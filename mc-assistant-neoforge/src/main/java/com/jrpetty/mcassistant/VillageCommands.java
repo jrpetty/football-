@@ -312,6 +312,8 @@ public final class VillageCommands {
             .then(LibraryCommands.build())
             // [batchD] The town's culture: its banner and motto, customs, theatre, band and choir, pictures, plaques.
             .then(CultureCommands.build())
+            // [culture2] The town's own ways: its dish, its tongue, its building style, its festival, its faith (WaysCommands).
+            .then(WaysCommands.build())
             // [arms] The town's arms everywhere (/village arms), and its street musicians (/village busk).
             .then(ArmsCommands.arms())
             .then(ArmsCommands.busk())

@@ -189,6 +189,16 @@ public final class Market {
         new Good("Reinforced pickaxe", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.REINFORCED_PICKAXE.get()), 11.0, 1, Villages.Task.NONE),
         new Good("Brewer's stout", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.BREWERS_STOUT.get()), 1.2, 4, Villages.Task.NONE),
         new Good("Farmhouse pie", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.FARMHOUSE_PIE.get()), 1.2, 4, Villages.Task.NONE),
+        // [culture2] The towns' own dishes (Cuisine): one at a time at the café's counter, the tavern's board and off a caravan.
+        new Good("Fish stew", s -> s.is(com.jrpetty.mcassistant.item.DishItems.FISH_STEW.get()), 1.5, 1, Villages.Task.NONE),
+        new Good("Game pie", s -> s.is(com.jrpetty.mcassistant.item.DishItems.GAME_PIE.get()), 1.3, 1, Villages.Task.NONE),
+        new Good("Berry tart", s -> s.is(com.jrpetty.mcassistant.item.DishItems.BERRY_TART.get()), 1.0, 1, Villages.Task.NONE),
+        new Good("Harvest loaf", s -> s.is(com.jrpetty.mcassistant.item.DishItems.HARVEST_LOAF.get()), 0.8, 1, Villages.Task.NONE),
+        new Good("Miner's hotpot", s -> s.is(com.jrpetty.mcassistant.item.DishItems.HOTPOT.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Spiced mutton", s -> s.is(com.jrpetty.mcassistant.item.DishItems.SPICED_MUTTON.get()), 1.4, 1, Villages.Task.NONE),
+        new Good("Cocoa cake", s -> s.is(com.jrpetty.mcassistant.item.DishItems.COCOA_CAKE.get()), 1.0, 1, Villages.Task.NONE),
+        new Good("Fen broth", s -> s.is(com.jrpetty.mcassistant.item.DishItems.FEN_BROTH.get()), 1.1, 1, Villages.Task.NONE),
+        good("Rabbit stew", Items.RABBIT_STEW, 1.2, 1, Villages.Task.NONE),
         // [itemaudit] The pets' things a household buys at the shop (Pets, Purchases), on the board at their worth.
         new Good("Pet bowls", s -> s.is(McAssistantMod.PET_BOWL_ITEM.get()), 0.8, 1, Villages.Task.NONE),
         new Good("Dog beds", s -> s.is(McAssistantMod.DOG_BED_ITEM.get()), 1.6, 1, Villages.Task.NONE),

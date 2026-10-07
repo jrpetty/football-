@@ -1212,6 +1212,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
         m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
+        m = TownWays.mood(this, day, m, why);           // [culture2] its town's dish, its own festival, a rite's blessing
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -1529,6 +1530,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (!passing) Plaques.fell(this, how, day);                                 // [batchD] a plaque where a hero fell (Plaques)
             com.jrpetty.mcassistant.village.Ledger.buried(village, new com.jrpetty.mcassistant.village.Ledger.Grave(
                 displayNameCap(), bornDay, day, how, life.parents(), life.partnerName(), stationTask().title));
+            Beliefs.died(this, day);                                                    // [culture2] to the sea, a cairn, or the yard
             Villages.tell(village, day, passing
                 ? displayNameCap() + " died peacefully in their sleep, aged " + age
                 : displayNameCap() + " died, aged " + age + ", " + how);
@@ -1685,6 +1687,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected void ateFood(net.minecraft.world.item.ItemStack meal) {
         meals.ate(level().getGameTime(), meal.getHoverName().getString());
+        Cuisine.ate(this, meal);                                    // [culture2] its town's own dish, or a neighbour's
     }
 
     /** One meal's worth out of the village's stores and into the pack (Meals), booked; how many came. */
@@ -1747,7 +1750,7 @@ public class VillageFolkEntity extends AssistantEntity {
             boolean partners = other.getUUID().equals(life.partner());
             if (offWork) getLookControl().setLookAt(other, 30.0F, 30.0F);
             if (!partners && life.partner() == null && other.life.partner() == null && !isBaby() && !other.isBaby()
-                    && now >= 75 && other.life.affinity(getUUID()) >= 75
+                    && now >= Beliefs.weddingWarmth(village) && other.life.affinity(getUUID()) >= Beliefs.weddingWarmth(village)   // [culture2] sooner by the Hearth
                     && !life.parents().contains(other.displayNameCap()) && !other.life.parents().contains(displayNameCap())) {
                 courted(other, server, village);
             }
@@ -6297,7 +6300,7 @@ public class VillageFolkEntity extends AssistantEntity {
         VillageFolkEntity child = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_FOLK.get().create(server);
         if (child == null) return null;
         child.moveTo(getX(), getY(), getZ(), getYRot(), 0.0F);
-        child.rename(Names.freshFor(village, server.getRandom()));
+        child.rename(Beliefs.childName(village, server.getRandom(), this, partner));   // [culture2] a name of its town's faith
         // Less than its parents spent on it — see childKit. A village that
         // could breed its way to a full larder would never have to farm.
         com.jrpetty.mcassistant.VillageSpawner.childKit(child);
@@ -6557,7 +6560,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean onBreak() {
         // On the road with a caravan, its own work waits until it is home.
         return trip != null || expedition != null || Drover.busy(this) || Stables.busy(this) || Nether.away(this) || JobSeekers.busy(this) || breakNow()
-            || Militia.mustering(this);                  // [war-prep] at the militia's muster, its own work waits
+            || Militia.mustering(this)                   // [war-prep] at the militia's muster, its own work waits
+            || Beliefs.keepsTaboo(this);                 // [culture2] the faith's day: no fishing on the Sea's, no mining on the Stone's
     }
 
     /** The caravan this folk is taking to a colony and back, or null (Caravans). */

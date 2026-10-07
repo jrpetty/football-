@@ -111,12 +111,16 @@ public final class TownWork {
             if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a lamp post")) return -1;
             net.minecraft.world.level.block.Block light = Masonry.light(level, v);
             if (light == null) return 0;
-            if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
+            Architecture.Post styled = Architecture.lampPost(level, v);    // [culture2] the town's own posts: dark oak, rough stone, birch...
+            net.minecraft.world.level.block.Block post = styled != null && take(level, v, styled.pay(), styled.cost())
+                ? styled.block() : null;
+            if (post == null && !take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
                 Masonry.unlight(level, v, light);
                 return 0;
             }
-            level.setBlockAndUpdate(top.above(), Blocks.SPRUCE_FENCE.defaultBlockState());
-            level.setBlockAndUpdate(top.above(2), Blocks.SPRUCE_FENCE.defaultBlockState());
+            if (post == null) post = Blocks.SPRUCE_FENCE;
+            level.setBlockAndUpdate(top.above(), post.defaultBlockState());
+            level.setBlockAndUpdate(top.above(2), post.defaultBlockState());
             level.setBlockAndUpdate(top.above(3), light.defaultBlockState());
             return 1;
         }

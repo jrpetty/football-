@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "mc_assistant:item/honey_loaf"
+    "layer0": "mc_assistant:item/harvest_loaf"
   }
 }

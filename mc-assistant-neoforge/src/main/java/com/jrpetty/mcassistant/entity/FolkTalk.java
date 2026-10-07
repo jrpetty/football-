@@ -123,6 +123,8 @@ public final class FolkTalk {
         // [caves] Not the cave team's map ("a copy of the cave map"): that is the team's to sell (CaveGuests).
         String library = topic == TalkTopic.CAVES ? null : Library.talk(f, p, topic, text);
         if (library != null && !library.isEmpty()) return manner(f, library);
+        String ways = TownWays.talk(f, p, topic, text);              // [culture2] "What's this town like?", its dish, faith, sayings
+        if (ways != null) return manner(f, ways, true);
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting, heard);
             case HOW -> howAreYou(f);
@@ -436,6 +438,7 @@ public final class FolkTalk {
         line(sb, "Birthday", Birthdays.cardLine(f));        // its birthday, its age and the next (Birthdays)
         line(sb, "The bell", TownBell.cardLine(f));         // when it answered today's bells (TownBell)
         line(sb, "Culture", Culture.cardLine(f));           // [batchD] the band, the choir, the stage, its pictures
+        line(sb, "Town ways", TownWays.cardLine(f));        // [culture2] its nickname, its town's soul, its faith, its dish
         return sb.toString();
     }
 
@@ -455,6 +458,7 @@ public final class FolkTalk {
         }
         if (!heard) return;
         text = Health.cough(f, text);                        // [batchA] a cough in it, with a cold
+        text = TownSpeech.local(f, text);                    // [culture2] its town's own words for the stores, the board, the coin
         String said = text.length() > 170 ? text.substring(0, 167) + "…" : text;
         int ticks = Math.min(200, 60 + said.length() * 2);
         PacketDistributor.sendToPlayersTrackingEntity(f, new FolkSpeechPayload(f.getId(), said, ticks));
@@ -494,7 +498,7 @@ public final class FolkTalk {
         if (life.has(Social.Trait.GENEROUS) && r.nextInt(5) == 0) {
             said += " " + pick(r, "If you ever need anything, just ask.", "Have you eaten? There's bread in the stores.");
         }
-        return said;
+        return TownSpeech.flavour(f, said, answering);       // [culture2] one of its town's sayings, now and then
     }
 
     private static String firstSentence(String s) {
@@ -658,6 +662,7 @@ public final class FolkTalk {
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
             case "cake", "drink" -> Kitchen.moodWords(f, why);                         // [kitchen]
+            case "homecooking", "delicacy", "townfeast", "ownfeast", "blessed" -> TownWays.moodWords(f, why);   // [culture2]
             default -> "";
         };
     }
@@ -1028,6 +1033,8 @@ public final class FolkTalk {
         int aff = f.persona().affinity(p.getUUID());
         if (aff <= -15) return pick(r, "Good.", "Finally.");
         if (f.life().has(Social.Trait.GRUMPY)) return pick(r, "Right. Back to it.", "Mm. Bye.");
+        String farewell = TownSpeech.bye(f, p);              // [culture2] its town's own farewell ("Fair winds to you!")
+        if (farewell != null) return farewell;
         if (aff >= 55) return pick(r, "Come back soon, " + p.getName().getString() + "!", "Take care of yourself!");
         return pick(r, "Goodbye!", "See you around.", "Safe travels.", "Mind how you go.");
     }
@@ -1385,6 +1392,8 @@ public final class FolkTalk {
         if (aff <= -50) return pick(r, "…", "Keep walking.", "Hmph.");
         if (aff <= -15) return pick(r, "Oh. You.", "Hm.");
         if (f.life().has(Social.Trait.GRUMPY) && aff < 30) return pick(r, "Hm.", "Mm.", "'Lo.");
+        String town = TownSpeech.passing(f, p);              // [culture2] its town's own hello ("Steady stone, Alex.")
+        if (town != null) return town;
         if (aff >= 55) return pick(r, you + "! Lovely to see you.", "Hello, " + you + "!", "There's my friend " + you + "!");
         if (aff >= 20) return pick(r, timeOfDay(f) + ", " + you + ".", "Hello, " + you + ".", "Oh, hi " + you + ".");
         return pick(r, timeOfDay(f) + ".", "Hello there.", "Afternoon, stranger.", "Hello!");
@@ -1493,6 +1502,7 @@ public final class FolkTalk {
         if (!n.isEmpty()) said.add("Did you hear? " + cap(n.get(0).text()) + ".");
         said.addAll(Crime.gossip(f));                   // [crime] a thief about, who was had up, who sat in the stocks
         said.addAll(QuestTalk.gossip(f, p));                  // [quests] who did what for whom, and the story going on
+        said.addAll(TownSpeech.gossip(f));                    // [culture2] who the town calls what now, and why
         if (said.isEmpty()) return pick(r, "Nothing worth repeating. It's been quiet.", "Gossip? Me? Never.");
         String line = said.get(r.nextInt(said.size()));
         if (f.life().has(Social.Trait.SHY)) line = "Oh — well, I shouldn't, but… " + line;

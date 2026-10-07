@@ -133,9 +133,12 @@ public final class StreetFurniture {
         for (Seat s : seats(Villages.townReach(v.id()))) {
             BlockPos p = TownLook.ground(level, v.centre().getX() + s.dx(), v.centre().getZ() + s.dz());
             if (!level.isLoaded(p) || benchAt(level, p.below()) || benchAt(level, p) || !benchFits(level, v, s, p)) continue;
-            if (!TownLook.canWooden(level, v, ItemTags.WOODEN_STAIRS, "stairs", 6)) return false;
+            Architecture.Style style = Architecture.of(v.id());          // [culture2] stone benches in the stone towns
+            boolean stone = style == Architecture.Style.HILL_FORT || style == Architecture.Style.GRAND_CIVIC || style == Architecture.Style.DESERT_COURT;
+            if (!stone && !TownLook.canWooden(level, v, ItemTags.WOODEN_STAIRS, "stairs", 6)) return false;
             if (!TownJobs.atWork(level, v, "furniture", p, "putting a bench out on the corner")) return false;
-            Block stair = TownLook.wooden(level, v, ItemTags.WOODEN_STAIRS, "stairs", 6, 4);
+            Block stair = stone ? Architecture.benchStair(level, v) : null;
+            if (stair == null) stair = TownLook.wooden(level, v, ItemTags.WOODEN_STAIRS, "stairs", 6, 4);
             if (!(stair instanceof StairBlock)) return false;
             if (!level.getBlockState(p).isAir()) level.destroyBlock(p, false);
             level.setBlock(p, stair.defaultBlockState().setValue(StairBlock.FACING, s.back()), 3);
@@ -158,6 +161,7 @@ public final class StreetFurniture {
 
     /** Is anybody in this household well off (Wealth)? */
     static boolean wellOff(UUID village, Homes.Home h) {
+        if (Architecture.boxesEverywhere(village)) return true;          // [culture2] a timbered town boxes every house's windows
         for (VillageFolkEntity f : Homes.loadedMembers(village, h)) {
             if (Wealth.tier(f).ordinal() >= Wealth.Tier.WELL_OFF.ordinal()) return true;
         }

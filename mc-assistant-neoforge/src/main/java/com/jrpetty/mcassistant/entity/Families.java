@@ -1820,7 +1820,7 @@ public final class Families {
             e.dead = g.name();
             e.kin = rel[0];
             e.years = (int) ((day - g.died()) / TownCalendar.YEAR_DAYS);
-            BlockPos[] at = Graves.graveOf(id, i);
+            BlockPos[] at = Beliefs.graveOf(id, i, g);               // [culture2] the yard, the post on the shore, the cairn
             e.lay = at == null ? null : at[1];
             ERRANDS.put(kin.getUUID(), e);
         }

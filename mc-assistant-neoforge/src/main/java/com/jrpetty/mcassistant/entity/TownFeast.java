@@ -416,7 +416,9 @@ public final class TownFeast {
     }
 
     static Assemblies.Assembly gathering(Villages.Village v, long due, long day) {
-        return new Assemblies.Assembly(v.id(), Assemblies.Kind.FESTIVAL, OURS + due, day, v.centre(), Direction.SOUTH, Assemblies.Layout.RING);
+        Feast f = of(v.id());
+        return new Assemblies.Assembly(v.id(), Assemblies.Kind.FESTIVAL, OURS + (f == null ? "" : f.name()) + "|" + due, day, v.centre(),
+            Direction.SOUTH, Assemblies.Layout.RING);
     }
 
     /** Called now (Festivals.calledNow, for callNow): tonight's festival, whatever the hour. */
@@ -436,19 +438,16 @@ public final class TownFeast {
         }
     }
 
+    /** The festival's own day, from the gathering's subject ("own|HERRING_FAIR|15"). */
     static long dueOf(String subject) {
-        return Culture.num(subject.substring(OURS.length()), -1);
+        int bar = subject.lastIndexOf('|');
+        return bar < 0 ? -1 : Culture.num(subject.substring(bar + 1), -1);
     }
 
-    /** "the Herring Fair". */
+    /** "the Herring Fair" (Assemblies.describe, by way of Festivals.describe), from the gathering's subject. */
     static String describe(String subject) {
-        Feast f = null;
-        return "the town's own festival";
-    }
-
-    /** "the Herring Fair" (Assemblies.describe): the village's own. */
-    static String describe(UUID village) {
-        Feast f = of(village);
+        String[] p = subject.split("\\|");
+        Feast f = p.length >= 3 ? Feast.byName(p[1]) : null;
         return f == null ? "the town's own festival" : f.words;
     }
 

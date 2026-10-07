@@ -199,6 +199,7 @@ public final class Colonies {
         Villages.tell(id, day, "settlers left to found " + colonyName);
         if (colony != null && !colony.id().equals(id)) {
             Villages.tell(colony.id(), day, "settlers from " + Villages.name(id) + " founded " + colonyName);
+            com.jrpetty.mcassistant.entity.TownWays.colonised(id, colony.id(), day);   // [culture2] the mother's dish and faith go with them
             // Mother and daughter: a road between them, and caravans along it (Roads, Caravans).
             com.jrpetty.mcassistant.village.Ledger.link(id, colony.id());
         }

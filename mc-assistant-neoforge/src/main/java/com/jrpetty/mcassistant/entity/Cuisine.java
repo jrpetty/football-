@@ -38,12 +38,12 @@ import java.util.function.Predicate;
  * bring in most.
  * <ul>
  * <li><b>The dish.</b> The land chooses it: fish stew on the coast and the rivers, mushroom and game pie in the forest,
- *     sweet berry tart in the pine woods and the snow, honey loaf on the plains and the meadows, miner's hotpot in the
+ *     sweet berry tart in the pine woods and the snow, the harvest loaf on the plains and the meadows, miner's hotpot in the
  *     hills and the badlands, spiced mutton on the savanna, cocoa cake in the jungle, fen broth in the swamp, and the
  *     well-towns' rabbit stew in the desert. A colony takes its mother's dish with it, and makes it in its own land's
  *     way: the hills' take on the coast's fish stew is made with mutton, and says so on the bowl.</li>
  * <li><b>The second dish</b>, once a trade brings in enough of its makings: a town of fishers takes to fish stew, one of
- *     hunters to game pie, one of herders to hotpot, one of beekeepers to honey loaf.</li>
+ *     hunters to game pie, one of herders to hotpot (or spiced mutton on the savanna).</li>
  * <li><b>The cook favours it.</b> Before the café's usual menu, the cook keeps the town's dish in the stores (four, and a
  *     portion more for every four folk, up to twelve), cooked by the game's own recipe the whole way from what the
  *     stores hold (Bench: potatoes baked in the smoker, cane pressed to sugar), never out of a larder on short commons.
@@ -69,7 +69,7 @@ public final class Cuisine {
         FISH_STEW("fish stew", "fish stews", Kind.SAVOURY, 1),
         GAME_PIE("mushroom and game pie", "game pies", Kind.SAVOURY, 2),
         BERRY_TART("sweet berry tart", "berry tarts", Kind.SWEET, 2),
-        HONEY_LOAF("honey loaf", "honey loaves", Kind.SWEET, 2),
+        HARVEST_LOAF("harvest loaf", "harvest loaves", Kind.SWEET, 2),
         HOTPOT("miner's hotpot", "hotpots", Kind.SAVOURY, 1),
         SPICED_MUTTON("spiced mutton", "portions of spiced mutton", Kind.SAVOURY, 1),
         COCOA_CAKE("cocoa cake", "slices of cocoa cake", Kind.SWEET, 2),
@@ -92,7 +92,7 @@ public final class Cuisine {
                 case FISH_STEW -> DishItems.FISH_STEW.get();
                 case GAME_PIE -> DishItems.GAME_PIE.get();
                 case BERRY_TART -> DishItems.BERRY_TART.get();
-                case HONEY_LOAF -> DishItems.HONEY_LOAF.get();
+                case HARVEST_LOAF -> DishItems.HARVEST_LOAF.get();
                 case HOTPOT -> DishItems.HOTPOT.get();
                 case SPICED_MUTTON -> DishItems.SPICED_MUTTON.get();
                 case COCOA_CAKE -> DishItems.COCOA_CAKE.get();
@@ -115,7 +115,7 @@ public final class Cuisine {
                     Bench.Want.of(Items.RED_MUSHROOM, 1), Bench.Want.of(Items.EGG, 1));
                 case BERRY_TART -> List.of(Bench.Want.of(Items.SWEET_BERRIES, 3), Bench.Want.of(Items.WHEAT, 2),
                     Bench.Want.of(Items.SUGAR, 1), Bench.Want.of(Items.EGG, 1));
-                case HONEY_LOAF -> List.of(Bench.Want.of(Items.HONEY_BOTTLE, 1), Bench.Want.of(Items.WHEAT, 3));
+                case HARVEST_LOAF -> List.of(Bench.Want.of(Items.WHEAT_SEEDS, 1), Bench.Want.of(Items.WHEAT, 3), Bench.Want.of(Items.EGG, 1));
                 case HOTPOT -> List.of(Bench.Want.of(Items.COOKED_MUTTON, 1), Bench.Want.of(Items.BOWL, 1),
                     Bench.Want.of(Items.BAKED_POTATO, 2));
                 case SPICED_MUTTON -> List.of(Bench.Want.of(Items.COOKED_MUTTON, 1), Bench.Want.of(Items.BEETROOT, 1),
@@ -135,7 +135,7 @@ public final class Cuisine {
                 case FISH_STEW -> "fish";
                 case GAME_PIE -> "game";
                 case BERRY_TART -> "berries";
-                case HONEY_LOAF -> "honey";
+                case HARVEST_LOAF -> "seed";
                 case HOTPOT, SPICED_MUTTON -> "mutton";
                 case COCOA_CAKE -> "cocoa";
                 case FEN_BROTH -> "mushrooms";
@@ -169,7 +169,7 @@ public final class Cuisine {
             case COAST, RIVER -> Dish.FISH_STEW;
             case FOREST -> Dish.GAME_PIE;
             case TAIGA, SNOW -> Dish.BERRY_TART;
-            case PLAINS, MEADOW -> Dish.HONEY_LOAF;
+            case PLAINS, MEADOW -> Dish.HARVEST_LOAF;
             case MOUNTAIN, BADLANDS -> Dish.HOTPOT;
             case SAVANNA -> Dish.SPICED_MUTTON;
             case JUNGLE -> Dish.COCOA_CAKE;
@@ -277,7 +277,6 @@ public final class Cuisine {
                 case FISH -> Dish.FISH_STEW;
                 case HUNT -> Dish.GAME_PIE;
                 case RANCH -> Homeland.of(village) == Homeland.Land.SAVANNA ? Dish.SPICED_MUTTON : Dish.HOTPOT;
-                case BEEKEEP -> Dish.HONEY_LOAF;
                 default -> null;
             };
             if (d == null || d == first) continue;
@@ -357,7 +356,7 @@ public final class Cuisine {
         wants.set(0, staple(land, d.kind).want());
         Bench.Plan p = Bench.plan(level, v, wants, hand);
         if (!p.ok() || !Bench.take(level, v, p, f)) return ItemStack.EMPTY;
-        if (d == Dish.HONEY_LOAF || wants.get(0).kinds().contains(Items.HONEY_BOTTLE)) Crafts.store(level, v, new ItemStack(Items.GLASS_BOTTLE));
+        if (wants.get(0).kinds().contains(Items.HONEY_BOTTLE)) Crafts.store(level, v, new ItemStack(Items.GLASS_BOTTLE));
         ItemStack made = new ItemStack(d.item(), d.batch);
         String from = TownWays.motherName(id);
         made.set(DataComponents.LORE, ItemLore.EMPTY.withLineAdded(Component.literal("A " + TownWays.landWord(land) + " take on "

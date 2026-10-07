@@ -151,6 +151,7 @@ public final class Caravans {
             ItemStack left = carrier.insertGiven(s);
             if (!left.isEmpty()) Market.intoStores(level, from.id(), left);
         }
+        Cuisine.packDelicacy(level, from, carrier, to.id());              // [culture2] a couple of the town's own dish, a delicacy there
         Trip t = new Trip(from.id(), to.id(), way(from, to));
         t.trade = true;
         t.gainedTick = carrier.tickCount;
@@ -211,6 +212,7 @@ public final class Caravans {
             ItemStack left = carrier.insertGiven(s);
             if (!left.isEmpty()) Market.intoStores(level, mother.id(), left);
         }
+        Cuisine.packDelicacy(level, mother, carrier, colony.id());        // [culture2] a taste of home for the colony
         Trip t = new Trip(mother.id(), colony.id(), way(mother, colony));
         t.gainedTick = carrier.tickCount;
         carrier.trip(t);

@@ -90,6 +90,13 @@ public final class Makers {
         declare("fish_pie", "the cook", "after a glut at the fish market", "Kitchen.cook");
         declare("herbal_tea", "the healer (the café with no healer)", "for a folk with a cold, and the café on cold days", "Kitchen.brew");
         declare("bandage", "the healer (the tailor with no healer)", "to keep the watch and the cave team at three each, and for the healer's round", "Kitchen.bind");
+        // [culture2] The towns' own dishes (Cuisine.cook, from Crafts.now: the cook's first care; a hand at the town's works
+        // on a feast day in a town with no cook).
+        for (String d : List.of("fish_stew", "game_pie", "berry_tart", "harvest_loaf", "hotpot", "spiced_mutton", "cocoa_cake", "fen_broth")) {
+            declare(d, "the cook (a hand at the town's works on a feast day, with no cook)",
+                "while the stores keep fewer of the town's own dish than four and one for every four folk, and on feast days",
+                "Cuisine.cook / Cuisine.tick");
+        }
         // [pets] The pets' things (Pets.craft, from Crafts.now; the shop's book through Workshop.demand).
         declare("pet_bowl", "the shop's workshop", "when a household with a pet has no bowl", "Pets.craft / Workshop.demand");
         declare("dog_bed", "the tailor", "when a household's dog has no bed of its own", "Pets.craft");

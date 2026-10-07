@@ -303,6 +303,11 @@ public final class Architecture {
      * building does not have, or where something else already stands.
      */
     static List<Change> plan(ServerLevel level, UUID village, Ledger.Building b, Style st) {
+        return plan(level, village, b, st, age(village));
+    }
+
+    /** As plan, for a town of this age (the stage: a street of every style, as an Iron Age town has them). */
+    static List<Change> plan(ServerLevel level, UUID village, Ledger.Building b, Style st, int age) {
         String drawing = Ages.drawing(village, b);
         List<Change> out = new ArrayList<>();
         if (!Blueprints.has(drawing)) return out;
@@ -310,7 +315,6 @@ public final class Architecture {
         Map<Long, Cell> byPos = new HashMap<>();
         for (Cell c : cells) if (c.p().part() != BuildGoal.Part.CLEAR) byPos.put(c.p().pos().asLong(), c);
         Direction back = b.facing(), front = back.getOpposite(), right = back.getClockWise();
-        int age = age(village);
         boolean stone = age >= Villages.Age.STONE.ordinal(), iron = age >= Villages.Age.IRON.ordinal();
         int frontDz = Integer.MAX_VALUE, eavesH = Integer.MAX_VALUE, minDz = Integer.MAX_VALUE, maxDz = Integer.MIN_VALUE;
         int wallBack = Integer.MIN_VALUE;
@@ -465,7 +469,8 @@ public final class Architecture {
                     }
                     case DESERT_COURT -> {
                         if (placeable(level, left)) out.add(new Change(left, Blocks.DECORATED_POT.defaultBlockState()
-                            .setValue(DecoratedPotBlock.HORIZONTAL_FACING, front), true, "a fired pot by the door"));
+                            .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, front), true,
+                            "a fired pot by the door"));
                     }
                     case FOREST_LODGE -> {
                         // The household's names carved on a board over the door.
@@ -722,6 +727,23 @@ public final class Architecture {
     /** Tests and the stage: every one of this building's changes made now, for nothing. How many blocks changed. */
     public static int dressForTests(ServerLevel level, Villages.Village v, Ledger.Building b) {
         return dress(level, v, b, 10000, true);
+    }
+
+    /**
+     * The stage and the tests: a building dressed in a given style, for nothing, as a town of this age would dress it
+     * (its trim in this town's colours). How many blocks changed.
+     */
+    public static int dressAs(ServerLevel level, UUID village, Ledger.Building b, Style st, Villages.Age age) {
+        int n = 0;
+        for (Change c : plan(level, village, b, st, age.ordinal())) {
+            if (c.fresh() && !level.getBlockState(c.pos()).isAir()) continue;
+            level.setBlock(c.pos(), c.want(), 3);
+            if (c.want().getBlock() instanceof WallSignBlock && level.getBlockEntity(c.pos()) instanceof SignBlockEntity sign) {
+                TownLife.write(sign, new String[]{ "~ Home ~", st.words, "", "" });
+            }
+            n++;
+        }
+        return n;
     }
 
     /** Tests: what the style would change on this building as it stands (each change's words), nothing done. */

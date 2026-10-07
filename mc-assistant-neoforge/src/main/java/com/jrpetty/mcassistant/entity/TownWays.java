@@ -417,6 +417,26 @@ public final class TownWays {
         return String.join(" ", bits);
     }
 
+    /** The folk's own words for what the town's ways did for its mood (FolkTalk.reason). */
+    static String moodWords(VillageFolkEntity f, String why) {
+        return switch (why) {
+            case "homecooking", "delicacy", "townfeast" -> Cuisine.moodWords(f, why);
+            case "ownfeast" -> {
+                TownFeast.Feast feast = TownFeast.of(f.ownerId());
+                yield feast == null ? "What a festival that was!" : "What a night " + feast.words + " was!";
+            }
+            case "blessed" -> Beliefs.moodWords(f);
+            default -> "";
+        };
+    }
+
+    /** What the town's ways do for a folk's mood (VillageFolkEntity.refreshMood): its dish, its festival, its rites. */
+    public static int mood(VillageFolkEntity f, long day, int m, List<Object[]> why) {
+        m = Cuisine.mood(f, day, m, why);
+        m = TownFeast.mood(f, day, m, why);
+        return Beliefs.mood(f, day, m, why);
+    }
+
     static boolean has(String text, String... words) {
         for (String w : words) if (text.contains(w)) return true;
         return false;

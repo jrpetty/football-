@@ -343,8 +343,9 @@ public final class Cafe {
     /** What the café has ready, drinks first: one of each, up to a counterful. */
     public static List<ItemStack> menuGoods(ServerLevel level, UUID village) {
         // What the village can spare (Budget): no bread off the counter while the larder is low.
-        return fromStores(level, village, s -> (isDrink(s) || MENU.stream().anyMatch(s::is)
-            || Kitchen.onMenu(level, village, s)) && Budget.spare(level, village, s) > 0, true);   // [kitchen] the fish pie; cider, tea in season
+        return Cuisine.ownFirst(village, fromStores(level, village, s -> (isDrink(s) || MENU.stream().anyMatch(s::is)
+            || Kitchen.onMenu(level, village, s)                                                   // [kitchen] the fish pie; cider, tea in season
+            || Cuisine.isDish(s)) && Budget.spare(level, village, s) > 0, true));                  // [culture2] the town's dish, by the door
     }
 
     private static final List<Item> MENU = List.of(Items.BAKED_POTATO, Items.COOKIE, Items.PUMPKIN_PIE, Items.COOKED_BEEF,

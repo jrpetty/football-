@@ -25,7 +25,8 @@ import java.util.List;
  * <li><b>Mushroom and game pie</b> (the forest): two wheat, a brown and a red mushroom, an egg and roast rabbit, pork or
  *     chicken; two pies.</li>
  * <li><b>Sweet berry tart</b> (the pine woods and the snow): three sweet berries, two wheat, sugar and an egg; two.</li>
- * <li><b>Honey loaf</b> (the plains and the meadows): three wheat and a bottle of honey (the bottle comes back); two.</li>
+ * <li><b>Harvest loaf</b> (the plains and the meadows): three wheat, an egg to glaze it and a handful of seed on its
+ *     crust, plaited like a sheaf; two. (The kitchen's honey cake is the feast's sweet: Kitchen.)</li>
  * <li><b>Miner's hotpot</b> (the mountains and the badlands): a bowl, roast mutton and two baked potatoes.</li>
  * <li><b>Spiced mutton</b> (the savanna): roast mutton glazed with a beetroot and sugar.</li>
  * <li><b>Cocoa cake</b> (the jungle): two cocoa beans, two wheat, sugar and an egg; two slices.</li>
@@ -57,7 +58,7 @@ public final class DishItems {
         "The forest towns' own dish", "Night Vision for half a minute: a hunter's supper");
     public static final DeferredItem<DishItem> BERRY_TART = dish("berry_tart", 6, 0.6F, MobEffects.MOVEMENT_SPEED, 600, false,
         "The pine-wood towns' own dish", "Speed for half a minute");
-    public static final DeferredItem<DishItem> HONEY_LOAF = dish("honey_loaf", 7, 0.7F, MobEffects.REGENERATION, 100, false,
+    public static final DeferredItem<DishItem> HARVEST_LOAF = dish("harvest_loaf", 7, 0.75F, MobEffects.REGENERATION, 100, false,
         "The plains towns' own dish", "A little Regeneration");
     public static final DeferredItem<DishItem> HOTPOT = dish("hotpot", 10, 0.9F, MobEffects.DAMAGE_RESISTANCE, 900, true,
         "The hill towns' own dish", "Resistance for three quarters of a minute; the bowl comes back");
@@ -70,7 +71,7 @@ public final class DishItems {
 
     /** All eight, in the order the showcase and the creative tab set them out. */
     public static List<DeferredItem<DishItem>> all() {
-        return List.of(FISH_STEW, GAME_PIE, BERRY_TART, HONEY_LOAF, HOTPOT, SPICED_MUTTON, COCOA_CAKE, FEN_BROTH);
+        return List.of(FISH_STEW, GAME_PIE, BERRY_TART, HARVEST_LOAF, HOTPOT, SPICED_MUTTON, COCOA_CAKE, FEN_BROTH);
     }
 
     /** Joined to the mod's bus (McAssistantMod): the dishes, and their places in the creative tabs. */

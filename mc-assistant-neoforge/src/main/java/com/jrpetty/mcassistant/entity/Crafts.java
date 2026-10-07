@@ -89,7 +89,8 @@ public final class Crafts {
         Economy.openCraft(v.id(), f.stationTask());
         String made;
         try {
-            made = Luxuries.craft(level, v, f, true);                 // a turn at what the houses wait on (Luxuries)
+            made = Cuisine.cook(level, v, f);                         // [culture2] the cook's first care: the town's own dish
+            if (made == null) made = Luxuries.craft(level, v, f, true);   // a turn at what the houses wait on (Luxuries)
             if (made == null) made = Pets.craft(level, v, f);         // [pets] a turn at the pets' beds, collars, bowls, treats
             if (made == null) made = TradeGoods.craft(level, v, f);   // [player-civic] a master's own: the reinforced pick, the stout, the pie, a journal
             if (made == null) made = Kitchen.craft(level, v, f);      // [kitchen] lunches, cheese, cakes, pies; mead, cider; tea and bandages

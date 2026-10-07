@@ -437,6 +437,22 @@ public final class TownSpeech {
         return out;
     }
 
+    /** Gossip of the town's nicknames (FolkTalk.gossipFor): who it calls what now, and why. */
+    public static List<String> gossip(VillageFolkEntity f) {
+        List<String> out = new ArrayList<>();
+        UUID id = f.ownerId();
+        if (id == null) return out;
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (!(a instanceof VillageFolkEntity o) || o == f) continue;
+            String nick = nickname(o);
+            if (nick == null) continue;
+            out.add("Everybody calls " + o.displayNameCap() + " \"" + nick + "\" now. " + (nick.startsWith("Old ")
+                ? "Not to their face, mind." : "Earned it, too."));
+            if (out.size() >= 2) break;
+        }
+        return out;
+    }
+
     /** What a folk tells a player of the town's sayings ("Any sayings?"). */
     static String talkSayings(VillageFolkEntity f) {
         UUID id = f.ownerId();

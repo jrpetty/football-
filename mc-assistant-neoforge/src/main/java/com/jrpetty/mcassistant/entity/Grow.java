@@ -201,6 +201,7 @@ public final class Grow {
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (!b.structure().equals("house") || !Land.areaLoaded(level, b.anchor(), 7)) continue;
             if (HousingMarket.isPrivate(id, b.anchor())) continue;     // [econ-housing] a folk's own: not the council's to rebuild or raise
+            if (Beliefs.untouchable(id, b)) continue;                    // [culture2] the founders' first house, as they left it
             done += garden(level, v, b, false);
             if (done >= budget) break;
             done += reface(level, v, b, age, budget - done, Ledger.grown(id, b.anchor()), false);
