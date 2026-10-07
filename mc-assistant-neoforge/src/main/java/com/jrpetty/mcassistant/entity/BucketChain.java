@@ -205,7 +205,7 @@ public final class BucketChain {
             double d = p.distSqr(fire);
             if (d < bd && d >= 9) { bd = d; best = p.immutable(); }
         }
-        return best;
+        return FieldTools.chainWater(level, fire, best);               // [fields] a nearer rain barrel, with no pond close
     }
 
     /**

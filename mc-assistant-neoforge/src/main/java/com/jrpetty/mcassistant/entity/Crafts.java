@@ -92,6 +92,7 @@ public final class Crafts {
             made = Luxuries.craft(level, v, f, true);                 // a turn at what the houses wait on (Luxuries)
             if (made == null) made = Pets.craft(level, v, f);         // [pets] a turn at the pets' beds, collars, bowls, treats
             if (made == null) made = TradeGoods.craft(level, v, f);   // [player-civic] a master's own: the reinforced pick, the stout, the pie, a journal
+            if (made == null) made = FieldTools.craft(level, v, f);   // [fields] the copper can, sickle and smoker, the satchel; the shop's any of them
             if (made == null) made = switch (f.stationTask()) {
                 case SMITH -> smith(level, v, f);
                 case TAILOR -> tailor(level, v, f);
@@ -659,6 +660,9 @@ public final class Crafts {
         int r = Math.min(6, z.radius());
         if (!Land.areaLoaded(level, c, r + 8)) return null;
         List<BlockPos> hives = hivesAt(level, c, r);
+        // [fields] With a bee smoker, every full hive smoked and emptied on the one round, and more from each (FieldTools).
+        String smoked = FieldTools.smokedHarvest(level, v, f, hives);
+        if (smoked != null) return smoked;
         // Honey first: a full hive is a hive about to swarm.
         for (BlockPos p : hives) {
             BlockState st = level.getBlockState(p);

@@ -388,6 +388,7 @@ public final class FolkTalk {
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
         line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
+        line(sb, "Tools", FieldTools.cardLine(f));            // [fields] its can, satchel, sickle or smoker; the box, the trough, the traps
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."
@@ -685,6 +686,8 @@ public final class FolkTalk {
         }
         String about = Transport.doing(f);                      // [transport] on its way by the cart or the ferry
         if (about != null) return cap(about) + ".";
+        String tools = FieldTools.doing(f);                     // [fields] filling its can, round its traps, at the nesting box
+        if (tools != null) return cap(tools) + ".";
         String hobby = f.hobbyNow();
         if (hobby != null) return pick(r, "My own time now — ", "Day's work's done, so ") + hobby + ".";
         if (f.offWorkNow() && f.onShift()) return pick(r, "Taking a breather. ", "A short break. ") + "Back to work in a bit.";

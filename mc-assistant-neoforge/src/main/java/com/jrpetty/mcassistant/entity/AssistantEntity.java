@@ -6973,7 +6973,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 }
                 // Pace breeding to the animals' ~5-minute love cooldown so the
                 // rancher isn't re-running empty breed jobs between litters.
-                if (adults >= 2 && tickCount - stationBreedTick > 6000) {
+                if (adults >= 2 && tickCount - stationBreedTick > 6000
+                        && !FieldTools.troughFeeds(this)) {          // [fields] a feed trough on its ground breeds the pairs itself
                     if (countCarried(BREEDING_FOOD) < 4) {
                         scoopFromChests(BREEDING_FOOD, 16, chestRange()); // the farm's produce feeds the ranch
                     }

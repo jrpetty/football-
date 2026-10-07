@@ -132,6 +132,16 @@ public final class Market {
         good("Raw iron", Items.RAW_IRON, 1.0, 4, Villages.Task.IRON),
         good("Iron", Items.IRON_INGOT, 1.5, 4, Villages.Task.IRON),
         good("Copper", Items.COPPER_INGOT, 0.4, 8, Villages.Task.NONE),
+        // [fields] The tools of the fields and the pens (FieldItems): sold at the shop and bought of a player. Matched when
+        // asked, not at load: the items are registered after this list is made.
+        new Good("Watering can", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.WATERING_CAN.get()), 2.6, 1, Villages.Task.NONE),
+        new Good("Seed satchel", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.SEED_SATCHEL.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Copper sickle", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.COPPER_SICKLE.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Nesting box", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.NESTING_BOX_ITEM.get()), 0.6, 1, Villages.Task.NONE),
+        new Good("Feed trough", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.FEED_TROUGH_ITEM.get()), 0.5, 1, Villages.Task.NONE),
+        new Good("Fish trap", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.FISH_TRAP_ITEM.get()), 0.8, 2, Villages.Task.NONE),
+        new Good("Rain barrel", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.RAIN_BARREL_ITEM.get()), 1.1, 1, Villages.Task.NONE),
+        new Good("Bee smoker", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.BEE_SMOKER.get()), 2.0, 1, Villages.Task.NONE),
         good("Gold", Items.GOLD_INGOT, COINS_PER_GOLD, 1, Villages.Task.NONE),
         good("Lapis", Items.LAPIS_LAZULI, 0.5, 8, Villages.Task.NONE),
         good("Redstone", Items.REDSTONE, 0.3, 8, Villages.Task.NONE),
