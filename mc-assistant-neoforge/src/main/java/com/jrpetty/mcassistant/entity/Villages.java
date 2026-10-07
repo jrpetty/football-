@@ -1692,6 +1692,8 @@ public final class Villages {
         if (Park.wanted(villageId, folk)) extras.add(Park.STRUCTURE);
         // A stable, once the village has horses of its own (or, in the Iron Age, a rancher and a saddle: Stables).
         if (built(villageId, "stable") < 1 && Stables.wanted(villageId)) extras.add("stable");
+        // [batchA] An infirmary once the town is twenty and its meeting hall stands (Infirmary).
+        if (Infirmary.wanted(villageId, folk)) extras.add(Infirmary.STRUCTURE);
         // The courtyard before the board, where the village gathers; and, once the town is big enough
         // to want governing, a hall for whoever leads it, on the great lot behind the board.
         if (VillageBoards.boardOf(villageId) != null && built(villageId, "hall") > 0 && built(villageId, "court") < 1) extras.add("court");
@@ -2080,6 +2082,7 @@ public final class Villages {
             case "barracks" -> "barracks (great work " + (greatWorks(villageId) + 1) + "), room for six more and a home for the watch";
             case "monument" -> "a monument (great work " + (greatWorks(villageId) + 1) + ") to how far the village has come";
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
+            case "infirmary" -> Infirmary.why(villageId);          // [batchA]
             default -> "the " + project;
         };
     }

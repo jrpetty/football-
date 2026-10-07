@@ -899,6 +899,40 @@ def ageing_stage(r, look, cx, cz):
     say("alive after the ageing: %s" % client_alive())
 
 
+def health_stage(r, look, cx, cz):
+    """Health and care (entity/Health, Infirmary, Neighbourly, PoorBox): an infirmary set out on a stage in clear
+    air out past the village (/village care stage), its four beds full (two folk with a cold, one hurt, a child) and
+    the healer at a bedside with a honey bottle in hand; from the street, then down the aisle from just inside the
+    door. Then a cold caught now by the folk nearest the heart (/village care cold), what /village care says of the
+    town (who is ill, the infirmary, the poor box, the old visited, newcomers welcomed), and the town's books at the
+    Money page, the poor box under the in-and-out."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    sx, sy, sz = cx + 90, 150, cz - 90
+    r.cmd("tp %s %d %d %d" % (USER, sx + 6, sy + 5, sz + 14))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village care stage" % (sx, sy, sz))
+    say("infirmary stage: " + out[:500])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        x, y, z, ax, ay, az = int(x), int(y), int(z), int(ax), int(ay), int(az)
+        look("24-care-%d-%s" % (i + 1, name), x + 0.5, y + 0.2, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=6)
+    if not views:
+        say("no infirmary to photograph")
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    say("a cold: " + r.cmd("execute positioned %d 100 %d run village care cold" % (cx, cz))[:200])
+    say("care: " + r.cmd("execute positioned %d 100 %d run village care" % (cx, cz))[:1500])
+    r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 2, cz))
+    time.sleep(3)
+    say("stats money: " + r.cmd("execute as %s at @s run village stats 2" % USER))
+    time.sleep(4)
+    shot("24-care-3-money")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("alive after the care: %s" % client_alive())
+
+
 def sights_stage(r, look, cx, cz):
     """The town's newer sights, found with /village sights (entity/Sights): the welcome sign at the edge of
     town from the road coming in; the gazette on its lectern in the hall; the crier reading the news; the
@@ -1350,6 +1384,10 @@ def main():
         visitors_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("visitors stage failed: %s" % e)
+    try:
+        health_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("health stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

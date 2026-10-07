@@ -131,6 +131,7 @@ public final class Grow {
                 case "house" -> Ledger.grown(id, b.anchor()) ? "house2" : "house";
                 case "barracks" -> "barracks";
                 case "manor" -> "manor";
+                case "infirmary" -> "infirmary";                       // [batchA] its beds, for the sick (Infirmary)
                 default -> null;
             };
             if (plan == null || !Land.areaLoaded(level, b.anchor(), 9)) continue;

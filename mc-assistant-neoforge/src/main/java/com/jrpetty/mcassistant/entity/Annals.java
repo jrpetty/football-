@@ -549,6 +549,7 @@ public final class Annals {
         out.put("homes", homes(level, id, folk));
         out.put("decor", Decor.report(level, id));                // how each home is furnished, and its luxuries (Decor)
         out.put("bank", Bank.report(level, id));                 // the bank: the Money page, and the Homes page's mortgages
+        out.put("care", Health.report(level, v));                // [batchA] who is ill, the infirmary, the poor box (Health, PoorBox)
         out.put("now", now(level, v, folk));
         out.put("drivers", strings(drivers(level, v, folk, days)));
         out.put("news", strings(news(id)));
@@ -676,6 +677,7 @@ public final class Annals {
             c.putString("partner", f.life().partnerName());
             c.putBoolean("leader", f.getUUID().equals(Villages.elder(id)));
             c.putBoolean("bed", f.bedPos() != null);
+            c.putString("ill", Health.illWord(f));                   // [batchA] a cold, or mending (Health)
             out.add(c);
         }
         return out;

@@ -1168,6 +1168,7 @@ public final class JobMarket {
     static void arrived(ServerLevel level, Villages.Village to, VillageFolkEntity f, UUID from, String fromName, @Nullable StationTask trade,
                         String because, boolean refugee, List<String> party, long day) {
         UUID id = to.id();
+        Neighbourly.arrived(level, id, f, refugee ? "taken in after a raid on " + fromName : "came from " + fromName);   // [batchA] a welcome
         String title = trade == null || trade == StationTask.NONE ? "" : noun(trade);
         String story = refugee
             ? "came from " + fromName + ", homeless after the raid, and was taken in" + (title.isEmpty() ? "" : "; works as " + a(title))

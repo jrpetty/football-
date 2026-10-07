@@ -356,6 +356,8 @@ public final class FolkTalk {
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
         if (!family.isEmpty()) line(sb, "Family", family);
         line(sb, "Household", Families.cardLine(f));        // its pet, its garden, its wedding anniversary (Families)
+        line(sb, "Health", Health.cardLine(f));              // [batchA] a cold, laid up, seen to (Health)
+        line(sb, "Neighbours", Neighbourly.cardLine(f));     // [batchA] looked in on, a welcome, a housewarming (Neighbourly)
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);
@@ -391,6 +393,7 @@ public final class FolkTalk {
             if (p.distanceToSqr(f) < 24.0 * 24.0) { heard = true; break; }
         }
         if (!heard) return;
+        text = Health.cough(f, text);                        // [batchA] a cough in it, with a cold
         String said = text.length() > 170 ? text.substring(0, 167) + "…" : text;
         int ticks = Math.min(200, 60 + said.length() * 2);
         PacketDistributor.sendToPlayersTrackingEntity(f, new FolkSpeechPayload(f.getId(), said, ticks));
@@ -586,6 +589,7 @@ public final class FolkTalk {
             case "birthday" -> Birthdays.moodWords(f);
             case "anniversary" -> Families.moodWords(f);
             case "bard", "visit" -> Visitors.moodWords(f, why);        // [batchG] the bard's songs, a friend from away
+            case "cold" -> Health.moodWords(f);                                     // [batchA]
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
             case "proud" -> Museum.prideWords(f);
             default -> "";
