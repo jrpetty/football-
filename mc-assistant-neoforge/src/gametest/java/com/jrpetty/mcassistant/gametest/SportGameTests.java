@@ -643,6 +643,11 @@ public class SportGameTests {
                 helper.assertTrue(stock(level, id, Items.BOW) == 1, "the borrowed bow back");
                 helper.assertTrue(xp > xp0, "the better at its trade for the morning: " + xp0 + " -> " + xp);
                 arrows[0] = arrowsNow;
+                // How the watch stands when the contest is called (the leader's escort, a fight, asleep, away).
+                for (VillageFolkEntity g : new VillageFolkEntity[]{ g1, g2 }) {
+                    Kit.log("sp07 " + g.displayNameCap() + ": asleep " + g.isSleeping() + ", target " + g.getTarget() + ", escorting "
+                        + com.jrpetty.mcassistant.entity.Patrols.escorting(g) + ", trip " + (g.trip() != null) + ", doing " + g.hobbyNow());
+                }
                 String c = Archery.contestForTests(level, v);
                 Kit.log("sp07 " + c);
                 helper.assertTrue(c.contains("archery contest is on"), "the contest called: " + c);
@@ -650,13 +655,24 @@ public class SportGameTests {
                 since[0] = t;
                 return;
             }
-            if (!Archery.contestDoneForTests(id) && t - since[0] < 2000) {
-                if (t % 200 == 0) Kit.log("sp07 the contest, tick " + t + ": " + g1.hobbyNow() + " / " + g2.hobbyNow());
+            if (phase[0] == 1) {
+                // Every entrant shoots its six once it is free (one at the leader's shoulder comes when it is let go);
+                // the contest is judged when all have, or after a while with whoever has.
+                if (!Archery.contestDoneForTests(id) && t - since[0] < 2000) {
+                    if (t % 200 == 0) Kit.log("sp07 the contest, tick " + t + ": " + g1.hobbyNow() + " / " + g2.hobbyNow());
+                    return;
+                }
+                String result = Archery.resultForTests(level, id);
+                Kit.log("sp07 the contest: " + result + "; the chronicle: " + chronicle(id));
+                helper.assertTrue(result != null && (told(id, "won the archery contest") || told(id, "nobody found the butts")), "the contest in the chronicle");
+                phase[0] = 2;
+                since[0] = t;
                 return;
             }
-            String result = Archery.resultForTests(level, id);
-            Kit.log("sp07 the contest: " + result + "; arrows " + arrows[0] + " -> " + stock(level, id, Items.ARROW) + "; the chronicle: " + chronicle(id));
-            helper.assertTrue(result != null && (told(id, "won the archery contest") || told(id, "nobody found the butts")), "the contest in the chronicle");
+            // The arrows counted once nobody is at the butts (a session still open when the contest was judged
+            // finishes, and pulls its arrows, first).
+            if ((Archery.sessionForTests(g1.getUUID()) || Archery.sessionForTests(g2.getUUID())) && t - since[0] < 800) return;
+            Kit.log("sp07 arrows after the contest " + arrows[0] + " -> " + stock(level, id, Items.ARROW));
             helper.assertTrue(stock(level, id, Items.ARROW) >= arrows[0] - 4, "the contest's arrows back in the stores, near enough all");
             helper.succeed();
         });

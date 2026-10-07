@@ -501,17 +501,27 @@ public final class Archery {
 
     // ------------------------------------------------------------------ the contest
 
-    /** The rest day's contest called (Sport's programme): the watch, two at least, each to shoot six. */
+    /**
+     * In the contest: a guard at home and awake. One walking at the leader's shoulder just now, or seeing off a
+     * monster, is entered all the same and takes its turn at the butts once it is free (begin); the contest waits
+     * for it (CONTEST_TIME). One asleep after its watch, or away on the road, sits it out.
+     */
+    static boolean entrant(VillageFolkEntity f) {
+        return f.isAlive() && !f.isSleeping() && f.trip() == null && f.expedition() == null && !Nether.away(f)
+            && !Sport.busyElsewhere(f, "archery");
+    }
+
+    /** The rest day's contest called (Sport's programme): the watch at home, two at least, each to shoot six. */
     static String startContest(ServerLevel level, Villages.Village v) {
         if (CONTESTS.containsKey(v.id())) return "already on";
         Ledger.Building range = of(v.id());
         if (range == null) return "no range";
         Contest c = new Contest(v.id(), level.getGameTime());
         for (AssistantEntity a : Villages.folkOf(v.id())) {
-            if (a instanceof VillageFolkEntity f && !f.isBaby() && f.stationTask() == StationTask.GUARD && free(f, level)) c.entrants.add(f.getUUID());
+            if (a instanceof VillageFolkEntity f && !f.isBaby() && f.stationTask() == StationTask.GUARD && entrant(f)) c.entrants.add(f.getUUID());
             if (c.entrants.size() >= 6) break;
         }
-        if (c.entrants.size() < 2) return "too few of the watch free: " + c.entrants.size();
+        if (c.entrants.size() < 2) return "too few of the watch at home: " + c.entrants.size();
         if (Market.stock(level, v.id(), s -> s.is(Items.ARROW)) < 2) return "no arrows in the stores";
         CONTESTS.put(v.id(), c);
         VillageFolkEntity first = Football.live(level, c.entrants.get(0));
