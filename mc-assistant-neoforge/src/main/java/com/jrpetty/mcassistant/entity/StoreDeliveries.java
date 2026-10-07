@@ -382,11 +382,13 @@ public final class StoreDeliveries {
                 }
                 continue;
             }
-            net.minecraft.world.entity.Entity e = level.getEntity(d.carrier);
-            boolean gone = !(e instanceof VillageFolkEntity f) || !f.isAlive() || f.ownerId() == null || !f.ownerId().equals(v.id());
+            // The carrier by the village's own roll (the level's lookup misses a folk on ground only just loaded).
+            VillageFolkEntity e = null;
+            for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f && d.carrier.equals(f.getUUID())) { e = f; break; }
+            boolean gone = e == null || !e.isAlive() || e.ownerId() == null || !e.ownerId().equals(v.id());
             if (gone || now - d.taken > TOO_LONG || now < d.taken) {
-                if (!gone && e instanceof VillageFolkEntity f) {
-                    drop(level, v, f, d, "it took far too long");
+                if (!gone) {
+                    drop(level, v, e, d, "it took far too long");
                 } else {
                     // The carrier is gone with whatever it had (to its grave, or another town): nothing to put back.
                     d.stage = Stage.DONE;
