@@ -2028,6 +2028,10 @@ def main():
         war_footing_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("war footing stage failed: %s" % e)
+    try:
+        guard_kit_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("guard kit stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
