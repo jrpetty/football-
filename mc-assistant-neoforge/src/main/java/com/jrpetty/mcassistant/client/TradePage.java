@@ -32,7 +32,8 @@ public final class TradePage {
     @Nullable
     public static List<Component> draw(GuiGraphics g, Font font, CompoundTag m, int x, int y, int w, int h, int scroll, int mx, int my) {
         List<Line> lines = new ArrayList<>();
-        lines.add(new Line('S', null, m.getString("summary") + " — " + m.getString("land") + "."));
+        lines.add(new Line('S', null, m.getString("summary") + " — " + m.getString("land")
+            + ". (The mouse over the name of a ware, a deal or a talk for all of it.)"));
         lines.add(new Line('H', null, "The trade book"));
         lines.add(new Line('h', null, ""));
         for (CompoundTag c : compounds(m, "wares")) lines.add(new Line('W', c, ""));
@@ -54,7 +55,12 @@ public final class TradePage {
         lines.add(new Line('H', null, "The talks"));
         List<String> talks = strings(m, "talks");
         if (talks.isEmpty()) lines.add(new Line('M', null, "No talks yet."));
-        for (String s : talks) lines.add(new Line('T', null, s));
+        // The newest talks whole, every round of them as the chronicle tells it; the older ones a line each.
+        for (int t = 0; t < talks.size(); t++) {
+            if (t >= 3) { lines.add(new Line('T', null, talks.get(t))); continue; }
+            List<String> wrapped = split(font, talks.get(t), (int) ((w - 8) / 0.75F));
+            for (int k = 0; k < wrapped.size() && k < 6; k++) lines.add(new Line(k == 0 ? 'T' : 'U', null, wrapped.get(k)));
+        }
         List<String> past = strings(m, "past");
         if (!past.isEmpty()) {
             lines.add(new Line('H', null, "Deals past"));
@@ -73,7 +79,9 @@ public final class TradePage {
         int[] cols = { 0, 58, 88, 118, 178, 214, 250, 286, 360, 400 };
         for (int i = start; i < lines.size() && cy + ROW <= y + h; i++) {
             Line l = lines.get(i);
-            boolean over = mx >= x && mx < x + w && my >= cy && my < cy + ROW;
+            // The whole of a ware, a deal or a talk with the mouse over its name (the first column), so the page reads
+            // clear with the mouse anywhere else.
+            boolean over = mx >= x && mx < x + 60 && my >= cy && my < cy + ROW;
             switch (l.kind()) {
                 case 'H' -> Ui.section(g, font, l.text(), x, cy + 1, w);
                 case 'S' -> small(g, font, Ui.clip(font, l.text(), (int) (w / 0.75F)), x, cy + 2, Ui.INK);
@@ -83,6 +91,7 @@ public final class TradePage {
                     small(g, font, Ui.clip(font, l.text(), (int) (w / 0.75F)), x + 4, cy + 2, Ui.INK);
                     if (over) tip = wrap(font, l.text());
                 }
+                case 'U' -> small(g, font, Ui.clip(font, l.text(), (int) (w / 0.75F)), x + 12, cy + 2, Ui.INK);
                 case 'h' -> {
                     String[] heads = { "Ware", "Held", "Keeps", "Over / short", "Made/d", "Out/d", "Cover", "Land", "Here", "To us" };
                     for (int k = 0; k < heads.length; k++) if (cols[k] < w - 20) small(g, font, heads[k], x + cols[k], cy + 2, Ui.FAINT);
@@ -203,6 +212,22 @@ public final class TradePage {
         if (each >= 1.0F) return String.format(Locale.ROOT, "%.1fc", each);
         if (each <= 0) return "—";
         return "1c/" + Math.max(2, Math.round(1.0F / each));
+    }
+
+    /** Words into lines no wider than {@code max} (in the font's own units). */
+    private static List<String> split(Font font, String s, int max) {
+        List<String> out = new ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        for (String word : s.split(" ")) {
+            if (line.length() > 0 && font.width(line + " " + word) > max) {
+                out.add(line.toString());
+                line.setLength(0);
+            }
+            if (line.length() > 0) line.append(' ');
+            line.append(word);
+        }
+        if (line.length() > 0) out.add(line.toString());
+        return out;
     }
 
     private static List<Component> wrap(Font font, String s) {

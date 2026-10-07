@@ -1457,50 +1457,91 @@ def store_stage(r, look, cx, cz):
 
 
 def trade_stage(r, look, cx, cz):
-    """Trade between towns (entity/TradeBook, TradeTalks, TradeDeals): a second town a little way off if the town
-    has no neighbour; a deal's caravan on the road between them (struck by the same bargaining if they have none),
-    seen from behind as it walks; an envoy from the neighbour before this town's board with its leader come out to
-    hear it and the town gathering; and the Trade page of the town's books (the book, the deals, the talks)."""
+    """Trade between towns (entity/TradeBook, TradeTalks, TradeDeals): the town and its nearest neighbour (a second
+    town a little way off if it has none), stocked to trade if neither has anything the other is short of (bread
+    and wheat here, stone there, as the game tests stock them); the neighbour's envoy before this town's board, the
+    town gathered and the envoy and the leader bargaining aloud, round by round, till they shake on it; then the
+    deal's caravan on the road to the neighbour, from behind and above as it walks; and the Trade page of the
+    town's books (the book, the deal, the rounds of the talks)."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
     hy = ground_height(r, cx, cz)
-    out = r.cmd("execute positioned %d %d %d run village trade stage" % (cx, hy + 1, cz))
+    here = "execute positioned %d %d %d run village trade " % (cx, hy + 1, cz)
+    out = r.cmd(here + "stage")
     if "no neighbour" in out:
-        tx, tz = cx - 240, cz + 30
-        tx, tz = other_town(r, tx, tz, "second town")
-        out = r.cmd("execute positioned %d %d %d run village trade stage" % (cx, hy + 1, cz))
+        other_town(r, cx - 240, cz + 30, "second town")
+        out = r.cmd(here + "stage")
     say("trade stage: " + out[:1500])
-    say("trade: " + r.cmd("execute positioned %d %d %d run village trade" % (cx, hy + 1, cz))[:1500])
-    # The caravan, from behind and above, walking on toward the other town.
-    c = re.search(r"CARAVAN (-?\d+) (-?\d+) (-?\d+)", out)
-    w = re.search(r"TOWARD (-?\d+) (-?\d+) (-?\d+)", out)
+
+    def audience_view(text):
+        """Where to stand to see the envoy and the leader side on, and where to look: (eye, target), or None."""
+        e = re.search(r"ENVOY (-?\d+) (-?\d+) (-?\d+)", text)
+        el = re.search(r"ELDER (-?\d+) (-?\d+) (-?\d+)", text)
+        if not e:
+            return None
+        ex, ey, ez = int(e.group(1)), int(e.group(2)), int(e.group(3))
+        lx, lz = (int(el.group(1)), int(el.group(3))) if el else (ex + 2, ez)
+        mx, mz = (ex + lx) / 2.0, (ez + lz) / 2.0
+        dx, dz = lx - ex, lz - ez
+        n = max(1.0, math.hypot(dx, dz))
+        return (mx - 6 * dz / n, ey + 1.5, mz + 6 * dx / n), (mx, ey + 1.2, mz)
+
+    # The audience: another gathering under way (a town meeting) is let finish first; then the bell, the town
+    # gathers, and the envoy and the leader bargain aloud. The picture while the offers are being said.
+    taken = False
+    last = out
+    deal = "DEAL " in out
+    for i in range(36):                                # three minutes at most
+        if deal:
+            break
+        time.sleep(5)
+        last = r.cmd(here + "audience")
+        m = re.search(r"AUDIENCE ENVOY SPEECH .*?line=(\d+)/(\d+)", last)
+        if i % 4 == 0 or m:
+            say("audience: " + last[:400].replace("\n", " | "))
+        if m and not taken and int(m.group(1)) >= 4:
+            view = audience_view(last)
+            if view:
+                (sx, sy, sz), (tx, ty, tz) = view
+                look("22-trade-1-audience", sx, sy, sz, tx, ty, tz, wait=4)
+                taken = True
+        deal = "DEAL " in last
+    if not taken:
+        view = audience_view(last)
+        if view:
+            (sx, sy, sz), (tx, ty, tz) = view
+            look("22-trade-1-audience", sx, sy, sz, tx, ty, tz, wait=4)
+        else:
+            say("no envoy to photograph")
+    if not deal:
+        say("no deal at the audience in time; the two leaders bargain at once: " + r.cmd(here + "now")[:1500])
+    say("trade: " + r.cmd(here)[:2500])
+    # The caravan on the road, from behind and above: the camera there first, then the caravan set down below it.
+    plan = r.cmd(here + "road plan")
+    say("road plan: " + plan[:300])
+    c = re.search(r"ROAD (-?\d+) (-?\d+) (-?\d+)", plan)
+    w = re.search(r"TOWARD (-?\d+) (-?\d+) (-?\d+)", plan)
     if c:
         x, y, z = int(c.group(1)), int(c.group(2)), int(c.group(3))
         ax, az = (int(w.group(1)), int(w.group(3))) if w else (x + 10, z)
         dx, dz = ax - x, az - z
         n = max(1.0, math.hypot(dx, dz))
-        ex, ez = x - 9 * dx / n + 2, z - 9 * dz / n + 2
+        ex, ez = x - 10 * dx / n, z - 10 * dz / n
         r.cmd("tp %s %d %d %d" % (USER, ex, y + 20, ez))
-        time.sleep(10)                                 # the road's chunks arrive
-        cy = max(y, ground_height(r, int(ex), int(ez))) + 4
-        look("22-trade-1-caravan", ex, cy, ez, x + 4 * dx / n, y + 1, z + 4 * dz / n, wait=6)
+        time.sleep(12)                                 # the road's chunks arrive
+        cy = max(y, ground_height(r, int(ex), int(ez))) + 6
+        r.cmd("tp %s %.1f %d %.1f" % (USER, ex, cy, ez))
+        time.sleep(3)
+        road = r.cmd(here + "road")
+        say("road: " + road[:500])
+        if re.search(r"CARAVAN -?\d+", road):
+            look("22-trade-2-caravan", ex, cy, ez, x + 6 * dx / n, y + 1, z + 6 * dz / n, wait=3)
+        else:
+            say("no caravan on the road to photograph")
     else:
-        say("no caravan on the road to photograph")
-    # The envoy before the board, the leader facing it.
-    e = re.search(r"ENVOY (-?\d+) (-?\d+) (-?\d+)", out)
-    el = re.search(r"ELDER (-?\d+) (-?\d+) (-?\d+)", out)
-    if e:
-        ex, ey, ez = int(e.group(1)), int(e.group(2)), int(e.group(3))
-        lx, ly, lz = (int(el.group(1)), int(el.group(2)), int(el.group(3))) if el else (ex + 2, ey, ez)
-        mx, mz = (ex + lx) / 2.0, (ez + lz) / 2.0
-        dx, dz = lx - ex, lz - ez
-        n = max(1.0, math.hypot(dx, dz))
-        sx, sz = mx - 6 * dz / n, mz + 6 * dx / n          # off to one side of the two, square on
-        look("22-trade-2-audience", sx, ey + 1.5, sz, mx, ey + 1.2, mz, wait=8)
-    else:
-        say("no envoy to photograph")
-    # The Trade page of the town's books.
+        say("no road to photograph")
+    # The Trade page of the town's books: the book, the deal and the rounds of the talks.
     r.cmd("gamemode creative %s" % USER)
     r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
     time.sleep(3)
