@@ -6734,3 +6734,125 @@ The game tests `CrimeGameTests` (cr01 to cr08) check that:
 * an innocent with nothing against it is acquitted and cleared;
 * a vandal mends the window it broke with a pane from the stores, at its own cost;
 * a second offender sits in stocks the town puts up on the square from its own timber.
+## Fire, flood and drought
+
+A town of timber by a river, under the open sky, has three old enemies: a spark from its own forge, the river in
+a wet spring, and a summer that will not rain. Each comes rarely, makes a stir while it lasts, costs the town
+something, and is answered, so the next one costs less. None of them is ruinous, and you can turn them all off.
+
+**Fire**
+
+* **Where fires come from.** Lightning in a storm, lava, a campfire, as before; and now and then a spark from a
+  lit furnace or smoker in one of the town's buildings (the smithy's forge, a house's kitchen, the bakery's oven)
+  catches the timber or wool right beside it. A careless town sees one every week or two; a dry spell makes it
+  twice as likely, a drought three times, a cauldron of water by the forge half as likely, and stone all round the
+  forge stops it altogether.
+* **The bell.** A new fire rings the town's bell (the fire station's, once there is one): a quick peal of a dozen
+  strokes. Whoever is nearest the bell cries out where it is (*Fire at the smithy! Bring your buckets!*), the
+  chronicle says so, and the board shows **FIRE AT THE SMITHY!** in red while it burns.
+* **The brigade and the bucket chain.** One to three of the nearest folk still run to a small fire with a bucket
+  (or their fists). A big fire (six blocks or more alight) with water within thirty blocks also gets a bucket
+  chain: four to ten folk in a line from the water to the fire, a couple of paces apart. The buckets are real
+  ones, off the fire station's rack, out of the stores, or made there and then from three of the stores' iron
+  each, and you can see them in the folk's hands. Full buckets go along the line toward the fire and empty ones
+  come back, swapped hand to hand. The first in line fills them at the water and the last throws them on the
+  flames. When the fire is out, every bucket goes back where it came from. A folk's card shows its place in the
+  chain.
+* **Never more than two buildings.** A fire that reaches a third building has that flame beaten out by the
+  neighbours at once.
+* **Rebuilding.** Each of the town's buildings a fire reaches is noted, block by block, from its own drawing, the
+  moment the fire is seen. When the fire is out, whatever burned is put back exactly as it stood, on the town's
+  works, by a hand at the building, a few blocks every couple of seconds. Every block is paid for out of the
+  stores: the same block if they hold it, otherwise what it is made of (a plank for a plank, stair, slab, fence or
+  door; a log for a log; wool for wool). If the makings run short the work waits, and the board says what for
+  (*Rebuilding the house after the fire: 3 of 6 blocks back, waiting for planks*). While a home is being rebuilt
+  its household sleeps in a neighbour's spare bed, or at the inn, or by the meeting hall's fire, and goes home in
+  the morning.
+* **Taking care afterwards.** After a fire caused by a spark, the town lays stone round its forges: every
+  burnable block of a town building's drawing beside a furnace is swapped for stone from the stores, and the
+  timber goes back into them. After any fire it keeps a cauldron of water by each workshop (smithy, smeltery,
+  workshop, bakery, café, tavern, brewery), made of a cauldron from the stores or seven of their iron (never the
+  last sixteen). A hand at the next fire fills a bucket there. On dry nights (three days without rain, a drought,
+  or the three nights after a fire) one of the watch keeps a **fire watch**, walking round the forges and the
+  watchtower with a light, and stamps out any spark it sees. An Iron Age town that has had two fires builds a
+  **fire station**: a small stone engine house with wide doors, a cauldron inside, a rack of four buckets and the
+  fire bell on its step (if the town has a bell to hang there).
+
+**Floods**
+
+* **When.** In spring or autumn, if it has rained on three of the last seven days and it rains again, the river
+  beside a town comes up over its low ground, at most once a season. In a very wet week it rises two blocks
+  instead of one (*the great flood*). "The river" is the town's main stretch of open water: a river, a lake or the
+  sea, not a well or a fountain.
+* **Safe and reversible.** The water is real, but the mod puts it only in empty cells, a block or two above the
+  river's level, joined to the river, within the town's reach. It never goes next to anything a player built, and
+  never replaces a block: grass tufts, flowers, crops and torches stay put with the water round them. The water is
+  held where it is placed and does not run into cellars, mines or fields. Every cell is written down (and kept
+  across a restart). A minute after the rain stops the flood goes down the way it came, and exactly those cells
+  are emptied again, only where they still hold water. (Grass that sat under the water may turn to bare earth, as
+  it does in the game; it grows back.)
+* **What it costs.** Folk in a flooded low house go up to the high ground. A child in the water gets out
+  wherever it is, and so does everyone in a great flood. Nobody drowns. A flooded household sleeps at a
+  neighbour's until the water is down. Crops in the low fields go back to seedlings, and a store chest the water
+  reaches loses a quarter of its grain, bread, sugar and paper (four dozen items at most).
+* **The levee.** Once the water is down, the town builds a levee along the bank where the river came over, as high
+  as the water reached. It is made of earth (or gravel or cobblestone) from the stores, by hand. Where a street or
+  a jetty goes down to the water it puts a step of slab instead, so the way stays open. The same flood stops at the
+  levee. The low ground it covered is also kept clear of new buildings.
+
+**Droughts**
+
+* **When.** Six days running without rain on the town in summer (a day more in late spring) is a drought. It lasts
+  until it rains or summer ends.
+* **What it does.** The town's crops on dry farmland (no water within four blocks) grow at a quarter of their usual
+  pace, on a farmer's plot and on the town's farmland alike. A watered field grows as usual. Wild crops and your
+  own farms are never touched. Farmers with a dry field fill a bucket at the nearest water (their own, or a stores
+  bucket that goes back when the drought breaks) and pour it on the driest part of their field. If the leader's
+  books show the larder running down, the town goes on short rations, so folk take fewer meals from the stores at
+  a time. Food prices rise with the falling stock, as they always do.
+* **Irrigation.** The town answers by digging irrigation channels through every field that was dry: a straight
+  run of water every eight rows, dug by hand on the town's works. The soil goes into the stores, and every block
+  of water is carried in a stores bucket from the river, the well or the pond. That field is then watered in the
+  next drought and grows on. (Not if `villageReshapeLand` is off: the town keeps your land as it is.)
+
+**Where you see it**
+
+* **The board:** a fire burning now; the weather's danger (*Dry for 9 days: a fire watch tonight.*, *The river is
+  in flood: the low houses are under water.*); a rebuilding, the levee or the irrigation under way.
+* **The crier and the gazette:** the morning news gives the weather's danger, and the gazette has a *Fire, flood
+  and drought* page with yesterday's events.
+* **The chronicle** records each event and what was built after it (*The great flood of day 34: the river came
+  up over the low ground...*; *the levee was finished on day 38*).
+* **The town's books:** the News page has a *Fire, flood and drought* panel with the weather, the fires (sparks,
+  blocks burnt and rebuilt), fire safety, the floods (cells, crops spoiled, goods soaked, the levee), the droughts
+  and irrigation, and the record.
+* **Folk:** they talk about it (*Were you there for the fire at the smithy?*, *Dry as a bone, these fields.*), and
+  a folk's card says if it is in a bucket chain, out of the flood, sleeping at a neighbour's, on the fire watch or
+  carrying water.
+
+**Settings and commands**
+
+* `villageDisasters` (on): turns forge sparks, floods and droughts on or off. With it off, a lightning fire is
+  still put out and rebuilt.
+* `villageSparkDays` (10): about how many days between sparks in a careless town.
+* `villageFloodRainDays` (3): how many of the last seven days must be wet before a flood. Higher is rarer, and 8
+  means never.
+* `villageDroughtDays` (6): how many dry summer days make a drought.
+* `/village disasters`: the nearest town's weather, fires, floods and droughts, and what it built after them.
+  Operators can also bring one on now: `/village disasters fire now`, `flood now [1|2]`, `flood drain`,
+  `levee now`, `drought now|end` and `irrigate now`. `/village disasters stage fire|flood|levee|irrigation` sets up
+  a scene where you stand for the pictures.
+
+The game tests `DisastersGameTests` (dd01 to dd07) check that:
+* a spark from a lit forge in the smithy rings the bell, a hand puts the fire out with the stores' bucket, the
+  books put it down to the forge, and stone goes round the forge afterwards;
+* a six-block fire a dozen blocks from a pond draws a bucket chain of four or more that passes buckets and throws
+  them, and every bucket goes back to the stores;
+* six burnt planks are put back exactly as they stood out of the stores' planks, the work waiting when the
+  planks run out;
+* a forced flood puts water only in empty cells a block over the river, the folk in the low house gets out to the
+  high ground without drowning, and when it drains every block is as it was;
+* after the flood a levee is raised out of the stores' earth, and the same flood then stays off the low ground;
+* a drought slows a dry field to under three fifths of its pace and not a watered one, and the town then digs
+  irrigation through the dry field;
+* a fire along three houses at once is never let burn more than two of them.

@@ -1877,6 +1877,23 @@ def crime_stage(r, look, cx, cz):
     at the hall or on the square (/village crime try), photographed from behind the dock while it is heard; then the
     stocks put up on the square out of the stores and the convicted sat in them (/village crime stocks), from in front;
     and the town's books open at the Cases page (the month's crime, what keeps it down, the case file)."""
+
+
+def disasters_stage(r, look, cx, cz):
+    """[disasters] Fire, flood and drought (entity/Disasters, BucketChain, Floods, Droughts). Three scenes set out past
+    the first houses by operator commands, each saying where to look from (VIEW name x y z ax ay az: the eyes' feet
+    and what they look at):
+      1. /village disasters stage fire: a timber house of the town's on clear ground with a pond fourteen blocks
+         behind it, its back wall alight in eight places; the brigade is called at once and a bucket chain forms
+         from the pond. Ten seconds on (the folk at their places, the buckets going along), from the side of the line.
+      2. /village disasters stage flood: a river channel forty blocks long with a low street of beaten earth along
+         its bank and a house of the town's on the low ground; the river brought up over it at once (real water,
+         in the empty cells only). From over the street, the water round the house and in its doorway.
+      3. /village disasters stage levee: the flood taken up again, every cell of it, and the levee raised along
+         the bank out of the stores' earth (a slab step where the avenue goes down to the water). From the same
+         side, the new bank.
+    Then /village disasters said (the weather, the fires, the flood, the levee, the record). Not wired in: call
+    it after cave_stage in main(). What is left alight at the fire is put out after (fire to air in its box)."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
@@ -2035,6 +2052,38 @@ def pets_stage(r, look, cx, cz):
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     say("alive after crime: %s" % client_alive())
+
+
+    num = r"(-?\d+)"
+    pattern = r"VIEW (\S+) " + " ".join([num] * 6)
+
+    def stage(which, sx, sz, settle):
+        sy = ground_height(r, sx, sz)
+        r.cmd("tp %s %d %d %d" % (USER, sx + 12, sy + 12, sz + 12))
+        time.sleep(settle)                             # the scene's ground arrives at the server and the client
+        out = r.cmd("execute positioned %d %d %d run village disasters stage %s" % (sx, sy + 1, sz, which))
+        say("disasters stage %s: %s" % (which, out[:700]))
+        return re.findall(pattern, out)
+
+    # 1. The bucket chain at a fire, out past the first houses (near enough that the folk are called to it).
+    fx, fz = cx + 44, cz + 20
+    views = stage("fire", fx, fz, 8)
+    time.sleep(10)                                     # the chain forms up and the buckets start along it
+    for name, x, y, z, ax, ay, az in views:
+        look("27-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=4)
+    say("the fire after: " + r.cmd("execute positioned %d %d %d run village disasters" % (fx, 80, fz))[:600])
+    # 2. A flooded low street, out past the town on the other side (the scene is its own river and low ground).
+    sx, sz = cx - 64, cz + 40
+    for name, x, y, z, ax, ay, az in stage("flood", sx, sz, 8):
+        look("27-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=6)
+    # 3. The flood taken up again and the levee raised along its bank.
+    for name, x, y, z, ax, ay, az in stage("levee", sx, sz, 2):
+        look("27-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=6)
+    hy = ground_height(r, cx, cz)
+    say("disasters: " + r.cmd("execute positioned %d %d %d run village disasters" % (cx, hy + 1, cz))[:1500])
+    fy = ground_height(r, fx, fz)
+    r.cmd("fill %d %d %d %d %d %d minecraft:air replace minecraft:fire" % (fx - 10, fy - 4, fz - 22, fx + 10, fy + 14, fz + 10))
+    say("alive after the disasters: %s" % client_alive())
 
 
 def main():

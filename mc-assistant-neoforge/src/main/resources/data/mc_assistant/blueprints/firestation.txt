@@ -1,0 +1,66 @@
+# The fire station (the Iron Age, once the town has had two fires: FireSafety): a small engine house all of
+# stone and brick, nothing in it to burn, with three doors wide on the street. Along the back wall the town's
+# fire buckets hang on their rack (the two chests) between barrels; a cauldron of water stands inside the
+# door, and the fire bell stands on the step before it, where anybody running past can ring it.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name firestation
+layer -1
+.........
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.ZSSSSSZ.
+.SQCQCQS.
+.S.....S.
+.S&....S.
+.S.....S.
+.S.....S.
+.ZSDDDSZ.
+.......e.
+layer 1
+.........
+.ZSSSSSZ.
+.S.....S.
+.G.....G.
+.S.....S.
+.G.....G.
+.S.....S.
+.ZS...SZ.
+.........
+layer 2
+.........
+.ZSSSSSZ.
+.S.....S.
+.S.....S.
+.S..j..S.
+.S.....S.
+.S.....S.
+.ZSSSSSZ.
+.........
+layer 3
+.........
+.SSSSSSS.
+.SSSSSSS.
+.SSSSSSS.
+.SSSSSSS.
+.SSSSSSS.
+.SSSSSSS.
+.SSSSSSS.
+.........
+layer 4
+.........
+.sssssss.
+.s.....s.
+.s.....s.
+.s.....s.
+.s.....s.
+.s.....s.
+.sssssss.
+.........
