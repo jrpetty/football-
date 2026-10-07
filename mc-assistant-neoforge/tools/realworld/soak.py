@@ -161,10 +161,15 @@ def report(r, x, z, label, compact=False):
         return
     # A hundred lines a checkpoint is more than anybody reads: tally instead.
     trades, idle, gated, frozen = {}, 0, 0, 0
+    # [mine-safety] Folk sat in a boat or a cart go nowhere, whatever their card says they are doing (Aboard).
+    aboard = []
     for line in lines[1:]:
         m = re.search(r" L\d+ (\w[\w ]*?) hp=", line)
         if m:
             trades[m.group(1)] = trades.get(m.group(1), 0) + 1
+        a = re.search(r"^(\w+) .* aboard=(\w+)", line.strip())
+        if a:
+            aboard.append("%s in a %s" % (a.group(1), a.group(2)))
         # A child has no trade and no work to do yet: counted as a child, not as a hand standing idle
         # (the hundred's tallies read its children as ten-odd grown folk with no trade).
         if m and m.group(1) == "Child":
@@ -176,8 +181,8 @@ def report(r, x, z, label, compact=False):
         m = re.search(r"sinceWork=(\d+)", line)
         if m and int(m.group(1)) > 6000:
             frozen += 1
-    say("TALLY %d folk; trades %s; %d with no job, %d missing something, %d not worked in 5 min"
-        % (max(0, len(lines) - 1), trades, idle, gated, frozen))
+    say("TALLY %d folk; trades %s; %d with no job, %d missing something, %d not worked in 5 min; aboard: %s"
+        % (max(0, len(lines) - 1), trades, idle, gated, frozen, ", ".join(aboard) if aboard else "none"))
     for line in lines[1:9]:
         say("  " + line)
 

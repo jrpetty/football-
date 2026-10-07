@@ -89,6 +89,12 @@ public final class TownMine {
         return level.getFluidState(top.below()).isEmpty() && level.getFluidState(top).isEmpty();
     }
 
+    /** [mine-safety] The middle of the mine's first face (y 0), or null when the town has no mine yet. */
+    @Nullable
+    public static BlockPos siteOf(UUID village) {
+        return kept(village);
+    }
+
     @Nullable
     private static BlockPos kept(UUID village) {
         String s = Ledger.note(village, "mine.site");
@@ -280,6 +286,7 @@ public final class TownMine {
             out.add(f.displayNameCap() + ": " + (c == null ? "a plot outside the mine at " + z.center().getX() + ", " + z.center().getZ()
                 : "face " + c[0] + "," + c[1]) + ", down to Y" + z.depth());
         }
+        out.addAll(MineSafety.report(village));                    // [mine-safety] who is down there; the stair heads fenced
         return out;
     }
 

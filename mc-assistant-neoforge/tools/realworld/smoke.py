@@ -1648,6 +1648,27 @@ def war_peace_stage(r, look, cx, cz):
     say("alive after the war: %s" % client_alive())
 
 
+def mine_safety_stage(r, look, cx, cz):
+    """The mine made safe (entity/MineSafety, Aboard): a run of mine stairs cut into the ground out past the
+    town (/village mine showcase), the open top of them fenced round at the surface, the head left open as
+    the way in and the sign "The mine of <town>" on the post beside it; from above the head, and close to
+    the sign. Then what /village mine says: who is below ground in the mine, the stair heads fenced, and any
+    folk that had to get out of a boat."""
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    sx, sz = cx + 70, cz - 120                       # out past the town, on ground of its own
+    gy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx - 6, gy + 8, sz - 8))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village mine showcase" % (sx, sz))
+    say("mine showcase: " + out[:500])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look(name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8 if i == 0 else 5)
+    say("mine: " + r.cmd("execute positioned %d 100 %d run village mine" % (cx, cz))[:900])
+    say("alive after the mine: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

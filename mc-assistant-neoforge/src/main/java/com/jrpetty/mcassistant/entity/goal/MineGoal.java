@@ -1326,9 +1326,11 @@ public class MineGoal extends Goal {
 
     // --- the way up -------------------------------------------------------------
 
-    /** Rock over its head: it is underground (MineStairs.underground). */
+    /** Rock over its head: it is underground (MineStairs.underground); or deep in its town's mine with the sky
+     *  over it, the open top of a pit, which is below ground all the same ([mine-safety] MineSafety.below). */
     private boolean buried() {
-        return com.jrpetty.mcassistant.entity.MineStairs.underground(assistant.level(), assistant.feetPos());
+        return com.jrpetty.mcassistant.entity.MineStairs.underground(assistant.level(), assistant.feetPos())
+            || com.jrpetty.mcassistant.entity.MineSafety.below(assistant, assistant.feetPos());
     }
 
     /** Going after ore: on the way down or along a gallery, never on the way up or out. */
@@ -1341,6 +1343,8 @@ public class MineGoal extends Goal {
      *  moved, and the way out off it altogether): never what somebody built or put there. */
     private boolean allowed(BlockPos pos) {
         if (mayDig(pos)) return true;
+        // [mine-safety] The fence round its mine's stair heads, where new stairs run: it goes up again round them.
+        if (phase == Phase.DESCEND && com.jrpetty.mcassistant.entity.MineSafety.fenceInTheWay(assistant, pos)) return true;
         if (!escaping && phase != Phase.RETURN) return false;
         BlockState s = assistant.level().getBlockState(pos);
         // Lost under the town, it climbs out through the rock, never through a cellar's cobbled floor.
@@ -1448,7 +1452,8 @@ public class MineGoal extends Goal {
 
     private void ascendTick() {
         cursor = assistant.feetPos();
-        if (com.jrpetty.mcassistant.entity.MineStairs.open(assistant.level(), cursor)) {
+        if (com.jrpetty.mcassistant.entity.MineStairs.open(assistant.level(), cursor)
+                && !com.jrpetty.mcassistant.entity.MineSafety.below(assistant, cursor)) {   // [mine-safety] not the floor of a pit
             finishAscent();
             return;
         }

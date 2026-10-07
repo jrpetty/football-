@@ -5926,3 +5926,51 @@ The game tests `WarAndPeaceGameTests` (wp01 to wp10) check that:
 * at the peace the militia stands down, the volunteers go back to their trades, the danger pay ends, a
   feast is called, the memorial goes up with the name of the spy the war cost, and Remembrance Day falls
   on the day of the peace a year later.
+
+## Dry land and safe mines
+
+* **Nobody sits in a boat for good.** A boat takes aboard any creature that bumps into it, and a
+  creature never gets out by itself. The boat moored at each fisher's jetty used to catch folk this
+  way: in one long game, three farmers and a miner sat in two boats below the town for forty days
+  and more, and the fields went untended until the food ran out. Now a folk only gets into a boat or a
+  minecart when it means to go somewhere in it. One that finds itself aboard anyway, from a world
+  saved like that, climbs out within a second and wades ashore. Horses are still ridden as before.
+* **Only miners go down the mine.** A folk with nothing to do in its own trade is no longer sent
+  to a miner's face to cut stone, since that walked it down the stairs after the nearest rock. It
+  fetches timber instead, and its own trade and field are untouched while it helps.
+* **Anyone below ground in the mine climbs out.** A folk in the town's mine that is not a miner at
+  work is sent up the stairs, mending missing steps as it climbs, or cuts and lays its own steps as
+  a player would. It is never lifted out. The town's other rescues, such as being put back on its
+  plot or set down by its bed, send a folk below ground in the mine climbing instead.
+* **The stair heads are fenced.** The top steps of a mine's stairs are an open trench two or three
+  blocks deep. A hand on the town's works fences them round at ground level, leaving the head
+  itself open as the way in, and puts a sign on the post beside it reading *The mine of* and the
+  town's name. The fence and the sign come out of the stores: a length of fence or two planks each,
+  a sign or two planks. A miner cutting new stairs takes down any length that stands in its way,
+  and it is put up again round the new ones.
+* **Work chests stay at the surface.** A miner's work chest, where the couriers collect its stone and
+  ore, is always set down at ground level on the edge of its face, never down below.
+
+Where to see it:
+* `/village mine` (and the long game's MINE line) adds two lines. *Below ground in the mine* lists
+  who is down there, by name and trade, and whether each is at work or climbing out. *Stairs into
+  the mine* gives how many stair heads there are, whether they are all fenced round, and how many
+  have the sign up. A third line counts folk who had to get out of a boat or cart they never meant
+  to board, if there were any.
+* `/village mine showcase` (operators) cuts a short run of mine stairs where you stand, fenced round
+  with the sign up, so you can see what the town does at its stair heads.
+* A folk's line in `/village folk` shows `aboard=boat` while it sits in one. The long game's tally
+  names anyone who is.
+
+The game tests `MineSafetyGameTests` (mf01 to mf05) check that:
+* a boat takes a pig aboard, but not a folk that bumps into it;
+* a folk already sitting in a boat cannot be moved by a rescue, gets out within two seconds, and is
+  not taken aboard again;
+* a farmer twenty-four blocks down, at the end of a gallery below stairs with a broken step, climbs
+  out and walks back to its field without ever being lifted, and afterwards the books show nobody
+  below ground;
+* the open top of a mine's stairs is fenced round with the head and the first step left open and the
+  sign up, and a farmer whose straight way crosses it walks round without ever going below ground;
+* a farmer with nothing to do is lent out for timber, never to a miner's face for stone, keeps its
+  trade and field, and is back on its own field once the lend is over;
+* a miner at the foot of its stairs sets its work chest down at the surface of its face.
