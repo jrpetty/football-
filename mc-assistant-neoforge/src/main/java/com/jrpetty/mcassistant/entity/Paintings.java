@@ -358,6 +358,17 @@ public final class Paintings {
         return b == null ? -1 : hanging(level, v.id(), b);
     }
 
+    /** Tests: how many places on this building's walls a picture would hang now (for the log, when it does not). */
+    public static int placesForTests(ServerLevel level, Villages.Village v, String structure) {
+        Ledger.Building b = Culture.building(v.id(), structure);
+        if (b == null) return -1;
+        int n = 0;
+        for (Decor.Spot s : Decor.wallSpots(level, Decor.room(v.id(), b), b.anchor(), 1, Decor.reserved(level, v.id(), b))) {
+            if (Painting.create(level, s.at(), s.facing()).isPresent()) n++;
+        }
+        return n;
+    }
+
     /** Tests: is this an artist (a whittler or a gardener), and is tonight one of its painting evenings? */
     public static boolean tonightForTests(VillageFolkEntity f, long day) {
         return artist(f) && tonight(f, day);

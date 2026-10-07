@@ -620,7 +620,7 @@ public class CultureGameTests {
                 f.removeMatching(s -> s.is(Items.STICK) || s.is(ItemTags.WOOL), 999);
             }
             Ledger.addCoins(id, 50);
-            chestAt(level, t.heart().offset(3, 0, -3), new ItemStack(Items.STICK, 8), new ItemStack(Items.RED_WOOL, 1));
+            Container box = chestAt(level, t.heart().offset(3, 0, -3), new ItemStack(Items.STICK, 8), new ItemStack(Items.RED_WOOL, 1));
             int purse = painter.purse(), treasury = Ledger.coins(id);
             boolean done = Paintings.paintForTests(painter, level, v);
             ItemStack picture = ItemStack.EMPTY;
@@ -646,9 +646,18 @@ public class CultureGameTests {
             Kit.log("ci07 in the tavern: " + hung + " (" + entities + " paintings about it)");
             helper.assertTrue(hung == 1 && entities == 1 && Market.stock(level, id, s -> s.is(Items.PAINTING)) == 0,
                 "the picture hung in the tavern, out of the stores");
-            chestAt(level, t.heart().offset(-3, 0, -3), new ItemStack(Items.PAINTING, 2));
+            // Two more pictures into the stores (the same chest the makings came out of, a store for certain): the tavern
+            // takes one, up to its two, and the other stays in the stores; and it takes no more after that.
+            put(box, new ItemStack(Items.PAINTING, 2));
+            int stocked = Market.stock(level, id, s -> s.is(Items.PAINTING)), places = Paintings.placesForTests(level, v, "tavern");
             int now = Paintings.hangForTests(level, v, "tavern");
-            helper.assertTrue(now == 2 && Market.stock(level, id, s -> s.is(Items.PAINTING)) == 1, "two in the tavern at most: " + now);
+            int left = Market.stock(level, id, s -> s.is(Items.PAINTING));
+            Kit.log("ci07 with " + stocked + " more in the stores and " + places + " places on the tavern's walls: " + now + " hang there, "
+                + left + " left in the stores");
+            helper.assertTrue(now == 2 && left == stocked - 1, "the tavern hung one more, up to its two: " + now + " hang, "
+                + left + " of " + stocked + " left in the stores, " + places + " places free on its walls");
+            int again = Paintings.hangForTests(level, v, "tavern");
+            helper.assertTrue(again == 2 && Market.stock(level, id, s -> s.is(Items.PAINTING)) == left, "and no more than two: " + again);
             helper.succeed();
         });
     }
