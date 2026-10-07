@@ -440,6 +440,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // [batchA] A neighbour's errand: the old visited, a newcomer shown round, a housewarming, the poor box (Neighbourly).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel kind
                 && (tickCount % 4 == 1 ? Neighbourly.hold(this, kind) : Neighbourly.busy(this))) return;
+        // [batchF] The town's affairs (Civics): out with a search party, the post, a warden's round, a petition, a good turn.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel civic
+                && (tickCount % 4 == 3 ? Civics.hold(this, civic) : Civics.busy(this))) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -1131,6 +1134,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Families.mood(this, day, m, why);           // its wedding anniversary (Families)
         m = Visitors.mood(this, day, m, why);           // [batchG] a night of the bard's songs, a day with a friend from away
         m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
+        m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -1478,6 +1482,9 @@ public class VillageFolkEntity extends AssistantEntity {
     String griefFor = "";
     /** The last day it had words with somebody. */
     private long quarrelDay = -10;
+
+    /** [batchF] The day it last had words with somebody (Wardens: a quarrel for the warden to settle). */
+    public long quarrelledOn() { return quarrelDay; }
 
     private static final net.minecraft.network.syncher.EntityDataAccessor<String> DATA_SOCIAL =
         net.minecraft.network.syncher.SynchedEntityData.defineId(

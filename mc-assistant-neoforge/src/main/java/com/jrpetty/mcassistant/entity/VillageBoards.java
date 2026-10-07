@@ -380,6 +380,7 @@ public final class VillageBoards {
         for (String p : Assemblies.planned(id)) out.add("RG|This evening: " + p + ".");
         if (day % 7 == 3) out.add("RM|The council sits this evening.");
         out.addAll(Elections.board(id, day));
+        out.addAll(Civics.board(level, id));                  // [batchF] the post, petitions, the fund, the meeting, a search
 
         // ---- what we're working towards
         out.add("FH|What we're working towards");

@@ -329,6 +329,8 @@ public final class Villages {
             case "flats" -> "a block of flats";                   // [flats]
             case "pitch" -> "the football pitch";                 // [batchC]
             case "range" -> "the archery range";                  // [batchC]
+            case "postoffice" -> "the post office";               // [batchF]
+            case "statue" -> "the statue on the square";          // [batchF]
             default -> "the " + structure;
         };
     }
@@ -415,6 +417,7 @@ public final class Villages {
         Woods.resetForTests();              // [wf] the woodcutters' stumps and errands
         FireBrigade.resetForTests();        // [wf] the fires and the hands at them
         Weather.resetForTests();            // [wf] the storm (and a test's storm let go), the rods looked at
+        Civics.resetForTests();             // [batchF] the post, petitions, the meeting, wardens, the fund, searches, favours
         Roads.reset();
         LAST_PROJECT.clear();
         POP.clear();
@@ -1619,7 +1622,8 @@ public final class Villages {
      */
     public static List<String> projectsWanted(UUID villageId) {
         // [flats] a block of flats ahead of the next house, in the Iron Age when the town wants one (Flats)
-        return requestedFirst(villageId, Flats.wanted(villageId, ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId))));
+        // [batchF] and, after everything else, the post office and the statue its own people paid for (Civics.wanted)
+        return requestedFirst(villageId, Civics.wanted(villageId, Flats.wanted(villageId, ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId)))));
     }
 
     /** The buildings an age asks for before the next (Villages.needs): the wall, the smeltery and the hall;
@@ -2101,6 +2105,8 @@ public final class Villages {
             case "infirmary" -> Infirmary.why(villageId);          // [batchA]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
+            case "postoffice" -> Post.why(villageId);                     // [batchF]
+            case "statue" -> PublicFund.why(villageId);                   // [batchF]
             default -> "the " + project;
         };
     }

@@ -5221,3 +5221,69 @@ house's window boxes and the notice board; a household's plot turned, sown and h
 home in its chest; the orchard planted, grown, picked and planted again; the windmill's place, its sails
 and its grain; the bakery's four bakes by their recipes and its milled batches; and a player's room and a
 traveller's at the inn.
+
+## Town life and governance
+
+* **The post office and letters.** From the Stone Age a town of ten wants a post office (built once its
+  more pressing buildings are up): a small timber office facing the square, a counter across it, the clerk's lectern behind and a row of pigeonholes
+  (barrels) along the back wall, its name on the sign by the door. One of the storehouse's couriers is its
+  postman. Folk with family or close friends living in another town now (a child who took a job there, a
+  friend who went off with a colony, a sister who married away) write to them of an afternoon on a sheet of
+  the stores' paper and walk it to the counter. A letter goes no faster than somebody walking: it waits in
+  the pigeonholes until a caravan or an envoy sets out that way, travels in the carrier's bag, and comes out
+  at the other town's counter, whose postman walks it round. Read, it is remembered, cheers the reader up
+  and warms it to the writer, and about half the time it is answered. **To write yourself**, take a book
+  and quill, put the name at the top ("Dear Ash,") or title a written book with it, and right-click the post
+  office's sign (or a pigeonhole, or the lectern, or hand it to the postman): it is posted to that folk,
+  wherever they live. They write back in your book, and the answer comes back to the counter you posted it
+  at: the postman brings it to you if you are in town, or right-click the sign with an empty hand. A letter
+  to somebody in the same town is answered within the day; one to another town takes as long as the road.
+* **Petitions.** Folk look about them: no bench anywhere near the house, the street at the door dark, no
+  well in their quarter, a plot out past the town with no road to it. One with a grievance gets up a
+  petition, and it goes on the board ("Petitions: a bench by No. 3 Elm Row (Ash; 2 of 4 names)"). Over the
+  next days the neighbours, the quarter, the hands who work that way and the raiser's friends walk to the
+  board of an evening and sign it (never its rivals). With a quarter of the grown folk's names the council
+  puts it on the town's works at its weekly sitting (or the elder does, if the council has not sat in two
+  days), and a hand does it with the stores' materials: a stair for a bench (or two planks), a fence post and
+  a torch for a light, eight cobblestone and a bucket of water for a well, a worn path for a road. The board
+  lists what the petitions have won. A petition without its names in a week lapses.
+* **The town meeting.** Once a week, the evening before the day of rest (or the day of rest itself, if that
+  evening is taken), the bell calls the town to the meeting hall's door, or to the board before there is a
+  hall. The elder gives the week: the treasury against last week, what went up, who was born and who died,
+  what the petitions won, how the statue fund stands and what is to be built next. Then two or three folk
+  have their say (a grumble about what the town is short of, a question about the next building, a word for
+  a petition still wanting names) and the elder answers each. A summary goes into the chronicle, and so into
+  the next morning's gazette, and everybody who came is a little the happier for knowing how the town stands.
+  The board says when the next one is.
+* **Quarter wardens.** Each quarter with homes in it (the market quarter, the craft quarter, the homes
+  quarter) has a warden: the folk living there the rest of the town thinks most of, never the elder nor the
+  watch. Of an evening it walks the quarter's street corners. A door nobody can walk in at goes to the town's
+  works and is dug out; a dark stretch of street gets a lamp (a fence post and a torch from the stores); litter
+  lying about (never a player's) is picked up and carried to the stores; and two neighbours who cannot abide
+  each other are talked round and shake on it. The warden's card says so, and the books keep its reports.
+* **The public works fund.** From the Stone Age, in a town of six or more, the board shows a fund for a statue
+  on the square: sixty coins. Folk with savings put in a coin or three now and then (the generous most). You
+  give by right-clicking the board with village coins in hand (a coin a click, the whole stack crouching) or
+  with `/village donate <coins>`; the town thinks the better of you for it. The coin is kept in the fund until
+  the sixty are raised; then it goes into the treasury and the statue (a stone figure holding up a lantern, on
+  a plinth with lanterns at its corners) goes to the head of the build list. When it stands, a sign before
+  it names those who gave most.
+* **Search parties.** Every few seconds the town notes where each of its folk is. One not seen in the town,
+  at its own work, in its bed or away on business the town knows of (a caravan, an errand, scouting, the
+  Nether, a mine run) for a whole day is missed: its partner, parents and grown children and two or three of
+  its friends go out to look, to where it was last seen and round about there, calling its name. It calls
+  back when it hears them. Found underground, it is set on its way up the nearest stairs and they wait at the
+  top; found stuck in a hole, they cut it a step out; then they bring it home, and the chronicle tells who
+  found it. At nightfall they go home and out again at first light; after three days the search is given up.
+  The board shows who is missing.
+* **Neighbourly favours.** Of an evening, a folk short of something goes round to a neighbour: the loan of a tool
+  its trade wants (a spare out of the neighbour's own pack), a bite to eat when it has gone without a meal
+  (sugar if the neighbour has any), or a hand carrying a heavy load to the stores. The things change packs
+  for real, and are paid back: the tool once the borrower has one of its own (or two coins for it), a bite
+  once there is food to spare (or a coin), a coin for the carrying. Both think the better of each other for
+  it; a folk who has done five good turns is known as a good neighbour, in the chronicle and on its card.
+
+A folk's card has a *Town life* line (its letters, its quarter if it is a warden, its petitions, its good
+turns, what it gave to the fund), and the books' News page has *The town's affairs*: the meetings, the
+petitions, the fund, the post, the wardens' reports, the searches and the good neighbours. `/village civic`
+prints the same. Tested by `TownAffairsGameTests` (tg01 to tg07).

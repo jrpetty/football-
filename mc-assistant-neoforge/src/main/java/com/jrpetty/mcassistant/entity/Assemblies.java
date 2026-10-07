@@ -51,7 +51,8 @@ public final class Assemblies {
         VIGIL("a vigil"), CELEBRATION("a celebration"), HONOUR("an honouring"), COUNCIL("the council's meeting"),
         ELECTION("an election"), COMING_OF_AGE("a coming of age"), ENVOY("an envoy's audience"),
         WATCH("the changing of the watch"), FOUNDING("Founding Day"),
-        FESTIVAL("a festival");                                 // [batchB] the May dance, the bonfire, the fair, the harvest (Festivals)
+        FESTIVAL("a festival"),                                 // [batchB] the May dance, the bonfire, the fair, the harvest (Festivals)
+        MEETING("the town meeting");                         // [batchF] once a week (TownMeeting)
 
         public final String label;
         Kind(String label) { this.label = label; }
@@ -208,6 +209,7 @@ public final class Assemblies {
             if (next == null && Elections.countsToday(id, day) && !held(id, Kind.ELECTION, day)) {
                 next = election(level, v, day);
             }
+            if (next == null && TownMeeting.due(id, day) && !held(id, Kind.MEETING, day)) next = TownMeeting.assembly(level, v, day);   // [batchF]
             // Rain puts off a feast, not a vigil, the council, or the count of an election.
             if (next != null && level.isRaining() && next.kind != Kind.VIGIL && next.kind != Kind.COUNCIL && next.kind != Kind.ELECTION
                 && next.kind != Kind.FOUNDING && next.kind != Kind.FESTIVAL) next = null;   // (nor Founding Day: it comes once a year;
@@ -412,6 +414,7 @@ public final class Assemblies {
         if (a.kind == Kind.COMING_OF_AGE) Villages.tell(a.village, day, a.subject.split("\\|", 2)[0] + " was welcomed among the grown folk");
         if (a.kind == Kind.FOUNDING) FoundingDay.kept(level, a);
         if (a.kind == Kind.FESTIVAL) Festivals.closed(level, a);                          // [batchB] kept, and into the chronicle
+        if (a.kind == Kind.MEETING) TownMeeting.held(level, a);      // [batchF] into the chronicle, and the books
     }
 
     // ------------------------------------------------------------------ being there
@@ -960,6 +963,7 @@ public final class Assemblies {
             case ELECTION -> Elections.script(level, id, s, r);
             case FOUNDING -> FoundingDay.script(level, a, s, r);
             case FESTIVAL -> Festivals.script(level, a, s, r);                             // [batchB]
+            case MEETING -> TownMeeting.script(level, a, s, r);       // [batchF] the week, and the folk's say
             case COMING_OF_AGE -> {
                 String[] parts = a.subject.split("\\|", -1);
                 String who = parts[0];
@@ -983,6 +987,7 @@ public final class Assemblies {
                     if (petition.contains("home") || petition.contains("bed") || petition.contains("room")) Villages.request(id, "house");
                 }));
             }
+            Petitions.council(level, id, s);                     // [batchF] the petitions with names enough, onto the works
             s.add(new Line(null, "To the vote: what do we build next?", '?', () -> Council.revote(id)));
             s.add(new Line(null, DECISION, '!', null));          // read out once the vote is in (step)
             s.add(new Line(null, "So it is decided. Thank you, all.", ' ', null));
@@ -1049,6 +1054,7 @@ public final class Assemblies {
             case FEAST -> new Assembly(v.id(), Kind.FEAST, "", day, v.centre(), Direction.SOUTH, Layout.RING);
             case FOUNDING -> FoundingDay.assembly(level, v, day);
             case FESTIVAL -> Festivals.calledNow(level, v, day);                           // [batchB] Festivals.callNow
+            case MEETING -> TownMeeting.assembly(level, v, day);       // [batchF]
             default -> null;
         };
         if (a == null) return false;

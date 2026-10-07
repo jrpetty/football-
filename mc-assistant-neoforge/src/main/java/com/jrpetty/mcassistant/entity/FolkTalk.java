@@ -361,6 +361,7 @@ public final class FolkTalk {
         line(sb, "Health", Health.cardLine(f));              // [batchA] a cold, laid up, seen to (Health)
         line(sb, "Neighbours", Neighbourly.cardLine(f));     // [batchA] looked in on, a welcome, a housewarming (Neighbourly)
         line(sb, "About town", TownLook.cardLine(f));       // [batchE] its allotment, the bakery, the inn (TownLook)
+        line(sb, "Town life", Civics.cardLine(f));          // [batchF] its letters, its quarter as warden, its good turns (Civics)
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);
@@ -596,6 +597,7 @@ public final class FolkTalk {
             case "cold" -> Health.moodWords(f);                                     // [batchA]
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
             case "proud" -> Museum.prideWords(f);
+            case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             default -> "";
         };
     }

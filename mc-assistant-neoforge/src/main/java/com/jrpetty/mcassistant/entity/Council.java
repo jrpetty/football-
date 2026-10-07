@@ -257,6 +257,7 @@ public final class Council {
     static String article(String building) {
         return switch (building) {
             case "cafe" -> "a café";
+            case "postoffice" -> "a post office";                     // [batchF] (Post)
             default -> (building.matches("^[aeiou].*") ? "an " : "a ") + building;
         };
     }

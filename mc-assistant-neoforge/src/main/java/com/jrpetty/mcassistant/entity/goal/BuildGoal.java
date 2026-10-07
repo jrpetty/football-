@@ -73,7 +73,9 @@ public class BuildGoal extends Goal {
         // [batchD] the open-air stage where the town's players put on its stories (Theatre)
         "theatre",
         // [batchE] the town's look: the windmill, the bakery, the inn, the orchard and the allotments (TownLook)
-        "windmill", "bakery", "inn", "orchard", "allotments");
+        "windmill", "bakery", "inn", "orchard", "allotments",
+        // [batchF] the post office (Post), and the statue the town's own fund pays for (PublicFund)
+        "postoffice", "statue");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

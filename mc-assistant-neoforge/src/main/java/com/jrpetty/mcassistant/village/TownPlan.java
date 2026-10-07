@@ -197,6 +197,8 @@ public final class TownPlan {
         return switch (structure) {
             case "well" -> "well";
             case "monument", "fountain", "belltower" -> "monument";
+            case "statue" -> "monument";                              // [batchF] on the square (PublicFund)
+            case "postoffice" -> "civic";                             // [batchF] facing the square (Post)
             case "hall", "chapel", "barracks", "manor", "townhall" -> "great";
             case "court" -> "court";
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
