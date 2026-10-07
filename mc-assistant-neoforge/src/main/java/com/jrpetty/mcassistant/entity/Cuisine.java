@@ -672,12 +672,13 @@ public final class Cuisine {
 
     /**
      * A caravan setting out (Caravans): a couple of the town's dish on the carrier's back, for a town whose own dish is
-     * not the same, while the stores have more than the feast's two: marked as from here, sold there off the caravan as
-     * any good is. How many went.
+     * not the same (or is, made its own way: a colony's take on its mother's dish has the old way as a treat), while the
+     * stores have more than the feast's two: marked as from here, sold there off the caravan as any good is. How many
+     * went.
      */
     public static int packDelicacy(ServerLevel level, Villages.Village from, VillageFolkEntity carrier, UUID to) {
         Dish d = dishOf(from.id());
-        if (d == null || d == dishOf(to)) return 0;
+        if (d == null || d == dishOf(to) && takeOf(to) == null) return 0;
         Item it = d.item();
         int can = Math.min(2, Market.stock(level, from.id(), s -> s.is(it) && from(s) == null) - 2);
         if (can <= 0) return 0;

@@ -397,7 +397,7 @@ public final class Cafe {
     }
 
     private static int rank(ItemStack s, boolean drinksFirst) {
-        if (drinksFirst) return isDrink(s) ? 2 : 1;
+        if (drinksFirst) return isDrink(s) || Cuisine.isDish(s) ? 2 : 1;   // [culture2] a dish is never cut off a full counter
         if (s.isEnchanted()) return 4;
         if (s.is(Items.POTION)) return 3;
         if (s.isDamageableItem()) return 2;

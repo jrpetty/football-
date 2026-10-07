@@ -8014,3 +8014,199 @@ name, for a thing that has no recipe, no age, no worth, no maker, or makings the
 * with no master in the town, its best cook (not its greenest) bakes the pies one turn in three, and once a master
   cook comes up the master bakes them at every turn and the other no longer; the best smith rivets the miners' pick,
   an apprentice's work that wears through sooner, with its name on it.
+
+## A town's own ways: food, speech, building and belief
+
+Walk out of one town and into the next and it should look, sound and taste different. Every town now works out its
+own ways from what is true of it: the land it stands on (Homeland), what its folk care about most (its temper, the
+value most of its grown folk put first, and its founders' temper, kept from its first day), what its hands do for a
+living, and what it has lived through (its chronicle). They are worked out once a game day, cached, and changed only
+slowly: a town can change its ways, and says so in its chronicle when it does.
+
+**Its table.** Each land's kitchen makes something of its own of what that land gives. Eight new dishes (and the
+desert's rabbit stew, the game's own), each with a real recipe at the crafting table, so the cook knows it and you can
+make it too.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Fish Stew | a bowl, a cod or a salmon, a baked potato and a carrot (the bowl comes back) | Stone | 1.5c | the cook of a harbour or river town | ten hunger and a minute's Water Breathing; the harbour's own at every feast |
+| Mushroom and Game Pie | two wheat, a brown and a red mushroom, an egg and roast rabbit, pork or chicken make two | Stone | 1.3c | the cook of a forest town; a town of hunters' second dish | nine hunger and Night Vision |
+| Sweet Berry Tart | three sweet berries, two wheat, sugar and an egg make two | Wood | 1.0c | the cook of a pine-wood or snow-country town | six hunger and a turn of Speed |
+| Harvest Loaf | three wheat, an egg and wheat seeds on top make two | Wood | 0.8c | the cook of a plains or meadow town | seven hunger and a breath of Regeneration |
+| Miner's Hotpot | a bowl, roast mutton and two baked potatoes | Stone | 1.6c | the cook of a hill or mesa town; a ranching town's second dish | ten hunger and Resistance for the pit |
+| Spiced Mutton | roast mutton, a beetroot and sugar | Stone | 1.4c | the cook of a herding town; a savanna ranchers' second dish | nine hunger and Fire Resistance |
+| Cocoa Cake | two cocoa beans, two wheat, sugar and an egg make two | Wood | 1.0c | the cook of a jungle town | six hunger and Haste |
+| Fen Broth | a bowl, a brown and a red mushroom and a beetroot | Wood | 1.1c | the cook of a fen town | eight hunger and Night Vision in the mist |
+
+A dish's age is the latest of what goes into it (anything roasted or baked is fired, so the Stone Age's). Each has its
+own picture: a blue bowl of stew with a fish tail over the rim, a raised pie with a crimped crust and a mushroom, a
+lattice of berries, a plaited seeded loaf, a crusted hotpot with its potato slices, a glazed chop with its beetroot, a
+dark iced cake, and a green-grey broth with its mushrooms. The game test ia01 holds every one of them to the item bar,
+and `entity/Makers` names their maker.
+
+* **The cook's first care.** The town's cook makes its own dish out of the stores before the café's usual menu, a batch
+  at a turn, while the stores keep fewer than four of it and one more for every four folk (twelve at most), and never on
+  short commons (the larder's makings go to bread first). A town with two or more hands fishing, hunting or ranching
+  makes a second dish of what they bring in, up to half as many. A town with no cook has a hand at its works cook the
+  dish in the afternoon of a feast day. A town a day old has other things to do: the cook turns to its dish the day
+  after the founding.
+* **At the feast.** The weekly feast, Founding Day, the harvest festival and the town's own festival serve its dish
+  first, while the stores have any; the bowl goes back into the stores. A folk who had its own town's dish at a feast is
+  six the happier for a day or two ("We had fish stew at the feast. Nothing like it."); at an ordinary meal, three ("A
+  taste of home"); another town's, carried in as a delicacy, four ("a real treat"). Its card says so.
+* **For sale.** The stores let go of all but two (kept for the feast). The café puts the town's own dish first on its
+  counter, by the door. The tavern's bar has a board on its cask, "The house dish", with the dish and its price: its
+  worth and a quarter over, two coins at least, a coin off for a citizen; right-click it to buy a portion out of the
+  stores, the coin into the treasury (sneak and right-click to ask the price). Nobody serves an outcast or the banished.
+* **Carried between towns.** A caravan setting out takes a couple of the town's dish on the carrier's back, marked "A
+  delicacy from Ashhaven", for a town whose own dish is different, while the stores have more than two. They are sold
+  there off the caravan as any good is; the dishes are on the market's board at their worth.
+* **A colony's dish.** Settlers take their mother town's dish with them and make it their own way: the same makings
+  with the new land's staple in place of the main of them (mutton in the hills, fish by water, game in the woods,
+  rabbit in the desert, farmyard meat on the plains; berries, cocoa, honey, cane sugar or apples in the sweet ones).
+  "A hill-town take on Ashhaven's fish stew, made with mutton", its lore says, and the chronicle tells how it came. The
+  mother's own, carried there by caravan, is a treat for the colony.
+
+**Its tongue.** Each town greets you in its own way, and says goodbye its own way, most of the time (a child, a grump
+that does not much like you and three times in ten a folk keeps to what it was going to say):
+
+| Land | Hello | Goodbye | Its words for the stores, the board, a coin |
+|---|---|---|---|
+| Coast | "Fair winds, Alex!" | "Fair winds to you!" / "Mind the tide." | the hold, the mast, shells |
+| River | "Good water" | "Fair crossing!" | the boathouse, the ferry-post, pennies |
+| Forest | "Walk quiet" | "Mind the roots." | the lodge-store, the notice-tree, acorns |
+| Pine wood | "Pine and plenty" | "Stay by the fire." | the woodshed, the blaze, bits |
+| Snow | "Warm hearth" | "Keep warm!" | the ice-house, the slate, chips |
+| Mountain | "Steady stone" | "Keep your footing." | the vault, the stone, marks |
+| Desert | "Water and shade" | "May your well run deep." | the cool-store, the tablet, pieces |
+| Savanna | "Wide skies" | "Safe grazing!" | the kraal, the herd-post, tokens |
+| Jungle | "Green and growing" | "Mind the vines!" | the long-house, the totem, beads |
+| Swamp | "Dry boots" | "Keep your feet dry!" | the stilt-store, the post, groats |
+| Badlands | "Red rock, steady hand" | "Mind the sun." | the strongroom, the slab, nuggets |
+| Meadow | "Bloom and bee" | "Sweet days!" | the granary, the hive-board, pennies |
+| Plains | "Good harvest to you" | "Sun on your fields!" | the barn, the board, pennies |
+
+A third of the time a folk greets you by the town's temper instead: "Blessings" (devout), "Stand fast" (martial), "Good
+trading" (merchant), "Bright days" (learned), "Easy days" (merry), "Full larder" (provident), "Warm hearth" (homely).
+Its own words for the stores, the board and the coin are in what it says out loud (its bubbles); the books and screens
+keep the plain words.
+
+* **Sayings from its own history.** Each day the town looks over its chronicle, and what it lived through coins its
+  sayings: a raid held at the north gate, "steady as the north gate held" (one with a folk lost, "true as the watch on
+  day 12"); a drought, "dry as day 9"; the rain that broke it; a first diamond, "lucky as Ember"; a great storm, a fire,
+  a flood, the levee, a wedding ("happy as Rowan and Fen"), a long life, a dream come true, a war and its peace, twins,
+  a rescue, a colony sent out, the mine opened, a new age, a building opened. One of each kind first, ten at most, the
+  oldest first; a young town's history is filled out with its land's own old sayings, to five at least ("sure as the
+  tide", "hard as the crag"), and they give way to its own. A new one goes into the chronicle: a new saying went round
+  the town. Folk work them into their answers now and then ("As we say in Ashhaven: steady as the north gate held."),
+  pass them between themselves, and tell you where one came from if you ask.
+* **Nicknames from deeds.** Forty pieces off the anvil and a smith is "Ember Ironhand"; a guard of a dozen kills "the
+  Bold"; a miner of twenty-five ores "Deepdelver" (or three thousand blocks, "Stonebreaker"); sixty fish, "Netcaster";
+  four hundred crops, "Greenthumb"; sixty trees, "Axeswing"; a hundred and fifty loads, "the Swift"; thirty animals bred,
+  "Shepherd"; a cook of thirty dishes, "Ladle"; fifteen hundred blocks built, "the Builder"; and the old are "Old Bram".
+  The chronicle says when the town takes to calling somebody something; it is on the folk's card, in the gossip, and in
+  what folk call each other in passing.
+
+**How it builds.** Six styles, and each changes real blocks on the town's homes (houses, manors, villas):
+
+| Style | Suits | Walls | Corners | Roof | Windows | What it adds | Its streets |
+|---|---|---|---|---|---|---|---|
+| Timbered Lowland | plains and meadows; river; homely, provident | a dark oak timber band under the eaves | dark oak posts | wooden shingle, kept through every age | | spruce shutters, a brick chimney with a fire in its pot | dark oak lamp posts; flower boxes under every house's windows |
+| Hill Fort | mountains, snow, badlands; martial; every raid at its gate | rough cobblestone, deepslate brick from the Iron Age | stone brick | cobblestone, slate tile from the Iron Age | the side windows walled up small | battlements along the eaves, the town's banners at the corners | rough stone lamp posts, stone benches |
+| Coastal | the coast; river, swamp | birch planks, white polished diorite from the Stone Age | stripped birch | | glass in the town's colour | the town's banners, a barrel by the door | birch lamp posts |
+| Desert Court | desert, savanna, badlands | cut sandstone | smooth sandstone | sandstone | | a fired pot by the door | sandstone lamp posts and benches |
+| Forest Lodge | forest and pine wood, jungle, swamp, snow; devout | laid logs of the town's wood | stripped logs | a mossy cobblestone ridge | | shutters, a carved board over the door with the household's names, smoke from the chimney | |
+| Grand Civic | a rich town (three hundred coin, more at six hundred), the Iron Age, forty folk; merchant, learned | polished andesite | chiselled stone brick columns | | | the town's banners at the corners | stone brick lamp posts and benches |
+
+The founders choose it, from the land and their own temper, the day the town's land is known, and the chronicle says
+so. Once a week it is looked at again with what the town is now (its temper, its coin, its age, its raids): a style
+that suits it better by three takes over ("the town turned from its Timbered Lowland ways to the Grand Civic"), and the
+homes are dressed anew. A hand at the town's works dresses one home at a time, a dozen blocks a turn, out of the stores
+(polished diorite or the diorite or calcite it is cut from, a log for a log, a pane and a share of a dye for a coloured
+one, six wool and a stick for a banner, four bricks for a pot), and what comes off goes back into the stores; a home
+waiting on the stores is looked at again five minutes on. A private home, and the Founders' first house, are left as
+they are. The town's new buildings go up in its style's woods first (Palettes), and its lamp posts and benches follow.
+
+**Its own festival.** On top of the year's festivals every town keeps, each town keeps one of its own, chosen three days
+after its founding from what it is known for, and looked at again each year (another must suit it better by three):
+
+| Festival | Day of its year | Kept by | On the square | The contest |
+|---|---|---|---|---|
+| The Herring Fair | 16th | a fishing town; the coast | stalls (barrels) and lanterns | the best catch since the last fair |
+| Lantern Night | 23rd | a town that came through a fire or a great storm; the north | lanterns and torches, fireworks | the best-kept house |
+| The Iron Fair | 9th | smiths and smelters; the Iron Age | forge fires and lanterns, the ring of anvils, fireworks | the finest smith, pieces off the anvil this year |
+| Bloom Day | 5th | beekeepers, flower-planters; the meadow | flowers round the square, petals on the wind | the best garden, flowers planted |
+| The Stone Feast | 18th | miners; the mountains | stone posts with lanterns on them | the strongest miner, stone brought up since the last |
+| The Night of Stars | 27th | stargazers, a learned town, a library, the desert's skies | candles low on the square, faces to the sky | a star named after the stargazer the town likes best |
+| Harvest Home | 19th | farmers; the plains; a provident town | hay and lit pumpkins | the ploughing match, the most sown |
+
+Its decorations go out round the square that afternoon, one at a time by a hand at the town's works, out of the stores,
+and come in again the next morning. At dusk the town gathers in a ring; the elder welcomes everybody; the town's dish is
+eaten (the town's own festival lifts a folk's spirits by five); a tune is played on the festival's own instrument, with
+fireworks of the stores' gunpowder and paper for Lantern Night and the Iron Fair; and the contest is judged, its winner
+given a purse of five coins out of the treasury and written into the chronicle ("Ashhaven kept the Herring Fair, eight
+of us on the square: Tam won the best catch, 51 fish since the last fair, and a purse of 5 coins"). Rain puts it off to
+the next evening. A player the town counts a friend is told of it that morning, and one who comes is given a portion of
+the town's dish.
+
+**What it believes.** Each town keeps faith with one of six, chosen when its ways are first worked out (a colony
+carries its mother's, unless its new land calls it to another), and looked at again each fortnight (another must suit
+it better by four). Its sacred day comes once a week, mid-week from its day of rest. The elder leads its rites (the town
+keeps no chaplain; with no elder, its eldest).
+
+| Faith | Chosen by | Its dead | Its weddings | Its children | Its sacred day | Its rite | Its shrine |
+|---|---|---|---|---|---|---|---|
+| The Founders | a devout town; the forest; founders buried | the graveyard | at the heart, where the first fire was lit | a founder's name made new: Bramwyn, Fenella | Founding Day: no work but the watch's | a flower of the stores laid at the heart on Founding Day | the founders' book; their first house is never altered |
+| The Sea | the coast, river and fen; fishers | given to the sea: a post and a board on the shore, a flower on the water, no headstone | on the shore | Marin, Coral, Pearl, Tide | nobody fishes, the fleet stays in | every morning the stores' first fish to the sea, the fishers blessed | a little boat |
+| The Stone | mountains, badlands; miners; a first diamond | a cairn on the high ground, "Under the stone" | before the hall | Flint, Jasper, Garnet, Slate | the mountain rests: no mining | every morning the mine's mouth blessed, the miners too | the first diamond |
+| The Stars | a learned town, the desert, stargazers | the graveyard | on the hill under the first stars | Vega, Lyra, Orion, Nova | no tree is felled | at dusk on its day, the vigil on the hill | a spyglass |
+| The Harvest | plains, meadow, savanna; farmers; a provident town; a drought weathered | the graveyard | by the fields | Barley, Rowan, Hazel, Clover | the fields rest | on its day, the fields blessed, the farmers too | the first sheaf |
+| The Hearth | a homely or merry town, the north, weddings | the graveyard | at the couple's own door | a grandparent's name made new | a wedding day is a holiday from noon | | a candle; its couples wed sooner |
+
+The vigil for the dead is held where they lie (the shore, the cairns, the yard), and the family takes its flower there
+on the anniversary. A rite's blessing lifts a folk's spirits by three for the day (four for the vigil under the stars).
+The faith's token hangs in a frame on the chapel's back wall (the hall's, with no chapel), out of the stores; a faith
+turned takes the old token down, back into the stores. The watch is never stood down for a sacred day.
+
+**Where you see it.**
+* **The town's books**, the Culture page: six sections, "Our own ways", "Our table", "Our tongue", "How we build", "Our
+  own festival" and "Our faith and its rites", each saying what the town does and why. (When the town's Identity page
+  comes, `TownWays.lines` and `TownWays.summary` are its sections and its summary line.)
+* **The board**: "Our ways: Coastal houses; famous for its fish stew; the Herring Fair; faith in the Sea."
+* **A folk's card**, "Town ways": its nickname; "a true harbour-town soul, provident as its town" when it cares for what
+  its town does; its faith's day kept or its blessing; the dish it had.
+* **Talk**: "What's this town like?", "What do you eat here?", "What do you believe?", "Any sayings?", "What do they
+  call you?", "Your festival?", "How do you build?"; and the greetings, goodbyes, sayings and local words in passing.
+* **The chronicle**: every choice and every change.
+* **Commands**: `/village ways` (the nearest town's ways in full); for operators, `/village ways now` (worked out now,
+  homes dressed out of the stores, the shrine hung, the house-dish board up), `/village ways set style|belief|feast|dish
+  <NAME>`, `/village ways feast` (the town's own festival called now), `/village ways speak` (the nearest folk greet you
+  their town's way) and `/village ways stage` (a street of the six styles and a wall of the eight dishes, for pictures).
+
+The game tests `TownWaysGameTests` (cw01 to cw10) check that:
+* a harbour town and a hill town raised side by side come out different in every way (fish stew and hotpot, Coastal and
+  Hill Fort, the Herring Fair and the Stone Feast, the Sea and the Stone, "Fair winds" and "Steady stone", the hold and
+  the vault, sayings with none in common, their board's line, their page and their talk), each choice in its chronicle;
+* each town's cook makes its own dish out of its stores by the game's recipe to the number it keeps and no more, and
+  never the other's; served first at the feast it lifts the spirits by six, the bowl back in the stores; it is first on
+  the café's counter, and a player buys it at the bar for coin into the treasury;
+* a colony of the harbour town takes its fish stew into the hills and makes it with mutton (its lore and the chronicle
+  say so), and two of the mother's own carried there are a treat for a settler;
+* a real drought coins "dry as day N" and a raid at the north gate "steady as the north gate held", five sayings at
+  least each, nothing coined twice; a smith of forty pieces is "Ironhand", in the chronicle, the gossip and its card;
+  folk answer "Any sayings?" with where it came from, and pass a saying between them;
+* one house drawing in a harbour town and a hill town, dressed out of each town's stores, differs in real blocks (white
+  diorite, birch, tinted glass, banners and a barrel; deepslate brick, a slate roof, battlements and windows walled
+  small), what came off back in the stores; and the six styles on six of the same house are six different houses;
+* the Herring Fair: stalls and lanterns out of the stores round the square, the fair held, the town's stew eaten, the
+  best catch judged, paid and written down, a year on the catch since the last fair wins, and the stalls back in;
+* a Sea town gives its dead to the sea (a post and a board on the shore out of the stores, a flower on the water, no
+  headstone), weds and keeps its vigils on the shore, keeps its fishers and its fleet in on the Sea's day and not on
+  another, gives the sea a fish of the stores and blesses its fishers, and names its children for the sea;
+* a Stone town raises a cairn on the high ground for its dead, hangs the first diamond in its chapel out of the stores,
+  rests its miners on the Stone's day, and names its children for stones;
+* the Harvest rests its farmers and blesses its fields; turned to the Stars, the spyglass takes the sheaf's place and
+  the sheaf goes back to the stores; the Hearth weds sooner; the Founders' first house is never touched;
+* a plains town builds Timbered Lowland (timber bands, shutters, smoke from the chimney, its shingle kept, flower boxes,
+  dark oak lamp posts); a little richer it stays; rich, in the Iron Age and merchant at heart it turns Grand Civic, says
+  so, and its homes, lamp posts and benches follow.

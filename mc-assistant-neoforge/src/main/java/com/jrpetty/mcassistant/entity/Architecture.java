@@ -243,7 +243,7 @@ public final class Architecture {
     }
 
     /** The town's colour for its trim: the field of its arms, or its land's own before it has arms. */
-    static DyeColor trim(UUID village) {
+    public static DyeColor trim(UUID village) {
         Heraldry.Design d = Heraldry.design(village);
         if (d != null) return d.field();
         return switch (Homeland.of(village)) {

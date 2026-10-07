@@ -2499,6 +2499,96 @@ def kitchen_stage(r, look, cx, cz):
     say("alive after the kitchen: %s" % client_alive())
 
 
+def culture2_stage(r, look, cx, cz):
+    """[culture2] A town's own ways (entity/TownWays, Cuisine, TownSpeech, Architecture, TownFeast, Beliefs): walking from
+    one town into the next must look, sound and taste different. The spawned village (cx, cz) and a second town about
+    220 blocks east (other_town) have their ways worked out now (/village ways now: houses dressed in the town's style out
+    of its stores, its shrine hung, the tavern's house-dish board); if both came out in the same style the second is set
+    to another, so the pictures can tell them apart. Pictures: each town's square and houses from above; /village ways
+    stage beside the first town (a street of the six styles, two pairs close up, and a wall of the eight dishes in
+    frames); the folk of each town greeting in their own way (/village ways speak: the bubbles); the first town's own
+    festival called on its square (/village ways feast); and each town's books open at the Culture page, where its
+    ways are written up. Not wired into main: call it after kitchen_stage, as culture2_stage(r, look, cx, cz)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    num = r"(-?\d+)"
+    view_pattern = r"VIEW (\S+) " + " ".join([num] * 6)
+
+    def ground(x, z):
+        return "execute positioned %d 0 %d positioned over motion_blocking_no_leaves run " % (x, z)
+
+    def views_of(out):
+        return dict((v[0], [int(n) for n in v[1:]]) for v in re.findall(view_pattern, out))
+
+    # The two towns, and their ways worked out now.
+    ax, az = cx, cz
+    bx, bz = other_town(r, cx + 220, cz, "the ways' second town")
+    styles = {}
+    for label, (x, z) in (("first", (ax, az)), ("second", (bx, bz))):
+        r.cmd("tp %s %d %d %d" % (USER, x, ground_height(r, x, z) + 20, z))
+        time.sleep(6)                                  # the town's ground and its folk load
+        out = r.cmd(ground(x, z) + "village ways now")
+        say("ways now (%s town): %s" % (label, out[:600]))
+        m = re.search(r"WAYS [^:]+: ([^;]*?) houses", out)
+        styles[label] = m.group(1).strip() if m else ""
+    if styles.get("first") and styles.get("first") == styles.get("second"):
+        other = "HILL_FORT" if styles["first"] != "Hill Fort" else "COASTAL"
+        say("both towns build %s: the second set to %s for the pictures: %s"
+            % (styles["first"], other, r.cmd(ground(bx, bz) + "village ways set style " + other)[:200]))
+        say("ways now (second town, again): " + r.cmd(ground(bx, bz) + "village ways now")[:400])
+    for label, (x, z) in (("first", (ax, az)), ("second", (bx, bz))):
+        say("ways (%s town): %s" % (label, r.cmd(ground(x, z) + "village ways")[:1500]))
+        hy = ground_height(r, x, z)
+        look("34-ways-%s-town" % label, x + 18, hy + 14, z + 18, x, hy + 2, z, wait=8)
+
+    # The street of the six styles and the wall of the dishes, on level ground of its own beside the first town.
+    sx, sz = ax - 110, az + 60
+    r.cmd("tp %s %d %d %d" % (USER, sx + 30, ground_height(r, sx, sz) + 20, sz + 20))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd(ground(sx, sz) + "village ways stage")
+    say("ways stage: " + out[:800])
+    views = views_of(out)
+    if not views:
+        say("nothing staged for the town's ways; no street to photograph")
+    for name, picture, wait in (("ways-street", "1-street", 8), ("ways-fort-coast", "2-fort-coast", 5),
+                                ("ways-lodge-civic", "3-lodge-civic", 5), ("ways-dishes", "4-dishes", 5)):
+        if name in views:
+            x, y, z, tx, ty, tz = views[name]
+            look("34-ways-" + picture, x + 0.5, y, z + 0.5, tx + 0.5, ty + 0.5, tz + 0.5, wait=wait)
+
+    # Each town's folk greet the way their town does: the bubble photographed while it is up.
+    for label, (x, z) in (("first", (ax, az)), ("second", (bx, bz))):
+        hy = ground_height(r, x, z)
+        r.cmd("tp %s %d %d %d" % (USER, x + 3, hy + 3, z + 3))
+        time.sleep(4)
+        out = r.cmd(ground(x, z) + "village ways speak")
+        say("ways speak (%s town): %s" % (label, out[:600]))
+        v = views_of(out).get("ways-speak")
+        if v:
+            look("34-ways-5-speak-%s" % label, v[0] + 0.5, v[1] - 1.0, v[2] + 0.5, v[3] + 0.5, v[4], v[5] + 0.5, wait=2)
+
+    # The first town's own festival, called on its square.
+    out = r.cmd(ground(ax, az) + "village ways feast")
+    say("ways feast: " + out[:400])
+    time.sleep(25)                                     # the town gathers on the square, the decorations out
+    hy = ground_height(r, ax, az)
+    look("34-ways-6-feast", ax + 12, hy + 9, az + 12, ax, hy + 1, az, wait=6)
+
+    # The Culture page of each town's books: its ways written up there.
+    r.cmd("gamemode creative %s" % USER)
+    for label, (x, z) in (("first", (ax, az)), ("second", (bx, bz))):
+        r.cmd("tp %s %d %d %d" % (USER, x + 2, ground_height(r, x, z) + 1, z + 2))
+        time.sleep(4)
+        say("stats culture (%s town): %s" % (label, r.cmd("execute as %s at @s run village stats 21" % USER)))
+        time.sleep(3)
+        shot("34-ways-7-culture-page-%s" % label)
+        say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the town's ways: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

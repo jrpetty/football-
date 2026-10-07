@@ -93,7 +93,7 @@ public final class WaysCommands {
         for (Ledger.Building b : Ledger.buildings(v.id())) {
             if (b.structure().equals("house") && level.isLoaded(b.anchor())) dressed += Math.max(0, Architecture.dress(level, v, b, 64, false));
         }
-        boolean shrine = Beliefs.shrineForTests(level, v);
+        boolean shrine = Beliefs.shrineForTests(level, v, false);
         boolean sign = Cuisine.tavernSign(level, v, false);
         int fd = dressed;
         ctx.getSource().sendSuccess(() -> Component.literal("WAYS " + Villages.name(v.id()) + ": " + TownWays.summary(v.id())
@@ -191,7 +191,7 @@ public final class WaysCommands {
         // The front of the street from across the way, and two close views.
         int mid = at.getX() + (styles.length - 1) * 6;
         out.add("VIEW ways-street " + mid + " " + (y + 9) + " " + (at.getZ() + 26) + " " + mid + " " + (y + 3) + " " + at.getZ());
-        out.add("VIEW ways-fort-coast " + (at.getX() + 6) + " " + (y + 4) + " " + (at.getZ() + 14) + " " + (at.getX() + 6) + " " + (y + 3) + " " + at.getZ());
+        out.add("VIEW ways-fort-coast " + (at.getX() + 18) + " " + (y + 4) + " " + (at.getZ() + 14) + " " + (at.getX() + 18) + " " + (y + 3) + " " + at.getZ());
         out.add("VIEW ways-lodge-civic " + (at.getX() + 54) + " " + (y + 4) + " " + (at.getZ() + 14) + " " + (at.getX() + 54) + " " + (y + 3) + " " + at.getZ());
         // The dishes on a wall of stone bricks behind the street, in frames, facing away from it.
         int wy = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ() - 22);
