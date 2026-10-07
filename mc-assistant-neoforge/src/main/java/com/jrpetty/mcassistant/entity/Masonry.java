@@ -294,12 +294,18 @@ public final class Masonry {
         if (it == Items.STONE_BRICKS) return ironAge ? 192 : stoneAge ? 128 : 32;
         if (it == Items.SMOOTH_STONE) return stoneAge ? 16 : 6;
         if (it == Items.BRICKS) return ironAge ? 96 : stoneAge ? 32 : 8;
-        if (it == Items.TORCH) return Math.min(96, 32 + 2 * Villages.headcount(village));
+        if (it == Items.TORCH) return townTorches(village) + CaveDwellers.torchesKept(village);   // [caves] and the cave team's, on top
         if (it == Items.GLASS) return 48;
         return 0;
     }
 
     /** How many more of this the village would like put by. */
+    /** [caves] The torches the town keeps for its own lights, its miners and its lamps; the cave team's come on top, and
+     *  the team never draws on these (CaveDwellers.spareTorches). */
+    static int townTorches(UUID village) {
+        return Math.min(96, 32 + 2 * Villages.headcount(village));
+    }
+
     static int shortOf(ServerLevel level, Villages.Village v, Item it) {
         int keep = keep(v.id(), it);
         if (keep <= 0) return 0;

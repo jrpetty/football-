@@ -3815,7 +3815,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // and not the things nobody should take on for fun. Anything that hits
         // a folk is still answered — that is a different goal.
         if (isSettler()) {
-            if (stationTask != StationTask.GUARD && stationTask != StationTask.CAVE && !hiredToFight()) return false;   // [caves] armed, too
+            // [caves] Armed too: at home anything near it, on the team's day out its share of the fight (CaveDwellers).
+            if (stationTask != StationTask.GUARD && !(stationTask == StationTask.CAVE && CaveDwellers.mayTakeOn(this, target))
+                && !hiredToFight()) return false;
             if (target instanceof net.minecraft.world.entity.monster.EnderMan
                 || target instanceof net.minecraft.world.entity.monster.Witch
                 || target instanceof net.minecraft.world.entity.monster.Ravager
@@ -5696,7 +5698,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // The watch stands between the town and whatever comes at night: a guard has twice the health of any
             // other folk (its sturdiness and its years doubled with it). Off the watch, it is as the rest again.
             hp.removeModifier(GUARD_HP_ID);
-            if (stationTask == StationTask.GUARD) {
+            if (stationTask == StationTask.GUARD || stationTask == StationTask.CAVE) {        // [caves] the cave dwellers as hardy
                 hp.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
                     GUARD_HP_ID, GUARD_HEALTH - 1.0,
                     net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));

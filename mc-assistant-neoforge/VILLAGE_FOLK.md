@@ -4218,59 +4218,128 @@ miner works and how deep.
 ## The cave dwellers
 
 An Iron Age town of **twenty-five** or more, with a couple of miners at its mine and a watch on
-its walls, takes up a **cave dweller**: half miner, half guard. It has one for every
-twenty-seven folk, and never more than four. The town takes an idle hand first, then a miner or
-a guard it has more of than it needs. It never takes one from a trade it is short of. A cave
-dweller wears the miner's helmet and lamp, with the town's armour over them, and a lantern
-floats over its head from far off.
+its walls, sends a small, highly skilled **cave team** into the caves round it: half miners,
+half guards. The team is **two** strong, **three** at sixty folk and **four** at a hundred,
+never more. A cave dweller wears the miner's helmet and lamp, with the town's armour over them,
+and a lantern floats over its head from far off.
 
-* **Kitted out by the town, free.** Each morning it goes to the stores. It gets the armour,
-  blade and shield the watch has (leather, iron or diamond, as the town can make them). It also
-  gets the best pickaxe in the stores (iron in the Iron Age, diamond once there are diamonds),
-  a stack and a half of torches (made from the stores' coal and sticks if there are none), food
-  for the day and a little cobblestone for walling off lava. It leaves what it does not need,
-  such as seed, saplings and a bench, in the stores. The town's pieces carry its mark. When it
-  takes up another trade, they go back into the stores; nothing comes out of its purse.
-* **Out by day, home by dusk.** It makes for a cave its town knows and has not worked out.
-  Knowing none, it walks out along the way it has looked least, to a hundred blocks in the Iron
-  Age, a hundred and fifty in the Diamond Age and two hundred in the Nether Age. As it walks it
-  looks for a way down under the rock that it can walk, and goes in.
-* **In the cave.** It lights its way with torches where it is dark, and the torches mark the
-  way home. It mines every ore it sees that its pick allows, the whole vein, including the
-  blocks behind the first: coal, copper, iron, gold, redstone, lapis, emerald and amethyst;
-  diamond with an iron pick or better; obsidian only with a diamond pick. It never digs the
-  block it stands on, a block with lava or water behind it, a step of the miners' stairs, a
-  portal's obsidian, or anything in a town. It fights what comes at it and clears the way. It
-  backs off from a creeper, never goes near a warden, eats when it is hurt and turns for home
-  when badly hurt.
-* **Old chests.** It opens the chests the world left: a mineshaft's carts, a dungeon's chests,
-  and the chests of the jungle temples, strongholds, ruined portals, igloos and shipwrecks. It
-  takes what is worth carrying: ore and metal, gems, enchanted books, golden apples, saddles,
-  name tags and music discs. It leaves the bones and the string. It only opens a chest that
-  still has the world's loot in it, or one inside something the world built. It never opens a
-  named chest, a chest near any town, or a chest in a village of villagers. It leaves the deep
-  dark's ancient cities and the trial chambers alone. It only opens a desert temple's chests
+* **Picked from the town's best.** The town takes its most skilled miners and guards, by their
+  level and their years at the work. It never takes an idle hand of no skill just for being
+  idle, and never a hand from a trade it is short of. A new cave dweller starts near its mining
+  or guarding level and learns the caves fast. The most experienced one **leads**, and the
+  Caves page shows each one's level. Cave dwellers have a **guard's health** (twice a folk's),
+  and they are among the **best paid** in the town: dangerous, skilled work underground, in a
+  small team (the Jobs page and their cards say so).
+* **A plan before they go.** The leader works out how long the trip will be. A cave nobody has
+  mapped gets **a day**: the team maps it, lists its veins, mines what is close and comes home.
+  A known cave is planned from its list: the hours to mine the veins the team's picks can take,
+  plus the walk there and back, over a working day of about ten hours of daylight. That comes to
+  anything from **half a day** (a near cave with a vein or two left) to **four days** (a big cave,
+  deep and far, with a long list). Veins worth little, of something the stores already have
+  plenty of, are left out. If the age is waiting badly on iron or diamonds the cave has, the
+  plan runs a day longer. The plan is cut down to what the town can spare: two meals a member a
+  day and a day over, 64 torches a member a day, and no more than a day for a team short of its
+  kit. The plan goes on the board and in the chronicle, for example *"Three days to the deep
+  caves north-east: 14 veins listed (iron, the town's want), a day's walk there and back, food
+  and torches for three."* The Caves page shows the plan and how it was worked out.
+* **Kitted out by the town, free.** Before setting out each one goes to the stores. It gets the
+  armour, blade and shield the watch has, and the best pickaxe in the stores. It gets at least
+  64 torches (more for a long trip), food for the days planned and one over, cobblestone for
+  the nights' camps, a crafting table, a few planks and sticks, and three iron ingots if the
+  town can spare them. It leaves what it does not need, such as seed, saplings and a bench, in
+  the stores. The town's pieces carry its mark and go back into the stores when it takes up
+  another trade. Nothing comes out of its purse.
+* **The town's torches.** Every torch the team carries is made by the town from its own coal or
+  charcoal and sticks. The smelter, the smith and the shop top the stores up for the team ahead
+  of its next trip. The team only draws what the town can spare over its own lights, its miners'
+  and its street lamps, and never takes the last of them. If the town cannot spare 64 each, the
+  team goes with what it can spare and keeps the trip shorter. With too few to go at all, it
+  waits for the makers.
+* **Together.** The team goes out as one. They walk in order, the leader first, each a couple
+  of blocks behind the one ahead, never more than a few blocks from the leader. The leader waits
+  for anyone who falls behind and goes back for them. In a fight one takes on a lone monster
+  while the others work on, and they all join in against a group. They shout a warning about a
+  creeper and back off from it. If one of them is badly hurt, they all go home together.
+* **Every vein.** In a cave the leader looks through the walls, the floor and the roof for ore.
+  Every vein showing, and every vein up to three blocks behind the rock face, goes on the cave's
+  list, and whoever is nearest calls it out ("Iron here!"). The leader picks the vein the town
+  wants most first, then the nearest. For a hidden vein they cut a short tunnel in to it. Each
+  member digs its own block, and two never dig the same one. They cheer at diamonds. They never
+  dig the block they stand on, a block with lava or water behind it, a step of the miners'
+  stairs, a portal's obsidian, or anything in a town. Obsidian with no diamond pick in the team
+  stays on the list, waiting. When every vein is done, the cave is worked out and they move on
+  to the next one. They come back to the waiting veins once the town has a better pick.
+* **Light where it counts.** Torches cost the town, so the team does not cover the cave in them.
+  The leader sets one about every 15 blocks along the way in, up to 20 in a straight passage and
+  closer at a turn or where passages meet, so the way home is clear. Anyone mining or fighting
+  where it is dark enough for monsters to spawn sets one there. What they set stays in the cave
+  for the town's later use.
+* **Made on the spot.** Low on torches, a cave dweller makes more from the coal it has mined and
+  its sticks (one coal and one stick for four torches; a plank makes two sticks, a log four
+  planks), so coal mined in the cave turns into light there and then. When its pickaxe or sword
+  is about to break, it sets its crafting table down, makes a new one and picks the table up
+  again. It uses iron ingots if it has them, otherwise cobblestone it has cut, otherwise wood.
+  It only makes a diamond pickaxe when the cave's list has a vein waiting for one that the town
+  wants. Otherwise the town wants its diamonds in the storehouse. Before a long dig it makes a
+  spare pick if its own is half worn. Every recipe is the game's own, and everything comes out
+  of its pack. What it made goes into the story of the trip.
+* **Lava, water and holes.** They wall off lava and running water with cobblestone, patch holes
+  in the floor so nobody falls in, and put themselves out with a water bucket if they carry one.
+  They put torches all round a spawner so nothing more comes out of it, leave it standing, and
+  note it.
+* **When to come back.** They come home when the plan's time is up. If the work is going well
+  and their food and torches hold, they stay another half day, twice at most. The leader turns
+  them back early, and says why ("We turn back: the torches were nearly gone"), when:
+    * the torches are nearly gone and there is no coal or wood to make more;
+    * the food will not last the walk home;
+    * one of them has no tool and nothing to make one with;
+    * a pack is full;
+    * one of them is badly hurt with nothing to eat, or one of the team is lost;
+    * the cave is worked out;
+    * there is more down there than they can take on, such as a warden or a crowd of monsters.
+* **Nights underground.** On a trip of more than a day, at dusk they find a nook, wall it in
+  with cobblestone and set a torch inside. They eat, and sleep in turns while one keeps watch.
+  At first light they eat again, take the walls down and go on. While they are away the town
+  still counts them as its team: nobody takes up their trade, their beds stay theirs, and their
+  cards and the Caves page say "on an expedition, day 2 of 3". If they are a day overdue, the
+  town sends out a search party. After a restart, they take up the trip again where they are.
+* **Old chests.** They open the chests the world left: a mineshaft's carts, a dungeon's chests,
+  and the chests of the jungle temples, strongholds, ruined portals, igloos and shipwrecks. They
+  take what is worth carrying: ore and metal, gems, enchanted books, golden apples, saddles,
+  name tags and music discs. They leave the bones and the string. They only open a chest that
+  still has the world's loot in it, or one inside something the world built. They never open a
+  named chest, a chest near any town, or a chest in a village of villagers. They leave the deep
+  dark's ancient cities and the trial chambers alone. They only open a desert temple's chests
   once the TNT trap under them is gone.
-* **What it notes.** It notes caves and ravines (how deep and how big), every ore vein (blocks
-  seen and blocks mined), mineshafts, dungeons and spawners (it leaves them alone, but says
-  so), the old structures, and pools of lava as a danger to the miners.
-* **Never trapped.** It comes home along its own marks. If it cannot get to one, it goes on to
-  the next. If it is underground with no way it can walk, it cuts its own stairs up, as a lost
-  miner does. If even that fails, it calls for help, and its family and friends go out to look
-  for it. It is never lifted out.
-* **Home.** What it brought out goes into the stores as its work, so it shows in the town's
-  production and its pay. A cave dweller is paid as dangerous, skilled work.
+* **Never trapped.** They come home along the leader's marks. If one of them is stuck, it cuts
+  itself a step. If they are underground with no way they can walk, they cut their own stairs
+  up, as a lost miner does. If even that fails, they call for help, and the town's search party
+  goes out for them. They are never lifted out.
+* **Home.** The town comes out to greet them, and a long trip home with a big haul is the town's
+  news. Every one of them walks to the town's **storehouse** and puts its whole haul in, booked
+  in the storehouse's books as brought in by that cave dweller and counted as its work. With no
+  storehouse, the haul goes into the stores at the heart. Unused torches and makings go back
+  too. The chronicle tells the trip as a short story: who went, where, the veins listed and
+  mined, the fights, the spawners lit, the nights camped, what they made down there, and the
+  haul, with the torches set and drawn.
 
 **Where to see it.** The **Caves** page of the town's books (the last tab) has a map of the
-finds round the town, every find with its coordinates (the big ones first; scroll for more),
-the cave dwellers and their day, and the hauls brought home. The board has a line on the
-caves. The chronicle and the gazette tell of diamonds, a mineshaft, a dungeon or a temple's
-treasure, and so does the next morning assembly. A cave dweller's card shows where it went
-today, what it found and its kit. Ask anybody "What's down in the caves?" (or press
-**Underground** on the Village tab); a cave dweller gives the exact spot. `/village caves` lists
-it all, and `/village caves books` opens the page. For operators, `/village caves now` sends the
-cave dwellers out at once (or takes one up), and `/village caves stage` cuts a small cave with
-ore and an old chest beside you and sends the town's cave dweller into it.
+finds round the town. Beside it, scrolling, are the team with each one's level (the leader
+marked) and its card, the trip under way or the last plan with how it was worked out, the
+torches drawn and set, each cave with its list of veins (mined, waiting for a better pick, or
+still to do), every find with its coordinates, and the hauls brought home. The board shows the
+plan while the team is out. The chronicle and the gazette tell of diamonds, a mineshaft, a
+dungeon or a temple's treasure, and so does the next morning assembly. A cave dweller's card
+shows its level, its place in the team, where it is on the trip, the torches set and drawn,
+and its kit. Ask anybody "What's down in the caves?" (or press **Underground** on the Village
+tab); a cave dweller gives the exact spot.
+
+**Commands.**
+* `/village caves` lists it all, and `/village caves books` opens the page.
+* For operators, `/village caves now` sends the team out at once, picking it first if the town
+  wants one and has none.
+* For operators, `/village caves stage` cuts a small cave beside you, with ore in and behind its
+  walls and an old chest, and sends the town's team into it.
 
 ## Names
 

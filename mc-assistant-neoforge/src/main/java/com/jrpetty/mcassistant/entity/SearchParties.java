@@ -97,6 +97,7 @@ public final class SearchParties {
     /** Is this folk where a folk should be (or away on business the town knows of)? */
     static boolean seen(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
         if (f.isSleeping() || f.isHired() || f.isShowcase()) return true;
+        if (CaveDwellers.missing(f)) return false;      // [caves] lost in the caves, or a day overdue from a trip: missed till found
         if (f.companionPlayer() != null || f.guidePlayer() != null) return true;     // out walking with a player
         if (f.trip() != null || f.expedition() != null || Nether.away(f) || JobSeekers.busy(f) || Drover.busy(f)
                 || Stables.busy(f) || Patrols.escorting(f) || TownJobs.busy(f)) return true;

@@ -62,6 +62,9 @@ public final class Links {
             case WOOD -> vines(f, level) != null;
             case MINE -> workPotion(f, level) != null;
             case HAUL, FISH -> workPotion(f, level) != null;
+            // [caves] The smith and the shop keep the cave dwellers in torches too, when the stores run short of what the
+            // team takes down: of the town's coal or charcoal and planks, ahead of the team's next trip.
+            case SMITH, SHOP -> CaveDwellers.torchesShort(level, f.ownerId()) && torches(f, level) != null;
             case RANCH -> {
                 // Both: a milking doesn't keep it from going for an animal the pen is short of.
                 boolean milked = milk(f, level) != null;
