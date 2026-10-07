@@ -691,13 +691,19 @@ public class VisitorsGameTests {
         level.setDayTime(day * 24000L + 3000L);
         VillageFolkEntity cook = raise(helper, level, heart);
         UUID id = cook.ownerId();
-        cook.setJob(StationTask.COOK);
         BlockPos inn = heart.offset(-20, 0, 20);
         BuildGoal.stamp(level, "inn", inn, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
         Ledger.built(id, "inn", inn, Direction.NORTH);
         Ledger.built(id, "tavern", heart.offset(0, 0, 18), Direction.NORTH);
+        Ledger.built(id, "cafe", heart.offset(0, 0, -16), Direction.SOUTH);        // the cook's place of work
+        chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.BREAD, 64), new ItemStack(Items.BAKED_POTATO, 64));
         helper.runAtTickTime(10, () -> {
             Villages.Village v = Villages.get(id);
+            // The innkeeper: the café's cook, made one now (a lone founder made a cook at the start is moved, on its
+            // first look at the town's trades, to whatever the town is short of; and an inn with nobody to keep it lets
+            // no rooms).
+            cook.setJob(StationTask.COOK);
+            helper.assertTrue(Inn.signAndKeeperForTests(id)[1] == cook, "the cook keeps the inn");
             List<BlockPos> beds = Inn.bedsForTests(level, id);
             helper.assertTrue(beds.size() >= 2, "the inn's beds: " + beds.size());
             VillageFolkEntity t = Tourists.arriveNowForTests(level, v);
@@ -707,9 +713,11 @@ public class VisitorsGameTests {
             Visitors.arriveForTests(level, t);
             level.setDayTime(day * 24000L + 12000L);
             int till = Ledger.coins(id);
+            String why = Visitors.noRoomForTests(level, t);
             boolean goes = Visitors.stayForTests(level, t);
             Kit.log("vp09 the tourist at dusk: going home " + goes + ", lodged " + Inn.lodged(t) + ", purse " + purse + " -> " + t.purse()
-                + ", the till " + till + " -> " + Ledger.coins(id));
+                + ", the till " + till + " -> " + Ledger.coins(id) + "; a room to be had: " + (why.isEmpty() ? "yes" : why)
+                + "; the keeper " + Inn.signAndKeeperForTests(id)[1]);
             helper.assertTrue(!goes && Inn.lodged(t), "it takes a room for the night instead of going home");
             helper.assertTrue(t.purse() == purse - 3 && Ledger.coins(id) == till + 3, "three coins out of its purse into the till");
             VillageFolkEntity bard = Bard.arriveNowForTests(level, v);

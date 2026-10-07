@@ -582,9 +582,35 @@ public final class Visitors {
      */
     static boolean lodge(ServerLevel level, VillageFolkEntity f) {
         if (inn(townOfOr(f)) == null) return false;
-        if (!Inn.lodged(f) && Inn.takeARoom(level, f) == null) return false;
+        if (!Inn.lodged(f) && Inn.takeARoom(level, f) == null) {
+            long day = level.getDayTime() / 24000L;
+            Long told = NO_ROOM.put(f.getUUID(), day);
+            if (told == null || told != day) LOG.info("[MCA-VISIT] {} found no room at the inn: {}", f.displayNameCap(), noRoom(level, f));
+            return false;
+        }
         Inn.lodging(f, level);
         return true;
+    }
+
+    /** The night each visitor was last turned away from the inn (said once a night, in the log). */
+    private static final Map<UUID, Long> NO_ROOM = new ConcurrentHashMap<>();
+
+    /** Why a visitor cannot have a room at its town's inn just now, in words; "" if it can (Inn.takeARoom's own tests). */
+    static String noRoom(ServerLevel level, VillageFolkEntity f) {
+        UUID town = townOf(f);
+        Ledger.Building b = town == null ? null : Inn.inn(town);
+        if (b == null) return "no inn";
+        Villages.Village near = Villages.nearest(level, f.blockPosition(), Villages.VILLAGE_RANGE);
+        if (near == null || !near.id().equals(town)) return "not in the town";
+        if (Inn.keeper(town) == null) return "nobody keeps the inn (no cook or shopkeeper)";
+        if (Inn.freeBed(level, town, b) == null) return "no bed free";
+        if (f.purse() < Inn.ROOM) return "not the price of a room (" + f.purse() + " coins)";
+        return "";
+    }
+
+    /** Tests: why the visitor could not have a room at the inn ("" if it could). */
+    public static String noRoomForTests(ServerLevel level, VillageFolkEntity f) {
+        return noRoom(level, f);
     }
 
     private static UUID townOfOr(VillageFolkEntity f) {
