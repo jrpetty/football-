@@ -335,6 +335,11 @@ final class WatchHouse {
             default -> {
                 // On the lead: it keeps up with its guard; with nobody to walk it, it waits where it is.
                 VillageFolkEntity g = t.hasUUID("escort") ? Civics.find(level, t.getUUID("escort")) : null;
+                if (g != null && !f.getUUID().equals(ESCORTS.get(g.getUUID()))) {
+                    // After a restart the escort is taken up again; a guard with another prisoner in hand leaves this one to wait.
+                    if (ESCORTS.get(g.getUUID()) == null && g.stationTask() == AssistantEntity.StationTask.GUARD) ESCORTS.put(g.getUUID(), f.getUUID());
+                    else g = null;
+                }
                 if (g == null || Raids.underAlarm(village) && g.stationTask() == AssistantEntity.StationTask.GUARD) {
                     f.getNavigation().stop();
                     if (g == null) recover(level, v, f, t, cell);
