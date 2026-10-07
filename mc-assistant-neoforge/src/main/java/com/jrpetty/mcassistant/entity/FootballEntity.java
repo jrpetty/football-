@@ -135,6 +135,9 @@ public class FootballEntity extends Entity {
             v = v.add(0.0, -GRAVITY, 0.0);                                              // (lying still, it presses on the ground)
         }
         Vec3 before = v;
+        // The way it is going this tick is its motion (the move leaves the motion as it was, but for what a collision
+        // stops): without this the fall never gathered speed, a tick's gravity at a time, and it never bounced.
+        setDeltaMovement(v);
         move(MoverType.SELF, v);
         Vec3 after = getDeltaMovement();
         double vx = after.x, vy = after.y, vz = after.z;

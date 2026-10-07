@@ -434,7 +434,10 @@ public class LeisureGameTests {
             Map<Item, Integer> want = Pastimes.wantedForTests(level, t.v());
             Kit.log("ls02 wanted: " + want);
             helper.assertTrue(want.getOrDefault(lute, 0) == 2, "a lute for each of the two buskers: " + want);
-            stock(t, join(many(Items.OAK_PLANKS, 64), many(Items.STICK, 8), many(Items.STRING, 8), many(Items.CRAFTING_TABLE, 1)));
+            // Timber enough that the Wood Age town is not putting every plank by for its age (Bench keeps all the planks
+            // while the age is short of timber), as a town settled enough to have buskers has.
+            stock(t, join(many(Items.OAK_LOG, 64), many(Items.OAK_PLANKS, 64), many(Items.STICK, 8), many(Items.STRING, 8),
+                many(Items.CRAFTING_TABLE, 1)));
             String made = Pastimes.craftForTests(level, shop);
             Kit.log("ls02 the shop's workshop: " + made + "; lutes " + stores(level, t, lute) + ", string " + stores(level, t, Items.STRING));
             helper.assertTrue(made != null && made.contains("lute") && stores(level, t, lute) == 1, "a lute made, into the stores: " + made);
@@ -516,7 +519,9 @@ public class LeisureGameTests {
             // The workshop makes one for the tavern's table.
             Map<Item, Integer> want = Pastimes.wantedForTests(level, t.v());
             helper.assertTrue(want.getOrDefault(boardItem, 0) == 1, "a board for the tavern: " + want);
-            stock(t, join(many(Items.OAK_PLANKS, 60), many(Items.INK_SAC, 2), many(Items.BONE_MEAL, 2), many(Items.CRAFTING_TABLE, 1)));
+            // Timber enough that the age is not holding every plank back (Bench), as a town with a tavern has.
+            stock(t, join(many(Items.OAK_LOG, 64), many(Items.OAK_PLANKS, 60), many(Items.INK_SAC, 2), many(Items.BONE_MEAL, 2),
+                many(Items.CRAFTING_TABLE, 1)));
             String made = Pastimes.craftForTests(level, shop);
             Kit.log("ls03 the workshop: " + made + "; boards " + stores(level, t, boardItem) + ", ink " + stores(level, t, Items.INK_SAC)
                 + ", bone meal " + stores(level, t, Items.BONE_MEAL));
@@ -709,6 +714,16 @@ public class LeisureGameTests {
             // A ball dropped from three blocks up, well away from anybody.
             Kit.live(level, t.heart().getX(), Z, 40);
             spot[0] = Kit.surface(level, t.heart().getX() + 20, Z + 20);
+            // Its ground made bare: nothing grown or put there by now (a bush or a web holds a ball fast), all along where
+            // it will roll and past the wall it will come off.
+            for (int dx = -3; dx <= 18; dx++) {
+                for (int dz = -4; dz <= 4; dz++) {
+                    BlockPos c = spot[0].offset(dx, 0, dz);
+                    level.setBlock(c.below(), Blocks.GRASS_BLOCK.defaultBlockState(), 2 | 16);
+                    for (int dy = 0; dy < 6; dy++) level.setBlock(c.above(dy), Blocks.AIR.defaultBlockState(), 2 | 16);
+                }
+            }
+            Kit.log("ls05 the drop's ground: " + level.getBlockState(spot[0].below()) + " under " + level.getBlockState(spot[0]));
             ball[0] = FootballEntity.setDown(level, spot[0].getX() + 0.5, spot[0].getY() + 3.0, spot[0].getZ() + 0.5, new ItemStack(football), null);
             helper.assertTrue(ball[0] != null, "a ball set down");
         });
@@ -717,18 +732,22 @@ public class LeisureGameTests {
             FootballEntity b = ball[0];
             if (b == null || tick <= 5) return;
             if (tick < 45) {
-                if (b.onGround()) landed[0] = true;
-                if (!landed[0]) track[0] = Math.min(track[0], b.getY());
-                else track[1] = Math.max(track[1], b.getY());
+                if (tick % 5 == 0) Kit.log("ls05 tick " + tick + ": " + String.format(Locale.ROOT, "%.3f", b.getY() - spot[0].getY()) + " up, going "
+                    + b.getDeltaMovement() + ", on the ground " + b.onGround() + ", alive " + b.isAlive() + ", in " + helper.getLevel().getBlockState(b.blockPosition()));
+                // Down to the grass (the lowest it has been), then up off it again: the highest it rose over its low point.
+                if (b.onGround() || b.getY() - spot[0].getY() < 0.05) landed[0] = true;
+                track[0] = Math.min(track[0], b.getY());
+                if (landed[0]) track[1] = Math.max(track[1], b.getY() - track[0]);
             }
             if (tick > 130 && tick < 160) track[3] = Math.max(track[3], b.getX());
         });
         helper.runAtTickTime(45, () -> {
             FootballEntity b = ball[0];
             double ground = spot[0].getY();
-            Kit.log("ls05 dropped: landed " + landed[0] + ", up again to " + String.format(Locale.ROOT, "%.2f", track[1] - ground) + " over the ground; lying at "
+            Kit.log("ls05 dropped: landed " + landed[0] + ", up again to " + String.format(Locale.ROOT, "%.2f", track[1]) + " off the grass; lying at "
                 + String.format(Locale.ROOT, "%.3f", b.getY() - ground) + ", moving " + b.getDeltaMovement());
-            helper.assertTrue(landed[0] && track[1] - ground > 0.3, "it bounced: up " + (track[1] - ground));
+            helper.assertTrue(landed[0] && track[1] > 0.3 && Math.abs(track[0] - ground) < 0.05, "it came down and bounced: up " + track[1]
+                + " off its lowest, " + (track[0] - ground));
             helper.assertTrue(Math.abs(b.getY() - ground) < 0.05 && b.onGround(), "and settled on the grass: " + (b.getY() - ground));
             // Kicked along the grass: it rolls, and slows.
             track[2] = b.getX();
