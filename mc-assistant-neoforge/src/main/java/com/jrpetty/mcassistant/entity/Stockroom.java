@@ -914,6 +914,8 @@ public final class Stockroom {
                 && book(level, village, maker).day - book(level, village, maker).opened >= 2) {
             status = have >= target ? "slow" : status;
         }
+        String kitchen = Kitchen.status(level, village, key);       // [kitchen] the lunches eaten out, the pies of the catch, the cheese cut
+        if (kitchen != null) status = kitchen;
         r.putString("status", status);
         return r;
     }

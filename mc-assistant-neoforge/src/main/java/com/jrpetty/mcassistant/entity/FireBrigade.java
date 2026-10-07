@@ -746,6 +746,15 @@ public final class FireBrigade {
         return false;
     }
 
+    /** [weave] The blocks alight in the town's fires now (a player's bucket is thrown at the nearest: Weave.douse). */
+    static List<BlockPos> burningBlocks(UUID village) {
+        List<BlockPos> out = new ArrayList<>();
+        Town t = TOWNS.get(village);
+        if (t == null) return out;
+        for (Blaze b : t.blazes) if (!b.closed) for (Long l : b.burning) out.add(BlockPos.of(l));
+        return out;
+    }
+
     /** Tests: the strokes the fire bell has rung for this town, all told. */
     public static int alarmForTests(UUID village) {
         return RUNG.getOrDefault(village, 0);

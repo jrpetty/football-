@@ -69,6 +69,8 @@ public final class Archery {
 
     public static void resetForTests() {
         SESSIONS.clear();
+        LAST.clear();
+        STOPPED.clear();
         PRACTISED.clear();
         CONTESTS.clear();
         TENDED.clear();
@@ -228,7 +230,8 @@ public final class Archery {
         }
         if (!s.dim.equals(level.dimension())) return false;
         if (f.getTarget() != null || Raids.underAlarm(s.village) || f.isSleeping()) {
-            stop(level, s, "called away");
+            stop(level, s, "called away (" + (f.getTarget() != null ? "at " + f.getTarget().getType().getDescription().getString()
+                : f.isSleeping() ? "asleep" : "the bell") + ")");
             return false;
         }
         drive(f, level, s);
@@ -349,8 +352,16 @@ public final class Archery {
         switch (s.stage) {
             case TO_LINE -> {
                 Vec3 at = Vec3.atBottomCenterOf(l.stand());
-                if (f.position().distanceToSqr(at.x, f.getY(), at.z) > 1.0 && now - s.since < 600) {
+                double off = f.position().distanceToSqr(at.x, f.getY(), at.z);
+                if (off > 1.0 && now - s.since < 600) {
                     if (f.getNavigation().isDone() || f.tickCount % 40 == 0) f.getNavigation().moveTo(at.x, at.y, at.z, 1.0);
+                    return;
+                }
+                // Held up on the way (taken off by something else a good while) and still not at the line: the
+                // practice is off, its arrows and the bow back. It shoots from the line or by it, never from
+                // across the town over the heads of whoever is in between (clear() looks down the lane only).
+                if (off > 9.0) {
+                    stop(level, s, "never got to the line");
                     return;
                 }
                 f.getNavigation().stop();
@@ -473,6 +484,7 @@ public final class Archery {
             if (s.points >= s.shot * 3 / 2) FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Not bad, that.", "My eye's in today."));
         }
         LAST.put(f.getUUID(), new int[]{ s.shot, s.hits, s.points, pulled });
+        STOPPED.remove(f.getUUID());
     }
 
     /** The arrows it loosed, and any of its own lying in the range: off the field, counted. */
@@ -497,6 +509,8 @@ public final class Archery {
         if (back > 0) Crafts.store(level, v, new ItemStack(Items.ARROW, back));
         if (f != null && s.borrowedBow) giveBackBow(level, v, f);
         if (s.contest) score(level, s.village, s.guard, s.points, s.hits, why);
+        LAST.put(s.guard, new int[]{ s.shot, s.hits, s.points, back - (s.toShoot - s.shot) });
+        STOPPED.put(s.guard, why);
     }
 
     // ------------------------------------------------------------------ the contest
@@ -607,6 +621,8 @@ public final class Archery {
     // ------------------------------------------------------------------ tests
 
     private static final Map<UUID, int[]> LAST = new ConcurrentHashMap<>();
+    /** Why this guard's last session was stopped before it was done (absent if it finished). */
+    private static final Map<UUID, String> STOPPED = new ConcurrentHashMap<>();
 
     /** Tests: a practice session for this guard now, whatever the hour (null if it cannot: no range, arrows, bow or lane). */
     public static boolean practiseForTests(VillageFolkEntity f, ServerLevel level) {
@@ -617,10 +633,16 @@ public final class Archery {
         return lane >= 0 && open(f, level, village, range, lane, false) != null;
     }
 
-    /** Tests: {shot, hits, points, pulled} of this guard's last session, or null. */
+    /** Tests: {shot, hits, points, pulled} of this guard's last session (finished or stopped), or null. */
     @Nullable
     public static int[] lastForTests(UUID guard) {
         return LAST.get(guard);
+    }
+
+    /** Tests: why this guard's last session was stopped before it was done, or null if it finished. */
+    @Nullable
+    public static String stoppedForTests(UUID guard) {
+        return STOPPED.get(guard);
     }
 
     public static boolean sessionForTests(UUID guard) {

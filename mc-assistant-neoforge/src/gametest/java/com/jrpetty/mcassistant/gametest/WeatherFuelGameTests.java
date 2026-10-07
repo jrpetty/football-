@@ -325,7 +325,7 @@ public class WeatherFuelGameTests {
         // The morning, at its work and not on its break, the clock kept there.
         final long from = morningAtWork(level, f, 1000);
         Kit.log("wf02 the woodcutter's morning from " + from);
-        final int[] stage = { 0 }, mark = { 0, 0, 0, 0 };
+        final int[] stage = { 0 }, mark = { 0, 0, 0, 0 }, felledAt = { 0 };
         final long[] since = { 0 };
         helper.onEachTick(() -> {
             long t = helper.getTick();
@@ -358,6 +358,7 @@ public class WeatherFuelGameTests {
                         mark[0] = f.countCarried(s -> s.is(ItemTags.SAPLINGS));
                         mark[1] = ground[0] + ground[1];                 // (a sapling that grows is a tree: counted together)
                         mark[2] = mark[1];
+                        felledAt[0] = f.deedCount(com.jrpetty.mcassistant.entity.AssistantEntity.Deed.TREES_FELLED);
                     } else if (t >= 2000) {
                         // Leaves give a sapling one time in twenty: should the four crowns have given fewer than four, every one
                         // they gave is on a stump.
@@ -392,10 +393,16 @@ public class WeatherFuelGameTests {
                             if (Math.max(Math.abs(a.getX() - b.getX()), Math.abs(a.getZ() - b.getZ())) <= 2) crowded++;
                         }
                     }
-                    Kit.log("wf02 the open ground: " + open + " planted, carried " + carried + " (had " + mark[0] + "), wood "
-                        + ground[0] + "/" + ground[1] + "/" + ground[2] + ", crowded pairs " + crowded);
+                    // The ones it keeps are for the stumps of its next felling, and that may come now: one of the saplings
+                    // grows in the window, the woodcutter fells it as its work, and puts a kept sapling on the stump.
+                    // So every tree it has felled since counts with the ones in hand: what the open ground must
+                    // never have is the last KEEP of them.
+                    int felled = f.deedCount(com.jrpetty.mcassistant.entity.AssistantEntity.Deed.TREES_FELLED) - felledAt[0];
+                    Kit.log("wf02 the open ground: " + open + " planted, carried " + carried + " (had " + mark[0] + "), felled since "
+                        + felled + ", wood " + ground[0] + "/" + ground[1] + "/" + ground[2] + ", crowded pairs " + crowded);
                     helper.assertTrue(open >= 8, "saplings to spare planted on the open ground: " + open);
-                    helper.assertTrue(carried >= Woods.KEEP, "the stumps' saplings kept back: " + carried);
+                    helper.assertTrue(carried + felled >= Woods.KEEP, "the stumps' saplings kept back: " + carried + " in hand, "
+                        + felled + " trees felled since (a stump each)");
                     helper.assertTrue(ground[0] + ground[1] <= ground[2], "no thicker than the wood should be: " + (ground[0] + ground[1]) + " of " + ground[2]);
                     helper.assertTrue(crowded == 0, "two blocks clear of each other: " + crowded + " crowded pairs");
                     // Short of timber (no logs at all in the stores): the stores' bone meal on the saplings.

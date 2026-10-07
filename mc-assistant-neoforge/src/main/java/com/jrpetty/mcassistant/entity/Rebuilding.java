@@ -298,7 +298,10 @@ public final class Rebuilding {
         long now = level.getGameTime();
         if (l == null) {
             l = find(level, f, night, now);
-            if (l == null) return false;
+            if (l == null) {
+                Weave.noBed(f);                                             // [weave] nowhere at all: a refugee, to a town at peace
+                return false;
+            }
             LODGE.put(f.getUUID(), l);
             NIGHTS.merge(f.getUUID(), 1, Integer::sum);
             if (f.isSleeping()) f.stopSleeping();

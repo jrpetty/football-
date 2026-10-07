@@ -93,6 +93,7 @@ public final class Crafts {
             if (made == null) made = Pets.craft(level, v, f);         // [pets] a turn at the pets' beds, collars, bowls, treats
             if (made == null) made = TradeGoods.craft(level, v, f);   // [player-civic] a master's own: the reinforced pick, the stout, the pie, a journal
             if (made == null) made = WorkTools.craft(level, v, f);    // [workitems] ropes and sacks, the saw, props, crates, boxes, milestones
+            if (made == null) made = Kitchen.craft(level, v, f);      // [kitchen] lunches, cheese, cakes, pies; mead, cider; tea and bandages
             if (made == null) made = switch (f.stationTask()) {
                 case SMITH -> smith(level, v, f);
                 case TAILOR -> tailor(level, v, f);
