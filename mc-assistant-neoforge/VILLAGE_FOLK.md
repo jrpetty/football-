@@ -779,17 +779,29 @@ for it. A guard never spends a coin of its own on its kit.
   and the shop's workshop once the shop stands). The stores keep as many of each piece as there
   are guards who wear worse, and a little leather is always kept back for books and the like. A
   tailor of ten years and more makes them in the town's colour.
-* **Iron in the Iron Age.** The smith's iron helmets, chestplates, leggings, boots and swords, as
-  before. While the town is putting iron by for its next age the armour waits (unless the town is
-  on a war footing), and the guards keep their leather meanwhile.
-* **Diamond in the Diamond Age.** Once the town has come into the Diamond Age, is not putting its
-  diamonds by for the next age, and the miners have their diamond pick, the smith forges the watch
-  a diamond sword first, then the chestplate, the leggings, the helmet and the boots, a couple of
-  diamonds always kept back. In the Nether Age it takes them on to netherite at the smithing table,
-  with the stores' netherite ingot and upgrade template.
-* **The maker's hand still counts.** A smith makes iron chestplates from level 10 and diamond
-  armour from level 30; a tailor makes the tunic and trousers from level 5 (see *The makers'
-  hands*). What the hand cannot make yet waits for it.
+* **Iron in the Iron Age.** The smith's iron helmets, chestplates, leggings, boots and swords. The
+  iron an age asks for is sized to put the watch in armour, so the watch's armour does not wait
+  while the town puts iron by: up to the watch's share of that iron, the smith forges each piece a
+  guard is waiting for, and the iron on the guards' backs counts toward the age as if it were in
+  the stores. Past the watch's share the armour waits for the age (unless the town is on a war
+  footing), and those guards keep their leather meanwhile.
+* **Diamond in the Diamond Age.** Once the town has come into the Diamond Age and is not putting
+  its diamonds by for the next age, the smith forges the watch a diamond sword first, then the
+  chestplate, the leggings, the helmet and the boots, a couple of diamonds always kept back. It
+  works on these turn and turn about with its other forging. If the smith has the hand to make the
+  miners' diamond pick, the pick comes first; if it has not, the watch does not wait for it. In the
+  Nether Age a master smith (level 40) takes them on to netherite at the smithing table, with the
+  stores' netherite ingot and upgrade template.
+* **A smith and a tailor for the watch.** A town that keeps a watch takes up a smith in the Iron
+  Age and a tailor in the Stone Age before their smithy or workshop stand. They work from a post by
+  the square, a little slower, and the smithy then goes up with what the age asks for. (A real town
+  of a hundred had built neither in fifty-eight days, and so had no smith, and no armour.)
+* **Whatever the maker's years.** The watch's armour, blades and shields wait on nobody's level. A
+  smith or tailor makes them once the age has come to them, and what is beyond its hand comes out
+  as an apprentice's work: it wears through a little sooner and carries a beginner's mark. A smith
+  takes weeks at the anvil to reach level 10, and many months to reach 25, so the watch would
+  otherwise have waited for ever. The rest of the ladder (diamond picks, a player's order) still
+  waits for the hand (see *The makers' hands*).
 * **The best goes on.** Every so often each guard looks in the stores (and the shop's round does
   the same for the whole watch): in each slot it puts on the best piece there is that beats what it
   wears (netherite, then diamond, iron, chainmail, leather), takes the blade that bites hardest if
@@ -799,6 +811,11 @@ for it. A guard never spends a coin of its own on its kit.
 * **No rank on the town's kit.** A guard new to the watch wears diamond and wields a diamond sword
   as soon as the town issues them: it is the town's kit, not a tool it has to earn the skill for.
   Other trades still need their levels for diamond and netherite tools.
+* **Handed back.** Everything the town issues its watch carries the town's mark, including a blade
+  off the storehouse's rack. A guard who leaves the watch, for another trade or to live in another
+  town, hands it all back into the stores for the next guard or the militia: armour, blade, bow,
+  arrows and shield. Its own stone sword stays with it. If a guard dies, its kit drops as anybody's
+  would.
 * **The town pays.** Every piece is made out of the stores' own leather, iron and diamonds by the
   town's makers, and issued free. A guard is never sold its blade at the shop, never charged for
   one off the storehouse's rack, and never pays for armour. The shop's takings go into the
@@ -817,8 +834,8 @@ for it. A guard never spends a coin of its own on its kit.
   come.*
 * `/village watch` (or `/village watch kit`) lists each guard and its kit, what is on order for the
   watch (and who will make it, and what it is waiting on: the age, the diamonds put by, the
-  miners' pick, the maker's level), the shop's order book for the watch, what was made for it
-  today, and what it has all cost.
+  miners' pick, the age's iron past the watch's share), the shop's order book for the watch, what
+  was made for it today, and what it has all cost.
 
 ### The crafts, the café and the shop
 
@@ -830,9 +847,9 @@ born or grown up into a big enough village.
 | Trade | From | Works at | What it does |
 |---|---|---|---|
 | Cook | Stone Age, 14 folk | the café | Bakes potatoes, roasts meat and fish, bakes bread, cookies, pumpkin pie and cakes, and makes drinks for the café and the tavern, more of what sells |
-| Tailor | Stone Age, 18 folk | the workshop | Makes beds (in the colour of the wool), rugs, string, and banners on its loom |
+| Tailor | Stone Age, 18 folk | the workshop (before it stands, a post by the square, once the town keeps a watch) | Makes beds (in the colour of the wool), rugs, string, banners on its loom, and the watch's leather |
 | Beekeeper | Stone Age, 20 folk | a meadow outside town | Keeps up to four hives: comb with shears or honey with a bottle from a full hive, new hives from comb, bees bred on flowers |
-| Blacksmith | Iron Age, 16 folk | the smithy | Makes iron picks for the miners, swords and armour for the watch, shears, buckets, axes and hoes; bows, and arrows of flint, stick and feather |
+| Blacksmith | Iron Age, 16 folk | the smithy (before it stands, a post by the square, once the town keeps a watch) | Makes iron picks for the miners, swords and armour for the watch (diamond in the Diamond Age), shears, buckets, axes and hoes; bows, and arrows of flint, stick and feather |
 | Shopkeeper | Iron Age, 18 folk | the shop | Makes what a house wants at its bench, the whole way from the stores (logs to planks to sticks to a pick), more of what sells, and sets it out on the counter with what the crafts have made; with the hands it takes on, makes the watch's blades and armour and the rack's spare tools, by any recipe there is, as far as the age has come (*The shop's workshop*) |
 | Brewer | Iron Age, 22 folk | the brewery | Brews at a real brewing stand: healing for the watch, then swiftness, night vision, regeneration, leaping, water breathing, fire resistance and strength |
 | Enchanter | Diamond Age, 24 folk | the library | Binds books from paper (the farmers' cane) and leather, then enchants the village's iron and diamond tools and armour with lapis at its table |
@@ -3229,9 +3246,13 @@ that trade), in what it can make and in how well it makes it.
 | 5 | iron helmets and boots | leather jerkins and leggings | |
 | 10 | iron chestplates and leggings | clothes in the village's colour; banners on the loom | the second rank; diamond things |
 | 15 | shields for the watch (up to three in the stores; a guard of level 10 takes one), and crossbows to order | | |
-| 25 | diamond tools, with the diamonds to hand (a pick for the miners and a blade for the watch, unless the age is saving its diamonds) | banners with a border woven in | the third rank; netherite things |
-| 30 | diamond armour (to order) | | its work bound to last (Unbreaking one better) |
+| 25 | diamond tools and diamond armour, with the diamonds to hand (a pick for the miners, unless the age is saving its diamonds) | banners with a border woven in | the third rank; netherite things |
+| 30 | | | its work bound to last (Unbreaking one better) |
 | 40 | netherite has its rung here, though no recipe the folk use makes it yet | banners with a stripe as well | |
+
+**The watch's kit comes first.** The watch's armour, blades and shields are not held back by this
+ladder. Once the age has come to them, a smith or tailor of any level makes them, and what is above
+its rung comes out as an apprentice's work (see *The watch's kit*).
 
 The bookshelves round the enchanting table still have their say, as they do for a player:
 the rank laid is the lower of the shelves' and the enchanter's own. The enchanter now also

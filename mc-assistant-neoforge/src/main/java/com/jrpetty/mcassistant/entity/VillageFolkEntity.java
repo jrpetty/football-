@@ -133,6 +133,8 @@ public class VillageFolkEntity extends AssistantEntity {
      * settlement on top of the one they were already standing in.
      */
     public void joinVillage(UUID village, BlockPos centre) {
+        // [guard-kit] A guard going to live in another town leaves the watch's kit in its old town's stores.
+        if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.GUARD) WatchKit.handBack(this, "leaving the town");
         this.villageCentre = centre;
         adoptVillage(village);
         setHome(centre);
@@ -1259,6 +1261,7 @@ public class VillageFolkEntity extends AssistantEntity {
 
     @Override
     protected void tradeTakenUp(StationTask from, StationTask to) {
+        if (from == StationTask.GUARD && to != StationTask.GUARD) WatchKit.handBack(this, "off the watch");   // [guard-kit] the town's kit
         if (tickCount < 40 || to == StationTask.NONE || !persona.rolled()) return;    // loading, or not settled yet
         long day = level().getDayTime() / 24000L;
         int lv = tradeLevel(to);

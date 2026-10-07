@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
  * <ul>
  * <li><b>The smith.</b> From the first day, iron tools and blades, shears and buckets; iron
  *     helmets and boots at level 5, the chestplate and leggings at 10; shields and crossbows
- *     at 15; diamond tools at 25 and diamond armour at 30 (only with the diamonds to hand);
+ *     at 15; diamond tools and diamond armour at 25 (only with the diamonds to hand);
  *     netherite at 40.</li>
  * <li><b>The tailor.</b> Boots and caps of plain leather, beds and rugs from the first day;
  *     jerkins and leggings at 5; clothes in the village's colour, and banners on the loom, at
@@ -49,6 +49,11 @@ import javax.annotation.Nullable;
  * (Unbreaking, and an edge or a good fit with it). Each piece carries its maker's mark and
  * how good it is, and sells for as much more (or less) at the village's counters. A player's
  * order gets the hand of whoever took it, and an order above that hand is turned down.
+ *
+ * <p>[guard-kit] <b>The watch's kit first.</b> The town's armour, blades and shields for its
+ * watch wait on nobody's years (WatchKit.forTheWatch): the smith and the tailor make them once
+ * the age has come to them, whatever their level, and what is beyond their hand comes out an
+ * apprentice's work. A real town's smith was at level five or six after weeks at the anvil.
  */
 public final class Craftsmanship {
 
@@ -96,7 +101,7 @@ public final class Craftsmanship {
         String path = BuiltInRegistries.ITEM.getKey(item).getPath();
         // The smith's.
         if (path.startsWith("netherite_")) return 40;
-        if (path.startsWith("diamond_")) return armour(path) ? 30 : 25;
+        if (path.startsWith("diamond_")) return 25;              // [guard-kit] diamond armour with the diamond tools
         if (path.startsWith("chainmail_") || item == Items.SHIELD || item == Items.CROSSBOW) return 15;
         if (item == Items.ANVIL) return 20;
         if ((path.startsWith("iron_") || path.startsWith("golden_")) && armour(path)) {
@@ -239,16 +244,17 @@ public final class Craftsmanship {
         return switch (t) {
             case SMITH -> {
                 String can = lv >= 40 ? "anything a forge can make, diamond and all"
-                    : lv >= 30 ? "diamond tools and diamond armour, given the diamonds"
-                    : lv >= 25 ? "diamond tools now, given the diamonds, and iron of every kind"
+                    : lv >= 25 ? "diamond tools and diamond armour, given the diamonds, and iron of every kind"
                     : lv >= 15 ? "shields and crossbows, and a full suit of iron"
                     : lv >= 10 ? "iron tools and blades, and a full suit of iron"
                     : lv >= 5 ? "iron tools and blades, and iron helmets and boots"
-                    : "iron tools and blades, and no armour yet";
-                String next = lv >= 40 ? "" : lv >= 30 ? " A master's hand comes at 40." : lv >= 25 ? " Diamond armour comes at 30."
+                    : "iron tools and blades";
+                String next = lv >= 40 ? "" : lv >= 25 ? " A master's hand comes at 40."
                     : lv >= 15 ? " Diamond comes at 25." : lv >= 10 ? " Shields come at 15." : lv >= 5 ? " Chestplates come at 10."
                     : " Helmets and boots come at 5.";
-                yield "I can forge " + can + "; " + lasting(g, "picks", "the anvil") + "." + next;
+                // [guard-kit] The watch's kit it makes whatever its years.
+                String watch = lv < 25 ? " The watch's armour I make all the same, as well as my hand allows." : "";
+                yield "I can forge " + can + "; " + lasting(g, "picks", "the anvil") + "." + next + watch;
             }
             case TAILOR -> {
                 String can = lv >= 25 ? "banners with a border woven in, clothes in the village's colour, beds and rugs"
@@ -257,7 +263,8 @@ public final class Craftsmanship {
                     : "boots and caps of plain leather, beds and rugs";
                 String next = lv >= 25 ? "" : lv >= 10 ? " Patterned banners come at 25." : lv >= 5 ? " Dyed clothes and banners come at 10."
                     : " Jerkins come at 5.";
-                yield "I can make " + can + "; " + lasting(g, "leathers", "the loom") + "." + next;
+                String watch = lv < 5 ? " The watch's leather I cut all the same, as well as my hand allows." : "";   // [guard-kit]
+                yield "I can make " + can + "; " + lasting(g, "leathers", "the loom") + "." + next + watch;
             }
             case ENCHANT -> {
                 int tier = enchantTier(lv);

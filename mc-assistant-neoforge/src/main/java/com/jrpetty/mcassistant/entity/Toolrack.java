@@ -454,6 +454,7 @@ public final class Toolrack {
         ItemStack got = best.getItem(bestSlot).split(1);
         if (best.getItem(bestSlot).isEmpty()) best.setItem(bestSlot, ItemStack.EMPTY);
         best.setChanged();
+        if (f.stationTask() == StationTask.GUARD) WatchKit.mark(got);    // [guard-kit] the watch's blade, the town's to have back
         ItemStack left = f.insertGiven(got.copy());
         if (!left.isEmpty()) {
             Crafts.store(level, v, left);                   // no room in its pack after all: back it goes

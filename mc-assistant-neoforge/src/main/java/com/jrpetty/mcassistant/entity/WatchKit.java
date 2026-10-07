@@ -10,6 +10,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
@@ -23,6 +24,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ShieldItem;
 import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.component.DyedItemColor;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -47,12 +49,20 @@ import java.util.function.Predicate;
  *     leather (by the smith when the town has no tailor, by the shop's workshop once the shop stands). The
  *     stores keep as many of each piece as there are guards who wear worse; and a little leather is always
  *     kept back for the books, the gazette and the frames.</li>
- * <li><b>Iron in the Iron Age.</b> The smith's iron (Crafts.forge), as ever, the age's saving kept.</li>
+ * <li><b>Iron in the Iron Age.</b> The smith's iron (Crafts.forge). The age's iron is sized to put the
+ *     watch in armour (VillageMath.ironWanted), so up to the watch's share the armour waits on no saving,
+ *     and the iron on the guards' backs counts toward the age as if it were in the stores (ironCredit):
+ *     the armour used to wait on the saving, the next age asked for twice as much, and no real town's watch
+ *     ever went into iron.</li>
  * <li><b>Diamond in the Diamond Age.</b> Once the age has come to diamond, the town is not saving its
- *     diamonds for the next age, and the miners have their diamond pick, the smith forges the watch a diamond
- *     sword first and then the chestplate, the leggings, the helmet and the boots, a few diamonds always kept
- *     back. In the Nether Age it takes them on to netherite at the smithing table (Bench), with the stores'
- *     ingot and template. What the maker's hand cannot make yet waits for it (Craftsmanship).</li>
+ *     diamonds for the next age, and the miners have their diamond pick (if the smith has the hand for one),
+ *     the smith forges the watch a diamond sword first and then the chestplate, the leggings, the helmet and
+ *     the boots, a few diamonds always kept back, turn about with its forging. In the Nether Age it takes them
+ *     on to netherite at the smithing table (Bench), with the stores' ingot and template.</li>
+ * <li><b>Makers, whatever their years.</b> The watch's armour, blades and shields wait on nobody's level
+ *     (forTheWatch): beyond the maker's hand they come out an apprentice's work. And a town that keeps a watch
+ *     takes up a smith and a tailor before their smithy and workshop stand (beforeItsBuilding), the smithy then
+ *     wanted with what the age asks for: a real town of a hundred had neither in fifty-eight days.</li>
  * <li><b>The best goes on.</b> One way of fitting a guard out, whether the guard goes to the stores itself or
  *     the shop's round fits the watch (Workshop.outfit): each slot the best armour the stores hold that beats
  *     what it wears (netherite, diamond, iron, chainmail, leather, by what the piece is worth as armour); the
@@ -60,6 +70,9 @@ import java.util.function.Predicate;
  *     the next guard or the militia (a guard's own wooden or stone blade stays in its pack).</li>
  * <li><b>No rank on the town's kit.</b> A guard new to the watch wears and wields whatever the town issues
  *     it: it is the town's kit, not a tool it earned the skill for (VillageFolkEntity.mayUseTier).</li>
+ * <li><b>Handed back.</b> What the town issues carries its mark; a guard who leaves the watch (another trade,
+ *     another town) hands it back into the stores for the next guard or the militia (handBack). Its own
+ *     stone sword stays with it; dying, it drops what it has, as anybody does.</li>
  * <li><b>The town pays.</b> Every piece is made out of the stores' own leather, iron and diamonds by the
  *     town's makers, and issued free. The shop does not sell the watch its blade, and the store's takings are
  *     the treasury's (StoreFloor, ShopStock), so no coin need change hands between the town and its own shop:
@@ -230,6 +243,7 @@ public final class WatchKit {
     public static void resetForTests() {
         MADE.clear();
         MADE_DAY.clear();
+        IRON_SHARE.clear();
     }
 
     /** Is there a tailor in the town (the watch's leather is its work)? */
@@ -285,8 +299,9 @@ public final class WatchKit {
 
     /**
      * Why the watch's piece of this kind in this metal may not be made now, in a few words, or null if it may:
-     * the age not come to it, the town putting its diamonds by, the miners' pick first, or the maker's hand
-     * ({@code skill} below nought: nobody's hand is asked after).
+     * the age not come to it, the town putting its diamonds by, or the miners' diamond pick first (when the
+     * maker has the hand to make that pick: {@code skill} below nought, whoever makes it). Not the maker's
+     * hand: the watch's kit waits on nobody's years (forTheWatch), and comes out as good as the hand makes it.
      */
     @Nullable
     static String waits(ServerLevel level, Villages.Village v, Kind k, Metal m, int skill) {
@@ -296,29 +311,160 @@ public final class WatchKit {
         if (!Tiers.allows(level, age, it)) return Tiers.of(level, it).label + "'s work, and the town is in " + age.label;
         if (m == Metal.DIAMOND || m == Metal.NETHERITE) {
             if (saving(level, v.id(), Villages.Task.DIAMOND)) return "the town is putting its diamonds by for its age";
-            if (!minersHaveTheirPick(level, v)) return "the miners' diamond pick comes first";
+            // The miners' pick first, when the smith can make it; a smith short of the years for the pick does not
+            // keep the watch waiting on it (the age's diamonds keep a pick's worth put by all the same).
+            if (!minersHaveTheirPick(level, v) && (skill < 0 || Craftsmanship.canMake(skill, Items.DIAMOND_PICKAXE))) {
+                return "the miners' diamond pick comes first";
+            }
         }
-        if (m == Metal.IRON && saving(level, v.id(), Villages.Task.IRON) && !WarFooting.ready(v.id())) {
-            return "the town is putting its iron by for its age";
+        if (m == Metal.IRON && k.armour() && saving(level, v.id(), Villages.Task.IRON) && !WarFooting.ready(v.id())
+                && !ironForTheWatch(level, v, it)) {
+            return "the town is putting its iron by for its age, past the watch's share";
         }
-        if (skill >= 0 && !Craftsmanship.canMake(skill, it)) return "level " + Craftsmanship.rung(it) + " work, and the maker is level " + skill;
         return null;
     }
 
+    // ------------------------------------------------------------------ what neither the years nor the age's saving bar
+
     /**
-     * A turn of a maker's work for the watch (Crafts: the tailor's, and the smith's after its forging): the first
-     * piece, in the smith's order (the blade, then the chest down), that the watch wants more of, in the best
-     * metal the maker may make it in and the stores can run to; a lesser metal meanwhile when the best is short.
-     * Made the way a player makes it, out of the stores, as good as the maker's hand, and into the stores for
-     * the watch to be fitted out of. Returns what it made, or null.
+     * Is this a piece of the watch's kit the age has come to (armour, a blade, a shield)? Then no maker's years
+     * bar it: the smith and the tailor make the watch's kit whatever their level, and what is beyond their hand
+     * comes out as an apprentice's work (hand). A smith of a real town was at level five or six after weeks at
+     * the anvil, and diamond armour at thirty would never have been made at all.
+     */
+    public static boolean forTheWatch(ServerLevel level, Villages.Village v, Item it) {
+        if (it != Items.SHIELD && !kitPath(BuiltInRegistries.ITEM.getKey(it).getPath())) return false;
+        return Tiers.allows(level, Villages.ageOf(v.id()), it);
+    }
+
+    /** The level a maker makes this piece at: its own, or an apprentice's for work beyond its hand. */
+    public static int hand(int skill, Item it) {
+        return Craftsmanship.canMake(skill, it) ? skill : 0;
+    }
+
+    /** Iron in armour, as a player makes it: a piece's ingots, or nought for anything that is not iron armour. */
+    static int ironIn(ItemStack s) {
+        if (!(s.getItem() instanceof ArmorItem)) return 0;
+        String path = BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+        if (!path.startsWith("iron_")) return 0;
+        for (Kind k : SUIT) if (fits(k, s)) return k.takes * s.getCount();
+        return 0;
+    }
+
+    /** The iron the watch has had of the town as armour: on its guards' backs, and waiting in the stores for them. */
+    static int watchIron(ServerLevel level, UUID village) {
+        int n = 0;
+        for (VillageFolkEntity g : watch(village)) for (Kind k : SUIT) n += ironIn(g.getItemBySlot(k.slot));
+        for (BlockPos p : Villages.storeChests(level, village)) {
+            if (!(level.getBlockEntity(p) instanceof Container c)) continue;
+            for (int i = 0; i < c.getContainerSize(); i++) n += ironIn(c.getItem(i));
+        }
+        return n;
+    }
+
+    /** The watch's share of the age's iron: what the age asks for is sized to put the watch in armour
+     *  (VillageMath.ironWanted: the watch's armour, and the smith's stock). */
+    static int watchShare(UUID village) {
+        return com.jrpetty.mcassistant.village.VillageMath.ironForTheWatch(Math.max(1, Villages.headcount(village)));
+    }
+
+    /**
+     * May the smith forge this piece of iron armour for the watch while the town puts its iron by for the age?
+     * Yes, up to the watch's share of the age's iron: the age asks for that iron to put the watch in armour, and it
+     * counts toward the age on the guards' backs as in the stores (ironCredit). The armour waited on the saving,
+     * and the age asked for twice as much in the next, so a town's watch never went into iron at all.
+     */
+    public static boolean ironForTheWatch(ServerLevel level, Villages.Village v, Item it) {
+        ItemStack one = new ItemStack(it);
+        int iron = ironIn(one);
+        if (iron <= 0) return false;
+        // Only a piece a guard is waiting for (no spares for the stores out of the age's iron), and within the share.
+        Kind kind = null;
+        for (Kind k : SUIT) if (fits(k, one)) kind = k;
+        return kind != null && wanting(level, v, kind, it) > 0 && watchIron(level, v.id()) + iron <= watchShare(v.id());
+    }
+
+    /** The iron the watch's armour holds, counted toward what the age asks for (Villages.needs), up to the watch's
+     *  share: looked at once in ten seconds. */
+    private static final Map<UUID, long[]> IRON_SHARE = new ConcurrentHashMap<>();
+
+    public static int ironCredit(ServerLevel level, UUID village) {
+        long now = level.getGameTime();
+        long[] c = IRON_SHARE.get(village);
+        if (c != null && now - c[0] < 200L && now >= c[0]) return (int) c[1];
+        int credit = Math.min(watchIron(level, village), watchShare(village));
+        IRON_SHARE.put(village, new long[]{ now, credit });
+        return credit;
+    }
+
+    /**
+     * Does the town take up this craft before its building stands, for its watch? The smith (its smithy) and the
+     * tailor (the workshop) once the town keeps a watch, or has one at the trade already: a hundred-folk town of
+     * fifty-eight days had built neither, and so had no smith and no armour. They work at a post by the square till
+     * their building goes up (a little slower, as any craft without its building: Crafts.work).
+     */
+    public static boolean beforeItsBuilding(@Nullable UUID village, StationTask trade) {
+        if (village == null || trade != StationTask.SMITH && trade != StationTask.TAILOR) return false;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a.isBaby() || !a.isAlive()) continue;
+            if (a.stationTask() == StationTask.GUARD || a.stationTask() == trade) return true;
+        }
+        return false;
+    }
+
+    /** Is a smith at work in the town with no smithy (its smithy then comes with what the age asks for)? */
+    public static boolean smithWithoutASmithy(@Nullable UUID village) {
+        if (village == null || Villages.hasBuilt(village, "smithy") || Villages.builtAt(village, "smithy") != null) return false;
+        for (AssistantEntity a : Villages.folkOf(village)) if (a.stationTask() == StationTask.SMITH && !a.isBaby()) return true;
+        return false;
+    }
+
+    // ------------------------------------------------------------------ the makers' turns
+
+    /**
+     * A turn of a maker's work for the watch (Crafts: the tailor's, and the smith's after its forging): a piece
+     * the watch wants more of, in the best metal the maker may make it in and the stores can run to (a lesser
+     * metal meanwhile when the best is short). The piece fewest guards have yet first, in the smith's order on a
+     * tie (the blade, then the chest down): one guard is in a whole suit before the next has its blade, and a
+     * watch of twenty did not wait on twenty diamond swords before its first chestplate. Made the way a player
+     * makes it, out of the stores, as good as the maker's hand, and into the stores for the watch to be fitted
+     * out of. Returns what it made, or null.
      */
     @Nullable
     public static String make(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        return make(level, v, f, false);
+    }
+
+    /** The smith's turn at the watch's diamond and netherite only (Crafts.smith: turn about with its forging). */
+    @Nullable
+    public static String makeBest(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        return make(level, v, f, true);
+    }
+
+    @Nullable
+    private static String make(ServerLevel level, Villages.Village v, VillageFolkEntity f, boolean bestOnly) {
         List<Metal> metals = metalsOf(f);
-        if (metals.isEmpty() || watch(v.id()).isEmpty()) return null;
+        int guards = watch(v.id()).size();
+        if (metals.isEmpty() || guards == 0) return null;
         int skill = f.veteranLevel();
+        // How many guards each piece already has, in the best metal the maker may make it in (or has it waiting).
+        Map<Kind, Integer> had = new java.util.EnumMap<>(Kind.class);
         for (Kind k : Kind.values()) {
+            int want = 0;
             for (Metal m : metals) {
+                if (bestOnly && m != Metal.DIAMOND && m != Metal.NETHERITE) continue;
+                Item it = piece(k, m);
+                if (it == null || waits(level, v, k, m, skill) != null) continue;
+                want = wanting(level, v, k, it);
+                break;
+            }
+            had.put(k, guards - Math.max(0, want));
+        }
+        List<Kind> order = new ArrayList<>(List.of(Kind.values()));
+        order.sort(java.util.Comparator.comparingInt(had::get));        // stable: the smith's order on a tie
+        for (Kind k : order) {
+            for (Metal m : metals) {
+                if (bestOnly && m != Metal.DIAMOND && m != Metal.NETHERITE) continue;
                 Item it = piece(k, m);
                 if (it == null || waits(level, v, k, m, skill) != null) continue;
                 if (wanting(level, v, k, it) <= 0) break;           // as good or better is had for every guard
@@ -342,7 +488,7 @@ public final class WatchKit {
                 ItemStack piece = new ItemStack(it);
                 // From a hand of ten years and more, in the town's colour, as the tailor's boots are.
                 if (skill >= 10) piece.set(DataComponents.DYED_COLOR, new DyedItemColor(Villages.colour(v.id()), false));
-                piece = Craftsmanship.finish(level, piece, skill, f.displayNameCap());
+                piece = Craftsmanship.finish(level, piece, hand(skill, it), f.displayNameCap());
                 Crafts.store(level, v, piece.copy());
                 return piece;
             }
@@ -350,7 +496,7 @@ public final class WatchKit {
                 if (Crafts.stock(level, v, s -> s.is(Items.DIAMOND)) < k.takes + DIAMONDS_KEPT) return ItemStack.EMPTY;
                 if (k == Kind.SWORD && !stick(level, v)) return ItemStack.EMPTY;
                 if (!Crafts.take(level, v, s -> s.is(Items.DIAMOND), k.takes)) return ItemStack.EMPTY;
-                ItemStack piece = Craftsmanship.finish(level, new ItemStack(it), skill, f.displayNameCap());
+                ItemStack piece = Craftsmanship.finish(level, new ItemStack(it), hand(skill, it), f.displayNameCap());
                 Crafts.store(level, v, piece.copy());
                 return piece;
             }
@@ -410,8 +556,8 @@ public final class WatchKit {
             ItemStack worn = g.getItemBySlot(k.slot);
             Workshop.Found f = Workshop.bestInStores(level, id, st -> fits(k, st), st -> score(k, st), held(k, worn));
             if (f == null) continue;
-            ItemStack got = Workshop.takeOut(level, id, f, who);
-            if (!worn.isEmpty()) Workshop.backIntoStores(level, v, worn.copy(), who);   // for the next guard, or the militia
+            ItemStack got = mark(Workshop.takeOut(level, id, f, who));
+            if (!worn.isEmpty()) Workshop.backIntoStores(level, v, unmarked(worn.copy()), who);   // for the next guard, or the militia
             g.setItemSlot(k.slot, got);
             given.add(got.copy());
         }
@@ -453,9 +599,9 @@ public final class WatchKit {
         ItemStack old = at == -1 ? main : at >= 0 ? pack.get(at) : ItemStack.EMPTY;
         boolean back = !old.isEmpty() && Workshop.blade(old) >= Workshop.blade(new ItemStack(Items.IRON_SWORD));
         if (!back && g.isPackFull()) return;
-        ItemStack got = Workshop.takeOut(level, id, f, g.displayNameCap());
+        ItemStack got = mark(Workshop.takeOut(level, id, f, g.displayNameCap()));
         if (back) {
-            ItemStack was = old.copy();
+            ItemStack was = unmarked(old.copy());
             if (at == -1) g.setItemSlot(EquipmentSlot.MAINHAND, got);
             else pack.set(at, got);
             Workshop.backIntoStores(level, v, was, g.displayNameCap());
@@ -465,12 +611,75 @@ public final class WatchKit {
         }
     }
 
-    /** Into its pack; what will not go in, back into the stores. */
+    /** Into its pack, the town's mark on it; what will not go in, back into the stores. */
     private static void handOver(ServerLevel level, Villages.Village v, VillageFolkEntity g, ItemStack got, List<ItemStack> given) {
-        ItemStack left = g.insertGiven(got.copy());
+        ItemStack left = g.insertGiven(mark(got.copy()));
         int in = got.getCount() - left.getCount();
-        if (!left.isEmpty()) Workshop.backIntoStores(level, v, left, g.displayNameCap());
+        if (!left.isEmpty()) Workshop.backIntoStores(level, v, unmarked(left), g.displayNameCap());
         if (in > 0) given.add(got.copyWithCount(in));
+    }
+
+    // ------------------------------------------------------------------ the town's mark, and the kit handed back
+
+    /** Where the town's mark is kept on a piece it issued its watch (with the maker's, Craftsmanship.MARK). */
+    static final String ISSUED = "mca_watch_kit";
+
+    /** The town's mark put on a piece it issues its watch (the rack's blade too: Toolrack.issue). Returns the piece. */
+    public static ItemStack mark(ItemStack s) {
+        if (!s.isEmpty()) CustomData.update(DataComponents.CUSTOM_DATA, s, tag -> tag.putBoolean(ISSUED, true));
+        return s;
+    }
+
+    /** Does the town's mark say this was issued to the watch? */
+    public static boolean issued(ItemStack s) {
+        CustomData data = s.isEmpty() ? null : s.get(DataComponents.CUSTOM_DATA);
+        return data != null && data.contains(ISSUED);
+    }
+
+    /** The town's mark taken off (the maker's stays), for the stores. Returns the piece. */
+    static ItemStack unmarked(ItemStack s) {
+        if (!issued(s)) return s;
+        CompoundTag tag = s.get(DataComponents.CUSTOM_DATA).copyTag();
+        tag.remove(ISSUED);
+        if (tag.isEmpty()) s.remove(DataComponents.CUSTOM_DATA);
+        else s.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        return s;
+    }
+
+    /**
+     * A guard leaving the watch hands back what the town issued it (Toolrack's blade and WatchKit's kit: the
+     * town's mark is on them): its armour, its blade, its bow and arrows, its shield, into the stores for the
+     * next guard or the militia. Its own things stay with it (the stone sword it came with). Taking up another
+     * trade, or going to live in another town (VillageFolkEntity.joinVillage: the old town's stores, before it
+     * goes); dying, it drops them as anybody does. Returns how many things went back.
+     */
+    public static int handBack(VillageFolkEntity f, String why) {
+        UUID id = f.ownerId();
+        Villages.Village v = id == null ? null : Villages.get(id);
+        if (v == null || !(f.level() instanceof ServerLevel level)) return 0;
+        String who = f.displayNameCap();
+        List<String> back = new ArrayList<>();
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            ItemStack s = f.getItemBySlot(slot);
+            if (!issued(s)) continue;
+            back.add(Bench.words(s.getItem(), s.getCount()));
+            Workshop.backIntoStores(level, v, unmarked(s.copy()), who);
+            f.setItemSlot(slot, ItemStack.EMPTY);
+        }
+        NonNullList<ItemStack> pack = f.getInventoryItems();
+        for (int i = 0; i < pack.size(); i++) {
+            ItemStack s = pack.get(i);
+            if (!issued(s)) continue;
+            back.add(Bench.words(s.getItem(), s.getCount()));
+            Workshop.backIntoStores(level, v, unmarked(s.copy()), who);
+            pack.set(i, ItemStack.EMPTY);
+        }
+        if (back.isEmpty()) return 0;
+        String words = String.join(", ", back);
+        f.brain("handed the watch's kit back into the stores (" + why + "): " + words);
+        FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "The town's kit goes back to the stores. The next guard will want it.",
+            "Back it goes: " + words + ". It was never mine to keep.", "Off the watch, so the kit goes home. Look after it."));
+        return back.size();
     }
 
     /** Every guard of the town fitted out now (the shop's round, and /village watch now): pieces given. */
