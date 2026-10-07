@@ -829,7 +829,9 @@ public final class Assemblies {
     static boolean councilOfWar(ServerLevel level, Villages.Village v, String subject, boolean now) {
         long day = level.getDayTime() / 24000L;
         Assembly c = council(level, v, day);
-        Assembly a = new Assembly(v.id(), Kind.COUNCIL, subject, day, c.focus, c.audience, c.layout);
+        // [war-peace] With no hall, before the board's face (WarAndPeace.councilSpot), not at its foot with half the ring behind it.
+        WarAndPeace.CouncilSpot s = WarAndPeace.councilSpot(v.id());
+        Assembly a = new Assembly(v.id(), Kind.COUNCIL, subject, day, s != null ? s.at() : c.focus, c.audience, c.layout);
         a.invited = c.invited;
         if (!now) {
             PLANNED.computeIfAbsent(v.id(), k -> new ArrayList<>()).add(a);

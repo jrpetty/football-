@@ -5819,7 +5819,9 @@ the config; then a feud stays a feud.
   report or none, it guesses from rumour, and its temper colours the guess: a prickly elder thinks little
   of the other town, a wary one fears the worst. It never picks a fight with a town half as strong again
   as its own unless its allies would stand with it. Even when all this holds, most days pass without war.
-* **The council of war.** The elder calls the council to the hall that evening. The elder makes its case,
+* **The council of war.** The elder calls the council to the hall that evening. A town with no hall
+  meets out on the square before the board's face, the ring of councillors four blocks out from the
+  board's foot, so all of them can be seen and heard from the square. The elder makes its case,
   then each councillor votes aye or nay out loud, by its own values. A Guardian votes for war. A Merchant
   or a Provider votes against, and so does anyone with family in the other town. The odds count too. The
   elder's vote counts three. A dove council can say no, and then the matter is dropped for ten days. The
@@ -5834,7 +5836,9 @@ the config; then a feud stays a feud.
   - **Refuse:** it is war.
   If the demand is met, there is no war, and the matter is settled for twenty days.
 * **Declaration day.** Both towns ring their bells, and each hangs a war banner. The banner goes over the
-  gate that faces the enemy, or on the front of the hall, or on a pole by the board. It is a real banner
+  gate that faces the enemy, or on the front of the hall, or on a pole by the board. The pole stands on
+  the square just past one end of the board, in front of its face, and the cloth faces the same way as
+  the board, so it is never hidden behind the board. It is a real banner
   from the town's stores, or one made from six of its wool and a stick. With no cloth in the stores
   there is no banner until cloth turns up. The chronicle, the gazette and any player nearby hear of it.
   Neighbours take sides by how they feel about each town. The towns' sworn allies are called by envoy.
@@ -5915,8 +5919,11 @@ Where to see it:
   it today, and why.
 * `/village war books` opens the page.
 * For operators:
-  - `/village war council` calls a council of war over the nearest neighbour;
-  - `/village war declare` declares war at once;
+  - `/village war council` calls a council of war over the nearest neighbour, and prints where it sits,
+    the side to look at it from and whether it is indoors (`AT x y z south outdoors`);
+  - `/village war declare` declares war at once, and prints where each banner hangs and which way its
+    face looks (`BANNER x y z north Oakford`; a banner on a pole by the board adds the board's foot,
+    `BOARD x y z`);
   - `/village war cloth` puts a red banner into the stores;
   - `/village war peace` makes peace on the terms the balance of strength gives.
 

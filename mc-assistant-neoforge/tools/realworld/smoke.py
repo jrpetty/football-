@@ -1639,9 +1639,11 @@ def war_footing_stage(r, look, cx, cz):
 def war_peace_stage(r, look, cx, cz):
     """War and peace between towns (entity/WarAndPeace): a second town a little way off; the first town's
     council called to its hall as a council of war over it (/village war council: the leader's case, each
-    councillor's vote and why); war declared (/village war declare: the bell in both towns, the war banner
-    out of the stores hung over the gate, else on the front of the hall, else on a pole by the board), the
-    banner photographed from the side it faces; the town's books at the War page; then peace made
+    councillor's vote and why; with no hall it sits out on the square before the board's face, and is
+    photographed from that side, the board behind the ring); war declared (/village war declare: the bell
+    in both towns, the war banner out of the stores hung over the gate, else on the front of the hall, else
+    on a pole before the board's face), each banner photographed from the side its face looks to (a pole
+    by the board together with the board); the town's books at the War page; then peace made
     (/village war peace), the banner taken down again, and the war's memorial put up and photographed."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
@@ -1655,19 +1657,40 @@ def war_peace_stage(r, look, cx, cz):
     say("cloth there: " + r.cmd("execute positioned %d %d %d run village war cloth" % (tx, ty + 1, tz)))
     out = r.cmd("execute positioned %d %d %d run village war council" % (cx, hy + 1, cz))
     say("council: " + out[:700])
-    m = re.search(r"AT (-?\d+) (-?\d+) (-?\d+)", out)
+    # Which way a thing's face looks (the board's, the hall's front, a banner's), as a step on the ground.
+    step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+    # "AT x y z <facing> <indoors|outdoors>": the middle of the council's ring and the side to look at it from.
+    m = re.search(r"AT (-?\d+) (-?\d+) (-?\d+)(?: (\w+) (\w+))?", out)
     if m:
         ax, ay, az = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        fx, fz = step.get(m.group(4) or "", (0, 1))
         time.sleep(20)                                 # the councillors come in and take their places; the vote
-        look("23-war-1-council", ax + 7.5, ay + 4, az + 7.5, ax + 0.5, ay + 1, az + 0.5, wait=6)
+        if m.group(5) == "indoors":
+            # Under the hall's roof: from inside its front, a little over their heads, at the middle of the ring.
+            look("23-war-1-council", ax + 0.5 + fx * 3, ay + 1, az + 0.5 + fz * 3, ax + 0.5, ay + 0.5, az + 0.5, wait=6)
+        else:
+            # Out on the square, on the side the board's face looks to, ten back and a little to one side and
+            # above: the whole ring (3.8 from its middle) in the frame, their bubbles over them, the board behind.
+            sx, sz = -fz, fx
+            look("23-war-1-council", ax + 0.5 + fx * 10 + sx * 2, ay + 4, az + 0.5 + fz * 10 + sz * 2,
+                 ax + 0.5, ay + 0.5, az + 0.5, wait=6)
     out = r.cmd("execute positioned %d %d %d run village war declare" % (cx, hy + 1, cz))
     say("declare: " + out[:700])
-    step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0), "up": (1, 1)}
-    for i, b in enumerate(re.findall(r"BANNER (-?\d+) (-?\d+) (-?\d+) (\w+) (\S+)", out)[:2]):
+    # "BANNER x y z <facing> <Town>", and for one on its pole by the board " BOARD x y z" (the board's foot).
+    found = re.findall(r"BANNER (-?\d+) (-?\d+) (-?\d+) (\w+) (.+?)(?: BOARD (-?\d+) (-?\d+) (-?\d+))?$", out, re.M)
+    for i, b in enumerate(found[:2]):
         bx, by, bz, facing = int(b[0]), int(b[1]), int(b[2]), b[3]
-        dx, dz = step.get(facing, (1, 1))
-        look("23-war-%d-banner-%s" % (2 + i, b[4].lower()), bx + 0.5 + dx * 6, by + 1, bz + 0.5 + dz * 6, bx + 0.5, by, bz + 0.5,
-             wait=8)
+        label = "23-war-%d-banner-%s" % (2 + i, re.sub(r"\W+", "-", b[4].strip().lower()))
+        fx, fz = step.get(facing, (0.7, 0.7))
+        if b[5]:
+            # On its pole before the board's face: from out on the square on that side, at the middle between
+            # the pole and the board's foot, far enough back for the board, the banner and whoever is about.
+            lx, lz = int(b[5]), int(b[7])
+            mx, mz = (bx + lx) / 2.0 + 0.5, (bz + lz) / 2.0 + 0.5
+            look(label, mx + fx * 11, by + 3, mz + fz * 11, mx, by + 2, mz, wait=8)
+        else:
+            # On a wall (over the gate, on the hall's front): straight out from its face, a little above it.
+            look(label, bx + 0.5 + fx * 8, by + 1, bz + 0.5 + fz * 8, bx + 0.5, by + 0.5, bz + 0.5, wait=8)
     say("war: " + r.cmd("execute positioned %d %d %d run village war" % (cx, hy + 1, cz))[:1500])
     r.cmd("gamemode creative %s" % USER)
     r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))

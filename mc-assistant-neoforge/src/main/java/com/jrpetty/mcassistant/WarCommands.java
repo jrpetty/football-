@@ -29,10 +29,12 @@ import java.util.UUID;
  *   /village war books      the town's books, opened at the War page
  *   /village war council    (ops) the nearest town's council called to the hall now as a council of war over
  *                           its nearest neighbour (made a feud with a quarrel over the land, for the pictures);
- *                           prints where it sits ("AT x y z")
+ *                           prints where it sits, the side to look at it from and whether under a roof
+ *                           ("AT x y z south outdoors": the middle of its ring, before the board's face)
  *   /village war declare    (ops) war declared now between the nearest town and its nearest neighbour: the bell,
- *                           the banners; prints where each banner hangs and which way it faces
- *                           ("BANNER x y z north Oakford", "up" for one on its own pole)
+ *                           the banners; prints where each banner hangs and which way its face looks
+ *                           ("BANNER x y z north Oakford"; one on its own pole by the board adds the board's
+ *                           foot, "BANNER x y z south Oakford BOARD x y z")
  *   /village war cloth      (ops) a red banner put into the nearest town's stores (for the pictures)
  *   /village war peace      (ops) the nearest town's war ended now, on the terms the balance of strength makes
  * </pre>
@@ -110,12 +112,11 @@ public final class WarCommands {
         long day = level.getDayTime() / 24000L;
         feud(v.id(), o.id(), day);
         String said = WarAndPeace.councilForPictures(level, v, o);
-        // Where it sits: the leader's hall, else the meeting hall, else the board (as Assemblies seats a council).
-        BlockPos at = Villages.builtAt(v.id(), "townhall");
-        if (at == null) at = Villages.builtAt(v.id(), "hall");
-        if (at == null) at = com.jrpetty.mcassistant.entity.VillageBoards.lectern(v.id());
-        if (at == null) at = v.centre();
-        String where = "\nAT " + at.getX() + " " + at.getY() + " " + at.getZ();
+        // Where it sits (the middle of its ring, as Assemblies seats it), the side to look at it from, and whether under a roof.
+        WarAndPeace.CouncilSpot s = WarAndPeace.councilSpot(v.id());
+        BlockPos at = s != null ? s.at() : v.centre();
+        String where = "\nAT " + at.getX() + " " + at.getY() + " " + at.getZ() + " " + (s != null ? s.facing().getName() : "south")
+            + " " + (s != null && s.indoors() ? "indoors" : "outdoors");
         ctx.getSource().sendSuccess(() -> Component.literal("COUNCIL " + Villages.name(v.id()) + " over " + Villages.name(o.id()) + ": " + said + where), false);
         return 1;
     }
@@ -136,10 +137,21 @@ public final class WarCommands {
             BlockPos at = WarAndPeace.bannerAt(p[0], p[1]);
             if (at == null) continue;
             net.minecraft.world.level.block.state.BlockState st = level.getBlockState(at);
-            String facing = st.hasProperty(net.minecraft.world.level.block.WallBannerBlock.FACING)
-                ? st.getValue(net.minecraft.world.level.block.WallBannerBlock.FACING).getName() : "up";
+            // The way its face looks: a wall banner's FACING; a standing one's ROTATION (set square to the board's face).
+            String facing = "up";
+            boolean pole = false;
+            if (st.hasProperty(net.minecraft.world.level.block.WallBannerBlock.FACING)) {
+                facing = st.getValue(net.minecraft.world.level.block.WallBannerBlock.FACING).getName();
+            } else if (st.hasProperty(net.minecraft.world.level.block.BannerBlock.ROTATION)) {
+                pole = true;
+                int rot = st.getValue(net.minecraft.world.level.block.BannerBlock.ROTATION);
+                if (rot % 4 == 0) facing = net.minecraft.core.Direction.from2DDataValue(rot / 4).getName();
+            }
             sb.append("\nBANNER ").append(at.getX()).append(' ').append(at.getY()).append(' ').append(at.getZ())
                 .append(' ').append(facing).append(' ').append(Villages.name(p[0]));
+            // On a pole by the board: where the board's foot is too, so a picture can take in the board, the pole and the square.
+            BlockPos foot = pole ? com.jrpetty.mcassistant.entity.VillageBoards.lectern(p[0]) : null;
+            if (foot != null) sb.append(" BOARD ").append(foot.getX()).append(' ').append(foot.getY()).append(' ').append(foot.getZ());
         }
         String said = sb.toString();
         ctx.getSource().sendSuccess(() -> Component.literal(said), false);
