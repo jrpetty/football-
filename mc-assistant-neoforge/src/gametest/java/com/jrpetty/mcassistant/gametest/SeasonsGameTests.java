@@ -297,6 +297,10 @@ public class SeasonsGameTests {
     public static void sf23_may_dance(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        // Clear skies: a thunderstorm in the test world sends every dancer indoors (Weather.shelter) and the ring stands still.
+        level.setWeatherParameters(24000, 0, false, false);
+        level.setRainLevel(0.0F);
+        level.setThunderLevel(0.0F);
         final int x = 624000;
         Kit.hold(level, x, Z, 48);
         Kit.prepare(level, x, Z, 48);
@@ -326,7 +330,8 @@ public class SeasonsGameTests {
             if (t <= 10 || pole[0] == null) return;
             if (level.getDayTime() - base > 3000L) level.setDayTime(base);         // the afternoon, held
             int[] pr = Assemblies.progress(id);
-            if (t % 200 == 0) Kit.log("sf23 @" + t + ": " + Assemblies.debug(id) + " " + Assemblies.now(id));
+            if (t % 200 == 0) Kit.log("sf23 @" + t + ": " + Assemblies.debug(id) + " " + Assemblies.now(id)
+                + (mingleFrom[0] > 0 ? " " + Festivals.danceForTests(level, id) : ""));
             helper.assertTrue(pr != null || mingleFrom[0] > 0, "the dance under way: " + Assemblies.debug(id));
             if (pr == null) return;
             if (pr[0] == 3 && mingleFrom[0] < 0) {                     // the dancing (Assemblies.Phase.MINGLE)
@@ -335,7 +340,9 @@ public class SeasonsGameTests {
                     if (f.getUUID().equals(Villages.elder(id))) continue;
                     startAngle.put(f.getUUID(), Math.atan2(f.getZ() - pole[0].getZ() - 0.5, f.getX() - pole[0].getX() - 0.5));
                 }
-                Kit.log("sf23 the dancing begins at tick " + t + " with " + pr[1] + " in the ring of " + pr[5] + " places");
+                Kit.log("sf23 the dancing begins at tick " + t + " with " + pr[1] + " in the ring of " + pr[5] + " places: "
+                    + Festivals.danceForTests(level, id));
+                for (VillageFolkEntity f : folk) Kit.log("   " + f.displayNameCap() + " " + f.debugLine());
             }
             if (mingleFrom[0] > 0 && t - mingleFrom[0] >= 300) {
                 int moved = 0, near = 0;
@@ -350,7 +357,8 @@ public class SeasonsGameTests {
                     if (r < 12) near++;
                     sb.append(String.format(java.util.Locale.ROOT, " %s %.0f° at %.1f;", f.displayNameCap(), Math.toDegrees(turned), r));
                 }
-                Kit.log("sf23 after " + (t - mingleFrom[0]) + " ticks of dancing:" + sb);
+                Kit.log("sf23 after " + (t - mingleFrom[0]) + " ticks of dancing:" + sb + " the ring: " + Festivals.danceForTests(level, id));
+                if (moved < 3) for (VillageFolkEntity f : folk) Kit.log("   " + f.displayNameCap() + " " + f.debugLine());
                 helper.assertTrue(near >= 3, "the town dances round the pole: " + near + " near it");
                 helper.assertTrue(moved >= 3, "the ring goes round: " + moved + " moved round the pole by a good step");
                 helper.succeed();

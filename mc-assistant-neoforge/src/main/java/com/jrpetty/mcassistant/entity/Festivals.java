@@ -435,6 +435,7 @@ public final class Festivals extends SavedData {
         Town town = town(id);
         if (t >= 200L) Seasons.turn(level, v, day);
         takeDown(level, v, town, day, t);
+        dance(level, v);
         if (Raids.underAlarm(id)) return;
         if (due(id, day, Feast.MAYPOLE) && t >= 1000L && t < 11500L) why(id, Feast.MAYPOLE, raiseMaypole(level, v, dayThisYear(id, day, Feast.MAYPOLE), false));
         if (due(id, day, Feast.BONFIRE) && t >= 11000L && t < 12400L) {
@@ -1053,6 +1054,39 @@ public final class Festivals extends SavedData {
     }
 
     /**
+     * The May dance, once a second from the town's own tick: the ring turned every two seconds, and every
+     * dancer sent on to its place in it, up off a bench if it sat down for the speeches. The ring used to turn
+     * only from a dancer's own part in the gathering (mingle), and only when one stood right at its place; the
+     * crowd's walk was the gathering's (Assemblies.attend), which a hand that gave up a path a moment before
+     * (AssistantEntity: the stuck give-up's ten seconds) or sat on a bench within a step of its place never
+     * took. The ring stood still and nobody danced. Now the dance turns, and its dancers walk it, whoever is
+     * standing where; a dancer called away by a fire, a thunderstorm or its sickbed is left to that.
+     */
+    static void dance(ServerLevel level, Villages.Village v) {
+        Assemblies.Assembly a = Assemblies.underWay(v.id());
+        if (a == null || a.kind != Assemblies.Kind.FESTIVAL || a.phase != Assemblies.Phase.MINGLE || feastOf(a.subject) != Feast.MAYPOLE) return;
+        long now = level.getGameTime();
+        Long last = TURNED.get(v.id());
+        if (last == null || now - last >= 40L || now < last) {
+            TURNED.put(v.id(), now);
+            turnTheRing(a);
+        }
+        for (Map.Entry<UUID, Integer> e : a.seated.entrySet()) {
+            if (!(level.getEntity(e.getKey()) instanceof VillageFolkEntity f) || !f.isAlive() || f.isSleeping() || !Assemblies.attending(f)) continue;
+            // Called away by something more pressing (a fire, a thunderstorm, laid up): that comes first.
+            if (FireBrigade.onIt(f) || Weather.sheltering(f) || Health.laidUp(f)) continue;
+            int i = e.getValue();
+            if (i < 0 || i >= a.seats.size()) continue;
+            BlockPos place = a.seats.get(i);
+            if (Seats.seated(f)) Seats.stand(f, null);                // a dance is danced on its feet
+            double dx = f.getX() - (place.getX() + 0.5), dz = f.getZ() - (place.getZ() + 0.5);
+            if (dx * dx + dz * dz <= 0.9 * 0.9) continue;
+            if (!f.getNavigation().isInProgress()) f.getNavigation().moveTo(place.getX() + 0.5, place.getY(), place.getZ() + 0.5, 0.8D);
+            f.hobbyNow = "dancing round the maypole";
+        }
+    }
+
+    /**
      * The dance: every seated folk moves on to the next place round its ring, all at once, so the ring turns
      * round the pole a place at a time and nobody steps into anybody's place.
      */
@@ -1368,6 +1402,21 @@ public final class Festivals extends SavedData {
         List<int[]> out = new ArrayList<>();
         for (Placed p : town(village).placed) {
             if (p.feast().equals(f.key)) out.add(new int[]{ p.pos().getX(), p.pos().getY(), p.pos().getZ() });
+        }
+        return out;
+    }
+
+    /** The May dance as it stands: each dancer's place in the ring, and how far off it the dancer is ("Ada 3 0.4"). */
+    public static List<String> danceForTests(ServerLevel level, UUID village) {
+        List<String> out = new ArrayList<>();
+        Assemblies.Assembly a = Assemblies.underWay(village);
+        if (a == null) return out;
+        for (Map.Entry<UUID, Integer> e : a.seated.entrySet()) {
+            if (!(level.getEntity(e.getKey()) instanceof VillageFolkEntity f) || e.getValue() < 0 || e.getValue() >= a.seats.size()) continue;
+            BlockPos p = a.seats.get(e.getValue());
+            double dx = f.getX() - (p.getX() + 0.5), dz = f.getZ() - (p.getZ() + 0.5);
+            out.add(String.format(Locale.ROOT, "%s place %d off %.1f%s%s", f.displayNameCap(), e.getValue(), Math.sqrt(dx * dx + dz * dz),
+                Seats.seated(f) ? " sat" : "", Assemblies.attending(f) ? "" : " not-attending"));
         }
         return out;
     }
