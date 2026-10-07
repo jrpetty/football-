@@ -186,5 +186,7 @@
   "block.mc_assistant.brown_paper_lantern": "Brown Paper Lantern",
   "block.mc_assistant.green_paper_lantern": "Green Paper Lantern",
   "block.mc_assistant.red_paper_lantern": "Red Paper Lantern",
-  "block.mc_assistant.black_paper_lantern": "Black Paper Lantern"
+  "block.mc_assistant.black_paper_lantern": "Black Paper Lantern",
+  "item.mc_assistant.gold_charm": "Gold Charm",
+  "item.mc_assistant.runners_satchel": "Runner's Satchel"
 }

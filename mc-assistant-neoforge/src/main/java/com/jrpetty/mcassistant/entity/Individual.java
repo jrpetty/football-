@@ -394,6 +394,7 @@ public final class Individual {
         RandomSource r = f.getRandom();
         String how = raid ? "in the raid of day " + (day + 1)
             : f.stationTask() == StationTask.CAVE && f.getY() < 50 ? "in the caves, on day " + (day + 1)
+            : f.level().dimension() == net.minecraft.world.level.Level.NETHER ? "in the Nether, on day " + (day + 1)   // [nether]
             : by != null ? "fighting off " + FolkTalk.article(by.getType().getDescription().getString().toLowerCase(Locale.ROOT)) + " on day " + (day + 1)
             : "in a blast on day " + (day + 1);
         if (raid && s.patch == 0 && amount >= 8.0F && r.nextInt(12) == 0) {

@@ -219,6 +219,11 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Out there", TalkTopic.ATLAS, "What the village's scouts have found: towns, ruins, peaks, ore — and which way"));
                 out.add(Choice.of("Underground", TalkTopic.CAVES, "What the town's cave dwellers have found: caves, ore, mineshafts, spawners, old chests — and where"));   // [caves]
                 out.add(Choice.of("Fashion", TalkTopic.FASHION, "What the town is wearing this season, who set it, and what this folk thinks of it"));   // [fashion]
+                // [nether] The Nether runners: their report, an ask, going through with them, their chart (NetherGuests).
+                out.add(Choice.of("The Nether", TalkTopic.NETHER, "What the town's Nether runners have found through the gateway: the outpost, the fortress, the hauls"));
+                out.add(new Choice("Ask the runners", TalkTopic.NETHER, "ask", "Ask the Nether runners to bring something on their next run: type it (\"bring us blaze rods\")"));
+                out.add(new Choice("Go through", TalkTopic.SAY, "Can I come through with you?", "Go through the gateway with the Nether runners: they wait for you there in the morning. Say \"for a share\" to take a share of the haul"));
+                out.add(new Choice("Runners' chart", TalkTopic.SAY, "Could I buy a copy of your chart?", "A copy of the runners' chart of the Nether round their outpost, their finds marked: a few coins, from one of the runners"));
                 // [caves] The cave team: ask it a way or an ore, go along with it, buy its map (CaveGuests, Lodge).
                 out.add(new Choice("Ask the delvers", TalkTopic.CAVES, "ask", "Ask the cave team to look a way or find something on its next trip: type it (\"look east\", \"find us diamonds\")"));
                 out.add(new Choice("Go caving", TalkTopic.SAY, "Can I come along with the cave team?", "Go down the caves with the cave team: it waits for you at its lodge at first light. Say \"for a share\" to take a share of the haul"));
@@ -345,6 +350,11 @@ public class TalkScreen extends Screen {
         }
         if (c.topic() == TalkTopic.MAPS && "commission".equals(c.text())) {    // [cartographer] a commission, the way typed yourself
             say.setValue("Map me the land to the east");
+            setFocused(say);
+            return;
+        }
+        if (c.topic() == TalkTopic.NETHER && "ask".equals(c.text())) {         // [nether] an ask of the runners, finished yourself
+            say.setValue("Runners, bring us blaze rods");
             setFocused(say);
             return;
         }

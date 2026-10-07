@@ -165,6 +165,7 @@ public final class ClientSetup {
                 case CARTOGRAPHER -> Items.CARTOGRAPHY_TABLE;   // [cartographer]
                 case EMERALD -> Items.EMERALD;             // [emerald]
                 case DIVER -> Items.KELP;                  // [diver]
+                case NETHER -> Items.BLAZE_ROD;            // [nether]
                 case NONE -> Items.AIR;
             });
         }

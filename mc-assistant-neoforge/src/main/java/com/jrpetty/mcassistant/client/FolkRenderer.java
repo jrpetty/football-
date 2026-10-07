@@ -53,6 +53,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     private static final ResourceLocation CAVE_GLOW = texture("cavedweller_glow");
     /** [emerald] The emerald trader's little lantern at its pack, lit. */
     private static final ResourceLocation EMERALD_GLOW = texture("emerald_glow");
+    /** [nether] The Nether runner's brow stone and the embers in its coat's hem. */
+    private static final ResourceLocation NETHER_GLOW = texture("netherrunner_glow");
     /** What its wealth adds to its clothes, by standing (Wealth.Tier): patches, a belt, a collar, gold. */
     private static final ResourceLocation[] FINERY = {
         texture("wealth_0"), null, texture("wealth_2"), texture("wealth_3"), texture("wealth_4") };
@@ -106,6 +108,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.INNER)),
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.OUTER))));
         this.addLayer(new TabardLayer(this, context.getModelSet()));      // [arms] a festival tabard of the town's arms
+        this.addLayer(new NetherClient.CharmLayer(this, context.getItemInHandRenderer()));   // [nether] the gold charm on the brow
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
     }
 
@@ -205,7 +208,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             if (folk.isInvisible()) return;
             String t = FolkModel.TRADES[trade(folk)];
             ResourceLocation lit = "miner".equals(t) ? MINER_GLOW : "cavedweller".equals(t) ? CAVE_GLOW
-                : "emerald".equals(t) ? EMERALD_GLOW : null;                                    // [emerald] its lantern
+                : "emerald".equals(t) ? EMERALD_GLOW                                            // [emerald] its lantern
+                : "netherrunner".equals(t) ? NETHER_GLOW : null;                                // [nether] its brow stone, its embers
             if (lit == null || folk.isBaby()) return;
             VertexConsumer glow = buffer.getBuffer(RenderType.eyes(lit));
             getParentModel().renderToBuffer(pose, glow, 0xF000F0, OverlayTexture.NO_OVERLAY, -1);
@@ -393,6 +397,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             case CARTOGRAPHER -> Items.FILLED_MAP;         // [cartographer] a sheet in hand
             case EMERALD -> Items.EMERALD;                 // [emerald] an emerald turned over in its fingers
             case DIVER -> Items.KELP;                      // [diver] a fistful of kelp
+            case NETHER -> Items.BLAZE_ROD;                // [nether] what the runners bring home through the gateway
             case NONE -> Items.AIR;
         });
     }

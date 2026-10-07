@@ -108,15 +108,18 @@ public final class TownWork {
                 && !level.getBlockState(top.above(2)).isSolid()) {
             // The light first: no light, no post (and no logs spent on one). A lantern if the smith has
             // made one (or left the nuggets for one), a torch if not (Masonry).
-            if (!Masonry.canLight(level, v)) return 0;
+            // [nether] In the Nether Age, glowstone from the runners' dust where the stores have it (NetherHome.lampLight).
+            if (!Masonry.canLight(level, v) && !NetherHome.canLamp(level, v)) return 0;
             if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a lamp post")) return -1;
-            net.minecraft.world.level.block.Block light = Masonry.light(level, v);
+            net.minecraft.world.level.block.Block light = NetherHome.lampLight(level, v);
+            if (light == null) light = Masonry.light(level, v);
             if (light == null) return 0;
             Architecture.Post styled = Architecture.lampPost(level, v);    // [culture2] the town's own posts: dark oak, rough stone, birch...
             net.minecraft.world.level.block.Block post = styled != null && take(level, v, styled.pay(), styled.cost())
                 ? styled.block() : null;
             if (post == null && !take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
-                Masonry.unlight(level, v, light);
+                if (light == Blocks.GLOWSTONE) give(level, v, new ItemStack(Items.GLOWSTONE));   // [nether] the runners' glowstone back to the stores
+                else Masonry.unlight(level, v, light);
                 return 0;
             }
             if (post == null) post = Blocks.SPRUCE_FENCE;

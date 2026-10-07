@@ -95,6 +95,7 @@ public final class Values {
             case CARTOGRAPHER -> Value.PROGRESS;         // [cartographer] knowing the land
             case EMERALD -> Value.WEALTH;                // [emerald] a fair bargain, and what the town cannot make
             case DIVER -> Value.PROGRESS;                // [diver] the furnaces' fuel, and the coal kept for the age
+            case NETHER -> Value.PROGRESS;               // [nether] what only the Nether has
             case SHOP, STORE, HAUL, TAILOR, BREW, BANK -> Value.WEALTH;
             default -> null;
         };

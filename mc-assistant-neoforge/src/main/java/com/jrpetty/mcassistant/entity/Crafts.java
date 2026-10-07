@@ -326,6 +326,9 @@ public final class Crafts {
             String best = WatchKit.makeBest(level, v, f);     // [guard-kit] the watch's diamond, turn about with the forging
             if (best != null) return best;
         }
+        // [nether] A gold charm for each Nether runner with no gold to wear; the leader's flint and steel (NetherRunners).
+        String nether = NetherRunners.smith(level, v, f);
+        if (nether != null) return nether;
         String forged = forge(level, v, f, wants);
         if (forged != null) return forged;
         // [guard-kit] Its forging seen to: the watch's diamond (the blade first) once the age, the diamonds and the
@@ -457,6 +460,7 @@ public final class Crafts {
      *  gravel if the stores have none; the feathers are the rancher's chickens'. */
     @Nullable
     static String fletch(ServerLevel level, Villages.Village v, int watch) {
+        watch += NetherRunners.bows(v.id());                      // [nether] a bow, and its arrows, for each Nether runner too
         if (watch <= 0) return null;
         if (Fletchers.keeps(v.id())) return null;                      // [fletcher] the town's fletcher makes them (Fletchers)
         if (stock(level, v, s -> s.is(Items.BOW)) < watch && stock(level, v, s -> s.is(Items.STRING)) >= 3
@@ -535,6 +539,8 @@ public final class Crafts {
         if (kit != null) return kit;
         String knotted = Fleet.makeNet(level, v, f);              // [fleet] a net for each of the fishing fleet's boats
         if (knotted != null) return knotted;
+        String satchel = NetherRunners.tailor(level, v, f);        // [nether] a runner's satchel for each Nether runner without one
+        if (satchel != null) return satchel;
         if (bedsFirst) return null;
         // [fashion] The fashion's garments, at the loom: the book's orders, dyed with the stores' dyes (Tailoring).
         String garment = Tailoring.work(level, v, f, loom);
@@ -969,7 +975,7 @@ public final class Crafts {
             new Brew(Potions.REGENERATION, Items.GHAST_TEAR, 2),
             new Brew(Potions.LEAPING, Items.RABBIT_FOOT, 2),
             new Brew(Potions.WATER_BREATHING, Items.PUFFERFISH, 2),
-            new Brew(Potions.FIRE_RESISTANCE, Items.MAGMA_CREAM, 2),
+            new Brew(Potions.FIRE_RESISTANCE, Items.MAGMA_CREAM, NetherHome.fireResistanceKept(v.id())),   // [nether] two a runner a day
             new Brew(Potions.STRENGTH, Items.BLAZE_POWDER, 2));
     }
 
@@ -989,7 +995,9 @@ public final class Crafts {
     static String brew(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
         BlockPos at = Trades.workstation(f, level, v, Blocks.BREWING_STAND, s -> s.is(Items.BREWING_STAND),
             com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.BREWING);
-        String patch = wartPatch(level, v, f, at != null ? at : (f.workZone() != null ? f.workZone().center() : f.blockPosition()));
+        // [nether] The town's wart farm of the runners' soul sand first (NetherHome), else its own small patch.
+        String patch = NetherHome.tend(level, v, f);
+        if (patch == null) patch = wartPatch(level, v, f, at != null ? at : (f.workZone() != null ? f.workZone().center() : f.blockPosition()));
         if (at == null || !(level.getBlockEntity(at) instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity stand)) {
             return patch;
         }
@@ -1093,6 +1101,8 @@ public final class Crafts {
             return have(level, v, f, s -> s.is(Items.BLAZE_POWDER)) >= 5 && (!use || use(level, v, f, s -> s.is(Items.BLAZE_POWDER), 1));
         }
         if (have(level, v, f, s -> s.is(r)) >= 1) return !use || use(level, v, f, s -> s.is(r), 1);
+        // [nether] Magma cream for fire resistance: a blaze powder (the runners' rods) and a slime ball, by the game's recipe.
+        if (r == Items.MAGMA_CREAM) return NetherHome.magmaCream(level, v, use);
         Predicate<ItemStack> base = r == Items.GLISTERING_MELON_SLICE ? s -> s.is(Items.MELON_SLICE)
             : r == Items.GOLDEN_CARROT ? s -> s.is(Items.CARROT)
             : r == Items.SUGAR ? s -> s.is(Items.SUGAR_CANE) : null;

@@ -589,6 +589,7 @@ public final class Annals {
         out.put("warmap", WarMap.report(level, v));              // [war-scouting] the war map: rivals, reports, pickets, spies
         out.put("caves", CaveDwellers.report(level, v));         // [caves] the caves' report: the Caves page
         out.put("divers", Divers.report(level, v));              // [diver] the kelp beds, the turtles, the rescues
+        out.put("nether", NetherRunners.report(level, v));       // [nether] the runners' report: the Nether page
         out.put("fashion", Fashion.report(level, v));            // [fashion] the season's look, who wears it, the tailor's book
         out.put("crime", Crime.report(level, v));                // [crime] the casebook and the crime rate: the Cases page
         out.put("auction", Auctions.report(level, v));           // [fleet] the auction and the fleet: the Auction page

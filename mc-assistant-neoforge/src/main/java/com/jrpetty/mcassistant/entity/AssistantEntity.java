@@ -162,7 +162,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // on the bed of the water, dried and packed into blocks that fire the furnaces in place of coal; clay, sand and
         // gravel up from the bed; seagrass for the turtles on its beach, and their scutes; and anybody in the water
         // pulled out (Divers).
-        DIVER("diving", "Diver");
+        DIVER("diving", "Diver"),
+        // [nether] A Nether Age town with its gateway lit keeps a small, picked team that really goes through it: quartz,
+        // glowstone, wart, blaze rods, and what the piglins give for gold, home to the brewer and the builders (NetherRunners).
+        NETHER("the Nether runs", "Nether runner");
 
         /** The trades of a grown village, which work out of a building of their own. */
         public boolean isCraft() {
@@ -170,7 +173,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 && this != FERRY                                                                      // [transport]
                 && this != CARTOGRAPHER                                                               // [cartographer]
                 && this != EMERALD                                                                    // [emerald]
-                && this != DIVER;                                                                     // [diver]
+                && this != DIVER                                                                      // [diver]
+                && this != NETHER;                                                                    // [nether]
         }
 
         public final String label;   // lower-case, for sentences
@@ -1457,6 +1461,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case CARTOGRAPHER -> null;            // [cartographer] its paper and compasses are drawn at the map room (Cartographers)
             case EMERALD -> null;                 // [emerald] its goods are drawn from the stores for each trip (EmeraldTrader)
             case DIVER -> null;                   // [diver] its kit is drawn at the stores on its rounds (KelpBeds.atStores)
+            case NETHER -> null;                  // [nether] kitted by the town before each run (NetherRunners.kitUp)
         };
         // ONE restock, one pace. This used to be three separate paced scoops in
         // a row, and only the first of them could ever run: the food scoop took
@@ -1773,6 +1778,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** [diver] Has its village dried kelp blocks in the stores for its fires (VillageFolkEntity: FuelBook)? */
     public boolean kelpForFuel() { return false; }
+
+    /** [nether] A Nether runner's day at home (NetherRunners): VillageFolkEntity does it. */
+    protected boolean netherWork() { return false; }
 
     /** Is this animal one of its village's own herd (penned, led, brought home), not game? (VillageFolkEntity) */
     public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) { return false; }
@@ -2708,6 +2716,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case CARTOGRAPHER -> false;           // [cartographer] its paper and compasses are drawn at the map room (Cartographers)
             case EMERALD -> false;                // [emerald] nothing of its own to keep: the goods are the town's (EmeraldTrader)
             case DIVER -> false;                  // [diver] its kit is drawn at the stores on its rounds (KelpBeds.atStores)
+            case NETHER -> false;                 // [nether] kitted by the town before each run (NetherRunners.kitUp)
         };
     }
 
@@ -2948,6 +2957,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 || s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS);
             case RANCH -> BREEDING_FOOD.test(s);
             case CAVE -> CaveDwellers.valuable(s);       // [caves] the old chests' golden apples go home, not down its throat
+            case NETHER -> CaveDwellers.valuable(s);     // [nether] the piglins' golden carrots and the like go home too
             default -> false;
         };
     }
@@ -3885,9 +3895,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // enderman, a witch, a pack of zombies. Only the watch takes that on,
         // and not the things nobody should take on for fun. Anything that hits
         // a folk is still answered — that is a different goal.
+        // [nether] In the Nether, nobody of the town strikes a piglin first (the whole crowd answers it).
+        if (isSettler() && level().dimension() == net.minecraft.world.level.Level.NETHER && !NetherRuns.mayTakeOn(this, target)) return false;
         if (isSettler()) {
             // [caves] Armed too: at home anything near it, on the team's day out its share of the fight (CaveDwellers).
             if (stationTask != StationTask.GUARD && !(stationTask == StationTask.CAVE && CaveDwellers.mayTakeOn(this, target))
+                && !(stationTask == StationTask.NETHER && NetherRuns.mayTakeOn(this, target))   // [nether] never a piglin that leaves it be
                 && !hiredToFight()) return false;
             if (target instanceof net.minecraft.world.entity.monster.EnderMan
                 || target instanceof net.minecraft.world.entity.monster.Witch
@@ -4143,6 +4156,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
     }
 
+    /** [nether] Its travelling window of chunks let go, here, before it goes through a portal: the window is this
+     *  world's, and the ground round it in the next is kept awake by the Nether runs' own (NetherRuns.keepAwake). */
+    public void letGoOfChunkWindow() {
+        freeMobileWindow();
+    }
+
     /** Release the hauler's traveling chunk window, re-forcing the fixed post
      *  window afterward in case the two overlapped (tickets are a set — one
      *  remove would otherwise strip a shared chunk from the post's window). */
@@ -4385,6 +4404,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 : s.is(Items.SHEARS) || s.getItem() instanceof net.minecraft.world.item.PickaxeItem || s.is(Items.TURTLE_HELMET) ? 1
                 : s.is(Items.DRIED_KELP_BLOCK) || s.is(Items.CHARCOAL) || s.is(ItemTags.LOGS) ? 2
                 : s.is(Items.TURTLE_SCUTE) ? 5 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
+            case NETHER -> NetherRunners.keeps(s);                       // [nether] the run's kit; the haul goes home
             case NONE -> 0;
         };
     }
@@ -5103,7 +5123,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** A ranged weapon this one has the RANK to shoot: the bow is level 20
      *  work, the crossbow level 30. */
     public boolean mayShoot(ItemStack s) {
-        if (s.is(Items.BOW)) return can(Ability.GUARD_BOW) || onWatch();
+        if (s.is(Items.BOW)) return can(Ability.GUARD_BOW) || onWatch() || NetherRunners.archer(this);   // [nether] the bow the town issued
         if (s.is(Items.CROSSBOW)) return can(Ability.GUARD_CROSSBOW) || onWatch();
         return false;
     }
@@ -5323,6 +5343,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             if (slot != EquipmentSlot.HEAD && slot != EquipmentSlot.CHEST
                 && slot != EquipmentSlot.LEGS && slot != EquipmentSlot.FEET) continue;
             ItemStack current = this.getItemBySlot(slot);
+            if (this instanceof VillageFolkEntity vf && NetherRunners.keepsGold(vf, current)) continue;   // [nether] its gold stays on
             int currentDefense = current.getItem() instanceof ArmorItem worn ? worn.getDefense() : -1;
             if (current.isEmpty() || candidate.getDefense() > currentDefense) {
                 this.setItemSlot(slot, s);
@@ -5687,6 +5708,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 case CARTOGRAPHER -> new Branch[]{ PORTER, PROSPECTOR };   // [cartographer] long walks, and an eye for the ground
                 case EMERALD -> new Branch[]{ PORTER, SENTINEL };      // [emerald] a pack on its back, the road to walk
                 case DIVER -> new Branch[]{ PORTER, PROSPECTOR };      // [diver]
+                case NETHER -> new Branch[]{ SENTINEL, PROSPECTOR };   // [nether]
                 case NONE -> new Branch[]{};
             };
         }
@@ -5803,7 +5825,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // The watch stands between the town and whatever comes at night: a guard has twice the health of any
             // other folk (its sturdiness and its years doubled with it). Off the watch, it is as the rest again.
             hp.removeModifier(GUARD_HP_ID);
-            if (stationTask == StationTask.GUARD || stationTask == StationTask.CAVE) {        // [caves] the cave dwellers as hardy
+            if (stationTask == StationTask.GUARD || stationTask == StationTask.CAVE           // [caves] the cave dwellers as hardy
+                    || stationTask == StationTask.NETHER) {                                       // [nether] and the Nether runners
                 hp.addPermanentModifier(new net.minecraft.world.entity.ai.attributes.AttributeModifier(
                     GUARD_HP_ID, GUARD_HEALTH - 1.0,
                     net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
@@ -7334,6 +7357,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // [diver] The kelp beds, the shed, the beach and the quay; and anybody in the water (Divers).
                 if (diverWork()) return true;
             }
+            case NETHER -> {
+                // [nether] Fitted out and through the gateway, or at home by it with the charts (NetherRunners).
+                if (netherWork()) return true;
+            }
             case NONE -> { }
         }
         // Nothing to do right where it's stood. On a zone bigger than its own
@@ -7891,6 +7918,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case CARTOGRAPHER -> 0;               // [cartographer] its maps go to the hall, the hands they are for, or the stores (Cartographers)
             case EMERALD -> 0;                    // [emerald] what it brings home goes in when it is home (EmeraldTrader.home)
             case DIVER -> 0;                      // [diver] it banks its own at the stores on its rounds (KelpBeds.atStores)
+            case NETHER -> 0;                     // [nether] its haul goes into the storehouse when it is home (NetherRuns)
         };
         // Never more than a stash would actually move. The trade's own sums kept back less
         // than the stash keeps back (a village miner keeps 32 cobble, the sum kept 16), so

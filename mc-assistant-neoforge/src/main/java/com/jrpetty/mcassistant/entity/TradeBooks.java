@@ -156,6 +156,7 @@ public final class TradeBooks {
             case FLETCHER, GOLEMS -> AssistantEntity.Deed.THINGS_MADE;     // [fletcher] [golems]
             case FIREWORKS -> AssistantEntity.Deed.THINGS_MADE;          // [fireworks] its rockets
             case CARTOGRAPHER -> AssistantEntity.Deed.THINGS_MADE;   // [cartographer] its maps
+            case NETHER -> AssistantEntity.Deed.MOBS_KILLED;           // [nether] the blazes it shot for their rods
             default -> null;
         };
     }
@@ -189,6 +190,7 @@ public final class TradeBooks {
             case CARTOGRAPHER -> new String[]{ "map", "cartographer", "explorer" };   // [cartographer]
             case EMERALD -> new String[]{ "emerald", "villagers", "trading post" };   // [emerald]
             case DIVER -> new String[]{ "diver", "kelp", "turtle", "drown", "out of the water", "monument" };   // [diver]
+            case NETHER -> new String[]{ "nether", "gateway", "the runners", "piglin", "blaze", "ghast" };   // [nether]
             case BEEKEEP -> new String[]{ "hive", "bee" };
             default -> new String[]{};
         };

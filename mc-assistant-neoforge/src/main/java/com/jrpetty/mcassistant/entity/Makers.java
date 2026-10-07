@@ -205,6 +205,11 @@ public final class Makers {
         }
         declare("spectacles", "the smith (else the shop)", "for an old folk who reads and has none: the scholar, the librarian, "
             + "the storekeeper first", "Keepsakes.spectacles");                                                     // [individual]
+        // [nether] The Nether runners' kit (NetherRunners.smith / tailor, from Crafts; the shop's book through Workshop.demand).
+        declare("gold_charm", "the smith (else the shop's workshop)", "for each Nether runner with no gold to wear, so the piglins leave it be",
+            "NetherRunners.smith / Workshop.demand");
+        declare("runners_satchel", "the tailor (else the shop's workshop)", "for each Nether runner without a satchel to carry the haul in",
+            "NetherRunners.tailor / Workshop.demand");
         unmade("memory_core", "it forms only when a companion falls, holding all it was; a made one would hold nobody");
     }
 }

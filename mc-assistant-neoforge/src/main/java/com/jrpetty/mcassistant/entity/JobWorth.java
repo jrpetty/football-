@@ -203,6 +203,10 @@ public final class JobWorth {
             // [diver] Under the water all day, on its own breath, and the one the town shouts for when somebody's in.
             case "DIVER" -> new Post(key, title, trade, role, 2, 2, 1.0, 1.0, "cold, deep work on your own breath",
                 "fuels the furnaces with kelp, and pulls folk out of the water");
+            // [nether] Through the gateway: lava, ghasts, blazes and the piglins' tempers, and the most skill the town asks of
+            // anybody: the best paid of all, a small picked team.
+            case "NETHER" -> new Post(key, title, trade, role, 4, 4, 1.2, 1.0, "the most dangerous work there is, and highly skilled; a small picked team",
+                "brings the town what only the Nether has");
             // The shop's jobs (ShopRoles): the keeper makes a little and runs the place; the assistants and the
             // stock keeper make nothing, and are paid for what they do for the shop.
             case "SHOP/KEEPER" -> new Post(key, title, trade, role, 1, 2, 1.0, 0.5, "runs the place", "keeps the shop and its sales");
@@ -828,6 +832,7 @@ public final class JobWorth {
         }
         if (postFor(t, ShopRoles.Role.KEEPER).learned >= 2 && target >= 0.75 && skilled < Math.max(1, Math.round(target))) raw *= 1.08;
         if (t == StationTask.CAVE) raw = Math.max(raw, 1.3);    // [caves] a small, picked team: never to be had for the asking
+        if (t == StationTask.NETHER) raw = Math.max(raw, 1.45); // [nether] fewer still, and picked from the veterans
         return clamp(raw, SCARCE_LO, SCARCE_HI);
     }
 
@@ -919,6 +924,7 @@ public final class JobWorth {
             case "CARTOGRAPHER" -> "the map room";     // [cartographer]
             case "EMERALD" -> "the trading post";      // [emerald]
             case "DIVER" -> "the kelp beds";            // [diver]
+            case "NETHER" -> "the Nether runs";        // [nether]
             default -> "the " + JobMarket.noun(t) + "s";
         };
     }

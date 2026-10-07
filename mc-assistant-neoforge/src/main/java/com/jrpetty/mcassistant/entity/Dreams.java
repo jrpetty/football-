@@ -197,7 +197,7 @@ public final class Dreams {
         return wantsToWrite(f) ? 30.0 : 0.0;
     }
 
-    /** Nether.tick: one who dreams of the Nether volunteers for the party. */
+    /** NetherRunners.appoint: one who dreams of the Nether volunteers first for the runners. */
     public static boolean volunteersForNether(VillageFolkEntity f) {
         return f.persona().rolled() && !f.persona().ambitionMet() && f.persona().ambition() == Persona.Ambition.GO_NETHER
             && !Fears.dreads(f, Fears.Fear.NETHER) && !f.isBaby();

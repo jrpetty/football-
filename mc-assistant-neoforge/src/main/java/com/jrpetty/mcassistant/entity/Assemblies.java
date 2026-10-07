@@ -916,6 +916,7 @@ public final class Assemblies {
                 }
                 for (String found : Scouts.reports(id)) s.add(new Line(null, found, '?', null));
                 for (String found : CaveDwellers.reports(id)) s.add(new Line(null, found, '?', null));   // [caves]
+                for (String found : NetherRuns.reports(id)) s.add(new Line(null, found, '?', null));     // [nether]
                 for (String money : Market.reports(id)) s.add(new Line(null, money, '!', null));
                 long dayNow = level.getDayTime() / 24000L;
                 Gatherings.Kind tonight = Gatherings.tonight(id, dayNow);

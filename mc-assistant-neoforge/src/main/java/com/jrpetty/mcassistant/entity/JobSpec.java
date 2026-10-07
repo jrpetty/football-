@@ -68,6 +68,8 @@ public final class JobSpec {
             // [diver] Water three deep near the town, and kelp to plant (out of the stores, or cut wild); shears for the
             // seagrass and a turtle helmet as the town has them (Divers).
             case DIVER -> List.of("water three deep near the town", "kelp to plant (the stores', or the wild kelp's)");
+            // [nether] All of it issued by the town before each run (NetherRunners.kitUp): nothing to set up first.
+            case NETHER -> List.of("armour, a sword and a bow (the town's)", "a piece of gold to wear", "fire resistance (the brewer's)");
         };
     }
 

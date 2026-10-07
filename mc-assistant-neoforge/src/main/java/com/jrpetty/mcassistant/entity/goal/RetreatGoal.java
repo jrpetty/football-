@@ -77,6 +77,10 @@ public class RetreatGoal extends Goal {
     private void moveToSafety() {
         this.repathCooldown = 30;
         BlockPos home = assistant.getHome();
+        // [nether] In the Nether a runner falls back to the outpost (or the portal), not toward a home a world away.
+        BlockPos outpost = com.jrpetty.mcassistant.entity.NetherRuns.safety(assistant);
+        if (outpost != null) home = outpost;
+        else if (assistant.level().dimension() == net.minecraft.world.level.Level.NETHER) home = null;
         if (home != null) {
             assistant.getNavigation().moveTo(home.getX() + 0.5, home.getY() + 1, home.getZ() + 0.5, 1.4D);
             return;

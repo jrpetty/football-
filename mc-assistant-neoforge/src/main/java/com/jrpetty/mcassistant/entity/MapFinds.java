@@ -447,7 +447,8 @@ public final class MapFinds {
         }
         if (to != null) {
             ItemStack left = to.insertGiven(map);
-            if (left.isEmpty()) return to.displayNameCap() + (hands == Hands.CAVE_TEAM ? " of the cave team" : hands == Hands.SCOUTS ? " the scout" : "");
+            if (left.isEmpty()) return to.displayNameCap() + (hands == Hands.CAVE_TEAM ? " of the cave team" : hands == Hands.SCOUTS ? " the scout"
+                : hands == Hands.NETHER ? " of the Nether runners" : "");   // [nether]
         }
         Crafts.store(level, v, map);
         return "the stores";

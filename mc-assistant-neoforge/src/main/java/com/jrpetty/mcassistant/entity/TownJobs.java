@@ -316,6 +316,7 @@ public final class TownJobs {
                 case CARTOGRAPHER -> score -= Cartographers.surveying(f) ? 60 : 15;   // [cartographer] out with its sheets, or at its table
                 case EMERALD -> score -= 40;             // [emerald] its day is on the road to the villagers
                 case DIVER -> score -= 40;               // [diver] its day is in the water (and it watches it)
+                case NETHER -> score -= 60;              // [nether] its day is through the gateway, or resting from it
                 default -> { if (trade.isCraft()) score -= 10; }
             }
             if (f.workedOut()) score += 25;                              // nothing to work at in its own trade

@@ -377,6 +377,8 @@ public final class Economy {
             // [diver] The kelp and what is dried and packed of it, the bed's clay, sand and gravel, the seagrass and the
             // pickles, the turtles' scutes, and the monument's prismarine.
             case DIVER -> true;
+            // [nether] All the Nether gives up: its ore, its stone and sand, its wart, the blazes' rods, the piglins' barter.
+            case NETHER -> k != null;
             default -> k == Kind.CRAFT || k == Kind.ANIMAL;                     // the crafts: smith, tailor, brewer, enchanter, shop
         };
     }

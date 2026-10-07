@@ -539,6 +539,8 @@ public final class VillageBoards {
         if (maps != null) out.add("FN|" + maps);
         String water = Divers.boardLine(level, id);             // [diver] the kelp beds, the coal they kept, the rescues
         if (water != null) out.add("FN|" + water);
+        String nether = NetherRunners.boardLine(id);            // [nether] the run under way, or the runs' tally and the last haul
+        if (nether != null) out.add("FN|" + nether);
         String about = Transport.boardLine(level, id);          // [transport] the lines, the ore carts, the ferry and the bridge
         if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);

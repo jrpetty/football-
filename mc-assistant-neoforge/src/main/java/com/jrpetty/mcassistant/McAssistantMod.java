@@ -371,6 +371,7 @@ public final class McAssistantMod {
         com.jrpetty.mcassistant.entity.TownWays.joinIdentity();        // [culture2] its sections of the Identity page
         com.jrpetty.mcassistant.item.IndividualItems.register(modBus); // [individual] spectacles
         com.jrpetty.mcassistant.item.LeisureItems.register(modBus);    // [leisure] the quilt, the lute, draughts, kites, the football, lanterns, slates
+        com.jrpetty.mcassistant.item.NetherItems.register(modBus);     // [nether] the runners' gold charm and satchel
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);

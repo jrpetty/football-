@@ -52,6 +52,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         "cartographer",                                        // [cartographer] likewise
         "emerald",                                             // [emerald] the emerald trader's: see outfit()
         "diver",                                               // [diver] its own too: see outfit()
+        "netherrunner",                                        // [nether] nor this: see outfit()
     };
 
     /** [caves] The cave dweller's outfit, after the trades drawn in StationTask's order (those before it). */
@@ -66,6 +67,8 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     public static final int EMERALD_OUTFIT = 24;
     /** [diver] The diver's outfit, after the emerald trader's. */
     public static final int DIVER_OUTFIT = 25;
+    /** [nether] The Nether runner's outfit, after the diver's. */
+    public static final int NETHER_OUTFIT = 26;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -204,6 +207,10 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"diver_line", "body", "diver"},
         {"diver_rope", "body", "diver"},
         {"diver_knife", "body", "diver"},
+        {"netherrunner_helm", "head", "netherrunner"},
+        {"netherrunner_neckguard", "head", "netherrunner"},
+        {"netherrunner_crest", "head", "netherrunner"},
+        {"netherrunner_satchel", "body", "netherrunner"},
         // END GENERATED WEARERS
     };
 
@@ -254,7 +261,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
             String name = WEARERS[i][0];
             wraps[i] = !onHead[i] && (name.contains("apron") || name.contains("shawl") || name.contains("mantle")
                 || name.contains("tape") || name.contains("cloak") || name.contains("cape"));
-            overHelmet[i] = "cavedweller_lamp".equals(name);
+            overHelmet[i] = "cavedweller_lamp".equals(name) || "netherrunner_crest".equals(name);   // [nether] the medallion too
         }
     }
 
@@ -405,6 +412,10 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("diver_line", CubeListBuilder.create().texOffs(84, 20).addBox(-0.5F, -7.5F, -0.5F, 1.0F, 15.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 5.5F, -3.75F, 0.0F, 0.0F, 0.62F));
         body.addOrReplaceChild("diver_rope", CubeListBuilder.create().texOffs(64, 26).addBox(4.2F, 6.5F, -2.0F, 2.0F, 5.0F, 4.0F), PartPose.ZERO);
         body.addOrReplaceChild("diver_knife", CubeListBuilder.create().texOffs(88, 26).addBox(-5.4F, 8.0F, -1.0F, 1.0F, 4.0F, 2.0F), PartPose.ZERO);
+        head.addOrReplaceChild("netherrunner_helm", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 4.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("netherrunner_neckguard", CubeListBuilder.create().texOffs(64, 12).addBox(-4.5F, -7.0F, 3.6F, 9.0F, 4.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("netherrunner_crest", CubeListBuilder.create().texOffs(104, 0).addBox(-1.0F, -10.0F, -5.6F, 2.0F, 2.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("netherrunner_satchel", CubeListBuilder.create().texOffs(100, 4).addBox(4.0F, 6.0F, -2.5F, 2.0F, 5.0F, 5.0F), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }
@@ -445,6 +456,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         if (job == AssistantEntity.StationTask.CARTOGRAPHER.ordinal()) return CARTO_OUTFIT;   // [cartographer] the scholar's coat
         if (job == AssistantEntity.StationTask.EMERALD.ordinal()) return EMERALD_OUTFIT;   // [emerald] "emerald": the merchant's coat
         if (job == AssistantEntity.StationTask.DIVER.ordinal()) return DIVER_OUTFIT; // [diver] "diver": the wetsuit and goggles
+        if (job == AssistantEntity.StationTask.NETHER.ordinal()) return NETHER_OUTFIT;   // [nether] "netherrunner"
         return Math.floorMod(job, CAVE_OUTFIT);
     }
 
@@ -455,7 +467,9 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
 
         // Dress for the trade. A helmet goes on instead of the trade's hat, not on top of it.
         String trade = tradeOf(folk);
-        boolean helmet = !folk.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
+        // [nether] A gold charm on the brow is no helmet: the runner's own skullcap stays on under it (NetherClient.CharmLayer).
+        boolean helmet = !folk.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
+            && !folk.getItemBySlot(EquipmentSlot.HEAD).is(com.jrpetty.mcassistant.item.NetherItems.GOLD_CHARM.get());
         boolean ownHat = FashionLayer.hatOn(folk);          // [fashion] off work, its own hat instead of its trade's
         boolean bare = com.jrpetty.mcassistant.entity.Manner.bareOf(folk.clientManner());   // [individual] its work hat off of an evening
         for (int i = 0; i < worn.length; i++) {

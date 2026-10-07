@@ -231,6 +231,15 @@ public final class Trades {
                     need("a turtle helmet", s -> s.is(Items.TURTLE_HELMET), 1, "the smith, of five scutes")),
                 List.of(need("kelp to plant", s -> s.is(Items.KELP), 8, "the stores, or the wild kelp")),
                 "dried kelp blocks for the furnaces, dried kelp for a hungry larder, clay for the masons, scutes for the helmets");
+            // [nether] The Nether runner (NetherRunners): the town's armour and gold, a bow, fire resistance; the Nether's haul home.
+            case NETHER -> new Trade("I go through the gateway into the Nether with the runners, in the town's armour with a piece of"
+                    + " gold on for the piglins: we wall in the portal on the far side, dig quartz and glowstone, pick the fortress's"
+                    + " wart, shoot blazes for their rods, barter gold with the piglins, and bring it all home",
+                List.of(need("a sword", s -> s.is(net.minecraft.tags.ItemTags.SWORDS), 1, "the smith (the town's, issued free)"),
+                    need("a bow", s -> s.is(Items.BOW), 1, "the fletcher (the town's, issued free)")),
+                List.of(need("fire resistance", NetherPlan::fireResistance, 1, "the brewer"),
+                    need("food for the run", s -> s.get(DataComponents.FOOD) != null, 4, "the stores")),
+                "blaze rods and wart for the brewer, quartz and glowstone for the builders, pearls and obsidian from the piglins");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }

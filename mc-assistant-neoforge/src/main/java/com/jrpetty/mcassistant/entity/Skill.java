@@ -42,6 +42,7 @@ public final class Skill {
                 case CAVE -> new Fit(-6, "misses company down in the dark");          // [caves]
                 case FIREWORKS -> new Fit(6, "loves the crowd's cheer when the rockets go up");   // [fireworks]
                 case EMERALD -> new Fit(14, "can talk any villager into a better bargain");   // [emerald]
+                case NETHER -> new Fit(4, "keeps the team's spirits up in the heat");   // [nether]
                 case SCOUT -> new Fit(6, "talks to everybody it meets on the road");
                 case HUNT -> new Fit(-8, "can't keep quiet long enough to get near anything");
                 case MINE, FISH -> new Fit(-5, "misses company down there");
@@ -69,6 +70,7 @@ public final class Skill {
             case GRUMPY -> switch (trade) {
                 case GUARD -> new Fit(8, "nothing gets past a scowl like that");
                 case CAVE -> new Fit(6, "takes it out on the rock, and on what lives in it");   // [caves]
+                case NETHER -> new Fit(6, "glowers right back at a ghast");                    // [nether]
                 case MINE, SMITH -> new Fit(4, "takes it out on the stone");
                 case GOLEMS -> new Fit(4, "has a lot in common with an iron golem");        // [golems]
                 case SHOP, COOK, STORE -> new Fit(-6, "puts the customers off");
@@ -87,6 +89,7 @@ public final class Skill {
                 case FIREWORKS -> new Fit(10, "always trying a new star to see what it does");      // [fireworks]
                 case CARTOGRAPHER -> new Fit(16, "has to know what's round the next bend, and draw it");   // [cartographer]
                 case DIVER -> new Fit(8, "always wants to see what's on the bottom");                  // [diver]
+                case NETHER -> new Fit(12, "wants to see what's past the next lava fall");             // [nether]
                 case HUNT -> new Fit(8, "reads the tracks like a book");
                 case HAUL, STORE -> new Fit(-4, "wanders off to look at things");
                 default -> new Fit(3, "always learning something");

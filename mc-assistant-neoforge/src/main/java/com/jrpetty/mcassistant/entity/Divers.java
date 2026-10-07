@@ -697,7 +697,7 @@ public final class Divers {
         if (f.trip() != null || f.expedition() != null) return Integer.MIN_VALUE;
         StationTask t = f.stationTask();
         if (t == StationTask.DIVER) return Integer.MIN_VALUE;
-        if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE
+        if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE || t == StationTask.NETHER   // [nether]
             || t == StationTask.SCOUT || t == StationTask.FERRY || t == StationTask.BANK) return Integer.MIN_VALUE;
         boolean spare = t == StationTask.NONE || Villages.share(village, t) >= 0.5
             || t == StationTask.FISH && Villages.share(village, StationTask.FISH) >= 0.0;

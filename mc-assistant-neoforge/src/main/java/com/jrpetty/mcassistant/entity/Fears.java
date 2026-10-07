@@ -228,7 +228,7 @@ public final class Fears {
         return dreads(f, Fear.HEIGHTS) && Villages.hasBuilt(village, "belltower") ? 500.0 : 0.0;
     }
 
-    /** Nether.tick: never one afraid of it in the party. */
+    /** NetherRunners.appoint: never one afraid of it among the runners. */
     public static boolean staysThisSide(VillageFolkEntity f) {
         return dreads(f, Fear.NETHER);
     }

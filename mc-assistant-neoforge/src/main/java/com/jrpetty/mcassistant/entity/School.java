@@ -979,6 +979,8 @@ public final class School {
             "North at the top, the town in the middle, and every place with its name." });
         LINES.put(StationTask.DIVER, new String[]{ "Up for air before you need it, not when you do.",       // [diver]
             "Cut the kelp above the root and it grows again." });
+        LINES.put(StationTask.NETHER, new String[]{ "Gold on before you go through, and never strike a piglin.",   // [nether]
+            "Drink your fire resistance before you need it, not after.", "A ghast's fireball: hit it back the way it came." });
     }
 
     private static final String[] ANY_DAY = { "Reading, writing and counting: every trade stands on those three.",

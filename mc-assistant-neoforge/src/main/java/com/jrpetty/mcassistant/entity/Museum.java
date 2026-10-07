@@ -341,6 +341,7 @@ public final class Museum {
             String from = how.substring("brought up ".length());
             return (what.equals("it") || what.equals("that") ? "brought " + what + " up " : "brought up " + what + " ") + from;
         }
+        if (how.startsWith("brought home from ")) return "brought home " + what + how.substring("brought home".length());   // [nether]
         return how + " " + what;
     }
 
@@ -359,6 +360,7 @@ public final class Museum {
             case HUNT -> "brought home";
             case CAVE -> CaveDwellers.foundWhere(f);       // [caves] "brought up from the great cave north-east"
             case DIVER -> "brought up off the bed";         // [diver]
+            case NETHER -> "brought home from the Nether";  // [nether]
             case GUARD -> "won";
             default -> "found";
         };
