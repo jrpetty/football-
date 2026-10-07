@@ -538,7 +538,9 @@ public final class FieldTools {
     static BlockPos patch(ServerLevel level, VillageFolkEntity f, WorkZone z, boolean drought, long now) {
         BlockPos at = f.blockPosition();
         BlockPos best = null;
-        int bestScore = 1;
+        // Scored in quarters, less a quarter for each step away: of the squares that want it as much, the nearest (the
+        // one under its feet first), not the first come upon in the look round.
+        int bestScore = 4;
         for (int dx = -4; dx <= 4; dx++) {
             for (int dz = -4; dz <= 4; dz++) {
                 for (int dy = -2; dy <= 1; dy++) {
@@ -549,7 +551,7 @@ public final class FieldTools {
                     boolean growing = crop.getBlock() instanceof CropBlock c && !c.isMaxAge(crop);
                     int m = gs.getValue(FarmBlock.MOISTURE);
                     int dry = m == 0 ? 3 : m < FarmBlock.MAX_MOISTURE ? 1 : 0;
-                    int score = (growing ? 3 : 0) + dry * (drought ? 3 : 1) - (Math.abs(dx) + Math.abs(dz)) / 4;
+                    int score = ((growing ? 3 : 0) + dry * (drought ? 3 : 1)) * 4 - (Math.abs(dx) + Math.abs(dz));
                     if (!growing && !drought) continue;                     // nothing growing there wants it
                     if (score > bestScore) { bestScore = score; best = g.immutable(); }
                 }

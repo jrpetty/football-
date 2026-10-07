@@ -19,6 +19,7 @@ import com.jrpetty.mcassistant.entity.RecipeBook;
 import com.jrpetty.mcassistant.entity.Tiers;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
+import com.jrpetty.mcassistant.entity.WorkZone;
 import com.jrpetty.mcassistant.entity.Workshop;
 import com.jrpetty.mcassistant.item.BeeSmokerItem;
 import com.jrpetty.mcassistant.item.FieldItems;
@@ -155,9 +156,14 @@ public class FieldsGameTests {
         return f;
     }
 
-    /** This folk at this trade, its ground round where it stands. */
+    /**
+     * This folk at this trade, its ground round where it stands. (The town plans a newcomer's ground for it as it
+     * arrives, a field or a pen away off by the town's edge; the test's ground is here, so it is given here.)
+     */
     private static VillageFolkEntity trade(VillageFolkEntity f, StationTask t) {
         f.setJob(t);
+        f.setWorkZone(WorkZone.around(f.blockPosition(), 8, WorkZone.DEFAULT_DEPTH));
+        Kit.log("fields: " + f.displayNameCap() + " a " + t.title + ", its ground " + f.workZone().center());
         return f;
     }
 
@@ -349,6 +355,7 @@ public class FieldsGameTests {
         BlockPos heart = Kit.surface(level, x, Z);
         VillageFolkEntity b = another(helper, heart.offset(-16, 0, 0), id);
         helper.runAtTickTime(5, () -> {
+            a.moveTo(heart.getX() + 16.5, heart.getY(), heart.getZ() + 0.5);       // off the square: its field is not to be sown over the stores
             trade(a, StationTask.FARM);
             trade(b, StationTask.FARM);
             // An hour of the working day when neither is on its break: Droughts carries water in working hours only.
@@ -360,6 +367,7 @@ public class FieldsGameTests {
             Kit.log("fi02 the hour: " + level.getDayTime() % 24000L + "; off work " + a.offWorkNow() + " " + b.offWorkNow());
             emptyStores(helper, level, id);
             stock(level, id, new ItemStack(Items.BUCKET, 2));
+            Kit.log("fi02 stocked: buckets " + stores(level, id, Items.BUCKET) + " in " + Villages.storeChests(level, id).size() + " chests; " + Villages.storeChests(level, id));
             // Both fields dry: young wheat on farmland with no water near.
             List<BlockPos> fieldA = field(level, a.blockPosition().offset(0, 0, 2), 2, 0, 2);
             List<BlockPos> fieldB = field(level, b.blockPosition().offset(0, 0, 2), 2, 0, 2);
@@ -367,6 +375,7 @@ public class FieldsGameTests {
             WateringCanItem.fill(can);
             a.insertItem(can);
             Droughts.droughtForTests(level, id, true);
+            Kit.log("fi02 after the drought began: buckets in the stores " + stores(level, id, Items.BUCKET) + ", b carries " + b.countCarried(s -> s.is(Items.BUCKET) || s.is(Items.WATER_BUCKET)));
             BlockPos crop = fieldA.get(12);
             boolean stunted0 = Droughts.stuntedForTests(level, crop);
             // The farmer with the can: no bucket; its can on the dry ground instead.
@@ -386,11 +395,14 @@ public class FieldsGameTests {
             BlockPos pond = b.blockPosition().offset(-12, -1, -12);
             for (int dx = 0; dx < 3; dx++) for (int dz = 0; dz < 3; dz++) level.setBlockAndUpdate(pond.offset(dx, 0, dz), Blocks.WATER.defaultBlockState());
             boolean bucketB = FieldTools.droughtCarryForTests(b, level);
+            Kit.log("fi02 b set out: " + bucketB + "; buckets in the stores " + stores(level, id, Items.BUCKET) + ", b carries " + b.countCarried(s -> s.is(Items.BUCKET) || s.is(Items.WATER_BUCKET)) + "; carrying " + FieldTools.droughtCarryingForTests(b));
             b.moveTo(rain.getX() + 1.5, rain.getY(), rain.getZ() + 0.5);
             FieldTools.droughtCarryForTests(b, level);
             int left = RainBarrelBlock.water(level, rain);
             Kit.log("fi02 the bucket farmer: set out " + bucketB + "; the barrel 3 -> " + left + "; carries a water bucket "
-                + (b.countCarried(s -> s.is(Items.WATER_BUCKET)) > 0));
+                + (b.countCarried(s -> s.is(Items.WATER_BUCKET)) > 0) + "; its ground " + b.workZone().center() + "; the dry fields "
+                + Droughts.dryFieldsForTests(id) + "; buckets in the stores " + stores(level, id, Items.BUCKET) + "; off work " + b.offWorkNow()
+                + " at " + level.getDayTime() % 24000L);
             helper.assertTrue(bucketB, "a farmer with no can carries a bucket");
             helper.assertTrue(left == 2 && b.countCarried(s -> s.is(Items.WATER_BUCKET)) == 1, "and fills it at the rain barrel first: " + left);
             Droughts.droughtForTests(level, id, false);
@@ -472,7 +484,9 @@ public class FieldsGameTests {
             BlockPos g = heart.offset(-12, -1, 12);
             for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {
                 level.setBlockAndUpdate(g.offset(dx, 0, dz), Blocks.FARMLAND.defaultBlockState().setValue(FarmBlock.MOISTURE, 7));
+                level.setBlockAndUpdate(g.offset(dx, 1, dz), Blocks.AIR.defaultBlockState());
             }
+            Kit.log("fi03 the player's patch at " + g + ": " + level.getBlockState(g.offset(-1, 1, -1)) + " ... " + level.getBlockState(g.offset(1, 1, 1)));
             var r = mine.getItem().useOn(new UseOnContext(p, InteractionHand.MAIN_HAND, hit(g)));
             int sown = 0;
             for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) if (level.getBlockState(g.offset(dx, 1, dz)).is(Blocks.WHEAT)) sown++;
@@ -687,6 +701,7 @@ public class FieldsGameTests {
             Cow stray = EntityType.COW.create(level);
             stray.moveTo(trough.getX() + 9.5, trough.getY(), trough.getZ() + 0.5, 0, 0);
             level.addFreshEntity(stray);
+            stray.setOnGround(true);                                         // it stands on the grass (not yet ticked to know it)
             int drawn = FieldTools.pullForTests(level, trough);
             Kit.log("fi06 drawn to it: " + drawn);
             helper.assertTrue(drawn >= 1 && stray.getNavigation().isInProgress(), "the stray makes for the trough");
@@ -885,13 +900,19 @@ public class FieldsGameTests {
             trade(smith, StationTask.SMITH);
             trade(keeper, StationTask.BEEKEEP);
             emptyStores(helper, level, id);
-            stock(level, id, new ItemStack(Items.COPPER_INGOT, 2), new ItemStack(Items.LEATHER, 4), new ItemStack(Items.COAL, 16),
+            // A Stone Age town puts all its coal by till it has the age's thirty-two (Bench.keeps): the smoker's coal is
+            // the spare beyond that.
+            stock(level, id, new ItemStack(Items.COPPER_INGOT, 2), new ItemStack(Items.LEATHER, 4), new ItemStack(Items.COAL, 48),
                 new ItemStack(Items.CRAFTING_TABLE), new ItemStack(Items.SHEARS), new ItemStack(Items.GLASS_BOTTLE, 4));
+            Map<Item, Integer> want = FieldTools.wantedForTests(level, Villages.get(id));
             String made = FieldTools.craftForTests(level, smith);
+            Kit.log("fi09 wanted " + want + "; the keeper " + keeper.stationTask() + ", the smith " + smith.stationTask()
+                + "; the age " + Villages.ageOf(id).label + "; the bench: "
+                + Bench.plan(level, Villages.get(id), FieldItems.BEE_SMOKER.get(), 1, Bench.handOf(level, Villages.get(id), smith, "smithy")).chain());
             Kit.log("fi09 the smith: " + made + "; copper " + stores(level, id, Items.COPPER_INGOT) + ", leather " + stores(level, id, Items.LEATHER)
                 + ", coal " + stores(level, id, Items.COAL));
             helper.assertTrue(made != null && made.contains("bee smoker") && stores(level, id, Items.COPPER_INGOT) == 0
-                && stores(level, id, Items.LEATHER) == 3 && stores(level, id, Items.COAL) == 15, "two copper, a leather and a coal");
+                && stores(level, id, Items.LEATHER) == 3 && stores(level, id, Items.COAL) == 47, "two copper, a leather and a coal");
 
             // Three full hives on the keeper's meadow, and an angry bee.
             BlockPos c = keeper.workZone().center();
