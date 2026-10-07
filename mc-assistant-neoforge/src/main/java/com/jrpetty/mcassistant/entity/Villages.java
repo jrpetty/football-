@@ -345,6 +345,7 @@ public final class Villages {
         Couriers.resetForTests();
         Toolrack.resetForTests();
         Workshop.resetForTests();
+        Store.resetForTests();                                     // [econ-store]
         Sweepers.resetForTests();
         Meals.resetForTests();
         Stables.resetForTests();
@@ -908,7 +909,8 @@ public final class Villages {
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
             : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade());
         // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.
-        double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null ? Workshop.handsWanted(villageId) : 0;
+        double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null
+            ? Workshop.handsWanted(villageId) + ShopRoles.staffWanted(villageId) : 0;   // [econ-store] and its assistants and stock keeper
         return Math.max(0.0, Math.min(max + hands, t + hands));
     }
 
@@ -1728,6 +1730,8 @@ public final class Villages {
         // shop are what a big Iron Age town has, not what makes it one.
         if (folk >= 16 && built(villageId, "smithy") < 1) extras.add("smithy");
         if (folk >= 18 && built(villageId, "shop") < 1) extras.add("shop");
+        // [econ-store] The town store, once the town has outgrown its shop (Store).
+        if (built(villageId, Store.STRUCTURE) < 1 && Store.wanted(villageId, folk)) extras.add(Store.STRUCTURE);
         if (folk >= 22 && built(villageId, "brewery") < 1) extras.add("brewery");
         // A town of thirty keeps its savings somewhere safe and lends them to its home-buyers: a bank (Bank).
         if (folk >= Bank.FROM && built(villageId, "bank") < 1 && builtStructure(villageId, "bank") == null) extras.add("bank");
@@ -2087,6 +2091,7 @@ public final class Villages {
             case "graveyard" -> "a graveyard, to lay our dead to rest";
             case "smithy" -> "a smithy, for the watch's armour and the miners' picks";
             case "shop" -> "a shop, to sell what the village's crafts make";
+            case "store" -> Store.why(villageId);                  // [econ-store]
             case "bank" -> "a bank, " + folk + " folk's savings kept safe behind iron bars, and lent to households buying their houses";
             case "brewery" -> "a brewery, for the brewer's potions";
             case "library" -> "a library, where the enchanter keeps its books";

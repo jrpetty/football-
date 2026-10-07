@@ -192,7 +192,7 @@ public final class Workshop {
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!shopFolk(a)) continue;
             VillageFolkEntity f = (VillageFolkEntity) a;
-            if (f.getTags().contains(HAND)) {
+            if (ShopRoles.underTheKeeper(f)) {                // [econ-store] a hand, an assistant or the stock keeper
                 if (bestHand == null || compareHands(f, bestHand) < 0) bestHand = f;
             } else if (best == null || compareHands(f, best) < 0) {
                 best = f;
@@ -244,7 +244,7 @@ public final class Workshop {
                 continue;
             }
             at.add(f);
-            if (!f.getTags().contains(HAND)) keepers.add(f);
+            if (!ShopRoles.underTheKeeper(f)) keepers.add(f);   // [econ-store]
         }
         if (at.isEmpty()) return;
         long day = level.getDayTime() / 24000L;
@@ -498,7 +498,8 @@ public final class Workshop {
         // one for every fifteen folk in the town at the most (four), while the book has work in it.
         int backlog = 0;
         for (Stockroom.Ware w : s.wares) {
-            int gap = Stockroom.target(level, id, Stockroom.Seller.SHOP, w) - Market.stock(level, id, w.is());
+            int gap = Stockroom.target(level, id, Stockroom.Seller.SHOP, w) - Market.stock(level, id, w.is())
+                - ShopStock.held(level, id, w.is());                      // [econ-store] and what its stockroom holds
             if (gap > 0) backlog += (gap + Math.max(1, w.batch()) - 1) / Math.max(1, w.batch());
         }
         s.backlog = backlog;
@@ -1053,7 +1054,7 @@ public final class Workshop {
         for (Stockroom.Ware w : s.wares) {
             if (book.size() >= 48) break;
             int target = Stockroom.target(level, village, Stockroom.Seller.SHOP, w);
-            int have = Market.stock(level, village, w.is());
+            int have = Market.stock(level, village, w.is()) + ShopStock.held(level, village, w.is());   // [econ-store]
             Stockroom.Line l = shopBook.lines.get(w.key());
             if (target <= 0 && have <= 0 && (l == null || Stockroom.Line.week(l.made) == 0)) continue;
             CompoundTag r = new CompoundTag();

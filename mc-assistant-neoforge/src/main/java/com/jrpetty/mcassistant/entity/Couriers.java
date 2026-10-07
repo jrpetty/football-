@@ -492,6 +492,8 @@ public final class Couriers {
         // Its business at the far end done, with a horse out (Riding): back to the horse and home on it first.
         if ((r == null || r.stage == Stage.IN || r.stage == Stage.BACK) && Riding.homeFirst(c, level)) return true;
         if (r == null) {
+            // [econ-store] The shop's deliveries (StoreDeliveries): one under way carried on, one waiting taken.
+            if (StoreDeliveries.courier(c, level, o.queue.isEmpty())) return true;
             // The street sweeper (Sweepers): the storehouse's sweeper sweeps before anything else, and a
             // courier part-way through a sweep between runs sees it through first.
             if (Sweepers.work(c, level, v, o, false)) return true;

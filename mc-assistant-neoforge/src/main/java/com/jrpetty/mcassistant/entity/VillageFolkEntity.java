@@ -1323,6 +1323,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return super.mobInteract(player, hand);
         }
         if (!level().isClientSide && player instanceof net.minecraft.server.level.ServerPlayer sp) {
+            if (StoreFloor.serveAPlayer(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;   // [econ-store]
             FolkTalk.open(this, sp);
         }
         return net.minecraft.world.InteractionResult.sidedSuccess(level().isClientSide);
@@ -4929,7 +4930,8 @@ public class VillageFolkEntity extends AssistantEntity {
         StationTask trade = stationTask();
         // The couriers are the storehouse's staff, and work out of it too (Couriers): their post is
         // the storehouse, where they wait between runs and report back after each.
-        String building = trade == StationTask.HAUL ? "storage" : buildingFor(trade);
+        String building = trade == StationTask.HAUL ? "storage"
+            : trade == StationTask.SHOP ? Store.buildingForShop(ownerId()) : buildingFor(trade);   // [econ-store] the store once it stands
         if (building == null) return;
         if (tickCount - buildingCheckTick < 1200) return;
         buildingCheckTick = tickCount;
@@ -5054,10 +5056,26 @@ public class VillageFolkEntity extends AssistantEntity {
         if (speed != null) speed.removeModifier(OLD_GAIT);
     }
 
+    // [econ-store] Its job at the shop on its nameplate ("[Stock keeper]"), looked at every ten seconds (ShopRoles).
+    private String roleBadge = "";
+    private int roleBadgeTick = -100000;
+
+    @Override
+    protected String roleBadge() {
+        if (level().isClientSide) return "";
+        if (tickCount - roleBadgeTick >= 200 || tickCount < roleBadgeTick) {
+            roleBadgeTick = tickCount;
+            String b = stationTask() == StationTask.SHOP ? ShopRoles.badge(this) : "";
+            roleBadge = b.isEmpty() ? "" : "[" + b + "]";
+        }
+        return roleBadge;
+    }
+
     /** The crafts' work (Crafts, Cafe): a piece at a time, out of the stores and back. */
     @Override
     protected boolean craftWork() {
-        return level() instanceof net.minecraft.server.level.ServerLevel server && Crafts.work(this, server);
+        return level() instanceof net.minecraft.server.level.ServerLevel server
+            && (StoreStaff.work(this, server) || Crafts.work(this, server));   // [econ-store] the counter, the stock book
     }
 
     /**

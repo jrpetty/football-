@@ -4545,6 +4545,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** What a long career shows on the nametag. One chevron for a thousand of
      *  the thing this trade is judged on, two for five thousand, three for
      *  twenty — earned slowly enough that seeing one means something. */
+    /** A job's title for the nameplate ("[Stock keeper]"), or none (VillageFolkEntity: the store's staff). [econ-store] */
+    protected String roleBadge() { return ""; }
+
     private String milestoneMarks() {
         int best = 0;
         for (int n : deeds.values()) best = Math.max(best, n);
@@ -9615,7 +9618,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         int hp = Mth.ceil(getHealth());
         char glyph = stationTask == StationTask.NONE ? ' '
             : (!missingEssentials.isEmpty() || upkeepStalled) ? '⚠' : '⚒';
-        String marks = milestoneMarks();
+        String marks = milestoneMarks() + roleBadge();         // [econ-store] and a job's title (VillageFolkEntity)
         if (isWatched() && (hp != lastShownHealth || veteranLevel() != lastShownLevel
             || glyph != lastShownGlyph || !marks.equals(lastShownMarks))) {
             lastShownMarks = marks;

@@ -480,7 +480,8 @@ public final class Stockroom {
      *  three days, a tenth; another every two days more, to four tenths. */
     static int markdown(ServerLevel level, UUID village, Seller maker, Ware w) {
         if (!w.made()) return 0;
-        int have = Market.stock(level, village, w.is());
+        int have = Market.stock(level, village, w.is())
+            + (maker == Seller.SHOP ? ShopStock.held(level, village, w.is()) : 0);   // [econ-store] its stockroom too
         if (have <= Math.max(1, target(level, village, maker, w))) return 0;
         Book b = book(level, village, maker);
         long last = b.opened;
@@ -536,7 +537,8 @@ public final class Stockroom {
         for (Ware w : wares) {
             if (!w.made()) continue;
             int target = target(level, v.id(), s, w);
-            int have = Market.stock(level, v.id(), w.is());
+            int have = Market.stock(level, v.id(), w.is())
+                + (s == Seller.SHOP ? ShopStock.held(level, v.id(), w.is()) : 0);   // [econ-store] its stockroom too
             if (target <= 0 || have >= target) {
                 Line l = b.lines.get(w.key());
                 if (l != null) clearShort(l);
@@ -676,6 +678,7 @@ public final class Stockroom {
             int n = tool ? 1 : Math.max(4, Math.min(32, best.missingCount * 4));
             out.add(new Ask(id.getPath(), n, s.words + "'s " + plural(bestKey)));
         }
+        out.addAll(StockKeeper.asks(level, v));                    // [econ-store] what the store wants and cannot get
         return out;
     }
 
@@ -747,6 +750,7 @@ public final class Stockroom {
                 break;
             }
         }
+        out.addAll(StockKeeper.shortages(level, village));         // [econ-store]
         return out;
     }
 
