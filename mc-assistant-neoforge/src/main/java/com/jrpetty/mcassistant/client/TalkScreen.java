@@ -247,7 +247,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("The bank", TalkTopic.BANK, "Your account: at the town's bank once it has one (see the banker: \"deposit 20\", \"withdraw 10\", "
                     + "\"a mortgage on this house\" standing in an empty one), else at the treasury; \"borrow 30\", \"repay\" for the treasury's small loans"));
                 out.add(new Choice("Invest…", TalkTopic.INVEST, "", "Put coin into the village's works: two weeks' share of what it takes each day"));
-                out.add(Choice.of("Auction", TalkTopic.AUCTION, "Market day's lot: the village's finest spare thing, to the best bid (\"I bid 30\")"));
+                out.add(Choice.of("Auction", TalkTopic.AUCTION, "Market day's auction: the lots, the bids, your own goods put up (\"I bid 30\", \"put it up\")"));   // [fleet]
                 out.add(Choice.of("Escort", TalkTopic.ESCORT, "Guard the next caravan: walk with it and be paid at the other end"));
                 out.add(Choice.of("Charter route", TalkTopic.CHARTER, "Fifty coins for a trade route to the nearest neighbour: a tenth of every load sold on it is yours"));
                 out.add(Choice.of("Buy a house", TalkTopic.HOUSING, "The village's empty houses and their prices. Say \"buy this house\" standing in one, \"let my house for 3\", or \"my rent\""));
