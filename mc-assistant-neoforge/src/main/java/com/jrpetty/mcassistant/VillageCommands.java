@@ -45,6 +45,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village birthdays        the week's birthdays; birthdays now &lt;name&gt; (ops) keeps one now
  *   /village speed 16|max|normal   time runs faster, to watch a village grow (ops / world owner)
  *   /village jobs [why|books|post|decide|look|want|pact]   the job market between towns (JobMarketCommands)
+ *   /village trade [books|now|talk|deliver|stage]   trade between towns: the book, the deals, the talks (TradeCommands)
  * </pre>
  */
 public final class VillageCommands {
@@ -295,6 +296,8 @@ public final class VillageCommands {
             // [economy] The larder against the mouths, the coal floor and charcoal, the builders' stock carried about
             // (/village larder; [econ-prices] it was /village economy, and hid the economy page).
             .then(EconomyCommands.build())
+            // [econ-trade] Trade between towns: the trade book, the deals, the talks (TradeCommands).
+            .then(TradeCommands.build())
             // What every village you have met thinks of you.
             .then(Commands.literal("standing").executes(VillageCommands::standing))
             // How the villages stand with each other: allies, feuds, tribute.

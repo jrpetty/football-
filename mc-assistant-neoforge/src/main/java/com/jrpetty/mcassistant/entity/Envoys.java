@@ -28,8 +28,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>An envoy can carry:
  * <ul>
  * <li>a first greeting;</li>
- * <li>an offer of trade — a pact, after which caravans run both ways and goods are paid for in
- *     coin;</li>
+ * <li>an offer of trade — bargained over before the host's board, round by round, into a deal (or
+ *     not) that both towns gain by at their own prices; its caravans then run both ways on the agreed
+ *     days with the agreed goods, and the coin is carried (TradeTalks, TradeDeals);</li>
  * <li>an alliance;</li>
  * <li>peace, with gifts out of the stores;</li>
  * <li>a demand for tribute;</li>
@@ -247,21 +248,14 @@ public final class Envoys {
         }
         if (bigger && (t == Temper.SHREWD || t == Temper.PRICKLY) && r <= 10 && Diplomacy.tributeDue(y, day)) return Errand.TRIBUTE;
         if (crowded && t == Temper.PRICKLY && r < Diplomacy.FRIENDLY) return Errand.COMPLAINT;
-        if (!pact(x, y) && t != Temper.WARY && r >= Diplomacy.FRIENDLY - 15 && (t == Temper.SHREWD || complementary(level, x, y))) {
-            return Errand.TRADE;
-        }
+        // [econ-trade] Trade talks when the two towns' books say there is something to trade, or the deal standing
+        // between them is near its end; not oftener than every few days (TradeDeals.talksDue).
+        if (t != Temper.WARY && r >= Diplomacy.FRIENDLY - 15 && TradeDeals.talksDue(level, x, y, day)) return Errand.TRADE;
         if (!allied(x, y) && r >= Diplomacy.ALLIANCE - 15 && t != Temper.WARY && t != Temper.PRICKLY) return Errand.ALLIANCE;
         if (t == Temper.GENEROUS && r >= 0 && com.jrpetty.mcassistant.AssistantConfig.villagesShareGoods()
                 && !Caravans.load(level, from, y, true, false).isEmpty()) return Errand.GIFT;
         if (r >= -5 && (t == Temper.FRIENDLY || t == Temper.CURIOUS || t == Temper.WARM) && rng.nextInt(3) == 0) return Errand.GREETING;
         return null;
-    }
-
-    /** Each has something the other is short of. */
-    static boolean complementary(ServerLevel level, UUID x, UUID y) {
-        Villages.Village vx = Villages.get(x), vy = Villages.get(y);
-        if (vx == null || vy == null) return false;
-        return !Caravans.load(level, vx, y, true, false).isEmpty() || !Caravans.load(level, vy, x, true, false).isEmpty();
     }
 
     /** An envoy of one of them is on the road between them. */
@@ -504,18 +498,10 @@ public final class Envoys {
                 });
             }
             case TRADE -> {
-                int score = r + warmth + (complementary(level, host, from) ? 15 : 0) + (ht == Temper.SHREWD ? 10 : 0);
-                if (score >= 10) {
-                    return new Answer(true, ht == Temper.SHREWD ? "Trade? Gladly — at fair prices, mind." : "Yes! Let the caravans run.", () -> {
-                        sign(host, from, day);
-                        Ledger.relate(host, from, 6);
-                        t.outcome = "they will trade with us — the caravans start soon";
-                    });
-                }
-                return new Answer(false, ht == Temper.PRICKLY ? "Trade with " + fn + "? Not while I'm elder." : "Not just now. Perhaps another time.", () -> {
-                    Ledger.relate(host, from, -2);
-                    t.outcome = "they will not trade with us, not yet";
-                });
+                // [econ-trade] Not a yes or a no any more: the envoy's offer and want lists against the host's books, and
+                // the bargaining, round by round, each side by its own prices (TradeTalks). Heard before the board, the
+                // rounds are said aloud (Assemblies); here, with nobody to hear it, the answer comes by word of mouth.
+                return TradeTalks.answer(level, host, from, envoy, t);
             }
             case ALLIANCE -> {
                 int score = r + warmth + (pact(host, from) ? 10 : 0);

@@ -689,9 +689,10 @@ Business with the whole village (the **Money** tab):
   * At the colony, **the colony buys the goods as they come off the carrier's back**, at the
     family price (half what the market says they're worth); between two villages with a
     trade pact it's the full price. What the treasury can't pay for goes home again with the
-    carrier. Then it loads what the colony can spare that the mother village is short of —
-    never what it just brought — which the mother buys the same way when it gets home, and
-    walks home with the coin.
+    carrier. Then it buys what the colony can spare that the mother village is short of —
+    never what it just brought — there and then, out of the coin in its purse, and walks home
+    with the goods and what is left of the coin. Coin is always carried: nothing is paid into
+    another town's treasury from afar.
   * Players nearby are told when a caravan sets out, and both towns record each
     delivery in their history.
   * You can meet a caravan on the road. Ask the carrier what it is doing and it
@@ -3753,9 +3754,9 @@ arrives, the neighbour's bell rings and its folk gather before their board to he
 Their elder answers there and then, in its own way. The envoy walks home, and the answer
 is told at the next morning assembly. An envoy can carry:
 * a first **greeting**;
-* an offer of **trade**: a pact, after which **trade caravans** run both ways every
-  few days. The goods are paid for in coin, and each trip warms the two villages a
-  little;
+* an offer of **trade**: bargained over before the board, round by round, into a **deal**
+  both towns gain by (see Trade between towns, at the end). Its caravans then run both ways
+  on the agreed days, and each trip warms the two villages a little;
 * an **alliance**, sworn before the village board. Allies feed each other when one goes
   hungry;
 * **peace**, with gifts out of the stores and a few coins;
@@ -5583,3 +5584,84 @@ treasury has the plot, the permit, the blocks and the furnishing and the builder
 coin, real blocks leave the stores, and it moves in owning the house; that the index, prices and rents
 rise while homes are scarce and fall while they stand empty; and that an owner moving up sells at the
 going price to a buyer (or to the council at four-fifths), every coin counted.
+
+## Trade between towns
+
+Towns trade with each other the way people do: one town has stone it cannot use and too little
+food, its neighbour the other way round, and their envoy and leader work out a deal that suits both.
+
+**What a town is good at, and short of.** Every town keeps a **trade book**, ware by ware: food,
+timber, stone, ore and iron, coal, wool and the crafts. For each it shows what the stores hold
+against what the town keeps for itself (a full larder, so many logs and so much stone a head, the
+smiths' iron, the smelters' coal, wool for beds), and so what it has **to spare** (only what its own
+needs leave over) or how far it is **short** (under what it keeps, or what its age still asks for).
+It also shows what the town makes a day and what goes out a day, how many days that lasts, how its
+land leans (a mountain town lives by its mine, a river town by its fields, a forest town by its
+timber), what one costs here today, and what one is **worth to the town**: dearer when it is short,
+cheaper when it has a glut.
+
+**The envoy and the leader.** When two neighbours on decent terms each have something the other is
+short of, an elder sends an envoy to talk trade (and again when a deal nears its end). The envoy
+brings its town's offer list and want list. Before the host's board, with the town gathered round:
+* The host's leader holds them up against its own books, and the two **bargain in rounds**. The
+  envoy opens ("128 cobblestone every 3 days, for 80 bread and 15 coin"), the leader counters ("I'll
+  give 8 bread, and that's fair"), and each round both give up part of the gap.
+* **Each side reckons by its own prices.** Stone is cheap in the mining town and dear in the farm
+  town that has none, and bread the other way round. That difference is what there is to gain. A
+  deal is only struck where **both towns gain by their own reckoning**. With no such room there is
+  no deal, however long they talk.
+* **The leader's nature tells.** A shrewd leader opens hard and gives little ground. A warm or
+  open-handed one opens near the middle and meets you quickly. A prickly one may walk out of talks
+  going nowhere. Friends meet sooner, rivals hold out, and two elders who get on settle faster.
+* **Coin balances it.** The buyer pays in its own spare goods as far as they go, then in coin.
+* The deal says what goes each way, how much each delivery, how often (every three days, four to a
+  far town), for how long (three weeks), and what a delivery missed costs: a tenth of the price.
+* The town hears it all, a few lines at a time, and the chronicle tells it the way you would: "Ashford's
+  envoy offered 128 cobblestone every 3 days for 80 bread and 15 coin; Brindle's elder offered 8
+  bread; then 52 against 30, ...; they settled at 54 bread and 3 coin, for 3 weeks". With no deal
+  the two towns still think a little better of each other, unless somebody walked out.
+
+**Carrying it out.**
+* Deliveries go **by caravan**, each town's in turn, on the agreed days. A carrier sets out with its
+  own town's goods: the agreed goods only, never more than agreed, and never more than the town can
+  spare. If its town is paying, it takes the coin in its purse.
+* At the other town it unloads, the other town loads its own goods for the way back, and **the coin
+  changes hands there, in person**. Home again, the goods go into the stores and the coin into the
+  treasury. Nothing goes chest to chest.
+* Each delivery is booked: made against due, each side's shortfalls, and what each town has gained
+  by its own prices. A side that falls short owes the penalty, and three short in a row break the deal
+  (and the friendship suffers). A deal that runs its term well leaves the towns warmer. A feud tears
+  it up. Renewing one is another audience, at the prices of the day.
+* What a town has promised its partner is **spoken for**: the passing traders do not buy it on market
+  day, and the fields and the mine are not cut back as if it were a glut.
+* A caravan or envoy on the road is written down, so after a restart it walks on with its goods and
+  its coin.
+
+**Specialising.** With the bread coming in reliably, the stone town needs fewer hands in its fields,
+and with stone promised it needs more in its mine. Each morning the leader leans the trades' shares
+toward what the deals want: fields down, mine up (more so where the land backs it), and the reverse
+for the farm town. It moves a step a day, never below two thirds or above seven fifths of the usual
+share, and **never fewer farmers on short commons or in a hungry town**. If the deliveries stop, the
+hands go back to the fields the next morning. Over the days you can watch one town mining more and the
+other farming more.
+
+**Where you see it.**
+* **The town's books** (the board) have a **Trade** page: the trade book, ware by ware (the mouse
+  over a ware for all of it); a chart of the town's farmers and miners over the days, with how far its
+  deals lean their shares; its deals (partner, terms, deliveries made against those due, shortfalls,
+  what it has gained by its own prices, what either owes); every negotiation, round by round; the
+  deals past; and the caravans' comings and goings.
+* **The board** says what the town is good at and short of, and its deals.
+* **The gazette** has a Trade section: yesterday's deals and caravans, and the deals standing.
+* `/village trade` gives the same in chat. `/village trade books` opens the Trade page. For operators:
+  `/village trade now [town]` (bargain at once, every round shown), `/village trade talk [town]` (send an
+  envoy now), `/village trade deliver` (the next delivery sets out now) and `/village trade stage` (for
+  the pictures).
+
+The game tests `TownTradeGameTests` (td01 to td07) check each of these with a stone town short of
+food and a farm town short of stone: each town's book names the right surplus and shortage; the envoy
+and the leader strike a deal each gains by at its own prices; a shrewd leader gives less ground than a
+warm one; two towns with nothing the other wants strike no deal, and the relation still moves; a
+delivery carries the agreed goods out of one town's stores into the other's, the coin carried in the
+purse (and kept through a restart); the stone town's farm share leans down and its mine's up while
+the bread comes, and back the morning it stops; and the whole audience before the board.

@@ -36,7 +36,8 @@ import java.util.Locale;
  * back); <b>Trends</b> (per hand, per head); <b>Records</b> (its bests, its totals, its averages and
  * where it is heading); <b>News</b> (the chronicle); the <b>Board</b> itself; and the <b>School</b> (the
  * schoolhouse, its teacher, the morning's lesson, every child with the trade it leans to and how far
- * it has got, and who has left school as what). The charts follow
+ * it has got, and who has left school as what); and <b>Trade</b> (what the town is good at and short of, its
+ * deals with the neighbours, the talks that made them, and its farmers and miners over the days: TradePage). The charts follow
  * the mouse: the day under it, and every line's value that day. The range (a week, a month, a
  * hundred days, all of it) is picked at the top right.
  */
@@ -51,10 +52,12 @@ public class CityScreen extends Screen {
         // [batchD] The town's culture, after them: its banner, motto, customs, theatre, music, pictures and plaques (CulturePage).
         "Culture",
         // [econ-prices] The town's prices, after them (PriceIndex), so the pages before keep their numbers.
-        "Prices" };
+        "Prices",
+        // [econ-trade] Trade between towns, after them (TradePage).
+        "Trade" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices");
+        "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -300,6 +303,10 @@ public class CityScreen extends Screen {
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "Prices" -> prices(g, x, y, cw, ch, mouseX, mouseY);      // [econ-prices]
+                case "Trade" -> {                                    // [econ-trade] the town's trade book, its deals and its talks
+                    List<Component> tip = TradePage.draw(g, font, data.getCompound("trade"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
                 default -> board(g, x, y, cw, ch);
             }
         }

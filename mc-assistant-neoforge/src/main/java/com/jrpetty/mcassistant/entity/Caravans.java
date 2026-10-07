@@ -62,6 +62,10 @@ public final class Caravans {
         @Nullable String outcome;
         /** What the village it went to could not pay for: the sender's own, carried home again. */
         final List<ItemStack> unsold = new ArrayList<>();
+        /** [econ-trade] A trade deal's delivery (TradeDeals): the pair it runs between; null for any other trip. */
+        @Nullable String deal;
+        /** [econ-trade] Of the coin in its purse, what the other town paid for goods (the rest is its own, going home). */
+        int earned;
 
         Trip(UUID from, UUID to, List<BlockPos> way) {
             this.from = from;
@@ -79,7 +83,10 @@ public final class Caravans {
     public static void onServerTick(ServerTickEvent.Post event) {
         if (event.getServer().getTickCount() % EVERY != 71) return;
         Guard.run("caravans", () -> {
-            for (ServerLevel level : event.getServer().getAllLevels()) tick(level);
+            for (ServerLevel level : event.getServer().getAllLevels()) {
+                TradeDeals.tick(level);                         // [econ-trade] trips kept, the trade books' mornings, the deals' caravans
+                tick(level);
+            }
         });
     }
 
@@ -103,6 +110,7 @@ public final class Caravans {
             for (int j = i + 1; j < here.size(); j++) {
                 Villages.Village a = here.get(i), b = here.get(j);
                 if (!Envoys.pact(a.id(), b.id()) || !Diplomacy.neighbours(a, b)) continue;
+                if (TradeDeals.live(a.id(), b.id())) continue;   // [econ-trade] a deal's caravans keep its own days (TradeDeals)
                 String key = "trade/" + b.id();
                 long last = parse(Ledger.note(a.id(), key));
                 if (last >= 0 && now - last < INTERVAL * 3 / 2 && now >= last) continue;
@@ -135,7 +143,8 @@ public final class Caravans {
     static boolean setOutTrade(ServerLevel level, Villages.Village from, Villages.Village to) {
         VillageFolkEntity carrier = choose(from);
         if (carrier == null) return false;
-        List<ItemStack> cargo = load(level, from, to.id(), true);
+        // [econ-trade] What the other is short of, as far as this town can spare it (Budget.spare), not a rule of thumb.
+        List<ItemStack> cargo = TradeDeals.pactLoad(level, from, to.id());
         if (cargo.isEmpty()) return false;
         carrier.clearQueue();
         for (ItemStack s : cargo) {
@@ -404,6 +413,8 @@ public final class Caravans {
         Villages.Village other = Villages.get(t.back ? t.to : t.from);
         long day = level.getDayTime() / 24000L;
         Riding.unpack(f, level);                                 // the load out of the donkey's chest, to be sold (Riding)
+        // [econ-trade] A deal's delivery: the agreed goods and the agreed coin only, exchanged in person (TradeDeals).
+        boolean dealt = t.deal != null && here != null && other != null && TradeDeals.exchange(level, f, t);
         // The village that sent for the goods buys them off the caravan as they come off its back:
         // at the market's worth from a trading partner, at the family price (half) between a mother
         // village and its colony. What its treasury cannot pay for stays on the carrier's back and
@@ -412,7 +423,7 @@ public final class Caravans {
         int unloaded = 0, paidAll = 0, refused = 0;
         java.util.Set<Market.Good> brought = new java.util.HashSet<>();
         StringBuilder what = new StringBuilder();
-        if (here != null) {
+        if (here != null && !dealt) {
             if (t.back) returnUnsold(level, f, t, here);
             for (int i = 0; i < f.getInventoryItems().size(); i++) {
                 ItemStack s = f.getInventoryItems().get(i);
@@ -420,7 +431,10 @@ public final class Caravans {
                 if (g == null) continue;
                 int move = s.getCount() - carrierKeeps(f, s);
                 if (move <= 0) continue;
-                double unit = g.value() * rate;
+                // [econ-trade] Home again, the load was bought at the other town, out of the purse, in person: nothing to pay
+                // here. Between pact towns, the price is halfway between the two towns' own (TradeDeals.pactPrice).
+                double unit = t.back ? 0.0 : t.trade && other != null ? TradeDeals.pactPrice(level, here.id(), other.id(), s.copyWithCount(1))
+                    : g.value() * rate;
                 if (other != null && unit > 0) {
                     int afford = (int) Math.floor(Ledger.coins(here.id()) / unit);
                     if (afford < move) {
@@ -447,8 +461,9 @@ public final class Caravans {
             if (other != null && !t.back) Commerce.caravanArrived(level, f, other.id(), here.id(), t.trade, paidAll);
             if (paidAll > 0 && other != null) {
                 Economy.spent(here.id(), paidAll);
-                if (!t.back) t.purse += paidAll;                                   // carried home to the seller
-                else { Ledger.addCoins(other.id(), paidAll); Economy.sold(other.id(), paidAll); }
+                // Carried home to the seller. ([econ-trade] Home again there is nothing to pay: the load was bought at the
+                // other town, out of the purse. It used to be paid for here, into the other town's treasury, by nobody.)
+                t.purse += paidAll;
             }
         }
         if (here != null && unloaded > 0) {
@@ -460,13 +475,10 @@ public final class Caravans {
             FolkTalk.speak(f, "They couldn't pay for all of it. The rest comes home with me.");
         }
         if (!t.back && here != null && other != null) {
-            // Load what the colony has plenty of and the mother is short of, for the way home.
-            double back = 0;
-            for (ItemStack s : load(level, here, other.id(), true, true, brought)) {
-                Market.Good g = Market.goodFor(s);
-                ItemStack left = f.insertGiven(s);
-                if (g != null) back += g.value() * (s.getCount() - left.getCount());
-                if (!left.isEmpty()) Market.intoStores(level, here.id(), left);
+            // Load what the colony has plenty of and the mother is short of, for the way home: [econ-trade] bought here,
+            // out of the coin the carrier holds, and paid for in person (TradeDeals.buyForHome).
+            if (!dealt) {
+                for (ItemStack s : load(level, here, other.id(), true, true, brought)) TradeDeals.buyForHome(level, f, t, here, other, s, rate);
             }
             Riding.pack(f, level);                               // and the goods for home back into it
             if (t.trade) Ledger.relate(here.id(), other.id(), 3);
@@ -484,6 +496,7 @@ public final class Caravans {
         Llama llama = llama(level, t);
         if (llama != null) llama.discard();
         release(level, f, t);
+        TradeTrips.over(f);                                      // [econ-trade] the written trip let go
         f.trip(null);
         Riding.caravanHome(f, level);                            // the donkey led back to the stable (Riding)
         if (t.errand != null) {
@@ -563,6 +576,7 @@ public final class Caravans {
         if (llama != null) llama.dropLeash(true, false);
         Riding.caravanLost(f, level);                            // its donkey let go, for the stable to bring in
         release(level, f, t);
+        TradeTrips.over(f);                                      // [econ-trade] the written trip let go
         f.trip(null);
     }
 }

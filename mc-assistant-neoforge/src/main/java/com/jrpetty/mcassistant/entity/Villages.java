@@ -903,6 +903,9 @@ public final class Villages {
         if ((slot.trade() == AssistantEntity.StationTask.FARM || slot.trade() == AssistantEntity.StationTask.FISH)
                 && villageId != null && Market.hungry(villageId)) leader = Math.max(leader, 1.5);
         t *= leader;
+        // [econ-trade] A standing trade deal leans the shares (TradeDeals.lean): fewer farmers where the bread comes in
+        // reliably from a partner, more miners where stone is promised to one; back at once if the deliveries stop.
+        t *= TradeDeals.lean(villageId, slot.trade());
         // Houses waiting on beds want the wool: twice the ranchers (their sheep) till they are made up.
         if (slot.trade() == AssistantEntity.StationTask.RANCH && villageId != null && Market.bedsShort(villageId) >= 6) t *= 2.0;
         // [economy] The watch grows with the town, and by half again when monsters have been killing its folk (Mishap.watch).
@@ -1054,14 +1057,17 @@ public final class Villages {
         int radius = storesRadius(villageId);
         Map<AssistantEntity.StationTask, Double> cut = new java.util.EnumMap<>(AssistantEntity.StationTask.class);
         int food = stock(level, v.centre(), Task.FOOD, radius);
+        food -= TradeDeals.spokenFor(villageId, Task.FOOD);              // [econ-trade] promised to a partner: no glut
         int larder = Math.max(64, larderForBirth(villageId));
         cut.put(AssistantEntity.StationTask.FARM, food > 4 * larder ? 0.5 : food > 2 * larder ? 0.75 : 1.0);
         int logs = stock(level, v.centre(), Task.LOGS, radius);
+        logs -= TradeDeals.spokenFor(villageId, Task.LOGS);              // [econ-trade]
         int timber = Math.max(256, com.jrpetty.mcassistant.village.VillageMath.timberWanted(folk));
         cut.put(AssistantEntity.StationTask.WOOD, logs > 4 * timber ? 0.5 : logs > 2 * timber ? 0.75 : 1.0);
         boolean deepShort = false;
         for (Need n : wants) if (n.task() == Task.IRON || n.task() == Task.DIAMOND || n.task() == Task.OBSIDIAN) deepShort = true;
         int stone = stock(level, v.centre(), Task.STONE, radius);
+        stone -= TradeDeals.spokenFor(villageId, Task.STONE);            // [econ-trade]
         int stoneMark = Math.max(384, com.jrpetty.mcassistant.village.VillageMath.stoneWanted(folk));
         cut.put(AssistantEntity.StationTask.MINE, deepShort ? 1.0 : stone > 4 * stoneMark ? 0.6 : 1.0);
         GLUT.put(villageId, cut);

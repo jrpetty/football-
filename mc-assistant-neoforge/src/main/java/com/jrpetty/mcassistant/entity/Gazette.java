@@ -267,6 +267,7 @@ public final class Gazette {
         if (store != null) entries.add(store);
         String pay = JobWorth.gazette(id, day);                 // [econ-wages] a trade's pay up while it is short of hands
         if (pay != null) entries.add(pay);
+        entries.add(TradeDeals.gazette(level, v, day));          // [econ-trade] the deals with the neighbours, and yesterday's caravans
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();

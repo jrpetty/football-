@@ -954,6 +954,8 @@ public final class Assemblies {
                 if (t == null || t.errand == null) return;
                 UUID guest = e.getUUID();
                 s.add(new Line(null, "We have a visitor: " + e.displayNameCap() + ", from " + Villages.name(t.from) + ".", '*', null));
+                // [econ-trade] An offer of trade is bargained over before the board, round by round (TradeTalks).
+                if (t.errand == Envoys.Errand.TRADE && TradeTalks.audience(level, id, e, t, s, r)) return;
                 s.add(new Line(guest, Envoys.asks(t.from, id, t.errand, e, t), '?', null));
                 Envoys.Answer ans = Envoys.answer(level, id, t.from, t.errand, e, t);
                 s.add(new Line(null, ans.said(), ans.yes() ? '!' : '?', ans.effect()));
