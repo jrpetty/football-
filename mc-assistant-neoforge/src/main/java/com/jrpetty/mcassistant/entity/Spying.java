@@ -110,6 +110,8 @@ public final class Spying {
         public boolean going() { return !freed && (phase == Phase.GOING || phase == Phase.WATCHING || phase == Phase.SLIPPING); }
         public int guardsSeen() { return guards.size(); }
         public boolean seen() { return seen; }
+        /** Has it lain at its vantage and looked (there is something to report)? */
+        public boolean watched() { return watchedOn >= 0; }
     }
 
     /** By "us/them": the day a spy was last sent that way. */
@@ -184,6 +186,11 @@ public final class Spying {
         if (!f.isAlive() || f.isBaby() || f.isSleeping() || f.isHired() || f.isShowcase()) return false;
         if (f.trip() != null || f.expedition() != null || Nether.away(f) || Drover.busy(f) || Assemblies.attending(f)) return false;
         if (Spies.held(f) || Pickets.on(f)) return false;
+        // Nor one whose day is already somebody else's: away visiting or out with a dog (Visitors), on a horse
+        // or with one out (Riding: a courier sent off mid-run rode its horse back to the stable first, and the
+        // stable's errand runs before the scout's), on its rounds, or called to the town's works.
+        if (Visitors.is(f) || FriendVisits.away(f) || WatchDogs.busy(f)) return false;
+        if (Stables.busy(f) || Riding.doing(f) != null || f.isPassenger() || Couriers.onARun(f) || TownJobs.busy(f)) return false;
         return f.getHealth() >= f.getMaxHealth() * 0.7F;
     }
 
@@ -291,29 +298,63 @@ public final class Spying {
     }
 
     /**
-     * Somewhere to watch a town from: sixteen blocks outside its streets, on our side of it, on the highest
-     * ground of five places along an arc there (straight on is worth a block); never in water.
+     * How far out from a town's heart to lie and watch it: sixteen blocks past its furthest building (the
+     * first real look at a hamlet of a few tents was from across a river sixty blocks off, the town a speck),
+     * but never nearer than forty, nor further than sixteen past the streets it has laid.
+     */
+    static int watchFrom(UUID them) {
+        Villages.Village o = Villages.get(them);
+        int built = 0;
+        if (o != null) {
+            for (Ledger.Building b : Ledger.buildings(them)) {
+                if (b.structure().equals("colony") || b.structure().equals("road")) continue;
+                built = Math.max(built, (int) Math.sqrt(Scouts.flat(b.anchor(), o.centre())));
+            }
+        }
+        return Math.max(40, Math.min(Villages.townReach(them) + 16, built + 16));
+    }
+
+    /**
+     * Somewhere to watch a town from: out past its buildings ({@link #watchFrom}), on our side of it, on the
+     * best ground of a fan of places there (a little further out, and up to forty degrees either way): high
+     * ground first (a rise, a ridge), open sky over it, straight on and nearer in for choice; never in water,
+     * nor on the water's edge, where whatever lives in the river comes up the bank at it.
      */
     static BlockPos vantage(ServerLevel level, BlockPos home, Villages.Village o) {
         BlockPos c = o.centre();
-        int r = Villages.townReach(o.id()) + 16;
+        int r = watchFrom(o.id());
         double base = Math.atan2(home.getZ() - c.getZ(), home.getX() - c.getX());
         BlockPos best = null, fallback = null;
         int bestScore = Integer.MIN_VALUE;
-        for (int deg : new int[]{ 0, 20, -20, 40, -40 }) {
-            double ang = base + Math.toRadians(deg);
-            int x = c.getX() + (int) Math.round(Math.cos(ang) * r), z = c.getZ() + (int) Math.round(Math.sin(ang) * r);
-            if (fallback == null) fallback = new BlockPos(x, c.getY(), z);
-            if (!level.hasChunk(x >> 4, z >> 4)) continue;
-            BlockPos p = Scouts.surface(level, new BlockPos(x, c.getY(), z));
-            if (!level.getFluidState(p.below()).isEmpty() || !level.getFluidState(p).isEmpty()) continue;
-            int score = p.getY() - Math.abs(deg) / 20;
-            if (score > bestScore) {
-                bestScore = score;
-                best = p;
+        for (int out : new int[]{ 0, 6, 12, 20 }) {
+            for (int deg : new int[]{ 0, 20, -20, 40, -40 }) {
+                double ang = base + Math.toRadians(deg);
+                int x = c.getX() + (int) Math.round(Math.cos(ang) * (r + out)), z = c.getZ() + (int) Math.round(Math.sin(ang) * (r + out));
+                if (fallback == null) fallback = new BlockPos(x, c.getY(), z);
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                BlockPos p = Scouts.surface(level, new BlockPos(x, c.getY(), z));
+                if (wet(level, p)) continue;
+                int score = 2 * p.getY() - Math.abs(deg) / 10 - out / 4 - (level.canSeeSky(p.above()) ? 0 : 6);
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = p;
+                }
             }
         }
         return best != null ? best : fallback;
+    }
+
+    /** Water here, or within three blocks of it on any side: no place to lie and watch from. */
+    static boolean wet(ServerLevel level, BlockPos p) {
+        if (!level.getFluidState(p).isEmpty() || !level.getFluidState(p.below()).isEmpty()) return true;
+        for (int dx = -3; dx <= 3; dx += 3) {
+            for (int dz = -3; dz <= 3; dz += 3) {
+                if (dx == 0 && dz == 0 || !level.hasChunk((p.getX() + dx) >> 4, (p.getZ() + dz) >> 4)) continue;
+                BlockPos q = Scouts.surface(level, p.offset(dx, 0, dz));
+                if (!level.getFluidState(q.below()).isEmpty()) return true;
+            }
+        }
+        return false;
     }
 
     // ------------------------------------------------------------------ out there (Scouts.drive)
@@ -337,15 +378,7 @@ public final class Spying {
                     return false;
                 }
                 if (Scouts.flat(f.blockPosition(), e.target) > 10 * 10) return false;
-                m.phase = Phase.WATCHING;
-                m.watchedOn = level.getDayTime() / 24000L;
-                m.until = f.tickCount + watchTicks;
-                m.countedTick = f.tickCount - 40;
-                f.getNavigation().stop();
-                FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "There it is: " + m.name + ". Now, quiet...",
-                    "Down in the grass, and count.", "So that's " + m.name + ". Let's see what they've got."));
-                LOG.info("[MCA-SPY] {} at its vantage over {} ({}), {} blocks from its heart", f.displayNameCap(), m.name, m.from,
-                    (int) Math.sqrt(Scouts.flat(f.blockPosition(), m.heart)));
+                beginWatch(level, f, m, o);
                 watch(level, f, e, m, o);
                 return true;
             }
@@ -374,6 +407,21 @@ public final class Spying {
                 return false;
             }
         }
+    }
+
+    /** At its vantage: down in the grass, the watch begun (dated today), and a first look over the town at once. */
+    static void beginWatch(ServerLevel level, VillageFolkEntity f, Mission m, Villages.Village o) {
+        m.phase = Phase.WATCHING;
+        m.watchedOn = level.getDayTime() / 24000L;
+        m.until = f.tickCount + watchTicks;
+        m.countedTick = f.tickCount;
+        f.getNavigation().stop();
+        sample(level, f, m, o);
+        count(level, f, m, o);
+        FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "There it is: " + m.name + ". Now, quiet...",
+            "Down in the grass, and count.", "So that's " + m.name + ". Let's see what they've got."));
+        LOG.info("[MCA-SPY] {} at its vantage over {} ({}), {} blocks from its heart; first look: {} folk, {} guards", f.displayNameCap(),
+            m.name, m.from, (int) Math.sqrt(Scouts.flat(f.blockPosition(), m.heart)), m.folk.size(), m.guards.size());
     }
 
     /** Down in the grass at its vantage, looking and counting, until it has seen enough. */
@@ -608,6 +656,36 @@ public final class Spying {
         BlockPos at = e.target;
         f.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, f.getYRot(), 0.0F);
         f.getNavigation().stop();
+        Villages.Village o = Villages.get(e.mission.them);
+        if (e.mission.phase == Phase.GOING && o != null && f.level() instanceof ServerLevel level) beginWatch(level, f, e.mission, o);
+    }
+
+    /**
+     * /village war scout home: this town's spies who have lain at their vantage and looked, home now with what
+     * they have counted, their reports filed; one still on its way there is left to it (it has nothing to tell),
+     * unless it is already at its vantage, when it takes its look first. A line a spy, for the command.
+     */
+    public static List<String> homeNow(ServerLevel level, Villages.Village v) {
+        List<String> out = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!(a instanceof VillageFolkEntity f) || f.expedition() == null) continue;
+            Scouts.Expedition e = f.expedition();
+            Mission m = e.mission;
+            if (m == null || m.freed) continue;
+            Villages.Village o = Villages.get(m.them);
+            if (!m.watched() && m.phase == Phase.GOING && o != null && Scouts.flat(f.blockPosition(), e.target) <= 12 * 12) {
+                beginWatch(level, f, m, o);
+            }
+            if (!m.watched()) {
+                out.add(f.displayNameCap() + ": still on the way to " + m.name + ", " + (int) Math.sqrt(Scouts.flat(f.blockPosition(), e.target))
+                    + " blocks from its vantage; nothing to tell yet");
+                continue;
+            }
+            homeNowForTests(level, f);
+            Intel.Report r = Intel.latest(v.id(), m.them);
+            out.add(f.displayNameCap() + ": " + (r == null ? "no report" : "report on " + m.name + " for day " + r.day() + ": " + Intel.summary(r)));
+        }
+        return out;
     }
 
     /** Tests: the spy home now (as if it had walked back along its trail): its report filed. */

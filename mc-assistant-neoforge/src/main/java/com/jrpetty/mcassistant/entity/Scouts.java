@@ -923,6 +923,10 @@ public final class Scouts {
         double near = 8.0 * 8.0;
         for (Mob m : level.getEntitiesOfClass(Mob.class, new AABB(f.blockPosition()).inflate(8), x -> x instanceof Enemy && x.isAlive())) {
             double d = m.distanceToSqr(f);
+            // [war-scouting] A drowned down in the river is no reason to leave the bank: only once it is up out
+            // of the water, or right at the edge, is it run from. (A spy sent to watch a town from beside a river
+            // ran from one in the water for the whole of its watch, and never counted a thing.)
+            if (m.isInWater() && !f.isInWater() && d > 4.0 * 4.0) continue;
             if (d < near) { near = d; best = m; }
         }
         return best;

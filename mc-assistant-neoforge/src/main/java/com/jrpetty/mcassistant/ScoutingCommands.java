@@ -153,9 +153,13 @@ public final class ScoutingCommands {
         Villages.Village them = Villages.get(rivals.get(0));
         BlockPos s = spy.blockPosition(), h = them == null ? s : them.centre();
         double dx = s.getX() - h.getX(), dz = s.getZ() - h.getZ(), len = Math.max(1.0, Math.sqrt(dx * dx + dz * dz));
-        int ex = (int) Math.round(s.getX() + dx / len * 6), ez = (int) Math.round(s.getZ() + dz / len * 6);
+        // Over its shoulder: four blocks behind it and a little above, looking down on the town's heart.
+        int ex = (int) Math.round(s.getX() + dx / len * 4), ez = (int) Math.round(s.getZ() + dz / len * 4);
+        Spying.Mission m = Spying.missionOf(spy);
         String said = "SCOUT " + spy.displayNameCap() + " of " + Villages.name(v.id()) + " watching " + Villages.name(rivals.get(0))
-            + " from " + s.toShortString() + "\nVIEW s1-spy-ridge " + ex + " " + (s.getY() + 3) + " " + ez + " " + h.getX() + " " + (h.getY() + 3) + " " + h.getZ();
+            + " from " + s.toShortString() + ", " + (int) len + " blocks from its heart"
+            + (m == null ? "" : "; first look: " + m.guardsSeen() + " guards")
+            + "\nVIEW s1-spy-ridge " + ex + " " + (s.getY() + 3) + " " + ez + " " + h.getX() + " " + (h.getY() + 1) + " " + h.getZ();
         ctx.getSource().sendSuccess(() -> Component.literal(said), false);
         return 1;
     }
@@ -164,17 +168,11 @@ public final class ScoutingCommands {
     private static int scoutHome(CommandContext<CommandSourceStack> ctx) {
         Villages.Village v = near(ctx);
         if (v == null) return 0;
-        ServerLevel level = ctx.getSource().getLevel();
+        // Only those who have lain at their vantage and looked come home: one still on the road has nothing to
+        // tell. (The first run of this brought home a folk the town had sent of its own accord that morning,
+        // halfway there, as well as the one the command sent, and each came home with "no report".)
         List<String> lines = new ArrayList<>();
-        for (com.jrpetty.mcassistant.entity.AssistantEntity a : Villages.folkOf(v.id())) {
-            if (!(a instanceof VillageFolkEntity f)) continue;
-            Spying.Mission m = Spying.missionOf(f);
-            if (m == null) continue;
-            UUID them = m.them();
-            Spying.homeNowForTests(level, f);
-            Intel.Report r = Intel.latest(v.id(), them);
-            lines.add("HOME " + f.displayNameCap() + ": " + (r == null ? "no report" : Intel.summary(r)));
-        }
+        for (String s : Spying.homeNow(ctx.getSource().getLevel(), v)) lines.add("HOME " + s);
         String said = lines.isEmpty() ? "HOME nobody out watching" : String.join("\n", lines);
         ctx.getSource().sendSuccess(() -> Component.literal(said), false);
         return lines.size();
