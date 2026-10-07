@@ -7782,7 +7782,8 @@ public class VillageFolkEntity extends AssistantEntity {
             || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
             || Transport.busy(this)                              // [transport] on a ride, a crossing, or at the ferry
             || Crime.calledAway(this)                            // [crime] on a case, at a trial, in the stocks, at community work
-            || Disasters.busy(this);                             // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || Disasters.busy(this)                              // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || WorkTools.busy(this);                             // [workitems] on a rope, or hanging or watering a window box
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */

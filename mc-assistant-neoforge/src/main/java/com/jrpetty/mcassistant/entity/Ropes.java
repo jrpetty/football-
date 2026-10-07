@@ -321,8 +321,11 @@ public final class Ropes {
         }
         if (party == null) return;
         if (!party.homeward) return;                                              // still out: it is their way back
-        for (VillageFolkEntity m : CaveDwellers.members(level, party)) {
-            if (m != f && (m.getY() < rope.top().getY() - 1 || riding(m))) return;  // somebody still down there
+        // Any of the party alive and still down there near its foot (or on it) keeps it hanging: their way up.
+        for (UUID u : party.members) {
+            if (u.equals(f.getUUID()) || !(level.getEntity(u) instanceof VillageFolkEntity m) || !m.isAlive()) continue;
+            if (riding(m)) return;
+            if (m.getY() < rope.top().getY() - 1 && m.blockPosition().distSqr(rope.bottom()) <= 48 * 48) return;
         }
         if (RopeBlock.takeUp(level, rope.top()) > 0) {
             ItemStack coil = new ItemStack(WorkItems.ROPE_COIL.get());
@@ -377,7 +380,7 @@ public final class Ropes {
             FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "A shaft! Rope down, and saves me a hundred steps.", "Down the rope I go."));
             LOG.info("[MCA-MINE] {} let its rope down a shaft at {} ({} blocks)", f.displayNameCap(), newFeet.toShortString(), hung);
         }
-        if (!reaches(level, rope)) return null;
+        if (!reaches(level, rope) || !rope.stand().equals(cursor)) return null;
         start(f, rope, true);
         return rope.bottom().immutable();
     }
@@ -418,6 +421,25 @@ public final class Ropes {
         if (cave == 0) return List.of();
         return List.of("Rope coils: the cave team has let its rope down " + cave + (cave == 1 ? " time" : " times")
             + " to get at a cave there was no walking down to.");
+    }
+
+    /** Tests: a cave party of these folk, the first leading it, out (or, {@code homeward}, on its way home). */
+    public static CaveDwellers.Party partyForTests(UUID village, long day, List<VillageFolkEntity> team) {
+        CaveDwellers.Party p = new CaveDwellers.Party(village, day);
+        for (VillageFolkEntity f : team) p.members.add(f.getUUID());
+        if (!team.isEmpty()) p.leader = team.get(0).getUUID();
+        return p;
+    }
+
+    /** Tests: the party turned for home. */
+    public static void homewardForTests(CaveDwellers.Party p) {
+        p.homeward = true;
+    }
+
+    /** Tests: is this folk on a rope, and is it going down? {riding, down}. */
+    public static boolean[] ridingForTests(VillageFolkEntity f) {
+        Ride r = RIDES.get(f.getUUID());
+        return new boolean[]{ r != null, r != null && r.down };
     }
 
     /** Tests: a folk set on this rope now, down it or up it. */

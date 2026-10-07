@@ -402,7 +402,7 @@ public final class WorkTools {
         StationTask t = f.stationTask();
         if ((t == StationTask.WOOD || t == StationTask.FARM) && f.tickCount - BENCH_LOOKED.getOrDefault(f.getUUID(), -100000) >= BENCH_EVERY) {
             BENCH_LOOKED.put(f.getUUID(), f.tickCount);
-            String made = craft(level, v, f);
+            String made = craftNow(level, v, f);                   // (its bench is looked at every forty seconds already)
             if (made != null) {
                 f.swing(InteractionHand.MAIN_HAND);
                 f.note(AssistantEntity.Deed.THINGS_MADE, 1);
@@ -790,6 +790,11 @@ public final class WorkTools {
      */
     public static boolean hold(VillageFolkEntity f) {
         return Ropes.ride(f) || WindowBoxes.hold(f);
+    }
+
+    /** Is it on a rope or on a window box's errand (its own work waits: VillageFolkEntity.calledAway)? */
+    public static boolean busy(VillageFolkEntity f) {
+        return Ropes.riding(f) || WindowBoxes.onErrand(f);
     }
 
     // ------------------------------------------------------------------ the town's rounds, the card

@@ -163,6 +163,10 @@ public class WindowBoxBlock extends Block {
             boolean bloom = com.jrpetty.mcassistant.entity.WindowBoxes.watered(server, pos, player.getName().getString());
             server.sendParticles(ParticleTypes.SPLASH, pos.getX() + 0.5, pos.getY() + 0.95, pos.getZ() + 0.5, 12, 0.35, 0.05, 0.2, 0.0);
             level.playSound(null, pos, SoundEvents.BUCKET_EMPTY, SoundSource.BLOCKS, 0.4F, 1.4F);
+            // A bucket of water is poured out, not kept full (a can is a modpack's, and minds its own water).
+            if (stack.is(Items.WATER_BUCKET) && !player.getAbilities().instabuild) {
+                player.setItemInHand(hand, net.minecraft.world.item.ItemUtils.createFilledResult(stack, player, new ItemStack(Items.BUCKET)));
+            }
             player.displayClientMessage(Component.literal(bloom ? "You water the window box. The " + state.getValue(FLOWER).plural()
                 + " lift their heads." : "You water the window box. The flowers will be back in the spring."), true);
         }

@@ -189,6 +189,8 @@ public final class WindowBoxes {
         ItemStack box = Crafts.takeOne(level, v, s -> s.is(WorkItems.WINDOW_BOX_ITEM.get()));
         if (box.isEmpty()) return false;
         // In its hands, all the way home.
+        g.clearQueue();
+        g.getNavigation().stop();
         ItemStack inHand = g.getMainHandItem().copy();
         g.setItemSlot(EquipmentSlot.MAINHAND, box.copy());
         ERRANDS.put(g.getUUID(), new Errand(id, ledge.immutable(), out, true, box, inHand, level.getGameTime()));
@@ -200,6 +202,11 @@ public final class WindowBoxes {
      * A gardener on its errand, a tick of it (VillageFolkEntity.aiStep, through WorkTools.hold): to the box's place, and
      * there it hangs the box (or waters it). True while it is at it.
      */
+    /** Is it on its way to hang or water a box? */
+    public static boolean onErrand(VillageFolkEntity f) {
+        return !ERRANDS.isEmpty() && ERRANDS.containsKey(f.getUUID());
+    }
+
     public static boolean hold(VillageFolkEntity f) {
         if (ERRANDS.isEmpty()) return false;
         Errand e = ERRANDS.get(f.getUUID());
@@ -346,6 +353,8 @@ public final class WindowBoxes {
         if (g == null || ERRANDS.containsKey(g.getUUID())) return;
         ItemStack water = Crafts.takeOne(level, v, s -> s.is(Items.WATER_BUCKET));
         if (water.isEmpty()) return;
+        g.clearQueue();
+        g.getNavigation().stop();
         ItemStack inHand = g.getMainHandItem().copy();
         g.setItemSlot(EquipmentSlot.MAINHAND, water.copy());
         BlockState s = level.getBlockState(box);
@@ -438,6 +447,27 @@ public final class WindowBoxes {
         long[] c = AT_HOUSE.get(anchor.asLong());
         int n = c == null ? 0 : (int) Math.min(MOST_COUNTED, c[1]);
         return 1.0 + n * WORTH_PERCENT / 100.0;
+    }
+
+    /** Tests: the gardener of the household at this house sent with a box for its first bare window. True if it went. */
+    public static boolean hangForTests(ServerLevel level, UUID village, BlockPos anchor) {
+        Villages.Village v = Villages.get(village);
+        Homes.Home h = v == null ? null : Homes.homes(village).get(anchor.asLong());
+        Ledger.Building b = h == null ? null : Homes.building(village, anchor);
+        if (b == null) return false;
+        for (StreetFurniture.Box box : StreetFurniture.boxes(b)) {
+            if (StreetFurniture.boxed(level, box) || !StreetFurniture.boxFits(level, box)) continue;
+            return hang(level, v, h, box.ledge(), box.out());
+        }
+        return false;
+    }
+
+    /** Tests: what the house at this anchor is worth, and what it would be without its boxes: {worth, bare}. */
+    public static double[] worthForTests(UUID village, BlockPos anchor) {
+        Homes.Home h = Homes.homes(village).get(anchor.asLong());
+        if (h == null) return new double[2];
+        double w = HousingMarket.worth(village, h);
+        return new double[]{ w, w / premium(village, anchor) };
     }
 
     /** Tests: the boxes in flower at this house, counted now. */

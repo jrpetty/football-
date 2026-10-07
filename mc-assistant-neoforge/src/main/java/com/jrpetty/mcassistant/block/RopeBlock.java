@@ -113,7 +113,7 @@ public class RopeBlock extends Block {
     public BlockState playerWillDestroy(Level level, BlockPos pos, BlockState state, Player player) {
         if (!level.isClientSide && state.getValue(PART) != Part.TOP) {
             BlockPos top = topOf(level, pos);
-            if (top != null && !top.equals(pos)) level.destroyBlock(top, !player.isCreative(), player);
+            if (top != null && !top.equals(pos)) level.destroyBlock(top, !player.getAbilities().instabuild, player);
         }
         return super.playerWillDestroy(level, pos, state, player);
     }
