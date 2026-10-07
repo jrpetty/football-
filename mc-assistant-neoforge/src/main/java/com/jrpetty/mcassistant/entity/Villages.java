@@ -1151,7 +1151,12 @@ public final class Villages {
                 need(wants, level, v, "coal", Task.COAL,
                     com.jrpetty.mcassistant.village.VillageMath.coalWanted(ageFolk));
                 if (built(villageId, "fortify") < 1) wants.add(new Need("a wall around the village", Task.BUILD, 1));
-                if (folk >= housing(villageId) - 5) {
+                // A growing town is always a few beds behind its births, and its houses are planned for them all the
+                // same (projectsWantedInOrder). Asking for five beds to spare before the Iron Age held a town of sixty,
+                // with its wall, smeltery and hall built and stone and coal enough, in the Stone Age from day 23 to
+                // day 44 and on: every new house filled before the next one went up. The age waits on houses only
+                // when more than one in ten has no bed.
+                if (folk - housing(villageId) > Math.max(2, folk / 10)) {
                     wants.add(new Need("more houses", Task.BUILD, 1));
                 }
                 if (built(villageId, "smeltery") < 1) wants.add(new Need("a smeltery", Task.BUILD, 1));
