@@ -10,10 +10,12 @@ import java.util.UUID;
  * Who is at war with whom, and how near to it a town stands.
  *
  * <p>[war] The shared seam of the wars between towns. Going to war and making peace (the council, the
- * ultimatum, the declaration, the treaty) belongs to the war-and-peace work; scouting, the town's
- * preparations and the fighting only ask it. A war is kept with the world on both towns' books (Ledger
- * notes "war/&lt;other&gt;", the day it began), so it outlasts a restart; until the war-and-peace work
- * fills in when a town stands on its guard short of war, a feud (Diplomacy.FEUD) reads as TENSION.
+ * ultimatum, the declaration, the treaty) belongs to the war-and-peace work (WarAndPeace); scouting and
+ * the town's preparations only ask it. A war is kept with the world on both towns' books (Ledger notes
+ * "war/&lt;other&gt;", the day it began), so it outlasts a restart. A town stands on its guard short of
+ * war (TENSION) while a council of war sits over a neighbour, a herald is on the road with an ultimatum
+ * either way, it has pledged its guards to an ally at war, or it is in a feud no treaty holds
+ * (WarAndPeace.onGuard).
  */
 public final class Wars {
 
@@ -54,10 +56,7 @@ public final class Wars {
     public static Footing footing(UUID village) {
         if (village == null) return Footing.PEACE;
         if (!enemies(village).isEmpty()) return Footing.WAR;
-        for (Villages.Village v : Villages.every()) {
-            if (!v.id().equals(village) && Ledger.relation(village, v.id()) <= Diplomacy.FEUD) return Footing.TENSION;
-        }
-        return Footing.PEACE;
+        return WarAndPeace.onGuard(village) ? Footing.TENSION : Footing.PEACE;
     }
 
     /** War between these two from today, on both towns' books. */

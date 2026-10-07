@@ -47,10 +47,12 @@ public class CityScreen extends Screen {
     private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Shops", "Jobs", "Folk", "Society", "Leader", "Homes",
         "Buildings", "Stores", "Stock", "Research", "Why", "Trends", "Records", "News", "Board",
         // The school and the museum, last, so the pages before them keep their numbers (School, Museum).
-        "School", "Museum" };
+        "School", "Museum",
+        // [war-peace] The war, after them for the same reason (WarPage).
+        "War" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes", "Stock", "Research", "School", "Museum");
+        "Shops", "Homes", "Stock", "Research", "School", "Museum", "War");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -291,6 +293,7 @@ public class CityScreen extends Screen {
                 case "Research" -> research(g, x, y, cw, ch, mouseX, mouseY);
                 case "School" -> school(g, x, y, cw, ch, mouseX, mouseY);
                 case "Museum" -> museum(g, x, y, cw, ch);
+                case "War" -> WarPage.draw(g, font, data.getCompound("war"), x, y, cw, ch, scroll);   // [war-peace]
                 default -> board(g, x, y, cw, ch);
             }
         }

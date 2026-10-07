@@ -370,6 +370,7 @@ public final class Villages {
         RestDay.resetForTests();
         Tavern.resetForTests();
         Council.resetForTests();
+        WarAndPeace.resetForTests();        // [war-peace]
         Laws.resetForTests();
         Diplomacy.resetForTests();
         Envoys.resetForTests();

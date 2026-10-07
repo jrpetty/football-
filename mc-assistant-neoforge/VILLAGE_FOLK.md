@@ -4744,3 +4744,86 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+
+## War and peace
+
+Towns can go to war with each other, but rarely and never for nothing. A war between towns is an armed
+standoff: it is declared, the towns scout each other and stand on a war footing, and it ends at the
+table with a treaty. Nobody marches, and no block is broken. Turn it off with `villageWars = false` in
+the config; then a feud stays a feud.
+
+* **How a war begins.** Two neighbours must be in a feud, and one must hold something real against the
+  other: a quarrel over the land, a stolen sheep, a broken deal, tribute demanded. A town keeps these
+  grievances in its books, taken from what it remembers of its neighbours. Then it depends on who leads
+  it. A prickly or shrewd elder who cares most for safe streets is a hawk. A warm or wary elder who cares
+  for trade is a dove, and a dove does not go to war. A hawk weighs the odds: its town's strength against
+  the other's as it sees it. It uses its scouts' last report if there is a fresh one. With only an old
+  report or none, it guesses from rumour, and its temper colours the guess: a prickly elder thinks little
+  of the other town, a wary one fears the worst. It never picks a fight with a town half as strong again
+  as its own unless its allies would stand with it. Even when all this holds, most days pass without war.
+* **The council of war.** The elder calls the council to the hall that evening. The elder makes its case,
+  then each councillor votes aye or nay out loud, by its own values. A Guardian votes for war. A Merchant
+  or a Provider votes against, and so does anyone with family in the other town. The odds count too. The
+  elder's vote counts three. A dove council can say no, and then the matter is dropped for ten days. The
+  vote goes on the board and into the chronicle, and each councillor's card shows how it voted.
+* **What the war is for.** Every war has a goal: a border where we say it runs, tribute, a trade deal on
+  our terms (written down for the trade between towns to take up), satisfaction for the wrongs done us,
+  or one of our colonies left in peace.
+* **The ultimatum.** A herald walks to the other town with the demands and is heard before its board.
+  That town's elder weighs its own strength, and its allies', against the herald's town as it sees it:
+  - **Yield:** it meets the demand, and the coin goes home in the herald's purse.
+  - **Bargain:** it meets half the demand. A prickly elder on the herald's side will not take half.
+  - **Refuse:** it is war.
+  If the demand is met, there is no war, and the matter is settled for twenty days.
+* **Declaration day.** Both towns ring their bells, and each hangs a war banner. The banner goes over the
+  gate that faces the enemy, or on the front of the hall, or on a pole by the board. It is a real banner
+  from the town's stores, or one made from six of its wool and a stick. With no cloth in the stores
+  there is no banner until cloth turns up. The chronicle, the gazette and any player nearby hear of it.
+  Neighbours take sides by how they feel about each town. The towns' sworn allies are called by envoy.
+* **Allies.** An ally that answers the call sends up to three of its guards, never more than half its
+  watch. They walk over and stand on the walls of the town they are sworn to, raising its strength in
+  anybody's reckoning, and they go home at the peace.
+* **Peace talks.** After the war has stood a while (three days for a soft elder, a week for a prickly one),
+  the side that reckons itself the weaker sues for peace under a white flag. It judges by its scouts'
+  reports, or by rumour if it has none. If neither side reckons itself the weaker, the cost of the war
+  footing decides: the militia's pay and the work lost to it, booked day by day. The town it costs most
+  sends the white flag. The terms come from the war's goal and the real balance of strength:
+  - if the town that began the war is half as strong again, the other gives up the whole goal;
+  - if it is a little stronger, the other gives up part of it;
+  - otherwise the war ends with no gain.
+  Coin owed travels in the envoy's purse.
+* **Treaties.** Peace ends the war on both towns' books. The treaty is written into both and shown on
+  both boards, and it keeps the peace (a truce, no brawls) for a town's year. The banners come down and go
+  back into the stores, and the town stands down from its war footing. Breaking a treaty, such as a raid
+  while it holds, is a cause for war, and every town that hears of it thinks the worse of the one that
+  did it.
+* **Brokering peace.** A player held in honour by both towns can say "make peace with ..." to a folk of
+  either. The player carries ten coins' worth of gifts and the peace is made on their word, with no coin
+  owed. Both towns think the better of the player for it.
+
+Where to see it:
+* The board shows the war, the council's vote, the herald on the road and the treaty in force.
+* The gazette has a *War and peace* section.
+* A folk's card has a *The war* line.
+* The town's books have a **War** page. It shows the town's strength and each war: its goal, our
+  strength against theirs and what that figure rests on, the cost so far, which side is likelier to sue,
+  where the banner hangs and the war's course day by day. Below that come the quarrels, the allies and
+  their guards, what the town holds against its neighbours, its treaties and its wars before.
+* `/village war` gives the same in chat, plus each neighbour and whether the elder would go to war with
+  it today, and why.
+* `/village war books` opens the page.
+* For operators:
+  - `/village war council` calls a council of war over the nearest neighbour;
+  - `/village war declare` declares war at once;
+  - `/village war cloth` puts a red banner into the stores;
+  - `/village war peace` makes peace on the terms the balance of strength gives.
+
+The game tests `WarAndPeaceGameTests` (wp01 to wp07) check that:
+* a hawk in a feud with a grievance puts war to the council, going by its scouts' report, and the
+  council's vote sends the herald;
+* a dove does not go to war, even after ten days of grievances;
+* a soft, weak town yields to an ultimatum and the tribute reaches the other treasury, with no war;
+* a refusal starts the war on both books under banners made from the stores;
+* the weaker side by its scouts' report sues for peace and the treaty concedes the whole goal;
+* an ally's guards raise a town's strength, peace comes when the cost tells, and the guards go home;
+* with wars switched off, nobody goes to war.

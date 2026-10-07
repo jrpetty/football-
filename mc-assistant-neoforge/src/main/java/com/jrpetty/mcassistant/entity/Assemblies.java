@@ -812,6 +812,27 @@ public final class Assemblies {
         return a;
     }
 
+    /**
+     * [war-peace] The council called to sit as a council of war (WarAndPeace), its subject "war|&lt;the other
+     * town&gt;": this evening, in the hall, its members only; or now ({@code now}, the command). Whether
+     * it was set going.
+     */
+    static boolean councilOfWar(ServerLevel level, Villages.Village v, String subject, boolean now) {
+        long day = level.getDayTime() / 24000L;
+        Assembly c = council(level, v, day);
+        Assembly a = new Assembly(v.id(), Kind.COUNCIL, subject, day, c.focus, c.audience, c.layout);
+        a.invited = c.invited;
+        if (!now) {
+            PLANNED.computeIfAbsent(v.id(), k -> new ArrayList<>()).add(a);
+            return true;
+        }
+        if (NOW.containsKey(v.id())) return false;
+        a.phaseAt = level.getGameTime();
+        NOW.put(v.id(), a);
+        step(level, a, level.getGameTime());
+        return NOW.get(v.id()) == a;
+    }
+
     /** An envoy from a neighbour is heard before the board: the village gathers to listen. */
     private static Assembly envoy(ServerLevel level, Villages.Village v, VillageFolkEntity guest) {
         UUID id = v.id();
@@ -966,7 +987,7 @@ public final class Assemblies {
             }
         }
         // The council's decision, read out once the vote is taken.
-        if (a.kind == Kind.COUNCIL) {
+        if (a.kind == Kind.COUNCIL && !WarAndPeace.councilScript(level, id, a.subject, s, r)) {   // [war-peace] or a council of war's
             s.clear();
             s.add(new Line(null, "The council is sitting.", ' ', null));
             Contentment.View view = Contentment.of(level, id);
@@ -992,6 +1013,7 @@ public final class Assemblies {
             case ENVOY -> "the envoy from " + a.subject.split("\\|", 2)[0];
             case CELEBRATION -> "the celebration of " + a.subject;
             case HONOUR -> a.subject;
+            case COUNCIL -> a.subject.startsWith("war|") ? "the council of war" : a.kind.label;   // [war-peace]
             default -> a.kind.label;
         };
     }

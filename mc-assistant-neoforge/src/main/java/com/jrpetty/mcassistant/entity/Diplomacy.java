@@ -162,6 +162,7 @@ public final class Diplomacy {
         }
         // Something happened between them today?
         int roll = rng.nextInt(10);
+        if (Wars.atWar(x, y)) roll = 9;                     // [war-peace] at war: no market days, courting or truces by chance (WarAndPeace)
         Terms now = terms(r);
         if (roll == 0) {
             delta += 6;
@@ -216,6 +217,7 @@ public final class Diplomacy {
         // memory is warm: a fresh kindness or a fresh grudge holds it where it is.
         if (delta == 0 && r != 0 && !kin(x, y) && !Envoys.pact(x, y) && Math.abs(Bonds.feeling(x, y, day)) < 10) delta = r > 0 ? -1 : 1;
         delta = Bonds.underTruce(x, y, day, r, delta);
+        if (Wars.atWar(x, y)) delta = Math.min(0, delta);   // [war-peace] no warming between towns at war: only the treaty mends it
         int after = Ledger.relate(x, y, delta);
         announce(x, y, after, day);
         // And the elders send their envoys: greetings, trade, alliances, peace, tribute, complaints.
@@ -442,6 +444,7 @@ public final class Diplomacy {
         Villages.Village o = meant(village, text);
         if (o == null) return "With whom? There's nobody near enough to quarrel with.";
         String on = Villages.name(o.id());
+        if (Wars.atWar(village, o.id())) return WarAndPeace.broker(f, p, o);   // [war-peace] at war: a peace on the player's word
         int r = Ledger.relation(village, o.id());
         if (r >= FRIENDLY) return "We're on good terms with " + on + " already.";
         int coins = Market.coinsHeld(p);

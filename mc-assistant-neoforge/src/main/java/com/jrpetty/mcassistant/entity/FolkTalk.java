@@ -343,6 +343,7 @@ public final class FolkTalk {
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
         line(sb, "Curator", Museum.curatorLine(f));         // the museum's keeper (Museum)
         line(sb, "In the museum", Museum.cardLine(f));      // its finds on show there
+        line(sb, "The war", WarAndPeace.cardLine(f));        // [war-peace] its town's war, its vote in the council of war
         String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
         if (life.children() > 0) family += (family.isEmpty() ? "" : "; ") + life.children() + (life.children() == 1 ? " child" : " children");
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();

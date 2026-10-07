@@ -369,6 +369,7 @@ public final class VillageBoards {
         out.add(alarm != null ? "RB|THE BELL IS RINGING: " + alarm + "!" : "RM|The watch: all quiet.");
         String bounty = PlayerServices.boardLine(level, id);     // [players] the night's bounty, when the watch is busy
         if (bounty != null) out.add("RW|" + bounty);
+        out.addAll(WarAndPeace.board(level, id, day));      // [war-peace] the war, the council of war, the herald, the treaty
         out.addAll(TownCalendar.board(level, id));          // today's bells, Founding Day, the week's birthdays
         String gathering = Assemblies.now(id);
         if (gathering != null) out.add("RG|Now: " + gathering + " — come along!");
