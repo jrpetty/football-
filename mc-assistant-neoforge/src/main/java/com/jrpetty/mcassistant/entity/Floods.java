@@ -88,6 +88,8 @@ public final class Floods {
     static final long STANDS_MOST = 36000L;
     /** The most of the stores' goods one flood soaks. */
     static final int SOAK_MOST = 48;
+    /** A folk getting out of the flood that comes no nearer the high ground in this long is helped up there. */
+    static final long STUCK = 200L;
 
     /** A folk getting out of the water: where to, and its progress. */
     static final class Evac {
@@ -747,13 +749,25 @@ public final class Floods {
         if (d < e.best - 0.5) {
             e.best = d;
             e.progress = now;
-        } else if (now - e.progress > 600 || now < e.progress) {
-            EVAC.remove(f.getUUID());                            // no way there: another look in a moment, elsewhere
+        } else if (now - e.progress > STUCK || now < e.progress) {
+            // No nearer in ten seconds (a door the water holds, a fence, the way round too long for its feet in the
+            // flood): helped up there, set down on the high ground, so nobody is left in a flooded house.
+            if (refugeStill(level, fl, e.to)) {
+                f.moveTo(e.to.getX() + 0.5, e.to.getY(), e.to.getZ() + 0.5, f.getYRot(), 0.0F);
+                f.getNavigation().stop();
+                f.brain("helped out of the flood to the high ground");
+                e.best = 0;
+                e.progress = now;
+                return true;
+            }
+            EVAC.remove(f.getUUID());                            // the high ground there gone: another look elsewhere
             FAILED.computeIfAbsent(f.getUUID(), k -> ConcurrentHashMap.newKeySet()).add(e.to.asLong());
             return false;
         }
-        if (f.getNavigation().isDone() || f.tickCount - e.walkTick > 30) {
-            f.walkTo(e.to, 1.25D);
+        if (f.getNavigation().isDone() && f.tickCount - e.walkTick > 5 || f.tickCount - e.walkTick > 30) {
+            // Straight there: not held back by a give-up meant for its day's work (the stuck watch benches a folk
+            // that stops short, and a bench would keep it in the water).
+            f.getNavigation().moveTo(e.to.getX() + 0.5, e.to.getY(), e.to.getZ() + 0.5, 1.25D);
             e.walkTick = f.tickCount;
         }
         f.hobbyNow = "getting out of the flood";
@@ -773,10 +787,7 @@ public final class Floods {
                 for (int[] p : new int[][]{ { i, -r }, { i, r }, { -r, i }, { r, i } }) {
                     BlockPos s = Land.surface(level, me.getX() + p[0], me.getZ() + p[1]);
                     if (s == null || s.getY() < dry || s.getY() > dry + 12) continue;
-                    if (fl.cells.contains(s.asLong()) || !level.getFluidState(s).isEmpty()) continue;
-                    if (!level.getBlockState(s).isAir() || !level.getBlockState(s.above()).isAir()) continue;
-                    BlockState under = level.getBlockState(s.below());
-                    if (!under.isSolid() || !under.getFluidState().isEmpty()) continue;   // not the top of the water
+                    if (!refugeStill(level, fl, s)) continue;
                     Homes.Home h = Homes.homeAt(v.id(), s);
                     if (h != null && fl.homes.contains(h.anchor.asLong())) continue;
                     if (Rebuilding.buildingAt(v.id(), s, 0) != null) continue;          // not up on somebody's roof
@@ -790,6 +801,18 @@ public final class Floods {
             if (best != null) return best;
         }
         return null;
+    }
+
+    /**
+     * Somewhere to stand out of the flood: two clear blocks out of the water over firm ground (not the top of the
+     * water, not on a fence or a wall, not up in the leaves).
+     */
+    static boolean refugeStill(ServerLevel level, Disasters.Flood fl, BlockPos s) {
+        if (!level.isLoaded(s) || fl.cells.contains(s.asLong()) || !level.getFluidState(s).isEmpty()) return false;
+        if (!level.getBlockState(s).isAir() || !level.getBlockState(s.above()).isAir()) return false;
+        BlockState under = level.getBlockState(s.below());
+        if (!under.getFluidState().isEmpty() || under.is(BlockTags.LEAVES)) return false;
+        return under.isFaceSturdy(level, s.below(), Direction.UP);
     }
 
     /** Its card's word: out of the flood, its home under water. */

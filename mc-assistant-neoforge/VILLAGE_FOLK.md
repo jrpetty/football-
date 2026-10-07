@@ -6882,7 +6882,8 @@ something, and is answered, so the next one costs less. None of them is ruinous,
   are emptied again, only where they still hold water. (Grass that sat under the water may turn to bare earth, as
   it does in the game; it grows back.)
 * **What it costs.** Folk in a flooded low house go up to the high ground. A child in the water gets out
-  wherever it is, and so does everyone in a great flood. Nobody drowns. A flooded household sleeps at a
+  wherever it is, and so does everyone in a great flood. One that gets no nearer the high ground in ten seconds
+  (a door the water holds, a fence in the way) is helped up there. Nobody drowns. A flooded household sleeps at a
   neighbour's until the water is down. Crops in the low fields go back to seedlings, and a store chest the water
   reaches loses a quarter of its grain, bread, sugar and paper (four dozen items at most).
 * **The levee.** Once the water is down, the town builds a levee along the bank where the river came over, as high
