@@ -406,6 +406,7 @@ public final class Hustings {
         Ledger.note(id, "civic.lean", "");
         Ledger.note(id, "civic.canvass", "");
         Ledger.note(id, "civic.scandal", "");
+        Ledger.note(id, "civic.bribes", "");                       // what never came out by the count, never will
         LEAN.remove(id);
         LEAN_FOR.remove(id);
     }
@@ -605,11 +606,13 @@ public final class Hustings {
         Market.payOut(p, coins);
         f.earn(coins);
         sway(village, f.getUUID(), p.getUUID(), Math.min(30, 10 + coins * 2));
+        // Seen by another folk near enough: an offence under the town's laws, there and then (and out already).
+        boolean seen = v != null && seenBy(level, village, f, p) != null;
         String list = Ledger.note(village, "civic.bribes");
-        Ledger.note(village, "civic.bribes", (list == null || list.isEmpty() ? "" : list + ";") + f.getUUID() + ">" + p.getUUID() + ">" + day + ">" + coins + ">0");
+        Ledger.note(village, "civic.bribes", (list == null || list.isEmpty() ? "" : list + ";") + f.getUUID() + ">" + p.getUUID() + ">" + day + ">"
+            + coins + ">" + (seen ? "1" : "0"));
         f.persona().remember(day, name + " paid me " + coins + " coins for my vote", 2);
-        // Seen by another folk near enough: an offence under the town's laws, there and then.
-        if (v != null && seenBy(level, village, f, p) != null) {
+        if (seen) {
             scandal(level, v, p.getUUID(), name, "buying " + f.displayNameCap() + "'s vote", 5 + coins, p, true);
             return "…" + FolkTalk.pick(f.getRandom(), "Oh no. Somebody saw that.", "Put it away — we're seen!");
         }

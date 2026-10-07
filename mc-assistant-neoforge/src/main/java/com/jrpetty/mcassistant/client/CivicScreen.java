@@ -20,11 +20,11 @@ import java.util.List;
  */
 public class CivicScreen extends Screen {
 
-    private static final int W = 344, H = 240, PAD = 10, ROW = 20, COLS = 4;
+    private static final int W = 344, PAD = 10, ROW = 20, COLS = 4;
 
     private final CivicPagePayload page;
     private final List<FormattedCharSequence> lines = new ArrayList<>();
-    private int left, top, scroll;
+    private int left, top, scroll, high = 240;
 
     public CivicScreen(CivicPagePayload page) {
         super(Component.literal(page.title()));
@@ -48,8 +48,9 @@ public class CivicScreen extends Screen {
 
     @Override
     protected void init() {
+        this.high = Math.max(200, Math.min(300, this.height - 12));
         this.left = (this.width - W) / 2;
-        this.top = (this.height - H) / 2;
+        this.top = (this.height - high) / 2;
         lines.clear();
         for (String part : page.text().split("\n", -1)) {
             String p = part.trim();
@@ -62,7 +63,7 @@ public class CivicScreen extends Screen {
             lines.addAll(this.font.split(c, W - PAD * 2 - 6));
         }
         int bw = (W - PAD * 2 - (COLS - 1) * 3) / COLS;
-        int y0 = top + H - PAD - 18 - 4 - rows() * ROW;
+        int y0 = top + high - PAD - 18 - 4 - rows() * ROW;
         for (int i = 0; i < page.buttons().size(); i++) {
             String[] b = page.buttons().get(i).split("\t", 3);
             if (b.length < 2) continue;
@@ -73,7 +74,7 @@ public class CivicScreen extends Screen {
             this.addRenderableWidget(btn);
         }
         this.addRenderableWidget(Button.builder(Component.literal("Close"), b -> this.onClose())
-            .bounds(left + W - PAD - 50, top + H - PAD - 18, 50, 18).build());
+            .bounds(left + W - PAD - 50, top + high - PAD - 18, 50, 18).build());
     }
 
     private void run(String command) {
@@ -83,7 +84,7 @@ public class CivicScreen extends Screen {
     }
 
     private int visible() {
-        return (H - 26 - PAD - 18 - 8 - rows() * ROW) / (this.font.lineHeight + 1);
+        return (high - 26 - PAD - 18 - 8 - rows() * ROW) / (this.font.lineHeight + 1);
     }
 
     @Override
@@ -95,7 +96,7 @@ public class CivicScreen extends Screen {
     @Override
     public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.renderBackground(g, mouseX, mouseY, partialTick);
-        Ui.panel(g, left, top, W, H, 22);
+        Ui.panel(g, left, top, W, high, 22);
         g.drawString(this.font, Ui.clip(this.font, this.title.getString(), W - PAD * 2), left + PAD, top + 7, Ui.INK, false);
         int y = top + 26;
         int shown = visible();
@@ -105,7 +106,7 @@ public class CivicScreen extends Screen {
         }
         if (lines.size() > shown) {
             g.drawString(this.font, (scroll + 1) + "–" + Math.min(lines.size(), scroll + shown) + " of " + lines.size() + " (scroll)",
-                left + PAD, top + H - PAD - 13, Ui.MUTED, false);
+                left + PAD, top + high - PAD - 13, Ui.MUTED, false);
         }
     }
 

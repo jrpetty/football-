@@ -316,6 +316,15 @@ public final class PlayerTrades extends SavedData {
         Course mine = course(p.getUUID(), t);
         if (mine != null) {
             if (!mine.master.equals(f.getUUID())) {
+                // The old master gone from its town (dead, or moved away): another master of the trade there sees it through.
+                if (!mine.finished() && village.equals(mine.village) && Elections.loaded(village, mine.master) == null) {
+                    String was = mine.masterName;
+                    mine.master = f.getUUID();
+                    mine.masterName = f.displayNameCap();
+                    dirty();
+                    f.persona().feelFor(p.getUUID(), name, 3);
+                    return "You were " + was + "'s apprentice? Then I'll see you through. " + next(mine);
+                }
                 return "You're learning " + t.label + " from " + mine.masterName + " already. A trade has one master.";
             }
             return mine.finished() ? "You're a " + plan.title(3) + " yourself now. There's nothing left I can teach you."
