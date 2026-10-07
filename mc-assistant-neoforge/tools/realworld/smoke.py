@@ -3334,6 +3334,10 @@ def main():
         work_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("work stage failed: %s" % e)
+    try:
+        leisure_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("leisure stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
