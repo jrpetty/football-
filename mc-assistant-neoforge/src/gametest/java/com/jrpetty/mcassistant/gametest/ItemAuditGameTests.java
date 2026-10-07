@@ -293,7 +293,7 @@ public class ItemAuditGameTests {
             many(Items.CRAFTING_TABLE, 1), many(Items.FURNACE, 1), many(Items.OAK_SLAB, 8),
             // [culture2] What the towns' own dishes are made of, besides the above (Cuisine).
             many(Items.BROWN_MUSHROOM, 8), many(Items.RED_MUSHROOM, 8), many(Items.MUTTON, 8), many(Items.RABBIT, 8),
-            many(Items.BEETROOT, 8),
+            many(Items.BEETROOT, 24),   // [itemaudit] over the twelve the bench keeps back for seed
             // [workitems] A milestone's five cobblestone over the builders' sixty-four the stores keep back.
             many(Items.COBBLESTONE, 64),
             many(Items.CACTUS, 8), many(Items.COCOA_BEANS, 8),   // [leisure] the green and brown dyes for the lanterns
@@ -443,7 +443,8 @@ public class ItemAuditGameTests {
         Kit.log("ia03 the player's cast at " + water.toShortString() + " (" + level.getBlockState(water.below()) + "): " + res.getResult() + ", fish "
             + fish0 + " -> " + fish1 + ", the net " + held.getDamageValue() + "/" + held.getMaxDamage() + ", cooling " + cooling);
         helper.assertTrue(res.getResult().consumesAction() && fish1 - fish0 >= 2, "the net comes up with two fish or more: " + (fish1 - fish0));
-        helper.assertTrue(held.getDamageValue() == 1 && cooling, "a haul's wear on the net, and a while before the next cast");
+        helper.assertTrue(held.getDamageValue() == 1 && cooling && !again.getResult().consumesAction(),
+            "a haul's wear on the net, and a while before the next cast: wear " + held.getDamageValue() + ", the second cast " + again.getResult());
         // Over dry ground it does nothing.
         Player q = helper.makeMockPlayer(GameType.SURVIVAL);
         q.moveTo(t.heart().getX() + 0.5, t.heart().getY() + 0.1, t.heart().getZ() + 8.5, 0.0F, 90.0F);
@@ -491,6 +492,7 @@ public class ItemAuditGameTests {
         t.folk().get(0).setJob(StationTask.FISH);
         t.folk().get(1).setJob(StationTask.WOOD);
         t.folk().get(2).setJob(StationTask.TAILOR);
+        t.folk().get(2).tradeXpForTests(StationTask.TAILOR, AssistantEntity.xpForLevel(12));   // banners are level-ten work
         Villages.ageForTests(id, Villages.Age.STONE);
         boolean granted = Arms.newAgeForTests(level, t.v());
         Heraldry.Design d = Heraldry.design(id);
@@ -780,7 +782,10 @@ public class ItemAuditGameTests {
         Kit.log("ia10 orders: " + a + " / " + b + "; made: place markers " + stores(level, t, place) + ", zone markers " + stores(level, t, zone)
             + "; paper " + stores(level, t, Items.PAPER) + ", redstone " + stores(level, t, Items.REDSTONE) + "; the shop's day " + Workshop.logForTests(id));
         helper.assertTrue(a.startsWith("On the workshop's book") && b.startsWith("On the workshop's book"), "both on the book: " + a + " / " + b);
-        helper.assertTrue(stores(level, t, place) == 1 && stores(level, t, Items.PAPER) == 3, "a place marker of the stores' paper and a stick");
+        // A stackable thing comes off the workshop's bench by the batch (Stockroom: four at a making), a paper each.
+        int placed = stores(level, t, place);
+        helper.assertTrue(placed >= 1 && placed <= 4 && 4 - stores(level, t, Items.PAPER) == placed,
+            "place markers of the stores' paper and sticks, a paper each: " + placed + ", paper left " + stores(level, t, Items.PAPER));
         helper.assertTrue(stores(level, t, zone) == 1 && stores(level, t, Items.REDSTONE) == 3, "a zone marker of the stores' redstone and sticks");
         helper.succeed();
     }
