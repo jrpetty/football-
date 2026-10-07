@@ -283,6 +283,8 @@ public final class TradeDeals {
         String story = TradeTalks.story(k) + (was == null ? "" : " (" + was + ")");
         Villages.tell(a, day, story);
         Villages.tell(b, day, story);
+        Identity.event(a, Identity.Ev.DEAL, day);                       // [identity] toward Merchant Princes, and a mercantile town
+        Identity.event(b, Identity.Ev.DEAL, day);
         for (UUID v : new UUID[]{ a, b }) {
             push(v, "talks", day + "|" + story + "|" + gainWords(k, v), 8);
             log(v, day, "a deal with " + Villages.name(d.other(v)) + ": " + dealWords(d, v));

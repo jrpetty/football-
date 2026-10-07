@@ -1350,6 +1350,10 @@ public class VillageGameTests {
         helper.onEachTick(() -> {
             long t = helper.getTick();
             if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);   // carrying is day work
+            // The daily break is skipped, the carrier's and the farmer's: this is where the loads go, not the pace. (A
+            // break comes at the folk's own hour and runs to 4500 ticks for an easygoing carrier that is its own
+            // easygoing leader; one that fell on the walk to the furnace outlasted the 5000 ticks below.)
+            if (carrier.breakNowForTests() || farmer[0] != null && farmer[0].breakNowForTests()) level.setDayTime(level.getDayTime() + 200);
             Villages.noteAttempt(village, level.getGameTime());                 // and nobody builds meanwhile
             int ingots = holding(level, store, Items.IRON_INGOT), cobble = holding(level, store, Items.COBBLESTONE);
             if (t % 600 == 0) {

@@ -136,11 +136,15 @@ final class WorksPlans {
 
     /** The y of the solid top under the water here (the river bed), at most twenty down. */
     static int bed(ServerLevel level, int x, int z, int surface) {
-        for (int y = surface; y > surface - 20; y--) {
+        // Never below the bottom of the world: water lying on the world's floor has that floor for its bed. (The
+        // void under it reads as air, and a pier was once drawn twenty blocks down into it, out of the world, where
+        // nobody could ever set its first stone, and the whole work waited on it for ever.)
+        int floor = Math.max(surface - 20, level.getMinBuildHeight() - 1);
+        for (int y = surface; y > floor; y--) {
             BlockPos p = new BlockPos(x, y, z);
             if (level.getFluidState(p).isEmpty() && !level.getBlockState(p).isAir()) return y;
         }
-        return surface - 20;
+        return floor;
     }
 
     /** Open ground, the kind a road is laid over or a canal cut through: earth, sand, gravel, plain stone, snow. */

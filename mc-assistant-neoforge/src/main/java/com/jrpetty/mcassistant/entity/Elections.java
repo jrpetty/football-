@@ -102,6 +102,10 @@ public final class Elections {
         Long last = CHECKED.get(id);
         if (last != null && now - last < 100L && now >= last) return;
         CHECKED.put(id, now);
+        if (!Government.holdsElections(id)) {                      // [identity] a lord's town, or the chaplain's: nobody is elected
+            if (NOW.remove(id) != null) Ledger.note(id, "election.now", "");
+            return;
+        }
         long day = level.getDayTime() / 24000L, t = level.getDayTime() % 24000L;
         Campaign c = campaign(id);
         if (c == null) {
@@ -145,6 +149,7 @@ public final class Elections {
 
     /** A leader lost: someone speaks for the village, and an election follows in two days. */
     public static void vacancy(ServerLevel level, UUID village, String who, long day) {
+        if (Government.vacancy(level, village, who, day)) return;      // [identity] a lord's heir, or the next chaplain, takes the seat
         Ledger.note(village, "elder", "");
         Ledger.note(village, "mandate", "");                       // what it was elected for goes with it
         Villages.Village v = Villages.get(village);
@@ -489,7 +494,7 @@ public final class Elections {
         save(c);
         NOW.remove(id);
         Ledger.note(id, "election.now", "");
-        Ledger.note(id, "election.next", Long.toString(day + TERM));
+        Ledger.note(id, "election.next", Long.toString(day + Government.term(id, TERM)));   // [identity] a commune's seven, the elders' fourteen
         String tally = tally(r);
         Ledger.note(id, "election.last", day + "|" + (winner == null ? "" : winner.name()) + "|" + tally);
         if (winner == null) return r;
@@ -668,6 +673,7 @@ public final class Elections {
 
     /** The board's lines on the election (VillageBoards): who stands, the vote under way, or the last result. */
     public static List<String> board(UUID village, long day) {
+        if (!Government.holdsElections(village)) return Government.board(village);   // [identity] a lord or the chaplain
         List<String> out = new ArrayList<>();
         Campaign c = campaign(village);
         if (c != null && !c.counted && !c.candidates.isEmpty()) {
@@ -765,7 +771,7 @@ public final class Elections {
 
     /** "thane", "mayor", "elder": what the land calls its leader. */
     static String title(UUID village) {
-        return Homeland.leaderTitle(village);
+        return Government.title(village);                              // [identity] the land's title, or the guildmaster, the steward...
     }
 
     static String standing(Campaign c) {
@@ -790,7 +796,7 @@ public final class Elections {
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (a instanceof VillageFolkEntity f && !f.isBaby() && !f.isShowcase() && f.persona().rolled()) out.add(f);
         }
-        return out;
+        return Government.voters(village, out);                        // [identity] the elders, the masters, the householders
     }
 
     @Nullable

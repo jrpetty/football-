@@ -211,6 +211,7 @@ public final class Caravans {
             ItemStack left = carrier.insertGiven(s);
             if (!left.isEmpty()) Market.intoStores(level, mother.id(), left);
         }
+        Crates.packCaravan(level, mother, colony.id(), carrier);   // [workitems] crates of the town's surplus besides the loose load
         Trip t = new Trip(mother.id(), colony.id(), way(mother, colony));
         t.gainedTick = carrier.tickCount;
         carrier.trip(t);
@@ -414,6 +415,7 @@ public final class Caravans {
         Villages.Village other = Villages.get(t.back ? t.to : t.from);
         long day = level.getDayTime() / 24000L;
         Riding.unpack(f, level);                                 // the load out of the donkey's chest, to be sold (Riding)
+        Crates.unpackCaravan(level, f, t);                       // [workitems] its crates unpacked onto its back (home: the crates into the stores)
         // [econ-trade] A deal's delivery: the agreed goods and the agreed coin only, exchanged in person (TradeDeals).
         boolean dealt = t.deal != null && here != null && other != null && TradeDeals.exchange(level, f, t);
         // The village that sent for the goods buys them off the caravan as they come off its back:
@@ -481,6 +483,7 @@ public final class Caravans {
             if (!dealt) {
                 for (ItemStack s : load(level, here, other.id(), true, true, brought)) TradeDeals.buyForHome(level, f, t, here, other, s, rate);
             }
+            Crates.packForHome(f);                               // [workitems] the goods for home packed into its crates
             Riding.pack(f, level);                               // and the goods for home back into it
             if (t.trade) Ledger.relate(here.id(), other.id(), 3);
             t.back = true;
@@ -536,6 +539,7 @@ public final class Caravans {
      * usual sixty-odd loaves delivered sixteen of the eighty it set out with.
      */
     static int carrierKeeps(VillageFolkEntity f, ItemStack s) {
+        if (Crates.isCrate(s)) return s.getCount();                 // [workitems] its crates go home with it, not sold off its back
         int reserve = Math.max(0, f.depositReserve(s));
         return Math.min(reserve, s.get(net.minecraft.core.component.DataComponents.FOOD) != null ? 4 : 8);
     }

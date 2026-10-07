@@ -71,6 +71,10 @@ public class CityScreen extends Screen {
         "Library",
         // [transport] The railways, the carts, the ferry and the bridge, after them (TransportPage).
         "Transport",
+        // [interviews] The town's interviews, coming and held, every candidate's score part by part (InterviewsPage).
+        "Interviews",
+        // [identity] What makes the town itself: its ethos, government, laws, traits, fame and renown (IdentityPage).
+        "Identity",
         // [emerald] The emerald account, the villagers' villages, their villagers and offers (TradingPostPage).
         "Trading Post" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
@@ -81,6 +85,8 @@ public class CityScreen extends Screen {
         "Auction",                                                                                    // [fleet]
         "Library",                                                                                    // [library]
         "Transport",                                                                                  // [transport]
+        "Interviews",                                                                                  // [interviews]
+        "Identity",                                                                                   // [identity]
         "Trading Post");                                                                              // [emerald]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
@@ -358,6 +364,14 @@ public class CityScreen extends Screen {
                 }
                 case "Transport" -> {                                                  // [transport] the lines, the ferry (TransportPage)
                     List<Component> tip = TransportPage.draw(g, font, data.getCompound("transport"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Interviews" -> {                                                 // [interviews] coming and held (InterviewsPage)
+                    List<Component> tip = InterviewsPage.draw(g, font, data.getCompound("interviews"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Identity" -> {                                                   // [identity] what makes the town itself (IdentityPage)
+                    List<Component> tip = IdentityPage.draw(g, font, data.getCompound("identity"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "Trading Post" -> {                                               // [emerald] the account, the villagers (TradingPostPage)

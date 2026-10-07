@@ -1,8 +1,9 @@
 {
   "parent": "minecraft:block/cube_bottom_top",
   "textures": {
-    "top": "minecraft:block/hay_block_top",
-    "bottom": "minecraft:block/hay_block_top",
-    "side": "minecraft:block/hay_block_side"
+    "top": "mc_assistant:block/village_folk_spawner_top",
+    "bottom": "mc_assistant:block/village_folk_spawner_bottom",
+    "side": "mc_assistant:block/village_folk_spawner_side",
+    "particle": "mc_assistant:block/village_folk_spawner_side"
   }
 }

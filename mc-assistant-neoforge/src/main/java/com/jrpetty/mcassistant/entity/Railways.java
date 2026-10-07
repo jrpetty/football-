@@ -1089,7 +1089,32 @@ public final class Railways {
         shape(level, l, i + 1);
         // A torch by the first of a run of powered rails.
         if (l.kinds[i] == BOOST && !torchBeside(level, l, i)) torch(level, v, l, i, free);
+        repower(level, l, i - 1, i + 1);
         return Laid.LAID;
+    }
+
+    private static boolean poweredKind(Line l, int i) {
+        return i >= 0 && i < l.rails.size() && (l.kinds[i] == BOOST || l.kinds[i] == BOOSTED);
+    }
+
+    /**
+     * Every powered rail of the runs from rail {@code from} to rail {@code to} looked at afresh, as a block beside it
+     * changing would have it. The game passes power along a run only to the neighbours of a rail whose power has just
+     * changed, and a rail at the foot of a slope is not a neighbour of the one at its top: a second torch beside a rail
+     * already powered from the first torch never reached the far side of a ridge, which lay dead. A rail shaped to the
+     * plan without the game's own updates (shape) is put right the same way.
+     */
+    static void repower(ServerLevel level, Line l, int from, int to) {
+        int a = Math.max(0, from), b = Math.min(l.rails.size() - 1, to);
+        while (a > 0 && poweredKind(l, a - 1)) a--;
+        while (b + 1 < l.rails.size() && poweredKind(l, b + 1)) b++;
+        for (int j = a; j <= b; j++) {
+            if (!poweredKind(l, j)) continue;
+            BlockPos p = l.rails.get(j);
+            if (!level.isLoaded(p)) continue;
+            BlockState st = level.getBlockState(p);
+            if (st.is(Blocks.POWERED_RAIL)) st.handleNeighborChanged(level, p, Blocks.REDSTONE_TORCH, p, false);
+        }
     }
 
     /** Is there something solid under this rail to hold it? */

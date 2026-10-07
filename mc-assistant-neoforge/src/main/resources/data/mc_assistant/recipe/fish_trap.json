@@ -1,0 +1,35 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "SSS",
+    "TBT",
+    "SSS"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:stick"
+    },
+    "T": {
+      "item": "minecraft:string"
+    },
+    "B": [
+      {
+        "item": "minecraft:cod"
+      },
+      {
+        "item": "minecraft:salmon"
+      },
+      {
+        "item": "minecraft:tropical_fish"
+      },
+      {
+        "item": "minecraft:spider_eye"
+      }
+    ]
+  },
+  "result": {
+    "id": "mc_assistant:fish_trap",
+    "count": 1
+  }
+}

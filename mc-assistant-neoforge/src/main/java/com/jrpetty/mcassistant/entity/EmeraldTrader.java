@@ -675,7 +675,12 @@ public final class EmeraldTrader {
             WANTED.put(id, reckon(level, v));
         }
         int want = WANTED.getOrDefault(id, 0);
-        if (want > 0 && traders(id, true).size() < want) appoint(level, v);
+        if (want > 0 && traders(id, true).size() < want) {
+            // [interviews] Two or more who want the place: it is held open for its interview (Interviews), and given
+            // after it to the panel's choice (candidates puts it first).
+            List<VillageFolkEntity> few = candidates(v);
+            if (few.isEmpty() || !Interviews.vacancy(level, id, POST_KEY, few.get(0))) appoint(level, v);
+        }
     }
 
     /** How many traders the town wants (0, 1 or 2), as last reckoned. Villages' share of the trades asks it. */
@@ -789,36 +794,53 @@ public final class EmeraldTrader {
      * hand to spare or none; the sociable, the cheerful and the curious before the shy and the grumpy, and one who has
      * traded before first of all.
      *
-     * <p>The seam for interviews: a town that holds interviews for its places (Interviews, when the town has them) puts
-     * this list before its panel and takes whom the panel chooses, instead of the first of it.
+     * <p>[interviews] A town that holds interviews for the place (Interviews, InterviewPosts' "trader") holds it open while
+     * two or more want it, and the panel's choice comes first here once it has chosen.
      */
     public static List<VillageFolkEntity> candidates(Villages.Village v) {
         UUID id = v.id();
         List<VillageFolkEntity> out = new ArrayList<>();
         Map<VillageFolkEntity, Integer> score = new HashMap<>();
-        long now = 0;
         for (AssistantEntity a : Villages.folkOf(id)) {
-            if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive()) continue;
-            if (f.trip() != null || f.expedition() != null) continue;
-            StationTask t = f.stationTask();
-            if (t == StationTask.EMERALD) continue;
-            if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE
-                || t == StationTask.BANK || t == StationTask.FERRY || t == StationTask.SCOUT) continue;
-            if (t != StationTask.NONE && Villages.share(id, t) < 0.5) continue;
-            int years = f.ageYears();
-            if (years < 18 || years > 65) continue;
-            now = f.level().getGameTime();
-            if (Villages.holdsTheLead(id, f.getUUID(), now)) continue;
-            int s = f.tradeLevel(StationTask.EMERALD) * 6 + f.tradeLevel(StationTask.SCOUT) * 2
-                + (t == StationTask.NONE ? 25 : 0)
-                + (f.life().has(Social.Trait.SOCIABLE) ? 14 : 0) + (f.life().has(Social.Trait.CHEERFUL) ? 8 : 0)
-                + (f.life().has(Social.Trait.CURIOUS) ? 8 : 0) - (f.life().has(Social.Trait.SHY) ? 10 : 0)
-                - (f.life().has(Social.Trait.GRUMPY) ? 8 : 0) + (f.life().has(Social.Trait.HARDWORKING) ? 4 : 0);
-            score.put(f, s);
+            if (!(a instanceof VillageFolkEntity f) || f.stationTask() == StationTask.EMERALD) continue;
+            int s = fitness(f, id);
+            if (s == Integer.MIN_VALUE) continue;
+            score.put(f, s + Interviews.preferred(id, POST_KEY, f));          // [interviews] the panel's choice first
             out.add(f);
         }
         out.sort((a, b) -> Integer.compare(score.get(b), score.get(a)));
         return out;
+    }
+
+    /** The trader's place, in the interviews' books (InterviewPosts). */
+    static final String POST_KEY = "trader";
+
+    /**
+     * How well this folk would do as the town's trader, by the town's own reckoning (candidates, and the interview's
+     * paper); Integer.MIN_VALUE for one who may not be it: a child, a stand-in, a hired hand, one away, one outside
+     * eighteen to sixty-five, the leader, the watch, a craft, the storekeeper, a carrier, the cave team, the bank, the
+     * ferry, a scout, or one whose own trade cannot spare it.
+     */
+    static int fitness(VillageFolkEntity f, UUID id) {
+        if (f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive()) return Integer.MIN_VALUE;
+        if (f.trip() != null || f.expedition() != null) return Integer.MIN_VALUE;
+        StationTask t = f.stationTask();
+        if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE
+            || t == StationTask.BANK || t == StationTask.FERRY || t == StationTask.SCOUT) return Integer.MIN_VALUE;
+        if (t != StationTask.NONE && t != StationTask.EMERALD && Villages.share(id, t) < 0.5) return Integer.MIN_VALUE;
+        int years = f.ageYears();
+        if (years < 18 || years > 65) return Integer.MIN_VALUE;
+        if (Villages.holdsTheLead(id, f.getUUID(), f.level().getGameTime())) return Integer.MIN_VALUE;
+        return f.tradeLevel(StationTask.EMERALD) * 6 + f.tradeLevel(StationTask.SCOUT) * 2
+            + (t == StationTask.NONE ? 25 : 0)
+            + (f.life().has(Social.Trait.SOCIABLE) ? 14 : 0) + (f.life().has(Social.Trait.CHEERFUL) ? 8 : 0)
+            + (f.life().has(Social.Trait.CURIOUS) ? 8 : 0) - (f.life().has(Social.Trait.SHY) ? 10 : 0)
+            - (f.life().has(Social.Trait.GRUMPY) ? 8 : 0) + (f.life().has(Social.Trait.HARDWORKING) ? 4 : 0);
+    }
+
+    /** [interviews] Is the town short of a trader just now (the place to be filled, InterviewPosts.stands)? */
+    static boolean placeOpen(UUID id) {
+        return wanted(id) && traders(id, true).size() < (int) Math.round(traders(id));
     }
 
     /** One more trader taken on: the first of the candidates (the town's choice: see candidates). */

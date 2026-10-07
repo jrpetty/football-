@@ -450,6 +450,7 @@ public final class Annals {
                 ? " — " + Math.round(need.amount() / rate) + " days at this rate: more hands to it" : " — there in " + Math.max(1, Math.round(need.amount() / rate)) + " days";
             reading.add(line);
         }
+        reading.addAll(Kitchen.reading(id, level.getDayTime() / 24000L));   // [kitchen] the packed lunches eaten out, the pies of the catch
         out.put("reading", strings(reading));
         return out;
     }
@@ -591,6 +592,8 @@ public final class Annals {
         out.getCompound("prices").putString("fleet", FishMarket.pricesLine(level, id));   // [fleet] the fish market, on the Prices page
         out.put("library", Library.report(level, v));            // [library] the catalogue, the authors, the loans: the Library page
         out.put("transport", Transport.report(level, v));        // [transport] the lines, the carts, the ferry, the bridge
+        out.put("interviews", Interviews.report(level, id));      // [interviews] the interviews coming and held: the Interviews page
+        out.put("identity", Identity.report(level, v));          // [identity] the town's ethos, government, laws, traits, fame: the Identity page
         out.put("emerald", EmeraldTrader.report(level, v));      // [emerald] the Trading Post page: the account, the villagers' villages
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
