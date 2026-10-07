@@ -358,7 +358,7 @@ public final class Transport {
         if (c.state() != Ferries.State.RUNNING && c.state() != Ferries.State.RETIRED) Ferries.buildFreeForStage(level, v, c);
         if (Ferries.ferrymanOf(level, c) == null) {
             for (AssistantEntity a : Villages.folkOf(id)) {
-                if (a instanceof VillageFolkEntity f && !f.isBaby() && f.stationTask() != AssistantEntity.StationTask.GUARD) {
+                if (a instanceof VillageFolkEntity f && Patrols.spareForStage(f)) {          // never the watch nor the leader
                     Ferries.appointForTests(level, v, f);
                     BlockPos s = c.stand(0);
                     f.moveTo(s.getX() + 0.5, s.getY(), s.getZ() + 0.5, 0.0F, 0.0F);

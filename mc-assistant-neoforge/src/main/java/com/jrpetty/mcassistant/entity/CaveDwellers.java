@@ -4386,7 +4386,7 @@ public final class CaveDwellers {
             if (dwellers(v.id()).isEmpty()) {
                 // A town too small to want a team: the nearest grown hand not on the watch goes, for the pictures.
                 for (AssistantEntity a : Villages.folkOf(v.id())) {
-                    if (a instanceof VillageFolkEntity c && !c.isBaby() && !c.isShowcase() && c.stationTask() != StationTask.GUARD && c.expedition() == null) {
+                    if (a instanceof VillageFolkEntity c && Patrols.spareForStage(c) && c.expedition() == null) {   // not the watch nor the leader
                         BlockPos post = post(v);
                         c.setStation(post, StationTask.CAVE);
                         c.assignPlot(WorkZone.around(post, 4, WorkZone.DEFAULT_DEPTH), "The Caves");

@@ -187,7 +187,7 @@ public final class NetherStage {
             if (team.isEmpty()) {
                 for (AssistantEntity a : Villages.folkOf(v.id())) {
                     if (team.size() >= 2) break;
-                    if (a instanceof VillageFolkEntity c && !c.isBaby() && !c.isShowcase() && c.stationTask() != StationTask.GUARD
+                    if (a instanceof VillageFolkEntity c && Patrols.spareForStage(c)        // never the watch nor the leader
                             && c.trip() == null && c.expedition() == null) {
                         BlockPos post = NetherRunners.post(level, v);
                         c.setStation(post, StationTask.NETHER);

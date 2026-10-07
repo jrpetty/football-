@@ -1389,7 +1389,7 @@ public final class Fletchers {
         VillageFolkEntity f = fletchers(id).isEmpty() ? appoint(level, v) : fletchers(id).get(0);
         if (f == null) {
             for (AssistantEntity a : Villages.folkOf(id)) {
-                if (a instanceof VillageFolkEntity k && !k.isBaby() && k.stationTask() != StationTask.GUARD && !k.isShowcase()) {
+                if (a instanceof VillageFolkEntity k && Patrols.spareForStage(k)) {         // never the watch nor the leader
                     if (!k.takeUpTrade(StationTask.FLETCHER)) k.setJob(StationTask.FLETCHER);
                     f = k;
                     break;
