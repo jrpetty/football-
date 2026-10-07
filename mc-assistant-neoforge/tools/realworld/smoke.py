@@ -3689,6 +3689,10 @@ def main():
         diver_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("diver stage failed: %s" % e)
+    try:
+        culture2_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("culture2 stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
