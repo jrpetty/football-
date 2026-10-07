@@ -169,8 +169,9 @@ public final class MapSurveys {
             this.scale = scale;
             this.cx = cx;
             this.cz = cz;
-            this.sheets = sheets;
-            this.stops = stops;
+            // Copies of its own: the sheets are swapped for their locked copies at the table (lock), whatever list they came in.
+            this.sheets = new ArrayList<>(sheets);
+            this.stops = new ArrayList<>(stops);
         }
 
         public Kind kind() { return kind; }

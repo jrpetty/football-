@@ -94,10 +94,15 @@ public final class Cartographers {
 
     // ------------------------------------------------------------------ the trade opening
 
-    /** Does the town want a cartographer: the Stone Age or later, and scouts out or thirty folk? */
+    /**
+     * Does the town want a cartographer: the Stone Age or later, and scouts out or thirty folk? Once its map room
+     * stands the trade stays open, though its one scout was the one who took it up (as a town's first often is).
+     */
     public static boolean wanted(@Nullable UUID village) {
         if (village == null) return false;
-        return opens(Villages.ageOf(village), Villages.headcount(village), hasScouts(village));
+        Villages.Age age = Villages.ageOf(village);
+        if (age.ordinal() >= Villages.Age.STONE.ordinal() && mapRoom(village) != null) return true;
+        return opens(age, Villages.headcount(village), hasScouts(village));
     }
 
     /** The rule itself: from the Stone Age, once the town has scouts out or thirty folk. */
