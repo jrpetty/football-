@@ -396,6 +396,8 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.WarScouting.class);   // [war-scouting] spies, pickets, captives
         NeoForge.EVENT_BUS.register(TimeSpeed.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Transport.class);    // [transport] railways, carts, ferries, bridges
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.TwoPeoples.class);   // [emerald] folk and villagers kept apart
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.EmeraldTrader.class); // [emerald] the trader to the villagers
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {

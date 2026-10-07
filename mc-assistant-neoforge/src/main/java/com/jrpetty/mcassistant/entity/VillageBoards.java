@@ -432,6 +432,8 @@ public final class VillageBoards {
         if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);
         if (scouts != null) out.add("FN|" + scouts);
+        String trading = EmeraldTrader.boardLine(id);           // [emerald] the trader: the villagers' villages, the emeralds, a raid
+        if (trading != null) out.add("FN|" + trading);
         String museum = Museum.boardLine(id, day);              // what is new in the museum (Museum)
         if (museum != null) out.add("FN|" + museum);
         out.addAll(Culture.board(level, id));                   // [batchD] the banner and the motto, the customs, the theatre tonight

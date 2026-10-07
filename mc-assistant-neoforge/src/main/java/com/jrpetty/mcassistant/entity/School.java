@@ -961,6 +961,8 @@ public final class School {
         LINES.put(StationTask.STORE, new String[]{ "A place for everything, and everything in its place." });
         LINES.put(StationTask.SCOUT, new String[]{ "Mark every hill on the map, and always know the way home." });
         LINES.put(StationTask.GUARD, new String[]{ "Keep your back to the wall and your eyes on the dark." });
+        LINES.put(StationTask.EMERALD, new String[]{ "Sell only what the town can spare, and count the emeralds twice.",   // [emerald]
+            "The villagers are their own people: trade fair, and never cut in on a traveller at a stall." });
         LINES.put(StationTask.CAVE, new String[]{ "A torch every few steps: it's the way home.",           // [caves]
             "Never dig the block you stand on, and never dig toward water or lava." });
     }

@@ -138,12 +138,18 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         CAVE("caving", "Cave dweller"),
         // [transport] Where a river lies between the town and its fields, its mine or a neighbour, and no bridge spans
         // it yet, a ferryman rows folk across for a coin (Ferries); the bridge, when the town votes one, retires it.
-        FERRY("the ferry", "Ferryman");
+        FERRY("the ferry", "Ferryman"),
+        // [emerald] From the Stone Age, once the town knows of a village of the game's own villagers within reach and has
+        // goods to spare: a trader who explores like a scout to find their villages, walks the town's surplus out to them,
+        // and trades with the villagers through their own offers, for emeralds, and emeralds for what the town wants
+        // (EmeraldTrader).
+        EMERALD("trading", "Emerald trader");
 
         /** The trades of a grown village, which work out of a building of their own. */
         public boolean isCraft() {
             return ordinal() >= SMITH.ordinal() && this != SCOUT && this != HUNT && this != CAVE   // [caves]
-                && this != FERRY;                                                                     // [transport]
+                && this != FERRY                                                                      // [transport]
+                && this != EMERALD;                                                                   // [emerald]
         }
 
         public final String label;   // lower-case, for sentences
@@ -1423,6 +1429,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FISH, STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> null;
             case CAVE -> null;                    // [caves] kitted by the town each morning (CaveDwellers.kitUp)
             case FERRY -> null;                   // [transport] the town's boat is its kit (Ferries)
+            case EMERALD -> null;                 // [emerald] its goods are drawn from the stores for each trip (EmeraldTrader)
         };
         // ONE restock, one pace. This used to be three separate paced scoops in
         // a row, and only the first of them could ever run: the food scoop took
@@ -1722,6 +1729,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** [transport] A ferryman's day at the landings (Ferries): VillageFolkEntity does it. */
     protected boolean ferryWork() { return false; }
+
+    /** [emerald] The emerald trader's day (EmeraldTrader): VillageFolkEntity does it. */
+    protected boolean emeraldWork() { return false; }
 
     /** Is this animal one of its village's own herd (penned, led, brought home), not game? (VillageFolkEntity) */
     public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) { return false; }
@@ -2652,6 +2662,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> false;
             case CAVE -> false;                   // [caves] kitted by the town each morning (CaveDwellers.kitUp)
             case FERRY -> false;                  // [transport] the town's boat is its kit (Ferries)
+            case EMERALD -> false;                // [emerald] nothing of its own to keep: the goods are the town's (EmeraldTrader)
         };
     }
 
@@ -4309,6 +4320,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case HUNT -> s.is(Items.ARROW) ? 32 : s.is(Items.BOW) ? 1 : GAME.test(s) ? 0
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
             case FERRY -> s.get(DataComponents.FOOD) != null ? 8 : 0;   // [transport] a bite between crossings
+            case EMERALD -> s.get(DataComponents.FOOD) != null ? 8 : 0;  // [emerald] rations for the road; the goods go home
             case NONE -> 0;
         };
     }
@@ -5605,6 +5617,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 case HUNT -> new Branch[]{ SENTINEL, HUSBANDRY };
                 case CAVE -> new Branch[]{ SENTINEL, PROSPECTOR };     // [caves]
                 case FERRY -> new Branch[]{ PORTER, SENTINEL };        // [transport]
+                case EMERALD -> new Branch[]{ PORTER, SENTINEL };      // [emerald] a pack on its back, the road to walk
                 case NONE -> new Branch[]{};
             };
         }
@@ -7225,6 +7238,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // [transport] At the landing with the town's boat, rowing folk across for a coin (Ferries).
                 if (ferryWork()) return true;
             }
+            case EMERALD -> {
+                // [emerald] Out to a village of villagers with the town's surplus, or at the trading post with the book.
+                if (emeraldWork()) return true;
+            }
             case NONE -> { }
         }
         // Nothing to do right where it's stood. On a zone bigger than its own
@@ -7774,6 +7791,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> 0;
             case CAVE -> 0;                       // [caves] its finds go into the stores when it is home (CaveDwellers.home)
             case FERRY -> 0;                      // [transport] its fares go into its purse, not the stores
+            case EMERALD -> 0;                    // [emerald] what it brings home goes in when it is home (EmeraldTrader.home)
         };
         // Never more than a stash would actually move. The trade's own sums kept back less
         // than the stash keeps back (a village miner keeps 32 cobble, the sum kept 16), so

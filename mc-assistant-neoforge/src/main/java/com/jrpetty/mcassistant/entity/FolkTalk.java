@@ -66,6 +66,10 @@ public final class FolkTalk {
         Persona.Opinion op = me.opinionOf(p.getUUID(), p.getName().getString());
         // [caves] Said to one of the cave team: an ask of it, going along, its map, a share (CaveGuests.meant).
         if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.CAVE && CaveGuests.meant(text)) topic = TalkTopic.CAVES;
+        // [emerald] Said to the emerald trader: an ask ("find us a Mending book"), or what the villagers sell (EmeraldTrader).
+        if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.EMERALD && EmeraldTrader.meant(text)) {
+            return EmeraldTrader.talk(f, p, text);
+        }
         if (topic == TalkTopic.SAY) {
             TalkTopic quest = QuestTalk.heard(f, p, text);              // [quests] "any work?", "I'll do it", a choice by name
             if (quest != null) topic = quest;
@@ -385,6 +389,7 @@ public final class FolkTalk {
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
+        line(sb, "Trading", EmeraldTrader.cardLine(f));     // [emerald] its trips to the villagers, its emeralds, what it bought
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
         line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
@@ -733,6 +738,7 @@ public final class FolkTalk {
             case BANK -> Bank.doing(f, r);                // the banker: its books, its vault, its borrowers
             case CAVE -> CaveDwellers.doing(f, r);        // [caves] down the caves, or home with the report
             case FERRY -> Ferries.doing(f, r);            // [transport] at the landing, or out on the water
+            case EMERALD -> EmeraldTrader.doing(f, r);    // [emerald] on the road to the villagers, at their stalls, or home
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";

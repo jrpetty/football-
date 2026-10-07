@@ -291,6 +291,9 @@ public final class Crafts {
             Trades.workstation(f, level, v, Blocks.ANVIL, s -> s.is(ItemTags.ANVIL),
                 com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.ANVIL);
         }
+        // [emerald] A book the trader bought from the villagers, laid on the town's best tool at the anvil (EmeraldTrader).
+        String laid = EmeraldTrader.layBook(level, v, f);
+        if (laid != null) return laid;
         int watch = Math.max(1, guards(v));
         List<Smithing> wants = List.of(
             new Smithing(Items.IRON_PICKAXE, 3, 2, 2),
@@ -1177,6 +1180,9 @@ public final class Crafts {
             }
         }
         if (table == null) return null;
+        // [emerald] A book the trader bought from the villagers, laid on the town's best tool (EmeraldTrader.layBook).
+        String laid = EmeraldTrader.layBook(level, v, f);
+        if (laid != null) return laid;
         if (have(level, v, f, s -> s.is(Items.LAPIS_LAZULI)) < 3 || stock(level, v, s -> s.is(Items.BOOK)) < 1) return null;
         // Bookshelves as the game counts them: two blocks out from the table, level with it or one
         // up, with nothing but air between (fifteen is as strong as it gets).

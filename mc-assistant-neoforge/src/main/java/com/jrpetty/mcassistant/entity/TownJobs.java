@@ -311,6 +311,7 @@ public final class TownJobs {
                 case SCOUT -> score -= 40;
                 case CAVE -> score -= 40;                // [caves] its day is down the caves
                 case FERRY -> score -= 40;               // [transport] its day is at the ferry
+                case EMERALD -> score -= 40;             // [emerald] its day is on the road to the villagers
                 default -> { if (trade.isCraft()) score -= 10; }
             }
             if (f.workedOut()) score += 25;                              // nothing to work at in its own trade

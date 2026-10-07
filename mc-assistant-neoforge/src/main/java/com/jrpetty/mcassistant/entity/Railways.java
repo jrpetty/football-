@@ -1132,6 +1132,7 @@ public final class Railways {
             return true;
         }
         if (!natural(st) && !(paving(st) && inATown(level, p))) return false;
+        if (VanillaVillages.within(level, p.getX(), p.getZ(), 2)) return false;   // [emerald] a village of villagers' ground is theirs
         if (!free) {
             Item back = st.is(Blocks.STONE) || st.is(Blocks.DEEPSLATE) ? Items.COBBLESTONE
                 : st.is(BlockTags.DIRT) || st.is(Blocks.DIRT_PATH) || st.is(Blocks.FARMLAND) ? Items.DIRT

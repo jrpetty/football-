@@ -71,6 +71,8 @@ public final class Asks {
         BUILDINGS.put("hospital", "infirmary");
         BUILDINGS.put("lodge", "lodge");                  // [caves] the Delvers' Lodge (Lodge)
         BUILDINGS.put("delvers", "lodge");
+        BUILDINGS.put("trading", "tradingpost");          // [emerald] the Trading Post (EmeraldTrader)
+        BUILDINGS.put("tradingpost", "tradingpost");
     }
 
     /** The trade named in a line, or null. */

@@ -175,6 +175,14 @@ public final class Trades {
                 List.of(need("a boat", s -> s.is(net.minecraft.tags.ItemTags.BOATS), 1, "the town's, moored at the landing")),
                 List.of(),
                 "folk across the water, and a coin a crossing into my purse");
+            // [emerald] The emerald trader (EmeraldTrader): the town's surplus and its emeralds out of the stores for each trip.
+            case EMERALD -> new Trade("I walk out to the villages of the game's own villagers, the way a scout goes, with what the"
+                    + " town has to spare: I sell it to whichever villager buys it, at the villager's own price, for emeralds, and"
+                    + " spend the emeralds on what nobody here can make: enchanted books, a bell, explorer maps, the cleric's lapis",
+                List.of(),
+                List.of(need("the town's surplus (only what it can spare)", EmeraldTrader::sellable, 1, "the stores, past the town's own needs"),
+                    need("food for the road", s -> s.get(DataComponents.FOOD) != null, 2, "the stores")),
+                "emeralds for the surplus, and enchanted books, bells, maps and lapis for the emeralds");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }

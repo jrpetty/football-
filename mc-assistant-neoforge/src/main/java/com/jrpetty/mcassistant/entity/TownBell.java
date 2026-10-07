@@ -491,6 +491,7 @@ public final class TownBell {
                 for (BlockEntity be : chunk.getBlockEntities().values()) {
                     if (!(be instanceof BellBlockEntity)) continue;
                     BlockPos p = be.getBlockPos();
+                    if (VanillaVillages.within(level, p.getX(), p.getZ(), 0)) continue;   // [emerald] the villagers' bell is theirs
                     double score = Math.sqrt(p.distSqr(want));
                     if (tower != null && Math.abs(p.getX() - tower.getX()) <= 4 && Math.abs(p.getZ() - tower.getZ()) <= 4) score -= 200;
                     if (frame != null && p.equals(frame.bell())) score -= 150;

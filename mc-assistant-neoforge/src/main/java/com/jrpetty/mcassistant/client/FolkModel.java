@@ -47,10 +47,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         "guard", "smelter", "fisher", "storekeeper", "hauler",
         "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
         "cavedweller",                                         // [caves] not in StationTask's order: see outfit()
+        "emerald",                                             // [emerald] the emerald trader's: see outfit()
     };
 
     /** [caves] The cave dweller's outfit, after the trades drawn in StationTask's order (those before it). */
     public static final int CAVE_OUTFIT = 19;
+    /** [emerald] The emerald trader's outfit: the merchant's green coat, the wide hat, the pack (tools/folk_art.py). */
+    public static final int EMERALD_OUTFIT = 20;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -142,6 +145,12 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"cavedweller_haft", "body", "cavedweller"},
         {"cavedweller_pickhead", "body", "cavedweller"},
         {"cavedweller_rope", "body", "cavedweller"},
+        {"emerald_crown", "head", "emerald"},
+        {"emerald_brim", "head", "emerald"},
+        {"emerald_pack", "body", "emerald"},
+        {"emerald_roll", "body", "emerald"},
+        {"emerald_lamp", "body", "emerald"},
+        {"emerald_purse", "body", "emerald"},
         // END GENERATED WEARERS
     };
 
@@ -294,6 +303,12 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("cavedweller_haft", CubeListBuilder.create().texOffs(64, 24).addBox(-0.5F, -6.0F, 0.0F, 1.0F, 12.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_pickhead", CubeListBuilder.create().texOffs(68, 24).addBox(-3.5F, -7.0F, 0.0F, 7.0F, 1.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_rope", CubeListBuilder.create().texOffs(84, 24).addBox(-6.2F, 7.0F, -2.0F, 2.0F, 4.0F, 4.0F), PartPose.ZERO);
+        head.addOrReplaceChild("emerald_crown", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -12.0F, -4.0F, 8.0F, 3.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("emerald_brim", CubeListBuilder.create().texOffs(64, 11).addBox(-8.0F, -9.0F, -8.0F, 16.0F, 1.0F, 16.0F), PartPose.ZERO);
+        body.addOrReplaceChild("emerald_pack", CubeListBuilder.create().texOffs(64, 28).addBox(-4.0F, 0.5F, 3.6F, 8.0F, 10.0F, 4.0F), PartPose.ZERO);
+        body.addOrReplaceChild("emerald_roll", CubeListBuilder.create().texOffs(88, 28).addBox(-5.0F, -2.5F, 4.1F, 10.0F, 3.0F, 3.0F), PartPose.ZERO);
+        body.addOrReplaceChild("emerald_lamp", CubeListBuilder.create().texOffs(100, 36).addBox(4.2F, 3.0F, 5.0F, 1.0F, 3.0F, 2.0F), PartPose.ZERO);
+        body.addOrReplaceChild("emerald_purse", CubeListBuilder.create().texOffs(114, 28).addBox(2.5F, 8.5F, -4.6F, 2.0F, 3.0F, 1.0F), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }
@@ -328,6 +343,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         int job = folk.clientJobOrdinal();
         if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
         if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
+        if (job == AssistantEntity.StationTask.EMERALD.ordinal()) return EMERALD_OUTFIT;   // [emerald] "emerald": the merchant's coat
         return Math.floorMod(job, CAVE_OUTFIT);
     }
 

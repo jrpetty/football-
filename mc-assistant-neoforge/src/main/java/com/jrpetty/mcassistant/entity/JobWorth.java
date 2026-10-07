@@ -183,6 +183,10 @@ public final class JobWorth {
             // [transport] Out on the water in all weathers but the worst: it makes nothing, and carries everybody over.
             case "FERRY" -> new Post(key, title, trade, role, 1, 1, 0.9, 0.0, "out on the water, and steady",
                 "carries the town's folk over the water");
+            // [emerald] Long days on the road among strangers, and a head for a bargain: it sells the town's surplus for
+            // emeralds and buys what nobody here can make. Paid like the scouts and a little over, for the bargaining.
+            case "EMERALD" -> new Post(key, title, trade, role, 2, 2, 1.0, 1.0, "long days on the road, and a head for a bargain",
+                "trades the town's surplus with the villagers for what it cannot make");
             // The shop's jobs (ShopRoles): the keeper makes a little and runs the place; the assistants and the
             // stock keeper make nothing, and are paid for what they do for the shop.
             case "SHOP/KEEPER" -> new Post(key, title, trade, role, 1, 2, 1.0, 0.5, "runs the place", "keeps the shop and its sales");
@@ -890,6 +894,7 @@ public final class JobWorth {
             case "BANK" -> "the bank";
             case "CAVE" -> "the caves";                // [caves]
             case "FERRY" -> "the ferry";               // [transport]
+            case "EMERALD" -> "the trading post";      // [emerald]
             default -> "the " + JobMarket.noun(t) + "s";
         };
     }
@@ -898,6 +903,7 @@ public final class JobWorth {
         return switch (t.name()) {
             case "FARM", "WOOD", "MINE", "RANCH", "SMELT", "HAUL", "BEEKEEP", "SCOUT", "HUNT" -> true;
             case "GUARD", "FISH", "STORE", "SMITH", "TAILOR", "BREW", "ENCHANT", "COOK", "SHOP", "BANK" -> false;
+            case "EMERALD" -> false;                                       // [emerald] the trading post
             default -> true;
         };
     }

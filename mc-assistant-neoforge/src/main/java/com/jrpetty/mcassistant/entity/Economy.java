@@ -363,6 +363,9 @@ public final class Economy {
             case GUARD -> k == Kind.ANIMAL;                                    // what the night's monsters drop
             // [caves] The ore it digs and what it brings out of the old chests: gems, books, gold apples, saddles.
             case CAVE -> k == Kind.ORE || k == Kind.CRAFT || k == Kind.ANIMAL || CaveDwellers.valuable(s);
+            // [emerald] What it brings home from the villagers: emeralds for the surplus, and what the emeralds bought.
+            // (What it took out of the stores and brings back unsold is no new work: Economy.given knows it.)
+            case EMERALD -> true;
             default -> k == Kind.CRAFT || k == Kind.ANIMAL;                     // the crafts: smith, tailor, brewer, enchanter, shop
         };
     }

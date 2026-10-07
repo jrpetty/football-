@@ -17,7 +17,7 @@ Everything is obtainable in **survival**.
 | **/village spawn [1-100]** | Out of reach of a village, founds one two blocks ahead of you, its ground made level first (at least two folk); in reach of one, stands that many more up in it. `spawnat <x> <z> [n]` for the console and scripts founds at once, levelling nothing. |
 | **The world** | Villages generate as you explore (config `naturalVillages`), in groups of three to five. Each has its ground made level before its folk come, as a founding at a board does. |
 | **/village level** | A town already standing (one from before its ground was levelled) has the ground round it made level now: trees cleared, hills cut, hollows filled, nothing built touched, and its folk kept clear of the moving ground. Operators, or the world's owner. |
-| **Vanilla villagers** | Turned into folk as you meet them (config `replaceVillagers`). Trading with them stops working; wandering traders are untouched. |
+| **Vanilla villagers** | Left as they are. The folk and the game's villagers are two peoples, kept apart (see *Folk and villagers: two peoples*), and a town's emerald trader walks out to trade with them. The old takeover, which turned villagers into folk as you met them and ended trading with them, is still there behind the config `replaceVillagers` (off). Wandering traders are untouched either way. |
 
 ## Founding a village: choose how many
 
@@ -4080,8 +4080,9 @@ And nothing comes from nothing:
   folk puts down is named **Village Store**. Folk use *only* containers with that name, so a village founded next
   to your base leaves your chests alone. To let them use a chest of yours,
   rename it *Village Store* in an anvil. A sign on a chest still hides it from
-  everybody. The chests and barrels of a vanilla village a spawner takes over
-  become its stores too. Your guest house's chest is never one.
+  everybody. A village of the game's villagers keeps its own chests and barrels: no folk takes
+  from them. (With the old takeover on, `replaceVillagers`, the chests and barrels of a vanilla
+  village a spawner takes over become its stores.) Your guest house's chest is never one.
 * **The storehouse** — the village's stores are the chests round its square,
   and the storehouse's come first. Every load for the stores goes to the
   storehouse: a builder's leftovers, a miner's or woodcutter's surplus, the
@@ -4618,9 +4619,13 @@ ripen, days pass, folk work and houses go up at that pace.
 ## Config (`config/mc_assistant-common.toml`, section `[villages]`)
 
 `naturalVillages`, `villageSpacing`, `villageMinFolk`, `villageMaxFolk`, `villageCharterFolk` (70),
-`villageFoundingMost` (500), `villageBreeding`, `villageGrowthCap`, `villageLoadedChunks`, `replaceVillagers`,
+`villageFoundingMost` (500), `villageBreeding`, `villageGrowthCap`, `villageLoadedChunks`, `replaceVillagers` (off),
 `protectTradedVillagers`, `villageColonies` (on), `villageColonyAt` (40),
 `villageWorldCap` (200).
+
+* `replaceVillagers` (off) is the old takeover. Off, the folk and the game's own villagers are two
+  peoples, kept apart (see *Folk and villagers: two peoples*). On, villagers are turned into folk as
+  you meet them and their villages become towns, and there is nobody left to trade with.
 
 * `villageCharterFolk` (70) is how many a Village Charter founds a village with, and where the
   founding screen at a spawner's board starts; a player may choose 2 to `villageFoundingMost` there.
@@ -4663,7 +4668,8 @@ Every push to CI:
 * boots a real headless server and runs the game tests in
   `src/gametest/java` — recipes load, the spawner block, the charter and the
   commands work, a village founded at a chosen size on rough ground ends on level
-  ground with sloped edges, a vanilla villager is swapped for a folk, and twelve folk are
+  ground with sloped edges, villagers stay villagers beside a town (and with the old takeover
+  switched on for the test, a vanilla villager is swapped for a folk), and twelve folk are
   left alone for **three game days** on ground of the test's own making;
 * starts a real dedicated server with vanilla world generation, settles a
   village in a chosen biome over RCON (`tools/realworld/soak.py`), lets three
@@ -4671,8 +4677,10 @@ Every push to CI:
   spiders among the settlers at dusk, and reports — for plains, forest, taiga
   and savanna;
 * settles a hundred folk on one map and reports what that costs a tick;
-* checks a generated vanilla village's villagers are converted without
-  freezing the server;
+* with the old takeover switched on for that scenario only, checks a generated vanilla village's
+  villagers are converted without freezing the server; and in the `natural` scenario, with it off,
+  checks a vanilla village's villagers are all still villagers four thousand ticks on, with no town
+  founded on their ground;
 * builds a storehouse on a hillside and among trees (game tests `t11`, `t12`),
   so the ground work — filling the low side, felling the tree in the way — runs;
 * plays **the long game** in a workflow of its own that a push never cancels
@@ -7749,3 +7757,198 @@ The game tests `TransportGameTests` (tr01 to tr05) check that:
   takes another trade, and the chronicle tells it;
 * in a town of nine, the bridge is put to everybody in a referendum as a great work drawn beside the ferry, carried,
   built by the town's hands out of its stone and opened, and then the ferry retires.
+
+## Folk and villagers: two peoples
+
+The folk and the game's own villagers are two peoples. They live side by side and never mix: villagers stay
+villagers, their villages stay theirs, and neither side uses the other's beds, job blocks, bells or chests. The one
+folk who crosses between them is the town's emerald trader (see *The emerald trader*), and only to trade.
+
+The old takeover, which turned villagers into folk as you met them and made their villages into towns, is still in
+the mod for anybody who wants it: set `replaceVillagers = true` in the `[villages]` section of the config. It is off
+unless you turn it on. With it on, everything below is switched off and the villagers' villages become towns, as they
+always did.
+
+**How the folk know a village of villagers.** Two ways, and either will do:
+* **By what the world built.** A village the world generated is a structure, and its ground is the structure's own:
+  every house, field and path the world laid. The mod looks these up the way the game's own locator does, round each
+  town, round a place a town is to be founded, and along the trader's road, each stretch of the world once a session;
+  a folk standing in one knows it at no cost.
+* **By its people.** Villagers meet at a bell. A bell that villagers have taken for their meeting place, anywhere
+  outside one of our towns, is a village of villagers, whether the world built it or a player did. Its ground runs as
+  far as their beds and workstations (up to sixty-four blocks from the bell) and sixteen blocks past. If the bell goes,
+  or nobody is seen at it for ten days, it is forgotten.
+
+**The folk keep off the villagers' things.**
+* **No town on their doorstep.** No town is founded within 128 blocks of a village of villagers' edge. The board a
+  spawner puts up, a charter, `/village spawn`, the world's own new villages and the colonies all look first. A
+  spawner set down too near says so: how far off the village is, which way, and how much further to go.
+* **No town's ground on theirs.** No lot, field, wood, pen or mine of a town comes within 32 blocks of a village of
+  villagers' edge, and no wall goes round a town whose ring would. A founding's levelled ground stops short of that
+  margin and leaves the land as the world made it. A road between towns lays and clears nothing on their ground
+  (their own paths are the road there), and no railway line is laid on it.
+* **Nothing of theirs is used.** No folk sleeps in a villager's bed, and their beds are never counted among the
+  town's. No folk works at their workstations or rings their bell (the town's bell is never one of theirs). No folk
+  takes from their chests or barrels: the folk only ever use their own town's *Village Store* containers, scouts
+  passing through a village of villagers look in none of its chests, and the cave team never loots one. A folk
+  walking through leaves everything as it is.
+
+**The villagers keep off the town's things.** A villager claims a bed, a workstation and a meeting bell through its
+own brain: it remembers the place and takes a ticket at the game's point of interest there. Once a second, every
+villager in the world is looked over, and a claim on anything inside one of our towns (its streets and eight blocks
+past) is undone the way the game undoes one when a villager dies: the ticket is handed back and the memory let go. A
+villager asleep in one of the town's beds is woken. A villager trying for the town's composter or bell holds it for a
+second at most, never gets there, and never takes up a trade from it.
+
+Why not mark the town's points of interest as taken, so villagers never try? Because the game counts taken points of
+interest when it decides where a village of villagers is, and a town that looked like one to the game would get its
+raids, its sieges and its stray cats. The town's beds and workstations are never taken by the town itself.
+
+**A villager in town.** One that wanders into a town is left alone: not turned into folk, not driven off, never
+attacked (the watch only ever fights monsters). It is never counted among the town's folk, beds or job market, and
+the folk are never counted among the villagers' (the game counts only villagers for its iron golems, its gossip and
+its breeding).
+
+**Where to see it.** `/village emerald` ends with a line on the two peoples: kept apart or taken over, the villages of
+villagers known near the town (built by the world or known by their bell, how big, how far), and how many villagers'
+claims on the town's things have been undone. The Trading Post page shows the same count.
+
+The game tests `EmeraldGameTests` (ep01 to ep04) check that:
+* a villager free to wander beside a town for three minutes stays a villager: it tries for the town's composter and
+  bell, each claim is undone within a second and a half, its own bed outside the town stays its own, it takes up no
+  trade, nobody joins the town and nobody harms it;
+* claims on the town's bed, composter and bell are undone at once with their tickets handed back (even a ticket the
+  game's own release would keep), a villager asleep in the town's bed is woken, and a villager of a village outside
+  the town keeps every claim, its bell making its village known; and the sweep the server runs every second does
+  the same unasked;
+* a founding on a village of villagers' doorstep is refused with the reason, one far enough off is not, and a town
+  standing near one puts no house lot within its margin and no wall whose ring would come within it;
+* with `replaceVillagers` off nobody is turned, and with it switched on for the test the villager is turned into a
+  folk of a new town, as the old takeover always did.
+
+## The emerald trader
+
+The town's go-between with the game's villagers. It walks to their villages, sells the town's surplus to them for
+emeralds, and spends the emeralds on what the town cannot make for itself: enchanted books, a bell, maps, and more.
+Every trade is a real trade with a real villager, through the villager's own offers.
+
+**When the trade opens.** From the Stone Age, in a town of twelve folk or more that:
+* knows of a village of villagers within a morning's walk (640 blocks): the scouts found it and it is in their atlas,
+  the trader found it, or it lies plainly on the land round the town for the trader to find; and
+* has goods to spare, or eight emeralds or more and something it wants.
+
+One trader. A town of thirty or more that has traded with two villages takes on a second. With the old takeover on,
+there are no villagers to trade with, and no trader.
+
+**Who takes it.** The town's choice, out of its grown folk fit for the road (eighteen to sixty-five): the sociable,
+the cheerful and the curious first, the shy and the grumpy last, and one who has traded before ahead of everybody.
+Never the watch, a craft, the storekeeper, a carrier, the cave team, the bank, the ferryman, a scout or the leader.
+
+**The Trading Post.** Once the trade opens, the town builds the Trading Post on a lot of its plan: the trader's stall
+with its counter and its book of the villagers' villages. It is the trader's post. Till it stands, the trader works
+beside the village board. You can ask a folk for it ("build a trading post").
+
+**Exploring, like a scout.** With no village of villagers in its book to go to, the trader goes looking for one: toward
+a village plainly on the land round the town that its book does not have yet, else the way the scouts' atlas knows
+least, up to 448 blocks out. It sees a village of villagers 96 blocks off. One it finds goes into the scouts' atlas,
+the trader's book and the town's news, and the trader goes straight there to trade.
+
+**The trip.** In the morning it chooses where to go: a village where somebody sells what the town wants most (it
+learns who sells Mending, and goes back), else where most of what the town can spare is bought, the nearer the
+better; one never seen close is worth the walk; one raided in the last two days is not. It draws from the stores:
+* the goods: what the villagers there buy, by their offers as last seen (what villagers buy, for a village never seen
+  close), only what the town can spare (its own needs first, and only a glut while it is short of anything), up to a
+  stack of each, five kinds at most;
+* the emeralds, up to a stack, if there is anything on the buying list, and a book for each enchanted book wanted
+  (the librarian asks one with the emeralds), a compass for a map;
+* a bite to eat for the road;
+* a pack donkey from the stable, if the town has one with a chest, to carry the load.
+
+It walks there as a caravan does, the ground round it kept loaded as it goes, running from monsters (it is a trader,
+not a fighter). In the afternoon it turns for home wherever it has got to; hurt, it comes home at once.
+
+**Trading with the villagers.** At the village it looks round and writes every villager into its book: a name of its
+own for it (the game gives villagers none), its trade, its level, and every offer it makes as it stands. Then:
+* **Selling.** It goes round the villagers who buy what it brought, nearest first, and sells to each through the
+  villager's own offer: the farmer's twenty wheat for an emerald, the librarian's paper, the cleric's rotten flesh. It
+  sells only what it brought from the stores.
+* **Buying.** It goes round the villagers who sell what the town wants, the cheapest for each first, and buys through
+  their offers with the emeralds.
+* **Each trade is a player's trade.** It stands at the villager's stall, pays the whole price as the offer has it now
+  (with the demand on it, as the game sets it), and takes what the offer gives. The offer's use goes up, the villager
+  gets the offer's trade experience, and when it has earned a level it takes it up a couple of seconds later with new
+  wares, exactly as after a player's trade. The trader is pleased to say so, and a villager made a master is the
+  town's news.
+* **What it never does.** It never trades on an offer that is used up (the villager restocks at its workstation, as
+  the game has it), never with a villager asleep, never with a villager a player is trading with, and never at a
+  village while a player is at any of its stalls (it waits its turn, and goes home after half a minute). It never
+  takes anything for nothing, never pays for what it cannot carry home, and never harms or takes a villager.
+
+**The buying list,** from the town's real wants, most wanted first:
+* what a player asked for (see below);
+* a Mending book for the town's best tools;
+* a bell, for a town with none;
+* from the Iron Age, Efficiency and Protection books;
+* lapis for the enchanter while it is short;
+* an explorer map for the scouts, while they know of no mansion or monument;
+* from the Iron Age, a diamond sword and a diamond chestplate for a watch of two or more;
+* a saddle for a town with a stable.
+
+**Home.** The emeralds and everything bought go into the stores, with what it did not sell. A player's ask that is met
+comes off the list. The smith at its anvil, or the enchanter, lays a bought enchanted book on the town's best thing it
+makes better (Mending on the best pick, blade or armour; Efficiency on the best pick; Protection on the best
+chestplate), as an anvil does: only where it goes, only with nothing on the thing that it will not sit with, and only
+where it is stronger. The book is used up, one a day. Emeralds are worth what the town's prices say they are.
+
+**A raided village.** Pillagers at a village of villagers when the trader arrives, or while it is there: it turns for
+home at once without a trade, the book marks the village raided, and the town is told (the news, the trader's log,
+the board). It does not go back there for two days. The watch stays at home: the villagers' fight is not the town's.
+
+**Asking the trader.** Talk to it:
+* *"find us a Mending book"*, *"buy us a bell"*, *"get us a map"*, or any enchantment by name; ender pearls,
+  redstone, lapis, glowstone, a saddle, a name tag, diamond tools and armour, and the other things the villagers sell.
+  It puts it at the head of its buying list (four asks at most), tells you who sells one if its book knows, and how
+  many emeralds the town has put by.
+* *"who sells Mending?"*, *"what do the villagers sell?"*: what the villagers it knows sell, village by village.
+
+**The Trading Post page** of the town's books (`/village emerald books`, or the books' *Trading Post* tab):
+* the emerald account: held in the stores, earned, spent, and the trips made;
+* the buying list, with a player's asks marked;
+* the traders and what each is doing;
+* every village of villagers the town knows: its name, its kind, how far and which way, when it was last visited,
+  whether it was raided, and what the town earned and spent there;
+* each of its villagers, with its trade, its level and how many times the town has traded with it, and every offer it
+  makes as it stands: *"sells Mending (a book) for 24 emeralds and a book (3 of 12 left)"*, *"buys 20 wheat for an
+  emerald (used up: it restocks at its workstation)"*;
+* the trader's log: what it sold and bought, who went up a level, where it turned back and why.
+
+The trader's card says its trips, the emeralds earned and spent, the villages it knows and its last trip. The board
+carries the trade's news, the trade book notes who sells Mending and the town's best customer, and the chronicle tells
+the first trade with each village and what was bought.
+
+**Commands.** `/village emerald` says it all in the chat. `/village emerald books` opens the Trading Post page.
+Operators: `/village emerald now` takes on a trader if the town has none and sends it out now; `/village emerald stage`
+sets a little village of villagers beside where it is run (a bell, three stalls with their workstations, a bed each,
+and a farmer, a librarian and a cleric with the game's own offers) and sets the town's trader down at it with goods to
+sell and emeralds and books to buy with. Run it well away from the town: villagers in the town's ground would be kept
+off their own beds and workstations.
+
+**Its look.** A travelling merchant's emerald-green coat, a wide hat and a pack with a little lantern on it
+(`textures/entity/folk/emerald.png`, `emerald_glow.png`, drawn by `tools/folk_art.py`).
+
+The game tests `EmeraldGameTests` (ep05 to ep10) check that:
+* the trade opens in a Stone Age town of thirteen with goods to spare once a village of villagers is known within
+  reach, and not before, not in the Wood Age and not with the takeover on; a folk who is not a guard or the smith takes
+  it; the Trading Post is wanted, goes up on a lot of the plan and is the trader's post; and the page has the buying
+  list;
+* the trader explores like a scout, sees a village of villagers from the road, writes it into the atlas, its book and
+  the town's news, walks to it, and records its villagers, their trades and levels, and every offer;
+* it sells the town's real surplus of wheat and potatoes to a real farmer through the farmer's own offers: the uses go
+  up, the farmer gets its trade experience and goes up a level, the emeralds come home to the stores and the account,
+  and the page lists the offers as they stand;
+* asked for a Mending book, it buys one from a real librarian with twelve emeralds and a book, brings it home to the
+  stores, the ask comes off the list, and the smith lays it on the town's diamond pickaxe;
+* it never sells what the town needs, never trades on a used-up offer or with a villager a player is trading with,
+  never takes anything for nothing, and pays the price as it stands with the demand on it;
+* a village under a raid is left alone: home without a trade, the town told, and not walked back to while the raid is
+  fresh.

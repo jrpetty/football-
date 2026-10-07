@@ -51,6 +51,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     private static final ResourceLocation MINER_GLOW = texture("miner_glow");
     /** [caves] The cave dweller's helm lamp, lit. */
     private static final ResourceLocation CAVE_GLOW = texture("cavedweller_glow");
+    /** [emerald] The emerald trader's little lantern at its pack, lit. */
+    private static final ResourceLocation EMERALD_GLOW = texture("emerald_glow");
     /** What its wealth adds to its clothes, by standing (Wealth.Tier): patches, a belt, a collar, gold. */
     private static final ResourceLocation[] FINERY = {
         texture("wealth_0"), null, texture("wealth_2"), texture("wealth_3"), texture("wealth_4") };
@@ -186,7 +188,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
                            float netHeadYaw, float headPitch) {
             if (folk.isInvisible()) return;
             String t = FolkModel.TRADES[trade(folk)];
-            ResourceLocation lit = "miner".equals(t) ? MINER_GLOW : "cavedweller".equals(t) ? CAVE_GLOW : null;
+            ResourceLocation lit = "miner".equals(t) ? MINER_GLOW : "cavedweller".equals(t) ? CAVE_GLOW
+                : "emerald".equals(t) ? EMERALD_GLOW : null;                                    // [emerald] its lantern
             if (lit == null || folk.isBaby()) return;
             VertexConsumer glow = buffer.getBuffer(RenderType.eyes(lit));
             getParentModel().renderToBuffer(pose, glow, 0xF000F0, OverlayTexture.NO_OVERLAY, -1);
@@ -368,6 +371,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             case BANK -> Items.GOLD_INGOT;
             case CAVE -> Items.LANTERN;                    // [caves] a lantern held up in the dark
             case FERRY -> Items.OAK_BOAT;                  // [transport] the ferryman's boat
+            case EMERALD -> Items.EMERALD;                 // [emerald] an emerald turned over in its fingers
             case NONE -> Items.AIR;
         });
     }

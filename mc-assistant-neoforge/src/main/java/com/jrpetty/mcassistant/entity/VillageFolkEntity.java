@@ -1500,7 +1500,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (expedition != null && level() instanceof net.minecraft.server.level.ServerLevel land) {
             UUID home = ownerId();
             if (home != null) Villages.tell(home, level().getDayTime() / 24000L, displayNameCap() + (expedition.delve() != null
-                ? " was lost in the caves " : " was lost while scouting the ") + expedition.heading());          // [caves]
+                ? " was lost in the caves " : expedition.venture() != null ? " was lost on the road " : " was lost while scouting the ")
+                + expedition.heading());          // [caves] [emerald]
             Scouts.abandon(land, this);
         }
         UUID village = ownerId();
@@ -2499,6 +2500,8 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     protected boolean bedFit(BlockPos bed) {
+        // [emerald] A bed in a village of the game's villagers is a villager's: no folk ever sleeps in one (TwoPeoples).
+        if (VanillaVillages.within(level(), bed.getX(), bed.getZ(), 0)) return false;
         if (!level().hasChunkAt(bed)) return true;                   // out of sight: as it was
         UUID village = ownerId();
         if (village == null) {
@@ -4528,6 +4531,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case BANK -> "The Bank";
             case CAVE -> "The Caves";             // [caves]
             case FERRY -> "The Ferry";            // [transport]
+            case EMERALD -> "The Trading Post";   // [emerald]
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -4614,6 +4618,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 BlockPos p = surfaceAt(at.getX(), at.getZ());
                 if (p == null || Math.abs(p.getY() - heart.getY()) > FIELD_CLIMB) continue;
                 if (Villages.builtOver(town, f[0], f[1], FIELD_MOST, FIELD_MOST)) { score -= 4; continue; }
+                // [emerald] Toward a village of the game's villagers the ground is theirs: the fields go another way.
+                if (VanillaVillages.within(level(), at.getX(), at.getZ(), FIELD_MOST + VanillaVillages.MARGIN)) { score -= 4; continue; }
                 if (!soilField(p) && !farmable(p)) continue;
                 // The nearest row counts twice: it is the one farmed first, and walked to every day.
                 int weight = i < 2 ? 2 : 1;
@@ -4708,7 +4714,8 @@ public class VillageFolkEntity extends AssistantEntity {
         java.util.function.Predicate<BlockPos> clear = p -> !outdoor || town == null
             || Villages.outsideTown(town, heart, p, keep)
                && (trade == StationTask.FARM || trade == StationTask.FISH || !Villages.onFarmland(town, heart, p, radius))
-               && !Bonds.overBorder(town, heart, p, keep);                 // never over the line toward a neighbour
+               && !Bonds.overBorder(town, heart, p, keep)                  // never over the line toward a neighbour
+               && !VanillaVillages.within(level(), p.getX(), p.getZ(), keep + VanillaVillages.MARGIN);   // [emerald] nor the villagers' ground
         BlockPos from = heart.offset(
             (int) Math.round(Math.cos(angle) * reach), 0,
             (int) Math.round(Math.sin(angle) * reach));
@@ -4866,6 +4873,8 @@ public class VillageFolkEntity extends AssistantEntity {
         WorkZone mine = WorkZone.around(pos, plotRadius + 2, WorkZone.DEFAULT_DEPTH);
         // Ground we are deliberately leaving counts as somebody else's.
         if (avoidHere != null && mine.overlaps(avoidHere)) return true;
+        // [emerald] And a village of the game's villagers, and its margin, is theirs: no field, wood, pen or mine on it.
+        if (VanillaVillages.within(level(), pos.getX(), pos.getZ(), plotRadius + VanillaVillages.MARGIN)) return true;
         java.util.List<AssistantEntity> crew =
             neighbours != null ? neighbours : Villages.folkOf(ownerId());
         for (AssistantEntity mate : crew) {
@@ -5730,6 +5739,12 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean ferryWork() {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Ferries.duty(this, server);
+    }
+
+    /** [emerald] The emerald trader's day (EmeraldTrader.work): out to the villagers in the morning, the book at home. */
+    @Override
+    protected boolean emeraldWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && EmeraldTrader.work(this, server);
     }
 
     /** A village's storekeeper keeps its stores in order from the first day, not from its

@@ -110,7 +110,10 @@ public final class Villages {
         // chosen by the town from its most skilled (CaveDwellers.team, appoint).
         new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST),
         // [transport] The ferryman: one, while the town's ferry runs (Ferries), whatever its size and age.
-        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1));
+        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1),
+        // [emerald] The emerald trader: one from the Stone Age once the town knows of a village of villagers within reach and
+        // has goods to spare, two when it trades with several (EmeraldTrader.wanted, traders).
+        new Slot(AssistantEntity.StationTask.EMERALD, 1, EmeraldTrader.FROM, Age.STONE, EmeraldTrader.MOST));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -340,6 +343,7 @@ public final class Villages {
             case "trainingyard" -> "the training yard";            // [war-prep]
             case "firestation" -> "the fire station";              // [disasters]
             case "lodge" -> "the Delvers' Lodge";                 // [caves]
+            case "tradingpost" -> "the Trading Post";             // [emerald]
             default -> "the " + structure;
         };
     }
@@ -403,6 +407,7 @@ public final class Villages {
         Economy.resetForTests();
         Scouts.resetForTests();
         CaveDwellers.resetForTests();       // [caves]
+        EmeraldTrader.resetForTests();      // [emerald] the trader, the villagers' villages, the two peoples' sweep
         Fashion.resetForTests();            // [fashion] the season's looks, the tailor's book, the shows
         Quests.resetForTests();
         Services.resetForTests();
@@ -842,6 +847,7 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
         if (trade == AssistantEntity.StationTask.CAVE) return CaveDwellers.ready(villageId);   // [caves] a few miners and a watch first
         if (trade == AssistantEntity.StationTask.FERRY) return Ferries.wanted(villageId);      // [transport] while the ferry runs
+        if (trade == AssistantEntity.StationTask.EMERALD) return EmeraldTrader.wanted(villageId);   // [emerald] villagers to trade with, goods to spare
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -912,6 +918,7 @@ public final class Villages {
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
         if (slot.trade() == AssistantEntity.StationTask.CAVE) t = CaveDwellers.team(total);   // [caves] two, three at sixty, four at a hundred
         if (slot.trade() == AssistantEntity.StationTask.FERRY) t = Ferries.wanted(villageId) ? 1.0 : 0.0;  // [transport] one ferryman
+        if (slot.trade() == AssistantEntity.StationTask.EMERALD) t = EmeraldTrader.traders(villageId);     // [emerald] one, two with several villages
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
             int producers = 0;
@@ -1766,6 +1773,8 @@ public final class Villages {
         TownLook.wanted(villageId, folk, at, extras, s -> built(villageId, s) < 1);
         // [library] A library for the town's books, once it is twelve strong (Library).
         if (Library.wanted(villageId, folk) && built(villageId, Library.STRUCTURE) < 1) extras.add(Library.STRUCTURE);
+        // [emerald] The Trading Post, once the town trades with the villagers (EmeraldTrader).
+        if (EmeraldTrader.postWanted(villageId)) extras.add(EmeraldTrader.POST);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -1926,6 +1935,7 @@ public final class Villages {
                     }
                     if (guest != null && p.distSqr(guest) <= 100) continue;
                     if (Inn.isInnBed(villageId, p)) continue;     // [batchE] the inn's rooms are the travellers', not a home
+                    if (VanillaVillages.within(level, p.getX(), p.getZ(), 0)) continue;   // [emerald] a villager's bed is the villagers'
                     // A bed buried in the ground (a ruin's, a vault's) is nobody's home and nobody sleeps
                     // in it (VillageFolkEntity.bedFit): counted, a mountain town of twenty-five thought
                     // it had four beds more than it had, and built and bought for four fewer.
@@ -2169,6 +2179,7 @@ public final class Villages {
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
             case "infirmary" -> Infirmary.why(villageId);          // [batchA]
             case "lodge" -> Lodge.why(villageId);                  // [caves]
+            case "tradingpost" -> EmeraldTrader.why(villageId);    // [emerald]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]
@@ -2789,6 +2800,9 @@ public final class Villages {
                 if (y != Integer.MIN_VALUE) ground = new BlockPos(v.centre().getX(), y, v.centre().getZ());
             }
             if (ground != null) site = new Site(ground, net.minecraft.core.Direction.NORTH, WALL_RADIUS);
+            // [emerald] No wall round a town whose ring would come within the margin of a village of villagers' ground.
+            if (site != null && VanillaVillages.meets(level, v.centre().getX() - WALL_RADIUS, v.centre().getZ() - WALL_RADIUS,
+                    v.centre().getX() + WALL_RADIUS, v.centre().getZ() + WALL_RADIUS, VanillaVillages.MARGIN)) site = null;
         } else if (project.equals("court")) {
             // The courtyard lies before the board, its back along the board's foot: no lot of its own.
             site = courtSite(level, villageId);
@@ -2831,6 +2845,9 @@ public final class Villages {
                 if (lotKeptOff(villageId, v.centre(), lot)) continue;
                 int x = v.centre().getX() + lot.x();
                 int z = v.centre().getZ() + lot.z();
+                // [emerald] Never on a village of villagers' ground, nor within its margin (VanillaVillages).
+                int lh = Math.max(lot.halfAcross(), lot.halfDeep());
+                if (VanillaVillages.meets(level, x - lh, z - lh, x + lh, z + lh, VanillaVillages.MARGIN)) continue;
                 if (bad.contains(BlockPos.asLong(x, 0, z))) continue;
                 // Too big for the lot (a hall on an ordinary lot): not this one.
                 if (half[0] > lot.halfAcross() || half[1] > lot.halfDeep()) continue;
