@@ -236,6 +236,7 @@ public final class Cafe {
         Workshop.tick(level, v);
         Stockroom.Made made = Stockroom.restock(level, v, Stockroom.Seller.SHOP, Workshop.wares(level, v.id()), hand);
         if (made != null) Workshop.made(level, v, hand, made);
+        if (made != null) Store.fromTheBench(level, v, made.out());        // [econ-store] made to sell: into the stockroom
         if (Workshop.isHand(hand)) return made != null ? name(made.out()) + " for the shop" : null;
         int set = dress(level, v, "shop");
         return made != null ? name(made.out()) + " for the shelves" : set > 0 ? "the shop counter set out" : null;
@@ -280,6 +281,7 @@ public final class Cafe {
     /** Set out every café (or shop) the village has, from its stores. Returns how many
      *  counters changed. */
     static int dress(ServerLevel level, Villages.Village v, String structure) {
+        if (structure.equals("shop") && StoreFloor.dresses(v.id())) return StoreFloor.dress(level, v);   // [econ-store]
         int changed = 0;
         for (Ledger.Building b : Ledger.buildings(v.id())) {
             if (!b.structure().equals(structure) || !level.isLoaded(b.anchor())) continue;

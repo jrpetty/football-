@@ -363,6 +363,8 @@ public final class VillageBoards {
         }
         String open = Cafe.openLine(level, id);
         if (open != null) out.add("RN|Open: " + open + ".");
+        String store = StockKeeper.boardLine(level, id);           // [econ-store] the shop's day: sold, out of, wanted
+        if (store != null) out.add("RN|" + store + ".");
         int content = Contentment.score(id);
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String alarm = Raids.why(id);

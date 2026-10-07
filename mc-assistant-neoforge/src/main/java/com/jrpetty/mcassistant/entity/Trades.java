@@ -567,7 +567,8 @@ public final class Trades {
     @Nullable
     public static BlockPos workstation(VillageFolkEntity f, ServerLevel level, Villages.Village v,
                                        Block block, Predicate<ItemStack> item, BuildGoal.Part part) {
-        String building = VillageFolkEntity.buildingFor(f.stationTask());
+        String building = f.stationTask() == StationTask.SHOP ? Store.buildingForShop(v.id())   // [econ-store]
+            : VillageFolkEntity.buildingFor(f.stationTask());
         Ledger.Building b = null;
         if (building != null) {
             for (Ledger.Building k : Ledger.buildings(v.id())) if (k.structure().equals(building)) { b = k; break; }

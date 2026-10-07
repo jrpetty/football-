@@ -4729,3 +4729,68 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+
+## The town store
+
+Once a town has a shop and folk buy for themselves there, the shop runs as a real business: it has stock of
+its own, it is kept stocked by deliveries and by its own crafters, and it has staff who each do a job.
+
+* **The store.** In the Iron Age, a town of forty (or a town of twenty-eight whose shop sells a hundred things
+  a week) builds a town store on one of the long lots by the square: eleven across and seventeen deep, two
+  storeys. On the shop floor six counters of casks, each with the thing it sells in a frame on top and a price
+  tag in front; behind a partition the **stockroom** (chests along the back, casks two high down the wall,
+  more chests) and the crafters' **workshop** (a crafting table, a furnace, a loom, a grindstone and an anvil);
+  up the stair the loft (more of the stockroom) and the **stock keeper's office**, its desk, the stock book on
+  a lectern and a shelf of books. The old shop keeps going as the store's branch: its counters still serve,
+  and its back room's chests are part of the same stock. Nothing is pulled down or wasted.
+* **Its own stock.** What the shop sells comes out of its stockroom and its counters, not straight out of
+  the village's stores. The chests and casks in the shop and the store are the shop's, not the stores'. If a
+  folk wants something the stockroom has run out of, the shop sends to the stores for it so nobody goes
+  without, but that is a **stock-out**: it goes in the stock keeper's book, and the stock keeper orders that
+  thing in.
+* **Deliveries.** Goods come into the stockroom as real deliveries. The storehouse's couriers carry them
+  between their own runs: so many of a thing packed at the storehouse, walked over and put away. A delivery
+  no courier takes, the stock keeper fetches itself. What the shop's crafters make to sell (for its
+  shelves, or on the stock keeper's order) goes straight into the stockroom. The town's own needs (the
+  watch's armour, the storehouse's tool rack, a player's order) still go to the stores. Food that has sat
+  more than four days' worth, and anything nobody has bought for four days, is carried back to the stores.
+* **The staff.** All of the shop's trade, each with a title on its card and its nameplate:
+  * the **shopkeeper** runs it and sets its prices with the stock keeper;
+  * the **shop assistants** stand behind the counters in working hours, one to a counter, and serve. A folk
+    buying comes to a counter and the assistant there hands it over and takes the coin, with a word on each
+    side;
+  * the **shop crafters** are the hands at the bench (the workshop's hands), making what sells;
+  * the **stock keeper** has the hardest job. Every morning it walks the stockroom and counts every ware: on
+    hand, sold, wanted and not there, and how many days' sales it has left. From each ware's rate of sale it
+    sets a reorder point and an order-up-to level, then orders, food first: from the storehouse if the stores
+    can spare it; else from the crafters, by way of the smelter if it wants firing; else it puts up a notice
+    that the store wants it (on the quest board, and in what the leader says the town is short of). After the
+    midday meal it looks at the food again. It chases the crafters when they are two days late, and is judged
+    by its stock-outs: its card says how many this week. A shop with no stock keeper only restocks what its
+    keeper notices has run out, a lot of each, four things a day at most.
+
+  The little shop takes on an assistant in a town of twenty-four and a stock keeper at thirty. The store wants
+  a stock keeper from the day it opens, and one assistant, two at fifty-five folk, three at eighty-five (or
+  two hundred and fifty sales a week), never more than its counters. They come first from the shop's own spare
+  hands, then from folk between trades. The stock keeper's job goes to someone experienced, hard-working and
+  curious; the counter to a cheerful, sociable face.
+* **The prices.** The shop asks what a thing costs in the town today plus its margin: a quarter at first,
+  raised a little when a thing sells out and lowered when it sits unsold three days (food never more than
+  thirty-five in the hundred over). Slow stock is still marked down, and never sold under what it cost. The
+  price tags on the counters show the shop's price. The coin goes to the treasury.
+* **Buying as a player.** Right-click a counter to buy a lot of what is on it (crouch to see the price), or
+  right-click the assistant behind it with village coin in your hand. The town's view of you still counts:
+  friends and citizens pay a tenth less, the unwelcome pay double, and an outcast is not served.
+* **Where you see it.** `/village stock` is the stock book: every ware on hand against its reorder point and
+  its level, its days of cover, what sold and ran out this week, its price and margin, the orders in flight
+  and where they went, what the store wants, the day's entries and the staff. The board says what the shop
+  sold yesterday and what it is out of; the gazette has a piece on the store; once a week the chronicle says
+  something like "the store sold 140 loaves of bread this week; out of iron pickaxes twice". Operators can run
+  the count now with `/village stock count`, or set a staffed, stocked store down with `/village stock stage`.
+
+The game tests `StoreGameTests` (sx01 to sx06) check the store's counters, stockroom, benches and desk, and
+when a town wants one; that a sale comes out of the stockroom and not the stores, and that a stock-out falls
+back on the stores and is booked; that a delivery moves real loaves from the storehouse into the stockroom;
+that a ware nobody has is ordered from the crafters and what they make goes into the stockroom; that a store
+is staffed with one keeper, a crafter, an assistant and a stock keeper; and that a folk buying at a counter is
+served there by its assistant. The unit test `BlueprintSoundnessTest` checks the store's drawing.

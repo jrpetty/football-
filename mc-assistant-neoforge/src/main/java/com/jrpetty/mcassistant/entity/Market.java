@@ -868,6 +868,10 @@ public final class Market {
         Villages.Village v = Villages.nearest(level, pos, 40);
         if (v == null) return;
         Player p = e.getEntity();
+        if (frame.getTags().contains(StoreFloor.FRAME_TAG)) {      // [econ-store] the shop's own counter (StoreFloor)
+            p.displayClientMessage(Component.literal(StoreFloor.playerBuys(level, v, p, frame.getItem(), pos)), true);
+            return;
+        }
         // A shop's counter sells; only the market's stalls buy what you bring.
         String said = frame.getTags().contains("mca_counter") ? buy(level, v, p, frame.getItem()) : deal(level, v, p, frame.getItem());
         p.displayClientMessage(Component.literal(said), true);

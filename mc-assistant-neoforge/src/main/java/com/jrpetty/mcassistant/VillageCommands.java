@@ -229,6 +229,8 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.PlayerStalls.command())
             // The shop's workshop (Workshop): its makers, its order book, the blueprints and the age's say; orders.
             .then(WorkshopCommands.node())
+            // [econ-store] The stock book: every ware's cover, its reorder point, the orders in flight, the stock-outs.
+            .then(StoreCommands.node())
             // The storehouse: its books for the day, its storekeeper and couriers, and its run list.
             .then(Commands.literal("stores").executes(ctx -> page(ctx, 5)))
             // The town's mine (TownMine): where it was opened, the faces worked out, who works which face and how deep.

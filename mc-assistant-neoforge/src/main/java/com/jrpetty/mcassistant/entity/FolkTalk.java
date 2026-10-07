@@ -275,8 +275,12 @@ public final class FolkTalk {
         String horses = Stables.doing(f);
         if (horses != null) return horses;
         if (f.offWorkNow()) return park != null ? "Off work: " + park.substring(0, 1).toLowerCase(Locale.ROOT) + park.substring(1) : "Off work";
+        String delivery = StoreDeliveries.doing(f);            // [econ-store] a delivery for the shop
+        if (delivery != null) return delivery;
         String run = Couriers.doing(f);
         if (run != null) return "For the storehouse: " + run;
+        String store = StoreStaff.doing(f);                     // [econ-store] at the counter, at the stock book
+        if (store != null) return store;
         String making = Workshop.doing(f);                      // at the shop's bench: "Making a stone sword for the shop"
         if (making != null) return making;
         return status.startsWith("Needs") ? status : "At work: " + f.stationTask().label;
@@ -299,7 +303,7 @@ public final class FolkTalk {
         AssistantEntity.StationTask job = f.stationTask();
         line(sb, "Trade", f.isBaby() ? "A child — no trade yet" : job == AssistantEntity.StationTask.NONE ? "Looking for one"
             : (Sweepers.appointed(f) ? "Street sweeper (a hauler of the storehouse)"
-                : Workshop.isHand(f) ? "Shop hand (at the shop's bench)" : job.title) + ", level " + f.veteranLevel()
+                : job == AssistantEntity.StationTask.SHOP ? StoreStaff.title(f) : job.title) + ", level " + f.veteranLevel()   // [econ-store]
                 + (f.isElder() ? " · the elder" : ""));
         // The storehouse's staff: the couriers work for it, under its storekeeper (Couriers).
         if (job == AssistantEntity.StationTask.HAUL && !f.isBaby() && f.ownerId() != null) {
@@ -310,6 +314,7 @@ public final class FolkTalk {
         } else if (job == AssistantEntity.StationTask.SHOP && !f.isBaby() && f.ownerId() != null) {
             // The shop's workshop (Workshop): its keeper and the hands at its bench, and what each is making.
             line(sb, Workshop.isHand(f) ? "Works for" : "Keeps", Workshop.staffLine(f));
+            line(sb, Store.stands(f.ownerId()) ? "At the store" : "At the shop", StoreStaff.cardLine(f));   // [econ-store] its job there
             String making = Workshop.making(f);
             if (making != null) line(sb, "Making", making);
         } else if (job == AssistantEntity.StationTask.STORE && !f.isBaby() && f.ownerId() != null) {

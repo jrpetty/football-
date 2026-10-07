@@ -994,6 +994,52 @@ def sights_stage(r, look, cx, cz):
     say("alive after the sights: %s" % client_alive())
 
 
+def store_stage(r, look, cx, cz):
+    """The town store (entity/Store, StockKeeper, StoreFloor): a store stood up beside the town if it has none
+    (its little shop too), staffed (a keeper, assistants behind the counters, a crafter, a stock keeper at the
+    desk) and stocked out of the stores by the stock keeper's count and its deliveries; the shop floor through
+    the door with the assistants at their counters, the stockroom's chests and casks, an assistant up close
+    behind its counter; and the stock book in chat (/village stock)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    out = r.cmd("execute positioned %d 100 %d run village stock stage" % (cx + 40, cz - 30))
+    say("store: " + out[:1200])
+    xyz = r"(-?\d+) (-?\d+) (-?\d+)"
+    s = re.search(r"STORE " + xyz, out)
+    if not s:
+        say("no store to photograph")
+        r.cmd("gamemode creative %s" % USER)
+        return
+    sx, sy, sz = (int(v) for v in s.groups())
+    r.cmd("tp %s %d %d %d" % (USER, sx + 12, sy + 8, sz + 12))
+    time.sleep(8)
+    d = re.search(r"DOOR " + xyz, out)
+    f = re.search(r"FLOOR " + xyz, out)
+    if d and f:
+        dx, dy, dz = (int(v) for v in d.groups())
+        fx, fy, fz = (int(v) for v in f.groups())
+        # Just inside the door, looking across the shop floor to the counters and the assistants behind them.
+        ox, oz = sx - dx, sz - dz
+        n = max(1.0, math.hypot(ox, oz))
+        look("24-store-1-shop-floor", dx + 0.5 + 1.5 * ox / n, dy + 2.2, dz + 0.5 + 1.5 * oz / n, fx + 0.5, fy + 1.0, fz + 0.5, wait=6)
+    else:
+        look("24-store-1-shop-floor", sx + 12, sy + 6, sz + 12, sx, sy + 2, sz, wait=6)
+    k = re.search(r"STOCKROOM " + xyz, out)
+    if k:
+        kx, ky, kz = (int(v) for v in k.groups())
+        # In the stockroom's aisle, looking at its chests and casks.
+        look("24-store-2-stockroom", kx + 0.5 + (sx - kx) * 0.6, ky + 1.7, kz + 0.5 + (sz - kz) * 0.6, kx + 0.5, ky + 0.5, kz + 0.5, wait=5)
+    a = re.search(r"STAFF Shop assistant (.+?): .*? " + xyz, out)
+    if a:
+        ax, ay, az = int(a.group(2)), int(a.group(3)), int(a.group(4))
+        look("24-store-3-assistant", ax + 2.5, ay + 1.7, az + 2.5, ax + 0.5, ay + 1.4, az + 0.5, wait=5)
+    say("stock book: " + r.cmd("execute positioned %d %d %d run village stock" % (sx, sy, sz))[:1500])
+    r.cmd("gamemode creative %s" % USER)
+    say("alive after the store: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
