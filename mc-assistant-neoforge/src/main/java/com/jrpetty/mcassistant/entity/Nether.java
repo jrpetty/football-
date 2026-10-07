@@ -84,9 +84,15 @@ public final class Nether {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby()) continue;
             if (guard == null && f.stationTask() == AssistantEntity.StationTask.GUARD) { guard = f; party.add(f.getUUID()); }
         }
+        // [individual] One who dreams of the Nether volunteers first; one afraid of it never goes (Dreams, Fears).
         for (AssistantEntity a : Villages.folkOf(id)) {
             if (party.size() >= 3) break;
-            if (a instanceof VillageFolkEntity f && !f.isBaby() && f.stationTask() == AssistantEntity.StationTask.MINE) party.add(f.getUUID());
+            if (a instanceof VillageFolkEntity f && Dreams.volunteersForNether(f) && !party.contains(f.getUUID())) party.add(f.getUUID());
+        }
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (party.size() >= 3) break;
+            if (a instanceof VillageFolkEntity f && !f.isBaby() && f.stationTask() == AssistantEntity.StationTask.MINE
+                    && !Fears.staysThisSide(f) && !party.contains(f.getUUID())) party.add(f.getUUID());
         }
         if (party.size() < 2) return;
         // Not without provisions: four of food a head out of the stores, and a torch or two.
@@ -121,6 +127,7 @@ public final class Nether {
             if (f.countMatching(s -> s.getItem() instanceof net.minecraft.world.item.SwordItem || s.getItem() instanceof net.minecraft.world.item.BowItem) > 0) armed = true;
             if (f.countMatching(s -> s.getItem() instanceof net.minecraft.world.item.PickaxeItem) > 0) picks = true;
             for (int i = 0; i < 12; i++) f.damageHeldTool();
+            f.individual().beenNether = true;                   // [individual] been through and back: a dream, a friend's courage
         }
         List<ItemStack> haul = new ArrayList<>();
         if (armed) haul.add(new ItemStack(Items.BLAZE_ROD, 1 + r.nextInt(2 + size)));

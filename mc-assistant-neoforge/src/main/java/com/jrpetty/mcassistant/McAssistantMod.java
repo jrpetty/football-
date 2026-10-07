@@ -362,6 +362,7 @@ public final class McAssistantMod {
         BLOCK_ENTITIES.register(modBus);
         RECIPE_SERIALIZERS.register(modBus);                          // [arms] the tabard given a banner's arms
         com.jrpetty.mcassistant.item.CivicItems.register(modBus);      // [player-civic] the masters' goods, and their recipes
+        com.jrpetty.mcassistant.item.IndividualItems.register(modBus); // [individual] spectacles
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);
@@ -376,6 +377,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(VillagerTakeover.class);
         NeoForge.EVENT_BUS.register(VillageCommands.class);
         NeoForge.EVENT_BUS.register(WarFootingCommands.class);        // [war-prep] /village war footing
+        NeoForge.EVENT_BUS.register(IndividualCommands.class);        // [individual] /village individual
         NeoForge.EVENT_BUS.register(SessionReset.class);
         NeoForge.EVENT_BUS.register(ChunkLoad.class);
         NeoForge.EVENT_BUS.register(StallWatch.class);

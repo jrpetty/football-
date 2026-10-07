@@ -261,6 +261,7 @@ public final class TownBell {
             if (f.isOld()) score -= 15;
             if (f.isSleeping()) score -= 10;
             score -= Math.sqrt(f.blockPosition().distSqr(at)) / 4.0;
+            score -= Fears.bellPenalty(f, v.id());              // [individual] nobody afraid of heights up the bell tower
             if (score > bestScore) { bestScore = score; best = f; }
         }
         d.ringer = best == null ? null : best.getUUID();

@@ -87,7 +87,7 @@ public final class Tavern {
         Ledger.Building tav = of(village);
         if (tav == null || f.isBaby() || !(f.level() instanceof ServerLevel level) || !level.isLoaded(tav.anchor())) return false;
         long day = level.getDayTime() / 24000L;
-        if (!goingTonight(f, day) && !Bard.playing(level, village)
+        if (!goingTonight(f, day) && !Habits.regular(f) && !Bard.playing(level, village)   // [individual] a regular: every evening
                 && !Buskers.tavernTonight(level, village)) return false;   // [batchG] a bard in: the whole town comes; [arms] or its busker
         Direction back = tav.facing(), right = back.getClockWise();
         int h = f.getUUID().hashCode();
