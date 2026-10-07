@@ -193,12 +193,15 @@ public class NetherRunnerGameTests {
         NetherOutpost.Room room = outpost ? NetherOutpost.stampForTests(nether, t.village(), portal, home.getDayTime() / 24000L) : null;
         // The fortress the runs make for, in the pocket (the server's own may be anywhere, past a sea of lava).
         NetherWork.fortressForTests(portal.offset(-6, 0, -12));
+        // Its look round kept inside the pocket: the server's own Nether past the walls is different on every machine.
+        NetherWork.boundsForTests(new net.minecraft.world.level.levelgen.structure.BoundingBox(nx - 19, NY - 3, nz - 19, nx + 19, NY + 9, nz + 19));
         if (outpost) helper.assertTrue(room != null && NetherOutpost.built(t.village()), "the outpost stands round the portal on the far side");
         return new Pocket(nether, portal, nx, nz, room);
     }
 
     /** The pocket's ground let go again. */
     static void release(Pocket p) {
+        NetherWork.boundsForTests(null);
         for (int cx = (p.nx() - 24) >> 4; cx <= (p.nx() + 24) >> 4; cx++) {
             for (int cz = (p.nz() - 24) >> 4; cz <= (p.nz() + 24) >> 4; cz++) p.nether().setChunkForced(cx, cz, false);
         }
@@ -286,10 +289,13 @@ public class NetherRunnerGameTests {
         StringBuilder sb = new StringBuilder(test + " tick " + level.getGameTime() + ": ");
         sb.append(r == null ? "no run" : r.phaseWords() + (r.task() != null ? " (" + r.task().words() + ")" : "") + ", mined " + r.mined() + ", blazes "
             + r.blazes() + ", barters " + r.barters() + ", haul " + r.haul());
+        if (r != null && r.task() != null && r.task().at() != null) sb.append(" at ").append(r.task().at().toShortString());
         for (UUID u : team) {
             VillageFolkEntity f = find(level, u);
             sb.append("; ").append(f == null ? "gone" : f.displayNameCap() + " in " + f.level().dimension().location().getPath() + " at "
-                + f.blockPosition().toShortString() + " " + f.hobbyNow() + " (" + (int) f.getHealth() + " hp)");
+                + f.blockPosition().toShortString() + " " + f.hobbyNow() + " (" + (int) f.getHealth() + " hp"
+                + (f.getLastDamageSource() != null ? ", hurt by " + f.getLastDamageSource().getMsgId() : "")
+                + (f.hasEffect(net.minecraft.world.effect.MobEffects.FIRE_RESISTANCE) ? ", fire resistant" : "") + ")");
         }
         Kit.log(sb.toString());
     }
@@ -356,7 +362,10 @@ public class NetherRunnerGameTests {
             if (s == StationTask.NONE || s == StationTask.NETHER) continue;
             helper.assertTrue(JobWorth.postFor(s, null).difficulty() <= hardest, "the runs as hard and skilled as anything: " + s);
         }
-        helper.assertTrue(ace.getMaxHealth() >= t.folk().get(1).getMaxHealth(), "a runner as hardy as the watch");
+        // The watch's health is twice a plain folk's (more for a sturdy one, or a loyal one); a runner keeps the doubling.
+        Kit.log("nr01 health: the runner " + ace.getMaxHealth() + ", a guard " + t.folk().get(1).getMaxHealth() + ", the farmer " + farmer.getMaxHealth());
+        helper.assertTrue(ace.getMaxHealth() >= 40.0F, "a runner as hardy as the watch: "
+            + ace.getMaxHealth());
         helper.succeed();
     }
 
@@ -424,15 +433,26 @@ public class NetherRunnerGameTests {
         helper.assertTrue(has(a, s -> s.is(Items.FLINT_AND_STEEL)) == 1, "the leader's flint and steel");
         helper.assertTrue(stock(level, id, Items.IRON_HELMET) == 2, "the helmets back in the stores for the charm");
         // The piglins: one by the runner in gold, one by a farmer with none.
-        BlockPos p1 = t.heart().east(20), p2 = t.heart().east(20).south(12);
+        // Out past the town's folk, out of each other's hearing (a piglin tells the others within sixteen blocks whom it is
+        // angry at), and out of earshot of each other's folk (a folk set on calls the others within thirty-two to help, and
+        // the runner would come to the farmer's and strike its piglin).
+        BlockPos p1 = t.heart().east(30).north(18), p2 = t.heart().east(30).south(18);
         a.moveTo(p1.getX() + 3.5, p1.getY(), p1.getZ() + 0.5, 90.0F, 0.0F);
         farmer.moveTo(p2.getX() + 3.5, p2.getY(), p2.getZ() + 0.5, 90.0F, 0.0F);
-        farmer.setInvulnerable(true);                                      // struck, not killed: the piglin's anger is what is looked at
+        // Struck, not killed: the piglin's anger is what is looked at. Not made invulnerable: a piglin gives up its anger at
+        // what it cannot hurt (the game's own "no valid target"); Resistance V takes every blow instead.
+        farmer.addEffect(new net.minecraft.world.effect.MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 600, 4));
         Piglin near = piglin(level, p1), other = piglin(level, p2);
         final int[] phase = { 0 };
         final long[] at = { helper.getTick() };
+        // Watched every tick for the two seconds after: the farmer, once struck, runs, and a piglin lets go of its anger
+        // at what has run out of its reach, so what it did is looked at as it did it.
+        final boolean[] turned = { false, false };
         helper.onEachTick(() -> {
             if (phase[0] == 0 && helper.getTick() - at[0] >= 10) {
+                Kit.log("nr02 the piglins: by the runner at " + near.blockPosition().toShortString() + " (sees it " + near.hasLineOfSight(a) + ", the runner at "
+                    + a.blockPosition().toShortString() + "), by the farmer at " + other.blockPosition().toShortString() + " (sees it " + other.hasLineOfSight(farmer)
+                    + ", the farmer at " + farmer.blockPosition().toShortString() + ", in gold " + NetherRunners.wearsGold(farmer) + ")");
                 NetherWork.mannersForTests(level, a);
                 NetherWork.mannersForTests(level, farmer);
                 phase[0] = 1;
@@ -451,6 +471,10 @@ public class NetherRunnerGameTests {
                 level.addFreshEntity(plain);
                 return;
             }
+            if (phase[0] == 1) {
+                if (near.getBrain().getMemory(MemoryModuleType.ANGRY_AT).filter(a.getUUID()::equals).isPresent() || near.getTarget() == a) turned[0] = true;
+                if (other.getBrain().getMemory(MemoryModuleType.ANGRY_AT).filter(farmer.getUUID()::equals).isPresent()) turned[1] = true;
+            }
             if (phase[0] != 1 || helper.getTick() - at[0] < 40) return;
             phase[0] = 2;
             var angryNear = near.getBrain().getMemory(MemoryModuleType.ANGRY_AT);
@@ -462,13 +486,13 @@ public class NetherRunnerGameTests {
             RunnersSatchelItem.pack(test, new ItemStack(Items.GLOWSTONE_DUST, 30));
             int in = RunnersSatchelItem.count(test);
             List<ItemStack> out = RunnersSatchelItem.unpack(test);
-            Kit.log("nr02 the piglin by the runner in gold: angry at " + angryNear + ", target " + near.getTarget() + "; by the farmer: angry at " + angryOther
+            Kit.log("nr02 the piglin by the runner in gold: turned on it " + turned[0] + ", angry at " + angryNear + ", target " + near.getTarget() + "; by the farmer: turned on it " + turned[1] + ", angry at " + angryOther
                 + ", target " + (other.getTarget() == null ? "none" : other.getTarget().getName().getString()) + "; satchel in the lava " + (satchelLives ? "whole" : "burnt")
                 + ", the leather " + (leatherLives ? "whole" : "burnt") + "; satchel took " + in + ", gave back " + out);
             near.discard();
             other.discard();
-            helper.assertTrue(angryNear.isEmpty() && near.getTarget() != a, "a piglin leaves the runner in gold alone");
-            helper.assertTrue(angryOther.isPresent() && angryOther.get().equals(farmer.getUUID()), "and turns on a folk with no gold on");
+            helper.assertTrue(!turned[0] && near.getTarget() != a, "a piglin leaves the runner in gold alone");
+            helper.assertTrue(turned[1], "and turns on a folk with no gold on");
             helper.assertTrue(left.isEmpty() && in == 94 && out.size() == 2 && RunnersSatchelItem.count(test) == 0, "the satchel takes the haul and gives it back");
             helper.assertTrue(satchelLives && !leatherLives, "a satchel in the lava floats there whole, where leather burns");
             helper.succeed();
@@ -600,21 +624,27 @@ public class NetherRunnerGameTests {
         NetherRuns.Run r = NetherRuns.sendForTests(level, t.v());
         helper.assertTrue(r != null && r.members().size() == 2, "the two set out");
         Kit.log("nr04 plan: " + r.planWords());
-        // One runner's pack all but full (stone it was carrying home anyway): the haul goes into its satchel.
-        VillageFolkEntity full = find(level, ub);
-        int free = 0;
-        for (int i = 0; i < full.getInventoryItems().size(); i++) if (full.getInventoryItems().get(i).isEmpty()) free++;
-        for (int i = 0; i < free - 2; i++) full.insertItem(new ItemStack(Items.STONE, 64));
         final int[] phase = { 0 };
         final int[] satchelMost = { 0 };
         final long[] since = { -1 };
         final List<Blaze> blazes = new ArrayList<>();
         helper.onEachTick(() -> {
             if (helper.getTick() % 200 == 0) log("nr04", level, r, ua, ub);
-            VillageFolkEntity fb = find(level, ub);
-            if (fb != null) for (ItemStack s : fb.getInventoryItems()) if (s.getItem() instanceof RunnersSatchelItem) satchelMost[0] = Math.max(satchelMost[0], RunnersSatchelItem.count(s));
+            for (UUID u : new UUID[]{ ua, ub }) {
+                VillageFolkEntity fb = find(level, u);
+                if (fb != null) for (ItemStack s : fb.getInventoryItems()) if (s.getItem() instanceof RunnersSatchelItem) satchelMost[0] = Math.max(satchelMost[0], RunnersSatchelItem.count(s));
+            }
             if (phase[0] == 0) {
                 if (r.phase() != NetherRuns.Run.Phase.WORK) return;
+                // Both packs full now (stone they were carrying home anyway: every empty place in them): what either digs
+                // goes into its satchel.
+                for (UUID u : new UUID[]{ ua, ub }) {
+                    VillageFolkEntity full = find(level, u);
+                    if (full == null) continue;
+                    for (int i = 0; i < full.getInventoryItems().size(); i++) {
+                        if (full.getInventoryItems().get(i).isEmpty()) full.getInventoryItems().set(i, new ItemStack(Items.STONE, 64));
+                    }
+                }
                 // At work on the far side: the blazes come, by the fortress.
                 for (int i = 0; i < 3; i++) {
                     Blaze bl = EntityType.BLAZE.create(nether);
@@ -748,6 +778,9 @@ public class NetherRunnerGameTests {
         Ledger.built(id, "brewery", at, Direction.NORTH);
         Villages.builtAtForTests(id, "brewery", at);
         int slime0 = stock(level, id, Items.SLIME_BALL);
+        // A town of three wants no runner of its own (one from twenty), so in time it puts this one to other work: the
+        // potions kept for the runners are reckoned now, while it is one.
+        int kept = NetherHome.fireResistanceKept(id);
         final int[] phase = { 0 };
         final long[] mark = { helper.getTick() };
         final int[] wartAtHarvest = { 0 };
@@ -789,11 +822,13 @@ public class NetherRunnerGameTests {
             }
             int fire = Market.stock(level, id, NetherPlanAccess::fireResistance);
             if (fire < 3 && helper.getTick() - mark[0] < 2400) return;
+            Kit.log("nr06 the runner: " + runner.stationTask() + ", alive " + runner.isAlive() + ", runners " + NetherRunners.runners(id).size()
+                + ", in " + runner.level().dimension().location().getPath());
             Kit.log("nr06 fire resistance in the stores: " + fire + "; slime balls " + slime0 + " -> " + stock(level, id, Items.SLIME_BALL) + "; blaze rods "
                 + stock(level, id, Items.BLAZE_ROD) + ", powder " + stock(level, id, Items.BLAZE_POWDER) + "; kept " + NetherHome.fireResistanceKept(id));
             helper.assertTrue(fire >= 3, "three potions of fire resistance brewed for the runners");
             helper.assertTrue(stock(level, id, Items.SLIME_BALL) == slime0 - 1, "a magma cream made of a slime ball and the runners' blaze powder");
-            helper.assertTrue(NetherHome.fireResistanceKept(id) >= 4, "two a runner kept, and a rescue's");
+            helper.assertTrue(kept == 4, "two a runner kept, and a rescue's: " + kept);
             helper.succeed();
         });
     }
@@ -981,6 +1016,14 @@ public class NetherRunnerGameTests {
                     helper.assertTrue(homeAgain(level, ua), "the leader home");
                     // The rescue, the next morning: the runner home and two of the watch.
                     NetherRuns.forgetWentForTests();
+                    // A town of five has more watch than it needs and in time puts a guard to the mine: the two are
+                    // the watch again tonight, as a town big enough for runners keeps them.
+                    for (int i = 2; i <= 3; i++) if (t.folk().get(i).stationTask() != StationTask.GUARD) t.folk().get(i).setJob(StationTask.GUARD);
+                    for (int i = 2; i <= 3; i++) {
+                        VillageFolkEntity g = t.folk().get(i);
+                        Kit.log("nr09 the watch: " + g.displayNameCap() + " " + g.stationTask() + ", " + g.getHealth() + "/" + g.getMaxHealth() + " hp, on watch "
+                            + g.onWatch() + ", sleeping " + g.isSleeping());
+                    }
                     rescue[0] = NetherRuns.sendForTests(level, t.v());
                     helper.assertTrue(rescue[0] != null && rescue[0].rescue() && rescue[0].members().size() >= 3,
                         "a rescue party through the gateway, the watch with it: " + (rescue[0] == null ? "none" : rescue[0].members().size()));

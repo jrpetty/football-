@@ -9774,8 +9774,9 @@ against what it keeps of each:
 A player's ask comes first. The work is reckoned at so long a piece, the walk through the gateway and out to the work
 and back added (the fortress's path twice when it goes there), a first run's outpost added, over a working day:
 half a day at the least, three at the most, a day more when the brewer is out of wart with no farm or the town is out of
-fire resistance. Then it is cut to what the town can spare: two meals a runner a day and one over, thirty-two arrows a
-runner a day, two potions of fire resistance a runner a day (without them no blazes), and the cobblestone. No food, or
+fire resistance. Then it is cut to what the town can spare: two meals a runner a day and one over, a stack of arrows a
+runner a day (a blaze takes five or six that hit, and a folk's bow misses as often), two potions of fire resistance a
+runner a day (without them no blazes), and the cobblestone. No food, or
 no cobblestone for a first outpost, and nobody goes; the board says why. The plan and its reckoning are on the Nether
 page.
 
@@ -9794,9 +9795,13 @@ it is finished on the next run. Every run after looks it over and makes good wha
 hurt runner falls back to, and where the team sleeps on a run of more than a day: in at dusk, the door shut, one on watch
 by turns, out at first light.
 
-**The work.** The leader picks the next thing by the plan, from what it can see (a look round every two seconds): the
-nearest quartz, glowstone, ripe wart or soul sand; a blaze, or a blaze spawner; a piglin to barter with. The others take
-a share of the same work beside it, or keep watch. With nothing of the plan in sight it goes on toward the fortress,
+**The work.** What moves comes first: a blaze in sight is shot down before anything is dug (any blaze that has one of
+the team for its target, whatever the plan), and a piglin about is bartered with while it is there when the plan wants a
+barter; the leader looks up from its digging for them every second. Then the next thing by the plan, from what it can
+see (a look round every two seconds): the nearest quartz, glowstone, ripe wart or soul sand, or a blaze spawner. A block
+it cannot get at in a minute is left for another run. The others take a share of the same work beside it, or keep
+watch; their arrows pass by one of their own town (or the player along) to the blaze beyond. Turned for home, the team
+walks on under fire: only what comes within eight blocks is fought. With nothing of the plan in sight it goes on toward the fortress,
 when the plan wants wart, rods or soul sand: the fortress the runners know of, or the nearest one the lie of the land
 puts within sixteen chunks of the outpost (noted in the report). Where there is no walking there, the way is cut a block
 at a time, as a player does it: the netherrack ahead cut out, the lava beside the way walled off first, a floor of
@@ -9870,7 +9875,8 @@ same way as the fortress's) would join the two portals: an eighth of the overlan
 * *"Can I come through with you?"* (add *"for a share"*): you are booked for the next run. Be at the gateway in the
   morning: the team waits a while for you there, and on the far side for you to come through after it, and waits for you
   as for one of the team. What comes home goes to the town, or with a share agreed, an equal share is kept for you at the
-  storehouse and handed over the next time you ask a runner (*"Is my share ready?"*).
+  storehouse and handed over the next time you ask for it (*"Is my share ready?"*), of a runner or of anybody of the
+  town (the runner you went with may be back at the mine by then).
 * *"Sell me a copy of your chart"*: eight coins for a map of the Nether round the outpost with the runners' finds
   marked (it fills in as you walk it) and, out of the stores' books, the chart's book: each find, where it lies in the
   Nether, and over it at home.

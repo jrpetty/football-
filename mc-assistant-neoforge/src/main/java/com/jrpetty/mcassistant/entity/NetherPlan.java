@@ -39,8 +39,8 @@ import java.util.UUID;
  * blazes to a rod; a barter six seconds and the walk), plus the walk through the gateway and out to the work and back
  * (three blocks a second, the fortress's path twice), over ten hours of a working day, to the half day; half a day at
  * the least, three days at the most; a day more when the brewer is out of wart with no farm, or out of fire
- * resistance. Then cut to what the town can spare: two meals a runner a day and a day over, thirty-two arrows a runner
- * a day out, two potions of fire resistance a runner a day (a run without them is kept to the outpost's doorstep: no
+ * resistance. Then cut to what the town can spare: two meals a runner a day and a day over, a stack of arrows a runner a
+ * day out (a blaze takes five or six that hit, and a folk's bow misses as often; the rods are what the runs are for), two potions of fire resistance a runner a day (a run without them is kept to the outpost's doorstep: no
  * blazes), and the cobblestone to wall and bridge with.
  */
 public final class NetherPlan {
@@ -50,7 +50,7 @@ public final class NetherPlan {
     /** A working day of daylight, in ticks; the shortest and the longest run, in days. */
     static final double DAYLIGHT = 10000.0, SHORTEST = 0.5, LONGEST = 3.0;
     /** Meals, arrows and fire resistance a runner a day; cobblestone a runner for bridging, and the outpost's. */
-    static final int MEALS = 2, ARROWS = 32, POTIONS = 2, COBBLE = 32, OUTPOST_COBBLE = 128;
+    static final int MEALS = 2, ARROWS = 64, POTIONS = 2, COBBLE = 32, OUTPOST_COBBLE = 128;
     /** Gold the town keeps whatever the runners want to barter with; the most they take on one run. */
     static final int GOLD_KEPT = 8, GOLD_MOST = 16;
 

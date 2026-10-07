@@ -3326,11 +3326,24 @@ def nether_stage(r, look, cx, cz):
         say("nothing staged for the Nether runners; nothing to photograph")
         return
 
-    def shoot(views, name, picture, wait):
+    def shoot(views, name, picture, wait, nether=False):
         if name not in views:
             return
         x, y, z, ax, ay, az = views[name]
-        look("34-nether-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+        if not nether:
+            look("34-nether-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+            return
+        # The far side's camera: a plain "tp" from the console lands in the console's world (the Overworld, at the
+        # same numbers: a hillside), so every move of it is made "in the_nether", with look()'s own angles.
+        x, y, z, tx, ty, tz = x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5
+        dx, dz = tx - x, tz - z
+        yaw = math.degrees(math.atan2(-dx, dz))
+        pitch = -math.degrees(math.atan2(ty - (y + 1.62), math.hypot(dx, dz)))
+        out = r.cmd("execute in minecraft:the_nether run tp %s %.2f %.2f %.2f %.1f %.1f" % (USER, x, y, z, yaw, pitch))
+        dim = r.cmd("execute as %s run data get entity @s Dimension" % USER)
+        say("nether camera %s: %s; %s" % (picture, out[:120], dim[:120]))
+        time.sleep(wait)
+        shot("34-nether-" + picture)
 
     shoot(home, "nether-1-gateway", "1-gateway", 8)
     shoot(home, "nether-5-wart-farm", "6-wart-farm", 5)
@@ -3338,11 +3351,11 @@ def nether_stage(r, look, cx, cz):
         # Into the Nether for the far side's pictures (a spectator, so the heat does nothing), and home again after.
         x, y, z = far["nether-2-outpost"][:3] if "nether-2-outpost" in far else list(far.values())[0][:3]
         say("into the Nether: " + r.cmd("execute in minecraft:the_nether run tp %s %d %d %d" % (USER, x, y, z))[:200])
-        time.sleep(10)                                 # the far side arrives at the client
-        shoot(far, "nether-2-outpost", "2-outpost", 8)
-        shoot(far, "nether-3-quartz-wall", "3-quartz-wall", 6)
-        shoot(far, "nether-4-barter", "4-barter", 6)
-        shoot(far, "nether-5-blaze", "5-blaze", 6)
+        time.sleep(12)                                 # the far side (a whole dimension) arrives at the client
+        shoot(far, "nether-2-outpost", "2-outpost", 8, nether=True)
+        shoot(far, "nether-3-quartz-wall", "3-quartz-wall", 6, nether=True)
+        shoot(far, "nether-4-barter", "4-barter", 6, nether=True)
+        shoot(far, "nether-5-blaze", "5-blaze", 6, nether=True)
         say("home again: " + r.cmd("execute in minecraft:overworld run tp %s %d %d %d" % (USER, cx, hy + 20, cz))[:200])
         time.sleep(8)
     say("nether: " + r.cmd("execute positioned %d %d %d run village nether" % (cx, hy + 1, cz))[:1400])

@@ -121,6 +121,10 @@ public final class NetherWork {
 
     /** The leader's look round: how far each way, how often; how far from the outpost the work goes (but the fortress). */
     static final int SCAN = 14, SCAN_DOWN = 6, SCAN_UP = 12, FROM_OUTPOST = 64;
+    /** Homeward, how close a foe has to come to be fought (the rest are walked on from). */
+    static final double HOMEWARD_FIGHT = 8.0;
+    /** A block the leader has not got at in this long (a minute) is left for another time. */
+    static final long GIVE_UP = 1200L;
     static final long SCAN_EVERY = 40;
     /** How high a ceiling the runners pillar up to (glowstone); how many looks about before there is nothing left. */
     static final int PILLAR_MOST = 9, LOOKS = 8;
@@ -148,12 +152,19 @@ public final class NetherWork {
     /** Tests: digging done quickly; the fortress where the test built it (found without looking). */
     private static boolean quick;
     @Nullable private static BlockPos fortressForTests;
+    /** Tests: the leader's look round kept inside the test's pocket (the server's own Nether past its walls varies). */
+    @Nullable private static net.minecraft.world.level.levelgen.structure.BoundingBox boundsForTests;
 
     public static void resetForTests() {
         SCANS.clear();
         PICKUP.clear();
         quick = false;
         fortressForTests = null;
+        boundsForTests = null;
+    }
+
+    public static void boundsForTests(@Nullable net.minecraft.world.level.levelgen.structure.BoundingBox box) {
+        boundsForTests = box;
     }
 
     public static void quickForTests(boolean on) {
@@ -483,7 +494,7 @@ public final class NetherWork {
             for (int dz = -SCAN; dz <= SCAN; dz++) {
                 for (int dy = -SCAN_DOWN; dy <= SCAN_UP; dy++) {
                     q.set(c.getX() + dx, c.getY() + dy, c.getZ() + dz);
-                    if (!level.isLoaded(q)) continue;
+                    if (!level.isLoaded(q) || boundsForTests != null && !boundsForTests.isInside(q)) continue;
                     BlockState st = level.getBlockState(q);
                     if (st.isAir()) continue;
                     if (st.is(Blocks.LAVA)) {
@@ -650,6 +661,14 @@ public final class NetherWork {
                 FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Good trading. On.", "That's that piglin's best. On we go."));
             }
         }
+        if (r.task != null && r.task.job != Job.BLAZE && r.task.job != Job.BARTER && r.task.job != Job.HUNT
+                && level.getGameTime() % 20 < NetherRuns.STEP) {
+            Task moving = mobFirst(level, f, r, level.getGameTime());
+            if (moving != null) {
+                if (r.task.at != null) scanOf(r).claims.remove(r.task.at.asLong());
+                r.task = moving;
+            }
+        }
         if (r.task == null) r.task = next(level, f, r, leg);
         if (r.task == null) return;
         work(level, f, r, leg, r.task, true);
@@ -658,7 +677,10 @@ public final class NetherWork {
     /** Is the work in hand still there to do? */
     static boolean valid(ServerLevel level, VillageFolkEntity f, NetherRuns.Run r, Task t) {
         long now = level.getGameTime();
-        if (now - t.since > 2400 && t.job != Job.WAY && t.job != Job.BLAZE) return false;     // two minutes at one thing: on
+        if (now - t.since > 2400 && t.job != Job.WAY && t.job != Job.BLAZE) {                 // two minutes at one thing: on
+            if (t.at != null && t.job.block()) r.passed.add(t.at.asLong());                     // and not straight back to it
+            return false;
+        }
         return switch (t.job) {
             case QUARTZ, GLOWSTONE, GOLD, DEBRIS, SOUL, WART -> t.at != null && !r.passed.contains(t.at.asLong()) && jobOf(level.getBlockState(t.at)) == t.job;
             case BLAZE -> now - t.since < 6000 && f.countMatching(s -> s.is(Items.ARROW)) > 0
@@ -691,24 +713,17 @@ public final class NetherWork {
             }
         }
         boolean piglinsNear = nearest(level, f, Piglin.class, 16, x -> x.isAlive()) != null;
+        // What moves comes first: a blaze in sight is shot before anything is dug (it will not wait, and it shoots back),
+        // and a piglin about is bartered with while it is here (the quartz will keep).
+        Task moving = mobFirst(level, f, r, now);
+        if (moving != null) return moving;
         for (Job j : jobs(r)) {
             switch (j) {
                 case BLAZE -> {
                     if (f.countMatching(s2 -> s2.is(Items.ARROW)) < 4) continue;
-                    Blaze b = nearest(level, f, Blaze.class, 24, x -> x.isAlive() && f.hasLineOfSight(x));
-                    if (b != null) return new Task(Job.BLAZE, b.blockPosition(), b.getUUID(), now);
                     if (s.spawner != null) return new Task(Job.BLAZE, s.spawner, null, now);
                 }
-                case BARTER -> {
-                    if (teamGold(level, r) <= 0 || !NetherRunners.wearsGold(f)) continue;
-                    Piglin p = nearest(level, f, Piglin.class, 24, x -> x.isAlive() && !x.isBaby() && x.getOffhandItem().isEmpty()
-                        && !barteredOut(r, x.getUUID()));
-                    if (p != null) {
-                        FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "A piglin. Stand back, all of you, and let me do the trading.",
-                            "Gold out. Slowly — they're touchy."));
-                        return new Task(Job.BARTER, p.blockPosition(), p.getUUID(), now);
-                    }
-                }
+                case BARTER -> { }
                 default -> {
                     if (!j.block()) continue;
                     if (j == Job.DEBRIS && !CaveDwellers.bestPick(f).isCorrectToolForDrops(Blocks.ANCIENT_DEBRIS.defaultBlockState())) continue;
@@ -748,6 +763,35 @@ public final class NetherWork {
                 if (look == null) continue;
                 s.look = look;
                 return new Task(Job.LOOK, look, null, now);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The work that will not wait, if there is any: a blaze in sight and in reach of the bow (any blaze at all that has
+     * one of the team for its target, whatever the plan; else one the plan wants rods of), or a piglin to barter with
+     * when the plan wants a barter and the leader wears gold and the team has an ingot. Null if there is none.
+     */
+    @Nullable
+    static Task mobFirst(ServerLevel level, VillageFolkEntity f, NetherRuns.Run r, long now) {
+        List<Job> plan = jobs(r);
+        if (f.countMatching(s -> s.is(Items.ARROW)) >= 4) {
+            Blaze b = nearest(level, f, Blaze.class, 24, x -> x.isAlive() && f.hasLineOfSight(x)
+                && (plan.contains(Job.BLAZE) || x.getTarget() instanceof VillageFolkEntity m && r.members.contains(m.getUUID())));
+            if (b != null) {
+                if (r.task == null || r.task.job != Job.BLAZE) FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Blaze! Bows, everybody, and stand off.",
+                    "A blaze — potions if you've not had one, and shoot."));
+                return new Task(Job.BLAZE, null, b.getUUID(), now);   // the blaze, not a place: done when it is down
+            }
+        }
+        if (plan.contains(Job.BARTER) && teamGold(level, r) > 0 && NetherRunners.wearsGold(f)) {
+            Piglin p = nearest(level, f, Piglin.class, 24, x -> x.isAlive() && !x.isBaby() && x.getOffhandItem().isEmpty()
+                && !barteredOut(r, x.getUUID()));
+            if (p != null) {
+                FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "A piglin. Stand back, all of you, and let me do the trading.",
+                    "Gold out. Slowly — they're touchy."));
+                return new Task(Job.BARTER, p.blockPosition(), p.getUUID(), now);
             }
         }
         return null;
@@ -869,6 +913,14 @@ public final class NetherWork {
             return;
         }
         long now = level.getGameTime();
+        if (now - t.since > GIVE_UP && t.done == 0 && (leg.digging == null || !leg.digging.equals(b) || leg.dug == 0)) {
+            // A minute and no nearer to having it out (no way to it, or none worth cutting): left for another time.
+            r.passed.add(b.asLong());
+            s.claims.remove(b.asLong());
+            leg.digging = null;
+            if (leading) r.task = null;
+            return;
+        }
         if (dig(level, f, r, leg, b)) {
             s.claims.remove(b.asLong());
             t.done++;
@@ -892,7 +944,10 @@ public final class NetherWork {
         if (b == null) return;
         if (f.getEyePosition().distanceToSqr(Vec3.atCenterOf(b)) > 4.5 * 4.5) {
             BlockPos stand = CaveDwellers.standBy(level, f, b);
-            if (!makeFor(level, f, r, leg, stand != null ? stand : b, 1.0D)) r.passed.add(b.asLong());
+            if (!makeFor(level, f, r, leg, stand != null ? stand : b, 1.0D) || level.getGameTime() - t.since > GIVE_UP) {
+                r.passed.add(b.asLong());                                   // no way to it, or a minute and not there: left
+                if (r.task == t) r.task = null;
+            }
             return;
         }
         BlockState st = level.getBlockState(b);
@@ -1076,6 +1131,10 @@ public final class NetherWork {
         if (!NetherRuns.inNether(lead)) return;
         double d = f.distanceToSqr(lead);
         Task t = r.task;
+        if (leg.claim != null && (t == null || !t.job.block() || jobOf(level.getBlockState(leg.claim)) != t.job)) {
+            scanOf(r).claims.remove(leg.claim.asLong());
+            leg.claim = null;
+        }
         if (d > 12 * 12 || t == null) {
             if (d > NetherRuns.CLOSE * NetherRuns.CLOSE) makeFor(level, f, r, leg, lead.blockPosition(), 1.1D);
             else f.getNavigation().stop();
@@ -1104,6 +1163,7 @@ public final class NetherWork {
                         }
                     }
                     leg.claim = mine;
+                    leg.claimSince = level.getGameTime();
                 }
                 if (mine == null) {
                     f.getNavigation().stop();
@@ -1112,7 +1172,7 @@ public final class NetherWork {
                     return;
                 }
                 s.claims.put(mine.asLong(), f.getUUID());
-                Task own = new Task(t.job, mine, null, t.since);
+                Task own = new Task(t.job, mine, null, leg.claimSince);
                 block(level, f, r, leg, own, false);
                 if (own.done > 0 || own.at == null) {
                     s.claims.remove(mine.asLong());
@@ -1130,7 +1190,7 @@ public final class NetherWork {
                 }
                 if (mine != null) {
                     s.claims.put(mine.asLong(), f.getUUID());
-                    wart(level, f, r, leg, new Task(Job.WART, mine, null, t.since));
+                    wart(level, f, r, leg, new Task(Job.WART, mine, null, level.getGameTime()));   // its own reach, not the leader's clock
                     s.claims.remove(mine.asLong());
                 }
             }
@@ -1369,6 +1429,13 @@ public final class NetherWork {
             }
         }
         LivingEntity t = f.getTarget();
+        if (t != null && t.isAlive() && r.homeward && f.distanceToSqr(t) > HOMEWARD_FIGHT * HOMEWARD_FIGHT) {
+            // Turned for home: a blaze or a ghast out at range is not stopped for (a spawner would keep the team there
+            // for ever); the fireballs are turned on the way (watchTheSky), and only what comes close is fought.
+            f.setTarget(null);
+            leg.foe = null;
+            t = null;
+        }
         if (t != null && t.isAlive()) {
             leg.foe = t.getUUID();
             if (t instanceof Blaze || t instanceof Ghast) {
@@ -1378,8 +1445,8 @@ public final class NetherWork {
             }
             return f.distanceToSqr(t) < 16 * 16;
         }
-        // A ghast in the sky with a line on the team: shot down.
-        Ghast g = nearest(level, f, Ghast.class, 40, x -> x.isAlive() && f.hasLineOfSight(x));
+        // A ghast in the sky with a line on the team: shot down (not stopped for on the way home).
+        Ghast g = r.homeward ? null : nearest(level, f, Ghast.class, 40, x -> x.isAlive() && f.hasLineOfSight(x));
         if (g != null && f.countMatching(s -> s.is(Items.ARROW)) > 0) {
             if (leg.foe == null) FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Ghast! Bows up!", "Ghast overhead — shoot it down!"));
             shoot(level, f, r, leg, g);

@@ -295,6 +295,8 @@ public final class NetherRuns {
         /** Where it is making for (NetherWork.makeFor), and when it started cutting its way there. */
         @Nullable BlockPos goal;
         long cutSince = -1, threw = -100000, shot = -100000, shielding = -1;
+        /** When a helper took up the block it has claimed (its own minute to get at it, not the leader's). */
+        long claimSince = -1;
         @Nullable UUID foe;
         /** What came into its pack out of the Nether (the haul it carries), by item. */
         final Map<Item, Integer> got = new HashMap<>();
@@ -1214,6 +1216,9 @@ public final class NetherRuns {
         String who = f.displayNameCap();
         int n = lot.getCount();
         int found = Math.min(n, got.getOrDefault(lot.getItem(), 0));
+        // Picked up off the ground by its own hands (a blaze's rod as it fell, a piglin's throw) rather than through the
+        // run's books: it set out with nothing but its kit, so a plain find it carries home is the Nether's all the same.
+        if (found < n && unbooked(lot)) found = n;
         if (found > 0) got.merge(lot.getItem(), -found, Integer::sum);
         if (found > 0) {
             ItemStack mine = lot.copyWithCount(found);
@@ -1227,6 +1232,19 @@ public final class NetherRuns {
         if (house != null && in > 0 && found > 0) lots.add(lot.copyWithCount(Math.min(in, found)));
         if (!left.isEmpty() || house == null) Crafts.store(level, v, house == null ? lot.copy() : left);
     }
+
+    /** A plain find carried home (not a tool or armour, a potion, food, the kit or what it took through): the Nether's,
+     *  whichever way it came into the pack (kitUp sends everything but the kit to the stores before a run). */
+    static boolean unbooked(ItemStack s) {
+        return !s.isEmpty() && !taken(s) && !keepsAtHome(s) && NETHER_FINDS.contains(s.getItem());
+    }
+
+    /** What the Nether gives a runner: its blocks and ores, its monsters' drops, and the piglins' barter. */
+    static final java.util.Set<Item> NETHER_FINDS = java.util.Set.of(Items.BLAZE_ROD, Items.GHAST_TEAR, Items.MAGMA_CREAM, Items.QUARTZ,
+        Items.GLOWSTONE_DUST, Items.GLOWSTONE, Items.NETHER_WART, Items.SOUL_SAND, Items.SOUL_SOIL, Items.GOLD_NUGGET, Items.ENDER_PEARL,
+        Items.OBSIDIAN, Items.CRYING_OBSIDIAN, Items.FIRE_CHARGE, Items.STRING, Items.IRON_NUGGET, Items.LEATHER, Items.NETHER_BRICK,
+        Items.BLACKSTONE, Items.GILDED_BLACKSTONE, Items.WITHER_SKELETON_SKULL, Items.ANCIENT_DEBRIS, Items.NETHERITE_SCRAP, Items.SHROOMLIGHT,
+        Items.SPECTRAL_ARROW, Items.CRIMSON_FUNGUS, Items.WARPED_FUNGUS, Items.BONE, Items.COAL);
 
     /** "6 quartz, 3 blaze rods, a ghast tear": the most of a haul first. */
     static String words(Map<String, Integer> what, int most) {

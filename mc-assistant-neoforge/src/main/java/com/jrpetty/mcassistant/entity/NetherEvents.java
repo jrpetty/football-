@@ -9,7 +9,12 @@ import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
+import net.neoforged.neoforge.event.entity.ProjectileImpactEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.phys.EntityHitResult;
 
 import java.util.UUID;
 
@@ -30,6 +35,22 @@ public final class NetherEvents {
 
     /** The runners' stand-in, as the game names a fake player: one for every town (it is never in the world). */
     static final GameProfile RUNNERS = new GameProfile(UUID.nameUUIDFromBytes("mca-nether-runners".getBytes()), "[Nether runners]");
+
+    /**
+     * A runner's arrow passes by one of its own town (a teammate between it and the blaze, a guest along): the team
+     * shoots past each other at the blazes and the ghasts, as players who know where the others stand.
+     */
+    @SubscribeEvent
+    public static void onImpact(ProjectileImpactEvent event) {
+        if (!(event.getRayTraceResult() instanceof EntityHitResult hit)) return;
+        if (!(event.getProjectile() instanceof AbstractArrow arrow) || !(arrow.getOwner() instanceof VillageFolkEntity f)) return;
+        if (f.stationTask() != AssistantEntity.StationTask.NETHER && !NetherRuns.on(f)) return;
+        Entity struck = hit.getEntity();
+        boolean ours = struck instanceof VillageFolkEntity o && o.ownerId() != null && o.ownerId().equals(f.ownerId())
+            || struck instanceof Player p && f.level() instanceof ServerLevel sl && NetherRuns.runOf(f) != null
+            && NetherGuests.with(sl, NetherRuns.runOf(f)) == p;
+        if (ours) event.setCanceled(true);
+    }
 
     @SubscribeEvent
     public static void onDamage(LivingDamageEvent.Post event) {

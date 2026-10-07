@@ -326,7 +326,7 @@ public final class NetherGuests {
         String had = Ledger.note(village, key);
         Ledger.note(village, key, had == null || had.isEmpty() ? sb.toString() : had + "," + sb);
         Player pl = level.getServer().getPlayerList().getPlayer(r.guest);
-        if (pl != null) pl.sendSystemMessage(Component.literal("Your share of the runners' haul is kept for you: ask any of them for it.").withStyle(ChatFormatting.GOLD));
+        if (pl != null) pl.sendSystemMessage(Component.literal("Your share of the runners' haul is kept for you at the storehouse: ask any of the town's folk for it.").withStyle(ChatFormatting.GOLD));
         Villages.tell(village, day, r.guestName + " went through the gateway with the Nether runners, and has a share of the haul kept for it");
         return r.guestName;
     }
@@ -336,6 +336,14 @@ public final class NetherGuests {
         r.guest = p.getUUID();
         r.guestName = p.getName().getString();
         r.guestShare = share;
+    }
+
+    /** Does the town keep a share of a run's haul for this player, and is that what it is asking after? */
+    public static boolean owedAsked(VillageFolkEntity f, Player p, String text) {
+        String t = text == null ? "" : text.toLowerCase(Locale.ROOT);
+        if (!t.contains("share") && !t.contains("owe")) return false;
+        String s = f.ownerId() == null ? null : Ledger.note(f.ownerId(), "nether.owed/" + p.getUUID());
+        return s != null && !s.isEmpty();
     }
 
     /** A share kept for this player handed over, if there is one. What the runner says, or null. */
