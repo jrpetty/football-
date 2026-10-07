@@ -504,6 +504,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Neighbourly.tick(polls, home);       // [batchA] the old, newcomers, housewarmings, the poor box (Neighbourly)
                     Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
                     CaveDwellers.tick(polls, home);      // [caves] an Iron Age town takes up its cave dwellers
+                    PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
                 }
             }
             if (level() instanceof net.minecraft.server.level.ServerLevel orders) Orders.consider(orders, ownerId(), level().getDayTime() / 24000L);

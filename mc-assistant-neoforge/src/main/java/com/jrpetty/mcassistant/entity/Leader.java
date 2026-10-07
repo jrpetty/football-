@@ -249,6 +249,8 @@ public final class Leader {
 
     /** The leader's usual pay, in the hundred of the standard wage. */
     static int usualPay(@Nullable UUID village) {
+        Integer set = PlayerLeader.wages(village);                    // [player-civic] the wages a player who leads set
+        if (set != null) return set;
         Nature n = natureOf(village);
         if (n == null) return 100;
         int p = 100;
@@ -605,6 +607,7 @@ public final class Leader {
     public static String line(@Nullable UUID village) {
         if (village == null) return "no leader";
         VillageFolkEntity elder = Orders.elderOf(village);
+        if (elder == null && PlayerLeader.leaderId(village) != null) return PlayerLeader.line(village);   // [player-civic] a player leads
         if (elder == null) return "no leader yet";
         Nature n = nature(village, elder.level().getGameTime());
         StringBuilder sb = new StringBuilder(leaderName(village, elder));

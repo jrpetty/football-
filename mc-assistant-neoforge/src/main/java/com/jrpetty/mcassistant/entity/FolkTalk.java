@@ -102,6 +102,8 @@ public final class FolkTalk {
         // [batchG] A visitor from afar answers for itself: its own story, the bard's news, the merchant's wares.
         String visitor = Visitors.talk(f, p, topic, text);
         if (visitor != null) return manner(f, visitor);
+        String civic = PlayerCivic.talk(f, p, topic, text);          // [player-civic] standing for leader; an apprenticeship
+        if (civic != null) return manner(f, civic);
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting, heard);
             case HOW -> howAreYou(f);
@@ -186,6 +188,7 @@ public final class FolkTalk {
             default -> puzzled(f);
         };
         said = KeptGifts.mention(f, p, topic, said);          // [batchG] "I keep the diamond you gave me by my bed"
+        said = PlayerTrades.mention(f, p, topic, said);       // [player-civic] a master speaks of its apprentice
         // Somebody who can't stand you says as little as it can.
         if (me.affinity(p.getUUID()) <= -50 && topic != TalkTopic.GIFT && topic != TalkTopic.STAY && topic != TalkTopic.FINE) {
             said = pick(f.getRandom(), "I've nothing to say to you.", "Leave me be.",
@@ -359,6 +362,7 @@ public final class FolkTalk {
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
+        line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);
         line(sb, "Home", (house != null && !house.isEmpty() ? house + " " : "") + (bed == null ? "No bed of its own yet."

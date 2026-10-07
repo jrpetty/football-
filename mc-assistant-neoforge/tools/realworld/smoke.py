@@ -2086,6 +2086,64 @@ def pets_stage(r, look, cx, cz):
     say("alive after the disasters: %s" % client_alive())
 
 
+def player_civic_stage(r, look, cx, cz):
+    """[player-civic] Standing for leader and apprenticeship (entity/Hustings, PlayerLeader, PlayerTrades). First the
+    player is made a citizen the town likes, stands with two promises, and the election is called and counted at once
+    (/village civic stage); it wins and takes office, and the tithe, the plan and the next building are set from its
+    page. Pictures: the board in the square from in front of its face, by day (the leader's lines: approval, steward,
+    the promises and how they stand); the Leader's page (/village leader). Then the player is apprenticed to the town's
+    smith (/village trades stage): two lessons done and the reinforced pickaxe learned, a crafting table set down
+    beside the player with the makings of one, and the smith come to watch. Pictures: the smith by the table, and the
+    apprentice's journal's page (/village trades)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(4)
+    out = r.cmd("execute as %s at @s run village civic stage" % USER)
+    say("civic stage: " + out[:900])
+    step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+    m = re.search(r"BOARD (-?\d+) (-?\d+) (-?\d+) (\w+)", out)
+    if m:
+        # The board's foot and the way its face looks: from seven out in front of it, at about its middle.
+        bx, by, bz = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        fx, fz = step.get(m.group(4), (0, 1))
+        r.cmd("gamemode spectator %s" % USER)
+        look("27-civic-1-board", bx + 0.5 + fx * 7, by, bz + 0.5 + fz * 7, bx + 0.5, by + 2, bz + 0.5, wait=6)
+        r.cmd("gamemode creative %s" % USER)
+        r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+        time.sleep(3)
+    else:
+        say("no board in the square to photograph")
+    say("leader's page: " + r.cmd("execute as %s at @s run village leader" % USER))
+    time.sleep(3)
+    shot("27-civic-2-leaders-page")
+    say("page shut: " + r.cmd("execute as %s run village civic close" % USER))
+    # Apprenticed to the smith, beside the square: a crafting table in front, the smith come to watch.
+    sx, sz = cx + 9, cz - 9
+    sy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d facing %d %d %d" % (USER, sx, sy + 1, sz, sx, sy + 1, sz + 5))
+    time.sleep(3)
+    out = r.cmd("execute as %s at @s run village trades stage" % USER)
+    say("trades stage: " + out[:900])
+    m = re.search(r"VIEW (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    if m:
+        ex, ey, ez, ax, ay, az = (int(v) for v in m.groups())
+        r.cmd("gamemode spectator %s" % USER)
+        look("27-civic-3-smith-and-table", ex + 0.5, ey - 1, ez + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=6)
+        r.cmd("gamemode creative %s" % USER)
+        r.cmd("tp %s %d %d %d" % (USER, sx, sy + 1, sz))
+        time.sleep(2)
+    say("journal: " + r.cmd("execute as %s at @s run village trades" % USER))
+    time.sleep(3)
+    shot("27-civic-4-journal")
+    say("page shut: " + r.cmd("execute as %s run village civic close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the civic stage: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

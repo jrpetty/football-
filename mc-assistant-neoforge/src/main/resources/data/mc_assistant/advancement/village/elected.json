@@ -1,0 +1,28 @@
+{
+  "parent": "mc_assistant:village/citizen",
+  "display": {
+    "icon": {
+      "id": "minecraft:bell"
+    },
+    "title": {
+      "text": "By the Folk's Vote"
+    },
+    "description": {
+      "text": "Stand for leader in a town's election, and win"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "granted": {
+      "trigger": "minecraft:impossible"
+    }
+  },
+  "requirements": [
+    [
+      "granted"
+    ]
+  ]
+}

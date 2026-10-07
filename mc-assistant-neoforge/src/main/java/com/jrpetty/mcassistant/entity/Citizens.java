@@ -114,7 +114,7 @@ public final class Citizens {
             if (is(v.id(), p.getUUID()) && citizen == null) citizen = "Citizen of " + name;
             if (t == Standing.Title.HONOURED && honoured == null) honoured = "Honoured guest of " + name;
         }
-        return hero != null ? hero : citizen != null ? citizen : honoured;
+        return PlayerCivic.titled(p, hero != null ? hero : citizen != null ? citizen : honoured);   // [player-civic] its office, its trade
     }
 
     /** Put the player's title after its name (a team of its own), or take it off. */

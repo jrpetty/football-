@@ -278,6 +278,8 @@ public final class Gazette {
         if (crime != null) entries.add(crime);
         String disasters = Disasters.gazette(level, v, day);        // [disasters] the weather's danger, yesterday's fire or flood
         if (disasters != null) entries.add(disasters);
+        String word = PlayerLeader.gazette(level, id, day);         // [player-civic] the leader's promises, kept and broken
+        if (word != null) entries.add(word);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();
