@@ -66,6 +66,7 @@ public final class TownWays {
     public static void resetForTests() {
         WORKED.clear();
         HEART.clear();
+        FORCED.clear();
         Cuisine.resetForTests();
         TownSpeech.resetForTests();
         Architecture.resetForTests();
@@ -137,6 +138,15 @@ public final class TownWays {
         TownFeast.choose(level, v, day);
     }
 
+    /**
+     * Is the town settled: a day past its founding (or older than its records)? Its cook turns to its own dish, its
+     * dressers to its houses and its elder to its rites only then: a camp on its first day has other things to do.
+     */
+    static boolean settled(ServerLevel level, UUID village) {
+        long founded = FoundingDay.founded(village);
+        return founded < 0 || level.getDayTime() / 24000L - founded >= 1;
+    }
+
     /** Tests and /village ways: the town's ways worked out now, whatever the day. */
     public static void workOutForTests(ServerLevel level, Villages.Village v) {
         long day = level.getDayTime() / 24000L;
@@ -158,6 +168,11 @@ public final class TownWays {
     }
 
     static Values.Value heart(UUID village, boolean fresh) {
+        Values.Value forced = FORCED.get(village);
+        if (forced != null) {
+            HEART.put(village, forced);
+            return forced;
+        }
         Values.Value now = null;
         if (fresh || note(village, "heart") == null) {
             int[] count = new int[Values.N];
@@ -192,7 +207,11 @@ public final class TownWays {
         note(village, "heart", now.name());
         if (founders != null) note(village, "founders", founders.name());
         HEART.put(village, now);
+        FORCED.put(village, now);
     }
+
+    /** The tests' tempers, kept whatever the town's folk come to care about. */
+    private static final Map<UUID, Values.Value> FORCED = new ConcurrentHashMap<>();
 
     @Nullable
     static Values.Value valueOf(@Nullable String s) {
@@ -388,16 +407,18 @@ public final class TownWays {
         UUID id = f.ownerId();
         if (id == null || text == null || text.isBlank()) return null;
         String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^a-z' ]", " ") + " ";
-        boolean town = has(t, "town like", "village like", "place like", "this town", "your town like", "your ways", "your customs",
+        boolean town = has(t, "town like", "village like", "place like", "your town like", "your ways", "your customs",
             "tell me about the town", "tell me about your town", "what's it like here", "whats it like here");
         if (has(t, "what do you eat", "local dish", "your dish", "food here", "eat here", "your food", "what's good to eat",
                 "whats good to eat", "house dish", "speciality", "specialty", "delicacy")) {
             return Cuisine.talk(f);
         }
-        if (has(t, "believe", "faith", "worship", "sacred", "pray", "your god", "rites", "religion", "taboo")) return Beliefs.talk(f);
-        if (has(t, "saying", "sayings", "proverb", "what do you say", "expression")) return TownSpeech.talkSayings(f);
-        if (has(t, "nickname", "call you", "what do they call", "known as")) return TownSpeech.talkNick(f);
-        if (has(t, "festival", "your feast", "celebrate", "holiday")) return TownFeast.talk(f);
+        if (has(t, "what do you believe", "do you believe in", "your faith", "your beliefs", "what do you worship", "sacred", " pray ",
+                "your god", "your rites", "religion", "taboo")) return Beliefs.talk(f);
+        if (has(t, "any sayings", "a saying", "your sayings", "old saying", "proverb", "what do you say here", "expressions"))
+            return TownSpeech.talkSayings(f);
+        if (has(t, "nickname", "what do they call you", "what do folk call you", "known as")) return TownSpeech.talkNick(f);
+        if (has(t, "festival", "your feast", "what do you celebrate", "your holiday")) return TownFeast.talk(f);
         if (has(t, "houses look", "your houses", "build like", "building style", "architecture", "how you build")) return Architecture.talk(f);
         if (!town) return null;
         List<String> bits = new ArrayList<>();

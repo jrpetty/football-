@@ -313,7 +313,12 @@ public final class Cuisine {
      */
     @Nullable
     static String cook(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
-        if (f.stationTask() != AssistantEntity.StationTask.COOK) return null;
+        if (f.stationTask() != AssistantEntity.StationTask.COOK || !TownWays.settled(level, v.id())) return null;
+        return cookNow(level, v, f);
+    }
+
+    @Nullable
+    private static String cookNow(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
         UUID id = v.id();
         Leader.Plan plan = Leader.plan(id);
         if (plan == Leader.Plan.FAMINE || plan == Leader.Plan.SHORT) return null;
@@ -377,7 +382,15 @@ public final class Cuisine {
     /** Tests: the cook's turn at the town's dish, now (what it made, or null). */
     @Nullable
     public static String cookForTests(ServerLevel level, Villages.Village v, VillageFolkEntity cook) {
-        return cook(level, v, cook);
+        return cookNow(level, v, cook);
+    }
+
+    /** Tests: the town's table chosen afresh now (its dish forgotten first: a colony's mother's taken up, if it has one). */
+    public static Dish chooseForTests(ServerLevel level, Villages.Village v) {
+        TownWays.note(v.id(), "dish", null);
+        TownWays.note(v.id(), "dish.take", null);
+        choose(level, v, level.getDayTime() / 24000L);
+        return dishOf(v.id());
     }
 
     /**
@@ -388,7 +401,7 @@ public final class Cuisine {
     static void tick(ServerLevel level, Villages.Village v, long day, long t) {
         UUID id = v.id();
         Dish d = dishOf(id);
-        if (d == null) return;
+        if (d == null || !TownWays.settled(level, id)) return;
         tavernSign(level, v, false);
         if (t < 8000L || t > 11400L) return;
         boolean cook = false;

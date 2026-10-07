@@ -103,6 +103,7 @@ public final class Beliefs {
     static void resetForTests() {
         BLESSED.clear();
         KEPT.clear();
+        LEADER.clear();
     }
 
     /** The town's faith, once chosen; null before. */
@@ -244,7 +245,7 @@ public final class Beliefs {
     public static String taboo(VillageFolkEntity f) {
         UUID id = f.ownerId();
         Belief b = of(id);
-        if (b == null || f.isBaby()) return null;
+        if (b == null || f.isBaby() || !(f.level() instanceof ServerLevel sl) || !TownWays.settled(sl, id)) return null;
         AssistantEntity.StationTask t = f.stationTask();
         if (t == AssistantEntity.StationTask.GUARD || t == AssistantEntity.StationTask.NONE) return null;
         long dt = f.level().getDayTime(), day = dt / 24000L;
@@ -276,8 +277,8 @@ public final class Beliefs {
 
     /** What keeps the fleet in for the faith today (Fleet.keptIn), or null. */
     @Nullable
-    public static String keptIn(UUID village, long day) {
-        return of(village) == Belief.SEA && sacred(village, day) ? "the Sea's day" : null;
+    public static String keptIn(ServerLevel level, UUID village, long day) {
+        return of(village) == Belief.SEA && sacred(village, day) && TownWays.settled(level, village) ? "the Sea's day" : null;
     }
 
     /** The first house of a town of the Founders is never altered: not dressed, refaced or raised (Architecture, Grow). */
@@ -306,7 +307,7 @@ public final class Beliefs {
     public static void died(VillageFolkEntity f, long day) {
         UUID id = f.ownerId();
         if (id == null || f.isShowcase()) return;
-        Burial how = burial(id);
+        Burial how = f.level() instanceof ServerLevel sl && TownWays.settled(sl, id) ? burial(id) : Burial.YARD;
         List<String[]> rows = Culture.rows(id, TownWays.PREFIX + BURIALS);
         rows.add(new String[]{ f.displayNameCap(), how.name(), Long.toString(day), "" });
         Culture.rows(id, TownWays.PREFIX + BURIALS, rows);
@@ -367,16 +368,28 @@ public final class Beliefs {
     @Nullable
     private static BlockPos spot(UUID village, String key) {
         String s = TownWays.note(village, key);
-        return s == null ? null : BlockPos.of(Culture.num(s, 0));
+        return s == null || NONE.equals(s) ? null : BlockPos.of(Culture.num(s, 0));
+    }
+
+    /** Written for a spot looked for and not found (no water near, no high ground loaded): not looked for again. */
+    private static final String NONE = "none";
+
+    /** Was this spot looked for, and none found? */
+    private static boolean lookedFor(UUID village, String key) {
+        return NONE.equals(TownWays.note(village, key));
     }
 
     /** The shore: where the sea's rites are kept (the water's edge nearest the heart, looked for once and kept). */
     @Nullable
     static BlockPos shore(ServerLevel level, Villages.Village v) {
         BlockPos had = spot(v.id(), "rites.shore");
-        if (had != null) return had;
+        if (had != null || lookedFor(v.id(), "rites.shore")) return had;
+        if (!level.isLoaded(v.centre())) return null;
         Waterfront.Dock d = Waterfront.site(level, v.centre(), 40);
-        if (d == null) return null;
+        if (d == null) {
+            TownWays.note(v.id(), "rites.shore", NONE);
+            return null;
+        }
         BlockPos bank = d.start().relative(d.out().getOpposite()).above();
         TownWays.note(v.id(), "rites.shore", Long.toString(bank.asLong()));
         TownWays.note(v.id(), "rites.water", Long.toString(d.start().asLong()));
@@ -395,7 +408,12 @@ public final class Beliefs {
                 int x = c.getX() + dx, z = c.getZ() + dz;
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
                 BlockPos top = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
-                if (!level.getBlockState(top.below()).isFaceSturdy(level, top.below(), Direction.UP) || !level.getFluidState(top.below()).isEmpty()) continue;
+                net.minecraft.world.level.block.state.BlockState ground = level.getBlockState(top.below());
+                // The land itself, not a roof or a tree: earth, sand, stone, snow.
+                boolean natural = ground.is(net.minecraft.tags.BlockTags.DIRT) || ground.is(net.minecraft.tags.BlockTags.SAND)
+                    || ground.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD) || ground.is(Blocks.SNOW_BLOCK) || ground.is(Blocks.GRAVEL)
+                    || ground.is(net.minecraft.tags.BlockTags.TERRACOTTA);
+                if (!natural || !level.getFluidState(top.below()).isEmpty() || !level.getBlockState(top).canBeReplaced()) continue;
                 if (Villages.onFarmland(v.id(), dx, dz, 1, 1)) continue;
                 if (best == null || top.getY() > best.getY()) best = top;
             }
@@ -480,7 +498,7 @@ public final class Beliefs {
     }
 
     private static boolean raisePost(ServerLevel level, Villages.Village v, BlockPos at, String[] r, boolean free) {
-        if (!level.getBlockState(at).isAir() || !level.getBlockState(at.above()).isAir()) return false;
+        if (!level.getBlockState(at).canBeReplaced() || !level.getBlockState(at.above()).canBeReplaced()) return false;
         if (!free) {
             if (!Crafts.take(level, v, s -> s.is(ItemTags.WOODEN_FENCES), 1) && !Crafts.planks(level, v, 2)) return false;
             if (!Crafts.sign(level, v)) {
@@ -522,7 +540,7 @@ public final class Beliefs {
     }
 
     private static boolean raiseCairn(ServerLevel level, Villages.Village v, BlockPos at, String[] r, boolean free) {
-        if (!level.getBlockState(at).isAir() || !level.getBlockState(at.above()).isAir()) return false;
+        if (!level.getBlockState(at).canBeReplaced() || !level.getBlockState(at.above()).canBeReplaced()) return false;
         BlockPos front = at.relative(Direction.NORTH);
         if (!free) {
             if (!Masonry.take(level, v, Items.COBBLESTONE, 2)) return false;
@@ -551,7 +569,7 @@ public final class Beliefs {
      */
     @Nullable
     public static BlockPos weddingAt(ServerLevel level, Villages.Village v, Gatherings.Wedding w) {
-        Belief b = of(v.id());
+        Belief b = TownWays.settled(level, v.id()) ? of(v.id()) : null;
         if (b == null) return null;
         UUID id = v.id();
         return switch (b) {
@@ -593,7 +611,7 @@ public final class Beliefs {
      * one a living folk of the town has. Otherwise the usual.
      */
     public static String childName(UUID village, RandomSource r, VillageFolkEntity a, VillageFolkEntity b) {
-        Belief belief = of(village);
+        Belief belief = a.level() instanceof ServerLevel sl && TownWays.settled(sl, village) ? of(village) : null;
         List<String> pick = new ArrayList<>();
         if (belief != null) {
             switch (belief) {
@@ -821,9 +839,23 @@ public final class Beliefs {
         return null;
     }
 
+    /** Who leads the rites, looked up at most once every five seconds a town (every folk asks, every few ticks, at dawn). */
+    private static final Map<UUID, Object[]> LEADER = new ConcurrentHashMap<>();
+
+    private static boolean leads(VillageFolkEntity f, UUID village) {
+        long now = f.level().getGameTime();
+        Object[] was = LEADER.get(village);
+        if (was == null || now - (Long) was[0] > 100L || now < (Long) was[0]) {
+            VillageFolkEntity l = leader(village);
+            was = new Object[]{ now, l == null ? null : l.getUUID() };
+            LEADER.put(village, was);
+        }
+        return f.getUUID().equals(was[1]);
+    }
+
     /** The town's faith, each second (TownWays): the dead's markers (each minute), the shrine (each minute). */
     static void tick(ServerLevel level, Villages.Village v, long day, long t) {
-        if (of(v.id()) == null) return;
+        if (of(v.id()) == null || !TownWays.settled(level, v.id())) return;
         if (level.getGameTime() % 1200L == 77L) {
             tend(level, v, false);
             shrine(level, v, false);
@@ -838,12 +870,11 @@ public final class Beliefs {
     static boolean hold(VillageFolkEntity f, ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         Belief b = of(id);
-        if (b == null || f.isBaby()) return false;
+        if (b == null || f.isBaby() || !TownWays.settled(level, id)) return false;
         long dt = level.getDayTime(), day = dt / 24000L, t = dt % 24000L;
         // The morning's rite: the elder, after the dawn bell and before the work is well begun.
         if (t >= 300L && t < 3000L && riteDue(id, b, day) && KEPT.getOrDefault(id, -1L) != day) {
-            VillageFolkEntity lead = leader(id);
-            if (lead != f) return false;
+            if (!leads(f, id)) return false;
             BlockPos at = riteSpot(level, v, b);
             if (at == null) return false;
             Culture.mark(f, Culture.Role.RITE, ritesWords(b));
@@ -853,7 +884,7 @@ public final class Beliefs {
         }
         // The Stars' vigil.
         if (b == Belief.STARS && sacred(id, day) && t >= 12600L && t < 15000L) {
-            boolean keeps = f.persona().rolled() && f.persona().hobby() == Persona.Hobby.STARGAZING || f == leader(id);
+            boolean keeps = f.persona().rolled() && f.persona().hobby() == Persona.Hobby.STARGAZING || leads(f, id);
             if (!keeps) return false;
             BlockPos hill = hill(level, v);
             if (hill == null) return false;

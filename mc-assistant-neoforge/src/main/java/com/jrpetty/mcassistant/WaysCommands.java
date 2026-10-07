@@ -91,7 +91,7 @@ public final class WaysCommands {
         TownWays.workOutForTests(level, v);
         int dressed = 0;
         for (Ledger.Building b : Ledger.buildings(v.id())) {
-            if (b.structure().equals("house") && level.isLoaded(b.anchor())) dressed += Architecture.dress(level, v, b, 64, false);
+            if (b.structure().equals("house") && level.isLoaded(b.anchor())) dressed += Math.max(0, Architecture.dress(level, v, b, 64, false));
         }
         boolean shrine = Beliefs.shrineForTests(level, v);
         boolean sign = Cuisine.tavernSign(level, v, false);

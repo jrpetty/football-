@@ -611,7 +611,7 @@ public final class Fleet {
         if (Weather.stormy(level)) return "a storm";
         if (level.isRaining()) return "the rain";
         if (RestDay.today(village, day)) return "the day of rest";
-        String faith = Beliefs.keptIn(village, day);                 // [culture2] the Sea's day: no boat goes out
+        String faith = Beliefs.keptIn(level, village, day);                 // [culture2] the Sea's day: no boat goes out
         if (faith != null) return faith;
         if (Raids.underAlarm(village)) return "the bell";
         return null;

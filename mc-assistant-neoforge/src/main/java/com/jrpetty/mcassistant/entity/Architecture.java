@@ -648,7 +648,7 @@ public final class Architecture {
             if (dressedFor(id, b, st) || waiting(level, b)) continue;
             if (HousingMarket.isPrivate(id, b.anchor()) || Beliefs.untouchable(id, b) || Grow.raisingNow(id, b.anchor())) continue;
             int n = dress(level, v, b, 12, false);
-            if (n > 0) return n;
+            if (n != 0) return Math.max(0, n);                         // done some, or a hand sent: one house a turn
         }
         return 0;
     }
@@ -677,8 +677,9 @@ public final class Architecture {
 
     /**
      * Dress a building in the town's style, up to so many blocks: out of the stores (unless {@code free}: the showcase,
-     * the tests), what comes off back into them. A building with nothing left that the stores could pay for is marked
-     * dressed for the style and the age, and not looked at again till either changes. Returns the blocks changed.
+     * the tests), what comes off back into them (-1 while the hand it sends is on its way). A building with nothing left
+     * to change is marked dressed for the style and the age, and not looked at again till either changes; one waiting on
+     * the stores is looked at again five minutes on. Returns the blocks changed.
      */
     public static int dress(ServerLevel level, Villages.Village v, Ledger.Building b, int budget, boolean free) {
         UUID id = v.id();
@@ -689,7 +690,7 @@ public final class Architecture {
             markDressed(id, b, st);
             return 0;
         }
-        if (!free && !TownJobs.atWork(level, v, "dressing", b.anchor(), "dressing a house in the " + st.words + " style")) return 0;
+        if (!free && !TownJobs.atWork(level, v, "dressing", b.anchor(), "dressing a house in the " + st.words + " style")) return -1;   // a hand on its way
         int n = 0;
         boolean shortOf = false;
         Set<String> did = new HashSet<>();
