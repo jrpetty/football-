@@ -323,7 +323,9 @@ jobs:
   # -------------------------------------------------------------------------
   client:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # The look round now has some thirty stages (the town's life, the economy, the wars); it ran 38 minutes
+    # before the economy's and the wars' were added.
+    timeout-minutes: 90
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
