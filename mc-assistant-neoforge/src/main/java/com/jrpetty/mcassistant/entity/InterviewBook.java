@@ -276,6 +276,8 @@ public final class InterviewBook extends SavedData {
         final List<Cand> cands = new ArrayList<>();
         /** What was said, a line at a time: "speaker|words". */
         final List<String> said = new ArrayList<>();
+        /** Who said each line of {@link #said}, by identity ("" for nobody known): two folk may share a name. */
+        final List<String> saidBy = new ArrayList<>();
         /** The players' choices (the leader's stands; a guest's is a vote), by player: the candidate. */
         final Map<UUID, UUID> chose = new LinkedHashMap<>();
         @Nullable UUID winner;
@@ -311,6 +313,23 @@ public final class InterviewBook extends SavedData {
         public Stage stage() { return stage; }
         public List<Cand> cands() { return cands; }
         public List<String> said() { return said; }
+        /** How many lines this folk said itself (by identity, whatever its name). */
+        public int linesBy(UUID who) {
+            int n = 0;
+            for (String s : saidBy) if (s.equals(who.toString())) n++;
+            return n;
+        }
+
+        /** A line said, by whom (null: nobody known), under the name it goes by. */
+        void say(@Nullable UUID by, String name, String words) {
+            said.add(name + "|" + words);
+            saidBy.add(by == null ? "" : by.toString());
+        }
+
+        void clearSaid() {
+            said.clear();
+            saidBy.clear();
+        }
         @Nullable public UUID winner() { return winner; }
         public String winnerName() { return winnerName; }
         public String reason() { return reason; }
@@ -371,6 +390,9 @@ public final class InterviewBook extends SavedData {
             ListTag s = new ListTag();
             for (String l : said) s.add(StringTag.valueOf(l));
             t.put("Said", s);
+            ListTag sb = new ListTag();
+            for (String l : saidBy) sb.add(StringTag.valueOf(l));
+            t.put("SaidBy", sb);
             CompoundTag ch = new CompoundTag();
             for (Map.Entry<UUID, UUID> e : chose.entrySet()) ch.putUUID(e.getKey().toString(), e.getValue());
             t.put("Chose", ch);
@@ -414,6 +436,8 @@ public final class InterviewBook extends SavedData {
             for (int i = 0; i < cs.size(); i++) iv.cands.add(Cand.load(cs.getCompound(i)));
             ListTag s = t.getList("Said", Tag.TAG_STRING);
             for (int i = 0; i < s.size(); i++) iv.said.add(s.getString(i));
+            ListTag sb = t.getList("SaidBy", Tag.TAG_STRING);
+            for (int i = 0; i < s.size(); i++) iv.saidBy.add(i < sb.size() ? sb.getString(i) : "");
             CompoundTag ch = t.getCompound("Chose");
             for (String k : ch.getAllKeys()) {
                 try {

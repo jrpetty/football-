@@ -572,6 +572,7 @@ public final class Interviews {
             + (c.knacks > 0 ? "; " + JobMarket.words(c.knacks) + (c.knacks == 1 ? " knack" : " knacks") + " of the trade" : "") + ". " + firstSentence(why);
         CompoundTag w = new CompoundTag();
         w.putString("Name", c.name);
+        w.putUUID("By", c.id);                                          // whose it is, whatever its name
         w.putString("From", c.homeName);
         w.putString("Post", iv.title);
         w.putString("Town", Villages.name(iv.village));
@@ -727,7 +728,7 @@ public final class Interviews {
         iv.dueTime = START;
         iv.current = -1;
         iv.lines.clear();
-        iv.said.clear();
+        iv.clearSaid();
         for (Cand c : iv.cands) c.seen = false;
         InterviewBook.changed();
         Villages.tell(v.id(), day, "the interviews for " + iv.title + " were put off to day " + (iv.dueDay + 1) + ": " + why);
@@ -974,7 +975,7 @@ public final class Interviews {
         iv.current = -1;
         iv.step = 0;
         iv.lines.clear();
-        iv.said.clear();
+        iv.clearSaid();
         iv.greeted.clear();
         iv.sat.clear();
         iv.shaken = false;
@@ -987,6 +988,8 @@ public final class Interviews {
             VillageFolkEntity f = Civics.find(level, c.id);
             c.absent = f == null || !InterviewPosts.about(f) && !ROLES.containsKey(c.id)
                 || c.outside && !c.arrived && f.distanceToSqr(Vec3.atCenterOf(v.centre())) > 64 * 64;
+            if (c.absent) LOG.info("[MCA-INTERVIEW] {}: {} is not here for its interview ({})", Villages.name(id), c.name,
+                f == null ? "not loaded" : !InterviewPosts.about(f) ? "away: " + FolkTalk.nowDoing(f) : "still on the road");
             if (!c.absent) {
                 ROLES.put(c.id, new Role(id, iv.id));
                 VISITS.remove(c.id);
@@ -1559,7 +1562,7 @@ public final class Interviews {
                 if (l.act() != Act.READ && l.act() != Act.SHOW && l.act() != Act.TASTE) who.swing(InteractionHand.MAIN_HAND);
             }
             String name = who != null ? who.displayNameCap() : l.who().equals("chair") ? iv.chairName : "?";
-            iv.said.add(name + "|" + l.text());
+            iv.say(who == null ? null : who.getUUID(), name, l.text());
             LOG.info("[MCA-INTERVIEW] {} | {}: {}", Villages.name(iv.village), name, l.text());
         }
         iv.nextAt = gt + line() + Math.min(40, l.text().length() / 4) * (hurry ? 0 : 1);
@@ -1730,8 +1733,8 @@ public final class Interviews {
         b.sayLater(said[1], 40);
         a.swing(InteractionHand.OFF_HAND);
         a.getLookControl().setLookAt(b, 30.0F, 30.0F);
-        iv.said.add(a.displayNameCap() + "|" + said[0]);
-        iv.said.add(b.displayNameCap() + "|" + said[1]);
+        iv.say(a.getUUID(), a.displayNameCap(), said[0]);
+        iv.say(b.getUUID(), b.displayNameCap(), said[1]);
         LOG.info("[MCA-INTERVIEW] {} | {} (on the bench): {} — {}: {}", Villages.name(iv.village), a.displayNameCap(), said[0], b.displayNameCap(), said[1]);
     }
 
@@ -1749,7 +1752,7 @@ public final class Interviews {
                 : FolkTalk.pick(level.getRandom(), "Ah, " + name + " — come to watch? Stand by the wall; we're interviewing for " + iv.title + ".",
                     "Good morning, " + name + ". Interviews — " + iv.title + ". You're welcome to listen.");
             FolkTalk.speak(chair, hello);
-            iv.said.add(chair.displayNameCap() + "|" + hello);
+            iv.say(chair.getUUID(), chair.displayNameCap(), hello);
             return;
         }
     }
@@ -1759,6 +1762,18 @@ public final class Interviews {
     /** Sat in its chair or on the bench at an interview (the park leaves it sat). */
     public static boolean seated(VillageFolkEntity f) {
         return f.getPose() == Pose.SITTING && ROLES.containsKey(f.getUUID());
+    }
+
+    /**
+     * Is it on the list for an interview not yet held (anywhere)? It does not go off to read other towns' boards, or on
+     * the market's business elsewhere, till it has had it (JobSeekers).
+     */
+    public static boolean shortlisted(VillageFolkEntity f) {
+        UUID me = f.getUUID();
+        for (InterviewBook.Town t : InterviewBook.of().towns.values()) {
+            for (Interview iv : t.list) if (iv.stage.open() && iv.cand(me) != null) return true;
+        }
+        return false;
     }
 
     /** Is it held by an interview just now (at it, or on the road to or from one)? Its own day waits (VillageFolkEntity.calledAway). */
@@ -1952,9 +1967,11 @@ public final class Interviews {
             if (isLetter(f.getOffhandItem(), iv.id) && iv.cand(f.getUUID()) == null) {
                 ItemStack letter = f.getOffhandItem();
                 f.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
-                String writer = LetterOfApplicationItem.words(letter).getString("Name");
+                CompoundTag words = LetterOfApplicationItem.words(letter);
                 VillageFolkEntity to = null;
-                for (Cand c : iv.cands) if (c.name.equals(writer)) to = Civics.find(level, c.id);
+                for (Cand c : iv.cands) {
+                    if (words.hasUUID("By") ? c.id.equals(words.getUUID("By")) : c.name.equals(words.getString("Name"))) to = Civics.find(level, c.id);
+                }
                 ItemStack left = (to != null ? to : f).insertItem(letter);
                 if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, f.blockPosition(), left);
             }
@@ -2215,7 +2232,11 @@ public final class Interviews {
             return "The panel will decide the post of " + iv.title + ".";
         }
         Cand pick = null;
-        for (Cand c : iv.cands) if (c.name.equalsIgnoreCase(name.trim())) pick = c;
+        for (Cand c : iv.cands) {
+            String full = c.name + (c.outside ? " of " + c.homeName : "");
+            if (full.equalsIgnoreCase(name.trim())) pick = c;
+            else if (pick == null && c.name.equalsIgnoreCase(name.trim())) pick = c;
+        }
         if (pick == null) return "No candidate by that name: " + JobMarket.join(names(iv)) + ".";
         iv.chose.put(p.getUUID(), pick.id);
         if (PlayerLeader.leads(iv.village, p.getUUID())) iv.playerChairs = true;
