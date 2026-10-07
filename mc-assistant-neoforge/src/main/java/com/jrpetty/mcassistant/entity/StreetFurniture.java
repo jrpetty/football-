@@ -121,7 +121,8 @@ public final class StreetFurniture {
         if (Villages.onFarmland(v.id(), s.dx(), s.dz(), 1, 1)) return false;
         if (Math.abs(p.getY() - v.centre().getY()) > 10) return false;
         BlockState ground = level.getBlockState(p.below());
-        if (!ground.isSolid() || !ground.getFluidState().isEmpty() || ground.getBlock() instanceof StairBlock) return false;
+        if (!ground.isSolid() || !ground.getFluidState().isEmpty() || ground.getBlock() instanceof StairBlock
+                || ground.is(BlockTags.ALL_SIGNS)) return false;                 // (the game counts a sign as solid)
         if (!TownLook.open(level.getBlockState(p)) || !level.getBlockState(p.above()).isAir()) return false;
         if (!level.canSeeSky(p.above())) return false;
         return !TownLook.doorNear(level, p, 2) && !TownLook.postNear(level, p);
@@ -297,8 +298,8 @@ public final class StreetFurniture {
         int out = TownPlan.RING + TownPlan.STREET;                         // the first block past the ring street
         for (int sz : new int[]{ first, -first }) {
             for (int sx : new int[]{ -1, 1 }) {
-                BlockPos a = TownLook.ground(level, heart.getX() + sx * (TownPlan.AVENUE + 3), heart.getZ() + sz * out);
-                BlockPos b = TownLook.ground(level, heart.getX() + sx * (TownPlan.AVENUE + 4), heart.getZ() + sz * out);
+                BlockPos a = noticeSpot(level, heart.getX() + sx * (TownPlan.AVENUE + 3), heart.getZ() + sz * out);
+                BlockPos b = noticeSpot(level, heart.getX() + sx * (TownPlan.AVENUE + 4), heart.getZ() + sz * out);
                 if (!level.isLoaded(a) || !level.isLoaded(b)) continue;
                 if (isNotice(level, a) && isNotice(level, b)) return new BlockPos[]{ a, b };
                 if (a.getY() != b.getY() || Math.abs(a.getY() - heart.getY()) > 10) continue;
@@ -311,8 +312,19 @@ public final class StreetFurniture {
 
     private static boolean noticeFits(ServerLevel level, BlockPos p) {
         BlockState ground = level.getBlockState(p.below());
-        return ground.isSolid() && ground.getFluidState().isEmpty() && TownLook.open(level.getBlockState(p))
+        return ground.isSolid() && ground.getFluidState().isEmpty() && !ground.is(BlockTags.ALL_SIGNS) && TownLook.open(level.getBlockState(p))
             && level.getBlockState(p.above()).isAir();
+    }
+
+    /**
+     * Where a notice stands at this column: the first free block over the ground, or the sign standing there.
+     * The game counts a sign as solid (the heightmap stands on it), so the ground's height alone would put the
+     * board's place on top of its own signs, and a new board up there every visit.
+     */
+    static BlockPos noticeSpot(ServerLevel level, int x, int z) {
+        BlockPos p = TownLook.ground(level, x, z);
+        for (int i = 0; i < 4 && level.getBlockState(p.below()).getBlock() instanceof StandingSignBlock; i++) p = p.below();
+        return p;
     }
 
     /** One of the town's notices: a standing sign it put up. */

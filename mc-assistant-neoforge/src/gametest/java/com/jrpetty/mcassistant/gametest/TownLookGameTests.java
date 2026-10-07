@@ -184,6 +184,11 @@ public class TownLookGameTests {
             Villages.Village v = Villages.get(id);
             emptyStores(level, id);
             Container box = stores(level, heart, 6, -6, new ItemStack(Items.OAK_SAPLING, 64));
+            // The verges bare to begin with: the town may have planted one already from its founding stores
+            // in its first moments (the test counts what it plants itself, out of this chest).
+            for (BlockPos p : Avenues.spotsForTests(level, v)) {
+                if (level.getBlockState(p).getBlock() instanceof SaplingBlock) level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
+            }
             List<BlockPos> spots = Avenues.spotsForTests(level, v);
             helper.assertTrue(spots.size() >= 8, "the verges have their spots: " + spots.size() + " (reach " + Villages.townReach(id) + ")");
             // A door by the first spot, a lamp post against the second: neither gets a tree.
@@ -269,6 +274,7 @@ public class TownLookGameTests {
             emptyStores(level, id);
             Container box = stores(level, heart, 6, -6, new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
                 new ItemStack(Items.OAK_SIGN, 2), new ItemStack(Items.FLOWER_POT, 2), new ItemStack(Items.POPPY, 6));
+            int planksBefore = Market.stock(level, id, s -> s.is(ItemTags.PLANKS));
             int rounds = StreetFurniture.roundsForTests(level, v, 24);
             int[] counts = StreetFurniture.countsForTests(level, v);
             BlockPos[] notice = StreetFurniture.noticeForTests(level, v);
@@ -294,7 +300,7 @@ public class TownLookGameTests {
             int stairBatches = (stairsLeft + counts[0]) / 4, trapBatches = (trapsLeft + counts[1]) / 2;
             Kit.log("tl02 stairs left " + stairsLeft + ", trapdoors left " + trapsLeft + ", planks left " + planksLeft);
             helper.assertTrue((stairsLeft + counts[0]) % 4 == 0 && (trapsLeft + counts[1]) % 2 == 0
-                    && 128 - planksLeft == 6 * (stairBatches + trapBatches),
+                    && planksBefore - planksLeft == 6 * (stairBatches + trapBatches),
                 "the benches and the ledges made of the stores' planks, the rest put by: " + stairsLeft + " stairs, " + trapsLeft
                     + " trapdoors, " + planksLeft + " planks left");
             helper.assertTrue(planksLeft >= 48, "the builders' timber kept: " + planksLeft);
