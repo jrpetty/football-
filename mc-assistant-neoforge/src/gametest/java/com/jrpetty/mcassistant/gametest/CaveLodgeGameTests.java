@@ -124,52 +124,30 @@ public class CaveLodgeGameTests {
         CaveDwellers.recordForTests(id, t.heart().offset(-110, -30, 40), "a great cave", 30, 700);
         CaveDwellers.recordForTests(id, t.heart().offset(20, -12, -100), "a ravine", 25, 200);
         CaveDwellerGameTests.fill(t, new ItemStack(Items.PAPER, 64), new ItemStack(Items.ITEM_FRAME, 12), new ItemStack(Items.BOOK, 3),
-            new ItemStack(Items.DIAMOND, 3), new ItemStack(Items.EMERALD, 1), new ItemStack(Items.BREAD, 64));
+            new ItemStack(Items.DIAMOND, 2), new ItemStack(Items.EMERALD, 1), new ItemStack(Items.BREAD, 64));
         long day = level.getDayTime() / 24000L;
         Lodge.broughtUp(id, new ItemStack(Items.DIAMOND), "Ada", "the big cave east", day);
         Lodge.broughtUp(id, new ItemStack(Items.EMERALD), "Ada", "the great cave west", day);
-        // An afternoon at home (no trip to set out on). The frames go up a second on: hung the tick the lodge's ground was
-        // first held, they stood in a part of the world not yet open to a look for them, and the test (and the wall's own
-        // look for a frame already there) found none.
+        // One of the team at home, in the hall, of an afternoon (no trip to set out on): the walls fitted out, once.
         level.setDayTime(day * 24000L + 8000);
         level.updateSkyBrightness();
         VillageFolkEntity d = t.folk().get(0);
         BlockPos hall = Lodge.hall(id);
-        helper.runAfterDelay(20, () -> fitted(helper, level, t, b, d, hall, day));
-    }
-
-    private static void fitted(GameTestHelper helper, ServerLevel level, Town t, Ledger.Building b, VillageFolkEntity d, BlockPos hall, long day) {
-        UUID id = t.village();
-        // One of the team at home, in the hall.
         d.moveTo(hall.getX() + 0.5, hall.getY(), hall.getZ() + 0.5, 0.0F, 0.0F);
+        boolean hand = d.stationTask() == StationTask.CAVE && d.expedition() == null;
         Lodge.tick(level, t.v(), day);
-        Lodge.tick(level, t.v(), day);
-        List<ItemFrame> fr = frames(level, hall);
-        int maps = 0, marks = 0, trophies = 0;
-        String label = "";
-        for (ItemFrame f : fr) {
-            ItemStack s = f.getItem();
-            if (s.is(Items.FILLED_MAP)) {
-                maps++;
-                MapDecorations m = s.get(DataComponents.MAP_DECORATIONS);
-                if (m != null) for (String k : m.decorations().keySet()) if (k.startsWith("caves")) marks++;
-            } else if (!s.isEmpty()) {
-                trophies++;
-                label = s.getHoverName().getString();
-            }
-        }
         boolean log = level.getBlockEntity(Lodge.at(b, 3, 0, -2)) instanceof LecternBlockEntity lec && lec.hasBook()
             && lec.getBook().is(Items.WRITTEN_BOOK);
         int diamonds = CaveDwellerGameTests.stock(level, id, Items.DIAMOND), emeralds = CaveDwellerGameTests.stock(level, id, Items.EMERALD);
-        Kit.log("cl01 fitted: " + maps + " maps (" + marks + " caves marked), " + trophies + " trophies (" + label + "), log " + log
-            + "; diamonds left " + diamonds + ", emeralds " + emeralds + "; " + CaveDwellers.lodgeLine(level, t.v()));
-        helper.assertTrue(maps == 4 && marks >= 3, "the map wall: four sheets of the cave country, every cave marked: " + maps + " maps, " + marks + " marks");
-        helper.assertTrue(trophies >= 1 && label.contains("brought up by Ada") && label.contains("the big cave east"),
-            "a trophy on the wall, named for who brought it up and from where: " + label);
-        helper.assertTrue(diamonds == 2 && emeralds == 1, "out of what the stores can spare, never the last: diamonds " + diamonds + ", emeralds " + emeralds);
+        String line = CaveDwellers.lodgeLine(level, t.v());
+        Kit.log("cl01 the hand " + d.displayNameCap() + " (" + d.stationTask() + ", out " + (d.expedition() != null) + "): log " + log
+            + "; diamonds left " + diamonds + ", emeralds " + emeralds + "; " + line);
+        helper.assertTrue(hand, "one of the team at home to do it: " + d.stationTask());
+        helper.assertTrue(line.contains("marks 3 caves"), "the map wall drawn, every cave on it: " + line);
+        helper.assertTrue(diamonds == 1 && emeralds == 1, "a trophy out of what the stores can spare, never the last: diamonds " + diamonds
+            + ", emeralds " + emeralds);
         helper.assertTrue(log, "the team's log on the lectern");
         // The post moves to the lodge (an afternoon at home), and of a morning the team gathers there.
-        level.setDayTime(day * 24000L + 8000);
         CaveDwellers.work(d, level);
         helper.assertTrue(d.stationPos() != null && d.stationPos().distSqr(hall) <= 4, "its post at the lodge: " + d.stationPos());
         VillageFolkEntity e = t.folk().get(1);
@@ -181,7 +159,30 @@ public class CaveLodgeGameTests {
         boolean off = CaveDwellers.gatheringForTests(d, level);
         Kit.log("cl01 the gathering: waits " + waits + ", walks " + walks + ", then off " + !off);
         helper.assertTrue(waits && walks && !off, "the team gathers at the lodge of a morning, and goes once all are in");
-        helper.succeed();
+        level.setDayTime(day * 24000L + 8000);
+        level.updateSkyBrightness();
+        // The frames, looked for a second on: hung the tick the lodge's ground was first held, they stand in a part of the
+        // world not yet open to a look for them (they are there; a look finds them a moment later).
+        helper.runAfterDelay(20, () -> {
+            int maps = 0, marks = 0, trophies = 0;
+            String label = "";
+            for (ItemFrame f : frames(level, hall)) {
+                ItemStack s = f.getItem();
+                if (s.is(Items.FILLED_MAP)) {
+                    maps++;
+                    MapDecorations m = s.get(DataComponents.MAP_DECORATIONS);
+                    if (m != null) for (String k : m.decorations().keySet()) if (k.startsWith("caves")) marks++;
+                } else if (!s.isEmpty()) {
+                    trophies++;
+                    label = s.getHoverName().getString();
+                }
+            }
+            Kit.log("cl01 fitted: " + maps + " maps (" + marks + " caves marked), " + trophies + " trophies (" + label + ")");
+            helper.assertTrue(maps == 4 && marks >= 3, "the map wall: four sheets of the cave country, every cave marked: " + maps + " maps, " + marks + " marks");
+            helper.assertTrue(trophies == 1 && label.contains("brought up by Ada") && label.contains("the big cave east"),
+                "a trophy on the wall, named for who brought it up and from where: " + label);
+            helper.succeed();
+        });
     }
 
     // ============================================================ cl02: a copy of the cave map
