@@ -205,7 +205,44 @@ public class BuildGoal extends Goal {
      */
     public static int stamp(net.minecraft.server.level.ServerLevel level, String structure, BlockPos anchor,
                             Direction facing, int radius, java.util.function.Function<Placement, BlockState> palette) {
+        clearWildPlants(level, structure, anchor, facing, radius);        // [econ-store] no grass growing on its floor
         return stampOnly(level, structure, anchor, facing, radius, palette, p -> true);
+    }
+
+    /**
+     * [econ-store] What grows wild (grass, ferns, flowers, a dead bush) inside a building's footprint, in the cells its
+     * drawing leaves empty, taken up: set down over a savanna's grass, the store had tall grass and ferns standing
+     * on its shop floor and among its stockroom's chests. Without telling the neighbours (the building is about to be
+     * set down round it, as stampOnly sets it). Returns how many came up.
+     */
+    public static int clearWildPlants(net.minecraft.world.level.Level level, String structure, BlockPos anchor, Direction facing, int radius) {
+        java.util.Set<BlockPos> planned = new java.util.HashSet<>();
+        int top = 5;
+        for (Placement p : plan(structure, anchor, facing, radius)) {
+            planned.add(p.pos());
+            top = Math.max(top, p.pos().getY() - anchor.getY());
+        }
+        int[] g = footprint(structure);
+        Direction right = facing.getClockWise();
+        int n = 0;
+        for (int dx = -g[0]; dx <= g[0]; dx++) {
+            for (int dz = -g[1]; dz <= g[1]; dz++) {
+                for (int dy = 0; dy <= top; dy++) {
+                    BlockPos c = cell(anchor, right, facing, dx, dz).above(dy);
+                    if (planned.contains(c) || !level.isLoaded(c) || !isWildPlant(level.getBlockState(c))) continue;
+                    level.setBlock(c, Blocks.AIR.defaultBlockState(), 2 | 16);
+                    n++;
+                }
+            }
+        }
+        return n;
+    }
+
+    /** [econ-store] Something growing wild that a building's floor is no place for: grass, ferns, a flower, a dead bush. */
+    public static boolean isWildPlant(BlockState st) {
+        return st.is(Blocks.SHORT_GRASS) || st.is(Blocks.TALL_GRASS) || st.is(Blocks.FERN) || st.is(Blocks.LARGE_FERN)
+            || st.is(Blocks.DEAD_BUSH) || st.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS) || st.is(Blocks.SUNFLOWER)
+            || st.is(Blocks.LILAC) || st.is(Blocks.ROSE_BUSH) || st.is(Blocks.PEONY) || st.is(Blocks.PINK_PETALS);
     }
 
     /** As stamp, but only the placements chosen (a storey at a time, the missing cells...). */
@@ -512,6 +549,16 @@ public class BuildGoal extends Goal {
                 }
             }
         }
+        // [econ-store] And what grows wild inside its walls, in the cells the drawing leaves empty: grass and ferns
+        // stood on the floor of every building put up over a meadow (a part's own cell is laid over them anyway).
+        for (int dx = -g[0]; dx <= g[0]; dx++) {
+            for (int dz = -g[1]; dz <= g[1]; dz++) {
+                for (int dy = 0; dy <= top; dy++) {
+                    BlockPos c = cell(base, right, facing, dx, dz).above(dy);
+                    if (!taken.contains(c) && isWildPlant(assistant.level().getBlockState(c))) plan.add(new Placement(c, Part.CLEAR));
+                }
+            }
+        }
         // [districts] A park's lot is cut and filled to one level, its edges eased, before a stone of it is laid
         // (entity/ParkGround): a lawn on a hillside is no lawn, and its fountain's water ran out under it.
         if (com.jrpetty.mcassistant.entity.Park.STRUCTURE.equals(structure)) {
@@ -729,7 +776,7 @@ public class BuildGoal extends Goal {
             // its leaves; by the time its turn comes the leaves round a trunk may be gone,
             // so it is only asked whether there is still a trunk or a leaf there.)
             if (p.part() == Part.CLEAR) {
-                if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st)) { target = p; break; }
+                if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st) || isWildPlant(st)) { target = p; break; }   // [econ-store] a plant
                 // [districts] Earth above a park's lawn, still to be dug away (entity/ParkGround).
                 if (com.jrpetty.mcassistant.entity.ParkGround.dig(p, st)) { target = p; break; }
             } else if (soft(st)) {
