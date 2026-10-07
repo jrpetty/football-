@@ -603,12 +603,12 @@ public final class Fashion {
         boolean watch = f.stationTask() == AssistantEntity.StationTask.GUARD && f.onWatch();
         s.dressed = !watch && (f.offWorkNow() || id != null && (Assemblies.now(id) != null || RestDay.today(id, day)));
         Villages.Village v = id == null ? null : Villages.get(id);
-        // A garment it is carrying (a treat from the shop, a parcel from a courier) goes on, if it has nothing in that
-        // place or it is the season's colour and what it has on is not.
+        // A garment of its own it is carrying (a treat from the shop, a thing from a player's stall) goes on, if it has
+        // nothing in that place or it is the season's colour and what it has on is not. Never a courier's load.
         if (v != null) {
             for (ItemStack st : f.getInventoryItems()) {
                 Garment g = Garment.of(st);
-                if (g == null || g == Garment.ROSETTE) continue;
+                if (g == null || g == Garment.ROSETTE || !Homes.isKeepsake(st) || !Homes.ownedBy(st, f)) continue;
                 int c = Garment.colourOf(st);
                 boolean better = s.worn(g.slot).isEmpty() || trend(id).set() && c == trend(id).colour && s.colour(g.slot) != c;
                 if (!better) continue;
@@ -1584,7 +1584,7 @@ public final class Fashion {
     /** Tests: the season's look chosen now, as a season's turn would choose it. */
     public static void newTrendForTests(ServerLevel level, Villages.Village v) {
         long day = level.getDayTime() / 24000L;
-        newTrend(level, v, day, seasonOf(v.id(), day) + 1000);
+        newTrend(level, v, day, seasonOf(v.id(), day));
     }
 
     /** Tests: a day of the fashion's going round, on this day. */

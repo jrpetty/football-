@@ -188,6 +188,7 @@ public final class Tailoring {
         Bench.Hand hand = Bench.handOf(level, v, tailor, VillageFolkEntity.buildingFor(AssistantEntity.StationTask.TAILOR));
         String at = loom != null ? ", at the loom" : "";
         List<Order> b = book(id);
+        Set<String> short_ = new HashSet<>();                          // what this turn found it could not make: not tried twice
         for (Order o : new ArrayList<>(b)) {
             if (!o.status.isEmpty() && now - o.tried < RETRY && now >= o.tried) continue;
             Item it = o.kind.item();
@@ -196,7 +197,10 @@ public final class Tailoring {
                 o.tried = now;
                 continue;
             }
+            String what = o.kind.name() + "/" + o.colour;
+            if (short_.contains(what)) continue;
             ItemStack made = make(level, v, tailor, hand, o.kind, o.colour, o);
+            if (made.isEmpty() && o.kind != Garment.ROSETTE) short_.add(what);
             // The show's rosette, for want of a blue dye, plain: there must be a rosette.
             if (made.isEmpty() && o.kind == Garment.ROSETTE) made = make(level, v, tailor, hand, o.kind, Garment.NATURAL, o);
             if (made.isEmpty()) continue;
