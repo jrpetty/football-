@@ -19,11 +19,6 @@
   },
   "result": {
     "id": "mc_assistant:window_box",
-    "count": 1,
-    "components": {
-      "minecraft:block_state": {
-        "flower": "poppy"
-      }
-    }
+    "count": 1
   }
 }

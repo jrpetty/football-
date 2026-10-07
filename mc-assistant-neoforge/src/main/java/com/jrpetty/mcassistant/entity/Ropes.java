@@ -157,8 +157,16 @@ public final class Ropes {
         if (r.stage == 0) {
             // To where it gets on: the edge over the rope, or the rope's foot.
             BlockPos to = r.down ? rope.stand() : rope.bottom();
-            double dx = f.getX() - (to.getX() + 0.5), dz = f.getZ() - (to.getZ() + 0.5);
-            if (dx * dx + dz * dz <= 0.9 * 0.9 && Math.abs(f.getY() - to.getY()) < 1.3) {
+            double dx = f.getX() - (to.getX() + 0.5), dz = f.getZ() - (to.getZ() + 0.5), d2 = dx * dx + dz * dz;
+            boolean even = Math.abs(f.getY() - to.getY()) < 1.3;
+            // A step or two short of it with the path-finder done (it stops short of an edge, and of a cell it shares
+            // with the rope): the last step taken by hand, onto the spot.
+            if (even && d2 > 0.9 * 0.9 && d2 <= 2.5 * 2.5 && (f.getNavigation().isDone() || now - r.started > 60)) {
+                f.getNavigation().stop();
+                f.setPos(to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
+                d2 = 0;
+            }
+            if (d2 <= 0.9 * 0.9 && even) {
                 r.stage = 1;
                 r.y = r.down ? rope.top().getY() + 1.0 : f.getY();
                 f.getNavigation().stop();

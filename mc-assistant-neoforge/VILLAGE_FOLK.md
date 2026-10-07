@@ -7965,7 +7965,7 @@ The game tests `WorkItemsGameTests` (wi01 to wi10) check that every one of the e
 maker; the woodcutter makes eight props of the stores' logs and planks for the miner, who stands them at the foot of its
 gallery and every five steps, the gravel over the propped stretch stays up while the gravel past it falls, the propped
 face is dug in 85 of every 100 ticks, and a player stands one by hand; the tailor knots a coil, the miner lets it down a
-shaft ten deep and climbs down and up it, and a player's coil let down a tower comes up whole when a piece halfway down
+shaft twelve deep and climbs down and up it, and a player's coil let down a tower comes up whole when a piece halfway down
 is broken; the tailor sews two sacks, a full pack's 198 ore and coal go into one and out at the chest, the empty sack
 is kept, a cave dweller's haul comes out of its sack, and a player's sack takes up the ore it walks over and tips it
 out; the smith makes one saw, the woodcutter fells a whole tree at its foot (the logs at the stump, the saw worn four)

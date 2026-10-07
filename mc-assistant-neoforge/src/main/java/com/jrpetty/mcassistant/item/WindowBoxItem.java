@@ -34,6 +34,7 @@ public class WindowBoxItem extends BlockItem {
     /** A box of this flower. */
     public static ItemStack of(WindowBoxBlock.Flower f) {
         ItemStack s = new ItemStack(WorkItems.WINDOW_BOX_ITEM.get());
+        if (f == WindowBoxBlock.Flower.POPPY) return s;              // the plain box is the poppies' (its recipe's), so they stack
         s.set(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY.with(WindowBoxBlock.FLOWER, f));
         return s;
     }
