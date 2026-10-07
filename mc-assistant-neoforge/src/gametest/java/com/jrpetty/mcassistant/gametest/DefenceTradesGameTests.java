@@ -139,6 +139,22 @@ public class DefenceTradesGameTests {
         return box;
     }
 
+    /** The town's arrows: its stores' and every one carried by its folk. */
+    private static int townArrows(ServerLevel level, UUID village, List<VillageFolkEntity> folk) {
+        int n = stock(level, village, Items.ARROW);
+        for (VillageFolkEntity f : folk) n += f.countCarried(s -> s.is(Items.ARROW));
+        return n;
+    }
+
+    /** Where the town's arrows are, for the log. */
+    private static String arrowsHeld(ServerLevel level, UUID village, List<VillageFolkEntity> folk) {
+        StringBuilder b = new StringBuilder("stores " + stock(level, village, Items.ARROW));
+        for (VillageFolkEntity f : folk) {
+            b.append(", ").append(f.displayNameCap()).append(" (").append(f.stationTask()).append(") ").append(f.countCarried(s -> s.is(Items.ARROW)));
+        }
+        return b.toString();
+    }
+
     private static int stock(ServerLevel level, UUID village, Item item) {
         return Market.stock(level, village, s -> s.is(item));
     }
@@ -588,7 +604,8 @@ public class DefenceTradesGameTests {
                     level.setBlock(l.target(), Blocks.TARGET.defaultBlockState(), 3);
                 }
                 chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.ARROW, 40));
-                arrows0[0] = stock(level, id, Items.ARROW);
+                arrows0[0] = townArrows(level, id, folk);
+                Kit.log("fd06 the town's arrows: " + arrowsHeld(level, id, folk));
                 aim0[0] = Fletchers.aimForTests(g1);
                 aim0[1] = Fletchers.aimForTests(g2);
                 return;
@@ -612,12 +629,15 @@ public class DefenceTradesGameTests {
             if (Fletchers.practising(id)) {
                 Fletchers.duty(f, level);
                 if (t % 200 == 0) Kit.log("fd06 @" + t + ": " + f.displayNameCap() + " at " + f.blockPosition().toShortString() + "; "
-                    + g1.displayNameCap() + " " + g1.hobbyNow() + "; " + g2.displayNameCap() + " " + g2.hobbyNow());
+                    + g1.displayNameCap() + " " + g1.hobbyNow() + "; " + g2.displayNameCap() + " " + g2.hobbyNow() + "; arrows: " + arrowsHeld(level, id, folk));
                 if (t > 5000) helper.fail("the practice never finished");
                 return;
             }
             var results = Fletchers.lastPracticeForTests(id);
-            int arrowsNow = stock(level, id, Items.ARROW);
+            // The town's arrows (the stores and every quiver in it): a quiver topped up out of the stores meanwhile (the
+            // watch's kit, a hunter's) is still the town's; practice itself loses none but a stray or two.
+            int arrowsNow = townArrows(level, id, folk);
+            Kit.log("fd06 the town's arrows after: " + arrowsHeld(level, id, folk));
             int[] a1 = Fletchers.aimForTests(g1), a2 = Fletchers.aimForTests(g2);
             Kit.log("fd06 practice over at tick " + t + ": " + results.entrySet().stream().map(e -> e.getKey() + " " + e.getValue()[1] + " of "
                 + e.getValue()[0]).toList() + "; arrows " + arrows0[0] + " -> " + arrowsNow + "; aim g1 " + java.util.Arrays.toString(aim0[0]) + " -> "
@@ -632,7 +652,7 @@ public class DefenceTradesGameTests {
             helper.assertTrue(Fletchers.spread(shot, 6.0F) < 6.0F, "its spread in a fight the narrower: " + Fletchers.spread(shot, 6.0F));
             String card = Fletchers.aimLine(shot);
             helper.assertTrue(card != null && card.startsWith("best at the butts: ") && card.contains(" of 10"), "its best on its card: " + card);
-            helper.assertTrue(arrowsNow >= arrows0[0] - 4 && arrowsNow <= arrows0[0], "the arrows pulled and back in the stores: "
+            helper.assertTrue(arrowsNow >= arrows0[0] - 4 && arrowsNow <= arrows0[0], "the arrows pulled and back to the town: "
                 + arrows0[0] + " -> " + arrowsNow);
             helper.succeed();
         });
