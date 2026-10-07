@@ -1,0 +1,28 @@
+{
+  "variants": {
+    "fish=false,servings=0": {
+      "model": "mc_assistant:block/pet_bowl_empty"
+    },
+    "fish=true,servings=0": {
+      "model": "mc_assistant:block/pet_bowl_empty"
+    },
+    "fish=false,servings=1": {
+      "model": "mc_assistant:block/pet_bowl_meat_half"
+    },
+    "fish=true,servings=1": {
+      "model": "mc_assistant:block/pet_bowl_fish_half"
+    },
+    "fish=false,servings=2": {
+      "model": "mc_assistant:block/pet_bowl_meat_half"
+    },
+    "fish=true,servings=2": {
+      "model": "mc_assistant:block/pet_bowl_fish_half"
+    },
+    "fish=false,servings=3": {
+      "model": "mc_assistant:block/pet_bowl_meat_full"
+    },
+    "fish=true,servings=3": {
+      "model": "mc_assistant:block/pet_bowl_fish_full"
+    }
+  }
+}

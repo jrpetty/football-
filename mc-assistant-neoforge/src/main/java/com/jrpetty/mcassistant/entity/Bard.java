@@ -315,6 +315,7 @@ public final class Bard {
             // A coin from its own purse into the bard's hat: the folk's to give, once a visit.
             if (o.spend(1)) {
                 f.earn(1);
+                Buskers.bardTook(level, town.id(), f);                  // [arms] in the gazette's street music
                 o.sayLater(FolkTalk.pick(f.getRandom(), "Here — that one was lovely.", "A coin for the song!"), 20);
             }
             return;

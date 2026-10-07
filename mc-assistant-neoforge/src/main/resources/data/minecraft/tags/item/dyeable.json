@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    "mc_assistant:collar",
+    "mc_assistant:long_coat",
+    "mc_assistant:leather_jacket",
+    "mc_assistant:wool_shawl",
+    "mc_assistant:waistcoat",
+    "mc_assistant:felt_hat",
+    "mc_assistant:flat_cap",
+    "mc_assistant:top_hat",
+    "mc_assistant:wool_scarf",
+    "mc_assistant:rosette"
+  ]
+}

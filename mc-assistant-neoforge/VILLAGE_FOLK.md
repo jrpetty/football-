@@ -4218,59 +4218,128 @@ miner works and how deep.
 ## The cave dwellers
 
 An Iron Age town of **twenty-five** or more, with a couple of miners at its mine and a watch on
-its walls, takes up a **cave dweller**: half miner, half guard. It has one for every
-twenty-seven folk, and never more than four. The town takes an idle hand first, then a miner or
-a guard it has more of than it needs. It never takes one from a trade it is short of. A cave
-dweller wears the miner's helmet and lamp, with the town's armour over them, and a lantern
-floats over its head from far off.
+its walls, sends a small, highly skilled **cave team** into the caves round it: half miners,
+half guards. The team is **two** strong, **three** at sixty folk and **four** at a hundred,
+never more. A cave dweller wears the miner's helmet and lamp, with the town's armour over them,
+and a lantern floats over its head from far off.
 
-* **Kitted out by the town, free.** Each morning it goes to the stores. It gets the armour,
-  blade and shield the watch has (leather, iron or diamond, as the town can make them). It also
-  gets the best pickaxe in the stores (iron in the Iron Age, diamond once there are diamonds),
-  a stack and a half of torches (made from the stores' coal and sticks if there are none), food
-  for the day and a little cobblestone for walling off lava. It leaves what it does not need,
-  such as seed, saplings and a bench, in the stores. The town's pieces carry its mark. When it
-  takes up another trade, they go back into the stores; nothing comes out of its purse.
-* **Out by day, home by dusk.** It makes for a cave its town knows and has not worked out.
-  Knowing none, it walks out along the way it has looked least, to a hundred blocks in the Iron
-  Age, a hundred and fifty in the Diamond Age and two hundred in the Nether Age. As it walks it
-  looks for a way down under the rock that it can walk, and goes in.
-* **In the cave.** It lights its way with torches where it is dark, and the torches mark the
-  way home. It mines every ore it sees that its pick allows, the whole vein, including the
-  blocks behind the first: coal, copper, iron, gold, redstone, lapis, emerald and amethyst;
-  diamond with an iron pick or better; obsidian only with a diamond pick. It never digs the
-  block it stands on, a block with lava or water behind it, a step of the miners' stairs, a
-  portal's obsidian, or anything in a town. It fights what comes at it and clears the way. It
-  backs off from a creeper, never goes near a warden, eats when it is hurt and turns for home
-  when badly hurt.
-* **Old chests.** It opens the chests the world left: a mineshaft's carts, a dungeon's chests,
-  and the chests of the jungle temples, strongholds, ruined portals, igloos and shipwrecks. It
-  takes what is worth carrying: ore and metal, gems, enchanted books, golden apples, saddles,
-  name tags and music discs. It leaves the bones and the string. It only opens a chest that
-  still has the world's loot in it, or one inside something the world built. It never opens a
-  named chest, a chest near any town, or a chest in a village of villagers. It leaves the deep
-  dark's ancient cities and the trial chambers alone. It only opens a desert temple's chests
+* **Picked from the town's best.** The town takes its most skilled miners and guards, by their
+  level and their years at the work. It never takes an idle hand of no skill just for being
+  idle, and never a hand from a trade it is short of. A new cave dweller starts near its mining
+  or guarding level and learns the caves fast. The most experienced one **leads**, and the
+  Caves page shows each one's level. Cave dwellers have a **guard's health** (twice a folk's),
+  and they are among the **best paid** in the town: dangerous, skilled work underground, in a
+  small team (the Jobs page and their cards say so).
+* **A plan before they go.** The leader works out how long the trip will be. A cave nobody has
+  mapped gets **a day**: the team maps it, lists its veins, mines what is close and comes home.
+  A known cave is planned from its list: the hours to mine the veins the team's picks can take,
+  plus the walk there and back, over a working day of about ten hours of daylight. That comes to
+  anything from **half a day** (a near cave with a vein or two left) to **four days** (a big cave,
+  deep and far, with a long list). Veins worth little, of something the stores already have
+  plenty of, are left out. If the age is waiting badly on iron or diamonds the cave has, the
+  plan runs a day longer. The plan is cut down to what the town can spare: two meals a member a
+  day and a day over, 64 torches a member a day, and no more than a day for a team short of its
+  kit. The plan goes on the board and in the chronicle, for example *"Three days to the deep
+  caves north-east: 14 veins listed (iron, the town's want), a day's walk there and back, food
+  and torches for three."* The Caves page shows the plan and how it was worked out.
+* **Kitted out by the town, free.** Before setting out each one goes to the stores. It gets the
+  armour, blade and shield the watch has, and the best pickaxe in the stores. It gets at least
+  64 torches (more for a long trip), food for the days planned and one over, cobblestone for
+  the nights' camps, a crafting table, a few planks and sticks, and three iron ingots if the
+  town can spare them. It leaves what it does not need, such as seed, saplings and a bench, in
+  the stores. The town's pieces carry its mark and go back into the stores when it takes up
+  another trade. Nothing comes out of its purse.
+* **The town's torches.** Every torch the team carries is made by the town from its own coal or
+  charcoal and sticks. The smelter, the smith and the shop top the stores up for the team ahead
+  of its next trip. The team only draws what the town can spare over its own lights, its miners'
+  and its street lamps, and never takes the last of them. If the town cannot spare 64 each, the
+  team goes with what it can spare and keeps the trip shorter. With too few to go at all, it
+  waits for the makers.
+* **Together.** The team goes out as one. They walk in order, the leader first, each a couple
+  of blocks behind the one ahead, never more than a few blocks from the leader. The leader waits
+  for anyone who falls behind and goes back for them. In a fight one takes on a lone monster
+  while the others work on, and they all join in against a group. They shout a warning about a
+  creeper and back off from it. If one of them is badly hurt, they all go home together.
+* **Every vein.** In a cave the leader looks through the walls, the floor and the roof for ore.
+  Every vein showing, and every vein up to three blocks behind the rock face, goes on the cave's
+  list, and whoever is nearest calls it out ("Iron here!"). The leader picks the vein the town
+  wants most first, then the nearest. For a hidden vein they cut a short tunnel in to it. Each
+  member digs its own block, and two never dig the same one. They cheer at diamonds. They never
+  dig the block they stand on, a block with lava or water behind it, a step of the miners'
+  stairs, a portal's obsidian, or anything in a town. Obsidian with no diamond pick in the team
+  stays on the list, waiting. When every vein is done, the cave is worked out and they move on
+  to the next one. They come back to the waiting veins once the town has a better pick.
+* **Light where it counts.** Torches cost the town, so the team does not cover the cave in them.
+  The leader sets one about every 15 blocks along the way in, up to 20 in a straight passage and
+  closer at a turn or where passages meet, so the way home is clear. Anyone mining or fighting
+  where it is dark enough for monsters to spawn sets one there. What they set stays in the cave
+  for the town's later use.
+* **Made on the spot.** Low on torches, a cave dweller makes more from the coal it has mined and
+  its sticks (one coal and one stick for four torches; a plank makes two sticks, a log four
+  planks), so coal mined in the cave turns into light there and then. When its pickaxe or sword
+  is about to break, it sets its crafting table down, makes a new one and picks the table up
+  again. It uses iron ingots if it has them, otherwise cobblestone it has cut, otherwise wood.
+  It only makes a diamond pickaxe when the cave's list has a vein waiting for one that the town
+  wants. Otherwise the town wants its diamonds in the storehouse. Before a long dig it makes a
+  spare pick if its own is half worn. Every recipe is the game's own, and everything comes out
+  of its pack. What it made goes into the story of the trip.
+* **Lava, water and holes.** They wall off lava and running water with cobblestone, patch holes
+  in the floor so nobody falls in, and put themselves out with a water bucket if they carry one.
+  They put torches all round a spawner so nothing more comes out of it, leave it standing, and
+  note it.
+* **When to come back.** They come home when the plan's time is up. If the work is going well
+  and their food and torches hold, they stay another half day, twice at most. The leader turns
+  them back early, and says why ("We turn back: the torches were nearly gone"), when:
+    * the torches are nearly gone and there is no coal or wood to make more;
+    * the food will not last the walk home;
+    * one of them has no tool and nothing to make one with;
+    * a pack is full;
+    * one of them is badly hurt with nothing to eat, or one of the team is lost;
+    * the cave is worked out;
+    * there is more down there than they can take on, such as a warden or a crowd of monsters.
+* **Nights underground.** On a trip of more than a day, at dusk they find a nook, wall it in
+  with cobblestone and set a torch inside. They eat, and sleep in turns while one keeps watch.
+  At first light they eat again, take the walls down and go on. While they are away the town
+  still counts them as its team: nobody takes up their trade, their beds stay theirs, and their
+  cards and the Caves page say "on an expedition, day 2 of 3". If they are a day overdue, the
+  town sends out a search party. After a restart, they take up the trip again where they are.
+* **Old chests.** They open the chests the world left: a mineshaft's carts, a dungeon's chests,
+  and the chests of the jungle temples, strongholds, ruined portals, igloos and shipwrecks. They
+  take what is worth carrying: ore and metal, gems, enchanted books, golden apples, saddles,
+  name tags and music discs. They leave the bones and the string. They only open a chest that
+  still has the world's loot in it, or one inside something the world built. They never open a
+  named chest, a chest near any town, or a chest in a village of villagers. They leave the deep
+  dark's ancient cities and the trial chambers alone. They only open a desert temple's chests
   once the TNT trap under them is gone.
-* **What it notes.** It notes caves and ravines (how deep and how big), every ore vein (blocks
-  seen and blocks mined), mineshafts, dungeons and spawners (it leaves them alone, but says
-  so), the old structures, and pools of lava as a danger to the miners.
-* **Never trapped.** It comes home along its own marks. If it cannot get to one, it goes on to
-  the next. If it is underground with no way it can walk, it cuts its own stairs up, as a lost
-  miner does. If even that fails, it calls for help, and its family and friends go out to look
-  for it. It is never lifted out.
-* **Home.** What it brought out goes into the stores as its work, so it shows in the town's
-  production and its pay. A cave dweller is paid as dangerous, skilled work.
+* **Never trapped.** They come home along the leader's marks. If one of them is stuck, it cuts
+  itself a step. If they are underground with no way they can walk, they cut their own stairs
+  up, as a lost miner does. If even that fails, they call for help, and the town's search party
+  goes out for them. They are never lifted out.
+* **Home.** The town comes out to greet them, and a long trip home with a big haul is the town's
+  news. Every one of them walks to the town's **storehouse** and puts its whole haul in, booked
+  in the storehouse's books as brought in by that cave dweller and counted as its work. With no
+  storehouse, the haul goes into the stores at the heart. Unused torches and makings go back
+  too. The chronicle tells the trip as a short story: who went, where, the veins listed and
+  mined, the fights, the spawners lit, the nights camped, what they made down there, and the
+  haul, with the torches set and drawn.
 
 **Where to see it.** The **Caves** page of the town's books (the last tab) has a map of the
-finds round the town, every find with its coordinates (the big ones first; scroll for more),
-the cave dwellers and their day, and the hauls brought home. The board has a line on the
-caves. The chronicle and the gazette tell of diamonds, a mineshaft, a dungeon or a temple's
-treasure, and so does the next morning assembly. A cave dweller's card shows where it went
-today, what it found and its kit. Ask anybody "What's down in the caves?" (or press
-**Underground** on the Village tab); a cave dweller gives the exact spot. `/village caves` lists
-it all, and `/village caves books` opens the page. For operators, `/village caves now` sends the
-cave dwellers out at once (or takes one up), and `/village caves stage` cuts a small cave with
-ore and an old chest beside you and sends the town's cave dweller into it.
+finds round the town. Beside it, scrolling, are the team with each one's level (the leader
+marked) and its card, the trip under way or the last plan with how it was worked out, the
+torches drawn and set, each cave with its list of veins (mined, waiting for a better pick, or
+still to do), every find with its coordinates, and the hauls brought home. The board shows the
+plan while the team is out. The chronicle and the gazette tell of diamonds, a mineshaft, a
+dungeon or a temple's treasure, and so does the next morning assembly. A cave dweller's card
+shows its level, its place in the team, where it is on the trip, the torches set and drawn,
+and its kit. Ask anybody "What's down in the caves?" (or press **Underground** on the Village
+tab); a cave dweller gives the exact spot.
+
+**Commands.**
+* `/village caves` lists it all, and `/village caves books` opens the page.
+* For operators, `/village caves now` sends the team out at once, picking it first if the town
+  wants one and has none.
+* For operators, `/village caves stage` cuts a small cave beside you, with ore in and behind its
+  walls and an old chest, and sends the town's team into it.
 
 ## Names
 
@@ -6228,6 +6297,565 @@ The game tests `WatchClearsGameTests` (wc01 to wc05) check that:
 * a raiding band gathers at the town's edge; two raiders among the folk get two guards each, and none is sent out to
   the band still at the edge; deaths while the bell rings are put down as what took them, with where and doing what;
   and the status, the books and `/village monsters` count the watch's and the golem's kills.
+
+## The town's arms
+
+A town's banner (see *Culture and identity*) is its coat of arms, and now it goes wherever the town goes. Every
+banner is woven by the tailor out of the stores, as you would make one: six wool of the field's colour and a
+stick, then a dye for each charge at the loom. Nothing is ever made from nothing, and while the stores are short
+the books say what of ("a guard's shield waits on 2 blue dye").
+
+* **Flown all over town.** Besides either side of the hall's door, the gates, the market and the theatre, the
+  banner now flies on the four corner towers of the wall (on the outside, just under the top) and on its own
+  pole at each end of the board, facing the square. `/village arms` lists every place and whether its banner is
+  up.
+* **On the board.** The board draws the arms in its header, a banner hung in each top corner either side of the
+  town's name, so you can tell whose square you are standing in from across it.
+* **On the watch's shields.** When a guard is issued a plain shield at the stores, the tailor weaves a banner and
+  puts it on the shield the way you would at the crafting table. The banner is used up, and the shield shows the
+  town's colours and charges. A shield keeps the arms it was given.
+* **On the road.** A folk setting out with a caravan, on a trade run or as an envoy carries the town's banner in
+  its free hand. It takes one of the town's woven banners out of the stores, or the tailor weaves one then, and
+  puts it back when it comes home.
+* **The war banner** that goes up the day war is declared is the stores' red cloth with the town's charges woven
+  on it, a dye for each, when the stores have the dyes. Taken down at the peace, it goes back into the stores as
+  it is, ready for next time.
+* **Festival tabards** (new item: *Tabard*). The tailor keeps the town a set of tabards, one for each grown folk
+  who is not on the watch, six at most. Each is seven wool cut like a tunic with the town's banner put on it.
+  On a festival's day and on Founding Day they come out of the stores in the morning, and the folk wear them over
+  their clothes, front and back, until night, when they go back in. You can make one too: seven wool in the shape
+  of a chestplate, then the tabard and any banner together at the crafting table give the tabard the banner's
+  arms, as a shield does.
+* **Your own banner.** Buy a copy at the shop's "Our banner" sign, as before (at the town store if the town has
+  no shop). When a town makes you a citizen it gives you its banner then and there. If the stores can't run to
+  one just then, the town owes you one: right-click the shop's sign once they can and it is yours for nothing.
+* **A grant for a great day.** A town's arms can gain a charge, six at most (as many as the loom will weave):
+  * the first time it comes into a new age, a charge for what it lives by: a **fish** for a town of fishers, a
+    **pick** for miners, a **sheaf** for farmers;
+  * later ages add one of their own: a grey border for iron, a cyan lozenge for diamond, a black base for the
+    Nether;
+  * a war won adds a red saltire.
+
+  A new leader may give the town a new motto, from its own heart, and the hall's sign is carved again. The banners
+  already up come down one place at a time (into the stores, as keepsakes) and the new arms go up. The chronicle
+  records each grant, and the Culture page lists them.
+* **New patterns** (new items: *Banner Pattern*, Fish, Pick and Sheaf). The fish, the pick and the sheaf are new
+  banner patterns. Make each from a sheet of paper and a fish, any pickaxe, or wheat, and use it at the loom like
+  the game's own patterns. The town's tailor makes the one it needs the first time, and the stores keep it.
+* **Seen on** the board, a guard's card ("carries the town's arms on its shield"), the card of anybody wearing a
+  tabard or carrying the banner, and the Culture page's new *The town's arms* section. `/village arms` says it all
+  in chat. Operators can use `/village arms now` to put up everything the stores run to at once, `/village arms
+  board` to find where to stand to see the board's header, and `/village arms stage` for a picture: a guard, a
+  carrier and two folk in tabards in a row.
+
+The game tests `ArmsBuskersGameTests` check that a guard's shield is given the town's arms, layer for layer, out of
+six wool, a stick and a dye a charge (ab01); that the banner flies either side of the hall's door, woven of the
+stores' wool (ab02); that the board carries the arms, and that a new age grants a river town a fish (ab03); and
+that a tabard is made of thirteen wool, worn on Founding Day and back in the stores the day after (ab07).
+
+## Buskers
+
+Folk whose pastime is music now play for coins in the street.
+
+* **When and where.** On two evenings in three, for the first two hours after work, a musician takes its note
+  block to a pitch of its own. The pitches are by the well, the corner of the square by each gate, and outside
+  the market. On market day it busks in its time off by day as well. Never in the rain, never while the town is
+  gathered for something, and never the watch. A visiting bard still busks on the square by day, as before,
+  and its takings now make the gazette too.
+* **Real music.** A busker plays a real tune (the tavern's jig, its slow air, the wedding march or a reel of the
+  street's own) on its own voice: harp, flute, guitar, banjo, bells or xylophone. Notes rise over its head. It
+  needs a note block: its own, or one lent out of the stores for the evening and put back after. A poor player
+  slips now and then, a note a semitone out, with a puff of smoke for it.
+* **The hat.** Folk in their own time stop to listen, more of them for a better player and up to five at once.
+  They stand round a while and go on their way. As they go, one with a few coins put by may drop a coin in the
+  busker's hat, out of its own purse and into the busker's, once an evening. A generous folk gives more readily
+  and a grumpy one less. **You can tip too:** right-click a busker who is playing with a village coin in your hand
+  to drop one in.
+* **Getting better.** Every evening of playing is practice, and a busker's skill (from a talent of its own) goes
+  up with it. The town's books keep its skill and what its hat has taken. A busker who has played five evenings,
+  plays badly and draws next to nothing gives up for a fortnight ("Nobody stops for my tunes").
+* **The tavern.** The tavern keeper hears of the good ones. Once a busker plays well (skill 45) and draws a hat of
+  two coins an evening, the tavern books it for every day of rest. The chronicle records it: *Pip, who played for
+  coppers by the well, now plays the tavern every rest day.* On the evening of the day of rest it plays by the
+  tavern's hearth, from dusk until the band takes over (all evening if there is no band). The tavern's own tune
+  waits while it plays. It is paid three coins out of the treasury, and the whole town comes to hear it, as for a
+  bard, with coins for its hat as well.
+* **Seen on** the busker's card ("busks by the well (a good player, skill 52; 31 coins in tips over 14
+  evenings)"), the gazette's *Street music* (yesterday's buskers and what their hats took, and who plays the
+  tavern), the folk's small talk ("Have you heard Pip play by the well? Lovely playing."), the Culture page's new
+  *Buskers* section, and `/village busk`. Operators can use `/village busk now` to send every musician out to its
+  pitch at once.
+
+The game tests check that a busker plays on a note block lent out of the stores, two listeners each drop exactly
+one coin out of their own purses into its purse, and the note block goes back afterwards (ab04); that a player's
+coin moves from the player to the busker (ab05); and that a good busker is booked by the tavern and plays there on
+the day of rest, paid its fee once out of the treasury (ab06).
+
+## Pets
+
+The towns keep dogs and cats now, and not just the odd stray a family with children coaxes home (see *Families, pets
+and gardens*): a pet is part of a household for the whole of its life.
+
+**Who has one.** A settled household (the town a few days old, fed and content enough) wants a pet if it is that sort of household:
+six in ten with children, a quarter without, so in time a third to a half of the town's homes have one. The town keeps
+one for every two households and a couple over, twelve at the most, counting the young and the strays.
+
+**Where they come from.**
+* *A stray* turns up about the town now and then while a household wants one. A grown-up of that household takes a bit
+  of meat or fish out of its chest (else the stores), goes out to it, and brings it home.
+* *A litter.* A well-fed pet in its prime has a litter now and then with another of its kind about the town: one to
+  three, never past the town's cap. The parents eat first (out of the bowl or the stores). The young go to the
+  mother's family's friends, then to any household that wants one; after a couple of days any household with room
+  takes one in. One that nobody takes goes off about the town as a stray.
+* *The merchant from afar* may have a pup or a kitten on its lead on market day. A household that wants one and has
+  six coins buys it; at dusk an unsold one goes on with the merchant.
+
+A child of the house names it (Biscuit, Shadow, Pip, Whiskers, Smudge, Marmalade…), never a name somebody in the town
+already has, and the name is on its tag. It belongs to the household and moves house with it.
+
+**A dog's day.** It follows the children while they play, and now and then a child throws a stick for it to fetch.
+With the children at school it trots along with a grown-up of the house to work. At night it sleeps in its dog bed by
+the door, or curled up at the foot of a sleeping child's bed. If a monster or a raider comes near after dark it barks,
+and the first bark at each one wakes the nearest guard and sends it out. A dog warns; it never fights. Next morning you
+will hear about it: *Biscuit kept us up barking at a zombie all night.*
+
+**A cat's day.** It sleeps in its basket or on a child's bed at night, up on the roof in the sun on a fine afternoon,
+and of a morning or an evening it sits in a window or potters about the house and garden. Creepers keep away from a
+cat and phantoms avoid one, as in the game; a creeper it sees off the step is talked about. It calls on the town's
+fishers, and a fisher with fish in its pack spares it one.
+
+**Food and care.**
+* The **pet bowl** stands by the hearth. A child (they love it) or a grown-up fills it from the household's chest or
+  the stores: bones or meat for a dog, fish for a cat. Once the shop is open, the household pays for the food. You can
+  see what's in the bowl, and you can put a bone, meat or fish in it yourself. A pet eats once a day; one that is
+  hungry with an empty bowl follows a grown-up about and begs.
+* A household that has had nothing to feed its pet with for three days gives it to a better-off neighbour.
+* A sick or hurt pet is seen to by the town's healer, with a bit of its own food or a drop of honey from the stores.
+* Pets grow old (a year every five days, like the folk) and die of it in their sleep: a dog at eleven to fifteen, a
+  cat a little older. The family buries it in the garden under a small sign, with a flower if the stores have one,
+  and the chronicle remembers it.
+
+**The new things.** Each has a real recipe, so the town's makers know it, and the shop's order book keeps them once
+there are pets.
+
+| Thing | Recipe | Age | Worth | Made by |
+|---|---|---|---|---|
+| Pet Bowl | planks, a bowl, planks in a row (or five bricks for two) | Wood | 0.8c | the shop's workshop; a household with no shop to go to knocks its own together |
+| Dog Bed | wool in a box of five planks | Wood | 1.6c | the tailor |
+| Cat Basket | wool in a basket of five sticks | Wood | 1.2c | the tailor |
+| Pet Collar | string, leather, string | Stone | 1.4c | the tailor; dye it at the crafting table like leather armour |
+| Pet Treat | two wheat and a piece of meat or fish make four | Wood | 0.15c | the cook |
+
+A household gets each one out of the stores (free until the shop opens, bought after). It sets the bowl by the hearth,
+the dog bed by the door and the cat basket under a window, buckles the collar on (the collar's dye is the colour its
+pet wears), and the children give it a treat now and then. You can place a bowl or a bed in a folk's house yourself
+and the household will use it.
+
+**You and the pets.**
+* *Befriend one:* right-click a household's pet with a **pet treat**. It eats from your hand and trots after you for a
+  while, and its family thinks the better of you. After two treats it counts you a friend.
+* *Adopt a stray:* right-click a stray about the town with a pet treat and it's yours, named by the town's children.
+* *Buy a pup or a kitten* from a litter for 3 coins (paid to the family), or the merchant's for 6: hold the coins and
+  right-click it.
+* *Ask about it:* the **Your pet?** button on a folk's card. The card has a **Pet** line too: the pet's age, whether it
+  has been fed today, its collar, bowl and bed, its litters, ribbons and friends.
+* *A lost dog:* now and then a dog goes off after a rabbit and comes home by itself the next morning. The quest board
+  can send one missing too ("find my lost dog"). Find it out past the edge of town, right-click it, and it follows you
+  home.
+
+**At the fair.** After the fair's own classes comes the **pet show**: every household's pet, and your own dog or cat if
+you have brought it to the board. The best-kept pet wins a blue ribbon (fed today, a collar, a bed of its own, a treat
+lately, friends among the guests). The ribbon is a sheet of the stores' paper with the year on it, and the chronicle
+names the winner.
+
+**Where to look.** The town's books (the board, the **News** page) have a **Pets** panel: how many pets, fed and kept,
+the young looking for homes, the strays, what the makers are wanted for, the litters, the barking and the creepers seen
+off, the healer's visits, the pet show's winner, and those remembered. `/village pets` gives the same, with where each
+pet is; `/village pets books` opens the books there. Operators: `/village pets now stray|takein|litter|fill|things|
+merchant|lost|homes` brings one about now out of the town's own stores and purses, and `/village pets stage` sets the
+scene for the pictures.
+
+The game tests `PetsGameTests` (pe01 to pe10) check that a household with a child takes in a stray and names it, the
+dog follows the child, the cat sleeps on the child's bed and on the roof, the bowl is filled from the stores and the dog
+eats, the new things have recipes, ages and a worth and the tailor, the cook and the shop make them, a litter finds a
+home within the town's cap, a player adopts a stray, befriends a dog and buys a pup, a bark brings out the watch, a lost
+dog is brought home, and the best-kept pet wins at the show.
+## Fashion
+
+Walk through a town and you can see what it is wearing this season. Every folk has its own colours and its own
+things to wear, and every season the town takes up a colour, set by the people it looks up to. The tailor is busy
+making it, the shop stocks it, and by the end of the week most of the town is in it. A few hold out.
+
+**Each folk's own style.**
+
+* Every folk has two colours of its own. The first is its favourite (a gardener's is a flower's, a stargazer's the
+  night's blue), and its trade's dyed cloth is in it: the farmer's neckerchief, the tailor's waistcoat, the
+  storekeeper's. The second goes on the trimmings of whatever it buys: a coat's cuffs and lapels, a hat's band, a
+  scarf's stripes, a waistcoat's back.
+* Over its trade's clothes it wears what it has bought, been given or won: a **long coat** (open down the front, so
+  the smith's apron and the shopkeeper's still show), a **leather jacket**, a **shawl** or a **waistcoat**; a **felt
+  hat**, a **flat cap** or a **top hat** when it is off work, at a gathering or on the rest day (at work it wears its
+  trade's hat); a **scarf**; a **brooch** (a vain folk who is well off has one made, once the town has gold); the
+  fashion show's **rosette**; and, if it is a little vain, a **feather** in its felt hat. All of it is drawn on the
+  folk in its own dye. A guard's armour goes over all of it.
+* Its card has a **Style** line: what it wears, its colours, and how it stands with the season's fashion (*In
+  fashion: crimson, since day 15*, *Wants a crimson scarf: on the tailor's book (short of a red dye)*, *Keeps to its
+  own colours: a Traditionalist*).
+
+**The season's fashion.** Each time a season turns (a week: see *Seasons and festivals*) the town takes up a new
+colour, and often a thing to wear it as (*crimson long coats*). It comes from the folk the town looks up to most:
+
+* the wealthiest, the leader and the leader's partner, the best liked (by how many count it a friend), and the young,
+  who set fashions;
+* a player who is famous in the town (a friend of it, better an honoured guest, best its hero) and has been about the
+  town lately in **dyed leather**. The colour you wear most of is the one it takes; a dyed leather tunic makes it
+  *crimson leather jackets*.
+
+It is the colour of what that one wears (its coat, its hat, its scarf, else its own colour), never last season's.
+The town's chronicle, the board and the gazette say what it is and who set it: *Crimson is all the rage this autumn,
+set by Ada, the wealthiest in town and the leader's partner.*
+
+**How it spreads.** Every day each folk comes round to it a little: quicker the more of its friends wear it and the
+more of the town does. The sociable and the vain (those who love wool, gems or gold) follow fastest, the young faster
+than the old, the poor slowest. A Traditionalist keeps its own colours. Come round, a folk wants the season's look in
+what it can run to: a wealthy folk the season's long coat, a poor one a scarf. By the end of the week most of the town
+is in it, and last season's colour fades.
+
+**The tailor follows demand.** A folk that wants something the town has none of puts it on the **tailor's book**. The
+setter's own order comes first, and the show's rosette is made before a show.
+
+* The tailor makes each piece at the loom, between the town's beds and the watch's leather. It uses the stores' real
+  wool, string and leather (and gold for a waistcoat's buttons or a top hat's buckle), and dyes it with the stores'
+  dye. The dye is made there and then from the flowers, cocoa, ink sacs, lapis or bone meal the stores hold, by the
+  game's own recipes: a poppy makes red, red and blue make purple. Its maker's mark goes on it, with whom it was made
+  for.
+* Short of a dye, the book says so, and a farm hand goes out past the houses to pick the flowers that make it. If
+  none grow round the town, it sows some with the stores' bone meal. Nothing comes from nothing.
+* With nothing on the book, early in a season, the tailor makes a couple of the season's things for the shop.
+* The shop's books count every garment wanted and not there, so the **price rises with demand**. A crimson scarf in
+  a crimson week costs more than a plain one in a quiet week.
+
+**Buying it.** Off work, a folk goes to the store (or the shop, or the stores) and buys what it wants out of its own
+purse, at the town's price, weighed against what it expects to pay. If it is too dear it leaves it and waits, and the
+price comes down. Before the town has a shop the stores clothe it, as they feed it. It shows off what it bought: *Have
+you seen my new scarf?*
+
+**Old clothes.** What a folk had on in that place goes to somebody with less. A poor neighbour with nothing there
+gets it through the **poor box**, the giver's friends first. Otherwise it is **sold second-hand** to the stores for a
+third of its worth, and a poor folk can buy it there for a third of the price. The poor wear last season's colours.
+
+**The new things.** All of them are made by the tailor at the loom, and you can make them at a crafting table.
+Every one but the brooch can be dyed in a crafting grid with any dye, as leather armour is.
+
+| Item | Recipe | Age | Worn as |
+|---|---|---|---|
+| Long Coat | six wool and a string | Wood | over its clothes, to the knee |
+| Leather Jacket | four leather and a string | Stone | over its clothes, to the waist |
+| Wool Shawl | three wool and two string | Wood | round its shoulders |
+| Waistcoat | five wool and a gold nugget | Iron | over its shirt |
+| Felt Hat | three wool round a leather band | Stone | a hat, off work |
+| Flat Cap | two wool and a string | Wood | a hat, off work |
+| Top Hat | four wool and a gold nugget | Iron | a hat, off work |
+| Wool Scarf | two wool and a string | Wood | round its neck |
+| Brooch | two gold nuggets and a lapis | Iron | pinned on |
+| Rosette | wool, paper and string | Wood | the best-dressed's prize |
+
+They are all in the price list, worth their cloth, a quarter more for the cutting and stitching, and a dye's worth.
+The shop and the store keep them on their counters, the season's thing first.
+
+**The fashion show.** At the May dance, the fair and the harvest festival, after the festival's own words, the elder
+calls the parade and judges the best-dressed. The scoring is two points for each thing of its own a folk wears, three
+for the season's colour (and one more for the season's very thing), two if its colours go together, up to three for
+a master's work, and one for something new this season. A player standing with them in dyed leather is judged too.
+The winner gets the tailor's blue rosette (or a paper ribbon if none was made) and wears it pinned on. Second and
+third are named, and it goes into the chronicle and the gazette.
+
+**You and the fashion.**
+
+* Wear dyed leather about a town that thinks well of you and you may set its next fashion.
+* Buy garments at the shop's and the store's counters like anything else. Dye them at a crafting table.
+* Give a folk a garment (hold it and press **Give…**). It puts it on there and then and thinks the better of you,
+  more if it is the season's colour or its own.
+* Ask a folk **What's in fashion?** (the **Fashion** button on the Village tab, or just ask about fashion, its coat
+  or its hat). It tells you the season's look, who set it, whether it has one, what it costs, or why it won't.
+
+**Where to see it.** The folk's cards (Style), the board (*Fashion: crimson long coats all the rage this autumn (9
+of 14 wear it)*), the gazette's **Fashion** column, and the town's books' **Fashion** page. The page shows the
+season's look in a swatch of its colour, who set it, how many wear it, the days of its going round against last
+season's, what the town wears colour by colour, who the town looks to, the tailor's book and what each order waits
+on, the season's price, the shows, the old clothes passed on, and everybody's style.
+
+* `/village fashion` says all of it in the chat; `/village fashion books` opens the page.
+* Operators: `/village fashion now` runs a day of it at once (the season's look set if there is none, a day's
+  spreading, the tailor's turns, and the folk buying). `/village fashion set <colour> [garment]` makes a colour the
+  season's look. `/village fashion show` holds the show now. `/village fashion stage` stands up a crowd for the
+  pictures (most in the season's colour, three holding out) and a tailor at a loom; `/kill @e[tag=fashion_lineup]`
+  clears them.
+
+The boxes the clothes are drawn on, and their pictures, are made by `tools/fashion_art.py`. The game tests
+`FashionGameTests` (fa01 to fa07) check that:
+* the wealthiest, best-liked folk, the leader's partner, sets the season's look in her own crimson, and the
+  chronicle, board, gazette, books and her card say so;
+* it spreads to her friends within a day or two, a stranger follows later, and a Traditionalist keeps its own;
+* the tailor makes the season's scarf from the stores' wool and string and a poppy made into red dye, and a blue one
+  from a cornflower a farm hand picks;
+* a folk buys it at the town's price out of its own purse, puts it on, is drawn in it, and passes its old scarf to a
+  poor neighbour;
+* every new item has a recipe, its age and a worth;
+* the fashion show's rosette goes to the best-dressed;
+* a famous player in dyed leather sets the season's look, and a scarf given to a folk is worn.
+## Crime and the watch
+
+A town is not all good neighbours. Now and then somebody who is poor, in debt, hungry, low or bitter, and not honest
+enough to let it go, does something about it, and the watch has a case on its hands.
+
+**Who is tempted, and why.** Every morning each grown folk's lot is weighed against its honesty. Its lot is what it
+is short of: an empty purse, a debt at the bank, missed meals, a low mood, a miserable town, a grudge against a rival,
+or a greedy streak (a folk that cares more for wages and trade than anything). Its honesty is its own nature (the
+generous and hard-working are honest, grumps and idlers less so, folk who hold to the old ways most of all) and its
+record (a conviction makes the next easier; a folk that has turned over a new leaf is much harder to tempt). A folk in
+good spirits lets it go, whatever it is short of. Even when the lot outweighs the honesty, it is only a chance, and a
+smaller one in a town with a watch to match its size and much smaller in a contented one. No town has more than one
+such folk a day. The guards and the leader never take part.
+
+**What they do.** It follows from the motive:
+* **Pickpocketing.** A few coins from a purse at the market on market day, at the tavern of an evening, or on the
+  square. The coins really leave one purse and go into the other.
+* **Theft from a house.** Something from a better-off neighbour's chest while the neighbour is out. It goes home to
+  the thief's own chest.
+* **Theft from the stores**, after dark: food, for the hungry.
+* **Vandalism**, after dark: a rival's window, a lamp on a post, a garden fence, really broken.
+* **Poaching**, after dark: a beast taken from the pen.
+* **A forged coin** (rarer, a smelter's or a smith's trick): a copper ingot cast into three coins, one passed at the
+  stores for a treat and two kept for another day.
+* **Smuggling** (rarer, a carrier's): a lot of the stores' goods slipped home and out of the town's books.
+
+Nobody is ever hurt, and no deed takes more than a few coins' worth. The culprit waits until nobody is close enough
+to see and the watch is out of sight. After dark it keeps out of the lamps' light. If the moment never comes, it
+thinks better of it, and the town's books count what put it off.
+
+**Clues and witnesses.** A deed leaves what deeds leave:
+* **Footprints.** A trail of mud (little brown specks you can see on the ground) from the scene towards where the
+  culprit went, until the watch reads it or the rain washes it out.
+* **Something dropped.** The nervous and the careless sometimes drop something: a keepsake with its owner's mark on
+  it, a tool of their trade, or some odd thing. It lies where it fell. No folk and no street sweeper picks it up.
+* **The hour, and who was about.**
+* **A purse fuller than its wages.**
+* **The stolen thing**, in somebody's pack or chest.
+
+Now and then somebody saw it from further off than the culprit thought. How well it saw depends on the distance,
+whether it was looking that way, and the light. It might name who it was, describe their clothes ("somebody in a
+miner's gear, going off east"), or, half-seeing, honestly mistake one folk of a trade for another. If you see a deed
+yourself, you are told what you saw.
+
+**The watch investigates.** The victim notices: its purse light, its chest short, its window broken. The stores'
+losses are found at the morning count. The board posts it (*Theft at the market: 3 coins from Bree's purse*), the
+chronicle and the crier have it, and the crier asks for witnesses. A guard takes the case. Once the town reaches the
+Iron Age, its most seasoned guard becomes the **constable** and takes every case. A town with no watch leaves it to
+its leader. By day, the investigator:
+* walks to the scene and reads it: the damage, the hour, whose door the footprints lead to, and whose the dropped
+  thing is;
+* asks the victim and everyone who was about, nearest first, walking up to each. They answer by what they saw and
+  who they are. An honest witness tells it as it saw it. One who loves the culprit saw nothing at all (a sharp
+  constable notices they are holding something back). A dishonest one with a grudge who saw too little to be sure
+  names its own rival. The culprit says it was elsewhere, and a lie is found out if somebody put it there. An honest
+  culprit sometimes owns up;
+* weighs it all and searches the likeliest: their purses against their wages, their packs and their home chests;
+* names the one the evidence points to, or gives the case up. A green or grumpy guard names somebody on less
+  evidence, and may name the wrong folk.
+
+**The court.** The morning after the watch names somebody, the council sits: at the leader's hall if there is one,
+otherwise on the square. The leader presides. The accused, the investigator, the victim and the witnesses are
+called, and the case is heard line by line: the charge, the evidence, what the witnesses saw, the victim, and the
+accused's denial or confession. Each councillor votes by the weight of the evidence, and a friend of the accused
+wants more of it. The sentence depends on the deed and the record:
+* **A first theft:** pay back what was taken, and a fine to the town.
+* **A first vandal:** **community work**. It mends what it broke, with a pane, lamp or fence from the stores at its
+  own cost, then sweeps the streets until sundown, sweeping loose litter into the stores.
+* **A second offence, or a forger's or smuggler's first:** **the stocks**. It sits in them on the square until sundown,
+  and passers-by have their say (children are merciless; friends bring a drink of water). The first time a sentence
+  calls for them, the town puts up a pair of **Stocks** on the square from its stores (three planks and two logs).
+* **A third offence:** banishment. The culprit leaves for another town, or the wide world.
+
+The victim is made whole: its own things back from the culprit's pack or chest, and any coins from the culprit's
+purse. Whatever cannot be paid now is paid out of the culprit's wages as it earns. Everyone thinks less of a
+convicted folk, the victim most of all, and it feels the shame for a few days. Some turn over a new leaf, more often
+if a partner or a close friend stands by them or they are no longer poor. An innocent folk who is acquitted is
+cleared. It remembers who named it, and the watch looks again. If a culprit later owns up in court, it owns up to its
+other deeds too: cases nobody solved are closed, and anyone wrongly convicted of them is cleared and has its fine
+given back.
+
+**Prevention.** Lamps, the watch walking the streets at night, and a contented town all mean less crime.
+
+**Where you see it.**
+* **The board** shows open cases, today's trial, who is in the stocks, and the month's crime.
+* **The gazette** has a *Watch and the court* section.
+* **The chronicle and the crier** carry the news.
+* **A folk's card** has a *The law* line: a constable, a case, a conviction, a debt, a new leaf, robbed, or cleared.
+* **The Cases page** of the town's books (`/village crime books`) shows:
+  * the month's crime: how many crimes, how many solved, and how many in every hundred folk;
+  * an eight-week chart of crimes, cases solved and deeds put off;
+  * what keeps crime down here: the watch, the lamps, the town's spirits, what put deeds off, and how many folk are
+    tempted right now;
+  * the casebook. Scroll to pick a case and read its file: what was done, where and when, the clues, the
+    witnesses' statements, the suspects and the weight of evidence on each, and the detective's notes.
+
+**What you can do.**
+* **Witness.** If you see a deed, you are told what you saw. Tell a guard who did it by typing something like *I saw
+  Fen take it*. A player who saw it is believed.
+* **Help investigate.** Ask any folk *Seen anything amiss?* (the *Seen anything?* button, or type *theft*, *witness*,
+  *who did it*). A witness tells you what it saw, and that goes into the case as if the watch had asked. A friend may
+  tell you what it would not tell the watch.
+* **Bring in clues.** Follow the footprints. Pick up whatever was dropped and hand it to a guard by holding it and
+  asking. Your help goes into the case file.
+
+You are still under the town's own Laws for anything you take or break yourself.
+
+**New things.**
+* **Stocks.** Three planks over two logs; a block in the Wood Age. The town makes and puts up its own from its
+  stores.
+* **Forged Coin.** A copper ingot makes three. It is worth its copper and no more.
+
+**Commands.**
+* `/village crime` gives the casebook as text.
+* `/village crime books` opens the Cases page.
+* Operators can use:
+  * `/village crime now` to send the town's most tempted folk to do what it would do;
+  * `/village crime stage` to have a purse picked where you stand, in front of a witness, with a guard on it;
+  * `/village crime try` to finish the watch's case at once and have the council sit;
+  * `/village crime stocks` to put up the stocks and sit the latest convicted in them.
+
+The game tests `CrimeGameTests` (cr01 to cr08) check that:
+* a poor, unhappy, greedy and dishonest folk is tempted, picks a purse at the market, and the coins really move;
+* a folk across the square looking that way is recorded as a witness, and thinks it knows who did it;
+* the guard walks to the scene, asks around, searches, names the culprit, and the council convicts;
+* the victim is paid back from the culprit's purse, and the fine is owed;
+* a town of content folk has no crime over four weeks of mornings;
+* an innocent with nothing against it is acquitted and cleared;
+* a vandal mends the window it broke with a pane from the stores, at its own cost;
+* a second offender sits in stocks the town puts up on the square from its own timber.
+## Fire, flood and drought
+
+A town of timber by a river, under the open sky, has three old enemies: a spark from its own forge, the river in
+a wet spring, and a summer that will not rain. Each comes rarely, makes a stir while it lasts, costs the town
+something, and is answered, so the next one costs less. None of them is ruinous, and you can turn them all off.
+
+**Fire**
+
+* **Where fires come from.** Lightning in a storm, lava, a campfire, as before; and now and then a spark from a
+  lit furnace or smoker in one of the town's buildings (the smithy's forge, a house's kitchen, the bakery's oven)
+  catches the timber or wool right beside it. A careless town sees one every week or two; a dry spell makes it
+  twice as likely, a drought three times, a cauldron of water by the forge half as likely, and stone all round the
+  forge stops it altogether.
+* **The bell.** A new fire rings the town's bell (the fire station's, once there is one): a quick peal of a dozen
+  strokes. Whoever is nearest the bell cries out where it is (*Fire at the smithy! Bring your buckets!*), the
+  chronicle says so, and the board shows **FIRE AT THE SMITHY!** in red while it burns.
+* **The brigade and the bucket chain.** One to three of the nearest folk still run to a small fire with a bucket
+  (or their fists). A big fire (six blocks or more alight) with water within thirty blocks also gets a bucket
+  chain: four to ten folk in a line from the water to the fire, a couple of paces apart. The buckets are real
+  ones, off the fire station's rack, out of the stores, or made there and then from three of the stores' iron
+  each, and you can see them in the folk's hands. Full buckets go along the line toward the fire and empty ones
+  come back, swapped hand to hand. The first in line fills them at the water and the last throws them on the
+  flames. When the fire is out, every bucket goes back where it came from. A folk's card shows its place in the
+  chain.
+* **Never more than two buildings.** A fire that reaches a third building has that flame beaten out by the
+  neighbours at once.
+* **Rebuilding.** Each of the town's buildings a fire reaches is noted, block by block, from its own drawing, the
+  moment the fire is seen. When the fire is out, whatever burned is put back exactly as it stood, on the town's
+  works, by a hand at the building, a few blocks every couple of seconds. Every block is paid for out of the
+  stores: the same block if they hold it, otherwise what it is made of (a plank for a plank, stair, slab, fence or
+  door; a log for a log; wool for wool). If the makings run short the work waits, and the board says what for
+  (*Rebuilding the house after the fire: 3 of 6 blocks back, waiting for planks*). While a home is being rebuilt
+  its household sleeps in a neighbour's spare bed, or at the inn, or by the meeting hall's fire, and goes home in
+  the morning.
+* **Taking care afterwards.** After a fire caused by a spark, the town lays stone round its forges: every
+  burnable block of a town building's drawing beside a furnace is swapped for stone from the stores, and the
+  timber goes back into them. After any fire it keeps a cauldron of water by each workshop (smithy, smeltery,
+  workshop, bakery, café, tavern, brewery), made of a cauldron from the stores or seven of their iron (never the
+  last sixteen). A hand at the next fire fills a bucket there. On dry nights (three days without rain, a drought,
+  or the three nights after a fire) one of the watch keeps a **fire watch**, walking round the forges and the
+  watchtower with a light, and stamps out any spark it sees. An Iron Age town that has had two fires builds a
+  **fire station**: a small stone engine house with wide doors, a cauldron inside, a rack of four buckets and the
+  fire bell on its step (if the town has a bell to hang there).
+
+**Floods**
+
+* **When.** In spring or autumn, if it has rained on three of the last seven days and it rains again, the river
+  beside a town comes up over its low ground, at most once a season. In a very wet week it rises two blocks
+  instead of one (*the great flood*). "The river" is the town's main stretch of open water: a river, a lake or the
+  sea, not a well or a fountain.
+* **Safe and reversible.** The water is real, but the mod puts it only in empty cells, a block or two above the
+  river's level, joined to the river, within the town's reach. It never goes next to anything a player built, and
+  never replaces a block: grass tufts, flowers, crops and torches stay put with the water round them. The water is
+  held where it is placed and does not run into cellars, mines or fields. Every cell is written down (and kept
+  across a restart). A minute after the rain stops the flood goes down the way it came, and exactly those cells
+  are emptied again, only where they still hold water. (Grass that sat under the water may turn to bare earth, as
+  it does in the game; it grows back.)
+* **What it costs.** Folk in a flooded low house go up to the high ground. A child in the water gets out
+  wherever it is, and so does everyone in a great flood. Nobody drowns. A flooded household sleeps at a
+  neighbour's until the water is down. Crops in the low fields go back to seedlings, and a store chest the water
+  reaches loses a quarter of its grain, bread, sugar and paper (four dozen items at most).
+* **The levee.** Once the water is down, the town builds a levee along the bank where the river came over, as high
+  as the water reached. It is made of earth (or gravel or cobblestone) from the stores, by hand. Where a street or
+  a jetty goes down to the water it puts a step of slab instead, so the way stays open. The same flood stops at the
+  levee. The low ground it covered is also kept clear of new buildings.
+
+**Droughts**
+
+* **When.** Six days running without rain on the town in summer (a day more in late spring) is a drought. It lasts
+  until it rains or summer ends.
+* **What it does.** The town's crops on dry farmland (no water within four blocks) grow at a quarter of their usual
+  pace, on a farmer's plot and on the town's farmland alike. A watered field grows as usual. Wild crops and your
+  own farms are never touched. Farmers with a dry field fill a bucket at the nearest water (their own, or a stores
+  bucket that goes back when the drought breaks) and pour it on the driest part of their field. If the leader's
+  books show the larder running down, the town goes on short rations, so folk take fewer meals from the stores at
+  a time. Food prices rise with the falling stock, as they always do.
+* **Irrigation.** The town answers by digging irrigation channels through every field that was dry: a straight
+  run of water every eight rows, dug by hand on the town's works. The soil goes into the stores, and every block
+  of water is carried in a stores bucket from the river, the well or the pond. That field is then watered in the
+  next drought and grows on. (Not if `villageReshapeLand` is off: the town keeps your land as it is.)
+
+**Where you see it**
+
+* **The board:** a fire burning now; the weather's danger (*Dry for 9 days: a fire watch tonight.*, *The river is
+  in flood: the low houses are under water.*); a rebuilding, the levee or the irrigation under way.
+* **The crier and the gazette:** the morning news gives the weather's danger, and the gazette has a *Fire, flood
+  and drought* page with yesterday's events.
+* **The chronicle** records each event and what was built after it (*The great flood of day 34: the river came
+  up over the low ground...*; *the levee was finished on day 38*).
+* **The town's books:** the News page has a *Fire, flood and drought* panel with the weather, the fires (sparks,
+  blocks burnt and rebuilt), fire safety, the floods (cells, crops spoiled, goods soaked, the levee), the droughts
+  and irrigation, and the record.
+* **Folk:** they talk about it (*Were you there for the fire at the smithy?*, *Dry as a bone, these fields.*), and
+  a folk's card says if it is in a bucket chain, out of the flood, sleeping at a neighbour's, on the fire watch or
+  carrying water.
+
+**Settings and commands**
+
+* `villageDisasters` (on): turns forge sparks, floods and droughts on or off. With it off, a lightning fire is
+  still put out and rebuilt.
+* `villageSparkDays` (10): about how many days between sparks in a careless town.
+* `villageFloodRainDays` (3): how many of the last seven days must be wet before a flood. Higher is rarer, and 8
+  means never.
+* `villageDroughtDays` (6): how many dry summer days make a drought.
+* `/village disasters`: the nearest town's weather, fires, floods and droughts, and what it built after them.
+  Operators can also bring one on now: `/village disasters fire now`, `flood now [1|2]`, `flood drain`,
+  `levee now`, `drought now|end` and `irrigate now`. `/village disasters stage fire|flood|levee|irrigation` sets up
+  a scene where you stand for the pictures.
+
+The game tests `DisastersGameTests` (dd01 to dd07) check that:
+* a spark from a lit forge in the smithy rings the bell, a hand puts the fire out with the stores' bucket, the
+  books put it down to the forge, and stone goes round the forge afterwards;
+* a six-block fire a dozen blocks from a pond draws a bucket chain of four or more that passes buckets and throws
+  them, and every bucket goes back to the stores;
+* six burnt planks are put back exactly as they stood out of the stores' planks, the work waiting when the
+  planks run out;
+* a forced flood puts water only in empty cells a block over the river, the folk in the low house gets out to the
+  high ground without drowning, and when it drains every block is as it was;
+* after the flood a levee is raised out of the stores' earth, and the same flood then stays off the low ground;
+* a drought slows a dry field to under three fifths of its pace and not a watered one, and the town then digs
+  irrigation through the dry field;
+* a fire along three houses at once is never let burn more than two of them.
 
 ## The fishing fleet
 

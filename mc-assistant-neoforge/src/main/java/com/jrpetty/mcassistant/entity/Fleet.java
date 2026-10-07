@@ -838,6 +838,11 @@ public final class Fleet {
             FolkTalk.speak(f, "I couldn't get down to the boat. The fleet's gone without me.");
             return false;
         }
+        if (f.distanceToSqr(b) <= 2.6 * 2.6) {
+            // A dog or a hen that climbed into the boat while it lay at the quay (a boat takes in whatever bumps it) is
+            // shooed out first.
+            for (Entity p : new ArrayList<>(b.getPassengers())) if (!(p instanceof VillageFolkEntity)) p.stopRiding();
+        }
         if (f.distanceToSqr(b) <= 2.6 * 2.6 && b.getPassengers().isEmpty()) {
             if (!rodInHand(f) && !(f.topUpKit() && rodInHand(f)) && !hasNet(f) && !takeNet(level, f, h)) {
                 letGo(t, h, "no rod");
@@ -1369,6 +1374,7 @@ public final class Fleet {
             if (b == null) continue;
             BlockPos stand = standFor(t.quay, t.chart.berths.get(Math.min(h.berth, t.chart.berths.size() - 1)));
             f.moveTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
+            for (Entity p : new ArrayList<>(b.getPassengers())) if (!(p instanceof VillageFolkEntity)) p.stopRiding();
             rodInHand(f);
             takeNet(level, f, h);
             if (f.startRiding(b)) {

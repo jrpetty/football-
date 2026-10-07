@@ -191,6 +191,7 @@ public final class Merchants {
         }
         String bought = townBuys(level, town, f, v, day);
         if (!bought.isEmpty()) LOG.info("[MCA-VISIT] {} bought from the merchant {}: {}", name, v.name, bought);
+        Pets.merchant(level, town, f, day);                    // [pets] a pup or a kitten on its lead, for a household that wants one
     }
 
     static String list(List<String> words) {

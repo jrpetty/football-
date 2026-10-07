@@ -962,6 +962,7 @@ public final class Festivals extends SavedData {
             case HARVEST -> harvestScript(level, a, s, r);
             case MIDWINTER -> { }
         }
+        FashionShow.script(level, a, f, s, r);          // [fashion] the parade, and the rosette for the best-dressed
     }
 
     /** Does it go on to the dancing, the singing or the eating (Assemblies.step)? The fair ends with its prizes. */

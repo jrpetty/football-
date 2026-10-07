@@ -369,6 +369,7 @@ public final class Cafe {
         if (houseware(s)) return true;
         // The workshop's tools, arms and armour (Workshop), whatever their price: the village keeps its own first (Budget).
         if (Budget.kitOf(s) != null && Workshop.wareFor(Stockroom.key(s)) != null) return true;
+        if (com.jrpetty.mcassistant.item.Garment.of(s) != null) return true;     // [fashion] the tailor's garments, new and second-hand
         return s.isEnchanted() || s.is(ItemTags.BEDS) || s.is(ItemTags.WOOL_CARPETS) || s.is(ItemTags.BANNERS)
             || s.is(Items.BOOK) || s.is(Items.HONEY_BOTTLE) || s.is(Items.HONEYCOMB) || s.is(Items.SHEARS)
             || s.is(Items.BUCKET) || s.is(Items.IRON_PICKAXE) || s.is(Items.IRON_SWORD) || s.is(Items.IRON_AXE)

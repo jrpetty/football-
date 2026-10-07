@@ -56,6 +56,11 @@ public final class AssistantConfig {
     public static final ModConfigSpec.BooleanValue VILLAGE_PHANTOMS;
     /** [economy] How much faster crops grow on a village's tended fields (Fields). */
     public static final ModConfigSpec.DoubleValue VILLAGE_CROP_GROWTH;
+    /** [disasters] Fire from the forges, floods and droughts (entity/Disasters), and how rare. */
+    public static final ModConfigSpec.BooleanValue VILLAGE_DISASTERS;
+    public static final ModConfigSpec.IntValue VILLAGE_SPARK_DAYS;
+    public static final ModConfigSpec.IntValue VILLAGE_FLOOD_RAIN_DAYS;
+    public static final ModConfigSpec.IntValue VILLAGE_DROUGHT_DAYS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -231,6 +236,30 @@ public final class AssistantConfig {
                 "tenth more again at most. Wild crops and your own farms are never touched; the",
                 "crops still have to be planted, and the harvest still has to be brought in.")
             .defineInRange("villageCropGrowth", 2.0, 1.0, 8.0);
+        // [disasters] Fire, flood and drought (entity/Disasters, FireSafety, Floods, Droughts).
+        VILLAGE_DISASTERS = b.comment(
+                "Fire, flood and drought in the villages: now and then a lit forge throws a spark into",
+                "the timber beside it, a river rises over the low ground in a wet spell, and a long dry",
+                "summer withers the fields that have no water. Each is answered (the bell and a bucket",
+                "chain, levees, irrigation) and none is ruinous: a fire takes a building or two at most",
+                "and is rebuilt from the stores, a flood is only water in empty cells and every block of",
+                "it is taken up again, a drought slows the dry fields and starves nobody. Off, none of",
+                "them happens (a lightning fire is still put out and rebuilt).")
+            .define("villageDisasters", true);
+        VILLAGE_SPARK_DAYS = b.comment(
+                "About how many days pass between sparks from a forge in a careless town (timber or wool",
+                "beside its lit furnaces, no water at hand, in ordinary weather). A dry spell makes them",
+                "twice as likely, a drought three times; stone round the forge stops them altogether.")
+            .defineInRange("villageSparkDays", 10, 2, 1000);
+        VILLAGE_FLOOD_RAIN_DAYS = b.comment(
+                "How many of the last seven days must have been wet, in spring or autumn, before rain",
+                "on a town by a river brings the river up over its low ground. Higher is rarer;",
+                "eight means never.")
+            .defineInRange("villageFloodRainDays", 3, 1, 8);
+        VILLAGE_DROUGHT_DAYS = b.comment(
+                "How many days running without rain, in summer, make a drought: the fields with no",
+                "water near them grow at a quarter of their pace until it rains.")
+            .defineInRange("villageDroughtDays", 6, 2, 60);
         b.pop();
 
         SPEC = b.build();
@@ -272,6 +301,10 @@ public final class AssistantConfig {
     public static boolean villageReshapeLand() { return read(VILLAGE_RESHAPE_LAND, true); }
     public static boolean villagePhantoms() { return read(VILLAGE_PHANTOMS, false); }
     public static double villageCropGrowth() { return read(VILLAGE_CROP_GROWTH, 2.0); }
+    public static boolean villageDisasters() { return read(VILLAGE_DISASTERS, true); }          // [disasters]
+    public static int villageSparkDays() { return read(VILLAGE_SPARK_DAYS, 10); }
+    public static int villageFloodRainDays() { return read(VILLAGE_FLOOD_RAIN_DAYS, 3); }
+    public static int villageDroughtDays() { return read(VILLAGE_DROUGHT_DAYS, 6); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */

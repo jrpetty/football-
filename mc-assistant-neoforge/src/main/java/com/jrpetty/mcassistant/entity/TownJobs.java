@@ -336,7 +336,8 @@ public final class TownJobs {
 
     /** The works a village has done even while it is young: its beds made up, room in its stores. */
     static boolean essential(String works) {
-        return works.equals("beds") || works.equals("stores");
+        return works.equals("beds") || works.equals("stores")
+            || works.equals("rebuild");                                  // [disasters] what a fire burnt put back
     }
 
     private static UUID owner(VillageFolkEntity f) {

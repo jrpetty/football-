@@ -87,7 +87,8 @@ public final class Tavern {
         Ledger.Building tav = of(village);
         if (tav == null || f.isBaby() || !(f.level() instanceof ServerLevel level) || !level.isLoaded(tav.anchor())) return false;
         long day = level.getDayTime() / 24000L;
-        if (!goingTonight(f, day) && !Bard.playing(level, village)) return false;   // [batchG] a bard in: the whole town comes
+        if (!goingTonight(f, day) && !Bard.playing(level, village)
+                && !Buskers.tavernTonight(level, village)) return false;   // [batchG] a bard in: the whole town comes; [arms] or its busker
         Direction back = tav.facing(), right = back.getClockWise();
         int h = f.getUUID().hashCode();
         BlockPos spot = tav.anchor().relative(right, Math.floorMod(h, 4)).relative(back, Math.floorMod(h >> 3, 5) - 2);
@@ -199,6 +200,7 @@ public final class Tavern {
         long t = level.getDayTime() % 24000L;
         if (t < 12500L || t > 17000L) return;
         if (Music.playing(v.id())) return;                         // [batchD] the band has the tavern tonight (Music)
+        if (Buskers.atTheTavern(v.id())) return;                   // [arms] and its busker before the band
         Ledger.Building tav = of(v.id());
         if (tav == null || !level.isLoaded(tav.anchor())) return;
         if (company(level, tav) < 2) return;

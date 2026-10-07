@@ -66,11 +66,17 @@ public class WatchClearsGameTests {
         return new BlockPos(cx, y, cz);
     }
 
-    /** A guard in the town's kit: an iron suit, a diamond blade and a shield, a bow and arrows, and bread. */
+    /**
+     * A guard in the town's kit: an iron suit, a diamond blade and a shield, a bow and arrows, and bread. Taken up
+     * as a player asking a folk to take up a trade does (takeUpTrade): a town of five or six has no share for a
+     * watch (that comes at eleven), and a guard set by hand went back to the fields at the folk's first look at
+     * the town's shape, all but the last of them (CI 0.285.0: one guard of three left for wc01's night, two of
+     * four for wc05's band). Taken up, a trade is not looked at again for five minutes.
+     */
     private static VillageFolkEntity guard(ServerLevel level, BlockPos at) {
         VillageFolkEntity g = VillageFolkSpawnerBlock.raise(level, at, 0.0F);
         if (g == null) return null;
-        g.setJob(StationTask.GUARD);
+        if (!g.takeUpTrade(StationTask.GUARD)) g.setJob(StationTask.GUARD);
         g.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.DIAMOND_SWORD));
         g.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.SHIELD));
         g.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
@@ -134,6 +140,17 @@ public class WatchClearsGameTests {
         return (e.getBlockX() - heart.getX()) + "," + (e.getBlockZ() - heart.getZ());
     }
 
+    /** Each guard: its trade, and why it is not free for the hunt ("free" when it is). */
+    private static String watchLine(List<VillageFolkEntity> watch) {
+        StringBuilder sb = new StringBuilder();
+        for (VillageFolkEntity g : watch) {
+            String why = WatchClears.whyNotFreeForTests(g);
+            sb.append(sb.length() == 0 ? "" : "; ").append(g.displayNameCap()).append(' ').append(g.stationTask())
+                .append(' ').append(why.isEmpty() ? "free" : why);
+        }
+        return sb.toString();
+    }
+
     private static String target(Mob m) {
         LivingEntity t = m.getTarget();
         return t == null ? "none" : t.getType().toShortString();
@@ -178,11 +195,14 @@ public class WatchClearsGameTests {
             Kit.log("wc01 the night's monsters: " + night.size() + " put out, " + about.size() + " about the town by its own count; reach "
                 + Villages.townReach(village));
             helper.assertTrue(night.size() == 8 && about.size() >= 8, "eight monsters about the town: " + night.size() + ", " + about.size());
+            String before = watchLine(watch);
+            Kit.log("wc01 the watch before its first look round: " + before);
+            helper.assertTrue(watch.stream().allMatch(g -> g.stationTask() == StationTask.GUARD), "all three still the watch: " + before);
             WatchClears.tickForTests(level, village);
             int sent = 0;
             for (VillageFolkEntity g : watch) if (WatchClears.huntedByForTests(g) != null) sent++;
-            Kit.log("wc01 the watch's first look round: " + sent + " of 3 guards sent out");
-            helper.assertTrue(sent == 3, "every guard of the watch sent after one: " + sent);
+            Kit.log("wc01 the watch's first look round: " + sent + " of 3 guards sent out; " + watchLine(watch));
+            helper.assertTrue(sent == 3, "every guard of the watch sent after one: " + sent + " (" + before + ")");
         });
         helper.onEachTick(() -> {
             long t = helper.getTick();
@@ -463,6 +483,9 @@ public class WatchClearsGameTests {
             one.setNoAi(true);
             two.setNoAi(true);
             for (Mob m : band) if (m != one && m != two) m.setNoAi(true);
+            String before = watchLine(watch);
+            Kit.log("wc05 the watch before its look round: " + before);
+            helper.assertTrue(watch.stream().allMatch(g -> g.stationTask() == StationTask.GUARD), "all four still the watch: " + before);
             WatchClears.tickForTests(level, village);
             int onOne = 0, onTwo = 0, onRest = 0;
             for (VillageFolkEntity g : watch) {
@@ -472,7 +495,7 @@ public class WatchClearsGameTests {
             }
             Kit.log("wc05 the watch's look round: " + onOne + " guards after the first raider among the folk, " + onTwo
                 + " after the second, " + onRest + " after the band still out at the edge");
-            helper.assertTrue(onOne == 2 && onTwo == 2, "two guards to each raider among the folk: " + onOne + ", " + onTwo);
+            helper.assertTrue(onOne == 2 && onTwo == 2, "two guards to each raider among the folk: " + onOne + ", " + onTwo + " (" + before + ")");
             helper.assertTrue(onRest == 0, "none sent out to the edge with the bell ringing: " + onRest);
 
             // A folk killed by a vindicator, the bell ringing; another in lava.

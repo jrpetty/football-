@@ -274,6 +274,14 @@ public final class Gazette {
         if (auction != null) entries.add(auction);
         String war = WarAndPeace.gazette(level, id, day);           // [war-peace] the war, the ultimatum, the treaty
         if (war != null) entries.add(war);
+        String street = Buskers.gazette(level, id, day);            // [arms] yesterday's buskers and their hats
+        if (street != null) entries.add(street);
+        String fashion = Fashion.gazette(level, v, day);            // [fashion] the season's look, who set it, the show
+        if (fashion != null) entries.add(fashion);
+        String crime = Crime.gazette(level, id, day);              // [crime] the watch and the court
+        if (crime != null) entries.add(crime);
+        String disasters = Disasters.gazette(level, v, day);        // [disasters] the weather's danger, yesterday's fire or flood
+        if (disasters != null) entries.add(disasters);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();

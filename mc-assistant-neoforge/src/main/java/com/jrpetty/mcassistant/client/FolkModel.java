@@ -317,12 +317,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         // Dress for the trade. A helmet goes on instead of the trade's hat, not on top of it.
         String trade = tradeOf(folk);
         boolean helmet = !folk.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
+        boolean ownHat = FashionLayer.hatOn(folk);          // [fashion] off work, its own hat instead of its trade's
         for (int i = 0; i < worn.length; i++) {
             String by = wornBy[i];
             boolean show = by.equals("beard")
                 ? FolkLooks.bearded(folk) || "lumberjack".equals(trade)
                 : by.equals(trade);
-            worn[i].visible = show && !(helmet && onHead[i] && !by.equals("beard"));
+            worn[i].visible = show && !((helmet || ownHat) && onHead[i] && !by.equals("beard"));
         }
         // [guard-kit] Armour over the clothes, not under them: the hair under a helmet, the coat under a breastplate or
         // leggings, and what is worn round the body (an apron, a shawl, a mantle, a cape) under a breastplate.

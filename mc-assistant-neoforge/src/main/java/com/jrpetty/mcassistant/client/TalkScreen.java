@@ -181,6 +181,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Your work?", TalkTopic.DOING));
                 out.add(Choice.of("About you", TalkTopic.ABOUT));
                 out.add(Choice.of("Family?", TalkTopic.PEOPLE));
+                out.add(Choice.of("Your pet?", TalkTopic.PET, "Its household's dog or cat: how it is, what it gets up to; a pup or a kitten looking for a home"));   // [pets]
                 out.add(Choice.of("Your home?", TalkTopic.HOUSE, "Where it lives, who with, and whether the house is its own"));
                 out.add(Choice.of("Any news?", TalkTopic.VILLAGE));
                 out.add(Choice.of("Your hopes?", TalkTopic.DREAMS));
@@ -214,9 +215,12 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Carry a letter", TalkTopic.LETTER, "Take a letter from the elder to the nearest neighbour's: both villages will think the better of you, and of each other"));
                 out.add(Choice.of("Out there", TalkTopic.ATLAS, "What the village's scouts have found: towns, ruins, peaks, ore — and which way"));
                 out.add(Choice.of("Underground", TalkTopic.CAVES, "What the town's cave dwellers have found: caves, ore, mineshafts, spawners, old chests — and where"));   // [caves]
+                out.add(Choice.of("Fashion", TalkTopic.FASHION, "What the town is wearing this season, who set it, and what this folk thinks of it"));   // [fashion]
                 out.add(Choice.of("My standing", TalkTopic.REPUTE));
                 out.add(Choice.of("Live here?", TalkTopic.CITIZEN, "Ask to become a citizen: a vote on the council and a house of your own"));
                 out.add(Choice.of("Pay a fine", TalkTopic.FINE, "Pay what you owe the village"));
+                out.add(Choice.of("Seen anything?", TalkTopic.WATCH, "A theft or a vandal: ask what it saw (a friend tells you what it would not "
+                    + "tell the watch). To a guard: the case it is on; hold what was dropped at the scene to hand it in, or type \"I saw Fen take it\""));   // [crime]
                 out.add(new Choice("The board", TalkTopic.OPEN, "", "Read the village board: what it is doing, how it is getting on, what it is working towards"));
                 out.add(new Choice("Suggest a build", TalkTopic.BUILD, "", "Type what you think the village should build next"));
             }

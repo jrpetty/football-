@@ -187,6 +187,68 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
+    // [arms] The town's arms (entity/Arms): the festival tabard, seven wool cut like a tunic, given a banner's arms at
+    // the crafting table as a shield is (TabardDecorationRecipe); and the loom's patterns for the three charges a town
+    // is granted for what it lives by, each a sheet of paper and a fish, a pickaxe or wheat.
+    private static final DeferredRegister<net.minecraft.world.item.crafting.RecipeSerializer<?>> RECIPE_SERIALIZERS =
+        DeferredRegister.create(Registries.RECIPE_SERIALIZER, MODID);
+    public static final DeferredItem<net.minecraft.world.item.Item> TABARD =
+        ITEMS.registerSimpleItem("tabard", new net.minecraft.world.item.Item.Properties().stacksTo(1));
+    public static final DeferredItem<net.minecraft.world.item.BannerPatternItem> FISH_PATTERN = patternItem("fish");
+    public static final DeferredItem<net.minecraft.world.item.BannerPatternItem> PICK_PATTERN = patternItem("pick");
+    public static final DeferredItem<net.minecraft.world.item.BannerPatternItem> SHEAF_PATTERN = patternItem("sheaf");
+    public static final DeferredHolder<net.minecraft.world.item.crafting.RecipeSerializer<?>,
+        net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<com.jrpetty.mcassistant.item.TabardDecorationRecipe>> TABARD_DECORATION =
+        RECIPE_SERIALIZERS.register("tabard_decoration",
+            () -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(com.jrpetty.mcassistant.item.TabardDecorationRecipe::new));
+
+    private static DeferredItem<net.minecraft.world.item.BannerPatternItem> patternItem(String charge) {
+        net.minecraft.tags.TagKey<net.minecraft.world.level.block.entity.BannerPattern> tag = net.minecraft.tags.TagKey.create(
+            Registries.BANNER_PATTERN, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MODID, "pattern_item/" + charge));
+        return ITEMS.register(charge + "_banner_pattern", () -> new net.minecraft.world.item.BannerPatternItem(tag,
+            new net.minecraft.world.item.Item.Properties().stacksTo(1)));
+    }
+    // [pets] The town's pets (entity/Pets). The pet bowl, the dog bed and the cat basket are blocks a household sets
+    // out at home; the collar (the tailor's, of leather, dyeable) is put on its pet; the treats are the cook's. Each
+    // has a real recipe, so the town's makers know it (Bench, Tiers, Prices), and the household gets it out of the
+    // stores or buys it at the shop (Purchases).
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.PetBowlBlock> PET_BOWL =
+        BLOCKS.registerBlock("pet_bowl", com.jrpetty.mcassistant.block.PetBowlBlock::new,
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(0.6F).sound(SoundType.WOOD).noOcclusion());
+    public static final DeferredItem<BlockItem> PET_BOWL_ITEM = ITEMS.registerSimpleBlockItem(PET_BOWL);
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.PetBedBlock> DOG_BED =
+        BLOCKS.registerBlock("dog_bed", p -> new com.jrpetty.mcassistant.block.PetBedBlock(p, false),
+            BlockBehaviour.Properties.of().mapColor(MapColor.COLOR_RED).strength(0.4F).sound(SoundType.WOOL).noOcclusion());
+    public static final DeferredItem<BlockItem> DOG_BED_ITEM = ITEMS.registerSimpleBlockItem(DOG_BED);
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.PetBedBlock> CAT_BED =
+        BLOCKS.registerBlock("cat_bed", p -> new com.jrpetty.mcassistant.block.PetBedBlock(p, true),
+            BlockBehaviour.Properties.of().mapColor(MapColor.WOOD).strength(0.4F).sound(SoundType.BAMBOO_WOOD).noOcclusion());
+    public static final DeferredItem<BlockItem> CAT_BED_ITEM = ITEMS.registerSimpleBlockItem(CAT_BED);
+    public static final DeferredItem<net.minecraft.world.item.Item> COLLAR =
+        ITEMS.registerSimpleItem("collar", new net.minecraft.world.item.Item.Properties().stacksTo(16));
+    /** No food of the folk's (it has no food in it for them to eat at a meal): what a pet is given, by hand. */
+    public static final DeferredItem<net.minecraft.world.item.Item> PET_TREAT =
+        ITEMS.registerSimpleItem("pet_treat");
+    /** [fashion] The tailor's garments (item/Garment): coats, a jacket, a shawl, a waistcoat, hats, a scarf, a brooch, the show's rosette. */
+    public static final java.util.List<DeferredItem<com.jrpetty.mcassistant.item.GarmentItem>> GARMENTS =
+        com.jrpetty.mcassistant.item.GarmentItem.register(ITEMS);
+    // [crime] The stocks: the council's sentence for a second offence, sat in on the square for a day (entity/Trial).
+    // Three planks over two logs; the town puts a pair up out of its stores the first time a sentence wants them.
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.StocksBlock> STOCKS =
+        BLOCKS.registerBlock("stocks",
+            com.jrpetty.mcassistant.block.StocksBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.WOOD)
+                .strength(2.0F, 3.0F)
+                .sound(SoundType.WOOD)
+                .noOcclusion());
+
+    public static final DeferredItem<BlockItem> STOCKS_ITEM =
+        ITEMS.registerSimpleBlockItem(STOCKS);
+
+    /** [crime] A copper coin cast to pass for the town's own: what a forger passes at the stores (entity/Mischief). */
+    public static final DeferredItem<net.minecraft.world.item.Item> FORGED_COIN =
+        ITEMS.registerSimpleItem("forged_coin");
     /** [fleet] The fishing fleet's net: knotted of five string by the tailor, a boat's haul two to four fish at a cast,
      *  worn a little with each haul (entity/Fleet). */
     public static final DeferredItem<net.minecraft.world.item.Item> FISHING_NET =
@@ -210,6 +272,18 @@ public final class McAssistantMod {
                 out.accept(ZONE_MARKER.get());
                 out.accept(PLACE_MARKER.get());
                 out.accept(MEMORY_CORE.get());
+                out.accept(TABARD.get());                     // [arms]
+                out.accept(FISH_PATTERN.get());
+                out.accept(PICK_PATTERN.get());
+                out.accept(SHEAF_PATTERN.get());
+                out.accept(PET_BOWL_ITEM.get());                 // [pets]
+                out.accept(DOG_BED_ITEM.get());
+                out.accept(CAT_BED_ITEM.get());
+                out.accept(COLLAR.get());
+                out.accept(PET_TREAT.get());
+                for (DeferredItem<com.jrpetty.mcassistant.item.GarmentItem> g : GARMENTS) out.accept(g.get());   // [fashion]
+                out.accept(STOCKS_ITEM.get());              // [crime]
+                out.accept(FORGED_COIN.get());              // [crime]
             })
             .build());
 
@@ -227,6 +301,7 @@ public final class McAssistantMod {
         ITEMS.register(modBus);
         TABS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
+        RECIPE_SERIALIZERS.register(modBus);                          // [arms] the tabard given a banner's arms
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);

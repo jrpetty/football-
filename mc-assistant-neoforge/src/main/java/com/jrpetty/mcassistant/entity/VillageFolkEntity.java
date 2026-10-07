@@ -420,6 +420,10 @@ public class VillageFolkEntity extends AssistantEntity {
         // fists, before anything else (FireBrigade; the town is looked over every two seconds).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel fireLevel
                 && FireBrigade.hold(this, fireLevel)) return;
+        // [disasters] Out of a flood, to a neighbour's bed while its home is burnt or flooded, the fire watch's round,
+        // a farmer's water carried to its parched field (Disasters).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel disasterLevel
+                && Disasters.hold(this, disasterLevel)) return;
         // [wf] A thunderstorm: indoors, everybody but the watch, and there till it has passed (Weather).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel stormLevel
                 && Weather.shelter(this, stormLevel)) return;
@@ -428,6 +432,10 @@ public class VillageFolkEntity extends AssistantEntity {
                 && WatchClears.takeCover(this, coverLevel)) return;
         // [batchA] Laid up: a cold or its wounds, in bed at the infirmary or at home, and kept there (Health).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel careLevel && Health.hold(this, careLevel)) return;
+        // [crime] The law first: in the stocks or at its community work, called to a trial, a guard on a case; or a folk up
+        // to no good in its own free time (Crime).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel lawLevel
+                && (tickCount % 4 == 2 ? Crime.hold(this, lawLevel) : Crime.busy(this))) return;
         // [fleet] At the auction on the square (calling it, or in the crowd), or at the fish market on the quay (Auctions).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel mart && Auctions.hold(this, mart)) return;
         // [batchD] The town's culture (Culture): a minute's silence at the bell, the choir at the morning service, the
@@ -486,6 +494,7 @@ public class VillageFolkEntity extends AssistantEntity {
         agendaTick = tickCount;
         flyTheColours();
         showTheWealth();
+        Fashion.look(this);                            // [fashion] its own style, its hat off work, what it wants on the tailor's book
         if (!life.rolled()) life.roll(getRandom(), null, null);
         ensurePersona();
         refreshMood();
@@ -1177,6 +1186,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Visitors.mood(this, day, m, why);           // [batchG] a night of the bard's songs, a day with a friend from away
         m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
+        m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -1368,6 +1378,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (!level().isClientSide && player instanceof net.minecraft.server.level.ServerPlayer sp) {
             if (StoreFloor.serveAPlayer(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;   // [econ-store]
+            if (Buskers.tipFrom(this, sp, held)) return net.minecraft.world.InteractionResult.SUCCESS;     // [arms] a coin in the busker's hat
             if (Auctions.serveAPlayer(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;     // [fleet] the auctioneer's bid screen
             FolkTalk.open(this, sp);
         }
@@ -1457,6 +1468,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void die(net.minecraft.world.damagesource.DamageSource cause) {
         if (!level().isClientSide) WarAndPeace.died(this, cause, level().getDayTime() / 24000L);   // [war-peace] lost to the war (before its errand is let go)
+        if (!level().isClientSide) Fashion.died(this);                   // [fashion] what it wore falls where it fell, with its pack
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
         if (level() instanceof net.minecraft.server.level.ServerLevel horses) Riding.fell(horses, this);   // a horse it had out (Riding)
         if (expedition != null && level() instanceof net.minecraft.server.level.ServerLevel land) {
@@ -1564,6 +1576,23 @@ public class VillageFolkEntity extends AssistantEntity {
         builder.define(DATA_BANNER, -1);
         builder.define(DATA_WEALTH, 1);
         builder.define(DATA_CHILD, false);
+        builder.define(DATA_STYLE, 0L);                 // [fashion]
+    }
+
+    /** [fashion] Its style (Fashion): its colours, what it wears of its own, how it stands with the season's look. */
+    private final Style style = new Style();
+
+    public Style style() { return style; }
+
+    /** [fashion] Its style, packed for the client to draw (Style.pack, client/FashionLayer). */
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Long> DATA_STYLE =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.LONG);
+
+    public long clientStyle() { return this.entityData.get(DATA_STYLE); }
+
+    public void showStyle(long packed) {
+        if (this.entityData.get(DATA_STYLE) != packed) this.entityData.set(DATA_STYLE, packed);
     }
 
     /** A child of the village: small, at play, and no trade until it is grown. */
@@ -2158,6 +2187,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         if (homeComfort(server)) return;              // its savings, spent on its home
+        if (Fashion.shopping(this, server)) return;   // [fashion] to the shop for the season's look it wants
         if (PlayerStalls.errand(this, server)) return;   // a player's stall on the square, for what it wants (PlayerStalls)
         if (shopping(server)) return;                 // market day: a treat from the stalls
         if (lookRound(server)) return;                // the new building everybody is talking about
@@ -4371,6 +4401,7 @@ public class VillageFolkEntity extends AssistantEntity {
     private int rationsWanted() {
         UUID village = ownerId();
         if (village != null && Market.hungry(village)) return RATIONS_LOW + 2;
+        if (Droughts.rationing(village)) return RATIONS_LOW + 2;   // [disasters] short rations in a drought
         return tripToStores() >= 48 ? 12 : 8;
     }
 
@@ -7691,7 +7722,9 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean calledAway() {
         return FireBrigade.onIt(this) || Weather.sheltering(this) || Health.laidUp(this) || Neighbourly.busy(this)   // [batchA]
             || Inn.lodged(this)                                  // [batchE] asleep in a room at an inn on the road
-            || WatchClears.sheltering(this);                     // [watch-clears] indoors out of a monster's way
+            || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
+            || Crime.calledAway(this)                            // [crime] on a case, at a trial, in the stocks, at community work
+            || Disasters.busy(this);                             // [disasters] a bucket chain, a flood, a night away, the fire watch
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */
@@ -7874,6 +7907,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (showcase) tag.putBoolean("Showcase", true);
         tag.put("Meals", meals.save());
         Health.save(this, tag);                         // [batchA]
+        Fashion.save(this, tag);                        // [fashion] its colours, what it wears, what it wants
         if (productionChest != null) tag.putLong("ProductionChest", productionChest.asLong());
         if (oldProductionChest != null) tag.putLong("OldProductionChest", oldProductionChest.asLong());
         tag.putLong("BornDay", bornDay);
@@ -7945,6 +7979,7 @@ public class VillageFolkEntity extends AssistantEntity {
         this.showcase = tag.getBoolean("Showcase");
         if (tag.contains("Meals")) meals.load(tag.getCompound("Meals"));
         Health.load(this, tag);                         // [batchA]
+        Fashion.load(this, tag);                        // [fashion]
         this.productionChest = tag.contains("ProductionChest") ? BlockPos.of(tag.getLong("ProductionChest")) : null;
         this.oldProductionChest = tag.contains("OldProductionChest") ? BlockPos.of(tag.getLong("OldProductionChest")) : null;
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;

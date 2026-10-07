@@ -59,14 +59,20 @@ public class CityScreen extends Screen {
         "War map",
         // [war-peace] The war, after them for the same reason (WarPage).
         "War",
-        // [caves] The caves' report, last of all (CavesPage).
+        // [caves] The caves' report (CavesPage).
         "Caves",
+        // [fashion] What the town wears (FashionPage).
+        "Fashion",
+        // [crime] The watch's casebook and the crime rate, after them (CasesPage).
+        "Cases",
         // [fleet] The auction and the fishing fleet, after them (AuctionPage).
         "Auction" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
-        "Auction");   // [fleet]
+        "Fashion",                                                                                    // [fashion]
+        "Cases",                                                                                      // [crime]
+        "Auction");                                                                                   // [fleet]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -323,6 +329,14 @@ public class CityScreen extends Screen {
                 case "War" -> WarPage.draw(g, font, data.getCompound("war"), x, y, cw, ch, scroll);   // [war-peace]
                 case "Caves" -> {                                                      // [caves] the caves' report (CavesPage)
                     List<Component> tip = CavesPage.draw(g, font, data.getCompound("caves"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Fashion" -> {                                                    // [fashion] the season's look (FashionPage)
+                    List<Component> tip = FashionPage.draw(g, font, data.getCompound("fashion"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Cases" -> {                                                      // [crime] the casebook (CasesPage)
+                    List<Component> tip = CasesPage.draw(g, font, data.getCompound("crime"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "Auction" -> {                                                    // [fleet] the auction and the fleet (AuctionPage)
@@ -2849,6 +2863,13 @@ public class CityScreen extends Screen {
             for (String s : guests) all.add("  " + s);
             all.add("");
         }
+        // [pets] The town's pets (entity/Pets): who has one, fed and kept, the young, the strays, litters, the show, the lost.
+        List<String> pets = strings("pets");
+        if (!pets.isEmpty()) {
+            all.add("Pets:");
+            for (String s : pets) all.add("  " + s);
+            all.add("");
+        }
         // [batchC] Sport and play: the pitch, the range, the league table, the cup, the contests (entity/Sport).
         List<String> sport = strings("sport");
         if (!sport.isEmpty()) {
@@ -2861,6 +2882,13 @@ public class CityScreen extends Screen {
         if (!civic.isEmpty()) {
             all.add("The town's affairs:");
             for (String s : civic) all.add("  " + s);
+            all.add("");
+        }
+        // [disasters] Fire, flood and drought (entity/Disasters): the weather, the fires, floods and droughts, what it built after.
+        List<String> disasters = strings("disasters");
+        if (!disasters.isEmpty()) {
+            all.add("Fire, flood and drought:");
+            for (String s : disasters) all.add("  " + s);
             all.add("");
         }
         all.add("The chronicle, latest first:");
