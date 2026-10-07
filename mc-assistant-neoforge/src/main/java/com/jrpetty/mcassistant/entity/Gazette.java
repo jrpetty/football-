@@ -240,7 +240,8 @@ public final class Gazette {
         UUID id = v.id();
         String town = Villages.name(id);
         long founded = Chronicle.foundedOn(id);
-        String front = "§lThe " + town + " Gazette§r\nDay " + day + "\n\n" + Villages.headcount(id) + " folk, "
+        String front = "§lThe " + town + " Gazette§r\nDay " + day + "\n" + Seasons.dateLine(id, day)     // [batchB] the season
+            + "\n\n" + Villages.headcount(id) + " folk, "
             + Villages.ageOf(id).label + (founded >= 0 ? "\nFounded day " + founded : "") + "\n\nYesterday in " + town + ", day " + (day - 1) + ".";
         List<String> born = new ArrayList<>(), died = new ArrayList<>(), built = new ArrayList<>(), other = new ArrayList<>();
         for (Chronicle.Entry e : Chronicle.of(id)) {

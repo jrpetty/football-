@@ -124,7 +124,7 @@ public final class Fields {
         double base = AssistantConfig.villageCropGrowth();
         if (base <= 1.0) return 1.0;
         Care c = CARE.get(f.getUUID());
-        return base + (c == null ? 0.0 : c.bonus());
+        return Seasons.tended(f, base + (c == null ? 0.0 : c.bonus()));     // [batchB] quicker in spring and summer, slower in winter
     }
 
     /** The town's word on its fields, for the books: "the fields grow at 2.0x (tended)". */
@@ -135,7 +135,8 @@ public final class Fields {
         }
         if (base <= 1.0) return "the fields grow at the game's own pace";
         return String.format(Locale.ROOT, "the fields grow at %.1fx (tended)%s", base,
-            most > base + 0.01 ? String.format(Locale.ROOT, ", up to %.2fx where they are best kept", most) : "");
+            most > base + 0.01 ? String.format(Locale.ROOT, ", up to %.2fx where they are best kept", most) : "")
+            + Seasons.fieldsNote(village);                                  // [batchB] and in this season
     }
 
     /**

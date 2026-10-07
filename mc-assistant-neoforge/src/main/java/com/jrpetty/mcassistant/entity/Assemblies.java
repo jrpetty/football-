@@ -50,7 +50,8 @@ public final class Assemblies {
         MORNING("the morning assembly"), OPENING("an opening"), FEAST("the village feast"), WEDDING("a wedding"),
         VIGIL("a vigil"), CELEBRATION("a celebration"), HONOUR("an honouring"), COUNCIL("the council's meeting"),
         ELECTION("an election"), COMING_OF_AGE("a coming of age"), ENVOY("an envoy's audience"),
-        WATCH("the changing of the watch"), FOUNDING("Founding Day");
+        WATCH("the changing of the watch"), FOUNDING("Founding Day"),
+        FESTIVAL("a festival");                                 // [batchB] the May dance, the bonfire, the fair, the harvest (Festivals)
 
         public final String label;
         Kind(String label) { this.label = label; }
@@ -197,6 +198,7 @@ public final class Assemblies {
         } else if (t >= 12100 && t < 13200) {
             // Founding Day (FoundingDay): once a year, before any other gathering that evening.
             if (FoundingDay.due(id, day) && !held(id, Kind.FOUNDING, day)) next = FoundingDay.assembly(level, v, day);
+            if (next == null && !held(id, Kind.FESTIVAL, day)) next = Festivals.evening(level, v, day);   // [batchB] the year's festivals
             Gatherings.Kind tonight = Gatherings.tonight(id, day);
             if (next == null && tonight != null) next = evening(level, v, tonight, day);
             if (next == null) next = planned(id, day);
@@ -208,7 +210,8 @@ public final class Assemblies {
             }
             // Rain puts off a feast, not a vigil, the council, or the count of an election.
             if (next != null && level.isRaining() && next.kind != Kind.VIGIL && next.kind != Kind.COUNCIL && next.kind != Kind.ELECTION
-                && next.kind != Kind.FOUNDING) next = null;            // (nor Founding Day: it comes once a year)
+                && next.kind != Kind.FOUNDING && next.kind != Kind.FESTIVAL) next = null;   // (nor Founding Day: it comes once a year;
+                                                                                            // [batchB] a festival minds the rain itself)
         }
         boolean several = next != null && (next.kind == Kind.OPENING || next.kind == Kind.ENVOY);
         if (next == null || held(id, next.kind, day) && !several) return;
@@ -276,6 +279,7 @@ public final class Assemblies {
                 if (now < a.nextLineAt) return;
                 if (a.line >= a.script.size()) {
                     a.phase = a.kind == Kind.FEAST || a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING
+                        || a.kind == Kind.FESTIVAL && Festivals.mingles(a)        // [batchB] the dance, the song, the meal
                         ? Phase.MINGLE : Phase.CLOSE;
                     a.phaseAt = now;
                     return;
@@ -318,7 +322,7 @@ public final class Assemblies {
                         level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, a.focus.getX() + 0.5, a.focus.getY() + 1, a.focus.getZ() + 0.5, 1, 0.1, 0.1, 0.1, 0.01);
                     }
                 }
-                if (now - a.phaseAt > (a.kind == Kind.FEAST || a.kind == Kind.FOUNDING ? 1200 : 700)) {
+                if (now - a.phaseAt > (a.kind == Kind.FEAST || a.kind == Kind.FOUNDING || a.kind == Kind.FESTIVAL ? 1200 : 700)) {   // [batchB]
                     a.phase = Phase.CLOSE;
                     a.phaseAt = now;
                 }
@@ -407,6 +411,7 @@ public final class Assemblies {
         }
         if (a.kind == Kind.COMING_OF_AGE) Villages.tell(a.village, day, a.subject.split("\\|", 2)[0] + " was welcomed among the grown folk");
         if (a.kind == Kind.FOUNDING) FoundingDay.kept(level, a);
+        if (a.kind == Kind.FESTIVAL) Festivals.closed(level, a);                          // [batchB] kept, and into the chronicle
     }
 
     // ------------------------------------------------------------------ being there
@@ -516,6 +521,7 @@ public final class Assemblies {
 
     /** The feast and the celebration: eat (out of the stores), dance, raise a cup. */
     private static void mingle(VillageFolkEntity f, ServerLevel level, Assembly a, RandomSource r) {
+        if (a.kind == Kind.FESTIVAL && Festivals.mingle(f, level, a, r)) return;          // [batchB] round the maypole, the fire, the tables
         if ((a.kind == Kind.FEAST || a.kind == Kind.FOUNDING) && !a.ate.contains(f.getUUID()) && r.nextInt(30) == 0) {
             a.ate.add(f.getUUID());
             Villages.Village v = Villages.get(a.village);
@@ -953,6 +959,7 @@ public final class Assemblies {
             }
             case ELECTION -> Elections.script(level, id, s, r);
             case FOUNDING -> FoundingDay.script(level, a, s, r);
+            case FESTIVAL -> Festivals.script(level, a, s, r);                             // [batchB]
             case COMING_OF_AGE -> {
                 String[] parts = a.subject.split("\\|", -1);
                 String who = parts[0];
@@ -992,6 +999,7 @@ public final class Assemblies {
             case ENVOY -> "the envoy from " + a.subject.split("\\|", 2)[0];
             case CELEBRATION -> "the celebration of " + a.subject;
             case HONOUR -> a.subject;
+            case FESTIVAL -> Festivals.describe(a.subject);                                // [batchB] "the May dance"
             default -> a.kind.label;
         };
     }
@@ -1034,6 +1042,7 @@ public final class Assemblies {
             case ELECTION -> election(level, v, day);
             case FEAST -> new Assembly(v.id(), Kind.FEAST, "", day, v.centre(), Direction.SOUTH, Layout.RING);
             case FOUNDING -> FoundingDay.assembly(level, v, day);
+            case FESTIVAL -> Festivals.calledNow(level, v, day);                           // [batchB] Festivals.callNow
             default -> null;
         };
         if (a == null) return false;

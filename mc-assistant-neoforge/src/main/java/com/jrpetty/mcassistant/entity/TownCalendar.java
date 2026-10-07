@@ -64,6 +64,7 @@ public final class TownCalendar extends SavedData {
         Birthdays.resetForTests();
         FoundingDay.resetForTests();
         Crier.resetForTests();
+        Festivals.resetForTests();                            // [batchB] the year's festivals (Festivals)
     }
 
     // ------------------------------------------------------------------ the clock
@@ -158,6 +159,7 @@ public final class TownCalendar extends SavedData {
             days.append("Birthdays this week: ").append(String.join("; ", week)).append('.');
         }
         if (days.length() > 0) out.add("RM|" + days);
+        out.addAll(Seasons.board(level, village));          // [batchB] the season, and the year's festivals
         return out;
     }
 
@@ -169,6 +171,7 @@ public final class TownCalendar extends SavedData {
         if (founding != null) out.add(founding + ".");
         List<String> week = Birthdays.thisWeek(level, village, day);
         out.add(week.isEmpty() ? "No birthdays this week." : "Birthdays this week: " + String.join("; ", week) + ".");
+        out.addAll(Seasons.book(level, village));           // [batchB] the season, the fields, the festivals, the harvest
         return out;
     }
 

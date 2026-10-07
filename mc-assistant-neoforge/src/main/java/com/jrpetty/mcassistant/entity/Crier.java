@@ -217,6 +217,8 @@ public final class Crier {
         int toMarket = Market.daysToMarket(id, day);
         out.add(toMarket == 0 ? "It's market day — the stalls are open on the square!"
             : toMarket == 1 ? "Market day tomorrow!" : "Market day in " + toMarket + " days.");
+        String season = Seasons.cry(id, day);                       // [batchB] the day of the season, and tonight's festival
+        if (season != null) out.add(season);
         List<Villages.Need> needs = Villages.needs(level, id);
         if (!needs.isEmpty()) {
             StringBuilder sb = new StringBuilder("The town is short of ");

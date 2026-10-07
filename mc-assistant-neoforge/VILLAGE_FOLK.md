@@ -4744,3 +4744,78 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+
+## Seasons and festivals
+
+A town keeps its own year of four weeks, counted from its Founding Day, and each week of it is a season:
+**spring** (the first seven days, from Founding Day), then **summer**, **autumn** and **winter**. Two towns
+founded a fortnight apart are a season apart.
+
+* **The seasons and the fields.** A farmer's tended field grows quicker in spring and summer and slower in
+  autumn and winter, but never stops: with the fields at twice the wild's pace (the default), a tended crop
+  grows at 2.3 times the wild in spring, 2.15 in summer, 1.8 in autumn and 1.55 in winter. The board says
+  the season and the day of it ("Summer, day 4 of 7 — the town's second year"), the town's books show it on
+  the News page with the fields' pace in every season, the crier reads it out at noon, the gazette prints
+  it under its masthead, and folk mention it now and then (the blossom, the long days, the leaves turning,
+  the cold). The first day of each season goes into the chronicle. `/village season` says where the town
+  is in its year; an operator can turn a town's calendar to any day of it with `/village season set <1-28>`.
+* **The May dance.** On the first rest day of spring a hand puts a maypole up on the square out of the
+  stores: five fence posts (or five logs) with a block of wool of every colour the stores have at its head,
+  up to five. At dusk the town gathers in a ring round it, the elder says a word, and they dance: the whole
+  ring moves round the pole a place at a time, to a tune. Everybody remembers it, and the town is the
+  happier for a few days. The next morning the pole comes down and every post and every block of wool goes
+  back into the stores. With no wool (or nothing for the pole) the board says why there is no maypole.
+* **The midsummer bonfire.** On midsummer's day (the fourth of summer), at dusk, a hand builds a fire on
+  the square: a campfire made as you would make one (three of the stores' logs, a lump of coal or charcoal
+  and three sticks, sawn from planks if need be), or five in a cross if the stores run to it. The town
+  gathers round and sings. At midnight it is put out, the ground is clear again, and what a campfire leaves
+  (two charcoal each) goes into the stores. Rain puts it off a day.
+* **The town fair.** Late in summer (its sixth day) the town holds a fair with four classes: the best
+  bread, the best wool, the biggest fish and the best honey. On fair day you can enter too: hold your
+  entry and right-click the board (or use `/village fair enter` near it). The fair keeps it, and it comes
+  back to you after the judging. At dusk the town gathers before the board and the folk bring theirs (the
+  farmers' and the cook's bread, the rancher's wool, the fisher's catch, the beekeeper's honey), out of
+  their own packs or, if they have none, the best of their trade's work in the stores. The elder judges by
+  rules anyone can check: the biggest batch of loaves (the better baker breaks a tie), the biggest fleece
+  of one colour (a dyed one scores a little more), the heaviest fish (a salmon weighs five to ten pounds, a
+  cod three to seven), honey by the bottle and the comb. Each winner gets a blue ribbon (a sheet of the
+  stores' paper, named "Ribbon: best bread, Year 3") and four coins from the treasury. Everything entered
+  goes back where it came from, the results go into the chronicle and the books, and they stay on the
+  board for a few days. If you are away when the judging is done, your entry and any prize are handed to
+  you the next time you are in the world. `/village fair` shows the next fair, its entries and the last
+  ribbons.
+* **The harvest festival.** All year the town counts its harvest as it is brought in: the meals from the
+  fields (farmer by farmer), the water, the hunt and the pens. On the last day of autumn a hand lays two
+  long tables on the square (the stores' wooden slabs, or planks sawn into them), and at dusk the town
+  feasts at them out of its stores. The elder reads out the year's harvest and gives the farmer who brought
+  in the most a prize of ten coins from the treasury. It all goes into the chronicle, and the tables are
+  cleared into the stores the next morning.
+* **Midwinter.** On midwinter's day (the fourth of winter) a hand sets lanterns out along the main avenue
+  (the one the board looks down), both sides of the road, twelve at most: the stores' lanterns, or torches
+  until the town makes lanterns. Friends and families give each other small presents: each grown folk with
+  a coin or two picks its partner, its child or parent, or its dearest friend, goes to the shop in its own
+  time and buys something they would like (a flower, a cookie, a candle, a book) out of its own purse, then
+  takes it round and hands it over. With no shop open it buys over the stores' counter instead. The present
+  becomes the friend's own keepsake. The next morning the lanterns go back into the stores, and midwinter
+  goes into the chronicle.
+* **Winter in town.** In a town where snow falls, on a winter afternoon one of the children goes off to
+  build a snowman by the playground (the park, or the square), two in a winter at most. It gathers the
+  lying snow with a shovel borrowed from the stores (by hand, snow gives nothing), makes up the rest with
+  the snowballs the sweeper has banked, and packs four snowballs to a block. If the stores have a carved
+  pumpkin it becomes the snowman's face, and as in the game, two blocks of snow under a carved pumpkin come
+  alive as a snow golem. A snowman made only of snow stands until the thaw on the first day of spring.
+  Everywhere, folk say it is cold in winter: snow talk where it snows, and talk of frost where it does not.
+
+A festival is a gathering like the others: it takes the evening before the weekly feast, gives way to a
+wedding, a vigil or a celebration (and is kept the next evening instead), and needs at least five grown
+folk for a hand to put things up. Everything it puts up is recorded with the world, so a restart never
+strands a maypole on the square or a lantern outside the stores.
+`/village festival <maypole|bonfire|fair|harvest|midwinter|snowman> [now]` (operators) shows where a
+festival stands, or sets it up now and calls the town to it.
+
+The game tests `SeasonsGameTests` (sf21 to sf28) check each of these: the seasons, the fields' pace in each
+and where they are shown; the maypole up and back into the stores; the ring going round the pole; five
+campfires built as a player builds them, put out at midnight with their charcoal in the stores; the fair's
+judging, ribbons, purses and every entry returned; the harvest counted and its prize paid; midwinter's
+lights and a present bought and given; and a snowman built by a child, woken by a pumpkin, and gone with
+the thaw.
