@@ -645,7 +645,9 @@ public class TownWaysGameTests {
             helper.assertTrue(sy.stream().anyMatch(s -> s.text().equals("steady as the north gate held")), "the raid coined its saying: " + sy);
             helper.assertTrue(told(x, "a new saying went round the town: \"" + dry + "\""), "into the chronicle:" + history(x));
             helper.assertTrue(sx.size() >= 5 && sy.size() >= 5, "five at least, the land's own making up the rest: " + sx.size() + ", " + sy.size());
-            helper.assertTrue(TownSpeech.coined(x).size() == 1, "one of the harbour town's own so far: " + TownSpeech.coined(x));
+            // The drought coins one saying, and only one (the town's mine, opened on its first day, may have coined another).
+            helper.assertTrue(TownSpeech.coined(x).stream().filter(s -> s.from().startsWith("drought:")).count() == 1,
+                "one saying of the drought: " + TownSpeech.coined(x));
             // The same day again coins nothing twice.
             int had = TownSpeech.coinForTests(x, day).size();
             helper.assertTrue(had == sx.size(), "nothing coined twice: " + had);
