@@ -372,6 +372,11 @@ public final class VillageBoards {
         if (store != null) out.add("RN|" + store + ".");
         String fashion = Fashion.boardLine(level, id);             // [fashion] the season's look, and who set it
         if (fashion != null) out.add("RN|" + fashion);
+        String fleet = Fleet.boardLine(level, id);                  // [fleet] the fishing fleet, the fish market's catch and prices
+        if (fleet != null) out.add("RN|" + fleet);
+        String fish = FishMarket.boardLine(level, id);
+        if (fish != null) out.add("RN|" + fish);
+        out.addAll(Auctions.board(level, id));                     // [fleet] the auction on the square: today's lots, or the last sale
         int content = Contentment.score(id);
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String alarm = Raids.why(id);

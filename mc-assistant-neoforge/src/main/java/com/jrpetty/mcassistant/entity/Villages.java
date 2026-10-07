@@ -925,6 +925,8 @@ public final class Villages {
         // [econ-trade] A standing trade deal leans the shares (TradeDeals.lean): fewer farmers where the bread comes in
         // reliably from a partner, more miners where stone is promised to one; back at once if the deliveries stop.
         t *= TradeDeals.lean(villageId, slot.trade());
+        // [fleet] A town with a fishing fleet wants a fisher for every one of its boats (Fleet).
+        if (slot.trade() == AssistantEntity.StationTask.FISH) t = Math.max(t, Fleet.handsWanted(villageId));
         // Houses waiting on beds want the wool: twice the ranchers (their sheep) till they are made up.
         if (slot.trade() == AssistantEntity.StationTask.RANCH && villageId != null && Market.bedsShort(villageId) >= 6) t *= 2.0;
         // [economy] The watch grows with the town, and by half again when monsters have been killing its folk (Mishap.watch).
@@ -1733,6 +1735,8 @@ public final class Villages {
         if (folk >= 10 && built(villageId, "fountain") < 1) extras.add("fountain");
         // A schoolhouse, once there are children enough to fill one (School).
         if (School.wanted(villageId, folk) && built(villageId, "school") < 1) extras.add("school");
+        // [fleet] An auction house, once an Iron Age town of twenty-five has held a few auctions on its square (Auctions).
+        if (Auctions.wanted(villageId, folk) && built(villageId, "auction") < 1) extras.add("auction");
         // And a park among the homes, once the town is big enough to want one (Park).
         if (Park.wanted(villageId, folk)) extras.add(Park.STRUCTURE);
         // [batchC] A football pitch by the park, for the rest day's match (Pitch).
@@ -2136,6 +2140,7 @@ public final class Villages {
             case "brewery" -> "a brewery, for the brewer's potions";
             case "library" -> "a library, where the enchanter keeps its books";
             case "school" -> School.why(villageId);
+            case "auction" -> Auctions.why(villageId);             // [fleet]
             case "fountain" -> "a fountain on the square, now that the village builds in stone";
             case "park" -> "a park among the homes, a fountain and benches: somewhere to sit of an evening, now the town has "
                 + folk + " folk";

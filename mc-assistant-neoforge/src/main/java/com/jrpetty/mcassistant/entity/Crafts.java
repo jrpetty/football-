@@ -519,6 +519,8 @@ public final class Crafts {
         // worse, out of the stores' leather, a little kept back for the books. Wool is for the beds; this is not.
         String kit = WatchKit.make(level, v, f);
         if (kit != null) return kit;
+        String knotted = Fleet.makeNet(level, v, f);              // [fleet] a net for each of the fishing fleet's boats
+        if (knotted != null) return knotted;
         if (bedsFirst) return null;
         // [fashion] The fashion's garments, at the loom: the book's orders, dyed with the stores' dyes (Tailoring).
         String garment = Tailoring.work(level, v, f, loom);

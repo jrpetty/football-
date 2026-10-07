@@ -253,6 +253,7 @@ public final class TownJobs {
         if (Assemblies.attending(f) || Patrols.escorting(f)) return false;      // (or walking with the leader)
         if (FireBrigade.onIt(f) || Weather.sheltering(f)) return false;          // [wf] at a fire, or in out of a storm
         if (Sport.busy(f)) return false;                                         // [batchC] at a match, a contest, the butts, away
+        if (Fleet.out(f) || Auctions.busy(f) || FishMarket.busy(f)) return false;   // [fleet] at sea, at the auction, at the fish market
         if (f.stationTask() == AssistantEntity.StationTask.GUARD && (f.level().isNight() || f.onWatch()) && !works.endsWith("watch")) return false;
         UUID id = f.ownerId();
         return id == null || !Villages.holdsTheLead(id, f.getUUID(), f.level().getGameTime());

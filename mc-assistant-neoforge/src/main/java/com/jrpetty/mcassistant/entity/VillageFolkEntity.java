@@ -325,8 +325,16 @@ public class VillageFolkEntity extends AssistantEntity {
         // in another town, or a guard out taming a dog for the watch: that is its day (Visitors).
         if (Visitors.drive(this)) return;
         if (Newcomers.drive(this)) return;                     // [civic] a newcomer on the road, or camped at a town's edge
+        // [fleet] Once a second for its town: the fishing fleet and the fish market (Fleet), the auction (Auctions).
+        if (tickCount % 20 == 9 && ownerId() != null && level() instanceof net.minecraft.server.level.ServerLevel quay) {
+            Fleet.tick(quay, ownerId());
+            Auctions.tick(quay, ownerId());
+        }
         Leisure.tick(this);
         if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
+        // [fleet] Out with the fishing fleet: down the quay, rowing, fishing, home with the catch (Fleet). Before the storm
+        // and the gatherings: a boat at sea is rowed home in a storm, not left to drift while its crew looks for a roof.
+        if (level() instanceof net.minecraft.server.level.ServerLevel sea && Fleet.hold(this, sea)) return;
         // Lost underground with no way up it can walk (a mine run cut short, a fall into a cave): sent up
         // the nearest stairs, or to cut its own (MineStairs).
         if (tickCount % 100 == 71 && level() instanceof net.minecraft.server.level.ServerLevel below) MineStairs.lookForAWayUp(this, below);
@@ -432,6 +440,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // to no good in its own free time (Crime).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel lawLevel
                 && (tickCount % 4 == 2 ? Crime.hold(this, lawLevel) : Crime.busy(this))) return;
+        // [fleet] At the auction on the square (calling it, or in the crowd), or at the fish market on the quay (Auctions).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel mart && Auctions.hold(this, mart)) return;
         // [batchD] The town's culture (Culture): a minute's silence at the bell, the choir at the morning service, the
         // play at the theatre (on the stage or a bench), the band at the tavern or a wedding, a toast, a picture painted.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel culture
@@ -1381,6 +1391,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!level().isClientSide && player instanceof net.minecraft.server.level.ServerPlayer sp) {
             if (StoreFloor.serveAPlayer(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;   // [econ-store]
             if (Buskers.tipFrom(this, sp, held)) return net.minecraft.world.InteractionResult.SUCCESS;     // [arms] a coin in the busker's hat
+            if (Auctions.serveAPlayer(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;     // [fleet] the auctioneer's bid screen
             FolkTalk.open(this, sp);
         }
         return net.minecraft.world.InteractionResult.sidedSuccess(level().isClientSide);

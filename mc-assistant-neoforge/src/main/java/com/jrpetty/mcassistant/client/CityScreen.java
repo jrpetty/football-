@@ -64,12 +64,15 @@ public class CityScreen extends Screen {
         // [fashion] What the town wears (FashionPage).
         "Fashion",
         // [crime] The watch's casebook and the crime rate, after them (CasesPage).
-        "Cases" };
+        "Cases",
+        // [fleet] The auction and the fishing fleet, after them (AuctionPage).
+        "Auction" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
         "Fashion",                                                                                    // [fashion]
-        "Cases");                                                                                     // [crime]
+        "Cases",                                                                                      // [crime]
+        "Auction");                                                                                   // [fleet]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -334,6 +337,10 @@ public class CityScreen extends Screen {
                 }
                 case "Cases" -> {                                                      // [crime] the casebook (CasesPage)
                     List<Component> tip = CasesPage.draw(g, font, data.getCompound("crime"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Auction" -> {                                                    // [fleet] the auction and the fleet (AuctionPage)
+                    List<Component> tip = AuctionPage.draw(g, font, data.getCompound("auction"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 default -> board(g, x, y, cw, ch);
@@ -799,6 +806,7 @@ public class CityScreen extends Screen {
         if (!p.getString("alarm").isEmpty()) notes.add("!The living wage: " + p.getString("alarm") + ".");
         if (!p.getString("refusedWhat").isEmpty()) notes.add("Too dear for the folk yesterday: " + p.getString("refusedWhat") + ".");
         if (!p.getString("bargainWhat").isEmpty()) notes.add("Bought more of for being cheap: " + p.getString("bargainWhat") + ".");
+        if (!p.getString("fleet").isEmpty()) notes.add(p.getString("fleet") + ".");   // [fleet] the fish market's catch and prices
         ListTag moves = p.getList("moves", Tag.TAG_STRING);
         for (int i = 0; i < moves.size(); i++) notes.add("~" + moves.getString(i) + ".");
         for (String n : notes) {
