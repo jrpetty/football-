@@ -537,14 +537,18 @@ public final class PriceIndex {
         return Stockroom.nameOf(key.substring(2));
     }
 
-    /** The lines worth showing, the furthest from their usual worth first. */
+    /** The lines worth showing (something on hand, made, wanted or refused), the furthest from their usual worth first. */
     private static List<Line> shown(UUID village) {
         List<Line> out = new ArrayList<>();
         for (Line l : town(village).lines.values()) {
             if (l.stock <= 0 && l.demand < 0.2 && l.output < 0.2 && l.dayRefused == 0 && l.dayBargains == 0) continue;
             out.add(l);
         }
-        out.sort((a, b) -> Double.compare(Math.abs(Math.log(b.factor)), Math.abs(Math.log(a.factor))));
+        // The furthest from its worth first; of two as far, the more wanted.
+        out.sort((a, b) -> {
+            int c = Double.compare(Math.abs(Math.log(b.factor)), Math.abs(Math.log(a.factor)));
+            return c != 0 ? c : Double.compare(b.demand, a.demand);
+        });
         return out;
     }
 

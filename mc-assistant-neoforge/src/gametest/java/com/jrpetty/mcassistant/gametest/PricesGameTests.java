@@ -41,7 +41,7 @@ import java.util.UUID;
  *     hundred a day; a stack of cookies nobody buys grows cheaper; the board's lot price and the prices page follow.</li>
  * <li><b>px02</b>: a rug at three times its worth is left on the shop's shelf (the refusal in the town's prices), and
  *     bread at three times its worth is still bought by a hungry folk at supper.</li>
- * <li><b>px03</b>: cookies at four tenths of their worth: a folk at the market buys two; at the usual price, one.</li>
+ * <li><b>px03</b>: apples at four tenths of their worth: a folk at the market buys two; at the usual price, one.</li>
  * <li><b>px04</b>: before the shop opens a supper comes free out of the stores; after, the same supper costs coin out of
  *     the folk's purse, and the treasury has it.</li>
  * <li><b>px05</b>: a folk with an empty purse still has its supper, on the slate; the next payday pays the slate back
@@ -227,26 +227,26 @@ public class PricesGameTests {
             f.setJob(StationTask.FARM);
             purse(f, 30);
             Container c = larder(level, f);
-            c.setItem(0, new ItemStack(Items.COOKIE, 32));
+            c.setItem(0, new ItemStack(Items.APPLE, 32));
             c.setChanged();
             Purchases.openForTests(id, true);
-            ItemStack cookie = new ItemStack(Items.COOKIE);
-            // At four tenths of their worth.
-            PriceIndex.setForTests(id, cookie, 0.4);
-            int before = count(c, Items.COOKIE);
+            ItemStack apple = new ItemStack(Items.APPLE);
+            // At four tenths of their worth. (Apples: no seller makes them, so no maker's cost holds the price up.)
+            PriceIndex.setForTests(id, apple, 0.4);
+            int before = count(c, Items.APPLE);
             String cheap = Market.folkBuys(level, v, f);
-            int cheapGot = before - count(c, Items.COOKIE);
-            int bargains = PriceIndex.tallyForTests(id, cookie)[3];
-            Kit.log(String.format(Locale.ROOT, "px03 cookies at %.2fc (it expects %.2fc): bought %s, %d out of the stores; bargains booked %d",
-                Purchases.priceEach(level, id, cookie, f), Purchases.expects(f, cookie), cheap, cheapGot, bargains));
+            int cheapGot = before - count(c, Items.APPLE);
+            int bargains = PriceIndex.tallyForTests(id, apple)[3];
+            Kit.log(String.format(Locale.ROOT, "px03 apples at %.2fc (it expects %.2fc): bought %s, %d out of the stores; bargains booked %d",
+                Purchases.priceEach(level, id, apple, f), Purchases.expects(f, apple), cheap, cheapGot, bargains));
             // At their usual worth, a fresh look (what it paid last time forgotten).
             Purchases.forgetForTests(f);
-            PriceIndex.setForTests(id, cookie, 1.0);
-            before = count(c, Items.COOKIE);
+            PriceIndex.setForTests(id, apple, 1.0);
+            before = count(c, Items.APPLE);
             String usual = Market.folkBuys(level, v, f);
-            int usualGot = before - count(c, Items.COOKIE);
-            Kit.log(String.format(Locale.ROOT, "px03 cookies at %.2fc (it expects %.2fc): bought %s, %d out of the stores",
-                Purchases.priceEach(level, id, cookie, f), Purchases.expects(f, cookie), usual, usualGot));
+            int usualGot = before - count(c, Items.APPLE);
+            Kit.log(String.format(Locale.ROOT, "px03 apples at %.2fc (it expects %.2fc): bought %s, %d out of the stores",
+                Purchases.priceEach(level, id, apple, f), Purchases.expects(f, apple), usual, usualGot));
             helper.assertTrue(cheap != null && cheapGot == 2, "cheap, it has two: " + cheap + " (" + cheapGot + ")");
             helper.assertTrue(bargains >= 1, "and the bargain is booked: " + bargains);
             helper.assertTrue(usual != null && usualGot == 1, "at the usual price, one: " + usual + " (" + usualGot + ")");
