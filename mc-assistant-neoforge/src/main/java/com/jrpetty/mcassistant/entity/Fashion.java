@@ -1655,6 +1655,17 @@ public final class Fashion {
         return f.style().pull;
     }
 
+    /** Tests: what this folk loves to be given (wool, gems or gold: a little vain). */
+    public static void lovesForTests(VillageFolkEntity f, Persona.Gift g) {
+        f.ensurePersona();
+        f.persona().loves = g;
+    }
+
+    /** Tests: how this folk feels about another, set outright (feelings it came with put aside). */
+    public static void feelForTests(VillageFolkEntity f, VillageFolkEntity other, int affinity) {
+        f.life().feel(other.getUUID(), other.displayNameCap(), affinity - f.life().affinity(other.getUUID()));
+    }
+
     /** Tests: the client's number for this folk, as it would be sent now. */
     public static long packedForTests(VillageFolkEntity f) {
         return f.style().pack(inFashion(f));
