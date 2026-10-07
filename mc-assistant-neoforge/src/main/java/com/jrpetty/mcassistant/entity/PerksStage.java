@@ -19,6 +19,9 @@ import java.util.UUID;
 /**
  * [perks] The perks set out for the pictures (tools/realworld/smoke.py's perks_stage).
  *
+ * <p>Each is set out on a stage of its own where it is asked for: on the ground, or in clear air above it if asked
+ * there (as the smoke does, so nothing of the town is cleared away for it).
+ *
  * <p>{@link #showcase} ("/village perks wonders show"): the ten wonders of the world side by side on ground levelled
  * for them, from a palette and not the stores (as the showcase's buildings are), claimed by nobody, so each can be
  * looked at; "WONDER name x y z" and a view of each.
@@ -46,7 +49,7 @@ final class PerksStage {
         List<String> out = new ArrayList<>();
         int x0 = start.getX(), z0 = start.getZ();
         level.getChunk(x0 >> 4, z0 >> 4);
-        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x0, z0);
+        int y = Math.max(start.getY(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x0, z0));   // in clear air if asked there
         // Two rows of five, eighteen apart along the row and thirty between the rows: every wonder fits a great lot
         // (eleven by twenty-one), so none touches its neighbour.
         int step = 18, rows = 30;
@@ -95,7 +98,7 @@ final class PerksStage {
         // The wonder on a stage beside the town, on the town's books, and claimed: the world told.
         int x = at.getX(), z = at.getZ();
         level.getChunk(x >> 4, z >> 4);
-        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        int y = Math.max(at.getY(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z));      // in clear air if asked there
         ground(level, x - 12, x + 12, z - 15, z + 16, y);
         BlockPos anchor = new BlockPos(x, y, z);
         BuildGoal.stamp(level, wonder.structure, anchor, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));

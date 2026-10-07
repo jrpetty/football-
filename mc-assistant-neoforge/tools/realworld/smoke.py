@@ -2447,6 +2447,70 @@ def transport_stage(r, look, cx, cz):
     say("alive after the transport: %s" % client_alive())
 
 
+def perks_stage(r, look, cx, cz):
+    """[perks] The town's, the leader's and the folk's perks (entity/Perks, CityTree, Wonders, Reigns, Quirks,
+    FolkSkills). Run from beside the town that cx, cz is the heart of: /village perks stage gives the nearest town a
+    history to photograph (two tiers of every branch studied, the first of each pair so the other shows closed, the
+    Faith branch to its top and the Cathedral, or the first wonder no other town holds, raised on a stage beside it and
+    claimed; a civic set to study; its leader five days in office with three skills of its heart's line; a past reign's
+    legacy and its plaque before the hall; every grown folk's quirks), and says where to look from ("VIEW name x y z ax
+    ay az"). Pictures: the town's wonder, the legacy plaque; then /village perks wonders show sets all ten wonders side
+    by side out past the town, and each is photographed; last, the town's books at the Research page (the whole tree,
+    the pairs, the wonders), the Leader page and the Perks page, and what /village perks says.
+    Not yet called from main(): call it after the other stages, as perks_stage(r, look, cx, cz)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    midday(r)
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    hy = ground_height(r, cx, cz)
+    sx, sy, sz = cx + 70, 150, cz + 50                 # in clear air beside the town, within its reach (the nearest town's)
+    r.cmd("tp %s %d %d %d" % (USER, sx + 20, sy + 12, sz + 36))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village perks stage" % (sx, sy, sz))
+    say("perks stage: " + out[:1500])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no perks staged; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("40-perks-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("perks-wonder", "1-wonder", 10)
+    shoot("perks-plaque", "2-legacy-plaque", 6)
+    # All ten wonders side by side, out past the town where the ground is its own.
+    wx, wy, wz = cx - 160, 160, cz + 120               # in clear air, well away from the town
+    r.cmd("tp %s %d %d %d" % (USER, wx + 36, wy + 30, wz + 60))
+    time.sleep(10)
+    shown = r.cmd("execute positioned %d %d %d run village perks wonders show" % (wx, wy, wz))
+    say("wonders shown: " + shown[:900])
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (wonder-\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", shown):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    k = 3
+    for name in sorted(n for n in views if n.startswith("wonder-")):
+        shoot(name, "%d-%s" % (k, name), 8)
+        k += 1
+    say("perks: " + r.cmd("execute positioned %d %d %d run village perks" % (cx, hy + 1, cz))[:1500])
+    say("wonders: " + r.cmd("execute positioned %d %d %d run village perks wonders" % (cx, hy + 1, cz))[:900])
+    # The books: Research (13), Leader (8) and Perks, the last tab (32 in this branch: after Transport; it moves on
+    # with any page added before it).
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    for page, label in ((13, "research"), (8, "leader"), (32, "perks")):
+        say("stats %s: " % label + r.cmd("execute as %s at @s run village stats %d" % (USER, page)))
+        time.sleep(4)
+        shot("40-perks-page-%s" % label)
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the perks: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

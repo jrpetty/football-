@@ -89,6 +89,11 @@ public final class PerkEvents {
         return fire(f, source, amount);
     }
 
+    /** Tests: an arrow's bite, as the event would have it. */
+    public static float arrowForTests(DamageSource source, float amount) {
+        return arrow(source, amount);
+    }
+
     /** Tests: would a piglin leave this folk be? */
     public static boolean friendForTests(VillageFolkEntity f, LivingEntity piglin) {
         return friend(f, piglin);

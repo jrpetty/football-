@@ -7749,3 +7749,229 @@ The game tests `TransportGameTests` (tr01 to tr05) check that:
   takes another trade, and the chronicle tells it;
 * in a town of nine, the bridge is put to everybody in a referendum as a great work drawn beside the ferry, carried,
   built by the town's hands out of its stone and opened, and then the ferry retires.
+
+## Perks: the town's, the leader's and the folk's
+
+Three kinds of perk, each a slight and real thing wired where the work is done: the town's (its research and its
+wonders), the leader's (its perk in office, its skills and the legacies its reign leaves) and the folk's (their knacks
+and their quirks).
+
+### The research tree: ten branches
+
+The tree has sixty-three civics in ten branches now: the Industry, the Land, Homes and Works, Wellbeing and Arts and
+Trade (the first twenty, kept as they were, so a saved town keeps every civic it studied), and Defence, Lore, Faith,
+the Sea and the Arcane. A branch's civics go in tiers, each open once one of the tier below it is done, at 10, 25, 50,
+90 and 140 points; its top is a wonder, at 200.
+
+The new civics:
+* **Industry**: Guild Monopolies (crafted goods, a tool, a blade, armour, a potion or an enchanted book, a tenth dearer
+  at the town's counters, and tools wear a tenth slower) *or* the Free Market (crafted goods a tenth cheaper, the crafts
+  6% quicker); the Great Forge.
+* **Land**: the Open Granary (a meal out of the stores is free to everybody, +2 contentment) *or* Private Larders
+  (wages a twentieth higher, food a fifth dearer at the counter, the poor 4 the lower in spirits, crime a fifth
+  likelier); the Sky Garden.
+* **Homes and Works**: the Observer Pattern Books (the railway's rails laid a quarter faster, and the redstone
+  engineer's machines when the game has that trade) *or* the Turnpikes (everybody walks 4% faster, the road to a
+  colony and a stone bridge laid half again as fast); the Clockwork Gate.
+* **Wellbeing and Arts**: Patronage of the Arts (+3 contentment, a busker's listener the likelier to drop a coin) *or*
+  Plain Living (every trade 3% quicker, a break a twentieth shorter, 2 less content); the Founders' Colossus.
+* **Trade**: Open Borders (a caravan carries two lots more, the takings 3% higher, every neighbour a little warmer each
+  day) *or* Tolls and Tariffs (the takings 6% higher, the neighbours a little cooler every other day); the Grand
+  Bazaar.
+* **Defence**: the Watch House (a guard two hearts more); the Standing Army (a guard more on the town's books, every
+  guard a point more blow and a coin more pay, crime a little rarer) *or* the Militia (everybody grown a point of armour,
+  a guard fewer, never none); the Fletchers' Charter (a guard's quiver sixteen arrows fuller, out of the stores); the
+  Stone Walls (under the bell, everybody two more armour) *or* the Earthworks and Hedges (a guard on the wall sees six
+  blocks further, the hunters 5% quicker); the Arena.
+* **Lore**: Primers (a lesson at the school teaches a quarter more); the Printing Press (every new library book printed
+  once more on a plain book out of the stores, the copy into the stores; nothing printed on nothing); the Scholars'
+  Endowment (two research points a morning more, the school a fifth more) *or* the Craftsmen's Endowment (a tenth more
+  experience from every piece of work, the crafts 3% quicker); the Surveyors' Office (the scouts a quarter further, a
+  research point more); the Grand Library.
+* **Faith**: Vespers (everybody 3 the happier while the town's contentment is under fifty); Remembrance (grief half as
+  hard); Saints' Days (a feast on the second day of every season, out of the stores like any feast); the Almshouse (the
+  poor 4 the happier, crime a little rarer); the Cathedral.
+* **The Sea**: the Fishwives' Guild (fishers 6% quicker); the Navigator's Guild (the fleet sails in the rain, never in
+  a storm); Diving Bells (everybody holds its breath twice as long); Shipwrights (the fleet fits out a boat more, and
+  a fisher for it); the Great Lighthouse.
+* **The Arcane**: Herbals (the brewer and the enchanter 6% quicker); the Blaze Wardens (a Nether-goer takes half the
+  fire and comes back hurt half as often); the Nether Charts (a Nether party every day, not every other, home with four
+  quartz and a blaze rod more when it has the picks and the blades to get them); the Alchemists' Guild (the brewer 8%
+  quicker, three blaze powders ground from a rod, not two); the Observatory.
+
+**The pairs.** Eight tiers are a choice of two. Taking one closes the other for good: it can never be studied, granted
+or picked, the chronicle says so, and the Research page shows it struck through. Each side leans to a different heart
+(a Merchant leans to the Free Market, a Traditionalist to the Guild Monopolies, a Provider to the Open Granary), so the
+choice is the leader's character.
+
+**Who chooses.** The leader, as before, by what it cares about, its nature, its mandate and what the town is short of;
+now also by the land (a coast town leans to the Sea, a mountain town to the Industry and the walls), by a wonder nobody
+in the world has raised yet, and by the town's own ways: `CityTree.ETHOS` is the seam for whoever keeps the town's ethos
+to lean a branch. A player who leads chooses itself, from the Leader page's Study buttons (or `/village perks study
+<civic>`), and the town hears it.
+
+### The wonders
+
+At the top of every branch is a wonder: a real building of its own, one in the world. Finishing the civic draws the
+plans. The town then lays by the wonder's dues out of its stores, all at once on a morning when the stores hold every
+one of them (never part, nothing from nothing), and from then the wonder is on its list of buildings and its builders
+raise it like any other, on the lot it wants. The first town in the world to finish building it holds it for good,
+with thirty renown; every other town is told, and every player hears it in gold. A town beaten to it has its dues back
+in its stores the next morning, drops it from its list, and no town may study that wonder any more. One built anyway is
+a fine building and no wonder. Its effects last only while the town holds it.
+
+| Wonder | Branch | Dues | While it stands |
+|---|---|---|---|
+| The Great Forge | Industry | 48 iron ingots, 32 coal, 8 gold ingots | every trade 4% quicker, the smith and the smelter 10% more, tools wear a quarter slower |
+| The Sky Garden | Land | 64 dirt, 16 saplings, 24 bone meal | farmers 8% quicker, a harvest in five one more, everybody 3 happier |
+| The Clockwork Gate | Homes and Works | 32 redstone, 16 iron ingots, 8 gold ingots | building 15% quicker, everybody walks 3% faster, rails, roads and bridges laid twice as fast |
+| The Founders' Colossus | Wellbeing and Arts | 16 gold ingots, 4 diamonds | +5 contentment, everybody 2 happier, nobody leaves for another town |
+| The Grand Bazaar | Trade | 150 coins, 24 wool | takings 10% higher, a caravan four lots more, a further twentieth of the wages back |
+| The Arena | Defence | 64 sand, 16 iron ingots | every guard two more blow and armour, +3 contentment |
+| The Grand Library | Lore | 32 paper, 12 books | research half again, a tenth more experience |
+| The Cathedral | Faith | 12 gold ingots, 32 glass | +4 contentment, nobody's spirits below 30, the old live a tenth longer |
+| The Great Lighthouse | The Sea | 32 glass, 32 coal, 8 iron ingots | fishers 10% quicker, a haul in three a fish more, the fleet sails in the rain |
+| The Observatory | The Arcane | 24 lapis, 4 diamonds, 8 books | research a quarter more, the enchanter and the brewer 15% quicker, an ore in ten one more |
+
+The buildings: the Great Forge a forge hall with twin chimneys, its furnaces and anvils; the Sky Garden terraces of
+earth and flowers climbing to a pavilion; the Clockwork Gate two tall towers over an arch with a bell and a clockwork of
+note blocks; the Colossus the founder in stone four times a house's height on a plinth; the Grand Bazaar arcades of
+stalls under two domes and a bell tower; the Arena an oval of tiered seats round a sanded floor with gate towers; the
+Grand Library a two-storey hall of shelves with galleries and ladders; the Cathedral a nave of lancets between
+buttresses, a transept, an apse and a spired belfry; the Great Lighthouse a tall stone tower with a lantern room of
+glass; the Observatory a round tower with a dome and a telescope. Every drawing passes the blueprint soundness test.
+
+### The leader in office
+
+The leader's perk in office is its heart, what it cares about most (a player who leads: its plan, or its steward's
+heart):
+* a **Provider** (food): the larder goes a tenth further (meals a tenth further apart);
+* a **Homemaker** (homes): building 10% quicker;
+* a **Visionary** (progress): research 15% faster;
+* a **Merchant** (wealth): the takings 5% higher;
+* a **Guardian** (safety): a guard more on the town's books;
+* a **Traditionalist** (tradition): +1 contentment, and colds a quarter shorter;
+* a **Free Spirit** (leisure): everybody 2 the happier.
+
+**Skills.** A leader gains experience in office: ten a day, twenty for being elected again, and for the town's deeds
+under it (fifteen for every civic finished, five for every building raised and every great work opened, twenty when a
+wonder's plans are drawn and sixty when it is raised). At 30, 80, 150, 240, 350 and 500 experience it has a point to spend, on four lines of three, each
+in order:
+* **the voice**: Orator (what it puts to the vote, 12 more for it on every voter's scales; 6 at its own election),
+  Diplomat (its envoys heard 15 warmer; the neighbours warm to the town every other day), Statesman (+2 contentment,
+  a tenth less crime);
+* **the purse**: Steward (a twentieth of the wages back), Quartermaster (a caravan two lots more), Treasurer (the
+  takings 4% higher);
+* **the watch**: Warden (crime a third rarer), Marshal (guards a point more armour and blow), Protector (under the
+  bell, everybody a point more armour);
+* **the heart**: Patron (+3 contentment, buskers' coins), Builder-King (building 15% quicker), Sage (two research points
+  a morning).
+A folk leader chooses its own skill on the morning after it has a point, by its heart and its nature; a player who
+leads chooses from the Leader page's Skill buttons (or `/village perks skill <skill>`).
+
+**Legacies.** A reign is counted by what the town did under it: its learning, its halls, its roads, its granaries,
+its peace, its watch, its coffers, its merriment and its glory. When a leader leaves office (beaten at an election, or
+gone), a reign of three days or more leaves the one it did most of as a legacy, for good: Learning (a research point a
+morning), Halls (building 3% quicker), Roads (everybody walks 3% faster), Granaries (the larder 4% further), Peace (the
+neighbours warm every other day), Watch (every guard a point more armour), Coffers (the takings 2% higher), Merriment
+(+1 contentment) or Glory (five renown). They stack, three of a kind at most. The chronicle and the assembly tell it,
+and a plaque goes up before the hall with the leader's name, its days and its legacy (out of the stores, put up by a
+hand at the town's works, as every plaque is).
+
+### The folk's knacks
+
+Fifty knacks now. The trades that had none have their own: Pathfinder for the scout, Sharp Ledger at the bank, Tunnel
+Rat in the caves and Strong Oar at the ferry (each 8% quicker). The new trades have theirs, each found by the trade's
+title or a word of its name the day the trade is in the game, and meanwhile open to the nearest old trades, where they
+do their work now: Surveyor's Eye (the cartographer's, a scout a quarter further); Deep Lungs (the kelp diver's, three
+times the breath); Fireproof (the Nether runner's, half the harm from fire and lava); Piglin-Friend (piglins leave it be
+unless it strikes them; Nether gold home with a party that has picks); Blaze Hunter (a blaze it kills drops a rod more;
+two more rods home); True Shot (the fletcher's, its arrows a quarter harder); Featherlight (eight arrows more in its
+quiver); Iron Whisperer (the golem keeper's, every iron golem within sixteen blocks mended a heart every five seconds);
+Tinkerer (the redstone engineer's, 8% quicker, the railway a quarter quicker while it works); Circuit Sense (one
+redstone ore in two gives four dust more); Silver Tongue (the emerald trader's, the town's takings 5% higher while it
+works); Showman (the fireworks maker's, a feast it is at lifts the town 2 for two days).
+
+**Masters.** At level thirty in a trade a folk may take its master's knack: a master's pace (12% quicker) and a
+master's gift: the Master Miner one ore in five, the Master Grower a seed back from every harvest, the Master Host a tip
+at every sale it can, the Veteran two more armour and blow on the watch, the Master Porter sixty-four more a load; and
+the Grand Master's for the trades without a master of their own.
+
+### The folk's quirks
+
+Every folk has one or two quirks from birth (a founder from the founding, the same every time), each with its effect:
+
+| Quirk | Effect |
+|---|---|
+| Early Bird | 5% quicker before noon |
+| Night Owl | 5% quicker after noon; on the night watch two more blow and four blocks' further sight |
+| Green Fingers | at the fields (or its garden) the youngest crop near it comes on a stage every eight seconds |
+| Iron Stomach | a fifth longer between meals |
+| Lucky | one ore, one harvest or one haul in twelve gives one more |
+| Clumsy | 3% slower, and now and then drops what it carries (and is laughed at) |
+| Broad Shoulders | sixteen more on every load |
+| Fleet-footed | walks 8% faster |
+| Smooth-talker | pays 5% less at the counter; as an envoy heard 8 warmer |
+| Homebody | 3 happier at home of an evening, 4 lower on a trip, the last sent on one |
+| Wanderlust | 4 happier on a trip, a scout 10% quicker, the first sent with a caravan |
+| Born Leader | stands for office the sooner, and draws more votes |
+| Bookworm | a tenth more experience; takes up reading |
+| Animal Lover | a rancher or a beekeeper 8% quicker |
+| Fearless | shrugs off a blow, a point more blow, runs to help a neighbour a monster has set on whatever its trade |
+| Squeamish | never a hunter: sent to the hunt, it takes up the fields |
+| Musical | takes up music; a listener the likelier to tip it busking; 2 happier for an evening's playing |
+| Hawk-eyed | a guard sees four blocks further |
+| Hardy | mends half a heart every eight seconds; a cold half as long |
+| Frail | two hearts less; catches a cold twice as easily |
+
+Never a pair at odds (an Early Bird is no Night Owl). A child takes one of its parents' quirks one time in two, and says
+whose ("I get that from Ada, they say"). The trades go to the folk they suit (the job pull): a Green Fingers to the
+fields, an Animal Lover to the herds, a Wanderlust to scouting, the Hawk-eyed and the Fearless to the watch. A town where
+one quirk runs in a fifth of its folk (four at least) is known for it: "known for its luck".
+
+### Where to see it
+
+* The **Research** page of the town's books shows the whole tree at once: ten branches in two bands of five, each a
+  column of its tiers, the pairs side by side (the one not taken greyed and struck through), each wonder edged in gold
+  (filled gold where the town holds it); the mouse over a civic tells the whole of it and, for a wonder, its state in
+  the world.
+* The **Perks** page (the last tab) has the wonders of the world (whose, since when, and the dues), the town's ways, the
+  leader (its perk, its level, its skills in a grid of the four lines, the town's legacies), the folk's quirks and what
+  the town is known for, and their knacks and masters.
+* The **Leader** page of the books and the leader's card ("Leads") show its perk in office, its level and its skills.
+  A player who leads has Study and Skill buttons on its Leader page.
+* A folk's card has a **Quirks** line (with whose an inherited one is); asked what it's good at, it says its quirks.
+* The board says the town's ways, its wonders, its leader's heart, its legacies and what its folk are known for.
+* `/village perks` (all of it), `/village perks wonders` (the world's wonders), `/village perks leader`,
+  `/village perks quirks`; `/village perks study <civic>` and `/village perks skill <skill>` for a player who leads;
+  for operators `/village perks quirks give <quirk>`, `/village perks reign end`, `/village perks reign xp <n>`,
+  `/village perks wonders show` (all ten wonders side by side) and `/village perks stage` (a town set out for the
+  pictures).
+* The tests are quiet: the resets between them put to sleep what comes by itself (no folk given its own quirks, no
+  leader's perk, experience or legacy), so a test written before the perks measures what it always did.
+
+The game tests `PerksGameTests` (pk01 to pk10) check that:
+* the tree has ten branches and sixty civics or more with the first twenty kept, at least five pairs each of one tier,
+  and at the top of every branch one wonder that is a sound building the builders know; a Merchant leans to the Free
+  Market and a Traditionalist to the Monopolies; the Monopolies done, the Free Market is closed (neither granted nor
+  picked), and the books and the chronicle say why; the town's ethos leans its choice; a leader sets the study; the
+  books and the identity show it all;
+* the Watch House, the Standing Army, the Fletchers' Charter, the Militia, the Earthworks and the Arena do what they
+  say, the Arena only once raised;
+* Primers, the Printing Press (on a book from the stores, and not without one), the Scholars, the Surveyors, the
+  Fishwives, the Navigators (the rain, not a storm), the Diving Bells, the Shipwrights, Herbals, the Blaze Wardens, the
+  Nether Charts (more only with the means to get it) and the Alchemists do what they say;
+* the ways' prices, wages, works, walking, contentment, breaks, caravans, takings and warmth, a saint's day's feast and
+  the Almshouse's lesser temptation;
+* two towns study to the Cathedral, each lays its dues by out of its stores, the first to raise it holds it (renown,
+  contentment, longer lives, the world told), the other has its dues back and drops it, no third may study it, and
+  one built anyway is no wonder;
+* every perk in office by its heart, and none in the tests' quiet;
+* skills a point a level, each line in order (the Orator before the Diplomat), the Orator's and the Diplomat's
+  effects, and a folk leader choosing its own (a Guardian the Warden);
+* a reign of three days leaves its legacy (and a plaque), a reign of a day nothing, three of a kind at most;
+* every trade has a knack of its own and a master's, and the new ones (Pathfinder, Surveyor's Eye, the Master Miner at
+  thirty, Fireproof, Featherlight, Iron Whisperer, Piglin-Friend, Veteran, True Shot, Deep Lungs, Showman) do what
+  they say;
+* every quirk tested does what it says, a child takes a parent's quirk (and says whose) or its own, and a town is known
+  for its commonest.

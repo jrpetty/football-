@@ -207,8 +207,8 @@ public final class Fleet {
 
     /** How many boats (and hands) the fleet wants: one to every ten folk, two to four. */
     public static int boatsWanted(UUID village) {
-        int more = CityTree.extraBoats(village);                    // [perks] the Shipwrights: a boat more
-        return Math.max(FEWEST, Math.min(MOST + more, Villages.headcount(village) / 10 + more));
+        // [perks] The Shipwrights: a boat more (and a fisher for it), whatever the town's size.
+        return Math.max(FEWEST, Math.min(MOST, Villages.headcount(village) / 10)) + CityTree.extraBoats(village);
     }
 
     /** [fleet] The fishers a town with a fleet wants at the least (Villages.target): a hand for every boat. */

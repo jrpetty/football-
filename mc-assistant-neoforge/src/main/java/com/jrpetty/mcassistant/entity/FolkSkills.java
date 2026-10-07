@@ -52,6 +52,17 @@ import java.util.UUID;
  *   and Nest Egg, once only: about three tenths of its house's price toward buying it.</li>
  * </ul>
  *
+ * <p>[perks] And now fifty in four families. The trades that had none have their own (Pathfinder for the scout,
+ * Sharp Ledger at the bank, Tunnel Rat in the caves, Strong Oar at the ferry, each 8% quicker), and the new trades
+ * theirs, found by their title or a word of their name the day they come into the game, and meanwhile the nearest
+ * old trades' (Surveyor's Eye, a scout a quarter further; Deep Lungs, three times the breath; Fireproof, half the
+ * fire; Piglin-Friend, left be by the piglins and Nether gold home; Blaze Hunter, a rod more from a blaze; True Shot,
+ * arrows a quarter harder; Featherlight, eight arrows more; Iron Whisperer, golems mended; Tinkerer, the railway a
+ * quarter quicker; Circuit Sense, redstone dust from the ore; Silver Tongue, the town's takings 5% higher; Showman, a
+ * feast to remember). The <b>Master</b> family (ten) opens at level thirty in a trade: a master's pace (12%) and a
+ * master's gift (the Master Miner's ore, the Master Grower's seed, the Master Host's tips, the Veteran's armour and
+ * blow, the Master Porter's load), and the Grand Master's for the trades without a master of their own.
+ *
  * <p>How it chooses: it scores every knack open to it by its trade (the knacks of the trade it
  * works, more as it masters it), its traits (the knack of its own nature), what it cares about
  * most (Values: a Merchant minds its coin, a Homemaker wants a house of its own, a Free Spirit its
@@ -156,7 +167,7 @@ public final class FolkSkills {
         STRONG_OAR("strong_oar", "Strong Oar", Family.TRADE, "+8% pace at the ferry", 8, null,
             "it pulls a steady oar", StationTask.FERRY),
         DEEP_LUNGS("deep_lungs", "Deep Lungs", Family.TRADE, "holds its breath three times as long", 0, null,
-            "it is at home under water", NewTrades.with("Kelp diver", "KELP", StationTask.FISH, StationTask.FERRY)),
+            "it is at home under water", NewTrades.with("Kelp diver", "KELP|DIVE", StationTask.FISH, StationTask.FERRY)),
         // ---------------------------------------------------------------- [perks] the new trades' (and the nearest old ones')
         FIREPROOF("fireproof", "Fireproof", Family.TRADE, "half the harm from fire and lava", 0, null,
             "it has walked through fire", NewTrades.with("Nether runner", "NETHER", StationTask.SMELT, StationTask.CAVE)),
@@ -248,14 +259,19 @@ public final class FolkSkills {
     static final class NewTrades {
         private NewTrades() {}
 
-        static final String[] HINTS = { "NETHER", "FLETCH", "GOLEM", "KELP", "REDSTONE", "CARTOGRAPH", "EMERALD", "FIREWORK" };
+        static final String[] HINTS = { "NETHER", "FLETCH", "GOLEM", "KELP", "DIVE", "REDSTONE", "CARTOGRAPH", "EMERALD", "FIREWORK" };
 
-        /** The old trades given, and the new trade by its title (or a word of its name) if the game has it. */
-        static StationTask[] with(String title, String hint, StationTask... old) {
+        /**
+         * The old trades given, and the new trade by its title or a word of its name ({@code hints}: one or more,
+         * "KELP|DIVE"), if the game has it.
+         */
+        static StationTask[] with(String title, String hints, StationTask... old) {
             List<StationTask> out = new ArrayList<>(Arrays.asList(old));
             for (StationTask t : StationTask.values()) {
                 if (out.contains(t) || t == StationTask.NONE) continue;
-                if (t.title.equalsIgnoreCase(title) || t.name().contains(hint)) out.add(t);
+                boolean named = t.title.equalsIgnoreCase(title);
+                for (String h : hints.split("\\|")) named |= t.name().contains(h);
+                if (named) out.add(t);
             }
             return out.toArray(new StationTask[0]);
         }
