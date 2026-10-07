@@ -35,23 +35,26 @@ import java.util.function.Predicate;
  *
  * <p>Four classes: <b>the best bread</b>, <b>the best wool</b>, <b>the biggest fish</b> and <b>the best
  * honey</b>. All day a player can enter something of their own: right-click the board with it, or
- * {@code /village fair enter} with it in hand; it is taken into the fair's keeping (the whole stack in hand,
- * up to sixteen loaves or wool, one fish, eight of honey), one entry a class, and comes back after the
- * judging. At dusk the town gathers before the board and the folk bring theirs: for each class up to four,
- * the hands whose trade it is first (the farmers and the cook for bread, the rancher and the tailor for
- * wool, the fishers, the beekeeper), each with the best it has in its own pack or, having none, the best
- * the stores hold of its trade's work, brought on the trade's behalf.
+ * {@code /village fair enter} with it in hand; it is taken into the fair's keeping (the whole stack in hand:
+ * up to a stack of loaves or wool, one fish, sixteen of honey), one entry a class, and comes back after the
+ * judging. At dusk the town gathers before the board and the folk bring theirs, up to four a class, only
+ * the hands whose trade it is (the cook and the farmers for bread, the rancher and the tailor for wool, the
+ * fishers, the beekeeper), the most skilled first: the best of its own work in its pack (its shearing, its
+ * catch, its honey) or, having none, the best the stores hold of its trade's work, brought on the trade's
+ * behalf. Bread always comes from the stores, the town's baking: the loaves in a folk's pack are its rations
+ * (every founder carries sixteen from its starter kit), not its baking, and the fair is not a count of who
+ * has eaten least.
  *
- * <p>The elder judges, by rules anybody can check:
+ * <p>The elder judges, by rules anybody can check, a tie going to whoever entered first (a guest who entered
+ * in the day, then the town's hands, the most skilled first):
  * <ul>
- * <li><b>Bread</b>: the biggest batch (ten points a loaf, up to sixteen), the better baker breaking a tie
- *     (a point for each of its levels at its trade, up to twenty).</li>
- * <li><b>Wool</b>: the biggest fleece of one colour (ten points a block), five more for a dyed one (the
- *     dye was work too).</li>
+ * <li><b>Bread</b>: the biggest batch, ten points a loaf, up to a stack.</li>
+ * <li><b>Wool</b>: the biggest fleece of one colour (ten points a block, up to a stack), five more for a
+ *     dyed one (the dye was work too).</li>
  * <li><b>Fish</b>: the heaviest. A salmon weighs five to ten pounds, a cod three to seven, a pufferfish one
  *     and a half to three, a tropical fish half a pound to a pound and a half, as the day falls for each
  *     angler; a skilled fisher lands them a little heavier.</li>
- * <li><b>Honey</b>: thirty points a bottle, ten a comb, up to eight, the beekeeper's level a tie-breaker.</li>
+ * <li><b>Honey</b>: thirty points a bottle, ten a comb, up to sixteen.</li>
  * </ul>
  * The winner of each class gets a ribbon (a sheet of the stores' paper, named "Ribbon: best bread, Year 3"
  * and lettered with the fair and the day; none if the stores have no paper) and a small purse out of the
@@ -147,9 +150,9 @@ public final class Fair {
     /** How many of a thing make an entry, at most. */
     static int most(Category c) {
         return switch (c) {
-            case BREAD, WOOL -> 16;
+            case BREAD, WOOL -> 64;
             case FISH -> 1;
-            case HONEY -> 8;
+            case HONEY -> 16;
         };
     }
 
@@ -249,11 +252,11 @@ public final class Fair {
         String what = e.item.getHoverName().getString().toLowerCase(Locale.ROOT);
         switch (e.cat) {
             case BREAD -> {
-                e.score = n * 10 + lv;
+                e.score = n * 10;
                 e.words = n + (n == 1 ? " loaf" : " loaves");
             }
             case WOOL -> {
-                e.score = n * 10 + (e.item.is(Items.WHITE_WOOL) ? 0 : 5) + lv / 10.0;
+                e.score = n * 10 + (e.item.is(Items.WHITE_WOOL) ? 0 : 5);
                 e.words = n + " " + what;
             }
             case FISH -> {
@@ -269,7 +272,7 @@ public final class Fair {
             }
             case HONEY -> {
                 boolean bottles = e.item.is(Items.HONEY_BOTTLE);
-                e.score = n * (bottles ? 30 : 10) + lv;
+                e.score = n * (bottles ? 30 : 10);
                 e.words = n + (bottles ? (n == 1 ? " bottle of honey" : " bottles of honey") : (n == 1 ? " honeycomb" : " honeycombs"));
             }
         }
@@ -289,9 +292,11 @@ public final class Fair {
             if (a instanceof VillageFolkEntity f && f.isAlive() && !f.isBaby() && !f.isShowcase() && !f.isHired()) folk.add(f);
         }
         for (Category c : Category.values()) {
-            // The trade's own hands first, the most skilled first; then anybody who happens to have one by it.
-            List<VillageFolkEntity> who = new ArrayList<>(folk);
-            who.sort(Comparator.comparingInt((VillageFolkEntity f) -> trade(c, f.stationTask()) ? 0 : 1)
+            // The trade's own hands only, the most skilled first (for bread, the cook before the farmers): in that
+            // order they come forward, and a tie goes to the first.
+            List<VillageFolkEntity> who = new ArrayList<>();
+            for (VillageFolkEntity f : folk) if (trade(c, f.stationTask())) who.add(f);
+            who.sort(Comparator.comparingInt((VillageFolkEntity f) -> f.stationTask() == AssistantEntity.StationTask.COOK ? 0 : 1)
                 .thenComparingInt(f -> -f.veteranLevel()));
             boolean storesIn = false;
             for (VillageFolkEntity f : who) {
@@ -301,12 +306,12 @@ public final class Fair {
                 boolean entered = false;
                 for (Entry e : town.entries) if (e.cat == c && e.owner.equals(f.getUUID())) entered = true;
                 if (entered) continue;
-                ItemStack mine = fromPack(f, c);
+                ItemStack mine = c == Category.BREAD ? ItemStack.EMPTY : fromPack(f, c);    // a folk's loaves are its rations
                 if (!mine.isEmpty()) {
                     town.entries.add(new Entry(c, Entry.FOLK, f.getUUID(), f.displayNameCap(), mine));
                     continue;
                 }
-                if (storesIn || !trade(c, f.stationTask())) continue;
+                if (storesIn) continue;
                 ItemStack theirs = fromStores(level, v, c);
                 if (theirs.isEmpty()) continue;
                 storesIn = true;
@@ -378,7 +383,7 @@ public final class Fair {
         return first.copyWithCount(1 + more);
     }
 
-    /** Each class's entries, the best first. */
+    /** Each class's entries, the best first; a tie to the first entered (the list's order: a sort that keeps it). */
     static List<Entry> ranked(Festivals.Town town, Category c) {
         List<Entry> out = new ArrayList<>();
         for (Entry e : town.entries) if (e.cat == c) out.add(e);

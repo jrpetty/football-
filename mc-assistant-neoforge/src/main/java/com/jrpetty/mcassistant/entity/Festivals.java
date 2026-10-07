@@ -52,10 +52,10 @@ import java.util.function.Predicate;
  * <ul>
  * <li><b>The May dance</b>, on the first rest day of spring (the day of the week the town keeps for its
  *     rest, whether it keeps one yet or not): in the morning a hand puts a maypole up on the square out of
- *     the stores — five fence posts (or logs) and wool of as many colours as the stores have, up to five,
- *     at its head — and at dusk the town gathers in a ring round it, the elder says a word, and they dance:
- *     round and round the pole, a place at a time, to a tune. The next morning the pole comes down and its
- *     posts and wool go back into the stores.</li>
+ *     the stores — five fence posts (on a foot of logs if posts are short, or logs alone) and wool of as many
+ *     colours as the stores have, up to five, at its head — and at dusk the town gathers in a ring round it,
+ *     the elder says a word, and they dance: round and round the pole, a place at a time, to a tune. The
+ *     next morning the pole comes down and its posts and wool go back into the stores.</li>
  * <li><b>The midsummer bonfire</b>, on midsummer's day (the fourth of summer): at dusk a hand builds a
  *     campfire on the square out of the stores (three logs, a lump of coal or charcoal and three sticks, as a
  *     player makes one; five of them, a fire as big as a bonfire, if the stores run to it), the town gathers
@@ -579,9 +579,11 @@ public final class Festivals extends SavedData {
     private static final Direction[] ROUND = { Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST };
 
     /**
-     * The maypole up on the square, by a hand at the town's works (or at once, {@code now}): five fence posts
-     * of the stores' (else five logs), and at its head a block of wool of each colour the stores have, up to
-     * five (two at the least). Null when it is up; else why not yet, in a few words.
+     * The maypole up on the square, by a hand at the town's works (or at once, {@code now}): five posts, the
+     * stores' fence posts as far as they go, on a foot of logs to make up the five (or logs alone: the town's
+     * small works take a fence post here and there, and a town with four is not to go without its dance), and
+     * at its head a block of wool of each colour the stores have, up to five (two at the least). Null when it
+     * is up; else why not yet, in a few words.
      */
     @Nullable
     static String raiseMaypole(ServerLevel level, Villages.Village v, long due, boolean now) {
@@ -591,12 +593,15 @@ public final class Festivals extends SavedData {
         Predicate<ItemStack> fence = s -> s.is(ItemTags.WOODEN_FENCES) && s.getItem() instanceof BlockItem;
         Predicate<ItemStack> log = s -> s.is(ItemTags.LOGS) && s.getItem() instanceof BlockItem;
         if (Market.stock(level, id, s -> s.is(ItemTags.WOOL)) < 2) return "no wool in the stores for its ribbons";
-        Predicate<ItemStack> pole = Market.stock(level, id, fence) >= POLE ? fence : Market.stock(level, id, log) >= POLE ? log : null;
-        if (pole == null) return "no fence posts or logs in the stores for the pole";
+        int fences = Market.stock(level, id, fence), logs = Market.stock(level, id, log);
+        if (fences + logs < POLE) return "no fence posts or logs in the stores for the pole";
         BlockPos spot = clearSpot(level, v, 2, 2, POLE + 2);
         if (spot == null) return "no clear ground on the square for it";
         if (!now && !TownJobs.atWork(level, v, "festival", spot, "putting up the maypole")) return "waiting for a hand";
-        List<ItemStack> posts = takeEach(level, v, pole, POLE);
+        // The foot first (the logs, if fence posts fall short), then the posts over it.
+        List<ItemStack> posts = new ArrayList<>(takeEach(level, v, log, POLE - Math.min(POLE, fences)));
+        posts.addAll(takeEach(level, v, fence, POLE - posts.size()));
+        if (posts.size() < POLE) posts.addAll(takeEach(level, v, log, POLE - posts.size()));   // a post gone since the count
         List<ItemStack> wool = ribbons(level, v);
         if (posts.size() < POLE || wool.size() < 2) {
             back(level, v, posts);

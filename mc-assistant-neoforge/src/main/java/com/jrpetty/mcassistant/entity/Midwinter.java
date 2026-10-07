@@ -352,7 +352,9 @@ public final class Midwinter {
         RandomSource r = giver.getRandom();
         String what = Birthdays.a(gift);
         String name = to.displayNameCap();
+        // Its own now: a keepsake of the friend's; something to eat is just food (the giver's mark off it, too).
         if (gift.get(net.minecraft.core.component.DataComponents.FOOD) == null) Homes.keepsake(gift, to);
+        else gift.remove(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
         ItemStack left = to.insertGiven(gift.copy());
         if (!left.isEmpty()) {
             ItemStack back = giver.insertItem(left);

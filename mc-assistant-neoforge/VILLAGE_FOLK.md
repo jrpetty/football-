@@ -4708,8 +4708,8 @@ founded a fortnight apart are a season apart.
   the cold). The first day of each season goes into the chronicle. `/village season` says where the town
   is in its year; an operator can turn a town's calendar to any day of it with `/village season set <1-28>`.
 * **The May dance.** On the first rest day of spring a hand puts a maypole up on the square out of the
-  stores: five fence posts (or five logs) with a block of wool of every colour the stores have at its head,
-  up to five. At dusk the town gathers in a ring round it, the elder says a word, and they dance: the whole
+  stores: five fence posts (on a foot of logs if the stores are short of posts, or five logs) with a block
+  of wool of every colour the stores have at its head, up to five. At dusk the town gathers in a ring round it, the elder says a word, and they dance: the whole
   ring moves round the pole a place at a time, to a tune. Everybody remembers it, and the town is the
   happier for a few days. The next morning the pole comes down and every post and every block of wool goes
   back into the stores. With no wool (or nothing for the pole) the board says why there is no maypole.
@@ -4721,12 +4721,14 @@ founded a fortnight apart are a season apart.
 * **The town fair.** Late in summer (its sixth day) the town holds a fair with four classes: the best
   bread, the best wool, the biggest fish and the best honey. On fair day you can enter too: hold your
   entry and right-click the board (or use `/village fair enter` near it). The fair keeps it, and it comes
-  back to you after the judging. At dusk the town gathers before the board and the folk bring theirs (the
-  farmers' and the cook's bread, the rancher's wool, the fisher's catch, the beekeeper's honey), out of
-  their own packs or, if they have none, the best of their trade's work in the stores. The elder judges by
-  rules anyone can check: the biggest batch of loaves (the better baker breaks a tie), the biggest fleece
-  of one colour (a dyed one scores a little more), the heaviest fish (a salmon weighs five to ten pounds, a
-  cod three to seven), honey by the bottle and the comb. Each winner gets a blue ribbon (a sheet of the
+  back to you after the judging. At dusk the town gathers before the board and the hands whose trade it is
+  bring theirs, the most skilled first: the rancher's or the tailor's wool, the fisher's catch and the
+  beekeeper's honey out of their own packs or, if they have none, the best of their trade's work in the
+  stores; and the cook's or a farmer's pick of the town's baking from the stores (the loaves folk carry are
+  their rations, not their baking). The elder judges by rules anyone can check: the biggest batch of loaves
+  (up to a stack), the biggest fleece of one colour (a dyed one scores a little more), the heaviest fish (a
+  salmon weighs five to ten pounds, a cod three to seven), honey by the bottle and the comb; a tie goes to
+  whoever entered first, so a guest who entered in the day wins a tie with the town. Each winner gets a blue ribbon (a sheet of the
   stores' paper, named "Ribbon: best bread, Year 3") and four coins from the treasury. Everything entered
   goes back where it came from, the results go into the chronicle and the books, and they stay on the
   board for a few days. If you are away when the judging is done, your entry and any prize are handed to

@@ -62,19 +62,20 @@ import java.util.function.Predicate;
  *     a tended field grows quicker in spring and summer and slower in autumn and winter, never at the wild's
  *     pace or under; the board, the books and the crier say the season; it goes into the chronicle as it
  *     turns; folk talk of it; /village season says it.</li>
- * <li><b>sf22</b>: the maypole goes up on the square out of the stores (five fence posts, wool of every
- *     colour the stores have); the May dance kept goes into the chronicle, the memories and the town's
- *     contentment; the morning after it comes down and every post and every block of wool is back in the
- *     stores.</li>
+ * <li><b>sf22</b>: the maypole goes up on the square out of the stores (five posts, fence posts on a foot of
+ *     logs if the town's works have taken a post or two, wool of every colour the stores have); the May dance
+ *     kept goes into the chronicle, the memories and the town's contentment; the morning after it comes down
+ *     and every post and every block of wool is back in the stores.</li>
  * <li><b>sf23</b>: the May dance itself: the town called round the maypole, and once the elder has spoken
  *     the ring goes round the pole, folk passing from place to place.</li>
  * <li><b>sf24</b>: the midsummer bonfire: five campfires lit on the square, each made of three of the
  *     stores' logs, a coal and three sticks (sawn from their planks when the sticks run out); sung round;
  *     put out at midnight, the ground clear and two charcoal a fire in the stores.</li>
- * <li><b>sf25</b>: the town fair: a player's bread, a farmer's bread out of its pack, the stores' wool
- *     entered by the rancher, the fisher's cod; judged by the rules (the player's twelve loaves beat the
- *     farmer's eight); ribbons of the stores' paper and purses out of the treasury; every entry back where
- *     it came from (the player's kept for them, being away); results in the chronicle and on the board.</li>
+ * <li><b>sf25</b>: the town fair: a player's bread, the stores' bread entered by the farmer (never its ration
+ *     loaves, which stay in its pack), the stores' wool entered by the rancher, the fisher's cod out of its
+ *     pack; judged by the rules (the player's forty-eight loaves beat the town's thirty-two); ribbons of the
+ *     stores' paper and purses out of the treasury; every entry back where it came from (the player's kept
+ *     for them, being away); results in the chronicle and on the board.</li>
  * <li><b>sf26</b>: the harvest festival: the year's harvest counted farmer by farmer as it is brought in;
  *     two long tables of slabs sawn from the stores' planks; the year's totals in the chronicle and the
  *     farmer who brought in the most paid its prize out of the treasury; the slabs back in the stores the
@@ -240,23 +241,31 @@ public class SeasonsGameTests {
         List<VillageFolkEntity> folk = town(helper, level, heart, 6);
         UUID id = folk.get(0).ownerId();
         Villages.Village v = Villages.get(id);
-        chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.OAK_FENCE, 5), new ItemStack(Items.RED_WOOL), new ItemStack(Items.BLUE_WOOL),
-            new ItemStack(Items.YELLOW_WOOL), new ItemStack(Items.WHITE_WOOL, 2));
+        // Ample: the town's own small works (a sign post, a garden fence) take a fence post or two in its first
+        // seconds, and the beds want wool.
+        chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.OAK_FENCE, 8), new ItemStack(Items.OAK_LOG, 4),
+            new ItemStack(Items.RED_WOOL, 3), new ItemStack(Items.BLUE_WOOL, 3), new ItemStack(Items.YELLOW_WOOL, 3), new ItemStack(Items.WHITE_WOOL, 3));
+        Predicate<ItemStack> postish = s -> s.is(ItemTags.WOODEN_FENCES) || s.is(ItemTags.LOGS);
         helper.runAtTickTime(10, () -> {
+            int posts0 = stock(level, id, postish), wool0 = stock(level, id, s -> s.is(ItemTags.WOOL));
             String why = Festivals.setUpForTests(level, v, Festivals.Feast.MAYPOLE);
             List<int[]> placed = Festivals.placedForTests(id, Festivals.Feast.MAYPOLE);
-            Kit.log("sf22 the maypole: " + (why == null ? "up" : why) + ", " + placed.size() + " blocks; stores: fences "
-                + stock(level, id, s -> s.is(ItemTags.WOODEN_FENCES)) + ", wool " + stock(level, id, s -> s.is(ItemTags.WOOL)));
-            helper.assertTrue(why == null && placed.size() == 9, "the pole up, five posts and four colours of wool: " + why + ", " + placed.size());
+            Kit.log("sf22 the maypole: " + (why == null ? "up" : why) + ", " + placed.size() + " blocks; stores: posts " + posts0 + " -> "
+                + stock(level, id, postish) + ", wool " + wool0 + " -> " + stock(level, id, s -> s.is(ItemTags.WOOL)));
+            helper.assertTrue(why == null && placed.size() >= Festivals.POLE + 2 && placed.size() <= Festivals.POLE + 5,
+                "the pole up, five posts and wool of several colours: " + why + ", " + placed.size());
             BlockPos base = new BlockPos(placed.get(0)[0], placed.get(0)[1], placed.get(0)[2]);
             for (int i = 0; i < Festivals.POLE; i++) {
-                helper.assertTrue(level.getBlockState(base.above(i)).getBlock() instanceof FenceBlock, "a fence post at " + i + " up the pole");
+                BlockState post = level.getBlockState(base.above(i));
+                helper.assertTrue(post.getBlock() instanceof FenceBlock || post.is(net.minecraft.tags.BlockTags.LOGS),
+                    "a post at " + i + " up the pole: " + post);
             }
             helper.assertTrue(level.getBlockState(base.above(Festivals.POLE)).is(net.minecraft.tags.BlockTags.WOOL), "wool at its head");
             helper.assertTrue(Math.max(Math.abs(base.getX() - v.centre().getX()), Math.abs(base.getZ() - v.centre().getZ())) <= 15,
                 "on the square: " + base.toShortString() + " from " + v.centre().toShortString());
-            helper.assertTrue(stock(level, id, s -> s.is(ItemTags.WOODEN_FENCES)) == 0 && stock(level, id, s -> s.is(Items.WHITE_WOOL)) == 1
-                && stock(level, id, s -> s.is(ItemTags.WOOL)) == 1, "the posts and one of each colour out of the stores");
+            helper.assertTrue(posts0 - stock(level, id, postish) == Festivals.POLE
+                && wool0 - stock(level, id, s -> s.is(ItemTags.WOOL)) == placed.size() - Festivals.POLE,
+                "the posts and the wool out of the stores, a block of wool to each colour");
             // The dance kept: the chronicle, the memories, the town's contentment.
             Festivals.closeForTests(level, v, Festivals.Feast.MAYPOLE, folk);
             long today = level.getDayTime() / 24000L;
@@ -272,12 +281,12 @@ public class SeasonsGameTests {
             // The morning after: down, and back into the stores.
             level.setDayTime((today + 1) * 24000L + 2000L);
             Festivals.takeDownForTests(level, v);
-            Kit.log("sf22 the morning after: " + Festivals.placedForTests(id, Festivals.Feast.MAYPOLE).size() + " blocks up; stores: fences "
-                + stock(level, id, s -> s.is(ItemTags.WOODEN_FENCES)) + ", wool " + stock(level, id, s -> s.is(ItemTags.WOOL)));
+            Kit.log("sf22 the morning after: " + Festivals.placedForTests(id, Festivals.Feast.MAYPOLE).size() + " blocks up; stores: posts "
+                + stock(level, id, postish) + ", wool " + stock(level, id, s -> s.is(ItemTags.WOOL)));
             helper.assertTrue(Festivals.placedForTests(id, Festivals.Feast.MAYPOLE).isEmpty() && level.getBlockState(base).isAir()
                 && level.getBlockState(base.above(Festivals.POLE)).isAir(), "the pole is down");
-            helper.assertTrue(stock(level, id, s -> s.is(Items.OAK_FENCE)) == 5 && stock(level, id, s -> s.is(ItemTags.WOOL)) == 5
-                && stock(level, id, s -> s.is(Items.RED_WOOL)) == 1, "every post and every block of wool back in the stores");
+            helper.assertTrue(stock(level, id, postish) == posts0 && stock(level, id, s -> s.is(ItemTags.WOOL)) == wool0,
+                "every post and every block of wool back in the stores");
             helper.succeed();
         });
     }
@@ -298,8 +307,8 @@ public class SeasonsGameTests {
         List<VillageFolkEntity> folk = town(helper, level, heart, 7);
         UUID id = folk.get(0).ownerId();
         Villages.Village v = Villages.get(id);
-        chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.OAK_FENCE, 5), new ItemStack(Items.RED_WOOL), new ItemStack(Items.LIME_WOOL),
-            new ItemStack(Items.PINK_WOOL));
+        chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.OAK_FENCE, 8), new ItemStack(Items.OAK_LOG, 4),
+            new ItemStack(Items.RED_WOOL, 2), new ItemStack(Items.LIME_WOOL, 2), new ItemStack(Items.PINK_WOOL, 2));
         BlockPos[] pole = new BlockPos[1];
         Map<UUID, Double> startAngle = new HashMap<>();
         long[] mingleFrom = { -1 };
@@ -423,6 +432,8 @@ public class SeasonsGameTests {
         chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.RED_WOOL, 10), new ItemStack(Items.PAPER, 3));
         helper.runAtTickTime(10, () -> {
             long today = level.getDayTime() / 24000L;
+            // One hand to each class's trade (the rest at the woods, which shows at no fair).
+            for (VillageFolkEntity f : folk) if (f != farmer && f != rancher && f != fisher) f.setJob(StationTask.WOOD);
             farmer.setJob(StationTask.FARM);
             rancher.setJob(StationTask.RANCH);
             fisher.setJob(StationTask.FISH);
@@ -435,27 +446,31 @@ public class SeasonsGameTests {
             int coinsBefore = Ledger.coins(id);
             Festivals.turnTo(id, today, Festivals.FAIR_DAY);
             helper.assertTrue(Fair.open(level, v), "fair day: entries open");
+            int storesBread = stock(level, id, s -> s.is(Items.BREAD)), storesRed = stock(level, id, s -> s.is(Items.RED_WOOL));
             Player you = helper.makeMockPlayer(GameType.SURVIVAL);
-            you.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BREAD, 12));
+            you.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BREAD, 64));      // a full stack: the most an entry takes
             String said = Fair.enter(level, you, v, you.getMainHandItem());
             Kit.log("sf25 a player enters: " + said + "; entries " + Fair.entriesForTests(id));
             helper.assertTrue(said.startsWith("Entered for the best bread") && you.getMainHandItem().isEmpty(), "taken into the fair's keeping: " + said);
             // The judging, as the gathering holds it.
             Festivals.closeForTests(level, v, Festivals.Feast.FAIR, folk);
             List<String> results = Fair.resultsForTests(id);
-            Kit.log("sf25 the ribbons: " + results + "; treasury " + coinsBefore + " -> " + Ledger.coins(id) + "; owed the player "
-                + Festivals.owedForTests(id) + "; chronicle " + chronicle(id));
+            Kit.log("sf25 the ribbons: " + results + " (the stores held " + storesBread + " loaves); treasury " + coinsBefore + " -> "
+                + Ledger.coins(id) + "; owed the player " + Festivals.owedForTests(id) + "; chronicle " + chronicle(id));
             helper.assertTrue(results.size() == 3, "three classes judged (no honey): " + results);
-            helper.assertTrue(results.get(0).startsWith("best bread: " + you.getName().getString()) && results.get(0).contains("12 loaves"),
-                "twelve loaves beat eight: " + results.get(0));
-            helper.assertTrue(results.stream().anyMatch(r -> r.startsWith("best wool: " + rancher.displayNameCap()) && r.contains("10 red wool")),
+            helper.assertTrue(results.get(0).startsWith("best bread: " + you.getName().getString()) && results.get(0).contains("64 loaves"),
+                "a guest's stack of loaves beats the town's baking (or ties it, and entered first): " + results.get(0));
+            helper.assertTrue(results.stream().anyMatch(r -> r.startsWith("best wool: " + rancher.displayNameCap()) && r.contains(storesRed + " red wool")),
                 "the rancher's entry of the stores' wool: " + results);
             helper.assertTrue(results.stream().anyMatch(r -> r.startsWith("biggest fish: " + fisher.displayNameCap()) && r.contains("cod of")),
                 "the fisher's cod: " + results);
             helper.assertTrue(coinsBefore - Ledger.coins(id) == 3 * Fair.PURSE, "a purse a class out of the treasury: "
                 + coinsBefore + " -> " + Ledger.coins(id));
-            helper.assertTrue(count(farmer, s -> s.is(Items.BREAD)) == 8, "the farmer's bread back in its pack: " + count(farmer, s -> s.is(Items.BREAD)));
-            helper.assertTrue(stock(level, id, s -> s.is(Items.RED_WOOL)) == 10, "the stores' wool back in the stores");
+            helper.assertTrue(count(farmer, s -> s.is(Items.BREAD)) == 8, "the farmer's ration loaves never entered, still in its pack: "
+                + count(farmer, s -> s.is(Items.BREAD)));
+            helper.assertTrue(stock(level, id, s -> s.is(Items.BREAD)) == storesBread, "the stores' bread entered and back: "
+                + storesBread + " -> " + stock(level, id, s -> s.is(Items.BREAD)));
+            helper.assertTrue(stock(level, id, s -> s.is(Items.RED_WOOL)) == storesRed, "the stores' wool back in the stores");
             helper.assertTrue(stock(level, id, s -> s.is(Items.PAPER)) == 0, "three ribbons of the stores' paper");
             helper.assertTrue(count(rancher, s -> s.is(Items.PAPER) && s.has(DataComponents.CUSTOM_NAME)
                 && s.getHoverName().getString().startsWith("Ribbon: best wool, Year") && Homes.isKeepsake(s)) == 1, "the rancher keeps its ribbon");
@@ -575,6 +590,13 @@ public class SeasonsGameTests {
             helper.assertTrue(friend.getUUID().equals(Midwinter.plannedForTests(id).get(giver.getUUID())), "a present planned for its friend");
             // Evening, off work: to the counter, bought, and given.
             level.setDayTime(today * 24000L + 13000L);
+            // The sky darkens once a tick (Level.updateSkyBrightness): without this, set straight from the morning,
+            // it is still day by the sky, a day hand is still on its shift, and the present waits for its own time.
+            level.updateSkyBrightness();
+            Kit.log("sf27 the evening: night " + level.isNight() + ", the giver off work " + giver.offWorkNow() + ", a job "
+                + giver.peekJob() + ", at a gathering " + Assemblies.attending(giver) + ", asleep " + giver.isSleeping()
+                + ", bedtime " + giver.bedtimeTick() + ", purse " + giver.purse());
+            helper.assertTrue(giver.offWorkNow(), "evening: the giver is off work");
             int purse = giver.purse(), coins = Ledger.coins(id);
             boolean busy1 = Festivals.hold(giver, level);
             boolean busy2 = Festivals.hold(giver, level);
