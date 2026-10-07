@@ -370,6 +370,7 @@ public final class VillageBoards {
         String bounty = PlayerServices.boardLine(level, id);     // [players] the night's bounty, when the watch is busy
         if (bounty != null) out.add("RW|" + bounty);
         out.addAll(TownCalendar.board(level, id));          // today's bells, Founding Day, the week's birthdays
+        out.addAll(Sport.board(level, id));                 // [batchC] the match on now, a side away, the league and the cup
         String gathering = Assemblies.now(id);
         if (gathering != null) out.add("RG|Now: " + gathering + " — come along!");
         Gatherings.Kind tonight = Gatherings.tonight(id, day);

@@ -65,7 +65,9 @@ public class BuildGoal extends Goal {
         // the museum, where the town's rare finds go on show and its chronicle is kept as books (Museum)
         "museum",
         // the stable, once the village has horses (Stables)
-        "stable");
+        "stable",
+        // [batchC] the football pitch (entity/Pitch) and the watch's archery range (entity/Archery)
+        "pitch", "range");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

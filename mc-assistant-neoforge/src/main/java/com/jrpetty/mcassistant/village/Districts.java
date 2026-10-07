@@ -156,7 +156,7 @@ public final class Districts {
         if (isIndustry(structure)) return District.CRAFTS;
         return switch (TownPlan.placeFor(structure)) {
             case "civic" -> District.MARKET;
-            case "home" -> District.HOMES;
+            case "home", "field" -> District.HOMES;                         // [batchC] the pitch among the homes
             default -> null;
         };
     }

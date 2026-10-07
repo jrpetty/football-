@@ -260,6 +260,8 @@ public final class FolkTalk {
         if (f.isSleeping()) return "Asleep";
         String school = School.doing(f);                     // at a desk, or at the lectern (School)
         if (school != null) return school;
+        String sport = Sport.doing(f);                        // [batchC] playing, watching, racing, fishing, at the butts (Sport)
+        if (sport != null) return sport;
         String family = Families.doing(f);                    // a game, supper at home, a story, a family errand (Families)
         if (family != null) return family;
         String park = Park.doing(f);                          // in the park, or on its way there

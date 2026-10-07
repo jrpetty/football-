@@ -327,6 +327,8 @@ public final class Villages {
             case "manor" -> "a manor house";
             case "belltower" -> "the bell tower";
             case "flats" -> "a block of flats";                   // [flats]
+            case "pitch" -> "the football pitch";                 // [batchC]
+            case "range" -> "the archery range";                  // [batchC]
             default -> "the " + structure;
         };
     }
@@ -368,6 +370,7 @@ public final class Villages {
         Raids.resetForTests();
         Contentment.resetForTests();
         RestDay.resetForTests();
+        Sport.resetForTests();              // [batchC] the pitch, the matches, the league, the contests, the range
         Tavern.resetForTests();
         Council.resetForTests();
         Laws.resetForTests();
@@ -1690,6 +1693,8 @@ public final class Villages {
         if (School.wanted(villageId, folk) && built(villageId, "school") < 1) extras.add("school");
         // And a park among the homes, once the town is big enough to want one (Park).
         if (Park.wanted(villageId, folk)) extras.add(Park.STRUCTURE);
+        // [batchC] A football pitch by the park, for the rest day's match (Pitch).
+        if (Pitch.wanted(villageId, folk)) extras.add(Pitch.STRUCTURE);
         // A stable, once the village has horses of its own (or, in the Iron Age, a rancher and a saddle: Stables).
         if (built(villageId, "stable") < 1 && Stables.wanted(villageId)) extras.add("stable");
         // The courtyard before the board, where the village gathers; and, once the town is big enough
@@ -1719,6 +1724,8 @@ public final class Villages {
         // The Iron Age's best homes: a manor house on a long lot by the square, one for every
         // thirty folk past twenty — six beds each.
         if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30 || Homes.wantsAManor(villageId)) extras.add("manor");
+        // [batchC] An archery range by the wall, once the town keeps a watch of two or more (Archery).
+        if (Archery.wanted(villageId)) extras.add(Archery.STRUCTURE);
         if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
@@ -2069,6 +2076,8 @@ public final class Villages {
                 + folk + " folk";
             case "manor" -> "a manor house, six beds under a slate roof: the best homes a town of the Iron Age has";
             case "flats" -> Flats.why(villageId);                  // [flats]
+            case "pitch" -> Pitch.why(villageId);                  // [batchC]
+            case "range" -> Archery.why(villageId);                // [batchC]
             case "belltower" -> "a bell tower on the square, to ring the hours of a Diamond Age town";
             case "gateway" -> "a gateway of obsidian, the way out of the world the Nether Age is named for";
             case "granary" -> "a granary (great work " + (greatWorks(villageId) + 1) + "): a town that has come through every age goes on building";

@@ -994,6 +994,55 @@ def sights_stage(r, look, cx, cz):
     say("alive after the sights: %s" % client_alive())
 
 
+def sport_stage(r, look, cx, cz):
+    """Sport and play (entity/Sport, Pitch, Football, Archery): the football pitch put up at once on its lot among the
+    homes (/village sport pitch now: its goals, benches and lamps, its lines laid in white wool), a match begun on it
+    with whoever is free and the stores' slime ball for the ball (a slime ball put in the stores first), photographed
+    from beyond a corner of the pitch a few blocks up while the sides are at it; then the watch's archery range put up
+    by a corner of the wall with targets on its butts and the guards sent to practise, from behind the line."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 7000")                            # one o'clock: the midday meal eaten
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    where = "execute positioned %d 100 %d run " % (cx, cz)
+    xyz = r"(-?\d+) (-?\d+) (-?\d+)"
+    dirs = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
+    out = r.cmd(where + "village sport pitch now")
+    say("pitch: " + out[:300])
+    m = re.search(r"PITCH " + xyz + r" facing (\w+)", out)
+    if not m:
+        say("no pitch went up; nothing to photograph")
+    else:
+        px, py, pz = (int(v) for v in m.groups()[:3])
+        bx, bz = dirs.get(m.group(4), (0, -1))                # the lot's back: one goal; the other toward the street
+        rx, rz = -bz, bx                                        # across the field
+        bell = r.cmd(where + "village bell")
+        st = re.search(r"STORES " + xyz, bell)
+        if st:
+            sx, sy, sz = (int(v) for v in st.groups())
+            say("ball: " + r.cmd("item replace block %d %d %d container.25 with minecraft:slime_ball 1" % (sx, sy, sz)))
+        say("match: " + r.cmd(where + "village sport match now")[:300])
+        r.cmd("tp %s %d %d %d" % (USER, px + rx * 12 - bx * 10, py + 7, pz + rz * 12 - bz * 10))
+        time.sleep(25)                                          # the sides walk out; the kick-off
+        # From beyond a front corner of the pitch, twelve across, ten out and seven up: the whole field and both goals.
+        look("24-sport-1-football", px + rx * 12 - bx * 10, py + 7, pz + rz * 12 - bz * 10, px, py + 0.5, pz, wait=6)
+        # Low behind the back goal, looking down the field at the players.
+        look("24-sport-2-goal", px + bx * 12, py + 3, pz + bz * 12, px, py + 1, pz, wait=8)
+    out = r.cmd(where + "village sport range now")
+    say("range: " + out[:300])
+    m = re.search(r"RANGE " + xyz + r" facing (\w+)", out)
+    if m:
+        x, y, z = (int(v) for v in m.groups()[:3])
+        bx, bz = dirs.get(m.group(4), (0, -1))
+        time.sleep(15)                                          # the guards walk down to the line
+        # From behind the archers' line and a little up: the line, the butts with their targets, the boards behind.
+        look("24-sport-3-range", x - bx * 9 + 2, y + 3, z - bz * 9 + 2, x + bx * 4, y + 1, z + bz * 4, wait=6)
+    say("sport: " + r.cmd(where + "village sport")[:900])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("time set 6000")
+    say("alive after the sport: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

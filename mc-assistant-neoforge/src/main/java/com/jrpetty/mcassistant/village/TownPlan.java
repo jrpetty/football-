@@ -202,6 +202,8 @@ public final class TownPlan {
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern", "school", "bank", "museum", "stable" -> "civic";
             case "watchtower" -> "corner";
+            case "range" -> "corner";                                       // [batchC] the watch's range, by the wall
+            case "pitch" -> "field";                                        // [batchC] a long lot for the football pitch
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
             default -> "home";
         };
@@ -232,6 +234,11 @@ public final class TownPlan {
             }
             case "corner" -> {
                 for (Lot l : all) if (l.use().equals("corner")) out.add(l);
+            }
+            case "field" -> {
+                // [batchC] The football pitch: the long lots out along the avenues, then the great lots by the square.
+                for (Lot l : all) if (l.use().equals("long")) out.add(l);
+                for (Lot l : all) if (l.use().equals("great")) out.add(l);
             }
             case "edge" -> {
                 List<Lot> far = new ArrayList<>();
