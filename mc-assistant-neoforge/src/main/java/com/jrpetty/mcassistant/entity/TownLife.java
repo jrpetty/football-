@@ -118,6 +118,7 @@ public final class TownLife {
         // [townlife] The gazette on the meeting hall's lectern, and the welcome sign at the edge of town: once a day each.
         Gazette.tick(level, v);
         WelcomeSign.tick(level, v);
+        VillageBoards.keep(level, v);               // [itemaudit] a board taken down: another made of the stores and put up
         // [batchG] Visitors (the bard, tourists, the merchant), friends' visits, the map room, the watch's dogs,
         // gifts kept on show, and its players' advancements (Visitors.tick).
         Visitors.tick(level, v);
@@ -843,6 +844,7 @@ public final class TownLife {
             case "lighthouse" -> "The Lighthouse";
             case "postoffice" -> "The Post Office";            // [batchF] (Post)
             case "firestation" -> "The Fire Station";          // [disasters] (FireSafety)
+            case "powderhut" -> "The Powder Hut";              // [fireworks] (FireworksMaker)
             default -> "The " + Character.toUpperCase(structure.charAt(0)) + structure.substring(1);
         };
     }

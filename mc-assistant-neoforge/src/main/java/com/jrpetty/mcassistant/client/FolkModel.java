@@ -47,10 +47,28 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         "guard", "smelter", "fisher", "storekeeper", "hauler",
         "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
         "cavedweller",                                         // [caves] not in StationTask's order: see outfit()
+        "fletcher", "golemkeeper",                             // [fletcher] [golems] the same
+        "fireworks",                                           // [fireworks] the same
+        "cartographer",                                        // [cartographer] likewise
+        "emerald",                                             // [emerald] the emerald trader's: see outfit()
+        "diver",                                               // [diver] its own too: see outfit()
+        "netherrunner",                                        // [nether] nor this: see outfit()
     };
 
     /** [caves] The cave dweller's outfit, after the trades drawn in StationTask's order (those before it). */
     public static final int CAVE_OUTFIT = 19;
+    /** [fletcher] [golems] The fletcher's and the golem keeper's own outfits, after the cave dweller's. */
+    public static final int FLETCHER_OUTFIT = 20, GOLEMS_OUTFIT = 21;
+    /** [fireworks] The fireworks maker's outfit, after the golem keeper's: the sooty apron, the goggles, the bright scarf. */
+    public static final int FIREWORKS_OUTFIT = 22;
+    /** [cartographer] The cartographer's outfit, after the fireworks maker's. */
+    public static final int CARTO_OUTFIT = 23;
+    /** [emerald] The emerald trader's outfit: the merchant's green coat, the wide hat, the pack (tools/folk_art.py). */
+    public static final int EMERALD_OUTFIT = 24;
+    /** [diver] The diver's outfit, after the emerald trader's. */
+    public static final int DIVER_OUTFIT = 25;
+    /** [nether] The Nether runner's outfit, after the diver's. */
+    public static final int NETHER_OUTFIT = 26;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -142,6 +160,57 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"cavedweller_haft", "body", "cavedweller"},
         {"cavedweller_pickhead", "body", "cavedweller"},
         {"cavedweller_rope", "body", "cavedweller"},
+        {"fletcher_cap", "head", "fletcher"},
+        {"fletcher_peak", "head", "fletcher"},
+        {"fletcher_feather", "head", "fletcher"},
+        {"fletcher_apron", "body", "fletcher"},
+        {"fletcher_quiver", "body", "fletcher"},
+        {"fletcher_fletch", "body", "fletcher"},
+        {"golemkeeper_cap", "head", "golemkeeper"},
+        {"golemkeeper_apron", "body", "golemkeeper"},
+        {"golemkeeper_scarf", "body", "golemkeeper"},
+        {"golemkeeper_scarf_end", "body", "golemkeeper"},
+        {"golemkeeper_shears", "body", "golemkeeper"},
+        {"hair_fall", "head", "look"},
+        {"hair_bun", "head", "look"},
+        {"hair_tail", "head", "look"},
+        {"hair_braid", "head", "look"},
+        {"hair_knot", "head", "look"},
+        {"hair_puff", "head", "look"},
+        {"beard_long", "head", "look"},
+        {"spectacles", "head", "look"},
+        {"pipe", "head", "pipe"},
+        {"cane_right", "right_arm", "cane"},
+        {"cane_left", "left_arm", "cane"},
+        {"fireworks_apron", "body", "fireworks"},
+        {"fireworks_band", "head", "fireworks"},
+        {"fireworks_lens_right", "head", "fireworks"},
+        {"fireworks_lens_left", "head", "fireworks"},
+        {"fireworks_scarf", "body", "fireworks"},
+        {"fireworks_tail", "body", "fireworks"},
+        {"fireworks_rocket_a", "body", "fireworks"},
+        {"fireworks_rocket_b", "body", "fireworks"},
+        {"cartographer_specs", "head", "cartographer"},
+        {"cartographer_quill", "head", "cartographer"},
+        {"cartographer_vane", "head", "cartographer"},
+        {"cartographer_compass", "body", "cartographer"},
+        {"cartographer_roll", "body", "cartographer"},
+        {"emerald_crown", "head", "emerald"},
+        {"emerald_brim", "head", "emerald"},
+        {"emerald_pack", "body", "emerald"},
+        {"emerald_roll", "body", "emerald"},
+        {"emerald_lamp", "body", "emerald"},
+        {"emerald_purse", "body", "emerald"},
+        {"diver_hood", "head", "diver"},
+        {"diver_band", "head", "diver"},
+        {"diver_goggles", "head", "diver"},
+        {"diver_line", "body", "diver"},
+        {"diver_rope", "body", "diver"},
+        {"diver_knife", "body", "diver"},
+        {"netherrunner_helm", "head", "netherrunner"},
+        {"netherrunner_neckguard", "head", "netherrunner"},
+        {"netherrunner_crest", "head", "netherrunner"},
+        {"netherrunner_satchel", "body", "netherrunner"},
         // END GENERATED WEARERS
     };
 
@@ -182,6 +251,8 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
             ModelPart parent = switch (WEARERS[i][1]) {
                 case "head" -> head;
                 case "body" -> body;
+                case "right_arm" -> rightArm;                 // [individual] a walking stick in its hand
+                case "left_arm" -> leftArm;
                 default -> root;
             };
             worn[i] = parent.getChild(WEARERS[i][0]);
@@ -190,7 +261,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
             String name = WEARERS[i][0];
             wraps[i] = !onHead[i] && (name.contains("apron") || name.contains("shawl") || name.contains("mantle")
                 || name.contains("tape") || name.contains("cloak") || name.contains("cape"));
-            overHelmet[i] = "cavedweller_lamp".equals(name);
+            overHelmet[i] = "cavedweller_lamp".equals(name) || "netherrunner_crest".equals(name);   // [nether] the medallion too
         }
     }
 
@@ -204,8 +275,8 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         head.addOrReplaceChild("beard", CubeListBuilder.create().texOffs(44, 50).addBox(-3.0F, -3.0F, -5.0F, 6.0F, 5.0F, 1.0F), PartPose.ZERO);
         PartDefinition body = root.addOrReplaceChild("body", CubeListBuilder.create().texOffs(0, 18).addBox(-4.0F, 0.0F, -3.0F, 8.0F, 12.0F, 6.0F), PartPose.ZERO);
         body.addOrReplaceChild("coat", CubeListBuilder.create().texOffs(0, 36).addBox(-4.0F, 0.0F, -3.0F, 8.0F, 18.0F, 6.0F, new CubeDeformation(0.5F)), PartPose.ZERO);
-        root.addOrReplaceChild("right_arm", CubeListBuilder.create().texOffs(28, 18).addBox(-3.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(-5.0F, 2.0F, 0.0F));
-        root.addOrReplaceChild("left_arm", CubeListBuilder.create().texOffs(44, 18).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(5.0F, 2.0F, 0.0F));
+        PartDefinition rightArm = root.addOrReplaceChild("right_arm", CubeListBuilder.create().texOffs(28, 18).addBox(-3.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(-5.0F, 2.0F, 0.0F));
+        PartDefinition leftArm = root.addOrReplaceChild("left_arm", CubeListBuilder.create().texOffs(44, 18).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(5.0F, 2.0F, 0.0F));
         root.addOrReplaceChild("right_leg", CubeListBuilder.create().texOffs(28, 34).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(-2.0F, 12.0F, 0.0F));
         root.addOrReplaceChild("left_leg", CubeListBuilder.create().texOffs(44, 34).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F), PartPose.offset(2.0F, 12.0F, 0.0F));
         body.addOrReplaceChild("none_cloak", CubeListBuilder.create().texOffs(64, 0).addBox(-4.5F, -0.6F, 3.6F, 9.0F, 14.0F, 1.0F), PartPose.ZERO);
@@ -294,6 +365,57 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("cavedweller_haft", CubeListBuilder.create().texOffs(64, 24).addBox(-0.5F, -6.0F, 0.0F, 1.0F, 12.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_pickhead", CubeListBuilder.create().texOffs(68, 24).addBox(-3.5F, -7.0F, 0.0F, 7.0F, 1.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_rope", CubeListBuilder.create().texOffs(84, 24).addBox(-6.2F, 7.0F, -2.0F, 2.0F, 4.0F, 4.0F), PartPose.ZERO);
+        head.addOrReplaceChild("fletcher_cap", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 3.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("fletcher_peak", CubeListBuilder.create().texOffs(96, 0).addBox(-3.5F, -8.0F, -7.0F, 7.0F, 1.0F, 3.0F), PartPose.ZERO);
+        head.addOrReplaceChild("fletcher_feather", CubeListBuilder.create().texOffs(116, 0).addBox(-0.5F, -6.0F, -0.5F, 1.0F, 6.0F, 1.0F), PartPose.offsetAndRotation(4.2F, -9.5F, 1.5F, -0.45F, 0.0F, 0.3F));
+        body.addOrReplaceChild("fletcher_apron", CubeListBuilder.create().texOffs(64, 12).addBox(-3.5F, 2.0F, -4.5F, 7.0F, 13.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("fletcher_quiver", CubeListBuilder.create().texOffs(84, 12).addBox(-1.5F, -1.0F, 0.0F, 3.0F, 10.0F, 2.0F), PartPose.offsetAndRotation(0.0F, 2.0F, 3.4F, 0.0F, 0.0F, -0.35F));
+        body.addOrReplaceChild("fletcher_fletch", CubeListBuilder.create().texOffs(96, 12).addBox(-1.0F, -4.0F, 0.5F, 2.0F, 3.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 2.0F, 3.4F, 0.0F, 0.0F, -0.35F));
+        head.addOrReplaceChild("golemkeeper_cap", CubeListBuilder.create().texOffs(64, 28).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 2.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        body.addOrReplaceChild("golemkeeper_apron", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, 1.5F, -4.5F, 8.0F, 15.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("golemkeeper_scarf", CubeListBuilder.create().texOffs(64, 17).addBox(-4.5F, -1.0F, -3.5F, 9.0F, 2.0F, 7.0F, new CubeDeformation(0.25F)), PartPose.ZERO);
+        body.addOrReplaceChild("golemkeeper_scarf_end", CubeListBuilder.create().texOffs(100, 0).addBox(0.8F, 0.6F, -5.6F, 2.0F, 6.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("golemkeeper_shears", CubeListBuilder.create().texOffs(108, 0).addBox(-5.6F, 8.5F, -1.0F, 1.0F, 3.0F, 2.0F), PartPose.ZERO);
+        head.addOrReplaceChild("hair_fall", CubeListBuilder.create().texOffs(0, 60).addBox(-4.0F, -0.5F, 3.6F, 8.0F, 6.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("hair_bun", CubeListBuilder.create().texOffs(20, 60).addBox(-2.0F, -9.5F, 4.2F, 4.0F, 3.0F, 3.0F), PartPose.ZERO);
+        head.addOrReplaceChild("hair_tail", CubeListBuilder.create().texOffs(36, 60).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 8.0F, 2.0F), PartPose.offsetAndRotation(0.0F, -7.5F, 4.4F, 0.42F, 0.0F, 0.0F));
+        head.addOrReplaceChild("hair_braid", CubeListBuilder.create().texOffs(46, 60).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 11.0F, 2.0F), PartPose.offsetAndRotation(0.0F, -4.5F, 4.3F, 0.2F, 0.0F, 0.0F));
+        head.addOrReplaceChild("hair_knot", CubeListBuilder.create().texOffs(56, 60).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 3.0F, 2.0F), PartPose.offsetAndRotation(0.0F, -4.0F, 4.4F, 0.55F, 0.0F, 0.0F));
+        head.addOrReplaceChild("hair_puff", CubeListBuilder.create().texOffs(64, 60).addBox(-4.0F, -10.0F, -4.0F, 8.0F, 5.0F, 8.0F, new CubeDeformation(1.0F)), PartPose.ZERO);
+        head.addOrReplaceChild("beard_long", CubeListBuilder.create().texOffs(96, 60).addBox(-3.0F, 2.0F, -5.0F, 6.0F, 6.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("spectacles", CubeListBuilder.create().texOffs(0, 76).addBox(-4.0F, -7.0F, -5.0F, 8.0F, 3.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("pipe", CubeListBuilder.create().texOffs(20, 76).addBox(-0.5F, -0.5F, -4.0F, 1.0F, 1.0F, 4.0F).texOffs(30, 76).addBox(-1.0F, -2.5F, -5.0F, 2.0F, 2.0F, 2.0F), PartPose.offsetAndRotation(-2.5F, -2.0F, -4.5F, 0.3F, 0.25F, 0.0F));
+        rightArm.addOrReplaceChild("cane_right", CubeListBuilder.create().texOffs(40, 76).addBox(-0.5F, -1.0F, -0.5F, 1.0F, 14.0F, 1.0F).texOffs(44, 76).addBox(-0.5F, -2.0F, -2.5F, 1.0F, 1.0F, 3.0F), PartPose.offset(-1.0F, 9.0F, -1.0F));
+        leftArm.addOrReplaceChild("cane_left", CubeListBuilder.create().texOffs(52, 76).addBox(-0.5F, -1.0F, -0.5F, 1.0F, 14.0F, 1.0F).texOffs(56, 76).addBox(-0.5F, -2.0F, -2.5F, 1.0F, 1.0F, 3.0F), PartPose.offset(1.0F, 9.0F, -1.0F));
+        body.addOrReplaceChild("fireworks_apron", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, 1.5F, -4.5F, 8.0F, 15.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("fireworks_band", CubeListBuilder.create().texOffs(82, 0).addBox(-4.0F, -9.0F, -4.0F, 8.0F, 2.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("fireworks_lens_right", CubeListBuilder.create().texOffs(114, 0).addBox(-3.2F, -9.2F, -5.7F, 2.0F, 2.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("fireworks_lens_left", CubeListBuilder.create().texOffs(114, 0).addBox(1.2F, -9.2F, -5.7F, 2.0F, 2.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("fireworks_scarf", CubeListBuilder.create().texOffs(64, 20).addBox(-4.5F, -0.5F, -3.5F, 9.0F, 2.0F, 7.0F, new CubeDeformation(0.3F)), PartPose.ZERO);
+        body.addOrReplaceChild("fireworks_tail", CubeListBuilder.create().texOffs(98, 20).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F), PartPose.offsetAndRotation(2.5F, 0.8F, -4.6F, -0.14F, 0.0F, 0.1F));
+        body.addOrReplaceChild("fireworks_rocket_a", CubeListBuilder.create().texOffs(64, 32).addBox(-3.6F, 5.5F, -5.3F, 1.0F, 4.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("fireworks_rocket_b", CubeListBuilder.create().texOffs(70, 32).addBox(-2.3F, 6.5F, -5.3F, 1.0F, 3.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("cartographer_specs", CubeListBuilder.create().texOffs(64, 0).addBox(-3.5F, -7.0F, -4.6F, 7.0F, 3.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("cartographer_quill", CubeListBuilder.create().texOffs(96, 0).addBox(-0.5F, -5.0F, -0.5F, 1.0F, 6.0F, 1.0F), PartPose.offsetAndRotation(-4.4F, -6.0F, 1.0F, -0.45F, 0.0F, -0.2F));
+        head.addOrReplaceChild("cartographer_vane", CubeListBuilder.create().texOffs(100, 0).addBox(-0.5F, -5.5F, -1.6F, 1.0F, 4.0F, 2.0F), PartPose.offsetAndRotation(-4.4F, -6.0F, 1.0F, -0.45F, 0.0F, -0.2F));
+        body.addOrReplaceChild("cartographer_compass", CubeListBuilder.create().texOffs(108, 0).addBox(-1.0F, 3.0F, -3.9F, 2.0F, 2.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("cartographer_roll", CubeListBuilder.create().texOffs(64, 8).addBox(3.6F, 2.5F, -6.0F, 3.0F, 3.0F, 11.0F), PartPose.ZERO);
+        head.addOrReplaceChild("emerald_crown", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -12.0F, -4.0F, 8.0F, 3.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("emerald_brim", CubeListBuilder.create().texOffs(64, 11).addBox(-8.0F, -9.0F, -8.0F, 16.0F, 1.0F, 16.0F), PartPose.ZERO);
+        body.addOrReplaceChild("emerald_pack", CubeListBuilder.create().texOffs(64, 28).addBox(-4.0F, 0.5F, 3.6F, 8.0F, 10.0F, 4.0F), PartPose.ZERO);
+        body.addOrReplaceChild("emerald_roll", CubeListBuilder.create().texOffs(88, 28).addBox(-5.0F, -2.5F, 4.1F, 10.0F, 3.0F, 3.0F), PartPose.ZERO);
+        body.addOrReplaceChild("emerald_lamp", CubeListBuilder.create().texOffs(100, 36).addBox(4.2F, 3.0F, 5.0F, 1.0F, 3.0F, 2.0F), PartPose.ZERO);
+        body.addOrReplaceChild("emerald_purse", CubeListBuilder.create().texOffs(114, 28).addBox(2.5F, 8.5F, -4.6F, 2.0F, 3.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("diver_hood", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -10.0F, -4.0F, 8.0F, 10.0F, 8.0F, new CubeDeformation(0.55F)), PartPose.ZERO);
+        head.addOrReplaceChild("diver_band", CubeListBuilder.create().texOffs(96, 0).addBox(-4.0F, -9.0F, -4.0F, 8.0F, 1.0F, 8.0F, new CubeDeformation(0.8F)), PartPose.ZERO);
+        head.addOrReplaceChild("diver_goggles", CubeListBuilder.create().texOffs(64, 20).addBox(-3.5F, -10.4F, -5.6F, 7.0F, 2.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("diver_line", CubeListBuilder.create().texOffs(84, 20).addBox(-0.5F, -7.5F, -0.5F, 1.0F, 15.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 5.5F, -3.75F, 0.0F, 0.0F, 0.62F));
+        body.addOrReplaceChild("diver_rope", CubeListBuilder.create().texOffs(64, 26).addBox(4.2F, 6.5F, -2.0F, 2.0F, 5.0F, 4.0F), PartPose.ZERO);
+        body.addOrReplaceChild("diver_knife", CubeListBuilder.create().texOffs(88, 26).addBox(-5.4F, 8.0F, -1.0F, 1.0F, 4.0F, 2.0F), PartPose.ZERO);
+        head.addOrReplaceChild("netherrunner_helm", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 4.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("netherrunner_neckguard", CubeListBuilder.create().texOffs(64, 12).addBox(-4.5F, -7.0F, 3.6F, 9.0F, 4.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("netherrunner_crest", CubeListBuilder.create().texOffs(104, 0).addBox(-1.0F, -10.0F, -5.6F, 2.0F, 2.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("netherrunner_satchel", CubeListBuilder.create().texOffs(100, 4).addBox(4.0F, 6.0F, -2.5F, 2.0F, 5.0F, 5.0F), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }
@@ -328,6 +450,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         int job = folk.clientJobOrdinal();
         if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
         if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
+        if (job == AssistantEntity.StationTask.FLETCHER.ordinal()) return FLETCHER_OUTFIT;   // [fletcher] apron, quiver, feathered cap
+        if (job == AssistantEntity.StationTask.GOLEMS.ordinal()) return GOLEMS_OUTFIT;       // [golems] riveted apron, orange scarf
+        if (job == AssistantEntity.StationTask.FIREWORKS.ordinal()) return FIREWORKS_OUTFIT;   // [fireworks] "fireworks"
+        if (job == AssistantEntity.StationTask.CARTOGRAPHER.ordinal()) return CARTO_OUTFIT;   // [cartographer] the scholar's coat
+        if (job == AssistantEntity.StationTask.EMERALD.ordinal()) return EMERALD_OUTFIT;   // [emerald] "emerald": the merchant's coat
+        if (job == AssistantEntity.StationTask.DIVER.ordinal()) return DIVER_OUTFIT; // [diver] "diver": the wetsuit and goggles
+        if (job == AssistantEntity.StationTask.NETHER.ordinal()) return NETHER_OUTFIT;   // [nether] "netherrunner"
         return Math.floorMod(job, CAVE_OUTFIT);
     }
 
@@ -338,15 +467,20 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
 
         // Dress for the trade. A helmet goes on instead of the trade's hat, not on top of it.
         String trade = tradeOf(folk);
-        boolean helmet = !folk.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
+        // [nether] A gold charm on the brow is no helmet: the runner's own skullcap stays on under it (NetherClient.CharmLayer).
+        boolean helmet = !folk.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
+            && !folk.getItemBySlot(EquipmentSlot.HEAD).is(com.jrpetty.mcassistant.item.NetherItems.GOLD_CHARM.get());
         boolean ownHat = FashionLayer.hatOn(folk);          // [fashion] off work, its own hat instead of its trade's
+        boolean bare = com.jrpetty.mcassistant.entity.Manner.bareOf(folk.clientManner());   // [individual] its work hat off of an evening
         for (int i = 0; i < worn.length; i++) {
             String by = wornBy[i];
-            boolean show = by.equals("beard")
-                ? FolkLooks.bearded(folk) || "lumberjack".equals(trade)
-                : by.equals(trade);
-            worn[i].visible = show && !(onHead[i] && !by.equals("beard") && ((helmet && !overHelmet[i]) || ownHat));
+            // [individual] The beard and the hair's own boxes are the folk's own picture's to show or leave clear
+            // (client/FolkFaces): a beard on the bearded, a bun on the one who wears one.
+            boolean own = by.equals("beard") || by.equals("look");
+            boolean show = own || by.equals(trade);
+            worn[i].visible = show && !(onHead[i] && !own && ((helmet && !overHelmet[i]) || ownHat || bare));
         }
+        individualParts(folk, trade, helmet, ownHat);   // [individual] its hair under a hat, its pipe, its stick
         // [guard-kit] Armour over the clothes, not under them: the hair under a helmet, the coat under a breastplate or
         // leggings, and what is worn round the body (an apron, a shawl, a mantle, a cape) under a breastplate.
         boolean breastplate = folk.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof net.minecraft.world.item.ArmorItem;
@@ -363,7 +497,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         head.yScale = headSize;
         head.zScale = headSize;
         if (young) {
-            for (int i = 0; i < worn.length; i++) worn[i].visible = false;
+            for (int i = 0; i < worn.length; i++) if (!"look".equals(wornBy[i])) worn[i].visible = false;   // [individual] its own hair stays
         }
 
         // Walking: legs and arms in step, as a player walks.
@@ -415,6 +549,33 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         }
 
         swingTool(folk, rightMain ? HumanoidArm.RIGHT : HumanoidArm.LEFT);
+        FolkPoses.apply(this, folk, limbSwing, limbSwingAmount, ageInTicks, young);   // [individual] its gait and its moments
+    }
+
+    /** [individual] Its own parts: the hair's boxes put away under a hat (a bun and curls) or a hood (the rest), the pipe
+     *  only while it smokes it, the walking stick in the hand it does not work with. */
+    private void individualParts(VillageFolkEntity folk, String trade, boolean helmet, boolean ownHat) {
+        boolean hatted = helmet || ownHat || "none".equals(trade);
+        boolean hooded = helmet || "none".equals(trade) || "scout".equals(trade) || "hunter".equals(trade);
+        for (int i = 0; i < worn.length; i++) {
+            if (onHead[i] && worn[i].visible && trade.equals(wornBy[i])) hatted = true;
+        }
+        int marks = folk.clientMarks();
+        boolean sitting = folk.getPose() == net.minecraft.world.entity.Pose.SITTING;
+        boolean stick = com.jrpetty.mcassistant.entity.Individual.stickOf(marks) && !sitting && folk.getOffhandItem().isEmpty();
+        boolean rightHanded = folk.getMainArm() == HumanoidArm.RIGHT;
+        int idle = com.jrpetty.mcassistant.entity.Manner.idleOf(folk.clientManner());
+        for (int i = 0; i < worn.length; i++) {
+            String name = WEARERS[i][0];
+            switch (name) {
+                case "hair_bun", "hair_puff" -> worn[i].visible = !hatted;
+                case "hair_tail", "hair_braid", "hair_knot", "hair_fall" -> worn[i].visible = !hooded;
+                case "pipe" -> worn[i].visible = idle == com.jrpetty.mcassistant.entity.Manner.PIPE;
+                case "cane_left" -> worn[i].visible = stick && rightHanded;
+                case "cane_right" -> worn[i].visible = stick && !rightHanded;
+                default -> { }
+            }
+        }
     }
 
     /** The swing of a pick, an axe or a sword — the player's own, move for move. */

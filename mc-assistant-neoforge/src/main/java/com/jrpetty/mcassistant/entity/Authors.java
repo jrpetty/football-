@@ -187,7 +187,122 @@ public final class Authors {
         lives(out, c, shelf, town);
         howTos(out, c, shelf, town);
         story(out, c, shelf, town);
+        woven(out, c, shelf, town);                                         // [weave] the flood, the great fire, the lost below, the smugglers, the works, the auction
         return out;
+    }
+
+    // ------------------------------------------------------------------ [weave] the new events' books
+
+    private static final Pattern FLOOD_OF = Pattern.compile("^the (great )?flood of day (\\d+)");
+    private static final Pattern BURNT = Pattern.compile("^the fire burnt (\\d+) blocks? of (.+?):");
+    private static final Pattern LOST_BELOW = Pattern.compile("^(.+?) was lost in the caves");
+
+    /**
+     * The town's new events, made books: a history of each flood and of a great fire (a dozen blocks or more burnt, and
+     * the rebuilding after); the life of a cave dweller lost below; the tale of the smugglers once their story is over;
+     * a poem for each great work opened; and a ballad of the auction's most famous sale.
+     */
+    private static void woven(List<Idea> out, TradeBooks.Ctx c, LibraryRecords.Shelf shelf, String town) {
+        UUID id = c.v.id();
+        long founded = Chronicle.foundedOn(id);
+        List<String> founders = new ArrayList<>();
+        for (VillageFolkEntity f : c.folk) if (f.persona().origin().equals("a founder of the village")) founders.add(f.displayNameCap());
+        String motto = Heraldry.motto(id);
+        String age = Villages.ageOf(id).label;
+        int folk = Villages.headcount(id);
+        for (Chronicle.Entry e : c.chronicle) {
+            String low = e.text().toLowerCase(Locale.ROOT).trim();
+            // A flood: from the water's coming up to the levee after.
+            Matcher fl = FLOOD_OF.matcher(low);
+            if (fl.find()) {
+                List<Tales.Event> ev = new ArrayList<>();
+                for (Chronicle.Entry x : c.chronicle) {
+                    if (x.day() < e.day() - 1 || x.day() > e.day() + 12) continue;
+                    String l = x.text().toLowerCase(Locale.ROOT);
+                    if (!(l.contains("flood") || l.contains("river") || l.contains("levee") || l.contains("high ground") || l.contains("low ground")
+                            || l.contains("rain"))) continue;
+                    // "The great flood of day 45: the river came up..." told on its day as "the great flood: the river came up...".
+                    ev.add(event(c, x.day(), x.text().replaceFirst("(?i)^(the (great )?flood) of day \\d+:", "$1:")));
+                }
+                if (ev.size() >= 2) history(out, shelf, c, new Tales.History("FLOOD", town, fl.group(2), ev, founders, age, folk,
+                    motto == null ? "" : motto, founded), 8, e.day());
+            }
+            // A great fire: a dozen blocks or more of a building burnt, and the rebuilding after.
+            Matcher bu = BURNT.matcher(low);
+            if (bu.find() && Integer.parseInt(bu.group(1)) >= 12) {
+                List<Tales.Event> ev = new ArrayList<>();
+                for (Chronicle.Entry x : c.chronicle) {
+                    if (x.day() < e.day() || x.day() > e.day() + 10) continue;
+                    String l = x.text().toLowerCase(Locale.ROOT);
+                    if (l.contains("fire") || l.contains("burnt") || l.contains("rebuilt") || l.contains("bucket") || l.contains("forges")
+                            || l.contains("bell rang")) ev.add(event(c, x.day(), x.text().replaceFirst("(?i) after the fire of day \\d+", " after the fire")));
+                }
+                if (!ev.isEmpty()) history(out, shelf, c, new Tales.History("GREATFIRE", town, Long.toString(e.day() + 1), ev, founders, age, folk,
+                    motto == null ? "" : motto, founded), 8, e.day());
+            }
+            // A cave dweller lost below: its life, whatever its age.
+            Matcher lb = LOST_BELOW.matcher(e.text().trim());
+            if (lb.find()) {
+                String name = lb.group(1);
+                for (Ledger.Grave g : c.graves) {
+                    if (!g.name().equals(name) || shelf.wrote("life:" + name)) continue;
+                    boolean dup = false;
+                    for (Idea i : out) dup |= i.subject().equals("life:" + name);
+                    if (dup) break;
+                    int years = ageAtDeath(c, g);
+                    Tales.Life l = new Tales.Life(g.name(), false, years, g.trade().toLowerCase(Locale.ROOT), 0, "", List.of(), "", "", "", false, "",
+                        g.born(), g.parents(), g.partner(), childrenOf(c, g.name()), List.of(), List.of(), "", finds(id, g.name()), List.of(), g.died(),
+                        g.cause(), "who went down into the caves for the town, and did not come home", mentions(c, g.name()));
+                    out.add(new Idea("life:" + name, "LIFE", 6, g.died(), null, null, closeTo(c, g.name(), g.partner()),
+                        f -> Tales.life(l, town, voice(f), knewAs(f, g.name(), g.partner(), c), c.day)));
+                    break;
+                }
+            }
+        }
+        // The smugglers' story, once it is over: told from what was found out, step by step, and how it ended.
+        for (QuestBook.Quest q : QuestBook.all()) {
+            if (!id.equals(q.village) || !"story.smugglers".equals(q.script) || q.open() || q.state != QuestBook.State.DONE) continue;
+            String subject = "history:SMUGGLERS:" + q.id;
+            if (shelf.wrote(subject)) continue;
+            List<Tales.Event> ev = new ArrayList<>();
+            if (!q.offer.isEmpty()) ev.add(new Tales.Event(q.posted, "How it began", q.giverName + " came to " + q.playerName + " with it: \"" + q.offer + "\""));
+            for (QuestBook.Step s : q.steps) {
+                if (!s.done || s.note.isEmpty()) continue;
+                ev.add(new Tales.Event(q.taken, s.chapter.isEmpty() ? "What was found out" : s.chapter, s.note));
+            }
+            if (!q.ending.isEmpty()) ev.add(new Tales.Event(q.finished, "How it ended", q.ending));
+            if (ev.size() >= 3) history(out, shelf, c, new Tales.History("SMUGGLERS", town, Integer.toString(q.id), ev, founders, age, folk,
+                motto == null ? "" : motto, founded), 8, q.finished);
+        }
+        // A great work opened: a poem for it.
+        for (net.minecraft.nbt.Tag t : CivicRecord.list(CivicRecord.town(id), "worksDone")) {
+            if (!(t instanceof net.minecraft.nbt.CompoundTag w)) continue;
+            BigWorks.Work kind = BigWorks.Work.named(w.getString("kind"));
+            Map<String, String> m = words(c, w.getLong("day"));
+            m.put("A", kind == null ? w.getString("title") : kind.the);
+            m.put("B", "day " + w.getLong("day"));
+            if (w.getInt("hands") > 0) m.put("nwords", Quill.spelled(w.getInt("hands")));
+            if (w.getInt("placed") > 0) m.put("stones", Quill.spelled(w.getInt("placed")));
+            poem(out, shelf, c, "WORKS", m, 6, w.getLong("day"), Set.of());
+        }
+        // The auction's most famous sale: a ballad of it.
+        String[] best = null;
+        for (String[] p : Auctions.salesRows(id)) {
+            if (p[3].isEmpty()) continue;
+            int price = parseInt(p[2]);
+            if (price >= 24 && (best == null || price > parseInt(best[2]))) best = p;
+        }
+        if (best != null) {
+            Map<String, String> m = words(c, parse(best[0]));
+            m.put("A", best[3]);
+            m.put("B", JobMarket.a(best[1]));
+            m.put("nwords", Quill.spelled(parseInt(best[2])));
+            poem(out, shelf, c, "AUCTION", m, 5, parse(best[0]), Set.of());
+        }
+    }
+
+    private static int parseInt(String s) {
+        try { return Integer.parseInt(s.trim()); } catch (RuntimeException e) { return 0; }
     }
 
     /** The words every poem may use: the season and the day. */
@@ -356,6 +471,7 @@ public final class Authors {
         mem.sort((a, b) -> b.weight() - a.weight());
         List<Tales.Memory> kept = new ArrayList<>();
         for (Persona.Memory m : mem.subList(0, Math.min(8, mem.size()))) kept.add(new Tales.Memory(m.day(), m.text()));
+        kept.addAll(Backstory.lifeMemories(s));                     // [individual] where it came from, its scar, its keepsake
         kept.sort((a, b) -> Long.compare(a.day(), b.day()));
         AssistantEntity.Deed deed = TradeBooks.deed(t);
         String deeds = deed == null || s.deedCount(deed) <= 0 ? "" : Quill.number(s.deedCount(deed)) + " " + deed.label;
@@ -536,8 +652,9 @@ public final class Authors {
     /** Has this folk the nature or the pastime to write: a reader, the curious, a diarist, a musician (for verse), the teacher? */
     static boolean writerish(VillageFolkEntity f) {
         Persona p = f.persona();
+        if (f.individual().rolled && !f.individual().literate) return false;        // [individual] one who cannot read cannot write
         return p.rolled() && (p.hobby() == Persona.Hobby.READING || p.hobby() == Persona.Hobby.MUSIC || p.quirk().equals("keeps a diary"))
-            || f.life().has(Social.Trait.CURIOUS) || School.isTeacher(f);
+            || f.life().has(Social.Trait.CURIOUS) || School.isTeacher(f) || Dreams.wantsToWrite(f);   // [individual] a dreamer
     }
 
     /** How well this folk would write this book (below nought: not at all). */
@@ -555,6 +672,7 @@ public final class Authors {
         if (p.hobby() == Persona.Hobby.READING) s += 15;
         if (p.quirk().equals("keeps a diary")) s += 10;
         if (f.life().has(Social.Trait.CURIOUS)) s += 10;
+        s += Dreams.writerBonus(f);                                  // [individual] the one who dreams of writing a book
         switch (i.kind()) {
             case "POEM" -> {
                 if (p.hobby() == Persona.Hobby.MUSIC) s += 20;

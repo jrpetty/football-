@@ -80,7 +80,9 @@ public enum TalkTopic {
     JOBS("Any work for me?"),                              // [quests] QuestTalk: its quest, in its own words
     QUEST_YES("I'll do it."),                              // [quests] take the quest on
     QUEST_NO("Not just now."),                             // [quests] leave it for somebody else
-    QUEST_CHOICE("");                                      // [quests] a quest's choice (the text is its key)
+    QUEST_CHOICE(""),                                      // [quests] a quest's choice (the text is its key)
+    MAPS("What maps have you?"),                           // [cartographer] Cartographers: explorer maps, a commission
+    NETHER("What's it like in the Nether?");               // [nether] NetherGuests: the runners' report; an ask, going along, the chart
 
     public final String line;
 

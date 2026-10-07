@@ -139,6 +139,8 @@ public final class Scouts {
         @Nullable Spying.Mission mission;
         /** [caves] A cave dweller's day down the caves, not a scout's over the land (CaveDwellers): the cave's part of it. */
         @Nullable CaveDwellers.Delve delve;
+        /** [emerald] The emerald trader's walk to a village of villagers and home (EmeraldTrader): its trip's part of it. */
+        @Nullable EmeraldTrader.Venture venture;
 
         Expedition(UUID village, BlockPos home, int bearing, BlockPos target) {
             this.village = village;
@@ -155,6 +157,8 @@ public final class Scouts {
         @Nullable public Spying.Mission mission() { return mission; }
         /** [caves] The cave dweller's day in the caves (CaveDwellers); null for a scout's. */
         @Nullable public CaveDwellers.Delve delve() { return delve; }
+        /** [emerald] The emerald trader's trip (EmeraldTrader); null for a scout's. */
+        @Nullable public EmeraldTrader.Venture venture() { return venture; }
     }
 
     /** What the scouts have come home with, for the next morning assembly. */
@@ -434,6 +438,7 @@ public final class Scouts {
         Expedition e = f.expedition();
         if (e == null) return false;
         if (e.delve != null) return CaveDwellers.drive(level, f, e);          // [caves] a cave dweller's day down the caves
+        if (e.venture != null) return EmeraldTrader.drive(level, f, e);       // [emerald] the trader's walk to the villagers and home
         keepAwake(level, f, e);
         long time = level.getDayTime() % 24000L;
         // Something hostile close by: away from it, quick.
@@ -924,7 +929,7 @@ public final class Scouts {
     // ------------------------------------------------------------------ helpers
 
     @Nullable
-    private static Mob foe(ServerLevel level, VillageFolkEntity f) {
+    static Mob foe(ServerLevel level, VillageFolkEntity f) {                  // [emerald] the trader's road too
         Mob best = null;
         double near = 8.0 * 8.0;
         for (Mob m : level.getEntitiesOfClass(Mob.class, new AABB(f.blockPosition()).inflate(8), x -> x instanceof Enemy && x.isAlive())) {
@@ -962,7 +967,7 @@ public final class Scouts {
     }
 
     /** The ground round the scout kept awake as it goes, as a caravan's is. */
-    private static void keepAwake(ServerLevel level, VillageFolkEntity f, Expedition e) {
+    static void keepAwake(ServerLevel level, VillageFolkEntity f, Expedition e) {       // [emerald] the trader's road too
         BlockPos here = f.blockPosition();
         if (e.window != null && e.window.distSqr(here) < 16 * 16) return;
         if (e.window != null) ChunkLoad.setLoaded(level, owner(f), e.window, 2, false);
@@ -979,6 +984,7 @@ public final class Scouts {
     public static void abandon(ServerLevel level, VillageFolkEntity f) {
         Expedition e = f.expedition();
         if (e == null) return;
+        if (e.venture != null) EmeraldTrader.abandon(level, f, e);          // [emerald] its pack donkey let go
         release(level, f, e);
         f.expedition(null);
     }

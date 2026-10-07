@@ -149,6 +149,7 @@ public final class Contentment {
         feasts += Perks.contentment(id, good, bad);               // [perks] the new civics, the wonders, the leader, its legacies
         int score = Math.max(0, Math.min(100, foodPts + homesPts + moodPts + safety + amenities + wages + rest + feasts));
         score = Math.max(0, Math.min(100, score + WarAndPeace.contentment(id, good, bad)));   // [war-peace] war-weariness
+        score = Math.max(0, Math.min(100, score + Identity.contentment(id, day, good, bad)));   // [identity] its ways, laws, rulers, traits
         return new View(score, word(score), foodPts, homesPts, moodPts, safety, amenities, wages, good, bad);
     }
 

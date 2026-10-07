@@ -1389,6 +1389,7 @@ public final class CityTree {
         if (d.containsKey(Civic.SCHOLARS_ENDOWMENT)) { total += SCHOLARS_POINTS; why.add("the Scholars' Endowment " + SCHOLARS_POINTS); }
         if (d.containsKey(Civic.SURVEYORS_OFFICE)) { total += SURVEY_POINTS; why.add("the Surveyors' Office " + SURVEY_POINTS); }
         total += Reigns.researchPoints(village, why);
+        total += Ethos.research(village, why);                          // [identity] a learned, forward-looking or bookish town
         if (total < 1) { why.add("never less than 1"); total = 1; }
         int pct = 0;
         if (d.containsKey(Civic.GRAND_LIBRARY) && wonderOf(village, Civic.GRAND_LIBRARY)) { pct += LIBRARY_RESEARCH; why.add("the Grand Library +" + LIBRARY_RESEARCH + "%"); }

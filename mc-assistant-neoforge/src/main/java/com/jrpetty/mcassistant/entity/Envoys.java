@@ -237,6 +237,7 @@ public final class Envoys {
             case EASY, STEADY, PRICKLY -> 2;
             case WARY -> 1;
         };
+        keen = Math.max(0, Math.min(5, keen + Ethos.envoyKeen(x)));   // [identity] a peaceable or mercantile town sends more
         if (rng.nextInt(6) >= keen) return null;
         int r = Ledger.relation(x, y);
         Diplomacy.Terms terms = Diplomacy.terms(r);
@@ -245,6 +246,7 @@ public final class Envoys {
         if (Ledger.note(x, "envoyed/" + y) == null && Ledger.note(y, "envoyed/" + x) == null) return Errand.GREETING;
         if (terms == Diplomacy.Terms.FEUD || terms == Diplomacy.Terms.UNEASY) {
             if (t.kindly() || (t == Temper.STEADY || t == Temper.CURIOUS) && rng.nextBoolean()) return Errand.PEACE;
+            if (Ethos.seeksPeace(x) && rng.nextBoolean()) return Errand.PEACE;   // [identity] a peaceable town seeks a peace
             if (bigger && (t == Temper.SHREWD || t == Temper.PRICKLY) && Diplomacy.tributeDue(y, day)) return Errand.TRIBUTE;
             if (t == Temper.PRICKLY && crowded) return Errand.COMPLAINT;
             return null;

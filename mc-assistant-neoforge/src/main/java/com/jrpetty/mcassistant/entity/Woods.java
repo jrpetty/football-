@@ -156,7 +156,8 @@ public final class Woods {
     @Nullable
     private static Errand next(VillageFolkEntity f, ServerLevel level, WorkZone z, long now) {
         int saplings = f.countCarried(s -> s.is(ItemTags.SAPLINGS));
-        if (saplings < KEEP) {
+        Kitchen.apples(f, level);                                    // [kitchen] the apples under the felled trees, for the cider
+        if (saplings < KEEP || Kitchen.applesWanted(level, f)) {    // [kitchen] a crown shaken for its apples too
             BlockPos crown = nearestCrown(level, f, z);
             if (crown != null) return new Errand(Doing.SHAKE, crown, now);
         }

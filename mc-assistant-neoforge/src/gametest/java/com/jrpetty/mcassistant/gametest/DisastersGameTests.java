@@ -62,13 +62,15 @@ import java.util.function.Predicate;
  *     planks (the stores go down by as many), waiting when the planks run short; its household sleeps at a
  *     neighbour's till it is done.</li>
  * <li><b>dd04</b>: a forced flood on a river beside a low street: water only in empty cells a block over the river,
- *     the folk in the low house gets out to the high ground, nobody drowns, and when it drains every block in the
- *     ground round it is as it was.</li>
+ *     nothing else in the ground round it touched, the folk in the low house gets out to the high ground, nobody
+ *     drowns, and when it drains every cell of it is as it was and no water is left anywhere (what the town's own
+ *     work changed meanwhile is told, not counted).</li>
  * <li><b>dd05</b>: after the flood the town raises a levee along the bank out of the stores' earth, and the same
  *     flood stops at it: no water on the low ground, none in the house.</li>
  * <li><b>dd06</b>: a forced drought: a dry field's crops grow at under three fifths of their pace (a watered field's
  *     not at all slowed); then the town digs irrigation through the dry field out of the pond, and it is wet.</li>
- * <li><b>dd07</b>: never ruinous: a fire on three houses at once; the third is never let burn.</li>
+ * <li><b>dd07</b>: never ruinous: one fire along three houses at once (every flame of it alight); the third is
+ *     never let burn.</li>
  * </ul>
  */
 @GameTestHolder("mc_assistant")
@@ -85,6 +87,7 @@ public class DisastersGameTests {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         level.setDayTime(2000);
+        level.updateSkyBrightness();
         Kit.hold(level, x, Z, r);
         Kit.prepare(level, x, Z, r);
         VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x, Z), 0.0F);
@@ -192,8 +195,8 @@ public class DisastersGameTests {
         final int[] firesBefore = { Annals.fires(id) };
         helper.onEachTick(() -> {
             long t = helper.getTick();
-            if (level.getDayTime() % 24000L > 10000) level.setDayTime(2000);
-            for (VillageFolkEntity f : folk) if (f.breakNowForTests()) level.setDayTime(level.getDayTime() + 200);
+            if (level.getDayTime() % 24000L > 10000) { level.setDayTime(2000); level.updateSkyBrightness(); }
+            for (VillageFolkEntity f : folk) if (f.breakNowForTests()) { level.setDayTime(level.getDayTime() + 200); level.updateSkyBrightness(); }
             if (spark[0] == null) {
                 BlockState st = level.getBlockState(forge);
                 if (t < 10 || !st.getValue(AbstractFurnaceBlock.LIT)) {
@@ -287,15 +290,15 @@ public class DisastersGameTests {
         final long[] outAt = { -1 };
         helper.onEachTick(() -> {
             long t = helper.getTick();
-            if (level.getDayTime() % 24000L > 10000) level.setDayTime(2000);
-            for (VillageFolkEntity f : folk) if (f.breakNowForTests()) level.setDayTime(level.getDayTime() + 200);
+            if (level.getDayTime() % 24000L > 10000) { level.setDayTime(2000); level.updateSkyBrightness(); }
+            for (VillageFolkEntity f : folk) if (f.breakNowForTests()) { level.setDayTime(level.getDayTime() + 200); level.updateSkyBrightness(); }
             int alight = 0;
             for (BlockPos p : lit) if (level.getBlockState(p).is(BlockTags.FIRE)) alight++;
             if (t % 100 == 0) {
                 int[] now = BucketChain.nowForTests(id);
                 StringBuilder sb = new StringBuilder();
                 for (VillageFolkEntity f : folk) sb.append(" | ").append(f.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND).getHoverName().getString())
-                    .append(" ").append(f.blockPosition().toShortString());
+                    .append(" ").append(f.blockPosition().toShortString()).append(" ").append(f.hobbyNow());
                 Kit.log("dd02 @" + t + " alight " + alight + ", chain " + (now == null ? "stood down" : java.util.Arrays.toString(now)) + sb);
             }
             if (alight == 0 && outAt[0] < 0) {
@@ -344,7 +347,8 @@ public class DisastersGameTests {
         Villages.recountBeds(id);
         Homes.tickForTests(level, v);
         // Three planks in the stores to begin with: not enough.
-        Container box = stores(level, id, Kit.surface(level, x - 3, Z - 3), new ItemStack(Items.OAK_PLANKS, 3), new ItemStack(Items.BREAD, 16));
+        final BlockPos chest = Kit.surface(level, x - 3, Z - 3);
+        stores(level, id, chest, new ItemStack(Items.OAK_PLANKS, 3), new ItemStack(Items.BREAD, 16));
         final boolean was = holdFire(level);
         helper.runAtTickTime(5, () -> {
             // A flame against the house's back wall; the brigade sees it, and the house is taken down as it stands.
@@ -378,7 +382,11 @@ public class DisastersGameTests {
                 }
             }
             Kit.log("dd03 the household of the burnt house " + Homes.membersForTests(id, anchor) + " displaced: " + displaced);
-            // Three planks: three go back, and the work waits for more.
+            // Three planks: three go back, and the work waits for more. The stores set to three planks again now: the
+            // town's other work had five ticks at the first three (a sign is two planks), and that is not the fire's.
+            int had = stock(level, id, s -> s.is(ItemTags.PLANKS));
+            Container box = stores(level, id, chest, new ItemStack(Items.OAK_PLANKS, 3), new ItemStack(Items.BREAD, 16));
+            Kit.log("dd03 planks in the stores when the fire was out: " + had + " of the three put there; three again now");
             int put = Rebuilding.workForTests(level, id);
             String waits = Rebuilding.waitsForTests(id);
             int planks = stock(level, id, s -> s.is(ItemTags.PLANKS));
@@ -442,6 +450,19 @@ public class DisastersGameTests {
         return out;
     }
 
+    /** How many blocks of the first look are not the same in the second, and the first few of them, for the log. */
+    private static String differences(Map<BlockPos, BlockState> was, Map<BlockPos, BlockState> now) {
+        int n = 0;
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<BlockPos, BlockState> e : was.entrySet()) {
+            BlockState st = now.get(e.getKey());
+            if (st == null || st.equals(e.getValue())) continue;
+            if (n++ < 8) sb.append(n == 1 ? " (" : ", ").append(e.getKey().toShortString()).append(' ')
+                .append(e.getValue().getBlock().getName().getString()).append(" -> ").append(st.getBlock().getName().getString());
+        }
+        return n + (n > 0 ? sb + (n > 8 ? ", ...)" : ")") : "");
+    }
+
     /** Is this in the house's footprint (within its walls)? */
     private static boolean inHouse(BlockPos anchor, BlockPos p) {
         return Math.abs(p.getX() - anchor.getX()) <= 2 && Math.abs(p.getZ() - anchor.getZ()) <= 2;
@@ -460,15 +481,23 @@ public class DisastersGameTests {
         BlockPos anchor = site[0];
         int w = site[1].getY();
         Homes.tickForTests(level, v);
-        final Map<BlockPos, BlockState> before = look(level, new BlockPos(x - 30, w - 2, Z + 5), new BlockPos(x + 30, w + 6, Z + 44));
+        final BlockPos boxA = new BlockPos(x - 30, w - 2, Z + 5), boxB = new BlockPos(x + 30, w + 6, Z + 44);
+        final Map<BlockPos, BlockState> setUp = look(level, boxA, boxB);
+        // The ground as it is the moment the river comes up; and the flood's cells.
+        final Map<BlockPos, BlockState> before = new HashMap<>();
+        final java.util.Set<BlockPos> cells = new java.util.HashSet<>();
         final VillageFolkEntity[] in = { null };
         final float[] health = { 0 };
         helper.runAtTickTime(5, () -> {
             // A folk in the low house, on its floor, as the river comes up.
             in[0] = another(helper, anchor, id);
             health[0] = in[0].getHealth();
+            // The town's own work has had five ticks at the ground since it was laid out (a road, a lamp, a sign):
+            // told, and the flood measured against the ground as it is now.
+            before.putAll(look(level, boxA, boxB));
+            Kit.log("dd04 the town's own work since the ground was laid out: " + differences(setUp, before));
             int n = Floods.floodForTests(level, id, 1);
-            java.util.Set<BlockPos> cells = new java.util.HashSet<>(Floods.cellsForTests(id));
+            cells.addAll(Floods.cellsForTests(id));
             int[] now = Floods.floodNowForTests(id);
             int wrong = 0, notAir = 0, inside_ = 0, onRiver = 0, onLow = 0;
             for (BlockPos p : cells) {
@@ -501,27 +530,41 @@ public class DisastersGameTests {
             long t = helper.getTick();
             VillageFolkEntity inside = in[0];
             if (t < 6 || inside == null) return;
-            if (level.getDayTime() % 24000L > 10000) level.setDayTime(2000);
-            if (inside.breakNowForTests()) level.setDayTime(level.getDayTime() + 200);
+            if (level.getDayTime() % 24000L > 10000) { level.setDayTime(2000); level.updateSkyBrightness(); }
+            if (inside.breakNowForTests()) { level.setDayTime(level.getDayTime() + 200); level.updateSkyBrightness(); }
             BlockPos at = inside.blockPosition();
             boolean wet = !level.getFluidState(at).isEmpty();
             if (t % 60 == 0) Kit.log("dd04 @" + t + " " + inside.displayNameCap() + " at " + at.toShortString() + (wet ? " in the water" : " dry")
                 + (inHouse(anchor, at) ? " IN THE HOUSE" : "") + ", breath given " + Floods.breathForTests(inside) + "; " + inside.debugLine());
             if (outAt[0] < 0 && !inHouse(anchor, at) && !wet && at.getY() >= w + 2) outAt[0] = t;
             if (outAt[0] >= 0 && t >= outAt[0] + 20) {
+                final Map<BlockPos, BlockState> high = look(level, boxA, boxB);
                 int drained = Floods.drainForTests(level, id);
-                // Every block in the ground round it as it was (a door left open or shut by a folk aside).
-                int changed = 0, water = 0;
+                // The flood taken up exactly: no water left where there was none, every cell of it as it was before
+                // the river came up, and the draining touching nothing else. What else changed while it stood (the
+                // town's own work, a door opened or shut) is told, not counted: the flood never left its cells.
+                int water = 0, notBack = 0, touched = 0;
+                Map<BlockPos, BlockState> after = new HashMap<>();
                 for (Map.Entry<BlockPos, BlockState> e : before.entrySet()) {
-                    BlockState st = level.getBlockState(e.getKey());
+                    BlockPos p = e.getKey();
+                    BlockState st = level.getBlockState(p);
+                    after.put(p, st);
                     if (st.is(Blocks.WATER) && !e.getValue().is(Blocks.WATER)) water++;
-                    if (!st.equals(e.getValue()) && !(st.getBlock() instanceof DoorBlock && e.getValue().getBlock() instanceof DoorBlock)) changed++;
+                    if (cells.contains(p)) {
+                        if (!st.equals(e.getValue())) notBack++;
+                    } else if (!st.equals(high.get(p))) {
+                        touched++;
+                    }
                 }
+                Map<BlockPos, BlockState> others = new HashMap<>(before);
+                others.keySet().removeAll(cells);
                 Kit.log("dd04 out of the house by tick " + outAt[0] + " to " + inside.blockPosition().toShortString() + " (health " + health[0] + " -> "
-                    + inside.getHealth() + "); drained " + drained + " cells; water left where none was: " + water + ", blocks not as they were: " + changed
+                    + inside.getHealth() + "); drained " + drained + " cells; water left where none was: " + water + ", cells not as they were: " + notBack
+                    + ", other blocks the draining changed: " + touched + "; changed meanwhile by the town: " + differences(others, after)
                     + "; levee planned: " + Floods.leveePlanForTests(id).size() + "; record: " + Disasters.logForTests(id));
                 helper.assertTrue(inside.isAlive() && inside.getHealth() >= health[0], "nobody drowned: " + inside.getHealth());
-                helper.assertTrue(water == 0 && changed == 0, "the flood taken up, exactly: " + water + " water left, " + changed + " blocks changed");
+                helper.assertTrue(water == 0 && notBack == 0 && touched == 0, "the flood taken up, exactly: " + water + " water left, " + notBack
+                    + " of its cells not as they were, " + touched + " other blocks changed by the draining");
                 helper.succeed();
             } else if (t >= 1400) {
                 Floods.drainForTests(level, id);
@@ -627,6 +670,7 @@ public class DisastersGameTests {
         VillageFolkEntity first = founder(helper, x, 40);
         ServerLevel level = helper.getLevel();
         level.setDayTime(6000);
+        level.updateSkyBrightness();
         UUID id = first.ownerId();
         BlockPos heart = Kit.surface(level, x, Z);
         int gy = heart.getY() - 1;
@@ -702,13 +746,17 @@ public class DisastersGameTests {
         }
         final boolean was = holdFire(level);
         helper.runAtTickTime(5, () -> {
-            // A line of flames along the backs of all three, every three blocks: one fire.
+            // A line of flames along the backs of all three, every three blocks, on the grass: one fire. (On the ground,
+            // so each stays alight where it is set: a flame in the air goes out at once unless what is beside it burns,
+            // and in the gaps between the houses and against a window nothing does.)
             List<BlockPos> flames = new ArrayList<>();
             for (int fx = houses.get(0).getX() - 3; fx <= houses.get(2).getX() + 3; fx += 3) {
-                BlockPos f = new BlockPos(fx, gy + 2, houses.get(0).getZ() - 4);
+                BlockPos f = new BlockPos(fx, gy + 1, houses.get(0).getZ() - 4);
                 level.setBlock(f, BaseFireBlock.getState(level, f), 3);
                 flames.add(f);
             }
+            int set = 0;
+            for (BlockPos f : flames) if (level.getBlockState(f).is(BlockTags.FIRE)) set++;
             FireBrigade.watchForTests(level, id);
             int[] alight = new int[3];
             for (BlockPos f : flames) {
@@ -720,11 +768,12 @@ public class DisastersGameTests {
             int[] town = FireBrigade.townForTests(id);
             int burning = 0;
             for (int a : alight) if (a > 0) burning++;
-            Kit.log("dd07 a line of " + flames.size() + " flames along three houses: still alight by each house " + java.util.Arrays.toString(alight)
-                + "; the town's fires {fires, blocks, hands} " + java.util.Arrays.toString(town));
+            Kit.log("dd07 a line of " + flames.size() + " flames along three houses (" + set + " alight as set): still alight by each house "
+                + java.util.Arrays.toString(alight) + "; the town's fires {fires, blocks, hands} " + java.util.Arrays.toString(town));
             for (BlockPos f : flames) level.removeBlock(f, false);
             FireBrigade.watchForTests(level, id);
             letFire(level, was);
+            helper.assertTrue(set == flames.size(), "every flame of the line alight as it was set: " + set + " of " + flames.size());
             helper.assertTrue(town[0] == 1, "one fire: " + town[0]);
             helper.assertTrue(burning <= 2, "no fire is let burn more than two buildings: " + java.util.Arrays.toString(alight));
             helper.succeed();

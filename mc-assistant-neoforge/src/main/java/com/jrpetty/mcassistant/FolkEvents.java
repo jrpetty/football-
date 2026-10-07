@@ -73,6 +73,7 @@ public final class FolkEvents {
             return;
         }
         com.jrpetty.mcassistant.entity.Welcome.check((ServerLevel) player.level(), player, now);
+        com.jrpetty.mcassistant.entity.Identity.inTown((ServerLevel) player.level(), player, now);   // [identity] its laws kept by the watch
         if (now.equals(was)) {
             // Still here: they have not been away, so there is nothing to catch up on.
             if (player.tickCount % 400 == 0)
@@ -86,6 +87,7 @@ public final class FolkEvents {
                 + view.title().words).withStyle(ChatFormatting.WHITE));
         player.displayClientMessage(banner, true);
         welcomeBack((ServerLevel) player.level(), player, now);
+        com.jrpetty.mcassistant.entity.Identity.entered((ServerLevel) player.level(), player, now);   // [identity] its character, its laws, its welcome
     }
 
     /** Back after a while away: somebody who knows you catches you up on the news. */

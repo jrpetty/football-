@@ -54,7 +54,16 @@ public final class Persona {
         NETHER("to see this village reach its last age", "I lived to see the village reach the Nether Age"),
         GREAT_WORK("to see a great work raised here", "I saw a great work raised in my own village"),
         GARDEN("to grow the finest garden in the village", "my garden is the talk of the village"),
-        WELL_FED("never to go hungry again", "the stores are full and I've not gone hungry in a long while");
+        WELL_FED("never to go hungry again", "the stores are full and I've not gone hungry in a long while"),
+        // [individual] The dreams of a life (Dreams): each worked towards, each something the game can see come true.
+        MARRY("to marry and settle down", "I married, and settled down"),
+        SEE_THE_SEA("to see the sea", "I saw the sea at last"),
+        OWN_HOUSE("to have a house of my own", "I have a house of my own"),
+        WRITE_BOOK("to write a book", "I wrote a book, and it's in the library"),
+        GO_NETHER("to go through to the Nether", "I've been to the Nether and back"),
+        LEAD("to lead the town one day", "I lead the town"),
+        BIG_FAMILY("to raise a big family", "I've a big family about me"),
+        RICH("to be rich", "I've made my fortune");
 
         public final String hope, done;
 
@@ -369,7 +378,11 @@ public final class Persona {
         return o == null ? 0 : o.affinity;
     }
 
+    /** [identity] The town this folk is of, as its own day last said (VillageFolkEntity.aiStep): how fast it trusts is its town's. */
+    @Nullable UUID town;
+
     public void feelFor(UUID player, String name, int delta) {
+        if (town != null) delta = Treatment.trust(town, delta);             // [identity] an open town warms quicker, a closed one slower
         Opinion o = opinionOf(player, name);
         o.affinity = Math.max(-100, Math.min(100, o.affinity + delta));
     }

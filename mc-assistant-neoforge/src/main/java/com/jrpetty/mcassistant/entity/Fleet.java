@@ -613,6 +613,8 @@ public final class Fleet {
         if (Weather.stormy(level)) return "a storm";
         if (level.isRaining() && !CityTree.sailsInRain(village)) return "the rain";   // [perks] the Navigators sail in it
         if (RestDay.today(village, day)) return "the day of rest";
+        String faith = Beliefs.keptIn(level, village, day);                 // [culture2] the Sea's day: no boat goes out
+        if (faith != null) return faith;
         if (Raids.underAlarm(village)) return "the bell";
         return null;
     }
@@ -1031,6 +1033,22 @@ public final class Fleet {
         else if (junk == 2) out.add(new ItemStack(Items.INK_SAC));
         if (r.nextInt(150) == 0) out.add(Museum.treasure(level, r));
         return out;
+    }
+
+    /** [itemaudit] A net's haul, as a boat's comes up: what a player's cast brings in (item/FishingNetItem). */
+    public static List<ItemStack> netHaul(ServerLevel level, RandomSource r) {
+        return roll(level, r, true);
+    }
+
+    /** [itemaudit] Tests: a haul with the net or with a line. */
+    public static List<ItemStack> rollForTests(ServerLevel level, RandomSource r, boolean net) {
+        return roll(level, r, net);
+    }
+
+    /** [itemaudit] Tests: the tailor's turn at the fleet's nets (Crafts.tailor), now. */
+    @Nullable
+    public static String makeNetForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        return makeNet(level, v, f);
     }
 
     private static void catchOne(ServerLevel level, VillageFolkEntity f, Town t, Hand h) {

@@ -38,8 +38,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * its own, by the well, on a corner of the square where an avenue comes in, or outside the market. Not in the
  * rain, not while the town is gathered, never the watch. A visiting bard still busks on the square by day (Bard).
  *
- * <p><b>The music.</b> A real tune on a real note block: its own, or one lent out of the stores for the evening and
- * put back after (a town with none has no buskers, and its books say so). The tavern's jig and its slow air, the
+ * <p><b>The music.</b> A real tune on a real instrument: [leisure] its lute (its own, one bought out of its hat, or one
+ * lent out of the stores for the evening: Lutes), held in its hand; or with no lute to be had, a note block, its own or
+ * the stores' lent for the evening and put back after (a town with neither has no buskers, and its books say so). The tavern's jig and its slow air, the
  * wedding march, a reel of the street's own, on the busker's own voice (a harp, a flute, a guitar...), the notes
  * rising over its head. A poor hand slips: a note a semitone out now and then, with a puff of smoke for it.
  *
@@ -157,6 +158,8 @@ public final class Buskers {
         final String where;
         final boolean tavern;
         boolean lent;
+        /** [leisure] Playing a lute (and the stores' lute, lent for the evening). */
+        boolean lute, luteLent;
         int skill, tune, beat, notes, take, fee;
         long since, lastHeld, spoke;
         final Set<UUID> tipped = new HashSet<>(), heard = new HashSet<>();
@@ -304,7 +307,8 @@ public final class Buskers {
             Ledger.Building tav = s.tavern ? Tavern.of(v.id()) : null;
             BlockPos look = tav != null ? tav.anchor().relative(tav.facing().getOpposite(), 3) : v.centre();
             f.getLookControl().setLookAt(look.getX() + 0.5, f.getEyeY(), look.getZ() + 0.5);
-            Culture.prop(f, Items.NOTE_BLOCK);
+            if (s.lute) Lutes.inHand(f);                          // [leisure] the lute in its hand
+            else Culture.prop(f, Items.NOTE_BLOCK);
             play(level, s, f);
             if (now % 20 < 4) {
                 if (s.tavern) room(level, v, s, f);
@@ -328,9 +332,12 @@ public final class Buskers {
     @Nullable
     static Stint start(ServerLevel level, Villages.Village v, VillageFolkEntity f, Stint s) {
         UUID id = v.id();
-        if (f.countCarried(Music::instrument) == 0) {
+        boolean[] lent = { false };
+        s.lute = Lutes.ready(level, v, f, lent);                     // [leisure] a lute first: its own, bought, or the stores'
+        s.luteLent = lent[0];
+        if (!s.lute && f.countCarried(st -> st.is(Items.NOTE_BLOCK) && !Leisure.isProp(st)) == 0) {
             if (Crafts.stock(level, v, st -> st.is(Items.NOTE_BLOCK)) <= 0 || !Crafts.take(level, v, st -> st.is(Items.NOTE_BLOCK), 1)) {
-                SHORT.put(id, "a note block to play (eight planks and a redstone): the stores have none to lend");
+                SHORT.put(id, "a lute or a note block to play: the stores have neither to lend (the shop's workshop makes lutes)");
                 return null;
             }
             ItemStack left = f.insertItem(new ItemStack(Items.NOTE_BLOCK));
@@ -374,7 +381,10 @@ public final class Buskers {
         Villages.Village v = Villages.get(s.town);
         VillageFolkEntity f = level.getEntity(s.folk) instanceof VillageFolkEntity g ? g : null;
         if (f != null) {
-            if (s.lent && f.isAlive() && f.removeMatching(Music::instrument, 1) == 1 && v != null) Crafts.store(level, v, new ItemStack(Items.NOTE_BLOCK));
+            if (s.lent && f.isAlive() && f.removeMatching(st -> st.is(Items.NOTE_BLOCK) && !Leisure.isProp(st), 1) == 1 && v != null) {
+                Crafts.store(level, v, new ItemStack(Items.NOTE_BLOCK));
+            }
+            if (s.lute) Lutes.putAway(level, v, f, s.luteLent);           // [leisure] the lute put away; the stores' back to them
             ItemStack off = f.getItemBySlot(EquipmentSlot.OFFHAND);
             if (off.is(Items.NOTE_BLOCK) && Leisure.isProp(off)) {
                 f.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
@@ -421,6 +431,13 @@ public final class Buskers {
 
     /** A note of its tune, on its own voice; a poor hand slips now and then. */
     static void play(ServerLevel level, Stint s, VillageFolkEntity f) {
+        if (s.lute) {                                                  // [leisure] the lute: a better instrument, fewer slips
+            int beat = s.beat++;
+            s.notes++;
+            Lutes.strum(level, f, Lutes.TUNES[Math.floorMod(s.tune, Lutes.TUNES.length)], beat, Math.min(100, s.skill + 20), s.tavern ? 1.1F : 0.95F);
+            if (beat % 4 == 0) f.swing(InteractionHand.MAIN_HAND);
+            return;
+        }
         int[] tune = TUNES[s.tune];
         int beat = s.beat++;
         int note = tune[Math.floorMod(beat, tune.length)];
@@ -439,7 +456,7 @@ public final class Buskers {
 
     /** Passers-by drawn to stop: more for a better busker, and only folk in their own time with nothing on. */
     static void gather(ServerLevel level, Villages.Village v, Stint s, VillageFolkEntity f) {
-        int want = Math.min(CROWD, 1 + s.skill / 20), have = 0;
+        int want = Math.min(CROWD, 1 + s.skill / 20) + (s.lute ? 1 : 0), have = 0;      // [leisure] a lute draws one more
         for (Ear e : LISTENING.values()) if (e.busker.equals(s.folk)) have++;
         if (have >= want) return;
         long now = level.getGameTime();
@@ -449,7 +466,7 @@ public final class Buskers {
             if (LISTENING.containsKey(o.getUUID()) || PLAYING.containsKey(o.getUUID()) || Culture.role(o) != null) continue;
             if (!o.offWorkNow() || !Culture.free(o, level) || Assemblies.attending(o)) continue;
             if (o.life().has(Social.Trait.SHY) && o.getRandom().nextInt(3) != 0) continue;
-            if (o.getRandom().nextDouble() > 0.3 + s.skill / 150.0) continue;
+            if (o.getRandom().nextDouble() > 0.3 + s.skill / 150.0 + (s.lute ? 0.15 : 0.0)) continue;
             LISTENING.put(o.getUUID(), new Ear(s.folk, now, now + 300L + o.getRandom().nextInt(300)));
             have++;
         }
@@ -508,7 +525,7 @@ public final class Buskers {
      */
     static boolean tip(ServerLevel level, Stint s, VillageFolkEntity busker, VillageFolkEntity o, double roll) {
         if (o.isBaby() || o.purse() < 3 || !s.tipped.add(o.getUUID())) return false;
-        double chance = 0.15 + s.skill / 120.0;
+        double chance = 0.15 + s.skill / 120.0 + (s.lute ? 0.1 : 0.0);          // [leisure] a lute fills the hat the quicker
         if (o.life().has(Social.Trait.GENEROUS)) chance += 0.2;
         if (o.life().has(Social.Trait.GRUMPY)) chance -= 0.15;
         chance += Perks.tips(busker);                                   // [perks] Patronage of the Arts, a Patron in office, a Musical busker
@@ -691,7 +708,7 @@ public final class Buskers {
         for (VillageFolkEntity f : all) {
             Record r = record(id, f.getUUID());
             Stint s = PLAYING.get(f.getUUID());
-            String voice = VOICE_WORDS[Math.floorMod(f.getUUID().hashCode(), VOICE_WORDS.length)];
+            String voice = f.countCarried(Lutes::isLute) > 0 ? "lute" : VOICE_WORDS[Math.floorMod(f.getUUID().hashCode(), VOICE_WORDS.length)];   // [leisure]
             lines.add(f.displayNameCap() + " (" + voice + ", skill " + r.skill + "): " + (s != null ? (s.tavern ? "on now at the tavern"
                 : "on now " + s.where + ", " + s.take + " in the hat") : f.getUUID().equals(tavern) ? "plays the tavern every rest day"
                 : r.gaveUp >= 0 ? "gave up busking on day " + r.gaveUp : r.stints == 0 ? "has not busked yet" : "busks " + r.where)
@@ -748,7 +765,7 @@ public final class Buskers {
     public static String stintForTests(UUID folk) {
         Stint s = PLAYING.get(folk);
         return s == null ? null : (s.tavern ? "TAVERN" : "STREET") + " at=" + s.pitch.toShortString() + " take=" + s.take + " notes=" + s.notes
-            + " fee=" + s.fee + " lent=" + s.lent;
+            + " fee=" + s.fee + " lent=" + s.lent + " lute=" + s.lute + " luteLent=" + s.luteLent;
     }
 
     /** Tests: the busker home now (its record kept). */
@@ -799,7 +816,8 @@ public final class Buskers {
             if (s == null) continue;
             f.moveTo(p.at().getX() + 0.5, p.at().getY(), p.at().getZ() + 0.5, f.getYRot(), 0.0F);
             Culture.mark(f, Culture.Role.BUSK, "busking " + s.where);
-            Culture.prop(f, Items.NOTE_BLOCK);
+            if (s.lute) Lutes.inHand(f);                               // [leisure]
+            else Culture.prop(f, Items.NOTE_BLOCK);
             out.add(f.displayNameCap() + " " + s.where);
             if (first == null) {
                 first = f;

@@ -1350,6 +1350,10 @@ public class VillageGameTests {
         helper.onEachTick(() -> {
             long t = helper.getTick();
             if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);   // carrying is day work
+            // The daily break is skipped, the carrier's and the farmer's: this is where the loads go, not the pace. (A
+            // break comes at the folk's own hour and runs to 4500 ticks for an easygoing carrier that is its own
+            // easygoing leader; one that fell on the walk to the furnace outlasted the 5000 ticks below.)
+            if (carrier.breakNowForTests() || farmer[0] != null && farmer[0].breakNowForTests()) level.setDayTime(level.getDayTime() + 200);
             Villages.noteAttempt(village, level.getGameTime());                 // and nobody builds meanwhile
             int ingots = holding(level, store, Items.IRON_INGOT), cobble = holding(level, store, Items.COBBLESTONE);
             if (t % 600 == 0) {
@@ -3114,6 +3118,8 @@ public class VillageGameTests {
     public static void t05_takeover_join(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        // [emerald] The old takeover is off by default now (two peoples, kept apart): on for this test, which keeps it working.
+        com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(true);
         Kit.hold(level, 2900, 2900, 48);
         BlockPos at = Kit.surface(level, 2900, 2900);
         Villager v = EntityType.VILLAGER.create(level);
@@ -3129,6 +3135,7 @@ public class VillageGameTests {
             }
             helper.assertTrue(villagers == 0, "the villager should have been swapped out, " + villagers + " remain");
             helper.assertTrue(folk.size() == 1, "one folk should stand where the villager was, found " + folk.size());
+            com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(null);   // [emerald]
             helper.succeed();
         });
     }
@@ -3140,6 +3147,8 @@ public class VillageGameTests {
     public static void t06_takeover_sweep(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        // [emerald] The old takeover is off by default now (two peoples, kept apart): on for this test, which keeps it working.
+        com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(true);
         Kit.hold(level, 3000, 2900, 48);
         BlockPos at = Kit.surface(level, 3000, 2900);
         VillagerTakeover.suspended = true;
@@ -3162,6 +3171,7 @@ public class VillageGameTests {
                 + (found.isEmpty() ? "" : " — " + found.get(0).debugLine()));
             helper.assertTrue(villagers == 0, "the sweep should have converted the villager, " + villagers + " remain");
             helper.assertTrue(folk == 1, "one folk should have taken its place, found " + folk);
+            com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(null);   // [emerald]
             helper.succeed();
         });
     }

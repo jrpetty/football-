@@ -2,6 +2,7 @@
   "replace": false,
   "values": [
     "mc_assistant:assistant_spawner",
+    "mc_assistant:milestone",
     "mc_assistant:ferry_bell"
   ]
 }

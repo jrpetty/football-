@@ -110,7 +110,8 @@ public final class Diplomacy {
     public static boolean neighbours(Villages.Village a, Villages.Village b) {
         if (!a.dim().equals(b.dim()) || a.id().equals(b.id())) return false;
         int d = apart(a, b);
-        return d <= NEAR || d <= NEAR * 2 && Scouts.met(a.id(), b.id());   // a town the scouts found is a neighbour further off
+        double far = Math.max(Fame.reach(a.id()), Fame.reach(b.id()));     // [identity] a city's envoys come from afar
+        return d <= NEAR * far || d <= NEAR * 2 * far && Scouts.met(a.id(), b.id());   // a town the scouts found is a neighbour further off
     }
 
     static int apart(Villages.Village a, Villages.Village b) {
@@ -144,6 +145,7 @@ public final class Diplomacy {
         java.util.Random rng = new java.util.Random(seed);
         // Kin, and the caravans between them.
         if (kin(x, y)) delta += 2;
+        delta += Ethos.relationLean(x, y);                  // [identity] two peaceable towns, a closed one, a town of renown, Peacemakers
         // The ground between them.
         boolean crowded = apart(a, b) < CROWDED;
         boolean truce = Bonds.truce(x, y, day);

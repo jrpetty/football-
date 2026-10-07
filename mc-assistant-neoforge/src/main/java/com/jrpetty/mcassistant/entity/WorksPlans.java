@@ -79,7 +79,10 @@ final class WorksPlans {
         BRICKS("brick", Blocks.BRICKS, Blocks.BRICK_STAIRS, Blocks.BRICK_SLAB, Blocks.BRICK_WALL, Items.BRICKS),
         DEEPSLATE("deepslate", Blocks.COBBLED_DEEPSLATE, Blocks.COBBLED_DEEPSLATE_STAIRS, Blocks.COBBLED_DEEPSLATE_SLAB,
             Blocks.COBBLED_DEEPSLATE_WALL, Items.COBBLED_DEEPSLATE),
-        COBBLESTONE("cobblestone", Blocks.COBBLESTONE, Blocks.COBBLESTONE_STAIRS, Blocks.COBBLESTONE_SLAB, Blocks.COBBLESTONE_WALL, Items.COBBLESTONE);
+        COBBLESTONE("cobblestone", Blocks.COBBLESTONE, Blocks.COBBLESTONE_STAIRS, Blocks.COBBLESTONE_SLAB, Blocks.COBBLESTONE_WALL, Items.COBBLESTONE),
+        // [diver] The ocean monument's, brought home by the diver (DiverRaids): the harbour's stone only (BigWorks).
+        PRISMARINE("prismarine brick", Blocks.PRISMARINE_BRICKS, Blocks.PRISMARINE_BRICK_STAIRS, Blocks.PRISMARINE_BRICK_SLAB,
+            Blocks.PRISMARINE_WALL, Items.PRISMARINE_BRICKS);
 
         final String words;
         final Block block, stairs, slab, wall;
@@ -136,11 +139,15 @@ final class WorksPlans {
 
     /** The y of the solid top under the water here (the river bed), at most twenty down. */
     static int bed(ServerLevel level, int x, int z, int surface) {
-        for (int y = surface; y > surface - 20; y--) {
+        // Never below the bottom of the world: water lying on the world's floor has that floor for its bed. (The
+        // void under it reads as air, and a pier was once drawn twenty blocks down into it, out of the world, where
+        // nobody could ever set its first stone, and the whole work waited on it for ever.)
+        int floor = Math.max(surface - 20, level.getMinBuildHeight() - 1);
+        for (int y = surface; y > floor; y--) {
             BlockPos p = new BlockPos(x, y, z);
             if (level.getFluidState(p).isEmpty() && !level.getBlockState(p).isAir()) return y;
         }
-        return surface - 20;
+        return floor;
     }
 
     /** Open ground, the kind a road is laid over or a canal cut through: earth, sand, gravel, plain stone, snow. */

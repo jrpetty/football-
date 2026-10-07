@@ -140,7 +140,9 @@ jobs:
   # RCON, lets three game days pass at full speed, and reports what they did.
   # One scenario per runner; the "takeover" scenario instead generates a
   # vanilla village and checks its villagers become folk without freezing the
-  # server. Like the game tests it can never fail the build.
+  # server (with replaceVillagers turned on for it: the takeover is off by
+  # default, folk and villagers kept apart), and "natural" checks that a vanilla
+  # village's villagers stay villagers. Like the game tests it can never fail the build.
   # -------------------------------------------------------------------------
   realworld:
     runs-on: ubuntu-latest
@@ -188,9 +190,14 @@ jobs:
           # Every scenario places its own village, so the world's natural ones would
           # only crowd the measurement — except the one that is about them.
           if [ "${{ matrix.scenario }}" = "natural" ]; then NATURAL=true; else NATURAL=false; fi
+          # The old takeover is off by default (folk and villagers are two peoples, kept apart): the
+          # takeover scenario turns it on, so that path stays tested; every other keeps villagers villagers
+          # (and "natural" checks that they do).
+          if [ "${{ matrix.scenario }}" = "takeover" ]; then REPLACE=true; else REPLACE=false; fi
           cat > run/config/mc_assistant-common.toml <<EOF
           [villages]
           naturalVillages = ${NATURAL}
+          replaceVillagers = ${REPLACE}
           EOF
           # The modpack scenario: the mod among two of the most common others (JEI and Jade),
           # the newest NeoForge 1.21.1 build of each from Modrinth.

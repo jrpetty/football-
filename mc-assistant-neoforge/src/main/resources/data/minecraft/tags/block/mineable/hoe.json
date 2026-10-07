@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "mc_assistant:thatch",
+    "mc_assistant:thatch_slab",
+    "mc_assistant:thatch_stairs"
+  ]
+}

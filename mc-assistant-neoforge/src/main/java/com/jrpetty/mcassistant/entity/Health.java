@@ -721,6 +721,8 @@ public final class Health {
     static void tend(ServerLevel level, Villages.Village v, VillageFolkEntity p, @Nullable VillageFolkEntity carer, long day, long now) {
         State s = p.health();
         List<Remedy> order = s.wounded && s.cold <= 0 ? List.of(POTION, CARROT, HONEY, BERRIES) : List.of(HONEY, CARROT, BERRIES, POTION);
+        Remedy kitchen = Kitchen.remedy(level, v, p, s.wounded && s.cold <= 0);      // [kitchen] a bandage for a wound, the healer's tea for a cold
+        if (kitchen != null) order = java.util.stream.Stream.concat(java.util.stream.Stream.of(kitchen), order.stream()).toList();
         Remedy used = null;
         ItemStack got = ItemStack.EMPTY;
         for (Remedy r : order) {
@@ -739,6 +741,7 @@ public final class Health {
             else p.heal(used.heals());
             if (used.bottle()) Crafts.store(level, v, new ItemStack(Items.GLASS_BOTTLE));     // the bottle back
             b.remedies++;
+            Kitchen.tended(level, v, p, used);                          // [kitchen] the tea's cold noted, the bandage's good
         }
         if (s.cold > 0) {
             s.cold -= eased;
@@ -761,6 +764,7 @@ public final class Health {
                     "I'll keep you company a bit. You'll mend.")
                 : used == HONEY ? FolkTalk.pick(r, "Here — honey for that throat.", "A drop of honey, " + p.displayNameCap() + ". You'll be right as rain.")
                 : used == POTION ? FolkTalk.pick(r, "Drink this. The brewer swears by it.", "One of the brewer's potions. Down in one.")
+                : Kitchen.isRemedy(used) ? Kitchen.careWords(r, used, p)                               // [kitchen]
                 : FolkTalk.pick(r, "Eat this — it'll do you good.", "Something to build you up, " + p.displayNameCap() + "."));
             if (!p.isSleeping() || p.health().lying) p.sayLater(FolkTalk.pick(r, "Thank you, " + who + ".", "*cough* You're kind.", "Bless you."), 40);
         }

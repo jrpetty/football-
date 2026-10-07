@@ -245,6 +245,7 @@ public final class Referendums {
 
     static Judged judge(ServerLevel level, VillageFolkEntity voter, CompoundTag q) {
         if (REFUGE.equals(q.getString("kind"))) return Newcomers.judge(level, voter, q.getString("subject"));
+        if (Government.KIND.equals(q.getString("kind"))) return Government.judge(level, voter, q);   // [identity] a law, the government, the lord
         return judgeWorks(level, voter, q);
     }
 
@@ -543,6 +544,8 @@ public final class Referendums {
             boolean carried = q.getBoolean("carried");
             String result = refuge
                 ? (carried ? "We take them in. Welcome to " + Villages.name(v.id()) + "!" : "We cannot take them in. I'm sorry.")
+                : Government.KIND.equals(q.getString("kind"))                   // [identity] a law, the government, the lord
+                ? (carried ? "It is carried: so it shall be, from today." : "It falls: things stay as they are.")
                 : (carried ? "It is carried! We start in the morning — everybody lend a hand." : ayes == nays ? "A tie: it falls. We'll put it again another season."
                     : "It falls. We'll think again next season.");
             CompoundTag fq = q;
@@ -594,6 +597,10 @@ public final class Referendums {
         boolean carried = q.getBoolean("carried");
         if (REFUGE.equals(q.getString("kind"))) {
             Newcomers.decided(level, v, q.getString("subject"), carried, q.getInt("ayes"), q.getInt("nays"));
+            return;
+        }
+        if (Government.KIND.equals(q.getString("kind"))) {             // [identity] the law changed, the government, the lord out
+            Government.decided(level, v, q, day);
             return;
         }
         BigWorks.Work kind = BigWorks.Work.named(q.getString("subject"));
@@ -688,7 +695,8 @@ public final class Referendums {
             } else {
                 out.add("RG|" + (today ? "VOTE TODAY at the board: " : "Vote on day " + (q.getLong("vote") + 1) + ": ") + q.getString("title")
                     + (q.getString("by").isEmpty() ? "" : ", put by " + q.getString("by")) + "." + (today ? " " + voted + " of " + of + " have voted." : ""));
-                out.add("RN|It costs " + q.getString("cost") + " from the stores; the labour, " + q.getString("labour") + ". It brings "
+                if (Government.KIND.equals(q.getString("kind"))) out.add("RN|If it is carried: " + q.getString("brings") + ".");   // [identity]
+                else out.add("RN|It costs " + q.getString("cost") + " from the stores; the labour, " + q.getString("labour") + ". It brings "
                     + q.getString("brings") + ".");
             }
         }

@@ -100,6 +100,7 @@ public final class Wealth {
         if (f.isBaby() || f.stationTask() == StationTask.NONE) return 0;
         int w = earned(f);
         w += tradeWage(f.stationTask(), f.ownerId()) * WarFooting.dangerPay(f) / 100;   // [war-prep] danger money on a war footing (WarFooting)
+        w = Ethos.wage(f, w);                                     // [identity] drawn together (egalitarian, a commune) or spread by rank
         return w + FolkSkills.haggled(f, w)
             + Perks.wageExtra(f, w);                         // [perks] a Standing Army's guard pay, Private Larders' twentieth
     }

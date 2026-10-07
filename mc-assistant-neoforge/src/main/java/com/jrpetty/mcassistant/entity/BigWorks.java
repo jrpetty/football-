@@ -184,6 +184,13 @@ public final class BigWorks {
     static WorksPlans.Plan plan(ServerLevel level, Villages.Village v, Work w) {
         UUID id = v.id();
         BlockPos c = v.centre();
+        WorksPlans.Plan p = drawn(level, v, w, id, c);
+        if (p != null) p.pieces().removeIf(pc -> level.isOutsideBuildHeight(pc.pos()));   // nothing out of the world is costed or waited on
+        return p;
+    }
+
+    @Nullable
+    private static WorksPlans.Plan drawn(ServerLevel level, Villages.Village v, Work w, UUID id, BlockPos c) {
         return switch (w) {
             case BRIDGE -> WorksPlans.bridge(level, id, c);
             case AQUEDUCT -> WorksPlans.aqueduct(level, id, c);
@@ -241,7 +248,9 @@ public final class BigWorks {
     @Nullable
     static Proposal propose(ServerLevel level, Villages.Village v, WorksPlans.Plan p) {
         int[] cost = WorksPlans.cost(p.pieces());
-        WorksPlans.Family family = family(level, v, cost[0]);
+        // [diver] A harbour of prismarine bricks, when the diver has brought home enough off the monument (DiverRaids).
+        WorksPlans.Family family = p.kind() == Work.HARBOUR ? DiverRaids.harbourFamily(level, v, cost[0]) : null;
+        if (family == null) family = family(level, v, cost[0]);
         if (family == null) return null;
         List<String> parts = new ArrayList<>();
         parts.add(cost[0] + " " + family.words + (family == WorksPlans.Family.BRICKS ? "s" : ""));
@@ -267,6 +276,7 @@ public final class BigWorks {
         WorksPlans.Family most = null;
         int mostHave = 0;
         for (WorksPlans.Family f : WorksPlans.Family.values()) {
+            if (f == WorksPlans.Family.PRISMARINE) continue;              // [diver] the harbour's alone (propose)
             int have = Market.stock(level, v.id(), f.payment());
             if (have >= units) return f;
             if (have > mostHave) { mostHave = have; most = f; }
@@ -379,6 +389,7 @@ public final class BigWorks {
         WorksPlans.Family best = null;
         int most = 15;
         for (WorksPlans.Family f : WorksPlans.Family.values()) {
+            if (f == WorksPlans.Family.PRISMARINE && !"HARBOUR".equals(w.getString("kind"))) continue;   // [diver] the harbour's alone
             int have = Market.stock(level, v.id(), f.payment());
             if (f != was && have > most) { most = have; best = f; }
         }
@@ -464,6 +475,40 @@ public final class BigWorks {
         }
         if (hung < n) TownWork.give(level, v, new ItemStack(ribbon, n - hung));
         return hung > 0;
+    }
+
+    /**
+     * [itemaudit] A player's shears at a ribbon (block/RibbonBlock): a player opening something of its own, as the leader
+     * opens the town's. The ribbon is snipped and gone, and the folk near enough to see clap, the nearest calling out.
+     * A town's own ribbon across a great work is its leader's to cut at the opening, and stays. Returns what the player
+     * is told, and whether it was cut.
+     */
+    public static String cutByPlayer(ServerLevel level, BlockPos pos, net.minecraft.world.entity.player.Player p, boolean[] cut) {
+        cut[0] = false;
+        Villages.Village v = Villages.nearest(level, pos, Villages.VILLAGE_RANGE * 2);
+        CompoundTag w = v == null ? null : current(v.id());
+        if (w != null) {
+            for (long l : w.getLongArray("ribbon")) {
+                if (l == pos.asLong()) return "That's " + Villages.name(v.id()) + "'s ribbon: its leader cuts it when the work is opened.";
+            }
+        }
+        level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+        level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, McAssistantMod.RIBBON.get().defaultBlockState()),
+            pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5, 10, 0.3, 0.1, 0.3, 0.05);
+        level.playSound(null, pos, SoundEvents.SHEEP_SHEAR, SoundSource.PLAYERS, 1.0F, 1.1F);
+        cut[0] = true;
+        int clapping = 0;
+        for (VillageFolkEntity f : level.getEntitiesOfClass(VillageFolkEntity.class, new net.minecraft.world.phys.AABB(pos).inflate(12.0),
+                x -> x.isAlive() && !x.isSleeping() && !x.isShowcase())) {
+            f.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5);
+            f.swing(InteractionHand.MAIN_HAND);
+            if (clapping++ == 0) {
+                FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Hooray! It's open!", "Well done, " + p.getName().getString() + "!",
+                    "A ribbon cut! What's the occasion?"));
+            }
+            if (clapping >= 6) break;
+        }
+        return clapping > 0 ? "Snip! The ribbon's cut, and the folk about give a cheer." : "Snip! The ribbon's cut.";
     }
 
     /** The ribbon cut and the work opened (from the gathering's line, or quietly): into the chronicle and the folk's memories. */
@@ -646,6 +691,12 @@ public final class BigWorks {
         int next = w.getInt("next");
         while (next < pieces.size()) {
             WorksPlans.Piece p = pieces.get(next);
+            if (level.isOutsideBuildHeight(p.pos())) {
+                // Out of the world (a plan drawn before its bed was looked for at the world's floor): passed over.
+                w.putInt("spared", w.getInt("spared") + 1);
+                next++;
+                continue;
+            }
             if (!level.isLoaded(p.pos())) {
                 w.putInt("next", next);
                 return false;                                       // its ground asleep: the works wait for somebody there
@@ -736,7 +787,10 @@ public final class BigWorks {
             };
         }
         return switch (part) {
-            case LANTERN -> TownWork.take(level, v, s -> s.is(Items.LANTERN), 1) ? Blocks.LANTERN.defaultBlockState()
+            // [diver] The harbour's lamps sea lanterns, of the monument's prismarine, when the stores have them (DiverRaids).
+            case LANTERN -> "HARBOUR".equals(w.getString("kind")) && TownWork.take(level, v, s -> s.is(Items.SEA_LANTERN), 1)
+                ? Blocks.SEA_LANTERN.defaultBlockState()
+                : TownWork.take(level, v, s -> s.is(Items.LANTERN), 1) ? Blocks.LANTERN.defaultBlockState()
                 : TownWork.take(level, v, s -> s.is(Items.TORCH), 1) ? Blocks.TORCH.defaultBlockState() : null;
             case LANTERN_HUNG -> TownWork.take(level, v, s -> s.is(Items.LANTERN), 1)
                 ? Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true) : null;

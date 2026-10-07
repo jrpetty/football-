@@ -170,6 +170,7 @@ public final class Families {
         if (doing == null) doing = errand(level, f, t, day);
         if (doing == null) doing = Pets.hold(level, f, village, t, day);   // [pets] the bowl, a bed set out, a treat, a stray, a grave
         if (doing == null) doing = story(level, f, village, t, day);
+        if (doing == null) doing = Pastimes.hold(level, f, village, t, day);     // [leisure] draughts, a kickabout, a kite, a quilt home
         if (doing == null && f.isBaby()) doing = play(level, f, village, t, day);
         if (doing == null) return release(f);
         HELD.put(f.getUUID(), new Held(doing, f.tickCount));
@@ -1820,7 +1821,7 @@ public final class Families {
             e.dead = g.name();
             e.kin = rel[0];
             e.years = (int) ((day - g.died()) / TownCalendar.YEAR_DAYS);
-            BlockPos[] at = Graves.graveOf(id, i);
+            BlockPos[] at = Beliefs.graveOf(id, i, g);               // [culture2] the yard, the post on the shore, the cairn
             e.lay = at == null ? null : at[1];
             ERRANDS.put(kin.getUUID(), e);
         }

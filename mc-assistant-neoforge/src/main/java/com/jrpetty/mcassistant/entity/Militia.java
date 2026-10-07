@@ -193,7 +193,8 @@ public final class Militia {
         Map<UUID, Member> have = members(id);
         List<VillageFolkEntity> able = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && able(f)) able.add(f);
-        int want = (int) Math.round(able.size() * (footing == Wars.Footing.WAR ? WAR_SHARE : TENSION_SHARE));
+        int want = (int) Math.round(able.size() * LawBook.militiaShare(v.id(), footing == Wars.Footing.WAR ? WAR_SHARE : TENSION_SHARE,
+            footing == Wars.Footing.WAR));                            // [identity] conscription: every fit adult, at war
         want = Math.max(Math.min(2, able.size()), want);
         int count = 0;
         for (VillageFolkEntity f : able) if (have.containsKey(f.getUUID())) count++;

@@ -60,6 +60,7 @@ public final class Graves {
             for (int[] plot : PLOTS) {
                 if (i >= dead.size()) break;
                 Ledger.Grave g = dead.get(i++);
+                if (!Beliefs.inYard(village, g)) continue;                  // [culture2] given to the sea, or under a cairn: its plot kept empty
                 BlockPos mound = b.anchor().relative(right, plot[0]).relative(back, plot[1]);
                 BlockPos stone = mound.relative(back);
                 if (headstone(level, v, stone, mound, front, g, false)) put++;

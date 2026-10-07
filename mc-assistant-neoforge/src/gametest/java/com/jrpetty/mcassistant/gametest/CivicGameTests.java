@@ -93,13 +93,13 @@ public class CivicGameTests {
         return new BlockPos(cx, y, cz);
     }
 
-    /** Water from x0 to x1, z0 to z1, its surface a block under the grass, three deep on gravel. */
+    /** Water from x0 to x1, z0 to z1, its surface a block under the grass, two deep on gravel (the flat world's floor is four under its grass). */
     private static void water(ServerLevel level, int x0, int x1, int z0, int z1, int y) {
         for (int x = x0; x <= x1; x++) {
             for (int z = z0; z <= z1; z++) {
                 level.setBlock(new BlockPos(x, y - 1, z), Blocks.AIR.defaultBlockState(), 2 | 16);
-                for (int dy = 2; dy <= 4; dy++) level.setBlock(new BlockPos(x, y - dy, z), Blocks.WATER.defaultBlockState(), 2 | 16);
-                level.setBlock(new BlockPos(x, y - 5, z), Blocks.GRAVEL.defaultBlockState(), 2 | 16);
+                for (int dy = 2; dy <= 3; dy++) level.setBlock(new BlockPos(x, y - dy, z), Blocks.WATER.defaultBlockState(), 2 | 16);
+                level.setBlock(new BlockPos(x, y - 4, z), Blocks.GRAVEL.defaultBlockState(), 2 | 16);
             }
         }
     }
@@ -175,6 +175,7 @@ public class CivicGameTests {
         final int cx = 1080000;
         long day = level.getDayTime() / 24000L + 3;
         level.setDayTime(day * 24000L + 3000L);
+        level.updateSkyBrightness();
         List<VillageFolkEntity> folk = new ArrayList<>();
         Villages.Village v = riverTown(helper, level, cx, 10, folk);
         UUID id = v.id();
@@ -183,6 +184,7 @@ public class CivicGameTests {
             new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64),
             new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.LANTERN, 8), new ItemStack(Items.STRING, 2), new ItemStack(Items.RED_DYE, 1));
         int bricksBefore = Market.stock(level, id, s -> s.is(Items.STONE_BRICKS));
+        Kit.noLeftoverPlayers(level);
         Player you = helper.makeMockPlayer(GameType.SURVIVAL);
         Ledger.addCitizen(id, you.getUUID(), "Tamsin");
         int[] q = { -1 };
@@ -220,6 +222,7 @@ public class CivicGameTests {
             helper.assertTrue(said.startsWith("Your vote is in"), "a citizen has a vote: " + said);
             // The polls: late in the day every folk's hour has come, and they walk to the board.
             level.setDayTime(day * 24000L + 10300L);
+            level.updateSkyBrightness();
         });
         helper.runAtTickTime(560, () -> {
             int walked = 0;
@@ -244,6 +247,7 @@ public class CivicGameTests {
             helper.assertTrue(state.startsWith("BRIDGE|building"), "the bridge to be built: " + state);
             // The works day: the morning after.
             level.setDayTime((day + 1) * 24000L + 2500L);
+            level.updateSkyBrightness();
             List<VillageFolkEntity> hands = BigWorks.helpersForTests(level, id);
             Kit.log("civ01 the works day: " + hands.size() + " of " + folk.size() + " turn out");
             helper.assertTrue(hands.size() >= 6, "most of the town turns out on the works day: " + hands.size());
@@ -279,6 +283,7 @@ public class CivicGameTests {
             helper.assertTrue(story.contains("was opened"), "the opening in the chronicle: " + story);
             helper.assertTrue(BigWorks.doneForTests(id).contains("BRIDGE"), "the bridge among the town's works");
             helper.assertTrue(!level.getBlockState(new BlockPos(cx + 22, heart.getY() + 1, Z)).is(McAssistantMod.RIBBON.get()), "the ribbon cut");
+            Kit.noLeftoverPlayers(level);
             helper.succeed();
         });
     }
@@ -293,6 +298,7 @@ public class CivicGameTests {
         final int cx = 1082000;
         long day = level.getDayTime() / 24000L + 3;
         level.setDayTime(day * 24000L + 3000L);
+        level.updateSkyBrightness();
         List<VillageFolkEntity> folk = new ArrayList<>();
         Villages.Village v = riverTown(helper, level, cx, 9, folk);
         UUID id = v.id();
@@ -313,6 +319,7 @@ public class CivicGameTests {
             // Asked about the works in the days after: not the bridge again. (No fields laid out yet: no canal to ask about.)
             Ledger.note(id, "fields.side", "");
             level.setDayTime((day + 4) * 24000L + 3000L);
+            level.updateSkyBrightness();
             String again = Referendums.considerForTests(level, v);
             Kit.log("civ02 four days on, the town is asked: '" + again + "'");
             helper.assertTrue(!again.contains("stone bridge"), "the bridge waits: " + again);
@@ -324,6 +331,7 @@ public class CivicGameTests {
             }
             // The season out: it may be put again.
             level.setDayTime((day + 8) * 24000L + 3000L);
+            level.updateSkyBrightness();
             String later = Referendums.considerForTests(level, v);
             Kit.log("civ02 eight days on, the town is asked: '" + later + "'");
             helper.assertTrue(later.contains("stone bridge"), "the season out, the bridge is put again: " + later);
@@ -381,6 +389,7 @@ public class CivicGameTests {
         level.setWeatherParameters(12000, 0, false, false);
         long day = level.getDayTime() / 24000L + 10;
         level.setDayTime(day * 24000L + 10000L);                  // past the towns' own daily look at who leaves
+        level.updateSkyBrightness();
         List<VillageFolkEntity> aFolk = new ArrayList<>(), bFolk = new ArrayList<>();
         Villages.Village[] towns = warTowns(helper, level, 1084000, aFolk, bFolk, day);
         Villages.Village a = towns[0], b = towns[1];
@@ -442,6 +451,7 @@ public class CivicGameTests {
         level.setWeatherParameters(12000, 0, false, false);
         long day = level.getDayTime() / 24000L + 10;
         level.setDayTime(day * 24000L + 10000L);
+        level.updateSkyBrightness();
         List<VillageFolkEntity> aFolk = new ArrayList<>(), bFolk = new ArrayList<>();
         Villages.Village[] towns = warTowns(helper, level, 1086000, aFolk, bFolk, day);
         Villages.Village a = towns[0], b = towns[1];
@@ -484,6 +494,7 @@ public class CivicGameTests {
         final int cx = 1088000;
         long day = level.getDayTime() / 24000L + 3;
         level.setDayTime(day * 24000L + 3000L);
+        level.updateSkyBrightness();
         Kit.hold(level, cx, Z, 72);
         Kit.prepare(level, cx, Z, 72);
         BlockPos heart = flat(level, cx, Z, 64);
@@ -581,6 +592,7 @@ public class CivicGameTests {
         final int cx = 1090000;
         long day = level.getDayTime() / 24000L + 3;
         level.setDayTime(day * 24000L + 10000L);
+        level.updateSkyBrightness();
         Kit.hold(level, cx, Z, 72);
         Kit.prepare(level, cx, Z, 72);
         BlockPos heart = flat(level, cx, Z, 70);

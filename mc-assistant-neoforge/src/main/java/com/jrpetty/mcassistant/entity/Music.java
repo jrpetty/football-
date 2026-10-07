@@ -121,9 +121,9 @@ public final class Music {
             && f.stationTask() != AssistantEntity.StationTask.GUARD;
     }
 
-    /** A real note block to play: not the one held up for show (Culture.prop), which is no thing of its own. */
+    /** A real note block to play: not the one held up for show (Culture.prop), which is no thing of its own. [leisure] Or a lute. */
     static boolean instrument(ItemStack s) {
-        return s.is(Items.NOTE_BLOCK) && !Leisure.isProp(s);
+        return s.is(Items.NOTE_BLOCK) && !Leisure.isProp(s) || Lutes.isLute(s);
     }
 
     /** The band: the town's musicians free to play, four at most, the same order every evening. */
@@ -226,9 +226,11 @@ public final class Music {
                 want.members.add(f.getUUID());
                 continue;
             }
-            if (Crafts.stock(level, v, st -> st.is(Items.NOTE_BLOCK)) <= 0) continue;
-            if (!Crafts.take(level, v, st -> st.is(Items.NOTE_BLOCK), 1)) continue;
-            ItemStack left = f.insertItem(new ItemStack(Items.NOTE_BLOCK));
+            // A note block lent out of the stores; [leisure] or, with none there, a lute.
+            ItemStack lend = Crafts.stock(level, v, st -> st.is(Items.NOTE_BLOCK)) > 0 && Crafts.take(level, v, st -> st.is(Items.NOTE_BLOCK), 1)
+                ? new ItemStack(Items.NOTE_BLOCK) : Crafts.takeOne(level, v, Lutes::isLute);
+            if (lend.isEmpty()) continue;
+            ItemStack left = f.insertItem(lend);
             if (!left.isEmpty()) {
                 Crafts.store(level, v, left);                          // a full pack: none for it
                 continue;
@@ -250,9 +252,12 @@ public final class Music {
     static void end(ServerLevel level, Villages.Village v, Session s) {
         BANDS.remove(v.id(), s);
         for (UUID u : s.lent) {
-            if (level.getEntity(u) instanceof VillageFolkEntity f && f.isAlive() && f.removeMatching(Music::instrument, 1) == 1) {
-                Crafts.store(level, v, new ItemStack(Items.NOTE_BLOCK));
-            }
+            if (!(level.getEntity(u) instanceof VillageFolkEntity f) || !f.isAlive()) continue;
+            if (f.removeMatching(st -> st.is(Items.NOTE_BLOCK) && !Leisure.isProp(st), 1) == 1) Crafts.store(level, v, new ItemStack(Items.NOTE_BLOCK));
+            else Lutes.putAway(level, v, f, true);                        // [leisure] the stores' lute back to them
+        }
+        for (UUID u : s.members) {                                           // [leisure] a lute of its own back in its pack
+            if (level.getEntity(u) instanceof VillageFolkEntity f && f.isAlive() && Lutes.isLute(f.getMainHandItem())) Lutes.putAway(level, v, f, false);
         }
         // The note block each held up to play put away (it was for show: the real one went back above).
         for (UUID u : s.members) {
@@ -336,8 +341,9 @@ public final class Music {
             }
             n = Math.max(0, Math.min(24, n));
             float pitch = (float) Math.pow(2.0, (n - 12) / 12.0);
-            level.playSound(null, f.getX(), f.getY() + 1.0, f.getZ(), VOICES.get(Math.min(i, VOICES.size() - 1)).value(),
-                SoundSource.RECORDS, i == 0 ? 1.1F : 0.8F, pitch);
+            SoundEvent voice = Lutes.isLute(f.getMainHandItem()) ? SoundEvents.NOTE_BLOCK_GUITAR.value()    // [leisure] a lute's own voice
+                : VOICES.get(Math.min(i, VOICES.size() - 1)).value();
+            level.playSound(null, f.getX(), f.getY() + 1.0, f.getZ(), voice, SoundSource.RECORDS, i == 0 ? 1.1F : 0.8F, pitch);
             level.sendParticles(ParticleTypes.NOTE, f.getX(), f.getY() + 2.2, f.getZ(), 0, n / 24.0, 0.0, 0.0, 1.0);
             if (beat % 8 == i) f.swing(net.minecraft.world.InteractionHand.OFF_HAND);
         }
@@ -398,7 +404,8 @@ public final class Music {
         if (Culture.arrive(f, place, 0.8, 1.0)) {
             BlockPos look = place.relative(s.faces, 4);
             f.getLookControl().setLookAt(look.getX() + 0.5, f.getEyeY(), look.getZ() + 0.5);
-            Culture.prop(f, Items.NOTE_BLOCK);
+            if (f.countCarried(Lutes::isLute) > 0) Lutes.inHand(f);          // [leisure] its lute in its hand
+            else Culture.prop(f, Items.NOTE_BLOCK);
         }
         return true;
     }
