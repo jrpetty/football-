@@ -389,6 +389,19 @@ public final class Engineers {
 
     // ------------------------------------------------------------------ the engineer's day
 
+    /** [perks] So many blocks, so much in the hundred more: the odd part by chance, so a quarter more of three is a quarter
+     *  more over the day, not nothing. */
+    static int quicker(int most, int percent, net.minecraft.util.RandomSource r) {
+        if (percent <= 0) return most;
+        int extra = most * percent;
+        return most + extra / 100 + (r.nextInt(100) < extra % 100 ? 1 : 0);
+    }
+
+    /** Tests: the blocks a beat lays, the town's research counted. */
+    public static int quickerForTests(java.util.UUID village, int most, net.minecraft.util.RandomSource r) {
+        return quicker(most, CityTree.machinePercent(village), r);
+    }
+
     /**
      * The engineer's day (its trade's work: AssistantEntity's station work): out to the machine it is building and at it,
      * or round the machines it keeps. True through its working hours (at its post, drawing up plans, when nothing is to
@@ -407,6 +420,7 @@ public final class Engineers {
         Long last = LAST_WORK.get(f.getUUID());
         if (last != null && now >= last && now - last < 20L) return true;
         int most = last == null || now < last ? PER_SECOND : (int) Math.min(4L * PER_SECOND, Math.max(1L, PER_SECOND * (now - last) / 20L));
+        most = quicker(most, CityTree.machinePercent(id), f.getRandom());   // [perks] the Observer Pattern Books: a quarter more
         LAST_WORK.put(f.getUUID(), now);
         Works w = works(id);
         Machine m = w.current;

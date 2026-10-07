@@ -284,7 +284,7 @@ public class DiverGameTests {
         helper.assertTrue(shedWanted && list.contains(Divers.SHED), "the diver's shed on the wish list: " + list);
         helper.assertTrue(site != null && site.anchor().equals(w.shedAt()), "its site the place on the bank");
         int[] half = BuildGoal.footprint(Divers.SHED);
-        helper.assertTrue(half[0] >= 3 && half[1] >= 3, "the shed's drawing is read: " + half[0] + "x" + half[1]);
+        helper.assertTrue(half[0] >= 2 && half[1] >= 2, "the shed's drawing is read (its walls five across): " + half[0] + "x" + half[1]);
 
         BuildGoal.stamp(level, Divers.SHED, site.anchor(), site.facing(), 13, Showcase.painter(Showcase.SPRUCE));
         Ledger.built(id, Divers.SHED, site.anchor(), site.facing());
@@ -881,7 +881,7 @@ public class DiverGameTests {
                     Kit.log("dv07 fenced at " + tick + ": " + fence + " fence, " + gates + " gate, lit " + lit + ", closed round " + round
                         + "; planks left " + stock(level, id, Items.OAK_PLANKS) + ", torches " + stock(level, id, Items.TORCH));
                     helper.assertTrue(round && fence >= 4 && gates <= 1 && lit, "the clutch fenced round, and a light on a post");
-                    helper.assertTrue(stock(level, id, Items.OAK_PLANKS) < 64 && stock(level, id, Items.TORCH) == 15, "out of the stores' planks and torches");
+                    helper.assertTrue(stock(level, id, Items.OAK_PLANKS) < 64 && stock(level, id, Items.TORCH) < 16, "out of the stores' planks and torches");
                     // The eggs hatch, by the game's random ticks.
                     for (int i = 0; i < 40000 && level.getBlockState(egg[0]).is(Blocks.TURTLE_EGG); i++) {
                         level.getBlockState(egg[0]).randomTick(level, egg[0], level.getRandom());

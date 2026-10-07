@@ -663,6 +663,18 @@ public final class Beliefs {
     // ------------------------------------------------------------------ the shrine in the chapel
 
     /** What the faith keeps on the chapel's wall (the hall's, with no chapel), and what pays for it out of the stores. */
+    /** The token in words, for the chronicle and the page (the server keeps no names of its own for the game's items). */
+    static String tokenWords(Belief b) {
+        return switch (b) {
+            case SEA -> "a little boat";
+            case STONE -> "the first diamond";
+            case STARS -> "a spyglass";
+            case HARVEST -> "the first sheaf of wheat";
+            case HEARTH -> "a candle";
+            case FOUNDERS -> "the founders' book";
+        };
+    }
+
     static Item token(Belief b) {
         return switch (b) {
             case SEA -> Items.OAK_BOAT;
@@ -691,9 +703,16 @@ public final class Beliefs {
         String had = TownWays.note(id, "rites.shrine");
         BlockPos at = null;
         Direction facing = chapel.facing().getOpposite();
-        for (int dz = 8; dz >= 2 && at == null; dz--) {
-            BlockPos p = Culture.at(chapel, 0, 2, dz), wall = Culture.at(chapel, 0, 2, dz + 1);
-            if (level.getBlockState(p).isAir() && level.getBlockState(wall).isFaceSturdy(level, wall, facing)) at = p;
+        // The back wall, as far back as it goes: in the middle if it is solid there, else beside the window in it (a chapel's
+        // back wall has its tall window in the middle), at eye height or a block above.
+        for (int dz = 9; dz >= 2 && at == null; dz--) {
+            for (int dx : new int[]{ 0, -2, 2, -1, 1, -3, 3 }) {
+                for (int h : new int[]{ 2, 3 }) {
+                    if (at != null) break;
+                    BlockPos p = Culture.at(chapel, dx, h, dz), wall = Culture.at(chapel, dx, h, dz + 1);
+                    if (level.getBlockState(p).isAir() && level.getBlockState(wall).isFaceSturdy(level, wall, facing)) at = p;
+                }
+            }
         }
         if (at == null) return false;
         List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(at).inflate(0.2), e -> true);
@@ -717,7 +736,7 @@ public final class Beliefs {
         frame.setItem(new ItemStack(want), false);
         if (!want.equals(BuiltInRegistries.ITEM.get(ResourceLocation.parse(had == null ? "minecraft:air" : had)))) {
             TownWays.note(id, "rites.shrine", BuiltInRegistries.ITEM.getKey(want).toString());
-            Villages.tell(id, level.getDayTime() / 24000L, "the town hung " + new ItemStack(want).getHoverName().getString().toLowerCase(java.util.Locale.ROOT)
+            Villages.tell(id, level.getDayTime() / 24000L, "the town hung " + tokenWords(b)
                 + " in " + (chapel.structure().equals("chapel") ? "the chapel" : "the hall") + ", for " + b.words);
         }
         return true;
@@ -987,7 +1006,7 @@ public final class Beliefs {
             case HARVEST -> "of the green (Barley, Rowan, Hazel)";
             case HEARTH -> "after a grandparent";
             case FOUNDERS -> "after a founder";
-        } + ". In the chapel: " + new ItemStack(token(b)).getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + ".");
+        } + ". In the chapel: " + tokenWords(b) + ".");
         String taboo = switch (b) {
             case SEA -> "nobody fishes on the Sea's day, and the fleet stays in";
             case STONE -> "the mountain rests on the Stone's day: no mining";
