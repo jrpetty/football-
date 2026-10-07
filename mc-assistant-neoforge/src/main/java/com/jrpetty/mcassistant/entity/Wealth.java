@@ -107,7 +107,9 @@ public final class Wealth {
      * teacher's mornings at the school, the elder's coin and a good day's work.
      */
     static int earned(VillageFolkEntity f) {
-        return JobWorth.payOf(f).total();                      // [econ-wages] pay by worth
+        int w = JobWorth.payOf(f).total();                     // [econ-wages] pay by worth
+        // Anything paid on top of the job's worth (a guard's danger money in wartime, say) goes in here.
+        return w;
     }
 
     /** How today's wage is made up: "6 as a miner (2.00 pay level × ... = 5.71), +1 as the elder, +2 for a hard day's work". */
@@ -119,7 +121,7 @@ public final class Wealth {
         if (pay.teaching() > 0) sb.append(", +").append(pay.teaching()).append(" for teaching the school");
         int b = pay.deeds();
         if (b > 0) sb.append(", +").append(b).append(b == 2 ? " for a hard day's work" : " for a fair day's work");
-        int haggled = FolkSkills.haggled(f, pay.total());
+        int haggled = FolkSkills.haggled(f, earned(f));
         if (haggled > 0) sb.append(", +").append(haggled).append(" haggled (its knack)");
         return sb.toString();
     }
