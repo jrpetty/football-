@@ -1122,6 +1122,7 @@ public final class JobMarket {
                 s += 12;
                 good.add("has family here");
             }
+            s += Quirks.onPaper(f, t, null, good);                    // [perks] a quirk that suits the trade
         }
         if ((temper == Envoys.Temper.WARM || temper == Envoys.Temper.GENEROUS) && a.age <= 24) s += 5;      // gives the young a start
         if (temper == Envoys.Temper.WARY && link.ordinal() >= Link.FRIENDS.ordinal()) s -= 10;             // a stranger's face

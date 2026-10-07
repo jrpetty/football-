@@ -209,7 +209,8 @@ final class InterviewScript {
 
         // A question the post really meets.
         String[] sc = scenario(level, iv, post, asked, f);
-        int q = heldLv / 5 + fit(post, asked, life) + (c.letter ? 1 : 0) + (nervous ? -2 : 0);
+        int q = heldLv / 5 + fit(post, asked, life) + (c.letter ? 1 : 0) + (nervous ? -2 : 0)
+            + (f == null ? 0 : Quirks.inInterview(f, asked));                 // [perks] a quirk that suits the trade asked about
         boolean good = q >= 3, fair = q >= 1;
         out.add(Line.of("chair", sc[0]));
         out.add(Line.of("cand", (nervous && !good ? FolkTalk.pick(r, "Um. ", "Er — ", "Well… ") : "") + (good ? sc[1] : fair ? sc[2] : sc[3])));

@@ -6,6 +6,7 @@ import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.CityTree;
 import com.jrpetty.mcassistant.entity.CityTree.Civic;
+import com.jrpetty.mcassistant.entity.Fears;
 import com.jrpetty.mcassistant.entity.Fleet;
 import com.jrpetty.mcassistant.entity.FolkSkills;
 import com.jrpetty.mcassistant.entity.FolkSkills.Knack;
@@ -258,12 +259,13 @@ public class PerksGameTests {
                 && CityTree.workPercent(other, StationTask.SMITH) == CityTree.workPercent(id, StationTask.SMITH) + 6,
                 "the one town's tools dearer, the other's cheaper and its smiths quicker");
             // The town's ethos leans the choice.
+            java.util.function.ToIntBiFunction<UUID, CityTree.Branch> ethosWas = CityTree.ETHOS;
             CityTree.ETHOS = (village, b) -> b == CityTree.Branch.SEA ? 500 : 0;
             Civic chosen;
             try {
                 chosen = CityTree.chooseForTests(level, id, day);
             } finally {
-                CityTree.ETHOS = (village, b) -> 0;
+                CityTree.ETHOS = ethosWas;
             }
             helper.assertTrue(chosen == Civic.FISHWIVES_GUILD, "a town of the sea studies the sea's first: " + chosen);
             // The leader sets the study itself (a player who leads does, from its Leader page).
@@ -386,7 +388,7 @@ public class PerksGameTests {
             List<VillageFolkEntity> folk = grown(id);
             VillageFolkEntity scout = folk.get(0), diver = folk.get(1);
             trade(scout, StationTask.SCOUT, 5);
-            trade(diver, StationTask.FISH, 5);
+            trade(diver, StationTask.DIVER, 5);
             int rate0 = CityTree.rate(id).points();
             upTo(level, id, Civic.PRIMERS, day);
             helper.assertTrue(CityTree.schoolPercent(id) == 25, "Primers: a quarter more at school");
@@ -429,21 +431,18 @@ public class PerksGameTests {
             int brew0 = CityTree.workPercent(id, StationTask.BREW);
             upTo(level, id, Civic.HERBALS, day);
             helper.assertTrue(CityTree.workPercent(id, StationTask.BREW) == brew0 + 6, "Herbals: the brewer 6% quicker");
-            helper.assertTrue(!CityTree.blazeWarded(id) && CityTree.netherGap(id) == 2, "no ward, a party every other day");
+            VillageFolkEntity runner = folk.get(2);
+            trade(runner, StationTask.NETHER, 5);
+            DamageSource fire = level.damageSources().inFire();
+            float unwarded = PerkEvents.fireForTests(runner, fire, 4F);
+            helper.assertTrue(!CityTree.blazeWarded(id) && CityTree.netherGap(id) == 2 && CityTree.netherWalkPercent(id) == 100,
+                "no ward, a run every other day");
             CityTree.grant(level, id, Civic.BLAZE_WARDENS, day);
+            float warded = PerkEvents.fireForTests(runner, fire, 4F), farmer = PerkEvents.fireForTests(scout, fire, 4F);
+            helper.assertTrue(unwarded == 4F && warded == 2F && farmer == 4F, "the Blaze Wardens: a Nether runner takes half the fire, nobody else");
             CityTree.grant(level, id, Civic.NETHER_CHARTS, day);
-            List<ItemStack> haul = new ArrayList<>();
-            Perks.netherHaul(level, id, List.of(), haul, true, true);
-            int quartz = 0, rods = 0;
-            for (ItemStack s : haul) {
-                if (s.is(Items.QUARTZ)) quartz += s.getCount();
-                if (s.is(Items.BLAZE_ROD)) rods += s.getCount();
-            }
-            helper.assertTrue(CityTree.blazeWarded(id) && CityTree.netherGap(id) == 1 && quartz == 4 && rods == 1,
-                "the wards; the Charts: a party a day, four quartz and a rod more: " + haul);
-            List<ItemStack> unarmed = new ArrayList<>();
-            Perks.netherHaul(level, id, List.of(), unarmed, false, false);
-            helper.assertTrue(unarmed.isEmpty(), "nothing more without a blade or a pick to get it: " + unarmed);
+            helper.assertTrue(CityTree.netherGap(id) == 1 && CityTree.netherWalkPercent(id) == 75,
+                "the Nether Charts: a run every day, a quarter less walking");
             helper.assertTrue(CityTree.powderPerRod(id) == 2, "two powders to a rod");
             CityTree.grant(level, id, Civic.ALCHEMISTS_GUILD, day);
             helper.assertTrue(CityTree.powderPerRod(id) == 3, "the Alchemists: three");
@@ -828,12 +827,13 @@ public class PerksGameTests {
             trade(guard, StationTask.GUARD, 30);
             FolkSkills.grant(level, guard, Knack.FEATHERLIGHT);
             helper.assertTrue(Perks.quiver(id, guard) == 8, "Featherlight: eight arrows more");
-            FolkSkills.grant(level, guard, Knack.IRON_WHISPERER);
+            trade(miner, StationTask.GOLEMS, 5);                       // the golem keeper's knack, at its trade
+            FolkSkills.grant(level, miner, Knack.IRON_WHISPERER);
             IronGolem golem = EntityType.IRON_GOLEM.create(level);
-            golem.moveTo(guard.getX() + 2, guard.getY(), guard.getZ(), 0, 0);
+            golem.moveTo(miner.getX() + 2, miner.getY(), miner.getZ(), 0, 0);
             level.addFreshEntity(golem);
             golem.setHealth(50F);
-            int mended = FolkSkills.mendGolemsForTests(guard);
+            int mended = FolkSkills.mendGolemsForTests(miner);
             helper.assertTrue(mended >= 1 && golem.getHealth() == 52F, "the Iron Whisperer mends a golem: " + golem.getHealth());
             golem.discard();
             FolkSkills.grant(level, guard, Knack.PIGLIN_FRIEND);
@@ -856,7 +856,7 @@ public class PerksGameTests {
             FolkSkills.grant(level, fisher, Knack.DEEP_LUNGS);
             FolkSkills.keepUpForTests(fisher);
             helper.assertTrue(near(fisher.getAttributeValue(Attributes.OXYGEN_BONUS), breath0 + 2), "Deep Lungs");
-            trade(cook, StationTask.COOK, 5);
+            trade(cook, StationTask.FIREWORKS, 5);                      // the fireworks maker's knack
             FolkSkills.grant(level, cook, Knack.SHOWMAN);
             List<String> good = new ArrayList<>();
             int c0 = Perks.contentment(id, good, new ArrayList<>());
@@ -904,8 +904,10 @@ public class PerksGameTests {
                 && FolkSkills.haulBonus(d) == haul0 + 16, "an Iron Stomach a fifth longer between meals; Broad Shoulders sixteen more");
             helper.assertTrue(near(Perks.priceEach(id, new ItemStack(Items.BREAD), e, 10.0), 9.5) && near(FolkSkills.sightBonus(e), sight0 + 4),
                 "a Smooth-talker pays 5% less; Hawk-eyed sees four further");
+            e.individual().fears.add(Fears.Fear.MONSTERS);
             Quirks.setForTests(e, Quirk.FEARLESS);
             Quirks.tendForTests(e);
+            helper.assertTrue(!e.individual().fears.contains(Fears.Fear.MONSTERS), "the Fearless fear no monster");
             helper.assertTrue(near(e.getAttributeValue(Attributes.ATTACK_DAMAGE), hit0 + 1) && Quirks.answersCries(e) && !Quirks.answersCries(a),
                 "Fearless: a point more blow, and it runs to help");
             // The hour, the hands and the trade.
@@ -934,6 +936,10 @@ public class PerksGameTests {
             BlockState s = level.getBlockState(crop);
             helper.assertTrue(grew && s.getBlock() instanceof CropBlock cb && cb.getAge(s) == 1 && Quirks.pull(a, StationTask.FARM) == 4,
                 "Green Fingers: the crop comes on, and the fields pull it: " + s);
+            List<String> paper = new ArrayList<>();
+            int onPaper = Quirks.onPaper(a, StationTask.FARM, "opening", paper), offPaper = Quirks.onPaper(a, StationTask.MINE, "opening", new ArrayList<>());
+            helper.assertTrue(onPaper == 20 && offPaper == 0 && paper.contains("green-fingered"),
+                "and at an interview for the fields, twenty points on its paper: " + onPaper + " " + paper);
             // A Bookworm learns a tenth faster.
             trade(b, StationTask.FARM, 5);
             trade(d, StationTask.FARM, 5);

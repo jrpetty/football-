@@ -365,7 +365,8 @@ public final class Interviews {
         c.age = f.ageYears();
         c.knacks = JobMarket.knacks(f, t);
         List<String> good = new ArrayList<>();
-        c.paper = InterviewPosts.paper(p, f, village, good);
+        c.paper = InterviewPosts.paper(p, f, village, good)
+            + Quirks.onPaper(f, t, p.kind().name(), good);           // [perks] a Green Fingers for the fields, a Bookworm for the school
         c.good = String.join(", ", good);
         return c;
     }

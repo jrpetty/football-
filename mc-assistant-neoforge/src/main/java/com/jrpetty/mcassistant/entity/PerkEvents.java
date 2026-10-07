@@ -40,12 +40,13 @@ public final class PerkEvents {
         if (now != was) event.setAmount(now);
     }
 
-    /** Fire's harm to a folk: half for a Fireproof folk at its trade, half for a Nether-goer of a Blaze Wardens town. */
+    /** Fire's harm to a folk: half for a Fireproof folk at its trade, half for a Nether runner (on a run, in the Nether, or
+     *  of the trade) of a Blaze Wardens town. */
     static float fire(VillageFolkEntity f, DamageSource source, float amount) {
         if (!source.is(DamageTypeTags.IS_FIRE)) return amount;
         float a = amount;
         if (FolkSkills.active(f, FolkSkills.Knack.FIREPROOF)) a *= 0.5F;
-        if (CityTree.blazeWarded(f.ownerId()) && (Nether.away(f) || FolkSkills.netherTrade(f.stationTask()))) a *= 0.5F;
+        if (CityTree.blazeWarded(f.ownerId()) && (NetherRuns.on(f) || NetherRuns.inNether(f) || FolkSkills.netherTrade(f.stationTask()))) a *= 0.5F;
         return a;
     }
 

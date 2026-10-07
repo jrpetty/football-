@@ -337,30 +337,93 @@ public final class Perks {
         FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Gather round, everybody — now THIS is a feast!", "A song! A dance! Who's with me?"));
     }
 
+    // ------------------------------------------------------------------ the town's ethos (Ethos), and its identity
+
+    private static volatile boolean joined;
+
     /**
-     * The Nether party home (Nether.comeBack): what its folk's knacks bring back more (the gold its picks dug in peace
-     * with a Piglin-Friend among them, the piglins letting them be; a Blaze Hunter's rods, with a blade or a bow to take
-     * them) and the Nether Charts' (quartz for the picks, a rod for the blades: the charts lead them to both), all into
-     * the haul. Nothing without the means to get it, as the rest of the haul.
+     * Joined once (McAssistantMod): the perks' section of the Identity page and a few words of its summary, and the
+     * research leaned by the town's ethos (CityTree.ETHOS).
      */
-    public static void netherHaul(ServerLevel level, UUID village, List<UUID> party, List<ItemStack> haul, boolean armed, boolean picks) {
-        int gold = 0, rods = 0;
-        for (UUID u : party) {
-            if (!(level.getEntity(u) instanceof VillageFolkEntity f)) continue;
-            if (picks && f.knacks().has(FolkSkills.Knack.PIGLIN_FRIEND)) gold += 6 + f.getRandom().nextInt(6);
-            if (armed && f.knacks().has(FolkSkills.Knack.BLAZE_HUNTER)) rods += 2;
-        }
-        int[] charts = CityTree.netherMore(village);
-        if (gold > 0) haul.add(new ItemStack(Items.GOLD_NUGGET, gold));
-        if (armed) rods += charts[1];
-        if (rods > 0) haul.add(new ItemStack(Items.BLAZE_ROD, rods));
-        if (picks && charts[0] > 0) haul.add(new ItemStack(Items.QUARTZ, charts[0]));
+    public static void joinIdentity() {
+        if (joined) return;
+        joined = true;
+        Identity.contribute("Perks", Perks::identityLines);
+        Identity.contributeTag("perks", Perks::tag);
+        CityTree.ETHOS = Perks::ethosBranch;
     }
 
-    /** A Nether-goer's roll on coming home (Nether.comeBack): under the wards, or Fireproof, hurt half as often. */
-    public static int netherRoll(@Nullable UUID village, VillageFolkEntity f, int roll, RandomSource r) {
-        boolean warded = CityTree.blazeWarded(village) || f.knacks().has(FolkSkills.Knack.FIREPROOF);
-        return warded && roll < 25 && r.nextBoolean() ? 99 : roll;
+    /** The summary line's few words: its wonder ("the Cathedral's town"), or what its folk are known for; null for none. */
+    @Nullable
+    static String tag(UUID village) {
+        List<Wonders.Wonder> held = Wonders.held(village);
+        if (!held.isEmpty()) return "home of " + held.get(0).name;
+        String known = Quirks.knownFor(village);
+        if (known.isEmpty()) return null;
+        int cut = known.indexOf(" (");
+        return cut > 0 ? known.substring(0, cut) : known;
+    }
+
+    /** How far the town leans on an axis, as a share of twenty points: {plus end, minus end}. */
+    private static int[] ends(@Nullable UUID village, Ethos.Axis a) {
+        int l = Ethos.lean(village, a);
+        return new int[]{ Math.max(0, l) / 5, Math.max(0, -l) / 5 };
+    }
+
+    /**
+     * What the town's ethos makes a branch of the research worth, in points (up to twenty an axis): a mercantile town
+     * leans to Trade and a self-reliant one to the Land; a martial town to Defence and a peaceable one to Wellbeing; a
+     * devout town to Faith and a worldly one to the Arts; a learned town to Lore and a practical one to the Industry and
+     * the works; a forward-looking town to the Arcane and Lore, a traditional one to Faith and the Land; an open town to
+     * Trade and the Sea.
+     */
+    public static int ethosBranch(@Nullable UUID village, CityTree.Branch b) {
+        if (village == null) return 0;
+        int[] trade = ends(village, Ethos.Axis.TRADE), war = ends(village, Ethos.Axis.WAR), faith = ends(village, Ethos.Axis.FAITH),
+            learn = ends(village, Ethos.Axis.LEARNING), ways = ends(village, Ethos.Axis.WAYS), doors = ends(village, Ethos.Axis.DOORS);
+        return switch (b) {
+            case TRADE -> trade[0] + doors[0] / 2;
+            case LAND -> trade[1] + ways[0] / 2;
+            case DEFENCE -> war[0];
+            case WELLBEING -> war[1] + faith[1];
+            case FAITH -> faith[0] + ways[0] / 2;
+            case LORE -> learn[0] + ways[1] / 2;
+            case INDUSTRY -> learn[1];
+            case HOMES -> learn[1] / 2;
+            case ARCANE -> ways[1];
+            case SEA -> doors[0] / 2;
+        };
+    }
+
+    /**
+     * Which side of a pair the town's ethos takes, in points (up to twenty): the Free Market for the forward-looking and
+     * the Guild Monopolies for the traditional; the Open Granary for the egalitarian and Private Larders for the
+     * hierarchical; the Militia for the peaceable and the Standing Army for the martial; Open Borders for the open and
+     * Tariffs for the closed; the Scholars for the learned and the Craftsmen for the practical; Plain Living for the
+     * devout and Patronage for the worldly; Earthworks for the self-reliant and Stone Walls for the martial; the Pattern
+     * Books for the forward-looking and the Turnpikes for the mercantile.
+     */
+    public static int ethosWays(@Nullable UUID village, CityTree.Civic c) {
+        if (village == null || c.rival() == null) return 0;
+        return switch (c) {
+            case FREE_MARKET -> ends(village, Ethos.Axis.WAYS)[1];
+            case GUILD_MONOPOLIES -> ends(village, Ethos.Axis.WAYS)[0];
+            case OPEN_GRANARY -> ends(village, Ethos.Axis.RANK)[0];
+            case PRIVATE_LARDERS -> ends(village, Ethos.Axis.RANK)[1];
+            case MILITIA -> ends(village, Ethos.Axis.WAR)[1];
+            case STANDING_ARMY -> ends(village, Ethos.Axis.WAR)[0];
+            case OPEN_BORDERS -> ends(village, Ethos.Axis.DOORS)[0];
+            case TARIFFS -> ends(village, Ethos.Axis.DOORS)[1];
+            case SCHOLARS_ENDOWMENT -> ends(village, Ethos.Axis.LEARNING)[0];
+            case CRAFTSMENS_ENDOWMENT -> ends(village, Ethos.Axis.LEARNING)[1];
+            case PLAIN_LIVING -> ends(village, Ethos.Axis.FAITH)[0];
+            case PATRONAGE -> ends(village, Ethos.Axis.FAITH)[1];
+            case EARTHWORKS -> ends(village, Ethos.Axis.TRADE)[1];
+            case STONE_WALLS -> ends(village, Ethos.Axis.WAR)[0];
+            case OBSERVER_PATTERN_BOOKS -> ends(village, Ethos.Axis.WAYS)[1];
+            case TURNPIKES -> ends(village, Ethos.Axis.TRADE)[0];
+            default -> 0;
+        };
     }
 
     // ------------------------------------------------------------------ telling

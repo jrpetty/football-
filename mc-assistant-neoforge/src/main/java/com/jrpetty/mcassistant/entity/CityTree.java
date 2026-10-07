@@ -399,14 +399,14 @@ public final class CityTree {
         HERBALS(Branch.ARCANE, 1, "Herbals", "Brewer and enchanter +6%",
             "the brewer and the enchanter work 6% quicker",
             "Herbals and grimoires: the brewer and the enchanter work 6% quicker."),
-        BLAZE_WARDENS(Branch.ARCANE, 2, "Blaze Wardens", "Nether-goers take half the fire",
-            "the Nether parties go warded",
-            "Wards against the fire: whoever goes through the gateway takes half the fire's harm, and comes back hurt "
-                + "half as often."),
-        NETHER_CHARTS(Branch.ARCANE, 3, "Nether Charts", "A Nether party every day, with more",
+        BLAZE_WARDENS(Branch.ARCANE, 2, "Blaze Wardens", "Nether runners take half the fire",
+            "the Nether runners go warded",
+            "Wards against the fire: a Nether runner (and anybody of the town in the Nether) takes half the harm of fire "
+                + "and lava."),
+        NETHER_CHARTS(Branch.ARCANE, 3, "Nether Charts", "Nether runs every day; a quarter less walking",
             "the Nether is charted",
-            "The Nether's ways charted: a party goes through the gateway every day, not every other, and comes back with "
-                + "more quartz and a blaze rod more."),
+            "The Nether's ways charted: the runners go through the gateway every day, not every other, and a run's "
+                + "walking is reckoned a quarter shorter, so more of it goes on the work."),
         ALCHEMISTS_GUILD(Branch.ARCANE, 4, "Alchemists' Guild", "Brewer +8%; three powders to a rod",
             "the alchemists grind finer",
             "The alchemists' secrets: the brewer works 8% quicker, and grinds three blaze powders from a rod, not two."),
@@ -583,9 +583,8 @@ public final class CityTree {
     public static final int ALL = Civic.values().length;
 
     /**
-     * [perks] The town's ethos (its identity, kept by another hand) leaning the research: what a branch
-     * is worth to this town's ways, in points on the leader's scales. Nought until whoever keeps the
-     * ethos sets it.
+     * [perks] The town's ethos (Ethos, its identity) leaning the research: what a branch is worth to this town's ways,
+     * in points on the leader's scales. Perks.joinIdentity sets it to Perks.ethosBranch; a test may lean it its own way.
      */
     public static volatile java.util.function.ToIntBiFunction<UUID, Branch> ETHOS = (v, b) -> 0;
 
@@ -1224,14 +1223,14 @@ public final class CityTree {
         return has(village, Civic.BLAZE_WARDENS);
     }
 
-    /** Nether Charts: days between Nether parties (Nether.tick). */
+    /** Nether Charts: days between the runners' runs (NetherRunners.rested): one with the charts, two without. */
     public static int netherGap(@Nullable UUID village) {
         return has(village, Civic.NETHER_CHARTS) ? 1 : 2;
     }
 
-    /** Nether Charts: what a party brings back more ({quartz, blaze rods}; Nether.comeBack). */
-    public static int[] netherMore(@Nullable UUID village) {
-        return has(village, Civic.NETHER_CHARTS) ? new int[]{ 4, 1 } : new int[]{ 0, 0 };
+    /** Nether Charts: the run's walking reckoned, in percent (NetherPlan.plan): three quarters with the charts. */
+    public static int netherWalkPercent(@Nullable UUID village) {
+        return has(village, Civic.NETHER_CHARTS) ? 75 : 100;
     }
 
     /** The Alchemists' Guild: blaze powders ground from a rod (Crafts.brew). */
@@ -1608,7 +1607,7 @@ public final class CityTree {
         Homeland.Land land = Homeland.of(village);
         int lean = landLean(c.branch, land);
         a.add(lean, "the way of " + land.kind, "we're " + land.kind + ", and it shows");
-        int ethos = ETHOS.applyAsInt(village, c.branch);
+        int ethos = ETHOS.applyAsInt(village, c.branch) + Perks.ethosWays(village, c);   // its branch, and its side of a pair
         a.add(ethos, "the town's own ways", "it's our way");
         if (c.wonder() && !Wonders.raisedElsewhere(village, c)) a.add(12, "for the glory of it", "nobody in the world has one");
         return a;

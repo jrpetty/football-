@@ -9946,9 +9946,10 @@ The new civics:
 * **Trade**: Open Borders (a caravan carries two lots more, the takings 3% higher, every neighbour a little warmer each
   day) *or* Tolls and Tariffs (the takings 6% higher, the neighbours a little cooler every other day); the Grand
   Bazaar.
-* **Defence**: the Watch House (a guard two hearts more); the Standing Army (a guard more on the town's books, every
+* **Defence**: the Watch House (a guard two hearts more, doubled with a guard's own); the Standing Army (a guard more on the town's books, every
   guard a point more blow and a coin more pay, crime a little rarer) *or* the Militia (everybody grown a point of armour,
-  a guard fewer, never none); the Fletchers' Charter (a guard's quiver sixteen arrows fuller, out of the stores); the
+  a guard fewer, never none); the Fletchers' Charter (a guard's quiver sixteen arrows fuller, out of the stores, on top of the fletcher's
+  thirty-two, and the fletcher keeps sixteen more a guard in the raid's reserve to fill them); the
   Stone Walls (under the bell, everybody two more armour) *or* the Earthworks and Hedges (a guard on the wall sees six
   blocks further, the hunters 5% quicker); the Arena.
 * **Lore**: Primers (a lesson at the school teaches a quarter more); the Printing Press (every new library book printed
@@ -9960,12 +9961,13 @@ The new civics:
   hard); Saints' Days (a feast on the second day of every season, out of the stores like any feast); the Almshouse (the
   poor 4 the happier, crime a little rarer); the Cathedral.
 * **The Sea**: the Fishwives' Guild (fishers 6% quicker); the Navigator's Guild (the fleet sails in the rain, never in
-  a storm); Diving Bells (everybody holds its breath twice as long); Shipwrights (the fleet fits out a boat more, and
+  a storm); Diving Bells (everybody holds its breath twice as long: a diver goes up for air half as often and works the longer
+  below); Shipwrights (the fleet fits out a boat more, and
   a fisher for it); the Great Lighthouse.
-* **The Arcane**: Herbals (the brewer and the enchanter 6% quicker); the Blaze Wardens (a Nether-goer takes half the
-  fire and comes back hurt half as often); the Nether Charts (a Nether party every day, not every other, home with four
-  quartz and a blaze rod more when it has the picks and the blades to get them); the Alchemists' Guild (the brewer 8%
-  quicker, three blaze powders ground from a rod, not two); the Observatory.
+* **The Arcane**: Herbals (the brewer and the enchanter 6% quicker); the Blaze Wardens (a Nether runner, on a run or
+  anybody of the town in the Nether, takes half the harm of fire and lava); the Nether Charts (the runners go every day,
+  not every other, and a run's walking is reckoned a quarter shorter, so more of it goes on the work); the Alchemists'
+  Guild (the brewer 8% quicker, three blaze powders ground from a rod, not two); the Observatory.
 
 **The pairs.** Eight tiers are a choice of two. Taking one closes the other for good: it can never be studied, granted
 or picked, the chronicle says so, and the Research page shows it struck through. Each side leans to a different heart
@@ -9974,8 +9976,13 @@ choice is the leader's character.
 
 **Who chooses.** The leader, as before, by what it cares about, its nature, its mandate and what the town is short of;
 now also by the land (a coast town leans to the Sea, a mountain town to the Industry and the walls), by a wonder nobody
-in the world has raised yet, and by the town's own ways: `CityTree.ETHOS` is the seam for whoever keeps the town's ethos
-to lean a branch. A player who leads chooses itself, from the Leader page's Study buttons (or `/village perks study
+in the world has raised yet, and by the town's ethos (up to twenty points an axis): a mercantile town leans to Trade
+and a self-reliant one to the Land, a martial town to Defence and a peaceable one to Wellbeing, a devout town to Faith
+and a worldly one to the Arts, a learned town to Lore and a practical one to the Industry and the works, a
+forward-looking town to the Arcane, an open one to Trade and the Sea. The ethos takes sides in the pairs too: the Free
+Market for the forward-looking and the Guild Monopolies for the traditional, the Open Granary for the egalitarian and
+Private Larders for the hierarchical, the Militia for the peaceable and the Standing Army for the martial, Open Borders
+for the open and Tariffs for the closed, the Scholars for the learned and the Craftsmen for the practical. A player who leads chooses itself, from the Leader page's Study buttons (or `/village perks study
 <civic>`), and the town hears it.
 
 ### The wonders
@@ -10049,16 +10056,17 @@ hand at the town's works, as every plaque is).
 ### The folk's knacks
 
 Fifty knacks now. The trades that had none have their own: Pathfinder for the scout, Sharp Ledger at the bank, Tunnel
-Rat in the caves and Strong Oar at the ferry (each 8% quicker). The new trades have theirs, each found by the trade's
-title or a word of its name the day the trade is in the game, and meanwhile open to the nearest old trades, where they
-do their work now: Surveyor's Eye (the cartographer's, a scout a quarter further); Deep Lungs (the kelp diver's, three
-times the breath); Fireproof (the Nether runner's, half the harm from fire and lava); Piglin-Friend (piglins leave it be
-unless it strikes them; Nether gold home with a party that has picks); Blaze Hunter (a blaze it kills drops a rod more;
-two more rods home); True Shot (the fletcher's, its arrows a quarter harder); Featherlight (eight arrows more in its
-quiver); Iron Whisperer (the golem keeper's, every iron golem within sixteen blocks mended a heart every five seconds);
-Tinkerer (the redstone engineer's, 8% quicker, the railway a quarter quicker while it works); Circuit Sense (one
-redstone ore in two gives four dust more); Silver Tongue (the emerald trader's, the town's takings 5% higher while it
-works); Showman (the fireworks maker's, a feast it is at lifts the town 2 for two days).
+Rat in the caves and Strong Oar at the ferry (each 8% quicker). The new trades have theirs: Surveyor's Eye (the
+cartographer's and the scout's, a quarter further afield); Deep Lungs (the diver's and the fisher's, three times the
+breath); Fireproof (the Nether runner's and the smelter's, half the harm from fire and lava); Piglin-Friend (the Nether
+runner's: piglins leave it be unless it strikes them); Blaze Hunter (the Nether runner's: a blaze it kills drops a rod
+more); True Shot (the fletcher's, the guard's and the hunter's: its arrows a quarter harder); Featherlight (the
+fletcher's and the guard's: eight arrows more in its quiver); Iron Whisperer (the golem keeper's: every iron golem within
+sixteen blocks mended a heart every five seconds); Silver Tongue (the emerald trader's and the shopkeeper's: the town's
+takings 5% higher while it works); Showman (the fireworks maker's: a feast it is at lifts the town 2 for two days). The
+redstone engineer's two wait on the smith and the miner till that trade comes (found then by its name): Tinkerer (8%
+quicker, the railway a quarter quicker while it works) and Circuit Sense (one redstone ore in two gives four dust
+more).
 
 **Masters.** At level thirty in a trade a folk may take its master's knack: a master's pace (12% quicker) and a
 master's gift: the Master Miner one ore in five, the Master Grower a seed back from every harvest, the Master Host a tip
@@ -10094,7 +10102,17 @@ Every folk has one or two quirks from birth (a founder from the founding, the sa
 
 Never a pair at odds (an Early Bird is no Night Owl). A child takes one of its parents' quirks one time in two, and says
 whose ("I get that from Ada, they say"). The trades go to the folk they suit (the job pull): a Green Fingers to the
-fields, an Animal Lover to the herds, a Wanderlust to scouting, the Hawk-eyed and the Fearless to the watch. A town where
+fields, an Animal Lover to the herds and the golems, a Wanderlust to scouting, the maps and the Nether runs, the
+Hawk-eyed and the Fearless to the watch, a Hardy folk to the diving and the Nether (a Frail or a Homebody not). At an
+interview the quirks count on paper, five points for each level's worth of pull to the post's trade (a Green Fingers
+twenty for the fields), and for the posts that are no trade (a Bookworm for the school and the library, a
+Smooth-talker for the auction and the trading post, the Fearless for the constable and the Nether runners); and in the
+interview's own question a quirk that suits the trade makes the better answer. The job market weighs applicants from
+other towns the same way.
+
+A folk's quirks and its own fears and dreams agree: a Fearless folk has no fear of monsters, never runs from one, and
+gets over any other fear (the dark, deep water) in half the brave days; a Homebody never dreams of going to the
+Nether. A town where
 one quirk runs in a fifth of its folk (four at least) is known for it: "known for its luck".
 
 ### Where to see it
@@ -10109,7 +10127,9 @@ one quirk runs in a fifth of its folk (four at least) is known for it: "known fo
 * The **Leader** page of the books and the leader's card ("Leads") show its perk in office, its level and its skills.
   A player who leads has Study and Skill buttons on its Leader page.
 * A folk's card has a **Quirks** line (with whose an inherited one is); asked what it's good at, it says its quirks.
-* The board says the town's ways, its wonders, its leader's heart, its legacies and what its folk are known for.
+* The board says the town's ways, its wonders, its leader's heart, its legacies and what its folk are known for; the
+  Identity page has a Perks section (its research, its ways, its wonders, its leader and its legacies, what its folk are
+  known for), and the summary line names its wonder or its folk's fame.
 * `/village perks` (all of it), `/village perks wonders` (the world's wonders), `/village perks leader`,
   `/village perks quirks`; `/village perks study <civic>` and `/village perks skill <skill>` for a player who leads;
   for operators `/village perks quirks give <quirk>`, `/village perks reign end`, `/village perks reign xp <n>`,
@@ -10128,8 +10148,8 @@ The game tests `PerksGameTests` (pk01 to pk10) check that:
 * the Watch House, the Standing Army, the Fletchers' Charter, the Militia, the Earthworks and the Arena do what they
   say, the Arena only once raised;
 * Primers, the Printing Press (on a book from the stores, and not without one), the Scholars, the Surveyors, the
-  Fishwives, the Navigators (the rain, not a storm), the Diving Bells, the Shipwrights, Herbals, the Blaze Wardens, the
-  Nether Charts (more only with the means to get it) and the Alchemists do what they say;
+  Fishwives, the Navigators (the rain, not a storm), the Diving Bells (on a diver), the Shipwrights, Herbals, the Blaze
+  Wardens (a Nether runner, nobody else), the Nether Charts and the Alchemists do what they say;
 * the ways' prices, wages, works, walking, contentment, breaks, caravans, takings and warmth, a saint's day's feast and
   the Almshouse's lesser temptation;
 * two towns study to the Cathedral, each lays its dues by out of its stores, the first to raise it holds it (renown,
@@ -10142,5 +10162,5 @@ The game tests `PerksGameTests` (pk01 to pk10) check that:
 * every trade has a knack of its own and a master's, and the new ones (Pathfinder, Surveyor's Eye, the Master Miner at
   thirty, Fireproof, Featherlight, Iron Whisperer, Piglin-Friend, Veteran, True Shot, Deep Lungs, Showman) do what
   they say;
-* every quirk tested does what it says, a child takes a parent's quirk (and says whose) or its own, and a town is known
-  for its commonest.
+* every quirk tested does what it says (a Green Fingers twenty points on paper for the fields, the Fearless no fear of
+  monsters), a child takes a parent's quirk (and says whose) or its own, and a town is known for its commonest.

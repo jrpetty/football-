@@ -711,7 +711,7 @@ public final class NetherRunners {
         } catch (NumberFormatException ignored) {
             // never been
         }
-        return day - lastDay > REST;
+        return day - lastDay > REST + 1 - CityTree.netherGap(village);     // [perks] the Nether Charts: every day
     }
 
     /** The team could not go today (no food, no cobblestone for the outpost): said, and on the board once a day. */

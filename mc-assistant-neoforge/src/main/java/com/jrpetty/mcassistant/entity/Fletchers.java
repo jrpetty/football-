@@ -546,9 +546,11 @@ public final class Fletchers {
         return null;
     }
 
-    /** The raid's reserve the stores keep: thirty-two arrows a guard, and a turn at the butts besides. */
+    /** The raid's reserve the stores keep: thirty-two arrows a guard, and a turn at the butts besides. [perks] Under the
+     *  Fletchers' Charter, a guard's sixteen more besides, so the fuller quivers are made before they are wanted. */
     public static int reserve(UUID village) {
-        return Math.max(1, WatchKit.watch(village).size()) * RESERVE_EACH + (Archery.of(village) != null ? PRACTICE_ARROWS : 0);
+        return Math.max(1, WatchKit.watch(village).size()) * (RESERVE_EACH + CityTree.quiver(village))
+            + (Archery.of(village) != null ? PRACTICE_ARROWS : 0);
     }
 
     /** The arrows the stores keep back from the shop's counter (Budget): the raid's reserve, where the town keeps a fletcher. */

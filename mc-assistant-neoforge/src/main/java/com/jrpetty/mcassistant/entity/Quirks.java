@@ -165,6 +165,7 @@ public final class Quirks {
         if (from.isEmpty()) f.getPersistentData().remove(FROM);
         else f.getPersistentData().putString(FROM, from);
         READ.put(f.getUUID(), EnumSet.copyOf(qs.isEmpty() ? EnumSet.noneOf(Quirk.class) : qs));
+        if (qs.contains(Quirk.FEARLESS)) calm(f, f.individual());       // no fear of monsters for the Fearless
         // A musical folk takes up music, a bookworm reading, if it has a pastime to change.
         if (f.persona().rolled()) {
             if (qs.contains(Quirk.MUSICAL)) f.persona().hobby = Persona.Hobby.MUSIC;
@@ -328,24 +329,81 @@ public final class Quirks {
     }
 
     /**
-     * The job pull: how well this trade suits it, in levels' worth (VillageFolkEntity.betterHandFor, JobMarket.fitFor):
-     * a Green Fingers at the fields, an Animal Lover at the herds, a Wanderlust out scouting, a Hawk-eyed or Fearless
-     * folk on the watch, a Bookworm at the enchanting table, a Musical folk at the café's counter; never a Squeamish
-     * folk at the hunt.
+     * The job pull: how well this trade suits it, in levels' worth (VillageFolkEntity.betterHandFor, JobMarket.fitFor,
+     * and the interviews' paper: onPaper): a Green Fingers at the fields, an Animal Lover at the herds and the golems, a
+     * Wanderlust out scouting, mapping or on the Nether runs, a Hawk-eyed or Fearless folk on the watch, a Bookworm at
+     * the enchanting table or the maps, a Smooth-talker at the counter, a Musical folk at the fireworks, a Hardy one
+     * diving or in the Nether (and a Frail or a Homebody not); never a Squeamish folk at the hunt.
      */
     public static int pull(VillageFolkEntity f, StationTask t) {
+        int p = 0;
+        for (Quirk q : of(f)) p += pull(f, t, q);
+        return p;
+    }
+
+    /** One quirk's pull to a trade, in levels' worth. */
+    static int pull(VillageFolkEntity f, StationTask t, Quirk q) {
+        return switch (q) {
+            case GREEN_FINGERS -> t == StationTask.FARM ? 4 : 0;
+            case ANIMAL_LOVER -> t == StationTask.RANCH || t == StationTask.BEEKEEP || t == StationTask.GOLEMS ? 4 : 0;
+            case WANDERLUST -> t == StationTask.SCOUT || t == StationTask.CARTOGRAPHER || t == StationTask.NETHER ? 4 : 0;
+            case HAWK_EYED -> t == StationTask.GUARD || t == StationTask.FLETCHER ? 3 : 0;
+            case FEARLESS -> t == StationTask.GUARD || t == StationTask.NETHER ? 3 : 0;
+            case BOOKWORM -> t == StationTask.ENCHANT || t == StationTask.CARTOGRAPHER ? 3 : 0;
+            case BROAD_SHOULDERS -> t == StationTask.HAUL || t == StationTask.MINE ? 2 : 0;
+            case SMOOTH_TALKER -> t == StationTask.SHOP || t == StationTask.EMERALD ? 2 : 0;
+            case MUSICAL -> t == StationTask.FIREWORKS ? 2 : 0;
+            case HARDY -> t == StationTask.DIVER || t == StationTask.NETHER ? 2 : 0;
+            case FRAIL -> t == StationTask.NETHER || t == StationTask.DIVER ? -4 : 0;
+            case SQUEAMISH -> t == StationTask.HUNT ? -100 : 0;
+            case HOMEBODY -> t == StationTask.SCOUT || t == StationTask.CARTOGRAPHER || t == StationTask.NETHER ? -4 : 0;
+            default -> 0;
+        };
+    }
+
+    /**
+     * [perks] What its quirks are worth on paper for a post (the interview's paper and the job market's weighing), in
+     * points, with the word for each said for it ("green-fingered") into {@code good}: its pull to the post's trade,
+     * five points a level's worth, and the posts that are no trade (a Bookworm for the school or the library, a
+     * Smooth-talker for the auction or the trading post, a Fearless folk for the watch or the Nether runners, a Frail one
+     * not for the runners).
+     */
+    public static int onPaper(VillageFolkEntity f, @Nullable StationTask trade, @Nullable String post, List<String> good) {
         EnumSet<Quirk> qs = of(f);
         if (qs.isEmpty()) return 0;
-        int p = 0;
-        if (qs.contains(Quirk.GREEN_FINGERS) && t == StationTask.FARM) p += 4;
-        if (qs.contains(Quirk.ANIMAL_LOVER) && (t == StationTask.RANCH || t == StationTask.BEEKEEP)) p += 4;
-        if (qs.contains(Quirk.WANDERLUST) && t == StationTask.SCOUT) p += 4;
-        if ((qs.contains(Quirk.HAWK_EYED) || qs.contains(Quirk.FEARLESS)) && t == StationTask.GUARD) p += 3;
-        if (qs.contains(Quirk.BOOKWORM) && t == StationTask.ENCHANT) p += 3;
-        if (qs.contains(Quirk.BROAD_SHOULDERS) && (t == StationTask.HAUL || t == StationTask.MINE)) p += 2;
-        if (qs.contains(Quirk.SQUEAMISH) && t == StationTask.HUNT) p -= 100;
-        if (qs.contains(Quirk.HOMEBODY) && t == StationTask.SCOUT) p -= 4;
-        return p;
+        String k = post == null ? "" : post.toLowerCase(Locale.ROOT);
+        int s = 0;
+        for (Quirk q : qs) {
+            int p = trade == null ? 0 : Math.max(-30, pull(f, trade, q) * 5);
+            if (q == Quirk.BOOKWORM && (k.startsWith("teacher") || k.startsWith("librarian"))) p += 15;
+            if (q == Quirk.SMOOTH_TALKER && (k.startsWith("auctioneer") || k.startsWith("trader") || k.startsWith("banker"))) p += 12;
+            if (q == Quirk.FEARLESS && (k.startsWith("constable") || k.startsWith("runner"))) p += 12;
+            if (q == Quirk.WANDERLUST && (k.startsWith("cartographer") || k.startsWith("runner"))) p += 8;
+            if (q == Quirk.FRAIL && k.startsWith("runner")) p -= 15;
+            if (q == Quirk.BORN_LEADER && (k.startsWith("steward") || k.startsWith("cave_leader"))) p += 10;
+            if (p > 0) good.add(q.adjective);
+            s += p;
+        }
+        return s;
+    }
+
+    /**
+     * [perks] Its quirks and its fears (Individual) agree: a Fearless folk has no fear of monsters (taken away as the
+     * quirks or the fears are given), and gets over any other fear twice as fast ({@link #courage}); nor does it run
+     * from a monster (Fears.hold). Returns whether a fear was taken away.
+     */
+    static boolean calm(VillageFolkEntity f, Individual.Self s) {
+        return has(f, Quirk.FEARLESS) && s.fears.remove(Fears.Fear.MONSTERS);
+    }
+
+    /** A brave day's courage toward getting over a fear (Fears.braved): two for the Fearless, one for anybody else. */
+    static int courage(VillageFolkEntity f) {
+        return has(f, Quirk.FEARLESS) ? 2 : 1;
+    }
+
+    /** A quirk's turn in the interview's own question (InterviewScript), -2 to 2: its pull to the trade asked about. */
+    public static int inInterview(VillageFolkEntity f, @Nullable StationTask trade) {
+        return trade == null ? 0 : Math.max(-2, Math.min(2, pull(f, trade) / 2));
     }
 
     /** Would it refuse this trade outright (a Squeamish folk the hunt)? */

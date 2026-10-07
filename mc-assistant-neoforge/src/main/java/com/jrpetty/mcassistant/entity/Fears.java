@@ -102,6 +102,7 @@ public final class Fears {
         // A grown folk already at a trade has long since got used to what that trade asks of it.
         StationTask t = f.stationTask();
         if (!child && t != StationTask.NONE) s.fears.removeIf(fear -> shuns(fear, t));
+        Quirks.calm(f, s);                                           // [perks] the Fearless fear no monster
     }
 
     // ------------------------------------------------------------------ the trades it will not take
@@ -139,7 +140,7 @@ public final class Fears {
     static boolean hold(VillageFolkEntity f, ServerLevel level) {
         Individual.Self s = f.individual();
         if (s.fears.isEmpty() || f.isBaby() || f.isSleeping() || f.ownerId() == null || Raids.underAlarm(f.ownerId())) return release(f);
-        if (s.fears.contains(Fear.MONSTERS) && flee(f, level)) return true;
+        if (s.fears.contains(Fear.MONSTERS) && !Quirks.answersCries(f) && flee(f, level)) return true;   // [perks] never the Fearless
         if (s.fears.contains(Fear.DARK) && homeBeforeDusk(f, level)) return true;
         return release(f);
     }
@@ -279,7 +280,7 @@ public final class Fears {
         String key = f.getUUID() + "/" + fear.name();
         if (BRAVE_DAY.getOrDefault(key, -1L) == day) return false;
         BRAVE_DAY.put(key, day);
-        int c = s.courage.getOrDefault(fear, 0) + 1;
+        int c = s.courage.getOrDefault(fear, 0) + Quirks.courage(f);         // [perks] the Fearless twice as fast
         if (c < COURAGE) {
             s.courage.put(fear, c);
             return false;

@@ -56,7 +56,7 @@ import java.util.UUID;
  * Sharp Ledger at the bank, Tunnel Rat in the caves, Strong Oar at the ferry, each 8% quicker), and the new trades
  * theirs, found by their title or a word of their name the day they come into the game, and meanwhile the nearest
  * old trades' (Surveyor's Eye, a scout a quarter further; Deep Lungs, three times the breath; Fireproof, half the
- * fire; Piglin-Friend, left be by the piglins and Nether gold home; Blaze Hunter, a rod more from a blaze; True Shot,
+ * fire; Piglin-Friend, left be by the piglins; Blaze Hunter, a rod more from a blaze; True Shot,
  * arrows a quarter harder; Featherlight, eight arrows more; Iron Whisperer, golems mended; Tinkerer, the railway a
  * quarter quicker; Circuit Sense, redstone dust from the ore; Silver Tongue, the town's takings 5% higher; Showman, a
  * feast to remember). The <b>Master</b> family (ten) opens at level thirty in a trade: a master's pace (12%) and a
@@ -159,7 +159,7 @@ public final class FolkSkills {
         PATHFINDER("pathfinder", "Pathfinder", Family.TRADE, "+8% pace scouting", 8, null,
             "it never loses the way", StationTask.SCOUT),
         SURVEYORS_EYE("surveyors_eye", "Surveyor's Eye", Family.TRADE, "scouts a quarter further afield", 0, null,
-            "an eye for the lie of the land", NewTrades.with("Cartographer", "CARTOGRAPH", StationTask.SCOUT)),
+            "an eye for the lie of the land", StationTask.CARTOGRAPHER, StationTask.SCOUT),
         SHARP_LEDGER("sharp_ledger", "Sharp Ledger", Family.TRADE, "+8% pace at the bank", 8, null,
             "it never loses a coin", StationTask.BANK),
         TUNNEL_RAT("tunnel_rat", "Tunnel Rat", Family.TRADE, "+8% pace in the caves", 8, null,
@@ -167,28 +167,28 @@ public final class FolkSkills {
         STRONG_OAR("strong_oar", "Strong Oar", Family.TRADE, "+8% pace at the ferry", 8, null,
             "it pulls a steady oar", StationTask.FERRY),
         DEEP_LUNGS("deep_lungs", "Deep Lungs", Family.TRADE, "holds its breath three times as long", 0, null,
-            "it is at home under water", NewTrades.with("Kelp diver", "KELP|DIVE", StationTask.FISH, StationTask.FERRY)),
+            "it is at home under water", StationTask.DIVER, StationTask.FISH),
         // ---------------------------------------------------------------- [perks] the new trades' (and the nearest old ones')
         FIREPROOF("fireproof", "Fireproof", Family.TRADE, "half the harm from fire and lava", 0, null,
-            "it has walked through fire", NewTrades.with("Nether runner", "NETHER", StationTask.SMELT, StationTask.CAVE)),
-        PIGLIN_FRIEND("piglin_friend", "Piglin-Friend", Family.TRADE, "piglins leave it be; brings back Nether gold", 0, null,
-            "it knows the piglins' ways", NewTrades.with("Nether runner", "NETHER", StationTask.GUARD, StationTask.MINE)),
+            "it has walked through fire", StationTask.NETHER, StationTask.SMELT),
+        PIGLIN_FRIEND("piglin_friend", "Piglin-Friend", Family.TRADE, "piglins leave it be (unless it strikes them)", 0, null,
+            "it knows the piglins' ways", StationTask.NETHER),
         BLAZE_HUNTER("blaze_hunter", "Blaze Hunter", Family.TRADE, "a blaze it kills drops a rod more", 0, null,
-            "it has a way with blazes", NewTrades.with("Nether runner", "NETHER", StationTask.GUARD, StationTask.HUNT)),
+            "it has a way with blazes", StationTask.NETHER),
         TRUE_SHOT("true_shot", "True Shot", Family.TRADE, "its arrows hit a quarter harder", 0, null,
-            "its arrows fly true", NewTrades.with("Fletcher", "FLETCH", StationTask.GUARD, StationTask.HUNT)),
+            "its arrows fly true", StationTask.FLETCHER, StationTask.GUARD, StationTask.HUNT),
         FEATHERLIGHT("featherlight", "Featherlight", Family.TRADE, "8 more arrows in its quiver", 0, null,
-            "it fletches light and true", NewTrades.with("Fletcher", "FLETCH", StationTask.GUARD)),
+            "it fletches light and true", StationTask.FLETCHER, StationTask.GUARD),
         IRON_WHISPERER("iron_whisperer", "Iron Whisperer", Family.TRADE, "iron golems near it mend", 0, null,
-            "the golems trust it", NewTrades.with("Golem keeper", "GOLEM", StationTask.GUARD)),
+            "the golems trust it", StationTask.GOLEMS),
         TINKERER("tinkerer", "Tinkerer", Family.TRADE, "+8% pace at its trade; the railway laid 25% faster while it works", 8, null,
             "it can't leave a mechanism alone", NewTrades.with("Redstone engineer", "REDSTONE", StationTask.SMITH)),
         CIRCUIT_SENSE("circuit_sense", "Circuit Sense", Family.TRADE, "one redstone ore in two gives four dust more", 0, null,
             "it can feel the redstone in the rock", NewTrades.with("Redstone engineer", "REDSTONE", StationTask.MINE, StationTask.CAVE)),
         SILVER_TONGUE("silver_tongue", "Silver Tongue", Family.TRADE, "+5% on the town's takings while it works", 0, null,
-            "it could sell sand in the desert", NewTrades.with("Emerald trader", "EMERALD", StationTask.SHOP, StationTask.BANK)),
+            "it could sell sand in the desert", StationTask.EMERALD, StationTask.SHOP),
         SHOWMAN("showman", "Showman", Family.TRADE, "a feast it is at lifts the town 2 for two days", 0, null,
-            "it knows how to put on a show", NewTrades.with("Fireworks maker", "FIREWORK", StationTask.COOK)),
+            "it knows how to put on a show", StationTask.FIREWORKS),
         // ---------------------------------------------------------------- [perks] the masters' (level thirty)
         MASTER_MINER("master_miner", "Master Miner", Family.MASTER, "+12% pace; one ore in five gives one more", 12, null,
             "a lifetime at the rock face", StationTask.MINE, StationTask.CAVE),
@@ -209,7 +209,8 @@ public final class FolkSkills {
         MASTER_PORTER("master_porter", "Master Porter", Family.MASTER, "+12% pace in the storehouse; 64 more a load", 12, null,
             "it could carry the town on its back", StationTask.HAUL, StationTask.STORE),
         GRAND_MASTER("grand_master", "Grand Master", Family.MASTER, "+12% pace at its trade", 12, null,
-            "there is nothing left to teach it", NewTrades.all(StationTask.SCOUT, StationTask.BANK, StationTask.FERRY));
+            "there is nothing left to teach it", NewTrades.all(StationTask.SCOUT, StationTask.BANK, StationTask.FERRY, StationTask.FLETCHER, StationTask.GOLEMS,
+                StationTask.FIREWORKS, StationTask.CARTOGRAPHER, StationTask.EMERALD, StationTask.DIVER, StationTask.NETHER));
 
         public final String key, title, effect, why;
         public final Family family;
@@ -251,15 +252,15 @@ public final class FolkSkills {
     }
 
     /**
-     * [perks] The trades that are coming (the Nether runner, the fletcher, the golem keeper, the kelp diver, the
-     * redstone engineer, the cartographer, the emerald trader, the fireworks maker), found by their title or a word of
-     * their name once they are in the game, so their knacks open to them the day they land; till then each knack
-     * belongs to the nearest old trades, where it does its work now.
+     * [perks] A trade still to come (the redstone engineer), found by its title or a word of its name once it is in the
+     * game, so its knacks open to it the day it lands; till then each of its knacks belongs to the nearest old trades,
+     * where it does its work now. The trades that have come (the Nether runner, the fletcher, the golem keeper, the
+     * diver, the cartographer, the emerald trader, the fireworks maker) are named outright.
      */
     static final class NewTrades {
         private NewTrades() {}
 
-        static final String[] HINTS = { "NETHER", "FLETCH", "GOLEM", "KELP", "DIVE", "REDSTONE", "CARTOGRAPH", "EMERALD", "FIREWORK" };
+        static final String[] HINTS = { "REDSTONE" };
 
         /**
          * The old trades given, and the new trade by its title or a word of its name ({@code hints}: one or more,
@@ -723,7 +724,7 @@ public final class FolkSkills {
 
     /** [perks] Is this the trade of going through to the Nether (the Nether runner, when the game has it)? */
     static boolean netherTrade(StationTask t) {
-        return t.name().contains("NETHER");
+        return t == StationTask.NETHER;
     }
 
     /** [perks] Has any grown folk of the town this knack at work just now (looked up at most once in ten seconds)? */

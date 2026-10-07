@@ -26,6 +26,11 @@ import net.minecraft.world.phys.Vec3;
  * a fifth, a diver at the deepest the trade goes (Divers.DEEPEST, twelve) is at the top in under three seconds, with
  * five in hand.
  *
+ * <p>[perks] The game spends a breath only one tick in so many for a body with an oxygen bonus, and the town's perks
+ * give one: the Diving Bells a point to everybody (CityTree.dress), a Deep Lungs diver two more (FolkSkills.keepUp). So
+ * the same {@link #LOW_AIR} mark comes twice (or four times) as late, and a diver of such a town goes up for air half
+ * as often (a quarter as often) and works the longer below.
+ *
  * <p><b>The turtle helmet.</b> As the game gives a player wearing one: ten seconds of water breathing, renewed while
  * its head is out of the water, and so a diver in one goes down with ten seconds more in hand.
  */

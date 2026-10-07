@@ -91,7 +91,7 @@ public final class Dreams {
         Individual.Self s = f.individual();
         int age = f.isBaby() ? 0 : f.ageYears();
         return switch (a) {
-            case GO_NETHER -> !s.fears.contains(Fears.Fear.NETHER);
+            case GO_NETHER -> !s.fears.contains(Fears.Fear.NETHER) && !Quirks.has(f, Quirks.Quirk.HOMEBODY);   // [perks] nor a homebody
             case SEE_THE_SEA -> !s.fears.contains(Fears.Fear.DEEP_WATER);
             case WRITE_BOOK -> s.literate || f.isBaby();
             case BIG_FAMILY, FAMILY -> age < 56;

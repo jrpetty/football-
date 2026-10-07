@@ -210,6 +210,10 @@ public final class NetherPlan {
         boolean toFort = fort != null && (jobs.contains("wart") || jobs.contains("blaze") || jobs.contains("soul"));
         double walk = 2.0 * 40 * 20.0 / 3.0;                                   // the gateway and out to the work, and back
         if (toFort) walk += 2.0 * Math.max(16, fort.a()) * 20.0 / 3.0;
+        if (CityTree.netherWalkPercent(id) < 100) {                           // [perks] the Nether Charts: the ways known
+            walk = walk * CityTree.netherWalkPercent(id) / 100.0;
+            reckoning.add("the Nether Charts: the ways known, a quarter less walking");
+        }
         reckoning.add("work: about " + hours(work) + "; walk: about " + hours(walk) + (toFort ? " (the fortress " + fort.a() + " blocks out)" : ""));
         double days = Math.max(SHORTEST, Math.min(LONGEST, Math.round((work + walk) / DAYLIGHT * 2.0) / 2.0));
         // Urgency: the brewer out of wart with no farm, or the town out of fire resistance.
