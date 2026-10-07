@@ -161,6 +161,14 @@ public final class Raids {
                 }
             }
         });
+        // [golems] The town's golems kept to their posts, back from a fight to the gate or the square (Golems).
+        Guard.run("golems", () -> {
+            for (ServerLevel level : event.getServer().getAllLevels()) {
+                for (Villages.Village v : Villages.every()) {
+                    if (v.dim().equals(level.dimension())) Golems.tick(level, v);
+                }
+            }
+        });
     }
 
     /** The watch's look round one village. */
@@ -431,6 +439,8 @@ public final class Raids {
         }
         // A bad raid: homes lost, or the place too few to keep: its homeless go to a neighbour (JobMarket).
         if (a.raid) JobMarket.raided(level, v, a.lost);
+        Fletchers.raidOver(level, v, a.raid);                // [fletcher] every quiver filled, and the reserve made good
+        Golems.raidOver(level, v, a.raid || "a raid".equals(a.why));   // [golems] the raids counted, for the keeper and the gates
     }
 
     /** A folk of this village fell (Raids counts the night's losses). */

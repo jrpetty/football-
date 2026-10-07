@@ -396,6 +396,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.WarScouting.class);   // [war-scouting] spies, pickets, captives
         NeoForge.EVENT_BUS.register(TimeSpeed.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Transport.class);    // [transport] railways, carts, ferries, bridges
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Golems.class);       // [golems] a golem fallen, its iron left lying
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {

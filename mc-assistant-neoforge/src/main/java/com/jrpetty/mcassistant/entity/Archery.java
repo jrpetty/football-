@@ -273,10 +273,16 @@ public final class Archery {
     /** Arrows out of the stores and a bow to hand: the session open. Null without them. */
     @Nullable
     static Session open(VillageFolkEntity f, ServerLevel level, UUID village, Ledger.Building range, int lane, boolean contest) {
+        return open(f, level, village, range, lane, contest, ARROWS);
+    }
+
+    /** [fletcher] The same, with so many arrows to shoot (the fletcher's practice gives each guard ten). */
+    @Nullable
+    static Session open(VillageFolkEntity f, ServerLevel level, UUID village, Ledger.Building range, int lane, boolean contest, int arrows) {
         Villages.Village v = Villages.get(village);
         if (v == null) return null;
         long day = level.getDayTime() / 24000L;
-        int n = Math.min(ARROWS, Market.stock(level, village, s -> s.is(Items.ARROW)));
+        int n = Math.min(arrows, Market.stock(level, village, s -> s.is(Items.ARROW)));
         if (n < 2) {
             if (contest) score(level, village, f.getUUID(), 0, 0, "no arrows in the stores");
             else PRACTISED.put(f.getUUID(), day);                       // no practice this morning: asked again tomorrow
@@ -416,6 +422,7 @@ public final class Archery {
         float speed = 1.6F;
         double drop = 0.5 * 0.05 * (horiz / speed) * (horiz / speed);
         float inaccuracy = (float) Math.max(2.5, Math.min(10.0, 10.0 - f.tradeLevel(StationTask.GUARD) * 0.2));
+        inaccuracy *= Fletchers.aimFactor(f);                          // [fletcher] the eye practice has given it
         arrow.shoot(dx, dy + drop, dz, speed, inaccuracy);
         level.addFreshEntity(arrow);
         level.playSound(null, f.blockPosition(), SoundEvents.ARROW_SHOOT, SoundSource.NEUTRAL, 1.0F, 1.0F / (f.getRandom().nextFloat() * 0.4F + 0.8F));
@@ -473,6 +480,7 @@ public final class Archery {
             if (s.points >= s.shot * 3 / 2) FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Not bad, that.", "My eye's in today."));
         }
         LAST.put(f.getUUID(), new int[]{ s.shot, s.hits, s.points, pulled });
+        Fletchers.practised(level, f, s.shot, s.hits, s.points, s.contest);   // [fletcher] its eye the better for it, and its best kept
     }
 
     /** The arrows it loosed, and any of its own lying in the range: off the field, counted. */
@@ -615,6 +623,18 @@ public final class Archery {
         if (village == null || range == null) return false;
         int lane = freeLane(village, range);
         return lane >= 0 && open(f, level, village, range, lane, false) != null;
+    }
+
+    /**
+     * [fletcher] A guard's turn at the fletcher's practice: down to a free butt with so many of the stores' arrows and its
+     * bow (or one borrowed), whatever the hour. False if it cannot go: no range, no lane free, no arrows or no bow.
+     */
+    static boolean turn(VillageFolkEntity g, ServerLevel level, int arrows) {
+        UUID village = g.ownerId();
+        Ledger.Building range = of(village);
+        if (village == null || range == null || SESSIONS.containsKey(g.getUUID())) return false;
+        int lane = freeLane(village, range);
+        return lane >= 0 && open(g, level, village, range, lane, false, arrows) != null;
     }
 
     /** Tests: {shot, hits, points, pulled} of this guard's last session, or null. */

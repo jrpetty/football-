@@ -356,6 +356,37 @@ public final class TradeBookWriter {
             "the deep caves, in diamond",
             "everything under the world",
         }, "What did the bat say to the cave dweller? Nothing. It was hanging around."));
+        // [fletcher]
+        craft("FLETCHER", new Craft("fletcher", "Fletcher's", "the fletching table", "fletching", "the arrows", "things made", new String[]{
+            "Sift the gravel on a hard floor and break it clean. One block in ten gives a flint; the rest goes back to be sifted again.",
+            "A flint, a stick and a feather make four arrows. Never cut a feather short: the flight is what keeps it true.",
+            "Keep the raid's reserve first, thirty-two to a guard, before a single arrow goes to the shop.",
+            "Every guard goes up the wall with a full quiver. A guard with an empty one is a guard with a stick.",
+            "Pull every arrow out of the butts after practice. An arrow lost in the grass is a feather the coop must grow again.",
+            "Practice steadies an eye for good. Send the worst shots to the butts first: they have the most to gain.",
+            "Three string to a bow, two to a crossbow. Ask the hunters for the spiders' silk.",
+        }, new String[]{
+            "flint knapped by hand and goose feathers off the common",
+            "the fletching table, and the miners' gravel by the cartload",
+            "crossbows of the smith's iron for the best eyes on the wall",
+            "the range's targets, and the lamps over them that light when an arrow strikes",
+            "spectral arrows, glowing in the dark, of the Nether's glowstone",
+        }, "Why did the arrow go to the party? It wanted to get to the point."));
+        // [golems]
+        craft("GOLEMS", new Craft("golem keeper", "Golem Keeper's", "the golem yard", "golem keeping", "the golems", "things made", new String[]{
+            "Four blocks of iron in a T, and the pumpkin last. Clear the corners first: the golem wants room to stand up.",
+            "Nine ingots to a block. Never build a golem with the watch's armour still wanting iron.",
+            "An ingot mends a golem by a quarter. Mend them before the cracks show, not after.",
+            "Carve the pumpkin where it sits on the golem's shoulders, and keep the seeds for the farmers.",
+            "Gather a fallen golem's iron the morning after. Every ingot of it goes back into the next one.",
+            "Snow golems only where it's cold enough to keep them, and only for the winter. Let them go in the spring.",
+        }, new String[]{
+            "nothing but our own two fists",
+            "nothing yet: iron golems want iron",
+            "iron golems at the gates and on the square",
+            "golems in good repair, and snow golems on the towers in the winter",
+            "golems enough for every gate and every road",
+        }, "Why did the iron golem go to the doctor? It had a touch of rust, and nobody would give it an ingot."));
     }
 
     /** A trade's lore, or a plain one for a trade with none written. */
