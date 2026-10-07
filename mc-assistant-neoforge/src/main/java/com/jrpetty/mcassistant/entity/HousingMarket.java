@@ -1091,7 +1091,7 @@ public final class HousingMarket {
 
     // ------------------------------------------------------------------ the build
 
-    /** Every so often (Homes.tick): the council's houses costed, and a course more on the house going up. */
+    /** Every quarter of a minute (Grow.tick, with the town's other works): the council's houses costed, and a course more on the house going up. */
     public static void tick(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         long now = level.getGameTime(), day = level.getDayTime() / 24000L;
@@ -1101,6 +1101,19 @@ public final class HousingMarket {
         costCouncilHouses(level, id, day);
         Commission c = load(id);
         if (c != null) work(level, v, c, BUDGET, false);
+    }
+
+    /**
+     * Can the stores spare a course for a folk's own house? In a thriving town, yes; otherwise only while they still hold
+     * what the town's own next building wants of stone and timber, and a course over: a household's house never holds up
+     * the hall, the wall or the next council house the town is waiting on.
+     */
+    static boolean storesToSpare(ServerLevel level, Villages.Village v) {
+        if (Villages.thriving(v.id())) return true;
+        String next = Villages.nextProject(v.id());
+        if (next == null) return true;
+        int need = BuildGoal.partCounts(next, 13).getOrDefault(BuildGoal.Part.BLOCK, 0);
+        return Market.stock(level, v.id(), BuildGoal::isBuildingBlock) >= need + BUDGET;
     }
 
     /** The words the builders are called with, and that say who is at it (TownJobs.doing). */
@@ -1260,6 +1273,7 @@ public final class HousingMarket {
             if (!Villages.thriving(id) && !Villages.crewsReport(id, level.getGameTime()).isEmpty()) {
                 return note(id, c, "the builders are on the town's own building first");
             }
+            if (!storesToSpare(level, v)) return note(id, c, "the stores' stone and timber kept for the town's own next building");
             if (!Land.areaLoaded(level, c.anchor, 9)) return "not loaded";
             if (!TownJobs.atWork(level, v, WORKS, c.anchor, doing(c))) return note(id, c, "waiting for a hand the town can spare");
         }

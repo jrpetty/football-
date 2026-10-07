@@ -83,6 +83,7 @@ public final class Grow {
         Luxuries.candles(level, v);                                  // the households' candles, lit at dusk (Luxuries)
         if (!furnish(level, v)) shelve(level, v);
         work(level, v, 24);
+        HousingMarket.tick(level, v);                                // [econ-housing] the council's houses costed; a folk's own house going up
     }
 
     /**

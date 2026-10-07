@@ -565,7 +565,6 @@ public final class Homes {
         for (Home h : homes.values()) childBeds(level, v, h, day);
         // Anybody with a bed free at home and none there: it is theirs now (and a spare bed out is free again).
         for (Home h : homes.values()) comeHome(level, id, h);
-        HousingMarket.tick(level, v);                  // [econ-housing] the council's houses costed; a folk's own house going up
         // The rent, the saving and the buying are payday's (Market.tick, after the wages: payday).
     }
 
