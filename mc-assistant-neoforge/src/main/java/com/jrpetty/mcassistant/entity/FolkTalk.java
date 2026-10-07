@@ -126,6 +126,8 @@ public final class FolkTalk {
         // [caves] Not the cave team's map ("a copy of the cave map"): that is the team's to sell (CaveGuests).
         String library = topic == TalkTopic.CAVES ? null : Library.talk(f, p, topic, text);
         if (library != null && !library.isEmpty()) return manner(f, library);
+        String rockets = FireworksMaker.talk(f, p, text);            // [fireworks] rockets for a player's elytra; the next display
+        if (rockets != null) return manner(f, rockets);
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting, heard);
             case HOW -> howAreYou(f);
@@ -395,6 +397,7 @@ public final class FolkTalk {
         line(sb, "Fletching", Fletchers.cardLine(f));        // [fletcher] what it has made, the stores' arrows, the reserve
         line(sb, "At the butts", Fletchers.aimLine(f));      // [fletcher] a guard's best at the butts, its practised aim
         line(sb, "Golems", Golems.cardLine(f));              // [golems] the town's golems at their posts, mended, waited on
+        line(sb, "Fireworks", FireworksMaker.cardLine(f));  // [fireworks] its stars, rockets and displays
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
         line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
@@ -751,6 +754,7 @@ public final class FolkTalk {
             case FERRY -> Ferries.doing(f, r);            // [transport] at the landing, or out on the water
             case FLETCHER -> Fletchers.doing(f, r);       // [fletcher] at its table, the gravel, the range
             case GOLEMS -> Golems.doing(f, r);            // [golems] round the golems, or building one
+            case FIREWORKS -> FireworksMaker.doing(f, r); // [fireworks] at the powder hut, or at the rack
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";

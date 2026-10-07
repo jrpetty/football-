@@ -403,6 +403,21 @@ public final class TradeBookWriter {
             "golems in good repair, and snow golems on the towers in the winter",
             "golems enough for every gate and every road",
         }, "Why did the iron golem go to the doctor? It had a touch of rust, and nobody would give it an ingot."));
+        // [fireworks] The fireworks maker (entity/FireworksMaker).
+        craft("FIREWORKS", new Craft("fireworks maker", "Fireworks Maker's", "the powder hut", "fireworks", "the rockets", "rockets made", new String[]{
+            "One gunpowder to a star, and one to three to a rocket. The powder for the flight, the star for the sky.",
+            "Never more than a day's powder in the hut. The rest lives in the stores, well away.",
+            "Keep the cauldron full and the hut cold: no lamp but a glassed lantern, no pipe, no hearth.",
+            "Nobody launches in a thunderstorm. The rockets keep; folk don't.",
+            "Straight up, from bare ground, and nobody near the rack but the crew. Never at anybody.",
+            "A wedding in the couple's colours, a festival in the town's, Remembrance in white. Make for the night ahead.",
+        }, new String[]{
+            "a pinch of powder and a sheet of paper",
+            "the powder hut, and the town's colours in the sky",
+            "gold nuggets for stars, feathers for bursts, the elytra rockets for the shop",
+            "glowstone for the twinkle, and a diamond's trail on Founding Day",
+            "fire charges for the great balls of a victory",
+        }, "Why did the rocket go to school? To get a little higher."));
     }
 
     /** A trade's lore, or a plain one for a trade with none written. */

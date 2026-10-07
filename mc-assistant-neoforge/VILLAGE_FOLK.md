@@ -8257,6 +8257,7 @@ and when it falls is mourned and its iron gathered back; that a snow golem is bu
 winter, none in a desert town (and why), and that it melts away in spring; and that no golem is built, and no iron
 touched, while the watch's armour still wants the iron, and that with iron enough for both, it is.
 
+<<<<<<< HEAD
 ## Interviews
 
 When a town fills a post that matters and more than one folk wants it, it holds a real interview. It happens in the
@@ -8395,3 +8396,128 @@ day it was written. Right-click it to read it. One you craft yourself is blank.
 * the letter is made from the stores' paper and ink, paid into the treasury, held on the bench, held by the chair while
   read, and kept afterwards;
 * a candidate from a town two hundred blocks away arrives in time and takes its seat.
+=======
+## The fireworks maker
+
+Every rocket a town sends up is one of its own fireworks maker's, made from the gunpowder, paper and dye in its stores
+by the game's own recipes, and taken out of the stores as it is lit. A town with no rockets put by has a quieter
+night: no rocket is ever made out of nothing.
+
+* **When a town takes it up.** A Stone Age town of eight folk or more that has kept a couple of its festivals (the May
+  dance, the bonfire, the fair, the harvest, Founding Day, a new age seen in) and has gunpowder in its stores wants
+  fireworks of its own. The chronicle says so, and the town asks its builders for a **powder hut**. When the hut
+  stands, the town picks one maker from its own folk: a cheerful, curious hand (a stargazer most of all) from a trade
+  with hands to spare, never the watch, the storekeeper, the banker, the cave team or a craft's only hand.
+* **The powder hut.** A small stone hut out at the edge of the town, away from the houses: stone walls on a stone
+  footing, a stone slab roof, glass in the windows, a lantern hanging from the roof and nothing in it that burns. Inside
+  are a crafting table, the powder chest, a stock chest, a barrel and a **cauldron**, which the maker keeps full of
+  water from the stores' bucket (or one filled at the well), with the bucket going back to the stores. Over the door
+  hangs its sign: *POWDER HUT, Fireworks, No naked flames*, and the maker's name. The hut's chests are the hut's own,
+  named "Powder Hut", not the town's stores. The powder chest keeps a dozen gunpowder to work from and never more than
+  sixteen; the rest goes back to the stores. A town fire never starts in the hut.
+* **Stars.** A firework star is a gunpowder and a dye of each colour, on the crafting table, with a shape and an effect
+  if the town has the makings:
+  * a fire charge for a **large ball** (made there and then from blaze powder, coal and gunpowder);
+  * a gold nugget for a **star** shape (cut from an ingot if there are no nuggets);
+  * a feather for a **burst**;
+  * a creeper head for a **creeper face**, if the stores ever hold one;
+  * glowstone dust for a **twinkle** (a crackle on a large ball);
+  * a diamond for a **trail**, but only in a rich town (a well-off treasury, or half a dozen diamonds put by);
+  * and a second turn on the table with another dye for the colour it **fades** to.
+  Short of a shape's makings, the maker uses the next best, down to a plain small ball. The dyes are the stores' own,
+  or made then and there by the recipes: from flowers, lapis, ink sacs, cocoa beans, beetroot and bone meal (a bone
+  ground down if need be), and mixed (red and yellow make orange, blue and white make light blue, and so on). Green
+  comes out of the furnace from cactus, so it has to be in the stores already.
+* **Rockets.** A sheet of paper (three sugar cane make three sheets, if the stores have none), one to three gunpowder
+  for the flight, and the stars, by the rocket recipe: three real firework rockets to a filling, each with its flight
+  and its stars in it, straight into the stores. Stars rolled for a filling that cannot be finished wait in the stock
+  chest for the next one.
+* **A design for each occasion.**
+
+  | Occasion | Colours | Stars | Flight |
+  |---|---|---|---|
+  | Festivals, a new age, a hero honoured | the town's colours, off its arms | stars with a twinkle | 2 |
+  | Founding Day | the town's colours, fading to white, and a second star of gold | bursts with a trail and a twinkle | 2 |
+  | A wedding | the couple's own colours (their style's), fading to white | stars with a twinkle | 2 |
+  | A victory in war | the town's colours | large balls with crackle, and bursts with a trail | 3 |
+  | Remembrance Day | white alone | plain small balls | 2 |
+
+  The maker looks ahead: rockets for a wedding pledged, for a victory feast called, and for Remembrance Day, Founding
+  Day or a festival within three days, then six in the town's colours always kept by for a night nobody saw coming, and
+  then the elytra rockets. A town short of the dye for its colours still gets on with the rest.
+
+**The displays.** As the speeches end at a festival, Founding Day, a new age, a hero's honour, a wedding (once the vows
+are said) or the feast for a war won, and after Remembrance Day's minute's silence, the town has a display if its
+stores hold rockets for it.
+
+* The maker and two helpers walk to a **launch spot** on the square, a dozen blocks from where the town stands to
+  watch, on open ground under the open sky. It is a rack of five places abreast, and they stand back behind it. The
+  couple never crew their own wedding, and the watch stays on watch by night.
+* It goes up as a **programme**: an opening volley, the middle a rocket or two at a time, and a finale. A wedding opens
+  with two together (one for each of them), a victory has big volleys and a bigger finale, and Remembrance is one white
+  rocket at a time, slowly. With fewer rockets than the programme wants, the opening and the finale are kept and the
+  middle is cut short.
+* Every rocket is taken out of the stores the moment it is lit: the occasion's own design first, then any display
+  rocket put by (never anything but white for Remembrance). With none put by, there is no display: the chronicle
+  stays quiet and the gazette says the bonfire's glow had to do.
+* The crowd looks up and cheers ("Ooooh!", "To the happy couple!"). Everyone who watched remembers it, and the crew
+  remember setting it off.
+* A milestone you helped the town to (its first diamond, a new age, its twenty-fifth folk) gets a **salute** of three
+  of the stores' rockets over the square. With none put by, it gets a bonfire's sparks instead.
+
+**Safety.**
+* **No launches in a thunderstorm.** The crew waits for the thunder to pass. If it has not passed in two minutes the
+  display is called off, and the rockets stay in the stores.
+* **Never at folk.** A rocket goes straight up, only from a place on the rack with nobody on it, beside it or over it.
+  If somebody stands on the rack, nothing goes up until they move off.
+* The hut keeps its cauldron full and never more than sixteen gunpowder in it.
+
+**Elytra rockets for you.** The maker keeps the stores stocked with plain rockets of paper and gunpowder for flying,
+while the town has gunpowder to spare: sixteen of flight one, twelve of flight two and eight of flight three. The
+shop sells them in lots of eight, and the longer they fly the dearer they are. Ask the maker at its powder hut, or a
+shopkeeper, with "Could I buy some rockets for my elytra?" (the **Elytra rockets** choice on a folk's card), and say
+"flight two" or "flight three" for the longer ones.
+
+**Gunpowder from the watch.** A creeper the town's folk kill before it blows drops its gunpowder, and whoever killed it
+goes over, picks it up and takes it to the stores. The maker's book thanks the watch for every one.
+
+Where to see it:
+* The maker's card says what it is doing and its tally: display and elytra rockets made, stars rolled, displays put on
+  and rockets fired. Ask any folk "When are the next fireworks?" (the **Fireworks** choice) for the rockets ready and
+  the next display.
+* The board says when a display is on ("Fireworks now: ... 6 of 9 rockets up. Eyes to the sky!"). Otherwise it says
+  the rockets ready, the elytra rockets, and the next display.
+* The next morning's **gazette** reviews the show under *Last night's fireworks*: how many went up, in what colours
+  and shapes, the opening and the finale, and its verdict, from "A triumph." to "Over almost before it began." The
+  chronicle tells who put on a display of how many rockets for what.
+* The Production page counts the rockets made and used, and the Fireworks Maker's book holds the trade's real numbers,
+  the hut's rule and the town's colours.
+* `/village fireworks` says it all in the chat: the hut, the maker, the rockets in the stores, the next thing to make
+  and the next display, the tally, and the last review. Operators also have `/village fireworks now` (a piece of the
+  maker's work now), `/village fireworks show <occasion>` (a display now, from the stores) and `/village fireworks
+  stage` / `stage show` (the smoke run's pictures).
+
+The game tests `FireworksGameTests` (fw01 to fw10) check that:
+* the trade opens only in the Stone Age, with festivals kept and gunpowder put by; the powder hut is wished for at the
+  edge of the town; once it stands, the cheerful, curious hand takes it up, and only one;
+* the hut is fitted out: its chests named and the town's goods in them moved to the storehouse, the cauldron filled
+  from the stores' water bucket with the bucket put back, the sign over the door, a dozen gunpowder fetched in, and
+  nothing in it that burns;
+* stars and rockets are made by the recipes from the stores' gunpowder, paper made of sugar cane, the town's dyes, a
+  nugget cut from an ingot and glowstone. The rocket's flight, shape, colours and twinkle match the design, and so do
+  Founding Day's (a diamond's trail in a rich town, a fade to white of bone meal, a star of gold). The Production page
+  and the trade's book count them;
+* the maker makes for a wedding in the couple's colours, and at the real wedding gathering real rockets go up in those
+  colours, every one of them out of the stores;
+* with no display rockets in the stores there is no display, no salute and not a rocket in the sky, the paper and
+  gunpowder are left alone, and the gazette says so;
+* elytra rockets of all three flights are made from paper and gunpowder (even with no dye in the stores) and priced
+  by flight, and a lot of eight is sold to a player, the coins going to the treasury;
+* nothing is lit in a thunderstorm and nothing leaves the stores; once the thunder passes, up they go;
+* a creeper killed by the watch drops its gunpowder, and the guard brings it to the stores;
+* a victory's rockets fly high with large balls, crackle and a burst with a trail (a fire charge made of blaze powder,
+  coal and gunpowder); Remembrance's are white alone, and its display takes only the white ones, one at a time; and a
+  war won puts the victory's rockets first on the maker's list;
+* the hut is brought back down to a dozen gunpowder; nothing is lit while folk stand on the rack, and the display goes
+  on once they step off; and the display is in the chronicle and the next morning's gazette.
+>>>>>>> worktree-agent-a6156817326098f06

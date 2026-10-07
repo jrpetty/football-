@@ -203,7 +203,11 @@ public final class Market {
         new Good("Pet bowls", s -> s.is(McAssistantMod.PET_BOWL_ITEM.get()), 0.8, 1, Villages.Task.NONE),
         new Good("Dog beds", s -> s.is(McAssistantMod.DOG_BED_ITEM.get()), 1.6, 1, Villages.Task.NONE),
         new Good("Cat baskets", s -> s.is(McAssistantMod.CAT_BED_ITEM.get()), 1.2, 1, Villages.Task.NONE),
-        new Good("Pet collars", s -> s.is(McAssistantMod.COLLAR.get()), 1.4, 1, Villages.Task.NONE));
+        new Good("Pet collars", s -> s.is(McAssistantMod.COLLAR.get()), 1.4, 1, Villages.Task.NONE),
+        // [fireworks] The fireworks maker's elytra rockets (FireworksMaker), by the eight, dearer the longer they fly.
+        new Good("Elytra rockets, flight 1", s -> FireworksMaker.elytra(s, 1), 0.2, 8, Villages.Task.NONE),
+        new Good("Elytra rockets, flight 2", s -> FireworksMaker.elytra(s, 2), 0.35, 8, Villages.Task.NONE),
+        new Good("Elytra rockets, flight 3", s -> FireworksMaker.elytra(s, 3), 0.5, 8, Villages.Task.NONE));
 
     /** The café's drinks, each its own good; then the brewer's potions. */
     private static final List<Good> DRINKS_AND_POTIONS = drinksAndPotions();

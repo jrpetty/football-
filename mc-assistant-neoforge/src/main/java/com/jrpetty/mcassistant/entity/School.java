@@ -968,6 +968,8 @@ public final class School {
             "Gravel gives a flint one time in ten. Patience is half the trade." });
         LINES.put(StationTask.GOLEMS, new String[]{ "Four blocks of iron in a T, and the pumpkin last: never the other way round.",   // [golems]
             "An iron golem never turns on its own town. Be kind to it all the same." });
+        LINES.put(StationTask.FIREWORKS, new String[]{ "One gunpowder to a star, one to three to a rocket: no more.",   // [fireworks]
+            "Never a flame in the powder hut, and never a rocket in a thunderstorm." });
     }
 
     private static final String[] ANY_DAY = { "Reading, writing and counting: every trade stands on those three.",

@@ -189,6 +189,10 @@ public final class JobWorth {
             // [golems] Iron blocks are heavy and a golem's fists are heavier: hard, learned work that keeps the town.
             case "GOLEMS" -> new Post(key, title, trade, role, 2, 3, 1.1, 0.0, "heavy, skilled work with the town's iron",
                 "keeps the town's golems at the gates");
+            // [fireworks] Gunpowder and a steady hand: as hard as the smelter's, as skilled as the tailor's, and the town's
+            // nights to show for it.
+            case "FIREWORKS" -> new Post(key, title, trade, role, 2, 2, 0.6, 1.0, "careful work with gunpowder",
+                "lights up the town's festivals, weddings and victories");
             // The shop's jobs (ShopRoles): the keeper makes a little and runs the place; the assistants and the
             // stock keeper make nothing, and are paid for what they do for the shop.
             case "SHOP/KEEPER" -> new Post(key, title, trade, role, 1, 2, 1.0, 0.5, "runs the place", "keeps the shop and its sales");
@@ -900,6 +904,7 @@ public final class JobWorth {
             case "FERRY" -> "the ferry";               // [transport]
             case "FLETCHER" -> "the fletcher's";       // [fletcher]
             case "GOLEMS" -> "the golem yard";         // [golems]
+            case "FIREWORKS" -> "the powder hut";      // [fireworks]
             default -> "the " + JobMarket.noun(t) + "s";
         };
     }
@@ -908,6 +913,7 @@ public final class JobWorth {
         return switch (t.name()) {
             case "FARM", "WOOD", "MINE", "RANCH", "SMELT", "HAUL", "BEEKEEP", "SCOUT", "HUNT" -> true;
             case "GUARD", "FISH", "STORE", "SMITH", "TAILOR", "BREW", "ENCHANT", "COOK", "SHOP", "BANK" -> false;
+            case "FIREWORKS" -> false;                 // [fireworks] "the powder hut is short of hands"
             default -> true;
         };
     }

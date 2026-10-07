@@ -59,6 +59,8 @@ public final class JobSpec {
             case FLETCHER -> List.of("a fletching table (two flint and four planks, from the stores)");
             // [golems] The stores' iron and the farm's pumpkins: nothing of its own to set up.
             case GOLEMS -> List.of("iron ingots and a pumpkin in the stores");
+            // [fireworks] The powder hut, and the stores' gunpowder, paper and dye (FireworksMaker): nothing of its own to set up.
+            case FIREWORKS -> List.of("the powder hut", "gunpowder, paper and dye in the stores");
         };
     }
 

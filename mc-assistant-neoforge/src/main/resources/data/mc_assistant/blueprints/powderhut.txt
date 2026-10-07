@@ -1,0 +1,59 @@
+# The powder hut: the fireworks maker's workshop, a squat stone hut out at the edge of the town, away from the
+# houses (entity/FireworksMaker). Stone walls on a stone footing and a flat roof of stone slabs: nothing in it or on
+# it that burns, and no chimney, for nothing in it is ever lit. Inside, the crafting table against the back wall,
+# where the stars are rolled and the rockets filled; a cauldron of water in the back corner, for the safety of the
+# hut (the maker keeps it full); the powder chest in the other back corner, which never holds more gunpowder than
+# the day's work wants; a chest down the left wall for the paper, the dyes and the stars; and a barrel by the door.
+# One lantern under the roof, glassed in. The maker's sign hangs over the door.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name powderhut
+layer -1
+.........
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+.FFFFFFF.
+....k....
+layer 0
+.........
+.SSSSSSS.
+.S&.T.CS.
+.S.....S.
+.S)....S.
+.S.....S.
+.SQ....S.
+.SSSDSSS.
+.........
+layer 1
+.........
+.SSSGSSS.
+.S.....S.
+.S.....S.
+.G.....G.
+.S.....S.
+.S.....S.
+.SSS.SSS.
+.........
+layer 2
+.........
+.SSSSSSS.
+.S.....S.
+.S.....S.
+.S..j..S.
+.S.....S.
+.S.....S.
+.SSSSSSS.
+.........
+layer 3
+.........
+.sssssss.
+.sssssss.
+.sssssss.
+.sssssss.
+.sssssss.
+.sssssss.
+.sssssss.
+.........

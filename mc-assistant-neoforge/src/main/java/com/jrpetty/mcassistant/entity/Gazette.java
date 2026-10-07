@@ -292,6 +292,8 @@ public final class Gazette {
         if (word != null) entries.add(word);
         String quests = QuestRun.gazette(id, day);                  // [quests] help wanted, and the week's deeds
         if (quests != null) entries.add(quests);
+        String fireworks = FireworkShows.gazette(id, day);          // [fireworks] last night's display, reviewed
+        if (fireworks != null) entries.add(fireworks);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         entries = Weave.frontPage(entries);                         // [weave] the biggest story leads
         front += Weave.headline(entries);                           // [weave] and has the front page's headline

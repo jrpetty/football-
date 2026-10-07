@@ -88,6 +88,8 @@ public class BuildGoal extends Goal {
         "firestation",
         // [caves] the Delvers' Lodge: the cave team's maps, trophies, bunks and gear (entity/Lodge)
         "lodge",
+        // [fireworks] the powder hut, the fireworks maker's: stone, out at the edge of the town (entity/FireworksMaker)
+        "powderhut",
         // [library] the town library, its real books on its shelves (entity/Library)
         "townlibrary",
         // [fletcher] the fletcher's hut, its table and its sifting floor (entity/Fletchers)

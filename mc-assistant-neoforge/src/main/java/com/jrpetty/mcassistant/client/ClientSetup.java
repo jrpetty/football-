@@ -161,6 +161,7 @@ public final class ClientSetup {
                 case FERRY -> Items.OAK_BOAT;              // [transport]
                 case FLETCHER -> Items.FLETCHING_TABLE;    // [fletcher]
                 case GOLEMS -> Items.CARVED_PUMPKIN;       // [golems]
+                case FIREWORKS -> Items.FIREWORK_ROCKET;   // [fireworks]
                 case NONE -> Items.AIR;
             });
         }

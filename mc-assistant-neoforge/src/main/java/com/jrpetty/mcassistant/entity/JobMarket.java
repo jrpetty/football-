@@ -381,6 +381,7 @@ public final class JobMarket {
             case HAUL -> "courier";
             case FLETCHER -> "fletcher";                 // [fletcher]
             case GOLEMS -> "golem keeper";               // [golems]
+            case FIREWORKS -> "fireworks maker";        // [fireworks]
             case NONE -> "hand";
             default -> t.title.toLowerCase(Locale.ROOT);
         };
@@ -444,6 +445,7 @@ public final class JobMarket {
             case CAVE -> "the caves";                    // [caves]
             case FLETCHER -> "the fletching";            // [fletcher]
             case GOLEMS -> "the golems";                 // [golems]
+            case FIREWORKS -> "the powder hut";          // [fireworks]
             case HAUL -> "the carrying";
             default -> "the work";
         };
@@ -456,6 +458,7 @@ public final class JobMarket {
             case "MINE", "GUARD", "SMELT", "STORE", "COOK", "BEEKEEP", "SHOP" -> 2;
             case "RANCH", "HUNT" -> 1;
             case "SCOUT", "TAILOR" -> 3;
+            case "FIREWORKS" -> 2;                                               // [fireworks]
             case "BREW" -> 4;
             case "SMITH", "ENCHANT" -> 5;
             default -> 0;
@@ -699,11 +702,13 @@ public final class JobMarket {
         { "stable", "GROOM" }, { "stables", "GROOM" }, { "stable", "STABLEHAND" },
         { "fletcher", "FLETCHER" },                                                    // [fletcher] the fletcher's hut
         { "golemyard", "GOLEMS" },                                                     // [golems] the golem yard
+        { "powderhut", "FIREWORKS" },                                                       // [fireworks]
     };
 
     /** How many hands short the town is at a trade, as its shape has it (the trade's share, less who works it). */
     static double shortOf(UUID town, StationTask t) {
         if (t == StationTask.CAVE) return 0.0;              // [caves] the team is chosen from the town's own (CaveDwellers.appoint)
+        if (t == StationTask.FIREWORKS) return 0.0;         // [fireworks] the maker is chosen from the town's own (FireworksMaker.appoint)
         return -Villages.share(town, t);
     }
 
