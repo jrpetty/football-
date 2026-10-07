@@ -411,6 +411,7 @@ public final class Patrols {
     static boolean free(VillageFolkEntity g, BlockPos centre, int reach) {
         if (!g.isAlive() || g.isBaby() || g.isSleeping() || away(g) || g.onWatch()) return false;
         if (ESCORTING.contains(g.getUUID())) return false;                       // the leader's, while it walks
+        if (Police.engaged(g)) return false;                                     // [police] a chase, a prisoner on the lead, a fight
         if (g.talkPartner() != null || g.companionPlayer() != null || g.guidePlayer() != null) return false;
         LivingEntity t = g.getTarget();
         if (t != null && t.isAlive()) return false;

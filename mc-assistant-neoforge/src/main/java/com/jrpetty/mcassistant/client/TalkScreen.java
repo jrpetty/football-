@@ -229,6 +229,12 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Pay a fine", TalkTopic.FINE, "Pay what you owe the village"));
                 out.add(Choice.of("Seen anything?", TalkTopic.WATCH, "A theft or a vandal: ask what it saw (a friend tells you what it would not "
                     + "tell the watch). To a guard: the case it is on; hold what was dropped at the scene to hand it in, or type \"I saw Fen take it\""));   // [crime]
+                // [police] The watch as the town's police: a crime reported, the day's roster, sworn in as a special constable.
+                out.add(new Choice("Report a crime", TalkTopic.SAY, "I want to report a crime",
+                    "Tell a guard (or the desk at the watch house) what you saw: it goes on the books and the watch goes at a run"));
+                out.add(new Choice("The roster", TalkTopic.SAY, "Who's on the roster today?", "Who of the watch is on the walls, the beat, the desk and the cases today, and who drew it"));
+                out.add(new Choice("Swear me in", TalkTopic.SAY, "Swear me in as a special constable",
+                    "A citizen or a friend of the town with a clean record can be sworn in: a Constable's Badge, an arrest by right-clicking a culprit with it, the beat with the watch, and a wage for every case closed"));
                 out.add(new Choice("The board", TalkTopic.OPEN, "", "Read the village board: what it is doing, how it is getting on, what it is working towards"));
                 out.add(new Choice("Suggest a build", TalkTopic.BUILD, "", "Type what you think the village should build next"));
                 // [player-civic] Standing for leader, the campaign, and the Leader's page.

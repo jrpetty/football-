@@ -349,6 +349,7 @@ public final class Villages {
             case "lodge" -> "the Delvers' Lodge";                 // [caves]
             case "fletcher" -> "the fletcher's hut";              // [fletcher]
             case "golemyard" -> "the golem yard";                 // [golems]
+            case "watchhouse" -> "the watch house";               // [police]
             case "powderhut" -> "the powder hut";                // [fireworks]
             default -> "the " + structure;
         };
@@ -452,6 +453,7 @@ public final class Villages {
         Weather.resetForTests();            // [wf] the storm (and a test's storm let go), the rods looked at
         Civics.resetForTests();             // [batchF] the post, petitions, the meeting, wardens, the fund, searches, favours
         Crime.resetForTests();              // [crime] the cases, the folk's records, the plans, the court
+        Police.resetForTests();             // [police] the watch's incidents, chases, beats, cells and players in hand
         Weave.resetForTests();              // [weave] the homeless waiting to go, the day's looks; the round off again
         Roads.reset();
         LAST_PROJECT.clear();
@@ -1795,6 +1797,8 @@ public final class Villages {
         if (Library.wanted(villageId, folk) && built(villageId, Library.STRUCTURE) < 1) extras.add(Library.STRUCTURE);
         // [fletcher] The fletcher's hut, once the town keeps a fletcher (Fletchers).
         if (Fletchers.hutWanted(villageId)) extras.add(Fletchers.STRUCTURE);
+        // [police] The watch house, once the watch is three strong (WatchHouse): from the Stone Age on.
+        if (Police.active() && WatchHouse.wanted(villageId)) extras.add(WatchHouse.STRUCTURE);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -2202,6 +2206,7 @@ public final class Villages {
             case "lodge" -> Lodge.why(villageId);                  // [caves]
             case "fletcher" -> Fletchers.why(villageId);           // [fletcher]
             case "golemyard" -> Golems.why(villageId);             // [golems]
+            case "watchhouse" -> WatchHouse.why(villageId);        // [police]
             case "powderhut" -> FireworksMaker.why(villageId);     // [fireworks]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]

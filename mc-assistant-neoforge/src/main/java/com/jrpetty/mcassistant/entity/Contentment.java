@@ -125,6 +125,7 @@ public final class Contentment {
         if (Villages.ageOf(id).ordinal() >= Villages.Age.STONE.ordinal() && !Villages.hasBuilt(id, "fortify")) safety -= 2;
         else if (Villages.hasBuilt(id, "fortify")) good.add("safe behind the wall");
         safety += Diplomacy.safety(id, good, bad);
+        safety += Police.safety(id, good, bad);                 // [police] a watch the town trusts, or resents; the wanted at large
         safety = Math.max(0, Math.min(10, safety));
         // Things to enjoy.
         int amenities = 0;

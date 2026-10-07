@@ -143,6 +143,10 @@ public final class Makers {
         // ink at the bench, paid for out of its purse, before it goes to an interview for a post.
         declare("letter_of_application", "the candidate itself, at its town's bench",
             "when it is shortlisted for a post that goes to interview (one kept, written over for the next)", "Interviews.write");
+        // [police] The Constable's Badge, of the stores' iron and gold (Police.makeBadge).
+        declare("constable_badge", "the smith (the shop's workshop with no smith)",
+            "for the town's constable when it has none, and for each player the watch swears in as a special constable",
+            "Police.smith / Police.badges");
         // The village's own pieces.
         declare("storehouse_unit", "the builders", "as the storehouse goes up: twenty-seven to a store", "VillageFolkEntity.madeFromStores");
         declare("village_board", "the town's hands", "whenever the town's board has been taken down (the founders bring the first)",

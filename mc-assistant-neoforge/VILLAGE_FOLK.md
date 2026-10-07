@@ -8519,3 +8519,322 @@ The game tests `FireworksGameTests` (fw01 to fw10) check that:
   war won puts the victory's rockets first on the maker's list;
 * the hut is brought back down to a dozen gunpowder; nothing is lit while folk stand on the rack, and the display goes
   on once they step off; and the display is in the chronicle and the next morning's gazette.
+
+## The watch as the town's police
+
+The guards are the town's police as well as its defence: one force, the watch, sharing one roster. Every guard walks
+the walls and the streets in turn, and every guard answers a cry for the watch, a fight in the street or a fire.
+
+### The roster
+
+Every morning the watch's **captain** draws up the day's roster. The captain is the town's constable once it has one
+(from the Iron Age), and before that the most seasoned guard. The duties are:
+
+* **wall and gate** (defence): a gate by day, seeing who comes and goes; a post on the wall by night, as the bell
+  would send it;
+* **beat patrol**: a set route through the town's quarters (see *The beat*, below);
+* **the station desk**: behind the counter at the watch house, minding the cells and the casebook;
+* **investigation**: the cases (the guard on it is the one the watch gives them to);
+* **escort and court**: prisoners to the cells, to the council and back, and the caravans seen safe out of town;
+* **event duty**: a gathering's crowd, the stores on market day, the bank's door at night when it holds a hundred
+  coins or more;
+* **rest**: a day off. A watch of four or more rests one guard each day. The resting guard is off duty day and night,
+  and spends the day at its ease.
+
+About a third of the day's guards are on the walls (at least one), and the rest police the town. Defence and policing
+turn about down the list, and the list moves one place a day, so in any week every guard has stood on the walls and
+walked the streets. The constable keeps to the watch house's own work (the cases, else the desk) and takes its turn on
+the walls one day in seven. A guard's ordinary night watch (half the night each) is unchanged: on the walls or on the
+beat, it sleeps its half of the night like any guard.
+
+**Raids and emergencies override the roster.** When the bell rings, every guard's duty is the walls, whatever the
+roster said. A guard in the middle of a chase, an escort or a fight lets it go, the resting guard turns out, and each
+makes for its post with its bow, or for a gate. A fire or a flood takes every guard who is not already at the buckets
+(see *Incidents*). The board says so: "The roster stands down: every guard to the walls."
+
+The roster is on the board ("The watch today (captain Bram): walls Ash; beat Rook, Wren; desk Moss; resting Fen"), on
+the watch house's notice board, on the Watch page, and on each guard's card ("today: beat patrol"), with its record
+(arrests, cases solved, fights broken up, folk helped, chases won) and a note once it has done both kinds of work that
+week.
+
+### The watch house
+
+From the Stone Age, a town whose watch is three strong builds a **watch house**: a squat house of stone and brick on
+the square, with a lantern on a post either side of its door. Inside the door is the front room: the records shelf
+down the left wall, and on the right the front desk, a counter of barrels with the casebook open on a lectern behind
+it. Beside the desk is the notice board. Across the back, behind a passage, are two cells, each with a bed along its
+outer wall.
+
+The cells are built with fence posts and a wooden door. The watch fits them out itself: as soon as the town can spare
+the iron, iron bars replace the posts and an iron door is hung in each doorway, which nobody inside can open. The
+smith forges them (sixteen bars, or three doors, for six ingots the town is not saving for its age). A town with no
+smith casts them at the watch house out of the same six ingots. The posts and the wooden doors go back to the stores.
+
+* **The notice board** is three of the stores' signs (or two planks apiece): the wanted, "Report a crime at the desk.
+  Bail and fines paid here.", and today's roster. The watch writes them up as they change.
+* **The casebook** on the desk's lectern is a book made from the stores' paper, ink sac and feather. It has the
+  roster, who is in the cells, the wanted and the week's incidents, and the watch writes it up every day.
+* **The desk.** The guard on the desk stands behind the counter, watching the door. Barred players pay their fines
+  there, and folk come to the desk to report a crime.
+
+### The beat
+
+A guard on the beat walks a set route through the places where trouble is at that hour:
+
+| Hour | The beat's stops |
+|---|---|
+| By day | the market (on market day above all), the square, the stores, the quay, the bank |
+| Evening | the tavern at closing time, the square, the market, and the homes |
+| After dark | the stores, the bank, the tavern, and the homes, lantern in hand |
+
+The homes are a house in each eighth of the town round the square. Each stop is the street before the building's
+door. With two or more guards on the beat, each has a beat of its own (the square is on all of them), with the
+street corners of its own part of the town between the stops. The routes are worked out once and kept until the town
+grows, the number on the beat changes or the hour turns.
+
+At each stop the guard stands a while and looks about. It greets the folk passing by name ("Afternoon, Bree. All well
+at home?") and asks after their troubles: a folk robbed lately is asked if there has been any more trouble, a folk who
+has missed its meals is sent to the stores, and a folk who is low is asked if all is well. Where the town has lost
+faith in its watch it may get a sour answer. The guard also notes anything amiss:
+
+* a folk hurt is seen to (see *First aid*, below);
+* at the tavern at closing time the guard calls time, and a folk who has had two drinks is walked home;
+* on market day it looks over the market's takings for forged coin (see *The town's laws*, below);
+* a wanted face is chased;
+* after curfew, whoever is out is sent home (see *The curfew*, below).
+
+After dark the beat carries a lantern from the stores (or its own torch) in its free hand, with its shield in its
+pack.
+
+**The beat keeps crime down where it walks.** Where the beat has passed lately the watch is felt. A folk minded to steal
+there thinks better of it while the guard's boots are still warm on the stones: always within half a minute of the
+guard's passing, and less likely as the minute goes. This is Mischief's own reckoning ("the beat", alongside "eyes",
+"the watch" and "the lamps"). The chance of a deed at a spot is a quarter of what it was just after the beat has
+passed, and back to the full chance a minute later. Where no beat has been, nothing changes. A town whose beats walked
+its market, tavern, square and stores in the last day also has fewer folk tempted at all: up to a third fewer. A
+special constable on patrol counts as the watch, wherever it walks.
+
+### Incidents
+
+The watch meets things as they happen; it does not go looking for them every tick.
+
+* **A crime reported.** When a crime is reported, the victim (or the witness who saw it plainly) runs to the nearest
+  guard within seventy-odd blocks, calling for the watch ("Watch! Someone's been at my chest!", "Watch! My purse,
+  somebody's had my coins!"). It tells the guard what happened and where, and the guard runs back with it to the
+  scene and keeps it for the case. If the culprit is still in sight there with the goods on it, the guard chases it.
+* **A crime in progress.** A guard who sees a deed done, plainly enough to know who it was, gives chase. A folk who
+  sees it plainly cries "Stop, thief!", and the nearest guard within thirty blocks gives chase.
+* **The chase.** The culprit runs for it through the streets, and the guard runs after it. A guard is a little faster
+  than most folk, and an old hand is quicker still. Within a couple of blocks it catches the culprit by the collar,
+  and a culprit run close to a badge (the constable's) gives itself up. Caught, the culprit is accused on the spot,
+  with the catch on the case as the strongest evidence there is ("Caught in the act by Bram of the watch, after a chase
+  down Mill Lane, with the coins on them"), and arrested. The guard loses the culprit if it gets thirty blocks ahead,
+  is out of sight for six seconds, or is still running after forty-five. Then the guard says where it lost it and who
+  it was, and the case has the guard's word for it. A culprit that runs clean out past the town's edge is **wanted**:
+  a bounty is posted on it, and it lies low out past the fields. After two days of sleeping in hedges it comes back
+  and gives itself up.
+* **Fights.** Two folk who can't abide each other, words already exchanged, now and then come to blows: about one
+  quarrel in seven, more often between grumps, after a drink or two, in an unhappy town or one that has lost faith in
+  its watch, and never under a guard's nose. They swing at each other (a knock or two, the angry puffs over their
+  heads), a passer-by shouts "Fight! Fight!", and the nearest guard within fifty blocks runs to it. It steps between
+  them, pushes them apart and takes their names. The first time each gets a warning, the second time a fine of two
+  coins (out of its purse into the treasury; what it hasn't got is owed), and the third time in a fortnight a night in
+  the cells (or a fine of four coins with no cell free). Each is walked home. If no guard comes, friends pull them
+  apart and the town hears of it all the same.
+* **The worse for drink.** At the tavern at closing time the beat walks a folk who has had two drinks home, a step
+  behind it.
+* **First aid.** A folk badly hurt on the beat has its wound bound with a bandage from the guard's own kit (or the
+  stores), else is given honey, berries or bread from the stores, else is helped to the infirmary. The folk remembers
+  it ("The watch saw me right when I needed it").
+* **Fire.** The watch is first to a fire. The guard nearest the bell cries it ("Fire! Everybody to the water!") as the
+  bell is rung for the brigade, and every guard not already at the buckets runs to it and keeps the folk back out of
+  the buckets' way ("Stand back! Let the buckets through!").
+* **Flood.** When the river comes up, the watch goes from flooded house to flooded house, calling the folk out and
+  sending them up to the square.
+* **The lost.** A search party for a lost folk has a guard of the watch at its head, if one is free by day (a guard
+  on the beat first).
+* **Guarding things.** On event duty the watch takes four posts round a gathering (a festival, an election's count, a
+  referendum, a wedding, the council's meeting), facing in and keeping it orderly ("No pushing. There's room for
+  all."). With no gathering on, it stands at the bank's door at night when the vault holds a hundred coins or more, at
+  the stores on market day, or on the square on a festival's or an election's day. On escort duty it sees a caravan
+  leaving the town safe to the town's edge.
+
+### Arrest, custody and the court
+
+An arrested folk is walked to the watch house on a **lead** (the guard's own, or one from the stores), and the lead is
+drawn between them as they go. At the cell the guard opens the door, sees it in, takes the lead off, and shuts the door
+on it. A town with no watch house, or no cell free, has the folk taken to the hall instead, and let go on its word to
+wait for the council.
+
+* **In the cells.** It sleeps in the cell's bed at night, and gets its dinner at noon (bread, or whatever the stores
+  have) at the town's cost, brought by the guard on the desk. It stays in: a prisoner found out of its cell is put
+  back.
+* **Bail.** Each morning a prisoner waiting for the council may be bailed out by its family (its partner, a parent or a
+  grown child) from their own purse: the fine it would face and three more, five coins at least. A player can stand
+  bail too ("I'll stand bail for Fen"). The bail goes into the treasury and is given back when the case is heard.
+* **The court.** When the council sits on its case, the watch walks it there on the lead, lets it into the dock and
+  stands by. Acquitted, it is let go at the court. Convicted, it is sentenced as before (a fine, community work, the
+  stocks, banishment), with one sentence more: **the cells**. With a watch house to hold it, the graver crimes
+  (forgery, smuggling, or ten coins' worth or more) are served in the cells, a day for most and two for the gravest,
+  instead of the stocks. A third offence is still banishment. The watch walks the prisoner back to its cell to serve
+  the sentence, and at the end of it opens the door with a word ("Your time's served, Fen. Keep out of trouble,
+  mind.").
+* **A night's lock-up.** A third fight in a fortnight is a night in the cells, with no trial: the folk is let out in
+  the morning.
+* **Jailbreak.** A rare thing: now and then at night, with no guard of the watch awake within ten blocks, a prisoner
+  tries the door. It gets out of a wooden-doored cell about one night in forty, and out of an iron one about one night
+  in three hundred. A guard in sight gives chase; otherwise the prisoner is wanted, with a bounty of eight coins on it.
+* **A wrong arrest.** If the council clears a folk the watch arrested, the arrest goes on the guard's record as a wrong
+  arrest, the folk holds it against the guard, and the town trusts its watch the less.
+
+### The town's laws
+
+* **The curfew.** If a week brings three crimes or fights after dark, the council calls a curfew: everybody indoors
+  from the tenth bell (dusk and a little after) to first light. The night beat sees to it. A folk out and away from
+  its home gets a warning the first time in a week and is sent home; the next time it is fined two coins. After a
+  quiet week the curfew is lifted, unless it was called by order (`/village police curfew on`).
+* **The market.** On market day the beat looks over the market's takings and the weights. A forged coin among the
+  takings is found, the forgery case goes on the books, and the coin is known to be cast of copper: a smelter's or a
+  smith's work.
+* **Hunting rights.** Only the town's citizens may hunt its beasts. A player who kills one of the town's cows,
+  sheep, pigs, chickens, rabbits or goats in front of its folk has broken the town's law, and the carcass goes to the
+  stores.
+* Warnings first, fines next, arrest last. Every fine goes to the treasury.
+
+### Players and the law
+
+Whether a town's watch polices players at all is up to you: the config's `villageWatchPolicesPlayers` (on by
+default). With it off, the council's old ladder in *Laws* stands (a fine, a trial, banishment). Only what a folk or a
+guard sees counts.
+
+**Taking from the stores, breaking what the town built, or killing its beasts.** The folk who sees it calls for the
+watch, and the nearest guard comes to you at a run with the town's answer:
+
+1. **A warning** the first time: "Put that back, stranger." You have thirty seconds to put back what you took from
+   the stores; after that the guard takes it back out of your pack.
+2. **A fine** the second time, from your purse into the treasury (what you can't pay is owed), and what you took is
+   taken back.
+3. **Barred** the third time. The shops, the inn and the town's services refuse you, the gates are shut in your face
+   by the guard on the gate, and your name is on the board as wanted. You stay barred until you pay your fine (ten
+   coins and whatever you owe) at the watch house: to the guard on the desk, any guard there, the guard on the gate,
+   or any guard at all in a town with no watch house. Say "I'd like to pay my fine". Your name is then clear, though
+   the town remembers: next time it is a fine, not a warning. Being barred is not being fought: the watch only shuts
+   you out.
+
+**Striking one of the town's folk** is real harm. A light first blow gets a sharp warning ("Lay a hand on one of ours
+again, stranger, and the watch will run you out!"). Anything more, and the watch draws its weapons and drives you out
+of the town: two guards at your back, a shove now and then, until you are past the town's edge or two minutes have
+passed. You are barred at once, with a fee of fifteen coins. Strike back at the watch while it drives you out and it
+fights you.
+
+Every offence costs you the town's good opinion, the witness's most of all.
+
+**Prison for players** is optional and off by default (`villagePlayerJail`). With it on, a player barred is also
+locked in a free cell for `villagePlayerJailSeconds` (two minutes by default), and walking out adds ten coins to the
+fine.
+
+**Reporting a crime.** Tell a guard, or the desk at the watch house: "I want to report a crime" (the **Report a
+crime** choice on a folk's card). If you saw a crime nobody has reported, it goes on the books and the guard goes at a
+run; if you know who did it, say so ("I saw Fen take the bread") and it goes in the case.
+
+**Special constables.** A citizen of the town, or a friend of it, with a clean record (never fined, owing nothing) can
+ask a guard to be sworn in ("Swear me in", the **Swear me in** choice). The guard swears you in on a **Constable's
+Badge**: your own, one from the stores, or, if there is none, one the smith makes from the stores (come back when it
+is made). The badge is bound to the town and to you, and it glints. With it:
+
+* **Arrest.** Right-click a folk with the badge to arrest it. The badge holds a folk who is running from the watch, a
+  wanted folk, a folk accused and loose, or one you saw do the deed yourself, plainly. It does not hold anybody on a
+  badge alone ("On what charge, constable?"). The arrested folk follows at your heels (on your lead, if you carry one),
+  and when you bring it within a few blocks of any guard, the guard takes it into the watch's keeping and you have the
+  credit.
+* **Patrol.** Use the badge in the air to join the beat, or to leave it. While you are on patrol in the town, a thief
+  thinks twice where you walk, as it does where the watch walks. The guards greet you on their rounds.
+* **Pay.** You get three coins from the treasury for every case you helped close.
+
+**Bounties.** A wanted folk who fled the watch is posted on the board ("WANTED: Fen, for picking a purse at the
+market (ran from the watch past the town's edge). 5 coins to whoever brings them in."), cried by the crier, and put
+on the quest board by the captain: find it lying low out past the fields, and it comes quietly with you to the watch
+house, where the treasury pays the bounty. A bounty comes down after a week.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Constable's Badge | an iron ingot ringed by four gold nuggets (a star of gold about an iron boss) | Iron | 6.5c | the smith (else the shop's workshop), from the stores, for the constable when it has none and for each player sworn in | a special constable's warrant: right-click a culprit to arrest it, use it to walk the beat; the constable wears its own |
+
+### The town's view of its watch
+
+**Trust.** The town's trust in its watch runs from nought to a hundred, starting at sixty and drifting back towards
+it a point a day:
+
+* a culprit caught or a case solved raises it by two;
+* a fight broken up or a folk helped raises it by one;
+* a chase lost lowers it by one, and a jailbreak by two;
+* a wrong arrest lowers it by six;
+* a heavy hand (more than four fines on its own folk in a week) wears it down a point for each fine over four.
+
+A watch the town trusts (seventy-five or more) makes the town feel safe (its contentment's safety, "the watch keeps the
+peace"). A watch it resents (under forty) has the folk grumbling ("Folk say the watch is heavy-handed"), fights more
+likely and a sour answer for the beat. A wanted folk at large weighs on the town too.
+
+**The Watch page** of the town's books (`/village police books`, or the **Watch** tab) has:
+
+* across the top, the watch in a line: how many guards, the captain, the constable, the trust, the watch house, the
+  curfew;
+* on the left, today's roster: each guard's duty (blue for the walls, green for policing, grey for rest), what it is
+  doing now and its record. Under it, the week's rosters as a grid of letters, with a tick for each guard that has done
+  both kinds of work;
+* on the right, eight weeks of trouble as a chart: incidents (crimes reported, fights, disorder), arrests and the coin
+  of the fines. Then the week's and the month's figures, and (scroll for more) who is in the cells, the wanted, the
+  beats and their routes, the week's incidents hour by hour, and the special constables.
+
+**Talk.** The folk talk about it ("Did you see it? Bram caught Fen after a chase down Mill Lane. Never seen the
+like!"), and a folk's spirits show a night in the cells, a fine, or the watch's help. The gazette has a section for the
+watch (yesterday's chases, arrests, releases and fires, and who is in the cells), the crier calls the wanted and the
+curfew and praises a catch, and the chronicle keeps it all. Ask a guard "Who's on the roster today?", "Is there a
+curfew?" or "Who's wanted?".
+
+**Looks.** A guard on police duty (the beat, the desk, the cases, an escort, an event, or out on an incident) wears a
+sash over its shoulder and an armband, both in the town's colours, over the watch's kit, and a belt with a brass
+buckle. After dark the beat carries a lantern. The constable wears a long navy coat with brass buttons and a standing
+collar, belted, and the badge on its breast. The pictures are `textures/entity/folk/watch_kit.png` and
+`textures/item/constable_badge.png` (drawn by `tools/watch_art.py`).
+
+**Commands.** `/village police` says it all in the chat: the watch, its trust, the roster, the watch house and its
+cells, the wanted, the curfew, the beats and the last two days' incidents. `/village police books` opens the Watch
+page. Operators also have:
+
+* `/village police roster` (today's roster drawn afresh);
+* `/village police curfew on|off`;
+* `/village police chase` and `/village police fight` (one started among the folk at hand);
+* `/village police swear <player>`;
+* `/village police stage` (the smoke run's pictures: the watch house stamped and fitted out, a prisoner in a cell, a
+  guard on the beat greeting a folk, a chase down the east avenue, an arrest on a lead).
+
+The game tests `PoliceGameTests` (pl01 to pl10) check that:
+
+* a week of rosters gives every guard both the walls and the town's policing, with one resting each day, the captain's
+  roster on the board and each guard's duty on its card; and that the bell calls every guard to the walls, the board
+  says the roster stands down, a guard breaking up a fight lets it go, the resting guard turns out, and the guards
+  make for their posts on the wall;
+* a robbed folk runs twenty-odd blocks to a guard with it, and the guard runs back with it to the scene, and the case
+  says so;
+* a thief seen in the act by a guard is chased, runs for it, and is caught and arrested, accused with the catch on the
+  case, and the chase is in the town's books;
+* a fight is broken up: a warning each and both sent home the first time, a fine of two coins each into the treasury
+  the second;
+* an accused culprit is walked on a lead to an iron-barred cell and locked in, held, walked to the council, sentenced
+  to a day in the cells, walked back, fed at the town's cost, and let out when its day is up;
+* where the beat has stood, the chance of a deed falls to a quarter and a would-be thief there is put off ("the
+  beat"), while across the town nothing changes; and the town's temptations are fewer;
+* the curfew is called and shown on the board, the evening beat finds a folk out on the square and sends it home with
+  a warning, and the second time it is fined two coins into the treasury;
+* a player taking bread from the stores is warned by the guard in person, has it taken back when it is not returned,
+  is fined and has it taken back the second time, is barred the third time (refused by the town, named on the board,
+  but not fought), and is cleared when it pays its fine;
+* a citizen is sworn in on a badge the town makes from its own iron ingot and four gold nuggets; the badge holds no
+  innocent folk, arrests the accused culprit, who follows the constable to a guard, and the constable is paid three
+  coins when the case is closed;
+* a Stone Age town with a watch of three wants a watch house, it stands with two cells and a bed in each, and the
+  watch fits it out from the stores with iron bars and iron doors, its notice board and its casebook.
+
+The other features' tests run with the watch stood down, so that a guard there keeps its old round and a witness its
+old ways.

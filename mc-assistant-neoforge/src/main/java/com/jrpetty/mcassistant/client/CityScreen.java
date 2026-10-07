@@ -72,7 +72,9 @@ public class CityScreen extends Screen {
         // [transport] The railways, the carts, the ferry and the bridge, after them (TransportPage).
         "Transport",
         // [interviews] The town's interviews, coming and held, every candidate's score part by part (InterviewsPage).
-        "Interviews" };
+        "Interviews",
+        // [police] The watch as the town's police: the roster, the beats, the incidents, the cells, the crime rate (WatchPage).
+        "Watch" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
@@ -81,7 +83,8 @@ public class CityScreen extends Screen {
         "Auction",                                                                                    // [fleet]
         "Library",                                                                                    // [library]
         "Transport",                                                                                  // [transport]
-        "Interviews");                                                                                // [interviews]
+        "Interviews",                                                                                 // [interviews]
+        "Watch");                                                                                     // [police]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -342,6 +345,10 @@ public class CityScreen extends Screen {
                 }
                 case "Fashion" -> {                                                    // [fashion] the season's look (FashionPage)
                     List<Component> tip = FashionPage.draw(g, font, data.getCompound("fashion"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Watch" -> {                                                      // [police] the watch's roster and books (WatchPage)
+                    List<Component> tip = WatchPage.draw(g, font, data.getCompound("police"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "Cases" -> {                                                      // [crime] the casebook (CasesPage)

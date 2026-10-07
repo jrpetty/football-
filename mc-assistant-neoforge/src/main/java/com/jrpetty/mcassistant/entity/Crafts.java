@@ -326,6 +326,9 @@ public final class Crafts {
         // miners' pick allow, netherite in the Nether Age, and the leather when the town has no tailor (WatchKit).
         String kit = WatchKit.make(level, v, f);
         if (kit != null) return kit;
+        // [police] The watch house's iron: the cells' bars and doors; and a Constable's Badge when the town wants one (Police).
+        String police = Police.smith(level, v, f);
+        if (police != null) return police;
         if (!fletchFirst) {
             String fletched = fletch(level, v, guards(v));
             if (fletched != null) return fletched;

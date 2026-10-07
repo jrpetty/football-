@@ -588,6 +588,7 @@ public final class Annals {
         out.put("caves", CaveDwellers.report(level, v));         // [caves] the caves' report: the Caves page
         out.put("fashion", Fashion.report(level, v));            // [fashion] the season's look, who wears it, the tailor's book
         out.put("crime", Crime.report(level, v));                // [crime] the casebook and the crime rate: the Cases page
+        out.put("police", Police.report(level, v));              // [police] the roster, the beats, the cells, the incidents: the Watch page
         out.put("auction", Auctions.report(level, v));           // [fleet] the auction and the fleet: the Auction page
         out.getCompound("prices").putString("fleet", FishMarket.pricesLine(level, id));   // [fleet] the fish market, on the Prices page
         out.put("library", Library.report(level, v));            // [library] the catalogue, the authors, the loans: the Library page
