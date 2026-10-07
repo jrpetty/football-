@@ -358,6 +358,10 @@ public class VillageFolkEntity extends AssistantEntity {
             if (tickCount % 5 == 0 && level() instanceof net.minecraft.server.level.ServerLevel land) Scouts.drive(this, land);
             return;
         }
+        // [war-scouting] Held captive at an enemy's barracks, after a spy, or on picket on the road (WarScouting):
+        // that is its day just now.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel warLevel
+                && WarScouting.hold(this, warLevel, tickCount % 5 == 1)) return;
         // Through the gateway with a Nether party: it waits by the gateway till they come back.
         if (Nether.away(this) && !withAPlayer) return;
         // Out with a lead, fetching a wild animal home to the pen (Drover): that is the work just now.

@@ -54,10 +54,12 @@ public class CityScreen extends Screen {
         // [econ-prices] The town's prices, after them (PriceIndex), so the pages before keep their numbers.
         "Prices",
         // [econ-trade] Trade between towns, after them (TradePage).
-        "Trade" };
+        "Trade",
+        // [war-scouting] The war map: the enemy where it lies, the scouts' reports and their age (WarMapPage).
+        "War map" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade");
+        "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -307,6 +309,7 @@ public class CityScreen extends Screen {
                     List<Component> tip = TradePage.draw(g, font, data.getCompound("trade"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
+                case "War map" -> warMap(g, x, y, cw, ch, mouseX, mouseY);   // [war-scouting]
                 default -> board(g, x, y, cw, ch);
             }
         }
@@ -2663,6 +2666,12 @@ public class CityScreen extends Screen {
      * volumes of the chronicle, where each stands, and the years waiting to be bound; what may go on
      * show next, and what the museum is short of.
      */
+    /** [war-scouting] The war map (WarMapPage, from the server's "warmap"). */
+    private void warMap(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        List<Component> tip = WarMapPage.draw(g, font, data.getCompound("warmap"), x, y, cw, ch, mx, my);
+        if (tip != null) { hover = tip; hoverX = mx; hoverY = my; }
+    }
+
     private void museum(GuiGraphics g, int x, int y, int cw, int ch) {
         CompoundTag m = data.getCompound("museum");
         List<String> coming = new ArrayList<>();

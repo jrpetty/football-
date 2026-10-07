@@ -83,6 +83,8 @@ public final class Raids {
         int size, killed, lost;
         long lastRing = -100000L;
         long quietSince = -1L;
+        /** [war-scouting] A war alarm (warAlarm) is kept up till then, monsters or none. */
+        long holdUntil = -1L;
 
         Alarm(long since, String why, @Nullable Direction from) {
             this.since = since;
@@ -207,7 +209,7 @@ public final class Raids {
         // does not wait on a creeper in the shade), or when the bell has rung for five minutes
         // of daylight without a band to fight.
         // (A raid's band gone, the monsters it leaves behind are the same as any others.)
-        boolean quiet = left == 0 && !bigRaid
+        boolean quiet = left == 0 && !bigRaid && now >= a.holdUntil         // [war-scouting] (a war alarm's least length)
             && (inside == 0 || (daylight && inside < TOO_MANY) || (daylight && now - a.since > 6000L));
         if (!quiet) { a.quietSince = -1L; return; }
         if (a.quietSince < 0) a.quietSince = now;
@@ -657,6 +659,25 @@ public final class Raids {
         } else {
             f.getNavigation().stop();
         }
+        return true;
+    }
+
+    // ------------------------------------------------------------------ [war-scouting] the war alarm
+
+    /**
+     * Word of an enemy on the approach (a picket come running, Pickets): the bell rung early, the gates
+     * shut and the watch on the walls, as for raiders, and kept up for at least {@code holdTicks} with
+     * nobody yet in sight. Already ringing, it is kept up the longer. Returns whether it was rung now.
+     */
+    public static boolean warAlarm(ServerLevel level, Villages.Village v, String why, @Nullable Direction from, long holdTicks) {
+        Alarm a = ALARMS.get(v.id());
+        long until = level.getGameTime() + Math.max(0L, holdTicks);
+        if (a != null) {
+            a.holdUntil = Math.max(a.holdUntil, until);
+            return false;
+        }
+        a = raise(level, v, why, from);
+        a.holdUntil = until;
         return true;
     }
 
