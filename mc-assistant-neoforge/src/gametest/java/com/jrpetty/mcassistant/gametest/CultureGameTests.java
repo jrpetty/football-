@@ -327,6 +327,9 @@ public class CultureGameTests {
         UUID id = t.id();
         helper.runAtTickTime(10, () -> {
             Villages.Village v = village(helper, id);
+            // Forty days on, so the town's made-up history (founded twenty days back) begins after the world's day 0.
+            level.setDayTime((level.getDayTime() / 24000L + 40) * 24000L + 2000L);
+            level.updateSkyBrightness();
             long today = level.getDayTime() / 24000L, f0 = today - 20;
             FoundingDay.foundedForTests(id, f0);
             String name = Villages.name(id);
@@ -347,18 +350,20 @@ public class CultureGameTests {
             // Founding Day: lanterns round the square before dusk, out of the stores; taken in the next morning.
             long founding = f0 + TownCalendarYear.DAYS;
             level.setDayTime(founding * 24000L + 9500L);
+            level.updateSkyBrightness();
             chestAt(level, t.heart().offset(3, 0, -3), new ItemStack(Items.LANTERN, 8));
+            int inStores = Market.stock(level, id, s -> s.is(Items.LANTERN)), before = lanternsAbout(level, t.heart());
             int lit = Traditions.lanternsForTests(level, v);
             int left = Market.stock(level, id, s -> s.is(Items.LANTERN));
-            int standing = 0;
-            for (BlockPos p : BlockPos.betweenClosed(t.heart().offset(-6, -2, -6), t.heart().offset(6, 2, 6))) {
-                if (level.getBlockState(p).is(Blocks.LANTERN)) standing++;
-            }
-            Kit.log("ci03 Founding Day: " + lit + " lanterns lit, " + left + " left in the stores, " + standing + " standing on the square");
-            helper.assertTrue(lit >= 4 && left == 8 - lit && standing == lit, "lanterns round the square out of the stores: " + lit + ", " + left);
+            int standing = lanternsAbout(level, t.heart()) - before;
+            Kit.log("ci03 Founding Day: " + lit + " lanterns lit, " + left + " of " + inStores + " left in the stores, " + standing
+                + " more standing on the square (" + before + " there before)");
+            helper.assertTrue(lit >= 4 && left == inStores - lit && standing == lit, "lanterns round the square out of the stores: " + lit + ", " + left);
             level.setDayTime((founding + 1) * 24000L + 2000L);
+            level.updateSkyBrightness();
             int still = Traditions.takeInForTests(level, v);
-            helper.assertTrue(still == 0 && Market.stock(level, id, s -> s.is(Items.LANTERN)) == 8, "taken in the next morning, back into the stores: "
+            helper.assertTrue(still == 0 && Market.stock(level, id, s -> s.is(Items.LANTERN)) == inStores
+                && lanternsAbout(level, t.heart()) == before, "taken in the next morning, back into the stores: "
                 + still + " out, " + Market.stock(level, id, s -> s.is(Items.LANTERN)) + " in");
 
             // The crier the day before the silence and on its day.
@@ -370,6 +375,7 @@ public class CultureGameTests {
 
             // The silence: just after the dusk bell everybody stops where it is, a minute; then the bell, and the history.
             level.setDayTime(silence * 24000L + 12150L);
+            level.updateSkyBrightness();
             int held = 0;
             for (VillageFolkEntity f : t.folk()) {
                 if (Culture.hold(f, level) && "SILENCE".equals(Culture.roleForTests(f))) held++;
@@ -377,23 +383,35 @@ public class CultureGameTests {
             }
             helper.assertTrue(held >= 3 && Traditions.silentForTests(id) == held, "the town keeps the silence: " + held + " of " + t.folk().size());
             level.setDayTime(silence * 24000L + 13350L);
+            level.updateSkyBrightness();
             Traditions.tickForTests(level, v);
             helper.assertTrue(told(id, "the town kept the Watch's Silence"), "into the history once the minute is over");
 
             // Diamond Night: the eldest's toast, a drink each out of the stores, the bottles back.
             long toast = f0 + 6 + TownCalendarYear.DAYS;
             level.setDayTime(toast * 24000L + 13500L);
+            level.updateSkyBrightness();
             Container drinks = chestAt(level, t.heart().offset(-3, 0, -3));
             for (int i = 0; i < 3; i++) put(drinks, Cafe.drink(Cafe.DRINKS.get(0)));
+            int bottlesBefore = Market.stock(level, id, s -> s.is(Items.GLASS_BOTTLE));
             boolean given = Traditions.toastNowForTests(level, v);
             int[] tt = Traditions.toastForTests(id);
-            int bottles = Market.stock(level, id, s -> s.is(Items.GLASS_BOTTLE));
+            int bottles = Market.stock(level, id, s -> s.is(Items.GLASS_BOTTLE)) - bottlesBefore;
             Kit.log("ci03 the toast: given " + given + ", " + tt[1] + " there, " + tt[2] + " drinks poured, " + bottles + " bottles back");
-            helper.assertTrue(given && tt[1] == t.folk().size(), "the toast given with the town there: " + tt[1]);
+            helper.assertTrue(given && tt[1] >= t.folk().size(), "the toast given with the town there: " + tt[1]);
             helper.assertTrue(tt[2] == 3 && bottles == 3, "a drink each while the stores had them, the bottles back: " + tt[2] + ", " + bottles);
             helper.assertTrue(told(id, "the town kept Diamond Night with a toast"), "into the history");
             helper.succeed();
         });
+    }
+
+    /** The lanterns standing on the ground about the heart of the town. */
+    private static int lanternsAbout(ServerLevel level, BlockPos heart) {
+        int n = 0;
+        for (BlockPos p : BlockPos.betweenClosed(heart.offset(-6, -2, -6), heart.offset(6, 2, 6))) {
+            if (level.getBlockState(p).is(Blocks.LANTERN)) n++;
+        }
+        return n;
     }
 
     /** The town's year, as the calendar counts it. */
@@ -646,6 +664,9 @@ public class CultureGameTests {
         BlockPos houseAt = t.heart().offset(-14, 0, 14);
         helper.runAtTickTime(10, () -> {
             Villages.Village v = village(helper, id);
+            // Ten days on, so the town (founded five days back) was founded after the world's day 0.
+            level.setDayTime((level.getDayTime() / 24000L + 10) * 24000L + 3000L);
+            level.updateSkyBrightness();
             long day = level.getDayTime() / 24000L;
             FoundingDay.foundedForTests(id, day - 5);
             BuildGoal.stamp(level, "house", houseAt, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));

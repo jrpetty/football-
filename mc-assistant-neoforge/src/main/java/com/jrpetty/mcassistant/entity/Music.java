@@ -121,6 +121,11 @@ public final class Music {
             && f.stationTask() != AssistantEntity.StationTask.GUARD;
     }
 
+    /** A real note block to play: not the one held up for show (Culture.prop), which is no thing of its own. */
+    static boolean instrument(ItemStack s) {
+        return s.is(Items.NOTE_BLOCK) && !Leisure.isProp(s);
+    }
+
     /** The band: the town's musicians free to play, four at most, the same order every evening. */
     static List<VillageFolkEntity> band(ServerLevel level, UUID village, Set<UUID> not) {
         List<VillageFolkEntity> out = new ArrayList<>();
@@ -217,7 +222,7 @@ public final class Music {
             return null;
         }
         for (VillageFolkEntity f : band) {
-            if (f.countCarried(st -> st.is(Items.NOTE_BLOCK)) > 0) {
+            if (f.countCarried(Music::instrument) > 0) {               // its own (a note block in hand for show is no instrument)
                 want.members.add(f.getUUID());
                 continue;
             }
@@ -245,8 +250,16 @@ public final class Music {
     static void end(ServerLevel level, Villages.Village v, Session s) {
         BANDS.remove(v.id(), s);
         for (UUID u : s.lent) {
-            if (level.getEntity(u) instanceof VillageFolkEntity f && f.isAlive() && f.removeMatching(st -> st.is(Items.NOTE_BLOCK), 1) == 1) {
+            if (level.getEntity(u) instanceof VillageFolkEntity f && f.isAlive() && f.removeMatching(Music::instrument, 1) == 1) {
                 Crafts.store(level, v, new ItemStack(Items.NOTE_BLOCK));
+            }
+        }
+        // The note block each held up to play put away (it was for show: the real one went back above).
+        for (UUID u : s.members) {
+            if (level.getEntity(u) instanceof VillageFolkEntity f && f.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND).is(Items.NOTE_BLOCK)
+                    && Leisure.isProp(f.getItemBySlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND))) {
+                f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+                f.propInHand = false;
             }
         }
         s.lent.clear();
