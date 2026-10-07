@@ -363,6 +363,7 @@ public final class Kitchen {
         if (f.trip() != null || f.expedition() != null || Fleet.out(f)) return true;
         StationTask t = f.stationTask();
         if (t == StationTask.CAVE || t == StationTask.SCOUT) return true;
+        if (t == StationTask.NETHER) return true;                    // [nether] through the gateway for the day, or days
         if (t == StationTask.NONE || t.isCraft() || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.GUARD) return false;
         WorkZone z = f.workZone();
         if (z == null) return false;
@@ -400,7 +401,7 @@ public final class Kitchen {
             if (f.isBaby()) continue;
             if (farToday(f, v)) far++;
             StationTask t = f.stationTask();
-            if (t == StationTask.GUARD || t == StationTask.CAVE) {
+            if (t == StationTask.GUARD || t == StationTask.CAVE || t == StationTask.NETHER) {   // [nether] the runners too
                 kitted++;
                 int c = f.countMatching(BANDAGE);
                 if (c < BANDAGES_LOW) kits += BANDAGES_CARRIED - c;
@@ -898,7 +899,7 @@ public final class Kitchen {
     /** A guard or a cave dweller hurt, out of the fight, binds its wound with one of its bandages. True if it did. */
     static boolean bind(VillageFolkEntity f, ServerLevel level, Villages.Village v, long now) {
         StationTask t = f.stationTask();
-        if (t != StationTask.GUARD && t != StationTask.CAVE) return false;
+        if (t != StationTask.GUARD && t != StationTask.CAVE && t != StationTask.NETHER) return false;   // [nether] and the runners
         if (f.getHealth() >= f.getMaxHealth() * BIND_BELOW || f.getTarget() != null || f.hurtTime > 0) return false;
         if (f.getLastHurtByMob() != null && f.tickCount - f.getLastHurtByMobTimestamp() < 60) return false;
         if (f.hasEffect(MobEffects.REGENERATION)) return false;
@@ -1258,7 +1259,8 @@ public final class Kitchen {
         int wanting = 0;
         for (AssistantEntity a : Villages.folkOf(id)) {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || !f.isAlive()) continue;
-            if (f.stationTask() != StationTask.GUARD && f.stationTask() != StationTask.CAVE) continue;
+            if (f.stationTask() != StationTask.GUARD && f.stationTask() != StationTask.CAVE
+                && f.stationTask() != StationTask.NETHER) continue;                                   // [nether]
             int c = f.countMatching(BANDAGE);
             if (c < BANDAGES_LOW) wanting += BANDAGES_CARRIED - c;
         }
@@ -1344,7 +1346,8 @@ public final class Kitchen {
         int lunch = f.countMatching(LUNCH);
         if (lunch > 0) parts.add("carries a packed lunch for its midday meal" + (lunch > 1 ? " (" + lunch + ")" : ""));
         int b = f.countMatching(BANDAGE);                    // the watch's and the cave team's show in their kit's line
-        if (b > 0 && f.stationTask() != StationTask.GUARD && f.stationTask() != StationTask.CAVE) {
+        if (b > 0 && f.stationTask() != StationTask.GUARD && f.stationTask() != StationTask.CAVE
+                && f.stationTask() != StationTask.NETHER) {                                          // [nether] in its kit's line
             parts.add(b + (b == 1 ? " bandage" : " bandages") + " in its pack");
         }
         long day = f.level().getDayTime() / 24000L;

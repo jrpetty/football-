@@ -77,7 +77,8 @@ public final class Greetings {
         if (WAVED.size() > 4096) WAVED.clear();                     // a long game's worth of folk: start the book afresh
         f.getLookControl().setLookAt(p, 30.0F, 30.0F);
         f.swing(InteractionHand.MAIN_HAND);
-        FolkTalk.speak(f, hello(f, p, aff));
+        Manner.idle(f, Manner.WAVE, 40);                            // [individual] a proper wave
+        FolkTalk.speak(f, TownSpeech.hello(f, p, hello(f, p, aff)));   // [culture2] its town's own hello, most of the time
         if (f.isBaby() && aff >= LIKES && !f.isSleeping()) {
             TAGS.put(f.getUUID(), new Tag(p, f.tickCount + FOLLOW));
             if (TAGS.size() > 256) TAGS.values().removeIf(t -> t.player.isRemoved());

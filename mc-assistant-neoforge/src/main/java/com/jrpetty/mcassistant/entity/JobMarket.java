@@ -404,7 +404,10 @@ public final class JobMarket {
         if (t.name().contains("TEACH")) return new int[]{ 35, 200 };
         return switch (t) {
             case GUARD, SCOUT, HUNT, CAVE -> new int[]{ 18, 50 };          // [caves]
+            case DIVER -> new int[]{ 16, 50 };                             // [diver] a young diver's lungs
+            case NETHER -> new int[]{ 20, 50 };                            // [nether]
             case MINE, WOOD -> new int[]{ 18, 60 };
+            case EMERALD -> new int[]{ 18, 65 };                          // [emerald] a day's walk there and back
             default -> new int[]{ 0, 200 };
         };
     }
@@ -416,7 +419,10 @@ public final class JobMarket {
         return switch (t) {
             case GUARD -> "able-bodied, for the watch";
             case SCOUT, HUNT -> "fit for long days out";
+            case EMERALD -> "fit for a day's walk, and a head for a bargain";   // [emerald]
             case CAVE -> "fit and able to fight, for a day underground";      // [caves]
+            case DIVER -> "a strong swimmer with good lungs";                  // [diver]
+            case NETHER -> "a seasoned hand, fit to fight through the Nether";   // [nether]
             case MINE, WOOD -> "strong enough for the work";
             default -> "";
         };
@@ -424,13 +430,14 @@ public final class JobMarket {
 
     /** A trade where an old head is valued: the teaching and the learned trades, the stores. */
     static boolean wise(@Nullable StationTask t) {
-        return t != null && (t.name().contains("TEACH") || t == StationTask.ENCHANT || t == StationTask.STORE || t == StationTask.BREW);
+        return t != null && (t.name().contains("TEACH") || t == StationTask.ENCHANT || t == StationTask.STORE || t == StationTask.BREW
+            || t == StationTask.CARTOGRAPHER);                                                       // [cartographer] a learned trade
     }
 
     /** Heavy work, for younger backs. */
     static boolean heavy(@Nullable StationTask t) {
         return t == StationTask.MINE || t == StationTask.WOOD || t == StationTask.GUARD || t == StationTask.HUNT
-            || t == StationTask.SCOUT || t == StationTask.HAUL || t == StationTask.CAVE;            // [caves]
+            || t == StationTask.SCOUT || t == StationTask.HAUL || t == StationTask.CAVE || t == StationTask.NETHER;   // [caves] [nether]
     }
 
     /** "the mines", "the watch": the work, for a refusal. */
@@ -446,6 +453,9 @@ public final class JobMarket {
             case FLETCHER -> "the fletching";            // [fletcher]
             case GOLEMS -> "the golems";                 // [golems]
             case FIREWORKS -> "the powder hut";          // [fireworks]
+            case EMERALD -> "the trading";               // [emerald]
+            case DIVER -> "the diving";                  // [diver]
+            case NETHER -> "the Nether runs";            // [nether]
             case HAUL -> "the carrying";
             default -> "the work";
         };
@@ -703,12 +713,15 @@ public final class JobMarket {
         { "fletcher", "FLETCHER" },                                                    // [fletcher] the fletcher's hut
         { "golemyard", "GOLEMS" },                                                     // [golems] the golem yard
         { "powderhut", "FIREWORKS" },                                                       // [fireworks]
+        { "maproom", "CARTOGRAPHER" },                                                          // [cartographer]
     };
 
     /** How many hands short the town is at a trade, as its shape has it (the trade's share, less who works it). */
     static double shortOf(UUID town, StationTask t) {
         if (t == StationTask.CAVE) return 0.0;              // [caves] the team is chosen from the town's own (CaveDwellers.appoint)
         if (t == StationTask.FIREWORKS) return 0.0;         // [fireworks] the maker is chosen from the town's own (FireworksMaker.appoint)
+        if (t == StationTask.DIVER) return 0.0;             // [diver] the diver is chosen from the town's own (Divers.appoint)
+        if (t == StationTask.NETHER) return 0.0;            // [nether] the runners are picked from its veterans (NetherRunners.appoint)
         return -Villages.share(town, t);
     }
 

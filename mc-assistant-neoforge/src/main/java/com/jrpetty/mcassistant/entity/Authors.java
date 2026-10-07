@@ -471,6 +471,7 @@ public final class Authors {
         mem.sort((a, b) -> b.weight() - a.weight());
         List<Tales.Memory> kept = new ArrayList<>();
         for (Persona.Memory m : mem.subList(0, Math.min(8, mem.size()))) kept.add(new Tales.Memory(m.day(), m.text()));
+        kept.addAll(Backstory.lifeMemories(s));                     // [individual] where it came from, its scar, its keepsake
         kept.sort((a, b) -> Long.compare(a.day(), b.day()));
         AssistantEntity.Deed deed = TradeBooks.deed(t);
         String deeds = deed == null || s.deedCount(deed) <= 0 ? "" : Quill.number(s.deedCount(deed)) + " " + deed.label;
@@ -651,8 +652,9 @@ public final class Authors {
     /** Has this folk the nature or the pastime to write: a reader, the curious, a diarist, a musician (for verse), the teacher? */
     static boolean writerish(VillageFolkEntity f) {
         Persona p = f.persona();
+        if (f.individual().rolled && !f.individual().literate) return false;        // [individual] one who cannot read cannot write
         return p.rolled() && (p.hobby() == Persona.Hobby.READING || p.hobby() == Persona.Hobby.MUSIC || p.quirk().equals("keeps a diary"))
-            || f.life().has(Social.Trait.CURIOUS) || School.isTeacher(f);
+            || f.life().has(Social.Trait.CURIOUS) || School.isTeacher(f) || Dreams.wantsToWrite(f);   // [individual] a dreamer
     }
 
     /** How well this folk would write this book (below nought: not at all). */
@@ -670,6 +672,7 @@ public final class Authors {
         if (p.hobby() == Persona.Hobby.READING) s += 15;
         if (p.quirk().equals("keeps a diary")) s += 10;
         if (f.life().has(Social.Trait.CURIOUS)) s += 10;
+        s += Dreams.writerBonus(f);                                  // [individual] the one who dreams of writing a book
         switch (i.kind()) {
             case "POEM" -> {
                 if (p.hobby() == Persona.Hobby.MUSIC) s += 20;

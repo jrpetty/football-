@@ -93,6 +93,8 @@ public final class Ages {
         boolean iron = age.ordinal() >= Villages.Age.IRON.ordinal();
         boolean diamond = age.ordinal() >= Villages.Age.DIAMOND.ordinal();
         boolean great = GREAT.contains(structure);
+        BlockState thatch = Thatch.reroof(age, style, now);           // [workitems] a thatched roof re-roofed in tiles, then slate
+        if (thatch != null) return thatch;
         switch (style) {
             case WALL -> {
                 // A manor is brick from the Iron Age it is built in.
@@ -103,6 +105,12 @@ public final class Ages {
                 return (landStone != null ? landStone : Blocks.STONE_BRICKS).defaultBlockState();
             }
             case FOUNDATION, WALL_LOW -> {
+                // [nether] The Nether Age's great buildings stand on quartz brick, of the runners' quartz (affordable: it
+                // waits till the stores have it).
+                if (age == Villages.Age.NETHER && great && (now.is(Blocks.STONE_BRICKS) || now.is(Blocks.MOSSY_STONE_BRICKS)
+                        || now.is(Blocks.COBBLESTONE) || now.is(Blocks.MOSSY_COBBLESTONE))) {
+                    return Blocks.QUARTZ_BRICKS.defaultBlockState();
+                }
                 // Moss in the old footings: only where the stores have the vines for it (affordable).
                 if (diamond && Math.floorMod(pos.hashCode(), 3) == 0) {
                     if (now.is(Blocks.STONE_BRICKS)) return Blocks.MOSSY_STONE_BRICKS.defaultBlockState();
@@ -181,6 +189,7 @@ public final class Ages {
     @Nullable
     static BlockState affordable(ServerLevel level, Villages.Village v, BlockState want, BlockState now,
                                  @Nullable Homeland.Stone local, Map<Block, Boolean> known) {
+        if (Thatch.isThatch(now)) return Thatch.affordable(level, v, want, now);   // [workitems] tiles, or stone bricks for want of them
         Block b = want.getBlock();
         if (!Masonry.fitForARoof(b) && (b instanceof net.minecraft.world.level.block.StairBlock
                 || b instanceof net.minecraft.world.level.block.SlabBlock)) return null;
@@ -240,6 +249,7 @@ public final class Ages {
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (AS_BUILT.contains(b.structure()) || !Land.areaLoaded(level, b.anchor(), 9)) continue;
             if (HousingMarket.isPrivate(id, b.anchor())) continue;     // [econ-housing] a folk's own house keeps the look it paid for
+            if (Beliefs.untouchable(id, b)) continue;                    // [culture2] the founders' first house, as they left it
             if (DONE.getOrDefault(b.anchor().asLong(), -1) >= age.ordinal()) continue;
             if (Grow.raisingNow(id, b.anchor())) continue;
             // A house waiting on (or raising) its second storey is Grow's first: its old roof is coming off.
@@ -264,6 +274,7 @@ public final class Ages {
         for (BuildGoal.Placement p : BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
             if (p.part() != BuildGoal.Part.BLOCK) continue;
             BlockState want = look(age, plan, p.style(), level.getBlockState(p.pos()), p.pos(), land);
+            if (want != null && !Architecture.ageMayChange(v.id(), b, p.style())) want = null;   // [culture2] a shingle roof kept
             // Moss is a nicety: a footing waiting on vines that never come is not work left undone.
             if (want != null && !want.is(Blocks.MOSSY_COBBLESTONE) && !want.is(Blocks.MOSSY_STONE_BRICKS)) return false;
         }
@@ -287,6 +298,7 @@ public final class Ages {
             if (p.part() != BuildGoal.Part.BLOCK) continue;
             BlockState now = level.getBlockState(p.pos());
             BlockState want = look(age, plan, p.style(), now, p.pos(), land);
+            if (want != null && v != null && !Architecture.ageMayChange(v.id(), b, p.style())) want = null;   // [culture2] a shingle roof kept
             // Only what the stores can pay for: a builder is not called out to stand by a wall
             // waiting on stone that is not there.
             if (want != null && !free) want = affordable(level, v, want, now, local, known);

@@ -90,6 +90,13 @@ public final class Makers {
         declare("fish_pie", "the cook", "after a glut at the fish market", "Kitchen.cook");
         declare("herbal_tea", "the healer (the café with no healer)", "for a folk with a cold, and the café on cold days", "Kitchen.brew");
         declare("bandage", "the healer (the tailor with no healer)", "to keep the watch and the cave team at three each, and for the healer's round", "Kitchen.bind");
+        // [culture2] The towns' own dishes (Cuisine.cook, from Crafts.now: the cook's first care; a hand at the town's works
+        // on a feast day in a town with no cook).
+        for (String d : List.of("fish_stew", "game_pie", "berry_tart", "harvest_loaf", "hotpot", "spiced_mutton", "cocoa_cake", "fen_broth")) {
+            declare(d, "the cook (a hand at the town's works on a feast day, with no cook)",
+                "while the stores keep fewer of the town's own dish than four and one for every four folk, and on feast days",
+                "Cuisine.cook / Cuisine.tick");
+        }
         // [pets] The pets' things (Pets.craft, from Crafts.now; the shop's book through Workshop.demand).
         declare("pet_bowl", "the shop's workshop", "when a household with a pet has no bowl", "Pets.craft / Workshop.demand");
         declare("dog_bed", "the tailor", "when a household's dog has no bed of its own", "Pets.craft");
@@ -139,6 +146,25 @@ public final class Makers {
         // [fleet] [transport]
         declare("fishing_net", "the tailor", "while the fishing fleet has fewer nets than boats", "Fleet.makeNet");
         declare("ferry_bell", "the ferry's builders", "for each landing as a ferry is put in", "Ferries / Railways.takeOrMake");
+        // [workitems] The tools of the mine, the woods and the roads, and the roofs' thatch (WorkTools.craft, from Crafts.now
+        // and a woodcutter's or a farmer's kit; the shop's book through Workshop.demand for a town without the trade).
+        declare("pit_prop", "the woodcutter (else the shop's workshop)", "while the town has miners: eight a miner kept, thirty-two at most",
+            "WorkTools.craft");
+        declare("rope_coil", "the tailor (else the shop's workshop)", "while a miner has no rope, or a cave dweller fewer than two",
+            "WorkTools.craft");
+        declare("ore_sack", "the tailor (else the shop's workshop)", "while a miner or a cave dweller has no sack", "WorkTools.craft");
+        declare("felling_saw", "the smith (else the shop's workshop)", "while a woodcutter has no saw", "WorkTools.craft");
+        declare("thatch", "the farmer (else the shop's workshop)", "in the Wood Age, with four stacks of wheat to spare over the seed",
+            "WorkTools.craft");
+        declare("thatch_stairs", "the builders, at the bench", "for a roof of thatch going up, out of the stores' thatch or wheat",
+            "Thatch.stock");
+        declare("thatch_slab", "the builders, at the bench", "for a roof of thatch going up, out of the stores' thatch or wheat",
+            "Thatch.stock");
+        declare("milestone", "the road crew (else the shop's workshop)", "from the Stone Age, every hundred blocks of a road and at its ends",
+            "Milestones.fromTheStores / WorkTools.craft");
+        declare("shipping_crate", "the woodcutter (else the shop's workshop)", "two for each courier, three while the town sends caravans",
+            "WorkTools.craft");
+        declare("window_box", "the shop's workshop", "for each well-off house with a window still bare, four at most", "WindowBoxes.make");
         // [interviews] The letter of application: each shortlisted candidate writes its own, of its own town's paper and
         // ink at the bench, paid for out of its purse, before it goes to an interview for a post.
         declare("letter_of_application", "the candidate itself, at its town's bench",
@@ -147,6 +173,30 @@ public final class Makers {
         declare("constable_badge", "the smith (the shop's workshop with no smith)",
             "for the town's constable when it has none, and for each player the watch swears in as a special constable",
             "Police.smith / Police.badges");
+        // [leisure] Home and play (entity/Pastimes: the trades' turns from Crafts.now, the shop's book through
+        // Workshop.demand, and the town's own bench where the town has neither trade nor shop; the busker's own lute).
+        declare("patchwork_quilt", "the tailor (the shop's workshop with no tailor)",
+            "while households saving for one would buy it for their beds (two kept), and one for a wedding's gift", "Pastimes.craft / Quilts.make");
+        declare("lute", "the shop's workshop", "for each busker without a lute of its own (three at most), and one for the tavern's band",
+            "Pastimes.craft / Workshop.demand");
+        declare("lute", "a busker, for itself", "of an evening, in a town with no maker and no lute in the stores", "Lutes.makeOwn");
+        declare("draughts_board", "the shop's workshop", "one for the tavern's table and one for the park, till each is out",
+            "Pastimes.craft / Workshop.demand");
+        declare("kite", "the tailor or the shop's workshop", "once the town has two children: a kite between two (four at most)",
+            "Pastimes.craft / Kites.make");
+        declare("leather_football", "the tailor (the shop's workshop with no tailor)",
+            "once the town has two children, for their kickabouts, and one for the pitch", "Pastimes.craft / Workshop.demand");
+        for (String c : List.of("red", "yellow", "orange", "light_blue", "lime", "pink", "magenta", "white")) {
+            declare(c + "_paper_lantern", "the tailor or the shop's workshop",
+                "once the town is settled: one of each of the festival's eight colours kept, for the lines across the square",
+                "Pastimes.craft / Lanterns");
+        }
+        for (String c : List.of("black", "blue", "brown", "cyan", "gray", "green", "light_gray", "purple")) {
+            declare(c + "_paper_lantern", "the shop's workshop", "only a player wants one in this colour: made on a player's order",
+                "Workshop.order");
+        }
+        declare("slate_and_chalk", "the shop's workshop (the mason at the town's bench)",
+            "while the school stands: one for each pupil with none, and a spare (eight at most)", "Pastimes.craft / Slates");
         // The village's own pieces.
         declare("storehouse_unit", "the builders", "as the storehouse goes up: twenty-seven to a store", "VillageFolkEntity.madeFromStores");
         declare("village_board", "the town's hands", "whenever the town's board has been taken down (the founders bring the first)",
@@ -157,6 +207,13 @@ public final class Makers {
         for (String t : List.of("job_board", "village_charter", "assistant_spawner", "village_folk_spawner", "place_marker", "zone_marker")) {
             declare(t, "the shop's workshop", PLAYERS, "Workshop.order");
         }
+        declare("spectacles", "the smith (else the shop)", "for an old folk who reads and has none: the scholar, the librarian, "
+            + "the storekeeper first", "Keepsakes.spectacles");                                                     // [individual]
+        // [nether] The Nether runners' kit (NetherRunners.smith / tailor, from Crafts; the shop's book through Workshop.demand).
+        declare("gold_charm", "the smith (else the shop's workshop)", "for each Nether runner with no gold to wear, so the piglins leave it be",
+            "NetherRunners.smith / Workshop.demand");
+        declare("runners_satchel", "the tailor (else the shop's workshop)", "for each Nether runner without a satchel to carry the haul in",
+            "NetherRunners.tailor / Workshop.demand");
         unmade("memory_core", "it forms only when a companion falls, holding all it was; a made one would hold nobody");
     }
 }

@@ -113,6 +113,9 @@ public final class Market {
         new Good("Fish pie", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.FISH_PIE.get()), 1.2, 4, Villages.Task.FOOD),
         new Good("Herbal tea", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.HERBAL_TEA.get()), 0.6, 2, Villages.Task.NONE),
         new Good("Bandages", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.BANDAGE.get()), 0.3, 4, Villages.Task.NONE),
+        // [nether] The Nether runners' kit (NetherItems): the smith's gold charm (an ingot and a third of gold), the tailor's satchel.
+        new Good("Gold charm", s -> s.is(com.jrpetty.mcassistant.item.NetherItems.GOLD_CHARM.get()), 13.0, 1, Villages.Task.NONE),
+        new Good("Runner's satchel", s -> s.is(com.jrpetty.mcassistant.item.NetherItems.RUNNERS_SATCHEL.get()), 6.0, 1, Villages.Task.NONE),
         good("Beetroot", Items.BEETROOT, 0.1, 16, Villages.Task.FOOD),
         good("Melon", Items.MELON_SLICE, 0.1, 16, Villages.Task.FOOD),
         good("Berries", Items.SWEET_BERRIES, 0.1, 16, Villages.Task.FOOD),
@@ -176,6 +179,24 @@ public final class Market {
         good("Flint", Items.FLINT, 0.2, 8, Villages.Task.NONE),
         good("Sand", Items.SAND, 0.05, 32, Villages.Task.NONE),
         good("Bones", Items.BONE, 0.1, 16, Villages.Task.NONE),
+        // [workitems] The tools of the mine, the woods and the roads, and thatch (item/WorkItems): sold at the shop, bought of a
+        // player. Matched when asked, not at load: the items are registered after this list is made.
+        new Good("Pit props", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.PIT_PROP_ITEM.get()), 0.25, 8, Villages.Task.NONE),
+        new Good("Rope coil", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.ROPE_COIL.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Ore sack", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.ORE_SACK.get()) && com.jrpetty.mcassistant.item.OreSackItem.count(s) == 0,
+            2.5, 1, Villages.Task.NONE),
+        new Good("Felling saw", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.FELLING_SAW.get()), 4.0, 1, Villages.Task.NONE),
+        new Good("Thatch", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.THATCH_ITEM.get()), 0.18, 16, Villages.Task.NONE),
+        new Good("Shipping crate", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.SHIPPING_CRATE_ITEM.get())
+            && com.jrpetty.mcassistant.block.ShippingCrateBlock.contents(s).isEmpty(), 1.4, 1, Villages.Task.NONE),
+        new Good("Window box", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.WINDOW_BOX_ITEM.get()), 0.6, 1, Villages.Task.NONE),
+        // [diver] The diver's: kelp blocks for a player's furnace (two and a half coals' burning each), dried kelp for the
+        // larder, clay off the bed, the turtles' scutes, and a turtle helmet.
+        good("Dried kelp blocks", Items.DRIED_KELP_BLOCK, 0.9, 4, Villages.Task.NONE),
+        good("Dried kelp", Items.DRIED_KELP, 0.08, 16, Villages.Task.FOOD),
+        good("Clay", Items.CLAY_BALL, 0.05, 16, Villages.Task.NONE),
+        good("Turtle scutes", Items.TURTLE_SCUTE, 3.0, 1, Villages.Task.NONE),
+        good("Turtle helmet", Items.TURTLE_HELMET, 18.0, 1, Villages.Task.NONE),
         // What the crafts make, sold one at a time at the shop and the café.
         good("Iron pickaxe", Items.IRON_PICKAXE, 6.0, 1, Villages.Task.NONE),
         good("Iron sword", Items.IRON_SWORD, 4.0, 1, Villages.Task.NONE),
@@ -192,6 +213,14 @@ public final class Market {
         new Good("Bed", s -> s.is(ItemTags.BEDS), 4.0, 1, Villages.Task.NONE),
         new Good("Rugs", s -> s.is(ItemTags.WOOL_CARPETS), 0.3, 4, Villages.Task.NONE),
         new Good("Banner", s -> s.is(ItemTags.BANNERS), 2.5, 1, Villages.Task.NONE),
+        // [leisure] Home and play (LeisureItems): read lazily, the items being registered after this list is made.
+        new Good("Patchwork quilt", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.QUILT_ITEM.get()), 3.2, 1, Villages.Task.NONE),
+        new Good("Lute", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.LUTE.get()), 2.6, 1, Villages.Task.NONE),
+        new Good("Draughts board", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.DRAUGHTS_BOARD_ITEM.get()), 1.8, 1, Villages.Task.NONE),
+        new Good("Kite", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.KITE.get()), 1.4, 1, Villages.Task.NONE),
+        new Good("Leather football", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.LEATHER_FOOTBALL.get()), 3.0, 1, Villages.Task.NONE),
+        new Good("Paper lanterns", com.jrpetty.mcassistant.item.LeisureItems::isLantern, 0.6, 4, Villages.Task.NONE),
+        new Good("Slate and chalk", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.SLATE.get()), 1.0, 1, Villages.Task.NONE),
         // [pets] The cook's pet treats (Pets): sold at the shop, and bought of a player. Matched when asked, not at
         // load: the item is registered after this list is made.
         new Good("Pet treats", s -> s.is(McAssistantMod.PET_TREAT.get()), 0.15, 8, Villages.Task.NONE),
@@ -199,6 +228,16 @@ public final class Market {
         new Good("Reinforced pickaxe", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.REINFORCED_PICKAXE.get()), 11.0, 1, Villages.Task.NONE),
         new Good("Brewer's stout", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.BREWERS_STOUT.get()), 1.2, 4, Villages.Task.NONE),
         new Good("Farmhouse pie", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.FARMHOUSE_PIE.get()), 1.2, 4, Villages.Task.NONE),
+        // [culture2] The towns' own dishes (Cuisine): one at a time at the café's counter, the tavern's board and off a caravan.
+        new Good("Fish stew", s -> s.is(com.jrpetty.mcassistant.item.DishItems.FISH_STEW.get()), 1.5, 1, Villages.Task.NONE),
+        new Good("Game pie", s -> s.is(com.jrpetty.mcassistant.item.DishItems.GAME_PIE.get()), 1.3, 1, Villages.Task.NONE),
+        new Good("Berry tart", s -> s.is(com.jrpetty.mcassistant.item.DishItems.BERRY_TART.get()), 1.0, 1, Villages.Task.NONE),
+        new Good("Harvest loaf", s -> s.is(com.jrpetty.mcassistant.item.DishItems.HARVEST_LOAF.get()), 0.8, 1, Villages.Task.NONE),
+        new Good("Miner's hotpot", s -> s.is(com.jrpetty.mcassistant.item.DishItems.HOTPOT.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Spiced mutton", s -> s.is(com.jrpetty.mcassistant.item.DishItems.SPICED_MUTTON.get()), 1.4, 1, Villages.Task.NONE),
+        new Good("Cocoa cake", s -> s.is(com.jrpetty.mcassistant.item.DishItems.COCOA_CAKE.get()), 1.0, 1, Villages.Task.NONE),
+        new Good("Fen broth", s -> s.is(com.jrpetty.mcassistant.item.DishItems.FEN_BROTH.get()), 1.1, 1, Villages.Task.NONE),
+        good("Rabbit stew", Items.RABBIT_STEW, 1.2, 1, Villages.Task.NONE),
         // [itemaudit] The pets' things a household buys at the shop (Pets, Purchases), on the board at their worth.
         new Good("Pet bowls", s -> s.is(McAssistantMod.PET_BOWL_ITEM.get()), 0.8, 1, Villages.Task.NONE),
         new Good("Dog beds", s -> s.is(McAssistantMod.DOG_BED_ITEM.get()), 1.6, 1, Villages.Task.NONE),
@@ -240,7 +279,8 @@ public final class Market {
 
     /** Is this the village's market day? Once a week, a day of its own. */
     public static boolean marketDay(UUID village, long day) {
-        return Math.floorMod(day + village.hashCode(), 7L) == 0;
+        return Math.floorMod(day + village.hashCode(), 7L) == 0
+            || Ethos.extraMarket(village, day);                          // [identity] a mercantile town's second market day
     }
 
     /** How many days until the next market day (0: today). */
@@ -391,6 +431,7 @@ public final class Market {
         Leader.morning(level, v, day);                   // the leader's books, the plan and the day's pay
         WarFooting.morning(level, v, day);               // [war-prep] the town on a war footing: the watch, the militia, the defences
         CityTree.morning(level, v, day);                 // the day's research points, and the leader's next civic
+        Identity.morning(level, v, day);                 // [identity] the town's character, government, laws, traits and fame looked at
         JobWorth.morning(level, v, day);                 // [econ-wages] the day's pay scale: what every job is worth
         mint(level, v);
         int sold = trade(level, v);
@@ -436,12 +477,14 @@ public final class Market {
                 default -> -1;
             };
             if (keep < 0) continue;
+            keep = (int) Math.round(keep * Ethos.keepFactor(id));       // [identity] a self-sufficient town keeps more back
             int have = stock(level, id, g.what());
             have -= TradeDeals.spokenFor(id, g);           // [econ-trade] what a partner is promised goes to the partner, not off the map
             int n = Math.min(192, have - keep);
             if (g.need() == Villages.Task.FOOD) n = Math.min(n, foodStock - foodKeep);
             if (n < 32) continue;
-            int paid = (int) Math.floor(n * PriceIndex.each(level, id, g) * 0.5 * CityTree.takingsPercent(id) / 100.0);   // the Market Charter
+            int paid = (int) Math.floor(n * PriceIndex.each(level, id, g) * 0.5 * CityTree.takingsPercent(id) / 100.0   // the Market Charter
+                * Fame.traderPremium(id, g));                         // [identity] a quarter more for what the town is famous for
             if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
             if (g.need() == Villages.Task.FOOD) foodStock -= n;
             coins += paid;
@@ -510,7 +553,7 @@ public final class Market {
             if (food && foodSpare < g.bundle()) continue;
             int have = stock(level, id, g.what());
             have -= TradeDeals.spokenFor(id, g);           // [econ-trade] what a partner is promised goes to the partner, not off the map
-            int plenty = g.bundle() * 4;
+            int plenty = (int) Math.round(g.bundle() * 4 * Ethos.keepFactor(id));   // [identity] kept back by its character
             if (have < plenty + g.bundle()) continue;
             // As much as is wanted, from what it has to spare: up to eight lots of a thing.
             int lotWorth = Math.max(1, (int) Math.floor(g.bundle() * PriceIndex.each(level, id, g) * 0.8));   // [econ-prices]
@@ -518,7 +561,7 @@ public final class Market {
             if (food) lots = Math.min(lots, foodSpare / g.bundle());
             if (lots <= 0) continue;
             int n = lots * g.bundle();
-            int paid = (int) Math.floor(n * PriceIndex.each(level, id, g) * 0.8);
+            int paid = (int) Math.floor(n * PriceIndex.each(level, id, g) * 0.8 * Fame.traderPremium(id, g));   // [identity] fame, rank
             if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
             in += paid;
             sold.add(n + " " + g.name().toLowerCase());
@@ -584,7 +627,7 @@ public final class Market {
     static int taxOn(VillageFolkEntity f, int wage) {
         if (wage <= 0 || Wealth.tier(f) == Wealth.Tier.POOR) return 0;
         if (TAX_CARRY.size() > 8192) TAX_CARRY.clear();               // folk long gone: under a coin each, let go
-        int owed = TAX_CARRY.getOrDefault(f.getUUID(), 0) + wage * TAX_PERCENT;
+        int owed = TAX_CARRY.getOrDefault(f.getUUID(), 0) + wage * LawBook.taxPercent(f.ownerId());   // [identity] the law's tithe
         int tax = Math.min(wage, owed / 100);
         TAX_CARRY.put(f.getUUID(), owed - tax * 100);
         return tax;

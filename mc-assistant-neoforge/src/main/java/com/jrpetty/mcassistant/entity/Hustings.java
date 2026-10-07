@@ -205,6 +205,8 @@ public final class Hustings {
                 + ", and we'll judge you on your record.";
         }
         if (!Citizens.is(village, p.getUUID())) return "Only a citizen of " + Villages.name(village) + " may stand. Ask to live here first.";
+        String barred = Government.standBarred(level, village, p);     // [identity] a lordship, the chaplain's, the elders', the guild's
+        if (barred != null) return barred;
         Standing.View view = Standing.of(village, p.getUUID(), level.getGameTime());
         if (!view.title().atLeast(Standing.Title.FRIEND)) {
             return "Stand for " + title + "? The town hardly knows you. Be a friend to it first — you're " + view.title().words + ".";

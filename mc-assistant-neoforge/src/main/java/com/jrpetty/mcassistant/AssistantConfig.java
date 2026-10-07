@@ -179,15 +179,20 @@ public final class AssistantConfig {
                 "such ring apiece for ever, and the cost is the square of the number.",
                 "Raise it if your machine can pay for it.")
             .defineInRange("villageLoadedChunks", 6, 2, 24);
+        // [emerald] Off by default now: the folk and the game's villagers are two peoples, kept apart (TwoPeoples).
         REPLACE_VILLAGERS = b.comment(
-                "Turn the game's own villagers into Village Folk as you meet them, so",
-                "they work the village they already live in — its houses, beds, chests,",
-                "furnaces and fields — instead of standing about. The settlement is",
-                "credited with the buildings it plainly already has.",
-                "THIS REMOVES TRADING with those villagers: they are gone, replaced by",
-                "people who work. Wandering traders are untouched. Turn it off to keep",
-                "vanilla villages exactly as they are.")
-            .define("replaceVillagers", true);
+                "The old takeover, OFF by default. Off, the folk and the game's own",
+                "villagers are two peoples kept completely apart: villagers stay",
+                "villagers, their villages stay theirs (no town is founded near one,",
+                "and no folk uses their beds, chests, job blocks or bells), villagers",
+                "never claim a town's beds, job blocks or bell, and a town's emerald",
+                "trader walks out to trade with them.",
+                "On, villagers are turned into Village Folk as you meet them and work",
+                "the village they lived in (its houses, beds, chests, furnaces and",
+                "fields); the settlement is credited with the buildings it already has.",
+                "That REMOVES TRADING with those villagers: they are gone. Wandering",
+                "traders are untouched either way.")
+            .define("replaceVillagers", false);
         PROTECT_TRADED_VILLAGERS = b.comment(
                 "Leave alone any villager you have traded with, named or cured. Off by",
                 "default: the swap is meant to be complete, and a swap that skips the",
@@ -312,7 +317,15 @@ public final class AssistantConfig {
     public static int villageCharterFolk() { return read(VILLAGE_CHARTER_FOLK, 70); }
     public static boolean villageWars() { return read(VILLAGE_WARS, true); }
     public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 6); }
-    public static boolean replaceVillagers() { return read(REPLACE_VILLAGERS, true); }
+    public static boolean replaceVillagers() {                                            // [emerald] off: two peoples
+        Boolean t = replaceForTests;
+        return t != null ? t : read(REPLACE_VILLAGERS, false);
+    }
+
+    /** [emerald] Tests: the old takeover switched on (or off) for one test whatever the file says; null for the file's. */
+    private static volatile Boolean replaceForTests;
+
+    public static void replaceVillagersForTests(@javax.annotation.Nullable Boolean on) { replaceForTests = on; }
     public static boolean protectTradedVillagers() { return read(PROTECT_TRADED_VILLAGERS, false); }
     public static boolean villageColonies() { return read(VILLAGE_COLONIES, true); }
     public static boolean villagesShareGoods() { return read(VILLAGES_SHARE_GOODS, false); }

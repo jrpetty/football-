@@ -363,10 +363,16 @@ public final class McAssistantMod {
         BLOCK_ENTITIES.register(modBus);
         RECIPE_SERIALIZERS.register(modBus);                          // [arms] the tabard given a banner's arms
         com.jrpetty.mcassistant.item.CivicItems.register(modBus);      // [player-civic] the masters' goods, and their recipes
+        com.jrpetty.mcassistant.item.WorkItems.register(modBus);       // [workitems] the mine's, the woods' and the roads' tools, thatch
         com.jrpetty.mcassistant.item.FieldItems.register(modBus);      // [fields] the tools of the fields and the pens, the bees and the water
         com.jrpetty.mcassistant.item.InterviewItems.register(modBus);  // [interviews] the letter of application
         com.jrpetty.mcassistant.item.KitchenItems.register(modBus);    // [kitchen] the kitchen, the cellar and the healer's shelf
         com.jrpetty.mcassistant.item.PoliceItems.register(modBus);     // [police] the Constable's Badge
+        com.jrpetty.mcassistant.item.DishItems.register(modBus);       // [culture2] the towns' own dishes
+        com.jrpetty.mcassistant.entity.TownWays.joinIdentity();        // [culture2] its sections of the Identity page
+        com.jrpetty.mcassistant.item.IndividualItems.register(modBus); // [individual] spectacles
+        com.jrpetty.mcassistant.item.LeisureItems.register(modBus);    // [leisure] the quilt, the lute, draughts, kites, the football, lanterns, slates
+        com.jrpetty.mcassistant.item.NetherItems.register(modBus);     // [nether] the runners' gold charm and satchel
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);
@@ -381,6 +387,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(VillagerTakeover.class);
         NeoForge.EVENT_BUS.register(VillageCommands.class);
         NeoForge.EVENT_BUS.register(WarFootingCommands.class);        // [war-prep] /village war footing
+        NeoForge.EVENT_BUS.register(IndividualCommands.class);        // [individual] /village individual
         NeoForge.EVENT_BUS.register(SessionReset.class);
         NeoForge.EVENT_BUS.register(ChunkLoad.class);
         NeoForge.EVENT_BUS.register(StallWatch.class);
@@ -402,6 +409,8 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(TimeSpeed.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Transport.class);    // [transport] railways, carts, ferries, bridges
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Golems.class);       // [golems] a golem fallen, its iron left lying
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.TwoPeoples.class);   // [emerald] folk and villagers kept apart
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.EmeraldTrader.class); // [emerald] the trader to the villagers
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {

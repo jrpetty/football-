@@ -73,6 +73,14 @@ public class CityScreen extends Screen {
         "Transport",
         // [interviews] The town's interviews, coming and held, every candidate's score part by part (InterviewsPage).
         "Interviews",
+        // [identity] What makes the town itself: its ethos, government, laws, traits, fame and renown (IdentityPage).
+        "Identity",
+        // [cartographer] The maps: the country as the cartographer drew it, the places found, the archive (MapsPage).
+        "Maps",
+        // [emerald] The emerald account, the villagers' villages, their villagers and offers (TradingPostPage).
+        "Trading Post",
+        // [nether] The Nether runners' page, after them (NetherPage): the runs, the outpost, the finds, the hauls.
+        "Nether",
         // [police] The watch as the town's police: the roster, the beats, the incidents, the cells, the crime rate (WatchPage).
         "Watch" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
@@ -83,7 +91,11 @@ public class CityScreen extends Screen {
         "Auction",                                                                                    // [fleet]
         "Library",                                                                                    // [library]
         "Transport",                                                                                  // [transport]
-        "Interviews",                                                                                 // [interviews]
+        "Interviews",                                                                                  // [interviews]
+        "Identity",                                                                                   // [identity]
+        "Maps",                                                                                       // [cartographer]
+        "Trading Post",                                                                              // [emerald]
+        "Nether",                                                                                    // [nether]
         "Watch");                                                                                     // [police]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
@@ -339,6 +351,10 @@ public class CityScreen extends Screen {
                 }
                 case "War map" -> warMap(g, x, y, cw, ch, mouseX, mouseY);   // [war-scouting]
                 case "War" -> WarPage.draw(g, font, data.getCompound("war"), x, y, cw, ch, scroll);   // [war-peace]
+                case "Nether" -> {                                                     // [nether] the runners' report (NetherPage)
+                    List<Component> tip = NetherPage.draw(g, font, data.getCompound("nether"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
                 case "Caves" -> {                                                      // [caves] the caves' report (CavesPage)
                     List<Component> tip = CavesPage.draw(g, font, data.getCompound("caves"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
@@ -369,6 +385,18 @@ public class CityScreen extends Screen {
                 }
                 case "Interviews" -> {                                                 // [interviews] coming and held (InterviewsPage)
                     List<Component> tip = InterviewsPage.draw(g, font, data.getCompound("interviews"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Identity" -> {                                                   // [identity] what makes the town itself (IdentityPage)
+                    List<Component> tip = IdentityPage.draw(g, font, data.getCompound("identity"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Maps" -> {                                                       // [cartographer] the map room's books (MapsPage)
+                    List<Component> tip = MapsPage.draw(g, font, data.getCompound("maps"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Trading Post" -> {                                               // [emerald] the account, the villagers (TradingPostPage)
+                    List<Component> tip = TradingPostPage.draw(g, font, data.getCompound("emerald"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 default -> board(g, x, y, cw, ch);

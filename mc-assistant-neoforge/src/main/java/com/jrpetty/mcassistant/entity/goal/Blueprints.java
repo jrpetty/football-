@@ -142,6 +142,7 @@ public final class Blueprints {
         key('h', BuildGoal.Part.CAMPFIRE, Style.NONE, Way.UP);
         key('m', BuildGoal.Part.NOTE_BLOCK, Style.NONE, Way.UP);
         key('$', BuildGoal.Part.STOREHOUSE, Style.NONE, Way.FRONT);
+        key('A', BuildGoal.Part.CARTOGRAPHY, Style.NONE, Way.UP);               // [cartographer] the map room's table
     }
 
     private static final Map<String, List<Cell>> DRAWINGS = new ConcurrentHashMap<>();

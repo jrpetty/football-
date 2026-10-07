@@ -147,7 +147,7 @@ public final class PlayerLaw {
         VillageFolkEntity seen = Laws.witness(level, v.id(), p);
         if (seen == null) return true;
         Offence kind = what.startsWith("taking") ? Offence.THEFT : what.startsWith("damaging") ? Offence.DAMAGE
-            : what.startsWith("killing") ? Offence.POACHING : Offence.OTHER;
+            : what.startsWith("killing") || what.startsWith("poaching") ? Offence.POACHING : Offence.OTHER;
         handle(level, v, p, seen, kind, what, fine, 0.0F);
         return true;
     }
@@ -358,6 +358,8 @@ public final class PlayerLaw {
             if (Math.max(Math.abs(a.getX() - v.centre().getX()), Math.abs(a.getZ() - v.centre().getZ())) > reach) return;
             if (Laws.witness(level, v.id(), p) == null) return;
             POACHED.add(a.getUUID());
+            // [identity] Where its law-book reserves the hunting, the law-book has it as poaching (LawBook.onDeath): once.
+            if (LawBook.huntingReserved(v.id())) return;
             String what = "killing the town's " + a.getType().getDescription().getString().toLowerCase(java.util.Locale.ROOT);
             Laws.offence(level, v, p, what, 4);
         });

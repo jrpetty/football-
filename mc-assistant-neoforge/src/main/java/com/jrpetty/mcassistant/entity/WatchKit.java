@@ -223,6 +223,7 @@ public final class WatchKit {
         int worse = 0;
         for (VillageFolkEntity g : watch(v.id())) if (wears(g, k) < want) worse++;
         for (VillageFolkEntity g : CaveDwellers.dwellers(v.id())) if (wears(g, k) < want) worse++;   // [caves] theirs is the watch's kit
+        for (VillageFolkEntity g : NetherRunners.runners(v.id())) if (wears(g, k) < want) worse++;   // [nether] and the runners'
         if (worse == 0) return 0;
         int have = 0;
         for (BlockPos p : Villages.storeChests(level, v.id())) {
@@ -551,12 +552,14 @@ public final class WatchKit {
     public static List<ItemStack> fit(ServerLevel level, Villages.Village v, VillageFolkEntity g) {
         List<ItemStack> given = new ArrayList<>();
         // [caves] The cave dwellers are kitted out the same way (CaveDwellers.kitUp), all but the bow.
-        boolean watch = g.stationTask() == StationTask.GUARD;
+        // [nether] The Nether runners too, with the watch's bow and arrows (the blazes, the ghasts).
+        boolean watch = g.stationTask() == StationTask.GUARD || g.stationTask() == StationTask.NETHER;
         if (!watch && g.stationTask() != StationTask.CAVE || g.isBaby() || !g.isAlive() || g.isShowcase()) return given;
         UUID id = v.id();
         String who = g.displayNameCap();
         for (Kind k : SUIT) {
             ItemStack worn = g.getItemBySlot(k.slot);
+            if (NetherRunners.keepsGold(g, worn)) continue;                // [nether] a runner's one piece of gold stays on
             Workshop.Found f = Workshop.bestInStores(level, id, st -> fits(k, st), st -> score(k, st), held(k, worn));
             if (f == null) continue;
             ItemStack got = mark(Workshop.takeOut(level, id, f, who));

@@ -833,6 +833,9 @@ public final class Riding {
                     if (!(be instanceof RandomizableContainerBlockEntity loot) || loot.getLootTable() == null) continue;
                     BlockPos p = be.getBlockPos();
                     if (LOOKED_IN.contains(p.asLong())) continue;
+                    // [emerald] A village of villagers' chests are the villagers': a scout walking through takes nothing.
+                    if (VanillaVillages.within(level, p.getX(), p.getZ(), 4)) continue;
+                    if (VanillaVillages.sawFrom(level, p) != null && VanillaVillages.within(level, p.getX(), p.getZ(), 4)) continue;
                     double d = p.distSqr(at);
                     if (d < near) { near = d; best = p.immutable(); }
                 }
@@ -901,6 +904,11 @@ public final class Riding {
      * that is the walking.
      */
     public static boolean caravan(VillageFolkEntity f, ServerLevel level, Caravans.Trip t) {
+        return packAlong(f, level, Villages.name(t.destination()));
+    }
+
+    /** [emerald] As caravan, for any walk with a pack donkey: a caravan's, or the emerald trader's to a village of villagers. */
+    public static boolean packAlong(VillageFolkEntity f, ServerLevel level, String to) {
         Pack p = PACKS.get(f.getUUID());
         if (p == null || p.stage == PackStage.HOME) return false;
         long now = level.getGameTime();
@@ -908,7 +916,7 @@ public final class Riding {
         if (d == null) {
             PACKS.remove(f.getUUID());
             f.brain("lost the pack donkey");
-            LOG.info("[MCA-CARAVAN] {} lost its pack donkey on the way to {}", f.displayNameCap(), Villages.name(t.destination()));
+            LOG.info("[MCA-CARAVAN] {} lost its pack donkey on the way to {}", f.displayNameCap(), to);
             return false;
         }
         if (p.stage == PackStage.FETCH) {

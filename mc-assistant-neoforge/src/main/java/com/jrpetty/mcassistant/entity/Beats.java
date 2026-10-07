@@ -415,12 +415,13 @@ final class Beats {
 
     /** Is there a curfew on in the town? */
     static boolean curfew(@Nullable UUID village) {
-        return village != null && Police.town(village).getCompound("curfew").getBoolean("on");
+        return village != null && (Police.town(village).getCompound("curfew").getBoolean("on") || LawBook.curfew(village));   // [identity] or its law-book's
     }
 
     static String curfewLine(UUID village) {
         CompoundTag c = Police.town(village).getCompound("curfew");
-        if (!c.getBoolean("on")) return "No curfew.";
+        if (!c.getBoolean("on")) return LawBook.curfew(village) ? "A curfew by the town's law: indoors after dark; the night beat sees to it, a warning, then a fine."
+            : "No curfew.";
         return "A curfew since day " + c.getLong("since") + " (" + c.getString("why") + "): indoors from the tenth bell to first light; a warning, then a fine.";
     }
 

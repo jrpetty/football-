@@ -162,6 +162,10 @@ public final class ClientSetup {
                 case FLETCHER -> Items.FLETCHING_TABLE;    // [fletcher]
                 case GOLEMS -> Items.CARVED_PUMPKIN;       // [golems]
                 case FIREWORKS -> Items.FIREWORK_ROCKET;   // [fireworks]
+                case CARTOGRAPHER -> Items.CARTOGRAPHY_TABLE;   // [cartographer]
+                case EMERALD -> Items.EMERALD;             // [emerald]
+                case DIVER -> Items.KELP;                  // [diver]
+                case NETHER -> Items.BLAZE_ROD;            // [nether]
                 case NONE -> Items.AIR;
             });
         }

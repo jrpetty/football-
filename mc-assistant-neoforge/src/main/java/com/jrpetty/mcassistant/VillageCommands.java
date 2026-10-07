@@ -105,6 +105,7 @@ public final class VillageCommands {
             // The town's quarters, the homes in the crafts' smoke and by the park, and the park (Quarters, Park).
             .then(com.jrpetty.mcassistant.entity.Quarters.command())
             .then(com.jrpetty.mcassistant.entity.Sport.command())                 // [batchC] /village sport
+            .then(com.jrpetty.mcassistant.entity.Pastimes.command())              // [leisure] /village items leisure [stage|make]
             // [batchE] The town's look: the avenues' trees, the street furniture, the allotments, the orchard, the
             // windmill, the bakery and the inn; `showcase` and `now` for operators and the pictures (TownLook).
             .then(com.jrpetty.mcassistant.entity.TownLook.command())
@@ -247,7 +248,12 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.Fletchers.command())       // [fletcher] the fletcher, the watch's arrows, practice
             .then(com.jrpetty.mcassistant.entity.Golems.command())          // [golems] the golem keeper and the town's golems
             .then(com.jrpetty.mcassistant.entity.FireworkShows.command())   // [fireworks] /village fireworks: the hut, the rockets, a display; stage (ops)
+            .then(com.jrpetty.mcassistant.entity.Cartographers.command())   // [cartographer] /village maps: the map room; now, stage (ops)
+            .then(com.jrpetty.mcassistant.entity.EmeraldTrader.command())   // [emerald] /village emerald: the trader, the villagers' villages
+            .then(com.jrpetty.mcassistant.entity.Divers.command())          // [diver] /village diver: the water, the beds, the stage
+            .then(com.jrpetty.mcassistant.entity.NetherRunners.command())   // [nether] the Nether runners: the report, the runs; now, stage (ops)
             .then(com.jrpetty.mcassistant.entity.Pets.command())            // [pets] /village pets: the town's pets; now, stage (ops)
+            .then(com.jrpetty.mcassistant.entity.WorkTools.command())       // [workitems] /village items work: the tools of the mine, woods, roads; stage (ops)
             .then(com.jrpetty.mcassistant.entity.Kitchen.command())         // [kitchen] /village items kitchen: its books; stage (ops)
             .then(com.jrpetty.mcassistant.entity.Fashion.command())         // [fashion] the season's look, the tailor's book, the show
             .then(com.jrpetty.mcassistant.entity.Crime.command())           // [crime] the casebook, the Cases page; a deed, a trial, the stocks staged
@@ -318,6 +324,8 @@ public final class VillageCommands {
             .then(LibraryCommands.build())
             // [batchD] The town's culture: its banner and motto, customs, theatre, band and choir, pictures, plaques.
             .then(CultureCommands.build())
+            // [culture2] The town's own ways: its dish, its tongue, its building style, its festival, its faith (WaysCommands).
+            .then(WaysCommands.build())
             // [arms] The town's arms everywhere (/village arms), and its street musicians (/village busk).
             .then(ArmsCommands.arms())
             .then(ArmsCommands.busk())
@@ -586,6 +594,10 @@ public final class VillageCommands {
                     case FLETCHER -> net.minecraft.world.item.Items.ARROW;        // [fletcher]
                     case GOLEMS -> net.minecraft.world.item.Items.IRON_INGOT;     // [golems]
                     case FIREWORKS -> net.minecraft.world.item.Items.FIREWORK_ROCKET;   // [fireworks]
+                    case CARTOGRAPHER -> net.minecraft.world.item.Items.FILLED_MAP;   // [cartographer]
+                    case EMERALD -> net.minecraft.world.item.Items.EMERALD;       // [emerald]
+                    case DIVER -> net.minecraft.world.item.Items.KELP;            // [diver]
+                    case NETHER -> net.minecraft.world.item.Items.BLAZE_ROD;      // [nether]
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));
             folk.rename(switch (trades[i]) {

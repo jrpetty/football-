@@ -684,7 +684,8 @@ public final class CaveDwellers {
      *  (its crafting table too). Its torches, cobble and makings it keeps up to so many (keepsOf). */
     static boolean kit(ItemStack s) {
         boolean found = valuable(s) && !WatchKit.issued(s);           // a diamond blade out of an old chest is the town's find
-        return s.isDamageableItem() && !found || food(s) || WatchKit.issued(s) && !s.is(Items.IRON_INGOT);
+        return s.isDamageableItem() && !found || food(s) || WatchKit.issued(s) && !s.is(Items.IRON_INGOT)
+            || WorkTools.caveKit(s);                                  // [workitems] its rope coils and its ore sack
     }
 
     /** How many of this it keeps in its pack over its kit: a stack of torches, sixteen cobble, the makings (CaveCraft). */
@@ -814,6 +815,7 @@ public final class CaveDwellers {
             f.insertGiven(new ItemStack(Items.WATER_BUCKET));
             got.add("a bucket of water");
         }
+        got.addAll(WorkTools.caveKitUp(level, v, f));             // [workitems] two rope coils and an ore sack
         if (!got.isEmpty()) f.brain("fitted out for the caves by the town: " + String.join(", ", got));
         return got;
     }
@@ -1125,6 +1127,11 @@ public final class CaveDwellers {
             double ang = bearing * (2 * Math.PI / Scouts.BEARINGS);
             target = new BlockPos(home.getX() + (int) Math.round(Math.cos(ang) * range), home.getY(),
                 home.getZ() + (int) Math.round(Math.sin(ang) * range));
+        } else if (Cartographers.caveLead(id, home) != null) {
+            // [cartographer] A mineshaft, a dungeon or the like on the cartographer's map, not yet made for: out that way to it.
+            target = Cartographers.caveLead(id, home);
+            bearing = Scouts.bearingOf(target.getX() - home.getX(), target.getZ() - home.getZ());
+            Cartographers.ledTo(id, target, day);
         } else {
             bearing = leastLooked(id, lead, day);
             double ang = bearing * (2 * Math.PI / Scouts.BEARINGS);
@@ -1538,6 +1545,7 @@ public final class CaveDwellers {
     }
 
     private static int freeSlots(VillageFolkEntity f) {
+        WorkTools.stowOre(f);                                     // [workitems] its ore into its sack first, if it has one
         int n = 0;
         for (ItemStack s : f.getInventoryItems()) if (s.isEmpty()) n++;
         return n;
@@ -1879,6 +1887,7 @@ public final class CaveDwellers {
     static boolean follow(ServerLevel level, VillageFolkEntity f, Delve d, VillageFolkEntity lead) {
         if (lead == f) return true;
         Party p = d.party;
+        if (Ropes.follow(level, f, lead, p)) return true;        // [workitems] after the leader, down the party's rope or up it
         VillageFolkEntity ahead = ahead(level, p, f, lead);
         double toAhead = f.distanceToSqr(ahead), toLead = f.distanceToSqr(lead);
         double gap = ahead == lead ? 2.5 : 2.0;
@@ -2064,6 +2073,11 @@ public final class CaveDwellers {
                     f.getNavigation().moveTo(path, 1.0D);
                     p.noWay = 0;
                 } else if (++p.noWay > 4) {
+                    // [workitems] No walking down to it: a rope down the drop nearest it, and the team climbs down (Ropes).
+                    if (Ropes.lowerToward(level, f, p.cave, p)) {
+                        p.noWay = 0;
+                        return true;
+                    }
                     p.passedCells.add(cell(p.cave));
                     f.brain("no way down to the cave from here");
                     p.cave = null;
@@ -3377,6 +3391,7 @@ public final class CaveDwellers {
             greet(level, p, f);
             return true;
         }
+        if (Ropes.homeward(level, f, p)) return true;             // [workitems] back up the rope the team came down
         if (waiting(level, f, p)) return true;
         BlockPos dest = p.crumb >= 0 && p.crumb < p.trail.size() ? p.trail.get(p.crumb) : homeAt;
         double dist = p.crumb >= 0 ? feet.distSqr(dest) : Scouts.flat(feet, dest);
@@ -3555,6 +3570,11 @@ public final class CaveDwellers {
         if (house != null) {
             house.setChanged();
             if (!lots.isEmpty()) Storekeeping.bookIn(level, p.village, who, lots, false);
+        }
+        // [workitems] Then its ore sack's load, out onto its back and in after the rest (WorkTools.unpackSacks).
+        if (WorkTools.unpackSacks(f) > 0) {
+            putIn(level, f, p);
+            return;
         }
         f.swing(InteractionHand.MAIN_HAND);
         f.brain("put the caves' haul into the " + (house != null ? "storehouse" : "stores"));

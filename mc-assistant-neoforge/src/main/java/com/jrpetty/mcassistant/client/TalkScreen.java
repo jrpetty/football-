@@ -93,6 +93,7 @@ public class TalkScreen extends Screen {
         String asked = reply.asked() == null ? "" : reply.asked().toLowerCase(java.util.Locale.ROOT);
         if (asked.contains("skill") || asked.contains("knack")) tab = lastTab = Tab.SKILLS;
         else if (asked.contains("your wage")) tab = lastTab = Tab.ABOUT;      // [econ-wages] its card: its wage and why
+        else if (asked.contains("who you are")) tab = lastTab = Tab.ABOUT;    // [individual] its card: its looks, its life
         else if (!reply.open() && !asked.isBlank() && (tab == Tab.ABOUT || tab == Tab.SKILLS)) tab = lastTab = Tab.TALK;
     }
 
@@ -210,6 +211,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("History", TalkTopic.CHRONICLE, "Ask for a copy of the village's chronicle"));
             }
             case VILLAGE -> {
+                out.add(new Choice("Town's ways", TalkTopic.SAY, "What's this town like?", "Its character, who rules it, its laws, what it is famous for and what history has made of it — in this folk's own words"));   // [identity]
                 out.add(Choice.of("Residents", TalkTopic.CENSUS));
                 out.add(Choice.of("The council", TalkTopic.COUNCIL, "Who sits on the council, and what it voted. Say \"you should build a tavern\" to put it to the vote"));
                 out.add(Choice.of("Neighbours", TalkTopic.RIVALS, "What this village thinks of the villages round about, who leads them, and who trades with whom"));
@@ -217,6 +219,11 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Out there", TalkTopic.ATLAS, "What the village's scouts have found: towns, ruins, peaks, ore — and which way"));
                 out.add(Choice.of("Underground", TalkTopic.CAVES, "What the town's cave dwellers have found: caves, ore, mineshafts, spawners, old chests — and where"));   // [caves]
                 out.add(Choice.of("Fashion", TalkTopic.FASHION, "What the town is wearing this season, who set it, and what this folk thinks of it"));   // [fashion]
+                // [nether] The Nether runners: their report, an ask, going through with them, their chart (NetherGuests).
+                out.add(Choice.of("The Nether", TalkTopic.NETHER, "What the town's Nether runners have found through the gateway: the outpost, the fortress, the hauls"));
+                out.add(new Choice("Ask the runners", TalkTopic.NETHER, "ask", "Ask the Nether runners to bring something on their next run: type it (\"bring us blaze rods\")"));
+                out.add(new Choice("Go through", TalkTopic.SAY, "Can I come through with you?", "Go through the gateway with the Nether runners: they wait for you there in the morning. Say \"for a share\" to take a share of the haul"));
+                out.add(new Choice("Runners' chart", TalkTopic.SAY, "Could I buy a copy of your chart?", "A copy of the runners' chart of the Nether round their outpost, their finds marked: a few coins, from one of the runners"));
                 // [caves] The cave team: ask it a way or an ore, go along with it, buy its map (CaveGuests, Lodge).
                 out.add(new Choice("Ask the delvers", TalkTopic.CAVES, "ask", "Ask the cave team to look a way or find something on its next trip: type it (\"look east\", \"find us diamonds\")"));
                 out.add(new Choice("Go caving", TalkTopic.SAY, "Can I come along with the cave team?", "Go down the caves with the cave team: it waits for you at its lodge at first light. Say \"for a share\" to take a share of the haul"));
@@ -281,6 +288,14 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Haggle", TalkTopic.HAGGLE, "Ask the storekeeper or the shopkeeper to do it cheaper: a discount for the day, if they like you"));
                 out.add(new Choice("Make me…", TalkTopic.ORDER, "", "Ask a smith or a tailor to make you something: from your makings and the village's spare, for a fee"));
                 out.add(Choice.of("Mend this", TalkTopic.REPAIR, "The smith (or, with no smith, a smelter at its forge) mends the worn thing in your hand: its metal from the stores at the market's price, a unit a quarter of the wear, and a fee"));
+                // [cartographer] The cartographer's maps (Cartographers): what it has and their prices, the explorer maps, a copy of
+                // the hall's map, and a map made to order.
+                out.add(Choice.of("Maps", TalkTopic.MAPS, "The cartographer's maps and their prices: explorer maps, a copy of the hall's map, a map to any place the town knows of"));
+                out.add(new Choice("Ocean map", TalkTopic.SAY, "I'd like an ocean explorer map", "A real ocean explorer map to the nearest monument the town's land reaches: priced by how far"));
+                out.add(new Choice("Woodland map", TalkTopic.SAY, "I'd like a woodland explorer map", "A real woodland explorer map to a mansion, if the town's scouts have been that far"));
+                out.add(new Choice("Treasure map", TalkTopic.SAY, "I'd like a treasure map", "A buried treasure map: one the town brought home from a wreck, or treasure it found itself"));
+                out.add(new Choice("Town map copy", TalkTopic.SAY, "A copy of the town's map, please", "Every sheet of the hall's map of the town, copied for you: hang them as they hang in the hall"));
+                out.add(new Choice("Commission…", TalkTopic.MAPS, "commission", "Have the cartographer walk and draw the land any way you like, ready by nightfall: type \"map me the land to the east\""));
             }
             default -> { }
         }
@@ -336,6 +351,16 @@ public class TalkScreen extends Screen {
         if (c.topic() == TalkTopic.BULK || c.topic() == TalkTopic.INVEST || c.topic() == TalkTopic.ORDER) {
             say.setValue(c.topic() == TalkTopic.BULK ? "I'd like to order 64 " : c.topic() == TalkTopic.INVEST ? "I'd like to invest 50 coins"
                 : "Make me an iron sword");
+            setFocused(say);
+            return;
+        }
+        if (c.topic() == TalkTopic.MAPS && "commission".equals(c.text())) {    // [cartographer] a commission, the way typed yourself
+            say.setValue("Map me the land to the east");
+            setFocused(say);
+            return;
+        }
+        if (c.topic() == TalkTopic.NETHER && "ask".equals(c.text())) {         // [nether] an ask of the runners, finished yourself
+            say.setValue("Runners, bring us blaze rods");
             setFocused(say);
             return;
         }

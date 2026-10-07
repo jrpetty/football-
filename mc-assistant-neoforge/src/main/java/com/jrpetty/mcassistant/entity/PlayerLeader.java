@@ -256,7 +256,7 @@ public final class PlayerLeader {
 
     /** A folk's tithe on what it holds over a dozen (Market.tithe): at the leader's rate, where a player leads. */
     public static int tithe(UUID village, int over, int due) {
-        if (leaderId(village) == null) return due;
+        if (leaderId(village) == null) return LawBook.tithe(village, over, due);   // [identity] the town's own law-book
         return over <= 0 ? 0 : over * titheRate(village) / 100;
     }
 

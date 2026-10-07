@@ -90,6 +90,8 @@ public class BuildGoal extends Goal {
         "lodge",
         // [fireworks] the powder hut, the fireworks maker's: stone, out at the edge of the town (entity/FireworksMaker)
         "powderhut",
+        // [cartographer] the map room: the cartographer's table, its lectern, its chests and its map wall (Cartographers)
+        "maproom",
         // [library] the town library, its real books on its shelves (entity/Library)
         "townlibrary",
         // [fletcher] the fletcher's hut, its table and its sifting floor (entity/Fletchers)
@@ -97,7 +99,11 @@ public class BuildGoal extends Goal {
         // [golems] the golem yard, where the iron is made into blocks for the golems (entity/Golems)
         "golemyard",
         // [police] the watch house: the front desk, the notice board of the wanted, the records and the cells (entity/WatchHouse)
-        "watchhouse");
+        "watchhouse",
+        // [emerald] the Trading Post: the emerald trader's stall and its book of the villagers' villages (entity/EmeraldTrader)
+        "tradingpost",
+        // [diver] the diver's shed on the bank: a smoker, a campfire, a bench and a barrel (entity/Divers)
+        "divershed");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest
@@ -125,7 +131,9 @@ public class BuildGoal extends Goal {
         /** A tavern's hearth fire and its note blocks. */
         CAMPFIRE, NOTE_BLOCK,
         /** A storehouse unit: twenty-seven laid in a cube join into the Village Storehouse. */
-        STOREHOUSE }
+        STOREHOUSE,
+        /** [cartographer] The map room's cartography table (Cartographers). */
+        CARTOGRAPHY }
 
     /** One block of a building: where, what part, what it is for (Blueprints.Style), and which way it faces. */
     public record Placement(BlockPos pos, Part part, Blueprints.Style style, Blueprints.Way way) {
@@ -325,7 +333,8 @@ public class BuildGoal extends Goal {
     public static boolean isFurniture(Part part) {
         return part == Part.BOOKSHELF || part == Part.LECTERN || part == Part.ENCHANTING || part == Part.BREWING
             || part == Part.SMOKER || part == Part.LOOM || part == Part.GRINDSTONE || part == Part.CAMPFIRE
-            || part == Part.NOTE_BLOCK;
+            || part == Part.NOTE_BLOCK
+            || part == Part.CARTOGRAPHY;                                    // [cartographer] the map room's table
     }
 
     /** Decorative parts skipped (not blocked-on) when we lack the item. */
@@ -379,6 +388,7 @@ public class BuildGoal extends Goal {
             case CAMPFIRE -> s -> s.is(Items.CAMPFIRE);
             case NOTE_BLOCK -> s -> s.is(Items.NOTE_BLOCK);
             case STOREHOUSE -> s -> s.is(com.jrpetty.mcassistant.McAssistantMod.STOREHOUSE_ITEM.get());
+            case CARTOGRAPHY -> s -> s.is(Items.CARTOGRAPHY_TABLE);           // [cartographer]
         };
     }
 
@@ -416,6 +426,7 @@ public class BuildGoal extends Goal {
             case CAMPFIRE -> "a fire for the hearth";
             case NOTE_BLOCK -> "note blocks";
             case STOREHOUSE -> "storehouse units (six planks and four sticks each)";
+            case CARTOGRAPHY -> "a cartography table (two paper and four planks)";   // [cartographer]
         };
     }
 
@@ -1124,6 +1135,7 @@ public class BuildGoal extends Goal {
             case CAMPFIRE -> Blocks.CAMPFIRE.defaultBlockState();
             case NOTE_BLOCK -> Blocks.NOTE_BLOCK.defaultBlockState();
             case STOREHOUSE -> com.jrpetty.mcassistant.block.StorehouseBlock.loose();
+            case CARTOGRAPHY -> Blocks.CARTOGRAPHY_TABLE.defaultBlockState();    // [cartographer]
         };
     }
 

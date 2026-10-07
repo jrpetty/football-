@@ -148,12 +148,15 @@ public final class TradeBooks {
             case FISH -> AssistantEntity.Deed.FISH_CAUGHT;
             case RANCH -> AssistantEntity.Deed.ANIMALS_BRED;
             case GUARD, HUNT, CAVE -> AssistantEntity.Deed.MOBS_KILLED;
+            case DIVER -> AssistantEntity.Deed.CROPS_HARVESTED;              // [diver] the kelp beds cut
             case SMELT -> AssistantEntity.Deed.ITEMS_SMELTED;
             case HAUL -> AssistantEntity.Deed.LOADS_HAULED;
             case STORE -> AssistantEntity.Deed.CHESTS_SORTED;
             case SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP -> AssistantEntity.Deed.THINGS_MADE;
             case FLETCHER, GOLEMS -> AssistantEntity.Deed.THINGS_MADE;     // [fletcher] [golems]
             case FIREWORKS -> AssistantEntity.Deed.THINGS_MADE;          // [fireworks] its rockets
+            case CARTOGRAPHER -> AssistantEntity.Deed.THINGS_MADE;   // [cartographer] its maps
+            case NETHER -> AssistantEntity.Deed.MOBS_KILLED;           // [nether] the blazes it shot for their rods
             default -> null;
         };
     }
@@ -184,6 +187,10 @@ public final class TradeBooks {
             case FLETCHER -> new String[]{ "arrow", "fletch", "the butts", "crossbow", "the raid" };   // [fletcher]
             case GOLEMS -> new String[]{ "golem" };                                                     // [golems]
             case FIREWORKS -> new String[]{ "firework", "rocket", "powder" };   // [fireworks]
+            case CARTOGRAPHER -> new String[]{ "map", "cartographer", "explorer" };   // [cartographer]
+            case EMERALD -> new String[]{ "emerald", "villagers", "trading post" };   // [emerald]
+            case DIVER -> new String[]{ "diver", "kelp", "turtle", "drown", "out of the water", "monument" };   // [diver]
+            case NETHER -> new String[]{ "nether", "gateway", "the runners", "piglin", "blaze", "ghast" };   // [nether]
             case BEEKEEP -> new String[]{ "hive", "bee" };
             default -> new String[]{};
         };
@@ -429,6 +436,7 @@ public final class TradeBooks {
             sum[3] += f.deedCount(AssistantEntity.Deed.FISH_CAUGHT);
         }
         switch (t) {
+            case EMERALD -> out.addAll(EmeraldTrader.bookNotes(c.v.id()));   // [emerald] the villages it knows, who sells Mending, its account
             case FARM -> {
                 String care = Fields.careLine(m);
                 if (care != null && care.startsWith("its field grows at ")) {
@@ -502,6 +510,9 @@ public final class TradeBooks {
                 if (Villages.hasBuilt(id, "smeltery")) out.add("The smeltery's three furnaces are the town's. Keep all three going.");
             }
             case FIREWORKS -> out.addAll(FireworksMaker.bookNotes(c.level, c.v));   // [fireworks] its real numbers, and what it learned
+            case CARTOGRAPHER -> out.addAll(Cartographers.bookNotes(id));     // [cartographer] what the map room has learnt, and its numbers
+            // [diver] The beds, the fuel they kept (FuelBook), the clay, the turtles, the rescues, and the breath (Divers.notes).
+            case DIVER -> out.addAll(Divers.notes(c.level, id));
             case COOK -> {
                 if (Villages.hasBuilt(id, "cafe")) out.add("The café is where folk spend their coins on their break. Keep its counter stocked.");
                 if (Villages.hasBuilt(id, "bakery")) out.add("The bakery's oven bakes for the whole town. Keep it fed.");

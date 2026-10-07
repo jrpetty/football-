@@ -433,6 +433,7 @@ public final class Assemblies {
         if (f.isBaby() && (a.kind == Kind.COUNCIL || a.kind == Kind.ELECTION || a.kind == Kind.VIGIL)) return false;
         if (a.host != null && a.host.equals(f.getUUID())) return true;
         if (a.principals.contains(f.getUUID())) return true;
+        if (Fears.shunsCrowd(f, a.kind.name())) return false;      // [individual] uneasy in a crowd: not the feast
         if (a.invited != null && !a.invited.contains(f.getUUID())) return false;
         return f.blockPosition().distSqr(a.focus) < 128 * 128;
     }
@@ -522,7 +523,8 @@ public final class Assemblies {
         if ((a.kind == Kind.FEAST || a.kind == Kind.FOUNDING) && !a.ate.contains(f.getUUID()) && r.nextInt(30) == 0) {
             a.ate.add(f.getUUID());
             Villages.Village v = Villages.get(a.village);
-            ItemStack food = v == null ? ItemStack.EMPTY : Crafts.takeOne(level, v,
+            ItemStack food = v == null ? ItemStack.EMPTY : Cuisine.feast(level, v, f);    // [culture2] the town's own dish first
+            if (food.isEmpty() && v != null) food = Crafts.takeOne(level, v,
                 s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null && !s.is(Items.ROTTEN_FLESH) && !s.is(Items.SPIDER_EYE));
             if (!food.isEmpty()) {
                 level.sendParticles(new net.minecraft.core.particles.ItemParticleOption(ParticleTypes.ITEM, food),
@@ -771,6 +773,8 @@ public final class Assemblies {
                         if (b.structure().equals("chapel")) { face = b.facing(); at = b.anchor().relative(face, 6); break; }
                     }
                 }
+                BlockPos rite = Beliefs.weddingAt(level, v, w);                     // [culture2] where its faith marries
+                if (rite != null) at = rite;
                 Assembly a = new Assembly(id, Kind.WEDDING, w.names(), day, at, face, Layout.AISLE);
                 a.principals.add(w.a());
                 a.principals.add(w.b());
@@ -778,7 +782,7 @@ public final class Assemblies {
             }
             case VIGIL -> {
                 if (held(id, Kind.VIGIL, day)) yield null;
-                BlockPos yard = Villages.builtAt(id, "graveyard");
+                BlockPos yard = Beliefs.vigilAt(id, Villages.builtAt(id, "graveyard"));   // [culture2] on the shore, by the cairns
                 yield new Assembly(id, Kind.VIGIL, Gatherings.describe(tonight, id), day,
                     yard != null ? yard : v.centre(), Direction.SOUTH, yard != null ? Layout.ARC : Layout.RING);
             }
@@ -912,6 +916,7 @@ public final class Assemblies {
                 }
                 for (String found : Scouts.reports(id)) s.add(new Line(null, found, '?', null));
                 for (String found : CaveDwellers.reports(id)) s.add(new Line(null, found, '?', null));   // [caves]
+                for (String found : NetherRuns.reports(id)) s.add(new Line(null, found, '?', null));     // [nether]
                 for (String money : Market.reports(id)) s.add(new Line(null, money, '!', null));
                 long dayNow = level.getDayTime() / 24000L;
                 Gatherings.Kind tonight = Gatherings.tonight(id, dayNow);
@@ -941,6 +946,7 @@ public final class Assemblies {
                     s.add(new Line(a.principals.get(1), FolkTalk.pick(r, "I will!", "I do."), ' ', null));
                 }
                 s.add(new Line(null, "Then before all of " + name + " — you are wed!", '!', null));
+                Quilts.weddingGift(level, a, s, r);                    // [leisure] the town's gift: a patchwork quilt for their bed
             }
             case VIGIL -> {
                 s.add(new Line(null, "We are here for " + a.subject.replace("a vigil for ", "") + ".", '~', null));

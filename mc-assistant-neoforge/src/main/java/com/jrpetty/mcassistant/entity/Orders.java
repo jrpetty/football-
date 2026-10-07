@@ -170,7 +170,7 @@ public final class Orders {
     public static void consider(ServerLevel level, UUID village, long day, boolean now) {
         Given g = given(village);
         // (A clock set back — /time set — makes the day go backwards: that counts as due.)
-        if (!now && g != null && day >= g.day() && day - g.day() < 3) return;
+        if (!now && g != null && day >= g.day() && day - g.day() < Government.ordersEvery(village, 3)) return;   // [identity] the elders slower
         if (Villages.headcount(village) < 8 || day - Math.max(0, com.jrpetty.mcassistant.village.Chronicle.foundedOn(village)) < 2) return;
         VillageFolkEntity elder = elderOf(village);
         if (elder == null) elder = PlayerLeader.steward(level, village, day);   // [player-civic] a player leads: its plan, or its steward's
@@ -282,6 +282,7 @@ public final class Orders {
         }
         // An order that wants a trade the village has no use for yet is no order at all: a watch
         // for a village too small for guards, a market for one with no shop or café to man.
+        Ethos.orders(village, score);                       // [identity] a martial town mans its walls, a mercantile one fills its stalls
         for (Order o : Order.values()) if (!possible(village, o)) score.put(o, -100);
         if (!fisher) score.put(Order.RIVER, -100);
         boolean hungry = hungry(level, village);
@@ -291,7 +292,7 @@ public final class Orders {
         for (Map.Entry<Order, Integer> e : score.entrySet()) if (e.getValue() > top) { top = e.getValue(); best = e.getKey(); }
         // A standing order stays unless something else is clearly wanted more — but not while the
         // village goes hungry on an order that is not for food.
-        if (now != null && possible(village, now) && score.get(now) >= top - 2 && !(hungry && now != Order.LARDER)
+        if (now != null && possible(village, now) && score.get(now) >= top - 2 - Government.steadiness(village) && !(hungry && now != Order.LARDER)
                 && !(short_ && now == Order.STEADY && best != Order.STEADY)) return now;
         return best;
     }
