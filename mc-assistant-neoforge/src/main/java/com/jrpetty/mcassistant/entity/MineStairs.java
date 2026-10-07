@@ -242,6 +242,7 @@ public final class MineStairs extends SavedData {
             if (OUT.equals(j.arg()) && !f.running(com.jrpetty.mcassistant.entity.goal.MineGoal.class)) f.interject(null);
             return;
         }
+        if (CaveDwellers.caving(f)) { BELOW.remove(id); return; }       // [caves] down there on purpose: its own marks see it home
         if (!f.isAlive() || f.isPassenger() || f.isSleeping()) return;
         BlockPos feet = f.blockPosition();
         // [mine-safety] Or deep in the town's mine with the sky over it (the open top of a pit, a gallery out

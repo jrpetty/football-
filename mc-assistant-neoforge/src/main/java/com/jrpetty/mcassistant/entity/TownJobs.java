@@ -308,6 +308,7 @@ public final class TownJobs {
                 case STORE -> score += 30;
                 case GUARD -> score += works.endsWith("watch") ? 50 : -60;
                 case SCOUT -> score -= 40;
+                case CAVE -> score -= 40;                // [caves] its day is down the caves
                 default -> { if (trade.isCraft()) score -= 10; }
             }
             if (f.workedOut()) score += 25;                              // nothing to work at in its own trade

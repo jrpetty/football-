@@ -361,6 +361,8 @@ public final class Economy {
             case BEEKEEP -> k == Kind.ANIMAL || s.is(Items.HONEY_BOTTLE) || k == Kind.FOOD || k == Kind.PLANT;
             case COOK -> k == Kind.FOOD || k == Kind.CRAFT;
             case GUARD -> k == Kind.ANIMAL;                                    // what the night's monsters drop
+            // [caves] The ore it digs and what it brings out of the old chests: gems, books, gold apples, saddles.
+            case CAVE -> k == Kind.ORE || k == Kind.CRAFT || k == Kind.ANIMAL || CaveDwellers.valuable(s);
             default -> k == Kind.CRAFT || k == Kind.ANIMAL;                     // the crafts: smith, tailor, brewer, enchanter, shop
         };
     }

@@ -153,6 +153,7 @@ public class VillageFolkEntity extends AssistantEntity {
     public void joinVillage(UUID village, BlockPos centre) {
         // [guard-kit] A guard going to live in another town leaves the watch's kit in its old town's stores.
         if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.GUARD) WatchKit.handBack(this, "leaving the town");
+        if (ownerId() != null && !ownerId().equals(village) && stationTask() == StationTask.CAVE) CaveDwellers.handBack(this, "leaving the town");   // [caves]
         this.villageCentre = centre;
         adoptVillage(village);
         setHome(centre);
@@ -493,6 +494,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Health.tick(polls, home);            // [batchA] colds passed round, the healer's round (Health)
                     Neighbourly.tick(polls, home);       // [batchA] the old, newcomers, housewarmings, the poor box (Neighbourly)
                     Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
+                    CaveDwellers.tick(polls, home);      // [caves] an Iron Age town takes up its cave dwellers
                 }
             }
             if (level() instanceof net.minecraft.server.level.ServerLevel orders) Orders.consider(orders, ownerId(), level().getDayTime() / 24000L);
@@ -1284,6 +1286,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected void tradeTakenUp(StationTask from, StationTask to) {
         if (from == StationTask.GUARD && to != StationTask.GUARD) WatchKit.handBack(this, "off the watch");   // [guard-kit] the town's kit
+        if (from == StationTask.CAVE && to != StationTask.CAVE && to != StationTask.GUARD) CaveDwellers.handBack(this, "out of the caves");   // [caves]
         if (tickCount < 40 || to == StationTask.NONE || !persona.rolled()) return;    // loading, or not settled yet
         long day = level().getDayTime() / 24000L;
         int lv = tradeLevel(to);
@@ -1447,7 +1450,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level() instanceof net.minecraft.server.level.ServerLevel horses) Riding.fell(horses, this);   // a horse it had out (Riding)
         if (expedition != null && level() instanceof net.minecraft.server.level.ServerLevel land) {
             UUID home = ownerId();
-            if (home != null) Villages.tell(home, level().getDayTime() / 24000L, displayNameCap() + " was lost while scouting the " + expedition.heading());
+            if (home != null) Villages.tell(home, level().getDayTime() / 24000L, displayNameCap() + (expedition.delve() != null
+                ? " was lost in the caves " : " was lost while scouting the ") + expedition.heading());          // [caves]
             Scouts.abandon(land, this);
         }
         UUID village = ownerId();
@@ -4116,6 +4120,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tool != null && path.endsWith(tool) && (path.startsWith("iron_") || path.startsWith("diamond_"))) return true;
         if (stationTask() == StationTask.GUARD && path.startsWith("iron_")) return true;
         if (stationTask() == StationTask.GUARD && WatchKit.kitPath(path)) return true;   // [guard-kit] the town's kit, at any level
+        if (stationTask() == StationTask.CAVE && (WatchKit.kitPath(path) || path.endsWith("_pickaxe"))) return true;   // [caves] the same
         return super.mayUseTier(s);
     }
 
@@ -4436,6 +4441,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case SMELT -> "The Forge";
             case HUNT -> "Hunting Grounds";
             case BANK -> "The Bank";
+            case CAVE -> "The Caves";             // [caves]
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -5626,6 +5632,12 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean scoutWork() {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Scouts.work(this, server);
+    }
+
+    /** [caves] A cave dweller's day (CaveDwellers): kitted out and down the caves at first light, home by dusk. */
+    @Override
+    protected boolean caveWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && CaveDwellers.work(this, server);
     }
 
     /** A village's storekeeper keeps its stores in order from the first day, not from its

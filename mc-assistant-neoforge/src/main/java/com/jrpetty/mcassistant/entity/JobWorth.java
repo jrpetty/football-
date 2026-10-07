@@ -176,6 +176,9 @@ public final class JobWorth {
             case "SMITH" -> new Post(key, title, trade, role, 2, 3, 0.0, 1.0, "hard work that takes much skill", "");
             case "ENCHANT" -> new Post(key, title, trade, role, 0, 4, 0.0, 1.0, "learned work", "");
             case "BANK" -> new Post(key, title, trade, role, 0, 4, 1.2, 1.0, "learned work", "keeps the town's savings and its loans");
+            // [caves] Underground, armed, among the monsters and the lava: as hard as the watch, and it takes a miner's eye.
+            case "CAVE" -> new Post(key, title, trade, role, 3, 2, 0.4, 1.0, "dangerous work underground, and skilled",
+                "finds the town its ore, and its dangers");
             // The shop's jobs (ShopRoles): the keeper makes a little and runs the place; the assistants and the
             // stock keeper make nothing, and are paid for what they do for the shop.
             case "SHOP/KEEPER" -> new Post(key, title, trade, role, 1, 2, 1.0, 0.5, "runs the place", "keeps the shop and its sales");
@@ -880,6 +883,7 @@ public final class JobWorth {
             case "SCOUT" -> "the scouts";
             case "HUNT" -> "the hunters";
             case "BANK" -> "the bank";
+            case "CAVE" -> "the caves";                // [caves]
             default -> "the " + JobMarket.noun(t) + "s";
         };
     }

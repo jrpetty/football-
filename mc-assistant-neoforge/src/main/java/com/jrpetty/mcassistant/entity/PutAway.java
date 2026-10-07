@@ -107,7 +107,7 @@ public final class PutAway {
     @Nullable
     public static String excused(VillageFolkEntity f) {
         if (f.trip() != null) return "on the road with a caravan";
-        if (f.expedition() != null) return "out scouting";
+        if (f.expedition() != null) return f.expedition().delve() != null ? "down the caves" : "out scouting";     // [caves]
         if (Nether.away(f)) return "through the gateway";
         if (Drover.busy(f)) return "out with a lead after a wild animal";
         if (JobSeekers.busy(f)) return "about the job market";

@@ -323,7 +323,8 @@ public final class VillageBoards {
             if (f.stationTask() == AssistantEntity.StationTask.GUARD) watch.add(f.displayNameCap());
             String job = TownJobs.doing(f);
             if (job != null) works.add(f.displayNameCap() + " (" + job + ")");
-            if (f.expedition() != null) away.add(f.displayNameCap() + " scouting " + f.expedition().heading());
+            if (f.expedition() != null) away.add(f.displayNameCap() + (f.expedition().delve() != null ? " in the caves " : " scouting ")   // [caves]
+                + f.expedition().heading());
             else if (f.trip() != null && f.trip().errand() != null) away.add(f.displayNameCap() + " envoy to " + Villages.name(f.trip().destination()));
             else if (f.trip() != null) away.add(f.displayNameCap() + " with a caravan");
         }
@@ -414,6 +415,8 @@ public final class VillageBoards {
         if (abroad != null) out.add("FM|Abroad: " + abroad + ".");
         String trade = TradeDeals.boardLine(level, id);         // [econ-trade] what it is good at and short of, and its deals
         if (trade != null) out.add("FN|" + trade);
+        String caves = CaveDwellers.boardLine(id);              // [caves] the caves' report, and the latest big find
+        if (caves != null) out.add("FN|" + caves);
         String scouts = Scouts.boardLine(id);
         if (scouts != null) out.add("FN|" + scouts);
         String museum = Museum.boardLine(id, day);              // what is new in the museum (Museum)

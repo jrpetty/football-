@@ -132,11 +132,14 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Out past the fields after game, for the larder and the tailor (VillageFolkEntity.huntWork).
         HUNT("hunting", "Hunter"),
         // A town of thirty with a bank keeps a banker: the deposits, the loans and the vault (Bank).
-        BANK("banking", "Banker");
+        BANK("banking", "Banker"),
+        // [caves] An Iron Age town sends a cave dweller or two into the caves round it, armed and in the town's
+        // armour: the ore its pick allows, the old chests, the mineshafts and the spawners, all told (CaveDwellers).
+        CAVE("caving", "Cave dweller");
 
         /** The trades of a grown village, which work out of a building of their own. */
         public boolean isCraft() {
-            return ordinal() >= SMITH.ordinal() && this != SCOUT && this != HUNT;
+            return ordinal() >= SMITH.ordinal() && this != SCOUT && this != HUNT && this != CAVE;   // [caves]
         }
 
         public final String label;   // lower-case, for sentences
@@ -1414,6 +1417,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case SMELT -> smeltFuel();
             case HUNT -> s -> s.is(Items.ARROW);
             case FISH, STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> null;
+            case CAVE -> null;                    // [caves] kitted by the town each morning (CaveDwellers.kitUp)
         };
         // ONE restock, one pace. This used to be three separate paced scoops in
         // a row, and only the first of them could ever run: the food scoop took
@@ -1707,6 +1711,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** A scout's day (Scouts): VillageFolkEntity does it. */
     protected boolean scoutWork() { return false; }
+
+    /** [caves] A cave dweller's day (CaveDwellers): VillageFolkEntity does it. */
+    protected boolean caveWork() { return false; }
 
     /** Is this animal one of its village's own herd (penned, led, brought home), not game? (VillageFolkEntity) */
     public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) { return false; }
@@ -2635,6 +2642,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case SMELT -> countCarried(smeltFuel()) == 0;
             case HUNT -> countCarried(s -> isToolNamed(s, "_sword")) == 0 && !hasBow();
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> false;
+            case CAVE -> false;                   // [caves] kitted by the town each morning (CaveDwellers.kitUp)
         };
     }
 
@@ -2874,6 +2882,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FARM -> s.is(Items.CARROT) || s.is(Items.POTATO)
                 || s.is(Items.WHEAT_SEEDS) || s.is(Items.BEETROOT_SEEDS);
             case RANCH -> BREEDING_FOOD.test(s);
+            case CAVE -> CaveDwellers.valuable(s);       // [caves] the old chests' golden apples go home, not down its throat
             default -> false;
         };
     }
@@ -3806,7 +3815,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // and not the things nobody should take on for fun. Anything that hits
         // a folk is still answered — that is a different goal.
         if (isSettler()) {
-            if (stationTask != StationTask.GUARD && !hiredToFight()) return false;
+            if (stationTask != StationTask.GUARD && stationTask != StationTask.CAVE && !hiredToFight()) return false;   // [caves] armed, too
             if (target instanceof net.minecraft.world.entity.monster.EnderMan
                 || target instanceof net.minecraft.world.entity.monster.Witch
                 || target instanceof net.minecraft.world.entity.monster.Ravager
@@ -4270,6 +4279,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case STORE -> s.get(DataComponents.FOOD) != null ? 8 : 0;
             case SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK -> s.get(DataComponents.FOOD) != null ? 8 : 0;
             case SCOUT -> s.is(Items.TORCH) ? 4 : (s.get(DataComponents.FOOD) != null ? 8 : 0);  // the road's rations, a torch to mark it
+            // [caves] Torches to light the way, rations, a little cobble to wall off lava; the finds go home (CaveDwellers).
+            case CAVE -> s.is(Items.TORCH) ? CaveDwellers.TORCHES : s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE) ? 16
+                : (s.get(DataComponents.FOOD) != null && !CaveDwellers.valuable(s) ? 8 : 0);
             // A bow and its arrows, a bite to eat; the game itself goes home to the stores.
             case HUNT -> s.is(Items.ARROW) ? 32 : s.is(Items.BOW) ? 1 : GAME.test(s) ? 0
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
@@ -5567,6 +5579,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 case SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK -> new Branch[]{ PORTER, SENTINEL };
                 case SCOUT -> new Branch[]{ SENTINEL, PROSPECTOR };
                 case HUNT -> new Branch[]{ SENTINEL, HUSBANDRY };
+                case CAVE -> new Branch[]{ SENTINEL, PROSPECTOR };     // [caves]
                 case NONE -> new Branch[]{};
             };
         }
@@ -7179,6 +7192,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // Out on the hunting grounds after game (VillageFolkEntity).
                 if (huntWork()) return true;
             }
+            case CAVE -> {
+                // [caves] Down the caves for the day, or at the board with the report (CaveDwellers).
+                if (caveWork()) return true;
+            }
             case NONE -> { }
         }
         // Nothing to do right where it's stood. On a zone bigger than its own
@@ -7726,6 +7743,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // crafts work out of the stores and into them (Crafts).
             case HUNT -> countMatching(GAME);
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> 0;
+            case CAVE -> 0;                       // [caves] its finds go into the stores when it is home (CaveDwellers.home)
         };
         // Never more than a stash would actually move. The trade's own sums kept back less
         // than the stash keeps back (a village miner keeps 32 cobble, the sum kept 16), so

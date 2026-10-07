@@ -400,7 +400,7 @@ public final class JobMarket {
         if (t == null) return new int[]{ 0, 200 };
         if (t.name().contains("TEACH")) return new int[]{ 35, 200 };
         return switch (t) {
-            case GUARD, SCOUT, HUNT -> new int[]{ 18, 50 };
+            case GUARD, SCOUT, HUNT, CAVE -> new int[]{ 18, 50 };          // [caves]
             case MINE, WOOD -> new int[]{ 18, 60 };
             default -> new int[]{ 0, 200 };
         };
@@ -413,6 +413,7 @@ public final class JobMarket {
         return switch (t) {
             case GUARD -> "able-bodied, for the watch";
             case SCOUT, HUNT -> "fit for long days out";
+            case CAVE -> "fit and able to fight, for a day underground";      // [caves]
             case MINE, WOOD -> "strong enough for the work";
             default -> "";
         };
@@ -426,7 +427,7 @@ public final class JobMarket {
     /** Heavy work, for younger backs. */
     static boolean heavy(@Nullable StationTask t) {
         return t == StationTask.MINE || t == StationTask.WOOD || t == StationTask.GUARD || t == StationTask.HUNT
-            || t == StationTask.SCOUT || t == StationTask.HAUL;
+            || t == StationTask.SCOUT || t == StationTask.HAUL || t == StationTask.CAVE;            // [caves]
     }
 
     /** "the mines", "the watch": the work, for a refusal. */
@@ -438,6 +439,7 @@ public final class JobMarket {
             case GUARD -> "the watch";
             case HUNT -> "the hunt";
             case SCOUT -> "the scouting";
+            case CAVE -> "the caves";                    // [caves]
             case HAUL -> "the carrying";
             default -> "the work";
         };

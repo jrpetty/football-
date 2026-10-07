@@ -222,6 +222,7 @@ public final class WatchKit {
         int want = worth(k, new ItemStack(item));
         int worse = 0;
         for (VillageFolkEntity g : watch(v.id())) if (wears(g, k) < want) worse++;
+        for (VillageFolkEntity g : CaveDwellers.dwellers(v.id())) if (wears(g, k) < want) worse++;   // [caves] theirs is the watch's kit
         if (worse == 0) return 0;
         int have = 0;
         for (BlockPos p : Villages.storeChests(level, v.id())) {
@@ -549,7 +550,9 @@ public final class WatchKit {
      */
     public static List<ItemStack> fit(ServerLevel level, Villages.Village v, VillageFolkEntity g) {
         List<ItemStack> given = new ArrayList<>();
-        if (g.stationTask() != StationTask.GUARD || g.isBaby() || !g.isAlive() || g.isShowcase()) return given;
+        // [caves] The cave dwellers are kitted out the same way (CaveDwellers.kitUp), all but the bow.
+        boolean watch = g.stationTask() == StationTask.GUARD;
+        if (!watch && g.stationTask() != StationTask.CAVE || g.isBaby() || !g.isAlive() || g.isShowcase()) return given;
         UUID id = v.id();
         String who = g.displayNameCap();
         for (Kind k : SUIT) {
@@ -564,12 +567,12 @@ public final class WatchKit {
         blade(level, v, g, given);
         // A bow, and arrows for it; a shield. Any guard may draw a bow when the bell rings, and raises the
         // shield once it has learnt to: the kit is the town's to give, whatever it can do with it yet.
-        if (g.countCarried(AssistantEntity.RANGED_WEAPON) == 0 && !g.isPackFull()) {
+        if (watch && g.countCarried(AssistantEntity.RANGED_WEAPON) == 0 && !g.isPackFull()) {          // [caves] (watch)
             Workshop.Found f = Workshop.bestInStores(level, id, st -> st.getItem() instanceof BowItem,
                 st -> Math.min(999, st.getMaxDamage()) + (st.isEnchanted() ? 1000 : 0), -1);
             if (f != null) handOver(level, v, g, Workshop.takeOut(level, id, f, who), given);
         }
-        if (g.countCarried(AssistantEntity.RANGED_WEAPON) > 0) {
+        if (watch && g.countCarried(AssistantEntity.RANGED_WEAPON) > 0) {                                 // [caves] (watch)
             int have = g.countCarried(s -> s.is(Items.ARROW));
             int n = have >= ARROWS_LOW ? 0 : Math.min(ARROWS - have, Crafts.stock(level, v, s -> s.is(Items.ARROW)));
             if (n > 0 && Crafts.take(level, v, s -> s.is(Items.ARROW), n)) handOver(level, v, g, new ItemStack(Items.ARROW, n), given);
