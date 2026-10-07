@@ -64,6 +64,8 @@ public class BuildGoal extends Goal {
 
         // the museum, where the town's rare finds go on show and its chronicle is kept as books (Museum)
         "museum",
+        // [fleet] the auction house, the market day's auction under a roof (entity/Auctions)
+        "auction",
         // [econ-housing] the villa a well-off household has built for itself (HousingMarket)
         "villa",
         // the stable, once the village has horses (Stables)
@@ -81,7 +83,13 @@ public class BuildGoal extends Goal {
         // [econ-store] the town store, once the town has outgrown its little shop (Store)
         "store",
         // [war-prep] the armoury and the training yard, on a war footing (entity/WarWorks)
-        "armoury", "trainingyard");
+        "armoury", "trainingyard",
+        // [disasters] the fire station, its buckets on a rack and its fire bell (entity/FireSafety)
+        "firestation",
+        // [caves] the Delvers' Lodge: the cave team's maps, trophies, bunks and gear (entity/Lodge)
+        "lodge",
+        // [library] the town library, its real books on its shelves (entity/Library)
+        "townlibrary");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

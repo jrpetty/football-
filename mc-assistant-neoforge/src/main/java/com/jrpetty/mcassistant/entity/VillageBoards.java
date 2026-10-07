@@ -370,10 +370,19 @@ public final class VillageBoards {
         if (prices != null) out.add((PriceIndex.boardWarns(id) ? "RW|" : "RG|") + prices + ".");
         String store = StockKeeper.boardLine(level, id);           // [econ-store] the shop's day: sold, out of, wanted
         if (store != null) out.add("RN|" + store + ".");
+        String fashion = Fashion.boardLine(level, id);             // [fashion] the season's look, and who set it
+        if (fashion != null) out.add("RN|" + fashion);
+        String fleet = Fleet.boardLine(level, id);                  // [fleet] the fishing fleet, the fish market's catch and prices
+        if (fleet != null) out.add("RN|" + fleet);
+        String fish = FishMarket.boardLine(level, id);
+        if (fish != null) out.add("RN|" + fish);
+        out.addAll(Auctions.board(level, id));                     // [fleet] the auction on the square: today's lots, or the last sale
         int content = Contentment.score(id);
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String alarm = Raids.why(id);
         out.add(alarm != null ? "RB|THE BELL IS RINGING: " + alarm + "!" : "RM|The watch: all quiet.");
+        out.addAll(Crime.board(level, id));                 // [crime] a theft reported, a trial, the stocks, the month's crime
+        out.addAll(Disasters.board(level, id));              // [disasters] a fire now, the flood, the drought, the rebuilding
         String kit = WatchKit.boardLine(id);                // [guard-kit] the watch, and what the town has it in
         if (kit != null) out.add("RN|" + kit);
         out.addAll(WarFooting.board(id));                   // [war-prep] on a war footing: the watch, the militia, the defences
@@ -389,7 +398,9 @@ public final class VillageBoards {
         for (String p : Assemblies.planned(id)) out.add("RG|This evening: " + p + ".");
         if (day % 7 == 3) out.add("RM|The council sits this evening.");
         out.addAll(Elections.board(id, day));
+        out.addAll(PlayerLeader.board(level, id, day));      // [player-civic] a player who leads: approval, promises, a recall
         out.addAll(Civics.board(level, id));                  // [batchF] the post, petitions, the fund, the meeting, a search
+        out.addAll(Referendums.board(level, id));             // [civic] the town's vote, the great work, newcomers asking to settle
 
         // ---- what we're working towards
         out.add("FH|What we're working towards");
@@ -439,6 +450,7 @@ public final class VillageBoards {
             char where = l.charAt(0), how = l.charAt(1);
             String words = l.substring(bar + 1);
             if (where == 'T') { title = words; continue; }
+            if (where == 'A') continue;                         // [arms] the arms, drawn in the header, not words
             if (how == 'H') page.append(page.length() == 0 ? "" : "\n\n").append(words.toUpperCase(Locale.ROOT)).append('\n');
             else page.append(words).append('\n');
         }

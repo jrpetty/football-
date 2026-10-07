@@ -219,6 +219,82 @@ public final class TownMine {
         return ((long) c[0] << 32) | (c[1] & 0xffffffffL);
     }
 
+    // ------------------------------------------------------------------ [caves] the cave team's lead
+
+    /** [caves] How long a miner holds to a face the cave team's lead took it to, in days. */
+    public static final long LEAD_DAYS = 10;
+
+    /** [caves] A face toward a rich vein the cave team found: its middle at ground level, the depth to dig to (the
+     *  vein's), the ore, the vein. */
+    public record Lead(BlockPos top, int depth, String ore, BlockPos vein) {}
+
+    /**
+     * [caves] The cave team's lead (CaveDwellers.leads): a rich vein of iron, gold, diamond or emerald the team has
+     * listed and not taken, under one of the mine's faces (within its reach) that is not worked out, not another
+     * miner's and fit (as faceFor). This miner's next face goes there, dug to the vein's depth (no deeper than a mine
+     * goes: `floor`), and the vein is off the team's list of work. A miner already on a lead keeps to it; an ore its pick
+     * will not take (`takes`) is left for another. Null with no lead to follow, or no mine opened yet.
+     */
+    @Nullable
+    public static Lead leadFor(ServerLevel level, VillageFolkEntity miner, BlockPos heart, int floor, Predicate<String> takes) {
+        UUID village = miner.ownerId();
+        BlockPos site = village == null ? null : kept(village);
+        if (site == null) return null;
+        WorkZone own = miner.workZone();
+        long day = level.getDayTime() / 24000L;
+        if (own != null && onALead(village, own.center(), day)) return null;
+        List<CaveDwellers.Rich> rich = CaveDwellers.leads(village);
+        if (rich.isEmpty()) return null;
+        Set<Long> spent = spent(village);
+        Set<Long> taken = new HashSet<>();
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a == miner || !(a instanceof VillageFolkEntity f) || f.stationTask() != AssistantEntity.StationTask.MINE) continue;
+            WorkZone z = f.workZone();
+            int[] c = z == null ? null : faceOf(site, z.center());
+            if (c != null) taken.add(key(c));
+        }
+        int[][] built = builtGround(village, heart, level.getGameTime());
+        for (CaveDwellers.Rich r : rich) {
+            if (!takes.test(r.vein().ore())) continue;
+            int[] c = faceOf(site, r.vein().at());
+            if (c == null || spent.contains(key(c)) || taken.contains(key(c))) continue;
+            BlockPos mid = centre(site, c);
+            if (!level.hasChunk(mid.getX() >> 4, mid.getZ() >> 4)) continue;
+            BlockPos top = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, mid);
+            if (!fit(level, village, heart, top) || underTheTown(built, top, PITCH / 2)) continue;
+            int depth = Math.max(floor, Math.min(top.getY() - 8, r.vein().at().getY()));
+            CaveDwellers.leadTaken(village, r.cave(), r.vein());
+            Ledger.note(village, "mine.lead/" + c[0] + ":" + c[1], r.vein().ore() + "|" + day);
+            Villages.tell(village, day, miner.displayNameCap() + " took the town's mine toward the " + r.vein().ore()
+                + " the cave team found " + Guide.direction(heart, r.vein().at()) + ", down to Y" + depth);
+            return new Lead(top, depth, r.vein().ore(), r.vein().at());
+        }
+        return null;
+    }
+
+    /** [caves] Is the face this spot is in one the cave team's lead took a miner to, these last days (its depth held)? */
+    public static boolean onALead(UUID village, BlockPos inFace, long day) {
+        BlockPos site = kept(village);
+        int[] c = site == null ? null : faceOf(site, inFace);
+        if (c == null || spent(village).contains(key(c))) return false;
+        String s = Ledger.note(village, "mine.lead/" + c[0] + ":" + c[1]);
+        if (s == null || s.isEmpty()) return false;
+        try {
+            return day - Long.parseLong(s.substring(s.indexOf('|') + 1)) < LEAD_DAYS;
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    /** [caves] The ore the cave team's lead took this face toward, or null (the mine's report). */
+    @Nullable
+    public static String leadOre(UUID village, BlockPos inFace) {
+        BlockPos site = kept(village);
+        int[] c = site == null ? null : faceOf(site, inFace);
+        String s = c == null ? null : Ledger.note(village, "mine.lead/" + c[0] + ":" + c[1]);
+        return s == null || s.isEmpty() ? null : s.substring(0, Math.max(0, s.indexOf('|')));
+    }
+
     // ------------------------------------------------------------------ the town over the ground
 
     /** The town's built ground, by village: squares (x0, z0, x1, z1) over each building and the square, and
@@ -284,8 +360,9 @@ public final class TownMine {
             WorkZone z = f.workZone();
             if (z == null) { out.add(f.displayNameCap() + ": no face yet"); continue; }
             int[] c = faceOf(site, z.center());
+            String lead = c == null ? null : leadOre(village, z.center());           // [caves] following the cave team's lead
             out.add(f.displayNameCap() + ": " + (c == null ? "a plot outside the mine at " + z.center().getX() + ", " + z.center().getZ()
-                : "face " + c[0] + "," + c[1]) + ", down to Y" + z.depth());
+                : "face " + c[0] + "," + c[1]) + ", down to Y" + z.depth() + (lead == null ? "" : ", toward the cave team's " + lead));
         }
         out.addAll(MineSafety.report(village));                    // [mine-safety] who is down there; the stair heads fenced
         return out;

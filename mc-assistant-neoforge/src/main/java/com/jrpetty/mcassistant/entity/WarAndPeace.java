@@ -1724,6 +1724,7 @@ public final class WarAndPeace {
         if (freed > 0) text += "; " + freed + (freed == 1 ? " captive" : " captives") + " sent home";
         text += "; peace until day " + (day + TREATY_DAYS);
         Wars.end(a, d);
+        Arms.peace(level, terms.share() >= 1 ? a : repaid > 0 ? d : null, terms.share() >= 1 ? d : a);   // [arms] a charge for the war won
         WarBooks.treaty(a, d, day, day + TREATY_DAYS, text);
         // The treaty's peace is a truce for as long as it lasts: no brawls at the boundary, no falling back into a feud.
         Ledger.note(a, "truce/" + d, Long.toString(day + TREATY_DAYS));

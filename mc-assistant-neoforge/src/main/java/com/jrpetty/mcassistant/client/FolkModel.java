@@ -46,7 +46,11 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         "none", "farmer", "lumberjack", "miner", "rancher",
         "guard", "smelter", "fisher", "storekeeper", "hauler",
         "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
+        "cavedweller",                                         // [caves] not in StationTask's order: see outfit()
     };
+
+    /** [caves] The cave dweller's outfit, after the trades drawn in StationTask's order (those before it). */
+    public static final int CAVE_OUTFIT = 19;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -132,6 +136,12 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"hunter_quiver", "body", "hunter"},
         {"hunter_fletch", "body", "hunter"},
         {"hunter_knife", "body", "hunter"},
+        {"cavedweller_shell", "head", "cavedweller"},
+        {"cavedweller_brim", "head", "cavedweller"},
+        {"cavedweller_lamp", "head", "cavedweller"},
+        {"cavedweller_haft", "body", "cavedweller"},
+        {"cavedweller_pickhead", "body", "cavedweller"},
+        {"cavedweller_rope", "body", "cavedweller"},
         // END GENERATED WEARERS
     };
 
@@ -150,6 +160,8 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     private final ModelPart coat;
     /** [guard-kit] The trade's things worn round the body, put away under a breastplate: aprons, a shawl, a mantle. */
     private final boolean[] wraps;
+    /** [caves] The things worn on the head that stay on over a helmet: the cave dweller's lamp, strapped to it. */
+    private final boolean[] overHelmet;
 
     public FolkModel(ModelPart root) {
         this.root = root;
@@ -165,6 +177,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         this.hair = head.getChild("hair");
         this.coat = body.getChild("coat");
         this.wraps = new boolean[WEARERS.length];
+        this.overHelmet = new boolean[WEARERS.length];
         for (int i = 0; i < WEARERS.length; i++) {
             ModelPart parent = switch (WEARERS[i][1]) {
                 case "head" -> head;
@@ -177,6 +190,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
             String name = WEARERS[i][0];
             wraps[i] = !onHead[i] && (name.contains("apron") || name.contains("shawl") || name.contains("mantle")
                 || name.contains("tape") || name.contains("cloak") || name.contains("cape"));
+            overHelmet[i] = "cavedweller_lamp".equals(name);
         }
     }
 
@@ -274,6 +288,12 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("hunter_quiver", CubeListBuilder.create().texOffs(100, 0).addBox(-1.5F, -1.0F, 0.0F, 3.0F, 10.0F, 2.0F), PartPose.offsetAndRotation(0.0F, 2.0F, 3.4F, 0.0F, 0.0F, 0.35F));
         body.addOrReplaceChild("hunter_fletch", CubeListBuilder.create().texOffs(112, 0).addBox(-1.0F, -4.0F, 0.5F, 2.0F, 3.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 2.0F, 3.4F, 0.0F, 0.0F, 0.35F));
         body.addOrReplaceChild("hunter_knife", CubeListBuilder.create().texOffs(100, 14).addBox(-5.0F, 8.0F, -1.0F, 1.0F, 4.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("cavedweller_shell", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 4.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("cavedweller_brim", CubeListBuilder.create().texOffs(64, 12).addBox(-5.0F, -7.0F, -5.0F, 10.0F, 1.0F, 10.0F), PartPose.ZERO);
+        head.addOrReplaceChild("cavedweller_lamp", CubeListBuilder.create().texOffs(104, 0).addBox(-2.0F, -10.5F, -6.8F, 4.0F, 3.0F, 2.0F), PartPose.ZERO);
+        body.addOrReplaceChild("cavedweller_haft", CubeListBuilder.create().texOffs(64, 24).addBox(-0.5F, -6.0F, 0.0F, 1.0F, 12.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
+        body.addOrReplaceChild("cavedweller_pickhead", CubeListBuilder.create().texOffs(68, 24).addBox(-3.5F, -7.0F, 0.0F, 7.0F, 1.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
+        body.addOrReplaceChild("cavedweller_rope", CubeListBuilder.create().texOffs(84, 24).addBox(-6.2F, 7.0F, -2.0F, 2.0F, 4.0F, 4.0F), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }
@@ -300,14 +320,15 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     }
 
     /**
-     * [caves] Which trade's outfit a folk wears: its own, by StationTask's order. The cave dweller has none of its own
-     * drawn: it goes in the miner's helmet, lamp and lantern (lit in the dark), with the town's armour over them.
+     * [caves] Which trade's outfit a folk wears: its own, by StationTask's order (a trade after the drawn ones, the
+     * banker, wraps round as before). The cave dweller has its own: the delver's helm and lamp (lit in the dark, and
+     * left on over an iron helmet), the oilskin coat, the rope and the spare pick.
      */
     public static int outfit(AssistantEntity folk) {
         int job = folk.clientJobOrdinal();
-        if (job == AssistantEntity.StationTask.CAVE.ordinal()) return 3;          // "miner"
-        if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;         // [transport] "fisher": a waterman's clothes
-        return Math.floorMod(job, TRADES.length);
+        if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
+        if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
+        return Math.floorMod(job, CAVE_OUTFIT);
     }
 
     @Override
@@ -318,12 +339,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         // Dress for the trade. A helmet goes on instead of the trade's hat, not on top of it.
         String trade = tradeOf(folk);
         boolean helmet = !folk.getItemBySlot(EquipmentSlot.HEAD).isEmpty();
+        boolean ownHat = FashionLayer.hatOn(folk);          // [fashion] off work, its own hat instead of its trade's
         for (int i = 0; i < worn.length; i++) {
             String by = wornBy[i];
             boolean show = by.equals("beard")
                 ? FolkLooks.bearded(folk) || "lumberjack".equals(trade)
                 : by.equals(trade);
-            worn[i].visible = show && !(helmet && onHead[i] && !by.equals("beard"));
+            worn[i].visible = show && !(onHead[i] && !by.equals("beard") && ((helmet && !overHelmet[i]) || ownHat));
         }
         // [guard-kit] Armour over the clothes, not under them: the hair under a helmet, the coat under a breastplate or
         // leggings, and what is worn round the body (an apron, a shawl, a mantle, a cape) under a breastplate.

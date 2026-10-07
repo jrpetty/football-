@@ -315,6 +315,7 @@ public final class StockKeeper {
             String key = Stockroom.key(one);
             out.putIfAbsent(key, new Ware(key, s -> s.is(it), one, false, it, 1, 1));
         }
+        Fashion.wares(level, v).forEach(out::putIfAbsent);     // [fashion] the garments, the season's look first: the tailor's, never the crafters'
         // Whatever folk and players bought or asked for this week, that the range has not got.
         for (Line l : b.lines.values()) {
             if (out.containsKey(l.key) || Line.week(l.sold) + Line.week(l.missed) == 0) continue;

@@ -113,6 +113,7 @@ public final class Council {
             String theirs = proposals.get(c.getKey());
             if (theirs != null && tally.containsKey(theirs)) tally.merge(theirs, 1, Integer::sum);
         }
+        Hustings.seatVotes(village, proposals, tally);          // [player-civic] a player given a seat votes as a councillor too
         String chosen = null;
         int most = -1, second = 0;
         for (Map.Entry<String, Integer> e : tally.entrySet()) {
@@ -234,6 +235,7 @@ public final class Council {
         sb.append(names.isEmpty() ? "nobody yet" : String.join(", ", names)).append(". ");
         int citizens = Ledger.citizens(village).size();
         if (citizens > 0) sb.append("And our ").append(citizens).append(citizens == 1 ? " citizen has" : " citizens have").append(" a vote too. ");
+        sb.append(Hustings.seatNews(village));                  // [player-civic] the seat offered to a player who stood
         String last = LAST.get(village);
         if (last != null) sb.append("Last time ").append(last).append(". ");
         String chosen = CHOSEN.get(village);

@@ -697,6 +697,7 @@ public final class JobMarket {
 
     /** How many hands short the town is at a trade, as its shape has it (the trade's share, less who works it). */
     static double shortOf(UUID town, StationTask t) {
+        if (t == StationTask.CAVE) return 0.0;              // [caves] the team is chosen from the town's own (CaveDwellers.appoint)
         return -Villages.share(town, t);
     }
 

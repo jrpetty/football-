@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "pattern": [
+    " P",
+    "SS"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:wooden_toy"
+  }
+}

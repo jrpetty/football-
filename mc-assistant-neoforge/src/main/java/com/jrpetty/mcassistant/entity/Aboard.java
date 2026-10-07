@@ -36,6 +36,7 @@ public final class Aboard {
     public static boolean mayBoard(VillageFolkEntity f, Entity vehicle) {
         if (!(vehicle instanceof Boat) && !(vehicle instanceof AbstractMinecart)) return true;
         if (Transport.mayBoard(f, vehicle)) return true;   // [transport] a rider in its cart; the ferryman and its passengers in the ferry
+        if (Fleet.crewing(f, vehicle)) return true;                   // [fleet] its own boat, on its day with the fishing fleet
         Job j = f.peekJob();
         return j != null && j.type() == Job.Type.BOAT;
     }

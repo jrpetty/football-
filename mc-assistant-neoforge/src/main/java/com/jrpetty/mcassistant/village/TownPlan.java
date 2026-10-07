@@ -203,14 +203,18 @@ public final class TownPlan {
             case "court" -> "court";
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern", "school", "bank", "museum", "stable",
+                 "auction",                                                    // [fleet] the auction house (entity/Auctions)
                  "infirmary",                                                  // [batchA] the infirmary (entity/Infirmary)
+                 "lodge",                                                      // [caves] the Delvers' Lodge (entity/Lodge)
                  "theatre",                                                    // [batchD] the theatre
+                 "townlibrary",                                                // [library] the town library
                  "bakery", "inn" -> "civic";                                   // [batchE] the bakery and the inn
             case "windmill", "orchard", "allotments" -> "fields";        // [batchE] by the farm gate (entity/TownLook.fieldLots)
             case "watchtower" -> "corner";
             case "range" -> "corner";                                       // [batchC] the watch's range, by the wall
             case "pitch" -> "field";                                        // [batchC] a long lot for the football pitch
             case "armoury" -> "civic";                // [war-prep] the armoury faces the square with the trades
+            case "firestation" -> "civic";            // [disasters] the fire station, among the trades it guards
             case "trainingyard" -> "corner";          // [war-prep] the training yard by the watchtower, at a corner
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
             default -> "home";

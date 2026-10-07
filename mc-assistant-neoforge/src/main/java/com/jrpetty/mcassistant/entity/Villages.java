@@ -106,7 +106,8 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.HUNT, 1, 10, Age.WOOD, 4),
         // The banker, once the bank stands: one, and chosen for its nature (Bank.appoint), not by who asks first.
         new Slot(AssistantEntity.StationTask.BANK, 1, Bank.FROM, Age.IRON, 1),
-        // [caves] The cave dwellers: from twenty-five in the Iron Age, one to every twenty-seven, four at most (CaveDwellers).
+        // [caves] The cave dwellers: a team of two from twenty-five in the Iron Age, three at sixty, four at a hundred,
+        // chosen by the town from its most skilled (CaveDwellers.team, appoint).
         new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST),
         // [transport] The ferryman: one, while the town's ferry runs (Ferries), whatever its size and age.
         new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1));
@@ -334,8 +335,11 @@ public final class Villages {
             case "pitch" -> "the football pitch";                 // [batchC]
             case "range" -> "the archery range";                  // [batchC]
             case "postoffice" -> "the post office";               // [batchF]
+            case "townlibrary" -> "the town library";             // [library]
             case "statue" -> "the statue on the square";          // [batchF]
             case "trainingyard" -> "the training yard";            // [war-prep]
+            case "firestation" -> "the fire station";              // [disasters]
+            case "lodge" -> "the Delvers' Lodge";                 // [caves]
             default -> "the " + structure;
         };
     }
@@ -345,6 +349,7 @@ public final class Villages {
         Bank.resetForTests();
         Culture.resetForTests();                                   // [batchD] the banner's works, the customs, the theatre, the band
         Museum.resetForTests();
+        Library.resetForTests();                                   // [library] the writing, the readers, the seats
         Storehouses.resetForTests();
         Storekeeping.resetForTests();
         Couriers.resetForTests();
@@ -383,6 +388,7 @@ public final class Villages {
         Sport.resetForTests();              // [batchC] the pitch, the matches, the league, the contests, the range
         Tavern.resetForTests();
         Council.resetForTests();
+        Referendums.resetForTests();        // [civic] the town's votes, great works and newcomers
         WarAndPeace.resetForTests();        // [war-peace]
         Laws.resetForTests();
         Diplomacy.resetForTests();
@@ -397,6 +403,7 @@ public final class Villages {
         Economy.resetForTests();
         Scouts.resetForTests();
         CaveDwellers.resetForTests();       // [caves]
+        Fashion.resetForTests();            // [fashion] the season's looks, the tailor's book, the shows
         Quests.resetForTests();
         Services.resetForTests();
         PlayerServices.resetForTests();     // [players] the nights' bounties, the milestones' looks
@@ -429,6 +436,7 @@ public final class Villages {
         FireBrigade.resetForTests();        // [wf] the fires and the hands at them
         Weather.resetForTests();            // [wf] the storm (and a test's storm let go), the rods looked at
         Civics.resetForTests();             // [batchF] the post, petitions, the meeting, wardens, the fund, searches, favours
+        Crime.resetForTests();              // [crime] the cases, the folk's records, the plans, the court
         Roads.reset();
         LAST_PROJECT.clear();
         POP.clear();
@@ -632,6 +640,7 @@ public final class Villages {
     public static java.util.Set<BlockPos> bedsClaimed(@Nullable UUID villageId) {
         java.util.Set<BlockPos> out = new java.util.HashSet<>();
         for (AssistantEntity a : folkOf(villageId)) if (a.bedPos() != null) out.add(a.bedPos());
+        out.addAll(CaveDwellers.awayBeds(villageId));          // [caves] the cave team's, away on a trip, stay theirs
         return out;
     }
 
@@ -687,6 +696,7 @@ public final class Villages {
             if (!wantedHere(slot, villageId, total, at)) continue;      // too small (or too young) to want one yet
             if (!craftReady(villageId, slot.trade())) continue;   // a smith with no smithy has nothing to work at
             if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
             double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // The first hand of a craft the village has grown into comes before one more of a trade
@@ -745,6 +755,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (slot.age() == Age.WOOD || !wantedHere(slot, villageId, total, at)) continue;
             if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
             if (craftReady(villageId, slot.trade())) return slot.trade();
         }
@@ -756,6 +767,7 @@ public final class Villages {
         double worst = 1.5;
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
+            if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > worst) { worst = short_; most = slot.trade(); }
@@ -784,6 +796,7 @@ public final class Villages {
         Map<AssistantEntity.StationTask, Double> by = new EnumMap<>(AssistantEntity.StationTask.class);
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
+            if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > 1.5) { by.put(slot.trade(), short_); out.add(slot.trade()); }
@@ -897,7 +910,7 @@ public final class Villages {
         // coast, more woodcutters and hunters in the forest, more miners in the hills.
         double t = (slot.weight() + boost) * total / (double) VILLAGE_SIZE * Orders.scale(villageId)
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
-        if (slot.trade() == AssistantEntity.StationTask.CAVE) t = t * VILLAGE_SIZE / CaveDwellers.PER;   // [caves] one to twenty-seven
+        if (slot.trade() == AssistantEntity.StationTask.CAVE) t = CaveDwellers.team(total);   // [caves] two, three at sixty, four at a hundred
         if (slot.trade() == AssistantEntity.StationTask.FERRY) t = Ferries.wanted(villageId) ? 1.0 : 0.0;  // [transport] one ferryman
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
@@ -918,6 +931,8 @@ public final class Villages {
         // [econ-trade] A standing trade deal leans the shares (TradeDeals.lean): fewer farmers where the bread comes in
         // reliably from a partner, more miners where stone is promised to one; back at once if the deliveries stop.
         t *= TradeDeals.lean(villageId, slot.trade());
+        // [fleet] A town with a fishing fleet wants a fisher for every one of its boats (Fleet).
+        if (slot.trade() == AssistantEntity.StationTask.FISH) t = Math.max(t, Fleet.handsWanted(villageId));
         // Houses waiting on beds want the wool: twice the ranchers (their sheep) till they are made up.
         if (slot.trade() == AssistantEntity.StationTask.RANCH && villageId != null && Market.bedsShort(villageId) >= 6) t *= 2.0;
         // [economy] The watch grows with the town, and by half again when monsters have been killing its folk (Mishap.watch).
@@ -939,6 +954,7 @@ public final class Villages {
         Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         int have = 0;
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
+        if (trade == AssistantEntity.StationTask.CAVE) return have - CaveDwellers.wanted(villageId);   // [caves] the team, whole
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
             if (!wantedHere(slot, villageId, total, at) || !craftReady(villageId, trade)) return 0.0;
@@ -961,6 +977,7 @@ public final class Villages {
         if (total <= 0) return false;
         int have = 0;
         for (AssistantEntity a : folk) if (a.stationTask() == trade) have++;
+        if (trade == AssistantEntity.StationTask.CAVE) return have > CaveDwellers.wanted(villageId);   // [caves] the team, whole
         Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
@@ -1724,6 +1741,8 @@ public final class Villages {
         if (folk >= 10 && built(villageId, "fountain") < 1) extras.add("fountain");
         // A schoolhouse, once there are children enough to fill one (School).
         if (School.wanted(villageId, folk) && built(villageId, "school") < 1) extras.add("school");
+        // [fleet] An auction house, once an Iron Age town of twenty-five has held a few auctions on its square (Auctions).
+        if (Auctions.wanted(villageId, folk) && built(villageId, "auction") < 1) extras.add("auction");
         // And a park among the homes, once the town is big enough to want one (Park).
         if (Park.wanted(villageId, folk)) extras.add(Park.STRUCTURE);
         // [batchC] A football pitch by the park, for the rest day's match (Pitch).
@@ -1740,6 +1759,8 @@ public final class Villages {
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
         // [batchE] The town's look: the windmill, the bakery, the orchard, the allotments and (Iron Age, or thirty folk) the inn.
         TownLook.wanted(villageId, folk, at, extras, s -> built(villageId, s) < 1);
+        // [library] A library for the town's books, once it is twelve strong (Library).
+        if (Library.wanted(villageId, folk) && built(villageId, Library.STRUCTURE) < 1) extras.add(Library.STRUCTURE);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -1769,6 +1790,10 @@ public final class Villages {
         if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30 || Homes.wantsAManor(villageId)) extras.add("manor");
         // [batchC] An archery range by the wall, once the town keeps a watch of two or more (Archery).
         if (Archery.wanted(villageId)) extras.add(Archery.STRUCTURE);
+        // [disasters] A fire station, once an Iron Age town has had two fires (FireSafety).
+        if (FireSafety.wanted(villageId)) extras.add(FireSafety.STATION);
+        // [caves] The Delvers' Lodge, once the town keeps a cave team (Lodge).
+        if (Lodge.wanted(villageId)) extras.add(Lodge.STRUCTURE);
         if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
@@ -2123,6 +2148,7 @@ public final class Villages {
             case "brewery" -> "a brewery, for the brewer's potions";
             case "library" -> "a library, where the enchanter keeps its books";
             case "school" -> School.why(villageId);
+            case "auction" -> Auctions.why(villageId);             // [fleet]
             case "fountain" -> "a fountain on the square, now that the village builds in stone";
             case "park" -> "a park among the homes, a fountain and benches: somewhere to sit of an evening, now the town has "
                 + folk + " folk";
@@ -2137,10 +2163,13 @@ public final class Villages {
             case "monument" -> "a monument (great work " + (greatWorks(villageId) + 1) + ") to how far the village has come";
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
             case "infirmary" -> Infirmary.why(villageId);          // [batchA]
+            case "lodge" -> Lodge.why(villageId);                  // [caves]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]
             case "statue" -> PublicFund.why(villageId);                   // [batchF]
+            case "firestation" -> FireSafety.why(villageId);              // [disasters]
+            case "townlibrary" -> Library.why(villageId);                 // [library]
             default -> "the " + project;
         };
     }
@@ -2815,6 +2844,7 @@ public final class Villages {
                 BlockPos ground = groundFor(level, x, z, hx, hz, true, heartGround, laps,
                     great ? 4 : 2, whyNot(villageId));
                 if (ground == null) continue;
+                if (Floods.lowGround(villageId, ground)) continue;     // [disasters] not on the low ground the river came over
                 // [districts] A park's lawn at the middle height of its lot, cut and filled to it (ParkGround).
                 ground = ParkGround.floorFor(level, project, ground);
                 valid++;

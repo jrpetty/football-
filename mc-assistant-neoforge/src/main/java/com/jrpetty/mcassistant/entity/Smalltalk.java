@@ -76,6 +76,10 @@ public final class Smalltalk {
             options.add(t);
             options.add(t);
         }
+        String[] word = PlayerLeader.gossip(a, b);           // [player-civic] the leader's promises, kept and broken
+        if (word != null) options.add(new Talk(word[0], word[1], word[2]));
+        String[] civic = Referendums.gossip(a, b);           // [civic] the town's vote: a great work, or newcomers
+        if (civic != null) options.add(new Talk(civic[0], civic[1], civic[2]));
         // The weather.
         if (level.isRaining()) {
             options.add(new Talk(pick(r, "Wet one today.", "Will this rain never stop?"),
@@ -147,6 +151,9 @@ public final class Smalltalk {
             }
         }
         for (String[] t : Seasons.talk(a, b, level, r)) options.add(new Talk(t[0], t[1], t[2]));   // [batchB] the season, now and then
+        for (String[] t : Pets.chat(a, b, level, r)) options.add(new Talk(t[0], t[1], t[2]));      // [pets] the dog, the cat, the litter
+        for (String[] t : Disasters.talk(a, b, level, r)) options.add(new Talk(t[0], t[1], t[2]));   // [disasters] the fire, the flood, the drought
+        for (String[] t : Library.talk(a, b, level, r)) options.add(new Talk(t[0], t[1], t[2]));   // [library] the new edition, a new poem
         if (options.isEmpty()) return null;
         return options.get(r.nextInt(options.size()));
     }

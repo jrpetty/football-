@@ -192,6 +192,7 @@ public final class Dealings {
 
     /** What a player talked the village down to today: a price after the haggle. */
     public static int haggled(UUID village, UUID player, long day, int price) {
+        price = QuestRewards.discount(village, player, price);            // [quests] the town's key or medal, carried
         int[] have = HAGGLED.get(village + "/" + player);
         if (have == null || have[1] != (int) day || have[0] <= 0) return price;
         return Math.max(1, price - (int) Math.round(price * have[0] / 100.0));
@@ -413,6 +414,7 @@ public final class Dealings {
         double work = Prices.each(want) * 0.2 * Craftsmanship.grade(skill).worth;
         int price = (int) Math.max(1, Math.round(storesWorth * Budget.PLAYER_MARKUP + work));
         price = haggled(village, p.getUUID(), d, price);
+        price = PlayerTrades.orderPrice(p, f.stationTask(), price);    // [player-civic] cheaper to one who learned the trade
         if (Market.coinsHeld(p) < price) return "That'd be " + coins(price) + ", makings and work. You've " + Market.coinsHeld(p) + ".";
         // Take it all.
         for (Map.Entry<Integer, Integer> e : fromPlayer.entrySet()) p.getInventory().getItem(e.getKey()).shrink(e.getValue());

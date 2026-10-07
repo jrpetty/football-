@@ -49,6 +49,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     private static final ResourceLocation[] OUTFIT = new ResourceLocation[FolkModel.TRADES.length];
     private static final ResourceLocation[] DYE = new ResourceLocation[FolkModel.TRADES.length];
     private static final ResourceLocation MINER_GLOW = texture("miner_glow");
+    /** [caves] The cave dweller's helm lamp, lit. */
+    private static final ResourceLocation CAVE_GLOW = texture("cavedweller_glow");
     /** What its wealth adds to its clothes, by standing (Wealth.Tier): patches, a belt, a collar, gold. */
     private static final ResourceLocation[] FINERY = {
         texture("wealth_0"), null, texture("wealth_2"), texture("wealth_3"), texture("wealth_4") };
@@ -96,10 +98,12 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new Outfit(this));
         this.addLayer(new Colours(this));
         this.addLayer(new Finery(this));
+        this.addLayer(new FashionLayer(this, new FashionModel(context.bakeLayer(FashionModel.LAYER))));   // [fashion] its own clothes
         this.addLayer(new Glow(this));
         this.addLayer(new Armour(this,                // [guard-kit] armour cut to a folk (FolkArmourModel)
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.INNER)),
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.OUTER))));
+        this.addLayer(new TabardLayer(this, context.getModelSet()));      // [arms] a festival tabard of the town's arms
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
     }
 
@@ -115,7 +119,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     }
 
     private static int trade(AssistantEntity folk) {
-        return FolkModel.outfit(folk);                     // [caves] the cave dweller in the miner's lamp
+        return FolkModel.outfit(folk);                     // [caves] the cave dweller in its own (FolkModel.CAVE_OUTFIT)
     }
 
     /** The trade's clothes, over the folk's own. */
@@ -151,6 +155,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             } else {
                 long bits = folk.getUUID().getMostSignificantBits();
                 rgb = DYES[(int) Math.floorMod(bits ^ (bits >>> 29) ^ t * 7L, (long) DYES.length)];
+                rgb = FashionLayer.mainColour(folk, rgb);          // [fashion] its own colour, once it has chosen one
             }
             renderColoredCutoutModel(getParentModel(), DYE[t], pose, buffer, light, folk, 0xFF000000 | rgb);
         }
@@ -171,7 +176,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         }
     }
 
-    /** The miner's lamp and lantern, lit whatever the light around them. */
+    /** The miner's lamp and lantern, lit whatever the light around them; [caves] and the cave dweller's helm lamp. */
     private static class Glow extends RenderLayer<VillageFolkEntity, FolkModel> {
         Glow(FolkRenderer parent) { super(parent); }
 
@@ -179,8 +184,11 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
                            float netHeadYaw, float headPitch) {
-            if (folk.isInvisible() || !"miner".equals(FolkModel.TRADES[trade(folk)])) return;
-            VertexConsumer glow = buffer.getBuffer(RenderType.eyes(MINER_GLOW));
+            if (folk.isInvisible()) return;
+            String t = FolkModel.TRADES[trade(folk)];
+            ResourceLocation lit = "miner".equals(t) ? MINER_GLOW : "cavedweller".equals(t) ? CAVE_GLOW : null;
+            if (lit == null || folk.isBaby()) return;
+            VertexConsumer glow = buffer.getBuffer(RenderType.eyes(lit));
             getParentModel().renderToBuffer(pose, glow, 0xF000F0, OverlayTexture.NO_OVERLAY, -1);
         }
     }
@@ -272,6 +280,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         }
         super.render(folk, entityYaw, partialTick, pose, buffer, packedLight);
         if (sat) pose.popPose();
+        QuestClient.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick);   // [quests] "!" or "?" over its head
 
         double far = this.entityRenderDispatcher.distanceToSqr(folk);
         if (far < 24 * 24 && bubble(folk, pose, buffer)) return;

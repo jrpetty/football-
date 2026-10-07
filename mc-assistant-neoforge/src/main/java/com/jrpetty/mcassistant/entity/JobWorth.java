@@ -176,8 +176,9 @@ public final class JobWorth {
             case "SMITH" -> new Post(key, title, trade, role, 2, 3, 0.0, 1.0, "hard work that takes much skill", "");
             case "ENCHANT" -> new Post(key, title, trade, role, 0, 4, 0.0, 1.0, "learned work", "");
             case "BANK" -> new Post(key, title, trade, role, 0, 4, 1.2, 1.0, "learned work", "keeps the town's savings and its loans");
-            // [caves] Underground, armed, among the monsters and the lava: as hard as the watch, and it takes a miner's eye.
-            case "CAVE" -> new Post(key, title, trade, role, 3, 2, 0.4, 1.0, "dangerous work underground, and skilled",
+            // [caves] Underground, armed, among the monsters and the lava: as hard as the watch, as learned as the enchanter,
+            // and a small team: among the best paid in the town.
+            case "CAVE" -> new Post(key, title, trade, role, 3, 4, 1.0, 1.0, "dangerous, skilled work underground; a small team",
                 "finds the town its ore, and its dangers");
             // [transport] Out on the water in all weathers but the worst: it makes nothing, and carries everybody over.
             case "FERRY" -> new Post(key, title, trade, role, 1, 1, 0.9, 0.0, "out on the water, and steady",
@@ -803,6 +804,7 @@ public final class JobWorth {
             break;
         }
         if (postFor(t, ShopRoles.Role.KEEPER).learned >= 2 && target >= 0.75 && skilled < Math.max(1, Math.round(target))) raw *= 1.08;
+        if (t == StationTask.CAVE) raw = Math.max(raw, 1.3);    // [caves] a small, picked team: never to be had for the asking
         return clamp(raw, SCARCE_LO, SCARCE_HI);
     }
 

@@ -349,6 +349,7 @@ public final class Ferries {
             BlockPos d = to.get(k);
             Crossing c = across(level, v, heart, d, reach);
             if (c == null) continue;
+            if (Bridges.worksBridgeNear(id, c) != null) continue;          // the town's great-work bridge crosses there
             c.toWhat = what.get(k);
             save(id, c);
             Villages.tell(id, level.getDayTime() / 24000L, "the water between the town and " + c.toWhat + " at " + c.where()

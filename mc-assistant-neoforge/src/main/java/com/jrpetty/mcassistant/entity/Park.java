@@ -740,7 +740,8 @@ public final class Park {
      * brain's looks, the walk round the park goes on.
      */
     static void tick(VillageFolkEntity f) {
-        if (Culture.seated(f)) return;                         // [batchD] sat on a bench at the theatre (Culture): left sat
+        if (Culture.seated(f) || Library.seated(f)) return;    // [batchD] sat on a bench at the theatre (Culture): left sat; [library] at a desk
+        if (Crime.inStocks(f)) return;                         // [crime] sat in the stocks on the square (Trial): left sat
         Visit vis = VISITS.get(f.getUUID());
         if (vis == null) {
             // After a restart (but not a folk sat down on its break or at a gathering: Seats, or for a story: Families,

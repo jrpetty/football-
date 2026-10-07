@@ -152,6 +152,7 @@ public final class Families {
         GARDEN_LOOKED.clear();
         KEPT.clear();
         ANNIV.clear();
+        Pets.resetForTests();               // [pets] the town's pets: their care, errands, young and strays
     }
 
     /**
@@ -167,6 +168,7 @@ public final class Families {
         long dt = level.getDayTime(), t = dt % 24000L, day = dt / 24000L;
         String doing = supper(level, f, village, t, day);          // supper first: an errand waits till after it
         if (doing == null) doing = errand(level, f, t, day);
+        if (doing == null) doing = Pets.hold(level, f, village, t, day);   // [pets] the bowl, a bed set out, a treat, a stray, a grave
         if (doing == null) doing = story(level, f, village, t, day);
         if (doing == null && f.isBaby()) doing = play(level, f, village, t, day);
         if (doing == null) return release(f);
@@ -332,6 +334,7 @@ public final class Families {
         if (Raids.underAlarm(id)) return;
         long dt = level.getDayTime(), day = dt / 24000L, t = dt % 24000L;
         pets(level, v, day, t);
+        Pets.tick(level, v, day, t);        // [pets] fed, the healer, their things, litters, strays, the merchant's pup
         gardens(level, v, day, t);
         remembrance(level, v, day, t);
         anniversaries(level, v, day, t);
@@ -612,6 +615,7 @@ public final class Families {
             if (children(id, h).isEmpty() || anyErrand(members)) continue;
             List<VillageFolkEntity> grown = grown(id, h);
             if (grown.isEmpty()) continue;
+            if (Pets.full(level, id)) continue;                          // [pets] the town keeps no more than it can
             PET_LOOKED.put(k, day);
             startPet(level, v, h, day);
         }
@@ -791,6 +795,12 @@ public final class Families {
      */
     static String drivePet(ServerLevel level, UUID village, Homes.Home h, TamableAnimal a) {
         harness(a);
+        // [pets] Its own business first: a meal, a bark, a bed, the roof, a stick to fetch (Pets); else as below.
+        String own = Pets.drive(level, village, h, a);
+        if (own != null) {
+            PET_DOING.put(a.getUUID(), own);
+            return own;
+        }
         long t = level.getDayTime() % 24000L;
         VillageFolkEntity child = null;
         if (t >= 1000L && t < 12500L) {
@@ -839,6 +849,11 @@ public final class Families {
         }
         PET_DOING.put(a.getUUID(), doing);
         return doing;
+    }
+
+    /** [pets] What the pet is doing, for Pets' lines ("about" when nobody has walked it lately). */
+    static String petDoing(UUID pet) {
+        return PET_DOING.getOrDefault(pet, "about");
     }
 
     /**

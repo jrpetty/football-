@@ -89,8 +89,9 @@ public final class Citizens {
         }
         Standing.stir(village, p.getUUID());
         if (p instanceof ServerPlayer sp) refresh(sp);
+        String banner = f.level() instanceof ServerLevel sl ? Arms.citizen(sl, village, p) : "";   // [arms] the town's banner, a citizen's
         return "Welcome, citizen " + name + "! " + (housed ? "Your house is your own. " : "We'll build you a house on one of our lots. ")
-            + "You've a vote on the council now, and the stores are yours as much as ours.";
+            + "You've a vote on the council now, and the stores are yours as much as ours." + banner;
     }
 
     // ------------------------------------------------------------------ titles
@@ -113,7 +114,7 @@ public final class Citizens {
             if (is(v.id(), p.getUUID()) && citizen == null) citizen = "Citizen of " + name;
             if (t == Standing.Title.HONOURED && honoured == null) honoured = "Honoured guest of " + name;
         }
-        return hero != null ? hero : citizen != null ? citizen : honoured;
+        return PlayerCivic.titled(p, hero != null ? hero : citizen != null ? citizen : honoured);   // [player-civic] its office, its trade
     }
 
     /** Put the player's title after its name (a team of its own), or take it off. */

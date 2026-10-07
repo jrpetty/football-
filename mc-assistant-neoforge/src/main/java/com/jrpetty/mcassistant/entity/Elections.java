@@ -162,6 +162,7 @@ public final class Elections {
         UUID id = v.id();
         Campaign c = new Campaign(id, day, voteDay);
         c.candidates.addAll(nominate(level, id, day));
+        Hustings.enter(level, v, c, day);                              // [player-civic] the players standing, and a player who leads
         NOW.put(id, c);
         save(c);
         if (c.candidates.isEmpty()) return c;
@@ -279,6 +280,7 @@ public final class Elections {
         double mind = Math.floorMod(Objects.hash(voter.getUUID(), c.id(), day), 7);
         double total = cares + needs + people + nature + skill + record + mind;
         total += WarAndPeace.electionLean(level, voter, c);           // [war-peace] the war: weary for peace, or a war going well
+        total += Hustings.lean(level, voter, c);                       // [player-civic] the campaign; a player's liking and record
         // The reason it gives: whichever weighed most.
         String why = "they stand for " + c.platform().cares + ", and so do I";
         double most = cares * 0.6;
@@ -287,6 +289,7 @@ public final class Elections {
         if (record > most) { most = record; why = "they've done well by us"; }
         if (skill > most) { most = skill; why = "they know what they're doing"; }
         if (nature > most) { why = "they're my kind of folk"; }
+        why = Hustings.why(voter, c, why);                             // [player-civic] a player's own doing
         return new Judged((int) Math.round(total), why);
     }
 
@@ -517,6 +520,7 @@ public final class Elections {
             f.persona().remember(day, "the village elected me " + title(id) + " for " + winner.platform().cares, 9);
         }
         WarAndPeace.elected(level, id, winner.id(), day);              // [war-peace] a peace candidate elected sues for peace
+        Hustings.installed(level, v, winner, day);                     // [player-civic] a player in office, or a player who lost
     }
 
     /** What the losers say: in their own way. */

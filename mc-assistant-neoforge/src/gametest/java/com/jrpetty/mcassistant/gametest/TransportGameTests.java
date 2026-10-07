@@ -52,8 +52,10 @@ import java.util.UUID;
  *     ferryman's.</li>
  * <li>tr04: the stone bridge, voted, is built across beside the ferry out of the stores' stone, arches and all, and the
  *     ferry retires: its boat back into the stores, its ferryman to another trade, the chronicle told.</li>
+ * <li>tr05: in a town big enough for a referendum, the bridge is put to the whole town as a great work, carried, built
+ *     by the town's hands beside the ferry and opened, and the ferry retires.</li>
  * </ul>
- * Each on its own ground (x 1160000 to 1166000, z 66000), in a batch of its own. The test world is flat, three blocks of
+ * Each on its own ground (x 1160000 to 1168000, z 66000), in a batch of its own. The test world is flat, three blocks of
  * earth over bedrock: the ridge, the water and the river are cut into it here.
  */
 @GameTestHolder("mc_assistant")
@@ -474,6 +476,83 @@ public class TransportGameTests {
         helper.assertTrue(c.state() == Ferries.State.RETIRED && boat == null && boats1 == boats0 + 1, "the ferry retired, its boat in the stores");
         helper.assertTrue(ferrymanMoved, "the ferryman took another trade: " + man.stationTask());
         helper.assertTrue(told && last, "the chronicle tells it: " + told + "/" + last);
+        helper.succeed();
+    }
+
+    // ================================================================== tr05: the bridge as the town's great work
+
+    /**
+     * The same river and ferry in a town of nine, voters enough for a referendum. The bridge in the ferry's place is put
+     * to the whole town as a great work (Referendums, BigWorks), drawn beside the ferry's crossing; everybody votes for
+     * it and it is carried; the town's hands build it out of the stores' stone and it is opened as a great work is. Then
+     * the ferry rows its last crossing: the boat back in the stores, the ferryman to another trade, the chronicle told.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "tr05_referendum")
+    public static void tr05_referendum(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 1168000;
+        StationTask[] trades = new StationTask[9];
+        java.util.Arrays.fill(trades, StationTask.NONE);
+        Town t = town(helper, x, 100, Villages.Age.STONE, trades);
+        UUID id = t.village();
+        for (VillageFolkEntity f : t.folk()) f.ensurePersona();
+        VillageFolkEntity man = t.folk().get(0), farmer = t.folk().get(1);
+        river(level, t.heart(), 50);
+        fieldOver(farmer, Kit.surface(level, x + 75, Z));
+        List<ItemStack> goods = new ArrayList<>(List.of(new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
+            new ItemStack(Items.STICK, 16), new ItemStack(Items.COPPER_INGOT, 8), new ItemStack(Items.LANTERN, 16), new ItemStack(Items.OAK_BOAT),
+            new ItemStack(Items.CRAFTING_TABLE), new ItemStack(Items.BREAD, 64), new ItemStack(Items.STRING, 4), new ItemStack(Items.RED_DYE, 2)));
+        for (int i = 0; i < 12; i++) goods.add(new ItemStack(Items.STONE_BRICKS, 64));
+        fill(t, goods.toArray(new ItemStack[0]));
+        Ferries.weatherForTests(false);
+        com.jrpetty.mcassistant.entity.Weather.stormForTests(false);
+        Ferries.Crossing c = Ferries.surveyForTests(level, t.v());
+        helper.assertTrue(c != null, "a crossing found");
+        Ferries.appointForTests(level, t.v(), man);
+        Ferries.buildForTests(level, t.v());
+        helper.assertTrue(c.state() == Ferries.State.RUNNING && man.stationTask() == StationTask.FERRY, "the ferry running, a ferryman: " + c.state());
+        // Put to the whole town, as a great work drawn at the ferry's crossing.
+        Bridges.Stage asked = Bridges.askForTests(level, t.v());
+        List<String> open = com.jrpetty.mcassistant.entity.Referendums.openForTests(id);
+        Kit.log("tr05 put to the town: " + asked + "; the questions " + open);
+        helper.assertTrue(asked == Bridges.Stage.ASKED && open.size() == 1 && open.get(0).contains("WORKS")
+            && open.get(0).contains("stone bridge") && open.get(0).contains("in place of the ferry"), "the bridge put to a referendum: " + open);
+        int q = Integer.parseInt(open.get(0).split(" ")[0]);
+        for (VillageFolkEntity f : t.folk()) {
+            com.jrpetty.mcassistant.entity.Values.setForTests(f, com.jrpetty.mcassistant.entity.Values.Value.PROGRESS, 95);
+            com.jrpetty.mcassistant.entity.Values.setForTests(f, com.jrpetty.mcassistant.entity.Values.Value.TRADITION, 5);
+        }
+        com.jrpetty.mcassistant.entity.Referendums.castAllForTests(level, t.v(), q);
+        int[] count = com.jrpetty.mcassistant.entity.Referendums.countForTests(level, t.v(), q);
+        Bridges.Stage voted = Bridges.tickForTests(level, t.v());
+        String works = com.jrpetty.mcassistant.entity.BigWorks.stateForTests(id);
+        Kit.log("tr05 the count: aye " + count[0] + ", nay " + count[1] + (count[2] == 1 ? ", carried" : ", lost") + "; the bridge " + voted
+            + "; the great work " + works + "; " + Bridges.report(level, id));
+        helper.assertTrue(count[2] == 1 && voted == Bridges.Stage.BUILDING && works.startsWith("BRIDGE|building"),
+            "carried, and the great work begun: " + voted + ", " + works);
+        // Beside the ferry: every piece of it within a few blocks of the crossing.
+        double midX = (c.bankA().getX() + c.bankB().getX()) / 2.0, midZ = (c.bankA().getZ() + c.bankB().getZ()) / 2.0;
+        int far = 0;
+        List<BlockPos> pieces = com.jrpetty.mcassistant.entity.BigWorks.piecesForTests(id);
+        for (BlockPos p : pieces) if (Math.abs(p.getX() - midX) > 24 || Math.abs(p.getZ() - midZ) > 24) far++;
+        helper.assertTrue(!pieces.isEmpty() && far == 0, "the great work drawn beside the ferry: " + far + " of " + pieces.size() + " pieces far off");
+        // Built by the town's hands and opened; the ferry's round then sees it.
+        int bricks0 = stock(level, id, Items.STONE_BRICKS), boats0 = stock(level, id, Items.SPRUCE_BOAT);
+        List<VillageFolkEntity> hands = new ArrayList<>(t.folk().subList(1, t.folk().size()));
+        java.util.Map<String, Integer> laid = com.jrpetty.mcassistant.entity.BigWorks.buildForTests(level, t.v(), hands, 400);
+        String opened = com.jrpetty.mcassistant.entity.BigWorks.finishAndOpenForTests(level, t.v());
+        List<String> done = com.jrpetty.mcassistant.entity.BigWorks.doneForTests(id);
+        Bridges.Stage after = Bridges.tickForTests(level, t.v());
+        int bricks1 = stock(level, id, Items.STONE_BRICKS), boats1 = stock(level, id, Items.SPRUCE_BOAT);
+        boolean told = false;
+        for (Villages.News n : Villages.news(id)) if (n.text().contains("nobody needs the ferry")) told = true;
+        Kit.log("tr05 built by " + laid + "; " + opened + "; done " + done + "; the bridge " + after + ", the ferry " + c.state()
+            + "; stone bricks " + bricks0 + " -> " + bricks1 + "; boats " + boats0 + " -> " + boats1 + "; the ferryman now " + man.stationTask());
+        helper.assertTrue(done.contains("BRIDGE") && bricks1 < bricks0, "the great work built of the stores' stone and opened: " + done);
+        helper.assertTrue(after == Bridges.Stage.OPEN && c.state() == Ferries.State.RETIRED && boats1 == boats0 + 1,
+            "the ferry retired, its boat in the stores: " + after + ", " + c.state());
+        helper.assertTrue(man.stationTask() != StationTask.FERRY, "the ferryman took another trade: " + man.stationTask());
+        helper.assertTrue(told, "the chronicle tells it");
         helper.succeed();
     }
 

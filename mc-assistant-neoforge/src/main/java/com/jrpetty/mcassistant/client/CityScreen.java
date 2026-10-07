@@ -59,14 +59,26 @@ public class CityScreen extends Screen {
         "War map",
         // [war-peace] The war, after them for the same reason (WarPage).
         "War",
-        // [caves] The caves' report, last of all (CavesPage).
+        // [caves] The caves' report (CavesPage).
         "Caves",
+        // [fashion] What the town wears (FashionPage).
+        "Fashion",
+        // [crime] The watch's casebook and the crime rate, after them (CasesPage).
+        "Cases",
+        // [fleet] The auction and the fishing fleet, after them (AuctionPage).
+        "Auction",
+        // [library] The town library, after them (LibraryPage): its catalogue, its writers, its loans.
+        "Library",
         // [transport] The railways, the carts, the ferry and the bridge, after them (TransportPage).
         "Transport" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
-        "Transport");                                                                      // [transport]
+        "Fashion",                                                                                    // [fashion]
+        "Cases",                                                                                      // [crime]
+        "Auction",                                                                                    // [fleet]
+        "Library",                                                                                    // [library]
+        "Transport");                                                                                 // [transport]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -323,6 +335,22 @@ public class CityScreen extends Screen {
                 case "War" -> WarPage.draw(g, font, data.getCompound("war"), x, y, cw, ch, scroll);   // [war-peace]
                 case "Caves" -> {                                                      // [caves] the caves' report (CavesPage)
                     List<Component> tip = CavesPage.draw(g, font, data.getCompound("caves"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Fashion" -> {                                                    // [fashion] the season's look (FashionPage)
+                    List<Component> tip = FashionPage.draw(g, font, data.getCompound("fashion"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Cases" -> {                                                      // [crime] the casebook (CasesPage)
+                    List<Component> tip = CasesPage.draw(g, font, data.getCompound("crime"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Auction" -> {                                                    // [fleet] the auction and the fleet (AuctionPage)
+                    List<Component> tip = AuctionPage.draw(g, font, data.getCompound("auction"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Library" -> {                                                    // [library] the town library (LibraryPage)
+                    List<Component> tip = LibraryPage.draw(g, font, data.getCompound("library"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "Transport" -> {                                                  // [transport] the lines, the ferry (TransportPage)
@@ -792,6 +820,7 @@ public class CityScreen extends Screen {
         if (!p.getString("alarm").isEmpty()) notes.add("!The living wage: " + p.getString("alarm") + ".");
         if (!p.getString("refusedWhat").isEmpty()) notes.add("Too dear for the folk yesterday: " + p.getString("refusedWhat") + ".");
         if (!p.getString("bargainWhat").isEmpty()) notes.add("Bought more of for being cheap: " + p.getString("bargainWhat") + ".");
+        if (!p.getString("fleet").isEmpty()) notes.add(p.getString("fleet") + ".");   // [fleet] the fish market's catch and prices
         ListTag moves = p.getList("moves", Tag.TAG_STRING);
         for (int i = 0; i < moves.size(); i++) notes.add("~" + moves.getString(i) + ".");
         for (String n : notes) {
@@ -2848,6 +2877,13 @@ public class CityScreen extends Screen {
             for (String s : guests) all.add("  " + s);
             all.add("");
         }
+        // [pets] The town's pets (entity/Pets): who has one, fed and kept, the young, the strays, litters, the show, the lost.
+        List<String> pets = strings("pets");
+        if (!pets.isEmpty()) {
+            all.add("Pets:");
+            for (String s : pets) all.add("  " + s);
+            all.add("");
+        }
         // [batchC] Sport and play: the pitch, the range, the league table, the cup, the contests (entity/Sport).
         List<String> sport = strings("sport");
         if (!sport.isEmpty()) {
@@ -2860,6 +2896,20 @@ public class CityScreen extends Screen {
         if (!civic.isEmpty()) {
             all.add("The town's affairs:");
             for (String s : civic) all.add("  " + s);
+            all.add("");
+        }
+        // [disasters] Fire, flood and drought (entity/Disasters): the weather, the fires, floods and droughts, what it built after.
+        List<String> disasters = strings("disasters");
+        if (!disasters.isEmpty()) {
+            all.add("Fire, flood and drought:");
+            for (String s : disasters) all.add("  " + s);
+            all.add("");
+        }
+        // [civic] The town's votes, its great works built together, and its newcomers (Referendums, BigWorks, Newcomers).
+        List<String> votes = strings("civic_votes");
+        if (!votes.isEmpty()) {
+            all.add("Votes, great works and newcomers:");
+            for (String s : votes) all.add("  " + s);
             all.add("");
         }
         all.add("The chronicle, latest first:");

@@ -267,14 +267,25 @@ public final class WatchClears {
 
     /** Free to be sent: up, about the town, not already fighting, not hurt, not with somebody. */
     static boolean free(VillageFolkEntity g, BlockPos c, int reach, boolean bell) {
-        if (!g.isAlive() || g.isBaby() || Patrols.away(g) || g.isRetreating()) return false;
-        if (g.isSleeping() && !bell) return false;                         // the bell wakes the whole watch
+        return unfree(g, c, reach, bell).isEmpty();
+    }
+
+    /** Why a guard of the watch is not free to be sent just now, in a word or two; "" when it is. */
+    static String unfree(VillageFolkEntity g, BlockPos c, int reach, boolean bell) {
+        if (!g.isAlive()) return "dead";
+        if (g.stationTask() != StationTask.GUARD) return "not a guard (" + g.stationTask().title + ")";
+        if (g.isBaby()) return "a child";
+        if (Patrols.away(g)) return "away";
+        if (g.isRetreating()) return "falling back";
+        if (g.isSleeping() && !bell) return "asleep";                     // the bell wakes the whole watch
         LivingEntity t = g.getTarget();
-        if (t != null && t.isAlive()) return false;
-        if (!bell && Patrols.escorting(g)) return false;                   // the leader's, while it walks
-        if (g.talkPartner() != null || g.companionPlayer() != null || g.guidePlayer() != null) return false;
-        if (g.getHealth() < g.getMaxHealth() * 0.5F || g.shouldDisengage()) return false;
-        return Math.max(Math.abs(g.getX() - c.getX()), Math.abs(g.getZ() - c.getZ())) <= reach + Patrols.ABROAD;
+        if (t != null && t.isAlive()) return "after " + a(name(t));
+        if (!bell && Patrols.escorting(g)) return "with the leader";       // the leader's, while it walks
+        if (g.talkPartner() != null || g.companionPlayer() != null || g.guidePlayer() != null) return "with a player";
+        if (g.getHealth() < g.getMaxHealth() * 0.5F) return "hurt (" + (int) g.getHealth() + " of " + (int) g.getMaxHealth() + ")";
+        if (g.shouldDisengage()) return "outmatched";
+        if (Math.max(Math.abs(g.getX() - c.getX()), Math.abs(g.getZ() - c.getZ())) > reach + Patrols.ABROAD) return "out of the town";
+        return "";
     }
 
     /** Can this guard take that on: a creeper only with a bow and arrows, and never one it has given up on. */
@@ -572,7 +583,8 @@ public final class WatchClears {
             case "house", "house2", "flats", "flats4", "hall", "townhall", "tavern", "inn", "guesthouse", "storage",
                  "storehouse", "store", "shop", "cafe", "bakery", "bank", "barracks", "granary", "chapel", "school",
                  "library", "museum", "infirmary", "manor", "villa", "postoffice", "theatre", "workshop", "smithy",
-                 "brewery", "armoury", "shelter" -> true;
+                 "brewery", "armoury", "shelter",
+                 "lodge" -> true;                                                 // [caves] the Delvers' Lodge
             default -> false;
         };
     }
@@ -1008,6 +1020,13 @@ public final class WatchClears {
     public static List<Mob> aboutForTests(ServerLevel level, UUID village) {
         Villages.Village v = Villages.get(village);
         return v == null ? List.of() : about(level, v);
+    }
+
+    /** Why this guard is not free for the hunt just now ("" when it is). */
+    public static String whyNotFreeForTests(VillageFolkEntity g) {
+        Villages.Village v = Villages.get(g.ownerId());
+        if (v == null) return "no town";
+        return unfree(g, v.centre(), Villages.townReach(v.id()), Raids.underAlarm(v.id()));
     }
 
     /** The monster this guard was sent after, or null. */

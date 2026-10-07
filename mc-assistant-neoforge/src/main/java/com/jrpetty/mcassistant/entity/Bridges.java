@@ -3,6 +3,8 @@ package com.jrpetty.mcassistant.entity;
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -24,10 +26,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * [transport] The stone bridge that replaces the ferry.
  * <ul>
  * <li><b>When.</b> Once the ferry has run a few days and the town has the stone to spare for a bridge (the builders'
- *     own stone kept back), the crossing is put to the town: a council vote here, or the town's referendum where there
- *     is one (the seam: {@link #pollBy}). Each councillor weighs it: one whose work is over the water is for it, a hard
- *     worker likes it, the elder likes it with money in the treasury, a grumbler grudges the stone, and the ferryman
- *     votes for its own trade. Voted down, it is put again a week on.</li>
+ *     own stone kept back), the crossing is put to the town (the seam: {@link #pollBy}). A town with voters enough for
+ *     a referendum puts it to all its folk as a great work (Referendums, BigWorks), drawn at the ferry's crossing, and
+ *     builds it together on the works day and after; the great work opened, the ferry retires. A smaller town leaves it
+ *     to its council, and builds it as below. Each councillor weighs it: one whose work is over the water is for it, a
+ *     hard worker likes it, the elder likes it with money in the treasury, a grumbler grudges the stone, and the
+ *     ferryman votes to keep its ferry. Voted down, it is put again a week on. A great-work bridge the town built of
+ *     its own accord near the ferry retires it too.</li>
  * <li><b>The bridge.</b> Beside the ferry's crossing (so the ferry runs while it goes up), from bank to bank: piers of
  *     stone from the river bed, an arch between each pair (its shoulders upside-down stairs), as many arches as the
  *     water is wide (one to every five blocks), a deck five wide two above the water, a wall either side and a lantern
@@ -58,12 +63,17 @@ public final class Bridges {
         Verdict ask(ServerLevel level, Villages.Village v, String key, String question);
     }
 
-    private static volatile Poll poll = Bridges::council;
+    private static volatile Poll poll = Bridges::byTheTown;
 
-    /** The referendums' seam: put the town's big works to its folk this way (null: back to the council). */
+    /** The seam: put the bridge to the town this way (null: back to the referendum, or the council in a small town). */
     public static void pollBy(@Nullable Poll p) {
-        poll = p == null ? Bridges::council : p;
+        poll = p == null ? Bridges::byTheTown : p;
     }
+
+    /** The referendum the ferry's bridge was put to (its question's id), while it is open or its great work is building. */
+    static final String WORKS_NOTE = "ferry/works";
+    /** A great-work bridge this near the ferry's crossing does its work. */
+    static final int NEAR_WORKS = 32;
 
     /** The ferry runs this many days before a bridge is asked for, and a no is asked again after this many. */
     static final long FERRY_DAYS = 2, ASK_AGAIN = 7;
@@ -80,7 +90,7 @@ public final class Bridges {
     public static void resetForTests() {
         PLANS.clear();
         forced = null;
-        poll = Bridges::council;
+        poll = Bridges::byTheTown;
     }
 
     /** Tests: the next vote goes this way (null: as the council would have it). */
@@ -93,6 +103,15 @@ public final class Bridges {
     /** Every few seconds with the ferry (Ferries.work): the bridge asked for, voted, built and opened. */
     static void tick(ServerLevel level, Villages.Village v, Ferries.Crossing c) {
         long day = level.getDayTime() / 24000L;
+        // A great-work bridge standing by the crossing (the town's vote on the ferry's, or one of its own accord): the
+        // ferry's work is done.
+        if (c.state == Ferries.State.RUNNING && (c.bridge != Stage.BUILDING || byTheWorks(v.id()))) {
+            CompoundTag done = worksBridgeNear(v.id(), c);
+            if (done != null) {
+                openedByTheWorks(level, v, c, done);
+                return;
+            }
+        }
         switch (c.bridge) {
             case NONE, REJECTED -> {
                 if (c.state != Ferries.State.RUNNING) return;
@@ -105,7 +124,10 @@ public final class Bridges {
                 ask(level, v, c);
             }
             case ASKED -> ask(level, v, c);
-            case BUILDING -> build(level, v, c, STEPS, false);
+            case BUILDING -> {
+                if (byTheWorks(v.id())) watchTheWorks(level, v, c);
+                else build(level, v, c, STEPS, false);
+            }
             case OPEN -> {
                 if (c.state != Ferries.State.RETIRED) Ferries.retire(level, v, c);
             }
@@ -182,6 +204,102 @@ public final class Bridges {
         }
         c.vote = "the council voted " + yes + " to " + no + (against.isEmpty() ? "" : ", " + String.join(" and ", against) + " against");
         return yes > no ? Verdict.FOR : Verdict.AGAINST;
+    }
+
+    // ------------------------------------------------------------------ the referendum and the great works
+
+    /**
+     * The bridge put to the town: to all its folk in a referendum, as a great work drawn at the ferry's crossing, where
+     * it has voters enough for one (BigWorks.GROWN_AT_LEAST); else to the council. Pending while the question is open
+     * (or cannot be put yet: another great work in hand, or another question on the works before the town).
+     */
+    static Verdict byTheTown(ServerLevel level, Villages.Village v, String key, String question) {
+        UUID id = v.id();
+        Ferries.Crossing c = Ferries.crossing(id);
+        if (c == null) return Verdict.PENDING;
+        long day = level.getDayTime() / 24000L;
+        String held = Ledger.note(id, WORKS_NOTE);
+        if (held == null || held.isEmpty()) {
+            if (Elections.voters(id).size() < BigWorks.GROWN_AT_LEAST) return council(level, v, key, question);
+            if (BigWorks.underWay(id) || Referendums.waitsUntil(id, BigWorks.Work.BRIDGE) > day) return Verdict.PENDING;
+            for (CompoundTag q : Referendums.open(id)) if (Referendums.WORKS.equals(q.getString("kind"))) return Verdict.PENDING;
+            WorksPlans.Plan plan = worksPlan(level, c);
+            BigWorks.Proposal p = plan == null ? null : BigWorks.propose(level, v, plan);
+            if (p == null) return council(level, v, key, question);         // no stone the great works would build in
+            CompoundTag q = Referendums.callWorks(level, v, p, day, day + Referendums.CAMPAIGN);
+            Ledger.note(id, WORKS_NOTE, Integer.toString(q.getInt("id")));
+            c.vote = "put to the whole town, the vote on day " + (day + Referendums.CAMPAIGN + 1);
+            return Verdict.PENDING;
+        }
+        CompoundTag q;
+        try {
+            q = Referendums.question(id, Integer.parseInt(held));
+        } catch (NumberFormatException e) {
+            q = null;
+        }
+        if (q == null) {                                                   // the question lost from the books: put again
+            Ledger.note(id, WORKS_NOTE, "");
+            return Verdict.PENDING;
+        }
+        if (!q.getBoolean("counted")) return Verdict.PENDING;
+        c.vote = "the town voted " + q.getInt("ayes") + " to " + q.getInt("nays");
+        if (q.getBoolean("carried")) return Verdict.FOR;                  // the great works build it (Referendums.decide)
+        Ledger.note(id, WORKS_NOTE, "");
+        return Verdict.AGAINST;
+    }
+
+    /** Is the ferry's bridge the town's great work (voted in a referendum), not the builders' own? */
+    static boolean byTheWorks(UUID village) {
+        String held = Ledger.note(village, WORKS_NOTE);
+        return held != null && !held.isEmpty();
+    }
+
+    /** The ferry's bridge drawn as a great work (WorksPlans.bridge) at the place found beside the crossing. */
+    @Nullable
+    static WorksPlans.Plan worksPlan(ServerLevel level, Ferries.Crossing c) {
+        if (c.bridgeA == null || c.bridgeB == null) return null;
+        int span = (int) Math.round(Math.sqrt(c.bridgeA.atY(0).distSqr(c.bridgeB.atY(0))));
+        if (span < 2) return null;
+        int rank = "its fields".equals(c.toWhat) ? 3 : "its mine".equals(c.toWhat) ? 1 : 2;
+        WorksPlans.Crossing w = new WorksPlans.Crossing(c.bridgeA.getX(), c.bridgeA.getZ(), c.way, 1, span - 1, c.surface, rank,
+            "over the water to " + c.toWhat + ", in place of the ferry");
+        return WorksPlans.bridge(level, w);
+    }
+
+    /** The great work under way: built and opened, the ferry retires; gone without a bridge, the town may be asked again. */
+    private static void watchTheWorks(ServerLevel level, Villages.Village v, Ferries.Crossing c) {
+        if (BigWorks.underWay(v.id())) return;                             // building, or waiting to be opened
+        if (worksBridgeNear(v.id(), c) != null) return;                    // opened: seen to at the top of tick
+        Ledger.note(v.id(), WORKS_NOTE, "");
+        c.bridge = Stage.NONE;
+        Ferries.save(v.id(), c);
+    }
+
+    /** A great-work bridge the town has opened near the ferry's crossing, or null. */
+    @Nullable
+    static CompoundTag worksBridgeNear(UUID village, Ferries.Crossing c) {
+        net.minecraft.world.phys.Vec3 mid = c.middle();
+        for (Tag t : CivicRecord.list(CivicRecord.town(village), "worksDone")) {
+            if (!(t instanceof CompoundTag w) || !BigWorks.Work.BRIDGE.name().equals(w.getString("kind"))) continue;
+            BlockPos site = BlockPos.of(w.getLong("site"));
+            double dx = site.getX() + 0.5 - mid.x, dz = site.getZ() + 0.5 - mid.z;
+            if (dx * dx + dz * dz <= NEAR_WORKS * NEAR_WORKS) return w;
+        }
+        return null;
+    }
+
+    /** The great work's bridge open by the crossing: the ferry rows its last. */
+    private static void openedByTheWorks(ServerLevel level, Villages.Village v, Ferries.Crossing c, CompoundTag done) {
+        long day = level.getDayTime() / 24000L;
+        c.bridge = Stage.OPEN;
+        c.bridgeOpenedDay = done.contains("day") ? done.getLong("day") : day;
+        if (c.vote.isEmpty()) c.vote = "built by the whole town";
+        Ledger.note(v.id(), WORKS_NOTE, "");
+        Villages.tell(v.id(), day, "the town's new stone bridge stands open by the ferry, and nobody needs the ferry over the water to "
+            + c.toWhat + " any more");
+        LOG.info("[MCA-BRIDGE] {}: the great work's bridge opened by the ferry at {}", Villages.name(v.id()), c.where());
+        Ferries.save(v.id(), c);
+        Ferries.retire(level, v, c);
     }
 
     // ------------------------------------------------------------------ where it goes
@@ -425,6 +543,11 @@ public final class Bridges {
             case ASKED -> "A stone bridge in place of the ferry is before the town.";
             case REJECTED -> "A stone bridge was voted down (" + c.vote + "); to be put again.";
             case BUILDING -> {
+                CompoundTag w = byTheWorks(village) ? BigWorks.current(village) : null;
+                if (w != null) {
+                    yield "The stone bridge is going up as the town's great work (" + c.vote + ", day " + c.votedDay + "): "
+                        + w.getInt("next") + " of " + BigWorks.pieces(village, w).size() + " pieces laid.";
+                }
                 int all = PLANS.containsKey(village) ? PLANS.get(village).size() : 0;
                 yield "The stone bridge is going up (" + c.vote + ", day " + c.votedDay + "): " + c.bridgeDone
                     + (all > 0 ? " of " + all : "") + " blocks of stone laid.";
@@ -441,6 +564,25 @@ public final class Bridges {
         c.bridge = Stage.ASKED;
         ask(level, v, c);
         return c.bridge == Stage.BUILDING;
+    }
+
+    /** Tests: the bridge put to the town now as the town would put it (not waiting on the ferry's days); its stage after. */
+    public static Stage askForTests(ServerLevel level, Villages.Village v) {
+        Ferries.Crossing c = Ferries.crossing(v.id());
+        if (c == null || !site(level, c)) return Stage.NONE;
+        forced = null;
+        c.bridge = Stage.ASKED;
+        c.lastAsked = level.getDayTime() / 24000L;
+        ask(level, v, c);
+        return c.bridge;
+    }
+
+    /** Tests: one look at the bridge, as the ferry's round takes it (Ferries.work); its stage after. */
+    public static Stage tickForTests(ServerLevel level, Villages.Village v) {
+        Ferries.Crossing c = Ferries.crossing(v.id());
+        if (c == null) return Stage.NONE;
+        tick(level, v, c);
+        return c.bridge;
     }
 
     /** Tests: the council's own vote on the bridge, now (who said what is in the books). */

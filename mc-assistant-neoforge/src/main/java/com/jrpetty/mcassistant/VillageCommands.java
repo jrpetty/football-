@@ -101,6 +101,7 @@ public final class VillageCommands {
                             .executes(ctx -> found(ctx, true))))))
             .then(Commands.literal("folk").executes(VillageCommands::folk))
             .then(com.jrpetty.mcassistant.entity.FolkTeleport.command())          // [teleport] /village tp <name> (ops)
+            .then(com.jrpetty.mcassistant.entity.QuestRun.command())              // [quests] /village quests [journal|offers|abandon <id>]
             // The town's quarters, the homes in the crafts' smoke and by the park, and the park (Quarters, Park).
             .then(com.jrpetty.mcassistant.entity.Quarters.command())
             .then(com.jrpetty.mcassistant.entity.Sport.command())                 // [batchC] /village sport
@@ -237,10 +238,17 @@ public final class VillageCommands {
             // for operators, a cold caught now and an infirmary set out on a stage (Health).
             .then(com.jrpetty.mcassistant.entity.Health.command())
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
+            .then(com.jrpetty.mcassistant.entity.Referendums.command())     // [civic] /village referendum: the town's vote, the great works
+            .then(com.jrpetty.mcassistant.entity.Newcomers.command())       // [civic] /village newcomers: refugees and newcomers
             .then(com.jrpetty.mcassistant.entity.WatchKit.command())        // [guard-kit] the watch's kit, on order, and its cost
             .then(com.jrpetty.mcassistant.entity.WatchClears.command())     // [watch-clears] /village monsters: about, killed, fallen
             .then(com.jrpetty.mcassistant.entity.Transport.command())       // [transport] /village transport: lines, carts, ferry, bridge
             .then(com.jrpetty.mcassistant.entity.CaveDwellers.command())    // [caves] the cave dwellers and the caves' report
+            .then(com.jrpetty.mcassistant.entity.Pets.command())            // [pets] /village pets: the town's pets; now, stage (ops)
+            .then(com.jrpetty.mcassistant.entity.Fashion.command())         // [fashion] the season's look, the tailor's book, the show
+            .then(com.jrpetty.mcassistant.entity.Crime.command())           // [crime] the casebook, the Cases page; a deed, a trial, the stocks staged
+            .then(com.jrpetty.mcassistant.entity.Fleet.command())           // [fleet] /village fleet: the boats, the catch, the market
+            .then(com.jrpetty.mcassistant.entity.Auctions.command())        // [fleet] /village auction: the lots, the bids, the sales
             .then(com.jrpetty.mcassistant.entity.Civics.donateCommand())    // [batchF] the public works fund
             // [flats] The village's blocks of flats: each flat, who lives there, on what terms. `stage`
             // sets a furnished block out on a stage at the spot, for the pictures (from a palette, not the stores).
@@ -299,8 +307,13 @@ public final class VillageCommands {
             .then(Commands.literal("chronicle").executes(VillageCommands::chronicle))
             // The museum and its archive: what is on show, who found it, the volumes (MuseumCommands).
             .then(MuseumCommands.build())
+            // [library] The town library: its librarian, its books and their editions, its loans (LibraryCommands).
+            .then(LibraryCommands.build())
             // [batchD] The town's culture: its banner and motto, customs, theatre, band and choir, pictures, plaques.
             .then(CultureCommands.build())
+            // [arms] The town's arms everywhere (/village arms), and its street musicians (/village busk).
+            .then(ArmsCommands.arms())
+            .then(ArmsCommands.busk())
             // [war-peace] The war: its goal, its course, the allies, the treaties; and (ops) a council, a declaration, a peace now.
             .then(WarCommands.build())
             // [economy] The larder against the mouths, the coal floor and charcoal, the builders' stock carried about

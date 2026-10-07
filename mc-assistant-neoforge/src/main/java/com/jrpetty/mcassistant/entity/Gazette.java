@@ -268,8 +268,26 @@ public final class Gazette {
         String pay = JobWorth.gazette(id, day);                 // [econ-wages] a trade's pay up while it is short of hands
         if (pay != null) entries.add(pay);
         entries.add(TradeDeals.gazette(level, v, day));          // [econ-trade] the deals with the neighbours, and yesterday's caravans
+        String quay = Fleet.gazette(id, day);                     // [fleet] the fleet's catch and the fish market
+        if (quay != null) entries.add(quay);
+        String auction = Auctions.gazette(id, day);               // [fleet] what sold at the auction, and to whom
+        if (auction != null) entries.add(auction);
+        String books = Library.gazette(id, day);                    // [library] yesterday's new books and editions
+        if (books != null) entries.add(books);
         String war = WarAndPeace.gazette(level, id, day);           // [war-peace] the war, the ultimatum, the treaty
         if (war != null) entries.add(war);
+        String street = Buskers.gazette(level, id, day);            // [arms] yesterday's buskers and their hats
+        if (street != null) entries.add(street);
+        String fashion = Fashion.gazette(level, v, day);            // [fashion] the season's look, who set it, the show
+        if (fashion != null) entries.add(fashion);
+        String crime = Crime.gazette(level, id, day);              // [crime] the watch and the court
+        if (crime != null) entries.add(crime);
+        String disasters = Disasters.gazette(level, v, day);        // [disasters] the weather's danger, yesterday's fire or flood
+        if (disasters != null) entries.add(disasters);
+        String word = PlayerLeader.gazette(level, id, day);         // [player-civic] the leader's promises, kept and broken
+        if (word != null) entries.add(word);
+        String quests = QuestRun.gazette(id, day);                  // [quests] help wanted, and the week's deeds
+        if (quests != null) entries.add(quests);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();

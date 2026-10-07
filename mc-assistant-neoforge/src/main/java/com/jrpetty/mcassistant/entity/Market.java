@@ -171,7 +171,14 @@ public final class Market {
         good("Iron boots", Items.IRON_BOOTS, 7.0, 1, Villages.Task.NONE),
         new Good("Bed", s -> s.is(ItemTags.BEDS), 4.0, 1, Villages.Task.NONE),
         new Good("Rugs", s -> s.is(ItemTags.WOOL_CARPETS), 0.3, 4, Villages.Task.NONE),
-        new Good("Banner", s -> s.is(ItemTags.BANNERS), 2.5, 1, Villages.Task.NONE));
+        new Good("Banner", s -> s.is(ItemTags.BANNERS), 2.5, 1, Villages.Task.NONE),
+        // [pets] The cook's pet treats (Pets): sold at the shop, and bought of a player. Matched when asked, not at
+        // load: the item is registered after this list is made.
+        new Good("Pet treats", s -> s.is(McAssistantMod.PET_TREAT.get()), 0.15, 8, Villages.Task.NONE),
+        // [player-civic] The masters' own (CivicItems): read lazily, the items being registered after this list is made.
+        new Good("Reinforced pickaxe", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.REINFORCED_PICKAXE.get()), 11.0, 1, Villages.Task.NONE),
+        new Good("Brewer's stout", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.BREWERS_STOUT.get()), 1.2, 4, Villages.Task.NONE),
+        new Good("Farmhouse pie", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.FARMHOUSE_PIE.get()), 1.2, 4, Villages.Task.NONE));
 
     /** The café's drinks, each its own good; then the brewer's potions. */
     private static final List<Good> DRINKS_AND_POTIONS = drinksAndPotions();
@@ -789,6 +796,7 @@ public final class Market {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby()) continue;
             int over = f.purse() - 12;
             int due = over >= 10 ? over / 10 : 0;
+            due = PlayerLeader.tithe(id, over, due);                 // [player-civic] at the rate a player who leads set
             if (due <= 0 || !f.spend(due)) continue;
             in += due;
             gave++;

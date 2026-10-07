@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:paper"
+    },
+    {
+      "tag": "minecraft:pickaxes"
+    }
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:pick_banner_pattern"
+  }
+}

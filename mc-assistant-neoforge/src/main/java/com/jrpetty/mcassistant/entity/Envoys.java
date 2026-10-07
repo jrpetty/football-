@@ -489,6 +489,8 @@ public final class Envoys {
     static Answer answer(ServerLevel level, UUID host, UUID from, Errand errand, VillageFolkEntity envoy, Caravans.Trip t) {
         Answer war = WarAndPeace.answer(level, host, from, errand, envoy, t);   // [war-peace] yield, bargain or refuse; join; make peace
         if (war != null) return war;
+        Answer ruled = PlayerLeader.ruling(level, host, from, errand, envoy, t); // [player-civic] the answer a player who leads gave
+        if (ruled != null) return ruled;
         Temper ht = temper(host);
         int r = Ledger.relation(host, from);
         int chem = chemistry(host, from);

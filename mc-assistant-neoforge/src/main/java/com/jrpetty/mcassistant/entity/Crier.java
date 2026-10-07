@@ -219,6 +219,8 @@ public final class Crier {
             : toMarket == 1 ? "Market day tomorrow!" : "Market day in " + toMarket + " days.");
         String season = Seasons.cry(id, day);                       // [batchB] the day of the season, and tonight's festival
         if (season != null) out.add(season);
+        String danger = Disasters.cry(id, day);                      // [disasters] the weather's danger: a fire watch, the flood
+        if (danger != null) out.add(danger);
         List<Villages.Need> needs = Villages.needs(level, id);
         if (!needs.isEmpty()) {
             StringBuilder sb = new StringBuilder("The town is short of ");
@@ -226,6 +228,7 @@ public final class Crier {
             out.add(sb.append(" — any help is welcome.").toString());
         }
         out.addAll(Traditions.crierLines(level, v, day));          // [batchD] a custom kept today or tomorrow, the motto on a feast day
+        out.addAll(Crime.crierLines(level, v, day));               // [crime] the watch's appeal for witnesses, the court's verdict
         out.add(FolkTalk.pick(r, "That's the news! Long live " + town + "!", "That's all. Back to your dinners!",
             "That's the news. God keep " + town + "!"));
         return out;

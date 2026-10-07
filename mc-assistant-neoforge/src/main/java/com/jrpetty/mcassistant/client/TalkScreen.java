@@ -174,13 +174,14 @@ public class TalkScreen extends Screen {
     }
 
     private List<Choice> choices(Tab t) {
-        List<Choice> out = new ArrayList<>();
+        List<Choice> out = new ArrayList<>(questChoices());     // [quests] take it on, not now, a choice, hand it over: on every tab
         switch (t) {
             case TALK -> {
                 out.add(Choice.of("How are you?", TalkTopic.HOW));
                 out.add(Choice.of("Your work?", TalkTopic.DOING));
                 out.add(Choice.of("About you", TalkTopic.ABOUT));
                 out.add(Choice.of("Family?", TalkTopic.PEOPLE));
+                out.add(Choice.of("Your pet?", TalkTopic.PET, "Its household's dog or cat: how it is, what it gets up to; a pup or a kitten looking for a home"));   // [pets]
                 out.add(Choice.of("Your home?", TalkTopic.HOUSE, "Where it lives, who with, and whether the house is its own"));
                 out.add(Choice.of("Any news?", TalkTopic.VILLAGE));
                 out.add(Choice.of("Your hopes?", TalkTopic.DREAMS));
@@ -192,6 +193,7 @@ public class TalkScreen extends Screen {
                 out.add(new Choice("I'm sorry", TalkTopic.SAY, "I'm sorry", "Apologise for whatever you did"));
             }
             case ASK -> {
+                out.add(Choice.of("Any work?", TalkTopic.JOBS, "Ask if it has a quest for you: a favour of its own, the town's work, the war's, the caves', a story"));   // [quests]
                 out.add(Choice.of("Can I help?", TalkTopic.HELP, "Ask if there's an errand you could run for it"));
                 out.add(Choice.of("A favour?", TalkTopic.FAVOUR));
                 out.add(Choice.of("What's short?", TalkTopic.SHORT, "What the village is short of, and how you could help"));
@@ -214,11 +216,23 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Carry a letter", TalkTopic.LETTER, "Take a letter from the elder to the nearest neighbour's: both villages will think the better of you, and of each other"));
                 out.add(Choice.of("Out there", TalkTopic.ATLAS, "What the village's scouts have found: towns, ruins, peaks, ore — and which way"));
                 out.add(Choice.of("Underground", TalkTopic.CAVES, "What the town's cave dwellers have found: caves, ore, mineshafts, spawners, old chests — and where"));   // [caves]
+                out.add(Choice.of("Fashion", TalkTopic.FASHION, "What the town is wearing this season, who set it, and what this folk thinks of it"));   // [fashion]
+                // [caves] The cave team: ask it a way or an ore, go along with it, buy its map (CaveGuests, Lodge).
+                out.add(new Choice("Ask the delvers", TalkTopic.CAVES, "ask", "Ask the cave team to look a way or find something on its next trip: type it (\"look east\", \"find us diamonds\")"));
+                out.add(new Choice("Go caving", TalkTopic.SAY, "Can I come along with the cave team?", "Go down the caves with the cave team: it waits for you at its lodge at first light. Say \"for a share\" to take a share of the haul"));
+                out.add(new Choice("Cave map", TalkTopic.SAY, "Could I buy a copy of the cave map?", "A copy of the cave team's map, every cave it has found marked: a few coins, from one of the team at its lodge"));
                 out.add(Choice.of("My standing", TalkTopic.REPUTE));
                 out.add(Choice.of("Live here?", TalkTopic.CITIZEN, "Ask to become a citizen: a vote on the council and a house of your own"));
                 out.add(Choice.of("Pay a fine", TalkTopic.FINE, "Pay what you owe the village"));
+                out.add(Choice.of("Seen anything?", TalkTopic.WATCH, "A theft or a vandal: ask what it saw (a friend tells you what it would not "
+                    + "tell the watch). To a guard: the case it is on; hold what was dropped at the scene to hand it in, or type \"I saw Fen take it\""));   // [crime]
                 out.add(new Choice("The board", TalkTopic.OPEN, "", "Read the village board: what it is doing, how it is getting on, what it is working towards"));
                 out.add(new Choice("Suggest a build", TalkTopic.BUILD, "", "Type what you think the village should build next"));
+                // [player-civic] Standing for leader, the campaign, and the Leader's page.
+                out.add(new Choice("Stand for leader", TalkTopic.SAY, "I'd like to stand for election",
+                    "Put your name forward at the next election (a citizen the town counts a friend, at the board or the hall)"));
+                out.add(new Choice("Vote for me?", TalkTopic.SAY, "Will you vote for me?", "Canvass: it weighs what you stand for against what it cares for"));
+                out.add(new Choice("Leader's page", TalkTopic.SAY, "Show me the leader's page", "Your promises and powers, or the hustings if you don't lead"));
             }
             case DEAL -> {
                 out.add(new Choice("Give…", TalkTopic.GIFT, "", "Give it what you are holding"));
@@ -235,6 +249,10 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Godparent", TalkTopic.GODPARENT, "Ask a child if you may be its godparent (a friend of the village only)"));
                 out.add(Choice.of("Keepsake?", TalkTopic.KEEPSAKE, "A close friend gives you something of its own to remember it by"));
                 out.add(Choice.of("Feast on me", TalkTopic.SPONSOR, "Pay for a feast for the whole village tonight: ten coins and one for every mouth"));
+                // [player-civic] An apprenticeship with a master of its trade.
+                out.add(new Choice("Apprentice me", TalkTopic.SAY, "Will you take me as your apprentice?",
+                    "Learn its trade (a master of level 25 or more): lessons that open recipes, bonuses and titles"));
+                out.add(new Choice("My lesson", TalkTopic.SAY, "What's my next lesson?", "Your master's next lesson; hand over what it asked for"));
             }
             case MONEY -> {
                 out.add(new Choice("Order goods…", TalkTopic.BULK, "", "Order a quantity of anything at a tenth off: type what and how many"));
@@ -243,7 +261,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("The bank", TalkTopic.BANK, "Your account: at the town's bank once it has one (see the banker: \"deposit 20\", \"withdraw 10\", "
                     + "\"a mortgage on this house\" standing in an empty one), else at the treasury; \"borrow 30\", \"repay\" for the treasury's small loans"));
                 out.add(new Choice("Invest…", TalkTopic.INVEST, "", "Put coin into the village's works: two weeks' share of what it takes each day"));
-                out.add(Choice.of("Auction", TalkTopic.AUCTION, "Market day's lot: the village's finest spare thing, to the best bid (\"I bid 30\")"));
+                out.add(Choice.of("Auction", TalkTopic.AUCTION, "Market day's auction: the lots, the bids, your own goods put up (\"I bid 30\", \"put it up\")"));   // [fleet]
                 out.add(Choice.of("Escort", TalkTopic.ESCORT, "Guard the next caravan: walk with it and be paid at the other end"));
                 out.add(Choice.of("Charter route", TalkTopic.CHARTER, "Fifty coins for a trade route to the nearest neighbour: a tenth of every load sold on it is yours"));
                 out.add(Choice.of("Buy a house", TalkTopic.HOUSING, "The village's empty houses and their prices. Say \"buy this house\" standing in one, \"let my house for 3\", or \"my rent\""));
@@ -253,6 +271,21 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Mend this", TalkTopic.REPAIR, "The smith (or, with no smith, a smelter at its forge) mends the worn thing in your hand: its metal from the stores at the market's price, a unit a quarter of the wear, and a fee"));
             }
             default -> { }
+        }
+        return out;
+    }
+
+    /** [quests] The quest buttons the folk sent with its last answer (QuestClient): "label|TOPIC|text|tip" a line. */
+    private List<Choice> questChoices() {
+        List<Choice> out = new ArrayList<>();
+        for (String line : QuestClient.choicesFor(last.entityId()).split("\n")) {
+            String[] f = line.split("\\|", -1);
+            if (f.length < 4) continue;
+            try {
+                out.add(new Choice(f[0], TalkTopic.valueOf(f[1]), f[2], f[3]));
+            } catch (IllegalArgumentException ignored) {
+                // a topic from a newer server
+            }
         }
         return out;
     }
@@ -291,6 +324,11 @@ public class TalkScreen extends Screen {
         if (c.topic() == TalkTopic.BULK || c.topic() == TalkTopic.INVEST || c.topic() == TalkTopic.ORDER) {
             say.setValue(c.topic() == TalkTopic.BULK ? "I'd like to order 64 " : c.topic() == TalkTopic.INVEST ? "I'd like to invest 50 coins"
                 : "Make me an iron sword");
+            setFocused(say);
+            return;
+        }
+        if (c.topic() == TalkTopic.CAVES && "ask".equals(c.text())) {          // [caves] an ask of the cave team, finished yourself
+            say.setValue("Cave team, look east");
             setFocused(say);
             return;
         }

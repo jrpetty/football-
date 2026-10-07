@@ -128,6 +128,8 @@ public final class Merchants {
             if (sb.length() > 0) sb.append(',');
             sb.append(BuiltInRegistries.ITEM.getKey(w.item()).getPath());
         }
+        ItemStack curio = Auctions.curio(level, v, day);              // [fleet] a curio from far away, for the auction
+        if (!curio.isEmpty()) kit.add(curio);
         VillageFolkEntity f = Visitors.arrive(level, v, Visitors.Kind.MERCHANT, day, 0, 0, kit, "a merchant from far away");
         if (f == null) return null;
         Visitors.Visit vis = Visitors.visit(f);
@@ -189,6 +191,7 @@ public final class Merchants {
         }
         String bought = townBuys(level, town, f, v, day);
         if (!bought.isEmpty()) LOG.info("[MCA-VISIT] {} bought from the merchant {}: {}", name, v.name, bought);
+        Pets.merchant(level, town, f, day);                    // [pets] a pup or a kitten on its lead, for a household that wants one
     }
 
     static String list(List<String> words) {

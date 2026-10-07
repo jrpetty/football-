@@ -559,8 +559,10 @@ public final class Annals {
         if (WarFooting.ready(id)) out.put("war_footing", strings(WarFooting.page(level, id)));   // [war-prep] the News page's panel
         out.put("calendar", strings(TownCalendar.book(level, id)));   // the day's bells, Founding Day, birthdays (News)
         out.put("visitors", strings(Visitors.book(level, id)));       // [batchG] visitors, friends' visits, the map room, the dogs (News)
+        out.put("pets", strings(Pets.book(level, id)));               // [pets] the town's pets, their things, litters, the show (News)
         out.put("sport", strings(Sport.book(level, id)));             // [batchC] the pitch, the range, the league, the cup, the contests (News)
         out.put("civics", strings(Civics.book(level, id)));           // [batchF] the town's affairs (News)
+        out.put("civic_votes", strings(Referendums.book(level, id))); // [civic] votes, great works and newcomers (News)
         out.put("society", society(id, folk));
         out.put("league", league(level, v));
         out.put("production", production(level, v));
@@ -583,6 +585,11 @@ public final class Annals {
         out.put("trade", TradeDeals.report(level, v));             // [econ-trade] the Trade page: the book, the deals, the talks
         out.put("warmap", WarMap.report(level, v));              // [war-scouting] the war map: rivals, reports, pickets, spies
         out.put("caves", CaveDwellers.report(level, v));         // [caves] the caves' report: the Caves page
+        out.put("fashion", Fashion.report(level, v));            // [fashion] the season's look, who wears it, the tailor's book
+        out.put("crime", Crime.report(level, v));                // [crime] the casebook and the crime rate: the Cases page
+        out.put("auction", Auctions.report(level, v));           // [fleet] the auction and the fleet: the Auction page
+        out.getCompound("prices").putString("fleet", FishMarket.pricesLine(level, id));   // [fleet] the fish market, on the Prices page
+        out.put("library", Library.report(level, v));            // [library] the catalogue, the authors, the loans: the Library page
         out.put("transport", Transport.report(level, v));        // [transport] the lines, the carts, the ferry, the bridge
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
@@ -593,6 +600,7 @@ public final class Annals {
         out.put("causes", c);
         out.putInt("fires", fires(id));                          // [wf] the town's fires, and the last of them (FireBrigade)
         out.put("fire_log", strings(fireLog(id)));
+        out.put("disasters", strings(Disasters.book(level, id)));      // [disasters] fire, flood and drought (the News page)
         String[] page = VillageBoards.page(VillageBoards.compose(level, id));
         out.putString("board_title", page[0]);
         out.putString("board", page[1].length() > 20000 ? page[1].substring(0, 20000) : page[1]);

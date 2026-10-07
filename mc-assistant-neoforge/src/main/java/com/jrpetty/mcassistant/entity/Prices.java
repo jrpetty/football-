@@ -271,6 +271,11 @@ public final class Prices {
         upgrade(Items.DIAMOND_CHESTPLATE, Items.NETHERITE_CHESTPLATE);
         upgrade(Items.DIAMOND_LEGGINGS, Items.NETHERITE_LEGGINGS);
         upgrade(Items.DIAMOND_BOOTS, Items.NETHERITE_BOOTS);
+        // [fashion] A garment: its cloth by its recipe, and the tailor's cutting and stitching and its dye on top (Fashion.worth).
+        for (com.jrpetty.mcassistant.item.Garment g : com.jrpetty.mcassistant.item.Garment.values()) {
+            Double cloth = VALUE.get(g.item());
+            if (cloth != null) VALUE.put(g.item(), Fashion.worth(g, cloth, VALUE.getOrDefault(Items.RED_DYE, 0.1)));
+        }
     }
 
     private static void upgrade(Item from, Item to) {
@@ -419,5 +424,12 @@ public final class Prices {
         "bell 12.0 C", "enchanted_book 4.0 C", "written_book 2.5 C", "filled_map 1.5 C",
         "suspicious_stew 0.4 F", "tipped_arrow 0.5 C", "firework_star 0.5 C", "potion 1.0 C",
         "splash_potion 4.5 C", "lingering_potion 6.0 C",
+        // [pets] The pets' things (entity/Pets), made, not gathered, but their worth set here so the board, the shop and the
+        // makers agree on it: a little over what goes into each by its recipe (a bowl of planks and a bowl, a dog bed of
+        // planks and wool, a basket of sticks and wool, a collar of leather and string, four treats of wheat and meat).
+        "mc_assistant:pet_bowl 0.8 C", "mc_assistant:dog_bed 1.6 C", "mc_assistant:cat_bed 1.2 C", "mc_assistant:collar 1.4 C",
+        "mc_assistant:pet_treat 0.15 C",
+        // [crime] A forged coin is worth its scrap of copper and no more, whatever it was cast to pass for (Mischief).
+        "mc_assistant:forged_coin 0.1 C",
     };
 }
