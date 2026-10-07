@@ -67,6 +67,8 @@ public final class Asks {
         BUILDINGS.put("barracks", "barracks");
         BUILDINGS.put("monument", "monument");
         BUILDINGS.put("museum", "museum");
+        BUILDINGS.put("infirmary", "infirmary");          // [batchA] (Infirmary)
+        BUILDINGS.put("hospital", "infirmary");
     }
 
     /** The trade named in a line, or null. */

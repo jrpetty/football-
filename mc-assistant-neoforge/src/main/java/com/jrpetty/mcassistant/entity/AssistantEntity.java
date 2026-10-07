@@ -2158,6 +2158,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** What its years do to the pace of its work, in percent (village folk: the old are a little slower). */
     protected int ageWorkPercent() { return 0; }
 
+    /** [batchA] What its health leaves of the pace of its work, in percent of its own: a folk with a cold works at half
+     *  pace (VillageFolkEntity: Health). A multiplier on the time, as its diet is, not a part of the bonus. */
+    protected int healthPacePercent() { return 100; }
+
     /** How well its nature suits its trade, in percent (village folk: Skill). */
     protected int personalityWorkPercent() { return 0; }
 
@@ -2251,7 +2255,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      */
     public int pacedTicks(int ticks, int sharePercent) {
         int bonus = workBonusPercent() * sharePercent / 100;
-        return Math.max(1, ticks * (100 - bonus) / 100);
+        return Math.max(1, ticks * (100 - bonus) / 100 * 100 / Math.max(20, healthPacePercent()));   // [batchA] a cold, half pace
     }
 
     /** One part of the pace of its work, for its card: what, and how many percent it gives (or takes). */
@@ -2367,6 +2371,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         sb.append(": ").append(String.join(", ", why));
         if (dietPercent < 100) sb.append("; on its last meal it works at ").append(Math.max(20, dietPercent)).append("% of that");
+        if (healthPacePercent() < 100) sb.append("; with a cold, at ").append(healthPacePercent()).append("% of that");   // [batchA]
         if (deedCount(Deed.BLOCKS_BUILT) > 0) {
             sb.append("; at building, level ").append(buildingLevel()).append(", a block every ")
                 .append(String.format(java.util.Locale.ROOT, "%.2f", buildPaceHundredths() / 2000.0F)).append(" s");
@@ -2441,6 +2446,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         int pace = 600 * (100 - buildBonusPercent()) / 100;
         // The server's pace for village builders (config villageBuildSpeed, a percentage).
         if (isSettler()) pace = Math.max(100, Math.round(pace * 100.0F / com.jrpetty.mcassistant.AssistantConfig.villageBuildSpeed()));
+        pace = pace * 100 / Math.max(20, healthPacePercent());                       // [batchA] a cold: half pace (Health)
         // Hands lending it a hand (VillageFolkEntity.helpTheBuilder): a block a tick sooner for
         // each of the first three — a crew raises a house quicker than one builder alone.
         return Math.max(200, pace - 100 * Math.min(3, buildHelpers()));
@@ -4881,6 +4887,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // Diet is a multiplier on TIME, not on the bonus: at 30% pace a job
         // takes three times as long, which is what "works at 30% speed" means.
         ticks = ticks * 100 / Math.max(20, dietPercent);
+        ticks = ticks * 100 / Math.max(20, healthPacePercent());       // [batchA] a cold: half pace (Health)
         // A villager knows its own trade. The five seconds a block of stone takes a
         // recruit is how a hired crew is kept from reading as a machine; for the
         // people of a settlement it meant a village of twelve dug a hundred blocks in
@@ -4943,6 +4950,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // with an iron hoe the same veteran is a quarter quicker again.
         int ticks = base * (100 - bonus) / 100 * branchCooldownPercent() / 100;
         ticks = ticks * 100 / Math.max(20, dietPercent);
+        ticks = ticks * 100 / Math.max(20, healthPacePercent());       // [batchA] a cold: half pace (Health)
         if (isSettler()) ticks = ticks * 3 / 5;
         return Math.max(12, ticks);   // never faster than about half a second
     }

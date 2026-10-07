@@ -842,6 +842,7 @@ public final class Homes {
         h.since = day;
         moveIn(level, v, h, household, day, true);
         Villages.tell(id, day, names + " " + how);
+        Neighbourly.movedIn(level, id, h.anchor, household);     // [batchA] its friends and neighbours call this evening
         for (VillageFolkEntity f : household) {
             if (f.isBaby()) continue;
             f.persona().remember(day, (left.isEmpty() ? "we " : "I moved out and ") + how + " on day " + day, 6);
@@ -1304,6 +1305,8 @@ public final class Homes {
         boolean letOff = CityTree.rentFreeToday(id, baseRent(id, h), day);   // Cheap Homes: a small rent, one payday in five
         int due = (hard || free || letOff ? 0 : h.rent) + h.owed;
         int paid = take(household, h, due);
+        // [batchA] What it is short of, out of the poor box (a house where nobody earns, or a generous leader, lets it off anyway).
+        if (!hard && !generous(id)) paid += PoorBox.towardRent(id, household, due - paid, day);
         if (paid > 0) {
             Ledger.addCoins(id, paid);
             Economy.rent(id, paid);

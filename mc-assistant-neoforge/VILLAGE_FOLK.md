@@ -4692,3 +4692,55 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+## Health and care
+
+* **Colds.** A folk caught out in the rain or a thunderstorm with nothing over its head for a couple of
+  minutes in a day, or worked to the bone (a long stretch at its work with no break: a harvest that would
+  not wait, a hard-driving leader), may catch a cold. The odds are low (worse on a poor diet), a town has to
+  be settled first (three days old and six folk), and no town catches more than four in a week; a cold may
+  pass to the folk it lives with, a small chance a day. A folk with a cold works at half its pace (every clock
+  its trade keeps, and its building), coughs and sneezes now and then and into what it says, spends the first
+  quarter-day in bed, and goes to bed early of an evening. It is over it in a day or two, sooner in the
+  infirmary's beds or with the healer's care. A cold never kills anybody. The folk's card has a *Health*
+  line (since when, how it caught it, where it is lying, who has seen to it), its pace line says "with a
+  cold, at 50% of that", the town's books mark the ill on the Folk page ("(ill)", and how many at the foot),
+  and the chronicle hears of it only when three or more are down with it at once.
+* **The infirmary.** A Stone Age town of twenty or more builds one once its meeting hall stands: a timber
+  ward on a stone footing with four beds down its sides, a cauldron and a brewing stand at the back between
+  two barrels, and lanterns. Its beds are made up from the stores like a house's and kept for the sick:
+  nobody takes one as its own bed. A folk down to three fifths of its health, out of any fight, walks there,
+  lies down and mends half a heart more every eight seconds than it would on its own (twice the pace), and
+  gets up nine tenths whole. A folk with a cold lies there in preference to its own bed, and its cold runs
+  out twice as fast.
+* **The healer.** The care of the sick is a works of the town's (the brewer first, else a hand the town can
+  spare): about once a minute somebody goes round the infirmary's patients and visits the bedridden at home,
+  with a honey bottle, a golden carrot, sweet berries or the brewer's healing potion out of the stores (the
+  bottle goes back). With none of those in the stores it sits with them a while anyway: rest and company do a
+  little good. The patient remembers who looked after it, and likes it the better. Keep honey and golden
+  carrots in the stores to see colds off quickly.
+* **Neighbours look after the old.** Every day somebody looks in on each very old (eighty and over) or frail
+  folk: one of its family if there is one, else a friend, else a neighbour it gets on with. In its own time it
+  fetches a meal from the stores (the old one's favourite, if there is one), carries it over, hands it to the
+  old one and sits down with it a while. They are the fonder of each other, and both remember it. An old
+  folk's card says it is looked in on.
+* **The poor box.** In the chapel (the meeting hall until there is one) there is a poor box. Once a week every
+  well-off folk walks there and puts a coin in out of its own purse (a wealthy one two, a generous one one more).
+  On payday a household that cannot make its rent has what it is short of paid out of the box, and a poor folk
+  with next to nothing to eat walks to the café (or the shop, or the stores) for a loaf the box pays for, at the
+  counter's price. The box's coin is its own, never the treasury's; the books' Money page shows what is in it,
+  what went in this week and from how many, and what came out for rent and bread.
+* **Housewarming.** The evening a household moves into a house that is new to it, its friends and neighbours
+  call at the door with a small present (a flower, a loaf or a candle out of their own packs, or bought at the
+  stores out of their own purses). The household comes out to meet them, and everybody remembers the
+  housewarming. (The founders, who all move in together, have nobody to call.)
+* **The welcome committee.** A newcomer (taken on at the job market, taken in after a raid, a villager the
+  town took in, a folk stood up in a town a day old or more) is greeted within the day by the elder, or else
+  the friendliest folk in the town, and walked round: the heart of the town, the stores (where it is handed a
+  welcome basket out of them: a loaf, a torch and a flower, whatever of them there is) and its new home.
+  Put a few loaves, torches and flowers in the stores and every newcomer gets the lot.
+
+`/village care` says who is ill and how, the infirmary and its beds, the day's care, the poor box, and the
+day's visits, welcomes and housewarmings. Operators: `/village care cold` gives the nearest folk a cold, and
+`/village care stage` sets an infirmary out where you stand, its beds full, for a look inside.
+
+Tested by `HealthCareGameTests` (hc01 to hc07).

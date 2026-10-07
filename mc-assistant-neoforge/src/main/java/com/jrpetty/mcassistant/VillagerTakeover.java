@@ -196,6 +196,11 @@ public final class VillagerTakeover {
         folk.joinVillage(village.id(), village.centre());
         level.addFreshEntity(folk);
         Villages.recordBirth(village.id());
+        // [batchA] Taken into a town a day old or more (not one the villagers found together): a welcome (Neighbourly).
+        long founded = com.jrpetty.mcassistant.village.Chronicle.foundedOn(village.id());
+        if (founded >= 0 && level.getDayTime() / 24000L - founded >= 1) {
+            com.jrpetty.mcassistant.entity.Neighbourly.arrived(level, village.id(), folk, "a villager the town took in");
+        }
         keepAwake(level, village);
         // Its own chunk and the ones round it, read off NOW, while it is
         // certainly loaded — each chunk once per village, ever.

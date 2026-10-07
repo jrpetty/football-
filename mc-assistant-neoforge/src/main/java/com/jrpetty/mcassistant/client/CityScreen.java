@@ -436,6 +436,22 @@ public class CityScreen extends Screen {
             small(g, Ui.clip(font, "No bank yet: a town of " + bank.getInt("from") + " in the Iron Age builds one, to keep its savings and lend toward houses.",
                 (int) (half / 0.75)), bx, by + 18, Ui.FAINT);
         }
+        // [batchA] The poor box (PoorBox): what is in it, what went in this week and from how many, what came out for rent and bread.
+        CompoundTag box = data.getCompound("care").getCompound("poorbox");
+        int boxY = by + (bank.getBoolean("stands") ? 18 : 27);
+        if (box.contains("coins") && boxY + 18 < y + ch) {
+            String line = !box.getBoolean("stands") ? "The poor box: none yet (it goes in the meeting hall, or the chapel)."
+                : "The poor box in " + box.getString("where") + ": " + box.getInt("coins") + "c in it. This week " + box.getInt("week_in")
+                    + "c from " + box.getInt("week_givers") + " well-off folk; out " + box.getInt("week_rent") + "c toward rent, "
+                    + box.getInt("week_loaves") + (box.getInt("week_loaves") == 1 ? " loaf" : " loaves") + " (" + box.getInt("week_bread")
+                    + "c) for the hard-up.";
+            int ly = boxY;
+            for (FormattedCharSequence l : font.split(Component.literal(line), (int) (half / 0.75))) {
+                if (ly > y + ch - 8) break;
+                small(g, l, bx, ly, Ui.MUTED);
+                ly += 9;
+            }
+        }
     }
 
     /**
@@ -1248,7 +1264,8 @@ public class CityScreen extends Screen {
             CompoundTag p = people.get(i);
             g.fill(x - 2, ry - 1, x + cw, ry + 9, p.getBoolean("leader") ? Ui.ROW_PICK : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
             Ui.chip(g, x, ry, Ui.job(p.getInt("ordinal")));
-            String[] cells = { p.getString("name") + (p.getBoolean("leader") ? " ★" : ""), p.getString("trade"), Integer.toString(p.getInt("level")),
+            String[] cells = { p.getString("name") + (p.getBoolean("leader") ? " ★" : "") + (p.getString("ill").isEmpty() ? "" : " (ill)"),   // [batchA]
+                p.getString("trade"), Integer.toString(p.getInt("level")),
                 p.getInt("years") + "y", p.getString("wealth").isEmpty() ? "—" : p.getInt("purse") + "c", p.getInt("wage") + "c", p.getInt("made") + "c",
                 Integer.toString(p.getInt("mood")), p.getString("type"),
                 p.getString("wealth").isEmpty() ? "a child" : p.getInt("worth") + "c · " + p.getString("wealth") };
@@ -1263,6 +1280,7 @@ public class CityScreen extends Screen {
                 if (p.getInt("comforts") > 0) tip.add(Component.literal("The comforts of home: " + p.getInt("comforts") + "c"));
                 tip.add(Component.literal("Net worth: " + p.getInt("worth") + "c — " + p.getString("wealth")).withColor(0x9EE07A));
                 tip.add(Component.literal("Paid " + p.getInt("wage") + "c a day; " + p.getInt("earned") + "c earned in all").withColor(0x9AA3B2));
+                if (!p.getString("ill").isEmpty()) tip.add(Component.literal("Ill: " + p.getString("ill")).withColor(0xE0A070));   // [batchA]
                 hover = tip;
                 hoverX = mx;
                 hoverY = my;
@@ -1283,7 +1301,9 @@ public class CityScreen extends Screen {
         }
         StringBuilder bs = new StringBuilder();
         for (var e : bands.entrySet()) bs.append(bs.length() == 0 ? "" : ", ").append(e.getValue()).append(' ').append(e.getKey());
-        small(g, Ui.clip(font, people.size() + " folk (" + bs + "); " + purses + " coins loose in purses · the mouse over a row for its money laid out"
+        int ill = 0;                                                                         // [batchA] who is ill (Health)
+        for (CompoundTag p : people) if (!p.getString("ill").isEmpty()) ill++;
+        small(g, Ui.clip(font, people.size() + " folk (" + bs + "); " + (ill > 0 ? ill + " ill; " : "") + purses + " coins loose in purses · the mouse over a row for its money laid out"
             + " · click a heading to sort · ★ the leader", (int) (cw / 0.75)), x, y + ch - 10, Ui.FAINT);
         if (playerRows > 0) {
             int py = y + ch + 2;

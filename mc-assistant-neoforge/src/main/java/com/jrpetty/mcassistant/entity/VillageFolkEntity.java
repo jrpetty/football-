@@ -384,6 +384,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // [wf] A thunderstorm: indoors, everybody but the watch, and there till it has passed (Weather).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel stormLevel
                 && Weather.shelter(this, stormLevel)) return;
+        // [batchA] Laid up: a cold or its wounds, in bed at the infirmary or at home, and kept there (Health).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel careLevel && Health.hold(this, careLevel)) return;
         // The village coming together (Assemblies): the bell rung, it goes, finds a place and takes part.
         if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel gathering
                 && Assemblies.attend(this, gathering)) {
@@ -420,6 +422,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // at bedtime; the children's games of an afternoon. Between its looks, nothing else takes the folk away.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel family
                 && (tickCount % 4 == 2 ? Families.hold(this, family) : Families.busy(this))) return;
+        // [batchA] A neighbour's errand: the old visited, a newcomer shown round, a housewarming, the poor box (Neighbourly).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel kind
+                && (tickCount % 4 == 1 ? Neighbourly.hold(this, kind) : Neighbourly.busy(this))) return;
         if (tickCount - agendaTick < 100) return;   // folk think slowly, on purpose
         agendaTick = tickCount;
         flyTheColours();
@@ -439,6 +444,8 @@ public class VillageFolkEntity extends AssistantEntity {
                     Elections.tick(polls, home);
                     Homes.tick(polls, home);
                     Families.tick(polls, home);          // pets, gardens, graves visited, anniversaries (Families)
+                    Health.tick(polls, home);            // [batchA] colds passed round, the healer's round (Health)
+                    Neighbourly.tick(polls, home);       // [batchA] the old, newcomers, housewarmings, the poor box (Neighbourly)
                     Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
                 }
             }
@@ -467,6 +474,10 @@ public class VillageFolkEntity extends AssistantEntity {
     // Leisure (what it does with its own time).
 
     private final Persona persona = new Persona();
+    /** [batchA] Its health: a cold, laid up in bed, who has seen to it (Health). Saved with it. */
+    private final Health.State health = new Health.State();
+
+    public Health.State health() { return health; }
     /** Who its parents are (Homes): by their ids, for children born from now on. */
     private final java.util.List<UUID> parentIds = new java.util.ArrayList<>();
 
@@ -1103,6 +1114,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = FolkSkills.mood(this, m, why);              // Bright Spirit, a bright friend near, Unflappable's floor
         m = Birthdays.mood(this, day, m, why);          // its birthday (Birthdays)
         m = Families.mood(this, day, m, why);           // its wedding anniversary (Families)
+        m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -1121,6 +1133,12 @@ public class VillageFolkEntity extends AssistantEntity {
         // How the village is doing, and how the leader drives it (Leader.pace). (Old age was
         // counted in here too; it is its own part of the pace now, ageWorkPercent.)
         return Contentment.workPercent(ownerId()) + Leader.pace(ownerId());
+    }
+
+    /** [batchA] A cold halves the pace of its work (Health). */
+    @Override
+    protected int healthPacePercent() {
+        return Health.pacePercent(this);
     }
 
     /** The village's part of the pace on its card: the town's spirits and its leader's drive, each on its own. */
@@ -2024,6 +2042,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // household has no need of, which a folk with none of its own may lodge in.
         if (village == null) return true;
         if (Villages.inAGuestHouse(village, pos)) return false;
+        if (Infirmary.isInfirmaryBed(village, pos)) return false;     // [batchA] kept for the sick and the hurt
         return level() instanceof net.minecraft.server.level.ServerLevel server
             ? !Homes.someoneElses(server, village, pos, this) : !Homes.someoneElses(village, pos, this);
     }
@@ -2404,6 +2423,8 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     public boolean onShift() {
+        // [batchA] Laid up in bed (Health): no work till it is up.
+        if (Health.laidUp(this)) return false;
         // Fetching a horse or putting one away (Stables): seen through before bed.
         if (Stables.busy(this)) return true;
         // Walking with the leader (Patrols, by day only): that is the work, assembly or none.
@@ -7510,7 +7531,7 @@ public class VillageFolkEntity extends AssistantEntity {
     /** [wf] At a fire (FireBrigade), or in out of a thunderstorm (Weather): its own work waits. */
     @Override
     protected boolean calledAway() {
-        return FireBrigade.onIt(this) || Weather.sheltering(this);
+        return FireBrigade.onIt(this) || Weather.sheltering(this) || Health.laidUp(this) || Neighbourly.busy(this);   // [batchA]
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */
@@ -7692,6 +7713,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (showcase) tag.putBoolean("Showcase", true);
         tag.put("Meals", meals.save());
+        Health.save(this, tag);                         // [batchA]
         if (productionChest != null) tag.putLong("ProductionChest", productionChest.asLong());
         if (oldProductionChest != null) tag.putLong("OldProductionChest", oldProductionChest.asLong());
         tag.putLong("BornDay", bornDay);
@@ -7762,6 +7784,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (tag.contains("Persona")) persona.load(tag.getCompound("Persona"));
         this.showcase = tag.getBoolean("Showcase");
         if (tag.contains("Meals")) meals.load(tag.getCompound("Meals"));
+        Health.load(this, tag);                         // [batchA]
         this.productionChest = tag.contains("ProductionChest") ? BlockPos.of(tag.getLong("ProductionChest")) : null;
         this.oldProductionChest = tag.contains("OldProductionChest") ? BlockPos.of(tag.getLong("OldProductionChest")) : null;
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;

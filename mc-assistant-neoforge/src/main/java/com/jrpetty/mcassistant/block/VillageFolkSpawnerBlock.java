@@ -172,6 +172,8 @@ public class VillageFolkSpawnerBlock extends Block {
         if (founding || founded >= 0 && server.getDayTime() / 24000L - founded <= 1) folk.rentFree(true);
         server.addFreshEntity(folk);
         Villages.recordBirth(village.id());
+        // [batchA] One stood up in a town already standing (not the founders): somebody comes to welcome it (Neighbourly).
+        if (!folk.rentFree()) com.jrpetty.mcassistant.entity.Neighbourly.arrived(server, village.id(), folk, "stood up in the town");
         if (founding) {
             // The founding stores, and the ground kept awake — the same start
             // a village the world grew gets. `at` is a free ground-level spot,

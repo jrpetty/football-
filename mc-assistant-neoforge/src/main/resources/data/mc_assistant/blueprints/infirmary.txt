@@ -1,0 +1,127 @@
+# The infirmary: a timber ward on a stone footing and a stone lower course, under a steep roof that
+# runs from the gable over the door to the back, tall windows down both sides for the light and the air.
+# Four beds, two down each side with their heads to the wall and the aisle clear between them; at the
+# back a cauldron and the brewer's brewing stand between two barrels, a lantern standing on each barrel.
+# Two lanterns hang under the ceiling over the beds' heads, one on each side (entity/Infirmary, Health).
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name infirmary
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+....k....
+layer 0
+.........
+.LwwwwwL.
+.wQ&.IQw.
+.w.....w.
+.w.[.].w.
+.w.....w.
+.w.[.].w.
+.w.....w.
+.w.....w.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.Wl...lW.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.LGW.WGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.LWWWWWL.
+.........
+layer 3
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.Wj....W.
+.W.....W.
+.W....jW.
+.W.....W.
+.W.....W.
+.LWWWWWL.
+.........
+layer 4
+>.......<
+>L-----L<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>L-----L<
+>.......<
+layer 5
+.>.....<.
+.>WWWWW<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>WWWWW<.
+.>.....<.
+layer 6
+..>...<..
+..>WWW<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>WWW<..
+..>...<..
+layer 7
+...>.<...
+...>W<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>W<...
+...>.<...
+layer 8
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
