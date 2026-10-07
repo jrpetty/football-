@@ -144,6 +144,8 @@ public final class InterviewBook extends SavedData {
         String good = "";
         /** It wrote a letter of application (out of its town's stores, at its own cost), and what it says. */
         boolean letter;
+        /** Why it has no letter, in its own words ("there was no ink to be had"); not kept (it is asked again). */
+        String noLetter = "";
         String letterWords = "";
         /** Came to the interview; could not come (its letter read out); set off for it; got there. */
         boolean absent, setOff, arrived;

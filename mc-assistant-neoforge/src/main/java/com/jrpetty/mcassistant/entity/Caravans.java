@@ -247,6 +247,7 @@ public final class Caravans {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (!(a instanceof VillageFolkEntity f) || !f.isAlive() || f.isBaby() || f.isSleeping() || f.trip() != null) continue;
             if (f.stationTask() == AssistantEntity.StationTask.GUARD) continue;
+            if (Interviews.busy(f) || Interviews.shortlisted(f)) continue;      // [interviews] it stays for its interview
             now = f.level().getGameTime();
             if (Villages.holdsTheLead(v.id(), f.getUUID(), now)) continue;
             double score = f.blockPosition().distSqr(v.centre());
