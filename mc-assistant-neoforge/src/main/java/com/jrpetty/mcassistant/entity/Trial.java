@@ -110,6 +110,8 @@ final class Trial {
         SEATED.clear();
         SWEEP.clear();
         PATHED.clear();
+        STOPS.clear();
+        STOPS_AT.clear();
     }
 
     // ------------------------------------------------------------------ the round
@@ -117,6 +119,14 @@ final class Trial {
     /** The round (Crime.tick): a sitting opened for the oldest case awaiting trial, the sentenced seen to, the stocks jeered. */
     static void tick(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
+        // A sitting is not kept over a restart: a case left before the council goes back to await it.
+        Sitting sat = SITTINGS.get(id);
+        for (Case c : Crime.open(id)) {
+            if (c.stage == Stage.TRIAL && (sat == null || sat.caseId != c.id)) {
+                c.stage = Stage.ACCUSED;
+                Crime.changed();
+            }
+        }
         if (!SITTINGS.containsKey(id) && courtHours(level)) {
             for (Case c : Crime.open(id)) {
                 if (c.stage != Stage.ACCUSED) continue;
@@ -911,7 +921,7 @@ final class Trial {
             return "mending " + c.brokeWhat;
         }
         // Sweeping the streets: the watch's stops, one after another, a few minutes' sweeping at each.
-        List<BlockPos> stops = Patrols.stops(level, v);
+        List<BlockPos> stops = stops(level, v);
         if (stops.isEmpty()) return null;
         long gt = level.getGameTime();
         long[] sw = SWEEP.computeIfAbsent(f.getUUID(), k -> new long[]{ f.getRandom().nextInt(stops.size()), -1 });
@@ -931,6 +941,20 @@ final class Trial {
             sw[1] = -1;
         }
         return "sweeping the streets (community work)";
+    }
+
+    /** The streets to sweep (the watch's stops), worked out once in a while. */
+    private static final Map<UUID, List<BlockPos>> STOPS = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> STOPS_AT = new ConcurrentHashMap<>();
+
+    private static List<BlockPos> stops(ServerLevel level, Villages.Village v) {
+        long now = level.getGameTime();
+        List<BlockPos> known = STOPS.get(v.id());
+        if (known != null && now - STOPS_AT.getOrDefault(v.id(), -100000L) < 2400L) return known;
+        List<BlockPos> fresh = List.copyOf(Patrols.stops(level, v));
+        STOPS.put(v.id(), fresh);
+        STOPS_AT.put(v.id(), now);
+        return fresh;
     }
 
     /** What lies loose in the street by it (never a player's, never a clue), into the stores. */

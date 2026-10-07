@@ -660,16 +660,14 @@ public final class Crime extends SavedData {
         of().setDirty();
     }
 
-    /** Everything forgotten (the tests share one world; Villages.resetForTests). */
+    /**
+     * What is only memory forgotten (Villages.resetForTests: between the tests, and when a world opens or closes). The
+     * books kept with the world are not touched: SessionReset calls this as every world starts, and a casebook wiped
+     * then would be a town's whole history of crime lost at each restart. Every case and record is the town's or the
+     * folk's own by its id, so one test's never touches another's.
+     */
     public static void resetForTests() {
-        Crime c = of();
-        c.cases.clear();
-        c.folk = new CompoundTag();
-        c.towns = new CompoundTag();
-        c.next = 0;
-        c.setDirty();
         HELD.clear();
-        DAILY.clear();
         HONESTY_FOR_TESTS.clear();
         hurry = false;
         Mischief.resetForTests();
@@ -791,9 +789,6 @@ public final class Crime extends SavedData {
 
     // ------------------------------------------------------------------ the round of the towns
 
-    /** The day each town last had its morning's look (temptations, debts). */
-    private static final Map<UUID, Long> DAILY = new ConcurrentHashMap<>();
-
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         int tick = event.getServer().getTickCount();
@@ -820,8 +815,10 @@ public final class Crime extends SavedData {
     public static void tick(ServerLevel level, Villages.Village v) {
         long now = level.getDayTime(), day = now / 24000L, t = now % 24000L;
         UUID id = v.id();
-        if (t >= 1000L && DAILY.getOrDefault(id, -1L) != day) {
-            DAILY.put(id, day);
+        CompoundTag town = town(id);
+        if (t >= 1000L && (!town.contains("morning") || town.getLong("morning") != day)) {
+            town.putLong("morning", day);            // kept with the world: a restart does not roll the day's temptations twice
+            changed();
             com.jrpetty.mcassistant.Guard.run("the day's temptations", () -> Mischief.daily(level, v, day));
             com.jrpetty.mcassistant.Guard.run("debts paid back", () -> Trial.debts(level, v, day));
             prune(id, day);
@@ -1269,8 +1266,10 @@ public final class Crime extends SavedData {
         }
         // A witness, or one who was about.
         for (Case c : open(village)) {
-            if (c.witness(f.getUUID()) == null && c.nearOf(f.getUUID()) == null && !f.getUUID().equals(c.victim)) continue;
-            if (f.getUUID().equals(c.investigator) || c.stage == Stage.UNNOTICED && !f.getUUID().equals(c.culprit) && c.witness(f.getUUID()) == null) continue;
+            boolean involved = c.witness(f.getUUID()) != null || c.nearOf(f.getUUID()) != null || f.getUUID().equals(c.victim);
+            if (!involved || f.getUUID().equals(c.investigator)) continue;
+            // Before anybody has noticed, only one who saw it (or did it) has anything to say about it.
+            if (c.stage == Stage.UNNOTICED && c.witness(f.getUUID()) == null && !f.getUUID().equals(c.culprit)) continue;
             String said = Inquiry.answerPlayer(level, v, c, f, p);
             if (said != null) return said;
         }
@@ -1291,6 +1290,28 @@ public final class Crime extends SavedData {
         int[] month = month(village, day);
         return month[0] == 0 ? FolkTalk.pick(f.getRandom(), "Amiss? Not round here. It's a decent town.", "Nothing that I've seen. The watch keeps the streets quiet.")
             : "Not that I saw. There's been " + month[0] + (month[0] == 1 ? " bit" : " bits") + " of trouble this month, mind.";
+    }
+
+    /** What the town whispers (FolkTalk.gossipFor): a thief about, who was had up before the council, who sat in the stocks. */
+    public static List<String> gossip(VillageFolkEntity f) {
+        List<String> out = new ArrayList<>();
+        UUID village = f.ownerId();
+        if (village == null) return out;
+        long day = f.level().getDayTime() / 24000L;
+        for (Case c : cases(village)) {
+            if (c.stage == Stage.UNNOTICED || day - c.day > 6) continue;
+            if (c.stage.open() && !f.getUUID().equals(c.culprit)) {
+                out.add(c.kind == Kind.VANDALISM ? "Somebody's been breaking things — " + c.brokeWhat + " at " + c.place + ". Who'd do a thing like that?"
+                    : "There's a thief about. Keep your purse close" + (c.kind == Kind.PICKPOCKET ? ", 'specially at " + c.place : "") + ".");
+            } else if (c.stage == Stage.CONVICTED && c.accused != null && !f.getUUID().equals(c.accused)) {
+                out.add(c.sentence.contains("stocks") ? c.accusedName + " sat in the stocks for it. Couldn't look anybody in the eye."
+                    : "It was " + c.accusedName + " all along, at " + c.place + ". I'd never have thought it.");
+            } else if (c.stage == Stage.ACQUITTED && c.cleared.size() > 0) {
+                out.add("They had somebody up before the council over " + c.place + ", and the council cleared them. Whoever did it is still about.");
+            }
+            if (out.size() >= 2) break;
+        }
+        return out;
     }
 
     /** The case a thing was dropped at, or 0. */

@@ -842,6 +842,8 @@ final class Inquiry {
         c.statements.add(st);
         c.helped(p);
         c.note(day, p.getName().getString() + " asked " + f.displayNameCap() + ", who said: \"" + st.text() + "\"");
+        // Having told somebody, a witness who saw who it was goes to the watch with it too.
+        if (c.stage == Stage.UNNOTICED && st.named != null) Crime.report(level, v, c, f.displayNameCap());
         Crime.listeners(l -> l.helped(p, v.id(), c.id, "asked a witness"));
         Crime.changed();
         return st.text() + (st.named != null || !st.outfit.isEmpty() ? " You'd best tell the watch." : "");

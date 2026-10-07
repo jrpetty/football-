@@ -1222,7 +1222,9 @@ public final class FolkTalk {
         // [crime] The watch's business: a theft, a vandal, what a witness saw, a thing found at the scene.
         if (has(t, "theft", "thief", "steal", "stole", "robbed", "robber", "pickpocket", "vandal", "crime", "witness", "who did it",
                 "anything amiss", "seen anything", "report a", "the culprit", "evidence", "found this", "a clue", "forged", "forger",
-                "poach", "smuggl", "constable", "the stocks", "suspect")) return TalkTopic.WATCH;
+                "poach", "smuggl", "constable", "the stocks", "suspect")
+                || has(t, "i saw") && has(t, " take", " took", " steal", " stole", " broke", " break", " smash", " pinch", " nick",
+                    " did it", " do it", " purse", " window", " lamp", " fence")) return TalkTopic.WATCH;
         // [players] Before "could I have" (the stores) and "where is" (the guide): a map, and the Lost and Found.
         if (has(t, "map of the town", "map of town", "map of the village", "town map", "village map", "a map of", "a map please",
                 "draw me a map")) return TalkTopic.TOWN_MAP;
@@ -1431,6 +1433,7 @@ public final class FolkTalk {
         }
         List<Villages.News> n = Villages.news(village);
         if (!n.isEmpty()) said.add("Did you hear? " + cap(n.get(0).text()) + ".");
+        said.addAll(Crime.gossip(f));                   // [crime] a thief about, who was had up, who sat in the stocks
         if (said.isEmpty()) return pick(r, "Nothing worth repeating. It's been quiet.", "Gossip? Me? Never.");
         String line = said.get(r.nextInt(said.size()));
         if (f.life().has(Social.Trait.SHY)) line = "Oh — well, I shouldn't, but… " + line;

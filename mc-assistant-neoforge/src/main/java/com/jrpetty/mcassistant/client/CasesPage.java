@@ -31,8 +31,8 @@ public final class CasesPage {
     public static List<Component> draw(GuiGraphics g, Font font, CompoundTag m, int x, int y, int w, int h, int scroll, int mx, int my) {
         ListTag cases = m.getList("cases", Tag.TAG_COMPOUND);
         int cy = y;
-        Ui.section(g, font, "The watch's casebook — " + m.getInt("month") + (m.getInt("month") == 1 ? " crime" : " crimes") + " in the last 28 days, "
-            + m.getInt("solved") + " solved, " + m.getInt("unsolved") + " given up: " + m.getInt("rate") + " in every 100 folk", x, cy, w);
+        head(g, font, "Casebook: " + m.getInt("month") + (m.getInt("month") == 1 ? " crime" : " crimes") + " in 28 days, "
+            + m.getInt("solved") + " solved, " + m.getInt("unsolved") + " given up — " + m.getInt("rate") + " in every 100 folk", x, cy, w);
         cy += 12;
         // The eight weeks, and what keeps crime down.
         int chartW = Math.min(150, w / 3), chartH = 44;
@@ -51,7 +51,7 @@ public final class CasesPage {
         }
         cy += chartH + 10;
         if (cases.isEmpty()) {
-            Ui.section(g, font, "No cases", x, cy, w);
+            head(g, font, "No cases", x, cy, w);
             small(g, font, "Nothing has been reported to the watch. Folk who are poor, hungry, low or bitter, and not honest enough to let it go,", x + 4, cy + 14, Ui.FAINT);
             small(g, font, "may pick a purse, take from a chest or break a window. The watch looks into it, and the council tries the culprit.", x + 4, cy + 23, Ui.FAINT);
             return tip;
@@ -60,7 +60,7 @@ public final class CasesPage {
         int lw = Math.max(110, w * 34 / 100), rows = Math.max(1, (y + h - cy - 12) / 10);
         int pick = Math.max(0, Math.min(scroll / 3, cases.size() - 1));       // the wheel moves three a notch: a case a notch
         int start = Math.max(0, Math.min(pick - rows / 2, cases.size() - rows));
-        Ui.section(g, font, "Cases (scroll to pick)", x, cy, lw);
+        head(g, font, "Cases (scroll to pick)", x, cy, lw);
         int ly = cy + 12;
         for (int i = start; i < cases.size() && i < start + rows; i++) {
             CompoundTag c = cases.getCompound(i);
@@ -76,7 +76,7 @@ public final class CasesPage {
         // The case file.
         CompoundTag c = cases.getCompound(pick);
         int fx = x + lw + 8, fw = w - lw - 8, fy = cy, bottom = y + h;
-        Ui.section(g, font, "Case file: " + c.getString("title"), fx, fy, fw);
+        head(g, font, "Case file: " + c.getString("title"), fx, fy, fw);
         fy += 12;
         List<String[]> body = new ArrayList<>();
         body.add(new String[]{ "N", c.getString("what") + ", " + c.getString("hour") + " on day " + c.getLong("day") + "." });
@@ -107,6 +107,13 @@ public final class CasesPage {
             }
         }
         return tip;
+    }
+
+    /** A section heading, cut to the width it has (Ui.section writes it in capitals, which run wide). */
+    private static void head(GuiGraphics g, Font font, String label, int x, int y, int w) {
+        String cut = label;
+        while (cut.length() > 4 && font.width(cut.toUpperCase()) > w - 12) cut = cut.substring(0, cut.length() - 1);
+        Ui.section(g, font, cut.length() < label.length() ? cut.trim() + "…" : label, x, y, w);
     }
 
     private static void section(List<String[]> body, String title, ListTag l, String none) {
