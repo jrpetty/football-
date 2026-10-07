@@ -4692,3 +4692,102 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+## Culture and identity
+
+Every town ends up with a look and a voice of its own: a banner, a motto, its own customs, its own
+plays, its own band, pictures on its walls and plaques where things happened. All of it is in the
+town's books on the new **Culture** page (the last tab; `/village stats 21`), and `/village culture`
+says it all in chat.
+
+* **The town's banner.** When a town is founded it draws its banner, once and for good. The base colour
+  comes from its land: blue for the coast, pale blue for a river, green for the forest, white for the
+  snowfields, grey for the mountains, yellow for the desert, and so on. On it go two or three patterns.
+  One is for the land itself where it has one (the sea's edge, a river's bend, a snowy peak, the desert
+  sun). One is for the town's name, in the town's colours: a band of water for a ford or a brook, a pale
+  for an oak or an ash, stonework for a Stonebury. The last is for the nature of whoever led it then: a
+  hard worker's border, a cheerful leader's chief, a curious one's lozenge. The tailor makes it as you
+  would, a banner of the base colour and a dye for each pattern at the loom, all out of the stores. A
+  hand at the town's works then hangs it, one at a time: either side of the hall's door, on a post of
+  each gate, on the market's front posts and over the theatre's stage. The Culture page draws it large,
+  says it in words, lists where it hangs and says what it is waiting for ("short of 2 red dye").
+* **A copy for yourself.** Once there is a shop, a sign goes up beside its door: "Our banner". If you are
+  a citizen of the town, right-click it and the tailor makes you a copy there and then, out of the
+  stores, for the price of what goes into it and a little for the work. The coin goes into the
+  treasury. Nobody else may fly it.
+* **The motto.** It is chosen with the banner, out of the land and what the town cares about most (its
+  leader's heart, or most of its folk's): "By the river, for each other", "Out of the rock, the gate
+  holds". Once the hall stands, a hand carves it on a sign over the hall's door. The crier cries it on
+  feast days: the weekly feast, Founding Day, a celebration, a wedding, the day of rest. The board's foot
+  shows the banner and the motto.
+* **Customs.** A town's great days become yearly customs, kept on their anniversary in the town's year
+  of four weeks. Its founding is always the first. The others are the night the raiders were beaten off
+  at a gate, a great storm (most of a minute of thunder over the town) and the first diamond out of its
+  mines. A town keeps three customs at most, each in its own way:
+  * *a minute's silence* at the dusk bell, for those who fell in a raid. The bell tolls, and every grown
+    folk stops where it is, faces the bell with its head bowed and stays quiet for a minute, until the
+    bell sounds again;
+  * *lanterns lit on the square* for the founding and for a great storm. Before dusk a hand sets lanterns
+    round the square out of the stores (torches if there are none) and takes them in the next morning;
+  * *a toast at the tavern* for a raid beaten off with nobody lost, or for the first diamond. That evening
+    the town goes to the tavern, and once they are in, the eldest raises a cup ("To Ember, and the first
+    diamond!"). They all drink to it, a bottle of the café's each out of the stores (the bottles go back),
+    or water when there are none.
+
+  The crier cries a custom the day before and on the day itself. The board lists them all with the next
+  day each one falls.
+* **The theatre.** An Iron Age town of twenty with at least two *players* (folk who love reading, music
+  or whittling) builds a theatre among its amenities. It is an open-air stage: a raised wooden platform,
+  a back wall with the town's banner either side, steps up at each end and two rows of benches. On the
+  evening of the day of rest, after supper and unless it rains, two or three players put on a short play
+  made from a story in the town's own chronicle. They pick the weightiest one they have not played yet:
+  the night at the north gate, the wedding of Ada and Bert, the first diamond, the great storm, how the
+  town began. They speak it in character, a line at a time over their heads. The rest of the town takes
+  the benches (latecomers stand behind) and reacts as a crowd does, and at the end the players bow and
+  the town cheers. Come and watch: you will see every line. The play goes into the chronicle and into
+  everyone's memory. The board says when a play is on tonight, and the Culture page lists the plays so
+  far.
+* **The band and the choir.** Up to four musicians (folk who love music) form the town's band. On the
+  evening of the day of rest they play at the tavern (after the play, if there is one), and at weddings
+  and feasts they stand together beside whoever is speaking. They play through the procession and the
+  feasting and stay quiet for the speeches. Each one plays a note block. That is a real thing: its own if
+  it has one, otherwise one lent out of the stores for the evening and put back after. **No note blocks
+  in the stores, no band** (the page says so), and the tavern's own tune carries on as before. The
+  parts are the tune, the bass, the harmony and a bell on the beat: a jig early in the evening, a slow
+  air later, a march for a wedding. In a town with a chapel, at the morning service on the day of rest,
+  the choir (the musicians, then sociable cheerful folk, six at most) stands before the altar facing the
+  pews. They sing the town's own hymn a line at a time, in chords; one line of it is the motto.
+* **Paintings.** A whittler or a gardener paints instead of its usual pastime one evening in three. It
+  takes a painting's makings, eight sticks and a wool, from its own pack or else the stores (no makings,
+  no painting). It sets up by its door with a brush in hand and the wool's colour flecking off it, and
+  paints until it is done. It names the picture ("The Well at Dusk", "Portrait of Fern", "The Sea at
+  Ashford") and signs it, and the town buys it from the treasury for the stores. From there it is sold
+  at the shop like any painting, and a comfortable folk buys one for its own wall. The town's works hang
+  two in each public room (the hall, the museum, the tavern) wherever one fits on a wall.
+* **Plaques.** A hand at the town's works puts up oak signs where something happened, out of the stores
+  (a sign, and a post for one on open ground):
+  * "Here Ashford was founded" by the heart of the town, once it is a day old;
+  * "The first house of Ashford" on that house's front wall beside the door;
+  * "Here fell Ada, against raiders" where a guard or anyone else fell while the raiders came (three at most);
+  * "Record harvest, 46 coins' worth" at the edge of the field of the farmer who brought in the most, once
+    the town's fields bring in more in a day than ever before. It is rewritten when the record is beaten.
+
+  A plaque never goes on a street, a worn path or in a doorway. On open ground it goes on the nearest
+  free ground to its place. The Culture page lists each one with its words and where it stands.
+* **Seeing it.** A folk's card has a **Culture** line, for example "plays the bass in the town's band,
+  and in the choir; played Bert in "The Wedding of Ada and Bert" on day 33", or "has painted 2 pictures,
+  the last "Night over Ashford"". The board's foot shows the banner, the motto, the customs and
+  tonight's play.
+
+Commands: `/village culture` (all of the above for the nearest town), `/village culture now` (ops: every
+piece the stores run to put up now), `/village culture play` (ops: tonight's play begun now) and
+`/village culture stage` (ops: a theatre set out where you stand, the banners up, players on the stage
+and an audience on the benches, for pictures).
+
+Tested by `CultureGameTests` (ci01 to ci08): the banner drawn and kept, woven from the stores and hung
+either side of the hall's door, a copy sold to a citizen and refused to a stranger; the motto carved and
+cried on a feast day but not on a plain one; three customs taken up and the fourth not, lanterns set out
+and taken in, the silence, and the toast with a drink each; the theatre wanted, a play cast from the
+players, watched from the benches, every line said and the next play a different story; the band only
+with the stores' note blocks, playing together and putting them back; the choir at the service; a
+picture painted from the stores' sticks and wool, bought and hung in the tavern; and the four plaques,
+none of them on a street.

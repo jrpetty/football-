@@ -198,6 +198,7 @@ public final class Tavern {
     static void play(ServerLevel level, Villages.Village v) {
         long t = level.getDayTime() % 24000L;
         if (t < 12500L || t > 17000L) return;
+        if (Music.playing(v.id())) return;                         // [batchD] the band has the tavern tonight (Music)
         Ledger.Building tav = of(v.id());
         if (tav == null || !level.isLoaded(tav.anchor())) return;
         if (company(level, tav) < 2) return;

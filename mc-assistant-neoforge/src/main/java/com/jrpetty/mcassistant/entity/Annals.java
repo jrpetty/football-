@@ -570,6 +570,7 @@ public final class Annals {
         out.put("research", CityTree.report(id));                // the city's research: the tree, the pick and why
         out.put("school", School.report(level, v));              // the school: its teacher, its pupils and what they lean to
         out.put("museum", Museum.report(level, v));              // the museum: what is on show, who found it, the archive
+        out.put("culture", Culture.report(level, v));            // [batchD] the banner, the motto, customs, theatre, music, pictures, plaques
         out.put("jobmarket", JobMarket.report(level, id));         // the job market between towns: the Jobs page's other view
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
