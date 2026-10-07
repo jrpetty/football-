@@ -15,11 +15,12 @@ import java.util.Locale;
 
 /**
  * [caves] The Caves page of the town's books (CityScreen), as the server's CaveDwellers.report has it. On the left a
- * map, north up, the town in the middle, the cave dwellers' range ringed: every cave and ravine, the ore veins, the
- * mineshafts, the dungeons and spawners, the old structures and the lava where they lie, and the cave dwellers out
- * today. On the right the cave dwellers and their cards, the report in a line, the finds with their coordinates (the
- * big ones first, and the scroll wheel for the rest), and the hauls brought home. The mouse over a mark on the map
- * gives the find.
+ * map, north up, the town in the middle, the cave team's range ringed: every cave and ravine, the ore veins, the
+ * mineshafts, the dungeons and spawners, the old structures and the lava where they lie, and the team out today. On
+ * the right, scrolled as one: the team (each one's level, the leader marked, its card), the trip under way or the last
+ * one's plan in words with the reckoning it was planned by, the report in a line and the torches drawn and set, each
+ * cave with its list of veins (mined, waiting for a better pick, still to do), the finds with their coordinates (the
+ * big ones first), and the hauls brought home. The mouse over a mark on the map gives the find.
  */
 public final class CavesPage {
 
@@ -28,61 +29,123 @@ public final class CavesPage {
     private static final int CAVE = 0xFF6E4B2A, VEIN = 0xFF2E6FBF, DIAMOND = 0xFF16A0A0, SHAFT = 0xFFB7791F, SPAWNER = 0xFFB83227,
         STRUCTURE = 0xFF7D3C98, LAVA = 0xFFE0571B, FOLK = 0xFF23803A, CHEST = 0xFF8A6A2A;
 
+    /** A row of the right-hand column: a heading, or a line of text (with a coloured mark before it, or none). */
+    private record Row(String text, int colour, int mark, boolean heading) {}
+
     /** The page. Returns the tooltip for what the mouse is over, or null. */
     @Nullable
     public static List<Component> draw(GuiGraphics g, Font font, CompoundTag m, int x, int y, int w, int h, int scroll, int mx, int my) {
-        List<CompoundTag> finds = compounds(m, "finds"), folk = compounds(m, "dwellers");
+        List<CompoundTag> finds = compounds(m, "finds"), folk = compounds(m, "dwellers"), caves = compounds(m, "caves");
         ListTag hauls = m.getList("hauls", Tag.TAG_STRING);
         if (finds.isEmpty() && folk.isEmpty()) {
             Ui.section(g, font, "The caves", x, y, w);
             small(g, font, "Nobody goes down the caves for the town yet.", x + 4, y + 14, Ui.MUTED);
-            small(g, font, Ui.clip(font, "An Iron Age town of " + m.getInt("from") + " folk or more, with a few miners and a watch, sends a cave dweller"
-                + " into the caves round it: armed and in the town's armour, it mines the ore its pick allows, looks in the old chests"
-                + " of the mineshafts, dungeons and temples, and reports what it finds here.", (int) ((w - 8) / 0.75F) * 2), x + 4, y + 24, Ui.FAINT);
-            small(g, font, "The town is in " + m.getString("age") + ".", x + 4, y + 34, Ui.FAINT);
+            int cy = y + 24;
+            for (String line : wrap(font, "An Iron Age town of " + m.getInt("from") + " folk or more, with a few miners and a watch, picks a small team of"
+                + " its most skilled hands (two, three at sixty folk, four at a hundred) to go down the caves round it: armed, in the town's"
+                + " armour, with its torches. They seek out every vein, mine what their picks allow, look in the old chests of the mineshafts,"
+                + " dungeons and temples, and report it all here.", w - 8)) {
+                small(g, font, line, x + 4, cy, Ui.FAINT);
+                cy += 9;
+            }
+            small(g, font, "The town is in " + m.getString("age") + ".", x + 4, cy + 2, Ui.FAINT);
             return null;
         }
         int side = Math.max(90, Math.min(h - 4, w * 2 / 5));
         List<Component> tip = map(g, font, m, finds, folk, x, y, side, mx, my);
-        int lx = x + side + 8, lw = w - side - 8, max = (int) (lw / 0.75F);
-        int cy = y;
-        Ui.section(g, font, "The caves — " + folk.size() + (folk.size() == 1 ? " cave dweller" : " cave dwellers") + ", " + m.getInt("wanted")
-            + " wanted, out to " + m.getInt("range") + " blocks", lx, cy, lw);
-        cy += 11;
+        int lx = x + side + 8, lw = w - side - 8;
+        List<Row> rows = new ArrayList<>();
+        rows.add(new Row("The cave team: " + folk.size() + " of " + m.getInt("wanted") + " wanted, out to " + m.getInt("range") + " blocks", 0, 0, true));
+        String trip = m.getString("trip");
+        if (!trip.isEmpty()) rows.add(new Row(capital(trip), Ui.GOOD, 0, false));
         for (CompoundTag f : folk) {
-            if (cy > y + h - 60) break;
-            small(g, font, Ui.clip(font, f.getString("name") + (f.getBoolean("out") ? " (out)" : "") + ": " + f.getString("card"), max), lx + 2, cy,
-                f.getBoolean("out") ? Ui.GOOD : Ui.INK);
-            cy += 9;
+            String head = f.getString("name") + " (level " + f.getInt("level") + (f.getBoolean("leader") ? ", leads" : "") + ")" + (f.getBoolean("out") ? ", out" : "");
+            for (String line : wrap(font, head + ": " + f.getString("card"), lw - 4)) rows.add(new Row(line, f.getBoolean("out") ? Ui.GOOD : Ui.INK, 0, false));
         }
-        small(g, font, Ui.clip(font, "Found: " + m.getString("summary"), max), lx + 2, cy, Ui.MUTED);
-        cy += 12;
+        String plan = m.getString("plan");
+        if (!plan.isEmpty()) {
+            rows.add(new Row(trip.isEmpty() ? "The last trip's plan" : "The plan", 0, 0, true));
+            for (String line : wrap(font, plan, lw - 4)) rows.add(new Row(line, Ui.INK, 0, false));
+            ListTag reck = m.getList("reckoning", Tag.TAG_STRING);
+            for (int i = 0; i < reck.size(); i++) for (String line : wrap(font, "  " + reck.getString(i), lw - 4)) rows.add(new Row(line, Ui.FAINT, 0, false));
+        }
+        rows.add(new Row("The report", 0, 0, true));
+        for (String line : wrap(font, "Found: " + m.getString("summary"), lw - 4)) rows.add(new Row(line, Ui.MUTED, 0, false));
+        if (m.getInt("torchesDrawn") + m.getInt("torchesSet") > 0) {
+            for (String line : wrap(font, "Torches, the last ten trips: " + m.getInt("torchesDrawn") + " drawn from the stores, " + m.getInt("torchesSet")
+                + " set", lw - 4)) rows.add(new Row(line, Ui.MUTED, 0, false));
+        }
+        // Each cave with its veins: mined, waiting for a better pick, still to do.
+        if (!caves.isEmpty()) {
+            rows.add(new Row("The caves and their veins", 0, 0, true));
+            for (CompoundTag c : caves) {
+                for (String line : wrap(font, capital(c.getString("label")), lw - 12)) rows.add(new Row(line, Ui.INK, CAVE, false));
+                ListTag vl = c.getList("veins", Tag.TAG_STRING);
+                if (vl.isEmpty()) {
+                    rows.add(new Row("    no veins listed yet", Ui.FAINT, 0, false));
+                    continue;
+                }
+                rows.add(new Row("    " + c.getInt("mined") + " mined, " + c.getInt("waiting") + " waiting for a better pick, " + c.getInt("todo") + " to do",
+                    Ui.MUTED, 0, false));
+                for (int i = 0; i < vl.size(); i++) {
+                    String v = vl.getString(i);
+                    int col = v.endsWith("mined") ? Ui.GOOD : v.contains("waiting") ? Ui.WARN : v.contains("left") ? Ui.FAINT : Ui.INK;
+                    rows.add(new Row("    " + v, col, 0, false));
+                }
+            }
+        }
         // The finds: the big ones first, then the nearest.
         List<CompoundTag> list = new ArrayList<>(finds);
         list.sort(Comparator.comparingInt(CavesPage::rank).thenComparingDouble(t -> Math.hypot(t.getInt("dx"), t.getInt("dz"))));
-        int haulRows = Math.min(4, hauls.size());
-        int rows = Math.max(1, (y + h - cy - 14 - (haulRows > 0 ? 11 + haulRows * 9 : 0)) / 9);
-        int start = Math.max(0, Math.min(scroll, Math.max(0, list.size() - rows)));
-        Ui.section(g, font, "What they found" + (list.size() > rows ? " (" + (start + 1) + "-" + Math.min(list.size(), start + rows) + " of " + list.size()
-            + ", scroll for more)" : ""), lx, cy, lw);
-        cy += 11;
-        for (int i = start; i < list.size() && i < start + rows; i++) {
-            CompoundTag t = list.get(i);
-            int col = colour(t);
-            g.fill(lx + 2, cy + 1, lx + 6, cy + 5, col);
-            small(g, font, Ui.clip(font, line(t), max - 10), lx + 9, cy, Ui.INK);
-            cy += 9;
+        if (!list.isEmpty()) {
+            rows.add(new Row("What they found", 0, 0, true));
+            for (CompoundTag t : list) rows.add(new Row(line(t), Ui.INK, colour(t), false));
         }
-        if (haulRows > 0) {
-            cy = Math.max(cy + 2, y + h - 11 - haulRows * 9);
-            Ui.section(g, font, "The hauls brought home", lx, cy, lw);
-            cy += 11;
-            for (int i = 0; i < haulRows; i++) {
-                small(g, font, Ui.clip(font, hauls.getString(i), max), lx + 2, cy, Ui.MUTED);
-                cy += 9;
+        if (!hauls.isEmpty()) {
+            rows.add(new Row("The hauls brought home", 0, 0, true));
+            for (int i = 0; i < hauls.size(); i++) for (String line : wrap(font, hauls.getString(i), lw - 4)) rows.add(new Row(line, Ui.MUTED, 0, false));
+        }
+        // Scrolled as one, headings and all.
+        int start = Math.max(0, Math.min(scroll, Math.max(0, rows.size() - 6)));
+        int cy = y;
+        for (int i = start; i < rows.size(); i++) {
+            Row r = rows.get(i);
+            int tall = r.heading() ? 11 : 9;
+            if (cy + tall > y + h - (i < rows.size() - 1 ? 9 : 0)) {
+                small(g, font, "scroll for more (" + (rows.size() - i) + " lines)", lx + 2, y + h - 8, Ui.FAINT);
+                break;
             }
+            if (r.heading()) {
+                Ui.section(g, font, r.text(), lx, cy, lw);
+            } else {
+                int tx = lx + 2;
+                if (r.mark() != 0) {
+                    g.fill(lx + 2, cy + 1, lx + 6, cy + 5, r.mark());
+                    tx = lx + 9;
+                }
+                small(g, font, Ui.clip(font, r.text(), (int) ((lx + lw - tx) / 0.75F)), tx, cy, r.colour());
+            }
+            cy += tall;
         }
         return tip;
+    }
+
+    /** Text broken into lines that fit so wide (at the page's small print). */
+    private static List<String> wrap(Font font, String text, int width) {
+        List<String> out = new ArrayList<>();
+        int max = (int) (width / 0.75F);
+        StringBuilder line = new StringBuilder();
+        for (String word : text.split(" ")) {
+            String next = line.length() == 0 ? word : line + " " + word;
+            if (font.width(next) > max && line.length() > 0) {
+                out.add(line.toString());
+                line = new StringBuilder("  " + word);
+            } else {
+                line = new StringBuilder(next);
+            }
+        }
+        if (line.length() > 0) out.add(line.toString());
+        return out;
     }
 
     /** One find in a line: "Iron vein (5 seen, 4 mined) at 120 64 -40, 70 east". */
