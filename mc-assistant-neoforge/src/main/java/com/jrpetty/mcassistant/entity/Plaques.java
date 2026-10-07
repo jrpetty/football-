@@ -54,7 +54,9 @@ public final class Plaques {
 
     public enum Site { FOUNDING, FIRST_HOUSE, FELL, HARVEST,
         /** [war-peace] A war's memorial, by the chapel or the graveyard (WarAndPeace). */
-        MEMORIAL }
+        MEMORIAL,
+        /** [perks] A leader's reign and its legacy, before the hall (Reigns). */
+        LEGACY }
 
     /** A plaque: what it marks, where (the sign's cell), on a wall (or on a post), its lines, and whether it is up. */
     public record Plaque(Site site, BlockPos at, boolean wall, String[] lines, boolean up, long day) {
@@ -129,6 +131,17 @@ public final class Plaques {
     public static void memorial(UUID village, BlockPos mark, String[] lines, long day) {
         List<Plaque> all = plaques(village);
         all.add(new Plaque(Site.MEMORIAL, mark, false, lines, false, day));
+        save(village, all);
+    }
+
+    /**
+     * [perks] A reign's plaque wanted (Reigns, as a leader leaves office with a legacy): a post and a sign near the
+     * hall, with the leader's name, its days and what the town keeps of its time. Put up as any plaque is, out of the
+     * stores by a hand at the town's works, so a town without a sign to spare remembers its leaders later, not for free.
+     */
+    public static void legacy(UUID village, BlockPos mark, String[] lines, long day) {
+        List<Plaque> all = plaques(village);
+        all.add(new Plaque(Site.LEGACY, mark, false, lines, false, day));
         save(village, all);
     }
 
@@ -298,6 +311,7 @@ public final class Plaques {
             case FELL -> "the place where " + p.lines()[1] + " fell";
             case HARVEST -> "the field of the record harvest";
             case MEMORIAL -> "the war memorial";
+            case LEGACY -> "the plaque for " + p.lines()[0];
         };
     }
 
@@ -353,6 +367,26 @@ public final class Plaques {
             }
         }
         return true;
+    }
+
+    /**
+     * [perks] For the pictures (PerksStage): every plaque of this kind not yet up, put up at once out of nothing,
+     * as the showcase's buildings are. The spot of the last one put up, or null.
+     */
+    @Nullable
+    static Culture.Spot upForStage(ServerLevel level, Villages.Village v, Site site) {
+        List<Plaque> all = plaques(v.id());
+        Culture.Spot last = null;
+        for (int i = 0; i < all.size(); i++) {
+            Plaque p = all.get(i);
+            if (p.up() || p.site() != site) continue;
+            Culture.Spot spot = p.wall() ? wallSpot(level, v.id(), p) : groundSpot(level, v, p.at());
+            if (spot == null || !place(level, v, p, spot, true)) continue;
+            all.set(i, new Plaque(p.site(), spot.at(), p.wall(), p.lines(), true, p.day()));
+            last = spot;
+        }
+        save(v.id(), all);
+        return last;
     }
 
     // ------------------------------------------------------------------ the tests

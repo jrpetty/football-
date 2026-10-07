@@ -281,6 +281,7 @@ public final class WatchClears {
         LivingEntity t = g.getTarget();
         if (t != null && t.isAlive()) return "after " + a(name(t));
         if (!bell && Patrols.escorting(g)) return "with the leader";       // the leader's, while it walks
+        if (!bell && Police.engaged(g)) return "on the watch's business";  // [police] a chase, a prisoner, a fight broken up
         if (g.talkPartner() != null || g.companionPlayer() != null || g.guidePlayer() != null) return "with a player";
         if (g.getHealth() < g.getMaxHealth() * 0.5F) return "hurt (" + (int) g.getHealth() + " of " + (int) g.getMaxHealth() + ")";
         if (g.shouldDisengage()) return "outmatched";
@@ -502,6 +503,7 @@ public final class WatchClears {
     static boolean exempt(VillageFolkEntity f, ServerLevel level) {
         if (f.stationTask() == StationTask.GUARD || Patrols.escorting(f) || f.isShowcase()) return true;
         if (f.isSleeping() || f.isHired() || f.trip() != null || f.expedition() != null || Nether.away(f)) return true;
+        if (Quirks.answersCries(f)) return true;                        // [perks] the Fearless do not run indoors from a monster
         BlockPos me = f.blockPosition();
         int ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, me.getX(), me.getZ());
         return me.getY() < ground - 6 && !level.canSeeSky(me);           // below ground (the mine), or deep indoors already
@@ -584,7 +586,10 @@ public final class WatchClears {
                  "storehouse", "store", "shop", "cafe", "bakery", "bank", "barracks", "granary", "chapel", "school",
                  "library", "museum", "infirmary", "manor", "villa", "postoffice", "theatre", "workshop", "smithy",
                  "brewery", "armoury", "shelter",
-                 "lodge" -> true;                                                 // [caves] the Delvers' Lodge
+                 "lodge",                                                         // [caves] the Delvers' Lodge
+                 "fletcher",                                                      // [fletcher] the fletcher's hut
+                 "maproom",                                                      // [cartographer] the map room
+                 "divershed" -> true;                                             // [diver] the diver's shed
             default -> false;
         };
     }

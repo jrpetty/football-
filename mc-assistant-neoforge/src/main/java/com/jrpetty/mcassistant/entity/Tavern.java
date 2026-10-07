@@ -78,7 +78,7 @@ public final class Tavern {
 
     /** Is this folk in for the evening (two evenings in five)? */
     static boolean goingTonight(VillageFolkEntity f, long day) {
-        return Math.floorMod(day * 7 + f.getUUID().hashCode(), 5) < 2;
+        return Math.floorMod(day * 7 + f.getUUID().hashCode(), 5) < 2 + Ethos.tavernNights(f.ownerId());   // [identity] worldly or devout
     }
 
     /** An off-work folk's evening at the tavern. True while it is going or there. */
@@ -86,8 +86,9 @@ public final class Tavern {
         UUID village = f.ownerId();
         Ledger.Building tav = of(village);
         if (tav == null || f.isBaby() || !(f.level() instanceof ServerLevel level) || !level.isLoaded(tav.anchor())) return false;
+        if (!LawBook.tavernOpen(village, t)) return false;            // [identity] shut at nightfall by law, or by the curfew
         long day = level.getDayTime() / 24000L;
-        if (!goingTonight(f, day) && !Bard.playing(level, village)
+        if (!goingTonight(f, day) && !Habits.regular(f) && !Bard.playing(level, village)   // [individual] a regular: every evening
                 && !Buskers.tavernTonight(level, village)) return false;   // [batchG] a bard in: the whole town comes; [arms] or its busker
         Direction back = tav.facing(), right = back.getClockWise();
         int h = f.getUUID().hashCode();
@@ -112,9 +113,11 @@ public final class Tavern {
      */
     static void drink(VillageFolkEntity f, ServerLevel level, Villages.Village v, long day) {
         if (f.purse() < 3 || DRANK.getOrDefault(f.getUUID(), -1L) == day) return;
+        if (LawBook.dry(v.id())) return;                               // [identity] a dry town: nothing sold at the bar
         DRANK.put(f.getUUID(), day);
         if (DRANK.size() > 4096) DRANK.clear();
         if (TradeGoods.stout(level, v, f, day)) return;              // [player-civic] the master brewer's stout, half the evenings
+        if (Kitchen.atTheBar(level, v, f, day)) return;             // [kitchen] the brewer's mead, or in the autumn its cider
         net.minecraft.world.item.ItemStack d = pour(level, v, f.getRandom());
         if (d.isEmpty()) {
             Cafe.Drink usual = Cafe.DRINKS.get(Math.floorMod(f.getUUID().hashCode(), Cafe.DRINKS.size()));

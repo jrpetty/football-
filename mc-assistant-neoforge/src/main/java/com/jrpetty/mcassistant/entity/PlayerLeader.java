@@ -180,6 +180,8 @@ public final class PlayerLeader {
     /** The one the town thinks most of after the leader: the council's first member who is not the leader. */
     @Nullable
     static VillageFolkEntity chooseSteward(UUID village, UUID leader) {
+        VillageFolkEntity chosen = Interviews.holder(village, "steward");               // [interviews] the panel's choice first
+        if (chosen != null && !chosen.getUUID().equals(leader) && !chosen.isBaby()) return chosen;
         for (VillageFolkEntity f : Council.members(village)) if (!f.getUUID().equals(leader) && !f.isBaby()) return f;
         return null;
     }
@@ -195,6 +197,8 @@ public final class PlayerLeader {
         }
         UUID leader = leaderId(village);
         VillageFolkEntity f = leader == null ? null : chooseSteward(village, leader);
+        // [interviews] The steward's post held open for its interview (the leader chooses at it).
+        if (f != null && f.level() instanceof net.minecraft.server.level.ServerLevel sl && Interviews.vacancy(sl, village, "steward", f)) return null;
         if (f != null) Ledger.note(village, "civic.steward", f.getUUID() + "|" + f.displayNameCap());
         return f;
     }
@@ -252,7 +256,7 @@ public final class PlayerLeader {
 
     /** A folk's tithe on what it holds over a dozen (Market.tithe): at the leader's rate, where a player leads. */
     public static int tithe(UUID village, int over, int due) {
-        if (leaderId(village) == null) return due;
+        if (leaderId(village) == null) return LawBook.tithe(village, over, due);   // [identity] the town's own law-book
         return over <= 0 ? 0 : over * titheRate(village) / 100;
     }
 
@@ -880,6 +884,12 @@ public final class PlayerLeader {
             buttons.add("Envoy: yes\tvillage leader envoy yes\tThe town's answer at the board is yes");
             buttons.add("Envoy: no\tvillage leader envoy no\tThe town's answer at the board is no");
         }
+        // [interviews] An interview coming or on: the candidates, and the choice that is the leader's.
+        String interview = Interviews.leaderLine(id);
+        if (interview != null) {
+            sb.append("\n\nInterviews: ").append(interview);
+            buttons.add("Interviews\tvillage interviews page\tThe candidates' particulars, and your choice");
+        }
         sb.append("\n\nA referendum: /village leader referendum <your question>.");
         buttons.add("Food first\tvillage leader plan food\tMore hands to the fields, the river and the hunt");
         buttons.add("Growth\tvillage leader plan growth\tTimber in the Wood Age, then the mines and the furnaces");
@@ -897,6 +907,7 @@ public final class PlayerLeader {
             buttons.add("Build: " + w + "\tvillage leader build " + w + "\tPut " + Villages.spoken(w) + " at the head of the town's list");
             shown++;
         }
+        Perks.leaderPage(id, p, sb, buttons);                // [perks] the town's research to set, the leader's skills to take
         PlayerCivic.send(p, styled(id) + " of " + Villages.name(id), sb.toString(), buttons);
     }
 

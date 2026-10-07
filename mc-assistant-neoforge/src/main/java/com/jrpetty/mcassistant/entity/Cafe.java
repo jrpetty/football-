@@ -139,6 +139,7 @@ public final class Cafe {
         out.add(Stockroom.ware(Items.PUMPKIN_PIE, 4, 1, 12, 1, false));
         out.add(Stockroom.ware(Items.BREAD, 12, 4, 48, 1, true));
         out.add(Stockroom.ware(Items.CAKE, 2, 1, 4, 1, false));
+        out.addAll(Kitchen.cafeWares());                     // [kitchen] the fish pie, the tea; the lunches, cheese and cakes on its books
         MENU_WARES = m = List.copyOf(out);
         return m;
     }
@@ -200,6 +201,9 @@ public final class Cafe {
         out.add(Stockroom.ware(Items.GLASS_PANE, 8, 0, 24, 16, false));
         out.add(Stockroom.ware(Items.BUCKET, 1, 1, 4, 1, false));
         out.add(Stockroom.ware(Items.SHEARS, 1, 1, 3, 1, false));
+        // [diver] The diver's kelp blocks for a player's furnace, and a turtle helmet of the beach's scutes (Divers).
+        out.add(Stockroom.ware(Items.DRIED_KELP_BLOCK, 4, 0, 16, 1, false));
+        out.add(Stockroom.ware(Items.TURTLE_HELMET, 1, 0, 1, 1, false));
         for (Item tool : new Item[]{ Items.STONE_PICKAXE, Items.STONE_AXE, Items.STONE_HOE, Items.STONE_SHOVEL, Items.STONE_SWORD }) {
             out.add(Stockroom.ware(tool, 1, 1, 4, 1, false));
         }
@@ -342,7 +346,9 @@ public final class Cafe {
     /** What the café has ready, drinks first: one of each, up to a counterful. */
     public static List<ItemStack> menuGoods(ServerLevel level, UUID village) {
         // What the village can spare (Budget): no bread off the counter while the larder is low.
-        return fromStores(level, village, s -> (isDrink(s) || MENU.stream().anyMatch(s::is)) && Budget.spare(level, village, s) > 0, true);
+        return Cuisine.ownFirst(village, fromStores(level, village, s -> (isDrink(s) || MENU.stream().anyMatch(s::is)
+            || Kitchen.onMenu(level, village, s)                                                   // [kitchen] the fish pie; cider, tea in season
+            || Cuisine.isDish(s)) && Budget.spare(level, village, s) > 0, true));                  // [culture2] the town's dish, by the door
     }
 
     private static final List<Item> MENU = List.of(Items.BAKED_POTATO, Items.COOKIE, Items.PUMPKIN_PIE, Items.COOKED_BEEF,
@@ -366,6 +372,7 @@ public final class Cafe {
         if (s.isDamaged() || isDrink(s) || Budget.goodFor(s) == null) return false;
         if (s.is(Items.POTION)) return true;
         if (Budget.kitOf(s) != null && Prices.each(s.getItem()) >= 2.0) return true;
+        if (FireworksMaker.elytra(s)) return true;                    // [fireworks] the maker's elytra rockets, by the eight
         if (houseware(s)) return true;
         // The workshop's tools, arms and armour (Workshop), whatever their price: the village keeps its own first (Budget).
         if (Budget.kitOf(s) != null && Workshop.wareFor(Stockroom.key(s)) != null) return true;
@@ -394,7 +401,7 @@ public final class Cafe {
     }
 
     private static int rank(ItemStack s, boolean drinksFirst) {
-        if (drinksFirst) return isDrink(s) ? 2 : 1;
+        if (drinksFirst) return isDrink(s) || Cuisine.isDish(s) ? 2 : 1;   // [culture2] a dish is never cut off a full counter
         if (s.isEnchanted()) return 4;
         if (s.is(Items.POTION)) return 3;
         if (s.isDamageableItem()) return 2;
@@ -534,6 +541,7 @@ public final class Cafe {
         price += FolkSkills.tip(v.id(), AssistantEntity.StationTask.COOK, f, Math.max(1, price));   // a Friendly Face at the counter
         Stockroom.sold(level, v.id(), Stockroom.Seller.CAFE, pick, 1, price);
         // Had there and then: a drink does its little good, a bite fills it up.
+        if (Kitchen.had(level, v, f, pick)) return pick.getHoverName().getString();   // [kitchen] cider or tea, the bottle back
         String drink = drinkOf(pick);
         if (drink != null) {
             Drink d = drinkFor(drink);

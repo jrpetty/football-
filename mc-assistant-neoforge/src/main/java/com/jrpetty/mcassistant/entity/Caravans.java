@@ -151,6 +151,7 @@ public final class Caravans {
             ItemStack left = carrier.insertGiven(s);
             if (!left.isEmpty()) Market.intoStores(level, from.id(), left);
         }
+        Cuisine.packDelicacy(level, from, carrier, to.id());              // [culture2] a couple of the town's own dish, a delicacy there
         Trip t = new Trip(from.id(), to.id(), way(from, to));
         t.trade = true;
         t.gainedTick = carrier.tickCount;
@@ -211,6 +212,8 @@ public final class Caravans {
             ItemStack left = carrier.insertGiven(s);
             if (!left.isEmpty()) Market.intoStores(level, mother.id(), left);
         }
+        Cuisine.packDelicacy(level, mother, carrier, colony.id());        // [culture2] a taste of home for the colony
+        Crates.packCaravan(level, mother, colony.id(), carrier);   // [workitems] crates of the town's surplus besides the loose load
         Trip t = new Trip(mother.id(), colony.id(), way(mother, colony));
         t.gainedTick = carrier.tickCount;
         carrier.trip(t);
@@ -248,6 +251,7 @@ public final class Caravans {
             if (Villages.holdsTheLead(v.id(), f.getUUID(), now)) continue;
             double score = f.blockPosition().distSqr(v.centre());
             if (f.stationTask() == AssistantEntity.StationTask.HAUL) score -= 1e6;
+            score += Quirks.tripPull(f);                                    // [perks] a wanderer first, a homebody last
             if (score < bestScore) { bestScore = score; best = f; }
         }
         return best;
@@ -282,8 +286,9 @@ public final class Caravans {
             for (Market.Good g : Market.GOODS) if (!order.contains(g) && g.need() != Villages.Task.NONE) order.add(g);
         }
         List<ItemStack> out = new ArrayList<>();
+        int lots = 4 + Perks.caravanLots(from.id());                       // [perks] Open Borders, the Grand Bazaar, a Quartermaster
         for (Market.Good g : order) {
-            if (out.size() >= 4) break;
+            if (out.size() >= lots) break;
             if (brought.contains(g)) continue;
             int have = Market.stock(level, from.id(), g.what());
             int plenty = g.bundle() * 4;
@@ -345,6 +350,7 @@ public final class Caravans {
         Trip t = f.trip();
         if (t == null) return false;
         keepAwake(level, f, t);
+        Cartographers.onTheRoad(f, level, t);                     // [cartographer] the region's map: a copy for the road, filled in as it goes
         if (t.waiting) {
             Envoys.waitThere(level, f, t);
             return f.trip() != null;
@@ -414,6 +420,7 @@ public final class Caravans {
         Villages.Village other = Villages.get(t.back ? t.to : t.from);
         long day = level.getDayTime() / 24000L;
         Riding.unpack(f, level);                                 // the load out of the donkey's chest, to be sold (Riding)
+        Crates.unpackCaravan(level, f, t);                       // [workitems] its crates unpacked onto its back (home: the crates into the stores)
         // [econ-trade] A deal's delivery: the agreed goods and the agreed coin only, exchanged in person (TradeDeals).
         boolean dealt = t.deal != null && here != null && other != null && TradeDeals.exchange(level, f, t);
         // The village that sent for the goods buys them off the caravan as they come off its back:
@@ -481,6 +488,7 @@ public final class Caravans {
             if (!dealt) {
                 for (ItemStack s : load(level, here, other.id(), true, true, brought)) TradeDeals.buyForHome(level, f, t, here, other, s, rate);
             }
+            Crates.packForHome(f);                               // [workitems] the goods for home packed into its crates
             Riding.pack(f, level);                               // and the goods for home back into it
             if (t.trade) Ledger.relate(here.id(), other.id(), 3);
             t.back = true;
@@ -536,6 +544,7 @@ public final class Caravans {
      * usual sixty-odd loaves delivered sixteen of the eighty it set out with.
      */
     static int carrierKeeps(VillageFolkEntity f, ItemStack s) {
+        if (Crates.isCrate(s)) return s.getCount();                 // [workitems] its crates go home with it, not sold off its back
         int reserve = Math.max(0, f.depositReserve(s));
         return Math.min(reserve, s.get(net.minecraft.core.component.DataComponents.FOOD) != null ? 4 : 8);
     }

@@ -88,6 +88,8 @@ public final class Ferries {
         State state = State.SURVEYED;
         int landings;
         @Nullable UUID boat, ferryman;
+        /** [itemaudit] The boat itself, kept to hand between ticks (never saved): see boat(). */
+        @Nullable transient Boat held;
         int boatAt;
         long startedDay = -1, retiredDay = -1;
         public int crossings, fares, free, players;
@@ -582,8 +584,13 @@ public final class Ferries {
     @Nullable
     static Boat boat(ServerLevel level, Crossing c) {
         if (c.boat == null) return null;
+        // [itemaudit] The boat is asked after every tick while it rows (Ferries.tick): kept to hand between ticks rather
+        // than looked up afresh each time, and looked up again only once it is gone, unloaded, or another boat.
+        Boat held = c.held;
+        if (held != null && held.isAlive() && !held.isRemoved() && held.level() == level && c.boat.equals(held.getUUID())) return held;
         Entity e = level.getEntity(c.boat);
-        return e instanceof Boat b && b.isAlive() ? b : null;
+        c.held = e instanceof Boat b && b.isAlive() ? b : null;
+        return c.held;
     }
 
     /** The town's boat in the water at a landing: one out of the stores, or five of their planks made into one. */
@@ -644,10 +651,12 @@ public final class Ferries {
             int score = f.tradeLevel(AssistantEntity.StationTask.FERRY) * 5 + f.tradeLevel(AssistantEntity.StationTask.FISH) * 2
                 + (t == AssistantEntity.StationTask.NONE ? 30 : t == AssistantEntity.StationTask.FISH ? 20 : 0)
                 + (f.life().has(Social.Trait.SOCIABLE) ? 8 : 0) + (f.life().has(Social.Trait.EASYGOING) ? 4 : 0)
-                - (int) Math.sqrt(f.blockPosition().distSqr(c.bankA)) / 8;
+                - (int) Math.sqrt(f.blockPosition().distSqr(c.bankA)) / 8
+                + Interviews.preferred(id, "ferryman", f);                          // [interviews] the panel's choice first
             if (score > bestScore) { bestScore = score; best = f; }
         }
         if (best == null) return null;
+        if (Interviews.vacancy(level, id, "ferryman", best)) return null;      // [interviews] the post held open for its interview
         take(level, v, c, best, best.stationTask());
         return best;
     }

@@ -233,9 +233,11 @@ public final class Drover {
         boolean pair = false;
         for (int n : herd.values()) if (n >= 2) pair = true;
         // A pair to breed is enough — unless none of it is sheep: the wool is the village's beds.
-        if (pair && herd.getOrDefault(EntityType.SHEEP, 0) >= 2) return false;
+        // [fletcher] And a pair of hens where the town keeps a fletcher: the coop's feathers are its arrows' flights.
+        boolean hens = Fletchers.keeps(village) && herd.getOrDefault(EntityType.CHICKEN, 0) < 2;
+        if (pair && herd.getOrDefault(EntityType.SHEEP, 0) >= 2 && !hens) return false;
         long today = level.getDayTime() / 24000L;
-        Animal wild = wild(level, pen, herd, today, pair ? EntityType.SHEEP : null);
+        Animal wild = wild(level, pen, herd, today, !pair ? null : herd.getOrDefault(EntityType.SHEEP, 0) < 2 ? EntityType.SHEEP : EntityType.CHICKEN);
         // Feed held out is how anybody fetches a sheep home: a lead only when there is none to hand.
         if (wild != null) {
             java.util.function.Predicate<ItemStack> feed = feedFor(wild);
@@ -532,6 +534,12 @@ public final class Drover {
      */
     @Nullable
     static Animal surplus(ServerLevel level, BlockPos pen, int r, int keep) {
+        return surplus(level, pen, r, keep, null);
+    }
+
+    /** [fletcher] The same, a kind first if it has any past the herd kept (the hens, while the fletcher is short of feathers). */
+    @Nullable
+    static Animal surplus(ServerLevel level, BlockPos pen, int r, int keep, @Nullable EntityType<?> first) {
         int kept = Math.max(2, keep);
         Map<EntityType<?>, Integer> herd = herd(level, pen, r);
         EntityType<?> most = null;
@@ -540,6 +548,7 @@ public final class Drover {
             int past = e.getValue() - kept;
             if (past > over) { over = past; most = e.getKey(); }
         }
+        if (first != null && herd.getOrDefault(first, 0) > kept) most = first;
         if (most == null) return null;
         final EntityType<?> kind = most;
         Animal pick = null;

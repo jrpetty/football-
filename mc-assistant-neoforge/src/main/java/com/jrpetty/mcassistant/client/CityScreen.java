@@ -70,7 +70,21 @@ public class CityScreen extends Screen {
         // [library] The town library, after them (LibraryPage): its catalogue, its writers, its loans.
         "Library",
         // [transport] The railways, the carts, the ferry and the bridge, after them (TransportPage).
-        "Transport" };
+        "Transport",
+        // [interviews] The town's interviews, coming and held, every candidate's score part by part (InterviewsPage).
+        "Interviews",
+        // [identity] What makes the town itself: its ethos, government, laws, traits, fame and renown (IdentityPage).
+        "Identity",
+        // [cartographer] The maps: the country as the cartographer drew it, the places found, the archive (MapsPage).
+        "Maps",
+        // [emerald] The emerald account, the villagers' villages, their villagers and offers (TradingPostPage).
+        "Trading Post",
+        // [nether] The Nether runners' page, after them (NetherPage): the runs, the outpost, the finds, the hauls.
+        "Nether",
+        // [perks] The wonders of the world, the town's ways, the leader's skills and legacies, the folk's quirks (PerksPage).
+        "Perks",
+        // [police] The watch as the town's police: the roster, the beats, the incidents, the cells, the crime rate (WatchPage).
+        "Watch" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
@@ -78,7 +92,14 @@ public class CityScreen extends Screen {
         "Cases",                                                                                      // [crime]
         "Auction",                                                                                    // [fleet]
         "Library",                                                                                    // [library]
-        "Transport");                                                                                 // [transport]
+        "Transport",                                                                                  // [transport]
+        "Interviews",                                                                                  // [interviews]
+        "Identity",                                                                                   // [identity]
+        "Maps",                                                                                       // [cartographer]
+        "Trading Post",                                                                              // [emerald]
+        "Nether",                                                                                     // [nether]
+        "Perks",                                                                                       // [perks]
+        "Watch");                                                                                     // [police]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -333,12 +354,20 @@ public class CityScreen extends Screen {
                 }
                 case "War map" -> warMap(g, x, y, cw, ch, mouseX, mouseY);   // [war-scouting]
                 case "War" -> WarPage.draw(g, font, data.getCompound("war"), x, y, cw, ch, scroll);   // [war-peace]
+                case "Nether" -> {                                                     // [nether] the runners' report (NetherPage)
+                    List<Component> tip = NetherPage.draw(g, font, data.getCompound("nether"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
                 case "Caves" -> {                                                      // [caves] the caves' report (CavesPage)
                     List<Component> tip = CavesPage.draw(g, font, data.getCompound("caves"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "Fashion" -> {                                                    // [fashion] the season's look (FashionPage)
                     List<Component> tip = FashionPage.draw(g, font, data.getCompound("fashion"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Watch" -> {                                                      // [police] the watch's roster and books (WatchPage)
+                    List<Component> tip = WatchPage.draw(g, font, data.getCompound("police"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "Cases" -> {                                                      // [crime] the casebook (CasesPage)
@@ -353,8 +382,28 @@ public class CityScreen extends Screen {
                     List<Component> tip = LibraryPage.draw(g, font, data.getCompound("library"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
+                case "Perks" -> {                                                      // [perks] wonders, ways, the leader, the folk (PerksPage)
+                    List<Component> tip = PerksPage.draw(g, font, data.getCompound("perks"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
                 case "Transport" -> {                                                  // [transport] the lines, the ferry (TransportPage)
                     List<Component> tip = TransportPage.draw(g, font, data.getCompound("transport"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Interviews" -> {                                                 // [interviews] coming and held (InterviewsPage)
+                    List<Component> tip = InterviewsPage.draw(g, font, data.getCompound("interviews"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Identity" -> {                                                   // [identity] what makes the town itself (IdentityPage)
+                    List<Component> tip = IdentityPage.draw(g, font, data.getCompound("identity"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Maps" -> {                                                       // [cartographer] the map room's books (MapsPage)
+                    List<Component> tip = MapsPage.draw(g, font, data.getCompound("maps"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Trading Post" -> {                                               // [emerald] the account, the villagers (TradingPostPage)
+                    List<Component> tip = TradingPostPage.draw(g, font, data.getCompound("emerald"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 default -> board(g, x, y, cw, ch);
@@ -1556,6 +1605,15 @@ public class CityScreen extends Screen {
         rows.add("Mandate: " + (l.getString("mandate").isEmpty() ? "none — chosen, not elected" : l.getString("mandate")));
         rows.add("Orders: " + (l.getString("orders").isEmpty() ? "none yet" : l.getString("orders")));
         rows.add("Council: " + (l.getString("council").isEmpty() ? "none" : l.getString("council")));
+        CompoundTag pk = data.getCompound("perks");                       // [perks] its perk in office, its level and skills
+        if (!pk.getString("office").isEmpty()) rows.add("In office: " + pk.getString("office"));
+        if (pk.contains("level")) {
+            List<String> skills = new ArrayList<>();
+            ListTag sl = pk.getList("skills", Tag.TAG_COMPOUND);
+            for (int i = 0; i < sl.size(); i++) if (sl.getCompound(i).getBoolean("has")) skills.add(sl.getCompound(i).getString("title"));
+            rows.add("Level " + pk.getInt("level") + " in office" + (skills.isEmpty() ? "" : ": " + String.join(", ", skills))
+                + (pk.getInt("free") > 0 ? " (" + pk.getInt("free") + " to choose)" : ""));
+        }
         if (l.contains("pace")) rows.add("Sets the work " + (l.getInt("pace") >= 0 ? "+" : "") + l.getInt("pace") + "% and pay at " + l.getInt("pay") + "%");
         for (String r : rows) {
             for (FormattedCharSequence line : font.split(Component.literal(r), half)) {
@@ -2974,14 +3032,18 @@ public class CityScreen extends Screen {
 
     // ------------------------------------------------------------------ research
 
-    /** A civic's node, by its state: done, being studied, open to choose, locked. */
-    private static final int NODE_DONE = 0xFFB9D7A8, NODE_NOW = 0xFFEAD49C, NODE_OPEN = 0xFFDADADA, NODE_LOCKED = 0xFFABABAB;
+    /** A civic's node, by its state: done, being studied, open to choose, locked; [perks] closed by its pair or a wonder. */
+    private static final int NODE_DONE = 0xFFB9D7A8, NODE_NOW = 0xFFEAD49C, NODE_OPEN = 0xFFDADADA, NODE_LOCKED = 0xFFABABAB,
+        NODE_CLOSED = 0xFF9C8F8F, NODE_GOLD = 0xFFB8892A, NODE_WONDER = 0xFFF1DC98;
 
     /**
-     * The city's research (CityTree, from the server's "research"): what the town is studying, who
-     * chose it and why, its points and how they come; the tree, five branches as columns of four
-     * civics (done green, being studied amber with its progress, open light, locked grey; the mouse
-     * over one tells the whole of it); and what was done when.
+     * The city's research (CityTree, from the server's "research"): what the town is studying, who chose it and why,
+     * its points and how they come; and the whole tree at once. [perks] Ten branches now, in two bands of five, each a
+     * column of its tiers from the first at the top to its wonder at the foot; where a tier is a choice of two (Guild
+     * Monopolies or the Free Market) the pair stand side by side, and the one not taken is closed for good, greyed and
+     * struck through. Each node is coloured by its state (done green, studied amber with its progress, open light,
+     * locked grey, closed dull), each wonder edged in gold (and filled gold where the town holds it); the mouse over
+     * one tells the whole of it, a wonder's state in the world with it; and what was done when, along the foot.
      */
     private void research(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
         CompoundTag r = data.getCompound("research");
@@ -2999,8 +3061,8 @@ public class CityScreen extends Screen {
             int cost = r.getInt("now_cost"), days = r.getInt("days_left");
             head = "Researching " + r.getString("now_title") + ": " + Math.min(points, cost) + " of " + cost + " points, "
                 + (days > 0 ? "about " + plural(days, "day") + " to go" : "done at the next morning's books");
-        } else if (r.getInt("done") >= r.getInt("total")) {
-            head = "Every civic is done: all " + r.getInt("total") + " of them.";
+        } else if (r.getBoolean("finished") || r.getInt("done") >= r.getInt("total")) {
+            head = "The whole tree is done: " + r.getInt("done") + " civics, every branch to its top.";
         } else {
             head = "Nothing chosen yet: " + r.getString("chooser") + " chooses at the next morning's books.";
         }
@@ -3010,49 +3072,80 @@ public class CityScreen extends Screen {
             small(g, Ui.clip(font, r.getString("by") + " chose it: " + r.getString("why") + (since > 0 ? " (day " + since + ")" : "") + ".",
                 (int) (cw / 0.75)), x, y + 11, Ui.MUTED);
         }
-        small(g, Ui.clip(font, r.getInt("done") + " of " + r.getInt("total") + " done · " + plural(points, "point") + " in hand · +" + rate
+        String rateWords = r.contains("rate_day") ? r.getString("rate_day") : Integer.toString(rate);
+        small(g, Ui.clip(font, r.getInt("done") + " of " + r.getInt("total") + " done · " + plural(points, "point") + " in hand · +" + rateWords
             + " a day (" + r.getString("rate_why") + ")", (int) (cw / 0.75)), x, y + 19, Ui.MUTED);
-        // The tree.
-        int gy = y + 30, cols = 5, gap = 6, nodeGap = 6;
-        int colW = (cw - gap * (cols - 1)) / cols;
-        int histH = 20;
-        int gridH = ch - (gy - y) - histH;
-        int nodeH = Math.max(20, (gridH - 12 - nodeGap * 3) / 4);
+        // The tree: two bands of five branches.
         ListTag branches = r.getList("branches", Tag.TAG_COMPOUND);
-        for (int b = 0; b < cols && b < branches.size(); b++) {
-            Ui.section(g, font, branches.getCompound(b).getString("title"), x + b * (colW + gap), gy, colW);
-        }
-        int ny = gy + 12;
-        CompoundTag over = null;
+        int perBand = 5, bands = Math.max(1, (branches.size() + perBand - 1) / perBand);
+        int gy = y + 29, histH = 9, gap = 5, bandGap = 4;
+        int colW = (cw - gap * (perBand - 1)) / perBand;
+        int bandH = (ch - (gy - y) - histH - bandGap * (bands - 1)) / bands;
+        // Each branch's tiers, and in each tier its civics (one, or a pair) in the order the books give them.
+        java.util.Map<Integer, List<List<CompoundTag>>> byBranch = new java.util.HashMap<>();
         for (CompoundTag c : civics) {
-            int col = c.getInt("branch"), row = c.getInt("tier") - 1;
-            if (col < 0 || col >= cols || row < 0 || row > 3) continue;
-            int nx = x + col * (colW + gap), top = ny + row * (nodeH + nodeGap);
-            if (row > 0) {
-                // The step up from the one before: a line between the two, dark where it is open to walk.
-                boolean walked = !c.getString("state").equals("locked");
-                g.fill(nx + colW / 2, top - nodeGap, nx + colW / 2 + 1, top, walked ? Ui.EDGE : Ui.EDGE_SOFT);
-            }
-            civicNode(g, c, nx, top, colW, nodeH, points);
-            if (mx >= nx && mx < nx + colW && my >= top && my < top + nodeH) over = c;
+            int b = c.getInt("branch"), tier = c.getInt("tier");
+            List<List<CompoundTag>> tiers = byBranch.computeIfAbsent(b, k -> new ArrayList<>());
+            while (tiers.size() < tier) tiers.add(new ArrayList<>());
+            if (tier >= 1) tiers.get(tier - 1).add(c);
         }
-        // What was done when.
-        int hy = ny + 4 * (nodeH + nodeGap) - nodeGap + 4;
+        CompoundTag over = null;
+        for (int band = 0; band < bands; band++) {
+            int by = gy + band * (bandH + bandGap);
+            int rows = 1;
+            for (int b = band * perBand; b < Math.min(branches.size(), (band + 1) * perBand); b++) {
+                rows = Math.max(rows, byBranch.getOrDefault(b, List.of()).size());
+            }
+            int nodeGap = 2, top0 = by + 10;
+            int nodeH = Math.max(9, (bandH - 10 - nodeGap * (rows - 1)) / rows);
+            for (int b = band * perBand; b < Math.min(branches.size(), (band + 1) * perBand); b++) {
+                CompoundTag bt = branches.getCompound(b);
+                int nx = x + (b - band * perBand) * (colW + gap);
+                String title = bt.getString("title") + " " + bt.getInt("done") + "/" + bt.getInt("of");
+                Ui.section(g, font, Ui.clip(font, title, colW), nx, by, colW);
+                List<List<CompoundTag>> tiers = byBranch.getOrDefault(b, List.of());
+                for (int t = 0; t < tiers.size(); t++) {
+                    List<CompoundTag> here = tiers.get(t);
+                    int top = top0 + t * (nodeH + nodeGap);
+                    if (t > 0) {
+                        // The step up from the tier before: dark where the way is walked, faint where it is not yet.
+                        boolean walked = here.stream().anyMatch(c -> !c.getString("state").equals("locked"));
+                        g.fill(nx + colW / 2, top - nodeGap, nx + colW / 2 + 1, top, walked ? Ui.EDGE : Ui.EDGE_SOFT);
+                    }
+                    int n = Math.max(1, here.size()), each = (colW - (n - 1) * 3) / n;
+                    for (int k = 0; k < here.size(); k++) {
+                        int kx = nx + k * (each + 3);
+                        civicNode(g, here.get(k), kx, top, each, nodeH, points);
+                        if (mx >= kx && mx < kx + each && my >= top && my < top + nodeH) over = here.get(k);
+                    }
+                    if (n == 2) {
+                        // The choice between them: a little "or" in the gap.
+                        int ox = nx + each, oy = top + nodeH / 2 - 1;
+                        g.fill(ox, oy, ox + 3, oy + 1, Ui.EDGE);
+                    }
+                }
+            }
+        }
+        // What was done when, the newest last, in a line along the foot.
+        int hy = y + ch - histH + 1;
         ListTag hist = r.getList("history", Tag.TAG_STRING);
         List<String> done = new ArrayList<>();
         for (int i = 0; i < hist.size(); i++) done.add(hist.getString(i));
-        String history = done.isEmpty() ? "Nothing done yet: the first civic comes in a few mornings." : "Done: " + String.join(" · ", done);
-        List<FormattedCharSequence> hl = font.split(Component.literal(history), (int) (cw / 0.75));
-        for (int i = 0; i < hl.size() && hy <= y + ch - 7; i++) {
-            small(g, hl.get(i), x, hy, Ui.MUTED);
-            hy += 8;
-        }
+        String history = done.isEmpty() ? "Nothing done yet: the first civic comes in a few mornings."
+            : "Done: " + String.join(" · ", done.subList(Math.max(0, done.size() - 6), done.size())) + (done.size() > 6 ? " (and " + (done.size() - 6) + " before)" : "");
+        small(g, Ui.clip(font, history, (int) (cw / 0.75)), x, hy, Ui.MUTED);
         if (over != null) {
             List<Component> tip = new ArrayList<>();
             String branch = over.getInt("branch") < branches.size() ? branches.getCompound(over.getInt("branch")).getString("title") : "";
-            tip.add(Component.literal(over.getString("title")).withStyle(net.minecraft.ChatFormatting.BOLD));
+            boolean wonder = over.getBoolean("wonder");
+            tip.add(Component.literal(over.getString("title") + (wonder ? " — a wonder of the world" : ""))
+                .withStyle(net.minecraft.ChatFormatting.BOLD).withColor(wonder ? 0xE0B040 : 0xFFFFFF));
             tip.add(Component.literal(branch + ", tier " + over.getInt("tier") + " · " + over.getInt("cost") + " points").withColor(0xA0A0A0));
             for (String line : wrapWords(over.getString("about"), 46)) tip.add(Component.literal(line));
+            if (!over.getString("rival").isEmpty()) {
+                tip.add(Component.literal("One or the other: " + over.getString("title") + " or " + over.getString("rival")
+                    + ". Taking it closes the other for good.").withColor(0xD0A0A0));
+            }
             String state = over.getString("state");
             int cost = over.getInt("cost");
             String says = switch (state) {
@@ -3060,45 +3153,68 @@ public class CityScreen extends Screen {
                 case "now" -> "Being studied: " + Math.min(points, cost) + " of " + cost + " points"
                     + (r.getInt("days_left") > 0 ? ", about " + plural(r.getInt("days_left"), "day") + " to go." : ", done tomorrow.");
                 case "open" -> "Open: the leader may choose it next.";
+                case "closed" -> "Closed: " + over.getString("closed_why") + ".";
                 default -> "Locked: " + over.getString("needs") + " first.";
             };
-            int colour = state.equals("done") ? 0x7FD67F : state.equals("now") ? 0xF2C14E : state.equals("open") ? 0xFFFFFF : 0xB0B0B0;
+            int colour = switch (state) {
+                case "done" -> 0x7FD67F;
+                case "now" -> 0xF2C14E;
+                case "open" -> 0xFFFFFF;
+                case "closed" -> 0xD08080;
+                default -> 0xB0B0B0;
+            };
             tip.add(Component.literal(says).withColor(colour));
+            if (wonder && !over.getString("wonder_state").isEmpty()) {
+                tip.add(Component.literal("The wonder: " + over.getString("wonder_state") + ".").withColor(0xE0B040));
+            }
             hover = tip;
             hoverX = mx;
             hoverY = my;
         }
     }
 
-    /** One civic on the tree: its name, its effect, and its cost, progress or the day it was done. */
+    /**
+     * One civic on the tree: its name and, where there is room, its cost, progress or the day it was done. A closed
+     * one dull and struck through; a wonder edged in gold, and filled gold where the town holds it.
+     */
     private void civicNode(GuiGraphics g, CompoundTag c, int x, int y, int w, int h, int points) {
         String state = c.getString("state");
-        int bed = switch (state) { case "done" -> NODE_DONE; case "now" -> NODE_NOW; case "open" -> NODE_OPEN; default -> NODE_LOCKED; };
-        int spine = switch (state) { case "done" -> GREEN; case "now" -> AMBER; case "open" -> BLUE; default -> GREY; };
-        boolean locked = state.equals("locked");
+        boolean wonder = c.getBoolean("wonder"), ours = c.getBoolean("wonder_ours");
+        int bed = switch (state) {
+            case "done" -> wonder && ours ? NODE_WONDER : NODE_DONE;
+            case "now" -> NODE_NOW;
+            case "open" -> NODE_OPEN;
+            case "closed" -> NODE_CLOSED;
+            default -> NODE_LOCKED;
+        };
+        int spine = switch (state) { case "done" -> GREEN; case "now" -> AMBER; case "open" -> BLUE; case "closed" -> RED; default -> GREY; };
+        boolean dim = state.equals("locked") || state.equals("closed");
         g.fill(x, y, x + w, y + h, bed);
-        g.renderOutline(x, y, w, h, locked ? Ui.EDGE_SOFT : Ui.EDGE);
+        g.renderOutline(x, y, w, h, wonder ? NODE_GOLD : dim ? Ui.EDGE_SOFT : Ui.EDGE);
+        if (wonder) g.renderOutline(x + 1, y + 1, w - 2, h - 2, NODE_GOLD);
         g.fill(x, y, x + 2, y + h, spine);
-        g.drawString(font, Ui.clip(font, c.getString("title"), w - 7), x + 4, y + 3, locked ? Ui.FAINT : Ui.INK, false);
-        // The effect, in the small hand: two lines if the node has room, one if not.
-        int lines = h >= 40 ? 2 : h >= 30 ? 1 : 0;
-        List<FormattedCharSequence> eff = font.split(Component.literal(c.getString("effect")), (int) ((w - 7) / 0.75));
-        int ey = y + 13;
-        for (int i = 0; i < Math.min(lines, eff.size()); i++) {
-            small(g, eff.get(i), x + 4, ey, locked ? Ui.FAINT : Ui.MUTED);
-            ey += 7;
+        int ink = dim ? Ui.FAINT : Ui.INK;
+        String title = Ui.clip(font, c.getString("title"), (int) ((w - 6) / 0.75));
+        small(g, title, x + 4, y + 2, ink);
+        if (state.equals("closed")) {
+            // Struck through: the road not taken.
+            int tw = Math.min(w - 6, (int) (font.width(title) * 0.75));
+            g.fill(x + 4, y + 5, x + 4 + tw, y + 6, Ui.BAD);
         }
-        int fy = y + h - 9, cost = c.getInt("cost");
+        int cost = c.getInt("cost");
+        if (state.equals("now")) {
+            Ui.bar(g, x + 4, y + h - 4, Math.max(6, w - 8), 2, Math.min(1F, points / (float) Math.max(1, cost)), AMBER);
+        }
+        if (h < 17) return;
+        // A second line, where the node has the room for it.
+        int fy = y + 9;
         switch (state) {
-            case "done" -> small(g, "Done, day " + c.getLong("day"), x + 4, fy, Ui.GOOD);
-            case "now" -> {
-                String of = Math.min(points, cost) + "/" + cost;
-                int lw = (int) (font.width(of) * 0.75) + 3;
-                Ui.bar(g, x + 4, fy + 1, Math.max(8, w - 8 - lw), 5, Math.min(1F, points / (float) Math.max(1, cost)), AMBER);
-                small(g, of, x + w - lw - 1, fy, Ui.WARN);
-            }
-            case "open" -> small(g, Ui.clip(font, cost + " points · open", (int) ((w - 7) / 0.75)), x + 4, fy, Ui.MUTED);
-            default -> small(g, Ui.clip(font, cost + " points · after " + c.getString("needs"), (int) ((w - 7) / 0.75)), x + 4, fy, Ui.FAINT);
+            case "done" -> small(g, Ui.clip(font, wonder ? (ours ? "Ours, day " + c.getLong("day") : "Done, day " + c.getLong("day"))
+                : "Done, day " + c.getLong("day"), (int) ((w - 6) / 0.75)), x + 4, fy, Ui.GOOD);
+            case "now" -> small(g, Math.min(points, cost) + "/" + cost, x + 4, fy, Ui.WARN);
+            case "open" -> small(g, Ui.clip(font, cost + " · open", (int) ((w - 6) / 0.75)), x + 4, fy, Ui.MUTED);
+            case "closed" -> small(g, "closed", x + 4, fy, Ui.BAD);
+            default -> small(g, Ui.clip(font, Integer.toString(cost), (int) ((w - 6) / 0.75)), x + 4, fy, Ui.FAINT);
         }
     }
 

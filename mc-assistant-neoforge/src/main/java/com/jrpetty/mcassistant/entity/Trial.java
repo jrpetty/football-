@@ -96,7 +96,9 @@ final class Trial {
         }
     }
 
-    enum Sentence { FINE, WORK, STOCKS, BANISH }
+    enum Sentence { FINE, WORK, STOCKS, BANISH,
+        /** [police] Served in the cells at the watch house, a day or two (WatchHouse). */
+        JAIL }
 
     private static final Map<UUID, Sitting> SITTINGS = new ConcurrentHashMap<>();
     /** Folk sat in the stocks just now: when they were last set down there. */
@@ -106,6 +108,7 @@ final class Trial {
     private static final Map<UUID, Integer> PATHED = new ConcurrentHashMap<>();
 
     static void resetForTests() {
+        ADOPT_LOOKED.clear();                       // [itemaudit]
         SITTINGS.clear();
         SEATED.clear();
         SWEEP.clear();
@@ -340,6 +343,8 @@ final class Trial {
     /** The sentence by the offence and the record. */
     static Sentence sentence(ServerLevel level, Villages.Village v, Case c, int priors) {
         if (priors >= 2) return Sentence.BANISH;
+        Sentence cells = WatchHouse.sentence(level, v, c, priors);            // [police] the graver crimes, with cells to hold them
+        if (cells != null) return cells;
         if (priors == 1 || c.kind.grave() || c.worth >= 10) return stocksAt(level, v) != null || canMake(level, v) ? Sentence.STOCKS : Sentence.WORK;
         if (c.kind == Kind.VANDALISM) return Sentence.WORK;
         return Sentence.FINE;
@@ -358,6 +363,8 @@ final class Trial {
                 + till + ".";
             case STOCKS -> (back.isEmpty() ? "You'll pay for the damage" : back) + ", and sit in the stocks on the square " + till + ".";
             case BANISH -> "This is your third time before us. You'll pay back what you can, and leave " + Villages.name(c.village) + " for good.";
+            case JAIL -> (back.isEmpty() ? "You'll pay for the damage" : back) + ", and serve " + (WatchHouse.jailDays(c) == 1 ? "a day" : WatchHouse.jailDays(c)
+                + " days") + " in the cells at the watch house.";                                                   // [police]
         };
     }
 
@@ -382,7 +389,10 @@ final class Trial {
                 int fine = fine(c);
                 int took = Math.min(f.purse(), fine);
                 if (took > 0 && f.spend(took)) Ledger.addCoins(v.id(), took);
+                else took = 0;
                 if (fine - took > 0) owe(f, null, "the town", fine - took);
+                c.fine = fine;
+                c.finePaid = took;
                 done += (done.isEmpty() ? "" : "; ") + "fined " + fine + (fine - took > 0 ? " (" + (fine - took) + " owed)" : "");
             }
             case STOCKS -> {
@@ -398,6 +408,12 @@ final class Trial {
                 done += (done.isEmpty() ? "" : "; ") + (c.kind == Kind.VANDALISM ? "to mend it and sweep the streets" : "community work");
             }
             case BANISH -> done += (done.isEmpty() ? "" : "; ") + "banished";
+            case JAIL -> {                                                   // [police] the cells at the watch house (WatchHouse)
+                r.putString("sentence", "jail");
+                r.putLong("until", now + WatchHouse.jailDays(c) * 24000L);
+                r.putInt("sentenceCase", c.id);
+                done += (done.isEmpty() ? "" : "; ") + (WatchHouse.jailDays(c) == 1 ? "a day" : WatchHouse.jailDays(c) + " days") + " in the cells";
+            }
         }
         c.stage = Stage.CONVICTED;
         c.closedDay = day;
@@ -424,6 +440,7 @@ final class Trial {
         if (c.confessed && id.equals(c.culprit)) ownsUpToTheRest(level, v, c, f, day);
         if (sentence == Sentence.BANISH) banish(level, v, c, f, day);
         else reform(level, v, f, priors, day);
+        WatchHouse.verdict(level, v, c, f, sentence == Sentence.JAIL ? WatchHouse.jailDays(c) : 0, false);   // [police] back to the cells, or let go
         f.refreshMood();
         Crime.closed(c, id.equals(c.culprit));
         Crime.changed();
@@ -460,7 +477,11 @@ final class Trial {
                 }
             }
             if (back > 0 && c.kind != Kind.FORGERY) said.add(c.goods + " returned to " + c.victimName);
-            if (back > 0 && c.kind == Kind.FORGERY) said.add(back + " forged coins taken");
+            if (back > 0 && c.kind == Kind.FORGERY) {
+                said.add(back + " forged coins taken");
+                int bars = meltForged(level, v);                 // [itemaudit] and melted back into the copper they were cast of
+                if (bars > 0) said.add("melted down into " + (bars == 1 ? "a bar" : bars + " bars") + " of copper for the stores");
+            }
         }
         int owed;
         if (c.kind == Kind.PICKPOCKET) owed = c.coins;
@@ -632,6 +653,7 @@ final class Trial {
 
     /** Cleared: it remembers who named it; the watch looks again (once), or the case is closed. */
     static void acquit(ServerLevel level, Villages.Village v, Case c, VillageFolkEntity f, Sitting s) {
+        Weave.acquitting(level, c, f.getUUID());                            // [weave] cleared: a player's word that put it here is paid for
         long day = level.getDayTime() / 24000L;
         UUID id = f.getUUID();
         String name = f.displayNameCap();
@@ -659,6 +681,7 @@ final class Trial {
             returnEvidence(level, v, c);
             Crime.closed(c, false);
         }
+        WatchHouse.verdict(level, v, c, f, 0, true);                      // [police] let go at the court; a wrong arrest on the watch's books
         f.refreshMood();
         Crime.changed();
     }
@@ -694,6 +717,7 @@ final class Trial {
             Crime.changed();
             return null;
         }
+        if (sentence.equals("jail")) return null;                           // [police] served in the cells (WatchHouse.prisonerHold)
         if (t >= 12500L || t < 1000L || f.isSleeping()) {
             standUp(f);
             return null;
@@ -801,7 +825,7 @@ final class Trial {
     @Nullable
     static BlockPos stocksAt(ServerLevel level, Villages.Village v) {
         String note = Ledger.note(v.id(), STOCKS);
-        if (note == null || note.isEmpty()) return null;
+        if (note == null || note.isEmpty()) return adopt(level, v);           // [itemaudit] a player's stocks on the square
         String[] p = note.split(",");
         if (p.length < 3) return null;
         try {
@@ -811,6 +835,56 @@ final class Trial {
         } catch (NumberFormatException ignored) { }
         Ledger.forget(v.id(), STOCKS);
         return null;
+    }
+
+    /**
+     * [itemaudit] The forged coins in the stores (the one passed, and those the watch took off the forger), melted down
+     * three to a bar of copper, as the recipe has it, so none is ever passed again: the copper they were cast of goes
+     * back to the town. Returns the bars.
+     */
+    static int meltForged(ServerLevel level, Villages.Village v) {
+        net.minecraft.world.item.Item forged = McAssistantMod.FORGED_COIN.get();
+        int bars = 0;
+        while (bars < 16 && Crafts.stock(level, v, s -> s.is(forged)) >= 3 && Crafts.take(level, v, s -> s.is(forged), 3)) {
+            Crafts.store(level, v, new ItemStack(Items.COPPER_INGOT));
+            bars++;
+        }
+        return bars;
+    }
+
+    /** [itemaudit] When each town last looked for stocks a player put up on its square. */
+    private static final Map<UUID, Long> ADOPT_LOOKED = new ConcurrentHashMap<>();
+
+    /**
+     * [itemaudit] Stocks a player has put up on the square (a block anybody can make: three planks over two logs) are
+     * the town's own once it has none: it sits its sentences in them rather than making a pair of its own. Looked for
+     * at most once a minute, while the town has no stocks of its own; the place noted as if the town had put them up.
+     */
+    @Nullable
+    static BlockPos adopt(ServerLevel level, Villages.Village v) {
+        long now = level.getGameTime();
+        Long last = ADOPT_LOOKED.get(v.id());
+        if (last != null && now - last < 1200L && now >= last) return null;
+        ADOPT_LOOKED.put(v.id(), now);
+        BlockPos heart = v.centre();
+        for (BlockPos p : BlockPos.betweenClosed(heart.offset(-12, -4, -12), heart.offset(12, 6, 12))) {
+            if (!level.isLoaded(p)) continue;
+            BlockState st = level.getBlockState(p);
+            if (!(st.getBlock() instanceof StocksBlock)) continue;
+            Direction facing = st.getValue(StocksBlock.FACING);
+            BlockPos at = p.immutable();
+            Ledger.note(v.id(), STOCKS, at.getX() + "," + at.getY() + "," + at.getZ() + "," + facing.getName());
+            Villages.tell(v.id(), level.getDayTime() / 24000L, "the stocks put up on the square were taken for the town's own");
+            return at;
+        }
+        return null;
+    }
+
+    /** [itemaudit] Tests: the town's stocks looked for afresh (a player's on the square among them), now. */
+    @Nullable
+    static BlockPos adoptNow(ServerLevel level, Villages.Village v) {
+        ADOPT_LOOKED.remove(v.id());
+        return stocksAt(level, v);
     }
 
     /** Can the stores run to the stocks: a pair put by, or three planks and two logs (the recipe's)? */
@@ -830,13 +904,17 @@ final class Trial {
         if (at == null || !canMake(level, v)) return false;
         if (!TownJobs.atWork(level, v, "stocks", at, "putting up the stocks on the square")) return false;
         boolean paid = Crafts.take(level, v, s -> s.is(McAssistantMod.STOCKS_ITEM.get()), 1);
+        String how = "a pair put by";
         if (!paid) {
             if (Crafts.usePlanks(level, v, 3)) {
                 if (Crafts.take(level, v, s -> s.is(ItemTags.LOGS), 2)) paid = true;
                 else Crafts.store(level, v, new ItemStack(Items.OAK_PLANKS, 3));
             }
+            how = "three planks and two logs";
         }
         if (!paid) return false;
+        Crime.town(v.id()).putString("stocksPaid", how);
+        Crime.changed();
         Direction facing = towards(at, v.centre());
         level.setBlockAndUpdate(at, McAssistantMod.STOCKS.get().defaultBlockState().setValue(StocksBlock.FACING, facing));
         Ledger.note(v.id(), STOCKS, at.getX() + "," + at.getY() + "," + at.getZ() + "," + facing.getName());

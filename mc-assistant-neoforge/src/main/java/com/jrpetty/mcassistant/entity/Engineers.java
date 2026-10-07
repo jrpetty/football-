@@ -1244,29 +1244,46 @@ public final class Engineers {
                 int x = c.getX() + dx, z = c.getZ() + dz;
                 if (!level.hasChunk(x >> 4, z >> 4)) continue;
                 int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-                out.add(new BlockPos(x, y - 1, z));
-                // The heightmap stops at the lantern on the post's top: the ground is the block under the post.
-                BlockPos g = new BlockPos(x, y - 1, z);
-                for (int i = 0; i < 4; i++) {
-                    BlockState s = level.getBlockState(g);
-                    if (s.is(BlockTags.FENCES) || s.is(Blocks.LANTERN) || s.is(Blocks.TORCH) || s.is(BlockTags.WALLS)
-                        || s.is(Blocks.REDSTONE_LAMP) || s.is(Blocks.DAYLIGHT_DETECTOR)) g = g.below();
-                }
-                out.set(out.size() - 1, g);
+                out.add(groundUnderPost(level, new BlockPos(x, y - 1, z)));
             }
         }
         out.sort(java.util.Comparator.comparingDouble(p -> p.distSqr(c)));
         return out;
     }
 
-    /** A post with a lantern or a torch on it (to be given a lamp), or bare level ground (a new post). */
+    /**
+     * The ground under whatever stands at a lamp spot, from the top of the column: the town's lamp posts are two blocks
+     * of the town's own post (fences, a wall, logs or stone, as its style has it: TownWork, Architecture) under their
+     * light (a lantern, a torch, the Nether Age's glowstone), the older ones a torch on a fence, and the engineer's own
+     * a lamp on two walls with its sensor on top.
+     */
+    static BlockPos groundUnderPost(ServerLevel level, BlockPos top) {
+        BlockState s = level.getBlockState(top);
+        if (s.is(Blocks.DAYLIGHT_DETECTOR)) return top.below(4);
+        if ((s.is(Blocks.TORCH) || s.is(Blocks.WALL_TORCH)) && level.getBlockState(top.below()).is(BlockTags.FENCES)
+                && !level.getBlockState(top.below(2)).is(BlockTags.FENCES)) return top.below(2);
+        if (light(s)) return top.below(3);
+        return top;
+    }
+
+    /** The light on top of a town's lamp post. */
+    private static boolean light(BlockState s) {
+        return s.is(Blocks.LANTERN) || s.is(Blocks.SOUL_LANTERN) || s.is(Blocks.TORCH) || s.is(Blocks.GLOWSTONE)
+            || s.is(Blocks.SEA_LANTERN) || s.is(Blocks.SHROOMLIGHT) || s.is(Blocks.JACK_O_LANTERN) || s.is(Blocks.REDSTONE_LAMP);
+    }
+
+    /** A post with a light on it (to be given a lamp: any of the town's styles), or bare level ground (a new post). */
     static boolean lampable(ServerLevel level, BlockPos top) {
         BlockState a = level.getBlockState(top.above()), b = level.getBlockState(top.above(2)), l = level.getBlockState(top.above(3));
-        if (level.getBlockState(top.above(3)).is(Blocks.REDSTONE_LAMP)) return false;
-        boolean post = (a.is(BlockTags.FENCES) || a.is(BlockTags.WALLS)) && (b.is(BlockTags.FENCES) || b.is(BlockTags.WALLS));
-        if (post) return l.is(Blocks.LANTERN) || l.is(Blocks.TORCH) || l.isAir();
+        if (l.is(Blocks.REDSTONE_LAMP) || b.is(Blocks.REDSTONE_LAMP)) return false;
         // The pre-Iron Age post: a fence and a torch on it. Grown into a proper post.
         if (a.is(BlockTags.FENCES) && b.is(Blocks.TORCH)) return true;
+        // An Iron Age post of whatever the town builds its posts of, its light on top.
+        boolean fenced = (a.is(BlockTags.FENCES) || a.is(BlockTags.WALLS)) && (b.is(BlockTags.FENCES) || b.is(BlockTags.WALLS));
+        if (fenced) return light(l) || l.isAir();
+        // (Of logs or stone, only with its light on: two blocks of either with nothing on top are somebody's, not a post.)
+        boolean post = !a.isAir() && !b.isAir() && !a.hasBlockEntity() && !b.hasBlockEntity() && !light(a) && !light(b);
+        if (post) return light(l);
         return a.isAir() && b.isAir() && l.isAir() && level.getBlockState(top).isSolid();
     }
 

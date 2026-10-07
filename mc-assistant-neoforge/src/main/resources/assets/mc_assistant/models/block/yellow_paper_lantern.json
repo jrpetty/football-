@@ -1,0 +1,6 @@
+{
+  "parent": "mc_assistant:block/template_paper_lantern",
+  "textures": {
+    "paper": "mc_assistant:block/yellow_paper_lantern"
+  }
+}

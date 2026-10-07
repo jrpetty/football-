@@ -161,6 +161,14 @@ public final class Raids {
                 }
             }
         });
+        // [golems] The town's golems kept to their posts, back from a fight to the gate or the square (Golems).
+        Guard.run("golems", () -> {
+            for (ServerLevel level : event.getServer().getAllLevels()) {
+                for (Villages.Village v : Villages.every()) {
+                    if (v.dim().equals(level.dimension())) Golems.tick(level, v);
+                }
+            }
+        });
     }
 
     /** The watch's look round one village. */
@@ -182,7 +190,7 @@ public final class Raids {
         Alarm a = ALARMS.get(id);
         // The gates: shut at dusk and whenever the bell rings, open again in the morning. Only on
         // the change, so a folk who opens a door to go through isn't fought by the watch.
-        boolean shut = (t >= 13000L && t < 23000L) || a != null;
+        boolean shut = (t >= Ethos.gatesShut(id) && t < Ethos.gatesOpen(id)) || a != null;   // [identity] a closed town at sunset
         if (!Watch.knows(id) || Watch.isShut(id) != shut) Watch.shut(level, id, shut);
         // Trouble? Monsters only ring the bell inside a wall: a village without one has no
         // bell to ring and nowhere to shut itself in, and its folk are indoors at night anyway.
@@ -431,6 +439,8 @@ public final class Raids {
         }
         // A bad raid: homes lost, or the place too few to keep: its homeless go to a neighbour (JobMarket).
         if (a.raid) JobMarket.raided(level, v, a.lost);
+        Fletchers.raidOver(level, v, a.raid);                // [fletcher] every quiver filled, and the reserve made good
+        Golems.raidOver(level, v, a.raid || "a raid".equals(a.why));   // [golems] the raids counted, for the keeper and the gates
     }
 
     /** A folk of this village fell (Raids counts the night's losses). */
@@ -477,7 +487,7 @@ public final class Raids {
         UUID id = g.ownerId();
         Alarm a = id == null ? null : ALARMS.get(id);
         if (a == null) {
-            if (g.post() != null) leavePost(g);
+            if (g.post() != null && !Beats.onTheWall(g)) leavePost(g);   // [police] the roster's night watch keeps its post
             SENT.remove(g.getUUID());
             return Militia.yard(g);                       // [war-prep] between the bells, a turn at the training yard
         }

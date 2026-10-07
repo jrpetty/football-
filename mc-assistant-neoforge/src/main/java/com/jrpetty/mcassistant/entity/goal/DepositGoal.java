@@ -236,6 +236,8 @@ public class DepositGoal extends Goal {
         int moved = 0;
         // What went into the Village Storehouse, for its books (Storekeeping).
         java.util.List<ItemStack> booked = new java.util.ArrayList<>();
+        // [workitems] Its ore sack's load and its crates' first: unpacked into the chest, the sack and the crates kept.
+        if (routeOnly == null) moved += com.jrpetty.mcassistant.entity.WorkTools.unpackInto(assistant, container, booked);
         var items = assistant.getInventoryItems();
         // Station reserve: a stationed farmer keeps its seed stock, a stationed
         // lumberjack its saplings — only the surplus above the reserve is stashed.

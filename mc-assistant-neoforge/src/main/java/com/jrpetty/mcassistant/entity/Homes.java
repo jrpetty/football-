@@ -1173,7 +1173,7 @@ public final class Homes {
             long t = level.getDayTime() % 24000L;
             if (t < 11500L || t > 13000L || f.tickCount % 200 != 0 || f.onShift()) return false;
             boolean carrying = false;
-            for (ItemStack s : f.getInventoryItems()) if (isKeepsake(s)) { carrying = true; break; }
+            for (ItemStack s : f.getInventoryItems()) if (isKeepsake(s) && !Keepsakes.isCarried(s)) { carrying = true; break; }   // [individual] not what it carries always
             if (!carrying) return false;
             Home h = homeOf(village, f.getUUID());
             BlockPos chest = h == null ? null : chestOf(level, village, h);
@@ -1212,7 +1212,7 @@ public final class Homes {
         List<ItemStack> pack = f.getInventoryItems();
         for (int i = 0; i < pack.size(); i++) {
             ItemStack s = pack.get(i);
-            if (s.isEmpty() || !isKeepsake(s)) continue;
+            if (s.isEmpty() || !isKeepsake(s) || Keepsakes.isCarried(s)) continue;   // [individual] its keepsake, stick, spectacles stay on it
             ItemStack left = insertInto(c, s.copy());
             pack.set(i, left);
         }
@@ -1978,6 +1978,8 @@ public final class Homes {
         Standing.Title title = Standing.of(id, p.getUUID(), level.getGameTime()).title();
         boolean citizen = Ledger.citizens(id).containsKey(p.getUUID());
         if (!citizen && !title.atLeast(Standing.Title.FRIEND)) return Villages.name(id) + " sells its houses to its friends. Be one first.";
+        String barred = LawBook.housesBarred(id, citizen);             // [identity] citizens only, or nobody: the town's law
+        if (barred != null) return barred;
         int price = (int) Math.round(price(id, h) * (citizen ? 1.0 : 1.25));
         int held = Market.coinsHeld(p);
         if (held < price) return address(id, v, h) + " is " + price + coins(price) + ". You have " + held + ".";

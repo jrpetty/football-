@@ -156,7 +156,8 @@ public final class Links {
         UUID village = f.ownerId();
         Villages.Village v = village == null ? null : Villages.get(village);
         if (v == null) return null;
-        if (Market.stock(level, village, s -> s.is(Items.MILK_BUCKET)) + f.countCarried(s -> s.is(Items.MILK_BUCKET)) >= 3) return null;
+        if (Market.stock(level, village, s -> s.is(Items.MILK_BUCKET)) + f.countCarried(s -> s.is(Items.MILK_BUCKET))
+                >= 3 + Kitchen.milkWanted(level, village)) return null;   // [kitchen] three more while the cook wants cheese
         java.util.List<Cow> cows = level.getEntitiesOfClass(Cow.class, f.getBoundingBox().inflate(12), c -> c.isAlive() && !c.isBaby());
         if (cows.isEmpty()) return null;
         if (f.countCarried(s -> s.is(Items.BUCKET)) < 1) {

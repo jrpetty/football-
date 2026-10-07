@@ -100,6 +100,7 @@ public final class Purchases {
     /** Does this folk pay for this, here and now? Not before the shop opens, nor for the town's work, nor the watch's kit. */
     static boolean pays(UUID village, VillageFolkEntity f, Need need) {
         if (village == null || need == Need.WORK || !open(village)) return false;
+        if (need == Need.FOOD && Perks.foodFree(village)) return false;            // [perks] the Open Granary: the stores feed everybody
         return !(need == Need.TOOL && f.stationTask() == StationTask.GUARD);       // the watch's blades are issued
     }
 
@@ -291,6 +292,7 @@ public final class Purchases {
         if (Market.marketDay(village, level.getDayTime() / 24000L)) p *= 0.9;
         p = asked(level, village, s, p);
         if (buyer != null && buyer.knacks().has(FolkSkills.Knack.THRIFTY)) p *= 0.9;
+        p = Perks.priceEach(village, s, buyer, p);         // [perks] Guild Monopolies / Free Market, Private Larders, a Smooth-talker
         return Math.max(0.01, p);
     }
 

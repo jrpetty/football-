@@ -264,16 +264,20 @@ public final class Couriers {
             if (!(a instanceof VillageFolkEntity f) || f.stationTask() != StationTask.SMELT || !f.isAlive() || f.isBaby()) continue;
             long key = f.getUUID().getLeastSignificantBits() ^ 0x5E17L;
             if (busy.contains(key) || o.avoid.containsKey(key)) continue;
-            if (f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8) continue;
-            boolean ore = Market.stock(level, village, AssistantEntity.SMELTABLE_ORE) >= 8;
-            boolean makings = !ore && f.countCarried(Masonry.MAKINGS) < 16 && !Masonry.makings(level, v).isEmpty();
-            if (!ore && !makings) continue;
+            // [diver] A smelter with its ore but nothing it may burn, and the diver's kelp blocks in the stores: a run with
+            // them alone. One with its ore and its fuel, or with its ore and no kelp in the stores, is left to it, as before.
+            boolean stocked = f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8;
+            boolean kelp = !FuelBook.fuelled(f) && FuelBook.kelpInStores(level, village);
+            if (stocked && !kelp) continue;
+            boolean ore = !stocked && Market.stock(level, village, AssistantEntity.SMELTABLE_ORE) >= 8;
+            boolean makings = !stocked && !ore && f.countCarried(Masonry.MAKINGS) < 16 && !Masonry.makings(level, v).isEmpty();
+            if (!ore && !makings && !kelp) continue;
             Run r = new Run(o.nextId++, Kind.SMELTER, key);
             r.folk = f.getUUID();
             r.folkName = f.displayNameCap();
             r.priority = 1;
             r.queued = now;
-            r.what = (ore ? "ore and fuel" : "stone and clay") + " out to " + f.displayNameCap() + " at the forge";
+            r.what = (ore ? "ore and fuel" : makings ? "stone and clay" : "kelp blocks") + " out to " + f.displayNameCap() + " at the forge";
             o.queue.add(r);
         }
 
@@ -549,6 +553,7 @@ public final class Couriers {
             if (!c.transferReady()) return true;                     // still handling the last load
             boolean all = c.can(AssistantEntity.Ability.HAUL_FULL_PACK);
             int n = c.loadFrom(at, all ? 512 : 256, s -> AssistantEntity.haulWeight(s) > 0);
+            n += Crates.packFrom(c, at);                            // [workitems] and what is left packed into its crates, nine stacks a crate
             r.moved += n;
             if (r.moved <= 0) {                                       // nothing worth carrying after all
                 close(level, v, o, c, r, 1200L);
@@ -619,12 +624,19 @@ public final class Couriers {
             if (r.kind == Kind.KIT) {
                 got = c.drawFrom(heart, what, Math.max(1, r.count), radius);
             } else {
-                got = c.drawFrom(heart, AssistantEntity.SMELTABLE_ORE, 32, radius);
+                boolean stocked = to.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8;     // [diver] out with kelp blocks alone
+                got = stocked ? 0 : c.drawFrom(heart, AssistantEntity.SMELTABLE_ORE, 32, radius);
                 Villages.Village vill = Villages.get(v);
-                if (got <= 0 && vill != null) {
+                if (!stocked && got <= 0 && vill != null) {
                     for (Masonry.Lot lot : Masonry.makings(level, vill)) got += c.drawFrom(heart, lot.what(), lot.n(), radius);
                 }
-                if (got > 0) c.drawFrom(heart, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, radius);
+                // [diver] Fuel with it: the diver's kelp blocks while the stores have them (none if the smelter has a couple
+                // already), coal only with none in the stores at all (FuelBook).
+                boolean kelpBurns = FuelBook.kelpInStores(level, v);
+                int kelp = kelpBurns && to.countCarried(FuelBook.KELP_BLOCK) < 2 ? c.drawFrom(heart, FuelBook.KELP_BLOCK, 4, radius) : 0;
+                if (kelp > 0) FuelBook.forget(v);
+                else if (got > 0 && !kelpBurns) c.drawFrom(heart, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, radius);
+                got += kelp;
             }
             if (got <= 0) {                                         // the stores had none after all
                 close(level, v, o, c, r, 6000L);

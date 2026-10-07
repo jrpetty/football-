@@ -176,7 +176,7 @@ public final class Rebuilding {
 
     /** Every two seconds: the first burnt building's blocks put back, a few at a time, by hand, out of the stores. */
     static void tick(ServerLevel level, Villages.Village v, Disasters.Town t) {
-        if (!t.rebuilds.isEmpty()) work(level, v, t, STEP);
+        if (!t.rebuilds.isEmpty()) work(level, v, t, TownTraits.rebuildPace(v.id(), STEP));   // [identity] Fire-born: twice as fast
     }
 
     /** Put back so many burnt blocks. Returns how many went back. */
@@ -298,7 +298,10 @@ public final class Rebuilding {
         long now = level.getGameTime();
         if (l == null) {
             l = find(level, f, night, now);
-            if (l == null) return false;
+            if (l == null) {
+                Weave.noBed(f);                                             // [weave] nowhere at all: a refugee, to a town at peace
+                return false;
+            }
             LODGE.put(f.getUUID(), l);
             NIGHTS.merge(f.getUUID(), 1, Integer::sum);
             if (f.isSleeping()) f.stopSleeping();

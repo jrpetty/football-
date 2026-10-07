@@ -174,6 +174,7 @@ public class MineGoal extends Goal {
         com.jrpetty.mcassistant.entity.WorkZone plot = assistant.workZone();
         this.stairsKey = com.jrpetty.mcassistant.entity.MineStairs.plotKey(plot != null ? plot.center() : cursor);
         this.townGround = townGroundNow();
+        com.jrpetty.mcassistant.entity.WorkTools.newRun(assistant);   // [workitems] its props counted from the foot of its stairs again
         if (outJob) {
             this.phase = Phase.RETURN;
             this.levelFloor = cursor.getY();
@@ -326,12 +327,15 @@ public class MineGoal extends Goal {
     @Override
     public void tick() {
         if (job == null) return;
+        if (com.jrpetty.mcassistant.entity.Ropes.riding(assistant)) return;   // [workitems] on its rope, down a shaft or up it
 
         // Full pack: walk back up our own staircase first — the known, lit,
         // dug route — and only then stash. Finishing on the spot handed the
         // pathfinder a bot at Y-50 and let it wander whatever caves the dig
         // had breached on the way.
-        if (assistant.isPackFull() && phase != Phase.RETURN && phase != Phase.CLIMB && phase != Phase.ASCEND) {
+        // [workitems] With an ore sack, a full pack's ore goes into the sack and the digging goes on (WorkTools.stowOre).
+        if (assistant.isPackFull() && phase != Phase.RETURN && phase != Phase.CLIMB && phase != Phase.ASCEND
+                && !com.jrpetty.mcassistant.entity.WorkTools.stowOre(assistant)) {
             if (shaftLined && cursor.getY() < shaftTopY - 4) {
                 returnReason = "Pack's full — got " + oresMined + " ore. Stashing now.";
                 assistant.sayRoutine("Pack's full — up the ladder.");
@@ -953,6 +957,15 @@ public class MineGoal extends Goal {
             return;
         }
 
+        // [workitems] A shaft under the next step: let its rope down it and climb down, rather than bridge it (Ropes).
+        if (phase == Phase.DESCEND) {
+            BlockPos shaftFloor = com.jrpetty.mcassistant.entity.Ropes.downTheShaft(assistant, cursor, newFeet);
+            if (shaftFloor != null) {
+                moveTarget = shaftFloor;
+                moveStuck = 0;
+                return;
+            }
+        }
         // Solid footing: bridge small cavities with carried blocks.
         BlockPos floor = newFeet.below();
         BlockState floorState = assistant.level().getBlockState(floor);
@@ -1116,7 +1129,7 @@ public class MineGoal extends Goal {
         assistant.equipBestTool(state);
         this.currentDig = pos;
         this.workTicks = 0;
-        this.workNeeded = assistant.workTicksFor(state);
+        this.workNeeded = com.jrpetty.mcassistant.entity.WorkTools.propPace(assistant, assistant.workTicksFor(state));   // [workitems] a propped face
     }
 
     private void digTick() {
@@ -1225,6 +1238,7 @@ public class MineGoal extends Goal {
     private void moveTick() {
         BlockPos dest = moveTarget;
         if (dest == null) return;
+        if (com.jrpetty.mcassistant.entity.Ropes.upTheShaft(assistant, cursor, dest)) return;   // [workitems] up the rope it came down
         double distSq = assistant.distanceToSqr(dest.getX() + 0.5, dest.getY(), dest.getZ() + 0.5);
         // A step up is one across and one up, two blocks' distance squared: on the way up it is reached
         // only when it is stood on, or every step "arrived" before it was climbed and the climb began
@@ -1240,6 +1254,7 @@ public class MineGoal extends Goal {
             if (phase == Phase.TUNNEL) {
                 tunnelSteps++;
                 if (dugThisStep) freshSteps++;
+                com.jrpetty.mcassistant.entity.WorkTools.propStep(assistant, cursor, dir, tunnelSteps);   // [workitems] a pit prop every five steps
             }
             dugThisStep = false;
             // [sf] A step through open cave can come out beside lava nobody dug to: sealed first, or home.

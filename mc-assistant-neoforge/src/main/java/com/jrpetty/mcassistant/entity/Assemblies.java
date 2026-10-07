@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * aisle, for a wedding; a small circle, for the council or a child come of age. The children
  * go to the front. Whoever leads it (the elder, mostly) stands before them and speaks, line
  * by line, and the crowd answers — a cheer, a murmur, a hush. A feast is eaten, out of the
- * stores; a celebration has fireworks, if the stores have the powder and paper for them.
+ * stores; a celebration has fireworks, if the stores have rockets for them (the fireworks maker's: FireworkShows).
  * When it is over they linger a little, a word with whoever is beside them, and drift back
  * to their day in twos and threes.
  *
@@ -91,8 +91,9 @@ public final class Assemblies {
         final Map<UUID, Integer> pathAt = new HashMap<>();
         int expected;
         long lastStep = -1;
+        /** [fireworks] Its display: 0 not yet asked for, 1 under way (FireworkShows), 99 none (no rockets put by: a bonfire's glow). */
         int rockets;
-        /** Rockets actually sent up (rockets stands at 99 once the powder or the paper runs out). */
+        /** Rockets actually sent up by its display. */
         int fired;
         /** Its close has been held (what it means to the village and to all who came: once). */
         boolean closed;
@@ -282,6 +283,7 @@ public final class Assemblies {
             case SPEECH -> {
                 if (now < a.nextLineAt) return;
                 if (a.line >= a.script.size()) {
+                    FireworkShows.afterSpeech(level, a);          // [fireworks] the vows said, the year read: the display, if it has one
                     a.phase = a.kind == Kind.FEAST || a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING
                         || a.kind == Kind.FESTIVAL && Festivals.mingles(a)        // [batchB] the dance, the song, the meal
                         ? Phase.MINGLE : Phase.CLOSE;
@@ -307,21 +309,9 @@ public final class Assemblies {
             }
             case MINGLE -> {
                 if (a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING) {
-                    if ((now - a.phaseAt) % 40 == 0 && a.rockets < 12) {
-                        Villages.Village v = Villages.get(a.village);
-                        if (v != null && Crafts.take(level, v, s -> s.is(Items.GUNPOWDER), 1)) {
-                            if (Crafts.take(level, v, s -> s.is(Items.PAPER), 1)) {
-                                Gatherings.launch(level, a.focus, r);
-                                a.rockets++;
-                                a.fired++;
-                            } else {
-                                Crafts.store(level, v, new ItemStack(Items.GUNPOWDER));
-                                a.rockets = 99;
-                            }
-                        } else {
-                            a.rockets = 99;            // nothing to make them of: a bonfire glow will do
-                        }
-                    }
+                    // [fireworks] The display is the fireworks maker's, of the stores' own rockets, begun as the speeches
+                    // ended (FireworkShows.afterSpeech); with none put by, a bonfire glow will do.
+                    a.fired = Math.max(a.fired, FireworkShows.fired(a.village, level.getDayTime() / 24000L));
                     if (a.rockets >= 99 && (now - a.phaseAt) % 20 == 0) {
                         level.sendParticles(ParticleTypes.FLAME, a.focus.getX() + 0.5, a.focus.getY() + 0.3, a.focus.getZ() + 0.5, 6, 0.3, 0.2, 0.3, 0.01);
                         level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, a.focus.getX() + 0.5, a.focus.getY() + 1, a.focus.getZ() + 0.5, 1, 0.1, 0.1, 0.1, 0.01);
@@ -443,6 +433,7 @@ public final class Assemblies {
         if (f.isBaby() && (a.kind == Kind.COUNCIL || a.kind == Kind.ELECTION || a.kind == Kind.VIGIL)) return false;
         if (a.host != null && a.host.equals(f.getUUID())) return true;
         if (a.principals.contains(f.getUUID())) return true;
+        if (Fears.shunsCrowd(f, a.kind.name())) return false;      // [individual] uneasy in a crowd: not the feast
         if (a.invited != null && !a.invited.contains(f.getUUID())) return false;
         return f.blockPosition().distSqr(a.focus) < 128 * 128;
     }
@@ -527,11 +518,16 @@ public final class Assemblies {
 
     /** The feast and the celebration: eat (out of the stores), dance, raise a cup. */
     private static void mingle(VillageFolkEntity f, ServerLevel level, Assembly a, RandomSource r) {
+        if (a.kind == Kind.FEAST || a.kind == Kind.FOUNDING || a.kind == Kind.FESTIVAL) {
+            Perks.feasted(f, level.getDayTime() / 24000L);                                 // [perks] a Showman makes it one to remember
+        }
+        Kitchen.mingle(f, level, a.kind, a.village, a.subject, a.day, r);    // [kitchen] a slice of honey cake; mead or cider in the toast
         if (a.kind == Kind.FESTIVAL && Festivals.mingle(f, level, a, r)) return;          // [batchB] round the maypole, the fire, the tables
         if ((a.kind == Kind.FEAST || a.kind == Kind.FOUNDING) && !a.ate.contains(f.getUUID()) && r.nextInt(30) == 0) {
             a.ate.add(f.getUUID());
             Villages.Village v = Villages.get(a.village);
-            ItemStack food = v == null ? ItemStack.EMPTY : Crafts.takeOne(level, v,
+            ItemStack food = v == null ? ItemStack.EMPTY : Cuisine.feast(level, v, f);    // [culture2] the town's own dish first
+            if (food.isEmpty() && v != null) food = Crafts.takeOne(level, v,
                 s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null && !s.is(Items.ROTTEN_FLESH) && !s.is(Items.SPIDER_EYE));
             if (!food.isEmpty()) {
                 level.sendParticles(new net.minecraft.core.particles.ItemParticleOption(ParticleTypes.ITEM, food),
@@ -780,6 +776,8 @@ public final class Assemblies {
                         if (b.structure().equals("chapel")) { face = b.facing(); at = b.anchor().relative(face, 6); break; }
                     }
                 }
+                BlockPos rite = Beliefs.weddingAt(level, v, w);                     // [culture2] where its faith marries
+                if (rite != null) at = rite;
                 Assembly a = new Assembly(id, Kind.WEDDING, w.names(), day, at, face, Layout.AISLE);
                 a.principals.add(w.a());
                 a.principals.add(w.b());
@@ -787,7 +785,7 @@ public final class Assemblies {
             }
             case VIGIL -> {
                 if (held(id, Kind.VIGIL, day)) yield null;
-                BlockPos yard = Villages.builtAt(id, "graveyard");
+                BlockPos yard = Beliefs.vigilAt(id, Villages.builtAt(id, "graveyard"));   // [culture2] on the shore, by the cairns
                 yield new Assembly(id, Kind.VIGIL, Gatherings.describe(tonight, id), day,
                     yard != null ? yard : v.centre(), Direction.SOUTH, yard != null ? Layout.ARC : Layout.RING);
             }
@@ -921,6 +919,7 @@ public final class Assemblies {
                 }
                 for (String found : Scouts.reports(id)) s.add(new Line(null, found, '?', null));
                 for (String found : CaveDwellers.reports(id)) s.add(new Line(null, found, '?', null));   // [caves]
+                for (String found : NetherRuns.reports(id)) s.add(new Line(null, found, '?', null));     // [nether]
                 for (String money : Market.reports(id)) s.add(new Line(null, money, '!', null));
                 long dayNow = level.getDayTime() / 24000L;
                 Gatherings.Kind tonight = Gatherings.tonight(id, dayNow);
@@ -950,6 +949,7 @@ public final class Assemblies {
                     s.add(new Line(a.principals.get(1), FolkTalk.pick(r, "I will!", "I do."), ' ', null));
                 }
                 s.add(new Line(null, "Then before all of " + name + " — you are wed!", '!', null));
+                Quilts.weddingGift(level, a, s, r);                    // [leisure] the town's gift: a patchwork quilt for their bed
             }
             case VIGIL -> {
                 s.add(new Line(null, "We are here for " + a.subject.replace("a vigil for ", "") + ".", '~', null));
@@ -1045,6 +1045,12 @@ public final class Assemblies {
     /** [batchD] What is under way (its kind, phase, focus, the way the crowd faces), for the band (Music); null if nothing. */
     @Nullable
     static Assembly underWay(UUID village) {
+        return NOW.get(village);
+    }
+
+    /** [police] The gathering under way in a town, or null: the watch on event duty posts itself round it (Incidents.eventPost). */
+    @Nullable
+    static Assembly current(UUID village) {
         return NOW.get(village);
     }
 

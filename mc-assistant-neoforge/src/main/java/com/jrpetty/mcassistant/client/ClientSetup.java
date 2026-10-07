@@ -159,6 +159,13 @@ public final class ClientSetup {
                 case BANK -> Items.GOLD_INGOT;
                 case CAVE -> Items.LANTERN;                // [caves]
                 case FERRY -> Items.OAK_BOAT;              // [transport]
+                case FLETCHER -> Items.FLETCHING_TABLE;    // [fletcher]
+                case GOLEMS -> Items.CARVED_PUMPKIN;       // [golems]
+                case FIREWORKS -> Items.FIREWORK_ROCKET;   // [fireworks]
+                case CARTOGRAPHER -> Items.CARTOGRAPHY_TABLE;   // [cartographer]
+                case EMERALD -> Items.EMERALD;             // [emerald]
+                case DIVER -> Items.KELP;                  // [diver]
+                case NETHER -> Items.BLAZE_ROD;            // [nether]
                 case REDSTONE -> Items.REPEATER;           // [redstone]
                 case NONE -> Items.AIR;
             });

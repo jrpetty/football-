@@ -1,0 +1,192 @@
+package com.jrpetty.mcassistant.entity;
+
+import com.jrpetty.mcassistant.Showcase;
+import com.jrpetty.mcassistant.entity.goal.BuildGoal;
+import com.jrpetty.mcassistant.village.Ledger;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LecternBlock;
+import net.minecraft.world.level.block.WallSignBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * [police] The operators' stage (/village police stage, chase, fight): the watch's pictures set out at once, among the
+ * town's own folk. The watch house is stamped beside where the command is run (a town with one of its own uses that)
+ * and fitted out as the watch would fit it: iron bars and doors on its cells, its notice board and its casebook, for
+ * nothing; a folk is put in a cell for a night's disorder; a guard on the beat greets a folk on the square by name; a
+ * culprit runs from a guard down the east avenue; and a guard walks another folk to the cells on a lead. Each scene
+ * says where to look from: "VIEW name x y z ax ay az" (the eyes' feet, and what they look at).
+ */
+final class PoliceStage {
+
+    private PoliceStage() {}
+
+    static List<String> stage(ServerLevel level, Villages.Village v, BlockPos at) {
+        List<String> out = new ArrayList<>();
+        UUID id = v.id();
+        Crime.hurryForTests(false);
+        Ledger.Building b = WatchHouse.of(id);
+        if (b == null || !level.isLoaded(b.anchor())) {
+            int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ());
+            BlockPos site = new BlockPos(at.getX(), y, at.getZ());
+            // Level ground for it: the footprint and a block round it cleared, a floor of earth under it.
+            for (int dx = -7; dx <= 7; dx++) {
+                for (int dz = -7; dz <= 7; dz++) {
+                    for (int dy = 0; dy < 9; dy++) level.setBlock(site.offset(dx, dy, dz), Blocks.AIR.defaultBlockState(), 2 | 16);
+                    for (int dy = -3; dy < 0; dy++) {
+                        level.setBlock(site.offset(dx, dy, dz), dy == -1 ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.DIRT.defaultBlockState(), 2 | 16);
+                    }
+                }
+            }
+            BuildGoal.stamp(level, WatchHouse.STRUCTURE, site, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
+            Ledger.built(id, WatchHouse.STRUCTURE, site, Direction.NORTH);
+            b = WatchHouse.of(id);
+            out.add("the watch house stamped at " + site.toShortString());
+        }
+        if (b == null) {
+            out.add("no watch house could be had");
+            return out;
+        }
+        fitOut(level, v, b);
+        // A folk in a cell, for a night's disorder.
+        List<VillageFolkEntity> folk = new ArrayList<>(), guards = new ArrayList<>(Patrols.watch(id));
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (a instanceof VillageFolkEntity f && !f.isBaby() && !f.isShowcase() && f.stationTask() != AssistantEntity.StationTask.GUARD
+                    && WatchHouse.custodyOf(f.getUUID()) == null && Incidents.task(f) == null && f.trip() == null) folk.add(f);
+        }
+        if (folk.size() < 3 || guards.size() < 2) {
+            out.add("the town wants three folk and two guards about for the stage (it has " + folk.size() + " and " + guards.size() + ")");
+            return out;
+        }
+        List<WatchHouse.Cell> cells = WatchHouse.cells(b);
+        WatchHouse.Cell cell = cells.get(0);
+        VillageFolkEntity prisoner = folk.get(0);
+        CompoundTag t = new CompoundTag();
+        t.putUUID("village", id);
+        t.putString("name", prisoner.displayNameCap());
+        t.putString("state", "CELL");
+        t.putInt("cell", 0);
+        t.putInt("case", 0);
+        t.putString("why", "a night's disorder");
+        t.putLong("since", level.getDayTime());
+        t.putLong("until", (level.getDayTime() / 24000L + 1) * 24000L + 1000L);
+        Police.custody().put(prisoner.getStringUUID(), t);
+        prisoner.clearQueue();
+        prisoner.moveTo(cell.inside().getX() + 0.5, cell.inside().getY(), cell.inside().getZ() + 0.5, 0.0F, 0.0F);
+        WatchHouse.setDoor(level, cell.door(), false);
+        BlockPos front = cell.front();
+        out.add(view("cell", front.relative(b.facing().getOpposite(), 1).relative(b.facing().getCounterClockWise(), 1), cell.inside().above()));
+        BlockPos door = WatchHouse.at(b, WatchHouse.OUTSIDE);
+        BlockPos outside = door.relative(b.facing().getOpposite(), 7).relative(b.facing().getClockWise(), 4).above(2);
+        out.add(view("house", outside, b.anchor().above(2)));
+        // A guard on the beat, greeting a folk on the square by name.
+        VillageFolkEntity beat = guards.get(0), passer = folk.get(1);
+        Police.setDutyForTests(level, beat, Roster.Duty.BEAT.name());
+        BlockPos sq = ground(level, v.centre().relative(Direction.EAST, 6).relative(Direction.SOUTH, 6));
+        beat.moveTo(sq.getX() + 0.5, sq.getY(), sq.getZ() + 0.5, 0.0F, 0.0F);
+        passer.moveTo(sq.getX() + 2.5, sq.getY(), sq.getZ() + 0.5, 90.0F, 0.0F);
+        beat.getLookControl().setLookAt(passer, 30.0F, 30.0F);
+        passer.getLookControl().setLookAt(beat, 30.0F, 30.0F);
+        FolkTalk.speak(beat, "Afternoon, " + passer.displayNameCap() + ". All well at home?");
+        passer.sayLater("All well, " + beat.displayNameCap() + ", thanks.", 40);
+        Beats.felt(id, sq, level.getGameTime());
+        out.add(view("beat", sq.relative(Direction.SOUTH, 5).relative(Direction.EAST, 1).above(1), sq.relative(Direction.EAST, 1).above(1)));
+        // A chase down the east avenue.
+        out.add(chase(level, v, ground(level, v.centre().relative(Direction.EAST, 20))));
+        // An arrest on a lead, walked to the second cell.
+        if (guards.size() >= 2 && folk.size() >= 3) {
+            VillageFolkEntity g = guards.get(1), f = folk.get(2);
+            BlockPos start = door.relative(b.facing().getOpposite(), 10);
+            start = ground(level, start);
+            g.moveTo(start.getX() + 0.5, start.getY(), start.getZ() + 0.5, 0.0F, 0.0F);
+            f.moveTo(start.getX() + 1.5, start.getY(), start.getZ() + 0.5, 0.0F, 0.0F);
+            if (g.countCarried(s -> s.is(Items.LEAD)) == 0) g.insertItem(new ItemStack(Items.LEAD));
+            WatchHouse.arrest(level, v, g, f, 0, "a breach of the peace", (level.getDayTime() / 24000L + 1) * 24000L + 1000L);
+            out.add(view("arrest", start.relative(b.facing().getClockWise(), 6).above(1), start.above(1)));
+        }
+        BlockPos board = VillageBoards.lectern(id);
+        if (board != null) out.add(view("board", board.relative(Direction.SOUTH, 4).above(1), board.above(1)));
+        out.add("the roster: " + Roster.words(level, v));
+        return out;
+    }
+
+    /** The watch house fitted out at once, for the pictures: iron bars and doors, the notice board, the casebook. */
+    static void fitOut(ServerLevel level, Villages.Village v, Ledger.Building b) {
+        for (WatchHouse.Cell c : WatchHouse.cells(b)) {
+            for (BlockPos p : c.bars()) {
+                if (!level.getBlockState(p).is(Blocks.IRON_BARS)) level.setBlock(p, Block.updateFromNeighbourShapes(Blocks.IRON_BARS.defaultBlockState(), level, p), 3);
+            }
+            if (!level.getBlockState(c.door()).is(Blocks.IRON_DOOR)) WatchHouse.hangIronDoor(level, v, c.door());
+        }
+        Direction left = b.facing().getCounterClockWise(), right = b.facing().getClockWise();
+        int[][] spots = { WatchHouse.WANTED_A, WatchHouse.WANTED_B, WatchHouse.ROSTER };
+        Direction[] faces = { left, left, right };
+        for (int i = 0; i < 3; i++) {
+            BlockPos p = WatchHouse.at(b, spots[i]);
+            if (level.getBlockState(p).canBeReplaced()) level.setBlock(p, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, faces[i]), 3);
+        }
+        WatchHouse.noticeBoard(level, v, b);
+        BlockPos lectern = WatchHouse.at(b, WatchHouse.LECTERN);
+        BlockState st = level.getBlockState(lectern);
+        if (st.getBlock() instanceof LecternBlock && !st.getValue(LecternBlock.HAS_BOOK)) {
+            LecternBlock.tryPlaceBook(null, level, lectern, st, WatchHouse.book(level, v));
+        }
+    }
+
+    /** "/village police chase": a folk at hand runs from the nearest guard, as if caught in the act. */
+    static String chase(ServerLevel level, Villages.Village v, BlockPos at) {
+        VillageFolkEntity g = null, f = null;
+        for (VillageFolkEntity x : Patrols.watch(v.id())) {
+            if (Incidents.task(x) != null || WatchHouse.escorting(x) != null) continue;
+            if (g == null || x.blockPosition().distSqr(at) < g.blockPosition().distSqr(at)) g = x;
+        }
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!(a instanceof VillageFolkEntity x) || x.isBaby() || x.stationTask() == AssistantEntity.StationTask.GUARD
+                    || WatchHouse.custodyOf(x.getUUID()) != null || Incidents.task(x) != null) continue;
+            if (f == null || x.blockPosition().distSqr(at) < f.blockPosition().distSqr(at)) f = x;
+        }
+        if (g == null || f == null) return "nobody to chase or to give chase";
+        BlockPos run = ground(level, at);
+        f.moveTo(run.getX() + 0.5, run.getY(), run.getZ() + 0.5, -90.0F, 0.0F);
+        BlockPos from = ground(level, at.relative(Direction.WEST, 9));
+        g.moveTo(from.getX() + 0.5, from.getY(), from.getZ() + 0.5, -90.0F, 0.0F);
+        Incidents.startChase(level, v, g, f, 0, "a theft at the market", true);
+        return view("chase", run.relative(Direction.SOUTH, 9).relative(Direction.EAST, 8).above(2), run.relative(Direction.EAST, 6).above(1))
+            + "\n" + g.displayNameCap() + " is after " + f.displayNameCap();
+    }
+
+    /** "/village police fight": two folk at hand come to blows, and the nearest guard is called. */
+    static String fight(ServerLevel level, Villages.Village v, BlockPos at) {
+        List<VillageFolkEntity> two = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (a instanceof VillageFolkEntity x && !x.isBaby() && x.stationTask() != AssistantEntity.StationTask.GUARD
+                    && WatchHouse.custodyOf(x.getUUID()) == null && Incidents.task(x) == null) two.add(x);
+            if (two.size() == 2) break;
+        }
+        if (two.size() < 2) return "nobody to fight";
+        BlockPos p = ground(level, at);
+        two.get(0).moveTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5, 90.0F, 0.0F);
+        two.get(1).moveTo(p.getX() + 1.8, p.getY(), p.getZ() + 0.5, -90.0F, 0.0F);
+        Incidents.startFight(level, v, two.get(0), two.get(1));
+        return two.get(0).displayNameCap() + " and " + two.get(1).displayNameCap() + " have come to blows";
+    }
+
+    static BlockPos ground(ServerLevel level, BlockPos p) {
+        return new BlockPos(p.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()), p.getZ());
+    }
+
+    private static String view(String name, BlockPos eye, BlockPos at) {
+        return "VIEW " + name + " " + eye.getX() + " " + eye.getY() + " " + eye.getZ() + " " + at.getX() + " " + at.getY() + " " + at.getZ();
+    }
+}

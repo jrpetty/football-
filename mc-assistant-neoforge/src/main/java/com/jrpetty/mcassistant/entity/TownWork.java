@@ -51,6 +51,7 @@ public final class TownWork {
         MineSafety.tick(level, v);                  // [mine-safety] the mine's stair heads fenced, the sign up
         TownLook.tick(level, v);                    // [batchE] the trees, benches, allotments, orchard, mill, bakery and inn
         Store.tick(level, v);                       // [econ-store] the shop's staff, its stock book and its deliveries
+        WorkTools.rounds(level, v);                 // [workitems] the milestones, the window boxes, the thatch, the shop's book
         int reach = Villages.townReach(id);
         List<int[]> cells = cellsWithin(reach);
         if (cells.isEmpty()) return;
@@ -107,16 +108,23 @@ public final class TownWork {
                 && !level.getBlockState(top.above(2)).isSolid()) {
             // The light first: no light, no post (and no logs spent on one). A lantern if the smith has
             // made one (or left the nuggets for one), a torch if not (Masonry).
-            if (!Masonry.canLight(level, v)) return 0;
+            // [nether] In the Nether Age, glowstone from the runners' dust where the stores have it (NetherHome.lampLight).
+            if (!Masonry.canLight(level, v) && !NetherHome.canLamp(level, v)) return 0;
             if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a lamp post")) return -1;
-            net.minecraft.world.level.block.Block light = Masonry.light(level, v);
+            net.minecraft.world.level.block.Block light = NetherHome.lampLight(level, v);
+            if (light == null) light = Masonry.light(level, v);
             if (light == null) return 0;
-            if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
-                Masonry.unlight(level, v, light);
+            Architecture.Post styled = Architecture.lampPost(level, v);    // [culture2] the town's own posts: dark oak, rough stone, birch...
+            net.minecraft.world.level.block.Block post = styled != null && take(level, v, styled.pay(), styled.cost())
+                ? styled.block() : null;
+            if (post == null && !take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
+                if (light == Blocks.GLOWSTONE) give(level, v, new ItemStack(Items.GLOWSTONE));   // [nether] the runners' glowstone back to the stores
+                else Masonry.unlight(level, v, light);
                 return 0;
             }
-            level.setBlockAndUpdate(top.above(), Blocks.SPRUCE_FENCE.defaultBlockState());
-            level.setBlockAndUpdate(top.above(2), Blocks.SPRUCE_FENCE.defaultBlockState());
+            if (post == null) post = Blocks.SPRUCE_FENCE;
+            level.setBlockAndUpdate(top.above(), post.defaultBlockState());
+            level.setBlockAndUpdate(top.above(2), post.defaultBlockState());
             level.setBlockAndUpdate(top.above(3), light.defaultBlockState());
             return 1;
         }
@@ -173,10 +181,14 @@ public final class TownWork {
      * From the Iron Age a village keeps an iron golem, as a vanilla village does: one made the day
      * the age comes, and another a few days after one is lost. It walks the town and fights what
      * comes into it; the folk are no monsters to it.
+     * [golems] Built as a player builds one: four blocks of the stores' iron stood in a T by the square and a
+     * carved pumpkin set on top, and the game's own check stands it up (Golems.raiseForTown). Once the town keeps
+     * a golem keeper (or wants one), its golems are the keeper's work, and the town leaves them to it.
      */
     static boolean golem(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         if (Villages.ageOf(id).ordinal() < Villages.Age.IRON.ordinal()) return false;
+        if (Golems.keeps(id) || Golems.wanted(id)) return false;          // [golems] the keeper's (Golems)
         BlockPos c = v.centre();
         if (!level.isLoaded(c)) return false;
         net.minecraft.world.phys.AABB town = new net.minecraft.world.phys.AABB(c).inflate(64, 24, 64);
@@ -186,28 +198,17 @@ public final class TownWork {
         String last = com.jrpetty.mcassistant.village.Ledger.note(id, "golem");
         if (last != null) {
             try {
-                if (day - Long.parseLong(last) < 3) return false;              // a new one takes a few days
+                if (day - Long.parseLong(last) < Ethos.golemGap(id, 3)) return false;   // a new one takes a few days ([identity] a martial town sooner)
             } catch (NumberFormatException ignored) { }
         }
-        BlockPos at = Trades.floorSpot(level, c, 8);
-        if (at == null) return false;
-        // A golem is made, not conjured: four blocks of iron and a carved pumpkin out of the stores
-        // (thirty-six ingots will do for the iron, a plain pumpkin carved on the spot for the head).
+        // A golem is made, not conjured: four blocks of iron (thirty-six ingots will do, nine to a block) and a
+        // pumpkin out of the stores, carved (or carved on the spot with the stores' shears), and some iron left
+        // over for the age.
         boolean blocks = Market.stock(level, id, s -> s.is(Items.IRON_BLOCK)) >= 4;
-        boolean ingots = Market.stock(level, id, s -> s.is(Items.IRON_INGOT)) >= 36 + 16;   // and some left over for the age
-        boolean head = Market.stock(level, id, s -> s.is(Items.CARVED_PUMPKIN) || s.is(Items.PUMPKIN)) >= 1;
-        if (!head || !blocks && !ingots) return false;
-        if (!TownJobs.atWork(level, v, "golem", at, "building an iron golem")) return false;
-        if (blocks ? !take(level, v, s -> s.is(Items.IRON_BLOCK), 4) : !take(level, v, s -> s.is(Items.IRON_INGOT), 36)) return false;
-        if (!take(level, v, s -> s.is(Items.CARVED_PUMPKIN) || s.is(Items.PUMPKIN), 1)) {
-            give(level, v, blocks ? new ItemStack(Items.IRON_BLOCK, 4) : new ItemStack(Items.IRON_INGOT, 36));
-            return false;
-        }
-        net.minecraft.world.entity.animal.IronGolem g = net.minecraft.world.entity.EntityType.IRON_GOLEM.create(level);
+        boolean ingots = Market.stock(level, id, s -> s.is(Items.IRON_INGOT)) >= 36 + 16;
+        if (!blocks && !ingots) return false;
+        net.minecraft.world.entity.animal.IronGolem g = Golems.raiseForTown(level, v);   // [golems] the T and the pumpkin
         if (g == null) return false;
-        g.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, level.getRandom().nextFloat() * 360.0F, 0.0F);
-        g.setPersistenceRequired();
-        if (!level.addFreshEntity(g)) return false;
         com.jrpetty.mcassistant.village.Ledger.note(id, "golem", Long.toString(day));
         Villages.tell(id, day, last == null ? "an iron golem was raised to keep the town" : "a new iron golem was raised in place of the one lost");
         return true;

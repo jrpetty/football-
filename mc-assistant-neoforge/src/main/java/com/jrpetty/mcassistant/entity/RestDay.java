@@ -49,6 +49,7 @@ public final class RestDay {
     public static boolean today(@Nullable UUID village, long day) {
         if (village == null || Math.floorMod(day + village.hashCode() + 3, 7) != 0) return false;
         if (Villages.ageOf(village).ordinal() < Villages.Age.STONE.ordinal()) return false;
+        if (!LawBook.restKept(village, day)) return false;             // [identity] kept loosely: every other week
         long founded = com.jrpetty.mcassistant.village.Chronicle.foundedOn(village);
         return founded < 0 || day - founded >= 7;
     }
@@ -87,7 +88,7 @@ public final class RestDay {
         long day = level.getDayTime() / 24000L, t = level.getDayTime() % 24000L;
         if (!today(village, day) || t < SERVICE_FROM || t >= EVENING) return false;
         KEPT.put(village, day);
-        if (t < GAMES_FROM) return service(f, level, village, heart, day);
+        if (t < LawBook.gamesFrom(village, GAMES_FROM)) return service(f, level, village, heart, day);   // [identity] a strict day, a longer service
         if (t < WALKING_FROM && Militia.drill(f)) return true;      // [war-prep] the militia drills instead of the games
         if (t < WALKING_FROM) return games(f, level, heart);
         return walkingOut(f, level, day);

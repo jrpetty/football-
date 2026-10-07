@@ -379,6 +379,9 @@ public final class JobMarket {
     public static String noun(StationTask t) {
         return switch (t) {
             case HAUL -> "courier";
+            case FLETCHER -> "fletcher";                 // [fletcher]
+            case GOLEMS -> "golem keeper";               // [golems]
+            case FIREWORKS -> "fireworks maker";        // [fireworks]
             case NONE -> "hand";
             default -> t.title.toLowerCase(Locale.ROOT);
         };
@@ -401,7 +404,10 @@ public final class JobMarket {
         if (t.name().contains("TEACH")) return new int[]{ 35, 200 };
         return switch (t) {
             case GUARD, SCOUT, HUNT, CAVE -> new int[]{ 18, 50 };          // [caves]
+            case DIVER -> new int[]{ 16, 50 };                             // [diver] a young diver's lungs
+            case NETHER -> new int[]{ 20, 50 };                            // [nether]
             case MINE, WOOD -> new int[]{ 18, 60 };
+            case EMERALD -> new int[]{ 18, 65 };                          // [emerald] a day's walk there and back
             case REDSTONE -> new int[]{ 20, 200 };                         // [redstone] a learned trade, not a youngster's
             default -> new int[]{ 0, 200 };
         };
@@ -414,7 +420,10 @@ public final class JobMarket {
         return switch (t) {
             case GUARD -> "able-bodied, for the watch";
             case SCOUT, HUNT -> "fit for long days out";
+            case EMERALD -> "fit for a day's walk, and a head for a bargain";   // [emerald]
             case CAVE -> "fit and able to fight, for a day underground";      // [caves]
+            case DIVER -> "a strong swimmer with good lungs";                  // [diver]
+            case NETHER -> "a seasoned hand, fit to fight through the Nether";   // [nether]
             case MINE, WOOD -> "strong enough for the work";
             case REDSTONE -> "old enough to have learned a trade first";      // [redstone]
             default -> "";
@@ -424,13 +433,14 @@ public final class JobMarket {
     /** A trade where an old head is valued: the teaching and the learned trades, the stores. */
     static boolean wise(@Nullable StationTask t) {
         return t != null && (t.name().contains("TEACH") || t == StationTask.ENCHANT || t == StationTask.STORE || t == StationTask.BREW
+            || t == StationTask.CARTOGRAPHER                                                         // [cartographer] a learned trade
             || t == StationTask.REDSTONE);                                          // [redstone]
     }
 
     /** Heavy work, for younger backs. */
     static boolean heavy(@Nullable StationTask t) {
         return t == StationTask.MINE || t == StationTask.WOOD || t == StationTask.GUARD || t == StationTask.HUNT
-            || t == StationTask.SCOUT || t == StationTask.HAUL || t == StationTask.CAVE;            // [caves]
+            || t == StationTask.SCOUT || t == StationTask.HAUL || t == StationTask.CAVE || t == StationTask.NETHER;   // [caves] [nether]
     }
 
     /** "the mines", "the watch": the work, for a refusal. */
@@ -443,6 +453,12 @@ public final class JobMarket {
             case HUNT -> "the hunt";
             case SCOUT -> "the scouting";
             case CAVE -> "the caves";                    // [caves]
+            case FLETCHER -> "the fletching";            // [fletcher]
+            case GOLEMS -> "the golems";                 // [golems]
+            case FIREWORKS -> "the powder hut";          // [fireworks]
+            case EMERALD -> "the trading";               // [emerald]
+            case DIVER -> "the diving";                  // [diver]
+            case NETHER -> "the Nether runs";            // [nether]
             case HAUL -> "the carrying";
             default -> "the work";
         };
@@ -455,6 +471,7 @@ public final class JobMarket {
             case "MINE", "GUARD", "SMELT", "STORE", "COOK", "BEEKEEP", "SHOP" -> 2;
             case "RANCH", "HUNT" -> 1;
             case "SCOUT", "TAILOR" -> 3;
+            case "FIREWORKS" -> 2;                                               // [fireworks]
             case "BREW" -> 4;
             case "SMITH", "ENCHANT" -> 5;
             default -> 0;
@@ -696,11 +713,18 @@ public final class JobMarket {
         { "smithy", "SMITH" }, { "cafe", "COOK" }, { "shop", "SHOP" }, { "brewery", "BREW" }, { "library", "ENCHANT" },
         { "workshop", "TAILOR" }, { "school", "TEACHER" }, { "school", "TEACH" }, { "bank", "BANKER" }, { "bank", "BANK" },
         { "stable", "GROOM" }, { "stables", "GROOM" }, { "stable", "STABLEHAND" },
+        { "fletcher", "FLETCHER" },                                                    // [fletcher] the fletcher's hut
+        { "golemyard", "GOLEMS" },                                                     // [golems] the golem yard
+        { "powderhut", "FIREWORKS" },                                                       // [fireworks]
+        { "maproom", "CARTOGRAPHER" },                                                          // [cartographer]
     };
 
     /** How many hands short the town is at a trade, as its shape has it (the trade's share, less who works it). */
     static double shortOf(UUID town, StationTask t) {
         if (t == StationTask.CAVE) return 0.0;              // [caves] the team is chosen from the town's own (CaveDwellers.appoint)
+        if (t == StationTask.FIREWORKS) return 0.0;         // [fireworks] the maker is chosen from the town's own (FireworksMaker.appoint)
+        if (t == StationTask.DIVER) return 0.0;             // [diver] the diver is chosen from the town's own (Divers.appoint)
+        if (t == StationTask.NETHER) return 0.0;            // [nether] the runners are picked from its veterans (NetherRunners.appoint)
         if (t == StationTask.REDSTONE) return 0.0;          // [redstone] the engineer is chosen from the town's own (Engineers.appoint)
         return -Villages.share(town, t);
     }
@@ -999,8 +1023,8 @@ public final class JobMarket {
         return hired;
     }
 
-    /** One applicant, weighed: its score, and what rules it out (null if nothing does). */
-    private record Weighed(Application a, @Nullable VillageFolkEntity f, int score, @Nullable String fault, boolean withdrawn,
+    /** One applicant, weighed: its score, and what rules it out (null if nothing does). [interviews] the shortlist reads it. */
+    record Weighed(Application a, @Nullable VillageFolkEntity f, int score, @Nullable String fault, boolean withdrawn,
                            List<String> good) {}
 
     /**
@@ -1009,6 +1033,7 @@ public final class JobMarket {
      */
     private static int judge(ServerLevel level, Villages.Village v, Opening o, List<Application> waiting, long day, boolean now) {
         UUID id = v.id();
+        if (!now && Interviews.held(id, o.id)) return -1;                // [interviews] the shortlist is before the panel: it decides
         String town = Villages.name(id);
         StationTask t = o.task();
         Envoys.Temper temper = Envoys.temper(id);
@@ -1053,6 +1078,9 @@ public final class JobMarket {
         }
         Weighed best = null;
         for (Weighed w : all) if (w.fault() == null && (best == null || w.score() > best.score())) best = w;
+        // [interviews] Two or more fit for the place: a shortlist goes before a panel at the hall (Interviews) instead of being
+        // decided on paper; those who would not do are told so now, and the panel's choice comes back through hire and refuse.
+        if (!now && Interviews.shortlist(level, v, o, all, day)) return 0;
         // Holding out: nobody with the years the notice asked for, the notice young, and the town not desperate.
         if (best != null && !now && best.a().level < o.minLevel && day - o.posted < 2 && t != null && at(id, t) > 0) return -1;
         for (Weighed w : all) {
@@ -1098,13 +1126,14 @@ public final class JobMarket {
                 s += 12;
                 good.add("has family here");
             }
+            s += Quirks.onPaper(f, t, null, good);                    // [perks] a quirk that suits the trade
         }
         if ((temper == Envoys.Temper.WARM || temper == Envoys.Temper.GENEROUS) && a.age <= 24) s += 5;      // gives the young a start
         if (temper == Envoys.Temper.WARY && link.ordinal() >= Link.FRIENDS.ordinal()) s -= 10;             // a stranger's face
         return s;
     }
 
-    private static void hire(ServerLevel level, Villages.Village v, Opening o, Application a, @Nullable VillageFolkEntity f,
+    static void hire(ServerLevel level, Villages.Village v, Opening o, Application a, @Nullable VillageFolkEntity f,      // [interviews] the panel's choice
                              List<String> good, int of, String judge, @Nullable VillageFolkEntity elder, long day) {
         UUID id = v.id();
         String town = Villages.name(id);
@@ -1129,7 +1158,7 @@ public final class JobMarket {
         LOG.info("[MCA-JOBS] {}: {} took on {} of {} as {} (score of {} applicants: {})", town, judge, a.name, a.fromName, o.title(), of, a.why);
     }
 
-    private static void refuse(ServerLevel level, UUID id, Opening o, Application a, boolean withdrawn, String why,
+    static void refuse(ServerLevel level, UUID id, Opening o, Application a, boolean withdrawn, String why,               // [interviews]
                                @Nullable String took, long day) {
         String town = Villages.name(id);
         a.verdict = withdrawn ? Verdict.WITHDRAWN : Verdict.REFUSED;
@@ -1217,7 +1246,8 @@ public final class JobMarket {
             if (t == StationTask.NONE) continue;
             double s = shortOf(town, t);
             if (s < 0.5) continue;
-            double score = s + f.tradeLevel(t) * 0.5;
+            double score = s + (f.tradeLevel(t) + Quirks.pull(f, t)) * 0.5;      // [perks] a quirk's pull to a trade
+            if (Quirks.refuses(f, t)) continue;
             if (score > bestScore) {
                 bestScore = score;
                 best = t;

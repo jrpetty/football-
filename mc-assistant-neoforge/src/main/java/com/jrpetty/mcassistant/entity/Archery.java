@@ -69,6 +69,8 @@ public final class Archery {
 
     public static void resetForTests() {
         SESSIONS.clear();
+        LAST.clear();
+        STOPPED.clear();
         PRACTISED.clear();
         CONTESTS.clear();
         TENDED.clear();
@@ -228,7 +230,8 @@ public final class Archery {
         }
         if (!s.dim.equals(level.dimension())) return false;
         if (f.getTarget() != null || Raids.underAlarm(s.village) || f.isSleeping()) {
-            stop(level, s, "called away");
+            stop(level, s, "called away (" + (f.getTarget() != null ? "at " + f.getTarget().getType().getDescription().getString()
+                : f.isSleeping() ? "asleep" : "the bell") + ")");
             return false;
         }
         drive(f, level, s);
@@ -273,10 +276,16 @@ public final class Archery {
     /** Arrows out of the stores and a bow to hand: the session open. Null without them. */
     @Nullable
     static Session open(VillageFolkEntity f, ServerLevel level, UUID village, Ledger.Building range, int lane, boolean contest) {
+        return open(f, level, village, range, lane, contest, ARROWS);
+    }
+
+    /** [fletcher] The same, with so many arrows to shoot (the fletcher's practice gives each guard ten). */
+    @Nullable
+    static Session open(VillageFolkEntity f, ServerLevel level, UUID village, Ledger.Building range, int lane, boolean contest, int arrows) {
         Villages.Village v = Villages.get(village);
         if (v == null) return null;
         long day = level.getDayTime() / 24000L;
-        int n = Math.min(ARROWS, Market.stock(level, village, s -> s.is(Items.ARROW)));
+        int n = Math.min(arrows, Market.stock(level, village, s -> s.is(Items.ARROW)));
         if (n < 2) {
             if (contest) score(level, village, f.getUUID(), 0, 0, "no arrows in the stores");
             else PRACTISED.put(f.getUUID(), day);                       // no practice this morning: asked again tomorrow
@@ -349,8 +358,16 @@ public final class Archery {
         switch (s.stage) {
             case TO_LINE -> {
                 Vec3 at = Vec3.atBottomCenterOf(l.stand());
-                if (f.position().distanceToSqr(at.x, f.getY(), at.z) > 1.0 && now - s.since < 600) {
+                double off = f.position().distanceToSqr(at.x, f.getY(), at.z);
+                if (off > 1.0 && now - s.since < 600) {
                     if (f.getNavigation().isDone() || f.tickCount % 40 == 0) f.getNavigation().moveTo(at.x, at.y, at.z, 1.0);
+                    return;
+                }
+                // Held up on the way (taken off by something else a good while) and still not at the line: the
+                // practice is off, its arrows and the bow back. It shoots from the line or by it, never from
+                // across the town over the heads of whoever is in between (clear() looks down the lane only).
+                if (off > 9.0) {
+                    stop(level, s, "never got to the line");
                     return;
                 }
                 f.getNavigation().stop();
@@ -416,6 +433,7 @@ public final class Archery {
         float speed = 1.6F;
         double drop = 0.5 * 0.05 * (horiz / speed) * (horiz / speed);
         float inaccuracy = (float) Math.max(2.5, Math.min(10.0, 10.0 - f.tradeLevel(StationTask.GUARD) * 0.2));
+        inaccuracy *= Fletchers.aimFactor(f);                          // [fletcher] the eye practice has given it
         arrow.shoot(dx, dy + drop, dz, speed, inaccuracy);
         level.addFreshEntity(arrow);
         level.playSound(null, f.blockPosition(), SoundEvents.ARROW_SHOOT, SoundSource.NEUTRAL, 1.0F, 1.0F / (f.getRandom().nextFloat() * 0.4F + 0.8F));
@@ -473,6 +491,8 @@ public final class Archery {
             if (s.points >= s.shot * 3 / 2) FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Not bad, that.", "My eye's in today."));
         }
         LAST.put(f.getUUID(), new int[]{ s.shot, s.hits, s.points, pulled });
+        Fletchers.practised(level, f, s.shot, s.hits, s.points, s.contest);   // [fletcher] its eye the better for it, and its best kept
+        STOPPED.remove(f.getUUID());
     }
 
     /** The arrows it loosed, and any of its own lying in the range: off the field, counted. */
@@ -497,6 +517,9 @@ public final class Archery {
         if (back > 0) Crafts.store(level, v, new ItemStack(Items.ARROW, back));
         if (f != null && s.borrowedBow) giveBackBow(level, v, f);
         if (s.contest) score(level, s.village, s.guard, s.points, s.hits, why);
+        LAST.put(s.guard, new int[]{ s.shot, s.hits, s.points, back - (s.toShoot - s.shot) });
+        STOPPED.put(s.guard, why);
+        Fletchers.stopped(level, f, s.shot, s.hits);                      // [fletcher] what it did shoot steadied it
     }
 
     // ------------------------------------------------------------------ the contest
@@ -607,6 +630,8 @@ public final class Archery {
     // ------------------------------------------------------------------ tests
 
     private static final Map<UUID, int[]> LAST = new ConcurrentHashMap<>();
+    /** Why this guard's last session was stopped before it was done (absent if it finished). */
+    private static final Map<UUID, String> STOPPED = new ConcurrentHashMap<>();
 
     /** Tests: a practice session for this guard now, whatever the hour (null if it cannot: no range, arrows, bow or lane). */
     public static boolean practiseForTests(VillageFolkEntity f, ServerLevel level) {
@@ -617,10 +642,28 @@ public final class Archery {
         return lane >= 0 && open(f, level, village, range, lane, false) != null;
     }
 
-    /** Tests: {shot, hits, points, pulled} of this guard's last session, or null. */
+    /**
+     * [fletcher] A guard's turn at the fletcher's practice: down to a free butt with so many of the stores' arrows and its
+     * bow (or one borrowed), whatever the hour. False if it cannot go: no range, no lane free, no arrows or no bow.
+     */
+    static boolean turn(VillageFolkEntity g, ServerLevel level, int arrows) {
+        UUID village = g.ownerId();
+        Ledger.Building range = of(village);
+        if (village == null || range == null || SESSIONS.containsKey(g.getUUID())) return false;
+        int lane = freeLane(village, range);
+        return lane >= 0 && open(g, level, village, range, lane, false, arrows) != null;
+    }
+
+    /** Tests: {shot, hits, points, pulled} of this guard's last session (finished or stopped), or null. */
     @Nullable
     public static int[] lastForTests(UUID guard) {
         return LAST.get(guard);
+    }
+
+    /** Tests: why this guard's last session was stopped before it was done, or null if it finished. */
+    @Nullable
+    public static String stoppedForTests(UUID guard) {
+        return STOPPED.get(guard);
     }
 
     public static boolean sessionForTests(UUID guard) {

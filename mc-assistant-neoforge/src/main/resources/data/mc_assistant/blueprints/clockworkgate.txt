@@ -1,0 +1,266 @@
+# [perks] The Clockwork Gate, a wonder of the world (Wonders): a great gatehouse of two tall towers under steep slate
+# spires, and an arched way through between them; over the arch the clock-chamber, a round clock face of glass framed
+# in brick with its hands of oak on the front, the town's bell behind it and the clockwork of note blocks that rings the
+# hours, reached by a ladder up the left tower. A wall-walk with battlements over the chamber, lamps at its corners.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name clockworkgate
+layer -1
+.FFFFFFFFFFF.
+.FFFFFFFFFFF.
+.FFFFFFFFFFF.
+.FFFFFFFFFFF.
+.FFFFFFFFFFF.
+.FFFFFFFFFFF.
+.FFFFFFFFFFF.
+.FFFFFFFFFFF.
+.FFFFFFFFFFF.
+layer 0
+.............
+.SSS.....SSS.
+.SHS.....S.S.
+.S.S.....S.S.
+.S.Y.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.SSS.....SSS.
+.............
+layer 1
+.............
+.SSS.....SSS.
+.SHS.....S.S.
+.S.S.....S.S.
+.S.......S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.SSS.....SSS.
+.............
+layer 2
+.............
+.SSS.....SSS.
+.SHS.....S.S.
+.S.S.....S.S.
+.G.S.....S.G.
+.S.S.....S.S.
+.S.S.....S.S.
+.SGS.....SGS.
+.............
+layer 3
+.............
+.SSS.....SSS.
+.SHS.....S.S.
+.S.S.....S.S.
+.G.S.....S.G.
+.S.S.....S.S.
+.S.S.....S.S.
+.SGS.....SGS.
+.............
+layer 4
+.............
+.SSS}...{SSS.
+.SHS..j..S.S.
+.S.S.....S.S.
+.S.S..j..S.S.
+.S.S.....S.S.
+.S.S..j..S.S.
+.SSS}...{SSS.
+.............
+layer 5
+.............
+.SSSSSSSSSSS.
+.fHfSSSSSS.S.
+.fffSSSSSS.S.
+.fffSSSSSS.S.
+.fffSSSSSS.S.
+.fffSSSSSS.S.
+.SSSSSSSSSSS.
+.............
+layer 6
+.............
+.SSSSSSSSSSS.
+.SHS.m.m.S.S.
+.S.Sm...mS.S.
+.S....e.mS.S.
+.S.Sm...mS.S.
+.S.S.....S.S.
+.SSSZZZZZSSS.
+.............
+layer 7
+.............
+.SSSSSSSSSSS.
+.SHS.....S.S.
+.S.S.....S.S.
+.G.......S.G.
+.S.S.....S.S.
+.S.S.....S.S.
+.SGSZOLOZSGS.
+.............
+layer 8
+.............
+.SSSSSSSSSSS.
+.SHS.....S.S.
+.S.S.....S.S.
+.G.S.....S.G.
+.S.S.....S.S.
+.S.S.....S.S.
+.SGSZOL-ZSGS.
+.............
+layer 9
+.............
+.SSSSSSSSSSS.
+.SHS.....S.S.
+.S.S.....S.S.
+.S.S..j..S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.SSSZZZZZSSS.
+.............
+layer 10
+.............
+.SSSSSSSSSSS.
+.S.SSSSSSS.S.
+.S.SSSSSSS.S.
+.S.SSSSSSS.S.
+.S.SSSSSSS.S.
+.S.SSSSSSS.S.
+.SSSSSSSSSSS.
+.............
+layer 11
+.............
+.SSSSsSsSSSS.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.SSSSsSsSSSS.
+.............
+layer 12
+.............
+.SSSl...lSSS.
+.S.S.....S.S.
+.S.S.....S.S.
+.G.S.....S.G.
+.S.S.....S.S.
+.S.S.....S.S.
+.SGSl...lSGS.
+.............
+layer 13
+.............
+.SSS.....SSS.
+.S.S.....S.S.
+.S.S.....S.S.
+.G.S.....S.G.
+.S.S.....S.S.
+.S.S.....S.S.
+.SGS.....SGS.
+.............
+layer 14
+.............
+.SSS.....SSS.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.SSS.....SSS.
+.............
+layer 15
+.............
+.SSS.....SSS.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.SSS.....SSS.
+.............
+layer 16
+.............
+.SSS.....SSS.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.S.S.....S.S.
+.SSS.....SSS.
+.............
+layer 17
+vvvvv...vvvvv
+>RRR<...>RRR<
+>RRR<...>RRR<
+>RRR<...>RRR<
+>RRR<...>RRR<
+>RRR<...>RRR<
+>RRR<...>RRR<
+>RRR<...>RRR<
+^^^^^...^^^^^
+layer 18
+.............
+.RRR.....RRR.
+.RRR.....RRR.
+.RRR.....RRR.
+.RRR.....RRR.
+.RRR.....RRR.
+.RRR.....RRR.
+.RRR.....RRR.
+.............
+layer 19
+.............
+.RRR.....RRR.
+.RRR.....RRR.
+.RRR.....RRR.
+.RRR.....RRR.
+.RRR.....RRR.
+.RRR.....RRR.
+.RRR.....RRR.
+.............
+layer 20
+.............
+.vvv.....vvv.
+.>R<.....>R<.
+.>R<.....>R<.
+.>R<.....>R<.
+.>R<.....>R<.
+.>R<.....>R<.
+.^^^.....^^^.
+.............
+layer 21
+.............
+.............
+..R.......R..
+..R.......R..
+..R.......R..
+..R.......R..
+..R.......R..
+.............
+.............
+layer 22
+.............
+.............
+.._......._..
+.._......._..
+.._......._..
+.._......._..
+.._......._..
+.............
+.............
+layer 23
+.............
+.............
+.............
+.............
+..P.......P..
+.............
+.............
+.............
+.............
+layer 24
+.............
+.............
+.............
+.............
+..l.......l..
+.............
+.............
+.............
+.............

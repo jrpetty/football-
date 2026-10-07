@@ -85,7 +85,22 @@ public final class TradeBooks {
     }
 
     /** A book's draft: what it would say now, its facts in a line, and what changed since the last edition. */
-    record Draft(StationTask trade, VillageFolkEntity master, Facts facts, String line, List<Change> changes, boolean significant) {}
+    record Draft(StationTask trade, VillageFolkEntity master, Facts facts, String line, List<Change> changes, boolean significant) {
+        /** [weave] Its key in the catalogue: the trade's ("FARM"), or the library's own ("LIBRARY", the librarian's, no trade of the work's). */
+        String key() {
+            return facts.key();
+        }
+
+        /** "farmer", "librarian". */
+        String noun() {
+            return trade == StationTask.NONE ? "librarian" : trade.title.toLowerCase(Locale.ROOT);
+        }
+
+        /** "farming", "library's keeping". */
+        String label() {
+            return trade == StationTask.NONE ? "library's keeping" : trade.label;
+        }
+    }
 
     // ------------------------------------------------------------------ the trades and their masters
 
@@ -133,10 +148,15 @@ public final class TradeBooks {
             case FISH -> AssistantEntity.Deed.FISH_CAUGHT;
             case RANCH -> AssistantEntity.Deed.ANIMALS_BRED;
             case GUARD, HUNT, CAVE -> AssistantEntity.Deed.MOBS_KILLED;
+            case DIVER -> AssistantEntity.Deed.CROPS_HARVESTED;              // [diver] the kelp beds cut
             case SMELT -> AssistantEntity.Deed.ITEMS_SMELTED;
             case HAUL -> AssistantEntity.Deed.LOADS_HAULED;
             case STORE -> AssistantEntity.Deed.CHESTS_SORTED;
             case SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP -> AssistantEntity.Deed.THINGS_MADE;
+            case FLETCHER, GOLEMS -> AssistantEntity.Deed.THINGS_MADE;     // [fletcher] [golems]
+            case FIREWORKS -> AssistantEntity.Deed.THINGS_MADE;          // [fireworks] its rockets
+            case CARTOGRAPHER -> AssistantEntity.Deed.THINGS_MADE;   // [cartographer] its maps
+            case NETHER -> AssistantEntity.Deed.MOBS_KILLED;           // [nether] the blazes it shot for their rods
             default -> null;
         };
     }
@@ -164,6 +184,13 @@ public final class TradeBooks {
             case HUNT -> new String[]{ "hunt", "wolf", "the wild" };
             case SCOUT -> new String[]{ "scout", "scouting" };
             case CAVE -> new String[]{ "cave" };
+            case FLETCHER -> new String[]{ "arrow", "fletch", "the butts", "crossbow", "the raid" };   // [fletcher]
+            case GOLEMS -> new String[]{ "golem" };                                                     // [golems]
+            case FIREWORKS -> new String[]{ "firework", "rocket", "powder" };   // [fireworks]
+            case CARTOGRAPHER -> new String[]{ "map", "cartographer", "explorer" };   // [cartographer]
+            case EMERALD -> new String[]{ "emerald", "villagers", "trading post" };   // [emerald]
+            case DIVER -> new String[]{ "diver", "kelp", "turtle", "drown", "out of the water", "monument" };   // [diver]
+            case NETHER -> new String[]{ "nether", "gateway", "the runners", "piglin", "blaze", "ghast" };   // [nether]
             case BEEKEEP -> new String[]{ "hive", "bee" };
             case REDSTONE -> new String[]{ "redstone", "engineer", "machine", "piston" };   // [redstone]
             default -> new String[]{};
@@ -410,6 +437,7 @@ public final class TradeBooks {
             sum[3] += f.deedCount(AssistantEntity.Deed.FISH_CAUGHT);
         }
         switch (t) {
+            case EMERALD -> out.addAll(EmeraldTrader.bookNotes(c.v.id()));   // [emerald] the villages it knows, who sells Mending, its account
             case FARM -> {
                 String care = Fields.careLine(m);
                 if (care != null && care.startsWith("its field grows at ")) {
@@ -482,14 +510,106 @@ public final class TradeBooks {
                 if (smelted > 0) out.add("Between us we've smelted " + Quill.number(smelted) + " loads.");
                 if (Villages.hasBuilt(id, "smeltery")) out.add("The smeltery's three furnaces are the town's. Keep all three going.");
             }
+            case FIREWORKS -> out.addAll(FireworksMaker.bookNotes(c.level, c.v));   // [fireworks] its real numbers, and what it learned
+            case CARTOGRAPHER -> out.addAll(Cartographers.bookNotes(id));     // [cartographer] what the map room has learnt, and its numbers
+            // [diver] The beds, the fuel they kept (FuelBook), the clay, the turtles, the rescues, and the breath (Divers.notes).
+            case DIVER -> out.addAll(Divers.notes(c.level, id));
             case REDSTONE -> out.addAll(Engineers.bookNotes(id));      // [redstone] its machines, its parts, what it has learned
             case COOK -> {
                 if (Villages.hasBuilt(id, "cafe")) out.add("The café is where folk spend their coins on their break. Keep its counter stocked.");
                 if (Villages.hasBuilt(id, "bakery")) out.add("The bakery's oven bakes for the whole town. Keep it fed.");
             }
+            case FLETCHER -> out.addAll(Fletchers.bookNotes(c.level, c.v));     // [fletcher] the arrows, the flint, the butts
+            case GOLEMS -> out.addAll(Golems.bookNotes(c.level, c.v));           // [golems] the golems raised, mended and lost
             default -> { }
         }
+        out.addAll(Weave.notes(c.level, c.v, t, m, at));      // [weave] the caves, the watch's cases, the fleet, the season's fashion
         return out;
+    }
+
+    // ------------------------------------------------------------------ [weave] the librarian's own book
+
+    /**
+     * The library's own book of best practice, kept by its librarian: the shelves (what is on them, what is read, what
+     * goes out and what never comes back) and how a library is kept. Its key is "LIBRARY": no trade of the work's, so no
+     * apprentice reads it for a quicker hand; it is the town's record of its own books. Null with no librarian or no books.
+     */
+    @Nullable
+    static Draft librarian(Ctx c, LibraryRecords.Shelf shelf) {
+        UUID id = c.v.id();
+        if (shelf.librarian == null || !Library.stands(id)) return null;
+        VillageFolkEntity m = null;
+        for (VillageFolkEntity f : c.folk) if (f.getUUID().equals(shelf.librarian)) m = f;
+        if (m == null) return null;
+        int books = 0, fresh = 0, reads = 0, lent = 0;
+        Map<String, Integer> kinds = new LinkedHashMap<>();
+        LibraryRecords.Title most = null;
+        java.util.Set<String> authors = new java.util.LinkedHashSet<>();
+        for (LibraryRecords.Title t : shelf.books) {
+            if (t.superseded || t.kind.isEmpty()) continue;
+            if (t.kind.equals("TRADE") && t.trade.equals("LIBRARY")) continue;          // its own book is not counted in itself
+            books++;
+            if (c.day - t.written < 7) fresh++;
+            reads += t.reads;
+            lent += t.lent;
+            kinds.merge(Library.kindWord(t), 1, Integer::sum);
+            if (!t.author.isEmpty()) authors.add(t.author);
+            if (most == null || t.reads > most.reads) most = t;
+        }
+        if (books == 0) return null;
+        List<String> notes = new ArrayList<>();
+        List<String> kindWords = new ArrayList<>();
+        for (Map.Entry<String, Integer> e : kinds.entrySet()) {
+            String one = e.getKey();
+            String many = switch (one) {
+                case "history" -> "histories";
+                case "life" -> "lives";
+                case "book of best practice" -> "books of best practice";
+                default -> one + "s";
+            };
+            kindWords.add(Quill.count(e.getValue(), one, many));
+        }
+        notes.add("We write our own books here: " + Quill.list(kindWords) + ", by " + Quill.count(authors.size(), "hand", "hands")
+            + ". Every one of them is about this town, and true.");
+        if (!shelf.readers.isEmpty()) notes.add(Quill.cap(Quill.count(shelf.readers.size(), "folk has", "folk have")) + " sat and read here. An apprentice who reads its trade's book learns the quicker for it.");
+        if (lent > 0 || shelf.lost > 0) {
+            notes.add("Players have borrowed " + Quill.count(lent, "book", "books") + (shelf.loans.isEmpty() ? "" : ", and " + Quill.count(shelf.loans.size(), "is", "are") + " out now")
+                + (shelf.lost > 0 ? "; " + Quill.count(shelf.lost, "never came back", "never came back") + ", and I wrote each out again" : "")
+                + (shelf.fines > 0 ? "; the fines came to " + Quill.count(shelf.fines, "coin", "coins") : "") + ".");
+        }
+        List<String> traits = new ArrayList<>();
+        for (Social.Trait tr : m.life().traits()) traits.add(tr.label);
+        Persona p = m.persona();
+        List<String> knacks = new ArrayList<>();
+        for (FolkSkills.Chosen ch : m.knacks().chosen()) knacks.add(ch.knack().title + " on day " + ch.day());
+        Person master = new Person(m.displayNameCap(), 0, traits, p.quirk(), p.rolled() ? p.hobby().word : "", m.ageYears(), p.origin(),
+            shelf.librarianSince, knacks, "", "", -1, m.life().partnerName());
+        LibraryRecords.Title last = shelf.tradeBook("LIBRARY");
+        List<Long> earlier = new ArrayList<>();
+        for (LibraryRecords.Title b : shelf.books) if (b.kind.equals("TRADE") && b.trade.equals("LIBRARY")) earlier.add(b.written);
+        earlier.sort(Long::compare);
+        Map<String, String> now = new LinkedHashMap<>();
+        now.put("master", m.displayNameCap());
+        now.put("books", Integer.toString(books));
+        String line = line(now);
+        List<Change> changes = new ArrayList<>();
+        boolean significant = last == null;
+        if (last != null) {
+            Map<String, String> was = parse(last.facts);
+            if (!was.getOrDefault("master", "").equals(now.get("master")) && !was.getOrDefault("master", "").isEmpty()) {
+                changes.add(new Change("master", now.get("master"), was.get("master"), -1, 0, 0));
+                significant = true;
+            }
+            int before = parseInt(was.get("books"));
+            if (books >= before + 3) changes.add(new Change("revised", "", "", -1, books, before));
+        }
+        Villages.Age age = Villages.ageOf(id);
+        String date = Seasons.season(id, c.day).word + ", the town's " + TownCalendar.ordinal(Seasons.year(id, c.day)) + " year";
+        List<Made> made = List.of(new Made("books", books, fresh, 0, -1), new Made("readings", reads, 0, 0, -1), new Made("loans", lent, 0, 0, -1));
+        Facts f = new Facts(Villages.name(id), "LIBRARY", c.day, date, last == null ? 1 : last.edition + 1, earlier, master,
+            List.of(new Hand(m.displayNameCap(), 0, "the librarian")), made, 1, fresh, 0, most == null ? 0 : most.reads, -1,
+            most == null ? "" : most.title, reads, 0, lent, List.of(), age.label, -1, "", 0, notes, changes);
+        return new Draft(StationTask.NONE, m, f, line, changes, significant);
     }
 
     private static String line(Map<String, String> m) {
@@ -541,7 +661,26 @@ public final class TradeBooks {
                 || since >= STALE && !d.line().equals(last.facts);
             if (go && (change == null || d.changes().size() > change.changes().size())) change = d;
         }
+        // [weave] The librarian keeps the library's own book, on the same terms as a trade's.
+        Draft lib = librarian(c, shelf);
+        if (lib != null) {
+            LibraryRecords.Title last = shelf.tradeBook("LIBRARY");
+            long since = last == null ? 0 : c.day - last.written;
+            if (last == null) {
+                if (first == null) first = lib;
+            } else if (since >= 1 || always) {
+                boolean go = lib.significant() && (always || since >= GAP) || !lib.changes().isEmpty() && since >= SMALL_GAP
+                    || since >= STALE && !lib.line().equals(last.facts);
+                if (go && change == null) change = lib;
+            }
+        }
         return first != null ? first : change;
+    }
+
+    /** [weave] Tests: the librarian's book's draft now, or null. */
+    @Nullable
+    static Draft librarianOf(ServerLevel level, Villages.Village v, LibraryRecords.Shelf shelf) {
+        return librarian(new Ctx(level, v, level.getDayTime() / 24000L), shelf);
     }
 
     /** The draft of one trade's book now (the tests, the stage), or null if it has no master. */

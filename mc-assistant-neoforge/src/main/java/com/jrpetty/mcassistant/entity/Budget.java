@@ -71,6 +71,8 @@ public final class Budget {
         final EnumSet<Villages.Task> short_ = EnumSet.noneOf(Villages.Task.class);
         final List<String> wants = new ArrayList<>();
         boolean bedsWait;
+        /** [fletcher] The arrows kept back from the counter: the raid's reserve, where the town keeps a fletcher. */
+        int arrowsKept = 2;
     }
 
     private static final Map<UUID, Books> BOOKS = new ConcurrentHashMap<>();
@@ -110,6 +112,7 @@ public final class Budget {
         b.larder = Math.max(256, 3 * Villages.larderForBirth(village));
         for (Villages.Need n : Villages.needs(level, village)) b.short_.add(n.task());
         b.bedsWait = Market.bedsShort(village) > 0;
+        b.arrowsKept = Fletchers.arrowsKept(village, 2);                  // [fletcher] the watch's reserve is not for sale
         // A tool for every hand that uses one, and spares (one and a tenth of the village more).
         Map<AssistantEntity.StationTask, Integer> trades = new EnumMap<>(AssistantEntity.StationTask.class);
         int toolsShort = 0;
@@ -211,6 +214,7 @@ public final class Budget {
         // few seconds stale, and read a larder just filled as empty.)
         if (g != null && g.need() != Villages.Task.NONE && g.need() != Villages.Task.FOOD && b.short_.contains(g.need())) return Integer.MAX_VALUE;
         if (s.is(ItemTags.WOOL)) return b.bedsWait ? Integer.MAX_VALUE : 32;
+        if (s.is(Items.ARROW) || s.is(Items.SPECTRAL_ARROW)) return b.arrowsKept;   // [fletcher] the raid's reserve
         if (s.is(ItemTags.BEDS)) return b.bedsWait ? Integer.MAX_VALUE : 2;
         Economy.Kind kind = Economy.kindOf(s);
         boolean food = s.get(net.minecraft.core.component.DataComponents.FOOD) != null
@@ -252,6 +256,7 @@ public final class Budget {
         // work, the tailor's banners and rugs — is the village's to sell whenever it has it: nobody
         // here needs an enchanted pick to eat.
         if (luxury(sample)) return Market.stock(level, village, s -> ItemStack.isSameItemSameComponents(s, sample));
+        if (Cuisine.isDish(sample)) return Cuisine.spare(level, village, sample);   // [culture2] the cook's to sell, two kept for the feast
         Books b = books(level, village);
         int held = b.held.getOrDefault(sample.getItem(), 0);
         int keep = keep(b, sample);
@@ -267,7 +272,8 @@ public final class Budget {
     static boolean luxury(ItemStack s) {
         return Cafe.isDrink(s) || s.is(Items.POTION) || s.is(Items.SPLASH_POTION) || s.is(Items.LINGERING_POTION)
             || s.isEnchanted() || s.is(Items.ENCHANTED_BOOK) || s.is(ItemTags.BANNERS) || s.is(ItemTags.WOOL_CARPETS)
-            || s.is(Items.BOOK) || s.is(Items.HONEY_BOTTLE);
+            || s.is(Items.BOOK) || s.is(Items.HONEY_BOTTLE)
+            || FireworksMaker.elytra(s);                              // [fireworks] made for the players' wings, not the town's
     }
 
     /** One thing for sale: what, how many, and its price each. */
@@ -284,6 +290,7 @@ public final class Budget {
         for (Item it : b.held.keySet()) {
             ItemStack one = new ItemStack(it);
             if (luxury(one) || it == Items.POTION || it == Items.ENCHANTED_BOOK) continue;   // on the café's and the shop's counters
+            if (Weave.unsellable(one)) continue;                                              // [weave] a forged coin is never sold
             int n = spare(level, village, one);
             if (n <= 0) continue;
             double each = playerPrice(one);

@@ -122,6 +122,8 @@ public final class Colonies {
             int z = v.centre().getZ() + (int) Math.round(Math.sin(angle) * DISTANCE);
             BlockPos at = new BlockPos(x, v.centre().getY(), z);
             if (Villages.nearest(level, at, Villages.VILLAGE_RANGE * 2) != null) continue;
+            // [emerald] Nor on (or beside) a village of the game's own villagers: theirs is theirs.
+            if (com.jrpetty.mcassistant.entity.VanillaVillages.inTheWayOfFounding(level, at) != null) continue;
             TRIED.put(v.id(), tried + i + 1);
             return at;
         }
@@ -154,7 +156,8 @@ public final class Colonies {
         BlockPos flat = ground == null ? null : com.jrpetty.mcassistant.entity.Land.flattest(level, ground, 24);
         if (flat != null) ground = flat;
         if (ground == null || !VillageSpawner.liveable(level, ground)
-                || Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) != null) {
+                || Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) != null
+                || com.jrpetty.mcassistant.entity.VanillaVillages.inTheWayOfFounding(level, ground) != null) {   // [emerald]
             LAST.put(id, now - INTERVAL + 1200L);                // somewhere else, in a minute
             return false;
         }
@@ -199,6 +202,7 @@ public final class Colonies {
         Villages.tell(id, day, "settlers left to found " + colonyName);
         if (colony != null && !colony.id().equals(id)) {
             Villages.tell(colony.id(), day, "settlers from " + Villages.name(id) + " founded " + colonyName);
+            com.jrpetty.mcassistant.entity.TownWays.colonised(id, colony.id(), day);   // [culture2] the mother's dish and faith go with them
             // Mother and daughter: a road between them, and caravans along it (Roads, Caravans).
             com.jrpetty.mcassistant.village.Ledger.link(id, colony.id());
         }

@@ -307,6 +307,7 @@ public class FarmGoal extends Goal {
             assistant.note(AssistantEntity.Deed.CROPS_HARVESTED, 1);
             sweepDrops(pos);
             com.jrpetty.mcassistant.entity.CityTree.seedExchange(assistant, cropBlock);   // the town's Seed Exchange: one in ten, one more
+            com.jrpetty.mcassistant.entity.Perks.luckyHarvest(assistant, cropBlock);      // [perks] a Lucky farmer: one in twelve, one more
             Item seed = REPLANT.get(cropBlock);
             // A farmer's Careful Harvest (FolkSkills): a seed back, one harvest in three.
             if (assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity folk) {
@@ -316,6 +317,8 @@ public class FarmGoal extends Goal {
                 && assistant.removeMatching(s -> s.is(seed), 1) == 1) {
                 assistant.level().setBlockAndUpdate(pos, cropBlock.defaultBlockState());
             }
+            // [fields] With a copper sickle, the ripe crops round it in the same swing, sown again (FieldTools).
+            harvested += com.jrpetty.mcassistant.entity.FieldTools.reap(assistant, pos);
         }
     }
 

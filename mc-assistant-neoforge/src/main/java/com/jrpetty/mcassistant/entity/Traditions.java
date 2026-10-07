@@ -200,7 +200,8 @@ public final class Traditions {
     static void adopt(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         List<Custom> have = customs(id);
-        if (have.size() >= MOST) return;
+        int most = Ethos.customsKept(id, MOST);                        // [identity] four in a traditional town, two in a forward-looking one
+        if (have.size() >= most) return;
         long today = level.getDayTime() / 24000L;
         boolean changed = false;
         Set<Why> kinds = new HashSet<>();
@@ -212,7 +213,7 @@ public final class Traditions {
             changed = true;
         }
         for (Chronicle.Entry e : Chronicle.of(id)) {
-            if (have.size() >= MOST) break;
+            if (have.size() >= most) break;
             Why w = great(e.text());
             if (w == null || kinds.contains(w)) continue;
             Custom c = custom(w, e);
@@ -314,6 +315,7 @@ public final class Traditions {
                 Villages.tell(v.id(), day, "the town kept " + c.name() + ", a minute's silence at the bell for " + c.toWhom()
                     + " (" + s.kept.size() + (s.kept.size() == 1 ? " folk" : " folk") + ")");
                 kept(v.id(), c, day);
+                if (c.why() == Why.WAR) FireworkShows.remembrance(level, v, c.toWhom());   // [fireworks] white rockets, slow
             }
         }
     }

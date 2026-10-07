@@ -138,6 +138,9 @@ public final class QuestMaker {
         QuestRun.script("caves.seal", SEAL);
         QuestRun.script("caves.missing", MISSING);
         QuestRun.script("board", BOARD);
+        Weave.registerQuests(MAKERS);           // [weave] help the watch, water for the fire, the flood, the rebuilding; the real lost pets
+        MAKERS.put("bounty", PlayerLaw::bountyQuest);              // [police] the watch's bounty on a folk who fled it
+        QuestRun.script("watch.bounty", PlayerLaw.BOUNTY);
     }
 
     // ------------------------------------------------------------------ the town's look
@@ -642,6 +645,7 @@ public final class QuestMaker {
                 .at(seen, 4));
             q.steps.add(new Step(StepType.WAIT, "home", "Bring " + lp.name() + " home (a lead will do it)").at(lp.home(), 10));
             q.steps.add(new Step(StepType.TALK, "back", "Tell " + owner.displayNameCap() + " that " + lp.name() + " is home").who(owner));
+            Weave.petQuest(q, lp);                                         // [weave] Pets' lost pet: held out there, found by following you
             return q;
         }
         return null;
@@ -655,6 +659,7 @@ public final class QuestMaker {
 
         @Override
         public void tick(ServerLevel level, Quest q, Player p) {
+            if (Weave.petsOwn(q)) return;                                  // [weave] home when Pets says so (Pets.onFound)
             Step s = q.current();
             if (s == null || !s.key.equals("home") || s.at == null) return;
             Entity e = level.getEntity(UUID.fromString(q.flag("pet")));
@@ -662,7 +667,13 @@ public final class QuestMaker {
         }
 
         @Override
+        public void ended(ServerLevel level, Quest q) {
+            Weave.petQuestEnded(q);                                        // [weave] given up or never taken: it finds its own way home
+        }
+
+        @Override
         public String reached(ServerLevel level, Quest q, Step s, @Nullable VillageFolkEntity f, Player p) {
+            Weave.petStep(level, q, s, p);                                 // [weave] found: it follows the finder home
             String name = p.getName().getString();
             if (s.key.equals("find")) s.note = "Found. Now home with it.";
             if (s.key.equals("back")) {
@@ -677,7 +688,7 @@ public final class QuestMaker {
         @Override
         public boolean stands(ServerLevel level, Quest q) {
             Entity e = level.getEntity(UUID.fromString(q.flag("pet")));
-            return e == null || e.isAlive();
+            return (e == null || e.isAlive()) && Weave.petStillLost(q);   // [weave] and still lost
         }
     };
 

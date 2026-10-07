@@ -68,6 +68,8 @@ final class Kit {
         com.jrpetty.mcassistant.entity.DoorWays.resetForTests();
         // What the town's works build is checked here at once; who builds it, by hand, in t54.
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+        // [police] The watch stood down to its old round for the other features' tests; PoliceGameTests stand it up.
+        com.jrpetty.mcassistant.entity.Police.standDownForTests(true);
     }
 
     /**
