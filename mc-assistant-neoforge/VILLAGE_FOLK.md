@@ -4692,3 +4692,84 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+
+## The town's look
+
+A town of any size starts to look like one: trees along its avenues, benches on its corners, flowers
+under the better windows, a notice board by the square, and out by the fields a windmill, an orchard and
+allotments; a bakery among the shops and an inn by the road. All of it comes out of the stores and is put
+in by a hand at the town's works, a little at a time, like the streets and the lamps.
+
+* **Tree-lined avenues.** On the verge just off each avenue, midway between two lamp posts (every six
+  blocks), the town plants a tree from the stores' saplings: the woodcutter for choice, as far out as the
+  town has come. Never on the road, where a street crosses, within two blocks of a door, against a lamp
+  post or a street sign, hard against a wall or on the farmland. Once a tree is grown, the leaves it hangs
+  over the road lower than three blocks are trimmed off (what they drop goes to the stores); the tree is
+  never felled for it. Leave saplings in the stores and the avenues fill up.
+* **Benches** go on the street corners, the first of them where the avenues leave the square: a wooden
+  stair the right way up, its back to the lot, made of six of the stores' planks (four stairs; the other
+  three go back into the stores for the builders' roofs). Folk on their break sit on them. The benches,
+  the window boxes' ledges and the notice board are only ever made of planks the builders can spare: none
+  in the Wood Age, when every plank is put by for the age, and never the builders' forty-eight.
+* **Window boxes.** A house whose household is well off (one of them worth ninety coins or more) gets a
+  box under two of its windows (the front ones where the lamp posts by the door leave room, else the
+  sides): a trapdoor fixed under the sill for a ledge, and a pot of flowers on it. The trapdoor, the pot
+  (or three bricks for one) and the flower all come out of the stores.
+* **The notice board** stands by the square where the avenue nearest the village board comes out: two
+  signs side by side, the first with the town's name, the day and how many live there, the second with
+  the latest from the town's chronicle (the gazette's news), pinned up afresh every day.
+* **The allotments** (a town of eighteen, once two households have no garden of their own): a fenced
+  square of four small plots by the fields, with a channel of water down the back. Each household with no
+  garden (see *Families, pets and gardens*) is let a plot; two evenings in three one of it walks over after
+  supper, turns the earth with a hoe (its own, or the stores' borrowed and put back the worse for wear),
+  sows carrots, potatoes, beetroot or wheat out of its own chest or the stores (never the farmers' last
+  twelve), pulls up whatever is ripe and puts one back in the ground, and carries the rest home to the
+  household's chest. A household that plants its garden after all gives its plot up for the next. The
+  channel is filled from a water bucket in the stores when it runs dry.
+* **The orchard** (a farming town of fourteen): a fenced square by the fields where the farmers plant
+  four oaks from the stores' oak saplings (the oak is the tree that bears apples), with bone meal now and
+  then if the stores have eight or more. In the last week of the town's twenty-eight-day year they pick
+  it: an oak only gives up its apples as its leaves come down (one leaf in two hundred), so each tree's
+  crown is taken down leaf by leaf, everything that falls (apples, saplings, sticks) and the trunk go into
+  the stores, and an oak goes straight back into the same ground. Apples lying in the grass are picked up
+  any day. The apples are for the café's cider and anybody's lunch.
+* **The windmill** (Stone Age, a farming town of sixteen): a stone and timber tower by the fields with
+  four sails on its front, the landmark of the farmland. The builders put up the axle and the arms; the
+  cloth (twelve pieces of the stores' wool) is hung after. Its two chests are where the town's grain is
+  kept: a farmer coming past with sixteen wheat or more leaves it there, and once the stores hold more
+  than sixty-four wheat a hand carries the rest up to it a load at a time.
+* **The bakery** (Stone Age, a farming town of twenty): two ovens, the baker's table and a counter. A
+  hand at the works (the café's cook for choice) bakes bread, cookies (wheat and cocoa beans), pumpkin pie
+  (a pumpkin, an egg and sugar pressed from cane) and cake (three buckets of milk, the buckets given back,
+  two sugar, an egg and three wheat), each by the game's own recipe out of the stores: whatever the stores are
+  shortest of against what a town its size likes to have (a loaf a head, a few dozen cookies, a pie or
+  two, a cake, another on a feast night), and never the farmers' last twelve wheat. It all goes to the
+  stores, where the café sets it out and the feasts draw on it. With a windmill, the baker walks over for
+  a sack of wheat when the stores run low and bakes twice the batch at a time. The idle hands who bake the
+  odd batch of bread leave it to the bakery while it is at it.
+* **The inn** (the Iron Age, or a town of thirty, once it has a cook or a shopkeeper to keep it): a long
+  timber house by the road in, on one of the lots that face the square beside an avenue's gate if one is
+  free (else the nearest lot), two rooms of two beds at the back and a common room with a bar. Its keeper
+  is the café's cook, else the shopkeeper, and its sign goes up by the door. A caravan's driver, an envoy or a household on the
+  road to a new home who is in a town with an inn after dusk takes a room out of its own purse (three
+  coins, into the town's treasury), sleeps there and goes on in the morning. **You can take a room
+  too:** right-click the inn's sign, or the innkeeper with village coins in your hand. For three coins
+  (less if you have haggled with the town today) you are given one of the beds until the next morning;
+  nobody else may sleep in it, and without a room you may sleep in none of them. A night at the inn does
+  not move your respawn point. The town's own folk never take an inn bed for their own, and its beds are
+  not counted as homes.
+
+**Where to see it.** The village board has a line for the bakery's day, the inn's rooms, the windmill
+and the trees along the avenues. A folk's card has an *About town* line: its household's allotment and
+what is growing on it, its turn at the bakery, the inn it keeps or is lodging at. The chronicle (and so
+the notice board and the gazette) records the first tree, the notice board, the windmill's sails, the
+bakery's first bake, the inn opening and its first guests, and the orchard's apples. `/village townlook`
+says all of it in chat; operators have `/village townlook showcase` (all of it set out where you stand,
+to be looked at) and `/village townlook now` (a few rounds of the town's works done at once).
+
+The game tests `TownLookGameTests` (tl01 to tl07) check each of these: the avenues' trees out of the stores
+and never by a door or a lamp post, and their low leaves trimmed off the road; the benches, a well-off
+house's window boxes and the notice board; a household's plot turned, sown and harvested, the vegetables
+home in its chest; the orchard planted, grown, picked and planted again; the windmill's place, its sails
+and its grain; the bakery's four bakes by their recipes and its milled batches; and a player's room and a
+traveller's at the inn.

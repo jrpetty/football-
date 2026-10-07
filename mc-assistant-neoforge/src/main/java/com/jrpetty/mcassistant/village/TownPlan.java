@@ -200,7 +200,8 @@ public final class TownPlan {
             case "hall", "chapel", "barracks", "manor", "townhall" -> "great";
             case "court" -> "court";
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
-                 "tavern", "school", "bank", "museum", "stable" -> "civic";
+                 "tavern", "school", "bank", "museum", "stable", "bakery", "inn" -> "civic";
+            case "windmill", "orchard", "allotments" -> "fields";        // [batchE] by the farm gate (entity/TownLook.fieldLots)
             case "watchtower" -> "corner";
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
             default -> "home";

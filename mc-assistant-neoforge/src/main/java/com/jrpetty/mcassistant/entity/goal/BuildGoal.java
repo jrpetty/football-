@@ -65,7 +65,9 @@ public class BuildGoal extends Goal {
         // the museum, where the town's rare finds go on show and its chronicle is kept as books (Museum)
         "museum",
         // the stable, once the village has horses (Stables)
-        "stable");
+        "stable",
+        // [batchE] the town's look: the windmill, the bakery, the inn, the orchard and the allotments (TownLook)
+        "windmill", "bakery", "inn", "orchard", "allotments");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

@@ -348,6 +348,7 @@ public final class FolkTalk {
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
         if (!family.isEmpty()) line(sb, "Family", family);
         line(sb, "Household", Families.cardLine(f));        // its pet, its garden, its wedding anniversary (Families)
+        line(sb, "About town", TownLook.cardLine(f));       // [batchE] its allotment, the bakery, the inn (TownLook)
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);

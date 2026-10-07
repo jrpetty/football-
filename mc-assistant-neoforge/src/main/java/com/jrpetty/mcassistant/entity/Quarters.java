@@ -183,6 +183,7 @@ public final class Quarters {
      */
     public static List<TownPlan.Lot> candidates(UUID village, String project) {
         List<TownPlan.Lot> plan = TownPlan.candidates(project);
+        if (TownLook.byTheFields(project)) return TownLook.fieldLots(village, plan);   // [batchE] the mill, the orchard, the allotments
         if (Districts.forBuilding(project) == null) return plan;
         return Districts.order(plan, project, farmSide(village), craftSide(village));
     }

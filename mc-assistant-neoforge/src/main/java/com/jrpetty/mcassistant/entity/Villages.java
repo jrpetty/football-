@@ -343,6 +343,7 @@ public final class Villages {
         Sweepers.resetForTests();
         Meals.resetForTests();
         Stables.resetForTests();
+        TownLook.resetForTests();           // [batchE] the town's look
         VillageBoards.resetForTests();
         Retiring.resetForTests();
         HAS_STORES.clear();
@@ -1698,6 +1699,8 @@ public final class Villages {
         if (folk >= 16 && built(villageId, "hall") > 0 && built(villageId, "townhall") < 1) extras.add("townhall");
         // Somewhere to lay the dead, once there are any; another when it is full.
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
+        // [batchE] The town's look: the windmill, the bakery, the orchard, the allotments and (Iron Age, or thirty folk) the inn.
+        TownLook.wanted(villageId, folk, at, extras, s -> built(villageId, s) < 1);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -1841,6 +1844,7 @@ public final class Villages {
                         continue;
                     }
                     if (guest != null && p.distSqr(guest) <= 100) continue;
+                    if (Inn.isInnBed(villageId, p)) continue;     // [batchE] the inn's rooms are the travellers', not a home
                     // A bed buried in the ground (a ruin's, a vault's) is nobody's home and nobody sleeps
                     // in it (VillageFolkEntity.bedFit): counted, a mountain town of twenty-five thought
                     // it had four beds more than it had, and built and bought for four fewer.
@@ -2075,6 +2079,7 @@ public final class Villages {
             case "barracks" -> "barracks (great work " + (greatWorks(villageId) + 1) + "), room for six more and a home for the watch";
             case "monument" -> "a monument (great work " + (greatWorks(villageId) + 1) + ") to how far the village has come";
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
+            case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             default -> "the " + project;
         };
     }
