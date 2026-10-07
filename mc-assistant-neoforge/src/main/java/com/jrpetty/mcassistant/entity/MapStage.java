@@ -57,7 +57,7 @@ public final class MapStage {
         if (f == null) f = Cartographers.appointForTests(level, v);
         if (f == null) {
             for (AssistantEntity a : Villages.folkOf(id)) {
-                if (a instanceof VillageFolkEntity g && !g.isBaby() && g.isAlive()) { f = g; break; }
+                if (a instanceof VillageFolkEntity g && Patrols.spareForStage(g)) { f = g; break; }   // never the watch nor the leader
             }
             if (f != null) {
                 Ledger.Building room = Cartographers.mapRoom(id);
