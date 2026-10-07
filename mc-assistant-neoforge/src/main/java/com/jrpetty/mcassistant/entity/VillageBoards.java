@@ -533,6 +533,8 @@ public final class VillageBoards {
         if (arrows != null) out.add("FN|" + arrows);
         String golems = Golems.boardLine(level, id);            // [golems] the golems at their posts, a fallen one
         if (golems != null) out.add("FN|" + golems);
+        String maps = Cartographers.boardLine(id);              // [cartographer] the hall's map, the country's, the latest find
+        if (maps != null) out.add("FN|" + maps);
         String about = Transport.boardLine(level, id);          // [transport] the lines, the ore carts, the ferry and the bridge
         if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);

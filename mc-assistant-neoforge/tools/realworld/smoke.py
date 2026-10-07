@@ -2955,6 +2955,145 @@ def leisure_stage(r, look, cx, cz):
     say("alive after home and play: %s" % client_alive())
 
 
+def cartographer_stage(r, look, cx, cz):
+    """[cartographer] The cartographer (entity/Cartographers, MapSurveys, MapFinds, MapArchive). Run as the player out
+    past the town to the north-west, /village maps stage puts up the map room on ground of its own (and a hall beside
+    it, if the town has none), chooses the town's cartographer, puts the makings in the stores for the pictures, and has
+    the hall's map walked and hung at once: every sheet filled by the game's own map update from the stations the
+    cartographer stands at, the town's places marked with their named banners (the game's banner markers), the sheets
+    locked under glass and framed on the hall's wall, a sign under them. The player is handed a real ocean explorer map
+    to the nearest monument, found by the world's own search. Pictures: the map wall in the hall; the cartographer at
+    its table; the hall's banner from the street; the explorer map in hand, first person, before the wall. Then
+    /village maps stage walk sends the cartographer out on the region's walk, and it is photographed on the road with
+    the sheet held up, filling in as it goes. Last, /village maps said, and the town's books at the Maps page (the
+    region as the cartographer drew it, the places found, the archive)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("weather clear")                            # a map is walked in the dry
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    if not 1000 <= now <= 7000:
+        r.cmd("time add %d" % ((24000 + 4000 - now) % 24000))     # the morning: the whole of the day's walk ahead of it
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx - 70, cz - 100                        # out past the town to the north-west, on ground of its own
+    r.cmd("tp %s %d %d %d" % (USER, sx + 14, hy + 20, sz + 18))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    # As the player, so the explorer map is put in its hand.
+    out = r.cmd("execute as %s positioned %d 0 %d positioned over motion_blocking_no_leaves run village maps stage" % (USER, sx, sz))
+    say("maps stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no map room staged; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("41-maps-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("maps-wall", "1-wall", 10)
+    shoot("maps-table", "2-table", 6)
+    shoot("maps-banner", "3-banner", 6)
+    held = re.search(r"HELD (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    if held and "explorer map in hand" in out:
+        # First person, the map in both hands before the wall: the game draws a held map large as its holder looks down.
+        x, y, z, ax, ay, az = (int(g) for g in held.groups())
+        yaw = math.degrees(math.atan2(-(ax - x), az - z))
+        r.cmd("gamemode creative %s" % USER)       # a spectator has no hands
+        r.cmd("tp %s %.2f %d %.2f %.1f 38" % (USER, x + 0.5, y, z + 0.5, yaw))
+        time.sleep(6)
+        shot("41-maps-4-explorer-map")
+        r.cmd("gamemode spectator %s" % USER)
+    # The trade at work: out on the region's walk, the sheet held up.
+    walk = r.cmd("execute positioned %d %d %d run village maps stage walk" % (cx, hy + 1, cz))
+    say("maps walk: " + walk[:400])
+    who = re.search(r"WALKER ([0-9a-f-]{36})", walk)
+    if who:
+        time.sleep(25)                                 # out of the map room and on its way to its first station
+        a = r.cmd("data get entity %s Pos" % who.group(1))
+        time.sleep(1)
+        b = r.cmd("data get entity %s Pos" % who.group(1))
+        pa = re.search(r"\[(-?[\d.]+)d, (-?[\d.]+)d, (-?[\d.]+)d\]", a)
+        pb = re.search(r"\[(-?[\d.]+)d, (-?[\d.]+)d, (-?[\d.]+)d\]", b)
+        if pa and pb:
+            x0, z0 = float(pa.group(1)), float(pa.group(3))
+            x1, y1, z1 = float(pb.group(1)), float(pb.group(2)), float(pb.group(3))
+            dx, dz = x1 - x0, z1 - z0
+            n = math.hypot(dx, dz) or 1.0
+            dx, dz = dx / n, dz / n
+            # Ahead of it on its way and a little to its left (the hand the sheet is in), the eye a little above its own.
+            look("41-maps-5-walking", x1 + dx * 6 - dz * 2, y1 + 0.6, z1 + dz * 6 + dx * 2, x1 + dx * 2, y1 + 1.2, z1 + dz * 2, wait=5)
+    say("maps: " + r.cmd("execute positioned %d %d %d run village maps" % (cx, hy + 1, cz))[:1200])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village maps books" % USER))
+    time.sleep(4)
+    shot("41-maps-6-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the maps: %s" % client_alive())
+
+
+
+def individual_stage(r, look, cx, cz):
+    """[individual] Every folk its own person (entity/Individual, Looks, Manner; client/FolkFaces, FolkPoses). In clear
+    air out past the town, /village individual stage stands up a crowd of eighteen of every age on a lawn, the back row
+    a step up, their work hats off (children at three ages of growing, the young, the greying, a scarred guard, an
+    eyepatch, a sooty smith, a sunburnt farmer, the old in spectacles, the oldest bent over their sticks); beside them a
+    family of five made by the town's own sums (two parents, their eldest, and twins); and past them a well and a bench
+    with an old folk sat smoking its pipe. Pictures at noon: the whole crowd, close on each half of it, the family; then
+    at dusk the pipe at the well; then the card of the folk nearest the player, opened at its About page (its Looks,
+    Dream, Fears, Habits, Favourite place and Keepsake lines). Last, /village individual for the town."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    sx, sy, sz = cx + 120, 150, cz + 90                # clear air out past the town: the stage lays its own lawn
+    r.cmd("tp %s %d %d %d" % (USER, sx, sy + 3, sz + 10))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village individual stage" % (sx, sy, sz))
+    say("individual stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for every folk its own person; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("39-individual-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    time.sleep(6)                                      # the faces are built as they come into sight, a few a frame
+    shoot("crowd", "1-crowd", 8)
+    shoot("crowd-left", "2-faces-left", 5)
+    shoot("crowd-right", "3-faces-right", 5)
+    shoot("family", "4-family", 5)
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    r.cmd("time add %d" % ((12900 - now) % 24000))     # dusk, the same day: the pipe at the well
+    shoot("pipe", "5-pipe-at-dusk", 8)
+    midday(r)
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d facing %d %d %d" % (USER, sx, sy, sz + 2, sx, sy + 1, sz))
+    time.sleep(3)
+    say("card: " + r.cmd("execute as %s at @s run village individual card" % USER))
+    time.sleep(4)
+    shot("39-individual-6-card")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    r.cmd("gamemode spectator %s" % USER)
+    hy = ground_height(r, cx, cz)
+    say("individual: " + r.cmd("execute positioned %d %d %d run village individual" % (cx, hy + 1, cz))[:1500])
+    say("alive after every folk its own person: %s" % client_alive())
+
+
 def emerald_stage(r, look, cx, cz):
     """[emerald] The emerald trader (entity/EmeraldTrader), and the two peoples kept apart (TwoPeoples, VanillaVillages).
     Run well out past the town to the north (the villagers' ground must not be the town's), /village emerald stage sets
@@ -3394,6 +3533,14 @@ def main():
         leisure_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("leisure stage failed: %s" % e)
+    try:
+        cartographer_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("cartographer stage failed: %s" % e)
+    try:
+        individual_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("individual stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

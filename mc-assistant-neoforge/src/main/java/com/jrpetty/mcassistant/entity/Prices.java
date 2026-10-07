@@ -115,6 +115,18 @@ public final class Prices {
         return VALUE.size();
     }
 
+    /**
+     * [cartographer] What a map to a place costs a player at the map room (Cartographers): its makings (an empty locator
+     * map's: eight paper and a compass, at their worth) and the cartographer's work, a coin for every hundred blocks to
+     * where it points (the walk the town made to find it), all of it by how rare the place is (a monument or a mansion
+     * four or five times a mineshaft). Never less than the makings and a coin, never more than eighty.
+     */
+    public static int mapOf(int blocksAway, double rarity) {
+        double makings = each(Items.PAPER) * 8 + each(Items.COMPASS);
+        double v = (makings + 2.0 + Math.max(0, blocksAway) / 100.0) * Math.max(1.0, rarity);
+        return (int) Math.max(Math.ceil(makings) + 1, Math.min(80, Math.round(v)));
+    }
+
     /** Is this item on the list by name or by recipe (not merely guessed at by rarity)? */
     public static boolean known(Item item) {
         ensure();

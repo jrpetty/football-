@@ -975,6 +975,8 @@ public final class School {
             "An iron golem never turns on its own town. Be kind to it all the same." });
         LINES.put(StationTask.FIREWORKS, new String[]{ "One gunpowder to a star, one to three to a rocket: no more.",   // [fireworks]
             "Never a flame in the powder hut, and never a rocket in a thunderstorm." });
+        LINES.put(StationTask.CARTOGRAPHER, new String[]{ "A map only fills in where somebody has walked. So walk it.",   // [cartographer]
+            "North at the top, the town in the middle, and every place with its name." });
     }
 
     private static final String[] ANY_DAY = { "Reading, writing and counting: every trade stands on those three.",

@@ -305,6 +305,7 @@ final class Leisure {
         } else {
             f.getNavigation().stop();
             f.getLookControl().setLookAt(player, 30.0F, 30.0F);
+            if (f.tickCount % 40 == 0) Manner.idle(f, Manner.TAP, 60);   // [individual] a foot tapped to the tune
             if (f.getRandom().nextInt(30) == 0) {
                 f.life().feel(player.getUUID(), player.displayNameCap(), 2);
                 server.sendParticles(ParticleTypes.HAPPY_VILLAGER, f.getX(), f.getY() + 2.0, f.getZ(), 2, 0.2, 0.2, 0.2, 0.0);

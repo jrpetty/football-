@@ -149,6 +149,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // maker: stars and rockets by the real recipes out of the stores, shown at its festivals, weddings and
         // victories, and plain rockets for the players' elytra at the shop (FireworksMaker, FireworkShows).
         FIREWORKS("fireworks", "Fireworks maker"),
+        // [cartographer] A Stone Age town with scouts, or of thirty, keeps a cartographer at its map room: the town's
+        // maps walked and drawn for the hall, the region's for the caravans, the old structures found and handed out
+        // as explorer maps, and maps sold to players (Cartographers).
+        CARTOGRAPHER("map-making", "Cartographer"),
         // [emerald] From the Stone Age, once the town knows of a village of the game's own villagers within reach and has
         // goods to spare: a trader who explores like a scout to find their villages, walks the town's surplus out to them,
         // and trades with the villagers through their own offers, for emeralds, and emeralds for what the town wants
@@ -159,6 +163,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         public boolean isCraft() {
             return ordinal() >= SMITH.ordinal() && this != SCOUT && this != HUNT && this != CAVE   // [caves]
                 && this != FERRY                                                                      // [transport]
+                && this != CARTOGRAPHER                                                               // [cartographer]
                 && this != EMERALD;                                                                   // [emerald]
         }
 
@@ -1442,6 +1447,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FLETCHER -> null;                // [fletcher] works out of the stores at its table (Fletchers)
             case GOLEMS -> null;                  // [golems] works out of the stores (Golems)
             case FIREWORKS -> null;               // [fireworks] its powder and paper are the stores', drawn at the hut (FireworksMaker)
+            case CARTOGRAPHER -> null;            // [cartographer] its paper and compasses are drawn at the map room (Cartographers)
             case EMERALD -> null;                 // [emerald] its goods are drawn from the stores for each trip (EmeraldTrader)
         };
         // ONE restock, one pace. This used to be three separate paced scoops in
@@ -1747,6 +1753,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     protected boolean fireworksWork() { return false; }
     /** [emerald] The emerald trader's day (EmeraldTrader): VillageFolkEntity does it. */
     protected boolean emeraldWork() { return false; }
+
+    /** [cartographer] A cartographer's day at the map room and out walking (Cartographers): VillageFolkEntity does it. */
+    protected boolean cartographerWork() { return false; }
 
     /** Is this animal one of its village's own herd (penned, led, brought home), not game? (VillageFolkEntity) */
     public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) { return false; }
@@ -2679,6 +2688,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FERRY -> false;                  // [transport] the town's boat is its kit (Ferries)
             case FLETCHER, GOLEMS -> false;       // [fletcher] [golems] their work is the stores' (Fletchers, Golems)
             case FIREWORKS -> false;              // [fireworks] its powder and paper are the stores', drawn at the hut (FireworksMaker)
+            case CARTOGRAPHER -> false;           // [cartographer] its paper and compasses are drawn at the map room (Cartographers)
             case EMERALD -> false;                // [emerald] nothing of its own to keep: the goods are the town's (EmeraldTrader)
         };
     }
@@ -4340,6 +4350,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // [fletcher] [golems] A bite to eat; what they make goes straight into the stores.
             case FLETCHER, GOLEMS -> s.get(DataComponents.FOOD) != null ? 8 : 0;
             case FIREWORKS -> s.get(DataComponents.FOOD) != null ? 8 : 0;   // [fireworks] never powder in a pocket: the hut's chest or the stores
+            // [cartographer] The sheets it is walking and the ones it has finished, the paper, a compass or two and the panes
+            // to lock a finished map: its work in hand, not the day's takings (Cartographers).
+            case CARTOGRAPHER -> Cartographers.keeps(s);
             case EMERALD -> s.get(DataComponents.FOOD) != null ? 8 : 0;  // [emerald] rations for the road; the goods go home
             case NONE -> 0;
         };
@@ -5640,6 +5653,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 case FLETCHER -> new Branch[]{ SENTINEL, PORTER };     // [fletcher]
                 case GOLEMS -> new Branch[]{ SENTINEL, PROSPECTOR };   // [golems]
                 case FIREWORKS -> new Branch[]{ PORTER, PROSPECTOR };  // [fireworks]
+                case CARTOGRAPHER -> new Branch[]{ PORTER, PROSPECTOR };   // [cartographer] long walks, and an eye for the ground
                 case EMERALD -> new Branch[]{ PORTER, SENTINEL };      // [emerald] a pack on its back, the road to walk
                 case NONE -> new Branch[]{};
             };
@@ -7276,6 +7290,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // [fireworks] At the powder hut, stars and rockets out of the stores (FireworksMaker).
                 if (fireworksWork()) return true;
             }
+            case CARTOGRAPHER -> {
+                // [cartographer] At the map room's table, or out walking the town with a sheet (Cartographers).
+                if (cartographerWork()) return true;
+            }
             case EMERALD -> {
                 // [emerald] Out to a village of villagers with the town's surplus, or at the trading post with the book.
                 if (emeraldWork()) return true;
@@ -7831,6 +7849,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FERRY -> 0;                      // [transport] its fares go into its purse, not the stores
             case FLETCHER, GOLEMS -> 0;           // [fletcher] [golems] what they make goes straight into the stores
             case FIREWORKS -> 0;                  // [fireworks] its rockets go into the stores as they are made (FireworksMaker)
+            case CARTOGRAPHER -> 0;               // [cartographer] its maps go to the hall, the hands they are for, or the stores (Cartographers)
             case EMERALD -> 0;                    // [emerald] what it brings home goes in when it is home (EmeraldTrader.home)
         };
         // Never more than a stash would actually move. The trade's own sums kept back less

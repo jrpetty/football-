@@ -25,7 +25,8 @@ import java.util.UUID;
  * <li><b>The posts the town gives its own</b>, each held open for its interview when it falls vacant (the subsystem's own
  *     choosing waits on it, and then takes the panel's choice): the schoolteacher (School), the librarian (Library),
  *     the ferryman (Ferries), the bank's clerk (Bank), the steward of a player who leads (PlayerLeader), a place on
- *     the cave team (CaveDwellers), the fletcher's place (Fletchers) and the golem keeper's (Golems).</li>
+ *     the cave team (CaveDwellers), the fletcher's place (Fletchers), the golem keeper's (Golems) and [cartographer] the
+ *     cartographer's (Cartographers).</li>
  * <li><b>The posts the town reckons each day</b> from who is best, which the panel's choice then keeps while it is fit
  *     for them: the constable of the watch (Inquiry), the leader of the cave team (CaveDwellers), the auctioneer once
  *     the auction house stands (Auctions), and the master of a trade that takes apprentices (PlayerTrades), when the old
@@ -38,7 +39,8 @@ final class InterviewPosts {
     private InterviewPosts() {}
 
     enum Kind { OPENING, TEACHER, LIBRARIAN, CONSTABLE, CAVE_LEADER, CAVE_PLACE, FERRYMAN, AUCTIONEER, BANKER, STEWARD, MASTER, FLETCHER,
-        GOLEM_KEEPER, TRADER }                                          // [emerald] the emerald trader's place
+        GOLEM_KEEPER, CARTOGRAPHER,
+        TRADER }                                                        // [emerald] the emerald trader's place
 
     /** A post: its kind, its key in the books, the trade it is of (for the questions and the master), a notice's number. */
     record Post(Kind kind, String key, @Nullable StationTask trade, int opening) {
@@ -70,6 +72,7 @@ final class InterviewPosts {
                 case "steward" -> new Post(Kind.STEWARD, key, null, -1);
                 case "fletcher" -> new Post(Kind.FLETCHER, key, StationTask.FLETCHER, -1);
                 case "golemkeeper" -> new Post(Kind.GOLEM_KEEPER, key, StationTask.GOLEMS, -1);
+                case Cartographers.POST -> new Post(Kind.CARTOGRAPHER, key, StationTask.CARTOGRAPHER, -1);   // [cartographer]
                 case EmeraldTrader.POST_KEY -> new Post(Kind.TRADER, key, StationTask.EMERALD, -1);   // [emerald]
                 default -> null;
             };
@@ -101,6 +104,7 @@ final class InterviewPosts {
                 case STEWARD -> "steward";
                 case FLETCHER -> "fletcher";
                 case GOLEM_KEEPER -> "golem keeper";
+                case CARTOGRAPHER -> "cartographer";                        // [cartographer]
                 case TRADER -> "emerald trader";                        // [emerald]
                 case MASTER -> "master " + (trade == null ? "hand" : JobMarket.noun(trade));
             };
@@ -138,6 +142,7 @@ final class InterviewPosts {
                 case FERRYMAN, AUCTIONEER, BANKER -> Values.Value.WEALTH;
                 case STEWARD -> Values.Value.HOMES;
                 case FLETCHER, GOLEM_KEEPER -> Values.Value.SAFETY;
+                case CARTOGRAPHER -> Values.Value.PROGRESS;                 // [cartographer] knowing the land
                 case TRADER -> Values.Value.WEALTH;                     // [emerald]
                 default -> {
                     Values.Value v = trade == null ? null : Values.taughtBy(trade);
@@ -159,6 +164,7 @@ final class InterviewPosts {
                 case STEWARD -> "the hall";
                 case FLETCHER -> "the fletcher's hut";
                 case GOLEM_KEEPER -> "the golem yard";
+                case CARTOGRAPHER -> "the map room";                        // [cartographer]
                 case TRADER -> "the Trading Post";                      // [emerald]
                 default -> trade == null ? "the town" : JobMarket.workWords(trade);
             };
@@ -199,6 +205,7 @@ final class InterviewPosts {
             // As the trade's own appointing weighs them (a hand its trade can spare, never the watch or a craft's own).
             case FLETCHER -> t != StationTask.FLETCHER && Fletchers.fitness(f, village) != Integer.MIN_VALUE;
             case GOLEM_KEEPER -> t != StationTask.GOLEMS && Golems.fitness(f, village) != Integer.MIN_VALUE;
+            case CARTOGRAPHER -> Cartographers.fit(f, village);              // [cartographer] as the town's own choosing has it
             case TRADER -> t != StationTask.EMERALD && EmeraldTrader.fitness(f, village) != Integer.MIN_VALUE;   // [emerald]
             case OPENING -> {
                 StationTask want = p.tradeFor(village);
@@ -295,6 +302,15 @@ final class InterviewPosts {
                 if (f.life().has(Social.Trait.HARDWORKING)) good.add("hardworking");
                 return Math.max(0, Golems.fitness(f, village));
             }
+            case CARTOGRAPHER -> {
+                // [cartographer] As the town's own choosing weighs them (Cartographers.score): the land, a curious mind, patience.
+                int lv = f.tradeLevel(StationTask.CARTOGRAPHER), scout = f.tradeLevel(StationTask.SCOUT);
+                if (lv > 0) good.add("level " + lv + " at map-making");
+                if (f.stationTask() == StationTask.SCOUT || scout > 0) good.add("knows the land (level " + scout + " scouting)");
+                if (f.life().has(Social.Trait.CURIOUS)) good.add("has to know what's round the next bend");
+                if (f.life().has(Social.Trait.SHY)) good.add("patient, happy alone with a sheet");
+                return Math.max(0, Cartographers.score(f));
+            }
             case TRADER -> {                                            // [emerald] as the town reckons a trader
                 int lv = f.tradeLevel(StationTask.EMERALD), sc = f.tradeLevel(StationTask.SCOUT);
                 if (lv > 0) good.add("level " + lv + " at trading with the villagers");
@@ -388,6 +404,7 @@ final class InterviewPosts {
             case MASTER -> p.trade() != null && Lessons.of(p.trade()) != null;
             case FLETCHER -> Fletchers.wanted(id) && Fletchers.fletchers(id).size() < Fletchers.hands(id);
             case GOLEM_KEEPER -> Golems.wanted(id) && !Golems.keeps(id);
+            case CARTOGRAPHER -> Cartographers.ready(id) && Cartographers.cartographer(id) == null;   // [cartographer] the map room waits
             case TRADER -> EmeraldTrader.placeOpen(id);                 // [emerald]
             case OPENING -> {
                 JobMarket.Opening o = JobMarket.opening(id, p.opening());
@@ -417,6 +434,7 @@ final class InterviewPosts {
             case STEWARD -> PlayerLeader.steward(id);
             case MASTER -> p.trade() == null ? null : PlayerTrades.masterOf(id, p.trade());
             case GOLEM_KEEPER -> Golems.keeper(id);
+            case CARTOGRAPHER -> Cartographers.cartographer(id);            // [cartographer]
             case CAVE_PLACE, FLETCHER, TRADER, OPENING -> null;
         };
     }
@@ -497,6 +515,12 @@ final class InterviewPosts {
             case GOLEM_KEEPER -> {
                 VillageFolkEntity got = Golems.appoint(level, v);
                 return got == winner ? "keeps the town's golems" : "is to keep the town's golems";
+            }
+            case CARTOGRAPHER -> {
+                // [cartographer] The town's own appointing, which takes the panel's choice first (Cartographers.candidates).
+                if (Cartographers.cartographer(id) != null) return "is to keep the map room";
+                VillageFolkEntity got = Cartographers.appoint(level, v, day);
+                return got == winner ? "keeps the map room, the town's maps its to draw" : "is to keep the map room";
             }
             case TRADER -> {
                 // [emerald] The trade's own appointing, which takes the panel's choice first (EmeraldTrader.candidates).

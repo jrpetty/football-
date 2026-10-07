@@ -426,7 +426,8 @@ public final class JobMarket {
 
     /** A trade where an old head is valued: the teaching and the learned trades, the stores. */
     static boolean wise(@Nullable StationTask t) {
-        return t != null && (t.name().contains("TEACH") || t == StationTask.ENCHANT || t == StationTask.STORE || t == StationTask.BREW);
+        return t != null && (t.name().contains("TEACH") || t == StationTask.ENCHANT || t == StationTask.STORE || t == StationTask.BREW
+            || t == StationTask.CARTOGRAPHER);                                                       // [cartographer] a learned trade
     }
 
     /** Heavy work, for younger backs. */
@@ -706,6 +707,7 @@ public final class JobMarket {
         { "fletcher", "FLETCHER" },                                                    // [fletcher] the fletcher's hut
         { "golemyard", "GOLEMS" },                                                     // [golems] the golem yard
         { "powderhut", "FIREWORKS" },                                                       // [fireworks]
+        { "maproom", "CARTOGRAPHER" },                                                          // [cartographer]
     };
 
     /** How many hands short the town is at a trade, as its shape has it (the trade's share, less who works it). */

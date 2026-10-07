@@ -594,6 +594,7 @@ public final class Annals {
         out.put("transport", Transport.report(level, v));        // [transport] the lines, the carts, the ferry, the bridge
         out.put("interviews", Interviews.report(level, id));      // [interviews] the interviews coming and held: the Interviews page
         out.put("identity", Identity.report(level, v));          // [identity] the town's ethos, government, laws, traits, fame: the Identity page
+        out.put("maps", Cartographers.report(level, v));         // [cartographer] the Maps page: the region drawn, the finds, the archive
         out.put("emerald", EmeraldTrader.report(level, v));      // [emerald] the Trading Post page: the account, the villagers' villages
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));

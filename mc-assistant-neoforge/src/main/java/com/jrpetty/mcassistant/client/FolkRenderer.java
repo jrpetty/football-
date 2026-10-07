@@ -111,13 +111,29 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
 
     @Override
     public ResourceLocation getTextureLocation(VillageFolkEntity folk) {
-        return FolkLooks.skinTexture(folk);
+        return FolkFaces.texture(folk);                    // [individual] its own face, built once and kept
     }
 
+    /**
+     * A villager's own size, and [individual] its own height on it (0.90 to 1.08 of it, between its parents'), a
+     * little wider for a broad build and narrower for a slim one; a child growing through its childhood, from not
+     * half a grown-up's height to two thirds of it.
+     */
     @Override
     protected void scale(VillageFolkEntity folk, PoseStack pose, float partialTick) {
-        float s = folk.isBaby() ? 0.9375F * 0.55F : 0.9375F;     // a villager's own size; a child's half of it
-        pose.scale(s, s, s);
+        long look = folk.clientLook();
+        boolean known = com.jrpetty.mcassistant.entity.Looks.known(look);
+        float h = known ? com.jrpetty.mcassistant.entity.Looks.heightOfStep(com.jrpetty.mcassistant.entity.Looks.heightStepOf(look)) : 1.0F;
+        float s;
+        if (folk.isBaby()) {
+            int growth = com.jrpetty.mcassistant.entity.Individual.growthOf(folk.clientMarks());
+            s = 0.9375F * (0.46F + 0.03F * growth) * (0.88F + 0.12F * h);
+        } else {
+            s = 0.9375F * h;
+        }
+        int build = known ? com.jrpetty.mcassistant.entity.Looks.build(look) : 1;
+        float wide = build == 0 ? 0.94F : build == 2 ? 1.07F : 1.0F;
+        pose.scale(s * wide, s, s * wide);
     }
 
     private static int trade(AssistantEntity folk) {
@@ -374,6 +390,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             case FLETCHER -> Items.FLETCHING_TABLE;        // [fletcher] the fletcher's table
             case GOLEMS -> Items.CARVED_PUMPKIN;           // [golems] a golem's head
             case FIREWORKS -> Items.FIREWORK_ROCKET;       // [fireworks] a rocket, of its own making
+            case CARTOGRAPHER -> Items.FILLED_MAP;         // [cartographer] a sheet in hand
             case EMERALD -> Items.EMERALD;                 // [emerald] an emerald turned over in its fingers
             case NONE -> Items.AIR;
         });

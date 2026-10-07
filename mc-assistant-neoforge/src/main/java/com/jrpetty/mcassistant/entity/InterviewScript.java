@@ -321,6 +321,7 @@ final class InterviewScript {
             case FERRY -> "How long have you handled a boat?";
             case FLETCHER -> "How long have you been fletching?";
             case GOLEMS -> "How long have you kept the golems?";
+            case CARTOGRAPHER -> "How long have you been drawing maps?";      // [cartographer]
             case EMERALD -> "How long have you traded with the villagers?";   // [emerald]
             case NONE -> "What have you done, till now?";
             // A trade come in since: asked in its own words.
@@ -490,6 +491,10 @@ final class InterviewScript {
             case GOLEMS -> new String[]{ "The golem's cracked after a raid and the stores have two ingots. What do you do?",
                 "Both ingots into it now, and the smelter told the golem comes before the watch's new helmets till it's mended.",
                 "Mend what I can with the two.", "Leave it. Golems mend themselves, don't they?" };
+            // [cartographer] The map room's first rule (its trade book): never sell a map of land the town hasn't seen.
+            case CARTOGRAPHER -> new String[]{ "A traveller offers good coin for a map to a monument, and the scouts have never been out to sea. What then?",
+                "Tell it straight: not yet. The scouts out that way first, and the map drawn when they're home. A map that lies gets folk drowned.",
+                "Draw what I can of the coast, and say the rest is guesswork.", "Draw a monument somewhere likely. Coin's coin." };
             case EMERALD -> new String[]{ "You reach the villagers' village and there are pillagers about the bell. What do you do?",   // [emerald]
                 "Turn straight round with the goods and tell the town. The villagers' fight isn't ours, and the trade will keep.",
                 "Wait at the edge till they've gone.", "Sell quick and run?" };

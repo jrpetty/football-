@@ -196,6 +196,8 @@ public final class Makers {
         for (String t : List.of("job_board", "village_charter", "assistant_spawner", "village_folk_spawner", "place_marker", "zone_marker")) {
             declare(t, "the shop's workshop", PLAYERS, "Workshop.order");
         }
+        declare("spectacles", "the smith (else the shop)", "for an old folk who reads and has none: the scholar, the librarian, "
+            + "the storekeeper first", "Keepsakes.spectacles");                                                     // [individual]
         unmade("memory_core", "it forms only when a companion falls, holding all it was; a made one would hold nobody");
     }
 }

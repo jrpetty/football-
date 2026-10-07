@@ -418,6 +418,22 @@ public final class TradeBookWriter {
             "glowstone for the twinkle, and a diamond's trail on Founding Day",
             "fire charges for the great balls of a victory",
         }, "Why did the rocket go to school? To get a little higher."));
+        // [cartographer]
+        craft("CARTOGRAPHER", new Craft("cartographer", "Cartographer's", "the map room", "map-making", "the maps", "things made", new String[]{
+            "Walk every sheet you draw. A map fills in only round whoever carries it: stand at the middle of each sheet till it's done there.",
+            "Lock a finished map under a pane of glass at the table, or it will go on changing on the wall.",
+            "Set a banner at each of the town's places and touch every sheet to it: the hall, the gates, the storehouse, the market.",
+            "Never sell a map of land the town hasn't seen. A map that lies gets folk drowned.",
+            "Price a map by how far and how rare: a coin for every hundred blocks, and more for a monument than a mineshaft.",
+            "Keep the old maps. Hung side by side in the museum, they show how the town has grown.",
+            "Press paper from the cane three sheets at a time, and keep two dozen by: a wall of nine eats them.",
+        }, new String[]{
+            "a sheet of paper and our own two feet",
+            "the cartography table, and the town's map on the hall's wall",
+            "compasses of the town's iron, and explorer maps for the scouts and the cave team",
+            "the country's map, carried down every road by the caravans",
+            "the ruined portals on the map, and the lands beyond them",
+        }, "Why did the cartographer take a pencil to the hall? To draw a crowd."));
         // [emerald] The emerald trader's book: what it has learned of the villagers and their prices.
         craft("EMERALD", new Craft("emerald trader", "Emerald Trader's", "the villagers' villages", "trading", "the emeralds",
             "trades made", new String[]{

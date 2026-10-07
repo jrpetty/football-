@@ -367,6 +367,9 @@ public final class Economy {
             case FLETCHER -> k == Kind.CRAFT || s.is(Items.FLINT) || s.is(Items.ARROW) || s.is(Items.SPECTRAL_ARROW);
             // [golems] The blocks of iron and the carved pumpkins it makes for its golems, and the seeds the carving gives.
             case GOLEMS -> k == Kind.CRAFT || s.is(Items.IRON_BLOCK) || s.is(Items.CARVED_PUMPKIN) || s.is(Items.PUMPKIN_SEEDS);
+            // [cartographer] Its maps and the makings it presses and forges for them: paper, compasses, a table.
+            case CARTOGRAPHER -> s.is(Items.FILLED_MAP) || s.is(Items.MAP) || s.is(Items.PAPER) || s.is(Items.COMPASS)
+                || s.is(Items.CARTOGRAPHY_TABLE);
             // [emerald] What it brings home from the villagers: emeralds for the surplus, and what the emeralds bought.
             // (What it took out of the stores and brings back unsold is no new work: Economy.given knows it.)
             case EMERALD -> true;

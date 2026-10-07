@@ -433,6 +433,7 @@ public final class Assemblies {
         if (f.isBaby() && (a.kind == Kind.COUNCIL || a.kind == Kind.ELECTION || a.kind == Kind.VIGIL)) return false;
         if (a.host != null && a.host.equals(f.getUUID())) return true;
         if (a.principals.contains(f.getUUID())) return true;
+        if (Fears.shunsCrowd(f, a.kind.name())) return false;      // [individual] uneasy in a crowd: not the feast
         if (a.invited != null && !a.invited.contains(f.getUUID())) return false;
         return f.blockPosition().distSqr(a.focus) < 128 * 128;
     }

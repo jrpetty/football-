@@ -274,6 +274,8 @@ public final class Gazette {
         if (auction != null) entries.add(auction);
         String books = Library.gazette(id, day);                    // [library] yesterday's new books and editions
         if (books != null) entries.add(books);
+        String maps = Cartographers.gazette(id, day);               // [cartographer] from the map room: maps drawn, places found, maps sold
+        if (maps != null) entries.add(maps);
         String war = WarAndPeace.gazette(level, id, day);           // [war-peace] the war, the ultimatum, the treaty
         if (war != null) entries.add(war);
         String street = Buskers.gazette(level, id, day);            // [arms] yesterday's buskers and their hats
