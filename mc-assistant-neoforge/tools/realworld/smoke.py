@@ -2086,6 +2086,10 @@ def main():
     except Exception as e:  # noqa: BLE001
         say("guard kit stage failed: %s" % e)
     try:
+        watch_clears_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("watch clears stage failed: %s" % e)
+    try:
         mine_safety_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("mine safety stage failed: %s" % e)
