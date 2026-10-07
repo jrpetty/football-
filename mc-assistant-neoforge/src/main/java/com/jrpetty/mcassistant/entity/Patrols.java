@@ -589,7 +589,7 @@ public final class Patrols {
     static VillageFolkEntity chooseEscort(UUID village, long now) {
         Escort e = ESCORTS.get(village);
         if (e != null && now - e.at() < 200L && now >= e.at()) {
-            for (VillageFolkEntity g : watch(village)) if (g.getUUID().equals(e.guard()) && !Archery.busy(g)) return g;
+            for (VillageFolkEntity g : watch(village)) if (g.getUUID().equals(e.guard()) && !Archery.busy(g) && !Police.engaged(g)) return g;
         }
         VillageFolkEntity elder = Orders.elderOf(village);
         List<VillageFolkEntity> watch = watch(village);
@@ -600,6 +600,7 @@ public final class Patrols {
         if (enough && elder != null) {
             for (VillageFolkEntity g : watch) {
                 if (!g.isAlive() || away(g) || Archery.busy(g)) continue;
+                if (Police.engaged(g)) continue;                      // [police] a prisoner on the lead, a chase: another walks with the leader
                 if (best == null || g.veteranLevel() > best.veteranLevel()
                         || (g.veteranLevel() == best.veteranLevel() && e != null && g.getUUID().equals(e.guard()))) best = g;
             }
@@ -685,6 +686,7 @@ public final class Patrols {
         if (elder == null || elder == g || chooseEscort(village, now) != g) return false;
         if (!g.isAlive() || g.isSleeping() || away(g) || g.onWatch() || Raids.underAlarm(village)) return false;
         if (Interviews.busy(g)) return false;                         // [interviews] at an interview (on the panel, or a candidate)
+        if (Police.engaged(g)) return false;                            // [police] the watch's business comes first
         if (level.isNight()) return false;                               // the night is the watch's
         if (g.talkPartner() != null || g.companionPlayer() != null || g.guidePlayer() != null) return false;
         if (Elections.dueToVote(g, level)) return false;                // its own vote, and straight back

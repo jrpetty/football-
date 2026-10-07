@@ -6663,6 +6663,11 @@ public class VillageFolkEntity extends AssistantEntity {
 
     private int tradeCheckTick = -100000;
 
+    /** [police] Tests: the trade as a test set it kept for the next five minutes (the village's own sums wait). */
+    public void keepTradeForTests() {
+        tradeCheckTick = tickCount;
+    }
+
     /**
      * A trade is not for life. A settlement decides its shape when its people
      * arrive and then never revisits it — so the day its only smelter falls

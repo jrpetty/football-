@@ -104,6 +104,10 @@ public class PoliceGameTests {
     private static VillageFolkEntity guard(GameTestHelper helper, ServerLevel level, BlockPos at, String who) {
         VillageFolkEntity g = folk(helper, level, at, who);
         g.setJob(StationTask.GUARD);
+        // Its ground where it stands, and its trade kept: a test's town has more of the watch than its sums would keep, and
+        // a newcomer's ground is otherwise planned off by the town's edge.
+        g.setWorkZone(com.jrpetty.mcassistant.entity.WorkZone.around(g.blockPosition(), 8, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH));
+        g.keepTradeForTests();
         g.setShift(AssistantEntity.Shift.ALWAYS);
         return g;
     }
@@ -149,6 +153,15 @@ public class PoliceGameTests {
             c.setChanged();
         }
         return took;
+    }
+
+    /** The town's guards (its own, grown, not hired out). */
+    private static List<VillageFolkEntity> watchOf(UUID village) {
+        List<VillageFolkEntity> out = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a instanceof VillageFolkEntity g && g.stationTask() == StationTask.GUARD && !g.isBaby() && !g.isHired()) out.add(g);
+        }
+        return out;
     }
 
     private static String names(List<VillageFolkEntity> l) {
@@ -420,7 +433,10 @@ public class PoliceGameTests {
         }
         int[] round = { 0 };
         int[] before = new int[3];
+        int[] start = new int[2];
         helper.runAtTickTime(20, () -> {
+            start[0] = a.purse();
+            start[1] = b.purse();
             Police.fightForTests(level, a, b);
             Kit.log("pl04 the fight: " + Police.taskForTests(a) + "/" + Police.taskForTests(b) + "; the guard " + Police.taskForTests(g));
             helper.assertTrue("BRAWL".equals(Police.taskForTests(a)) && "BRAWL".equals(Police.taskForTests(b)), "the two come to blows");
@@ -436,7 +452,8 @@ public class PoliceGameTests {
                 CompoundTag ra = Police.folkRecordForTests(a), rb = Police.folkRecordForTests(b);
                 Kit.log("pl04 broken up at tick " + t + ": " + Police.taskForTests(a) + "/" + Police.taskForTests(b) + "; warnings " + rec.getInt("warnings"));
                 helper.assertTrue(ra.getInt("brawls") == 1 && rb.getInt("brawls") == 1, "both names taken");
-                helper.assertTrue(rec.getInt("warnings") == 2 && a.purse() == 10 && b.purse() == 10, "a warning each, the first time, and no fine");
+                helper.assertTrue(rec.getInt("warnings") == 2 && a.purse() >= start[0] && b.purse() >= start[1],
+                    "a warning each, the first time, and no fine: purses " + start[0] + " -> " + a.purse() + ", " + start[1] + " -> " + b.purse());
                 helper.assertTrue("WALKED".equals(Police.taskForTests(a)) && "WALKED".equals(Police.taskForTests(b)), "and each sent home");
                 // The second time.
                 Police.endTaskForTests(a);
@@ -540,7 +557,7 @@ public class PoliceGameTests {
             if ("BACK".equals(state)) seen[3] = true;
             if (t % 100 == 0) {
                 Kit.log("pl05 tick " + t + " phase " + phase[0] + ": " + state + " (" + Police.doingForTests(culprit) + "), " + String.format("%.1f", in)
-                    + " from the cell; the guard " + Police.doingForTests(g) + "; the case " + c.stage());
+                    + " from the cell; the guard " + Police.doingForTests(g) + "; the case " + c.stage() + " | " + g.debugLine());
             }
             switch (phase[0]) {
                 case 1 -> {                                                     // walked to the cell on a lead
@@ -865,7 +882,7 @@ public class PoliceGameTests {
         // An Iron Age town (a badge is iron and gold worked together), whose constable wears its own badge already.
         Villages.ageForTests(village, Villages.Age.IRON);
         g.insertItem(new ItemStack(PoliceItems.CONSTABLE_BADGE.get()));
-        BlockPos chest = stores(level, heart, new ItemStack(Items.IRON_INGOT, 6), new ItemStack(Items.GOLD_NUGGET, 4));
+        BlockPos chest = stores(level, heart, new ItemStack(Items.IRON_INGOT, 24), new ItemStack(Items.GOLD_NUGGET, 4));
         Ledger.addCoins(village, 20);
         Kit.noLeftoverPlayers(level);
         ServerPlayer p = helper.makeMockServerPlayerInLevel();
@@ -876,6 +893,8 @@ public class PoliceGameTests {
         helper.runAtTickTime(20, () -> {
             String first = PlayerLaw.swearForTests(g, p);
             int iron0 = Crime.storesForTests(level, v, Items.IRON_INGOT), gold0 = Crime.storesForTests(level, v, Items.GOLD_NUGGET);
+            Kit.log("pl09 the stores before: iron " + iron0 + ", nuggets " + gold0 + ", gold " + Crime.storesForTests(level, v, Items.GOLD_INGOT)
+                + "; the age " + Villages.ageOf(village) + "; the chest's own: iron " + count(level, chest, Items.IRON_INGOT));
             boolean made = Police.makeBadgeForTests(level, v);
             int iron = iron0 - Crime.storesForTests(level, v, Items.IRON_INGOT), gold = gold0 - Crime.storesForTests(level, v, Items.GOLD_NUGGET);
             String second = PlayerLaw.swearForTests(g, p);
@@ -1003,6 +1022,126 @@ public class PoliceGameTests {
             helper.assertTrue(barsLeft == 16 - 8 && doorsLeft == 0, "the iron out of the stores: eight bars and two doors");
             helper.assertTrue(book, "the casebook on the desk's lectern");
             helper.assertTrue(!rosterSign.isBlank() && wantedSign.contains("WANTED"), "the notice board: the roster and the wanted");
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ pl11: the operators' stage sees to its own cast
+
+    /**
+     * A town of six farmers and no watch at all (as a played world's town can be, its one guard taken for the ferry or
+     * the smithy). The operators' stage still has its pictures: it appoints three of the town to the watch (its folk,
+     * and folk stood up beside its heart for the parts nobody is left for), and every scene is set — a prisoner in a
+     * cell, a guard greeting a folk on the beat, a chase down the avenue by a guard of its own, and an arrest walked to
+     * the cells on a lead, still on the lead a few seconds on (the leader's escort does not take a guard with a
+     * prisoner on its lead).
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "pl11_stage_cast")
+    public static void pl11_stage_cast(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        final int x = 1559000;
+        start(level, x, 56);
+        BlockPos heart = flat(level, x, Z, 48);
+        morning(level, 3000L);
+        List<VillageFolkEntity> town = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            VillageFolkEntity f = folk(helper, level, heart.offset(-5 + 2 * i, 0, i == 0 ? 0 : -3), "farmer " + (i + 1));
+            f.setJob(StationTask.FARM);
+            f.keepTradeForTests();
+            town.add(f);
+        }
+        UUID village = town.get(0).ownerId();
+        Villages.Village v = Villages.get(village);
+        VillageFolkEntity[] led = new VillageFolkEntity[2];
+        helper.runAtTickTime(20, () -> {
+            helper.assertTrue(watchOf(village).isEmpty(), "no watch to begin with");
+            List<String> said = Police.stageForTests(level, v, heart.offset(24, 0, 22));
+            String out = String.join("\n", said);
+            Kit.log("pl11 the stage said:\n" + out);
+            List<VillageFolkEntity> watch = watchOf(village);
+            helper.assertTrue(out.contains("appointed to the watch for the stage"), "the stage appoints its own guards");
+            helper.assertTrue(watch.size() >= 3, "three guards now: " + names(watch));
+            for (String scene : List.of("cell", "house", "beat", "chase", "arrest")) {
+                helper.assertTrue(out.contains("VIEW " + scene + " "), "a view of the " + scene);
+            }
+            helper.assertTrue(!out.contains("the town wants"), "nothing wanting for the cast");
+            VillageFolkEntity beat = null, chaser = null, escort = null;
+            for (VillageFolkEntity g : watch) {
+                if ("BEAT".equals(Police.dutyForTests(level, g)) && Police.taskForTests(g).isEmpty()) beat = g;
+                if (!Police.taskForTests(g).isEmpty()) chaser = g;
+                if (Police.engaged(g) && Police.taskForTests(g).isEmpty()) escort = g;
+            }
+            Kit.log("pl11 on the beat " + (beat == null ? "nobody" : beat.displayNameCap()) + ", giving chase " + (chaser == null ? "nobody"
+                : chaser.displayNameCap() + " (" + Police.taskForTests(chaser) + ")") + ", the escort " + (escort == null ? "nobody" : escort.displayNameCap()));
+            helper.assertTrue(beat != null && chaser != null && escort != null && beat != chaser && chaser != escort,
+                "a guard each for the beat, the chase and the arrest");
+            int inCells = 0;
+            for (AssistantEntity a : Villages.folkOf(village)) {
+                if (!(a instanceof VillageFolkEntity f)) continue;
+                String c = Police.custodyForTests(f);
+                if ("CELL".equals(c)) inCells++;
+                if ("LED".equals(c)) led[0] = f;
+            }
+            helper.assertTrue(inCells == 1 && led[0] != null, "one in a cell and one on the lead: " + inCells + ", " + (led[0] != null));
+            led[1] = escort;
+        });
+        helper.runAtTickTime(120, () -> {
+            String c = Police.custodyForTests(led[0]);
+            Kit.log("pl11 a hundred ticks on: " + led[0].displayNameCap() + " " + c + "; " + led[1].displayNameCap() + " " + led[1].debugLine());
+            helper.assertTrue("LED".equals(c) || "CELL".equals(c), "the arrest still on its lead, or in the cells: " + c);
+            helper.assertTrue(!com.jrpetty.mcassistant.entity.Patrols.escorting(led[1]), "the escort not taken to walk with the leader");
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ pl12: the watch's first hand
+
+    /**
+     * A town of eight has no watch and wants none. Grown to twelve with no guard (its one guard gone), it wants one, and
+     * its own sums would never find it a hand: none of its trades is over its share. The leader asks, once a day: a hand
+     * from a trade that can spare it takes up the watch, says so, and the town is told; and not a second the same day.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "pl12_first_hand")
+    public static void pl12_first_hand(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        final int x = 1559500;
+        start(level, x, 48);
+        BlockPos heart = flat(level, x, Z, 40);
+        morning(level, 3000L);
+        StationTask[] jobs = { StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.MINE, StationTask.MINE,
+            StationTask.WOOD, StationTask.WOOD, StationTask.FARM, StationTask.FARM, StationTask.MINE, StationTask.WOOD };
+        List<VillageFolkEntity> town = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            VillageFolkEntity f = folk(helper, level, heart.offset(-7 + 2 * i, 0, i == 0 ? 0 : -4), jobs[i] + " " + (i + 1));
+            f.setJob(jobs[i]);
+            f.keepTradeForTests();
+            town.add(f);
+        }
+        UUID village = town.get(0).ownerId();
+        Villages.Village v = Villages.get(village);
+        helper.runAtTickTime(20, () -> {
+            double small = Villages.share(village, StationTask.GUARD);
+            helper.assertTrue(Police.firstHandForTests(level, v) == null, "a town of eight keeps no watch: its share " + small);
+            for (int i = 8; i < 12; i++) {
+                VillageFolkEntity f = folk(helper, level, heart.offset(-7 + 2 * (i - 8), 0, 4), jobs[i] + " " + (i + 1));
+                f.setJob(jobs[i]);
+                f.keepTradeForTests();
+                town.add(f);
+            }
+            double share = Villages.share(village, StationTask.GUARD);
+            List<String> over = new ArrayList<>();
+            for (StationTask t : List.of(StationTask.FARM, StationTask.MINE, StationTask.WOOD)) {
+                over.add(t + " " + String.format(java.util.Locale.ROOT, "%.2f", Villages.share(village, t)) + (Villages.overStaffed(village, t) ? " over" : ""));
+            }
+            Kit.log("pl12 at eight the watch's share " + String.format(java.util.Locale.ROOT, "%.2f", small) + "; at twelve "
+                + String.format(java.util.Locale.ROOT, "%.2f", share) + "; the trades: " + over + "; the vacancy " + Villages.vacancy(village));
+            VillageFolkEntity g = Police.firstHandForTests(level, v);
+            helper.assertTrue(g != null, "a town of twelve with no guard finds one: the watch's share " + share);
+            Kit.log("pl12 " + g.displayNameCap() + " took up the watch; the town's news: " + (Villages.news(village).isEmpty() ? "" : Villages.news(village).get(0).text()));
+            helper.assertTrue(g.stationTask() == StationTask.GUARD, "it is a guard now: " + g.stationTask());
+            helper.assertTrue(!g.isElder(), "not the leader");
+            helper.assertTrue(Police.tallyForTests(village, level.getDayTime() / 24000L, "watch") == 1, "the watch's book has it");
+            helper.assertTrue(Police.firstHandForTests(level, v) == null, "and no second the same day");
             helper.succeed();
         });
     }

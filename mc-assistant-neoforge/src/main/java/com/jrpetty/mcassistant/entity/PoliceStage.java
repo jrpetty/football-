@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
@@ -16,7 +17,9 @@ import net.minecraft.world.level.block.WallSignBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -59,16 +62,16 @@ final class PoliceStage {
             return out;
         }
         fitOut(level, v, b);
-        // A folk in a cell, for a night's disorder.
-        List<VillageFolkEntity> folk = new ArrayList<>(), guards = new ArrayList<>(Patrols.watch(id));
-        for (AssistantEntity a : Villages.folkOf(id)) {
-            if (a instanceof VillageFolkEntity f && !f.isBaby() && !f.isShowcase() && f.stationTask() != AssistantEntity.StationTask.GUARD
-                    && WatchHouse.custodyOf(f.getUUID()) == null && Incidents.task(f) == null && f.trip() == null) folk.add(f);
-        }
-        if (folk.size() < 3 || guards.size() < 2) {
-            out.add("the town wants three folk and two guards about for the stage (it has " + folk.size() + " and " + guards.size() + ")");
+        // The cast: a guard each for the beat, the arrest and the chase, and a folk each for the cell, the greeting, the
+        // lead and the running. The stage sees to its own: a town short of guards has its folk appointed to the watch
+        // (whoever would volunteer first), and a town short of folk has them stood up beside its heart.
+        List<VillageFolkEntity> guards = cast(level, v, true), folk = cast(level, v, false);
+        out.addAll(castUp(level, v, guards, folk));
+        if (folk.size() < FOLK || guards.size() < GUARDS) {
+            out.add("the town wants " + FOLK + " folk and " + GUARDS + " guards about for the stage (it has " + folk.size() + " and " + guards.size() + ")");
             return out;
         }
+        // A folk in a cell, for a night's disorder.
         List<WatchHouse.Cell> cells = WatchHouse.cells(b);
         WatchHouse.Cell cell = cells.get(0);
         VillageFolkEntity prisoner = folk.get(0);
@@ -102,10 +105,10 @@ final class PoliceStage {
         passer.sayLater("All well, " + beat.displayNameCap() + ", thanks.", 40);
         Beats.felt(id, sq, level.getGameTime());
         out.add(view("beat", sq.relative(Direction.SOUTH, 5).relative(Direction.EAST, 1).above(1), sq.relative(Direction.EAST, 1).above(1)));
-        // A chase down the east avenue.
-        out.add(chase(level, v, ground(level, v.centre().relative(Direction.EAST, 20))));
+        // A chase down the east avenue: its own guard and its own culprit, not the beat's.
+        out.add(chase(level, v, ground(level, v.centre().relative(Direction.EAST, 20)), guards.get(2), folk.get(3)));
         // An arrest on a lead, walked to the second cell.
-        if (guards.size() >= 2 && folk.size() >= 3) {
+        {
             VillageFolkEntity g = guards.get(1), f = folk.get(2);
             BlockPos start = door.relative(b.facing().getOpposite(), 10);
             start = ground(level, start);
@@ -119,6 +122,63 @@ final class PoliceStage {
         if (board != null) out.add(view("board", board.relative(Direction.SOUTH, 4).above(1), board.above(1)));
         out.add("the roster: " + Roster.words(level, v));
         return out;
+    }
+
+    /** Who is about for a part: the town's guards (true) or its other grown folk (false), here, free and out of the cells. */
+    static List<VillageFolkEntity> cast(ServerLevel level, Villages.Village v, boolean guard) {
+        List<VillageFolkEntity> out = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || f.level() != level) continue;
+            if ((f.stationTask() == AssistantEntity.StationTask.GUARD) != guard || Patrols.away(f)) continue;
+            if (WatchHouse.custodyOf(f.getUUID()) != null || Incidents.task(f) != null || WatchHouse.escorting(f) != null) continue;
+            if (!guard && f.isElder()) continue;                    // not the leader in the cells
+            out.add(f);
+        }
+        out.sort(Comparator.comparing(Entity::getUUID));
+        return out;
+    }
+
+    /**
+     * The stage's own cast: the town's folk appointed to the watch while it has fewer than three guards about (the
+     * readiest volunteers first, then any grown hand but the leader, while four are left for the other parts), and folk
+     * stood up beside the heart for the parts nobody is left for. An appointed guard keeps the watch a while (the
+     * town's own sums wait on it). The lists are filled in; what was done, in words.
+     */
+    static final int GUARDS = 3, FOLK = 4;
+
+    static List<String> castUp(ServerLevel level, Villages.Village v, List<VillageFolkEntity> guards, List<VillageFolkEntity> folk) {
+        List<String> out = new ArrayList<>();
+        List<VillageFolkEntity> order = new ArrayList<>();
+        for (VillageFolkEntity f : WarFooting.volunteers(v.id())) if (folk.contains(f)) order.add(f);
+        for (VillageFolkEntity f : folk) if (!order.contains(f)) order.add(f);
+        List<String> named = new ArrayList<>();
+        while (guards.size() < GUARDS) {
+            VillageFolkEntity f = order.isEmpty() || folk.size() <= FOLK ? raise(level, v, guards.size()) : order.remove(0);
+            if (f == null) break;
+            folk.remove(f);
+            if (!f.takeUpTrade(AssistantEntity.StationTask.GUARD)) f.setJob(AssistantEntity.StationTask.GUARD);
+            if (f.stationTask() != AssistantEntity.StationTask.GUARD) break;
+            f.keepTradeForTests();
+            guards.add(f);
+            named.add(f.displayNameCap());
+        }
+        if (!named.isEmpty()) out.add("appointed to the watch for the stage: " + String.join(", ", named));
+        named.clear();
+        while (folk.size() < FOLK) {
+            VillageFolkEntity f = raise(level, v, GUARDS + folk.size());
+            if (f == null) break;
+            folk.add(f);
+            named.add(f.displayNameCap());
+        }
+        if (!named.isEmpty()) out.add("stood up for the stage: " + String.join(", ", named));
+        return out;
+    }
+
+    /** One more of the town stood up a few blocks off its heart (whatever the town's cap), or null. */
+    @Nullable
+    private static VillageFolkEntity raise(ServerLevel level, Villages.Village v, int n) {
+        BlockPos p = ground(level, v.centre().relative(Direction.SOUTH, 4).relative(Direction.WEST, 3 + 2 * n));
+        return com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, p, 0.0F, Integer.MAX_VALUE);
     }
 
     /** The watch house fitted out at once, for the pictures: iron bars and doors, the notice board, the casebook. */
@@ -146,16 +206,18 @@ final class PoliceStage {
 
     /** "/village police chase": a folk at hand runs from the nearest guard, as if caught in the act. */
     static String chase(ServerLevel level, Villages.Village v, BlockPos at) {
-        VillageFolkEntity g = null, f = null;
-        for (VillageFolkEntity x : Patrols.watch(v.id())) {
-            if (Incidents.task(x) != null || WatchHouse.escorting(x) != null) continue;
-            if (g == null || x.blockPosition().distSqr(at) < g.blockPosition().distSqr(at)) g = x;
-        }
-        for (AssistantEntity a : Villages.folkOf(v.id())) {
-            if (!(a instanceof VillageFolkEntity x) || x.isBaby() || x.stationTask() == AssistantEntity.StationTask.GUARD
-                    || WatchHouse.custodyOf(x.getUUID()) != null || Incidents.task(x) != null) continue;
-            if (f == null || x.blockPosition().distSqr(at) < f.blockPosition().distSqr(at)) f = x;
-        }
+        return chase(level, v, at, nearest(cast(level, v, true), at), nearest(cast(level, v, false), at));
+    }
+
+    @Nullable
+    private static VillageFolkEntity nearest(List<VillageFolkEntity> all, BlockPos at) {
+        VillageFolkEntity best = null;
+        for (VillageFolkEntity x : all) if (best == null || x.blockPosition().distSqr(at) < best.blockPosition().distSqr(at)) best = x;
+        return best;
+    }
+
+    /** The chase with its cast given: {@code f} runs down the avenue from {@code at}, {@code g} after it. */
+    static String chase(ServerLevel level, Villages.Village v, BlockPos at, @Nullable VillageFolkEntity g, @Nullable VillageFolkEntity f) {
         if (g == null || f == null) return "nobody to chase or to give chase";
         BlockPos run = ground(level, at);
         f.moveTo(run.getX() + 0.5, run.getY(), run.getZ() + 0.5, -90.0F, 0.0F);

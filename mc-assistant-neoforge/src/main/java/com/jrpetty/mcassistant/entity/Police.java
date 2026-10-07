@@ -289,7 +289,7 @@ public final class Police extends SavedData {
 
     /** Is this guard taken up with an incident or a prisoner (not free to be sent after a monster)? */
     public static boolean engaged(VillageFolkEntity g) {
-        return !standDown && Incidents.task(g) != null || WatchHouse.escorting(g) != null;
+        return !standDown && (Incidents.task(g) != null || WatchHouse.escorting(g) != null);
     }
 
     /**
@@ -430,6 +430,62 @@ public final class Police extends SavedData {
         com.jrpetty.mcassistant.Guard.run("the beats", () -> Beats.tick(level, v));
         com.jrpetty.mcassistant.Guard.run("the players and the law", () -> PlayerLaw.tick(level, v));
         if (level.getGameTime() % 200 < 20) com.jrpetty.mcassistant.Guard.run("the constable's badge", () -> badges(level, v));
+        if (level.getGameTime() % 1200 < 20) com.jrpetty.mcassistant.Guard.run("the watch's first hand", () -> firstHand(level, v, day));
+    }
+
+    /**
+     * A town of the size that keeps a watch with no guard left at all (the one it had died, or was taken for the ferry or
+     * the smithy): the leader asks for a hand, one a day, from a trade that can spare it — never the last at its trade,
+     * the storekeeper, the banker or a scout, the old or the leader, nor a food-maker while the town is short. The town's
+     * own sums move a hand only out of a trade over its share, and a town of a dozen has none over: its watch stayed
+     * empty for good. Only on a full view (the town all loaded), as the sums are. Returns who took it up, or null.
+     */
+    @Nullable
+    static VillageFolkEntity firstHand(ServerLevel level, Villages.Village v, long day) {
+        UUID id = v.id();
+        CompoundTag t = town(id);
+        if (t.contains("firstHand") && t.getLong("firstHand") == day) return null;
+        if (Villages.loadedCount(id) * 5 < Villages.headcount(id) * 4) return null;
+        Map<AssistantEntity.StationTask, Integer> have = new java.util.EnumMap<>(AssistantEntity.StationTask.class);
+        List<VillageFolkEntity> all = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (!(a instanceof VillageFolkEntity f) || f.isHired()) continue;
+            if (f.stationTask() == AssistantEntity.StationTask.GUARD) return null;                // it has a watch
+            if (f.stationTask() != AssistantEntity.StationTask.NONE) have.merge(f.stationTask(), 1, Integer::sum);
+            all.add(f);
+        }
+        if (Villages.share(id, AssistantEntity.StationTask.GUARD) > -0.5) return null;   // too small a town for one yet
+        boolean hungry = Market.hungry(id);
+        VillageFolkEntity best = null;
+        double bestScore = Double.NEGATIVE_INFINITY;
+        for (VillageFolkEntity f : all) {
+            if (f.isBaby() || !f.isAlive() || f.isOld() || f.isElder() || f.isHired() || f.isShowcase() || Patrols.away(f)) continue;
+            if (WatchHouse.custodyOf(f.getUUID()) != null) continue;
+            AssistantEntity.StationTask job = f.stationTask();
+            double score = WarFooting.volunteerScore(f) / 10.0;
+            if (job != AssistantEntity.StationTask.NONE) {
+                if (job == AssistantEntity.StationTask.STORE || job == AssistantEntity.StationTask.BANK || job == AssistantEntity.StationTask.SCOUT) continue;
+                if (have.getOrDefault(job, 0) <= 1) continue;                                  // the last at its trade
+                if (WarFooting.FOOD.contains(job) && hungry && !Villages.overStaffed(id, job)) continue;
+                score += Villages.share(id, job) * 10.0;                                       // the trade with most to spare
+            } else {
+                score += 50.0;                                                                 // a hand at nothing
+            }
+            if (score > bestScore) { bestScore = score; best = f; }
+        }
+        t.putLong("firstHand", day);
+        changed();
+        if (best == null) return null;
+        AssistantEntity.StationTask was = best.stationTask();
+        if (!best.takeUpTrade(AssistantEntity.StationTask.GUARD)) best.setJob(AssistantEntity.StationTask.GUARD);
+        if (best.stationTask() != AssistantEntity.StationTask.GUARD) return null;
+        best.setAutonomous(true);
+        FolkTalk.speak(best, FolkTalk.pick(best.getRandom(), "Somebody has to keep the watch. I will.",
+            "No guard in the whole town? Then I'll take it up.", "The " + (was == AssistantEntity.StationTask.NONE ? "work" : was.label) + " can spare me. I'll keep the watch."));
+        Villages.tell(id, day, best.displayNameCap() + " took up the watch, the town having no guard"
+            + (was == AssistantEntity.StationTask.NONE ? "" : " (it was a " + was.title.toLowerCase(Locale.ROOT) + ")"));
+        log(id, level.getDayTime(), "watch", best.displayNameCap() + " took up the watch, the town having no guard", best, 0);
+        return best;
     }
 
     /** The morning: trust drifts back toward its usual, the curfew is weighed, old bounties are let go. */
@@ -1030,6 +1086,19 @@ public final class Police extends SavedData {
     public static String doingForTests(VillageFolkEntity f) {
         String s = doingLine(f);
         return s == null ? "" : s;
+    }
+
+    // ---- the watch's first hand, and the operators' stage
+
+    /** The look for the watch's first hand, now (not waiting on the minute): who took up the watch, or null. */
+    @Nullable
+    public static VillageFolkEntity firstHandForTests(ServerLevel level, Villages.Village v) {
+        return firstHand(level, v, level.getDayTime() / 24000L);
+    }
+
+    /** /village police stage, from here: what it said (its VIEW lines among it). */
+    public static List<String> stageForTests(ServerLevel level, Villages.Village v, BlockPos at) {
+        return PoliceStage.stage(level, v, at);
     }
 
     // ---- the watch house and the cells

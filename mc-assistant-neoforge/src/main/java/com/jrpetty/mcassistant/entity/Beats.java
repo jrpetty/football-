@@ -281,7 +281,9 @@ final class Beats {
             felt(v.id(), g.blockPosition(), gt);
         }
         if (w.walking) {
-            if (!Mischief.near(g, s.at(), 2.0) && gt - w.legStart < 400) {
+            // There: at the stop, or as near as its path goes (a stall or a cart stood on the very spot).
+            boolean there = Mischief.near(g, s.at(), 2.5) || g.getNavigation().isDone() && Mischief.near(g, s.at(), 4.0) && gt - w.legStart > 20;
+            if (!there && gt - w.legStart < 400) {
                 Incidents.walk(g, s.at(), 0.75D);
                 g.brain("walking the beat to " + s.name());
                 return true;
@@ -557,8 +559,16 @@ final class Beats {
         if (m == null) return 1.0;
         int walked = 0;
         for (Stop s : spots) {
-            Long when = m.get(key(s.at()));
-            if (when != null && gt - when < 24000L && gt >= when) walked++;
+            // Walked near it (within a few strides, the watch in plain sight of it) in the last day.
+            boolean near = false;
+            int cx = s.at().getX() >> 2, cz = s.at().getZ() >> 2;
+            for (int dx = -2; dx <= 2 && !near; dx++) {
+                for (int dz = -2; dz <= 2 && !near; dz++) {
+                    Long when = m.get(BlockPos.asLong(cx + dx, 0, cz + dz));
+                    if (when != null && gt - when < 24000L && gt >= when) near = true;
+                }
+            }
+            if (near) walked++;
         }
         return 1.0 - 0.35 * walked / spots.size();
     }
