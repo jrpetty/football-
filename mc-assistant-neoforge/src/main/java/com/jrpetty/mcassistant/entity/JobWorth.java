@@ -183,6 +183,12 @@ public final class JobWorth {
             // [transport] Out on the water in all weathers but the worst: it makes nothing, and carries everybody over.
             case "FERRY" -> new Post(key, title, trade, role, 1, 1, 0.9, 0.0, "out on the water, and steady",
                 "carries the town's folk over the water");
+            // [fletcher] Skilled bench work, a craftsman's: the watch's arrows and bows, and the range's practice.
+            case "FLETCHER" -> new Post(key, title, trade, role, 0, 2, 0.6, 1.0, "skilled work at the bench",
+                "keeps the watch's quivers full");
+            // [golems] Iron blocks are heavy and a golem's fists are heavier: hard, learned work that keeps the town.
+            case "GOLEMS" -> new Post(key, title, trade, role, 2, 3, 1.1, 0.0, "heavy, skilled work with the town's iron",
+                "keeps the town's golems at the gates");
             // The shop's jobs (ShopRoles): the keeper makes a little and runs the place; the assistants and the
             // stock keeper make nothing, and are paid for what they do for the shop.
             case "SHOP/KEEPER" -> new Post(key, title, trade, role, 1, 2, 1.0, 0.5, "runs the place", "keeps the shop and its sales");
@@ -202,6 +208,7 @@ public final class JobWorth {
     static double own(StationTask t) {
         return switch (t.name()) {
             case "SMELT", "COOK", "TAILOR", "BREW", "SMITH", "ENCHANT", "SHOP" -> 0.5;
+            case "FLETCHER" -> 0.5;                                     // [fletcher] the flint, feathers and sticks are others' work
             default -> 1.0;
         };
     }
@@ -214,6 +221,7 @@ public final class JobWorth {
             case "GUARD" -> 0.15;
             case "SCOUT" -> 0.1;
             case "HAUL", "STORE", "BANK", "FERRY" -> 0.0;                 // [transport] the ferryman makes nothing
+            case "GOLEMS" -> 0.0;                                         // [golems] its golems are kept, not sold
             default -> 1.0;
         };
     }
@@ -890,6 +898,8 @@ public final class JobWorth {
             case "BANK" -> "the bank";
             case "CAVE" -> "the caves";                // [caves]
             case "FERRY" -> "the ferry";               // [transport]
+            case "FLETCHER" -> "the fletcher's";       // [fletcher]
+            case "GOLEMS" -> "the golem yard";         // [golems]
             default -> "the " + JobMarket.noun(t) + "s";
         };
     }

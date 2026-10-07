@@ -119,7 +119,7 @@ public class BowAttackGoal extends Goal {
             if (inRange && --attackTimer <= 0) {
                 if (hand.getItem() instanceof CrossbowItem cb) {
                     cb.performShooting(assistant.level(), assistant, InteractionHand.MAIN_HAND,
-                        hand, 1.6F, 6.0F, t);
+                        hand, 1.6F, com.jrpetty.mcassistant.entity.Fletchers.spread(assistant, 6.0F), t);   // [fletcher] practised aim
                 }
                 // Belt and braces: a charge that survives its own shot would
                 // fire for ever off one bolt. Clearing a spent one is a no-op.

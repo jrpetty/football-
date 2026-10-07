@@ -449,6 +449,7 @@ public final class Crafts {
     @Nullable
     static String fletch(ServerLevel level, Villages.Village v, int watch) {
         if (watch <= 0) return null;
+        if (Fletchers.keeps(v.id())) return null;                      // [fletcher] the town's fletcher makes them (Fletchers)
         if (stock(level, v, s -> s.is(Items.BOW)) < watch && stock(level, v, s -> s.is(Items.STRING)) >= 3
                 && planks(level, v, 2)) {
             if (!take(level, v, s -> s.is(Items.STRING), 3)) return null;
@@ -458,9 +459,8 @@ public final class Crafts {
         }
         if (stock(level, v, s -> s.is(Items.ARROW)) < 32 * watch && stock(level, v, s -> s.is(Items.FEATHER)) >= 1) {
             if (stock(level, v, s -> s.is(Items.FLINT)) < 1) {
-                if (stock(level, v, s -> s.is(Items.GRAVEL)) < 3 || !take(level, v, s -> s.is(Items.GRAVEL), 3)) return null;
-                store(level, v, new ItemStack(Items.FLINT));
-                return "a flint knapped out of the gravel, for arrowheads";
+                // [fletcher] Sifted out of the gravel as the game gives it: set down and broken, a flint one time in ten.
+                return Fletchers.siftFor(level, v, 4);
             }
             if (!planks(level, v, 1)) return null;
             if (!take(level, v, s -> s.is(Items.FLINT), 1) || !take(level, v, s -> s.is(Items.FEATHER), 1)) return null;

@@ -138,7 +138,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         CAVE("caving", "Cave dweller"),
         // [transport] Where a river lies between the town and its fields, its mine or a neighbour, and no bridge spans
         // it yet, a ferryman rows folk across for a coin (Ferries); the bridge, when the town votes one, retires it.
-        FERRY("the ferry", "Ferryman");
+        FERRY("the ferry", "Ferryman"),
+        // [fletcher] A Stone Age town whose watch carries bows keeps a fletcher: flint sifted from the miners' gravel,
+        // the coop's feathers, arrows, bows and crossbows for the watch, and the range's practice (Fletchers).
+        FLETCHER("fletching", "Fletcher"),
+        // [golems] An Iron Age town that has been raided twice in a fortnight, or is sixty strong, keeps a golem keeper:
+        // iron golems raised the game's way at the gates, repaired with ingots, snow golems on the towers (Golems).
+        GOLEMS("golem keeping", "Golem keeper");
 
         /** The trades of a grown village, which work out of a building of their own. */
         public boolean isCraft() {
@@ -1423,6 +1429,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FISH, STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> null;
             case CAVE -> null;                    // [caves] kitted by the town each morning (CaveDwellers.kitUp)
             case FERRY -> null;                   // [transport] the town's boat is its kit (Ferries)
+            case FLETCHER -> null;                // [fletcher] works out of the stores at its table (Fletchers)
+            case GOLEMS -> null;                  // [golems] works out of the stores (Golems)
         };
         // ONE restock, one pace. This used to be three separate paced scoops in
         // a row, and only the first of them could ever run: the food scoop took
@@ -2652,6 +2660,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> false;
             case CAVE -> false;                   // [caves] kitted by the town each morning (CaveDwellers.kitUp)
             case FERRY -> false;                  // [transport] the town's boat is its kit (Ferries)
+            case FLETCHER, GOLEMS -> false;       // [fletcher] [golems] their work is the stores' (Fletchers, Golems)
         };
     }
 
@@ -4309,6 +4318,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case HUNT -> s.is(Items.ARROW) ? 32 : s.is(Items.BOW) ? 1 : GAME.test(s) ? 0
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
             case FERRY -> s.get(DataComponents.FOOD) != null ? 8 : 0;   // [transport] a bite between crossings
+            // [fletcher] [golems] A bite to eat; what they make goes straight into the stores.
+            case FLETCHER, GOLEMS -> s.get(DataComponents.FOOD) != null ? 8 : 0;
             case NONE -> 0;
         };
     }
@@ -5199,7 +5210,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         double dy = target.getY(0.3333) - arrow.getY();
         double dz = target.getZ() - getZ();
         double horiz = Math.sqrt(dx * dx + dz * dz);
-        arrow.shoot(dx, dy + horiz * 0.2, dz, 1.6F, 6.0F);
+        arrow.shoot(dx, dy + horiz * 0.2, dz, 1.6F, Fletchers.spread(this, 6.0F));   // [fletcher] the butts have steadied its aim
         this.playSound(net.minecraft.sounds.SoundEvents.SKELETON_SHOOT, 1.0F,
             1.0F / (getRandom().nextFloat() * 0.4F + 0.8F));
         level().addFreshEntity(arrow);
@@ -5605,6 +5616,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 case HUNT -> new Branch[]{ SENTINEL, HUSBANDRY };
                 case CAVE -> new Branch[]{ SENTINEL, PROSPECTOR };     // [caves]
                 case FERRY -> new Branch[]{ PORTER, SENTINEL };        // [transport]
+                case FLETCHER -> new Branch[]{ SENTINEL, PORTER };     // [fletcher]
+                case GOLEMS -> new Branch[]{ SENTINEL, PROSPECTOR };   // [golems]
                 case NONE -> new Branch[]{};
             };
         }
@@ -7226,6 +7239,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // [transport] At the landing with the town's boat, rowing folk across for a coin (Ferries).
                 if (ferryWork()) return true;
             }
+            case FLETCHER -> {
+                // [fletcher] At its table, the gravel sifted, the arrows made, the watch kept stocked (Fletchers).
+                if (this instanceof VillageFolkEntity f && level() instanceof net.minecraft.server.level.ServerLevel sl
+                    && Fletchers.duty(f, sl)) return true;
+            }
+            case GOLEMS -> {
+                // [golems] Round the town's golems: built, posted, repaired; snow golems in a cold winter (Golems).
+                if (this instanceof VillageFolkEntity f && level() instanceof net.minecraft.server.level.ServerLevel sl
+                    && Golems.duty(f, sl)) return true;
+            }
             case NONE -> { }
         }
         // Nothing to do right where it's stood. On a zone bigger than its own
@@ -7775,6 +7798,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case STORE, HAUL, NONE, SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP, BANK, SCOUT -> 0;
             case CAVE -> 0;                       // [caves] its finds go into the stores when it is home (CaveDwellers.home)
             case FERRY -> 0;                      // [transport] its fares go into its purse, not the stores
+            case FLETCHER, GOLEMS -> 0;           // [fletcher] [golems] what they make goes straight into the stores
         };
         // Never more than a stash would actually move. The trade's own sums kept back less
         // than the stash keeps back (a village miner keeps 32 cobble, the sum kept 16), so

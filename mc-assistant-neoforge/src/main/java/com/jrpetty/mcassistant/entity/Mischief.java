@@ -933,6 +933,8 @@ final class Mischief {
             case HUNT -> "a hunter's leathers";
             case BANK -> "a banker's coat";
             case CAVE -> "a cave dweller's kit";
+            case FLETCHER -> "a fletcher's apron and quiver";      // [fletcher]
+            case GOLEMS -> "a golem keeper's riveted apron";      // [golems]
             default -> "plain clothes";
         };
     }

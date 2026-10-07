@@ -8140,3 +8140,116 @@ name, for a thing that has no recipe, no age, no worth, no maker, or makings the
 * with no master in the town, its best cook (not its greenest) bakes the pies one turn in three, and once a master
   cook comes up the master bakes them at every turn and the other no longer; the best smith rivets the miners' pick,
   an apprentice's work that wears through sooner, with its name on it.
+
+## The fletcher
+
+A Stone Age town whose watch carries bows (or that has built the archery range) takes up a **fletcher**: one at first,
+and a second once the town is sixty strong. If nobody takes the trade up of their own accord within a day, the town
+asks one of its own: a hand between trades or a hunter for choice, never one of the watch, nor a craft's only hand.
+The fletcher wears a tan leather bib apron over a green tunic, a quiver of arrows slung over its shoulder, and a green
+felt cap with a goose feather in its band.
+
+**Its hut.** Once the town keeps a fletcher, the builders put up a little timber fletcher's hut facing the square: a
+barrel for the finished arrows and a chest against the back wall, with the place between them left for the fletching
+table. The fletcher makes that table itself, of two of the stores' flint and four planks (the game's recipe), and sets
+it there; until the hut stands it works at a table on the square, and carries it in when the hut is built.
+
+**Everything it uses is real.**
+
+| What | Where it comes from |
+|---|---|
+| Flint | The miners' and diggers' gravel in the stores. The fletcher sets a block down on the sifting floor in front of its hut and breaks it with the stores' shovel, as you would: the game's own loot gives a flint about one time in ten, and the gravel otherwise, which goes back in the stores to be sifted again. |
+| Feathers | The rancher's hens. When the pen has more hens than it keeps (four), the rancher culls an old one, and while the fletcher is short of feathers it takes a hen before any other animal. A pen with no hens fetches a wild pair home. The feathers and the meat come home in its pack. |
+| Sticks | The stores' planks: two planks make four sticks, the rest kept. |
+| String | The spiders the watch and the hunters kill. |
+| Iron, glowstone, redstone, hay | The smelter's ingots; the Nether's glowstone, once it is in the stores; the miners' redstone; the farmers' wheat as bales. |
+
+**What it makes**, a piece at a time at its table, all into the stores, and booked as its making on the Production page
+and in the fletcher's trade book:
+
+| Thing | Recipe | When |
+|---|---|---|
+| Arrows | a flint, a stick and a feather make four | first, until the stores hold the raid's reserve; then some for the shop |
+| Bow | three sticks, three string | for each guard without one, and a spare; one for the shop when string is plentiful |
+| Crossbow | three sticks, two string, an ingot and a tripwire hook (an ingot, a stick and a plank make two hooks) | in the Iron Age, for the town's best archers, who are given them in place of their bows |
+| Target | a bale of hay and four redstone | for each butt at the range without one |
+| Redstone lamp | four redstone round a block of glowstone | set over a butt's target, it lights when an arrow strikes home |
+| Spectral arrows | four glowstone dust round an arrow make two | once the Nether's glowstone is in the stores; sixteen kept |
+
+**The watch, kept stocked.** In a town with a fletcher, every guard with a bow goes up the wall with a quiver of
+thirty-two arrows, filled again from the stores when it runs below sixteen. A guard with an empty quiver goes for more
+at once. The stores keep a reserve of thirty-two arrows a guard (and a turn at the butts) for a raid, and the shop will
+not sell you those, only what the fletcher makes past them. After a raid every quiver is filled at once, the chronicle
+says how many arrows went out, and the fletcher goes straight back to its table to make the reserve good. If a guard's
+quiver is empty and the stores have none, the board says so, and names the guards.
+
+**Practice.** On a quiet working afternoon (no bell, no rain, not the rest day) the fletcher runs practice at the
+range. The guards whose aim is least steady go first, one at a time: ten of the stores' arrows each, shot at the
+targets as real arrows, while the fletcher stands behind the line calling the shots. The guard pulls its arrows and
+they go back in the stores; the fletcher sweeps up any strays. Every session at the butts (the morning's practice and
+the contest too) steadies a guard's aim for good: its arrows fly truer at the butts, and in a fight the spread of its
+shots narrows, to half an unpractised guard's at best. A guard's card shows its best ("best at the butts: 8 of 10"),
+its sessions and its spread in a fight; a new best of seven or more out of ten that beats the whole watch goes into the
+chronicle.
+
+**You can** buy the arrows and bows the fletcher makes past the watch's needs at the shop; and `/village fletcher` says
+the whole of it: the fletcher, its hut and table, the stores' arrows and makings, all it has made, every guard's quiver
+and aim. An operator can call practice with `/village fletcher practice`.
+
+The game tests `DefenceTradesGameTests` (fd01 to fd06) check that a Stone Age town wants a fletcher only once its watch
+carries a bow, gives the place to one of its own (never the watch) and puts the hut on the builders' list, and that the
+fletcher makes its table of two flint and four planks in the hut; that a hundred blocks of gravel broken on the sifting
+floor give flint as the game gives it, the rest back in the stores; that a rancher culls hens first for a town with a
+fletcher and the feathers come home; that the stores' makings become arrows, bows, a crossbow (issued to the best
+archer), a target and spectral arrows by their recipes; that quivers are filled to thirty-two and refilled after a raid,
+that the reserve is not sold, and that an empty quiver with empty stores is on the board; and that practice at the
+range steadies a guard's aim, narrows its spread and gets the arrows back into the stores.
+
+## The golem keeper
+
+An Iron Age town that has been raided twice within a fortnight, or has grown to sixty folk, takes up a **golem keeper**:
+one, from its own folk if nobody comes forward within a day (a hand between trades, or a strong back from the mines or
+the furnaces for choice, never the watch). It wears a heavy dark leather apron studded with iron rivets, a
+pumpkin-orange scarf wound round its neck, a riveted leather cap, and the shears it carves pumpkins with at its hip.
+Its workplace is the **golem yard**, an open-fronted shed by the square with a crafting table, a chest and an anvil.
+
+**Iron golems, built the real way.** The keeper makes blocks of iron out of the stores' ingots at the yard, nine to a
+block, until it has four. At the golem's post it stands them in a T, legs, body and both arms, clearing the grass round
+it, and sets a pumpkin on top: a carved one from the stores, or a farm pumpkin carved where it sits with the stores'
+shears (its four seeds go into the stores). The pumpkin is placed the ordinary way, so the game's own check stands the
+golem up, exactly as when you build one: a golem made by hand, which never turns on the town's folk. The keeper names
+it (Ironside, Old Rust, Bolt...), and the chronicle tells who raised whom, and where.
+
+* **How many.** A golem on the square always; one at every gate while the raids are frequent (two in a fortnight); and
+  two more about the square in a big town of eighty. Never one the town cannot afford: a golem takes thirty-six ingots,
+  and none is built if that would leave the stores short of the iron the watch's armour and blades still want. The
+  keeper's card and `/village golems` say what it is waiting on.
+* **At its post.** Each golem keeps to its post, a gate or the square. It goes after a monster about the town as any
+  golem does, and walks back to its post when the fight is done.
+* **Mending.** A hurt golem is mended with the stores' iron ingots, as you mend one: twenty-five health an ingot, by the
+  keeper on its round. Its cracks fade as it mends.
+* **Losses.** A golem that falls is mourned a little ("Old Rust fell at the east gate"), the folk who knew it remember
+  it, and the keeper gathers the iron it dropped back into the stores on its next round. The post is built again when
+  the town can afford it.
+* **The golem from before.** A town that already has an iron golem (the one the town raised itself before it had a
+  keeper) hands it to the keeper, who names it if it has no name and gives it a post. A town with no keeper still raises
+  its first golem when it comes into the Iron Age, now in the same real way, by a town hand at the square.
+
+**Snow golems in winter.** In the town's winter, if the biome is not one a snow golem melts in, the keeper builds snow
+golems on the watchtower's deck, two to a tower: two blocks of snow (packed four snowballs to a block from the
+sweeper's snowballs, or snow it shovels where it lies) and a pumpkin, and the game stands each up to pelt whatever comes
+at the town with snowballs. In spring they are let go, and melt away. In a warm biome (a desert, a savanna, the badlands)
+it builds none, and says why.
+
+**You can** see the golems at their posts and their state on the board and the keeper's card, and read the whole of it
+with `/village golems`: the keeper, the yard, the posts wanted, every golem and how it is, the fallen, the stores' iron
+against what the watch still wants, and all the keeper has done. Its trade book keeps the same numbers.
+
+The game tests `DefenceTradesGameTests` (fd07 to fd10) check that a town raided twice in a fortnight (not twice in a
+month) wants a keeper and gives the place to one of its own, with the golem yard on the builders' list; that four
+blocks of the stores' iron and a pumpkin carved with the stores' shears stand up a player-made iron golem at the square
+by the game's own check, named, with the seeds in the stores, and that carried away it walks back to its post; that the
+town's old golem is taken in hand and named, mended with ingots twenty-five health at a time until its cracks are gone,
+and when it falls is mourned and its iron gathered back; that a snow golem is built on the watchtower in a snowy
+winter, none in a desert town (and why), and that it melts away in spring; and that no golem is built, and no iron
+touched, while the watch's armour still wants the iron, and that with iron enough for both, it is.
