@@ -578,6 +578,8 @@ public final class Trades {
     /** What a hand of this trade keeps in its pack and never banks: its kit, and its workstation
      *  until it is set down. */
     public static int keeps(StationTask t, ItemStack s) {
+        int field = FieldTools.keeps(t, s);                    // [fields] its can, sickle and satchel, its smoker, its traps to set
+        if (field > 0) return field;
         return switch (t) {
             case BEEKEEP -> s.is(Items.BEEHIVE) ? 4 : (s.is(Items.SHEARS) ? 1 : 0);
             case BREW -> s.is(Items.BREWING_STAND) || s.is(Items.BLAZE_POWDER) || s.is(Items.NETHER_WART)

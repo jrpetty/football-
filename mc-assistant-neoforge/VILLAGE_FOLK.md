@@ -7895,6 +7895,132 @@ for, a lost dog found and one given up, water for a fire, a household's things o
 the quest is given up), planks for a rebuilding, refugees from a burnt house, short rations, nothing stolen sold, a
 coat won and worn, the offices' clothes, the pledge's guards, the front page, the library's new books, and the cave
 team's finds past the six at auction. The unit test `LibraryTextTest` checks that the new books say what happened.
+## Tools of the fields and the pens
+
+Eight new things go out to the town's fields, its pens, its pond and its hives. Each has a real recipe, so the town's
+makers know it and you can make it too; each is made by a trade of the town out of the stores whenever the town wants
+one, and each is put to work.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Copper Watering Can | five copper ingots, a can with its spout | Stone | 2.6c | the smith (else the shop's workshop) | sixteen waterings: each soaks a three-by-three and gives its crops a little growth |
+| Seed Satchel | a string over two leather | Wood | 1.6c | the tailor (else the rancher, else the shop) | four stacks of seed at the hip: a whole field sown off one trip to the stores |
+| Copper Sickle | three copper ingots in a curve on a stick | Stone | 1.6c | the smith (else the shop's workshop) | two hundred cuts: a ripe crop and the eight round it reaped in one swing, and sown again |
+| Nesting Box | five planks round a wheat | Wood | 0.6c | the rancher (else the shop's workshop) | the hens lay into it, and lay sooner on its hay |
+| Feed Trough | four planks round a wooden slab | Wood | 0.5c | the rancher (else the shop's workshop) | the herd eats and breeds off it, and stays near it |
+| Fish Trap | six sticks and two string round a bait (a cod, a salmon, a tropical fish or a spider eye) | Wood | 0.8c | the fisher (else the shop's workshop) | catches fish (and some junk) by itself, six at a time |
+| Rain Barrel | seven planks round a copper ingot | Wood | 1.1c | the shop's workshop (else a hand of the town's at the bench) | catches the rain, four buckets' worth, for the cans, the drought and fires |
+| Bee Smoker | two copper ingots, a leather and a coal or charcoal | Stone | 2.0c | the smith (else the shop's workshop) | calms the bees: every full hive emptied without a sting, and more from each |
+
+With no smith and no shop in town, the smelter beats the copper tools cold at its furnace (and leaves them to the smith
+once there is one). The shop's order book keeps whatever the town still wants of the eight. The smelter takes the
+miners' raw copper out of the stores to its furnace with the iron, so the copper is there.
+
+**Who wants one, and when.** The town keeps a can, a sickle and a satchel for every farmer who has none, a smoker for
+every beekeeper, a nesting box for a rancher whose ground has hens and no box, a feed trough for one with two grown
+animals and no trough, two traps for every fisher (four in all), and a rain barrel for every workshop and every field
+with none by it. A farmer, a beekeeper or a fisher takes its tool out of the stores on its round; it keeps it in its
+pack (never banked) and you see it in the free hand while it is at work.
+
+**The copper watering can.** Every ten seconds or so, as it goes about its field, the farmer tips the can over a patch
+of its young rows: the farmland under the three-by-three is soaked and each crop on it grows a little, with a splash
+and the sound of water. It waters the driest first and not the same patch twice within five minutes; a full can is
+sixteen waterings, shown by the blue bar under it and the water in it. Dry, it walks to the nearest rain barrel with
+water in it (failing that, to its field's pond or river) and fills it. Of an evening, before bed, it waters its own
+house's garden and window boxes with it, a quiet hour it enjoys. **In a drought** a farmer with a can carries no
+bucket: it waters the parched ground round it every round, walking out to the driest of its field if need be, and a
+watered crop grows at its full pace, not stunted. A farmer without one still carries a bucket, but draws it from a
+rain barrel before it walks to a pond. *You:* right-click water (or a rain barrel, or a cauldron of water) to fill
+it, and right-click farmland, a crop or a flower to water the three-by-three round it.
+
+**The seed satchel.** At the stores the farmer packs it with the field's seed (wheat, carrots, potatoes, beetroot),
+half of what the stores hold of each and never their last twelve. Out in the field it hands itself twenty seed
+whenever its hand runs below a dozen, so it sows on with no walk back; run dry and far from the stores, it makes
+one trip to fill it. A farmer with seed at its hip works a little quicker (its pace line says *its seed satchel*), and
+its card counts the seed sown out of it and the trips to the stores it saved. *You:* click seed onto it (or it onto
+seed) to put it in, as with a bundle; it takes only seed. Right-click farmland to sow the three-by-three round it.
+
+**The copper sickle.** When the farmer cuts a ripe crop at harvest, the sickle takes the ripe crops of the
+three-by-three round it in the same swing. The swing's drops are gathered together and every square is sown again
+from them before the rest goes into its pack, so a wheat that happened to give no seed is sown from its neighbours'
+spare. Its card counts the crops reaped. *You:* break a ripe crop with it and the ripe crops round it are reaped too
+and sown again (the one you broke as well, from the swing's seed or your own). A cut a swing. It is a light weapon at a
+pinch.
+
+**The nesting box.** The rancher sets it in a far corner of its pen, lined with a wheat's worth of hay. A hen within
+six blocks lays into it instead of onto the ground, and while it has hay in it a hen near it lays a fifth sooner. On
+its round the rancher empties the eggs into the stores for the cook's cakes, pies and cheese, and lines it afresh with
+a wheat. You can see what is in it: the hay, and one egg, two, or a clutch. *You:* take the eggs with an empty hand;
+line it with a wheat or a bale of hay. A comparator reads how full it is.
+
+**The feed trough.** The rancher sets it by the middle of the pen's far fence and fills it out of its pack, then the
+stores beyond their last dozen, with the right feed for what is near it: wheat for sheep, cows and goats, seed for
+hens, carrots for pigs and rabbits, sixteen of each. While there is feed in it the grown animals that wander off come
+back to it, and about every half-minute a ready pair near it breeds, each eating one of the feed, so long as the pen
+keeps to its limit (eight of a kind, sixteen in all, near the trough). With a trough feeding the pen, the rancher no
+longer walks about holding wheat out. How full it is shows in the grain heaped in it. *You:* right-click it with feed
+to tip in a handful; look in with an empty hand.
+
+**The fish trap.** The fisher sets two in open water by its fishing ground (off the end of its quay first), the town's
+four at most. Now and then a fish swims in: a cod, or a salmon in a river or cold water, with a little junk now and
+then (a stick, a bone, a string, kelp, seagrass), up to six. The catch shows in the cage. A fisher passing one empties
+it, and on a day the boats stay in for the weather it goes round them all; the fish go to the fish market's barrels
+(else the stores), the junk to the stores. *You:* set one in water and take the catch with an empty hand. A
+comparator reads it.
+
+**The rain barrel.** The town sets one by each workshop and at the edge of each field, under the open sky, out of the
+stores and by hand (the town's works). It fills in the rain (not the snow), up to four buckets, faster than a
+cauldron; the water stands in it, and a comparator reads it. The farmers fill their cans at it; the fire brigade fills
+its buckets at it; the bucket chain draws from a barrel nearer the fire than its pond when there is no pond close; in
+a drought the farmers draw from the barrels before the ponds. A workshop the town wants a cauldron of water by, with no
+cauldron in the stores and no iron to spare for one, gets a rain barrel instead. *You:* fill a bucket or a can at it,
+or tip a bucket of water in.
+
+**The bee smoker.** With a smoker (its own, or the stores'), the beekeeper smokes and empties every full hive on its
+meadow on the one round instead of a hive at a time: four comb to the shears instead of three, or a bottle of honey
+and a comb. The bees never anger, and any that were angry are calmed. You see the smoke rise and hear the hives. *You:*
+right-click near hives for a puff of smoke: the bees within eight blocks stay calm for thirty seconds, and a full hive
+gives you its comb (shears) or its honey (a bottle) without a bee coming out angry.
+
+**Where to look.** The folk's card has a **Tools** line: the can's water and the patches watered today (and in the
+drought), the satchel's seed and the trips saved, the sickle's cuts left and the crops reaped, the hives smoked, the
+eggs from the box, the trough filled and the pairs bred off it, the fish from the traps and the traps set. What a folk
+says it is doing names the errand (*filling my watering can at the rain barrel*, *going round my fish traps while the
+boats stay in*). The chronicle has each town's first: the first can, satchel, sickle and the rest made, the first
+field kept green through a drought, the first field sown off one trip, the first harvest reaped three rows at a stroke,
+the first eggs from the box, the first pair bred off the trough, the first trap set and its first catch landed, the
+first rain barrel, and the first hives smoked. The town's books list the eight among the stores, the makings and the
+prices. `/village items fields` gives each of the eight (in the stores, wanted, its age and worth), the boxes,
+troughs, traps and barrels set out (and the rain in the barrels), and every folk's tools and what they did today.
+Operators: `/village items fields stage` sets the scene for the pictures.
+
+The game tests `FieldsGameTests` (fi01 to fi10) check that:
+* the smith makes the can of five of the stores' copper; the farmer takes it, fills it at the rain barrel (a bucket's
+  worth out of it), waters its young wheat (the ground soaked, the crops grown, the can in its hand, its card and its
+  words), fills it at the pond with the barrel dry; and a player waters with it;
+* in a drought a farmer with a can carries no bucket and its watering keeps a crop from being stunted, while a farmer
+  without one fills a bucket at the rain barrel first;
+* the tailor makes the satchel of two leather and a string; the farmer packs it at the stores, sows out of it with no
+  trip back (quicker, its card counting the trips saved), goes back once to fill it when it runs dry; and a player
+  sows a three-by-three out of it, the satchel taking only seed;
+* the smith makes the sickle when the stores have copper for it but not for the can; the farmer's one cut reaps and
+  sows again the eight round it, their wheat in its pack; and a player's swing does the same;
+* the rancher makes the nesting box of five planks and a wheat and sets it out; a hen lays into it (and sooner on its
+  hay); the rancher takes the eggs to the stores and lines it afresh; and the cook bakes a pumpkin pie with one;
+* the rancher makes the feed trough of planks and a slab and sets it out, fills it with sixteen of the stores' wheat
+  for its cows; a pair breeds off it, eating two; a stray makes for it; its own breeding stands aside; and at eight
+  cows the limit holds;
+* the fisher weaves a trap of sticks, two string and a cod and sets it in the pond; it catches six at most; on a rainy
+  day the fisher goes round and lands the catch, junk and all; it empties one in passing; and a player empties its own;
+* the shop's hand coopers a rain barrel of seven planks and a copper; the town sets it at the edge of the field under
+  the sky; the rain fills it and the snow does not; a player fills a bucket at it; the bucket chain draws from it with
+  no pond near; and a workshop with no iron for its cauldron gets a barrel instead;
+* the smith makes the smoker of two copper, a leather and a coal; the beekeeper empties all three full hives on one
+  round, more from them than unsmoked, the angry bee calmed; and a player's puff calms the bees and lets it take a full
+  hive's comb;
+* the eight have their recipes, ages, worth and place on the market; the smelter takes the stores' raw copper to its
+  furnace; with no smith it beats the can cold, and stands aside once a smith comes.
+
 ## Every thing the town makes
 
 Everything the mod adds is a real thing of real makings. It has a recipe of what a town gathers, an age, a worth on

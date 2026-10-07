@@ -599,7 +599,7 @@ public final class FireBrigade {
         // A source with water either side of it fills again (as the game's does); a lone one is taken up;
         // [disasters] a full cauldron is emptied into it, as a player empties one.
         if (cauldron) {
-            level.setBlockAndUpdate(w, Blocks.CAULDRON.defaultBlockState());
+            if (!FieldTools.drawBarrel(level, w)) level.setBlockAndUpdate(w, Blocks.CAULDRON.defaultBlockState());   // [fields] a barrel gives a bucket's worth
         } else {
             int sources = 0;
             for (Direction dir : Direction.Plane.HORIZONTAL) {
@@ -730,6 +730,7 @@ public final class FireBrigade {
 
     /** A cauldron full of water (a workshop's, FireSafety), to fill a bucket at. */
     static boolean fullCauldron(BlockState st) {
+        if (FieldTools.barrelWater(st) > 0) return true;              // [fields] a rain barrel with water in it will do
         return st.is(Blocks.WATER_CAULDRON) && st.getValue(net.minecraft.world.level.block.LayeredCauldronBlock.LEVEL)
             >= net.minecraft.world.level.block.LayeredCauldronBlock.MAX_FILL_LEVEL;
     }
