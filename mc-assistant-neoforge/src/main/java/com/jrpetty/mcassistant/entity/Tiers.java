@@ -175,7 +175,11 @@ public final class Tiers {
             }
             // Kept for next time (a way shut off only by the loop it was asked from may make it read a little late).
             if (best != null) AGES.put(item, best);
-            return best;
+            // [culture2] Every way round in a circle (wheat only out of a bale of wheat, the bale only out of wheat): the
+            // thing is gathered, as far as this way of asking can tell, so the Wood Age's — not cached, the circle being
+            // this path's. Without it a loaf's wheat came out as no age at all, the loaf with it, and the folk spawner (eight
+            // loaves round a gold ingot) fell back to the Wood Age whenever nothing had asked after the wheat first.
+            return best != null ? best : Villages.Age.WOOD;
         } finally {
             path.remove(item);
         }

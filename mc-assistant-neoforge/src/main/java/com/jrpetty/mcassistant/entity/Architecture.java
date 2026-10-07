@@ -791,6 +791,15 @@ public final class Architecture {
         return !BuildGoal.isRoof(part);
     }
 
+    /**
+     * As above, for the roof as it stands: only a wooden shingle roof is kept as it is. A thatch roof (the work items'
+     * Wood Age roofing) is made over in the Stone Age as anywhere else: thatch was never the style's look, and it burns.
+     */
+    public static boolean ageMayChange(@Nullable UUID village, Ledger.Building b, Blueprints.Style part, BlockState now) {
+        if (ageMayChange(village, b, part)) return true;
+        return !(now.is(BlockTags.WOODEN_STAIRS) || now.is(BlockTags.WOODEN_SLABS) || now.is(BlockTags.PLANKS));
+    }
+
     /** A lamp post of the town's style: what it is made of (the post's two blocks), and what pays for it. */
     public record Post(Block block, Predicate<ItemStack> pay, int cost) {}
 

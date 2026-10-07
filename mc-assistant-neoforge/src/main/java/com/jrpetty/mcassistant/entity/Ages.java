@@ -274,7 +274,7 @@ public final class Ages {
         for (BuildGoal.Placement p : BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
             if (p.part() != BuildGoal.Part.BLOCK) continue;
             BlockState want = look(age, plan, p.style(), level.getBlockState(p.pos()), p.pos(), land);
-            if (want != null && !Architecture.ageMayChange(v.id(), b, p.style())) want = null;   // [culture2] a shingle roof kept
+            if (want != null && !Architecture.ageMayChange(v.id(), b, p.style(), level.getBlockState(p.pos()))) want = null;   // [culture2] a shingle roof kept
             // Moss is a nicety: a footing waiting on vines that never come is not work left undone.
             if (want != null && !want.is(Blocks.MOSSY_COBBLESTONE) && !want.is(Blocks.MOSSY_STONE_BRICKS)) return false;
         }
@@ -298,7 +298,7 @@ public final class Ages {
             if (p.part() != BuildGoal.Part.BLOCK) continue;
             BlockState now = level.getBlockState(p.pos());
             BlockState want = look(age, plan, p.style(), now, p.pos(), land);
-            if (want != null && v != null && !Architecture.ageMayChange(v.id(), b, p.style())) want = null;   // [culture2] a shingle roof kept
+            if (want != null && v != null && !Architecture.ageMayChange(v.id(), b, p.style(), now)) want = null;   // [culture2] a shingle roof kept
             // Only what the stores can pay for: a builder is not called out to stand by a wall
             // waiting on stone that is not there.
             if (want != null && !free) want = affordable(level, v, want, now, local, known);
