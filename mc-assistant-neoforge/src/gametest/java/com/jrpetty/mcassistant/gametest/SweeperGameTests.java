@@ -342,6 +342,9 @@ public class SweeperGameTests {
     public static void sw03_no_phantoms(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        // [watch-clears] A stand-in player left on the server by an earlier test makes the game despawn both
+        // phantoms at once (neither is kept on purpose), and the town's own doing goes untested.
+        Kit.noLeftoverPlayers(level);
         level.setDayTime(18000);                                             // night: no phantom burns in the sun
         int x = 234000, z = 50000;
         Kit.hold(level, x, z, 40);
