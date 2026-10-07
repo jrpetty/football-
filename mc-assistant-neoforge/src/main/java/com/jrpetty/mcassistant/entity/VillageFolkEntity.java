@@ -476,6 +476,7 @@ public class VillageFolkEntity extends AssistantEntity {
         agendaTick = tickCount;
         flyTheColours();
         showTheWealth();
+        Fashion.look(this);                            // [fashion] its own style, its hat off work, what it wants on the tailor's book
         if (!life.rolled()) life.roll(getRandom(), null, null);
         ensurePersona();
         refreshMood();
@@ -1446,6 +1447,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public void die(net.minecraft.world.damagesource.DamageSource cause) {
         if (!level().isClientSide) WarAndPeace.died(this, cause, level().getDayTime() / 24000L);   // [war-peace] lost to the war (before its errand is let go)
+        if (!level().isClientSide) Fashion.died(this);                   // [fashion] what it wore falls where it fell, with its pack
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
         if (level() instanceof net.minecraft.server.level.ServerLevel horses) Riding.fell(horses, this);   // a horse it had out (Riding)
         if (expedition != null && level() instanceof net.minecraft.server.level.ServerLevel land) {
@@ -1553,6 +1555,23 @@ public class VillageFolkEntity extends AssistantEntity {
         builder.define(DATA_BANNER, -1);
         builder.define(DATA_WEALTH, 1);
         builder.define(DATA_CHILD, false);
+        builder.define(DATA_STYLE, 0L);                 // [fashion]
+    }
+
+    /** [fashion] Its style (Fashion): its colours, what it wears of its own, how it stands with the season's look. */
+    private final Style style = new Style();
+
+    public Style style() { return style; }
+
+    /** [fashion] Its style, packed for the client to draw (Style.pack, client/FashionLayer). */
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Long> DATA_STYLE =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.LONG);
+
+    public long clientStyle() { return this.entityData.get(DATA_STYLE); }
+
+    public void showStyle(long packed) {
+        if (this.entityData.get(DATA_STYLE) != packed) this.entityData.set(DATA_STYLE, packed);
     }
 
     /** A child of the village: small, at play, and no trade until it is grown. */
@@ -2147,6 +2166,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         if (homeComfort(server)) return;              // its savings, spent on its home
+        if (Fashion.shopping(this, server)) return;   // [fashion] to the shop for the season's look it wants
         if (PlayerStalls.errand(this, server)) return;   // a player's stall on the square, for what it wants (PlayerStalls)
         if (shopping(server)) return;                 // market day: a treat from the stalls
         if (lookRound(server)) return;                // the new building everybody is talking about
@@ -7863,6 +7883,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (showcase) tag.putBoolean("Showcase", true);
         tag.put("Meals", meals.save());
         Health.save(this, tag);                         // [batchA]
+        Fashion.save(this, tag);                        // [fashion] its colours, what it wears, what it wants
         if (productionChest != null) tag.putLong("ProductionChest", productionChest.asLong());
         if (oldProductionChest != null) tag.putLong("OldProductionChest", oldProductionChest.asLong());
         tag.putLong("BornDay", bornDay);
@@ -7934,6 +7955,7 @@ public class VillageFolkEntity extends AssistantEntity {
         this.showcase = tag.getBoolean("Showcase");
         if (tag.contains("Meals")) meals.load(tag.getCompound("Meals"));
         Health.load(this, tag);                         // [batchA]
+        Fashion.load(this, tag);                        // [fashion]
         this.productionChest = tag.contains("ProductionChest") ? BlockPos.of(tag.getLong("ProductionChest")) : null;
         this.oldProductionChest = tag.contains("OldProductionChest") ? BlockPos.of(tag.getLong("OldProductionChest")) : null;
         this.bornDay = tag.contains("BornDay") ? tag.getLong("BornDay") : UNKNOWN;

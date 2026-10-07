@@ -217,6 +217,7 @@ public final class Wealth {
         for (net.minecraft.world.entity.EquipmentSlot slot : net.minecraft.world.entity.EquipmentSlot.values()) {
             sum += value(f.getItemBySlot(slot));
         }
+        sum += Fashion.wornWorth(f);                       // [fashion] the clothes on its back, its own
         return (int) Math.round(sum);
     }
 

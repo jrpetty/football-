@@ -271,6 +271,11 @@ public final class Prices {
         upgrade(Items.DIAMOND_CHESTPLATE, Items.NETHERITE_CHESTPLATE);
         upgrade(Items.DIAMOND_LEGGINGS, Items.NETHERITE_LEGGINGS);
         upgrade(Items.DIAMOND_BOOTS, Items.NETHERITE_BOOTS);
+        // [fashion] A garment: its cloth by its recipe, and the tailor's cutting and stitching and its dye on top (Fashion.worth).
+        for (com.jrpetty.mcassistant.item.Garment g : com.jrpetty.mcassistant.item.Garment.values()) {
+            Double cloth = VALUE.get(g.item());
+            if (cloth != null) VALUE.put(g.item(), Fashion.worth(g, cloth, VALUE.getOrDefault(Items.RED_DYE, 0.1)));
+        }
     }
 
     private static void upgrade(Item from, Item to) {

@@ -370,6 +370,8 @@ public final class VillageBoards {
         if (prices != null) out.add((PriceIndex.boardWarns(id) ? "RW|" : "RG|") + prices + ".");
         String store = StockKeeper.boardLine(level, id);           // [econ-store] the shop's day: sold, out of, wanted
         if (store != null) out.add("RN|" + store + ".");
+        String fashion = Fashion.boardLine(level, id);             // [fashion] the season's look, and who set it
+        if (fashion != null) out.add("RN|" + fashion);
         int content = Contentment.score(id);
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String alarm = Raids.why(id);

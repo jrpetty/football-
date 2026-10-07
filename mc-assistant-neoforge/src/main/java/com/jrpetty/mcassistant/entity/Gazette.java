@@ -270,6 +270,8 @@ public final class Gazette {
         entries.add(TradeDeals.gazette(level, v, day));          // [econ-trade] the deals with the neighbours, and yesterday's caravans
         String war = WarAndPeace.gazette(level, id, day);           // [war-peace] the war, the ultimatum, the treaty
         if (war != null) entries.add(war);
+        String fashion = Fashion.gazette(level, v, day);            // [fashion] the season's look, who set it, the show
+        if (fashion != null) entries.add(fashion);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();

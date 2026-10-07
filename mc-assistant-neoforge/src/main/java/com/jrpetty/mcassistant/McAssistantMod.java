@@ -187,6 +187,10 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
+    /** [fashion] The tailor's garments (item/Garment): coats, a jacket, a shawl, a waistcoat, hats, a scarf, a brooch, the show's rosette. */
+    public static final java.util.List<DeferredItem<com.jrpetty.mcassistant.item.GarmentItem>> GARMENTS =
+        com.jrpetty.mcassistant.item.GarmentItem.register(ITEMS);
+
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
         TABS.register("village_folk", () -> net.minecraft.world.item.CreativeModeTab.builder()
@@ -204,6 +208,7 @@ public final class McAssistantMod {
                 out.accept(ZONE_MARKER.get());
                 out.accept(PLACE_MARKER.get());
                 out.accept(MEMORY_CORE.get());
+                for (DeferredItem<com.jrpetty.mcassistant.item.GarmentItem> g : GARMENTS) out.accept(g.get());   // [fashion]
             })
             .build());
 

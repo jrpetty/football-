@@ -23,5 +23,21 @@
   "block.mc_assistant.storehouse_unit": "Storehouse Unit",
   "container.mc_assistant.storehouse": "Village Storehouse",
   "block.mc_assistant.village_board": "Village Board",
-  "item.mc_assistant.village_board": "Village Board"
+  "item.mc_assistant.village_board": "Village Board",
+  "item.mc_assistant.long_coat": "Long Coat",
+  "item.mc_assistant.leather_jacket": "Leather Jacket",
+  "item.mc_assistant.wool_shawl": "Wool Shawl",
+  "item.mc_assistant.waistcoat": "Waistcoat",
+  "item.mc_assistant.felt_hat": "Felt Hat",
+  "item.mc_assistant.flat_cap": "Flat Cap",
+  "item.mc_assistant.top_hat": "Top Hat",
+  "item.mc_assistant.wool_scarf": "Wool Scarf",
+  "item.mc_assistant.brooch": "Brooch",
+  "item.mc_assistant.rosette": "Rosette",
+  "item.mc_assistant.garment.dyed": "%s %s",
+  "item.mc_assistant.garment.worn.body": "Worn over a folk's clothes",
+  "item.mc_assistant.garment.worn.head": "A hat, worn off work",
+  "item.mc_assistant.garment.worn.neck": "Worn round the neck",
+  "item.mc_assistant.garment.worn.pin": "Pinned on the breast",
+  "item.mc_assistant.garment.worn.ribbon": "The best-dressed's rosette"
 }

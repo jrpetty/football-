@@ -73,7 +73,8 @@ public enum TalkTopic {
     HOUSING("Any houses to buy?"),
     TOWN_MAP("Could I have a map of the town?"),           // [players] PlayerServices
     LOST("Has anything of mine turned up?"),               // [players] the Lost and Found
-    CAVES("What have the cave dwellers found down there?"); // [caves] CaveDwellers
+    CAVES("What have the cave dwellers found down there?"), // [caves] CaveDwellers
+    FASHION("What's in fashion?");                         // [fashion] Fashion
 
     public final String line;
 

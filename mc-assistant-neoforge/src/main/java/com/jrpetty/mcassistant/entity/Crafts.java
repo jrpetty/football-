@@ -516,6 +516,9 @@ public final class Crafts {
         String kit = WatchKit.make(level, v, f);
         if (kit != null) return kit;
         if (bedsFirst) return null;
+        // [fashion] The fashion's garments, at the loom: the book's orders, dyed with the stores' dyes (Tailoring).
+        String garment = Tailoring.work(level, v, f, loom);
+        if (garment != null) return garment;
         // Books for the library's shelves (three to a bookshelf) and the enchanter's table: three paper
         // pressed from the farmers' cane and a piece of the rancher's leather. Shelves were only ever
         // made of books the enchanter happened to have bound, and the library stood with bare walls.

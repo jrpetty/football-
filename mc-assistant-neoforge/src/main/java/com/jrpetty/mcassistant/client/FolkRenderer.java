@@ -96,6 +96,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new Outfit(this));
         this.addLayer(new Colours(this));
         this.addLayer(new Finery(this));
+        this.addLayer(new FashionLayer(this, new FashionModel(context.bakeLayer(FashionModel.LAYER))));   // [fashion] its own clothes
         this.addLayer(new Glow(this));
         this.addLayer(new Armour(this,                // [guard-kit] armour cut to a folk (FolkArmourModel)
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.INNER)),
@@ -151,6 +152,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             } else {
                 long bits = folk.getUUID().getMostSignificantBits();
                 rgb = DYES[(int) Math.floorMod(bits ^ (bits >>> 29) ^ t * 7L, (long) DYES.length)];
+                rgb = FashionLayer.mainColour(folk, rgb);          // [fashion] its own colour, once it has chosen one
             }
             renderColoredCutoutModel(getParentModel(), DYE[t], pose, buffer, light, folk, 0xFF000000 | rgb);
         }
