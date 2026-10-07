@@ -158,11 +158,16 @@ public final class Purchases {
         return a == null ? 0 : a.balance;
     }
 
-    /** Tests: what this folk has been charged today, in hundredths. */
-    public static long spentTodayForTests(VillageFolkEntity f) {
+    /** What this folk has been charged today at the town's counters, in hundredths of a coin. */
+    public static long spentToday(VillageFolkEntity f) {
         UUID village = f.ownerId();
         Account a = village == null ? null : accounts(village).get(f.getUUID());
-        return a == null ? 0 : a.spentToday;
+        return a == null || a.spentDay != f.level().getDayTime() / 24000L ? 0 : a.spentToday;
+    }
+
+    /** Tests: as spentToday. */
+    public static long spentTodayForTests(VillageFolkEntity f) {
+        return spentToday(f);
     }
 
     /** The town's slates: {folk who owe, coins owed}. */

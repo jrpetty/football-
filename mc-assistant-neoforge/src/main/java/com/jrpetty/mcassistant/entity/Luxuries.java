@@ -344,6 +344,7 @@ public final class Luxuries {
         Predicate<ItemStack> what = forSale(level, v.id(), f, kind);
         if (what == null) return null;
         int before = f.purse();
+        long spent = Purchases.spentToday(f);                  // [econ-prices] to the hundredth: the change stays at the counter
         if (Cafe.folkShops(level, v, f, false, what) == null) return null;
         int n = 1;
         if (kind == Kind.POT && flowerIn(f) == null) Cafe.folkShops(level, v, f, false, Luxuries::pottable);
@@ -358,7 +359,7 @@ public final class Luxuries {
         booked(level, v.id(), n, paid);
         f.persona().remember(level.getDayTime() / 24000L, "I bought " + kind.words + " for my home with my own savings", 2);
         String words = kind == Kind.PANE ? n + (n == 1 ? " pane" : " panes") + " of glass for the windows" : kind.words;
-        return words + " for " + paid + (paid == 1 ? " coin" : " coins");
+        return words + " for " + String.format(java.util.Locale.ROOT, "%.2f coins", (Purchases.spentToday(f) - spent) / 100.0);
     }
 
     /** A flower it has with it, for a pot. */
