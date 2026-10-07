@@ -92,6 +92,8 @@ public final class CulturePage {
         section(lines, font, "The band and the choir", c.getCompound("music"), width, "");
         section(lines, font, "Paintings", c.getCompound("paintings"), width, "");
         section(lines, font, "Plaques", c.getCompound("plaques"), width, "");
+        section(lines, font, "The town's arms, beyond its hall", c.getCompound("arms"), width, "");       // [arms]
+        section(lines, font, "Buskers", c.getCompound("buskers"), width, "");                             // [arms]
 
         int rows = Math.max(1, ch / ROW);
         int start = Math.max(0, Math.min(scroll, Math.max(0, lines.size() - rows)));

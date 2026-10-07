@@ -300,6 +300,9 @@ public final class VillageCommands {
             .then(MuseumCommands.build())
             // [batchD] The town's culture: its banner and motto, customs, theatre, band and choir, pictures, plaques.
             .then(CultureCommands.build())
+            // [arms] The town's arms everywhere (/village arms), and its street musicians (/village busk).
+            .then(ArmsCommands.arms())
+            .then(ArmsCommands.busk())
             // [war-peace] The war: its goal, its course, the allies, the treaties; and (ops) a council, a declaration, a peace now.
             .then(WarCommands.build())
             // [economy] The larder against the mouths, the coal floor and charcoal, the builders' stock carried about

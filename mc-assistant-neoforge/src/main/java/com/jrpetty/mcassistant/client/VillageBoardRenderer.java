@@ -36,9 +36,11 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
         GOOD = 0xFF8FE08F, WARN = 0xFFFFC870, BAD = 0xFFFF7A6E, QUIET = 0xFFA9B3BE;
 
     private final Font font;
+    private final BoardArms arms;                                   // [arms]
 
     public VillageBoardRenderer(BlockEntityRendererProvider.Context context) {
         this.font = context.getFont();
+        this.arms = new BoardArms(context);                           // [arms] the town's arms in the header
     }
 
     @Override
@@ -60,7 +62,7 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
         int glow = LightTexture.FULL_BRIGHT;
 
         List<String[]> left = new ArrayList<>(), right = new ArrayList<>(), foot = new ArrayList<>();
-        String title = "", sub = "";
+        String title = "", sub = "", heraldry = null;
         for (String l : lines) {
             int bar = l.indexOf('|');
             if (bar < 2) continue;
@@ -71,6 +73,7 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
                 case 'L' -> left.add(cell);
                 case 'R' -> right.add(cell);
                 case 'F' -> foot.add(cell);
+                case 'A' -> heraldry = cell[1];                       // [arms]
                 default -> { }
             }
         }
@@ -82,6 +85,11 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
         font.drawInBatch(title, (WIDTH / 2.0F - tw) / 2.0F, MARGIN / 2.0F, TITLE, false, pose.last().pose(), buffers,
             Font.DisplayMode.POLYGON_OFFSET, 0, glow);
         pose.popPose();
+        // [arms] The town's arms either side of its name, a banner hung in each top corner.
+        if (heraldry != null) {
+            arms.draw(heraldry, board.getLevel(), pose, buffers, MARGIN, 4, 16, glow);
+            arms.draw(heraldry, board.getLevel(), pose, buffers, WIDTH - MARGIN - 16, 4, 16, glow);
+        }
         int y = MARGIN + 22;
         drawCentred(sub, y, SUB, m, buffers, glow);
         y += LINE + 4;

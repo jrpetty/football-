@@ -20,6 +20,7 @@ import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.AbstractBannerBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.WallBannerBlock;
@@ -66,6 +67,13 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p><b>The motto.</b> Chosen with the banner, out of the land and what the town cares for (its leader's
  * heart, or most of its folk's): "By the river, for each other", "Out of the rock, the gate holds". Once the
  * hall stands it is carved on a sign over its door; the crier cries it on feast days (Traditions).
+ *
+ * <p>[arms] <b>The arms on everything.</b> The banner is the town's arms, and they go wherever the town does
+ * (Arms): flown on the corner towers of its wall and on two poles at the ends of its board as well as the hall,
+ * the gates, the market and the theatre; on the guards' shields, the caravans' and the envoys' poles, the war
+ * banner and the festival tabards; drawn in the board's header. A great day may add a charge to them (a new
+ * age, a war won: a fish, a pick or a sheaf for what the town lives by is the first), and a new leader may give
+ * the town a new motto; the banners that hang are then taken down, a place at a time, and the new arms hung.
  */
 public final class Heraldry {
 
@@ -87,7 +95,11 @@ public final class Heraldry {
         BASE(BannerPatterns.STRIPE_BOTTOM, "base", true), CHIEF(BannerPatterns.STRIPE_TOP, "chief", true),
         CHEVRON(BannerPatterns.TRIANGLE_BOTTOM, "chevron", true), INDENTED(BannerPatterns.TRIANGLES_TOP, "indented chief", true),
         MASONRY(BannerPatterns.BRICKS, "masonry", false), FADE(BannerPatterns.GRADIENT, "fade", true),
-        BEND(BannerPatterns.STRIPE_DOWNRIGHT, "bend", true), PALLETS(BannerPatterns.STRIPE_SMALL, "pallets", false);
+        BEND(BannerPatterns.STRIPE_DOWNRIGHT, "bend", true), PALLETS(BannerPatterns.STRIPE_SMALL, "pallets", false),
+        // [arms] What a town lives by, granted it at its first new age (Arms.grant). The game has no such charges,
+        // so the mod draws them (banner_pattern/fish, pick and sheaf), and the loom wants their pattern: a sheet of
+        // paper and a fish, a pickaxe or wheat, made once out of the stores and kept there.
+        FISH(mod("fish"), "fish", true), PICK(mod("pick"), "pick", true), SHEAF(mod("sheaf"), "sheaf", true);
 
         public final ResourceKey<BannerPattern> key;
         public final String noun;
@@ -97,6 +109,11 @@ public final class Heraldry {
             this.key = key;
             this.noun = noun;
             this.one = one;
+        }
+
+        /** [arms] One of the mod's own patterns. */
+        private static ResourceKey<BannerPattern> mod(String name) {
+            return ResourceKey.create(Registries.BANNER_PATTERN, ResourceLocation.fromNamespaceAndPath("mc_assistant", name));
         }
     }
 
@@ -135,6 +152,13 @@ public final class Heraldry {
                 }
             }
             return new Design(field, List.copyOf(layers));
+        }
+
+        /** [arms] These arms with one charge more woven on last (a grant for a great day: Arms.grant). */
+        Design with(Layer l) {
+            List<Layer> more = new ArrayList<>(layers);
+            more.add(l);
+            return new Design(field, List.copyOf(more));
         }
 
         /** "Blue, with a white fess and a black border". */
@@ -381,7 +405,9 @@ public final class Heraldry {
 
     /** The banner worked out at the tailor's bench (or a hand at the town's works, with none), out of the stores. */
     static Bench.Plan plan(ServerLevel level, Villages.Village v, Design d) {
-        return Bench.plan(level, v, wants(d), Bench.handOf(level, v, tailor(v.id()), "workshop"));
+        Bench.Hand hand = Bench.handOf(level, v, tailor(v.id()), "workshop");
+        String loom = Arms.patternsToHand(level, v, d, hand);       // [arms] a fish, a pick, a sheaf: its pattern on the loom first
+        return loom != null ? Arms.shortOf(loom) : Bench.plan(level, v, wants(d), hand);
     }
 
     /** What a copy costs a citizen: its makings at the price list's worth, and a little for the tailor's work. */
@@ -393,10 +419,22 @@ public final class Heraldry {
 
     // ------------------------------------------------------------------ where it hangs
 
-    /** A place the banner hangs: where, and what it is called there. */
-    record Place(Culture.Spot spot, String where) {}
+    /** A place the banner hangs: where, and what it is called there; [arms] and whether it flies on a pole of its own. */
+    record Place(Culture.Spot spot, String where, boolean pole) {
+        Place(Culture.Spot spot, String where) {
+            this(spot, where, false);
+        }
+    }
 
-    /** Every place the town's banner hangs, as the town stands: its hall, its gates, its market, its theatre. */
+    /** Is a banner up here (on a wall, or on its pole)? */
+    static boolean up(ServerLevel level, BlockPos at) {
+        return level.getBlockState(at).getBlock() instanceof AbstractBannerBlock;
+    }
+
+    /**
+     * Every place the town's banner hangs, as the town stands: its hall, its gates, its market, its theatre;
+     * [arms] the corner towers of its wall, and a pole at each end of its board (Arms).
+     */
     static List<Place> places(ServerLevel level, UUID village) {
         List<Place> out = new ArrayList<>();
         Ledger.Building hall = Culture.hall(village);
@@ -429,6 +467,7 @@ public final class Heraldry {
                 out.add(new Place(new Culture.Spot(Culture.at(theatre, c[0], c[1], c[2]), theatre.facing().getOpposite()), "the theatre"));
             }
         }
+        out.addAll(Arms.places(level, village));                     // [arms] the wall's towers, the board's poles
         return out;
     }
 
@@ -446,6 +485,12 @@ public final class Heraldry {
     static void resetForTests() {
         DUE.clear();
         SHORT.clear();
+        Arms.resetForTests();                                           // [arms]
+    }
+
+    /** [arms] The banners looked at again at once (the arms changed: Arms.grant). */
+    static void soon(UUID village) {
+        DUE.remove(village);
     }
 
     /** The town's look at its banner and its motto (Culture, each second): chosen, carved, hung, a piece at a time. */
@@ -489,8 +534,7 @@ public final class Heraldry {
     public static List<String> placesForTests(ServerLevel level, UUID village) {
         List<String> out = new ArrayList<>();
         for (Place p : places(level, village)) {
-            out.add(p.where() + " " + p.spot().at().toShortString() + " "
-                + (level.getBlockState(p.spot().at()).getBlock() instanceof WallBannerBlock ? "hung" : "empty"));
+            out.add(p.where() + " " + p.spot().at().toShortString() + " " + (up(level, p.spot().at()) ? "hung" : "empty"));
         }
         return out;
     }
@@ -498,11 +542,14 @@ public final class Heraldry {
     /** Tests: where the town's banner hangs now, place by place. */
     public static List<BlockPos> hungForTests(ServerLevel level, UUID village) {
         List<BlockPos> out = new ArrayList<>();
-        for (Place p : places(level, village)) if (level.getBlockState(p.spot().at()).getBlock() instanceof WallBannerBlock) out.add(p.spot().at());
+        for (Place p : places(level, village)) if (up(level, p.spot().at())) out.add(p.spot().at());
         return out;
     }
 
-    /** The next banner hung where it is missing. True while a hand is on its way or there is more the stores run to. */
+    /**
+     * The next banner hung where it is missing, [arms] or where one of the town's old arms hangs since a grant
+     * (it comes down into the stores). True while a hand is on its way or there is more the stores run to.
+     */
     static boolean hang(ServerLevel level, Villages.Village v, boolean free) {
         UUID id = v.id();
         Design d = design(id);
@@ -512,9 +559,15 @@ public final class Heraldry {
         for (Place p : places(level, id)) {
             BlockPos at = p.spot().at();
             BlockState st = level.getBlockState(at);
-            if (st.getBlock() instanceof WallBannerBlock) continue;
-            if (!st.isAir() || !level.getBlockState(at.below()).isAir()) continue;
-            if (!wall.defaultBlockState().setValue(WallBannerBlock.FACING, p.spot().facing()).canSurvive(level, at)) continue;
+            boolean old = false;
+            if (st.getBlock() instanceof AbstractBannerBlock) {
+                if (!(old = Arms.outworn(level, id, at, d))) continue;            // [arms] up, and the arms as they are
+            } else if (p.pole()) {
+                if (!Arms.poleGround(level, at)) continue;                       // [arms] a pole by the board
+            } else {
+                if (!st.isAir() || !level.getBlockState(at.below()).isAir()) continue;
+                if (!wall.defaultBlockState().setValue(WallBannerBlock.FACING, p.spot().facing()).canSurvive(level, at)) continue;
+            }
             VillageFolkEntity tailor = tailor(id);
             if (!free) {
                 Bench.Plan plan = plan(level, v, d);
@@ -523,10 +576,13 @@ public final class Heraldry {
                     return false;
                 }
                 SHORT.remove(id);
-                if (!TownJobs.atWork(level, v, WORKS, at, "hanging the town's banner on " + p.where())) return true;
+                if (!TownJobs.atWork(level, v, WORKS, at, (old ? "hanging the town's new arms on " : "hanging the town's banner on ")
+                    + p.where())) return true;
                 if (!Bench.take(level, v, plan, tailor)) return false;
             }
-            if (!Decor.hangBanner(level, at, p.spot().facing(), item(level, id, d))) return false;
+            if (old) Arms.takeDown(level, v, at);                               // [arms] the old arms into the stores
+            if (!(p.pole() ? Arms.plant(level, at, p.spot().facing(), item(level, id, d))
+                : Decor.hangBanner(level, at, p.spot().facing(), item(level, id, d)))) return false;
             long day = level.getDayTime() / 24000L;
             int hung = (int) Culture.num(String.valueOf(Ledger.note(id, "culture.banner.hung")), 0) + 1;
             Ledger.note(id, "culture.banner.hung", Integer.toString(hung));
@@ -632,6 +688,7 @@ public final class Heraldry {
     @Nullable
     static Culture.Spot shopSpot(ServerLevel level, UUID village) {
         Ledger.Building shop = Culture.building(village, "shop");
+        if (shop == null) shop = Culture.building(village, Store.STRUCTURE);       // [arms] or the town store, with no shop
         if (shop == null) return null;
         List<Culture.Spot> s = Culture.front(level, shop, 1, new int[]{ -3, 3, -2, 2 }, false);
         return s.isEmpty() ? null : s.get(0);
@@ -683,11 +740,16 @@ public final class Heraldry {
         }
         Bench.Plan plan = plan(level, v, d);
         if (!plan.ok()) return "The tailor can't make one just now: short of " + plan.shortOf + ".";
-        int price = price(d);
+        boolean owed = Arms.owed(id, p.getUUID());                 // [arms] a new citizen's, the stores short of it then
+        int price = owed ? 0 : price(d);
         int coins = Market.coinsHeld(p);
         if (coins < price) return "A copy of the banner of " + town + " is " + price + " coins. You have " + coins + ".";
         VillageFolkEntity tailor = tailor(id);
         if (!Bench.take(level, v, plan, tailor)) return "The stores changed under the tailor's hands; try again.";
+        if (owed) {
+            Arms.given(level, v, p, item(level, id, d), "at the shop's sign");
+            return "The tailor had your banner of " + town + " ready at last: the town's gift to a new citizen.";
+        }
         Market.payOut(p, price);
         Ledger.addCoins(id, price);
         Economy.sold(id, price);
@@ -744,7 +806,7 @@ public final class Heraldry {
         int hung = 0;
         List<Place> places = places(level, id);
         for (Place p : places) {
-            boolean up = level.getBlockState(p.spot().at()).getBlock() instanceof WallBannerBlock;
+            boolean up = up(level, p.spot().at());
             if (up) hung++;
             if (up && !where.contains(p.where())) where.add(p.where());
         }

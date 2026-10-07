@@ -65,7 +65,7 @@ public final class Culture {
     private Culture() {}
 
     /** What a folk is about, of the town's culture. */
-    enum Role { SILENCE, CHOIR, ACTOR, AUDIENCE, BAND, TOAST, PAINTER }
+    enum Role { SILENCE, CHOIR, ACTOR, AUDIENCE, BAND, TOAST, PAINTER, BUSK, LISTEN }   // [arms] a busker, a passer-by stopped to hear it
 
     /** A folk held by the town's culture: as what, till when (its last look and a little), and its seat if it sat. */
     static final class Held {
@@ -90,6 +90,7 @@ public final class Culture {
         Music.resetForTests();
         Paintings.resetForTests();
         Plaques.resetForTests();
+        Buskers.resetForTests();                                         // [arms]
     }
 
     // ------------------------------------------------------------------ the town's part
@@ -117,6 +118,8 @@ public final class Culture {
         Music.tick(level, v);
         Paintings.tick(level, v);
         Plaques.tick(level, v);
+        Arms.tick(level, v);                                             // [arms] the arms on the road, the watch, the tabards
+        Buskers.tick(level, v);                                          // [arms] the street's musicians
     }
 
     /** The shop's sign for the town's banner, right-clicked: a copy for a citizen (Heraldry). */
@@ -156,7 +159,8 @@ public final class Culture {
             return false;
         }
         boolean held = Music.choir(f, level, v) || Theatre.hold(f, level, v)
-            || Music.band(f, level, v) || Traditions.toast(f, level, v) || Paintings.easel(f, level, v);
+            || Music.band(f, level, v) || Traditions.toast(f, level, v) || Paintings.easel(f, level, v)
+            || Buskers.hold(f, level, v);                                // [arms] busking, or stopped to listen
         if (!held) release(f);
         return held;
     }
@@ -360,6 +364,10 @@ public final class Culture {
         if (stage != null) bits.add(stage);
         String art = Paintings.cardLine(f);
         if (art != null) bits.add(art);
+        String busk = Buskers.cardLine(f);                               // [arms] the street's musicians
+        if (busk != null) bits.add(busk);
+        String arms = Arms.cardLine(f);                                  // [arms] the town's arms it bears
+        if (arms != null) bits.add(arms);
         return bits.isEmpty() ? null : String.join("; ", bits);
     }
 
@@ -368,6 +376,8 @@ public final class Culture {
         List<String> out = new ArrayList<>();
         String arms = Heraldry.boardLine(village);
         if (arms != null) out.add("FN|" + arms);
+        String drawn = Arms.boardLine(village);                          // [arms] the arms drawn in the board's header
+        if (drawn != null) out.add(drawn);
         String customs = Traditions.boardLine(village, level.getDayTime() / 24000L);
         if (customs != null) out.add("FN|" + customs);
         String stage = Theatre.boardLine(level, village);
@@ -384,6 +394,8 @@ public final class Culture {
         out.put("music", Music.report(level, v));
         out.put("paintings", Paintings.report(level, v));
         out.put("plaques", Plaques.report(level, v));
+        out.put("arms", Arms.report(level, v));                          // [arms]
+        out.put("buskers", Buskers.report(level, v));                    // [arms]
         return out;
     }
 
@@ -402,6 +414,8 @@ public final class Culture {
         for (String s : strings(r.getCompound("music"), "lines")) out.add("Music: " + s);
         for (String s : strings(r.getCompound("paintings"), "lines")) out.add("Paintings: " + s);
         for (String s : strings(r.getCompound("plaques"), "lines")) out.add("Plaque: " + s);
+        for (String s : strings(r.getCompound("arms"), "lines")) out.add("Arms: " + s);          // [arms]
+        for (String s : strings(r.getCompound("buskers"), "lines")) out.add("Busker: " + s);     // [arms]
         return out;
     }
 

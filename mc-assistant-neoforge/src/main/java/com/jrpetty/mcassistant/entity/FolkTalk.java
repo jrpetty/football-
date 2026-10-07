@@ -1363,6 +1363,7 @@ public final class FolkTalk {
             if (a.level().isRaining()) options.add("Wet one, isn't it?");
             if (a.persona().hobby() == Persona.Hobby.CARDS) options.add("Cards later, " + b.displayNameCap() + "?");
             if (a.persona().hobby() == Persona.Hobby.MUSIC) options.add("I'll be playing at the well tonight.");
+            Buskers.smallTalk(a, options);                                 // [arms] "Have you heard Pip play by the well?"
             if (a.life().has(Social.Trait.CURIOUS)) options.add("Do you think there's anything under the bedrock?");
             if (a.ownerId() != null) {
                 List<Villages.News> n = Villages.news(a.ownerId());

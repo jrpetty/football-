@@ -6297,3 +6297,96 @@ The game tests `WatchClearsGameTests` (wc01 to wc05) check that:
 * a raiding band gathers at the town's edge; two raiders among the folk get two guards each, and none is sent out to
   the band still at the edge; deaths while the bell rings are put down as what took them, with where and doing what;
   and the status, the books and `/village monsters` count the watch's and the golem's kills.
+
+## The town's arms
+
+A town's banner (see *Culture and identity*) is its coat of arms, and now it goes wherever the town goes. Every
+banner is woven by the tailor out of the stores, as you would make one: six wool of the field's colour and a
+stick, then a dye for each charge at the loom. Nothing is ever made from nothing, and while the stores are short
+the books say what of ("a guard's shield waits on 2 blue dye").
+
+* **Flown all over town.** Besides either side of the hall's door, the gates, the market and the theatre, the
+  banner now flies on the four corner towers of the wall (on the outside, just under the top) and on its own
+  pole at each end of the board, facing the square. `/village arms` lists every place and whether its banner is
+  up.
+* **On the board.** The board draws the arms in its header, a banner hung in each top corner either side of the
+  town's name, so you can tell whose square you are standing in from across it.
+* **On the watch's shields.** When a guard is issued a plain shield at the stores, the tailor weaves a banner and
+  puts it on the shield the way you would at the crafting table. The banner is used up, and the shield shows the
+  town's colours and charges. A shield keeps the arms it was given.
+* **On the road.** A folk setting out with a caravan, on a trade run or as an envoy carries the town's banner in
+  its free hand. It takes one of the town's woven banners out of the stores, or the tailor weaves one then, and
+  puts it back when it comes home.
+* **The war banner** that goes up the day war is declared is the stores' red cloth with the town's charges woven
+  on it, a dye for each, when the stores have the dyes. Taken down at the peace, it goes back into the stores as
+  it is, ready for next time.
+* **Festival tabards** (new item: *Tabard*). The tailor keeps the town a set of tabards, one for each grown folk
+  who is not on the watch, six at most. Each is seven wool cut like a tunic with the town's banner put on it.
+  On a festival's day and on Founding Day they come out of the stores in the morning, and the folk wear them over
+  their clothes, front and back, until night, when they go back in. You can make one too: seven wool in the shape
+  of a chestplate, then the tabard and any banner together at the crafting table give the tabard the banner's
+  arms, as a shield does.
+* **Your own banner.** Buy a copy at the shop's "Our banner" sign, as before (at the town store if the town has
+  no shop). When a town makes you a citizen it gives you its banner then and there. If the stores can't run to
+  one just then, the town owes you one: right-click the shop's sign once they can and it is yours for nothing.
+* **A grant for a great day.** A town's arms can gain a charge, six at most (as many as the loom will weave):
+  * the first time it comes into a new age, a charge for what it lives by: a **fish** for a town of fishers, a
+    **pick** for miners, a **sheaf** for farmers;
+  * later ages add one of their own: a grey border for iron, a cyan lozenge for diamond, a black base for the
+    Nether;
+  * a war won adds a red saltire.
+
+  A new leader may give the town a new motto, from its own heart, and the hall's sign is carved again. The banners
+  already up come down one place at a time (into the stores, as keepsakes) and the new arms go up. The chronicle
+  records each grant, and the Culture page lists them.
+* **New patterns** (new items: *Banner Pattern*, Fish, Pick and Sheaf). The fish, the pick and the sheaf are new
+  banner patterns. Make each from a sheet of paper and a fish, any pickaxe, or wheat, and use it at the loom like
+  the game's own patterns. The town's tailor makes the one it needs the first time, and the stores keep it.
+* **Seen on** the board, a guard's card ("carries the town's arms on its shield"), the card of anybody wearing a
+  tabard or carrying the banner, and the Culture page's new *The town's arms* section. `/village arms` says it all
+  in chat. Operators can use `/village arms now` to put up everything the stores run to at once, `/village arms
+  board` to find where to stand to see the board's header, and `/village arms stage` for a picture: a guard, a
+  carrier and two folk in tabards in a row.
+
+The game tests `ArmsBuskersGameTests` check that a guard's shield is given the town's arms, layer for layer, out of
+six wool, a stick and a dye a charge (ab01); that the banner flies either side of the hall's door, woven of the
+stores' wool (ab02); that the board carries the arms, and that a new age grants a river town a fish (ab03); and
+that a tabard is made of thirteen wool, worn on Founding Day and back in the stores the day after (ab07).
+
+## Buskers
+
+Folk whose pastime is music now play for coins in the street.
+
+* **When and where.** On two evenings in three, for the first two hours after work, a musician takes its note
+  block to a pitch of its own. The pitches are by the well, the corner of the square by each gate, and outside
+  the market. On market day it busks in its time off by day as well. Never in the rain, never while the town is
+  gathered for something, and never the watch. A visiting bard still busks on the square by day, as before,
+  and its takings now make the gazette too.
+* **Real music.** A busker plays a real tune (the tavern's jig, its slow air, the wedding march or a reel of the
+  street's own) on its own voice: harp, flute, guitar, banjo, bells or xylophone. Notes rise over its head. It
+  needs a note block: its own, or one lent out of the stores for the evening and put back after. A poor player
+  slips now and then, a note a semitone out, with a puff of smoke for it.
+* **The hat.** Folk in their own time stop to listen, more of them for a better player and up to five at once.
+  They stand round a while and go on their way. As they go, one with a few coins put by may drop a coin in the
+  busker's hat, out of its own purse and into the busker's, once an evening. A generous folk gives more readily
+  and a grumpy one less. **You can tip too:** right-click a busker who is playing with a village coin in your hand
+  to drop one in.
+* **Getting better.** Every evening of playing is practice, and a busker's skill (from a talent of its own) goes
+  up with it. The town's books keep its skill and what its hat has taken. A busker who has played five evenings,
+  plays badly and draws next to nothing gives up for a fortnight ("Nobody stops for my tunes").
+* **The tavern.** The tavern keeper hears of the good ones. Once a busker plays well (skill 45) and draws a hat of
+  two coins an evening, the tavern books it for every day of rest. The chronicle records it: *Pip, who played for
+  coppers by the well, now plays the tavern every rest day.* On the evening of the day of rest it plays by the
+  tavern's hearth, from dusk until the band takes over (all evening if there is no band). The tavern's own tune
+  waits while it plays. It is paid three coins out of the treasury, and the whole town comes to hear it, as for a
+  bard, with coins for its hat as well.
+* **Seen on** the busker's card ("busks by the well (a good player, skill 52; 31 coins in tips over 14
+  evenings)"), the gazette's *Street music* (yesterday's buskers and what their hats took, and who plays the
+  tavern), the folk's small talk ("Have you heard Pip play by the well? Lovely playing."), the Culture page's new
+  *Buskers* section, and `/village busk`. Operators can use `/village busk now` to send every musician out to its
+  pitch at once.
+
+The game tests check that a busker plays on a note block lent out of the stores, two listeners each drop exactly
+one coin out of their own purses into its purse, and the note block goes back afterwards (ab04); that a player's
+coin moves from the player to the busker (ab05); and that a good busker is booked by the tavern and plays there on
+the day of rest, paid its fee once out of the treasury (ab06).

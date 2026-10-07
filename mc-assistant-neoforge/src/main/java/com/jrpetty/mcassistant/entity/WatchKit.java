@@ -583,6 +583,7 @@ public final class WatchKit {
             if (f != null) handOver(level, v, g, Workshop.takeOut(level, id, f, who), given);
         }
         if (!given.isEmpty()) issued(level, v, g, given);
+        if (watch) Arms.shield(level, v, g);                        // [arms] the town's arms on its shield, at the stores
         return given;
     }
 

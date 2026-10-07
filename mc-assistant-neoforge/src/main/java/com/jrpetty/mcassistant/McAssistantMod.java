@@ -187,6 +187,28 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
+    // [arms] The town's arms (entity/Arms): the festival tabard, seven wool cut like a tunic, given a banner's arms at
+    // the crafting table as a shield is (TabardDecorationRecipe); and the loom's patterns for the three charges a town
+    // is granted for what it lives by, each a sheet of paper and a fish, a pickaxe or wheat.
+    private static final DeferredRegister<net.minecraft.world.item.crafting.RecipeSerializer<?>> RECIPE_SERIALIZERS =
+        DeferredRegister.create(Registries.RECIPE_SERIALIZER, MODID);
+    public static final DeferredItem<net.minecraft.world.item.Item> TABARD =
+        ITEMS.registerSimpleItem("tabard", new net.minecraft.world.item.Item.Properties().stacksTo(1));
+    public static final DeferredItem<net.minecraft.world.item.BannerPatternItem> FISH_PATTERN = patternItem("fish");
+    public static final DeferredItem<net.minecraft.world.item.BannerPatternItem> PICK_PATTERN = patternItem("pick");
+    public static final DeferredItem<net.minecraft.world.item.BannerPatternItem> SHEAF_PATTERN = patternItem("sheaf");
+    public static final DeferredHolder<net.minecraft.world.item.crafting.RecipeSerializer<?>,
+        net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<com.jrpetty.mcassistant.item.TabardDecorationRecipe>> TABARD_DECORATION =
+        RECIPE_SERIALIZERS.register("tabard_decoration",
+            () -> new net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer<>(com.jrpetty.mcassistant.item.TabardDecorationRecipe::new));
+
+    private static DeferredItem<net.minecraft.world.item.BannerPatternItem> patternItem(String charge) {
+        net.minecraft.tags.TagKey<net.minecraft.world.level.block.entity.BannerPattern> tag = net.minecraft.tags.TagKey.create(
+            Registries.BANNER_PATTERN, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(MODID, "pattern_item/" + charge));
+        return ITEMS.register(charge + "_banner_pattern", () -> new net.minecraft.world.item.BannerPatternItem(tag,
+            new net.minecraft.world.item.Item.Properties().stacksTo(1)));
+    }
+
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
         TABS.register("village_folk", () -> net.minecraft.world.item.CreativeModeTab.builder()
@@ -204,6 +226,10 @@ public final class McAssistantMod {
                 out.accept(ZONE_MARKER.get());
                 out.accept(PLACE_MARKER.get());
                 out.accept(MEMORY_CORE.get());
+                out.accept(TABARD.get());                     // [arms]
+                out.accept(FISH_PATTERN.get());
+                out.accept(PICK_PATTERN.get());
+                out.accept(SHEAF_PATTERN.get());
             })
             .build());
 
@@ -221,6 +247,7 @@ public final class McAssistantMod {
         ITEMS.register(modBus);
         TABS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
+        RECIPE_SERIALIZERS.register(modBus);                          // [arms] the tabard given a banner's arms
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);
