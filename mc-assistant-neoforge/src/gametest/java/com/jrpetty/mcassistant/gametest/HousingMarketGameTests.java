@@ -108,10 +108,12 @@ public class HousingMarketGameTests {
                 new ItemStack(Items.OAK_LOG, 64), new ItemStack(Items.OAK_LOG, 64), new ItemStack(Items.COBBLESTONE, 64),
                 new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.STONE_BRICKS, 64),
                 new ItemStack(Items.GLASS, 32), new ItemStack(Items.GLASS_PANE, 32), new ItemStack(Items.TORCH, 32),
-                new ItemStack(Items.LANTERN, 8), new ItemStack(Items.WHITE_BED, 4), new ItemStack(Items.WHITE_WOOL, 16) },
+                new ItemStack(Items.LANTERN, 8), new ItemStack(Items.WHITE_WOOL, 16) },
             { new ItemStack(Items.STONE, 64), new ItemStack(Items.BRICKS, 64), new ItemStack(Items.BRICKS, 64),
                 new ItemStack(Items.COBBLED_DEEPSLATE, 64), new ItemStack(Items.DEEPSLATE_TILES, 64), new ItemStack(Items.DEEPSLATE_TILES, 64),
-                new ItemStack(Items.RED_CARPET, 16), new ItemStack(Items.POPPY, 8), new ItemStack(Items.BARREL, 2) } };
+                new ItemStack(Items.RED_CARPET, 16), new ItemStack(Items.POPPY, 8), new ItemStack(Items.BARREL, 2),
+                new ItemStack(Items.WHITE_BED), new ItemStack(Items.WHITE_BED), new ItemStack(Items.WHITE_BED),
+                new ItemStack(Items.WHITE_BED), new ItemStack(Items.WHITE_BED), new ItemStack(Items.WHITE_BED) } };
         int[][] at = { { 4, -4 }, { -4, -4 } };
         for (int i = 0; i < goods.length; i++) {
             BlockPos chest = Kit.surface(level, t.heart().getX() + at[i][0], t.heart().getZ() + at[i][1]);
@@ -279,7 +281,7 @@ public class HousingMarketGameTests {
             owner.earn(400);
             List<VillageFolkEntity> household = HousingMarket.householdForTests(owner);
             int treasury0 = Ledger.coins(id), purse0 = owner.purse(), makings0 = makings(level, id);
-            int beds0 = Market.stock(level, id, s -> s.is(ItemTags.BEDS));
+            int beds0 = Market.stock(level, id, s -> s.is(ItemTags.BEDS)), wool0 = Market.stock(level, id, s -> s.is(ItemTags.WOOL));
             long coins0 = coin(id);
             java.util.Map<UUID, Integer> others0 = new java.util.HashMap<>();
             for (VillageFolkEntity f : t.folk()) if (f != owner) others0.put(f.getUUID(), f.purse());
@@ -322,8 +324,11 @@ public class HousingMarketGameTests {
             ok.that(hands == labour && labour > 0, "the builders had the labour, into their purses: " + hands + " of " + labour);
             ok.that(coin(id) == coins0, "coin conserved through the build: " + coins0 + " -> " + coin(id));
             ok.that(makings(level, id) < makings0 - 150, "real blocks came out of the stores: " + makings0 + " -> " + makings(level, id));
-            ok.that(Market.stock(level, id, s -> s.is(ItemTags.BEDS)) <= beds0 - 2, "and its beds: " + beds0 + " -> "
-                + Market.stock(level, id, s -> s.is(ItemTags.BEDS)));
+            int beds1 = Market.stock(level, id, s -> s.is(ItemTags.BEDS)), wool1 = Market.stock(level, id, s -> s.is(ItemTags.WOOL));
+            int bedsIn = Homes.bedsForTests(level, id, at).size();
+            ok.that(bedsIn >= 2, "its two beds made up in it: " + bedsIn);
+            ok.that(beds1 + wool1 / 3 <= beds0 + wool0 / 3 - 2, "out of the stores' beds (or their wool): beds " + beds0 + " -> " + beds1
+                + ", wool " + wool0 + " -> " + wool1);
             int standing = 0, drawn = 0;
             for (BuildGoal.Placement p : BuildGoal.plan("house", at, facing == null ? Direction.NORTH : facing, 13)) {
                 if (p.part() != BuildGoal.Part.BLOCK) continue;
