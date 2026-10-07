@@ -88,16 +88,16 @@ public class VillageFolkSpawnerBlock extends Block {
 
     /**
      * How many stand up when a charter FOUNDS a village, and how many the founding
-     * screen offers first when a spawner is set down: as many as
-     * a village the world grows by itself starts with ({@code villageMinFolk}).
-     * One settler on its own can never raise a child and cannot farm, dig, fell
-     * and build at once, so a founding of one was a village only if the player
-     * kept crafting and placing spawners. Placing one is the last thing asked of
-     * the player: from here the village finds its trades, its ground, its lots
-     * and its children on its own.
+     * screen offers first when a spawner is set down: seventy, unless the server says
+     * otherwise ({@code villageCharterFolk}), and never more than a village may be founded
+     * with ({@code villageFoundingMost}). The player may choose any number from two up
+     * at the board before confirming. It was the eight a village the world grows by
+     * itself starts with: a hamlet that took weeks to become a town, where a charter is
+     * the player's own town, founded to be one. (Villages the world grows, and colonies,
+     * keep their own sizes: villageMinFolk to villageMaxFolk.)
      */
     public static int foundingParty() {
-        return Math.max(2, com.jrpetty.mcassistant.AssistantConfig.villageMinFolk());
+        return com.jrpetty.mcassistant.entity.Founding.allowed(com.jrpetty.mcassistant.AssistantConfig.villageCharterFolk());
     }
 
     /**

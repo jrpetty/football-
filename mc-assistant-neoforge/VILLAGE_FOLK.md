@@ -12,7 +12,7 @@ Everything is obtainable in **survival**.
 | How | What you do |
 |---|---|
 | **Village Folk Spawner** (recommended) | Craft it — 8 bread round a gold ingot — and *place* it. The first one puts the village board up on the spot; go to the board and choose how many folk start the village, from two to five hundred (see *Founding a village: choose how many*). The ground round about is made level for them, and they come, with the founding stores in a chest where the spawner stood. Each one placed after that, within reach of the village, adds one settler. That is the last thing a village needs from you. |
-| **Village Charter** | Right-click the ground. Founds a village of eight there (the same start a village the world grows gets): its ground is made level first, as for a spawner, and the folk come when the heart of it is level. Craftable with paper, bread, a gold ingot, seeds and a chest. |
+| **Village Charter** | Right-click the ground. Founds a town of **seventy** there (config `villageCharterFolk`; use a spawner and its board to choose any other number): its ground is made level first, as for a spawner, and the folk come when the heart of it is level, each with a bed at the camp and the town's treasury opened with their savings (four coins a head). Craftable with paper, bread, a gold ingot, seeds and a chest. |
 | **Where to find them** | In creative, everything the mod adds is in its own **Village Folk** tab (the spawner is also under Functional Blocks). In survival, every recipe is in the recipe book from the moment you join; the spawner is a gold ingot in the middle of the crafting grid with bread in all eight squares round it. |
 | **/village spawn [1-100]** | Out of reach of a village, founds one two blocks ahead of you, its ground made level first (at least two folk); in reach of one, stands that many more up in it. `spawnat <x> <z> [n]` for the console and scripts founds at once, levelling nothing. |
 | **The world** | Villages generate as you explore (config `naturalVillages`), in groups of three to five. Each has its ground made level before its folk come, as a founding at a board does. |
@@ -30,9 +30,12 @@ happen, and chat says: *Go to the village board to choose how many folk start th
 
 * **How many**: a slider from 2 to 500 (it moves by ratio, so two to twelve is not squeezed into
   the first pixel), a − and a + beside it (with Shift, ten at a time), and the usual sizes to pick
-  at a click: 2, 8, 12, 25, 50, 100, 250, 500. It starts at eight. A server lets a village be no
-  bigger than its growth cap (`villageGrowthCap`, 100 unless it has been raised to 500), and when
-  the cap is lower than five hundred the screen says so and goes no higher.
+  at a click: 2, 12, 25, 50, 70, 100, 250, 500. It starts at **seventy** (`villageCharterFolk`, which
+  a server may set anywhere from 2 to 500). A server may found a village with at most
+  `villageFoundingMost` folk (500 unless it says fewer), and when that is lower than five hundred
+  the screen says so and goes no higher. (That is not the growth cap: `villageGrowthCap` is how big a
+  village grows by raising children, and a founding may be bigger; it then raises none until it is
+  smaller.)
 * **What that means**, worked out from the count as you move it: how much ground is made level,
   the trades that many settle into (the biggest first), the houses they will want before they
   raise children and how many beds the camp has, and what so many folk cost a server every tick,
@@ -41,7 +44,7 @@ happen, and chat says: *Go to the village board to choose how many folk start th
   (`villageWorldCap`), it says that too: past it no village raises a child.
 * **Confirm and spawn** starts the founding. **Cancel** only closes the screen; the board goes on
   waiting. The server checks the choice again: you must be standing by the board (24 blocks), the
-  board must still be waiting, and the count must be 2 to 500; a count over the growth cap is
+  board must still be waiting, and the count must be 2 to 500; a count over `villageFoundingMost` is
   brought down to it, and you are told.
 
 To call it off, take the board down: you get your spawner back. A board left waiting is still
@@ -110,7 +113,8 @@ there, with its founding stores, its board put up again on the same side of the 
 camp. The rest come a few a tick (eight), on a spiral round the heart, each on dry ground of its
 own, while the outer ground is still being shaped. A bigger party brings more: a second chest of
 bread, seed, saplings, torches, planks and stone for every sixteen past the first dozen (up to
-six), and the bedding of those the camp has no room for (it lays two dozen beds) in chests of its
+six), and the bedding of those the camp has no room for (it lays a bed each for up to about eighty, in
+rings round the heart, the well's and the monuments' places on the square left clear) in chests of its
 own, up to two, for the first houses.
 
 **It goes on without you.** The work is done a little every tick: at most 4,096 blocks or eight
@@ -4305,11 +4309,16 @@ ripen, days pass, folk work and houses go up at that pace.
 
 ## Config (`config/mc_assistant-common.toml`, section `[villages]`)
 
-`naturalVillages`, `villageSpacing`, `villageMinFolk`, `villageMaxFolk`,
-`villageBreeding`, `villageGrowthCap`, `villageLoadedChunks`, `replaceVillagers`,
+`naturalVillages`, `villageSpacing`, `villageMinFolk`, `villageMaxFolk`, `villageCharterFolk` (70),
+`villageFoundingMost` (500), `villageBreeding`, `villageGrowthCap`, `villageLoadedChunks`, `replaceVillagers`,
 `protectTradedVillagers`, `villageColonies` (on), `villageColonyAt` (40),
 `villageWorldCap` (200).
 
+* `villageCharterFolk` (70) is how many a Village Charter founds a village with, and where the
+  founding screen at a spawner's board starts; a player may choose 2 to `villageFoundingMost` there.
+  Villages the world grows on its own start with `villageMinFolk` to `villageMaxFolk` (8 to 12), and a
+  colony with `villageMinFolk`.
+* `villageFoundingMost` (500) is the most a village may be founded with, at the board or by charter.
 * `villageGrowthCap` (100) is the largest a village grows by raising children.
 * `villageBuildSpeed` (100) is how fast village builders lay blocks, as a percentage:
   200 is twice as fast, 50 half.

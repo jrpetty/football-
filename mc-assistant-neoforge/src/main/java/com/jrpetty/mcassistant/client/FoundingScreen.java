@@ -15,8 +15,8 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Found a village: how many folk are to start it, asked at the board a Village Folk Spawner put
- * up (entity/Founding). A slider from two to five hundred (or to what this server lets a village
- * grow to, and it says so when that is less), a step down and up, the usual sizes to pick at a
+ * up (entity/Founding), starting at seventy (villageCharterFolk). A slider from two to five hundred (or
+ * to what this server lets a village be founded with, and it says so when that is less), a step down and up, the usual sizes to pick at a
  * click, and under them what that many means: how much ground is levelled for them, the trades
  * they settle into, the homes they will want, and what so many cost a server. Nothing happens
  * until Confirm and spawn, and the server checks that again.
@@ -24,7 +24,7 @@ import net.minecraft.network.chat.Component;
 public class FoundingScreen extends Screen {
 
     private static final int W = 320, H = 240, PAD = 10;
-    private static final int[] PRESETS = { 2, 8, 12, 25, 50, 100, 250, 500 };
+    private static final int[] PRESETS = { 2, 12, 25, 50, 70, 100, 250, 500 };
 
     private final BlockPos board;
     private final int most, worldFolk, worldCap;
@@ -121,7 +121,7 @@ public class FoundingScreen extends Screen {
                 .bounds(x + i * (bw + gap), y + 23, bw, 16).build();
             b.active = n <= most;
             b.setTooltip(Tooltip.create(Component.literal(n <= most ? "Start with " + n + " folk"
-                : "More than this server lets a village grow to (" + most + ")")));
+                : "More than this server lets a village be founded with (" + most + ")")));
             this.addRenderableWidget(b);
         }
         int by = top + H - PAD - 20;
@@ -163,8 +163,10 @@ public class FoundingScreen extends Screen {
         y = line(g, "Trades", kinds + (kinds == 1 ? " kind" : " kinds") + " of work: "
             + FoundingPlan.trades(count, 3) + ".", x, y, inner, Ui.INK);
         int homes = VillageMath.housesWanted(count, true);
-        y = line(g, "Homes", homes + (homes == 1 ? " house" : " houses") + " wanted; the camp has "
-            + Math.min(count, 24) + " beds.", x, y, inner, Ui.INK);
+        int camp = Math.min(count, com.jrpetty.mcassistant.VillageSpawner.campRoom());
+        y = line(g, "Homes", homes + (homes == 1 ? " house" : " houses") + " wanted; a bed each at the camp"
+            + (count > camp ? " for " + camp + ", the rest's bedding in the stores for the first houses." : "."),
+            x, y, inner, Ui.INK);
         double ms = FoundingPlan.msPerTick(count);
         int load = ms >= 20 ? Ui.BAD : ms >= 6 ? Ui.WARN : Ui.INK;
         y = line(g, "Server", String.format(java.util.Locale.ROOT, "about %.1f ms of every 50 ms tick", ms)

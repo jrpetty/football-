@@ -113,7 +113,7 @@ public final class AssistantNetwork {
     /**
      * Confirm and spawn. Never trusted as sent: the board must still be waiting, the player standing
      * by it, and the count two to five hundred (Founding.confirm checks all of it, and brings a count
-     * over the server's growth cap down to the cap).
+     * over the server's founding limit, villageFoundingMost, down to it).
      */
     private static void handleFoundingChoice(FoundingChoicePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {

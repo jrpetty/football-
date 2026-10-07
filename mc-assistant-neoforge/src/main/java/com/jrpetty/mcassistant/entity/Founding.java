@@ -323,7 +323,7 @@ public final class Founding extends SavedData {
     /**
      * Confirm and spawn: {@code count} folk to found the village at this board. Refused unless the
      * board is still waiting, the one asking stands by it, and the count is two to five hundred; a
-     * count over what the server lets a village grow to is brought down to that.
+     * count over what the server lets a village be founded with (villageFoundingMost) is brought down to that.
      */
     public static Outcome confirm(ServerLevel level, BlockPos board, int count, @Nullable ServerPlayer player) {
         Site s = siteAt(level, board);
@@ -365,7 +365,7 @@ public final class Founding extends SavedData {
         closeScreens(level, board);
         LOG.info("[MCA-FOUND] founding at {}: {} folk (asked {}), the ground levelled {} round, worked to {}",
             s.heart.toShortString(), folk, count, s.radius, s.outer);
-        String said = (folk < count ? "This server lets a village grow to " + folk + ", so " + folk + " are coming. " : "")
+        String said = (folk < count ? "This server lets a village be founded with " + folk + " at most, so " + folk + " are coming. " : "")
             + "The ground is being made ready for " + folk + " folk. They will come as soon as the heart of it is level.";
         return new Outcome(true, said, board);
     }
@@ -822,9 +822,12 @@ public final class Founding extends SavedData {
         s.nextSpot = 1;
         Villages.Village v = Villages.get(s.village);
         BlockPos centre = v == null ? heart : v.centre();
-        // The founders' camp (a bed each, as many as it has room for) and the stores for a party this size.
-        VillageSpawner.pitchCamp(level, centre, s.count);
-        VillageSpawner.foundingStores(level, centre, s.count);
+        // The founders' camp (a bed each, as many as it has room for) and the stores for a party this size,
+        // and the treasury opened with the savings the whole party brings (Market.foundingPurse): its first
+        // morning's wages are paid when only some of them have come.
+        int camped = VillageSpawner.pitchCamp(level, centre, s.count);
+        VillageSpawner.foundingStores(level, centre, s.count, camped);
+        Market.openTreasury(s.village, s.count);
         f.setDirty();
         LOG.info("[MCA-FOUND] {} is founded at {}; {} more to come", Villages.name(s.village), centre.toShortString(), s.count - 1);
         return true;

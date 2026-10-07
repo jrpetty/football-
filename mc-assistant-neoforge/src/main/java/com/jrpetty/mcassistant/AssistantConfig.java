@@ -42,6 +42,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.BooleanValue VILLAGE_RAIDS;
     public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
     public static final ModConfigSpec.IntValue VILLAGE_FOUNDING_MOST;
+    public static final ModConfigSpec.IntValue VILLAGE_CHARTER_FOLK;
     public static final ModConfigSpec.IntValue VILLAGE_LOADED_CHUNKS;
     public static final ModConfigSpec.BooleanValue REPLACE_VILLAGERS;
     public static final ModConfigSpec.BooleanValue PROTECT_TRADED_VILLAGERS;
@@ -121,9 +122,9 @@ public final class AssistantConfig {
                 "Blocks between candidate settlement sites. One village per grid cell,",
                 "its exact spot fixed by the world seed. Bigger means rarer and further apart.")
             .defineInRange("villageSpacing", 768, 256, 8000);
-        VILLAGE_MIN_FOLK = b.comment("Fewest folk a new settlement is founded with.")
+        VILLAGE_MIN_FOLK = b.comment("Fewest folk a settlement the world grows on its own (or a colony) is founded with.")
             .defineInRange("villageMinFolk", 8, 1, 60);
-        VILLAGE_MAX_FOLK = b.comment("Most folk a new settlement is founded with.")
+        VILLAGE_MAX_FOLK = b.comment("Most folk a settlement the world grows on its own is founded with.")
             .defineInRange("villageMaxFolk", 12, 1, 60);
         VILLAGE_RAIDS = b.comment(
                 "Raiders come at walled villages with a watch, about one night in five:",
@@ -148,6 +149,12 @@ public final class AssistantConfig {
                 "hundred). A founding party may be bigger than villageGrowthCap: the cap is on",
                 "children, so a village founded over it raises none until it is smaller.")
             .defineInRange("villageFoundingMost", 500, 2, 500);
+        VILLAGE_CHARTER_FOLK = b.comment(
+                "How many folk a Village Charter, or a Village Folk Spawner set down away from any village,",
+                "founds a village with: the founding screen at the board starts here, and the player may",
+                "choose anything from two to villageFoundingMost before confirming. (Villages the world grows",
+                "on its own are founded with villageMinFolk to villageMaxFolk; colonies with villageMinFolk.)")
+            .defineInRange("villageCharterFolk", 70, 2, 500);
         VILLAGE_LOADED_CHUNKS = b.comment(
                 "How many chunks around its heart a settlement keeps ticking while",
                 "nobody is there, as a radius. Six is a 13x13 square (169 chunks): the",
@@ -246,6 +253,7 @@ public final class AssistantConfig {
     public static boolean villageRaids() { return read(VILLAGE_RAIDS, true); }
     public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
     public static int villageFoundingMost() { return read(VILLAGE_FOUNDING_MOST, 500); }
+    public static int villageCharterFolk() { return read(VILLAGE_CHARTER_FOLK, 70); }
     public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 6); }
     public static boolean replaceVillagers() { return read(REPLACE_VILLAGERS, true); }
     public static boolean protectTradedVillagers() { return read(PROTECT_TRADED_VILLAGERS, false); }

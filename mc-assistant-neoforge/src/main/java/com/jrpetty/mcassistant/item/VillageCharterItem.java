@@ -16,11 +16,12 @@ import net.minecraft.world.item.context.UseOnContext;
 /**
  * Village Charter — right-click the ground and somebody comes to live there.
  *
- * <p>The first use founds a settlement on that spot. Every use after it adds
- * another pair of hands to whichever settlement is nearest, up to a full
- * village of ten. Nothing else is required of you: they pick their own trades
- * to fill out the village, find their own ground, and build the place up in
- * their own time.
+ * <p>The first use founds a settlement on that spot: seventy folk by default
+ * (villageCharterFolk), the ground made level first. Every use after it adds
+ * another pair of hands to whichever settlement is nearest, up to the village's
+ * growth cap. Nothing else is required of you: they pick their own trades to
+ * fill out the village, find their own ground, and build the place up in their
+ * own time.
  */
 public class VillageCharterItem extends Item {
 
@@ -51,8 +52,7 @@ public class VillageCharterItem extends Item {
             if (o.ok() && !player.getAbilities().instabuild) ctx.getItemInHand().shrink(1);
             return InteractionResult.CONSUME;
         }
-        int stood = VillageFolkSpawnerBlock.raiseParty(level, spot, player.getYRot(),
-            founding ? VillageFolkSpawnerBlock.foundingParty() : 1);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, spot, player.getYRot(), 1);
         if (stood == 0) {
             player.displayClientMessage(Component.literal(
                 "That village is full at "

@@ -65,8 +65,23 @@ public final class Market {
 
     private Market() {}
 
-    /** What a new village has in its treasury. */
+    /** What a new village has in its treasury, at the least. */
     public static final int FOUNDING_PURSE = 32;
+    /** What each founder brings to the treasury: four coins a head, a few days' wages for the party. */
+    public static final int FOUNDING_PURSE_A_HEAD = 4;
+
+    /**
+     * The founders' savings for a party this size. It was thirty-two coins whoever came: enough for a
+     * hamlet of eight, and for a charter's seventy a single morning's wages paid short from the first day.
+     */
+    public static int foundingPurse(int folk) {
+        return Math.max(FOUNDING_PURSE, FOUNDING_PURSE_A_HEAD * folk);
+    }
+
+    /** Open a new village's treasury with its founders' savings (once: an open treasury is left alone). */
+    public static void openTreasury(UUID village, int folk) {
+        if (!Ledger.hasTreasury(village)) Ledger.addCoins(village, foundingPurse(folk));
+    }
     /** Coins minted from one gold ingot. */
     public static final int COINS_PER_GOLD = 9;
 
@@ -292,7 +307,7 @@ public final class Market {
      *  coin minted from gold, wages paid, and on market day the bell rung. */
     public static void tick(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
-        if (!Ledger.hasTreasury(id)) Ledger.addCoins(id, FOUNDING_PURSE);
+        if (!Ledger.hasTreasury(id)) openTreasury(id, Villages.headcount(id));
         long time = level.getDayTime();
         long day = time / 24000L, t = time % 24000L;
         if (t < 500 || t > 6000) return;

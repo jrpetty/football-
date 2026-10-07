@@ -1839,7 +1839,8 @@ public final class Villages {
                     net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
                     if (!st.hasProperty(net.minecraft.world.level.block.BedBlock.PART)
                         || st.getValue(net.minecraft.world.level.block.BedBlock.PART) != net.minecraft.world.level.block.state.properties.BedPart.HEAD) continue;
-                    if (Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ())) <= 6) {
+                    if (Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ()))
+                            <= com.jrpetty.mcassistant.VillageSpawner.CAMP_REACH) {
                         camp++;                                // the camp: room, but not a home
                         continue;
                     }
@@ -1867,7 +1868,8 @@ public final class Villages {
         if (p.getY() >= level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 p.getX(), p.getZ()) - 8) return false;
         Village v = get(villageId);
-        if (v != null && Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ())) <= 6
+        if (v != null && Math.max(Math.abs(p.getX() - v.centre().getX()), Math.abs(p.getZ() - v.centre().getZ()))
+                    <= com.jrpetty.mcassistant.VillageSpawner.CAMP_REACH
                 && Math.abs(p.getY() - v.centre().getY()) <= 3) return false;          // the camp
         return !Land.inABuilding(villageId, p);
     }

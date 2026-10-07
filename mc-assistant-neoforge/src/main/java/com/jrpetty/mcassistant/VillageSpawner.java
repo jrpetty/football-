@@ -443,13 +443,19 @@ public final class VillageSpawner {
      * The founding stores of a party bigger than the usual (entity/Founding). The one chest every
      * village is founded with (supplyChest) seeds and lights a dozen; for every sixteen more there
      * is a second of the same, bread, seed, saplings, light, planks and stone, up to six of them;
-     * and the bedding of those the camp has no room for (it lays two dozen) is carried in chests
+     * and the bedding of those the camp has no room for (it lays as many as it has level ground for) is carried in chests
      * of its own, up to two of them, for the first houses to be made up with. Every chest is the
      * village's stores (ZoneChests.mark), in a ring round the first. Returns the chests set down.
      */
     public static int foundingStores(ServerLevel level, BlockPos heart, int folk) {
+        return foundingStores(level, heart, folk, Math.min(folk, CAMP.length));
+    }
+
+    /** The founding stores, knowing how many beds the camp could actually be laid with (broken ground lays
+     *  fewer than it has room for): the bedding chests carry the rest. */
+    public static int foundingStores(ServerLevel level, BlockPos heart, int folk, int campBeds) {
         int supplies = folk <= 12 ? 0 : Math.min(6, (folk - 12 + 15) / 16);
-        int unbedded = Math.max(0, folk - CAMP.length);
+        int unbedded = Math.max(0, folk - campBeds);
         int bedding = Math.min(2, (unbedded + 26) / 27);
         int set = 0, beds = 0;
         for (int[] at : STORE_RING) {
@@ -481,9 +487,58 @@ public final class VillageSpawner {
     /** Where the camp's beds go round the heart: (dx, dz) of the foot; the head points away from the middle.
      *  A second ring further out for broken ground: on a mountainside the first ring had nowhere
      *  level enough for one bed, and a village of twelve spent every night on its feet. */
-    private static final int[][] CAMP = {
+    private static final int[][] FIRST_CAMP = {
         {0, -3}, {3, 0}, {0, 3}, {-3, 0}, {-2, -3}, {3, -2}, {2, 3}, {-3, 2}, {2, -3}, {3, 2}, {-2, 3}, {-3, -2},
         {0, -5}, {5, 0}, {0, 5}, {-5, 0}, {-2, -5}, {5, -2}, {2, 5}, {-5, 2}, {2, -5}, {5, 2}, {-2, 5}, {-5, -2}};
+
+    /** How far out from the heart the camp's beds reach (the head of a bed on the outermost ring). Every
+     *  bed this near the heart is the camp's: the square keeps houses well beyond it (TownPlan.PLAZA). */
+    public static final int CAMP_REACH = 12;
+
+    /**
+     * Every place a camp bed may go, nearest the heart first: the first two rings as they always were, then
+     * the rest of the fifth ring and rings at seven, nine and eleven, a bed every other block along each side. A
+     * charter's seventy slept on a camp of twenty-four, the rest with nowhere to lie until the houses were
+     * built: the leader's spare bedding had no room left at the camp to be laid in. The square's own spots
+     * (the well to the south, the monuments) are left clear, and so is the line the village board stands on
+     * (the square's edge, thirteen out). About eighty beds on level ground.
+     */
+    private static final int[][] CAMP = campSpots();
+
+    private static int[][] campSpots() {
+        List<int[]> out = new java.util.ArrayList<>(java.util.Arrays.asList(FIRST_CAMP));
+        java.util.Set<Long> taken = new java.util.HashSet<>();
+        for (int[] c : FIRST_CAMP) taken.add(BlockPos.asLong(c[0], 0, c[1]));
+        for (int r = 5; r + 1 <= CAMP_REACH; r += 2) {
+            for (int along = -(r - 1); along <= r - 1; along += 2) {
+                int[][] four = { {along, -r}, {r, along}, {-along, r}, {-r, -along} };
+                for (int[] c : four) {
+                    if (!taken.add(BlockPos.asLong(c[0], 0, c[1]))) continue;
+                    if (onASquareSpot(c[0], c[1])) continue;
+                    out.add(c);
+                }
+            }
+        }
+        return out.toArray(new int[0][]);
+    }
+
+    /** Is this bed (its foot here, its head a block further out) on ground the square keeps for its well or
+     *  a monument (TownPlan.squareSpots)? */
+    private static boolean onASquareSpot(int dx, int dz) {
+        int hx = Math.abs(dz) >= Math.abs(dx) ? dx : dx + Integer.signum(dx);
+        int hz = Math.abs(dz) >= Math.abs(dx) ? dz + Integer.signum(dz) : dz;
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot l : com.jrpetty.mcassistant.village.TownPlan.squareSpots()) {
+            for (int[] p : new int[][]{ {dx, dz}, {hx, hz} }) {
+                if (Math.abs(p[0] - l.x()) <= l.halfAcross() && Math.abs(p[1] - l.z()) <= l.halfDeep()) return true;
+            }
+        }
+        return false;
+    }
+
+    /** How many beds the camp has room for, on level ground. */
+    public static int campRoom() {
+        return CAMP.length;
+    }
     private static final net.minecraft.world.level.block.Block[] BEDDING = {
         Blocks.RED_BED, Blocks.BLUE_BED, Blocks.YELLOW_BED, Blocks.GREEN_BED, Blocks.WHITE_BED, Blocks.BROWN_BED,
         Blocks.ORANGE_BED, Blocks.LIGHT_BLUE_BED, Blocks.PURPLE_BED, Blocks.CYAN_BED, Blocks.LIME_BED, Blocks.PINK_BED};
@@ -615,7 +670,7 @@ public final class VillageSpawner {
     /** The heads of the beds still standing at a village's camp, nearest the heart first. */
     public static List<BlockPos> campBeds(Level level, BlockPos heart) {
         List<BlockPos> out = new java.util.ArrayList<>();
-        for (BlockPos p : BlockPos.betweenClosed(heart.offset(-6, -3, -6), heart.offset(6, 3, 6))) {
+        for (BlockPos p : BlockPos.betweenClosed(heart.offset(-CAMP_REACH, -3, -CAMP_REACH), heart.offset(CAMP_REACH, 3, CAMP_REACH))) {
             net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
             if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock
                     && st.getValue(net.minecraft.world.level.block.BedBlock.PART)

@@ -125,7 +125,8 @@ public class VillageGameTests {
         helper.onEachTick(() -> {
             if (done[0] || com.jrpetty.mcassistant.entity.Founding.near(level, ground, 8)) return;   // still being founded
             done[0] = true;
-            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 12));
+            // A party of seventy stands on the spiral up to fourteen or so out (the camp's beds take some spots).
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 40));
             Kit.log("t02 folk near the block: " + folk.size()
                 + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
             int party = VillageFolkSpawnerBlock.foundingParty();
@@ -144,7 +145,7 @@ public class VillageGameTests {
             player.setItemInHand(InteractionHand.MAIN_HAND, more);
             more.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
                 new BlockHitResult(Vec3.atCenterOf(next.below()), Direction.UP, next.below(), false)));
-            int after = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 16)).size();
+            int after = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 40)).size();
             Kit.log("t02 after a second spawner: " + after);
             helper.assertTrue(after == party + 1, "a second spawner should add exactly one, found " + after);
             helper.succeed();
