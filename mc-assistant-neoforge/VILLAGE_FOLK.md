@@ -397,11 +397,10 @@ morning and a week is kept, so the village knows whether it is making more or le
 wages, an idle one sells what it can and pays short. Its **worth** is its treasury, its
 stores at the market's prices, and its folk's savings.
 
-**Pay** is the trade's rate (a coin a day for the fields, the woods, the water and the
-stores; two for miners, guards, smelters, ranchers, cooks, shopkeepers, beekeepers, scouts
-and hunters; three for the smith, the tailor, the brewer and the enchanter) **times what the
-place is**: a hamlet pays the rate, a village half as much again, a town twice, a city two
-and a half times, a capital three. On top: a coin at level ten and another at twenty-five,
+**Pay** is what the job is worth (see *What every job is worth*, at the end): its value to the
+town, how hard it is to fill, how hard it is and the skill it takes, and the folk's own hand at
+it, **times what the place is**: a hamlet pays the unit, a village half as much again, a town
+twice, a city two and a half times, a capital three, at what the treasury can afford. On top:
 one for the elder, and up to two for a hard day's work. When the town comes up in the world
 the elder tells the morning assembly that wages are going up; when the treasury is short,
 everybody gets the same share and a grumbler or two says so.
@@ -429,9 +428,8 @@ output, the worth and the three best paid, and any folk will tell you who earns 
     treasury every morning (less whatever the traders paid for that morning). A busy
     village pays its wages; an idle one pays short. The journal's Economy page shows the
     takings.
-  * **Pay for what you make.** On top of its trade's rate, every folk is paid a quarter of
-    what it made yesterday (up to twice its rate): the hardest workers are the best paid,
-    and the Wages page says so ("+3 for what it made yesterday").
+  * **Pay for what the work brings in.** A trade is paid by what a hand of it brings the town
+    at the town's own prices, against what an average hand does (*What every job is worth*).
   * **Passing traders** come every morning and buy enough of what the village has to
     spare (anything over four lots of it) to meet the day's wages and what it is saving
     for, at a fair price. They never take what the village is short of itself — the
@@ -4272,6 +4270,10 @@ ripen, days pass, folk work and houses go up at that pace.
   day, whether a child may be raised and why), its coal and charcoal against the floor it keeps,
   who carries the builders' stock about, and what its dead died of. `economy charcoal`
   (operators) has its smelter burn logs into charcoal now, if the village wants it.
+* `/village wages` — what every job in the nearest village is worth and pays, part by part, and who
+  is paid what and why. `wages show` opens the page on your screen, `wages books` the town's books
+  at the Jobs page, `wages card [n]` the card of the n-th best paid; `wages reckon` (operators) draws
+  up the day's pay scale now.
 * `/village standing` — what every village you have met thinks of you.
 * `/village ledger` — the nearest village's town ledger, as a book.
 * `/village relations` — every pair of neighbouring villages: allies, friends, uneasy,
@@ -4729,3 +4731,68 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+
+## What every job is worth
+
+Every job in a town is paid for what it is worth: what it brings the town, how hard it is to get hands
+for, how hard it is and the skill it takes, and how good the folk doing it is. A folk's day's wage is
+**the town's pay level × the job's worth × its own hand at it**, and the wages page shows every part.
+
+* **The pay level.** What the place is (a hamlet pays the unit, a village half as much again, a town
+  twice, a city two and a half times, a capital three), at what the treasury can afford. Each morning
+  the town sets the day's wage bill against the money coming in (the day's work taken in, sales, the
+  tax, the tithe, the rent, houses sold and what the folk spend in town, a few days smoothed): while the
+  bill runs over seventeen twentieths of it the rate eases down a little each day, as far as thirteen
+  twentieths of the full rate; while there is plenty coming in and a week's wages put by, it eases up,
+  as far as six fifths. The leader's own rate (stingy or generous) and the tax come on top as before.
+* **Value to the town.** What a hand of the trade brought in yesterday, at the town's own prices,
+  against what an average hand brings in. A maker counts half of what it made as its own (the ore, the
+  wool or the wheat it worked was somebody else's work). The jobs that make nothing to sell are paid for
+  their service: the watch keeps folk alive; the couriers and the storekeeper keep the goods moving; the
+  banker keeps the savings and the loans; the teacher teaches the children; a healer, if the town has
+  one, keeps folk well; and at the shop the keeper runs the place, the assistants serve at the counter
+  and the stock keeper keeps the shelves full. A bigger town leans on its services a little more.
+* **Scarcity.** A trade short of hands for the town's shape is paid more, one with hands to spare less;
+  more again for a notice on the board nobody has answered, and for a skilled trade few in the town have
+  the skill for. It moves a third of the way a day and never by more than a tenth, so pay rises over a
+  few days while a trade stays short, and does not jump about.
+* **Difficulty.** Fixed for each job: the fields, the water and the couriers' rounds are easy; the woods
+  heavy; the mines, the watch and the furnaces hard and dangerous; the smith, the enchanter, the banker,
+  the teacher and the shop's stock keeper need much skill. A shop assistant's is the easier job, the
+  stock keeper's a hard, skilled one.
+* **Its own hand.** Its level at the trade on a smooth curve: four fifths of the rate new to the work,
+  the rate at about level five, half as much again for a master; a little more for a maker whose marks
+  say good, fine or a master's work, and for each knack of the trade it chose.
+* **The living wage and the top.** Nobody is paid less than two meals and a house's rent at today's
+  prices (two loaves at the town's price of bread, and a plain house's rent), whatever the job or the
+  leader's rate; nobody's worth is paid more than five times the lowest wage. On top, as before: one for
+  the elder, up to two for a hard day's work, a Haggler's twentieth, and the teacher's mornings at the
+  school.
+
+**Seeing it.**
+
+* **`/village wages`** (and the journal's Wages page): the pay level, the lowest wage against the cost of
+  living, the top of the scale, the day's bill against what comes in; then every job's day for a
+  journeyman with its worth part by part ("Miner 6 a day (worth ×3.4): value ×1.00, scarcity ×1.27 (1
+  at it, 2.2 wanted, short), difficulty ×1.54 (hard and dangerous work)"); then everybody who works,
+  best paid first, with why. **`/village wages show`** opens it on your screen; **`/village wages
+  books`** opens the town's books at the Jobs page, where the mouse over a trade shows its worth and the
+  pay scale's three lines sit under the table; the Folk page's tooltips say why each is paid what it is.
+* **A folk's card** has a **Wage** line: "Paid 6 coins a day: the mines are short of hands, hard and
+  dangerous work and it is a skilled miner." Ask a folk "what's your wage?" and its card opens at it;
+  ask how it is doing for money and it tells you the same in its own words. **`/village wages card
+  [n]`** opens the card of the n-th best paid.
+* **The news.** When a short-handed trade's pay goes up, the chronicle and the morning assembly say so,
+  and the gazette prints it in a **Wages** column that morning ("Miners' pay is up to 4 a day, from 3:
+  the mines are short of hands.").
+* **Changing jobs.** A town's notice on the job market offers what the job is worth there for the hand
+  it asks for, the more for being short; a folk weighing a notice sets it against what it really earns
+  at home. A hand moving to a trade its own town is short of goes to the best paid of them first, and
+  says so if the pay is better ("They're short of hands at the mines — 6 a day against my 3.").
+
+The game tests `WagesGameTests` (wg01 to wg06) check that a trade short of hands is paid more than the
+same trade over-staffed, and the gazette tells of it; that a master is paid more than a novice at the
+same trade, on a smooth curve; that the shop's stock keeper is paid more than its assistant; that the
+watch is paid for its service though it brings nothing in; that the lowest wage covers the cost of
+living even when the treasury can afford next to nothing; and that the day's bill settles within what
+a steady town takes in.
