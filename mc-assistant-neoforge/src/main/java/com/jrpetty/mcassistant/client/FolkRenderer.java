@@ -100,6 +100,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new Armour(this,                // [guard-kit] armour cut to a folk (FolkArmourModel)
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.INNER)),
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.OUTER))));
+        this.addLayer(new TabardLayer(this, context.getModelSet()));      // [arms] a festival tabard of the town's arms
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
     }
 

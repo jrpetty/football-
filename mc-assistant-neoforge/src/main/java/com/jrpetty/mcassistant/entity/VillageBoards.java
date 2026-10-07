@@ -437,6 +437,7 @@ public final class VillageBoards {
             char where = l.charAt(0), how = l.charAt(1);
             String words = l.substring(bar + 1);
             if (where == 'T') { title = words; continue; }
+            if (where == 'A') continue;                         // [arms] the arms, drawn in the header, not words
             if (how == 'H') page.append(page.length() == 0 ? "" : "\n\n").append(words.toUpperCase(Locale.ROOT)).append('\n');
             else page.append(words).append('\n');
         }

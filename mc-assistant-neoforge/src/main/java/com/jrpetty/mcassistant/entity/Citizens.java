@@ -89,8 +89,9 @@ public final class Citizens {
         }
         Standing.stir(village, p.getUUID());
         if (p instanceof ServerPlayer sp) refresh(sp);
+        String banner = f.level() instanceof ServerLevel sl ? Arms.citizen(sl, village, p) : "";   // [arms] the town's banner, a citizen's
         return "Welcome, citizen " + name + "! " + (housed ? "Your house is your own. " : "We'll build you a house on one of our lots. ")
-            + "You've a vote on the council now, and the stores are yours as much as ours.";
+            + "You've a vote on the council now, and the stores are yours as much as ours." + banner;
     }
 
     // ------------------------------------------------------------------ titles

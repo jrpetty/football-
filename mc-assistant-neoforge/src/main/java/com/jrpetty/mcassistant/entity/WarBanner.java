@@ -95,6 +95,7 @@ final class WarBanner {
             return null;
         }
         Ledger.note(v.id(), "wp.banner/" + enemy, Long.toString(at.asLong()));
+        Arms.warArms(level, v, at);                                  // [arms] the town's charges woven on its cloth
         return at;
     }
 
@@ -113,8 +114,11 @@ final class WarBanner {
         BlockState st = level.getBlockState(at);
         if (!(st.getBlock() instanceof AbstractBannerBlock banner)) return false;
         DyeColor c = banner.getColor();
+        // [arms] Woven with the town's arms, it comes down as it is, for the next war.
+        ItemStack back = level.getBlockEntity(at) instanceof net.minecraft.world.level.block.entity.BannerBlockEntity be ? be.getItem()
+            : new ItemStack(BannerBlock.byColor(c).asItem());
         level.setBlock(at, Blocks.AIR.defaultBlockState(), 3);
-        TownWork.give(level, v, new ItemStack(BannerBlock.byColor(c).asItem()));
+        TownWork.give(level, v, back);
         return true;
     }
 

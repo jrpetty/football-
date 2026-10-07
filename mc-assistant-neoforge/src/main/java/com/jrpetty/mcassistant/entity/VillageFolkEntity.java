@@ -1358,6 +1358,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (!level().isClientSide && player instanceof net.minecraft.server.level.ServerPlayer sp) {
             if (StoreFloor.serveAPlayer(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;   // [econ-store]
+            if (Buskers.tipFrom(this, sp, held)) return net.minecraft.world.InteractionResult.SUCCESS;     // [arms] a coin in the busker's hat
             FolkTalk.open(this, sp);
         }
         return net.minecraft.world.InteractionResult.sidedSuccess(level().isClientSide);

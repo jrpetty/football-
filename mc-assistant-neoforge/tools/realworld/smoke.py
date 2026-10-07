@@ -1847,6 +1847,54 @@ def cave_stage(r, look, cx, cz):
     say("alive after the caves: %s" % client_alive())
 
 
+def arms_buskers_stage(r, look, cx, cz):
+    """[arms] The town's arms everywhere (entity/Arms) and its street musicians (entity/Buskers): every piece of the
+    arms the stores run to put up now (/village arms now: the banners on the hall, the gates, the towers and the
+    board's poles, the guards' shields, the festival tabards) and /village arms said; then three pictures. The board's
+    header, from out on the square (/village arms board: the arms drawn either side of the town's name, its two poles
+    beside it); a lineup on open ground beside the town (/village arms stage: a guard with the arms on its shield, a
+    carrier with the banner in hand, two folk in the festival tabard, and the banner on its pole), from in front; and
+    the town's musicians sent out to busk at their pitches (/village busk now), from over the first one's shoulder with
+    the passers-by stopped round it. /village busk said at the end; the lineup cleared away (tag arms_lineup)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    say("arms now: " + r.cmd("execute positioned %d %d %d run village arms now" % (cx, hy + 1, cz))[:600])
+    say("arms: " + r.cmd("execute positioned %d %d %d run village arms" % (cx, hy + 1, cz))[:1500])
+    num = r"(-?\d+(?:\.\d+)?)"
+
+    def view(out, name):
+        # The commands say where the camera's eyes go and what they look at; look() takes the feet (eyes 1.62 above).
+        m = re.search(r"VIEW " + name + " " + " ".join([num] * 6), out)
+        return None if not m else [float(v) for v in m.groups()]
+
+    time.sleep(6)                                     # the board says who it is every five seconds
+    v = view(r.cmd("execute positioned %d %d %d run village arms board" % (cx, hy + 1, cz)), "board")
+    if v:
+        look("31-arms-1-board", v[0], v[1] - 1.62, v[2], v[3], v[4], v[5], wait=8)
+    else:
+        say("the board is not known yet; no picture of its header")
+    sx, sz = cx + 36, cz - 30                         # out past the first houses; the stage looks for dry ground
+    sy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx + 2, sy + 6, sz + 10))
+    time.sleep(6)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village arms stage" % (sx, sy + 1, sz))
+    say("arms stage: " + out[:300])
+    v = view(out, "arms-lineup")
+    if v:
+        look("31-arms-2-lineup", v[0], v[1] - 1.62, v[2], v[3], v[4], v[5], wait=6)
+    out = r.cmd("execute positioned %d %d %d run village busk now" % (cx, hy + 1, cz))
+    say("busk now: " + out[:500])
+    v = view(out, "busker")
+    if v:
+        look("31-buskers-1-pitch", v[0], v[1] - 1.62, v[2], v[3], v[4], v[5], wait=8)
+    say("busk: " + r.cmd("execute positioned %d %d %d run village busk" % (cx, hy + 1, cz))[:1200])
+    r.cmd("kill @e[tag=arms_lineup,type=!player]")
+    say("alive after the arms and the buskers: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
