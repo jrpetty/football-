@@ -341,7 +341,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         if (said == null) return false;
         net.minecraft.client.gui.Font font = getFont();
         java.util.List<net.minecraft.util.FormattedCharSequence> lines =
-            font.split(net.minecraft.network.chat.FormattedText.of(said.text()), 150);
+            TextCache.splitPlain(font, said.text(), 150);
         if (lines.size() > 6) lines = lines.subList(0, 6);
         pose.pushPose();
         pose.translate(0.0F, folk.getBbHeight() + 0.75F + lines.size() * 0.25F, 0.0F);

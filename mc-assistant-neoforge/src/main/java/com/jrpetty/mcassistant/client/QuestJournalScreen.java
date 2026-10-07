@@ -5,7 +5,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -252,8 +251,7 @@ public class QuestJournalScreen extends Screen {
         g.fill(x0, y0, x0 + LIST_W, y1, LOG);
         List<Entry> s = shown();
         if (s.isEmpty()) {
-            for (FormattedCharSequence l : font.split(FormattedText.of(doneTab ? "Nothing done yet." : "No quests under way. Look for a gold \"!\" over a folk's head, and ask it \"Any work for me?\""),
-                    LIST_W - 8)) {
+            for (FormattedCharSequence l : TextCache.splitPlain(font, doneTab ? "Nothing done yet." : "No quests under way. Look for a gold \"!\" over a folk's head, and ask it \"Any work for me?\"", LIST_W - 8)) {
                 g.drawString(font, l, x0 + 4, y0 + 4, MUTED, false);
                 y0 += LINE;
             }
@@ -368,7 +366,7 @@ public class QuestJournalScreen extends Screen {
     }
 
     private int wrap(GuiGraphics g, String text, int x, int y, int width, int colour) {
-        for (FormattedCharSequence l : font.split(FormattedText.of(text), Math.max(20, width))) {
+        for (FormattedCharSequence l : TextCache.splitPlain(font, text, Math.max(20, width))) {
             g.drawString(font, l, x, y, colour, false);
             y += LINE;
         }

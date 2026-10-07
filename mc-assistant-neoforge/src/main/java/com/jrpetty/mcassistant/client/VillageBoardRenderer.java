@@ -127,7 +127,7 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
     /** The height one line takes: a heading, or an entry wrapped to w. */
     private int height(String[] l, int w) {
         if (l[0].equals("H")) return LINE + 3;
-        return font.split(FormattedText.of(l[1]), w).size() * LINE + 2;
+        return TextCache.splitPlain(font, l[1], w).size() * LINE + 2;
     }
 
     /**
@@ -185,7 +185,7 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
                 y += LINE + 3;
                 continue;
             }
-            List<FormattedCharSequence> wrapped = font.split(FormattedText.of(l[1]), w);
+            List<FormattedCharSequence> wrapped = TextCache.splitPlain(font, l[1], w);
             for (int i = 0; i < wrapped.size(); i++) {
                 if (y + LINE > bottom) return;
                 font.drawInBatch(wrapped.get(i), x + (i == 0 ? 0 : 6), y, colour, false, m, buffers,

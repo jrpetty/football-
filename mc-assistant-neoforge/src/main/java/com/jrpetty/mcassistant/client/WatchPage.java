@@ -6,7 +6,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
 
 import javax.annotation.Nullable;
@@ -127,7 +126,7 @@ public final class WatchPage {
         int max = (int) (rw / 0.75F) - 4, skip = Math.max(0, scroll);
         int line = 0;
         for (String[] b : body) {
-            List<FormattedCharSequence> parts = b[0].equals("H") ? List.of() : font.split(FormattedText.of((b[0].equals("L") ? "· " : "") + b[1]), max);
+            List<FormattedCharSequence> parts = b[0].equals("H") ? List.of() : TextCache.splitPlain(font, (b[0].equals("L") ? "· " : "") + b[1], max);
             if (b[0].equals("H")) {
                 if (line++ < skip) continue;
                 if (ry > y + h - 10) break;

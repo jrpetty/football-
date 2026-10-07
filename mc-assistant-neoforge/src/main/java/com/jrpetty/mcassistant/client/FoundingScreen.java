@@ -183,7 +183,7 @@ public class FoundingScreen extends Screen {
         String head = label + ": ";
         g.drawString(this.font, head, x, y, Ui.MUTED, false);
         int hw = this.font.width(head);
-        var lines = this.font.split(Component.literal(words), w - hw);
+        var lines = TextCache.split(this.font, words, w - hw);
         for (int i = 0; i < lines.size() && i < 2; i++) {
             g.drawString(this.font, lines.get(i), x + hw, y, colour, false);
             y += this.font.lineHeight + 1;

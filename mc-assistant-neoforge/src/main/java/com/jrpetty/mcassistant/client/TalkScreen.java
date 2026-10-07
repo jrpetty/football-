@@ -10,7 +10,6 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
@@ -596,7 +595,7 @@ public class TalkScreen extends Screen {
         int width = w - 2 * PAD - 10;
         for (Line l : HISTORY.getOrDefault(last.entityId(), List.of())) {
             String text = l.you() ? "You: " + l.text() : l.text();
-            for (FormattedCharSequence s : font.split(FormattedText.of(text), width)) {
+            for (FormattedCharSequence s : TextCache.splitPlain(font, text, width)) {
                 lines.add(s);
                 colours.add(l.you() ? YOU : INK);
             }
@@ -628,7 +627,7 @@ public class TalkScreen extends Screen {
         // Lay it out, then scroll it.
         List<Object[]> out = new ArrayList<>();
         for (String[] r : rows) {
-            List<FormattedCharSequence> wrapped = font.split(FormattedText.of(r[1]), width);
+            List<FormattedCharSequence> wrapped = TextCache.splitPlain(font, r[1], width);
             for (int i = 0; i < wrapped.size(); i++) out.add(new Object[]{ i == 0 ? r[0] : "", wrapped.get(i) });
             out.add(new Object[]{ "", null });
         }
@@ -776,8 +775,8 @@ public class TalkScreen extends Screen {
             g.fill(bx, y + 2, bx + Math.max(1, bw * Math.max(0, Math.min(100, pt.pct())) / 100), y + 7, FILL);
             g.drawString(font, after, bx + bw + 6, y, MUTED, false);
             if (hovering && mouseX >= bx && mouseX < bx + bw && mouseY >= y && mouseY < y + 9) {
-                tip = font.split(FormattedText.of(pt.pct() + "% of the way from level " + (pt.nextAt() - 5) + " to level " + pt.nextAt()
-                    + ", by its experience at its best trade."), 200);
+                tip = TextCache.splitPlain(font, pt.pct() + "% of the way from level " + (pt.nextAt() - 5) + " to level " + pt.nextAt()
+                    + ", by its experience at its best trade.", 200);
             }
             y += LINE + 2;
         }
@@ -811,8 +810,8 @@ public class TalkScreen extends Screen {
                 : "Nothing yet. Its first point comes at level 5 of its best trade.", cx, y, inner, MUTED);
         }
         for (KnackRow k : page.chosen()) {
-            List<FormattedCharSequence> effect = font.split(FormattedText.of(k.effect()), inner - 12);
-            List<FormattedCharSequence> why = font.split(FormattedText.of("Why: " + k.why()), inner - 12);
+            List<FormattedCharSequence> effect = TextCache.splitPlain(font, k.effect(), inner - 12);
+            List<FormattedCharSequence> why = TextCache.splitPlain(font, "Why: " + k.why(), inner - 12);
             int h = 4 + LINE + effect.size() * LINE + why.size() * LINE + (k.active() ? 0 : LINE) + 3;
             int ink = familyInk(k.family());
             g.fill(cx, y, cx + inner, y + h, CARD);
@@ -867,8 +866,8 @@ public class TalkScreen extends Screen {
                 boolean chosen = (Boolean) n[2];
                 String title = (String) n[0];
                 List<FormattedCharSequence> body = chosen
-                    ? font.split(FormattedText.of("✓ day " + ((KnackRow) n[3]).day()), cw - 14)
-                    : font.split(FormattedText.of((String) n[1]), cw - 14);
+                    ? TextCache.splitPlain(font, "✓ day " + ((KnackRow) n[3]).day(), cw - 14)
+                    : TextCache.splitPlain(font, (String) n[1], cw - 14);
                 int nh = 3 + LINE + body.size() * 9 + 2;
                 int nx = colX + 9;
                 lastMid = yy + 6;
@@ -895,7 +894,7 @@ public class TalkScreen extends Screen {
                     } else {
                         t.append(fit >= 2 ? " Open to it, and it leans this way." : fit == 1 ? " Open to it." : " Open to it, though it hardly wants it.");
                     }
-                    tip = font.split(FormattedText.of(t.toString()), 220);
+                    tip = TextCache.splitPlain(font, t.toString(), 220);
                 }
                 yy += nh + 3;
             }
@@ -928,7 +927,7 @@ public class TalkScreen extends Screen {
 
     /** Text wrapped to a width; returns the line after it. */
     private int wrapped(GuiGraphics g, String text, int x, int y, int width, int colour) {
-        for (FormattedCharSequence l : font.split(FormattedText.of(text), width)) {
+        for (FormattedCharSequence l : TextCache.splitPlain(font, text, width)) {
             g.drawString(font, l, x, y, colour, false);
             y += LINE;
         }

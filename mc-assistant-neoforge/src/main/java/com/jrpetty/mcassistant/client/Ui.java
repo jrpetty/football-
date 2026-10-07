@@ -148,8 +148,14 @@ public final class Ui {
         g.drawString(font, text, rightEdge - font.width(text), y, colour, false);
     }
 
-    /** Never let a readout run past the panel and onto the world behind it. */
+    /** Never let a readout run past the panel and onto the world behind it. (Worked out once for the same words and
+     *  width, and kept: TextCache.) */
     public static String clip(Font font, String text, int max) {
+        return TextCache.clip(font, text, max);
+    }
+
+    /** Ui.clip, worked out now: a letter at a time off the end until it fits with its "…". */
+    static String clipNow(Font font, String text, int max) {
         if (font.width(text) <= max) return text;
         String cut = text;
         while (cut.length() > 1 && font.width(cut + "…") > max) {
