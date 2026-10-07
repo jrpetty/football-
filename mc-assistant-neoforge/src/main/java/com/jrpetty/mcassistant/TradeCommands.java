@@ -27,8 +27,12 @@ import java.util.List;
  *                                 once, without the walk: every round, and the deal struck if there is one
  *   /village trade talk [town]    (ops) the elder sends an envoy to talk trade, now
  *   /village trade deliver        (ops) the next delivery of each of the nearest town's deals sets out now
- *   /village trade stage          (ops) for the pictures: a deal's caravan on the road to the nearest neighbour and
- *                                 an envoy from it before this town's board; says where each stands
+ *   /village trade stage          (ops) for the pictures: the town here and its nearest neighbour stocked to trade
+ *                                 (bread and wheat here, stone there) if neither has anything the other wants, and an
+ *                                 envoy from the neighbour before this town's board, the bell rung for the audience
+ *   /village trade audience       (ops) how that audience stands, where the envoy and the leader are, and the deal
+ *   /village trade road [plan]    (ops) the deal's delivery from this town sets out now, a third of the way along the
+ *                                 road (plan: only where, so the camera can be there first)
  * </pre>
  */
 public final class TradeCommands {
@@ -46,7 +50,13 @@ public final class TradeCommands {
                 .then(Commands.argument("town", StringArgumentType.greedyString())
                     .executes(ctx -> talk(ctx, StringArgumentType.getString(ctx, "town")))))
             .then(Commands.literal("deliver").requires(src -> src.hasPermission(2)).executes(TradeCommands::deliver))
-            .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(TradeCommands::stage));
+            .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(TradeCommands::stage))
+            .then(Commands.literal("audience").requires(src -> src.hasPermission(2)).executes(ctx -> say(ctx,
+                TradeDeals.audience(ctx.getSource().getLevel(), BlockPos.containing(ctx.getSource().getPosition())))))
+            .then(Commands.literal("road").requires(src -> src.hasPermission(2)).executes(ctx -> say(ctx,
+                    TradeDeals.road(ctx.getSource().getLevel(), BlockPos.containing(ctx.getSource().getPosition()), false)))
+                .then(Commands.literal("plan").executes(ctx -> say(ctx,
+                    TradeDeals.road(ctx.getSource().getLevel(), BlockPos.containing(ctx.getSource().getPosition()), true)))));
     }
 
     @Nullable

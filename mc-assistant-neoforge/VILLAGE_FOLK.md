@@ -5660,8 +5660,13 @@ other farming more.
 * **The gazette** has a Trade section: yesterday's deals and caravans, and the deals standing.
 * `/village trade` gives the same in chat. `/village trade books` opens the Trade page. For operators:
   `/village trade now [town]` (bargain at once, every round shown), `/village trade talk [town]` (send an
-  envoy now), `/village trade deliver` (the next delivery sets out now) and `/village trade stage` (for
-  the pictures).
+  envoy now), `/village trade deliver` (the next delivery sets out now), and for the pictures
+  `/village trade stage` (the town and its nearest neighbour stocked to trade if neither has anything
+  the other wants, and the neighbour's envoy before the board), `/village trade audience` (how that
+  audience is going) and `/village trade road` (the deal's caravan set out from this town, a third of
+  the way along the road).
+* A poor town is offered a smaller lot it can pay for. If the envoy's offer comes to nothing, the two
+  leaders try it the other way round: the envoy buys the host's surplus instead.
 
 The game tests `TownTradeGameTests` (td01 to td07) check each of these with a stone town short of
 food and a farm town short of stone: each town's book names the right surplus and shortage; the envoy

@@ -249,7 +249,15 @@ public final class TradeTalks {
         }
         // The coin the buyer can find each delivery: a third of what it has over two days' wages.
         double coinCap = Math.max(0, Ledger.coins(b.town()) - 2 * Market.wageBill(b.town())) / 3.0;
-        return new Table(s.town(), b.town(), x, qx, y, yMax, sx, bx, sy, by, coinCap);
+        Table t = new Table(s.town(), b.town(), x, qx, y, yMax, sx, bx, sy, by, coinCap);
+        // A buyer that cannot pay for the whole lot (its own goods run out, and it has no coin to spare) is offered
+        // a smaller one, a lot at a time, till what it can pay covers what the seller must have: a poor hamlet still
+        // gets its forty loaves, where it could never find the coin for eighty.
+        int lot = Math.max(1, xw == null ? 1 : xw.lot);
+        while (t.qx() > lot && t.sellerFloor(margin(t.qx() * t.sx())) > t.canPay() - 0.25) {
+            t = new Table(t.seller(), t.buyer(), x, t.qx() - lot, y, yMax, sx, bx, sy, by, coinCap);
+        }
+        return t;
     }
 
     // ------------------------------------------------------------------ the bargaining
@@ -263,15 +271,23 @@ public final class TradeTalks {
         int chem = Envoys.chemistry(envoyTown, hostTown);
         Manner me = manner(temper(envoyTown), r, chem), mh = manner(temper(hostTown), r, chem);
         boolean renewal = TradeDeals.live(envoyTown, hostTown);
-        // The envoy brings its own surplus to sell, if the host wants any of it; else it comes to buy.
-        Table t = lay(level, e, h, every);
-        boolean envoySells = t != null;
-        if (t == null) t = lay(level, h, e, every);
-        if (t == null) {
+        // The envoy brings its own surplus to sell, if the host wants any of it. If that comes to nothing (the host
+        // could not pay what the envoy's town must have), the other way round: the envoy buys the host's surplus.
+        Table sell = lay(level, e, h, every), buy = lay(level, h, e, every);
+        if (sell == null && buy == null) {
             return new Talk(envoyTown, hostTown, null, List.of(), End.NOTHING, null, 0, 0, 0, 0, 0, 0, 0, me, mh, every, WEEKS, 0,
                 "neither has anything the other is short of", renewal);
         }
-        return bargain(t, envoyTown, hostTown, envoySells ? me : mh, envoySells ? mh : me, every, renewal);
+        if (sell != null) {
+            Talk k = bargain(sell, envoyTown, hostTown, me, mh, every, renewal);
+            if (k.end() != End.NO_ROOM || buy == null) return k;
+        }
+        return bargain(buy, envoyTown, hostTown, mh, me, every, renewal);
+    }
+
+    /** The least a side will deal for: a twenty-fifth of what the goods are worth to it, a quarter of a coin at least. */
+    static double margin(double worth) {
+        return Math.max(0.25, 0.04 * worth);
     }
 
     /**
@@ -280,8 +296,8 @@ public final class TradeTalks {
      */
     public static Talk bargain(Table t, UUID envoyTown, UUID hostTown, Manner ms, Manner mb, int every, boolean renewal) {
         boolean envoySells = t.seller().equals(envoyTown);
-        double floor = t.sellerFloor(Math.max(0.25, 0.04 * t.qx() * t.sx()));
-        double ceiling = Math.min(t.buyerCeiling(Math.max(0.25, 0.04 * t.qx() * t.bx())), t.canPay());
+        double floor = t.sellerFloor(margin(t.qx() * t.sx()));
+        double ceiling = Math.min(t.buyerCeiling(margin(t.qx() * t.bx())), t.canPay());
         List<Offer> offers = new ArrayList<>();
         double room = ceiling - floor;
         if (room < 0.25) {

@@ -1201,78 +1201,185 @@ public final class TradeDeals {
         return out;
     }
 
+    // ------------------------------------------------------------------ the stage (operators, for the pictures)
+
+    /** Who keeps the neighbour's heart awake for the stage (ChunkLoad). */
+    private static final UUID STAGE = UUID.nameUUIDFromBytes("mca-trade-stage".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+    /** The town here and its nearest neighbour, or null with why in {@code out}. */
+    @Nullable
+    private static Villages.Village[] stagePair(ServerLevel level, BlockPos at, List<String> out) {
+        Villages.Village host = Villages.nearest(level, at, Villages.VILLAGE_RANGE * 4);
+        if (host == null) { out.add("TRADE-STAGE no town near"); return null; }
+        List<Villages.Village> ns = Diplomacy.neighboursOf(host.id());
+        if (ns.isEmpty()) { out.add("TRADE-STAGE no neighbour for " + Villages.name(host.id())); return null; }
+        return new Villages.Village[]{ host, ns.get(0) };
+    }
+
+    /** The neighbour's envoy come to this town about trade, or null. */
+    @Nullable
+    private static VillageFolkEntity stageEnvoy(Villages.Village host, Villages.Village partner) {
+        for (AssistantEntity a : Villages.folkOf(partner.id())) {
+            if (a instanceof VillageFolkEntity f && f.trip() != null && f.trip().errand() == Envoys.Errand.TRADE && f.trip().to.equals(host.id())) return f;
+        }
+        return null;
+    }
+
     /**
-     * /village trade stage (operators, for the pictures): the town here and its nearest neighbour. A deal's caravan
-     * on its way between them (a deal struck at once, by the same bargaining, if they have none), set down a third
-     * of the way along the road; and an envoy from the neighbour before this town's board, its leader called to hear
-     * it, the bell rung. Says where each stands.
+     * /village trade stage: the town here and its nearest neighbour made a pair worth trading. If neither has
+     * anything the other is short of (two new hamlets), goods are set down for the pictures in chests at each
+     * heart, as the game tests stock them: bread and wheat here, stone there. Then an envoy from the neighbour,
+     * come to offer its stone, before this town's board, its leader out to hear it and the bell rung: the
+     * bargaining is the audience's own (follow it with /village trade audience). Says where each stands.
      */
     public static List<String> stage(ServerLevel level, BlockPos at) {
         List<String> out = new ArrayList<>();
-        Villages.Village host = Villages.nearest(level, at, Villages.VILLAGE_RANGE * 4);
-        if (host == null) { out.add("TRADE-STAGE no town near"); return out; }
-        List<Villages.Village> ns = Diplomacy.neighboursOf(host.id());
-        if (ns.isEmpty()) { out.add("TRADE-STAGE no neighbour for " + Villages.name(host.id())); return out; }
-        Villages.Village partner = ns.get(0);
+        Villages.Village[] pair = stagePair(level, at, out);
+        if (pair == null) return out;
+        Villages.Village host = pair[0], partner = pair[1];
         long day = level.getDayTime() / 24000L;
-        if (!Ledger.knowEachOther(host.id(), partner.id())) Ledger.relate(host.id(), partner.id(), 0);
         out.add("TRADE-STAGE " + Villages.name(host.id()) + " hears " + Villages.name(partner.id()));
-        // The caravan.
-        if (!live(host.id(), partner.id())) {
-            TradeTalks.Talk k = TradeTalks.negotiate(level, host.id(), partner.id());
-            out.add("TALK " + TradeTalks.story(k));
-            if (k.deal()) strike(level, k, day, null);
+        // The neighbour's heart kept awake while it is looked at: its stores, its folk, its envoy.
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) level.getChunk((partner.centre().getX() >> 4) + dx, (partner.centre().getZ() >> 4) + dz);
         }
-        VillageFolkEntity carrier = live(host.id(), partner.id()) && !Caravans.between(host.id(), partner.id())
-            ? sendNowForTests(level, host.id(), partner.id()) : null;
-        if (carrier != null && carrier.trip() != null) {
-            Caravans.Trip t = carrier.trip();
-            BlockPos spot = along(t, 0.35), ahead = along(t, 0.6);
-            if (spot != null) {
-                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spot.getX(), spot.getZ());
-                carrier.moveTo(spot.getX() + 0.5, y, spot.getZ() + 0.5, carrier.getYRot(), 0.0F);
-                t.at = Math.max(t.at, t.way.indexOf(spot) + 1);
-                Riding.bringAlong(carrier, level, spot.getX() + 0.5, y, spot.getZ() + 0.5);
-                out.add("CARAVAN " + spot.getX() + " " + y + " " + spot.getZ() + " " + carrier.displayNameCap());
-                if (ahead != null) out.add("TOWARD " + ahead.getX() + " " + y + " " + ahead.getZ());
-            }
-            out.add("DEAL " + words(host.id(), partner.id()));
-        } else {
-            out.add("CARAVAN none: " + (live(host.id(), partner.id()) ? "one on the road already, or no carrier free" : "no deal to carry"));
+        com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, STAGE, partner.centre(), 3, true);
+        if (!Ledger.knowEachOther(host.id(), partner.id())) Ledger.relate(host.id(), partner.id(), 0);
+        int r = Ledger.relation(host.id(), partner.id());
+        if (r < Diplomacy.FRIENDLY - 15) Ledger.relate(host.id(), partner.id(), Diplomacy.FRIENDLY - 15 - r);
+        if (!live(host.id(), partner.id()) && !TradeBook.complementary(level, host.id(), partner.id())) {
+            List<ItemStack> food = new ArrayList<>(), stone = new ArrayList<>();
+            for (int i = 0; i < 20; i++) food.add(new ItemStack(net.minecraft.world.item.Items.BREAD, 64));
+            for (int i = 0; i < 5; i++) food.add(new ItemStack(net.minecraft.world.item.Items.WHEAT, 64));
+            for (int i = 0; i < 50; i++) stone.add(new ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 64));
+            int a = setDown(level, host, food), b = setDown(level, partner, stone);
+            out.add("STOCKED " + Villages.name(host.id()) + ": 1280 bread and 320 wheat in " + a + " chest(s); "
+                + Villages.name(partner.id()) + ": 3200 cobblestone in " + b + " chest(s)");
+        }
+        Villages.forgetStock();
+        for (UUID v : new UUID[]{ host.id(), partner.id() }) {
+            TradeBook.forget(v);
+            out.add("BOOK " + Villages.name(v) + ": " + TradeBook.summary(TradeBook.of(level, v)));
         }
         // The envoy, before this town's board.
-        if (Envoys.send(level, partner, host, Envoys.Errand.TRADE, day)) {
-            VillageFolkEntity envoy = null;
-            for (AssistantEntity a : Villages.folkOf(partner.id())) {
-                if (a instanceof VillageFolkEntity f && f.trip() != null && f.trip().errand() == Envoys.Errand.TRADE && f.trip().to.equals(host.id())) envoy = f;
-            }
-            if (envoy != null) {
-                Caravans.arriveForTests(level, envoy);                 // there, and asking to be heard
-                BlockPos board = VillageBoards.lectern(host.id());
-                net.minecraft.core.Direction facing = VillageBoards.facingOf(host.id());
-                if (board == null) board = host.centre();
-                if (facing == null) facing = net.minecraft.core.Direction.SOUTH;
-                BlockPos stand = board.relative(facing, 4);
-                int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, stand.getX(), stand.getZ());
-                envoy.moveTo(stand.getX() + 0.5, y, stand.getZ() + 0.5, facing.getOpposite().toYRot(), 0.0F);
-                envoy.getNavigation().stop();
-                out.add("ENVOY " + stand.getX() + " " + y + " " + stand.getZ() + " " + envoy.displayNameCap());
-                out.add("BOARD " + board.getX() + " " + board.getY() + " " + board.getZ() + " facing " + facing.getName());
-                VillageFolkEntity elder = Envoys.leader(host.id());
-                if (elder != null) {
-                    BlockPos near = board.relative(facing, 2);
-                    int ey = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, near.getX(), near.getZ());
-                    elder.moveTo(near.getX() + 0.5, ey, near.getZ() + 0.5, facing.toYRot(), 0.0F);
-                    elder.getNavigation().stop();
-                    out.add("ELDER " + near.getX() + " " + ey + " " + near.getZ() + " " + elder.displayNameCap());
-                }
-                Assemblies.tick(level, host);                          // the bell, and the town gathers to hear it
-                out.add("AUDIENCE " + Assemblies.debug(host.id()));
-            }
-        } else {
+        VillageFolkEntity envoy = stageEnvoy(host, partner);
+        if (envoy == null && Envoys.send(level, partner, host, Envoys.Errand.TRADE, day)) envoy = stageEnvoy(host, partner);
+        if (envoy == null) {
             out.add("ENVOY none: nobody free to go from " + Villages.name(partner.id()));
+            return out;
         }
+        if (Envoys.visiting(envoy) == null && !envoy.trip().homeward()) Caravans.arriveForTests(level, envoy);   // there, and asking to be heard
+        BlockPos board = VillageBoards.lectern(host.id());
+        net.minecraft.core.Direction facing = VillageBoards.facingOf(host.id());
+        if (board == null) board = host.centre();
+        if (facing == null) facing = net.minecraft.core.Direction.SOUTH;
+        BlockPos stand = board.relative(facing, 4);
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, stand.getX(), stand.getZ());
+        envoy.moveTo(stand.getX() + 0.5, y, stand.getZ() + 0.5, facing.getOpposite().toYRot(), 0.0F);
+        envoy.getNavigation().stop();
+        out.add("BOARD " + board.getX() + " " + board.getY() + " " + board.getZ() + " facing " + facing.getName());
+        VillageFolkEntity elder = Envoys.leader(host.id());
+        if (elder != null) {
+            BlockPos near = board.relative(facing, 2);
+            int ey = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, near.getX(), near.getZ());
+            elder.moveTo(near.getX() + 0.5, ey, near.getZ() + 0.5, facing.toYRot(), 0.0F);
+            elder.getNavigation().stop();
+        }
+        out.addAll(audience(level, at));
         return out;
+    }
+
+    /**
+     * /village trade audience: how the audience before this town's board stands (the bell called, gathering, the
+     * line reached), where the envoy and the leader stand, and the deal once it is shaken on. If nothing is under
+     * way and the envoy is waiting, the bell is rung for it; another gathering under way is let finish first.
+     */
+    public static List<String> audience(ServerLevel level, BlockPos at) {
+        List<String> out = new ArrayList<>();
+        Villages.Village[] pair = stagePair(level, at, out);
+        if (pair == null) return out;
+        Villages.Village host = pair[0], partner = pair[1];
+        VillageFolkEntity envoy = stageEnvoy(host, partner);
+        if (envoy != null && Envoys.visiting(envoy) != null && Assemblies.now(host.id()) == null) Assemblies.tick(level, host);
+        boolean home = envoy != null && envoy.trip() != null && envoy.trip().homeward();
+        out.add("AUDIENCE " + Assemblies.debug(host.id()) + (home ? "; the envoy is on its way home" : ""));
+        if (envoy != null) {
+            BlockPos e = envoy.blockPosition();
+            out.add("ENVOY " + e.getX() + " " + e.getY() + " " + e.getZ() + " " + envoy.displayNameCap());
+        }
+        VillageFolkEntity elder = Envoys.leader(host.id());
+        if (elder != null) {
+            BlockPos p = elder.blockPosition();
+            out.add("ELDER " + p.getX() + " " + p.getY() + " " + p.getZ() + " " + elder.displayNameCap());
+        }
+        String w = words(host.id(), partner.id());
+        if (w != null) out.add("DEAL " + w);
+        return out;
+    }
+
+    /**
+     * /village trade road [plan]: the deal's next delivery from this town sets out now (whichever town's turn it
+     * was: for the picture, this one goes first) and is set down a third of the way to the neighbour. With
+     * {@code plan}, only where that will be, so the camera can be there first.
+     */
+    public static List<String> road(ServerLevel level, BlockPos at, boolean plan) {
+        List<String> out = new ArrayList<>();
+        Villages.Village[] pair = stagePair(level, at, out);
+        if (pair == null) return out;
+        Villages.Village host = pair[0], partner = pair[1];
+        List<BlockPos> way = Caravans.way(host, partner);
+        if (way.isEmpty()) { out.add("CARAVAN none: no way between them"); return out; }
+        BlockPos spot = way.get((int) Math.round((way.size() - 1) * 0.35)), ahead = way.get((int) Math.round((way.size() - 1) * 0.6));
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spot.getX(), spot.getZ());
+        if (plan) {
+            out.add("ROAD " + spot.getX() + " " + y + " " + spot.getZ());
+            out.add("TOWARD " + ahead.getX() + " " + y + " " + ahead.getZ());
+            return out;
+        }
+        Deal d = deal(host.id(), partner.id());
+        if (d == null) { out.add("CARAVAN none: no deal between " + Villages.name(host.id()) + " and " + Villages.name(partner.id())); return out; }
+        d.sellerSends = d.seller.equals(host.id());
+        if (!setOut(level, d, level.getDayTime() / 24000L)) { out.add("CARAVAN none: nobody free to carry it"); return out; }
+        VillageFolkEntity carrier = null;
+        for (AssistantEntity a : Villages.folkOf(host.id())) {
+            if (a instanceof VillageFolkEntity f && f.trip() != null && f.trip().deal != null && f.trip().to.equals(partner.id())) carrier = f;
+        }
+        if (carrier == null) { out.add("CARAVAN none: the carrier went astray"); return out; }
+        Caravans.Trip t = carrier.trip();
+        carrier.moveTo(spot.getX() + 0.5, y, spot.getZ() + 0.5, carrier.getYRot(), 0.0F);
+        t.at = Math.max(t.at, t.way.indexOf(spot) + 1);
+        Riding.bringAlong(carrier, level, spot.getX() + 0.5, y, spot.getZ() + 0.5);
+        Item item = d.sends(host.id());
+        out.add("CARAVAN " + spot.getX() + " " + y + " " + spot.getZ() + " " + carrier.displayNameCap() + " carrying "
+            + (item == null ? "the coin" : carrier.countCarried(s -> s.is(item)) + " " + TradeTalks.name(item)));
+        out.add("TOWARD " + ahead.getX() + " " + y + " " + ahead.getZ());
+        out.add("DEAL " + words(host.id(), partner.id()));
+        return out;
+    }
+
+    /** Goods set down for the pictures in chests of the town's stores round its heart. Returns how many chests. */
+    private static int setDown(ServerLevel level, Villages.Village v, List<ItemStack> goods) {
+        int n = 0, chests = 0;
+        BlockPos c = v.centre();
+        for (int r = 4; r <= 14 && n < goods.size(); r++) {
+            for (int dx = -r; dx <= r && n < goods.size(); dx += 2) {
+                for (int dz : new int[]{ -r, r }) {
+                    if (n >= goods.size()) break;
+                    int x = c.getX() + dx, z = c.getZ() + dz;
+                    BlockPos p = new BlockPos(x, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
+                    if (Math.abs(p.getY() - c.getY()) > 6 || !level.getBlockState(p).isAir() || !level.getBlockState(p.above()).isAir()
+                            || !level.getBlockState(p.below()).isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP)
+                            || !level.getFluidState(p.below()).isEmpty()) continue;
+                    level.setBlock(p, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState(), 3);
+                    ZoneChests.mark(level, p);
+                    if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container box)) continue;
+                    for (int i = 0; i < box.getContainerSize() && n < goods.size(); i++) box.setItem(i, goods.get(n++));
+                    box.setChanged();
+                    chests++;
+                }
+            }
+        }
+        return chests;
     }
 
     /** A spot along a caravan's way: the waypoint this far along (0 to 1). */
