@@ -490,7 +490,8 @@ public class ArmsBuskersGameTests {
             int tabards = Market.stock(level, id, s -> s.is(McAssistantMod.TABARD.get()) && Arms.bears(s, d));
             Kit.log("ab07 made=" + made + " tabards " + tabards + "; wool " + wool + " -> " + stock(level, id, wool(d.field())) + "; " + Arms.shortForTests(id));
             helper.assertTrue(made && tabards == 1, "a tabard of the town's arms in the stores: " + Arms.shortForTests(id));
-            helper.assertTrue(wool - stock(level, id, wool(d.field())) == 13, "seven wool for the tabard, six for the banner on it");
+            // The tabard is cut in the shape of a chestplate, eight wool (data/mc_assistant/recipe/tabard.json); the banner six.
+            helper.assertTrue(wool - stock(level, id, wool(d.field())) == 14, "eight wool for the tabard, six for the banner on it");
             // Founding Day: a folk wears it; the day after, it is back in the stores.
             long founded = FoundingDay.founded(id);
             level.setDayTime((founded + TownCalendar.YEAR_DAYS) * 24000L + 3000L);

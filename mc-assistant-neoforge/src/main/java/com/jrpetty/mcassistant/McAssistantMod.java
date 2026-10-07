@@ -201,7 +201,7 @@ public final class McAssistantMod {
 
     public static final DeferredItem<BlockItem> FERRY_BELL_ITEM =
         ITEMS.registerSimpleBlockItem(FERRY_BELL);
-    // [arms] The town's arms (entity/Arms): the festival tabard, seven wool cut like a tunic, given a banner's arms at
+    // [arms] The town's arms (entity/Arms): the festival tabard, eight wool cut like a tunic, given a banner's arms at
     // the crafting table as a shield is (TabardDecorationRecipe); and the loom's patterns for the three charges a town
     // is granted for what it lives by, each a sheet of paper and a fish, a pickaxe or wheat.
     private static final DeferredRegister<net.minecraft.world.item.crafting.RecipeSerializer<?>> RECIPE_SERIALIZERS =
