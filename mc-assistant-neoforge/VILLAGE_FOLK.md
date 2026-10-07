@@ -5526,7 +5526,11 @@ follow supply and demand.
   the family house. It is laid in what the stores can pay for all of (Masonry): brick short, dressed
   stone; or, with even that short, the council's timber.
 * **The plot.** A lot of the town's plan where homes go, the homes' quarter first, as the builders
-  choose any (the gardens, the woods and the sweepers keep off it while it goes up). Its price: eight
+  choose any (the gardens, the woods and the sweepers keep off it while it goes up). Where the council's
+  builders find none (a hilly town, a town by a river), the household finds one for itself on ground the
+  council would not build on: as steep as eight blocks across the house, or with up to a third of it a
+  river's shallow edge, filled from the bed. It pays for the ground made up (the bill's cobblestone), so
+  a steep lot is a dear one. A villa with no lot to its size anywhere is built as a town house. Its price: eight
   coins in a Wood Age hamlet, a quarter more an age and as much more as the place's wages are, a
   quarter more on the first ring of streets round the square and a fifth less out at the edge, dearer
   by the park, cheaper in the smoke, and as the housing market stands.
@@ -5580,7 +5584,9 @@ follow supply and demand.
 * **For operators and the pictures.** `/village house market custom` has the best-placed household
   commission a house now (a grant from the treasury making up what it lacks, said in the chronicle);
   `/village house market build 100` lays a hundred blocks of it now, out of the stores, as the builders
-  would; `/village house market day` runs the morning's reckoning.
+  would; `/village house market day` runs the morning's reckoning; `/village house market stage` levels a
+  plot at the spot (or the first clear one east of it), delivers a villa's makings into the stores and grants
+  the best-placed household what it lacks (the chronicle says so), and commissions the villa there.
 
 The game tests `HousingMarketGameTests` (hm01 to hm05) check that a house's bill is its every block at
 the town's price plus the builders' hours plus the plot, the furnishing and the permit, line by line;
