@@ -591,6 +591,7 @@ public final class Annals {
         out.getCompound("prices").putString("fleet", FishMarket.pricesLine(level, id));   // [fleet] the fish market, on the Prices page
         out.put("library", Library.report(level, v));            // [library] the catalogue, the authors, the loans: the Library page
         out.put("transport", Transport.report(level, v));        // [transport] the lines, the carts, the ferry, the bridge
+        out.put("identity", Identity.report(level, v));          // [identity] the town's ethos, government, laws, traits, fame: the Identity page
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
         out.put("queue", strings(queue));

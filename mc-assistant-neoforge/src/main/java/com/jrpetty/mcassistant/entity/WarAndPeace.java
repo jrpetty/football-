@@ -414,7 +414,10 @@ public final class WarAndPeace {
         else if (w >= 4) h += 1;
         if (brokenFaith(us, them, day)) h += 2;
         if (Ledger.relation(us, them) <= -80) h += 1;
-        String who = "the elder is " + t.words + (cares == null ? "" : ", a " + cares.type + " at heart");
+        int ways = Ethos.warLean(us);                                  // [identity] a martial or warlike town, a peaceable one
+        h += ways;
+        String who = "the elder is " + t.words + (cares == null ? "" : ", a " + cares.type + " at heart")
+            + (ways > 0 ? ", of a martial town" : ways < 0 ? ", of a peaceable town" : "");
         return new Stance(h, who + (h >= HAWK ? " (a hawk, " + h + ")" : " (a dove, " + h + ")"));
     }
 
@@ -1725,6 +1728,7 @@ public final class WarAndPeace {
         text += "; peace until day " + (day + TREATY_DAYS);
         Wars.end(a, d);
         Arms.peace(level, terms.share() >= 1 ? a : repaid > 0 ? d : null, terms.share() >= 1 ? d : a);   // [arms] a charge for the war won
+        Identity.peace(terms.share() >= 1 ? a : repaid > 0 ? d : null, a, d, day);                     // [identity] a war won, a peace made
         WarBooks.treaty(a, d, day, day + TREATY_DAYS, text);
         // The treaty's peace is a truce for as long as it lasts: no brawls at the boundary, no falling back into a feud.
         Ledger.note(a, "truce/" + d, Long.toString(day + TREATY_DAYS));

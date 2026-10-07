@@ -821,6 +821,11 @@ public final class Newcomers {
         s += led;
         if (led > best) { best = led; bestWhy = "our " + Homeland.leaderTitle(id) + " says we should, and I agree"; }
         if (-led > worst) { worst = -led; worstWhy = "our " + Homeland.leaderTitle(id) + " doesn't trust it, and nor do I"; }
+        // [identity] The town's character and its law: an open town takes them in, a closed one keeps to its own (Ethos).
+        double ways = Ethos.newcomerLean(id);
+        s += ways;
+        if (ways > best) { best = ways; bestWhy = Ethos.newcomerWhy(id, true); }
+        if (-ways > worst) { worst = -ways; worstWhy = Ethos.newcomerWhy(id, false); }
         // What drove them.
         Cause c = Cause.named(p.getString("cause"));
         s += c == Cause.OUTSIDE ? -2 : c == Cause.FIRE || c == Cause.FLOOD ? 8 : 6;

@@ -602,6 +602,7 @@ public final class CityTree {
         if (Villages.hasBuilt(village, "library")) { total++; why.add("the library 1"); }
         if (Villages.hasBuilt(village, "chapel")) { total++; why.add("the chapel 1"); }
         if (Elections.mandate(village) == Values.Value.PROGRESS) { total++; why.add("a leader elected for the next age 1"); }
+        total += Ethos.research(village, why);                          // [identity] a learned, forward-looking or bookish town
         if (total < 1) { why.add("never less than 1"); total = 1; }
         return new Rate(total, String.join(", ", why));
     }

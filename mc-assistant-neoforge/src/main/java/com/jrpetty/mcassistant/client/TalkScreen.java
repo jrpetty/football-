@@ -210,6 +210,7 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("History", TalkTopic.CHRONICLE, "Ask for a copy of the village's chronicle"));
             }
             case VILLAGE -> {
+                out.add(new Choice("Town's ways", TalkTopic.SAY, "What's this town like?", "Its character, who rules it, its laws, what it is famous for and what history has made of it — in this folk's own words"));   // [identity]
                 out.add(Choice.of("Residents", TalkTopic.CENSUS));
                 out.add(Choice.of("The council", TalkTopic.COUNCIL, "Who sits on the council, and what it voted. Say \"you should build a tavern\" to put it to the vote"));
                 out.add(Choice.of("Neighbours", TalkTopic.RIVALS, "What this village thinks of the villages round about, who leads them, and who trades with whom"));

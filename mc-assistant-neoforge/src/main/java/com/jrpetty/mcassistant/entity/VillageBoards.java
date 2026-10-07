@@ -308,6 +308,7 @@ public final class VillageBoards {
 
         // ---- how we're doing
         out.add("RH|How we're doing");
+        out.addAll(Identity.board(level, id));                    // [identity] who we are: character, rulers, fame, traits; renown and laws
         StringBuilder t = new StringBuilder();
         for (Map.Entry<AssistantEntity.StationTask, Integer> e : trades.entrySet()) {
             if (t.length() > 0) t.append(", ");

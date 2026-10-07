@@ -145,7 +145,7 @@ public final class PoorBox {
         if (t != Wealth.Tier.WELL_OFF && t != Wealth.Tier.WEALTHY) return 0;
         int n = t == Wealth.Tier.WEALTHY ? 2 : 1;
         if (f.life().has(Social.Trait.GENEROUS)) n++;
-        return f.purse() >= n + KEEPS ? n : 0;
+        return f.purse() >= n + KEEPS ? Ethos.alms(f, n) : 0;     // [identity] a coin more in an egalitarian town
     }
 
     /** The week's givers whose day it is (or has been): each sent to the box with its coin. Returns how many were sent. */
