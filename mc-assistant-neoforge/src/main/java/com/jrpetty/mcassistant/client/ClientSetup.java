@@ -135,8 +135,19 @@ public final class ClientSetup {
             if (job == AssistantEntity.StationTask.NONE) return ItemStack.EMPTY;
             String status = entity.clientStatus();
             if (status.startsWith("Needs") || status.startsWith("Out of")) {
-                return new ItemStack(Items.BARRIER);
+                if (BARRIER_ICON == null) BARRIER_ICON = new ItemStack(Items.BARRIER);
+                return BARRIER_ICON;
             }
+            ItemStack kept = ICONS[job.ordinal()];
+            if (kept == null) ICONS[job.ordinal()] = kept = icon(job);
+            return kept;
+        }
+
+        /** The icons, made once each when first wanted and kept (the item renderer only reads them), not every frame. */
+        private static final ItemStack[] ICONS = new ItemStack[AssistantEntity.StationTask.values().length];
+        private static ItemStack BARRIER_ICON;
+
+        private static ItemStack icon(AssistantEntity.StationTask job) {
             return new ItemStack(switch (job) {
                 case FARM -> Items.WHEAT;
                 case WOOD -> Items.IRON_AXE;
