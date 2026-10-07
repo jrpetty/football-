@@ -184,6 +184,13 @@ public final class BigWorks {
     static WorksPlans.Plan plan(ServerLevel level, Villages.Village v, Work w) {
         UUID id = v.id();
         BlockPos c = v.centre();
+        WorksPlans.Plan p = drawn(level, v, w, id, c);
+        if (p != null) p.pieces().removeIf(pc -> level.isOutsideBuildHeight(pc.pos()));   // nothing out of the world is costed or waited on
+        return p;
+    }
+
+    @Nullable
+    private static WorksPlans.Plan drawn(ServerLevel level, Villages.Village v, Work w, UUID id, BlockPos c) {
         return switch (w) {
             case BRIDGE -> WorksPlans.bridge(level, id, c);
             case AQUEDUCT -> WorksPlans.aqueduct(level, id, c);
@@ -645,6 +652,12 @@ public final class BigWorks {
         int next = w.getInt("next");
         while (next < pieces.size()) {
             WorksPlans.Piece p = pieces.get(next);
+            if (level.isOutsideBuildHeight(p.pos())) {
+                // Out of the world (a plan drawn before its bed was looked for at the world's floor): passed over.
+                w.putInt("spared", w.getInt("spared") + 1);
+                next++;
+                continue;
+            }
             if (!level.isLoaded(p.pos())) {
                 w.putInt("next", next);
                 return false;                                       // its ground asleep: the works wait for somebody there
