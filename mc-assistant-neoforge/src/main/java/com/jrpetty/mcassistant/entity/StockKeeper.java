@@ -531,7 +531,7 @@ public final class StockKeeper {
             int n = Math.min(StoreDeliveries.MOST * 4, Math.min(spare, Math.max(need, Math.min(lot, spare))));
             for (int left = n; left > 0; left -= StoreDeliveries.MOST) {
                 int k = Math.min(StoreDeliveries.MOST, left);
-                StoreDeliveries.Delivery d = StoreDeliveries.queue(level, id, w.key(), w.is(), w.sample(), k, false);
+                StoreDeliveries.Delivery d = StoreDeliveries.queue(level, id, w.key(), w.is().and(s -> !Weave.unsellable(s)), w.sample(), k, false);   // [weave] never a stolen thing
                 Order o = new Order(nextOrder++, w.key(), Route.STOREHOUSE, k, b.day);
                 o.delivery = d;
                 d.orderId = o.id;

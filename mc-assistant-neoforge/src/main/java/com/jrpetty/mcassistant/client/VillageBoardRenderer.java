@@ -96,16 +96,82 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
         rule(y, m, buffers, glow);
         y += 6;
 
-        // The two columns, and the foot under them.
-        int colW = (WIDTH - MARGIN * 2 - GUTTER) / 2;
-        int footLines = 0;
-        for (String[] f : foot) footLines += f[0].equals("H") ? 1 : Math.min(2, font.split(FormattedText.of(f[1]), WIDTH - MARGIN * 2).size());
-        int footTop = HEIGHT - MARGIN - footLines * LINE - 6;
-        column(left, MARGIN, y, colW, footTop - 4, m, buffers, glow);
-        column(right, MARGIN + colW + GUTTER, y, colW, footTop - 4, m, buffers, glow);
-        rule(footTop, m, buffers, glow);
-        column(foot, MARGIN, footTop + 6, WIDTH - MARGIN * 2, HEIGHT - MARGIN, m, buffers, glow);
+        // The two columns, and the foot under them. Every feature of the town has a line to put up, and the foot
+        // ("what we're working towards") grew upwards with each one until it ran off the top of the board and over
+        // the town's name. Each part now keeps to its share of the board, the foot to two fifths of it at most, and
+        // what does not fit is turned to like the pages of a notice: a new page every eight seconds.
+        int colW = (WIDTH - MARGIN * 2 - GUTTER) / 2, footW = WIDTH - MARGIN * 2;
+        int body = HEIGHT - MARGIN - y;
+        int footH = Math.min(needed(foot, footW), body * 2 / 5);
+        int footTop = HEIGHT - MARGIN - footH - 6;
+        long turn = board.getLevel() == null ? 0 : board.getLevel().getGameTime() / PAGE_TICKS;
+        paged(left, MARGIN, y, colW, footTop - 4, turn, m, buffers, glow);
+        paged(right, MARGIN + colW + GUTTER, y, colW, footTop - 4, turn, m, buffers, glow);
+        if (!foot.isEmpty()) {
+            rule(footTop, m, buffers, glow);
+            paged(foot, MARGIN, footTop + 6, footW, HEIGHT - MARGIN, turn, m, buffers, glow);
+        }
         pose.popPose();
+    }
+
+    /** Ticks a page of the board stays up before the next is turned to. */
+    private static final long PAGE_TICKS = 160L;
+
+    /** The height these lines take, wrapped to w. */
+    private int needed(List<String[]> lines, int w) {
+        int h = 0;
+        for (String[] l : lines) h += height(l, w);
+        return h;
+    }
+
+    /** The height one line takes: a heading, or an entry wrapped to w. */
+    private int height(String[] l, int w) {
+        if (l[0].equals("H")) return LINE + 3;
+        return font.split(FormattedText.of(l[1]), w).size() * LINE + 2;
+    }
+
+    /**
+     * These lines in a box from y to bottom: all of them if they fit, else split into pages that fit (each page under
+     * the heading it falls under, and no heading left alone at the foot of a page), the page shown turning with the
+     * clock, and its number in the box's corner.
+     */
+    private void paged(List<String[]> lines, int x, int y, int w, int bottom, long turn, Matrix4f m,
+                       MultiBufferSource buffers, int glow) {
+        int room = bottom - y;
+        if (room < LINE || lines.isEmpty()) return;
+        if (needed(lines, w) <= room) {
+            column(lines, x, y, w, bottom, m, buffers, glow);
+            return;
+        }
+        int pageRoom = room - LINE;                                 // a line kept for the page number
+        List<List<String[]>> pages = new ArrayList<>();
+        List<String[]> page = new ArrayList<>();
+        String[] heading = null;
+        int used = 0;
+        for (String[] l : lines) {
+            boolean head = l[0].equals("H");
+            int need = Math.min(height(l, w), pageRoom);
+            int keep = head ? need + LINE + 2 : need;                   // a heading wants a line under it on its page
+            boolean onlyHeading = page.size() == 1 && page.get(0) == heading;
+            if (used + keep > pageRoom && !page.isEmpty() && !onlyHeading) {
+                pages.add(page);
+                page = new ArrayList<>();
+                used = 0;
+                if (!head && heading != null) {
+                    page.add(heading);
+                    used += height(heading, w);
+                }
+            }
+            if (head) heading = l;
+            page.add(l);
+            used += need;
+        }
+        if (!page.isEmpty()) pages.add(page);
+        int at = (int) Math.floorMod(turn, (long) pages.size());
+        column(pages.get(at), x, y, w, bottom - LINE, m, buffers, glow);
+        String mark = (at + 1) + " / " + pages.size();
+        font.drawInBatch(mark, x + w - font.width(mark), bottom - LINE + 1, QUIET, false, m, buffers,
+            Font.DisplayMode.POLYGON_OFFSET, 0, glow);
     }
 
     /** One column of lines, wrapped to its width, stopping at the bottom. */

@@ -280,7 +280,9 @@ public final class Pledges {
 
     static int guards(UUID village) {
         int n = 0;
-        for (AssistantEntity a : Villages.folkOf(village)) if (!a.isBaby() && a.stationTask() == AssistantEntity.StationTask.GUARD) n++;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (!a.isBaby() && a.stationTask() == AssistantEntity.StationTask.GUARD && Weave.kitted(a)) n++;   // [weave] a guard in its kit
+        }
         return n;
     }
 

@@ -231,6 +231,40 @@ public final class Verse {
             "and where you see the one of them,", "the other surely goes.");
         v("FRIEND", 'C', "", "So here's to friends, the best of things,", "worth more than gold or land:",
             "two people walking down the street", "who need not hold a hand.");
+
+        // ---------------------------------------------------------------- [weave] a great work opened
+        TITLES.put("WORKS", new String[]{ "The Opening of {Work}", "{Work}", "For the Hands Who Built {Work}", "A Song for {Work}" });
+        v("WORKS", 'O', "", "The ribbon's cut on {A},", "the last stone's laid and set,",
+            "and all the hands of {town}", "are standing on it yet.");
+        v("WORKS", 'O', "", "We voted for it in the hall", "and turned out with the dawn,",
+            "and stone by stone we laid {A}", "till every gap was gone.");
+        v("WORKS", 'M', "count", "{stones} stones went into it,", "and each one set by hand;",
+            "{nwords} of us to lift them", "and carry them overland.");
+        v("WORKS", 'M', "", "The masons and the miners came,", "the farmers left the plough,",
+            "and every hand in {town}", "can say, 'I built that,' now.");
+        v("WORKS", 'M', "", "The elder said what it had cost", "and what it meant to bring,",
+            "then took the shears and cut the cord,", "and all of us did sing.");
+        v("WORKS", 'C', "", "So cross it, friends, and stamp your feet,", "and think on those who made it:",
+            "there's not a stone in all of it", "but someone's hands have laid it.");
+        v("WORKS", 'C', "", "And when we're old and slow and grey", "we'll bring the young ones by,",
+            "and tell them how we built {A}", "beneath this very sky.");
+
+        // ---------------------------------------------------------------- [weave] a famous auction
+        TITLES.put("AUCTION", new String[]{ "The Ballad of the Auction", "Going, Going, Gone", "Sold to {A}", "The Day of the Auction" });
+        v("AUCTION", 'O', "", "It was market day in {town}", "and the square was packed and loud,",
+            "for the auctioneer had a lot to sell", "that drew the whole town's crowd.");
+        v("AUCTION", 'O', "", "They held it up for all to see,", "the finest of the day:",
+            "{B}, and every purse in {town}", "was itching for the fray.");
+        v("AUCTION", 'M', "count", "The bids went up by ones and twos,", "then up by fives and more,",
+            "till {nwords} coins was called aloud", "and the crowd began to roar.");
+        v("AUCTION", 'M', "", "'Going once!' the hammer hung,", "'and going twice!' it said;",
+            "and {A} held up a steady hand", "while others shook their head.");
+        v("AUCTION", 'M', "", "A rancher bid, a smith bid too,", "a collector at the back;",
+            "but {A} would not be beaten down", "nor give an inch of slack.");
+        v("AUCTION", 'C', "count", "So 'Sold!' they cried to {A},", "for {nwords} coins and true;",
+            "and {town} still tells it at the inn", "the way I've told it you.");
+        v("AUCTION", 'C', "", "And if you're at the square one day", "when the hammer's raised on high,",
+            "remember {A}, who would not budge", "and let no bargain by.");
     }
 
     // ------------------------------------------------------------------ the writing
@@ -239,7 +273,7 @@ public final class Verse {
 
     /** The kinds of poem there are. */
     public static List<String> kinds() {
-        return List.of("WEDDING", "ELEGY", "HARVEST", "SEA", "PET", "BIRTH", "TOWN", "FRIEND");
+        return List.of("WEDDING", "ELEGY", "HARVEST", "SEA", "PET", "BIRTH", "TOWN", "FRIEND", "WORKS", "AUCTION");   // [weave] the works, the auction
     }
 
     /** A poem on this, by this poet: its title, its dedication, its verses, and a word from the poet. */
@@ -279,7 +313,7 @@ public final class Verse {
             case "ELEGY" -> "OTXKC";
             case "WEDDING" -> "OMMC";
             case "HARVEST", "SEA", "PET" -> "OMMC";
-            case "BIRTH", "TOWN" -> "OMMC";
+            case "BIRTH", "TOWN", "WORKS", "AUCTION" -> "OMMC";                // [weave]
             default -> "OMC";
         };
         for (char slot : shape.toCharArray()) {
@@ -332,6 +366,7 @@ public final class Verse {
             case "town" -> s.town();
             case "Kind" -> Quill.cap(s.get("kind"));
             case "Place" -> titleCase(s.get("place").replaceFirst("^the ", ""));
+            case "Work" -> titleCase(s.get("A"));                              // [weave] "the Stone Bridge"
             default -> s.get(key);
         };
     }
@@ -364,6 +399,8 @@ public final class Verse {
             case "BIRTH" -> "for " + s.get("A") + (day.isEmpty() ? "" : ", born on day " + day);
             case "PET" -> "for " + s.get("A") + ", and for " + s.get("B");
             case "FRIEND" -> "for " + s.get("A") + " and " + s.get("B");
+            case "WORKS" -> "for the opening of " + s.get("A") + (day.isEmpty() ? "" : ", day " + day);                     // [weave]
+            case "AUCTION" -> "for " + s.get("A") + ", who bought " + s.get("B") + (day.isEmpty() ? "" : " on day " + day);
             default -> "";
         };
     }
@@ -378,6 +415,8 @@ public final class Verse {
             case "PET" -> s.get("A");
             case "BIRTH" -> "the baby";
             case "TOWN" -> "the town";
+            case "WORKS" -> "the opening";                                     // [weave]
+            case "AUCTION" -> "the auction";
             default -> "them";
         };
         return switch (poet.tone()) {
@@ -403,6 +442,8 @@ public final class Verse {
             case "BIRTH" -> "a poem for the birth of " + s.get("A");
             case "TOWN" -> "a poem in praise of " + s.town();
             case "FRIEND" -> "a poem for " + s.get("A") + " and " + s.get("B") + ", friends";
+            case "WORKS" -> "a poem for the opening of " + s.get("A");             // [weave]
+            case "AUCTION" -> "a ballad of the auction, and " + s.get("A") + "'s famous bid";
             default -> "a poem";
         };
     }

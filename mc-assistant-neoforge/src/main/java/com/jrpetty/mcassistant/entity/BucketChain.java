@@ -106,6 +106,13 @@ public final class BucketChain {
         return LINKS.containsKey(f.getUUID());
     }
 
+    /** [weave] The head of the town's chain (at the water: it called the line), the fire brigade's chief while it stands; or null. */
+    @Nullable
+    static UUID head(UUID village) {
+        Chain c = CHAINS.get(village);
+        return c == null || c.links.isEmpty() ? null : c.links.get(0);
+    }
+
     // ------------------------------------------------------------------ forming the line
 
     /** A big fire: a chain formed for it, if it has none, there is water near and folk enough. */

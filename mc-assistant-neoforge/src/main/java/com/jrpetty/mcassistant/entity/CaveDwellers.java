@@ -4022,6 +4022,7 @@ public final class CaveDwellers {
         if (f.countCarried(s -> s.getItem() instanceof ShieldItem) > 0 || f.getOffhandItem().getItem() instanceof ShieldItem) out.add("a shield");
         int torches = f.countMatching(s -> s.is(Items.TORCH));
         if (torches > 0) out.add(torches + " torches");
+        Kitchen.kitWords(f, out);                                      // [kitchen] its bandages, its packed lunch
         return String.join(", ", out);
     }
 
@@ -4294,6 +4295,8 @@ public final class CaveDwellers {
         Villages.Village v = here(ctx);
         if (v == null) return 0;
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) return cmdPage(ctx);
+        // A player whose game cannot take the books (a test's stand-in) is told the page instead.
+        if (p.connection == null || !p.connection.hasChannel(com.jrpetty.mcassistant.net.CityStatsPayload.TYPE)) return cmdPage(ctx);
         CompoundTag books = Annals.snapshot(ctx.getSource().getLevel(), v);
         books.putString("page", "Caves");
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(books));

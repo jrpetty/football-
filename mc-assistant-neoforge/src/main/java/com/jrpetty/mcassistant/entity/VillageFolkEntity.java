@@ -337,6 +337,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         Leisure.tick(this);
         if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
+        if (tickCount % 20 == 15 && level() instanceof net.minecraft.server.level.ServerLevel kitchen) Kitchen.second(this, kitchen);   // [kitchen] a lunch packed, a wound bound
         // [fleet] Out with the fishing fleet: down the quay, rowing, fishing, home with the catch (Fleet). Before the storm
         // and the gatherings: a boat at sea is rowed home in a storm, not left to drift while its crew looks for a roof.
         if (level() instanceof net.minecraft.server.level.ServerLevel sea && Fleet.hold(this, sea)) return;
@@ -1213,6 +1214,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
+        m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -1305,6 +1307,16 @@ public class VillageFolkEntity extends AssistantEntity {
     /** What a lesson at the school taught it of a trade (School): put by for the day it takes the trade up. */
     public void schoolXp(StationTask t, int amount) {
         if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount, (a, b) -> Math.min(1_000_000, a + b));
+    }
+
+    /** [itemaudit] Tests: its experience at a trade, as it stands. */
+    public int tradeXpOfForTests(StationTask t) {
+        return t == StationTask.NONE ? 0 : tradeXp.getOrDefault(t, 0);
+    }
+
+    /** [itemaudit] Tests: a child learning this trade at a grown-up's side (as its morning's mentor would have it). */
+    public void apprenticeForTests(StationTask t) {
+        apprenticeTo = t;
     }
 
     /** Tests: so much experience at a trade, as though it had worked for it (xpForLevel gives a level's worth). */

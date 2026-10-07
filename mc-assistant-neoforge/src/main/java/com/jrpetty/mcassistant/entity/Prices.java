@@ -439,5 +439,8 @@ public final class Prices {
         "mc_assistant:pet_treat 0.15 C",
         // [crime] A forged coin is worth its scrap of copper and no more, whatever it was cast to pass for (Mischief).
         "mc_assistant:forged_coin 0.1 C",
+        // [itemaudit] The town's coin is worth a coin, whatever its minting took (a ninth of a bar of gold and the fire);
+        // and a companion's memory core is nobody's to buy or sell: it is a friend, and nothing makes another.
+        "mc_assistant:village_coin 1.0 C", "mc_assistant:memory_core 0 C",
     };
 }
