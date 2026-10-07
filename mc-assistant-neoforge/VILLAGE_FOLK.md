@@ -10170,6 +10170,14 @@ The game tests `PerksGameTests` (pk01 to pk10) check that:
 The guards are the town's police as well as its defence: one force, the watch, sharing one roster. Every guard walks
 the walls and the streets in turn, and every guard answers a cry for the watch, a fight in the street or a fire.
 
+**The watch's first hand.** A town keeps a watch from eleven folk. If a town that size has no guard at all (its only
+guard died, or was taken for the ferry or the smithy), the leader asks for one, one a day: a hand from a trade that can
+spare it takes up the watch, says so, and the town is told ("Hoar took up the watch, the town having no guard (it was a
+miner)"). It is never the last hand at a trade, the storekeeper, the banker or a scout, the old or the leader, nor a
+food-maker while the town is short of food; a hand at nothing goes first. The town's ordinary sums only ever move a
+hand out of a trade that is over its share, and in a town of a dozen none is, so without this the watch stayed empty
+for good.
+
 ### The roster
 
 Every morning the watch's **captain** draws up the day's roster. The captain is the town's constable once it has one
@@ -10458,9 +10466,12 @@ page. Operators also have:
 * `/village police chase` and `/village police fight` (one started among the folk at hand);
 * `/village police swear <player>`;
 * `/village police stage` (the smoke run's pictures: the watch house stamped and fitted out, a prisoner in a cell, a
-  guard on the beat greeting a folk, a chase down the east avenue, an arrest on a lead).
+  guard on the beat greeting a folk, a chase down the east avenue, an arrest on a lead). The stage sees to its own
+  cast: a guard each for the beat, the chase and the arrest, and a folk each for the cell, the greeting, the running
+  and the lead. A town short of guards has its readiest folk appointed to the watch (they keep it at least five
+  minutes), and a town short of folk has them stood up beside its heart.
 
-The game tests `PoliceGameTests` (pl01 to pl10) check that:
+The game tests `PoliceGameTests` (pl01 to pl12) check that:
 
 * a week of rosters gives every guard both the walls and the town's policing, with one resting each day, the captain's
   roster on the board and each guard's duty on its card; and that the bell calls every guard to the walls, the board
@@ -10485,7 +10496,13 @@ The game tests `PoliceGameTests` (pl01 to pl10) check that:
   innocent folk, arrests the accused culprit, who follows the constable to a guard, and the constable is paid three
   coins when the case is closed;
 * a Stone Age town with a watch of three wants a watch house, it stands with two cells and a bed in each, and the
-  watch fits it out from the stores with iron bars and iron doors, its notice board and its casebook.
+  watch fits it out from the stores with iron bars and iron doors, its notice board and its casebook;
+* the stage, in a town of six farmers with no watch at all, appoints its own three guards and sets every scene (a
+  prisoner in a cell, the beat's greeting, a chase with its own guard, an arrest on a lead), and the arrest is still on
+  its lead a few seconds on (the leader's escort never takes a guard with a prisoner or a chase);
+* a town of eight with no guard asks for none; grown to twelve, with every trade at its share and none over, one hand
+  takes up the watch (a miner, not a farmer while the larder is short), the town and the watch's book are told, and no
+  second hand goes the same day.
 
 The other features' tests run with the watch stood down, so that a guard there keeps its old round and a witness its
 old ways.

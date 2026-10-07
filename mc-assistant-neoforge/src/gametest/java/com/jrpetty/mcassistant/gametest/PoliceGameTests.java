@@ -1108,8 +1108,9 @@ public class PoliceGameTests {
         start(level, x, 48);
         BlockPos heart = flat(level, x, Z, 40);
         morning(level, 3000L);
+        // Every trade at its share and none over it: seven farmers, two miners, a woodcutter, a smelter and a fisher.
         StationTask[] jobs = { StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.MINE, StationTask.MINE,
-            StationTask.WOOD, StationTask.WOOD, StationTask.FARM, StationTask.FARM, StationTask.MINE, StationTask.WOOD };
+            StationTask.WOOD, StationTask.SMELT, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FISH };
         List<VillageFolkEntity> town = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
             VillageFolkEntity f = folk(helper, level, heart.offset(-7 + 2 * i, 0, i == 0 ? 0 : -4), jobs[i] + " " + (i + 1));
@@ -1129,12 +1130,14 @@ public class PoliceGameTests {
                 town.add(f);
             }
             double share = Villages.share(village, StationTask.GUARD);
-            List<String> over = new ArrayList<>();
-            for (StationTask t : List.of(StationTask.FARM, StationTask.MINE, StationTask.WOOD)) {
-                over.add(t + " " + String.format(java.util.Locale.ROOT, "%.2f", Villages.share(village, t)) + (Villages.overStaffed(village, t) ? " over" : ""));
+            List<String> shares = new ArrayList<>(), over = new ArrayList<>();
+            for (StationTask t : List.of(StationTask.FARM, StationTask.MINE, StationTask.WOOD, StationTask.SMELT, StationTask.FISH)) {
+                shares.add(t + " " + String.format(java.util.Locale.ROOT, "%.2f", Villages.share(village, t)));
+                if (Villages.overStaffed(village, t)) over.add(t.name());
             }
             Kit.log("pl12 at eight the watch's share " + String.format(java.util.Locale.ROOT, "%.2f", small) + "; at twelve "
-                + String.format(java.util.Locale.ROOT, "%.2f", share) + "; the trades: " + over + "; the vacancy " + Villages.vacancy(village));
+                + String.format(java.util.Locale.ROOT, "%.2f", share) + "; the trades: " + shares + "; over: " + over + "; the vacancy " + Villages.vacancy(village));
+            helper.assertTrue(over.isEmpty(), "no trade over its share, so the town's own sums move nobody: " + over);
             VillageFolkEntity g = Police.firstHandForTests(level, v);
             helper.assertTrue(g != null, "a town of twelve with no guard finds one: the watch's share " + share);
             Kit.log("pl12 " + g.displayNameCap() + " took up the watch; the town's news: " + (Villages.news(village).isEmpty() ? "" : Villages.news(village).get(0).text()));

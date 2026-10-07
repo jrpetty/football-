@@ -1036,6 +1036,7 @@ public final class Police extends SavedData {
     public static void setDutyForTests(ServerLevel level, VillageFolkEntity g, String duty) {
         Villages.Village v = Villages.get(g.ownerId());
         if (v == null) return;
+        Roster.forget(v.id());               // the roster read afresh: a guard just appointed is on it before its duty is set
         Roster.today(level, v);
         CompoundTag r = town(v.id()).getCompound("roster");
         r.putString(g.getStringUUID(), duty);

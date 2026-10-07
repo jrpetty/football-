@@ -77,6 +77,8 @@ final class Incidents {
 
     /** How long a chase is run before the guard gives it up, and how far ahead the culprit gets away. */
     static final int CHASE_MOST = 900, LOSE = 30;
+    /** How close a guard must be to take a fleeing culprit by the collar. */
+    static final double CATCH = 2.5;
     /** How far a guard is fetched from to a report, a fight or a cry of "thief". */
     static final double CALL = 48.0;
 
@@ -412,8 +414,10 @@ final class Incidents {
         if (d <= 12 && g.hasLineOfSight(f)) t.sawWell = true;
         // A badge is the watch's authority: a culprit run close to the constable's gives itself up.
         boolean badge = g.countCarried(s -> s.is(com.jrpetty.mcassistant.item.PoliceItems.CONSTABLE_BADGE.get())) > 0;
-        if (d <= 1.9 || badge && d <= 5.0 && g.hasLineOfSight(f)) {
-            caught(level, v, g, f, t, badge && d > 1.9);
+        // Within arm's reach at a run: both sprinting, a guard on the culprit's heels trails it by two blocks or so as its
+        // path catches up with where the culprit was, and a grab at 1.9 let one run clean out of the town a step ahead.
+        if (d <= CATCH || badge && d <= 5.0 && g.hasLineOfSight(f)) {
+            caught(level, v, g, f, t, badge && d > CATCH);
             return "has caught " + f.displayNameCap();
         }
         if (g.hasLineOfSight(f)) t.unseen = 0;
