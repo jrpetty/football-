@@ -566,7 +566,7 @@ public final class Interviews {
         StationTask postTrade = p == null ? null : p.tradeFor(iv.village);
         String why = InterviewScript.why(level, iv, c, f);
         c.letterWords = "I, " + c.name + (c.outside ? " of " + c.homeName : "") + ", would take the post of " + iv.title + ". "
-            + (t == null || t == StationTask.NONE ? "I've no trade yet" : JobMarket.a(JobMarket.noun(t)) + ", level "
+            + (t == null || t == StationTask.NONE ? "I've no trade yet" : "I'm " + JobMarket.a(JobMarket.noun(t)) + ", level "
             + (postTrade != null && postTrade == t ? c.level : f.tradeLevel(t))) + "; " + c.age + " years old"
             + (c.knacks > 0 ? "; " + JobMarket.words(c.knacks) + (c.knacks == 1 ? " knack" : " knacks") + " of the trade" : "") + ". " + firstSentence(why);
         CompoundTag w = new CompoundTag();
