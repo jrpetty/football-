@@ -75,7 +75,8 @@ public enum TalkTopic {
     LOST("Has anything of mine turned up?"),               // [players] the Lost and Found
     CAVES("What have the cave dwellers found down there?"), // [caves] CaveDwellers
     PET("Tell me about your pet"),                           // [pets] Pets
-    FASHION("What's in fashion?");                         // [fashion] Fashion
+    FASHION("What's in fashion?"),                         // [fashion] Fashion
+    WATCH("Seen anything amiss?");                          // [crime] Crime: what a witness saw; a clue handed in
 
     public final String line;
 

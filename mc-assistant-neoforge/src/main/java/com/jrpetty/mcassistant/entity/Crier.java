@@ -226,6 +226,7 @@ public final class Crier {
             out.add(sb.append(" — any help is welcome.").toString());
         }
         out.addAll(Traditions.crierLines(level, v, day));          // [batchD] a custom kept today or tomorrow, the motto on a feast day
+        out.addAll(Crime.crierLines(level, v, day));               // [crime] the watch's appeal for witnesses, the court's verdict
         out.add(FolkTalk.pick(r, "That's the news! Long live " + town + "!", "That's all. Back to your dinners!",
             "That's the news. God keep " + town + "!"));
         return out;

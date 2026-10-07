@@ -93,7 +93,7 @@ public final class FolkTalk {
         }
         if (!text.isEmpty()) {
             VillageFolkEntity other = mentioned(f, lower);
-            if (other != null) return manner(f, opinionOf(f, other));
+            if (other != null && topic != TalkTopic.WATCH) return manner(f, opinionOf(f, other));   // [crime] "I saw Fen take it" is for the watch
         }
         if (topic == TalkTopic.PET) return manner(f, Pets.talk(f, p, text), true);    // [pets] its household's pet, a child's above all
         if (f.isBaby() && topic != TalkTopic.GIFT) return child(f, p, topic, op);
@@ -157,6 +157,7 @@ public final class FolkTalk {
             case ATLAS -> Scouts.tell(f);
             case CAVES -> CaveDwellers.tell(f);                                // [caves] the caves' report
             case FASHION -> Fashion.talk(f);                                   // [fashion] the season's look
+            case WATCH -> p instanceof ServerPlayer sp ? Crime.talk(f, sp, text) : puzzled(f);   // [crime] seen anything amiss?
             case FOR_SALE -> Budget.answer(f, p);
             case LETTER -> Bonds.letter(f, p, text);
             case BROKER -> Bonds.broker(f, p, text);
@@ -382,6 +383,7 @@ public final class FolkTalk {
         line(sb, "Neighbours", Neighbourly.cardLine(f));     // [batchA] looked in on, a welcome, a housewarming (Neighbourly)
         line(sb, "About town", TownLook.cardLine(f));       // [batchE] its allotment, the bakery, the inn (TownLook)
         line(sb, "Town life", Civics.cardLine(f));          // [batchF] its letters, its quarter as warden, its good turns (Civics)
+        line(sb, "The law", Crime.cardLine(f));             // [crime] its case, its record, robbed, cleared, a new leaf (Crime)
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);
@@ -619,6 +621,7 @@ public final class FolkTalk {
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
             case "proud" -> Museum.prideWords(f);
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
+            case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
             default -> "";
         };
     }
@@ -628,6 +631,8 @@ public final class FolkTalk {
         Persona me = f.persona();
         if (f.isFollowing(p)) return pick(r, "Walking with you, of course!", "Following you. Where are we off to?");
         if (f.isSleeping()) return "Sleeping, until you woke me.";
+        String law = Crime.doing(f);                            // [crime] on a case, at a trial, in the stocks
+        if (law != null) return capFirst(law) + ".";
         String rest = RestDay.now(f.ownerId(), f.level().getDayTime());
         if (rest != null && f.stationTask() != AssistantEntity.StationTask.GUARD && !Raids.underAlarm(f.ownerId())) {
             return pick(r, "It's our day of rest! ", "No work today — ") + "it's " + rest + ".";
@@ -1221,6 +1226,12 @@ public final class FolkTalk {
     public static TalkTopic understand(String text) {
         String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^a-z' ]", " ") + " ";
         if (has(t, "make peace", "peace with", "olive branch", "patch things up", "end the feud", "settle the feud")) return TalkTopic.PEACE;
+        // [crime] The watch's business: a theft, a vandal, what a witness saw, a thing found at the scene.
+        if (has(t, "theft", "thief", "steal", "stole", "robbed", "robber", "pickpocket", "vandal", "crime", "witness", "who did it",
+                "anything amiss", "seen anything", "report a", "the culprit", "evidence", "found this", "a clue", "forged", "forger",
+                "poach", "smuggl", "constable", "the stocks", "suspect")
+                || has(t, "i saw") && has(t, " take", " took", " steal", " stole", " broke", " break", " smash", " pinch", " nick",
+                    " did it", " do it", " purse", " window", " lamp", " fence")) return TalkTopic.WATCH;
         // [players] Before "could I have" (the stores) and "where is" (the guide): a map, and the Lost and Found.
         if (has(t, "map of the town", "map of town", "map of the village", "town map", "village map", "a map of", "a map please",
                 "draw me a map")) return TalkTopic.TOWN_MAP;
@@ -1438,6 +1449,7 @@ public final class FolkTalk {
         }
         List<Villages.News> n = Villages.news(village);
         if (!n.isEmpty()) said.add("Did you hear? " + cap(n.get(0).text()) + ".");
+        said.addAll(Crime.gossip(f));                   // [crime] a thief about, who was had up, who sat in the stocks
         if (said.isEmpty()) return pick(r, "Nothing worth repeating. It's been quiet.", "Gossip? Me? Never.");
         String line = said.get(r.nextInt(said.size()));
         if (f.life().has(Social.Trait.SHY)) line = "Oh — well, I shouldn't, but… " + line;

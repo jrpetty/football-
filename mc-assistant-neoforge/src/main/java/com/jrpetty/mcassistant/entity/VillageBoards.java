@@ -376,6 +376,7 @@ public final class VillageBoards {
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String alarm = Raids.why(id);
         out.add(alarm != null ? "RB|THE BELL IS RINGING: " + alarm + "!" : "RM|The watch: all quiet.");
+        out.addAll(Crime.board(level, id));                 // [crime] a theft reported, a trial, the stocks, the month's crime
         String kit = WatchKit.boardLine(id);                // [guard-kit] the watch, and what the town has it in
         if (kit != null) out.add("RN|" + kit);
         out.addAll(WarFooting.board(id));                   // [war-prep] on a war footing: the watch, the militia, the defences

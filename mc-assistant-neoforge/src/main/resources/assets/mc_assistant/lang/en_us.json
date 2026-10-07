@@ -99,5 +99,7 @@
   "item.mc_assistant.garment.worn.head": "A hat, worn off work",
   "item.mc_assistant.garment.worn.neck": "Worn round the neck",
   "item.mc_assistant.garment.worn.pin": "Pinned on the breast",
-  "item.mc_assistant.garment.worn.ribbon": "The best-dressed's rosette"
+  "item.mc_assistant.garment.worn.ribbon": "The best-dressed's rosette",
+  "block.mc_assistant.stocks": "Stocks",
+  "item.mc_assistant.forged_coin": "Forged Coin"
 }

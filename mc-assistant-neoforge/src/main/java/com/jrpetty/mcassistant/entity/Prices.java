@@ -429,5 +429,7 @@ public final class Prices {
         // planks and wool, a basket of sticks and wool, a collar of leather and string, four treats of wheat and meat).
         "mc_assistant:pet_bowl 0.8 C", "mc_assistant:dog_bed 1.6 C", "mc_assistant:cat_bed 1.2 C", "mc_assistant:collar 1.4 C",
         "mc_assistant:pet_treat 0.15 C",
+        // [crime] A forged coin is worth its scrap of copper and no more, whatever it was cast to pass for (Mischief).
+        "mc_assistant:forged_coin 0.1 C",
     };
 }

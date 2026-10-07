@@ -219,6 +219,8 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("My standing", TalkTopic.REPUTE));
                 out.add(Choice.of("Live here?", TalkTopic.CITIZEN, "Ask to become a citizen: a vote on the council and a house of your own"));
                 out.add(Choice.of("Pay a fine", TalkTopic.FINE, "Pay what you owe the village"));
+                out.add(Choice.of("Seen anything?", TalkTopic.WATCH, "A theft or a vandal: ask what it saw (a friend tells you what it would not "
+                    + "tell the watch). To a guard: the case it is on; hold what was dropped at the scene to hand it in, or type \"I saw Fen take it\""));   // [crime]
                 out.add(new Choice("The board", TalkTopic.OPEN, "", "Read the village board: what it is doing, how it is getting on, what it is working towards"));
                 out.add(new Choice("Suggest a build", TalkTopic.BUILD, "", "Type what you think the village should build next"));
             }

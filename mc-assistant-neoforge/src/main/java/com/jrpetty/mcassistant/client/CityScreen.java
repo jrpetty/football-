@@ -61,12 +61,15 @@ public class CityScreen extends Screen {
         "War",
         // [caves] The caves' report (CavesPage).
         "Caves",
-        // [fashion] What the town wears, last of all (FashionPage).
-        "Fashion" };
+        // [fashion] What the town wears (FashionPage).
+        "Fashion",
+        // [crime] The watch's casebook and the crime rate, after them (CasesPage).
+        "Cases" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
-        "Fashion");                                                                                   // [fashion]
+        "Fashion",                                                                                    // [fashion]
+        "Cases");                                                                                     // [crime]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -327,6 +330,10 @@ public class CityScreen extends Screen {
                 }
                 case "Fashion" -> {                                                    // [fashion] the season's look (FashionPage)
                     List<Component> tip = FashionPage.draw(g, font, data.getCompound("fashion"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Cases" -> {                                                      // [crime] the casebook (CasesPage)
+                    List<Component> tip = CasesPage.draw(g, font, data.getCompound("crime"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 default -> board(g, x, y, cw, ch);
