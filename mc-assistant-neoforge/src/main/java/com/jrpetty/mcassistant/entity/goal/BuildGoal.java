@@ -67,7 +67,9 @@ public class BuildGoal extends Goal {
         // the stable, once the village has horses (Stables)
         "stable",
         // [batchA] the infirmary, its beds for the sick and the hurt (entity/Infirmary, Health)
-        "infirmary");
+        "infirmary",
+        // [batchC] the football pitch (entity/Pitch) and the watch's archery range (entity/Archery)
+        "pitch", "range");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

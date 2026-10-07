@@ -411,6 +411,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // The school's morning (School): the children to their desks, the teacher to the lectern.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel schooling
                 && School.hold(this, schooling)) return;
+        // [batchC] Sport and play (Sport): a match to play or watch on the rest day, an away day at a neighbour's
+        // pitch, the fishing contest or the children's race, the watch at the butts of a morning.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel sport && Sport.hold(this, sport)) return;
         // Called to the town's own work (TownJobs): to the spot, and at it.
         if (!withAPlayer && tickCount % 4 == 3 && level() instanceof net.minecraft.server.level.ServerLevel works
                 && TownJobs.hold(this, works)) return;

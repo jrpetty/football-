@@ -97,6 +97,7 @@ public final class VillageCommands {
             .then(Commands.literal("folk").executes(VillageCommands::folk))
             // The town's quarters, the homes in the crafts' smoke and by the park, and the park (Quarters, Park).
             .then(com.jrpetty.mcassistant.entity.Quarters.command())
+            .then(com.jrpetty.mcassistant.entity.Sport.command())                 // [batchC] /village sport
             .then(Commands.literal("people").executes(VillageCommands::people))
             // The knacks each folk chose for itself (FolkSkills): every folk of the nearest village, or one
             // by name; and, for operators and tests, a knack given to a folk as though it chose it.

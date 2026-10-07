@@ -2575,6 +2575,13 @@ public class CityScreen extends Screen {
             for (String s : guests) all.add("  " + s);
             all.add("");
         }
+        // [batchC] Sport and play: the pitch, the range, the league table, the cup, the contests (entity/Sport).
+        List<String> sport = strings("sport");
+        if (!sport.isEmpty()) {
+            all.add("Sport and play:");
+            for (String s : sport) all.add("  " + s);
+            all.add("");
+        }
         all.add("The chronicle, latest first:");
         all.addAll(strings("news"));
         lines(g, all, x, y, cw, ch);

@@ -4960,3 +4960,83 @@ day's visits, welcomes and housewarmings. Operators: `/village care cold` gives 
 `/village care stage` sets an infirmary out where you stand, its beds full, for a look inside.
 
 Tested by `HealthCareGameTests` (hc01 to hc07).
+
+## Sport and play
+
+What a town does with its day of rest besides the service, the games on the square and walking out,
+and what its watch does of a working morning. Everything here is played with the town's own things:
+the ball, the rods, the arrows, the prizes and the cup all come out of its stores (and the ball, the
+rods and the arrows go back into them after).
+
+* **The football pitch.** Once a town builds in stone and has twenty folk, a football pitch goes on the
+  builders' list with the other amenities. It takes a long lot among the homes, the nearest the park if
+  there is one: a field of grass fifteen blocks long and nine across inside its lines, a goal at each end
+  (two fence posts with a fence across the top for the crossbar, and fences round the back for a net), a
+  bench of stairs down each side and a lamp on a post at each corner. Then its keepers finish it out of
+  the stores, a little at a time: any earth standing proud of the field is cut away, a hollow is filled
+  and the builder's bare stone turfed with the stores' earth, and the lines (the touchlines, the goal
+  lines and the halfway line) are set into the grass in **white wool**, or **birch planks** where the
+  stores have no wool to spare (a town short of beds keeps its wool for them). Put white wool or birch
+  planks in the stores and you will see the lines go down.
+* **Football on the rest day.** Every rest day, in the early afternoon, two of the town's **ends** play a
+  match on the pitch: every folk belongs to the end of town its home is on (the North End, the East End,
+  the South End, the West End), and the two ends that have met least this season turn out up to five a
+  side each, a different few from week to week (with three or more a side, one keeps goal). The watch, the
+  old and the children do not play. The **ball is real**: a slime ball out of the stores, or a scrap of
+  leather if there is no slime, and back in the stores at the final whistle; no ball, no match. The players
+  walk out to their places, the home side kicks off, and they run at the ball and kick it toward the other
+  goal (a pass from far out, a shot from close in, a long clearance from the keeper). A goal is the ball
+  over the goal line between the posts and under the bar, and the side that let it in kicks off again; a
+  ball over a line anywhere else is put back on the field. Two and a half minutes later it is over, and the
+  result, with who scored, goes into the chronicle, onto the board and into the league. Folk with nobody to
+  walk out with that afternoon, the children and the players' own families stand along the sides and on the
+  benches and cheer their end on. A thunderstorm, or the bell, stops it.
+* **The league and the cup.** The ends' results make a **league table**, three points for a win and one
+  for a draw, kept with the world. A season is the town's own year (twenty-eight days from its founding,
+  as Founding Day counts them): when it turns, whoever is top of the table are the champions, written into
+  the chronicle, and they get **the cup**, a gold ingot out of the stores (or nine nuggets) named "The
+  *Town* Cup", with every year's winners written on it, in an item frame (the stores', or made of eight
+  sticks and a leather) on the back wall of the leader's hall or the meeting hall. The cup is made once;
+  each year after, the new champions' name goes on the same cup. No hall, or no gold in the stores, and the
+  champions wait for their cup until there is.
+* **Friendlies between towns.** Two towns on good terms (friendly or better) and within a caravan's
+  reach of each other now and then play a friendly, on the rest day of the one with the pitch. The
+  visitors' side, up to five, sets out after the morning assembly and really walks there, by the road a
+  caravan takes, to the side of the host's pitch; the host turns out as many as came. The result goes into
+  both towns' chronicles and books, and a good afternoon's football warms the two towns to each other a
+  little (a thrashing rather less). A walker that gets stuck on the road is set down at its next step, as
+  a caravan's carrier is; if the side has not got there by early afternoon, or nobody in the host town comes
+  out to play, the match is called off (both chronicles say so) and the side walks home.
+* **The fishing contest.** Folk have no seasons to go by, so the rest days take turns: the first of every
+  three has the fishing contest in the late morning. The town's fishers and anybody whose pastime is
+  fishing (up to six) fish side by side at the town's water for an hour, each with its own rod or one
+  borrowed from the stores. The catch is real, mostly fish and now and then an old bone or a bit of
+  string, and it all goes into the stores. The most fish wins **a purse of five coins** from the treasury
+  (if it has them).
+* **The children's sports day.** The second rest day of the three, the children (up to eight) line up in
+  lanes at one end of the park, or of the square with no park, and race to the other end, each at its own
+  pace on the day; their parents stand at the finish and cheer them home. The winner gets **a cookie** out
+  of the stores, or an apple. Put cookies in the stores for the prize.
+* **The archery range.** An Iron Age town with two guards or more builds the watch a range on a lot just
+  outside a corner of the wall: three butts of hay at the back with a wall of boards behind them, and a
+  line of stone slabs eight blocks off. Its keepers make each butt's top bale a **target** with four of the
+  stores' redstone (with no redstone to spare, the guards shoot at the hay). On a working morning a guard
+  not needed elsewhere goes down once a day (never more than half the watch at once), takes six real arrows
+  out of the stores and its bow (or one borrowed from the stores), and shoots them at its butt, holding its
+  fire while anybody is in the way: two points in the target, one in the bale under it. Then it pulls its
+  arrows and they go back into the stores (a lost one is lost), and the morning makes it a little better at
+  its trade. On the rest day the watch holds an **archery contest**, six arrows each; the most points wins.
+
+**Where to see it.** The board's right-hand column says what is on now ("Now: football on the pitch: the
+North End 2, the South End 1 — come and watch!"), a side away or on its way, the last result, the top of
+the league and who holds the cup. In the town's books the **News** page has a *Sport and play* section: how
+the pitch and the range are coming on, the next rest day's programme, the league table, the cup and its
+winners, the latest results and friendlies, and the latest winners of the fishing contest, the children's
+race and the archery contest. A folk's card says when it is playing, watching, fishing, racing or at the
+butts. Operators: `/village sport` says all of it; `/village sport pitch now`, `match now`, `range now`,
+`fishing now`, `race now`, `archery now` and `cup now` make each happen at once.
+
+Tested by `SportGameTests` (sp01 to sp07): the pitch and its keepers, a match with a real ball (the
+referee's eye for a goal, the kick-off, the result and the ball back in the stores), the league and the cup,
+a friendly between two towns (and one called off), the fishing contest, the children's race and the archery
+range.
