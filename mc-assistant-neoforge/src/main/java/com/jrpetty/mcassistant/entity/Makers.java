@@ -80,6 +80,16 @@ public final class Makers {
     private static final String PLAYERS = "only a player wants one: made on a player's order";
 
     static {
+        // [kitchen] The kitchen and the cellar (entity/Kitchen, item/KitchenItems): each by its own trade, else the shop's workshop.
+        declare("packed_lunch", "the cook", "for hands working far off at midday, the cave team, the fleet, caravans and envoys", "Kitchen.pack");
+        declare("cheese_wheel", "the cook", "while the stores keep fewer than two wheels (three in autumn), from the rancher's milk", "Kitchen.cook");
+        declare("cheese_slice", "the cook", "a wheel cut for meals when food runs short, or on the café's and tavern's tables", "Kitchen.cut");
+        declare("honey_cake", "the cook", "a day ahead of a birthday, a wedding, Founding Day or a festival", "Kitchen.cook");
+        declare("mead", "the brewer (the café with no brewer)", "while the tavern's bar runs short", "Kitchen.brew");
+        declare("cider", "the brewer (the café with no brewer)", "in autumn and for the harvest festival", "Kitchen.brew");
+        declare("fish_pie", "the cook", "after a glut at the fish market", "Kitchen.cook");
+        declare("herbal_tea", "the healer (the café with no healer)", "for a folk with a cold, and the café on cold days", "Kitchen.brew");
+        declare("bandage", "the healer (the tailor with no healer)", "to keep the watch and the cave team at three each, and for the healer's round", "Kitchen.bind");
         // [pets] The pets' things (Pets.craft, from Crafts.now; the shop's book through Workshop.demand).
         declare("pet_bowl", "the shop's workshop", "when a household with a pet has no bowl", "Pets.craft / Workshop.demand");
         declare("dog_bed", "the tailor", "when a household's dog has no bed of its own", "Pets.craft");
