@@ -2466,6 +2466,13 @@ public final class Interviews {
             out.add("  #" + iv.id + " " + iv.stage.name().toLowerCase(Locale.ROOT) + ": " + iv.title + ", day " + (iv.dueDay + 1)
                 + (iv.where.isEmpty() ? "" : " at " + iv.where) + "; panel " + iv.chairName + (iv.masterName.isEmpty() ? "" : ", " + iv.masterName)
                 + (iv.councillorName.isEmpty() ? "" : ", " + iv.councillorName) + (iv.winnerName.isEmpty() ? "" : " — " + iv.winnerName + ": " + iv.reason));
+            if (iv.stage.on()) {
+                // Going on: who is across the table, and the last line said (the smoke stage times its pictures by it).
+                Cand now = iv.now();
+                String last = iv.said.isEmpty() ? "" : iv.said.get(iv.said.size() - 1).replace("|", ": ");
+                out.add("     Now: " + (now == null ? iv.stage.name().toLowerCase(Locale.ROOT) : now.name + " across the table")
+                    + (last.isEmpty() ? "" : "; last said, " + last));
+            }
             for (Cand c : iv.cands) {
                 out.add("     " + c.name + (c.outside ? " of " + c.homeName : "") + ": paper " + c.paper + (c.seen ? ", " + parts(c) + " = "
                     + (c.paper + c.interview()) : "") + (c.letter ? ", letter" : ", no letter") + (c.absent ? ", absent" : "")
@@ -2554,10 +2561,26 @@ public final class Interviews {
             BlockPos b = t.bench().get(t.bench().size() / 2).pos();
             out.add("BENCH " + b.getX() + " " + b.getY() + " " + b.getZ());
             out.add("WHERE " + t.where());
+            // The camera's places (the smoke stage): the panel looks toward the candidate's chair, and the bench is behind it
+            // (by the board) or at the table's foot (in the hall).
+            net.minecraft.core.Direction dir = t.cand().look().getOpposite(), side = dir.getClockWise();
+            BlockPos head = t.panel().get(Math.min(1, t.panel().size() - 1)).pos();
+            int toBench = (b.getX() - c.getX()) * side.getStepX() + (b.getZ() - c.getZ()) * side.getStepZ();
+            if (toBench < 0) side = side.getOpposite();                           // looking from the bench's end of the table
+            BlockPos mid = new BlockPos(Math.floorDiv(c.getX() + head.getX(), 2), c.getY(), Math.floorDiv(c.getZ() + head.getZ(), 2));
+            view(out, "iv-bench", t.hall() ? t.out().above(2) : b.relative(dir.getOpposite(), 2).relative(side, 2).above(), b.above());
+            view(out, "iv-table", mid.relative(side, 5).above(2), mid.above());
+            view(out, "iv-shoulder", c.relative(dir, 2).relative(side).above(), head.above());
+            view(out, "iv-panel", head.relative(dir.getOpposite(), 2).relative(side).above(), c.above());
         } else {
             out.add("No table yet: a hand is being sent to set one out by the board.");
         }
         return out;
+    }
+
+    /** "VIEW name x y z ax ay az": a camera's place and what it looks at, as the other stages give them. */
+    private static void view(List<String> out, String name, BlockPos from, BlockPos at) {
+        out.add("VIEW " + name + " " + from.getX() + " " + from.getY() + " " + from.getZ() + " " + at.getX() + " " + at.getY() + " " + at.getZ());
     }
 
     /** /village interviews now: the town's next interview begun at once (those from away set off, or their letters read). */

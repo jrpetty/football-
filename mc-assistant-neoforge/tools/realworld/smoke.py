@@ -2499,6 +2499,120 @@ def kitchen_stage(r, look, cx, cz):
     say("alive after the kitchen: %s" % client_alive())
 
 
+def interviews_stage(r, look, cx, cz):
+    """[interviews] Job interviews you can watch (entity/Interviews, InterviewScript, InterviewTable). In the morning, after
+    the assembly, /village interviews stage smith puts a notice up for a blacksmith and sets an interview for it with the
+    town's three best hands at the forge (one given a marked iron sword to show if none has a piece of its own), at the
+    hall's long table or at a table set out by the board; /village interviews now begins it, at its own pace, a line every
+    four or five seconds. The pictures are timed by the last line said (/village interviews: "Now: ...; last said, ..."),
+    so the bubbles are up: the bench with the candidates holding their letters as the chair opens; the first candidate
+    across the table as its letter is read out, from the side and over its shoulder; the smith holding up its work as the
+    master looks it over; the choice announced; the handshake and the chosen's thanks. Last, what /village interviews
+    says, and the town's books open at the Interviews page. The camera stays within earshot of the table throughout
+    (folk speak only to players within twenty-four blocks)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("weather clear")                             # nobody interviews in a thunderstorm
+
+    def clock_to(target):
+        m = re.search(r"(\d+)", r.cmd("time query daytime"))
+        now = int(m.group(1)) % 24000 if m else 6000
+        r.cmd("time add %d" % ((target - now) % 24000))   # forward only (time set would put the world's days back)
+
+    clock_to(2600)                                     # the morning, the assembly over: interviews begin after it
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 12, cz))
+    time.sleep(5)
+    at = "execute positioned %d %d %d run village interviews" % (cx, hy + 1, cz)
+    r.cmd(at + " hurry off")                           # at their own pace: a bubble up for every shot
+    views = {}
+
+    def read(out):
+        for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+            views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+
+    out = r.cmd(at + " stage smith")
+    say("interviews stage: " + out[:1200])
+    read(out)
+    if not views:                                      # no table found yet (the ground still loading): once more
+        time.sleep(15)
+        out = r.cmd(at + " stage smith")
+        say("interviews stage again: " + out[:1200])
+        read(out)
+    if not views:
+        say("no interview staged; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("34-interviews-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    def last_said(s):
+        m = re.search(r"last said, ([^\n]*)", s)
+        return m.group(1) if m else ""
+
+    def wait_for(test, most, what):
+        """Ask /village interviews every second and a half till the test holds of what it says; the reply, or None."""
+        end = time.time() + most
+        s = ""
+        while time.time() < end:
+            s = r.cmd(at)
+            if test(s):
+                return s
+            time.sleep(1.5)
+        say("interviews: no %s in %ds; last: %s" % (what, most, s[-500:]))
+        return None
+
+    # Park the camera by the table, so the folk there are heard (and their bubbles sent) from the first line.
+    x, y, z, ax, ay, az = views.get("iv-table", list(views.values())[0])
+    r.cmd("tp %s %.1f %.1f %.1f" % (USER, x + 0.5, y, z + 0.5))
+    out = r.cmd(at + " now")
+    say("interviews now: " + out[:300])
+    if "Not now" in out:                               # a festival, a raid: the next morning, then
+        clock_to(2600)
+        out = r.cmd(at + " now")
+        say("interviews now, the next morning: " + out[:300])
+    if "begin now" not in out:
+        say("the interview did not begin; nothing more to photograph")
+        return
+    # 1. The panel at the table, the candidates on the bench with their letters: as the chair opens.
+    if wait_for(lambda s: re.search(r"#\d+ sitting:", s), 120, "seating"):
+        shoot("iv-bench", "1-bench", 2)
+    # 2. The first across the table, its letter read out: from the side, and over its shoulder at the panel.
+    if wait_for(lambda s: ': "I, ' in last_said(s), 150, "letter read"):
+        time.sleep(1)
+        shoot("iv-table", "2-across", 1)
+        shoot("iv-shoulder", "3-shoulder", 1)
+    # 3. The smith holding up its work, its maker's mark on it, and the master looking it over.
+    if wait_for(lambda s: "My mark's on it" in last_said(s), 420, "work held up"):
+        shoot("iv-panel", "4-work", 1)
+        shoot("iv-table", "5-work-side", 1)
+    # 4. The choice told, and 5. the handshake across the table, and the chosen's thanks.
+    said = wait_for(lambda s: " goes to " in last_said(s), 480, "announcement")
+    if said:
+        time.sleep(1)
+        shoot("iv-table", "6-announced", 1)
+        m = re.search(r" goes to ([^:]+):", last_said(said))
+        chosen = m.group(1) if m else ""
+        if chosen and wait_for(lambda s: last_said(s).startswith(chosen + ": "), 60, "thanks"):
+            shoot("iv-shoulder", "7-handshake", 1)
+            shoot("iv-table", "7b-handshake-side", 1)
+    time.sleep(10)
+    say("interviews: " + r.cmd(at)[:1500])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    # The Interviews page is the last tab of the town's books (CityScreen.TABS), after Transport.
+    say("books: " + r.cmd("execute as %s at @s run village interviews books" % USER))
+    time.sleep(4)
+    shot("34-interviews-8-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the interviews: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
