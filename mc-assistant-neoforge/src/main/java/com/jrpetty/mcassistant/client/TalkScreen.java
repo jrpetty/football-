@@ -74,6 +74,8 @@ public class TalkScreen extends Screen {
     /** The pack and the work record's places in tabRects: well clear of the tabs' own numbers. (They were
      *  5 and 6, which the About tab became when the Money tab came in: clicking About opened the pack.) */
     private static final int PACK = 100, WORK = 101;
+    /** [teleport] Its name, for a creative player not beside it: Teleport to it (FolkLinks). */
+    private final FolkLinks links = new FolkLinks(true);
 
     public TalkScreen(FolkReplyPayload first) {
         super(Component.literal(first.name()));
@@ -335,6 +337,7 @@ public class TalkScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (links.click(mx, my, button)) return true;                    // [teleport] its name, or its button
         for (int[] r : tabRects) {
             if (mx >= r[0] && mx < r[0] + r[2] && my >= r[1] && my < r[1] + r[3]) {
                 if (r[4] == PACK) { openPack(); return true; }
@@ -420,11 +423,13 @@ public class TalkScreen extends Screen {
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
+        links.begin(mouseX, mouseY);                                      // [teleport]
         header(g, mouseX, mouseY);
         tabs(g, mouseX, mouseY);
         if (tab == Tab.ABOUT) about(g);
         else if (tab == Tab.SKILLS) skills(g, mouseX, mouseY);
         else conversation(g);
+        links.draw(g, font);                                              // [teleport] its name's button, over everything
     }
 
     private void header(GuiGraphics g, int mouseX, int mouseY) {
@@ -438,6 +443,7 @@ public class TalkScreen extends Screen {
         }
         int tx = px + 52, tw = left + w - PAD - tx;
         g.drawString(font, last.name(), tx, top + 6, GOLD, true);
+        links.addCard(g, last.entityId(), last.name(), tx, top + 6, font.width(last.name()), 8, GOLD);   // [teleport]
         String where = Ui.clip(font, last.village(), Math.max(40, tw - font.width(last.name()) - 10));
         g.drawString(font, where, left + w - PAD - font.width(where), top + 6, MUTED, false);
         g.drawString(font, Ui.clip(font, last.about(), tw), tx, top + 17, MUTED, false);

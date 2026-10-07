@@ -23,6 +23,7 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village spawn 12         twelve — a full starting village
  *   /village found 40 [x z]   a village of forty, founded as the board's founding screen does (ops)
  *   /village status           who lives here, what age, what they are short of
+ *   /village tp &lt;name&gt;        go to a folk, set down safely beside it, in any world (ops; FolkTeleport)
  *   /village top              every village in the world, by its folk: age, worth, renown
  *   /village lineup           one folk of every trade, dressed, to look at (ops)
  *   /village talk [words]     talk with the nearest folk, as a right-click would (ops)
@@ -99,6 +100,7 @@ public final class VillageCommands {
                         .then(Commands.argument("z", IntegerArgumentType.integer())
                             .executes(ctx -> found(ctx, true))))))
             .then(Commands.literal("folk").executes(VillageCommands::folk))
+            .then(com.jrpetty.mcassistant.entity.FolkTeleport.command())          // [teleport] /village tp <name> (ops)
             // The town's quarters, the homes in the crafts' smoke and by the park, and the park (Quarters, Park).
             .then(com.jrpetty.mcassistant.entity.Quarters.command())
             .then(com.jrpetty.mcassistant.entity.Sport.command())                 // [batchC] /village sport

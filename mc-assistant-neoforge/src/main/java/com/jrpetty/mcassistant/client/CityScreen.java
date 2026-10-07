@@ -85,6 +85,8 @@ public class CityScreen extends Screen {
     private static boolean buildingsMap;
     /** What can be clicked on the page just drawn: its box and what a click does. */
     private final List<Zone> zones = new ArrayList<>();
+    /** [teleport] The folk's names that can be clicked (Teleport to, Show card), and their buttons. */
+    private final FolkLinks links = new FolkLinks(false);
 
     private record Zone(int x0, int y0, int x1, int y1, Runnable act) {}
     private int sortColumn = 6;
@@ -248,6 +250,7 @@ public class CityScreen extends Screen {
         super.render(g, mouseX, mouseY, partialTick);
         hover = null;
         zones.clear();
+        links.begin(mouseX, mouseY);                                     // [teleport]
         Ui.panel(g, left, top, w, h, 34);
         String head = data.getString("name") + " — " + data.getString("age") + ", " + data.getString("rank").toLowerCase(Locale.ROOT)
             + ", day " + data.getLong("today");
@@ -316,6 +319,7 @@ public class CityScreen extends Screen {
                 default -> board(g, x, y, cw, ch);
             }
         }
+        if (links.draw(g, font)) hover = null;                          // [teleport] a name's buttons, over everything
         if (hover != null) g.renderComponentTooltip(font, hover, hoverX, hoverY);
     }
 
@@ -1438,6 +1442,8 @@ public class CityScreen extends Screen {
                 small(g, Ui.clip(font, cells[c], (int) (colW / 0.75)), x + FOLK_COLS[c] + (c == 0 ? 9 : 0), ry + 1,
                     c == 7 ? (p.getInt("mood") >= 60 ? Ui.GOOD : p.getInt("mood") < 35 ? Ui.BAD : Ui.INK) : Ui.INK);
             }
+            if (p.hasUUID("uuid")) links.add(g, p.getUUID("uuid"), p.getString("name"), x + FOLK_COLS[0] + 9, ry,     // [teleport]
+                Math.min((int) (font.width(p.getString("name")) * 0.75F), FOLK_COLS[1] - FOLK_COLS[0] - 12), 7, Ui.INK);
             ry += 10;
         }
         java.util.Map<String, Integer> bands = new java.util.TreeMap<>();
@@ -1492,6 +1498,7 @@ public class CityScreen extends Screen {
         CompoundTag l = data.getCompound("leader");
         int half = (cw - 10) / 2;
         g.drawString(font, Ui.clip(font, l.getString("name") + (l.getString("title").isEmpty() ? "" : ", the " + l.getString("title")), half), x, y, Ui.INK, false);
+        if (l.hasUUID("uuid")) links.add(g, l.getUUID("uuid"), l.getString("name"), x, y, Math.min(font.width(l.getString("name")), half), 8, Ui.INK);   // [teleport]
         int ly = y + 12;
         List<String> rows = new ArrayList<>();
         if (l.contains("type")) rows.add(capital(l.getString("type")));
@@ -2203,6 +2210,7 @@ public class CityScreen extends Screen {
             String[] p = rich.getString(i).split("\\|");
             if (p.length < 3) continue;
             small(g, Ui.clip(font, p[0] + ", " + p[1].toLowerCase(Locale.ROOT), (int) ((col - 30) / 0.75)), cx, cy, Ui.INK);
+            if (p.length > 3) links.add(g, p[3], p[0], cx, cy - 1, Math.min((int) (font.width(p[0]) * 0.75F), col - 30), 7, Ui.INK);   // [teleport]
             Ui.right(g, font, p[2] + "c", cx + col, cy - 1, Ui.MUTED);
             cy += 9;
         }
@@ -2228,6 +2236,7 @@ public class CityScreen extends Screen {
                 String[] p = liked.getString(i).split("\\|");
                 if (p.length < 2) continue;
                 small(g, Ui.clip(font, p[0], (int) ((col - 30) / 0.75)), cx, cy, Ui.INK);
+                if (p.length > 2) links.add(g, p[2], p[0], cx, cy - 1, Math.min((int) (font.width(p[0]) * 0.75F), col - 30), 7, Ui.INK);   // [teleport]
                 Ui.right(g, font, (p[1].startsWith("-") ? "" : "+") + p[1], cx + col, cy - 1, Ui.MUTED);
                 cy += 9;
             }
@@ -2277,6 +2286,8 @@ public class CityScreen extends Screen {
                 String[] p = masters.getString(i).split("\\|");
                 if (p.length < 3) continue;
                 small(g, Ui.clip(font, p[0] + ": " + p[1], (int) ((col - 22) / 0.75)), cx, cy, Ui.INK);
+                int at = (int) (font.width(p[0] + ": ") * 0.75F);                                                  // [teleport] the name after the trade
+                if (p.length > 3) links.add(g, p[3], p[1], cx + at, cy - 1, Math.min((int) (font.width(p[1]) * 0.75F), col - 22 - at), 7, Ui.INK);
                 Ui.right(g, font, "L" + p[2], cx + col, cy - 1, Ui.MUTED);
                 cy += 9;
             }
@@ -3309,6 +3320,7 @@ public class CityScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (links.click(mx, my, button)) return true;                    // [teleport] a folk's name, or its buttons
         for (Zone z : new ArrayList<>(zones)) {
             if (mx >= z.x0() && mx < z.x1() && my >= z.y0() && my < z.y1()) { z.act().run(); return true; }
         }
