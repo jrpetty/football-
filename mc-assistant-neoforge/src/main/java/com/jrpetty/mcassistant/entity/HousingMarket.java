@@ -300,7 +300,8 @@ public final class HousingMarket {
         java.util.function.Function<BuildGoal.Placement, BlockState> paint = Showcase.painter(councilPalette(village));
         int cells = 0;
         for (BuildGoal.Placement p : BuildGoal.plan(drawing, BlockPos.ZERO.above(64), Direction.NORTH, 13)) {
-            if (p.part() == BuildGoal.Part.CLEAR || p.part() == BuildGoal.Part.WATER) continue;
+            // The house, not its furniture: the beds and rugs are the household's, furnished out of the stores as it needs them.
+            if (p.part() == BuildGoal.Part.CLEAR || p.part() == BuildGoal.Part.WATER || furnishing(p.part())) continue;
             BlockState st = paint.apply(p);
             if (st == null || st.isAir()) continue;
             items.merge(st.getBlock().asItem(), 1, Integer::sum);
@@ -321,9 +322,11 @@ public final class HousingMarket {
      * flat figure (35 a house, 55 a two-storey house, 120 a manor, a quarter more an age).
      */
     static double worth(UUID village, Homes.Home h) {
-        String drawing = Homes.drawing(village, h);
+        // A flat is never sold: what a household in one saves toward is a house's price (Flats).
+        boolean flat = Flats.isFlat(h);
+        String drawing = flat ? "house" : Homes.drawing(village, h);
         int age = Villages.ageOf(village).ordinal();
-        if (!h.anchor.equals(BlockPos.ZERO)) {
+        if (!flat && !h.anchor.equals(BlockPos.ZERO)) {
             Cost c = Cost.decode(Ledger.note(village, COST + h.anchor.asLong()));
             if (c != null && (c.custom() || c.drawing().equals(drawing) && c.age() == age)) return Math.max(1, c.worth());
         }
@@ -2088,6 +2091,13 @@ public final class HousingMarket {
         return c == null ? null : c.anchor;
     }
 
+    /** Tests: which way the house going up has its back, or null. */
+    @Nullable
+    public static Direction buildFacingForTests(UUID village) {
+        Commission c = load(village);
+        return c == null ? null : c.facing;
+    }
+
     /** Tests: who has been paid for laying the house going up, and how much. */
     public static Map<UUID, Integer> buildersForTests(UUID village) {
         Commission c = load(village);
@@ -2102,7 +2112,7 @@ public final class HousingMarket {
 
     /** Tests: the morning's market reckoning, for so many days running from today. */
     public static void daysForTests(ServerLevel level, Villages.Village v, int days) {
-        long day = level.getDayTime() / 24000L;
+        long day = Math.max(level.getDayTime() / 24000L, indexDay(v.id()));
         for (int i = 0; i < days; i++) reckon(level, v, day + i + 1);
     }
 
@@ -2156,5 +2166,33 @@ public final class HousingMarket {
     /** Tests: what the folk's card says of its own house. */
     public static String cardForTests(VillageFolkEntity f) {
         return cardLine(f);
+    }
+
+    /** Tests: the plot's price on this ground today. */
+    public static int plotForTests(UUID village, BlockPos anchor) {
+        return plotFee(village, anchor);
+    }
+
+    /** Tests: a builder's hourly rate in this town, and the hours so many blocks take. */
+    public static double hourlyForTests(UUID village) {
+        return hourly(village);
+    }
+
+    /** Tests: what the house on this ground fetches on the market today (Homes.price), or -1. */
+    public static int marketPriceForTests(UUID village, BlockPos anchor) {
+        Homes.Home h = Homes.homes(village).get(anchor.asLong());
+        return h == null ? -1 : Homes.price(village, h);
+    }
+
+    /** Tests: the household this folk heads (it, its partner, their children), as the market counts households. */
+    public static List<VillageFolkEntity> householdForTests(VillageFolkEntity f) {
+        UUID id = f.ownerId();
+        if (id != null) for (List<VillageFolkEntity> hh : households(id)) if (hh.contains(f)) return hh;
+        return List.of(f);
+    }
+
+    /** Tests: the cells of a design's drawing the household pays for (beds as wanted). */
+    public static int cellsForTests(Design d, int household) {
+        return cells(d, BlockPos.ZERO.above(70), Direction.NORTH, bedsWanted(d, household)).size();
     }
 }
