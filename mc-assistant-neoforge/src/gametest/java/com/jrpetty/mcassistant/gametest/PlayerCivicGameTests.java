@@ -117,7 +117,7 @@ public class PlayerCivicGameTests {
         String name = p.getName().getString();
         Ledger.addCitizen(village, p.getUUID(), name);
         for (VillageFolkEntity f : folk) {
-            f.persona().feelFor(p.getUUID(), name, 85);
+            f.persona().feelFor(p.getUUID(), name, 100);
             f.persona().met(p.getUUID());
         }
         Standing.stir(village, p.getUUID());
@@ -125,6 +125,13 @@ public class PlayerCivicGameTests {
         int called = Elections.callForTests(level, v, day + 1);
         Kit.log("pc01 called: " + Elections.standingForTests(village));
         helper.assertTrue(called >= 1, "folk stand: " + Elections.standingForTests(village));
+        // The folk who stand are weaker: the town has no great liking for them.
+        for (VillageFolkEntity k : folk) {
+            for (String s : Elections.standingForTests(village)) {
+                if (!s.startsWith(k.displayNameCap() + ":")) continue;
+                for (VillageFolkEntity f : folk) if (f != k) f.life().feel(k.getUUID(), k.displayNameCap(), -40);
+            }
+        }
 
         // A folk who is not standing hears the player put its name forward.
         VillageFolkEntity voter = null;
