@@ -262,6 +262,7 @@ public final class Gazette {
         entries.add("§lThe elder's order§r\n" + (g == null ? "None given."
             : g.order().title + ". " + g.order().words + (g.by().isEmpty() ? "" : " — " + g.by()) + ", day " + g.day()));
         entries.add(prices(level, v, day));
+        entries.add(TradeDeals.gazette(level, v, day));          // [econ-trade] the deals with the neighbours, and yesterday's caravans
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();

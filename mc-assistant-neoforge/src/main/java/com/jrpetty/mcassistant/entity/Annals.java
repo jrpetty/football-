@@ -571,6 +571,7 @@ public final class Annals {
         out.put("school", School.report(level, v));              // the school: its teacher, its pupils and what they lean to
         out.put("museum", Museum.report(level, v));              // the museum: what is on show, who found it, the archive
         out.put("jobmarket", JobMarket.report(level, id));         // the job market between towns: the Jobs page's other view
+        out.put("trade", TradeDeals.report(level, v));             // [econ-trade] the Trade page: the book, the deals, the talks
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
         out.put("queue", strings(queue));

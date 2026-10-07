@@ -400,6 +400,8 @@ public final class VillageBoards {
         if (neighbours != null) out.add("FN|Neighbours: " + neighbours + ". Elder " + (Villages.elderName(id).isEmpty() ? "none yet" : "is " + Envoys.temper(id).words) + ".");
         String abroad = Envoys.latest(id);
         if (abroad != null) out.add("FM|Abroad: " + abroad + ".");
+        String trade = TradeDeals.boardLine(level, id);         // [econ-trade] what it is good at and short of, and its deals
+        if (trade != null) out.add("FN|" + trade);
         String scouts = Scouts.boardLine(id);
         if (scouts != null) out.add("FN|" + scouts);
         String museum = Museum.boardLine(id, day);              // what is new in the museum (Museum)

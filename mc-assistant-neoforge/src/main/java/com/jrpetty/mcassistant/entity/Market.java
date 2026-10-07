@@ -350,6 +350,7 @@ public final class Market {
             };
             if (keep < 0) continue;
             int have = stock(level, id, g.what());
+            have -= TradeDeals.spokenFor(id, g);           // [econ-trade] what a partner is promised goes to the partner, not off the map
             int n = Math.min(192, have - keep);
             if (g.need() == Villages.Task.FOOD) n = Math.min(n, foodStock - foodKeep);
             if (n < 32) continue;
@@ -421,6 +422,7 @@ public final class Market {
             boolean food = g.need() == Villages.Task.FOOD;
             if (food && foodSpare < g.bundle()) continue;
             int have = stock(level, id, g.what());
+            have -= TradeDeals.spokenFor(id, g);           // [econ-trade] what a partner is promised goes to the partner, not off the map
             int plenty = g.bundle() * 4;
             if (have < plenty + g.bundle()) continue;
             // As much as is wanted, from what it has to spare: up to eight lots of a thing.

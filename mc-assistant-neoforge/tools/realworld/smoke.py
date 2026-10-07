@@ -878,6 +878,65 @@ def fields_stage(r, look, cx, cz):
     say("alive after the fields: %s" % client_alive())
 
 
+def trade_stage(r, look, cx, cz):
+    """Trade between towns (entity/TradeBook, TradeTalks, TradeDeals): a second town a little way off if the town
+    has no neighbour; a deal's caravan on the road between them (struck by the same bargaining if they have none),
+    seen from behind as it walks; an envoy from the neighbour before this town's board with its leader come out to
+    hear it and the town gathering; and the Trade page of the town's books (the book, the deals, the talks)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    hy = ground_height(r, cx, cz)
+    out = r.cmd("execute positioned %d %d %d run village trade stage" % (cx, hy + 1, cz))
+    if "no neighbour" in out:
+        tx, tz = cx - 240, cz + 30
+        r.cmd("tp %s %d 140 %d" % (USER, tx, tz))
+        time.sleep(15)                                 # the ground arrives
+        say("second town: " + r.cmd("village spawnat %d %d 8" % (tx, tz))[:200])
+        time.sleep(20)                                 # its board goes up, its folk take up their trades
+        out = r.cmd("execute positioned %d %d %d run village trade stage" % (cx, hy + 1, cz))
+    say("trade stage: " + out[:1500])
+    say("trade: " + r.cmd("execute positioned %d %d %d run village trade" % (cx, hy + 1, cz))[:1500])
+    # The caravan, from behind and above, walking on toward the other town.
+    c = re.search(r"CARAVAN (-?\d+) (-?\d+) (-?\d+)", out)
+    w = re.search(r"TOWARD (-?\d+) (-?\d+) (-?\d+)", out)
+    if c:
+        x, y, z = int(c.group(1)), int(c.group(2)), int(c.group(3))
+        ax, az = (int(w.group(1)), int(w.group(3))) if w else (x + 10, z)
+        dx, dz = ax - x, az - z
+        n = max(1.0, math.hypot(dx, dz))
+        ex, ez = x - 9 * dx / n + 2, z - 9 * dz / n + 2
+        r.cmd("tp %s %d %d %d" % (USER, ex, y + 20, ez))
+        time.sleep(10)                                 # the road's chunks arrive
+        cy = max(y, ground_height(r, int(ex), int(ez))) + 4
+        look("22-trade-1-caravan", ex, cy, ez, x + 4 * dx / n, y + 1, z + 4 * dz / n, wait=6)
+    else:
+        say("no caravan on the road to photograph")
+    # The envoy before the board, the leader facing it.
+    e = re.search(r"ENVOY (-?\d+) (-?\d+) (-?\d+)", out)
+    el = re.search(r"ELDER (-?\d+) (-?\d+) (-?\d+)", out)
+    if e:
+        ex, ey, ez = int(e.group(1)), int(e.group(2)), int(e.group(3))
+        lx, ly, lz = (int(el.group(1)), int(el.group(2)), int(el.group(3))) if el else (ex + 2, ey, ez)
+        mx, mz = (ex + lx) / 2.0, (ez + lz) / 2.0
+        dx, dz = lx - ex, lz - ez
+        n = max(1.0, math.hypot(dx, dz))
+        sx, sz = mx - 6 * dz / n, mz + 6 * dx / n          # off to one side of the two, square on
+        look("22-trade-2-audience", sx, ey + 1.5, sz, mx, ey + 1.2, mz, wait=8)
+    else:
+        say("no envoy to photograph")
+    # The Trade page of the town's books.
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("trade books: " + r.cmd("execute as %s at @s run village trade books" % USER))
+    time.sleep(4)
+    shot("22-trade-3-books")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the trade: %s" % client_alive())
+
+
 def ageing_stage(r, look, cx, cz):
     """Growing old slowly (entity/VillageFolkEntity.ageYears, Lifespans): grown folk age a year every
     three days and the founders come eighteen to forty-five. What /village lifespans says of the town
