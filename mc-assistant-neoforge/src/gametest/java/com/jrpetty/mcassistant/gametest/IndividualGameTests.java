@@ -346,6 +346,13 @@ public class IndividualGameTests {
         level.setBlock(at.above(), Blocks.OAK_DOOR.defaultBlockState().setValue(DoorBlock.OPEN, true).setValue(DoorBlock.FACING, Direction.EAST)
             .setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
         tall.moveTo(at.getX() - 2.5, at.getY(), at.getZ() + 0.5);
+        // Stood on the floor (a folk not yet ticked has never landed, and the game plans no walk for one in the air).
+        tall.setOnGround(true);
+        // Its hitbox, stood in the doorway, touches neither the door nor the lintel.
+        boolean fits = level.noCollision(tall, tall.getDimensions(tall.getPose()).makeBoundingBox(at.getX() + 0.5, at.getY(), at.getZ() + 0.5));
+        boolean lintel = !level.noCollision(tall, tall.getDimensions(tall.getPose()).makeBoundingBox(at.getX() + 0.5, at.getY() + 0.2, at.getZ() + 0.5));
+        Kit.log("id04 the tallest stood in the doorway: clear " + fits + "; a fifth of a block higher, the lintel in the way " + lintel);
+        helper.assertTrue(fits, "the tallest stands in a doorway two blocks high, clear of the door and the lintel");
         Path path = tall.getNavigation().createPath(at.east(3), 0);
         boolean viaDoor = false;
         for (int i = 0; path != null && i < path.getNodeCount(); i++) {
@@ -432,6 +439,7 @@ public class IndividualGameTests {
         helper.assertTrue(f.claimBedNear(head), "a bed of its own");
         f.clearQueue();
         g.clearQueue();
+        f.setOnGround(true);                                          // stood on the ground: the game plans no walk for one in the air
         boolean home = Fears.homeBeforeDusk(f, level);
         BlockPos to = f.getNavigation().getTargetPos();
         Kit.log("id06 at 11500 the dark-fearing " + f.displayNameCap() + " home: " + home + ", to " + to + " (bed " + f.bedPos() + ")");
@@ -506,6 +514,7 @@ public class IndividualGameTests {
         VillageFolkEntity f = t.folk().get(0);
         Individual.habitsForTests(f, Habits.Place.WELL);
         f.moveTo(t.heart().getX() + 14.5, Kit.surface(level, t.heart().getX() + 14, t.heart().getZ() + 10).getY(), t.heart().getZ() + 10.5);
+        f.setOnGround(true);                                          // stood on the ground: the game plans no walk for one in the air
         Habits.placeNowForTests(f);
         BlockPos spot = Habits.placeSpotForTests(f);
         boolean going = Habits.favouritePlace(f, level);
