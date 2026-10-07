@@ -201,7 +201,8 @@ final class Mischief {
         else if (content >= 60) x *= 0.5;
         int guards = Patrols.watch(v.id()).size(), head = Math.max(1, Villages.headcount(v.id()));
         if (guards > 0) x *= Math.max(0.5, 1.0 - guards * 6.0 / head);
-        return x * Ethos.crimeFactor(v.id());                         // [identity] a curfew, a closed town
+        return x * Ethos.crimeFactor(v.id())                          // [identity] a curfew, a closed town
+            * Perks.crimeFactor(v.id());                              // [perks] the Watch House, a Warden or a Statesman in office
     }
 
     // ------------------------------------------------------------------ the morning's temptations
@@ -209,7 +210,7 @@ final class Mischief {
     /** The morning's look at a town's folk (Crime.tick): who is tempted today, and what it means to do. Returns the plans made. */
     static int daily(ServerLevel level, Villages.Village v, long day) {
         if (Villages.headcount(v.id()) < 3) return 0;
-        double prevent = prevention(v);
+        double prevent = prevention(v) * Beats.cover(level, v);    // [police] a town whose beats walk its trouble spots tempts fewer
         RandomSource r = level.getRandom();
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (!(a instanceof VillageFolkEntity f) || !eligible(f, day)) continue;
@@ -572,6 +573,8 @@ final class Mischief {
             if (p.isSpectator() || !p.isAlive()) continue;
             if (p.distanceTo(f) <= TOO_NEAR && p.hasLineOfSight(f)) return "eyes";
         }
+        String beat = Beats.deters(level, f, to);                   // [police] the beat passed here lately: its boots still warm
+        if (beat != null) return beat;
         long t = level.getDayTime() % 24000L;
         boolean dark = t >= 12500L && t < 23500L;
         boolean lamp = kind == Kind.VANDALISM && isLight(level.getBlockState(to));
@@ -739,6 +742,7 @@ final class Mischief {
         f.persona().remember(day, "I did something on day " + day + " I'm not proud of", 3);
         f.brain(kind.word + " at " + placeName);
         Crime.changed();
+        Incidents.inTheAct(level, v, f, c);                         // [police] a guard saw it, or heard "stop, thief!": a chase
         return c;
     }
 
@@ -935,6 +939,8 @@ final class Mischief {
             case CAVE -> "a cave dweller's kit";
             case FLETCHER -> "a fletcher's apron and quiver";      // [fletcher]
             case GOLEMS -> "a golem keeper's riveted apron";      // [golems]
+            case CARTOGRAPHER -> "a cartographer's long blue coat";  // [cartographer]
+            case DIVER -> "a diver's wetsuit and goggles";           // [diver]
             default -> "plain clothes";
         };
     }

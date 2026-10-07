@@ -45,7 +45,8 @@ public final class NightLight {
         boolean holding = isLight(off);
         boolean wants = !f.isBaby() && !f.isSleeping() && f.getTarget() == null && !f.isPassenger()
             && dark(level.getDayTime()) && underSky(level, f)
-            && !(f.stationTask() == AssistantEntity.StationTask.GUARD && f.countMatching(s -> s.is(Items.SHIELD)) > 0);   // the watch's hand is for its shield
+            && (!(f.stationTask() == AssistantEntity.StationTask.GUARD && f.countMatching(s -> s.is(Items.SHIELD)) > 0)   // the watch's hand is for its shield
+                || Police.lantern(f));                     // [police] but on the night beat it carries its lantern (Beats.lantern)
         if (holding && !wants) {
             putAway(f, off);
         } else if (!holding && wants && off.isEmpty()) {

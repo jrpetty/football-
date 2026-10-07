@@ -209,7 +209,8 @@ final class InterviewScript {
 
         // A question the post really meets.
         String[] sc = scenario(level, iv, post, asked, f);
-        int q = heldLv / 5 + fit(post, asked, life) + (c.letter ? 1 : 0) + (nervous ? -2 : 0);
+        int q = heldLv / 5 + fit(post, asked, life) + (c.letter ? 1 : 0) + (nervous ? -2 : 0)
+            + (f == null ? 0 : Quirks.inInterview(f, asked));                 // [perks] a quirk that suits the trade asked about
         boolean good = q >= 3, fair = q >= 1;
         out.add(Line.of("chair", sc[0]));
         out.add(Line.of("cand", (nervous && !good ? FolkTalk.pick(r, "Um. ", "Er — ", "Well… ") : "") + (good ? sc[1] : fair ? sc[2] : sc[3])));
@@ -321,6 +322,11 @@ final class InterviewScript {
             case FERRY -> "How long have you handled a boat?";
             case FLETCHER -> "How long have you been fletching?";
             case GOLEMS -> "How long have you kept the golems?";
+            case CARTOGRAPHER -> "How long have you been drawing maps?";      // [cartographer]
+            case EMERALD -> "How long have you traded with the villagers?";   // [emerald]
+            case DIVER -> "How long have you been diving, and how long can you hold your breath?";   // [diver]
+            case NETHER -> "How long have you carried a blade, and have you ever been through a portal?";   // [nether]
+            case REDSTONE -> "How long have you worked with redstone, and can you tell an observer from a comparator?";   // [redstone]
             case NONE -> "What have you done, till now?";
             // A trade come in since: asked in its own words.
             default -> "How long have you been at " + t.label + "?";
@@ -489,6 +495,25 @@ final class InterviewScript {
             case GOLEMS -> new String[]{ "The golem's cracked after a raid and the stores have two ingots. What do you do?",
                 "Both ingots into it now, and the smelter told the golem comes before the watch's new helmets till it's mended.",
                 "Mend what I can with the two.", "Leave it. Golems mend themselves, don't they?" };
+            // [cartographer] The map room's first rule (its trade book): never sell a map of land the town hasn't seen.
+            case CARTOGRAPHER -> new String[]{ "A traveller offers good coin for a map to a monument, and the scouts have never been out to sea. What then?",
+                "Tell it straight: not yet. The scouts out that way first, and the map drawn when they're home. A map that lies gets folk drowned.",
+                "Draw what I can of the coast, and say the rest is guesswork.", "Draw a monument somewhere likely. Coin's coin." };
+            case EMERALD -> new String[]{ "You reach the villagers' village and there are pillagers about the bell. What do you do?",   // [emerald]
+                "Turn straight round with the goods and tell the town. The villagers' fight isn't ours, and the trade will keep.",
+                "Wait at the edge till they've gone.", "Sell quick and run?" };
+            // [diver] The diver's first rule (its trade book): up for air before you need it, not when you do.
+            case DIVER -> new String[]{ "You're on the bed with the last of the kelp to cut, and your chest is starting to burn. What then?",
+                "Straight up, to open water and not under the jetty. The kelp's still there when I've my breath back.",
+                "Cut the last one quickly, then up.", "Keep going. I can hold it a bit longer." };
+            // [nether] The runners' first rule (School's lines): gold on before you go through, and never strike a piglin.
+            case NETHER -> new String[]{ "On the far side a piglin's watching you hard, and your gold charm's come off in the scramble. What then?",
+                "Charm back on before anything else, back to the others, and never a hand raised to it: strike one and they all come.",
+                "Back away slowly and hope it loses interest.", "Draw my sword before it does." };
+            // [redstone] The engineer's first rule (its trade book): never let an observer watch where a piston's head comes.
+            case REDSTONE -> new String[]{ "The cane farm's pistons won't stop: out, in, out, in, with no cane grown. What's wrong?",
+                "An observer's watching the place a piston's head comes into: it sees the head and fires it again. Move the observer.",
+                "Pull the redstone up and lay it again.", "Leave it. It'll stop when it's tired." };
             default -> new String[]{ "What would you do first, in the post?",
                 "Learn how it's done here first — ask who did it before me — and then do it better.", "Get to work.", "I'm not sure, to be honest." };
         };

@@ -333,6 +333,7 @@ public final class ZoneChests {
         return !(be instanceof net.minecraft.world.level.block.entity.AbstractFurnaceBlockEntity)
             && !(be instanceof net.minecraft.world.level.block.entity.HopperBlockEntity)
             && !(be instanceof net.minecraft.world.level.block.entity.DispenserBlockEntity)
-            && !(be instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity);
+            && !(be instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity)
+            && !Engineers.anyMachineInput(found.pos());     // [redstone] a machine's ore, fuel or delivery chest is the machine's
     }
 }

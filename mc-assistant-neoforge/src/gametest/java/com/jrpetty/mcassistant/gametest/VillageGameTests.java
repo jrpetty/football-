@@ -3118,6 +3118,8 @@ public class VillageGameTests {
     public static void t05_takeover_join(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        // [emerald] The old takeover is off by default now (two peoples, kept apart): on for this test, which keeps it working.
+        com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(true);
         Kit.hold(level, 2900, 2900, 48);
         BlockPos at = Kit.surface(level, 2900, 2900);
         Villager v = EntityType.VILLAGER.create(level);
@@ -3133,6 +3135,7 @@ public class VillageGameTests {
             }
             helper.assertTrue(villagers == 0, "the villager should have been swapped out, " + villagers + " remain");
             helper.assertTrue(folk.size() == 1, "one folk should stand where the villager was, found " + folk.size());
+            com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(null);   // [emerald]
             helper.succeed();
         });
     }
@@ -3144,6 +3147,8 @@ public class VillageGameTests {
     public static void t06_takeover_sweep(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        // [emerald] The old takeover is off by default now (two peoples, kept apart): on for this test, which keeps it working.
+        com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(true);
         Kit.hold(level, 3000, 2900, 48);
         BlockPos at = Kit.surface(level, 3000, 2900);
         VillagerTakeover.suspended = true;
@@ -3166,6 +3171,7 @@ public class VillageGameTests {
                 + (found.isEmpty() ? "" : " — " + found.get(0).debugLine()));
             helper.assertTrue(villagers == 0, "the sweep should have converted the villager, " + villagers + " remain");
             helper.assertTrue(folk == 1, "one folk should have taken its place, found " + folk);
+            com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(null);   // [emerald]
             helper.succeed();
         });
     }

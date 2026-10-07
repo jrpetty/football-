@@ -191,6 +191,9 @@ public final class Bench {
         k.add(new Kept(s -> s.is(Items.FEATHER), 4, "the watch's arrows"));
         k.add(new Kept(s -> s.is(Items.TORCH), 8, "the village's lights"));
         k.add(new Kept(s -> s.is(Items.STONE_BRICKS), Masonry.keep(id, Items.STONE_BRICKS), "the masons' stone"));
+        // [diver] The scutes the divers' turtle helmets want, till they are made (TurtleBeach).
+        int scutes = TurtleBeach.scutesKept(level, v);
+        if (scutes > 0) k.add(new Kept(s -> s.is(Items.TURTLE_SCUTE), scutes, "the divers' turtle helmets"));
         // What the museum's curator has asked for, until it is fetched (Museum).
         Museum.keptBack(id, (what, n, why) -> k.add(new Kept(what, n, why)));
         return k;
@@ -294,6 +297,8 @@ public final class Bench {
         public final int missingCount;
         /** Why, when the stores have it but the village keeps it back ("put by for the age"); else empty. */
         public final String why;
+        /** [diver] What its firings burn, by fuel (FuelBook's books, when it is made). */
+        public Map<Item, Integer> burnt = Map.of();
 
         Plan(@Nullable Item target, int made, List<Step> steps, Map<Item, Integer> takes, Map<Item, Integer> back, List<Item> tools,
              @Nullable String shortOf, @Nullable Item missing, int missingCount, String why) {
@@ -344,6 +349,8 @@ public final class Bench {
         final Map<Item, Integer> takes;
         final List<Step> steps;
         final List<Item> tools;
+        /** [diver] What the plan's firings burn, by fuel: the town's fuel books (FuelBook). */
+        final Map<Item, Integer> burnt = new HashMap<>();
         boolean table, furnace, smithy;
 
         State(Map<Item, Integer> free, boolean table, boolean furnace) {
@@ -370,6 +377,7 @@ public final class Bench {
             State c = new State(new HashMap<>(free), new HashMap<>(spare), new LinkedHashMap<>(takes), new ArrayList<>(steps),
                 new ArrayList<>(tools), table, furnace);
             c.smithy = smithy;
+            c.burnt.putAll(burnt);
             return c;
         }
 
@@ -379,6 +387,7 @@ public final class Bench {
             takes.clear(); takes.putAll(o.takes);
             steps.clear(); steps.addAll(o.steps);
             tools.clear(); tools.addAll(o.tools);
+            burnt.clear(); burnt.putAll(o.burnt);
             table = o.table;
             furnace = o.furnace;
             smithy = o.smithy;
@@ -451,7 +460,9 @@ public final class Bench {
         Map<Item, Integer> back = new LinkedHashMap<>(s.spare);
         back.remove(target);
         back.entrySet().removeIf(e -> e.getValue() <= 0);
-        return new Plan(target, made, List.copyOf(s.steps), Map.copyOf(s.takes), back, List.copyOf(s.tools), null, null, 0, "");
+        Plan done = new Plan(target, made, List.copyOf(s.steps), Map.copyOf(s.takes), back, List.copyOf(s.tools), null, null, 0, "");
+        done.burnt = Map.copyOf(s.burnt);
+        return done;
     }
 
     /** These things wanted for a piece of work of a maker's own (the café's drinks): out of the stores,
@@ -469,7 +480,9 @@ public final class Bench {
         }
         Map<Item, Integer> back = new LinkedHashMap<>(s.spare);
         back.entrySet().removeIf(e -> e.getValue() <= 0);
-        return new Plan(null, 0, List.copyOf(s.steps), Map.copyOf(s.takes), back, List.copyOf(s.tools), null, null, 0, "");
+        Plan done = new Plan(null, 0, List.copyOf(s.steps), Map.copyOf(s.takes), back, List.copyOf(s.tools), null, null, 0, "");
+        done.burnt = Map.copyOf(s.burnt);
+        return done;
     }
 
     /**
@@ -642,8 +655,13 @@ public final class Bench {
      * coal the age wants, or anything the village keeps back.
      */
     private static boolean fuel(Ctx c, State s, int firings, int depth) {
-        List<Predicate<ItemStack>> kinds = List.of(x -> x.is(Items.CHARCOAL) || x.is(Items.COAL), x -> x.is(ItemTags.PLANKS),
-            x -> x.is(ItemTags.LOGS));
+        // [diver] The diver's dried kelp blocks first (a block fires twenty); and while the stores have any, no coal at
+        // all: the coal is the torches', the forge's and the watch's (FuelBook).
+        boolean kelp = false;
+        for (Map.Entry<Item, Integer> e : s.free.entrySet()) if (e.getValue() > 0 && e.getKey() == Items.DRIED_KELP_BLOCK) kelp = true;
+        List<Predicate<ItemStack>> kinds = kelp
+            ? List.of(x -> x.is(Items.DRIED_KELP_BLOCK), x -> x.is(ItemTags.PLANKS), x -> x.is(ItemTags.LOGS))
+            : List.of(x -> x.is(Items.CHARCOAL) || x.is(Items.COAL), x -> x.is(ItemTags.PLANKS), x -> x.is(ItemTags.LOGS));
         for (Predicate<ItemStack> kind : kinds) {
             for (Map.Entry<Item, Integer> e : new ArrayList<>(s.free.entrySet())) {
                 ItemStack one = c.sample(e.getKey());
@@ -653,6 +671,7 @@ public final class Bench {
                 int want = (firings * FIRING + burns - 1) / burns;
                 if (e.getValue() < want) continue;
                 use(c, s, e.getKey(), want, false);
+                s.burnt.merge(e.getKey(), want, Integer::sum);                  // [diver] the fuel books
                 return true;
             }
         }
@@ -687,6 +706,7 @@ public final class Bench {
             took.put(it, e.getValue());
         }
         for (Map.Entry<Item, Integer> e : p.back.entrySet()) Crafts.giveBack(level, v, e.getKey(), e.getValue());
+        if (!p.burnt.isEmpty()) FuelBook.burnt(level, v.id(), p.burnt);         // [diver] what its fires burnt, by kind
         for (Item tool : p.tools) {
             ItemStack t = new ItemStack(tool);
             ItemStack left = f == null ? t : f.insertItem(t);

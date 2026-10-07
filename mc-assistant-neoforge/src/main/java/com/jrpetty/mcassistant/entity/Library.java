@@ -686,6 +686,7 @@ public final class Library {
         if (j.draft == null) shelf.lastBook = day;
         prune(level, v, b, shelf);
         LibraryRecords.touch();
+        Perks.printed(level, v, item(id, t, 1));       // [perks] the Printing Press: a copy for the stores, on a book out of them
         // The news.
         String kind = kindWord(t);
         String line;

@@ -1,0 +1,19 @@
+# [redstone] A street lamp that lights itself at dusk: a redstone lamp on a stone post, an inverted daylight
+# sensor on top of it. The sensor, inverted (as a right-click sets one in the game), gives power while the sky
+# is dark and none while it is light, and the lamp under it burns while it has power: on at dusk, off at dawn,
+# on in a storm, by the sky alone.
+name lamp_post
+key # casing
+key w casing_wall
+key L redstone_lamp
+key S daylight_detector inverted=true
+layer -1
+#
+layer 0
+w
+layer 1
+w
+layer 2
+L
+layer 3
+S

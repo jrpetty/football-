@@ -125,6 +125,7 @@ public final class Contentment {
         if (Villages.ageOf(id).ordinal() >= Villages.Age.STONE.ordinal() && !Villages.hasBuilt(id, "fortify")) safety -= 2;
         else if (Villages.hasBuilt(id, "fortify")) good.add("safe behind the wall");
         safety += Diplomacy.safety(id, good, bad);
+        safety += Police.safety(id, good, bad);                 // [police] a watch the town trusts, or resents; the wanted at large
         safety = Math.max(0, Math.min(10, safety));
         // Things to enjoy.
         int amenities = 0;
@@ -146,6 +147,7 @@ public final class Contentment {
         int feasts = CityTree.contentment(id);
         if (feasts > 0) good.add("feast days kept");
         feasts += Festivals.contentment(id, day, good);           // [batchB] a festival kept in the last few days
+        feasts += Perks.contentment(id, good, bad);               // [perks] the new civics, the wonders, the leader, its legacies
         int score = Math.max(0, Math.min(100, foodPts + homesPts + moodPts + safety + amenities + wages + rest + feasts));
         score = Math.max(0, Math.min(100, score + WarAndPeace.contentment(id, good, bad)));   // [war-peace] war-weariness
         score = Math.max(0, Math.min(100, score + Identity.contentment(id, day, good, bad)));   // [identity] its ways, laws, rulers, traits
@@ -194,6 +196,7 @@ public final class Contentment {
         if (days == 0) MISERY.remove(id);
         if (days < 3) return null;
         if (Villages.headcount(id) <= KEEP_AT_LEAST) return null;
+        if (CityTree.nobodyLeaves(id)) return null;               // [perks] the Founders' Colossus: nobody gives up on this town
         if (LEFT.getOrDefault(id, -10L) >= day - 1) return null;
         VillageFolkEntity who = leaver(id);
         if (who == null) return null;

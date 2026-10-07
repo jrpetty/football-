@@ -290,6 +290,14 @@ public final class Founding extends SavedData {
             // Under a roof of rock the top of the world is the roof: there is no ground to level from above.
             return Outcome.no("A village wants open sky over it. Found it in the overworld.");
         }
+        // [emerald] Not on a village of the game's own villagers, nor near enough to crowd it: theirs is theirs (VanillaVillages).
+        VanillaVillages.Known theirs = VanillaVillages.inTheWayOfFounding(level, at);
+        if (theirs != null) {
+            int d = (int) Math.sqrt(theirs.centre().distSqr(at));
+            return Outcome.no("There is " + theirs.words() + " " + d + " blocks " + bearing(at, theirs.centre())
+                + " of here, and its ground is the villagers' own. Found the town at least " + VanillaVillages.CLEAR
+                + " blocks from its edge (" + Math.max(1, VanillaVillages.CLEAR - theirs.edge(at.getX(), at.getZ())) + " further off).");
+        }
         Direction side = Direction.fromYRot(yaw);
         BlockPos anchor = VillageBoards.raisePending(level, at, side);
         if (anchor == null || !(level.getBlockEntity(anchor) instanceof VillageBoardBlockEntity board)) {
@@ -359,6 +367,9 @@ public final class Founding extends SavedData {
             int room = (int) d - Villages.townReach(v.id()) - 8;
             if (room < s.outer) s.outer = Math.max(FoundingPlan.BARE + 8, room);
         }
+        // [emerald] Nor into a village of villagers' ground, nor its margin: the levelling stops short of it.
+        int theirs = VanillaVillages.roomFrom(level, s.heart);
+        if (theirs < s.outer) s.outer = Math.max(FoundingPlan.BARE + 8, theirs);
         if (s.outer < s.radius + 8) s.radius = Math.max(FoundingPlan.BARE, s.outer - 8);
         if (f != null) f.setDirty();
         be.underWay(folk);
@@ -417,6 +428,8 @@ public final class Founding extends SavedData {
             int room = (int) d - Villages.townReach(o.id()) - 8;
             if (room < s.outer) s.outer = Math.max(FoundingPlan.BARE + 8, room);
         }
+        int theirs = VanillaVillages.roomFrom(level, s.heart);       // [emerald] never into a village of villagers' ground
+        if (theirs < s.outer) s.outer = Math.max(FoundingPlan.BARE + 8, theirs);
         if (s.outer < s.radius + 8) s.radius = Math.max(FoundingPlan.BARE, s.outer - 8);
         f.sites.add(s);
         f.setDirty();
@@ -671,6 +684,8 @@ public final class Founding extends SavedData {
                 }
                 Terraform.survey(chunk, minY, x, z, g, i, s.tops, m);
                 if (!s.existing && board.contains(BlockPos.asLong(x, 0, z))) g.kind[i] = FoundingPlan.BOARD;
+                // [emerald] A village of villagers' ground, and its margin, is never levelled: left as the world made it.
+                if (VanillaVillages.within(level, x, z, VanillaVillages.MARGIN)) g.kind[i] = FoundingPlan.OUTSIDE;
             }
             s.surveyed++;
             done++;

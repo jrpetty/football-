@@ -115,6 +115,18 @@ public final class Prices {
         return VALUE.size();
     }
 
+    /**
+     * [cartographer] What a map to a place costs a player at the map room (Cartographers): its makings (an empty locator
+     * map's: eight paper and a compass, at their worth) and the cartographer's work, a coin for every hundred blocks to
+     * where it points (the walk the town made to find it), all of it by how rare the place is (a monument or a mansion
+     * four or five times a mineshaft). Never less than the makings and a coin, never more than eighty.
+     */
+    public static int mapOf(int blocksAway, double rarity) {
+        double makings = each(Items.PAPER) * 8 + each(Items.COMPASS);
+        double v = (makings + 2.0 + Math.max(0, blocksAway) / 100.0) * Math.max(1.0, rarity);
+        return (int) Math.max(Math.ceil(makings) + 1, Math.min(80, Math.round(v)));
+    }
+
     /** Is this item on the list by name or by recipe (not merely guessed at by rarity)? */
     public static boolean known(Item item) {
         ensure();
@@ -449,6 +461,8 @@ public final class Prices {
         "mc_assistant:forged_coin 0.1 C",
         // [interviews] A letter of application: its sheet of paper and its ink, and a little for the hand that wrote it.
         "mc_assistant:letter_of_application 0.3 C",
+        // [police] The Constable's Badge: its iron ingot and four gold nuggets (a coin and a half, and four), and the smith's hand.
+        "mc_assistant:constable_badge 6.5 C",
         // [itemaudit] The town's coin is worth a coin, whatever its minting took (a ninth of a bar of gold and the fire);
         // and a companion's memory core is nobody's to buy or sell: it is a friend, and nothing makes another.
         "mc_assistant:village_coin 1.0 C", "mc_assistant:memory_core 0 C",

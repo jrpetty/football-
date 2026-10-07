@@ -908,6 +908,7 @@ public final class Crime extends SavedData {
             case SMUGGLING -> "the stores' books came up short: " + c.goods + " missing";
         } + "; the watch is looking into it");
         changed();
+        Incidents.reported(level, v, c, by);                    // [police] the victim or the witness runs to the watch with it
     }
 
     // ------------------------------------------------------------------ the footprints
@@ -1257,6 +1258,8 @@ public final class Crime extends SavedData {
         ServerLevel level = p.serverLevel();
         Villages.Village v = Villages.get(village);
         if (v == null) return "Amiss? Not that I know of.";
+        String police = Police.talk(f, p, text);                 // [police] reporting a crime, swearing in, the patrol, bail, bounties
+        if (police != null) return police;
         long day = level.getDayTime() / 24000L;
         boolean watch = f.stationTask() == AssistantEntity.StationTask.GUARD || f.getUUID().equals(Villages.elder(village));
         // Handing in what was dropped at a scene.

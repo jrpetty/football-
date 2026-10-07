@@ -30,8 +30,8 @@ import java.util.List;
  *   /village interviews books            the city books open at the Interviews page
  *   /village interviews stage &lt;post&gt;     (ops) an interview set now for a post, with the town's best: teacher,
  *                                        librarian, constable, caveleader, caveplace, ferryman, auctioneer, banker,
- *                                        steward, fletcher, golemkeeper, master_&lt;trade&gt;, or a trade's word (a
- *                                        notice put up for it)
+ *                                        steward, fletcher, golemkeeper, cartographer, master_&lt;trade&gt;, or a
+ *                                        trade's word (a notice put up for it)
  *   /village interviews now              (ops) the town's next interview begun at once
  *   /village interviews hurry on|off     (ops) lines every half-second, for a quick look
  * </pre>

@@ -116,6 +116,7 @@ public final class Economy {
                 || s.is(Items.DIORITE) || s.is(Items.GRANITE) || s.is(Items.TUFF) || s.is(Items.STONE_BRICKS)
                 || s.is(Items.SAND) || s.is(Items.GRAVEL) || s.is(Items.CLAY_BALL) || s.is(Items.BRICK) || s.is(Items.FLINT)) return Kind.STONE;
         if (s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.RAW_IRON) || s.is(Items.IRON_INGOT) || s.is(Items.RAW_COPPER)
+                || s.is(Items.DRIED_KELP_BLOCK)                                  // [diver] kelp blocks: fuel, with the coal
                 || s.is(Items.COPPER_INGOT) || s.is(Items.RAW_GOLD) || s.is(Items.GOLD_INGOT) || s.is(Items.DIAMOND)
                 || s.is(Items.EMERALD) || s.is(Items.REDSTONE) || s.is(Items.LAPIS_LAZULI) || s.is(Items.OBSIDIAN)
                 || s.is(Items.IRON_NUGGET) || s.is(Items.GOLD_NUGGET) || s.is(Items.QUARTZ)) return Kind.ORE;
@@ -171,6 +172,28 @@ public final class Economy {
         d.trades.merge(trade, v, Double::sum);
         d.folk.merge(f.getUUID(), v, Double::sum);
         d.names.put(f.getUUID(), f.displayNameCap());
+    }
+
+    /**
+     * [redstone] What one of the engineer's machines made by itself (Engineers.tally): its cane, its melons, the
+     * auto-smelter's ingots. Nobody's hands picked it up, so it is booked here, as the trade's output and its worth
+     * and, for the day's best producers, the engineer's (its machine). The couriers who carry it in make nothing.
+     */
+    public static void machineMade(UUID village, @Nullable VillageFolkEntity engineer, ItemStack s, int n) {
+        if (village == null || s.isEmpty() || n <= 0) return;
+        ItemStack lot = s.copyWithCount(n);
+        tally(village, StationTask.REDSTONE, lot, n, true);
+        Kind k = kindOf(lot);
+        if (k == Kind.FOOD) Leader.foodIn(village, lot);
+        double v = worthOf(lot);
+        if (k == null || v <= 0) return;
+        Day d = TODAY.computeIfAbsent(village, x -> new Day());
+        d.kinds[k.ordinal()] += v;
+        d.trades.merge(StationTask.REDSTONE, v, Double::sum);
+        if (engineer != null) {
+            d.folk.merge(engineer.getUUID(), v, Double::sum);
+            d.names.put(engineer.getUUID(), engineer.displayNameCap());
+        }
     }
 
     // ------------------------------------------------------------------ item by item
@@ -367,6 +390,17 @@ public final class Economy {
             case FLETCHER -> k == Kind.CRAFT || s.is(Items.FLINT) || s.is(Items.ARROW) || s.is(Items.SPECTRAL_ARROW);
             // [golems] The blocks of iron and the carved pumpkins it makes for its golems, and the seeds the carving gives.
             case GOLEMS -> k == Kind.CRAFT || s.is(Items.IRON_BLOCK) || s.is(Items.CARVED_PUMPKIN) || s.is(Items.PUMPKIN_SEEDS);
+            // [cartographer] Its maps and the makings it presses and forges for them: paper, compasses, a table.
+            case CARTOGRAPHER -> s.is(Items.FILLED_MAP) || s.is(Items.MAP) || s.is(Items.PAPER) || s.is(Items.COMPASS)
+                || s.is(Items.CARTOGRAPHY_TABLE);
+            // [emerald] What it brings home from the villagers: emeralds for the surplus, and what the emeralds bought.
+            // (What it took out of the stores and brings back unsold is no new work: Economy.given knows it.)
+            case EMERALD -> true;
+            // [diver] The kelp and what is dried and packed of it, the bed's clay, sand and gravel, the seagrass and the
+            // pickles, the turtles' scutes, and the monument's prismarine.
+            case DIVER -> true;
+            // [nether] All the Nether gives up: its ore, its stone and sand, its wart, the blazes' rods, the piglins' barter.
+            case NETHER -> k != null;
             default -> k == Kind.CRAFT || k == Kind.ANIMAL;                     // the crafts: smith, tailor, brewer, enchanter, shop
         };
     }

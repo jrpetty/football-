@@ -223,6 +223,7 @@ public final class WatchKit {
         int worse = 0;
         for (VillageFolkEntity g : watch(v.id())) if (wears(g, k) < want) worse++;
         for (VillageFolkEntity g : CaveDwellers.dwellers(v.id())) if (wears(g, k) < want) worse++;   // [caves] theirs is the watch's kit
+        for (VillageFolkEntity g : NetherRunners.runners(v.id())) if (wears(g, k) < want) worse++;   // [nether] and the runners'
         if (worse == 0) return 0;
         int have = 0;
         for (BlockPos p : Villages.storeChests(level, v.id())) {
@@ -551,12 +552,14 @@ public final class WatchKit {
     public static List<ItemStack> fit(ServerLevel level, Villages.Village v, VillageFolkEntity g) {
         List<ItemStack> given = new ArrayList<>();
         // [caves] The cave dwellers are kitted out the same way (CaveDwellers.kitUp), all but the bow.
-        boolean watch = g.stationTask() == StationTask.GUARD;
+        // [nether] The Nether runners too, with the watch's bow and arrows (the blazes, the ghasts).
+        boolean watch = g.stationTask() == StationTask.GUARD || g.stationTask() == StationTask.NETHER;
         if (!watch && g.stationTask() != StationTask.CAVE || g.isBaby() || !g.isAlive() || g.isShowcase()) return given;
         UUID id = v.id();
         String who = g.displayNameCap();
         for (Kind k : SUIT) {
             ItemStack worn = g.getItemBySlot(k.slot);
+            if (NetherRunners.keepsGold(g, worn)) continue;                // [nether] a runner's one piece of gold stays on
             Workshop.Found f = Workshop.bestInStores(level, id, st -> fits(k, st), st -> score(k, st), held(k, worn));
             if (f == null) continue;
             ItemStack got = mark(Workshop.takeOut(level, id, f, who));
@@ -575,7 +578,8 @@ public final class WatchKit {
         if (watch && g.countCarried(AssistantEntity.RANGED_WEAPON) > 0) {                                 // [caves] (watch)
             int have = g.countCarried(s -> s.is(Items.ARROW));
             // [fletcher] A full quiver of thirty-two once the town keeps a fletcher (Fletchers.quiver).
-            int full = Fletchers.quiver(id, ARROWS), low = Fletchers.quiverLow(id, ARROWS_LOW);
+            // [perks] And the Fletchers' Charter and a Featherlight guard, more again (Perks.quiver).
+            int full = Fletchers.quiver(id, ARROWS) + Perks.quiver(v.id(), g), low = Fletchers.quiverLow(id, ARROWS_LOW);
             int n = have >= low ? 0 : Math.min(full - have, Crafts.stock(level, v, s -> s.is(Items.ARROW)));
             if (n > 0 && Crafts.take(level, v, s -> s.is(Items.ARROW), n)) handOver(level, v, g, new ItemStack(Items.ARROW, n), given);
         }

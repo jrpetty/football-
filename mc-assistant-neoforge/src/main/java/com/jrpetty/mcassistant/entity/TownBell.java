@@ -261,6 +261,7 @@ public final class TownBell {
             if (f.isOld()) score -= 15;
             if (f.isSleeping()) score -= 10;
             score -= Math.sqrt(f.blockPosition().distSqr(at)) / 4.0;
+            score -= Fears.bellPenalty(f, v.id());              // [individual] nobody afraid of heights up the bell tower
             if (score > bestScore) { bestScore = score; best = f; }
         }
         d.ringer = best == null ? null : best.getUUID();
@@ -491,6 +492,7 @@ public final class TownBell {
                 for (BlockEntity be : chunk.getBlockEntities().values()) {
                     if (!(be instanceof BellBlockEntity)) continue;
                     BlockPos p = be.getBlockPos();
+                    if (VanillaVillages.within(level, p.getX(), p.getZ(), 0)) continue;   // [emerald] the villagers' bell is theirs
                     double score = Math.sqrt(p.distSqr(want));
                     if (tower != null && Math.abs(p.getX() - tower.getX()) <= 4 && Math.abs(p.getZ() - tower.getZ()) <= 4) score -= 200;
                     if (frame != null && p.equals(frame.bell())) score -= 150;

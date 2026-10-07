@@ -84,6 +84,7 @@ LEGEND = {
     "!": ("banner", "banner", "F"),
     "&": ("cauldron", "cube", None),
     "$": ("storehouse", "cube", None),    # a storehouse unit
+    "A": ("cartography", "cube", None),   # [cartographer] the map room's cartography table
 }
 
 COLOURS = {
@@ -100,6 +101,7 @@ COLOURS = {
     "furnace": (100, 100, 100),
     "chest": (170, 120, 50),
     "storehouse": (150, 109, 60),
+    "cartography": (196, 170, 120),
     "bed": (180, 40, 40),
     "pillow": (235, 235, 235),
     "torch": (255, 200, 60),

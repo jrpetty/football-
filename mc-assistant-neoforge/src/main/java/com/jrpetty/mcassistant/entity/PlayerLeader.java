@@ -907,6 +907,7 @@ public final class PlayerLeader {
             buttons.add("Build: " + w + "\tvillage leader build " + w + "\tPut " + Villages.spoken(w) + " at the head of the town's list");
             shown++;
         }
+        Perks.leaderPage(id, p, sb, buttons);                // [perks] the town's research to set, the leader's skills to take
         PlayerCivic.send(p, styled(id) + " of " + Villages.name(id), sb.toString(), buttons);
     }
 

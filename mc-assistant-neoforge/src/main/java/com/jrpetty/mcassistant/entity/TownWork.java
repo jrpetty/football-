@@ -108,16 +108,23 @@ public final class TownWork {
                 && !level.getBlockState(top.above(2)).isSolid()) {
             // The light first: no light, no post (and no logs spent on one). A lantern if the smith has
             // made one (or left the nuggets for one), a torch if not (Masonry).
-            if (!Masonry.canLight(level, v)) return 0;
+            // [nether] In the Nether Age, glowstone from the runners' dust where the stores have it (NetherHome.lampLight).
+            if (!Masonry.canLight(level, v) && !NetherHome.canLamp(level, v)) return 0;
             if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a lamp post")) return -1;
-            net.minecraft.world.level.block.Block light = Masonry.light(level, v);
+            net.minecraft.world.level.block.Block light = NetherHome.lampLight(level, v);
+            if (light == null) light = Masonry.light(level, v);
             if (light == null) return 0;
-            if (!take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
-                Masonry.unlight(level, v, light);
+            Architecture.Post styled = Architecture.lampPost(level, v);    // [culture2] the town's own posts: dark oak, rough stone, birch...
+            net.minecraft.world.level.block.Block post = styled != null && take(level, v, styled.pay(), styled.cost())
+                ? styled.block() : null;
+            if (post == null && !take(level, v, s -> s.is(net.minecraft.tags.ItemTags.LOGS), 2)) {
+                if (light == Blocks.GLOWSTONE) give(level, v, new ItemStack(Items.GLOWSTONE));   // [nether] the runners' glowstone back to the stores
+                else Masonry.unlight(level, v, light);
                 return 0;
             }
-            level.setBlockAndUpdate(top.above(), Blocks.SPRUCE_FENCE.defaultBlockState());
-            level.setBlockAndUpdate(top.above(2), Blocks.SPRUCE_FENCE.defaultBlockState());
+            if (post == null) post = Blocks.SPRUCE_FENCE;
+            level.setBlockAndUpdate(top.above(), post.defaultBlockState());
+            level.setBlockAndUpdate(top.above(2), post.defaultBlockState());
             level.setBlockAndUpdate(top.above(3), light.defaultBlockState());
             return 1;
         }
@@ -212,8 +219,9 @@ public final class TownWork {
         return u >= TownPlan.RING && u < TownPlan.RING + TownPlan.STREET;
     }
 
-    /** Lamps stand at the street's edge, every few blocks along it. */
-    private static boolean lampSpot(int dx, int dz) {
+    /** Lamps stand at the street's edge, every few blocks along it. [redstone] Not private: the redstone engineer
+     *  puts his daylight lamps where the street lamps stand. */
+    static boolean lampSpot(int dx, int dz) {
         int ax = Math.abs(dx), az = Math.abs(dz);
         if (ax == TownPlan.AVENUE && az > TownPlan.RING + TownPlan.STREET && az % LAMP_EVERY == 0) return true;
         if (az == TownPlan.AVENUE && ax > TownPlan.RING + TownPlan.STREET && ax % LAMP_EVERY == 0) return true;

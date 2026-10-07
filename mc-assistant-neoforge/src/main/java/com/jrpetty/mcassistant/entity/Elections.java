@@ -209,6 +209,8 @@ public final class Elections {
             if (l.has(Social.Trait.SHY)) s -= 25;
             if (l.has(Social.Trait.EASYGOING)) s -= 6;
             if (incumbent) s += 25;
+            s += Quirks.standing(c);                                    // [perks] a Born Leader stands the sooner
+            s += Dreams.ambitionToLead(c);                 // [individual] one who dreams of leading the town stands
             score.put(c, s);
         }
         List<VillageFolkEntity> ranked = new ArrayList<>(score.keySet());
@@ -286,6 +288,8 @@ public final class Elections {
         double total = cares + needs + people + nature + skill + record + mind;
         total += WarAndPeace.electionLean(level, voter, c);           // [war-peace] the war: weary for peace, or a war going well
         total += Hustings.lean(level, voter, c);                       // [player-civic] the campaign; a player's liking and record
+        double presence = Perks.hustings(village, cf, c.id());          // [perks] a Born Leader's presence, an Orator standing again
+        total += presence;
         // The reason it gives: whichever weighed most.
         String why = "they stand for " + c.platform().cares + ", and so do I";
         double most = cares * 0.6;
@@ -293,7 +297,8 @@ public final class Elections {
         if (people > most) { most = people; why = partner ? "they're my partner" : family ? "family stands by family" : "they're a good friend to me"; }
         if (record > most) { most = record; why = "they've done well by us"; }
         if (skill > most) { most = skill; why = "they know what they're doing"; }
-        if (nature > most) { why = "they're my kind of folk"; }
+        if (nature > most) { most = nature; why = "they're my kind of folk"; }
+        if (presence > most) { why = "when they speak, you listen"; }
         why = Hustings.why(voter, c, why);                             // [player-civic] a player's own doing
         return new Judged((int) Math.round(total), why);
     }

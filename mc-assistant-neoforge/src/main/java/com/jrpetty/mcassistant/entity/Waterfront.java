@@ -191,11 +191,12 @@ public final class Waterfront {
                 && level.getBlockState(lamp.above()).isAir()) {
             net.minecraft.world.level.block.Block light = Blocks.LANTERN;
             if (!free) {
-                // A lantern if the smith has made one, a torch till it does (Masonry).
-                light = Masonry.light(level, v);
+                // A lantern if the smith has made one, a torch till it does (Masonry); [diver] a sea lantern of the
+                // monument's prismarine, if the diver has brought any home (DiverRaids).
+                light = DiverRaids.waterLight(level, v);
                 if (light == null) return n;
                 if (!Crafts.fence(level, v)) {
-                    Masonry.unlight(level, v, light);
+                    DiverRaids.unlight(level, v, light);
                     return n;
                 }
             }

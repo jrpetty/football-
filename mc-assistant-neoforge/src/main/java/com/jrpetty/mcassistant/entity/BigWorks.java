@@ -248,7 +248,9 @@ public final class BigWorks {
     @Nullable
     static Proposal propose(ServerLevel level, Villages.Village v, WorksPlans.Plan p) {
         int[] cost = WorksPlans.cost(p.pieces());
-        WorksPlans.Family family = family(level, v, cost[0]);
+        // [diver] A harbour of prismarine bricks, when the diver has brought home enough off the monument (DiverRaids).
+        WorksPlans.Family family = p.kind() == Work.HARBOUR ? DiverRaids.harbourFamily(level, v, cost[0]) : null;
+        if (family == null) family = family(level, v, cost[0]);
         if (family == null) return null;
         List<String> parts = new ArrayList<>();
         parts.add(cost[0] + " " + family.words + (family == WorksPlans.Family.BRICKS ? "s" : ""));
@@ -274,6 +276,7 @@ public final class BigWorks {
         WorksPlans.Family most = null;
         int mostHave = 0;
         for (WorksPlans.Family f : WorksPlans.Family.values()) {
+            if (f == WorksPlans.Family.PRISMARINE) continue;              // [diver] the harbour's alone (propose)
             int have = Market.stock(level, v.id(), f.payment());
             if (have >= units) return f;
             if (have > mostHave) { mostHave = have; most = f; }
@@ -386,6 +389,7 @@ public final class BigWorks {
         WorksPlans.Family best = null;
         int most = 15;
         for (WorksPlans.Family f : WorksPlans.Family.values()) {
+            if (f == WorksPlans.Family.PRISMARINE && !"HARBOUR".equals(w.getString("kind"))) continue;   // [diver] the harbour's alone
             int have = Market.stock(level, v.id(), f.payment());
             if (f != was && have > most) { most = have; best = f; }
         }
@@ -513,6 +517,7 @@ public final class BigWorks {
         CompoundTag w = current(id);
         if (w == null) return;
         long day = level.getDayTime() / 24000L;
+        Perks.worksOpened(id);                               // [perks] a deed of the reign: its roads and works
         // The ribbon cut: the pieces of it are the town's keepsakes now, and nothing goes back to the stores.
         for (long l : w.getLongArray("ribbon")) {
             BlockPos p = BlockPos.of(l);
@@ -782,7 +787,10 @@ public final class BigWorks {
             };
         }
         return switch (part) {
-            case LANTERN -> TownWork.take(level, v, s -> s.is(Items.LANTERN), 1) ? Blocks.LANTERN.defaultBlockState()
+            // [diver] The harbour's lamps sea lanterns, of the monument's prismarine, when the stores have them (DiverRaids).
+            case LANTERN -> "HARBOUR".equals(w.getString("kind")) && TownWork.take(level, v, s -> s.is(Items.SEA_LANTERN), 1)
+                ? Blocks.SEA_LANTERN.defaultBlockState()
+                : TownWork.take(level, v, s -> s.is(Items.LANTERN), 1) ? Blocks.LANTERN.defaultBlockState()
                 : TownWork.take(level, v, s -> s.is(Items.TORCH), 1) ? Blocks.TORCH.defaultBlockState() : null;
             case LANTERN_HUNG -> TownWork.take(level, v, s -> s.is(Items.LANTERN), 1)
                 ? Blocks.LANTERN.defaultBlockState().setValue(LanternBlock.HANGING, true) : null;

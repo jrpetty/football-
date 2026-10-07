@@ -290,7 +290,7 @@ public final class Fletchers {
         if (f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || f.trip() != null || f.expedition() != null) return Integer.MIN_VALUE;
         StationTask t = f.stationTask();
         if (t == StationTask.FLETCHER) return 1000 + f.tradeLevel(t);
-        if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE
+        if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE || t == StationTask.NETHER   // [nether]
             || t == StationTask.SCOUT || t == StationTask.FERRY) return Integer.MIN_VALUE;
         if (t != StationTask.NONE && Villages.share(village, t) < 0.5) return Integer.MIN_VALUE;
         return f.tradeLevel(StationTask.FLETCHER) * 5 + (t == StationTask.NONE ? 30 : t == StationTask.HUNT ? 24 : 0)
@@ -546,9 +546,11 @@ public final class Fletchers {
         return null;
     }
 
-    /** The raid's reserve the stores keep: thirty-two arrows a guard, and a turn at the butts besides. */
+    /** The raid's reserve the stores keep: thirty-two arrows a guard, and a turn at the butts besides. [perks] Under the
+     *  Fletchers' Charter, a guard's sixteen more besides, so the fuller quivers are made before they are wanted. */
     public static int reserve(UUID village) {
-        return Math.max(1, WatchKit.watch(village).size()) * RESERVE_EACH + (Archery.of(village) != null ? PRACTICE_ARROWS : 0);
+        return Math.max(1, WatchKit.watch(village).size()) * (RESERVE_EACH + CityTree.quiver(village))
+            + (Archery.of(village) != null ? PRACTICE_ARROWS : 0);
     }
 
     /** The arrows the stores keep back from the shop's counter (Budget): the raid's reserve, where the town keeps a fletcher. */
