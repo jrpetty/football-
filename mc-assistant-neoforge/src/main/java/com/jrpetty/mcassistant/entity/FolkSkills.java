@@ -54,8 +54,7 @@ import java.util.UUID;
  *
  * <p>[perks] And now fifty in four families. The trades that had none have their own (Pathfinder for the scout,
  * Sharp Ledger at the bank, Tunnel Rat in the caves, Strong Oar at the ferry, each 8% quicker), and the new trades
- * theirs, found by their title or a word of their name the day they come into the game, and meanwhile the nearest
- * old trades' (Surveyor's Eye, a scout a quarter further; Deep Lungs, three times the breath; Fireproof, half the
+ * theirs, each shared with the nearest old trade (Surveyor's Eye, a scout a quarter further; Deep Lungs, three times the breath; Fireproof, half the
  * fire; Piglin-Friend, left be by the piglins; Blaze Hunter, a rod more from a blaze; True Shot,
  * arrows a quarter harder; Featherlight, eight arrows more; Iron Whisperer, golems mended; Tinkerer, the railway a
  * quarter quicker; Circuit Sense, redstone dust from the ore; Silver Tongue, the town's takings 5% higher; Showman, a
@@ -182,9 +181,9 @@ public final class FolkSkills {
         IRON_WHISPERER("iron_whisperer", "Iron Whisperer", Family.TRADE, "iron golems near it mend", 0, null,
             "the golems trust it", StationTask.GOLEMS),
         TINKERER("tinkerer", "Tinkerer", Family.TRADE, "+8% pace at its trade; the railway laid 25% faster while it works", 8, null,
-            "it can't leave a mechanism alone", NewTrades.with("Redstone engineer", "REDSTONE", StationTask.SMITH)),
+            "it can't leave a mechanism alone", StationTask.REDSTONE, StationTask.SMITH),
         CIRCUIT_SENSE("circuit_sense", "Circuit Sense", Family.TRADE, "one redstone ore in two gives four dust more", 0, null,
-            "it can feel the redstone in the rock", NewTrades.with("Redstone engineer", "REDSTONE", StationTask.MINE, StationTask.CAVE)),
+            "it can feel the redstone in the rock", StationTask.REDSTONE, StationTask.MINE, StationTask.CAVE),
         SILVER_TONGUE("silver_tongue", "Silver Tongue", Family.TRADE, "+5% on the town's takings while it works", 0, null,
             "it could sell sand in the desert", StationTask.EMERALD, StationTask.SHOP),
         SHOWMAN("showman", "Showman", Family.TRADE, "a feast it is at lifts the town 2 for two days", 0, null,
@@ -209,8 +208,8 @@ public final class FolkSkills {
         MASTER_PORTER("master_porter", "Master Porter", Family.MASTER, "+12% pace in the storehouse; 64 more a load", 12, null,
             "it could carry the town on its back", StationTask.HAUL, StationTask.STORE),
         GRAND_MASTER("grand_master", "Grand Master", Family.MASTER, "+12% pace at its trade", 12, null,
-            "there is nothing left to teach it", NewTrades.all(StationTask.SCOUT, StationTask.BANK, StationTask.FERRY, StationTask.FLETCHER, StationTask.GOLEMS,
-                StationTask.FIREWORKS, StationTask.CARTOGRAPHER, StationTask.EMERALD, StationTask.DIVER, StationTask.NETHER));
+            "there is nothing left to teach it", StationTask.SCOUT, StationTask.BANK, StationTask.FERRY, StationTask.FLETCHER, StationTask.GOLEMS,
+                StationTask.FIREWORKS, StationTask.CARTOGRAPHER, StationTask.EMERALD, StationTask.DIVER, StationTask.NETHER, StationTask.REDSTONE);
 
         public final String key, title, effect, why;
         public final Family family;
@@ -248,43 +247,6 @@ public final class FolkSkills {
             List<String> out = new ArrayList<>();
             for (StationTask t : trades) out.add(t.title.toLowerCase(Locale.ROOT));
             return String.join(" / ", out);
-        }
-    }
-
-    /**
-     * [perks] A trade still to come (the redstone engineer), found by its title or a word of its name once it is in the
-     * game, so its knacks open to it the day it lands; till then each of its knacks belongs to the nearest old trades,
-     * where it does its work now. The trades that have come (the Nether runner, the fletcher, the golem keeper, the
-     * diver, the cartographer, the emerald trader, the fireworks maker) are named outright.
-     */
-    static final class NewTrades {
-        private NewTrades() {}
-
-        static final String[] HINTS = { "REDSTONE" };
-
-        /**
-         * The old trades given, and the new trade by its title or a word of its name ({@code hints}: one or more,
-         * "KELP|DIVE"), if the game has it.
-         */
-        static StationTask[] with(String title, String hints, StationTask... old) {
-            List<StationTask> out = new ArrayList<>(Arrays.asList(old));
-            for (StationTask t : StationTask.values()) {
-                if (out.contains(t) || t == StationTask.NONE) continue;
-                boolean named = t.title.equalsIgnoreCase(title);
-                for (String h : hints.split("\\|")) named |= t.name().contains(h);
-                if (named) out.add(t);
-            }
-            return out.toArray(new StationTask[0]);
-        }
-
-        /** The old trades given, and every new trade the game has. */
-        static StationTask[] all(StationTask... old) {
-            List<StationTask> out = new ArrayList<>(Arrays.asList(old));
-            for (StationTask t : StationTask.values()) {
-                if (out.contains(t)) continue;
-                for (String h : HINTS) if (t.name().contains(h)) { out.add(t); break; }
-            }
-            return out.toArray(new StationTask[0]);
         }
     }
 

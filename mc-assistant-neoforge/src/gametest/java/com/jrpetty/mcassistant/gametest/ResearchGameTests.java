@@ -207,8 +207,10 @@ public class ResearchGameTests {
             for (int i = 0; i < CityTree.ALL; i++) {
                 Civic c = CityTree.chooseForTests(level, id, day + i);
                 if (c == null) break;
-                Civic before = c.before();
-                helper.assertTrue(before == null || CityTree.has(id, before), c + " chosen before " + before);
+                // [perks] Where the tier below is a pair, either of the two opens it (the other is closed for good).
+                boolean ready = c.befores().isEmpty();
+                for (Civic b : c.befores()) ready |= CityTree.has(id, b);
+                helper.assertTrue(ready, c + " chosen before any of " + c.befores());
                 Civic rival = c.rival();
                 helper.assertTrue(rival == null || !CityTree.has(id, rival), c + " chosen after its pair " + rival);
                 CityTree.grant(level, id, c, day + i);
