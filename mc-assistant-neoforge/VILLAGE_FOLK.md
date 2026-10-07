@@ -10502,6 +10502,11 @@ who knows metal and rock (a smith's or a miner's years at it count, and a curiou
 town is short of, nor a craftsman, its storekeeper, couriers, banker, scouts, cave team or ferryman. An old smith or miner
 starts a few levels into the trade.
 
+The post goes to interview when two or more could take it: it is held open as "redstone engineer" till the interview,
+on a morning soon after, where the panel asks each one how long they have worked redstone and what they would do with a cane farm whose pistons
+will not stop firing (an observer watching where a piston's head comes in), and the post goes to the panel's choice. One
+hand alone, or a world without interviews, and the town gives the post at once.
+
 **Its workshop.** The redstone workshop goes on the town's wish list once the trade opens: a stone workroom under a hipped
 roof, with a lectern of plans between two tall bookcases at the back, the workbench, chests and barrels of parts, windows
 down both sides and lanterns under the beams. The engineer works out of it once it stands.

@@ -42,7 +42,8 @@ final class InterviewPosts {
     enum Kind { OPENING, TEACHER, LIBRARIAN, CONSTABLE, CAVE_LEADER, CAVE_PLACE, FERRYMAN, AUCTIONEER, BANKER, STEWARD, MASTER, FLETCHER,
         GOLEM_KEEPER, CARTOGRAPHER,
         TRADER, DIVER,                                                         // [emerald] the emerald trader's place; [diver] the diver's
-        RUNNER }                                                               // [nether] a place on the Nether runners
+        RUNNER,                                                                // [nether] a place on the Nether runners
+        ENGINEER }                                                             // [redstone] the redstone engineer's post
 
     /** A post: its kind, its key in the books, the trade it is of (for the questions and the master), a notice's number. */
     record Post(Kind kind, String key, @Nullable StationTask trade, int opening) {
@@ -78,6 +79,7 @@ final class InterviewPosts {
                 case EmeraldTrader.POST_KEY -> new Post(Kind.TRADER, key, StationTask.EMERALD, -1);   // [emerald]
                 case Divers.POST -> new Post(Kind.DIVER, key, StationTask.DIVER, -1);                        // [diver]
                 case NetherRunners.POST -> new Post(Kind.RUNNER, key, StationTask.NETHER, -1);               // [nether]
+                case Engineers.POST -> new Post(Kind.ENGINEER, key, StationTask.REDSTONE, -1);               // [redstone]
                 default -> null;
             };
         }
@@ -112,6 +114,7 @@ final class InterviewPosts {
                 case TRADER -> "emerald trader";                        // [emerald]
                 case DIVER -> "diver";                                      // [diver]
                 case RUNNER -> "Nether runner";                             // [nether]
+                case ENGINEER -> "redstone engineer";                       // [redstone]
                 case MASTER -> "master " + (trade == null ? "hand" : JobMarket.noun(trade));
             };
         }
@@ -151,6 +154,7 @@ final class InterviewPosts {
                 case CARTOGRAPHER -> Values.Value.PROGRESS;                 // [cartographer] knowing the land
                 case TRADER -> Values.Value.WEALTH;                     // [emerald]
                 case RUNNER -> Values.Value.PROGRESS;                       // [nether] what only the Nether has
+                case ENGINEER -> Values.Value.PROGRESS;                     // [redstone] machines that work by themselves
                 default -> {
                     Values.Value v = trade == null ? null : Values.taughtBy(trade);
                     yield v == null ? Values.Value.WEALTH : v;
@@ -175,6 +179,7 @@ final class InterviewPosts {
                 case TRADER -> "the Trading Post";                      // [emerald]
                 case DIVER -> "the kelp beds";                              // [diver]
                 case RUNNER -> "the gateway";                               // [nether]
+                case ENGINEER -> "the redstone workshop";                   // [redstone]
                 default -> trade == null ? "the town" : JobMarket.workWords(trade);
             };
         }
@@ -218,6 +223,7 @@ final class InterviewPosts {
             case TRADER -> t != StationTask.EMERALD && EmeraldTrader.fitness(f, village) != Integer.MIN_VALUE;   // [emerald]
             case DIVER -> t != StationTask.DIVER && Divers.fitness(f, village) != Integer.MIN_VALUE;   // [diver] the same
             case RUNNER -> NetherRunners.candidate(f, village) != Integer.MIN_VALUE;                  // [nether] a veteran, unafraid
+            case ENGINEER -> Engineers.eligible(f, village);                                         // [redstone] a hand to spare
             case OPENING -> {
                 StationTask want = p.tradeFor(village);
                 // One of the town's own for a new workplace: not its elder, not a hand its own trade cannot spare.
@@ -349,6 +355,15 @@ final class InterviewPosts {
                 if (f.life().has(Social.Trait.CURIOUS)) good.add("curious");
                 return Math.max(0, NetherRunners.candidate(f, village) / 100);
             }
+            case ENGINEER -> {
+                // [redstone] As the town's own choosing weighs them (Engineers.fitness): metal and rock, and a curious mind.
+                int lv = f.tradeLevel(StationTask.REDSTONE), smith = f.tradeLevel(StationTask.SMITH), mine = f.tradeLevel(StationTask.MINE);
+                if (lv > 0) good.add("level " + lv + " at redstone");
+                if (smith > 0) good.add("knows metal (level " + smith + " at the forge)");
+                if (mine > 0) good.add("knows the rock (level " + mine + " in the mine)");
+                if (f.life().has(Social.Trait.CURIOUS)) good.add("has to know how a thing works");
+                return Math.max(0, Engineers.fitness(f) / 10);
+            }
             case OPENING -> {
                 int lv = t == null ? 0 : f.tradeLevel(t), kn = JobMarket.knacks(f, t);
                 if (lv > 0) good.add("level " + lv + " at " + t.label);
@@ -438,6 +453,7 @@ final class InterviewPosts {
             case TRADER -> EmeraldTrader.placeOpen(id);                 // [emerald]
             case DIVER -> Divers.divers(id).size() < Divers.wanted(id);                                // [diver] the water waits
             case RUNNER -> NetherRunners.runners(id).size() < NetherRunners.wanted(id);                // [nether] the gateway waits
+            case ENGINEER -> Engineers.engineers(id).size() < Engineers.wanted(id);                    // [redstone] the works wait
             case OPENING -> {
                 JobMarket.Opening o = JobMarket.opening(id, p.opening());
                 yield o != null && o.state() == JobMarket.State.OPEN;
@@ -467,7 +483,7 @@ final class InterviewPosts {
             case MASTER -> p.trade() == null ? null : PlayerTrades.masterOf(id, p.trade());
             case GOLEM_KEEPER -> Golems.keeper(id);
             case CARTOGRAPHER -> Cartographers.cartographer(id);            // [cartographer]
-            case CAVE_PLACE, FLETCHER, TRADER, DIVER, RUNNER, OPENING -> null;
+            case CAVE_PLACE, FLETCHER, TRADER, DIVER, RUNNER, ENGINEER, OPENING -> null;
         };
     }
 
@@ -568,6 +584,11 @@ final class InterviewPosts {
                 // [nether] The town's own picking, which takes the panel's choice first (NetherRunners.shortlist).
                 VillageFolkEntity got = NetherRunners.appoint(level, v, day);
                 return got == winner ? "was picked for the Nether runners" : "is to go with the Nether runners";
+            }
+            case ENGINEER -> {
+                // [redstone] The town's own appointing, which takes the panel's choice first (Engineers.candidates).
+                VillageFolkEntity got = Engineers.appoint(level, v);
+                return got == winner ? "is the town's redstone engineer, its machines to build" : "is to be the town's redstone engineer";
             }
             case CONSTABLE -> { return "leads the watch as its constable"; }
             case CAVE_LEADER -> { return "leads the cave team"; }

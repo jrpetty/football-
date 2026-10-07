@@ -326,6 +326,7 @@ final class InterviewScript {
             case EMERALD -> "How long have you traded with the villagers?";   // [emerald]
             case DIVER -> "How long have you been diving, and how long can you hold your breath?";   // [diver]
             case NETHER -> "How long have you carried a blade, and have you ever been through a portal?";   // [nether]
+            case REDSTONE -> "How long have you worked with redstone, and can you tell an observer from a comparator?";   // [redstone]
             case NONE -> "What have you done, till now?";
             // A trade come in since: asked in its own words.
             default -> "How long have you been at " + t.label + "?";
@@ -509,6 +510,10 @@ final class InterviewScript {
             case NETHER -> new String[]{ "On the far side a piglin's watching you hard, and your gold charm's come off in the scramble. What then?",
                 "Charm back on before anything else, back to the others, and never a hand raised to it: strike one and they all come.",
                 "Back away slowly and hope it loses interest.", "Draw my sword before it does." };
+            // [redstone] The engineer's first rule (its trade book): never let an observer watch where a piston's head comes.
+            case REDSTONE -> new String[]{ "The cane farm's pistons won't stop: out, in, out, in, with no cane grown. What's wrong?",
+                "An observer's watching the place a piston's head comes into: it sees the head and fires it again. Move the observer.",
+                "Pull the redstone up and lay it again.", "Leave it. It'll stop when it's tired." };
             default -> new String[]{ "What would you do first, in the post?",
                 "Learn how it's done here first — ask who did it before me — and then do it better.", "Get to work.", "I'm not sure, to be honest." };
         };

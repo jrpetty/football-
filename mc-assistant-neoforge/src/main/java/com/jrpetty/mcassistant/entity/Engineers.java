@@ -265,27 +265,44 @@ public final class Engineers {
         return s;
     }
 
+    /** The engineer's post in the interviews' books (InterviewPosts). */
+    static final String POST = "engineer";
+
+    /** May this folk stand for the works: grown, at home, not the elder, from a trade the town can spare it from? */
+    static boolean eligible(VillageFolkEntity f, UUID id) {
+        if (f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || f.isElder()) return false;
+        if (f.trip() != null || f.expedition() != null || f.ageYears() < 18) return false;
+        return f.stationTask() != StationTask.REDSTONE && spare(id, f.stationTask());
+    }
+
     /**
-     * The hands who could take up the works, the fittest first: grown, at home, not the elder, and from a trade the town
-     * can spare them from.
+     * The hands who could take up the works, the fittest first (the interview panel's choice above them all).
      *
-     * <p>[redstone] The interviews' seam. The town fills the post itself here (appoint takes the first). When the town
-     * comes to hold interviews for its posts (an Interviews of its own, not in this branch yet), this is the list it
-     * interviews from, and appoint takes whoever the interviews choose instead of the first.
+     * <p>[interviews] The engineer's post is one the town gives its own: with two or more who could take it, it is held
+     * open a day for its interview (InterviewPosts, kind ENGINEER), and given after it to the panel's choice, which comes
+     * first here. One alone, or no interviews in this world: given at once.
      */
     public static List<VillageFolkEntity> candidates(UUID id) {
         List<VillageFolkEntity> out = new ArrayList<>();
+        Map<VillageFolkEntity, Integer> score = new HashMap<>();
         for (AssistantEntity a : Villages.folkOf(id)) {
-            if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || f.isElder()) continue;
-            if (f.trip() != null || f.expedition() != null || f.ageYears() < 18) continue;
-            if (!spare(id, f.stationTask())) continue;
+            if (!(a instanceof VillageFolkEntity f) || !eligible(f, id)) continue;
+            score.put(f, fitness(f) + Interviews.preferred(id, POST, f));
             out.add(f);
         }
-        out.sort((x, y) -> Integer.compare(fitness(y), fitness(x)));
+        out.sort((x, y) -> Integer.compare(score.get(y), score.get(x)));
         return out;
     }
 
-    /** One more engineer, if the town wants one: the fittest hand it can spare. Returns who, or null. */
+    /** The town's look at the post (its tick, once a minute): filled now, or held open for its interview. */
+    static void fillThePost(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        if (engineers(id).size() >= wanted(id) || Interviews.pending(id, POST) != null) return;
+        List<VillageFolkEntity> few = candidates(id);
+        if (!few.isEmpty() && !Interviews.vacancy(level, id, POST, few.get(0))) appoint(level, v);
+    }
+
+    /** One more engineer, if the town wants one: the fittest hand it can spare (the interview's choice first). */
     @Nullable
     public static VillageFolkEntity appoint(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
@@ -355,7 +372,7 @@ public final class Engineers {
         long now = level.getGameTime();
         if (now - LOOKED.getOrDefault(id, -100000L) >= 1200L || now < LOOKED.getOrDefault(id, 0L)) {
             LOOKED.put(id, now);
-            if (lookAtStores(level, v)) appoint(level, v);
+            if (lookAtStores(level, v)) fillThePost(level, v);
         }
         if (!WORKS.containsKey(id) && Ledger.note(id, "redstone.works") == null) return;
         gateWatch(level, v);
