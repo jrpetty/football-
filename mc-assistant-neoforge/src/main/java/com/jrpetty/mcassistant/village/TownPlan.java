@@ -201,7 +201,8 @@ public final class TownPlan {
             case "court" -> "court";
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern", "school", "bank", "museum", "stable",
-                 "infirmary" -> "civic";                                       // [batchA] the infirmary (entity/Infirmary)
+                 "infirmary",                                                  // [batchA] the infirmary (entity/Infirmary)
+                 "theatre" -> "civic";                                         // [batchD] the theatre
             case "watchtower" -> "corner";
             case "range" -> "corner";                                       // [batchC] the watch's range, by the wall
             case "pitch" -> "field";                                        // [batchC] a long lot for the football pitch

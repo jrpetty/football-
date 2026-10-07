@@ -389,6 +389,10 @@ public class VillageFolkEntity extends AssistantEntity {
                 && Weather.shelter(this, stormLevel)) return;
         // [batchA] Laid up: a cold or its wounds, in bed at the infirmary or at home, and kept there (Health).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel careLevel && Health.hold(this, careLevel)) return;
+        // [batchD] The town's culture (Culture): a minute's silence at the bell, the choir at the morning service, the
+        // play at the theatre (on the stage or a bench), the band at the tavern or a wedding, a toast, a picture painted.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel culture
+                && (tickCount % 4 == 3 ? Culture.hold(this, culture) : Culture.busy(this))) return;
         // The village coming together (Assemblies): the bell rung, it goes, finds a place and takes part.
         if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel gathering
                 && Assemblies.attend(this, gathering)) {
@@ -1416,6 +1420,7 @@ public class VillageFolkEntity extends AssistantEntity {
             // [economy] What took it, in words (Mishap): "by misfortune" said nothing about what kills folk.
             String how = passing ? "of old age" : Raids.underAlarm(village) ? "when the raiders came" : Mishap.how(cause);
             Mishap.record(village, day, level().getGameTime(), how);                    // [economy] for the books' daily line and the watch
+            if (!passing) Plaques.fell(this, how, day);                                 // [batchD] a plaque where a hero fell (Plaques)
             com.jrpetty.mcassistant.village.Ledger.buried(village, new com.jrpetty.mcassistant.village.Ledger.Grave(
                 displayNameCap(), bornDay, day, how, life.parents(), life.partnerName(), stationTask().title));
             Villages.tell(village, day, passing
@@ -2227,6 +2232,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (TownJobs.busy(this)) return true;                 // at the town's work (TownJobs)
         if (School.teaching(this)) return true;               // at the school's lectern (School)
         if (TownCalendar.busy(this)) return true;             // ringing the bell, home at the dusk bell, a birthday present (TownCalendar)
+        if (Culture.busy(this)) return true;                  // [batchD] the silence, the play, the band, a toast, a picture (Culture)
         if (Raids.underAlarm(ownerId())) return false;       // the bell is ringing: no evening out
         long t = level().getDayTime() % 24000L;
         long bedtime = bedtimeTick();

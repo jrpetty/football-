@@ -1004,6 +1004,12 @@ public final class Assemblies {
         };
     }
 
+    /** [batchD] What is under way (its kind, phase, focus, the way the crowd faces), for the band (Music); null if nothing. */
+    @Nullable
+    static Assembly underWay(UUID village) {
+        return NOW.get(village);
+    }
+
     /** For the board: what is under way, or null. */
     @Nullable
     public static String now(UUID village) {

@@ -716,6 +716,38 @@ def museum_stage(r, look, cx, cz):
     say("alive after the museum: %s" % client_alive())
 
 
+def culture_stage(r, look, cx, cz):
+    """The town's culture (entity/Culture) photographed: a theatre set out on a stage in clear air beside the
+    village the smoke spawned at cx, cz (/village culture stage: the town's banner hung either side over the
+    stage, three players on it in the middle of a play out of the town's own chronicle, an audience on the
+    benches); from the street behind the benches over the audience's heads, from the side of the stage along
+    the players; and then, back at the village, the Culture page of its books (the banner drawn large, the
+    motto, the customs, the theatre, the band and the choir, the pictures, the plaques)."""
+    tx, ty, tz = cx - 120, 150, cz - 100
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    midday(r)
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, tx, ty + 10, tz + 20))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village culture stage" % (tx, ty, tz))
+    say("culture stage: " + out[:600])
+    views = dict((v[0], [float(n) for n in v[1:]]) for v in
+                 re.findall(r"VIEW (\S+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (-?[\d.]+)", out))
+    for name in ("theatre-house", "theatre-stage"):
+        if name in views:
+            look("30-culture-" + name, *views[name], wait=6)
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    say("culture: " + r.cmd("execute positioned %d 0 %d run village culture" % (cx, cz))[:900])
+    say("to the village: " + r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run tp %s ~2 ~ ~2"
+                                   % (cx, cz, USER)))
+    time.sleep(4)
+    say("stats culture: " + r.cmd("execute as %s at @s run village stats 21" % USER))
+    time.sleep(3)
+    shot("30-culture-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("alive after the culture stage: %s" % client_alive())
+
+
 def jobs_stage(r, look, cx, cz):
     """The job market between towns (entity/JobMarket, JobSeekers): a second town a little way off,
     the two agreeing to trade, a Wanted notice put up on the second town's board, a folk of the first
@@ -1441,6 +1473,10 @@ def main():
         sport_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("sport stage failed: %s" % e)
+    try:
+        culture_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("culture stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

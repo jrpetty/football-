@@ -377,6 +377,7 @@ public final class FolkTalk {
         if (!mem.isEmpty()) line(sb, "Remembers", mem.get(mem.size() - 1).text());
         line(sb, "Birthday", Birthdays.cardLine(f));        // its birthday, its age and the next (Birthdays)
         line(sb, "The bell", TownBell.cardLine(f));         // when it answered today's bells (TownBell)
+        line(sb, "Culture", Culture.cardLine(f));           // [batchD] the band, the choir, the stage, its pictures
         return sb.toString();
     }
 

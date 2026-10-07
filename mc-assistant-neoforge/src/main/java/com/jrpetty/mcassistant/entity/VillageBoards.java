@@ -405,6 +405,7 @@ public final class VillageBoards {
         if (scouts != null) out.add("FN|" + scouts);
         String museum = Museum.boardLine(id, day);              // what is new in the museum (Museum)
         if (museum != null) out.add("FN|" + museum);
+        out.addAll(Culture.board(level, id));                   // [batchD] the banner and the motto, the customs, the theatre tonight
         List<Villages.News> news = Villages.news(id);
         if (!news.isEmpty()) out.add("FM|Latest: " + news.get(news.size() - 1).text() + ".");
         return out;

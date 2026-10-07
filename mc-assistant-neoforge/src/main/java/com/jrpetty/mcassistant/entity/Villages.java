@@ -336,6 +336,7 @@ public final class Villages {
     public static void resetForTests() {
         MADE_UP.clear();
         Bank.resetForTests();
+        Culture.resetForTests();                                   // [batchD] the banner's works, the customs, the theatre, the band
         Museum.resetForTests();
         Storehouses.resetForTests();
         Storekeeping.resetForTests();
@@ -1723,6 +1724,8 @@ public final class Villages {
         if (folk >= Bank.FROM && built(villageId, "bank") < 1 && builtStructure(villageId, "bank") == null) extras.add("bank");
         // A museum, once the town has finds worth showing (Museum): its diamonds, fossils, the sea's treasure.
         if (folk >= Museum.FROM_FOLK && built(villageId, "museum") < 1 && Museum.worthAMuseum(villageId)) extras.add("museum");
+        // [batchD] A theatre, once the town has players enough to fill its stage (Theatre).
+        if (Theatre.wanted(villageId, folk) && built(villageId, Theatre.STRUCTURE) < 1) extras.add(Theatre.STRUCTURE);
         // The Iron Age's best homes: a manor house on a long lot by the square, one for every
         // thirty folk past twenty — six beds each.
         if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30 || Homes.wantsAManor(villageId)) extras.add("manor");
@@ -2092,6 +2095,7 @@ public final class Villages {
             case "monument" -> "a monument (great work " + (greatWorks(villageId) + 1) + ") to how far the village has come";
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
             case "infirmary" -> Infirmary.why(villageId);          // [batchA]
+            case "theatre" -> Theatre.why(villageId);             // [batchD]
             default -> "the " + project;
         };
     }
