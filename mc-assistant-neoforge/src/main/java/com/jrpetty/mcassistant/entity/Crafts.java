@@ -312,6 +312,9 @@ public final class Crafts {
         if (fletchFirst) {
             String fletched = fletch(level, v, guards(v));
             if (fletched != null) return fletched;
+        } else {
+            String best = WatchKit.makeBest(level, v, f);     // [guard-kit] the watch's diamond, turn about with the forging
+            if (best != null) return best;
         }
         String forged = forge(level, v, f, wants);
         if (forged != null) return forged;
@@ -410,9 +413,13 @@ public final class Crafts {
         int skill = f.veteranLevel();
         for (Smithing w : wants) {
             Item it = w.item();
-            if (!Craftsmanship.canMake(skill, it)) continue;                // not the hand for it yet
+            // [guard-kit] The watch's armour, blades and shields wait on no smith's years: beyond its hand they come
+            // out an apprentice's work (WatchKit.forTheWatch, hand); and the watch's iron armour, up to its share of
+            // the age's iron, waits on no saving either (WatchKit.ironForTheWatch).
+            if (!Craftsmanship.canMake(skill, it) && !WatchKit.forTheWatch(level, v, it)) continue;   // not the hand for it yet
             boolean diamond = w.metal() == Items.DIAMOND;
-            if (diamond ? savingDiamonds : saving && it != Items.IRON_PICKAXE && it != Items.IRON_SWORD) continue;
+            if (diamond ? savingDiamonds : saving && it != Items.IRON_PICKAXE && it != Items.IRON_SWORD
+                    && !WatchKit.ironForTheWatch(level, v, it)) continue;
             if (stock(level, v, s -> s.is(it)) >= w.keep()) continue;
             Item metal = w.metal();
             int bars = stock(level, v, s -> s.is(metal));
@@ -422,7 +429,7 @@ public final class Crafts {
             if (!take(level, v, s -> s.is(metal), w.bars())) return null;
             sticks(level, v, w.sticks());
             if (w.planks() > 0) take(level, v, s -> s.is(ItemTags.PLANKS), w.planks());
-            ItemStack made = Craftsmanship.finish(level, new ItemStack(it), skill, f.displayNameCap());
+            ItemStack made = Craftsmanship.finish(level, new ItemStack(it), WatchKit.hand(skill, it), f.displayNameCap());   // [guard-kit]
             store(level, v, made.copy());
             return name(made);
         }

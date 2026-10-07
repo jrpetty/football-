@@ -428,4 +428,172 @@ public class GuardKitGameTests {
         }
         helper.succeed();
     }
+
+    // ============================================================ a real town's smith: before its smithy, a beginner, the age saving iron
+
+    /** Is the age's list asking for iron just now, and how much? (0: not.) */
+    private static int ironNeed(ServerLevel level, UUID village) {
+        for (Villages.Need n : Villages.needs(level, village)) if (n.task() == Villages.Task.IRON) return n.amount();
+        return 0;
+    }
+
+    /**
+     * What a real town looks like in the Iron Age: seventeen folk, no smithy built, the age still putting its
+     * iron by. With no watch the town wants no smith (it has nowhere to work); once it keeps a guard it does,
+     * before its smithy, and the smithy goes on the list. A smith of level nought, with forty-eight iron in the
+     * stores, forges its picks and blades and then the watch's iron, an apprentice's work, out of the age's iron
+     * (the watch's share of it): the guard ends up in a full suit of iron and an iron sword, and the iron on its
+     * back counts toward what the age asks for.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "gk05_a_beginner_smith_before_its_smithy")
+    public static void gk05_a_beginner_smith_before_its_smithy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        StationTask[] trades = new StationTask[17];
+        java.util.Arrays.fill(trades, StationTask.FARM);
+        Town t = town(helper, 868500, Villages.Age.IRON, trades);
+        UUID village = t.village();
+        VillageFolkEntity guard = t.folk().get(1), smith = t.folk().get(2);
+        boolean noWatchNoSmith = Villages.overStaffed(village, StationTask.SMITH);
+        guard.setJob(StationTask.GUARD);
+        boolean watchWantsASmith = !Villages.overStaffed(village, StationTask.SMITH) && Villages.wants(village, StationTask.SMITH);
+        smith.setJob(StationTask.SMITH);
+        bare(guard);
+        guard.earn(30);
+        fill(t, new ItemStack(Items.IRON_INGOT, 48), new ItemStack(Items.OAK_PLANKS, 32));
+        int need0 = ironNeed(level, village), iron0 = count(level, village, s -> s.is(Items.IRON_INGOT)), purse0 = guard.purse();
+        List<String> wanted = Villages.projectsWanted(village);
+        List<String> turns = new ArrayList<>();
+        for (int i = 0; i < 30 && (wearing(guard, "iron") < 4 || guard.countCarried(s -> s.is(Items.IRON_SWORD)) == 0); i++) {
+            boolean worked = Crafts.now(smith, level, t.v());
+            List<ItemStack> got = WatchKit.fit(level, t.v(), guard);
+            turns.add(i + ":" + worked + "->" + words(got) + " [iron " + count(level, village, s -> s.is(Items.IRON_INGOT)) + "]");
+        }
+        WatchKit.resetForTests();                         // the iron on the guards' backs counted afresh
+        Villages.forgetStock();
+        int credit = WatchKit.ironCredit(level, village), need1 = ironNeed(level, village);
+        int iron1 = count(level, village, s -> s.is(Items.IRON_INGOT));
+        ItemStack chest = guard.getItemBySlot(EquipmentSlot.CHEST);
+        Kit.log("gk05 no watch, a smith wanted: " + !noWatchNoSmith + "; with a guard: " + watchWantsASmith + "; smithy built "
+            + Villages.hasBuilt(village, "smithy") + "; the list " + wanted + "; the smith (level " + smith.veteranLevel() + "): "
+            + String.join(" | ", turns) + "; the guard wears " + suit(guard) + ", chestplate " + Craftsmanship.gradeOf(chest)
+            + "; iron " + iron0 + " -> " + iron1 + "; the age's iron wanted " + need0 + " -> " + need1 + ", the watch's credit " + credit
+            + "; purse " + purse0 + " -> " + guard.purse() + "; the smith says: " + Craftsmanship.line(smith));
+        helper.assertTrue(noWatchNoSmith, "no watch and no smithy: no smith wanted");
+        helper.assertTrue(watchWantsASmith, "a town that keeps a watch wants its smith before the smithy stands");
+        helper.assertTrue(!Villages.hasBuilt(village, "smithy") && wanted.contains("smithy"), "no smithy yet, and the smithy on the list: " + wanted);
+        helper.assertTrue(need0 > 0, "the age is putting its iron by: " + need0 + " wanted");
+        helper.assertTrue(wearing(guard, "iron") == 4 && guard.countCarried(s -> s.is(Items.IRON_SWORD)) >= 1,
+            "a smith of level nought gets the guard into a full suit of iron and an iron sword: " + suit(guard));
+        helper.assertTrue(Craftsmanship.gradeOf(chest) == Craftsmanship.Grade.ROUGH, "an apprentice's chestplate: " + Craftsmanship.gradeOf(chest));
+        helper.assertTrue(credit >= 24, "the iron on the guard's back counts toward the age's iron: " + credit);
+        helper.assertTrue(need1 <= need0 + (iron0 - iron1) - 24, "the age asks for no more iron for the armour: " + need0 + " -> " + need1
+            + " (iron " + iron0 + " -> " + iron1 + ")");
+        helper.assertTrue(guard.purse() == purse0, "the guard paid nothing");
+        helper.succeed();
+    }
+
+    // ============================================================ a beginner's diamond
+
+    /**
+     * A Diamond Age town with a smith of level nought, a miner with only a stone pick, and sixty-four diamonds:
+     * the smith has not the hand for the miners' diamond pick (level 25 work), so the watch does not wait on it;
+     * it forges the watch's diamond sword and suit all the same, an apprentice's work, and a guard of level
+     * nought ends up wearing diamond and wielding the diamond sword. No diamond pick is made.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "gk06_a_beginner_forges_diamond")
+    public static void gk06_a_beginner_forges_diamond(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 870500, Villages.Age.DIAMOND, StationTask.FARM, StationTask.SMITH, StationTask.GUARD, StationTask.MINE);
+        VillageFolkEntity smith = t.folk().get(1), guard = t.folk().get(2);
+        UUID village = t.village();
+        bare(guard);
+        fill(t, new ItemStack(Items.DIAMOND, 64), new ItemStack(Items.OAK_PLANKS, 32));
+        int diamonds0 = count(level, village, s -> s.is(Items.DIAMOND));
+        List<String> turns = new ArrayList<>();
+        for (int i = 0; i < 24 && (wearing(guard, "diamond") < 4 || guard.countCarried(s -> s.is(Items.DIAMOND_SWORD)) == 0); i++) {
+            boolean worked = Crafts.now(smith, level, t.v());
+            turns.add(i + ":" + worked + "->" + words(WatchKit.fit(level, t.v(), guard)));
+        }
+        guard.equipBestWeapon();
+        ItemStack hand = guard.getMainHandItem(), chest = guard.getItemBySlot(EquipmentSlot.CHEST);
+        int diamonds1 = count(level, village, s -> s.is(Items.DIAMOND)), picks = count(level, village, s -> s.is(Items.DIAMOND_PICKAXE));
+        Kit.log("gk06 the smith (level " + smith.veteranLevel() + "): " + String.join(" | ", turns) + "; made today " + WatchKit.madeToday(level, village)
+            + "; the guard (level " + guard.veteranLevel() + ") wears " + suit(guard) + ", chestplate " + Craftsmanship.gradeOf(chest)
+            + ", wields " + BuiltInRegistries.ITEM.getKey(hand.getItem()) + "; diamonds " + diamonds0 + " -> " + diamonds1 + "; diamond picks " + picks);
+        helper.assertTrue(smith.veteranLevel() == 0 && guard.veteranLevel() == 0, "a beginner smith, a guard new to the watch");
+        helper.assertTrue(wearing(guard, "diamond") == 4 && hand.is(Items.DIAMOND_SWORD), "in diamond, with the diamond sword: " + suit(guard));
+        helper.assertTrue(Craftsmanship.gradeOf(chest) == Craftsmanship.Grade.ROUGH, "an apprentice's work: " + Craftsmanship.gradeOf(chest));
+        helper.assertTrue(picks == 0, "no diamond pick: beyond the smith's hand, and the watch did not wait on it");
+        helper.assertTrue(diamonds0 - diamonds1 >= 26, "of the stores' diamonds: " + diamonds0 + " -> " + diamonds1);
+        helper.succeed();
+    }
+
+    // ============================================================ off the watch: the kit handed back
+
+    private static boolean anyIssued(VillageFolkEntity f) {
+        for (EquipmentSlot s : EquipmentSlot.values()) if (WatchKit.issued(f.getItemBySlot(s))) return true;
+        for (ItemStack s : f.getInventoryItems()) if (WatchKit.issued(s)) return true;
+        return false;
+    }
+
+    /** Pieces in the stores still carrying the town's mark (there should be none). */
+    private static int marked(ServerLevel level, UUID village) {
+        return count(level, village, WatchKit::issued);
+    }
+
+    /**
+     * A guard is issued an iron suit, an iron sword, a bow, sixteen arrows and a shield, each with the town's mark;
+     * it takes up farming, and every issued piece goes back into the stores (the mark off), its own stone sword
+     * staying with it. Another guard is issued the same kit and goes to live in another town: the kit goes back
+     * into the old town's stores before it goes, and nothing into the new town's.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "gk07_the_kit_handed_back")
+    public static void gk07_the_kit_handed_back(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 872500;
+        Town t = town(helper, x, Villages.Age.IRON, StationTask.FARM, StationTask.GUARD, StationTask.GUARD);
+        UUID village = t.village();
+        VillageFolkEntity first = t.folk().get(1), second = t.folk().get(2);
+        bare(first);
+        bare(second);
+        second.setJob(StationTask.FARM);                  // the second waits its turn
+        fill(t, new ItemStack(Items.IRON_HELMET), new ItemStack(Items.IRON_CHESTPLATE), new ItemStack(Items.IRON_LEGGINGS),
+            new ItemStack(Items.IRON_BOOTS), new ItemStack(Items.IRON_SWORD), new ItemStack(Items.BOW), new ItemStack(Items.ARROW, 32),
+            new ItemStack(Items.SHIELD));
+        Predicate<ItemStack> kit = s -> s.getItem() instanceof ArmorItem || s.is(Items.IRON_SWORD) || s.is(Items.BOW) || s.is(Items.SHIELD);
+        int kit0 = count(level, village, kit), arrows0 = count(level, village, s -> s.is(Items.ARROW));
+        List<ItemStack> got = WatchKit.fit(level, t.v(), first);
+        boolean allMarked = !got.isEmpty();
+        for (EquipmentSlot s : SUIT) allMarked &= WatchKit.issued(first.getItemBySlot(s));
+        boolean stoneOwn = first.countCarried(s -> s.is(Items.STONE_SWORD) && !WatchKit.issued(s)) >= 1;
+        int kitOut = count(level, village, kit);
+        first.setJob(StationTask.FARM);
+        int kitBack = count(level, village, kit), arrowsBack = count(level, village, s -> s.is(Items.ARROW));
+        boolean firstClear = !anyIssued(first) && wearing(first, "iron") == 0 && first.countCarried(s -> s.is(Items.IRON_SWORD) || s.is(Items.BOW)
+            || s.is(Items.SHIELD)) == 0;
+        boolean stoneKept = first.countCarried(s -> s.is(Items.STONE_SWORD)) >= 1;
+        Kit.log("gk07 issued " + words(got) + " (all marked " + allMarked + ", its own stone sword unmarked " + stoneOwn + "); the stores' kit "
+            + kit0 + " -> " + kitOut + " -> " + kitBack + ", arrows " + arrows0 + " -> " + arrowsBack + " after it took up farming; it wears "
+            + suit(first) + ", carries anything issued " + anyIssued(first) + ", its stone sword " + stoneKept + "; marked in the stores "
+            + marked(level, village));
+        helper.assertTrue(allMarked && stoneOwn, "the town's mark on what it issued, not on the guard's own stone sword");
+        helper.assertTrue(kitOut < kit0 && kitBack == kit0 && arrowsBack == arrows0, "every issued piece back in the stores: kit " + kit0 + " -> "
+            + kitOut + " -> " + kitBack + ", arrows " + arrows0 + " -> " + arrowsBack);
+        helper.assertTrue(firstClear && stoneKept, "off the watch with nothing of the town's, and its own stone sword still: " + suit(first));
+        helper.assertTrue(marked(level, village) == 0, "the mark off what went back");
+        // Another guard, and another town.
+        second.setJob(StationTask.GUARD);
+        WatchKit.fit(level, t.v(), second);
+        int kitOut2 = count(level, village, kit);
+        Kit.prepare(level, x + 400, Z, 8);
+        Villages.Village other = Villages.found(level, Kit.surface(level, x + 400, Z));
+        helper.assertTrue(other != null && !other.id().equals(village), "another town");
+        second.joinVillage(other.id(), other.centre());
+        int kitBack2 = count(level, village, kit), kitThere = count(level, other.id(), kit);
+        Kit.log("gk07 the second guard to " + Villages.name(other.id()) + ": the old town's kit " + kitOut2 + " -> " + kitBack2 + ", the new town's "
+            + kitThere + "; it carries anything issued " + anyIssued(second));
+        helper.assertTrue(kitOut2 < kit0 && kitBack2 == kit0 && kitThere == 0 && !anyIssued(second),
+            "leaving the town, the kit stays in the old town's stores: " + kitOut2 + " -> " + kitBack2 + ", the new town's " + kitThere);
+        helper.succeed();
+    }
 }

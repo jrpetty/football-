@@ -827,6 +827,7 @@ public final class Villages {
                 || builtAt(villageId, "storage") != null);
         }
         if (!trade.isCraft() || trade == AssistantEntity.StationTask.BEEKEEP) return true;
+        if (WatchKit.beforeItsBuilding(villageId, trade)) return true;     // [guard-kit] the watch's makers, before their buildings
         String building = VillageFolkEntity.buildingFor(trade);
         return building == null || (villageId != null && (hasBuilt(villageId, building) || builtAt(villageId, building) != null));
     }
@@ -1214,6 +1215,7 @@ public final class Villages {
     private static void need(List<Need> wants, net.minecraft.server.level.ServerLevel level,
                              Village v, String what, Task task, int amount) {
         int have = stock(level, v.centre(), task, storesRadius(v.id()));
+        if (task == Task.IRON) have += WatchKit.ironCredit(level, v.id());   // [guard-kit] the watch's armour is iron the age asked for
         if (have < amount) wants.add(new Need(what, task, amount - have));
     }
 
@@ -1738,9 +1740,11 @@ public final class Villages {
         if (built(villageId, "market") < 1) out.add("market");
         String pen = penIfWanted(villageId, folk);
         if (pen != null) out.add(pen);
+        // [guard-kit] A smith at work for the watch with no smithy: the smithy with what the age asks for.
+        if (built(villageId, "smithy") < 1 && WatchKit.smithWithoutASmithy(villageId)) out.add("smithy");
         // The crafts' buildings come after everything the age itself asks for: a smithy and a
         // shop are what a big Iron Age town has, not what makes it one.
-        if (folk >= 16 && built(villageId, "smithy") < 1) extras.add("smithy");
+        if (folk >= 16 && built(villageId, "smithy") < 1 && !out.contains("smithy")) extras.add("smithy");
         if (folk >= 18 && built(villageId, "shop") < 1) extras.add("shop");
         // [econ-store] The town store, once the town has outgrown its shop (Store).
         if (built(villageId, Store.STRUCTURE) < 1 && Store.wanted(villageId, folk)) extras.add(Store.STRUCTURE);
