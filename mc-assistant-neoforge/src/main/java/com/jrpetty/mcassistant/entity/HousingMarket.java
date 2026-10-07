@@ -1313,6 +1313,11 @@ public final class HousingMarket {
             if (!things && blockFor(look, c.design, p) == null) { c.laid.set(i); continue; }
             course.add(i);
         }
+        if (course.isEmpty()) {
+            c.laidCount = c.laid.cardinality();
+            store(id, c);
+            return "passed over what the look leaves out";
+        }
         Map<BlockPos, BlockState> lay = new HashMap<>();
         List<Integer> done = new ArrayList<>();
         if (!things) {
@@ -1515,7 +1520,13 @@ public final class HousingMarket {
         Ledger.note(id, COST + c.anchor.asLong(), new Cost(c.design.drawing, Villages.ageOf(id).ordinal(), c.blocksPaid, c.labourPaid,
             c.furnishPaid, day, c.blocksPaid + c.labourPaid + c.furnishPaid, true).encode());
         recordDone(id, c, day);
-        if (h == null) return;
+        if (h == null) {                                                         // not on the homes' books after all: its coin back
+            if (c.escrow > 0) {
+                if (lead != null) lead.earn(c.escrow);
+                else Ledger.addCoins(id, c.escrow);
+            }
+            return;
+        }
         if (c.foreclosed || household.isEmpty()) {
             // The council's now: let like any of its houses.
             h.tenure = Homes.Tenure.RENTED;
@@ -1631,6 +1642,9 @@ public final class HousingMarket {
         }
         int beds = level.isLoaded(h.anchor) ? Homes.bedsIn(level, id, h).size() : 4;
         List<VillageFolkEntity> buyer = null;
+        // A house worth less than its mortgage (the market fallen since it was bought) goes back to the council, which takes on
+        // what its seller cannot pay off (Bank.reconcile): a buyer never takes on another's debt with the house.
+        if (owed > price) buyers.clear();
         for (List<VillageFolkEntity> hh : buyers) {
             if (hh.isEmpty() || seller != null && hh.contains(seller) || Homes.grown(hh).size() > Math.max(1, beds)) continue;
             if (Homes.earners(hh) == 0) continue;
