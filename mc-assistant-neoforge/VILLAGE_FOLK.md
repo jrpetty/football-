@@ -9940,7 +9940,7 @@ The new civics:
   (wages a twentieth higher, food a fifth dearer at the counter, the poor 4 the lower in spirits, crime a fifth
   likelier); the Sky Garden.
 * **Homes and Works**: the Observer Pattern Books (the railway's rails laid a quarter faster, and the redstone
-  engineer's machines when the game has that trade) *or* the Turnpikes (everybody walks 4% faster, the road to a
+  engineer works a quarter quicker and builds its machines a quarter faster) *or* the Turnpikes (everybody walks 4% faster, the road to a
   colony and a stone bridge laid half again as fast); the Clockwork Gate.
 * **Wellbeing and Arts**: Patronage of the Arts (+3 contentment, a busker's listener the likelier to drop a coin) *or*
   Plain Living (every trade 3% quicker, a break a twentieth shorter, 2 less content); the Founders' Colossus.
@@ -10065,8 +10065,8 @@ more); True Shot (the fletcher's, the guard's and the hunter's: its arrows a qua
 fletcher's and the guard's: eight arrows more in its quiver); Iron Whisperer (the golem keeper's: every iron golem within
 sixteen blocks mended a heart every five seconds); Silver Tongue (the emerald trader's and the shopkeeper's: the town's
 takings 5% higher while it works); Showman (the fireworks maker's: a feast it is at lifts the town 2 for two days). The
-redstone engineer's two wait on the smith and the miner till that trade comes (found then by its name): Tinkerer (8%
-quicker, the railway a quarter quicker while it works) and Circuit Sense (one redstone ore in two gives four dust
+redstone engineer's two: Tinkerer (the engineer's and the smith's: 8% quicker, the railway a quarter quicker while it
+works) and Circuit Sense (the engineer's, the miner's and the cave team's: one redstone ore in two gives four dust
 more).
 
 **Masters.** At level thirty in a trade a folk may take its master's knack: a master's pace (12% quicker) and a

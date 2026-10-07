@@ -238,8 +238,8 @@ public final class CityTree {
                 + "(while it has the coin)."),
         OBSERVER_PATTERN_BOOKS(Branch.HOMES, 5, "Observer Pattern Books", "Machines 25% faster; rails laid 25% faster",
             "the town's machines and rails go in a quarter quicker",
-            "The redstone patterns written down: the redstone engineer builds its machines a quarter faster, and the "
-                + "railway's rails go down a quarter faster. Closes the Turnpikes."),
+            "The redstone patterns written down: the redstone engineer works a quarter quicker and lays its machines' "
+                + "blocks a quarter faster, and the railway's rails go down a quarter faster. Closes the Turnpikes."),
         TURNPIKES(Branch.HOMES, 5, "Turnpikes", "Walk +4%; roads and bridges laid half again as fast",
             "good roads and quick bridges",
             "Roads kept up out of the tolls: everybody walks 4% faster, and the road to a colony and a stone bridge are "
@@ -1175,12 +1175,17 @@ public final class CityTree {
     }
 
     /**
-     * The trade that builds the town's machines: the redstone engineer, by its name, if the game has the trade (the
-     * Observer Pattern Books quicken it a quarter, in {@link #workPercent}; the railway's rails take the same through
-     * {@link #worksPercent} whether it has or not).
+     * The trade that builds the town's machines: the redstone engineer (the Observer Pattern Books quicken its work a
+     * quarter, in {@link #workPercent}, and its building of a machine, {@link #machinePercent}; the railway's rails take
+     * the same through {@link #worksPercent}).
      */
     static boolean machines(StationTask t) {
-        return t.name().contains("REDSTONE");
+        return t == StationTask.REDSTONE;
+    }
+
+    /** The Observer Pattern Books: blocks more a second the engineer lays building a machine, in percent (Engineers.work). */
+    public static int machinePercent(@Nullable UUID village) {
+        return has(village, Civic.OBSERVER_PATTERN_BOOKS) ? PATTERN_PERCENT : 0;
     }
 
     /** Primers and the Scholars' Endowment: a school lesson, in percent more (School). */

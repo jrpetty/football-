@@ -6,6 +6,7 @@ import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.CityTree;
 import com.jrpetty.mcassistant.entity.CityTree.Civic;
+import com.jrpetty.mcassistant.entity.Engineers;
 import com.jrpetty.mcassistant.entity.Fears;
 import com.jrpetty.mcassistant.entity.Fleet;
 import com.jrpetty.mcassistant.entity.FolkSkills;
@@ -502,6 +503,8 @@ public class PerksGameTests {
             CityTree.clearForTests(id);
             upTo(level, id, Civic.OBSERVER_PATTERN_BOOKS, day);
             helper.assertTrue(CityTree.worksSteps(id, "rails", 8) == 10 && CityTree.locked(id, Civic.TURNPIKES), "the Pattern Books: the rails a quarter");
+            helper.assertTrue(Engineers.quickerForTests(id, 100, level.getRandom()) == 125
+                && CityTree.workPercent(id, StationTask.REDSTONE) >= 25, "and the engineer's machines a quarter faster, its work a quarter quicker");
             // Wellbeing.
             CityTree.clearForTests(id);
             double tips0 = Perks.tipsForTests(busker);
