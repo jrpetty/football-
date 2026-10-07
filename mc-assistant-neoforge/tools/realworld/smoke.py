@@ -3421,6 +3421,10 @@ def main():
         leisure_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("leisure stage failed: %s" % e)
+    try:
+        cartographer_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("cartographer stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
