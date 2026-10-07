@@ -2419,6 +2419,7 @@ public final class EmeraldTrader {
     public static boolean tradeForTests(ServerLevel level, VillageFolkEntity f, Villager v, int offer) {
         Scouts.Expedition e = f.expedition();
         Venture t = e != null && e.venture != null ? e.venture : new Venture(Venture.Purpose.TRADE, null);
+        if (offer < 0 || offer >= v.getOffers().size()) return false;
         MerchantOffer o = v.getOffers().get(offer);
         if (o.getResult().is(Items.EMERALD) && !t.toSell.containsKey(o.getCostA().getItem())) {
             t.toSell.put(o.getCostA().getItem(), f.countMatching(o.getItemCostA()::test));

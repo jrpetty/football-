@@ -205,6 +205,9 @@ public class EmeraldGameTests {
         // The trade first: a villager given a new trade forgets its offers.
         v.setVillagerData(v.getVillagerData().setType(VillagerType.PLAINS).setProfession(p).setLevel(1));
         v.setVillagerXp(0);
+        // Its brain made for its trade, as the game makes it (a brain made for no trade lets its job site go at once,
+        // and with it its trade and offers).
+        v.refreshBrain(level);
         if (offers.length > 0) {
             MerchantOffers mo = new MerchantOffers();
             for (MerchantOffer o : offers) mo.add(o);
@@ -265,6 +268,12 @@ public class EmeraldGameTests {
             if (p != null && TwoPeoples.townGround(level, p)) out.add(m + " " + p.toShortString());
         }
         return out;
+    }
+
+    /** How many times this offer of the villager's has been used; -1 if it has no such offer (it lost its trade). */
+    static int uses(Villager v, int i) {
+        MerchantOffers o = v.getOffers();
+        return i < o.size() ? o.get(i).getUses() : -1;
     }
 
     static int free(ServerLevel level, BlockPos p) {
@@ -361,8 +370,10 @@ public class EmeraldGameTests {
         final int heads = Villages.headcount(t.id());
         final long day = level.getDayTime() / 24000L;
         final int minutes = 3 * 1200;
-        // {ticks the current claim has been held, the longest any was held, claims seen, ticks since the last}
+        // {(unused), the longest any one claim was held, claims seen, ticks since the town was last claimed}
         final int[] run = { 0, 0, 0, 0 };
+        // Each claim as the villager's brain set it (a new claim is a new value), and the tick it was first seen.
+        final java.util.Map<MemoryModuleType<GlobalPos>, Object[]> held = new java.util.HashMap<>();
         Kit.log("ep01 a villager beside " + Villages.name(t.id()) + " (" + heads + " folk, a guard among them); the town's bed "
             + ourBed.toShortString() + ", composter " + ourJob.toShortString() + ", bell " + ourBell.toShortString());
         helper.onEachTick(() -> {
@@ -378,18 +389,23 @@ public class EmeraldGameTests {
                 return;
             }
             List<String> claims = townClaims(level, vg);
-            if (claims.isEmpty()) {
-                run[0] = 0;
-                run[3]++;
-            } else {
-                if (run[0] == 0) {
-                    run[2]++;
-                    Kit.log("ep01 @" + tick + " the villager claimed " + claims);
+            for (MemoryModuleType<GlobalPos> m : CLAIMS) {
+                GlobalPos g = vg.getBrain().hasMemoryValue(m) ? vg.getBrain().getMemory(m).orElse(null) : null;
+                if (g == null || !TwoPeoples.townGround(level, g.pos())) {
+                    held.remove(m);
+                    continue;
                 }
-                run[0]++;
-                run[1] = Math.max(run[1], run[0]);
-                run[3] = 0;
+                Object[] was = held.get(m);
+                if (was == null || was[0] != g) {
+                    held.put(m, new Object[]{ g, tick });
+                    run[2]++;
+                    Kit.log("ep01 @" + tick + " the villager claimed " + m + " " + g.pos().toShortString());
+                } else {
+                    run[1] = (int) Math.max(run[1], tick - (Long) was[1] + 1);
+                }
             }
+            if (claims.isEmpty()) run[3]++;
+            else run[3] = 0;
             if (tick % 600 == 0) {
                 Kit.log("ep01 @" + tick + " the villager at " + vg.blockPosition().toShortString() + ", "
                     + vg.getVillagerData().getProfession() + "; claims seen " + run[2] + ", longest held " + run[1]
@@ -402,7 +418,7 @@ public class EmeraldGameTests {
                 "after three minutes beside the town it is still a villager, the same one");
             ex.that(Villages.headcount(t.id()) == heads, "nobody joined the town: " + Villages.headcount(t.id()) + " folk (" + heads + " before)");
             ex.that(run[2] >= 1, "it did try for the town's things (" + run[2] + " claims), so keeping it off was put to the test");
-            ex.that(run[1] <= 30, "it never held one of the town's things longer than a second and a half: the longest " + run[1] + " ticks");
+            ex.that(run[1] <= 30, "it never held a claim on the town's things longer than a second and a half: the longest " + run[1] + " ticks");
             ex.that(TwoPeoples.turnedAway(t.id(), day)[1] >= 1, "the claims were undone by the sweep: " + TwoPeoples.turnedAway(t.id(), day)[1]);
             ex.that(level.getBlockState(ourJob).is(Blocks.COMPOSTER) && level.getBlockState(ourBell).is(Blocks.BELL)
                 && level.getBlockState(ourBed).getBlock() instanceof BedBlock, "test setup: the town's bed, composter and bell still stand");
@@ -769,18 +785,22 @@ public class EmeraldGameTests {
         final int heldWheat = stock(level, t.id(), Items.WHEAT), heldPotatoes = stock(level, t.id(), Items.POTATO);
         final int spareWheat = Budget.spare(level, t.id(), new ItemStack(Items.WHEAT));
         final int sparePotatoes = Budget.spare(level, t.id(), new ItemStack(Items.POTATO));
+        final int hadWheat = has(f, Items.WHEAT), hadPotatoes = has(f, Items.POTATO);       // (a founder's kit: a few potatoes)
         ex.that(EmeraldTrader.setOutForTests(f, level, h.key()), "it sets out for the village");
         final int wheat = has(f, Items.WHEAT), potatoes = has(f, Items.POTATO);
-        Kit.log("ep07 took " + wheat + " wheat (" + spareWheat + " spare of " + heldWheat + ") and " + potatoes + " potatoes ("
-            + sparePotatoes + " spare of " + heldPotatoes + ")");
-        ex.that(wheat >= 20 && wheat <= spareWheat && wheat <= 64, "it takes wheat the town can spare, and no more: " + wheat + " of " + spareWheat);
-        ex.that(potatoes >= 26 && potatoes <= sparePotatoes && potatoes <= 64, "and potatoes: " + potatoes + " of " + sparePotatoes);
-        ex.that(stock(level, t.id(), Items.WHEAT) == heldWheat - wheat, "the rest stays in the stores");
+        final int tookWheat = wheat - hadWheat, tookPotatoes = potatoes - hadPotatoes;
+        Kit.log("ep07 took " + tookWheat + " wheat (" + spareWheat + " spare of " + heldWheat + ") and " + tookPotatoes + " potatoes ("
+            + sparePotatoes + " spare of " + heldPotatoes + "); it had " + hadWheat + " and " + hadPotatoes + " of its own");
+        ex.that(tookWheat >= 20 && tookWheat <= spareWheat && tookWheat <= 64, "it takes wheat the town can spare, and no more: " + tookWheat + " of " + spareWheat);
+        ex.that(tookPotatoes >= 26 && tookPotatoes <= sparePotatoes && tookPotatoes <= 64, "and potatoes: " + tookPotatoes + " of " + sparePotatoes);
+        ex.that(stock(level, t.id(), Items.WHEAT) == heldWheat - tookWheat, "the rest stays in the stores");
+        ex.that(farmer.getVillagerData().getProfession() == VillagerProfession.FARMER, "test setup: the farmer is a farmer");
         if (!ex.clean()) {
             helper.fail(ex.summary());
             return;
         }
-        final int wheatSales = Math.min(16, wheat / 20), potatoSales = Math.min(16, potatoes / 26);
+        // It sells only what it took for the trip (toSell), never a bite of its own.
+        final int wheatSales = Math.min(16, tookWheat / 20), potatoSales = Math.min(16, tookPotatoes / 26);
         final int sales = wheatSales + potatoSales;
         EmeraldTrader.arriveForTests(level, f);
         final boolean[] home = { false };
@@ -793,8 +813,8 @@ public class EmeraldGameTests {
             Kit.Expect end = new Kit.Expect();
             MerchantOffers offers = farmer.getOffers();
             end.that(now.trades() == sales && now.earned() == sales, "it sold " + sales + " times for " + sales + " emeralds: " + now.trades() + " trades, " + now.earned() + " earned");
-            end.that(offers.get(0).getUses() == wheatSales && offers.get(1).getUses() == potatoSales,
-                "the farmer's own offers are used: wheat " + offers.get(0).getUses() + " of " + wheatSales + ", potatoes " + offers.get(1).getUses() + " of " + potatoSales);
+            end.that(uses(farmer, 0) == wheatSales && uses(farmer, 1) == potatoSales,
+                "the farmer's own offers are used: wheat " + uses(farmer, 0) + " of " + wheatSales + ", potatoes " + uses(farmer, 1) + " of " + potatoSales);
             end.that(farmer.getVillagerXp() == 2 * sales, "the farmer has its trade XP: " + farmer.getVillagerXp());
             if (2 * sales >= 10) {
                 end.that(farmer.getVillagerData().getLevel() == 2 && offers.size() > 2,
@@ -878,9 +898,8 @@ public class EmeraldGameTests {
             if (home[0] || now == null || now.stage() != EmeraldTrader.Stage.HOME) return;
             home[0] = true;
             Kit.Expect end = new Kit.Expect();
-            MerchantOffer m = librarian.getOffers().get(1);
-            end.that(m.getUses() == 1 && librarian.getVillagerXp() == 1, "the librarian's own offer is used, and it has its XP: "
-                + m.getUses() + " uses, " + librarian.getVillagerXp() + " XP");
+            end.that(uses(librarian, 1) == 1 && librarian.getVillagerXp() == 1, "the librarian's own offer is used, and it has its XP: "
+                + uses(librarian, 1) + " uses, " + librarian.getVillagerXp() + " XP (" + librarian.getVillagerData().getProfession() + ")");
             end.that(now.spent() == 12 && now.got().stream().anyMatch(g -> g.contains("Mending")), "it bought Mending for twelve: " + now.got());
             end.that(has(f, Items.EMERALD) == 28 && has(f, Items.BOOK) == 1, "paid twelve emeralds and a book: " + has(f, Items.EMERALD) + " left, "
                 + has(f, Items.BOOK) + " book");
@@ -1024,7 +1043,7 @@ public class EmeraldGameTests {
             home[0] = true;
             Kit.Expect end = new Kit.Expect();
             Kit.log("ep10 @" + tick + " turned for home: " + f.debugLine());
-            end.that(now.trades() == 0 && farmer.getOffers().get(0).getUses() == 0 && farmer.getVillagerXp() == 0, "not a trade at a raided village");
+            end.that(now.trades() == 0 && uses(farmer, 0) == 0 && farmer.getVillagerXp() == 0, "not a trade at a raided village");
             EmeraldTrader.Hamlet hb = booked(t.id(), k.key());
             end.that(hb != null && hb.raided() == day, "the book marks the village raided on day " + day + ": " + (hb == null ? "?" : hb.raided()));
             end.that(newsHas(t.id(), "pillagers raiding") && logHas(t.id(), "pillagers"), "the town is told");

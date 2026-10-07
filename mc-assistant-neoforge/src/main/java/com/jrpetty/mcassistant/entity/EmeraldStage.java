@@ -81,6 +81,9 @@ public final class EmeraldStage {
             vg.finalizeSpawn(level, level.getCurrentDifficultyAt(stand), MobSpawnType.COMMAND, null);
             vg.setVillagerData(vg.getVillagerData().setProfession((VillagerProfession) s[0]).setLevel(1));
             vg.setVillagerXp(0);
+            // Its brain made again for its trade, as the game makes it when a villager takes one up (AssignProfessionFromJobSite):
+            // a brain still made for no trade lets its job site go at its first look, and with it, its trade and its offers.
+            vg.refreshBrain(level);
             vg.getOffers();                                       // the game's own first offers for the trade
             level.addFreshEntity(vg);
             employ(level, vg, station, bell);
