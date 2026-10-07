@@ -104,6 +104,8 @@ public final class FireBrigade {
         boolean closed;
         /** [disasters] The town's buildings it has reached, each as it stood when the fire was first seen by it. */
         final Map<Long, Map<Long, BlockState>> stood = new java.util.LinkedHashMap<>();
+        /** [disasters] Its flames beaten out on a third building: still this fire's, so what catches beyond them is too. */
+        final Set<Long> beaten = new LinkedHashSet<>();
         /** [disasters] Its bucket chain's part, written in when the chain stands down; and when one was last tried for. */
         String chain = "";
         long chainTried = -100000L;
@@ -199,6 +201,10 @@ public final class FireBrigade {
             for (Blaze b : t.blazes) {
                 if (b.closed) continue;
                 for (Long l : b.burning) {
+                    if (BlockPos.of(l).distManhattan(p) <= SAME_FIRE) { into = b; break; }
+                }
+                // [disasters] Beside a flame beaten out on a third building: the same fire, not a new one let burn it.
+                if (into == null) for (Long l : b.beaten) {
                     if (BlockPos.of(l).distManhattan(p) <= SAME_FIRE) { into = b; break; }
                 }
                 if (into == null && b.first.distManhattan(p) <= SAME_FIRE) into = b;
@@ -361,6 +367,7 @@ public final class FireBrigade {
     static boolean fit(VillageFolkEntity f) {
         if (!f.isAlive() || f.isBaby() || f.isShowcase() || f.isHired()) return false;
         if (f.trip() != null || f.expedition() != null || Nether.away(f)) return false;
+        if (JobSeekers.travelling(f)) return false;                      // [disasters] on the road to a new home
         return f.getTarget() == null;                                    // not in a fight
     }
 
@@ -702,6 +709,7 @@ public final class FireBrigade {
         if (b.stood.size() >= 2) {
             level.removeBlock(p, false);
             level.levelEvent(null, 1009, p, 0);                          // the hiss of a flame put out
+            if (b.beaten.size() < 256) b.beaten.add(p.asLong());
             Disasters.town(v.id()).keptFrom++;
             Disasters.dirty();
             return false;

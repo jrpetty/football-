@@ -6835,10 +6835,13 @@ something, and is answered, so the next one costs less. None of them is ruinous,
   ones, off the fire station's rack, out of the stores, or made there and then from three of the stores' iron
   each, and you can see them in the folk's hands. Full buckets go along the line toward the fire and empty ones
   come back, swapped hand to hand. The first in line fills them at the water and the last throws them on the
-  flames. When the fire is out, every bucket goes back where it came from. A folk's card shows its place in the
-  chain.
+  flames. A folk in the line is never so far from the next that a bucket cannot be handed on: one that cannot get
+  any nearer its place in eight seconds is set down at it, and one called away for ten seconds is let go and the
+  rest spread out again (short of four, the chain stands down and the brigade carries on with its own buckets).
+  Nobody is off reading the job notices while the town burns. When the fire is out, every bucket goes back where
+  it came from. A folk's card shows its place in the chain.
 * **Never more than two buildings.** A fire that reaches a third building has that flame beaten out by the
-  neighbours at once.
+  neighbours at once, and whatever catches beyond it is still the same fire, so that is beaten out too.
 * **Rebuilding.** Each of the town's buildings a fire reaches is noted, block by block, from its own drawing, the
   moment the fire is seen. When the fire is out, whatever burned is put back exactly as it stood, on the town's
   works, by a hand at the building, a few blocks every couple of seconds. Every block is paid for out of the
@@ -6930,7 +6933,7 @@ The game tests `DisastersGameTests` (dd01 to dd07) check that:
 * six burnt planks are put back exactly as they stood out of the stores' planks, the work waiting when the
   planks run out;
 * a forced flood puts water only in empty cells a block over the river, the folk in the low house gets out to the
-  high ground without drowning, and when it drains every block is as it was;
+  high ground without drowning, and when it drains every cell of it is as it was and no water is left anywhere;
 * after the flood a levee is raised out of the stores' earth, and the same flood then stays off the low ground;
 * a drought slows a dry field to under three fifths of its pace and not a watered one, and the town then digs
   irrigation through the dry field;
