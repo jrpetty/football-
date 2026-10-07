@@ -11,6 +11,7 @@ import com.jrpetty.mcassistant.entity.JobWorth;
 import com.jrpetty.mcassistant.entity.Market;
 import com.jrpetty.mcassistant.entity.Names;
 import com.jrpetty.mcassistant.entity.ShopRoles;
+import com.jrpetty.mcassistant.entity.StoreStaff;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
 import com.jrpetty.mcassistant.entity.Wealth;
@@ -236,6 +237,11 @@ public class WagesGameTests {
         VillageFolkEntity assistant = folk(level, v, x + 11, Z - 8, StationTask.SHOP, 10);
         helper.runAtTickTime(5, () -> {
             Villages.ageForTests(id, Villages.Age.STONE);
+            // The town has no shop yet, so on its first look round a shopkeeper takes up whatever the town is short
+            // of (VillageFolkEntity.changedTrade): the two are put back at the shop, in their jobs, as the store's
+            // staffing puts them (StoreStaff: the keeper untagged, the assistant with the counter's tag).
+            StoreStaff.appointForTests(level, v, keeper, ShopRoles.Role.KEEPER);
+            StoreStaff.appointForTests(level, v, assistant, ShopRoles.Role.ASSISTANT);
             JobWorth.Post stock = JobWorth.post("SHOP/STOCK_KEEPER"), counter = JobWorth.post("SHOP/ASSISTANT"),
                 keeps = JobWorth.post("SHOP/KEEPER");
             int asStock = JobWorth.payAs(assistant, stock), asCounter = JobWorth.payAs(assistant, counter), asKeeper = JobWorth.payAs(assistant, keeps);
