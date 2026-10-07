@@ -361,6 +361,8 @@ public final class Crime extends SavedData {
         @Nullable final UUID victim;
         final String victimName;
         int worth, coins, goodsCount;
+        /** The fine the council set, and how much of it came out of the culprit's purse then (the rest is owed). */
+        int fine, finePaid;
         String goods = "", goodsId = "", broke = "", brokeWhat = "";
         boolean mended;
         final List<Near> near = new ArrayList<>();
@@ -430,6 +432,14 @@ public final class Crime extends SavedData {
         public List<BlockPos> trail() { return List.copyOf(trail); }
         public boolean confessed() { return confessed; }
         public Set<UUID> cleared() { return Set.copyOf(cleared); }
+        public int fine() { return fine; }
+        public int finePaid() { return finePaid; }
+
+        /** What was in the culprit's purse just before (the town's note of who was about, and with what). */
+        public int culpritPurseBefore() {
+            Near n = nearOf(culprit);
+            return n == null ? 0 : n.purse();
+        }
 
         /** "Theft at the market". */
         public String title() {
@@ -490,6 +500,8 @@ public final class Crime extends SavedData {
             t.putInt("worth", worth);
             t.putInt("coins", coins);
             t.putInt("goodsCount", goodsCount);
+            t.putInt("fine", fine);
+            t.putInt("finePaid", finePaid);
             t.putString("goods", goods);
             t.putString("goodsId", goodsId);
             t.putString("broke", broke);
@@ -561,6 +573,8 @@ public final class Crime extends SavedData {
             c.worth = t.getInt("worth");
             c.coins = t.getInt("coins");
             c.goodsCount = t.getInt("goodsCount");
+            c.fine = t.getInt("fine");
+            c.finePaid = t.getInt("finePaid");
             c.goods = t.getString("goods");
             c.goodsId = t.getString("goodsId");
             c.broke = t.getString("broke");
@@ -1443,6 +1457,11 @@ public final class Crime extends SavedData {
             ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", page(ctx.getSource().getLevel(), v))), false);
             return 1;
         }
+        // Only to a player whose connection takes the books (never a test's stand-in player).
+        if (p.connection == null || !p.connection.hasChannel(com.jrpetty.mcassistant.net.CityStatsPayload.TYPE)) {
+            ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", page(ctx.getSource().getLevel(), v))), false);
+            return 1;
+        }
         CompoundTag books = Annals.snapshot(ctx.getSource().getLevel(), v);
         books.putString("page", "Cases");
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(books));
@@ -1592,8 +1611,33 @@ public final class Crime extends SavedData {
         return Trial.stocksAt(level, v);
     }
 
+    /** [itemaudit] Tests: the town's stocks looked for afresh, stocks a player put up on the square among them. */
+    @Nullable
+    public static BlockPos adoptStocksForTests(ServerLevel level, Villages.Village v) {
+        return Trial.adoptNow(level, v);
+    }
+
+    /** [itemaudit] Tests: the forged coins in the stores melted down three to a bar of copper, now. The bars. */
+    public static int meltForgedForTests(ServerLevel level, Villages.Village v) {
+        return Trial.meltForged(level, v);
+    }
+
     public static int convictionsForTests(VillageFolkEntity f) {
         return convictions(f.getUUID());
+    }
+
+    /** What it owes the town (fines, the cost of a mending), apart from what it owes the one it robbed. */
+    public static int owesTownForTests(VillageFolkEntity f) {
+        return known(f.getUUID()) ? folk(f.getUUID()).getInt("owesTown") : 0;
+    }
+
+    /** How the town paid for its stocks: "a pair put by", or "three planks and two logs", or "" if it has none. */
+    public static String stocksPaidForTests(Villages.Village v) {
+        return town(v.id()).getString("stocksPaid");
+    }
+
+    public static int storesForTests(ServerLevel level, Villages.Village v, net.minecraft.world.item.Item item) {
+        return Market.stock(level, v.id(), s -> s.is(item));
     }
 
     public static int owesForTests(VillageFolkEntity f) {

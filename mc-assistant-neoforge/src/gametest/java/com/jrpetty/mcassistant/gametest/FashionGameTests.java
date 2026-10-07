@@ -210,7 +210,9 @@ public class FashionGameTests {
         ada.rename("Ada");
         stranger.rename("Stranger");
         old.rename("Oldways");
-        Values.setForTests(old, Values.Value.TRADITION, 200);
+        Values.setForTests(old, Values.Value.LEISURE, 0);         // weights top out at 100: the town's Free Spirit weight off
+        Values.setForTests(old, Values.Value.TRADITION, 100);
+        helper.assertTrue(Fashion.traditional(old), "Oldways is a Traditionalist: " + Values.type(old));
         for (VillageFolkEntity f : t.folk()) f.earn(45);
         for (VillageFolkEntity p : pals) {
             p.life().setTraitsForTests(Social.Trait.SOCIABLE, Social.Trait.CHEERFUL);

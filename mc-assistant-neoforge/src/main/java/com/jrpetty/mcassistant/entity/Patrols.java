@@ -580,13 +580,15 @@ public final class Patrols {
     /**
      * Who walks with the village's leader: the best of its guards (the one already at it, if it is
      * as good as any), once the village has two guards, or a barracks and one. Looked at afresh
-     * every ten seconds. Null when it has none.
+     * every ten seconds. Null when it has none. A guard at the butts with its six arrows (Archery) is
+     * not taken off them: the walk to the line would run out while it was away, and it shot from where
+     * it stood, across the town. Another walks with the leader, or the leader walks alone a while.
      */
     @Nullable
     static VillageFolkEntity chooseEscort(UUID village, long now) {
         Escort e = ESCORTS.get(village);
         if (e != null && now - e.at() < 200L && now >= e.at()) {
-            for (VillageFolkEntity g : watch(village)) if (g.getUUID().equals(e.guard())) return g;
+            for (VillageFolkEntity g : watch(village)) if (g.getUUID().equals(e.guard()) && !Archery.busy(g)) return g;
         }
         VillageFolkEntity elder = Orders.elderOf(village);
         List<VillageFolkEntity> watch = watch(village);
@@ -596,7 +598,7 @@ public final class Patrols {
         VillageFolkEntity best = null;
         if (enough && elder != null) {
             for (VillageFolkEntity g : watch) {
-                if (!g.isAlive() || away(g)) continue;
+                if (!g.isAlive() || away(g) || Archery.busy(g)) continue;
                 if (best == null || g.veteranLevel() > best.veteranLevel()
                         || (g.veteranLevel() == best.veteranLevel() && e != null && g.getUUID().equals(e.guard()))) best = g;
             }

@@ -356,6 +356,22 @@ public final class TradeBookWriter {
             "the deep caves, in diamond",
             "everything under the world",
         }, "What did the bat say to the cave dweller? Nothing. It was hanging around."));
+        // [weave] The librarian's own book: the library is kept, and keeping it is a craft too.
+        craft("LIBRARY", new Craft("librarian", "Librarian's", "the library", "keeping the library", "the books", "books lent", new String[]{
+            "Three days for a loan, and a fine after that: two coins a day, ten at the most. Folk bring a book back sooner when they know it.",
+            "Write it down when a book goes out, and cross it off when it comes back. A library is only as good as its catalogue.",
+            "A book that is lost is written out again from the catalogue. That is why we keep the words of every one.",
+            "Shelve the newest on the lectern, where folk see it first. A book nobody sees is a book nobody reads.",
+            "Keep a book and quill in the stores, and the ink to go with it: no ink, no book.",
+            "Let the children in of an afternoon. A child who reads becomes a hand who learns quicker.",
+            "Keep the old editions of the trades' books. They show how we used to do things, and why we stopped.",
+        }, new String[]{
+            "a shelf of planks and whatever we can write on",
+            "a hall of stone, chiseled shelves, a reading table and two desks",
+            "ink and paper enough for every trade's book, and a lectern for the newest",
+            "a book for everything the town has done",
+            "every book the world has, if we can get it",
+        }, "Why did the librarian slip on the floor? She was in the non-friction section."));
         // [fletcher]
         craft("FLETCHER", new Craft("fletcher", "Fletcher's", "the fletching table", "fletching", "the arrows", "things made", new String[]{
             "Sift the gravel on a hard floor and break it clean. One block in ten gives a flint; the rest goes back to be sifted again.",
@@ -439,7 +455,8 @@ public final class TradeBookWriter {
         b.add(Block.title("§lThe " + c.possessive() + " Book§r"));
         b.add(Block.title("of " + f.town()));
         b.add(Block.space());
-        b.add(Block.title(d.pick("the best practice of " + c.place(), "how " + c.work() + " is done here", "all we know of " + c.place())));
+        b.add(Block.title(d.pick("the best practice of " + c.place(), f.key().equals("LIBRARY") ? "how the library is kept"   // [weave]
+            : "how " + c.work() + " is done here", "all we know of " + c.place())));
         b.add(Block.space());
         b.add(Block.title("kept by " + f.master().name()));
         b.add(Block.title("master " + c.noun()));
@@ -495,7 +512,8 @@ public final class TradeBookWriter {
                 crew += " " + who + " new to it, which is half the reason for this book.";
             }
         }
-        b.add(Block.para(crew + " I'm level " + m.level() + " at it, which makes me the master" + (v.is("grumpy") ? ", for my sins." : ", for now.")));
+        b.add(Block.para(f.key().equals("LIBRARY") ? crew + " The books are my charge" + (v.is("grumpy") ? ", for my sins." : ", and I'm glad of it.")   // [weave]
+            : crew + " I'm level " + m.level() + " at it, which makes me the master" + (v.is("grumpy") ? ", for my sins." : ", for now.")));
         if (f.edition() <= 1) {
             b.add(Block.para(d.pick("Nobody has written it down before. ", "This is the first time it's been put in a book. ")
                 + "Everything here comes out of the town's own books and my own hands; none of it is guesswork."));
@@ -563,6 +581,10 @@ public final class TradeBookWriter {
 
     /** The trade's numbers: this week, the best day, all of it, its worth. */
     private static void numbers(List<Block> b, Facts f, Craft c, Voice v, Dice d) {
+        if (f.key().equals("LIBRARY")) {                                   // [weave] the shelves, not a harvest
+            shelves(b, f, v, d);
+            return;
+        }
         b.add(Block.heading(d.pick("By the numbers", "The tally", "What we bring in")));
         if (f.days() <= 0 || f.made().isEmpty()) {
             b.add(Block.para("The town's books haven't a full day of our work in them yet. Ask me again in a week and I'll have numbers for you."
@@ -608,6 +630,24 @@ public final class TradeBookWriter {
             break;
         }
         if (f.deeds() > 0) b.add(Block.para("My own tally: " + number(f.deeds()) + " " + c.deedWord() + "."));
+    }
+
+    /**
+     * [weave] The library's numbers: the books on its shelves and the week's new ones, how often they are read and lent,
+     * and the most read of them (the facts' made: books, readings, loans; best and bestWhat: the most read).
+     */
+    private static void shelves(List<Block> b, Facts f, Voice v, Dice d) {
+        b.add(Block.heading(d.pick("The shelves", "What we hold", "By the shelf")));
+        long books = f.made().isEmpty() ? 0 : f.made().get(0).total();
+        int fresh = f.made().isEmpty() ? 0 : f.made().get(0).week();
+        long reads = f.made().size() > 1 ? f.made().get(1).total() : 0, loans = f.made().size() > 2 ? f.made().get(2).total() : 0;
+        b.add(Block.para("The shelves hold " + Quill.count(books, "book", "books") + (fresh > 0 ? ", " + number(fresh) + " of them new this week" : "") + "."
+            + (reads > 0 ? " They've been read " + Quill.count(reads, "time", "times") + " in the chairs" + (loans > 0 ? ", and lent out " + Quill.count(loans, "time", "times") : "") + "."
+                : " Nobody has sat down to one yet" + (v.is("grumpy") ? ", which says a good deal about this town." : "."))));
+        if (f.best() > 0 && !f.bestWhat().isEmpty()) {
+            b.add(Block.para("The most read is \"" + f.bestWhat() + "\": read " + Quill.count(f.best(), "time", "times") + "."
+                + (v.is("cheerful") ? " I'm not surprised!" : v.is("curious") ? " I've wondered why." : "")));
+        }
     }
 
     private static String trend(Facts f, Voice v, Dice d) {
@@ -702,6 +742,8 @@ public final class TradeBookWriter {
                 case "SMELT", "SMITH", "COOK", "BREW" -> "keep a bucket of water by the fire.";
                 case "WOOD" -> "keep clear of a falling tree, and of the fire.";
                 case "FARM" -> "be in before dark, and keep the field lit.";
+                case "CAVE" -> "light every fifteen blocks, and never go past your torches.";     // [weave]
+                case "LIBRARY" -> "keep the candles well away from the shelves.";              // [weave]
                 default -> "mind how you go.";
             };
         };

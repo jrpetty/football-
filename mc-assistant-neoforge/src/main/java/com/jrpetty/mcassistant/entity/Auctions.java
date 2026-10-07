@@ -239,6 +239,8 @@ public final class Auctions {
 
     /** Where a lot of the town's came from, in words. */
     static String provenance(ServerLevel level, UUID village, ItemStack s) {
+        String woven = Weave.provenance(level, village, s);              // [weave] who of the cave team brought it up; the tailor's finest
+        if (woven != null) return woven;
         String name = lower(s.getHoverName().getString());
         Museum.Kind k = Museum.Kind.inStores(s);
         if (k != null && Museum.onShow(village, k.key())) return "a spare from the museum's collection";
@@ -256,7 +258,7 @@ public final class Auctions {
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
             for (int i = 0; i < c.getContainerSize(); i++) {
                 ItemStack s = c.getItem(i);
-                if (!rare(s)) continue;
+                if (!rare(s) && !Weave.lot(level, v.id(), s) || Weave.unsellable(s)) continue;   // [weave] fine garments, the trophies past six; never stolen
                 String key = key(s);
                 sample.putIfAbsent(key, s.copyWithCount(1));
                 count.merge(key, s.getCount(), Integer::sum);
@@ -412,6 +414,7 @@ public final class Auctions {
         if (Standing.of(id, p.getUUID(), level.getGameTime()).title() == Standing.Title.OUTCAST) return "Nobody here will sell for you.";
         ItemStack hand = p.getMainHandItem();
         if (hand.isEmpty() || Market.isCoin(hand)) return "Hold the thing you want to sell in your hand.";
+        if (Weave.unsellable(hand)) return "That's stolen goods, or a forged coin. The town won't sell it — take it to the watch.";   // [weave]
         ListTag l = held(level, id);
         int mine = 0;
         for (int i = 0; i < l.size(); i++) if (l.getCompound(i).hasUUID("owner") && l.getCompound(i).getUUID("owner").equals(p.getUUID())) mine++;
@@ -843,6 +846,7 @@ public final class Auctions {
         } else if (s.is(Items.NAUTILUS_SHELL) || s.is(Items.HEART_OF_THE_SEA) || s.is(Items.TRIDENT) || s.is(Items.SPYGLASS)) {
             w = t == AssistantEntity.StationTask.FISH || hobby == Persona.Hobby.STARGAZING ? 1.4 : f.life().has(Social.Trait.CURIOUS) ? 1.25 : 0.9;
         }
+        w *= Weave.wants(f, s);                                           // [weave] a fine garment to the vain, a find to the cave team
         if (collector(f)) w *= 1.35;
         return w;
     }
@@ -1175,6 +1179,7 @@ public final class Auctions {
     static void deliver(ServerLevel level, Villages.Village v, VillageFolkEntity f, ItemStack item, int price, long day) {
         Homes.keepsake(item, f);
         String what = lower(item.getHoverName().getString());
+        if (Weave.wearWon(level, v, f, item, day)) item = ItemStack.EMPTY;  // [weave] a garment won is worn at once: the height of fashion
         if (item.getItem() instanceof ArmorItem armour) {
             EquipmentSlot slot = armour.getEquipmentSlot();
             if (f.getItemBySlot(slot).isEmpty()) {
@@ -1504,7 +1509,7 @@ public final class Auctions {
         return out;
     }
 
-    private static List<String[]> salesRows(UUID village) {
+    static List<String[]> salesRows(UUID village) {                     // [weave] read by the library's ballads too (Authors)
         List<String[]> out = new ArrayList<>();
         String s = Ledger.note(village, "auction.sales");
         if (s == null || s.isEmpty()) return out;

@@ -317,6 +317,7 @@ public final class Newcomers {
             members.add(mt);
             if (!m.isBaby()) grown.add(m.displayNameCap());
             leave(level, m, from.id(), pid, day, c, to);
+            Weave.oldColours(m, from);                                      // [weave] they go in their old town's colours
             i++;
         }
         CivicRecord.changed();

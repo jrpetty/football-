@@ -965,12 +965,30 @@ public final class Fletchers {
      * a little less each time: the first sessions teach the most), its best kept, and a new best in the chronicle.
      */
     public static void practised(ServerLevel level, VillageFolkEntity g, int shot, int hits, int points, boolean contest) {
+        practised(level, g, shot, hits, true);
+    }
+
+    /**
+     * A session at the butts stopped before it was done (Archery.stop: the bell, a fight): the arrows it did shoot
+     * steadied its eye all the same, in proportion to a whole session's, but a broken session is no best and no record.
+     */
+    public static void stopped(ServerLevel level, @Nullable VillageFolkEntity g, int shot, int hits) {
+        if (g != null && shot > 0) practised(level, g, shot, hits, false);
+    }
+
+    private static void practised(ServerLevel level, VillageFolkEntity g, int shot, int hits, boolean whole) {
         UUID id = g.ownerId();
         if (id == null || shot <= 0) return;
         Town t = town(id);
         Aim a = t.aims.computeIfAbsent(g.getUUID(), k -> new Aim());
         double before = a.aim;
-        a.aim = Math.min(1.0, a.aim + (1.0 - a.aim) * (0.06 + 0.10 * hits / (double) shot));
+        double share = whole ? 1.0 : Math.min(1.0, shot / (double) PRACTICE_ARROWS);
+        a.aim = Math.min(1.0, a.aim + share * (1.0 - a.aim) * (0.06 + 0.10 * hits / (double) shot));
+        if (!whole) {
+            save(id, t);
+            g.brain(String.format(Locale.ROOT, "its aim a little steadier for %d arrows at the butts: %.0f%% to %.0f%%", shot, before * 100, a.aim * 100));
+            return;
+        }
         a.sessions++;
         boolean best = a.bestShot == 0 || hits * a.bestShot > a.bestHits * shot || hits * a.bestShot == a.bestHits * shot && shot > a.bestShot;
         if (best) {

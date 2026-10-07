@@ -107,6 +107,7 @@ public class PlayerCivicGameTests {
         Kit.reset(level);
         PlayerCivic.resetForTests();
         level.setDayTime(2000);
+        level.updateSkyBrightness();
         int x = 1140000, z = 66000;
         List<VillageFolkEntity> folk = town(helper, level, x, z, 7);
         UUID village = folk.get(0).ownerId();
@@ -114,6 +115,10 @@ public class PlayerCivicGameTests {
         BlockPos heart = Kit.surface(level, x, z);
         ServerPlayer p = helper.makeMockServerPlayerInLevel();
         p.moveTo(heart.getX() + 0.5, heart.getY(), heart.getZ() + 1.5);
+        // A name is put forward at the board (the founders put one up), or in the hall: the player stands there.
+        BlockPos board = com.jrpetty.mcassistant.entity.VillageBoards.lectern(village);
+        if (board != null) p.moveTo(board.getX() + 0.5, board.getY(), board.getZ() + 0.5);
+        Kit.log("pc01 at the board: " + board + ", the heart " + heart);
         String name = p.getName().getString();
         Ledger.addCitizen(village, p.getUUID(), name);
         for (VillageFolkEntity f : folk) {
@@ -194,6 +199,7 @@ public class PlayerCivicGameTests {
         Kit.log("pc01 past the deadline: " + after2 + " approval " + a1 + " -> " + a2);
         helper.assertTrue(after2.contains(second.key() + ":BROKEN") && a2 < a1, "broken past its deadline, approval down: " + after2
             + ", " + a1 + " -> " + a2);
+        level.getServer().getPlayerList().remove(p);    // no stand-in player left to despawn other tests' monsters
         helper.succeed();
     }
 
@@ -212,6 +218,7 @@ public class PlayerCivicGameTests {
         Kit.reset(level);
         PlayerCivic.resetForTests();
         level.setDayTime(2000);
+        level.updateSkyBrightness();
         int x = 1142000, z = 66000;
         List<VillageFolkEntity> folk = town(helper, level, x, z, 3);
         UUID village = folk.get(0).ownerId();
@@ -280,6 +287,7 @@ public class PlayerCivicGameTests {
         int reinforced = Market.stock(level, village, s -> s.is(CivicItems.REINFORCED_PICKAXE.get()));
         Kit.log("pc02 the smith's own work: " + made + " (" + reinforced + " in the stores)");
         helper.assertTrue(made != null && reinforced == 1, "the master smith rivets one for the miners: " + made);
+        level.getServer().getPlayerList().remove(p);    // no stand-in player left to despawn other tests' monsters
         helper.succeed();
     }
 
@@ -297,6 +305,7 @@ public class PlayerCivicGameTests {
         Kit.reset(level);
         PlayerCivic.resetForTests();
         level.setDayTime(2000);
+        level.updateSkyBrightness();
         int x = 1144000, z = 66000;
         List<VillageFolkEntity> folk = town(helper, level, x, z, 3);
         UUID village = folk.get(0).ownerId();
@@ -340,11 +349,13 @@ public class PlayerCivicGameTests {
         helper.assertTrue("Apprentice Miner".equals(PlayerTrades.title(p.getUUID())), "an apprentice miner: " + PlayerTrades.title(p.getUUID()));
 
         // It speaks of its apprentice, and its card names it.
-        String about = FolkTalk.answer(master, p, TalkTopic.ABOUT, "");
+        // (What FolkTalk.answer adds to its ABOUT answer; called alone, the talk screen's other buttons are not sent.)
+        String about = PlayerTrades.mention(master, p, TalkTopic.ABOUT, "I dig.");
         String card = PlayerTrades.cardLine(master);
         Kit.log("pc03 about: " + about + " | card: " + card);
         helper.assertTrue(about.contains("coming along") || about.contains("lesson"), "it speaks of the apprentice's progress: " + about);
         helper.assertTrue(card.contains(name), "its card names the apprentice: " + card);
+        level.getServer().getPlayerList().remove(p);    // no stand-in player left to despawn other tests' monsters
         helper.succeed();
     }
 }
