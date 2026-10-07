@@ -6244,8 +6244,9 @@ making it, the shop stocks it, and by the end of the week most of the town is in
 * Over its trade's clothes it wears what it has bought, been given or won: a **long coat** (open down the front, so
   the smith's apron and the shopkeeper's still show), a **leather jacket**, a **shawl** or a **waistcoat**; a **felt
   hat**, a **flat cap** or a **top hat** when it is off work, at a gathering or on the rest day (at work it wears its
-  trade's hat); a **scarf**; a **brooch**; the fashion show's **rosette**; and, if it is a little vain, a **feather**
-  in its felt hat. All of it is drawn on the folk in its own dye. A guard's armour goes over all of it.
+  trade's hat); a **scarf**; a **brooch** (a vain folk who is well off has one made, once the town has gold); the
+  fashion show's **rosette**; and, if it is a little vain, a **feather** in its felt hat. All of it is drawn on the
+  folk in its own dye. A guard's armour goes over all of it.
 * Its card has a **Style** line: what it wears, its colours, and how it stands with the season's fashion (*In
   fashion: crimson, since day 15*, *Wants a crimson scarf: on the tailor's book (short of a red dye)*, *Keeps to its
   own colours: a Traditionalist*).

@@ -392,7 +392,7 @@ public final class Fashion {
         // The old look's wants that came to nothing fade with it; what is on the tailor's book stands.
         for (VillageFolkEntity f : grown(id)) {
             Style s = f.style();
-            if (s.want != null && !s.ordered && s.wantColour != t.colour) s.want = null;
+            if (s.want != null && !s.ordered && s.wantColour >= 0 && s.wantColour != t.colour) s.want = null;
         }
         save(id, t);
     }
@@ -626,10 +626,19 @@ public final class Fashion {
                 f.brain("stuck a feather in its felt hat");
             }
         }
+        // A vain folk that is well off likes a brooch to set it all off: gold and lapis, off the tailor's book, once the
+        // town has the Iron Age's gold to make one of. A day in the week it thinks of it.
+        if (v != null && s.want == null && s.worn(Garment.Slot.PIN).isEmpty() && vain(f) && reach(f) >= Garment.BROOCH.rank
+                && Villages.ageOf(id).ordinal() >= Garment.BROOCH.age.ordinal() && Math.floorMod(f.getUUID().hashCode() + day, 7L) == 0) {
+            s.want = Garment.BROOCH;
+            s.wantColour = -1;
+            s.wantSince = day;
+            s.ordered = false;
+        }
         if (v != null && s.want != null) {
             Trend t = trend(id);
             boolean stale = !s.ordered && day - s.wantSince > WANT_DAYS;
-            boolean passed = t.set() && s.wantColour != t.colour && !s.ordered;
+            boolean passed = t.set() && s.wantColour >= 0 && s.wantColour != t.colour && !s.ordered;
             if (stale || passed) {
                 s.want = null;
             } else if (!s.ordered && stockOf(level, id, wanted(s), false) <= 0) {
