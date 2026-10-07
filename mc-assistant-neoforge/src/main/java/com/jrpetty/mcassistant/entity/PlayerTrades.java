@@ -289,6 +289,9 @@ public final class PlayerTrades extends SavedData {
     /** The best master of a trade in the town, or null. */
     @Nullable
     static VillageFolkEntity masterOf(UUID village, StationTask t) {
+        // [interviews] The trade's master chosen at interview, while it is a master at it.
+        VillageFolkEntity chosen = Interviews.holder(village, "master:" + t.name());
+        if (chosen != null && chosen.stationTask() == t && chosen.tradeLevel(t) >= Lessons.MASTER && !chosen.isShowcase()) return chosen;
         VillageFolkEntity best = null;
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.stationTask() != t) continue;

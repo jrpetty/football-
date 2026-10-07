@@ -56,7 +56,9 @@ TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           # [caves] Not in StationTask's order: the cave dweller's own (FolkModel.outfit picks it for CAVE).
           "cavedweller",
           # [fletcher] [golems] The fletcher's and the golem keeper's own (FolkModel.outfit picks them).
-          "fletcher", "golemkeeper"]
+          "fletcher", "golemkeeper",
+          # [fireworks] The fireworks maker's own (FolkModel.outfit picks it for FIREWORKS).
+          "fireworks"]
 
 PARTS = [
     # The body every folk has: a villager's head and nose, a coat over a body,
@@ -242,6 +244,17 @@ PARTS = [
                                                           (44, 76, -0.5, -2, -2.5, 1, 1, 3, 0)], "cane"),
     ("cane_left", "left_arm", (1, 9, -1), (0, 0, 0), [(52, 76, -0.5, -1, -0.5, 1, 14, 1, 0),
                                                        (56, 76, -0.5, -2, -2.5, 1, 1, 3, 0)], "cane"),
+
+    # [fireworks] Fireworks maker: a canvas apron gone grey with soot, two rockets in its pocket, brass goggles with
+    # smoked lenses pushed up on its forehead, and a bright scarf of red and gold round its neck, its tail hanging down.
+    ("fireworks_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 0, -4, 1.5, -4.5, 8, 15, 1, 0)], "fireworks"),
+    ("fireworks_band", "head", (0, 0, 0), (0, 0, 0), [(82, 0, -4, -9, -4, 8, 2, 8, 0.6)], "fireworks"),
+    ("fireworks_lens_right", "head", (0, 0, 0), (0, 0, 0), [(114, 0, -3.2, -9.2, -5.7, 2, 2, 1, 0)], "fireworks"),
+    ("fireworks_lens_left", "head", (0, 0, 0), (0, 0, 0), [(114, 0, 1.2, -9.2, -5.7, 2, 2, 1, 0)], "fireworks"),
+    ("fireworks_scarf", "body", (0, 0, 0), (0, 0, 0), [(64, 20, -4.5, -0.5, -3.5, 9, 2, 7, 0.3)], "fireworks"),
+    ("fireworks_tail", "body", (2.5, 0.8, -4.6), (-0.14, 0, 0.1), [(98, 20, -1, 0, -0.5, 2, 6, 1, 0)], "fireworks"),
+    ("fireworks_rocket_a", "body", (0, 0, 0), (0, 0, 0), [(64, 32, -3.6, 5.5, -5.3, 1, 4, 1, 0)], "fireworks"),
+    ("fireworks_rocket_b", "body", (0, 0, 0), (0, 0, 0), [(70, 32, -2.3, 6.5, -5.3, 1, 3, 1, 0)], "fireworks"),
 ]
 
 
@@ -1011,6 +1024,100 @@ def outfit_cavedweller():
     # The rope: a coil of hemp, wound round.
     rope = Box(cv, "cavedweller_rope")
     rope.all(lambda face, x, y, w, h: (198, 170, 112) if (x + y) % 2 else (156, 128, 80))
+    return cv
+
+
+def outfit_fireworks():
+    """[fireworks] The fireworks maker: a dark blue work shirt with its sleeves rolled to the elbow, soot on its
+    forearms and its cheeks, leather gloves; a heavy canvas apron gone grey with powder and soot, a scorch or two
+    and a burn hole, a pocket with two rockets standing in it (a red and a blue, paper-capped); brass goggles with
+    smoked lenses pushed up on its forehead; and a bright scarf, red with gold stripes, round its neck, its fringed
+    tail hanging down its front; canvas trousers and stout boots."""
+    cv = Canvas()
+    shirt = (50, 60, 100)
+    sh = cloth(shirt, 6, 400)
+    coat = coat_to(cv, sh, 12)
+    coat.row(11, lambda x: lit(shirt, 0.72))
+    canvas = (200, 190, 162)
+    for x in (2, 5):                                                     # the apron's neck strap
+        coat.put("front", x, 0, lit(canvas, 0.9))
+        coat.put("front", x, 1, lit(canvas, 0.85))
+    for face in ("right", "left", "back"):                              # its ties round the waist
+        coat.row(9, lambda x: grain(lit(canvas, 0.85), x, 9, 4, 401), (face,))
+    coat.put("back", 3, 10, lit(canvas, 0.8))
+    coat.put("back", 4, 10, lit(canvas, 0.8))
+    coat.put("back", 4, 11, lit(canvas, 0.7))
+    coat.fill("top", lambda x, y, w, h: lit(canvas, 0.9) if x in (2, 5) else sh(x, y))
+    sleeves(cv, sh, 4, cuff=lit(shirt, 1.22))                            # rolled up to the elbow
+    soot = (74, 70, 68)
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        arm.row(3, lambda x: lit(shirt, 1.1))                            # the roll
+        for (face, x, y) in (("front", 1, 6), ("front", 2, 7), ("back", 0, 5), ("back", 3, 7), ("right", 2, 6), ("left", 1, 7)):
+            arm.put(face, x, y, soot)                                     # soot on the bare forearms
+        arm.around(lambda s, y, sw, h, face, x: grain((92, 66, 44), s, y, 5, 402) if y >= 9 else None)   # gloves
+        arm.row(9, lambda x: (112, 82, 54))                              # the gloves' cuffs
+        arm.fill("bottom", lambda x, y, w, h: (70, 50, 34))
+    legs(cv, cloth((104, 96, 78), 5, 403), leather((60, 44, 32)), boot_from=8, sole=(28, 22, 18))
+    for name in ("right_leg", "left_leg"):
+        leg = Box(cv, name)
+        leg.row(8, (80, 60, 42))                                         # the boot tops
+        leg.put("front", 1, 2, lit(soot, 1.2))                           # a smudge where the hands wipe
+    face_paint(cv, [(1, 7, (118, 98, 86)), (2, 8, (128, 108, 96)), (6, 6, (112, 94, 84))])   # soot on its cheeks
+    # The apron: heavy canvas, grey with powder at the hem and soot where the hands go, scorched, a hole burnt in it.
+    ap = Box(cv, "fireworks_apron")
+
+    def apron(x, y, w, h):
+        if y == 0 and x in (0, w - 1):
+            return False
+        c = grain(canvas, x, y, 6, 404)
+        smut = noise(x, y, 405)
+        if smut > 0.6:
+            c = mix(c, soot, 0.2 + 0.5 * (smut - 0.6))                   # soot, in smudges
+        if y >= h - 3:
+            c = mix(c, (150, 146, 140), 0.35)                            # grey with powder at the hem
+        if (x, y) in ((1, 3), (2, 4), (5, 11), (6, 12), (2, 13)):
+            c = mix(c, soot, 0.6)                                        # where the hands wipe
+        if (x, y) in ((6, 2), (5, 3)):
+            c = (120, 84, 50)                                            # a scorch
+        if (x, y) == (2, 11):
+            c = (40, 34, 30)                                             # a hole burnt in it
+        if x in (0, w - 1) or y == h - 1:
+            c = lit(c, 0.82)
+        if 1 <= x <= w - 2 and y == 8:
+            c = lit(canvas, 0.68)                                        # the pocket's lip
+        if 1 <= x <= w - 2 and y == 9:
+            c = lit(c, 0.9)
+        return c
+    ap.fill("front", apron)
+    ap.fill("back", lambda x, y, w, h: False if y == 0 and x in (0, w - 1) else lit(grain(canvas, x, y, 6, 404), 0.8))
+    for face in ("right", "left", "top", "bottom"):
+        ap.fill(face, lambda x, y, w, h: lit(canvas, 0.72))
+    # The goggles: a leather strap round the head, brass rims, smoked glass with a glint.
+    band = Box(cv, "fireworks_band")
+    band.all(lambda face, x, y, w, h: grain((84, 58, 36), x, y, 4, 406))
+    band.fill("top", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else (84, 58, 36))
+    band.fill("bottom", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else (84, 58, 36))
+    band.row(0, (106, 76, 48))
+    for name in ("fireworks_lens_right", "fireworks_lens_left"):
+        lens = Box(cv, name)
+        lens.all(lambda face, x, y, w, h: (204, 164, 72) if (x + y) % 2 else (176, 136, 58))
+        lens.fill("front", lambda x, y, w, h: (190, 222, 230) if (x, y) == (0, 0) else (58, 72, 84))
+    # The scarf: red, striped gold, wound round the neck (hollow where the neck goes through).
+    red, gold = (214, 38, 42), (246, 198, 46)
+    sc = Box(cv, "fireworks_scarf")
+    sc.around(lambda s, y, sw, h, face, x: grain(gold if (s // 2) % 3 == 2 else red, s, y, 6, 407) if y == 0
+              else lit(grain(gold if (s // 2) % 3 == 2 else red, s, y, 6, 407), 0.82))
+    sc.fill("top", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else lit(red, 1.06))
+    sc.fill("bottom", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else lit(red, 0.7))
+    tail = Box(cv, "fireworks_tail")
+    tail.all(lambda face, x, y, w, h: ((250, 226, 132) if (x + y) % 2 else (214, 170, 52)) if y == h - 1   # the fringe
+             else grain(gold if y % 3 == 1 else red, x, y, 6, 408))
+    # Two rockets standing in the pocket: paper tubes, a red and a blue, a gold band, a grey fuse at the top.
+    for name, body, band_c in (("fireworks_rocket_a", (188, 40, 38), (240, 200, 60)), ("fireworks_rocket_b", (52, 90, 186), (236, 232, 220))):
+        rk = Box(cv, name)
+        rk.all(lambda face, x, y, w, h, body=body, band_c=band_c: (band_c if y == 1 else lit(body, 1.0 if face in ("front", "left") else 0.82)))
+        rk.fill("top", lambda x, y, w, h: (150, 150, 146))
     return cv
 
 
@@ -1875,6 +1982,7 @@ OUTFITS = {
     "cavedweller": outfit_cavedweller,                                    # [caves]
     "fletcher": outfit_fletcher,                                          # [fletcher]
     "golemkeeper": outfit_golemkeeper,                                    # [golems]
+    "fireworks": outfit_fireworks,                                        # [fireworks]
 }
 GLOWS = {"miner": miner_glow, "cavedweller": cavedweller_glow}
 DYED = ("none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler",

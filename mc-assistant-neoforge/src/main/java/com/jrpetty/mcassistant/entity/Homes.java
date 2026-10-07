@@ -1978,6 +1978,8 @@ public final class Homes {
         Standing.Title title = Standing.of(id, p.getUUID(), level.getGameTime()).title();
         boolean citizen = Ledger.citizens(id).containsKey(p.getUUID());
         if (!citizen && !title.atLeast(Standing.Title.FRIEND)) return Villages.name(id) + " sells its houses to its friends. Be one first.";
+        String barred = LawBook.housesBarred(id, citizen);             // [identity] citizens only, or nobody: the town's law
+        if (barred != null) return barred;
         int price = (int) Math.round(price(id, h) * (citizen ? 1.0 : 1.25));
         int held = Market.coinsHeld(p);
         if (held < price) return address(id, v, h) + " is " + price + coins(price) + ". You have " + held + ".";

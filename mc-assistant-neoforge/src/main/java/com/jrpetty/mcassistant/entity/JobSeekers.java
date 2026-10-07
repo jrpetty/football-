@@ -290,6 +290,7 @@ public final class JobSeekers {
         if (j != null) return travel(f, level, j);
         Leaving l = LEAVING.get(me);
         if (l != null) return leaving(f, level, l);
+        if (Interviews.busy(f)) return false;                     // [interviews] at an interview or on the road to one: the board waits
         if (f.ownerId() == null || f.isShowcase() || f.isHired()) return false;
         Visit v = VISITS.get(me);
         if (v != null) return visit(f, level, v);

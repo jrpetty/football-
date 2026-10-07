@@ -378,7 +378,11 @@ public final class Persona {
         return o == null ? 0 : o.affinity;
     }
 
+    /** [identity] The town this folk is of, as its own day last said (VillageFolkEntity.aiStep): how fast it trusts is its town's. */
+    @Nullable UUID town;
+
     public void feelFor(UUID player, String name, int delta) {
+        if (town != null) delta = Treatment.trust(town, delta);             // [identity] an open town warms quicker, a closed one slower
         Opinion o = opinionOf(player, name);
         o.affinity = Math.max(-100, Math.min(100, o.affinity + delta));
     }

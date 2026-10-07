@@ -51,6 +51,7 @@ public final class TownWork {
         MineSafety.tick(level, v);                  // [mine-safety] the mine's stair heads fenced, the sign up
         TownLook.tick(level, v);                    // [batchE] the trees, benches, allotments, orchard, mill, bakery and inn
         Store.tick(level, v);                       // [econ-store] the shop's staff, its stock book and its deliveries
+        WorkTools.rounds(level, v);                 // [workitems] the milestones, the window boxes, the thatch, the shop's book
         int reach = Villages.townReach(id);
         List<int[]> cells = cellsWithin(reach);
         if (cells.isEmpty()) return;
@@ -190,7 +191,7 @@ public final class TownWork {
         String last = com.jrpetty.mcassistant.village.Ledger.note(id, "golem");
         if (last != null) {
             try {
-                if (day - Long.parseLong(last) < 3) return false;              // a new one takes a few days
+                if (day - Long.parseLong(last) < Ethos.golemGap(id, 3)) return false;   // a new one takes a few days ([identity] a martial town sooner)
             } catch (NumberFormatException ignored) { }
         }
         // A golem is made, not conjured: four blocks of iron (thirty-six ingots will do, nine to a block) and a

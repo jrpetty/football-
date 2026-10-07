@@ -48,12 +48,15 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
         "cavedweller",                                         // [caves] not in StationTask's order: see outfit()
         "fletcher", "golemkeeper",                             // [fletcher] [golems] the same
+        "fireworks",                                           // [fireworks] the same
     };
 
     /** [caves] The cave dweller's outfit, after the trades drawn in StationTask's order (those before it). */
     public static final int CAVE_OUTFIT = 19;
     /** [fletcher] [golems] The fletcher's and the golem keeper's own outfits, after the cave dweller's. */
     public static final int FLETCHER_OUTFIT = 20, GOLEMS_OUTFIT = 21;
+    /** [fireworks] The fireworks maker's outfit, after the golem keeper's: the sooty apron, the goggles, the bright scarf. */
+    public static final int FIREWORKS_OUTFIT = 22;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -167,6 +170,14 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"pipe", "head", "pipe"},
         {"cane_right", "right_arm", "cane"},
         {"cane_left", "left_arm", "cane"},
+        {"fireworks_apron", "body", "fireworks"},
+        {"fireworks_band", "head", "fireworks"},
+        {"fireworks_lens_right", "head", "fireworks"},
+        {"fireworks_lens_left", "head", "fireworks"},
+        {"fireworks_scarf", "body", "fireworks"},
+        {"fireworks_tail", "body", "fireworks"},
+        {"fireworks_rocket_a", "body", "fireworks"},
+        {"fireworks_rocket_b", "body", "fireworks"},
         // END GENERATED WEARERS
     };
 
@@ -343,6 +354,14 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         head.addOrReplaceChild("pipe", CubeListBuilder.create().texOffs(20, 76).addBox(-0.5F, -0.5F, -4.0F, 1.0F, 1.0F, 4.0F).texOffs(30, 76).addBox(-1.0F, -2.5F, -5.0F, 2.0F, 2.0F, 2.0F), PartPose.offsetAndRotation(-2.5F, -2.0F, -4.5F, 0.3F, 0.25F, 0.0F));
         rightArm.addOrReplaceChild("cane_right", CubeListBuilder.create().texOffs(40, 76).addBox(-0.5F, -1.0F, -0.5F, 1.0F, 14.0F, 1.0F).texOffs(44, 76).addBox(-0.5F, -2.0F, -2.5F, 1.0F, 1.0F, 3.0F), PartPose.offset(-1.0F, 9.0F, -1.0F));
         leftArm.addOrReplaceChild("cane_left", CubeListBuilder.create().texOffs(52, 76).addBox(-0.5F, -1.0F, -0.5F, 1.0F, 14.0F, 1.0F).texOffs(56, 76).addBox(-0.5F, -2.0F, -2.5F, 1.0F, 1.0F, 3.0F), PartPose.offset(1.0F, 9.0F, -1.0F));
+        body.addOrReplaceChild("fireworks_apron", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, 1.5F, -4.5F, 8.0F, 15.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("fireworks_band", CubeListBuilder.create().texOffs(82, 0).addBox(-4.0F, -9.0F, -4.0F, 8.0F, 2.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("fireworks_lens_right", CubeListBuilder.create().texOffs(114, 0).addBox(-3.2F, -9.2F, -5.7F, 2.0F, 2.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("fireworks_lens_left", CubeListBuilder.create().texOffs(114, 0).addBox(1.2F, -9.2F, -5.7F, 2.0F, 2.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("fireworks_scarf", CubeListBuilder.create().texOffs(64, 20).addBox(-4.5F, -0.5F, -3.5F, 9.0F, 2.0F, 7.0F, new CubeDeformation(0.3F)), PartPose.ZERO);
+        body.addOrReplaceChild("fireworks_tail", CubeListBuilder.create().texOffs(98, 20).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 6.0F, 1.0F), PartPose.offsetAndRotation(2.5F, 0.8F, -4.6F, -0.14F, 0.0F, 0.1F));
+        body.addOrReplaceChild("fireworks_rocket_a", CubeListBuilder.create().texOffs(64, 32).addBox(-3.6F, 5.5F, -5.3F, 1.0F, 4.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("fireworks_rocket_b", CubeListBuilder.create().texOffs(70, 32).addBox(-2.3F, 6.5F, -5.3F, 1.0F, 3.0F, 1.0F), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }
@@ -379,6 +398,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
         if (job == AssistantEntity.StationTask.FLETCHER.ordinal()) return FLETCHER_OUTFIT;   // [fletcher] apron, quiver, feathered cap
         if (job == AssistantEntity.StationTask.GOLEMS.ordinal()) return GOLEMS_OUTFIT;       // [golems] riveted apron, orange scarf
+        if (job == AssistantEntity.StationTask.FIREWORKS.ordinal()) return FIREWORKS_OUTFIT;   // [fireworks] "fireworks"
         return Math.floorMod(job, CAVE_OUTFIT);
     }
 

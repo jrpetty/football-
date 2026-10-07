@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " SI",
+    "PSI",
+    "PPI"
+  ],
+  "key": {
+    "P": {
+      "tag": "minecraft:planks"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    },
+    "I": {
+      "item": "minecraft:string"
+    }
+  },
+  "result": {
+    "id": "mc_assistant:lute",
+    "count": 1
+  }
+}

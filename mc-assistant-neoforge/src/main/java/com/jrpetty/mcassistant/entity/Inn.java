@@ -282,7 +282,8 @@ public final class Inn {
 
     /** Is this folk on the road (a caravan, an envoy, a household moving towns)? */
     static boolean travelling(VillageFolkEntity f) {
-        return f.trip() != null || JobSeekers.travelling(f);
+        return f.trip() != null || JobSeekers.travelling(f)
+            || Interviews.visiting(f);                              // [interviews] come from another town for an interview
     }
 
     /** Is the folk lodging at an inn just now (its own night routine waits: VillageFolkEntity.calledAway)? */

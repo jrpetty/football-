@@ -1,0 +1,6 @@
+{
+  "parent": "mc_assistant:block/window_box_template",
+  "textures": {
+    "flower": "minecraft:block/dandelion"
+  }
+}

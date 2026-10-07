@@ -291,10 +291,11 @@ public final class School {
         int bestScore = Integer.MIN_VALUE;
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || !fit(f)) continue;
-            int s = score(f);
+            int s = score(f) + Interviews.preferred(village, "teacher", f);     // [interviews] the panel's choice first
             if (s > bestScore || s == bestScore && best != null && f.getUUID().compareTo(best.getUUID()) < 0) { bestScore = s; best = f; }
         }
         if (best == null) return null;
+        if (Interviews.vacancy(level, village, "teacher", best)) return null;   // [interviews] the post held open for its interview
         appoint(level, village, best);
         return best;
     }
@@ -355,8 +356,8 @@ public final class School {
         return why.isEmpty() ? "the best the village had" : String.join(", ", why);
     }
 
-    /** It takes the school. */
-    private static void appoint(ServerLevel level, UUID village, VillageFolkEntity f) {
+    /** It takes the school. [interviews] The panel's choice is given it here too (InterviewPosts.give). */
+    static void appoint(ServerLevel level, UUID village, VillageFolkEntity f) {
         long day = level.getDayTime() / 24000L;
         String before = Ledger.note(village, TEACHER_NAME);
         Ledger.note(village, TEACHER, f.getUUID().toString());
@@ -611,6 +612,7 @@ public final class School {
         String learning = "learning to be " + a(d.leaning());
         if (!inClass(f, b) && tooLate(level, village)) return false;    // not there by now: the morning is gone
         f.lastLeisureTick = f.tickCount;
+        Slates.inHand(f);                                               // [leisure] its slate in its hand, to school and at its desk
         if (!inClass(f, b)) {
             if (f.getNavigation().isDone() || f.tickCount % 40 == 0) f.walkTo(seat, 1.1D);
             f.hobbyNow = "on the way to school";
@@ -640,6 +642,7 @@ public final class School {
                 keep(village, f, d);
                 countTaught(village, day);
             }
+            Slates.beat(level, v, f, teacher, topic(level, village, day));   // [leisure] handed a slate, the lesson chalked on it, its chalk worn
             learn(f, teacher, d.leaning(), topic(level, village, day));
         }
         if (r.nextInt(500) == 0) FolkTalk.speak(f, FolkTalk.pick(r, "I know! I know!", "Like this?", "Why, though?",
@@ -785,6 +788,7 @@ public final class School {
         if (p.has(Social.Trait.HARDWORKING)) pct += 15;
         if (p.has(Social.Trait.CURIOUS)) pct += 10;
         if (p.has(Social.Trait.EASYGOING)) pct -= 15;
+        pct += Slates.bonus(pupil);                                      // [leisure] a slate and chalk: a quarter quicker
         return Math.max(1, (cap * pct + BEATS_TO_CAP * 100 - 1) / (BEATS_TO_CAP * 100));     // rounded up: sixty beats fill it
     }
 
@@ -967,6 +971,8 @@ public final class School {
             "Gravel gives a flint one time in ten. Patience is half the trade." });
         LINES.put(StationTask.GOLEMS, new String[]{ "Four blocks of iron in a T, and the pumpkin last: never the other way round.",   // [golems]
             "An iron golem never turns on its own town. Be kind to it all the same." });
+        LINES.put(StationTask.FIREWORKS, new String[]{ "One gunpowder to a star, one to three to a rocket: no more.",   // [fireworks]
+            "Never a flame in the powder hut, and never a rocket in a thunderstorm." });
     }
 
     private static final String[] ANY_DAY = { "Reading, writing and counting: every trade stands on those three.",
