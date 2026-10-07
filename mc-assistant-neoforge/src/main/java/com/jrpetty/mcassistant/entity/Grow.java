@@ -135,6 +135,7 @@ public final class Grow {
                 default -> null;
             };
             if (plan == null || !Land.areaLoaded(level, b.anchor(), 9)) continue;
+            if (HousingMarket.isPrivate(id, b.anchor())) continue;     // [econ-housing] a folk's own: it buys its own beds (Homes.childBed)
             if (level.getGameTime() - FURNISHED.getOrDefault(b.anchor().asLong(), -100000L) < 6000L) continue;
             for (BuildGoal.Placement p : BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
                 if (p.part() != BuildGoal.Part.BED) continue;
