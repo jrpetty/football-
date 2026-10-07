@@ -110,7 +110,16 @@ public class StorehouseGameTests {
      * fixed hour would have caught one folk in three on its break, and its work waits for that.
      */
     private static boolean atWorkFor(ServerLevel level, VillageFolkEntity f, long span) {
-        for (long t = 1500; t + span <= 12000; t += 250) {
+        // Looked for with its pack set aside: a carrier with a load in hand puts its break off till the
+        // load is in (VillageFolkEntity.breakNow), so a time found while it carried its starter kit's
+        // bread turned into its break the moment the bread was in the stores.
+        java.util.List<net.minecraft.world.item.ItemStack> pack = new java.util.ArrayList<>();
+        for (net.minecraft.world.item.ItemStack s : f.getInventoryItems()) {
+            pack.add(s.copy());
+            s.setCount(0);
+        }
+        boolean found = false;
+        for (long t = 1500; t + span <= 12000 && !found; t += 250) {
             boolean ok = true;
             for (long k = t; k <= t + span && ok; k += 200) {
                 level.setDayTime(k);
@@ -118,10 +127,12 @@ public class StorehouseGameTests {
             }
             if (ok) {
                 level.setDayTime(t);
-                return true;
+                found = true;
             }
         }
-        return false;
+        for (int i = 0; i < pack.size(); i++) f.getInventoryItems().set(i, pack.get(i));
+        level.updateSkyBrightness();
+        return found;
     }
 
     // ============================================================ the one way in
