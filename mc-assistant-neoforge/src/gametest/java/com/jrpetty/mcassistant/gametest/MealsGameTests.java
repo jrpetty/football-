@@ -119,11 +119,17 @@ public class MealsGameTests {
         for (int k = 0; k < 3; k++) {
             final int m = k;
             helper.runAtTickTime(when[m], () -> {
+                // A child still, by the stores: the clock jumps whole days between the meals, and a child left to
+                // itself grew up and went to the town's mine, fifty-odd blocks out of reach of the stores.
+                child.setChild(true);
+                child.childhoodForTests(0);
+                child.moveTo(heart.getX() + 1.5, heart.getY(), heart.getZ() + 0.5, 0.0F, 0.0F);
                 onlyTheLarder(level, child, c);
                 // Topped up for each meal: the larder is a chest of the stores, and the rest of the village eats out of it too.
                 c.setItem(0, new ItemStack(Items.BREAD, 8));
                 c.setChanged();
                 level.setDayTime(at[m]);
+                child.childhoodForTests(0);                      // born today, by the new clock
                 int before = bread(c);
                 String held = Meals.heldForTests(child);
                 Meals.tick(child);

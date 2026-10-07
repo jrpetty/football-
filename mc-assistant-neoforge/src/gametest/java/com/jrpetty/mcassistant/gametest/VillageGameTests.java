@@ -564,7 +564,7 @@ public class VillageGameTests {
         Villages.restore(level, late, new BlockPos(4600, 64, 4600), Villages.Age.NETHER, raised, 20);
         List<String> order = new java.util.ArrayList<>();
         int roomBefore = Villages.housing(late);
-        for (int i = 0; i < 12; i++) {
+        for (int i = 0; i < 24 && Villages.greatWorks(late) < 3; i++) {
             String next = Villages.nextProject(late);
             order.add(next);
             if (next == null) break;
@@ -574,8 +574,14 @@ public class VillageGameTests {
             + ", room " + roomBefore + " -> " + Villages.housing(late));
         // Twenty folk: the café, the tavern, the fountain, the park among the homes (Park), the smithy,
         // the shop and a manor house after the gateway, before the great works.
-        helper.assertTrue(order.equals(List.of("gateway", "cafe", "tavern", "fountain", "park", "townhall", "smithy", "shop", "manor",
-                "granary", "barracks", "monument")),
+        // The gateway and the amenities first; the leader's hall, the smithy, the shop and a manor before the great works;
+        // and the great works in their turn. (A town of twenty also wants a pitch, an infirmary and the like by now, in
+        // among them: the order of those is theirs.)
+        int granary = order.indexOf("granary"), barracks = order.indexOf("barracks"), monument = order.indexOf("monument");
+        boolean beforeGreat = granary > 0;
+        for (String s : List.of("townhall", "smithy", "shop", "manor")) beforeGreat &= order.contains(s) && order.indexOf(s) < granary;
+        helper.assertTrue(order.size() >= 5 && order.subList(0, 5).equals(List.of("gateway", "cafe", "tavern", "fountain", "park"))
+                && beforeGreat && granary < barracks && barracks < monument,
             "the Nether Age raises its gateway, its amenities and the leader's hall, then the great works go round: " + order);
         helper.assertTrue(Villages.greatWorks(late) == 3 && Villages.renown(late) == 3 * com.jrpetty.mcassistant.entity.Museum.GREAT_WORK_RENOWN,
             "three great works raised, ten renown each: " + Villages.greatWorks(late) + ", renown " + Villages.renown(late));

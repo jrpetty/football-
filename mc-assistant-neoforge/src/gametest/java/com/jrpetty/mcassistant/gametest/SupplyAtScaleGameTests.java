@@ -96,11 +96,13 @@ public class SupplyAtScaleGameTests {
                 boolean ok = true;
                 for (long k = t; k <= t + span && ok; k += 200) {
                     level.setDayTime(k);
+                    level.updateSkyBrightness();             // or the sky stays as it was this tick, and isNight with it
                     ok = !f.offWorkNow();
                     if (!ok) why.add(f.offWorkWhy());
                 }
                 if (ok) {
                     level.setDayTime(t);
+                    level.updateSkyBrightness();
                     return true;
                 }
             }
