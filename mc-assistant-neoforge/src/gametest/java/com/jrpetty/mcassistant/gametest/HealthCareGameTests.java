@@ -478,7 +478,10 @@ public class HealthCareGameTests {
                     helper.assertTrue(stock(level, id, s -> s.is(Items.HONEY_BOTTLE)) == 0 && stock(level, id, s -> s.is(Items.GLASS_BOTTLE)) == bottles + 1,
                         "the honey out of the stores, the bottle back into them");
                     helper.assertTrue(before - after == 6000, "a quarter-day off its cold: " + (before - after));
-                    helper.assertTrue(remembers(k, "looked after me") && k.life().affinity(c.getUUID()) > liked, "it remembers, and likes it the better");
+                    // Its partner at the bedside: partners are as fond of each other as two folk get (Social.partnerWith, a
+                    // hundred), so the liking is looked at where it can rise, at the infirmary below.
+                    helper.assertTrue(remembers(k, c.displayNameCap() + " looked after me") && k.life().affinity(c.getUUID()) >= liked,
+                        "it remembers who looked after it: " + k.persona().memories() + "; liking " + liked + " -> " + k.life().affinity(c.getUUID()));
                     // Over it; then the infirmary, and somebody with a cold in it.
                     Health.passForTests(k, 100000);
                     homes[1] = infirmary(level, id, heart.offset(0, 0, -14));
@@ -493,15 +496,22 @@ public class HealthCareGameTests {
             if (phase[0] == 2) {
                 if (Health.lyingForTests(a) && Health.inInfirmaryForTests(a)) {
                     moveTo(c, homes[1].offset(0, 0, 6));                 // just outside the infirmary's door
-                    int before = a.health().coldLeft();
+                    int before = a.health().coldLeft(), likedC = a.life().affinity(c.getUUID()), likedK = a.life().affinity(k.getUUID());
                     VillageFolkEntity seen = Health.careForTests(level, id);
                     int mid = a.health().coldLeft();
                     String first = Health.tendedForTests(a);
+                    // Who was at the bedside (the nearest well folk: its neighbour at the door, as a rule), and its liking for them.
+                    String by = first.contains(" / ") ? first.substring(0, first.indexOf(" / ")) : "";
+                    VillageFolkEntity carer = by.equals(c.displayNameCap()) ? c : by.equals(k.displayNameCap()) ? k : null;
+                    int liked = carer == c ? likedC : likedK, likes = carer == null ? 0 : a.life().affinity(carer.getUUID());
                     VillageFolkEntity again = Health.careForTests(level, id);
                     int after = a.health().coldLeft();
                     Kit.log("hc03 at the infirmary: " + first + " (" + before + " -> " + mid + "), then " + Health.tendedForTests(a) + " (" + mid + " -> " + after
                         + "); golden carrots left " + stock(level, id, s -> s.is(Items.GOLDEN_CARROT)));
                     helper.assertTrue(seen == a && again == a, "the patient at the infirmary is seen to");
+                    Kit.log("hc03 the carer at the infirmary: " + by + "; liking " + liked + " -> " + likes + "; memories " + a.persona().memories());
+                    helper.assertTrue(carer != null && remembers(a, by + " looked after me") && likes > liked,
+                        "it remembers who looked after it, and likes them the better: " + by + ", " + liked + " -> " + likes);
                     helper.assertTrue(first.contains("golden carrot") && before - mid == 6000 && stock(level, id, s -> s.is(Items.GOLDEN_CARROT)) == 0,
                         "with the stores' golden carrot: " + first);
                     helper.assertTrue(Health.tendedForTests(a).contains("rest and company") && mid - after == 1500,
