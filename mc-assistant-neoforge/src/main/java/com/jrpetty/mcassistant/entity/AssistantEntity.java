@@ -8444,6 +8444,26 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         jobs.addFirst(job);
     }
 
+    /**
+     * [mine-safety] This job first, now (or, with none, the one already first): whatever job goal has its
+     * legs lets go of its own job, which stays queued behind, and the first job starts on the next tick.
+     * Put in front of a deposit under way, a way up out of a mine waited behind it for good: a farmer sent
+     * up stood on the stairs a whole test, the deposit walking a one-step path to the stores and its
+     * watchdog's rescue setting it going again.
+     */
+    public void interject(@Nullable Job job) {
+        if (job != null) jobs.addFirst(job);
+        taskGen++;
+    }
+
+    /** [mine-safety] Is a goal of this kind running just now? */
+    public boolean running(Class<? extends net.minecraft.world.entity.ai.goal.Goal> kind) {
+        for (net.minecraft.world.entity.ai.goal.WrappedGoal g : goalSelector.getAvailableGoals()) {
+            if (g.isRunning() && kind.isInstance(g.getGoal())) return true;
+        }
+        return false;
+    }
+
     /** No empty slot left (stacks may have room, but it's time to stash). */
     public boolean isPackFull() {
         for (ItemStack s : inventory) {
