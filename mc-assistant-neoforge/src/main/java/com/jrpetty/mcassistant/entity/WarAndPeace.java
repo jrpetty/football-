@@ -2668,6 +2668,35 @@ public final class WarAndPeace {
         return d.why();
     }
 
+    /**
+     * Where the council of war sits ({@code at}, the middle of its circle), which way that place is
+     * looked at from ({@code facing}: the hall's front, else the way the board faces) and whether it is
+     * under a roof.
+     */
+    public record CouncilSpot(BlockPos at, Direction facing, boolean indoors) {}
+
+    /**
+     * Where the council of war sits: in the leader's hall, else the meeting hall; else out on the square
+     * before the face of the board, the middle of its circle four blocks out from the board's foot, so the
+     * whole ring stands in front of the board (at the foot itself half of it stood behind the board, out of
+     * sight of anyone on the square); else the middle of the town. Null for a town not known.
+     */
+    @Nullable
+    public static CouncilSpot councilSpot(UUID village) {
+        for (String s : new String[]{ "townhall", "hall" }) {
+            BlockPos hall = Villages.builtAt(village, s);
+            if (hall == null) continue;
+            Ledger.Building b = Villages.builtStructure(village, s);
+            Direction f = b != null ? b.facing() : VillageBoards.facingOf(village);
+            return new CouncilSpot(hall, f != null && f.getAxis().isHorizontal() ? f : Direction.SOUTH, true);
+        }
+        BlockPos lectern = VillageBoards.lectern(village);
+        Direction f = VillageBoards.facingOf(village);
+        if (lectern != null && f != null) return new CouncilSpot(lectern.relative(f, 4), f, false);
+        Villages.Village v = Villages.get(village);
+        return v == null ? null : new CouncilSpot(v.centre(), f != null ? f : Direction.SOUTH, false);
+    }
+
     /** The command: a red banner into the town's stores, as a player might bring one (for the pictures). Whether it went in. */
     public static boolean clothForPictures(ServerLevel level, Villages.Village v) {
         ItemStack banner = new ItemStack(net.minecraft.world.item.Items.RED_BANNER);

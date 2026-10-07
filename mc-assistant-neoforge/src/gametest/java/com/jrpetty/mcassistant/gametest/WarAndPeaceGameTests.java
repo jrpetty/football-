@@ -147,6 +147,14 @@ public class WarAndPeaceGameTests {
         return false;
     }
 
+    /** How far out from the face of the town's board this stands (the board itself 0, its foot 2; behind it below 0), or null with no board. */
+    private static Integer outFromBoard(UUID v, BlockPos p) {
+        BlockPos foot = VillageBoards.lectern(v);
+        net.minecraft.core.Direction f = VillageBoards.facingOf(v);
+        if (foot == null || f == null) return null;
+        return (p.getX() - foot.getX()) * f.getStepX() + (p.getZ() - foot.getZ()) * f.getStepZ() + 2;
+    }
+
     private static void start(ServerLevel level) {
         Kit.reset(level);
         WarAndPeace.resetForTests();
@@ -182,6 +190,12 @@ public class WarAndPeaceGameTests {
             helper.assertTrue(d.why().contains("scouts' report of day " + (day - 1)), "it goes by the scouts' report: " + d.why());
             String vote = WarAndPeace.councilNow(level, a, b, false);
             Kit.log("wp01 the council of war: " + vote);
+            // Where it sits: with no hall, out before the board's face, its ring (3.8 across from the middle) wholly in front of the board.
+            WarAndPeace.CouncilSpot spot = WarAndPeace.councilSpot(a.id());
+            Integer out = spot == null ? null : outFromBoard(a.id(), spot.at());
+            Kit.log("wp01 the council sits at " + (spot == null ? "nowhere" : spot.at() + " " + spot.facing() + (spot.indoors() ? " indoors" : " outdoors"))
+                + ", " + out + " out from the board's face");
+            helper.assertTrue(spot != null && (spot.indoors() || out == null || out >= 5), "the council of war sits before the board's face, not at its foot: " + out);
             String stage = WarAndPeace.quarrelStage(a.id(), b.id());
             helper.assertTrue("HERALD_DUE".equals(stage), "the council voted for the ultimatum: " + stage + " / " + vote);
             List<String> board = WarAndPeace.board(level, a.id(), day);
@@ -314,6 +328,18 @@ public class WarAndPeaceGameTests {
             helper.assertTrue(WarAndPeace.booksForTests(a.id(), b.id()).startsWith("book true/true"), "each keeps the war's page");
             helper.assertTrue(ba != null && level.getBlockState(ba).getBlock() instanceof AbstractBannerBlock, "a war banner hangs in " + Villages.name(a.id()));
             helper.assertTrue(bb != null && level.getBlockState(bb).getBlock() instanceof AbstractBannerBlock, "and in " + Villages.name(b.id()));
+            // A banner on its own pole by the board stands out on the square before the board's face, turned the way the board faces.
+            for (UUID t : new UUID[]{ a.id(), b.id() }) {
+                BlockPos p = t.equals(a.id()) ? ba : bb;
+                net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+                Integer out = outFromBoard(t, p);
+                if (out == null || !st.hasProperty(net.minecraft.world.level.block.BannerBlock.ROTATION)) continue;   // on a wall: not by the board
+                int rot = st.getValue(net.minecraft.world.level.block.BannerBlock.ROTATION);
+                Kit.log("wp04 the pole in " + Villages.name(t) + ": " + out + " out from the board's face, turned " + rot + ", the board facing "
+                    + VillageBoards.facingOf(t));
+                helper.assertTrue(out >= 1 && rot == VillageBoards.facingOf(t).get2DDataValue() * 4,
+                    "the banner on its pole stands before the board's face, never behind it, and looks the way the board looks: " + out + "/" + rot);
+            }
             int aLeft = Market.stock(level, a.id(), s -> s.is(Items.RED_BANNER)), bLeft = Market.stock(level, b.id(), s -> s.is(net.minecraft.tags.ItemTags.WOOL));
             Kit.log("wp04 the stores: red banners " + aBanners + " -> " + aLeft + ", wool " + bWool + " -> " + bLeft);
             helper.assertTrue(aLeft == aBanners - 1 && bLeft == bWool - 6, "out of the stores: the banner, and the wool for the other");

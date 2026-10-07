@@ -1,5 +1,6 @@
 package com.jrpetty.mcassistant.entity;
 
+import com.jrpetty.mcassistant.block.VillageBoardBlock;
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -163,27 +164,73 @@ final class WarBanner {
         return null;
     }
 
-    /** On its own pole by the board (a standing banner), when the town has no wall and no hall. */
+    /**
+     * On its own pole by the board (a standing banner), when the town has no wall and no hall: out on the
+     * square before the board's face, just past one end of the board (else a little further along, else in
+     * front of the board near an end), its cloth turned the way the board faces. Whoever looks at the board
+     * from the square sees the banner beside it, never a pole behind it (it once went anywhere round the
+     * board's foot, and as often as not stood behind the board, out of sight). With no board, somewhere
+     * round the middle of the town.
+     */
     @Nullable
     private static BlockPos byBoard(ServerLevel level, Villages.Village v, DyeColor c) {
-        BlockPos near = VillageBoards.lectern(v.id());
-        if (near == null) near = v.centre();
+        BlockPos foot = VillageBoards.lectern(v.id());
+        Direction f = VillageBoards.facingOf(v.id());
+        if (foot != null && f != null && f.getAxis().isHorizontal()) {
+            Direction right = VillageBoardBlock.right(f);
+            int first = -VillageBoardBlock.WIDE / 2, last = first + VillageBoardBlock.WIDE - 1;   // the board's ends, along from its foot
+            int[] along = { first - 1, last + 1, first - 2, last + 2, first + 1, last - 1, first - 3, last + 3 };
+            // The foot is two out from the board's face: two out first, then three, one, four, five.
+            for (boolean road : new boolean[]{ false, true }) {
+                for (int out : new int[]{ 0, 1, -1, 2, 3 }) {
+                    for (int a : along) {
+                        BlockPos spot = poleSpot(level, foot.relative(right, a).relative(f, out), foot.getY(), road);
+                        if (spot == null) continue;
+                        plant(level, spot, c, f.get2DDataValue() * 4);
+                        return spot;
+                    }
+                }
+            }
+            return null;
+        }
+        BlockPos near = v.centre();
         for (int r = 2; r <= 5; r++) {
             for (int dx = -r; dx <= r; dx++) {
                 for (int dz = -r; dz <= r; dz++) {
                     if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
-                    int x = near.getX() + dx, z = near.getZ() + dz;
-                    BlockPos spot = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
-                    if (!level.getBlockState(spot).isAir() || !level.getBlockState(spot.above()).isAir()) continue;
-                    if (!level.getBlockState(spot.below()).isFaceSturdy(level, spot.below(), Direction.UP)) continue;
-                    if (level.getBlockState(spot.below()).is(Blocks.DIRT_PATH)) continue;     // not in the road
-                    int rot = Math.floorMod(Math.round((float) (Math.toDegrees(Math.atan2(-dx, dz)) / 22.5)), 16);
-                    level.setBlock(spot, BannerBlock.byColor(c).defaultBlockState().setValue(BannerBlock.ROTATION, rot), 3);
+                    BlockPos spot = poleSpot(level, near.offset(dx, 0, dz), near.getY() + 1, false);
+                    if (spot == null) continue;
+                    plant(level, spot, c, Math.floorMod(Math.round((float) (Math.toDegrees(Math.atan2(-dx, dz)) / 22.5)), 16));
                     return spot;
                 }
             }
         }
         return null;
+    }
+
+    /**
+     * Ground for a pole on this column, near the board's foot in height ({@code y}): open (or only grass
+     * and flowers, which are cleared), firm underfoot, and not in the road unless {@code road}. Null if not.
+     */
+    @Nullable
+    private static BlockPos poleSpot(ServerLevel level, BlockPos col, int y, boolean road) {
+        if (!level.isLoaded(col)) return null;
+        BlockPos spot = new BlockPos(col.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, col.getX(), col.getZ()), col.getZ());
+        if (spot.getY() < y - 4 || spot.getY() > y + 1) return null;                 // not on a roof, not down a bank
+        for (BlockPos p : new BlockPos[]{ spot, spot.above() }) {
+            BlockState st = level.getBlockState(p);
+            if (!st.isAir() && (!st.canBeReplaced() || !level.getFluidState(p).isEmpty())) return null;
+        }
+        BlockPos below = spot.below();
+        if (!level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) return null;
+        if (!road && level.getBlockState(below).is(Blocks.DIRT_PATH)) return null;    // not in the road
+        return spot;
+    }
+
+    /** The banner set up on its pole, turned to {@code rotation}; the grass where it stands cleared first. */
+    private static void plant(ServerLevel level, BlockPos spot, DyeColor c, int rotation) {
+        if (!level.getBlockState(spot.above()).isAir()) level.setBlock(spot.above(), Blocks.AIR.defaultBlockState(), 3);
+        level.setBlock(spot, BannerBlock.byColor(c).defaultBlockState().setValue(BannerBlock.ROTATION, rotation), 3);
     }
 
     private static boolean hangOn(ServerLevel level, BlockPos wall, BlockPos spot, Direction out, DyeColor c) {
