@@ -110,7 +110,10 @@ public final class Villages {
         // chosen by the town from its most skilled (CaveDwellers.team, appoint).
         new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST),
         // [transport] The ferryman: one, while the town's ferry runs (Ferries), whatever its size and age.
-        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1));
+        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1),
+        // [diver] The kelp farmer and diver: one from fifteen in a town with a river, a lake or the sea close by, two at
+        // fifty, from the Wood Age (Divers); none at all in a town with no water.
+        new Slot(AssistantEntity.StationTask.DIVER, 1, Divers.FROM, Age.WOOD, Divers.MOST));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -340,6 +343,7 @@ public final class Villages {
             case "trainingyard" -> "the training yard";            // [war-prep]
             case "firestation" -> "the fire station";              // [disasters]
             case "lodge" -> "the Delvers' Lodge";                 // [caves]
+            case "divershed" -> "the diver's shed";               // [diver]
             default -> "the " + structure;
         };
     }
@@ -403,6 +407,7 @@ public final class Villages {
         Economy.resetForTests();
         Scouts.resetForTests();
         CaveDwellers.resetForTests();       // [caves]
+        Divers.resetForTests();             // [diver]
         Fashion.resetForTests();            // [fashion] the season's looks, the tailor's book, the shows
         Quests.resetForTests();
         Services.resetForTests();
@@ -842,6 +847,7 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
         if (trade == AssistantEntity.StationTask.CAVE) return CaveDwellers.ready(villageId);   // [caves] a few miners and a watch first
         if (trade == AssistantEntity.StationTask.FERRY) return Ferries.wanted(villageId);      // [transport] while the ferry runs
+        if (trade == AssistantEntity.StationTask.DIVER) return Divers.ready(villageId);        // [diver] water near enough to dive in
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -912,6 +918,7 @@ public final class Villages {
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
         if (slot.trade() == AssistantEntity.StationTask.CAVE) t = CaveDwellers.team(total);   // [caves] two, three at sixty, four at a hundred
         if (slot.trade() == AssistantEntity.StationTask.FERRY) t = Ferries.wanted(villageId) ? 1.0 : 0.0;  // [transport] one ferryman
+        if (slot.trade() == AssistantEntity.StationTask.DIVER) t = Divers.team(villageId);      // [diver] one, two at fifty
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
             int producers = 0;
@@ -1725,6 +1732,8 @@ public final class Villages {
         // A house for the player the village has taken to its heart.
         if (com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId) != null
                 && built(villageId, "storage") > 0) out.add("guesthouse");
+        // [diver] The diver's shed by the water, once the town keeps a diver (Divers): the Wood Age's after its homes.
+        if (at == Age.WOOD && Divers.shedWanted(villageId)) out.add(Divers.SHED);
         if (at == Age.WOOD) { housesForBeds(villageId, folk, out); return out; }
 
         if (built(villageId, "fortify") < 1) out.add("fortify");        // the wall
@@ -1760,6 +1769,8 @@ public final class Villages {
         // to want governing, a hall for whoever leads it, on the great lot behind the board.
         if (VillageBoards.boardOf(villageId) != null && built(villageId, "hall") > 0 && built(villageId, "court") < 1) extras.add("court");
         if (folk >= 16 && built(villageId, "hall") > 0 && built(villageId, "townhall") < 1) extras.add("townhall");
+        // [diver] The diver's shed by the water, from the Stone Age with the other trades' buildings (Divers).
+        if (Divers.shedWanted(villageId)) extras.add(Divers.SHED);
         // Somewhere to lay the dead, once there are any; another when it is full.
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
         // [batchE] The town's look: the windmill, the bakery, the orchard, the allotments and (Iron Age, or thirty folk) the inn.
@@ -2169,6 +2180,7 @@ public final class Villages {
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
             case "infirmary" -> Infirmary.why(villageId);          // [batchA]
             case "lodge" -> Lodge.why(villageId);                  // [caves]
+            case "divershed" -> Divers.shedWhy(villageId);         // [diver]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]
@@ -2792,6 +2804,9 @@ public final class Villages {
         } else if (project.equals("court")) {
             // The courtyard lies before the board, its back along the board's foot: no lot of its own.
             site = courtSite(level, villageId);
+        } else if (project.equals(Divers.SHED)) {
+            // [diver] The diver's shed goes on the bank of its water, its door to it (Divers.shedPlace): no lot in the plan.
+            site = Divers.shedSite(level, villageId);
         } else {
             java.util.Set<Long> bad = BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
             java.util.Set<Long> taken = LOT_TAKEN.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());

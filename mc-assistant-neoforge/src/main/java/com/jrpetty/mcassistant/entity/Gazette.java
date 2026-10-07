@@ -270,6 +270,8 @@ public final class Gazette {
         entries.add(TradeDeals.gazette(level, v, day));          // [econ-trade] the deals with the neighbours, and yesterday's caravans
         String quay = Fleet.gazette(id, day);                     // [fleet] the fleet's catch and the fish market
         if (quay != null) entries.add(quay);
+        String waterside = Divers.gazette(id, day);               // [diver] the kelp blocks, the clay, a rescue
+        if (waterside != null) entries.add(waterside);
         String auction = Auctions.gazette(id, day);               // [fleet] what sold at the auction, and to whom
         if (auction != null) entries.add(auction);
         String books = Library.gazette(id, day);                    // [library] yesterday's new books and editions

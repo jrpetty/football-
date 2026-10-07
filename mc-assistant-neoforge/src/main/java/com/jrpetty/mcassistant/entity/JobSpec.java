@@ -55,6 +55,9 @@ public final class JobSpec {
             case CAVE -> List.of("a pickaxe and a sword (the town's)", "torches (it lights the caves)");
             // [transport] The town's boat, moored at the landing (Ferries): nothing of its own to set up.
             case FERRY -> List.of("the town's boat (moored at the landing)");
+            // [diver] Water three deep near the town, and kelp to plant (out of the stores, or cut wild); shears for the
+            // seagrass and a turtle helmet as the town has them (Divers).
+            case DIVER -> List.of("water three deep near the town", "kelp to plant (the stores', or the wild kelp's)");
         };
     }
 

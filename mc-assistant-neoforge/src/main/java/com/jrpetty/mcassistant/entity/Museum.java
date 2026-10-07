@@ -358,6 +358,7 @@ public final class Museum {
             case FISH -> "fished up";
             case HUNT -> "brought home";
             case CAVE -> CaveDwellers.foundWhere(f);       // [caves] "brought up from the great cave north-east"
+            case DIVER -> "brought up off the bed";         // [diver]
             case GUARD -> "won";
             default -> "found";
         };

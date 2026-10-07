@@ -183,6 +183,9 @@ public final class JobWorth {
             // [transport] Out on the water in all weathers but the worst: it makes nothing, and carries everybody over.
             case "FERRY" -> new Post(key, title, trade, role, 1, 1, 0.9, 0.0, "out on the water, and steady",
                 "carries the town's folk over the water");
+            // [diver] Under the water all day, on its own breath, and the one the town shouts for when somebody's in.
+            case "DIVER" -> new Post(key, title, trade, role, 2, 2, 1.0, 1.0, "cold, deep work on your own breath",
+                "fuels the furnaces with kelp, and pulls folk out of the water");
             // The shop's jobs (ShopRoles): the keeper makes a little and runs the place; the assistants and the
             // stock keeper make nothing, and are paid for what they do for the shop.
             case "SHOP/KEEPER" -> new Post(key, title, trade, role, 1, 2, 1.0, 0.5, "runs the place", "keeps the shop and its sales");
@@ -890,6 +893,7 @@ public final class JobWorth {
             case "BANK" -> "the bank";
             case "CAVE" -> "the caves";                // [caves]
             case "FERRY" -> "the ferry";               // [transport]
+            case "DIVER" -> "the kelp beds";            // [diver]
             default -> "the " + JobMarket.noun(t) + "s";
         };
     }

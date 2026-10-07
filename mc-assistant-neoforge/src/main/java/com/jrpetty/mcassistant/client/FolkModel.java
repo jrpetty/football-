@@ -47,10 +47,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         "guard", "smelter", "fisher", "storekeeper", "hauler",
         "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
         "cavedweller",                                         // [caves] not in StationTask's order: see outfit()
+        "diver",                                               // [diver] its own too: see outfit()
     };
 
     /** [caves] The cave dweller's outfit, after the trades drawn in StationTask's order (those before it). */
     public static final int CAVE_OUTFIT = 19;
+    /** [diver] The diver's outfit, after the cave dweller's. */
+    public static final int DIVER_OUTFIT = 20;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -142,6 +145,12 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"cavedweller_haft", "body", "cavedweller"},
         {"cavedweller_pickhead", "body", "cavedweller"},
         {"cavedweller_rope", "body", "cavedweller"},
+        {"diver_hood", "head", "diver"},
+        {"diver_band", "head", "diver"},
+        {"diver_goggles", "head", "diver"},
+        {"diver_line", "body", "diver"},
+        {"diver_rope", "body", "diver"},
+        {"diver_knife", "body", "diver"},
         // END GENERATED WEARERS
     };
 
@@ -294,6 +303,12 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("cavedweller_haft", CubeListBuilder.create().texOffs(64, 24).addBox(-0.5F, -6.0F, 0.0F, 1.0F, 12.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_pickhead", CubeListBuilder.create().texOffs(68, 24).addBox(-3.5F, -7.0F, 0.0F, 7.0F, 1.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_rope", CubeListBuilder.create().texOffs(84, 24).addBox(-6.2F, 7.0F, -2.0F, 2.0F, 4.0F, 4.0F), PartPose.ZERO);
+        head.addOrReplaceChild("diver_hood", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -10.0F, -4.0F, 8.0F, 10.0F, 8.0F, new CubeDeformation(0.55F)), PartPose.ZERO);
+        head.addOrReplaceChild("diver_band", CubeListBuilder.create().texOffs(96, 0).addBox(-4.0F, -9.0F, -4.0F, 8.0F, 1.0F, 8.0F, new CubeDeformation(0.8F)), PartPose.ZERO);
+        head.addOrReplaceChild("diver_goggles", CubeListBuilder.create().texOffs(64, 20).addBox(-3.5F, -10.4F, -5.6F, 7.0F, 2.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("diver_line", CubeListBuilder.create().texOffs(84, 20).addBox(-0.5F, -7.5F, -0.5F, 1.0F, 15.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 5.5F, -3.75F, 0.0F, 0.0F, 0.62F));
+        body.addOrReplaceChild("diver_rope", CubeListBuilder.create().texOffs(64, 26).addBox(4.2F, 6.5F, -2.0F, 2.0F, 5.0F, 4.0F), PartPose.ZERO);
+        body.addOrReplaceChild("diver_knife", CubeListBuilder.create().texOffs(88, 26).addBox(-5.4F, 8.0F, -1.0F, 1.0F, 4.0F, 2.0F), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }
@@ -328,6 +343,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         int job = folk.clientJobOrdinal();
         if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
         if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
+        if (job == AssistantEntity.StationTask.DIVER.ordinal()) return DIVER_OUTFIT; // [diver] "diver": the wetsuit and goggles
         return Math.floorMod(job, CAVE_OUTFIT);
     }
 

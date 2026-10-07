@@ -175,6 +175,15 @@ public final class Trades {
                 List.of(need("a boat", s -> s.is(net.minecraft.tags.ItemTags.BOATS), 1, "the town's, moored at the landing")),
                 List.of(),
                 "folk across the water, and a coin a crossing into my purse");
+            // [diver] The kelp farmer and diver (Divers): kelp beds on the bed of the water, dried and packed into fuel.
+            case DIVER -> new Trade("I farm kelp on the bed of the water: planted three deep and more, cut above the lowest piece so"
+                    + " it grows again, dried in the shed's smoker and over its campfire and packed nine to a block, so the furnaces"
+                    + " burn kelp and the coal goes on the torches. I dive for clay, sand and gravel when the town's short, cut"
+                    + " seagrass for the turtles on our beach, and pull anybody out of the water who's in trouble",
+                List.of(need("shears for the seagrass", s -> s.is(Items.SHEARS), 1, "the smith"),
+                    need("a turtle helmet", s -> s.is(Items.TURTLE_HELMET), 1, "the smith, of five scutes")),
+                List.of(need("kelp to plant", s -> s.is(Items.KELP), 8, "the stores, or the wild kelp")),
+                "dried kelp blocks for the furnaces, dried kelp for a hungry larder, clay for the masons, scutes for the helmets");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }

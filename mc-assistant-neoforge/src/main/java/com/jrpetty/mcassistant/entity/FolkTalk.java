@@ -97,6 +97,10 @@ public final class FolkTalk {
         // [quests] A quest's step waiting on it (a word, a hand-over, a choice), work asked for, an offer taken: a child's too.
         String quest = QuestTalk.answer(f, p, topic, text);
         if (quest != null) return manner(f, quest);
+        // [diver] Asked of a diver: clay or sea pickles brought up from the bed, or the order collected (Divers.meant).
+        if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.DIVER && Divers.meant(text)) {
+            return manner(f, Divers.talk(f, p, text));
+        }
         String lower = text.toLowerCase(Locale.ROOT);
         if (!text.isEmpty() && (lower.contains("sorry") || lower.contains("apolog"))) {
             return manner(f, apology(f, p, op, day));
@@ -385,6 +389,7 @@ public final class FolkTalk {
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
+        line(sb, "The water", Divers.cardLine(f));          // [diver] its kelp bed, its blocks, its clay, its rescues
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
         line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
@@ -733,6 +738,7 @@ public final class FolkTalk {
             case BANK -> Bank.doing(f, r);                // the banker: its books, its vault, its borrowers
             case CAVE -> CaveDwellers.doing(f, r);        // [caves] down the caves, or home with the report
             case FERRY -> Ferries.doing(f, r);            // [transport] at the landing, or out on the water
+            case DIVER -> Divers.doing(f, r);             // [diver] on the bed of the water, at the shed, or watching it
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";

@@ -326,6 +326,9 @@ public class VillageFolkEntity extends AssistantEntity {
             Transport.hold(this, riding);
             return;
         }
+        // [diver] A diver on a dive is steered a tick at a time (its swim, its breath, its work); one being pulled out of
+        // the water is held; a guard out with the diver at the monument keeps at its shoulder (Divers).
+        if (level() instanceof net.minecraft.server.level.ServerLevel diving && Divers.hold(this, diving)) return;
         // [batchG] A visitor from afar (the bard, a tourist, the merchant), one of ours away for the day at a friend's
         // in another town, or a guard out taming a dog for the watch: that is its day (Visitors).
         if (Visitors.drive(this)) return;
@@ -534,6 +537,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Neighbourly.tick(polls, home);       // [batchA] the old, newcomers, housewarmings, the poor box (Neighbourly)
                     Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
                     CaveDwellers.tick(polls, home);      // [caves] an Iron Age town takes up its cave dwellers
+                    Divers.tick(polls, home);            // [diver] a town by the water finds it, and takes up its diver
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
                 }
             }
@@ -1332,6 +1336,7 @@ public class VillageFolkEntity extends AssistantEntity {
     protected void tradeTakenUp(StationTask from, StationTask to) {
         if (from == StationTask.GUARD && to != StationTask.GUARD) WatchKit.handBack(this, "off the watch");   // [guard-kit] the town's kit
         if (from == StationTask.CAVE && to != StationTask.CAVE && to != StationTask.GUARD) CaveDwellers.handBack(this, "out of the caves");   // [caves]
+        if (from == StationTask.DIVER && to != StationTask.DIVER) Divers.handBack(this, "out of the water");   // [diver] its helmet to the stores
         if (tickCount < 40 || to == StationTask.NONE || !persona.rolled()) return;    // loading, or not settled yet
         long day = level().getDayTime() / 24000L;
         int lv = tradeLevel(to);
@@ -4302,7 +4307,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean walksAbroad() {
         // (And a courier out on one of the storehouse's runs: the whole village is its ground.)
         return super.walksAbroad() || Patrols.escorting(this) || Patrols.onTheStreets(this) || Couriers.onARun(this)
-            || Sweepers.sweeping(this);                // (and the street sweeper about the town's streets)
+            || Sweepers.sweeping(this)                 // (and the street sweeper about the town's streets)
+            || Divers.busy(this);                      // [diver] on a dive: the water and the shed are its ground
     }
 
     /** What it just drew out of the Village Storehouse: one request, served by the storekeeper at the
@@ -4528,6 +4534,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case BANK -> "The Bank";
             case CAVE -> "The Caves";             // [caves]
             case FERRY -> "The Ferry";            // [transport]
+            case DIVER -> "The Kelp Beds";        // [diver]
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -4783,6 +4790,11 @@ public class VillageFolkEntity extends AssistantEntity {
             case HUNT -> {
                 BlockPos game = scan(from, SCAN, 8, radius, p -> clear.test(p) && gameAround(p));
                 yield game != null ? game : scan(from, SCAN, 8, radius, p -> clear.test(p) && (meadow(p) || woodland(p)));
+            }
+            // [diver] The bank of the town's diving water (Divers); none, and no ground for the trade.
+            case DIVER -> {
+                Divers.Waterside w = Divers.water(town);
+                yield w == null ? null : w.bank();
             }
             // The indoor trades belong in the village rather than out in a
             // field — but not all three in the same square. Each takes its own
@@ -5074,6 +5086,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case COOK -> "cafe";
             case SHOP -> "shop";
             case BANK -> "bank";                  // the banker (Bank)
+            case DIVER -> Divers.SHED;            // [diver] the diver's shed on the bank
             default -> null;
         };
     }
@@ -5647,20 +5660,35 @@ public class VillageFolkEntity extends AssistantEntity {
         Villages.Village vill = Villages.get(village);
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || f.stationTask() != StationTask.SMELT || !f.isAlive()) continue;
-            if (f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8) continue;
-            int got = drawFrom(villageCentre, AssistantEntity.SMELTABLE_ORE, 32, buildStoresRadius());
+            // [diver] A smelter with its ore but nothing it may burn now (the stores' kelp blocks, while there are any) is
+            // brought kelp blocks on their own; one with ore and fuel is left to it, as before.
+            boolean stocked = f.countCarried(AssistantEntity.SMELTABLE_ORE) >= 8;
+            boolean kelpWanted = FuelBook.kelpInStores(server, village) && f.countCarried(FuelBook.KELP_BLOCK) < 2;
+            if (stocked && (FuelBook.fuelled(f) || !kelpWanted)) continue;
+            int got = stocked ? 0 : drawFrom(villageCentre, AssistantEntity.SMELTABLE_ORE, 32, buildStoresRadius());
             String what = "ore";
-            if (got <= 0 && vill != null && f.countCarried(Masonry.MAKINGS) < 16) {
+            if (!stocked && got <= 0 && vill != null && f.countCarried(Masonry.MAKINGS) < 16) {
                 for (Masonry.Lot lot : Masonry.makings(server, vill)) {
                     int n = drawFrom(villageCentre, lot.what(), lot.n(), buildStoresRadius());
                     if (n > 0 && got == 0) what = lot.word();
                     got += n;
                 }
             }
-            if (got <= 0) break;
+            // [diver] The diver's kelp blocks go out first while the stores have them, and then no coal at all (FuelBook).
+            int kelp = kelpWanted ? drawFrom(villageCentre, FuelBook.KELP_BLOCK, 4, buildStoresRadius()) : 0;
+            if (kelp > 0) {
+                FuelBook.forget(village);
+                if (got <= 0) what = "kelp blocks";
+            }
+            if (got <= 0 && kelp <= 0) {
+                if (stocked) continue;
+                break;
+            }
             // Fuel with it — but not the coal the age is putting by: the smelter burns wood then
             // (SmeltGoal), and what goes out to it is logs the builders can spare.
-            if (!savingCoal() && !coalLow()) {        // [economy] nor the last of it, under the floor (Fuel)
+            if (kelp > 0) {
+                // [diver] (the kelp blocks are its fuel)
+            } else if (!savingCoal() && !coalLow()) {        // [economy] nor the last of it, under the floor (Fuel)
                 drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.COAL) || s.is(net.minecraft.world.item.Items.CHARCOAL), 8, buildStoresRadius());
             } else {
                 int wood = Math.min(8, logsToSpare(server, village));
@@ -5676,7 +5704,8 @@ public class VillageFolkEntity extends AssistantEntity {
     /** What a courier carries out to the smelter: ore, fuel, and the makings of its mason's work. */
     static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOR_THE_SMELTER =
         s -> AssistantEntity.SMELTABLE_ORE.test(s) || s.is(net.minecraft.world.item.Items.COAL)
-            || s.is(net.minecraft.world.item.Items.CHARCOAL) || s.is(net.minecraft.tags.ItemTags.LOGS) || Masonry.MAKINGS.test(s);
+            || s.is(net.minecraft.world.item.Items.CHARCOAL) || s.is(net.minecraft.tags.ItemTags.LOGS) || Masonry.MAKINGS.test(s)
+            || s.is(net.minecraft.world.item.Items.DRIED_KELP_BLOCK);          // [diver] the diver's kelp blocks
 
     /** A worker's load (what it would bank: its output, not its kit) into this carrier's pack. */
     int takeLoadFrom(VillageFolkEntity worker) {
@@ -5730,6 +5759,33 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean ferryWork() {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Ferries.duty(this, server);
+    }
+
+    /** [diver] The diver's day (Divers.work): its next dive, or the bank to watch the water from. */
+    @Override
+    protected boolean diverWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && Divers.work(this, server);
+    }
+
+    /** [diver] Under the water on purpose, or being pulled out of it (Divers). */
+    @Override
+    protected boolean underwaterWork() {
+        return Divers.underwater(this);
+    }
+
+    private int kelpCheckTick = -100000;
+    private boolean kelpFuel;
+
+    /** [diver] Has the town dried kelp blocks in its stores for its fires (FuelBook)? Looked at once a minute. */
+    @Override
+    public boolean kelpForFuel() {
+        UUID village = ownerId();
+        if (village == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
+        if (tickCount - kelpCheckTick >= 1200 || tickCount < kelpCheckTick) {
+            kelpCheckTick = tickCount;
+            kelpFuel = FuelBook.kelpInStores(server, village);
+        }
+        return kelpFuel;
     }
 
     /** A village's storekeeper keeps its stores in order from the first day, not from its
@@ -7775,7 +7831,8 @@ public class VillageFolkEntity extends AssistantEntity {
             || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
             || Transport.busy(this)                              // [transport] on a ride, a crossing, or at the ferry
             || Crime.calledAway(this)                            // [crime] on a case, at a trial, in the stocks, at community work
-            || Disasters.busy(this);                             // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || Disasters.busy(this)                              // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || Divers.busy(this);                                // [diver] on a dive, or being pulled out of the water
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */

@@ -331,6 +331,9 @@ public final class Crafts {
         // [transport] The railway's rails, powered rails, torches, levers and carts, of the stores' iron and gold (Railways).
         String rails = Railways.smith(level, v, f);
         if (rails != null) return rails;
+        // [diver] Turtle helmets of the beach's scutes: the divers', the fleet's fishers', one for the shop (TurtleBeach).
+        String helmet = TurtleBeach.smith(level, v, f);
+        if (helmet != null) return helmet;
         // The tools and the watch seen to: the village's lights and pots, of the iron it can spare.
         return ironwork(level, v);
     }

@@ -368,6 +368,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             case BANK -> Items.GOLD_INGOT;
             case CAVE -> Items.LANTERN;                    // [caves] a lantern held up in the dark
             case FERRY -> Items.OAK_BOAT;                  // [transport] the ferryman's boat
+            case DIVER -> Items.KELP;                      // [diver] a fistful of kelp
             case NONE -> Items.AIR;
         });
     }

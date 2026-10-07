@@ -79,7 +79,10 @@ final class WorksPlans {
         BRICKS("brick", Blocks.BRICKS, Blocks.BRICK_STAIRS, Blocks.BRICK_SLAB, Blocks.BRICK_WALL, Items.BRICKS),
         DEEPSLATE("deepslate", Blocks.COBBLED_DEEPSLATE, Blocks.COBBLED_DEEPSLATE_STAIRS, Blocks.COBBLED_DEEPSLATE_SLAB,
             Blocks.COBBLED_DEEPSLATE_WALL, Items.COBBLED_DEEPSLATE),
-        COBBLESTONE("cobblestone", Blocks.COBBLESTONE, Blocks.COBBLESTONE_STAIRS, Blocks.COBBLESTONE_SLAB, Blocks.COBBLESTONE_WALL, Items.COBBLESTONE);
+        COBBLESTONE("cobblestone", Blocks.COBBLESTONE, Blocks.COBBLESTONE_STAIRS, Blocks.COBBLESTONE_SLAB, Blocks.COBBLESTONE_WALL, Items.COBBLESTONE),
+        // [diver] The ocean monument's, brought home by the diver (DiverRaids): the harbour's stone only (BigWorks).
+        PRISMARINE("prismarine brick", Blocks.PRISMARINE_BRICKS, Blocks.PRISMARINE_BRICK_STAIRS, Blocks.PRISMARINE_BRICK_SLAB,
+            Blocks.PRISMARINE_WALL, Items.PRISMARINE_BRICKS);
 
         final String words;
         final Block block, stairs, slab, wall;

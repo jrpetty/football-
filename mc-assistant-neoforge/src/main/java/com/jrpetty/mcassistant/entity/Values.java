@@ -91,6 +91,7 @@ public final class Values {
             case MINE, SMELT, SMITH, ENCHANT -> Value.PROGRESS;
             case GUARD, SCOUT -> Value.SAFETY;
             case CAVE -> Value.PROGRESS;                 // [caves] the ore the age wants
+            case DIVER -> Value.PROGRESS;                // [diver] the furnaces' fuel, and the coal kept for the age
             case SHOP, STORE, HAUL, TAILOR, BREW, BANK -> Value.WEALTH;
             default -> null;
         };

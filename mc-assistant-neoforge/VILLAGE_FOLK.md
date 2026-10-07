@@ -7749,3 +7749,104 @@ The game tests `TransportGameTests` (tr01 to tr05) check that:
   takes another trade, and the chronicle tells it;
 * in a town of nine, the bridge is put to everybody in a referendum as a great work drawn beside the ferry, carried,
   built by the town's hands out of its stone and opened, and then the ferry retires.
+
+## The kelp farmer and diver
+
+A town by a river, a lake or the sea keeps a **kelp farmer and diver** from fifteen folk, from the Wood Age on (two
+divers at fifty). Its kelp beds are the town's own fuel: a dried kelp block is real furnace fuel, as good as two and a
+half coals, so the town's furnaces burn kelp and its coal is kept for the torches, the forge and the watch.
+
+**Finding the water.** Once the town is near fifteen strong it looks round for open water three deep or more within
+reach of its edge: a river, a lake or the sea, not a pond. It notes the bank to go in from, a sandy beach for turtles
+if there is one, and a dry, level spot on the bank for the diver's shed, and the chronicle says so. A town with no
+such water keeps no diver, and the board's jobs line says why ("No diver: no river, lake or sea within ... blocks").
+
+**Who dives.** The diver is a hand the town can spare: one with nothing to do, a fisher (it knows the water) if the
+town has enough of them, or one from a trade with more hands than it needs. Never the watch, the storekeepers, a
+craft's only hand, the cave team or the ferryman. It wears a dark wetsuit with sea-green seams, a close hood with
+brass goggles pushed up on its forehead, a coil of rope at its hip and a dive knife at the other; and, once it has
+one, a turtle helmet.
+
+**The diver's shed.** When the trade opens, the shed goes on the town's wish list. It is a little timber shed on the
+bank with its door to the water: a smoker to dry kelp, a campfire beside it as a drying rack, a crafting table to pack
+the kelp into blocks, and a barrel for the diving gear with a lantern on it.
+
+**The kelp beds.** The diver plants kelp on the bed of the water, three deep or more, one plant on every other square,
+starting with eight and growing the bed to twenty-four as the town grows and its fires need more (eight more while the
+coal is low). The kelp comes out of the stores, or is cut from wild kelp nearby. It grows by the game's own rules. The
+diver cuts each plant from the top down to the piece above its root, never the root itself, so the bed grows back.
+
+**Swimming and breathing.** The diver swims straight down to its work, along the bed and back up. It goes up for air
+well before its breath runs low, swims out from under a jetty or a deck to open water to breathe, waits at the top
+until its lungs are full and then goes back down to where it was. It never drowns. In a turtle helmet it gets the
+helmet's ten seconds of water breathing each time it goes under, as you do.
+
+**Drying and packing.** At the shed the kelp goes into the smoker. Once there is a kelp block, a kelp block is the
+smoker's fuel; charcoal or wood before that, and coal only when there is nothing else. Four more pieces dry on the
+campfire for nothing. The diver packs nine dried kelp into a dried kelp block at the shed's bench and takes the blocks to the
+stores, keeping one back for its own smoker. While the town is hungry it leaves some dried kelp loose for the larder,
+since dried kelp is food.
+
+**Fuel for the town.** While the stores hold dried kelp blocks, the smelters, the bench's firings for the café and the
+shop, and the couriers' loads out to the smeltery all use kelp blocks and no coal. Coal goes on a fire only when there
+are no kelp blocks. The town's Production page shows the fuel burnt this month by kind and what the kelp saved ("The
+diver's kelp blocks kept 400 coal in the stores this month"), and so does the board's line about the water.
+
+**Diving for more.**
+* **Clay** from the river or lake bed while the town has less than sixty-four, for the masons' bricks. Only the bed is
+  dug, never the bank or the beach.
+* **Sand** for the glass and **gravel** for flint, while the town is short.
+* **Seagrass**, cut with the stores' shears (nothing else will cut it), to feed the turtles.
+* **Sea pickles**, set in clusters of four on the bed at the fishing fleet's berths, where they glow under the water.
+* **Prismarine**, in the Iron Age, if an ocean monument is in reach: the diver and two of the watch go out to its
+  outer walls and bring back prismarine, and turn back if anyone is badly hurt or the elder guardian's curse falls on
+  them. The prismarine becomes sea lanterns and prismarine bricks for the harbour and the jetties. With no monument in
+  reach, the board says the town does without.
+
+**The turtle beach.** On a sandy beach the diver feeds wild turtles seagrass two at a time, and they breed. The turtle
+with eggs comes ashore to lay them in the sand. The diver fences each clutch with a gate on the water side and puts a
+light on a post, so no zombie tramples the eggs and nothing spawns beside them. When they hatch it opens the gate,
+feeds the hatchlings seagrass to bring them on, and picks up the **scute** each turtle drops as it grows up, as in the
+game. The scutes go to the stores.
+
+**Turtle helmets.** The smith makes a turtle helmet from five scutes (the diver makes its own at the shed if the town
+has no smith). The divers wear them, spare ones go to the fishing fleet's fishers at the stores, and the shop keeps
+one on its shelves for you.
+
+**The quay.** When the fleet's boats are in, the diver tows any boat that has drifted off back to its berth, and picks
+anything floating in the water out of it. Anybody of the town struggling in the water, drowning or too far out to get
+to the bank, is swum out to, held with their head above water and brought to the bank. The town remembers who pulled
+whom out, and so do they.
+
+**For you.**
+* Buy dried kelp blocks for your own furnace, and a turtle helmet, at the shop.
+* Ask the diver to "bring me some clay" or "dive for sea pickles": it quotes you a price, goes down when it can, and
+  hands them over (sixteen clay, or four pickles) when you come back and ask for your order.
+* Ask the diver what it is doing: it tells you about the beds, its last dive, or that it is just up for air.
+
+Where to see it:
+* The diver's card: the size of the bed, the kelp blocks packed, the clay brought up, its rescues and its last dive.
+* `/village diver`: the water, the bed, the books (planted, cut, dried, packed, clay, turtles, scutes, helmets,
+  rescues, how often it went up for air) and the fuel the town burnt by kind.
+* The board, the gazette ("The waterside": yesterday's kelp blocks and how much coal they are worth, clay, scutes,
+  hatchlings, rescues) and the chronicle (the water found, the diver taken on, clutches fenced, helmets made,
+  rescues).
+* The trade's book, written from the town's own numbers.
+
+The game tests `DiverGameTests` (dv01 to dv10) check that:
+* a town of sixteen finds its lake, wants one diver, takes its idle hand rather than a farmer or a guard, and puts the
+  diver's shed on its wish list on the bank, built with its smoker and campfire and its door to the water;
+* the diver draws kelp from the stores and plants a bed; grown by random ticks, the bed is cut back to the roots, no
+  plant is pulled up, and it grows again;
+* kelp is dried in the shed's smoker on a dried kelp block, packed nine to a block at the bench, and a block goes to
+  the stores;
+* with kelp blocks in the stores a smelter burns kelp and not coal, the bench's firing takes a kelp block, and the
+  books say what was saved; with none, coal goes back on the fires;
+* clay, then sand, then gravel come up off the bed into the stores, and the gazette mentions the clay;
+* on a long dive in a tank nine deep, half of it under a deck, the diver goes up for air at open water and is never
+  short of breath or hurt;
+* turtles are fed seagrass and bred, the eggs are laid in the beach, fenced and lit, they hatch, and a hatchling's
+  scute reaches the stores;
+* the smith makes a turtle helmet of five scutes, the diver wears it and dives without using a breath;
+* a folk drowning in the middle of a lake is pulled out alive;
+* a town with no water near it keeps no diver, and the board says why.

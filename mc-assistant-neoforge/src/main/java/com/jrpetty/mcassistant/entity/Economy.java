@@ -116,6 +116,7 @@ public final class Economy {
                 || s.is(Items.DIORITE) || s.is(Items.GRANITE) || s.is(Items.TUFF) || s.is(Items.STONE_BRICKS)
                 || s.is(Items.SAND) || s.is(Items.GRAVEL) || s.is(Items.CLAY_BALL) || s.is(Items.BRICK) || s.is(Items.FLINT)) return Kind.STONE;
         if (s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.RAW_IRON) || s.is(Items.IRON_INGOT) || s.is(Items.RAW_COPPER)
+                || s.is(Items.DRIED_KELP_BLOCK)                                  // [diver] kelp blocks: fuel, with the coal
                 || s.is(Items.COPPER_INGOT) || s.is(Items.RAW_GOLD) || s.is(Items.GOLD_INGOT) || s.is(Items.DIAMOND)
                 || s.is(Items.EMERALD) || s.is(Items.REDSTONE) || s.is(Items.LAPIS_LAZULI) || s.is(Items.OBSIDIAN)
                 || s.is(Items.IRON_NUGGET) || s.is(Items.GOLD_NUGGET) || s.is(Items.QUARTZ)) return Kind.ORE;
@@ -363,6 +364,9 @@ public final class Economy {
             case GUARD -> k == Kind.ANIMAL;                                    // what the night's monsters drop
             // [caves] The ore it digs and what it brings out of the old chests: gems, books, gold apples, saddles.
             case CAVE -> k == Kind.ORE || k == Kind.CRAFT || k == Kind.ANIMAL || CaveDwellers.valuable(s);
+            // [diver] The kelp and what is dried and packed of it, the bed's clay, sand and gravel, the seagrass and the
+            // pickles, the turtles' scutes, and the monument's prismarine.
+            case DIVER -> true;
             default -> k == Kind.CRAFT || k == Kind.ANIMAL;                     // the crafts: smith, tailor, brewer, enchanter, shop
         };
     }

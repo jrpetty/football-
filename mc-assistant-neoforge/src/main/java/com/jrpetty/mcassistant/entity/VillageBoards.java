@@ -315,6 +315,8 @@ public final class VillageBoards {
         }
         out.add("RN|Our trades: " + (t.length() == 0 ? "none yet" : t) + (idle > 0 ? "; " + idle + " still choosing" : "")
             + (children > 0 ? "; " + children + (children == 1 ? " child" : " children") : "") + ".");
+        String diving = Divers.jobsLine(id);                       // [diver] a town by no water says why it keeps no diver
+        if (diving != null) out.add("RN|" + diving);
         out.add("RN|At work right now: " + working + " of " + Math.max(0, folk - children) + ".");
         // Who is on duty: the watch, the town's works, the scouts and envoys out on the road.
         List<String> watch = new ArrayList<>(), works = new ArrayList<>(), away = new ArrayList<>();
@@ -428,6 +430,8 @@ public final class VillageBoards {
         if (trade != null) out.add("FN|" + trade);
         String caves = CaveDwellers.boardLine(id);              // [caves] the caves' report, and the latest big find
         if (caves != null) out.add("FN|" + caves);
+        String water = Divers.boardLine(level, id);             // [diver] the kelp beds, the coal they kept, the rescues
+        if (water != null) out.add("FN|" + water);
         String about = Transport.boardLine(level, id);          // [transport] the lines, the ore carts, the ferry and the bridge
         if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);

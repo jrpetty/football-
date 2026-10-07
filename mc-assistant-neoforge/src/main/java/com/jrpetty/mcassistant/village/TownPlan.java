@@ -217,6 +217,7 @@ public final class TownPlan {
             case "firestation" -> "civic";            // [disasters] the fire station, among the trades it guards
             case "trainingyard" -> "corner";          // [war-prep] the training yard by the watchtower, at a corner
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
+            case "divershed" -> "edge";               // [diver] on the bank of its water (Divers.shedSite), out at the edge
             default -> "home";
         };
     }

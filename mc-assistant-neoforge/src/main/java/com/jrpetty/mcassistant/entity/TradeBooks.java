@@ -133,6 +133,7 @@ public final class TradeBooks {
             case FISH -> AssistantEntity.Deed.FISH_CAUGHT;
             case RANCH -> AssistantEntity.Deed.ANIMALS_BRED;
             case GUARD, HUNT, CAVE -> AssistantEntity.Deed.MOBS_KILLED;
+            case DIVER -> AssistantEntity.Deed.CROPS_HARVESTED;              // [diver] the kelp beds cut
             case SMELT -> AssistantEntity.Deed.ITEMS_SMELTED;
             case HAUL -> AssistantEntity.Deed.LOADS_HAULED;
             case STORE -> AssistantEntity.Deed.CHESTS_SORTED;
@@ -164,6 +165,7 @@ public final class TradeBooks {
             case HUNT -> new String[]{ "hunt", "wolf", "the wild" };
             case SCOUT -> new String[]{ "scout", "scouting" };
             case CAVE -> new String[]{ "cave" };
+            case DIVER -> new String[]{ "diver", "kelp", "turtle", "drown", "out of the water", "monument" };   // [diver]
             case BEEKEEP -> new String[]{ "hive", "bee" };
             default -> new String[]{};
         };
@@ -481,6 +483,8 @@ public final class TradeBooks {
                 if (smelted > 0) out.add("Between us we've smelted " + Quill.number(smelted) + " loads.");
                 if (Villages.hasBuilt(id, "smeltery")) out.add("The smeltery's three furnaces are the town's. Keep all three going.");
             }
+            // [diver] The beds, the fuel they kept (FuelBook), the clay, the turtles, the rescues, and the breath (Divers.notes).
+            case DIVER -> out.addAll(Divers.notes(c.level, id));
             case COOK -> {
                 if (Villages.hasBuilt(id, "cafe")) out.add("The café is where folk spend their coins on their break. Keep its counter stocked.");
                 if (Villages.hasBuilt(id, "bakery")) out.add("The bakery's oven bakes for the whole town. Keep it fed.");
