@@ -283,9 +283,12 @@ public class CartographerGameTests {
         helper.assertTrue(iv != null && iv.cands().size() >= 2 && meanwhile == null && stillNobody == null,
             "the place held open for its interview, not given: " + (meanwhile == null ? "nobody yet" : meanwhile.displayNameCap()));
         helper.assertTrue(Interviews.board(level, id).stream().anyMatch(l -> l.contains("cartographer")), "the board shows it");
-        long base = level.getDayTime() / 24000L * 24000L;
+        // The interview is set for its own day (the next, as the town sets one in the morning): the clock is held at that
+        // day's interview hour, so the panel and the candidates come to the table.
+        long base = Math.max(level.getDayTime() / 24000L, iv.dueDay()) * 24000L;
         helper.onEachTick(() -> {
             level.setDayTime(base + 3000L);                                  // the interviews' own hour, held there
+            level.updateSkyBrightness();
             Interviews.stepForTests(level, t.v());
             if (iv.stage() != InterviewBook.Stage.DONE) {
                 if (helper.getTick() > 5500) helper.fail("the interview never finished: " + iv.stage());
