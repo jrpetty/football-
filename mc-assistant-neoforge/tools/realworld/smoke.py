@@ -1747,6 +1747,32 @@ def guard_kit_stage(r, look, cx, cz):
     say("alive after the watch's kit: %s" % client_alive())
 
 
+def watch_clears_stage(r, look, cx, cz):
+    """[watch-clears] The watch clears the town (entity/WatchClears): three zombies, a skeleton and a creeper put among
+    the houses by day (pumpkins on the zombies' and the skeleton's heads, so the sun leaves them be), the watch's look
+    round the town at once (/village monsters now), and from above the street, the guards going after them and the
+    folk near them making for a door; again ten seconds on. What /village monsters says before and after. Whatever
+    is left is cleared away (tag watch_clears)."""
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    sx, sz = cx + 30, cz + 18                         # among the first houses, off the square
+    gy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx - 12, gy + 14, sz - 12))
+    time.sleep(6)                                     # the street's chunks arrive
+    head = '{Tags:["watch_clears"],PersistenceRequired:1b,ArmorItems:[{},{},{},{id:"minecraft:carved_pumpkin",count:1}]}'
+    for i, (dx, dz, kind) in enumerate([(0, 0, "zombie"), (4, 3, "zombie"), (-3, 5, "zombie"), (6, -4, "skeleton"),
+                                        (-6, -2, "creeper")]):
+        tag = head if kind != "creeper" else '{Tags:["watch_clears"],PersistenceRequired:1b}'
+        r.cmd("summon minecraft:%s %d %d %d %s" % (kind, sx + dx, ground_height(r, sx + dx, sz + dz) + 1, sz + dz, tag))
+    say("watch clears: " + r.cmd("execute positioned %d %d %d run village monsters now" % (sx, gy + 1, sz))[:900])
+    look("26-watch-clears-1-the-hunt", sx - 10.5, gy + 12, sz - 10.5, sx + 0.5, gy + 1, sz + 0.5, wait=4)
+    time.sleep(10)
+    look("26-watch-clears-2-ten-seconds-on", sx - 10.5, gy + 12, sz - 10.5, sx + 0.5, gy + 1, sz + 0.5, wait=3)
+    say("watch clears after: " + r.cmd("execute positioned %d %d %d run village monsters" % (sx, gy + 1, sz))[:900])
+    r.cmd("kill @e[tag=watch_clears]")
+    say("alive after the watch clears: %s" % client_alive())
+
+
 def mine_safety_stage(r, look, cx, cz):
     """The mine made safe (entity/MineSafety, Aboard): a run of mine stairs cut into the ground out past the
     town (/village mine showcase), the open top of them fenced round at the surface, the head left open as

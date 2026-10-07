@@ -700,6 +700,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     protected void brain(String what) { brainNote = what; brainTick = tickCount; }
 
+    /** [watch-clears] What its work brain last said, for the books' word on what a folk was doing when it fell. */
+    public String brainNoteForBooks() { return brainNote; }
+
     /** Which of this hand's job goals are running right now: a job at the head of
      *  the queue that no goal is running is the first thing to look for in a hand
      *  that has stood still for a day. */
@@ -5070,7 +5073,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return deathSite.getX() + "," + deathSite.getY() + "," + deathSite.getZ() + "," + age;
     }
 
-    private void equipBow() {
+    /** [watch-clears] Package-wide: a guard sent after a creeper draws its bow at once (WatchClears.send). */
+    void equipBow() {
         if (mayShoot(getMainHandItem())) return;
         for (int i = 0; i < inventory.size(); i++) {
             if (mayShoot(inventory.get(i))) {

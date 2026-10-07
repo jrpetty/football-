@@ -414,6 +414,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // [wf] A thunderstorm: indoors, everybody but the watch, and there till it has passed (Weather).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel stormLevel
                 && Weather.shelter(this, stormLevel)) return;
+        // [watch-clears] A monster near, and it not one of the watch: indoors till it has gone (WatchClears).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel coverLevel
+                && WatchClears.takeCover(this, coverLevel)) return;
         // [batchA] Laid up: a cold or its wounds, in bed at the infirmary or at home, and kept there (Health).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel careLevel && Health.hold(this, careLevel)) return;
         // [batchD] The town's culture (Culture): a minute's silence at the bell, the choir at the morning service, the
@@ -1454,8 +1457,10 @@ public class VillageFolkEntity extends AssistantEntity {
             Contentment.loss(village, day);
             int age = ageYears();
             // [economy] What took it, in words (Mishap): "by misfortune" said nothing about what kills folk.
-            String how = passing ? "of old age" : Raids.underAlarm(village) ? "when the raiders came" : Mishap.how(cause);
+            // [watch-clears] Under the bell, what took it and the raid after it, not "when the raiders came" for a fall (WatchClears.how).
+            String how = passing ? "of old age" : WatchClears.how(village, cause);
             Mishap.record(village, day, level().getGameTime(), how);                    // [economy] for the books' daily line and the watch
+            WatchClears.fell(this, how, day);                                           // [watch-clears] where it fell, doing what
             if (!passing) Plaques.fell(this, how, day);                                 // [batchD] a plaque where a hero fell (Plaques)
             com.jrpetty.mcassistant.village.Ledger.buried(village, new com.jrpetty.mcassistant.village.Ledger.Grave(
                 displayNameCap(), bornDay, day, how, life.parents(), life.partnerName(), stationTask().title));
@@ -2511,6 +2516,9 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Stables.busy(this)) return true;
         // Walking with the leader (Patrols, by day only): that is the work, assembly or none.
         if (Patrols.escorting(this)) return true;
+        // [watch-clears] Out after a monster the watch sent it after: at its work, whichever watch it keeps, and not
+        // to be called off to bed or an evening's errand halfway through the fight (WatchClears).
+        if (WatchClears.hunting(this)) return true;
         // Called to the village's gathering: its work waits (the watch is never called away).
         if (Assemblies.attending(this)) return false;
         // On the town's own work (TownJobs): its trade waits till that is done.
@@ -4996,7 +5004,24 @@ public class VillageFolkEntity extends AssistantEntity {
 
     @Override
     public boolean onWatch() {
-        return stationTask() == StationTask.GUARD && Raids.underAlarm(ownerId());
+        // [watch-clears] Out among the houses after a monster, it is not holding the wall: it opens the gates, closes in
+        // and breaks off a fight it is losing, as on any other day (WatchClears).
+        return stationTask() == StationTask.GUARD && Raids.underAlarm(ownerId()) && !WatchClears.hunting(this);
+    }
+
+    /** [watch-clears] Sent after a creeper, any guard draws the town's bow, whatever its years (WatchClears.mayDraw). */
+    @Override
+    public boolean mayShoot(net.minecraft.world.item.ItemStack s) {
+        return super.mayShoot(s) || (s.is(net.minecraft.world.item.Items.BOW) || s.is(net.minecraft.world.item.Items.CROSSBOW))
+            && stationTask() == StationTask.GUARD && WatchClears.mayDraw(this);
+    }
+
+    /** [watch-clears] A shout for help is the watch's to answer: a farmer, a cook or a child that ran at the monster
+     *  with its fists only gave it a second to kill (WatchClears; the shout still brings a guard, Patrols.cryForHelp). */
+    @Override
+    public boolean respondToDistress(AssistantEntity ally, net.minecraft.world.entity.monster.Monster attacker) {
+        if (stationTask() != StationTask.GUARD && !hiredToFight()) return false;
+        return super.respondToDistress(ally, attacker);
     }
 
     @Override
@@ -5004,10 +5029,11 @@ public class VillageFolkEntity extends AssistantEntity {
         return Raids.guardDuty(this);
     }
 
-    /** No bed of its own when the bell rings: into the nearest of the village's buildings. */
+    /** No bed of its own when the bell rings: into the nearest of the village's buildings. [watch-clears] And with
+     *  its bed across the town, the same, children too: not a walk through the streets with the band in them. */
     @Override
     protected boolean bedtime() {
-        if (Raids.underAlarm(ownerId()) && bedPos() == null && !isBaby()) return Raids.shelter(this);
+        if (Raids.underAlarm(ownerId()) && (bedPos() == null && !isBaby() || WatchClears.bedFar(this))) return Raids.shelter(this);
         // The day of rest, by day: the service, the games, walking out — not bed at noon.
         if (!Raids.underAlarm(ownerId()) && RestDay.now(ownerId(), level().getDayTime()) != null) {
             if (!RestDay.spend(this)) socialise();
@@ -7641,7 +7667,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean calledAway() {
         return FireBrigade.onIt(this) || Weather.sheltering(this) || Health.laidUp(this) || Neighbourly.busy(this)   // [batchA]
-            || Inn.lodged(this);                                 // [batchE] asleep in a room at an inn on the road
+            || Inn.lodged(this)                                  // [batchE] asleep in a room at an inn on the road
+            || WatchClears.sheltering(this);                     // [watch-clears] indoors out of a monster's way
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */
