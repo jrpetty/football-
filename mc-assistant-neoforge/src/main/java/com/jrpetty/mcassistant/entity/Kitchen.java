@@ -537,7 +537,8 @@ public final class Kitchen {
             int have = Market.stock(level, id, s -> s.is(it));
             if (have >= e.getValue()) continue;
             if (hand == null) hand = Bench.handOf(level, v, f, VillageFolkEntity.buildingFor(t));
-            String made = it == tea() ? steep(level, v, f, hand) : make(level, v, f, hand, it, e.getValue() - have);
+            String made = make(level, v, f, hand, it, e.getValue() - have);
+            if (made != null && it == tea()) level.playSound(null, f.blockPosition(), SoundEvents.BOTTLE_FILL, SoundSource.NEUTRAL, 0.6F, 1.0F);
             if (made != null) return made;
         }
         return null;
@@ -564,30 +565,20 @@ public final class Kitchen {
         return made(level, v, f, out, plan.cost() / Math.max(1, out.getCount()));
     }
 
-    /**
-     * The healer's tea: sweet berries or a small flower and a spoon of sugar out of the stores (the sugar pressed from
-     * cane if need be), steeped in one of the stores' bottles filled at the well. The recipe's water bottle, as a player
-     * makes it; the water is the world's, drawn by hand.
-     */
-    @Nullable
-    static String steep(ServerLevel level, Villages.Village v, VillageFolkEntity f, Bench.Hand hand) {
-        Bench.Plan plan = Bench.plan(level, v, teaWants(), hand);
-        if (!plan.ok()) {
-            f.brain("short of " + plan.shortOf + " for the healer's tea");
-            return null;
-        }
-        if (!Bench.take(level, v, plan, f)) return null;
-        ItemStack out = new ItemStack(tea());
-        Crafts.store(level, v, out.copy());
-        level.playSound(null, f.blockPosition(), SoundEvents.BOTTLE_FILL, SoundSource.NEUTRAL, 0.6F, 1.0F);
-        return made(level, v, f, out, plan.cost());
-    }
+    /** The water bottle a water bottle's ingredient asks for (the herbal tea's), to know it by. */
+    private static ItemStack waterSample;
 
-    /** What the tea is made of: a leaf of something, a spoon of sugar, a bottle (filled at the well). */
-    static List<Bench.Want> teaWants() {
-        return List.of(new Bench.Want(LEAVES, List.of(Items.SWEET_BERRIES, Items.DANDELION, Items.POPPY, Items.CORNFLOWER), 1,
-                "sweet berries or a flower"),
-            Bench.Want.of(Items.SUGAR, 1), Bench.Want.of(Items.GLASS_BOTTLE, 1));
+    /**
+     * Does this ingredient ask for a bottle of water (Bench.need)? The bench meets it with one of the stores' glass bottles,
+     * filled at the well: the water is the world's, drawn by hand, as a player fills one at any water. So the healer's tea is
+     * made by its own recipe the whole way from the stores, at any bench that makes it.
+     */
+    public static boolean waterBottle(Predicate<ItemStack> what, List<Item> kinds) {
+        if (!kinds.contains(Items.POTION)) return false;
+        ItemStack w = waterSample;
+        if (w == null) waterSample = w = net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION,
+            net.minecraft.world.item.alchemy.Potions.WATER);
+        return what.test(w);
     }
 
     /** Made: booked in the cook's book, the honey cakes' baker named, the glut's pies counted. Returns the words for it. */
@@ -643,8 +634,7 @@ public final class Kitchen {
     static List<Stockroom.Ware> cafeWares() {
         List<Stockroom.Ware> out = new ArrayList<>();
         out.add(Stockroom.ware(pie(), 2, 0, 12, 2, false));
-        ItemStack t = new ItemStack(tea());
-        out.add(new Stockroom.Ware(Stockroom.key(t), s -> s.is(tea()), t, null, new Stockroom.Own(teaWants(), t), 0, 0, TEA_MOST, 1, false));
+        out.add(Stockroom.ware(tea(), 0, 0, TEA_MOST, 1, false));
         out.add(Stockroom.ware(lunch(), 0, 0, 0, 2, false));
         out.add(Stockroom.ware(wheel(), 0, 0, 0, 1, false));
         out.add(Stockroom.ware(cake(), 0, 0, 0, 1, false));
