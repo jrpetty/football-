@@ -90,6 +90,9 @@ public final class DiverSwim {
         @javax.annotation.Nullable Vec3 air;
         /** Times it had to kick for the top at the last of its breath (a blocked way up): its books. */
         int kicks;
+        /** The nearest it has got to where it is going (and where that is): bobbing about is not making way. */
+        double near = Double.MAX_VALUE;
+        Vec3 nearTo = Vec3.ZERO;
     }
 
     /** Breath left at which, still under, a diver gives a last kick for the top whatever is in its way. */
@@ -135,8 +138,25 @@ public final class DiverSwim {
             s.surfacing = false;
             s.madeWay = now;
             s.last = f.position();
+            s.near = Double.MAX_VALUE;
         }
         Vec3 p = f.position();
+        // Out of the water with its work below it (its float lifted it onto a jetty's deck or a ledge as it came up for
+        // air): along to the edge of the nearest open water, and in again, as a swimmer would. Pushing on straight for
+        // the work only presses it against the planks.
+        if (!f.isInWater() && to.y < p.y - 0.5 && f.level() instanceof ServerLevel level) {
+            Vec3 edge = openWater(level, f);
+            if (edge != null) {
+                Vec3 h = new Vec3(edge.x - p.x, 0, edge.z - p.z);
+                double hl = h.length();
+                if (hl > 0.05) {
+                    move(f, new Vec3(h.x / hl * PACE * 1.5, f.getDeltaMovement().y, h.z / hl * PACE * 1.5), edge);
+                    s.madeWay = now;
+                    s.last = p;
+                    return Way.MOVING;
+                }
+            }
+        }
         Vec3 d = to.subtract(p);
         double len = d.length();
         if (len < NEAR) {
@@ -144,16 +164,23 @@ public final class DiverSwim {
             return Way.ARRIVED;
         }
         Vec3 v = d.scale(Math.min(PACE, len) / len);
-        // Swum into a wall: over it.
+        // Swum into something: over it if the work is level or above, under it if the work is below (a jetty's deck,
+        // the edge of a ledge), and on.
         if (f.horizontalCollision) {
-            v = new Vec3(v.x * 0.3, Math.max(v.y, 0.12), v.z * 0.3);
+            v = new Vec3(v.x * 0.3, d.y < -0.5 ? Math.min(v.y, -0.12) : Math.max(v.y, 0.12), v.z * 0.3);
             s.lifts++;
         }
         move(f, v, to);
-        if (p.distanceToSqr(s.last) > 0.04) {
-            s.last = p;
+        // Way made is getting nearer the work; bobbing about at the top does not count.
+        if (s.nearTo.distanceToSqr(to) > 0.25) {
+            s.nearTo = to;
+            s.near = len;
+            s.madeWay = now;
+        } else if (len < s.near - 0.15) {
+            s.near = len;
             s.madeWay = now;
         }
+        s.last = p;
         return Way.MOVING;
     }
 
@@ -203,6 +230,28 @@ public final class DiverSwim {
                 }
             }
             if (best != null) return new Vec3(best.getX() + 0.5, best.getY() + 0.4, best.getZ() + 0.5);
+        }
+        return null;
+    }
+
+    /** The nearest open water to a diver out of it (water to the air, within six blocks, at any height): the middle of
+     *  its top block, to step off into. */
+    @javax.annotation.Nullable
+    static Vec3 openWater(ServerLevel level, VillageFolkEntity f) {
+        BlockPos at = f.blockPosition();
+        for (int r = 1; r <= 6; r++) {
+            BlockPos best = null;
+            double bestD = Double.MAX_VALUE;
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                    BlockPos top = KelpBeds.surfaceAt(level, at.getX() + dx, at.getZ() + dz);
+                    if (top == null || !level.getBlockState(top.above()).isAir() || Math.abs(top.getY() - at.getY()) > 3) continue;
+                    double dd = dx * dx + dz * dz;
+                    if (dd < bestD) { bestD = dd; best = top; }
+                }
+            }
+            if (best != null) return new Vec3(best.getX() + 0.5, best.getY() + 0.5, best.getZ() + 0.5);
         }
         return null;
     }
