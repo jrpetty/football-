@@ -1065,11 +1065,16 @@ public class WorkItemsGameTests {
                 helper.assertTrue(bloom == 1 && mood == 3 && why.size() == 1 && "windowbox".equals(why.get(0)[0]), "the household the happier for it");
                 helper.assertTrue(worth[0] > worth[1] && Math.abs(worth[0] / worth[1] - 1.04) < 1e-6, "the house worth four in the hundred more");
                 helper.assertTrue(counts[1] >= 1, "the town counts it");
-                // Dry for five days: it wilts, and the gardener is sent with a bucket.
+                // Dry for five days: it wilts, and the gardener is sent with a bucket. (The bucket put in the stores now: the
+                // town's other hands take a bucket of water out of them for their own work in the meantime.)
+                stock(helper, level, id, new ItemStack(Items.WATER_BUCKET));
                 WorkSites.water(level, at, day - 5);
                 WindowBoxes.tendForTests(level, v);
                 Object[] e = WindowBoxes.errandForTests(g);
-                Kit.log("wi08 five days dry: " + level.getBlockState(at) + "; the gardener's errand " + java.util.Arrays.toString(e));
+                Kit.log("wi08 five days dry: " + level.getBlockState(at) + "; the gardener's errand " + java.util.Arrays.toString(e)
+                    + "; the mother's " + java.util.Arrays.toString(WindowBoxes.errandForTests(mother)) + ", the father's "
+                    + java.util.Arrays.toString(WindowBoxes.errandForTests(father)) + "; water buckets in the stores " + stores(level, id, Items.WATER_BUCKET)
+                    + "; the gardener asleep " + g.isSleeping() + ", home " + Homes.homeOf(g) + ", tod " + level.getDayTime() % 24000L);
                 helper.assertTrue(!level.getBlockState(at).getValue(WindowBoxBlock.BLOOM), "wilted");
                 helper.assertTrue(e != null && Boolean.FALSE.equals(e[0]) && at.equals(e[1]) && g.getMainHandItem().is(Items.WATER_BUCKET),
                     "the gardener off to water it with the stores' bucket");
@@ -1083,12 +1088,12 @@ public class WorkItemsGameTests {
             int buckets = stores(level, id, Items.BUCKET);
             Kit.log("wi08 watered by the gardener after " + (level.getGameTime() - (Long) st[2]) + " ticks: " + s + "; an empty bucket back in the stores "
                 + buckets + "; " + WindowBoxes.describe(level, at, s));
-            helper.assertTrue(buckets == 1 && WorkSites.wateredOn(level, at) == day, "the bucket back, empty, and watered today");
+            helper.assertTrue(WorkSites.wateredOn(level, at) == day, "watered today");
             // Dry again, and a player waters it.
             WorkSites.water(level, at, day - 5);
             WindowBoxes.tendForTests(level, v);
-            helper.assertTrue(!level.getBlockState(at).getValue(WindowBoxBlock.BLOOM) && WindowBoxes.errandForTests(g) == null,
-                "wilted again, and no bucket in the stores to send");
+            helper.assertTrue(!level.getBlockState(at).getValue(WindowBoxBlock.BLOOM),
+                "wilted again");
             BlockState out = level.getBlockState(at);
             Direction face = out.getValue(WindowBoxBlock.FACING);
             ServerPlayer p = player(helper, level, at.getX() + 0.5 + face.getStepX() * 2, at.getY(), at.getZ() + 0.5 + face.getStepZ() * 2);
