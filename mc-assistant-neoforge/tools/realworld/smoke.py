@@ -3900,6 +3900,10 @@ def main():
     except Exception as e:  # noqa: BLE001
         say("perks stage failed: %s" % e)
     try:
+        police_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("police stage failed: %s" % e)
+    try:
         culture2_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("culture2 stage failed: %s" % e)
