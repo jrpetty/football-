@@ -137,6 +137,7 @@ public final class TradeBooks {
             case HAUL -> AssistantEntity.Deed.LOADS_HAULED;
             case STORE -> AssistantEntity.Deed.CHESTS_SORTED;
             case SMITH, TAILOR, BEEKEEP, BREW, ENCHANT, COOK, SHOP -> AssistantEntity.Deed.THINGS_MADE;
+            case CARTOGRAPHER -> AssistantEntity.Deed.THINGS_MADE;   // [cartographer] its maps
             default -> null;
         };
     }
@@ -164,6 +165,7 @@ public final class TradeBooks {
             case HUNT -> new String[]{ "hunt", "wolf", "the wild" };
             case SCOUT -> new String[]{ "scout", "scouting" };
             case CAVE -> new String[]{ "cave" };
+            case CARTOGRAPHER -> new String[]{ "map", "cartographer", "explorer" };   // [cartographer]
             case BEEKEEP -> new String[]{ "hive", "bee" };
             default -> new String[]{};
         };
@@ -481,6 +483,7 @@ public final class TradeBooks {
                 if (smelted > 0) out.add("Between us we've smelted " + Quill.number(smelted) + " loads.");
                 if (Villages.hasBuilt(id, "smeltery")) out.add("The smeltery's three furnaces are the town's. Keep all three going.");
             }
+            case CARTOGRAPHER -> out.addAll(Cartographers.bookNotes(id));     // [cartographer] what the map room has learnt, and its numbers
             case COOK -> {
                 if (Villages.hasBuilt(id, "cafe")) out.add("The café is where folk spend their coins on their break. Keep its counter stocked.");
                 if (Villages.hasBuilt(id, "bakery")) out.add("The bakery's oven bakes for the whole town. Keep it fed.");

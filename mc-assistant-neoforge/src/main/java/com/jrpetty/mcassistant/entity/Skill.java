@@ -32,6 +32,7 @@ public final class Skill {
             case EASYGOING -> switch (trade) {
                 case FISH, BEEKEEP -> new Fit(0, "unhurried, which suits the water and the hives");
                 case SCOUT -> new Fit(-10, "dawdles on the road");
+                case CARTOGRAPHER -> new Fit(-6, "dawdles on its rounds");          // [cartographer]
                 case HUNT -> new Fit(4, "patient enough to wait for the game to come to it");
                 default -> new Fit(-8, "takes its time");
             };
@@ -48,6 +49,7 @@ public final class Skill {
                 case SHOP, COOK -> new Fit(-8, "finds serving folk hard going");
                 case SCOUT -> new Fit(4, "happy on its own out on the land");
                 case CAVE -> new Fit(6, "happy on its own in the dark");               // [caves]
+                case CARTOGRAPHER -> new Fit(6, "happy alone with a sheet and the land");   // [cartographer]
                 case HUNT -> new Fit(12, "quiet as the woods: the game never hears it coming");
                 default -> new Fit(0, "");
             };
@@ -70,6 +72,7 @@ public final class Skill {
                 case MINE, ENCHANT, BREW, SMITH -> new Fit(10, "loves finding out how things work");
                 case SCOUT -> new Fit(18, "born to see what's over the next hill");
                 case CAVE -> new Fit(14, "can't pass a dark passage without seeing where it goes");   // [caves]
+                case CARTOGRAPHER -> new Fit(16, "has to know what's round the next bend, and draw it");   // [cartographer]
                 case HUNT -> new Fit(8, "reads the tracks like a book");
                 case HAUL, STORE -> new Fit(-4, "wanders off to look at things");
                 default -> new Fit(3, "always learning something");

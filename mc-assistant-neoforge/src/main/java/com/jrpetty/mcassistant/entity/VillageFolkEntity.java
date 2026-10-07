@@ -484,6 +484,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // [civic] The town's great work, built together (BigWorks): everybody on the works day, and anybody free after it.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel greatWork
                 && (tickCount % 4 == 1 ? BigWorks.hold(this, greatWork) : BigWorks.busy(this))) return;
+        // [cartographer] Out walking the town (or the country) with its sheets, a round a second (MapSurveys).
+        if (!withAPlayer && stationTask() == StationTask.CARTOGRAPHER && level() instanceof net.minecraft.server.level.ServerLevel mapping
+                && Cartographers.hold(this, mapping)) return;
         // Called to the town's own work (TownJobs): to the spot, and at it.
         if (!withAPlayer && tickCount % 4 == 3 && level() instanceof net.minecraft.server.level.ServerLevel works
                 && TownJobs.hold(this, works)) return;
@@ -534,6 +537,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Neighbourly.tick(polls, home);       // [batchA] the old, newcomers, housewarmings, the poor box (Neighbourly)
                     Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
                     CaveDwellers.tick(polls, home);      // [caves] an Iron Age town takes up its cave dwellers
+                    Cartographers.tick(polls, home);     // [cartographer] the town chooses its cartographer once its map room stands
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
                 }
             }
@@ -4302,7 +4306,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean walksAbroad() {
         // (And a courier out on one of the storehouse's runs: the whole village is its ground.)
         return super.walksAbroad() || Patrols.escorting(this) || Patrols.onTheStreets(this) || Couriers.onARun(this)
-            || Sweepers.sweeping(this);                // (and the street sweeper about the town's streets)
+            || Sweepers.sweeping(this)                 // (and the street sweeper about the town's streets)
+            || Cartographers.surveying(this);          // [cartographer] out walking the town (or the country) with its sheets
     }
 
     /** What it just drew out of the Village Storehouse: one request, served by the storekeeper at the
@@ -4528,6 +4533,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case BANK -> "The Bank";
             case CAVE -> "The Caves";             // [caves]
             case FERRY -> "The Ferry";            // [transport]
+            case CARTOGRAPHER -> "The Map Room";  // [cartographer]
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -5074,6 +5080,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case COOK -> "cafe";
             case SHOP -> "shop";
             case BANK -> "bank";                  // the banker (Bank)
+            case CARTOGRAPHER -> Cartographers.STRUCTURE;   // [cartographer] the map room
             default -> null;
         };
     }
@@ -5730,6 +5737,12 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean ferryWork() {
         return level() instanceof net.minecraft.server.level.ServerLevel server && Ferries.duty(this, server);
+    }
+
+    /** [cartographer] The cartographer's day: at the map room's table, or out walking the town with a sheet (Cartographers). */
+    @Override
+    protected boolean cartographerWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && Cartographers.work(this, server);
     }
 
     /** A village's storekeeper keeps its stores in order from the first day, not from its
@@ -6948,7 +6961,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 BuildGoal.Part.LOOM,
                 BuildGoal.Part.GRINDSTONE,
                 BuildGoal.Part.CAMPFIRE,
-                BuildGoal.Part.NOTE_BLOCK)) {
+                BuildGoal.Part.NOTE_BLOCK,
+                BuildGoal.Part.CARTOGRAPHY)) {                           // [cartographer] the map room's table
             int want = need.getOrDefault(deco, 0);
             if (want == 0) continue;
             var item = BuildGoal.itemForPart(deco);
@@ -7302,6 +7316,9 @@ public class VillageFolkEntity extends AssistantEntity {
                 java.util.Map.entry(LOGS, 3), java.util.Map.entry(COAL, 1)); }
             case NOTE_BLOCK -> { return makeFromStores(net.minecraft.world.item.Items.NOTE_BLOCK, wanted, heart, r, 8,
                 java.util.Map.entry(REDSTONE, 1)); }
+            // [cartographer] The map room's cartography table: two of the stores' paper on four planks, as the game makes one.
+            case CARTOGRAPHY -> { return makeFromStores(net.minecraft.world.item.Items.CARTOGRAPHY_TABLE, wanted, heart, r, 4,
+                java.util.Map.entry(st -> st.is(net.minecraft.world.item.Items.PAPER), 2)); }
             case ENCHANTING -> { return makeFromStores(net.minecraft.world.item.Items.ENCHANTING_TABLE, wanted, heart, r, 0,
                 java.util.Map.entry(BOOKS, 1), java.util.Map.entry(DIAMONDS, 2), java.util.Map.entry(OBSIDIAN, 4)); }
             default -> { return 0; }

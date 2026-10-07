@@ -47,6 +47,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * </ul>
  * The leader's hall stands for the meeting hall if the town has only that. The books say when the map
  * was last drawn (Visitors.book).
+ *
+ * <p>[cartographer] A town with a cartographer has its hall's wall drawn by it instead (MapSurveys): a two-by-two or a
+ * three-by-three of real maps, walked and filled in as the game fills a map in a player's hand, the town's places
+ * marked with named banners, locked under glass, and the old wall kept in the museum's archive. The clerk's map
+ * waits while there is one; the wall it draws is recorded here all the same, and hangs in these frames.
  */
 public final class MapRoom {
 
@@ -99,7 +104,7 @@ public final class MapRoom {
         }
     }
 
-    private static void record(UUID village, long day, List<BlockPos> frames) {
+    static void record(UUID village, long day, List<BlockPos> frames) {
         StringBuilder sb = new StringBuilder().append(day).append('|');
         for (int i = 0; i < frames.size(); i++) {
             if (i > 0) sb.append(',');
@@ -112,6 +117,7 @@ public final class MapRoom {
     static void tick(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
         if (Villages.headcount(id) < TownJobs.SETTLED) return;
+        if (Cartographers.keepsTheHallMap(id)) return;               // [cartographer] its walked maps, not the clerk's (MapSurveys)
         Ledger.Building hall = hall(id);
         if (hall == null || !level.isLoaded(hall.anchor())) return;
         Record r = record(id);
@@ -138,7 +144,7 @@ public final class MapRoom {
     }
 
     @Nullable
-    private static ItemFrame frame(ServerLevel level, BlockPos at) {
+    static ItemFrame frame(ServerLevel level, BlockPos at) {
         for (ItemFrame f : level.getEntitiesOfClass(ItemFrame.class, new AABB(at).inflate(0.1), e -> e.isAlive() && e.getTags().contains(TAG))) {
             return f;
         }
@@ -246,7 +252,7 @@ public final class MapRoom {
 
     /** The frames already up, as spots (their facing as they hang). Null if any is gone. */
     @Nullable
-    private static List<Decor.Spot> existing(ServerLevel level, Record r) {
+    static List<Decor.Spot> existing(ServerLevel level, Record r) {
         List<Decor.Spot> out = new ArrayList<>();
         for (BlockPos p : r.frames()) {
             ItemFrame f = frame(level, p);
@@ -263,27 +269,45 @@ public final class MapRoom {
      */
     @Nullable
     static List<Decor.Spot> wall(ServerLevel level, UUID village, Ledger.Building hall, int n) {
-        Decor.Room room = Decor.room(village, hall);
-        Set<BlockPos> taken = new HashSet<>(Decor.reserved(level, village, hall));
-        for (Decor.Spot s : Decor.wallSpots(level, room, hall.anchor(), 1, taken)) {
-            if (!free(level, s.at(), s.facing())) continue;
-            if (n == 1) return List.of(s);
+        return wall(level, village, hall, n, Set.of());
+    }
+
+    /**
+     * [cartographer] The same, for one, four or nine (a three-by-three, the cartographer's wall for a big town), any
+     * of these cells left alone too (a group already hanging, the museum's own places). In hanging order, row by row
+     * from the top, each row from the viewer's left: north-west first, as the sheets are drawn.
+     */
+    @Nullable
+    static List<Decor.Spot> wall(ServerLevel level, UUID village, Ledger.Building b, int n, Set<BlockPos> alsoTaken) {
+        Decor.Room room = Decor.room(village, b);
+        Set<BlockPos> taken = new HashSet<>(Decor.reserved(level, village, b));
+        taken.addAll(alsoTaken);
+        int across = n >= 9 ? 3 : n >= 4 ? 2 : 1;
+        for (Decor.Spot s : Decor.wallSpots(level, room, b.anchor(), 1, taken)) {
+            if (!free(level, s.at(), s.facing()) || taken.contains(s.at())) continue;
+            if (across == 1) return List.of(s);
             // The viewer faces the wall: its right is the frame's facing turned anticlockwise. The square may run
-            // either way from this spot along the wall.
+            // either way from this spot along the wall, so long as the whole of it is free.
             Direction right = s.facing().getCounterClockWise();
-            for (BlockPos bl : new BlockPos[]{ s.at(), s.at().relative(right.getOpposite()) }) {
-                BlockPos br = bl.relative(right), tl = bl.above(), tr = br.above();
-                if (!free(level, bl, s.facing()) || !free(level, br, s.facing()) || !free(level, tl, s.facing())
-                        || !free(level, tr, s.facing())) continue;
-                return List.of(new Decor.Spot(tl, s.facing()), new Decor.Spot(tr, s.facing()), new Decor.Spot(bl, s.facing()),
-                    new Decor.Spot(br, s.facing()));
+            for (int shift = 0; shift < across; shift++) {
+                BlockPos bl = s.at().relative(right.getOpposite(), shift);
+                List<Decor.Spot> group = new ArrayList<>();
+                boolean ok = true;
+                for (int row = across - 1; row >= 0 && ok; row--) {
+                    for (int col = 0; col < across; col++) {
+                        BlockPos at = bl.relative(right, col).above(row);
+                        if (taken.contains(at) || !free(level, at, s.facing())) { ok = false; break; }
+                        group.add(new Decor.Spot(at, s.facing()));
+                    }
+                }
+                if (ok) return group;
             }
         }
         return null;
     }
 
     /** Free for a frame facing this way: air, a sound wall behind, nothing hanging there, no door by it. */
-    private static boolean free(ServerLevel level, BlockPos at, Direction facing) {
+    static boolean free(ServerLevel level, BlockPos at, Direction facing) {
         if (!level.isLoaded(at) || !level.getBlockState(at).isAir()) return false;
         BlockPos wall = at.relative(facing.getOpposite());
         BlockState w = level.getBlockState(wall);
@@ -323,7 +347,7 @@ public final class MapRoom {
         if (compasses > 0) Crafts.store(level, v, new ItemStack(Items.COMPASS, compasses));
     }
 
-    /** Can the stores run to so many frames (each: a frame put by, or four planks' sticks and a leather)? */
+    /** Can the stores run to so many frames (each: a frame put by, or eight sticks (four planks) and a leather)? */
     static boolean framesToHand(ServerLevel level, Villages.Village v, int n) {
         if (n <= 0) return true;
         int have = Crafts.stock(level, v, s -> s.is(Items.ITEM_FRAME));
@@ -333,7 +357,7 @@ public final class MapRoom {
             && Crafts.stock(level, v, s -> s.is(net.minecraft.tags.ItemTags.PLANKS) || s.is(net.minecraft.tags.ItemTags.LOGS)) >= make;
     }
 
-    private static boolean payForFrames(ServerLevel level, Villages.Village v, int n) {
+    static boolean payForFrames(ServerLevel level, Villages.Village v, int n) {
         for (int i = 0; i < n; i++) {
             if (Crafts.take(level, v, s -> s.is(Items.ITEM_FRAME), 1)) continue;
             if (Crafts.stock(level, v, s -> s.is(Items.LEATHER)) < 1 || !Crafts.usePlanks(level, v, 4)) return false;
@@ -398,7 +422,8 @@ public final class MapRoom {
         Record r = record(village);
         if (r == null) return "";
         long next = Math.max(0, r.day() + EVERY - day);
-        return "The map room: " + (r.frames().size() == 4 ? "four maps of the town" : "the town's map") + " on the hall's wall, drawn on day "
+        int n = r.frames().size();
+        return "The map room: " + (n == 9 ? "nine maps of the town" : n == 4 ? "four maps of the town" : "the town's map") + " on the hall's wall, drawn on day "
             + (r.day() + 1) + (next == 0 ? "; a fresh one is due" : "; the next in " + next + (next == 1 ? " day" : " days")) + ".";
     }
 

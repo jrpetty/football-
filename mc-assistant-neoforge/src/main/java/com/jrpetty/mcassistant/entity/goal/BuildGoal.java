@@ -88,6 +88,8 @@ public class BuildGoal extends Goal {
         "firestation",
         // [caves] the Delvers' Lodge: the cave team's maps, trophies, bunks and gear (entity/Lodge)
         "lodge",
+        // [cartographer] the map room: the cartographer's table, its lectern, its chests and its map wall (Cartographers)
+        "maproom",
         // [library] the town library, its real books on its shelves (entity/Library)
         "townlibrary");
 
@@ -117,7 +119,9 @@ public class BuildGoal extends Goal {
         /** A tavern's hearth fire and its note blocks. */
         CAMPFIRE, NOTE_BLOCK,
         /** A storehouse unit: twenty-seven laid in a cube join into the Village Storehouse. */
-        STOREHOUSE }
+        STOREHOUSE,
+        /** [cartographer] The map room's cartography table (Cartographers). */
+        CARTOGRAPHY }
 
     /** One block of a building: where, what part, what it is for (Blueprints.Style), and which way it faces. */
     public record Placement(BlockPos pos, Part part, Blueprints.Style style, Blueprints.Way way) {
@@ -317,7 +321,8 @@ public class BuildGoal extends Goal {
     public static boolean isFurniture(Part part) {
         return part == Part.BOOKSHELF || part == Part.LECTERN || part == Part.ENCHANTING || part == Part.BREWING
             || part == Part.SMOKER || part == Part.LOOM || part == Part.GRINDSTONE || part == Part.CAMPFIRE
-            || part == Part.NOTE_BLOCK;
+            || part == Part.NOTE_BLOCK
+            || part == Part.CARTOGRAPHY;                                    // [cartographer] the map room's table
     }
 
     /** Decorative parts skipped (not blocked-on) when we lack the item. */
@@ -371,6 +376,7 @@ public class BuildGoal extends Goal {
             case CAMPFIRE -> s -> s.is(Items.CAMPFIRE);
             case NOTE_BLOCK -> s -> s.is(Items.NOTE_BLOCK);
             case STOREHOUSE -> s -> s.is(com.jrpetty.mcassistant.McAssistantMod.STOREHOUSE_ITEM.get());
+            case CARTOGRAPHY -> s -> s.is(Items.CARTOGRAPHY_TABLE);           // [cartographer]
         };
     }
 
@@ -408,6 +414,7 @@ public class BuildGoal extends Goal {
             case CAMPFIRE -> "a fire for the hearth";
             case NOTE_BLOCK -> "note blocks";
             case STOREHOUSE -> "storehouse units (six planks and four sticks each)";
+            case CARTOGRAPHY -> "a cartography table (two paper and four planks)";   // [cartographer]
         };
     }
 
@@ -1116,6 +1123,7 @@ public class BuildGoal extends Goal {
             case CAMPFIRE -> Blocks.CAMPFIRE.defaultBlockState();
             case NOTE_BLOCK -> Blocks.NOTE_BLOCK.defaultBlockState();
             case STOREHOUSE -> com.jrpetty.mcassistant.block.StorehouseBlock.loose();
+            case CARTOGRAPHY -> Blocks.CARTOGRAPHY_TABLE.defaultBlockState();    // [cartographer]
         };
     }
 

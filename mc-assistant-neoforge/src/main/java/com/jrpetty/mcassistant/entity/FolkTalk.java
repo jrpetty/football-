@@ -66,6 +66,9 @@ public final class FolkTalk {
         Persona.Opinion op = me.opinionOf(p.getUUID(), p.getName().getString());
         // [caves] Said to one of the cave team: an ask of it, going along, its map, a share (CaveGuests.meant).
         if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.CAVE && CaveGuests.meant(text)) topic = TalkTopic.CAVES;
+        // [cartographer] Said to the cartographer, about a map: its maps (Cartographers.talk); a map of the town from it is its copy.
+        if (f.stationTask() == AssistantEntity.StationTask.CARTOGRAPHER && (topic == TalkTopic.SAY && Cartographers.meant(text)
+            || topic == TalkTopic.TOWN_MAP)) topic = TalkTopic.MAPS;
         if (topic == TalkTopic.SAY) {
             TalkTopic quest = QuestTalk.heard(f, p, text);              // [quests] "any work?", "I'll do it", a choice by name
             if (quest != null) topic = quest;
@@ -190,6 +193,7 @@ public final class FolkTalk {
             case ORDER -> Dealings.order(f, p, text);
             case REPAIR -> Dealings.repair(f, p);
             case TOWN_MAP -> PlayerServices.townMap(f, p);                    // [players] a map of the town
+            case MAPS -> Cartographers.talk(f, p, text);                      // [cartographer] explorer maps, a commission, a copy
             case LOST -> PlayerServices.lostAndFound(f, p);                   // [players] the Lost and Found
             case SPONSOR -> Dealings.sponsor(f, p);
             case BULK -> f.ownerId() != null && Dealings.hasOrder(p.getUUID(), f.ownerId()) && Services.itemNamed(text) == null
@@ -385,6 +389,7 @@ public final class FolkTalk {
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit
+        line(sb, "Maps", Cartographers.cardLine(f));        // [cartographer] its survey, the hall's map, what it found and sold
         line(sb, f.isBaby() ? "Apprenticed" : "Apprentices", PlayerTrades.cardLine(f));   // [player-civic] its apprentices, or its trade
         line(sb, "The fleet", Fleet.cardLine(f));            // [fleet] out with the fishing fleet, and its catch
         line(sb, "Auction", Auctions.cardLine(f));           // [fleet] at the auction, or what it won there
@@ -733,6 +738,7 @@ public final class FolkTalk {
             case BANK -> Bank.doing(f, r);                // the banker: its books, its vault, its borrowers
             case CAVE -> CaveDwellers.doing(f, r);        // [caves] down the caves, or home with the report
             case FERRY -> Ferries.doing(f, r);            // [transport] at the landing, or out on the water
+            case CARTOGRAPHER -> Cartographers.doing(f, r);   // [cartographer] at the table, or out walking with a sheet
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";
@@ -1271,6 +1277,9 @@ public final class FolkTalk {
         // [caves] The cave team's map, going along with the team, an ask of it: before the town's map and the guide.
         if (has(t, "cave map", "map of the caves", "caves map", "cave team", "delvers", "come down the caves", "come caving",
                 "go caving")) return TalkTopic.CAVES;
+        // [cartographer] The cartographer's maps: an explorer map, a commission, its copy of the hall's map; before the town's map.
+        if (has(t, "explorer map", "ocean map", "woodland map", "treasure map", "map me", "map the land", "land to the", "commission a map",
+                "your maps", "buy a map", "maps for sale", "cartographer", "map room", "map to the", "copy of the town", "town's map")) return TalkTopic.MAPS;
         // [players] Before "could I have" (the stores) and "where is" (the guide): a map, and the Lost and Found.
         if (has(t, "map of the town", "map of town", "map of the village", "town map", "village map", "a map of", "a map please",
                 "draw me a map")) return TalkTopic.TOWN_MAP;

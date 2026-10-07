@@ -309,6 +309,7 @@ public final class QuestRun {
             return "Oh — I can't ask it of you after all" + (why.isEmpty() ? "." : ": " + why + ".");
         }
         f.persona().remember(day, q.playerName + " said they'd help me: " + lower(q.title), 2);
+        Cartographers.questMap(level, q, p);                             // [cartographer] a map to a far place, from the map room
         QuestRewards.firstJournal(level, f, p);
         QuestBook.changed();
         Step next = q.current();

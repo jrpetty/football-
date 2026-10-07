@@ -110,7 +110,10 @@ public final class Villages {
         // chosen by the town from its most skilled (CaveDwellers.team, appoint).
         new Slot(AssistantEntity.StationTask.CAVE, 1, CaveDwellers.FROM, Age.IRON, CaveDwellers.MOST),
         // [transport] The ferryman: one, while the town's ferry runs (Ferries), whatever its size and age.
-        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1));
+        new Slot(AssistantEntity.StationTask.FERRY, 1, 1, Age.WOOD, 1),
+        // [cartographer] The cartographer: one, from the Stone Age once the town has scouts or thirty folk, at its map room;
+        // chosen by the town for its nature (Cartographers.appoint), not taken by whoever asks first.
+        new Slot(AssistantEntity.StationTask.CARTOGRAPHER, 1, Cartographers.FROM, Age.STONE, 1));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -340,6 +343,7 @@ public final class Villages {
             case "trainingyard" -> "the training yard";            // [war-prep]
             case "firestation" -> "the fire station";              // [disasters]
             case "lodge" -> "the Delvers' Lodge";                 // [caves]
+            case "maproom" -> "the map room";                     // [cartographer]
             default -> "the " + structure;
         };
     }
@@ -403,6 +407,7 @@ public final class Villages {
         Economy.resetForTests();
         Scouts.resetForTests();
         CaveDwellers.resetForTests();       // [caves]
+        Cartographers.resetForTests();      // [cartographer]
         Fashion.resetForTests();            // [fashion] the season's looks, the tailor's book, the shows
         Quests.resetForTests();
         Services.resetForTests();
@@ -697,6 +702,7 @@ public final class Villages {
             if (!craftReady(villageId, slot.trade())) continue;   // a smith with no smithy has nothing to work at
             if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
             double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // The first hand of a craft the village has grown into comes before one more of a trade
@@ -756,6 +762,7 @@ public final class Villages {
             if (slot.age() == Age.WOOD || !wantedHere(slot, villageId, total, at)) continue;
             if (slot.trade() == AssistantEntity.StationTask.BANK) continue;   // the banker is appointed (Bank.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
             if (craftReady(villageId, slot.trade())) return slot.trade();
         }
@@ -768,6 +775,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > worst) { worst = short_; most = slot.trade(); }
@@ -797,6 +805,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > 1.5) { by.put(slot.trade(), short_); out.add(slot.trade()); }
@@ -842,6 +851,7 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.FISH) return !dryForFishers(villageId);
         if (trade == AssistantEntity.StationTask.CAVE) return CaveDwellers.ready(villageId);   // [caves] a few miners and a watch first
         if (trade == AssistantEntity.StationTask.FERRY) return Ferries.wanted(villageId);      // [transport] while the ferry runs
+        if (trade == AssistantEntity.StationTask.CARTOGRAPHER) return Cartographers.ready(villageId);   // [cartographer] its map room stands
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -899,6 +909,8 @@ public final class Villages {
      * lives by it (Homeland): a coast town fishes from its first days.
      */
     static boolean wantedHere(Slot slot, @Nullable UUID villageId, int total, Age at) {
+        // [cartographer] A Stone Age town with scouts out wants its maps drawn before it is thirty (Cartographers.wanted).
+        if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) return Cartographers.wanted(villageId);
         if (slot.wanted(total, at)) return true;
         int sooner = Homeland.sooner(villageId, slot.trade());
         return sooner > 0 && total >= sooner && at.ordinal() >= slot.age().ordinal();
@@ -912,6 +924,7 @@ public final class Villages {
             * glut(villageId, slot.trade()) * Homeland.lean(villageId, slot.trade());
         if (slot.trade() == AssistantEntity.StationTask.CAVE) t = CaveDwellers.team(total);   // [caves] two, three at sixty, four at a hundred
         if (slot.trade() == AssistantEntity.StationTask.FERRY) t = Ferries.wanted(villageId) ? 1.0 : 0.0;  // [transport] one ferryman
+        if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) t = Cartographers.ready(villageId) ? 1.0 : 0.0;   // [cartographer] one
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
             int producers = 0;
@@ -1766,6 +1779,8 @@ public final class Villages {
         TownLook.wanted(villageId, folk, at, extras, s -> built(villageId, s) < 1);
         // [library] A library for the town's books, once it is twelve strong (Library).
         if (Library.wanted(villageId, folk) && built(villageId, Library.STRUCTURE) < 1) extras.add(Library.STRUCTURE);
+        // [cartographer] The map room, once a Stone Age town has scouts or thirty folk: the cartographer's (Cartographers).
+        if (Cartographers.wantsMapRoom(villageId) && built(villageId, Cartographers.STRUCTURE) < 1) extras.add(Cartographers.STRUCTURE);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -2169,6 +2184,7 @@ public final class Villages {
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
             case "infirmary" -> Infirmary.why(villageId);          // [batchA]
             case "lodge" -> Lodge.why(villageId);                  // [caves]
+            case "maproom" -> Cartographers.why(villageId);        // [cartographer]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]

@@ -269,6 +269,14 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Haggle", TalkTopic.HAGGLE, "Ask the storekeeper or the shopkeeper to do it cheaper: a discount for the day, if they like you"));
                 out.add(new Choice("Make me…", TalkTopic.ORDER, "", "Ask a smith or a tailor to make you something: from your makings and the village's spare, for a fee"));
                 out.add(Choice.of("Mend this", TalkTopic.REPAIR, "The smith (or, with no smith, a smelter at its forge) mends the worn thing in your hand: its metal from the stores at the market's price, a unit a quarter of the wear, and a fee"));
+                // [cartographer] The cartographer's maps (Cartographers): what it has and their prices, the explorer maps, a copy of
+                // the hall's map, and a map made to order.
+                out.add(Choice.of("Maps", TalkTopic.MAPS, "The cartographer's maps and their prices: explorer maps, a copy of the hall's map, a map to any place the town knows of"));
+                out.add(new Choice("Ocean map", TalkTopic.SAY, "I'd like an ocean explorer map", "A real ocean explorer map to the nearest monument the town's land reaches: priced by how far"));
+                out.add(new Choice("Woodland map", TalkTopic.SAY, "I'd like a woodland explorer map", "A real woodland explorer map to a mansion, if the town's scouts have been that far"));
+                out.add(new Choice("Treasure map", TalkTopic.SAY, "I'd like a treasure map", "A buried treasure map: one the town brought home from a wreck, or treasure it found itself"));
+                out.add(new Choice("Town map copy", TalkTopic.SAY, "A copy of the town's map, please", "Every sheet of the hall's map of the town, copied for you: hang them as they hang in the hall"));
+                out.add(new Choice("Commission…", TalkTopic.MAPS, "commission", "Have the cartographer walk and draw the land any way you like, ready by nightfall: type \"map me the land to the east\""));
             }
             default -> { }
         }
@@ -324,6 +332,11 @@ public class TalkScreen extends Screen {
         if (c.topic() == TalkTopic.BULK || c.topic() == TalkTopic.INVEST || c.topic() == TalkTopic.ORDER) {
             say.setValue(c.topic() == TalkTopic.BULK ? "I'd like to order 64 " : c.topic() == TalkTopic.INVEST ? "I'd like to invest 50 coins"
                 : "Make me an iron sword");
+            setFocused(say);
+            return;
+        }
+        if (c.topic() == TalkTopic.MAPS && "commission".equals(c.text())) {    // [cartographer] a commission, the way typed yourself
+            say.setValue("Map me the land to the east");
             setFocused(say);
             return;
         }

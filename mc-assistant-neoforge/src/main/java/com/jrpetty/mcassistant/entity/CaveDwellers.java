@@ -1121,6 +1121,11 @@ public final class CaveDwellers {
             double ang = bearing * (2 * Math.PI / Scouts.BEARINGS);
             target = new BlockPos(home.getX() + (int) Math.round(Math.cos(ang) * range), home.getY(),
                 home.getZ() + (int) Math.round(Math.sin(ang) * range));
+        } else if (Cartographers.caveLead(id, home) != null) {
+            // [cartographer] A mineshaft, a dungeon or the like on the cartographer's map, not yet made for: out that way to it.
+            target = Cartographers.caveLead(id, home);
+            bearing = Scouts.bearingOf(target.getX() - home.getX(), target.getZ() - home.getZ());
+            Cartographers.ledTo(id, target, day);
         } else {
             bearing = leastLooked(id, lead, day);
             double ang = bearing * (2 * Math.PI / Scouts.BEARINGS);

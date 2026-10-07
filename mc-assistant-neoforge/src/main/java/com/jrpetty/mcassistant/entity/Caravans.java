@@ -345,6 +345,7 @@ public final class Caravans {
         Trip t = f.trip();
         if (t == null) return false;
         keepAwake(level, f, t);
+        Cartographers.onTheRoad(f, level, t);                     // [cartographer] the region's map: a copy for the road, filled in as it goes
         if (t.waiting) {
             Envoys.waitThere(level, f, t);
             return f.trip() != null;

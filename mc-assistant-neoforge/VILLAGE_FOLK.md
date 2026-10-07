@@ -7749,3 +7749,139 @@ The game tests `TransportGameTests` (tr01 to tr05) check that:
   takes another trade, and the chronicle tells it;
 * in a town of nine, the bridge is put to everybody in a referendum as a great work drawn beside the ferry, carried,
   built by the town's hands out of its stone and opened, and then the ferry retires.
+
+## The cartographer
+
+A Stone Age town that has sent scouts out, or has grown to thirty folk, takes on a cartographer. It walks the town and
+the country round it with real maps, the same maps you carry, and they fill in as it walks. It hangs the town's map in
+the hall, finds the old places round the town for the scouts and the cave team, and sells you explorer maps that point
+at real structures in your world.
+
+* **The map room.** The town puts a map room on its building list as soon as it wants a cartographer. It is a little
+  timber house on a stone footing with a lantern over the door. Inside, the cartography table stands against the back
+  wall between two bookcases, with the wall above it kept for the cartographer's own maps. There is a chest down each
+  side, a lectern by the door and a barrel of cane. The builders set the table like any other part, and if it goes
+  missing the cartographer makes another from two of the stores' paper and four planks, as you would.
+* **Who takes it.** Nobody takes the post on their own; the town chooses, once the map room stands. It picks a scout
+  who knows the land first, then the most curious and patient of its folk. It never takes the last hand of a trade the
+  town is short of. The town has one cartographer, however big it grows, and the chronicle says who took the post and
+  why.
+* **Its look.** The cartographer wears a long blue scholar's coat to the knee, with a buff collar and turned-back cuffs
+  (one of them ink-stained), brass buttons, a claret waistcoat and a white stock. Add round brass spectacles, a goose
+  quill tucked behind its ear and a brass compass on a chain. The day's map is rolled under its arm, tied with a red
+  ribbon. When it is out walking, it holds the sheet it is working on up in its hand.
+* **Paper and compasses.** The cartographer makes its own makings from the stores, by the game's recipes. It presses
+  paper from the town's sugar cane (three cane make three sheets) until about two dozen are put by. When the map room
+  has fewer than two compasses, it makes one from four iron and a redstone. It always makes the first compass, even
+  when the town is saving its iron. Glass panes for locking finished maps come from the stores too. All of this is
+  counted on the Production page and in its trade book.
+
+**The town's map in the hall.** The map really is walked. The cartographer takes fresh sheets out of the stores (a
+paper each) and sets out with them in the morning. A map fills in round whoever carries it, exactly as one does in
+your hand, and only where it goes: so it walks to the middle of each sheet (or each quarter of one) and stands there
+until the sheet has filled in round it. Watch a sheet in the hall's frames and you can see the town come up on it,
+street by street.
+
+* A small town gets a two-by-two of sheets at full detail. A bigger town gets a three-by-three, if the hall has a
+  stretch of wall for it (or a two-by-two of the same ground at half the detail if it hasn't). The biggest towns get
+  the same layouts at half the detail.
+* On the way back, it stops at the hall, the leader's hall, each gate of the wall, the storehouse and the market. At
+  each it sets up a banner named for the place, in the town's colour if it can, made from six of the stores' wool and
+  a plank for the stick. Then it touches every sheet to the banner, as you would click a map on one. The places show
+  on the map as the game's own banner markers, with their names.
+* At its table it locks each sheet under a pane of glass, so the map never changes again. Then it hangs the sheets in
+  frames on the hall's wall, north-west at the top left, with a sign under them: *Map of (the town), by (its name),
+  day (the day)*.
+* It sets out only between early morning and early afternoon, and only by day. At dusk it puts its sheets away and
+  goes home, and the next morning it goes on from where it left off.
+* The wall is drawn afresh every week, or sooner if the town has grown (six new buildings, or too big for the layout)
+  or a sheet has gone from the wall.
+
+**The archive.** When a new map goes up, the old one isn't thrown away. It is named for the town as it was (*Thornhurst
+in its Stone Age*). If the town has a museum, the first map of each age hangs there, in frames on a free stretch of
+its wall, so you can walk along and watch the town grow. Every other old map goes into the map room's chest, where you
+may take one out to look at.
+
+**The country's map.** After the town's first map is up, and every fortnight after that, the cartographer walks one
+sheet of the country round the town at a quarter of the detail. It goes round a ring of stations about a hundred and
+fifty blocks out, and to the mine. If the town's colonies or neighbours lie far off, it uses an eighth of the detail
+and walks a wider ring. It marks the sheet with the town, its colonies, the neighbours its folk have met, the mine,
+the caves the cave team knows and every place it has found. It frames the sheet in the hall (or in the map room if the
+hall has no room), and this one is never locked. Caravans and envoys setting out are given a copy for the road (a sheet
+of the stores' paper). A copy is the same map, so as they travel, the roads fill in on the one in the hall.
+
+**The old places round the town.** Between its walks, a few times a day, the cartographer looks for one kind of place
+at a time, and only in land the town has been to: its own country, where the scouts have explored, near what the
+scouts and the cave team have found, and along the roads to its colonies, neighbours and mine.
+
+* Mineshafts and dungeons go to the cave team, and so do the trial chambers and ancient cities from the Iron Age and
+  strongholds from the Diamond Age. A mineshaft or a dungeon found this way is the team's next place to set out for.
+* Villages of villagers, pillager outposts, desert and jungle temples, witch huts and woodland mansions go to the
+  scouts.
+* Ruined portals go to a Nether runner, and ocean monuments to a kelp diver, if the town has those trades. Otherwise
+  their maps go into the stores.
+
+Each find goes on the town's books and in the scouts' atlas (a cave team's find goes on the caves' report too). The
+folk it is for get an explorer map to it, made from eight of the stores' paper and a compass.
+
+**Maps for you.** Talk to the cartographer and choose **Maps** to hear what it has and the prices, or pick one
+straight off:
+
+* **Ocean map**: the game's own ocean explorer map, to the nearest ocean monument the town's land reaches.
+* **Woodland map**: a woodland explorer map, to a mansion the scouts have been near.
+* **Treasure map**: a buried treasure map. It is one the town brought home from a wreck if it has one, otherwise one
+  to treasure the town found itself.
+* A map to any place the town knows of: say which ("a map to the desert temple").
+* **Town map copy**: a copy of every sheet of the hall's map, at a sheet of paper and a coin each. The copies are
+  locked like the hall's, so hang them two by two (or three by three) and they meet up as they do in the hall.
+
+They are real explorer maps, with the game's names and marks, and they point at real structures in your world. The
+cartographer never sells you a map of somewhere the town hasn't seen. The price is the makings, two coins for the work
+and a coin for every hundred blocks to the place. That is multiplied by how rare the place is (a mineshaft once, a
+temple twice, buried treasure three times, a monument four times, a mansion five), and is never more than eighty coins.
+
+**Commissions.** Choose **Commission…** and say which way: "map me the land to the east", or north, south-west, any
+of the eight. You pay when you ask: the sheet and the pane at their worth, and four coins for the walk. The cartographer
+walks it that day (or first thing the next morning if you ask late), on one sheet at half the detail, centred about two
+hundred blocks out that way. It locks the sheet under glass and leaves it in the map room's chest with your name on
+it, and you are told when it's ready. Take it from the chest, or ask the cartographer for it.
+
+**Quests.** Take on a quest that sends you well away from the town (fifty blocks or so) and the cartographer sends
+you a map to the place, marked with a cross, made from the stores' paper and a compass.
+
+Where to see it:
+* The cartographer's card has a **Maps** line: the survey it is out on (stop by stop), when the hall's map was drawn
+  and when the next is due, what it has found and sold, and anything it is waiting for.
+* Ask it what it does: it tells you whether it is walking the town, the country or a commission, or at its table.
+* The board gives the hall's map, the country's, and the latest find with who it went to. The gazette has a *From the
+  map room* piece the day after anything happens. The chronicle tells who took the post, each map hung, each place
+  found and each commission drawn.
+* Its trade book has what the map room has learnt and its numbers.
+* The town's books have a **Maps** page. It shows the country's map as the cartographer drew it (or the hall's map put
+  together, before there is one), every place found, the archive, commissions waiting, and the map room's numbers.
+  `/village maps` says the same in the chat.
+* For operators: `/village maps now` has the cartographer do its next piece of work at once. `/village maps stage`
+  puts up a map room (and a hall if the town has none) where you stand, appoints a cartographer, walks and hangs the
+  hall's map at once and hands you an ocean explorer map. `/village maps stage walk` sends the cartographer out on the
+  country's walk, and `/village maps books` opens the Maps page.
+
+The game tests `CartographerGameTests` (ca01 to ca10) check that:
+* the trade opens in the Stone Age with scouts out or at thirty folk (not in the Wood Age), the map room goes on the
+  town's list, and once it stands the town appoints its best candidate, just one, at the map room;
+* the map room is built with its table, lectern, chests and bookcases, and a missing table is made from the stores'
+  two paper and four planks;
+* a sheet fills in only round where the cartographer stands and fills in further as it walks on, each pixel the
+  colour of the ground under it, and on a live walk the sheets fill as it goes;
+* the wall hangs in the hall: four locked sheets in frames, the hall, the storehouse and the market marked with named
+  banners as the game's banner markers, a sign under them, and the paper, panes and wool out of the stores;
+* a real mineshaft is found and handed to the cave team with an explorer map to it, and is on the caves' report as
+  their next lead, while one far out where the town has never been is not found;
+* a player buys an ocean explorer map that points at a real ocean monument, priced by its distance and rarity, and a
+  player with no coin gets none;
+* paper is made from the stores' sugar cane and a compass from their iron and redstone, counted in the day's
+  production and the map room's books;
+* a week on, the redraw replaces the wall with fresh sheets and the old one goes to the archive, named for the town in
+  its Stone Age, and the next week's goes there too;
+* a commission for the land to the east is paid for, walked, locked and handed over;
+* the country's map is framed in the hall and stays open, a caravan's copy fills in the hall's map as the carrier
+  walks, and a far quest comes with a map to its place.

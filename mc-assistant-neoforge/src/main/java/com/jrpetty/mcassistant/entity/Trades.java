@@ -175,6 +175,15 @@ public final class Trades {
                 List.of(need("a boat", s -> s.is(net.minecraft.tags.ItemTags.BOATS), 1, "the town's, moored at the landing")),
                 List.of(),
                 "folk across the water, and a coin a crossing into my purse");
+            // [cartographer] The cartographer (Cartographers): the town's paper and compasses, a pane for each finished map.
+            case CARTOGRAPHER -> new Trade("I keep the map room: I walk the town with fresh sheets till they fill in, mark its places with"
+                    + " banners and hang the map in the hall; I walk the country round it for the region's map, find the old places round"
+                    + " us for the scouts and the cave team, and draw explorer maps for anybody with the coin",
+                List.of(need("a cartography table", s -> s.is(Items.CARTOGRAPHY_TABLE), 1, "the builders (two paper and four planks), at the map room")),
+                List.of(need("paper", s -> s.is(Items.PAPER), 9, "me, from the stores' sugar cane"),
+                    need("a compass", s -> s.is(Items.COMPASS), 1, "me, from the stores' iron and redstone"),
+                    need("glass panes", s -> s.is(Items.GLASS_PANE), 4, "the smelter's glass")),
+                "the hall's map of the town, the region's for the caravans, explorer maps for the cave team, the scouts and travellers");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }
@@ -569,6 +578,7 @@ public final class Trades {
             case RANCH -> s.is(Items.LEAD) ? 4 : ((s.is(Items.BUCKET) || s.is(Items.SHEARS)) ? 1 : 0);
             case FARM -> s.is(Items.SUGAR_CANE) ? 6 : ((s.is(Items.MELON_SEEDS) || s.is(Items.PUMPKIN_SEEDS)) ? 4 : 0);
             case GUARD -> Links.healing(s) ? 1 : 0;
+            case CARTOGRAPHER -> Cartographers.keeps(s);                 // [cartographer] its sheets and makings
             default -> 0;
         };
     }
