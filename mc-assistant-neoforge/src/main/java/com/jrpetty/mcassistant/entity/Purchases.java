@@ -238,10 +238,19 @@ public final class Purchases {
 
     // ------------------------------------------------------------------ what it expects, and what it will pay
 
-    /** What this folk expects to pay for one of these: the usual worth, by its means and its nature, and pulled toward
-     *  what it paid for the same last time. */
+    /** What this folk expects to see asked for one of these: its usual worth, pulled toward what it paid for the same
+     *  last time (a price that has crept up for a month is the price it is used to). */
     public static double expects(VillageFolkEntity f, ItemStack one) {
-        double usual = PriceIndex.usual(one);
+        double e = PriceIndex.usual(one);
+        Map<String, Double> last = LAST.get(f.getUUID());
+        Double paid = last == null ? null : last.get(PriceIndex.keyOf(one));
+        if (paid != null && paid > 0) e = 0.6 * e + 0.4 * paid;
+        return Math.max(0.01, e);
+    }
+
+    /** The most this folk will pay for one of a thing it can do without: what it expects, by its means (the poor less,
+     *  the wealthy more), its nature, and how far over it a treat (a quarter) or a luxury (a seventh) may go. */
+    public static double willing(VillageFolkEntity f, ItemStack one, Need need) {
         double means = switch (Wealth.tier(f)) {
             case POOR -> 0.85;
             case GETTING_BY -> 0.95;
@@ -249,11 +258,7 @@ public final class Purchases {
             case WELL_OFF -> 1.2;
             case WEALTHY -> 1.4;
         };
-        double e = usual * means * nature(f);
-        Map<String, Double> last = LAST.get(f.getUUID());
-        Double paid = last == null ? null : last.get(PriceIndex.keyOf(one));
-        if (paid != null && paid > 0) e = 0.6 * e + 0.4 * paid;
-        return Math.max(0.01, e);
+        return expects(f, one) * means * nature(f) * (need == Need.TREAT ? 1.25 : 1.15);
     }
 
     /** How free with its coin its nature makes it: thrifty and Merchants less, the generous and the Free Spirits more. */
@@ -265,12 +270,6 @@ public final class Purchases {
         if (top == Values.Value.WEALTH) n -= 0.05;                            // a Merchant minds its coin
         if (top == Values.Value.LEISURE) n += 0.05;                            // a Free Spirit spends it
         return n;
-    }
-
-    /** How far over what it expects a folk will pay for a thing it can do without, before it leaves it. */
-    static double limit(VillageFolkEntity f, Need need) {
-        double l = need == Need.TREAT ? 1.25 : 1.15;
-        return l + (nature(f) - 1.0) * 1.5;
     }
 
     /** What one of these costs this folk here today: the town's price (PriceIndex), dearer for an enchanted thing and a
@@ -302,8 +301,9 @@ public final class Purchases {
 
     /**
      * How many of these this folk buys at this price, having come for {@code n}: food and its tool whatever the price,
-     * and more food when it is cheap (a day or two's put by, as its purse runs to); a treat or a luxury not at all
-     * when it is over what it thinks fair (the refusal booked, so the price comes down), one more treat when cheap.
+     * and more food when it is a fifth or more under what it expects (a day or two's put by, as its purse runs to); a
+     * treat or a luxury not at all when it is over what it will pay (the refusal booked, so the price comes down), one
+     * more treat when it is a quarter under.
      */
     public static int decide(ServerLevel level, VillageFolkEntity f, ItemStack one, double each, Need need, int n) {
         UUID village = f.ownerId();
@@ -314,14 +314,14 @@ public final class Purchases {
             case FOOD -> {
                 // Cheap: a day or two's meals put by, as far as its purse runs to without the slate.
                 if (ratio <= 0.8) {
-                    int extra = Math.max(2, n);
+                    int extra = Math.min(4, Math.max(2, n / 2));
                     while (extra > 0 && !canPay(f, each * (n + extra))) extra--;
                     k = n + extra;
                 }
             }
             case TOOL, WORK -> { }
             default -> {
-                if (ratio > limit(f, need)) {
+                if (each > willing(f, one, need)) {
                     refuse(level, f, one, each, n);
                     return 0;
                 }

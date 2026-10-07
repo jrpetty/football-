@@ -146,7 +146,9 @@ public final class FolkTalk {
             case BUILD -> Asks.build(f, p, text);
             case GUIDE -> Guide.ask(f, p, text);
             case PRAISE -> praise(f, p, op, day);
-            case WORTH -> Wealth.talk(f, text) + Bank.talkLine(f);     // and its savings and its mortgage at the bank
+            // and its savings and its mortgage at the bank; [econ-prices] or, asked about prices, how they stand (Purchases)
+            case WORTH -> has(text.toLowerCase(java.util.Locale.ROOT), "price", "dear", "cost of living", "the slate")
+                ? Purchases.talk(f) : Wealth.talk(f, text) + Bank.talkLine(f);
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
             case FOR_SALE -> Budget.answer(f, p);
@@ -1191,7 +1193,8 @@ public final class FolkTalk {
                 "thank you", "thanks", "you're great", "youre great", "amazing work", "keep it up")) return TalkTopic.PRAISE;
         if (has(t, "money", "wage", "wages", "salary", " earn", "savings", "how rich", "are you rich", "are you poor",
                 "your worth", "you worth", "how much are you", "get paid", "your pay", "best paid", "highest paid", "paid the most",
-                "richest", "most money")) return TalkTopic.WORTH;
+                "richest", "most money",
+                "prices", "how dear", "cost of living", "the slate")) return TalkTopic.WORTH;    // [econ-prices] prices, too
         if (has(t, "good at", "your skill", "talent", "best at", "your level", "what level", "how skilled", "your knack")) return TalkTopic.KNACK;
         if (has(t, "scout", "atlas", "out there", "explore", "explored", "landmark", "beyond the", "what's around", "whats around",
                 "found anything", "discover")) return TalkTopic.ATLAS;

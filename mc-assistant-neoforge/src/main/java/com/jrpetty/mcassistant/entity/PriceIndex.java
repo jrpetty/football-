@@ -359,9 +359,8 @@ public final class PriceIndex {
             Market.Good g = goodNamed(key.substring(2));
             if (g != null) return ShopStock.count(level, village, g.what());
         }
-        ItemStack one = sampleOf(key);
-        if (one.isEmpty()) return 0;
-        return ShopStock.count(level, village, s -> keyOf(s).equals(key));
+        if (sampleOf(key).isEmpty()) return 0;
+        return ShopStock.count(level, village, Stockroom.matcher(key.substring(2)));
     }
 
     @Nullable
