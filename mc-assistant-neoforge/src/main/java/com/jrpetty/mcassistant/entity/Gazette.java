@@ -291,6 +291,8 @@ public final class Gazette {
         String quests = QuestRun.gazette(id, day);                  // [quests] help wanted, and the week's deeds
         if (quests != null) entries.add(quests);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
+        entries = Weave.frontPage(entries);                         // [weave] the biggest story leads
+        front += Weave.headline(entries);                           // [weave] and has the front page's headline
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();
         mark.putLong(MARK, day);

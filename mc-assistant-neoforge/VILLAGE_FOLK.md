@@ -7848,3 +7848,45 @@ cider; a glut becomes twelve fish pies and the gazette says so; the healer's tea
 cold, and the café makes it with no healer; the tailor rolls bandages, the watch's kit takes them, a hurt guard binds
 its own and mends, and the healer binds the wounded; every thing has its recipe, age and worth and the shop's workshop
 makes what no trade does; and the cook's book, the Production page, the card and the stage show it all.
+## How it all fits together
+
+The town's systems were built one at a time; this is where they hear of each other (`entity/Weave`, and a line in
+each system marked `[weave]`). Nothing here is made from nothing: every bucket, plank and coat is the stores' or the
+player's, and every coin comes out of a purse or the treasury.
+
+* **Help the watch.** The guard on a case (or the constable) offers *Help the watch*. Its steps are the real ways to
+  help as the case stands: follow the muddy footprints before the rain takes them, find what was dropped and hand it
+  in, ask those who were about (*seen anything amiss?*), then tell the guard. The treasury pays when the council
+  convicts the right one. Tell the watch you saw somebody do it when they didn't, and if your word is what put them
+  before the council, they never forget it, the town thinks the less of you, the chronicle says so, and the watch
+  wants no more of your help on that case.
+* **Lost pets.** Now and then (a fortnight apart at the least) a town's dog goes off after a rabbit. It waits out past
+  the edge while its household's quest stands. Find it and it follows you home, and the quest is done when it is. Give
+  the quest up, or let it run out, and the dog makes its own way home in the morning.
+* **Fire and flood.** While a fire burns, the elder (or whoever heads the bucket chain) asks at once for water: each
+  bucket you hand over is thrown on the nearest flames and the empty comes back. While the river is in a house, its
+  household's things are to be carried out of its chest and up to one of them on the high ground. When a rebuilding
+  waits on planks, wool or logs the stores have not got, the elder asks for those, and the work goes on as soon as
+  they are in. A household burnt or flooded out with no bed anywhere (no neighbour's spare, no inn, no hall) goes as
+  refugees to the nearest town at peace. Short rations in a drought tempt like hunger.
+* **The library.** Every trade has its book, now the cave dwellers' (caves, veins, hauls, the lost, *light every
+  fifteen blocks*), the watch's (cases solved, its tips), the fleet's (catches, grounds, storms), the tailor's (the
+  season and what was made) and the librarian's own. The town's writers take up the great flood, the great fire and
+  the rebuilding, the life of a cave dweller lost below, the smugglers once their story is over, a poem for a great
+  work opened and a ballad of the auction's famous sale.
+* **The auction and the shop.** Nothing stolen and no forged coin is ever sold or put up. A master's coat, a fine
+  garment or a gold brooch nobody has ordered, and a find of the cave team's that the lodge's full trophy wall has no
+  room for, go under the hammer with who made or found them. A garment won is put on at once and is the height of
+  fashion for the season.
+* **Dressed for the office.** The librarian wants a waistcoat, the constable a felt hat, the auctioneer a top hat, a
+  player leader's steward a long coat, and a cave dweller home from the caves a leather jacket, each in the season's
+  colour when the season's own thing is beyond its purse. The steward and the auctioneer help set the fashion.
+  Newcomers arrive in their old town's colours and come round to the new town's look quicker than most.
+* **And more.** A leader's promise of *more guards* counts only guards in their kit. The gazette's biggest story
+  leads its front page, under a headline. A dog lies at the feet of the child it follows to the library.
+
+The game tests `WeaveGameTests` (w01 to w17) walk each of these through: a case helped and paid for, a wrong word paid
+for, a lost dog found and one given up, water for a fire, a household's things out of a flood (and handed back when
+the quest is given up), planks for a rebuilding, refugees from a burnt house, short rations, nothing stolen sold, a
+coat won and worn, the offices' clothes, the pledge's guards, the front page, the library's new books, and the cave
+team's finds past the six at auction. The unit test `LibraryTextTest` checks that the new books say what happened.
