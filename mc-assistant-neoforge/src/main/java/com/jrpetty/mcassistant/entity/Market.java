@@ -215,7 +215,7 @@ public final class Market {
 
     /** One of a thing's worth by the stores' count alone: dear when they hold little, cheap when they hold plenty.
      *  [econ-prices] The board's old reading, kept for what has no town to ask; in a town the price is the town's
-     *  (PriceIndex, by supply and demand: each(level, village, g)), which starts from this. */
+     *  (PriceIndex, by supply and demand: each(level, village, g)), which heads for this for a thing little wanted. */
     static double each(Good g, int stock) {
         return g.value() * scarcity(g, stock);
     }

@@ -575,7 +575,7 @@ public final class Purchases {
         UUID village = f.ownerId();
         if (village == null || chest == null || !(f.level() instanceof ServerLevel level)) return false;
         if (!word.equals("ration") && !word.equals("meal") && !word.equals("food")) return false;
-        return pays(village, f, Need.FOOD) && Villages.storeChests(level, village).contains(chest);
+        return pays(village, f, Need.FOOD) && (Villages.storeChests(level, village).contains(chest) || Villages.inStoreArea(village, chest));
     }
 
     /**
