@@ -376,6 +376,7 @@ public final class Villages {
         TownJobs.resetForTests();
         JobMarket.resetForTests();
         Market.resetForTests();
+        JobWorth.resetForTests();           // [econ-wages] the day's pay scales
         Homeland.resetForTests();
         Economy.resetForTests();
         Scouts.resetForTests();

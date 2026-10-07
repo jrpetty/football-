@@ -6256,7 +6256,7 @@ public class VillageFolkEntity extends AssistantEntity {
             }
         }
         if (site == null && !ordered && Villages.overStaffed(village, mine)) {
-            for (StationTask other : Villages.shortOfHands(village)) {
+            for (StationTask other : JobWorth.byPay(this, Villages.shortOfHands(village))) {   // [econ-wages] the best paid first
                 if (other == vacancy || other == mine) continue;
                 BlockPos there = findSite(other, radiusFor(other));
                 if (there == null) continue;
@@ -6271,6 +6271,7 @@ public class VillageFolkEntity extends AssistantEntity {
         assignPlot(WorkZone.around(site, radiusFor(vacancy), depthFor(vacancy, site)),
             patchNameFor(vacancy));
         setAutonomous(true);
+        if (!ordered) JobWorth.tookUp(this, mine, vacancy);   // [econ-wages] better pay there: it says so
         if (ordered) {
             long day = level().getDayTime() / 24000L;
             Orders.moved(village, day);                // the day's move, now that it has its ground
