@@ -344,7 +344,7 @@ public class WorkItemsGameTests {
             helper.assertTrue(took && miner.countCarried(s -> s.is(prop)) == 6 && stores(level, id, prop) == 2,
                 "the miner drew six props out of the stores: " + miner.countCarried(s -> s.is(prop)));
             // The gallery: a block of stone with a tunnel two high cut along it, a seam of gravel in its roof.
-            BlockPos g = heart.offset(14, 0, -22);
+            BlockPos g = Kit.surface(level, heart.getX() + 14, heart.getZ() - 22);   // the ground there (the heart may stand on a block)
             gallery[0] = g;
             stone(level, g.offset(-1, 0, -2), 24, 5, 5, (rel, p) -> rel.getZ() == 2 && rel.getY() <= 1 && rel.getX() >= 1 && rel.getX() <= 21);
             for (int dx : new int[]{ 2, 3, 7, 8, 18 }) level.setBlock(g.offset(dx, 2, 0), Blocks.GRAVEL.defaultBlockState(), 3);
@@ -371,7 +371,7 @@ public class WorkItemsGameTests {
             Kit.log("wi01 the propped face: " + propped + ", a hundred ticks' block in " + pace + "; an unpropped face propped: " + bare);
             helper.assertTrue(propped && pace == 85 && !bare, "a propped face is dug in 85 of every 100 ticks: " + pace);
             // A player's prop.
-            BlockPos floor = heart.offset(-10, -1, 12);
+            BlockPos floor = Kit.surface(level, heart.getX() - 10, heart.getZ() + 12).below();
             ServerPlayer p = player(helper, level, floor.getX() + 2.5, floor.getY() + 1, floor.getZ() + 0.5);
             InteractionResult r = useOn(p, level, new ItemStack(prop), floor, Direction.UP);
             BlockState lo = level.getBlockState(floor.above()), hi = level.getBlockState(floor.above(2));
@@ -401,7 +401,7 @@ public class WorkItemsGameTests {
     // ============================================================ wi02: the rope coil
 
     /**
-     * The tailor knots a coil of four string and a leather for the miner, who draws it; at a shaft ten deep the miner lets
+     * The tailor knots a coil of four string and a leather for the miner, who draws it; at a shaft twelve deep the miner lets
      * it down, climbs down, and climbs back up again, the rope left hanging as the mine's way down; and a player lets a
      * coil down the side of a tower and takes it up again by breaking a piece of it halfway down.
      */
@@ -432,18 +432,21 @@ public class WorkItemsGameTests {
             helper.assertTrue(made != null && made.contains("rope coil") && coils == 1, "the tailor made a coil: " + made);
             helper.assertTrue(string0 - string1 == 4 && leather0 - leather1 == 1, "four string and a leather out of the stores");
             helper.assertTrue(WorkTools.kitUp(miner) && miner.countCarried(s -> s.is(coil)) == 1, "the miner drew it");
-            // A shaft ten deep down the middle of a tower of stone, the miner on its lip.
-            BlockPos g = heart.offset(16, 0, 16);
-            stone(level, g, 5, 10, 5, (rel, p) -> rel.getX() == 2 && rel.getZ() == 2);
-            BlockPos cursor = g.offset(1, 10, 2), newFeet = g.offset(2, 9, 2);
+            // A shaft twelve deep down the middle of a tower of stone twenty high, the miner on its lip. The shaft's floor
+            // is eight blocks up the tower: a shaft whose foot is within ten of the world's floor is the deep lava's, and
+            // no miner ropes down into that (CI's flat world is four blocks deep).
+            BlockPos g = Kit.surface(level, heart.getX() + 16, heart.getZ() + 16);
+            stone(level, g, 5, 20, 5, (rel, p) -> rel.getX() == 2 && rel.getZ() == 2 && rel.getY() >= 8);
+            BlockPos cursor = g.offset(1, 20, 2), newFeet = g.offset(2, 19, 2);
             miner.teleportTo(cursor.getX() + 0.5, cursor.getY(), cursor.getZ() + 0.5);
             BlockPos bottom = Ropes.downTheShaft(miner, cursor, newFeet);
             BlockState top = level.getBlockState(newFeet);
             Kit.log("wi02 at the shaft: down to " + bottom + "; the rope's top " + top + "; on it " + java.util.Arrays.toString(Ropes.ridingForTests(miner))
                 + "; coils left " + miner.countCarried(s -> s.is(coil)));
-            helper.assertTrue(g.offset(2, 0, 2).equals(bottom), "down the shaft to its floor: " + bottom);
+            helper.assertTrue(g.offset(2, 8, 2).equals(bottom), "down the shaft to its floor: " + bottom);
             helper.assertTrue(top.getBlock() instanceof RopeBlock && top.getValue(RopeBlock.PART) == RopeBlock.Part.TOP
-                && level.getBlockState(g.offset(2, 0, 2)).getValue(RopeBlock.PART) == RopeBlock.Part.BOTTOM, "the rope let down the shaft to the floor");
+                && level.getBlockState(g.offset(2, 8, 2)).getBlock() instanceof RopeBlock
+                && level.getBlockState(g.offset(2, 8, 2)).getValue(RopeBlock.PART) == RopeBlock.Part.BOTTOM, "the rope let down the shaft to the floor");
             helper.assertTrue(Ropes.ridingForTests(miner)[0] && Ropes.ridingForTests(miner)[1], "the miner climbing down it");
             helper.assertTrue(miner.countCarried(s -> s.is(coil)) == 0, "the coil out of its pack");
             st[0] = g;
@@ -454,7 +457,7 @@ public class WorkItemsGameTests {
             helper.assertTrue(st[0] != null, "set up");
             BlockPos g = (BlockPos) st[0], cursor = (BlockPos) st[1];
             if (phase[0] == 0) {
-                helper.assertTrue(!Ropes.riding(miner) && miner.getY() < g.getY() + 1.0, "the miner down the rope: at " + miner.blockPosition().toShortString()
+                helper.assertTrue(!Ropes.riding(miner) && miner.getY() < g.getY() + 9.0, "the miner down the rope: at " + miner.blockPosition().toShortString()
                     + ", on it " + Ropes.riding(miner));
                 Kit.log("wi02 at the foot of the shaft after " + (level.getGameTime() - (Long) st[2]) + " ticks, at " + miner.blockPosition().toShortString());
                 boolean up = Ropes.upTheShaft(miner, miner.blockPosition(), cursor);
@@ -466,25 +469,25 @@ public class WorkItemsGameTests {
             if (phase[0] == 1) {
                 helper.assertTrue(!Ropes.riding(miner) && miner.getY() >= cursor.getY() - 0.1 && miner.blockPosition().distManhattan(cursor) <= 1,
                     "the miner up the rope: at " + miner.blockPosition().toShortString());
-                boolean stays = level.getBlockState(g.offset(2, 9, 2)).getBlock() instanceof RopeBlock;
+                boolean stays = level.getBlockState(g.offset(2, 19, 2)).getBlock() instanceof RopeBlock;
                 List<String> report = WorkTools.mineReport(miner.ownerId());
                 Kit.log("wi02 up again after " + (level.getGameTime() - (Long) st[2]) + " ticks; the rope still down the shaft: " + stays + "; report " + report);
                 helper.assertTrue(stays, "the rope left as the mine's way down");
                 helper.assertTrue(String.join(" ", report).contains("Ropes: 1 let down a shaft"), "the mine's report has it: " + report);
                 // A player's coil let down the tower's east side, and taken up again.
-                ServerPlayer p = player(helper, level, g.getX() + 3.5, g.getY() + 10, g.getZ() + 0.5);
-                BlockPos edge = g.offset(4, 9, 0), ropeTop = edge.east();
+                ServerPlayer p = player(helper, level, g.getX() + 3.5, g.getY() + 20, g.getZ() + 0.5);
+                BlockPos edge = g.offset(4, 19, 0), ropeTop = edge.east();
                 InteractionResult r = useOn(p, level, new ItemStack(coil), edge, Direction.EAST);
                 int pieces = 0;
-                for (int dy = 0; dy < 12; dy++) if (level.getBlockState(ropeTop.below(dy)).getBlock() instanceof RopeBlock) pieces++;
+                for (int dy = 0; dy < 26; dy++) if (level.getBlockState(ropeTop.below(dy)).getBlock() instanceof RopeBlock) pieces++;
                 BlockState t = level.getBlockState(ropeTop);
                 Kit.log("wi02 the player's coil: " + r + "; " + pieces + " pieces down the side; its top " + t + "; in hand " + p.getMainHandItem());
-                helper.assertTrue(pieces == 10 && t.getBlock() instanceof RopeBlock && t.getValue(RopeBlock.FACING) == Direction.WEST,
-                    "ten pieces down to the ground, hitched to the tower: " + pieces);
+                helper.assertTrue(pieces == 20 && t.getBlock() instanceof RopeBlock && t.getValue(RopeBlock.FACING) == Direction.WEST,
+                    "twenty pieces down to the ground, hitched to the tower: " + pieces);
                 helper.assertTrue(p.getMainHandItem().isEmpty(), "the coil out of the player's hand");
                 boolean broke = p.gameMode.destroyBlock(ropeTop.below(5));
                 int left = 0;
-                for (int dy = 0; dy < 12; dy++) if (level.getBlockState(ropeTop.below(dy)).getBlock() instanceof RopeBlock) left++;
+                for (int dy = 0; dy < 26; dy++) if (level.getBlockState(ropeTop.below(dy)).getBlock() instanceof RopeBlock) left++;
                 int dropped = lying(level, ropeTop, 3.0, s -> s.is(coil));
                 Kit.log("wi02 a piece broken halfway down (" + broke + "): " + left + " pieces left; coils dropped at the top " + dropped);
                 helper.assertTrue(left == 0 && dropped == 1, "the whole rope up, and the coil back: " + left + " left, " + dropped + " dropped");
@@ -953,7 +956,7 @@ public class WorkItemsGameTests {
             helper.assertTrue(moved == 18 * 64 && count(store, s -> !s.isEmpty()) == 18 * 64, "every stack into the stores: " + moved);
             helper.assertTrue(u[0] == 2 && u[1] == 18 && emptyCrates == 2, "both crates unpacked and kept, empty");
             // A crate set down, broken, and set down again by a player: its goods go with it.
-            BlockPos cAt = heart.offset(-8, 0, 8);
+            BlockPos cAt = Kit.surface(level, heart.getX() - 8, heart.getZ() + 8);
             level.setBlock(cAt, WorkItems.SHIPPING_CRATE.get().defaultBlockState(), 3);
             ShippingCrateBlockEntity be = (ShippingCrateBlockEntity) level.getBlockEntity(cAt);
             for (int i = 0; i < 5; i++) be.setItem(i, new ItemStack(Items.BREAD, 10 + i));
@@ -1231,7 +1234,7 @@ public class WorkItemsGameTests {
             helper.assertTrue(wanted.getOrDefault(coil, 0) == 5, "two coils a cave dweller, and one over: " + wanted);
             helper.assertTrue(one != null && two != null && lead.countCarried(s -> s.is(coil)) == 2, "two coils knotted and in the leader's pack");
             // A cliff eight high; the cave the team is making for at its foot, to the east.
-            BlockPos c = heart.offset(16, 0, -24);
+            BlockPos c = Kit.surface(level, heart.getX() + 16, heart.getZ() - 24);
             stone(level, c, 9, 8, 9, (rel, p) -> false);
             BlockPos feet = c.offset(8, 8, 4), target = c.offset(20, 0, 4);
             lead.teleportTo(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5);

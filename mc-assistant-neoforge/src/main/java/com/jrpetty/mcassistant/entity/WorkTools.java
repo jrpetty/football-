@@ -728,9 +728,15 @@ public final class WorkTools {
                     for (int dz = -1; dz <= 1; dz++) {
                         if (dx == 0 && dy == 0 && dz == 0) continue;
                         BlockPos q = p.offset(dx, dy, dz);
+                        boolean face = Math.abs(dx) + Math.abs(dy) + Math.abs(dz) == 1;
+                        // Every log's faces are looked at, whatever was seen before from a corner: a plank met corner
+                        // to corner from one log is still a plank against the next (a cabin's post was felled so).
+                        if (face) {
+                            BlockState fs = level.getBlockState(q);
+                            if (!fs.is(BlockTags.LOGS) && !(fs.getBlock() instanceof LeavesBlock) && !natural(fs)) return List.of();
+                        }
                         if (!seen.add(q.asLong())) continue;
                         BlockState s = level.getBlockState(q);
-                        boolean face = Math.abs(dx) + Math.abs(dy) + Math.abs(dz) == 1;
                         if (s.is(BlockTags.LOGS)) {
                             if (q.getY() < base.getY()) continue;            // not down into the roots or the ground
                             if (out.size() < FellingSawItem.MOST_LOGS) {
