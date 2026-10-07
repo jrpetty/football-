@@ -331,7 +331,7 @@ public final class Pastimes {
     // ------------------------------------------------------------------ the children's afternoons
 
     /** What the children's afternoon is (each half of it): their own games (Families), a kickabout, or kites. */
-    static final int GAMES = 0, BALL = 1, KITES = 2;
+    public static final int GAMES = 0, BALL = 1, KITES = 2;
     /** Each town's afternoon, as decided for the half it is: {day * 2 + half, what}. */
     private static final Map<UUID, long[]> AFTERNOON = new ConcurrentHashMap<>();
 
@@ -557,6 +557,23 @@ public final class Pastimes {
         if (v == null) return null;
         WANTS.remove(v.id());
         return craftNow(level, v, f, f.stationTask());
+    }
+
+    /**
+     * Tests: one of this made now by this folk, out of the stores by its recipe, as its turn at the pastimes makes it
+     * (wanted or not), if it is its trade's work; what it made, or empty.
+     */
+    public static ItemStack makeForTests(ServerLevel level, VillageFolkEntity f, Item it) {
+        Villages.Village v = f.ownerId() == null ? null : Villages.get(f.ownerId());
+        if (v == null || !makes(v.id(), f.stationTask(), it)) return ItemStack.EMPTY;
+        WANTS.remove(v.id());
+        Bench.Hand hand = Bench.handOf(level, v, f, VillageFolkEntity.buildingFor(f.stationTask()));
+        return make(level, v, f, hand, it);
+    }
+
+    /** Tests: the photographs' stage set out now by this spot (LeisureStage). Its lines. */
+    public static List<String> stageForTests(ServerLevel level, Villages.Village v, BlockPos near) {
+        return LeisureStage.stage(level, v, near);
     }
 
     /** Tests: the town's bench now (no tailor, no shop): what it made, or null. */

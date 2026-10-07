@@ -7850,6 +7850,149 @@ cider; a glut becomes twelve fish pies and the gazette says so; the healer's tea
 cold, and the café makes it with no healer; the tailor rolls bandages, the watch's kit takes them, a hurt guard binds
 its own and mends, and the healer binds the wounded; every thing has its recipe, age and worth and the shop's workshop
 makes what no trade does; and the cook's book, the Production page, the card and the stage show it all.
+
+## Home comforts and play
+
+Seven new things for the town's homes, its children and its evenings: a patchwork quilt for the bed, a lute for the
+buskers, a draughts board for the tavern, kites and a leather football for the children, paper lanterns for the
+festivals, and a slate and chalk for the schoolroom. Each has a real recipe (you can make every one at a crafting
+table), each is made by a trade of the town out of the stores whenever the town wants one, and each is used, by the
+folk and by you.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Patchwork Quilt | six wool in two rows of three, of three colours or more | Wood | 3.2c | the tailor, of the stores' odd wool (the shop's workshop with no tailor) | laid over a bed: a better night, warm in winter |
+| Lute | three planks, two sticks and three string | Wood | 2.6c | the shop's workshop; a busker in a town with no maker makes its own | the buskers' instrument, and the tavern band's |
+| Draughts Board | two planks under a black dye (or an ink sac) and a white dye (or bone meal) | Wood | 1.8c | the shop's workshop | on the tavern's table and in the park, for real games of an evening |
+| Kite | three paper, two sticks, a string and any dye: a kite of the dye's colour | Wood | 1.4c | the tailor or the shop's workshop | the children fly them on dry, windy afternoons |
+| Leather Football | four leather round a wool | Wood | 3.0c | the tailor (the shop's workshop with no tailor) | a real ball: the children's kickabouts and the league's matches |
+| Paper Lantern (16 colours) | paper, a torch and a dye make two | Wood | 0.6c | the tailor or the shop's workshop | strung across the square on festival nights; light 12 |
+| Slate and Chalk | smooth stone, a stick and bone meal | Stone | 1.0c | the shop's workshop (the mason at the town's bench with no shop) | the schoolchildren's: they learn a quarter faster |
+
+The football and the lanterns are the Wood Age's, though leather and a torch would make them the Stone Age's by the
+usual rule: a young town has its hunters' hides and the torches on its lamp posts. A town with neither a tailor nor a
+shop yet still gets what it wants: a hand it can spare goes to the storehouse's bench and makes it there (the rancher
+the quilts, kites and footballs, the woodcutter the lutes and boards, the smelter the slates, anybody the lanterns).
+
+**The patchwork quilt.** A quilt of bright patches, plain cloth between cream squares sewn with little flowers, laid
+over a bed: the foot and half the head, hanging down the sides and the foot, the pillow left showing. When somebody
+sleeps in the bed, the quilt is drawn up over them to the shoulders.
+* *Made* by the tailor of the town's odd wool: six of it, the colours the stores have least of first, never the wool
+  the town's beds are waiting on.
+* *Bought.* Of an evening, a household with a bed and no quilt, and the coins to spare, buys one at the shop out of its
+  own purse; the one who bought it carries it home and lays it on the bed. The tailor keeps one or two made while
+  households are saving up for one.
+* *Slept under.* A folk who sleeps under a quilt wakes the happier for it ("I slept like a log under my patchwork
+  quilt"), and in winter the happier again ("snug as anything"). A cold mends quicker under one: a sixth of a day a
+  night, a third in winter. Its card says it sleeps under a patchwork quilt.
+* *A wedding's gift.* With a wedding coming, the tailor makes one more, and at the wedding the town gives it to the
+  couple before everybody, to lay on their bed.
+* *You:* right-click either half of a bed with one to lay it over the bed. Break it to take it up again.
+
+**The lute.** A round-bellied lute with a long neck and three strings: the busker's own instrument.
+* *The buskers.* A busker goes out with its lute: its own, or one it buys at the shop out of what its hat has taken
+  (keeping a few coins by), or the stores' lute lent for the evening and put back after. Only with no lute to be had
+  does it fall back on a note block. It holds the lute in its hands and plays a real tune on the guitar's voice, the
+  harp ringing over it on the strong beats and a low string at the start of each bar, the notes rising off it, and it
+  slips less than on a note block. A lute draws one more listener, and more readily, and the coins come the readier.
+* *The band.* At the tavern and at weddings, a musician with a lute plays it in the band, and one with nothing to play
+  borrows the stores' lute when there is no note block to lend.
+* *Made* by the shop's workshop: a lute for each busker without one of its own (three at most), and one for the band.
+  In a town with no shop, a busker with nothing to play makes itself a lute at the bench of an evening, out of the
+  stores, and keeps it (its card: "plays a lute of its own").
+* *You:* hold right-click to strum a tune.
+
+**The draughts board.** A green and buff board with its red and black men on it.
+* *Set out.* A hand sets the town's board on one of the tavern's tables (its cloth back into the stores), and puts up
+  a table in the park for the second: a fence post with a bench either side.
+* *Played.* Of an evening at the tavern, and on the day of rest in the park when it is dry, two of the town sit down to
+  a game: a real one, by the rules (a capture must be taken, jumps go on, a man reaching the far row is crowned). The
+  men move on the board for you to watch, a move every few seconds, with a "King me!" or "Got you!" now and then. A
+  sharp player (curious, hardworking, the quiet and the old, and those who have won before) plays the better move more
+  often, and wins the more; the easygoing and the chatterers less.
+* *After.* The winner is the happier the next day ("crowned three, I did!"), the two are the friendlier for a game (the
+  more for a close one), each card keeps its record ("draughts: 5 won, 2 lost"), and the gazette has the result.
+* *The fair's tournament.* At the fair, the town's best four play two semi-finals and a final, each a real game; the
+  champion goes in the chronicle, with a purse of three coins out of the treasury.
+* *You:* right-click a board to challenge whoever of the town is nearest. It sits down with you to a short game (a
+  dozen moves on the board), then it is settled by its skill and a roll of the dice against yours and the board as it
+  stands, and the result is said aloud.
+
+**The kite.** A diamond of paper on two sticks, in its dye's colour, with a tail of bows.
+* *The wind.* Every day has its wind, from hardly a breath to a blustery day, a little stronger in spring and autumn and
+  weaker in summer. No kite goes up in the rain or without wind enough.
+* *The children.* On a dry afternoon with wind enough (some afternoons it is a kickabout, some kites, some their own
+  games), the children fly kites in the park, or on the square with no park: each with a kite of its own or one lent
+  out of the stores and put back after. It runs to its place on the green and sends it up: the kite climbs high over
+  its head on its string, downwind, swaying and bobbing, higher the windier it is. The children are the happier for it
+  the next day ("My kite went ever so high!"), and the gazette notices.
+* *Made* by the tailor or the shop's workshop, in whatever colour the stores have the dye for (a colour the town's kites
+  lack first): one for every two children, four at most.
+* *You:* right-click to send it up; it flies over your head and follows you wherever you walk. Right-click again (or
+  put it away) to reel it in. Dye it again at the crafting table, as you would leather.
+
+**The leather football.** A real ball of stitched leather panels with a lace at its mouth.
+* *A real ball.* It falls and bounces (a little less each time), rolls and slows on the grass, and comes back off a wall
+  or a goal post. Walk or run into it and it goes on ahead of you (a dribble); punch it to kick it the way you look;
+  right-click it for a tap; sneak and right-click to pick it up. It knows who touched it last.
+* *The kickabout.* On a kickabout afternoon the children take the town's football out of the stores to the park (or the
+  square), stand in a ring and pass it about: the one nearest runs to the ball and passes to another, who comes to meet
+  it. Join in and they pass to you too. They are the happier for it the next day, and at the end of the afternoon the
+  ball goes back into the stores. A town's ball nobody has played with for a minute takes itself home.
+* *The league.* The league's matches are played with the leather football when the town has one (else a slime ball, or
+  a scrap of leather, as before): a real ball on the centre spot, struck and rolling. A goal is the goal of whoever
+  touched it last, so a player at a match can score, with its own name in the score, the chronicle and the gazette.
+* *Made* by the tailor: one for the kickabouts once the town has two children, and one for its pitch.
+* *You:* right-click the ground to set one down.
+
+**The paper lanterns.** A round paper shade in any of the sixteen colours on a light frame with dark wooden caps, lit
+from inside (light 12). It stands on the ground, or hangs under a block, a fence, a wall, a chain or a line of string,
+with a tassel below.
+* *Festival nights.* On the evening of a festival the town gathers for (the May dance, the midsummer bonfire, the fair
+  and the harvest festival), before dusk a hand strings lanterns across the square out of the stores: a post at each
+  end of a line, string between their tops, and a lantern hung every other block in all the colours the stores have,
+  and a second line when there are lanterns enough. The square glows all evening; the folk who are there are the
+  happier for a lit festival ("like stars, they were"), and the chronicle and the gazette have it. The morning after, a
+  hand takes them down, and every lantern, string and post goes back into the stores (what is up is written in the
+  town's books, so nothing is lost over a restart).
+* *Made* by the tailor or the shop's workshop: the town keeps eight for its festivals, one of each of eight colours.
+* *You:* place one on the ground, or under anything that holds it up. String a line of your own across a street.
+
+**The slate and chalk.** A dark slate in a wooden frame, a stick of chalk with it.
+* *The schoolroom.* The teacher keeps a set of slates out of the stores. A pupil at its desk with no slate is handed
+  one at the lesson and keeps it for its schooling, carrying it in its hand on the way to school and at its desk, with
+  the day's lesson chalked on it ("The farmer's trade: sow, weed, reap"). A child with a slate learns about a quarter
+  faster. Each beat of the lesson uses a little chalk; when it is gone, another slate comes out of the stores. A child
+  who grows up gives its slate back for the next.
+* *Made* by the shop's workshop while the school stands: a slate for each pupil without one, and a spare.
+* *You:* right-click to chalk a line on it (rename it at an anvil to choose the words, or let it doodle); sneak and
+  right-click to wipe it. The chalk wears as you write.
+
+**Where to look.** The folk's card has a **Pastimes** line (its quilt, its draughts record, its kite, its lute, its
+slate), and its doing line says what it is about ("flying a red kite in the park", "playing draughts with Wren at the
+tavern (31 moves; 9 pieces to 7)"). The gazette has a **Home and play** piece: yesterday's football and its goals, the
+draughts, the kites and the lanterns. `/village items leisure` lists what the town has and wants of each, who made
+what lately and what it is short of. Operators: `/village items leisure make` sets the town's makers at it now, and
+`/village items leisure stage` sets the scene for the pictures where you stand: a wall with the seven in frames and
+lanterns along its top, a quilt on a bed with somebody asleep under it, a game of draughts under way, a lute being
+played, children flying kites and having a kickabout, and the lanterns strung across the square.
+
+The game tests `LeisureGameTests` (ls01 to ls10) check that the quilt's recipe wants three colours, the tailor makes
+one of the odd wool, a household buys it and lays it on its bed, a winter's night under it is a happier, warmer morning
+and a shorter cold, the wedding's gift is given, and a player lays one; that the shop's workshop makes a lute for the
+buskers, a busker with no note block plays the stores' lute in its hands and takes a coin where a note block's busker
+does not, the lute goes back after, a busker in a town with no maker makes its own, and a player strums; that the
+board is made and set on the tavern's table, two folk play a real game to its end with the men moving on the board,
+the winner is the happier and the two the friendlier, the sharper player wins the more, a player's challenge is
+settled, and the fair's champion is in the chronicle; that the kite takes its dye's colour, a child flies the stores'
+kite high and downwind, is the happier, and the kite goes back, and a player flies one and reels it in; that the
+football is made and is a real ball (it bounces and settles, rolls and slows, comes off a wall, and a punch kicks it)
+and a player sets it down and picks it up; that the children's kickabout passes the ball and a player joins in; that
+the league's match uses the leather ball, counts a player's goal to the player and a shot that rolls in; that the
+sixteen lanterns light the square on a festival night and all come down into the stores after; that a child with a
+slate learns about a quarter faster; and that all seven are in the books, the town's own bench makes what a town with
+no tailor or shop wants, and the stage sets out.
+
 ## How it all fits together
 
 The town's systems were built one at a time; this is where they hear of each other (`entity/Weave`, and a line in

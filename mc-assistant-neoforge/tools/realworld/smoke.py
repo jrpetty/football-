@@ -2499,6 +2499,62 @@ def kitchen_stage(r, look, cx, cz):
     say("alive after the kitchen: %s" % client_alive())
 
 
+def leisure_stage(r, look, cx, cz):
+    """[leisure] Home comforts and play (entity/Pastimes, item/LeisureItems). In the children's afternoon (the kites and the
+    kickabout are an afternoon's), run out past the town's west side, /village items leisure stage levels a patch of
+    ground and sets out a spruce wall with the seven in item frames (the patchwork quilt, the lute, the draughts board, a
+    red kite, the leather football, a slate with a line chalked on it, a paper lantern) and a row of paper lanterns along
+    its top, one of every colour, two more hanging from posts at its ends; before it a bed with the quilt on it and one of
+    the town asleep under it, a draughts table (a post and two benches) with a game under way, and the football on the
+    grass. Then the things in use: the town's buskers out with lutes (else a folk playing one by the wall), two children
+    flying kites high over the showcase, a child with its slate, the children's kickabout on their green, lanterns strung
+    across the square, and with a pitch, a league match with the leather ball. Pictures: the showcase, the draughts game,
+    the quilt, the lute, the kites, the slate, the kickabout, the match; then night falls, and the lanterns over the
+    square and along the wall, lit. Then /village items leisure gives the town's books of it."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("weather clear")
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    r.cmd("time add %d" % ((8000 - now) % 24000))           # on to the afternoon (never /time set: the town counts its days)
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx - 40, cz + 30                                # beside the town, where the stage levels its own ground
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 14, sz + 14))
+    time.sleep(8)                                            # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village items leisure stage" % (sx, sz))
+    say("leisure stage: " + out[:1500])
+    num = r"(-?\d+(?:\.\d+)?)"
+    views = {}
+    for name, ex, ey, ez, ax, ay, az in re.findall(r"VIEW (\S+) " + " ".join([num] * 6), out):
+        views[name] = tuple(float(v) for v in (ex, ey, ez, ax, ay, az))
+    if not views:
+        say("nothing staged for home and play; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        ex, ey, ez, ax, ay, az = views[name]
+        look("34-leisure-" + picture, ex, ey, ez, ax, ay, az, wait=wait)
+
+    shoot("showcase", "1-showcase", 8)
+    shoot("draughts", "2-draughts", 5)
+    shoot("quilt", "3-quilt", 5)
+    shoot("busker", "4-lute", 6)
+    shoot("lute", "4-lute", 5)
+    shoot("kites", "5-kites", 8)
+    shoot("slate", "6-slate", 5)
+    shoot("kickabout", "7-kickabout", 6)
+    shoot("match", "8-match", 8)
+    # Night over the square: the lanterns lit (they stay up till the morning after).
+    r.cmd("time add 6500")
+    time.sleep(3)
+    shoot("lanterns", "9-lanterns-at-night", 8)
+    shoot("showcase", "10-showcase-at-night", 6)
+    say("leisure: " + r.cmd("execute positioned %d %d %d run village items leisure" % (cx, hy + 1, cz))[:1500])
+    say("alive after home and play: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

@@ -64,7 +64,7 @@ public final class Draughts {
 
     public static final int RED = 1, BLACK = 2;
     /** A game's longest, in moves (both sides'), before it is called on what is left on the board. */
-    static final int LONGEST = 90;
+    public static final int LONGEST = 90;
     /** A player's challenge: so many moves, then the dice. */
     static final int SHORT_GAME = 12;
     /** The tavern's evening games and the park's rest-day games. */

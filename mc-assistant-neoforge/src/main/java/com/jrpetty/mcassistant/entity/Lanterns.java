@@ -43,7 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p><b>Made</b> by the tailor or the shop's workshop: a sheet of paper and a torch and a dye make two, in the dye's
  * colour. The town keeps eight for its festivals, in eight colours.
  */
-final class Lanterns {
+public final class Lanterns {
 
     private Lanterns() {}
 
@@ -52,7 +52,7 @@ final class Lanterns {
     /** The posts' height; the string on their tops; the lanterns hung a block under it. */
     static final int POST = 4;
     /** The festival's colours, eight lanterns kept for it. */
-    static final DyeColor[] COLOURS = { DyeColor.RED, DyeColor.YELLOW, DyeColor.ORANGE, DyeColor.LIGHT_BLUE, DyeColor.LIME, DyeColor.PINK,
+    public static final DyeColor[] COLOURS = { DyeColor.RED, DyeColor.YELLOW, DyeColor.ORANGE, DyeColor.LIGHT_BLUE, DyeColor.LIME, DyeColor.PINK,
         DyeColor.MAGENTA, DyeColor.WHITE };
     /** Lanterns at least for a line. */
     static final int LEAST = 3;

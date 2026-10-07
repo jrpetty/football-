@@ -34,12 +34,12 @@ import java.util.concurrent.ConcurrentHashMap;
  * from the stores. The shop's workshop keeps the stores in slates while the school has pupils (a slate for each with
  * none, and a spare); a town with no shop has its smelter (its mason) make them at the storehouse's bench.
  */
-final class Slates {
+public final class Slates {
 
     private Slates() {}
 
     /** How much quicker a child with a slate learns, in percent. */
-    static final int BONUS = 25;
+    public static final int BONUS = 25;
     /** The mark on the school's own slates. */
     static final String SCHOOL = "mca_school_slate";
 

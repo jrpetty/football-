@@ -274,6 +274,12 @@ public final class Lutes {
         return v == null ? ItemStack.EMPTY : makeOwn(level, v, f);
     }
 
+    /** Tests: the lute into its hand, as a busker at its pitch takes it up (Buskers.busk). Whether it holds one now. */
+    public static boolean inHandForTests(VillageFolkEntity f) {
+        inHand(f);
+        return isLute(f.getMainHandItem());
+    }
+
     /** Tests: the town's evening look for a busker to make its own lute, now. */
     public static void tickForTests(ServerLevel level, Villages.Village v, long day) {
         MADE_OWN.remove(v.id());

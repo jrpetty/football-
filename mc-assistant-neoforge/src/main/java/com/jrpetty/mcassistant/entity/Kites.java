@@ -495,6 +495,12 @@ public final class Kites {
         return child.ownerId() == null ? null : hold(level, child, child.ownerId(), dt % 24000L, dt / 24000L);
     }
 
+    /** Tests: the child's place on the green now (where it runs to fly its kite). */
+    public static BlockPos placeForTests(ServerLevel level, VillageFolkEntity child) {
+        Villages.Village v = child.ownerId() == null ? null : Villages.get(child.ownerId());
+        return v == null ? child.blockPosition() : place(level, child, v);
+    }
+
     /** Tests: the kite this flier has up, or null. */
     @Nullable
     public static KiteEntity flyingForTests(ServerLevel level, UUID flier) {

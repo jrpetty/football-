@@ -48,14 +48,14 @@ import java.util.function.Predicate;
  * log"), and in winter the happier again ("snug as anything"); and a cold mends the quicker under one, a good deal
  * quicker in winter. Its card says it sleeps under a patchwork quilt.
  */
-final class Quilts {
+public final class Quilts {
 
     private Quilts() {}
 
     /** A good night under a quilt; and in winter, warm as well. */
-    static final int RESTED = 4, WARM = 4;
+    public static final int RESTED = 4, WARM = 4;
     /** What a night under a quilt takes off a cold (ticks of it): in winter, and the rest of the year. */
-    static final int MENDS_WINTER = 8000, MENDS = 4000;
+    public static final int MENDS_WINTER = 8000, MENDS = 4000;
     /** Quilts kept made for the households that are saving for one, at most. */
     static final int FOR_SALE = 2;
 
