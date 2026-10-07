@@ -162,6 +162,7 @@ final class StoryLostChild implements QuestStories.Story {
         }
         // The world: the toy on the way (whittled for it of the stores' wood), the child gone while nobody watched.
         ItemStack toy = QuestItems.make(level, v, parent, McAssistantMod.WOODEN_TOY.get());
+        if (toy.isEmpty()) toy = whittled(level, v);
         if (!toy.isEmpty()) {
             QuestItems.stamp(toy, q.id, cn + "'s wooden horse", "Whittled for " + cn + " by " + pn + ".");
             ItemEntity e = QuestItems.drop(level, clue, toy);
@@ -177,6 +178,29 @@ final class StoryLostChild implements QuestStories.Story {
         SearchParties.start(level, v, child, level.getGameTime());
         Villages.tell(id, day, cn + " did not come home at dusk; " + pn + " is asking everybody for help");
         return q;
+    }
+
+    /**
+     * The toy whittled by its parent when the bench would not make it: a young town keeps every plank back for its
+     * builders (Bench's keeps, the Wood Age), but a parent's whittling is a plank and two sticks, not a seller's stock,
+     * so they come out of the stores all the same (a third plank split for the sticks if there are none). Nothing
+     * when the stores have not the wood at all.
+     */
+    static ItemStack whittled(ServerLevel level, Villages.Village v) {
+        java.util.function.Predicate<ItemStack> plank = s -> s.is(net.minecraft.tags.ItemTags.PLANKS) && s.getComponentsPatch().isEmpty();
+        java.util.function.Predicate<ItemStack> stick = s -> s.is(net.minecraft.world.item.Items.STICK) && s.getComponentsPatch().isEmpty();
+        boolean sticks = Market.stock(level, v.id(), stick) >= 2;
+        if (Market.stock(level, v.id(), plank) < (sticks ? 1 : 3)) return ItemStack.EMPTY;
+        if (!TownWork.take(level, v, plank, sticks ? 1 : 3)) return ItemStack.EMPTY;
+        if (sticks) {
+            if (!TownWork.take(level, v, stick, 2)) {
+                Crafts.giveBack(level, v, net.minecraft.world.item.Items.OAK_PLANKS, 1);
+                return ItemStack.EMPTY;
+            }
+        } else {
+            Crafts.giveBack(level, v, net.minecraft.world.item.Items.STICK, 2);   // two planks split make four sticks: two over
+        }
+        return new ItemStack(McAssistantMod.WOODEN_TOY.get());
     }
 
     /** The child it plays with (another child of the town), else a grown neighbour who saw it last. */

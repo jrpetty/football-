@@ -389,12 +389,12 @@ public class QuestGameTests {
         child.ensurePersona();
         mother.earn(20);
         father.earn(10);
-        // The builders' forty-eight planks are kept back from any maker (Bench): sixty, so the toy has its one.
+        // A young town keeps its planks back from any maker (Bench); the parent whittles the toy of them all the same.
         stores(level, heart, 6, 6, new ItemStack(Items.OAK_PLANKS, 60), new ItemStack(Items.STICK, 4), new ItemStack(Items.PAPER, 2),
             new ItemStack(Items.YELLOW_DYE, 1), new ItemStack(Items.BLUE_DYE, 1));
         Villages.forgetStores(village);
         BlockPos place = Kit.surface(level, heart.getX() + 45, heart.getZ() + 20);
-        Predicate<ItemStack> wood = s -> s.is(Items.OAK_PLANKS) || s.is(Items.STICK);
+        Predicate<ItemStack> wood = s -> s.is(net.minecraft.tags.ItemTags.PLANKS) || s.is(Items.STICK);
         int planks0 = stock(level, village, wood);
         Quest q = QuestStories.beginForTests(level, v, "child", Map.of("child", child, "parent", mother, "friend", neighbour, "place", place, "variant", "woods"));
         Kit.log("qg04 begun: " + (q == null ? "no — " + QuestStories.whyForTests(village) : q.title + " by " + q.giverName + "; the child at "
