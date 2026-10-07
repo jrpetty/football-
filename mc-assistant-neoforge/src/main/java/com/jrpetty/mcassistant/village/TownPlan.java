@@ -207,6 +207,7 @@ public final class TownPlan {
                  "infirmary",                                                  // [batchA] the infirmary (entity/Infirmary)
                  "lodge",                                                      // [caves] the Delvers' Lodge (entity/Lodge)
                  "theatre",                                                    // [batchD] the theatre
+                 "townlibrary",                                                // [library] the town library
                  "bakery", "inn" -> "civic";                                   // [batchE] the bakery and the inn
             case "windmill", "orchard", "allotments" -> "fields";        // [batchE] by the farm gate (entity/TownLook.fieldLots)
             case "watchtower" -> "corner";

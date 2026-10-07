@@ -87,7 +87,9 @@ public class BuildGoal extends Goal {
         // [disasters] the fire station, its buckets on a rack and its fire bell (entity/FireSafety)
         "firestation",
         // [caves] the Delvers' Lodge: the cave team's maps, trophies, bunks and gear (entity/Lodge)
-        "lodge");
+        "lodge",
+        // [library] the town library, its real books on its shelves (entity/Library)
+        "townlibrary");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

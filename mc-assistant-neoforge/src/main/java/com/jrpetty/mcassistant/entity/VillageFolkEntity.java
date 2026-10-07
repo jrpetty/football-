@@ -490,6 +490,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // The museum's curator on its errand (Museum): a find fetched out of the stores and set out, a year bound.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel museum
                 && Museum.hold(this, museum)) return;
+        // [library] The library (Library): a writer at its desk with its book and quill, a reader in one of its chairs.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel library
+                && (tickCount % 4 == 2 ? Library.hold(this, library) : Library.busy(this))) return;
         // The family's own (Families): its pet walked; a pet, a garden or a grave to see to; supper at home; a story
         // at bedtime; the children's games of an afternoon. Between its looks, nothing else takes the folk away.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel family
@@ -536,6 +539,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 TownWork.tick(townLevel, home);
                 TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
                 Museum.tick(townLevel, home);           // the museum's finds and its archive
+                Library.tick(townLevel, home);          // [library] its books written, shelved, lent and read
                 Assemblies.tick(townLevel, home);       // the morning assembly, openings, feasts, the council, elections
                 Contentment.daily(townLevel, home);     // how it is doing; at its worst, folk leave
             }
@@ -1265,7 +1269,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected void skillPaceParts(java.util.List<PacePart> parts) {
         int research = CityTree.workPercent(ownerId(), stationTask());
         addPacePart(parts, "the town's research", research);
-        addPacePart(parts, "its knacks", skillWorkPercent() - research);
+        addPacePart(parts, Library.paceWord(this), Library.workPercent(this));          // [library] its trade's book, read
+        addPacePart(parts, "its knacks", skillWorkPercent() - research - Library.workPercent(this));
     }
 
     // ------------------------------ a level in every trade ------------------------
@@ -1282,7 +1287,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected void creditTrade(int amount) {
         StationTask t = stationTask();
-        if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount + FolkSkills.extraXp(this, amount), (a, b) -> Math.min(1_000_000, a + b));
+        if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount + FolkSkills.extraXp(this, amount)
+            + Library.extraXp(this, amount), (a, b) -> Math.min(1_000_000, a + b));                  // [library] an apprentice who read its trade's book
     }
 
     /** What a lesson at the school taught it of a trade (School): put by for the day it takes the trade up. */
@@ -1336,7 +1342,8 @@ public class VillageFolkEntity extends AssistantEntity {
     /** The city's research and its own knacks (CityTree, FolkSkills). */
     @Override
     protected int skillWorkPercent() {
-        return CityTree.workPercent(ownerId(), stationTask()) + FolkSkills.workPercent(this);
+        return CityTree.workPercent(ownerId(), stationTask()) + FolkSkills.workPercent(this)
+            + Library.workPercent(this);                                                        // [library] its trade's book, read
     }
 
     /** A good mood makes for quick hands, a black one for slow ones. */

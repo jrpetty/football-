@@ -272,6 +272,8 @@ public final class Gazette {
         if (quay != null) entries.add(quay);
         String auction = Auctions.gazette(id, day);               // [fleet] what sold at the auction, and to whom
         if (auction != null) entries.add(auction);
+        String books = Library.gazette(id, day);                    // [library] yesterday's new books and editions
+        if (books != null) entries.add(books);
         String war = WarAndPeace.gazette(level, id, day);           // [war-peace] the war, the ultimatum, the treaty
         if (war != null) entries.add(war);
         String street = Buskers.gazette(level, id, day);            // [arms] yesterday's buskers and their hats

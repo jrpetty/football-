@@ -7538,3 +7538,94 @@ the coin goes from its purse to the treasury and the diamond from the stores int
 treasury, and the folk keeps its purse (fa05); and that an Iron Age town wants an auction house
 once it has held three auctions, and with one standing the auctioneer stands behind its rostrum
 and the crowd takes the benches (fa06).
+## The library
+
+Once a Stone Age town is twelve strong it puts a library on its list of things to build, on a lot facing the
+square. It is a stone-footed hall with tall windows. At the back is a lectern with a bookshelf either side of it, in
+the middle a reading table with four chairs, and by the door two writing desks with stools. The books are real
+written books. They stand on chiseled bookshelves round the walls, which are put up out of the stores' planks and
+slabs as the books need room (six books to a shelf, sixteen places for shelves). The newest book lies open on the
+lectern.
+
+**The librarian.** When the library opens, the town chooses a librarian from its folk: the one who likes reading,
+the curious, and at first the teacher before most others. The watch, the scouts and the elder are kept for their own
+work. The chronicle says who was chosen. The librarian lends the books, takes them back, chases the late ones, and
+writes out again any book that is lost.
+
+**Books cost real paper and ink.** Every book is written on a book and quill made out of the stores: a book (paper
+from the town's cane, and leather), a feather and an ink sac. If the stores lack any of them, the book is not
+written, and the writer says what it is short of. Writing takes a folk's own time, an evening or the day of rest,
+sitting at one of the desks. If the writer is called away, it comes back to the desk the next free hour.
+
+**The trade books.** Each trade with a master of level 3 or more has one book of best practice, *The Farmer's Book
+of Rowanfield*, kept by that master and written in its own voice. Everything in it comes from the town's own books:
+
+* what the trade brought in over the last week and since the books began, its best day and what it is worth to
+  the town a day;
+* how the work is done well here, from the master's own field, mine or kitchen, and the trade's lore;
+* what the town *learned the hard way*: a drought, a fire, a fall down the mine, a death, with what to do next time;
+* the age the town is in and what it unlocked (iron hoes, iron picks), and what the next age will bring;
+* the master's own knacks and branch, a tip in its own nature, a memory or a joke;
+* who's who at the trade, with the hands who have read the book.
+
+When something changes (a new record, a new age, a new master, a lesson learned, the town's research), the master
+writes a **new edition** that says what is new, for example *A new record: 150 wheat in a single day, on day 33.
+The old best was ninety-eight.* Smaller changes wait a few days, and a book that has not changed for ten days is
+brought up to date anyway. Every old edition stays on the shelf, marked as superseded.
+
+**The other books.** The town's writers (folk who like reading or music, folk who keep a diary, the curious, and the
+teacher) write from the town's real events:
+
+* **poems** for a wedding (naming the couple; never written by the couple themselves), a death (by trade and by
+  cause), a first big harvest, the fishers, a pet, a birth, a friendship, and the town itself, in rhymed four-line
+  verses;
+* **histories**: how the town was founded, how it grew age by age, its fires, raids and wars, its first year;
+* **lives** of the elder, the founders, the masters and the dead;
+* **how-to books** by a folk with a trade or a hobby to teach: bees, building, bread, fishing, the stars, whittling
+  and more;
+* the teacher's **storybooks** for the children, starring the town's own children, pets and folk.
+
+**Reading.** Folk come to the library in their free time (grown folk of an evening and on the day of rest, children
+of an afternoon) and read in the chairs. Reading pays, a little:
+
+* an apprentice below level 10 that has read its trade's book learns its trade a quarter faster;
+* a hand that has read the current edition works 4% faster (2% for an older edition), shown on its card and in its
+  pace;
+* a child that reads the teacher's storybooks learns a little of the trade it leans to.
+
+**Borrowing.** Ask the librarian (*could I borrow the Farmer's Book?*, *what books have you got?*), or take a book off
+a shelf in the library. You may have two out at once, for three days. Bring a book back to the librarian or put it
+back on a shelf. A late book costs two coins a day, ten at most, and the librarian thinks the less of you. Five days
+late, the book is given up as lost: ten coins go on what you owe the town, everybody thinks a little less of you,
+and the librarian writes it out again. You may also buy a copy of your own for six coins (*could I buy a copy of
+...?*), made from the town's own paper and ink.
+
+**Seeing it.**
+
+* The town's books (the board, `/village stats`) have a **Library** page: the catalogue with every book's spine
+  coloured by kind, the librarian, the writers at work and the loans out.
+* The chronicle records each book written, each new edition, the librarian chosen, and books never brought back. The
+  gazette has a *From the library* corner.
+* Folk talk about it: *Have you read the new edition of the Farmer's Book?* Ask a folk *what are you reading?* or
+  *what are you writing?*
+* `/village library` gives the library's state, its shelves and loans. Operators can also use `/village library
+  read <title>` (a copy of the book named, into your hands), `/village library write` (write the next book now)
+  and `/village library stage` (put up a library with books in it, for screenshots).
+
+The unit test `LibraryTextTest` writes a whole town's shelf of books with no world: every kind, in every voice. It
+checks every page fits a book's page, nothing is left unfilled, the trade book has the town's own numbers and names
+and its new edition says what changed, and a wedding poem names the couple. Run with `-Dlibrary.samples=true`, it
+prints the shelf so the books can be read.
+
+The game tests `LibraryGameTests` (lb01 to lb07) check that:
+* a library stands, has a librarian (the town's reader), and holds trade books on a lectern and on a chiseled
+  bookshelf put up out of the stores, with the ink used up;
+* each trade has one book, written by its master with the town's real numbers (its week, its best day, its hands),
+  and a second edition leaves one current book and one old one;
+* a new record, a new age and a death go into the next edition's *New in this edition*, the old edition is kept,
+  and the chronicle tells of it;
+* a wedding poem is written for a wedding, names the couple, and is not by them;
+* a player borrows a book from the librarian and brings it back on time, then brings one back two days late, is
+  charged four coins and is thought the less of;
+* an apprentice that has read its trade's book learns faster than one that hasn't;
+* every book uses real cane, leather, feathers and ink from the stores, and with none left no book is written.

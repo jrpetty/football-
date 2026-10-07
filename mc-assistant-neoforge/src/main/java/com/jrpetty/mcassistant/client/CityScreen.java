@@ -66,13 +66,16 @@ public class CityScreen extends Screen {
         // [crime] The watch's casebook and the crime rate, after them (CasesPage).
         "Cases",
         // [fleet] The auction and the fishing fleet, after them (AuctionPage).
-        "Auction" };
+        "Auction",
+        // [library] The town library, after them (LibraryPage): its catalogue, its writers, its loans.
+        "Library" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
         "Fashion",                                                                                    // [fashion]
         "Cases",                                                                                      // [crime]
-        "Auction");                                                                                   // [fleet]
+        "Auction",                                                                                    // [fleet]
+        "Library");                                                                                   // [library]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -341,6 +344,10 @@ public class CityScreen extends Screen {
                 }
                 case "Auction" -> {                                                    // [fleet] the auction and the fleet (AuctionPage)
                     List<Component> tip = AuctionPage.draw(g, font, data.getCompound("auction"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Library" -> {                                                    // [library] the town library (LibraryPage)
+                    List<Component> tip = LibraryPage.draw(g, font, data.getCompound("library"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 default -> board(g, x, y, cw, ch);
