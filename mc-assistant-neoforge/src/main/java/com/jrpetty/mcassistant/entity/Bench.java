@@ -492,6 +492,11 @@ public final class Bench {
     private static boolean need(Ctx c, State s, Predicate<ItemStack> what, List<Item> kinds, int n, int depth, Set<Item> path,
                                 boolean crafting, String words) {
         if (n <= 0) return true;
+        if (Kitchen.waterBottle(what, kinds)) {                      // [kitchen] a water bottle: a stores' glass bottle, filled at the well
+            what = x -> x.is(Items.GLASS_BOTTLE);
+            kinds = List.of(Items.GLASS_BOTTLE);
+            words = n == 1 ? "a glass bottle (for water)" : n + " glass bottles (for water)";
+        }
         List<Item> have = new ArrayList<>();
         for (Map.Entry<Item, Integer> e : s.free.entrySet()) {
             if (e.getValue() > 0 && what.test(c.sample(e.getKey()))) have.add(e.getKey());

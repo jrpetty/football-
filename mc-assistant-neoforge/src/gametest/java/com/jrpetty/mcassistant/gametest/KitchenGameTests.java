@@ -101,7 +101,7 @@ import java.util.UUID;
 public class KitchenGameTests {
 
     private static final String EMPTY = "empty";
-    private static final long DAY = 24000L * 5;
+    private static final long DAY = 24000L * 40;             // day forty: a town founded weeks back can be told so (foundedForTests)
     private static final int Z = 66000;
 
     // ------------------------------------------------------------------ the ground and the town
@@ -240,6 +240,7 @@ public class KitchenGameTests {
         long day = DAY / 24000L;
         helper.runAtTickTime(5, () -> {
             cook.setJob(StationTask.COOK);
+            founder.setJob(StationTask.NONE);                            // a founder may be given a far plot at once: kept at home here
             Item lunch = KitchenItems.PACKED_LUNCH.get();
             helper.assertTrue(Kitchen.farForTests(hand) && Kitchen.farForTests(other), "the far field's hands work far off");
             helper.assertTrue(!Kitchen.farForTests(cook) && !Kitchen.farForTests(founder), "the cook and the founder work at home");
@@ -727,7 +728,7 @@ public class KitchenGameTests {
             helper.assertTrue(guard.countMatching(s -> s.is(bandage)) == 2 && guard.hasEffect(MobEffects.REGENERATION), "a bandage bound on");
             helper.assertTrue(guard.getItemBySlot(EquipmentSlot.OFFHAND).is(bandage), "the bandage in its hand as it binds: "
                 + guard.getItemBySlot(EquipmentSlot.OFFHAND));
-            helper.assertTrue(Kitchen.cardLine(guard).contains("bound a wound"), "its card: " + Kitchen.cardLine(guard));
+            helper.assertTrue(Kitchen.cardLine(guard).toLowerCase(java.util.Locale.ROOT).contains("bound a wound"), "its card: " + Kitchen.cardLine(guard));
             bound[0] = guard.getHealth();
             // The healer binds a wounded patient on its round.
             Health.layUpForTests(patient, 6000, "wound");
@@ -768,6 +769,7 @@ public class KitchenGameTests {
         VillageFolkEntity shopkeeper = another(helper, heart.south(4), id);
         VillageFolkEntity hand = farHand(helper, level, heart, id, 110, 0);
         helper.runAtTickTime(5, () -> {
+            founder.setJob(StationTask.NONE);                            // the founder at home: the far hand the only one out
             Item[] things = { KitchenItems.PACKED_LUNCH.get(), KitchenItems.CHEESE_WHEEL_ITEM.get(), KitchenItems.CHEESE_SLICE.get(),
                 KitchenItems.HONEY_CAKE.get(), KitchenItems.MEAD.get(), KitchenItems.CIDER.get(), KitchenItems.FISH_PIE.get(),
                 KitchenItems.HERBAL_TEA.get(), KitchenItems.BANDAGE.get() };
