@@ -2499,6 +2499,364 @@ def kitchen_stage(r, look, cx, cz):
     say("alive after the kitchen: %s" % client_alive())
 
 
+def fletcher_stage(r, look, cx, cz):
+    """[fletcher] The fletcher (entity/Fletchers). /village fletcher stage, run at the town: its fletcher (one taken up
+    from the town's own if it has none), the fletcher's hut stamped on a lot of its own by the square if it has none, the
+    makings put by in the stores for the pictures (gravel, feathers, planks, flint, string: a showcase's, and said so),
+    four pieces of the fletcher's work done (the table made and set in the hut, gravel sifted on the floor in front of it,
+    arrows and bows made), and practice called at the range if the town has one. Pictures: the hut from the street, the
+    fletcher at its table inside, and (with a range) the watch at the butts with the fletcher calling the shots; then
+    /village fletcher said."""
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx + 12, hy + 20, cz + 12))
+    time.sleep(6)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d %d %d run village fletcher stage" % (cx, hy + 1, cz))
+    say("fletcher stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the fletcher; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("35-fletcher-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("fletcher-hut", "1-hut", 8)
+    shoot("fletcher-table", "2-table", 6)
+    time.sleep(25)                                     # the watch walks down to the butts and starts to shoot
+    shoot("fletcher-range", "3-practice", 4)
+    say("fletcher: " + r.cmd("execute positioned %d %d %d run village fletcher" % (cx, hy + 1, cz))[:1200])
+    say("alive after the fletcher: %s" % client_alive())
+
+
+def golems_stage(r, look, cx, cz):
+    """[golems] The golem keeper (entity/Golems). /village golems stage, run at the town: its keeper (one taken up from
+    the town's own if it has none: a town not yet in the Iron Age is put there for the stage, and two raids written in
+    its books, and it says so), the golem yard stamped by the square if it has none, iron, pumpkins and shears put by in
+    the stores (a showcase's), and an iron golem raised at the square the game's own way: four blocks of iron in a T and
+    a pumpkin carved on top, the game's check standing it up. The new golem is then set hurt for the keeper's round.
+    Pictures: the square before and after the golem stands, the yard, and a while later the golem mended at its post;
+    then /village golems said."""
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx + 10, hy + 16, cz + 14))
+    time.sleep(6)
+    out = r.cmd("execute positioned %d %d %d run village golems stage" % (cx, hy + 1, cz))
+    say("golems stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the golems; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("36-golems-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("golems-raised", "1-raised", 6)
+    shoot("golems-yard", "2-yard", 6)
+    time.sleep(30)                                     # the keeper's round: to the hurt golem with the stores' ingots
+    shoot("golems-raised", "3-mended", 4)
+    say("golems: " + r.cmd("execute positioned %d %d %d run village golems" % (cx, hy + 1, cz))[:1200])
+    say("alive after the golems: %s" % client_alive())
+
+
+def fields_items_stage(r, look, cx, cz):
+    """[fields] The tools of the fields and the pens (entity/FieldTools, item/FieldItems). (Named so: fields_stage is the
+    farms' own stage, above.) Run out past the town's west side, /village items fields stage levels a patch of ground and
+    sets out a wall of item frames with the copper watering can, the seed satchel, the copper sickle and the bee smoker over
+    the nesting box, the feed trough, the fish trap and the rain barrel, the four blocks again in a row before it (eggs on
+    hay, a heaped trough, a trap with a catch in its pool, a barrel brim full); a wheat field round a water hole with a
+    farmer watering its young rows from the can (splashing for a minute) beside a rain barrel, and another at the ripe rows
+    with the sickle and the satchel; a pen with its box and trough, two hens and two sheep, the rancher at the gate; a pond
+    with two traps and the fisher; a full hive with the beekeeper smoking it. Pictures: the wall close up, the watering, the
+    reaping, the pen, the traps, the smoker. Then /village items fields gives the town's books on its tools."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx - 44, cz + 30                          # beside the town, where the stage levels its own ground
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 14, sz - 14))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village items fields stage" % (sx, sz))
+    say("fields stage: " + out[:1200])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the fields' tools; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("34-fields-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("fields-1-showcase", "1-showcase", 8)
+    shoot("fields-2-watering", "2-watering", 5)
+    shoot("fields-3-reaping", "3-reaping", 5)
+    shoot("fields-4-pen", "4-pen", 5)
+    shoot("fields-5-traps", "5-traps", 5)
+    shoot("fields-6-smoker", "6-smoker", 5)
+    say("fields' tools: " + r.cmd("execute positioned %d %d %d run village items fields" % (cx, hy + 1, cz))[:1200])
+    say("alive after the fields' tools: %s" % client_alive())
+
+
+
+def interviews_stage(r, look, cx, cz):
+    """[interviews] Job interviews you can watch (entity/Interviews, InterviewScript, InterviewTable). In the morning, after
+    the assembly, /village interviews stage smith puts a notice up for a blacksmith and sets an interview for it with the
+    town's three best hands at the forge (one given a marked iron sword to show if none has a piece of its own), at the
+    hall's long table or at a table set out by the board; /village interviews now begins it, at its own pace, a line every
+    four or five seconds. The pictures are timed by the last line said (/village interviews: "Now: ...; last said, ..."),
+    so the bubbles are up: the bench with the candidates holding their letters as the chair opens; the first candidate
+    across the table as its letter is read out, from the side and over its shoulder; the smith holding up its work as the
+    master looks it over; the choice announced; the handshake and the chosen's thanks. Last, what /village interviews
+    says, and the town's books open at the Interviews page. The camera stays within earshot of the table throughout
+    (folk speak only to players within twenty-four blocks)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("weather clear")                             # nobody interviews in a thunderstorm
+
+    def clock_to(target):
+        m = re.search(r"(\d+)", r.cmd("time query daytime"))
+        now = int(m.group(1)) % 24000 if m else 6000
+        r.cmd("time add %d" % ((target - now) % 24000))   # forward only (time set would put the world's days back)
+
+    clock_to(2600)                                     # the morning, the assembly over: interviews begin after it
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 12, cz))
+    time.sleep(5)
+    at = "execute positioned %d %d %d run village interviews" % (cx, hy + 1, cz)
+    r.cmd(at + " hurry off")                           # at their own pace: a bubble up for every shot
+    views = {}
+
+    def read(out):
+        for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+            views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+
+    out = r.cmd(at + " stage smith")
+    say("interviews stage: " + out[:1200])
+    read(out)
+    if not views:                                      # no table found yet (the ground still loading): once more
+        time.sleep(15)
+        out = r.cmd(at + " stage smith")
+        say("interviews stage again: " + out[:1200])
+        read(out)
+    if not views:
+        say("no interview staged; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("34-interviews-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    def last_said(s):
+        m = re.search(r"last said, ([^\n]*)", s)
+        return m.group(1) if m else ""
+
+    def wait_for(test, most, what):
+        """Ask /village interviews every second and a half till the test holds of what it says; the reply, or None."""
+        end = time.time() + most
+        s = ""
+        while time.time() < end:
+            s = r.cmd(at)
+            if test(s):
+                return s
+            time.sleep(1.5)
+        say("interviews: no %s in %ds; last: %s" % (what, most, s[-500:]))
+        return None
+
+    # Park the camera by the table, so the folk there are heard (and their bubbles sent) from the first line.
+    x, y, z, ax, ay, az = views.get("iv-table", list(views.values())[0])
+    r.cmd("tp %s %.1f %.1f %.1f" % (USER, x + 0.5, y, z + 0.5))
+    out = r.cmd(at + " now")
+    say("interviews now: " + out[:300])
+    if "Not now" in out:                               # a festival, a raid: the next morning, then
+        clock_to(2600)
+        out = r.cmd(at + " now")
+        say("interviews now, the next morning: " + out[:300])
+    if "begin now" not in out:
+        say("the interview did not begin; nothing more to photograph")
+        return
+    # 1. The panel at the table, the candidates on the bench with their letters: as the chair opens.
+    if wait_for(lambda s: re.search(r"#\d+ sitting:", s), 120, "seating"):
+        shoot("iv-bench", "1-bench", 2)
+    # 2. The first across the table, its letter read out: from the side, and over its shoulder at the panel.
+    if wait_for(lambda s: ': "I, ' in last_said(s), 150, "letter read"):
+        time.sleep(1)
+        shoot("iv-table", "2-across", 1)
+        shoot("iv-shoulder", "3-shoulder", 1)
+    # 3. The smith holding up its work, its maker's mark on it, and the master looking it over.
+    if wait_for(lambda s: "My mark's on it" in last_said(s), 420, "work held up"):
+        shoot("iv-panel", "4-work", 1)
+        shoot("iv-table", "5-work-side", 1)
+    # 4. The choice told, and 5. the handshake across the table, and the chosen's thanks.
+    said = wait_for(lambda s: " goes to " in last_said(s), 480, "announcement")
+    if said:
+        time.sleep(1)
+        shoot("iv-table", "6-announced", 1)
+        m = re.search(r" goes to ([^:]+):", last_said(said))
+        chosen = m.group(1) if m else ""
+        if chosen and wait_for(lambda s: last_said(s).startswith(chosen + ": "), 60, "thanks"):
+            shoot("iv-shoulder", "7-handshake", 1)
+            shoot("iv-table", "7b-handshake-side", 1)
+    time.sleep(10)
+    say("interviews: " + r.cmd(at)[:1500])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    # The Interviews page is the last tab of the town's books (CityScreen.TABS), after Transport.
+    say("books: " + r.cmd("execute as %s at @s run village interviews books" % USER))
+    time.sleep(4)
+    shot("34-interviews-8-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the interviews: %s" % client_alive())
+
+
+
+def fireworks_stage(r, look, cx, cz):
+    """[fireworks] The fireworks maker (entity/FireworksMaker, FireworkShows). By day, on ground of its own out past the
+    town to the north-west, /village fireworks stage puts up the powder hut (stone walls and a stone roof, the bench,
+    the powder chest, the cauldron of water, the sign over the door) on the town's books, opens the trade and takes up
+    a maker, gives the stores the makings (gunpowder, paper, the town's dyes, white and yellow, gold nuggets, feathers,
+    glowstone dust) and makes the town's rockets out of them there and then by the game's own recipes. A fireworks maker
+    in its own look (the soot-smudged apron, the brass goggles, the bright scarf) stands at the bench. Pictures: the hut
+    from the path, the maker at the bench, the sign.
+
+    Then the night: the clock moved on to the middle of the night (time add, not time set), the sky cleared, the camera
+    over the square, and /village fireworks stage show sends the stage's eighteen rockets up from a rack on the square,
+    six volleys of three, the first four seconds after the command and one every second and a half after it. They are
+    flight-two rockets, each bursting a second or so after it is lit, nine to twenty blocks up, and the sparks hang for
+    two seconds or more: so the pictures, taken five and a half to thirteen seconds after the command (timed from it,
+    not from the last picture), all have bursts on screen. Last, /village fireworks said (the stock, the tally, the
+    review) and the morning brought back."""
+    num = r"(-?\d+)"
+    pattern = r"VIEW (\S+) " + " ".join([num] * 6)
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx - 60, cz - 55                          # out at the edge of the town, away from the houses
+    r.cmd("tp %s %d %d %d" % (USER, sx + 10, hy + 20, sz + 16))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village fireworks stage" % (sx, sz))
+    say("fireworks stage: " + out[:1200])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(pattern, out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no powder hut staged; nothing to photograph")
+        return
+
+    def shoot(vs, name, picture, wait):
+        if name not in vs:
+            return
+        x, y, z, ax, ay, az = vs[name]
+        look("37-fireworks-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot(views, "hut", "1-hut", 8)
+    shoot(views, "maker", "2-maker", 5)
+    shoot(views, "sign", "3-sign", 4)
+    # The night: the middle of it, the sky clear, the camera over the square first so the ground and the sky are drawn.
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    r.cmd("time add %d" % ((18000 - now) % 24000))
+    r.cmd("weather clear")
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 12, cz))
+    time.sleep(6)
+    sout = r.cmd("execute positioned %d %d %d run village fireworks stage show" % (cx, hy + 1, cz))
+    t0 = time.time()                                   # the first volley goes four seconds after this
+    say("fireworks show: " + sout[:600])
+    sviews = {}
+    for name, x, y, z, ax, ay, az in re.findall(pattern, sout):
+        sviews[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if "show" not in sviews:
+        say("no display: nothing to photograph by night")
+    else:
+        def since(secs):
+            return max(0.3, secs - (time.time() - t0))
+
+        shoot(sviews, "show", "4-display", since(5.8))     # the opening volley's bursts
+        shoot(sviews, "show", "5-display", since(8.2))
+        shoot(sviews, "crowd" if "crowd" in sviews else "show", "6-over-the-square", since(10.6))
+        shoot(sviews, "show", "7-finale", since(13.0))     # the finale's bursts
+        time.sleep(4)
+    say("fireworks: " + r.cmd("execute positioned %d %d %d run village fireworks" % (cx, hy + 1, cz))[:1400])
+    r.cmd("kill @e[tag=fireworks_stage,type=!player]")
+    midday(r)                                          # the morning, for whatever comes next
+    say("alive after the fireworks: %s" % client_alive())
+
+
+
+def identity_stage(r, look, cx, cz):
+    """[identity] What makes a town itself (entity/Identity, Ethos, Government, LawBook, TownTraits, Fame). Two towns
+    made as unlike as they come (/village identity profile): the smoke's own town a mercantile, open, worldly port under
+    an elected leader, Seafarers and Hospitable; a second town off to the north-east a martial, closed, traditional hold
+    under a hereditary lord, Raid-scarred and Iron-willed, with a curfew and its weapons kept by the watch. For each:
+    its board, its one line on it under "How we're doing"; a folk of it saying what its town is like
+    (/village identity speak, the speech bubble in the picture); and its books at the Identity page (the seven axes as
+    bars, its rulers, its renown, its traits as badges, its law-book). And what /village identity says of each."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    num = r"(-?\d+(?:\.\d+)?)"
+
+    def view(out, name):
+        m = re.search(r"VIEW " + name + " " + " ".join([num] * 6), out)
+        return None if not m else [float(v) for v in m.groups()]
+
+    tx, tz = other_town(r, cx + 220, cz - 160, "the hold")
+    towns = [("port", cx, cz), ("hold", tx, tz)]
+    for i, (profile, x, z) in enumerate(towns):
+        y = ground_height(r, x, z)
+        say("%s: %s" % (profile, r.cmd("execute positioned %d %d %d run village identity profile %s" % (x, y + 1, z, profile))[:600]))
+        say("%s, said: %s" % (profile, r.cmd("execute positioned %d %d %d run village identity" % (x, y + 1, z))[:1500]))
+    for i, (profile, x, z) in enumerate(towns):
+        y = ground_height(r, x, z)
+        n = 2 + i * 3
+        r.cmd("tp %s %d %d %d" % (USER, x, y + 6, z + 6))
+        time.sleep(7)                                   # the board writes itself afresh every few seconds
+        v = view(r.cmd("execute positioned %d %d %d run village arms board" % (x, y + 1, z)), "board")
+        if v:
+            look("33-identity-%d-%s-board" % (n, profile), v[0], v[1] - 1.62, v[2], v[3], v[4], v[5], wait=8)
+        else:
+            say("%s: no board known yet; no picture of it" % profile)
+        out = r.cmd("execute positioned %d %d %d run village identity speak" % (x, y + 1, z))
+        say("%s speaks: %s" % (profile, out[:600]))
+        v = view(out, "speaker")
+        if v:
+            look("33-identity-%d-%s-speaks" % (n + 1, profile), v[0], v[1] - 1.62, v[2], v[3], v[4], v[5], wait=2)
+        r.cmd("gamemode creative %s" % USER)
+        r.cmd("tp %s %d %d %d" % (USER, x, y + 1, z))
+        time.sleep(3)
+        say("%s books: %s" % (profile, r.cmd("execute as %s at @s run village identity books" % USER)))
+        time.sleep(4)
+        shot("33-identity-%d-%s-page" % (n + 2, profile))
+        say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+        r.cmd("gamemode spectator %s" % USER)
+    say("alive after the identity stage: %s" % client_alive())
+
+
 def leisure_stage(r, look, cx, cz):
     """[leisure] Home comforts and play (entity/Pastimes, item/LeisureItems). In the children's afternoon (the kites and the
     kickabout are an afternoon's), run out past the town's west side, /village items leisure stage levels a patch of
@@ -2535,7 +2893,7 @@ def leisure_stage(r, look, cx, cz):
         if name not in views:
             return
         ex, ey, ez, ax, ay, az = views[name]
-        look("34-leisure-" + picture, ex, ey, ez, ax, ay, az, wait=wait)
+        look("38-leisure-" + picture, ex, ey, ez, ax, ay, az, wait=wait)
 
     shoot("showcase", "1-showcase", 8)
     shoot("draughts", "2-draughts", 5)
@@ -2902,6 +3260,34 @@ def main():
         transport_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("transport stage failed: %s" % e)
+    try:
+        kitchen_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("kitchen stage failed: %s" % e)
+    try:
+        fletcher_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("fletcher stage failed: %s" % e)
+    try:
+        golems_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("golems stage failed: %s" % e)
+    try:
+        fields_items_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("fields items stage failed: %s" % e)
+    try:
+        interviews_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("interviews stage failed: %s" % e)
+    try:
+        fireworks_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("fireworks stage failed: %s" % e)
+    try:
+        identity_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("identity stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

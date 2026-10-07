@@ -88,8 +88,8 @@ import java.util.function.Predicate;
  *     or ask the storekeeper, and it is handed back. What nobody comes for goes into the stores.</li>
  * <li><b>Milestones.</b> A town of twenty-five, of fifty, of a hundred; each new age; the first
  *     diamond in the stores: each goes into the chronicle as a milestone, and the town celebrates
- *     on the square, with fireworks of the stores' paper and gunpowder if it has them (as the feast
- *     nights do) and word to the players about.</li>
+ *     on the square, with a salute of the fireworks maker's rockets if the stores hold any (FireworkShows)
+ *     and word to the players about.</li>
  * </ul>
  */
 @EventBusSubscriber(modid = McAssistantMod.MODID)
@@ -1049,24 +1049,17 @@ public final class PlayerServices {
     }
 
     /**
-     * The town celebrates on the square: rockets of the stores' gunpowder and paper (a sparkle of flame
-     * where there are none), as the feast nights do (Gatherings), the folk about cheering, and word to
-     * the players near. Returns the rockets let off.
+     * The town celebrates on the square: the fireworks maker's rockets out of the stores (a sparkle of flame
+     * where there are none: FireworkShows.salute), the folk about cheering, and word to the players near.
+     * Returns the rockets let off.
      */
     static int celebrate(ServerLevel level, Villages.Village v, String words) {
         UUID id = v.id();
         BlockPos heart = v.centre();
-        RandomSource r = level.getRandom();
-        int rockets = 0;
-        for (int i = 0; i < ROCKETS; i++) {
-            if (Crafts.take(level, v, s -> s.is(Items.GUNPOWDER), 1)) {
-                if (Crafts.take(level, v, s -> s.is(Items.PAPER), 1)) {
-                    Gatherings.launch(level, heart, r);
-                    rockets++;
-                    continue;
-                }
-                Crafts.store(level, v, new ItemStack(Items.GUNPOWDER));
-            }
+        // [fireworks] A salute of the fireworks maker's rockets out of the stores (FireworkShows.salute); a sparkle of flame
+        // for each the stores are short of.
+        int rockets = FireworkShows.salute(level, v, heart, ROCKETS);
+        for (int i = rockets; i < ROCKETS; i++) {
             level.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME, heart.getX() + 0.5, heart.getY() + 0.3, heart.getZ() + 0.5,
                 6, 0.3, 0.2, 0.3, 0.01);
         }

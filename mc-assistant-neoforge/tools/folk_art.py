@@ -54,7 +54,11 @@ TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           "smelter", "fisher", "storekeeper", "hauler",
           "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
           # [caves] Not in StationTask's order: the cave dweller's own (FolkModel.outfit picks it for CAVE).
-          "cavedweller"]
+          "cavedweller",
+          # [fletcher] [golems] The fletcher's and the golem keeper's own (FolkModel.outfit picks them).
+          "fletcher", "golemkeeper",
+          # [fireworks] The fireworks maker's own (FolkModel.outfit picks it for FIREWORKS).
+          "fireworks"]
 
 PARTS = [
     # The body every folk has: a villager's head and nose, a coat over a body,
@@ -200,6 +204,35 @@ PARTS = [
     ("cavedweller_haft", "body", (0, 6, 4.4), (0, 0, 0.7), [(64, 24, -0.5, -6, 0, 1, 12, 1, 0)], "cavedweller"),
     ("cavedweller_pickhead", "body", (0, 6, 4.4), (0, 0, 0.7), [(68, 24, -3.5, -7, 0, 7, 1, 1, 0)], "cavedweller"),
     ("cavedweller_rope", "body", (0, 0, 0), (0, 0, 0), [(84, 24, -6.2, 7, -2, 2, 4, 4, 0)], "cavedweller"),
+
+    # [fletcher] Fletcher: a green felt cap with a peak and a long goose feather in its band, a leather bib apron over
+    # a green tunic, and a quiver of the day's arrows slung over its right shoulder, the flights showing at the top.
+    ("fletcher_cap", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -11, -4, 8, 3, 8, 0.6)], "fletcher"),
+    ("fletcher_peak", "head", (0, 0, 0), (0, 0, 0), [(96, 0, -3.5, -8, -7, 7, 1, 3, 0)], "fletcher"),
+    ("fletcher_feather", "head", (4.2, -9.5, 1.5), (-0.45, 0, 0.3), [(116, 0, -0.5, -6, -0.5, 1, 6, 1, 0)], "fletcher"),
+    ("fletcher_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 12, -3.5, 2, -4.5, 7, 13, 1, 0)], "fletcher"),
+    ("fletcher_quiver", "body", (0, 2, 3.4), (0, 0, -0.35), [(84, 12, -1.5, -1, 0, 3, 10, 2, 0)], "fletcher"),
+    ("fletcher_fletch", "body", (0, 2, 3.4), (0, 0, -0.35), [(96, 12, -1, -4, 0.5, 2, 3, 1, 0)], "fletcher"),
+
+    # [golems] Golem keeper: a riveted leather skullcap, a pumpkin-orange scarf wound round its neck with an end hanging
+    # down its chest, a heavy leather apron to the knee studded with iron rivets, and the shears it carves pumpkins
+    # with at its hip.
+    ("golemkeeper_cap", "head", (0, 0, 0), (0, 0, 0), [(64, 28, -4, -11, -4, 8, 2, 8, 0.6)], "golemkeeper"),
+    ("golemkeeper_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 0, -4, 1.5, -4.5, 8, 15, 1, 0)], "golemkeeper"),
+    ("golemkeeper_scarf", "body", (0, 0, 0), (0, 0, 0), [(64, 17, -4.5, -1, -3.5, 9, 2, 7, 0.25)], "golemkeeper"),
+    ("golemkeeper_scarf_end", "body", (0, 0, 0), (0, 0, 0), [(100, 0, 0.8, 0.6, -5.6, 2, 6, 1, 0)], "golemkeeper"),
+    ("golemkeeper_shears", "body", (0, 0, 0), (0, 0, 0), [(108, 0, -5.6, 8.5, -1, 1, 3, 2, 0)], "golemkeeper"),
+
+    # [fireworks] Fireworks maker: a canvas apron gone grey with soot, two rockets in its pocket, brass goggles with
+    # smoked lenses pushed up on its forehead, and a bright scarf of red and gold round its neck, its tail hanging down.
+    ("fireworks_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 0, -4, 1.5, -4.5, 8, 15, 1, 0)], "fireworks"),
+    ("fireworks_band", "head", (0, 0, 0), (0, 0, 0), [(82, 0, -4, -9, -4, 8, 2, 8, 0.6)], "fireworks"),
+    ("fireworks_lens_right", "head", (0, 0, 0), (0, 0, 0), [(114, 0, -3.2, -9.2, -5.7, 2, 2, 1, 0)], "fireworks"),
+    ("fireworks_lens_left", "head", (0, 0, 0), (0, 0, 0), [(114, 0, 1.2, -9.2, -5.7, 2, 2, 1, 0)], "fireworks"),
+    ("fireworks_scarf", "body", (0, 0, 0), (0, 0, 0), [(64, 20, -4.5, -0.5, -3.5, 9, 2, 7, 0.3)], "fireworks"),
+    ("fireworks_tail", "body", (2.5, 0.8, -4.6), (-0.14, 0, 0.1), [(98, 20, -1, 0, -0.5, 2, 6, 1, 0)], "fireworks"),
+    ("fireworks_rocket_a", "body", (0, 0, 0), (0, 0, 0), [(64, 32, -3.6, 5.5, -5.3, 1, 4, 1, 0)], "fireworks"),
+    ("fireworks_rocket_b", "body", (0, 0, 0), (0, 0, 0), [(70, 32, -2.3, 6.5, -5.3, 1, 3, 1, 0)], "fireworks"),
 ]
 
 
@@ -972,6 +1005,100 @@ def outfit_cavedweller():
     return cv
 
 
+def outfit_fireworks():
+    """[fireworks] The fireworks maker: a dark blue work shirt with its sleeves rolled to the elbow, soot on its
+    forearms and its cheeks, leather gloves; a heavy canvas apron gone grey with powder and soot, a scorch or two
+    and a burn hole, a pocket with two rockets standing in it (a red and a blue, paper-capped); brass goggles with
+    smoked lenses pushed up on its forehead; and a bright scarf, red with gold stripes, round its neck, its fringed
+    tail hanging down its front; canvas trousers and stout boots."""
+    cv = Canvas()
+    shirt = (50, 60, 100)
+    sh = cloth(shirt, 6, 400)
+    coat = coat_to(cv, sh, 12)
+    coat.row(11, lambda x: lit(shirt, 0.72))
+    canvas = (200, 190, 162)
+    for x in (2, 5):                                                     # the apron's neck strap
+        coat.put("front", x, 0, lit(canvas, 0.9))
+        coat.put("front", x, 1, lit(canvas, 0.85))
+    for face in ("right", "left", "back"):                              # its ties round the waist
+        coat.row(9, lambda x: grain(lit(canvas, 0.85), x, 9, 4, 401), (face,))
+    coat.put("back", 3, 10, lit(canvas, 0.8))
+    coat.put("back", 4, 10, lit(canvas, 0.8))
+    coat.put("back", 4, 11, lit(canvas, 0.7))
+    coat.fill("top", lambda x, y, w, h: lit(canvas, 0.9) if x in (2, 5) else sh(x, y))
+    sleeves(cv, sh, 4, cuff=lit(shirt, 1.22))                            # rolled up to the elbow
+    soot = (74, 70, 68)
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        arm.row(3, lambda x: lit(shirt, 1.1))                            # the roll
+        for (face, x, y) in (("front", 1, 6), ("front", 2, 7), ("back", 0, 5), ("back", 3, 7), ("right", 2, 6), ("left", 1, 7)):
+            arm.put(face, x, y, soot)                                     # soot on the bare forearms
+        arm.around(lambda s, y, sw, h, face, x: grain((92, 66, 44), s, y, 5, 402) if y >= 9 else None)   # gloves
+        arm.row(9, lambda x: (112, 82, 54))                              # the gloves' cuffs
+        arm.fill("bottom", lambda x, y, w, h: (70, 50, 34))
+    legs(cv, cloth((104, 96, 78), 5, 403), leather((60, 44, 32)), boot_from=8, sole=(28, 22, 18))
+    for name in ("right_leg", "left_leg"):
+        leg = Box(cv, name)
+        leg.row(8, (80, 60, 42))                                         # the boot tops
+        leg.put("front", 1, 2, lit(soot, 1.2))                           # a smudge where the hands wipe
+    face_paint(cv, [(1, 7, (118, 98, 86)), (2, 8, (128, 108, 96)), (6, 6, (112, 94, 84))])   # soot on its cheeks
+    # The apron: heavy canvas, grey with powder at the hem and soot where the hands go, scorched, a hole burnt in it.
+    ap = Box(cv, "fireworks_apron")
+
+    def apron(x, y, w, h):
+        if y == 0 and x in (0, w - 1):
+            return False
+        c = grain(canvas, x, y, 6, 404)
+        smut = noise(x, y, 405)
+        if smut > 0.6:
+            c = mix(c, soot, 0.2 + 0.5 * (smut - 0.6))                   # soot, in smudges
+        if y >= h - 3:
+            c = mix(c, (150, 146, 140), 0.35)                            # grey with powder at the hem
+        if (x, y) in ((1, 3), (2, 4), (5, 11), (6, 12), (2, 13)):
+            c = mix(c, soot, 0.6)                                        # where the hands wipe
+        if (x, y) in ((6, 2), (5, 3)):
+            c = (120, 84, 50)                                            # a scorch
+        if (x, y) == (2, 11):
+            c = (40, 34, 30)                                             # a hole burnt in it
+        if x in (0, w - 1) or y == h - 1:
+            c = lit(c, 0.82)
+        if 1 <= x <= w - 2 and y == 8:
+            c = lit(canvas, 0.68)                                        # the pocket's lip
+        if 1 <= x <= w - 2 and y == 9:
+            c = lit(c, 0.9)
+        return c
+    ap.fill("front", apron)
+    ap.fill("back", lambda x, y, w, h: False if y == 0 and x in (0, w - 1) else lit(grain(canvas, x, y, 6, 404), 0.8))
+    for face in ("right", "left", "top", "bottom"):
+        ap.fill(face, lambda x, y, w, h: lit(canvas, 0.72))
+    # The goggles: a leather strap round the head, brass rims, smoked glass with a glint.
+    band = Box(cv, "fireworks_band")
+    band.all(lambda face, x, y, w, h: grain((84, 58, 36), x, y, 4, 406))
+    band.fill("top", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else (84, 58, 36))
+    band.fill("bottom", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else (84, 58, 36))
+    band.row(0, (106, 76, 48))
+    for name in ("fireworks_lens_right", "fireworks_lens_left"):
+        lens = Box(cv, name)
+        lens.all(lambda face, x, y, w, h: (204, 164, 72) if (x + y) % 2 else (176, 136, 58))
+        lens.fill("front", lambda x, y, w, h: (190, 222, 230) if (x, y) == (0, 0) else (58, 72, 84))
+    # The scarf: red, striped gold, wound round the neck (hollow where the neck goes through).
+    red, gold = (214, 38, 42), (246, 198, 46)
+    sc = Box(cv, "fireworks_scarf")
+    sc.around(lambda s, y, sw, h, face, x: grain(gold if (s // 2) % 3 == 2 else red, s, y, 6, 407) if y == 0
+              else lit(grain(gold if (s // 2) % 3 == 2 else red, s, y, 6, 407), 0.82))
+    sc.fill("top", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else lit(red, 1.06))
+    sc.fill("bottom", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else lit(red, 0.7))
+    tail = Box(cv, "fireworks_tail")
+    tail.all(lambda face, x, y, w, h: ((250, 226, 132) if (x + y) % 2 else (214, 170, 52)) if y == h - 1   # the fringe
+             else grain(gold if y % 3 == 1 else red, x, y, 6, 408))
+    # Two rockets standing in the pocket: paper tubes, a red and a blue, a gold band, a grey fuse at the top.
+    for name, body, band_c in (("fireworks_rocket_a", (188, 40, 38), (240, 200, 60)), ("fireworks_rocket_b", (52, 90, 186), (236, 232, 220))):
+        rk = Box(cv, name)
+        rk.all(lambda face, x, y, w, h, body=body, band_c=band_c: (band_c if y == 1 else lit(body, 1.0 if face in ("front", "left") else 0.82)))
+        rk.fill("top", lambda x, y, w, h: (150, 150, 146))
+    return cv
+
+
 def cavedweller_glow():
     """[caves] The cave dweller's helm lamp, lit whatever the light around it."""
     cv = Canvas()
@@ -1687,6 +1814,136 @@ def outfit_hunter():
     return cv
 
 
+def outfit_fletcher():
+    """[fletcher] A fletcher: a tunic of Lincoln green to the hip under a tan leather bib apron, its pocket bristling
+    with spare feathers; a leather strap across the chest to the quiver on its back; brown breeches and soft boots;
+    a green felt cap with a peak, and a long white goose feather in its band. The quiver is stitched leather with a
+    brass band, its arrows' red and white flights showing at the top."""
+    cv = Canvas()
+    green = (74, 102, 50)
+    tunic = cloth(green, 6, 400)
+    coat = coat_to(cv, tunic, 12)
+    for y in range(0, 12):
+        if y % 4 == 1:
+            coat.put("front", 3, y, lit(green, 0.8))                     # the lacing at the neck and down the front
+    strap = (92, 62, 36)
+    for i in range(7):                                                    # the quiver's strap, right shoulder to left hip
+        coat.put("front", 1 + i, i, strap)
+        coat.put("front", 1 + i, i + 1, lit(strap, 0.8))
+        coat.put("back", 6 - i, i, strap)
+    belt(coat, 10, strap=(70, 48, 30), buckle=(196, 166, 80))
+    sleeves(cv, tunic, 7, cuff=lit(green, 0.78))
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        arm.around(lambda s, y, sw, h, face, x: grain((128, 96, 62), s, y, 4, 401) if y >= 10 else None)   # bracers
+    legs(cv, leather((98, 72, 46)), leather((64, 46, 30)), boot_from=8, sole=(34, 26, 20))
+    for name in ("right_leg", "left_leg"):
+        Box(cv, name).row(8, (78, 56, 36))                                # the boots' turned tops
+    # The apron: tan leather, a darker stitched hem, a pocket with feathers in it.
+    tan = (178, 130, 80)
+    ap = Box(cv, "fletcher_apron")
+
+    def apron(x, y, w, h):
+        if y == 0 and x in (0, w - 1):
+            return False
+        c = leather(tan, 0.1)(x, y)
+        if x in (0, w - 1) or y == h - 1:
+            c = lit(tan, 0.78)
+        if 1 <= x <= w - 2 and y == 7:
+            c = lit(tan, 0.68)                                            # the pocket's top
+        if y in (5, 6) and x in (2, 4):
+            c = (238, 234, 222)                                           # feathers in the pocket
+        if y == 6 and x == 3:
+            c = (176, 172, 160)
+        return c
+    ap.fill("front", apron)
+    ap.fill("back", lambda x, y, w, h: False if y == 0 and x in (0, w - 1) else lit(tan, 0.7))
+    for face in ("right", "left", "top", "bottom"):
+        ap.fill(face, lambda x, y, w, h: lit(tan, 0.66))
+    # The cap: green felt, a brown band, and its peak.
+    felt = (64, 100, 44)
+    cap = Box(cv, "fletcher_cap")
+    crown(cap, lambda x, y: grain(felt if (x + y) % 5 else lit(felt, 0.86), x, y, 6, 402), band=(96, 66, 40), band_rows=1)
+    cap.fill("top", lambda x, y, w, h: grain(lit(felt, 1.08) if 2 <= x <= 5 and 2 <= y <= 5 else felt, x, y, 6, 403))
+    cap.fill("bottom", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else lit(felt, 0.7))
+    pk = Box(cv, "fletcher_peak")
+    pk.all(lambda face, x, y, w, h: lit(felt, 0.82) if face != "top" else grain(felt, x, y, 5, 404))
+    # The feather: white vanes, a grey-brown tip, the quill at its root.
+    fe = Box(cv, "fletcher_feather")
+    fe.all(lambda face, x, y, w, h: (226, 222, 210) if y >= 2 and y < h - 1 else ((128, 112, 92) if y < 2 else (200, 186, 150)))
+    # The quiver: stitched leather, a brass band at its mouth, its flights red and white.
+    q = Box(cv, "fletcher_quiver")
+    qc = (118, 78, 42)
+    q.all(lambda face, x, y, w, h: (190, 158, 72) if y == 1 else ((84, 56, 30) if y == h - 2 or (face in ("front", "back") and x == 1 and y % 2 == 0)
+                                                             else grain(qc, x, y, 5, 405)))
+    fl = Box(cv, "fletcher_fletch")
+    fl.all(lambda face, x, y, w, h: ((188, 42, 38) if x % 2 == 0 else (238, 234, 224)) if y < 2 else (126, 98, 64))
+    return cv
+
+
+def outfit_golemkeeper():
+    """[golems] A golem keeper: a charcoal work shirt, its sleeves rolled to the elbow over forearms grey with iron dust;
+    a heavy dark leather apron to the knee, its bib and hem studded with iron rivets; a pumpkin-orange knitted scarf
+    wound round its neck, one end hanging down its chest; a riveted leather skullcap; dark breeches and heavy boots
+    with iron toecaps; and at its hip the shears it carves the golems' pumpkins with."""
+    cv = Canvas()
+    shirt = (72, 72, 78)
+    sh = cloth(shirt, 6, 420)
+    coat_to(cv, sh, 12)
+    sleeves(cv, sh, 4, cuff=lit(shirt, 0.75))
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        for y in range(6, 10):
+            arm.put("front", (y * 3) % 4, y, (150, 140, 132))             # iron dust on the forearms
+        arm.around(lambda s, y, sw, h, face, x: grain((58, 44, 34), s, y, 4, 421) if y >= 10 else None)   # gauntlets
+    legs(cv, cloth((62, 56, 50), 5, 422), leather((38, 32, 28)), boot_from=8, sole=(22, 20, 18))
+    for name in ("right_leg", "left_leg"):
+        leg = Box(cv, name)
+        for x in range(4):
+            leg.put("front", x, 11, (156, 158, 164) if x in (1, 2) else (128, 130, 136))   # iron toecaps
+    face_paint(cv, [(1, 8, (120, 112, 106)), (6, 7, (116, 108, 100))])
+    rivet, rivet_dark = (186, 190, 196), (120, 124, 130)
+    hide = (82, 56, 36)
+    ap = Box(cv, "golemkeeper_apron")
+
+    def apron(x, y, w, h):
+        if y == 0 and x in (0, w - 1):
+            return False
+        c = leather(hide, 0.14)(x, y)
+        if x in (0, w - 1) or y == h - 1:
+            c = lit(hide, 0.74)
+        if y in (1, h - 2) and x % 2 == 1 and 0 < x < w - 1:
+            c = rivet                                                     # a row of rivets at the bib and the hem
+        if x in (1, w - 2) and y % 3 == 0 and 2 < y < h - 2:
+            c = rivet_dark                                                # down the sides
+        if y == 8 and 2 <= x <= w - 3:
+            c = lit(hide, 0.6)                                            # the pocket's seam
+        if (x, y) in ((3, 4), (4, 4), (3, 5), (4, 5)):
+            c = (150, 152, 158) if (x + y) % 2 else (176, 178, 184)       # an iron patch over the heart
+        return c
+    ap.fill("front", apron)
+    ap.fill("back", lambda x, y, w, h: False if y == 0 and x in (0, w - 1) else lit(hide, 0.68))
+    for face in ("right", "left", "top", "bottom"):
+        ap.fill(face, lambda x, y, w, h: lit(hide, 0.62))
+    orange, fold = (228, 126, 30), (184, 90, 18)
+    sc = Box(cv, "golemkeeper_scarf")
+    sc.all(lambda face, x, y, w, h: grain(orange if x % 2 == 0 else lit(orange, 0.9), x, y, 5, 423) if (x + y) % 4 else fold)
+    sc.fill("bottom", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else fold)
+    sc.fill("top", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else orange)
+    end = Box(cv, "golemkeeper_scarf_end")
+    end.all(lambda face, x, y, w, h: (fold if y == h - 1 else (lit(orange, 1.05) if (x + y) % 3 else orange)))
+    end.fill("front", lambda x, y, w, h: (246, 214, 150) if y == h - 1 else (orange if (x + y) % 2 else lit(orange, 0.9)))   # the fringe
+    cap = Box(cv, "golemkeeper_cap")
+    capc = (66, 48, 34)
+    crown(cap, lambda x, y: grain(capc, x, y, 5, 424))
+    cap.row(1, lambda x: rivet_dark if x % 3 == 1 else lit(capc, 0.8))
+    cap.fill("top", lambda x, y, w, h: rivet if (x, y) in ((3, 3), (4, 4)) else grain(lit(capc, 1.1), x, y, 5, 425))
+    cap.fill("bottom", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else lit(capc, 0.7))
+    shears = Box(cv, "golemkeeper_shears")
+    shears.all(lambda face, x, y, w, h: (196, 200, 206) if y < 2 else (84, 60, 40))
+    return cv
+
+
 OUTFITS = {
     "none": outfit_none,
     "farmer": outfit_farmer,
@@ -1708,6 +1965,9 @@ OUTFITS = {
     "scout": outfit_scout,
     "hunter": outfit_hunter,
     "cavedweller": outfit_cavedweller,                                    # [caves]
+    "fletcher": outfit_fletcher,                                          # [fletcher]
+    "golemkeeper": outfit_golemkeeper,                                    # [golems]
+    "fireworks": outfit_fireworks,                                        # [fireworks]
 }
 GLOWS = {"miner": miner_glow, "cavedweller": cavedweller_glow}
 DYED = ("none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler",

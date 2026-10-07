@@ -92,6 +92,7 @@ public final class Crafts {
             made = Luxuries.craft(level, v, f, true);                 // a turn at what the houses wait on (Luxuries)
             if (made == null) made = Pets.craft(level, v, f);         // [pets] a turn at the pets' beds, collars, bowls, treats
             if (made == null) made = TradeGoods.craft(level, v, f);   // [player-civic] a master's own: the reinforced pick, the stout, the pie, a journal
+            if (made == null) made = FieldTools.craft(level, v, f);   // [fields] the copper can, sickle and smoker, the satchel; the shop's any of them
             if (made == null) made = Kitchen.craft(level, v, f);      // [kitchen] lunches, cheese, cakes, pies; mead, cider; tea and bandages
             if (made == null) made = Pastimes.craft(level, v, f);     // [leisure] the quilts, lutes, boards, kites, footballs, lanterns, slates
             if (made == null) made = switch (f.stationTask()) {
@@ -449,6 +450,7 @@ public final class Crafts {
     @Nullable
     static String fletch(ServerLevel level, Villages.Village v, int watch) {
         if (watch <= 0) return null;
+        if (Fletchers.keeps(v.id())) return null;                      // [fletcher] the town's fletcher makes them (Fletchers)
         if (stock(level, v, s -> s.is(Items.BOW)) < watch && stock(level, v, s -> s.is(Items.STRING)) >= 3
                 && planks(level, v, 2)) {
             if (!take(level, v, s -> s.is(Items.STRING), 3)) return null;
@@ -458,9 +460,8 @@ public final class Crafts {
         }
         if (stock(level, v, s -> s.is(Items.ARROW)) < 32 * watch && stock(level, v, s -> s.is(Items.FEATHER)) >= 1) {
             if (stock(level, v, s -> s.is(Items.FLINT)) < 1) {
-                if (stock(level, v, s -> s.is(Items.GRAVEL)) < 3 || !take(level, v, s -> s.is(Items.GRAVEL), 3)) return null;
-                store(level, v, new ItemStack(Items.FLINT));
-                return "a flint knapped out of the gravel, for arrowheads";
+                // [fletcher] Sifted out of the gravel as the game gives it: set down and broken, a flint one time in ten.
+                return Fletchers.siftFor(level, v, 4);
             }
             if (!planks(level, v, 1)) return null;
             if (!take(level, v, s -> s.is(Items.FLINT), 1) || !take(level, v, s -> s.is(Items.FEATHER), 1)) return null;
@@ -661,6 +662,9 @@ public final class Crafts {
         int r = Math.min(6, z.radius());
         if (!Land.areaLoaded(level, c, r + 8)) return null;
         List<BlockPos> hives = hivesAt(level, c, r);
+        // [fields] With a bee smoker, every full hive smoked and emptied on the one round, and more from each (FieldTools).
+        String smoked = FieldTools.smokedHarvest(level, v, f, hives);
+        if (smoked != null) return smoked;
         // Honey first: a full hive is a hive about to swarm.
         for (BlockPos p : hives) {
             BlockState st = level.getBlockState(p);

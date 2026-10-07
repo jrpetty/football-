@@ -30,9 +30,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li><b>When.</b> A fire with six blocks or more alight (FireBrigade), water (a river, a pond, a well's spring)
  *     within thirty blocks of it, and four grown folk free to stand in it within call. Small fires keep their one
  *     to three hands, and a big one keeps them too: the chain is besides.</li>
- * <li><b>The line.</b> Four to ten folk, a couple of paces apart, on the ground between a standing place at the
- *     water's edge and one within a bucket's throw of the fire, each walking to its place. The first fills, the
- *     last throws, the rest pass.</li>
+ * <li><b>The line.</b> Four to ten folk, a couple of paces apart (never so far apart that a bucket cannot be handed
+ *     on), on the ground between a standing place at the water's edge and one within a bucket's throw of the fire,
+ *     each running to its place (one that cannot get nearer in eight seconds is set down at it). The first fills,
+ *     the last throws, the rest pass. A link something else takes away for ten seconds is let go and the rest
+ *     spread out again; short of four, the chain stands down and the hands go at the fire as they can.</li>
  * <li><b>The buckets.</b> Real ones: off the fire station's rack, else the stores' (a bucket of water as it is),
  *     else made there and then of three of the stores' iron each; half as many as there are links, one more,
  *     four at most. Each is in a folk's hand (its off hand, where it can be seen) the whole time. Every few
@@ -63,6 +65,12 @@ public final class BucketChain {
     static final double HAND_TO_HAND = 4.5;
     /** The line is laid out again (the fire moved on) at most this often. */
     static final long REFORM = 200L;
+    /** Two places in the line no further apart than this: each link a little off its place, they can still pass. */
+    static final double PLACES_APART = HAND_TO_HAND - 0.8;
+    /** A link that gets no nearer its place in this long (a fence, a crowd in the way) is set down at it. */
+    static final long NO_NEARER = 160L;
+    /** A link something else has had this long (it has not been at its place in the line) is let go from it. */
+    static final long ABSENT = 200L;
 
     /** One chain: its fire, its water, its links and their places, and how it has done. */
     static final class Chain {
@@ -78,6 +86,10 @@ public final class BucketChain {
         int passes, fills, pours, out, buckets, made;
         /** The buckets each link had of its own when it joined (so the chain takes back only its own). */
         final Map<UUID, Integer> had = new ConcurrentHashMap<>();
+        /** When each link was last at its part in the chain (its tick came to the chain). */
+        final Map<UUID, Long> held = new ConcurrentHashMap<>();
+        /** The chain's buckets given back already, by links let go before it stood down. */
+        int back;
         String from = "the water";
 
         Chain(UUID village, FireBrigade.Blaze blaze, long now) {
@@ -119,7 +131,9 @@ public final class BucketChain {
     static void form(ServerLevel level, Villages.Village v, FireBrigade.Blaze b) {
         Chain have = CHAINS.get(v.id());
         if (have != null && have.blaze == b) {
-            b.chainTried = -100000L;                                    // it has one: looked at again whenever asked
+            // It has one: looked along (a link that has not been at its place for ten seconds let go, though none of
+            // the line's own ticks come to it), and looked at again whenever asked; stood down, tried again later.
+            if (tend(level, have, level.getGameTime())) b.chainTried = -100000L;
             return;
         }
         if (have != null) standDown(level, v, have.blaze);               // an old fire's chain, gone over to this one
@@ -136,10 +150,11 @@ public final class BucketChain {
             free.add(f);
         }
         if (free.size() < LEAST) return;
-        int n = Math.min(spots.size(), free.size());
-        // A line of n: the water's end and the fire's end kept, the places between spread along it.
-        List<BlockPos> use = new ArrayList<>();
-        for (int i = 0; i < n; i++) use.add(spots.get((int) Math.round(i * (spots.size() - 1) / (double) Math.max(1, n - 1))));
+        // Fewer hands than places: the same line, its places further apart. Too far apart to hand a bucket on, and
+        // there is no chain: the hands carry their own.
+        List<BlockPos> use = free.size() >= spots.size() ? spots : line(level, water, fire, free.size());
+        if (!passable(use)) return;
+        int n = use.size();
         Chain c = new Chain(v.id(), b, level.getGameTime());
         c.water = water;
         c.fire = fire;
@@ -212,7 +227,7 @@ public final class BucketChain {
             double d = p.distSqr(fire);
             if (d < bd && d >= 9) { bd = d; best = p.immutable(); }
         }
-        return best;
+        return FieldTools.chainWater(level, fire, best);               // [fields] a nearer rain barrel, with no pond close
     }
 
     /**
@@ -221,13 +236,18 @@ public final class BucketChain {
      * stand on near the straight line between them. Short of four, no chain.
      */
     static List<BlockPos> line(ServerLevel level, BlockPos water, BlockPos fire) {
+        return line(level, water, fire, 0);
+    }
+
+    /** As line, with {@code k} places along it (0: as many as fit a couple of paces apart, four to ten). */
+    static List<BlockPos> line(ServerLevel level, BlockPos water, BlockPos fire, int k) {
         List<BlockPos> out = new ArrayList<>();
         BlockPos start = standNear(level, water, fire, 2);
         BlockPos end = standNear(level, fire, water, 3);
         if (start == null || end == null) return out;
         double dx = end.getX() - start.getX(), dz = end.getZ() - start.getZ();
         double len = Math.sqrt(dx * dx + dz * dz);
-        int n = (int) Math.max(LEAST, Math.min(MOST, Math.round(len / SPACING) + 1));
+        int n = k > 1 ? Math.min(MOST, k) : (int) Math.max(LEAST, Math.min(MOST, Math.round(len / SPACING) + 1));
         out.add(start);
         for (int i = 1; i < n - 1; i++) {
             double t = i / (double) (n - 1);
@@ -238,6 +258,17 @@ public final class BucketChain {
         }
         out.add(end);
         return out;
+    }
+
+    /** Places enough for a chain, each near enough the next for a bucket to be handed on. */
+    static boolean passable(List<BlockPos> spots) {
+        if (spots.size() < LEAST) return false;
+        for (int i = 0; i + 1 < spots.size(); i++) {
+            BlockPos a = spots.get(i), b = spots.get(i + 1);
+            double dx = a.getX() - b.getX(), dz = a.getZ() - b.getZ();
+            if (Math.sqrt(dx * dx + dz * dz) > PLACES_APART || Math.abs(a.getY() - b.getY()) > 2) return false;
+        }
+        return true;
     }
 
     /** A spot to stand on near {@code at}, as near as may be to it and on the side toward {@code toward}. */
@@ -304,26 +335,55 @@ public final class BucketChain {
             return false;
         }
         long now = level.getGameTime();
+        c.held.put(f.getUUID(), now);
+        // Once a pass: the line looked along (a link something else has had too long let go), then the buckets moved
+        // on between whoever is at their places.
+        boolean turn = now - c.lastPass >= PASS || now < c.lastPass;
+        if (turn) {
+            c.lastPass = now;
+            if (!tend(level, c, now)) return false;                       // the chain stood down, short of hands
+            i = c.links.indexOf(f.getUUID());
+            if (i < 0) return false;
+        }
         BlockPos spot = c.spots.get(i);
         double d = flat(f, spot);
+        // Its walk to its place: the nearest it has come, and when; its last step; when its tick last came to the
+        // chain. Away a while (something else had it), the walk is reckoned again from where it is now.
+        double[] w = WALKS.computeIfAbsent(f.getUUID(), k -> new double[]{ Double.MAX_VALUE, now, -1000, now });
+        if (now - w[3] > 10 || now < w[3]) {
+            w[0] = Double.MAX_VALUE;
+            w[1] = now;
+            w[2] = -1000;
+        }
+        w[3] = now;
         if (d > 1.2 || Math.abs(f.getY() - spot.getY()) > 2.5) {
-            double[] w = WALKS.computeIfAbsent(f.getUUID(), k -> new double[]{ Double.MAX_VALUE, now, -1000 });
             if (d < w[0] - 0.4) {
                 w[0] = d;
                 w[1] = now;
-            } else if (now - w[1] > 160 || now < w[1]) {
-                // No nearer for eight seconds: it takes its place where it stands, if it can stand there.
-                if (stand(level, f.blockPosition())) c.spots.set(i, f.blockPosition());
+            } else if (now - w[1] > NO_NEARER || now < w[1]) {
+                // No nearer in eight seconds (a fence, a crowd, a wall in its way): set down at its place, so the line
+                // stays whole; if its place is gone (the fire is on it), it takes its place where it stands.
+                if (stand(level, spot)) {
+                    f.moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, f.getYRot(), 0.0F);
+                    f.getNavigation().stop();
+                } else if (stand(level, f.blockPosition())) {
+                    c.spots.set(i, f.blockPosition());
+                }
+                w[0] = Double.MAX_VALUE;
                 w[1] = now;
             }
-            if (f.getNavigation().isDone() || f.tickCount - (int) w[2] > 20) {
-                f.walkTo(spot, 1.3D);
+            if (f.getNavigation().isDone() && f.tickCount - (int) w[2] > 4 || f.tickCount - (int) w[2] > 20) {
+                // Straight there: not round by the roads, and not held back by a give-up meant for its day's work.
+                f.getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.3D);
                 w[2] = f.tickCount;
             }
             f.hobbyNow = "running to its place in the bucket chain";
+            if (turn) step(level, c);
             return true;
         }
         f.getNavigation().stop();
+        // The last step onto its place, so that it stands within a hand of the next.
+        if (d > 0.35) f.getMoveControl().setWantedPosition(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 0.6D);
         // It faces the way its bucket goes: a full one toward the fire, an empty one (or none) toward the water.
         ItemStack held = f.getItemBySlot(EquipmentSlot.OFFHAND);
         int toward = held.is(Items.WATER_BUCKET) ? i + 1 : i - 1;
@@ -335,10 +395,45 @@ public final class BucketChain {
             f.getLookControl().setLookAt(p.getX() + 0.5, p.getY() + 0.5, p.getZ() + 0.5);
         }
         f.hobbyNow = i == 0 ? "filling buckets for the chain" : i == c.links.size() - 1 ? "throwing water on the fire" : "passing buckets in the chain";
-        if (now - c.lastPass >= PASS || now < c.lastPass) {
-            c.lastPass = now;
-            step(level, c);
+        if (turn) step(level, c);
+        return true;
+    }
+
+    /**
+     * The line looked along: a link something else has had for ten seconds (its tick has not come to the chain)
+     * is let go, the chain's buckets it holds back where they came from, and the rest spread along the line again.
+     * Short of four, or with the rest too few to reach, the chain stands down (and the hands carry their own).
+     * False if it stood down.
+     */
+    private static boolean tend(ServerLevel level, Chain c, long now) {
+        Villages.Village v = Villages.get(c.village);
+        if (v == null) return true;
+        boolean let = false;
+        for (int i = c.links.size() - 1; i >= 0; i--) {
+            UUID u = c.links.get(i);
+            Long seen = c.held.get(u);
+            long since = seen == null ? c.formed : seen;
+            if (now - since <= ABSENT && now >= since) continue;
+            c.links.remove(i);
+            c.spots.remove(i);
+            LINKS.remove(u);
+            WALKS.remove(u);
+            c.held.remove(u);
+            if (level.getEntity(u) instanceof VillageFolkEntity f) {
+                c.back += giveBack(level, v, c, f);
+                f.brain("let go from the bucket chain: it was wanted elsewhere");
+            }
+            let = true;
         }
+        if (!let) return true;
+        List<BlockPos> spots = c.links.size() < LEAST ? List.of() : line(level, c.water, c.fire, c.links.size());
+        if (spots.size() != c.links.size() || !passable(spots)) {
+            standDown(level, v, c.blaze);
+            return false;
+        }
+        c.spots.clear();
+        c.spots.addAll(spots);
+        for (UUID u : c.links) WALKS.remove(u);
         return true;
     }
 
@@ -475,13 +570,18 @@ public final class BucketChain {
         if (near == null) return;
         BlockPos water = water(level, near);
         if (water == null) return;
-        List<BlockPos> spots = line(level, water, near);
-        if (spots.size() < 2) return;
-        int n = c.links.size();
+        List<BlockPos> spots = line(level, water, near, c.links.size());
+        if (spots.size() != c.links.size() || !passable(spots)) {
+            // The same folk cannot reach from water to the fire where it is now: the chain stands down, and the
+            // hands go at it as they can (a chain is tried again for it, of whoever is free then).
+            Villages.Village v = Villages.get(c.village);
+            if (v != null) standDown(level, v, c.blaze);
+            return;
+        }
         c.water = water;
         c.fire = near;
         c.spots.clear();
-        for (int i = 0; i < n; i++) c.spots.add(spots.get((int) Math.round(i * (spots.size() - 1) / (double) Math.max(1, n - 1))));
+        c.spots.addAll(spots);
         for (UUID u : c.links) WALKS.remove(u);
     }
 
@@ -492,35 +592,44 @@ public final class BucketChain {
         Chain c = CHAINS.get(v.id());
         if (c == null || c.blaze != b) return;
         CHAINS.remove(v.id());
-        int back = 0;
+        int back = c.back;
         for (UUID u : c.links) {
             LINKS.remove(u);
             WALKS.remove(u);
             if (!(level.getEntity(u) instanceof VillageFolkEntity f)) continue;
-            // Every bucket it has over what it had of its own when it joined (one put away into its pack by
-            // something else meanwhile is the chain's all the same): its hand's first.
-            int over = f.countCarried(FireSafety::bucket) - c.had.getOrDefault(u, 0);
-            ItemStack held = f.getItemBySlot(EquipmentSlot.OFFHAND);
-            if (over > 0 && FireSafety.bucket(held)) {
-                f.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
-                FireSafety.putBack(level, v, held.copy());
-                back++;
-                over--;
-            }
-            for (; over > 0; over--) {
-                ItemStack s = f.removeMatching(x -> x.is(Items.BUCKET), 1) == 1 ? new ItemStack(Items.BUCKET)
-                    : f.removeMatching(x -> x.is(Items.WATER_BUCKET), 1) == 1 ? new ItemStack(Items.WATER_BUCKET) : ItemStack.EMPTY;
-                if (s.isEmpty()) break;
-                FireSafety.putBack(level, v, s);
-                back++;
-            }
-            f.brain("the fire is out: the chain stands down");
+            back += giveBack(level, v, c, f);
+            f.brain(b.closed ? "the fire is out: the chain stands down" : "the bucket chain stands down");
         }
         LAST.put(v.id(), new int[]{ c.links.size(), c.passes, c.fills, c.pours, c.out, c.buckets, c.made, back });
         if (c.pours > 0) {
             b.chain = "and a bucket chain of " + c.links.size() + " from " + c.from + " (" + c.pours + (c.pours == 1 ? " bucket" : " buckets")
                 + " thrown, " + c.passes + " passes)";
         }
+    }
+
+    /**
+     * A link's part of the chain's buckets back where they came from: every bucket it has over what it had of its
+     * own when it joined (one put away into its pack by something else meanwhile is the chain's all the same), its
+     * hand's first. Returns how many.
+     */
+    private static int giveBack(ServerLevel level, Villages.Village v, Chain c, VillageFolkEntity f) {
+        int back = 0;
+        int over = f.countCarried(FireSafety::bucket) - c.had.getOrDefault(f.getUUID(), 0);
+        ItemStack held = f.getItemBySlot(EquipmentSlot.OFFHAND);
+        if (over > 0 && FireSafety.bucket(held)) {
+            f.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
+            FireSafety.putBack(level, v, held.copy());
+            back++;
+            over--;
+        }
+        for (; over > 0; over--) {
+            ItemStack s = f.removeMatching(x -> x.is(Items.BUCKET), 1) == 1 ? new ItemStack(Items.BUCKET)
+                : f.removeMatching(x -> x.is(Items.WATER_BUCKET), 1) == 1 ? new ItemStack(Items.WATER_BUCKET) : ItemStack.EMPTY;
+            if (s.isEmpty()) break;
+            FireSafety.putBack(level, v, s);
+            back++;
+        }
+        return back;
     }
 
     /** Its card's word. */

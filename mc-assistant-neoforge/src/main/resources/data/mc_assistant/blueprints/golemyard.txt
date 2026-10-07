@@ -1,0 +1,70 @@
+# [golems] The golem yard: an open-fronted shed of stone and timber on a cobbled floor, where the golem keeper makes
+# the stores' iron into blocks for the town's golems (entity/Golems). A crafting table and a chest against the back
+# wall, the anvil by the left wall (put in if the stores have one), a window in each side; the front stands open on
+# two posts under a beam, a lantern hung from it, so a block of iron can be carried out without a door in the way.
+# Rows run from the back of the building (top) to the front (bottom, the open side).
+name golemyard
+layer -1
+.......
+.FFFFF.
+.FSSSF.
+.FSSSF.
+.FSSSF.
+.FFFFF.
+.......
+layer 0
+.......
+.LwwwL.
+.wT.Cw.
+.w...w.
+.wa..w.
+.L...L.
+.......
+layer 1
+.......
+.LWWWL.
+.W...W.
+.G...G.
+.W...W.
+.L...L.
+.......
+layer 2
+.......
+.LWWWL.
+.W...W.
+.W...W.
+.W...W.
+.L-j-L.
+.......
+layer 3
+>.....<
+>L---L<
+>|fff|<
+>|fff|<
+>|fff|<
+>L---L<
+>.....<
+layer 4
+.>...<.
+.>WWW<.
+.>...<.
+.>...<.
+.>...<.
+.>WWW<.
+.>...<.
+layer 5
+..>.<..
+..>W<..
+..>.<..
+..>.<..
+..>.<..
+..>W<..
+..>.<..
+layer 6
+..._...
+..._...
+..._...
+..._...
+..._...
+..._...
+..._...

@@ -24,9 +24,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * there is one — and the leader (or, with nobody leading, the eldest) reads out the year's
  * chronicle: the things that mattered most, in the order they happened, a line at a time, slowly
  * enough to read over their heads ("Day 9: the smithy was opened"). Then there is a feast out of
- * the stores (Assemblies' feast: food passed round, eaten there) and, if the stores hold the
- * gunpowder and the paper to make them, fireworks over the board — a rocket made of each powder
- * and paper taken, a bonfire's sparks once they run out. The history notes the year kept.
+ * the stores (Assemblies' feast: food passed round, eaten there) and, if the stores hold rockets
+ * for it, fireworks over the town: [fireworks] the fireworks maker's display in the town's colours and
+ * gold (FireworkShows), every rocket out of the stores; with none put by, a bonfire's glow. The
+ * history notes the year kept.
  */
 public final class FoundingDay {
 

@@ -201,7 +201,7 @@ final class Mischief {
         else if (content >= 60) x *= 0.5;
         int guards = Patrols.watch(v.id()).size(), head = Math.max(1, Villages.headcount(v.id()));
         if (guards > 0) x *= Math.max(0.5, 1.0 - guards * 6.0 / head);
-        return x;
+        return x * Ethos.crimeFactor(v.id());                         // [identity] a curfew, a closed town
     }
 
     // ------------------------------------------------------------------ the morning's temptations
@@ -933,6 +933,8 @@ final class Mischief {
             case HUNT -> "a hunter's leathers";
             case BANK -> "a banker's coat";
             case CAVE -> "a cave dweller's kit";
+            case FLETCHER -> "a fletcher's apron and quiver";      // [fletcher]
+            case GOLEMS -> "a golem keeper's riveted apron";      // [golems]
             default -> "plain clothes";
         };
     }

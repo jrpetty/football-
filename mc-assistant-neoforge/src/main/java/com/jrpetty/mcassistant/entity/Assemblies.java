@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * aisle, for a wedding; a small circle, for the council or a child come of age. The children
  * go to the front. Whoever leads it (the elder, mostly) stands before them and speaks, line
  * by line, and the crowd answers — a cheer, a murmur, a hush. A feast is eaten, out of the
- * stores; a celebration has fireworks, if the stores have the powder and paper for them.
+ * stores; a celebration has fireworks, if the stores have rockets for them (the fireworks maker's: FireworkShows).
  * When it is over they linger a little, a word with whoever is beside them, and drift back
  * to their day in twos and threes.
  *
@@ -91,8 +91,9 @@ public final class Assemblies {
         final Map<UUID, Integer> pathAt = new HashMap<>();
         int expected;
         long lastStep = -1;
+        /** [fireworks] Its display: 0 not yet asked for, 1 under way (FireworkShows), 99 none (no rockets put by: a bonfire's glow). */
         int rockets;
-        /** Rockets actually sent up (rockets stands at 99 once the powder or the paper runs out). */
+        /** Rockets actually sent up by its display. */
         int fired;
         /** Its close has been held (what it means to the village and to all who came: once). */
         boolean closed;
@@ -282,6 +283,7 @@ public final class Assemblies {
             case SPEECH -> {
                 if (now < a.nextLineAt) return;
                 if (a.line >= a.script.size()) {
+                    FireworkShows.afterSpeech(level, a);          // [fireworks] the vows said, the year read: the display, if it has one
                     a.phase = a.kind == Kind.FEAST || a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING
                         || a.kind == Kind.FESTIVAL && Festivals.mingles(a)        // [batchB] the dance, the song, the meal
                         ? Phase.MINGLE : Phase.CLOSE;
@@ -307,21 +309,9 @@ public final class Assemblies {
             }
             case MINGLE -> {
                 if (a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING) {
-                    if ((now - a.phaseAt) % 40 == 0 && a.rockets < 12) {
-                        Villages.Village v = Villages.get(a.village);
-                        if (v != null && Crafts.take(level, v, s -> s.is(Items.GUNPOWDER), 1)) {
-                            if (Crafts.take(level, v, s -> s.is(Items.PAPER), 1)) {
-                                Gatherings.launch(level, a.focus, r);
-                                a.rockets++;
-                                a.fired++;
-                            } else {
-                                Crafts.store(level, v, new ItemStack(Items.GUNPOWDER));
-                                a.rockets = 99;
-                            }
-                        } else {
-                            a.rockets = 99;            // nothing to make them of: a bonfire glow will do
-                        }
-                    }
+                    // [fireworks] The display is the fireworks maker's, of the stores' own rockets, begun as the speeches
+                    // ended (FireworkShows.afterSpeech); with none put by, a bonfire glow will do.
+                    a.fired = Math.max(a.fired, FireworkShows.fired(a.village, level.getDayTime() / 24000L));
                     if (a.rockets >= 99 && (now - a.phaseAt) % 20 == 0) {
                         level.sendParticles(ParticleTypes.FLAME, a.focus.getX() + 0.5, a.focus.getY() + 0.3, a.focus.getZ() + 0.5, 6, 0.3, 0.2, 0.3, 0.01);
                         level.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, a.focus.getX() + 0.5, a.focus.getY() + 1, a.focus.getZ() + 0.5, 1, 0.1, 0.1, 0.1, 0.01);

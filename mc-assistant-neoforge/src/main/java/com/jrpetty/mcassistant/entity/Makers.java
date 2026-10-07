@@ -139,6 +139,10 @@ public final class Makers {
         // [fleet] [transport]
         declare("fishing_net", "the tailor", "while the fishing fleet has fewer nets than boats", "Fleet.makeNet");
         declare("ferry_bell", "the ferry's builders", "for each landing as a ferry is put in", "Ferries / Railways.takeOrMake");
+        // [interviews] The letter of application: each shortlisted candidate writes its own, of its own town's paper and
+        // ink at the bench, paid for out of its purse, before it goes to an interview for a post.
+        declare("letter_of_application", "the candidate itself, at its town's bench",
+            "when it is shortlisted for a post that goes to interview (one kept, written over for the next)", "Interviews.write");
         // [leisure] Home and play (entity/Pastimes: the trades' turns from Crafts.now, the shop's book through
         // Workshop.demand, and the town's own bench where the town has neither trade nor shop; the busker's own lute).
         declare("patchwork_quilt", "the tailor (the shop's workshop with no tailor)",

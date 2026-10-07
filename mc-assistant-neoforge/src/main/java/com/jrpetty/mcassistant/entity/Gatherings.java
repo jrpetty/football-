@@ -1,24 +1,18 @@
 package com.jrpetty.mcassistant.entity;
 
-import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.projectile.FireworkRocketEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.FireworkExplosion;
-import net.minecraft.world.item.component.Fireworks;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -119,7 +113,8 @@ public final class Gatherings {
         if (aged >= 0 && day - aged <= 0) return Kind.CELEBRATION;
         Long died = DIED.get(village);
         if (died != null && day - died <= 0) return Kind.VIGIL;
-        if (day > 0 && day % 7 == 6 || sponsored(village, day)) return Kind.FEAST;
+        if (day > 0 && day % 7 == 6 || sponsored(village, day)
+            || Government.extraFeast(village, day)) return Kind.FEAST;      // [identity] the chaplain's mid-week feast day
         return null;
     }
 
@@ -296,32 +291,16 @@ public final class Gatherings {
         dance(f, r);
     }
 
-    /** A rocket over the heart of the village, in village colours. */
-    /** A rocket out of the stores' gunpowder and paper; with none put by, a bonfire's sparks instead. */
+    /**
+     * [fireworks] A rocket over the heart of the village: one of the fireworks maker's, out of the stores (FireworkShows.salute);
+     * with none put by, a bonfire's sparks instead. (A rocket used to be made here of a gunpowder and a paper, its stars and
+     * colours out of nothing.)
+     */
     static void paidLaunch(ServerLevel server, java.util.UUID village, BlockPos heart, RandomSource r) {
         Villages.Village v = Villages.get(village);
-        if (v != null && Crafts.take(server, v, x -> x.is(Items.GUNPOWDER), 1)) {
-            if (Crafts.take(server, v, x -> x.is(Items.PAPER), 1)) {
-                launch(server, heart, r);
-                return;
-            }
-            Crafts.store(server, v, new ItemStack(Items.GUNPOWDER));
-        }
+        if (v != null && FireworkShows.salute(server, v, heart, 1) > 0) return;
         server.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME, heart.getX() + 0.5, heart.getY() + 0.3, heart.getZ() + 0.5,
             6, 0.3, 0.2, 0.3, 0.01);
-    }
-
-    static void launch(ServerLevel server, BlockPos heart, RandomSource r) {
-        int[] palette = {0xE8C547, 0xD94F3D, 0x4F86D9, 0x5BC26B, 0xC45BD9, 0xF2F2F2, 0xF28C38};
-        int c1 = palette[r.nextInt(palette.length)], c2 = palette[r.nextInt(palette.length)];
-        FireworkExplosion.Shape[] shapes = FireworkExplosion.Shape.values();
-        FireworkExplosion boom = new FireworkExplosion(shapes[r.nextInt(shapes.length)], IntList.of(c1, c2),
-            IntList.of(0xFFFFFF), r.nextBoolean(), r.nextBoolean());
-        ItemStack rocket = new ItemStack(Items.FIREWORK_ROCKET);
-        rocket.set(DataComponents.FIREWORKS, new Fireworks(1 + r.nextInt(2), List.of(boom)));
-        FireworkRocketEntity e = new FireworkRocketEntity(server, heart.getX() + 0.5 + r.nextInt(5) - 2,
-            heart.getY() + 2.0, heart.getZ() + 0.5 + r.nextInt(5) - 2, rocket);
-        server.addFreshEntity(e);
     }
 
     /** A little jig. */

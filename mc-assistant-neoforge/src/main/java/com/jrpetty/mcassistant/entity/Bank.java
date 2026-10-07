@@ -467,11 +467,12 @@ public final class Bank {
                     || !t.isCraft() && t != StationTask.STORE && t != StationTask.GUARD && hands(id, t) >= 3;
                 // The second look: anybody but a workshop's only hand or the storekeeper.
                 if (pass == 0 ? !spare : t.isCraft() || t == StationTask.STORE || hands(id, t) < 2) continue;
-                int score = bankerScore(f);
+                int score = bankerScore(f) + Interviews.preferred(id, "banker", f);   // [interviews] the panel's choice first
                 if (score > bestScore) { bestScore = score; best = f; }
             }
         }
         if (best == null) return;
+        if (Interviews.vacancy(level, id, "banker", best)) return;               // [interviews] the post held open for its interview
         StationTask was = best.stationTask();
         best.setStation(b.anchor(), StationTask.BANK);
         best.assignPlot(WorkZone.around(b.anchor(), 4, WorkZone.DEFAULT_DEPTH), "The Bank");
