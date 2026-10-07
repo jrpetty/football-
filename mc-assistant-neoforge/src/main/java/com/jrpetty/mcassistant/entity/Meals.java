@@ -159,6 +159,11 @@ public final class Meals {
     // ------------------------------------------------------------------ mealtimes
 
     /** A look at the clock, every few seconds: if it is a mealtime and this meal is not had, it is eaten now. */
+    /** [itemaudit] Tests: something eaten now, as at a meal (its pack, its household's chest, the stores). */
+    public static boolean eatForTests(ServerLevel level, VillageFolkEntity f) {
+        return f.ownerId() != null && eat(level, f, f.ownerId());
+    }
+
     /** Tests: what, if anything, holds this folk's meal back at this moment (the crier's news, the noon bell,
      *  the meal already taken), or "" when nothing does. */
     public static String heldForTests(VillageFolkEntity f) {

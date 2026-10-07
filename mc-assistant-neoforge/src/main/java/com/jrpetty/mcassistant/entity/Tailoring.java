@@ -517,6 +517,11 @@ public final class Tailoring {
         return v == null ? null : work(level, v, tailor, null);
     }
 
+    /** [itemaudit] Tests: one of these on the book for nobody in particular, first in line. */
+    public static void orderForTests(UUID village, Garment kind, int colour, long day) {
+        orderFor(village, "the test", kind, colour, day, true);
+    }
+
     /** Tests: every order that was short of something tried again at the next turn, not half a minute on. */
     public static void resetRetryForTests(UUID village) {
         for (Order o : book(village)) o.tried = -100000L;

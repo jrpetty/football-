@@ -1305,6 +1305,16 @@ public class VillageFolkEntity extends AssistantEntity {
         if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount, (a, b) -> Math.min(1_000_000, a + b));
     }
 
+    /** [itemaudit] Tests: its experience at a trade, as it stands. */
+    public int tradeXpOfForTests(StationTask t) {
+        return t == StationTask.NONE ? 0 : tradeXp.getOrDefault(t, 0);
+    }
+
+    /** [itemaudit] Tests: a child learning this trade at a grown-up's side (as its morning's mentor would have it). */
+    public void apprenticeForTests(StationTask t) {
+        apprenticeTo = t;
+    }
+
     /** Tests: so much experience at a trade, as though it had worked for it (xpForLevel gives a level's worth). */
     public void tradeXpForTests(StationTask t, int xp) {
         if (t == StationTask.NONE) return;

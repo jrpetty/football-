@@ -303,9 +303,10 @@ public final class McAssistantMod {
         return ITEMS.registerSimpleItem(name, new net.minecraft.world.item.Item.Properties().stacksTo(1).rarity(rarity));
     }
     /** [fleet] The fishing fleet's net: knotted of five string by the tailor, a boat's haul two to four fish at a cast,
-     *  worn a little with each haul (entity/Fleet). */
-    public static final DeferredItem<net.minecraft.world.item.Item> FISHING_NET =
-        ITEMS.registerSimpleItem("fishing_net", new net.minecraft.world.item.Item.Properties().durability(96));
+     *  worn a little with each haul (entity/Fleet). [itemaudit] A player casts it over open water too (item/FishingNetItem). */
+    public static final DeferredItem<com.jrpetty.mcassistant.item.FishingNetItem> FISHING_NET =
+        ITEMS.registerItem("fishing_net", com.jrpetty.mcassistant.item.FishingNetItem::new,
+            new net.minecraft.world.item.Item.Properties().durability(96));
 
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =

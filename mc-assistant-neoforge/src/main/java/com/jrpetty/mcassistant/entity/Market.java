@@ -188,7 +188,12 @@ public final class Market {
         // [player-civic] The masters' own (CivicItems): read lazily, the items being registered after this list is made.
         new Good("Reinforced pickaxe", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.REINFORCED_PICKAXE.get()), 11.0, 1, Villages.Task.NONE),
         new Good("Brewer's stout", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.BREWERS_STOUT.get()), 1.2, 4, Villages.Task.NONE),
-        new Good("Farmhouse pie", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.FARMHOUSE_PIE.get()), 1.2, 4, Villages.Task.NONE));
+        new Good("Farmhouse pie", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.FARMHOUSE_PIE.get()), 1.2, 4, Villages.Task.NONE),
+        // [itemaudit] The pets' things a household buys at the shop (Pets, Purchases), on the board at their worth.
+        new Good("Pet bowls", s -> s.is(McAssistantMod.PET_BOWL_ITEM.get()), 0.8, 1, Villages.Task.NONE),
+        new Good("Dog beds", s -> s.is(McAssistantMod.DOG_BED_ITEM.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Cat baskets", s -> s.is(McAssistantMod.CAT_BED_ITEM.get()), 1.2, 1, Villages.Task.NONE),
+        new Good("Pet collars", s -> s.is(McAssistantMod.COLLAR.get()), 1.4, 1, Villages.Task.NONE));
 
     /** The café's drinks, each its own good; then the brewer's potions. */
     private static final List<Good> DRINKS_AND_POTIONS = drinksAndPotions();

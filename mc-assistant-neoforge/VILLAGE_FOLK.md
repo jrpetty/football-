@@ -7053,6 +7053,8 @@ walks out with you for work in the world (it goes home at dusk). Away from your 
   half the time, before the café's drinks.
 * **The farmhouse pie** (a pumpkin, an egg, a carrot and three wheat, two to a baking): ten hunger. A master cook
   bakes it into the stores, and the town eats it.
+* Until a town has a master of the trade, its best hand at it makes these three, one turn at the bench in three, and
+  a pick of a learner's riveting is an apprentice's work (see "Every thing the town makes").
 * **The apprentice's journal** (a book, a feather, an ink sac and leather): the tailor binds them when the town's
   young apprentices want them. A child learning a trade at a grown-up's side (they follow their master about its
   work) takes one out of the stores and writes up its day in it: a little of the trade's experience every day, put
@@ -7890,3 +7892,125 @@ for, a lost dog found and one given up, water for a fire, a household's things o
 the quest is given up), planks for a rebuilding, refugees from a burnt house, short rations, nothing stolen sold, a
 coat won and worn, the offices' clothes, the pledge's guards, the front page, the library's new books, and the cave
 team's finds past the six at auction. The unit test `LibraryTextTest` checks that the new books say what happened.
+## Every thing the town makes
+
+Everything the mod adds is a real thing of real makings. It has a recipe of what a town gathers, an age, a worth on
+the price list, a trade that makes it out of the stores when the town wants one, and a use, for the folk and for you.
+This is the whole list in one place. The thirty new things (the kitchen's, the fields', the work's and the leisure
+things) follow the same rule, each in its own section above, and the game test ia01 holds every one of them to it.
+
+**What the audit changed.**
+* **The village coin has a recipe.** Fire a gold ingot in a furnace and nine coins come out, the mint's own rate. The
+  town mints the same way: from the Iron Age, while its treasury runs low, it melts bars of the stores' gold into its
+  coin, nine a bar (the mint, on the morning's business). The coin you are paid is always the treasury's, and a coin is
+  worth a coin, whatever minting it took.
+* **The memory core** has no recipe, and never will. It forms only when a companion falls, and holds everything that
+  companion was; a core made at a bench would hold nobody. It is worth nothing on the price list: a friend is not for
+  sale, and no stall buys or sells one.
+* **The player's own tools look like themselves.** The Assistant Spawner is a plinth of dark polished stone with brass
+  corners, a companion's face glowing in its panel and a diamond in its top. The Village Folk Spawner is a settler's
+  bundle of straw bound with rope, the little house it will found painted on its side and a loaf on top. The Job Board
+  is a notice board of oak with the crew's notes pinned on cork. The Place Marker is a surveyor's stake with a paper
+  flag, the Zone Marker a red-and-white ranging rod with a redstone tip, the Memory Core a sea-green orb in a brass
+  cage, and the Village Charter a roll of parchment tied with a blue ribbon and a gold seal. The shawl, the flat cap,
+  the scarf, the top hat, the tabard and the coin are drawn afresh too.
+* **No folk wants the player's tools**, so the shop's workshop makes them to a player's order, out of the stores, like
+  anything else on its book: `/village workshop order mc_assistant:zone_marker`.
+* **A board taken down is put back up.** The founders bring the first board. Take a town's board down and, within a
+  minute or two, the town makes another at the bench out of its stores (five signs, two planks and a book) and puts it
+  up on the square, and the chronicle says so. A town's own board gives you nothing when it comes down.
+* **Cast a fishing net.** Over open water, from a boat or off the bank, a net comes up with what a fleet boat's does:
+  two to four fish a haul, a while between casts, a haul's wear on the net each time.
+* **Cut a ribbon.** String an opening ribbon across your new doorway and cut it with shears: it snips in two and the
+  folk about give a cheer. A town's own ribbon across a great work is its leader's to cut at the opening.
+* **Put up the stocks for a town.** Stocks you set on a town's square are the town's for its sentences, the first time
+  it wants a pair, rather than it making its own.
+* **Forged coins are melted down.** The forged coins the watch takes off a forger, and the one it passed, are melted
+  back into the copper they were cast of, three to a bar, so none is ever passed again. You can do the same at a
+  crafting table: three forged coins make a copper ingot.
+* **The pets' bowls, beds and collars are on the market's board**, at their worth, with the treats.
+* **The masters' goods do not wait for a master.** A trade takes months to master, and a town that waited went its
+  whole first season without a pie, a stout or a reinforced pick. Until it has a master of the trade, the town's best
+  hand at it makes them, one turn at the bench in three (a master, at every turn). A pick of a learner's riveting is as
+  good as its hand: an apprentice's work, wearing through sooner, with the smith's name on it. Once a master comes up,
+  they are the master's.
+
+**The table.** Worths are in coin, as the price list works them out from the recipe (the cloth and the tailor's work
+and its dye, for a garment), rounded. The ages are the ones the makers keep to (Tiers).
+
+| Thing | Recipe | Age | Worth | Made by, and when | Used by the folk | Used by you |
+|---|---|---|---|---|---|---|
+| Pet Bowl | planks, a bowl, planks (or five bricks for two) | Wood | 0.8 | the shop's workshop, when a household with a pet has none | set by the hearth, filled from the household's chest or the stores, eaten from once a day | place one in a folk's house; fill it with a bone, meat or fish |
+| Dog Bed | wool in a box of five planks | Wood | 1.6 | the tailor, for a household's dog with no bed | set by the door; the dog sleeps in it | place one in a folk's house |
+| Cat Basket | wool in a basket of five sticks | Wood | 1.2 | the tailor, for a household's cat with no basket | under a window; the cat sleeps in it | place one in a folk's house |
+| Pet Collar | string, leather, string | Stone | 1.4 | the tailor, for a pet with none | buckled on its pet; its dye is the pet's colour | dye it like leather armour |
+| Pet Treat | two wheat and meat or fish, four | Wood | 0.15 | the cook, while a household with children keeps a pet | the children's treats for the pet | befriend or adopt a pet |
+| Long Coat | six wool and a string | Wood | ~4.0 | the tailor, on its book, when a folk wants one and the stock has none | worn over its clothes | buy, dye, give to a folk |
+| Leather Jacket | four leather and a string | Stone | ~3.9 | the tailor, as above | worn | as above |
+| Shawl | three wool and two string | Wood | ~2.5 | the tailor, as above | worn | as above |
+| Waistcoat | five wool and a gold nugget | Iron | ~4.6 | the tailor, as above | worn | as above |
+| Felt Hat | three wool and a leather band | Stone | ~2.8 | the tailor, as above | worn off work, a feather in it for the vain | as above |
+| Flat Cap | two wool and a string | Wood | ~1.7 | the tailor, as above | worn off work | as above |
+| Top Hat | four wool and a gold nugget | Iron | ~4.0 | the tailor, as above | worn off work, by the wealthy | as above |
+| Scarf | two wool and a string | Wood | ~1.7 | the tailor, as above | worn, by the poor first | as above |
+| Brooch | two gold nuggets and a lapis | Iron | ~3.9 | the tailor, as above | pinned on by the vain | buy, give to a folk |
+| Rosette | wool, paper and string | Wood | ~1.4 | the tailor, the day before a fashion show | the show's prize, worn pinned on | win one at the show |
+| Tabard | seven wool, cut like a tunic; then a banner at the crafting table | Wood | ~3.2 | the tailor, while the town has fewer than its grown folk off the watch (six at most) | worn on festival days and Founding Day | give it any banner's arms |
+| Fish / Pick / Sheaf Banner Pattern | paper and a fish / any pickaxe / wheat | Wood | ~0.5 / 0.7 / 0.35 | the tailor, the first time the town's arms carry the charge (kept in the stores) | the loom's pattern for the town's charge | use it at a loom |
+| Stocks | three planks over two logs | Wood | ~0.9 | the town's hands, the first time a sentence wants them | a convicted folk sits in them on the square | set them on a town's square for it |
+| Forged Coin | a copper ingot makes three; three make a copper ingot back | Stone | 0.1 | a tempted forger, of a stolen ingot | passed at the stores for a treat; melted down by the watch | melt them down |
+| Opening Ribbon | two string and a red dye, three | Wood | ~0.2 | the tailor, while a great work is under way | strung across the work's end, cut by the leader | string it anywhere, cut it with shears |
+| Reinforced Pickaxe | an iron pickaxe, three iron and a copper strap (taught) | Iron | 11 | a master smith (till there is one, the best smith, one turn in three), while the town digs and has fewer than two | a miner's or cave dweller's pick, three times the wear | learn it from a master smith |
+| Brewer's Stout | two wheat, sugar and a bottle (taught) | Stone | 1.2 | a master brewer (till there is one, the best brewer, one turn in three), while the town has a tavern and is fed (six kept) | drunk at the tavern for Haste | drink it: Haste |
+| Farmhouse Pie | three wheat, a pumpkin, an egg and a carrot, two (taught) | Wood | 1.2 | a master cook (till there is one, the best cook, one turn in three; eight kept) | a better meal than bread | eat it: ten hunger |
+| Apprentice's Journal | a book, a feather, an ink sac and leather | Stone | ~3.3 | the tailor, for each young apprentice without one | an apprentice writes up its day in it | your lessons' journal |
+| Quest Journal | a book, a feather, an ink sac and paper | Stone | ~2.8 | the shop's workshop, once quests are going (two kept) | given to a player taking a first quest | your quests, steps and endings |
+| Sealed Letter | paper and honeycomb or red dye | Wood | ~0.3 | the letter's writer, when a quest wants one | a letter carried to a friend | carry it |
+| Parcel | two paper and a string | Wood | ~0.7 | the sender, when a quest wants one | carried to another town | carry it |
+| Peace Terms | two paper, string, honeycomb or red dye | Wood | ~0.8 | the elder, when war's quest wants it | read to the enemy's elder, peace made | carry it |
+| Spy's Report | paper and an ink sac | Wood | ~0.5 | the scout's giver, filled in on the spot | the town's latest word on its rival | bring it home |
+| Smugglers' Ledger | three paper, string, an ink sac | Wood | ~1.2 | the smugglers' accomplice, in the story | the evidence against the ring | turn it in, or not |
+| Old Miner's Journal | a book and coal or charcoal | Stone | ~2.6 | the old miner, in the story | where the curse lies | read it |
+| Wooden Toy | planks and two sticks | Wood | ~0.25 | the lost child's parent | a child's toy, dropped on the way | follow it |
+| Child's Drawing | paper, yellow and blue dye | Wood | ~0.4 | the child, at the story's end | a thank-you | keep it |
+| Heirloom Ring | four gold nuggets round an emerald, diamond or lapis | Iron | ~5.6 | the smith, for a family's story | the family's heirloom | find it, give it back |
+| Heirloom Locket | gold nuggets, string, and amethyst, glass or emerald | Iron | ~4.1 | the smith, as above | as above | as above |
+| Medal of the Town | a gold ingot on a ribbon (red or blue wool, or string) | Iron | ~10 | the smith (else the shop), when the town honours you | carried: the town warms to you faster | carry it: a twentieth off the stores |
+| Key to the Town | two gold ingots and a nugget | Iron | ~21 | the smith (else the shop), when the town makes you a freeman | as above | a tenth off the stores |
+| Fishing Net | five string | Wood | 1.2 | the tailor, while the fleet has fewer nets than boats | cast from the fleet's boats: two to four fish a haul | cast it over open water |
+| Ferry Bell | two planks, a stick, a copper ingot | Stone | ~0.7 | the ferry's builders, at each landing | rung by folk waiting at a landing | ring it to call the ferry |
+| Storehouse Unit | four planks and four sticks | Wood | ~0.7 | the builders, twenty-seven to a storehouse | the town's store | build your own store |
+| Village Board | five signs, two planks and a book | Stone | ~3.7 | the founders; then the town's hands, whenever it has been taken down | says what the town is doing; the books | put one up anywhere; read it |
+| Village Coin | a gold ingot fired in a furnace makes nine | Iron | 1 | the mint, from the Iron Age, nine to a bar of the stores' gold | wages, purses, stalls, rents | buy and sell in town |
+| Village Charter | paper, bread, a gold ingot, seeds and a chest | Iron | ~12 | the shop's workshop, on your order | founds a town of its own | found a town |
+| Village Folk Spawner | eight bread round a gold ingot | Iron | ~13 | the shop's workshop, on your order | founds a town, or adds a settler | as it says |
+| Job Board | eight oak planks round a book | Stone | ~3 | the shop's workshop, on your order | the crew's board: roster and preset | right-click it |
+| Assistant Spawner | eight rotten flesh round a diamond | Diamond | ~27 | the shop's workshop, on your order | calls up a companion | place it |
+| Place Marker | paper over a stick | Wood | ~0.3 | the shop's workshop, on your order | a named waypoint for a companion | name it and set it |
+| Zone Marker | redstone over two sticks | Iron | ~0.5 | the shop's workshop, on your order | marks out a companion's patch | click two corners |
+| Memory Core | none: it forms when a companion falls | | 0 | nobody | brings that companion back | right-click the ground |
+
+**Where it is said.** `entity/Makers` names every thing's maker and when it is made, and the game test ia01 fails, by
+name, for a thing that has no recipe, no age, no worth, no maker, or makings the stores cannot run to. The game tests
+`ItemAuditGameTests` (ia01 to ia11) check that:
+* every item of the mod's has a recipe, its age, a worth and a maker, and the stores of a grown town run to every one of
+  them at the bench, the whole way from logs, wool and ore; and the pets' things are on the market's board;
+* a gold ingot fired makes nine coins, a coin is worth one, and an Iron Age town mints three bars of its stores' gold
+  into twenty-seven coin; and the memory core has no recipe, the reason given, and no worth;
+* the tailor knots a net of five of the stores' string for each of the fleet's two boats and no third, a net hauls two
+  to four fish to a line's one or two, and a player's cast over a pond brings fish up and wears the net (and nothing
+  off dry land);
+* a river town granted a fish for its arms has the tailor make the fish pattern of the stores' paper and cod, keeps
+  it, weaves the fish on its festival tabard, and uses the same pattern again;
+* a forger casts a copper ingot of the stores into three coins and passes one; handed in, the three are melted back
+  into the ingot; and stocks a player sets on the square are the town's;
+* the master brewer's stout is brewed of the stores and drunk at the tavern for Haste, paid into the treasury; the
+  master cook's pies are baked and eaten at a meal, a better one than bread; the tailor's journal is taken by the young
+  apprentice and written up the next day;
+* a town's board taken down is made again of its stores' planks and a book and put up, and the chronicle says so;
+* a player cuts its own ribbon, with the folk about cheering, and the shears wear;
+* every garment is made on the tailor's book out of the stores, dyed, and worn;
+* a place marker and a zone marker are made at the shop's workshop to a player's order, out of the stores;
+* with no master in the town, its best cook (not its greenest) bakes the pies one turn in three, and once a master
+  cook comes up the master bakes them at every turn and the other no longer; the best smith rivets the miners' pick,
+  an apprentice's work that wears through sooner, with its name on it.
