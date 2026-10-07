@@ -398,10 +398,11 @@ public final class Store {
         UUID id = v.id();
         if (Villages.builtAt(id, "shop") == null) Workshop.stage(level, v, near);
         if (Villages.builtAt(id, STRUCTURE) == null) {
-            // Beside the shop (clear of it: the store is eleven across and seventeen deep under a wider roof).
+            // Beside the shop, clear of it, on the flattest dry ground near there (the store is eleven across and
+            // seventeen deep under a wider roof), cleared of what grows on it first.
             BlockPos shop = Villages.builtAt(id, "shop");
-            BlockPos at = (shop != null ? shop : near).offset(22, 0, 0);
-            at = new BlockPos(at.getX(), level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ()), at.getZ());
+            BlockPos at = flatGround(level, (shop != null ? shop : near).offset(24, 0, 0));
+            clearSite(level, at);
             BuildGoal.stamp(level, STRUCTURE, at, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
             Ledger.built(id, STRUCTURE, at, Direction.NORTH);
             Villages.builtAtForTests(id, STRUCTURE, at);
@@ -425,8 +426,156 @@ public final class Store {
         StockKeeper.takeStock(level, v, true);
         StoreDeliveries.deliverAllNow(level, v);
         StoreFloor.dress(level, v);
-        StoreFloor.postNow(level, v);
-        for (String s : StoreStaff.lines(v.id())) out.add("STAFF " + s);
+        out.addAll(standForTheCamera(level, v, b));
+        for (String st : StoreStaff.lines(v.id())) out.add("STAFF " + st);
         return out;
+    }
+
+    /** The tag on a folk held in its place for the camera (Store.stage), till the stage is done. */
+    public static final String STAGED = "mca_store_staged";
+
+    /** A place in the store's drawing, in the world: across (right is +) and deep (the back is +). */
+    private static BlockPos at(Ledger.Building b, int dx, int dz) {
+        Direction back = b.facing(), right = back.getClockWise();
+        return b.anchor().relative(right, dx).relative(back, dz);
+    }
+
+    /** A camera's place and aim, for the smoke ("SHOT name feet-x y z aim-x y z"): its feet at a place in the drawing
+     *  so many blocks over the floor, looking at another place so many over the floor. */
+    private static String shot(Ledger.Building b, String name, int dx, int dz, double up, int ax, int az, double aup) {
+        return shot(name, at(b, dx, dz), up, at(b, ax, az), aup);
+    }
+
+    private static String shot(String name, BlockPos eye, double up, BlockPos aim, double aup) {
+        return String.format(java.util.Locale.ROOT, "SHOT %s %.1f %.1f %.1f %.1f %.1f %.1f", name, eye.getX() + 0.5, eye.getY() + up,
+            eye.getZ() + 0.5, aim.getX() + 0.5, aim.getY() + aup, aim.getZ() + 0.5);
+    }
+
+    /**
+     * The staff at their places and held there for the camera, as at a busy hour: the assistants and the keeper
+     * behind the counters, customers in front of them, the stock keeper in the stockroom's aisle among the chests,
+     * a crafter at the workshop's bench; and where the camera stands for each picture (SHOT lines): the whole
+     * building from outside, the shop floor, the stockroom, the workshop, an assistant at its counter.
+     */
+    static List<String> standForTheCamera(ServerLevel level, Villages.Village v, Ledger.Building b) {
+        List<String> out = new ArrayList<>();
+        UUID id = v.id();
+        List<StoreFloor.Post> manned = new ArrayList<>();
+        for (StoreFloor.Post p : StoreFloor.posts(level, id)) if (p.stand() != null && p.building().equals(b)) manned.add(p);
+        List<VillageFolkEntity> held = new ArrayList<>();
+        int post = 0;
+        for (VillageFolkEntity a : StoreStaff.in(id, ShopRoles.Role.ASSISTANT)) {
+            if (post >= manned.size()) break;
+            StoreFloor.Post p = manned.get(post++);
+            hold(a, p.stand(), p.counter().relative(p.front(), 3));
+            held.add(a);
+        }
+        VillageFolkEntity keeper = Workshop.keeper(id);
+        if (keeper != null && post < manned.size()) {
+            StoreFloor.Post p = manned.get(post++);
+            hold(keeper, p.stand(), p.counter().relative(p.front(), 3));
+            held.add(keeper);
+        }
+        VillageFolkEntity sk = StoreStaff.stockKeeper(id);
+        if (sk != null) {
+            hold(sk, at(b, -3, 5), at(b, -4, 5));
+            held.add(sk);
+        }
+        List<VillageFolkEntity> hands = Workshop.hands(id);
+        if (!hands.isEmpty()) {
+            hold(hands.get(0), at(b, 2, 6), at(b, 1, 7));
+            held.add(hands.get(0));
+        }
+        // Customers: grown folk of the town, not of the shop, nearest first, at the counters after the first (the
+        // first is the close-up's), facing whoever serves them.
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (a instanceof VillageFolkEntity f && !f.isBaby() && f.isAlive() && !f.isShowcase()
+                    && f.stationTask() != AssistantEntity.StationTask.SHOP && !held.contains(f)) folk.add(f);
+        }
+        BlockPos mid = b.anchor();
+        folk.sort(Comparator.comparingDouble(f -> f.distanceToSqr(mid.getX(), mid.getY(), mid.getZ())));
+        int customers = 0;
+        for (int i = 1; i < manned.size() && customers < 3 && customers < folk.size(); i++) {
+            StoreFloor.Post p = manned.get(i);
+            BlockPos spot = p.counter().relative(p.front(), 2);
+            if (!StoreFloor.standable(level, spot)) spot = p.counter().relative(p.front());
+            if (!StoreFloor.standable(level, spot)) continue;
+            VillageFolkEntity c = folk.get(customers++);
+            hold(c, spot, p.counter());
+            out.add("CUSTOMER " + c.displayNameCap() + " " + spot.getX() + " " + spot.getY() + " " + spot.getZ());
+        }
+        // The cameras: outside, the shop floor from just inside the door, the stockroom and the workshop from
+        // their doorways in the partition, and an assistant face to face across its counter.
+        out.add(shot(b, "24-store-0-outside", 13, -25, 7, 0, -1, 5));
+        out.add(shot(b, "24-store-1-shop-floor", -3, -7, 0, 2, -3, 1.2));
+        out.add(shot(b, "24-store-2-stockroom", -3, 0, 0, -3, 6, 0.8));
+        out.add(shot(b, "24-store-3-workshop", 3, 2, 0, 1, 6, 1.0));
+        if (!manned.isEmpty()) {
+            StoreFloor.Post p = manned.get(0);
+            out.add(shot("24-store-4-assistant", p.counter().relative(p.front(), 3), 0, p.stand(), 1.4));
+        }
+        return out;
+    }
+
+    /** Held at this spot, facing that one, for the camera (let go by {@link #releaseStaged}). */
+    private static void hold(VillageFolkEntity f, BlockPos spot, BlockPos face) {
+        f.getNavigation().stop();
+        f.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+        float yaw = (float) (Math.atan2(face.getZ() - spot.getZ(), face.getX() - spot.getX()) * (180.0 / Math.PI)) - 90.0F;
+        f.setYRot(yaw);
+        f.setYHeadRot(yaw);
+        f.setYBodyRot(yaw);
+        f.setNoAi(true);
+        f.addTag(STAGED);
+    }
+
+    /** Everybody held in the store for the camera about its business again. Returns how many. */
+    public static int releaseStaged(Villages.Village v) {
+        int n = 0;
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!(a instanceof VillageFolkEntity f) || !f.getTags().contains(STAGED)) continue;
+            f.setNoAi(false);
+            f.removeTag(STAGED);
+            n++;
+        }
+        return n;
+    }
+
+    /** The flattest dry spot near here for the store (its corners and middle within a block of one another), within
+     *  thirty blocks; else here. */
+    private static BlockPos flatGround(ServerLevel level, BlockPos near) {
+        for (int ring = 0; ring <= 30; ring += 3) {
+            for (int dx = -ring; dx <= ring; dx += 3) {
+                for (int dz = -ring; dz <= ring; dz += 3) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) continue;
+                    BlockPos at = ground(level, near.getX() + dx, near.getZ() + dz);
+                    boolean flat = true;
+                    for (int[] c : new int[][]{ { 0, 0 }, { -6, -10 }, { 6, -10 }, { -6, 10 }, { 6, 10 }, { 0, -10 }, { 0, 10 } }) {
+                        BlockPos q = ground(level, at.getX() + c[0], at.getZ() + c[1]);
+                        if (!level.getFluidState(q.below()).isEmpty() || Math.abs(q.getY() - at.getY()) > 1) { flat = false; break; }
+                    }
+                    if (flat) return at;
+                }
+            }
+        }
+        return ground(level, near.getX(), near.getZ());
+    }
+
+    /** The first free block over the ground here, seeing through trees. */
+    private static BlockPos ground(ServerLevel level, int x, int z) {
+        return new BlockPos(x, BuildGoal.groundTop(level, x, z), z);
+    }
+
+    /** The store's ground cleared of what the world grew on it (trees, leaves, grass, flowers) so its air is clear. */
+    private static void clearSite(ServerLevel level, BlockPos at) {
+        for (BlockPos p : BlockPos.betweenClosed(at.offset(-7, 0, -11), at.offset(7, 16, 11))) {
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+            if (st.isAir()) continue;
+            if (BuildGoal.isWildPlant(st) || st.is(net.minecraft.tags.BlockTags.LEAVES) || st.is(net.minecraft.tags.BlockTags.LOGS)
+                    || st.canBeReplaced() && st.getFluidState().isEmpty()) {
+                level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 2 | 16);
+            }
+        }
     }
 }

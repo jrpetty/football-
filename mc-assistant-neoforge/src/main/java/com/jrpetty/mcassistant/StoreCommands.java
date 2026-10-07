@@ -23,7 +23,8 @@ import java.util.List;
  * <li>{@code /village stock count} (ops) — the morning's count and its orders, now, by the stock keeper (or, with
  *     none, the keeper's look at the shelves);</li>
  * <li>{@code /village stock stage} (ops, the client smoke) — a town store stood up by the spot, staffed and
- *     stocked out of the stores, the assistants behind their counters.</li>
+ *     stocked out of the stores, its staff and a few customers held at their places for the camera, and where
+ *     the camera stands for each picture; {@code /village stock stage done} lets them go about their business.</li>
  * </ul>
  */
 public final class StoreCommands {
@@ -34,7 +35,8 @@ public final class StoreCommands {
         return Commands.literal("stock")
             .executes(StoreCommands::book)
             .then(Commands.literal("count").requires(src -> src.hasPermission(2)).executes(StoreCommands::count))
-            .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(StoreCommands::stage));
+            .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(StoreCommands::stage)
+                .then(Commands.literal("done").executes(StoreCommands::stageDone)));
     }
 
     @Nullable
@@ -64,6 +66,14 @@ public final class StoreCommands {
             + (placed.isEmpty() ? "nothing ordered" : String.join("; ", placed));
         ctx.getSource().sendSuccess(() -> Component.literal(said), false);
         return placed.size();
+    }
+
+    private static int stageDone(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = here(ctx);
+        if (v == null) return 0;
+        int n = Store.releaseStaged(v);
+        ctx.getSource().sendSuccess(() -> Component.literal("STORE STAGE DONE: " + n + " let go"), false);
+        return n;
     }
 
     private static int stage(CommandContext<CommandSourceStack> ctx) {
