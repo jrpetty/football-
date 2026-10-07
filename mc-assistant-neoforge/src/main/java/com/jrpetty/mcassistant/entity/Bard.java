@@ -39,8 +39,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *     songs!"), and remembers it. Somebody always calls out for another.</li>
  * <li>By day it sees the town and busks on the square; a folk who likes the song may put a coin in its hat,
  *     out of its own purse, once a visit.</li>
- * <li>It sleeps at the inn if the town has one, else at the tavern, in a bed nobody calls their own or on its
- *     own bedroll by the wall, rolled up again in the morning.</li>
+ * <li>It takes a room at the town's inn, if it has one with a keeper and a bed free, and pays for it as any
+ *     traveller does (Inn: three coins a night, out of the price of its rooms it brings); else it sleeps at the
+ *     tavern on its own bedroll by the wall, rolled up again in the morning.</li>
  * <li>After two or three nights it goes on its way, and the chronicle says so.</li>
  * </ul>
  */
@@ -105,12 +106,16 @@ public final class Bard {
         try { return Long.parseLong(s); } catch (NumberFormatException e) { return -1; }
     }
 
-    /** A bard comes in from the edge: two or three nights, with its bedroll and a loaf or two of its own. */
+    /**
+     * A bard comes in from the edge: two or three nights, with its bedroll, a loaf or two of its own, and the price of a
+     * room at an inn for each night (Inn.ROOM): a traveller's few coins, from outside, as a tourist's purse is.
+     */
     @Nullable
     static VillageFolkEntity come(ServerLevel level, Villages.Village v, long day) {
         int nights = 2 + Math.floorMod(v.id().hashCode() + (int) day, 2);
         List<ItemStack> kit = List.of(new ItemStack(Items.RED_BED), new ItemStack(Items.BREAD, 3));
-        VillageFolkEntity f = Visitors.arrive(level, v, Visitors.Kind.BARD, day, nights, 0, kit, "a travelling bard from far away");
+        VillageFolkEntity f = Visitors.arrive(level, v, Visitors.Kind.BARD, day, nights, Inn.ROOM * nights, kit,
+            "a travelling bard from far away");
         if (f != null) Ledger.note(v.id(), "visit/bard", Long.toString(day));
         return f;
     }
@@ -157,8 +162,6 @@ public final class Bard {
     static boolean stay(ServerLevel level, Villages.Village town, VillageFolkEntity f, Visitors.Visit v, long day, long t) {
         Ledger.Building tav = Tavern.of(town.id());
         if (tav == null) return true;                          // the tavern is gone: nothing to stay for
-        Ledger.Building inn = Visitors.inn(town.id());
-        if (inn == null) inn = tav;
         if (day >= v.leave && t >= 1000L && t < 11000L) return true;
         if (t >= 12500L && t < 17500L) {
             Visitors.rise(level, f, v);
@@ -166,7 +169,10 @@ public final class Bard {
             return false;
         }
         if (t >= 17500L && t < 23000L) {
-            if (!Visitors.bedDown(level, f, v, inn)) {
+            // A room at the inn, paid for out of what it brought (Inn); with no inn, no room or no coin, its bedroll
+            // at the tavern; with no room for that, it sits up by the fire.
+            if (Visitors.lodge(level, f)) return false;
+            if (!Visitors.bedDown(level, f, v, tav)) {
                 // No bed and no room for its bedroll: it sits up by the fire.
                 BlockPos fire = tav.anchor().relative(tav.facing(), 2);
                 Visitors.walk(f, level, fire, 1.5, 0.7D, v.walk);

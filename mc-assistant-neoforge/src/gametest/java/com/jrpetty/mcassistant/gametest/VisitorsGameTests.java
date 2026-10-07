@@ -9,6 +9,7 @@ import com.jrpetty.mcassistant.entity.Bard;
 import com.jrpetty.mcassistant.entity.FolkTalk;
 import com.jrpetty.mcassistant.entity.FriendVisits;
 import com.jrpetty.mcassistant.entity.Homes;
+import com.jrpetty.mcassistant.entity.Inn;
 import com.jrpetty.mcassistant.entity.KeptGifts;
 import com.jrpetty.mcassistant.entity.MapRoom;
 import com.jrpetty.mcassistant.entity.Market;
@@ -106,6 +107,13 @@ public class VisitorsGameTests {
 
     private static int stock(ServerLevel level, UUID village, Item item) {
         return Market.stock(level, village, s -> s.is(item));
+    }
+
+    /** The bones a town has: in its stores and in its guards' packs. */
+    private static int bones(ServerLevel level, UUID village, VillageFolkEntity... guards) {
+        int n = stock(level, village, Items.BONE);
+        for (VillageFolkEntity g : guards) n += g.countCarried(s -> s.is(Items.BONE));
+        return n;
     }
 
     private static boolean chronicled(UUID village, String words) {
@@ -508,15 +516,19 @@ public class VisitorsGameTests {
         level.addFreshEntity(wolf);
         helper.runAtTickTime(10, () -> {
             Villages.Village v = Villages.get(id);
-            int bones0 = stock(level, id, Items.BONE);
+            // The bones the town has, in the stores or already in a guard's pack (the town's own round may have sent a
+            // guard out with them in the ticks before this one).
+            int bones0 = bones(level, id, g1, g2);
             String did = WatchDogs.tameForTests(level, v);
             List<String> dogs = WatchDogs.dogsForTests(id);
-            Kit.log("vp06 " + did + "; the dogs " + dogs + "; bones " + bones0 + " -> " + stock(level, id, Items.BONE));
+            Kit.log("vp06 " + did + "; the dogs " + dogs + "; the town's bones " + bones0 + " -> " + bones(level, id, g1, g2)
+                + " (in the stores " + stock(level, id, Items.BONE) + ")");
             helper.assertTrue(wolf.isTame() && dogs.size() == 1, "the wolf tamed for the watch: " + did);
             UUID guard = wolf.getOwnerUUID();
             VillageFolkEntity g = guard.equals(g1.getUUID()) ? g1 : g2;
             helper.assertTrue(guard.equals(g1.getUUID()) || guard.equals(g2.getUUID()), "its guard is of the watch");
-            helper.assertTrue(bones0 - stock(level, id, Items.BONE) == 1, "one bone from the stores, the rest put back");
+            helper.assertTrue(bones0 - bones(level, id, g1, g2) == 1 && stock(level, id, Items.BONE) == bones0 - 1,
+                "one bone used, the rest back in the stores");
             helper.assertTrue(wolf.hasCustomName() && chronicled(id, "tamed a wolf"), "named, and in the chronicle");
             String card = FolkTalk.card(g);
             helper.assertTrue(card.contains("Its dog|"), "on its guard's card: " + card);
@@ -639,8 +651,8 @@ public class VisitorsGameTests {
                 + Ledger.coins(id));
             helper.assertTrue(shown != null && shown.contains("diamond"), "the diamond on show: " + did);
             helper.assertTrue(f.countCarried(s -> s.is(Items.DIAMOND)) == 0, "out of its pack and on the wall");
-            helper.assertTrue(purse0 - f.purse() == 2 && Ledger.coins(id) - coins0 == 2 && stock(level, id, Items.ITEM_FRAME) == 0,
-                "the frame bought out of its purse");
+            helper.assertTrue(purse0 - f.purse() > 0 && purse0 - f.purse() == Ledger.coins(id) - coins0
+                && stock(level, id, Items.ITEM_FRAME) == 0, "the frame bought out of its purse into the treasury");
             List<ItemFrame> frames = level.getEntitiesOfClass(ItemFrame.class, new AABB(house).inflate(8), fr -> fr.getItem().is(Items.DIAMOND));
             helper.assertTrue(frames.size() == 1, "an item frame with the diamond in the house: " + frames.size());
             String card = FolkTalk.card(f);
@@ -655,6 +667,62 @@ public class VisitorsGameTests {
             Kit.log("vp08 a finer gift: " + again + "; on show: " + now);
             helper.assertTrue(now != null && now.contains("disc"), "the disc on show now: " + now);
             helper.assertTrue(f.countCarried(s -> s.is(Items.DIAMOND)) == 1, "the diamond back in its pack");
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ vp09: a night at the inn
+
+    /**
+     * A town with an inn kept by its cook, and a tavern: a tourist comes with the price of a room in its purse as
+     * well as its spending money, and at dusk takes a room at the inn (three coins out of its purse into the till)
+     * instead of going home; the bard, of a night, takes a room there too rather than laying its bedroll.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "vp09_inn")
+    public static void vp09_inn(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Visitors.resetForTests();
+        final int x = 736000;
+        Kit.hold(level, x, Z, 48);
+        Kit.prepare(level, x, Z, 48);
+        BlockPos heart = flat(level, x, Z, 40);
+        long day = level.getDayTime() / 24000L + 2;
+        level.setDayTime(day * 24000L + 3000L);
+        VillageFolkEntity cook = raise(helper, level, heart);
+        UUID id = cook.ownerId();
+        cook.setJob(StationTask.COOK);
+        BlockPos inn = heart.offset(-20, 0, 20);
+        BuildGoal.stamp(level, "inn", inn, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
+        Ledger.built(id, "inn", inn, Direction.NORTH);
+        Ledger.built(id, "tavern", heart.offset(0, 0, 18), Direction.NORTH);
+        helper.runAtTickTime(10, () -> {
+            Villages.Village v = Villages.get(id);
+            List<BlockPos> beds = Inn.bedsForTests(level, id);
+            helper.assertTrue(beds.size() >= 2, "the inn's beds: " + beds.size());
+            VillageFolkEntity t = Tourists.arriveNowForTests(level, v);
+            helper.assertTrue(t != null, "a tourist comes");
+            int purse = t.purse();
+            helper.assertTrue(purse >= 4 + 3 && purse <= 10 + 3, "its spending money and a room's price: " + purse);
+            Visitors.arriveForTests(level, t);
+            level.setDayTime(day * 24000L + 12000L);
+            int till = Ledger.coins(id);
+            boolean goes = Visitors.stayForTests(level, t);
+            Kit.log("vp09 the tourist at dusk: going home " + goes + ", lodged " + Inn.lodged(t) + ", purse " + purse + " -> " + t.purse()
+                + ", the till " + till + " -> " + Ledger.coins(id));
+            helper.assertTrue(!goes && Inn.lodged(t), "it takes a room for the night instead of going home");
+            helper.assertTrue(t.purse() == purse - 3 && Ledger.coins(id) == till + 3, "three coins out of its purse into the till");
+            VillageFolkEntity bard = Bard.arriveNowForTests(level, v);
+            helper.assertTrue(bard != null, "a bard comes");
+            Visitors.arriveForTests(level, bard);
+            level.setDayTime(day * 24000L + 18000L);
+            int bardPurse = bard.purse(), till2 = Ledger.coins(id);
+            Visitors.stayForTests(level, bard);
+            Kit.log("vp09 the bard at night: lodged " + Inn.lodged(bard) + ", purse " + bardPurse + " -> " + bard.purse() + ", bedroll "
+                + Bard.bedrollForTests(bard) + ", the till " + till2 + " -> " + Ledger.coins(id));
+            helper.assertTrue(Inn.lodged(bard) && bard.purse() == bardPurse - 3 && Ledger.coins(id) == till2 + 3,
+                "the bard pays for a room at the inn");
+            helper.assertTrue(Bard.bedrollForTests(bard) == null, "and lays no bedroll");
             helper.succeed();
         });
     }

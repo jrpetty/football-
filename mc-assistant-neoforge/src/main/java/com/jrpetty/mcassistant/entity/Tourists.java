@@ -4,6 +4,7 @@ import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -21,10 +22,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li>A tourist walks in from the edge with a purse of four to ten coins of its own (money from outside,
  *     kept small: it is the town's takings from being worth the walk).</li>
  * <li>It walks the sights in turn, the museum first, stops before each a while and says what it thinks.</li>
- * <li>Then it has a drink or a bite at the café, and buys itself a souvenir at the shop, at their prices, as
- *     any folk does (Cafe.folkBuys, Cafe.folkShops): the coin goes into the treasury and the shops' books.</li>
- * <li>With an inn in the town it stays the night there and goes home in the morning; with none, it goes
- *     home at dusk.</li>
+ * <li>Then it has a drink or a bite at the café, and buys itself a souvenir at the shop, at the town's prices
+ *     (Purchases.priceEach), in whole coins out of its purse: the coin goes into the treasury and the sellers'
+ *     books. It keeps no account at the town's counters, so it has no change and no slate.</li>
+ * <li>With an inn in the town it brings the price of a room as well, takes one at dusk (Inn) and goes home
+ *     in the morning; with none, it goes home at dusk.</li>
  * </ul>
  * The town's books count the visitors of the week and what they spent (Visitors.book).
  */
@@ -74,8 +76,8 @@ public final class Tourists {
     @Nullable
     static VillageFolkEntity come(ServerLevel level, Villages.Village v, long day) {
         RandomSource r = level.getRandom();
-        int purse = 4 + r.nextInt(7);
         int nights = Visitors.inn(v.id()) != null ? 1 : 0;
+        int purse = 4 + r.nextInt(7) + nights * Inn.ROOM;       // and the night's room, with an inn to stay at
         VillageFolkEntity f = Visitors.arrive(level, v, Visitors.Kind.TOURIST, day, nights, purse, List.of(), "a visitor from far away");
         if (f != null) Ledger.note(v.id(), "visit/tourist", Long.toString(day));
         return f;
@@ -141,13 +143,16 @@ public final class Tourists {
      */
     static boolean stay(ServerLevel level, Villages.Village town, VillageFolkEntity f, Visitors.Visit v, long day, long t) {
         Ledger.Building inn = Visitors.inn(town.id());
-        // Dusk: home, or to the inn for the night.
-        if (t >= 11500L || t < 500L) {
+        // Dusk: home, or a room at the inn for the night (Inn: its price out of its purse, into the till).
+        if (t >= 11500L && t < 23000L) {
             if (inn == null || day >= v.leave) return true;
-            if (!Visitors.bedDown(level, f, v, inn)) return true;      // no bed to be had: it goes home after all
-            return false;
+            return !Visitors.lodge(level, f);                          // no room to be had: it goes home after all
         }
         Visitors.rise(level, f, v);
+        if (t >= 23000L || t < 1000L) {                                 // up before dawn: about the square till it is light
+            Visitors.walk(f, level, town.centre(), 4.0, 0.6D, v.walk);
+            return false;
+        }
         List<Sight> sights = sights(level, town);
         int step = v.sight;
         if (step < sights.size()) {
@@ -197,7 +202,9 @@ public final class Tourists {
             return;
         }
         if (!Visitors.walk(f, level, b.anchor(), 4.0, 0.7D, v.walk)) return;
-        String had = buy(level, town, f, structure);
+        // The night's room at the inn is kept back out of what it spends (it booked a night: Tourists.come).
+        int keep = v.leave > v.arrived && Visitors.inn(town.id()) != null && !Inn.lodged(f) ? Inn.ROOM : 0;
+        String had = buy(level, town, f, structure, keep);
         if (had != null) {
             FolkTalk.speak(f, structure.equals("cafe") ? FolkTalk.pick(f.getRandom(), "Mm! " + FolkTalk.cap(had) + ". Lovely.", "Just what I needed after all that walking.")
                 : FolkTalk.pick(f.getRandom(), "A little something to remember " + Villages.name(town.id()) + " by.", "This'll go on my mantelpiece!"));
@@ -206,16 +213,63 @@ public final class Tourists {
         Visitors.save(f, v);
     }
 
-    /** What it buys at the café or the shop, out of its own purse, as a folk does; null if nothing. */
+    /**
+     * What it buys at the café (a drink or a bite, had there and then) or the shop (a souvenir to take home): one thing
+     * at the town's own price (Purchases.priceEach, as a folk is charged), paid in whole coins over the counter out of its
+     * purse into the treasury and the seller's books. A visitor keeps no account at the town's counters (no change kept,
+     * no slate), so it pays the price rounded up, and only for what its purse runs to. Null if nothing.
+     */
     @Nullable
     static String buy(ServerLevel level, Villages.Village town, VillageFolkEntity f, String structure) {
-        int before = f.purse();
-        String had = structure.equals("cafe") ? Cafe.folkBuys(level, town, f) : Cafe.folkShops(level, town, f, false);
-        int paid = before - f.purse();
-        if (had != null) {
-            LOG.info("[MCA-VISIT] {} bought {} at the {} of {} for {} coins", f.displayNameCap(), had, structure, Villages.name(town.id()), paid);
+        return buy(level, town, f, structure, 0);
+    }
+
+    /** As buy, keeping so many coins of its purse back (the night's room). */
+    @Nullable
+    static String buy(ServerLevel level, Villages.Village town, VillageFolkEntity f, String structure, int keep) {
+        UUID id = town.id();
+        boolean cafe = structure.equals("cafe");
+        if (!Cafe.open(id, structure)) return null;
+        List<ItemStack> goods = new ArrayList<>(cafe ? Cafe.menuGoods(level, id) : Cafe.shopGoods(level, id));
+        if (!cafe) goods.removeIf(ItemStack::isDamageableItem);          // a keepsake, not a tool
+        List<ItemStack> fits = new ArrayList<>();
+        for (ItemStack s : goods) if (price(level, id, s) <= f.purse() - keep) fits.add(s);
+        if (fits.isEmpty()) return null;
+        ItemStack pick = fits.get(f.getRandom().nextInt(fits.size()));
+        int price = price(level, id, pick);
+        if (!TownWork.take(level, town, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
+        if (!f.spend(price)) {
+            Crafts.store(level, town, pick.copyWithCount(1));
+            return null;
         }
+        Ledger.addCoins(id, price);
+        Economy.spentInTown(id, price);
+        PriceIndex.bought(id, pick, 1);
+        Stockroom.sold(level, id, cafe ? Stockroom.Seller.CAFE : Stockroom.Seller.SHOP, pick, 1, price);
+        ItemStack one = pick.copyWithCount(1);
+        if (cafe) {
+            // Had there and then: a drink does its little good (the bottle back to the stores), a bite fills it up.
+            String drink = Cafe.drinkOf(one);
+            Cafe.Drink d = drink == null ? null : Cafe.drinkFor(drink);
+            if (d != null) {
+                f.addEffect(new net.minecraft.world.effect.MobEffectInstance(d.effect(), d.ticks(), 0));
+                Crafts.store(level, town, new ItemStack(net.minecraft.world.item.Items.GLASS_BOTTLE));
+            } else {
+                f.heal(2.0F);
+            }
+        } else {
+            Homes.keepsake(one, f);                                       // its own, to take home
+            ItemStack left = f.insertItem(one);
+            if (!left.isEmpty()) f.spawnAtLocation(left);
+        }
+        String had = one.getHoverName().getString().toLowerCase(java.util.Locale.ROOT);
+        LOG.info("[MCA-VISIT] {} bought {} at the {} of {} for {} coins", f.displayNameCap(), had, structure, Villages.name(id), price);
         return had;
+    }
+
+    /** One of these at the town's price, in whole coins: what a visitor hands over (a coin at least). */
+    static int price(ServerLevel level, UUID town, ItemStack s) {
+        return Math.max(1, (int) Math.ceil(Purchases.priceEach(level, town, s, null) - 1e-6));
     }
 
     private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();

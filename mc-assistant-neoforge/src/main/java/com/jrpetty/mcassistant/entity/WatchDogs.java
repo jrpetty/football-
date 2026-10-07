@@ -449,7 +449,10 @@ public final class WatchDogs {
         List<VillageFolkEntity> watch = Patrols.watch(v.id());
         if (watch.isEmpty()) return "no watch";
         if (dogs(v.id()).size() >= Math.max(1, watch.size() / 2)) return "the watch has its dogs (" + dogs(v.id()).size() + ")";
-        String started = start(level, v, watch, true);
+        // A guard the town's own round has already sent out keeps to its errand; else one is sent now.
+        boolean out = false;
+        for (Errand e : TAMING.values()) if (e.village.equals(v.id())) out = true;
+        String started = out ? "a guard was already out taming one" : start(level, v, watch, true);
         for (Map.Entry<UUID, Errand> e : TAMING.entrySet()) {
             if (!e.getValue().village.equals(v.id())) continue;
             if (!(level.getEntity(e.getKey()) instanceof VillageFolkEntity g) || !(level.getEntity(e.getValue().wolf) instanceof Wolf wolf)) continue;
