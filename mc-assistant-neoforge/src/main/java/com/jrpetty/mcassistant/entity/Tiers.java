@@ -142,6 +142,8 @@ public final class Tiers {
     private static Villages.Age work(ServerLevel level, Item item, Set<Item> path, int depth) {
         Villages.Age named = material(item);
         if (named != null) return named;
+        Villages.Age kitchen = Kitchen.age(item);                         // [kitchen] the lunch and the cake the Wood Age's, the cheese and mead the Stone Age's
+        if (kitchen != null) return kitchen;
         Villages.Age known = AGES.get(item);
         if (known != null) return known;
         List<RecipeBook.Way> ways = RecipeBook.waysFor(level, item);

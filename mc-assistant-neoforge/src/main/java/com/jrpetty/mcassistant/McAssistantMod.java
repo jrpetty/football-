@@ -362,6 +362,7 @@ public final class McAssistantMod {
         BLOCK_ENTITIES.register(modBus);
         RECIPE_SERIALIZERS.register(modBus);                          // [arms] the tabard given a banner's arms
         com.jrpetty.mcassistant.item.CivicItems.register(modBus);      // [player-civic] the masters' goods, and their recipes
+        com.jrpetty.mcassistant.item.KitchenItems.register(modBus);    // [kitchen] the kitchen, the cellar and the healer's shelf
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);

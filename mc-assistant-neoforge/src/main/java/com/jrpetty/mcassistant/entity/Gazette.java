@@ -280,6 +280,8 @@ public final class Gazette {
         if (street != null) entries.add(street);
         String fashion = Fashion.gazette(level, v, day);            // [fashion] the season's look, who set it, the show
         if (fashion != null) entries.add(fashion);
+        String kitchen = Kitchen.gazette(id, day);                  // [kitchen] the lunches eaten out, the pies of the catch, the cheese cut
+        if (kitchen != null) entries.add(kitchen);
         String crime = Crime.gazette(level, id, day);              // [crime] the watch and the court
         if (crime != null) entries.add(crime);
         String disasters = Disasters.gazette(level, v, day);        // [disasters] the weather's danger, yesterday's fire or flood

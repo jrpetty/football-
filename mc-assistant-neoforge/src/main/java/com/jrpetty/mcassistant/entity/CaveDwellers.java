@@ -4022,6 +4022,7 @@ public final class CaveDwellers {
         if (f.countCarried(s -> s.getItem() instanceof ShieldItem) > 0 || f.getOffhandItem().getItem() instanceof ShieldItem) out.add("a shield");
         int torches = f.countMatching(s -> s.is(Items.TORCH));
         if (torches > 0) out.add(torches + " torches");
+        Kitchen.kitWords(f, out);                                      // [kitchen] its bandages, its packed lunch
         return String.join(", ", out);
     }
 

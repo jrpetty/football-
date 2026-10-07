@@ -648,6 +648,7 @@ public final class FishMarket {
         }
         if (cod > 0) Crafts.giveBack(level, v, Items.COD, cod);
         if (salmon > 0) Crafts.giveBack(level, v, Items.SALMON, salmon);
+        Kitchen.glut(level, v, glut(m), cod + salmon);           // [kitchen] a glut's unsold fish: the cook's pies
         m.smoked += smoked;
         m.stored += cod + salmon;
         saveDay(m);

@@ -582,6 +582,7 @@ public final class WatchKit {
                 st -> Math.min(999, st.getMaxDamage()) + (st.isEnchanted() ? 1000 : 0), -1);
             if (f != null) handOver(level, v, g, Workshop.takeOut(level, id, f, who), given);
         }
+        Kitchen.bandages(level, v, g, given);                       // [kitchen] two to four bandages, out of the stores
         if (!given.isEmpty()) issued(level, v, g, given);
         if (watch) Arms.shield(level, v, g);                        // [arms] the town's arms on its shield, at the stores
         return given;
@@ -880,6 +881,7 @@ public final class WatchKit {
         int arrows = g.countCarried(s -> s.is(Items.ARROW));
         if (arrows > 0) out.add(arrows + (arrows == 1 ? " arrow" : " arrows"));
         if (g.countCarried(s -> s.getItem() instanceof ShieldItem) > 0) out.add("shield");
+        Kitchen.kitWords(g, out);                                      // [kitchen] its bandages
         return String.join(", ", out);
     }
 
@@ -942,6 +944,7 @@ public final class WatchKit {
         if (noBow > 0) out.add(Bench.words(Items.BOW, noBow) + ": the smith's fletching");
         if (noShield > 0) out.add(Bench.words(Items.SHIELD, noShield) + ": the smith's work"
             + (Tiers.allows(level, age, Items.SHIELD) ? "" : "; waiting: " + Tiers.of(level, Items.SHIELD).label));
+        out.addAll(Kitchen.watchOrders(level, v));                    // [kitchen] bandages for the kits
         return out;
     }
 
