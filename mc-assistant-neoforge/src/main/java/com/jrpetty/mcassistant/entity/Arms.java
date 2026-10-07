@@ -880,22 +880,25 @@ public final class Arms {
         return SHORT.get(village);
     }
 
-    /** /village arms now (and the tests): every piece the stores run to, now: the banners, a shield each, a tabard each. */
+    /**
+     * /village arms now: every piece the stores run to, now, the hands' walk to it skipped (the town's works done at
+     * once, as the tests have them): the banners, a shield for each guard, the festival tabards.
+     */
     public static String now(ServerLevel level, Villages.Village v) {
-        String hung = Heraldry.putForTests(level, v);
-        int shields = 0;
-        for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity g && shield(level, v, g)) shields++;
-        int tabards = 0;
-        Heraldry.Design d = Heraldry.design(v.id());
         boolean was = TownJobs.instantNow();
         TownJobs.instantForTests(true);
         try {
+            String hung = Heraldry.putForTests(level, v);
+            int shields = 0;
+            for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity g && shield(level, v, g)) shields++;
+            int tabards = 0;
+            Heraldry.Design d = Heraldry.design(v.id());
             while (d != null && tabards < TABARDS && makeTabard(level, v, d, false)) tabards++;
+            return "banners " + (hung.isEmpty() ? "nothing more to hang" : hung) + "; shields " + shields + "; tabards " + tabards
+                + (SHORT.get(v.id()) == null ? "" : "; waiting on " + SHORT.get(v.id()));
         } finally {
             TownJobs.instantForTests(was);
         }
-        return "banners " + (hung.isEmpty() ? "nothing more to hang" : hung) + "; shields " + shields + "; tabards " + tabards
-            + (SHORT.get(v.id()) == null ? "" : "; waiting on " + SHORT.get(v.id()));
     }
 
     /** The pictures' lineup's tag: put away with the next stage. */

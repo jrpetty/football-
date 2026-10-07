@@ -609,6 +609,11 @@ public final class Buskers {
         Ledger.forget(village, "busk.takings/" + (day - 3));
     }
 
+    /** A visiting bard's coin on the square (Bard.busk), into the day's hats for the gazette. */
+    static void bardTook(ServerLevel level, UUID village, VillageFolkEntity bard) {
+        takings(village, level.getDayTime() / 24000L, bard.displayNameCap() + " the bard", 1, "on the square");
+    }
+
     /** The gazette's street music: yesterday's buskers and what their hats took, and who plays the tavern. Null with nothing. */
     @Nullable
     public static String gazette(ServerLevel level, UUID village, long day) {

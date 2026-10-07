@@ -6291,7 +6291,8 @@ Folk whose pastime is music now play for coins in the street.
 * **When and where.** On two evenings in three, for the first two hours after work, a musician takes its note
   block to a pitch of its own. The pitches are by the well, the corner of the square by each gate, and outside
   the market. On market day it busks in its time off by day as well. Never in the rain, never while the town is
-  gathered for something, and never the watch. A visiting bard still busks on the square by day, as before.
+  gathered for something, and never the watch. A visiting bard still busks on the square by day, as before,
+  and its takings now make the gazette too.
 * **Real music.** A busker plays a real tune (the tavern's jig, its slow air, the wedding march or a reel of the
   street's own) on its own voice: harp, flute, guitar, banjo, bells or xylophone. Notes rise over its head. It
   needs a note block: its own, or one lent out of the stores for the evening and put back after. A poor player

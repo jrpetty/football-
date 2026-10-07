@@ -352,6 +352,7 @@ public class ArmsBuskersGameTests {
             UUID id = t.id();
             Villages.Village v = village(helper, id);
             VillageFolkEntity busker = t.folk().get(0);
+            busker.setJob(StationTask.WOOD);                         // a musician of the town, never the watch
             Culture.hobbyForTests(busker, Persona.Hobby.MUSIC);
             busker.removeMatching(s -> s.is(Items.NOTE_BLOCK), 64);
             VillageFolkEntity a = t.folk().get(1), b = t.folk().get(2);
@@ -397,6 +398,7 @@ public class ArmsBuskersGameTests {
         helper.runAtTickTime(10, () -> {
             Villages.Village v = village(helper, t.id());
             VillageFolkEntity busker = t.folk().get(0), other = t.folk().get(1);
+            busker.setJob(StationTask.WOOD);                         // a musician of the town, never the watch
             Culture.hobbyForTests(busker, Persona.Hobby.MUSIC);
             busker.insertItem(new ItemStack(Items.NOTE_BLOCK));
             helper.assertTrue(Buskers.startForTests(level, v, busker) != null, "the busker is out, on its own note block");
@@ -429,6 +431,7 @@ public class ArmsBuskersGameTests {
             Villages.Village v = village(helper, id);
             Villages.ageForTests(id, Villages.Age.STONE);
             VillageFolkEntity busker = t.folk().get(0);
+            busker.setJob(StationTask.WOOD);                         // a musician of the town, never the watch
             Culture.hobbyForTests(busker, Persona.Hobby.MUSIC);
             busker.insertItem(new ItemStack(Items.NOTE_BLOCK));
             for (int i = 1; i < t.folk().size(); i++) Culture.hobbyForTests(t.folk().get(i), Persona.Hobby.READING);
