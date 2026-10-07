@@ -4744,3 +4744,62 @@ back, the charcoal and the charcoal torches; a sapling from the crowns on every 
 ground planted and the saplings fed; a rod a building, of three copper ingots; a fire put out with a
 bucket made of the stores' iron and noted in the books; the snow shovelled off the square into the
 storehouse and not off a garden; and a farmer in out of the storm while the watch stays out.
+
+## Scouts at war: knowing the enemy
+
+A town at odds with a neighbour (in a feud, or at war) wants to know what it is up against, and it finds out
+the way you would: somebody goes and looks.
+
+* **A scout sent to the enemy.** Of a morning, a town on its guard sends one of its folk to watch the town
+  it is at odds with: its scout if it has one, else whoever has the sharpest eyes, a courier who knows the
+  stable's horses, the rancher or a hunter; never a guard and never the leader. It takes food for the road
+  out of the stores (and a saddled horse, if the stable has one standing free), walks there the way a scout
+  walks, and lies down in the grass on the highest ground it can find outside the enemy's streets. For a
+  minute it watches and counts what it can really see: the guards out of doors, which are in iron and
+  which carry bows, the wall's sides and its gates, the folk about the streets and the houses for the rest,
+  and the fields and granary for a guess at the food. A guard indoors is not seen, and not counted. Now and
+  then a bold one (a scout, or a curious folk, at war) slips in among the houses afterwards and, if nobody
+  stops it, counts the barracks and the granary too. In a feud a town looks again every four days; at war,
+  every two.
+* **The report, and its age.** Home again, the scout files its report, dated the day it watched, in its
+  own words ("watched from the ridge south-west of it, on Bess"). It tells the leader if the leader is
+  about, and the morning assembly hears it; it goes in the chronicle, on the board ("The enemy: Brindle (at
+  war): 6 guards ... a day old") and on the war map, always with how old it is. From the fifth day a report
+  is marked old.
+* **The strength reckoning.** The town knows its own strength exactly: its guards, those in iron, its
+  bowmen, its wall and gates, its days of food, its allies. The enemy's it knows only from the latest report,
+  or from rumour if nobody has looked (its size, whether it has a wall, and a guess at the rest). The two set
+  against each other give a balance: well over one, the town reckons itself the stronger; under nine in ten,
+  the weaker, and the one that should look for peace. The war council goes by it, and so does the number of
+  guards the town wants to keep (enough to hold off what the enemy could bring, a fifth to spare).
+* **The fog of war.** An old report is not believed as it stands: the older it is, the further out the
+  leader's guess may be (six in the hundred a day, up to sixty), and the less sure the council is of it. The
+  leader's temper bends it too: a prickly leader makes light of the enemy, a wary one sees more spears than
+  there are. A town that went to war on a bad guess is told so in its chronicle when it learns the truth:
+  "we went to war with Brindle thinking it held six guards; it held fourteen".
+* **Catching spies.** The watch keeps an eye on the hills. A guard (or a picket) that sees a stranger from
+  a rival town watching gives chase; the spy jumps up and runs for home. Caught, it is held at the barracks
+  and questioned, and the town that caught it learns what it knew of its own town; its own report is lost
+  with it, and relations between the two get worse. Chased off, it goes home and says it was seen. When the
+  two towns make peace (or exchange captives at the peace talks) it is let go and walks home.
+* **Pickets on the roads.** On its guard or at war, a town puts a picket on the road toward each rival
+  (two at most), thirty blocks out past its last buildings: a guard the watch can spare (half the watch
+  always stays in), else one of the militia or a hunter, one by day and another by night. A picket that
+  sees a spy points it out to the watch. One that sees an envoy coming runs ahead and the town bell is rung
+  once to fetch the leader. One that sees any other folk of the enemy coming runs home with it, and the
+  alarm bell is rung early: the gates shut and the watch goes up on the walls while the enemy is still out
+  on the road, and the bell keeps ringing while they are about.
+* **The war map.** `/village war map` lays it all out in words; `/village war map books` (or the War map
+  tab of the town's books, from the board) draws it: your town in the middle, north up, every rival where
+  it lies (red with a report, amber on rumour alone) with its last known guards and the report's age, where
+  the pickets last saw folk of theirs, your pickets on the roads and your scouts out; and beside it, for
+  each rival, the report, what the leader believes now and how sure it is, the balance of strength, and how
+  many guards the town wants against it. Ask any folk what the scouts have found and they will tell you
+  what is known of the enemy, too. `/village war intel` gives the figures in a line each.
+
+The game tests `ScoutingGameTests` (si01 to si05) check each part: a scout sent to a town in a feud counts
+its four guards (two in iron, one bow) from where it lies and files a report dated that day; a report's
+guess drifts further from it with every day it ages, and a prickly and a wary leader read it differently;
+a town with a report of a strong enemy reckons itself the weaker and wants more guards, and with a report
+of a weak one the stronger; the watch runs down a spy, questions it, and lets it go at peace; and a picket
+sees the enemy coming up the road and the bell rings while they are still outside the town.

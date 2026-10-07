@@ -47,10 +47,12 @@ public class CityScreen extends Screen {
     private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Shops", "Jobs", "Folk", "Society", "Leader", "Homes",
         "Buildings", "Stores", "Stock", "Research", "Why", "Trends", "Records", "News", "Board",
         // The school and the museum, last, so the pages before them keep their numbers (School, Museum).
-        "School", "Museum" };
+        "School", "Museum",
+        // [war-scouting] The war map: the enemy where it lies, the scouts' reports and their age (WarMapPage).
+        "War map" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes", "Stock", "Research", "School", "Museum");
+        "Shops", "Homes", "Stock", "Research", "School", "Museum", "War map");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -291,6 +293,7 @@ public class CityScreen extends Screen {
                 case "Research" -> research(g, x, y, cw, ch, mouseX, mouseY);
                 case "School" -> school(g, x, y, cw, ch, mouseX, mouseY);
                 case "Museum" -> museum(g, x, y, cw, ch);
+                case "War map" -> warMap(g, x, y, cw, ch, mouseX, mouseY);   // [war-scouting]
                 default -> board(g, x, y, cw, ch);
             }
         }
@@ -2413,6 +2416,12 @@ public class CityScreen extends Screen {
      * volumes of the chronicle, where each stands, and the years waiting to be bound; what may go on
      * show next, and what the museum is short of.
      */
+    /** [war-scouting] The war map (WarMapPage, from the server's "warmap"). */
+    private void warMap(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        List<Component> tip = WarMapPage.draw(g, font, data.getCompound("warmap"), x, y, cw, ch, mx, my);
+        if (tip != null) { hover = tip; hoverX = mx; hoverY = my; }
+    }
+
     private void museum(GuiGraphics g, int x, int y, int cw, int ch) {
         CompoundTag m = data.getCompound("museum");
         List<String> coming = new ArrayList<>();

@@ -264,6 +264,8 @@ public final class VillageCommands {
             .then(MuseumCommands.build())
             // [economy] The larder against the mouths, the coal floor and charcoal, the builders' stock carried about.
             .then(EconomyCommands.build())
+            // [war-scouting] The war map, the reports on the enemy, the pickets (ScoutingCommands).
+            .then(ScoutingCommands.build())
             // What every village you have met thinks of you.
             .then(Commands.literal("standing").executes(VillageCommands::standing))
             // How the villages stand with each other: allies, feuds, tribute.

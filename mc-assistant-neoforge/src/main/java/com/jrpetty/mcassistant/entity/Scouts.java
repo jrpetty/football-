@@ -135,6 +135,8 @@ public final class Scouts {
         int gainedTick, walkTick = -1000, surveyTick, startedTick;
         @Nullable BlockPos window;
         int spokeTick = -100000;
+        /** [war-scouting] Sent to watch an enemy town, not to explore (Spying): what it is about, and what it counts. */
+        @Nullable Spying.Mission mission;
 
         Expedition(UUID village, BlockPos home, int bearing, BlockPos target) {
             this.village = village;
@@ -145,8 +147,10 @@ public final class Scouts {
         }
 
         public boolean returning() { return returning; }
-        public String heading() { return heading; }
+        public String heading() { return mission != null && mission.going() ? "toward " + mission.name() : heading; }
         public int finds() { return found.size(); }
+        /** [war-scouting] The enemy town it was sent to watch, and what it has counted (Spying); null when out exploring. */
+        @Nullable public Spying.Mission mission() { return mission; }
     }
 
     /** What the scouts have come home with, for the next morning assembly. */
@@ -157,6 +161,7 @@ public final class Scouts {
     public static void resetForTests() {
         REPORTS.clear();
         WENT.clear();
+        WarScouting.resetForTests();             // [war-scouting] the spies, the pickets, the captives
     }
 
     // ------------------------------------------------------------------ the atlas
@@ -306,6 +311,8 @@ public final class Scouts {
         boolean fit = f.getHealth() >= f.getMaxHealth() * 0.7F && !level.isThundering() && !Raids.underAlarm(id);
         boolean morning = time >= 1200 && time < 4200;
         if (morning && fit && WENT.getOrDefault(f.getUUID(), -1L) < day && !Assemblies.attending(f)) {
+            // [war-scouting] On a war footing, the scout goes to watch the enemy before it goes exploring (Spying).
+            if (Spying.instead(f, level, v, day)) return true;
             if (setOut(f, level, v, day)) return true;
         }
         // At the board, with the atlas.
@@ -438,10 +445,16 @@ public final class Scouts {
         // A horse from the stable to ride its rounds on, and an old chest looked into for a saddle (Riding).
         if (Riding.scout(f, level, e)) return true;
         if (!e.returning) {
+            // [war-scouting] One sent to watch an enemy town has further to go and a while to watch when it gets
+            // there: it is given the afternoon too (Spying), and comes home in the evening.
+            long late = e.mission != null ? Spying.LATE : 7600, longest = e.mission != null ? Spying.LONGEST : 9000;
             if (f.getHealth() < f.getMaxHealth() * 0.45F) turnBack(level, f, e, "I got hurt, so I came back");
-            else if (time >= 7600 && time < 23000) turnBack(level, f, e, "it was time to turn back");
-            else if (f.tickCount - e.startedTick > 9000) turnBack(level, f, e, "it was time to turn back");
+            else if (time >= late && time < 23000) turnBack(level, f, e, "it was time to turn back");
+            else if (f.tickCount - e.startedTick > longest) turnBack(level, f, e, "it was time to turn back");
         }
+        // [war-scouting] At its vantage over the enemy's town it watches and counts, slips closer if it dares, runs
+        // if it is seen (Spying); on the way there and back it walks as any scout does.
+        if (e.mission != null && Spying.drive(level, f, e)) return true;
         // Look about every couple of seconds.
         if (f.tickCount - e.surveyTick >= 40) {
             e.surveyTick = f.tickCount;
@@ -458,7 +471,7 @@ public final class Scouts {
         }
         BlockPos dest = destination(e);
         double d = flat(f.blockPosition(), dest);
-        if (!e.returning && d <= 10 * 10) {
+        if (!e.returning && d <= 10 * 10 && e.mission == null) {
             // As far as it was going: a good look round, a torch to mark it, and home.
             lookRound(level, f, e);
             placeTorch(level, f);
@@ -579,6 +592,7 @@ public final class Scouts {
         e.detour = 0;
         e.best = Double.MAX_VALUE;
         e.gainedTick = f.tickCount;
+        if (e.mission != null) return;                 // [war-scouting] a spy has its own words for it (Spying)
         FolkTalk.speak(f, why.startsWith("I got hurt") ? "Ow. That's enough for one day — home." : e.found.isEmpty()
             ? FolkTalk.pick(f.getRandom(), "Nothing much out here. Home, then.", "Time to head back.")
             : "Home — I've news for the elder!");
@@ -597,6 +611,11 @@ public final class Scouts {
             fresh++;
             if (x.kind() == Kind.LAND || x.kind() == Kind.BLOCKED) continue;
             told.add(x.label() + " " + (int) Math.sqrt(x.at().distSqr(e.home)) / 10 * 10 + " blocks " + Guide.direction(e.home, x.at()));
+        }
+        // [war-scouting] Home from watching an enemy town: its report filed and told (Spying), not the atlas's news.
+        if (e.mission != null) {
+            Spying.home(level, f, e);
+            return;
         }
         String report = told.isEmpty()
             ? f.displayNameCap() + " came back from the " + e.heading + (fresh > 0 ? " with a little more of the map filled in" : " with nothing new to tell")
@@ -617,6 +636,46 @@ public final class Scouts {
         return list == null ? List.of() : list;
     }
 
+    // ------------------------------------------------------------------ [war-scouting] sent to watch the enemy
+
+    /** A line for the next morning assembly (Spying: what the scout saw of the enemy; Spies: a spy taken). */
+    static void report(UUID village, String line) {
+        REPORTS.computeIfAbsent(village, k -> new ArrayList<>()).add(line);
+    }
+
+    /** This folk's day out is spoken for (sent to watch the enemy): no exploring as well. */
+    static void wentToday(VillageFolkEntity f, long day) {
+        WENT.put(f.getUUID(), day);
+    }
+
+    /** Out to watch another town (Spying): an expedition whose far point is the vantage over it. */
+    static Expedition mission(VillageFolkEntity f, Villages.Village v, BlockPos vantage, Spying.Mission m) {
+        int bearing = bearingOf(vantage.getX() - v.centre().getX(), vantage.getZ() - v.centre().getZ());
+        Expedition e = new Expedition(v.id(), v.centre(), bearing, vantage);
+        e.mission = m;
+        e.startedTick = e.gainedTick = e.surveyTick = f.tickCount;
+        e.trail.add(f.blockPosition().immutable());
+        f.clearQueue();
+        f.getNavigation().stop();
+        f.expedition(e);
+        return e;
+    }
+
+    /**
+     * Home on foot from wherever it is (a captive let go, Spies): the way a scout comes home from a day
+     * cut short, straight for the heart of its own town, with the ground kept awake round it as it goes.
+     */
+    static void walkHome(VillageFolkEntity f, Villages.Village home, Spying.Mission m) {
+        Expedition e = new Expedition(home.id(), home.centre(), 0, f.blockPosition());
+        e.mission = m;
+        e.returning = true;
+        e.crumb = -1;
+        e.why = "came home";
+        e.startedTick = e.gainedTick = f.tickCount;
+        f.clearQueue();
+        f.expedition(e);
+    }
+
     // ------------------------------------------------------------------ looking about
 
     /** What it can see from here: towns, players, ruins, the lie of the land, the rock. */
@@ -629,6 +688,8 @@ public final class Scouts {
             if (o.id().equals(e.village) || !o.dim().equals(level.dimension())) continue;
             if (flat(here, o.centre()) > 80 * 80) continue;
             if (find(f, e, new Find(Kind.TOWN, Villages.name(o.id()), o.centre(), day, by))) {
+                // [war-scouting] Into the atlas, but no swapping news with a town we are at odds with (Spying).
+                if (Spying.hostile(e.village, o.id())) continue;
                 FolkTalk.speak(f, "A town! That'll be " + Villages.name(o.id()) + ".");
                 contact(level, f, e, o, day);
             }
@@ -806,6 +867,7 @@ public final class Scouts {
             if (o.id().equals(e.village) || !o.dim().equals(level.dimension())) continue;
             if (flat(f.blockPosition(), o.centre()) > 160 * 160) continue;
             if (find(f, e, new Find(Kind.TOWN, Villages.name(o.id()), o.centre(), day, by))) {
+                if (Spying.hostile(e.village, o.id())) continue;          // [war-scouting] (as in survey)
                 FolkTalk.speak(f, "Smoke on the horizon — that's " + Villages.name(o.id()) + ".");
                 contact(level, f, e, o, day);
             }
@@ -921,6 +983,9 @@ public final class Scouts {
         boolean scout = f.stationTask() == AssistantEntity.StationTask.SCOUT;
         Expedition e = f.expedition();
         if (all.isEmpty()) {
+            // [war-scouting] On a war footing a town of any size sends somebody to watch the enemy.
+            String enemy = WarMap.talk(village, f.level().getDayTime() / 24000L);
+            if (enemy != null) return enemy;
             if (Villages.headcount(village) < FROM) {
                 return "We don't send anybody scouting yet — that's for a town of " + FROM + " or more. We're " + Villages.headcount(village) + ".";
             }
@@ -944,12 +1009,23 @@ public final class Scouts {
         if (worth.size() > 5) sb.append("; and ").append(worth.size() - 5).append(" more");
         sb.append(". We've seen ").append(exploredPercent(village)).append("% of the land within ").append(RANGE).append(" blocks.");
         if (e != null) sb.append(" I'm out ").append(e.heading()).append(" right now.");
+        String enemy = WarMap.talk(village, f.level().getDayTime() / 24000L);      // [war-scouting] what we know of the enemy
+        if (enemy != null) sb.append(' ').append(enemy);
         return sb.toString();
     }
 
     /** For the board: what the scouts have found, in a line. */
     @Nullable
     public static String boardLine(UUID village) {
+        // [war-scouting] What the scouts saw of the enemy, and how old it is (WarMap), after the atlas.
+        String enemy = WarMap.boardLine(village);
+        String atlas = atlasLine(village);
+        if (enemy == null) return atlas;
+        return atlas == null ? enemy : atlas + " " + enemy;
+    }
+
+    @Nullable
+    private static String atlasLine(UUID village) {
         List<Find> all = atlas(village);
         if (all.isEmpty()) return Villages.headcount(village) >= FROM ? "Scouts: out exploring — nothing in the atlas yet." : null;
         Villages.Village v = Villages.get(village);

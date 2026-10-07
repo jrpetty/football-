@@ -994,6 +994,51 @@ def sights_stage(r, look, cx, cz):
     say("alive after the sights: %s" % client_alive())
 
 
+def war_scouting_stage(r, look, cx, cz):
+    """Scouts at war (entity/Spying, Pickets, WarMap): a second town a little way off, the two set at war
+    (/village war scout stage), one of the first town's folk sent to watch the second and put down at its
+    vantage on the rise outside its streets (/village war scout now): a picture over the scout's shoulder of
+    the enemy town it is counting; the first town's pickets out on the road toward it, and one of them at its
+    post; then the scout home with its count (/village war scout home) and the town's books open at the War
+    map (the enemy where it lies, its guards and the report's age, the reckoning)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    tx, tz = cx + 200, cz - 40
+    r.cmd("tp %s %d 140 %d" % (USER, tx, tz))
+    time.sleep(15)                                     # the ground arrives
+    say("enemy town: " + r.cmd("village spawnat %d %d 8" % (tx, tz))[:200])
+    time.sleep(20)                                     # its board goes up, its folk take up their trades
+    hy = ground_height(r, cx, cz)
+    here = "execute positioned %d %d %d run " % (cx, hy + 1, cz)
+    say("war: " + r.cmd(here + "village war scout stage"))
+    out = r.cmd(here + "village war scout now")
+    say("scout: " + out[:400])
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        r.cmd("tp %s %s %s %s" % (USER, x, y, z))
+        time.sleep(6)
+        look("24-war-1-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=10)
+    out = r.cmd(here + "village war pickets now")
+    say("pickets: " + out[:400])
+    m = re.search(r"PICKET (.+?) on (.+?) at (-?\d+) (-?\d+) (-?\d+)", out)
+    if m:
+        px, py, pz = int(m.group(3)), int(m.group(4)), int(m.group(5))
+        look("24-war-2-picket", px + 6.5, py + 3, pz + 6.5, px + 0.5, py + 1, pz + 0.5, wait=8)
+    time.sleep(30)                                     # the scout lies watching, and counts
+    say("home: " + r.cmd(here + "village war scout home")[:400])
+    say("war map: " + r.cmd(here + "village war map")[:1500])
+    say("intel: " + r.cmd(here + "village war intel")[:600])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village war map books" % USER))
+    time.sleep(4)
+    shot("24-war-3-map")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the war map: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
