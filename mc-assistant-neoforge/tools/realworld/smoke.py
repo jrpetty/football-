@@ -2143,6 +2143,10 @@ def main():
         mine_safety_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("mine safety stage failed: %s" % e)
+    try:
+        cave_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("cave stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
