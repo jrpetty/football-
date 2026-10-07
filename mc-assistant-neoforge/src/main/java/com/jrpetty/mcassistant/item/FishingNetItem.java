@@ -44,6 +44,8 @@ public class FishingNetItem extends Item {
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack net = player.getItemInHand(hand);
+        // Still drying from the last haul: no second haul (the cooldown is not every caller's guard, so it is the net's).
+        if (player.getCooldowns().isOnCooldown(this)) return InteractionResultHolder.fail(net);
         BlockHitResult hit = getPlayerPOVHitResult(level, player, ClipContext.Fluid.SOURCE_ONLY);
         if (hit.getType() != HitResult.Type.BLOCK) return InteractionResultHolder.pass(net);
         BlockPos at = hit.getBlockPos();
