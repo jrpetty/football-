@@ -595,8 +595,13 @@ public class SportGameTests {
         UUID id = folk.get(0).ownerId();
         Villages.Village v = Villages.get(id);
         VillageFolkEntity g1 = folk.get(1), g2 = folk.get(2);
-        g1.setJob(StationTask.GUARD);
-        g2.setJob(StationTask.GUARD);
+        // Two guards in a town of three is more watch than the town's shape calls for, and a hand of an over-staffed
+        // trade re-badges to a trade with nobody at it at its first look (VillageFolkEntity.changedTrade). Taken up as
+        // a player's asking would have it (takeUpTrade), the trade is kept: the town's sums leave it be a while.
+        for (VillageFolkEntity g : new VillageFolkEntity[]{ g1, g2 }) {
+            if (!g.takeUpTrade(StationTask.GUARD)) g.setJob(StationTask.GUARD);
+        }
+        helper.assertTrue(g1.stationTask() == StationTask.GUARD && g2.stationTask() == StationTask.GUARD, "two of the watch");
         g1.removeMatching(s -> s.is(Items.BOW), 64);
         if (g1.getMainHandItem().is(Items.BOW)) g1.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         g2.insertItem(new ItemStack(Items.BOW));
@@ -645,7 +650,7 @@ public class SportGameTests {
                 arrows[0] = arrowsNow;
                 // How the watch stands when the contest is called (the leader's escort, a fight, asleep, away).
                 for (VillageFolkEntity g : new VillageFolkEntity[]{ g1, g2 }) {
-                    Kit.log("sp07 " + g.displayNameCap() + ": asleep " + g.isSleeping() + ", target " + g.getTarget() + ", escorting "
+                    Kit.log("sp07 " + g.displayNameCap() + ": trade " + g.stationTask() + ", asleep " + g.isSleeping() + ", target " + g.getTarget() + ", escorting "
                         + com.jrpetty.mcassistant.entity.Patrols.escorting(g) + ", trip " + (g.trip() != null) + ", doing " + g.hobbyNow());
                 }
                 String c = Archery.contestForTests(level, v);
