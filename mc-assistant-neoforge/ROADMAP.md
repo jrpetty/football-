@@ -166,3 +166,70 @@ somewhere a player can see it.
 48. **Travelling merchants** on market day, with exotic goods.
 49. **Friends from other towns** come to visit.
 50. **Gifts kept.** A folk displays a player's gifts at home.
+
+## War between towns (b277 onward)
+
+Built by four helpers in parallel on the shared seams `Wars` (who is at war, a town's footing), `Intel`
+(scouts' dated reports) and `WarFooting` (who fights). Config `villageWars` (on).
+
+### Why towns go to war (war and peace)
+1. Feuds that boil over: land quarrels, broken deals, stolen goods and insults drive relations to war.
+2. Hawks and doves: the leader's temper and values decide whether a feud becomes a war.
+3. The war council: the leader puts war to the council in the hall; folk vote by their values.
+4. War goals: a border, tribute, a trade deal on our terms, revenge, or freeing a colony.
+5. The ultimatum: a herald carries the demands; the other town gives in, bargains or refuses.
+6. Declaration day: the bell, the war banner over the walls, the chronicle, neighbours take sides.
+
+### Scouts and intelligence
+7. Scouting the enemy: guards, armour, walls, gates, food stores and weapons counted.
+8. Intelligence reports: dated, brought to the war council, stale as the days pass.
+9. Strength reckoning: our strength against theirs from the latest report; no scout, only rumour.
+10. Fog of war: without fresh intelligence the leader guesses, boldly or timidly by temper.
+11. Catching spies: the watch spots enemy scouts; caught spies held, questioned, traded at peace.
+12. Pickets and watchtowers on the roads give early warning of a war band.
+13. The war map in the map room: the enemy town, its last known strength, war bands seen.
+14. Deception: a shrewd leader keeps its barracks out of sight; enemy reports can be wrong.
+
+### Getting ready (the war footing)
+15. The town changes how it works: more guards, smiths on weapons, miners on iron, couriers for the army.
+16. The militia: every able folk drills on rest days and is called up in war.
+17. Recruiting: guards' pay rises with the danger; volunteers by their values.
+18. Fortifications: palisade, stone walls, corner towers, a gatehouse, a ditch.
+19. The armoury: weapons and armour kept and issued; the smiths fill it.
+20. Siege stores: the leader's plan becomes WAR: food, arrows and bandages put by.
+21. Rationing: meals cut to stretch the stores, luxuries stopped.
+22. Curfew and blackout: lanterns out, gates shut at dusk, strangers stopped.
+23. Shelter plan: children and the old to the hall's cellar when the bell rings.
+24. The training yard: guards train at targets and dummies; skill rises.
+25. Cavalry: the stables mount riders for scouting and raids.
+26. Calling the allies: allied towns send guards.
+
+### The war economy
+27. The war chest and a war tax on wages.
+28. War bonds: the well-off lend the town coin at interest.
+29. War prices: iron, weapons, armour and food dearer; luxuries cheaper.
+30. Blockade: caravans stopped or escorted, trade deals paused.
+31. The arms trade: neutral towns and the player sell weapons to both sides.
+32. Mercenaries hired from other towns' job markets.
+33. Requisition: goods taken for the war, paid in IOUs honoured after peace.
+34. The cost counted: coin, goods, lives and trade lost, on the war page.
+
+### Fighting
+35. The war band: guards and militia muster at the gate, armed and fed, under a captain.
+36. Raids on outlying farms, mines and herds: goods and animals carried off, no building broken.
+37. Battles in the field with swords, bows, shields and armour.
+38. Yield and surrender: a beaten folk yields rather than dies; captives taken.
+39. The wounded carried home and tended.
+40. Sieges: a camp outside the walls stops the fields and caravans; relief or hunger decides it.
+41. Defending the walls: archers on the walls, gates shut, a sally when the enemy tires.
+42. Caravan escorts and ambushes on the roads.
+43. Heroes: titles, medals and the chronicle's stories.
+44. The player in the war: join a side, lead the band, scout, sell arms, or broker peace.
+
+### Peace and after
+45. War weariness: losses, hunger and long wars wear a town down; folk may leave.
+46. Wartime elections: a failing war can cost the leader its seat.
+47. Peace talks under a white flag: tribute, borders, captives, reparations, a trade deal.
+48. Treaties kept, in both chronicles and on the board; breaking one is a cause for war.
+49. Memorials and a remembrance day.
+50. Demobilisation: the militia home to their trades, the war tax ended, the town rebuilt.

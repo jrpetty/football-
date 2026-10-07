@@ -43,6 +43,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
     public static final ModConfigSpec.IntValue VILLAGE_FOUNDING_MOST;
     public static final ModConfigSpec.IntValue VILLAGE_CHARTER_FOLK;
+    public static final ModConfigSpec.BooleanValue VILLAGE_WARS;
     public static final ModConfigSpec.IntValue VILLAGE_LOADED_CHUNKS;
     public static final ModConfigSpec.BooleanValue REPLACE_VILLAGERS;
     public static final ModConfigSpec.BooleanValue PROTECT_TRADED_VILLAGERS;
@@ -155,6 +156,11 @@ public final class AssistantConfig {
                 "choose anything from two to villageFoundingMost before confirming. (Villages the world grows",
                 "on its own are founded with villageMinFolk to villageMaxFolk; colonies with villageMinFolk.)")
             .defineInRange("villageCharterFolk", 70, 2, 500);
+        VILLAGE_WARS = b.comment(
+                "Let towns go to war with each other: a feud that boils over, a war council, scouts sent to count",
+                "the enemy, the town on a war footing, war bands, raids, sieges and peace talks. Off, a feud",
+                "stays a feud and nobody marches.")
+            .define("villageWars", true);
         VILLAGE_LOADED_CHUNKS = b.comment(
                 "How many chunks around its heart a settlement keeps ticking while",
                 "nobody is there, as a radius. Six is a 13x13 square (169 chunks): the",
@@ -254,6 +260,7 @@ public final class AssistantConfig {
     public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
     public static int villageFoundingMost() { return read(VILLAGE_FOUNDING_MOST, 500); }
     public static int villageCharterFolk() { return read(VILLAGE_CHARTER_FOLK, 70); }
+    public static boolean villageWars() { return read(VILLAGE_WARS, true); }
     public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 6); }
     public static boolean replaceVillagers() { return read(REPLACE_VILLAGERS, true); }
     public static boolean protectTradedVillagers() { return read(PROTECT_TRADED_VILLAGERS, false); }
