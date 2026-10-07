@@ -313,6 +313,7 @@ public final class Market {
         payWages(level, v);
         Bank.beforeRent(level, v, day);                  // the bank: a saver short of the rent draws it out first (Bank)
         Homes.payday(level, v, day);                     // the rent in, and what the households put by to buy their houses
+        HousingMarket.payday(level, v, day);             // [econ-housing] the housing market weighed; a house of its own commissioned
         if (RestDay.today(id, day)) tithe(level, v, day);
         Bank.morning(level, v, day);                     // the bank: the day's savings in, and on its seventh day its round (Bank)
         Villages.checkRank(level, v, day);

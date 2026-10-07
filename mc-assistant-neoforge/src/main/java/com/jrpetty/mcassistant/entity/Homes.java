@@ -147,7 +147,8 @@ public final class Homes {
 
     /** What the village builds for living in. */
     public static boolean isHome(String structure) {
-        return structure.equals("house") || structure.equals("manor") || structure.equals("townhall");
+        return structure.equals("house") || structure.equals("manor") || structure.equals("townhall")
+            || structure.equals("villa");                // [econ-housing] a folk's own villa (HousingMarket)
     }
 
     /** The leader's hall: the home that goes with leading the village, never given, sold or let. */
@@ -564,6 +565,7 @@ public final class Homes {
         for (Home h : homes.values()) childBeds(level, v, h, day);
         // Anybody with a bed free at home and none there: it is theirs now (and a spare bed out is free again).
         for (Home h : homes.values()) comeHome(level, id, h);
+        HousingMarket.tick(level, v);                  // [econ-housing] the council's houses costed; a folk's own house going up
         // The rent, the saving and the buying are payday's (Market.tick, after the wages: payday).
     }
 
@@ -608,8 +610,9 @@ public final class Homes {
         hall.since = day;
         moveIn(level, v, hall, household, day, true);
         if (old != null && old != hall && old.members.isEmpty() && old.tenure != Tenure.PLAYER) {
-            if (old.tenure == Tenure.OWNED && old.price > 0) f.earn(boughtBack(id, old.price / 2));
-            vacate(id, old, f);                        // and what they had put by toward buying it, back to them
+            // [econ-housing] Its own house sold at the going price, to a household that can buy it or back to the council (HousingMarket).
+            if (old.tenure == Tenure.OWNED) HousingMarket.sell(level, v, old, f, day, "for the leader's hall");
+            else vacate(id, old, f);                   // and what they had put by toward buying it, back to them
         }
         Villages.tell(id, day, names(household) + " moved into the leader's hall");
         f.persona().remember(day, "we moved into the leader's hall", 7);
@@ -739,17 +742,18 @@ public final class Homes {
             && Ledger.coins(village) >= 120 && Villages.headcount(village) >= 16;
     }
 
-    /** What a house sells for: by its size and the age of the town (a tenth less under the town's Home Loans: CityTree). */
+    /** What a house sells for: what it cost to build, as the housing market stands (a tenth less under the town's Home Loans: CityTree). */
     static int price(UUID village, Home h) {
-        int base = h.structure.equals("manor") ? 120 : Ledger.grown(village, h.anchor) ? 55 : 35;
-        return (int) Math.round(base * (1.0 + 0.25 * Villages.ageOf(village).ordinal()) * CityTree.pricePercent(village) / 100.0
+        // [econ-housing] Its blocks at the town's prices and its builders' hours (HousingMarket.worth), times the market's
+        // index: no longer a flat 35, 55 or 120 a quarter dearer an age, whatever the stores and the waiting list.
+        return (int) Math.round(HousingMarket.worth(village, h) * HousingMarket.index(village) * CityTree.pricePercent(village) / 100.0
             * Decor.pricePercent(village, h.anchor) / 100.0                 // a furnished house is worth more (Decor)
             * Quarters.homePercent(village, h.anchor) / 100.0);      // less in the crafts' smoke, more by the park (Quarters)
     }
 
     /** How big a house is, for its rent: a house 1, a two-storey house 2, a manor 4. */
     static int size(UUID village, Home h) {
-        return h.structure.equals("manor") ? 4 : Ledger.grown(village, h.anchor) ? 2 : 1;
+        return h.structure.equals("manor") ? 4 : h.structure.equals("villa") ? 3 : Ledger.grown(village, h.anchor) ? 2 : 1;   // [econ-housing] a villa 3
     }
 
     /**
@@ -761,7 +765,8 @@ public final class Homes {
      * is too small to cut, and is let off one payday in five instead (tenants).
      */
     static int rent(UUID village, Home h) {
-        return Quarters.rent(village, h.anchor, CityTree.rent(village, baseRent(village, h)));   // the smoke, the park (Quarters)
+        return Quarters.rent(village, h.anchor, CityTree.rent(village,
+            HousingMarket.rent(village, baseRent(village, h))));                  // [econ-housing] scarce homes, dearer; empty, cheaper
     }
 
     /** The rent before the town's Cheap Homes. */
@@ -907,13 +912,9 @@ public final class Homes {
         boolean emptied = leave != null && leave.members.size() <= moving.size();
         moveIn(level, v, keep, moving, day, true);
         if (leave != null && leave.members.isEmpty()) {
-            // Back to the village: bought back at half what was paid, if it was theirs.
-            if (leave.tenure == Tenure.OWNED && leave.price > 0) {
-                int back = boughtBack(id, leave.price / 2);
-                mover.earn(back);
-                Villages.tell(id, day, mover.displayNameCap() + " sold " + address(id, v, leave) + " back to the village for " + back + coins(back));
-            }
-            vacate(id, leave, mover);                  // what it had put by toward buying it goes with it
+            // [econ-housing] Theirs: sold at the going price, to a household that can buy it or back to the council (HousingMarket).
+            if (leave.tenure == Tenure.OWNED) HousingMarket.sell(level, v, leave, mover, day, "moving in with " + (mover == a ? b : a).displayNameCap());
+            else vacate(id, leave, mover);             // what it had put by toward buying it goes with it
         }
         if (emptied || leave == null) {
             Villages.tell(id, day, mover.displayNameCap() + " moved in with " + (mover == a ? b : a).displayNameCap() + " at " + address(id, v, keep));
@@ -1443,24 +1444,29 @@ public final class Homes {
         if (h.structure.equals("manor")) return;
         for (Home m : homes(id).values()) {
             if (!m.structure.equals("manor") || !m.vacant() || m.tenure == Tenure.PLAYER) continue;
-            int price = price(id, m), back = h.price / 2;
+            // [econ-housing] Its house sold at the going price (HousingMarket.sell): at the least, the council's four-fifths of it.
+            int price = price(id, m), back = HousingMarket.saleFloor(id, h);
             if (purses(household) + back < price + 20) return;
             VillageFolkEntity seller = null;
-            for (VillageFolkEntity f : household) if (!f.isBaby()) { seller = f; f.earn(boughtBack(id, back)); break; }
-            if (!pay(household, price)) return;
-            Ledger.addCoins(id, price);
-            Economy.houseSold(id, price);
+            for (VillageFolkEntity f : household) if (!f.isBaby()) { seller = f; break; }
             if (m.saved > 0) Ledger.addCoins(id, m.saved);   // savings left behind in an empty house: nobody's now
-            m.tenure = Tenure.OWNED;
-            m.price = price;
-            m.rent = 0;
-            m.owed = 0;
             m.saved = 0;
-            m.since = day;
             moveIn(level, v, m, household, day, true);
-            h.members.clear();
-            vacate(id, h, seller);
-            Villages.tell(id, day, names(household) + " moved up to the manor at " + address(id, v, m) + ", bought for " + price + coins(price));
+            HousingMarket.sell(level, v, h, seller, day, "moving up to the manor");
+            // Bought with what the sale brought in; should it fetch less than the council's floor after all, the manor is rented.
+            boolean paid = pay(household, price);
+            if (paid) {
+                Ledger.addCoins(id, price);
+                Economy.houseSold(id, price);
+            }
+            m.tenure = paid ? Tenure.OWNED : Tenure.RENTED;
+            m.price = price;
+            m.rent = paid ? 0 : rent(id, m);
+            m.owed = 0;
+            m.since = day;
+            save(id, m);
+            Villages.tell(id, day, names(household) + " moved up to the manor at " + address(id, v, m) + (paid ? ", bought for " + price + coins(price)
+                : ", renting it: the sale of their house fell short of its " + price + coins(price)));
             return;
         }
     }
@@ -2031,6 +2037,7 @@ public final class Homes {
         UUID id = v.id();
         enrol(id);
         out.add(Villages.name(id) + ": " + line(level, id));
+        out.addAll(HousingMarket.lines(level, id));      // [econ-housing] the index, prices and rents, houses going up, sales
         for (Home h : homes(id).values()) {
             StringBuilder sb = new StringBuilder(address(id, v, h)).append(" (").append(Flats.isFlat(h) ? "flat" : seat(h) ? "the leader's hall" : h.structure.equals("manor") ? "manor"
                 : Ledger.grown(id, h.anchor) ? "two-storey house" : "house")

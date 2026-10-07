@@ -2840,6 +2840,25 @@ public final class Villages {
 
     /** The builders could not get to this lot: give it up, never pick it again,
      *  and have another look in half a minute. */
+    /**
+     * [econ-housing] A folk's own house (HousingMarket) chooses its lot as a project does (siteFor, under its drawing's
+     * name, so the gardens, the woods and the sweepers keep off it while it goes up). When it stands its site comes off the
+     * list of what is going up, its lot spoken for as any built on; given up before a block is laid (the household could
+     * not pay after all), the lot is free again.
+     */
+    public static void privateSiteDone(UUID villageId, String key, boolean free) {
+        Map<String, Site> pending = SITES.get(villageId);
+        Site gone = pending == null ? null : pending.remove(key);
+        Village v = get(villageId);
+        if (!free || gone == null || v == null) return;
+        java.util.Set<Long> taken = LOT_TAKEN.get(villageId);
+        if (taken == null) return;
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : com.jrpetty.mcassistant.village.TownPlan.lots()) {
+            if (v.centre().getX() + lot.x() != gone.anchor().getX() || v.centre().getZ() + lot.z() != gone.anchor().getZ()) continue;
+            for (long cell : lot.cells()) taken.remove(cell);
+        }
+    }
+
     public static void rejectSite(UUID villageId, String project, long gameTime) {
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);

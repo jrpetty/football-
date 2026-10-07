@@ -731,7 +731,7 @@ public final class HousingMarket {
         double blocksDue, furnishDue;
         int blocksPaid, furnishPaid, labourPaid, laidCount;
         boolean groundDone, foreclosed;
-        long started, day;
+        long started, day, waitSince = -1;
         String waiting = "";
         final Map<Item, Double> prices = new LinkedHashMap<>();
         final Map<UUID, Integer> builders = new LinkedHashMap<>();
@@ -760,7 +760,7 @@ public final class HousingMarket {
                 String.format(Locale.ROOT, "%.5f", blocksDue), String.format(Locale.ROOT, "%.5f", furnishDue),
                 Integer.toString(blocksPaid), Integer.toString(furnishPaid), Integer.toString(labourPaid), Integer.toString(laidCount),
                 groundDone ? "1" : "0", foreclosed ? "1" : "0", Long.toString(started), Long.toString(day), clean(waiting),
-                pr.toString(), bu.toString(), bits.toString(), clean(address) };
+                pr.toString(), bu.toString(), bits.toString(), clean(address), Long.toString(waitSince) };
             return String.join("\t", f);
         }
 
@@ -820,6 +820,7 @@ public final class HousingMarket {
                     c.laid.or(BitSet.valueOf(words));
                 }
                 c.address = p.length > 33 ? p[33] : "";
+                c.waitSince = p.length > 34 ? Long.parseLong(p[34]) : -1;
                 return c;
             } catch (RuntimeException e) {
                 return null;
@@ -1051,7 +1052,7 @@ public final class HousingMarket {
         c.address = addressAt(id, v, c.anchor, c.facing, d);
         c.look = b.look == null ? "" : b.look;
         c.beds = b.beds;
-        c.cells = b.cells;
+        c.cells = cells(d, c.anchor, c.facing, b.beds).size();
         c.ground = b.ground;
         c.blocks = b.blocks;
         c.labour = b.labour;
@@ -1285,7 +1286,12 @@ public final class HousingMarket {
             store(id, c);
             return "the ground made up (" + fill.size() + ")";
         }
-        List<BuildGoal.Placement> all = cells(c.design, c.anchor, c.facing, look, c.beds);
+        List<BuildGoal.Placement> all = cells(c.design, c.anchor, c.facing, c.beds);
+        // Cells the look leaves out (nothing to make them of when it was agreed) are passed over, and not paid for.
+        for (int i = c.laid.nextClearBit(0); i < all.size(); i = c.laid.nextClearBit(i + 1)) {
+            if (furnishing(all.get(i).part()) || blockFor(look, c.design, all.get(i)) != null) break;
+            c.laid.set(i);
+        }
         int next = c.laid.nextClearBit(0);
         if (next >= all.size()) {
             finish(level, v, c, day);
@@ -1301,6 +1307,7 @@ public final class HousingMarket {
             if (c.laid.get(i)) continue;
             if (furnishing(p.part()) != things) break;
             if (!things && p.pos().getY() != y) break;
+            if (!things && blockFor(look, c.design, p) == null) { c.laid.set(i); continue; }
             course.add(i);
         }
         Map<BlockPos, BlockState> lay = new HashMap<>();
@@ -1328,7 +1335,13 @@ public final class HousingMarket {
                     c.blocksDue += c.prices.getOrDefault(it, PriceIndex.each(level, id, it));
                 }
             }
-            if (done.isEmpty()) return note(id, c, "waiting on the stores for " + (shortOf.isEmpty() ? "its blocks" : shortOf));
+            if (done.isEmpty()) {
+                // Waited three days on the same thing: the rest of the house laid in what the stores can pay for now.
+                if (c.waitSince < 0) c.waitSince = day;
+                else if (day - c.waitSince >= 3) relook(level, v, c);
+                return note(id, c, "waiting on the stores for " + (shortOf.isEmpty() ? "its blocks" : shortOf));
+            }
+            c.waitSince = -1;
             c.waiting = shortOf.isEmpty() ? "" : "waiting on the stores for " + shortOf;
         } else {
             for (int i : course) {
@@ -1369,6 +1382,30 @@ public final class HousingMarket {
             return "finished";
         }
         return "laid " + done.size() + (things ? " things" : " blocks at y " + y);
+    }
+
+    /**
+     * A build that has waited three days on the stores for the same thing: what is still to lay is laid in what the stores
+     * can pay for now (brick short, dressed stone; slate short, stone or the town's own timber), each new kind of block at
+     * the town's price today. The household pays no more than the blocks agreed: a builder's price is its price.
+     */
+    static void relook(ServerLevel level, Villages.Village v, Commission c) {
+        List<BuildGoal.Placement> all = cells(c.design, c.anchor, c.facing, c.beds), rest = new ArrayList<>();
+        for (int i = 0; i < all.size(); i++) if (!c.laid.get(i) && !furnishing(all.get(i).part())) rest.add(all.get(i));
+        if (rest.isEmpty()) return;
+        Masonry.Look look = Masonry.buildIn(level, v, c.design.palette, rest, false);
+        if (look == null) look = Masonry.buildIn(level, v, Showcase.OAK, rest, false);
+        if (look == null) return;
+        c.look = look.encode();
+        for (BuildGoal.Placement p : rest) {
+            Block b = look.of(Masonry.role(p));
+            if (b == null) continue;
+            Item it = b == Blocks.WALL_TORCH ? Items.TORCH : b.asItem();
+            c.prices.putIfAbsent(it, PriceIndex.each(level, v.id(), it));
+        }
+        c.waitSince = -1;
+        Villages.tell(v.id(), level.getDayTime() / 24000L, "the stores could not run to " + c.names + "'s " + c.design.word
+            + " as drawn: the rest of it goes up in what they have");
     }
 
     private static String firstName(Commission c) {

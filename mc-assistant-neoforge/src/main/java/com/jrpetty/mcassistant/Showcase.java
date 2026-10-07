@@ -35,7 +35,7 @@ public final class Showcase {
         "house", "guesthouse", "storage", "shelter", "well", "smeltery", "workshop", "granary",
         "market", "watchtower", "lighthouse", "monument", "gateway", "hall", "chapel", "barracks",
         "smithy", "brewery", "library", "cafe", "shop", "tavern", "graveyard", "house2", "fountain", "manor", "belltower",
-        "school", "museum", "stable");
+        "school", "museum", "stable", "villa");
 
     /** A palette: the woods and stones a building is made of. */
     public record Palette(Block walls, Block frame, Block roofStair, Block roofSlab, Block roofBlock, Block floor,

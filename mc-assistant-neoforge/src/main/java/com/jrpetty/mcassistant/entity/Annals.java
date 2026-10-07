@@ -885,6 +885,7 @@ public final class Annals {
         c.putInt("bedded", bedded);
         c.putInt("folk", folk.size());
         c.putString("line", Homes.line(level, id));
+        c.put("market", HousingMarket.report(level, id));         // [econ-housing] the index, prices, houses going up, sales
         return c;
     }
 

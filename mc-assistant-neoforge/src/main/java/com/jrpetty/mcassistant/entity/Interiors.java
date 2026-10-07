@@ -83,6 +83,7 @@ public final class Interiors {
         int done = 0;
         for (Ledger.Building b : Ledger.buildings(id)) {
             if (!FURNISHED.contains(b.structure()) || Ledger.raising(id, b.anchor())) continue;
+            if (HousingMarket.isPrivate(id, b.anchor())) continue;     // [econ-housing] a folk's own house: furnished at its own cost
             if (DONE.getOrDefault(b.anchor().asLong(), 0) >= tier) continue;
             if (!Land.areaLoaded(level, b.anchor(), 12)) continue;
             List<Piece> plan = plan(level, id, b, tier);
