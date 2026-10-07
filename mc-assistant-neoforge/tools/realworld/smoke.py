@@ -3173,6 +3173,10 @@ def main():
         interviews_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("interviews stage failed: %s" % e)
+    try:
+        fireworks_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("fireworks stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
