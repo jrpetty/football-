@@ -8142,10 +8142,10 @@ chosen one shakes hands across the table.
 * *A new workplace's first keeper*: the new smithy wants a blacksmith. The town's own folk who want the work stand
   alongside any applicants from other towns.
 * *The posts a town gives its own*: the schoolteacher, the librarian, the ferryman, the bank clerk, a place on the cave
-  team, and the steward of a player who leads. When one of these falls vacant and two or more folk want it, the post is
-  held open for a day for its interview. Whether a folk wants a post depends on its ambition, what it cares about, its
-  nature and its hand at the work, and on whether it can take the post without leaving its own trade short. With only
-  one candidate, the post simply goes to that one.
+  team, the fletcher, the golem keeper, and the steward of a player who leads. When one of these falls vacant and two or
+  more folk want it, the post is held open for a day for its interview. Whether a folk wants a post depends on its
+  ambition, what it cares about, its nature and its hand at the work, and on whether it can take the post without
+  leaving its own trade short. With only one candidate, the post simply goes to that one.
 * *The posts a town works out each day from who is best*: the constable of the watch (from the Iron Age, with a watch
   of two or more), the leader of the cave team, the auctioneer, and the master of a trade when the old master retires
   or dies. Once a panel has chosen someone, the town keeps that choice for as long as the folk stays fit for the post.
@@ -8246,9 +8246,10 @@ day it was written. Right-click it to read it. One you craft yourself is blank.
   Interviews.
 * `/village interviews choose <name>`, `recommend <name>` and `panel`: as above.
 * Operators: `/village interviews stage <post>` sets up an interview now with the town's best candidates (`teacher`,
-  `librarian`, `constable`, `caveleader`, `caveplace`, `ferryman`, `auctioneer`, `banker`, `steward`, `master_<trade>`,
-  or a trade's name such as `smith`, which puts a notice up for it). `/village interviews now` starts the next one at
-  once, and `/village interviews hurry on|off` makes it a line every half-second for a quick look.
+  `librarian`, `constable`, `caveleader`, `caveplace`, `ferryman`, `auctioneer`, `banker`, `steward`, `fletcher`,
+  `golemkeeper`, `master_<trade>`, or another trade's name such as `smith`, which puts a notice up for it).
+  `/village interviews now` starts the next one at once, and `/village interviews hurry on|off` makes it a line every
+  half-second for a quick look.
 
 **Tested.** The game tests `InterviewGameTests` (iv01 to iv10) check that:
 * four miners from a town ninety blocks away apply for a notice, and three are shortlisted. They travel over, sit on the

@@ -24,8 +24,8 @@ import java.util.UUID;
  *     from the other towns.</li>
  * <li><b>The posts the town gives its own</b>, each held open for its interview when it falls vacant (the subsystem's own
  *     choosing waits on it, and then takes the panel's choice): the schoolteacher (School), the librarian (Library),
- *     the ferryman (Ferries), the bank's clerk (Bank), the steward of a player who leads (PlayerLeader), and a place on
- *     the cave team (CaveDwellers).</li>
+ *     the ferryman (Ferries), the bank's clerk (Bank), the steward of a player who leads (PlayerLeader), a place on
+ *     the cave team (CaveDwellers), the fletcher's place (Fletchers) and the golem keeper's (Golems).</li>
  * <li><b>The posts the town reckons each day</b> from who is best, which the panel's choice then keeps while it is fit
  *     for them: the constable of the watch (Inquiry), the leader of the cave team (CaveDwellers), the auctioneer once
  *     the auction house stands (Auctions), and the master of a trade that takes apprentices (PlayerTrades), when the old
@@ -37,7 +37,8 @@ final class InterviewPosts {
 
     private InterviewPosts() {}
 
-    enum Kind { OPENING, TEACHER, LIBRARIAN, CONSTABLE, CAVE_LEADER, CAVE_PLACE, FERRYMAN, AUCTIONEER, BANKER, STEWARD, MASTER }
+    enum Kind { OPENING, TEACHER, LIBRARIAN, CONSTABLE, CAVE_LEADER, CAVE_PLACE, FERRYMAN, AUCTIONEER, BANKER, STEWARD, MASTER, FLETCHER,
+        GOLEM_KEEPER }
 
     /** A post: its kind, its key in the books, the trade it is of (for the questions and the master), a notice's number. */
     record Post(Kind kind, String key, @Nullable StationTask trade, int opening) {
@@ -67,6 +68,8 @@ final class InterviewPosts {
                 case "auctioneer" -> new Post(Kind.AUCTIONEER, key, StationTask.SHOP, -1);
                 case "banker" -> new Post(Kind.BANKER, key, StationTask.BANK, -1);
                 case "steward" -> new Post(Kind.STEWARD, key, null, -1);
+                case "fletcher" -> new Post(Kind.FLETCHER, key, StationTask.FLETCHER, -1);
+                case "golemkeeper" -> new Post(Kind.GOLEM_KEEPER, key, StationTask.GOLEMS, -1);
                 default -> null;
             };
         }
@@ -95,6 +98,8 @@ final class InterviewPosts {
                 case AUCTIONEER -> "auctioneer";
                 case BANKER -> "bank clerk";
                 case STEWARD -> "steward";
+                case FLETCHER -> "fletcher";
+                case GOLEM_KEEPER -> "golem keeper";
                 case MASTER -> "master " + (trade == null ? "hand" : JobMarket.noun(trade));
             };
         }
@@ -129,6 +134,7 @@ final class InterviewPosts {
                 case CAVE_LEADER, CAVE_PLACE -> Values.Value.PROGRESS;
                 case FERRYMAN, AUCTIONEER, BANKER -> Values.Value.WEALTH;
                 case STEWARD -> Values.Value.HOMES;
+                case FLETCHER, GOLEM_KEEPER -> Values.Value.SAFETY;
                 default -> {
                     Values.Value v = trade == null ? null : Values.taughtBy(trade);
                     yield v == null ? Values.Value.WEALTH : v;
@@ -147,6 +153,8 @@ final class InterviewPosts {
                 case AUCTIONEER -> "the auction house";
                 case BANKER -> "the bank";
                 case STEWARD -> "the hall";
+                case FLETCHER -> "the fletcher's hut";
+                case GOLEM_KEEPER -> "the golem yard";
                 default -> trade == null ? "the town" : JobMarket.workWords(trade);
             };
         }
@@ -183,6 +191,9 @@ final class InterviewPosts {
                 yield council && (leader == null || !leader.equals(f.getUUID()));
             }
             case MASTER -> p.trade() != null && t == p.trade() && f.tradeLevel(t) >= Lessons.MASTER;
+            // As the trade's own appointing weighs them (a hand its trade can spare, never the watch or a craft's own).
+            case FLETCHER -> t != StationTask.FLETCHER && Fletchers.fitness(f, village) != Integer.MIN_VALUE;
+            case GOLEM_KEEPER -> t != StationTask.GOLEMS && Golems.fitness(f, village) != Integer.MIN_VALUE;
             case OPENING -> {
                 StationTask want = p.tradeFor(village);
                 // One of the town's own for a new workplace: not its elder, not a hand its own trade cannot spare.
@@ -263,6 +274,20 @@ final class InterviewPosts {
                 int lv = t == null ? 0 : f.tradeLevel(t);
                 good.add("level " + lv + " at " + (t == null ? "the trade" : t.label));
                 return lv * 10;
+            }
+            case FLETCHER -> {
+                int lv = f.tradeLevel(StationTask.FLETCHER), hunt = f.tradeLevel(StationTask.HUNT);
+                if (lv > 0) good.add("level " + lv + " at fletching");
+                if (hunt > 0) good.add("knows a bow (level " + hunt + " hunting)");
+                if (f.life().has(Social.Trait.SHY)) good.add("quiet, careful hands");
+                return Math.max(0, Fletchers.fitness(f, village));
+            }
+            case GOLEM_KEEPER -> {
+                int lv = f.tradeLevel(StationTask.GOLEMS), iron = f.tradeLevel(StationTask.MINE) + f.tradeLevel(StationTask.SMELT);
+                if (lv > 0) good.add("level " + lv + " at keeping golems");
+                if (iron > 0) good.add("used to iron (level " + iron + " at the mine and the furnace)");
+                if (f.life().has(Social.Trait.HARDWORKING)) good.add("hardworking");
+                return Math.max(0, Golems.fitness(f, village));
             }
             case OPENING -> {
                 int lv = t == null ? 0 : f.tradeLevel(t), kn = JobMarket.knacks(f, t);
@@ -347,6 +372,8 @@ final class InterviewPosts {
             case BANKER -> Bank.building(id) != null;
             case STEWARD -> PlayerLeader.leaderId(id) != null;
             case MASTER -> p.trade() != null && Lessons.of(p.trade()) != null;
+            case FLETCHER -> Fletchers.wanted(id) && Fletchers.fletchers(id).size() < Fletchers.hands(id);
+            case GOLEM_KEEPER -> Golems.wanted(id) && !Golems.keeps(id);
             case OPENING -> {
                 JobMarket.Opening o = JobMarket.opening(id, p.opening());
                 yield o != null && o.state() == JobMarket.State.OPEN;
@@ -374,7 +401,8 @@ final class InterviewPosts {
             case BANKER -> Bank.banker(id);
             case STEWARD -> PlayerLeader.steward(id);
             case MASTER -> p.trade() == null ? null : PlayerTrades.masterOf(id, p.trade());
-            case CAVE_PLACE, OPENING -> null;
+            case GOLEM_KEEPER -> Golems.keeper(id);
+            case CAVE_PLACE, FLETCHER, OPENING -> null;
         };
     }
 
@@ -446,6 +474,15 @@ final class InterviewPosts {
                 VillageFolkEntity got = CaveDwellers.appoint(level, v, day);
                 return got == winner ? "joined the cave team" : "is to join the cave team";
             }
+            case FLETCHER -> {
+                // The trade's own appointing, which takes the panel's choice first (Fletchers.shortlist: Interviews.preferred).
+                VillageFolkEntity got = Fletchers.appoint(level, v);
+                return got == winner ? "took up fletching, the watch's arrows its to make" : "is to take up fletching";
+            }
+            case GOLEM_KEEPER -> {
+                VillageFolkEntity got = Golems.appoint(level, v);
+                return got == winner ? "keeps the town's golems" : "is to keep the town's golems";
+            }
             case CONSTABLE -> { return "leads the watch as its constable"; }
             case CAVE_LEADER -> { return "leads the cave team"; }
             case AUCTIONEER -> { return "calls the auctions"; }
@@ -466,7 +503,7 @@ final class InterviewPosts {
     /** "teacher", "librarian"… and every trade's word, for the operator's stage. */
     static List<String> keys() {
         List<String> out = new ArrayList<>(List.of("teacher", "librarian", "constable", "caveleader", "caveplace", "ferryman",
-            "auctioneer", "banker", "steward"));
+            "auctioneer", "banker", "steward", "golemkeeper"));
         for (StationTask t : StationTask.values()) {
             if (t == StationTask.NONE) continue;
             out.add(t.name().toLowerCase(Locale.ROOT));
