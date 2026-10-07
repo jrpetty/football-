@@ -64,6 +64,8 @@ public final class FolkTalk {
         Persona me = f.persona();
         long day = f.level().getDayTime() / 24000L;
         Persona.Opinion op = me.opinionOf(p.getUUID(), p.getName().getString());
+        // [caves] Said to one of the cave team: an ask of it, going along, its map, a share (CaveGuests.meant).
+        if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.CAVE && CaveGuests.meant(text)) topic = TalkTopic.CAVES;
         if (topic == TalkTopic.SAY) topic = understand(text);
         boolean firstMeeting = op.lastTalkDay < 0 && op.lastGiftDay < 0;
         String heard = op.heardFrom;
@@ -162,7 +164,7 @@ public final class FolkTalk {
                 ? Purchases.talk(f) : Wealth.talk(f, text) + Bank.talkLine(f);
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
-            case CAVES -> CaveDwellers.tell(f);                                // [caves] the caves' report
+            case CAVES -> CaveGuests.talk(f, p, text);                         // [caves] the report; an ask, going along, the map
             case FASHION -> Fashion.talk(f);                                   // [fashion] the season's look
             case WATCH -> p instanceof ServerPlayer sp ? Crime.talk(f, sp, text) : puzzled(f);   // [crime] seen anything amiss?
             case FOR_SALE -> Budget.answer(f, p);
@@ -1245,6 +1247,9 @@ public final class FolkTalk {
                 "poach", "smuggl", "constable", "the stocks", "suspect")
                 || has(t, "i saw") && has(t, " take", " took", " steal", " stole", " broke", " break", " smash", " pinch", " nick",
                     " did it", " do it", " purse", " window", " lamp", " fence")) return TalkTopic.WATCH;
+        // [caves] The cave team's map, going along with the team, an ask of it: before the town's map and the guide.
+        if (has(t, "cave map", "map of the caves", "caves map", "cave team", "delvers", "come down the caves", "come caving",
+                "go caving")) return TalkTopic.CAVES;
         // [players] Before "could I have" (the stores) and "where is" (the guide): a map, and the Lost and Found.
         if (has(t, "map of the town", "map of town", "map of the village", "town map", "village map", "a map of", "a map please",
                 "draw me a map")) return TalkTopic.TOWN_MAP;

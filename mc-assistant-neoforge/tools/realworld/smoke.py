@@ -1800,11 +1800,18 @@ def mine_safety_stage(r, look, cx, cz):
 def cave_stage(r, look, cx, cz):
     """The cave dwellers (entity/CaveDwellers): a small cave cut into the ground well out past the town (/village caves
     stage), a ramp down into it from the west, a chamber with iron in its east wall, coal and copper in its south, a
-    diamond and obsidian in its north, and an old chest with the world's dungeon loot in it; a cave dweller in the
-    town's iron kit stood at the mouth (a showcase's), and the town's cave team (taken up for it if the town has
-    none) sent into it. Pictures: the cave dweller in its kit at the cave mouth; inside, once the real one has walked out
+    diamond and obsidian in its north, and an old chest with the world's dungeon loot in it; a cave dweller in its own
+    look stood at the mouth (a showcase's), and the town's cave team (taken up for it if the town has
+    none) sent into it. Pictures: the cave dweller in its own look at the cave mouth; inside, once the real one has walked out
     to it, gone in and lit it, the iron vein in the east wall being mined; the old chest being looked into; then
-    /village caves said, and the town's books open at the Caves page (the map, the finds, the hauls)."""
+    /village caves said, and the town's books open at the Caves page (the map, the finds, the hauls).
+
+    The staged cave is lit as the team lights a cave (torches fifteen to twenty apart, at the bends and over the
+    work), so the pictures inside show it whatever the team has set by then; and the team's trip is kept going a
+    while (a short real trip, the finds on the Caves page as they are made). [caves] Then the Delvers' Lodge put up
+    on ground of its own beside the cave (/village caves lodge): from the street, the map wall of the cave country
+    (real maps in item frames, every cave marked), and the trophy wall, two of the team about the hall in their own
+    look (the delver's helm and lamp, the oilskin coat, the rope and the spare pick)."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
@@ -1829,12 +1836,22 @@ def cave_stage(r, look, cx, cz):
         look("25-" + name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
 
     shoot("caves-1-mouth", 8)
-    time.sleep(60)                                     # the town's cave dweller walks out to it, goes in and lights it
+    time.sleep(70)                                     # the town's cave dweller walks out to it, goes in and lights it
     say("caves: " + r.cmd("execute positioned %d %d %d run village caves" % (cx, hy + 1, cz))[:900])
     shoot("caves-2-vein", 10)
-    time.sleep(15)
+    time.sleep(20)
     shoot("caves-3-chest", 8)
-    say("caves after: " + r.cmd("execute positioned %d %d %d run village caves" % (cx, hy + 1, cz))[:900])
+    say("caves after: " + r.cmd("execute positioned %d %d %d run village caves" % (cx, hy + 1, cz))[:1400])
+    # [caves] The Delvers' Lodge, on ground of its own north of the cave, out of the town's way.
+    lx, lz = sx - 6, sz - 44
+    r.cmd("tp %s %d %d %d" % (USER, lx + 8, hy + 16, lz + 18))
+    time.sleep(6)                                      # the ground arrives
+    lout = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village caves lodge" % (lx, lz))
+    say("lodge stage: " + lout[:700])
+    lviews = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", lout)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(lviews):
+        look("25-caves-%d-%s" % (5 + i, name), int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5,
+             wait=8 if i == 0 else 6)
     r.cmd("gamemode creative %s" % USER)
     r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
     time.sleep(3)

@@ -83,7 +83,9 @@ public class BuildGoal extends Goal {
         // [war-prep] the armoury and the training yard, on a war footing (entity/WarWorks)
         "armoury", "trainingyard",
         // [disasters] the fire station, its buckets on a rack and its fire bell (entity/FireSafety)
-        "firestation");
+        "firestation",
+        // [caves] the Delvers' Lodge: the cave team's maps, trophies, bunks and gear (entity/Lodge)
+        "lodge");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

@@ -583,7 +583,8 @@ public final class WatchClears {
             case "house", "house2", "flats", "flats4", "hall", "townhall", "tavern", "inn", "guesthouse", "storage",
                  "storehouse", "store", "shop", "cafe", "bakery", "bank", "barracks", "granary", "chapel", "school",
                  "library", "museum", "infirmary", "manor", "villa", "postoffice", "theatre", "workshop", "smithy",
-                 "brewery", "armoury", "shelter" -> true;
+                 "brewery", "armoury", "shelter",
+                 "lodge" -> true;                                                 // [caves] the Delvers' Lodge
             default -> false;
         };
     }

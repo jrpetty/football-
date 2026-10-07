@@ -329,10 +329,19 @@ public final class Museum {
         if (!first || k.renown < 2) return;
         String who = f.displayNameCap() + (trade.isEmpty() ? "" : " the " + trade);
         String what = k.words.startsWith("the town's first") ? k.words : article(k) + ", the first the town has had";
-        Villages.tell(village, day, who + " " + how + " " + what);
-        f.persona().remember(day, "I " + how + " " + what, 4);
+        Villages.tell(village, day, who + " " + deed(how, what));
+        f.persona().remember(day, "I " + deed(how, what), 4);
         FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Look at this — " + article(k) + "!", "Well I never. " + capital(article(k)) + "!",
             "Wait till they see this at home!"));
+    }
+
+    /** "mined a diamond"; [caves] "brought up a diamond from the great cave north-east" (the cave after the thing). */
+    static String deed(String how, String what) {
+        if (how.startsWith("brought up from ")) {
+            String from = how.substring("brought up ".length());
+            return (what.equals("it") || what.equals("that") ? "brought " + what + " up " : "brought up " + what + " ") + from;
+        }
+        return how + " " + what;
     }
 
     /** The folk's trade in a word ("miner"), or "" for none. */
@@ -348,7 +357,7 @@ public final class Museum {
             case MINE -> k == Kind.FOSSIL ? "dug out" : "mined";
             case FISH -> "fished up";
             case HUNT -> "brought home";
-            case CAVE -> "brought up from the caves";      // [caves]
+            case CAVE -> CaveDwellers.foundWhere(f);       // [caves] "brought up from the great cave north-east"
             case GUARD -> "won";
             default -> "found";
         };
@@ -1305,12 +1314,26 @@ public final class Museum {
         return Archive.px(w) <= SIGN_PX ? w : "Old Map";
     }
 
+    /** [caves] Tests: a label's four lines. */
+    public static String[] labelLinesForTests(MuseumRecords.Shown s) {
+        return labelLines(s);
+    }
+
     /** The label's four lines: what, found by whom, at what trade, on what day. */
     static String[] labelLines(MuseumRecords.Shown s) {
         String l1, l2 = "", l3;
         if (s.finder.isEmpty()) {
             l1 = "from the stores";
             l3 = "shown day " + s.shown;
+        } else if (s.how.startsWith("brought up from ")) {
+            // [caves] The cave team's find: who brought it up, and from which cave (CaveDwellers.foundWhere).
+            String place = s.how.substring("brought up from ".length()).replaceFirst("^the ", "");
+            String brief = place.replace("north-east", "NE").replace("north-west", "NW").replace("south-east", "SE").replace("south-west", "SW")
+                .replace("north", "N").replace("south", "S").replace("east", "E").replace("west", "W");
+            l1 = Archive.px("by " + s.finder) <= SIGN_PX ? "by " + s.finder : s.finder;
+            l2 = Archive.px("from " + place) <= SIGN_PX ? "from " + place : Archive.px(place) <= SIGN_PX ? place
+                : Archive.px("from " + brief) <= SIGN_PX ? "from " + brief : brief;
+            l3 = s.found >= 0 ? "day " + s.found : "shown day " + s.shown;
         } else {
             String verb = s.how.isEmpty() ? "found" : s.how;
             String full = verb + " by " + s.finder;
@@ -1709,12 +1732,12 @@ public final class Museum {
         RandomSource r = f.getRandom();
         if (f.getUUID().equals(s.finderId)) {
             return FolkTalk.pick(r, "My " + s.label.toLowerCase(Locale.ROOT) + "! Day " + s.found + ", it was. I'll never forget it.",
-                "That's mine, that is. I " + (s.how.isEmpty() ? "found" : s.how) + " it myself.",
+                "That's mine, that is. I " + deed(s.how.isEmpty() ? "found" : s.how, "it") + " myself.",     // [caves] deed
                 "Look at it there, with my name on it.");
         }
         if (isCurator(f)) return FolkTalk.pick(r, "A little dust on this one. There.", "Straight as a die. Good.",
             "Mind the glass, everybody.");
-        String who = s.finder.isEmpty() ? "" : s.finder + " " + (s.how.isEmpty() ? "found" : s.how) + " that. ";
+        String who = s.finder.isEmpty() ? "" : s.finder + " " + deed(s.how.isEmpty() ? "found" : s.how, "that") + ". ";   // [caves] deed
         Kind k = Kind.byKey(s.kind);
         String about = k == null ? "Isn't it something?" : switch (k) {
             case DIAMOND -> "Look at it shine. Our very first diamond.";

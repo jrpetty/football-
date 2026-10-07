@@ -69,15 +69,15 @@ import java.util.function.Predicate;
 @PrefixGameTestTemplate(false)
 public class CaveDwellerGameTests {
 
-    private static final String EMPTY = "empty";
-    private static final int Z = 66000;
+    static final String EMPTY = "empty";
+    static final int Z = 66000;
     /** How far east of the heart the cave's tunnel opens. */
-    private static final int OUT = 64;
+    static final int OUT = 64;
 
     /** A village of these trades (the founder first), its stores a storehouse and nothing else, in this age. */
-    private record Town(UUID village, Villages.Village v, BlockPos heart, StorehouseBlockEntity store, List<VillageFolkEntity> folk) {}
+    record Town(UUID village, Villages.Village v, BlockPos heart, StorehouseBlockEntity store, List<VillageFolkEntity> folk) {}
 
-    private static Town town(GameTestHelper helper, int x, Villages.Age age, StationTask... trades) {
+    static Town town(GameTestHelper helper, int x, Villages.Age age, StationTask... trades) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         CaveDwellers.resetForTests();
@@ -102,7 +102,7 @@ public class CaveDwellerGameTests {
         return new Town(village, Villages.get(village), heart, store, folk);
     }
 
-    private static StorehouseBlockEntity storehouse(GameTestHelper helper, ServerLevel level, BlockPos heart, int dx, int dz) {
+    static StorehouseBlockEntity storehouse(GameTestHelper helper, ServerLevel level, BlockPos heart, int dx, int dz) {
         BlockPos origin = Kit.surface(level, heart.getX() + dx, heart.getZ() + dz);
         for (BlockPos p : BlockPos.betweenClosed(origin.offset(-1, 0, -1), origin.offset(3, 4, 3))) {
             level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
@@ -122,7 +122,7 @@ public class CaveDwellerGameTests {
     }
 
     /** No chest about but the storehouse (the founders' chest goes). */
-    private static void onlyTheStorehouse(ServerLevel level, UUID village) {
+    static void onlyTheStorehouse(ServerLevel level, UUID village) {
         for (BlockPos p : Villages.storeChests(level, village)) {
             if (level.getBlockEntity(p) instanceof ChestBlockEntity c) {
                 c.clearContent();
@@ -133,7 +133,7 @@ public class CaveDwellerGameTests {
     }
 
     /** The storehouse filled with these, in its first slots, and the village's counts made afresh. */
-    private static void fill(Town t, ItemStack... goods) {
+    static void fill(Town t, ItemStack... goods) {
         for (int i = 0; i < t.store().getContainerSize(); i++) t.store().setItem(i, ItemStack.EMPTY);
         for (int i = 0; i < goods.length; i++) t.store().setItem(i, goods[i]);
         Villages.forgetStock();
@@ -143,7 +143,7 @@ public class CaveDwellerGameTests {
 
     /** A cave team's kit for so many, and these besides: the watch's iron, swords, shields, iron picks, a stack of
      *  bread each, torches (four stacks), cobblestone. */
-    private static ItemStack[] kit(int n, boolean picks, int torchStacks, ItemStack... more) {
+    static ItemStack[] kit(int n, boolean picks, int torchStacks, ItemStack... more) {
         List<ItemStack> out = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             out.add(new ItemStack(Items.IRON_HELMET));
@@ -162,19 +162,19 @@ public class CaveDwellerGameTests {
         return out.toArray(new ItemStack[0]);
     }
 
-    private static int stock(ServerLevel level, UUID village, Item it) {
+    static int stock(ServerLevel level, UUID village, Item it) {
         return Market.stock(level, village, s -> s.is(it));
     }
 
     /** What the storehouse block itself holds of this (not the town's other stores). */
-    private static int inStorehouse(Town t, Item it) {
+    static int inStorehouse(Town t, Item it) {
         int n = 0;
         for (int i = 0; i < t.store().getContainerSize(); i++) if (t.store().getItem(i).is(it)) n += t.store().getItem(i).getCount();
         return n;
     }
 
     /** Carried at all: in either hand, worn, or in the pack. */
-    private static int has(VillageFolkEntity f, Predicate<ItemStack> what) {
+    static int has(VillageFolkEntity f, Predicate<ItemStack> what) {
         int n = 0;
         for (EquipmentSlot slot : EquipmentSlot.values()) if (what.test(f.getItemBySlot(slot))) n += f.getItemBySlot(slot).getCount();
         for (ItemStack s : f.getInventoryItems()) if (what.test(s)) n += s.getCount();
@@ -182,7 +182,7 @@ public class CaveDwellerGameTests {
     }
 
     /** The test's cave, and where its things are. */
-    private record Cave(BlockPos mouth, BlockPos chamber, BlockPos lootChest, BlockPos playerChest, BlockPos spawner,
+    record Cave(BlockPos mouth, BlockPos chamber, BlockPos lootChest, BlockPos playerChest, BlockPos spawner,
                         List<BlockPos> iron, List<BlockPos> coal, BlockPos diamond, List<BlockPos> obsidian, int x0, int z0, int base) {}
 
     /**
@@ -193,7 +193,7 @@ public class CaveDwellerGameTests {
      * rolled (and two diamonds and some rotten flesh in it already), a player's chest beside it with three diamonds and
      * an iron ingot, a zombie spawner by mossy stones in the south wall.
      */
-    private static Cave cave(ServerLevel level, int x0, int z0, boolean extras) {
+    static Cave cave(ServerLevel level, int x0, int z0, boolean extras) {
         int base = Kit.surface(level, x0 + 12, z0).getY();
         for (int x = x0; x <= x0 + 24; x++) {
             for (int z = z0 - 8; z <= z0 + 8; z++) {
@@ -244,7 +244,7 @@ public class CaveDwellerGameTests {
         return new Cave(mouth, chamber, loot, mine, spawner, iron, coal, diamond, obsidian, x0, z0, base);
     }
 
-    private static int torchesIn(ServerLevel level, Cave c) {
+    static int torchesIn(ServerLevel level, Cave c) {
         int n = 0;
         for (BlockPos p : BlockPos.betweenClosed(new BlockPos(c.x0(), c.base(), c.z0() - 6), new BlockPos(c.x0() + 20, c.base() + 4, c.z0() + 6))) {
             if (level.getBlockState(p).is(Blocks.TORCH) || level.getBlockState(p).is(Blocks.WALL_TORCH)) n++;
@@ -252,27 +252,27 @@ public class CaveDwellerGameTests {
         return n;
     }
 
-    private static int ironLeft(ServerLevel level, Cave c) {
+    static int ironLeft(ServerLevel level, Cave c) {
         int n = 0;
         for (BlockPos p : c.iron()) if (level.getBlockState(p).is(Blocks.IRON_ORE)) n++;
         return n;
     }
 
     /** Every one of the team stood at the cave's mouth. */
-    private static void toTheMouth(Town t, Cave c, VillageFolkEntity... team) {
+    static void toTheMouth(Town t, Cave c, VillageFolkEntity... team) {
         for (int i = 0; i < team.length; i++) {
             team[i].moveTo(c.mouth().getX() + 0.5 - i, c.mouth().getY(), c.mouth().getZ() + 0.5, -90.0F, 0.0F);
         }
     }
 
     /** Is anybody of the team still out? */
-    private static boolean out(VillageFolkEntity... team) {
+    static boolean out(VillageFolkEntity... team) {
         for (VillageFolkEntity f : team) if (f.expedition() != null) return true;
         return false;
     }
 
     /** The time the test may skip on: a folk's break taken (VillageFolkEntity.breakNowForTests). */
-    private static void pace(ServerLevel level, VillageFolkEntity... team) {
+    static void pace(ServerLevel level, VillageFolkEntity... team) {
         for (VillageFolkEntity f : team) if (f.breakNowForTests()) level.setDayTime(level.getDayTime() + 200);
     }
 
@@ -620,11 +620,23 @@ public class CaveDwellerGameTests {
         for (int i = 0; i < 60; i++) list.add(new CaveDwellers.Vein("iron", great.offset(i % 10 - 5, i / 10 - 3, (i * 7) % 11 - 5), 8, i % 3, "todo"));
         CaveDwellers.listForTests(id, great, list);
         CaveTrips.Plan big = CaveTrips.plan(level, t.v(), team, great);
-        // (c) The same, with little food in the stores.
+        // (c) The same, with little food in the stores, and none in the team's packs (what it carries is reckoned too: the
+        // folk come into the world with a few days' food of their own, and the plan counted it as plenty).
         ItemStack[] little = kit(2, true, 10, new ItemStack(Items.BREAD, 3 * Villages.headcount(id) + 8));
         for (int i = 0; i < little.length - 1; i++) if (little[i].is(Items.BREAD)) little[i] = ItemStack.EMPTY;
         fill(t, little);
+        List<ItemStack> packed = new ArrayList<>();
+        for (VillageFolkEntity f : team) {
+            var pack = f.getInventoryItems();
+            for (int i = 0; i < pack.size(); i++) {
+                if (pack.get(i).get(net.minecraft.core.component.DataComponents.FOOD) != null) {
+                    packed.add(pack.get(i).copy());
+                    pack.set(i, ItemStack.EMPTY);
+                }
+            }
+        }
         CaveTrips.Plan hungry = CaveTrips.plan(level, t.v(), team, great);
+        for (ItemStack s : packed) team.get(0).insertItem(s);
         fill(t, plenty);
         // (d) A small cave near the town, two coal veins left on its list.
         BlockPos near = t.heart().offset(40, -8, -10);
@@ -898,6 +910,11 @@ public class CaveDwellerGameTests {
         VillageFolkEntity d = t.folk().get(0);
         Cave c = cave(level, x + OUT, Z, false);
         fill(t, kit(1, false, 2, new ItemStack(Items.OAK_PLANKS, 16)));
+        // Its worn pick its only one: whatever pick it came into the world with goes (it mined the iron with that, and
+        // never wanted to make one).
+        for (EquipmentSlot slot : EquipmentSlot.values()) if (CaveDwellers.isPickaxe(d.getItemBySlot(slot))) d.setItemSlot(slot, ItemStack.EMPTY);
+        var pack = d.getInventoryItems();
+        for (int i = 0; i < pack.size(); i++) if (CaveDwellers.isPickaxe(pack.get(i))) pack.set(i, ItemStack.EMPTY);
         ItemStack worn = new ItemStack(Items.STONE_PICKAXE);
         worn.setDamageValue(worn.getMaxDamage() - 2);
         d.insertItem(worn);

@@ -156,6 +156,18 @@ public final class Quests {
         Set<String> already = new HashSet<>();
         for (Posting p : board) already.add(p.kind + ":" + (p.kind.equals("bring") ? p.item : p.placeName));
         List<Posting> options = new ArrayList<>();
+        // [caves] A cave the cave team turned back from for the monsters in it: up before anything, to be cleared
+        // (CaveGuests.trouble: {mob, count, the place in words, x, y, z}).
+        String[] cave = CaveGuests.trouble(id, already);
+        if (cave != null) {
+            try {
+                int count = Integer.parseInt(cave[1]);
+                BlockPos at = new BlockPos(Integer.parseInt(cave[3]), Integer.parseInt(cave[4]), Integer.parseInt(cave[5]));
+                return new Posting(nextId++, "clear", "", count, "", cave[0], at, cave[2], 4 * count, day);
+            } catch (NumberFormatException ignored) {
+                // an unreadable note: nothing posted for it
+            }
+        }
         // What it is short of.
         for (Villages.Need n : Villages.needs(level, id)) {
             String item = Errands.supplyItem(n.task());

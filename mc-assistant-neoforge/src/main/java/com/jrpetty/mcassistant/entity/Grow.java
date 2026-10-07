@@ -133,6 +133,7 @@ public final class Grow {
                 case "barracks" -> "barracks";
                 case "manor" -> "manor";
                 case "infirmary" -> "infirmary";                       // [batchA] its beds, for the sick (Infirmary)
+                case "lodge" -> "lodge";                               // [caves] the cave team's bunks (Lodge)
                 default -> null;
             };
             if (plan == null || !Land.areaLoaded(level, b.anchor(), 9)) continue;

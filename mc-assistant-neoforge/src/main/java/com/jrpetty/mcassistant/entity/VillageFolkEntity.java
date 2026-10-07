@@ -2144,6 +2144,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (village == null) return true;
         if (Villages.inAGuestHouse(village, pos)) return false;
         if (Infirmary.isInfirmaryBed(village, pos)) return false;     // [batchA] kept for the sick and the hurt
+        if (Lodge.isLodgeBed(village, pos) && stationTask() != StationTask.CAVE) return false;   // [caves] the cave team's bunks
         if (Inn.isInnBed(village, pos)) return false;           // [batchE] the inn's rooms are for travellers (Inn)
         return level() instanceof net.minecraft.server.level.ServerLevel server
             ? !Homes.someoneElses(server, village, pos, this) : !Homes.someoneElses(village, pos, this);
@@ -3911,6 +3912,22 @@ public class VillageFolkEntity extends AssistantEntity {
             return true;
         }
         if (at.ordinal() < Villages.Age.STONE.ordinal()) return false;
+        // [caves] The cave team found a rich vein within the mine's reach: this miner's next face goes toward it, dug to
+        // its depth, and is held there while it follows the lead (TownMine.leadFor).
+        if (villageCentre != null && level() instanceof net.minecraft.server.level.ServerLevel leadLevel) {
+            int tier = pickTierCarried();
+            TownMine.Lead lead = TownMine.leadFor(leadLevel, this, villageCentre, floor,
+                ore -> switch (ore) { case "diamond", "emerald", "gold" -> tier >= 3; default -> tier >= 2; });
+            if (lead != null) {
+                assignPlot(WorkZone.around(lead.top(), radiusFor(StationTask.MINE), lead.depth()), patchNameFor(StationTask.MINE));
+                setAutonomous(true);
+                brain("moved to a face of the town's mine over the cave team's " + lead.ore() + ", down to Y" + lead.depth());
+                FolkTalk.speak(this, FolkTalk.pick(getRandom(), "The cave team found " + lead.ore() + " under this way. I'll follow their lead.",
+                    "If the cave dwellers say there's " + lead.ore() + " down there, that's where I'm digging."));
+                return true;
+            }
+            if (TownMine.onALead(village, zone.center(), leadLevel.getDayTime() / 24000L)) return false;
+        }
         int want = Math.max(floor, IRON_SEAM_Y);
         if (at.ordinal() >= Villages.Age.DIAMOND.ordinal() && pickTierCarried() >= 3 && deepMiner()) {
             want = floor;

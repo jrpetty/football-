@@ -216,6 +216,10 @@ public class TalkScreen extends Screen {
                 out.add(Choice.of("Out there", TalkTopic.ATLAS, "What the village's scouts have found: towns, ruins, peaks, ore — and which way"));
                 out.add(Choice.of("Underground", TalkTopic.CAVES, "What the town's cave dwellers have found: caves, ore, mineshafts, spawners, old chests — and where"));   // [caves]
                 out.add(Choice.of("Fashion", TalkTopic.FASHION, "What the town is wearing this season, who set it, and what this folk thinks of it"));   // [fashion]
+                // [caves] The cave team: ask it a way or an ore, go along with it, buy its map (CaveGuests, Lodge).
+                out.add(new Choice("Ask the delvers", TalkTopic.CAVES, "ask", "Ask the cave team to look a way or find something on its next trip: type it (\"look east\", \"find us diamonds\")"));
+                out.add(new Choice("Go caving", TalkTopic.SAY, "Can I come along with the cave team?", "Go down the caves with the cave team: it waits for you at its lodge at first light. Say \"for a share\" to take a share of the haul"));
+                out.add(new Choice("Cave map", TalkTopic.SAY, "Could I buy a copy of the cave map?", "A copy of the cave team's map, every cave it has found marked: a few coins, from one of the team at its lodge"));
                 out.add(Choice.of("My standing", TalkTopic.REPUTE));
                 out.add(Choice.of("Live here?", TalkTopic.CITIZEN, "Ask to become a citizen: a vote on the council and a house of your own"));
                 out.add(Choice.of("Pay a fine", TalkTopic.FINE, "Pay what you owe the village"));
@@ -304,6 +308,11 @@ public class TalkScreen extends Screen {
         if (c.topic() == TalkTopic.BULK || c.topic() == TalkTopic.INVEST || c.topic() == TalkTopic.ORDER) {
             say.setValue(c.topic() == TalkTopic.BULK ? "I'd like to order 64 " : c.topic() == TalkTopic.INVEST ? "I'd like to invest 50 coins"
                 : "Make me an iron sword");
+            setFocused(say);
+            return;
+        }
+        if (c.topic() == TalkTopic.CAVES && "ask".equals(c.text())) {          // [caves] an ask of the cave team, finished yourself
+            say.setValue("Cave team, look east");
             setFocused(say);
             return;
         }

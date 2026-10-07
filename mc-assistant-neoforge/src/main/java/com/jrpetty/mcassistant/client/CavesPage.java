@@ -55,7 +55,13 @@ public final class CavesPage {
         List<Component> tip = map(g, font, m, finds, folk, x, y, side, mx, my);
         int lx = x + side + 8, lw = w - side - 8;
         List<Row> rows = new ArrayList<>();
-        rows.add(new Row("The cave team: " + folk.size() + " of " + m.getInt("wanted") + " wanted, out to " + m.getInt("range") + " blocks", 0, 0, true));
+        int wanted = m.getInt("wanted");
+        rows.add(new Row(wanted > 0 ? "The cave team: " + folk.size() + " of " + wanted + " wanted, out to " + m.getInt("range") + " blocks"
+            : "The cave team: " + folk.size() + " (the town wants none of its own yet), out to " + m.getInt("range") + " blocks", 0, 0, true));
+        if (wanted == 0) rows.add(new Row("A team is kept from " + m.getInt("from") + " folk in the Iron Age; the town is in " + m.getString("age") + ".",
+            Ui.FAINT, 0, false));
+        String lodge = m.getString("lodge");
+        if (!lodge.isEmpty()) for (String line : wrap(font, lodge, lw - 4)) rows.add(new Row(line, Ui.MUTED, 0, false));
         String trip = m.getString("trip");
         if (!trip.isEmpty()) rows.add(new Row(capital(trip), Ui.GOOD, 0, false));
         for (CompoundTag f : folk) {
