@@ -205,6 +205,13 @@ public final class Habits {
     /** Free for a habit: awake, off work (or before work, for the walk), nothing of the town's or the family's in hand. */
     static boolean free(VillageFolkEntity f, boolean beforeWork) {
         if (f.isSleeping() || f.isBaby() || f.peekJob() != null && !beforeWork) return false;
+        // Not even the walk in the middle of a building: walked off its lot, the builder passed by every cell it could
+        // not get at, and a park's lot was filled with its fountain's stone before the bank's earth was dug to fill it.
+        if (beforeWork && f.peekJob() != null && f.peekJob().type() == Job.Type.BUILD) return false;
+        // Nor before it has a trade and ground to work it: the walk is before the day's work, and a folk with none yet
+        // spends its morning choosing one (its agenda waits while it walks: one of a new town of twelve was still out
+        // walking, with no trade, when the other eleven had theirs).
+        if (beforeWork && (f.stationTask() == StationTask.NONE || f.workZone() == null)) return false;
         UUID village = f.ownerId();
         if (village == null || Raids.underAlarm(village)) return false;
         if (TownJobs.busy(f) || Assemblies.attending(f) || School.teaching(f) || Birthdays.busy(f) || Families.busy(f)

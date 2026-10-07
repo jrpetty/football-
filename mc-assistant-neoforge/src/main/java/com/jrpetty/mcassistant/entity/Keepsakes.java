@@ -134,7 +134,10 @@ public final class Keepsakes {
         ItemStack got = switch (s.keepsake) {
             case FEATHER -> ownOrStores(f, level, v, st -> st.is(Items.FEATHER));
             case FLOWER -> ownOrStores(f, level, v, st -> st.is(ItemTags.SMALL_FLOWERS));
-            case STONE -> ownOrStores(f, level, v, st -> st.is(Items.FLINT) || st.is(Items.AMETHYST_SHARD) || st.is(Items.QUARTZ));
+            // A pretty one of its own if it has one; out of the stores only a plain flint pebble: the town's gems
+            // (its amethyst and quartz, the museum's and the market's) are not a folk's to pocket for luck.
+            case STONE -> ownOrStores(f, level, v, st -> st.is(Items.FLINT) || st.is(Items.AMETHYST_SHARD) || st.is(Items.QUARTZ),
+                st -> st.is(Items.FLINT));
             case BOOK -> ownOrStores(f, level, v, st -> st.is(Items.BOOK));
             case COIN -> f.earnedInAll() > 0 && f.spend(1) ? new ItemStack(McAssistantMod.VILLAGE_COIN.get()) : ItemStack.EMPTY;
             case TOY -> QuestItems.make(level, v, maker(f, level), McAssistantMod.WOODEN_TOY.get());
@@ -187,6 +190,12 @@ public final class Keepsakes {
 
     /** One of these out of its own pack (not a thing it already keeps), else out of the stores. */
     private static ItemStack ownOrStores(VillageFolkEntity f, ServerLevel level, Villages.Village v, Predicate<ItemStack> what) {
+        return ownOrStores(f, level, v, what, what);
+    }
+
+    /** One of these out of its own pack, else (a narrower choice) one of those out of the stores. */
+    private static ItemStack ownOrStores(VillageFolkEntity f, ServerLevel level, Villages.Village v, Predicate<ItemStack> what,
+                                         Predicate<ItemStack> fromStores) {
         for (ItemStack st : f.getInventoryItems()) {
             if (!st.isEmpty() && what.test(st) && !Homes.isKeepsake(st)) {
                 ItemStack one = st.copyWithCount(1);
@@ -194,7 +203,7 @@ public final class Keepsakes {
                 return one;
             }
         }
-        return Crafts.takeOne(level, v, what);
+        return Crafts.takeOne(level, v, fromStores);
     }
 
     @Nullable
