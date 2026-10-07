@@ -121,6 +121,8 @@ public final class Interviews {
     private static final Map<UUID, double[]> WALKS = new ConcurrentHashMap<>();
     /** The interview the operator's stage last set in each town. */
     private static final Map<UUID, Integer> STAGED = new ConcurrentHashMap<>();
+    /** When each candidate last tried to write its letter (game time), and the day it last said it could not. */
+    private static final Map<UUID, Long> LETTER_TRIED = new ConcurrentHashMap<>(), LETTER_SAID = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
         ROLES.clear();
@@ -128,6 +130,8 @@ public final class Interviews {
         LOOKED.clear();
         WALKS.clear();
         STAGED.clear();
+        LETTER_TRIED.clear();
+        LETTER_SAID.clear();
         // A world opening: what is kept with it stays (the book is the world's own); between tests, an empty book.
         if (!com.jrpetty.mcassistant.SessionReset.opening()) {
             auto = false;
@@ -553,11 +557,20 @@ public final class Interviews {
                 return false;
             }
             if (!plan.ok() || plan.made <= 0) {
-                LOG.info("[MCA-INTERVIEW] {} cannot write a letter: {} short of {}", c.name, Villages.name(home), plan.shortOf);
+                String shortOf = String.valueOf(plan.shortOf);
+                c.noLetter = shortOf.contains("ink") ? "there was no ink to be had" : shortOf.contains("paper") || shortOf.contains("cane")
+                    ? "there was no paper to be had" : "the stores hadn't the makings";
+                if (!Long.valueOf(day).equals(LETTER_SAID.put(c.id, day))) {
+                    LOG.info("[MCA-INTERVIEW] {} cannot write a letter: {} short of {} (it will come without one)", c.name, Villages.name(home), shortOf);
+                }
                 return false;
             }
             int cost = Math.max(1, (int) Math.ceil(plan.cost()));
-            if (f.purse() < cost || !Bench.take(level, v, plan, f)) return false;
+            if (f.purse() < cost) {
+                c.noLetter = "I couldn't spare the coin for the paper";
+                return false;
+            }
+            if (!Bench.take(level, v, plan, f)) return false;
             if (f.spend(cost)) Ledger.addCoins(home, cost);
             if (plan.made > 1) Crafts.giveBack(level, v, InterviewItems.LETTER_OF_APPLICATION.get(), plan.made - 1);
             letter = new ItemStack(InterviewItems.LETTER_OF_APPLICATION.get());
@@ -684,6 +697,9 @@ public final class Interviews {
             prepare(level, v, iv);
             if (next == null) next = iv;
         }
+        Integer staged = STAGED.get(id);
+        Interview set = staged == null ? null : find(id, staged);
+        if (set != null && set.stage == Stage.SET) next = set;                    // the operator's stage first
         if (next == null) return;
         long dt = level.getDayTime(), day = dt / 24000L, t = dt % 24000L;
         if (day < next.dueDay || day == next.dueDay && t < next.dueTime) return;
@@ -785,7 +801,12 @@ public final class Interviews {
         for (Cand c : iv.cands) {
             VillageFolkEntity f = Civics.find(level, c.id);
             if (f == null) continue;
-            if (!c.letter) write(level, iv, c, f);
+            // Its letter, if it has none yet: tried once a minute (the stores may get their ink), not every second.
+            long gt = level.getGameTime();
+            if (!c.letter && gt - LETTER_TRIED.getOrDefault(c.id, Long.MIN_VALUE / 2) >= 1200L) {
+                LETTER_TRIED.put(c.id, gt);
+                write(level, iv, c, f);
+            }
             if (c.outside && !c.setOff && dt >= c.leaveAt) setOff(level, v, iv, c, f);
         }
     }
@@ -1084,8 +1105,23 @@ public final class Interviews {
         if (iv.current < iv.cands.size()) {
             Cand c = iv.cands.get(iv.current);
             VillageFolkEntity f = c.absent ? null : Civics.find(level, c.id);
-            if (f != null && f.distanceToSqr(Vec3.atCenterOf(iv.table.cand().pos())) > 32 * 32) {
-                f = null;                                                      // never came to the table (called away): its letter
+            Vec3 chairAt = Vec3.atCenterOf(iv.table.cand().pos());
+            if (f != null && f.distanceToSqr(chairAt) > 32 * 32) {
+                // Not at the table yet (still on its way from its work): one who is here goes first, and it after.
+                for (int j = iv.current + 1; j < iv.cands.size(); j++) {
+                    Cand o = iv.cands.get(j);
+                    VillageFolkEntity of = o.absent ? null : Civics.find(level, o.id);
+                    if (of == null || of.distanceToSqr(chairAt) > 32 * 32) continue;
+                    iv.cands.set(j, c);
+                    iv.cands.set(iv.current, o);
+                    LOG.info("[MCA-INTERVIEW] {}: {} not at the table yet; {} goes first", Villages.name(iv.village), c.name, o.name);
+                    c = o;
+                    f = of;
+                    break;
+                }
+            }
+            if (f != null && (f.distanceToSqr(chairAt) > 96 * 96 || !ROLES.containsKey(c.id))) {
+                f = null;                                                      // never came (called away, or far off): its letter
                 c.absent = true;
                 ROLES.remove(c.id);
             }
@@ -1602,7 +1638,9 @@ public final class Interviews {
                 VillageFolkEntity f = c == null ? null : Civics.find(level, c.id);
                 boolean there = f != null && near(f, InterviewTable.spot(t, t.cand()), 1.2);
                 if (there) iv.sat.add(f.getUUID());
-                return f == null || there || waited > waitMost(600);
+                // One still walking in from its work is waited for (a minute at most), however brisk the interview.
+                boolean coming = f != null && f.distanceToSqr(Vec3.atCenterOf(t.cand().pos())) > 6 * 6;
+                return f == null || there || waited > (coming ? Math.max(waitMost(600), 1200) : waitMost(600));
             }
             case "referee" -> {
                 VillageFolkEntity f = iv.referee == null ? null : Civics.find(level, iv.referee);
@@ -2533,6 +2571,12 @@ public final class Interviews {
         }
         Interview old = pending(id, p.key());
         if (old != null) cancel(level, old, "set again by hand");
+        Interview on = running(id);
+        if (on != null) {
+            // The town's own, under way: put off till tomorrow (it is heard again then), the stage's set in its place.
+            putOff(level, v, on, "set aside for another, by hand");
+            out.add("PUT OFF the interviews for " + on.title + " till tomorrow");
+        }
         List<VillageFolkEntity> cands;
         if (p.kind() == InterviewPosts.Kind.OPENING) {
             // For the scene: the town's own with the best hands at the trade (its own smiths too), three at most.
@@ -2612,6 +2656,9 @@ public final class Interviews {
         List<Interview> coming = coming(id);
         if (coming.isEmpty()) return "No interview set in " + Villages.name(id) + ".";
         Interview iv = coming.get(0);
+        Integer staged = STAGED.get(id);
+        Interview set = staged == null ? null : find(id, staged);
+        if (set != null && set.stage == Stage.SET) iv = set;                      // the one the stage set
         long dt = level.getDayTime();
         iv.dueDay = dt / 24000L;
         iv.dueTime = dt % 24000L;

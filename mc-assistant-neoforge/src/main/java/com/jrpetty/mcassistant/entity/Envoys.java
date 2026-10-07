@@ -328,6 +328,7 @@ public final class Envoys {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (!(a instanceof VillageFolkEntity f) || !f.isAlive() || f.isBaby() || f.isSleeping() || f.trip() != null) continue;
             if (f.isHired() || Nether.away(f) || Drover.busy(f)) continue;
+            if (Interviews.busy(f) || Interviews.shortlisted(f)) continue;   // [interviews] it stays for its interview
             if (f.stationTask() == AssistantEntity.StationTask.GUARD) continue;
             now = f.level().getGameTime();
             boolean isElder = f.getUUID().equals(elder);
