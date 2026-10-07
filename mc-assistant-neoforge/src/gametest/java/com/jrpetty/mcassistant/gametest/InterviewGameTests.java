@@ -86,7 +86,17 @@ public class InterviewGameTests {
 
     // ------------------------------------------------------------------ the scene
 
+    /**
+     * The tests' folk go by fixed names, none the same in one test (two towns' name lists can both hand out "Quill",
+     * and a test reading the transcript by name would mistake one for the other).
+     */
+    private static final String[] NAMES = { "Ada", "Bram", "Cole", "Dara", "Edda", "Finch", "Garth", "Hale", "Ivy", "Juno", "Kit",
+        "Lark", "Moss", "Nell", "Orrin", "Quince", "Rook", "Sorrel", "Tamsin", "Umber", "Vale", "Wren", "Yarrow", "Zeb", "Alder",
+        "Briar", "Clove", "Dell", "Elm", "Fern" };
+    private static int named;
+
     private static long start(ServerLevel level) {
+        named = 0;
         Kit.reset(level);
         Kit.noLeftoverPlayers(level);
         Interviews.hurryForTests(true);
@@ -120,7 +130,7 @@ public class InterviewGameTests {
         VillageFolkEntity f = McAssistantMod.VILLAGE_FOLK.get().create(level);
         BlockPos at = Kit.surface(level, x, z);
         f.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0.0F, 0.0F);
-        f.rename(Names.freeFor(v.id()));
+        f.rename(NAMES[named++ % NAMES.length]);
         VillageSpawner.starterKit(f);
         f.joinVillage(v.id(), v.centre());
         level.addFreshEntity(f);
@@ -199,10 +209,9 @@ public class InterviewGameTests {
     }
 
     /** How many lines this folk said. */
-    private static int linesBy(InterviewBook.Interview iv, String name) {
-        int n = 0;
-        for (String l : iv.said()) if (l.startsWith(name + "|")) n++;
-        return n;
+    /** The lines this folk said itself, by its identity (the script keeps who said what, not only the name). */
+    private static int linesBy(InterviewBook.Interview iv, VillageFolkEntity f) {
+        return iv.linesBy(f.getUUID());
     }
 
     private static void transcript(String tag, InterviewBook.Interview iv) {
@@ -316,8 +325,8 @@ public class InterviewGameTests {
                         helper.assertTrue(said(iv, "Why do you want it") || said(iv, "why this post") || said(iv, "makes you want it"),
                             "why it wants the post");
                         for (VillageFolkEntity f : List.of(bram, fen, wick)) {
-                            helper.assertTrue(linesBy(iv, f.displayNameCap()) >= 4, f.displayNameCap() + " spoke for itself: "
-                                + linesBy(iv, f.displayNameCap()) + " lines");
+                            helper.assertTrue(linesBy(iv, f) >= 4, f.displayNameCap() + " spoke for itself: "
+                                + linesBy(iv, f) + " lines");
                         }
                         helper.assertTrue(iv.said().size() >= 30, "a real conversation: " + iv.said().size() + " lines");
                         InterviewBook.Cand top = best(iv);
@@ -908,6 +917,7 @@ public class InterviewGameTests {
         folk(level, b, bx + 2, Z + 6, StationTask.WOOD, 2, 39);
         folk(level, b, bx + 5, Z + 6, StationTask.FARM, 2, 45);
         VillageFolkEntity pell = folk(level, b, bx - 3, Z - 5, StationTask.SMITH, 8, 31, Social.Trait.CHEERFUL, Social.Trait.SOCIABLE);
+        pell.rename("Pell");
         stores(level, bx, 7, 7, new ItemStack(Items.PAPER, 4), new ItemStack(Items.INK_SAC, 4));
         long day = base / 24000L;
         Villages.electElder(a.id(), elderA, day);
@@ -952,13 +962,19 @@ public class InterviewGameTests {
                 }
                 case 1 -> {
                     if (iv.stage() == InterviewBook.Stage.SET && t - since[0] > 40) Kit.log("iv10 " + Interviews.nowForTests(level, a));
-                    if (Interviews.satForTests(iv).contains(pell.getUUID())) {
+                    // Sat across the table, it greets the panel and answers the master: two lines of its own, at least.
+                    if (Interviews.satForTests(iv).contains(pell.getUUID()) && linesBy(iv, pell) >= 2) {
                         transcript("iv10", iv);
-                        helper.assertTrue(linesBy(iv, pell.displayNameCap()) >= 2, "Pell speaks for itself across the table");
+                        InterviewBook.Cand oc = cand(iv, own);
+                        Kit.log("iv10 Pell said " + linesBy(iv, pell) + " lines; " + own.displayNameCap() + " (Ashford's own) "
+                            + (oc.absent() ? "absent" : "here") + ", said " + linesBy(iv, own));
+                        // (Laid up with a cold is the one good reason not to come: Health.)
+                        helper.assertTrue(!oc.absent() || com.jrpetty.mcassistant.entity.Health.laidUp(own), own.displayNameCap()
+                            + ", one of Ashford's own, was there for its interview, not off on its own business: " + FolkTalk.nowDoing(own));
                         helper.succeed();
                     } else if (t - since[0] > 3500) {
                         transcript("iv10", iv);
-                        helper.fail("Pell never sat across the table: " + iv.stage());
+                        helper.fail("Pell never sat across the table and spoke: " + iv.stage() + ", " + linesBy(iv, pell) + " lines");
                     }
                 }
                 default -> { }
