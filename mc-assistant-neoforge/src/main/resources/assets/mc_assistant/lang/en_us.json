@@ -23,5 +23,6 @@
   "block.mc_assistant.storehouse_unit": "Storehouse Unit",
   "container.mc_assistant.storehouse": "Village Storehouse",
   "block.mc_assistant.village_board": "Village Board",
-  "item.mc_assistant.village_board": "Village Board"
+  "item.mc_assistant.village_board": "Village Board",
+  "block.mc_assistant.opening_ribbon": "Opening Ribbon"
 }

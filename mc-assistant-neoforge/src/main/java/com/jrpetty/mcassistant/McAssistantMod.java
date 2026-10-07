@@ -187,6 +187,22 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
+    /** [civic] The opening ribbon: red cloth strung across a great work's end, cut by the leader when it opens
+     *  (entity/BigWorks). String and red dye at a crafting table; the tailor makes them for the town. */
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.RibbonBlock> RIBBON =
+        BLOCKS.registerBlock("opening_ribbon",
+            com.jrpetty.mcassistant.block.RibbonBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.COLOR_RED)
+                .strength(0.2F)
+                .sound(SoundType.WOOL)
+                .noOcclusion()
+                .noCollission()
+                .pushReaction(net.minecraft.world.level.material.PushReaction.DESTROY));
+
+    public static final DeferredItem<BlockItem> RIBBON_ITEM =
+        ITEMS.registerSimpleBlockItem(RIBBON);
+
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
         TABS.register("village_folk", () -> net.minecraft.world.item.CreativeModeTab.builder()
@@ -197,6 +213,7 @@ public final class McAssistantMod {
                 out.accept(FOLK_SPAWNER_ITEM.get());
                 out.accept(VILLAGE_CHARTER.get());
                 out.accept(VILLAGE_COIN.get());
+                out.accept(RIBBON_ITEM.get());                       // [civic]
                 out.accept(STOREHOUSE_ITEM.get());
                 out.accept(VILLAGE_BOARD_ITEM.get());
                 out.accept(ASSISTANT_SPAWNER_ITEM.get());

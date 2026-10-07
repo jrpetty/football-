@@ -51,7 +51,8 @@ public final class Assemblies {
         VIGIL("a vigil"), CELEBRATION("a celebration"), HONOUR("an honouring"), COUNCIL("the council's meeting"),
         ELECTION("an election"), COMING_OF_AGE("a coming of age"), ENVOY("an envoy's audience"),
         WATCH("the changing of the watch"), FOUNDING("Founding Day"),
-        FESTIVAL("a festival"),                                 // [batchB] the May dance, the bonfire, the fair, the harvest (Festivals)
+        REFERENDUM("the town's vote"),                          // [civic] a count at the board, or a great work opened (Referendums)
+        FESTIVAL("a festival"),                               // [batchB] the May dance, the bonfire, the fair, the harvest (Festivals)
         MEETING("the town meeting");                         // [batchF] once a week (TownMeeting)
 
         public final String label;
@@ -209,6 +210,7 @@ public final class Assemblies {
             if (next == null && Elections.countsToday(id, day) && !held(id, Kind.ELECTION, day)) {
                 next = election(level, v, day);
             }
+            if (next == null && Referendums.gatheringDue(id, day) && !held(id, Kind.REFERENDUM, day)) next = Referendums.assembly(level, v, day);   // [civic]
             if (next == null && TownMeeting.due(id, day) && !held(id, Kind.MEETING, day)) next = TownMeeting.assembly(level, v, day);   // [batchF]
             // Rain puts off a feast, not a vigil, the council, or the count of an election.
             if (next != null && level.isRaining() && next.kind != Kind.VIGIL && next.kind != Kind.COUNCIL && next.kind != Kind.ELECTION
@@ -989,6 +991,7 @@ public final class Assemblies {
             case ELECTION -> Elections.script(level, id, s, r);
             case FOUNDING -> FoundingDay.script(level, a, s, r);
             case FESTIVAL -> Festivals.script(level, a, s, r);                             // [batchB]
+            case REFERENDUM -> Referendums.script(level, a, s, r);    // [civic] the count, or the ribbon cut
             case MEETING -> TownMeeting.script(level, a, s, r);       // [batchF] the week, and the folk's say
             case COMING_OF_AGE -> {
                 String[] parts = a.subject.split("\\|", -1);
@@ -1031,6 +1034,7 @@ public final class Assemblies {
             case CELEBRATION -> "the celebration of " + a.subject;
             case HONOUR -> a.subject;
             case FESTIVAL -> Festivals.describe(a.subject);                                // [batchB] "the May dance"
+            case REFERENDUM -> Referendums.describe(a);                                  // [civic] "the count", "the opening of the bridge"
             case COUNCIL -> a.subject.startsWith("war|") ? "the council of war" : a.kind.label;   // [war-peace]
             default -> a.kind.label;
         };
@@ -1081,6 +1085,7 @@ public final class Assemblies {
             case FEAST -> new Assembly(v.id(), Kind.FEAST, "", day, v.centre(), Direction.SOUTH, Layout.RING);
             case FOUNDING -> FoundingDay.assembly(level, v, day);
             case FESTIVAL -> Festivals.calledNow(level, v, day);                           // [batchB] Festivals.callNow
+            case REFERENDUM -> Referendums.assembly(level, v, day);   // [civic]
             case MEETING -> TownMeeting.assembly(level, v, day);       // [batchF]
             default -> null;
         };

@@ -237,6 +237,8 @@ public final class VillageCommands {
             // for operators, a cold caught now and an infirmary set out on a stage (Health).
             .then(com.jrpetty.mcassistant.entity.Health.command())
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
+            .then(com.jrpetty.mcassistant.entity.Referendums.command())     // [civic] /village referendum: the town's vote, the great works
+            .then(com.jrpetty.mcassistant.entity.Newcomers.command())       // [civic] /village newcomers: refugees and newcomers
             .then(com.jrpetty.mcassistant.entity.WatchKit.command())        // [guard-kit] the watch's kit, on order, and its cost
             .then(com.jrpetty.mcassistant.entity.WatchClears.command())     // [watch-clears] /village monsters: about, killed, fallen
             .then(com.jrpetty.mcassistant.entity.CaveDwellers.command())    // [caves] the cave dwellers and the caves' report

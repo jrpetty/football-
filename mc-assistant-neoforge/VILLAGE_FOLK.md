@@ -6228,3 +6228,155 @@ The game tests `WatchClearsGameTests` (wc01 to wc05) check that:
 * a raiding band gathers at the town's edge; two raiders among the folk get two guards each, and none is sent out to
   the band still at the edge; deaths while the bell rings are put down as what took them, with where and doing what;
   and the status, the books and `/village monsters` count the watch's and the golem's kills.
+
+## Referendums
+
+The town decides its great works together. A great work is bigger than a building: a stone bridge, an aqueduct,
+a stretch of town wall, a harbour, a great road or a canal. Each is drawn to fit the land where it will stand,
+the whole town votes on it, and if the vote carries, the whole town builds it.
+
+**What a town wants.** A town needs eight grown folk or more and must be in the Stone Age or later. An aqueduct,
+a harbour and a great road also need the Iron Age. Only one great work is under way at a time. The town looks
+for:
+* **A stone bridge** where a river cuts it off from its fields or from a neighbour. The river must be three to
+  twenty-four blocks wide with dry banks either side, it must run on past the crossing (a pond you can walk
+  round doesn't count), and nobody must have bridged it already. The bridge is five wide and high enough for a
+  boat to pass under. It has a parapet each side, a pier every five blocks standing on the river bed with the
+  shoulders of an arch either side of it, a few steps down to each bank and a lantern at each end.
+* **An aqueduct** from the nearest open water, twenty to seventy blocks out, back toward the fountain (or the
+  square). It is a stone channel of running water on piers and arches, high enough to walk under, and it
+  follows the ground however it rises. At its end the water spills into a stone-rimmed cistern sunk in the
+  ground. It is only drawn where nothing built stands in its line and the cistern's ground is level.
+* **The town wall**, one side at a time, after a raid or in a war. It runs out past the last street, two high
+  with merlons, following the ground. Each corner has a tower with a lantern on top, and a gateway is left
+  wherever a road or path goes through. Water, fields and anything built are left alone.
+* **A harbour** for a fishing town by wide water: a stone quay along the shore with a pier out into deep water,
+  posts down to the bottom, bollards, and lanterns at the end.
+* **A great road** toward the nearest neighbour at peace: three wide, paved in stone in place of the open
+  ground, with a lamp post every twelve blocks.
+* **A canal** where the ground is low enough: a stone-lined channel cut from the water toward the fields, at
+  the water's own level.
+
+Nothing anybody built is ever knocked down for a work. A piece whose place is already taken is left out.
+
+**The proposal.** Each morning the leader (or, with no leader, the folk the council thinks most of) looks at
+what the town wants most. When the stores hold most of the cost, it puts that work to the town, with the vote
+two days later. The board shows the work and where it goes, its cost from the stores (*122 stone bricks, 4
+lanterns*), the labour (*some 11 hand-hours: a morning's work for a dozen hands*) and what it brings (*the
+fields across the river without the long way round*). It is built in whatever stone the stores hold enough of,
+dressed stone before rough. The morning assembly and the chronicle tell it too.
+
+**The campaign.** Folk argue it by what they care about:
+* Visionaries are for anything the town builds.
+* Guardians want the wall, more so after a raid or in a war.
+* Farmers and Providers want water for the fields.
+* Fishers want the harbour.
+* Merchants want a road or a bridge to a neighbour.
+* Friends of whoever proposed it take its word.
+* Thrifty and old-fashioned folk count the cost against what the stores hold (*122 stone bricks? The stores
+  would be bare for a month*).
+* Nobody wants a bridge built while the larder is empty.
+
+You'll hear them say it aloud, argue it with each other, and tell you which way they lean if you ask about the
+council.
+
+**The vote.** On the day, each grown folk walks to the board at an hour of its own, votes aye or nay, and
+tells whoever is near why. If you are a **citizen** you have a vote too: use `/village referendum vote aye`
+(or `nay`), or say "I vote aye" to any folk. That evening the town gathers at the board for the count. One
+folk speaks for each side, then the leader reads out the tally (*Aye 7, nay 4. It is carried!*). If the evening
+is taken by something else, the votes are counted quietly after dark. A work that carries starts the next
+morning. One that is voted down (a tie falls) waits a season, seven days, before the town can be asked again.
+
+**Building it together.** The morning after the vote is the works day. From the morning assembly to the noon
+bell, every grown folk who isn't on the watch or leading a building goes to the work and lends a hand.
+After that the work goes on in everybody's own time: on breaks, in the evenings, on the day of rest, and with
+anyone who has nothing to do at its trade. Each hand sets a piece every few seconds and the stores pay as it
+goes: a block of stone a block, half for a slab, a block and a half for stairs, a lantern (or a torch) for a
+light. Carrying the water needs a bucket in the stores, but the bucket isn't used up. The more hands, the
+quicker it rises: a bridge goes up in a morning. If the stone runs out the work waits, and the board says what
+for. After two days it carries on in whatever stone the stores do have.
+
+**The opening.** When the last stone is laid, a red **opening ribbon** is strung across the work's end. It
+comes from the stores, or is made on the spot from two string and a red dye. That evening the town gathers
+there. The leader thanks the hands by number (and whoever laid the most), says what the work cost and what it
+brings, cuts the ribbon, and declares it open. The chronicle records it (*a stone bridge over the river to the
+fields was opened: 9 hands laid its 113 stones in 2 days*). Everybody who lent a hand remembers it, is proud of
+it for a few days, and has the stones it laid on its card.
+
+**The opening ribbon** is a new block. Craft three from two string and a red dye (shapeless). It hangs at waist
+height across a doorway, a road or a bridge's end, lets everybody walk through it, and drops itself when
+broken. When a work is voted for, the shop's workshop puts the ribbon on its order book.
+
+**Where you see it.** The board shows what is put to the town, the tally so far, the result, the work under
+way and how far on it is. In the town's books, the News page has *Votes, great works and newcomers*: the
+questions, the votes of the last weeks, works waiting a season, the work under way and the works opened. A
+folk's card has a *Votes and works* line. `/village referendum` prints the same. Operators can use
+`/village referendum call [bridge|aqueduct|wall|harbour|road|canal]` to put a work now (vote today),
+`/village referendum count`, `/village referendum works` (call the works day now),
+`/village referendum finish` (lay the rest from the stores and string the ribbon) and
+`/village referendum open`.
+
+## Newcomers and refugees
+
+Folk from elsewhere come to a town and ask to be taken in, and the town votes on it.
+
+**Who comes.**
+* **From a town at war:** when a town is worn down by a war that has lasted four days, a household packs up.
+  So does one from a town that has been in famine two mornings running. It is the household with fewest
+  friends to keep it, a family before a lone hand, and never the leader, the watch or the builder at its build.
+  This happens once in five days at most, and never leaves a town below eight. They really leave: off the old
+  town's roll, their bed and plot given up, carrying what is their own. They walk the road to the nearest town
+  at peace and camp at its edge, by the way they came in.
+* **From fire or flood**, when a disaster leaves a household homeless (the disasters' seam:
+  `Newcomers.displaced`).
+* **From outside the world of towns:** now and then (one day in fourteen, no oftener than once in ten days) a
+  lone hand or a small family comes to a town of fifteen at peace, fleeing a war, a famine or a flood far away.
+  They carry a little bread and bring a trade the town has nobody at, with years at it. They come rarely and in
+  small numbers, so towns still grow mostly by their own children.
+
+**The vote.** The board says who asks (*A family of four from Oakwick, fleeing the war, ask to settle*), and the
+town votes that day (or the next, if they came after noon) at the board, as for a great work. Each folk weighs:
+* the room the town has (its beds against its people);
+* its food;
+* how the town is feeling;
+* the leader's temper (a warm leader's town welcomes them, a wary or prickly one turns them away);
+* its own nature (a generous or sociable soul says aye; a grump, a shy one or a Guardian wary of strangers says
+  nay);
+* any trade they bring that the town lacks (Visionaries and Merchants like that);
+* a friend among them, which is aye at once.
+
+A full town or a hungry one turns them away, generous folk and all.
+
+**Taken in.** They become the town's folk. They go on its roll and are found a home: an empty house if there is
+one, else beds at the camp, and the builders are asked for a house. Each takes up the trade it knows best if
+the town lacks it, with its levels and nature its own: a smith, a brewer, a tailor. The town they left thinks
+the better of this one. They are grateful for their first days. Within the week each meets two neighbours
+properly: alike in nature, they become friends; at odds, they have words, and the newcomer is sore about it
+for a few days. The card and the books say how each is getting on.
+
+**Turned away.** They go on to the next town at peace that might have them, and the town they came from thinks
+the worse of the one that sent them on. With nowhere left to try, folk of another town go home, war or no war,
+and folk from outside walk back out into the world. A party left waiting three days without a vote goes on too.
+
+**Where you see it.** Newcomers on the road or camped at the edge have their own card: where they come from,
+why, what they ask and their trade. Talk to them and they'll tell you their story. The board shows who is on the
+road to the town and how the week's votes went. The chronicle has every leaving, asking, taking in and turning
+away, and both towns' chronicles tell it. The books' News page has the newcomers line (*Newcomers: 2 parties
+taken in, 1 turned away; 5 of our folk came to us that way*), each party and the trades it brought, and how the
+newest folk are settling. A settled folk's card says where it came from and why. Use `/village newcomers` to
+print the same. Operators can use `/village newcomers outside [n]` to send a party from outside now,
+`/village newcomers here` to have whoever is on the road camp at the edge now, and `/village newcomers stage`
+for the pictures.
+
+The game tests `CivicGameTests` check that:
+* civ01: a bridge over a river is put to the town with its cost; Visionaries vote aye and thrifty folk nay; a
+  citizen votes; the count is every ballot once; carried, the bridge goes up out of the stores with many hands
+  laying it (a deck over the river, a pier, parapets), its ribbon is made of the stores' string and dye, and it
+  is opened;
+* civ02: a bridge voted down waits a season, and is put again when the season is out;
+* civ03: a family (a smith and a brewer) leaves a town worn out by its war, is on nobody's roll on the road,
+  asks to settle at a town at peace with room and food, is voted in, and works at the trades it brought;
+* civ04: the same family is turned away by a town that is full and in famine, and makes for home;
+* civ05: an aqueduct keeps its channel level over a knoll with its piers on the ground, and runs with water when
+  built; a side of the wall follows the ground over a mound and leaves a gateway for a path;
+* civ06: a family of three from outside, each grown one with a trade the town lacks, is voted in.

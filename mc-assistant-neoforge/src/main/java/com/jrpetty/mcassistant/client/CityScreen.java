@@ -2855,6 +2855,13 @@ public class CityScreen extends Screen {
             for (String s : civic) all.add("  " + s);
             all.add("");
         }
+        // [civic] The town's votes, its great works built together, and its newcomers (Referendums, BigWorks, Newcomers).
+        List<String> votes = strings("civic_votes");
+        if (!votes.isEmpty()) {
+            all.add("Votes, great works and newcomers:");
+            for (String s : votes) all.add("  " + s);
+            all.add("");
+        }
         all.add("The chronicle, latest first:");
         all.addAll(strings("news"));
         lines(g, all, x, y, cw, ch);

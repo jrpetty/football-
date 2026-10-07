@@ -76,6 +76,8 @@ public final class Smalltalk {
             options.add(t);
             options.add(t);
         }
+        String[] civic = Referendums.gossip(a, b);           // [civic] the town's vote: a great work, or newcomers
+        if (civic != null) options.add(new Talk(civic[0], civic[1], civic[2]));
         // The weather.
         if (level.isRaining()) {
             options.add(new Talk(pick(r, "Wet one today.", "Will this rain never stop?"),

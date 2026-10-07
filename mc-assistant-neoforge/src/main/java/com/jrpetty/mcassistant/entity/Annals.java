@@ -561,6 +561,7 @@ public final class Annals {
         out.put("visitors", strings(Visitors.book(level, id)));       // [batchG] visitors, friends' visits, the map room, the dogs (News)
         out.put("sport", strings(Sport.book(level, id)));             // [batchC] the pitch, the range, the league, the cup, the contests (News)
         out.put("civics", strings(Civics.book(level, id)));           // [batchF] the town's affairs (News)
+        out.put("civic_votes", strings(Referendums.book(level, id))); // [civic] votes, great works and newcomers (News)
         out.put("society", society(id, folk));
         out.put("league", league(level, v));
         out.put("production", production(level, v));
