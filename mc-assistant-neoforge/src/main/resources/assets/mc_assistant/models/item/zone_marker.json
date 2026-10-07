@@ -1,6 +1,6 @@
 {
-  "parent": "minecraft:item/generated",
+  "parent": "minecraft:item/handheld",
   "textures": {
-    "layer0": "minecraft:item/blaze_rod"
+    "layer0": "mc_assistant:item/zone_marker"
   }
 }

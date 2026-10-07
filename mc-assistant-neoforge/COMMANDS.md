@@ -184,7 +184,7 @@ auto <on|off> · night <on|off> · rename <name> · dismiss`
   falling gravel, spawns collision-safe (no suffocation).
 - **Chat hygiene** — casual chat is never hijacked; addressed messages
   always get a reply; a bad command never breaks the listener.
-- **Assistant Spawner block** — craftable (8 iron + 1 diamond); right-click
+- **Assistant Spawner block** — craftable (8 rotten flesh around a diamond); right-click
   to summon your assistant and set its home point.
 - **Place Marker item** — craftable (paper over a stick). Rename it in an
   anvil to a place name ("mine", "base"), then right-click a block to save

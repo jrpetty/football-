@@ -120,7 +120,8 @@ public final class FolkTalk {
         String vote = Referendums.playerSays(f, p, text);
         if (vote != null) return manner(f, vote);
         // [library] Books: borrowing one, bringing it back, the shelves, a copy; what it is reading or writing (Library).
-        String library = Library.talk(f, p, topic, text);
+        // [caves] Not the cave team's map ("a copy of the cave map"): that is the team's to sell (CaveGuests).
+        String library = topic == TalkTopic.CAVES ? null : Library.talk(f, p, topic, text);
         if (library != null && !library.isEmpty()) return manner(f, library);
         String said = switch (topic) {
             case OPEN -> greet(f, p, op, firstMeeting, heard);
@@ -410,6 +411,7 @@ public final class FolkTalk {
         line(sb, "Household", Families.cardLine(f));        // its pet, its garden, its wedding anniversary (Families)
         line(sb, "Pet", Pets.cardLine(f));                  // [pets] its age, its bowl and bed, its collar, its young, its friends
         line(sb, "Health", Health.cardLine(f));              // [batchA] a cold, laid up, seen to (Health)
+        line(sb, "Kitchen", Kitchen.cardLine(f));            // [kitchen] its packed lunch, its bandages, a slice of cake, a drink
         line(sb, "Neighbours", Neighbourly.cardLine(f));     // [batchA] looked in on, a welcome, a housewarming (Neighbourly)
         line(sb, "About town", TownLook.cardLine(f));       // [batchE] its allotment, the bakery, the inn (TownLook)
         line(sb, "Town life", Civics.cardLine(f));          // [batchF] its letters, its quarter as warden, its good turns (Civics)
@@ -655,6 +657,7 @@ public final class FolkTalk {
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
+            case "cake", "drink" -> Kitchen.moodWords(f, why);                         // [kitchen]
             default -> "";
         };
     }

@@ -139,6 +139,7 @@ public final class Cafe {
         out.add(Stockroom.ware(Items.PUMPKIN_PIE, 4, 1, 12, 1, false));
         out.add(Stockroom.ware(Items.BREAD, 12, 4, 48, 1, true));
         out.add(Stockroom.ware(Items.CAKE, 2, 1, 4, 1, false));
+        out.addAll(Kitchen.cafeWares());                     // [kitchen] the fish pie, the tea; the lunches, cheese and cakes on its books
         MENU_WARES = m = List.copyOf(out);
         return m;
     }
@@ -342,7 +343,8 @@ public final class Cafe {
     /** What the café has ready, drinks first: one of each, up to a counterful. */
     public static List<ItemStack> menuGoods(ServerLevel level, UUID village) {
         // What the village can spare (Budget): no bread off the counter while the larder is low.
-        return fromStores(level, village, s -> (isDrink(s) || MENU.stream().anyMatch(s::is)) && Budget.spare(level, village, s) > 0, true);
+        return fromStores(level, village, s -> (isDrink(s) || MENU.stream().anyMatch(s::is)
+            || Kitchen.onMenu(level, village, s)) && Budget.spare(level, village, s) > 0, true);   // [kitchen] the fish pie; cider, tea in season
     }
 
     private static final List<Item> MENU = List.of(Items.BAKED_POTATO, Items.COOKIE, Items.PUMPKIN_PIE, Items.COOKED_BEEF,
@@ -534,6 +536,7 @@ public final class Cafe {
         price += FolkSkills.tip(v.id(), AssistantEntity.StationTask.COOK, f, Math.max(1, price));   // a Friendly Face at the counter
         Stockroom.sold(level, v.id(), Stockroom.Seller.CAFE, pick, 1, price);
         // Had there and then: a drink does its little good, a bite fills it up.
+        if (Kitchen.had(level, v, f, pick)) return pick.getHoverName().getString();   // [kitchen] cider or tea, the bottle back
         String drink = drinkOf(pick);
         if (drink != null) {
             Drink d = drinkFor(drink);
