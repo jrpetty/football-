@@ -70,7 +70,9 @@ public class CityScreen extends Screen {
         // [library] The town library, after them (LibraryPage): its catalogue, its writers, its loans.
         "Library",
         // [transport] The railways, the carts, the ferry and the bridge, after them (TransportPage).
-        "Transport" };
+        "Transport",
+        // [interviews] The town's interviews, coming and held, every candidate's score part by part (InterviewsPage).
+        "Interviews" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
@@ -78,7 +80,8 @@ public class CityScreen extends Screen {
         "Cases",                                                                                      // [crime]
         "Auction",                                                                                    // [fleet]
         "Library",                                                                                    // [library]
-        "Transport");                                                                                 // [transport]
+        "Transport",                                                                                  // [transport]
+        "Interviews");                                                                                // [interviews]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -355,6 +358,10 @@ public class CityScreen extends Screen {
                 }
                 case "Transport" -> {                                                  // [transport] the lines, the ferry (TransportPage)
                     List<Component> tip = TransportPage.draw(g, font, data.getCompound("transport"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Interviews" -> {                                                 // [interviews] coming and held (InterviewsPage)
+                    List<Component> tip = InterviewsPage.draw(g, font, data.getCompound("interviews"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 default -> board(g, x, y, cw, ch);

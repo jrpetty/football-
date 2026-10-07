@@ -462,6 +462,7 @@ public final class Library {
         }
         VillageFolkEntity pick = chooseLibrarian(id);
         if (pick == null) return null;
+        if (Interviews.vacancy(level, id, "librarian", pick)) return null;     // [interviews] the post held open for its interview
         String was = shelf.librarianName;
         shelf.librarian = pick.getUUID();
         shelf.librarianName = pick.displayNameCap();
@@ -482,7 +483,7 @@ public final class Library {
         double bestScore = -Double.MAX_VALUE;
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || !f.isAlive() || f.isBaby() || f.isShowcase() || f.isHired()) continue;
-            double s = f.ageYears() * 0.3;
+            double s = f.ageYears() * 0.3 + Interviews.preferred(village, "librarian", f);   // [interviews] the panel's choice first
             if (f.persona().rolled() && f.persona().hobby() == Persona.Hobby.READING) s += 30;
             if (f.life().has(Social.Trait.CURIOUS)) s += 20;
             if (f.persona().quirk().equals("keeps a diary")) s += 10;

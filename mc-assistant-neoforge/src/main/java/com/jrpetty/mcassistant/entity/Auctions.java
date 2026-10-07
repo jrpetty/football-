@@ -666,6 +666,9 @@ public final class Auctions {
     /** Who calls it: the elder, else the leader, else the most practised grown folk free. */
     @Nullable
     static VillageFolkEntity auctioneerFor(ServerLevel level, Villages.Village v) {
+        // [interviews] The auctioneer the panel chose, once the auction house stands, while it is fit and about.
+        VillageFolkEntity chosen = Interviews.holder(v.id(), "auctioneer");
+        if (chosen != null && Fleet.fit(chosen) && !chosen.isSleeping() && !Fleet.out(chosen)) return chosen;
         UUID elder = Villages.elder(v.id());
         if (elder != null && level.getEntity(elder) instanceof VillageFolkEntity e && Fleet.fit(e) && !e.isSleeping() && !Fleet.out(e)) return e;
         AssistantEntity lead = Villages.leader(v.id());

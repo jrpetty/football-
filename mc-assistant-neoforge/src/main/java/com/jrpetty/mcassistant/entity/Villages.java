@@ -395,6 +395,7 @@ public final class Villages {
         Envoys.resetForTests();
         TownJobs.resetForTests();
         JobMarket.resetForTests();
+        Interviews.resetForTests();         // [interviews] the interviews, set and held
         Market.resetForTests();
         PriceIndex.resetForTests();         // [econ-prices] the towns' prices
         Purchases.resetForTests();          // [econ-prices] the folk's accounts at the counter

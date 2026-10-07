@@ -257,6 +257,8 @@ public final class VillageCommands {
                 .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(VillageCommands::flatsStage)))
             // The job market between towns: the notices, the applications, who came and went (JobMarketCommands).
             .then(JobMarketCommands.node())
+            // [interviews] The town's interviews, set and held; a word put in, a seat on the panel, a choice; (ops) one staged now.
+            .then(InterviewCommands.build())
             // [econ-wages] What every job is worth (WagesCommands): the page, on screen, the books, a folk's card, reckon now.
             .then(WagesCommands.node())
             // [econ-prices] The economy page (what the town makes, sells and is worth). It was registered twice, here and

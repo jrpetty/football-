@@ -101,6 +101,9 @@ public final class FolkTalk {
         if (!text.isEmpty() && (lower.contains("sorry") || lower.contains("apolog"))) {
             return manner(f, apology(f, p, op, day));
         }
+        // [interviews] "Any interviews coming up?", "I'd recommend Ada for the post", a seat on the panel, the interview page.
+        String interview = Interviews.talk(f, p, topic, text);
+        if (interview != null) return manner(f, interview);
         if (!text.isEmpty()) {
             VillageFolkEntity other = mentioned(f, lower);
             if (other != null && topic != TalkTopic.WATCH) return manner(f, opinionOf(f, other));   // [crime] "I saw Fen take it" is for the watch
@@ -307,6 +310,8 @@ public final class FolkTalk {
         Job j = f.peekJob();
         if (j != null) return capFirst(j.label());
         if (f.guidePlayer() != null) return "Showing somebody the way to " + f.guideWhat();
+        String interview = Interviews.doing(f);                 // [interviews] on the bench, across the table, on the panel
+        if (interview != null) return interview;
         String market = JobSeekers.doing(f);                    // at the board, saying goodbye, on the road (JobSeekers)
         if (market != null) return market;
         String status = f.clientStatus();
@@ -371,6 +376,7 @@ public final class FolkTalk {
         String levels = f.tradeLevels();
         if (!f.isBaby() && !levels.isEmpty() && levels.contains(",")) line(sb, "Has worked", levels);
         if (!f.isBaby()) line(sb, "Job market", JobMarket.cardLine(f));       // applied elsewhere, or came from elsewhere (JobMarket)
+        if (!f.isBaby()) line(sb, "Interviews", Interviews.cardLine(f));      // [interviews] shortlisted; chosen, or not and why
         if (!f.isBaby()) line(sb, "At its work", Skill.line(f));
         // Its horses: the rancher's gentling and the stable, a rider's horse and rides (Stables).
         String horses = f.isBaby() ? null : Stables.card(f);
@@ -655,6 +661,7 @@ public final class FolkTalk {
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
+            case "interviewed", "passedover" -> Interviews.moodWords(f, why);          // [interviews]
             default -> "";
         };
     }

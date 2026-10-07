@@ -431,5 +431,7 @@ public final class Prices {
         "mc_assistant:pet_treat 0.15 C",
         // [crime] A forged coin is worth its scrap of copper and no more, whatever it was cast to pass for (Mischief).
         "mc_assistant:forged_coin 0.1 C",
+        // [interviews] A letter of application: its sheet of paper and its ink, and a little for the hand that wrote it.
+        "mc_assistant:letter_of_application 0.3 C",
     };
 }

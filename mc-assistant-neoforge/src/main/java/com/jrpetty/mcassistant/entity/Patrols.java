@@ -681,6 +681,7 @@ public final class Patrols {
     private static boolean escortDuty(VillageFolkEntity g, ServerLevel level, UUID village, @Nullable VillageFolkEntity elder, long now) {
         if (elder == null || elder == g || chooseEscort(village, now) != g) return false;
         if (!g.isAlive() || g.isSleeping() || away(g) || g.onWatch() || Raids.underAlarm(village)) return false;
+        if (Interviews.busy(g)) return false;                         // [interviews] at an interview (on the panel, or a candidate)
         if (level.isNight()) return false;                               // the night is the watch's
         if (g.talkPartner() != null || g.companionPlayer() != null || g.guidePlayer() != null) return false;
         if (Elections.dueToVote(g, level)) return false;                // its own vote, and straight back
