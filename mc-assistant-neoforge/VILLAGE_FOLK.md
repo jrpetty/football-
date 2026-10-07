@@ -2025,6 +2025,9 @@ grows up.
   done in its life: blocks mined, ore veins dug, trees felled, crops planted and
   harvested, animals bred, fish caught, things smelted and made, blocks built, loads
   carried.
+* its name: in creative, when you are not already beside it (it has wandered more than five
+  blocks off, or is out of sight round a wall or up a floor), click it for **Teleport to** the
+  folk, as in the town's books.
 
 The buttons ask:
 
@@ -2962,6 +2965,16 @@ charts, so you can see exactly what is driving its growth. Every morning the vil
 written down (kept for four hundred days), and the books have twenty pages, picked along the
 top (in two rows on a small window; the arrow keys turn the pages); the range (a week, a month, a hundred days, or all of it) is picked at the top right, and
 every chart reads out the day under the mouse.
+
+**Click a name to go to them.** On the Folk page, the Society page (the richest, the best liked and
+the best hand at each trade) and the Leader page, a folk's name is underlined under the mouse (the
+pointer turns to a hand); click it for a small card of buttons under it. In creative mode it has
+**Teleport to** the folk: the books shut and you are set down on the ground beside it, facing it,
+never inside a block or over a drop, and in the Nether if that is where it is. If the folk's part
+of the world is asleep, you go to where it was last seen and it wakes around you. On a server you
+must be an operator as well; in survival there is no button (and the server turns the request away
+whatever sends it). When the folk is near enough to talk to, **Show card** opens its card, as
+right-clicking it would. `/village tp <name>` does the same from the command line.
 
 * **Overview:** population, what it makes a day, the treasury and its worth, each with how
   far it has moved in the week; contentment, beds, days of food put by, and the leader with
@@ -4244,6 +4257,10 @@ ripen, days pass, folk work and houses go up at that pace.
   the board waiting there, or on one put up for it. `found board [x z]` puts the board up
   alone, as placing a spawner does; `found screen [count]` opens the founding screen of the
   waiting board nearest you; `found status` says how every founding is getting on.
+* `/village tp <name>` — (operators) go straight to a folk by name, the nearest of that name
+  first, in any world: set down on the ground beside it, facing it, never inside a block or over
+  a drop. From the console, name who goes: `/execute as <player> run village tp <name>`. The
+  town's books and a folk's card have the same as a button for a player in creative.
 * `/village status` — age, headcount, trades, what the stores hold, what has
   been built, what the village is short of. Works from the console.
 * **The village journal (J key)** — the same, for the village you stand in, on a page

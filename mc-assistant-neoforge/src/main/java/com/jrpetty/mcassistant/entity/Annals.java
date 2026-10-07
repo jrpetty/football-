@@ -662,6 +662,7 @@ public final class Annals {
             if (out.size() >= 200) break;
             CompoundTag c = new CompoundTag();
             c.putString("name", f.displayNameCap());
+            c.putUUID("uuid", f.getUUID());                          // [teleport] its name a link in the books (client/FolkLinks)
             c.putString("trade", f.isBaby() ? "Child" : f.stationTask() == StationTask.NONE ? "Unassigned" : f.stationTask().title);
             c.putInt("ordinal", f.stationTask().ordinal());
             c.putInt("level", f.veteranLevel());
@@ -843,6 +844,7 @@ public final class Annals {
             return c;
         }
         c.putString("name", f.displayNameCap());
+        c.putUUID("uuid", f.getUUID());                              // [teleport] its name a link on the Leader page
         c.putString("trade", f.stationTask().title);
         c.putInt("level", f.veteranLevel());
         c.putString("type", Values.describe(f));
@@ -1008,7 +1010,7 @@ public final class Annals {
         List<String> richest = new ArrayList<>();
         for (int i = n - 1; i >= Math.max(0, n - 5); i--) {
             VillageFolkEntity f = byPurse.get(i);
-            richest.add(f.displayNameCap() + "|" + f.stationTask().title + "|" + f.purse());
+            richest.add(f.displayNameCap() + "|" + f.stationTask().title + "|" + f.purse() + "|" + f.getUUID());   // [teleport] the id last
         }
         c.put("richest", strings(richest));
         // The best hand at each trade.
@@ -1020,7 +1022,8 @@ public final class Annals {
         }
         List<String> masters = new ArrayList<>();
         for (Map.Entry<StationTask, VillageFolkEntity> e : best.entrySet()) {
-            masters.add(e.getKey().title + "|" + e.getValue().displayNameCap() + "|" + e.getValue().veteranLevel());
+            masters.add(e.getKey().title + "|" + e.getValue().displayNameCap() + "|" + e.getValue().veteranLevel()
+                + "|" + e.getValue().getUUID());                                                          // [teleport] the id last
         }
         c.put("masters", strings(masters));
         // Who is best liked: the warmth the others feel for each, on average.
@@ -1034,10 +1037,10 @@ public final class Annals {
                     sum += o.life().affinity(f.getUUID());
                     counted++;
                 }
-                warmth.add(new Object[]{ f.displayNameCap(), counted == 0 ? 0 : Math.round(sum / (float) counted) });
+                warmth.add(new Object[]{ f.displayNameCap(), counted == 0 ? 0 : Math.round(sum / (float) counted), f.getUUID() });   // [teleport] and its id
             }
             warmth.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
-            for (int i = 0; i < Math.min(5, warmth.size()); i++) liked.add(warmth.get(i)[0] + "|" + warmth.get(i)[1]);
+            for (int i = 0; i < Math.min(5, warmth.size()); i++) liked.add(warmth.get(i)[0] + "|" + warmth.get(i)[1] + "|" + warmth.get(i)[2]);
         }
         c.put("liked", strings(liked));
         // Households: how many, how big.
