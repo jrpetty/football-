@@ -291,17 +291,33 @@ public final class Militia {
         return s.getItem() instanceof SwordItem;
     }
 
-    /** A blade, and a helmet or a breastplate if there is one, out of the armoury (or the stores). Returns the
-     *  item ids issued, comma-separated; empty if there was nothing to give it. */
+    /** How good a blade is: its metal's bite (wood and gold nought, stone one, iron two, diamond three...); -1 for no blade. */
+    static float bite(ItemStack s) {
+        return s.getItem() instanceof SwordItem sw ? sw.getTier().getAttackDamageBonus() : -1.0F;
+    }
+
+    /** The best blade this folk carries (in its pack or its hands), by bite; -1 with none. */
+    static float bestBlade(VillageFolkEntity f) {
+        float best = -1.0F;
+        for (ItemStack s : f.getInventoryItems()) best = Math.max(best, bite(s));
+        for (EquipmentSlot slot : EquipmentSlot.values()) best = Math.max(best, bite(f.getItemBySlot(slot)));
+        return best;
+    }
+
+    /**
+     * A blade better than its own, and a helmet or a breastplate if there is one, out of the armoury (or the
+     * stores). Every founder carries a stone sword of its own (VillageSpawner.starterKit): called up, it is
+     * issued the armoury's iron and keeps its own in its pack. Returns the item ids issued, comma-separated;
+     * empty if there was nothing better to give it.
+     */
     static String issue(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
         List<String> got = new ArrayList<>();
-        if (f.countCarried(Militia::blade) == 0) {
-            ItemStack w = WarWorks.takeArms(level, v, Militia::blade);
-            if (!w.isEmpty()) {
-                ItemStack left = f.insertGiven(w.copy());
-                if (left.isEmpty()) got.add(id(w.getItem()));
-                else WarWorks.returnArms(level, v, left);
-            }
+        float own = bestBlade(f);
+        ItemStack w = WarWorks.takeArms(level, v, s -> blade(s) && bite(s) > own);
+        if (!w.isEmpty()) {
+            ItemStack left = f.insertGiven(w.copy());
+            if (left.isEmpty()) got.add(id(w.getItem()));
+            else WarWorks.returnArms(level, v, left);
         }
         for (EquipmentSlot slot : new EquipmentSlot[]{ EquipmentSlot.CHEST, EquipmentSlot.HEAD }) {
             if (!f.getItemBySlot(slot).isEmpty()) continue;
