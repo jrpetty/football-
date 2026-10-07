@@ -964,6 +964,10 @@ public final class School {
         LINES.put(StationTask.GUARD, new String[]{ "Keep your back to the wall and your eyes on the dark." });
         LINES.put(StationTask.CAVE, new String[]{ "A torch every few steps: it's the way home.",           // [caves]
             "Never dig the block you stand on, and never dig toward water or lava." });
+        LINES.put(StationTask.FLETCHER, new String[]{ "A flint, a stick and a feather make four arrows: count them twice.",   // [fletcher]
+            "Gravel gives a flint one time in ten. Patience is half the trade." });
+        LINES.put(StationTask.GOLEMS, new String[]{ "Four blocks of iron in a T, and the pumpkin last: never the other way round.",   // [golems]
+            "An iron golem never turns on its own town. Be kind to it all the same." });
     }
 
     private static final String[] ANY_DAY = { "Reading, writing and counting: every trade stands on those three.",

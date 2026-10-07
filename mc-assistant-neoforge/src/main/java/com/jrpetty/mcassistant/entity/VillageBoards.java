@@ -526,6 +526,10 @@ public final class VillageBoards {
         if (trade != null) out.add("FN|" + trade);
         String caves = CaveDwellers.boardLine(id);              // [caves] the caves' report, and the latest big find
         if (caves != null) out.add("FN|" + caves);
+        String arrows = Fletchers.boardLine(level, id);         // [fletcher] the watch's arrows, or none to be had
+        if (arrows != null) out.add("FN|" + arrows);
+        String golems = Golems.boardLine(level, id);            // [golems] the golems at their posts, a fallen one
+        if (golems != null) out.add("FN|" + golems);
         String about = Transport.boardLine(level, id);          // [transport] the lines, the ore carts, the ferry and the bridge
         if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);

@@ -2499,6 +2499,80 @@ def kitchen_stage(r, look, cx, cz):
     say("alive after the kitchen: %s" % client_alive())
 
 
+def fletcher_stage(r, look, cx, cz):
+    """[fletcher] The fletcher (entity/Fletchers). /village fletcher stage, run at the town: its fletcher (one taken up
+    from the town's own if it has none), the fletcher's hut stamped on a lot of its own by the square if it has none, the
+    makings put by in the stores for the pictures (gravel, feathers, planks, flint, string: a showcase's, and said so),
+    four pieces of the fletcher's work done (the table made and set in the hut, gravel sifted on the floor in front of it,
+    arrows and bows made), and practice called at the range if the town has one. Pictures: the hut from the street, the
+    fletcher at its table inside, and (with a range) the watch at the butts with the fletcher calling the shots; then
+    /village fletcher said."""
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx + 12, hy + 20, cz + 12))
+    time.sleep(6)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d %d %d run village fletcher stage" % (cx, hy + 1, cz))
+    say("fletcher stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the fletcher; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("35-fletcher-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("fletcher-hut", "1-hut", 8)
+    shoot("fletcher-table", "2-table", 6)
+    time.sleep(25)                                     # the watch walks down to the butts and starts to shoot
+    shoot("fletcher-range", "3-practice", 4)
+    say("fletcher: " + r.cmd("execute positioned %d %d %d run village fletcher" % (cx, hy + 1, cz))[:1200])
+    say("alive after the fletcher: %s" % client_alive())
+
+
+def golems_stage(r, look, cx, cz):
+    """[golems] The golem keeper (entity/Golems). /village golems stage, run at the town: its keeper (one taken up from
+    the town's own if it has none: a town not yet in the Iron Age is put there for the stage, and two raids written in
+    its books, and it says so), the golem yard stamped by the square if it has none, iron, pumpkins and shears put by in
+    the stores (a showcase's), and an iron golem raised at the square the game's own way: four blocks of iron in a T and
+    a pumpkin carved on top, the game's check standing it up. The new golem is then set hurt for the keeper's round.
+    Pictures: the square before and after the golem stands, the yard, and a while later the golem mended at its post;
+    then /village golems said."""
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx + 10, hy + 16, cz + 14))
+    time.sleep(6)
+    out = r.cmd("execute positioned %d %d %d run village golems stage" % (cx, hy + 1, cz))
+    say("golems stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the golems; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("36-golems-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("golems-raised", "1-raised", 6)
+    shoot("golems-yard", "2-yard", 6)
+    time.sleep(30)                                     # the keeper's round: to the hurt golem with the stores' ingots
+    shoot("golems-raised", "3-mended", 4)
+    say("golems: " + r.cmd("execute positioned %d %d %d run village golems" % (cx, hy + 1, cz))[:1200])
+    say("alive after the golems: %s" % client_alive())
+
+
 def interviews_stage(r, look, cx, cz):
     """[interviews] Job interviews you can watch (entity/Interviews, InterviewScript, InterviewTable). In the morning, after
     the assembly, /village interviews stage smith puts a notice up for a blacksmith and sets an interview for it with the
@@ -2960,6 +3034,18 @@ def main():
         transport_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("transport stage failed: %s" % e)
+    try:
+        kitchen_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("kitchen stage failed: %s" % e)
+    try:
+        fletcher_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("fletcher stage failed: %s" % e)
+    try:
+        golems_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("golems stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

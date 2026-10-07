@@ -319,7 +319,11 @@ final class InterviewScript {
             case BANK -> "How long have you kept accounts?";
             case CAVE -> "How long have you been going underground?";
             case FERRY -> "How long have you handled a boat?";
+            case FLETCHER -> "How long have you been fletching?";
+            case GOLEMS -> "How long have you kept the golems?";
             case NONE -> "What have you done, till now?";
+            // A trade come in since: asked in its own words.
+            default -> "How long have you been at " + t.label + "?";
         };
     }
 
@@ -479,6 +483,12 @@ final class InterviewScript {
                 "The forge: a smith idle wastes the most. Then the fields, and I'd tell them so.", "Whichever's nearer.", "Neither, till I've had my dinner." };
             case CAVE -> new String[]{ "Your lantern's out, a mile down, and you hear a spider. What do you do?",
                 "Torch from my pack, back to back with the team, and out along my own marks.", "Light a torch and run.", "Scream, most likely." };
+            case FLETCHER -> new String[]{ "The watch wants a hundred arrows by the full moon and you've feathers for forty. What then?",
+                "Forty now, the rancher asked for the chickens' moult, and a word to the watch so it practises with the old ones.",
+                "Make forty and ask round for feathers.", "Make them without feathers?" };
+            case GOLEMS -> new String[]{ "The golem's cracked after a raid and the stores have two ingots. What do you do?",
+                "Both ingots into it now, and the smelter told the golem comes before the watch's new helmets till it's mended.",
+                "Mend what I can with the two.", "Leave it. Golems mend themselves, don't they?" };
             default -> new String[]{ "What would you do first, in the post?",
                 "Learn how it's done here first — ask who did it before me — and then do it better.", "Get to work.", "I'm not sure, to be honest." };
         };
@@ -514,6 +524,7 @@ final class InterviewScript {
             case WEALTH -> "Honestly? It pays well. And I'd earn every coin.";
             case LEISURE -> "I'd enjoy it — and a happy worker's a good worker.";
             case TRADITION -> "Somebody has to keep the old ways going. I'd like it to be me.";
+            default -> "I think I'd be good at it. And I'd like to find out.";
         };
         if (sb.length() > 0) sb.append(' ');
         sb.append(cares);

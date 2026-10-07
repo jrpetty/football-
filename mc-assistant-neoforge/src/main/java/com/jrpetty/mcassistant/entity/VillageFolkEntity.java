@@ -539,6 +539,8 @@ public class VillageFolkEntity extends AssistantEntity {
                     Neighbourly.tick(polls, home);       // [batchA] the old, newcomers, housewarmings, the poor box (Neighbourly)
                     Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
                     CaveDwellers.tick(polls, home);      // [caves] an Iron Age town takes up its cave dwellers
+                    Fletchers.tick(polls, home);         // [fletcher] its fletcher, and the afternoon's practice at the range
+                    Golems.look(polls, home);            // [golems] its golem keeper, after the raids
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
                 }
             }
@@ -4193,12 +4195,14 @@ public class VillageFolkEntity extends AssistantEntity {
      * into the stores; the same fitting as the shop's round (WatchKit.fit), and free.
      */
     private void guardKitFromTheStores() {
-        if (stationTask() != StationTask.GUARD || tickCount - guardKitTick < 1200) return;
+        // [fletcher] A guard out of arrows goes for more at once, not at its next look at the stores.
+        if (stationTask() != StationTask.GUARD || tickCount - guardKitTick < (Fletchers.emptyQuiver(this) ? 200 : 1200)) return;
         guardKitTick = tickCount;
         UUID village = ownerId();
         Villages.Village v = village == null ? null : Villages.get(village);
         if (v == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         WatchKit.fit(server, v, this);                 // [guard-kit]
+        if (Fletchers.emptyQuiver(this)) Fletchers.cameForArrows(server, this);   // [fletcher] nothing in the stores: the board says so
     }
 
     /** What its trade works with, by the end of its name: a miner's pickaxe, a woodcutter's axe. */
@@ -4546,6 +4550,8 @@ public class VillageFolkEntity extends AssistantEntity {
             case BANK -> "The Bank";
             case CAVE -> "The Caves";             // [caves]
             case FERRY -> "The Ferry";            // [transport]
+            case FLETCHER -> "The Fletcher's";    // [fletcher]
+            case GOLEMS -> "The Golem Yard";      // [golems]
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -5092,6 +5098,8 @@ public class VillageFolkEntity extends AssistantEntity {
             case COOK -> "cafe";
             case SHOP -> "shop";
             case BANK -> "bank";                  // the banker (Bank)
+            case FLETCHER -> Fletchers.STRUCTURE; // [fletcher] the fletcher's hut
+            case GOLEMS -> Golems.STRUCTURE;      // [golems] the golem yard
             default -> null;
         };
     }
@@ -5371,7 +5379,8 @@ public class VillageFolkEntity extends AssistantEntity {
         WorkZone z = workZone();
         if (z == null) return false;
         cullTick = tickCount;
-        net.minecraft.world.entity.animal.Animal one = Drover.surplus(server, z.center(), Math.max(8, Math.min(16, z.radius())), HERD_KEPT);
+        net.minecraft.world.entity.animal.Animal one = Drover.surplus(server, z.center(), Math.max(8, Math.min(16, z.radius())), HERD_KEPT,
+            Fletchers.henFirst(server, ownerId()));               // [fletcher] an old hen first, while the fletcher wants feathers
         String word = one == null ? null : gameWord(one);
         if (word == null) return false;
         // The hunt does the killing (the blade, the drops swept into the pack); the meat, the hide and the wool
