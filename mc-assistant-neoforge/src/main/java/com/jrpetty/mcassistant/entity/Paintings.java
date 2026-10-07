@@ -211,11 +211,13 @@ public final class Paintings {
         UUID id = v.id();
         ItemStack p = picture(e.title, f.displayNameCap(), day, Villages.name(id));
         Crafts.store(level, v, p);
+        // Out of the treasury into its purse, only what the treasury has: none to spare, and the picture is the
+        // painter's gift to the town. (Coin is never made here: a debit is a take from the treasury, not a minus.)
         int price = Math.max(1, (int) Math.round(Prices.each(Items.PAINTING)));
-        boolean paid = Ledger.coins(id) >= price;
+        boolean paid = Ledger.coins(id) >= price && Ledger.takeCoins(id, price) == price;
         if (paid) {
-            Ledger.addCoins(id, -price);
             f.earn(price);
+            Economy.spent(id, price);                                  // the town's buying-in, in its books
         }
         f.persona().remember(day, "I painted “" + e.title + "”", 3);
         f.persona().enjoyedHobby(day);
