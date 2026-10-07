@@ -387,7 +387,7 @@ public class StoreGameTests {
     // ============================================================ at the counter
 
     /**
-     * A farmer with coin at one of the store's counters, eight loaves in the stockroom and an assistant behind the
+     * A farmer with coin at one of the store's counters, loaves in the stockroom and an assistant behind the
      * counter: the assistant serves it — a loaf out of the stockroom into its pack, its coin into the treasury, the
      * sale on the assistant's day — and the stores are untouched. The counters show the stock with its price tag;
      * and a folk across the room is told to come to the counter first.
@@ -402,7 +402,8 @@ public class StoreGameTests {
         buyer.setJob(StationTask.FARM);
         far.setJob(StationTask.FARM);
         fill(t, new ItemStack(Items.BREAD, 16), new ItemStack(Items.OAK_PLANKS, 32));
-        Store.putForTests(level, village, new ItemStack(Items.BREAD, 8));
+        // Ample: the town's folk may buy their bread here in the ticks before the counters are looked at.
+        Store.putForTests(level, village, new ItemStack(Items.BREAD, 32));
         // The assistant to its counter, as at work.
         boolean atWork = StoreStaff.work(assistant, level);
         BlockPos counter = StoreFloor.counterForTests(level, assistant), stand = StoreFloor.standForTests(level, assistant);

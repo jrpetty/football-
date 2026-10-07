@@ -339,6 +339,21 @@ public final class StoreFloor {
         }
     }
 
+    /**
+     * Who served the last sale in this village, from the village's own roll rather than the level's entity lookup:
+     * a folk on ground only just loaded (a forced chunk the tick it is forced) is not in the level's lookup yet,
+     * and the sale it served was put down to nobody.
+     */
+    @Nullable
+    static VillageFolkEntity lastServer(UUID village) {
+        UUID by = LAST_SERVER.get(village);
+        if (by == null) return null;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a instanceof VillageFolkEntity f && by.equals(f.getUUID()) && f.isAlive()) return f;
+        }
+        return null;
+    }
+
     /** What a sale came to: did it go through, who served it, at which counter, for how much, and what. */
     public record Sale(boolean ok, @Nullable VillageFolkEntity servedBy, @Nullable BlockPos counter, int price, ItemStack bought, String why) {}
 
@@ -372,8 +387,7 @@ public final class StoreFloor {
             ItemStack left = buyer.insertGiven(s.copy());
             if (!left.isEmpty()) Crafts.store(level, v, left);
         }
-        UUID by = LAST_SERVER.get(id);
-        VillageFolkEntity server = by != null && level.getEntity(by) instanceof VillageFolkEntity f ? f : null;
+        VillageFolkEntity server = lastServer(id);
         buyer.brain("bought " + Bench.words(got.get(0).getItem(), n) + " at " + (Store.stands(id) ? "the store" : "the shop")
             + (server != null ? ", served by " + server.displayNameCap() : ""));
         return new Sale(true, server, post.counter(), price, got.get(0).copyWithCount(n), "");
@@ -422,8 +436,7 @@ public final class StoreFloor {
             if (!p.getInventory().add(give)) p.drop(give, false);
         }
         level.playSound(null, p.blockPosition(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 0.8F, 1.0F);
-        UUID by = LAST_SERVER.get(id);
-        VillageFolkEntity server = by != null && level.getEntity(by) instanceof VillageFolkEntity f ? f : null;
+        VillageFolkEntity server = lastServer(id);
         if (counter != null) {
             // The assistant at that very counter, if it is behind it.
             for (VillageFolkEntity a : StoreStaff.in(id, ShopRoles.Role.ASSISTANT)) {
