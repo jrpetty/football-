@@ -11,13 +11,15 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.phys.AABB;
 import org.joml.Matrix4f;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * The writing on a Village Board, across all ten by five blocks of it: the village's
@@ -49,6 +51,7 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
         List<String> lines = board.lines();
         if (lines.isEmpty() || !(board.getBlockState().getBlock() instanceof VillageBoardBlock)) return;
         Direction facing = board.getBlockState().getValue(VillageBoardBlock.FACING);
+        Layout at = layout(board, lines);
 
         pose.pushPose();
         // To the middle of the bottom-left panel, then turned so +X runs along the board to
@@ -61,6 +64,76 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
         Matrix4f m = pose.last().pose();
         int glow = LightTexture.FULL_BRIGHT;
 
+        // The name, twice the size, centred; the line under it.
+        pose.pushPose();
+        pose.scale(2.0F, 2.0F, 2.0F);
+        font.drawInBatch(at.title, at.titleX, MARGIN / 2.0F, TITLE, false, pose.last().pose(), buffers,
+            Font.DisplayMode.POLYGON_OFFSET, 0, glow);
+        pose.popPose();
+        // [arms] The town's arms either side of its name, a banner hung in each top corner.
+        if (at.heraldry != null) {
+            arms.draw(at.heraldry, board.getLevel(), pose, buffers, MARGIN, 4, 16, glow);
+            arms.draw(at.heraldry, board.getLevel(), pose, buffers, WIDTH - MARGIN - 16, 4, 16, glow);
+        }
+        draw(at.head, m, buffers, glow);
+
+        // The two columns, and the foot under them, each at its page of the moment (see Layout).
+        long turn = board.getLevel() == null ? 0 : board.getLevel().getGameTime() / PAGE_TICKS;
+        draw(at.left, turn, m, buffers, glow);
+        draw(at.right, turn, m, buffers, glow);
+        draw(at.footRule, m, buffers, glow);
+        draw(at.foot, turn, m, buffers, glow);
+        pose.popPose();
+    }
+
+    // ------------------------------------------------------------------ the layout, worked out once
+
+    /**
+     * What the board shows, laid out: the writing in its places, each line wrapped, each column split into its pages.
+     * It is the same for the same lines, so it is worked out when the board's lines change (a new list from the server,
+     * a hundred ticks apart at the soonest) and kept; each frame only picks the page of the moment and draws it. It was
+     * worked out afresh every frame, every line wrapped over and over (to measure the foot, to see whether a column
+     * fits, to page it, to draw it), for every board in sight.
+     */
+    private static final class Layout {
+        final List<String> lines;
+        final int epoch;
+        String title = "";
+        float titleX;
+        @Nullable String heraldry;
+        /** The subtitle and the rule under it. */
+        final List<Op> head = new ArrayList<>();
+        /** The rule over the foot (none when there is no foot). */
+        final List<Op> footRule = new ArrayList<>();
+        @Nullable Paged left, right, foot;
+
+        Layout(List<String> lines, int epoch) {
+            this.lines = lines;
+            this.epoch = epoch;
+        }
+    }
+
+    /** A column's pages: what each shows (its "2 / 3" in the corner among it, when there is more than one). */
+    private record Paged(List<List<Op>> pages) {}
+
+    /** One piece of writing in its place: a String drawn as a String, a wrapped line as a wrapped line, as ever. */
+    private record Op(@Nullable String text, @Nullable FormattedCharSequence line, float x, float y, int colour) {}
+
+    /** The boards' layouts, by board; a board gone is let go with it. */
+    private final Map<VillageBoardBlockEntity, Layout> layouts = new WeakHashMap<>();
+
+    private Layout layout(VillageBoardBlockEntity board, List<String> lines) {
+        boolean keep = TextCache.fresh();
+        Layout got = layouts.get(board);
+        if (keep && got != null && got.lines == lines && got.epoch == TextCache.epoch()) return got;
+        Layout made = lay(lines);
+        if (keep) layouts.put(board, made);
+        else layouts.remove(board);
+        return made;
+    }
+
+    private Layout lay(List<String> lines) {
+        Layout out = new Layout(lines, TextCache.epoch());
         List<String[]> left = new ArrayList<>(), right = new ArrayList<>(), foot = new ArrayList<>();
         String title = "", sub = "", heraldry = null;
         for (String l : lines) {
@@ -77,23 +150,14 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
                 default -> { }
             }
         }
-
-        // The name, twice the size, centred; the line under it.
-        pose.pushPose();
-        pose.scale(2.0F, 2.0F, 2.0F);
+        out.title = title;
         float tw = font.width(title);
-        font.drawInBatch(title, (WIDTH / 2.0F - tw) / 2.0F, MARGIN / 2.0F, TITLE, false, pose.last().pose(), buffers,
-            Font.DisplayMode.POLYGON_OFFSET, 0, glow);
-        pose.popPose();
-        // [arms] The town's arms either side of its name, a banner hung in each top corner.
-        if (heraldry != null) {
-            arms.draw(heraldry, board.getLevel(), pose, buffers, MARGIN, 4, 16, glow);
-            arms.draw(heraldry, board.getLevel(), pose, buffers, WIDTH - MARGIN - 16, 4, 16, glow);
-        }
+        out.titleX = (WIDTH / 2.0F - tw) / 2.0F;
+        out.heraldry = heraldry;
         int y = MARGIN + 22;
-        drawCentred(sub, y, SUB, m, buffers, glow);
+        centred(sub, y, SUB, out.head);
         y += LINE + 4;
-        rule(y, m, buffers, glow);
+        rule(y, out.head);
         y += 6;
 
         // The two columns, and the foot under them. Every feature of the town has a line to put up, and the foot
@@ -104,14 +168,30 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
         int body = HEIGHT - MARGIN - y;
         int footH = Math.min(needed(foot, footW), body * 2 / 5);
         int footTop = HEIGHT - MARGIN - footH - 6;
-        long turn = board.getLevel() == null ? 0 : board.getLevel().getGameTime() / PAGE_TICKS;
-        paged(left, MARGIN, y, colW, footTop - 4, turn, m, buffers, glow);
-        paged(right, MARGIN + colW + GUTTER, y, colW, footTop - 4, turn, m, buffers, glow);
+        out.left = paged(left, MARGIN, y, colW, footTop - 4);
+        out.right = paged(right, MARGIN + colW + GUTTER, y, colW, footTop - 4);
         if (!foot.isEmpty()) {
-            rule(footTop, m, buffers, glow);
-            paged(foot, MARGIN, footTop + 6, footW, HEIGHT - MARGIN, turn, m, buffers, glow);
+            rule(footTop, out.footRule);
+            out.foot = paged(foot, MARGIN, footTop + 6, footW, HEIGHT - MARGIN);
         }
-        pose.popPose();
+        return out;
+    }
+
+    private void draw(List<Op> ops, Matrix4f m, MultiBufferSource buffers, int glow) {
+        for (Op op : ops) {
+            if (op.text() != null) {
+                font.drawInBatch(op.text(), op.x(), op.y(), op.colour(), false, m, buffers, Font.DisplayMode.POLYGON_OFFSET, 0, glow);
+            } else {
+                font.drawInBatch(op.line(), op.x(), op.y(), op.colour(), false, m, buffers, Font.DisplayMode.POLYGON_OFFSET, 0, glow);
+            }
+        }
+    }
+
+    /** A column at its page of the moment, turning with the clock. */
+    private void draw(@Nullable Paged p, long turn, Matrix4f m, MultiBufferSource buffers, int glow) {
+        if (p == null) return;
+        int at = (int) Math.floorMod(turn, (long) p.pages().size());
+        draw(p.pages().get(at), m, buffers, glow);
     }
 
     /** Ticks a page of the board stays up before the next is turned to. */
@@ -132,16 +212,17 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
 
     /**
      * These lines in a box from y to bottom: all of them if they fit, else split into pages that fit (each page under
-     * the heading it falls under, and no heading left alone at the foot of a page), the page shown turning with the
-     * clock, and its number in the box's corner.
+     * the heading it falls under, and no heading left alone at the foot of a page), each page with its number in the
+     * box's corner. Null when there is no room or nothing to put there.
      */
-    private void paged(List<String[]> lines, int x, int y, int w, int bottom, long turn, Matrix4f m,
-                       MultiBufferSource buffers, int glow) {
+    @Nullable
+    private Paged paged(List<String[]> lines, int x, int y, int w, int bottom) {
         int room = bottom - y;
-        if (room < LINE || lines.isEmpty()) return;
+        if (room < LINE || lines.isEmpty()) return null;
         if (needed(lines, w) <= room) {
-            column(lines, x, y, w, bottom, m, buffers, glow);
-            return;
+            List<Op> all = new ArrayList<>();
+            column(lines, x, y, w, bottom, all);
+            return new Paged(List.of(all));
         }
         int pageRoom = room - LINE;                                 // a line kept for the page number
         List<List<String[]>> pages = new ArrayList<>();
@@ -167,48 +248,49 @@ public class VillageBoardRenderer implements BlockEntityRenderer<VillageBoardBlo
             used += need;
         }
         if (!page.isEmpty()) pages.add(page);
-        int at = (int) Math.floorMod(turn, (long) pages.size());
-        column(pages.get(at), x, y, w, bottom - LINE, m, buffers, glow);
-        String mark = (at + 1) + " / " + pages.size();
-        font.drawInBatch(mark, x + w - font.width(mark), bottom - LINE + 1, QUIET, false, m, buffers,
-            Font.DisplayMode.POLYGON_OFFSET, 0, glow);
+        List<List<Op>> laid = new ArrayList<>();
+        for (int at = 0; at < pages.size(); at++) {
+            List<Op> ops = new ArrayList<>();
+            column(pages.get(at), x, y, w, bottom - LINE, ops);
+            String mark = (at + 1) + " / " + pages.size();
+            ops.add(new Op(mark, null, x + w - font.width(mark), bottom - LINE + 1, QUIET));
+            laid.add(ops);
+        }
+        return new Paged(laid);
     }
 
     /** One column of lines, wrapped to its width, stopping at the bottom. */
-    private void column(List<String[]> lines, int x, int y, int w, int bottom, Matrix4f m, MultiBufferSource buffers, int glow) {
+    private void column(List<String[]> lines, int x, int y, int w, int bottom, List<Op> out) {
         for (String[] l : lines) {
             if (y + LINE > bottom) return;
             int colour = colour(l[0]);
             if (l[0].equals("H")) {
-                font.drawInBatch(l[1].toUpperCase(java.util.Locale.ROOT), x, y, colour, false, m, buffers,
-                    Font.DisplayMode.POLYGON_OFFSET, 0, glow);
+                out.add(new Op(l[1].toUpperCase(java.util.Locale.ROOT), null, x, y, colour));
                 y += LINE + 3;
                 continue;
             }
             List<FormattedCharSequence> wrapped = TextCache.splitPlain(font, l[1], w);
             for (int i = 0; i < wrapped.size(); i++) {
                 if (y + LINE > bottom) return;
-                font.drawInBatch(wrapped.get(i), x + (i == 0 ? 0 : 6), y, colour, false, m, buffers,
-                    Font.DisplayMode.POLYGON_OFFSET, 0, glow);
+                out.add(new Op(null, wrapped.get(i), x + (i == 0 ? 0 : 6), y, colour));
                 y += LINE;
             }
             y += 2;
         }
     }
 
-    private void drawCentred(String s, int y, int colour, Matrix4f m, MultiBufferSource buffers, int glow) {
+    private void centred(String s, int y, int colour, List<Op> out) {
         String shown = s;
         while (font.width(shown) > WIDTH - MARGIN * 2 && shown.length() > 4) shown = shown.substring(0, shown.length() - 2);
-        font.drawInBatch(shown, (WIDTH - font.width(shown)) / 2.0F, y, colour, false, m, buffers,
-            Font.DisplayMode.POLYGON_OFFSET, 0, glow);
+        out.add(new Op(shown, null, (WIDTH - font.width(shown)) / 2.0F, y, colour));
     }
 
     /** A rule across the board: a row of dots, which every font has. */
-    private void rule(int y, Matrix4f m, MultiBufferSource buffers, int glow) {
+    private void rule(int y, List<Op> out) {
         String dot = "· ";
         int n = (WIDTH - MARGIN * 2) / Math.max(1, font.width(dot));
         String row = dot.repeat(Math.max(1, n));
-        font.drawInBatch(row, MARGIN, y, 0xFF6E5A3A, false, m, buffers, Font.DisplayMode.POLYGON_OFFSET, 0, glow);
+        out.add(new Op(row, null, MARGIN, y, 0xFF6E5A3A));
     }
 
     private static int colour(String how) {
