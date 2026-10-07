@@ -367,6 +367,7 @@ public final class McAssistantMod {
         com.jrpetty.mcassistant.item.FieldItems.register(modBus);      // [fields] the tools of the fields and the pens, the bees and the water
         com.jrpetty.mcassistant.item.InterviewItems.register(modBus);  // [interviews] the letter of application
         com.jrpetty.mcassistant.item.KitchenItems.register(modBus);    // [kitchen] the kitchen, the cellar and the healer's shelf
+        com.jrpetty.mcassistant.item.LeisureItems.register(modBus);    // [leisure] the quilt, the lute, draughts, kites, the football, lanterns, slates
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);

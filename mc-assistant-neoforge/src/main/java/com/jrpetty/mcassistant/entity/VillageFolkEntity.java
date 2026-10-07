@@ -1231,6 +1231,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = WindowBoxes.mood(this, day, m, why);        // [workitems] its household's window boxes in flower
         m = Interviews.mood(this, day, m, why);          // [interviews] a post won at interview, or missed
         m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
+        m = Pastimes.mood(this, day, m, why);           // [leisure] a night under a quilt, a game won, a kite, a kickabout, the lanterns
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);

@@ -162,6 +162,30 @@ public final class Makers {
         // ink at the bench, paid for out of its purse, before it goes to an interview for a post.
         declare("letter_of_application", "the candidate itself, at its town's bench",
             "when it is shortlisted for a post that goes to interview (one kept, written over for the next)", "Interviews.write");
+        // [leisure] Home and play (entity/Pastimes: the trades' turns from Crafts.now, the shop's book through
+        // Workshop.demand, and the town's own bench where the town has neither trade nor shop; the busker's own lute).
+        declare("patchwork_quilt", "the tailor (the shop's workshop with no tailor)",
+            "while households saving for one would buy it for their beds (two kept), and one for a wedding's gift", "Pastimes.craft / Quilts.make");
+        declare("lute", "the shop's workshop", "for each busker without a lute of its own (three at most), and one for the tavern's band",
+            "Pastimes.craft / Workshop.demand");
+        declare("lute", "a busker, for itself", "of an evening, in a town with no maker and no lute in the stores", "Lutes.makeOwn");
+        declare("draughts_board", "the shop's workshop", "one for the tavern's table and one for the park, till each is out",
+            "Pastimes.craft / Workshop.demand");
+        declare("kite", "the tailor or the shop's workshop", "once the town has two children: a kite between two (four at most)",
+            "Pastimes.craft / Kites.make");
+        declare("leather_football", "the tailor (the shop's workshop with no tailor)",
+            "once the town has two children, for their kickabouts, and one for the pitch", "Pastimes.craft / Workshop.demand");
+        for (String c : List.of("red", "yellow", "orange", "light_blue", "lime", "pink", "magenta", "white")) {
+            declare(c + "_paper_lantern", "the tailor or the shop's workshop",
+                "once the town is settled: one of each of the festival's eight colours kept, for the lines across the square",
+                "Pastimes.craft / Lanterns");
+        }
+        for (String c : List.of("black", "blue", "brown", "cyan", "gray", "green", "light_gray", "purple")) {
+            declare(c + "_paper_lantern", "the shop's workshop", "only a player wants one in this colour: made on a player's order",
+                "Workshop.order");
+        }
+        declare("slate_and_chalk", "the shop's workshop (the mason at the town's bench)",
+            "while the school stands: one for each pupil with none, and a spare (eight at most)", "Pastimes.craft / Slates");
         // The village's own pieces.
         declare("storehouse_unit", "the builders", "as the storehouse goes up: twenty-seven to a store", "VillageFolkEntity.madeFromStores");
         declare("village_board", "the town's hands", "whenever the town's board has been taken down (the founders bring the first)",
