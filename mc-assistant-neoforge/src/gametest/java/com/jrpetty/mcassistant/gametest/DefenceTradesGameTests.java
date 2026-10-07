@@ -250,6 +250,7 @@ public class DefenceTradesGameTests {
             Ledger.built(id, Fletchers.STRUCTURE, hutAt, Direction.NORTH);
             helper.assertTrue(put > 30 && !Fletchers.hutWanted(id), "the hut stands: " + put + " blocks");
             chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.FLINT, 2), new ItemStack(Items.OAK_PLANKS, 8));
+            int flintBefore = stock(level, id, Items.FLINT), planksBefore = stock(level, id, s -> s.is(net.minecraft.tags.ItemTags.PLANKS));
             BlockPos spot = Fletchers.tableSpotForTests(id);
             String made = Fletchers.workForTests(f, level, v);
             Kit.log("fd01 the first piece: " + made + "; the table's place " + spot + " holds " + level.getBlockState(spot)
@@ -257,8 +258,10 @@ public class DefenceTradesGameTests {
             helper.assertTrue(made.contains("fletching table"), "its table made first: " + made);
             helper.assertTrue(level.getBlockState(spot).is(Blocks.FLETCHING_TABLE) && spot.equals(Fletchers.tableForTests(id)),
                 "a fletching table on the drawing's place in the hut");
-            helper.assertTrue(stock(level, id, Items.FLINT) == 0 && stock(level, id, s -> s.is(net.minecraft.tags.ItemTags.PLANKS)) == 4,
-                "two flint and four planks out of the stores, the recipe's");
+            helper.assertTrue(flintBefore - stock(level, id, Items.FLINT) == 2
+                    && planksBefore - stock(level, id, s -> s.is(net.minecraft.tags.ItemTags.PLANKS)) == 4,
+                "two flint and four planks out of the stores, the recipe's: flint " + flintBefore + " to " + stock(level, id, Items.FLINT)
+                    + ", planks " + planksBefore + " to " + stock(level, id, s -> s.is(net.minecraft.tags.ItemTags.PLANKS)));
             String card = com.jrpetty.mcassistant.entity.FolkTalk.card(f);
             Kit.log("fd01 the fletcher's card: " + card);
             helper.assertTrue(card.contains("Fletcher") && card.contains("Fletching|"), "its card says its trade and its fletching");
@@ -423,6 +426,8 @@ public class DefenceTradesGameTests {
             trade(g1, StationTask.GUARD);
             trade(g2, StationTask.GUARD);
             for (VillageFolkEntity g : folk) unarmed(g);
+            // The watch's quivers already full (fd05 tests the filling): the arrows made here stay in the stores.
+            for (VillageFolkEntity g : List.of(g1, g2)) g.insertItem(new ItemStack(Items.ARROW, 32));
             BlockPos hutAt = heart.offset(14, 0, -10);
             BuildGoal.stamp(level, Fletchers.STRUCTURE, hutAt, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
             Ledger.built(id, Fletchers.STRUCTURE, hutAt, Direction.NORTH);
@@ -430,6 +435,13 @@ public class DefenceTradesGameTests {
             BuildGoal.stamp(level, Archery.STRUCTURE, rangeAt, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
             Ledger.built(id, Archery.STRUCTURE, rangeAt, Direction.NORTH);
             for (Archery.Lane l : Archery.lanes(Archery.of(id))) level.setBlock(l.target(), Blocks.HAY_BLOCK.defaultBlockState(), 3);
+            // What the founding stores already hold (their string, their planks): every count below is past it.
+            java.util.Map<Item, Integer> was = new java.util.HashMap<>();
+            for (Item it : List.of(Items.ARROW, Items.SPECTRAL_ARROW, Items.BOW, Items.CROSSBOW, Items.TRIPWIRE_HOOK, Items.TARGET, Items.FLINT,
+                    Items.FEATHER, Items.STRING, Items.IRON_INGOT, Items.GLOWSTONE_DUST, Items.REDSTONE, Items.HAY_BLOCK, Items.STICK)) {
+                was.put(it, stock(level, id, it));
+            }
+            java.util.function.ToIntFunction<Item> got = it -> stock(level, id, it) - was.get(it);
             chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.FLETCHING_TABLE), new ItemStack(Items.FLINT, 6),
                 new ItemStack(Items.FEATHER, 6), new ItemStack(Items.OAK_PLANKS, 32), new ItemStack(Items.STRING, 12),
                 new ItemStack(Items.IRON_INGOT, 6), new ItemStack(Items.GLOWSTONE_DUST, 4), new ItemStack(Items.REDSTONE, 4),
@@ -440,31 +452,31 @@ public class DefenceTradesGameTests {
                 if (made.equals("nothing")) break;
                 pieces.add(made);
             }
-            int arrows = stock(level, id, Items.ARROW), bows = stock(level, id, Items.BOW), crossbowsInStores = stock(level, id, Items.CROSSBOW);
+            int arrows = got.applyAsInt(Items.ARROW), bows = got.applyAsInt(Items.BOW), crossbowsInStores = got.applyAsInt(Items.CROSSBOW);
             int crossbowsCarried = 0;
             for (VillageFolkEntity g : List.of(g1, g2)) crossbowsCarried += g.countCarried(s -> s.is(Items.CROSSBOW));
             Kit.log("fd04 the fletcher's pieces: " + pieces);
-            Kit.log("fd04 the stores: arrows " + arrows + ", spectral " + stock(level, id, Items.SPECTRAL_ARROW) + ", bows " + bows
-                + ", crossbows " + crossbowsInStores + " (carried " + crossbowsCarried + "), hooks " + stock(level, id, Items.TRIPWIRE_HOOK)
-                + ", targets " + stock(level, id, Items.TARGET) + "; flint " + stock(level, id, Items.FLINT) + ", feathers " + stock(level, id, Items.FEATHER)
-                + ", string " + stock(level, id, Items.STRING) + ", iron " + stock(level, id, Items.IRON_INGOT) + ", glowstone "
-                + stock(level, id, Items.GLOWSTONE_DUST) + ", redstone " + stock(level, id, Items.REDSTONE) + ", hay " + stock(level, id, Items.HAY_BLOCK)
-                + ", sticks " + stock(level, id, Items.STICK) + ", planks " + stock(level, id, s -> s.is(net.minecraft.tags.ItemTags.PLANKS))
+            Kit.log("fd04 the stores: arrows " + arrows + ", spectral " + got.applyAsInt(Items.SPECTRAL_ARROW) + ", bows " + bows
+                + ", crossbows " + crossbowsInStores + " (carried " + crossbowsCarried + "), hooks " + got.applyAsInt(Items.TRIPWIRE_HOOK)
+                + ", targets " + got.applyAsInt(Items.TARGET) + "; flint " + got.applyAsInt(Items.FLINT) + ", feathers " + got.applyAsInt(Items.FEATHER)
+                + ", string " + got.applyAsInt(Items.STRING) + ", iron " + got.applyAsInt(Items.IRON_INGOT) + ", glowstone "
+                + got.applyAsInt(Items.GLOWSTONE_DUST) + ", redstone " + got.applyAsInt(Items.REDSTONE) + ", hay " + got.applyAsInt(Items.HAY_BLOCK)
+                + ", sticks " + got.applyAsInt(Items.STICK) + ", planks " + stock(level, id, s -> s.is(net.minecraft.tags.ItemTags.PLANKS))
                 + "; booked arrows " + java.util.Arrays.toString(Economy.todayForTests(id, "arrow")));
             helper.assertTrue(level.getBlockState(Fletchers.tableSpotForTests(id)).is(Blocks.FLETCHING_TABLE), "the stores' table set down in the hut");
             // Six flint and six feathers: six crafts, twenty-four arrows (one of them into the spectral arrows).
-            helper.assertTrue(stock(level, id, Items.FLINT) == 0 && stock(level, id, Items.FEATHER) == 0, "every flint and feather made into arrows");
-            helper.assertTrue(arrows + 1 == 24 && stock(level, id, Items.SPECTRAL_ARROW) == 2,
+            helper.assertTrue(got.applyAsInt(Items.FLINT) == 0 && got.applyAsInt(Items.FEATHER) == 0, "every flint and feather made into arrows");
+            helper.assertTrue(arrows + 1 == 24 && got.applyAsInt(Items.SPECTRAL_ARROW) == 2,
                 "four arrows to a flint, a stick and a feather (24), one of them and four glowstone dust made into two spectral arrows: "
-                    + arrows + " arrows, " + stock(level, id, Items.SPECTRAL_ARROW) + " spectral");
-            helper.assertTrue(stock(level, id, Items.GLOWSTONE_DUST) == 0, "the glowstone used");
+                    + arrows + " arrows, " + got.applyAsInt(Items.SPECTRAL_ARROW) + " spectral");
+            helper.assertTrue(got.applyAsInt(Items.GLOWSTONE_DUST) == 0, "the glowstone used");
             helper.assertTrue(bows == 3, "a bow for each guard with none, and a spare: " + bows);
             helper.assertTrue(crossbowsInStores + crossbowsCarried == 1 && crossbowsCarried == 1, "a crossbow, issued to the best archer: carried "
                 + crossbowsCarried + ", in the stores " + crossbowsInStores);
-            helper.assertTrue(stock(level, id, Items.TRIPWIRE_HOOK) == 1, "the hook's twin kept: an ingot, a stick and a plank make two");
-            helper.assertTrue(stock(level, id, Items.STRING) == 12 - 9 - 2, "three string a bow, two the crossbow: " + stock(level, id, Items.STRING));
-            helper.assertTrue(stock(level, id, Items.IRON_INGOT) == 4, "two ingots: the crossbow's, and the hook's: " + stock(level, id, Items.IRON_INGOT));
-            helper.assertTrue(stock(level, id, Items.TARGET) == 1 && stock(level, id, Items.REDSTONE) == 0 && stock(level, id, Items.HAY_BLOCK) == 0,
+            helper.assertTrue(got.applyAsInt(Items.TRIPWIRE_HOOK) == 1, "the hook's twin kept: an ingot, a stick and a plank make two");
+            helper.assertTrue(got.applyAsInt(Items.STRING) == 12 - 9 - 2, "three string a bow, two the crossbow: " + got.applyAsInt(Items.STRING));
+            helper.assertTrue(got.applyAsInt(Items.IRON_INGOT) == 4, "two ingots: the crossbow's, and the hook's: " + got.applyAsInt(Items.IRON_INGOT));
+            helper.assertTrue(got.applyAsInt(Items.TARGET) == 1 && got.applyAsInt(Items.REDSTONE) == 0 && got.applyAsInt(Items.HAY_BLOCK) == 0,
                 "a target for the range of four redstone and a bale");
             helper.assertTrue(Economy.todayForTests(id, "arrow")[0] >= 23, "the arrows booked as the town's making today");
             helper.succeed();
@@ -671,7 +683,12 @@ public class DefenceTradesGameTests {
                 BuildGoal.stamp(level, Golems.STRUCTURE, yardAt, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
                 Ledger.built(id, Golems.STRUCTURE, yardAt, Direction.NORTH);
                 helper.assertTrue(!Golems.yardWanted(id), "the yard stands");
-                chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.IRON_INGOT, 40), new ItemStack(Items.PUMPKIN), new ItemStack(Items.SHEARS));
+                // Iron enough for a golem and four over, past what the watch's armour and blades still want (fd10 tests the want).
+                int watchIron = Golems.ironForTheWatch(level, v);
+                int ingots = 40 + watchIron;
+                chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.IRON_INGOT, Math.min(64, ingots)),
+                    new ItemStack(Items.IRON_INGOT, Math.max(0, ingots - 64)), new ItemStack(Items.PUMPKIN), new ItemStack(Items.SHEARS));
+                Kit.log("fd07 the watch's kit still wants " + watchIron + " ingots; the stores hold " + stock(level, id, Items.IRON_INGOT));
                 String said = Golems.buildForTests(level, v, k, "square");
                 List<String[]> kept = Golems.keptForTests(id);
                 Kit.log("fd07 the build: " + said + "; kept " + kept.stream().map(java.util.Arrays::toString).toList() + "; the stores: ingots "
@@ -691,8 +708,8 @@ public class DefenceTradesGameTests {
                     if (level.getBlockState(q).is(Blocks.IRON_BLOCK) || level.getBlockState(q).is(Blocks.CARVED_PUMPKIN)) ironLeft++;
                 }
                 helper.assertTrue(ironLeft == 0, "the T and its head taken up into the golem: " + ironLeft + " blocks left");
-                helper.assertTrue(stock(level, id, Items.IRON_INGOT) == 4 && stock(level, id, Items.IRON_BLOCK) == 0,
-                    "four blocks of nine of the stores' ingots: " + stock(level, id, Items.IRON_INGOT) + " ingots left");
+                helper.assertTrue(stock(level, id, Items.IRON_INGOT) == ingots - 36 && stock(level, id, Items.IRON_BLOCK) == 0,
+                    "four blocks of nine of the stores' ingots: " + stock(level, id, Items.IRON_INGOT) + " ingots left of " + ingots);
                 helper.assertTrue(stock(level, id, Items.PUMPKIN) == 0 && stock(level, id, Items.PUMPKIN_SEEDS) == 4 && stock(level, id, Items.SHEARS) == 1,
                     "the farm's pumpkin carved where it sat with the stores' shears, four seeds into the stores");
                 helper.assertTrue(told(id, "raised an iron golem, " + g[1]), "into the chronicle: " + chronicle(id));
