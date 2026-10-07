@@ -157,7 +157,7 @@ final class DistrictMap {
         small(g, font, "at work", kx + 10, ky, Ui.MUTED);
         ky += 12;
         for (String line : new String[]{ d.getString("plan"), d.getString("park") }) {
-            for (FormattedCharSequence s : font.split(Component.literal(line), (int) ((w - size - 8) / 0.75F))) {
+            for (FormattedCharSequence s : TextCache.split(font, line, (int) ((w - size - 8) / 0.75F))) {
                 if (ky > y + h - 8) break;
                 small(g, font, s, kx, ky, Ui.MUTED);
                 ky += 8;
@@ -191,7 +191,7 @@ final class DistrictMap {
         Ui.section(g, font, "Where they live: the smoke and the park", x, y, w);
         y += 12;
         if (smoky.isEmpty() && park.isEmpty()) {
-            for (FormattedCharSequence s : font.split(Component.literal(d.getString("park")), (int) (w / 0.75F))) {
+            for (FormattedCharSequence s : TextCache.split(font, d.getString("park"), (int) (w / 0.75F))) {
                 if (y > bottom - 8) break;
                 small(g, font, s, x, y, Ui.MUTED);
                 y += 9;
@@ -213,7 +213,7 @@ final class DistrictMap {
                 small(g, font, "… and " + (lines.size() - i) + " more", x + 4, y - 1, Ui.FAINT);
                 break;
             }
-            for (FormattedCharSequence s : font.split(Component.literal("· " + lines.getString(i)), (int) ((w - 4) / 0.75F))) {
+            for (FormattedCharSequence s : TextCache.split(font, "· " + lines.getString(i), (int) ((w - 4) / 0.75F))) {
                 if (y > bottom - 8) break;
                 small(g, font, s, x + 4, y, Ui.INK);
                 y += 9;

@@ -53,12 +53,35 @@ public final class BoardArms {
         return new Arms(field, layers.build());
     }
 
+    /** No arms (the line is not the arms'), as kept in PARSED. */
+    private static final Arms NONE = new Arms(DyeColor.WHITE, BannerPatternLayers.EMPTY);
+    /** The arms read from a board's line, kept: read twice a frame a board (a banner each side), they are the same
+     *  arms for the same line in the same world (its registry of patterns does not change while it is open). */
+    private final java.util.Map<String, Arms> parsed = new java.util.HashMap<>();
+    /** The world they were read in (held weakly, so a world left is not kept for it); null if read with none. */
+    @Nullable private java.lang.ref.WeakReference<Level> parsedIn;
+
+    @Nullable
+    private Arms parsed(String words, @Nullable Level level) {
+        boolean same = level == null ? parsedIn == null : parsedIn != null && parsedIn.get() == level;
+        if (!same || parsed.size() > 64) {
+            parsed.clear();
+            parsedIn = level == null ? null : new java.lang.ref.WeakReference<>(level);
+        }
+        Arms got = parsed.get(words);
+        if (got == null) {
+            got = parse(words, level);
+            parsed.put(words, got == null ? NONE : got);
+        }
+        return got == NONE ? null : got;
+    }
+
     /**
      * The arms hung at x, y of the board's writing (its pixels: x to the reader's right, y down, z out of its face
      * towards the reader), {@code wide} pixels across and twice that down, lit as the writing is.
      */
     public void draw(String words, @Nullable Level level, PoseStack pose, MultiBufferSource buffers, float x, float y, float wide, int light) {
-        Arms a = parse(words, level);
+        Arms a = parsed(words, level);
         if (a == null) return;
         pose.pushPose();
         pose.translate(x + wide / 2.0F, y, 0.0F);

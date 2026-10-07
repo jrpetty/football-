@@ -6,7 +6,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
 
 import javax.annotation.Nullable;
@@ -100,7 +99,7 @@ public final class CasesPage {
                 continue;
             }
             int colour = b[0].equals("S") ? Ui.INK : b[0].equals("M") ? Ui.FAINT : Ui.MUTED;
-            for (FormattedCharSequence part : font.split(FormattedText.of((b[0].equals("L") ? "· " : "") + b[1]), max)) {
+            for (FormattedCharSequence part : TextCache.splitPlain(font, (b[0].equals("L") ? "· " : "") + b[1], max)) {
                 if (fy > bottom - 8) break;
                 small(g, font, part, fx + (b[0].equals("L") ? 2 : 0), fy, colour);
                 fy += 8;
@@ -159,7 +158,7 @@ public final class CasesPage {
     }
 
     private static List<FormattedCharSequence> wrap(Font font, String s, int w) {
-        return font.split(FormattedText.of(s), (int) (w / 0.75F));
+        return TextCache.splitPlain(font, s, (int) (w / 0.75F));
     }
 
     private static void small(GuiGraphics g, Font font, String s, int x, int y, int colour) {

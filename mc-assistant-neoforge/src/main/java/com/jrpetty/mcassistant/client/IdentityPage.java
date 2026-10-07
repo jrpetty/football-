@@ -35,7 +35,7 @@ public final class IdentityPage {
         List<Component> tip = null;
         int top = y;
         // The town in one line, two at most.
-        List<FormattedCharSequence> sum = font.split(Component.literal(c.getString("summary")), w - 4);
+        List<FormattedCharSequence> sum = TextCache.split(font, c.getString("summary"), w - 4);
         for (int i = 0; i < Math.min(2, sum.size()); i++) {
             g.drawString(font, sum.get(i), x + 2, y, Ui.ACCENT, false);
             y += 10;
@@ -178,7 +178,7 @@ public final class IdentityPage {
     }
 
     private static int wrap(GuiGraphics g, Font font, String text, int x, int y, int w, int most, int colour) {
-        List<FormattedCharSequence> l = font.split(Component.literal(text), (int) (w / 0.75F));
+        List<FormattedCharSequence> l = TextCache.split(font, text, (int) (w / 0.75F));
         for (int i = 0; i < Math.min(most, l.size()); i++) {
             small(g, font, l.get(i), x, y, colour);
             y += 8;
@@ -191,7 +191,7 @@ public final class IdentityPage {
     }
 
     private static void add(List<Line> lines, Font font, char kind, String text, int width) {
-        for (FormattedCharSequence l : font.split(Component.literal(text), width)) lines.add(new Line(kind, l));
+        for (FormattedCharSequence l : TextCache.split(font, text, width)) lines.add(new Line(kind, l));
     }
 
     private static List<String> strings(CompoundTag m, String key) {

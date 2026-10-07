@@ -62,8 +62,27 @@ public class FashionLayer extends RenderLayer<VillageFolkEntity, FolkModel> {
         return DyeColor.byId(Math.max(0, Math.min(15, id))).getTextureDiffuseColor() & 0xFFFFFF;
     }
 
-    /** One piece to draw: its parts and the colour of its cloth. */
-    private record Piece(List<FashionModel.Part> parts, int rgb) {}
+    /**
+     * The pieces to draw for the folk being drawn: their parts and the colour of their cloth, six at most (a coat, a
+     * hat, its feather, a scarf, a brooch, a rosette). Kept in the layer and filled afresh for each folk, rather than a
+     * new list of new pieces for every folk every frame: the layer draws one folk at a time, on the render thread.
+     */
+    private final List<?>[] pieceParts = new List<?>[6];
+    private final int[] pieceRgb = new int[6];
+    private int pieces;
+    /** A body garment's parts without its long skirt (put away under leggings), by garment: worked out once each. */
+    private final java.util.Map<String, List<FashionModel.Part>> skirtless = new java.util.HashMap<>();
+
+    private void piece(List<FashionModel.Part> parts, int rgb) {
+        pieceParts[pieces] = parts;
+        pieceRgb[pieces] = rgb;
+        pieces++;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<FashionModel.Part> partsOf(int i) {
+        return (List<FashionModel.Part>) pieceParts[i];
+    }
 
     @Override
     public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
@@ -74,43 +93,50 @@ public class FashionLayer extends RenderLayer<VillageFolkEntity, FolkModel> {
         if (p == 0) return;
         boolean breastplate = folk.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof ArmorItem;
         boolean leggings = folk.getItemBySlot(EquipmentSlot.LEGS).getItem() instanceof ArmorItem;
-        List<Piece> pieces = new ArrayList<>();
+        pieces = 0;
         Garment body = Garment.byShape(Garment.Slot.BODY, Style.bodyShape(p));
         if (body != null && !breastplate) {
-            List<FashionModel.Part> parts = new ArrayList<>(model.parts(body.name()));
-            if (leggings) parts.removeIf(part -> part.name().endsWith("_skirt"));
-            pieces.add(new Piece(parts, body.rgb(Style.bodyColour(p))));
+            List<FashionModel.Part> parts = model.parts(body.name());
+            if (leggings) {
+                parts = skirtless.computeIfAbsent(body.name(), k -> {
+                    List<FashionModel.Part> left = new ArrayList<>(model.parts(k));
+                    left.removeIf(part -> part.name().endsWith("_skirt"));
+                    return left;
+                });
+            }
+            piece(parts, body.rgb(Style.bodyColour(p)));
         }
         Garment hat = hatOn(folk) ? Garment.byShape(Garment.Slot.HEAD, Style.hatShape(p)) : null;
         if (hat != null) {
-            pieces.add(new Piece(model.parts(hat.name()), hat.rgb(Style.hatColour(p))));
-            if (hat == Garment.FELT_HAT && Style.feather(p)) pieces.add(new Piece(model.parts("FEATHER"), 0xFFFFFF));
+            piece(model.parts(hat.name()), hat.rgb(Style.hatColour(p)));
+            if (hat == Garment.FELT_HAT && Style.feather(p)) piece(model.parts("FEATHER"), 0xFFFFFF);
         }
         if (!breastplate) {
-            if (!Style.none(Style.scarfColour(p))) pieces.add(new Piece(model.parts(Garment.WOOL_SCARF.name()), Garment.WOOL_SCARF.rgb(Style.scarfColour(p))));
-            if (Style.brooch(p)) pieces.add(new Piece(model.parts(Garment.BROOCH.name()), 0xFFFFFF));
-            if (!Style.none(Style.rosetteColour(p))) pieces.add(new Piece(model.parts(Garment.ROSETTE.name()), Garment.ROSETTE.rgb(Style.rosetteColour(p))));
+            if (!Style.none(Style.scarfColour(p))) piece(model.parts(Garment.WOOL_SCARF.name()), Garment.WOOL_SCARF.rgb(Style.scarfColour(p)));
+            if (Style.brooch(p)) piece(model.parts(Garment.BROOCH.name()), 0xFFFFFF);
+            if (!Style.none(Style.rosetteColour(p))) piece(model.parts(Garment.ROSETTE.name()), Garment.ROSETTE.rgb(Style.rosetteColour(p)));
         }
-        if (pieces.isEmpty()) return;
+        if (pieces == 0) return;
         model.follow(getParentModel());
         int overlay = LivingEntityRenderer.getOverlayCoords(folk, 0.0F);
         // A pass a picture: every buffer is finished before the next is asked for.
         VertexConsumer cloth = buffer.getBuffer(RenderType.entityCutoutNoCull(CLOTH));
-        for (Piece piece : pieces) {
-            for (FashionModel.Part part : piece.parts()) {
-                if (part.cloth()) FashionModel.draw(part, pose, cloth, light, overlay, 0xFF000000 | piece.rgb());
+        for (int i = 0; i < pieces; i++) {
+            int rgb = pieceRgb[i];
+            for (FashionModel.Part part : partsOf(i)) {
+                if (part.cloth()) FashionModel.draw(part, pose, cloth, light, overlay, 0xFF000000 | rgb);
             }
         }
         int accent = 0xFF000000 | dye(Style.accentOf(p));
         VertexConsumer trim = buffer.getBuffer(RenderType.entityCutoutNoCull(TRIM));
-        for (Piece piece : pieces) {
-            for (FashionModel.Part part : piece.parts()) {
+        for (int i = 0; i < pieces; i++) {
+            for (FashionModel.Part part : partsOf(i)) {
                 if (part.trim()) FashionModel.draw(part, pose, trim, light, overlay, accent);
             }
         }
         VertexConsumer fixed = buffer.getBuffer(RenderType.entityCutoutNoCull(FIXED));
-        for (Piece piece : pieces) {
-            for (FashionModel.Part part : piece.parts()) {
+        for (int i = 0; i < pieces; i++) {
+            for (FashionModel.Part part : partsOf(i)) {
                 if (part.fixed()) FashionModel.draw(part, pose, fixed, light, overlay, -1);
             }
         }

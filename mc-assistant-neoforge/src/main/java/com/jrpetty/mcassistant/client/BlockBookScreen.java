@@ -183,7 +183,7 @@ public class BlockBookScreen extends Screen {
      */
     private int paragraph(GuiGraphics g, String caption, String body, int x, int y, int w) {
         List<net.minecraft.util.FormattedCharSequence> lines =
-            this.font.split(Component.literal(caption + " — " + body), w);
+            TextCache.split(this.font, caption + " — " + body, w);
         int drawn = Math.min(2, lines.size());
         for (int i = 0; i < drawn; i++) {
             g.drawString(this.font, lines.get(i), x, y + i * 9, i == 0 ? Ui.INK : Ui.MUTED, false);

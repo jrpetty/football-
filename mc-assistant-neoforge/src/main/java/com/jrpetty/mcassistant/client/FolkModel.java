@@ -242,6 +242,22 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     private final boolean[] wraps;
     /** [caves] The things worn on the head that stay on over a helmet: the cave dweller's lamp, strapped to it. */
     private final boolean[] overHelmet;
+    /**
+     * Every part of the model, gathered once. Its parts never change after it is baked, and putting each back as it was
+     * every frame by walking the tree as a stream (ModelPart.getAllParts) built a chain of streams over some hundreds of
+     * parts for every folk in sight, every frame.
+     */
+    private final ModelPart[] allParts;
+    /** The outfits (FolkModel.TRADES, by number) each part is worn with, a bit an outfit: wornBy, worked out once. */
+    private final long[] wornWith;
+    /** The parts that are the folk's own (its beard, its hair's boxes), whatever its trade: wornBy "beard" or "look". */
+    private final boolean[] own;
+    /** The hair's own boxes (wornBy "look"), which stay on a child. */
+    private final boolean[] look;
+    /** What individualParts does with each part, by its name, worked out once (one of the KIND_ numbers). */
+    private final byte[] kind;
+    private static final byte KIND_OTHER = 0, KIND_UNDER_HAT = 1, KIND_UNDER_HOOD = 2, KIND_PIPE = 3, KIND_CANE_LEFT = 4,
+        KIND_CANE_RIGHT = 5;
 
     public FolkModel(ModelPart root) {
         this.root = root;
@@ -273,6 +289,28 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
             wraps[i] = !onHead[i] && (name.contains("apron") || name.contains("shawl") || name.contains("mantle")
                 || name.contains("tape") || name.contains("cloak") || name.contains("cape"));
             overHelmet[i] = "cavedweller_lamp".equals(name) || "netherrunner_crest".equals(name);   // [nether] the medallion too
+        }
+        // Worked out once here rather than every frame in setupAnim: the same answers, from the same names. An outfit is
+        // a bit of a long, so there can be no more than 64 of them.
+        if (TRADES.length > Long.SIZE) throw new IllegalStateException("more outfits than FolkModel.wornWith can hold");
+        this.allParts = root.getAllParts().toArray(ModelPart[]::new);
+        this.wornWith = new long[WEARERS.length];
+        this.own = new boolean[WEARERS.length];
+        this.look = new boolean[WEARERS.length];
+        this.kind = new byte[WEARERS.length];
+        for (int i = 0; i < WEARERS.length; i++) {
+            String by = wornBy[i];
+            for (int o = 0; o < TRADES.length; o++) if (by.equals(TRADES[o])) wornWith[i] |= 1L << o;
+            own[i] = by.equals("beard") || by.equals("look");
+            look[i] = "look".equals(by);
+            kind[i] = switch (WEARERS[i][0]) {
+                case "hair_bun", "hair_puff" -> KIND_UNDER_HAT;
+                case "hair_tail", "hair_braid", "hair_knot", "hair_fall" -> KIND_UNDER_HOOD;
+                case "pipe" -> KIND_PIPE;
+                case "cane_left" -> KIND_CANE_LEFT;
+                case "cane_right" -> KIND_CANE_RIGHT;
+                default -> KIND_OTHER;
+            };
         }
     }
 
@@ -482,24 +520,25 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     @Override
     public void setupAnim(VillageFolkEntity folk, float limbSwing, float limbSwingAmount,
                           float ageInTicks, float netHeadYaw, float headPitch) {
-        root.getAllParts().forEach(ModelPart::resetPose);
+        for (ModelPart part : allParts) part.resetPose();
 
         // Dress for the trade. A helmet goes on instead of the trade's hat, not on top of it.
-        String trade = tradeOf(folk);
+        int outfit = outfit(folk);
+        String trade = TRADES[outfit];
         // [nether] A gold charm on the brow is no helmet: the runner's own skullcap stays on under it (NetherClient.CharmLayer).
         boolean helmet = !folk.getItemBySlot(EquipmentSlot.HEAD).isEmpty()
             && !folk.getItemBySlot(EquipmentSlot.HEAD).is(com.jrpetty.mcassistant.item.NetherItems.GOLD_CHARM.get());
         boolean ownHat = FashionLayer.hatOn(folk);          // [fashion] off work, its own hat instead of its trade's
         boolean bare = com.jrpetty.mcassistant.entity.Manner.bareOf(folk.clientManner());   // [individual] its work hat off of an evening
+        long mine = 1L << outfit;
         for (int i = 0; i < worn.length; i++) {
-            String by = wornBy[i];
             // [individual] The beard and the hair's own boxes are the folk's own picture's to show or leave clear
             // (client/FolkFaces): a beard on the bearded, a bun on the one who wears one.
-            boolean own = by.equals("beard") || by.equals("look");
-            boolean show = own || by.equals(trade);
+            boolean own = this.own[i];
+            boolean show = own || (wornWith[i] & mine) != 0;
             worn[i].visible = show && !(onHead[i] && !own && ((helmet && !overHelmet[i]) || ownHat || bare));
         }
-        individualParts(folk, trade, helmet, ownHat);   // [individual] its hair under a hat, its pipe, its stick
+        individualParts(folk, trade, mine, helmet, ownHat);   // [individual] its hair under a hat, its pipe, its stick
         // [guard-kit] Armour over the clothes, not under them: the hair under a helmet, the coat under a breastplate or
         // leggings, and what is worn round the body (an apron, a shawl, a mantle, a cape) under a breastplate.
         boolean breastplate = folk.getItemBySlot(EquipmentSlot.CHEST).getItem() instanceof net.minecraft.world.item.ArmorItem;
@@ -516,7 +555,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         head.yScale = headSize;
         head.zScale = headSize;
         if (young) {
-            for (int i = 0; i < worn.length; i++) if (!"look".equals(wornBy[i])) worn[i].visible = false;   // [individual] its own hair stays
+            for (int i = 0; i < worn.length; i++) if (!look[i]) worn[i].visible = false;   // [individual] its own hair stays
         }
 
         // Walking: legs and arms in step, as a player walks.
@@ -573,11 +612,11 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
 
     /** [individual] Its own parts: the hair's boxes put away under a hat (a bun and curls) or a hood (the rest), the pipe
      *  only while it smokes it, the walking stick in the hand it does not work with. */
-    private void individualParts(VillageFolkEntity folk, String trade, boolean helmet, boolean ownHat) {
+    private void individualParts(VillageFolkEntity folk, String trade, long mine, boolean helmet, boolean ownHat) {
         boolean hatted = helmet || ownHat || "none".equals(trade);
         boolean hooded = helmet || "none".equals(trade) || "scout".equals(trade) || "hunter".equals(trade);
         for (int i = 0; i < worn.length; i++) {
-            if (onHead[i] && worn[i].visible && trade.equals(wornBy[i])) hatted = true;
+            if (onHead[i] && worn[i].visible && (wornWith[i] & mine) != 0) hatted = true;
         }
         int marks = folk.clientMarks();
         boolean sitting = folk.getPose() == net.minecraft.world.entity.Pose.SITTING;
@@ -585,13 +624,12 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         boolean rightHanded = folk.getMainArm() == HumanoidArm.RIGHT;
         int idle = com.jrpetty.mcassistant.entity.Manner.idleOf(folk.clientManner());
         for (int i = 0; i < worn.length; i++) {
-            String name = WEARERS[i][0];
-            switch (name) {
-                case "hair_bun", "hair_puff" -> worn[i].visible = !hatted;
-                case "hair_tail", "hair_braid", "hair_knot", "hair_fall" -> worn[i].visible = !hooded;
-                case "pipe" -> worn[i].visible = idle == com.jrpetty.mcassistant.entity.Manner.PIPE;
-                case "cane_left" -> worn[i].visible = stick && rightHanded;
-                case "cane_right" -> worn[i].visible = stick && !rightHanded;
+            switch (kind[i]) {                                   // by the part's name, worked out once (the constructor)
+                case KIND_UNDER_HAT -> worn[i].visible = !hatted;
+                case KIND_UNDER_HOOD -> worn[i].visible = !hooded;
+                case KIND_PIPE -> worn[i].visible = idle == com.jrpetty.mcassistant.entity.Manner.PIPE;
+                case KIND_CANE_LEFT -> worn[i].visible = stick && rightHanded;
+                case KIND_CANE_RIGHT -> worn[i].visible = stick && !rightHanded;
                 default -> { }
             }
         }

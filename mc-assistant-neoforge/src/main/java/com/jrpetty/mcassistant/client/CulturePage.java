@@ -54,7 +54,7 @@ public final class CulturePage {
         int ty = y;
         g.drawString(font, "The town's banner", tx, ty, Ui.INK, false);
         ty += 11;
-        for (FormattedCharSequence l : font.split(Component.literal(banner.getString("blazon")), (int) (tw / 0.75F))) {
+        for (FormattedCharSequence l : TextCache.split(font, banner.getString("blazon"), (int) (tw / 0.75F))) {
             small(g, font, l, tx, ty, Ui.MUTED);
             ty += 8;
             if (ty > top + 34) break;
@@ -144,7 +144,7 @@ public final class CulturePage {
     }
 
     private static void add(List<Line> lines, Font font, char kind, String text, int width) {
-        for (FormattedCharSequence l : font.split(Component.literal(text), width)) lines.add(new Line(kind, l));
+        for (FormattedCharSequence l : TextCache.split(font, text, width)) lines.add(new Line(kind, l));
     }
 
     /** The banner as an item, its patterns woven in from the client's own registry of them. */

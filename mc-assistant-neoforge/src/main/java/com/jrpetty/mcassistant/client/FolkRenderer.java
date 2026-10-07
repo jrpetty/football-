@@ -341,7 +341,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         if (said == null) return false;
         net.minecraft.client.gui.Font font = getFont();
         java.util.List<net.minecraft.util.FormattedCharSequence> lines =
-            font.split(net.minecraft.network.chat.FormattedText.of(said.text()), 150);
+            TextCache.splitPlain(font, said.text(), 150);
         if (lines.size() > 6) lines = lines.subList(0, 6);
         pose.pushPose();
         pose.translate(0.0F, folk.getBbHeight() + 0.75F + lines.size() * 0.25F, 0.0F);
@@ -368,8 +368,24 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         AssistantEntity.StationTask job = AssistantEntity.StationTask.byOrdinal(folk.clientJobOrdinal());
         if (job == AssistantEntity.StationTask.NONE) return ItemStack.EMPTY;
         String status = folk.clientStatus();
-        if (status.startsWith("Needs") || status.startsWith("Out of")) return new ItemStack(Items.BARRIER);
+        if (status.startsWith("Needs") || status.startsWith("Out of")) {
+            if (BARRIER_ICON == null) BARRIER_ICON = new ItemStack(Items.BARRIER);
+            return BARRIER_ICON;
+        }
         if (distanceSq < 14 * 14) return ItemStack.EMPTY;
+        ItemStack kept = ICONS[job.ordinal()];
+        if (kept == null) ICONS[job.ordinal()] = kept = icon(job);
+        return kept;
+    }
+
+    /**
+     * The icons, made once each the first time they are wanted and kept (the item renderer only reads them), rather
+     * than a new ItemStack for every folk in sight with a trade, every frame.
+     */
+    private static final ItemStack[] ICONS = new ItemStack[AssistantEntity.StationTask.values().length];
+    private static ItemStack BARRIER_ICON;
+
+    private static ItemStack icon(AssistantEntity.StationTask job) {
         return new ItemStack(switch (job) {
             case FARM -> Items.WHEAT;
             case WOOD -> Items.IRON_AXE;

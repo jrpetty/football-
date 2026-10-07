@@ -85,7 +85,7 @@ public final class QuestClient {
         pose.mulPose(dispatcher.cameraOrientation());
         pose.scale(0.05F, -0.05F, 0.05F);
         org.joml.Matrix4f matrix = pose.last().pose();
-        String s = String.valueOf(c);
+        String s = c == '!' ? "!" : c == '?' ? "?" : String.valueOf(c);     // the two marks there are, without a new string a frame
         float x = -font.width(s) / 2.0F;
         font.drawInBatch(s, x, 0.0F, 0x30FFFFFF, false, matrix, buffer, Font.DisplayMode.SEE_THROUGH, PANEL, LightTexture.FULL_BRIGHT);
         font.drawInBatch(s, x, 0.0F, c == '!' ? OFFER : WAITING, false, matrix, buffer, Font.DisplayMode.NORMAL, 0, LightTexture.FULL_BRIGHT);

@@ -333,7 +333,7 @@ public class StallScreen extends Screen {
         };
         int y = top + HEAD + 6, bottom = buttonsY() - 4;
         for (String line : lines) {
-            for (FormattedCharSequence part : font.split(Component.literal(line), (int) (inner / 0.85))) {
+            for (FormattedCharSequence part : TextCache.split(font, line, (int) (inner / 0.85))) {
                 if (y > bottom - 8) break;
                 g.pose().pushPose();
                 g.pose().translate(x, y, 0);

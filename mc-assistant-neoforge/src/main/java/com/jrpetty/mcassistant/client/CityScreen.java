@@ -188,6 +188,28 @@ public class CityScreen extends Screen {
 
     /** Where each tab sits: {x, y, width}; in one row if they fit, in the small hand if that makes them fit, else in two rows. */
     private int[][] tabBoxes() {
+        // Worked out once for the window's size and place and kept (it was worked out twice a frame, measuring every
+        // tab's name over and over: in two rows, every tab's row again for every tab). The boxes are only read.
+        boolean keep = TextCache.fresh();
+        if (keep && boxes != null && boxesW == w && boxesLeft == left && boxesTop == top && boxesEpoch == TextCache.epoch()) {
+            return boxes;
+        }
+        int[][] made = layTabs();
+        if (keep) {
+            boxes = made;
+            boxesW = w;
+            boxesLeft = left;
+            boxesTop = top;
+            boxesEpoch = TextCache.epoch();
+        }
+        return made;
+    }
+
+    /** The tab boxes as last worked out (tabBoxes), and for what. */
+    private int[][] boxes;
+    private int boxesW, boxesLeft, boxesTop, boxesEpoch;
+
+    private int[][] layTabs() {
         int[][] out = new int[TABS.length][];
         int room = w - 8;
         int total = 0, small = 0;
@@ -562,7 +584,7 @@ public class CityScreen extends Screen {
                     + box.getInt("week_loaves") + (box.getInt("week_loaves") == 1 ? " loaf" : " loaves") + " (" + box.getInt("week_bread")
                     + "c) for the hard-up.";
             int ly = boxY;
-            for (FormattedCharSequence l : font.split(Component.literal(line), (int) (half / 0.75))) {
+            for (FormattedCharSequence l : TextCache.split(font, line, (int) (half / 0.75))) {
                 if (ly > y + ch - 8) break;
                 small(g, l, bx, ly, Ui.MUTED);
                 ly += 9;
@@ -660,13 +682,45 @@ public class CityScreen extends Screen {
             || p.equals("banner");
     }
 
+    /**
+     * An item's stack and its name, by its id in the books, kept: the Production and Stock pages sorted their rows by
+     * name every frame, making a new stack and looking its name up in the language twice a comparison, and drew an
+     * icon from a new stack a row. The stacks are only read (drawn, named); the items do not change while the game
+     * runs, and the names are let go with what TextCache keeps (a new language is a reload of resources).
+     */
+    private static final java.util.Map<String, net.minecraft.world.item.ItemStack> STACKS = new java.util.HashMap<>();
+    private static final java.util.Map<String, String> NAMES = new java.util.HashMap<>();
+    private static int namesEpoch = -1;
+
     private static net.minecraft.world.item.ItemStack stackOf(String id) {
+        net.minecraft.world.item.ItemStack got = STACKS.get(id);
+        if (got != null) return got;
+        if (STACKS.size() > 4096) STACKS.clear();
+        got = stackNow(id);
+        STACKS.put(id, got);
+        return got;
+    }
+
+    private static net.minecraft.world.item.ItemStack stackNow(String id) {
         net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(id.contains(":") ? id : "minecraft:" + id);
         if (rl == null) return net.minecraft.world.item.ItemStack.EMPTY;
         return new net.minecraft.world.item.ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl));
     }
 
     private static String itemName(String id) {
+        if (!TextCache.fresh()) return nameNow(id);
+        if (namesEpoch != TextCache.epoch() || NAMES.size() > 4096) {
+            NAMES.clear();
+            namesEpoch = TextCache.epoch();
+        }
+        String got = NAMES.get(id);
+        if (got != null) return got;
+        got = nameNow(id);
+        NAMES.put(id, got);
+        return got;
+    }
+
+    private static String nameNow(String id) {
         net.minecraft.world.item.ItemStack s = stackOf(id);
         return s.isEmpty() ? id : s.getHoverName().getString();
     }
@@ -826,7 +880,7 @@ public class CityScreen extends Screen {
         for (int i = 0; i < rl.size(); i++) reading.add(rl.getString(i));
         if (reading.isEmpty()) { small(g, "Nothing short: it makes what it needs.", sx, sy, Ui.GOOD); sy += 9; }
         for (String line : reading) {
-            for (FormattedCharSequence part : font.split(Component.literal("· " + line), (int) (side / 0.75))) {
+            for (FormattedCharSequence part : TextCache.split(font, "· " + line, (int) (side / 0.75))) {
                 if (sy > y + ch - 9) break;
                 small(g, part, sx, sy, line.contains("none at all") ? Ui.BAD : line.contains("more hands") ? Ui.WARN : Ui.INK);
                 sy += 9;
@@ -1379,7 +1433,7 @@ public class CityScreen extends Screen {
         if (worth.isEmpty()) return;
         List<Component> tip = new ArrayList<>();
         for (String part : worth.split("\n")) {
-            for (FormattedCharSequence l : font.split(Component.literal(part), 260)) tip.add(Component.literal(toPlain(l)));
+            for (FormattedCharSequence l : TextCache.split(font, part, 260)) tip.add(Component.literal(toPlain(l)));
         }
         hover = tip;
         hoverX = mx;
@@ -1395,7 +1449,7 @@ public class CityScreen extends Screen {
             small(g, shown, x, cy - 4, text.contains("(over it") ? Ui.BAD : Ui.MUTED);
             if (!shown.equals(text) && mx >= x && mx < x + cw && my >= cy - 4 && my < cy + 5) {
                 List<Component> tip = new ArrayList<>();
-                for (FormattedCharSequence l : font.split(Component.literal(text), 260)) tip.add(Component.literal(toPlain(l)));
+                for (FormattedCharSequence l : TextCache.split(font, text, 260)) tip.add(Component.literal(toPlain(l)));
                 hover = tip;
                 hoverX = mx;
                 hoverY = my;
@@ -1521,7 +1575,7 @@ public class CityScreen extends Screen {
                 tip.add(Component.literal("Paid " + p.getInt("wage") + "c a day; " + p.getInt("earned") + "c earned in all").withColor(0x9AA3B2));
                 if (!p.getString("ill").isEmpty()) tip.add(Component.literal("Ill: " + p.getString("ill")).withColor(0xE0A070));   // [batchA]
                 if (!p.getString("why").isEmpty()) {                        // [econ-wages] and why (JobWorth)
-                    for (FormattedCharSequence l : font.split(Component.literal(p.getString("why")), 260)) tip.add(Component.literal(toPlain(l)).withColor(0x9AA3B2));
+                    for (FormattedCharSequence l : TextCache.split(font, p.getString("why"), 260)) tip.add(Component.literal(toPlain(l)).withColor(0x9AA3B2));
                 }
                 hover = tip;
                 hoverX = mx;
@@ -1616,7 +1670,7 @@ public class CityScreen extends Screen {
         }
         if (l.contains("pace")) rows.add("Sets the work " + (l.getInt("pace") >= 0 ? "+" : "") + l.getInt("pace") + "% and pay at " + l.getInt("pay") + "%");
         for (String r : rows) {
-            for (FormattedCharSequence line : font.split(Component.literal(r), half)) {
+            for (FormattedCharSequence line : TextCache.split(font, r, half)) {
                 g.drawString(font, line, x, ly, Ui.INK, false);
                 ly += 10;
             }
@@ -1630,7 +1684,7 @@ public class CityScreen extends Screen {
             small(g, "Regard, on average: " + l.getInt("regard") + " (from -100 to 100)", x, ly, Ui.MUTED);
             ly += 10;
         }
-        for (FormattedCharSequence line : font.split(Component.literal(l.getString("line")), half)) {
+        for (FormattedCharSequence line : TextCache.split(font, l.getString("line"), half)) {
             if (ly > y + ch - 10) break;
             small(g, line, x, ly, Ui.MUTED);
             ly += 9;
@@ -1652,7 +1706,7 @@ public class CityScreen extends Screen {
         ry += 4;
         Ui.section(g, font, "Elections", rx, ry, half);
         ry += 12;
-        for (FormattedCharSequence line : font.split(Component.literal(l.getString("election")), half)) {
+        for (FormattedCharSequence line : TextCache.split(font, l.getString("election"), half)) {
             small(g, line, rx, ry, Ui.INK);
             ry += 9;
         }
@@ -1956,7 +2010,7 @@ public class CityScreen extends Screen {
             small(g, shown, x, ry[0], colour);
             if (!shown.equals(text) && mx >= x && mx < x + w && my >= ry[0] && my < ry[0] + 9) {
                 hover = new ArrayList<>();
-                for (FormattedCharSequence l : font.split(Component.literal(text), 220)) hover.add(Component.literal(toPlain(l)));
+                for (FormattedCharSequence l : TextCache.split(font, text, 220)) hover.add(Component.literal(toPlain(l)));
                 hoverX = mx;
                 hoverY = my;
             }
@@ -2203,18 +2257,18 @@ public class CityScreen extends Screen {
         if (needs.isEmpty()) { small(g, "Nothing: about to come of age.", rx, ry, Ui.GOOD); ry += 9; }
         for (String n : needs) {
             if (ry > y + ch - 40) break;
-            for (FormattedCharSequence line : font.split(Component.literal("· " + n), (int) (rw / 0.75))) { small(g, line, rx, ry, Ui.INK); ry += 9; }
+            for (FormattedCharSequence line : TextCache.split(font, "· " + n, (int) (rw / 0.75))) { small(g, line, rx, ry, Ui.INK); ry += 9; }
         }
         ry += 4;
         Ui.section(g, font, "Next to build", rx, ry, rw);
         ry += 12;
-        for (FormattedCharSequence line : font.split(Component.literal(now.getString("next")), (int) (rw / 0.75))) {
+        for (FormattedCharSequence line : TextCache.split(font, now.getString("next"), (int) (rw / 0.75))) {
             if (ry > y + ch - 9) break;
             small(g, line, rx, ry, Ui.MUTED);
             ry += 9;
         }
         if (!now.getString("set_aside").isEmpty() && ry < y + ch - 18) {
-            for (FormattedCharSequence line : font.split(Component.literal("Set aside: " + now.getString("set_aside")), (int) (rw / 0.75))) {
+            for (FormattedCharSequence line : TextCache.split(font, "Set aside: " + now.getString("set_aside"), (int) (rw / 0.75))) {
                 if (ry > y + ch - 9) break;
                 small(g, line, rx, ry, Ui.WARN);
                 ry += 9;
@@ -2279,7 +2333,7 @@ public class CityScreen extends Screen {
         if (cy < bottom - 16) {
             String where = so.getInt("smoky") + " live in the smoke or din; " + so.getInt("parkside") + " by the park"
                 + (so.getInt("at_park") > 0 ? " (" + so.getInt("at_park") + " there now)" : "");
-            for (FormattedCharSequence line : font.split(Component.literal(where), (int) (col / 0.75))) {
+            for (FormattedCharSequence line : TextCache.split(font, where, (int) (col / 0.75))) {
                 if (cy > bottom - 8) break;
                 small(g, line, cx, cy + 2, so.getInt("smoky") > 0 ? Ui.WARN : Ui.MUTED);
                 cy += 9;
@@ -2517,7 +2571,7 @@ public class CityScreen extends Screen {
     /** Lines in the small hand, wrapped to the width; returns where the next line goes. */
     private int schoolText(GuiGraphics g, List<String> lines, int x, int y, int w, int bottom, int colour) {
         for (String l : lines) {
-            for (FormattedCharSequence line : font.split(Component.literal(l), (int) (w / 0.75))) {
+            for (FormattedCharSequence line : TextCache.split(font, l, (int) (w / 0.75))) {
                 if (y > bottom - 8) return y;
                 small(g, line, x, y, colour);
                 y += 9;
@@ -2612,7 +2666,7 @@ public class CityScreen extends Screen {
         String next = now().getString("next");
         if (!next.isEmpty()) {
             sy += 3;
-            for (FormattedCharSequence line : font.split(Component.literal(next), (int) (side / 0.75))) {
+            for (FormattedCharSequence line : TextCache.split(font, next, (int) (side / 0.75))) {
                 if (sy > y + ch - 9) break;
                 small(g, line, sx, sy, Ui.MUTED);
                 sy += 9;
@@ -2624,14 +2678,14 @@ public class CityScreen extends Screen {
             sy += 6;
             Ui.section(g, font, "The stable", sx, sy, side);
             sy += 12;
-            for (FormattedCharSequence line : font.split(Component.literal(horses), (int) (side / 0.75))) {
+            for (FormattedCharSequence line : TextCache.split(font, horses, (int) (side / 0.75))) {
                 if (sy > y + ch - 9) break;
                 small(g, line, sx, sy, Ui.INK);
                 sy += 9;
             }
             net.minecraft.nbt.ListTag names = data.getCompound("stable").getList("names", net.minecraft.nbt.Tag.TAG_STRING);
             for (int i = 0; i < names.size() && sy <= y + ch - 9; i++) {
-                for (FormattedCharSequence line : font.split(Component.literal(names.getString(i)), (int) (side / 0.75))) {
+                for (FormattedCharSequence line : TextCache.split(font, names.getString(i), (int) (side / 0.75))) {
                     if (sy > y + ch - 9) break;
                     small(g, line, sx, sy, Ui.MUTED);
                     sy += 9;
@@ -3009,7 +3063,7 @@ public class CityScreen extends Screen {
         };
         g.drawString(font, sym, x, y, colour, false);
         int n = 0;
-        for (FormattedCharSequence line : font.split(Component.literal(text), cw - 12)) {
+        for (FormattedCharSequence line : TextCache.split(font, text, cw - 12)) {
             if (n++ >= maxLines) break;
             g.drawString(font, line, x + 10, y, mark == '!' ? colour : Ui.INK, false);
             y += 10;
@@ -3019,7 +3073,7 @@ public class CityScreen extends Screen {
 
     private void lines(GuiGraphics g, List<String> text, int x, int y, int cw, int ch) {
         List<FormattedCharSequence> all = new ArrayList<>();
-        for (String t : text) all.addAll(font.split(Component.literal(t), cw));
+        for (String t : text) all.addAll(TextCache.split(font, t, cw));
         int rows = ch / 10;
         int start = Math.max(0, Math.min(scroll, Math.max(0, all.size() - rows)));
         int ly = y;
