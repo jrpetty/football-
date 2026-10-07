@@ -60,10 +60,13 @@ public class CityScreen extends Screen {
         // [war-peace] The war, after them for the same reason (WarPage).
         "War",
         // [caves] The caves' report, last of all (CavesPage).
-        "Caves" };
+        "Caves",
+        // [transport] The railways, the carts, the ferry and the bridge, after them (TransportPage).
+        "Transport" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves");
+        "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
+        "Transport");                                                                      // [transport]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -320,6 +323,10 @@ public class CityScreen extends Screen {
                 case "War" -> WarPage.draw(g, font, data.getCompound("war"), x, y, cw, ch, scroll);   // [war-peace]
                 case "Caves" -> {                                                      // [caves] the caves' report (CavesPage)
                     List<Component> tip = CavesPage.draw(g, font, data.getCompound("caves"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Transport" -> {                                                  // [transport] the lines, the ferry (TransportPage)
+                    List<Component> tip = TransportPage.draw(g, font, data.getCompound("transport"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 default -> board(g, x, y, cw, ch);

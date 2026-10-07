@@ -6228,3 +6228,111 @@ The game tests `WatchClearsGameTests` (wc01 to wc05) check that:
 * a raiding band gathers at the town's edge; two raiders among the folk get two guards each, and none is sent out to
   the band still at the edge; deaths while the bell rings are put down as what took them, with where and doing what;
   and the status, the books and `/village monsters` count the watch's and the golem's kills.
+
+## Railways
+
+From the Iron Age, a town of ten folk or more whose mine lies far out (more than sixty-odd blocks beyond its ring
+street) lays a railway to it. Later, once that line is open, it lays a second one to a neighbour it has a trade pact
+with, each town laying its own half.
+
+* **The way.** The line leaves from a station on the avenue that points toward the mine, just out past the ring street.
+  It runs down the avenue to the edge of the town, then across the land in two or three long straight runs, and the
+  turns are flat. The town weighs every way the land allows and takes the one with the least digging and banking. Off
+  the avenue it keeps clear of the fields, the pens, the woods, the town's buildings, other towns, lava and any other
+  line, and the builders never put a house on it.
+* **Up hill and down dale.** The rail keeps as near the ground as a cart can take it, rising or falling a block a step
+  at most. Over a dip it runs on a bank of cobblestone, over a deeper one on a plank trestle with fence posts, over
+  water on a plank deck on posts, and through a bump in a cutting. The earth and stone dug out go to the stores. A way
+  that would need too deep a cutting, too high a trestle or too wide a water is not taken.
+* **The rails.** Plain rails, with a pair of powered rails every ten blocks on the flat and on every slope, each run
+  lit by a redstone torch beside it. At each station the four rails by the buffer stop are powered rails, worked by a
+  lever on the buffer. Left off, they brake a cart coming in; thrown, they set it off going out. The smith makes the
+  rails, powered rails, torches and levers at the bench from the stores' own iron, gold, redstone and sticks, by the
+  game's recipes. It never spends the iron the town is putting by for its next age. A hand at the town's works lays a
+  few rails a visit, and the work waits whenever the stores run short (the books say what for).
+* **Stations.** A platform of slabs, a roof on posts with a lantern under it, a signpost, and the buffer stop at the end
+  of the track, all out of the stores.
+* **The ore cart.** The smith makes a chest minecart for the mine line. At the mine's station a miner loads it from the
+  miners' work chests round the mine. When it is full, or has waited long enough, or the day is done, the lever is
+  thrown and it rolls home. At the town's station a hand from the storehouse unloads it into the stores and sends it
+  back. The couriers no longer walk all the way out to the mine for it.
+* **Riding.** Each line also has a plain minecart for riders. A miner going out to the mine of a morning rides it from
+  the town's station, and rides it home at the day's end (the cart is sent down the line for it if it stands at the
+  other end). Caravans and envoys between two towns joined by a line ride it too, their beast brought along after
+  them. **You can ride any town cart:** get in at a station and throw the lever on the buffer. A station hand puts the
+  lever back a few seconds later, so the next cart in is braked.
+* **Safety.** A cart under way slows down for anybody on the track ahead and moves them off it. Nobody is carried off
+  who did not mean to board. A cart that comes off the rails is put back on, one that stalls on a slope is given a
+  push, and one stuck for good is set down at the station it was making for. A cart broken up is gone, and the smith
+  makes another.
+* **Upkeep.** An open line is walked a stretch at a time. A rail, a torch, a support or a lever gone missing is put
+  back by the town's works out of the stores, and the chronicle notes the mending.
+
+Where to see it:
+* The town's books have a **Transport** page: a map of the town, the mine and every line (the part laid and the part
+  still to lay), the stations, the ferry and the bridge, with each line's state, how far laid, what it waits on, and
+  its carts of ore, goods brought in, riders and mendings. `/village transport books` opens the books there.
+* `/village transport` says the same in the chat. Operators can use `/village transport now` to work the town's lines
+  and ferry at once (out of the stores as ever).
+* The board says how the lines are getting on (*Getting about: The railway to the mine is open (12 carts of ore
+  in)*), the chronicle tells each line planned, each station built, the line opened, the first cart of ore and the
+  first rider, and a folk riding the cart says so on its card.
+
+## Ferries and bridges
+
+Where a river or a lake lies between the town and its fields, its mine or a neighbour, and no bridge spans it, a town
+of six folk or more keeps a ferry.
+
+* **The crossing.** The town looks along the way out to each farmer's field, the mine and each neighbour for open water
+  three to thirty-two blocks wide (a real river or lake, not a pond). It crosses at the narrowest place it can go
+  straight over, with a low bank to land on each side.
+* **The landings.** A short plank jetty on posts goes out from each bank, with a lantern on a post beside it and a
+  **Ferry Bell**. The town's boat comes out of the stores (or is made from five of its planks).
+* **The ferryman.** Ferryman is a trade of its own. A fisher or a hand with nothing to do takes it up. By day it sits
+  in the boat at one landing. A folk who needs to cross (a farmer whose field is over the water, of a morning, and home
+  again in the evening) walks to the landing, rings the bell if the boat is on the far side, gets in behind the
+  ferryman and is rowed across. The fare is a coin, out of the passenger's purse into the ferryman's. One with no coin
+  is carried all the same, and the books say so.
+* **You can take the ferry.** Ring the bell on the landing to call the boat over, step into the boat behind the
+  ferryman, and you are rowed across for one village coin from your pockets (or for nothing if you have none).
+* **Weather.** Nobody goes out on the water in rain or a storm. The ferryman comes ashore and waits for it to clear,
+  and the bell tells you so.
+* **The Ferry Bell.** A small copper bell on a wooden frame, made at the crafting table from two planks, a stick and a
+  copper ingot (Stone Age and on). The town makes its own for the landings. Ring it (use it) to call the ferry to that
+  landing.
+
+**The stone bridge.** Once the ferry has run a couple of days and the town is in the Stone Age or later, with stone to
+spare over what its builders keep back, the bridge is put to the council. A councillor whose work lies over the water
+votes for it, a hard worker likes it, the elder likes it with money in the treasury, a grumbler grudges the stone, and
+the ferryman votes to keep its ferry. A tie is a no. Voted down, it is asked again a week on.
+
+Voted through, the town builds it a few blocks beside the ferry, so the ferry runs while it goes up. Piers stand on the
+river bed, with an arch between each pair (one to every five blocks of water), a deck five wide two blocks above the
+water, a wall either side with a lantern every six blocks, and stairs down to the ground at each end. All of it is the
+town's own stone out of the stores (stone bricks if the masons have made them, cobblestone otherwise), laid a dozen
+blocks a visit by a hand at the town's works.
+
+When the bridge opens, the ferry rows its last crossing. The boat goes back into the stores, and the ferryman takes up
+fishing if the town is short of fishers, or another trade otherwise.
+
+Where to see it:
+* The Transport page of the town's books draws the ferry's crossing and the bridge on the map, with the ferry's
+  crossings, fares, folk carried free and travellers from away, and the bridge's vote and progress.
+  `/village transport` says the same in the chat.
+* The chronicle tells the ferry planned, its first day running, who took up the ferry, the bridge voted (and how the
+  council split) or voted down, the bridge opened (arches, blocks of stone, the day it was voted), and the ferry's last
+  crossing. The board says the ferry runs, and later that the bridge carries everybody over.
+* Ask the ferryman how it's going: it talks about the weather, the bell and its crossings.
+
+The game tests `TransportGameTests` (tr01 to tr04) check that:
+* a town in the Iron Age plans a line to a mine over a ridge and a stretch of water, and lays it to the end out of its
+  stores (its iron, gold and redstone go down), with the line climbing the ridge on powered rails, a plank deck over
+  the water, every powered rail lit, a lever on each buffer and the opening in the chronicle, and a broken rail is
+  mended;
+* a chest minecart of raw iron and coal sent from the mine's station rolls down the line to the town's station, is
+  unloaded into the stores to the last piece and sent back toward the mine;
+* a ferryman rows a farmer over a river from the town's landing to the far side, and a coin moves from the farmer's
+  purse to the ferryman's;
+* with stone in the stores the bridge is put to the council and voted through, the town builds it of its own stone
+  bricks with piers and arches across the river, the ferry retires with its boat back in the stores, the ferryman
+  takes another trade, and the chronicle tells it.

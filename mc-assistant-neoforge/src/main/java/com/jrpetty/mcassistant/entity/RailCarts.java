@@ -225,8 +225,37 @@ public final class RailCarts {
                 AbstractMinecart e = entity(level, ride);
                 if (e != null && e.getPassengers().isEmpty()) dispatch(level, l, ride, 0);     // left out on the line: home
             }
+            leversBack(level, id, l);
         }
     }
+
+    /**
+     * A lever left thrown at a station (a player's, gone off down the line in the cart) is put back by the station's
+     * hand, so that the next cart in is braked on the powered rails and not sent straight back out again.
+     */
+    private static void leversBack(ServerLevel level, UUID id, Railways.Line l) {
+        for (int end = 0; end < 2; end++) {
+            final int e = end;
+            String key = id + "/" + l.key() + "/" + end;
+            BlockPos lever = l.buffer(end).above();
+            if (!level.isLoaded(lever)) continue;
+            BlockState st = level.getBlockState(lever);
+            boolean ours = carts(id).stream().anyMatch(c -> c.line.equals(l.key()) && c.leverEnd == e);   // thrown just now
+            if (ours || !(st.getBlock() instanceof LeverBlock lb) || !st.getValue(LeverBlock.POWERED)) {
+                THROWN.remove(key);
+                continue;
+            }
+            // Seen thrown at the last look as well (so the cart it sent off is well away): back it goes.
+            Long seen = THROWN.putIfAbsent(key, level.getGameTime());
+            if (seen != null && level.getGameTime() - seen >= 80L) {
+                lb.pull(st, level, lever, null);
+                THROWN.remove(key);
+            }
+        }
+    }
+
+    /** When a station's lever was first seen left thrown, by village, line and end. */
+    private static final Map<String, Long> THROWN = new ConcurrentHashMap<>();
 
     /** A cart out of the stores put on the line at the town's station, by a hand at the works. */
     private static boolean putOn(ServerLevel level, Villages.Village v, Railways.Line l, Role role) {

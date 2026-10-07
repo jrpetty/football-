@@ -83,6 +83,8 @@ public final class Railways {
     static final int RAIL_SIDE = 1;
     /** A mine nearer the town's station than this is walked to. */
     static final int FAR = 64;
+    /** The fewest folk a town lays a railway for. */
+    static final int LEAST_TOWN = 10;
     /** The mine's station stands this far short of the mine's first face, on the town's side of it. */
     static final int SHORT_OF_THE_MINE = 22;
     /** A pair of powered rails every so many on the flat. */
@@ -365,10 +367,13 @@ public final class Railways {
         UUID id = v.id();
         BlockPos site = TownMine.siteOf(id);
         if (site == null) return false;
+        if (!planAnyway && Villages.folkOf(id).size() < LEAST_TOWN) return false;     // a hamlet walks to its mine
         Direction out = avenueToward(v.centre(), site);
         BlockPos station = townStation(v.centre(), out);
         if (flat(station, site) < (double) FAR * FAR) return false;
         if (planAnyway) return true;
+        // Never while the town is still putting iron by for its age: the smith would not spare it for rails.
+        if (Crafts.savingIron(level, v)) return false;
         // The iron for the plain rails at least (six bars a sixteen), over what the smith keeps back.
         int rails = (int) Math.sqrt(flat(station, site)) + 24;
         int iron = (rails + 15) / 16 * 6;
@@ -1156,11 +1161,12 @@ public final class Railways {
             level.setBlock(under, Blocks.COBBLESTONE.defaultBlockState(), 3);
             return Laid.LAID;
         }
-        // How far down the ground is.
+        // How far down the ground is, and whether it is water that lies under the rail.
         int depth = 0;
         BlockPos q = under;
         while (depth < MOST_FILL + 2) {
             BlockState s = level.getBlockState(q);
+            if (!s.getFluidState().isEmpty() && !overWater) overWater = true;
             if (!s.isAir() && s.getFluidState().isEmpty() && !s.canBeReplaced()) break;
             depth++;
             q = q.below();
@@ -1211,6 +1217,7 @@ public final class Railways {
     /** A redstone torch out of the stores beside a powered rail, on something it can stand on (a block put under it if need be). */
     private static boolean torch(ServerLevel level, Villages.Village v, Line l, int i, boolean free) {
         for (BlockPos p : besides(l, i)) {
+            if (l.rails.contains(p) || l.rails.contains(p.below()) || l.rails.contains(p.above())) continue;   // never on the line itself
             BlockState st = level.getBlockState(p);
             if (!st.isAir() && !(natural(st) && !st.is(BlockTags.LOGS))) continue;
             BlockPos under = p.below();
@@ -1289,8 +1296,10 @@ public final class Railways {
             }
         }
         if (!signUp) signpost(level, v, l, end, free);
-        // Built once the drawing stands; the lever and the sign go up when the stores have them (mend looks again).
-        for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement p : plan) if (!placed(level, p)) return false;
+        // Built once the drawing stands; the lantern, the lever and the sign go up when the stores have them (mend looks again).
+        for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement p : plan) {
+            if (p.part() != com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.LANTERN && !placed(level, p)) return false;
+        }
         return true;
     }
 
@@ -1480,12 +1489,15 @@ public final class Railways {
         boolean open = false;
         String forLine = "";
         for (Line l : mine.values()) {
+            // The torches for every run of powered rails still dark, laid or not (a rail is laid before its torch is to hand).
+            for (int i = 0; i < l.own(); i++) {
+                if (l.kinds[i] == BOOST && !(level.isLoaded(l.rails.get(i)) && torchBeside(level, l, i))) torches++;
+            }
             if (l.state == State.OPEN) { open = true; continue; }
             for (int i = l.laid; i < l.own(); i++) {
                 if (level.isLoaded(l.rails.get(i)) && railRight(level, l, i)) continue;
                 if (l.kinds[i] == PLAIN) rails++;
                 else powered++;
-                if (l.kinds[i] == BOOST) torches++;
             }
             if ((l.stations & 1) == 0) levers++;
             if (l.kind == Kind.MINE && (l.stations & 2) == 0) levers++;
@@ -1667,6 +1679,33 @@ public final class Railways {
     /** Tests: is this station built (0: the town's, 1: the far end's)? */
     public static boolean stationForTests(Line l, int end) {
         return (l.stations & (end == 0 ? 1 : 2)) != 0;
+    }
+
+    /** Tests: {rails laid by this town, rails it lays}. */
+    public static int[] laidForTests(Line l) {
+        return new int[]{ l.laid, l.own() };
+    }
+
+    /** Tests: {runs of powered rails wanting a torch, of them with their torch, powered rails, of them powered now}. */
+    public static int[] powerForTests(ServerLevel level, Line l) {
+        int runs = 0, lit = 0, powered = 0, live = 0;
+        for (int i = 0; i < l.rails.size(); i++) {
+            if (l.kinds[i] == BOOST) {
+                runs++;
+                if (torchBeside(level, l, i)) lit++;
+            }
+            if (l.kinds[i] == BOOST || l.kinds[i] == BOOSTED) {
+                powered++;
+                BlockState st = level.getBlockState(l.rails.get(i));
+                if (st.is(Blocks.POWERED_RAIL) && st.getValue(net.minecraft.world.level.block.PoweredRailBlock.POWERED)) live++;
+            }
+        }
+        return new int[]{ runs, lit, powered, live };
+    }
+
+    /** Tests: the buffer stop at an end. */
+    public static BlockPos bufferForTests(Line l, int end) {
+        return l.buffer(end);
     }
 
     /** The showcase (/village transport stage): a line laid at once, for nothing, its stations and all. */

@@ -57,6 +57,10 @@ public final class Ferries {
 
     /** The narrowest and widest water a ferry crosses. */
     static final int LEAST_WIDE = 3, MOST_WIDE = 32;
+    /** A river or a lake, not a pond: the water runs on at least this far along the bank either way of the crossing together. */
+    static final int LEAST_LONG = 14;
+    /** The town looks for a crossing once it has this many folk (a ferryman to spare). */
+    static final int SURVEY_FROM = 6;
     /** The ferry's pace on the water, blocks a tick: a steady pull at the oars. */
     static final double PACE = 0.12;
     /** A crossing's fare, in coin. */
@@ -295,7 +299,8 @@ public final class Ferries {
         UUID id = v.id();
         Crossing c = crossing(id);
         if (c == null) {
-            if (level.getGameTime() % 1200L < 200L || Villages.folkOf(id).size() >= 2) survey(level, v);
+            // Looked for now and then, by a town big enough to keep a ferryman.
+            if (level.getGameTime() % 1200L < 200L && Villages.folkOf(id).size() >= SURVEY_FROM) survey(level, v);
             return;
         }
         switch (c.state) {
@@ -371,11 +376,30 @@ public final class Ferries {
             }
             if (run >= LEAST_WIDE) {
                 int[] m = line.get(first + run / 2);
-                return narrowest(level, v, heart, to, m[0], m[1]);
+                Crossing c = narrowest(level, v, heart, to, m[0], m[1]);
+                // A pond on the way is walked round; a river or a lake is not.
+                return c != null && along(level, c) >= LEAST_LONG ? c : null;
             }
             run = 0;
         }
         return null;
+    }
+
+    /** How far the water runs along the banks through the middle of the crossing, both ways together (64 at most). */
+    static int along(ServerLevel level, Crossing c) {
+        BlockPos mid = c.bankA.relative(c.way, (c.width + 1) / 2);
+        Direction side = c.way.getClockWise();
+        int n = 1;
+        for (Direction d : new Direction[]{ side, side.getOpposite() }) {
+            for (int k = 1; k <= 32; k++) {
+                BlockPos p = mid.relative(d, k);
+                if (!level.hasChunk(p.getX() >> 4, p.getZ() >> 4)) break;
+                Roads.Ground g = Roads.ground(level, p.getX(), p.getZ());
+                if (g == null || !g.water()) break;
+                n++;
+            }
+        }
+        return n;
     }
 
     /** Near this spot in the water, the narrowest straight crossing between two low banks. */
