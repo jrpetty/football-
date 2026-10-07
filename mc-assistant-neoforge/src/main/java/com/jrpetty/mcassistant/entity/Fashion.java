@@ -462,7 +462,7 @@ public final class Fashion {
     /** A day's coming round to the season's look, for this folk, with so many of its friends and of the town in it. */
     static double pull(VillageFolkEntity f, double friends, double town) {
         double p = PACE * (0.3 + 1.2 * friends + 1.2 * town);
-        return p * nature(f) * youth(f) * means(f);
+        return p * nature(f) * youth(f) * means(f) * Ethos.fashionPace(f.ownerId());   // [identity] a forward-looking town quick to it
     }
 
     /** Its nature's say: the sociable and the vain quick, the shy and the grumpy slow, a Traditionalist hardly moved. */

@@ -113,7 +113,8 @@ public final class Gatherings {
         if (aged >= 0 && day - aged <= 0) return Kind.CELEBRATION;
         Long died = DIED.get(village);
         if (died != null && day - died <= 0) return Kind.VIGIL;
-        if (day > 0 && day % 7 == 6 || sponsored(village, day)) return Kind.FEAST;
+        if (day > 0 && day % 7 == 6 || sponsored(village, day)
+            || Government.extraFeast(village, day)) return Kind.FEAST;      // [identity] the chaplain's mid-week feast day
         return null;
     }
 

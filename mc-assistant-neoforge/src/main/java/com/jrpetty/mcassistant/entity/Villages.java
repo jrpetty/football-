@@ -142,6 +142,7 @@ public final class Villages {
         d.addFirst(new News(day, text));
         while (d.size() > 12) d.pollLast();
         com.jrpetty.mcassistant.village.Chronicle.record(villageId, day, text);
+        Identity.heard(villageId, day, text);                      // [identity] what happened to it, toward its traits and its ethos
     }
 
     // ------------------------------ a village's name --------------------------
@@ -230,7 +231,7 @@ public final class Villages {
         ELECTED_ON.put(villageId, day);
         com.jrpetty.mcassistant.village.Ledger.note(villageId, "elder", who + "|" + name + "|" + day);
         if (was == null || !was.id().equals(who)) {
-            tell(villageId, day, name + " was elected " + Homeland.leaderTitle(villageId));
+            tell(villageId, day, Government.installedLine(villageId, name));   // [identity] elected, or a lord's heir succeeding
             if (f != null) f.persona().remember(day, "the village elected me its " + Homeland.leaderTitle(villageId), 9);
         }
     }
@@ -358,6 +359,7 @@ public final class Villages {
         MADE_UP.clear();
         Bank.resetForTests();
         Culture.resetForTests();                                   // [batchD] the banner's works, the customs, the theatre, the band
+        Identity.resetForTests();                                  // [identity] every town plain again till a test asks for it live
         Museum.resetForTests();
         Library.resetForTests();                                   // [library] the writing, the readers, the seats
         Storehouses.resetForTests();
@@ -961,8 +963,11 @@ public final class Villages {
         if (slot.trade() == AssistantEntity.StationTask.RANCH && villageId != null && Market.bedsShort(villageId) >= 6) t *= 2.0;
         // [economy] The watch grows with the town, and by half again when monsters have been killing its folk (Mishap.watch).
         if (slot.trade() == AssistantEntity.StationTask.GUARD) t = Mishap.watch(villageId, t, total, CLOCK);
+        // [identity] The town's character, laws and history lean the shares: a martial town's watch, a reserved hunt (Ethos).
+        double ways = Ethos.extraHands(villageId, slot.trade());
+        t = t * Ethos.shareLean(villageId, slot.trade()) + ways;
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
-            : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade());
+            : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade()) + (int) Math.ceil(ways);
         // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.
         double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null
             ? Workshop.handsWanted(villageId) + ShopRoles.staffWanted(villageId) : 0;   // [econ-store] and its assistants and stock keeper
@@ -1795,6 +1800,8 @@ public final class Villages {
         if (Library.wanted(villageId, folk) && built(villageId, Library.STRUCTURE) < 1) extras.add(Library.STRUCTURE);
         // [fletcher] The fletcher's hut, once the town keeps a fletcher (Fletchers).
         if (Fletchers.hutWanted(villageId)) extras.add(Fletchers.STRUCTURE);
+        // [identity] What its character wants early, and first: a devout town's chapel, a worldly one's tavern (Ethos.extras).
+        Ethos.extras(villageId, folk, at, extras, s -> built(villageId, s) < 1);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -2005,7 +2012,8 @@ public final class Villages {
      * rarer the more (Museum). It is what the ranks ask for past the Town.
      */
     public static int renown(UUID villageId) {
-        return Museum.GREAT_WORK_RENOWN * greatWorks(villageId) + Museum.renown(villageId);
+        return Museum.GREAT_WORK_RENOWN * greatWorks(villageId) + Museum.renown(villageId)
+            + Fame.renown(villageId);                                  // [identity] its deeds, its fame, its masters, its traits
     }
 
     /** How many great works this village has raised. */
@@ -2032,11 +2040,13 @@ public final class Villages {
         int colonies = 0;
         for (String s : BUILT.getOrDefault(villageId, List.of())) if ("colony".equals(s)) colonies++;
         Age age = ageOf(villageId);
-        if (age == Age.NETHER && renown >= 6 * Museum.GREAT_WORK_RENOWN && folk >= 80 && colonies >= 2) return Rank.CAPITAL;
-        if (age.ordinal() >= Age.DIAMOND.ordinal() && renown >= 2 * Museum.GREAT_WORK_RENOWN && folk >= 50) return Rank.CITY;
-        if (age.ordinal() >= Age.IRON.ordinal() && folk >= 30) return Rank.TOWN;
-        if (age.ordinal() >= Age.STONE.ordinal() && folk >= 12) return Rank.VILLAGE;
-        return Rank.HAMLET;
+        Rank by;
+        if (age == Age.NETHER && renown >= 6 * Museum.GREAT_WORK_RENOWN && folk >= 80 && colonies >= 2) by = Rank.CAPITAL;
+        else if (age.ordinal() >= Age.DIAMOND.ordinal() && renown >= 2 * Museum.GREAT_WORK_RENOWN && folk >= 50) by = Rank.CITY;
+        else if (age.ordinal() >= Age.IRON.ordinal() && folk >= 30) by = Rank.TOWN;
+        else if (age.ordinal() >= Age.STONE.ordinal() && folk >= 12) by = Rank.VILLAGE;
+        else by = Rank.HAMLET;
+        return Fame.lift(villageId, by, age, folk, renown, colonies);   // [identity] renown raises the title too
     }
 
     /** What the next rank asks for, in words (for the status and the journal). */

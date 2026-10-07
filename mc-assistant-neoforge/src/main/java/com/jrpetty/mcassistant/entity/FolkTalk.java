@@ -104,6 +104,8 @@ public final class FolkTalk {
         // [interviews] "Any interviews coming up?", "I'd recommend Ada for the post", a seat on the panel, the interview page.
         String interview = Interviews.talk(f, p, topic, text);
         if (interview != null) return manner(f, interview);
+        String ways = text.isEmpty() || f.isBaby() ? null : Identity.talk(f, p, text);   // [identity] "What's this town like?"; a proposal
+        if (ways != null) return manner(f, ways, true);
         if (!text.isEmpty()) {
             VillageFolkEntity other = mentioned(f, lower);
             if (other != null && topic != TalkTopic.WATCH) return manner(f, opinionOf(f, other));   // [crime] "I saw Fen take it" is for the watch
@@ -449,6 +451,7 @@ public final class FolkTalk {
         line(sb, "Birthday", Birthdays.cardLine(f));        // its birthday, its age and the next (Birthdays)
         line(sb, "The bell", TownBell.cardLine(f));         // when it answered today's bells (TownBell)
         line(sb, "Culture", Culture.cardLine(f));           // [batchD] the band, the choir, the stage, its pictures
+        line(sb, "Its town", Identity.cardLine(f));         // [identity] a true Seafarer; of the ruling house; chafes at the curfew
         return sb.toString();
     }
 
