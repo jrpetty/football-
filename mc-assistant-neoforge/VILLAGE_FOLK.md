@@ -5972,9 +5972,10 @@ the config; then a feud stays a feud.
   - a feast for the peace is called for the next day of rest within the week, or the next evening.
 * **Memorials.** Everyone the war cost is remembered: a spy who died on its errand, an ally's guard who
   died on another town's walls, or anyone killed by the enemy's hand. If nobody died, the memorial is to
-  the war itself and the peace. A hand at the town's works puts up a plaque on a post before the chapel
-  or the graveyard (by the board if the town has neither). It is made from the stores: a sign, and a
-  fence or planks. The day of the peace becomes Remembrance Day, kept every year with a minute's silence at
+  the war itself and the peace. The plaque is wanted on the day of the peace, and a hand at the town's
+  works puts it up on a post before the chapel or the graveyard. If the town has neither, it goes on the
+  square in front of the board, past the far end from the war banner's pole. It is made from the stores:
+  a sign, and a fence or planks. The day of the peace becomes Remembrance Day, kept every year with a minute's silence at
   the dusk bell. It is on the town's calendar, the board, the gazette and the Culture page.
 * **Brokering peace.** A player held in honour by both towns can say "make peace with ..." to a folk of
   either. The player carries ten coins' worth of gifts and the peace is made on their word, with no coin
@@ -6005,7 +6006,10 @@ Where to see it:
     face looks (`BANNER x y z north Oakford`; a banner on a pole by the board adds the board's foot,
     `BOARD x y z`);
   - `/village war cloth` puts a red banner into the stores;
-  - `/village war peace` makes peace on the terms the balance of strength gives.
+  - `/village war peace` makes peace on the terms the balance of strength gives;
+  - `/village war memorial` puts the town's newest war memorial up at once, from the stores, and prints
+    where its post stands and which way the sign looks (`MEMORIAL x y z south The war with / Oakford /
+    ...`), or `NO-MEMORIAL` and why.
 
 The game tests `WarAndPeaceGameTests` (wp01 to wp10) check that:
 * a hawk in a feud with a grievance puts war to the council, going by its scouts' report, and the
@@ -6013,7 +6017,8 @@ The game tests `WarAndPeaceGameTests` (wp01 to wp10) check that:
 * a dove does not go to war, even after ten days of grievances;
 * a soft, weak town yields to an ultimatum and the tribute reaches the other treasury, with no war;
 * a refusal starts the war on both books under banners made from the stores;
-* the weaker side by its scouts' report sues for peace and the treaty concedes the whole goal;
+* the weaker side by its scouts' report sues for peace and the treaty concedes the whole goal; the war
+  cost no lives, and its memorial names the war itself and goes up from the stores;
 * an ally's guards raise a town's strength, peace comes when the cost tells, and the guards go home;
   then a treaty broken is in both chronicles and on the board, and costs the breaker everywhere;
 * with wars switched off, nobody goes to war;
