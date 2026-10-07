@@ -8647,3 +8647,181 @@ The game tests `FireworksGameTests` (fw01 to fw10) check that:
   war won puts the victory's rockets first on the maker's list;
 * the hut is brought back down to a dozen gunpowder; nothing is lit while folk stand on the rack, and the display goes
   on once they step off; and the display is in the chronicle and the next morning's gazette.
+## What makes a town itself
+
+No two towns are alike. Each one is shaped by where it stands, who founded and led it, what has happened to it, what
+it makes and what its people vote for, and all of that changes how it works, not just what it says about itself. Open
+the town's books at the **Identity** page (the last tab, or `/village identity books`), read the one line under
+"How we're doing" on the board, or ask any folk *"What's this town like?"* (the **Town's ways** button on its card).
+
+### Its character: seven axes
+
+Each town leans one way or the other on seven axes, from -100 to +100, drawn as bars on the Identity page (with a mark
+where its founding put it). At its first morning the town is given its leanings by its land (a port is mercantile and
+open, a hill-town martial and practical, a desert town devout and old-fashioned, a meadow town peaceable and worldly)
+and by its founders (a party of Guardians makes a martial, closed town; Merchants a mercantile one; Free Spirits a
+worldly, open one; grumpy founders shut the gates, generous ones level the wages). After that it drifts, a point or two
+a day, toward what its folk care about and above all toward whoever leads it while they are in office, and toward the
+standing order they give. What happens to it pushes it too: a raid makes it martial and wary, a war won warlike, a peace
+peaceable, a trade deal mercantile, a book learned, newcomers taken in open, a great work forward-looking, an election
+for good wages mercantile. Half of every push stays for good. When a town grows martial (or stops being so) the
+chronicle and the gazette say so.
+
+A leaning of 35 or more counts as being that thing outright. Each end does something modest and real, scaled by how far
+the town leans:
+
+| Axis | One end | The other end |
+|------|---------|---------------|
+| Mercantile / Self-sufficient | a second market day each week, less kept back from the traders, keener envoys for trade, more hands at the shop | up to three fifths more kept in the stores before selling, outsiders' goods valued less, more farmers |
+| Martial / Peaceable | up to three tenths more on the watch, a new golem the day after one is lost, quicker to war, the walls manned | fewer guards, envoys sent more often and a peace sought in a feud, slower to war, happier at peace |
+| Devout / Worldly | the chapel wanted from the Stone Age (at twelve folk), fewer evenings at the tavern | the tavern wanted at eight folk, the theatre early, three evenings in five at the tavern |
+| Learned / Practical | the library at nine folk and the school early, up to two more research points a day | up to five in a hundred quicker at every trade |
+| Open / Closed | newcomers voted in, players trusted half again as fast, tourists sooner, the gates open at first light and shut late | newcomers voted down, players trusted slowly, the gates shut at sunset, a little less crime |
+| Traditional / Progressive | four customs kept, fashion slow to change, the houses made over slowly | a research point more, fashion quick, the houses made over sooner |
+| Egalitarian / Hierarchical | wages pulled toward the town's average, a coin more in the poor box | wages spread wider by rank, the leader's hall wanted at twelve folk, only householders vote |
+
+The town's character is named from its strongest two or three leanings and its land: *a martial, closed hill-town*,
+*an open, mercantile port*, *a seafaring, worldly port* once it has earned the name.
+
+### How it is ruled
+
+Each town is founded under the government its character suits, and it can change it by a vote, or be driven to change
+it by a crisis:
+
+* **An elected leader**, called by the land's own title (harbourmaster, thane, reeve...): elections every ten days as
+  before. The leader decides the laws by its own lights.
+* **A council of elders**: only the eldest five vote, choosing a speaker of the elders from among themselves every
+  fourteen days. They vote on the laws among themselves. Orders come every five days and stick: slower, but steadier.
+* **A hereditary lord**: no elections. When the lord dies its eldest grown child takes the seat; with no child, its
+  partner holds it; with nobody of the line, the town's most esteemed founds a new house. The chronicle keeps the line,
+  and the board names the heir. If the town is miserable under its lord three mornings running, it votes on no
+  confidence; carried, the house leaves the seat and the town elects its leader two days later.
+* **A guild republic**: the masters of the trades (level ten and over) elect the guildmaster, and each trade votes on
+  its own laws (the traders on tariffs, the hunters on hunting).
+* **A commune**: every change to the law goes to the whole town's vote, the steward is elected every seven days, and
+  everybody is paid the same.
+* **The chaplain's rule**: the town's most devout leads it as its chaplain, chosen by the chapel and never voted on.
+  The chapel is wanted early and there is a feast day in the middle of the week as well as the usual one.
+
+When a town's character has come to suit another government much better, it is put to the town in a referendum.
+
+**A player who wants to lead** stands at the elections where the town has them (an honoured guest only, before the
+elders or the masters). In a lordship there are only two ways in: marry into the ruling house (say *"Will you marry
+me?"* to an unwed lord or heir who thinks the world of you, once you are an honoured citizen; the lord's consort takes
+the seat when the lord dies), or wait for the town to vote its lord out and then stand. The chaplain's town has no
+election at all.
+
+### Its law-book
+
+Each town keeps its own laws, set at its founding from its character and government and reviewed by whoever governs
+(every two days for a lord, three for an elected leader, four for a guild, six for the elders). A raid makes a curfew
+likelier, a war conscription. A player who leads a town sets them with `/village identity law <law> <choice>`.
+
+| Law | Choices | What it does |
+|-----|---------|--------------|
+| The tithe | one coin in twenty, ten, three in twenty, five | the tax on wages and the tithe on savings, into the treasury; a heavy one is grumbled at |
+| Trade with outsiders | free trade, tariffs | outsiders' goods are valued a tenth less in a bargain under tariffs |
+| The curfew | none, after dark | everybody to bed soon after dusk, the tavern shut, the gates shut sooner, less crime |
+| Weapons | all may go armed, the watch alone | a visitor walking about with a blade or bow in hand is asked to put it away, and fined if it doesn't |
+| The borders | open, closed | closed borders turn newcomers away |
+| Conscription | none, in war | in a war every fit adult joins the militia and drills, not just a third |
+| The apprentice age | from the first day, as usual, school longer | when children start their mornings at a grown-up's side |
+| Drink | open late, shut at nightfall, a dry town | when the tavern empties, or whether anything is sold at the bar |
+| The day of rest | loosely, kept, strictly | every other week, every week, or every week with a longer service |
+| Hunting rights | common, reserved | fewer hunters where reserved, and a visitor's kill inside the town is poaching |
+| Who may own a house | anyone in good standing, citizens only, nobody | who may buy a house there (`/village house buy`) |
+
+A visitor is told the laws that matter to it as it walks in, *"Thornhurst's law: the watch alone goes armed; a curfew
+after dark."* Breaking them goes on its record under the town's laws, with fines, trials and banishment as for theft.
+
+### Earned traits
+
+A town's history becomes its character. These are badges it earns from what really happened to it, each with its
+story ("Flood-hardy: the floods of days 12, 31 and 44") and a small perk. Most fade once what earned them is long past;
+the founding ones never do.
+
+| Trait | Earned by | What it gives |
+|-------|-----------|---------------|
+| Flood-hardy | three floods weathered | the levee raised twice as fast, and nobody panics when the river rises |
+| Iron-willed | three raids held off | a guard more on the watch, steadier spirits |
+| Raid-scarred | folk lost to raiders twice | the gates shut earlier, strangers trusted slowly, a few more on the watch |
+| Golden Fields | two record harvests | farm work five in a hundred quicker, pride in its fields |
+| Deep Delvers | its first diamond in its first weeks, or three finds from the mine | mine work five in a hundred quicker |
+| Hospitable | many visitors, guests and heroes honoured, newcomers taken in | players trusted a quarter faster, tourists sooner, newcomers welcomed |
+| Mourning Town | three lost in five days | sombre for a fortnight: spirits down, the tavern quiet |
+| Lucky | a whole year without a death | spirits up, until the next death |
+| Fire-born | rebuilt after a fire | rebuilds after a fire twice as fast |
+| Well-wed | four weddings | children a little more often |
+| Warlike | two wars won | quicker to war, more on the watch |
+| Peacemakers | two peaces or truces made | more envoys, warmer with every neighbour |
+| Seafarers | three great catches by the fleet | fishing five in a hundred quicker |
+| Bookish | four books written | a research point more a day |
+| Merchant Princes | three trade deals struck | the traders pay a twentieth more |
+| Merrymakers | six festivals kept | spirits up |
+| Builders' Town | two great works raised | the houses made over faster |
+| Hero-honoured | two heroes named | renown, and visitors come to see the statues |
+| Hardy (founding) | founded on snow, desert, badlands or mountain | steadier spirits |
+| Colonists (founding) | a colony | warmer with its mother town every day |
+
+A fisher in a Seafaring town has *"a true Seafarer of Thornhurst"* on its card; a folk whose own values sit badly with
+its town's says it chafes at them.
+
+### Fame, renown and the town's title
+
+**Fame.** Each morning the town's books are read for what it makes most, and how well: the finest steel, smoked fish,
+honey, glass, wool and cloth, fireworks, maps, bread and pies, timber, dressed stone, leather, bricks and pottery,
+books, garden produce, beef and mutton, gold, diamonds and emeralds. A town becomes famous for something when it makes
+enough of it to be talked of and no other town makes it better (two things at most), and loses the name when another
+town does it better by a tenth. The traders pay a quarter more for what it is famous for, other towns value its famous
+goods more when they bargain (so their caravans ask for it, at a better price), and once a season it holds a fair for
+it, when buyers from round about take some of it out of the stores at half again the town's price.
+
+**Renown** comes from deeds: a war won (10), a great work of its own (6), a hero named (6), the first diamond (3), a
+peace made (3), a book written, a guest house, a record harvest or a fame fair (2), a festival, a great catch or a trade
+deal (1). It also comes from what the town is: 8 for each thing it is famous for, 2 for each master of a trade
+(level 25, ten at most), 2 for each trait it has earned, along with the great works and the museum as before.
+
+**The title.** Renown raises a town's title as well as its age and size: renown 6 makes a hamlet of eight a village,
+18 makes a village of twenty-two a town (from the Stone Age), 45 makes an Iron Age town of forty a city, and 110 makes a
+Diamond Age city with a colony a capital. A city's leader wears a mayor's chain, made out of the stores' gold. A city or
+capital gets better terms from the traders and envoys from much further away, and a capital is the seat of its colonies,
+whose laws become its laws. Other towns think better of a town of renown, a little each day.
+
+### How a town treats you
+
+All of this decides how a player is treated. An open, hospitable town greets you warmly and points you to the tavern; a
+closed, raid-scarred one asks your business and tells you to keep to the road. Where the watch alone goes armed, a guard
+at the gate looks at your weapons first. In an open town every kindness counts for more (a quarter more again if it is
+Hospitable), and in a closed one for less, and a closed town holds a grudge longer. The Identity page's *How it treats
+you* section and `/village identity` spell it out.
+
+### For the curious
+
+`/village identity` prints the nearest town's summary, axes, government, laws, traits, fame, renown and how it treats
+players. Operators can also use `/village identity set <axis> <value>`, `gov <form>`, `trait <trait>`, `fair`,
+`morning`, `seed` and `profile port|hold|abbey|commune` (a whole character at once, for pictures).
+
+Other parts of the mod add their own sections to the Identity page and words to the board's line through
+`Identity.contribute` and `Identity.contributeTag`.
+
+The game tests `IdentityGameTests` (id01 to id10) check that:
+* a port founded by Merchants and Free Spirits and a hill-town founded by Guardians and Traditionalists come out with
+  different axes, governments and laws, earn different names from their histories (Merchant Princes, Raid-scarred), and
+  differ measurably in their watch, their gates, how fast they trust a player, how they take newcomers, their tavern
+  evenings and the buildings they want first;
+* a Guardian in office makes its town martial day by day, a raid and an election push it too, and the chronicle says
+  when it has grown martial;
+* three real floods make a town Flood-hardy with its story, after which it raises its levee twice as fast and its folk
+  keep calm, and the name fades when the floods are long past;
+* the town that makes the most cooked cod becomes famous for smoked fish, the traders pay it more for the same cod,
+  other towns value its cod more, its fair brings coin into the treasury, and its renown rises;
+* a book, a festival and a hero raise a hamlet's renown until it becomes a village, as the chronicle says;
+* a curfew sends every folk to bed after dusk and empties the tavern, the gates shut sooner, a loosely kept day of rest
+  comes every other week, and the apprentice age and the tithe follow the law;
+* when a lord dies, its eldest child takes the seat without an election, a player can't stand, and a vote of no
+  confidence puts the house out so the town elects its leader;
+* a commune puts a curfew to the whole town's vote while an elected leader decrees it and the elders vote among
+  themselves; a commune pays everybody alike; the chaplain's town keeps a feast mid-week;
+* the same newcomers are voted into an open town and turned away by a closed one;
+* an open, hospitable town warms to a player faster than a closed, raid-scarred one, and a visitor walking the closed
+  town with a sword is first asked to put it away and then fined.

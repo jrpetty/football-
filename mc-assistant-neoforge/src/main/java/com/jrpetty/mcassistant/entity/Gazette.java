@@ -294,6 +294,8 @@ public final class Gazette {
         if (quests != null) entries.add(quests);
         String fireworks = FireworkShows.gazette(id, day);          // [fireworks] last night's display, reviewed
         if (fireworks != null) entries.add(fireworks);
+        String ways = Identity.gazette(id, day);                    // [identity] its laws, its rulers, its names and fame, changed
+        if (ways != null) entries.add(ways);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         entries = Weave.frontPage(entries);                         // [weave] the biggest story leads
         front += Weave.headline(entries);                           // [weave] and has the front page's headline

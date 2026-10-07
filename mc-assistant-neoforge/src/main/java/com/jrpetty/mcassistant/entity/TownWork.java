@@ -191,7 +191,7 @@ public final class TownWork {
         String last = com.jrpetty.mcassistant.village.Ledger.note(id, "golem");
         if (last != null) {
             try {
-                if (day - Long.parseLong(last) < 3) return false;              // a new one takes a few days
+                if (day - Long.parseLong(last) < Ethos.golemGap(id, 3)) return false;   // a new one takes a few days ([identity] a martial town sooner)
             } catch (NumberFormatException ignored) { }
         }
         // A golem is made, not conjured: four blocks of iron (thirty-six ingots will do, nine to a block) and a

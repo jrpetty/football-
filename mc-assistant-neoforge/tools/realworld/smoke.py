@@ -2806,6 +2806,57 @@ def fireworks_stage(r, look, cx, cz):
     say("alive after the fireworks: %s" % client_alive())
 
 
+
+def identity_stage(r, look, cx, cz):
+    """[identity] What makes a town itself (entity/Identity, Ethos, Government, LawBook, TownTraits, Fame). Two towns
+    made as unlike as they come (/village identity profile): the smoke's own town a mercantile, open, worldly port under
+    an elected leader, Seafarers and Hospitable; a second town off to the north-east a martial, closed, traditional hold
+    under a hereditary lord, Raid-scarred and Iron-willed, with a curfew and its weapons kept by the watch. For each:
+    its board, its one line on it under "How we're doing"; a folk of it saying what its town is like
+    (/village identity speak, the speech bubble in the picture); and its books at the Identity page (the seven axes as
+    bars, its rulers, its renown, its traits as badges, its law-book). And what /village identity says of each."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    num = r"(-?\d+(?:\.\d+)?)"
+
+    def view(out, name):
+        m = re.search(r"VIEW " + name + " " + " ".join([num] * 6), out)
+        return None if not m else [float(v) for v in m.groups()]
+
+    tx, tz = other_town(r, cx + 220, cz - 160, "the hold")
+    towns = [("port", cx, cz), ("hold", tx, tz)]
+    for i, (profile, x, z) in enumerate(towns):
+        y = ground_height(r, x, z)
+        say("%s: %s" % (profile, r.cmd("execute positioned %d %d %d run village identity profile %s" % (x, y + 1, z, profile))[:600]))
+        say("%s, said: %s" % (profile, r.cmd("execute positioned %d %d %d run village identity" % (x, y + 1, z))[:1500]))
+    for i, (profile, x, z) in enumerate(towns):
+        y = ground_height(r, x, z)
+        n = 2 + i * 3
+        r.cmd("tp %s %d %d %d" % (USER, x, y + 6, z + 6))
+        time.sleep(7)                                   # the board writes itself afresh every few seconds
+        v = view(r.cmd("execute positioned %d %d %d run village arms board" % (x, y + 1, z)), "board")
+        if v:
+            look("33-identity-%d-%s-board" % (n, profile), v[0], v[1] - 1.62, v[2], v[3], v[4], v[5], wait=8)
+        else:
+            say("%s: no board known yet; no picture of it" % profile)
+        out = r.cmd("execute positioned %d %d %d run village identity speak" % (x, y + 1, z))
+        say("%s speaks: %s" % (profile, out[:600]))
+        v = view(out, "speaker")
+        if v:
+            look("33-identity-%d-%s-speaks" % (n + 1, profile), v[0], v[1] - 1.62, v[2], v[3], v[4], v[5], wait=2)
+        r.cmd("gamemode creative %s" % USER)
+        r.cmd("tp %s %d %d %d" % (USER, x, y + 1, z))
+        time.sleep(3)
+        say("%s books: %s" % (profile, r.cmd("execute as %s at @s run village identity books" % USER)))
+        time.sleep(4)
+        shot("33-identity-%d-%s-page" % (n + 2, profile))
+        say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+        r.cmd("gamemode spectator %s" % USER)
+    say("alive after the identity stage: %s" % client_alive())
+
+
 def work_stage(r, look, cx, cz):
     """[workitems] The tools of the mine, the woods and the roads (item/WorkItems, entity/WorkStage). Out past the town's
     south-east corner, /village items work stage levels its own ground for each scene and sets out, running east: a wall
@@ -3218,6 +3269,10 @@ def main():
         fireworks_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("fireworks stage failed: %s" % e)
+    try:
+        identity_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("identity stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

@@ -321,6 +321,7 @@ public class VillageFolkEntity extends AssistantEntity {
             laterLine = null;
         }
         if (tickCount % 20 == 17) Aboard.step(this);           // [mine-safety] out of a boat it never meant to board
+        if (tickCount % 20 == 3) persona.town = ownerId();      // [identity] how fast it trusts a player is its town's (Treatment)
         // [transport] Sat in a cart or the ferry: the ride (or the rowing) is its day till it is off again.
         if (level() instanceof net.minecraft.server.level.ServerLevel riding && Transport.aboard(this)) {
             Transport.hold(this, riding);
@@ -1383,7 +1384,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected int skillWorkPercent() {
         return CityTree.workPercent(ownerId(), stationTask()) + FolkSkills.workPercent(this)
             + Library.workPercent(this)                                                         // [library] its trade's book, read
-            + FieldTools.workPercent(this);                                                     // [fields] its seed satchel
+            + FieldTools.workPercent(this)                                                      // [fields] its seed satchel
+            + Ethos.workPercent(ownerId(), stationTask());                                      // [identity] a practical town; Golden Fields, Seafarers
     }
 
     /** A good mood makes for quick hands, a black one for slow ones. */
@@ -1969,7 +1971,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server) || villageCentre == null) return;
         // Mornings, once it is old enough: at a grown-up's side at work, learning the trade.
-        if (day - bornDay >= 1 && level().getDayTime() % 24000L < 7000L && apprentice(server)) return;
+        if (day - bornDay >= LawBook.apprenticeFrom(ownerId(), 1) && level().getDayTime() % 24000L < 7000L && apprentice(server)) return;   // [identity] the apprentice age
         // Afternoons in the park, when the town has one (Park).
         if (Park.play(this, server)) return;
         // Tag with the other children, when there are any.
@@ -2661,8 +2663,8 @@ public class VillageFolkEntity extends AssistantEntity {
 
     /** This folk's own hour for bed: a sociable one stays up, a hard worker turns in early. */
     public long bedtimeTick() {
-        return 14000L + Math.floorMod(getUUID().getMostSignificantBits(), 600L)
-            + (life.has(Social.Trait.SOCIABLE) ? 1500L : 0L) - (life.has(Social.Trait.HARDWORKING) ? 800L : 0L);
+        return LawBook.bedtime(ownerId(), 14000L + Math.floorMod(getUUID().getMostSignificantBits(), 600L)   // [identity] a curfew
+            + (life.has(Social.Trait.SOCIABLE) ? 1500L : 0L) - (life.has(Social.Trait.HARDWORKING) ? 800L : 0L));
     }
 
     /** Where this hand's ground was when the agenda last looked, and since when. */
@@ -6261,7 +6263,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return false;
         UUID village = ownerId();
         if (village == null || villageCentre == null) return false;
-        if (tickCount - breedCheckTick < 6000) return false;     // five minutes apiece
+        if (tickCount - breedCheckTick < TownTraits.breedEvery(village, 6000)) return false;     // five minutes apiece ([identity] Well-wed: sooner)
         breedCheckTick = tickCount;
         if (tickCount - breedTick < 6000) return false;          // not straight after the last
 
