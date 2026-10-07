@@ -168,6 +168,9 @@ public final class Decor {
                 frame("cave.pick", t, s -> s.getItem() instanceof PickaxeItem, Items.WOODEN_PICKAXE, "a pickaxe on the wall"));
             // [emerald] An emerald in a frame, the first the trader brought home, and a barrel of the goods it trades.
             case EMERALD -> List.of(frame("emerald.frame", t, s -> s.is(Items.EMERALD), Items.EMERALD, "an emerald on the wall"));
+            // [diver] A barrel of the dried kelp it packs, and a sea pickle off the bed glowing in a frame.
+            case DIVER -> List.of(barrel("diver.kelp", t, Items.DRIED_KELP, 8, "a barrel of dried kelp"),
+                frame("diver.pickle", t, s -> s.is(Items.SEA_PICKLE), Items.SEA_PICKLE, "a sea pickle on the wall"));
             case SCOUT -> List.of(floor("scout.table", t, Items.CARTOGRAPHY_TABLE, true, "a map table"),
                 frame("scout.compass", t, s -> s.is(Items.COMPASS) || s.is(Items.MAP) || s.is(Items.FILLED_MAP), Items.COMPASS,
                     "a compass on the wall"));

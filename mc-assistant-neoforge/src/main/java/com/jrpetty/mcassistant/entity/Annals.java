@@ -451,6 +451,8 @@ public final class Annals {
             reading.add(line);
         }
         reading.addAll(Kitchen.reading(id, level.getDayTime() / 24000L));   // [kitchen] the packed lunches eaten out, the pies of the catch
+        // [diver] The town's fires, by what they burnt this month, and the coal the kelp blocks kept (FuelBook).
+        reading.addAll(FuelBook.lines(level, id));
         out.put("reading", strings(reading));
         return out;
     }
@@ -586,6 +588,7 @@ public final class Annals {
         out.put("trade", TradeDeals.report(level, v));             // [econ-trade] the Trade page: the book, the deals, the talks
         out.put("warmap", WarMap.report(level, v));              // [war-scouting] the war map: rivals, reports, pickets, spies
         out.put("caves", CaveDwellers.report(level, v));         // [caves] the caves' report: the Caves page
+        out.put("divers", Divers.report(level, v));              // [diver] the kelp beds, the turtles, the rescues
         out.put("nether", NetherRunners.report(level, v));       // [nether] the runners' report: the Nether page
         out.put("fashion", Fashion.report(level, v));            // [fashion] the season's look, who wears it, the tailor's book
         out.put("crime", Crime.report(level, v));                // [crime] the casebook and the crime rate: the Cases page

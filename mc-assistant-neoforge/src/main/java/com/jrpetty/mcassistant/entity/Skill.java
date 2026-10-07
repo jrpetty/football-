@@ -31,6 +31,7 @@ public final class Skill {
                 : new Fit(12, "puts its back into everything");
             case EASYGOING -> switch (trade) {
                 case FISH, BEEKEEP -> new Fit(0, "unhurried, which suits the water and the hives");
+                case DIVER -> new Fit(4, "calm under the water, and slow to use its breath");          // [diver]
                 case SCOUT -> new Fit(-10, "dawdles on the road");
                 case CARTOGRAPHER -> new Fit(-6, "dawdles on its rounds");          // [cartographer]
                 case HUNT -> new Fit(4, "patient enough to wait for the game to come to it");
@@ -56,6 +57,7 @@ public final class Skill {
                 case FIREWORKS -> new Fit(8, "quiet, careful hands with the powder");     // [fireworks]
                 case CARTOGRAPHER -> new Fit(6, "happy alone with a sheet and the land");   // [cartographer]
                 case EMERALD -> new Fit(-8, "finds haggling with strangers hard going");     // [emerald]
+                case DIVER -> new Fit(8, "happy on its own on the bed of the water");     // [diver]
                 case HUNT -> new Fit(12, "quiet as the woods: the game never hears it coming");
                 default -> new Fit(0, "");
             };
@@ -86,6 +88,7 @@ public final class Skill {
                 case CAVE -> new Fit(14, "can't pass a dark passage without seeing where it goes");   // [caves]
                 case FIREWORKS -> new Fit(10, "always trying a new star to see what it does");      // [fireworks]
                 case CARTOGRAPHER -> new Fit(16, "has to know what's round the next bend, and draw it");   // [cartographer]
+                case DIVER -> new Fit(8, "always wants to see what's on the bottom");                  // [diver]
                 case NETHER -> new Fit(12, "wants to see what's past the next lava fall");             // [nether]
                 case HUNT -> new Fit(8, "reads the tracks like a book");
                 case HAUL, STORE -> new Fit(-4, "wanders off to look at things");

@@ -190,6 +190,13 @@ public final class Market {
         new Good("Shipping crate", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.SHIPPING_CRATE_ITEM.get())
             && com.jrpetty.mcassistant.block.ShippingCrateBlock.contents(s).isEmpty(), 1.4, 1, Villages.Task.NONE),
         new Good("Window box", s -> s.is(com.jrpetty.mcassistant.item.WorkItems.WINDOW_BOX_ITEM.get()), 0.6, 1, Villages.Task.NONE),
+        // [diver] The diver's: kelp blocks for a player's furnace (two and a half coals' burning each), dried kelp for the
+        // larder, clay off the bed, the turtles' scutes, and a turtle helmet.
+        good("Dried kelp blocks", Items.DRIED_KELP_BLOCK, 0.9, 4, Villages.Task.NONE),
+        good("Dried kelp", Items.DRIED_KELP, 0.08, 16, Villages.Task.FOOD),
+        good("Clay", Items.CLAY_BALL, 0.05, 16, Villages.Task.NONE),
+        good("Turtle scutes", Items.TURTLE_SCUTE, 3.0, 1, Villages.Task.NONE),
+        good("Turtle helmet", Items.TURTLE_HELMET, 18.0, 1, Villages.Task.NONE),
         // What the crafts make, sold one at a time at the shop and the café.
         good("Iron pickaxe", Items.IRON_PICKAXE, 6.0, 1, Villages.Task.NONE),
         good("Iron sword", Items.IRON_SWORD, 4.0, 1, Villages.Task.NONE),

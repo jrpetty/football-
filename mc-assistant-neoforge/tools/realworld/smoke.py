@@ -3150,6 +3150,56 @@ def emerald_stage(r, look, cx, cz):
     say("alive after the emerald trader: %s" % client_alive())
 
 
+def diver_stage(r, look, cx, cz):
+    """[diver] The kelp farmer and diver (entity/Divers, KelpBeds, DiverSwim, TurtleBeach, FuelBook). /village diver
+    stage, run at the town: its diving water found (a lake eighteen across and six deep cut beside the town if it has
+    none, a sandy beach on its west side), the diver's shed stamped on the bank with its door to the water, a kelp bed
+    planted and grown ripe, two wild turtles on the beach, and a diver taken on, in its turtle helmet, sent down to cut
+    the bed. Pictures: the shed from over the water; the bed from the bank; the bed from under the water with the diver
+    cutting it (and again after a while, the diver up for air or back at its work); the turtle beach. Then /village
+    diver said (the water, the bed, the books, the fuel the town burnt by kind), and the town's books open at the
+    Production page (the fuel line: what the kelp blocks kept)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")                            # no diving in a thunderstorm
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx + 40, hy + 24, cz))
+    time.sleep(8)                                      # the ground east of the town arrives at the server and the client
+    out = r.cmd("execute positioned %d %d %d run village diver stage" % (cx, hy + 1, cz))
+    say("diver stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no diving water staged; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("42-diver-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("diver-shed", "1-shed", 10)
+    shoot("diver-bed", "2-bed", 6)
+    time.sleep(10)                                     # the diver walks to the bank and goes in
+    shoot("diver-under", "3-under", 6)
+    time.sleep(25)                                     # a few plants cut; up for air, perhaps, and down again
+    shoot("diver-under", "4-cutting", 4)
+    shoot("diver-beach", "5-beach", 6)
+    say("diver: " + r.cmd("execute positioned %d %d %d run village diver" % (cx, hy + 1, cz))[:1400])
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("books: " + r.cmd("execute as %s at @s run village stats 3" % USER))      # the Production page
+    time.sleep(4)
+    shot("42-diver-6-production")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the diver: %s" % client_alive())
+
+
 def nether_stage(r, look, cx, cz):
     """[nether] The Nether runners (entity/NetherRunners, NetherRuns, NetherWork, NetherOutpost). Out past the town's
     south-east, /village nether stage levels a patch of ground and puts up a lit gateway (an obsidian frame) with three
@@ -3209,6 +3259,8 @@ def nether_stage(r, look, cx, cz):
     r.cmd("kill @e[tag=nether_lineup,type=!player]")
     r.cmd("execute in minecraft:the_nether run kill @e[tag=nether_lineup,type=!player]")
     say("alive after the Nether runners: %s" % client_alive())
+
+
 
 
 def main():
@@ -3606,6 +3658,10 @@ def main():
         emerald_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("emerald stage failed: %s" % e)
+    try:
+        diver_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("diver stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

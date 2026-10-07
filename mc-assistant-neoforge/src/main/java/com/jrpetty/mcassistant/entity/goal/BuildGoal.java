@@ -99,7 +99,9 @@ public class BuildGoal extends Goal {
         // [golems] the golem yard, where the iron is made into blocks for the golems (entity/Golems)
         "golemyard",
         // [emerald] the Trading Post: the emerald trader's stall and its book of the villagers' villages (entity/EmeraldTrader)
-        "tradingpost");
+        "tradingpost",
+        // [diver] the diver's shed on the bank: a smoker, a campfire, a bench and a barrel (entity/Divers)
+        "divershed");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

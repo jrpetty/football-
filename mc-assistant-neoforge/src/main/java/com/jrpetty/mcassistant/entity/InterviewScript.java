@@ -323,6 +323,8 @@ final class InterviewScript {
             case GOLEMS -> "How long have you kept the golems?";
             case CARTOGRAPHER -> "How long have you been drawing maps?";      // [cartographer]
             case EMERALD -> "How long have you traded with the villagers?";   // [emerald]
+            case DIVER -> "How long have you been diving, and how long can you hold your breath?";   // [diver]
+            case NETHER -> "How long have you carried a blade, and have you ever been through a portal?";   // [nether]
             case NONE -> "What have you done, till now?";
             // A trade come in since: asked in its own words.
             default -> "How long have you been at " + t.label + "?";
@@ -498,6 +500,14 @@ final class InterviewScript {
             case EMERALD -> new String[]{ "You reach the villagers' village and there are pillagers about the bell. What do you do?",   // [emerald]
                 "Turn straight round with the goods and tell the town. The villagers' fight isn't ours, and the trade will keep.",
                 "Wait at the edge till they've gone.", "Sell quick and run?" };
+            // [diver] The diver's first rule (its trade book): up for air before you need it, not when you do.
+            case DIVER -> new String[]{ "You're on the bed with the last of the kelp to cut, and your chest is starting to burn. What then?",
+                "Straight up, to open water and not under the jetty. The kelp's still there when I've my breath back.",
+                "Cut the last one quickly, then up.", "Keep going. I can hold it a bit longer." };
+            // [nether] The runners' first rule (School's lines): gold on before you go through, and never strike a piglin.
+            case NETHER -> new String[]{ "On the far side a piglin's watching you hard, and your gold charm's come off in the scramble. What then?",
+                "Charm back on before anything else, back to the others, and never a hand raised to it: strike one and they all come.",
+                "Back away slowly and hope it loses interest.", "Draw my sword before it does." };
             default -> new String[]{ "What would you do first, in the post?",
                 "Learn how it's done here first — ask who did it before me — and then do it better.", "Get to work.", "I'm not sure, to be honest." };
         };

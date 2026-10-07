@@ -173,20 +173,9 @@ public final class NetherRunners {
     public static VillageFolkEntity appoint(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
         if (have(id) >= wanted(id)) return null;
-        VillageFolkEntity best = null;
-        int bestScore = Integer.MIN_VALUE;
-        for (AssistantEntity a : Villages.folkOf(id)) {
-            if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || f.isElder()) continue;
-            if (f.trip() != null || f.expedition() != null || NetherRuns.away(f)) continue;
-            if (!veteran(f) || !spare(id, f.stationTask())) continue;
-            if (Fears.staysThisSide(f)) continue;               // [individual] never one afraid of the Nether, however good
-            int age = f.ageYears();
-            if (age < 20 || age > 50) continue;
-            // [individual] One who dreams of the Nether volunteers first: ahead of a veteran a level or so better at it.
-            int score = fitness(f) + (Dreams.volunteersForNether(f) ? 1500 : 0);
-            if (score > bestScore) { bestScore = score; best = f; }
-        }
-        if (best == null) return null;
+        List<VillageFolkEntity> few = shortlist(id);
+        if (few.isEmpty()) return null;
+        VillageFolkEntity best = few.get(0);
         StationTask was = best.stationTask();
         int knows = Math.max(Math.max(best.tradeLevel(StationTask.GUARD), best.tradeLevel(StationTask.CAVE)), best.tradeLevel(StationTask.MINE) / 2);
         int has = AssistantEntity.xpForLevel(best.tradeLevel(StationTask.NETHER)), start = AssistantEntity.xpForLevel(Math.max(0, knows - 2));
@@ -203,6 +192,41 @@ public final class NetherRunners {
         LOG.info("[MCA-NETHER] {} of {} picked for the Nether runners (was {} level {}, skill {}), {} of {}", best.displayNameCap(), Villages.name(id),
             was, best.tradeLevel(was), skill(best), n, wanted(id));
         return best;
+    }
+
+    /** [interviews] The runners' place in the interviews' books (InterviewPosts). */
+    static final String POST = "netherrunner";
+
+    /**
+     * How fit a folk is to be picked for the runners, by the town's own reckoning (more is better), or Integer.MIN_VALUE
+     * if it may not be: a veteran of the watch, the caves or the mine, twenty to fifty, whose own trade can spare it,
+     * not away, not already a runner, and never one afraid of the Nether.
+     */
+    static int candidate(VillageFolkEntity f, UUID village) {
+        if (f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || f.isElder() || !village.equals(f.ownerId())) return Integer.MIN_VALUE;
+        if (f.stationTask() == StationTask.NETHER) return Integer.MIN_VALUE;
+        if (f.trip() != null || f.expedition() != null || NetherRuns.away(f)) return Integer.MIN_VALUE;
+        if (!veteran(f) || !spare(village, f.stationTask())) return Integer.MIN_VALUE;
+        if (Fears.staysThisSide(f)) return Integer.MIN_VALUE;   // [individual] never one afraid of the Nether, however good
+        int age = f.ageYears();
+        if (age < 20 || age > 50) return Integer.MIN_VALUE;
+        // [individual] One who dreams of the Nether volunteers first: ahead of a veteran a level or so better at it.
+        return fitness(f) + (Dreams.volunteersForNether(f) ? 1500 : 0);
+    }
+
+    /** The few best for a place on the runners, best first: the interview panel's choice above them all. */
+    static List<VillageFolkEntity> shortlist(UUID village) {
+        List<VillageFolkEntity> out = new ArrayList<>();
+        Map<VillageFolkEntity, Integer> score = new java.util.HashMap<>();
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (!(a instanceof VillageFolkEntity f)) continue;
+            int s = candidate(f, village);
+            if (s == Integer.MIN_VALUE) continue;
+            score.put(f, s + Interviews.preferred(village, POST, f));
+            out.add(f);
+        }
+        out.sort((a, b) -> Integer.compare(score.get(b), score.get(a)));
+        return out.size() > 4 ? new ArrayList<>(out.subList(0, 4)) : out;
     }
 
     /** Where a runner stands of a day at home: before the gateway, on the town's side. */
@@ -233,8 +257,12 @@ public final class NetherRunners {
         TICKED.put(id, now);
         ensureDemand();
         long day = level.getDayTime() / 24000L;
-        for (int i = 0; i < MOST && have(id) < wanted(id); i++) {
-            if (appoint(level, v, day) == null) break;
+        // [interviews] A place on the runners with two or more of the town fit for it is held open a day for its
+        // interview (InterviewPosts), and given after it to the panel's choice (shortlist puts it first). One alone, or
+        // no interviews in this world: given now, one place at a time.
+        if (have(id) < wanted(id) && Interviews.pending(id, POST) == null) {
+            List<VillageFolkEntity> few = shortlist(id);
+            if (!few.isEmpty() && !Interviews.vacancy(level, id, POST, few.get(0))) appoint(level, v, day);
         }
         NetherHome.tick(level, v, day);
     }

@@ -936,6 +936,7 @@ final class Mischief {
             case FLETCHER -> "a fletcher's apron and quiver";      // [fletcher]
             case GOLEMS -> "a golem keeper's riveted apron";      // [golems]
             case CARTOGRAPHER -> "a cartographer's long blue coat";  // [cartographer]
+            case DIVER -> "a diver's wetsuit and goggles";           // [diver]
             default -> "plain clothes";
         };
     }

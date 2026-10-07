@@ -396,6 +396,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             case FIREWORKS -> Items.FIREWORK_ROCKET;       // [fireworks] a rocket, of its own making
             case CARTOGRAPHER -> Items.FILLED_MAP;         // [cartographer] a sheet in hand
             case EMERALD -> Items.EMERALD;                 // [emerald] an emerald turned over in its fingers
+            case DIVER -> Items.KELP;                      // [diver] a fistful of kelp
             case NETHER -> Items.BLAZE_ROD;                // [nether] what the runners bring home through the gateway
             case NONE -> Items.AIR;
         });

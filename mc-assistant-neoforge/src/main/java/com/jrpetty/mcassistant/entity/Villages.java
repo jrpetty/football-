@@ -124,6 +124,9 @@ public final class Villages {
         // [emerald] The emerald trader: one from the Stone Age once the town knows of a village of villagers within reach and
         // has goods to spare, two when it trades with several (EmeraldTrader.wanted, traders).
         new Slot(AssistantEntity.StationTask.EMERALD, 1, EmeraldTrader.FROM, Age.STONE, EmeraldTrader.MOST),
+        // [diver] The kelp farmer and diver: one from fifteen in a town with a river, a lake or the sea close by, two at
+        // fifty, from the Wood Age (Divers); none at all in a town with no water.
+        new Slot(AssistantEntity.StationTask.DIVER, 1, Divers.FROM, Age.WOOD, Divers.MOST),
         // [nether] The Nether runners: once the gateway is lit in the Nether Age, one; two at sixty folk, three at a hundred,
         // picked by the town from its veterans (NetherRunners.team, appoint).
         new Slot(AssistantEntity.StationTask.NETHER, 1, NetherRunners.FROM, Age.NETHER, NetherRunners.MOST));
@@ -362,6 +365,7 @@ public final class Villages {
             case "powderhut" -> "the powder hut";                // [fireworks]
             case "maproom" -> "the map room";                     // [cartographer]
             case "tradingpost" -> "the Trading Post";             // [emerald]
+            case "divershed" -> "the diver's shed";               // [diver]
             default -> "the " + structure;
         };
     }
@@ -433,6 +437,7 @@ public final class Villages {
         FireworkShows.resetForTests();      // [fireworks]
         Cartographers.resetForTests();      // [cartographer]
         EmeraldTrader.resetForTests();      // [emerald] the trader, the villagers' villages, the two peoples' sweep
+        Divers.resetForTests();             // [diver]
         Fashion.resetForTests();            // [fashion] the season's looks, the tailor's book, the shows
         Quests.resetForTests();
         Services.resetForTests();
@@ -731,6 +736,7 @@ public final class Villages {
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.FIREWORKS) continue;   // [fireworks] the maker is chosen (FireworksMaker.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
@@ -772,6 +778,7 @@ public final class Villages {
         for (Slot slot : SLOTS) {
             if (!wantedHere(slot, villageId, total, at)) continue;   // too small (or too young) to want one yet
             if (slot.age() != Age.WOOD) continue;    // crafts below, once the trades have their hands
+            if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;   // nowhere to work at it yet
             if (have.getOrDefault(slot.trade(), 0) == 0) return slot.trade();
         }
@@ -793,6 +800,7 @@ public final class Villages {
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.FIREWORKS) continue;   // [fireworks] the maker is chosen (FireworksMaker.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
             if (craftReady(villageId, slot.trade())) return slot.trade();
@@ -807,6 +815,7 @@ public final class Villages {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
@@ -838,6 +847,7 @@ public final class Villages {
             if (!wantedHere(slot, villageId, total, at) || slot.trade().isCraft() || slot.trade() == AssistantEntity.StationTask.GUARD) continue;
             if (slot.trade() == AssistantEntity.StationTask.CAVE) continue;   // [caves] the team is chosen (CaveDwellers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) continue;   // [cartographer] appointed (Cartographers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
@@ -890,6 +900,7 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.FIREWORKS) return FireworksMaker.ready(villageId);   // [fireworks] opened, and its hut up
         if (trade == AssistantEntity.StationTask.CARTOGRAPHER) return Cartographers.ready(villageId);   // [cartographer] its map room stands
         if (trade == AssistantEntity.StationTask.EMERALD) return EmeraldTrader.wanted(villageId);   // [emerald] villagers to trade with, goods to spare
+        if (trade == AssistantEntity.StationTask.DIVER) return Divers.ready(villageId);        // [diver] water near enough to dive in
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -968,6 +979,7 @@ public final class Villages {
         if (slot.trade() == AssistantEntity.StationTask.FIREWORKS) t = FireworksMaker.ready(villageId) ? 1.0 : 0.0;   // [fireworks] one maker
         if (slot.trade() == AssistantEntity.StationTask.CARTOGRAPHER) t = Cartographers.ready(villageId) ? 1.0 : 0.0;   // [cartographer] one
         if (slot.trade() == AssistantEntity.StationTask.EMERALD) t = EmeraldTrader.traders(villageId);     // [emerald] one, two with several villages
+        if (slot.trade() == AssistantEntity.StationTask.DIVER) t = Divers.team(villageId);      // [diver] one, two at fifty
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
             int producers = 0;
@@ -1786,6 +1798,8 @@ public final class Villages {
         // A house for the player the village has taken to its heart.
         if (com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId) != null
                 && built(villageId, "storage") > 0) out.add("guesthouse");
+        // [diver] The diver's shed by the water, once the town keeps a diver (Divers): the Wood Age's after its homes.
+        if (at == Age.WOOD && Divers.shedWanted(villageId)) out.add(Divers.SHED);
         if (at == Age.WOOD) { housesForBeds(villageId, folk, out); return out; }
 
         if (built(villageId, "fortify") < 1) out.add("fortify");        // the wall
@@ -1821,6 +1835,8 @@ public final class Villages {
         // to want governing, a hall for whoever leads it, on the great lot behind the board.
         if (VillageBoards.boardOf(villageId) != null && built(villageId, "hall") > 0 && built(villageId, "court") < 1) extras.add("court");
         if (folk >= 16 && built(villageId, "hall") > 0 && built(villageId, "townhall") < 1) extras.add("townhall");
+        // [diver] The diver's shed by the water, from the Stone Age with the other trades' buildings (Divers).
+        if (Divers.shedWanted(villageId)) extras.add(Divers.SHED);
         // Somewhere to lay the dead, once there are any; another when it is full.
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
         // [batchE] The town's look: the windmill, the bakery, the orchard, the allotments and (Iron Age, or thirty folk) the inn.
@@ -2252,6 +2268,7 @@ public final class Villages {
             case "powderhut" -> FireworksMaker.why(villageId);     // [fireworks]
             case "maproom" -> Cartographers.why(villageId);        // [cartographer]
             case "tradingpost" -> EmeraldTrader.why(villageId);    // [emerald]
+            case "divershed" -> Divers.shedWhy(villageId);         // [diver]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]
@@ -2878,6 +2895,9 @@ public final class Villages {
         } else if (project.equals("court")) {
             // The courtyard lies before the board, its back along the board's foot: no lot of its own.
             site = courtSite(level, villageId);
+        } else if (project.equals(Divers.SHED)) {
+            // [diver] The diver's shed goes on the bank of its water, its door to it (Divers.shedPlace): no lot in the plan.
+            site = Divers.shedSite(level, villageId);
         } else {
             java.util.Set<Long> bad = BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
             java.util.Set<Long> taken = LOT_TAKEN.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());

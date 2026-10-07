@@ -64,6 +64,8 @@ TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           "cartographer",
           # [emerald] The emerald trader's own (FolkModel.outfit picks it for EMERALD).
           "emerald",
+          # [diver] Its own too, after the cave dweller's (FolkModel.outfit picks it for DIVER).
+          "diver",
           # [nether] And the Nether runner's (FolkModel.outfit picks it for NETHER).
           "netherrunner"]
 
@@ -280,6 +282,15 @@ PARTS = [
     ("emerald_roll", "body", (0, 0, 0), (0, 0, 0), [(88, 28, -5, -2.5, 4.1, 10, 3, 3, 0)], "emerald"),
     ("emerald_lamp", "body", (0, 0, 0), (0, 0, 0), [(100, 36, 4.2, 3, 5, 1, 3, 2, 0)], "emerald"),
     ("emerald_purse", "body", (0, 0, 0), (0, 0, 0), [(114, 28, 2.5, 8.5, -4.6, 2, 3, 1, 0)], "emerald"),
+
+    # [diver] Kelp farmer and diver: a close neoprene hood, a goggle strap round it with the goggles pushed up on the
+    # forehead, a coil of rope at its hip on a line across its chest, and a dive knife at the other hip.
+    ("diver_hood", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -10, -4, 8, 10, 8, 0.55)], "diver"),
+    ("diver_band", "head", (0, 0, 0), (0, 0, 0), [(96, 0, -4, -9, -4, 8, 1, 8, 0.8)], "diver"),
+    ("diver_goggles", "head", (0, 0, 0), (0, 0, 0), [(64, 20, -3.5, -10.4, -5.6, 7, 2, 1, 0)], "diver"),
+    ("diver_line", "body", (0, 5.5, -3.75), (0, 0, 0.62), [(84, 20, -0.5, -7.5, -0.5, 1, 15, 1, 0)], "diver"),
+    ("diver_rope", "body", (0, 0, 0), (0, 0, 0), [(64, 26, 4.2, 6.5, -2, 2, 5, 4, 0)], "diver"),
+    ("diver_knife", "body", (0, 0, 0), (0, 0, 0), [(88, 26, -5.4, 8, -1, 1, 4, 2, 0)], "diver"),
 
     # [nether] Nether runner: a blackened iron skullcap banded in gold, a gold medallion at its brow (it stays on over
     # an iron helmet, and its stone glows), a mail curtain at the back of the neck, and the runner's satchel at its hip.
@@ -1355,6 +1366,103 @@ def cavedweller_glow():
     return cv
 
 
+def outfit_diver():
+    """[diver] The kelp farmer and diver: a dark wetsuit of neoprene, sea-green piping down its seams and a white stripe
+    across the chest, a weight belt with its lead blocks, gloves and soft booties; a close hood, the goggles pushed up
+    on the forehead on their strap (brass rims, green glass), a coil of hemp rope at its hip on a line slung across its
+    chest, and a dive knife in a sheath at the other hip. Not the fisher's yellow oilskin: the diver goes under."""
+    cv = Canvas()
+    suit = (34, 40, 52)
+    seam = (58, 150, 140)
+
+    def neo(x, y):
+        c = suit
+        if (x * 3 + y * 5) % 11 == 0:
+            c = lit(suit, 1.18)                                          # the rubber's sheen
+        elif noise(x, y, 400) > 0.8:
+            c = lit(suit, 0.82)
+        return grain(c, x, y, 3, 401)
+    coat = coat_to(cv, neo, 13)
+    # The zip up the front and the seams down the sides.
+    for y in range(0, 13):
+        coat.put("front", 3, y, lit(suit, 0.62))
+        if y % 2 == 0:
+            coat.put("front", 4, y, (150, 152, 158))                     # the zip's teeth
+        for face in ("right", "left"):
+            coat.put(face, 2, y, seam)
+    # A white stripe across the chest, the trade's mark, piped in green.
+    coat.row(3, lambda x: (214, 218, 222))
+    coat.row(2, lambda x: lit(seam, 0.9))
+    coat.row(4, lambda x: lit(seam, 0.9))
+    coat.row(0, lambda x: lit(suit, 0.7))                                # the collar
+    # The weight belt: webbing with lead blocks on it.
+    belt(coat, 10, strap=(44, 44, 46), buckle=(176, 178, 184))
+    for face, xs in (("front", (1, 6)), ("right", (1, 4)), ("left", (1, 4)), ("back", (2, 5))):
+        for x in xs:
+            coat.put(face, x, 10, (112, 116, 124))
+            coat.put(face, x, 11, (86, 90, 98))
+    coat.row(12, lambda x: lit(suit, 0.72))
+    sleeves(cv, neo, 11, cuff=lit(seam, 0.85))
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        arm.around(lambda s_, y, sw, h, face, x: seam if face in ("right", "left") and x == 1 and y <= 10 else None)
+        arm.row(10, lit(seam, 0.85))
+        arm.around(lambda s_, y, sw, h, face, x: grain((26, 30, 38), s_, y, 3, 402) if y == 11 else None)   # gloves
+        arm.fill("bottom", lambda x, y, w, h: (22, 26, 34))
+    legs(cv, neo, lambda x, y: grain((26, 30, 38), x, y, 3, 403), boot_from=9, sole=(18, 20, 24))
+    for name in ("right_leg", "left_leg"):
+        leg = Box(cv, name)
+        leg.around(lambda s_, y, sw, h, face, x: seam if face in ("right", "left") and x == 1 and y < 9 else None)
+        leg.row(9, lit(seam, 0.85))                                      # the booties' tops
+        leg.put("front", 1, 10, (60, 66, 78))                            # their laces
+        leg.put("front", 2, 10, (60, 66, 78))
+    # The hood: the face open, the rest close round the head.
+    def hood_f(face, x, y, w, h):
+        if face == "bottom":
+            return False
+        if face == "front":
+            if 1 <= x <= w - 2 and 1 <= y <= h - 1:
+                return False                                             # the face shows through
+            return lit(suit, 0.75)
+        c = neo(x, y)
+        if face in ("right", "left") and x == w // 2:
+            c = seam                                                     # a seam over the ears
+        return c
+    Box(cv, "diver_hood").all(hood_f)
+    # The goggle strap round the hood.
+    band = Box(cv, "diver_band")
+    band.all(lambda face, x, y, w, h: grain((50, 54, 60), x, y, 3, 404))
+    band.fill("top", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else (50, 54, 60))
+    band.fill("bottom", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else (50, 54, 60))
+    # The goggles: brass rims, green glass with a glint, a dark rubber bridge between them.
+    brass = (196, 160, 70)
+
+    def goggle(x, y, w, h):
+        if x in (3,):
+            return (40, 42, 46)                                          # the bridge
+        lens = 0 <= x <= 2 or 4 <= x <= 6
+        if not lens:
+            return brass
+        inner = x in (1, 5) and y >= 0
+        if inner:
+            return (180, 236, 220) if y == 0 else (70, 140, 128)        # a glint, then the glass
+        return brass
+    gg = Box(cv, "diver_goggles")
+    gg.all(lambda face, x, y, w, h: lit(brass, 0.8))
+    gg.fill("front", goggle)
+    gg.fill("back", lambda x, y, w, h: (40, 42, 46))
+    # The line across the chest, and the coil at the hip.
+    hemp = (198, 170, 112)
+    Box(cv, "diver_line").all(lambda face, x, y, w, h: hemp if (y + x) % 2 else lit(hemp, 0.78))
+    rope = Box(cv, "diver_rope")
+    rope.all(lambda face, x, y, w, h: (lit(hemp, 1.05) if (x + y) % 2 else lit(hemp, 0.76)) if face != "top" else lit(hemp, 0.6))
+    rope.fill("top", lambda x, y, w, h: lit(hemp, 0.55) if 1 <= x <= w - 2 and 1 <= y <= h - 2 else hemp)   # the coil's hollow
+    # The knife: a black sheath, a steel pommel.
+    kn = Box(cv, "diver_knife")
+    kn.all(lambda face, x, y, w, h: (178, 184, 192) if y == 0 else ((30, 32, 36) if y < h - 1 else (120, 124, 130)))
+    return cv
+
+
 def outfit_netherrunner():
     """[nether] The Nether runners: a long coat gone soot-dark and scorched at the hem from the heat, gold trim down
     its front and at its cuffs (gold is what the piglins look for), leather over the shoulders, a crimson scarf at the
@@ -2316,6 +2424,7 @@ OUTFITS = {
     "fireworks": outfit_fireworks,                                        # [fireworks]
     "cartographer": outfit_cartographer,                                  # [cartographer]
     "emerald": outfit_emerald,                                            # [emerald]
+    "diver": outfit_diver,                                                # [diver]
     "netherrunner": outfit_netherrunner,                                  # [nether]
 }
 def emerald_glow():

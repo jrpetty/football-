@@ -222,6 +222,7 @@ public final class TownPlan {
             case "trainingyard" -> "corner";          // [war-prep] the training yard by the watchtower, at a corner
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
             case "powderhut" -> "edge";               // [fireworks] the powder hut, away from the houses (FireworksMaker)
+            case "divershed" -> "edge";               // [diver] on the bank of its water (Divers.shedSite), out at the edge
             default -> "home";
         };
     }

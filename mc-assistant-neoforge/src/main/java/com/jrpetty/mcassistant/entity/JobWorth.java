@@ -200,6 +200,9 @@ public final class JobWorth {
             // emeralds and buys what nobody here can make. Paid like the scouts and a little over, for the bargaining.
             case "EMERALD" -> new Post(key, title, trade, role, 2, 2, 1.0, 1.0, "long days on the road, and a head for a bargain",
                 "trades the town's surplus with the villagers for what it cannot make");
+            // [diver] Under the water all day, on its own breath, and the one the town shouts for when somebody's in.
+            case "DIVER" -> new Post(key, title, trade, role, 2, 2, 1.0, 1.0, "cold, deep work on your own breath",
+                "fuels the furnaces with kelp, and pulls folk out of the water");
             // [nether] Through the gateway: lava, ghasts, blazes and the piglins' tempers, and the most skill the town asks of
             // anybody: the best paid of all, a small picked team.
             case "NETHER" -> new Post(key, title, trade, role, 4, 4, 1.2, 1.0, "the most dangerous work there is, and highly skilled; a small picked team",
@@ -920,6 +923,7 @@ public final class JobWorth {
             case "FIREWORKS" -> "the powder hut";      // [fireworks]
             case "CARTOGRAPHER" -> "the map room";     // [cartographer]
             case "EMERALD" -> "the trading post";      // [emerald]
+            case "DIVER" -> "the kelp beds";            // [diver]
             case "NETHER" -> "the Nether runs";        // [nether]
             default -> "the " + JobMarket.noun(t) + "s";
         };

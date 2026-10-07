@@ -76,6 +76,8 @@ public final class Asks {
         BUILDINGS.put("cartographer", "maproom");
         BUILDINGS.put("trading", "tradingpost");          // [emerald] the Trading Post (EmeraldTrader)
         BUILDINGS.put("tradingpost", "tradingpost");
+        BUILDINGS.put("diver", "divershed");              // [diver] the diver's shed (Divers)
+        BUILDINGS.put("kelp", "divershed");
     }
 
     /** The trade named in a line, or null. */

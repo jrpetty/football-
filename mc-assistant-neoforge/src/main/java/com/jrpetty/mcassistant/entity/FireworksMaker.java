@@ -511,7 +511,7 @@ public final class FireworksMaker {
                 if (f.trip() != null || f.expedition() != null) continue;
                 StationTask t = f.stationTask();
                 if (t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.BANK || t == StationTask.CAVE
-                    || t == StationTask.FERRY || t == StationTask.SCOUT) continue;
+                    || t == StationTask.FERRY || t == StationTask.SCOUT || t == StationTask.NETHER) continue;   // [nether]
                 boolean spare = t == StationTask.NONE || Villages.overStaffed(id, t) || !t.isCraft() && hands(id, t) >= 3;
                 if (pass == 0 ? !spare : t != StationTask.NONE && hands(id, t) < 2) continue;   // never a trade's only hand
                 int score = suits(f);

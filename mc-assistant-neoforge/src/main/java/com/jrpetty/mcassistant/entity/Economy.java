@@ -116,6 +116,7 @@ public final class Economy {
                 || s.is(Items.DIORITE) || s.is(Items.GRANITE) || s.is(Items.TUFF) || s.is(Items.STONE_BRICKS)
                 || s.is(Items.SAND) || s.is(Items.GRAVEL) || s.is(Items.CLAY_BALL) || s.is(Items.BRICK) || s.is(Items.FLINT)) return Kind.STONE;
         if (s.is(Items.COAL) || s.is(Items.CHARCOAL) || s.is(Items.RAW_IRON) || s.is(Items.IRON_INGOT) || s.is(Items.RAW_COPPER)
+                || s.is(Items.DRIED_KELP_BLOCK)                                  // [diver] kelp blocks: fuel, with the coal
                 || s.is(Items.COPPER_INGOT) || s.is(Items.RAW_GOLD) || s.is(Items.GOLD_INGOT) || s.is(Items.DIAMOND)
                 || s.is(Items.EMERALD) || s.is(Items.REDSTONE) || s.is(Items.LAPIS_LAZULI) || s.is(Items.OBSIDIAN)
                 || s.is(Items.IRON_NUGGET) || s.is(Items.GOLD_NUGGET) || s.is(Items.QUARTZ)) return Kind.ORE;
@@ -373,6 +374,9 @@ public final class Economy {
             // [emerald] What it brings home from the villagers: emeralds for the surplus, and what the emeralds bought.
             // (What it took out of the stores and brings back unsold is no new work: Economy.given knows it.)
             case EMERALD -> true;
+            // [diver] The kelp and what is dried and packed of it, the bed's clay, sand and gravel, the seagrass and the
+            // pickles, the turtles' scutes, and the monument's prismarine.
+            case DIVER -> true;
             // [nether] All the Nether gives up: its ore, its stone and sand, its wart, the blazes' rods, the piglins' barter.
             case NETHER -> k != null;
             default -> k == Kind.CRAFT || k == Kind.ANIMAL;                     // the crafts: smith, tailor, brewer, enchanter, shop

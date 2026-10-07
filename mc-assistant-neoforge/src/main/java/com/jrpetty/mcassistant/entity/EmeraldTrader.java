@@ -825,7 +825,7 @@ public final class EmeraldTrader {
         if (f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive()) return Integer.MIN_VALUE;
         if (f.trip() != null || f.expedition() != null) return Integer.MIN_VALUE;
         StationTask t = f.stationTask();
-        if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE
+        if (t.isCraft() || t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.HAUL || t == StationTask.CAVE || t == StationTask.NETHER   // [nether]
             || t == StationTask.BANK || t == StationTask.FERRY || t == StationTask.SCOUT) return Integer.MIN_VALUE;
         if (t != StationTask.NONE && t != StationTask.EMERALD && Villages.share(id, t) < 0.5) return Integer.MIN_VALUE;
         int years = f.ageYears();

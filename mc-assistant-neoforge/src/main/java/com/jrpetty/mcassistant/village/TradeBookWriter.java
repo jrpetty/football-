@@ -449,6 +449,24 @@ public final class TradeBookWriter {
             "masters in three villages, and a bell for the square",
             "every villager for a day's walk, and Mending for every pick",
         }, "Why did the villager raise its prices? The trader kept coming back for more."));
+        // [diver] The kelp farmer and diver (entity/Divers).
+        craft("DIVER", new Craft("diver", "Diver's", "the kelp beds", "diving", "the kelp", "kelp beds cut", new String[]{
+            "Go up for air before you need it, not when you do. The bed will wait; your lungs won't.",
+            "Cut the kelp above the lowest piece, never pull it up. Leave the root and it grows again by itself.",
+            "Plant on the bed where the water is three deep or more, a column apart, and the bed grows into a forest.",
+            "A dried kelp block smelts twenty in a furnace. Every one on the fire is two and a half coals that go on the torches.",
+            "Dry the kelp over the campfire for nothing, and in the smoker on the kelp you dried yesterday.",
+            "Seagrass only comes up with shears. Cut it for the turtles, and they'll give you scutes for it.",
+            "Fence the turtles' eggs and light them. A zombie will trample a nest in a night.",
+            "Never dig the bank, only the bed. A bank dug away is a flood waiting to happen.",
+            "Watch the water. If somebody's in it and not getting out, go in after them.",
+        }, new String[]{
+            "our own breath, and kelp cut by hand",
+            "a smoker and a campfire on the bank, and the bed planted",
+            "turtle helmets, and the monument's prismarine with the watch beside us",
+            "the deep sea's beds, and conduits if we're lucky",
+            "every sea there is",
+        }, "Why don't divers ever get lonely? They're always surrounded by kelp."));
     }
 
     /** A trade's lore, or a plain one for a trade with none written. */

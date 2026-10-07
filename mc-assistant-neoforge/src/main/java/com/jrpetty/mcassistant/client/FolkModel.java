@@ -51,6 +51,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         "fireworks",                                           // [fireworks] the same
         "cartographer",                                        // [cartographer] likewise
         "emerald",                                             // [emerald] the emerald trader's: see outfit()
+        "diver",                                               // [diver] its own too: see outfit()
         "netherrunner",                                        // [nether] nor this: see outfit()
     };
 
@@ -64,8 +65,10 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     public static final int CARTO_OUTFIT = 23;
     /** [emerald] The emerald trader's outfit: the merchant's green coat, the wide hat, the pack (tools/folk_art.py). */
     public static final int EMERALD_OUTFIT = 24;
-    /** [nether] The Nether runner's outfit, after the emerald trader's. */
-    public static final int NETHER_OUTFIT = 25;
+    /** [diver] The diver's outfit, after the emerald trader's. */
+    public static final int DIVER_OUTFIT = 25;
+    /** [nether] The Nether runner's outfit, after the diver's. */
+    public static final int NETHER_OUTFIT = 26;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -198,6 +201,12 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"emerald_roll", "body", "emerald"},
         {"emerald_lamp", "body", "emerald"},
         {"emerald_purse", "body", "emerald"},
+        {"diver_hood", "head", "diver"},
+        {"diver_band", "head", "diver"},
+        {"diver_goggles", "head", "diver"},
+        {"diver_line", "body", "diver"},
+        {"diver_rope", "body", "diver"},
+        {"diver_knife", "body", "diver"},
         {"netherrunner_helm", "head", "netherrunner"},
         {"netherrunner_neckguard", "head", "netherrunner"},
         {"netherrunner_crest", "head", "netherrunner"},
@@ -397,6 +406,12 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("emerald_roll", CubeListBuilder.create().texOffs(88, 28).addBox(-5.0F, -2.5F, 4.1F, 10.0F, 3.0F, 3.0F), PartPose.ZERO);
         body.addOrReplaceChild("emerald_lamp", CubeListBuilder.create().texOffs(100, 36).addBox(4.2F, 3.0F, 5.0F, 1.0F, 3.0F, 2.0F), PartPose.ZERO);
         body.addOrReplaceChild("emerald_purse", CubeListBuilder.create().texOffs(114, 28).addBox(2.5F, 8.5F, -4.6F, 2.0F, 3.0F, 1.0F), PartPose.ZERO);
+        head.addOrReplaceChild("diver_hood", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -10.0F, -4.0F, 8.0F, 10.0F, 8.0F, new CubeDeformation(0.55F)), PartPose.ZERO);
+        head.addOrReplaceChild("diver_band", CubeListBuilder.create().texOffs(96, 0).addBox(-4.0F, -9.0F, -4.0F, 8.0F, 1.0F, 8.0F, new CubeDeformation(0.8F)), PartPose.ZERO);
+        head.addOrReplaceChild("diver_goggles", CubeListBuilder.create().texOffs(64, 20).addBox(-3.5F, -10.4F, -5.6F, 7.0F, 2.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("diver_line", CubeListBuilder.create().texOffs(84, 20).addBox(-0.5F, -7.5F, -0.5F, 1.0F, 15.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 5.5F, -3.75F, 0.0F, 0.0F, 0.62F));
+        body.addOrReplaceChild("diver_rope", CubeListBuilder.create().texOffs(64, 26).addBox(4.2F, 6.5F, -2.0F, 2.0F, 5.0F, 4.0F), PartPose.ZERO);
+        body.addOrReplaceChild("diver_knife", CubeListBuilder.create().texOffs(88, 26).addBox(-5.4F, 8.0F, -1.0F, 1.0F, 4.0F, 2.0F), PartPose.ZERO);
         head.addOrReplaceChild("netherrunner_helm", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 4.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
         head.addOrReplaceChild("netherrunner_neckguard", CubeListBuilder.create().texOffs(64, 12).addBox(-4.5F, -7.0F, 3.6F, 9.0F, 4.0F, 1.0F), PartPose.ZERO);
         head.addOrReplaceChild("netherrunner_crest", CubeListBuilder.create().texOffs(104, 0).addBox(-1.0F, -10.0F, -5.6F, 2.0F, 2.0F, 1.0F), PartPose.ZERO);
@@ -440,6 +455,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         if (job == AssistantEntity.StationTask.FIREWORKS.ordinal()) return FIREWORKS_OUTFIT;   // [fireworks] "fireworks"
         if (job == AssistantEntity.StationTask.CARTOGRAPHER.ordinal()) return CARTO_OUTFIT;   // [cartographer] the scholar's coat
         if (job == AssistantEntity.StationTask.EMERALD.ordinal()) return EMERALD_OUTFIT;   // [emerald] "emerald": the merchant's coat
+        if (job == AssistantEntity.StationTask.DIVER.ordinal()) return DIVER_OUTFIT; // [diver] "diver": the wetsuit and goggles
         if (job == AssistantEntity.StationTask.NETHER.ordinal()) return NETHER_OUTFIT;   // [nether] "netherrunner"
         return Math.floorMod(job, CAVE_OUTFIT);
     }

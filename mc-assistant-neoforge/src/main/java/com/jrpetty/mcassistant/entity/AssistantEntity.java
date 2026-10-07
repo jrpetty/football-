@@ -158,6 +158,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // and trades with the villagers through their own offers, for emeralds, and emeralds for what the town wants
         // (EmeraldTrader).
         EMERALD("trading", "Emerald trader"),
+        // [diver] A town by a river, a lake or the sea keeps a kelp farmer and diver from fifteen folk: its kelp beds
+        // on the bed of the water, dried and packed into blocks that fire the furnaces in place of coal; clay, sand and
+        // gravel up from the bed; seagrass for the turtles on its beach, and their scutes; and anybody in the water
+        // pulled out (Divers).
+        DIVER("diving", "Diver"),
         // [nether] A Nether Age town with its gateway lit keeps a small, picked team that really goes through it: quartz,
         // glowstone, wart, blaze rods, and what the piglins give for gold, home to the brewer and the builders (NetherRunners).
         NETHER("the Nether runs", "Nether runner");
@@ -168,6 +173,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 && this != FERRY                                                                      // [transport]
                 && this != CARTOGRAPHER                                                               // [cartographer]
                 && this != EMERALD                                                                    // [emerald]
+                && this != DIVER                                                                      // [diver]
                 && this != NETHER;                                                                    // [nether]
         }
 
@@ -683,6 +689,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      */
     private void climbOutOfTheWater() {
         if (!isInWater() || isPassenger() || isSleeping()) { wetFor = 0; return; }
+        if (underwaterWork()) { wetFor = 0; return; }        // [diver] down there on purpose, or being pulled out
         if (wetFor++ == 0) wetFrom = position();
         if (wetFor < 10) return;
         if (position().distanceToSqr(wetFrom) > 36.0) { wetFor = 0; return; }   // making way
@@ -1453,6 +1460,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FIREWORKS -> null;               // [fireworks] its powder and paper are the stores', drawn at the hut (FireworksMaker)
             case CARTOGRAPHER -> null;            // [cartographer] its paper and compasses are drawn at the map room (Cartographers)
             case EMERALD -> null;                 // [emerald] its goods are drawn from the stores for each trip (EmeraldTrader)
+            case DIVER -> null;                   // [diver] its kit is drawn at the stores on its rounds (KelpBeds.atStores)
             case NETHER -> null;                  // [nether] kitted by the town before each run (NetherRunners.kitUp)
         };
         // ONE restock, one pace. This used to be three separate paced scoops in
@@ -1761,6 +1769,16 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** [cartographer] A cartographer's day at the map room and out walking (Cartographers): VillageFolkEntity does it. */
     protected boolean cartographerWork() { return false; }
+    /** [diver] A diver's day (Divers): VillageFolkEntity does it. */
+    protected boolean diverWork() { return false; }
+
+    /** [diver] Under the water on purpose (a diver at work below, or one being pulled out): its float held off, and no
+     *  climbing out of the water of its own accord (VillageFolkEntity: Divers). */
+    protected boolean underwaterWork() { return false; }
+
+    /** [diver] Has its village dried kelp blocks in the stores for its fires (VillageFolkEntity: FuelBook)? */
+    public boolean kelpForFuel() { return false; }
+
     /** [nether] A Nether runner's day at home (NetherRunners): VillageFolkEntity does it. */
     protected boolean netherWork() { return false; }
 
@@ -2697,6 +2715,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FIREWORKS -> false;              // [fireworks] its powder and paper are the stores', drawn at the hut (FireworksMaker)
             case CARTOGRAPHER -> false;           // [cartographer] its paper and compasses are drawn at the map room (Cartographers)
             case EMERALD -> false;                // [emerald] nothing of its own to keep: the goods are the town's (EmeraldTrader)
+            case DIVER -> false;                  // [diver] its kit is drawn at the stores on its rounds (KelpBeds.atStores)
             case NETHER -> false;                 // [nether] kitted by the town before each run (NetherRunners.kitUp)
         };
     }
@@ -3558,7 +3577,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             return;
         }
         // Running out of air: head for the surface instead of quietly drowning.
-        if (this.isEyeInFluid(net.minecraft.tags.FluidTags.WATER) && this.getAirSupply() < 120) {
+        // ([diver] A diver at work below keeps its own breath, and goes up for it itself: DiverSwim.)
+        if (this.isEyeInFluid(net.minecraft.tags.FluidTags.WATER) && this.getAirSupply() < 120 && !underwaterWork()) {
             BlockPos surface = surfaceAbove();
             if (surface != null) {
                 getNavigation().moveTo(surface.getX() + 0.5, surface.getY(), surface.getZ() + 0.5, 1.3D);
@@ -3622,6 +3642,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      */
     @Override
     public void setJumping(boolean jumping) {
+        // [diver] A diver going down, or at work on the bed, does not float up: its stroke is its own (DiverSwim).
+        if (jumping && !level().isClientSide && underwaterWork()) {
+            super.setJumping(false);
+            return;
+        }
         // A ladder is climbed by HOLDING jump — vanilla applies the upward
         // motion in handleOnClimbable while the jump flag is set. The anti-hop
         // cap below would therefore have let a bot rise one block a second and
@@ -4340,11 +4365,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 : (s.is(Items.BOW) || s.is(Items.CROSSBOW) || s.is(Items.SHIELD)) ? 1
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0));
             case SMELT -> (s.is(Items.RAW_IRON) || s.is(Items.RAW_GOLD) || s.is(Items.RAW_COPPER)) ? 64
-                : ((s.is(Items.COAL) || s.is(Items.CHARCOAL)) ? (savingCoal() || (s.is(Items.CHARCOAL) && coalLow()) ? 0 : 32)   // [economy] its charcoal is the stores'
+                : ((s.is(Items.COAL) || s.is(Items.CHARCOAL)) ? (savingCoal() || kelpForFuel() || (s.is(Items.CHARCOAL) && coalLow()) ? 0 : 32)   // [economy] its charcoal is the stores' ([diver] its coal too, while kelp burns)
                 // What it is firing and cutting for the masons (Masonry), and the sand for its glass.
                 : (s.is(Items.COBBLESTONE) || s.is(Items.STONE) || s.is(Items.CLAY_BALL)) ? 64
                 : (s.is(Items.SAND) || s.is(Items.RED_SAND)) ? 32
                 : (s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS)) ? 16
+                : s.is(Items.DRIED_KELP_BLOCK) ? 8                  // [diver] its fuel, brought out to it, not banked again
                 : (s.get(DataComponents.FOOD) != null ? 8 : 0));
             case HAUL -> s.get(DataComponents.FOOD) != null ? 8 : 0; // rations for the road
             case MINE -> s.is(Items.TORCH) ? 16 : (s.is(Items.COBBLESTONE) ? (isSettler() ? 32 : 16)
@@ -4372,6 +4398,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             // to lock a finished map: its work in hand, not the day's takings (Cartographers).
             case CARTOGRAPHER -> Cartographers.keeps(s);
             case EMERALD -> s.get(DataComponents.FOOD) != null ? 8 : 0;  // [emerald] rations for the road; the goods go home
+            // [diver] Kelp to plant and to dry, dried kelp to pack, seagrass for the turtles, pickles for the quay's lights,
+            // its shears and pick, and a couple of blocks of fuel for its smoker: the rest it banks itself (KelpBeds.atStores).
+            case DIVER -> s.is(Items.KELP) || s.is(Items.DRIED_KELP) ? 64 : s.is(Items.SEAGRASS) || s.is(Items.SEA_PICKLE) ? 16
+                : s.is(Items.SHEARS) || s.getItem() instanceof net.minecraft.world.item.PickaxeItem || s.is(Items.TURTLE_HELMET) ? 1
+                : s.is(Items.DRIED_KELP_BLOCK) || s.is(Items.CHARCOAL) || s.is(ItemTags.LOGS) ? 2
+                : s.is(Items.TURTLE_SCUTE) ? 5 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
             case NETHER -> NetherRunners.keeps(s);                       // [nether] the run's kit; the haul goes home
             case NONE -> 0;
         };
@@ -5675,6 +5707,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 case FIREWORKS -> new Branch[]{ PORTER, PROSPECTOR };  // [fireworks]
                 case CARTOGRAPHER -> new Branch[]{ PORTER, PROSPECTOR };   // [cartographer] long walks, and an eye for the ground
                 case EMERALD -> new Branch[]{ PORTER, SENTINEL };      // [emerald] a pack on its back, the road to walk
+                case DIVER -> new Branch[]{ PORTER, PROSPECTOR };      // [diver]
                 case NETHER -> new Branch[]{ SENTINEL, PROSPECTOR };   // [nether]
                 case NONE -> new Branch[]{};
             };
@@ -7320,6 +7353,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // [emerald] Out to a village of villagers with the town's surplus, or at the trading post with the book.
                 if (emeraldWork()) return true;
             }
+            case DIVER -> {
+                // [diver] The kelp beds, the shed, the beach and the quay; and anybody in the water (Divers).
+                if (diverWork()) return true;
+            }
             case NETHER -> {
                 // [nether] Fitted out and through the gateway, or at home by it with the charts (NetherRunners).
                 if (netherWork()) return true;
@@ -7386,11 +7423,13 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  when there is any, and timber — which is what there is. */
     public static final java.util.function.Predicate<ItemStack> SMELT_FUEL = s ->
         s.is(Items.COAL) || s.is(Items.CHARCOAL)
-        || s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS);
+        || s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS)
+        || s.is(Items.DRIED_KELP_BLOCK);                   // [diver] the diver's kelp blocks, burnt before coal (FuelBook)
 
     /** Timber, the fuel that is not coal. */
     public static final java.util.function.Predicate<ItemStack> WOOD_FUEL = s ->
-        s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS);
+        s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS)
+        || s.is(Items.DRIED_KELP_BLOCK);                   // [diver] and the diver's kelp blocks, which are not coal
 
     /**
      * What this smelter's furnaces run on, as its kit: coal, charcoal and timber; or, while its
@@ -7401,7 +7440,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      * it keeps none (jobDepositReserve), fetches wood, and burns no coal (SmeltGoal).
      */
     protected java.util.function.Predicate<ItemStack> smeltFuel() {
-        return savingCoal() ? WOOD_FUEL : SMELT_FUEL;
+        return savingCoal() || kelpForFuel() ? WOOD_FUEL : SMELT_FUEL;     // [diver] kelp blocks and wood while kelp burns
     }
 
     /** Raw or block-form ore the smeltery keeper takes as input. */
@@ -7849,7 +7888,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 + surplusOf(Items.BRICKS, 0) + surplusOf(Items.BRICK, 0)
                 // [economy] The charcoal it burnt for the stores, and any coal past its own fuel: banked,
                 // all of it while the village is saving coal (Fuel), for it sat in the pack otherwise.
-                + surplusOf(Items.CHARCOAL, savingCoal() || coalLow() ? 0 : 32) + surplusOf(Items.COAL, savingCoal() ? 0 : 32)
+                + surplusOf(Items.CHARCOAL, savingCoal() || coalLow() || kelpForFuel() ? 0 : 32)
+                + surplusOf(Items.COAL, savingCoal() || kelpForFuel() ? 0 : 32)                  // [diver] banked while kelp burns
                 // The crew's dinners: banked so the supply chain can route
                 // them, minus a few kept back for the cook's own table.
                 + surplusOf(Items.COOKED_BEEF, 3) + surplusOf(Items.COOKED_PORKCHOP, 3)
@@ -7877,6 +7917,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case FIREWORKS -> 0;                  // [fireworks] its rockets go into the stores as they are made (FireworksMaker)
             case CARTOGRAPHER -> 0;               // [cartographer] its maps go to the hall, the hands they are for, or the stores (Cartographers)
             case EMERALD -> 0;                    // [emerald] what it brings home goes in when it is home (EmeraldTrader.home)
+            case DIVER -> 0;                      // [diver] it banks its own at the stores on its rounds (KelpBeds.atStores)
             case NETHER -> 0;                     // [nether] its haul goes into the storehouse when it is home (NetherRuns)
         };
         // Never more than a stash would actually move. The trade's own sums kept back less
