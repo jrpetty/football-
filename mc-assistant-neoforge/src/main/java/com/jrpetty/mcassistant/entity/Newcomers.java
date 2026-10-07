@@ -598,13 +598,13 @@ public final class Newcomers {
                 keepAwake(level, f);
                 BlockPos camp = spot(p, f);
                 if (Visitors.walk(f, level, camp, 3.0, 0.75D, walk(f))) {
-                    release(level, f);
                     arrived(level, town, pid, day);                       // the first of them there asks for them all
                 }
                 f.hobbyNow = "on the road to " + Villages.name(target);
                 f.lastLeisureTick = f.tickCount;
             }
             case "camp" -> {
+                keepAwake(level, f);                                     // out past the town's own ground: kept awake to hear the answer
                 BlockPos camp = spot(p, f);
                 if (Visitors.flat(f.blockPosition(), camp) > 6 * 6) Visitors.walk(f, level, camp, 2.0, 0.6D, walk(f));
                 else if (town != null && f.getRandom().nextInt(6) == 0) f.getLookControl().setLookAt(town.centre().getX(), f.getEyeY(), town.centre().getZ());

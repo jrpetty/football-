@@ -52,7 +52,7 @@ public final class Assemblies {
         ELECTION("an election"), COMING_OF_AGE("a coming of age"), ENVOY("an envoy's audience"),
         WATCH("the changing of the watch"), FOUNDING("Founding Day"),
         REFERENDUM("the town's vote"),                          // [civic] a count at the board, or a great work opened (Referendums)
-        FESTIVAL("a festival"),                               // [batchB] the May dance, the bonfire, the fair, the harvest (Festivals)
+        FESTIVAL("a festival"),                                 // [batchB] the May dance, the bonfire, the fair, the harvest (Festivals)
         MEETING("the town meeting");                         // [batchF] once a week (TownMeeting)
 
         public final String label;

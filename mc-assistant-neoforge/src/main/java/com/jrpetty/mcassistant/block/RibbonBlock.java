@@ -16,8 +16,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
  * [civic] An opening ribbon: a band of red cloth strung across a doorway, a bridge's end or a road at waist height,
- * for the leader to cut when a great work is opened (BigWorks). Made of string and red dye, by the tailor or
- * whoever has the makings; a player can string one anywhere. It runs one way or the other across the block (the
+ * for the leader to cut when a great work is opened (BigWorks). Made of string and red dye, by the shop's workshop
+ * on the town's order or there and then out of the stores; a player can string one anywhere. It runs one way or the
+ * other across the block (the
  * way across the path its placer is looking along), stops nobody walking through it, and drops itself.
  */
 public class RibbonBlock extends Block {

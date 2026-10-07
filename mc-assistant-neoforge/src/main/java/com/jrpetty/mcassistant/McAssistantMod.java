@@ -188,7 +188,8 @@ public final class McAssistantMod {
         ITEMS.registerSimpleItem("village_coin");
 
     /** [civic] The opening ribbon: red cloth strung across a great work's end, cut by the leader when it opens
-     *  (entity/BigWorks). String and red dye at a crafting table; the tailor makes them for the town. */
+     *  (entity/BigWorks). String and red dye at a crafting table: the shop's workshop makes them for the town when a
+     *  work is voted for, or they are made there and then out of the stores. */
     public static final DeferredBlock<com.jrpetty.mcassistant.block.RibbonBlock> RIBBON =
         BLOCKS.registerBlock("opening_ribbon",
             com.jrpetty.mcassistant.block.RibbonBlock::new,

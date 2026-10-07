@@ -6305,7 +6305,8 @@ it for a few days, and has the stones it laid on its card.
 
 **The opening ribbon** is a new block. Craft three from two string and a red dye (shapeless). It hangs at waist
 height across a doorway, a road or a bridge's end, lets everybody walk through it, and drops itself when
-broken. When a work is voted for, the shop's workshop puts the ribbon on its order book.
+broken. While a work is being built, the town's tailor makes the ribbon for its opening from the stores' string
+and red dye.
 
 **Where you see it.** The board shows what is put to the town, the tally so far, the result, the work under
 way and how far on it is. In the town's books, the News page has *Votes, great works and newcomers*: the

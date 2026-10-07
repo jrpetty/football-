@@ -643,7 +643,6 @@ public final class Referendums {
                     .append(j.aye() ? "aye" : "nay").append(": ").append(j.why()).append('.');
             }
         }
-        String works = BigWorks.cardLine(f);
         if (qs.isEmpty() && BigWorks.underWay(id)) {
             CompoundTag w = BigWorks.current(id);
             if (w != null) sb.append(" We're building ").append(w.getString("title")).append(", all of us together.");
@@ -907,7 +906,6 @@ public final class Referendums {
     public static String considerForTests(ServerLevel level, Villages.Village v) {
         CivicRecord.town(v.id()).remove("considered");
         int before = list(v.id()).size();
-        long dt = level.getDayTime();
         consider(level, v);
         ListTag all = list(v.id());
         return all.size() > before && all.get(all.size() - 1) instanceof CompoundTag q ? q.getString("title") : "";

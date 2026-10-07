@@ -337,17 +337,6 @@ public final class BigWorks {
         CivicRecord.town(id).put("work", w);
         CivicRecord.changed();
         PIECES.remove(id);
-        Work kind = Work.named(w.getString("kind"));
-        String the = kind == null ? "the work" : kind.the;
-        // A ribbon for the opening: on the shop's order book, if the stores have none.
-        int strung = w.getLongArray("ribbon").length;
-        if (strung > 0 && Market.stock(level, id, s -> s.is(McAssistantMod.RIBBON_ITEM.get())) < strung) {
-            try {
-                Workshop.order(level, v, McAssistantMod.RIBBON_ITEM.get(), strung, "the opening of " + the);
-            } catch (RuntimeException e) {
-                LOG.debug("[MCA-CIVIC] no ribbon on order: {}", e.toString());
-            }
-        }
         Villages.tell(id, day, "work on " + w.getString("title") + " starts tomorrow, the whole town lending a hand");
         Market.assemblyNews(id, "Today we start on " + w.getString("title") + ". Everybody who can, lend a hand till the noon bell!");
         LOG.info("[MCA-CIVIC] {}: {} to be built ({} pieces, {})", Villages.name(id), w.getString("title"),
@@ -418,6 +407,29 @@ public final class BigWorks {
         Market.assemblyNews(id, capital(the) + " is finished! We open it this evening — come one, come all.");
         LOG.info("[MCA-CIVIC] {}: {} finished ({} set, {} passed over); ribbon {}", Villages.name(id), w.getString("title"),
             w.getInt("placed"), w.getInt("spared"), strung ? "strung" : "none");
+    }
+
+    /**
+     * The tailor's piece (Crafts.tailor), while a great work is under way and the stores have not ribbon enough for its
+     * opening: three lengths of opening ribbon, of two of the stores' string and a red dye, as at the bench. Null if no
+     * ribbon is wanted or the makings are not in the stores.
+     */
+    @Nullable
+    static String tailorRibbon(ServerLevel level, Villages.Village v) {
+        CompoundTag w = current(v.id());
+        if (w == null) return null;
+        int want = w.getLongArray("ribbon").length;
+        Item ribbon = McAssistantMod.RIBBON_ITEM.get();
+        if (want == 0 || Market.stock(level, v.id(), s -> s.is(ribbon)) >= want) return null;
+        if (Market.stock(level, v.id(), s -> s.is(Items.STRING)) < 2 || Market.stock(level, v.id(), s -> s.is(Items.RED_DYE)) < 1) return null;
+        if (!TownWork.take(level, v, s -> s.is(Items.STRING), 2)) return null;
+        if (!TownWork.take(level, v, s -> s.is(Items.RED_DYE), 1)) {
+            TownWork.give(level, v, new ItemStack(Items.STRING, 2));
+            return null;
+        }
+        TownWork.give(level, v, new ItemStack(ribbon, 3));
+        Work kind = Work.named(w.getString("kind"));
+        return "three lengths of opening ribbon, for " + (kind == null ? "the town's great work" : kind.the);
     }
 
     /**
