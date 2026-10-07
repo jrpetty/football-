@@ -785,6 +785,7 @@ public final class School {
         if (p.has(Social.Trait.HARDWORKING)) pct += 15;
         if (p.has(Social.Trait.CURIOUS)) pct += 10;
         if (p.has(Social.Trait.EASYGOING)) pct -= 15;
+        pct += CityTree.schoolPercent(pupil.ownerId());                // [perks] Primers, the Scholars' Endowment
         return Math.max(1, (cap * pct + BEATS_TO_CAP * 100 - 1) / (BEATS_TO_CAP * 100));     // rounded up: sixty beats fill it
     }
 

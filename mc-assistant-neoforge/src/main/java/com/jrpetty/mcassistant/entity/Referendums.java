@@ -313,6 +313,10 @@ public final class Referendums {
             }
             forIt += word;
             if (word > most) { most = word; whyFor = "if " + byName + " says we need it, that's good enough for me"; }
+            // [perks] An Orator in office: the way it put the case stays with every voter.
+            int oratory = Perks.oratory(id, byId);
+            forIt += oratory;
+            if (oratory > most) { most = oratory; whyFor = "the way " + byName + " put it, I'm convinced"; }
         }
         long day = level.getDayTime() / 24000L;
         forIt += Math.floorMod(Objects.hash(voter.getUUID(), q.getInt("id"), day), 9);

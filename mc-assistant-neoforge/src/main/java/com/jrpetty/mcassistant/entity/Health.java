@@ -395,6 +395,7 @@ public final class Health {
         boolean wet = s.wet >= EXPOSED;
         int odds = oddsForTests > 0 ? oddsForTests : wet ? WET_ODDS : WORN_ODDS;
         if (f.dietPercent() < 60) odds = Math.max(1, odds / 2);            // a body poorly fed takes a chill the easier
+        odds = Perks.coldOdds(f, odds);                                      // [perks] a Frail folk takes one the easier
         if (f.getRandom().nextInt(odds) != 0 || caughtThisWeek(village, day) >= WEEKLY_MOST) return;
         catchCold(level, f, wet ? (Weather.stormy(level) ? "caught out in a thunderstorm" : "caught out in the rain")
             : "worn out at its work", day);
@@ -432,6 +433,7 @@ public final class Health {
         State s = f.health();
         RandomSource r = f.getRandom();
         s.cold = COLD_LEAST + r.nextInt(COLD_MOST - COLD_LEAST + 1);
+        s.cold = Math.max(1, Perks.coldLength(f, s.cold));                  // [perks] a Hardy folk shakes it off, a Traditionalist leader's remedies
         s.caughtDay = day;
         s.how = how;
         s.tended = 0L;

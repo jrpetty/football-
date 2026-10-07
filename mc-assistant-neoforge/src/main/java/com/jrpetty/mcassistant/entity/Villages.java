@@ -318,6 +318,8 @@ public final class Villages {
 
     /** "the meeting hall", "a new house": a building as folk would speak of it. */
     public static String spoken(String structure) {
+        Wonders.Wonder wonder = Wonders.byStructure(structure);    // [perks] "the Great Forge"
+        if (wonder != null) return wonder.name;
         return switch (structure) {
             case "fortify" -> "the wall";
             case "storage" -> "the storehouse";
@@ -346,6 +348,7 @@ public final class Villages {
 
     public static void resetForTests() {
         MADE_UP.clear();
+        Perks.resetForTests();                                     // [perks] quiet between the tests; the wonders forgotten
         Bank.resetForTests();
         Culture.resetForTests();                                   // [batchD] the banner's works, the customs, the theatre, the band
         Museum.resetForTests();
@@ -943,7 +946,8 @@ public final class Villages {
         double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null
             ? Workshop.handsWanted(villageId) + ShopRoles.staffWanted(villageId) : 0;   // [econ-store] and its assistants and stock keeper
         // [war-prep] On a war footing the watch's share rises to meet the enemy, out of the trades a town can spare (WarFooting).
-        return WarFooting.share(villageId, slot.trade(), Math.max(0.0, Math.min(max + hands, t + hands)));
+        // [perks] The Standing Army and a Guardian in office a guard more, the Militia one fewer (Perks.share).
+        return WarFooting.share(villageId, slot.trade(), Perks.share(villageId, slot.trade(), Math.max(0.0, Math.min(max + hands, t + hands))));
     }
 
     /** How many hands a trade has over (positive) or under (negative) its share, as the order has
@@ -1530,6 +1534,7 @@ public final class Villages {
             // And opened: the village gathers in front of it this evening (Assemblies).
             Assemblies.opening(villageId, structure, raised.anchor(), raised.facing(), gameTime);
         }
+        Perks.raised(villageId, structure, gameTime);               // [perks] a wonder claimed for the world (where it stands); a deed of the reign
         if ("guesthouse".equals(structure)) {
             com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId);
             Site site = pending == null ? null : pending.get(structure);
@@ -1671,8 +1676,9 @@ public final class Villages {
         // [flats] a block of flats ahead of the next house, in the Iron Age when the town wants one (Flats)
         // [batchF] and, after everything else, the post office and the statue its own people paid for (Civics.wanted);
         // [war-prep] and on a war footing, the defences at the head of the list (WarWorks)
+        // [perks] and a wonder whose dues are laid by, before the next great work (Wonders.wanted)
         return requestedFirst(villageId, WarWorks.wanted(villageId,
-            Civics.wanted(villageId, Flats.wanted(villageId, ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId))))));
+            Civics.wanted(villageId, Wonders.wanted(villageId, Flats.wanted(villageId, ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId)))))));
     }
 
     /** The buildings an age asks for before the next (Villages.needs): the wall, the smeltery and the hall;
@@ -1974,7 +1980,8 @@ public final class Villages {
      * rarer the more (Museum). It is what the ranks ask for past the Town.
      */
     public static int renown(UUID villageId) {
-        return Museum.GREAT_WORK_RENOWN * greatWorks(villageId) + Museum.renown(villageId);
+        return Museum.GREAT_WORK_RENOWN * greatWorks(villageId) + Museum.renown(villageId)
+            + Perks.renown(villageId);                              // [perks] its wonders of the world, its legacies of glory
     }
 
     /** How many great works this village has raised. */
@@ -2119,6 +2126,8 @@ public final class Villages {
         if (project == null) return "nothing for now — the village is gathering what its age asks for";
         String war = WarWorks.whyBuild(villageId, project);        // [war-prep] the defences, on a war footing
         if (war != null) return war;
+        String wonder = Wonders.why(project);                      // [perks] a wonder of the world
+        if (wonder != null) return wonder;
         int folk = headcount(villageId);
         return switch (project) {
             case "guesthouse" -> {

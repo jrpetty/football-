@@ -207,7 +207,8 @@ public final class Fleet {
 
     /** How many boats (and hands) the fleet wants: one to every ten folk, two to four. */
     public static int boatsWanted(UUID village) {
-        return Math.max(FEWEST, Math.min(MOST, Villages.headcount(village) / 10));
+        int more = CityTree.extraBoats(village);                    // [perks] the Shipwrights: a boat more
+        return Math.max(FEWEST, Math.min(MOST + more, Villages.headcount(village) / 10 + more));
     }
 
     /** [fleet] The fishers a town with a fleet wants at the least (Villages.target): a hand for every boat. */
@@ -607,9 +608,10 @@ public final class Fleet {
     @Nullable
     static String keptIn(ServerLevel level, UUID village, long day) {
         String w = weatherForTests;
-        if (w != null) return w.equals("storm") ? "a storm" : w.equals("rain") ? "the rain" : null;   // the tests' weather, and only that
+        if (w != null) return w.equals("storm") ? "a storm"
+            : w.equals("rain") && !CityTree.sailsInRain(village) ? "the rain" : null;   // the tests' weather, and only that ([perks] the Navigators')
         if (Weather.stormy(level)) return "a storm";
-        if (level.isRaining()) return "the rain";
+        if (level.isRaining() && !CityTree.sailsInRain(village)) return "the rain";   // [perks] the Navigators sail in it
         if (RestDay.today(village, day)) return "the day of rest";
         if (Raids.underAlarm(village)) return "the bell";
         return null;
@@ -1033,6 +1035,7 @@ public final class Fleet {
 
     private static void catchOne(ServerLevel level, VillageFolkEntity f, Town t, Hand h) {
         List<ItemStack> haul = roll(level, f.getRandom(), h.net);
+        Perks.moreFish(f, haul);                                      // [perks] the Great Lighthouse, a Lucky fisher
         f.swing(InteractionHand.MAIN_HAND);
         if (h.bobber != null) {
             level.playSound(null, h.bobber, SoundEvents.FISHING_BOBBER_RETRIEVE, SoundSource.NEUTRAL, 0.6F, 1.0F);

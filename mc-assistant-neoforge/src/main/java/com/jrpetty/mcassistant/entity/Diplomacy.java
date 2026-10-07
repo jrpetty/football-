@@ -211,6 +211,8 @@ public final class Diplomacy {
         // Who leads them: a warm-hearted elder makes friends, a prickly one enemies; two elders
         // alike get on, two opposites do not.
         delta += Envoys.temper(x).warmth + Envoys.temper(y).warmth + Envoys.chemistry(x, y);
+        // [perks] Open Borders (Tariffs cool it), a Diplomat in office and the legacies of peace: every other day.
+        delta += Perks.warmth(x, day) + Perks.warmth(y, day);
         // Memories, borders, truces, marriages, feasts, contests, a hand when short (Bonds).
         delta += Bonds.daily(level, a, b, day, r, crowded, rng);
         // With nothing to keep it hot or cold, a relation drifts back toward nothing — unless the

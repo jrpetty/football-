@@ -838,6 +838,7 @@ public final class CityTree {
         if (d.containsKey(Civic.FISHWIVES_GUILD) && trade == StationTask.FISH) p += FISHWIVES;
         if (d.containsKey(Civic.HERBALS) && (trade == StationTask.BREW || trade == StationTask.ENCHANT)) p += HERBALS;
         if (d.containsKey(Civic.ALCHEMISTS_GUILD) && trade == StationTask.BREW) p += ALCHEMY;
+        if (d.containsKey(Civic.OBSERVER_PATTERN_BOOKS) && machines(trade)) p += PATTERN_PERCENT;
         if (d.containsKey(Civic.GREAT_FORGE) && wonderOf(village, Civic.GREAT_FORGE)) {
             p += FORGE_PACE;
             if (trade == StationTask.SMITH || trade == StationTask.SMELT) p += FORGE_SMITHS;
@@ -1163,6 +1164,7 @@ public final class CityTree {
         if (village == null) return 0;
         int p = 0;
         if (kind.equals("rails") && has(village, Civic.OBSERVER_PATTERN_BOOKS)) p += PATTERN_PERCENT;
+        if (kind.equals("rails") && FolkSkills.atWork(village, FolkSkills.Knack.TINKERER)) p += FolkSkills.TINKER_RAILS;
         if (!kind.equals("rails") && has(village, Civic.TURNPIKES)) p += PIKE_WORKS;
         if (has(village, Civic.CLOCKWORK_GATE) && wonderOf(village, Civic.CLOCKWORK_GATE)) p += GATE_WORKS;
         return p;
@@ -1174,12 +1176,12 @@ public final class CityTree {
     }
 
     /**
-     * The Observer Pattern Books: how much quicker the town's redstone engineer builds its machines, in percent.
-     * For the engineer's own work wherever it is done (the trade's builder asks here); the railway's rails take
-     * the same through {@link #worksPercent}.
+     * The trade that builds the town's machines: the redstone engineer, by its name, if the game has the trade (the
+     * Observer Pattern Books quicken it a quarter, in {@link #workPercent}; the railway's rails take the same through
+     * {@link #worksPercent} whether it has or not).
      */
-    public static int machinePercent(@Nullable UUID village) {
-        return has(village, Civic.OBSERVER_PATTERN_BOOKS) ? PATTERN_PERCENT : 0;
+    static boolean machines(StationTask t) {
+        return t.name().contains("REDSTONE");
     }
 
     /** Primers and the Scholars' Endowment: a school lesson, in percent more (School). */

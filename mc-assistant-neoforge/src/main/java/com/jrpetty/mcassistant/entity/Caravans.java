@@ -248,6 +248,7 @@ public final class Caravans {
             if (Villages.holdsTheLead(v.id(), f.getUUID(), now)) continue;
             double score = f.blockPosition().distSqr(v.centre());
             if (f.stationTask() == AssistantEntity.StationTask.HAUL) score -= 1e6;
+            score += Quirks.tripPull(f);                                    // [perks] a wanderer first, a homebody last
             if (score < bestScore) { bestScore = score; best = f; }
         }
         return best;
@@ -282,8 +283,9 @@ public final class Caravans {
             for (Market.Good g : Market.GOODS) if (!order.contains(g) && g.need() != Villages.Task.NONE) order.add(g);
         }
         List<ItemStack> out = new ArrayList<>();
+        int lots = 4 + Perks.caravanLots(from.id());                       // [perks] Open Borders, the Grand Bazaar, a Quartermaster
         for (Market.Good g : order) {
-            if (out.size() >= 4) break;
+            if (out.size() >= lots) break;
             if (brought.contains(g)) continue;
             int have = Market.stock(level, from.id(), g.what());
             int plenty = g.bundle() * 4;

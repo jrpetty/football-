@@ -112,7 +112,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     public int traitUpkeepPercent() {
         // And the town's Granaries (CityTree) make the larder go a tenth further: meals a little further apart.
-        return super.traitUpkeepPercent() * 9 / 4 * CityTree.mealPercent(ownerId()) / 100;
+        return super.traitUpkeepPercent() * 9 / 4 * CityTree.mealPercent(ownerId()) / 100
+            * Quirks.upkeepPercent(this) / 100;                                                 // [perks] an Iron Stomach's 120
     }
 
     /**
@@ -1210,6 +1211,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
+        m = Perks.mood(this, day, m, why);              // [perks] Vespers, Remembrance, the almshouse, the Cathedral, its quirks
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -1277,7 +1279,8 @@ public class VillageFolkEntity extends AssistantEntity {
         int research = CityTree.workPercent(ownerId(), stationTask());
         addPacePart(parts, "the town's research", research);
         addPacePart(parts, Library.paceWord(this), Library.workPercent(this));          // [library] its trade's book, read
-        addPacePart(parts, "its knacks", skillWorkPercent() - research - Library.workPercent(this));
+        addPacePart(parts, "its quirks", Perks.workPercent(this));                    // [perks] an early bird's morning, clumsy hands
+        addPacePart(parts, "its knacks", skillWorkPercent() - research - Library.workPercent(this) - Perks.workPercent(this));
     }
 
     // ------------------------------ a level in every trade ------------------------
@@ -1350,7 +1353,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected int skillWorkPercent() {
         return CityTree.workPercent(ownerId(), stationTask()) + FolkSkills.workPercent(this)
-            + Library.workPercent(this);                                                        // [library] its trade's book, read
+            + Library.workPercent(this)                                                         // [library] its trade's book, read
+            + Perks.workPercent(this);                                                          // [perks] its quirks
     }
 
     /** A good mood makes for quick hands, a black one for slow ones. */
@@ -5112,7 +5116,7 @@ public class VillageFolkEntity extends AssistantEntity {
      *  with its fists only gave it a second to kill (WatchClears; the shout still brings a guard, Patrols.cryForHelp). */
     @Override
     public boolean respondToDistress(AssistantEntity ally, net.minecraft.world.entity.monster.Monster attacker) {
-        if (stationTask() != StationTask.GUARD && !hiredToFight()) return false;
+        if (stationTask() != StationTask.GUARD && !hiredToFight() && !Quirks.answersCries(this)) return false;   // [perks] the Fearless run in
         return super.respondToDistress(ally, attacker);
     }
 
@@ -6296,6 +6300,7 @@ public class VillageFolkEntity extends AssistantEntity {
         partner.life.hadAChild();
         child.life.roll(getRandom(), life, partner.life);
         child.life.setParents(displayNameCap(), partner.displayNameCap());
+        Quirks.born(child, this, partner);              // [perks] one time in two, a parent's quirk
         child.parentIds.add(getUUID());
         child.parentIds.add(partner.getUUID());
         child.life.feel(getUUID(), displayNameCap(), 70);
@@ -6424,7 +6429,7 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Nullable
     private VillageFolkEntity betterHandFor(UUID village, StationTask wanted) {
-        int mine = tradeLevel(wanted);
+        int mine = tradeLevel(wanted) + Quirks.pull(this, wanted);                 // [perks] a quirk's pull to a trade
         VillageFolkEntity best = null;
         int bestLevel = mine;
         for (AssistantEntity a : Villages.folkOf(village)) {
@@ -6432,7 +6437,7 @@ public class VillageFolkEntity extends AssistantEntity {
             StationTask theirs = f.stationTask();
             if (theirs == wanted || theirs == StationTask.NONE && !f.isAutonomous()) continue;
             if (theirs != StationTask.NONE && !Villages.overStaffed(village, theirs)) continue;
-            int lv = f.tradeLevel(wanted);
+            int lv = f.tradeLevel(wanted) + Quirks.pull(f, wanted);               // [perks] Green Fingers to the fields...
             if (lv > bestLevel) { bestLevel = lv; best = f; }
         }
         return best;
@@ -6462,6 +6467,8 @@ public class VillageFolkEntity extends AssistantEntity {
             if (vacancy == null || vacancy == mine) return false;
             ordered = true;
         }
+        vacancy = Quirks.instead(this, vacancy);        // [perks] a Squeamish folk will not hunt: the fields instead
+        if (vacancy == mine) return false;
 
         // Who goes: whoever has worked that trade before goes first. A hand that has never
         // smelted waits while one that has — and could be spared — takes the place; after

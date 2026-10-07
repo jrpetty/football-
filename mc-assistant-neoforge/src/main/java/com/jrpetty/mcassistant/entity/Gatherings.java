@@ -120,6 +120,7 @@ public final class Gatherings {
         Long died = DIED.get(village);
         if (died != null && day - died <= 0) return Kind.VIGIL;
         if (day > 0 && day % 7 == 6 || sponsored(village, day)) return Kind.FEAST;
+        if (CityTree.saintsDay(village, day)) return Kind.FEAST;            // [perks] Saints' Days: a feast to open each season
         return null;
     }
 

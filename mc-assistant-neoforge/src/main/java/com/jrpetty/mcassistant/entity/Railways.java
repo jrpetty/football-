@@ -346,7 +346,7 @@ public final class Railways {
                         l.state = State.LAYING;
                         save(id, l);
                     }
-                    lay(level, v, l, STEPS);
+                    lay(level, v, l, CityTree.worksSteps(id, "rails", STEPS));   // [perks] the Observer Pattern Books
                 }
                 case OPEN -> mend(level, v, l, 24);
             }

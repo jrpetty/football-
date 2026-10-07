@@ -194,6 +194,8 @@ public final class TownPlan {
 
     /** What sort of place a building wants. */
     public static String placeFor(String structure) {
+        String wonder = com.jrpetty.mcassistant.entity.Wonders.placeFor(structure);   // [perks] a wonder's lot (Wonders)
+        if (wonder != null) return wonder;
         return switch (structure) {
             case "well" -> "well";
             case "monument", "fountain", "belltower" -> "monument";

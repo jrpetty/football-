@@ -89,7 +89,10 @@ public class BuildGoal extends Goal {
         // [caves] the Delvers' Lodge: the cave team's maps, trophies, bunks and gear (entity/Lodge)
         "lodge",
         // [library] the town library, its real books on its shelves (entity/Library)
-        "townlibrary");
+        "townlibrary",
+        // [perks] the wonders of the world, one of each in the world, the first town to raise it keeping it (entity/Wonders)
+        "greatforge", "skygarden", "clockworkgate", "colossus", "grandbazaar", "arena", "grandlibrary", "cathedral",
+        "greatlighthouse", "observatory");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

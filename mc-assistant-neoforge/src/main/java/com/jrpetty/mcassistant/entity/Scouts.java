@@ -354,6 +354,7 @@ public final class Scouts {
         }
         if (bestBearing < 0) bestBearing = start;
         int range = Math.min(RANGE, Math.max(96, (Math.min(bestRing, RINGS - 1) + 1) * RING + 32));
+        range = Math.min(RANGE + RANGE / 2, Perks.scoutRange(f, range));   // [perks] the Surveyors' Office, a Surveyor's Eye: further out
         double ang = bestBearing * (2 * Math.PI / BEARINGS);
         int tx = home.getX() + (int) Math.round(Math.cos(ang) * range);
         int tz = home.getZ() + (int) Math.round(Math.sin(ang) * range);

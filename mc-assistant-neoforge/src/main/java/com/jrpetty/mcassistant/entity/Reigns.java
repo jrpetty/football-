@@ -763,6 +763,45 @@ public final class Reigns {
         return String.join(", ", names);
     }
 
+    // ------------------------------------------------------------------ the stage (PerksStage)
+
+    /**
+     * For the pictures (/village perks stage): the leader in office given a reign begun five days ago, experience
+     * enough for three skills and the first three of the line its heart leans to; and before it, one past reign of
+     * so many days whose deeds leave a legacy (its plaque wanted, as any reign's would). The words of it, a line each.
+     */
+    static List<String> stage(ServerLevel level, Villages.Village v, String pastName, Deed pastDeed, long day) {
+        UUID id = v.id();
+        List<String> out = new ArrayList<>();
+        // The past reign first: written as the reign now, ended, and the reign now put back as it was.
+        String was = Ledger.note(id, "reign.now"), wasDeeds = Ledger.note(id, "reign.deeds");
+        Ledger.note(id, "reign.deeds", pastDeed.name() + ":6");
+        end(level, v, new Reign(UUID.nameUUIDFromBytes(("past" + id).getBytes()), pastName, Math.max(0, day - 12)), Math.max(3, day - 2));
+        if (was != null && !was.isEmpty()) Ledger.note(id, "reign.now", was);
+        if (wasDeeds != null && !wasDeeds.isEmpty()) Ledger.note(id, "reign.deeds", wasDeeds);
+        out.add("LEGACY " + legacyWords(id));
+        UUID l = leader(id);
+        if (l == null) {
+            out.add("LEADER none");
+            return out;
+        }
+        Ledger.note(id, "reign.now", l + "|" + leaderNameOf(id, l) + "|" + Math.max(0, day - 5));
+        Map<Deed, Integer> d = new EnumMap<>(Deed.class);
+        d.put(Deed.BUILD, 3);
+        d.put(Deed.CIVIC, 2);
+        saveDeeds(id, d);
+        Book b = book(id, l);
+        if (b.xp() < LEVELS[2]) save(id, l, new Book(LEVELS[2], b.skills().isEmpty() ? EnumSet.noneOf(Skill.class) : EnumSet.copyOf(b.skills())));
+        Values.Value h = heart(id);
+        Line line = h == Values.Value.SAFETY ? Line.WATCH : h == Values.Value.WEALTH || h == Values.Value.FOOD ? Line.PURSE
+            : h == Values.Value.TRADITION ? Line.VOICE : Line.HEART;
+        String who = leaderNameOf(id, l);
+        for (Skill s : Skill.values()) if (s.line == line && canTake(id, l, s)) take(id, l, s, day, who);
+        for (Skill s : Skill.values()) if (canTake(id, l, s)) take(id, l, s, day, who);
+        out.addAll(lines(id, day));
+        return out;
+    }
+
     // ------------------------------------------------------------------ tests
 
     /** Tests: the town's leaders' morning, now. */

@@ -338,18 +338,19 @@ public final class Perks {
     }
 
     /**
-     * The Nether party home (Nether.comeBack): what its folk's knacks bring back more (a Piglin-Friend's gold bartered,
-     * a Blaze Hunter's rods) and the Nether Charts' (quartz and a rod), all into the haul.
+     * The Nether party home (Nether.comeBack): what its folk's knacks bring back more (the gold its picks dug in peace
+     * with a Piglin-Friend among them, the piglins letting them be; a Blaze Hunter's rods, with a blade or a bow to take
+     * them) and the Nether Charts' (quartz for the picks, a rod for the blades: the charts lead them to both), all into
+     * the haul. Nothing without the means to get it, as the rest of the haul.
      */
     public static void netherHaul(ServerLevel level, UUID village, List<UUID> party, List<ItemStack> haul, boolean armed, boolean picks) {
         int gold = 0, rods = 0;
         for (UUID u : party) {
             if (!(level.getEntity(u) instanceof VillageFolkEntity f)) continue;
-            if (f.knacks().has(FolkSkills.Knack.PIGLIN_FRIEND)) gold += 6 + f.getRandom().nextInt(6);
+            if (picks && f.knacks().has(FolkSkills.Knack.PIGLIN_FRIEND)) gold += 6 + f.getRandom().nextInt(6);
             if (armed && f.knacks().has(FolkSkills.Knack.BLAZE_HUNTER)) rods += 2;
         }
         int[] charts = CityTree.netherMore(village);
-        if (picks) gold += 0;
         if (gold > 0) haul.add(new ItemStack(Items.GOLD_NUGGET, gold));
         if (armed) rods += charts[1];
         if (rods > 0) haul.add(new ItemStack(Items.BLAZE_ROD, rods));
@@ -451,6 +452,21 @@ public final class Perks {
         t.putInt("level", b.level());
         t.putInt("xp", b.xp());
         t.putInt("next", b.next());
+        t.putInt("free", b.free());
+        Values.Value heart = Reigns.heart(id);
+        t.putString("heart", heart == null ? "" : heart.type);
+        t.putString("office", heart == null ? "" : Reigns.officeWords(heart));
+        ListTag legacies = new ListTag();
+        for (Reigns.Legacy x : Reigns.legacies(id)) {
+            CompoundTag lt = new CompoundTag();
+            lt.putString("name", x.name());
+            lt.putString("leader", x.title() + " " + x.leader());
+            lt.putLong("from", x.from());
+            lt.putLong("to", x.to());
+            lt.putString("effect", x.deed().effect);
+            legacies.add(lt);
+        }
+        t.put("legacies", legacies);
         ListTag ways = new ListTag();
         for (CityTree.Civic[] pr : CityTree.pairs()) {
             CompoundTag wt = new CompoundTag();

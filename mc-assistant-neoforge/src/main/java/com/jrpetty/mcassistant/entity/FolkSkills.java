@@ -170,7 +170,7 @@ public final class FolkSkills {
             "it fletches light and true", NewTrades.with("Fletcher", "FLETCH", StationTask.GUARD)),
         IRON_WHISPERER("iron_whisperer", "Iron Whisperer", Family.TRADE, "iron golems near it mend", 0, null,
             "the golems trust it", NewTrades.with("Golem keeper", "GOLEM", StationTask.GUARD)),
-        TINKERER("tinkerer", "Tinkerer", Family.TRADE, "+8% pace at the bench; machines 25% faster", 8, null,
+        TINKERER("tinkerer", "Tinkerer", Family.TRADE, "+8% pace at its trade; the railway laid 25% faster while it works", 8, null,
             "it can't leave a mechanism alone", NewTrades.with("Redstone engineer", "REDSTONE", StationTask.SMITH)),
         CIRCUIT_SENSE("circuit_sense", "Circuit Sense", Family.TRADE, "one redstone ore in two gives four dust more", 0, null,
             "it can feel the redstone in the rock", NewTrades.with("Redstone engineer", "REDSTONE", StationTask.MINE, StationTask.CAVE)),
@@ -733,10 +733,8 @@ public final class FolkSkills {
         AT_WORK.clear();
     }
 
-    /** [perks] Tinkerer: how much quicker this redstone engineer (or smith) builds the town's machines, in percent. */
-    public static int machinePercent(VillageFolkEntity f) {
-        return active(f, Knack.TINKERER) ? 25 : 0;
-    }
+    /** [perks] Tinkerer: the railway's rails laid so much quicker, in percent, while one is at its work (CityTree.worksPercent). */
+    static final int TINKER_RAILS = 25;
 
     /** [perks] Featherlight: so many more arrows in this guard's quiver (WatchKit.fit, through Perks.quiver). */
     static int featherlight(VillageFolkEntity f) {

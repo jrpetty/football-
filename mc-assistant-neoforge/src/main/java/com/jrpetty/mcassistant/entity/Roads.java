@@ -68,7 +68,7 @@ public final class Roads {
             Villages.Village mother = Villages.get(link.getValue());
             if (colony == null || mother == null) continue;
             if (!colony.dim().equals(level.dimension()) || !mother.dim().equals(level.dimension())) continue;
-            lay(level, mother, colony, STEPS);
+            lay(level, mother, colony, CityTree.worksSteps(mother.id(), "roads", STEPS));   // [perks] Turnpikes
         }
     }
 

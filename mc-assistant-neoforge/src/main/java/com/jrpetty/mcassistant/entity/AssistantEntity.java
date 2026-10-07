@@ -2446,7 +2446,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public int buildBonusPercent() {
         int experience = experiencePercentAt(Math.max(veteranLevel(), buildingLevel()));
         int other = ageWorkPercent() + (plainPaceForTests ? 0 : moodWorkPercent() + villageWorkPercent() + skillWorkPercent()
-            + CityTree.buildPercent(ownerId()));                                     // the Builders' Guild (CityTree)
+            + CityTree.buildPercent(ownerId())                                       // the Builders' Guild (CityTree)
+            + Perks.buildPercent(ownerId()));                                        // [perks] the Clockwork Gate, the leader, its legacies
         return Math.max(LEAST_PACE_PERCENT, Math.min(MOST_BUILD_PERCENT, experience + other));
     }
 

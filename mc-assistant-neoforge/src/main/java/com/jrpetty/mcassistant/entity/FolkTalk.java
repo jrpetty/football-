@@ -256,7 +256,8 @@ public final class FolkTalk {
         String others = levels.isEmpty() ? "" : " All told: " + levels + ".";
         String nature = Skill.line(f);
         String knacks = FolkSkills.talk(f);
-        return now + others + " " + nature + (knacks.isEmpty() ? "" : " " + knacks);
+        String quirks = Quirks.talk(f);                              // [perks] its quirks, in its own words
+        return now + others + " " + nature + (knacks.isEmpty() ? "" : " " + knacks) + (quirks.isEmpty() ? "" : " " + quirks);
     }
 
     /** Right-click: open the talk screen with a greeting. */
@@ -398,7 +399,9 @@ public final class FolkTalk {
         for (String[] l : Visitors.cardLines(f)) line(sb, l[0], l[1]);   // [batchG] its gifts on show, its dog, its visits
         line(sb, "Quarter", Quarters.cardLine(f));          // its quarter of the town, the smoke, the park (Quarters)
         line(sb, "Nature", life.traitsLabel());
+        line(sb, "Quirks", Quirks.cardLine(f));             // [perks] its quirks and what they do, and whose they are
         line(sb, "Knacks", FolkSkills.cardLine(f));         // what it chose for itself: the Skills page has the rest
+        line(sb, "Leads", Reigns.cardLine(f));              // [perks] the leader: its perk in office, its level and skills
         line(sb, "Curator", Museum.curatorLine(f));         // the museum's keeper (Museum)
         line(sb, "In the museum", Museum.cardLine(f));      // its finds on show there
         line(sb, "Library", Library.cardLine(f));           // [library] the librarian, what it wrote, its trade's book read
@@ -655,6 +658,8 @@ public final class FolkTalk {
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
+            case "faith", "remembrance", "alms", "larders", "reign", "cathedral",
+                 "homesick", "athome", "wander", "fearless", "tune" -> Perks.moodWords(f, why);   // [perks]
             default -> "";
         };
     }

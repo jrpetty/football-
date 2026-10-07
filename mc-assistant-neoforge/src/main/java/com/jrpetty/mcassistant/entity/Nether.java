@@ -72,12 +72,12 @@ public final class Nether {
             }
             return;
         }
-        // A party every other day, by daylight, when there are hands to send.
+        // A party every other day (every day with the Nether Charts: [perks]), by daylight, when there are hands to send.
         String last = Ledger.note(id, "nether.last");
         long lastDay = -10;
         try { if (last != null) lastDay = Long.parseLong(last); } catch (NumberFormatException ignored) { }
         long t = level.getDayTime() % 24000L;
-        if (day - lastDay < 2 || t < 1000L || t > 6000L || Raids.underAlarm(id)) return;
+        if (day - lastDay < CityTree.netherGap(id) || t < 1000L || t > 6000L || Raids.underAlarm(id)) return;
         List<UUID> party = new ArrayList<>();
         VillageFolkEntity guard = null;
         for (AssistantEntity a : Villages.folkOf(id)) {
@@ -131,6 +131,7 @@ public final class Nether {
         if (picks) haul.add(new ItemStack(Items.GOLD_NUGGET, 4 + r.nextInt(12)));
         if (armed && r.nextInt(4) == 0) haul.add(new ItemStack(Items.MAGMA_CREAM, 1 + r.nextInt(2)));
         if (armed && r.nextInt(5) == 0) haul.add(new ItemStack(Items.GHAST_TEAR));
+        Perks.netherHaul(level, id, party.folk(), haul, armed, picks);   // [perks] a Piglin-Friend, a Blaze Hunter, the Nether Charts
         List<String> what = new ArrayList<>();
         for (ItemStack s : haul) {
             what.add(s.getCount() + " " + s.getHoverName().getString().toLowerCase());
@@ -141,7 +142,7 @@ public final class Nether {
         for (UUID u : party.folk()) {
             if (!(level.getEntity(u) instanceof VillageFolkEntity f)) continue;
             f.brain("back from the Nether");
-            int roll = r.nextInt(100);
+            int roll = Perks.netherRoll(id, f, r.nextInt(100), r);   // [perks] the Blaze Wardens, a Fireproof folk: hurt half as often
             if (roll < 3 && f.stationTask() != AssistantEntity.StationTask.GUARD) {
                 fate = "; " + f.displayNameCap() + " never came back";
                 f.hurt(level.damageSources().inFire(), Float.MAX_VALUE);

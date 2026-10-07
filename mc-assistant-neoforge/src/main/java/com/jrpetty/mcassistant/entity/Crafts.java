@@ -981,7 +981,7 @@ public final class Crafts {
         }
         // Blaze powder ground from the rods the Nether parties bring (Nether): two to a rod.
         if (have(level, v, f, s -> s.is(Items.BLAZE_POWDER)) < 6 && take(level, v, s -> s.is(Items.BLAZE_ROD), 1)) {
-            store(level, v, new ItemStack(Items.BLAZE_POWDER, 2));
+            store(level, v, new ItemStack(Items.BLAZE_POWDER, CityTree.powderPerRod(v.id())));   // [perks] the Alchemists' Guild grinds three
         }
         // Fire: a blaze powder in the fuel slot (it burns for twenty brews).
         if (stand.getItem(4).isEmpty() && use(level, v, f, s -> s.is(Items.BLAZE_POWDER), 1)) {

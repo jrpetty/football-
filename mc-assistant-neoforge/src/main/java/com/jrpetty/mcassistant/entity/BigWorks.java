@@ -472,6 +472,7 @@ public final class BigWorks {
         CompoundTag w = current(id);
         if (w == null) return;
         long day = level.getDayTime() / 24000L;
+        Perks.worksOpened(id);                               // [perks] a deed of the reign: its roads and works
         // The ribbon cut: the pieces of it are the town's keepsakes now, and nothing goes back to the stores.
         for (long l : w.getLongArray("ribbon")) {
             BlockPos p = BlockPos.of(l);

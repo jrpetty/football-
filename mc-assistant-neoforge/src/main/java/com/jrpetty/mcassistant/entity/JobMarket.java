@@ -1213,7 +1213,8 @@ public final class JobMarket {
             if (t == StationTask.NONE) continue;
             double s = shortOf(town, t);
             if (s < 0.5) continue;
-            double score = s + f.tradeLevel(t) * 0.5;
+            double score = s + (f.tradeLevel(t) + Quirks.pull(f, t)) * 0.5;      // [perks] a quirk's pull to a trade
+            if (Quirks.refuses(f, t)) continue;
             if (score > bestScore) {
                 bestScore = score;
                 best = t;
