@@ -2613,6 +2613,10 @@ def main():
         referendum_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("referendum stage failed: %s" % e)
+    try:
+        quests_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("quests stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
