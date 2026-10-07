@@ -554,6 +554,7 @@ public final class CaveTrips {
         p.phase = CaveDwellers.Party.Phase.CAMP;
         p.camp = c.immutable();
         p.campStart = level.getDayTime();
+        p.campTick = level.getGameTime();
         p.campWalls.clear();
         p.nights++;
         p.campNoCobble = false;
@@ -585,7 +586,9 @@ public final class CaveTrips {
             return true;
         }
         double dist = f.position().distanceToSqr(c.getX() + 0.5, c.getY(), c.getZ() + 0.5);
-        if (dist > 1.5 * 1.5) {
+        // One of the others that could not get in for all the waiting (CAMP_WAIT) settles down where it is.
+        boolean settle = !leading && level.getGameTime() - p.campTick > CAMP_WAIT;
+        if (dist > 1.5 * 1.5 && !settle) {
             if (f.getNavigation().isDone() || f.tickCount - d.followTick > 40) {
                 // The others to the camp's middle or a step to its side, so all fit in.
                 List<VillageFolkEntity> team = CaveDwellers.members(level, p);
@@ -621,14 +624,22 @@ public final class CaveTrips {
         return true;
     }
 
+    /** How long the leader waits for the team to come into camp before the walls go up without one (game ticks). */
+    static final long CAMP_WAIT = 1200;
+
     /** A block of the camp's wall at a time, out of the team's cobblestone; a torch inside when it is dark. */
     static void wallUp(ServerLevel level, VillageFolkEntity lead, CaveDwellers.Party p) {
         BlockPos c = p.camp;
         if (c == null) return;
-        // Everybody in first (a while at most), so nobody is walled out.
-        if (level.getDayTime() - p.campStart < 400) {
+        // Everybody in first (a minute at most), so nobody is walled out; one shut out by a wall already up (it came in
+        // late) is let in through it. The wait was by the day's clock, four hundred of it: a test's skip of the hours
+        // (or a night's sleep in town) ran it out at once, the walls went up round the leader alone, and the other stood
+        // outside them, "making for the camp", all night.
+        if (level.getGameTime() - p.campTick < CAMP_WAIT) {
             for (VillageFolkEntity m : CaveDwellers.members(level, p)) {
-                if (m.position().distanceToSqr(c.getX() + 0.5, c.getY(), c.getZ() + 0.5) > 2.2 * 2.2) return;
+                if (m.position().distanceToSqr(c.getX() + 0.5, c.getY(), c.getZ() + 0.5) <= 2.2 * 2.2) continue;
+                letIn(level, lead, p, m);
+                return;
             }
         }
         if (level.getBrightness(LightLayer.BLOCK, c) < 8 && !p.campLit) {
@@ -649,6 +660,37 @@ public final class CaveTrips {
             p.campWalls.add(q.immutable());
             return;                                                     // a block at a time
         }
+    }
+
+    /**
+     * One of the team outside the camp's walls, near them, with no way in left (every column of the ring shut, by the
+     * walls or the rock): the column of the wall nearest it taken down, its cobble back in the leader's pack. It goes
+     * up again once everybody is in.
+     */
+    static void letIn(ServerLevel level, VillageFolkEntity lead, CaveDwellers.Party p, VillageFolkEntity m) {
+        BlockPos c = p.camp;
+        if (c == null || p.campWalls.isEmpty() || m.blockPosition().distSqr(c) > 8 * 8) return;
+        for (BlockPos q : ring(c)) {
+            if (q.getY() == c.getY() && open(level, q) && open(level, q.above())) return;     // a way in still open
+        }
+        BlockPos nearest = null;
+        for (BlockPos q : p.campWalls) {
+            if (!level.getBlockState(q).is(Blocks.COBBLESTONE)) continue;
+            if (nearest == null || q.distSqr(m.blockPosition()) < nearest.distSqr(m.blockPosition())) nearest = q;
+        }
+        if (nearest == null) return;
+        int back = 0;
+        for (BlockPos q : List.of(nearest.atY(c.getY()), nearest.atY(c.getY() + 1))) {
+            if (!p.campWalls.contains(q) || !level.getBlockState(q).is(Blocks.COBBLESTONE)) continue;
+            level.setBlockAndUpdate(q, Blocks.AIR.defaultBlockState());
+            p.campWalls.remove(q);
+            back++;
+        }
+        if (back == 0) return;
+        ItemStack left = lead.insertItem(new ItemStack(Items.COBBLESTONE, back));
+        if (!left.isEmpty()) lead.spawnAtLocation(left);
+        lead.swing(InteractionHand.MAIN_HAND);
+        FolkTalk.speak(lead, "Hold on, " + m.displayNameCap() + " — I'll let you in.");
     }
 
     /** A cobblestone out of any of the team's packs. */
