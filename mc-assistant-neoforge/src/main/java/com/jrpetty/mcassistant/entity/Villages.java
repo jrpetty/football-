@@ -2889,13 +2889,26 @@ public final class Villages {
         return x + hx >= r[0] && x - hx <= r[1] && z + hz >= r[2] && z - hz <= r[3];
     }
 
-    /** The builders could not get to this lot: give it up, never pick it again,
-     *  and have another look in half a minute. */
     /**
-     * [econ-housing] A folk's own house (HousingMarket) chooses its lot as a project does (siteFor, under its drawing's
-     * name, so the gardens, the woods and the sweepers keep off it while it goes up). When it stands its site comes off the
-     * list of what is going up, its lot spoken for as any built on; given up before a block is laid (the household could
-     * not pay after all), the lot is free again.
+     * [econ-housing] A folk's own house (HousingMarket) holds its lot as a project does (siteFor, under its drawing's
+     * name, so the gardens, the woods and the sweepers keep off it while it goes up): a lot the household found for itself
+     * (steeper or wetter than the council builds on, the made ground at its own cost), or its site again after a restart,
+     * its plan lot spoken for.
+     */
+    public static void holdPrivateSite(UUID villageId, String key, Site site) {
+        SITES.computeIfAbsent(villageId, k -> new ConcurrentHashMap<>()).put(key, site);
+        Village v = get(villageId);
+        if (v == null) return;
+        java.util.Set<Long> taken = LOT_TAKEN.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot lot : com.jrpetty.mcassistant.village.TownPlan.lots()) {
+            if (v.centre().getX() + lot.x() != site.anchor().getX() || v.centre().getZ() + lot.z() != site.anchor().getZ()) continue;
+            for (long cell : lot.cells()) taken.add(cell);
+        }
+    }
+
+    /**
+     * [econ-housing] A folk's own house stands: its site comes off the list of what is going up, its lot spoken for as any
+     * built on; given up before a block is laid (the household could not pay after all), the lot is free again.
      */
     public static void privateSiteDone(UUID villageId, String key, boolean free) {
         Map<String, Site> pending = SITES.get(villageId);
@@ -2910,6 +2923,8 @@ public final class Villages {
         }
     }
 
+    /** The builders could not get to this lot: give it up, never pick it again,
+     *  and have another look in half a minute. */
     public static void rejectSite(UUID villageId, String project, long gameTime) {
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);

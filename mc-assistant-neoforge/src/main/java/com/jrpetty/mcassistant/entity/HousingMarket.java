@@ -493,6 +493,122 @@ public final class HousingMarket {
         return house;
     }
 
+    /** How steep a lot a household will build on, paying for the ground made up: twice what the council's builders take. */
+    static final int PRIVATE_SLOPE = 8;
+    /** How deep a pool or a river's edge a household will build out over, filled from its bed, and over how much of the lot. */
+    static final int PRIVATE_WADE = 3;
+
+    /**
+     * The ground made up under a house: every column of its footprint that stops short of its floor, built up from the ground
+     * (or, by the water, from the bed of it: a shallow edge is filled, as a jetty's is) to the floor; not the cells its own
+     * footing goes in, which are laid as the house.
+     */
+    static List<BlockPos> groundCells(ServerLevel level, BlockPos anchor, Direction facing, Design d) {
+        int[] half = BuildGoal.footprint(d.drawing);
+        boolean turned = facing.getAxis() == Direction.Axis.X;
+        int wx = turned ? half[1] : half[0], wz = turned ? half[0] : half[1];
+        java.util.Set<BlockPos> footing = new java.util.HashSet<>();
+        for (BuildGoal.Placement p : BuildGoal.plan(d.drawing, anchor, facing, 13)) if (p.pos().getY() < anchor.getY()) footing.add(p.pos());
+        List<BlockPos> out = new ArrayList<>();
+        for (int dx = -wx; dx <= wx; dx++) {
+            for (int dz = -wz; dz <= wz; dz++) {
+                int x = anchor.getX() + dx, z = anchor.getZ() + dz;
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                int top = BuildGoal.groundTop(level, x, z);
+                while (top > anchor.getY() - 8 && !level.getBlockState(new BlockPos(x, top - 1, z)).getFluidState().isEmpty()) top--;
+                for (int y = Math.max(top, anchor.getY() - 8); y < anchor.getY(); y++) {
+                    BlockPos at = new BlockPos(x, y, z);
+                    if (!footing.contains(at)) out.add(at);
+                }
+            }
+        }
+        return out;
+    }
+
+    /**
+     * A lot a household finds for itself where the council's builders found none (Villages.siteFor: dry under every corner,
+     * no steeper than four or six): one of the plan's home lots, its own quarter's first, kept off the fields, nothing built
+     * or going up on it, its ground no steeper than eight across the house and within reach of the heart's height, a third of
+     * it at most a shallow river's edge (filled from the bed), not rocky; of the first dozen that will do, the one wanting the
+     * least made ground. The household pays for the made ground (the bill's cobblestone), so it will build where the council
+     * would not. Held for it as any site is. Null if there is none.
+     */
+    @Nullable
+    static Villages.Site privateLot(ServerLevel level, Villages.Village v, Design d) {
+        UUID id = v.id();
+        BlockPos heart = v.centre();
+        int heartY = level.hasChunk(heart.getX() >> 4, heart.getZ() >> 4) ? BuildGoal.groundTop(level, heart.getX(), heart.getZ()) : Integer.MIN_VALUE;
+        int[] half = BuildGoal.footprint(d.drawing);
+        List<Ledger.Building> built = Ledger.buildings(id);
+        java.util.Collection<Villages.Site> going = Villages.sitesOf(id).values();
+        Villages.Site best = null;
+        int bestScore = Integer.MAX_VALUE, valid = 0, index = 0;
+        for (TownPlan.Lot lot : Quarters.candidates(id, d.siteKey())) {
+            if (valid >= 12) break;
+            index++;
+            if (lot.kind() != TownPlan.Kind.LOT || !"home".equals(lot.use())) continue;
+            if (half[0] > lot.halfAcross() || half[1] > lot.halfDeep()) continue;
+            if (Villages.lotKeptOff(id, heart, lot) || Villages.builtOver(id, lot.x(), lot.z(), 0, 0)) continue;
+            int x = heart.getX() + lot.x(), z = heart.getZ() + lot.z();
+            boolean taken = false;
+            for (Ledger.Building b : built) {
+                if (Math.abs(b.anchor().getX() - x) <= TownPlan.LOT / 2 + 1 && Math.abs(b.anchor().getZ() - z) <= TownPlan.LOT / 2 + 1) { taken = true; break; }
+            }
+            for (Villages.Site s : going) {
+                if (Math.abs(s.anchor().getX() - x) <= TownPlan.LOT && Math.abs(s.anchor().getZ() - z) <= TownPlan.LOT) { taken = true; break; }
+            }
+            if (taken) continue;
+            Direction back = Villages.direction(lot.back());
+            boolean turned = back.getAxis() == Direction.Axis.X;
+            int hx = turned ? half[1] : half[0], hz = turned ? half[0] : half[1];
+            int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE, wet = 0, deep = 0;
+            boolean ok = true;
+            for (int dx = -hx; dx <= hx && ok; dx++) {
+                for (int dz = -hz; dz <= hz; dz++) {
+                    int cx = x + dx, cz = z + dz;
+                    if (!level.hasChunk(cx >> 4, cz >> 4)) { ok = false; break; }
+                    int h = BuildGoal.groundTop(level, cx, cz);
+                    BlockState top = level.getBlockState(new BlockPos(cx, h - 1, cz));
+                    if (!top.getFluidState().isEmpty()) {
+                        int bed = h - 1;
+                        while (bed > h - 1 - PRIVATE_WADE - 1 && !level.getBlockState(new BlockPos(cx, bed, cz)).getFluidState().isEmpty()) bed--;
+                        if (h - 1 - bed > PRIVATE_WADE || top.getFluidState().is(net.minecraft.tags.FluidTags.LAVA)) { ok = false; break; }
+                        wet++;
+                    } else if (!top.isSolid()) {
+                        ok = false;
+                        break;
+                    }
+                    lo = Math.min(lo, h);
+                    hi = Math.max(hi, h);
+                }
+            }
+            int area = (2 * hx + 1) * (2 * hz + 1);
+            if (!ok || wet * 3 > area || hi - lo > PRIVATE_SLOPE) continue;
+            if (heartY != Integer.MIN_VALUE && Math.abs(hi - heartY) > 20) continue;
+            BlockPos at = new BlockPos(x, hi, z);
+            int blocked = 0;
+            for (int dx = -hx; dx <= hx; dx++) {
+                for (int dz = -hz; dz <= hz; dz++) {
+                    for (int dy = 0; dy <= 1; dy++) {
+                        BlockPos c = at.offset(dx, dy, dz);
+                        BlockState st = level.getBlockState(c);
+                        if (BuildGoal.soft(st) || st.is(BlockTags.LEAVES) || st.is(BlockTags.LOGS) && BuildGoal.isTreeLog(level, c)) continue;
+                        blocked++;
+                    }
+                }
+            }
+            if (blocked > area / 5) continue;
+            valid++;
+            int score = groundCells(level, at, back, d).size() + 6 * index + Quarters.misfit(id, d.siteKey(), lot);
+            if (score < bestScore) {
+                bestScore = score;
+                best = new Villages.Site(at, back, 0);
+            }
+        }
+        if (best != null) Villages.holdPrivateSite(id, d.siteKey(), best);
+        return best;
+    }
+
     /** How many beds a household wants in a house of its own: one each and one to spare, two at least, no more than it holds. */
     static int bedsWanted(Design d, int household) {
         return Math.min(d.beds(), Math.max(2, household + 1));
@@ -522,8 +638,7 @@ public final class HousingMarket {
             (furnishing(p.part()) ? things : house).merge(it, 1, Integer::sum);
             b.cells++;
         }
-        int[] half = BuildGoal.footprint(d.drawing);
-        b.ground = ground && level.isLoaded(anchor) ? BuildGoal.fillCells(level, anchor, facing, half[0], half[1]).size() : 0;
+        b.ground = ground && level.isLoaded(anchor) ? groundCells(level, anchor, facing, d).size() : 0;
         if (b.ground > 0) house.merge(Items.COBBLESTONE, b.ground, Integer::sum);
         for (Map.Entry<Item, Integer> e : house.entrySet()) b.lines.add(line(level, id, e.getKey(), e.getValue(), false));
         for (Map.Entry<Item, Integer> e : things.entrySet()) b.lines.add(line(level, id, e.getKey(), e.getValue(), true));
@@ -992,11 +1107,32 @@ public final class HousingMarket {
      */
     @Nullable
     static Commission commission(ServerLevel level, Villages.Village v, List<VillageFolkEntity> household, Design d, long day) {
+        return commission(level, v, household, d, day, null);
+    }
+
+    /**
+     * As above, on this ground if it is given (an operator's stage, for the pictures); else a lot of the town's plan as the
+     * council's builders choose one (Villages.siteFor), else one the household finds for itself on ground the council would
+     * not build on, steeper or by the water, the made ground at its own cost (privateLot). A villa with no lot to its size
+     * anywhere is built as a town house instead.
+     */
+    @Nullable
+    static Commission commission(ServerLevel level, Villages.Village v, List<VillageFolkEntity> household, Design want, long day,
+                                 @Nullable Villages.Site given) {
         UUID id = v.id();
         VillageFolkEntity lead = household.get(0);
-        Villages.Site site = Villages.siteFor(level, id, d.siteKey());
+        Design d = want;
+        Villages.Site site = given;
+        if (site != null) Villages.holdPrivateSite(id, d.siteKey(), site);
+        if (site == null) site = Villages.siteFor(level, id, d.siteKey());
+        if (site == null) site = privateLot(level, v, d);
+        if (site == null && d == Design.VILLA) {
+            d = Design.TOWN;
+            site = Villages.siteFor(level, id, d.siteKey());
+            if (site == null) site = privateLot(level, v, d);
+        }
         if (site == null) {
-            plan(level, id, household, d, estimate(level, v, d, household.size()), "no plot to be had in the town's plan just now", day);
+            plan(level, id, household, want, estimate(level, v, want, household.size()), "no plot to be had in the town's plan just now", day);
             return null;
         }
         Bill b = quote(level, v, d, site.anchor(), site.facing(), household.size());
@@ -1100,6 +1236,9 @@ public final class HousingMarket {
         TICKED.put(id, now);
         costCouncilHouses(level, id, day);
         Commission c = load(id);
+        if (c != null && !Villages.sitesOf(id).containsKey(c.design.siteKey())) {
+            Villages.holdPrivateSite(id, c.design.siteKey(), new Villages.Site(c.anchor, c.facing, 0));   // the town forgot it over a restart
+        }
         if (c != null) work(level, v, c, BUDGET, false);
     }
 
@@ -1289,8 +1428,7 @@ public final class HousingMarket {
         Masonry.Look look = c.lookOf();
         // The ground made up under it first, of the stores' cobblestone.
         if (!c.groundDone) {
-            int[] half = BuildGoal.footprint(c.design.drawing);
-            List<BlockPos> fill = BuildGoal.fillCells(level, c.anchor, c.facing, half[0], half[1]);
+            List<BlockPos> fill = groundCells(level, c.anchor, c.facing, c.design);
             if (!fill.isEmpty()) {
                 if (!Crafts.take(level, v, s -> s.is(Items.COBBLESTONE), fill.size())) {
                     return note(id, c, "waiting on the stores for " + fill.size() + " cobblestone to make up the ground");
@@ -2004,6 +2142,7 @@ public final class HousingMarket {
     public static LiteralArgumentBuilder<CommandSourceStack> command() {
         return Commands.literal("market").executes(ctx -> marketCmd(ctx))
             .then(Commands.literal("custom").requires(src -> src.hasPermission(2)).executes(HousingMarket::customCmd))
+            .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(HousingMarket::stageCmd))
             .then(Commands.literal("build").requires(src -> src.hasPermission(2))
                 .then(Commands.argument("blocks", IntegerArgumentType.integer(1, 2000))
                     .executes(ctx -> buildCmd(ctx, IntegerArgumentType.getInteger(ctx, "blocks")))))
@@ -2073,6 +2212,103 @@ public final class HousingMarket {
             + "/" + made.permit + ") lead " + made.lead;
         ctx.getSource().sendSuccess(() -> Component.literal(said), false);
         return made == null ? 0 : 1;
+    }
+
+    /**
+     * For the pictures (an operator's): a villa commissioned on ground made ready for it at the spot (or the first spot
+     * eastward clear of the town's buildings): a plot fifteen across levelled, the makings of the villa delivered into the
+     * town's stores and what the household lacks of the bill granted to it (out of the treasury as far as it can, then
+     * the operator's own), every grant said in the chronicle; then commissioned and paid for as any house is, and laid by
+     * "build". Says where it stands and where its owner's door is.
+     */
+    private static int stageCmd(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = here(ctx);
+        if (v == null) return 0;
+        ServerLevel level = ctx.getSource().getLevel();
+        UUID id = v.id();
+        long day = level.getDayTime() / 24000L;
+        if (load(id) != null) {
+            ctx.getSource().sendFailure(Component.literal("A house is going up already: " + String.join(" | ", lines(level, id))));
+            return 0;
+        }
+        BlockPos at = BlockPos.containing(ctx.getSource().getPosition());
+        // Clear of anything the town has built or is building.
+        for (int tries = 0; tries < 12; tries++) {
+            boolean clear = true;
+            for (Ledger.Building b : Ledger.buildings(id)) {
+                if (Math.abs(b.anchor().getX() - at.getX()) <= 16 && Math.abs(b.anchor().getZ() - at.getZ()) <= 16) { clear = false; break; }
+            }
+            for (Villages.Site s : Villages.sitesOf(id).values()) {
+                if (Math.abs(s.anchor().getX() - at.getX()) <= 16 && Math.abs(s.anchor().getZ() - at.getZ()) <= 16) { clear = false; break; }
+            }
+            if (clear) break;
+            at = at.east(16);
+        }
+        level.getChunk(at.getX() >> 4, at.getZ() >> 4);
+        int y = BuildGoal.groundTop(level, at.getX(), at.getZ());
+        BlockPos anchor = new BlockPos(at.getX(), y, at.getZ());
+        Showcase.stage(level, anchor.getX() - 7, anchor.getX() + 7, anchor.getZ() - 7, anchor.getZ() + 7, y);
+        // The household with the most to hand.
+        List<List<VillageFolkEntity>> all = households(id);
+        all.sort(Comparator.comparingInt((List<VillageFolkEntity> h) -> -cashOf(id, h)));
+        List<VillageFolkEntity> household = null;
+        for (List<VillageFolkEntity> hh : all) {
+            Homes.Home home = Homes.homeOf(id, hh.get(0).getUUID());
+            if (Homes.earners(hh) == 0 || home != null && Homes.seat(home)) continue;
+            household = hh;
+            break;
+        }
+        if (household == null) {
+            ctx.getSource().sendFailure(Component.literal("Nobody in " + Villages.name(id) + " earns a wage to build a house with."));
+            return 0;
+        }
+        Design d = Design.VILLA;
+        // The makings, delivered: what the villa's own look is laid in, a tenth over.
+        Map<Item, Integer> makings = new LinkedHashMap<>();
+        int planks = 0;
+        java.util.function.Function<BuildGoal.Placement, BlockState> paint = Showcase.painter(d.palette);
+        for (BuildGoal.Placement p : cells(d, anchor, Direction.NORTH, bedsWanted(d, household.size()))) {
+            BlockState st = paint.apply(p);
+            if (st == null) continue;
+            Block bl = st.getBlock();
+            if (!furnishing(p.part()) && wooden(bl) && !st.is(BlockTags.LOGS)) planks += planksFor(bl);
+            else makings.merge(bl.asItem(), 1, Integer::sum);
+        }
+        makings.merge(Items.OAK_PLANKS, planks, Integer::sum);
+        int delivered = 0;
+        for (Map.Entry<Item, Integer> e : makings.entrySet()) {
+            int n = e.getValue() + e.getValue() / 10 + 1;
+            Crafts.giveBack(level, v, e.getKey(), n);
+            delivered += n;
+        }
+        Villages.tell(id, day, "a delivery of " + delivered + " blocks for a villa came into the stores (an operator's)");
+        Villages.forgetStores(id);
+        Bill b = quote(level, v, d, anchor, Direction.NORTH, household.size());
+        int lacks = Math.max(0, b.total() * 11 / 10 - cashOf(id, household));
+        int fromTreasury = Ledger.takeCoins(id, Math.min(lacks, Math.max(0, Ledger.coins(id) - Market.wageBill(id))));
+        VillageFolkEntity lead = household.get(0);
+        lead.earn(lacks);                                                       // the treasury's part, and the operator's for the rest
+        if (lacks > 0) Villages.tell(id, day, lead.displayNameCap() + " was granted " + lacks + " coins toward a house of its own ("
+            + fromTreasury + " from the treasury, " + (lacks - fromTreasury) + " an operator's)");
+        Commission c = commission(level, v, household, d, day, new Villages.Site(anchor, Direction.NORTH, 0));
+        if (c == null) {
+            ctx.getSource().sendFailure(Component.literal("The household could not commission it after all: " + planOfWhy(id, lead)));
+            return 0;
+        }
+        BlockPos door = anchor.south(4);
+        for (BuildGoal.Placement p : BuildGoal.plan(d.drawing, anchor, Direction.NORTH, 13)) {
+            if (p.part() == BuildGoal.Part.DOOR) { door = p.pos().south(2); break; }
+        }
+        String said = "BUILD " + c.names + " " + c.design.word + " at " + c.anchor.getX() + " " + c.anchor.getY() + " " + c.anchor.getZ()
+            + " facing " + c.facing.getName() + " bill " + c.total() + " (" + c.blocks + "/" + c.labour + "/" + c.plot + "/" + c.furnish
+            + "/" + c.permit + ") lead " + c.lead + " DOOR " + door.getX() + " " + door.getY() + " " + door.getZ();
+        ctx.getSource().sendSuccess(() -> Component.literal(said), false);
+        return 1;
+    }
+
+    private static String planOfWhy(UUID village, VillageFolkEntity lead) {
+        String[] p = planOf(village, lead.getUUID());
+        return p == null ? "no plan noted" : p[4];
     }
 
     private static int buildCmd(CommandContext<CommandSourceStack> ctx, int blocks) {

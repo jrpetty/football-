@@ -672,32 +672,33 @@ def bank_stage(r, look, cx, cz):
 
 
 def housing_stage(r, look, cx, cz):
-    """A folk's own house going up (entity/HousingMarket): the best-placed household commissions one now
-    (/village house market custom: an operator's grant from the treasury makes up what it lacks, and the
-    chronicle says so), its lot chosen in the homes' quarter, its bill agreed; the builders lay a third of it
-    out of the stores (/village house market build); photographed from its street, half up; then the books'
-    Homes page with the market strip (the index, prices and rents, the house going up with its bill); then the
-    rest laid, and the finished house from the street. Best called after the stats stage, so the books have
-    days in them."""
+    """A folk's own house going up (entity/HousingMarket), on ground made ready for it: east of the heart, clear of
+    the town's buildings, a plot levelled (/village house market stage: the makings of a villa delivered into the
+    stores and what the best-placed household lacks of the bill granted it, every grant in the chronicle), the villa
+    commissioned and paid for as any house is. The builders lay a third of it out of the stores (/village house
+    market build): photographed from its street, going up; then the books' Homes page with the market strip (the
+    index, prices and rents, the villa going up with its bill); then the rest laid, and the finished villa from the
+    street with its owner held at its door. Best called after the stats stage, so the books have days in them."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
-    out = r.cmd("execute positioned %d 100 %d run village house market custom" % (cx, cz))
-    say("housing custom: " + out[:400])
-    m = re.search(r"BUILD (.+?) (cottage|family house|town house|villa) at (-?\d+) (-?\d+) (-?\d+) facing (\w+) bill (\d+)", out)
+    sx, sz = cx + 60, cz + 20
+    r.cmd("tp %s %d %d %d" % (USER, sx, ground_height(r, sx, sz) + 24, sz + 30))
+    time.sleep(10)                                       # the plot's chunks arrive
+    out = r.cmd("execute positioned %d %d %d run village house market stage" % (sx, ground_height(r, sx, sz) + 1, sz))
+    say("housing stage: " + out[:500])
+    m = re.search(r"BUILD (.+?) (cottage|family house|town house|villa) at (-?\d+) (-?\d+) (-?\d+) facing (\w+) bill (\d+).*?"
+                  r"lead ([0-9a-f-]+) DOOR (-?\d+) (-?\d+) (-?\d+)", out)
     if not m:
         say("no house of a folk's own commissioned; nothing to photograph")
         return
-    ax, ay, az, facing = int(m.group(3)), int(m.group(4)), int(m.group(5)), m.group(6).lower()
-    tall = 16 if m.group(2) in ("family house", "town house", "villa") else 12
-    step = {"north": (0, -1), "south": (0, 1), "east": (1, 0), "west": (-1, 0)}
-    back = step.get(facing, (0, -1))
-    front = (-back[0], -back[1])                        # the door's side, toward its street
-    right = (-back[1], back[0])
-    ex, ez = ax + 0.5 + front[0] * 17 + right[0] * 7, az + 0.5 + front[1] * 17 + right[1] * 7
+    ax, ay, az = int(m.group(3)), int(m.group(4)), int(m.group(5))
+    lead, dx, dy, dz = m.group(8), int(m.group(9)), int(m.group(10)), int(m.group(11))
+    # Its back is to the north: the door, the porch and the street to the south.
+    ex, ez = ax + 7.5, az + 18.5
     r.cmd("tp %s %.1f %d %.1f" % (USER, ex, ay + 8, ez))
-    time.sleep(8)
-    say("housing build: " + r.cmd("execute positioned %d %d %d run village house market build %d" % (ax, ay, az, 160))[:400])
+    time.sleep(6)
+    say("housing build: " + r.cmd("execute positioned %d %d %d run village house market build %d" % (ax, ay, az, 180))[:400])
     look("housing-1-going-up", ex, ay + 7, ez, ax + 0.5, ay + 3, az + 0.5, wait=8)
     r.cmd("gamemode creative %s" % USER)
     r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 1, cz))
@@ -708,8 +709,15 @@ def housing_stage(r, look, cx, cz):
     shot("housing-2-homes-page")
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
+    r.cmd("tp %s %.1f %d %.1f" % (USER, ex, ay + 8, ez))
+    time.sleep(4)
     say("housing finish: " + r.cmd("execute positioned %d %d %d run village house market build %d" % (ax, ay, az, 2000))[:400])
-    look("housing-3-built", ex, ay + tall * 0.5 + 2, ez, ax + 0.5, ay + tall * 0.4, az + 0.5, wait=8)
+    # Its owner at its own front door, held there for the picture.
+    r.cmd("data merge entity %s {NoAI:1b}" % lead)
+    r.cmd("tp %s %.1f %d %.1f 0 0" % (lead, dx + 0.5, dy, dz + 0.5))      # facing the street
+    look("housing-3-built", ax + 4.5, ay + 5, az + 15.5, ax + 0.5, ay + 4, az + 0.5, wait=8)
+    look("housing-4-at-the-door", dx + 2.5, dy + 2, dz + 6.5, dx + 0.5, dy + 1.5, dz + 0.5, wait=6)
+    r.cmd("data merge entity %s {NoAI:0b}" % lead)
     say("alive after the housing market: %s" % client_alive())
 
 
