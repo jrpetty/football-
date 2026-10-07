@@ -2352,6 +2352,10 @@ def main():
         fashion_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("fashion stage failed: %s" % e)
+    try:
+        crime_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("crime stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
