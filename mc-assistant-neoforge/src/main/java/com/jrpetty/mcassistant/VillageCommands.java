@@ -33,6 +33,9 @@ import net.neoforged.neoforge.event.RegisterCommandsEvent;
  *   /village stall            the players' market stalls; stall rent | screen | till | books | price N item
  *   /village decor            how each home is furnished; decor now | decor showcase (ops)
  *   /village bank             the bank's books; bank deposit|withdraw|repay N, bank mortgage; bank week|showcase (ops)
+ *   /village economy          what the town makes, sells and is worth (the economy page)
+ *   /village larder           the larder against the mouths, the fuel, the fields; larder charcoal (ops) | fields
+ *   /village prices           the town's prices against their usual worth; prices page | now (ops) | shop (ops)
  *   /village knacks [name]    the knacks each folk chose for itself; knacks grant <name> <key> (ops)
  *   /village stats            the town's books in full: the analytics screen (as the village board)
  *   /village research         the city's research: what the leader has the town studying, and the tree
@@ -222,7 +225,11 @@ public final class VillageCommands {
             // The job market between towns: the notices, the applications, who came and went (JobMarketCommands).
             .then(JobMarketCommands.node())
             .then(Commands.literal("wages").executes(ctx -> page(ctx, 2)))
+            // [econ-prices] The economy page (what the town makes, sells and is worth). It was registered twice, here and
+            // by EconomyCommands, and the larder's status shadowed it: that one is /village larder now.
             .then(Commands.literal("economy").executes(ctx -> page(ctx, 3)))
+            // [econ-prices] The town's prices: today against the usual worth, supply and demand, the cost of living (PriceIndex).
+            .then(com.jrpetty.mcassistant.entity.PriceIndex.command())
             // The sellers' books: what the shop, the café, the tavern and the stores have, sell and make.
             .then(Commands.literal("shop").executes(ctx -> page(ctx, 4)))
             // A player's market stall: the stalls here; rent, screen, till, books, price; market day now, a lapse (ops).
@@ -262,7 +269,8 @@ public final class VillageCommands {
             .then(Commands.literal("chronicle").executes(VillageCommands::chronicle))
             // The museum and its archive: what is on show, who found it, the volumes (MuseumCommands).
             .then(MuseumCommands.build())
-            // [economy] The larder against the mouths, the coal floor and charcoal, the builders' stock carried about.
+            // [economy] The larder against the mouths, the coal floor and charcoal, the builders' stock carried about
+            // (/village larder; [econ-prices] it was /village economy, and hid the economy page).
             .then(EconomyCommands.build())
             // What every village you have met thinks of you.
             .then(Commands.literal("standing").executes(VillageCommands::standing))

@@ -207,6 +207,17 @@ public class WithdrawGoal extends Goal {
             keeper = null;                                          // gone from the counter: it helps itself
         }
 
+        // [econ-prices] Its own food at the town's stores, once the town keeps a shop: bought at the town's price, the
+        // cheaper if its own is dear (Purchases), not taken.
+        if (assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity vf
+                && com.jrpetty.mcassistant.entity.Purchases.buysFood(vf, word, chestPos)
+                && assistant.level() instanceof net.minecraft.server.level.ServerLevel server) {
+            int got = com.jrpetty.mcassistant.entity.Purchases.get(server, vf, matcherFor(word), job.amount(),
+                com.jrpetty.mcassistant.entity.Purchases.Need.FOOD);
+            assistant.rememberChest(chestPos, container);
+            finish(got > 0 ? "Bought " + got + " " + word + " at the town's price." : "No " + word + " to be had at a price I'll pay.");
+            return;
+        }
         Predicate<ItemStack> match = matcherFor(word);
         int wanted = job.amount();
         int moved = 0;

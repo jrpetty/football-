@@ -23,16 +23,18 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * /village economy — the larder, the fuel and the builders' stock (entity/Larder, Fuel, Strays).
+ * /village larder — the larder, the fuel and the builders' stock (entity/Larder, Fuel, Strays). [econ-prices] It was
+ * /village economy too, and the two shadowed each other (the later one's answer won); /village economy is the
+ * economy page (VillageCommands), and this is the larder's.
  *
  * <pre>
- *   /village economy            the nearest village: food grown a day against what its mouths eat, and
+ *   /village larder             the nearest village: food grown a day against what its mouths eat, and
  *                               whether a child may be raised and why; coal and charcoal in the stores
  *                               against the floor it keeps, and whether charcoal is wanted; who carries
  *                               the builders' stock about; and what its dead died of
- *   /village economy charcoal   (ops) its smelter burns logs into charcoal now, if the village wants it;
+ *   /village larder charcoal    (ops) its smelter burns logs into charcoal now, if the village wants it;
  *                               says where the smelter stands
- *   /village economy fields     its farmers' fields: where each lies, how fast it grows and why, how
+ *   /village larder fields      its farmers' fields: where each lies, how fast it grows and why, how
  *                               ripe it was at the farmer's last look, and the growth ticks it was given
  * </pre>
  */
@@ -41,7 +43,7 @@ public final class EconomyCommands {
     private EconomyCommands() {}
 
     public static LiteralArgumentBuilder<CommandSourceStack> build() {
-        return Commands.literal("economy")
+        return Commands.literal("larder")
             .executes(EconomyCommands::status)
             .then(Commands.literal("charcoal").requires(src -> src.hasPermission(2)).executes(EconomyCommands::charcoal))
             .then(Commands.literal("fields").executes(EconomyCommands::fields));

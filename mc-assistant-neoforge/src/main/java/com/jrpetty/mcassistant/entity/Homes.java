@@ -938,10 +938,13 @@ public final class Homes {
         // A bed: out of the stores (the tailor's), bought with the parents' coin; or the village's gift if
         // the parents have none and the leader is a generous one.
         if (Market.stock(level, id, s -> s.is(ItemTags.BEDS)) == 0) return why(h, "no bed in the stores");
-        Market.Good g = Market.goodFor(new ItemStack(Items.WHITE_BED));
-        int price = g == null ? 4 : Math.max(1, Market.sellPrice(g, Market.stock(level, id, g.what()), false));
-        boolean paid = pay(members, price);
+        // [econ-prices] Who pays (Purchases.homePrice): nobody before the town has a shop (out of the stores, as everything
+        // a household wanted was), nor for a house the town lets (its landlord furnishes it); for one the household owns,
+        // the household, at the town's price. Short of the coin, a generous leader gives it.
+        int price = Purchases.homePrice(level, id, h.tenure == Tenure.OWNED, new ItemStack(Items.WHITE_BED));
+        boolean paid = price == 0 || pay(members, price);
         if (!paid && !generous(id)) return why(h, "the parents cannot pay " + price);
+        boolean bought = paid && price > 0;
         BlockPos spot = bedSpot(level, id, h, beds);
         if (spot == null) {
             if (paid) members.stream().filter(m -> !m.isBaby()).max(Comparator.comparingInt(VillageFolkEntity::purse)).ifPresent(m -> m.earn(price));
@@ -953,9 +956,9 @@ public final class Homes {
             if (!bed.isEmpty()) Crafts.store(level, v, bed);
             return why(h, "the bed could not be taken from the stores");
         }
-        if (paid) {
+        if (bought) {
             Ledger.addCoins(id, price);
-            Economy.spentInTown(id, price);
+            Purchases.homeBought(level, id, bed, price);                 // [econ-prices] spent in town, in the shop's books
         }
         Direction lie = spotLie(level, spot);
         VillageFolkEntity parent0 = members.stream().filter(m -> !m.isBaby() && !BED_ERRANDS.containsKey(m.getUUID())).findFirst().orElse(null);
@@ -966,8 +969,8 @@ public final class Homes {
             // Bought at the shop: a parent goes for it and carries it home (moving), and sets it up.
             BED_ERRANDS.put(parent0.getUUID(), new BedErrand(id, h.anchor, shop, spot, lie, bb.defaultBlockState().setValue(BedBlock.FACING, lie),
                 level.getGameTime(), new boolean[]{ false }, child0 == null ? "the little one" : child0.displayNameCap()));
-            Villages.tell(id, day, parent0.displayNameCap() + " bought a bed at the shop for " + (child0 == null ? "a child" : child0.displayNameCap())
-                + " (" + price + coins(price) + ")");
+            Villages.tell(id, day, parent0.displayNameCap() + (bought ? " bought a bed at the shop for " : " fetched the town's bed from the shop for ")
+                + (child0 == null ? "a child" : child0.displayNameCap()) + (bought ? " (" + price + coins(price) + ")" : ""));
             parent0.persona().remember(day, "I bought a bed for " + (child0 == null ? "the little one" : child0.displayNameCap()), 4);
             why(h, "bought one at the shop");
             return true;
@@ -976,8 +979,8 @@ public final class Homes {
         VillageFolkEntity parent = members.stream().filter(m -> !m.isBaby()).findFirst().orElse(null);
         VillageFolkEntity child = members.stream().filter(VillageFolkEntity::isBaby)
             .max(Comparator.comparingLong(VillageFolkEntity::bornDay)).orElse(null);
-        Villages.tell(id, day, (parent == null ? "the village" : parent.displayNameCap()) + (paid ? " bought a bed at the shop for " : " was given a bed for ")
-            + (child == null ? "a child" : child.displayNameCap()) + " (" + price + coins(price) + ")");
+        Villages.tell(id, day, (parent == null ? "the village" : parent.displayNameCap()) + (bought ? " bought a bed at the shop for " : " was given a bed for ")
+            + (child == null ? "a child" : child.displayNameCap()) + (bought ? " (" + price + coins(price) + ")" : ""));
         if (parent != null) parent.persona().remember(day, "I bought a bed for " + (child == null ? "the little one" : child.displayNameCap()), 4);
         why(h, "bought one");
         return true;

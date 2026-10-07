@@ -182,7 +182,8 @@ public final class Luxuries {
             return false;
         }
         if (e.want == null) {
-            if (day - f.comfortDay() < 2) return false;
+            // [econ-prices] Every other day at most; every day while the shop's luxuries are cheap (PriceIndex).
+            if (day - f.comfortDay() < (PriceIndex.luxuriesCheap(village) ? 1 : 2)) return false;
             Wealth.Tier tier = Wealth.tier(f);
             if (tier.ordinal() < Wealth.Tier.COMFORTABLE.ordinal() || f.comforts() >= tier.comforts) return false;
             e.want = choose(level, v, h, b, f, tier, day, e);
@@ -326,12 +327,11 @@ public final class Luxuries {
         return ItemStack.EMPTY;
     }
 
-    /** What the shop asks a folk for one of these: the price list's, as Cafe.folkShops charges it. */
+    /** What the shop asks a folk for one of these, in whole coins: the town's price for the one thing, as Cafe.folkShops
+     *  charges it. [econ-prices] It was a whole lot's price (four rugs' for one rug). */
     static int priceOf(ServerLevel level, UUID village, ItemStack sample) {
         if (sample.isEmpty()) return 3;
-        Market.Good g = Budget.goodFor(sample);
-        int price = g == null ? 3 : Market.sellPrice(g, Market.stock(level, village, s -> ItemStack.isSameItemSameComponents(s, sample)), false);
-        return Math.max(1, Stockroom.asked(level, village, sample, Math.max(1, price), 1));
+        return Math.max(1, (int) Math.ceil(Purchases.priceEach(level, village, sample, null) - 1e-6));
     }
 
     /**

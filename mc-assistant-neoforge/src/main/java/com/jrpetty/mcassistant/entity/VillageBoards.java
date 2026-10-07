@@ -363,6 +363,8 @@ public final class VillageBoards {
         }
         String open = Cafe.openLine(level, id);
         if (open != null) out.add("RN|Open: " + open + ".");
+        String prices = PriceIndex.boardLine(id);               // [econ-prices] the week's big moves in prices
+        if (prices != null) out.add((PriceIndex.boardWarns(id) ? "RW|" : "RG|") + prices + ".");
         int content = Contentment.score(id);
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String alarm = Raids.why(id);

@@ -821,8 +821,8 @@ def economy_stage(r, look, cx, cz):
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
-    say("economy: " + r.cmd("execute positioned %d 100 %d run village economy" % (cx, cz))[:900])
-    out = r.cmd("execute positioned %d 100 %d run village economy charcoal" % (cx, cz))
+    say("economy: " + r.cmd("execute positioned %d 100 %d run village larder" % (cx, cz))[:900])
+    out = r.cmd("execute positioned %d 100 %d run village larder charcoal" % (cx, cz))
     say("charcoal: " + out[:300])
     m = re.search(r"SMELTER (.+?) (-?\d+) (-?\d+) (-?\d+)", out)
     if m:
@@ -846,13 +846,13 @@ def economy_stage(r, look, cx, cz):
 
 
 def fields_stage(r, look, cx, cz):
-    """The town's tended fields (entity/Fields): what /village economy says of the food in, by where it
+    """The town's tended fields (entity/Fields): what /village larder says of the food in, by where it
     came from, and of the fields' pace; then the first farmer's field from above, its torches round the
     edge and its composter by the work chest, and the same field a game hour later, grown."""
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
-    say("economy: " + r.cmd("execute positioned %d 100 %d run village economy" % (cx, cz))[:1200])
-    out = r.cmd("execute positioned %d 100 %d run village economy fields" % (cx, cz))
+    say("economy: " + r.cmd("execute positioned %d 100 %d run village larder" % (cx, cz))[:1200])
+    out = r.cmd("execute positioned %d 100 %d run village larder fields" % (cx, cz))
     say("fields: " + out[:900])
     # The field with the most tilled ground, and the middle of its farmland (seldom the middle of the plot:
     # a riverside field is a strip along the bank).
@@ -872,7 +872,7 @@ def fields_stage(r, look, cx, cz):
     look("21-fields-1-tended", fx + 6.5, cy + 0.5, fz + 6.5, fx, fy, fz, wait=4)
     r.cmd("time add 1000")
     time.sleep(50)                                   # a game hour less the jump: the field grows on
-    say("fields an hour on: " + r.cmd("execute positioned %d 100 %d run village economy fields" % (cx, cz))[:600])
+    say("fields an hour on: " + r.cmd("execute positioned %d 100 %d run village larder fields" % (cx, cz))[:600])
     look("21-fields-2-later", fx + 6.5, cy + 0.5, fz + 6.5, fx, fy, fz, wait=4)
     r.cmd("gamemode creative %s" % USER)
     say("alive after the fields: %s" % client_alive())

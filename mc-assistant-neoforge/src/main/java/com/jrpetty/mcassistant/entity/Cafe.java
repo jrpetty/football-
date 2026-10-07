@@ -486,24 +486,27 @@ public final class Cafe {
             return null;
         }
         ItemStack pick = forWork ? goods.get(0) : goods.get(f.getRandom().nextInt(goods.size()));
-        Market.Good g = after != null ? Budget.goodFor(pick) : Market.goodFor(pick);
-        int price = g == null ? 3 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, pick)), false);
-        price = Math.max(1, pick.isEnchanted() ? price * 3 : price);
-        price = Stockroom.asked(level, v.id(), pick, price, 1);              // slow stock marked down, never under cost
-        price = FolkSkills.thrifty(f, price);                                 // a Thrifty folk pays a tenth less
-        if (f.purse() < price) return null;
+        // [econ-prices] One of it at the town's price (Purchases.priceEach: the town's price, an enchanted thing and a
+        // master's work dearer, slow stock marked down, never under cost, the Thrifty a tenth off). It was a whole
+        // lot's price for the one thing: four rugs' price for one rug. The tool of its trade it buys whatever the price;
+        // a treat or a luxury it weighs against what it expects to pay, and leaves on the shelf if it is too dear.
+        double each = Purchases.priceEach(level, v.id(), pick, f);
+        Purchases.Need need = forWork ? Purchases.Need.TOOL : after != null || Luxuries.isLuxury(pick) ? Purchases.Need.LUXURY
+            : Purchases.Need.TREAT;
+        if (Purchases.decide(level, f, pick, each, need, 1) <= 0) return null;
+        if (!Purchases.canPay(f, each)) return null;
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
-        f.spend(price);
-        Ledger.addCoins(v.id(), price);
-        Economy.spentInTown(v.id(), price);
-        price += FolkSkills.tip(v.id(), AssistantEntity.StationTask.SHOP, f, price);   // a Friendly Face at the counter
+        int price = Math.max(0, Purchases.charge(level, f, v.id(), each, false, pick, 1));
+        PriceIndex.bought(v.id(), pick, 1);
+        price += FolkSkills.tip(v.id(), AssistantEntity.StationTask.SHOP, f, Math.max(1, price));   // a Friendly Face at the counter
         Stockroom.sold(level, v.id(), Stockroom.Seller.SHOP, pick, 1, price);
         ItemStack bought = pick.copyWithCount(1);
         // A treat is its own: kept off the stores, and carried along when it moves house (Homes).
         if (!forWork) Homes.keepsake(bought, f);
         ItemStack left = f.insertItem(bought);
         if (!left.isEmpty()) Crafts.store(level, v, left);
-        return bought.getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + " for " + price + (price == 1 ? " coin" : " coins");
+        return bought.getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + " for " + String.format(java.util.Locale.ROOT, "%.2f", each)
+            + " coins";
     }
 
     // ------------------------------------------------------------------ folk at the café
@@ -518,17 +521,13 @@ public final class Cafe {
         List<ItemStack> menu = menuGoods(level, v.id());
         if (menu.isEmpty()) return null;
         ItemStack pick = menu.get(f.getRandom().nextInt(menu.size()));
-        Market.Good g = Market.goodFor(pick);
-        int price = g == null ? 1 : Market.sellPrice(g, Market.stock(level, v.id(), s -> ItemStack.isSameItemSameComponents(s, pick)), false);
-        price = Math.max(1, price / Math.max(1, g == null ? 1 : g.bundle()));
-        price = Stockroom.asked(level, v.id(), pick, price, 1);              // slow stock marked down, never under cost
-        price = FolkSkills.thrifty(f, price);                                 // a Thrifty folk pays a tenth less
-        if (f.purse() < price) return null;
+        // [econ-prices] At the town's price, weighed against what it expects to pay: too dear and it does without.
+        double each = Purchases.priceEach(level, v.id(), pick, f);
+        if (Purchases.decide(level, f, pick, each, Purchases.Need.TREAT, 1) <= 0 || !Purchases.canPay(f, each)) return null;
         if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, pick), 1)) return null;
-        f.spend(price);
-        Ledger.addCoins(v.id(), price);
-        Economy.spentInTown(v.id(), price);
-        price += FolkSkills.tip(v.id(), AssistantEntity.StationTask.COOK, f, price);   // a Friendly Face at the counter
+        int price = Math.max(0, Purchases.charge(level, f, v.id(), each, false, pick, 1));
+        PriceIndex.bought(v.id(), pick, 1);
+        price += FolkSkills.tip(v.id(), AssistantEntity.StationTask.COOK, f, Math.max(1, price));   // a Friendly Face at the counter
         Stockroom.sold(level, v.id(), Stockroom.Seller.CAFE, pick, 1, price);
         // Had there and then: a drink does its little good, a bite fills it up.
         String drink = drinkOf(pick);

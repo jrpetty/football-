@@ -559,6 +559,7 @@ public final class Annals {
         out.put("league", league(level, v));
         out.put("production", production(level, v));
         out.put("shops", Stockroom.inventoryReport(level, id));
+        out.put("prices", PriceIndex.report(level, id));        // [econ-prices] the town's prices: the Prices page
         out.getCompound("shops").put("stalls", PlayerStalls.report(level, id));   // the players' stalls on the square
         out.put("workshop", Workshop.report(level, id));        // the shop's workshop: its makers, its order book, the age's say
         out.put("stock", stock(level, v));

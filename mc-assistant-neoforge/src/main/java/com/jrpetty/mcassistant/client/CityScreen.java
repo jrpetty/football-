@@ -47,10 +47,12 @@ public class CityScreen extends Screen {
     private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Shops", "Jobs", "Folk", "Society", "Leader", "Homes",
         "Buildings", "Stores", "Stock", "Research", "Why", "Trends", "Records", "News", "Board",
         // The school and the museum, last, so the pages before them keep their numbers (School, Museum).
-        "School", "Museum" };
+        "School", "Museum",
+        // [econ-prices] The town's prices, after them (PriceIndex), so the pages before keep their numbers.
+        "Prices" };
     /** The pages that read today's figures, not the books (so they show from the first day). */
     private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
-        "Shops", "Homes", "Stock", "Research", "School", "Museum");
+        "Shops", "Homes", "Stock", "Research", "School", "Museum", "Prices");
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -291,6 +293,7 @@ public class CityScreen extends Screen {
                 case "Research" -> research(g, x, y, cw, ch, mouseX, mouseY);
                 case "School" -> school(g, x, y, cw, ch, mouseX, mouseY);
                 case "Museum" -> museum(g, x, y, cw, ch);
+                case "Prices" -> prices(g, x, y, cw, ch, mouseX, mouseY);      // [econ-prices]
                 default -> board(g, x, y, cw, ch);
             }
         }
@@ -700,6 +703,94 @@ public class CityScreen extends Screen {
                 sy += 9;
             }
         }
+    }
+
+    // ------------------------------------------------------------------ [econ-prices] the prices
+
+    private static final String[] PRICE_HEADS = { "Good", "Today", "Usual", "", "Week", "Stock", "Made a day", "Wanted a day", "Why" };
+
+    /**
+     * The town's prices (entity/PriceIndex, Purchases): the cost of living against the lowest wage, the folk on the
+     * slate, what the folk thought too dear and what they bought more of for being cheap, the week's big moves; then a
+     * row a thing: today's price against its usual worth (the bar: where it stands between four tenths and three times
+     * its worth), which way it is going, the week's move, what is on hand, made and wanted a day, and why it moved.
+     */
+    private void prices(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        CompoundTag p = data.getCompound("prices");
+        if (p.isEmpty()) {
+            g.drawString(font, "No prices in the books yet.", x, y, Ui.MUTED, false);
+            return;
+        }
+        int cardW = (cw - 3 * 4) / 4, cardH = 28;
+        double living = p.getInt("living100") / 100.0;
+        int lowest = p.getInt("lowest");
+        boolean fits = living <= lowest;
+        card(g, x, y, cardW, cardH, "Cost of living", String.format(Locale.ROOT, "%.2fc a day", living),
+            String.format(Locale.ROOT, "two meals at %.2fc, rent %dc", p.getInt("meal100") / 100.0, p.getInt("rent")), fits ? GREEN : RED);
+        card(g, x + cardW + 4, y, cardW, cardH, "Lowest wage", lowest + "c a day", fits ? "it covers the living" : "short of the living",
+            fits ? GREEN : RED);
+        card(g, x + 2 * (cardW + 4), y, cardW, cardH, "On the slate", p.getInt("slateCoins") + "c",
+            p.getInt("slateFolk") + (p.getInt("slateFolk") == 1 ? " folk owes" : " folk owe") + ", paid from wages", p.getInt("slateFolk") > 0 ? AMBER : GREEN);
+        card(g, x + 3 * (cardW + 4), y, cardW, cardH, "Too dear · cheap", p.getInt("refused") + " · " + p.getInt("bargains"),
+            "left on the shelf · bought extra", p.getInt("refused") > p.getInt("bargains") ? AMBER : BLUE);
+        int ty = y + cardH + 5, wrap = (int) (cw / 0.75);
+        List<String> notes = new ArrayList<>();
+        if (p.getLong("day") < 0) notes.add("Not reckoned yet: everything sells at its usual worth until the town's first morning.");
+        if (!p.getBoolean("open")) notes.add("No shop open yet: the folk take what they need for themselves from the stores, free.");
+        if (!p.getString("alarm").isEmpty()) notes.add("!The living wage: " + p.getString("alarm") + ".");
+        if (!p.getString("refusedWhat").isEmpty()) notes.add("Too dear for the folk yesterday: " + p.getString("refusedWhat") + ".");
+        if (!p.getString("bargainWhat").isEmpty()) notes.add("Bought more of for being cheap: " + p.getString("bargainWhat") + ".");
+        ListTag moves = p.getList("moves", Tag.TAG_STRING);
+        for (int i = 0; i < moves.size(); i++) notes.add("~" + moves.getString(i) + ".");
+        for (String n : notes) {
+            int colour = n.startsWith("!") ? Ui.BAD : n.startsWith("~") ? PURPLE : Ui.MUTED;
+            small(g, Ui.clip(font, n.startsWith("!") || n.startsWith("~") ? n.substring(1) : n, wrap), x, ty, colour);
+            ty += 10;
+        }
+        int[] cols = { 0, cw * 22 / 100, cw * 31 / 100, cw * 40 / 100, cw * 44 / 100, cw * 52 / 100, cw * 60 / 100, cw * 70 / 100, cw * 81 / 100 };
+        for (int i = 0; i < PRICE_HEADS.length; i++) small(g, PRICE_HEADS[i], x + cols[i], ty, Ui.FAINT);
+        ty += 10;
+        ListTag rows = p.getList("goods", Tag.TAG_COMPOUND);
+        int rowsFit = Math.max(1, (y + ch - 10 - ty) / 10);
+        int start = Math.max(0, Math.min(scroll, Math.max(0, rows.size() - rowsFit)));
+        for (int i = start; i < Math.min(rows.size(), start + rowsFit); i++) {
+            CompoundTag r = rows.getCompound(i);
+            boolean over = mx >= x && mx < x + cw && my >= ty - 1 && my < ty + 9;
+            g.fill(x - 2, ty - 1, x + cw, ty + 9, over ? Ui.HI : i % 2 == 0 ? Ui.ROW : Ui.ROW_ALT);
+            icon(g, r.getString("item"), x, ty - 1, 0.6F);
+            small(g, Ui.clip(font, r.getString("name"), (int) ((cols[1] - 14) / 0.75)), x + 11, ty + 1, Ui.INK);
+            int factor = r.getInt("factor100");
+            int dear = factor >= 115 ? RED : factor <= 87 ? GREEN : Ui.INK;
+            small(g, String.format(Locale.ROOT, "%.2fc", r.getInt("each100") / 100.0), x + cols[1], ty + 1, dear);
+            small(g, String.format(Locale.ROOT, "%.2f", r.getInt("usual100") / 100.0), x + cols[2], ty + 1, Ui.MUTED);
+            int trend = r.getInt("trend");
+            small(g, trend > 0 ? "\u2191" : trend < 0 ? "\u2193" : "\u2192", x + cols[3], ty + 1, trend > 0 ? RED : trend < 0 ? GREEN : Ui.FAINT);
+            int week = r.getInt("week");
+            small(g, week == 0 ? "—" : (week > 0 ? "+" : "") + week + "%", x + cols[4], ty + 1, week >= 25 ? RED : week <= -25 ? GREEN : Ui.MUTED);
+            small(g, num(r.getInt("stock")), x + cols[5], ty + 1, Ui.INK);
+            small(g, num(r.getInt("made10") / 10.0), x + cols[6], ty + 1, Ui.INK);
+            small(g, num(r.getInt("wanted10") / 10.0), x + cols[7], ty + 1, Ui.INK);
+            String why = r.getInt("refused") > 0 ? r.getInt("refused") + " refused" + (r.getString("why").isEmpty() ? "" : "; " + r.getString("why"))
+                : r.getString("why");
+            small(g, Ui.clip(font, why, (int) ((cw - cols[8]) / 0.75)), x + cols[8], ty + 1, r.getInt("refused") > 0 ? Ui.WARN : Ui.MUTED);
+            if (over) {
+                List<Component> tip = new ArrayList<>();
+                tip.add(Component.literal(r.getString("name") + String.format(Locale.ROOT, ": %.2fc today, %.2fc its usual worth (%d%%)",
+                    r.getInt("each100") / 100.0, r.getInt("usual100") / 100.0, factor)));
+                tip.add(Component.literal("Heading for " + r.getInt("target100") + "% of its worth; " + (week == 0 ? "no week's change yet"
+                    : (week > 0 ? "up " : "down ") + Math.abs(week) + "% on the week")));
+                tip.add(Component.literal("Supply: " + r.getInt("stock") + " on hand, " + num(r.getInt("made10") / 10.0) + " made a day"));
+                tip.add(Component.literal("Demand: " + num(r.getInt("wanted10") / 10.0) + " wanted a day; yesterday " + r.getInt("missed")
+                    + " wanted and not there, " + r.getInt("refused") + " too dear, " + r.getInt("bargains") + " bought extra for cheapness"));
+                hover = tip;
+                hoverX = mx;
+                hoverY = my;
+            }
+            ty += 10;
+        }
+        if (rows.isEmpty()) small(g, "Nothing priced yet.", x, ty, Ui.MUTED);
+        small(g, Ui.clip(font, "Supply (the stores, the shop, the day's making) against demand (sold, wanted, too dear) · the mouse over a row"
+            + (rows.size() > rowsFit ? " · scroll for more" : ""), wrap), x, y + ch - 9, Ui.FAINT);
     }
 
     // ------------------------------------------------------------------ the shops

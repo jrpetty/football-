@@ -332,6 +332,7 @@ public final class FolkTalk {
         if (!f.isBaby() && job != AssistantEntity.StationTask.NONE) line(sb, "Pace", f.paceLine());
         line(sb, "Worth", Wealth.line(f));
         line(sb, "Meals", Meals.line(f));
+        line(sb, "At the counter", Purchases.cardLine(f));  // [econ-prices] its slate, its change, what it bought and refused
         line(sb, "Bank", Bank.cardLine(f));                 // its savings at the bank, its mortgage, how careful it is
         net.minecraft.core.BlockPos bed = f.bedPos();
         String house = Homes.talk(f);

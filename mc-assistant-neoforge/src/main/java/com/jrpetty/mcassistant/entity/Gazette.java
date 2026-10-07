@@ -303,7 +303,7 @@ public final class Gazette {
         if (goods.isEmpty()) sb.append("\nThe stalls are bare.");
         for (int i = 0; i < Math.min(4, goods.size()); i++) {
             Market.Good g = goods.get(i);
-            sb.append('\n').append(g.bundle()).append(' ').append(g.name()).append(": ").append(Market.sellPrice(g, stock.get(g), md)).append('c');
+            sb.append('\n').append(g.bundle()).append(' ').append(g.name()).append(": ").append(Market.sellPrice(level, id, g, md)).append('c');
         }
         List<Market.Good> wanted = Market.wanted(level, id);
         if (!wanted.isEmpty() && Ledger.coins(id) > 0) {
@@ -311,9 +311,11 @@ public final class Gazette {
             for (int i = 0; i < Math.min(2, wanted.size()); i++) {
                 Market.Good g = wanted.get(i);
                 sb.append('\n').append(g.bundle()).append(' ').append(g.name()).append(": ")
-                    .append(Market.buyPrice(g, stock.getOrDefault(g, 0), md)).append('c');
+                    .append(Market.buyPrice(level, id, g, md)).append('c');
             }
         }
+        // [econ-prices] The week's big moves, and why: "Bread dear this week: the harvest failed (0.42c, up 40%)".
+        for (String m : PriceIndex.moveLines(id)) sb.append('\n').append(m).append('.');
         return sb.toString();
     }
 

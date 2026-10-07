@@ -4222,7 +4222,7 @@ public class VillageFolkEntity extends AssistantEntity {
             brain("asked the storehouse to send a " + tool.word + " out: mine is nearly worn through");
             return;
         }
-        net.minecraft.world.item.ItemStack got = Toolrack.issue(server, v, this, tool);
+        net.minecraft.world.item.ItemStack got = Purchases.tool(server, v, this, tool);   // [econ-prices] bought once there is a shop
         if (got.isEmpty()) return;
         brain((worn ? "a spare " : "a new ") + got.getHoverName().getString().toLowerCase(java.util.Locale.ROOT)
             + " off the storehouse's rack");
@@ -4280,7 +4280,7 @@ public class VillageFolkEntity extends AssistantEntity {
         int want = rationsWanted();
         Villages.Village v = Villages.get(village);
         if (v != null && Toolrack.atTheStores(server, v, this)) {
-            int got = drawFromTheStores(server, RATION, want - have);
+            int got = Purchases.get(server, this, RATION, want - have, Purchases.Need.FOOD);   // [econ-prices] bought once there is a shop
             if (got > 0) {
                 brain("took " + got + " rations at the stores");
                 recheckKit();
