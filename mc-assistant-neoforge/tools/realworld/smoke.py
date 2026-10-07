@@ -1601,7 +1601,7 @@ def war_peace_stage(r, look, cx, cz):
     councillor's vote and why); war declared (/village war declare: the bell in both towns, the war banner
     out of the stores hung over the gate, else on the front of the hall, else on a pole by the board), the
     banner photographed from the side it faces; the town's books at the War page; then peace made
-    (/village war peace) and the banner taken down again."""
+    (/village war peace), the banner taken down again, and the war's memorial put up and photographed."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
@@ -1637,6 +1637,14 @@ def war_peace_stage(r, look, cx, cz):
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("peace: " + r.cmd("execute positioned %d %d %d run village war peace" % (cx, hy + 1, cz))[:500])
     r.cmd("gamemode spectator %s" % USER)
+    # The memorial, put up out of the stores by the town's works (/village culture now: every plaque wanted, at once).
+    say("plaques: " + r.cmd("execute positioned %d %d %d run village culture now" % (cx, hy + 1, cz))[:300])
+    out = r.cmd("execute positioned %d %d %d run village war" % (cx, hy + 1, cz))
+    say("after the peace: " + out[-900:])
+    m = re.search(r"Memorial at (-?\d+) (-?\d+) (-?\d+)", out)
+    if m:
+        px, py, pz = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        look("23-war-5-memorial", px + 3.5, py + 1, pz + 3.5, px + 0.5, py + 1.5, pz + 0.5, wait=6)
     say("alive after the war: %s" % client_alive())
 
 

@@ -38,8 +38,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * war; a town that yields pays and stays at peace; a town that refuses is at war on both books, with a
  * banner of real blocks over each; the side that reckons itself the weaker by its scouts' report sues
  * for peace and the treaty concedes the goal; an ally's guards walk over and stand on the walls, and the
- * peace (when the cost tells on both) is on both books and sends them home; and with wars switched off,
- * nobody goes to war.
+ * peace (when the cost tells on both) is on both books and sends them home; with wars switched off,
+ * nobody goes to war; a war wears its town down day by day, the more for what it costs; a weary town elects
+ * a peace candidate who sues for peace, while a war going well keeps the hawk in; and at the peace the
+ * militia stand down, the danger pay ends, a feast is called, the memorial goes up and Remembrance Day is kept.
  *
  * <p>Each on its own ground in x 760000-779999, z 66000, in a batch of its own, two (or three) towns 300
  * blocks apart. The day is set just after the day's dealings (11200), so the towns' own diplomacy and war
@@ -452,6 +454,18 @@ public class WarAndPeaceGameTests {
             Kit.log("wp06 the ally's guards home: " + home + " of " + going.size() + "; " + Villages.name(b.id()) + " now "
                 + WarAndPeace.own(level, b.id()).strength());
             helper.assertTrue(home == 2, "the ally's guards go home at the peace");
+            // And the treaty broken: a raid while it holds. A cause for war, in both chronicles and on the board.
+            if (!Ledger.knowEachOther(c.id(), a.id())) Ledger.relate(c.id(), a.id(), 0);   // the ally has heard of it (it took sides)
+            int was = Ledger.relation(b.id(), a.id()), wasC = Ledger.relation(c.id(), a.id());
+            helper.assertTrue(WarAndPeace.treatyHoldsForTests(a.id(), b.id(), day), "the treaty holds");
+            WarAndPeace.breach(level, a.id(), b.id(), day, "its folk drove off our sheep while the treaty held");
+            List<String> board = WarAndPeace.board(level, b.id(), day);
+            Kit.log("wp06 the treaty broken: relation " + was + " -> " + Ledger.relation(b.id(), a.id()) + ", the ally's " + wasC + " -> "
+                + Ledger.relation(c.id(), a.id()) + "; holds " + WarAndPeace.treatyHoldsForTests(a.id(), b.id(), day) + "; the board " + board);
+            helper.assertTrue(!WarAndPeace.treatyHoldsForTests(a.id(), b.id(), day), "a treaty broken no longer keeps the peace");
+            helper.assertTrue(chronicled(a.id(), "broke its treaty") && chronicled(b.id(), "broke its treaty"), "in both chronicles");
+            helper.assertTrue(board.stream().anyMatch(l -> l.contains("broke its treaty")), "on the board");
+            helper.assertTrue(Ledger.relation(b.id(), a.id()) < was && Ledger.relation(c.id(), a.id()) < wasC, "and it costs the breaker everywhere");
             helper.succeed();
         });
     }
@@ -509,6 +523,211 @@ public class WarAndPeaceGameTests {
                 if (set) AssistantConfig.VILLAGE_WARS.set(true);
                 WarAndPeace.switchForTests(null);
             }
+        });
+    }
+
+    // ------------------------------------------------------------------ wp08
+
+    /** Two of the town's folk (not the elder, not the watch) off their trades to the watch, as the leader's morning call for volunteers makes them. */
+    private static List<VillageFolkEntity> volunteers(UUID v, int n) {
+        UUID e = Villages.elder(v);
+        List<VillageFolkEntity> out = new ArrayList<>();
+        for (VillageFolkEntity f : folk(v)) {
+            if (out.size() >= n) break;
+            if (f.getUUID().equals(e) || f.isBaby() || f.stationTask() == AssistantEntity.StationTask.GUARD) continue;
+            AssistantEntity.StationTask was = f.stationTask() == AssistantEntity.StationTask.NONE ? AssistantEntity.StationTask.WOOD : f.stationTask();
+            Ledger.note(v, "war.vol/" + f.getUUID(), was.name());
+            f.setJob(AssistantEntity.StationTask.GUARD);
+            out.add(f);
+        }
+        return out;
+    }
+
+    private static int points(String wear) {
+        try {
+            return Integer.parseInt(wear.split("\\|", 2)[0]);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    /**
+     * War-weariness: a war's day wears the town down more when the war footing costs it (volunteers off their
+     * trades, danger pay), and day after day of the war it grows; it shows in the town's contentment and on the
+     * folk's cards.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "wp08_weariness")
+    public static void wp08_weariness(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        start(level);
+        int x = 774000;
+        Villages.Village a = town(level, x, 8), b = town(level, x + 300, 5);
+        helper.assertTrue(a != null && b != null && !a.id().equals(b.id()), "two towns");
+        helper.runAtTickTime(20, () -> {
+            long day = level.getDayTime() / 24000L;
+            elder(level, a.id(), Values.Value.SAFETY, Social.Trait.GRUMPY, Social.Trait.HARDWORKING);
+            elder(level, b.id(), Values.Value.FOOD, Social.Trait.CHEERFUL, Social.Trait.GENEROUS);
+            guards(a.id(), 2);
+            feud(a.id(), b.id(), day);
+            helper.assertTrue(WarAndPeace.declare(level, a.id(), b.id(), day, WarAndPeace.Goal.REVENGE, 6, "6 coins for the wrongs done us"), "war declared");
+            String bare = WarAndPeace.wearForTests(level, a, day + 1);
+            List<VillageFolkEntity> vols = volunteers(a.id(), 2);
+            com.jrpetty.mcassistant.entity.WarFooting.Cost cost = com.jrpetty.mcassistant.entity.WarFooting.dailyCost(a.id());
+            String paid = WarAndPeace.wearForTests(level, a, day + 1);
+            Kit.log("wp08 a day of the war, before the volunteers: " + bare + "; with " + vols.size() + " volunteers (cost " + cost.coins()
+                + " coins, " + cost.hoursLost() + " hours lost, danger pay " + cost.dangerPay() + "): " + paid);
+            helper.assertTrue(cost.coins() > 0 || cost.hoursLost() > 0, "the war footing costs the town: " + cost);
+            helper.assertTrue(points(paid) > points(bare) && paid.contains("cost"), "the cost wears the town the more: " + bare + " -> " + paid);
+            List<Integer> ws = new ArrayList<>();
+            for (int d = 1; d <= 12; d++) {
+                WarAndPeace.townDailyForTests(level, a, day + d);
+                ws.add(WarAndPeace.weariness(a.id()));
+            }
+            Kit.log("wp08 weariness day by day: " + ws + "; what wore it down: " + WarAndPeace.wearyWhy(a.id()));
+            for (int i = 1; i < ws.size(); i++) helper.assertTrue(ws.get(i) > ws.get(i - 1), "it grows with every day of the war: " + ws);
+            int last = ws.get(ws.size() - 1);
+            helper.assertTrue(last >= ws.get(0) + 11, "twelve days of war wear on the town: " + ws);
+            com.jrpetty.mcassistant.entity.Contentment.resetForTests();             // (worked out afresh, not as it stood a moment before the war)
+            com.jrpetty.mcassistant.entity.Contentment.View view = com.jrpetty.mcassistant.entity.Contentment.of(level, a.id());
+            String card = WarAndPeace.cardLine(vols.isEmpty() ? folk(a.id()).get(0) : vols.get(0));
+            Kit.log("wp08 contentment " + view.score() + " (" + view.bad() + "); a card: " + card + "; looking elsewhere: " + WarAndPeace.wearyOfWar(a.id()));
+            helper.assertTrue(view.bad().stream().anyMatch(s -> s.contains("war")), "it shows in the town's contentment: " + view.bad());
+            helper.assertTrue(card != null && card.contains("war"), "and on the folk's cards: " + card);
+            helper.assertTrue(WarAndPeace.wearyOfWar(a.id()) == (last >= 50), "weary enough, folk look for work elsewhere (JobSeekers)");
+            helper.succeed();
+        });
+    }
+
+    // ------------------------------------------------------------------ wp09
+
+    /**
+     * The wartime election: a town weary of a war going badly puts up a peace candidate, who wins the count
+     * and sues for peace at once; while a war going well keeps the hawk ahead in a voter's eyes.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "wp09_peace_candidate")
+    public static void wp09_peace_candidate(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        start(level);
+        int x = 776000;
+        Villages.Village a = town(level, x, 8), b = town(level, x + 300, 6);
+        helper.assertTrue(a != null && b != null && !a.id().equals(b.id()), "two towns");
+        helper.runAtTickTime(20, () -> {
+            long day = level.getDayTime() / 24000L;
+            VillageFolkEntity hawk = elder(level, a.id(), Values.Value.SAFETY, Social.Trait.GRUMPY, Social.Trait.HARDWORKING);
+            elder(level, b.id(), Values.Value.SAFETY, Social.Trait.GRUMPY, Social.Trait.SHY);
+            helper.assertTrue(hawk != null, "a hawk leads the town");
+            VillageFolkEntity dove = null;
+            for (VillageFolkEntity f : folk(a.id())) {
+                if (f == hawk) continue;
+                f.life().setTraitsForTests(Social.Trait.CHEERFUL, Social.Trait.SOCIABLE);
+                Values.setForTests(f, Values.Value.WEALTH, 95);
+                Values.setForTests(f, Values.Value.SAFETY, 10);
+                if (dove == null) dove = f;
+            }
+            guards(a.id(), 1);                                   // one on the watch: against a beaten enemy, enough
+            guards(b.id(), 4);
+            feud(a.id(), b.id(), day);
+            helper.assertTrue(WarAndPeace.declare(level, a.id(), b.id(), day, WarAndPeace.Goal.TRIBUTE, 10, "10 coins in tribute"), "war declared");
+            Intel.file(a.id(), new Intel.Report(b.id(), day, 6, 4, 0, 0, 0, 0, 10, "four on the walls, and they look ready"));
+            WarAndPeace.wearyForTests(a.id(), 80);
+            int stood = com.jrpetty.mcassistant.entity.Elections.callForTests(level, a, day);
+            UUID pc = WarAndPeace.peaceCandidate(a.id());
+            List<String> standing = com.jrpetty.mcassistant.entity.Elections.standingForTests(a.id());
+            Kit.log("wp09 the election called at weariness 80: " + stood + " stand: " + standing + "; the peace candidate " + pc);
+            helper.assertTrue(pc != null && !pc.equals(hawk.getUUID()), "a peace candidate stands, and it is not the leader who took the town to war");
+            // A war going well (the enemy reckoned the weaker) keeps the hawk ahead in a dove's eyes, weary as it is.
+            com.jrpetty.mcassistant.entity.Elections.Candidate forPeace = new com.jrpetty.mcassistant.entity.Elections.Candidate(pc, "the peace candidate",
+                Values.Value.WEALTH, Values.Value.LEISURE, "peace");
+            com.jrpetty.mcassistant.entity.Elections.Candidate forWar = new com.jrpetty.mcassistant.entity.Elections.Candidate(hawk.getUUID(), hawk.displayNameCap(),
+                Values.Value.SAFETY, Values.Value.TRADITION, "safe streets");
+            double badPeace = WarAndPeace.electionLean(level, dove, forPeace), badWar = WarAndPeace.electionLean(level, dove, forWar);
+            Intel.file(a.id(), new Intel.Report(b.id(), day, 6, 0, 0, 0, 0, 0, 3, "nobody on the walls; they are finished"));
+            WarAndPeace.wearyForTests(a.id(), 55);
+            double wellPeace = WarAndPeace.electionLean(level, dove, forPeace), wellWar = WarAndPeace.electionLean(level, dove, forWar);
+            Kit.log("wp09 a dove's lean: the war going badly, peace " + badPeace + " against the hawk " + badWar + "; going well, peace "
+                + wellPeace + " against the hawk " + wellWar);
+            helper.assertTrue(badPeace > badWar, "a war going badly leans the town to peace");
+            helper.assertTrue(wellWar > wellPeace, "a war going well keeps the hawk in");
+            Intel.file(a.id(), new Intel.Report(b.id(), day, 6, 4, 0, 0, 0, 0, 10, "four on the walls again"));
+            WarAndPeace.wearyForTests(a.id(), 80);
+            com.jrpetty.mcassistant.entity.Elections.Result r = com.jrpetty.mcassistant.entity.Elections.countForTests(level, a);
+            VillageFolkEntity flag = envoy(a.id(), b.id(), Envoys.Errand.PEACE);
+            Kit.log("wp09 the count: " + r.votes() + "; winner " + (r.winner() == null ? "none" : r.winner().name()) + "; elder now "
+                + Villages.elderName(a.id()) + "; white flag " + (flag == null ? "none" : flag.displayNameCap()));
+            helper.assertTrue(r.winner() != null && r.winner().id().equals(pc), "the peace candidate wins: " + r.votes());
+            helper.assertTrue(flag != null, "and the new leader sues for peace at once");
+            helper.assertTrue(chronicled(a.id(), "promise of peace"), "in the chronicle");
+            helper.succeed();
+        });
+    }
+
+    // ------------------------------------------------------------------ wp10
+
+    /**
+     * Peace returns: the militia stood down and the volunteers back at their trades the day of the peace, the
+     * danger pay ended, the war's cost gone from the books; a feast called for the peace; the memorial plaque
+     * put up with the name of the spy the war cost; and Remembrance Day kept on the day of the peace, a year on.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "wp10_peace_returns")
+    public static void wp10_peace_returns(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        start(level);
+        int x = 778000;
+        Villages.Village a = town(level, x, 8), b = town(level, x + 300, 5);
+        helper.assertTrue(a != null && b != null && !a.id().equals(b.id()), "two towns");
+        helper.runAtTickTime(20, () -> {
+            long day = level.getDayTime() / 24000L;
+            elder(level, a.id(), Values.Value.SAFETY, Social.Trait.GRUMPY, Social.Trait.HARDWORKING);
+            elder(level, b.id(), Values.Value.FOOD, Social.Trait.CHEERFUL, Social.Trait.GENEROUS);
+            guards(a.id(), 1);
+            feud(a.id(), b.id(), day);
+            stock(level, a.id(), new ItemStack(Items.OAK_SIGN, 4), new ItemStack(Items.OAK_FENCE, 4));
+            helper.assertTrue(WarAndPeace.declare(level, a.id(), b.id(), day, WarAndPeace.Goal.REVENGE, 6, "6 coins for the wrongs done us"), "war declared");
+            com.jrpetty.mcassistant.entity.WarFooting.morning(level, a, day);      // the leader's morning at war: the militia enrolled and called up
+            List<VillageFolkEntity> vols = volunteers(a.id(), 2);
+            VillageFolkEntity guard = null;
+            for (VillageFolkEntity f : folk(a.id())) if (f.stationTask() == AssistantEntity.StationTask.GUARD && !vols.contains(f)) guard = f;
+            int militia = com.jrpetty.mcassistant.entity.Militia.members(a.id()).size();
+            int danger = guard == null ? -1 : com.jrpetty.mcassistant.entity.WarFooting.dangerPay(guard);
+            int costAtWar = com.jrpetty.mcassistant.entity.WarFooting.dailyCost(a.id()).coins();
+            Kit.log("wp10 at war: militia " + militia + ", volunteers " + vols.size() + ", a guard's danger pay " + danger + "%, the day's cost " + costAtWar);
+            helper.assertTrue(danger > 0, "the watch is paid danger money at war: " + danger);
+            WarAndPeace.fallenForTests(a.id(), b.id(), "Wren, our spy", day);
+            String text = WarAndPeace.makePeace(level, a.id(), b.id(), day, WarAndPeace.terms(level, a.id(), b.id()), "by order", null);
+            int militiaAfter = com.jrpetty.mcassistant.entity.Militia.members(a.id()).size();
+            int dangerAfter = guard == null ? -1 : com.jrpetty.mcassistant.entity.WarFooting.dangerPay(guard);
+            int costAfter = com.jrpetty.mcassistant.entity.WarFooting.dailyCost(a.id()).coins();
+            StringBuilder back = new StringBuilder();
+            for (VillageFolkEntity f : vols) back.append(f.displayNameCap()).append(" ").append(f.stationTask()).append("; ");
+            Kit.log("wp10 the peace: " + text + "; militia " + militia + " -> " + militiaAfter + ", danger pay " + danger + " -> " + dangerAfter
+                + ", the day's cost " + costAtWar + " -> " + costAfter + "; the volunteers: " + back + "footing " + Wars.footing(a.id()));
+            helper.assertTrue(!Wars.atWar(a.id(), b.id()) && Wars.footing(a.id()) == Wars.Footing.PEACE, "at peace");
+            helper.assertTrue(militiaAfter == 0, "the militia stood down at the peace");
+            for (VillageFolkEntity f : vols) helper.assertTrue(f.stationTask() != AssistantEntity.StationTask.GUARD, "the volunteers back to their trades: " + back);
+            helper.assertTrue(dangerAfter == 0 && costAfter == 0, "the danger pay ended, and the war footing costs nothing");
+            helper.assertTrue(chronicled(a.id(), "peacetime work"), "the town back to its peacetime work");
+            long feast = WarAndPeace.feastDay(a.id());
+            helper.assertTrue(feast > day && com.jrpetty.mcassistant.entity.Gatherings.sponsored(a.id(), feast), "a feast called for the peace: day " + feast);
+            List<com.jrpetty.mcassistant.entity.Plaques.Plaque> plaques = com.jrpetty.mcassistant.entity.Plaques.putForTests(level, a);
+            com.jrpetty.mcassistant.entity.Plaques.Plaque memorial = null;
+            for (com.jrpetty.mcassistant.entity.Plaques.Plaque p : plaques) if (p.site() == com.jrpetty.mcassistant.entity.Plaques.Site.MEMORIAL) memorial = p;
+            Kit.log("wp10 the memorial: " + (memorial == null ? "none" : String.join(" / ", memorial.lines()) + (memorial.up() ? " at " + memorial.at().toShortString()
+                + ", " + level.getBlockState(memorial.at().above()) : " (not up: " + com.jrpetty.mcassistant.entity.Plaques.shortForTests(a.id()) + ")")));
+            helper.assertTrue(memorial != null && String.join(" ", memorial.lines()).contains("Wren"), "a memorial to whoever the war cost");
+            helper.assertTrue(memorial.up() && level.getBlockState(memorial.at().above()).getBlock() instanceof net.minecraft.world.level.block.SignBlock,
+                "put up, a sign on its post, out of the stores");
+            com.jrpetty.mcassistant.entity.Traditions.Custom rem = null;
+            for (com.jrpetty.mcassistant.entity.Traditions.Custom c : com.jrpetty.mcassistant.entity.Traditions.customs(a.id())) {
+                if (c.why() == com.jrpetty.mcassistant.entity.Traditions.Why.WAR) rem = c;
+            }
+            List<String> calendar = com.jrpetty.mcassistant.entity.TownCalendar.board(level, a.id());
+            Kit.log("wp10 the remembrance: " + (rem == null ? "none" : rem.name() + ", " + rem.how().words + " for " + rem.toWhom() + ", from day " + rem.day())
+                + "; the calendar: " + calendar);
+            helper.assertTrue(rem != null && rem.how() == com.jrpetty.mcassistant.entity.Traditions.How.SILENCE, "Remembrance Day kept, a minute's silence at the bell");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Traditions.todayForTests(a.id(), rem, day + com.jrpetty.mcassistant.entity.TownCalendar.YEAR_DAYS)
+                && !com.jrpetty.mcassistant.entity.Traditions.todayForTests(a.id(), rem, day + 1), "every year on the day of the peace");
+            helper.assertTrue(calendar.stream().anyMatch(l -> l.contains("Remembrance Day")), "and in the town's calendar");
+            helper.succeed();
         });
     }
 }

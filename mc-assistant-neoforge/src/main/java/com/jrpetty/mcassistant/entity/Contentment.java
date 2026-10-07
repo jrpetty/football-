@@ -147,6 +147,7 @@ public final class Contentment {
         if (feasts > 0) good.add("feast days kept");
         feasts += Festivals.contentment(id, day, good);           // [batchB] a festival kept in the last few days
         int score = Math.max(0, Math.min(100, foodPts + homesPts + moodPts + safety + amenities + wages + rest + feasts));
+        score = Math.max(0, Math.min(100, score + WarAndPeace.contentment(id, good, bad)));   // [war-peace] war-weariness
         return new View(score, word(score), foodPts, homesPts, moodPts, safety, amenities, wages, good, bad);
     }
 

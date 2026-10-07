@@ -77,7 +77,9 @@ public final class JobSeekers {
         WAGES("better pay", "for the wages", 2),
         UNHAPPY("unhappy at home", "for a fresh start", 2),
         FAMILY("family there", "to be near its family", 3),
-        START("young, wanting a start", "for a start in life", 1);
+        START("young, wanting a start", "for a start in life", 1),
+        // [war-peace] Worn out by a long war at home (WarAndPeace.weariness).
+        WAR_WEARY("sick of the war at home", "to get away from the war", 2);
 
         public final String words, because;
         public final int weight;
@@ -336,6 +338,7 @@ public final class JobSeekers {
     public static Reasons reasons(VillageFolkEntity f, UUID town, JobMarket.Opening o) {
         UUID home = f.ownerId();
         if (home == null) return Reasons.NONE;
+        if (Wars.atWar(home, town)) return Reasons.NONE;                   // [war-peace] nobody goes over to the enemy
         List<Why> why = new ArrayList<>();
         StationTask mine = f.stationTask();
         boolean noGround = mine != StationTask.NONE && outOfWork(f);
@@ -348,6 +351,7 @@ public final class JobSeekers {
         String kin = kinIn(f, town);
         if (kin != null) why.add(Why.FAMILY);
         if (f.ageYears() <= 24 && FolkSkills.bestLevel(f) < 5) why.add(Why.START);
+        if (WarAndPeace.wearyOfWar(home)) why.add(Why.WAR_WEARY);           // [war-peace]
         if (why.isEmpty()) return Reasons.NONE;
         int strength = 0;
         for (Why w : why) strength += w.weight;

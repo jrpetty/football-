@@ -74,11 +74,30 @@ import java.util.function.BiConsumer;
  * itself the weaker, the cost of the war footing (the militia's pay and the work lost to it, a day at a
  * time in the war's books) wears them both down, and they talk.
  *
+ * <p><b>War-weariness.</b> Every day of a war wears its towns down: the longer it lasts, the more it costs
+ * (the danger pay and the hours lost to the militia), the day of rest given to drill, a larder kept for a
+ * siege or gone short, the trade with the enemy lost, an enemy reckoned the stronger, their spies held by
+ * the enemy and their guards away on an ally's walls; and every one it costs. It shows in the town's
+ * contentment, in its folk's spirits and what they say, on their cards and the board. Weary, some look for
+ * work elsewhere (JobSeekers); worn out, one in a while packs up for a neighbour at peace.
+ *
+ * <p><b>The wartime election.</b> A weary town puts up somebody for peace at its next election, and a worn-out
+ * one calls the election early. The voters weigh the war: weary, they lean to peace and away from the one who
+ * led them into it; a war going well keeps the hawk in. A peace candidate elected sues for peace at once.
+ *
  * <p><b>The treaty.</b> Its terms come from what the war was for and the balance of strength between them:
  * the weaker side concedes the whole of the goal, or the part of it, or the war ends with no gain to
- * either. It is written into both towns' books and onto both boards, keeps the peace for a town's year,
- * the banners come down and the militia stand down (onPeace). Breaking it, a raid while it holds, is a
- * cause for war, and every town that hears of it thinks the worse of the town that did it.
+ * either (and an aggressor much the weaker pays reparations); the captives each holds of the other's go
+ * home (Spies.exchange); a trade deal goal is struck at the table (TradeTalks). It is written into both
+ * towns' books and onto both boards and keeps the peace for a town's year. Breaking it, a raid while it
+ * holds, is a cause for war, and every town that hears of it thinks the worse of the town that did it.
+ *
+ * <p><b>Peace returns.</b> The banners come down; the militia's arms go back to the armoury and the
+ * volunteers to their trades, there and then, and the danger pay ends with the footing; the town turns back
+ * to its peacetime list of works; a feast is held for the peace at the next day of rest. Everybody the war
+ * cost is remembered (or, with nobody lost, the war itself), with a plaque before the chapel or the
+ * graveyard (Plaques) and Remembrance Day kept every year on the day of the peace, a minute's silence at
+ * the dusk bell (Traditions).
  *
  * <p>Everything that must outlast a restart is in the towns' books (Ledger notes "wp.", WarBooks); the
  * war itself is the shared seam {@link Wars}.
@@ -159,9 +178,10 @@ public final class WarAndPeace {
     /**
      * A peace's terms: who began it and who stood against it, what it was for, the balance of strength
      * between them (the one's over the other's), how much of the goal is conceded (0 none, 1 part, 2 the
-     * whole), the coin that goes with it, and all of it in words.
+     * whole), the coin that goes with it (from the defender), the reparations (from an aggressor that gains
+     * nothing and is much the weaker, to the town it troubled), and all of it in words.
      */
-    public record Terms(UUID aggressor, UUID defender, Goal goal, double balance, int share, int coins, String words) {}
+    public record Terms(UUID aggressor, UUID defender, Goal goal, double balance, int share, int coins, int reparations, String words) {}
 
     // ------------------------------------------------------------------ the switch, and the seams
 
@@ -287,6 +307,15 @@ public final class WarAndPeace {
             account(level, id, foe, day);
         }
         keepGarrison(level, v, day);
+        wearyDay(level, v, day);
+        Guard.run("war-weary leaving", () -> leave(level, v, day));
+        earlyElection(v.id(), day);
+        String feast = Ledger.note(id, "wp.feast");
+        if (feast != null && !feast.isEmpty()) {
+            long on = WarBooks.num(feast.split("\\|")[0], -1);
+            if (on < day) Ledger.forget(id, "wp.feast");
+            else if (!Gatherings.sponsored(id, on)) Gatherings.sponsor(id, feast.contains("|") ? feast.split("\\|", 2)[1] : "the peace", on);
+        }
     }
 
     // ------------------------------------------------------------------ grievances
@@ -1033,17 +1062,7 @@ public final class WarAndPeace {
         switch (goal) {
             case TRIBUTE, REVENGE -> {
                 int owed = share >= 2 ? amount : amount / 2;
-                int paid = 0;
-                if (t != null) {
-                    if (t.from.equals(defender)) {                      // the yielding side's envoy has it in its purse
-                        paid = Math.min(t.purse, owed);
-                        t.purse -= paid;
-                        Ledger.addCoins(aggressor, paid);
-                    } else {                                            // the herald carries it home
-                        paid = Ledger.takeCoins(defender, owed);
-                        t.purse += paid;
-                    }
-                }
+                int paid = pay(defender, aggressor, owed, t);
                 return paid + " coins " + (goal == Goal.TRIBUTE ? "in tribute" : "for the wrongs done") + (paid < owed ? " (of " + owed + ")" : "");
             }
             case BORDER -> {
@@ -1057,7 +1076,9 @@ public final class WarAndPeace {
                 if (!Envoys.pact(aggressor, defender)) Envoys.sign(aggressor, defender, day);
                 Ledger.note(aggressor, "wp.deal/" + defender, deal);
                 Ledger.note(defender, "wp.deal/" + aggressor, deal);
-                return deal.isEmpty() ? "a trade pact" : dealWords(deal, defender);
+                // And sat down to it there and then (TradeTalks): a standing deal, if the two towns' books lay a table.
+                String struck = strike(level, aggressor, defender, day);
+                return (deal.isEmpty() ? "a trade pact" : dealWords(deal, defender)) + (struck == null ? "" : "; " + struck);
             }
             case FREE_COLONY -> {
                 UUID colony = colonyOf(text);
@@ -1075,6 +1096,39 @@ public final class WarAndPeace {
             default -> {
                 return "nothing";
             }
+        }
+    }
+
+    /**
+     * Coin owed from one town to another, moved by whoever walks between them: out of the paying side's envoy's
+     * purse when its envoy carries it, or out of the paying town's treasury into the visiting envoy's purse, to
+     * be carried home (Envoys.home). With nobody walking ({@code t} null: a peace on a player's word), none.
+     * What was paid.
+     */
+    static int pay(UUID payer, UUID payee, int owed, @Nullable Caravans.Trip t) {
+        if (t == null || owed <= 0) return 0;
+        if (t.from.equals(payer)) {
+            int paid = Math.min(t.purse, owed);
+            t.purse -= paid;
+            Ledger.addCoins(payee, paid);
+            return paid;
+        }
+        int paid = Ledger.takeCoins(payer, owed);
+        t.purse += paid;
+        return paid;
+    }
+
+    /** A trade deal struck at the peace (TradeTalks, TradeDeals) on the two towns' books as they stand: its words, or null. */
+    @Nullable
+    static String strike(ServerLevel level, UUID aggressor, UUID defender, long day) {
+        try {
+            TradeTalks.Talk k = TradeTalks.negotiate(level, aggressor, defender);
+            if (!k.deal()) return null;
+            TradeDeals.strike(level, k, day, null);
+            return "a standing deal: " + TradeTalks.terms(k);
+        } catch (RuntimeException e) {
+            LOG.warn("[MCA-WAR] no deal at the peace between {} and {}: {}", name(aggressor), name(defender), e.toString());
+            return null;
         }
     }
 
@@ -1117,6 +1171,11 @@ public final class WarAndPeace {
         WarBooks.save(a, b, ba);
         WarBooks.save(b, a, bb);
         drop(a, b, day, 0);
+        // Who led each town into it: judged on it at the next election (electionLean).
+        for (UUID side : new UUID[]{ a, b }) {
+            UUID elder = Villages.elder(side);
+            if (elder != null) Ledger.note(side, "wp.warleader", elder.toString());
+        }
         Ledger.note(a, "wp.lastwar", Long.toString(day));
         Ledger.note(b, "wp.lastwar", Long.toString(day));
         int r = Ledger.relation(a, b);
@@ -1483,20 +1542,20 @@ public final class WarAndPeace {
     }
 
     /**
-     * The day's cost of the war footing, in the war's book (once a day): every one of the militia's pay,
-     * and the work lost of every hand taken off its trade for it (over the watch the town kept before the
-     * war); and the scouts' latest report, if there is a new one, in its course.
+     * The day's cost of the war footing, in the war's book (once a day): the danger pay on top of the wages and
+     * the hours of work lost to the volunteers and the militia's muster, in coin, as the preparations reckon it
+     * (WarFooting.dailyCost); with nothing reckoned there (a town whose footing nobody has set), the work lost
+     * of every hand on the watch over what it kept before the war. And the scouts' latest report, if there is a
+     * new one, in its course.
      */
     static void account(ServerLevel level, UUID us, UUID them, long day) {
         WarBooks.Book b = WarBooks.book(us, them);
         if (b == null) return;
         boolean changed = false;
         if (b.costDay < day && !Villages.folkOf(us).isEmpty()) {
-            List<VillageFolkEntity> militia = WarFooting.militia(us);
-            int pay = 0;
-            for (VillageFolkEntity g : militia) pay += Market.wage(g);
-            int lost = Math.max(0, militia.size() - b.watch) * WORK_LOST;
-            b.cost += pay + lost;
+            int cost = WarFooting.dailyCost(us).coins();
+            if (cost <= 0) cost = Math.max(0, WarFooting.militia(us).size() - b.watch) * WORK_LOST;
+            b.cost += cost;
             b.costDay = day;
             changed = true;
         }
@@ -1541,6 +1600,9 @@ public final class WarAndPeace {
             if (day - bx.lastPeaceTry >= 2) sue(level, a, b, day, "wars are over");
             return;
         }
+        // A town that has voted for peace (its peace candidate elected) talks, whatever its elder's temper.
+        if (mandate(x, day) && day - bx.lastPeaceTry >= 2) { sue(level, a, b, day, "the town voted for peace"); return; }
+        if (mandate(y, day) && day - by.lastPeaceTry >= 2) { sue(level, b, a, day, "the town voted for peace"); return; }
         boolean xStood = day - bx.began >= standDays(x), yStood = day - by.began >= standDays(y);
         double rx = own(level, x).strength() / (double) Math.max(1, of(level, x, y, day).strength());
         double ry = own(level, y).strength() / (double) Math.max(1, of(level, y, x, day).strength());
@@ -1575,8 +1637,9 @@ public final class WarAndPeace {
     static int peacePurse(ServerLevel level, UUID from, UUID to, Envoys.Errand errand) {
         if (errand != Envoys.Errand.PEACE || !Wars.atWar(from, to)) return 0;
         Terms t = terms(level, from, to);
-        if (t.coins() <= 0 || !t.defender().equals(from)) return 0;
-        return Ledger.takeCoins(from, t.coins());
+        if (t.coins() > 0 && t.defender().equals(from)) return Ledger.takeCoins(from, t.coins());
+        if (t.reparations() > 0 && t.aggressor().equals(from)) return Ledger.takeCoins(from, t.reparations());
+        return 0;
     }
 
     /**
@@ -1594,12 +1657,20 @@ public final class WarAndPeace {
         int share = goal == Goal.DEFENCE ? 0 : balance >= 1.5 ? 2 : balance >= 1.1 ? 1 : 0;
         int coins = 0;
         if (share > 0 && ab != null && (goal == Goal.TRIBUTE || goal == Goal.REVENGE)) coins = share >= 2 ? ab.amount : ab.amount / 2;
+        // An aggressor that gains nothing and is much the weaker pays for the trouble it made: a day's coin for each
+        // day of the war and five more, out of a fifth of its treasury at most.
+        int reparations = 0;
+        if (share == 0 && ab != null && ab.aggressor && balance <= 2.0 / 3.0) {
+            long days = Math.max(0, today() - ab.began);
+            reparations = (int) Math.min(Math.max(0, Ledger.coins(aggressor) / 5), 5 + days);
+        }
         String an = name(aggressor), dn = name(defender);
         String what = ab == null ? "" : words(ab.goalText);
         String words = share >= 2 ? dn + " concedes the whole of " + an + "'s demand: " + what
             : share == 1 ? dn + " concedes part of " + an + "'s demand (" + what + ")"
+            : reparations > 0 ? "no gain to " + an + ", which withdraws its demands and pays " + dn + " " + reparations + " coins in reparations"
             : "no gain to either: " + an + " withdraws its demands";
-        return new Terms(aggressor, defender, goal, balance, share, coins, words);
+        return new Terms(aggressor, defender, goal, balance, share, coins, reparations, words);
     }
 
     /**
@@ -1607,7 +1678,7 @@ public final class WarAndPeace {
      * itself the weaker, or a soft elder, at once; a hard one that has not yet had its war, not yet.
      */
     static boolean acceptPeace(ServerLevel level, UUID host, UUID from, long day) {
-        if (!on()) return true;
+        if (!on() || mandate(host, day)) return true;
         WarBooks.Book b = WarBooks.book(host, from);
         if (b == null || day - b.began >= standDays(host)) return true;
         if (own(level, host).strength() < of(level, host, from, day).strength()) return true;
@@ -1643,9 +1714,14 @@ public final class WarAndPeace {
         UUID a = terms.aggressor(), d = terms.defender();
         WarBooks.Book ab = WarBooks.book(a, d), db = WarBooks.book(d, a);
         String given = terms.share() > 0 && ab != null ? meet(level, a, d, ab.goal, ab.amount, ab.goalText, terms.share(), t, day) : "nothing";
+        int repaid = terms.reparations() > 0 ? pay(a, d, terms.reparations(), t) : 0;
+        // The spies each holds of the other's, sent home (Spies).
+        int freed = Spies.exchange(level, a, d);
         String text = terms.share() >= 2 ? name(d) + " concedes " + given
             : terms.share() == 1 ? name(d) + " concedes part: " + given
+            : repaid > 0 ? "no gain to " + name(a) + ", which withdraws its demands and pays " + repaid + " coins in reparations"
             : "no gain to either; " + name(a) + " withdraws its demands";
+        if (freed > 0) text += "; " + freed + (freed == 1 ? " captive" : " captives") + " sent home";
         text += "; peace until day " + (day + TREATY_DAYS);
         Wars.end(a, d);
         WarBooks.treaty(a, d, day, day + TREATY_DAYS, text);
@@ -1673,6 +1749,7 @@ public final class WarAndPeace {
             WarBooks.close(side, other);
             Ledger.note(side, "wp.lastwar", Long.toString(day));
             Ledger.forget(side, "wp.calling/" + other);
+            Ledger.forget(side, "wp.early/" + other);
             tense(side, other, false);
             // The allies' part is done: their pledges let go, their guards on our walls sent home.
             List<String> allies = new ArrayList<>();
@@ -1699,6 +1776,8 @@ public final class WarAndPeace {
                     .withStyle(ChatFormatting.GREEN), false);
             }
             Villages.tell(side, day, name(a) + " and " + name(d) + " made peace " + how + ": " + text);
+            memorialise(level, side, other, began, day);
+            feast(level, side, other, day);
             onPeace(level, side);
         }
         LOG.info("[MCA-WAR] peace between {} and {} {} (balance {}): {}", name(a), name(d), how, String.format(Locale.ROOT, "%.2f", terms.balance()), text);
@@ -1706,15 +1785,517 @@ public final class WarAndPeace {
     }
 
     /**
-     * A town at war with nobody any more stands down: the gates rehung if any were lost (out of the stores),
-     * and whatever the preparations listen for (the militia home to their trades, the war tax ended).
+     * A town at war with nobody any more stands down, there and then rather than at the next morning's
+     * muster: the militia's arms back to the armoury and the hands to their trades (Militia.standDown), the
+     * volunteers off the watch to the trades they left (WarFooting.sendHome), the footing told; danger pay
+     * ends with the footing. The gates rehung if any were lost (out of the stores), and the town back to its
+     * peace order (the defences not begun go from the head of its list: WarWorks.wanted). Whatever else
+     * listens for the peace is told. A town still on its guard against somebody else stays on it.
      */
     public static void onPeace(ServerLevel level, UUID village) {
         if (!Wars.enemies(village).isEmpty()) return;
+        long day = level.getDayTime() / 24000L;
         Villages.Village v = Villages.get(village);
         if (v != null && level.isLoaded(v.centre())) Watch.keep(level, v, false);
-        Ledger.note(village, "wp.stooddown", Long.toString(level.getDayTime() / 24000L));
+        if (v != null && WarFooting.footing(village) == Wars.Footing.PEACE) {
+            Wars.Footing was = WarFooting.lastFooting(village);
+            Militia.standDown(level, v, day);
+            WarFooting.sendHome(level, village, day);
+            if (was != Wars.Footing.PEACE) {
+                WarFooting.announce(level, v, day, was, Wars.Footing.PEACE);
+                Ledger.note(village, "war.footing", Wars.Footing.PEACE.name() + "|" + day);
+            }
+            String next = Villages.nextProject(village);
+            Villages.tell(village, day, "the town turned back to its peacetime work" + (next == null ? "" : ": next to go up is " + Villages.spoken(next)));
+        }
+        Ledger.forget(village, "wp.peacecand");
+        Ledger.note(village, "wp.stooddown", Long.toString(day));
         for (BiConsumer<ServerLevel, UUID> l : STAND_DOWN) Guard.run("stand down", () -> l.accept(level, village));
+    }
+
+    // ------------------------------------------------------------------ war-weariness
+
+    /** Weary enough that some folk look for work elsewhere (JobSeekers), and a peace candidate stands. */
+    static final int WEARY = 50;
+    /** So weary that folk up and leave for a town at peace, and an early election is called. */
+    static final int WORN_OUT = 70;
+    /** How much a town's weariness eases a day at peace. */
+    static final int EASES = 5;
+
+    /** How weary of war the town is, 0 (not at all) to 100 (worn out). */
+    public static int weariness(@Nullable UUID village) {
+        return village == null ? 0 : (int) Math.max(0, Math.min(100, WarBooks.num(Ledger.note(village, "wp.weary"), 0)));
+    }
+
+    static void weariness(UUID village, int w) {
+        Ledger.note(village, "wp.weary", Integer.toString(Math.max(0, Math.min(100, w))));
+    }
+
+    /** What wore the town down the last day of its war, in words ("" at peace). */
+    public static String wearyWhy(UUID village) {
+        String s = Ledger.note(village, "wp.weary.why");
+        return s == null ? "" : s;
+    }
+
+    /** Weary enough of the war that a folk would look for a fresh start elsewhere (JobSeekers). */
+    public static boolean wearyOfWar(@Nullable UUID village) {
+        return village != null && weariness(village) >= WEARY && !Wars.enemies(village).isEmpty();
+    }
+
+    static String wearyWord(int w) {
+        return w >= 85 ? "worn out by the war" : w >= WORN_OUT ? "sick of the war" : w >= WEARY ? "weary of the war"
+            : w >= 25 ? "tiring of the war" : w > 0 ? "uneasy" : "at peace with itself";
+    }
+
+    /** One day's wear, and what did it. */
+    record Wear(int by, List<String> why) {}
+
+    /**
+     * What a day of its war takes out of a town: the war's length (a day more each day, more after ten days and
+     * twenty); its cost (WarFooting.dailyCost: the danger pay and the hours lost to the militia, in coin); the
+     * day of rest given to the militia's drill instead of the games; hunger, short commons, or the larder kept
+     * for a siege (Leader.plan); trade lost with the enemy (a pact or a deal it once had); an enemy stronger than
+     * itself, as it reckons them; its spies held by the enemy; and its own guards away on an ally's walls (an ally
+     * pledged is worn by that too, at war or not).
+     */
+    static Wear wear(ServerLevel level, UUID id, long day) {
+        List<String> why = new ArrayList<>();
+        int by = 0;
+        List<UUID> foes = Wars.enemies(id);
+        int away = 0;
+        for (VillageFolkEntity g : WarFooting.militia(id)) if (awayOnGarrison(g)) away++;
+        if (foes.isEmpty() && away == 0) return new Wear(0, why);
+        if (!foes.isEmpty()) {
+            long since = Long.MAX_VALUE;
+            for (UUID e : foes) since = Math.min(since, Math.max(0, Wars.since(id, e)));
+            long length = Math.max(0, day - since);
+            by += length >= 20 ? 3 : length >= 10 ? 2 : 1;
+            why.add("the war, " + length + (length == 1 ? " day" : " days") + " long");
+            WarFooting.Cost c = WarFooting.dailyCost(id);
+            // A point for any cost at all, one more for every six coins of it a day, and one for a working day lost; four at most.
+            int cost = c.coins() <= 0 && c.hoursLost() <= 0 ? 0 : Math.min(4, 1 + c.coins() / 6 + (c.hoursLost() >= 10.0 ? 1 : 0));
+            if (cost > 0) {
+                by += cost;
+                why.add("its cost (" + c.coins() + " coins a day in danger pay and work lost)");
+            }
+            if (RestDay.today(id, day) && !Militia.members(id).isEmpty()) {
+                by += 2;
+                why.add("the militia drilling on the day of rest instead of the games");
+            }
+            Leader.Plan plan = Leader.plan(id);
+            if (plan == Leader.Plan.FAMINE) { by += 4; why.add("hunger"); }
+            else if (plan == Leader.Plan.SHORT) { by += 2; why.add("short commons"); }
+            else if (plan == Leader.Plan.WAR) { by += 1; why.add("the larder kept for a siege"); }
+            for (UUID e : foes) {
+                if (Ledger.note(id, "pact/" + e) != null || Ledger.note(id, "deal/" + e) != null || Ledger.note(id, "talks.last/" + e) != null) {
+                    by += 1;
+                    why.add("the trade with " + name(e) + " lost");
+                    break;
+                }
+            }
+            for (UUID e : foes) {
+                Reckoning theirs = of(level, id, e, day);
+                if (own(level, id).strength() < theirs.strength() * 0.8) {
+                    by += 2;
+                    why.add(name(e) + " the stronger (" + theirs.source() + ")");
+                    break;
+                }
+            }
+            int held = 0;
+            for (Spies.Captive c2 : Spies.ofOurs(id)) if (foes.contains(c2.holder())) held++;
+            if (held > 0) {
+                by += 2 * held;
+                why.add(held + (held == 1 ? " of ours" : " of ours") + " held by the enemy");
+            }
+        }
+        if (away > 0) {
+            by += away;
+            why.add(away + (away == 1 ? " of our guards" : " of our guards") + " away on our allies' walls");
+        }
+        return new Wear(by, why);
+    }
+
+    /** The town's spirits, once a day: worn by its war, or easing at peace. */
+    static void wearyDay(ServerLevel level, Villages.Village v, long day) {
+        UUID id = v.id();
+        if (WarBooks.num(Ledger.note(id, "wp.weary.day"), -1) >= day) return;
+        Ledger.note(id, "wp.weary.day", Long.toString(day));
+        int w = weariness(id);
+        Wear wear = wear(level, id, day);
+        if (wear.by() > 0) {
+            weariness(id, w + wear.by());
+            Ledger.note(id, "wp.weary.why", String.join(", ", wear.why()));
+            int now = weariness(id);
+            for (UUID e : Wars.enemies(id)) {
+                if (w < WEARY && now >= WEARY) WarBooks.course(id, e, day, "the town grew weary of the war: " + String.join(", ", wear.why()));
+                if (w < WORN_OUT && now >= WORN_OUT) WarBooks.course(id, e, day, "the town is sick of the war");
+            }
+            if (w < WEARY && now >= WEARY) Villages.tell(id, day, "the town is weary of the war: " + String.join(", ", wear.why()));
+        } else if (w > 0) {
+            weariness(id, w - EASES);
+            if (weariness(id) == 0) Ledger.forget(id, "wp.weary.why");
+        }
+    }
+
+    /**
+     * Worn out by a long war: once in three days a folk with least to keep it (Contentment.leaver) packs up and
+     * goes to the happiest neighbour at peace with room for it. Never below a town of eight, never to the
+     * enemy, and only in a war that has lasted a week.
+     */
+    static void leave(ServerLevel level, Villages.Village v, long day) {
+        UUID id = v.id();
+        if (weariness(id) < WORN_OUT || Wars.enemies(id).isEmpty()) return;
+        long since = Long.MAX_VALUE;
+        for (UUID e : Wars.enemies(id)) since = Math.min(since, Wars.since(id, e));
+        if (day - since < 7 || day - WarBooks.num(Ledger.note(id, "wp.left"), -100) < 3) return;
+        if (Villages.headcount(id) <= Contentment.KEEP_AT_LEAST) return;
+        Villages.Village to = null;
+        int best = 40;
+        for (Villages.Village o : Diplomacy.neighboursOf(id)) {
+            if (!Wars.enemies(o.id()).isEmpty() || Wars.footing(o.id()) == Wars.Footing.WAR) continue;
+            if (Ledger.relation(id, o.id()) <= Diplomacy.UNEASY || Villages.headcount(o.id()) >= Villages.housing(o.id())) continue;
+            int s = Contentment.score(o.id());
+            if (s > best) { best = s; to = o; }
+        }
+        if (to == null) return;
+        VillageFolkEntity who = Contentment.leaver(id);
+        if (who == null) return;
+        Ledger.note(id, "wp.left", Long.toString(day));
+        String name = who.displayNameCap(), there = name(to.id());
+        FolkTalk.speak(who, FolkTalk.pick(who.getRandom(), "I can't stand another day of this war. I'm off to " + there + ".",
+            "Enough. " + there + " is at peace, and that's where I'll be."));
+        who.persona().remember(day, "I left " + name(id) + " for " + there + ", sick of the war", 8);
+        who.leaveFor(level, to);
+        Villages.tell(id, day, name + " left for " + there + ", sick of the war");
+        Villages.tell(to.id(), day, name + " came from " + name(id) + " to live here, away from the war");
+        for (UUID e : Wars.enemies(id)) WarBooks.course(id, e, day, name + " left for " + there + ", sick of the war");
+        LOG.info("[MCA-WAR] {} leaves {} for {} (weariness {})", name, name(id), there, weariness(id));
+    }
+
+    /** [Contentment.compute] The war on the town's spirits: less content the wearier it is. */
+    public static int contentment(UUID village, List<String> good, List<String> bad) {
+        int w = weariness(village);
+        if (w < 10) return 0;
+        bad.add(0, w >= WORN_OUT ? "folk are sick of the war" : w >= WEARY ? "the war wears on us" : "the war");
+        return -Math.min(12, w / 8);
+    }
+
+    /**
+     * [VillageFolkEntity mood] A folk's spirits in a war: low, the more so the wearier the town and the more
+     * it cares for its wages or its leisure; a Guardian early in a war stands the taller for it.
+     */
+    public static int mood(VillageFolkEntity f, long day, int m, List<Object[]> why) {
+        UUID v = f.ownerId();
+        if (v == null || f.isBaby()) return m;
+        int w = weariness(v);
+        if (w < 10) return m;                          // (a town at peace, or a war only begun: nothing read)
+        Values.Value cares = Values.top(f);
+        if (cares == Values.Value.SAFETY && w < WEARY && !Wars.enemies(v).isEmpty()) {
+            why.add(new Object[]{ "warproud", 2 });
+            return m + 2;
+        }
+        int hit = Math.min(12, 1 + w / 10) + (cares == Values.Value.WEALTH || cares == Values.Value.LEISURE ? 2 : 0);
+        why.add(new Object[]{ "warweary", hit });
+        return m - hit;
+    }
+
+    /** [FolkTalk] What a folk says of the war, when it is on its mind. */
+    public static String moodWords(VillageFolkEntity f, String key) {
+        UUID v = f.ownerId();
+        List<UUID> foes = v == null ? List.of() : Wars.enemies(v);
+        String them = foes.isEmpty() ? "them" : name(foes.get(0));
+        RandomSource r = f.getRandom();
+        if (key.equals("warproud")) {
+            return FolkTalk.pick(r, "Let " + them + " come. Our walls will hold.", "I'm proud of our watch. " + capital(them) + " won't scare us.");
+        }
+        int w = v == null ? 0 : weariness(v);
+        if (foes.isEmpty()) return FolkTalk.pick(r, "The war's over, but I've not got over it.", "I still lie awake thinking about that war.");
+        if (w >= WORN_OUT) return FolkTalk.pick(r, "This war with " + them + "... I'm sick to death of it.",
+            "If it goes on much longer I'm packing up and going somewhere at peace.");
+        return FolkTalk.pick(r, "This war with " + them + " wears on everybody.", "When will it end, this war?",
+            "Half the town on the walls and nobody at their work. It can't go on.");
+    }
+
+    private static String capital(String s) {
+        return s == null || s.isEmpty() ? "" : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /** [TownMeeting] The leader's answer to a grumble about the war at the town meeting. */
+    public static String meetingAnswer(UUID village) {
+        List<UUID> foes = Wars.enemies(village);
+        if (foes.isEmpty()) return "The war is over. We'll mend what it cost us, and remember who it cost.";
+        String them = name(foes.get(0));
+        if (mandate(village, today())) return "You voted for peace, and we've sent to " + them + " under a white flag. It's coming.";
+        if (weariness(village) >= WORN_OUT) return "I hear you. If " + them + " will talk, we'll talk. And there's an election to be had.";
+        return "I know it's hard. We'll talk peace with " + them + " the day they'll talk sense.";
+    }
+
+    // ------------------------------------------------------------------ the wartime election
+
+    /** The folk standing for peace at the town's next election, or null. */
+    @Nullable
+    public static UUID peaceCandidate(UUID village) {
+        String s = Ledger.note(village, "wp.peacecand");
+        return s == null || s.isEmpty() ? null : WarBooks.id(s.split("\\|")[0]);
+    }
+
+    /** Who led the town into its war (its elder on declaration day), or null. */
+    @Nullable
+    static UUID warLeader(UUID village) {
+        return WarBooks.id(Ledger.note(village, "wp.warleader"));
+    }
+
+    /** Is the war going well for the town: every enemy reckoned a good deal the weaker? */
+    static boolean goingWell(ServerLevel level, UUID village) {
+        List<UUID> foes = Wars.enemies(village);
+        if (foes.isEmpty()) return false;
+        long day = level.getDayTime() / 24000L;
+        int mine = own(level, village).strength();
+        for (UUID e : foes) if (mine < of(level, village, e, day).strength() * 1.25) return false;
+        return true;
+    }
+
+    /** How much a folk leans for peace: by what it cares about, its nature, and kin over there. */
+    static int dove(VillageFolkEntity f, @Nullable UUID enemy) {
+        int d = switch (Values.top(f)) {
+            case SAFETY -> -10;
+            case TRADITION -> -3;
+            case PROGRESS -> 2;
+            case FOOD, HOMES -> 6;
+            case WEALTH, LEISURE -> 8;
+        };
+        if (f.life().has(Social.Trait.GRUMPY)) d -= 3;
+        if (f.life().has(Social.Trait.GENEROUS) || f.life().has(Social.Trait.CHEERFUL)) d += 3;
+        if (enemy != null && JobSeekers.kinIn(f, enemy) != null) d += 6;
+        return d;
+    }
+
+    /**
+     * [Elections.nominate] A town at war and weary of it puts up somebody for peace: the most dovish of its
+     * grown folk the town thinks well of (never the leader who took it to war), standing for what it cares
+     * about and pledged to make peace. If it stands already it takes up the peace; else it stands in place of
+     * the last of the others (or beside them, if there is room).
+     */
+    public static void peaceCandidate(ServerLevel level, UUID village, List<Elections.Candidate> out, List<VillageFolkEntity> folk, int stand, long day) {
+        List<UUID> foes = Wars.enemies(village);
+        if (foes.isEmpty() || weariness(village) < WEARY) return;
+        UUID leader = Villages.elder(village), enemy = foes.get(0);
+        VillageFolkEntity best = null;
+        int bestScore = Integer.MIN_VALUE;
+        for (VillageFolkEntity f : folk) {
+            if (f.getUUID().equals(leader) || f.isBaby()) continue;
+            int s = 4 * dove(f, enemy);
+            for (VillageFolkEntity o : folk) if (o != f) s += o.life().affinity(f.getUUID()) / 4;
+            if (f.life().has(Social.Trait.SOCIABLE)) s += 5;
+            if (f.life().has(Social.Trait.SHY)) s -= 10;
+            if (s > bestScore) { bestScore = s; best = f; }
+        }
+        if (best == null || dove(best, enemy) <= 0) return;
+        Values.Value p = Values.top(best) == Values.Value.SAFETY ? Values.second(best) : Values.top(best);
+        Values.Value q = p == Values.top(best) ? Values.second(best) : Values.top(best);
+        Elections.Candidate peace = new Elections.Candidate(best.getUUID(), best.displayNameCap(), p, q,
+            "peace with " + name(enemy) + ": the militia home, the walls stood down, and our trade back");
+        // In place of itself if it stands already; else of the last of the others who is not the leader (the
+        // hawk stands to be judged on its war); else beside them.
+        int at = -1, last = -1;
+        UUID warLeader = warLeader(village);
+        for (int i = 0; i < out.size(); i++) {
+            UUID id = out.get(i).id();
+            if (id.equals(best.getUUID())) at = i;
+            else if (!id.equals(leader) && !id.equals(warLeader)) last = i;
+        }
+        if (at >= 0) out.set(at, peace);
+        else if (out.size() < 2 || last < 0) out.add(peace);
+        else out.set(last, peace);
+        Ledger.note(village, "wp.peacecand", best.getUUID() + "|" + day);
+        Villages.tell(village, day, best.displayNameCap() + " stood for " + Elections.title(village) + " on the promise of peace with " + name(enemy));
+        WarBooks.course(village, enemy, day, best.displayNameCap() + " stood at the election for peace");
+        best.persona().remember(day, "I stood for peace with " + name(enemy), 6);
+    }
+
+    /**
+     * [Elections.judge] The war at the ballot: a weary town leans to the one standing for peace (the more, the
+     * more the voter cares for its wages, its rest or its kin over there), and away from the leader who took it
+     * to war; a war going well (the enemy reckoned the weaker) keeps the hawk in.
+     */
+    public static double electionLean(ServerLevel level, VillageFolkEntity voter, Elections.Candidate c) {
+        UUID v = voter.ownerId();
+        if (v == null) return 0;
+        List<UUID> foes = Wars.enemies(v);
+        if (foes.isEmpty()) return 0;
+        int w = weariness(v);
+        boolean well = goingWell(level, v);
+        int lean = dove(voter, foes.get(0));
+        if (c.id().equals(peaceCandidate(v))) return w * 0.6 + lean - (well ? 40 : 0);
+        if (c.id().equals(warLeader(v)) || c.id().equals(Villages.elder(v))) return (well ? 30 : 0) - w * 0.3 - lean / 2.0;
+        return 0;
+    }
+
+    /**
+     * [Elections.install] The count is in: a peace candidate elected sues for peace at once (and the town keeps
+     * talking until it has it); the war leader kept in, or another, and the war goes on.
+     */
+    public static void elected(ServerLevel level, UUID village, UUID winner, long day) {
+        UUID pc = peaceCandidate(village);
+        Ledger.forget(village, "wp.peacecand");
+        List<UUID> foes = Wars.enemies(village);
+        if (foes.isEmpty() || pc == null) return;
+        String who = Villages.elderName(village);
+        if (!pc.equals(winner)) {
+            Villages.tell(village, day, "the town would not vote for peace: the war with " + name(foes.get(0)) + " goes on");
+            WarBooks.course(village, foes.get(0), day, "the town voted, and not for peace");
+            return;
+        }
+        Ledger.note(village, "wp.mandate", Long.toString(day));
+        Villages.tell(village, day, (who.isEmpty() ? "the peace candidate" : who) + " was elected on the promise of peace, and sues for peace with "
+            + name(foes.get(0)) + " at once");
+        Villages.Village us = Villages.get(village);
+        for (UUID e : foes) {
+            WarBooks.course(village, e, day, "the town elected " + (who.isEmpty() ? "its peace candidate" : who) + " on the promise of peace");
+            Villages.Village them = Villages.get(e);
+            if (us != null && them != null) sue(level, us, them, day, "the town voted for peace");
+        }
+    }
+
+    /** Has the town voted for peace in the last fortnight? */
+    static boolean mandate(UUID village, long day) {
+        return day - WarBooks.num(Ledger.note(village, "wp.mandate"), -100) <= 14;
+    }
+
+    /**
+     * A town worn out by its war calls its election early, where it has elections at all (four voters or more)
+     * and the next is more than two days off: once a war, and the peace candidate stands at it.
+     */
+    static void earlyElection(UUID village, long day) {
+        List<UUID> foes = Wars.enemies(village);
+        if (foes.isEmpty() || weariness(village) < WORN_OUT || Elections.voters(village).size() < 4) return;
+        String key = "wp.early/" + foes.get(0);
+        if (Ledger.note(village, key) != null) return;
+        long next = WarBooks.num(Ledger.note(village, "election.next"), -1);
+        if (next >= 0 && next - day <= Elections.CALL) return;
+        Ledger.note(village, key, Long.toString(day));
+        Ledger.note(village, "election.next", Long.toString(day + Elections.CALL));
+        Villages.tell(village, day, "worn out by the war with " + name(foes.get(0)) + ", the town called its election early, for day " + (day + Elections.CALL));
+        WarBooks.course(village, foes.get(0), day, "the town called an early election");
+    }
+
+    // ------------------------------------------------------------------ the fallen, the memorial and the remembrance
+
+    /**
+     * [VillageFolkEntity.die] A death the war is to blame for: a spy of ours dead on its errand against a
+     * town we are at odds with, an ally's guard dead on another town's walls, or anybody killed by the hand of
+     * a folk of a town we are at war with. Into the books, to be remembered at the peace.
+     */
+    public static void died(VillageFolkEntity f, @Nullable net.minecraft.world.damagesource.DamageSource cause, long day) {
+        // (Whatever goes wrong here, the folk's death itself goes on.)
+        Guard.run("war dead", () -> diedNow(f, cause, day));
+    }
+
+    private static void diedNow(VillageFolkEntity f, @Nullable net.minecraft.world.damagesource.DamageSource cause, long day) {
+        UUID us = f.ownerId();
+        if (us == null || f.isShowcase()) return;
+        String name = f.displayNameCap();
+        Spying.Mission m = Spying.missionOf(f);
+        if (m != null && (Wars.atWar(us, m.them()) || Spying.hostile(us, m.them()))) {
+            fallen(us, m.them(), name + ", our spy", day);
+            return;
+        }
+        if (awayOnGarrison(f)) {
+            UUID host = f.trip().to;
+            for (String[] p : garrison(host)) {
+                UUID foe = WarBooks.id(p[2]);
+                if (!p[0].equals(f.getUUID().toString()) || foe == null) continue;
+                fallen(us, foe, name + ", on " + name(host) + "'s walls", day);
+                fallen(host, foe, name + " of " + name(us), day);
+                return;
+            }
+        }
+        if (cause != null && cause.getEntity() instanceof VillageFolkEntity k && k.ownerId() != null && Wars.atWar(us, k.ownerId())) {
+            fallen(us, k.ownerId(), name, day);
+        }
+    }
+
+    /** One the war cost this town, in its books (once): the town the wearier for it. */
+    public static void fallen(UUID us, UUID them, String name, long day) {
+        for (String[] f : WarBooks.fallen(us)) if (f[1].equals(name) && WarBooks.num(f[0], -1) == day) return;
+        WarBooks.fallen(us, day, name, name(them));
+        weariness(us, weariness(us) + 8);
+        if (WarBooks.book(us, them) != null) WarBooks.course(us, them, day, name + " was lost to the war");
+    }
+
+    /**
+     * At the peace: everybody the war cost this town remembered (the chronicle, a plaque before the chapel or
+     * the graveyard, else by the board: Plaques), or with nobody lost, the war itself and the peace; and the day
+     * of the peace kept every year as Remembrance Day, a minute's silence at the dusk bell (Traditions).
+     */
+    static void memorialise(ServerLevel level, UUID side, UUID other, long began, long day) {
+        String foe = name(other);
+        List<String> names = new ArrayList<>();
+        for (String[] f : WarBooks.fallen(side)) if (f[2].equals(foe) && WarBooks.num(f[0], -1) >= began) names.add(f[1]);
+        String[] lines = names.isEmpty()
+            ? new String[]{ "The war with", foe, "day " + (began + 1) + " to " + (day + 1), "and the peace" }
+            : new String[]{ "Remember", clip(names.get(0).split(",")[0] + (names.size() > 1 ? " +" + (names.size() - 1) : "")), "war with " + foe,
+                "day " + (began + 1) + " to " + (day + 1) };
+        Plaques.memorial(side, memorialMark(side), lines, day);
+        Traditions.remember(side, day, "Remembrance Day", names.isEmpty() ? "the war with " + foe + ", and the peace"
+            : "those the war with " + foe + " cost: " + String.join(", ", names));
+        Villages.tell(side, day, names.isEmpty()
+            ? "the town will put up a plaque for the war with " + foe + ", which cost it no lives, and keep the day of the peace every year"
+            : "the town remembered those the war with " + foe + " cost (" + String.join("; ", names) + "), with a plaque, and Remembrance Day every year");
+    }
+
+    private static String clip(String s) {
+        return s.length() <= 15 ? s : s.substring(0, 15);
+    }
+
+    /** Where the memorial goes: before the chapel (or the graveyard), out from its front; else by the board. */
+    static BlockPos memorialMark(UUID village) {
+        for (String s : new String[]{ "chapel", "graveyard" }) {
+            for (Ledger.Building b : Ledger.buildings(village)) {
+                if (!b.structure().equals(s)) continue;
+                int[] half = com.jrpetty.mcassistant.entity.goal.Blueprints.fullHalf(s);
+                return b.anchor().relative(b.facing(), Math.max(half[0], half[1]) + 2);
+            }
+        }
+        BlockPos at = VillageBoards.lectern(village);
+        if (at != null) return at.offset(3, 0, 3);
+        Villages.Village v = Villages.get(village);
+        return v == null ? BlockPos.ZERO : v.centre().offset(4, 0, 4);
+    }
+
+    /** [TownCalendar] The town's next Remembrance Day, for the board and the books, or null. */
+    @Nullable
+    public static String calendarLine(UUID village, long day) {
+        Traditions.Custom next = null;
+        long when = Long.MAX_VALUE;
+        for (Traditions.Custom c : Traditions.customs(village)) {
+            if (c.why() != Traditions.Why.WAR) continue;
+            long n = Traditions.today(village, c, day) ? day : Traditions.next(village, c, day);
+            if (n >= 0 && n < when) { when = n; next = c; }
+        }
+        if (next == null) return null;
+        return "Remembrance Day" + (when == day ? " is today: a minute's silence at the dusk bell" : " on day " + (when + 1)
+            + (when - day <= 7 ? " (in " + (when - day) + (when - day == 1 ? " day)" : " days)") : "")) + ", for " + next.toWhom() + ".";
+    }
+
+    /**
+     * A feast for the peace: at the town's next day of rest within the week (else tomorrow evening), on the
+     * town (Gatherings: the feast out of its own stores), and in the chronicle and the gazette.
+     */
+    static void feast(ServerLevel level, UUID side, UUID other, long day) {
+        long on = day + 1;
+        for (long d = day + 1; d <= day + 7; d++) if (RestDay.today(side, d)) { on = d; break; }
+        String what = "the peace with " + name(other);
+        Gatherings.sponsor(side, what, on);
+        Ledger.note(side, "wp.feast", on + "|" + what);
+        Villages.tell(side, day, "a feast for the peace with " + name(other) + " was called for day " + (on + 1)
+            + (RestDay.today(side, on) ? ", the day of rest" : ""));
+    }
+
+    /** The day of the town's peace feast, or -1. */
+    public static long feastDay(UUID village) {
+        String f = Ledger.note(village, "wp.feast");
+        return f == null || f.isEmpty() ? -1 : WarBooks.num(f.split("\\|")[0], -1);
     }
 
     // ------------------------------------------------------------------ broken faith
@@ -1730,6 +2311,7 @@ public final class WarAndPeace {
         WarBooks.wrong(victim, raider, day, faith ? Wrong.TREATY : Wrong.THEFT, what);
         if (!faith) return;
         Ledger.note(raider, "wp.broken/" + victim, "broken");
+        Ledger.note(victim, "wp.brokenby/" + raider, Long.toString(day));
         String rn = name(raider), line = rn + " broke its treaty with " + name(victim) + ": " + what;
         for (Villages.Village o : Villages.every()) {
             UUID x = o.id();
@@ -1813,6 +2395,17 @@ public final class WarAndPeace {
             if (!names.isEmpty() || g > 0) out.add("RN|Our allies: " + (names.isEmpty() ? "none" : String.join(", ", names))
                 + (g > 0 ? "; " + g + " of their guards on our walls" : "") + ".");
         }
+        int w = weariness(v);
+        if (w >= 10) out.add((w >= WEARY ? "RW" : "RN") + "|The town is " + wearyWord(w) + " (" + w + "/100)"
+            + (wearyWhy(v).isEmpty() ? "" : ": " + wearyWhy(v)) + ".");
+        UUID pc = peaceCandidate(v);
+        if (pc != null) {
+            String n = "";
+            for (AssistantEntity a : Villages.folkOf(v)) if (a.getUUID().equals(pc)) n = a.displayNameCap();
+            out.add("RW|" + (n.isEmpty() ? "One of us" : n) + " stands at the election for peace.");
+        }
+        long feast = feastDay(v);
+        if (feast >= day) out.add("RG|A feast for the peace" + (feast == day ? " tonight" : " on day " + (feast + 1)) + ": everybody welcome.");
         for (Villages.Village o : Villages.every()) {
             UUID y = o.id();
             if (y.equals(v)) continue;
@@ -1834,7 +2427,11 @@ public final class WarAndPeace {
                 }
             }
             WarBooks.Treaty t = WarBooks.treaty(v, y);
-            if (t != null && t.until() >= day) out.add("RN|Treaty with " + name(y) + " (day " + t.day() + "): " + t.terms() + ".");
+            long broke = WarBooks.num(Ledger.note(v, "wp.brokenby/" + y), -100);
+            if (day - broke <= 14) out.add("RB|" + name(y) + " broke its treaty with us on day " + (broke + 1) + ": a cause for war.");
+            else if ("broken".equals(Ledger.note(v, "wp.broken/" + y)) && t != null && t.until() >= day) {
+                out.add("RW|We broke our treaty with " + name(y) + ", and every town knows it.");
+            } else if (t != null && t.until() >= day) out.add("RN|Treaty with " + name(y) + " (day " + t.day() + "): " + t.terms() + ".");
         }
         return out;
     }
@@ -1853,6 +2450,12 @@ public final class WarAndPeace {
         for (String l : board(level, v, day)) {
             if (l.startsWith("RW|") || l.startsWith("RN|Treaty")) lines.add(l.substring(3));
         }
+        int w = weariness(v);
+        if (w >= 10) lines.add("The town is " + wearyWord(w) + ".");
+        long feast = feastDay(v);
+        if (feast >= day) lines.add("A feast for the peace" + (feast == day ? " tonight." : " on day " + (feast + 1) + "."));
+        String rem = calendarLine(v, day);
+        if (rem != null) lines.add(rem);
         if (lines.isEmpty()) return null;
         StringBuilder sb = new StringBuilder("§lWar and peace§r");
         for (int i = 0; i < Math.min(5, lines.size()); i++) sb.append('\n').append(lines.get(i));
@@ -1876,7 +2479,10 @@ public final class WarAndPeace {
             }
         }
         List<UUID> foes = Wars.enemies(v);
-        String war = foes.isEmpty() ? null : "At war with " + name(foes.get(0)) + " since day " + Wars.since(v, foes.get(0));
+        int w = weariness(v);
+        String war = foes.isEmpty() ? null : "At war with " + name(foes.get(0)) + " since day " + Wars.since(v, foes.get(0))
+            + (w >= 25 ? " (the town " + wearyWord(w) + (Values.top(f) == Values.Value.SAFETY && w < WEARY ? ", though it would see it through" : "") + ")" : "");
+        if (f.getUUID().equals(peaceCandidate(v))) war = (war == null ? "" : war + "; ") + "standing for peace at the election";
         String council = vote == null || about == null ? null : "On the council of war it " + vote + " war with " + about;
         if (war == null && council == null) return null;
         return war == null ? council + "." : council == null ? war + "." : war + "; " + council.substring(0, 1).toLowerCase(Locale.ROOT) + council.substring(1) + ".";
@@ -1890,6 +2496,11 @@ public final class WarAndPeace {
         out.add("WAR " + name(id) + ": " + footingWord(id) + " (" + Wars.footing(id) + "); elder " + Envoys.temper(id).words
             + ", lets a war stand " + standDays(id) + " days; wars " + (on() ? "on" : "off") + ".");
         Reckoning mine = own(level, id);
+        int weary = weariness(id);
+        out.add("Weariness: " + weary + "/100, " + wearyWord(weary) + (wearyWhy(id).isEmpty() ? "" : " (" + wearyWhy(id) + ")")
+            + (peaceCandidate(id) == null ? "" : "; a peace candidate stands") + (mandate(id, day) ? "; the town has voted for peace" : "") + ".");
+        String rem = calendarLine(id, day);
+        if (rem != null) out.add(rem);
         out.add("Our strength: " + mine.strength() + " (" + mine.guards() + " guards, " + mine.armoured() + " in iron, " + mine.archers()
             + " with bows" + (mine.garrison() > 0 ? ", " + mine.garrison() + " of them our allies'" : "") + (mine.walls() > 0 ? ", a wall" : "") + ").");
         for (UUID foe : Wars.enemies(id)) {
@@ -1916,6 +2527,12 @@ public final class WarAndPeace {
         }
         for (String[] t : WarBooks.treaties(id)) out.add("Treaty of day " + t[0] + " with " + t[2] + ": " + t[3] + ".");
         for (String p : WarBooks.past(id)) out.add("Past: " + p + ".");
+        for (String[] f : WarBooks.fallen(id)) out.add("Lost to the war with " + f[2] + ", day " + (WarBooks.num(f[0], 0) + 1) + ": " + f[1] + ".");
+        for (Plaques.Plaque p : Plaques.plaques(id)) {
+            if (p.site() != Plaques.Site.MEMORIAL) continue;
+            out.add(p.up() ? "Memorial at " + p.at().getX() + " " + p.at().getY() + " " + p.at().getZ() + ": " + String.join(" / ", p.lines()) + "."
+                : "Memorial to go up: " + String.join(" / ", p.lines()) + ".");
+        }
         return out;
     }
 
@@ -1981,6 +2598,24 @@ public final class WarAndPeace {
         out.put("allies", strings(allies));
         out.put("past", strings(WarBooks.past(id)));
         out.put("last_course", strings(WarBooks.list(id, "wp.lastcourse")));
+        int weary = weariness(id);
+        out.putInt("weary", weary);
+        out.putString("weary_word", wearyWord(weary));
+        out.putString("weary_why", wearyWhy(id));
+        List<String> fallen = new ArrayList<>();
+        for (String[] f : WarBooks.fallen(id)) fallen.add("day " + (WarBooks.num(f[0], 0) + 1) + ": " + f[1] + " (the war with " + f[2] + ")");
+        out.put("fallen", strings(fallen));
+        String rem = calendarLine(id, day);
+        out.putString("remembrance", rem == null ? "" : rem);
+        List<String> election = new ArrayList<>();
+        UUID pc = peaceCandidate(id);
+        if (pc != null) {
+            for (AssistantEntity a : Villages.folkOf(id)) if (a.getUUID().equals(pc)) election.add(a.displayNameCap() + " stands at the next election for peace");
+        }
+        if (mandate(id, day)) election.add("the town has voted for peace, and talks until it has it");
+        long feast = feastDay(id);
+        if (feast >= day) election.add("a feast for the peace on day " + (feast + 1));
+        out.put("election", strings(election));
         return out;
     }
 
@@ -2059,6 +2694,27 @@ public final class WarAndPeace {
         Villages.Village host = Villages.get(t.to);
         Envoys.homeward(level, envoy, t, host);
         return asked + " / " + a.said();
+    }
+
+    /** Tests: does a treaty keep the peace between them today? */
+    public static boolean treatyHoldsForTests(UUID a, UUID b, long day) {
+        return WarBooks.inForce(a, b, day);
+    }
+
+    /** Tests: the town's weariness set. */
+    public static void wearyForTests(UUID village, int w) {
+        weariness(village, w);
+    }
+
+    /** Tests: what a day of its war would take out of the town today, "points|what did it" (nothing is changed). */
+    public static String wearForTests(ServerLevel level, Villages.Village v, long day) {
+        Wear w = wear(level, v.id(), day);
+        return w.by() + "|" + String.join(", ", w.why());
+    }
+
+    /** Tests: one the war cost the town, as the death of a spy or a guard on an ally's walls would write it. */
+    public static void fallenForTests(UUID us, UUID them, String name, long day) {
+        fallen(us, them, name, day);
     }
 
     /** Tests: the coin in an envoy's purse (-1 with no trip). */

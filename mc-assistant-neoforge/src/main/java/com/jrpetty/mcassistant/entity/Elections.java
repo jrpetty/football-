@@ -217,6 +217,7 @@ public final class Elections {
             taken.add(p);
             out.add(new Candidate(c.getUUID(), c.displayNameCap(), p, q, pledge(level, village, p)));
         }
+        WarAndPeace.peaceCandidate(level, village, out, folk, stand, day);   // [war-peace] a town weary of its war puts up one for peace
         return out;
     }
 
@@ -277,6 +278,7 @@ public final class Elections {
         long day = level.getDayTime() / 24000L;
         double mind = Math.floorMod(Objects.hash(voter.getUUID(), c.id(), day), 7);
         double total = cares + needs + people + nature + skill + record + mind;
+        total += WarAndPeace.electionLean(level, voter, c);           // [war-peace] the war: weary for peace, or a war going well
         // The reason it gives: whichever weighed most.
         String why = "they stand for " + c.platform().cares + ", and so do I";
         double most = cares * 0.6;
@@ -514,6 +516,7 @@ public final class Elections {
         if (f != null) {
             f.persona().remember(day, "the village elected me " + title(id) + " for " + winner.platform().cares, 9);
         }
+        WarAndPeace.elected(level, id, winner.id(), day);              // [war-peace] a peace candidate elected sues for peace
     }
 
     /** What the losers say: in their own way. */

@@ -1136,6 +1136,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = FolkSkills.mood(this, m, why);              // Bright Spirit, a bright friend near, Unflappable's floor
         m = Birthdays.mood(this, day, m, why);          // its birthday (Birthdays)
         m = Families.mood(this, day, m, why);           // its wedding anniversary (Families)
+        m = WarAndPeace.mood(this, day, m, why);        // [war-peace] weary of the war (or a Guardian's pride in it)
         m = Visitors.mood(this, day, m, why);           // [batchG] a night of the bard's songs, a day with a friend from away
         m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
@@ -1415,6 +1416,7 @@ public class VillageFolkEntity extends AssistantEntity {
     /** A death in the village is news, and the ones who loved it remember. */
     @Override
     public void die(net.minecraft.world.damagesource.DamageSource cause) {
+        if (!level().isClientSide) WarAndPeace.died(this, cause, level().getDayTime() / 24000L);   // [war-peace] lost to the war (before its errand is let go)
         if (trip != null && level() instanceof net.minecraft.server.level.ServerLevel road) Caravans.abandon(road, this);
         if (level() instanceof net.minecraft.server.level.ServerLevel horses) Riding.fell(horses, this);   // a horse it had out (Riding)
         if (expedition != null && level() instanceof net.minecraft.server.level.ServerLevel land) {

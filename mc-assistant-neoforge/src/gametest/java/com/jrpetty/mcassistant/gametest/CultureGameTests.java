@@ -680,6 +680,7 @@ public class CultureGameTests {
             for (Plaques.Plaque p : ps) Kit.log("ci08 " + p.site() + " at " + p.at().toShortString() + " up=" + p.up() + ": " + String.join(" / ", p.lines()));
             Kit.log("ci08 waiting on: " + Plaques.shortForTests(id));
             for (Plaques.Site s : Plaques.Site.values()) {
+                if (s == Plaques.Site.MEMORIAL) continue;      // [war-peace] a war's memorial comes only with a peace (WarAndPeaceGameTests wp10)
                 helper.assertTrue(ps.stream().anyMatch(p -> p.site() == s && p.up()), "a plaque up for " + s + ": " + ps.size() + " plaques");
             }
             for (Plaques.Plaque p : ps) {
