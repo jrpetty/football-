@@ -2187,6 +2187,11 @@ public final class WarAndPeace {
      * a folk of a town we are at war with. Into the books, to be remembered at the peace.
      */
     public static void died(VillageFolkEntity f, @Nullable net.minecraft.world.damagesource.DamageSource cause, long day) {
+        // (Whatever goes wrong here, the folk's death itself goes on.)
+        Guard.run("war dead", () -> diedNow(f, cause, day));
+    }
+
+    private static void diedNow(VillageFolkEntity f, @Nullable net.minecraft.world.damagesource.DamageSource cause, long day) {
         UUID us = f.ownerId();
         if (us == null || f.isShowcase()) return;
         String name = f.displayNameCap();
