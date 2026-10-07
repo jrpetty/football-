@@ -696,7 +696,9 @@ public final class FishMarket {
         if (village == null) return false;
         Mart m = MARTS.get(village);
         Villages.Village v = Villages.get(village);
-        if (m == null || m.stall == null || v == null || !village.equals(f.ownerId()) || f.isSleeping()) {
+        long tod = level.getDayTime() % 24000L;
+        if (m == null || m.stall == null || v == null || !village.equals(f.ownerId()) || f.isSleeping()
+                || (tod >= CLOSE_AT + 1500L || tod < 1000L)) {                 // never kept from its bed by a market left open
             AT.remove(f.getUUID());
             return false;
         }

@@ -1279,7 +1279,9 @@ public final class Auctions {
         UUID village = AT.get(f.getUUID());
         if (village == null) return false;
         Sale s = SALES.get(village);
-        if (s == null || s.phase == Phase.DONE || s.phase == Phase.LOTS || s.rostrum == null || !village.equals(f.ownerId()) || f.isSleeping()) {
+        long tod = level.getDayTime() % 24000L;
+        if (s == null || s.phase == Phase.DONE || s.phase == Phase.LOTS || s.rostrum == null || !village.equals(f.ownerId()) || f.isSleeping()
+                || tod >= LATEST + 1000L || s.day != level.getDayTime() / 24000L) {      // never kept past the morning
             AT.remove(f.getUUID());
             return false;
         }

@@ -797,6 +797,13 @@ public final class Fleet {
             return false;
         }
         long now = level.getGameTime();
+        long tod = level.getDayTime() % 24000L;
+        if (tod >= 12500L && tod < 23000L) {
+            // Past dusk and still about it (its town out of sight, so nobody called time): it lets go, and its own
+            // evening takes it home; a boat it is still in, it steps out of (Aboard).
+            letGo(t, h, "dusk");
+            return false;
+        }
         return switch (h.stage) {
             case BOARDING -> board(f, level, t, h, now);
             case OUT, HOME -> row(f, level, t, h, now);
