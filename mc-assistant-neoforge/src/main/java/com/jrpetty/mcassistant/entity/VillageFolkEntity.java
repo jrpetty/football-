@@ -384,6 +384,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // that is its day just now.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel warLevel
                 && WarScouting.hold(this, warLevel, tickCount % 5 == 1)) return;
+        // [quests] A part in a quest (QuestRun): a lost child where it is lost, the miners at the mine head while the
+        // curse is on, the found led home at a player's heels.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel questLevel && QuestRun.hold(this, questLevel)) return;
         // Through the gateway with a Nether party: it waits by the gateway till they come back.
         if (Nether.away(this) && !withAPlayer) return;
         // Out with a lead, fetching a wild animal home to the pen (Drover): that is the work just now.

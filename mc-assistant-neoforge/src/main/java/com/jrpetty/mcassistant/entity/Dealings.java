@@ -192,6 +192,7 @@ public final class Dealings {
 
     /** What a player talked the village down to today: a price after the haggle. */
     public static int haggled(UUID village, UUID player, long day, int price) {
+        price = QuestRewards.discount(village, player, price);            // [quests] the town's key or medal, carried
         int[] have = HAGGLED.get(village + "/" + player);
         if (have == null || have[1] != (int) day || have[0] <= 0) return price;
         return Math.max(1, price - (int) Math.round(price * have[0] / 100.0));

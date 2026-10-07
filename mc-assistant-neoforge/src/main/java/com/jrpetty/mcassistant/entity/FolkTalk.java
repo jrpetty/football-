@@ -64,6 +64,10 @@ public final class FolkTalk {
         Persona me = f.persona();
         long day = f.level().getDayTime() / 24000L;
         Persona.Opinion op = me.opinionOf(p.getUUID(), p.getName().getString());
+        if (topic == TalkTopic.SAY) {
+            TalkTopic quest = QuestTalk.heard(f, p, text);              // [quests] "any work?", "I'll do it", a choice by name
+            if (quest != null) topic = quest;
+        }
         if (topic == TalkTopic.SAY) topic = understand(text);
         boolean firstMeeting = op.lastTalkDay < 0 && op.lastGiftDay < 0;
         String heard = op.heardFrom;
@@ -73,6 +77,7 @@ public final class FolkTalk {
             op.lastTalkDay = day;
             Social.Life life = f.life();
             int warm = life.has(Social.Trait.SOCIABLE) ? 3 : life.has(Social.Trait.SHY) || life.has(Social.Trait.GRUMPY) ? 1 : 2;
+            warm += QuestRewards.warmth(f, p);                           // [quests] the town's medal or key, carried
             if (op.affinity > -40) me.feelFor(p.getUUID(), p.getName().getString(), warm);
         }
         if (topic == TalkTopic.BYE) {
@@ -87,6 +92,9 @@ public final class FolkTalk {
             return manner(f, pick(f.getRandom(), "We don't want you here.", "Nobody here will talk to you. Go away.",
                 "After what you've done? Leave."));
         }
+        // [quests] A quest's step waiting on it (a word, a hand-over, a choice), work asked for, an offer taken: a child's too.
+        String quest = QuestTalk.answer(f, p, topic, text);
+        if (quest != null) return manner(f, quest);
         String lower = text.toLowerCase(Locale.ROOT);
         if (!text.isEmpty() && (lower.contains("sorry") || lower.contains("apolog"))) {
             return manner(f, apology(f, p, op, day));
@@ -182,6 +190,7 @@ public final class FolkTalk {
             default -> puzzled(f);
         };
         said = KeptGifts.mention(f, p, topic, said);          // [batchG] "I keep the diamond you gave me by my bed"
+        said = QuestTalk.hint(f, p, topic, said);             // [quests] work to give, let known; the quest buttons sent
         // Somebody who can't stand you says as little as it can.
         if (me.affinity(p.getUUID()) <= -50 && topic != TalkTopic.GIFT && topic != TalkTopic.STAY && topic != TalkTopic.FINE) {
             said = pick(f.getRandom(), "I've nothing to say to you.", "Leave me be.",
@@ -248,9 +257,12 @@ public final class FolkTalk {
             Standing.View v = Standing.of(f.ownerId(), p.getUUID(), f.level().getGameTime());
             where = Villages.name(f.ownerId()) + " · " + Villages.ageOf(f.ownerId()).label + " · you: "
                 + Standing.titleIn(f.ownerId(), v.title());
+            String earned = QuestRewards.titleLine(f.ownerId(), p.getUUID());   // [quests] "Thief-taker, the town's Medal"
+            if (!earned.isEmpty()) where += ", " + earned;
         }
         String errand = Errands.live(f, p.getUUID()) ? "Asked you to " + Errands.describe(me)
             : Trade.live(f, p) ? "Offers you " + Trade.describe(f) : "";
+        if (errand.isEmpty()) errand = QuestTalk.banner(f, p);             // [quests] the step it waits on, or its work to give
         PacketDistributor.sendToPlayer(p, new FolkReplyPayload(f.getId(), open, f.displayNameCap(), about, said,
             me.mood(), Persona.moodWord(me.mood()), aff, Persona.standing(aff), f.isFollowing(p), asked,
             where, errand, Errands.canDeliver(f, p) || Trade.canPay(f, p),
@@ -1422,6 +1434,7 @@ public final class FolkTalk {
         }
         List<Villages.News> n = Villages.news(village);
         if (!n.isEmpty()) said.add("Did you hear? " + cap(n.get(0).text()) + ".");
+        said.addAll(QuestTalk.gossip(f, p));                  // [quests] who did what for whom, and the story going on
         if (said.isEmpty()) return pick(r, "Nothing worth repeating. It's been quiet.", "Gossip? Me? Never.");
         String line = said.get(r.nextInt(said.size()));
         if (f.life().has(Social.Trait.SHY)) line = "Oh — well, I shouldn't, but… " + line;

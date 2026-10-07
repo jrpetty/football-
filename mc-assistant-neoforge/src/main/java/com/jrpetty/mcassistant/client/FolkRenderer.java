@@ -272,6 +272,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         }
         super.render(folk, entityYaw, partialTick, pose, buffer, packedLight);
         if (sat) pose.popPose();
+        QuestClient.draw(folk, pose, buffer, getFont(), this.entityRenderDispatcher, partialTick);   // [quests] "!" or "?" over its head
 
         double far = this.entityRenderDispatcher.distanceToSqr(folk);
         if (far < 24 * 24 && bubble(folk, pose, buffer)) return;

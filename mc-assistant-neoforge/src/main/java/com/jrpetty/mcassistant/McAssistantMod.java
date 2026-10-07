@@ -187,6 +187,30 @@ public final class McAssistantMod {
     public static final DeferredItem<net.minecraft.world.item.Item> VILLAGE_COIN =
         ITEMS.registerSimpleItem("village_coin");
 
+    // [quests] The quests' things (entity/QuestItems): the journal; what a quest's giver makes for it out of the stores
+    // (a sealed letter, a parcel, the peace terms, a spy's report, an old miner's journal, a child's wooden toy or its
+    // drawing); a family's heirlooms; the smugglers' ledger; and the town's honours, its medal and its key.
+    public static final DeferredItem<com.jrpetty.mcassistant.item.QuestJournalItem> QUEST_JOURNAL =
+        ITEMS.registerItem("quest_journal", com.jrpetty.mcassistant.item.QuestJournalItem::new,
+            new net.minecraft.world.item.Item.Properties().stacksTo(1));
+    public static final DeferredItem<net.minecraft.world.item.Item> SEALED_LETTER = quest("sealed_letter", net.minecraft.world.item.Rarity.COMMON);
+    public static final DeferredItem<net.minecraft.world.item.Item> PARCEL = quest("parcel", net.minecraft.world.item.Rarity.COMMON);
+    public static final DeferredItem<net.minecraft.world.item.Item> PEACE_TERMS = quest("peace_terms", net.minecraft.world.item.Rarity.UNCOMMON);
+    public static final DeferredItem<net.minecraft.world.item.Item> SPY_REPORT = quest("spy_report", net.minecraft.world.item.Rarity.COMMON);
+    public static final DeferredItem<net.minecraft.world.item.Item> SMUGGLERS_LEDGER = quest("smugglers_ledger", net.minecraft.world.item.Rarity.UNCOMMON);
+    public static final DeferredItem<net.minecraft.world.item.Item> MINERS_JOURNAL = quest("miners_journal", net.minecraft.world.item.Rarity.COMMON);
+    public static final DeferredItem<net.minecraft.world.item.Item> WOODEN_TOY = quest("wooden_toy", net.minecraft.world.item.Rarity.COMMON);
+    public static final DeferredItem<net.minecraft.world.item.Item> CHILDS_DRAWING = quest("childs_drawing", net.minecraft.world.item.Rarity.COMMON);
+    public static final DeferredItem<net.minecraft.world.item.Item> HEIRLOOM_RING = quest("heirloom_ring", net.minecraft.world.item.Rarity.UNCOMMON);
+    public static final DeferredItem<net.minecraft.world.item.Item> HEIRLOOM_LOCKET = quest("heirloom_locket", net.minecraft.world.item.Rarity.UNCOMMON);
+    public static final DeferredItem<net.minecraft.world.item.Item> TOWN_MEDAL = quest("town_medal", net.minecraft.world.item.Rarity.RARE);
+    public static final DeferredItem<net.minecraft.world.item.Item> TOWN_KEY = quest("town_key", net.minecraft.world.item.Rarity.EPIC);
+
+    /** [quests] A quest's thing: one to a stack (each is somebody's own, named on it). */
+    private static DeferredItem<net.minecraft.world.item.Item> quest(String name, net.minecraft.world.item.Rarity rarity) {
+        return ITEMS.registerSimpleItem(name, new net.minecraft.world.item.Item.Properties().stacksTo(1).rarity(rarity));
+    }
+
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
         TABS.register("village_folk", () -> net.minecraft.world.item.CreativeModeTab.builder()
@@ -204,6 +228,10 @@ public final class McAssistantMod {
                 out.accept(ZONE_MARKER.get());
                 out.accept(PLACE_MARKER.get());
                 out.accept(MEMORY_CORE.get());
+                for (DeferredItem<?> q : java.util.List.of(QUEST_JOURNAL, SEALED_LETTER, PARCEL, PEACE_TERMS, SPY_REPORT,   // [quests]
+                        SMUGGLERS_LEDGER, MINERS_JOURNAL, WOODEN_TOY, CHILDS_DRAWING, HEIRLOOM_RING, HEIRLOOM_LOCKET, TOWN_MEDAL, TOWN_KEY)) {
+                    out.accept(q.get());
+                }
             })
             .build());
 
@@ -248,6 +276,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Diplomacy.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.JobMarket.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Quests.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.QuestRun.class);     // [quests] the quests' steps, day by day
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Hire.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Land.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Founding.class);
@@ -278,6 +307,7 @@ public final class McAssistantMod {
             event.accept(PLACE_MARKER);
             event.accept(MEMORY_CORE);
             event.accept(ZONE_MARKER);
+            event.accept(QUEST_JOURNAL);                                   // [quests]
         }
     }
 }
