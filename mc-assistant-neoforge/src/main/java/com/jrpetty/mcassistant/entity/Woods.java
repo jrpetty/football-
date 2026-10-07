@@ -304,7 +304,13 @@ public final class Woods {
                         // Down the trunk to its foot: a trunk standing on the earth is a tree.
                         BlockPos p = top;
                         for (int i = 0; i < 32 && level.getBlockState(p.below()).is(BlockTags.LOGS); i++) p = p.below();
-                        if (level.getBlockState(p.below()).is(BlockTags.DIRT)) g.trunks++;
+                        BlockState foot = level.getBlockState(p.below());
+                        if (foot.is(BlockTags.DIRT)) g.trunks++;
+                        // A tree half felled: its foot cut, its stump planted again at once, and the rest of the
+                        // trunk still standing over the new sapling. That sapling is one of the wood's: missed, the
+                        // wood looked a tree thin and a sapling went on the open ground besides (23 of 22).
+                        else if (foot.is(BlockTags.SAPLINGS)) g.saplings.add(p.below().immutable());
+
                     } else if (level.getBlockState(top.above()).is(BlockTags.SAPLINGS)) {
                         g.saplings.add(top.above());
                     }

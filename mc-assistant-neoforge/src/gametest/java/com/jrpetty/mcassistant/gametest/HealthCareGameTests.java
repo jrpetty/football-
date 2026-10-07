@@ -7,6 +7,7 @@ import com.jrpetty.mcassistant.entity.FolkTalk;
 import com.jrpetty.mcassistant.entity.Health;
 import com.jrpetty.mcassistant.entity.Homes;
 import com.jrpetty.mcassistant.entity.Infirmary;
+import com.jrpetty.mcassistant.entity.Keepsakes;
 import com.jrpetty.mcassistant.entity.Market;
 import com.jrpetty.mcassistant.entity.Neighbourly;
 import com.jrpetty.mcassistant.entity.Persona;
@@ -803,9 +804,12 @@ public class HealthCareGameTests {
             if (Neighbourly.welcomeForTests(n.getUUID())[2] == 1 && Neighbourly.errandForTests(g) == null && remembers(n, "welcomed me")) {
                 List<String> said = Neighbourly.saidForTests();
                 Kit.log("hc07 welcomed at " + t + "; carries bread " + carried(n, s -> s.is(Items.BREAD)) + ", torch " + carried(n, s -> s.is(Items.TORCH))
-                    + ", flower " + carried(n, s -> s.is(ItemTags.SMALL_FLOWERS)) + "; said " + said);
+                    + ", flower " + carried(n, s -> s.is(ItemTags.SMALL_FLOWERS) && !Keepsakes.isCarried(s)) + " (and its keepsake "
+                    + carried(n, Keepsakes::isTreasure) + "); said " + said);
+                // (A newcomer may come by its own pressed flower out of the stores the same day, "picked the day it came":
+                // that is its keepsake, carried always, not the basket's.)
                 helper.assertTrue(carried(n, s -> s.is(Items.BREAD)) == 1 && carried(n, s -> s.is(Items.TORCH)) == 1
-                    && carried(n, s -> s.is(ItemTags.SMALL_FLOWERS)) == 1, "a welcome basket: a loaf, a torch and a flower");
+                    && carried(n, s -> s.is(ItemTags.SMALL_FLOWERS) && !Keepsakes.isCarried(s)) == 1, "a welcome basket: a loaf, a torch and a flower");
                 int bread = stock(level, id, s -> s.is(Items.BREAD)), torches = stock(level, id, s -> s.is(Items.TORCH)),
                     flowers = stock(level, id, s -> s.is(ItemTags.SMALL_FLOWERS));
                 Kit.log("hc07 the stores: bread " + had[0] + " -> " + bread + ", torches " + had[1] + " -> " + torches + ", flowers " + had[2] + " -> " + flowers);
