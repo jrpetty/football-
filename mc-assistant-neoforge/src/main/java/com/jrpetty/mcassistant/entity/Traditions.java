@@ -72,7 +72,9 @@ public final class Traditions {
 
     /** What made the day great. */
     public enum Why {
-        FOUNDING("the founding"), RAID("the raid beaten off"), STORM("the great storm"), DIAMOND("the first diamond");
+        FOUNDING("the founding"), RAID("the raid beaten off"), STORM("the great storm"), DIAMOND("the first diamond"),
+        // [war-peace] The end of a war: Remembrance Day, kept with a minute's silence at the dusk bell (WarAndPeace).
+        WAR("the war's end");
 
         public final String words;
         Why(String words) { this.words = words; }
@@ -124,6 +126,18 @@ public final class Traditions {
         return out;
     }
 
+    /**
+     * [war-peace] A war's end kept every year (WarAndPeace): Remembrance Day, a minute's silence at the dusk bell
+     * on the day the peace was made, for whoever the war cost. Kept whatever other customs the town has: a town
+     * does not choose between its founding and its dead.
+     */
+    public static void remember(UUID village, long day, String name, String toWhom) {
+        List<Custom> have = customs(village);
+        for (Custom c : have) if (c.why() == Why.WAR && c.day() == day) return;
+        have.add(new Custom(Why.WAR, How.SILENCE, day, name, toWhom, -1));
+        save(village, have);
+    }
+
     private static void save(UUID village, List<Custom> customs) {
         List<String[]> rows = new ArrayList<>();
         for (Custom c : customs) rows.add(c.row());
@@ -167,6 +181,7 @@ public final class Traditions {
             case STORM -> new Custom(why, How.LANTERNS, day, "Stormlight", "the great storm of day " + (day + 1), -1);
             case DIAMOND -> new Custom(why, How.TOAST, day, "Diamond Night", finder(t) + "the first diamond", -1);
             case FOUNDING -> new Custom(why, How.LANTERNS, day, "the Founders' Lanterns", "the founders", -1);
+            case WAR -> new Custom(why, How.SILENCE, day, "Remembrance Day", "those the war cost", -1);   // [war-peace]
         };
     }
 

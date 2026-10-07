@@ -17,8 +17,8 @@ import java.util.List;
  * rumour), what the war footing has cost, who is likelier to sue for peace, where the war banner hangs,
  * and its course day by day (or, at peace, the last war's, to its treaty); the quarrels and the council
  * of war's votes; the allies and their guards on
- * the walls; what the town holds against its neighbours; its treaties; and its wars before. Scrolls
- * with the wheel.
+ * the walls; what the town holds against its neighbours; its treaties; its wars before; its weariness
+ * of war and the peace candidate; and those its wars cost, with its Remembrance Day. Scrolls with the wheel.
  */
 public final class WarPage {
 
@@ -37,6 +37,12 @@ public final class WarPage {
         lines.add(new Line('P', capital(m.getString("footing_word")) + ": strength " + m.getInt("strength") + " (" + m.getString("strength_words")
             + "); the elder is " + m.getString("temper") + " and lets a war stand " + m.getInt("stand") + " days before it talks"
             + (m.getBoolean("on") ? "" : ". Wars are switched off (villageWars)")));
+        // How weary of war the town is, as a bar: what wore it down beside it.
+        if (m.getInt("weary") > 0) {
+            lines.add(new Line('Y', "Weariness: " + m.getString("weary_word") + (m.getString("weary_why").isEmpty() ? "" : " (" + m.getString("weary_why") + ")"),
+                m.getInt("weary"), 100));
+        }
+        for (String e : strings(m, "election")) lines.add(new Line('W', capital(e) + "."));
         ListTag wars = m.getList("wars", Tag.TAG_COMPOUND);
         if (wars.isEmpty()) lines.add(new Line('M', "No war. A feud boils over only with a real grievance, a hawk for an elder and the council's vote."));
         for (int i = 0; i < wars.size(); i++) {
@@ -60,6 +66,14 @@ public final class WarPage {
         section(lines, "Held against our neighbours (the last month)", strings(m, "grievances"), 'N', "Nothing.");
         section(lines, "Treaties", strings(m, "treaties"), 'G', "None signed.");
         section(lines, "Wars before", strings(m, "past"), 'M', "None.");
+        List<String> fallen = strings(m, "fallen");
+        String rem = m.getString("remembrance");
+        if (!fallen.isEmpty() || !rem.isEmpty()) {
+            lines.add(new Line('H', "Those the wars cost"));
+            if (fallen.isEmpty()) lines.add(new Line('M', "Nobody: the plaque remembers the war itself, and the peace."));
+            for (String f : fallen) lines.add(new Line('C', f));
+            if (!rem.isEmpty()) lines.add(new Line('N', rem));
+        }
 
         int rows = Math.max(1, (h - 4) / ROW);
         int start = Math.max(0, Math.min(scroll, Math.max(0, lines.size() - rows)));
@@ -84,6 +98,13 @@ public final class WarPage {
                     small(g, font, l.a() + " : " + l.b(), bx + bw + 4, cy + 1, l.a() >= l.b() ? Ui.GOOD : Ui.BAD);
                 }
                 case 'W' -> small(g, font, Ui.clip(font, l.text(), clip), x + 4, cy + 2, Ui.WARN);
+                case 'Y' -> {
+                    int bw = Math.max(20, w / 4);
+                    float frac = l.a() / (float) Math.max(1, l.b());
+                    small(g, font, Ui.clip(font, l.text(), (int) ((w - bw - 36) / 0.75F)), x + 4, cy + 2, frac >= 0.5F ? Ui.BAD : Ui.WARN);
+                    Ui.bar(g, x + w - bw - 28, cy + 2, bw, 5, frac, frac >= 0.7F ? Ui.BAD : frac >= 0.5F ? Ui.WARN : Ui.MUTED);
+                    small(g, font, l.a() + "/100", x + w - 24, cy + 2, frac >= 0.5F ? Ui.BAD : Ui.MUTED);
+                }
                 case 'G' -> small(g, font, Ui.clip(font, l.text(), clip), x + 4, cy + 2, Ui.GOOD);
                 case 'C' -> small(g, font, Ui.clip(font, "· " + l.text(), clip), x + 8, cy + 2, Ui.INK);
                 case 'M' -> small(g, font, Ui.clip(font, l.text(), clip), x + 4, cy + 2, Ui.FAINT);

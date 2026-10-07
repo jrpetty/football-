@@ -179,7 +179,8 @@ public final class TownMeeting {
             String gripe = !view.bad().isEmpty() ? view.bad().get(0) : "we're short of " + shorts.get(0);
             line(s, said, low.getUUID(), FolkTalk.pick(r, "What about this: " + gripe + "? When's somebody going to see to it?",
                 "I'll say it if nobody else will — " + gripe + "!"), '?');
-            String answer = gripe.contains("eat") ? "The farmers and the fishers are at it; bring in what you can spare."
+            String answer = gripe.contains("the war") ? WarAndPeace.meetingAnswer(id)        // [war-peace] the war, answered
+                : gripe.contains("eat") ? "The farmers and the fishers are at it; bring in what you can spare."
                 : gripe.contains("bed") ? "A new house is on the list. It goes up as soon as the timber's in."
                 : gripe.contains("wage") ? "The treasury's thin. Market day will help, and so will every coin that comes in."
                 : gripe.contains("short of") ? "The gatherers are on it. Bring in what you can to the stores."

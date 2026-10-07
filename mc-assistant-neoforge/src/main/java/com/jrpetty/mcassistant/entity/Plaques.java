@@ -52,7 +52,9 @@ public final class Plaques {
     /** Where a hero fell, three in a town at most. */
     static final int FALLEN = 3;
 
-    public enum Site { FOUNDING, FIRST_HOUSE, FELL, HARVEST }
+    public enum Site { FOUNDING, FIRST_HOUSE, FELL, HARVEST,
+        /** [war-peace] A war's memorial, by the chapel or the graveyard (WarAndPeace). */
+        MEMORIAL }
 
     /** A plaque: what it marks, where (the sign's cell), on a wall (or on a post), its lines, and whether it is up. */
     public record Plaque(Site site, BlockPos at, boolean wall, String[] lines, boolean up, long day) {
@@ -116,6 +118,17 @@ public final class Plaques {
         BlockPos at = f.blockPosition();
         BlockPos ground = Watch.floorAt(level, at.getX(), at.getZ(), at.getY());
         all.add(new Plaque(Site.FELL, ground != null ? ground : at, false, lines, false, day));
+        save(village, all);
+    }
+
+    /**
+     * [war-peace] A war's memorial wanted (WarAndPeace, at the peace): a post and a sign near this mark (before the
+     * chapel or the graveyard), with whoever the war cost or, with nobody lost, the war itself and the peace. Put
+     * up as every plaque is, by a hand at the town's works out of the stores.
+     */
+    public static void memorial(UUID village, BlockPos mark, String[] lines, long day) {
+        List<Plaque> all = plaques(village);
+        all.add(new Plaque(Site.MEMORIAL, mark, false, lines, false, day));
         save(village, all);
     }
 
@@ -284,6 +297,7 @@ public final class Plaques {
             case FIRST_HOUSE -> "the town's first house";
             case FELL -> "the place where " + p.lines()[1] + " fell";
             case HARVEST -> "the field of the record harvest";
+            case MEMORIAL -> "the war memorial";
         };
     }
 

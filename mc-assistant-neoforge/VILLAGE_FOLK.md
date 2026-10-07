@@ -5825,32 +5825,76 @@ the config; then a feud stays a feud.
 * **Allies.** An ally that answers the call sends up to three of its guards, never more than half its
   watch. They walk over and stand on the walls of the town they are sworn to, raising its strength in
   anybody's reckoning, and they go home at the peace.
+* **War-weariness.** Every day of a war wears a town down, measured from 0 to 100. These add to it:
+  - the war's length (more after ten days, more again after twenty);
+  - its cost: the danger pay and the hours lost to the volunteers and the militia's muster;
+  - the day of rest given to the militia's drill instead of the games;
+  - a larder kept for a siege, gone short, or empty;
+  - trade with the enemy lost;
+  - an enemy the town reckons the stronger;
+  - its spies held by the enemy, and its guards away on an ally's walls;
+  - everyone the war costs.
+
+  At peace it eases again, a little each day. You see it in the town's contentment, in the folk's spirits
+  and what they say about the war, on their cards, on the board and at the town meeting. A Guardian is
+  proud of the watch early in a war. Once the town is weary, some folk look at other towns' notices for
+  work (never the enemy's). Once it is worn out, a folk every few days packs up for a neighbour at peace
+  with room for it. A town never drops below eight this way.
+* **The wartime election.** A weary town puts up a candidate for peace at its next election, standing for
+  "the militia home, the walls stood down, and our trade back". A worn-out town calls the election early,
+  once a war. Weary voters lean to peace and away from the leader who took them to war, the more so if
+  they care for wages or rest or have family over there. If the war is going well, with the enemy reckoned
+  the weaker, the hawk stays ahead. If the peace candidate wins, the new leader sues for peace at once, and
+  the town keeps talking until it has peace.
 * **Peace talks.** After the war has stood a while (three days for a soft elder, a week for a prickly one),
   the side that reckons itself the weaker sues for peace under a white flag. It judges by its scouts'
   reports, or by rumour if it has none. If neither side reckons itself the weaker, the cost of the war
-  footing decides: the militia's pay and the work lost to it, booked day by day. The town it costs most
+  footing decides: the danger pay and the work lost, booked day by day. The town it costs most
   sends the white flag. The terms come from the war's goal and the real balance of strength:
   - if the town that began the war is half as strong again, the other gives up the whole goal;
   - if it is a little stronger, the other gives up part of it;
-  - otherwise the war ends with no gain.
-  Coin owed travels in the envoy's purse.
+  - otherwise the war ends with no gain. If the town that began it is much the weaker, it pays
+    reparations as well: a coin for every day of the war and five more, at most a fifth of its treasury.
+
+  Each town sends home the spies it holds of the other's. A trade deal goal is written down for the trade
+  between towns and, where the two towns' books have something to trade, a standing deal is struck at the
+  table. Coin owed travels in the envoy's purse.
 * **Treaties.** Peace ends the war on both towns' books. The treaty is written into both and shown on
-  both boards, and it keeps the peace (a truce, no brawls) for a town's year. The banners come down and go
-  back into the stores, and the town stands down from its war footing. Breaking a treaty, such as a raid
-  while it holds, is a cause for war, and every town that hears of it thinks the worse of the one that
-  did it.
+  both boards, and it keeps the peace (a truce, no brawls) for a town's year. Breaking a treaty, such as a
+  raid while it holds, is a cause for war. It goes into both towns' chronicles and onto the board of the
+  town that was wronged, and every town that hears of it thinks the worse of the one that did it.
+* **Peace returns.** On the day of the peace:
+  - the war banner comes down and goes back into the stores;
+  - the militia hands their arms back to the armoury, and the volunteers return to the trades they left;
+  - the danger pay ends;
+  - the town goes back to its peacetime building list: defences not yet begun drop off the top, and any
+    begun are finished later;
+  - a feast for the peace is called for the next day of rest within the week, or the next evening.
+* **Memorials.** Everyone the war cost is remembered: a spy who died on its errand, an ally's guard who
+  died on another town's walls, or anyone killed by the enemy's hand. If nobody died, the memorial is to
+  the war itself and the peace. A hand at the town's works puts up a plaque on a post before the chapel
+  or the graveyard (by the board if the town has neither). It is made from the stores: a sign, and a
+  fence or planks. The day of the peace becomes Remembrance Day, kept every year with a minute's silence at
+  the dusk bell. It is on the town's calendar, the board, the gazette and the Culture page.
 * **Brokering peace.** A player held in honour by both towns can say "make peace with ..." to a folk of
   either. The player carries ten coins' worth of gifts and the peace is made on their word, with no coin
   owed. Both towns think the better of the player for it.
 
 Where to see it:
-* The board shows the war, the council's vote, the herald on the road and the treaty in force.
+* The board shows the war, the council's vote, the herald on the road, how weary the town is, the peace
+  candidate, the peace feast and the treaty in force.
 * The gazette has a *War and peace* section.
 * A folk's card has a *The war* line.
 * The town's books have a **War** page. It shows the town's strength and each war: its goal, our
   strength against theirs and what that figure rests on, the cost so far, which side is likelier to sue,
-  where the banner hangs and the war's course day by day. Below that come the quarrels, the allies and
-  their guards, what the town holds against its neighbours, its treaties and its wars before.
+  where the banner hangs and the war's course day by day. At peace it shows the last war, day by day, up
+  to its treaty. Below that come:
+  - a weariness bar, with what wore the town down;
+  - the peace candidate;
+  - the quarrels, the allies and their guards;
+  - what the town holds against its neighbours;
+  - its treaties and its wars before;
+  - those its wars cost, and Remembrance Day.
 * `/village war` gives the same in chat, plus each neighbour and whether the elder would go to war with
   it today, and why.
 * `/village war books` opens the page.
@@ -5860,7 +5904,7 @@ Where to see it:
   - `/village war cloth` puts a red banner into the stores;
   - `/village war peace` makes peace on the terms the balance of strength gives.
 
-The game tests `WarAndPeaceGameTests` (wp01 to wp07) check that:
+The game tests `WarAndPeaceGameTests` (wp01 to wp10) check that:
 * a hawk in a feud with a grievance puts war to the council, going by its scouts' report, and the
   council's vote sends the herald;
 * a dove does not go to war, even after ten days of grievances;
@@ -5868,4 +5912,12 @@ The game tests `WarAndPeaceGameTests` (wp01 to wp07) check that:
 * a refusal starts the war on both books under banners made from the stores;
 * the weaker side by its scouts' report sues for peace and the treaty concedes the whole goal;
 * an ally's guards raise a town's strength, peace comes when the cost tells, and the guards go home;
-* with wars switched off, nobody goes to war.
+  then a treaty broken is in both chronicles and on the board, and costs the breaker everywhere;
+* with wars switched off, nobody goes to war;
+* weariness grows with every day of a war, and faster when the war footing costs the town, and shows in
+  its contentment and on its folk's cards;
+* a weary town with a war going badly elects its peace candidate, who sues for peace at once, while a
+  war going well keeps the hawk ahead in a voter's eyes;
+* at the peace the militia stands down, the volunteers go back to their trades, the danger pay ends, a
+  feast is called, the memorial goes up with the name of the spy the war cost, and Remembrance Day falls
+  on the day of the peace a year later.

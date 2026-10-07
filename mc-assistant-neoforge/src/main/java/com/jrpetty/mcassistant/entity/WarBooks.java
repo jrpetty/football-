@@ -10,8 +10,8 @@ import java.util.UUID;
 /**
  * The books a town keeps of its wars, written down with the world (Ledger notes, all under "wp."):
  * what it holds against each neighbour, each war's own page (when it began, what it was fought for,
- * what keeping the war footing has cost, how it went), the treaties it signed, and the wars it fought
- * before. WarAndPeace decides; this only remembers.
+ * what keeping the war footing has cost, how it went), the treaties it signed, the wars it fought
+ * before, and those its wars cost. WarAndPeace decides; this only remembers.
  *
  * <p>A note is a line of text, so each list is its entries joined by "~" and each entry its fields
  * joined by "|"; what is written in them is cleaned of both first.
@@ -233,5 +233,20 @@ final class WarBooks {
 
     static List<String> past(UUID village) {
         return list(village, "wp.past");
+    }
+
+    /** One the war cost the town: the day, its name (and how), and with whom the war was. */
+    static void fallen(UUID village, long day, String name, String enemy) {
+        push(village, "wp.fallen", day + FIELD + clean(name) + FIELD + clean(enemy), 32);
+    }
+
+    /** {day, name, enemy}, oldest first. */
+    static List<String[]> fallen(UUID village) {
+        List<String[]> out = new ArrayList<>();
+        for (String e : list(village, "wp.fallen")) {
+            String[] p = e.split("\\|", 3);
+            if (p.length == 3) out.add(p);
+        }
+        return out;
     }
 }
