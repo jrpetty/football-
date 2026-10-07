@@ -580,10 +580,10 @@ public final class Library {
         TradeBooks.Draft d = TradeBooks.due(c, shelf, instant);
         if (d != null) {
             if (!materials(level, v, d.master())) return null;
-            String title = bookTitle(d.trade());
-            boolean first = shelf.tradeBook(d.trade().name()) == null;
+            String title = bookTitle(d.key(), d.noun());                   // [weave] a trade's, or the librarian's own
+            boolean first = shelf.tradeBook(d.key()) == null;
             return begin(new Job(id, d.master().getUUID(), (first ? "writing " : "bringing up to date ") + title, now, d, null, -1), d.master(),
-                first ? FolkTalk.pick(d.master().getRandom(), "Somebody has to write down how the " + d.trade().label + " is done. It'll be me.",
+                first ? FolkTalk.pick(d.master().getRandom(), "Somebody has to write down how the " + d.label() + " is done. It'll be me.",
                     "I'll write " + title + ". The young ones need it.") : FolkTalk.pick(d.master().getRandom(), title + " wants bringing up to date.",
                     "We've learned a thing or two since the last edition. Time to write it down."));
         }
@@ -674,7 +674,7 @@ public final class Library {
         t.news.addAll(book.news());
         Title was = null;
         if (j.draft != null) {
-            t.trade = j.draft.trade().name();
+            t.trade = j.draft.key();                                       // [weave]
             t.edition = j.draft.facts().edition();
             t.facts = j.draft.line();
             was = shelf.tradeBook(t.trade);
@@ -689,7 +689,7 @@ public final class Library {
         String kind = kindWord(t);
         String line;
         if (j.draft != null) {
-            line = was == null ? f.displayNameCap() + " wrote " + t.title + ", the " + j.draft.trade().title.toLowerCase(Locale.ROOT)
+            line = was == null ? f.displayNameCap() + " wrote " + t.title + ", the " + j.draft.noun()
                 + "s' book of best practice, for the library" : f.displayNameCap() + " brought out the " + Quill.ordinal(t.edition) + " edition of "
                 + t.title + (j.draft.changes().isEmpty() ? "" : ", with " + TradeBooks.changeWords(j.draft.changes()) + " in it");
             f.persona().remember(day, was == null ? "I wrote " + t.title : "I brought out the " + Quill.ordinal(t.edition) + " edition of " + t.title, 4);
@@ -1825,7 +1825,7 @@ public final class Library {
         t.written = day;
         t.pages.addAll(book.pages());
         if (d != null) {
-            t.trade = d.trade().name();
+            t.trade = d.key();                                             // [weave]
             t.edition = d.facts().edition();
             t.facts = d.line();
         }
@@ -1943,5 +1943,24 @@ public final class Library {
     /** A trade's book by its short title: "The Farmer's Book". */
     static String bookTitle(StationTask t) {
         return "The " + com.jrpetty.mcassistant.village.TradeBookWriter.craft(t.name(), t.title).possessive() + " Book";
+    }
+
+    /** [weave] A book of best practice by its key: a trade's, or the librarian's own ("LIBRARY"). */
+    static String bookTitle(String key, String noun) {
+        return "The " + com.jrpetty.mcassistant.village.TradeBookWriter.craft(key, noun).possessive() + " Book";
+    }
+
+    /** [weave] Tests: the librarian's own book written now, out of the stores. Its catalogue entry, or null. */
+    @Nullable
+    public static Title writeLibrarianBookForTests(ServerLevel level, Villages.Village v) {
+        Ledger.Building b = building(v.id());
+        if (b == null) return null;
+        Shelf shelf = LibraryRecords.shelf(v.id());
+        TradeBooks.Draft d = TradeBooks.librarianOf(level, v, shelf);
+        if (d == null) return null;
+        Job j = new Job(v.id(), d.master().getUUID(), "writing " + bookTitle(d.key(), d.noun()), level.getGameTime(), d, null, -1);
+        if (!fetch(level, v, j, d.master())) return null;
+        finish(level, v, b, j, d.master());
+        return shelf.tradeBook("LIBRARY");
     }
 }

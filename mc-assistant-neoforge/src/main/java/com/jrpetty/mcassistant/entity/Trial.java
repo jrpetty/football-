@@ -632,6 +632,7 @@ final class Trial {
 
     /** Cleared: it remembers who named it; the watch looks again (once), or the case is closed. */
     static void acquit(ServerLevel level, Villages.Village v, Case c, VillageFolkEntity f, Sitting s) {
+        Weave.acquitting(level, c, f.getUUID());                            // [weave] cleared: a player's word that put it here is paid for
         long day = level.getDayTime() / 24000L;
         UUID id = f.getUUID();
         String name = f.displayNameCap();

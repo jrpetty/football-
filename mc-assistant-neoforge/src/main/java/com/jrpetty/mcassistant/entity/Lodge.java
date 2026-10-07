@@ -403,6 +403,18 @@ public final class Lodge {
         return out;
     }
 
+    /** [weave] The trophies hung on the lodge's wall now, by item key (a full wall has six): the rest may go to the auction. */
+    static List<String> shown(ServerLevel level, UUID village) {
+        List<String> out = new ArrayList<>();
+        Ledger.Building b = of(village);
+        if (b == null || !level.isLoaded(b.anchor())) return out;
+        for (int[] c : TROPHIES) {
+            ItemFrame f = frame(level, at(b, c));
+            if (f != null && !f.getItem().isEmpty()) out.add(key(f.getItem().getItem()));
+        }
+        return out;
+    }
+
     /** One more trophy on the wall, if the team has brought one up that is not there yet and the stores have one to
      *  spare (never the last). True if one went up. */
     static boolean trophy(ServerLevel level, Villages.Village v, Ledger.Building b, @Nullable VillageFolkEntity by, long day) {
