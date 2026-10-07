@@ -41,7 +41,12 @@ public final class FolkPoses {
             switch (gait) {
                 case Manner.SKIP -> {
                     float hop = Math.abs(Mth.sin(limbSwing * 0.6662F)) * swing * 1.6F;
-                    for (ModelPart p : new ModelPart[]{head, body, ra, la, rl, ll}) p.y -= hop;
+                    head.y -= hop;                       // each in turn, without a new array every frame
+                    body.y -= hop;
+                    ra.y -= hop;
+                    la.y -= hop;
+                    rl.y -= hop;
+                    ll.y -= hop;
                     ra.xRot *= 1.35F;
                     la.xRot *= 1.35F;
                     ra.zRot += swing * 0.25F;
