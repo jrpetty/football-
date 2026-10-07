@@ -188,6 +188,28 @@ public class CityScreen extends Screen {
 
     /** Where each tab sits: {x, y, width}; in one row if they fit, in the small hand if that makes them fit, else in two rows. */
     private int[][] tabBoxes() {
+        // Worked out once for the window's size and place and kept (it was worked out twice a frame, measuring every
+        // tab's name over and over: in two rows, every tab's row again for every tab). The boxes are only read.
+        boolean keep = TextCache.fresh();
+        if (keep && boxes != null && boxesW == w && boxesLeft == left && boxesTop == top && boxesEpoch == TextCache.epoch()) {
+            return boxes;
+        }
+        int[][] made = layTabs();
+        if (keep) {
+            boxes = made;
+            boxesW = w;
+            boxesLeft = left;
+            boxesTop = top;
+            boxesEpoch = TextCache.epoch();
+        }
+        return made;
+    }
+
+    /** The tab boxes as last worked out (tabBoxes), and for what. */
+    private int[][] boxes;
+    private int boxesW, boxesLeft, boxesTop, boxesEpoch;
+
+    private int[][] layTabs() {
         int[][] out = new int[TABS.length][];
         int room = w - 8;
         int total = 0, small = 0;
@@ -660,13 +682,45 @@ public class CityScreen extends Screen {
             || p.equals("banner");
     }
 
+    /**
+     * An item's stack and its name, by its id in the books, kept: the Production and Stock pages sorted their rows by
+     * name every frame, making a new stack and looking its name up in the language twice a comparison, and drew an
+     * icon from a new stack a row. The stacks are only read (drawn, named); the items do not change while the game
+     * runs, and the names are let go with what TextCache keeps (a new language is a reload of resources).
+     */
+    private static final java.util.Map<String, net.minecraft.world.item.ItemStack> STACKS = new java.util.HashMap<>();
+    private static final java.util.Map<String, String> NAMES = new java.util.HashMap<>();
+    private static int namesEpoch = -1;
+
     private static net.minecraft.world.item.ItemStack stackOf(String id) {
+        net.minecraft.world.item.ItemStack got = STACKS.get(id);
+        if (got != null) return got;
+        if (STACKS.size() > 4096) STACKS.clear();
+        got = stackNow(id);
+        STACKS.put(id, got);
+        return got;
+    }
+
+    private static net.minecraft.world.item.ItemStack stackNow(String id) {
         net.minecraft.resources.ResourceLocation rl = net.minecraft.resources.ResourceLocation.tryParse(id.contains(":") ? id : "minecraft:" + id);
         if (rl == null) return net.minecraft.world.item.ItemStack.EMPTY;
         return new net.minecraft.world.item.ItemStack(net.minecraft.core.registries.BuiltInRegistries.ITEM.get(rl));
     }
 
     private static String itemName(String id) {
+        if (!TextCache.fresh()) return nameNow(id);
+        if (namesEpoch != TextCache.epoch() || NAMES.size() > 4096) {
+            NAMES.clear();
+            namesEpoch = TextCache.epoch();
+        }
+        String got = NAMES.get(id);
+        if (got != null) return got;
+        got = nameNow(id);
+        NAMES.put(id, got);
+        return got;
+    }
+
+    private static String nameNow(String id) {
         net.minecraft.world.item.ItemStack s = stackOf(id);
         return s.isEmpty() ? id : s.getHoverName().getString();
     }
