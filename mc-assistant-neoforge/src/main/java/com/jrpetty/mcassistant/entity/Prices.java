@@ -433,5 +433,8 @@ public final class Prices {
         "mc_assistant:forged_coin 0.1 C",
         // [interviews] A letter of application: its sheet of paper and its ink, and a little for the hand that wrote it.
         "mc_assistant:letter_of_application 0.3 C",
+        // [itemaudit] The town's coin is worth a coin, whatever its minting took (a ninth of a bar of gold and the fire);
+        // and a companion's memory core is nobody's to buy or sell: it is a friend, and nothing makes another.
+        "mc_assistant:village_coin 1.0 C", "mc_assistant:memory_core 0 C",
     };
 }

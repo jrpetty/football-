@@ -125,6 +125,8 @@ public final class PlayerCivic {
 
     /** A page for a player (the Leader's page, the hustings, the trades): its words, and buttons that run commands. */
     public static void send(ServerPlayer p, String title, String text, List<String> buttons) {
+        // A connection without the mod's channel (a test's stand-in player, a client without the mod) is sent nothing.
+        if (p.connection == null || !p.connection.hasChannel(CivicPagePayload.TYPE)) return;
         PacketDistributor.sendToPlayer(p, new CivicPagePayload(title, text.length() > 30000 ? text.substring(0, 30000) : text,
             buttons.size() > 24 ? buttons.subList(0, 24) : buttons));
     }

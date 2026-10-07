@@ -117,7 +117,7 @@ can't one-shot your companion by accident.
 
 ### Assistant Spawner block
 
-Craft an **Assistant Spawner** (8 iron + 1 diamond) and place it. **Right-click
+Craft an **Assistant Spawner** (8 rotten flesh around a diamond) and place it. **Right-click
 it** to bring your assistant here — it spawns a fresh one if you don't have one,
 or teleports your existing one in — and the block becomes its home point. Find
 it in the **Functional Blocks** creative tab.

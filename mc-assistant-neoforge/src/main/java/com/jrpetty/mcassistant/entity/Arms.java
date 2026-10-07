@@ -56,7 +56,7 @@ import java.util.function.Predicate;
  *     its banner in its free hand: one of the town's woven banners out of the stores, or one woven then, and back
  *     into the stores when it comes home. (The guards lent to an ally's walls go as the watch, under no banner.)</li>
  * <li><b>The war banner</b> (WarBanner) is the stores' cloth with the town's charges woven on it, a dye a charge.</li>
- * <li><b>Festival tabards.</b> The tailor keeps the town a set of tabards (seven wool cut like a tunic, the arms put
+ * <li><b>Festival tabards.</b> The tailor keeps the town a set of tabards (eight wool cut like a tunic, the arms put
  *     on it with a banner at the crafting table, as a shield's are): on a festival's day and on Founding Day they
  *     are lent out of the stores in the morning to the grown folk who are not the watch, worn over their clothes
  *     (FolkRenderer's tabard), and taken back in at night.</li>
@@ -632,7 +632,7 @@ public final class Arms {
     }
 
     /**
-     * A festival tabard made, if the town keeps fewer than it wants and it is no festival today: seven wool cut
+     * A festival tabard made, if the town keeps fewer than it wants and it is no festival today: eight wool cut
      * like a tunic (the recipe) and the town's banner woven to go on it, out of the stores, at the tailor's hand;
      * the arms put on it as at the crafting table, and into the stores. True while a hand is on its way.
      */
