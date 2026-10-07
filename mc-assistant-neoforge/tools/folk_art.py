@@ -11,7 +11,8 @@ drift apart:
   * outfits  one picture per trade (textures/entity/folk/<trade>.png) laid over
              the skin: what a folk does. Hats, aprons, packs and shields are
              boxes of their own, painted only on their trade's picture.
-  * glow     the light a miner carries (textures/entity/folk/miner_glow.png).
+  * glow     the light a miner carries (textures/entity/folk/miner_glow.png), and the
+             cave dweller's helm lamp (cavedweller_glow.png).
 
     python3 tools/folk_art.py            # write the pictures and the Java
     python3 tools/folk_art.py --check    # only say what would change
@@ -51,7 +52,9 @@ SIZE = 128
 
 TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           "smelter", "fisher", "storekeeper", "hauler",
-          "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter"]
+          "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
+          # [caves] Not in StationTask's order: the cave dweller's own (FolkModel.outfit picks it for CAVE).
+          "cavedweller"]
 
 PARTS = [
     # The body every folk has: a villager's head and nose, a coat over a body,
@@ -187,6 +190,16 @@ PARTS = [
     ("hunter_quiver", "body", (0, 2, 3.4), (0, 0, 0.35), [(100, 0, -1.5, -1, 0, 3, 10, 2, 0)], "hunter"),
     ("hunter_fletch", "body", (0, 2, 3.4), (0, 0, 0.35), [(112, 0, -1, -4, 0.5, 2, 3, 1, 0)], "hunter"),
     ("hunter_knife", "body", (0, 0, 0), (0, 0, 0), [(100, 14, -5, 8, -1, 1, 4, 1, 0)], "hunter"),
+
+    # [caves] Cave dweller: a dented steel delver's helm with a big brass lamp strapped to its front (the lamp
+    # stays on over an iron helmet, and glows), a long oilskin coat, a coil of rope at its hip and a spare pick
+    # slung across its back.
+    ("cavedweller_shell", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -11, -4, 8, 4, 8, 0.6)], "cavedweller"),
+    ("cavedweller_brim", "head", (0, 0, 0), (0, 0, 0), [(64, 12, -5, -7, -5, 10, 1, 10, 0)], "cavedweller"),
+    ("cavedweller_lamp", "head", (0, 0, 0), (0, 0, 0), [(104, 0, -2, -10.5, -6.8, 4, 3, 2, 0)], "cavedweller"),
+    ("cavedweller_haft", "body", (0, 6, 4.4), (0, 0, 0.7), [(64, 24, -0.5, -6, 0, 1, 12, 1, 0)], "cavedweller"),
+    ("cavedweller_pickhead", "body", (0, 6, 4.4), (0, 0, 0.7), [(68, 24, -3.5, -7, 0, 7, 1, 1, 0)], "cavedweller"),
+    ("cavedweller_rope", "body", (0, 0, 0), (0, 0, 0), [(84, 24, -6.2, 7, -2, 2, 4, 4, 0)], "cavedweller"),
 ]
 
 
@@ -885,6 +898,85 @@ def miner_glow():
     lantern = Box(cv, "miner_lantern")
     for face in Box.SIDES:
         lantern.fill(face, lambda x, y, w, h: (250, 180, 70) if 0 < y < h - 1 and 0 < x < w - 1 else None)
+    return cv
+
+
+def outfit_cavedweller():
+    """[caves] The cave team: a long oilskin coat with leather over its shoulders and at its elbows and brass
+    buttons, canvas breeches and laced boots with steel toes, chalk on its gloves; a dented steel helm with a
+    brass lamp strapped to its front; a coil of rope at its hip and a spare pick slung across its back. Not the
+    miner's ochre hard hat and dusty jacket: the delver goes further down, and for longer."""
+    cv = Canvas()
+    oilskin = (70, 62, 40)
+
+    def waxed(x, y):
+        c = grain(oilskin, x, y, 5, 300)
+        if (x + 2 * y) % 7 == 0:
+            c = lit(c, 1.12)                                              # the wax's shine
+        if noise(x, y, 301) > 0.86:
+            c = lit(c, 0.78)                                              # mud
+        return c
+    coat = coat_to(cv, waxed, 16)
+    yoke = leather((92, 62, 38))
+    coat.row(0, lambda x: yoke(x, 0))                                     # leather over the shoulders
+    coat.row(1, lambda x: yoke(x, 1))
+    for y in range(2, 15):                                                # the coat's front edge and its buttons
+        coat.put("front", 4, y, lit(oilskin, 0.72))
+        if y % 3 == 0 and y < 10:
+            coat.put("front", 3, y, (196, 160, 74))
+    belt(coat, 9, strap=(58, 40, 26), buckle=(150, 152, 156))
+    for face, xs in (("right", (1, 2, 3)), ("left", (2, 3, 4))):         # pouches on the belt
+        for x in xs:
+            coat.put(face, x, 10, (104, 72, 44))
+            coat.put(face, x, 11, (86, 60, 38))
+    for y in range(12, 16):                                               # a slit up the back, for the climbing
+        coat.put("back", 4, y, lit(oilskin, 0.55))
+    coat.row(15, lambda x: lit(oilskin, 0.7))
+    sleeves(cv, waxed, 9, cuff=lit(oilskin, 0.75))
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        for x in range(4):
+            for y in (5, 6):
+                arm.put("back", x, y, grain((92, 62, 38), x, y, 4, 302))  # leather at the elbows
+        arm.around(lambda s, y, sw, h, face, x: grain((118, 92, 62), s, y, 5, 303) if y >= 10 else None)   # gloves
+        arm.around(lambda s, y, sw, h, face, x: (214, 210, 196) if y == 11 and s % 3 == 0 else None)       # chalk
+    legs(cv, cloth((92, 84, 66), 5, 304), leather((50, 38, 28)), boot_from=7, sole=(26, 22, 20))
+    for name in ("right_leg", "left_leg"):
+        leg = Box(cv, name)
+        leg.row(7, (66, 50, 34))                                          # the boot tops
+        leg.put("front", 1, 8, (176, 170, 150))                           # laced
+        leg.put("front", 2, 9, (176, 170, 150))
+        leg.put("front", 0, 11, (150, 152, 156))                          # steel toes
+        leg.put("front", 3, 11, (150, 152, 156))
+        leg.put("front", 1, 11, (178, 180, 184))
+        leg.put("front", 2, 11, (178, 180, 184))
+    face_paint(cv, [(1, 7, (110, 98, 88)), (6, 6, (104, 92, 82))])        # grime
+    # The helm: dented steel, a leather band, a brass lamp.
+    iron = (118, 122, 128)
+    shell = Box(cv, "cavedweller_shell")
+    crown(shell, lambda x, y: grain(lit(iron, 0.85) if noise(x, y, 305) > 0.7 else iron, x, y, 7, 306),
+          band=(84, 58, 36), band_rows=1)
+    shell.fill("top", lambda x, y, w, h: lit(iron, 1.12) if (x, y) in ((2, 2), (5, 4), (3, 6)) else grain(iron, x, y, 7, 306))
+    brim(Box(cv, "cavedweller_brim"), lambda x, y: grain(lit(iron, 0.9), x, y, 6, 307), lit(iron, 0.6))
+    lamp = Box(cv, "cavedweller_lamp")
+    lamp.all(lambda face, x, y, w, h: grain((168, 130, 58), x, y, 5, 308) if (x + y) % 4 else (124, 94, 40))
+    lamp.fill("front", lambda x, y, w, h: (255, 248, 206) if 0 < x < w - 1 and 0 < y < h - 1 else (140, 104, 44))
+    # The spare pick across its back: an ash haft, an iron head.
+    haft = Box(cv, "cavedweller_haft")
+    haft.all(lambda face, x, y, w, h: grain((150, 112, 70), x, y, 5, 309) if y < h - 2 else (96, 70, 44))
+    head = Box(cv, "cavedweller_pickhead")
+    head.all(lambda face, x, y, w, h: (196, 200, 206) if x in (0, w - 1) else grain((136, 140, 148), x, y, 5, 310))
+    # The rope: a coil of hemp, wound round.
+    rope = Box(cv, "cavedweller_rope")
+    rope.all(lambda face, x, y, w, h: (198, 170, 112) if (x + y) % 2 else (156, 128, 80))
+    return cv
+
+
+def cavedweller_glow():
+    """[caves] The cave dweller's helm lamp, lit whatever the light around it."""
+    cv = Canvas()
+    lamp = Box(cv, "cavedweller_lamp")
+    lamp.fill("front", lambda x, y, w, h: (255, 244, 186) if 0 < x < w - 1 and 0 < y < h - 1 else None)
     return cv
 
 
@@ -1615,8 +1707,9 @@ OUTFITS = {
     "shopkeeper": outfit_shopkeeper,
     "scout": outfit_scout,
     "hunter": outfit_hunter,
+    "cavedweller": outfit_cavedweller,                                    # [caves]
 }
-GLOWS = {"miner": miner_glow}
+GLOWS = {"miner": miner_glow, "cavedweller": cavedweller_glow}
 DYED = ("none", "farmer", "lumberjack", "rancher", "guard", "storekeeper", "hauler",
         "tailor", "enchanter", "shopkeeper")
 

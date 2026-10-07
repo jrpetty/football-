@@ -1,0 +1,129 @@
+# The Delvers' Lodge: the cave team's own house, a timber hall on a stone lower course under a steep roof
+# (entity/Lodge). Inside, the back wall is kept bare for the map wall: a two-by-two of maps of the cave
+# country in item frames, every cave the team has found marked on them, over the team's workbench and its
+# grindstone. The left wall is the trophy wall, a row of frames with the rarest things the team has brought
+# up. Two bunks against the right wall, between the windows, for the team on the eve of a long trip; the
+# barrels in the back corners and the chest by the door are its gear racks; the lectern by the door holds the
+# team's log. Two lanterns hang under the beams.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name lodge
+layer -1
+..........
+.FFFFFFFF.
+.FffffffF.
+.FffffffF.
+.FffffffF.
+.FffffffF.
+.FffffffF.
+.FffffffF.
+.FffffffF.
+.FFFFFFFF.
+....k.....
+layer 0
+..........
+.LwwwwwwL.
+.wQT..VQw.
+.w......w.
+.w....].w.
+.w......w.
+.w....].w.
+.wC....rw.
+.w......w.
+.LwwDwwwL.
+..........
+layer 1
+..........
+.LWWWWWWL.
+.W......W.
+.W......G.
+.W......W.
+.W......G.
+.W......W.
+.G......G.
+.W......W.
+.LGW.WWGL.
+..........
+layer 2
+..........
+.LWWWWWWL.
+.W......W.
+.W......W.
+.W......W.
+.W......W.
+.W......W.
+.W......W.
+.W......W.
+.LWWWWWWL.
+..........
+layer 3
+..........
+.LWWWWWWL.
+.W......W.
+.W......W.
+.W......W.
+.W.j..j.W.
+.W......W.
+.W......W.
+.W......W.
+.LWWWWWWL.
+..........
+layer 4
+>........<
+>L------L<
+>|ffffff|<
+>|ffffff|<
+>|ffffff|<
+>|ffffff|<
+>|ffffff|<
+>|ffffff|<
+>|ffffff|<
+>L------L<
+>........<
+layer 5
+.>......<.
+.>WWWWWW<.
+.>......<.
+.>......<.
+.>......<.
+.>......<.
+.>......<.
+.>......<.
+.>......<.
+.>WWWWWW<.
+.>......<.
+layer 6
+..>....<..
+..>WWWW<..
+..>....<..
+..>....<..
+..>....<..
+..>....<..
+..>....<..
+..>....<..
+..>....<..
+..>WWWW<..
+..>....<..
+layer 7
+...>..<...
+...>WW<...
+...>..<...
+...>..<...
+...>..<...
+...>..<...
+...>..<...
+...>..<...
+...>..<...
+...>WW<...
+...>..<...
+layer 8
+....__....
+....__....
+....__....
+....__....
+....__....
+....__....
+....__....
+....__....
+....__....
+....__....
+....__....

@@ -4220,8 +4220,12 @@ miner works and how deep.
 An Iron Age town of **twenty-five** or more, with a couple of miners at its mine and a watch on
 its walls, sends a small, highly skilled **cave team** into the caves round it: half miners,
 half guards. The team is **two** strong, **three** at sixty folk and **four** at a hundred,
-never more. A cave dweller wears the miner's helmet and lamp, with the town's armour over them,
-and a lantern floats over its head from far off.
+never more. A cave dweller has a **look of its own**, not the miner's: a dented steel delver's
+helm with a big brass lamp strapped to its front, a long oilskin coat with leather on its
+shoulders and elbows, laced boots with steel toes, chalk on its gloves, a coil of rope at its
+hip and a spare pick slung across its back. The lamp **glows** in the dark. Under the town's
+armour the coat is put away, but the lamp stays strapped to the front of an iron helmet, and the
+rope and the pick still show over a breastplate. A lantern floats over its head from far off.
 
 * **Picked from the town's best.** The town takes its most skilled miners and guards, by their
   level and their years at the work. It never takes an idle hand of no skill just for being
@@ -4316,12 +4320,80 @@ and a lantern floats over its head from far off.
   up, as a lost miner does. If even that fails, they call for help, and the town's search party
   goes out for them. They are never lifted out.
 * **Home.** The town comes out to greet them, and a long trip home with a big haul is the town's
-  news. Every one of them walks to the town's **storehouse** and puts its whole haul in, booked
+  news. With a lodge they come home to its door first ("Home to the lodge! Now the haul to the
+  storehouse."). Every one of them then walks to the town's **storehouse** and puts its whole haul in, booked
   in the storehouse's books as brought in by that cave dweller and counted as its work. With no
   storehouse, the haul goes into the stores at the heart. Unused torches and makings go back
   too. The chronicle tells the trip as a short story: who went, where, the veins listed and
   mined, the fights, the spawners lit, the nights camped, what they made down there, and the
-  haul, with the torches set and drawn.
+  haul, with the torches set and drawn. The finds go into the town's report **as they are
+  made**, so the Caves page fills while the team is still down there.
+
+### The Delvers' Lodge
+
+From the Iron Age, a town that keeps a cave team (or wants one) builds the team a house of its
+own: **the Delvers' Lodge**, a timber hall on a stone lower course under a steep roof, among the
+town's civic buildings. Ask for it with "you should build a lodge".
+
+* **The map wall.** The back wall holds four maps of the cave country in item frames, two by
+  two: real filled maps, drawn on the town's paper (nine sheets a map, or eight and a spare
+  compass), the ground as it stands, and every cave and ravine the team has found marked with a
+  cross, every mineshaft and temple with a target, every dungeon and spawner with a red marker.
+  The team redraws it every week, or whenever it finds a new cave; the old sheets go back to the
+  stores.
+* **The trophy wall.** Down the left wall, six frames for the rarest things the team has brought
+  up: an enchanted golden apple, the heart of the sea, a totem, an echo shard, diamonds, an
+  emerald, an enchanted book, a music disc, a golden apple, a name tag, a saddle. Each is named
+  for who brought it up, from which cave and on what day ("Diamond — brought up by Bram from
+  the great cave north-east, day 12"). One goes up at a time, out of what the stores can spare,
+  never their last.
+* **The team's log.** Every three days a book from the stores is written up as *The Delvers' Log*
+  (the team, every cave with its veins, the hauls) and laid on the lectern by the door.
+* **Bunks and gear.** Two bunks down the right wall are the team's and nobody else's. Barrels in
+  the corners, a chest by the door, a workbench and a grindstone hold its gear.
+* **Out from it, home to it.** The team's post moves to the lodge, before the map wall. Of a
+  morning the team **gathers there** and sets out together once all are in, or when the
+  gathering's hour is up. It comes home to the lodge's door, then takes the haul on to the
+  storehouse.
+
+### Players and the team
+
+* **Ask them.** Tell the team where to look or what to find: "Cave team, look east", or say to
+  one of them "could you find us some diamonds?" (or press **Ask the delvers** on the Village
+  tab). The leader plans it into the next trip if it makes sense. Asked a way, it goes to a
+  cave the report knows that way, or out along that bearing to find one. Asked an ore, it puts
+  that ore first on its list and makes for a cave with a vein of it. It declines an ore no pick
+  in the team or the stores will take, and says what pick it wants. The ask stands for five
+  days. The plan, the board and the chronicle say whose ask the trip is on.
+* **Go along.** Ask one of the team "Can I come along with the cave team?" (**Go caving**). It
+  agrees if it knows you a little and you are not an outcast. The team waits for you **at its
+  lodge** (or by the board) at first light, until the morning is half gone. Then you go with
+  it: the leader waits for you and comes back for you as for one of its own, and after a minute
+  goes on ("Steve knows the way home"). By default what the team brings up goes to the town.
+  Add "for a share" and an equal share of what it puts in the storehouse is kept for you, to
+  be handed over by any of the team when you ask for your share. The chronicle tells the trip
+  with you in it.
+* **Buy the cave map.** One of the team copies you the cave map (**Cave map**) for 6 coins,
+  at the lodge if the town has one. It is a real filled map of the whole cave country, on one
+  sheet, with every find marked. The paper comes from the town's stores.
+
+### The town and the team
+
+* **The museum.** The rare finds the team brings up (the first diamond, an enchanted book, a
+  music disc, a temple's golden apple) go into the museum's books like anybody's. The plaque
+  names the finder and the cave: "Diamond / by Bram / great cave NE / day 12". The full words,
+  "brought up from the great cave north-east by Bram the cave dweller", are in the museum's
+  books.
+* **The town's mine follows the lead.** When the team lists a rich vein within reach of the
+  town's mine, the next miner to look over its mine moves to the face over it and digs to the
+  vein's depth (never deeper than a mine goes). A rich vein is iron of six blocks or more, gold
+  of four, or any diamond or emerald, and the miner's pick has to take it. The miner says so
+  ("The cave team found iron under this way. I'll follow their lead."). It holds there for ten
+  days or until the face is worked out. The vein comes off the team's list ("the town's mine
+  is digging toward it"), and the mine's report says which face is following the team.
+* **The quest board.** A cave the team turned back from because of the monsters in it goes up on
+  the quest board, ahead of anything else: clear the zombies (or whatever was most of them) in
+  the cave east, for a reward.
 
 **Where to see it.** The **Caves** page of the town's books (the last tab) has a map of the
 finds round the town. Beside it, scrolling, are the team with each one's level (the leader
@@ -4339,7 +4411,11 @@ tab); a cave dweller gives the exact spot.
 * For operators, `/village caves now` sends the team out at once, picking it first if the town
   wants one and has none.
 * For operators, `/village caves stage` cuts a small cave beside you, with ore in and behind its
-  walls and an old chest, and sends the town's team into it.
+  walls and an old chest, lit as the team lights a cave, and sends the town's team into it on a
+  short real trip.
+* For operators, `/village caves lodge` puts up the Delvers' Lodge where you stand, its map wall,
+  trophy wall and log filled in, with two of the team in their own look about it (for the
+  pictures).
 
 ## Names
 

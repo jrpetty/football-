@@ -69,6 +69,8 @@ public final class Asks {
         BUILDINGS.put("museum", "museum");
         BUILDINGS.put("infirmary", "infirmary");          // [batchA] (Infirmary)
         BUILDINGS.put("hospital", "infirmary");
+        BUILDINGS.put("lodge", "lodge");                  // [caves] the Delvers' Lodge (Lodge)
+        BUILDINGS.put("delvers", "lodge");
     }
 
     /** The trade named in a line, or null. */

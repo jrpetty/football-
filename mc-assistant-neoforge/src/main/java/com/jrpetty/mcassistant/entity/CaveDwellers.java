@@ -275,6 +275,7 @@ public final class CaveDwellers {
                 case "mined" -> "mined";
                 case "waiting" -> "waiting for a better pick";
                 case "left" -> "left (no safe way to it)";
+                case "mine" -> "the town's mine is digging toward it";     // [caves] TownMine.leadFor
                 default -> "still to do";
             };
             return ore + ", " + size + (size == 1 ? " block" : " blocks") + (behind > 0 ? ", " + behind + " behind the face" : "") + ": " + how;
@@ -356,6 +357,17 @@ public final class CaveDwellers {
         boolean greeted;
         /** The torches it brought back unused (into the storehouse). */
         int returned;
+        /** The finds put into the town's report as they were found, that were new to it then (liveKey). */
+        final Set<String> liveNew = new HashSet<>();
+        /** [caves] A player going with the team (CaveGuests): who, its name, a share by agreement, since when it was
+         *  waited for; what went into the storehouse, by item (its share is reckoned from it). */
+        @Nullable UUID guest;
+        String guestName = "";
+        boolean guestShare;
+        long guestWait = -1;
+        final Map<net.minecraft.world.item.Item, Integer> storedItems = new LinkedHashMap<>();
+        /** [caves] The ask it set out on (CaveGuests), in words for the report, or "". */
+        String asked = "";
 
         Party(UUID village, long day) {
             this.village = village;
@@ -558,6 +570,8 @@ public final class CaveDwellers {
         }
         // A day past its plan and not home: a search party (CaveTrips).
         CaveTrips.checkOverdue(level, v);
+        // [caves] The lodge's walls kept by the team at home: the map wall, the trophies, the log (Lodge).
+        Lodge.tick(level, v, day);
     }
 
     /** The town's team: those in the world, and those away on the trip whose ground is asleep. */
@@ -606,8 +620,11 @@ public final class CaveDwellers {
         return best;
     }
 
-    /** Where a cave dweller stands of a day at home: by the board, or the square. */
+    /** Where a cave dweller stands of a day at home: in its lodge before the map wall ([caves] Lodge); else by the
+     *  board, or the square. */
     static BlockPos post(Villages.Village v) {
+        BlockPos hall = Lodge.hall(v.id());
+        if (hall != null) return hall;
         BlockPos board = VillageBoards.lectern(v.id());
         BlockPos at = board != null ? board : v.centre();
         return at.relative(Direction.EAST, 3);
@@ -905,13 +922,27 @@ public final class CaveDwellers {
         }
         boolean fit = f.getHealth() >= f.getMaxHealth() * 0.7F && !level.isThundering() && !Raids.underAlarm(id);
         boolean morning = time >= 1200 && time < 4200;
+        // [caves] The team's own lodge built: its post moves there (Lodge).
+        BlockPos hall = Lodge.hall(id);
+        if (hall != null && (f.stationPos() == null || f.stationPos().distSqr(hall) > 16)) {
+            f.setStation(hall, StationTask.CAVE);
+            f.assignPlot(WorkZone.around(hall, 4, WorkZone.DEFAULT_DEPTH), "The Delvers' Lodge");
+        }
         if (morning && fit && WENT.getOrDefault(f.getUUID(), -1L) < day && !Assemblies.attending(f)) {
+            // [caves] The team gathers at its lodge to set out, and waits there for a player going with it (CaveGuests).
+            if (gathering(level, f, v, day, time)) return true;
             Party p = setOut(level, v, day, null);
             if (p != null && p.members.contains(f.getUUID())) return true;
         }
         BlockPos spot = post(v);
         if (f.blockPosition().distSqr(spot) > 9) {
             if (f.getNavigation().isDone()) f.walkTo(spot, 0.8D);
+        } else if (hall != null) {
+            // Before the map wall: what the caves gave up, and where to go next.
+            Ledger.Building b = Lodge.of(id);
+            BlockPos wall = b == null ? hall : Lodge.at(b, 0, 2, 3);
+            f.getLookControl().setLookAt(wall.getX() + 0.5, wall.getY() + 0.5, wall.getZ() + 0.5);
+            f.hobbyNow = "going over the cave maps in the lodge";
         } else {
             BlockPos board = VillageBoards.lectern(id);
             BlockPos at = board != null ? board : v.centre();
@@ -919,6 +950,46 @@ public final class CaveDwellers {
             f.hobbyNow = "going over what the caves gave up";
         }
         return true;
+    }
+
+    /** [caves] The morning's gathering lasts till this hour; the team that is all at its lodge sets out before. */
+    static final long GATHER_UNTIL = 2600;
+
+    /**
+     * [caves] The morning's gathering: with a lodge, the team meets there to set out (till the rest are in, or the
+     * gathering's hour is up); with a player booked to go along, the team waits for it there (or by the board) till the
+     * morning is half gone (CaveGuests.waitFor). True while this one gathers or waits.
+     */
+    static boolean gathering(ServerLevel level, VillageFolkEntity f, Villages.Village v, long day, long time) {
+        UUID id = v.id();
+        BlockPos hall = Lodge.hall(id);
+        BlockPos at = post(v);
+        boolean guest = CaveGuests.waitFor(level, f, id, day, time, at);
+        if (hall == null && !guest) return false;
+        if (f.blockPosition().distSqr(at) > 6 * 6) {
+            if (time >= GATHER_UNTIL && !guest) return false;
+            if (f.getNavigation().isDone()) f.walkTo(at, 1.0D);
+            if (!guest) f.hobbyNow = "off to the lodge to set out";       // (waiting for a player: CaveGuests.waitFor said so)
+            return true;
+        }
+        if (guest) {
+            f.getNavigation().stop();
+            return true;
+        }
+        if (time >= GATHER_UNTIL) return false;
+        int reach = Villages.townReach(id) + 40;
+        for (VillageFolkEntity m : dwellers(id)) {
+            if (m == f || m.expedition() != null || m.trip() != null || m.isSleeping() || LOST.containsKey(m.getUUID())) continue;
+            if (WENT.getOrDefault(m.getUUID(), -1L) >= day || m.getHealth() < m.getMaxHealth() * 0.7F || Assemblies.attending(m)) continue;
+            if (Scouts.flat(m.blockPosition(), v.centre()) > (double) reach * reach) continue;
+            if (m.blockPosition().distSqr(at) > 8 * 8) {
+                f.getNavigation().stop();
+                f.getLookControl().setLookAt(m, 30.0F, 30.0F);
+                f.hobbyNow = "at the lodge, waiting for " + m.displayNameCap() + " to set out";
+                return true;
+            }
+        }
+        return false;
     }
 
     /** The beds at home of the team away on its trip (Villages.bedsClaimed): theirs still while their ground sleeps. */
@@ -1037,9 +1108,16 @@ public final class CaveDwellers {
         VillageFolkEntity lead = going.get(0);
         int bearing;
         BlockPos target;
+        // [caves] A player's ask (CaveGuests): out that way to find a cave, when the report knows none there.
+        CaveGuests.Ask ask = cave == null ? CaveGuests.ask(id, day) : null;
         if (dest != null) {
             bearing = Scouts.bearingOf(dest.getX() - home.getX(), dest.getZ() - home.getZ());
             target = dest;
+        } else if (ask != null && ask.bearing() >= 0) {
+            bearing = ask.bearing();
+            double ang = bearing * (2 * Math.PI / Scouts.BEARINGS);
+            target = new BlockPos(home.getX() + (int) Math.round(Math.cos(ang) * range), home.getY(),
+                home.getZ() + (int) Math.round(Math.sin(ang) * range));
         } else {
             bearing = leastLooked(id, lead, day);
             double ang = bearing * (2 * Math.PI / Scouts.BEARINGS);
@@ -1070,16 +1148,30 @@ public final class CaveDwellers {
             m.expedition(e);
         }
         markLooked(id, bearing, day);
+        // [caves] The ask it goes on, and the player going with it (CaveGuests).
+        if (ask != null) {
+            boolean way = ask.bearing() >= 0 && (dest == null || CaveGuests.thatWay(home, dest, ask.bearing()));
+            boolean ore = !ask.ore().isEmpty();
+            if (way || ore) {
+                p.asked = (way ? "out " + ask.way() : "") + (way && ore ? ", and " : "") + (ore ? "after " + ask.ore() : "") + ", as " + ask.by() + " asked";
+                CaveGuests.honoured(id, ask, way);
+            }
+        }
+        CaveGuests.setOut(level, p, lead);
         // The plan, told: on the board and the Caves page, in the chronicle; kept with the town while the team is away.
-        Ledger.note(id, "caves.plan", plan.words());
+        Ledger.note(id, "caves.plan", plan.words() + (p.asked.isEmpty() ? "" : " (" + p.asked + ")"));
         Ledger.note(id, "caves.reckoning", String.join("\n", plan.reckoning()));
         List<String> names = new ArrayList<>();
         for (VillageFolkEntity m : going) if (m != lead) names.add(m.displayNameCap());
         Villages.tell(id, day, "the cave team (" + lead.displayNameCap() + (names.isEmpty() ? "" : " leading " + JobMarket.join(names))
-            + ") set out: " + plan.words());
+            + (p.guestName.isEmpty() ? "" : ", with " + p.guestName + " along") + ") set out: " + plan.words()
+            + (p.asked.isEmpty() ? "" : " (" + p.asked + ")"));
         CaveTrips.keep(p);
         String when = days > 1.0 ? "Back in " + CaveTrips.numberWord((int) Math.ceil(days)) + " days." : days < 1.0 ? "Back by noon." : "Back by dusk!";
-        FolkTalk.speak(lead, plan.words().replaceFirst("\\.$", "") + ". " + (names.isEmpty() ? "" : JobMarket.join(names) + ", with me. ") + when);
+        if (p.guestName.isEmpty()) {
+            FolkTalk.speak(lead, plan.words().replaceFirst("\\.$", "") + (p.asked.isEmpty() ? "" : " — " + p.asked) + ". "
+                + (names.isEmpty() ? "" : JobMarket.join(names) + ", with me. ") + when);
+        }
         LOG.info("[MCA-CAVES] the team of {} sets out: {} leading, {}; {} (range {}, bearing {}; {} torches drawn; turns at {})", Villages.name(id),
             lead.displayNameCap(), names, plan.words(), range, bearing, drawn, p.turnAt);
         return p;
@@ -1107,8 +1199,28 @@ public final class CaveDwellers {
      */
     @Nullable
     static BlockPos knownCave(ServerLevel level, VillageFolkEntity f, Villages.Village v, int range, long day, @Nullable BlockPos not) {
+        // [caves] A player's ask first (CaveGuests): a cave with a vein of the ore asked for; a cave the way asked, or
+        // none (out that way to find one).
+        CaveGuests.Ask ask = CaveGuests.ask(v.id(), day);
+        if (ask != null) {
+            if (!ask.ore().isEmpty()) {
+                BlockPos with = CaveGuests.caveWith(v.id(), ask.ore());
+                if (with != null && Scouts.flat(with, v.centre()) <= (double) range * range && (not == null || key(with) != key(not))) return with;
+            }
+            if (ask.bearing() >= 0) {
+                BlockPos way = nearestKnown(level, f, v, range, day, not, ask.bearing());
+                return way;
+            }
+        }
+        return nearestKnown(level, f, v, range, day, not, -1);
+    }
+
+    /** The nearest cave the report knows (that way from the town, given a bearing), as knownCave. */
+    @Nullable
+    private static BlockPos nearestKnown(ServerLevel level, VillageFolkEntity f, Villages.Village v, int range, long day, @Nullable BlockPos not, int bearing) {
         Find best = null;
         for (Find x : report(v.id())) {
+            if (bearing >= 0 && !CaveGuests.thatWay(v.centre(), x.at(), bearing)) continue;
             if (x.kind() != Kind.CAVE && x.kind() != Kind.RAVINE) continue;
             if (Scouts.flat(x.at(), v.centre()) > (double) range * range) continue;
             if (not != null && key(x.at()) == key(not)) continue;
@@ -1234,6 +1346,40 @@ public final class CaveDwellers {
         StringBuilder sb = new StringBuilder();
         for (Vein v : list) sb.append(sb.length() == 0 ? "" : "\n").append(v.encode());
         Ledger.note(village, "caves.veins/" + key(cave), sb.toString());
+    }
+
+    /** [caves] A rich vein on the team's lists, with the cave it is listed under (TownMine.leadFor). */
+    public record Rich(BlockPos cave, Vein vein) {}
+
+    /**
+     * [caves] The rich veins the team has listed and not taken (TownMine.leadFor: the town's mine steers toward them):
+     * iron of six blocks or more, gold of four or more, any diamond or emerald; still to do, or waiting for a better
+     * pick than the team's. The richest first (diamond, emerald, gold, iron; the biggest).
+     */
+    public static List<Rich> leads(@Nullable UUID village) {
+        List<Rich> out = new ArrayList<>();
+        if (village == null) return out;
+        for (Find x : report(village)) {
+            if (x.kind() != Kind.CAVE && x.kind() != Kind.RAVINE) continue;
+            for (Vein v : veins(village, x.at())) {
+                if (!"todo".equals(v.state()) && !"waiting".equals(v.state())) continue;
+                boolean rich = switch (v.ore()) {
+                    case "diamond", "emerald" -> true;
+                    case "gold" -> v.size() >= 4;
+                    case "iron" -> v.size() >= 6;
+                    default -> false;
+                };
+                if (rich) out.add(new Rich(x.at(), v));
+            }
+        }
+        List<String> rank = List.of("diamond", "emerald", "gold", "iron");
+        out.sort(Comparator.<Rich>comparingInt(r -> rank.indexOf(r.vein().ore())).thenComparingInt(r -> -r.vein().size()));
+        return out;
+    }
+
+    /** [caves] A vein the town's mine is digging toward (TownMine.leadFor): off the team's list of work. */
+    public static void leadTaken(UUID village, BlockPos cave, Vein v) {
+        markVein(village, cave, v.at(), v.ore(), "mine");
     }
 
     /** A vein's state set on its cave's list. */
@@ -1758,6 +1904,8 @@ public final class CaveDwellers {
      * True while it is waiting.
      */
     static boolean waiting(ServerLevel level, VillageFolkEntity lead, Party p) {
+        // [caves] A player going with the team is waited for as one of the team (CaveGuests).
+        if (CaveGuests.waitForPlayer(level, lead, p)) return true;
         long now = level.getGameTime();
         VillageFolkEntity behind = null;
         double far = WAIT * WAIT;
@@ -2418,6 +2566,9 @@ public final class CaveDwellers {
     static List<String> wantedOres(ServerLevel level, UUID village) {
         List<String> out = new ArrayList<>();
         if (wantedForTests != null) out.add(wantedForTests);
+        // [caves] An ore a player asked the team to find (CaveGuests): first after a test's.
+        String asked = CaveGuests.askedOre(level, village);
+        if (asked != null && !out.contains(asked)) out.add(asked);
         try {
             for (Villages.Need n : Villages.needs(level, village)) {
                 String ore = switch (n.task()) {
@@ -2478,11 +2629,42 @@ public final class CaveDwellers {
             return true;
         }
         if (f.getNavigation().isDone() || f.tickCount - e.walkTick > 60) {
-            f.getNavigation().moveTo(v.at().getX() + 0.5, v.at().getY(), v.at().getZ() + 0.5, 1.0D);
+            BlockPos to = standBy(level, f, v.at());
+            BlockPos go = to != null ? to : v.at();
+            f.getNavigation().moveTo(go.getX() + 0.5, go.getY(), go.getZ() + 0.5, 1.0D);
             e.walkTick = f.tickCount;
         }
         f.hobbyNow = "leading the cave dwellers to the " + v.ore();
         return true;
+    }
+
+    /**
+     * Where to stand to work a block in the rock: the spot nearest this one, within three blocks of it, where it can
+     * stand and reach it (never on it). The path-finder, given the block itself, makes for the top of the rock above it
+     * (a block in a wall: the surface over the cave), and the team stood on a chest by the wall, out of reach of a
+     * diamond on the far side of it, till it gave the diamond up as out of reach. Null with no such spot.
+     */
+    @Nullable
+    static BlockPos standBy(ServerLevel level, VillageFolkEntity f, BlockPos b) {
+        BlockPos best = null;
+        double bestScore = Double.MAX_VALUE;
+        BlockPos feet = f.blockPosition();
+        for (int dy = -3; dy <= 1; dy++) {
+            for (int dx = -3; dx <= 3; dx++) {
+                for (int dz = -3; dz <= 3; dz++) {
+                    BlockPos q = b.offset(dx, dy, dz);
+                    if (q.equals(b) || q.below().equals(b) || !level.isLoaded(q) || !standable(level, q)) continue;
+                    double reach = new Vec3(q.getX() + 0.5, q.getY() + 1.62, q.getZ() + 0.5).distanceToSqr(Vec3.atCenterOf(b));
+                    if (reach > 4.0 * 4.0) continue;
+                    double score = q.distSqr(feet) + reach;
+                    if (score < bestScore) {
+                        bestScore = score;
+                        best = q.immutable();
+                    }
+                }
+            }
+        }
+        return best;
     }
 
     /** A vein taken in hand: the way in to it (the rock between, nearest the cave first), then its blocks as they show. */
@@ -2582,7 +2764,9 @@ public final class CaveDwellers {
                 return false;
             }
             if (f.getNavigation().isDone() || f.tickCount - e.walkTick > 60) {
-                f.getNavigation().moveTo(b.getX() + 0.5, b.getY(), b.getZ() + 0.5, 1.0D);
+                BlockPos to = standBy(level, f, b);                    // a spot to stand and reach it, not the rock's top
+                BlockPos go = to != null ? to : b;
+                f.getNavigation().moveTo(go.getX() + 0.5, go.getY(), go.getZ() + 0.5, 1.0D);
                 e.walkTick = f.tickCount;
             }
             f.hobbyNow = cut ? "cutting in to the " + p.veinOf : "going after the " + ore;
@@ -3075,9 +3259,19 @@ public final class CaveDwellers {
     static void note(VillageFolkEntity f, Party p, Find x, @Nullable String say) {
         boolean fresh = merge(p.found, x);
         if (!fresh) return;
-        if (x.kind() != Kind.VEIN && known(report(p.village), x)) return;
+        boolean knownBefore = x.kind() != Kind.VEIN && known(report(p.village), x);
+        // Into the town's report at once (a chest's takings excepted: counted at home), so the Caves page, the lodge's
+        // map and the board follow the team as it goes. Counts fold in again at home (merge: the most seen, the mined
+        // added), so nothing is counted twice.
+        if (x.kind() != Kind.CHEST && record(p.village, x)) p.liveNew.add(liveKey(x));
+        if (knownBefore) return;
         if (say != null) FolkTalk.speak(f, say);
         LOG.info("[MCA-CAVES] {} found {} ({}) at {}", f.displayNameCap(), x.label(), x.kind(), x.at().toShortString());
+    }
+
+    /** A find's key for the ones put into the report as they were found (new to the town then). */
+    static String liveKey(Find x) {
+        return x.kind().name() + "|" + x.label() + "|" + x.at().asLong();
     }
 
     private static int near(Kind k) {
@@ -3140,6 +3334,8 @@ public final class CaveDwellers {
         p.chest = null;
         p.cart = null;
         finishVein(level, p, "home");
+        // [caves] Too many monsters down there: the cave goes up on the quest board, to be cleared (CaveGuests.trouble).
+        if (why.contains("too many")) CaveGuests.troubleAt(level, p, f.blockPosition());
         for (VillageFolkEntity m : members(level, p)) {
             Scouts.Expedition e = m.expedition();
             if (e == null) continue;
@@ -3163,13 +3359,19 @@ public final class CaveDwellers {
     static boolean walkHome(ServerLevel level, VillageFolkEntity f, Scouts.Expedition e, Delve d, Party p) {
         BlockPos feet = f.blockPosition();
         long time = level.getDayTime() % 24000L;
-        if (p.crumb < 0 && Scouts.flat(feet, e.home) <= 14 * 14) {
+        // [caves] Home to the lodge's door (Lodge), with one; the haul on from there to the storehouse.
+        BlockPos lodge = Lodge.door(p.village);
+        BlockPos homeAt = lodge != null && Scouts.flat(lodge, e.home) <= 96 * 96 ? lodge : e.home;
+        boolean atLodge = homeAt == lodge;
+        double off = Scouts.flat(feet, homeAt);
+        if (p.crumb < 0 && (atLodge ? off <= 4 * 4 || off <= 14 * 14 && e.detour >= 2 : off <= 14 * 14)) {
             p.phase = Party.Phase.STORE;
+            if (atLodge && !p.greeted && !p.reported) FolkTalk.speak(f, "Home to the lodge! Now the haul to the storehouse.");
             greet(level, p, f);
             return true;
         }
         if (waiting(level, f, p)) return true;
-        BlockPos dest = p.crumb >= 0 && p.crumb < p.trail.size() ? p.trail.get(p.crumb) : e.home;
+        BlockPos dest = p.crumb >= 0 && p.crumb < p.trail.size() ? p.trail.get(p.crumb) : homeAt;
         double dist = p.crumb >= 0 ? feet.distSqr(dest) : Scouts.flat(feet, dest);
         if (p.crumb >= 0 && dist <= 3 * 3) {
             p.crumb--;
@@ -3217,7 +3419,7 @@ public final class CaveDwellers {
             }
         } else {
             if (e.waypoint == null || Scouts.flat(feet, e.waypoint) <= 3 * 3) {
-                e.waypoint = Scouts.chooseWaypoint(level, f, e.home, Math.min(6, e.detour));
+                e.waypoint = Scouts.chooseWaypoint(level, f, homeAt, Math.min(6, e.detour));
                 e.walkTick = -1000;
             }
             if (e.waypoint != null && (f.getNavigation().isDone() || f.tickCount - e.walkTick > 80)) {
@@ -3339,6 +3541,9 @@ public final class CaveDwellers {
                 Crafts.store(level, v, lot.copy());
             }
             p.stored.merge(lot.getHoverName().getString().toLowerCase(Locale.ROOT), lot.getCount(), Integer::sum);
+            // [caves] By item, for a share (CaveGuests.home); a rare thing noted for the lodge's trophy wall (Lodge).
+            p.storedItems.merge(lot.getItem(), lot.getCount(), Integer::sum);
+            Lodge.broughtUp(p.village, lot, who, cameFrom(p), level.getDayTime() / 24000L);
         }
         if (house != null) {
             house.setChanged();
@@ -3346,6 +3551,27 @@ public final class CaveDwellers {
         }
         f.swing(InteractionHand.MAIN_HAND);
         f.brain("put the caves' haul into the " + (house != null ? "storehouse" : "stores"));
+    }
+
+    /** [caves] Where the team's haul came from, in words: "the cave north-east", or "the caves". */
+    static String cameFrom(Party p) {
+        Villages.Village v = Villages.get(p.village);
+        BlockPos at = p.caveKey != null ? p.caveKey : p.cave;
+        if (v == null || at == null) return "the caves";
+        Find x = caveNear(p.village, at);
+        String what = x == null ? "the cave " : x.kind() == Kind.RAVINE ? "the ravine " : x.label().startsWith("a great") ? "the great cave "
+            : x.label().startsWith("a big") ? "the big cave " : "the cave ";
+        return what + Guide.direction(v.centre(), at);
+    }
+
+    /** [caves] Where a cave dweller last brought things up from (the museum's plaques: Museum.how), in words:
+     *  "brought up from the cave north-east". */
+    public static String foundWhere(VillageFolkEntity f) {
+        Party p = partyOf(f);
+        if (p != null && (p.caveKey != null || p.cave != null)) return "brought up from " + cameFrom(p);     // down there now
+        UUID id = f.ownerId();
+        String from = id == null ? null : Ledger.note(id, "caves.from/" + f.getUUID());
+        return "brought up from " + (from == null || from.isEmpty() ? "the caves" : from);
     }
 
     /**
@@ -3369,7 +3595,7 @@ public final class CaveDwellers {
         List<String> big = new ArrayList<>();
         int fresh = 0;
         for (Find x : p.found) {
-            boolean isNew = record(id, x);
+            boolean isNew = record(id, x) || p.liveNew.contains(liveKey(x));
             if (isNew) fresh++;
             if (!isNew) continue;
             switch (x.kind()) {
@@ -3388,6 +3614,11 @@ public final class CaveDwellers {
         String heading = p.caveKey != null ? Guide.direction(home, p.caveKey) : "round about";
         String story = story(level, p, leadName, names, heading, big, haulWords);
         Villages.tell(id, day, story);
+        // [caves] The ask it went on, done with; a player who went along, its share kept (CaveGuests); where each of the
+        // team last brought things up from (the museum's plaques: foundWhere).
+        if (p.asked.contains("after ")) CaveGuests.done(id);
+        CaveGuests.home(level, p, day);
+        for (UUID u : p.members) Ledger.note(id, "caves.from/" + u, cameFrom(p));
         int total = 0;
         for (int n : p.stored.values()) total += n;
         if (p.days > 1.0 && (total >= 32 || p.stored.getOrDefault("diamond", 0) > 0)) {
@@ -3445,10 +3676,12 @@ public final class CaveDwellers {
         List<String> others = new ArrayList<>(names);
         others.remove(lead);
         StringBuilder sb = new StringBuilder(lead);
+        if (!p.guestName.isEmpty()) others.add(p.guestName);                                                // [caves] a player along
         sb.append(others.isEmpty() ? " went alone" : " led " + JobMarket.join(others));
         sb.append(p.days > 1.0 ? " " + CaveTrips.daysWords(p.days).toLowerCase(Locale.ROOT) + " into " : " into ");
         Find cave = p.caveKey == null ? null : caveNear(p.village, p.caveKey);
         sb.append(cave == null ? "the caves " + heading : "the " + cave.label().replaceFirst("^an? ", "") + " " + heading);
+        if (!p.asked.isEmpty()) sb.append(" (").append(p.asked.replaceFirst("^out [a-z-]+, and ", "")).append(")");     // [caves] an ask
         int listed = p.caveKey == null ? 0 : veins(p.village, p.caveKey).size();
         List<String> did = new ArrayList<>();
         if (listed > 0) did.add("listed " + listed + (listed == 1 ? " vein" : " veins"));
@@ -3873,7 +4106,46 @@ public final class CaveDwellers {
         ListTag hauls = new ListTag();
         for (String h : hauls(id)) hauls.add(StringTag.valueOf(h));
         out.put("hauls", hauls);
+        out.putString("lodge", lodgeLine(level, v));                   // [caves] the lodge, an ask, a player going along
         return out;
+    }
+
+    /**
+     * [caves] The lodge in a line (the Caves page, /village caves): its map wall, its trophies, the map for sale; the
+     * player's ask the team has in hand; a player booked to go along. "" with none of it.
+     */
+    public static String lodgeLine(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        List<String> parts = new ArrayList<>();
+        Ledger.Building b = Lodge.of(id);
+        if (b != null) {
+            String maps = Ledger.note(id, "lodge.maps");
+            int caves = 0;
+            try {
+                if (maps != null && maps.contains("|")) caves = Integer.parseInt(maps.substring(maps.indexOf('|') + 1));
+            } catch (NumberFormatException ignored) {
+                // unread: none told
+            }
+            Map<String, String> tro = Lodge.trophies(id);
+            List<String> names = new ArrayList<>();
+            for (String k : tro.keySet()) {
+                net.minecraft.world.item.Item it = net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.parse(k));
+                names.add(new ItemStack(it).getHoverName().getString().toLowerCase(Locale.ROOT));
+            }
+            parts.add("The Delvers' Lodge: " + (caves > 0 ? "the map wall marks " + caves + (caves == 1 ? " cave" : " caves") : "the map wall still to draw")
+                + (names.isEmpty() ? "" : "; brought up for the trophy wall: " + JobMarket.join(names.subList(0, Math.min(5, names.size()))))
+                + "; a copy of the cave map, " + Lodge.MAP_PRICE + " coins.");
+        } else if (Lodge.wanted(id)) {
+            parts.add("No lodge yet: " + Lodge.why(id) + ".");
+        }
+        CaveGuests.Ask ask = CaveGuests.ask(id, level.getDayTime() / 24000L);
+        if (ask != null) {
+            parts.add("Asked by " + ask.by() + ": " + (ask.bearing() >= 0 ? "to look " + ask.way() : "") + (ask.bearing() >= 0 && !ask.ore().isEmpty() ? ", and " : "")
+                + (ask.ore().isEmpty() ? "" : "to find " + ask.ore()) + ".");
+        }
+        CaveGuests.Guest g = CaveGuests.guest(id);
+        if (g != null) parts.add(g.name() + " goes along on the next trip" + (g.share() ? ", for a share" : ", for the town") + ".");
+        return String.join(" ", parts);
     }
 
     /** The whole of it, for /village caves: the team, each cave's veins, the finds with their spots, the hauls. */
@@ -3886,6 +4158,8 @@ public final class CaveDwellers {
             + folk.size() + ", " + want + " wanted" + (want == 0 ? " (from " + FROM + " folk in the Iron Age, with " + MINERS + " miners and a guard)" : "")
             + "; out to " + range(id) + " blocks.");
         for (VillageFolkEntity f : folk) out.add("  " + f.displayNameCap() + ": " + cardLine(f));
+        String lodge = lodgeLine(level, v);                            // [caves]
+        if (!lodge.isEmpty()) out.add(lodge);
         CaveTrips.Trip trip = CaveTrips.trip(id);
         String plan = Ledger.note(id, "caves.plan");
         if (plan != null && !plan.isEmpty()) {
@@ -3981,6 +4255,17 @@ public final class CaveDwellers {
                 List<String> out = stage(ctx.getSource().getLevel(), BlockPos.containing(ctx.getSource().getPosition()));
                 ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", out)), false);
                 return out.size();
+            }))
+            // [caves] The pictures' lodge: the Delvers' Lodge put up where it is run, its walls fitted out (Lodge.stage).
+            .then(Commands.literal("lodge").requires(src -> src.hasPermission(2)).executes(ctx -> {
+                Villages.Village v = here(ctx);
+                if (v == null) return 0;
+                ServerLevel level = ctx.getSource().getLevel();
+                BlockPos at = BlockPos.containing(ctx.getSource().getPosition());
+                int g = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, at.getX(), at.getZ());
+                List<String> out = Lodge.stage(level, v, new BlockPos(at.getX(), g, at.getZ()));
+                ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", out)), false);
+                return out.size();
             }));
     }
 
@@ -4020,8 +4305,8 @@ public final class CaveDwellers {
     /**
      * The pictures' stage: a small cave cut into a block of stone twelve blocks along from where it is run (east), a
      * ramp down into it from the west, ore in its walls (iron, coal, copper, a diamond, a little obsidian, and iron two
-     * blocks behind the south wall) and an old chest with the world's dungeon loot in it; a cave dweller in the watch's
-     * iron kit stood at its mouth (a showcase's, for nothing); and the town's own team (taken up if it has none) sent
+     * blocks behind the south wall) and an old chest with the world's dungeon loot in it; a cave dweller in its own
+     * look stood at its mouth (a showcase's, for nothing); and the town's own team (taken up if it has none) sent
      * into it. Returns the views to photograph ("VIEW name x y z lookx looky lookz") and where the cave is.
      */
     static List<String> stage(ServerLevel level, BlockPos at) {
@@ -4038,6 +4323,7 @@ public final class CaveDwellers {
             }
         }
         cut(level, x0, z0, g);
+        lightTheStage(level, x0, z0, g);
         BlockPos mouth = new BlockPos(x0 - 1, g, z0);
         BlockPos chamber = new BlockPos(x0 + 14, g - 7, z0);
         List<String> out = new ArrayList<>();
@@ -4049,9 +4335,8 @@ public final class CaveDwellers {
             show.setYHeadRot(-90.0F);
             show.setYBodyRot(-90.0F);
             show.makeShowcase(StationTask.CAVE);
-            show.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
-            show.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
-            show.setItemSlot(EquipmentSlot.LEGS, new ItemStack(Items.IRON_LEGGINGS));
+            // [caves] In its own look (the helm and lamp, the oilskin coat, the rope, the spare pick), iron boots only:
+            // the team that comes after it is in the town's iron, the lamp strapped to its helmet.
             show.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.IRON_BOOTS));
             show.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_PICKAXE));
             show.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.TORCH));
@@ -4082,6 +4367,10 @@ public final class CaveDwellers {
             List<VillageFolkEntity> team = dwellers(v.id());
             if (!team.isEmpty()) {
                 boolean sent = sendForTests(team.get(0), level, chamber);
+                // Whatever the hour the stage is set at, a short real trip: in, the veins listed and the iron worked,
+                // before the team turns for home.
+                Party staged = partyOf(team.get(0));
+                if (staged != null) staged.turnAt = Math.max(staged.turnAt, level.getDayTime() + 3000L);
                 out.add("TEAM " + team.size() + (sent ? " sent into the cave" : " could not go") + ", " + team.get(0).displayNameCap() + " from "
                     + team.get(0).blockPosition().getX() + " " + team.get(0).blockPosition().getY() + " " + team.get(0).blockPosition().getZ());
             }
@@ -4189,8 +4478,58 @@ public final class CaveDwellers {
         CaveTrips.keep(p);
     }
 
+    /**
+     * The stage's cave lit as the team lights a cave (light): a torch where the way in turns dark at the foot of the
+     * ramp, one on the east wall by the iron they work, one over the old chest, one by the diamond on the north wall.
+     * Four torches for a chamber thirteen across: the pictures show the team's own work, not a carpet of light.
+     */
+    static void lightTheStage(ServerLevel level, int x0, int z0, int g) {
+        BlockState floor = Blocks.TORCH.defaultBlockState();
+        BlockPos foot = new BlockPos(x0 + 7, g - 7, z0 - 1);
+        if (level.getBlockState(foot).isAir() && floor.canSurvive(level, foot)) level.setBlock(foot, floor, 3);
+        int[][] walls = { { x0 + 19, g - 5, z0 + 3, 4 }, { x0 + 11, g - 5, z0 - 5, 2 }, { x0 + 15, g - 5, z0 - 5, 2 }, { x0 + 9, g - 5, z0 + 5, 0 } };
+        for (int[] w : walls) {
+            BlockPos at = new BlockPos(w[0], w[1], w[2]);
+            Direction face = w[3] == 4 ? Direction.WEST : w[3] == 2 ? Direction.SOUTH : Direction.NORTH;
+            BlockState torch = Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, face);
+            if (level.getBlockState(at).isAir() && torch.canSurvive(level, at)) level.setBlock(at, torch, 3);
+        }
+    }
+
     /** Tests: the stage's cave cut at this spot (its ramp from the west at x0, the surface at g). */
     public static void cutForTests(ServerLevel level, int x0, int z0, int g) {
         cut(level, x0, z0, g);
+    }
+
+    /** [caves] Tests: the stage's cave lit as the team lights a cave. */
+    public static void lightForTests(ServerLevel level, int x0, int z0, int g) {
+        lightTheStage(level, x0, z0, g);
+    }
+
+    /** [caves] Tests: the team's morning now (whatever went today forgotten): out on a plan, a player's ask and a
+     *  player going along taken into it. The party, or null if nobody went. */
+    @Nullable
+    public static Party setOutForTests(ServerLevel level, Villages.Village v) {
+        for (VillageFolkEntity f : dwellers(v.id())) WENT.remove(f.getUUID());
+        return setOut(level, v, level.getDayTime() / 24000L, null);
+    }
+
+    /** [caves] Tests: the morning's gathering, for one of the team (true while it gathers or waits). */
+    public static boolean gatheringForTests(VillageFolkEntity f, ServerLevel level) {
+        Villages.Village v = f.ownerId() == null ? null : Villages.get(f.ownerId());
+        return v != null && gathering(level, f, v, level.getDayTime() / 24000L, level.getDayTime() % 24000L);
+    }
+
+    /** [caves] Tests: the ask the party set out on, in words; the player going with it. */
+    public static String askedForTests(Party p) {
+        return p.asked + (p.guestName.isEmpty() ? "" : " | with " + p.guestName + (p.guestShare ? " for a share" : ""));
+    }
+
+    /** [caves] Tests: where the party is making for (the cave, or the bearing's spot), from its leader's expedition. */
+    @Nullable
+    public static BlockPos targetForTests(ServerLevel level, Party p) {
+        if (p.cave != null) return p.cave;
+        Entity lead = p.leader == null ? null : level.getEntity(p.leader);
+        return lead instanceof VillageFolkEntity l && l.expedition() != null ? l.expedition().target : null;
     }
 }

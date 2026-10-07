@@ -335,6 +335,7 @@ public final class Villages {
             case "postoffice" -> "the post office";               // [batchF]
             case "statue" -> "the statue on the square";          // [batchF]
             case "trainingyard" -> "the training yard";            // [war-prep]
+            case "lodge" -> "the Delvers' Lodge";                 // [caves]
             default -> "the " + structure;
         };
     }
@@ -1773,6 +1774,8 @@ public final class Villages {
         if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30 || Homes.wantsAManor(villageId)) extras.add("manor");
         // [batchC] An archery range by the wall, once the town keeps a watch of two or more (Archery).
         if (Archery.wanted(villageId)) extras.add(Archery.STRUCTURE);
+        // [caves] The Delvers' Lodge, once the town keeps a cave team (Lodge).
+        if (Lodge.wanted(villageId)) extras.add(Lodge.STRUCTURE);
         if (at == Age.IRON) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
@@ -2141,6 +2144,7 @@ public final class Villages {
             case "monument" -> "a monument (great work " + (greatWorks(villageId) + 1) + ") to how far the village has come";
             case "museum" -> "a museum, to put the town's rare finds on show and keep its chronicle as books";
             case "infirmary" -> Infirmary.why(villageId);          // [batchA]
+            case "lodge" -> Lodge.why(villageId);                  // [caves]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]

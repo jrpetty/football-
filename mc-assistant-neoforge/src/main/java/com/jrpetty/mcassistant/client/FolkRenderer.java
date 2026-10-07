@@ -49,6 +49,8 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     private static final ResourceLocation[] OUTFIT = new ResourceLocation[FolkModel.TRADES.length];
     private static final ResourceLocation[] DYE = new ResourceLocation[FolkModel.TRADES.length];
     private static final ResourceLocation MINER_GLOW = texture("miner_glow");
+    /** [caves] The cave dweller's helm lamp, lit. */
+    private static final ResourceLocation CAVE_GLOW = texture("cavedweller_glow");
     /** What its wealth adds to its clothes, by standing (Wealth.Tier): patches, a belt, a collar, gold. */
     private static final ResourceLocation[] FINERY = {
         texture("wealth_0"), null, texture("wealth_2"), texture("wealth_3"), texture("wealth_4") };
@@ -115,7 +117,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     }
 
     private static int trade(AssistantEntity folk) {
-        return FolkModel.outfit(folk);                     // [caves] the cave dweller in the miner's lamp
+        return FolkModel.outfit(folk);                     // [caves] the cave dweller in its own (FolkModel.CAVE_OUTFIT)
     }
 
     /** The trade's clothes, over the folk's own. */
@@ -171,7 +173,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         }
     }
 
-    /** The miner's lamp and lantern, lit whatever the light around them. */
+    /** The miner's lamp and lantern, lit whatever the light around them; [caves] and the cave dweller's helm lamp. */
     private static class Glow extends RenderLayer<VillageFolkEntity, FolkModel> {
         Glow(FolkRenderer parent) { super(parent); }
 
@@ -179,8 +181,11 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         public void render(PoseStack pose, MultiBufferSource buffer, int light, VillageFolkEntity folk,
                            float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks,
                            float netHeadYaw, float headPitch) {
-            if (folk.isInvisible() || !"miner".equals(FolkModel.TRADES[trade(folk)])) return;
-            VertexConsumer glow = buffer.getBuffer(RenderType.eyes(MINER_GLOW));
+            if (folk.isInvisible()) return;
+            String t = FolkModel.TRADES[trade(folk)];
+            ResourceLocation lit = "miner".equals(t) ? MINER_GLOW : "cavedweller".equals(t) ? CAVE_GLOW : null;
+            if (lit == null || folk.isBaby()) return;
+            VertexConsumer glow = buffer.getBuffer(RenderType.eyes(lit));
             getParentModel().renderToBuffer(pose, glow, 0xF000F0, OverlayTexture.NO_OVERLAY, -1);
         }
     }

@@ -81,7 +81,9 @@ public class BuildGoal extends Goal {
         // [econ-store] the town store, once the town has outgrown its little shop (Store)
         "store",
         // [war-prep] the armoury and the training yard, on a war footing (entity/WarWorks)
-        "armoury", "trainingyard");
+        "armoury", "trainingyard",
+        // [caves] the Delvers' Lodge: the cave team's maps, trophies, bunks and gear (entity/Lodge)
+        "lodge");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest
