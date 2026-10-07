@@ -70,6 +70,19 @@ final class Kit {
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
     }
 
+    /**
+     * [watch-clears] No stand-in players left over from earlier tests. A mock player a test puts on the server
+     * (makeMockServerPlayerInLevel) stays on its list for the rest of the run, its stand-in connection never closed;
+     * and with any player in the world, however far off, the game despawns at once every monster not kept on
+     * purpose. sw03's spawn-egg phantom went at its first tick, the run after the teleport tests came in.
+     */
+    static void noLeftoverPlayers(ServerLevel level) {
+        var list = level.getServer().getPlayerList();
+        for (net.minecraft.server.level.ServerPlayer p : new ArrayList<>(list.getPlayers())) {
+            if ("test-mock-player".equals(p.getGameProfile().getName())) list.remove(p);
+        }
+    }
+
     // -------------------------------------------------------------- terrain
 
     /** The free block above the highest solid one at this column. */
