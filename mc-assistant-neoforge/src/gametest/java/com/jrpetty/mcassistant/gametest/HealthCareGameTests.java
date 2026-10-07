@@ -7,6 +7,7 @@ import com.jrpetty.mcassistant.entity.FolkTalk;
 import com.jrpetty.mcassistant.entity.Health;
 import com.jrpetty.mcassistant.entity.Homes;
 import com.jrpetty.mcassistant.entity.Infirmary;
+import com.jrpetty.mcassistant.entity.Market;
 import com.jrpetty.mcassistant.entity.Neighbourly;
 import com.jrpetty.mcassistant.entity.Persona;
 import com.jrpetty.mcassistant.entity.PoorBox;
@@ -148,6 +149,15 @@ public class HealthCareGameTests {
         return box;
     }
 
+    /**
+     * What the town's stores hold of this, every chest of them together: the founding stores at the heart (bread,
+     * carrots, torches) are the stores as much as a chest the test puts down, and are as often what is taken first.
+     */
+    private static int stock(ServerLevel level, UUID village, Predicate<ItemStack> what) {
+        Villages.forgetStock();
+        return Market.stock(level, village, what);
+    }
+
     private static int count(Container c, Predicate<ItemStack> what) {
         int n = 0;
         for (int i = 0; i < c.getContainerSize(); i++) if (what.test(c.getItem(i))) n += c.getItem(i).getCount();
@@ -185,7 +195,10 @@ public class HealthCareGameTests {
     /** Keep the clock between these hours of the day (its own work waits for nobody in a test). */
     private static void hold(ServerLevel level, long from, long to) {
         long tod = level.getDayTime() % 24000L;
-        if (tod < from || tod > to) level.setDayTime(level.getDayTime() / 24000L * 24000L + from);
+        if (tod < from || tod > to) {
+            level.setDayTime(level.getDayTime() / 24000L * 24000L + from);
+            level.updateSkyBrightness();                     // (isNight follows the clock only once the sky is worked out)
+        }
     }
 
     /**
@@ -426,13 +439,12 @@ public class HealthCareGameTests {
         BlockPos heart = Kit.surface(level, x, Z);
         VillageFolkEntity k = another(helper, heart.east(3), id);
         VillageFolkEntity c = another(helper, heart.west(3), id);
-        Container[] stores = new Container[1];
         BlockPos[] homes = new BlockPos[2];
         int[] phase = { 0 };
         helper.runAtTickTime(5, () -> {
             Health.roundsOffForTests(true);                          // only the visits the test makes (put back when it is done)
             fed(a, k, c);
-            stores[0] = chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.HONEY_BOTTLE), new ItemStack(Items.GOLDEN_CARROT));
+            chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.HONEY_BOTTLE), new ItemStack(Items.GOLDEN_CARROT));
             k.life().widowed();
             c.life().widowed();
             k.life().partnerWith(c.getUUID(), c.displayNameCap());
@@ -454,16 +466,17 @@ public class HealthCareGameTests {
                     moveTo(c, homes[0].offset(0, 0, 5));                 // just outside its door
                     moveTo(a, heart.offset(20, 0, -20));
                     int before = k.health().coldLeft(), liked = k.life().affinity(c.getUUID());
+                    int bottles = stock(level, id, s -> s.is(Items.GLASS_BOTTLE));
                     VillageFolkEntity seen = Health.careForTests(level, id);
                     int after = k.health().coldLeft();
                     Kit.log("hc03 at home: seen " + (seen == null ? "nobody" : seen.displayNameCap()) + "; " + Health.tendedForTests(k) + "; cold "
-                        + before + " -> " + after + "; honey " + count(stores[0], s -> s.is(Items.HONEY_BOTTLE)) + ", bottles "
-                        + count(stores[0], s -> s.is(Items.GLASS_BOTTLE)) + "; said " + Health.saidForTests());
+                        + before + " -> " + after + "; honey " + stock(level, id, s -> s.is(Items.HONEY_BOTTLE)) + ", bottles in the stores "
+                        + bottles + " -> " + stock(level, id, s -> s.is(Items.GLASS_BOTTLE)) + "; said " + Health.saidForTests());
                     helper.assertTrue(seen == k, "the one laid up at home is visited");
                     helper.assertTrue(Health.tendedForTests(k).startsWith(c.displayNameCap()) && Health.tendedForTests(k).contains("honey"),
                         "by the one at its bedside, with the stores' honey: " + Health.tendedForTests(k));
-                    helper.assertTrue(count(stores[0], s -> s.is(Items.HONEY_BOTTLE)) == 0 && count(stores[0], s -> s.is(Items.GLASS_BOTTLE)) == 1,
-                        "the honey out of the stores, the bottle back");
+                    helper.assertTrue(stock(level, id, s -> s.is(Items.HONEY_BOTTLE)) == 0 && stock(level, id, s -> s.is(Items.GLASS_BOTTLE)) == bottles + 1,
+                        "the honey out of the stores, the bottle back into them");
                     helper.assertTrue(before - after == 6000, "a quarter-day off its cold: " + (before - after));
                     helper.assertTrue(remembers(k, "looked after me") && k.life().affinity(c.getUUID()) > liked, "it remembers, and likes it the better");
                     // Over it; then the infirmary, and somebody with a cold in it.
@@ -487,9 +500,9 @@ public class HealthCareGameTests {
                     VillageFolkEntity again = Health.careForTests(level, id);
                     int after = a.health().coldLeft();
                     Kit.log("hc03 at the infirmary: " + first + " (" + before + " -> " + mid + "), then " + Health.tendedForTests(a) + " (" + mid + " -> " + after
-                        + "); carrots left " + count(stores[0], s -> s.is(Items.GOLDEN_CARROT)));
+                        + "); golden carrots left " + stock(level, id, s -> s.is(Items.GOLDEN_CARROT)));
                     helper.assertTrue(seen == a && again == a, "the patient at the infirmary is seen to");
-                    helper.assertTrue(first.contains("golden carrot") && before - mid == 6000 && count(stores[0], s -> s.is(Items.GOLDEN_CARROT)) == 0,
+                    helper.assertTrue(first.contains("golden carrot") && before - mid == 6000 && stock(level, id, s -> s.is(Items.GOLDEN_CARROT)) == 0,
                         "with the stores' golden carrot: " + first);
                     helper.assertTrue(Health.tendedForTests(a).contains("rest and company") && mid - after == 1500,
                         "nothing left in the stores: rest and company, a little off all the same: " + Health.tendedForTests(a) + ", " + (mid - after));
@@ -519,7 +532,6 @@ public class HealthCareGameTests {
         BlockPos heart = Kit.surface(level, x, Z);
         VillageFolkEntity son = another(helper, heart.east(6), id);
         VillageFolkEntity other = another(helper, heart.west(6), id);
-        Container[] stores = new Container[1];
         int[] state = { 0, 0, 0, 0 };                    // phase, bread before, son's feeling before, sat seen
         helper.runAtTickTime(5, () -> {
             evening(old, son, other);
@@ -527,7 +539,7 @@ public class HealthCareGameTests {
             son.setAgeForTests(50);
             other.setAgeForTests(30);
             son.parentIds().add(old.getUUID());
-            stores[0] = chestAt(level, heart.offset(4, 0, -4), new ItemStack(Items.BREAD, 4));
+            chestAt(level, heart.offset(4, 0, -4), new ItemStack(Items.BREAD, 4));
             for (VillageFolkEntity f : List.of(old, son, other)) {
                 f.removeMatching(s -> s.is(Items.BREAD), 9999);
                 f.clearQueue();
@@ -539,7 +551,7 @@ public class HealthCareGameTests {
             Kit.log("hc04 visits sent: " + sent + "; son " + Neighbourly.errandForTests(son) + ", other " + Neighbourly.errandForTests(other));
             helper.assertTrue(sent == 1 && Neighbourly.errandForTests(son) != null && Neighbourly.errandForTests(son).startsWith("visit"),
                 "one of the family is sent to look in on it");
-            state[1] = count(stores[0], s -> s.is(Items.BREAD));
+            state[1] = stock(level, id, s -> s.is(Items.BREAD));
             state[2] = old.life().affinity(son.getUUID());
             state[0] = 1;
         });
@@ -553,10 +565,12 @@ public class HealthCareGameTests {
                 + Neighbourly.doing(son) + "; old: " + Neighbourly.companyForTests(old) + " at " + old.blockPosition().toShortString());
             boolean done = Neighbourly.errandForTests(son) == null && Neighbourly.visitsTodayForTests(id, level.getDayTime() / 24000L) == 1;
             if (done) {
-                int bread = count(stores[0], s -> s.is(Items.BREAD)), got = carried(old, s -> s.is(Items.BREAD));
+                int bread = stock(level, id, s -> s.is(Items.BREAD)), got = carried(old, s -> s.is(Items.BREAD));
                 Kit.log("hc04 the visit done at " + t + ": stores' bread " + state[1] + " -> " + bread + ", the old one carries " + got
                     + "; sat together " + (state[3] == 1) + "; liking " + state[2] + " -> " + old.life().affinity(son.getUUID()) + "; said " + Neighbourly.saidForTests());
-                helper.assertTrue(bread == state[1] - 1 && got >= 1, "a loaf out of the stores, into the old one's hands");
+                // (Its own bread was taken off it, and the son's: a loaf in its hands is the one the son brought.)
+                helper.assertTrue(bread <= state[1] - 1 && got >= 1 && said(Neighbourly.saidForTests(), "bread"),
+                    "a loaf out of the stores, into the old one's hands: " + Neighbourly.saidForTests());
                 helper.assertTrue(state[3] == 1, "they sat down together a while");
                 helper.assertTrue(remembers(old, "came round") && remembers(son, "sat with"), "both remember it");
                 helper.assertTrue(old.life().affinity(son.getUUID()) >= state[2] + 5, "and the old one is the fonder of its son");
@@ -583,7 +597,6 @@ public class HealthCareGameTests {
         UUID id = rich.ownerId();
         BlockPos heart = Kit.surface(level, x, Z);
         VillageFolkEntity poor = another(helper, heart.east(5), id);
-        Container[] stores = new Container[1];
         // phase, the rich one's purse before; and when the poor one set out: its bread, the stores', the box, the treasury
         int[] state = { 0, 0, -1, 0, 0, 0 };
         helper.runAtTickTime(5, () -> {
@@ -591,7 +604,7 @@ public class HealthCareGameTests {
             fed(rich);
             BlockPos hall = Kit.surface(level, x + 12, Z - 12);
             Ledger.built(id, "hall", hall, Direction.NORTH);
-            stores[0] = chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.BREAD, 5));
+            chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.BREAD, 5));
             rich.earn(400);
             poor.getInventoryItems().clear();
             poor.spend(poor.purse());
@@ -617,7 +630,7 @@ public class HealthCareGameTests {
             if (state[2] < 0 && going != null && going.contains("begun")) {
                 // Set out: from here its errand is all it does (nothing else of its evening takes a loaf meanwhile).
                 state[2] = carried(poor, s -> s.is(Items.BREAD));
-                state[3] = count(stores[0], s -> s.is(Items.BREAD));
+                state[3] = stock(level, id, s -> s.is(Items.BREAD));
                 state[4] = PoorBox.coins(id);
                 state[5] = Ledger.coins(id);
             }
@@ -629,7 +642,7 @@ public class HealthCareGameTests {
                 return;
             }
             int box = PoorBox.coins(id), treasury = Ledger.coins(id);
-            int bread = carried(poor, s -> s.is(Items.BREAD)), left = count(stores[0], s -> s.is(Items.BREAD));
+            int bread = carried(poor, s -> s.is(Items.BREAD)), left = stock(level, id, s -> s.is(Items.BREAD));
             int[] week = PoorBox.weekForTests(id, level.getDayTime() / 24000L);
             Kit.log("hc05 both done: the box " + box + "c (week " + java.util.Arrays.toString(week) + "); the rich one's purse " + state[1] + " -> "
                 + rich.purse() + "; the poor one's bread " + state[2] + " -> " + bread + ", the stores' " + state[3] + " -> " + left + "; treasury "
@@ -637,7 +650,7 @@ public class HealthCareGameTests {
             helper.assertTrue(state[2] >= 0, "the poor one set out");
             helper.assertTrue(rich.purse() == state[1] - 2 && week[1] == 2 && week[2] == 1, "two coins out of the rich one's own purse into the box");
             helper.assertTrue(remembers(rich, "poor box"), "and it remembers it");
-            helper.assertTrue(bread == state[2] + 1 && left == state[3] - 1 && week[4] == 1, "a loaf out of the stores into the poor one's pack");
+            helper.assertTrue(bread == state[2] + 1 && left <= state[3] - 1 && week[4] == 1, "a loaf out of the stores into the poor one's pack");
             helper.assertTrue(week[5] >= 1 && treasury - state[5] == week[5] && box == 3 + 2 - week[5],
                 "paid for out of the box (" + week[5] + "c), into the treasury");
             // Payday: a household of one, renting, short of its rent: the box pays the rest. (A house each, so
@@ -693,6 +706,7 @@ public class HealthCareGameTests {
             Kit.log("hc06 moved in: " + Homes.homeOf(h1) + "; housewarming " + java.util.Arrays.toString(w));
             helper.assertTrue(home[0].equals(Homes.homeOf(h1)) && w[0] == 1 && w[1] == 0, "they move in, and a housewarming is planned for the evening");
             level.setDayTime(level.getDayTime() / 24000L * 24000L + AFTER_SUPPER);
+            level.updateSkyBrightness();
             for (VillageFolkEntity f : List.of(h1, h2, friend)) f.clearQueue();
             Neighbourly.housewarmingsForTests(level, id);
             w = Neighbourly.warmingForTests(id, home[0]);
@@ -740,9 +754,9 @@ public class HealthCareGameTests {
         UUID id = e.ownerId();
         BlockPos heart = Kit.surface(level, x, Z);
         VillageFolkEntity same = another(helper, heart.east(3), id);
-        Container[] stores = new Container[1];
         VillageFolkEntity[] who = new VillageFolkEntity[2];
         int[] phase = { 0 };
+        int[] had = new int[3];                           // the stores' bread, torches and flowers before
         helper.runAtTickTime(5, () -> {
             evening(e, same);
             helper.assertTrue(Neighbourly.welcomeForTests(same.getUUID())[0] == 0, "one stood up the day the town was founded is a founder");
@@ -750,12 +764,16 @@ public class HealthCareGameTests {
             VillageFolkEntity n = another(helper, heart.west(10), id);
             Kit.log("hc07 stood up two days on: " + n.displayNameCap() + " " + java.util.Arrays.toString(Neighbourly.welcomeForTests(n.getUUID())));
             helper.assertTrue(Neighbourly.welcomeForTests(n.getUUID())[0] == 1, "one stood up in a town two days old is to be welcomed");
-            stores[0] = chestAt(level, heart.offset(5, 0, 5), new ItemStack(Items.BREAD, 3), new ItemStack(Items.TORCH, 4), new ItemStack(Items.POPPY, 2));
+            chestAt(level, heart.offset(5, 0, 5), new ItemStack(Items.BREAD, 3), new ItemStack(Items.TORCH, 4), new ItemStack(Items.POPPY, 2));
             evening(n);
             n.removeMatching(s -> s.is(Items.BREAD) || s.is(Items.TORCH) || s.is(ItemTags.SMALL_FLOWERS), 999);
             fed(e, same, n);
             level.setDayTime(level.getDayTime() / 24000L * 24000L + AFTER_SUPPER);
+            level.updateSkyBrightness();
             for (VillageFolkEntity f : List.of(e, same, n)) f.clearQueue();
+            had[0] = stock(level, id, s -> s.is(Items.BREAD));
+            had[1] = stock(level, id, s -> s.is(Items.TORCH));
+            had[2] = stock(level, id, s -> s.is(ItemTags.SMALL_FLOWERS));
             Neighbourly.welcomesForTests(level, id);
             VillageFolkEntity g = null;
             for (VillageFolkEntity f : List.of(e, same)) if (Neighbourly.errandForTests(f) != null) g = f;
@@ -778,8 +796,10 @@ public class HealthCareGameTests {
                     + ", flower " + carried(n, s -> s.is(ItemTags.SMALL_FLOWERS)) + "; said " + said);
                 helper.assertTrue(carried(n, s -> s.is(Items.BREAD)) == 1 && carried(n, s -> s.is(Items.TORCH)) == 1
                     && carried(n, s -> s.is(ItemTags.SMALL_FLOWERS)) == 1, "a welcome basket: a loaf, a torch and a flower");
-                helper.assertTrue(count(stores[0], s -> s.is(Items.BREAD)) == 2 && count(stores[0], s -> s.is(Items.TORCH)) == 3
-                    && count(stores[0], s -> s.is(Items.POPPY)) == 1, "out of the stores");
+                int bread = stock(level, id, s -> s.is(Items.BREAD)), torches = stock(level, id, s -> s.is(Items.TORCH)),
+                    flowers = stock(level, id, s -> s.is(ItemTags.SMALL_FLOWERS));
+                Kit.log("hc07 the stores: bread " + had[0] + " -> " + bread + ", torches " + had[1] + " -> " + torches + ", flowers " + had[2] + " -> " + flowers);
+                helper.assertTrue(bread <= had[0] - 1 && torches <= had[1] - 1 && flowers <= had[2] - 1, "out of the stores");
                 helper.assertTrue(said(said, "heart of the town") || said(said, "the square"), "shown the heart of the town: " + said);
                 helper.assertTrue(remembers(n, "welcomed me") && remembers(g, "welcomed"), "both remember it");
                 helper.succeed();

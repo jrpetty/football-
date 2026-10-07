@@ -573,13 +573,26 @@ public final class Neighbourly {
         return e;
     }
 
-    /** A meal for the old one out of the stores: its favourite if there is one, else a ration. */
+    /**
+     * A meal for the old one out of the stores: its favourite if there is one, else a proper dish (bread, something
+     * baked or cooked), and only with none of those a ration as it comes. A raw carrot out of the farmers' seed is no
+     * supper to carry round to anybody, and the founding stores' carrots came first in the chest.
+     */
     static ItemStack meal(ServerLevel level, Villages.Village v, VillageFolkEntity old) {
         String fav = old.persona().food();
-        ItemStack got = Crafts.takeOne(level, v, s -> s.get(DataComponents.FOOD) != null
+        ItemStack got = Crafts.takeOne(level, v, s -> s.get(DataComponents.FOOD) != null && Meals.FOOD.test(s)
             && net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().equals(fav));
+        if (got.isEmpty()) got = Crafts.takeOne(level, v, s -> Meals.FOOD.test(s) && dish(s));
         if (got.isEmpty()) got = Crafts.takeOne(level, v, Meals.FOOD);
         return got;
+    }
+
+    /** A proper dish: bread, or something baked, cooked or made (not a raw crop or raw meat). */
+    static boolean dish(ItemStack s) {
+        if (s.is(Items.BREAD) || s.is(Items.BAKED_POTATO) || s.is(Items.PUMPKIN_PIE) || s.is(Items.COOKIE) || s.is(Items.CAKE)
+            || s.is(Items.MUSHROOM_STEW) || s.is(Items.RABBIT_STEW) || s.is(Items.BEETROOT_SOUP)) return true;
+        String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+        return path.startsWith("cooked_");
     }
 
     /** Where the stores are, to walk to: the storehouse's door, the first store built, a store chest, the heart. */
@@ -956,23 +969,25 @@ public final class Neighbourly {
         }
     }
 
-    /** A present out of its own pack: a flower, a loaf (not its last rations) or a candle; never a keepsake. */
+    /**
+     * A present out of its own pack, the best it has: a flower, else a candle, else a loaf (not out of its last
+     * rations); never a keepsake. (Every founder carries a stack of bread from its starter kit: a flower it picked
+     * is the better present, and used to be passed over for the first loaf in the pack.)
+     */
     static ItemStack fromPack(VillageFolkEntity f) {
         var pack = f.getInventoryItems();
         int food = f.countFood();
-        for (int i = 0; i < pack.size(); i++) {
-            ItemStack s = pack.get(i);
-            if (s.isEmpty() || Homes.isKeepsake(s) || !gift(s)) continue;
-            if (s.is(Items.BREAD) && food <= 3) continue;
-            ItemStack one = s.split(1);
-            if (s.isEmpty()) pack.set(i, ItemStack.EMPTY);
-            return one;
+        for (Predicate<ItemStack> kind : List.<Predicate<ItemStack>>of(s -> s.is(ItemTags.SMALL_FLOWERS), s -> s.is(ItemTags.CANDLES),
+                s -> s.is(Items.BREAD) && food > 3)) {
+            for (int i = 0; i < pack.size(); i++) {
+                ItemStack s = pack.get(i);
+                if (s.isEmpty() || Homes.isKeepsake(s) || !kind.test(s)) continue;
+                ItemStack one = s.split(1);
+                if (s.isEmpty()) pack.set(i, ItemStack.EMPTY);
+                return one;
+            }
         }
         return ItemStack.EMPTY;
-    }
-
-    static boolean gift(ItemStack s) {
-        return s.is(ItemTags.SMALL_FLOWERS) || s.is(Items.BREAD) || s.is(ItemTags.CANDLES);
     }
 
     /** A present bought from the stores out of its own purse, at the market's price (the coin into the treasury). */
