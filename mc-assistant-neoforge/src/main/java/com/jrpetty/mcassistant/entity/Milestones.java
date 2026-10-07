@@ -91,7 +91,10 @@ public final class Milestones {
         if (!level.hasChunk(sx >> 4, sz >> 4)) return null;
         Roads.Ground g = Roads.ground(level, sx, sz);
         if (g == null || g.water()) return null;
-        BlockPos at = new BlockPos(sx, g.y() + 1, sz);
+        // A stone set there already stops motion, so it reads as the ground: its own cell is the place, not the air on
+        // top of it (or every round would count it still wanted, and look for a stone to stand on a stone).
+        BlockPos top = new BlockPos(sx, g.y(), sz);
+        BlockPos at = level.getBlockState(top).getBlock() instanceof MilestoneBlock ? top : top.above();
         Direction face = alongX ? Direction.SOUTH : Direction.EAST;
         return new Object[]{ at, face };
     }

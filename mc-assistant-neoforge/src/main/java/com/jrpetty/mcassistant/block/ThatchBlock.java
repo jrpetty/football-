@@ -17,8 +17,8 @@ import net.minecraft.world.level.block.state.BlockState;
  */
 public class ThatchBlock extends Block {
 
-    /** As hay: it catches at once and the flames run along it. */
-    static final int CATCH = 60, SPREAD = 20;
+    /** As a hay bale: it catches at once (the fire's odds of spreading to it), and burns away at a fifth of that. */
+    static final int CATCH = 60, BURN = 20;
 
     public ThatchBlock(Properties properties) {
         super(properties);
@@ -31,12 +31,12 @@ public class ThatchBlock extends Block {
 
     @Override
     public int getFlammability(BlockState state, BlockGetter level, BlockPos pos, Direction face) {
-        return CATCH;
+        return BURN;
     }
 
     @Override
     public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction face) {
-        return SPREAD;
+        return CATCH;
     }
 
     /** Thatch stairs: the slope of a thatched roof. */
@@ -47,12 +47,12 @@ public class ThatchBlock extends Block {
 
         @Override
         public int getFlammability(BlockState state, BlockGetter level, BlockPos pos, Direction face) {
-            return CATCH;
+            return BURN;
         }
 
         @Override
         public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction face) {
-            return SPREAD;
+            return CATCH;
         }
     }
 
@@ -64,12 +64,12 @@ public class ThatchBlock extends Block {
 
         @Override
         public int getFlammability(BlockState state, BlockGetter level, BlockPos pos, Direction face) {
-            return CATCH;
+            return BURN;
         }
 
         @Override
         public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction face) {
-            return SPREAD;
+            return CATCH;
         }
     }
 }

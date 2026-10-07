@@ -194,11 +194,11 @@ public class WindowBoxBlock extends Block {
 
     @Override
     public int getFlammability(BlockState state, BlockGetter level, BlockPos pos, Direction face) {
-        return 5;
+        return 20;
     }
 
     @Override
     public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction face) {
-        return 20;
+        return 5;
     }
 }

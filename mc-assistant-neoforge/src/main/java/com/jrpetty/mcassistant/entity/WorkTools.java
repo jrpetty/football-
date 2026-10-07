@@ -549,11 +549,12 @@ public final class WorkTools {
         List<String> out = new ArrayList<>();
         int props = count(village, "work.props"), held = count(village, "work.held"), sacked = count(village, "work.sacked"),
             ropes = count(village, "work.shafts");
-        if (props == 0 && held == 0 && sacked == 0 && ropes == 0) return out;
-        StringBuilder sb = new StringBuilder("Pit props: " + props + " stood in the mine");
-        if (props > 0) sb.append(" (a propped face is dug a sixth quicker: its miners trust the roof)");
-        if (held > 0) sb.append("; ").append(held).append(held == 1 ? " fall of gravel held" : " falls of gravel and sand held");
-        out.add(sb.append('.').toString());
+        if (props > 0 || held > 0) {
+            StringBuilder sb = new StringBuilder("Pit props: " + props + " stood in the mine");
+            if (props > 0) sb.append(" (a propped face is dug a sixth quicker: its miners trust the roof)");
+            if (held > 0) sb.append("; ").append(held).append(held == 1 ? " fall of gravel held" : " falls of gravel and sand held");
+            out.add(sb.append('.').toString());
+        }
         if (ropes > 0) out.add("Ropes: " + ropes + (ropes == 1 ? " let down a shaft" : " let down shafts") + " in the mine.");
         if (sacked > 0) out.add("Ore sacks: " + sacked + (sacked == 1 ? " time" : " times") + " a full pack was tipped into a sack and the work went on.");
         return out;

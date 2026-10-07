@@ -202,11 +202,11 @@ public class RopeBlock extends Block {
 
     @Override
     public int getFlammability(BlockState state, BlockGetter level, BlockPos pos, Direction face) {
-        return 30;
+        return 60;
     }
 
     @Override
     public int getFireSpreadSpeed(BlockState state, BlockGetter level, BlockPos pos, Direction face) {
-        return 60;
+        return 30;
     }
 }

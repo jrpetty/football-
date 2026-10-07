@@ -7850,6 +7850,132 @@ cider; a glut becomes twelve fish pies and the gazette says so; the healer's tea
 cold, and the café makes it with no healer; the tailor rolls bandages, the watch's kit takes them, a hurt guard binds
 its own and mends, and the healer binds the wounded; every thing has its recipe, age and worth and the shop's workshop
 makes what no trade does; and the cook's book, the Production page, the card and the stage show it all.
+
+## Tools of the mine, the woods and the roads
+
+Eight new things for the town's working hands and its roofs: the miner's pit props, rope and ore sack, the woodcutter's
+felling saw, thatch for the cottages, milestones for the roads, shipping crates for the haulers and window boxes for
+the houses. Each has a real recipe, so the town's makers know it and you can make it too; each is made by a trade of
+the town out of the stores whenever the town wants one (the shop's workshop makes it for a town without the trade);
+and each is used, by the folk and by you.
+
+| Thing | Recipe | Age | Worth | Made by, and when | Used by the folk | Used by you |
+|---|---|---|---|---|---|---|
+| Pit Prop | three planks over two logs make four | Wood | 0.25 | the woodcutter, while the town has miners (eight a miner kept, thirty-two at most) | stood in the mine's galleries: gravel and sand over them stay up, and a propped face is dug quicker | stand one under a loose roof |
+| Rope Coil | four string round a leather | Wood | 1.6 | the tailor, while a miner has no rope or a cave dweller fewer than two | let down a shaft or a cliff and climbed, down and back up | let it down any drop and climb it; break it to take it up |
+| Ore Sack | three leathers and two string | Stone | 2.5 | the tailor, for each miner and cave dweller without one | a full pack's ore tipped into it, so the work goes on | carries four stacks of ore, raw metal, coal and gems |
+| Felling Saw | two iron bars, two sticks and a string | Stone | 4 | the smith, for each woodcutter without one | a tree's foot cut, the whole tree comes down | sneak as you cut a tree's log |
+| Thatch | six wheat make four; stairs of six, four; slabs of three, six | Wood | 0.18 (stairs 0.3, slab 0.1) | the farmer, of the wheat the town can spare; the builders cut the stairs and slabs at the bench | the Wood Age's roofs | build with it |
+| Milestone | five cobblestone round a sign | Stone | 0.8 | the road crew, out of the mother town's stores, as its roads want them | set beside the roads, lettered with the towns and their distance | ask it the way; set one by a road |
+| Shipping Crate | six planks, two logs and an iron nugget | Stone | 1.4 | the woodcutter: two for each courier, three while the town sends caravans | nine stacks of goods in one slot of a hauler's pack | a chest you can pick up full |
+| Window Box | three planks under a block of earth under a flower (twelve kinds, one a flower) | Wood | 0.6 | the shop's workshop, for each well-off house with a window still bare | hung under the windows: a happier household, a house worth more | hang one under a window and water it |
+
+**The pit prop.** A squared oak post with a beam across its cap, two blocks high. A miner takes six out of the stores
+when it is down to its last few, and stands one at the foot of its stairs and every five steps along its gallery
+wherever there is rock overhead and no prop near. A prop holds the roof three blocks either side and up to six above:
+gravel and sand there do not fall in on the miner, they stay where they are. Folk walk through a prop (you can too),
+and a miner trusts a propped roof: a face with two props in it or more is dug a sixth quicker. `/village mine` says how
+many props stand in the mine and how many falls of gravel they have held. You can stand one anywhere, like a door, and
+it holds a roof for you just the same.
+
+**The rope coil.** A coil of good hemp rope, its end whipped with leather. Use it on the edge of a drop, against the
+side of the block you stand on (or on its top, toward the way you face), and it lets down as far as it will go, up to
+twenty-four blocks, hitched to the edge. Climb it like a ladder. Break any piece of it and the whole rope comes up as
+the coil again.
+* *The miners* carry one. Cutting its stairs down, a miner that comes to a shaft four deep or more under its next step
+  lets its rope down the shaft and climbs down to go on from the bottom, rather than bridging it, and climbs back up it
+  coming home. The rope stays as the mine's way down, and `/village mine` counts the ropes down its shafts.
+* *The cave team* carries two each. Where there is no walking down to the cave it is making for (a ravine, a pit, the
+  foot of a cliff), the leader looks along the edge for a drop that comes down nearer the cave, lets a rope down it and
+  climbs down; the others follow it down. On the way home they climb back up it, and the last one up takes the rope up,
+  the coil back in its pack. So the team gets at caves it used to have to pass by. The chronicle tells of it: "Wren let
+  a rope down eight blocks for the cave team, to get at a cave there was no walking down to."
+
+**The ore sack.** A stout leather sack with a drawstring, bulging when it is full. It holds four stacks of ore, raw
+metal, coal, gems and the like and nothing else. A miner or a cave dweller whose pack fills tips its ore and coal into
+its sack and works on, instead of walking all the way home with a full pack; at the stores the sack's load goes in
+with the rest, and the empty sack goes back down the mine with it. The folk's card says what is in it ("an ore sack
+with 198 of ore and coal in it"), and `/village mine` how often a full pack was tipped into a sack and the work went
+on. You: carry one, and ore, raw metal, coal and gems you pick up go into it first. Put a stack into it or take one out
+in your inventory as you would with a bundle, and right-click to tip the lot out into your pack.
+
+**The felling saw.** A long two-handled saw, good for two hundred and fifty cuts. A woodcutter with one, cutting the
+bottom log of a tree, brings the whole tree down at once (up to sixty-four logs), the logs falling at the stump where
+it sweeps them up, the saw worn a cut a log; it replants as ever. It is never used on a building: logs on the town's
+built ground, or with planks, glass, a fence or anything else a hand put there beside them, are no tree, and a log cabin
+is safe. Its card counts the trees ("felled 3 whole trees with it (17 logs)"). You: hold it and sneak as you cut a
+tree's log, and the whole tree comes down at the stump.
+
+**Thatch.** Bundled straw, golden on top, stairs and slabs of it for the roof. A fed Wood Age town with wheat to spare
+(four stacks over its seed) roofs its houses in thatch: its builders take it first for the roofs, cutting the stairs and
+slabs they need at the bench out of the stores' thatch or wheat, and the farmer keeps two dozen bundles made. The
+chronicle notes the day the town began. Thatch burns like a hay bale. Of an evening and at meals, with the hearths lit,
+a spark from a chimney can catch a thatched roof: the more thatched houses, the likelier, three times as likely in a
+drought and half as likely in the rain, and the fire watch nearby stamps it out. If it catches, the fire's cause is the
+chimney's spark on the thatch. From the Stone Age, as the town makes its buildings over for the age, the builders take
+the thatch off and roof the house in tiles (slate in the Iron Age; stone bricks where the stores have no brick), the
+old thatch back into the stores. You: build with it (a hoe takes it down quickest); a fall onto thatch hurts a fifth as
+much.
+
+**The milestone.** A short post of grey stone with a rounded top, the town each way cut into its face with the distance
+and an arrow ("← ALDERTOR 120"). From the Stone Age a road between a town and its colony gets a stone at each end, one
+every hundred blocks along it and one where it crosses another road, two blocks off the road on the side away from its
+lamps, its face to the road. The road crew sets each as it lays the road, out of the mother town's stores (made there of
+five cobblestone and a sign if none is put by), and a road laid before the Stone Age gets its stones afterwards, one a
+visit. Right-click one to be told each town's name, how far it is by the road, which way, and how far as the crow
+flies. A stone you set within six blocks of a road is lettered for it; anywhere else, for the nearest town.
+
+**The shipping crate.** A plank crate with battens round its edges, stencilled with arrows. It holds nine stacks, and
+broken it keeps everything in it, like a shulker box, so a hauler can carry nine stacks of goods in one slot of its
+pack. A crate can't go inside another, nor in a sack or a bundle.
+* *The couriers* carry two empty crates each. At a production chest a courier fills its pack as ever, then packs what
+  is left in the chest into its crates, nine stacks to a crate; at the storehouse the stores unpack them with the rest,
+  and the crates go out empty again. Its "doing" line counts them: "For the storehouse: ..., 2 crates packed (18
+  stacks)".
+* *The caravans* take up to three empty crates out of the stores and pack them with the town's surplus besides the
+  loose load they always took. At the colony the crates are unpacked onto the carrier's back and sold off it as ever;
+  the crates come home with it and go back into the stores. The carrier's "doing" line on the road says how many
+  crates it has packed and how many stacks, and the chronicle notes how much more the caravan carried.
+
+**The window box.** A planter of oak under a window, a fringe of leaves and three clumps of its flower, one look for each
+of the twelve flowers. The shop's workshop makes one for each well-off household whose house still has a bare window
+(four ready at most), of the stores' planks and earth and a flower they can spare. The household's gardener (one who
+loves gardening, else the one with most put by) carries it home in its hands and hangs it under the window; the
+builders hang them on a house they have raised a storey. A household with its boxes in flower is the happier for it
+("Our window boxes are a picture this week"), and the house is worth four in the hundred more for each box in flower,
+two at most. The rain waters them. Three days without water and the flowers wilt, and the gardener is sent with a bucket
+of water from the stores; in winter they die back, and in the spring they are up again. You: hang one against a wall
+under a window, water it with a bucket of water (or a watering can), and right-click it to see how it is doing.
+
+**Where to look.** The folk's card has a **Tools** line: its props, its rope, its sack and what is in it, its saw and
+the trees it has felled, its crates and what is packed in them. `/village items work` lists what the town's stores hold
+of each, what the town wants made, the props, ropes and sacks of the mine, the trees felled, the crates unpacked and the
+caravans' crates, the thatched roofs and their sparks, the milestones and the window boxes, and each folk's tools.
+`/village mine` has the mine's props, falls held, ropes and sacks. Operators: `/village items work stage` sets the
+scene for the pictures east of where you stand: a wall of the eight in frames with the blocks before it, a propped
+tunnel under a gravel seam, a rope down a drop, a felled tree and its saw, a thatched cottage with its window boxes, a
+road with its milestone, and a courier with a packed crate.
+
+The game tests `WorkItemsGameTests` (wi01 to wi10) check that every one of the eight has its recipe, age, worth and
+maker; the woodcutter makes eight props of the stores' logs and planks for the miner, who stands them at the foot of its
+gallery and every five steps, the gravel over the propped stretch stays up while the gravel past it falls, the propped
+face is dug in 85 of every 100 ticks, and a player stands one by hand; the tailor knots a coil, the miner lets it down a
+shaft ten deep and climbs down and up it, and a player's coil let down a tower comes up whole when a piece halfway down
+is broken; the tailor sews two sacks, a full pack's 198 ore and coal go into one and out at the chest, the empty sack
+is kept, a cave dweller's haul comes out of its sack, and a player's sack takes up the ore it walks over and tips it
+out; the smith makes one saw, the woodcutter fells a whole tree at its foot (the logs at the stump, the saw worn four)
+but never a cabin's post, and a player sneaking fells a tree; a fed Wood Age town with wheat to spare roofs in thatch,
+the farmer makes it, a builder cuts the roof's stairs and slabs, it burns like hay, a chimney's spark catches a
+thatched roof and the Stone Age re-roofs the house in tiles with the thatch back in the stores; the road between two
+towns gets its four stones out of the mother's cobblestone and signs, each lettered with both towns and their distance
+by the road, a player is told the way, a player's stone is lettered for the road and a stone taken away is set again;
+the woodcutter makes two crates for the courier, who packs eighteen stacks into them past its pack and unpacks them at
+the stores, and a crate broken keeps its sixty bread; the shop's hand makes a box of cornflowers, the gardener hangs it,
+the household is happier and the house worth four in the hundred more, five days dry it wilts and the gardener waters
+it with the stores' bucket, a player waters it too, and it dies back in winter and is up in the spring; a caravan takes
+two crates of surplus besides its load, the colony buys the lot and the crates come home; and the cave team's leader
+ropes down a cliff to its cave, the other follows, and the last up takes the rope home as a coil.
+
 ## How it all fits together
 
 The town's systems were built one at a time; this is where they hear of each other (`entity/Weave`, and a line in

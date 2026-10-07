@@ -2499,6 +2499,47 @@ def kitchen_stage(r, look, cx, cz):
     say("alive after the kitchen: %s" % client_alive())
 
 
+def work_stage(r, look, cx, cz):
+    """[workitems] The tools of the mine, the woods and the roads (item/WorkItems, entity/WorkStage). Out past the town's
+    south-east corner, /village items work stage levels its own ground for each scene and sets out, running east: a wall
+    of stone bricks with the eight things in frames, a rope down its face and a window box under its window, the blocks
+    in a row before it; a tunnel cut under a seam of gravel and propped, a miner in it with its pick and a full ore sack;
+    a drop with a rope down it and a cave dweller half way down; a woodcutter with its felling saw by the tree it has
+    felled, the logs at the stump; a cottage roofed in thatch with window boxes in flower and its gardener at the door;
+    a road with its milestone lettered for the towns; a courier with a packed crate in its hands by a stack of crates.
+    One picture each (VIEW lines, eye and target to a tenth of a block); then /village items work gives the town's
+    tools: what it keeps, what it wants made, and each in use."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 50, cz + 60                          # beside the town; the stage runs a hundred and twenty blocks east
+    r.cmd("tp %s %d %d %d" % (USER, sx + 60, hy + 24, sz - 16))
+    time.sleep(10)                                     # the whole run of ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village items work stage" % (sx, sz))
+    say("work stage: " + out[:1500])
+    num = r"(-?\d+(?:\.\d+)?)"
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) " + " ".join([num] * 6), out):
+        views[name] = (float(x), float(y), float(z), float(ax), float(ay), float(az))
+    if not views:
+        say("nothing staged for the work items; nothing to photograph")
+        return
+    pictures = (("work-showcase", "1-showcase", 8), ("work-blocks", "2-blocks", 5), ("work-mine", "3-pit-props", 6),
+                ("work-rope", "4-rope", 5), ("work-saw", "5-felling-saw", 5), ("work-thatch", "6-thatch", 6),
+                ("work-boxes", "7-window-boxes", 5), ("work-road", "8-milestone", 5), ("work-crates", "9-crates", 5))
+    for name, picture, wait in pictures:
+        if name not in views:
+            say("no view staged for " + name)
+            continue
+        x, y, z, ax, ay, az = views[name]
+        look("33-work-" + picture, x, y, z, ax, ay, az, wait=wait)
+    say("work: " + r.cmd("execute positioned %d %d %d run village items work" % (cx, hy + 1, cz))[:1500])
+    r.cmd("kill @e[tag=work_stage]")                   # the stage's folk only stood for their pictures
+    say("alive after the work items: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
