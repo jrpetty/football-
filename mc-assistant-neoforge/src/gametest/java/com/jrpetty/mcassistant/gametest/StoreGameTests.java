@@ -444,18 +444,30 @@ public class StoreGameTests {
             "its coin into the treasury: " + (purse0 - purse1) + " paid, " + (coins1 - coins0) + " in");
         helper.assertTrue(StoreFloor.servedToday(assistant) == 1, "on the assistant's day");
         helper.assertTrue(!farSale.ok() && farSale.why().equals("walk"), "a folk across the room comes to the counter first: " + farSale.why());
-        // The counters, a few ticks on (a frame hung this tick is found from a later one).
-        helper.runAfterDelay(5, () -> {
-            List<String> shown = new ArrayList<>(), tags = new ArrayList<>();
-            for (ItemFrame f : level.getEntitiesOfClass(ItemFrame.class, new AABB(at).inflate(12), f -> f.getTags().contains(StoreFloor.FRAME_TAG))) {
-                if (!f.getItem().isEmpty()) shown.add(f.getItem().getHoverName().getString());
+        // The counters, from a later tick on: a frame hung on ground forced only this tick is in the level's lookup only
+        // once the ground's entities are loaded (as the café's in t32), so it is looked for each tick, a while, and
+        // the counters set out afresh every second meanwhile, as the town sets them out.
+        final long from = helper.getTick();
+        final boolean[] done = { false };
+        helper.onEachTick(() -> {
+            if (done[0]) return;
+            long waited = helper.getTick() - from;
+            if (waited > 0 && waited % 20 == 0) StoreFloor.dress(level, t.v());
+            List<String> shown = new ArrayList<>(), all = new ArrayList<>(), tags = new ArrayList<>();
+            for (ItemFrame f : level.getEntitiesOfClass(ItemFrame.class, new AABB(at).inflate(12))) {
+                all.add(f.blockPosition().toShortString() + "=" + f.getItem().getHoverName().getString() + f.getTags());
+                if (f.getTags().contains(StoreFloor.FRAME_TAG) && !f.getItem().isEmpty()) shown.add(f.getItem().getHoverName().getString());
             }
             for (BlockPos q : BlockPos.betweenClosed(at.offset(-7, 0, -10), at.offset(7, 2, 10))) {
                 if (level.getBlockEntity(q) instanceof SignBlockEntity sign) tags.add(sign.getFrontText().getMessage(0, false).getString() + " / "
                     + sign.getFrontText().getMessage(2, false).getString());
             }
-            Kit.log("sx06 the counters: " + shown + "; tags " + tags);
-            helper.assertTrue(shown.contains("Bread") && tags.stream().anyMatch(s -> s.startsWith("Bread")), "the bread on a counter, its price tag in front");
+            boolean ok = shown.contains("Bread") && tags.stream().anyMatch(s -> s.startsWith("Bread"));
+            if (!ok && waited < 160) return;
+            done[0] = true;
+            Kit.log("sx06 the counters after " + waited + " ticks: " + shown + "; every frame round the store " + all + "; tags " + tags
+                + "; the stockroom's bread " + roomOf(level, village, bread));
+            helper.assertTrue(ok, "the bread on a counter, its price tag in front");
             helper.succeed();
         });
     }
