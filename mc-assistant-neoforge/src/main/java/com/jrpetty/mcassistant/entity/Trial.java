@@ -106,6 +106,7 @@ final class Trial {
     private static final Map<UUID, Integer> PATHED = new ConcurrentHashMap<>();
 
     static void resetForTests() {
+        ADOPT_LOOKED.clear();                       // [itemaudit]
         SITTINGS.clear();
         SEATED.clear();
         SWEEP.clear();
@@ -460,7 +461,11 @@ final class Trial {
                 }
             }
             if (back > 0 && c.kind != Kind.FORGERY) said.add(c.goods + " returned to " + c.victimName);
-            if (back > 0 && c.kind == Kind.FORGERY) said.add(back + " forged coins taken");
+            if (back > 0 && c.kind == Kind.FORGERY) {
+                said.add(back + " forged coins taken");
+                int bars = meltForged(level, v);                 // [itemaudit] and melted back into the copper they were cast of
+                if (bars > 0) said.add("melted down into " + (bars == 1 ? "a bar" : bars + " bars") + " of copper for the stores");
+            }
         }
         int owed;
         if (c.kind == Kind.PICKPOCKET) owed = c.coins;
@@ -801,7 +806,7 @@ final class Trial {
     @Nullable
     static BlockPos stocksAt(ServerLevel level, Villages.Village v) {
         String note = Ledger.note(v.id(), STOCKS);
-        if (note == null || note.isEmpty()) return null;
+        if (note == null || note.isEmpty()) return adopt(level, v);           // [itemaudit] a player's stocks on the square
         String[] p = note.split(",");
         if (p.length < 3) return null;
         try {
@@ -811,6 +816,56 @@ final class Trial {
         } catch (NumberFormatException ignored) { }
         Ledger.forget(v.id(), STOCKS);
         return null;
+    }
+
+    /**
+     * [itemaudit] The forged coins in the stores (the one passed, and those the watch took off the forger), melted down
+     * three to a bar of copper, as the recipe has it, so none is ever passed again: the copper they were cast of goes
+     * back to the town. Returns the bars.
+     */
+    static int meltForged(ServerLevel level, Villages.Village v) {
+        net.minecraft.world.item.Item forged = McAssistantMod.FORGED_COIN.get();
+        int bars = 0;
+        while (bars < 16 && Crafts.stock(level, v, s -> s.is(forged)) >= 3 && Crafts.take(level, v, s -> s.is(forged), 3)) {
+            Crafts.store(level, v, new ItemStack(Items.COPPER_INGOT));
+            bars++;
+        }
+        return bars;
+    }
+
+    /** [itemaudit] When each town last looked for stocks a player put up on its square. */
+    private static final Map<UUID, Long> ADOPT_LOOKED = new ConcurrentHashMap<>();
+
+    /**
+     * [itemaudit] Stocks a player has put up on the square (a block anybody can make: three planks over two logs) are
+     * the town's own once it has none: it sits its sentences in them rather than making a pair of its own. Looked for
+     * at most once a minute, while the town has no stocks of its own; the place noted as if the town had put them up.
+     */
+    @Nullable
+    static BlockPos adopt(ServerLevel level, Villages.Village v) {
+        long now = level.getGameTime();
+        Long last = ADOPT_LOOKED.get(v.id());
+        if (last != null && now - last < 1200L && now >= last) return null;
+        ADOPT_LOOKED.put(v.id(), now);
+        BlockPos heart = v.centre();
+        for (BlockPos p : BlockPos.betweenClosed(heart.offset(-12, -4, -12), heart.offset(12, 6, 12))) {
+            if (!level.isLoaded(p)) continue;
+            BlockState st = level.getBlockState(p);
+            if (!(st.getBlock() instanceof StocksBlock)) continue;
+            Direction facing = st.getValue(StocksBlock.FACING);
+            BlockPos at = p.immutable();
+            Ledger.note(v.id(), STOCKS, at.getX() + "," + at.getY() + "," + at.getZ() + "," + facing.getName());
+            Villages.tell(v.id(), level.getDayTime() / 24000L, "the stocks put up on the square were taken for the town's own");
+            return at;
+        }
+        return null;
+    }
+
+    /** [itemaudit] Tests: the town's stocks looked for afresh (a player's on the square among them), now. */
+    @Nullable
+    static BlockPos adoptNow(ServerLevel level, Villages.Village v) {
+        ADOPT_LOOKED.remove(v.id());
+        return stocksAt(level, v);
     }
 
     /** Can the stores run to the stocks: a pair put by, or three planks and two logs (the recipe's)? */

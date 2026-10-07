@@ -1592,6 +1592,17 @@ public final class Crime extends SavedData {
         return Trial.stocksAt(level, v);
     }
 
+    /** [itemaudit] Tests: the town's stocks looked for afresh, stocks a player put up on the square among them. */
+    @Nullable
+    public static BlockPos adoptStocksForTests(ServerLevel level, Villages.Village v) {
+        return Trial.adoptNow(level, v);
+    }
+
+    /** [itemaudit] Tests: the forged coins in the stores melted down three to a bar of copper, now. The bars. */
+    public static int meltForgedForTests(ServerLevel level, Villages.Village v) {
+        return Trial.meltForged(level, v);
+    }
+
     public static int convictionsForTests(VillageFolkEntity f) {
         return convictions(f.getUUID());
     }

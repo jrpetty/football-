@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "ingredient": { "item": "minecraft:gold_ingot" },
+  "result": { "id": "mc_assistant:village_coin", "count": 9 },
+  "experience": 0.2,
+  "cookingtime": 200
+}

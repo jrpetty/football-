@@ -195,7 +195,7 @@ public final class AssistantCommands {
     }
 
     public static final String SPAWNER_COST_HINT =
-        "You need an Assistant Spawner to bring in a new helper — craft one: 8 rotten flesh around a diamond block.";
+        "You need an Assistant Spawner to bring in a new helper — craft one: 8 rotten flesh around a diamond.";
 
     /** Survival cost: bringing in a NEW assistant consumes one Assistant Spawner
      *  item from the player's inventory — one spawner, one companion. Creative

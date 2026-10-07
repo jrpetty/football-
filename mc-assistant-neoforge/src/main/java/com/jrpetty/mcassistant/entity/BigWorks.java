@@ -466,6 +466,40 @@ public final class BigWorks {
         return hung > 0;
     }
 
+    /**
+     * [itemaudit] A player's shears at a ribbon (block/RibbonBlock): a player opening something of its own, as the leader
+     * opens the town's. The ribbon is snipped and gone, and the folk near enough to see clap, the nearest calling out.
+     * A town's own ribbon across a great work is its leader's to cut at the opening, and stays. Returns what the player
+     * is told, and whether it was cut.
+     */
+    public static String cutByPlayer(ServerLevel level, BlockPos pos, net.minecraft.world.entity.player.Player p, boolean[] cut) {
+        cut[0] = false;
+        Villages.Village v = Villages.nearest(level, pos, Villages.VILLAGE_RANGE * 2);
+        CompoundTag w = v == null ? null : current(v.id());
+        if (w != null) {
+            for (long l : w.getLongArray("ribbon")) {
+                if (l == pos.asLong()) return "That's " + Villages.name(v.id()) + "'s ribbon: its leader cuts it when the work is opened.";
+            }
+        }
+        level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
+        level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, McAssistantMod.RIBBON.get().defaultBlockState()),
+            pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5, 10, 0.3, 0.1, 0.3, 0.05);
+        level.playSound(null, pos, SoundEvents.SHEEP_SHEAR, SoundSource.PLAYERS, 1.0F, 1.1F);
+        cut[0] = true;
+        int clapping = 0;
+        for (VillageFolkEntity f : level.getEntitiesOfClass(VillageFolkEntity.class, new net.minecraft.world.phys.AABB(pos).inflate(12.0),
+                x -> x.isAlive() && !x.isSleeping() && !x.isShowcase())) {
+            f.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5);
+            f.swing(InteractionHand.MAIN_HAND);
+            if (clapping++ == 0) {
+                FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Hooray! It's open!", "Well done, " + p.getName().getString() + "!",
+                    "A ribbon cut! What's the occasion?"));
+            }
+            if (clapping >= 6) break;
+        }
+        return clapping > 0 ? "Snip! The ribbon's cut, and the folk about give a cheer." : "Snip! The ribbon's cut.";
+    }
+
     /** The ribbon cut and the work opened (from the gathering's line, or quietly): into the chronicle and the folk's memories. */
     static void opened(ServerLevel level, Villages.Village v, @Nullable VillageFolkEntity cutter) {
         UUID id = v.id();

@@ -27,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * <li><b>The brewer's stout.</b> A master brewer brews it for the tavern, a bottle, two wheat and a spoon of sugar
  *     (while the town is fed: the wheat is food first), up to six in the stores. Of an evening at the tavern a folk
  *     with the coin buys one at the bar, half the time, before the café's drinks: it digs the better for it.</li>
+ * <li><b>[itemaudit] With no master yet</b> the town's best hand at the trade makes them, one turn in three (hand): a
+ *     town does not wait months for its first master to eat a pie.</li>
  * <li><b>The farmhouse pie.</b> A master cook bakes two out of a pumpkin, an egg, a carrot and three wheat, up to
  *     eight in the stores; the town eats them like any food (ten hunger a pie).</li>
  * <li><b>The apprentice's journal.</b> The tailor binds one from a book, a feather, an ink sac and a strap of leather
@@ -45,14 +47,34 @@ public final class TradeGoods {
     /** The day each child last wrote up its journal. */
     private static final Map<UUID, Long> WROTE = new ConcurrentHashMap<>();
 
+    /** [itemaudit] Each hand's turns at the masters' goods with no master in the town: one in three makes them. */
+    private static final Map<UUID, Integer> TURNS = new ConcurrentHashMap<>();
+
     public static void resetForTests() {
         WROTE.clear();
+        TURNS.clear();
     }
 
     /** Tests: a master's own piece of work at its bench, now (what was made, or null). */
     @Nullable
     public static String craftForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
         return craft(level, v, f);
+    }
+
+    /** [itemaudit] Tests: a stout at the tavern's bar, as an evening there would have it (half the time). */
+    public static boolean stoutForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f, long day) {
+        return stout(level, v, f, day);
+    }
+
+    /** [itemaudit] Tests: is this the hand that makes its trade's masters' goods, master or best hand (hand)? */
+    public static boolean handForTests(Villages.Village v, VillageFolkEntity f) {
+        StationTask t = f.stationTask();
+        return hand(v, f, t, f.tradeLevel(t) >= Lessons.MASTER);
+    }
+
+    /** [itemaudit] Tests: a reinforced pickaxe riveted in the stores by this smith's hand, marked with its name. */
+    public static boolean pickByForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        return makeOne(level, v, CivicItems.REINFORCED_PICKAXE.get(), f);
     }
 
     /** A master's own piece of work at its bench, if one is wanted and the stores have the makings (Crafts.now). */
@@ -62,21 +84,21 @@ public final class TradeGoods {
         boolean master = f.tradeLevel(t) >= Lessons.MASTER;
         switch (t) {
             case SMITH -> {
-                if (!master || !digs(v.id()) || Crafts.stock(level, v, s -> s.is(CivicItems.REINFORCED_PICKAXE.get())) >= PICKS_KEPT) return null;
+                if (!hand(v, f, t, master) || !digs(v.id()) || Crafts.stock(level, v, s -> s.is(CivicItems.REINFORCED_PICKAXE.get())) >= PICKS_KEPT) return null;
                 if (Crafts.savingIron(level, v) || Crafts.stock(level, v, s -> s.is(Items.IRON_INGOT)) < 3 + Crafts.IRON_KEPT) return null;
-                if (!makeOne(level, v, CivicItems.REINFORCED_PICKAXE.get())) return null;
+                if (!turn(f, master) || !makeOne(level, v, CivicItems.REINFORCED_PICKAXE.get(), f)) return null;
                 return "a reinforced pickaxe for the miners";
             }
             case BREW -> {
-                if (!master || Tavern.of(v.id()) == null || Crafts.stock(level, v, s -> s.is(CivicItems.BREWERS_STOUT.get())) >= STOUTS_KEPT) return null;
+                if (!hand(v, f, t, master) || Tavern.of(v.id()) == null || Crafts.stock(level, v, s -> s.is(CivicItems.BREWERS_STOUT.get())) >= STOUTS_KEPT) return null;
                 Leader.Plan plan = Leader.plan(v.id());
                 if (plan == Leader.Plan.FAMINE || plan == Leader.Plan.SHORT) return null;      // the wheat is bread first
-                if (!makeOne(level, v, CivicItems.BREWERS_STOUT.get())) return null;
+                if (!turn(f, master) || !makeOne(level, v, CivicItems.BREWERS_STOUT.get())) return null;
                 return "a brewer's stout for the tavern";
             }
             case COOK -> {
-                if (!master || Crafts.stock(level, v, s -> s.is(CivicItems.FARMHOUSE_PIE.get())) >= PIES_KEPT) return null;
-                if (!makeOne(level, v, CivicItems.FARMHOUSE_PIE.get())) return null;
+                if (!hand(v, f, t, master) || Crafts.stock(level, v, s -> s.is(CivicItems.FARMHOUSE_PIE.get())) >= PIES_KEPT) return null;
+                if (!turn(f, master) || !makeOne(level, v, CivicItems.FARMHOUSE_PIE.get())) return null;
                 return "two farmhouse pies";
             }
             case TAILOR -> {
@@ -88,6 +110,29 @@ public final class TradeGoods {
                 return null;
             }
         }
+    }
+
+    /**
+     * [itemaudit] Whose work the masters' goods are: the town's master of the trade's; and, while the town has none, its
+     * best hand at the trade's. A smith takes weeks at the anvil to reach level ten and months to reach twenty-five, and
+     * a town that waited for a master went without its pies, its stout and its miners' picks the whole of a long game.
+     * A master makes them at every turn; a hand not yet a master one turn in three (turn), and a pick of its making is as
+     * good as its hand (Craftsmanship: a beginner's wears through sooner and carries a beginner's mark).
+     */
+    static boolean hand(Villages.Village v, VillageFolkEntity f, StationTask t, boolean master) {
+        if (master) return true;
+        if (PlayerTrades.masterOf(v.id(), t) != null) return false;               // the town's master makes them
+        VillageFolkEntity best = null;
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!(a instanceof VillageFolkEntity o) || o.isBaby() || o.isShowcase() || o.stationTask() != t) continue;
+            if (best == null || o.tradeLevel(t) > best.tradeLevel(t)) best = o;
+        }
+        return best == f;
+    }
+
+    /** [itemaudit] A master's turn is every turn; a hand's not yet a master, one turn in three. */
+    static boolean turn(VillageFolkEntity f, boolean master) {
+        return master || TURNS.merge(f.getUUID(), 1, Integer::sum) % 3 == 0;
     }
 
     /** Does the town dig (miners or cave dwellers)? */
@@ -113,6 +158,11 @@ public final class TradeGoods {
      * to a baking.
      */
     static boolean makeOne(ServerLevel level, Villages.Village v, Item what) {
+        return makeOne(level, v, what, null);
+    }
+
+    /** As makeOne, by this hand (the pick finished as good as it, marked with its name): the master smith's if null. */
+    static boolean makeOne(ServerLevel level, Villages.Village v, Item what, @Nullable VillageFolkEntity by) {
         if (what == CivicItems.REINFORCED_PICKAXE.get()) {
             if (Crafts.stock(level, v, s -> s.is(Items.IRON_PICKAXE)) < 1 || Crafts.stock(level, v, s -> s.is(Items.IRON_INGOT)) < 3
                     || Crafts.stock(level, v, s -> s.is(Items.COPPER_INGOT)) < 1) return false;
@@ -124,7 +174,7 @@ public final class TradeGoods {
                 Crafts.store(level, v, new ItemStack(Items.IRON_INGOT, 3));
                 return false;
             }
-            VillageFolkEntity smith = PlayerTrades.masterOf(v.id(), StationTask.SMITH);
+            VillageFolkEntity smith = by != null ? by : PlayerTrades.masterOf(v.id(), StationTask.SMITH);
             ItemStack made = new ItemStack(CivicItems.REINFORCED_PICKAXE.get());
             if (smith != null) made = Craftsmanship.finish(level, made, smith.tradeLevel(StationTask.SMITH), smith.displayNameCap());
             Crafts.store(level, v, made);
