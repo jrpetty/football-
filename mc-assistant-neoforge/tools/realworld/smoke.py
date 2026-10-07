@@ -2198,6 +2198,10 @@ def main():
         cave_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("cave stage failed: %s" % e)
+    try:
+        arms_buskers_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("arms buskers stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
