@@ -950,6 +950,7 @@ public final class Assemblies {
                     s.add(new Line(a.principals.get(1), FolkTalk.pick(r, "I will!", "I do."), ' ', null));
                 }
                 s.add(new Line(null, "Then before all of " + name + " — you are wed!", '!', null));
+                Quilts.weddingGift(level, a, s, r);                    // [leisure] the town's gift: a patchwork quilt for their bed
             }
             case VIGIL -> {
                 s.add(new Line(null, "We are here for " + a.subject.replace("a vigil for ", "") + ".", '~', null));

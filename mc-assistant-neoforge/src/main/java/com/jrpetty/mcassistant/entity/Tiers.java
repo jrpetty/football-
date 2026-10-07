@@ -124,6 +124,8 @@ public final class Tiers {
     /** The age this thing belongs to (the rule in the class comment). */
     public static synchronized Villages.Age of(ServerLevel level, Item item) {
         ensure(level);
+        Villages.Age fixed = Pastimes.age(item);                         // [leisure] the football and the paper lanterns: the Wood Age's
+        if (fixed != null) return fixed;
         Villages.Age a = AGES.get(item);
         if (a != null) return a;
         a = work(level, item, new HashSet<>(), 0);

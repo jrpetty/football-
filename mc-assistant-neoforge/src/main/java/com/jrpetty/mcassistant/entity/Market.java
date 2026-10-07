@@ -172,6 +172,14 @@ public final class Market {
         new Good("Bed", s -> s.is(ItemTags.BEDS), 4.0, 1, Villages.Task.NONE),
         new Good("Rugs", s -> s.is(ItemTags.WOOL_CARPETS), 0.3, 4, Villages.Task.NONE),
         new Good("Banner", s -> s.is(ItemTags.BANNERS), 2.5, 1, Villages.Task.NONE),
+        // [leisure] Home and play (LeisureItems): read lazily, the items being registered after this list is made.
+        new Good("Patchwork quilt", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.QUILT_ITEM.get()), 3.2, 1, Villages.Task.NONE),
+        new Good("Lute", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.LUTE.get()), 2.6, 1, Villages.Task.NONE),
+        new Good("Draughts board", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.DRAUGHTS_BOARD_ITEM.get()), 1.8, 1, Villages.Task.NONE),
+        new Good("Kite", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.KITE.get()), 1.4, 1, Villages.Task.NONE),
+        new Good("Leather football", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.LEATHER_FOOTBALL.get()), 3.0, 1, Villages.Task.NONE),
+        new Good("Paper lanterns", com.jrpetty.mcassistant.item.LeisureItems::isLantern, 0.6, 4, Villages.Task.NONE),
+        new Good("Slate and chalk", s -> s.is(com.jrpetty.mcassistant.item.LeisureItems.SLATE.get()), 1.0, 1, Villages.Task.NONE),
         // [pets] The cook's pet treats (Pets): sold at the shop, and bought of a player. Matched when asked, not at
         // load: the item is registered after this list is made.
         new Good("Pet treats", s -> s.is(McAssistantMod.PET_TREAT.get()), 0.15, 8, Villages.Task.NONE),

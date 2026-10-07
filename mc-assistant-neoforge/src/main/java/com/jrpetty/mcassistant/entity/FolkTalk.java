@@ -416,6 +416,7 @@ public final class FolkTalk {
         line(sb, "The law", Crime.cardLine(f));             // [crime] its case, its record, robbed, cleared, a new leaf (Crime)
         line(sb, "Fire and flood", Disasters.cardLine(f));  // [disasters] a bucket chain, the flood, a night away, the fire watch
         line(sb, "Votes and works", Referendums.cardLine(f));   // [civic] its vote, the works it built, where it came from
+        line(sb, "Pastimes", Pastimes.cardLine(f));         // [leisure] its quilt, its draughts, its kite, its lute, its slate
         java.util.List<String> friends = new java.util.ArrayList<>();
         for (Social.Bond b : life.friends()) {
             if (b.name != null && !b.name.isEmpty()) friends.add(b.name);
@@ -655,6 +656,7 @@ public final class FolkTalk {
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
+            case "quilt", "warmquilt", "draughts", "kite", "kickabout", "lanterns" -> Pastimes.moodWords(f, why);   // [leisure]
             default -> "";
         };
     }

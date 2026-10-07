@@ -288,6 +288,8 @@ public final class Gazette {
         if (word != null) entries.add(word);
         String quests = QuestRun.gazette(id, day);                  // [quests] help wanted, and the week's deeds
         if (quests != null) entries.add(quests);
+        String play = Pastimes.gazette(level, id, day);              // [leisure] the football and its goals, draughts, kites, lanterns
+        if (play != null) entries.add(play);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();

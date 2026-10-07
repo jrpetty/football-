@@ -1210,6 +1210,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
+        m = Pastimes.mood(this, day, m, why);           // [leisure] a night under a quilt, a game won, a kite, a kickabout, the lanterns
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
