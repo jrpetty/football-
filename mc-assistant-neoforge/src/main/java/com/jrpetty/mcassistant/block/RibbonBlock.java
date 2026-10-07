@@ -2,7 +2,17 @@ package com.jrpetty.mcassistant.block;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Rotation;
@@ -19,7 +29,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * for the leader to cut when a great work is opened (BigWorks). Made of string and red dye, by the shop's workshop
  * on the town's order or there and then out of the stores; a player can string one anywhere. It runs one way or the
  * other across the block (the
- * way across the path its placer is looking along), stops nobody walking through it, and drops itself.
+ * way across the path its placer is looking along), stops nobody walking through it, and drops itself. [itemaudit] A
+ * player cuts its own with shears, to open what it has built, and the folk about clap (BigWorks.cutByPlayer).
  */
 public class RibbonBlock extends Block {
 
@@ -52,6 +63,19 @@ public class RibbonBlock extends Block {
     @Override
     protected VoxelShape getCollisionShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
         return Shapes.empty();
+    }
+
+    /** [itemaudit] Shears to it: snipped, for a player's own opening; a town's ribbon is its leader's to cut. */
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player,
+                                              InteractionHand hand, BlockHitResult hit) {
+        if (!stack.is(Items.SHEARS)) return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        if (!(level instanceof ServerLevel server)) return ItemInteractionResult.SUCCESS;
+        boolean[] cut = { false };
+        String said = com.jrpetty.mcassistant.entity.BigWorks.cutByPlayer(server, pos, player, cut);
+        if (cut[0]) stack.hurtAndBreak(1, player, LivingEntity.getSlotForHand(hand));
+        player.displayClientMessage(Component.literal(said), true);
+        return cut[0] ? ItemInteractionResult.CONSUME : ItemInteractionResult.FAIL;
     }
 
     @Override

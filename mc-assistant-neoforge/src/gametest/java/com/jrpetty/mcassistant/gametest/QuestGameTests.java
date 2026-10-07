@@ -69,6 +69,7 @@ public class QuestGameTests {
         Kit.reset(level);
         QuestBook.resetForTests();
         QuestRun.resetForTests();
+        QuestRun.quietForTests(true);
         Standing.resetForTests();
         SearchParties.resetForTests();
     }
@@ -76,7 +77,31 @@ public class QuestGameTests {
     private static BlockPos heart(ServerLevel level, int x, int r) {
         Kit.hold(level, x, Z, r);
         Kit.prepare(level, x, Z, r);
+        // Every chunk of it live now: a spider set down out by the fields is seen at once (getEntitiesOfClass).
+        if (!Kit.live(level, x, Z, r)) Kit.log("qg the ground round " + x + " not all live: " + Kit.notLive(level, x, Z, r) + " chunks");
         return Kit.surface(level, x, Z);
+    }
+
+    /** The time of day set, and the sky's light with it. */
+    private static void time(ServerLevel level, long t) {
+        level.setDayTime(t);
+        level.updateSkyBrightness();
+    }
+
+    /** What all the town's stores hold of a thing (there may be a chest of the founding's besides the test's own). */
+    private static int stock(ServerLevel level, UUID village, Predicate<ItemStack> what) {
+        return Market.stock(level, village, what);
+    }
+
+    /**
+     * A hollow in a stone mound out past the town: the test world is a flat one, four blocks of ground over the
+     * bottom of the world, so "under the ground" is built up rather than dug down. Its floor's middle (the camp).
+     */
+    private static BlockPos hollow(ServerLevel level, BlockPos heart, int dx, int dz) {
+        BlockPos camp = Kit.surface(level, heart.getX() + dx, heart.getZ() + dz);
+        for (BlockPos c : BlockPos.betweenClosed(camp.offset(-3, -1, -3), camp.offset(3, 4, 3))) level.setBlockAndUpdate(c, Blocks.STONE.defaultBlockState());
+        for (BlockPos c : BlockPos.betweenClosed(camp.offset(-2, 0, -2), camp.offset(2, 2, 2))) level.setBlockAndUpdate(c, Blocks.AIR.defaultBlockState());
+        return camp.immutable();
     }
 
     /** So many folk of one town, round its heart. */
@@ -158,7 +183,7 @@ public class QuestGameTests {
     public static void qg01_a_favour_from_a_real_need(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(2000);
+        time(level, 2000);
         BlockPos heart = heart(level, 960000, 40);
         List<VillageFolkEntity> folk = town(helper, heart, 4);
         VillageFolkEntity sick = folk.get(0), partner = folk.get(1);
@@ -166,7 +191,7 @@ public class QuestGameTests {
         Villages.Village v = Villages.get(village);
         sick.life().partnerWith(partner.getUUID(), partner.displayNameCap());
         partner.life().partnerWith(sick.getUUID(), sick.displayNameCap());
-        Container box = stores(level, heart, 6, 6, new ItemStack(Items.BREAD, 8));
+        stores(level, heart, 6, 6, new ItemStack(Items.BREAD, 8));
         Villages.forgetStores(village);
         sick.setHealth(sick.getMaxHealth() * 0.4F);
         partner.earn(20);
@@ -187,13 +212,14 @@ public class QuestGameTests {
         p.getInventory().add(new ItemStack(Items.HONEY_BOTTLE, 3));
         int purse0 = partner.purse(), coins0 = Market.coinsHeld(p), aff0 = partner.persona().affinity(p.getUUID());
         float hp0 = sick.getHealth();
+        int honey0 = stock(level, village, s -> s.is(Items.HONEY_BOTTLE));
         Standing.stir(village, p.getUUID());
         int score0 = Standing.of(village, p.getUUID(), level.getGameTime()).score();
         String done = FolkTalk.answer(partner, p, TalkTopic.SAY, "Here you are — I've brought it.");
         int purse1 = partner.purse(), coins1 = Market.coinsHeld(p), aff1 = partner.persona().affinity(p.getUUID());
         Standing.stir(village, p.getUUID());
         int score1 = Standing.of(village, p.getUUID(), level.getGameTime()).score();
-        int honey = count(box, s -> s.is(Items.HONEY_BOTTLE));
+        int honey = stock(level, village, s -> s.is(Items.HONEY_BOTTLE)) - honey0;
         Kit.log("qg01 handed over -> " + done + " | purse " + purse0 + " -> " + purse1 + ", player's coin " + coins0 + " -> " + coins1 + ", warmth " + aff0 + " -> "
             + aff1 + ", standing " + score0 + " -> " + score1 + ", patient " + hp0 + " -> " + sick.getHealth() + ", honey in the stores " + honey);
         helper.assertTrue(q.state == State.DONE, "done: " + q.state + " " + steps(q));
@@ -216,7 +242,7 @@ public class QuestGameTests {
     public static void qg02_the_town_two_players_giving_up(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(2000);
+        time(level, 2000);
         BlockPos heart = heart(level, 962000, 60);
         List<VillageFolkEntity> folk = town(helper, heart, 5);
         VillageFolkEntity elder = folk.get(0);
@@ -224,37 +250,47 @@ public class QuestGameTests {
         Villages.Village v = Villages.get(village);
         Villages.electElder(village, elder, QuestRun.day(level));
         Ledger.addCoins(village, 50);
+        // Two dens, set down now and looked at a moment later, once the town can see them.
         List<Spider> den = spiders(level, heart.offset(30, 0, 10), 3);
-        Quest q = QuestMaker.offerForTests(level, v, "den");
-        Kit.log("qg02 offer: " + (q == null ? "none" : q.title + " by " + q.giverName + ", " + q.coins + " coins from the " + q.payer + "; " + steps(q)));
-        helper.assertTrue(q != null && q.giver.equals(elder.getUUID()) && "treasury".equals(q.payer) && q.coins > 0,
-            "the elder offers a den, paid by the treasury: " + (q == null ? "none" : q.giverName + " " + q.payer + " " + q.coins));
-        Player one = helper.makeMockPlayer(GameType.SURVIVAL), two = helper.makeMockPlayer(GameType.SURVIVAL);
-        String first = QuestRun.accept(level, elder, one);
-        String second = QuestRun.accept(level, elder, two);
-        Kit.log("qg02 the first: " + first + " | the second: " + second);
-        helper.assertTrue(one.getUUID().equals(q.player) && QuestBook.active(two.getUUID()).isEmpty() && second.contains("already"),
-            "one taker only: " + q.playerName + "; the second told: " + second);
-        for (Spider s : den) QuestRun.killed(level, one, s);
-        helper.assertTrue(q.steps.get(0).done, "the den cleared: " + steps(q));
-        int treasury0 = Ledger.coins(village), coins0 = Market.coinsHeld(one);
-        String told = QuestRun.talk(level, elder, one, null);
-        int treasury1 = Ledger.coins(village), coins1 = Market.coinsHeld(one);
-        Kit.log("qg02 told the elder -> " + told + " | treasury " + treasury0 + " -> " + treasury1 + ", player " + coins0 + " -> " + coins1);
-        helper.assertTrue(q.state == State.DONE && treasury0 - treasury1 == q.coins && coins1 - coins0 == q.coins,
-            "paid out of the treasury: " + q.coins + "; treasury " + treasury0 + " -> " + treasury1 + ", player " + coins0 + " -> " + coins1);
-        // A second den: the second player takes it, and gives it up.
-        for (Spider s : den) s.discard();
-        spiders(level, heart.offset(-30, 0, -10), 3);
-        Quest again = QuestMaker.offerForTests(level, v, "den");
-        helper.assertTrue(again != null, "a second den offered");
-        QuestRun.accept(level, elder, two);
-        int aff0 = elder.persona().affinity(two.getUUID()), town0 = folk.get(2).persona().affinity(two.getUUID());
-        String gaveUp = QuestRun.abandon(level, again, two);
-        int aff1 = elder.persona().affinity(two.getUUID()), town1 = folk.get(2).persona().affinity(two.getUUID());
-        Kit.log("qg02 given up -> " + gaveUp + " | the elder " + aff0 + " -> " + aff1 + ", a neighbour " + town0 + " -> " + town1 + "; " + again.state);
-        helper.assertTrue(again.state == State.ABANDONED && aff0 - aff1 >= 12, "given up: the elder let down: " + aff0 + " -> " + aff1);
-        helper.succeed();
+        List<Spider> den2 = spiders(level, heart.offset(-30, 0, -10), 3);
+        helper.runAtTickTime(10, () -> {
+            int seen = level.getEntitiesOfClass(net.minecraft.world.entity.monster.Monster.class,
+                new net.minecraft.world.phys.AABB(v.centre()).inflate(96, 48, 96), net.minecraft.world.entity.LivingEntity::isAlive).size();
+            Quest q = QuestMaker.offerForTests(level, v, "den");
+            Kit.log("qg02 offer: " + (q == null ? "none" : q.title + " by " + q.giverName + ", " + q.coins + " coins from the " + q.payer + "; " + steps(q))
+                + " (monsters about the town " + seen + "; the spiders alive " + den.stream().filter(Spider::isAlive).count() + "+"
+                + den2.stream().filter(Spider::isAlive).count() + ")");
+            helper.assertTrue(q != null && q.giver.equals(elder.getUUID()) && "treasury".equals(q.payer) && q.coins > 0,
+                "the elder offers a den, paid by the treasury: " + (q == null ? "none" : q.giverName + " " + q.payer + " " + q.coins));
+            List<Spider> first = q.steps.get(0).at.distSqr(den.get(0).blockPosition()) < 24 * 24 ? den : den2;
+            List<Spider> other = first == den ? den2 : den;
+            Player one = helper.makeMockPlayer(GameType.SURVIVAL), two = helper.makeMockPlayer(GameType.SURVIVAL);
+            String took = QuestRun.accept(level, elder, one);
+            String second = QuestRun.accept(level, elder, two);
+            Kit.log("qg02 the first: " + took + " | the second: " + second);
+            helper.assertTrue(one.getUUID().equals(q.player) && QuestBook.active(two.getUUID()).isEmpty() && second.contains("already"),
+                "one taker only: " + q.playerName + "; the second told: " + second);
+            for (Spider s : first) QuestRun.killed(level, one, s);
+            helper.assertTrue(q.steps.get(0).done, "the den cleared: " + steps(q));
+            int treasury0 = Ledger.coins(village), coins0 = Market.coinsHeld(one);
+            String told = QuestRun.talk(level, elder, one, null);
+            int treasury1 = Ledger.coins(village), coins1 = Market.coinsHeld(one);
+            Kit.log("qg02 told the elder -> " + told + " | treasury " + treasury0 + " -> " + treasury1 + ", player " + coins0 + " -> " + coins1);
+            helper.assertTrue(q.state == State.DONE && treasury0 - treasury1 == q.coins && coins1 - coins0 == q.coins,
+                "paid out of the treasury: " + q.coins + "; treasury " + treasury0 + " -> " + treasury1 + ", player " + coins0 + " -> " + coins1);
+            // The second den: the second player takes it, and gives it up.
+            for (Spider s : first) s.discard();
+            Quest again = QuestMaker.offerForTests(level, v, "den");
+            helper.assertTrue(again != null && again.steps.get(0).at.distSqr(other.get(0).blockPosition()) < 24 * 24, "the second den offered");
+            QuestRun.accept(level, elder, two);
+            int aff0 = elder.persona().affinity(two.getUUID()), town0 = folk.get(2).persona().affinity(two.getUUID());
+            String gaveUp = QuestRun.abandon(level, again, two);
+            int aff1 = elder.persona().affinity(two.getUUID()), town1 = folk.get(2).persona().affinity(two.getUUID());
+            Kit.log("qg02 given up -> " + gaveUp + " | the elder " + aff0 + " -> " + aff1 + ", a neighbour " + town0 + " -> " + town1 + "; " + again.state);
+            helper.assertTrue(again.state == State.ABANDONED && aff0 - aff1 >= 12, "given up: the elder let down: " + aff0 + " -> " + aff1);
+            for (Spider s : other) s.discard();
+            helper.succeed();
+        });
     }
 
     private static List<Spider> spiders(ServerLevel level, BlockPos at, int n) {
@@ -283,10 +319,11 @@ public class QuestGameTests {
     public static void qg03_a_letter_and_its_answer(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(2000);
+        time(level, 2000);
         BlockPos a = heart(level, 964000, 30);
         Kit.hold(level, 964400, Z, 30);
         Kit.prepare(level, 964400, Z, 30);
+        Kit.live(level, 964400, Z, 30);
         BlockPos b = Kit.surface(level, 964400, Z);
         List<VillageFolkEntity> here = town(helper, a, 4);
         List<VillageFolkEntity> there = town(helper, b, 4);
@@ -337,7 +374,7 @@ public class QuestGameTests {
     public static void qg04_lost_at_dusk(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(2000);
+        time(level, 2000);
         BlockPos heart = heart(level, 966000, 70);
         List<VillageFolkEntity> folk = town(helper, heart, 4);
         VillageFolkEntity mother = folk.get(0), father = folk.get(1), neighbour = folk.get(2);
@@ -352,18 +389,20 @@ public class QuestGameTests {
         child.ensurePersona();
         mother.earn(20);
         father.earn(10);
-        Container box = stores(level, heart, 6, 6, new ItemStack(Items.OAK_PLANKS, 4), new ItemStack(Items.STICK, 4), new ItemStack(Items.PAPER, 2),
+        // The builders' forty-eight planks are kept back from any maker (Bench): sixty, so the toy has its one.
+        stores(level, heart, 6, 6, new ItemStack(Items.OAK_PLANKS, 60), new ItemStack(Items.STICK, 4), new ItemStack(Items.PAPER, 2),
             new ItemStack(Items.YELLOW_DYE, 1), new ItemStack(Items.BLUE_DYE, 1));
         Villages.forgetStores(village);
         BlockPos place = Kit.surface(level, heart.getX() + 45, heart.getZ() + 20);
-        int planks0 = count(box, s -> s.is(Items.OAK_PLANKS)) + count(box, s -> s.is(Items.STICK));
+        Predicate<ItemStack> wood = s -> s.is(Items.OAK_PLANKS) || s.is(Items.STICK);
+        int planks0 = stock(level, village, wood);
         Quest q = QuestStories.beginForTests(level, v, "child", Map.of("child", child, "parent", mother, "friend", neighbour, "place", place, "variant", "woods"));
         Kit.log("qg04 begun: " + (q == null ? "no — " + QuestStories.whyForTests(village) : q.title + " by " + q.giverName + "; the child at "
             + child.blockPosition().toShortString() + ", its place " + place.toShortString()));
         helper.assertTrue(q != null && q.state == State.OFFERED, "the story offered: " + QuestStories.whyForTests(village));
         helper.assertTrue(child.blockPosition().distSqr(place) < 9, "the child gone to its place: " + child.blockPosition().toShortString());
-        ItemEntity toy = level.getEntity(UUID.fromString(q.flag("toy"))) instanceof ItemEntity e ? e : null;
-        int planks1 = count(box, s -> s.is(Items.OAK_PLANKS)) + count(box, s -> s.is(Items.STICK));
+        ItemEntity toy = q.flag("toy").isEmpty() ? null : level.getEntity(UUID.fromString(q.flag("toy"))) instanceof ItemEntity e ? e : null;
+        int planks1 = stock(level, village, wood);
         helper.assertTrue(toy != null && toy.getItem().is(McAssistantMod.WOODEN_TOY.get()) && planks1 < planks0,
             "its wooden horse, of the stores' wood, on the way: " + planks0 + " -> " + planks1);
         Player p = helper.makeMockPlayer(GameType.SURVIVAL);
@@ -387,6 +426,7 @@ public class QuestGameTests {
         QuestRun.checkForTests(level, p);
         helper.assertTrue(q.current() != null && "parent".equals(q.current().key), "home, and to its parent: " + steps(q));
         int purses0 = mother.purse() + father.purse(), coins0 = Market.coinsHeld(p), fond0 = child.persona().affinity(p.getUUID());
+        int paper0 = stock(level, village, s -> s.is(Items.PAPER));
         String reunion = QuestRun.talk(level, mother, p, null);
         int purses1 = mother.purse() + father.purse(), coins1 = Market.coinsHeld(p), fond1 = child.persona().affinity(p.getUUID());
         int drawings = count(p, s -> s.is(McAssistantMod.CHILDS_DRAWING.get()) && questOf(s) == q.id);
@@ -395,8 +435,8 @@ public class QuestGameTests {
         Kit.log("qg04 the chronicle: " + chronicle(village));
         helper.assertTrue(q.state == State.DONE && purses0 - purses1 == q.coins && coins1 - coins0 == q.coins && q.coins > 0,
             "done, paid out of the parents' purses: " + q.coins + "; " + purses0 + " -> " + purses1);
-        helper.assertTrue(fond1 >= 60 && drawings == 1 && count(box, s -> s.is(Items.PAPER)) == 1, "the child's lasting fondness, and its drawing of the stores' paper: "
-            + fond1 + ", " + drawings);
+        helper.assertTrue(fond1 >= 60 && drawings == 1 && paper0 - stock(level, village, s -> s.is(Items.PAPER)) == 1,
+            "the child's lasting fondness, and its drawing of the stores' paper: " + fond1 + ", " + drawings);
         helper.assertTrue(chronicle(village).contains("was found by") && QuestBook.titles(p.getUUID(), village).contains("Finder of the Lost"),
             "the chronicle and the title: " + QuestBook.titles(p.getUUID(), village));
         helper.succeed();
@@ -414,7 +454,7 @@ public class QuestGameTests {
     public static void qg05_the_smugglers_cave(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(2000);
+        time(level, 2000);
         BlockPos heart = heart(level, 968000, 60);
         List<VillageFolkEntity> folk = town(helper, heart, 7);
         VillageFolkEntity keeper = folk.get(0), elder = folk.get(1), ring = folk.get(2), acc = folk.get(3), gossip = folk.get(4);
@@ -425,20 +465,19 @@ public class QuestGameTests {
         Villages.electElder(village, elder, QuestRun.day(level));
         ring.earn(30);
         Ledger.addCoins(village, 60);
-        Container box = stores(level, heart, 6, 6, new ItemStack(Items.IRON_INGOT, 24), new ItemStack(Items.GOLD_INGOT, 9), new ItemStack(Items.PAPER, 6),
-            new ItemStack(Items.STRING, 2), new ItemStack(Items.INK_SAC, 2), new ItemStack(Items.CHEST, 1), new ItemStack(Items.TORCH, 4),
+        // String: the fishers' and the smith's two are kept back from any maker (Bench), so four for the ledger's one.
+        stores(level, heart, 6, 6, new ItemStack(Items.IRON_INGOT, 24), new ItemStack(Items.GOLD_INGOT, 9), new ItemStack(Items.PAPER, 6),
+            new ItemStack(Items.STRING, 4), new ItemStack(Items.INK_SAC, 2), new ItemStack(Items.CHEST, 1), new ItemStack(Items.TORCH, 4),
             new ItemStack(Items.CRAFTING_TABLE, 1));
         Villages.forgetStores(village);
-        // A hollow under the ground, out past the town: the camp.
-        BlockPos top = Kit.surface(level, heart.getX() + 40, heart.getZ() - 20);
-        BlockPos camp = top.below(8);
-        for (BlockPos c : BlockPos.betweenClosed(camp.offset(-2, 0, -2), camp.offset(2, 2, 2))) level.setBlockAndUpdate(c, Blocks.AIR.defaultBlockState());
-        for (BlockPos c : BlockPos.betweenClosed(camp.offset(-2, -1, -2), camp.offset(2, -1, 2))) level.setBlockAndUpdate(c, Blocks.STONE.defaultBlockState());
-        int iron0 = count(box, s -> s.is(Items.IRON_INGOT));
+        // A hollow in a hill out past the town: the camp.
+        BlockPos camp = hollow(level, heart, 40, -20);
+        Predicate<ItemStack> iron = s -> s.is(Items.IRON_INGOT);
+        int iron0 = stock(level, village, iron);
         Quest q = QuestStories.beginForTests(level, v, "smugglers", Map.of("keeper", keeper, "elder", elder, "ring", ring, "accomplice", acc, "gossip", gossip,
             "camp", camp));
         Container cache = level.getBlockEntity(camp) instanceof Container c ? c : null;
-        int iron1 = count(box, s -> s.is(Items.IRON_INGOT)), stolen = cache == null ? 0 : count(cache, s -> s.is(Items.IRON_INGOT));
+        int iron1 = stock(level, village, iron), stolen = cache == null ? 0 : count(cache, iron);
         Kit.log("qg05 begun: " + (q == null ? "no — " + QuestStories.whyForTests(village) : q.title + "; stolen: " + q.flag("stolen") + "; iron in the stores " + iron0
             + " -> " + iron1 + ", in the camp " + stolen + "; the accomplice's purse " + acc.purse()));
         helper.assertTrue(q != null && cache != null && iron0 - iron1 == stolen && stolen > 0, "the goods really gone to the camp: " + iron0 + " -> " + iron1 + ", " + stolen);
@@ -454,7 +493,7 @@ public class QuestGameTests {
         at(p, QuestStories.place(q, "mouth"));
         QuestRun.checkForTests(level, p);
         helper.assertTrue("lights".equals(q.current().key), "the lights only show at night: " + steps(q));
-        level.setDayTime(14000);
+        time(level, 14000);
         QuestRun.checkForTests(level, p);
         at(p, camp);
         QuestRun.checkForTests(level, p);
@@ -473,7 +512,7 @@ public class QuestGameTests {
         Kit.log("qg05 confronted, turned in -> " + QuestRun.talk(level, acc, p, "turn"));
         int fines0 = Ledger.coins(village), accPurse0 = acc.purse();
         String trial = QuestRun.talk(level, elder, p, null);
-        int iron2 = count(box, s -> s.is(Items.IRON_INGOT));
+        int iron2 = stock(level, village, iron);
         Kit.log("qg05 the trial -> " + trial + " | treasury " + fines0 + " -> " + Ledger.coins(village) + ", the accomplice's purse " + accPurse0 + " -> " + acc.purse()
             + ", iron back in the stores " + iron1 + " -> " + iron2);
         helper.assertTrue("guilty".equals(q.flag("verdict")) && iron2 == iron0 && acc.purse() < accPurse0, "guilty, fined, and the goods back: " + q.flag("verdict")
@@ -501,7 +540,7 @@ public class QuestGameTests {
     public static void qg06_the_cursed_mine(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(3000);
+        time(level, 3000);
         BlockPos heart = heart(level, 970000, 60);
         List<VillageFolkEntity> folk = town(helper, heart, 5);
         VillageFolkEntity foreman = folk.get(0), old = folk.get(1), miner = folk.get(2), elder = folk.get(3);
@@ -510,12 +549,12 @@ public class QuestGameTests {
         for (VillageFolkEntity m : new VillageFolkEntity[]{ foreman, old, miner }) m.setJob(StationTask.MINE);
         Villages.electElder(village, elder, QuestRun.day(level));
         Ledger.addCoins(village, 60);
-        Container box = stores(level, heart, 6, 6, new ItemStack(Items.BOOK, 1), new ItemStack(Items.COAL, 2), new ItemStack(Items.TORCH, 16));
+        // Coal: the furnaces' eight are kept back from any maker (Bench), so twelve for the journal's one.
+        stores(level, heart, 6, 6, new ItemStack(Items.BOOK, 1), new ItemStack(Items.COAL, 12), new ItemStack(Items.TORCH, 16));
         Villages.forgetStores(village);
         BlockPos site = Kit.surface(level, heart.getX() + 35, heart.getZ());
-        BlockPos spawner = site.offset(3, -10, 2);
-        for (BlockPos c : BlockPos.betweenClosed(spawner.offset(-3, 0, -3), spawner.offset(3, 2, 3))) level.setBlockAndUpdate(c, Blocks.AIR.defaultBlockState());
-        for (BlockPos c : BlockPos.betweenClosed(spawner.offset(-3, -1, -3), spawner.offset(3, -1, 3))) level.setBlockAndUpdate(c, Blocks.STONE.defaultBlockState());
+        // The test world is four blocks of ground over the bottom of the world: the "deep level" is out on the flat.
+        BlockPos spawner = Kit.surface(level, site.getX() + 6, site.getZ() + 4);
         level.setBlockAndUpdate(spawner, Blocks.SPAWNER.defaultBlockState());
         Quest q = QuestStories.beginForTests(level, v, "mine", Map.of("site", site, "foreman", foreman, "old", old, "place", spawner, "kind", "spawner"));
         Kit.log("qg06 begun: " + (q == null ? "no — " + QuestStories.whyForTests(village) : q.title + " by " + q.giverName + "; " + q.offer));
@@ -525,14 +564,19 @@ public class QuestGameTests {
         if (!miner.offWorkNow()) helper.assertTrue(refusing, "a miner refuses to go down while the curse is on");
         Player p = helper.makeMockPlayer(GameType.SURVIVAL);
         known(p, 5, foreman, old);
-        int torches0 = count(box, s -> s.is(Items.TORCH));
+        Predicate<ItemStack> torch = s -> s.is(Items.TORCH);
+        int torches0 = stock(level, village, torch);
         String took = QuestRun.accept(level, foreman, p);
-        Kit.log("qg06 taken -> " + took + " | torches in the stores " + torches0 + " -> " + count(box, s -> s.is(Items.TORCH)) + ", in hand " + count(p, s -> s.is(Items.TORCH)));
-        helper.assertTrue(q.state == State.ACTIVE && count(p, s -> s.is(Items.TORCH)) == 16 && count(box, s -> s.is(Items.TORCH)) == 0, "the foreman's torches, out of the stores");
+        int torches1 = stock(level, village, torch), inHand = count(p, torch);
+        Kit.log("qg06 taken -> " + took + " | torches in the stores " + torches0 + " -> " + torches1 + ", in hand " + inHand);
+        helper.assertTrue(q.state == State.ACTIVE && inHand == 16 && torches0 - torches1 == 16, "the foreman's torches, out of the stores: "
+            + torches0 + " -> " + torches1 + ", in hand " + inHand);
+        int books0 = stock(level, village, s -> s.is(Items.BOOK)), coal0 = stock(level, village, s -> s.is(Items.COAL));
         String tale = QuestRun.talk(level, old, p, null);
         int journals = count(p, s -> s.is(McAssistantMod.MINERS_JOURNAL.get()) && questOf(s) == q.id);
-        Kit.log("qg06 the old miner -> " + tale + " | journal " + journals + ", the stores' book " + count(box, s -> s.is(Items.BOOK)) + ", coal " + count(box, s -> s.is(Items.COAL)));
-        helper.assertTrue(journals == 1 && count(box, s -> s.is(Items.BOOK)) == 0, "the old miner's journal, of the stores' book and coal");
+        int books1 = stock(level, village, s -> s.is(Items.BOOK)), coal1 = stock(level, village, s -> s.is(Items.COAL));
+        Kit.log("qg06 the old miner -> " + tale + " | journal " + journals + ", the stores' books " + books0 + " -> " + books1 + ", coal " + coal0 + " -> " + coal1);
+        helper.assertTrue(journals == 1 && books0 - books1 == 1 && coal0 - coal1 == 1, "the old miner's journal, of the stores' book and coal");
         at(p, spawner.east(2));
         QuestRun.checkForTests(level, p);
         helper.assertTrue("seal".equals(q.current().key), "down at the deep level: " + steps(q));
@@ -567,12 +611,11 @@ public class QuestGameTests {
     public static void qg07_the_stolen_heirloom(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(2000);
+        time(level, 2000);
         BlockPos heart = heart(level, 972000, 40);
         List<VillageFolkEntity> folk = town(helper, heart, 4);
         Object[] setup = heirloomTown(helper, level, heart, folk);
         Quest q = (Quest) setup[0];
-        Container box = (Container) setup[1];
         VillageFolkEntity giver = folk.get(0), son = folk.get(1), neighbour = folk.get(2);
         UUID village = giver.ownerId();
         Predicate<ItemStack> heirloom = s -> (s.is(McAssistantMod.HEIRLOOM_RING.get()) || s.is(McAssistantMod.HEIRLOOM_LOCKET.get())) && questOf(s) == q.id;
@@ -594,7 +637,7 @@ public class QuestGameTests {
         String home = QuestRun.talk(level, giver, p, null);
         int medals = count(p, s -> s.is(McAssistantMod.TOWN_MEDAL.get()));
         Kit.log("qg07 home -> " + home + " | family purses " + purse0 + " -> " + (giver.purse() + son.purse()) + ", player " + coins0 + " -> " + Market.coinsHeld(p)
-            + ", warmth " + aff0 + " -> " + giver.persona().affinity(p.getUUID()) + ", medals " + medals + " (gold in the stores " + count(box, s -> s.is(Items.GOLD_INGOT))
+            + ", warmth " + aff0 + " -> " + giver.persona().affinity(p.getUUID()) + ", medals " + medals + " (gold in the stores " + stock(level, village, s -> s.is(Items.GOLD_INGOT))
             + "); ending: " + q.ending);
         helper.assertTrue(q.state == State.DONE && giver.countCarried(heirloom) == 1, "done, the heirloom home: " + q.state);
         int paid = QuestRewards.num(q.flag("paid"));
@@ -611,16 +654,18 @@ public class QuestGameTests {
         son.parentIds().add(giver.getUUID());
         giver.earn(20);
         neighbour.earn(5);
-        Container box = stores(level, heart, 6, 6, new ItemStack(Items.GOLD_INGOT, 3), new ItemStack(Items.EMERALD, 1), new ItemStack(Items.AMETHYST_SHARD, 1),
-            new ItemStack(Items.STRING, 3), new ItemStack(Items.GLASS_PANE, 1), new ItemStack(Items.CRAFTING_TABLE, 1));
+        // The mint's twenty-seven gold bars and the fishers' two string are kept back from any maker (Bench): more than
+        // that, for the heirloom (a bar's nuggets) and, at the story's end, the medal (a bar on a string).
+        Container box = stores(level, heart, 6, 6, new ItemStack(Items.GOLD_INGOT, 32), new ItemStack(Items.EMERALD, 1), new ItemStack(Items.AMETHYST_SHARD, 1),
+            new ItemStack(Items.STRING, 6), new ItemStack(Items.GLASS_PANE, 1), new ItemStack(Items.CRAFTING_TABLE, 1));
         Villages.forgetStores(village);
-        int gold0 = count(box, s -> s.is(Items.GOLD_INGOT)), treasury0 = Ledger.coins(village), purses0 = giver.purse() + son.purse();
+        int gold0 = stock(level, village, s -> s.is(Items.GOLD_INGOT)), treasury0 = Ledger.coins(village), purses0 = giver.purse() + son.purse();
         Quest q = QuestStories.beginForTests(level, Villages.get(village), "heirloom", Map.of("giver", giver, "child", son, "neighbour", neighbour, "truth", "neighbour"));
         Kit.log("heirloom begun: " + (q == null ? "no — " + QuestStories.whyForTests(village) : q.title + ": " + q.flag("owner") + " (" + q.flag("word") + ") in "
-            + q.flag("hidden") + "; gold " + gold0 + " -> " + count(box, s -> s.is(Items.GOLD_INGOT)) + ", treasury " + treasury0 + " -> " + Ledger.coins(village)
+            + q.flag("hidden") + "; gold " + gold0 + " -> " + stock(level, village, s -> s.is(Items.GOLD_INGOT)) + ", treasury " + treasury0 + " -> " + Ledger.coins(village)
             + ", family purses " + purses0 + " -> " + (giver.purse() + son.purse())));
         helper.assertTrue(q != null, "the story begun: " + QuestStories.whyForTests(village));
-        helper.assertTrue(count(box, s -> s.is(Items.GOLD_INGOT)) < gold0 && Ledger.coins(village) > treasury0,
+        helper.assertTrue(stock(level, village, s -> s.is(Items.GOLD_INGOT)) < gold0 && Ledger.coins(village) > treasury0,
             "the heirloom made of the stores' gold, and paid for out of the family's purses into the treasury");
         return new Object[]{ q, box };
     }
@@ -636,7 +681,7 @@ public class QuestGameTests {
     public static void qg08_the_heirloom_wrongly_accused(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(2000);
+        time(level, 2000);
         BlockPos heart = heart(level, 974000, 40);
         List<VillageFolkEntity> folk = town(helper, heart, 4);
         Quest q = (Quest) heirloomTown(helper, level, heart, folk)[0];
@@ -682,7 +727,7 @@ public class QuestGameTests {
     public static void qg09_a_cut_and_it_comes_out(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(14000);
+        time(level, 14000);
         BlockPos heart = heart(level, 976000, 60);
         List<VillageFolkEntity> folk = town(helper, heart, 6);
         VillageFolkEntity keeper = folk.get(0), elder = folk.get(1), ring = folk.get(2), acc = folk.get(3), gossip = folk.get(4);
@@ -690,12 +735,11 @@ public class QuestGameTests {
         keeper.setJob(StationTask.STORE);
         Villages.electElder(village, elder, QuestRun.day(level));
         ring.earn(40);
-        stores(level, heart, 6, 6, new ItemStack(Items.IRON_INGOT, 24), new ItemStack(Items.PAPER, 6), new ItemStack(Items.STRING, 2),
+        // String: the fishers' and the smith's two are kept back from any maker (Bench), so four for the ledger's one.
+        stores(level, heart, 6, 6, new ItemStack(Items.IRON_INGOT, 24), new ItemStack(Items.PAPER, 6), new ItemStack(Items.STRING, 4),
             new ItemStack(Items.INK_SAC, 2), new ItemStack(Items.CHEST, 1), new ItemStack(Items.CRAFTING_TABLE, 1));
         Villages.forgetStores(village);
-        BlockPos camp = Kit.surface(level, heart.getX() - 40, heart.getZ() + 20).below(8);
-        for (BlockPos c : BlockPos.betweenClosed(camp.offset(-1, 0, -1), camp.offset(1, 1, 1))) level.setBlockAndUpdate(c, Blocks.AIR.defaultBlockState());
-        level.setBlockAndUpdate(camp.below(), Blocks.STONE.defaultBlockState());
+        BlockPos camp = hollow(level, heart, -40, 20);
         Quest q = QuestStories.beginForTests(level, Villages.get(village), "smugglers", Map.of("keeper", keeper, "elder", elder, "ring", ring, "accomplice", acc,
             "gossip", gossip, "camp", camp));
         helper.assertTrue(q != null, "begun: " + QuestStories.whyForTests(village));
@@ -747,7 +791,7 @@ public class QuestGameTests {
     public static void qg10_kept_the_journal_the_board(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         clean(level);
-        level.setDayTime(2000);
+        time(level, 2000);
         BlockPos heart = heart(level, 978000, 40);
         List<VillageFolkEntity> folk = town(helper, heart, 4);
         VillageFolkEntity sick = folk.get(0), partner = folk.get(1);
@@ -755,7 +799,8 @@ public class QuestGameTests {
         Villages.Village v = Villages.get(village);
         sick.life().partnerWith(partner.getUUID(), partner.displayNameCap());
         partner.life().partnerWith(sick.getUUID(), sick.displayNameCap());
-        stores(level, heart, 6, 6, new ItemStack(Items.BREAD, 4), new ItemStack(Items.GOLD_INGOT, 3), new ItemStack(Items.CRAFTING_TABLE, 1));
+        // The mint's twenty-seven gold bars are kept back from any maker (Bench): the key's two bars and a nugget besides.
+        stores(level, heart, 6, 6, new ItemStack(Items.BREAD, 4), new ItemStack(Items.GOLD_INGOT, 32), new ItemStack(Items.CRAFTING_TABLE, 1));
         Villages.forgetStores(village);
         sick.setHealth(sick.getMaxHealth() * 0.4F);
         partner.earn(10);

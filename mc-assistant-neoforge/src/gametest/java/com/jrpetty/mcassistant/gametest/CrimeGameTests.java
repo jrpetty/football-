@@ -65,6 +65,7 @@ public class CrimeGameTests {
     /** The next day, at this hour. */
     private static void morning(ServerLevel level, long hour) {
         level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + hour);
+        level.updateSkyBrightness();                  // a witness's eyes go by the light, and the light by the sky's
     }
 
     private static VillageFolkEntity folk(GameTestHelper helper, ServerLevel level, BlockPos at, String who) {
@@ -171,11 +172,14 @@ public class CrimeGameTests {
             if (!cases.isEmpty()) {
                 Crime.Case c = cases.get(0);
                 logCase("cr01", c);
-                Kit.log("cr01 at tick " + t + ": the victim's purse " + victim.purse() + ", the culprit's " + culprit.purse() + ", at " + c.place);
+                // Its purse just before the deed, as the case has it: a poor folk may have had a coin or two from the poor box
+                // (or anybody else) since the test emptied it, and those are its own.
+                int before = c.culpritPurseBefore();
+                Kit.log("cr01 at tick " + t + ": the victim's purse " + victim.purse() + ", the culprit's " + before + " -> " + culprit.purse() + ", at " + c.place);
                 helper.assertTrue(culprit.getUUID().equals(c.culprit()) && victim.getUUID().equals(c.victim()), "the culprit's deed, on the victim");
                 helper.assertTrue(c.coins() >= 1 && c.coins() <= 5, "a few coins, never a ruinous sum: " + c.coins());
                 helper.assertTrue(victim.purse() == 10 - c.coins(), "the coins left the victim's purse: " + victim.purse());
-                helper.assertTrue(culprit.purse() == c.coins(), "and are in the culprit's: " + culprit.purse());
+                helper.assertTrue(culprit.purse() == before + c.coins(), "and are in the culprit's: " + before + " -> " + culprit.purse());
                 helper.assertTrue("the market".equals(c.place), "at the market: " + c.place);
                 helper.succeed();
                 return;
@@ -305,7 +309,7 @@ public class CrimeGameTests {
 
     /**
      * Convicted of picking a purse of ten, the culprit pays the coins back to the victim out of its own purse (the very
-     * coins it took), and owes the town its fine, having nothing left to pay it with.
+     * coins it took); the fine comes out of whatever is left in it, and what it cannot pay it owes the town.
      */
     @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "cr04_repaid")
     public static void cr04_repaid(GameTestHelper helper) {
@@ -348,10 +352,13 @@ public class CrimeGameTests {
             if (c == null) { helper.fail("cr04 the case is gone"); return; }
             if (c.stage() == Crime.Stage.CONVICTED) {
                 logCase("cr04", c);
-                Kit.log("cr04 after: the victim's purse " + victim.purse() + ", the culprit's " + culprit.purse() + ", it owes " + Crime.owesForTests(culprit));
+                Kit.log("cr04 after: the victim's purse " + victim.purse() + ", the culprit's " + culprit.purse() + "; fined " + c.fine() + ", "
+                    + c.finePaid() + " of it paid, " + Crime.owesTownForTests(culprit) + " owed to the town, " + Crime.owesForTests(culprit) + " owed in all");
                 helper.assertTrue(victim.purse() == 10, "the victim has its ten coins again: " + victim.purse());
-                helper.assertTrue(culprit.purse() == 0, "out of the culprit's purse: " + culprit.purse());
-                helper.assertTrue(Crime.owesForTests(culprit) >= 2, "and the fine is owed: " + Crime.owesForTests(culprit));
+                helper.assertTrue(Crime.owesForTests(culprit) == Crime.owesTownForTests(culprit), "nothing still owed to the victim");
+                // Whatever else was in its purse (the poor box's coin, say) went to the fine first; what it could not pay is owed.
+                helper.assertTrue(c.fine() >= 2 && c.finePaid() + Crime.owesTownForTests(culprit) == c.fine(),
+                    "the fine paid out of its purse, the rest owed: fined " + c.fine() + ", paid " + c.finePaid() + ", owed " + Crime.owesTownForTests(culprit));
                 helper.assertTrue(Crime.repaidForTests(victim), "the victim knows it was paid back");
                 helper.succeed();
                 return;
@@ -545,7 +552,8 @@ public class CrimeGameTests {
 
     /**
      * A folk already convicted once picks a purse, in front of a witness. Convicted again, it is sentenced to the stocks:
-     * the town puts a pair up on the square out of its stores (three planks and two logs), and it sits in them.
+     * the town puts a pair up on the square out of its stores (three planks, from whichever chest has them, and the two
+     * logs from the only chest that has any), and it sits in them.
      */
     @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "cr08_stocks")
     public static void cr08_stocks(GameTestHelper helper) {
@@ -594,12 +602,16 @@ public class CrimeGameTests {
             if (t % 100 == 0) Kit.log("cr08 tick " + t + ": sentence '" + Crime.sentenceForTests(culprit) + "', the stocks at " + stocks + ", " + culprit.debugLine());
             if (stocks != null && Crime.inStocksForTests(culprit)) {
                 logCase("cr08", c);
-                Kit.log("cr08 sat in the stocks at tick " + t + ": " + level.getBlockState(stocks) + "; the stores now hold " + count(level, chest, Items.OAK_LOG)
-                    + " logs and " + count(level, chest, Items.OAK_PLANKS) + " planks");
+                Villages.Village v = Villages.get(village);
+                Kit.log("cr08 sat in the stocks at tick " + t + ": " + level.getBlockState(stocks) + ", paid with " + Crime.stocksPaidForTests(v)
+                    + "; our chest now holds " + count(level, chest, Items.OAK_LOG) + " logs and " + count(level, chest, Items.OAK_PLANKS) + " planks, the stores "
+                    + Crime.storesForTests(level, v, Items.OAK_LOG) + " logs and " + Crime.storesForTests(level, v, Items.OAK_PLANKS) + " planks");
                 helper.assertTrue(level.getBlockState(stocks).getBlock() instanceof StocksBlock, "the stocks stand on the square");
                 helper.assertTrue("stocks".equals(Crime.sentenceForTests(culprit)), "a second offence: the stocks");
-                helper.assertTrue(count(level, chest, Items.OAK_LOG) == 2 && count(level, chest, Items.OAK_PLANKS) == 1,
-                    "made of the stores' timber: " + count(level, chest, Items.OAK_LOG) + " logs, " + count(level, chest, Items.OAK_PLANKS) + " planks left");
+                // The planks come out of whichever of the stores' chests the town reaches first (a founding chest has plenty);
+                // the town's only logs are the two in ours, so it is ours that is two logs the lighter.
+                helper.assertTrue("three planks and two logs".equals(Crime.stocksPaidForTests(v)), "made out of the stores: " + Crime.stocksPaidForTests(v));
+                helper.assertTrue(count(level, chest, Items.OAK_LOG) == 2, "two of the stores' logs went into them: " + count(level, chest, Items.OAK_LOG) + " left");
                 helper.succeed();
                 return;
             }

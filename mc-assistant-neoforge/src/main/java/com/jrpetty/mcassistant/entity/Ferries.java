@@ -88,6 +88,8 @@ public final class Ferries {
         State state = State.SURVEYED;
         int landings;
         @Nullable UUID boat, ferryman;
+        /** [itemaudit] The boat itself, kept to hand between ticks (never saved): see boat(). */
+        @Nullable transient Boat held;
         int boatAt;
         long startedDay = -1, retiredDay = -1;
         public int crossings, fares, free, players;
@@ -582,8 +584,13 @@ public final class Ferries {
     @Nullable
     static Boat boat(ServerLevel level, Crossing c) {
         if (c.boat == null) return null;
+        // [itemaudit] The boat is asked after every tick while it rows (Ferries.tick): kept to hand between ticks rather
+        // than looked up afresh each time, and looked up again only once it is gone, unloaded, or another boat.
+        Boat held = c.held;
+        if (held != null && held.isAlive() && !held.isRemoved() && held.level() == level && c.boat.equals(held.getUUID())) return held;
         Entity e = level.getEntity(c.boat);
-        return e instanceof Boat b && b.isAlive() ? b : null;
+        c.held = e instanceof Boat b && b.isAlive() ? b : null;
+        return c.held;
     }
 
     /** The town's boat in the water at a landing: one out of the stores, or five of their planks made into one. */

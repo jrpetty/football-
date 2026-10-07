@@ -284,6 +284,7 @@ public final class Budget {
         for (Item it : b.held.keySet()) {
             ItemStack one = new ItemStack(it);
             if (luxury(one) || it == Items.POTION || it == Items.ENCHANTED_BOOK) continue;   // on the café's and the shop's counters
+            if (Weave.unsellable(one)) continue;                                              // [weave] a forged coin is never sold
             int n = spare(level, village, one);
             if (n <= 0) continue;
             double each = playerPrice(one);
