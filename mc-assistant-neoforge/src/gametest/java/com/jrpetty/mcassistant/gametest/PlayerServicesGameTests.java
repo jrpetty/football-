@@ -492,7 +492,7 @@ public class PlayerServicesGameTests {
         Villages.forgetStores(village);
         List<String> first = PlayerServices.milestonesForTests(level, village, -1);
         helper.assertTrue(first.isEmpty() && PlayerServices.milestones(village).contains("seen"), "the first look celebrates nothing: " + first);
-        box.setItem(2, new ItemStack(Items.DIAMOND));
+        box.setItem(5, new ItemStack(Items.DIAMOND));                      // [fireworks] a slot of its own: the rockets are in the third
         box.setChanged();
         List<String> diamond = PlayerServices.milestonesForTests(level, village, -1);
         int paper = count(box, Items.PAPER), powder = count(box, Items.GUNPOWDER), rockets = count(box, Items.FIREWORK_ROCKET);

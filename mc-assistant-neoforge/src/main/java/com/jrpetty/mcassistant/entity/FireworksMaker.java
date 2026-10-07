@@ -563,7 +563,28 @@ public final class FireworksMaker {
     /** The town's colours: its arms' field and charges (Heraldry: drawn now, if it has not drawn them yet), bright first, three at most. */
     public static List<DyeColor> townColours(UUID village) {
         Heraldry.Design d = Heraldry.design(village);
-        if (d == null) d = Heraldry.draw(village);
+        if (d == null) {
+            // No banner chosen yet: the colours as first drawn, kept (a drawing follows who leads, and the rockets made
+            // for a night should not change colour under the maker's hands), till the town chooses its arms.
+            String kept = Ledger.note(village, "fw.colours");
+            if (kept != null && !kept.isEmpty()) {
+                List<DyeColor> out = new ArrayList<>();
+                for (String c : kept.split(",")) {
+                    DyeColor dc = DyeColor.byName(c, null);
+                    if (dc != null) out.add(dc);
+                }
+                if (!out.isEmpty()) return List.copyOf(out);
+            }
+            List<DyeColor> drawn = colours(Heraldry.draw(village));
+            List<String> names = new ArrayList<>();
+            for (DyeColor c : drawn) names.add(c.getName());
+            Ledger.note(village, "fw.colours", String.join(",", names));
+            return drawn;
+        }
+        return colours(d);
+    }
+
+    private static List<DyeColor> colours(Heraldry.Design d) {
         LinkedHashSet<DyeColor> all = new LinkedHashSet<>();
         all.add(d.field());
         for (Heraldry.Layer l : d.layers()) all.add(l.colour());

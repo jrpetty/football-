@@ -307,13 +307,13 @@ public final class FireworkShows {
 
     /**
      * Nobody on the place or over it: a rocket goes straight up out of the middle of it (a quarter of a block wide), so
-     * one standing on it, or anywhere over it, would have it in the face. Never at folk. The crew stood two blocks back
+     * one standing on it, or anywhere over it, would have it in the face. Never at folk. The crew stood three blocks back
      * behind the rack, and the crowd a dozen off, are clear of it; and its burst is nine blocks up and more, out of the
      * reach of its blast.
      */
     static boolean safe(ServerLevel level, BlockPos p) {
         if (!open(level, p)) return false;
-        AABB column = new AABB(p).inflate(0.25, 0.0, 0.25).expandTowards(0.0, 32.0, 0.0);
+        AABB column = new AABB(p).expandTowards(0.0, 32.0, 0.0);              // the place itself, and the sky over it
         return level.getEntitiesOfClass(LivingEntity.class, column, LivingEntity::isAlive).isEmpty();
     }
 
@@ -580,7 +580,8 @@ public final class FireworkShows {
         if (s == null) return false;
         int i = s.crew.indexOf(f.getUUID());
         if (i < 0 || f.isSleeping() || f.getTarget() != null) return false;
-        BlockPos stand = s.spot.relative(s.back, 2).relative(s.side, i == 0 ? 0 : i == 1 ? -2 : 2);
+        // Three blocks back: a folk walked to a place stops a block or so short of it, and two back left it on the rack.
+        BlockPos stand = s.spot.relative(s.back, 3).relative(s.side, i == 0 ? 0 : i == 1 ? -2 : 2);
         f.hobbyNow = "setting off the fireworks for " + s.words;
         f.lastLeisureTick = f.tickCount;
         double dx = f.getX() - (stand.getX() + 0.5), dz = f.getZ() - (stand.getZ() + 0.5);
@@ -810,7 +811,22 @@ public final class FireworkShows {
         out.add("tally: " + t[0] + " stars, " + t[1] + " display rockets, " + t[2] + " elytra rockets made; " + t[3] + " displays, "
             + t[4] + " rockets fired; " + t[5] + " gunpowder fetched from the watch's creepers");
         Show s = SHOWS.get(id);
-        if (s != null) out.add("NOW: " + s.words + ", " + s.fired + "/" + s.planned + " up, from " + s.spot.toShortString());
+        if (s != null) {
+            long now = level.getGameTime();
+            StringBuilder crew = new StringBuilder();
+            for (UUID u : s.crew) {
+                crew.append(crew.length() == 0 ? "" : ", ");
+                crew.append(level.getEntity(u) instanceof VillageFolkEntity f
+                    ? f.displayNameCap() + " " + String.format(java.util.Locale.ROOT, "%.1f", Math.sqrt(f.blockPosition().distSqr(s.spot))) + " off"
+                    : "gone");
+            }
+            int clear = 0;
+            for (int off : RACK) if (safe(level, s.spot.relative(s.side, off))) clear++;
+            out.add("NOW: " + s.words + ", " + s.fired + "/" + s.planned + " up, from " + s.spot.toShortString() + " (volley " + s.next
+                + ", due in " + (s.nextAt - now) + ", begun " + (now - s.began) + " ago, storm " + (s.storm < 0 ? "none" : now - s.storm + " ago")
+                + ", blocked " + (s.blockedSince < 0 ? "no" : now - s.blockedSince + " ago") + ", rack clear " + clear + "/5, crew at it "
+                + crewAt(level, s) + " [" + crew + "], works at once " + TownJobs.instantNow() + ")");
+        }
         String review = gazetteNow(id);
         out.add("last review: " + review);
         return out;
