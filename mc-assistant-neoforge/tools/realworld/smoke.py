@@ -2920,6 +2920,18 @@ def main():
         transport_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("transport stage failed: %s" % e)
+    try:
+        kitchen_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("kitchen stage failed: %s" % e)
+    try:
+        fletcher_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("fletcher stage failed: %s" % e)
+    try:
+        golems_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("golems stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
