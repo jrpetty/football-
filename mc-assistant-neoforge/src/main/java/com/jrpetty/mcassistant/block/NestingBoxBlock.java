@@ -31,8 +31,8 @@ import javax.annotation.Nullable;
 
 /**
  * [fields] The nesting box: a low plank box lined with hay, set in the pen or the coop. A hen within six blocks lays into
- * it (nine eggs at most) instead of onto the ground, and lays a little more often while it has hay in it (FieldTools);
- * the rancher empties it into the stores on its round and lines it afresh with a little of the stores' wheat. What is
+ * it (nine slots of sixteen eggs) instead of onto the ground, and lays a little more often while it has hay in it
+ * (FieldTools); the rancher empties it into the stores on its round and lines it afresh with a little of the stores' wheat. What is
  * in it shows: the hay, and one, two or a clutch of eggs. A player takes the eggs out with an empty hand, and lines it
  * with wheat or a bale of hay.
  */

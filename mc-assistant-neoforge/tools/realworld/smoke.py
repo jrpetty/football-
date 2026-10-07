@@ -2499,6 +2499,49 @@ def kitchen_stage(r, look, cx, cz):
     say("alive after the kitchen: %s" % client_alive())
 
 
+def fields_items_stage(r, look, cx, cz):
+    """[fields] The tools of the fields and the pens (entity/FieldTools, item/FieldItems). (Named so: fields_stage is the
+    farms' own stage, above.) Run out past the town's west side, /village items fields stage levels a patch of ground and
+    sets out a wall of item frames with the copper watering can, the seed satchel, the copper sickle and the bee smoker over
+    the nesting box, the feed trough, the fish trap and the rain barrel, the four blocks again in a row before it (eggs on
+    hay, a heaped trough, a trap with a catch in its pool, a barrel brim full); a wheat field round a water hole with a
+    farmer watering its young rows from the can (splashing for a minute) beside a rain barrel, and another at the ripe rows
+    with the sickle and the satchel; a pen with its box and trough, two hens and two sheep, the rancher at the gate; a pond
+    with two traps and the fisher; a full hive with the beekeeper smoking it. Pictures: the wall close up, the watering, the
+    reaping, the pen, the traps, the smoker. Then /village items fields gives the town's books on its tools."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx - 44, cz + 30                          # beside the town, where the stage levels its own ground
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 14, sz - 14))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village items fields stage" % (sx, sz))
+    say("fields stage: " + out[:1200])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the fields' tools; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("34-fields-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("fields-1-showcase", "1-showcase", 8)
+    shoot("fields-2-watering", "2-watering", 5)
+    shoot("fields-3-reaping", "3-reaping", 5)
+    shoot("fields-4-pen", "4-pen", 5)
+    shoot("fields-5-traps", "5-traps", 5)
+    shoot("fields-6-smoker", "6-smoker", 5)
+    say("fields' tools: " + r.cmd("execute positioned %d %d %d run village items fields" % (cx, hy + 1, cz))[:1200])
+    say("alive after the fields' tools: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

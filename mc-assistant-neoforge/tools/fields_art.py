@@ -285,9 +285,10 @@ def sickle():
 
 SMOKER_PAL = dict(COPPER)
 SMOKER_PAL.update({
-    "s": hexc("#e2e2e2", 225),   # smoke
-    "S": hexc("#a9a9a9", 190),
-    "f": hexc("#f4f4f4", 150),
+    "s": hexc("#f6f6f2", 240),   # smoke: the puff's lit top,
+    "S": hexc("#cfcfcb", 230),   # its body,
+    "K": hexc("#9d9d99", 215),   # its shadowed underside,
+    "f": hexc("#e8e8e4", 140),   # and its thinning edge
     "L": hexc("#8a5a33"),        # the bellows' leather
     "M": hexc("#5e3a1f"),        # its folds
     "B": hexc("#6e4f2c"),        # the bellows' boards
@@ -338,9 +339,9 @@ def smoker():
     for (x, y) in [(5, 10), (5, 11), (6, 10), (6, 11)]:
         cv.put(x, y, "d")                                         # the bellows' pipe into the can
     cv.outline("o")
-    # The smoke: a puff from the nozzle, curling up and away.
-    for (x, y, c) in [(12, 2, "s"), (13, 2, "S"), (12, 1, "s"), (13, 1, "s"), (14, 1, "f"), (13, 0, "f"), (14, 0, "s"),
-                      (15, 0, "f"), (11, 2, "f"), (15, 1, "f")]:
+    # The smoke: a wisp from the nozzle rising up and away to the right, lit above and shadowed beneath, thinning out.
+    for (x, y, c) in [(12, 2, "S"), (12, 1, "f"), (13, 1, "s"), (14, 1, "S"), (14, 0, "s"), (15, 0, "f"), (15, 1, "K"),
+                      (13, 2, "K")]:
         if cv.empty(x, y):
             cv.put(x, y, c)
     return cv.image(SMOKER_PAL)

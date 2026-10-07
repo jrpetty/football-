@@ -1394,6 +1394,30 @@ public final class FieldTools {
 
     // ------------------------------------------------------------------ the makers
 
+    /**
+     * Who makes each of the eight, and when the town wants one (Makers: the books, the docs and the item audit ask it).
+     * Said here, beside the makers themselves, at the mod's start (FieldItems.register).
+     */
+    public static void declareMakers() {
+        String farmers = "for every farmer without one (wanted)";
+        Makers.declare("copper_watering_can", "the smith (the smelter with no smith or shop; the shop's workshop)", farmers,
+            "FieldTools.craft / smelter, from Crafts.now");
+        Makers.declare("copper_sickle", "the smith (the smelter with no smith or shop; the shop's workshop)", farmers,
+            "FieldTools.craft / smelter, from Crafts.now");
+        Makers.declare("seed_satchel", "the tailor (the rancher with no tailor or shop; the shop's workshop)", farmers,
+            "FieldTools.craft / rancher");
+        Makers.declare("bee_smoker", "the smith (the smelter with no smith or shop; the shop's workshop)",
+            "for every beekeeper without one", "FieldTools.craft, from Crafts.now");
+        Makers.declare("nesting_box", "the rancher (the shop's workshop)", "when the hens on its ground have no box to lay in",
+            "FieldTools.rancher / setOut");
+        Makers.declare("feed_trough", "the rancher (the shop's workshop)", "when two grown animals on its ground have no trough",
+            "FieldTools.rancher / setOut");
+        Makers.declare("fish_trap", "the fisher (the shop's workshop)", "till each fisher has two traps set, four to the town",
+            "FieldTools.fisher");
+        Makers.declare("rain_barrel", "the shop's workshop (with no shop, a hand of the town's at the bench)",
+            "for every workshop and every field with no barrel by it", "FieldTools.town / craft");
+    }
+
     /** Put the fields' wants on the shop's order book (once, at the first town round: Pets.demandOnce's reason). */
     static void demandOnce() {
         if (demanded) return;

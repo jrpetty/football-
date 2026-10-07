@@ -145,6 +145,7 @@ public final class FieldItems {
         ITEMS.register(modBus);
         BLOCK_ENTITIES.register(modBus);
         modBus.addListener(FieldItems::onTabs);
+        com.jrpetty.mcassistant.entity.FieldTools.declareMakers();
     }
 
     private static void onTabs(BuildCreativeModeTabContentsEvent event) {
