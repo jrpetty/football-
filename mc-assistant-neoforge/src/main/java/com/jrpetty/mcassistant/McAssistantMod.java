@@ -303,9 +303,10 @@ public final class McAssistantMod {
         return ITEMS.registerSimpleItem(name, new net.minecraft.world.item.Item.Properties().stacksTo(1).rarity(rarity));
     }
     /** [fleet] The fishing fleet's net: knotted of five string by the tailor, a boat's haul two to four fish at a cast,
-     *  worn a little with each haul (entity/Fleet). */
-    public static final DeferredItem<net.minecraft.world.item.Item> FISHING_NET =
-        ITEMS.registerSimpleItem("fishing_net", new net.minecraft.world.item.Item.Properties().durability(96));
+     *  worn a little with each haul (entity/Fleet). [itemaudit] A player casts it over open water too (item/FishingNetItem). */
+    public static final DeferredItem<com.jrpetty.mcassistant.item.FishingNetItem> FISHING_NET =
+        ITEMS.registerItem("fishing_net", com.jrpetty.mcassistant.item.FishingNetItem::new,
+            new net.minecraft.world.item.Item.Properties().durability(96));
 
     /** The mod's own creative tab: everything it adds, in one place, the village folk spawner first. */
     public static final DeferredHolder<net.minecraft.world.item.CreativeModeTab, net.minecraft.world.item.CreativeModeTab> TAB =
@@ -362,6 +363,8 @@ public final class McAssistantMod {
         BLOCK_ENTITIES.register(modBus);
         RECIPE_SERIALIZERS.register(modBus);                          // [arms] the tabard given a banner's arms
         com.jrpetty.mcassistant.item.CivicItems.register(modBus);      // [player-civic] the masters' goods, and their recipes
+        com.jrpetty.mcassistant.item.FieldItems.register(modBus);      // [fields] the tools of the fields and the pens, the bees and the water
+        com.jrpetty.mcassistant.item.KitchenItems.register(modBus);    // [kitchen] the kitchen, the cellar and the healer's shelf
         com.jrpetty.mcassistant.item.IndividualItems.register(modBus); // [individual] spectacles
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
@@ -398,6 +401,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.WarScouting.class);   // [war-scouting] spies, pickets, captives
         NeoForge.EVENT_BUS.register(TimeSpeed.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Transport.class);    // [transport] railways, carts, ferries, bridges
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Golems.class);       // [golems] a golem fallen, its iron left lying
     }
 
     private void onEntityAttributes(EntityAttributeCreationEvent event) {

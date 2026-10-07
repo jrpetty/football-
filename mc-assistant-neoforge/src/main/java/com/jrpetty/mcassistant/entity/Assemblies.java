@@ -528,6 +528,7 @@ public final class Assemblies {
 
     /** The feast and the celebration: eat (out of the stores), dance, raise a cup. */
     private static void mingle(VillageFolkEntity f, ServerLevel level, Assembly a, RandomSource r) {
+        Kitchen.mingle(f, level, a.kind, a.village, a.subject, a.day, r);    // [kitchen] a slice of honey cake; mead or cider in the toast
         if (a.kind == Kind.FESTIVAL && Festivals.mingle(f, level, a, r)) return;          // [batchB] round the maypole, the fire, the tables
         if ((a.kind == Kind.FEAST || a.kind == Kind.FOUNDING) && !a.ate.contains(f.getUUID()) && r.nextInt(30) == 0) {
             a.ate.add(f.getUUID());

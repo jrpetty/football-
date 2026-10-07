@@ -103,6 +103,16 @@ public final class Market {
         good("Cookies", Items.COOKIE, 0.2, 8, Villages.Task.FOOD),
         good("Pumpkin pie", Items.PUMPKIN_PIE, 1.0, 2, Villages.Task.FOOD),
         good("Cake", Items.CAKE, 4.0, 1, Villages.Task.NONE),
+        // [kitchen] The kitchen's, the cellar's and the healer's (KitchenItems): read lazily, the items being registered after this list is made.
+        new Good("Packed lunch", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.PACKED_LUNCH.get()), 0.8, 2, Villages.Task.NONE),
+        new Good("Cheese wheel", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.CHEESE_WHEEL_ITEM.get()), 4.0, 1, Villages.Task.NONE),
+        new Good("Cheese", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.CHEESE_SLICE.get()), 1.0, 4, Villages.Task.FOOD),
+        new Good("Honey cake", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.HONEY_CAKE.get()), 2.5, 1, Villages.Task.NONE),
+        new Good("Mead", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.MEAD.get()), 1.8, 2, Villages.Task.NONE),
+        new Good("Cider", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.CIDER.get()), 1.5, 2, Villages.Task.NONE),
+        new Good("Fish pie", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.FISH_PIE.get()), 1.2, 4, Villages.Task.FOOD),
+        new Good("Herbal tea", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.HERBAL_TEA.get()), 0.6, 2, Villages.Task.NONE),
+        new Good("Bandages", s -> s.is(com.jrpetty.mcassistant.item.KitchenItems.BANDAGE.get()), 0.3, 4, Villages.Task.NONE),
         good("Beetroot", Items.BEETROOT, 0.1, 16, Villages.Task.FOOD),
         good("Melon", Items.MELON_SLICE, 0.1, 16, Villages.Task.FOOD),
         good("Berries", Items.SWEET_BERRIES, 0.1, 16, Villages.Task.FOOD),
@@ -132,6 +142,16 @@ public final class Market {
         good("Raw iron", Items.RAW_IRON, 1.0, 4, Villages.Task.IRON),
         good("Iron", Items.IRON_INGOT, 1.5, 4, Villages.Task.IRON),
         good("Copper", Items.COPPER_INGOT, 0.4, 8, Villages.Task.NONE),
+        // [fields] The tools of the fields and the pens (FieldItems): sold at the shop and bought of a player. Matched when
+        // asked, not at load: the items are registered after this list is made.
+        new Good("Watering can", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.WATERING_CAN.get()), 2.6, 1, Villages.Task.NONE),
+        new Good("Seed satchel", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.SEED_SATCHEL.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Copper sickle", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.COPPER_SICKLE.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Nesting box", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.NESTING_BOX_ITEM.get()), 0.6, 1, Villages.Task.NONE),
+        new Good("Feed trough", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.FEED_TROUGH_ITEM.get()), 0.5, 1, Villages.Task.NONE),
+        new Good("Fish trap", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.FISH_TRAP_ITEM.get()), 0.8, 2, Villages.Task.NONE),
+        new Good("Rain barrel", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.RAIN_BARREL_ITEM.get()), 1.1, 1, Villages.Task.NONE),
+        new Good("Bee smoker", s -> s.is(com.jrpetty.mcassistant.item.FieldItems.BEE_SMOKER.get()), 2.0, 1, Villages.Task.NONE),
         good("Gold", Items.GOLD_INGOT, COINS_PER_GOLD, 1, Villages.Task.NONE),
         good("Lapis", Items.LAPIS_LAZULI, 0.5, 8, Villages.Task.NONE),
         good("Redstone", Items.REDSTONE, 0.3, 8, Villages.Task.NONE),
@@ -178,7 +198,12 @@ public final class Market {
         // [player-civic] The masters' own (CivicItems): read lazily, the items being registered after this list is made.
         new Good("Reinforced pickaxe", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.REINFORCED_PICKAXE.get()), 11.0, 1, Villages.Task.NONE),
         new Good("Brewer's stout", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.BREWERS_STOUT.get()), 1.2, 4, Villages.Task.NONE),
-        new Good("Farmhouse pie", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.FARMHOUSE_PIE.get()), 1.2, 4, Villages.Task.NONE));
+        new Good("Farmhouse pie", s -> s.is(com.jrpetty.mcassistant.item.CivicItems.FARMHOUSE_PIE.get()), 1.2, 4, Villages.Task.NONE),
+        // [itemaudit] The pets' things a household buys at the shop (Pets, Purchases), on the board at their worth.
+        new Good("Pet bowls", s -> s.is(McAssistantMod.PET_BOWL_ITEM.get()), 0.8, 1, Villages.Task.NONE),
+        new Good("Dog beds", s -> s.is(McAssistantMod.DOG_BED_ITEM.get()), 1.6, 1, Villages.Task.NONE),
+        new Good("Cat baskets", s -> s.is(McAssistantMod.CAT_BED_ITEM.get()), 1.2, 1, Villages.Task.NONE),
+        new Good("Pet collars", s -> s.is(McAssistantMod.COLLAR.get()), 1.4, 1, Villages.Task.NONE));
 
     /** The café's drinks, each its own good; then the brewer's potions. */
     private static final List<Good> DRINKS_AND_POTIONS = drinksAndPotions();

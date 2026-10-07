@@ -75,6 +75,7 @@ public final class VillageBoards {
         BOARDS.clear();
         FACING.clear();
         PREFER.clear();
+        LOOKED.clear();                                  // [itemaudit]
     }
 
     // ------------------------------------------------------------------ putting it up
@@ -121,6 +122,102 @@ public final class VillageBoards {
         VillageBoardBlock.raise(level, spot.anchor(), spot.facing(), null);
         LOG.info("[MCA-BOARD] a founding board is up at {}, facing {}", spot.anchor().toShortString(), spot.facing());
         return spot.anchor();
+    }
+
+    // ------------------------------------------------------------------ [itemaudit] putting it back up
+
+    /** How often a town looks to see that its board still stands (ticks). */
+    static final long KEEP_EVERY = 1200L;
+    /** When each town last looked. */
+    private static final Map<UUID, Long> LOOKED = new ConcurrentHashMap<>();
+
+    /**
+     * [itemaudit] A town whose board has been taken down puts up another (the town's own work, once a minute or so,
+     * from TownLife): the one in its stores, or one made there and then at the bench of the stores' signs, planks and
+     * a book, as the board's recipe has it, and set up where the founders would have put theirs. A town's own board
+     * gives nothing back when it comes down (VillageBoardBlock.takeDown), so the stores pay for each. The first look
+     * after a start only notes the time: a board whose chunk has just loaded has not yet told the town it stands.
+     */
+    public static void keep(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        long now = level.getGameTime();
+        Long last = LOOKED.get(id);
+        if (last == null || now < last) {
+            LOOKED.put(id, now);
+            return;
+        }
+        if (now - last < KEEP_EVERY) return;
+        LOOKED.put(id, now);
+        keepNow(level, v);
+    }
+
+    /** The look, now: what the town did about its board, or null when it stands (or the town cannot run to one yet). */
+    @Nullable
+    public static String keepNow(ServerLevel level, Villages.Village v) {
+        UUID id = v.id();
+        if (!level.isLoaded(v.centre()) || Raids.underAlarm(id)) return null;
+        BlockPos at = BOARDS.get(id);
+        if (at != null && (!level.isLoaded(at) || level.getBlockState(at).getBlock() instanceof VillageBoardBlock)) return null;
+        if (at == null) {
+            // Not heard of: a board may stand all the same, in a chunk whose blocks are not ticking. Looked for along the
+            // lines a board goes on (a thousand blocks, once a minute, and only while the town has not heard of one).
+            BlockPos found = standing(level, v.centre());
+            if (found != null) {
+                known(level, found, id);
+                return null;
+            }
+        }
+        Direction faced = FACING.get(id);
+        Spot spot = findSpot(level, v.centre(), faced == null ? null : faced.getOpposite(), 2.0, false);
+        if (spot == null) return null;
+        net.minecraft.world.item.Item board = com.jrpetty.mcassistant.McAssistantMod.VILLAGE_BOARD_ITEM.get();
+        java.util.function.Predicate<net.minecraft.world.item.ItemStack> isBoard = s -> s.is(board);
+        boolean made = false;
+        if (Market.stock(level, id, isBoard) <= 0) {
+            if (!Tiers.allows(level, Villages.ageOf(id), board)) return null;
+            Bench.Hand hand = Bench.handOf(level, v, null, "workshop");
+            Bench.Plan plan = Bench.plan(level, v, board, 1, hand);
+            if (!plan.ok()) {
+                LOG.info("[MCA-BOARD] {}: no board on the square, and the stores are short of {} for one", Villages.name(id), plan.shortOf);
+                return null;
+            }
+            if (!TownJobs.atWork(level, v, "board", spot.anchor(), "making the town a new board")) return null;
+            if (Bench.make(level, v, plan, null, hand).isEmpty()) return null;
+            made = true;
+        } else if (!TownJobs.atWork(level, v, "board", spot.anchor(), "putting the town's board back up")) {
+            return null;
+        }
+        if (!TownWork.take(level, v, isBoard, 1)) return null;
+        put(level, spot);
+        VillageBoardBlock.raise(level, spot.anchor(), spot.facing(), id);
+        if (level.getBlockEntity(spot.anchor()) instanceof com.jrpetty.mcassistant.block.VillageBoardBlockEntity be) be.markRaised();
+        known(level, spot.anchor(), id);
+        long day = level.getDayTime() / 24000L;
+        Villages.tell(id, day, made ? "a new board was made of the stores' timber and put up on the square" : "the town's board was put back up on the square");
+        LOG.info("[MCA-BOARD] {}: the board {} at {}", Villages.name(id), made ? "made anew and put up" : "put back up", spot.anchor().toShortString());
+        return made ? "made a new board and put it up" : "put the board back up";
+    }
+
+    /** The anchor of a board standing on one of the lines round this heart a board goes on, or null. */
+    @Nullable
+    private static BlockPos standing(ServerLevel level, BlockPos heart) {
+        int line = com.jrpetty.mcassistant.village.TownPlan.PLAZA;
+        for (int d : new int[]{ line, line - 2, line + 2, line - 4, line + 4 }) {
+            for (Direction side : new Direction[]{ Direction.WEST, Direction.SOUTH, Direction.EAST, Direction.NORTH }) {
+                Direction right = VillageBoardBlock.right(side.getOpposite());
+                BlockPos mid = heart.relative(side, d);
+                for (int c = -12; c < VillageBoardBlock.WIDE - 12; c++) {
+                    BlockPos col = mid.relative(right, c);
+                    if (!level.isLoaded(col)) continue;
+                    for (int dy = -8; dy <= 12; dy += 2) {
+                        BlockPos p = col.above(dy);
+                        BlockState st = level.getBlockState(p);
+                        if (st.getBlock() instanceof VillageBoardBlock) return VillageBoardBlock.anchor(p, st);
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     /** The side the board of the village about to be founded here is to go on (entity/Founding). */
@@ -428,6 +525,10 @@ public final class VillageBoards {
         if (trade != null) out.add("FN|" + trade);
         String caves = CaveDwellers.boardLine(id);              // [caves] the caves' report, and the latest big find
         if (caves != null) out.add("FN|" + caves);
+        String arrows = Fletchers.boardLine(level, id);         // [fletcher] the watch's arrows, or none to be had
+        if (arrows != null) out.add("FN|" + arrows);
+        String golems = Golems.boardLine(level, id);            // [golems] the golems at their posts, a fallen one
+        if (golems != null) out.add("FN|" + golems);
         String about = Transport.boardLine(level, id);          // [transport] the lines, the ore carts, the ferry and the bridge
         if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);

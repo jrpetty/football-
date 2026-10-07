@@ -47,10 +47,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         "guard", "smelter", "fisher", "storekeeper", "hauler",
         "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
         "cavedweller",                                         // [caves] not in StationTask's order: see outfit()
+        "fletcher", "golemkeeper",                             // [fletcher] [golems] the same
     };
 
     /** [caves] The cave dweller's outfit, after the trades drawn in StationTask's order (those before it). */
     public static final int CAVE_OUTFIT = 19;
+    /** [fletcher] [golems] The fletcher's and the golem keeper's own outfits, after the cave dweller's. */
+    public static final int FLETCHER_OUTFIT = 20, GOLEMS_OUTFIT = 21;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -142,6 +145,17 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"cavedweller_haft", "body", "cavedweller"},
         {"cavedweller_pickhead", "body", "cavedweller"},
         {"cavedweller_rope", "body", "cavedweller"},
+        {"fletcher_cap", "head", "fletcher"},
+        {"fletcher_peak", "head", "fletcher"},
+        {"fletcher_feather", "head", "fletcher"},
+        {"fletcher_apron", "body", "fletcher"},
+        {"fletcher_quiver", "body", "fletcher"},
+        {"fletcher_fletch", "body", "fletcher"},
+        {"golemkeeper_cap", "head", "golemkeeper"},
+        {"golemkeeper_apron", "body", "golemkeeper"},
+        {"golemkeeper_scarf", "body", "golemkeeper"},
+        {"golemkeeper_scarf_end", "body", "golemkeeper"},
+        {"golemkeeper_shears", "body", "golemkeeper"},
         {"hair_fall", "head", "look"},
         {"hair_bun", "head", "look"},
         {"hair_tail", "head", "look"},
@@ -307,6 +321,17 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("cavedweller_haft", CubeListBuilder.create().texOffs(64, 24).addBox(-0.5F, -6.0F, 0.0F, 1.0F, 12.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_pickhead", CubeListBuilder.create().texOffs(68, 24).addBox(-3.5F, -7.0F, 0.0F, 7.0F, 1.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 6.0F, 4.4F, 0.0F, 0.0F, 0.7F));
         body.addOrReplaceChild("cavedweller_rope", CubeListBuilder.create().texOffs(84, 24).addBox(-6.2F, 7.0F, -2.0F, 2.0F, 4.0F, 4.0F), PartPose.ZERO);
+        head.addOrReplaceChild("fletcher_cap", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 3.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        head.addOrReplaceChild("fletcher_peak", CubeListBuilder.create().texOffs(96, 0).addBox(-3.5F, -8.0F, -7.0F, 7.0F, 1.0F, 3.0F), PartPose.ZERO);
+        head.addOrReplaceChild("fletcher_feather", CubeListBuilder.create().texOffs(116, 0).addBox(-0.5F, -6.0F, -0.5F, 1.0F, 6.0F, 1.0F), PartPose.offsetAndRotation(4.2F, -9.5F, 1.5F, -0.45F, 0.0F, 0.3F));
+        body.addOrReplaceChild("fletcher_apron", CubeListBuilder.create().texOffs(64, 12).addBox(-3.5F, 2.0F, -4.5F, 7.0F, 13.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("fletcher_quiver", CubeListBuilder.create().texOffs(84, 12).addBox(-1.5F, -1.0F, 0.0F, 3.0F, 10.0F, 2.0F), PartPose.offsetAndRotation(0.0F, 2.0F, 3.4F, 0.0F, 0.0F, -0.35F));
+        body.addOrReplaceChild("fletcher_fletch", CubeListBuilder.create().texOffs(96, 12).addBox(-1.0F, -4.0F, 0.5F, 2.0F, 3.0F, 1.0F), PartPose.offsetAndRotation(0.0F, 2.0F, 3.4F, 0.0F, 0.0F, -0.35F));
+        head.addOrReplaceChild("golemkeeper_cap", CubeListBuilder.create().texOffs(64, 28).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 2.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        body.addOrReplaceChild("golemkeeper_apron", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, 1.5F, -4.5F, 8.0F, 15.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("golemkeeper_scarf", CubeListBuilder.create().texOffs(64, 17).addBox(-4.5F, -1.0F, -3.5F, 9.0F, 2.0F, 7.0F, new CubeDeformation(0.25F)), PartPose.ZERO);
+        body.addOrReplaceChild("golemkeeper_scarf_end", CubeListBuilder.create().texOffs(100, 0).addBox(0.8F, 0.6F, -5.6F, 2.0F, 6.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("golemkeeper_shears", CubeListBuilder.create().texOffs(108, 0).addBox(-5.6F, 8.5F, -1.0F, 1.0F, 3.0F, 2.0F), PartPose.ZERO);
         head.addOrReplaceChild("hair_fall", CubeListBuilder.create().texOffs(0, 60).addBox(-4.0F, -0.5F, 3.6F, 8.0F, 6.0F, 1.0F), PartPose.ZERO);
         head.addOrReplaceChild("hair_bun", CubeListBuilder.create().texOffs(20, 60).addBox(-2.0F, -9.5F, 4.2F, 4.0F, 3.0F, 3.0F), PartPose.ZERO);
         head.addOrReplaceChild("hair_tail", CubeListBuilder.create().texOffs(36, 60).addBox(-1.0F, 0.0F, -0.5F, 2.0F, 8.0F, 2.0F), PartPose.offsetAndRotation(0.0F, -7.5F, 4.4F, 0.42F, 0.0F, 0.0F));
@@ -352,6 +377,8 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         int job = folk.clientJobOrdinal();
         if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
         if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
+        if (job == AssistantEntity.StationTask.FLETCHER.ordinal()) return FLETCHER_OUTFIT;   // [fletcher] apron, quiver, feathered cap
+        if (job == AssistantEntity.StationTask.GOLEMS.ordinal()) return GOLEMS_OUTFIT;       // [golems] riveted apron, orange scarf
         return Math.floorMod(job, CAVE_OUTFIT);
     }
 

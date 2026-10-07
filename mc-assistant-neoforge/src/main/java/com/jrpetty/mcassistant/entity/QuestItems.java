@@ -147,6 +147,10 @@ public final class QuestItems {
                     net.minecraft.world.item.alchemy.PotionContents.EMPTY).is(net.minecraft.world.item.alchemy.Potions.HEALING);
             case "cake" -> s -> s.is(Items.CAKE) || s.is(Items.PUMPKIN_PIE);
             case "torch" -> s -> s.is(Items.TORCH) || s.is(Items.LANTERN) || s.is(Items.SOUL_TORCH);
+            // [weave] the rebuilding's planks or wool (any kind), and a household's own things carried for a quest
+            case "planks" -> s -> s.is(net.minecraft.tags.ItemTags.PLANKS) && questOf(s) == 0;
+            case "wool" -> s -> s.is(net.minecraft.tags.ItemTags.WOOL) && questOf(s) == 0;
+            case "quest" -> s -> !s.isEmpty() && questOf(s) == quest;
             case "iron", "coal", "logs", "stone", "food", "flowers", "fish" -> Errands.matcher(key);
             default -> {
                 ResourceLocation id = ResourceLocation.tryParse(key);
@@ -166,6 +170,9 @@ public final class QuestItems {
             case "remedy" -> n + (n == 1 ? " remedy" : " remedies") + " (honey bottles, golden carrots or healing potions)";
             case "cake" -> n == 1 ? "a cake (or a pumpkin pie)" : n + " cakes";
             case "torch" -> n + " torches";
+            case "planks" -> n + (n == 1 ? " plank" : " planks");                 // [weave]
+            case "wool" -> n + " wool";                                            // [weave]
+            case "quest" -> "their things";                                        // [weave]
             case "iron", "coal", "logs", "stone", "food", "flowers", "fish" -> Errands.words(key, n).replace(" (ingots or raw)", "");
             default -> {
                 ResourceLocation id = ResourceLocation.tryParse(key);

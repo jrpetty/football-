@@ -6835,10 +6835,13 @@ something, and is answered, so the next one costs less. None of them is ruinous,
   ones, off the fire station's rack, out of the stores, or made there and then from three of the stores' iron
   each, and you can see them in the folk's hands. Full buckets go along the line toward the fire and empty ones
   come back, swapped hand to hand. The first in line fills them at the water and the last throws them on the
-  flames. When the fire is out, every bucket goes back where it came from. A folk's card shows its place in the
-  chain.
+  flames. A folk in the line is never so far from the next that a bucket cannot be handed on: one that cannot get
+  any nearer its place in eight seconds is set down at it, and one called away for ten seconds is let go and the
+  rest spread out again (short of four, the chain stands down and the brigade carries on with its own buckets).
+  Nobody is off reading the job notices while the town burns. When the fire is out, every bucket goes back where
+  it came from. A folk's card shows its place in the chain.
 * **Never more than two buildings.** A fire that reaches a third building has that flame beaten out by the
-  neighbours at once.
+  neighbours at once, and whatever catches beyond it is still the same fire, so that is beaten out too.
 * **Rebuilding.** Each of the town's buildings a fire reaches is noted, block by block, from its own drawing, the
   moment the fire is seen. When the fire is out, whatever burned is put back exactly as it stood, on the town's
   works, by a hand at the building, a few blocks every couple of seconds. Every block is paid for out of the
@@ -6930,7 +6933,7 @@ The game tests `DisastersGameTests` (dd01 to dd07) check that:
 * six burnt planks are put back exactly as they stood out of the stores' planks, the work waiting when the
   planks run out;
 * a forced flood puts water only in empty cells a block over the river, the folk in the low house gets out to the
-  high ground without drowning, and when it drains every block is as it was;
+  high ground without drowning, and when it drains every cell of it is as it was and no water is left anywhere;
 * after the flood a levee is raised out of the stores' earth, and the same flood then stays off the low ground;
 * a drought slows a dry field to under three fifths of its pace and not a watered one, and the town then digs
   irrigation through the dry field;
@@ -7053,6 +7056,8 @@ walks out with you for work in the world (it goes home at dusk). Away from your 
   half the time, before the café's drinks.
 * **The farmhouse pie** (a pumpkin, an egg, a carrot and three wheat, two to a baking): ten hunger. A master cook
   bakes it into the stores, and the town eats it.
+* Until a town has a master of the trade, its best hand at it makes these three, one turn at the bench in three, and
+  a pick of a learner's riveting is an apprentice's work (see "Every thing the town makes").
 * **The apprentice's journal** (a book, a feather, an ink sac and leather): the tailor binds them when the town's
   young apprentices want them. A child learning a trade at a grown-up's side (they follow their master about its
   work) takes one out of the stores and writes up its day in it: a little of the trade's experience every day, put
@@ -7749,3 +7754,505 @@ The game tests `TransportGameTests` (tr01 to tr05) check that:
   takes another trade, and the chronicle tells it;
 * in a town of nine, the bridge is put to everybody in a referendum as a great work drawn beside the ferry, carried,
   built by the town's hands out of its stone and opened, and then the ferry retires.
+
+## The kitchen and the cellar
+
+Eight new things come out of the town's kitchen, its cellar and the healer's shelf. Each has a real recipe, so the
+town's makers know it and you can make it too; each is made by a trade of the town out of the stores, whenever the
+town wants one, and each is used.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Packed Lunch | bread, any cooked meat or fish and an apple make two | Wood | 0.8c | the cook | a hand working far off eats it where it is at midday |
+| Cheese Wheel | three milk buckets over three wheat round an egg (the buckets come back) | Stone | 4c | the cook, of the rancher's milk | the town's reserve; set out on the café's and the tavern's tables |
+| Slice of Cheese | a cheese wheel cut into four | Stone | 1c | the stores, when food runs short | a meal |
+| Honey Cake | a honey bottle, two wheat, an egg and sugar (the honey's bottle comes back) | Wood | 2.5c | the cook | birthdays, weddings, Founding Day and the festivals |
+| Mead | a honey bottle, sugar and a glass bottle | Stone | 1.8c | the brewer | the tavern's bar, and the toasts at weddings and Founding Day |
+| Cider | three apples, sugar and a glass bottle | Stone | 1.5c | the brewer | the harvest festival; the tavern and the café in the autumn |
+| Fish Pie | cod or salmon, a potato, wheat and an egg | Wood | 1.2c | the cook | a hearty meal; the cook's answer to a glut of fish |
+| Herbal Tea | sweet berries or any small flower, sugar and a water bottle | Wood | 0.6c | the healer (else the café) | a cup for a cold; the café's on cold days |
+| Bandage | two paper and a string, or a wool and two string, make three | Wood | 0.3c | the healer (else the tailor) | the watch's and the cave team's kit; the healer's round |
+
+Mead and cider, with no brewer in town yet, are brewed at the café, as it brews its own drinks. Whatever no trade of the
+town makes, the shop's workshop does. The healer is the town's brewer (it sees to the town's care).
+
+**The packed lunch.** The cook packs a lunch in a red-checked cloth for everybody whose work today lies far off: a
+plot more than forty-eight blocks from its home and from the stores, the cave team, the scouts, the fishing fleet, a
+caravan or an envoy on the road. Before it sets out, the hand picks one up at the stores, and at the midday meal it
+sits down where it is and eats it, instead of walking all the way back in for food. You'll see it in its hand. The cook
+keeps a lunch in the stores for every far hand and one over. The town counts the lunches eaten out: the cook's book
+on the **Shops** page ("5 eaten out this week" against the packed lunch), the **Production** page's reading, the
+folk's card ("Kitchen: ate its packed lunch out at the north field") and the gazette. You can eat one yourself: it is
+a full meal (nine hunger, and filling with it).
+
+**The cheese wheel.** The rancher milks the pen's cows into the stores' buckets, and more while the cook wants cheese.
+The cook makes a wheel of three buckets of milk, three wheat and an egg, and the buckets go back to the stores. A
+wheel sits on its own board with a waxed golden rind, and as it is eaten a quarter goes at a time, showing the pale
+cheese and its holes where it was cut.
+* *It keeps.* Two wheels are kept in the stores as the town's reserve (a third put by in the autumn for the winter).
+  When food runs short (short rations, a drought's rationing, a hungry winter) and the stores are nearly bare, the
+  stores cut a wheel into four slices, and the folk eat them at their meals. The chronicle notes it.
+* *On the tables.* In good times the cook sets a wheel out on a table at the café and at the tavern, in place of the
+  cloth, keeping one in reserve. Folk taking their meal there eat a slice off it. When it's eaten to the board the
+  cloth goes back on.
+* *You:* right-click a wheel to eat a slice (four hunger), like a cake. Broken, a whole wheel drops itself; a cut one
+  drops the slices left.
+
+**The honey cake.** Golden with the beekeeper's honey, a little honeycomb on top. The cook bakes it a day or so ahead
+of a birthday, a wedding, Founding Day and the festivals (the May dance, the bonfire, the fair, the harvest). At the
+gathering it is cut, eight slices to a cake, and everybody there has a slice. They are happier for the rest of the
+day: "I had a slice of Ada's honey cake at the wedding. Still smiling." The folk's card says whose cake it was, and so
+does the chronicle ("the wedding of Wren and Kit had Ada's honey cake"). On a birthday a cake is cut for the one whose
+day it is and its friends. You can eat one: seven hunger and a heart of good cheer (absorption).
+
+**Mead and cider.** The brewer's, in bottles of their own: the mead amber, the cider pale gold with an apple on its
+label.
+* *At the bar.* The tavern sells mead beside the stout, and cider in the autumn; the café pours cider in the autumn
+  too. A drink lifts a folk's spirits for the evening, with a little regeneration, and the bottle goes back to the
+  stores. Folk drink in moderation: a sensible one has one of an evening, a merry one (cheerful, sociable, or a Free
+  Spirit at heart) two.
+* *In the toasts.* Weddings and Founding Day are toasted in mead, the harvest festival in cider: four cups to a
+  bottle.
+* *The apples* come from the oaks and dark oaks the woodcutters fell. A woodcutter takes up the apples lying under its
+  trees for the stores, and while the brewer is short of them it shakes the felled crowns down for them too.
+* *You:* drink one from the bottle (mead: regeneration; cider: a heart of absorption for a minute). The bottle comes
+  back.
+
+**The fish pie.** A dish of fish under a lattice crust: a hearty meal, more than bread, eaten by the folk like any good
+food and sold at the café and the market. When the fishing fleet brings in more than the usual catch (a glut: the fish
+market's price falls), the fish left unsold at dusk go into the stores and the cook bakes them into pies, up to a dozen.
+The gazette says so: "The cook turned yesterday's catch into twelve fish pies."
+
+**Herbal tea.** A green-brown bottle with a sprig of mint at the cork. The healer steeps it of sweet berries or a
+flower and a spoon of sugar, in a bottle of water drawn at the well. On its round the healer gives a cup to a folk
+laid up with a cold, once a cold, and it is well a whole day sooner (honey takes a quarter of a day off). The café
+sells it on cold days, in the rain and all winter. You can drink one for a short regeneration.
+
+**The bandage.** A white roll of clean cloth. Every guard and every member of the cave team carries two to four out of
+the stores: the kit tops them up to three when they're down to one. A guard or a delver left hurt after a fight binds
+its own wound (you'll see the bandage in its hand), and mends over a few seconds. The healer binds the wounded laid up
+in the infirmary or at home. You bind your own by right-clicking with one: four hearts over five seconds, then a short
+wait before the next. You can't bind a wound you haven't got.
+
+**Where to look.** The folk's card has a **Kitchen** line: its packed lunch, its bandages, and what it had of the
+kitchen's today. The cook's book (the café on the **Shops** page) keeps the lunches, the cheese, the cakes, the pies and
+the tea, with what became of them; the **Production** page's reading counts the lunches eaten out and the pies of the
+catch; the gazette has a **The kitchen** piece about yesterday. `/village items kitchen` lists what the town wants of
+each, what the stores hold and who makes it, and the week. Operators: `/village items kitchen stage` sets out the
+scene for the pictures where you stand (a wall of the things in frames, the cheese in its four cuts, a café table, and
+the town's folk with the things in hand), and `/village items kitchen stage release` lets the folk go.
+
+The game tests `KitchenGameTests` (kt01 to kt10) check that the cook packs lunches of the stores' bread, roast and
+apples and a far hand eats one at its plot with no walk back (where one without is sent in), and a player eats one; the
+rancher milks for the cheese, the cook makes a wheel (the buckets back), sets one out on the café's table and folk eat
+it to the board, a player eats a slice, and short of food the stores cut a wheel that feeds a folk; the cook bakes honey
+cakes for Founding Day, the guests are happier for a slice and the card and chronicle say whose, the toast is in mead
+and a birthday has the other cake; the brewer brews mead for the tavern, a sensible folk has one and a merry one two,
+with the bottle back; the brewer brews cider in the autumn, the woodcutter takes up apples and the harvest is toasted in
+cider; a glut becomes twelve fish pies and the gazette says so; the healer's tea sees a cold off a day sooner, once a
+cold, and the café makes it with no healer; the tailor rolls bandages, the watch's kit takes them, a hurt guard binds
+its own and mends, and the healer binds the wounded; every thing has its recipe, age and worth and the shop's workshop
+makes what no trade does; and the cook's book, the Production page, the card and the stage show it all.
+## How it all fits together
+
+The town's systems were built one at a time; this is where they hear of each other (`entity/Weave`, and a line in
+each system marked `[weave]`). Nothing here is made from nothing: every bucket, plank and coat is the stores' or the
+player's, and every coin comes out of a purse or the treasury.
+
+* **Help the watch.** The guard on a case (or the constable) offers *Help the watch*. Its steps are the real ways to
+  help as the case stands: follow the muddy footprints before the rain takes them, find what was dropped and hand it
+  in, ask those who were about (*seen anything amiss?*), then tell the guard. The treasury pays when the council
+  convicts the right one. Tell the watch you saw somebody do it when they didn't, and if your word is what put them
+  before the council, they never forget it, the town thinks the less of you, the chronicle says so, and the watch
+  wants no more of your help on that case.
+* **Lost pets.** Now and then (a fortnight apart at the least) a town's dog goes off after a rabbit. It waits out past
+  the edge while its household's quest stands. Find it and it follows you home, and the quest is done when it is. Give
+  the quest up, or let it run out, and the dog makes its own way home in the morning.
+* **Fire and flood.** While a fire burns, the elder (or whoever heads the bucket chain) asks at once for water: each
+  bucket you hand over is thrown on the nearest flames and the empty comes back. While the river is in a house, its
+  household's things are to be carried out of its chest and up to one of them on the high ground. When a rebuilding
+  waits on planks, wool or logs the stores have not got, the elder asks for those, and the work goes on as soon as
+  they are in. A household burnt or flooded out with no bed anywhere (no neighbour's spare, no inn, no hall) goes as
+  refugees to the nearest town at peace. Short rations in a drought tempt like hunger.
+* **The library.** Every trade has its book, now the cave dwellers' (caves, veins, hauls, the lost, *light every
+  fifteen blocks*), the watch's (cases solved, its tips), the fleet's (catches, grounds, storms), the tailor's (the
+  season and what was made) and the librarian's own. The town's writers take up the great flood, the great fire and
+  the rebuilding, the life of a cave dweller lost below, the smugglers once their story is over, a poem for a great
+  work opened and a ballad of the auction's famous sale.
+* **The auction and the shop.** Nothing stolen and no forged coin is ever sold or put up. A master's coat, a fine
+  garment or a gold brooch nobody has ordered, and a find of the cave team's that the lodge's full trophy wall has no
+  room for, go under the hammer with who made or found them. A garment won is put on at once and is the height of
+  fashion for the season.
+* **Dressed for the office.** The librarian wants a waistcoat, the constable a felt hat, the auctioneer a top hat, a
+  player leader's steward a long coat, and a cave dweller home from the caves a leather jacket, each in the season's
+  colour when the season's own thing is beyond its purse. The steward and the auctioneer help set the fashion.
+  Newcomers arrive in their old town's colours and come round to the new town's look quicker than most.
+* **And more.** A leader's promise of *more guards* counts only guards in their kit. The gazette's biggest story
+  leads its front page, under a headline. A dog lies at the feet of the child it follows to the library.
+
+The game tests `WeaveGameTests` (w01 to w17) walk each of these through: a case helped and paid for, a wrong word paid
+for, a lost dog found and one given up, water for a fire, a household's things out of a flood (and handed back when
+the quest is given up), planks for a rebuilding, refugees from a burnt house, short rations, nothing stolen sold, a
+coat won and worn, the offices' clothes, the pledge's guards, the front page, the library's new books, and the cave
+team's finds past the six at auction. The unit test `LibraryTextTest` checks that the new books say what happened.
+## Tools of the fields and the pens
+
+Eight new things go out to the town's fields, its pens, its pond and its hives. Each has a real recipe, so the town's
+makers know it and you can make it too; each is made by a trade of the town out of the stores whenever the town wants
+one, and each is put to work.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Copper Watering Can | five copper ingots, a can with its spout | Stone | 2.6c | the smith (else the shop's workshop) | sixteen waterings: each soaks a three-by-three and gives its crops a little growth |
+| Seed Satchel | a string over two leather | Wood | 1.6c | the tailor (else the rancher, else the shop) | four stacks of seed at the hip: a whole field sown off one trip to the stores |
+| Copper Sickle | three copper ingots in a curve on a stick | Stone | 1.6c | the smith (else the shop's workshop) | two hundred cuts: a ripe crop and the eight round it reaped in one swing, and sown again |
+| Nesting Box | five planks round a wheat | Wood | 0.6c | the rancher (else the shop's workshop) | the hens lay into it, and lay sooner on its hay |
+| Feed Trough | four planks round a wooden slab | Wood | 0.5c | the rancher (else the shop's workshop) | the herd eats and breeds off it, and stays near it |
+| Fish Trap | six sticks and two string round a bait (a cod, a salmon, a tropical fish or a spider eye) | Wood | 0.8c | the fisher (else the shop's workshop) | catches fish (and some junk) by itself, six at a time |
+| Rain Barrel | seven planks round a copper ingot | Wood | 1.1c | the shop's workshop (else a hand of the town's at the bench) | catches the rain, four buckets' worth, for the cans, the drought and fires |
+| Bee Smoker | two copper ingots, a leather and a coal or charcoal | Stone | 2.0c | the smith (else the shop's workshop) | calms the bees: every full hive emptied without a sting, and more from each |
+
+With no smith and no shop in town, the smelter beats the copper tools cold at its furnace (and leaves them to the smith
+once there is one). The shop's order book keeps whatever the town still wants of the eight. The smelter takes the
+miners' raw copper out of the stores to its furnace with the iron, so the copper is there.
+
+**Who wants one, and when.** The town keeps a can, a sickle and a satchel for every farmer who has none, a smoker for
+every beekeeper, a nesting box for a rancher whose ground has hens and no box, a feed trough for one with two grown
+animals and no trough, two traps for every fisher (four in all), and a rain barrel for every workshop and every field
+with none by it. A farmer, a beekeeper or a fisher takes its tool out of the stores on its round; it keeps it in its
+pack (never banked) and you see it in the free hand while it is at work.
+
+**The copper watering can.** Every ten seconds or so, as it goes about its field, the farmer tips the can over a patch
+of its young rows: the farmland under the three-by-three is soaked and each crop on it grows a little, with a splash
+and the sound of water. It waters the driest first and not the same patch twice within five minutes; a full can is
+sixteen waterings, shown by the blue bar under it and the water in it. Dry, it walks to the nearest rain barrel with
+water in it (failing that, to its field's pond or river) and fills it. Of an evening, before bed, it waters its own
+house's garden and window boxes with it, a quiet hour it enjoys. **In a drought** a farmer with a can carries no
+bucket: it waters the parched ground round it every round, walking out to the driest of its field if need be, and a
+watered crop grows at its full pace, not stunted. A farmer without one still carries a bucket, but draws it from a
+rain barrel before it walks to a pond. *You:* right-click water (or a rain barrel, or a cauldron of water) to fill
+it, and right-click farmland, a crop or a flower to water the three-by-three round it.
+
+**The seed satchel.** At the stores the farmer packs it with the field's seed (wheat, carrots, potatoes, beetroot),
+half of what the stores hold of each and never their last twelve. Out in the field it hands itself twenty seed
+whenever its hand runs below a dozen, so it sows on with no walk back; run dry and far from the stores, it makes
+one trip to fill it. A farmer with seed at its hip works a little quicker (its pace line says *its seed satchel*), and
+its card counts the seed sown out of it and the trips to the stores it saved. *You:* click seed onto it (or it onto
+seed) to put it in, as with a bundle; it takes only seed. Right-click farmland to sow the three-by-three round it.
+
+**The copper sickle.** When the farmer cuts a ripe crop at harvest, the sickle takes the ripe crops of the
+three-by-three round it in the same swing. The swing's drops are gathered together and every square is sown again
+from them before the rest goes into its pack, so a wheat that happened to give no seed is sown from its neighbours'
+spare. Its card counts the crops reaped. *You:* break a ripe crop with it and the ripe crops round it are reaped too
+and sown again (the one you broke as well, from the swing's seed or your own). A cut a swing. It is a light weapon at a
+pinch.
+
+**The nesting box.** The rancher sets it in a far corner of its pen, lined with a wheat's worth of hay. A hen within
+six blocks lays into it instead of onto the ground, and while it has hay in it a hen near it lays a fifth sooner. On
+its round the rancher empties the eggs into the stores for the cook's cakes, pies and cheese, and lines it afresh with
+a wheat. You can see what is in it: the hay, and one egg, two, or a clutch. *You:* take the eggs with an empty hand;
+line it with a wheat or a bale of hay. A comparator reads how full it is.
+
+**The feed trough.** The rancher sets it by the middle of the pen's far fence and fills it out of its pack, then the
+stores beyond their last dozen, with the right feed for what is near it: wheat for sheep, cows and goats, seed for
+hens, carrots for pigs and rabbits, sixteen of each. While there is feed in it the grown animals that wander off come
+back to it, and about every half-minute a ready pair near it breeds, each eating one of the feed, so long as the pen
+keeps to its limit (eight of a kind, sixteen in all, near the trough). With a trough feeding the pen, the rancher no
+longer walks about holding wheat out. How full it is shows in the grain heaped in it. *You:* right-click it with feed
+to tip in a handful; look in with an empty hand.
+
+**The fish trap.** The fisher sets two in open water by its fishing ground (off the end of its quay first), the town's
+four at most. Now and then a fish swims in: a cod, or a salmon in a river or cold water, with a little junk now and
+then (a stick, a bone, a string, kelp, seagrass), up to six. The catch shows in the cage. A fisher passing one empties
+it, and on a day the boats stay in for the weather it goes round them all; the fish go to the fish market's barrels
+(else the stores), the junk to the stores. *You:* set one in water and take the catch with an empty hand. A
+comparator reads it.
+
+**The rain barrel.** The town sets one by each workshop and at the edge of each field, under the open sky, out of the
+stores and by hand (the town's works). It fills in the rain (not the snow), up to four buckets, faster than a
+cauldron; the water stands in it, and a comparator reads it. The farmers fill their cans at it; the fire brigade fills
+its buckets at it; the bucket chain draws from a barrel nearer the fire than its pond when there is no pond close; in
+a drought the farmers draw from the barrels before the ponds. A workshop the town wants a cauldron of water by, with no
+cauldron in the stores and no iron to spare for one, gets a rain barrel instead. *You:* fill a bucket or a can at it,
+or tip a bucket of water in.
+
+**The bee smoker.** With a smoker (its own, or the stores'), the beekeeper smokes and empties every full hive on its
+meadow on the one round instead of a hive at a time: four comb to the shears instead of three, or a bottle of honey
+and a comb. The bees never anger, and any that were angry are calmed. You see the smoke rise and hear the hives. *You:*
+right-click near hives for a puff of smoke: the bees within eight blocks stay calm for thirty seconds, and a full hive
+gives you its comb (shears) or its honey (a bottle) without a bee coming out angry.
+
+**Where to look.** The folk's card has a **Tools** line: the can's water and the patches watered today (and in the
+drought), the satchel's seed and the trips saved, the sickle's cuts left and the crops reaped, the hives smoked, the
+eggs from the box, the trough filled and the pairs bred off it, the fish from the traps and the traps set. What a folk
+says it is doing names the errand (*filling my watering can at the rain barrel*, *going round my fish traps while the
+boats stay in*). The chronicle has each town's first: the first can, satchel, sickle and the rest made, the first
+field kept green through a drought, the first field sown off one trip, the first harvest reaped three rows at a stroke,
+the first eggs from the box, the first pair bred off the trough, the first trap set and its first catch landed, the
+first rain barrel, and the first hives smoked. The town's books list the eight among the stores, the makings and the
+prices. `/village items fields` gives each of the eight (in the stores, wanted, its age and worth), the boxes,
+troughs, traps and barrels set out (and the rain in the barrels), and every folk's tools and what they did today.
+Operators: `/village items fields stage` sets the scene for the pictures.
+
+The game tests `FieldsGameTests` (fi01 to fi10) check that:
+* the smith makes the can of five of the stores' copper; the farmer takes it, fills it at the rain barrel (a bucket's
+  worth out of it), waters its young wheat (the ground soaked, the crops grown, the can in its hand, its card and its
+  words), fills it at the pond with the barrel dry; and a player waters with it;
+* in a drought a farmer with a can carries no bucket and its watering keeps a crop from being stunted, while a farmer
+  without one fills a bucket at the rain barrel first;
+* the tailor makes the satchel of two leather and a string; the farmer packs it at the stores, sows out of it with no
+  trip back (quicker, its card counting the trips saved), goes back once to fill it when it runs dry; and a player
+  sows a three-by-three out of it, the satchel taking only seed;
+* the smith makes the sickle when the stores have copper for it but not for the can; the farmer's one cut reaps and
+  sows again the eight round it, their wheat in its pack; and a player's swing does the same;
+* the rancher makes the nesting box of five planks and a wheat and sets it out; a hen lays into it (and sooner on its
+  hay); the rancher takes the eggs to the stores and lines it afresh; and the cook bakes a pumpkin pie with one;
+* the rancher makes the feed trough of planks and a slab and sets it out, fills it with sixteen of the stores' wheat
+  for its cows; a pair breeds off it, eating two; a stray makes for it; its own breeding stands aside; and at eight
+  cows the limit holds;
+* the fisher weaves a trap of sticks, two string and a cod and sets it in the pond; it catches six at most; on a rainy
+  day the fisher goes round and lands the catch, junk and all; it empties one in passing; and a player empties its own;
+* the shop's hand coopers a rain barrel of seven planks and a copper; the town sets it at the edge of the field under
+  the sky; the rain fills it and the snow does not; a player fills a bucket at it; the bucket chain draws from it with
+  no pond near; and a workshop with no iron for its cauldron gets a barrel instead;
+* the smith makes the smoker of two copper, a leather and a coal; the beekeeper empties all three full hives on one
+  round, more from them than unsmoked, the angry bee calmed; and a player's puff calms the bees and lets it take a full
+  hive's comb;
+* the eight have their recipes, ages, worth and place on the market; the smelter takes the stores' raw copper to its
+  furnace; with no smith it beats the can cold, and stands aside once a smith comes.
+
+## Every thing the town makes
+
+Everything the mod adds is a real thing of real makings. It has a recipe of what a town gathers, an age, a worth on
+the price list, a trade that makes it out of the stores when the town wants one, and a use, for the folk and for you.
+This is the whole list in one place. The thirty new things (the kitchen's, the fields', the work's and the leisure
+things) follow the same rule, each in its own section above, and the game test ia01 holds every one of them to it.
+
+**What the audit changed.**
+* **The village coin has a recipe.** Fire a gold ingot in a furnace and nine coins come out, the mint's own rate. The
+  town mints the same way: from the Iron Age, while its treasury runs low, it melts bars of the stores' gold into its
+  coin, nine a bar (the mint, on the morning's business). The coin you are paid is always the treasury's, and a coin is
+  worth a coin, whatever minting it took.
+* **The memory core** has no recipe, and never will. It forms only when a companion falls, and holds everything that
+  companion was; a core made at a bench would hold nobody. It is worth nothing on the price list: a friend is not for
+  sale, and no stall buys or sells one.
+* **The player's own tools look like themselves.** The Assistant Spawner is a plinth of dark polished stone with brass
+  corners, a companion's face glowing in its panel and a diamond in its top. The Village Folk Spawner is a settler's
+  bundle of straw bound with rope, the little house it will found painted on its side and a loaf on top. The Job Board
+  is a notice board of oak with the crew's notes pinned on cork. The Place Marker is a surveyor's stake with a paper
+  flag, the Zone Marker a red-and-white ranging rod with a redstone tip, the Memory Core a sea-green orb in a brass
+  cage, and the Village Charter a roll of parchment tied with a blue ribbon and a gold seal. The shawl, the flat cap,
+  the scarf, the top hat, the tabard and the coin are drawn afresh too.
+* **No folk wants the player's tools**, so the shop's workshop makes them to a player's order, out of the stores, like
+  anything else on its book: `/village workshop order mc_assistant:zone_marker`.
+* **A board taken down is put back up.** The founders bring the first board. Take a town's board down and, within a
+  minute or two, the town makes another at the bench out of its stores (five signs, two planks and a book) and puts it
+  up on the square, and the chronicle says so. A town's own board gives you nothing when it comes down.
+* **Cast a fishing net.** Over open water, from a boat or off the bank, a net comes up with what a fleet boat's does:
+  two to four fish a haul, a while between casts, a haul's wear on the net each time.
+* **Cut a ribbon.** String an opening ribbon across your new doorway and cut it with shears: it snips in two and the
+  folk about give a cheer. A town's own ribbon across a great work is its leader's to cut at the opening.
+* **Put up the stocks for a town.** Stocks you set on a town's square are the town's for its sentences, the first time
+  it wants a pair, rather than it making its own.
+* **Forged coins are melted down.** The forged coins the watch takes off a forger, and the one it passed, are melted
+  back into the copper they were cast of, three to a bar, so none is ever passed again. You can do the same at a
+  crafting table: three forged coins make a copper ingot.
+* **The pets' bowls, beds and collars are on the market's board**, at their worth, with the treats.
+* **The masters' goods do not wait for a master.** A trade takes months to master, and a town that waited went its
+  whole first season without a pie, a stout or a reinforced pick. Until it has a master of the trade, the town's best
+  hand at it makes them, one turn at the bench in three (a master, at every turn). A pick of a learner's riveting is as
+  good as its hand: an apprentice's work, wearing through sooner, with the smith's name on it. Once a master comes up,
+  they are the master's.
+
+**The table.** Worths are in coin, as the price list works them out from the recipe (the cloth and the tailor's work
+and its dye, for a garment), rounded. The ages are the ones the makers keep to (Tiers).
+
+| Thing | Recipe | Age | Worth | Made by, and when | Used by the folk | Used by you |
+|---|---|---|---|---|---|---|
+| Pet Bowl | planks, a bowl, planks (or five bricks for two) | Wood | 0.8 | the shop's workshop, when a household with a pet has none | set by the hearth, filled from the household's chest or the stores, eaten from once a day | place one in a folk's house; fill it with a bone, meat or fish |
+| Dog Bed | wool in a box of five planks | Wood | 1.6 | the tailor, for a household's dog with no bed | set by the door; the dog sleeps in it | place one in a folk's house |
+| Cat Basket | wool in a basket of five sticks | Wood | 1.2 | the tailor, for a household's cat with no basket | under a window; the cat sleeps in it | place one in a folk's house |
+| Pet Collar | string, leather, string | Stone | 1.4 | the tailor, for a pet with none | buckled on its pet; its dye is the pet's colour | dye it like leather armour |
+| Pet Treat | two wheat and meat or fish, four | Wood | 0.15 | the cook, while a household with children keeps a pet | the children's treats for the pet | befriend or adopt a pet |
+| Long Coat | six wool and a string | Wood | ~4.0 | the tailor, on its book, when a folk wants one and the stock has none | worn over its clothes | buy, dye, give to a folk |
+| Leather Jacket | four leather and a string | Stone | ~3.9 | the tailor, as above | worn | as above |
+| Shawl | three wool and two string | Wood | ~2.5 | the tailor, as above | worn | as above |
+| Waistcoat | five wool and a gold nugget | Iron | ~4.6 | the tailor, as above | worn | as above |
+| Felt Hat | three wool and a leather band | Stone | ~2.8 | the tailor, as above | worn off work, a feather in it for the vain | as above |
+| Flat Cap | two wool and a string | Wood | ~1.7 | the tailor, as above | worn off work | as above |
+| Top Hat | four wool and a gold nugget | Iron | ~4.0 | the tailor, as above | worn off work, by the wealthy | as above |
+| Scarf | two wool and a string | Wood | ~1.7 | the tailor, as above | worn, by the poor first | as above |
+| Brooch | two gold nuggets and a lapis | Iron | ~3.9 | the tailor, as above | pinned on by the vain | buy, give to a folk |
+| Rosette | wool, paper and string | Wood | ~1.4 | the tailor, the day before a fashion show | the show's prize, worn pinned on | win one at the show |
+| Tabard | seven wool, cut like a tunic; then a banner at the crafting table | Wood | ~3.2 | the tailor, while the town has fewer than its grown folk off the watch (six at most) | worn on festival days and Founding Day | give it any banner's arms |
+| Fish / Pick / Sheaf Banner Pattern | paper and a fish / any pickaxe / wheat | Wood | ~0.5 / 0.7 / 0.35 | the tailor, the first time the town's arms carry the charge (kept in the stores) | the loom's pattern for the town's charge | use it at a loom |
+| Stocks | three planks over two logs | Wood | ~0.9 | the town's hands, the first time a sentence wants them | a convicted folk sits in them on the square | set them on a town's square for it |
+| Forged Coin | a copper ingot makes three; three make a copper ingot back | Stone | 0.1 | a tempted forger, of a stolen ingot | passed at the stores for a treat; melted down by the watch | melt them down |
+| Opening Ribbon | two string and a red dye, three | Wood | ~0.2 | the tailor, while a great work is under way | strung across the work's end, cut by the leader | string it anywhere, cut it with shears |
+| Reinforced Pickaxe | an iron pickaxe, three iron and a copper strap (taught) | Iron | 11 | a master smith (till there is one, the best smith, one turn in three), while the town digs and has fewer than two | a miner's or cave dweller's pick, three times the wear | learn it from a master smith |
+| Brewer's Stout | two wheat, sugar and a bottle (taught) | Stone | 1.2 | a master brewer (till there is one, the best brewer, one turn in three), while the town has a tavern and is fed (six kept) | drunk at the tavern for Haste | drink it: Haste |
+| Farmhouse Pie | three wheat, a pumpkin, an egg and a carrot, two (taught) | Wood | 1.2 | a master cook (till there is one, the best cook, one turn in three; eight kept) | a better meal than bread | eat it: ten hunger |
+| Apprentice's Journal | a book, a feather, an ink sac and leather | Stone | ~3.3 | the tailor, for each young apprentice without one | an apprentice writes up its day in it | your lessons' journal |
+| Quest Journal | a book, a feather, an ink sac and paper | Stone | ~2.8 | the shop's workshop, once quests are going (two kept) | given to a player taking a first quest | your quests, steps and endings |
+| Sealed Letter | paper and honeycomb or red dye | Wood | ~0.3 | the letter's writer, when a quest wants one | a letter carried to a friend | carry it |
+| Parcel | two paper and a string | Wood | ~0.7 | the sender, when a quest wants one | carried to another town | carry it |
+| Peace Terms | two paper, string, honeycomb or red dye | Wood | ~0.8 | the elder, when war's quest wants it | read to the enemy's elder, peace made | carry it |
+| Spy's Report | paper and an ink sac | Wood | ~0.5 | the scout's giver, filled in on the spot | the town's latest word on its rival | bring it home |
+| Smugglers' Ledger | three paper, string, an ink sac | Wood | ~1.2 | the smugglers' accomplice, in the story | the evidence against the ring | turn it in, or not |
+| Old Miner's Journal | a book and coal or charcoal | Stone | ~2.6 | the old miner, in the story | where the curse lies | read it |
+| Wooden Toy | planks and two sticks | Wood | ~0.25 | the lost child's parent | a child's toy, dropped on the way | follow it |
+| Child's Drawing | paper, yellow and blue dye | Wood | ~0.4 | the child, at the story's end | a thank-you | keep it |
+| Heirloom Ring | four gold nuggets round an emerald, diamond or lapis | Iron | ~5.6 | the smith, for a family's story | the family's heirloom | find it, give it back |
+| Heirloom Locket | gold nuggets, string, and amethyst, glass or emerald | Iron | ~4.1 | the smith, as above | as above | as above |
+| Medal of the Town | a gold ingot on a ribbon (red or blue wool, or string) | Iron | ~10 | the smith (else the shop), when the town honours you | carried: the town warms to you faster | carry it: a twentieth off the stores |
+| Key to the Town | two gold ingots and a nugget | Iron | ~21 | the smith (else the shop), when the town makes you a freeman | as above | a tenth off the stores |
+| Fishing Net | five string | Wood | 1.2 | the tailor, while the fleet has fewer nets than boats | cast from the fleet's boats: two to four fish a haul | cast it over open water |
+| Ferry Bell | two planks, a stick, a copper ingot | Stone | ~0.7 | the ferry's builders, at each landing | rung by folk waiting at a landing | ring it to call the ferry |
+| Storehouse Unit | four planks and four sticks | Wood | ~0.7 | the builders, twenty-seven to a storehouse | the town's store | build your own store |
+| Village Board | five signs, two planks and a book | Stone | ~3.7 | the founders; then the town's hands, whenever it has been taken down | says what the town is doing; the books | put one up anywhere; read it |
+| Village Coin | a gold ingot fired in a furnace makes nine | Iron | 1 | the mint, from the Iron Age, nine to a bar of the stores' gold | wages, purses, stalls, rents | buy and sell in town |
+| Village Charter | paper, bread, a gold ingot, seeds and a chest | Iron | ~12 | the shop's workshop, on your order | founds a town of its own | found a town |
+| Village Folk Spawner | eight bread round a gold ingot | Iron | ~13 | the shop's workshop, on your order | founds a town, or adds a settler | as it says |
+| Job Board | eight oak planks round a book | Stone | ~3 | the shop's workshop, on your order | the crew's board: roster and preset | right-click it |
+| Assistant Spawner | eight rotten flesh round a diamond | Diamond | ~27 | the shop's workshop, on your order | calls up a companion | place it |
+| Place Marker | paper over a stick | Wood | ~0.3 | the shop's workshop, on your order | a named waypoint for a companion | name it and set it |
+| Zone Marker | redstone over two sticks | Iron | ~0.5 | the shop's workshop, on your order | marks out a companion's patch | click two corners |
+| Memory Core | none: it forms when a companion falls | | 0 | nobody | brings that companion back | right-click the ground |
+
+**Where it is said.** `entity/Makers` names every thing's maker and when it is made, and the game test ia01 fails, by
+name, for a thing that has no recipe, no age, no worth, no maker, or makings the stores cannot run to. The game tests
+`ItemAuditGameTests` (ia01 to ia11) check that:
+* every item of the mod's has a recipe, its age, a worth and a maker, and the stores of a grown town run to every one of
+  them at the bench, the whole way from logs, wool and ore; and the pets' things are on the market's board;
+* a gold ingot fired makes nine coins, a coin is worth one, and an Iron Age town mints three bars of its stores' gold
+  into twenty-seven coin; and the memory core has no recipe, the reason given, and no worth;
+* the tailor knots a net of five of the stores' string for each of the fleet's two boats and no third, a net hauls two
+  to four fish to a line's one or two, and a player's cast over a pond brings fish up and wears the net (and nothing
+  off dry land);
+* a river town granted a fish for its arms has the tailor make the fish pattern of the stores' paper and cod, keeps
+  it, weaves the fish on its festival tabard, and uses the same pattern again;
+* a forger casts a copper ingot of the stores into three coins and passes one; handed in, the three are melted back
+  into the ingot; and stocks a player sets on the square are the town's;
+* the master brewer's stout is brewed of the stores and drunk at the tavern for Haste, paid into the treasury; the
+  master cook's pies are baked and eaten at a meal, a better one than bread; the tailor's journal is taken by the young
+  apprentice and written up the next day;
+* a town's board taken down is made again of its stores' planks and a book and put up, and the chronicle says so;
+* a player cuts its own ribbon, with the folk about cheering, and the shears wear;
+* every garment is made on the tailor's book out of the stores, dyed, and worn;
+* a place marker and a zone marker are made at the shop's workshop to a player's order, out of the stores;
+* with no master in the town, its best cook (not its greenest) bakes the pies one turn in three, and once a master
+  cook comes up the master bakes them at every turn and the other no longer; the best smith rivets the miners' pick,
+  an apprentice's work that wears through sooner, with its name on it.
+
+## The fletcher
+
+A Stone Age town whose watch carries bows (or that has built the archery range) takes up a **fletcher**: one at first,
+and a second once the town is sixty strong. If nobody takes the trade up of their own accord within a day, the town
+asks one of its own: a hand between trades or a hunter for choice, never one of the watch, nor a craft's only hand.
+The fletcher wears a tan leather bib apron over a green tunic, a quiver of arrows slung over its shoulder, and a green
+felt cap with a goose feather in its band.
+
+**Its hut.** Once the town keeps a fletcher, the builders put up a little timber fletcher's hut facing the square: a
+barrel for the finished arrows and a chest against the back wall, with the place between them left for the fletching
+table. The fletcher makes that table itself, of two of the stores' flint and four planks (the game's recipe), and sets
+it there; until the hut stands it works at a table on the square, and carries it in when the hut is built.
+
+**Everything it uses is real.**
+
+| What | Where it comes from |
+|---|---|
+| Flint | The miners' and diggers' gravel in the stores. The fletcher sets a block down on the sifting floor in front of its hut and breaks it with the stores' shovel, as you would: the game's own loot gives a flint about one time in ten, and the gravel otherwise, which goes back in the stores to be sifted again. |
+| Feathers | The rancher's hens. When the pen has more hens than it keeps (four), the rancher culls an old one, and while the fletcher is short of feathers it takes a hen before any other animal. A pen with no hens fetches a wild pair home. The feathers and the meat come home in its pack. |
+| Sticks | The stores' planks: two planks make four sticks, the rest kept. |
+| String | The spiders the watch and the hunters kill. |
+| Iron, glowstone, redstone, hay | The smelter's ingots; the Nether's glowstone, once it is in the stores; the miners' redstone; the farmers' wheat as bales. |
+
+**What it makes**, a piece at a time at its table, all into the stores, and booked as its making on the Production page
+and in the fletcher's trade book:
+
+| Thing | Recipe | When |
+|---|---|---|
+| Arrows | a flint, a stick and a feather make four | first, until the stores hold the raid's reserve; then some for the shop |
+| Bow | three sticks, three string | for each guard without one, and a spare; one for the shop when string is plentiful |
+| Crossbow | three sticks, two string, an ingot and a tripwire hook (an ingot, a stick and a plank make two hooks) | in the Iron Age, for the town's best archers, who are given them in place of their bows |
+| Target | a bale of hay and four redstone | for each butt at the range without one |
+| Redstone lamp | four redstone round a block of glowstone | set over a butt's target, it lights when an arrow strikes home |
+| Spectral arrows | four glowstone dust round an arrow make two | once the Nether's glowstone is in the stores; sixteen kept |
+
+**The watch, kept stocked.** In a town with a fletcher, every guard with a bow goes up the wall with a quiver of
+thirty-two arrows, filled again from the stores when it runs below sixteen. A guard with an empty quiver goes for more
+at once. The stores keep a reserve of thirty-two arrows a guard (and a turn at the butts) for a raid, and the shop will
+not sell you those, only what the fletcher makes past them. After a raid every quiver is filled at once, the chronicle
+says how many arrows went out, and the fletcher goes straight back to its table to make the reserve good. If a guard's
+quiver is empty and the stores have none, the board says so, and names the guards.
+
+**Practice.** On a quiet working afternoon (no bell, no rain, not the rest day) the fletcher runs practice at the
+range. The guards whose aim is least steady go first, one at a time: ten of the stores' arrows each, shot at the
+targets as real arrows, while the fletcher stands behind the line calling the shots. The guard pulls its arrows and
+they go back in the stores; the fletcher sweeps up any strays. Every session at the butts (the morning's practice and
+the contest too) steadies a guard's aim for good: its arrows fly truer at the butts, and in a fight the spread of its
+shots narrows, to half an unpractised guard's at best. A guard's card shows its best ("best at the butts: 8 of 10"),
+its sessions and its spread in a fight; a new best of seven or more out of ten that beats the whole watch goes into the
+chronicle.
+
+**You can** buy the arrows and bows the fletcher makes past the watch's needs at the shop; and `/village fletcher` says
+the whole of it: the fletcher, its hut and table, the stores' arrows and makings, all it has made, every guard's quiver
+and aim. An operator can call practice with `/village fletcher practice`.
+
+The game tests `DefenceTradesGameTests` (fd01 to fd06) check that a Stone Age town wants a fletcher only once its watch
+carries a bow, gives the place to one of its own (never the watch) and puts the hut on the builders' list, and that the
+fletcher makes its table of two flint and four planks in the hut; that a hundred blocks of gravel broken on the sifting
+floor give flint as the game gives it, the rest back in the stores; that a rancher culls hens first for a town with a
+fletcher and the feathers come home; that the stores' makings become arrows, bows, a crossbow (issued to the best
+archer), a target and spectral arrows by their recipes; that quivers are filled to thirty-two and refilled after a raid,
+that the reserve is not sold, and that an empty quiver with empty stores is on the board; and that practice at the
+range steadies a guard's aim, narrows its spread and gets the arrows back into the stores.
+
+## The golem keeper
+
+An Iron Age town that has been raided twice within a fortnight, or has grown to sixty folk, takes up a **golem keeper**:
+one, from its own folk if nobody comes forward within a day (a hand between trades, or a strong back from the mines or
+the furnaces for choice, never the watch). It wears a heavy dark leather apron studded with iron rivets, a
+pumpkin-orange scarf wound round its neck, a riveted leather cap, and the shears it carves pumpkins with at its hip.
+Its workplace is the **golem yard**, an open-fronted shed by the square with a crafting table, a chest and an anvil.
+
+**Iron golems, built the real way.** The keeper makes blocks of iron out of the stores' ingots at the yard, nine to a
+block, until it has four. At the golem's post it stands them in a T, legs, body and both arms, clearing the grass round
+it, and sets a pumpkin on top: a carved one from the stores, or a farm pumpkin carved where it sits with the stores'
+shears (its four seeds go into the stores). The pumpkin is placed the ordinary way, so the game's own check stands the
+golem up, exactly as when you build one: a golem made by hand, which never turns on the town's folk. The keeper names
+it (Ironside, Old Rust, Bolt...), and the chronicle tells who raised whom, and where.
+
+* **How many.** A golem on the square always; one at every gate while the raids are frequent (two in a fortnight); and
+  two more about the square in a big town of eighty. Never one the town cannot afford: a golem takes thirty-six ingots,
+  and none is built if that would leave the stores short of the iron the watch's armour and blades still want. The
+  keeper's card and `/village golems` say what it is waiting on.
+* **At its post.** Each golem keeps to its post, a gate or the square. It goes after a monster about the town as any
+  golem does, and walks back to its post when the fight is done.
+* **Mending.** A hurt golem is mended with the stores' iron ingots, as you mend one: twenty-five health an ingot, by the
+  keeper on its round. Its cracks fade as it mends.
+* **Losses.** A golem that falls is mourned a little ("Old Rust fell at the east gate"), the folk who knew it remember
+  it, and the keeper gathers the iron it dropped back into the stores on its next round. The post is built again when
+  the town can afford it.
+* **The golem from before.** A town that already has an iron golem (the one the town raised itself before it had a
+  keeper) hands it to the keeper, who names it if it has no name and gives it a post. A town with no keeper still raises
+  its first golem when it comes into the Iron Age, now in the same real way, by a town hand at the square.
+
+**Snow golems in winter.** In the town's winter, if the biome is not one a snow golem melts in, the keeper builds snow
+golems on the watchtower's deck, two to a tower: two blocks of snow (packed four snowballs to a block from the
+sweeper's snowballs, or snow it shovels where it lies) and a pumpkin, and the game stands each up to pelt whatever comes
+at the town with snowballs. In spring they are let go, and melt away. In a warm biome (a desert, a savanna, the badlands)
+it builds none, and says why.
+
+**You can** see the golems at their posts and their state on the board and the keeper's card, and read the whole of it
+with `/village golems`: the keeper, the yard, the posts wanted, every golem and how it is, the fallen, the stores' iron
+against what the watch still wants, and all the keeper has done. Its trade book keeps the same numbers.
+
+The game tests `DefenceTradesGameTests` (fd07 to fd10) check that a town raided twice in a fortnight (not twice in a
+month) wants a keeper and gives the place to one of its own, with the golem yard on the builders' list; that four
+blocks of the stores' iron and a pumpkin carved with the stores' shears stand up a player-made iron golem at the square
+by the game's own check, named, with the seeds in the stores, and that carried away it walks back to its post; that the
+town's old golem is taken in hand and named, mended with ingots twenty-five health at a time until its cracks are gone,
+and when it falls is mourned and its iron gathered back; that a snow golem is built on the watchtower in a snowy
+winter, none in a desert town (and why), and that it melts away in spring; and that no golem is built, and no iron
+touched, while the watch's armour still wants the iron, and that with iron enough for both, it is.
