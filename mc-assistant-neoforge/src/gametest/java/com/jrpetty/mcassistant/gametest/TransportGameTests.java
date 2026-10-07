@@ -369,7 +369,11 @@ public class TransportGameTests {
         BlockPos near = c.bankA().relative(c.way().getOpposite(), 2).above();
         farmer.moveTo(near.getX() + 0.5, near.getY(), near.getZ() + 0.5, 0.0F, 0.0F);
         farmer.earn(5);
+        // The morning's wages (Market.payWages) are paid at a test town's first look: today's are counted as paid, and
+        // any wage paid all the same is taken out of the purses' change below, so only the fare is weighed.
+        Ledger.paid(id, level.getDayTime() / 24000L);
         int purse0 = farmer.purse(), manPurse0 = man.purse();
+        int wages0 = farmer.earnedInAll(), manWages0 = man.earnedInAll();
         Ferries.bookForTests(farmer, level);
         helper.assertTrue(Ferries.passageForTests(farmer) == 0, "the farmer off to the ferry");
         boolean[] done = { false };
@@ -390,13 +394,15 @@ public class TransportGameTests {
             if (stage != -1 || c.crossings == 0) return;
             done[0] = true;
             int side = farmer.blockPosition().getX() > c.bankA().getX() + c.width() / 2 ? 1 : 0;
+            int farmerWages = farmer.earnedInAll() - wages0, manWages = man.earnedInAll() - manWages0;
             Kit.log("tr03 across at tick " + tick + ": the farmer at " + farmer.blockPosition().toShortString() + " (side " + side + "), purse "
-                + purse0 + " -> " + farmer.purse() + "; the ferryman's " + manPurse0 + " -> " + man.purse() + "; " + c.crossings + " crossings, "
-                + c.fares + " in fares");
+                + purse0 + " -> " + farmer.purse() + " (wages " + farmerWages + "); the ferryman's " + manPurse0 + " -> " + man.purse()
+                + " (wages " + manWages + "); " + c.crossings + " crossings, " + c.fares + " in fares");
             for (String p : Transport.page(level, t.v())) Kit.log("tr03 page: " + p);
             helper.assertTrue(side == 1 && farmer.getVehicle() == null, "the farmer set down on the far landing: " + farmer.blockPosition().toShortString());
-            helper.assertTrue(farmer.purse() == purse0 - Ferries.FARE && man.purse() == manPurse0 + Ferries.FARE,
-                "a coin from the farmer's purse to the ferryman's: " + purse0 + " -> " + farmer.purse() + ", " + manPurse0 + " -> " + man.purse());
+            helper.assertTrue(farmer.purse() - farmerWages == purse0 - Ferries.FARE && man.purse() - manWages == manPurse0 + Ferries.FARE,
+                "a coin from the farmer's purse to the ferryman's: " + purse0 + " -> " + farmer.purse() + " (wages " + farmerWages + "), "
+                + manPurse0 + " -> " + man.purse() + " (wages " + manWages + ")");
             helper.assertTrue(c.fares == Ferries.FARE && c.crossings >= 1, "the crossing and the fare in the books: " + c.crossings + ", " + c.fares);
             helper.succeed();
         });
