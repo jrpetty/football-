@@ -203,6 +203,7 @@ public final class TownPlan {
             case "court" -> "court";
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern", "school", "bank", "museum", "stable",
+                 "auction",                                                    // [fleet] the auction house (entity/Auctions)
                  "infirmary",                                                  // [batchA] the infirmary (entity/Infirmary)
                  "theatre",                                                    // [batchD] the theatre
                  "bakery", "inn" -> "civic";                                   // [batchE] the bakery and the inn

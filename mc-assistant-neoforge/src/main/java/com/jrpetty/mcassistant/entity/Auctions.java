@@ -76,6 +76,9 @@ import java.util.function.Predicate;
  * <li><b>The proceeds</b> go to the seller: the treasury for the town's finds, the player who put the lot up, or the
  *     merchant. The lot goes to the winner: a folk keeps it at home (its keepsake) or wears it; a player gets it, or
  *     finds it waiting next time they come by the town, with anything else the town owes them.</li>
+ * <li><b>The auction house.</b> An Iron Age town of twenty-five that has held its auction three market days or more
+ *     builds an auction house (blueprints/auction.txt): a hall with a rostrum at the back and benches for twelve. From
+ *     then on the auction is held in it, the auctioneer behind the rostrum and the bidders on the benches.</li>
  * </ul>
  * It is all in the chronicle and the gazette ("A diamond sold for 48 coins to Mara, the smith's partner"), on the
  * board, on the winners' cards, and on the Auction page of the town's books (the lots, the bids, the sales).
@@ -150,6 +153,8 @@ public final class Auctions {
         String auctioneerName = "";
         @Nullable BlockPos rostrum;
         Direction facing = Direction.SOUTH;
+        /** The auction house, if the auction is held in it. */
+        @Nullable Ledger.Building house;
         long nextAt, phaseAt;
         final Map<UUID, BlockPos> bidders = new LinkedHashMap<>();
         /** The coin held for a player's bid on the lot being called. */
@@ -607,7 +612,7 @@ public final class Auctions {
         }
         List<String> names = new ArrayList<>();
         for (Lot l : s.lots) names.add(JobMarket.a(l.name()));
-        Villages.tell(v.id(), day, "up for auction on the square this morning: " + list(names));
+        Villages.tell(v.id(), day, "up for auction " + venue(v.id()) + " this morning: " + list(names));
         LOG.info("[MCA-AUCTION] {}: {} lots for today: {}", Villages.name(v.id()), s.lots.size(), names);
         return s;
     }
@@ -626,7 +631,7 @@ public final class Auctions {
         stand(level, v, s);
         AT.put(a.getUUID(), v.id());
         if (a.peekJob() != null) a.clearQueue();
-        a.brain("calling the auction on the square");
+        a.brain("calling the auction " + venue(v.id()));
         FolkTalk.speak(a, "Gather round, gather round! The auction's about to start!");
         level.playSound(null, s.rostrum, SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 1.5F, 1.4F);
         // Who comes: the grown folk who want something on the list and have the coin for it, the keenest first.
@@ -651,7 +656,7 @@ public final class Auctions {
             if (f.peekJob() != null) f.clearQueue();
             f.brain("off to the auction on the square");
         }
-        tellPlayers(level, s, "The auction is starting on the square at " + Villages.name(v.id()) + ": " + s.lots.size()
+        tellPlayers(level, s, "The auction is starting " + venue(v.id()) + " at " + Villages.name(v.id()) + ": " + s.lots.size()
             + (s.lots.size() == 1 ? " lot" : " lots") + ". Right-click " + s.auctioneerName + " to bid.");
         LOG.info("[MCA-AUCTION] {}: {} calls the auction at {} with {} folk keen", Villages.name(v.id()), s.auctioneerName,
             s.rostrum == null ? "?" : s.rostrum.toShortString(), s.bidders.size());
@@ -671,9 +676,17 @@ public final class Auctions {
         return null;
     }
 
-    /** The auctioneer's stand on the square (or the auction house's, once it stands): a spot of open ground a little off
-     *  the heart, facing it, the crowd between. */
+    /** The auctioneer's stand: in the auction house, once it stands, behind its rostrum (the lectern), facing the
+     *  benches; before it, on the square, a spot of open ground a little off the heart, facing it, the crowd between. */
     static void stand(ServerLevel level, Villages.Village v, Sale s) {
+        Ledger.Building house = house(v.id());
+        if (house != null && level.isLoaded(house.anchor())) {
+            int[] l = rostrumCell();
+            s.house = house;
+            s.rostrum = inHouse(house, l[0], 0, l[1] + 1);
+            s.facing = house.facing().getOpposite();
+            return;
+        }
         BlockPos c = v.centre();
         int[][] spots = { { 0, -6 }, { 6, 0 }, { -6, 0 }, { 0, 6 }, { 5, -5 }, { -5, -5 }, { 5, 5 }, { -5, 5 }, { 0, -9 }, { 9, 0 } };
         for (int[] o : spots) {
@@ -691,6 +704,66 @@ public final class Auctions {
         s.facing = Direction.SOUTH;
     }
 
+    // ------------------------------------------------------------------ the auction house
+
+    /** The auction house, if the town has built one. */
+    @Nullable
+    static Ledger.Building house(UUID village) {
+        return Villages.builtStructure(village, "auction");
+    }
+
+    /** A spot in the auction house by its drawing: across (right +), up, and toward the back (+). */
+    static BlockPos inHouse(Ledger.Building b, int dx, int h, int dz) {
+        Direction back = b.facing(), right = back.getClockWise();
+        return b.anchor().relative(right, dx).relative(back, dz).above(h);
+    }
+
+    /** Where the rostrum (the lectern) stands in the drawing: {dx, dz}. */
+    private static int[] rostrumCell() {
+        for (com.jrpetty.mcassistant.entity.goal.Blueprints.Cell c : com.jrpetty.mcassistant.entity.goal.Blueprints.cells("auction")) {
+            if (c.h() == 0 && c.key().part() == com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.LECTERN) return new int[]{ c.dx(), c.dz() };
+        }
+        return new int[]{ 0, 1 };
+    }
+
+    /** The bidders' benches (the stairs on the floor), the nearest the rostrum first. */
+    static List<BlockPos> benches(Ledger.Building b) {
+        List<int[]> cells = new ArrayList<>();
+        for (com.jrpetty.mcassistant.entity.goal.Blueprints.Cell c : com.jrpetty.mcassistant.entity.goal.Blueprints.cells("auction")) {
+            if (c.h() == 0 && c.key().part() == com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.BLOCK
+                    && c.key().style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_STAIR) cells.add(new int[]{ c.dx(), c.dz() });
+        }
+        cells.sort(java.util.Comparator.<int[]>comparingInt(c -> -c[1]).thenComparingInt(c -> Math.abs(c[0])).thenComparingInt(c -> c[0]));
+        List<BlockPos> out = new ArrayList<>();
+        for (int[] c : cells) out.add(inHouse(b, c[0], 0, c[1]));
+        return out;
+    }
+
+    /** How many market days the town has held an auction (the days in its sales books). */
+    static int held(UUID village) {
+        java.util.Set<String> days = new java.util.HashSet<>();
+        for (String[] p : salesRows(village)) days.add(p[0]);
+        return days.size();
+    }
+
+    /** [fleet] Does the town want an auction house (Villages.projectsWantedInOrder)? An Iron Age town of twenty-five that
+     *  has held its auction on the square three market days or more. */
+    public static boolean wanted(@Nullable UUID village, int folk) {
+        return village != null && holds(village) && folk >= 25 && Villages.ageOf(village).ordinal() >= Villages.Age.IRON.ordinal()
+            && held(village) >= 3;
+    }
+
+    /** Why it is building one (the board's "why"). */
+    public static String why(UUID village) {
+        return "an auction house: the market day's auction under a roof, a rostrum and benches for twelve bidders, now the town has held "
+            + held(village) + " on its square";
+    }
+
+    /** Where the auction is held, in words. */
+    static String venue(UUID village) {
+        return house(village) != null ? "at the auction house" : "on the square";
+    }
+
     /** Standing room at a column: the ground's top, with two of air over it. */
     @Nullable
     static BlockPos surface(ServerLevel level, BlockPos at) {
@@ -702,10 +775,17 @@ public final class Auctions {
         return p;
     }
 
-    /** The crowd's places before the stand: rows of five, three to five blocks off, facing it. */
+    /** The crowd's places before the stand: the auction house's benches, the nearest the rostrum first; on the square,
+     *  rows of five, three to five blocks off, facing it. */
     static List<BlockPos> places(ServerLevel level, Sale s, int n) {
         List<BlockPos> out = new ArrayList<>();
         if (s.rostrum == null) return out;
+        if (s.house != null) {
+            for (BlockPos p : benches(s.house)) if (out.size() < n) out.add(p);
+            BlockPos floor = s.rostrum.relative(s.facing, 2);
+            while (out.size() < n) out.add(floor);
+            return out;
+        }
         Direction side = s.facing.getClockWise();
         int[] across = { 0, -1, 1, -2, 2 };
         for (int row = 0; row < 4 && out.size() < n; row++) {
@@ -1144,7 +1224,7 @@ public final class Auctions {
                 : "That's all for today. Better luck next market day.");
         }
         if (s.at >= 0) {
-            Villages.tell(v.id(), s.day, "the auction on the square sold " + s.sold + " of " + s.lots.size() + (s.lots.size() == 1 ? " lot" : " lots")
+            Villages.tell(v.id(), s.day, "the auction " + venue(v.id()) + " sold " + s.sold + " of " + s.lots.size() + (s.lots.size() == 1 ? " lot" : " lots")
                 + " for " + s.takings + coinWord(s.takings));
         }
         LOG.info("[MCA-AUCTION] {}: the auction is over ({}): {} of {} sold for {}", Villages.name(v.id()), why, s.sold, s.lots.size(), s.takings);
@@ -1365,7 +1445,7 @@ public final class Auctions {
         if (s != null && s.phase != Phase.DONE && !s.lots.isEmpty()) {
             List<String> names = new ArrayList<>();
             for (Lot l : s.lots) names.add(JobMarket.a(l.name()));
-            return "There's an auction on the square this morning: " + list(names) + ". Come along at nine and bid!";
+            return "There's an auction " + venue(village) + " this morning: " + list(names) + ". Come along at nine and bid!";
         }
         return whenNext(level, village) + " Hand me what you want sold and say \"put it up\": the town keeps it for you till then.";
     }
@@ -1376,7 +1456,7 @@ public final class Auctions {
         long day = level.getDayTime() / 24000L;
         Sale s = SALES.get(village);
         if (Market.marketDay(village, day) && (s == null || s.phase != Phase.DONE) && level.getDayTime() % 24000L < LATEST) {
-            return "The auction's this morning, on the square, at nine.";
+            return "The auction's this morning, " + venue(village) + ", at nine.";
         }
         int d = Market.daysToMarket(village, day + 1) + 1;
         return "The next auction is on market day, in " + d + (d == 1 ? " day." : " days.");
@@ -1444,7 +1524,7 @@ public final class Auctions {
             List<String> names = new ArrayList<>();
             for (Lot l : s.lots) names.add(l.name());
             switch (s.phase) {
-                case LOTS, GATHER -> out.add("RG|Auction on the square at nine: " + list(names) + " — come and bid!");
+                case LOTS, GATHER -> out.add("RG|Auction " + venue(village) + " at nine: " + list(names) + " — come and bid!");
                 case CALLING -> {
                     Lot lot = s.lot();
                     if (lot != null) out.add("RG|The auction is on: lot " + (s.at + 1) + " of " + s.lots.size() + ", " + JobMarket.a(lot.name())
@@ -1485,7 +1565,7 @@ public final class Auctions {
         if (village == null) return "";
         Sale s = SALES.get(village);
         if (s != null && AT.containsKey(f.getUUID())) {
-            if (f.getUUID().equals(s.auctioneer)) return "calling the auction on the square";
+            if (f.getUUID().equals(s.auctioneer)) return "calling the auction " + venue(village);
             Lot lot = s.lot();
             Integer most = lot == null ? null : lot.most.get(f.getUUID());
             return "at the auction" + (lot == null ? "" : ", for the " + lot.name() + (most != null && most >= lot.reserve ? " (up to " + most + "c)" : " (only looking)"));
@@ -1608,6 +1688,26 @@ public final class Auctions {
         Sale s = SALES.get(village);
         Lot lot = s == null || s.phase != Phase.CALLING ? null : s.lot();
         return lot == null ? null : lot.highBy;
+    }
+
+    /** Tests: where the auctioneer stands today, then the crowd's places. */
+    public static List<BlockPos> standForTests(UUID village) {
+        Sale s = SALES.get(village);
+        List<BlockPos> out = new ArrayList<>();
+        if (s == null || s.rostrum == null) return out;
+        out.add(s.rostrum);
+        out.addAll(s.bidders.values());
+        return out;
+    }
+
+    /** Tests: the auction house's rostrum (where the auctioneer stands) and its benches. */
+    public static BlockPos rostrumForTests(Ledger.Building b) {
+        int[] l = rostrumCell();
+        return inHouse(b, l[0], 0, l[1] + 1);
+    }
+
+    public static List<BlockPos> benchesForTests(Ledger.Building b) {
+        return benches(b);
     }
 
     /** Tests: what each folk will go to for the lot being called. */

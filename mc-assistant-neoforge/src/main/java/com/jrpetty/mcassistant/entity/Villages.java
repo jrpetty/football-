@@ -1722,6 +1722,8 @@ public final class Villages {
         if (folk >= 10 && built(villageId, "fountain") < 1) extras.add("fountain");
         // A schoolhouse, once there are children enough to fill one (School).
         if (School.wanted(villageId, folk) && built(villageId, "school") < 1) extras.add("school");
+        // [fleet] An auction house, once an Iron Age town of twenty-five has held a few auctions on its square (Auctions).
+        if (Auctions.wanted(villageId, folk) && built(villageId, "auction") < 1) extras.add("auction");
         // And a park among the homes, once the town is big enough to want one (Park).
         if (Park.wanted(villageId, folk)) extras.add(Park.STRUCTURE);
         // [batchC] A football pitch by the park, for the rest day's match (Pitch).
@@ -2121,6 +2123,7 @@ public final class Villages {
             case "brewery" -> "a brewery, for the brewer's potions";
             case "library" -> "a library, where the enchanter keeps its books";
             case "school" -> School.why(villageId);
+            case "auction" -> Auctions.why(villageId);             // [fleet]
             case "fountain" -> "a fountain on the square, now that the village builds in stone";
             case "park" -> "a park among the homes, a fountain and benches: somewhere to sit of an evening, now the town has "
                 + folk + " folk";

@@ -148,6 +148,8 @@ public final class Fleet {
         long chartDay = -1;
         final Map<UUID, Hand> crew = new LinkedHashMap<>();
         long decided = -1, cameIn = -1;
+        /** Mornings in a row with no open water beyond the quay. */
+        int dry;
         String today = "";
         int caught, out;
         long lastTick = -100000L, lastBoats = -100000L;
@@ -249,7 +251,9 @@ public final class Fleet {
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             Waterfront.Dock d = Waterfront.dockOf(v.id(), a);
             if (d == null || !level.getBlockState(d.start()).is(BlockTags.PLANKS)) continue;
-            if (best == null || d.start().distSqr(v.centre()) < best.start().distSqr(v.centre())) best = d;
+            if (best != null && d.start().distSqr(v.centre()) >= best.start().distSqr(v.centre())) continue;
+            if (!Land.areaLoaded(level, d.end(), 20) || chart(level, d).grounds(1).isEmpty()) continue;   // a jetty into a pond: no sea
+            best = d;
         }
         if (best == null) {
             // None: a site where the town meets the water, looked for about its fishers' water and its heart.
@@ -260,7 +264,7 @@ public final class Fleet {
             around.add(v.centre());
             for (BlockPos c : around) {
                 if (!Land.areaLoaded(level, c, 20)) continue;
-                Waterfront.Dock d = Waterfront.site(level, c, c.equals(v.centre()) ? 24 : 16);
+                Waterfront.Dock d = Waterfront.site(level, c, 16);
                 if (d == null || chart(level, d).grounds(1).isEmpty()) continue;
                 if (Waterfront.build(level, v, d, false) == 0) continue;            // no wood for it yet
                 best = d;
@@ -623,12 +627,12 @@ public final class Fleet {
      *  hour; and the fish market (FishMarket). */
     public static void tick(ServerLevel level, @Nullable UUID village) {
         if (village == null) return;
-        Villages.Village v = Villages.get(village);
-        if (v == null || !big(village)) return;
         Town t = town(village);
         long now = level.getGameTime();
-        if (now - t.lastTick < 20L && now >= t.lastTick) return;
+        if (now - t.lastTick < 20L && now >= t.lastTick) return;    // every folk of the town calls: once a second is enough
         t.lastTick = now;
+        Villages.Village v = Villages.get(village);
+        if (v == null || !big(village)) return;
         Waterfront.Dock q = quay(level, v, t);
         if (q == null || !level.isLoaded(q.start())) return;
         FishMarket.tick(level, v, q);
@@ -694,8 +698,18 @@ public final class Fleet {
         if (grounds.isEmpty()) {
             t.today = "no open water beyond the quay";
             book(id, day, 0, 0, t.today);
+            // A quay that has had no open water beyond it three mornings running (the water gone, built over, or never
+            // more than a pond) is let go of: another is looked for.
+            if (++t.dry >= 3) {
+                t.dry = 0;
+                t.quay = null;
+                t.chart = null;
+                Ledger.forget(id, "fleet.quay");
+                LOG.info("[MCA-FLEET] {}: no open water beyond the quay three mornings running; looking for another", Villages.name(id));
+            }
             return t.today;
         }
+        t.dry = 0;
         List<BlockPos> berths = t.chart.berths;
         long now = level.getGameTime();
         int sent = 0;

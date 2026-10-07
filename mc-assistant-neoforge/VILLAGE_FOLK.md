@@ -6342,6 +6342,11 @@ On market day, a town of **twelve** or more from the Stone Age holds an **auctio
   else the town owes them (a bid handed back, a sale's proceeds, an unsold lot).
 * On market day a town that holds the auction no longer puts its "finest spare thing" up for the
   sealed bids of before; its finds go under the hammer on the square instead.
+* **The auction house.** Once an Iron Age town of twenty-five has held its auction on three market
+  days, it builds an auction house: a timber hall on a stone footing, with the auctioneer's
+  rostrum (a lectern) at the back before the barrels where the lots wait, and three rows of
+  benches for twelve bidders. From then on the auction is held there, the auctioneer behind the
+  rostrum with the lot held up over it, and the bidders on the benches.
 
 **Where to see it.** The board shows the day's lots, the lot under the hammer and the bid, and
 afterwards what sold. The chronicle and the gazette's **The auction** piece say what sold, for
@@ -6357,4 +6362,6 @@ hammer, the folk who can afford it come and the poor one does not, every bid is 
 bidder's purse and what the diamond is worth to it, the one to whom it is worth most takes it,
 the coin goes from its purse to the treasury and the diamond from the stores into its pack
 (fa04); and that a player outbids a folk, gets the diamond, pays only the winning bid into the
-treasury, and the folk keeps its purse (fa05).
+treasury, and the folk keeps its purse (fa05); and that an Iron Age town wants an auction house
+once it has held three auctions, and with one standing the auctioneer stands behind its rostrum
+and the crowd takes the benches (fa06).

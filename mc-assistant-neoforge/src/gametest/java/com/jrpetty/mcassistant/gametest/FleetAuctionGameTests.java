@@ -406,4 +406,53 @@ public class FleetAuctionGameTests {
         helper.assertTrue(rival.purse() == purse0, "the folk outbid keeps its purse: " + rival.purse());
         helper.succeed();
     }
+
+    // ============================================================ fa06: the auction house
+
+    /**
+     * An Iron Age town that has held its auction on three market days wants an auction house; with one standing, the
+     * auction is held in it: the auctioneer behind the rostrum (the lectern), the crowd on the benches.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "fa06_house")
+    public static void fa06_house(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 1050000;
+        Bay b = bay(helper, x, 9000L, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM);
+        UUID id = b.village();
+        Villages.ageForTests(id, Villages.Age.IRON);
+        Auctions.manualForTests(true);
+        boolean before = Auctions.wanted(id, 25);
+        long day = level.getDayTime() / 24000L;
+        Ledger.note(id, "auction.sales", (day - 14) + "|diamond|20|Ada|town|from the town's stores\n" + (day - 7) + "|saddle|9|Bram|town|\n"
+            + day + "|name tag|4|Cara|town|");
+        boolean after = Auctions.wanted(id, 25);
+        Kit.log("fa06 wanted before any auction " + before + ", after three market days " + after + "; why: " + Auctions.why(id));
+        helper.assertTrue(!before && after, "an auction house wanted once three auctions have been held: " + before + ", " + after);
+        BlockPos anchor = Kit.surface(level, x - 4, Z - 22);
+        com.jrpetty.mcassistant.entity.goal.BuildGoal.stamp(level, "auction", anchor, Direction.NORTH, 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        Ledger.built(id, "auction", anchor, Direction.NORTH);
+        Ledger.Building house = Villages.builtStructure(id, "auction");
+        helper.assertTrue(house != null, "the auction house in the town's ledger");
+        BlockPos at = Kit.surface(level, x + 6, Z + 6);
+        level.setBlockAndUpdate(at, Blocks.CHEST.defaultBlockState());
+        ZoneChests.mark(level, at);
+        ((Container) level.getBlockEntity(at)).setItem(0, new ItemStack(Items.DIAMOND, 6));
+        b.folk().get(1).earn(80);
+        b.folk().get(2).earn(60);
+        List<String> lots = Auctions.openForTests(level, b.v());
+        int crowd = Auctions.startForTests(level, b.v());
+        List<BlockPos> stand = Auctions.standForTests(id);
+        BlockPos rostrum = Auctions.rostrumForTests(house);
+        List<BlockPos> benches = Auctions.benchesForTests(house);
+        Kit.log("fa06 lots " + lots + "; a crowd of " + crowd + "; the stand " + stand + "; the rostrum " + rostrum.toShortString()
+            + " (behind the lectern: " + level.getBlockState(rostrum.relative(Direction.SOUTH)).getBlock() + "), benches " + benches.size());
+        helper.assertTrue(!stand.isEmpty() && stand.get(0).equals(rostrum), "the auctioneer behind the auction house's rostrum: " + stand);
+        helper.assertTrue(level.getBlockState(rostrum.relative(Direction.SOUTH)).is(Blocks.LECTERN), "the lectern before it");
+        helper.assertTrue(crowd >= 2 && benches.size() == 12, "a crowd, and twelve places on the benches: " + crowd + ", " + benches.size());
+        for (int i = 1; i < stand.size(); i++) {
+            helper.assertTrue(benches.contains(stand.get(i)), "the crowd's places are the benches: " + stand.get(i).toShortString());
+        }
+        helper.succeed();
+    }
 }

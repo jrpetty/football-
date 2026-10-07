@@ -229,15 +229,15 @@ public final class FishMarket {
 
     // ------------------------------------------------------------------ the stall
 
-    /** Somewhere on the bank by the quay's foot for the stall: three to six blocks along the shore from the quay, on
+    /** Somewhere on the bank by the quay's foot for the stall: three to eight blocks along the shore from the quay, on
      *  flat dry ground with room over it, its customers' side away from the water. */
     @Nullable
     static Stall site(ServerLevel level, Waterfront.Dock q) {
         Direction in = q.out().getOpposite(), side = q.out().getClockWise();
         BlockPos bank = q.start().relative(in);
-        for (int n : new int[]{ 3, -3, 4, -4, 5, -5, 6, -6 }) {
+        for (int n : new int[]{ 3, -3, 4, -4, 5, -5, 6, -6, 7, -7, 8, -8 }) {
             Direction a = n > 0 ? side : side.getOpposite();
-            for (int back = 0; back <= 2; back++) {
+            for (int back = 0; back <= 3; back++) {
                 for (int dy = 1; dy >= 0; dy--) {
                     BlockPos stand = bank.relative(a, Math.abs(n)).relative(in, back).above(dy);
                     Stall s = new Stall(stand, q.out(), side);

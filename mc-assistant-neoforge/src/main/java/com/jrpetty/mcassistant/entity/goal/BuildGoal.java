@@ -64,6 +64,8 @@ public class BuildGoal extends Goal {
 
         // the museum, where the town's rare finds go on show and its chronicle is kept as books (Museum)
         "museum",
+        // [fleet] the auction house, the market day's auction under a roof (entity/Auctions)
+        "auction",
         // [econ-housing] the villa a well-off household has built for itself (HousingMarket)
         "villa",
         // the stable, once the village has horses (Stables)
