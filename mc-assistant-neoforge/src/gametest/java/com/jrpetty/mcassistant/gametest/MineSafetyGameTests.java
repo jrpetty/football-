@@ -257,7 +257,7 @@ public class MineSafetyGameTests {
             + String.join(" | ", TownMine.report(v, heart)));
         helper.assertTrue(deep >= 20 && deep <= 30, "twenty to thirty down: " + deep);
         final double[] last = { end.getX() + 0.5, end.getZ() + 0.5 }, worst = { 0 };
-        final long[] up = { -1 }, sent = { -1 };
+        final long[] up = { -1 }, sent = { -1 }, climbing = { -1 };
         helper.onEachTick(() -> {
             keepAtWork(level, f);
             long t = helper.getTick();
@@ -271,8 +271,16 @@ public class MineSafetyGameTests {
             Job j = f.peekJob();
             if (sent[0] < 0 && j != null && j.type() == Job.Type.MINE && MineStairs.OUT.equals(j.arg())) {
                 sent[0] = t;
-                Kit.log("mf02 sent up at " + t + " from " + at.toShortString());
+                Kit.log("mf02 sent up at " + t + " from " + at.toShortString() + " — " + f.debugLine());
             }
+            // Sent up, the climb itself gets under way: a deposit to stores it could not walk to once held its
+            // legs with the way up queued behind it, the whole test long.
+            if (climbing[0] < 0 && f.running(com.jrpetty.mcassistant.entity.goal.MineGoal.class)) {
+                climbing[0] = t;
+                Kit.log("mf02 climbing at " + t + " from " + at.toShortString());
+            }
+            helper.assertTrue(sent[0] < 0 || climbing[0] >= 0 || t - sent[0] <= 200,
+                "sent up at " + sent[0] + ", and still not climbing at " + t + " — " + f.debugLine());
             if (t % 250 == 0) Kit.log("mf02 @" + t + " at " + at.toShortString() + " — " + f.debugLine());
             if (up[0] < 0 && at.getY() >= top - 1 && !MineStairs.underground(level, at)) {
                 up[0] = t;
@@ -281,7 +289,7 @@ public class MineSafetyGameTests {
             }
             if (up[0] >= 0 && plot.containsColumn(at) && at.getY() >= top - 1) {
                 List<String> report = TownMine.report(v, heart);
-                Kit.log("mf02 back at its field at " + t + " (out at " + up[0] + ", sent up at " + sent[0] + "); the most it moved in a tick "
+                Kit.log("mf02 back at its field at " + t + " (out at " + up[0] + ", sent up at " + sent[0] + ", climbing from " + climbing[0] + "); the most it moved in a tick "
                     + String.format("%.2f", worst[0]) + " | " + String.join(" | ", report));
                 helper.assertTrue(report.stream().anyMatch(l -> l.startsWith("Below ground in the mine: none")), "nobody below ground in the mine now: " + report);
                 helper.succeed();

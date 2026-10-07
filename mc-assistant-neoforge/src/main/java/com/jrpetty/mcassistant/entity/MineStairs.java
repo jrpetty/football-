@@ -235,7 +235,13 @@ public final class MineStairs extends SavedData {
     public static void lookForAWayUp(VillageFolkEntity f, ServerLevel level) {
         UUID id = f.getUUID();
         Job j = f.peekJob();
-        if (j != null && j.type() == Job.Type.MINE) { BELOW.remove(id); return; }   // its own run sees it home
+        if (j != null && j.type() == Job.Type.MINE) {                                // its own run sees it home
+            BELOW.remove(id);
+            // [mine-safety] Its way up first in the queue, and another goal still with its legs (a deposit to
+            // stores it cannot walk to): that one lets go, and the climb begins.
+            if (OUT.equals(j.arg()) && !f.running(com.jrpetty.mcassistant.entity.goal.MineGoal.class)) f.interject(null);
+            return;
+        }
         if (!f.isAlive() || f.isPassenger() || f.isSleeping()) return;
         BlockPos feet = f.blockPosition();
         // [mine-safety] Or deep in the town's mine with the sky over it (the open top of a pit, a gallery out
@@ -258,7 +264,7 @@ public final class MineStairs extends SavedData {
         }
         int sent = SENT.merge(id, 1, Integer::sum);
         if (sent > 4 && sent % 12 != 0) return;           // tried and failed: once a minute after that
-        f.enqueueFront(Job.mine(feet.getY(), OUT));
+        f.interject(Job.mine(feet.getY(), OUT));         // [mine-safety] now: not behind whatever goal has its legs
         f.brain("lost underground: making for the surface");
     }
 
