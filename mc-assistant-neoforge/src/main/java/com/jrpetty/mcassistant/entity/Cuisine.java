@@ -680,7 +680,8 @@ public final class Cuisine {
         Dish d = dishOf(from.id());
         if (d == null || d == dishOf(to) && takeOf(to) == null) return 0;
         Item it = d.item();
-        int can = Math.min(2, Market.stock(level, from.id(), s -> s.is(it) && from(s) == null) - 2);
+        int most = Ethos.is(from.id(), Ethos.Axis.TRADE, true) ? 3 : 2;   // [identity] a mercantile town sends a third
+        int can = Math.min(most, Market.stock(level, from.id(), s -> s.is(it) && from(s) == null) - 2);
         if (can <= 0) return 0;
         int n = 0;
         for (int i = 0; i < can; i++) {

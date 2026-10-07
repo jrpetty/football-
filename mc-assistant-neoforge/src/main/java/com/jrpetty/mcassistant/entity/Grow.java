@@ -78,11 +78,11 @@ public final class Grow {
     public static void tick(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         long now = level.getGameTime();
-        if (now - LAST.getOrDefault(id, -100000L) < 300L) return;
+        if (now - LAST.getOrDefault(id, -100000L) < Ethos.growEvery(id, 300L)) return;   // [identity] sooner in a forward-looking town
         LAST.put(id, now);
         Luxuries.candles(level, v);                                  // the households' candles, lit at dusk (Luxuries)
         if (!furnish(level, v)) shelve(level, v);
-        work(level, v, 24);
+        work(level, v, Ethos.growBudget(id, 24));                    // [identity] and more at a time; less in a traditional one
         HousingMarket.tick(level, v);                                // [econ-housing] the council's houses costed; a folk's own house going up
     }
 

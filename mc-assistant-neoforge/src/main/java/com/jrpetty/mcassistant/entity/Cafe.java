@@ -201,6 +201,9 @@ public final class Cafe {
         out.add(Stockroom.ware(Items.GLASS_PANE, 8, 0, 24, 16, false));
         out.add(Stockroom.ware(Items.BUCKET, 1, 1, 4, 1, false));
         out.add(Stockroom.ware(Items.SHEARS, 1, 1, 3, 1, false));
+        // [diver] The diver's kelp blocks for a player's furnace, and a turtle helmet of the beach's scutes (Divers).
+        out.add(Stockroom.ware(Items.DRIED_KELP_BLOCK, 4, 0, 16, 1, false));
+        out.add(Stockroom.ware(Items.TURTLE_HELMET, 1, 0, 1, 1, false));
         for (Item tool : new Item[]{ Items.STONE_PICKAXE, Items.STONE_AXE, Items.STONE_HOE, Items.STONE_SHOVEL, Items.STONE_SWORD }) {
             out.add(Stockroom.ware(tool, 1, 1, 4, 1, false));
         }
@@ -369,6 +372,7 @@ public final class Cafe {
         if (s.isDamaged() || isDrink(s) || Budget.goodFor(s) == null) return false;
         if (s.is(Items.POTION)) return true;
         if (Budget.kitOf(s) != null && Prices.each(s.getItem()) >= 2.0) return true;
+        if (FireworksMaker.elytra(s)) return true;                    // [fireworks] the maker's elytra rockets, by the eight
         if (houseware(s)) return true;
         // The workshop's tools, arms and armour (Workshop), whatever their price: the village keeps its own first (Budget).
         if (Budget.kitOf(s) != null && Workshop.wareFor(Stockroom.key(s)) != null) return true;

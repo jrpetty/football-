@@ -1,0 +1,98 @@
+# The map room: the cartographer's workroom (entity/Cartographers). A little timber house on a stone footing,
+# its roof running front to back, a lantern over the door. Inside, the cartography table stands against the back
+# wall between two bookcases, and the back wall over it is kept bare for the cartographer's own maps: the region's
+# sheet and the one it is working on, in frames. Two chests down the sides for the paper, the compasses and the
+# panes (and the maps waiting for the players who asked for them), the lectern by the door with the town's book of
+# maps open on it, a barrel of sugar cane for the paper, two lanterns under the ceiling.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name maproom
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.LwwwwwL.
+.wK.A.Kw.
+.w.....w.
+.wC...Cw.
+.w.....w.
+.wr...Qw.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.LGW.WGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.W..j..W.
+.W.....W.
+.W..j..W.
+.W.....W.
+.LWWWWWL.
+....j....
+layer 3
+vvvvvvvvv
+.L-----L.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.L-----L.
+^^^^^^^^^
+layer 4
+.........
+vvvvvvvvv
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+layer 5
+.........
+.........
+vvvvvvvvv
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+.........
+layer 6
+.........
+.........
+.........
+vvvvvvvvv
+.W.....W.
+^^^^^^^^^
+.........
+.........
+.........
+layer 7
+.........
+.........
+.........
+.........
+_________
+.........
+.........
+.........
+.........

@@ -421,10 +421,20 @@ public final class TownWays {
         if (has(t, "festival", "your feast", "what do you celebrate", "your holiday")) return TownFeast.talk(f);
         if (has(t, "houses look", "your houses", "build like", "building style", "architecture", "how you build")) return Architecture.talk(f);
         if (!town) return null;
+        return likeHere(f, true);
+    }
+
+    /**
+     * What the town is like, of its own ways: its land and temper (if {@code withName}), its dish, its houses, its
+     * festival, its faith and a saying.
+     */
+    static String likeHere(VillageFolkEntity f, boolean withName) {
+        UUID id = f.ownerId();
         List<String> bits = new ArrayList<>();
         Homeland.Land l = Homeland.known(id);
         String name = Villages.name(id);
-        bits.add(l == null ? name + "? It's home." : name + "'s a " + landWord(l) + " town, " + temperWord(heart(id)) + " to the bone.");
+        if (withName) bits.add(l == null ? name + "? It's home." : name + "'s a " + landWord(l) + " town, " + temperWord(heart(id)) + " to the bone.");
+        else if (l != null) bits.add("We're " + landWord(l) + " folk, " + temperWord(heart(id)) + " to the bone.");
         Cuisine.Dish d = Cuisine.dishOf(id);
         if (d != null) bits.add("You've not lived till you've had our " + d.words + ".");
         Architecture.Style st = Architecture.of(id);
@@ -436,6 +446,44 @@ public final class TownWays {
         String saying = TownSpeech.saying(id, f.getRandom());
         if (saying != null) bits.add("As we say here: \"" + saying + "\".");
         return String.join(" ", bits);
+    }
+
+    /**
+     * [identity] Its town's answer to "What's this town like?" (Identity.talk, which is asked first: its character, its
+     * rulers, its fame), with the town's own ways after it: its dish, its houses, its festival, its faith. Anything else
+     * Identity answers (a proposal to the ruling house) is left as it is.
+     */
+    public static String alongside(VillageFolkEntity f, String text, String said) {
+        if (f.ownerId() == null || text == null) return said;
+        String t = " " + text.toLowerCase(Locale.ROOT).replaceAll("[^a-z' ]", " ") + " ";
+        if (!has(t, "town like", "village like", "place like", "your ways", "town's ways", "tell me about")) return said;
+        String ours = likeHere(f, false);
+        return ours.isEmpty() ? said : said + " " + ours;
+    }
+
+    /** Joined once (McAssistantMod): the town's ways as sections of the Identity page, and a few words of its summary. */
+    private static volatile boolean joined;
+
+    public static void joinIdentity() {
+        if (joined) return;
+        joined = true;
+        Identity.contribute("Our table", Cuisine::lines);
+        Identity.contribute("Our tongue", TownSpeech::lines);
+        Identity.contribute("How we build", Architecture::lines);
+        Identity.contribute("Our own festival", TownFeast::lines);
+        Identity.contribute("Our faith", Beliefs::lines);
+        Identity.contributeTag("ways", TownWays::tag);
+    }
+
+    /** The summary line's few words: "Coastal houses, the Herring Fair". Null before either is chosen. */
+    @Nullable
+    static String tag(UUID village) {
+        List<String> parts = new ArrayList<>();
+        Architecture.Style st = Architecture.of(village);
+        if (st != null) parts.add(st.words + " houses");
+        TownFeast.Feast f = TownFeast.of(village);
+        if (f != null) parts.add(f.words);
+        return parts.isEmpty() ? null : String.join(", ", parts);
     }
 
     /** The folk's own words for what the town's ways did for its mood (FolkTalk.reason). */

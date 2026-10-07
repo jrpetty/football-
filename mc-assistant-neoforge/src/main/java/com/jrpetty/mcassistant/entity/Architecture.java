@@ -186,12 +186,21 @@ public final class Architecture {
         if (day - since < 7) return;
         Map<Style, Integer> s = scores(id, TownWays.heart(id));
         Style better = best(s);
-        if (better == now || s.get(better) < s.get(now) + DRIFT_MARGIN) return;
+        if (better == now || s.get(better) < s.get(now) + driftMargin(id)) return;
         TownWays.note(id, "style", better.name());
         TownWays.note(id, "style.since", Long.toString(day));
         Palettes.forget(id);
         Villages.tell(id, day, "the town turned from its " + now.words + " ways to the " + better.words
             + ": its houses will be dressed anew as the builders come round to them");
+    }
+
+    /**
+     * [identity] How much better a style must suit the town before it turns to it: three, five in a traditional town
+     * (the old ways kept), two in a forward-looking one.
+     */
+    static int driftMargin(UUID village) {
+        int ways = Ethos.lean(village, Ethos.Axis.WAYS);
+        return DRIFT_MARGIN + (ways >= Ethos.POLE ? 2 : ways <= -Ethos.POLE ? -1 : 0);
     }
 
     /** Tests: the choice made now (and a change of style, if the town has changed enough), whatever the week. */

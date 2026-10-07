@@ -175,6 +175,62 @@ public final class Trades {
                 List.of(need("a boat", s -> s.is(net.minecraft.tags.ItemTags.BOATS), 1, "the town's, moored at the landing")),
                 List.of(),
                 "folk across the water, and a coin a crossing into my purse");
+            // [fletcher] The fletcher (Fletchers): flint from the miners' gravel, the coop's feathers, sticks, string and iron.
+            case FLETCHER -> new Trade("I make the watch's arrows at my fletching table: I sift the miners' gravel for flint, take"
+                    + " the feathers from the coop and the sticks from the stores, and I string bows and crossbows. Every guard on the"
+                    + " wall goes up with a full quiver, there's a reserve kept for a raid, and on a quiet afternoon I run practice"
+                    + " at the butts",
+                List.of(need("a fletching table", s -> s.is(Items.FLETCHING_TABLE), 0, "two flint and four planks")),
+                List.of(need("gravel to sift for flint", s -> s.is(Items.GRAVEL) || s.is(Items.FLINT), 8, "the miners and the diggers"),
+                    need("feathers", s -> s.is(Items.FEATHER), 4, "the rancher's coop"),
+                    need("sticks", s -> s.is(Items.STICK), 4, "the stores' planks"),
+                    need("string", s -> s.is(Items.STRING), 3, "the hunter and the watch, off the spiders")),
+                "arrows for the watch's quivers and the raid reserve, bows and crossbows, targets for the range, and arrows for the shop");
+            // [golems] The golem keeper (Golems): the stores' iron and the farm's pumpkins made into the town's golems.
+            case GOLEMS -> new Trade("I keep the town's golems: I make iron blocks of the stores' ingots, stand them in a T at a gate"
+                    + " with a carved pumpkin on top, as the old folk did, and the golem gets up and takes its post. I mend them with"
+                    + " ingots when they're hurt, and in a cold winter I build snow golems for the towers",
+                List.of(need("shears", s -> s.is(Items.SHEARS), 0, "the smith")),
+                List.of(need("iron ingots", s -> s.is(Items.IRON_INGOT), 9, "the smelter"),
+                    need("a pumpkin", s -> s.is(Items.PUMPKIN) || s.is(Items.CARVED_PUMPKIN), 1, "the farmers")),
+                "iron golems at the gates and the square, mended when they're hurt, and snow golems on the towers in winter");
+            // [fireworks] The fireworks maker (FireworksMaker): the stores' gunpowder, paper and dye, at the powder hut.
+            case FIREWORKS -> new Trade("I make the town's fireworks at the powder hut: stars of gunpowder and dye (a gold nugget for a"
+                    + " star, a feather for a burst, glowstone for a twinkle), rockets of paper and one to three gunpowder, and I set"
+                    + " them off at the festivals, the weddings and the victories. Never in a thunderstorm, and never at anybody",
+                List.of(),
+                List.of(need("gunpowder", s -> s.is(Items.GUNPOWDER), 4, "the watch's creepers, the hunters, the Nether runners"),
+                    need("paper", s -> s.is(Items.PAPER) || s.is(Items.SUGAR_CANE), 3, "the farmers' sugar cane"),
+                    need("dyes", s -> s.getItem() instanceof net.minecraft.world.item.DyeItem || s.is(net.minecraft.tags.ItemTags.FLOWERS)
+                        || s.is(Items.LAPIS_LAZULI) || s.is(Items.INK_SAC) || s.is(Items.BONE_MEAL) || s.is(Items.COCOA_BEANS), 2,
+                        "the meadows' flowers, the miners' lapis, the fishers' ink, the cocoa and the bone meal")),
+                "firework rockets for the stores: the town's displays, in its colours, and elytra rockets for the shop");
+            // [cartographer] The cartographer (Cartographers): the town's paper and compasses, a pane for each finished map.
+            case CARTOGRAPHER -> new Trade("I keep the map room: I walk the town with fresh sheets till they fill in, mark its places with"
+                    + " banners and hang the map in the hall; I walk the country round it for the region's map, find the old places round"
+                    + " us for the scouts and the cave team, and draw explorer maps for anybody with the coin",
+                List.of(need("a cartography table", s -> s.is(Items.CARTOGRAPHY_TABLE), 1, "the builders (two paper and four planks), at the map room")),
+                List.of(need("paper", s -> s.is(Items.PAPER), 9, "me, from the stores' sugar cane"),
+                    need("a compass", s -> s.is(Items.COMPASS), 1, "me, from the stores' iron and redstone"),
+                    need("glass panes", s -> s.is(Items.GLASS_PANE), 4, "the smelter's glass")),
+                "the hall's map of the town, the region's for the caravans, explorer maps for the cave team, the scouts and travellers");
+            // [emerald] The emerald trader (EmeraldTrader): the town's surplus and its emeralds out of the stores for each trip.
+            case EMERALD -> new Trade("I walk out to the villages of the game's own villagers, the way a scout goes, with what the"
+                    + " town has to spare: I sell it to whichever villager buys it, at the villager's own price, for emeralds, and"
+                    + " spend the emeralds on what nobody here can make: enchanted books, a bell, explorer maps, the cleric's lapis",
+                List.of(),
+                List.of(need("the town's surplus (only what it can spare)", EmeraldTrader::sellable, 1, "the stores, past the town's own needs"),
+                    need("food for the road", s -> s.get(DataComponents.FOOD) != null, 2, "the stores")),
+                "emeralds for the surplus, and enchanted books, bells, maps and lapis for the emeralds");
+            // [diver] The kelp farmer and diver (Divers): kelp beds on the bed of the water, dried and packed into fuel.
+            case DIVER -> new Trade("I farm kelp on the bed of the water: planted three deep and more, cut above the lowest piece so"
+                    + " it grows again, dried in the shed's smoker and over its campfire and packed nine to a block, so the furnaces"
+                    + " burn kelp and the coal goes on the torches. I dive for clay, sand and gravel when the town's short, cut"
+                    + " seagrass for the turtles on our beach, and pull anybody out of the water who's in trouble",
+                List.of(need("shears for the seagrass", s -> s.is(Items.SHEARS), 1, "the smith"),
+                    need("a turtle helmet", s -> s.is(Items.TURTLE_HELMET), 1, "the smith, of five scutes")),
+                List.of(need("kelp to plant", s -> s.is(Items.KELP), 8, "the stores, or the wild kelp")),
+                "dried kelp blocks for the furnaces, dried kelp for a hungry larder, clay for the masons, scutes for the helmets");
             case NONE -> new Trade("I'm between trades just now", List.of(), List.of(), "whatever the village needs a hand with");
         };
     }
@@ -559,6 +615,10 @@ public final class Trades {
     /** What a hand of this trade keeps in its pack and never banks: its kit, and its workstation
      *  until it is set down. */
     public static int keeps(StationTask t, ItemStack s) {
+        int work = WorkTools.keeps(t, s);                       // [workitems] a miner's props, rope and sack, a woodcutter's saw, a courier's crates
+        if (work > 0) return work;
+        int field = FieldTools.keeps(t, s);                    // [fields] its can, sickle and satchel, its smoker, its traps to set
+        if (field > 0) return field;
         return switch (t) {
             case BEEKEEP -> s.is(Items.BEEHIVE) ? 4 : (s.is(Items.SHEARS) ? 1 : 0);
             case BREW -> s.is(Items.BREWING_STAND) || s.is(Items.BLAZE_POWDER) || s.is(Items.NETHER_WART)
@@ -569,6 +629,7 @@ public final class Trades {
             case RANCH -> s.is(Items.LEAD) ? 4 : ((s.is(Items.BUCKET) || s.is(Items.SHEARS)) ? 1 : 0);
             case FARM -> s.is(Items.SUGAR_CANE) ? 6 : ((s.is(Items.MELON_SEEDS) || s.is(Items.PUMPKIN_SEEDS)) ? 4 : 0);
             case GUARD -> Links.healing(s) ? 1 : 0;
+            case CARTOGRAPHER -> Cartographers.keeps(s);                 // [cartographer] its sheets and makings
             default -> 0;
         };
     }

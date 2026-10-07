@@ -386,6 +386,7 @@ public final class VillageBoards {
         }
         // The job market (JobMarket): our Wanted notices, who is on the road here, who came and went, word from other towns.
         out.addAll(JobMarket.board(level, id));
+        out.addAll(Interviews.board(level, id));                  // [interviews] the interviews coming, on, or just held
         Orders.Order order = Orders.current(id);
         out.add(order == null ? "LM|Elder's orders: none yet — the elder is watching how things go."
             : "LN|Elder's orders: " + order.title + ". " + order.words);
@@ -405,6 +406,7 @@ public final class VillageBoards {
 
         // ---- how we're doing
         out.add("RH|How we're doing");
+        out.addAll(Identity.board(level, id));                    // [identity] who we are: character, rulers, fame, traits; renown and laws
         StringBuilder t = new StringBuilder();
         for (Map.Entry<AssistantEntity.StationTask, Integer> e : trades.entrySet()) {
             if (t.length() > 0) t.append(", ");
@@ -412,6 +414,8 @@ public final class VillageBoards {
         }
         out.add("RN|Our trades: " + (t.length() == 0 ? "none yet" : t) + (idle > 0 ? "; " + idle + " still choosing" : "")
             + (children > 0 ? "; " + children + (children == 1 ? " child" : " children") : "") + ".");
+        String diving = Divers.jobsLine(id);                       // [diver] a town by no water says why it keeps no diver
+        if (diving != null) out.add("RN|" + diving);
         out.add("RN|At work right now: " + working + " of " + Math.max(0, folk - children) + ".");
         // Who is on duty: the watch, the town's works, the scouts and envoys out on the road.
         List<String> watch = new ArrayList<>(), works = new ArrayList<>(), away = new ArrayList<>();
@@ -492,6 +496,8 @@ public final class VillageBoards {
         if (gathering != null) out.add("RG|Now: " + gathering + " — come along!");
         Gatherings.Kind tonight = Gatherings.tonight(id, day);
         if (tonight != null) out.add("RG|Tonight: " + Gatherings.describe(tonight, id) + " — everybody welcome.");
+        String fireworks = FireworkShows.boardLine(id, day);        // [fireworks] a display on now; the rockets ready, the next display
+        if (fireworks != null) out.add(fireworks);
         for (String p : Assemblies.planned(id)) out.add("RG|This evening: " + p + ".");
         if (day % 7 == 3) out.add("RM|The council sits this evening.");
         out.addAll(Elections.board(id, day));
@@ -525,10 +531,20 @@ public final class VillageBoards {
         if (trade != null) out.add("FN|" + trade);
         String caves = CaveDwellers.boardLine(id);              // [caves] the caves' report, and the latest big find
         if (caves != null) out.add("FN|" + caves);
+        String arrows = Fletchers.boardLine(level, id);         // [fletcher] the watch's arrows, or none to be had
+        if (arrows != null) out.add("FN|" + arrows);
+        String golems = Golems.boardLine(level, id);            // [golems] the golems at their posts, a fallen one
+        if (golems != null) out.add("FN|" + golems);
+        String maps = Cartographers.boardLine(id);              // [cartographer] the hall's map, the country's, the latest find
+        if (maps != null) out.add("FN|" + maps);
+        String water = Divers.boardLine(level, id);             // [diver] the kelp beds, the coal they kept, the rescues
+        if (water != null) out.add("FN|" + water);
         String about = Transport.boardLine(level, id);          // [transport] the lines, the ore carts, the ferry and the bridge
         if (about != null) out.add("FN|" + about);
         String scouts = Scouts.boardLine(id);
         if (scouts != null) out.add("FN|" + scouts);
+        String trading = EmeraldTrader.boardLine(id);           // [emerald] the trader: the villagers' villages, the emeralds, a raid
+        if (trading != null) out.add("FN|" + trading);
         String museum = Museum.boardLine(id, day);              // what is new in the museum (Museum)
         if (museum != null) out.add("FN|" + museum);
         out.addAll(Culture.board(level, id));                   // [batchD] the banner and the motto, the customs, the theatre tonight

@@ -316,6 +316,8 @@ public class FarmGoal extends Goal {
                 && assistant.removeMatching(s -> s.is(seed), 1) == 1) {
                 assistant.level().setBlockAndUpdate(pos, cropBlock.defaultBlockState());
             }
+            // [fields] With a copper sickle, the ripe crops round it in the same swing, sown again (FieldTools).
+            harvested += com.jrpetty.mcassistant.entity.FieldTools.reap(assistant, pos);
         }
     }
 

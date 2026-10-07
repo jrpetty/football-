@@ -14,7 +14,10 @@ days pass at full speed (/tick sprint), and reports what the folk did.
 "takeover" instead finds a vanilla village, forces its chunks to generate, and
 checks the game's own villagers were turned into folk WITHOUT freezing the
 server (the join event fires inside chunk generation, where touching the world
-can deadlock it).
+can deadlock it). The takeover is off by default now (the folk and the villagers
+are two peoples, kept apart): the workflow turns it on for that scenario only,
+and "natural" checks the other way, that a vanilla village's villagers stay
+villagers and no town is founded on their ground.
 
 Every line of output starts [REAL]. Only a dead or hung server is a hard
 failure; everything else is measurement, read from the published report.
@@ -618,6 +621,51 @@ def natural(r):
         say("PASS the world founded a village of its own and it kept running")
     else:
         say("FAIL no village was founded at any of the world's own sites")
+    # [emerald] And the two peoples kept apart while it did: the game's own villagers stay villagers.
+    villagers_stay(r)
+
+
+def count_near(r, kind, x, z, reach):
+    """How many of this kind of creature stand within so many blocks of here (by /execute if entity)."""
+    out = r.cmd("execute if entity @e[type=%s,x=%d,y=64,z=%d,distance=..%d]" % (kind, x, z, reach))
+    m = re.search(r"count:?\s*(\d+)", out)
+    return int(m.group(1)) if m else 0
+
+
+def villagers_stay(r):
+    """[emerald] Folk and villagers, two peoples: with the takeover off (as it is unless a world turns it on), a vanilla
+    village's chunks are generated (which delivers its villagers to the world, as walking up to it would) and its people
+    are counted then and four thousand ticks on. They are all still villagers, none of them folk, and no town has been
+    founded on their ground. Asserted: a FAIL line if any villager became folk or a town stands on the village."""
+    spot = where(r, "structure minecraft:village_plains") or where(r, "structure #minecraft:village")
+    if spot is None:
+        say("SKIP no vanilla village within reach of this seed (villagers stay villagers)")
+        return
+    x, z = spot
+    say("a vanilla village near %d, %d: its villagers should stay villagers" % (x, z))
+    say("forceload: " + r.cmd("forceload add %d %d %d %d" % (x - 64, z - 64, x + 64, z + 64)))
+    sprint(r, 400)
+    first = count_near(r, "minecraft:villager", x, z, 96)
+    folk_first = count_near(r, "mc_assistant:village_folk", x, z, 64)
+    say("villagers at the village after 400 ticks: %d (folk among them: %d)" % (first, folk_first))
+    sprint(r, 4000)
+    later = count_near(r, "minecraft:villager", x, z, 96)
+    folk_later = count_near(r, "mc_assistant:village_folk", x, z, 64)
+    say("villagers at the village after 4400 ticks: %d (folk among them: %d)" % (later, folk_later))
+    near_towns = []
+    for line in r.cmd("village list").split("\n"):
+        m = re.search(r"Village at (-?\d+), (-?\d+)", line)
+        if m and (int(m.group(1)) - x) ** 2 + (int(m.group(2)) - z) ** 2 < 128 * 128:
+            near_towns.append(line.strip())
+    say("towns within 128 blocks of the village: %d %s" % (len(near_towns), "; ".join(near_towns)))
+    if first > 0 and later > 0 and folk_first == 0 and folk_later == 0 and not near_towns:
+        say("PASS the villagers stayed villagers (%d, then %d), and no town was founded on their village" % (first, later))
+    elif first == 0:
+        say("SKIP the village's villagers never came into the world to be counted")
+    else:
+        say("FAIL the two peoples mixed: villagers %d then %d, folk at the village %d then %d, towns on it %d"
+            % (first, later, folk_first, folk_later, len(near_towns)))
+    r.cmd("forceload remove %d %d %d %d" % (x - 64, z - 64, x + 64, z + 64))
 
 
 def restart1(r):

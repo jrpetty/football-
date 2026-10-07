@@ -311,6 +311,11 @@ public final class TownJobs {
                 case SCOUT -> score -= 40;
                 case CAVE -> score -= 40;                // [caves] its day is down the caves
                 case FERRY -> score -= 40;               // [transport] its day is at the ferry
+                case GOLEMS -> score += works.equals("golem") ? 40 : -20;   // [golems] the town's golem is its work
+                case FIREWORKS -> score -= 15;           // [fireworks] its day is at the powder hut
+                case CARTOGRAPHER -> score -= Cartographers.surveying(f) ? 60 : 15;   // [cartographer] out with its sheets, or at its table
+                case EMERALD -> score -= 40;             // [emerald] its day is on the road to the villagers
+                case DIVER -> score -= 40;               // [diver] its day is in the water (and it watches it)
                 default -> { if (trade.isCraft()) score -= 10; }
             }
             if (f.workedOut()) score += 25;                              // nothing to work at in its own trade

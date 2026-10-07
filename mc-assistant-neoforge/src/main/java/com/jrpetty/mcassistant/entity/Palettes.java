@@ -128,7 +128,7 @@ public final class Palettes {
             Item it = BuiltInRegistries.ITEM.get(ResourceLocation.withDefaultNamespace(id));
             if (it != Items.AIR && !out.contains(it)) out.add(it);
         }
-        return out;
+        return Thatch.palette(village, style, out);                // [workitems] thatch first on a Wood Age roof, with wheat to spare
     }
 
     private static String planks(String wood) {

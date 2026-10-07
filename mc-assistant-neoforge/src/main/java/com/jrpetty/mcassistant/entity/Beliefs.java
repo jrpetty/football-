@@ -200,7 +200,9 @@ public final class Beliefs {
             return;
         }
         long since = Culture.num(String.valueOf(TownWays.note(id, "belief.since")), day);
-        if (best == now || day - since < 14 || s.get(best) < s.get(now) + 4) return;
+        int faith = Ethos.lean(id, Ethos.Axis.FAITH);                      // [identity] devout: kept longer; worldly: sooner
+        int margin = 4 + (faith >= Ethos.POLE ? 2 : faith <= -Ethos.POLE ? -1 : 0);
+        if (best == now || day - since < 14 || s.get(best) < s.get(now) + margin) return;
         TownWays.note(id, "belief", best.name());
         TownWays.note(id, "belief.since", Long.toString(day));
         Villages.tell(id, day, "the town's faith turned from " + now.words + " to " + best.words);
@@ -755,7 +757,8 @@ public final class Beliefs {
     static boolean riteDue(UUID village, Belief b, long day) {
         return switch (b) {
             case SEA, STONE -> true;
-            case HARVEST -> sacred(village, day);
+            // [identity] A devout town blesses its fields every morning, not only on the Harvest's day.
+            case HARVEST -> sacred(village, day) || Ethos.is(village, Ethos.Axis.FAITH, true);
             case FOUNDERS -> FoundingDay.today(village, day);
             default -> false;
         };
@@ -925,7 +928,8 @@ public final class Beliefs {
     public static int mood(VillageFolkEntity f, long day, int m, List<Object[]> why) {
         Object[] b = BLESSED.get(f.getUUID());
         if (b == null || day - (Long) b[0] > 1) return m;
-        int lift = "STARS".equals(b[1]) ? 4 : 3;
+        int lift = ("STARS".equals(b[1]) ? 4 : 3)
+            + (Ethos.is(f.ownerId(), Ethos.Axis.FAITH, true) ? 1 : 0);          // [identity] a devout town takes its rites to heart
         why.add(new Object[]{ "blessed", lift });
         return m + lift;
     }

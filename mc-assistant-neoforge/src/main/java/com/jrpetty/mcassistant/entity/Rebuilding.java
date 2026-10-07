@@ -176,7 +176,7 @@ public final class Rebuilding {
 
     /** Every two seconds: the first burnt building's blocks put back, a few at a time, by hand, out of the stores. */
     static void tick(ServerLevel level, Villages.Village v, Disasters.Town t) {
-        if (!t.rebuilds.isEmpty()) work(level, v, t, STEP);
+        if (!t.rebuilds.isEmpty()) work(level, v, t, TownTraits.rebuildPace(v.id(), STEP));   // [identity] Fire-born: twice as fast
     }
 
     /** Put back so many burnt blocks. Returns how many went back. */

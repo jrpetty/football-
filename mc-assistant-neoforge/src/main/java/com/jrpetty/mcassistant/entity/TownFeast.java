@@ -96,8 +96,8 @@ public final class TownFeast {
 
     /** The festival called now (tests, /village ways feast now). */
     private static final Map<UUID, Boolean> CALLED = new ConcurrentHashMap<>();
-    /** Rockets sent up at each town's festival tonight. */
-    private static final Map<UUID, Integer> ROCKETS = new ConcurrentHashMap<>();
+    /** The towns whose festival tonight has had its finale of rockets (Lantern Night, the Iron Fair). */
+    private static final Map<UUID, Long> FINALE = new ConcurrentHashMap<>();
     /** The day each folk was last at its town's own festival (its mood). */
     private static final Map<UUID, Long> WAS_THERE = new ConcurrentHashMap<>();
     /** The day the town's friends were told of tonight's festival (one telling a day). */
@@ -105,7 +105,7 @@ public final class TownFeast {
 
     static void resetForTests() {
         CALLED.clear();
-        ROCKETS.clear();
+        FINALE.clear();
         WAS_THERE.clear();
         INVITED.clear();
     }
@@ -511,8 +511,14 @@ public final class TownFeast {
             int beat = (int) ((now / 40L) % TUNE.length);
             level.playSound(null, a.focus, instrument(feast), SoundSource.RECORDS, 1.1F, TUNE[beat]);
             level.sendParticles(ParticleTypes.NOTE, a.focus.getX() + 0.5, a.focus.getY() + 2.0, a.focus.getZ() + 0.5, 0, beat / 24.0, 0, 0, 1);
-            if ((feast == Feast.LANTERN_NIGHT || feast == Feast.IRON_FAIR) && v != null && ROCKETS.getOrDefault(a.village, 0) < 6
-                    && (now / 40L) % 3L == 0L) rocket(level, v, a.focus, r);
+            // The display itself is the fireworks maker's, after the speeches (FireworkShows, as for any festival); Lantern
+            // Night and the Iron Fair end with a finale of three more of the stores' rockets, once a night, if any are put by.
+            long day = level.getDayTime() / 24000L;
+            if ((feast == Feast.LANTERN_NIGHT || feast == Feast.IRON_FAIR) && v != null && FINALE.getOrDefault(a.village, -1L) != day
+                    && (now / 40L) % 6L == 5L) {
+                FINALE.put(a.village, day);
+                FireworkShows.salute(level, v, a.focus, 3);
+            }
         }
         switch (feast) {
             case HERRING_FAIR -> {
@@ -559,21 +565,6 @@ public final class TownFeast {
         return true;
     }
 
-    /** A rocket of the stores' gunpowder and paper (the fireworks, as a celebration's). */
-    private static void rocket(ServerLevel level, Villages.Village v, BlockPos at, RandomSource r) {
-        if (!Crafts.take(level, v, s -> s.is(Items.GUNPOWDER), 1)) {
-            ROCKETS.put(v.id(), 99);
-            return;
-        }
-        if (!Crafts.take(level, v, s -> s.is(Items.PAPER), 1)) {
-            Crafts.store(level, v, new ItemStack(Items.GUNPOWDER));
-            ROCKETS.put(v.id(), 99);
-            return;
-        }
-        Gatherings.launch(level, at, r);
-        ROCKETS.merge(v.id(), 1, Integer::sum);
-    }
-
     /**
      * At its close (Festivals.closed): the contest judged, its winner's purse paid out of the treasury and the day written
      * into the chronicle; every folk there remembers it; the friends among the players who came given a portion of the
@@ -584,7 +575,6 @@ public final class TownFeast {
         Feast f = of(id);
         long day = level.getDayTime() / 24000L, due = dueOf(a.subject);
         TownWays.note(id, "feast.kept", Long.toString(due));
-        ROCKETS.remove(id);
         if (f == null) return;
         int n = 0;
         for (UUID u : a.seated.keySet()) {

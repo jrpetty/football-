@@ -104,6 +104,7 @@ public final class FireSafety {
             LOOKED.put(id, now);
             spark(level, v, t, false);
         }
+        Thatch.chimneySpark(level, v, t);                          // [workitems] a chimney's spark on a thatched roof (once a minute)
         keepTheWatch(level, v);
         if (now - WORKED.getOrDefault(id, -100000L) >= WORKS) {
             WORKED.put(id, now);
@@ -186,7 +187,7 @@ public final class FireSafety {
             if (level.getRandom().nextDouble() >= p) return null;
         }
         BlockPos at = sparkSpot(level, forge, burn);
-        if (at == null) return null;
+        if (at == null || FireworksMaker.inHut(id, at)) return null;     // [fireworks] stone and a cauldron: nothing catches in the powder hut
         String from = FireBrigade.named(b.structure()) + "'s " + (level.getBlockState(forge).is(Blocks.SMOKER) ? "oven" : "forge");
         long day = level.getDayTime() / 24000L;
         // The fire watch, near enough to see it, stamps it out before it catches.
@@ -206,6 +207,11 @@ public final class FireSafety {
         return at;
     }
 
+    /** [workitems] A spark from somewhere else than a forge (a chimney onto thatch: Thatch), remembered as a forge's is. */
+    static void sparked(UUID village, BlockPos at, long when, String from) {
+        SPARKS.put(village, new Spark(at, when, from));
+    }
+
     /** A spark lately near here, and what it came from ("a spark from the smithy's forge"); else null. */
     @Nullable
     static String sparkCause(UUID village, BlockPos p, long now) {
@@ -218,7 +224,7 @@ public final class FireSafety {
     static boolean cauldronNear(ServerLevel level, BlockPos forge) {
         for (BlockPos q : BlockPos.betweenClosed(forge.offset(-6, -2, -6), forge.offset(6, 2, 6))) {
             BlockState st = level.getBlockState(q);
-            if (st.is(Blocks.WATER_CAULDRON) || st.is(Blocks.CAULDRON)) return true;
+            if (st.is(Blocks.WATER_CAULDRON) || st.is(Blocks.CAULDRON) || FieldTools.isBarrel(st)) return true;   // [fields] or a rain barrel
         }
         return false;
     }
@@ -410,13 +416,22 @@ public final class FireSafety {
             boolean has = false;
             for (long k : t.cauldronsAt) {
                 BlockPos p = BlockPos.of(k);
-                if (p.distSqr(b.anchor()) <= 10 * 10 && (level.getBlockState(p).is(Blocks.CAULDRON) || level.getBlockState(p).is(Blocks.WATER_CAULDRON))) has = true;
+                if (p.distSqr(b.anchor()) <= 10 * 10 && (level.getBlockState(p).is(Blocks.CAULDRON) || level.getBlockState(p).is(Blocks.WATER_CAULDRON)
+                        || FieldTools.isBarrel(level.getBlockState(p)))) has = true;              // [fields] or the rain barrel set instead
             }
             if (has) continue;
             BlockPos spot = cauldronSpot(level, b);
             if (spot == null) continue;
             // A cauldron put by, or seven iron, and never the town's last sixteen (its tools and its age want them).
             boolean pot = Market.stock(level, v.id(), s -> s.is(Items.CAULDRON)) > 0 || Market.stock(level, v.id(), s -> s.is(Items.IRON_INGOT)) >= 7 + IRON_KEPT;
+            // [fields] No iron to spare for a cauldron: a rain barrel out of the stores by it instead (FieldTools).
+            if (!pot && FieldTools.barrelInstead(level, v, spot, FireBrigade.named(b.structure()))) {
+                t.cauldronsAt.add(spot.asLong());
+                n++;
+                Disasters.record(v.id(), level.getDayTime() / 24000L, "a rain barrel was set by " + FireBrigade.named(b.structure())
+                    + " against fire, there being no iron for a cauldron");
+                continue;
+            }
             if (!pot) return n;
             if (!TownJobs.atWork(level, v, "firesafety", spot, "setting a cauldron of water by " + FireBrigade.named(b.structure()))) return n;
             if (!Crafts.take(level, v, s -> s.is(Items.CAULDRON), 1)

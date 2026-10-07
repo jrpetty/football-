@@ -741,7 +741,9 @@ public final class Park {
      */
     static void tick(VillageFolkEntity f) {
         if (Culture.seated(f) || Library.seated(f)) return;    // [batchD] sat on a bench at the theatre (Culture): left sat; [library] at a desk
+        if (Draughts.seated(f)) return;                         // [leisure] sat at a draughts board
         if (Crime.inStocks(f)) return;                         // [crime] sat in the stocks on the square (Trial): left sat
+        if (Interviews.seated(f)) return;                      // [interviews] in its chair at an interview, or on the bench: left sat
         Visit vis = VISITS.get(f.getUUID());
         if (vis == null) {
             // After a restart (but not a folk sat down on its break or at a gathering: Seats, or for a story: Families,
