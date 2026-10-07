@@ -75,6 +75,9 @@ public final class FolkTalk {
         }
         // [nether] Said to one of the Nether runners: an ask of them, going through with them, their chart, a share.
         if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.NETHER && NetherGuests.meant(text)) topic = TalkTopic.NETHER;
+        // [nether] A share of a run's haul the town keeps for a player: any of its folk hands it over when asked (the
+        // runner it went with may have gone back to the mine since).
+        if (topic == TalkTopic.SAY && NetherGuests.owedAsked(f, p, text)) topic = TalkTopic.NETHER;
         if (topic == TalkTopic.SAY) {
             TalkTopic quest = QuestTalk.heard(f, p, text);              // [quests] "any work?", "I'll do it", a choice by name
             if (quest != null) topic = quest;
