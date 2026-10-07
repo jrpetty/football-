@@ -156,6 +156,9 @@ final class Mischief {
         if (Bank.worthOf(f) < 0) { m += 12; why.add("in debt"); }
         int missed = f.meals().missedInRow();
         if (missed >= 2) { m += 10 + 3 * missed; why.add("hungry"); }
+        // [weave] A drought's short rations are hunger too, whatever the meals' count says (Droughts).
+        boolean rations = Droughts.rationing(f.ownerId());
+        if (rations) { m += 14; if (!why.contains("hungry")) why.add("hungry"); why.add("on short rations"); }
         int mood = f.persona().mood();
         if (mood < 50) { m += 50 - mood; why.add("low"); }
         UUID village = f.ownerId();
@@ -171,7 +174,7 @@ final class Mischief {
         int wealth = Values.weight(f, Values.Value.WEALTH);
         if (wealth > 55) { m += (wealth - 55) / 2; why.add("greedy"); }
         // A contented folk lets things go, whatever it is short of.
-        if (mood >= 60 && tier != Wealth.Tier.POOR && missed < 2) m = Math.min(m, 12);
+        if (mood >= 60 && tier != Wealth.Tier.POOR && missed < 2 && !rations) m = Math.min(m, 12);   // [weave] not on short rations
         return new Motive(m, why, grudge);
     }
 
@@ -930,6 +933,9 @@ final class Mischief {
             case HUNT -> "a hunter's leathers";
             case BANK -> "a banker's coat";
             case CAVE -> "a cave dweller's kit";
+            case FLETCHER -> "a fletcher's apron and quiver";      // [fletcher]
+            case GOLEMS -> "a golem keeper's riveted apron";      // [golems]
+            case CARTOGRAPHER -> "a cartographer's long blue coat";  // [cartographer]
             default -> "plain clothes";
         };
     }

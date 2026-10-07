@@ -233,6 +233,9 @@ public class TalkScreen extends Screen {
                     "Put your name forward at the next election (a citizen the town counts a friend, at the board or the hall)"));
                 out.add(new Choice("Vote for me?", TalkTopic.SAY, "Will you vote for me?", "Canvass: it weighs what you stand for against what it cares for"));
                 out.add(new Choice("Leader's page", TalkTopic.SAY, "Show me the leader's page", "Your promises and powers, or the hustings if you don't lead"));
+                // [interviews] The town's interviews: who stands for what, when; then a good word put in ("I'd recommend Ada for the post").
+                out.add(new Choice("Interviews?", TalkTopic.SAY, "Any interviews coming up?",
+                    "Who stands for which post at the town's interviews, and when. Then type \"I'd recommend <name> for the post\" to put in a good word"));
             }
             case DEAL -> {
                 out.add(new Choice("Give…", TalkTopic.GIFT, "", "Give it what you are holding"));

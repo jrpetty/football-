@@ -282,6 +282,10 @@ public final class Gazette {
         if (street != null) entries.add(street);
         String fashion = Fashion.gazette(level, v, day);            // [fashion] the season's look, who set it, the show
         if (fashion != null) entries.add(fashion);
+        String interviews = Interviews.gazette(id, day);           // [interviews] who got which post at interview, and who stands next
+        if (interviews != null) entries.add(interviews);
+        String kitchen = Kitchen.gazette(id, day);                  // [kitchen] the lunches eaten out, the pies of the catch, the cheese cut
+        if (kitchen != null) entries.add(kitchen);
         String crime = Crime.gazette(level, id, day);              // [crime] the watch and the court
         if (crime != null) entries.add(crime);
         String disasters = Disasters.gazette(level, v, day);        // [disasters] the weather's danger, yesterday's fire or flood
@@ -291,6 +295,8 @@ public final class Gazette {
         String quests = QuestRun.gazette(id, day);                  // [quests] help wanted, and the week's deeds
         if (quests != null) entries.add(quests);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
+        entries = Weave.frontPage(entries);                         // [weave] the biggest story leads
+        front += Weave.headline(entries);                           // [weave] and has the front page's headline
         ItemStack book = Services.book("The " + town + " Gazette", town, front, entries);
         CompoundTag mark = new CompoundTag();
         mark.putLong(MARK, day);

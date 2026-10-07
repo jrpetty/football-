@@ -289,10 +289,12 @@ public class ZoneMarkerItem extends Item {
         } catch (IllegalArgumentException e) {
             return null;
         }
-        List<AssistantEntity> found = level.getEntitiesOfClass(AssistantEntity.class,
-            new net.minecraft.world.phys.AABB(near).inflate(BIND_RANGE),
-            a -> a.getUUID().equals(uuid));
-        return found.isEmpty() ? null : found.get(0);
+        // [itemaudit] Looked up by its id (the level's own index), not by sweeping every assistant in a box round the
+        // holder: the outline asks twice a second while the wand is in hand.
+        if (!(level instanceof ServerLevel sl)) return null;
+        net.minecraft.world.entity.Entity e = sl.getEntity(uuid);
+        return e instanceof AssistantEntity a && a.isAlive() && a.distanceToSqr(near.getX() + 0.5, near.getY() + 0.5, near.getZ() + 0.5)
+            <= (double) BIND_RANGE * BIND_RANGE * 3 ? a : null;
     }
 
     /** The plot this wand is carrying, if it has closed one. */

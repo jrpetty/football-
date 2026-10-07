@@ -551,6 +551,9 @@ public final class CaveDwellers {
     /** The town's team's leader (at home or out), or null with no team. */
     @Nullable
     public static VillageFolkEntity leaderOf(UUID village) {
+        // [interviews] The one the panel chose to lead it, while it is of the team.
+        VillageFolkEntity chosen = Interviews.holder(village, "caveleader");
+        if (chosen != null && chosen.stationTask() == StationTask.CAVE && !chosen.isBaby()) return chosen;
         VillageFolkEntity best = null;
         for (VillageFolkEntity f : dwellers(village)) if (best == null || better(f, best)) best = f;
         return best;
@@ -600,10 +603,11 @@ public final class CaveDwellers {
             if (!spare(id, f.stationTask())) continue;
             int age = f.ageYears();
             if (age < 18 || age > 50) continue;                       // fit for a day underground (JobMarket.ages)
-            int score = fitness(f);
+            int score = fitness(f) + Interviews.preferred(id, "caveplace", f);     // [interviews] the panel's choice first
             if (score > bestScore) { bestScore = score; best = f; }
         }
         if (best == null) return null;
+        if (Interviews.vacancy(level, id, "caveplace", best)) return null;     // [interviews] the place held open for its interview
         StationTask was = best.stationTask();
         // A head start: a skilled miner or guard knows the most of what the caves want, and is a level or two short of it there.
         int knows = Math.max(best.tradeLevel(StationTask.MINE), best.tradeLevel(StationTask.GUARD));
@@ -4027,6 +4031,7 @@ public final class CaveDwellers {
         if (f.countCarried(s -> s.getItem() instanceof ShieldItem) > 0 || f.getOffhandItem().getItem() instanceof ShieldItem) out.add("a shield");
         int torches = f.countMatching(s -> s.is(Items.TORCH));
         if (torches > 0) out.add(torches + " torches");
+        Kitchen.kitWords(f, out);                                      // [kitchen] its bandages, its packed lunch
         return String.join(", ", out);
     }
 
@@ -4299,6 +4304,8 @@ public final class CaveDwellers {
         Villages.Village v = here(ctx);
         if (v == null) return 0;
         if (!(ctx.getSource().getEntity() instanceof ServerPlayer p)) return cmdPage(ctx);
+        // A player whose game cannot take the books (a test's stand-in) is told the page instead.
+        if (p.connection == null || !p.connection.hasChannel(com.jrpetty.mcassistant.net.CityStatsPayload.TYPE)) return cmdPage(ctx);
         CompoundTag books = Annals.snapshot(ctx.getSource().getLevel(), v);
         books.putString("page", "Caves");
         net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(books));

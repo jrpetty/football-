@@ -275,11 +275,13 @@ public final class Droughts {
         long now = level.getGameTime();
         if (c == null) {
             if (f.tickCount % 40 != 9 || !mayCarry(f, level)) return false;
+            if (FieldTools.carriesCan(f)) return false;             // [fields] a farmer with a watering can waters with that instead
             CARRIED.put(f.getUUID(), now);
             Villages.Village v = Villages.get(f.ownerId());
             if (v == null) return false;
             BlockPos field = driest(level, f.workZone());
-            BlockPos water = water(level, f.workZone().center(), WATER_REACH);
+            BlockPos water = FieldTools.barrelFirst(level, f.workZone().center(), WATER_REACH);   // [fields] the rain barrels first
+            if (water == null) water = water(level, f.workZone().center(), WATER_REACH);
             if (field == null || water == null) return false;
             // A bucket: its own, else one of the stores' (lent till the drought breaks).
             if (f.countCarried(s -> s.is(Items.BUCKET) || s.is(Items.WATER_BUCKET)) == 0) {
@@ -412,6 +414,7 @@ public final class Droughts {
      * a well's spring); a lone one is taken up. False if there is no water there now.
      */
     static boolean fill(ServerLevel level, BlockPos w) {
+        if (FieldTools.drawBarrel(level, w)) return true;              // [fields] a bucket's worth out of a rain barrel
         if (!level.getBlockState(w).is(Blocks.WATER) || !level.getFluidState(w).isSource()) return false;
         int sources = 0;
         for (Direction dir : Direction.Plane.HORIZONTAL) {

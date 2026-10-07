@@ -91,7 +91,11 @@ public class BuildGoal extends Goal {
         // [cartographer] the map room: the cartographer's table, its lectern, its chests and its map wall (Cartographers)
         "maproom",
         // [library] the town library, its real books on its shelves (entity/Library)
-        "townlibrary");
+        "townlibrary",
+        // [fletcher] the fletcher's hut, its table and its sifting floor (entity/Fletchers)
+        "fletcher",
+        // [golems] the golem yard, where the iron is made into blocks for the golems (entity/Golems)
+        "golemyard");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

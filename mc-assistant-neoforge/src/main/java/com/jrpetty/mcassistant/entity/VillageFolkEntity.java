@@ -337,6 +337,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         Leisure.tick(this);
         if (tickCount % 100 == 53) Meals.tick(this);           // breakfast, the midday meal, supper
+        if (tickCount % 20 == 15 && level() instanceof net.minecraft.server.level.ServerLevel kitchen) Kitchen.second(this, kitchen);   // [kitchen] a lunch packed, a wound bound
         // [fleet] Out with the fishing fleet: down the quay, rowing, fishing, home with the catch (Fleet). Before the storm
         // and the gatherings: a boat at sea is rowed home in a storm, not left to drift while its crew looks for a roof.
         if (level() instanceof net.minecraft.server.level.ServerLevel sea && Fleet.hold(this, sea)) return;
@@ -441,6 +442,13 @@ public class VillageFolkEntity extends AssistantEntity {
                 && WatchClears.takeCover(this, coverLevel)) return;
         // [batchA] Laid up: a cold or its wounds, in bed at the infirmary or at home, and kept there (Health).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel careLevel && Health.hold(this, careLevel)) return;
+        // [interviews] Called to an interview (Interviews): on the road to it from another town, waiting its turn on the bench
+        // with its letter, across the table from the panel, or on the panel; its own day waits.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel interviewLevel
+                && (tickCount % 4 == 0 ? Interviews.hold(this, interviewLevel) : Interviews.busy(this))) return;
+        // [fields] A short errand with its tools: the can filled at the rain barrel, the nesting box emptied, the fish traps
+        // gone round on a day the boats stay in, the garden watered of an evening (FieldTools).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel fieldLevel && FieldTools.hold(this, fieldLevel)) return;
         // [crime] The law first: in the stocks or at its community work, called to a trial, a guard on a case; or a folk up
         // to no good in its own free time (Crime).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel lawLevel
@@ -537,6 +545,8 @@ public class VillageFolkEntity extends AssistantEntity {
                     Neighbourly.tick(polls, home);       // [batchA] the old, newcomers, housewarmings, the poor box (Neighbourly)
                     Bank.tick(polls, home);              // the bank opens the day it stands, and gets its banker
                     CaveDwellers.tick(polls, home);      // [caves] an Iron Age town takes up its cave dwellers
+                    Fletchers.tick(polls, home);         // [fletcher] its fletcher, and the afternoon's practice at the range
+                    Golems.look(polls, home);            // [golems] its golem keeper, after the raids
                     Cartographers.tick(polls, home);     // [cartographer] the town chooses its cartographer once its map room stands
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
                 }
@@ -1214,6 +1224,8 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
+        m = Interviews.mood(this, day, m, why);          // [interviews] a post won at interview, or missed
+        m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);
@@ -1281,7 +1293,8 @@ public class VillageFolkEntity extends AssistantEntity {
         int research = CityTree.workPercent(ownerId(), stationTask());
         addPacePart(parts, "the town's research", research);
         addPacePart(parts, Library.paceWord(this), Library.workPercent(this));          // [library] its trade's book, read
-        addPacePart(parts, "its knacks", skillWorkPercent() - research - Library.workPercent(this));
+        addPacePart(parts, FieldTools.paceWord(), FieldTools.workPercent(this));         // [fields] seed at its hip: a field sown a trip
+        addPacePart(parts, "its knacks", skillWorkPercent() - research - Library.workPercent(this) - FieldTools.workPercent(this));
     }
 
     // ------------------------------ a level in every trade ------------------------
@@ -1299,12 +1312,23 @@ public class VillageFolkEntity extends AssistantEntity {
     protected void creditTrade(int amount) {
         StationTask t = stationTask();
         if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount + FolkSkills.extraXp(this, amount)
-            + Library.extraXp(this, amount), (a, b) -> Math.min(1_000_000, a + b));                  // [library] an apprentice who read its trade's book
+            + Library.extraXp(this, amount)                                                           // [library] an apprentice who read its trade's book
+            + Interviews.extraXp(this, amount), (a, b) -> Math.min(1_000_000, a + b));               // [interviews] turned down: a week's hard work
     }
 
     /** What a lesson at the school taught it of a trade (School): put by for the day it takes the trade up. */
     public void schoolXp(StationTask t, int amount) {
         if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount, (a, b) -> Math.min(1_000_000, a + b));
+    }
+
+    /** [itemaudit] Tests: its experience at a trade, as it stands. */
+    public int tradeXpOfForTests(StationTask t) {
+        return t == StationTask.NONE ? 0 : tradeXp.getOrDefault(t, 0);
+    }
+
+    /** [itemaudit] Tests: a child learning this trade at a grown-up's side (as its morning's mentor would have it). */
+    public void apprenticeForTests(StationTask t) {
+        apprenticeTo = t;
     }
 
     /** Tests: so much experience at a trade, as though it had worked for it (xpForLevel gives a level's worth). */
@@ -1354,7 +1378,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected int skillWorkPercent() {
         return CityTree.workPercent(ownerId(), stationTask()) + FolkSkills.workPercent(this)
-            + Library.workPercent(this);                                                        // [library] its trade's book, read
+            + Library.workPercent(this)                                                         // [library] its trade's book, read
+            + FieldTools.workPercent(this);                                                     // [fields] its seed satchel
     }
 
     /** A good mood makes for quick hands, a black one for slow ones. */
@@ -2888,7 +2913,8 @@ public class VillageFolkEntity extends AssistantEntity {
     private String[] kitShort() {
         return switch (stationTask()) {
             case FARM -> countCarried(st -> st.is(net.minecraft.world.item.Items.WHEAT_SEEDS) || st.is(net.minecraft.world.item.Items.CARROT)
-                    || st.is(net.minecraft.world.item.Items.POTATO) || st.is(net.minecraft.world.item.Items.BEETROOT_SEEDS)) < 8
+                    || st.is(net.minecraft.world.item.Items.POTATO) || st.is(net.minecraft.world.item.Items.BEETROOT_SEEDS))
+                    + FieldTools.satchelSeed(this) < 8                                // [fields] and the seed at its hip
                 ? new String[]{ "wheat seeds", "carrot", "potato", "beetroot seeds" } : null;
             case WOOD -> countCarried(st -> st.is(net.minecraft.tags.ItemTags.SAPLINGS)) < 4 ? new String[]{ "sapling" } : null;
             case MINE -> countCarried(st -> st.is(net.minecraft.world.item.Items.TORCH)) < 8 ? new String[]{ "torch" } : null;
@@ -4179,12 +4205,14 @@ public class VillageFolkEntity extends AssistantEntity {
      * into the stores; the same fitting as the shop's round (WatchKit.fit), and free.
      */
     private void guardKitFromTheStores() {
-        if (stationTask() != StationTask.GUARD || tickCount - guardKitTick < 1200) return;
+        // [fletcher] A guard out of arrows goes for more at once, not at its next look at the stores.
+        if (stationTask() != StationTask.GUARD || tickCount - guardKitTick < (Fletchers.emptyQuiver(this) ? 200 : 1200)) return;
         guardKitTick = tickCount;
         UUID village = ownerId();
         Villages.Village v = village == null ? null : Villages.get(village);
         if (v == null || !(level() instanceof net.minecraft.server.level.ServerLevel server)) return;
         WatchKit.fit(server, v, this);                 // [guard-kit]
+        if (Fletchers.emptyQuiver(this)) Fletchers.cameForArrows(server, this);   // [fletcher] nothing in the stores: the board says so
     }
 
     /** What its trade works with, by the end of its name: a miner's pickaxe, a woodcutter's axe. */
@@ -4533,6 +4561,8 @@ public class VillageFolkEntity extends AssistantEntity {
             case BANK -> "The Bank";
             case CAVE -> "The Caves";             // [caves]
             case FERRY -> "The Ferry";            // [transport]
+            case FLETCHER -> "The Fletcher's";    // [fletcher]
+            case GOLEMS -> "The Golem Yard";      // [golems]
             case CARTOGRAPHER -> "The Map Room";  // [cartographer]
             default -> "The Commons";
         };
@@ -5080,6 +5110,8 @@ public class VillageFolkEntity extends AssistantEntity {
             case COOK -> "cafe";
             case SHOP -> "shop";
             case BANK -> "bank";                  // the banker (Bank)
+            case FLETCHER -> Fletchers.STRUCTURE; // [fletcher] the fletcher's hut
+            case GOLEMS -> Golems.STRUCTURE;      // [golems] the golem yard
             case CARTOGRAPHER -> Cartographers.STRUCTURE;   // [cartographer] the map room
             default -> null;
         };
@@ -5360,7 +5392,8 @@ public class VillageFolkEntity extends AssistantEntity {
         WorkZone z = workZone();
         if (z == null) return false;
         cullTick = tickCount;
-        net.minecraft.world.entity.animal.Animal one = Drover.surplus(server, z.center(), Math.max(8, Math.min(16, z.radius())), HERD_KEPT);
+        net.minecraft.world.entity.animal.Animal one = Drover.surplus(server, z.center(), Math.max(8, Math.min(16, z.radius())), HERD_KEPT,
+            Fletchers.henFirst(server, ownerId()));               // [fletcher] an old hen first, while the fletcher wants feathers
         String word = one == null ? null : gameWord(one);
         if (word == null) return false;
         // The hunt does the killing (the blade, the drops swept into the pack); the meat, the hide and the wool
@@ -7792,7 +7825,8 @@ public class VillageFolkEntity extends AssistantEntity {
             || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
             || Transport.busy(this)                              // [transport] on a ride, a crossing, or at the ferry
             || Crime.calledAway(this)                            // [crime] on a case, at a trial, in the stocks, at community work
-            || Disasters.busy(this);                             // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || Disasters.busy(this)                              // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || Interviews.busy(this);                            // [interviews] at an interview, or on the road to one
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */

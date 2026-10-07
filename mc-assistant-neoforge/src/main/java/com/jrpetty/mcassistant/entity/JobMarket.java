@@ -379,6 +379,8 @@ public final class JobMarket {
     public static String noun(StationTask t) {
         return switch (t) {
             case HAUL -> "courier";
+            case FLETCHER -> "fletcher";                 // [fletcher]
+            case GOLEMS -> "golem keeper";               // [golems]
             case NONE -> "hand";
             default -> t.title.toLowerCase(Locale.ROOT);
         };
@@ -441,6 +443,8 @@ public final class JobMarket {
             case HUNT -> "the hunt";
             case SCOUT -> "the scouting";
             case CAVE -> "the caves";                    // [caves]
+            case FLETCHER -> "the fletching";            // [fletcher]
+            case GOLEMS -> "the golems";                 // [golems]
             case HAUL -> "the carrying";
             default -> "the work";
         };
@@ -694,6 +698,8 @@ public final class JobMarket {
         { "smithy", "SMITH" }, { "cafe", "COOK" }, { "shop", "SHOP" }, { "brewery", "BREW" }, { "library", "ENCHANT" },
         { "workshop", "TAILOR" }, { "school", "TEACHER" }, { "school", "TEACH" }, { "bank", "BANKER" }, { "bank", "BANK" },
         { "stable", "GROOM" }, { "stables", "GROOM" }, { "stable", "STABLEHAND" },
+        { "fletcher", "FLETCHER" },                                                    // [fletcher] the fletcher's hut
+        { "golemyard", "GOLEMS" },                                                     // [golems] the golem yard
         { "maproom", "CARTOGRAPHER" },                                                          // [cartographer]
     };
 
@@ -997,8 +1003,8 @@ public final class JobMarket {
         return hired;
     }
 
-    /** One applicant, weighed: its score, and what rules it out (null if nothing does). */
-    private record Weighed(Application a, @Nullable VillageFolkEntity f, int score, @Nullable String fault, boolean withdrawn,
+    /** One applicant, weighed: its score, and what rules it out (null if nothing does). [interviews] the shortlist reads it. */
+    record Weighed(Application a, @Nullable VillageFolkEntity f, int score, @Nullable String fault, boolean withdrawn,
                            List<String> good) {}
 
     /**
@@ -1007,6 +1013,7 @@ public final class JobMarket {
      */
     private static int judge(ServerLevel level, Villages.Village v, Opening o, List<Application> waiting, long day, boolean now) {
         UUID id = v.id();
+        if (!now && Interviews.held(id, o.id)) return -1;                // [interviews] the shortlist is before the panel: it decides
         String town = Villages.name(id);
         StationTask t = o.task();
         Envoys.Temper temper = Envoys.temper(id);
@@ -1051,6 +1058,9 @@ public final class JobMarket {
         }
         Weighed best = null;
         for (Weighed w : all) if (w.fault() == null && (best == null || w.score() > best.score())) best = w;
+        // [interviews] Two or more fit for the place: a shortlist goes before a panel at the hall (Interviews) instead of being
+        // decided on paper; those who would not do are told so now, and the panel's choice comes back through hire and refuse.
+        if (!now && Interviews.shortlist(level, v, o, all, day)) return 0;
         // Holding out: nobody with the years the notice asked for, the notice young, and the town not desperate.
         if (best != null && !now && best.a().level < o.minLevel && day - o.posted < 2 && t != null && at(id, t) > 0) return -1;
         for (Weighed w : all) {
@@ -1102,7 +1112,7 @@ public final class JobMarket {
         return s;
     }
 
-    private static void hire(ServerLevel level, Villages.Village v, Opening o, Application a, @Nullable VillageFolkEntity f,
+    static void hire(ServerLevel level, Villages.Village v, Opening o, Application a, @Nullable VillageFolkEntity f,      // [interviews] the panel's choice
                              List<String> good, int of, String judge, @Nullable VillageFolkEntity elder, long day) {
         UUID id = v.id();
         String town = Villages.name(id);
@@ -1127,7 +1137,7 @@ public final class JobMarket {
         LOG.info("[MCA-JOBS] {}: {} took on {} of {} as {} (score of {} applicants: {})", town, judge, a.name, a.fromName, o.title(), of, a.why);
     }
 
-    private static void refuse(ServerLevel level, UUID id, Opening o, Application a, boolean withdrawn, String why,
+    static void refuse(ServerLevel level, UUID id, Opening o, Application a, boolean withdrawn, String why,               // [interviews]
                                @Nullable String took, long day) {
         String town = Villages.name(id);
         a.verdict = withdrawn ? Verdict.WITHDRAWN : Verdict.REFUSED;

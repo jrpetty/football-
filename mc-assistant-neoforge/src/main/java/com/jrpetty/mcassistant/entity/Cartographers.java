@@ -187,30 +187,50 @@ public final class Cartographers {
         if (last != null && now - last < 600L && now >= last) return;
         TICKED.put(id, now);
         if (!ready(id) || cartographer(id) != null) return;
+        // [interviews] Two or more of the town who want the place: it is held open for its interview (InterviewPosts),
+        // and given after it, to the panel's choice (candidates puts it first). One alone, or no interviews: given now.
+        // While its interview is set, the panel gives it, whatever the town's own look would say in the meantime.
+        if (Interviews.pending(id, POST) != null) return;
+        List<VillageFolkEntity> few = candidates(v);
+        if (!few.isEmpty() && Interviews.vacancy(level, id, POST, few.get(0))) return;
         appoint(level, v, level.getDayTime() / 24000L);
     }
 
+    /** The cartographer's place in the interviews' books (InterviewPosts). */
+    static final String POST = "cartographer";
+
     /**
      * Who the town would make its cartographer, the best first: a grown folk free of a trade the town is short of, by
-     * its knack for it (score). [cartographer] Interviews: when the town interviews for its posts (a later day's
-     * Interviews), the cartographer's post goes through them: this list is who it would interview, in its order.
+     * its knack for it (score), the interview panel's choice ahead of them all.
      */
     public static List<VillageFolkEntity> candidates(Villages.Village v) {
         UUID id = v.id();
         List<VillageFolkEntity> out = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(id)) {
-            if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive()) continue;
-            if (f.trip() != null || f.expedition() != null) continue;
-            StationTask t = f.stationTask();
-            if (t == StationTask.CARTOGRAPHER || t == StationTask.BANK || t == StationTask.CAVE || t == StationTask.FERRY) continue;
-            if (t == StationTask.STORE && hands(id, t) < 2) continue;
-            // Never the last of a trade the town is short of; a scout leaves the scouting to the others.
-            if (t != StationTask.NONE && t != StationTask.SCOUT && !Villages.overStaffed(id, t) && hands(id, t) < 3) continue;
-            if (t == StationTask.SCOUT && hands(id, t) < 2 && Villages.headcount(id) >= Scouts.FROM) continue;
-            out.add(f);
+            if (!(a instanceof VillageFolkEntity f)) continue;
+            // The panel's choice stands, whatever the town's own look would make of it by the time the post is given.
+            boolean chosen = Interviews.preferred(id, POST, f) > 0 && f.isAlive() && !f.isBaby() && id.equals(f.ownerId())
+                && f.stationTask() != StationTask.CARTOGRAPHER;
+            if (chosen || fit(f, id)) out.add(f);
         }
-        out.sort((a, b) -> Integer.compare(score(b), score(a)));
+        out.sort((a, b) -> Integer.compare(score(b) + Interviews.preferred(id, POST, b), score(a) + Interviews.preferred(id, POST, a)));
         return out;
+    }
+
+    /**
+     * May this folk be the town's cartographer: grown, at home and about, not holding a post of its own (the bank, the
+     * caves, the ferry, the watch's arrows, the golems), and not the last of a trade the town is short of.
+     */
+    static boolean fit(VillageFolkEntity f, UUID id) {
+        if (f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || !id.equals(f.ownerId())) return false;
+        if (f.trip() != null || f.expedition() != null) return false;
+        StationTask t = f.stationTask();
+        if (t == StationTask.CARTOGRAPHER || t == StationTask.BANK || t == StationTask.CAVE || t == StationTask.FERRY
+            || t == StationTask.FLETCHER || t == StationTask.GOLEMS) return false;
+        if (t == StationTask.STORE && hands(id, t) < 2) return false;
+        // Never the last of a trade the town is short of; a scout leaves the scouting to the others.
+        if (t != StationTask.NONE && t != StationTask.SCOUT && !Villages.overStaffed(id, t) && hands(id, t) < 3) return false;
+        return !(t == StationTask.SCOUT && hands(id, t) < 2 && Villages.headcount(id) >= Scouts.FROM);
     }
 
     static int hands(UUID village, StationTask t) {
@@ -1127,6 +1147,12 @@ public final class Cartographers {
 
     public static VillageFolkEntity appointForTests(ServerLevel level, Villages.Village v) {
         return appoint(level, v, level.getDayTime() / 24000L);
+    }
+
+    /** Tests: the town's look at its cartographer's place now, whenever it last looked. */
+    public static void tickNowForTests(ServerLevel level, Villages.Village v) {
+        TICKED.remove(v.id());
+        tick(level, v);
     }
 
     public static String makingsForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {

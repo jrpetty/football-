@@ -7,6 +7,8 @@ import com.jrpetty.mcassistant.entity.CaveDwellers;
 import com.jrpetty.mcassistant.entity.Cartographers;
 import com.jrpetty.mcassistant.entity.Economy;
 import com.jrpetty.mcassistant.entity.FolkTalk;
+import com.jrpetty.mcassistant.entity.InterviewBook;
+import com.jrpetty.mcassistant.entity.Interviews;
 import com.jrpetty.mcassistant.entity.MapArchive;
 import com.jrpetty.mcassistant.entity.MapFinds;
 import com.jrpetty.mcassistant.entity.MapRoom;
@@ -79,7 +81,8 @@ import java.util.UUID;
  * the world's chunks as world generation sets them).
  * <ul>
  * <li>ca01: the trade opens in the Stone Age with scouts out (or at thirty folk), not in the Wood Age; the map room goes
- *     on the town's list; once it stands, the town appoints its best candidate, at the map room.</li>
+ *     on the town's list; once it stands, the town appoints its best candidate, at the map room. Fallen vacant with three
+ *     who want it, the place is held open for its interview, and the panel's choice keeps the map room.</li>
  * <li>ca02: the map room built: its cartography table, lectern, chests and bookcases; a table made of the stores' two
  *     paper and four planks when it is gone.</li>
  * <li>ca03: a sheet really fills as the cartographer walks: blank, then filled only round where it stands, then the
@@ -212,7 +215,7 @@ public class CartographerGameTests {
 
     // ============================================================ ca01: the trade opens, the right folk takes it
 
-    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "ca01_opens")
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "ca01_opens")
     public static void ca01_opens(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Town t = town(helper, 1400000, Villages.Age.STONE, 40, StationTask.FARM, StationTask.FARM, StationTask.WOOD, StationTask.MINE,
@@ -240,20 +243,64 @@ public class CartographerGameTests {
         Ledger.Building room = build(level, t, Cartographers.STRUCTURE, -26, 30);
         helper.assertTrue(room != null && Cartographers.ready(id) && !Cartographers.wantsMapRoom(id), "the map room stands: ready");
         List<VillageFolkEntity> cands = Cartographers.candidates(t.v());
-        int best = cands.isEmpty() ? -999 : Cartographers.score(cands.get(0));
-        Cartographers.tick(level, t.v());
+        VillageFolkEntity best = cands.isEmpty() ? null : cands.get(0);
+        Cartographers.tickNowForTests(level, t.v());
         VillageFolkEntity c = Cartographers.cartographer(id);
         Kit.log("ca01 candidates " + cands.stream().map(f -> f.displayNameCap() + " " + f.stationTask() + " " + Cartographers.score(f)).toList()
             + "; chosen " + (c == null ? "nobody" : c.displayNameCap() + " (was the scout: " + (c == scout) + ")"));
         helper.assertTrue(!neededAlone, "not taken by whoever asks first");
-        helper.assertTrue(c != null && c.stationTask() == StationTask.CARTOGRAPHER && Cartographers.score(c) == best,
+        helper.assertTrue(c != null && c == best && c.stationTask() == StationTask.CARTOGRAPHER,
             "the best of the candidates appointed: " + (c == null ? "nobody" : c.displayNameCap()));
         helper.assertTrue(c.stationPos() != null && c.stationPos().distManhattan(room.anchor()) <= 6, "its post at the map room: " + c.stationPos());
-        Cartographers.tick(level, t.v());
+        Cartographers.tickNowForTests(level, t.v());
         int n = 0;
         for (VillageFolkEntity f : t.folk()) if (f.stationTask() == StationTask.CARTOGRAPHER) n++;
         helper.assertTrue(n == 1 && Villages.wants(id, StationTask.CARTOGRAPHER), "one cartographer, however long it is looked at: " + n);
-        helper.succeed();
+        // [interviews] The place falls vacant (the cartographer back to its scouting) and three of the town want it: it is
+        // held open for its interview, not given, and the town's own look waits on it. The panel sits, and its choice
+        // keeps the map room.
+        c.setJob(StationTask.SCOUT);
+        List<VillageFolkEntity> keen = new ArrayList<>();
+        for (int i = 1; i <= 3; i++) {
+            VillageFolkEntity f = t.folk().get(i);
+            f.setJob(StationTask.NONE);
+            Interviews.keenForTests(f);
+            keen.add(f);
+        }
+        CaveDwellerGameTests.fill(t, new ItemStack(Items.OAK_PLANKS, 32), new ItemStack(Items.PAPER, 8), new ItemStack(Items.INK_SAC, 8),
+            new ItemStack(Items.BREAD, 16));
+        Interviews.hurryForTests(true);
+        Interviews.fairDayForTests(true);
+        Interviews.liveForTests(true);
+        Cartographers.tickNowForTests(level, t.v());
+        InterviewBook.Interview iv = Interviews.pendingForTests(id, "cartographer");
+        Interviews.liveForTests(false);
+        VillageFolkEntity meanwhile = Cartographers.cartographer(id);
+        Cartographers.tickNowForTests(level, t.v());
+        VillageFolkEntity stillNobody = Cartographers.cartographer(id);
+        Kit.log("ca01 vacant: " + (iv == null ? "no interview" : "the interview for the " + iv.title() + ", " + iv.cands().size() + " standing")
+            + "; given meanwhile to " + (meanwhile == null ? "nobody" : meanwhile.displayNameCap()) + "; the board " + Interviews.board(level, id));
+        helper.assertTrue(iv != null && iv.cands().size() >= 2 && meanwhile == null && stillNobody == null,
+            "the place held open for its interview, not given: " + (meanwhile == null ? "nobody yet" : meanwhile.displayNameCap()));
+        helper.assertTrue(Interviews.board(level, id).stream().anyMatch(l -> l.contains("cartographer")), "the board shows it");
+        long base = level.getDayTime() / 24000L * 24000L;
+        helper.onEachTick(() -> {
+            level.setDayTime(base + 3000L);                                  // the interviews' own hour, held there
+            Interviews.stepForTests(level, t.v());
+            if (iv.stage() != InterviewBook.Stage.DONE) {
+                if (helper.getTick() > 5500) helper.fail("the interview never finished: " + iv.stage());
+                return;
+            }
+            VillageFolkEntity got = Cartographers.cartographer(id);
+            Kit.log("ca01 the interview: " + iv.winnerName() + " chosen (" + iv.reason() + "); the map room is "
+                + (got == null ? "nobody's" : got.displayNameCap() + "'s"));
+            helper.assertTrue(got != null && got.getUUID().equals(iv.winner()) && got.stationPos() != null
+                && got.stationPos().distManhattan(room.anchor()) <= 6, "the panel's choice keeps the map room: " + (got == null ? "nobody" : got.displayNameCap()));
+            int now = 0;
+            for (VillageFolkEntity f : t.folk()) if (f.stationTask() == StationTask.CARTOGRAPHER) now++;
+            helper.assertTrue(now == 1, "still one cartographer: " + now);
+            helper.succeed();
+        });
     }
 
     // ============================================================ ca02: the map room

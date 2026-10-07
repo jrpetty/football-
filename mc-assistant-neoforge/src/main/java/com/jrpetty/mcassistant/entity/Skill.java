@@ -46,6 +46,7 @@ public final class Skill {
             };
             case SHY -> switch (trade) {
                 case FISH, BEEKEEP, ENCHANT, TAILOR -> new Fit(10, "quiet, careful work suits it");
+                case FLETCHER -> new Fit(10, "quiet, careful work at the table suits it");   // [fletcher]
                 case SHOP, COOK -> new Fit(-8, "finds serving folk hard going");
                 case SCOUT -> new Fit(4, "happy on its own out on the land");
                 case CAVE -> new Fit(6, "happy on its own in the dark");               // [caves]
@@ -61,6 +62,7 @@ public final class Skill {
                 case GUARD -> new Fit(8, "nothing gets past a scowl like that");
                 case CAVE -> new Fit(6, "takes it out on the rock, and on what lives in it");   // [caves]
                 case MINE, SMITH -> new Fit(4, "takes it out on the stone");
+                case GOLEMS -> new Fit(4, "has a lot in common with an iron golem");        // [golems]
                 case SHOP, COOK, STORE -> new Fit(-6, "puts the customers off");
                 default -> new Fit(0, "");
             };

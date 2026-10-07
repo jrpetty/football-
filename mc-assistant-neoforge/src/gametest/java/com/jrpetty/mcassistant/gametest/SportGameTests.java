@@ -640,6 +640,13 @@ public class SportGameTests {
                     return;
                 }
                 int[] last = Archery.lastForTests(g1.getUUID());
+                String stopped = Archery.stoppedForTests(g1.getUUID());
+                if (last == null || stopped != null) {
+                    helper.fail("sp07 the practice was not seen through: " + (stopped == null ? "no session on record" : "stopped, " + stopped)
+                        + (last == null ? "" : "; shot " + last[0] + ", pulled " + last[3]) + "; escorting " + com.jrpetty.mcassistant.entity.Patrols.escorting(g1)
+                        + ", target " + g1.getTarget() + ", at " + g1.blockPosition().toShortString());
+                    return;
+                }
                 int arrowsNow = stock(level, id, Items.ARROW), xp = g1.xpInTrade(StationTask.GUARD);
                 Kit.log("sp07 practice over at tick " + t + ": shot " + last[0] + ", hits " + last[1] + ", points " + last[2] + ", pulled " + last[3]
                     + "; arrows " + arrows0 + " -> " + arrowsNow + "; xp " + xp0 + " -> " + xp);

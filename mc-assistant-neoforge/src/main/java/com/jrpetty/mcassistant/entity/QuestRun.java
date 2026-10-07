@@ -165,6 +165,12 @@ public final class QuestRun {
     private static final Map<UUID, Long> LOOKED = new ConcurrentHashMap<>();
     /** Givers put up for the pictures (/village quests stage), stood still till this game time. */
     private static final Map<UUID, Long> STAGED = new ConcurrentHashMap<>();
+    /** Tests: the towns' own look round (offers, stories, honours) held off, so a test's offers are its own. */
+    private static volatile boolean quiet;
+
+    public static void quietForTests(boolean on) {
+        quiet = on;
+    }
 
     public static void resetForTests() {
         MARKS_SENT.clear();
@@ -191,6 +197,7 @@ public final class QuestRun {
                     QuestTalk.reactions(p.serverLevel(), p);
                 }
                 for (ServerLevel level : event.getServer().getAllLevels()) {
+                    if (quiet) break;                       // the tests make their own offers, and nobody else's
                     for (Villages.Village v : Villages.every()) {
                         if (v.dim().equals(level.dimension()) && level.isLoaded(v.centre())) look(level, v);
                     }
@@ -679,7 +686,19 @@ public final class QuestRun {
         String now = sb.toString();
         if (now.equals(MARKS_SENT.get(p.getUUID()))) return;
         MARKS_SENT.put(p.getUUID(), now);
-        PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.QuestMarksPayload(now));
+        send(p, new com.jrpetty.mcassistant.net.QuestMarksPayload(now));
+    }
+
+    /**
+     * Only to a client that has this mod: a vanilla client, or a test's stand-in player, cannot hear it, and sending
+     * it anyway throws (and takes down whatever else was being done for that player, a conversation or a test).
+     */
+    static void send(ServerPlayer p, net.minecraft.network.protocol.common.custom.CustomPacketPayload payload) {
+        try {
+            if (p.connection != null && p.connection.hasChannel(payload.type())) PacketDistributor.sendToPlayer(p, payload);
+        } catch (RuntimeException ignored) {
+            // A connection going away mid-send: nothing to show.
+        }
     }
 
     /** The folk this player's steps wait on: "?". */
@@ -709,7 +728,7 @@ public final class QuestRun {
      */
     public static void sendChoices(VillageFolkEntity f, Player p) {
         if (!(p instanceof ServerPlayer sp)) return;
-        PacketDistributor.sendToPlayer(sp, new com.jrpetty.mcassistant.net.QuestOfferPayload(f.getId(), choices(f, p)));
+        send(sp, new com.jrpetty.mcassistant.net.QuestOfferPayload(f.getId(), choices(f, p)));
     }
 
     /** The buttons, one a line: "label|TOPIC|text|tip". */
@@ -791,7 +810,7 @@ public final class QuestRun {
     /** The journal opened: its pages sent to the player. */
     public static void openJournal(ServerPlayer p) {
         String text = journal(p, day(p.serverLevel()));
-        PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.QuestJournalPayload(text));
+        send(p, new com.jrpetty.mcassistant.net.QuestJournalPayload(text));
     }
 
     /** The journal's buttons: give a quest up (1), or read the pages again (2). */
@@ -813,7 +832,7 @@ public final class QuestRun {
                 return 1;
             }).then(Commands.literal("close").executes(ctx -> {
                 // Shut the journal on the asker's screen (the client smoke, between its stages).
-                PacketDistributor.sendToPlayer(ctx.getSource().getPlayerOrException(), new com.jrpetty.mcassistant.net.QuestJournalPayload(""));
+                send(ctx.getSource().getPlayerOrException(), new com.jrpetty.mcassistant.net.QuestJournalPayload(""));
                 return 1;
             })))
             .then(Commands.literal("abandon")

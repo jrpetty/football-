@@ -206,6 +206,8 @@ public final class TownPlan {
                  "auction",                                                    // [fleet] the auction house (entity/Auctions)
                  "infirmary",                                                  // [batchA] the infirmary (entity/Infirmary)
                  "lodge",                                                      // [caves] the Delvers' Lodge (entity/Lodge)
+                 "fletcher",                                                   // [fletcher] the fletcher's hut (entity/Fletchers)
+                 "golemyard",                                                  // [golems] the golem yard (entity/Golems)
                  "maproom",                                                    // [cartographer] the map room (entity/Cartographers)
                  "theatre",                                                    // [batchD] the theatre
                  "townlibrary",                                                // [library] the town library

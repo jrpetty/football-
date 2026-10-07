@@ -88,6 +88,9 @@ final class Inquiry {
     @Nullable
     static VillageFolkEntity constable(UUID village) {
         if (Villages.ageOf(village).ordinal() < Villages.Age.IRON.ordinal()) return null;
+        // [interviews] The one the panel chose for constable, while it is on the watch.
+        VillageFolkEntity chosen = Interviews.holder(village, "constable");
+        if (chosen != null && chosen.stationTask() == StationTask.GUARD) return chosen;
         VillageFolkEntity best = null;
         for (VillageFolkEntity g : Patrols.watch(village)) {
             if (best == null || g.veteranLevel() > best.veteranLevel()) best = g;
@@ -765,6 +768,28 @@ final class Inquiry {
         Clue k = c.clues.get(c.clues.size() - 1);
         FolkTalk.speak(guard, FolkTalk.pick(guard.getRandom(), "Where did you find this?", "Now that's a find."));
         return "Where did you find this — at " + c.place + "? " + k.text() + " Good work. I'll put it to the council.";
+    }
+
+    /**
+     * [weave] A player followed the muddy footprints from the scene to where they lead, before the watch got to them and
+     * before the rain did: read for the watch as it would read them itself (whose door they go to), and told to whoever
+     * listens (a quest's step). True if they were read.
+     */
+    static boolean followed(ServerLevel level, Case c, ServerPlayer p) {
+        Villages.Village v = Villages.get(c.village);
+        if (v == null || c.trailRead || c.trail.isEmpty() || !c.stage.open()) return false;
+        long day = level.getDayTime() / 24000L;
+        if (c.trailWashed) {
+            c.note(day, p.getName().getString() + " looked for the footprints, but the rain had washed them out.");
+            return false;
+        }
+        c.trailRead = true;
+        footprints(level, v, c, day);
+        c.helped(p);
+        c.note(day, p.getName().getString() + " followed the footprints for the watch.");
+        Crime.listeners(l -> l.helped(p, v.id(), c.id, "followed the footprints"));
+        Crime.changed();
+        return true;
     }
 
     /** A player tells a guard who it saw do it: believed, if the player did see it. Null if this was nothing of the kind. */

@@ -55,6 +55,10 @@ public final class JobSpec {
             case CAVE -> List.of("a pickaxe and a sword (the town's)", "torches (it lights the caves)");
             // [transport] The town's boat, moored at the landing (Ferries): nothing of its own to set up.
             case FERRY -> List.of("the town's boat (moored at the landing)");
+            // [fletcher] Its fletching table, made of the stores' flint and planks: nothing of its own to set up.
+            case FLETCHER -> List.of("a fletching table (two flint and four planks, from the stores)");
+            // [golems] The stores' iron and the farm's pumpkins: nothing of its own to set up.
+            case GOLEMS -> List.of("iron ingots and a pumpkin in the stores");
             // [cartographer] Its table stands at the map room; its paper, compasses and panes are the stores' (Cartographers).
             case CARTOGRAPHER -> List.of("a cartography table (at the map room)");
         };
