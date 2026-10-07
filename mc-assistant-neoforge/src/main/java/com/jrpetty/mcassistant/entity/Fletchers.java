@@ -334,7 +334,7 @@ public final class Fletchers {
             if (!(a instanceof VillageFolkEntity f) || f.stationTask() == StationTask.FLETCHER) continue;
             int s = fitness(f, village);
             if (s == Integer.MIN_VALUE) continue;
-            score.put(f, s);
+            score.put(f, s + Interviews.preferred(village, "fletcher", f));     // [interviews] the panel's choice first
             out.add(f);
         }
         out.sort((a, b) -> score.get(b) - score.get(a));
@@ -1202,7 +1202,9 @@ public final class Fletchers {
                 try { since = Long.parseLong(opened); } catch (NumberFormatException e) { since = day; }
                 if (day - since >= 1) {
                     APPOINTED.put(id, day);
-                    appoint(level, v);
+                    // [interviews] Two or more who want the place: it is held open for its interview, and given after it.
+                    List<VillageFolkEntity> few = shortlist(id);
+                    if (few.isEmpty() || !Interviews.vacancy(level, id, "fletcher", few.get(0))) appoint(level, v);
                 }
             }
         }

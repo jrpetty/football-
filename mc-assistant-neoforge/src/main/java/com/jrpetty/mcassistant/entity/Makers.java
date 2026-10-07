@@ -139,6 +139,10 @@ public final class Makers {
         // [fleet] [transport]
         declare("fishing_net", "the tailor", "while the fishing fleet has fewer nets than boats", "Fleet.makeNet");
         declare("ferry_bell", "the ferry's builders", "for each landing as a ferry is put in", "Ferries / Railways.takeOrMake");
+        // [interviews] The letter of application: each shortlisted candidate writes its own, of its own town's paper and
+        // ink at the bench, paid for out of its purse, before it goes to an interview for a post.
+        declare("letter_of_application", "the candidate itself, at its town's bench",
+            "when it is shortlisted for a post that goes to interview (one kept, written over for the next)", "Interviews.write");
         // The village's own pieces.
         declare("storehouse_unit", "the builders", "as the storehouse goes up: twenty-seven to a store", "VillageFolkEntity.madeFromStores");
         declare("village_board", "the town's hands", "whenever the town's board has been taken down (the founders bring the first)",

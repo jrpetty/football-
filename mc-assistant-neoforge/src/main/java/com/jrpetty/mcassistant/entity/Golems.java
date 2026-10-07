@@ -344,7 +344,7 @@ public final class Golems {
             if (!(a instanceof VillageFolkEntity f) || f.stationTask() == StationTask.GOLEMS) continue;
             int s = fitness(f, village);
             if (s == Integer.MIN_VALUE) continue;
-            score.put(f, s);
+            score.put(f, s + Interviews.preferred(village, "golemkeeper", f));  // [interviews] the panel's choice first
             out.add(f);
         }
         out.sort((a, b) -> score.get(b) - score.get(a));
@@ -1238,7 +1238,9 @@ public final class Golems {
         try { since = Long.parseLong(opened); } catch (NumberFormatException e) { since = day; }
         if (day - since < 1) return;
         APPOINTED.put(id, day);
-        appoint(level, v);
+        // [interviews] Two or more who want the place: it is held open for its interview, and given after it.
+        List<VillageFolkEntity> few = shortlist(id);
+        if (few.isEmpty() || !Interviews.vacancy(level, id, "golemkeeper", few.get(0))) appoint(level, v);
     }
 
     // ------------------------------------------------------------------ what the town sees

@@ -8256,3 +8256,142 @@ town's old golem is taken in hand and named, mended with ingots twenty-five heal
 and when it falls is mourned and its iron gathered back; that a snow golem is built on the watchtower in a snowy
 winter, none in a desert town (and why), and that it melts away in spring; and that no golem is built, and no iron
 touched, while the watch's armour still wants the iron, and that with iron enough for both, it is.
+
+## Interviews
+
+When a town fills a post that matters and more than one folk wants it, it holds a real interview. It happens in the
+world, in the morning, and you can walk up and watch it. The candidates on the shortlist wait their turn on a bench
+with their letters in their hands. Each one sits across the table from the panel in turn, and both sides talk in
+speech bubbles. Then the panel huddles, calls everyone back in, and tells them who got the post and why. Last, the
+chosen one shakes hands across the table.
+
+**When a town interviews.**
+* *A notice on the board* with two or more fit applicants. The elder used to choose on paper; now the best three are
+  shortlisted (a fourth if it is within a whisker of the third). The rest are told no on paper, kindly.
+* *A new workplace's first keeper*: the new smithy wants a blacksmith. The town's own folk who want the work stand
+  alongside any applicants from other towns.
+* *The posts a town gives its own*: the schoolteacher, the librarian, the ferryman, the bank clerk, a place on the cave
+  team, the fletcher, the golem keeper, and the steward of a player who leads. When one of these falls vacant and two or
+  more folk want it, the post is held open for a day for its interview. Whether a folk wants a post depends on its
+  ambition, what it cares about, its nature and its hand at the work, and on whether it can take the post without
+  leaving its own trade short. With only one candidate, the post simply goes to that one.
+* *The posts a town works out each day from who is best*: the constable of the watch (from the Iron Age, with a watch
+  of two or more), the leader of the cave team, the auctioneer, and the master of a trade when the old master retires
+  or dies. Once a panel has chosen someone, the town keeps that choice for as long as the folk stays fit for the post.
+  (There is no captain of the watch: the constable leads it.)
+* A town holds one interview at a time, and never at night, in a raid, a fire, a thunderstorm or on a festival day. Then
+  it is put off a day. After three put-offs the panel decides on paper.
+
+**The day before.** The board says so ("Interviews at the hall tomorrow morning: the post of blacksmith. Three
+candidates: Ada, Bram and Cole."), and so do the crier, the gazette and the morning assembly. Each candidate writes its
+**letter of application**. A candidate from another town sets out along the road in time to arrive, and the town pays
+for its room at the inn. If it can't come, its letter is read out instead.
+
+**The table.** If the town has a meeting hall, the interview uses the hall's long table: the panel sits at the head, the
+candidate in the chair across from them, and the bench is the chairs at the far end by the door. A town with no hall
+sets out a table by its board, in the leader's courtyard if it has one. The table is three slabs on end, with three
+chairs behind it for the panel, one across it for the candidate, and a bench of three a few steps back. A hand the town
+sends makes them from the stores' own stairs and slabs (or saws them from planks) and leaves them there for next time.
+With nothing in the stores to make them from, everyone stands.
+
+**The panel.** The leader takes the chair. When a player leads, its steward chairs and the player chooses. Next to the
+chair sits the post's master or the town's best hand at the trade. A big post (the constable, the steward, the bank,
+the school, the cave team's leader) adds a councillor. An honoured guest can sit at the end of the table.
+
+**The interview.** It starts after the morning assembly. The chair names the post and the candidates, then calls each
+in turn: "First, Ada. Come and sit down."
+* *The greeting*, in the candidate's own manner. A shy folk stammers ("G-good morning. My letter. Sorry, my hands are
+  cold."), a grumpy one wants to get on with it, a proud one says its letter makes the case, and a cheerful one beams.
+  It hands its letter across, and the chair holds it and reads it aloud.
+* *How long at it*: the candidate's real level, what it has done in its life ("Nine trees felled, all told.") and
+  how long it has worked here. A teacher is asked what it knows that is worth teaching a child; a librarian, what it
+  reads.
+* *Its best work.* A smith or a tailor holds up a piece with its own maker's mark, fetched from its pack, its home
+  chest or the town's stores, and the master looks it over ("A master's work. Look at the temper on that edge."). A
+  cook offers a taste from its own pack, and the master eats it. A guard gives its tally of hostiles. Anyone else
+  talks about the knack it chose or its fondest day.
+* *A real question* the post meets: raiders at the east gate at night, a child who won't learn its letters, the stores
+  down to two iron when the watch wants blades (counted from the real stores), a torn book coming back, a mortgage
+  that can't be met. A skilled, ready candidate answers well; a nervous one stumbles ("Um. Hope for rain.").
+* *Why it wants the post*: what it cares about most, its ambition, or family in town.
+* *A proud folk's boast* is checked against the record: borne out ("Level 16, and nobody here above it.") or seen
+  through ("Level 3, Cole. I can count. Dara is level 16.").
+* *A record before the court* is asked about. Owning up counts for it; denying counts against it.
+* *References.* A partner, a friend, an old master at the trade or a rival walks over, stands to one side, says its
+  piece and goes. The panel discounts a grudge.
+
+The panel's faces show what it thinks: green sparkles for a nod, a puff of smoke for a frown, a note for a raised
+eyebrow. On the bench, the others fidget and whisper ("Have you done this before?" "Once. Didn't get it.").
+
+**The decision.** The candidates step out and the panel huddles, each line a whisper about one of them ("Ada's work
+spoke for itself: an iron sword, a master's work."). Then the chair calls them back in and announces the choice, with
+the reason in a sentence: "We've decided. The post of blacksmith goes to Ada: the finest work we saw (an iron sword, a master's work)." The chosen
+comes to the table for the handshake (sparkles and a chime), and each of the others is thanked and told what to work
+on ("too new to it yet; another year at it and you'll walk it").
+
+**How it is scored.** The paper (the post's usual weighing of level, knacks, years and family) is the core. The
+interview can move a candidate up to twelve points either way: nerves, the letter, the answers, the work shown, the
+references (eight at most), honesty about the past, a boast, and not turning up at all. Each panel member votes for
+the best by that score, leaning a little towards friends, and the chair breaks a tie.
+
+**After.** The chosen takes the post. A newcomer from another town goes home to fetch its things and then comes back
+for good; one of the town's own starts at once. The chronicle, the board, the crier and the next gazette all report it.
+Every candidate's card shows the result ("Interviewed for town librarian on day 12: not chosen — nerves got the better
+of you; you know more than you showed us"). The chosen is in high spirits for a few days. The others are a little down
+for a day or two, but they work harder for a week and learn their trade a fifth quicker. Friends console them, and the
+ambitious ones go and read the board for a place elsewhere.
+
+**You and the interviews.**
+* Walk up and watch. The chair greets you ("Come to watch? Stand by the wall.").
+* Ask any folk "any interviews coming up?" and it tells you when, where, for what post and who is standing.
+* If the town counts you a friend, put in a word: say "I'd recommend Ada for the post" to any folk, or use
+  `/village interviews recommend Ada`. The chair reads it out at Ada's turn. It counts for more the better the town
+  knows you (a hero's word most), and you get one word per interview.
+* An honoured guest can ask to sit on the panel ("can I sit on the panel?", or `/village interviews panel`). You get a
+  chair at the end and one vote in three.
+* **If you lead the town**, the choice is yours. When the panel has heard everyone, the interview page opens with each
+  candidate's particulars and a Choose button. Your choice stands, even over the panel's, and the announcement says so.
+  If you aren't there, you have until sundown, and after that the panel decides. You can also use
+  `/village interviews choose <name>`, or `/village interviews choose panel` to leave it to them.
+* The town's books have an **Interviews** page, after Transport. It shows interviews coming and held, every
+  candidate's score part by part (paper, nerves, letter, answers, work, references, honesty, boast, absence, total),
+  who got the post and why, and the last lines said.
+
+**The letter of application.** An upright sheet in a candidate's own hand: the post written across the top in red and
+underlined, a few wandering lines, a signature with a flourish, and an ink blot.
+
+| Thing | Recipe | Age | Worth | Made by | What it's for |
+|---|---|---|---|---|---|
+| Letter of Application | a paper and an ink sac | Wood | 0.3c | the candidate, at its own town's bench | handed to the panel at an interview |
+
+The candidate writes it from its own town's paper and ink and pays for them from its purse into the treasury. It holds
+the letter while waiting, hands it across the table, and gets it back afterwards as a keepsake. Its tooltip shows who
+wrote it and where from, the post and town, its trade and level, its age, its knacks, why it wants the post, and the
+day it was written. Right-click it to read it. One you craft yourself is blank.
+
+**Commands.**
+* `/village interviews`: the nearest town's interviews, set, on and held, with each candidate's score.
+* `/village interviews page` and `/village interviews books`: the interview page, and the town's books open at
+  Interviews.
+* `/village interviews choose <name>`, `recommend <name>` and `panel`: as above.
+* Operators: `/village interviews stage <post>` sets up an interview now with the town's best candidates (`teacher`,
+  `librarian`, `constable`, `caveleader`, `caveplace`, `ferryman`, `auctioneer`, `banker`, `steward`, `fletcher`,
+  `golemkeeper`, `master_<trade>`, or another trade's name such as `smith`, which puts a notice up for it).
+  `/village interviews now` starts the next one at once, and `/village interviews hurry on|off` makes it a line every
+  half-second for a quick look.
+
+**Tested.** The game tests `InterviewGameTests` (iv01 to iv10) check that:
+* four miners from a town ninety blocks away apply for a notice, and three are shortlisted. They travel over, sit on the
+  bench, take the chair in turn, and real lines are said. The best by combined score is chosen, and the notice is
+  filled;
+* a staged smith interview has the candidate hold up its own marked sword, and it goes back afterwards;
+* the librarian's candidates' cards, moods, memories and week of harder work all show the result;
+* the constable's post goes to interview in an Iron Age town, and the board, crier, chronicle and gazette tell it,
+  before and after; the watch's own reckoning keeps the panel's choice;
+* a reference (a friend's and a hero player's word) turns a close result;
+* a proud folk's boast is seen through, and another's is borne out;
+* when the teacher's post falls vacant, the school waits for the interview, and the best of the town's own gets it;
+* a player who leads chooses the lowest-scoring candidate, and its choice stands, with the reason saying so;
+* the letter is made from the stores' paper and ink, paid into the treasury, held on the bench, held by the chair while
+  read, and kept afterwards;
+* a candidate from a town two hundred blocks away arrives in time and takes its seat.

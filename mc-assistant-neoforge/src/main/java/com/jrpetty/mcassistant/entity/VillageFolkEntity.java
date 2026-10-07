@@ -442,6 +442,10 @@ public class VillageFolkEntity extends AssistantEntity {
                 && WatchClears.takeCover(this, coverLevel)) return;
         // [batchA] Laid up: a cold or its wounds, in bed at the infirmary or at home, and kept there (Health).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel careLevel && Health.hold(this, careLevel)) return;
+        // [interviews] Called to an interview (Interviews): on the road to it from another town, waiting its turn on the bench
+        // with its letter, across the table from the panel, or on the panel; its own day waits.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel interviewLevel
+                && (tickCount % 4 == 0 ? Interviews.hold(this, interviewLevel) : Interviews.busy(this))) return;
         // [fields] A short errand with its tools: the can filled at the rain barrel, the nesting box emptied, the fish traps
         // gone round on a day the boats stay in, the garden watered of an evening (FieldTools).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel fieldLevel && FieldTools.hold(this, fieldLevel)) return;
@@ -1216,6 +1220,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
+        m = Interviews.mood(this, day, m, why);          // [interviews] a post won at interview, or missed
         m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
@@ -1303,7 +1308,8 @@ public class VillageFolkEntity extends AssistantEntity {
     protected void creditTrade(int amount) {
         StationTask t = stationTask();
         if (t != StationTask.NONE && amount > 0) tradeXp.merge(t, amount + FolkSkills.extraXp(this, amount)
-            + Library.extraXp(this, amount), (a, b) -> Math.min(1_000_000, a + b));                  // [library] an apprentice who read its trade's book
+            + Library.extraXp(this, amount)                                                           // [library] an apprentice who read its trade's book
+            + Interviews.extraXp(this, amount), (a, b) -> Math.min(1_000_000, a + b));               // [interviews] turned down: a week's hard work
     }
 
     /** What a lesson at the school taught it of a trade (School): put by for the day it takes the trade up. */
@@ -7802,7 +7808,8 @@ public class VillageFolkEntity extends AssistantEntity {
             || WatchClears.sheltering(this)                      // [watch-clears] indoors out of a monster's way
             || Transport.busy(this)                              // [transport] on a ride, a crossing, or at the ferry
             || Crime.calledAway(this)                            // [crime] on a case, at a trial, in the stocks, at community work
-            || Disasters.busy(this);                             // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || Disasters.busy(this)                              // [disasters] a bucket chain, a flood, a night away, the fire watch
+            || Interviews.busy(this);                            // [interviews] at an interview, or on the road to one
     }
 
     /** [wf] The woodcutter's wood kept growing between its fellings (Woods). */

@@ -88,6 +88,9 @@ final class Inquiry {
     @Nullable
     static VillageFolkEntity constable(UUID village) {
         if (Villages.ageOf(village).ordinal() < Villages.Age.IRON.ordinal()) return null;
+        // [interviews] The one the panel chose for constable, while it is on the watch.
+        VillageFolkEntity chosen = Interviews.holder(village, "constable");
+        if (chosen != null && chosen.stationTask() == StationTask.GUARD) return chosen;
         VillageFolkEntity best = null;
         for (VillageFolkEntity g : Patrols.watch(village)) {
             if (best == null || g.veteranLevel() > best.veteranLevel()) best = g;

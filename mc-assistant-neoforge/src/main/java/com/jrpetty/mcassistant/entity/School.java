@@ -291,10 +291,11 @@ public final class School {
         int bestScore = Integer.MIN_VALUE;
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || !fit(f)) continue;
-            int s = score(f);
+            int s = score(f) + Interviews.preferred(village, "teacher", f);     // [interviews] the panel's choice first
             if (s > bestScore || s == bestScore && best != null && f.getUUID().compareTo(best.getUUID()) < 0) { bestScore = s; best = f; }
         }
         if (best == null) return null;
+        if (Interviews.vacancy(level, village, "teacher", best)) return null;   // [interviews] the post held open for its interview
         appoint(level, village, best);
         return best;
     }
@@ -355,8 +356,8 @@ public final class School {
         return why.isEmpty() ? "the best the village had" : String.join(", ", why);
     }
 
-    /** It takes the school. */
-    private static void appoint(ServerLevel level, UUID village, VillageFolkEntity f) {
+    /** It takes the school. [interviews] The panel's choice is given it here too (InterviewPosts.give). */
+    static void appoint(ServerLevel level, UUID village, VillageFolkEntity f) {
         long day = level.getDayTime() / 24000L;
         String before = Ledger.note(village, TEACHER_NAME);
         Ledger.note(village, TEACHER, f.getUUID().toString());

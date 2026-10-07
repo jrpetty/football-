@@ -386,6 +386,7 @@ public final class VillageBoards {
         }
         // The job market (JobMarket): our Wanted notices, who is on the road here, who came and went, word from other towns.
         out.addAll(JobMarket.board(level, id));
+        out.addAll(Interviews.board(level, id));                  // [interviews] the interviews coming, on, or just held
         Orders.Order order = Orders.current(id);
         out.add(order == null ? "LM|Elder's orders: none yet — the elder is watching how things go."
             : "LN|Elder's orders: " + order.title + ". " + order.words);
