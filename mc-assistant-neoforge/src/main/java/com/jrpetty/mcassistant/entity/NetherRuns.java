@@ -1054,6 +1054,11 @@ public final class NetherRuns {
                          VillageFolkEntity lead) {
         long now = level.getGameTime();
         if (inNether(f)) {
+            // Turned for home up a pillar after the glowstone: down it first (a block at a time, as it went up).
+            if (NetherWork.pillarDown(level, f, leg)) {
+                f.hobbyNow = "coming down its pillar to go home";
+                return;
+            }
             BlockPos portal = r.netherPortal != null && level.getBlockState(r.netherPortal).is(Blocks.NETHER_PORTAL) ? r.netherPortal
                 : portalNear(level, r.netherPortal != null ? r.netherPortal : f.blockPosition(), 3);
             if (portal == null) {
