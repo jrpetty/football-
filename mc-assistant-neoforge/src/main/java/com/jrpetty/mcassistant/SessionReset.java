@@ -23,16 +23,38 @@ public final class SessionReset {
 
     private SessionReset() {}
 
+    /**
+     * True while a world opens or closes. The resets below are the tests' resets too, and some of them clear what is
+     * kept with the world (the town affairs' letters, petitions and fund; the league table). Between tests that is a
+     * clean slate; as a world opens it is the town's history lost at every restart. Those check this and forget only
+     * what is in memory.
+     */
+    private static boolean opening;
+
+    /** Is a world opening or closing (so what is saved with it must be left alone)? */
+    public static boolean opening() {
+        return opening;
+    }
+
     @SubscribeEvent
     public static void onServerStarting(ServerStartingEvent event) {
-        resetAll();
+        session();
         com.jrpetty.mcassistant.entity.Prices.reset();      // this world's recipes, priced afresh
     }
 
     @SubscribeEvent
     public static void onServerStopped(ServerStoppedEvent event) {
-        resetAll();
+        session();
         com.jrpetty.mcassistant.entity.Prices.reset();
+    }
+
+    private static void session() {
+        opening = true;
+        try {
+            resetAll();
+        } finally {
+            opening = false;
+        }
     }
 
     /** Wipe every piece of in-memory village and crew state. */

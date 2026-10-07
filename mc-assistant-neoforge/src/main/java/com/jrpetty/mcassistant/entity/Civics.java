@@ -146,10 +146,12 @@ public final class Civics extends SavedData {
         return tag;
     }
 
-    /** Everything forgotten (the tests share one world; Villages.resetForTests). */
+    /** Everything forgotten (the tests share one world; Villages.resetForTests); as a world opens, only memory. */
     public static void resetForTests() {
-        of().root = new CompoundTag();
-        of().setDirty();
+        if (!com.jrpetty.mcassistant.SessionReset.opening()) {   // a world opening keeps its letters, petitions and fund
+            of().root = new CompoundTag();
+            of().setDirty();
+        }
         HELD.clear();
         PATHED.clear();
         GLAD.clear();

@@ -139,7 +139,7 @@ public final class League extends SavedData {
     public League() {}
 
     public static void resetForTests() {
-        League l = of();
+        League l = com.jrpetty.mcassistant.SessionReset.opening() ? null : of();   // a world opening keeps its table
         if (l != null) l.towns.clear();
         LOOSE.clear();
     }
