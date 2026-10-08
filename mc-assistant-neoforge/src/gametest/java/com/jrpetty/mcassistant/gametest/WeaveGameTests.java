@@ -1168,10 +1168,11 @@ public class WeaveGameTests {
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "weave_w16_finds_past_the_six")
     public static void w16_finds_past_the_six(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        // Six kinds of find for the wall, two of each in the stores (the wall never takes the last), and a seventh it has no room for.
+        // Six kinds of find for the wall, hung on it (the stores keep one of each, the town's own), and a seventh, two of it, it has no room for:
+        // the auction takes the town's three finest spares, so the wall's kinds are not spare here and the seventh is.
         Item[] six = { Items.DIAMOND, Items.EMERALD, Items.GOLDEN_APPLE, Items.NAME_TAG, Items.SADDLE, Items.RAW_GOLD };
         List<ItemStack> goods = new ArrayList<>();
-        for (Item k : six) goods.add(new ItemStack(k, 2));
+        for (Item k : six) goods.add(new ItemStack(k, 1));
         goods.add(new ItemStack(Items.AMETHYST_SHARD, 2));
         goods.add(new ItemStack(Items.ITEM_FRAME, 12));
         goods.add(new ItemStack(Items.PAPER, 64));
@@ -1190,6 +1191,8 @@ public class WeaveGameTests {
         Ledger.Building b = Lodge.of(id);
         BlockPos hall = Lodge.hall(id);
         helper.assertTrue(b != null && hall != null, "the Delvers' Lodge stands");
+        // A second for the chunks held for the town to come alive (a frame's entity is kept only where they are).
+        helper.runAtTickTime(20, () -> {
         long day = QuestRun.day(level);
         for (Item k : six) Lodge.broughtUp(id, new ItemStack(k), "Ada", "the big cave east", day);
         Lodge.broughtUp(id, new ItemStack(Items.AMETHYST_SHARD), "Bram", "the crystal cave", day);
@@ -1223,11 +1226,13 @@ public class WeaveGameTests {
         List<String> lots = Auctions.openForTests(level, v);
         Auctions.fromForTests(-1);
         Kit.log("w16 the wall: " + up + " (" + byTheTeam + " hung by the team); the amethyst a lot " + lot + " (" + from + "), the diamond (on the wall) "
-            + diamond + "; the town's lots " + lots);
+            + diamond + "; the town's lots " + lots + "; the wall as the weave reads it " + Weave.trophyWallForTests(level, id) + "; noted " + Lodge.trophies(id).keySet()
+            + "; the lodge at " + b.anchor().toShortString() + " facing " + b.facing());
         helper.assertTrue(up.size() == 6, "the trophy wall full: " + up);
         helper.assertTrue(lot && !diamond, "the find the full wall has no room for goes to auction; the wall's own do not, by the weave");
         helper.assertTrue(from != null && from.contains("Bram") && from.contains("the crystal cave") && from.contains("no room"), "and the auction says whose find it was: " + from);
         helper.assertTrue(lots.stream().anyMatch(l -> l.contains("amethyst")), "under the hammer: " + lots);
         helper.succeed();
+        });
     }
 }

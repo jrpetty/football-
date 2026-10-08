@@ -1630,6 +1630,11 @@ public final class Weave {
         return lot(level, village, s);
     }
 
+    /** Tests: the trophies on the lodge's wall now, as the weave reads them (a full wall has six). */
+    public static List<String> trophyWallForTests(ServerLevel level, UUID village) {
+        return Lodge.shown(level, village);
+    }
+
     /** Tests: where the auction says one of the weave's lots came from (null for the auction's own). */
     @Nullable
     public static String provenanceForTests(ServerLevel level, UUID village, ItemStack s) {
