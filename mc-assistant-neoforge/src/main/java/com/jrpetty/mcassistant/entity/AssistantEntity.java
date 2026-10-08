@@ -283,7 +283,65 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     // Owner UUID -> (lowercase name -> live assistant). One owner can run a
     // whole crew; commands route by name or to the nearest one.
-    private static final Map<UUID, ConcurrentHashMap<String, AssistantEntity>> BY_OWNER = new ConcurrentHashMap<>();
+    private static final Map<UUID, Register> BY_OWNER = new ConcurrentHashMap<>();
+
+    /**
+     * One owner's register. The same map it always was, keeping besides a copy of its folk in the map's own order,
+     * made when first asked for and thrown away whenever the map is changed: allFor and countFor, asked hundreds of
+     * times a second in a big town, walk that copy instead of the map's table, and come out with the same folk in the
+     * same order (a map's order changes only when it is changed).
+     */
+    private static final class Register extends ConcurrentHashMap<String, AssistantEntity> {
+        @Nullable private volatile AssistantEntity[] crew;
+
+        AssistantEntity[] crew() {
+            AssistantEntity[] c = crew;
+            if (c == null) {
+                c = values().toArray(new AssistantEntity[0]);
+                crew = c;
+            }
+            return c;
+        }
+
+        @Override
+        public AssistantEntity put(String key, AssistantEntity value) {
+            crew = null;
+            AssistantEntity was = super.put(key, value);
+            crew = null;
+            return was;
+        }
+
+        @Override
+        public AssistantEntity remove(Object key) {
+            AssistantEntity was = super.remove(key);
+            if (was != null) crew = null;
+            return was;
+        }
+
+        @Override
+        public boolean remove(Object key, Object value) {
+            boolean gone = super.remove(key, value);
+            if (gone) crew = null;
+            return gone;
+        }
+
+        @Override
+        public void clear() {
+            super.clear();
+            crew = null;
+        }
+
+        // Nothing else changes a register; were anything to, the copy would be wrong, so none of it may.
+        @Override public AssistantEntity putIfAbsent(String k, AssistantEntity v) { throw new UnsupportedOperationException(); }
+        @Override public void putAll(Map<? extends String, ? extends AssistantEntity> m) { throw new UnsupportedOperationException(); }
+        @Override public AssistantEntity replace(String k, AssistantEntity v) { throw new UnsupportedOperationException(); }
+        @Override public boolean replace(String k, AssistantEntity o, AssistantEntity n) { throw new UnsupportedOperationException(); }
+        @Override public AssistantEntity compute(String k, java.util.function.BiFunction<? super String, ? super AssistantEntity, ? extends AssistantEntity> f) { throw new UnsupportedOperationException(); }
+        @Override public AssistantEntity computeIfAbsent(String k, java.util.function.Function<? super String, ? extends AssistantEntity> f) { throw new UnsupportedOperationException(); }
+        @Override public AssistantEntity computeIfPresent(String k, java.util.function.BiFunction<? super String, ? super AssistantEntity, ? extends AssistantEntity> f) { throw new UnsupportedOperationException(); }
+        @Override public AssistantEntity merge(String k, AssistantEntity v, java.util.function.BiFunction<? super AssistantEntity, ? super AssistantEntity, ? extends AssistantEntity> f) { throw new UnsupportedOperationException(); }
+        @Override public void replaceAll(java.util.function.BiFunction<? super String, ? super AssistantEntity, ? extends AssistantEntity> f) { throw new UnsupportedOperationException(); }
+    }
 
     // What this bot is currently filed under, so the tick can tell at a glance
     // whether the registry needs touching at all.
@@ -317,10 +375,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     }
 
     public static List<AssistantEntity> allFor(UUID ownerId) {
-        Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
+        Register m = BY_OWNER.get(ownerId);
         if (m == null) return List.of();
-        List<AssistantEntity> out = new ArrayList<>();
-        for (AssistantEntity a : m.values()) {
+        AssistantEntity[] crew = m.crew();
+        List<AssistantEntity> out = new ArrayList<>(crew.length);
+        for (AssistantEntity a : crew) {
             if (a.isAlive()) out.add(a);
         }
         return out;
@@ -328,10 +387,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** How many allFor would list, without the list. */
     public static int countFor(UUID ownerId) {
-        Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
+        Register m = BY_OWNER.get(ownerId);
         if (m == null) return 0;
         int n = 0;
-        for (AssistantEntity a : m.values()) {
+        for (AssistantEntity a : m.crew()) {
             if (a.isAlive()) n++;
         }
         return n;
@@ -4009,7 +4068,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             Map<String, AssistantEntity> old = BY_OWNER.get(registeredOwner);
             if (old != null) old.remove(registeredName.toLowerCase(), this);
         }
-        BY_OWNER.computeIfAbsent(ownerId, k -> new ConcurrentHashMap<>())
+        BY_OWNER.computeIfAbsent(ownerId, k -> new Register())
             .put(assistantName.toLowerCase(), this);
         registeredOwner = ownerId;
         registeredName = assistantName;
