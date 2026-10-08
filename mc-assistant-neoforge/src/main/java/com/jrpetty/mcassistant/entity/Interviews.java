@@ -2634,10 +2634,10 @@ public final class Interviews {
             int toBench = (b.getX() - c.getX()) * side.getStepX() + (b.getZ() - c.getZ()) * side.getStepZ();
             if (toBench < 0) side = side.getOpposite();                           // looking from the bench's end of the table
             BlockPos mid = new BlockPos(Math.floorDiv(c.getX() + head.getX(), 2), c.getY(), Math.floorDiv(c.getZ() + head.getZ(), 2));
-            view(out, "iv-bench", t.hall() ? t.out().above(2) : b.relative(dir.getOpposite(), 2).relative(side, 2).above(), b.above());
-            view(out, "iv-table", mid.relative(side, 5).above(2), mid.above());
-            view(out, "iv-shoulder", c.relative(dir, 2).relative(side).above(), head.above());
-            view(out, "iv-panel", head.relative(dir.getOpposite(), 2).relative(side).above(), c.above());
+            view(level, out, "iv-bench", t.hall() ? t.out().above(2) : b.relative(dir.getOpposite(), 2).relative(side, 2).above(), b.above());
+            view(level, out, "iv-table", mid.relative(side, 5).above(2), mid.above());
+            view(level, out, "iv-shoulder", c.relative(dir, 2).relative(side).above(), head.above());
+            view(level, out, "iv-panel", head.relative(dir.getOpposite(), 2).relative(side).above(), c.above());
         } else {
             out.add("No table yet: a hand is being sent to set one out by the board.");
         }
@@ -2645,8 +2645,43 @@ public final class Interviews {
     }
 
     /** "VIEW name x y z ax ay az": a camera's place and what it looks at, as the other stages give them. */
-    private static void view(List<String> out, String name, BlockPos from, BlockPos at) {
-        out.add("VIEW " + name + " " + from.getX() + " " + from.getY() + " " + from.getZ() + " " + at.getX() + " " + at.getY() + " " + at.getZ());
+    private static void view(ServerLevel level, List<String> out, String name, BlockPos from, BlockPos at) {
+        BlockPos pick = clearSpot(level, from, at);
+        LOG.info("[MCA-INTERVIEW] stage camera {}: {} (asked {}), looking at {}", name, pick.toShortString(), from.toShortString(), at.toShortString());
+        out.add("VIEW " + name + " " + pick.getX() + " " + pick.getY() + " " + pick.getZ() + " " + at.getX() + " " + at.getY() + " " + at.getZ());
+    }
+
+    /**
+     * A camera's place in clear air with a clear sight of what it looks at: out from the table along the way it was
+     * asked to look from (the asked distance first, then nearer, then a little farther), at its height or up to four
+     * higher; the feet and the eye in air, and a ray from the eye reaching the table (a wall, a hill or a house between
+     * and it tries the next). Failing all, above the roofs over where it was asked.
+     */
+    static BlockPos clearSpot(ServerLevel level, BlockPos from, BlockPos at) {
+        double dx = from.getX() - at.getX(), dz = from.getZ() - at.getZ();
+        double len = Math.hypot(dx, dz);
+        if (len < 1.0e-3) { dx = 1; dz = 0; len = 1; }
+        dx /= len;
+        dz /= len;
+        int d0 = (int) Math.round(len);
+        List<Integer> ds = new ArrayList<>();
+        for (int d = d0; d >= 2; d--) ds.add(d);
+        for (int d = d0 + 1; d <= d0 + 4; d++) ds.add(d);
+        Vec3 target = Vec3.atCenterOf(at);
+        for (int h = 0; h <= 4; h++) {
+            for (int d : ds) {
+                BlockPos p = BlockPos.containing(at.getX() + 0.5 + dx * d, from.getY() + h, at.getZ() + 0.5 + dz * d);
+                if (!level.isLoaded(p) || !level.getBlockState(p).getCollisionShape(level, p).isEmpty()
+                    || !level.getBlockState(p.above()).getCollisionShape(level, p.above()).isEmpty()) continue;
+                Vec3 eye = new Vec3(p.getX() + 0.5, p.getY() + 1.62, p.getZ() + 0.5);
+                net.minecraft.world.phys.BlockHitResult hit = level.clip(new net.minecraft.world.level.ClipContext(eye, target,
+                    net.minecraft.world.level.ClipContext.Block.VISUAL, net.minecraft.world.level.ClipContext.Fluid.NONE,
+                    net.minecraft.world.phys.shapes.CollisionContext.empty()));
+                if (hit.getType() == net.minecraft.world.phys.HitResult.Type.MISS || hit.getLocation().distanceTo(target) < 1.6) return p;
+            }
+        }
+        int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING, from.getX(), from.getZ());
+        return new BlockPos(from.getX(), Math.max(from.getY(), top + 2), from.getZ());
     }
 
     /** /village interviews now: the town's next interview begun at once (those from away set off, or their letters read). */

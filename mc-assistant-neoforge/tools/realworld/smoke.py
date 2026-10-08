@@ -2651,11 +2651,13 @@ def interviews_stage(r, look, cx, cz):
 
     out = r.cmd(at + " stage smith")
     say("interviews stage: " + out[:1200])
+    out_stage = out
     read(out)
     if not views:                                      # no table found yet (the ground still loading): once more
         time.sleep(15)
         out = r.cmd(at + " stage smith")
         say("interviews stage again: " + out[:1200])
+        out_stage = out
         read(out)
     if not views:
         say("no interview staged; nothing to photograph")
@@ -2701,29 +2703,49 @@ def interviews_stage(r, look, cx, cz):
     if "begin now" not in out and "on already" not in out:
         say("the interview did not begin; nothing more to photograph")
         return
-    # 1. The panel at the table, the candidates on the bench with their letters: as the chair opens.
-    if wait_for(lambda s: re.search(r"#\d+ sitting:", s), 120, "seating"):
-        shoot("iv-bench", "1-bench", 2)
-    # 2. The first across the table, greeting the panel and its letter read out (or its want of one noted): from the side,
-    # and over its shoulder at the panel. Called across, it sits and says good morning in the next few seconds.
-    if wait_for(lambda s: "across the table" in s, 150, "candidate across the table"):
-        time.sleep(7)
-        shoot("iv-table", "2-across", 1)
-        shoot("iv-shoulder", "3-shoulder", 1)
-    # 3. The smith holding up its work, its maker's mark on it, and the master looking it over.
-    if wait_for(lambda s: "My mark's on it" in last_said(s), 420, "work held up"):
-        shoot("iv-panel", "4-work", 1)
-        shoot("iv-table", "5-work-side", 1)
-    # 4. The choice told, and 5. the handshake across the table, and the chosen's thanks.
-    said = wait_for(lambda s: " goes to " in last_said(s), 480, "announcement")
-    if said:
-        time.sleep(1)
-        shoot("iv-table", "6-announced", 1)
-        m = re.search(r" goes to ([^:]+):", last_said(said))
-        chosen = m.group(1) if m else ""
-        if chosen and wait_for(lambda s: last_said(s).startswith(chosen + ": "), 60, "thanks"):
+    # One watch over the whole interview, each picture taken as its moment comes (the interview runs at its own pace,
+    # and the moments come in its order, not the script's: a smith may be the last called, or never show its work).
+    m = re.search(r"Set: #(\d+)", out_stage)
+    sid = m.group(1) if m else r"\d+"
+    taken = set()
+    chosen = ""
+    end = time.time() + 900
+    while time.time() < end:
+        s = r.cmd(at)
+        st = re.search(r"#%s (\w+):" % sid, s)
+        stage = st.group(1) if st else ""
+        said = last_said(s)
+        if stage in ("done", "cancelled") or (stage == "set" and "bench" in taken):
+            break                                      # over (or put off again): what was taken stands
+        if stage == "sitting" and "bench" not in taken:
+            taken.add("bench")                         # 1. the bench with its letters, as the chair opens
+            shoot("iv-bench", "1-bench", 2)
+            continue
+        if "across the table" in s and "across" not in taken:
+            taken.add("across")                        # 2-3. the first across the table, greeting the panel
+            time.sleep(7)
+            shoot("iv-table", "2-across", 1)
+            shoot("iv-shoulder", "3-shoulder", 1)
+            continue
+        if "My mark's on it" in said and "work" not in taken:
+            taken.add("work")                          # 4-5. the smith's work held up, the master looking it over
+            shoot("iv-panel", "4-work", 1)
+            shoot("iv-table", "5-work-side", 1)
+            continue
+        if " goes to " in said and "announced" not in taken:
+            taken.add("announced")                     # 6. the choice told
+            mm = re.search(r" goes to ([^:]+):", said)
+            chosen = mm.group(1) if mm else ""
+            time.sleep(1)
+            shoot("iv-table", "6-announced", 1)
+            continue
+        if chosen and said.startswith(chosen + ": ") and "shake" not in taken:
+            taken.add("shake")                         # 7. the handshake and the chosen's thanks
             shoot("iv-shoulder", "7-handshake", 1)
             shoot("iv-table", "7b-handshake-side", 1)
+            continue
+        time.sleep(1.5)
+    say("interviews: pictures %s; the interview %s" % (sorted(taken), stage or "?"))
     time.sleep(10)
     say("interviews: " + r.cmd(at)[:1500])
     r.cmd("gamemode creative %s" % USER)

@@ -169,7 +169,8 @@ final class InterviewScript {
             : face == Act.BROW ? FolkTalk.pick(r, "Hm. ", "I see. ") : "";
 
         // Its best: a piece of its work with its mark, its knacks, its fondest day; and the evidence.
-        Piece piece = (at == StationTask.SMITH || at == StationTask.TAILOR || own == StationTask.SMITH || own == StationTask.TAILOR)
+        Piece piece = (at == StationTask.SMITH || at == StationTask.TAILOR || own == StationTask.SMITH || own == StationTask.TAILOR
+                || t == StationTask.SMITH || t == StationTask.TAILOR)
             ? piece(level, iv, f) : null;
         ItemStack taste = at == StationTask.COOK || own == StationTask.COOK ? taste(f) : ItemStack.EMPTY;
         int kills = f.deedCount(AssistantEntity.Deed.MOBS_KILLED);
