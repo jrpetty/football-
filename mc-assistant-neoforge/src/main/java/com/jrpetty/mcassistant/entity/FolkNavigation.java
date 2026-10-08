@@ -28,6 +28,15 @@ public class FolkNavigation extends GroundPathNavigation {
         setMaxVisitedNodesMultiplier(2.5F);
     }
 
+    /** The game's own path finder over the game's own walking rules (GroundPathNavigation's), with an evaluator that
+     *  works each place out once a search rather than a dozen times (FolkNodeEvaluator): the same paths, cheaper. */
+    @Override
+    protected net.minecraft.world.level.pathfinder.PathFinder createPathFinder(int maxVisitedNodes) {
+        this.nodeEvaluator = new FolkNodeEvaluator();
+        this.nodeEvaluator.setCanPassDoors(true);
+        return new net.minecraft.world.level.pathfinder.PathFinder(this.nodeEvaluator, maxVisitedNodes);
+    }
+
     /** [sf] The last place the careful plan could not reach, and when: planned at full drop straight away for a while. */
     @Nullable private BlockPos looseTo;
     private long looseAt;
