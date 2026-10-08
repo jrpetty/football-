@@ -8209,8 +8209,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  the idle brain from looping a doomed "gather X" where none exists nearby. */
     public boolean resourceNearby(GatherGoal.Kind kind, int radius) {
         BlockPos feet = feetPos();
-        for (BlockPos pos : BlockPos.betweenClosed(
-                feet.offset(-radius, -6, -radius), feet.offset(radius, 8, radius))) {
+        BlockPos lo = feet.offset(-radius, -6, -radius), hi = feet.offset(radius, 8, radius);
+        // Only the part of the box inside its patch is looked at (inZone below): the box is cut down to that part
+        // first, rather than every block of it outside the patch being asked about and passed over. The same blocks,
+        // in the same order.
+        WorkZone z = lentZone() != null ? lentZone() : workZone;
+        if (z != null) {
+            lo = new BlockPos(Math.max(lo.getX(), z.min().getX()), Math.max(lo.getY(), z.min().getY() - 16), Math.max(lo.getZ(), z.min().getZ()));
+            hi = new BlockPos(Math.min(hi.getX(), z.max().getX()), Math.min(hi.getY(), z.max().getY() + 16), Math.min(hi.getZ(), z.max().getZ()));
+            if (lo.getX() > hi.getX() || lo.getY() > hi.getY() || lo.getZ() > hi.getZ()) return false;
+        }
+        for (BlockPos pos : BlockPos.betweenClosed(lo, hi)) {
             if (!inZone(pos)) continue; // the goal filters by zone; so must we
             if (kind.matches(level().getBlockState(pos))) return true;
         }
