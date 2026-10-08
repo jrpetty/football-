@@ -321,6 +321,11 @@ public final class Seats {
         if (f.tickCount % 40 == 0) drive(f, level, s);
     }
 
+    /** Going to a seat, or on one (on its break, or at a gathering). */
+    public static boolean sitting(VillageFolkEntity f) {
+        return SITTING.containsKey(f.getUUID());
+    }
+
     /** Is it sat down (by this, not the park) just now? */
     public static boolean seated(VillageFolkEntity f) {
         Sit s = SITTING.get(f.getUUID());

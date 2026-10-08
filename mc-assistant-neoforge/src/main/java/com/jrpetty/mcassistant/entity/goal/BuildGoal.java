@@ -1238,6 +1238,7 @@ public class BuildGoal extends Goal {
         }
         BlockState st = takeBlockMatching(preferred(style).and(fit));
         if (st == null) st = takeBlockMatching(secondBest(style).and(fit));
+        if (st == null && style == Blueprints.Style.SOIL) st = takeSpoil();
         if (st == null && style != Blueprints.Style.SOIL) st = takeBlockMatching(s -> isBuildingBlock(s) && !isSoil(s) && fit.test(s));
         if (st == null) st = takeBlockMatching(s -> isBuildingBlock(s) && fit.test(s));
         return st;
@@ -1336,6 +1337,26 @@ public class BuildGoal extends Goal {
     }
 
     /** Consume one matching BlockItem from the pack; its block is what we place. */
+    /**
+     * Earth for a fill out of the builder's own spoil: what it dug here and had no room in its pack for, lying where
+     * it fell. (A builder whose pack was full to the last slot, its keepsake in it, let a park's bank fall on the
+     * grass as it cut it, then filled the hollow with the fountain's stone and built the fountain of earth.)
+     */
+    @Nullable
+    private BlockState takeSpoil() {
+        for (net.minecraft.world.entity.item.ItemEntity e : assistant.level().getEntitiesOfClass(
+                net.minecraft.world.entity.item.ItemEntity.class, assistant.getBoundingBox().inflate(16.0, 6.0, 16.0),
+                e -> e.isAlive() && isSoil(e.getItem()) && e.getItem().getItem() instanceof BlockItem)) {
+            ItemStack s = e.getItem();
+            BlockState state = ((BlockItem) s.getItem()).getBlock().defaultBlockState();
+            ItemStack left = s.copy();
+            left.shrink(1);
+            if (left.isEmpty()) e.discard(); else e.setItem(left);
+            return state;
+        }
+        return null;
+    }
+
     @Nullable
     private BlockState takeBlockMatching(Predicate<ItemStack> pred) {
         var inv = assistant.getInventoryItems();

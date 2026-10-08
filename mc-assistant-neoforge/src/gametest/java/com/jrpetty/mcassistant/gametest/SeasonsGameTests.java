@@ -241,6 +241,13 @@ public class SeasonsGameTests {
         List<VillageFolkEntity> folk = town(helper, level, heart, 6);
         UUID id = folk.get(0).ownerId();
         Villages.Village v = Villages.get(id);
+        // Not the town's own May day (nor the day after it): on that day the town raises its maypole itself in its
+        // first seconds, out of the same stores, and the test's counts start after it (posts 6 -> 6, wool 8 -> 8).
+        for (int i = 0; i < 4; i++) {
+            long today = level.getDayTime() / 24000L, may = Festivals.dayThisYear(id, today, Festivals.Feast.MAYPOLE);
+            if (today != may && today != may + 1) break;
+            level.setDayTime((today + 2) * 24000L + 2000L);
+        }
         // Ample: the town's own small works (a sign post, a garden fence) take a fence post or two in its first
         // seconds, and the beds want wool.
         chestAt(level, heart.offset(3, 0, -3), new ItemStack(Items.OAK_FENCE, 8), new ItemStack(Items.OAK_LOG, 4),
