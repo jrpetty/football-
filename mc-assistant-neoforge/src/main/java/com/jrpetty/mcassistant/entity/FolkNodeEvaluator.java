@@ -41,6 +41,10 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
         final long[] keys = new long[SIZE];
         final int[] searches = new int[SIZE];
         final int[] answers = new int[SIZE];
+        /** The same for the floor under each place (getFloorLevel): which place, in which search, how high. */
+        final long[] floorKeys = new long[SIZE];
+        final int[] floorSearches = new int[SIZE];
+        final double[] floors = new double[SIZE];
         int search;
     }
 
@@ -59,6 +63,7 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
         Memo m = MEMO.get();
         if (++m.search == 0) {                         // once in four thousand million searches: start the count again
             java.util.Arrays.fill(m.searches, 0);
+            java.util.Arrays.fill(m.floorSearches, 0);
             m.search = 1;
         }
         search = m.search;
@@ -77,6 +82,25 @@ public class FolkNodeEvaluator extends WalkNodeEvaluator {
         // Only the search under way, and only through its own context: anything else is the game's own answer.
         if (m == null || m.search != search || context != this.currentContext) return super.getPathType(context, x, y, z);
         return pathTypeStatic(context, m, x, y, z);
+    }
+
+    /**
+     * How high the floor is under this place (WalkNodeEvaluator.getFloorLevel: water's surface for a swimmer, else the
+     * top of the block below): the same place is weighed from each of its neighbours in turn, and was worked out afresh
+     * each time. It asks nothing of the path-type cache, only of the blocks, which cannot change during a search.
+     */
+    @Override
+    protected double getFloorLevel(BlockPos pos) {
+        Memo m = memo;
+        if (m == null || m.search != search) return super.getFloorLevel(pos);
+        long key = pos.asLong();
+        int slot = (int) it.unimi.dsi.fastutil.HashCommon.mix(key) & Memo.MASK;
+        if (m.floorKeys[slot] == key && m.floorSearches[slot] == search) return m.floors[slot];
+        double y = super.getFloorLevel(pos);
+        m.floorKeys[slot] = key;
+        m.floorSearches[slot] = search;
+        m.floors[slot] = y;
+        return y;
     }
 
     /** WalkNodeEvaluator.getPathTypeStatic, step for step, its look round the place memoised. */
