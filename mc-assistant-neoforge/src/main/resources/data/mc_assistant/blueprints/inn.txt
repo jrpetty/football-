@@ -1,0 +1,126 @@
+# The inn: a long timber house by the road into town, for whoever is passing through. Two rooms at
+# the back with a partition between them, two beds in each; at the front the common room, a bar of
+# casks along one wall and the guest book on its lectern by the other. Its sign goes up by the door
+# once there is an innkeeper to let the rooms (entity/Inn), and a lantern hangs over the way in.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name inn
+layer -1
+.........
+FFFFFFFFF
+FfffffffF
+FfffffffF
+FfffffffF
+FfffffffF
+FfffffffF
+FfffffffF
+FfffffffF
+FFFFFFFFF
+.........
+layer 0
+.........
+LwwwwwwwL
+w...w...w
+wB.BwB.Bw
+w...w...w
+w.......w
+wQQ....rw
+w.......w
+w.......w
+LwwwDwwwL
+.........
+layer 1
+.........
+LWWWWWWWL
+W...W...W
+G...W...G
+W...W...W
+G.......G
+W.......W
+G.......G
+W.......W
+LGGW.WGGL
+.........
+layer 2
+.........
+LWWWWWWWL
+W...W...W
+W...W...W
+W.j.W.j.W
+W.......W
+W...j...W
+W.......W
+W.......W
+LWWWWWWWL
+....j....
+layer 3
+vvvvvvvvv
+L-------L
+|fffffff|
+|fffffff|
+|fffffff|
+|fffffff|
+|fffffff|
+|fffffff|
+|fffffff|
+L-------L
+^^^^^^^^^
+layer 4
+.........
+vvvvvvvvv
+W.......W
+W.......W
+W.......W
+W.......W
+W.......W
+W.......W
+W.......W
+^^^^^^^^^
+.........
+layer 5
+.........
+.........
+vvvvvvvvv
+W.......W
+W.......W
+W.......W
+W.......W
+W.......W
+^^^^^^^^^
+.........
+.........
+layer 6
+.........
+.........
+.........
+vvvvvvvvv
+W.......W
+W.......W
+W.......W
+^^^^^^^^^
+.........
+.........
+.........
+layer 7
+.........
+.........
+.........
+.........
+vvvvvvvvv
+W.......W
+^^^^^^^^^
+.........
+.........
+.........
+.........
+layer 8
+.........
+.........
+.........
+.........
+.........
+_________
+.........
+.........
+.........
+.........
+.........

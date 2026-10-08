@@ -1,0 +1,6052 @@
+package com.jrpetty.mcassistant.gametest;
+
+import com.jrpetty.mcassistant.McAssistantMod;
+import com.jrpetty.mcassistant.VillagerTakeover;
+import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
+import com.jrpetty.mcassistant.entity.AssistantEntity;
+import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
+import com.jrpetty.mcassistant.entity.Job;
+import com.jrpetty.mcassistant.entity.VillageFolkEntity;
+import com.jrpetty.mcassistant.entity.goal.BuildGoal;
+import com.jrpetty.mcassistant.entity.Villages;
+import com.jrpetty.mcassistant.village.VillageMath;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
+
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * The village, RUN. Every test here boots the real mod inside a real headless
+ * server and watches what actually happens — not what the code says should.
+ *
+ * <p>Each test has its own batch so they run one at a time: they share a JVM,
+ * and therefore every static in the mod. Each also works far from the test
+ * arena, on ground of its own making, because a village needs room and the
+ * arena is eight blocks wide.
+ */
+@GameTestHolder("mc_assistant")
+@PrefixGameTestTemplate(false)
+public class VillageGameTests {
+
+    private static final String EMPTY = "empty";
+
+    private static AABB around(BlockPos p, double r) {
+        return new AABB(p.getX() - r, p.getY() - 20, p.getZ() - r, p.getX() + r, p.getY() + 20, p.getZ() + r);
+    }
+
+    // ============================================================ the basics
+
+    /** Every recipe the mod ships must actually PARSE. In 1.21.1 an ingredient
+     *  written as a bare string is silently dropped at load, and the item then
+     *  cannot be crafted in survival — which nothing else would notice. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t00_recipes")
+    public static void t00_recipes(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        StringBuilder missing = new StringBuilder();
+        for (String id : new String[]{"assistant_spawner", "job_board", "place_marker",
+                                      "zone_marker", "village_charter", "village_folk_spawner"}) {
+            var key = net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("mc_assistant", id);
+            boolean there = level.getServer().getRecipeManager().byKey(key).isPresent();
+            Kit.log("t00 recipe " + id + ": " + (there ? "loaded" : "MISSING"));
+            if (!there) missing.append(id).append(' ');
+        }
+        helper.assertTrue(missing.length() == 0, "recipes that did not load: " + missing);
+        helper.succeed();
+    }
+
+    /** Does a folk exist, tick for ten seconds, and stay alive? A crash on
+     *  the entity tick kills the whole server, so this is also a smoke test. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t01_boot")
+    public static void t01_boot(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 2500, 2500, 48);
+        BlockPos at = Kit.surface(level, 2500, 2500);
+        VillageFolkEntity folk = McAssistantMod.VILLAGE_FOLK.get().create(level);
+        helper.assertTrue(folk != null, "the village_folk entity type cannot create an entity");
+        folk.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(folk);
+        helper.runAtTickTime(200, () -> {
+            Kit.log("t01 after 200 ticks: " + folk.debugLine());
+            helper.assertTrue(folk.isAlive(), "the folk died or vanished within ten seconds");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Placing the spawner block, exactly as a player does: the village board goes up and waits, and
+     * nobody comes until the founders are chosen at it (here the usual party, as Confirm and spawn
+     * on the founding screen would); then the ground is made level and they come. A second spawner
+     * within reach adds one settler.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "t02_spawner_block")
+    public static void t02_spawner_block(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        Kit.hold(level, 2600, 2600, 96);
+        BlockPos ground = Kit.surface(level, 2600, 2600);
+        ItemStack stack = new ItemStack(McAssistantMod.FOLK_SPAWNER_ITEM.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(ground.below()), Direction.UP, ground.below(), false);
+        InteractionResult r = stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
+        Kit.log("t02 useOn result: " + r);
+        BlockPos board = com.jrpetty.mcassistant.entity.Founding.boardNear(level, ground, 64);
+        int before = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 24)).size();
+        Kit.log("t02 the board waits at " + board + "; folk before the founders are chosen: " + before);
+        helper.assertTrue(board != null && before == 0, "the spawner puts up a waiting board and brings nobody yet");
+        com.jrpetty.mcassistant.entity.Founding.Outcome chosen = com.jrpetty.mcassistant.entity.Founding.confirm(
+            level, board, VillageFolkSpawnerBlock.foundingParty(), null);
+        Kit.log("t02 confirmed: " + chosen.message());
+        helper.assertTrue(chosen.ok(), "the founders can be chosen at the board: " + chosen.message());
+        final boolean[] done = { false };
+        helper.onEachTick(() -> {
+            if (done[0] || com.jrpetty.mcassistant.entity.Founding.near(level, ground, 8)) return;   // still being founded
+            done[0] = true;
+            // A party of seventy stands on the spiral up to fourteen or so out (the camp's beds take some spots).
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 40));
+            Kit.log("t02 folk near the block: " + folk.size()
+                + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
+            int party = VillageFolkSpawnerBlock.foundingParty();
+            helper.assertTrue(folk.size() == party,
+                "placing the first spawner should found a village of " + party + ", found " + folk.size());
+            helper.assertTrue(level.getBlockState(ground).is(Blocks.CHEST),
+                "the founding stores should stand where the block stood, found " + level.getBlockState(ground));
+            // It may have eaten a loaf by now (it heals by eating): what matters is that it carries a store.
+            helper.assertTrue(folk.get(0).countFood() >= 12, "a folk should carry its bread, has food=" + folk.get(0).countFood());
+            java.util.Set<java.util.UUID> villages = new java.util.HashSet<>();
+            for (VillageFolkEntity f : folk) villages.add(f.ownerId());
+            helper.assertTrue(villages.size() == 1, "the founding party should be one village, found " + villages.size());
+            // A second spawner, placed within reach, adds one settler to that village.
+            BlockPos next = Kit.surface(level, 2610, 2600);   // clear of the party
+            ItemStack more = new ItemStack(McAssistantMod.FOLK_SPAWNER_ITEM.get());
+            player.setItemInHand(InteractionHand.MAIN_HAND, more);
+            more.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
+                new BlockHitResult(Vec3.atCenterOf(next.below()), Direction.UP, next.below(), false)));
+            int after = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 40)).size();
+            Kit.log("t02 after a second spawner: " + after);
+            helper.assertTrue(after == party + 1, "a second spawner should add exactly one, found " + after);
+            helper.succeed();
+        });
+    }
+
+    /** Using the charter on the ground. */
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "t03_charter")
+    public static void t03_charter(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.getAbilities().instabuild = false;   // the mock player is in creative, where a charter is never used up
+        Kit.hold(level, 2700, 2700, 48);
+        BlockPos ground = Kit.surface(level, 2700, 2700);
+        ItemStack stack = new ItemStack(McAssistantMod.VILLAGE_CHARTER.get());
+        player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+        BlockHitResult hit = new BlockHitResult(Vec3.atCenterOf(ground.below()), Direction.UP, ground.below(), false);
+        InteractionResult r = stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
+        Kit.log("t03 useOn result: " + r + "; a founding under way " + com.jrpetty.mcassistant.entity.Founding.near(level, ground, 16));
+        // The charter founds as a board does now: the ground made level first, and its folk come after.
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Founding.near(level, ground, 16), "the charter begins a founding");
+        helper.assertTrue(stack.isEmpty(), "and is spent on it");
+        final boolean[] done = { false };
+        helper.onEachTick(() -> {
+            if (done[0] || com.jrpetty.mcassistant.entity.Founding.near(level, ground, 16)) return;
+            done[0] = true;
+            Villages.Village v = Villages.nearest(level, ground, 64);
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(ground, 64));
+            Kit.log("t03 founded at " + helper.getTick() + ": " + (v == null ? "no village" : Villages.name(v.id()))
+                + ", folk near the click: " + folk.size() + (folk.isEmpty() ? "" : " — " + folk.get(0).debugLine()));
+            helper.assertTrue(v != null && folk.size() == VillageFolkSpawnerBlock.foundingParty(),
+                "the charter should found a village of " + VillageFolkSpawnerBlock.foundingParty()
+                + ", found " + folk.size());
+            helper.succeed();
+        });
+    }
+
+    /** The /village command family, run as a console would. */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "t04_commands")
+    public static void t04_commands(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 2800, 2800, 48);
+        List<String> said = Kit.command(level, "village spawnat 2800 2800 3");
+        Kit.log("t04 spawnat said: " + said);
+        List<String> folkLines = null;
+        helper.runAtTickTime(60, () -> {
+            BlockPos here = Kit.surface(level, 2800, 2800);
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(here, 20));
+            helper.assertTrue(folk.size() == 3, "/village spawnat 2800 2800 3 should make three folk, found " + folk.size());
+            List<String> status = Kit.command(level, "village status");
+            Kit.log("t04 status said: " + status);
+            List<String> lines = Kit.command(level, "village folk");
+            Kit.log("t04 folk said: " + lines);
+            helper.assertTrue(!status.isEmpty() && !lines.isEmpty(), "/village status and /village folk should both answer");
+            for (String s : status) helper.assertFalse(s.toLowerCase().contains("exception"), "status threw: " + s);
+            for (String s : lines) helper.assertFalse(s.toLowerCase().contains("exception"), "folk threw: " + s);
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ building
+
+    /** The blueprints are the single source of truth for what a builder must
+     *  carry. If a blueprint changes, what stocks it must follow — this is the
+     *  check that they are read from the same drawing. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t08_blueprints")
+    public static void t08_blueprints(GameTestHelper helper) {
+        for (String st : BuildGoal.STRUCTURES) {
+            Kit.log("t08 " + st + " needs " + BuildGoal.partCounts(st, 13));
+        }
+        var storage = BuildGoal.partCounts("storage", 13);
+        helper.assertTrue(storage.getOrDefault(BuildGoal.Part.STOREHOUSE, 0) == 27
+                && storage.getOrDefault(BuildGoal.Part.CHEST, 0) == 0,
+            "the storehouse shed is built round the Village Storehouse's 27 units, and holds no chests, wants " + storage);
+        helper.assertTrue(BuildGoal.partCounts("storehouse", 0).getOrDefault(BuildGoal.Part.STOREHOUSE, 0) == 27,
+            "the storehouse put into an old shed is its 27 units");
+        var house = BuildGoal.partCounts("house", 13);
+        helper.assertTrue(house.getOrDefault(BuildGoal.Part.FURNACE, 0) >= 1
+                && house.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) >= 1
+                && house.getOrDefault(BuildGoal.Part.CHEST, 0) >= 1,
+            "a house should want a furnace, a bench and a chest, wants " + house);
+        helper.assertTrue(BuildGoal.partCounts("watchtower", 13).getOrDefault(BuildGoal.Part.LADDER, 0) > 0,
+            "the watchtower has a ladder shaft — the stocking must know");
+        helper.assertTrue(BuildGoal.partCounts("lighthouse", 13).getOrDefault(BuildGoal.Part.LADDER, 0) > 0,
+            "the lighthouse has a ladder shaft — the stocking must know");
+        var well = BuildGoal.partCounts("well", 13);
+        helper.assertTrue(well.getOrDefault(BuildGoal.Part.FENCE, 0) == 8 && well.getOrDefault(BuildGoal.Part.LANTERN, 0) == 1
+                && well.getOrDefault(BuildGoal.Part.WATER, 0) == 1,
+            "the well has four posts two high, a lantern and water, wants " + well);
+        helper.assertTrue(house.getOrDefault(BuildGoal.Part.BED, 0) == com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE
+                && house.getOrDefault(BuildGoal.Part.DOOR, 0) == 1 && house.getOrDefault(BuildGoal.Part.WINDOW, 0) >= 8,
+            "a house sleeps a family of four, has a door and glass in its windows, wants " + house);
+        var houseStyles = BuildGoal.styleCounts("house");
+        helper.assertTrue(houseStyles.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_STAIR, 0) >= 60
+                && houseStyles.getOrDefault(com.jrpetty.mcassistant.entity.goal.Blueprints.Style.POST, 0) >= 12,
+            "a house has a pitched roof of stairs and a timber frame, wants " + houseStyles);
+        var hall = BuildGoal.partCounts("hall", 13);
+        helper.assertTrue(hall.getOrDefault(BuildGoal.Part.CHEST, 0) == 2 && hall.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) == 1
+                && hall.getOrDefault(BuildGoal.Part.BLOCK, 0) > house.getOrDefault(BuildGoal.Part.BLOCK, 0),
+            "the meeting hall is the biggest thing a village builds, with two chests and a bench, wants " + hall);
+        var pen = BuildGoal.partCounts("pen", 13);
+        helper.assertTrue(pen.getOrDefault(BuildGoal.Part.FENCE, 0) >= 20 && pen.getOrDefault(BuildGoal.Part.GATE, 0) == 1,
+            "the pen is a ring of fence with a gate, wants " + pen);
+        // The later ages' buildings and the great works.
+        var market = BuildGoal.partCounts("market", 13);
+        helper.assertTrue(market.getOrDefault(BuildGoal.Part.CHEST, 0) == 2
+                && market.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) == 2 && market.getOrDefault(BuildGoal.Part.FURNACE, 0) == 1,
+            "the market is a roof on posts over two chests, two benches and a furnace, wants " + market);
+        var chapel = BuildGoal.partCounts("chapel", 13);
+        helper.assertTrue(chapel.getOrDefault(BuildGoal.Part.WINDOW, 0) >= 20 && chapel.getOrDefault(BuildGoal.Part.CRAFTING_TABLE, 0) == 1,
+            "the chapel has tall windows and an altar, wants " + chapel);
+        var gateway = BuildGoal.partCounts("gateway", 13);
+        helper.assertTrue(gateway.getOrDefault(BuildGoal.Part.OBSIDIAN, 0) == 10 && gateway.getOrDefault(BuildGoal.Part.BLOCK, 0) >= 4,
+            "the gateway is a ten-obsidian frame on a stone dais, wants " + gateway);
+        var granary = BuildGoal.partCounts("granary", 13);
+        helper.assertTrue(granary.getOrDefault(BuildGoal.Part.CHEST, 0) == 3, "the granary holds three chests, wants " + granary);
+        var barracks = BuildGoal.partCounts("barracks", 13);
+        helper.assertTrue(barracks.getOrDefault(BuildGoal.Part.BED, 0) == 6 && barracks.getOrDefault(BuildGoal.Part.CHEST, 0) == 2,
+            "the barracks have six bunks and two chests, wants " + barracks);
+        var monument = BuildGoal.partCounts("monument", 13);
+        helper.assertTrue(monument.getOrDefault(BuildGoal.Part.BLOCK, 0) >= 17 && monument.getOrDefault(BuildGoal.Part.LANTERN, 0) >= 1,
+            "the monument is a plinth, a step, a pillar and a light, wants " + monument);
+        // Every drawing reads, and every building has a way in or is open.
+        for (String st : BuildGoal.STRUCTURES) {
+            if (!com.jrpetty.mcassistant.entity.goal.Blueprints.has(st)) continue;
+            int[] g = com.jrpetty.mcassistant.entity.goal.Blueprints.groundHalf(st);
+            Kit.log("t08 " + st + " stands " + (2 * g[0] + 1) + " by " + (2 * g[1] + 1) + ", "
+                + com.jrpetty.mcassistant.entity.goal.Blueprints.cells(st).size() + " blocks");
+        }
+        helper.succeed();
+    }
+
+    /** A village hands out building lots: flat, clear, claimed once. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t09_lots")
+    public static void t09_lots(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 3100, 3100, 64);
+        BlockPos heart = Kit.surface(level, 3100, 3100);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "could not found a village");
+        Villages.Village v = Villages.nearest(level, heart, 100);
+        helper.assertTrue(v != null, "no village to plan in");
+        var first = Villages.siteFor(level, v.id(), "storage");
+        var again = Villages.siteFor(level, v.id(), "storage");
+        var other = Villages.siteFor(level, v.id(), "shelter");
+        Kit.log("t09 storage lot " + first + ", again " + again + ", shelter lot " + other);
+        helper.assertTrue(first != null && other != null, "flat ground should give a lot for each project");
+        helper.assertTrue(first.equals(again), "a project's lot must be chosen once and kept");
+        helper.assertTrue(!first.anchor().equals(other.anchor()), "two projects must not share a lot");
+        helper.assertTrue(Math.abs(first.anchor().getY() - heart.getY()) <= 1, "a lot on flat ground stands at ground level");
+        // A lot the builders could not walk to is given up, and not handed out again.
+        Villages.rejectSite(v.id(), "storage", level.getGameTime());
+        var next = Villages.siteFor(level, v.id(), "storage");
+        Kit.log("t09 storage lot after the first was refused: " + next);
+        helper.assertTrue(next != null && !next.anchor().equals(first.anchor()) && !next.anchor().equals(other.anchor()),
+            "a refused lot must give way to another, not come round again");
+        // A builder that gives a lot up hands what it drew for it back to the stores:
+        // the founding chests and the stone, for whoever builds it next.
+        int chestsBefore = storedAt(level, heart, net.minecraft.world.item.Items.CHEST);
+        int stoneBefore = storedAt(level, heart, net.minecraft.world.item.Items.COBBLESTONE);
+        int ownChests = f.countCarried(st -> st.is(net.minecraft.world.item.Items.CHEST));
+        f.insertItem(new ItemStack(net.minecraft.world.item.Items.CHEST, 4));
+        f.insertItem(new ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 20));
+        f.noteBuildAbandoned("storage");
+        int chestsAfter = storedAt(level, heart, net.minecraft.world.item.Items.CHEST);
+        int stoneAfter = storedAt(level, heart, net.minecraft.world.item.Items.COBBLESTONE);
+        int keptChests = f.countCarried(st -> st.is(net.minecraft.world.item.Items.CHEST));
+        Kit.log("t09 handed back: chests " + chestsBefore + " -> " + chestsAfter + " (kept " + keptChests
+            + " of " + (ownChests + 4) + "), stone " + stoneBefore + " -> " + stoneAfter);
+        helper.assertTrue(stoneAfter - stoneBefore == 20, "the stone drawn for a given-up building goes back to the stores");
+        // (None kept for its own ground: a village's folk keep no chest of their own any more.)
+        helper.assertTrue(keptChests == 0 && chestsAfter - chestsBefore == ownChests + 4,
+            "the chests drawn for a given-up building go back to the stores, all of them");
+        helper.succeed();
+    }
+
+    /** How many of this item the container at {@code pos} holds. */
+    private static int storedAt(ServerLevel level, BlockPos pos, net.minecraft.world.item.Item item) {
+        if (!(level.getBlockEntity(pos) instanceof net.minecraft.world.Container c)) return 0;
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(item)) n += c.getItem(i).getCount();
+        return n;
+    }
+
+    /** Ground that is not flat: a hillside, climbing a block for every two. A village
+     *  gets a lot on it, and its builder fills the low side up to the floor instead of
+     *  leaving the walls hanging over a drop. */
+    @GameTest(template = EMPTY, timeoutTicks = 5000, batch = "t11_hillside")
+    public static void t11_hillside(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 3300, 3300, 70);
+        Kit.prepare(level, 3300, 3300, 70);
+        for (int dx = -40; dx <= 40; dx++) {
+            int rise = Math.max(0, Math.min(12, (dx + 12) / 2));
+            for (int dz = -40; dz <= 40; dz++) {
+                BlockPos g = Kit.surface(level, 3300 + dx, 3300 + dz);
+                for (int i = 0; i < rise; i++) level.setBlock(g.above(i), Blocks.DIRT.defaultBlockState(), 3);
+                if (rise > 0) level.setBlock(g.above(rise - 1), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+        }
+        BlockPos heart = Kit.surface(level, 3300, 3300);
+        VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(builder != null, "could not found a village on the hillside");
+        Villages.Village v = Villages.nearest(level, heart, 100);
+        var site = Villages.siteFor(level, v.id(), "storage");
+        Kit.log("t11 hillside storage lot " + site + "; " + Villages.lotReport(v.id()));
+        helper.assertTrue(site != null, "a hillside should still give a lot: " + Villages.lotReport(v.id()));
+        int fill = BuildGoal.fillCells(level, site.anchor()).size();
+        Kit.log("t11 the lot needs " + fill + " blocks to build up to its floor");
+        for (int i = 0; i < 6; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        // The storehouse shed is built round the Village Storehouse: twenty-seven units.
+        builder.insertItem(new ItemStack(McAssistantMod.STOREHOUSE_ITEM.get(), 27));
+        builder.insertItem(new ItemStack(Items.TORCH, 4));
+        builder.enqueue(Job.buildAt("storage", site.anchor(), site.facing(), site.radius()));
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 600 == 0) Kit.log("t11 @" + t + " built=" + Villages.builtList(v.id()) + " — " + builder.debugLine());
+            if (Villages.builtList(v.id()).contains("storage")) {
+                int hanging = 0;
+                for (int dx = -2; dx <= 2; dx++) {
+                    for (int dz = -2; dz <= 2; dz++) {
+                        BlockPos floor = site.anchor().offset(dx, -1, dz);
+                        if (level.getBlockState(floor).isAir()) hanging++;
+                    }
+                }
+                Kit.log("t11 the storehouse stands at tick " + t + "; " + hanging + " of 25 floor cells hang over air");
+                helper.assertTrue(hanging == 0, "the low side should have been built up, " + hanging + " cells hang");
+                helper.succeed();
+            } else if (t >= 4800) {
+                helper.fail("the storehouse was not built on the hillside in 4800 ticks: " + builder.debugLine());
+            }
+        });
+    }
+
+    /** Trees where the first lots are: the lot is taken anyway, and the builder fells
+     *  what is in the way and keeps the wood. */
+    @GameTest(template = EMPTY, timeoutTicks = 5000, batch = "t12_woodland")
+    public static void t12_woodland(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 3400, 3400, 70);
+        Kit.prepare(level, 3400, 3400, 70);
+        BlockPos heart = Kit.surface(level, 3400, 3400);
+        for (int dx = -9; dx <= 9; dx += 9) {
+            for (int dz = -9; dz <= 9; dz += 9) {
+                if (dx != 0 || dz != 0) Kit.wildTree(level, heart.getX() + dx, heart.getZ() + dz);
+            }
+        }
+        VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(builder != null, "could not found a village in the wood");
+        Villages.Village v = Villages.nearest(level, heart, 100);
+        var site = Villages.siteFor(level, v.id(), "storage");
+        Kit.log("t12 woodland storage lot " + site + "; " + Villages.lotReport(v.id()));
+        helper.assertTrue(site != null, "a lot with a tree on it should still be a lot: " + Villages.lotReport(v.id()));
+        helper.assertTrue(site.anchor().distSqr(heart) < 30 * 30, "with trees all round, the lot is still beside the heart: " + site);
+        for (int i = 0; i < 5; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        // The storehouse shed is built round the Village Storehouse: twenty-seven units.
+        builder.insertItem(new ItemStack(McAssistantMod.STOREHOUSE_ITEM.get(), 27));
+        builder.insertItem(new ItemStack(Items.TORCH, 4));
+        builder.enqueue(Job.buildAt("storage", site.anchor(), site.facing(), site.radius()));
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 600 == 0) Kit.log("t12 @" + t + " built=" + Villages.builtList(v.id()) + " — " + builder.debugLine());
+            if (Villages.builtList(v.id()).contains("storage")) {
+                int logs = builder.countMatching(st -> st.is(ItemTags.LOGS));
+                Kit.log("t12 the storehouse stands at tick " + t + "; the builder carries " + logs + " logs from the tree");
+                helper.succeed();
+            } else if (t >= 4800) {
+                helper.fail("the storehouse was not built among the trees in 4800 ticks: " + builder.debugLine());
+            }
+        });
+    }
+
+    /** The two new designs, raised for real: a meeting hall (seven across, the stepped roof
+     *  five blocks up — within a builder's reach from its own floor) and a well. */
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "t13_hall_and_well")
+    public static void t13_hall_and_well(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 3600, 3600, 48);
+        Kit.prepare(level, 3600, 3600, 48);
+        BlockPos heart = Kit.surface(level, 3600, 3600);
+        VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(builder != null, "could not found a village for the hall");
+        Villages.Village v = Villages.nearest(level, heart, 100);
+        BlockPos hallAt = Kit.surface(level, 3614, 3600);
+        BlockPos wellAt = Kit.surface(level, 3590, 3600);
+        for (int i = 0; i < 12; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.CHEST, 2));
+        builder.insertItem(new ItemStack(Items.CRAFTING_TABLE, 2));
+        builder.insertItem(new ItemStack(Items.TORCH, 8));
+        builder.insertItem(new ItemStack(Items.GLASS_PANE, 48));
+        builder.insertItem(new ItemStack(Items.OAK_FENCE, 16));
+        builder.insertItem(new ItemStack(Items.OAK_STAIRS, 64));
+        builder.insertItem(new ItemStack(Items.OAK_STAIRS, 64));
+        builder.insertItem(new ItemStack(Items.OAK_STAIRS, 64));
+        builder.enqueue(Job.buildAt("hall", hallAt, Direction.WEST, 0));
+        builder.enqueue(Job.buildAt("well", wellAt, Direction.EAST, 0));
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);      // building is day work
+            if (t % 1200 == 0) Kit.log("t13 @" + t + " built=" + Villages.builtList(v.id()) + " — " + builder.debugLine());
+            var built = Villages.builtList(v.id());
+            if (built.contains("hall") && built.contains("well")) {
+                boolean ridge = !level.getBlockState(hallAt.above(9)).isAir();
+                boolean roof = !level.getBlockState(wellAt.above(3)).isAir();
+                Kit.log("t13 hall and well stand at tick " + t + "; hall ridge " + ridge + ", well roof " + roof);
+                boolean stairs = level.getBlockState(hallAt.above(5).relative(Direction.NORTH, 4)).getBlock()
+                    instanceof net.minecraft.world.level.block.StairBlock;
+                Kit.log("t13 the hall's roof is of stairs: " + stairs);
+                helper.assertTrue(ridge, "the hall's ridge should be up (nine above the floor)");
+                helper.assertTrue(stairs, "and its roof laid in stairs");
+                helper.assertTrue(roof, "the well should have its roof");
+                helper.succeed();
+            } else if (t >= 11800) {
+                helper.fail("hall and well not both built in 11800 ticks: " + built + " — " + builder.debugLine());
+            }
+        });
+    }
+
+    /** The later ages' buildings and a great work, raised for real: the market's fence
+     *  posts and roof, the gateway's obsidian frame, the monument's pillar. */
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "t14_great_works")
+    public static void t14_great_works(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 3800, 3800, 48);
+        Kit.prepare(level, 3800, 3800, 48);
+        BlockPos heart = Kit.surface(level, 3800, 3800);
+        VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(builder != null, "could not found a village for the great works");
+        Villages.Village v = Villages.nearest(level, heart, 100);
+        BlockPos marketAt = Kit.surface(level, 3814, 3800);
+        BlockPos gateAt = Kit.surface(level, 3788, 3800);
+        BlockPos monumentAt = Kit.surface(level, 3800, 3814);
+        for (int i = 0; i < 12; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
+        builder.insertItem(new ItemStack(Items.OAK_LOG, 64));
+        builder.insertItem(new ItemStack(Items.CHEST, 2));
+        builder.insertItem(new ItemStack(Items.CRAFTING_TABLE, 2));
+        builder.insertItem(new ItemStack(Items.FURNACE, 1));
+        builder.insertItem(new ItemStack(Items.TORCH, 8));
+        builder.insertItem(new ItemStack(Items.OBSIDIAN, 10));
+        builder.enqueue(Job.buildAt("market", marketAt, Direction.WEST, 0));
+        builder.enqueue(Job.buildAt("gateway", gateAt, Direction.EAST, 0));
+        builder.enqueue(Job.buildAt("monument", monumentAt, Direction.NORTH, 0));
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);      // building is day work
+            if (t % 1200 == 0) Kit.log("t14 @" + t + " built=" + Villages.builtList(v.id()) + " — " + builder.debugLine());
+            var built = Villages.builtList(v.id());
+            if (built.contains("market") && built.contains("gateway") && built.contains("monument")) {
+                int posts = count(level, marketAt, 4, 0, 3, st -> st.is(net.minecraft.tags.BlockTags.LOGS));
+                int obsidian = count(level, gateAt, 4, 0, 5, st -> st.is(Blocks.OBSIDIAN));
+                boolean marketRoof = !level.getBlockState(marketAt.above(4)).isAir();
+                boolean pillar = !level.getBlockState(monumentAt.above(4)).isAir();
+                Kit.log("t14 stand at tick " + t + ": market posts " + posts + ", roof " + marketRoof
+                    + "; gateway obsidian " + obsidian + "; monument pillar " + pillar);
+                helper.assertTrue(posts >= 24, "the market stands on log posts four high, found " + posts + " log");
+                helper.assertTrue(marketRoof, "the market's raised roof should be up");
+                helper.assertTrue(obsidian == 10, "the gateway is a frame of ten obsidian, found " + obsidian);
+                helper.assertTrue(pillar, "the monument's pillar should be up");
+                helper.succeed();
+            } else if (t >= 11800) {
+                helper.fail("market, gateway and monument not all built in 11800 ticks: " + built + " — " + builder.debugLine());
+            }
+        });
+    }
+
+    /** How many blocks round {@code at} (this far each way, these heights) match. */
+    private static int count(ServerLevel level, BlockPos at, int half, int lo, int hi,
+                             java.util.function.Predicate<net.minecraft.world.level.block.state.BlockState> what) {
+        int n = 0;
+        for (BlockPos p : BlockPos.betweenClosed(at.offset(-half, lo, -half), at.offset(half, hi, half))) {
+            if (what.test(level.getBlockState(p))) n++;
+        }
+        return n;
+    }
+
+    /** What a village builds next, and in what order, all the way past the last age: a
+     *  project that cannot go ahead is set aside and the next one goes up; a village that
+     *  has come through every age raises its gateway and then the great works, for ever. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t15_onward")
+    public static void t15_onward(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        long now = level.getGameTime();
+        java.util.UUID stone = java.util.UUID.randomUUID();
+        Villages.restore(level, stone, new BlockPos(4200, 64, 4200), Villages.Age.STONE,
+            List.of("storage", "storehouse", "shelter", "house", "house", "well"), 15);
+        Villages.projectDue(stone, now);
+        String first = Villages.nextProject(stone);
+        helper.assertTrue("fortify".equals(first), "a Stone Age village wants its wall first, got " + first);
+        Villages.defer(stone, "fortify", now + 1000000L);
+        String meanwhile = Villages.nextProject(stone);
+        Kit.log("t15 Stone Age: first " + first + ", with the wall set aside " + meanwhile);
+        helper.assertTrue("smeltery".equals(meanwhile),
+            "with the wall set aside the smeltery should go up meanwhile, got " + meanwhile);
+
+        java.util.UUID late = java.util.UUID.randomUUID();
+        // Homes enough for its twenty and two to spare (a village short of beds, or about to be,
+        // builds houses first).
+        List<String> raised = new java.util.ArrayList<>(List.of("storage", "storehouse", "shelter", "well", "fortify", "smeltery",
+            "hall", "workshop", "watchtower", "market", "pen", "lighthouse", "chapel"));
+        int homes = (20 + 2 + com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE)
+            / com.jrpetty.mcassistant.village.VillageMath.BEDS_PER_HOUSE;
+        for (int i = 0; i < homes; i++) raised.add("house");
+        Villages.restore(level, late, new BlockPos(4600, 64, 4600), Villages.Age.NETHER, raised, 20);
+        List<String> order = new java.util.ArrayList<>();
+        int roomBefore = Villages.housing(late);
+        for (int i = 0; i < 24 && Villages.greatWorks(late) < 3; i++) {
+            String next = Villages.nextProject(late);
+            order.add(next);
+            if (next == null) break;
+            Villages.noteProject(late, next, now);
+        }
+        Kit.log("t15 past the last age: " + order + ", renown " + Villages.renown(late)
+            + ", room " + roomBefore + " -> " + Villages.housing(late));
+        // Twenty folk: the café, the tavern, the fountain, the park among the homes (Park), the smithy,
+        // the shop and a manor house after the gateway, before the great works.
+        // The gateway and the amenities first; the leader's hall, the smithy, the shop and a manor before the great works;
+        // and the great works in their turn. (A town of twenty also wants a pitch, an infirmary and the like by now, in
+        // among them: the order of those is theirs.)
+        int granary = order.indexOf("granary"), barracks = order.indexOf("barracks"), monument = order.indexOf("monument");
+        boolean beforeGreat = granary > 0;
+        for (String s : List.of("townhall", "smithy", "shop", "manor")) beforeGreat &= order.contains(s) && order.indexOf(s) < granary;
+        helper.assertTrue(order.size() >= 5 && order.subList(0, 5).equals(List.of("gateway", "cafe", "tavern", "fountain", "park"))
+                && beforeGreat && granary < barracks && barracks < monument,
+            "the Nether Age raises its gateway, its amenities and the leader's hall, then the great works go round: " + order);
+        helper.assertTrue(Villages.greatWorks(late) == 3 && Villages.renown(late) == 3 * com.jrpetty.mcassistant.entity.Museum.GREAT_WORK_RENOWN,
+            "three great works raised, ten renown each: " + Villages.greatWorks(late) + ", renown " + Villages.renown(late));
+        helper.assertTrue(Villages.housing(late) == roomBefore + 12, "the manor and the barracks are room for twelve more: "
+            + roomBefore + " -> " + Villages.housing(late));
+        helper.succeed();
+    }
+
+    /** A grown village sends out a founding party: a new village of its own a long way
+     *  off, paid for out of the mother village's larder, and written down in its record. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t16_colony")
+    public static void t16_colony(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 5000, 5000, 32);
+        Kit.hold(level, 5200, 5000, 32);
+        BlockPos heart = Kit.surface(level, 5000, 5000);
+        VillageFolkEntity founder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(founder != null, "could not found the mother village");
+        Villages.Village mother = Villages.nearest(level, heart, 100);
+        // Stocked like a town that can spare a party: logs (not planks), stone and bread put by, and
+        // no storehouse units loose (hers are built into her storehouse): the colony's are made
+        // out of her timber.
+        net.minecraft.world.Container motherChest = (net.minecraft.world.Container) level.getBlockEntity(heart);
+        helper.assertTrue(motherChest != null, "the mother's stores");
+        for (int i = 0; i < motherChest.getContainerSize(); i++) {
+            if (motherChest.getItem(i).is(com.jrpetty.mcassistant.McAssistantMod.STOREHOUSE_ITEM.get())) motherChest.setItem(i, ItemStack.EMPTY);
+        }
+        for (ItemStack st : List.of(new ItemStack(Items.OAK_LOG, 64), new ItemStack(Items.COBBLESTONE, 64),
+                new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.BREAD, 64))) {
+            for (int i = 0; i < motherChest.getContainerSize(); i++) {
+                if (motherChest.getItem(i).isEmpty()) { motherChest.setItem(i, st); break; }
+            }
+        }
+        int foodBefore = storedAt(level, heart, Items.BREAD);
+        BlockPos far = Kit.surface(level, 5200, 5000);
+        boolean sent = com.jrpetty.mcassistant.Colonies.found(level, mother, far, level.getGameTime());
+        helper.runAtTickTime(20, () -> {
+            Villages.Village colony = Villages.nearest(level, far, 40);
+            int folk = colony == null ? 0 : Villages.headcount(colony.id());
+            int foodAfter = storedAt(level, heart, Items.BREAD);
+            int units = colony == null ? 0 : com.jrpetty.mcassistant.entity.Market.stock(level, colony.id(),
+                st -> st.is(com.jrpetty.mcassistant.McAssistantMod.STOREHOUSE_ITEM.get()));
+            int fed = 0, tooled = 0;
+            if (colony != null) {
+                for (AssistantEntity a : Villages.folkOf(colony.id())) {
+                    if (a.countCarried(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null) > 0) fed++;
+                    if (a.countCarried(st -> st.is(net.minecraft.tags.ItemTags.AXES)) > 0
+                        && a.countCarried(st -> st.is(net.minecraft.tags.ItemTags.PICKAXES)) > 0) tooled++;
+                }
+            }
+            Kit.log("t16 colony sent " + sent + ": " + (colony == null ? "none" : colony.centre() + ", " + folk + " folk")
+                + "; mother's record " + Villages.builtList(mother.id()) + "; bread " + foodBefore + " -> " + foodAfter
+                + "; the colony's storehouse units " + units + ", " + fed + " fed, " + tooled + " with an axe and a pick");
+            helper.assertTrue(units >= 27, "the colony's storehouse, made out of the mother's timber: " + units + " units");
+            helper.assertTrue(fed == folk && tooled >= folk - 2, "the settlers go fed and with their tools: " + fed + " fed, " + tooled + " tooled");
+            helper.assertTrue(sent && colony != null && !colony.id().equals(mother.id()),
+                "a new village should stand two hundred blocks out");
+            helper.assertTrue(folk == com.jrpetty.mcassistant.Colonies.party(),
+                "the colony is founded by a full party, found " + folk);
+            helper.assertTrue(Villages.builtList(mother.id()).contains("colony"), "the mother village remembers its colony");
+            helper.assertTrue(foodAfter < foodBefore, "the party is fed out of the mother village's larder");
+            helper.succeed();
+        });
+    }
+
+    /** People, not workers: time spent together makes friends, a generous friend feeds a
+     *  hungry one, raising a child makes partners and a family, and all of it is kept. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t17_social")
+    public static void t17_social(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 5600, 5600, 32);
+        BlockPos heart = Kit.surface(level, 5600, 5600);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
+        helper.assertTrue(a != null && b != null && a.ownerId().equals(b.ownerId()), "two folk of one village");
+        // A moment for the ground they stand on to finish loading (its entities are read
+        // from it), then side by side.
+        helper.runAtTickTime(20, () -> {
+            b.moveTo(a.getX() + 1.0, a.getY(), a.getZ(), 0.0F, 0.0F);
+            com.jrpetty.mcassistant.entity.Social.Life la = a.life(), lb = b.life();
+            la.traits().clear();
+            la.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE);
+            la.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.GENEROUS);
+            lb.traits().clear();
+            lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL);
+            lb.traits().add(com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE);
+            for (int i = 0; i < 20; i++) {
+                a.socialBeat();
+                b.socialBeat();
+            }
+            int ab = la.affinity(b.getUUID()), ba = lb.affinity(a.getUUID());
+            Kit.log("t17 after twenty beats together: a->b " + ab + ", b->a " + ba);
+            helper.assertTrue(ab >= com.jrpetty.mcassistant.entity.Social.FRIEND && ba >= com.jrpetty.mcassistant.entity.Social.FRIEND,
+                "two folk who spend their time together become friends: " + ab + " / " + ba);
+            // A generous friend does not let a friend go hungry.
+            b.removeMatching(st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null, 999);
+            a.insertItem(new ItemStack(Items.BREAD, 10));
+            a.socialBeat();
+            Kit.log("t17 b's food after a generous friend's beat: " + b.countFood());
+            helper.assertTrue(b.countFood() > 0, "a generous folk shares a ration with a hungry friend");
+            // A child: partners, a family, a trait from a parent.
+            a.insertItem(new ItemStack(Items.BREAD, 4));
+            b.insertItem(new ItemStack(Items.BREAD, 4));
+            VillageFolkEntity child = a.raiseChildWith(b);
+            helper.assertTrue(child != null, "the two could raise a child");
+            com.jrpetty.mcassistant.entity.Social.Life lc = child.life();
+            Kit.log("t17 family: " + lc.describe(child.displayNameCap(), "child") + " / " + la.describe(a.displayNameCap(), "first"));
+            helper.assertTrue(b.getUUID().equals(la.partner()) && a.getUUID().equals(lb.partner()), "parents become partners");
+            helper.assertTrue(lc.parents().contains(a.displayNameCap()) && lc.parents().contains(b.displayNameCap()),
+                "the child knows whose it is: " + lc.parents());
+            // Twins now and then (VillageFolkEntity.litter): both parents count every child born.
+            helper.assertTrue(la.children() >= 1 && la.children() == lb.children(), "both parents count the child: " + la.children() + " / " + lb.children());
+            boolean takesAfter = false;
+            for (var t : lc.traits()) takesAfter |= la.has(t) || lb.has(t);
+            helper.assertTrue(lc.traits().size() == 2 && takesAfter, "the child takes after a parent: " + lc.traits());
+            // Kept across a save.
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            la.save(tag);
+            com.jrpetty.mcassistant.entity.Social.Life back = new com.jrpetty.mcassistant.entity.Social.Life();
+            back.load(tag);
+            helper.assertTrue(back.describe("x", "y").equals(la.describe("x", "y")),
+                "a folk's personality and friends survive a save: " + back.describe("x", "y"));
+            helper.succeed();
+        });
+    }
+
+    /** Night: a folk finds a bed in the village (not just one beside the heart) and
+     *  sleeps in it, and is up and about by morning. */
+    @GameTest(template = EMPTY, timeoutTicks = 4000, batch = "t18_sleep")
+    public static void t18_sleep(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 6000, 6000, 40);
+        Kit.prepare(level, 6000, 6000, 40);
+        BlockPos heart = Kit.surface(level, 6000, 6000);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a folk to put to bed");
+        // A house sixteen blocks out with a bed in it: further than the old twelve-block search.
+        BlockPos foot = Kit.surface(level, 6016, 6000);
+        BlockPos head = foot.east();
+        level.setBlock(foot, Blocks.RED_BED.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.EAST)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        level.setBlock(head, Blocks.RED_BED.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.EAST)
+            .setValue(net.minecraft.world.level.block.BedBlock.PART, net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        level.setDayTime(18000);                       // the middle of the night
+        long[] slept = {-1};
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (slept[0] < 0) {
+                if (level.getDayTime() % 24000 < 15000) level.setDayTime(18000);   // keep it night
+                if (folk.isSleeping()) {
+                    slept[0] = t;
+                    Kit.log("t18 asleep at tick " + t + " in the bed at " + folk.getSleepingPos().orElse(null));
+                    level.setDayTime(1000);            // and morning comes
+                } else if (t % 400 == 0) {
+                    Kit.log("t18 @" + t + " not asleep yet — " + folk.debugLine());
+                }
+                if (t >= 3000) helper.fail("no folk asleep in 3000 ticks of night: " + folk.debugLine());
+            } else if (!folk.isSleeping()) {
+                Kit.log("t18 up at tick " + t + ", " + (t - slept[0]) + " ticks after morning came");
+                helper.succeed();
+            } else if (t - slept[0] > 800) {
+                helper.fail("still asleep 800 ticks into the morning");
+            }
+        });
+    }
+
+    /** The gateway's obsidian is made where the lava is: a Nether Age miner with a diamond
+     *  pickaxe and a bucket of water turns a lava pool's surface into obsidian and takes it. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t19_obsidian")
+    public static void t19_obsidian(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 6400, 6400, 32);
+        Kit.prepare(level, 6400, 6400, 32);
+        BlockPos heart = Kit.surface(level, 6400, 6400);
+        VillageFolkEntity miner = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(miner != null, "a miner for the lava");
+        helper.runAtTickTime(20, () -> {
+            Villages.ageForTests(miner.ownerId(), Villages.Age.NETHER);
+            miner.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+            miner.insertItem(new ItemStack(Items.DIAMOND_PICKAXE));
+            miner.insertItem(new ItemStack(Items.WATER_BUCKET));
+            // A lava source let into the ground three blocks off, open to the air above.
+            BlockPos top = Kit.surface(level, miner.getBlockX() + 3, miner.getBlockZ());
+            BlockPos lava = top.below();
+            level.setBlock(top, Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(lava, Blocks.LAVA.defaultBlockState(), 3);
+            int before = miner.countCarried(st -> st.is(Items.OBSIDIAN));
+            miner.obsidianFromLava();
+            int after = miner.countCarried(st -> st.is(Items.OBSIDIAN));
+            boolean gone = level.getFluidState(lava).isEmpty();
+            Kit.log("t19 obsidian " + before + " -> " + after + ", lava there now " + !gone
+                + ", block " + level.getBlockState(lava).getBlock());
+            helper.assertTrue(after == before + 1, "water on the lava gives an obsidian: " + before + " -> " + after);
+            helper.assertTrue(gone, "the lava is gone from where it was");
+            helper.assertTrue(miner.countCarried(st -> st.is(Items.WATER_BUCKET)) == 1, "the water bucket is kept");
+            helper.succeed();
+        });
+    }
+
+    /** A folk is somebody you can talk to: it answers every question in its own way,
+     *  likes a present it loves and refuses one it hates, won't wander off with a
+     *  stranger but will with a friend, remembers being hit, understands plain words,
+     *  and keeps all of it across a save. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t20_talk")
+    public static void t20_talk(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 6800, 6800, 32);
+        BlockPos heart = Kit.surface(level, 6800, 6800);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a folk to talk to");
+        level.setDayTime(1000);                       // broad day: nobody is off to bed
+        helper.runAtTickTime(20, () -> {
+            folk.life().traits().clear();
+            folk.life().traits().add(com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE);
+            folk.life().traits().add(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL);
+            folk.ensurePersona();
+            com.jrpetty.mcassistant.entity.Persona me = folk.persona();
+            helper.assertTrue(me.rolled() && me.mood() >= 0 && me.mood() <= 100, "a folk has an inner life");
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            java.util.UUID id = you.getUUID();
+            StringBuilder heard = new StringBuilder();
+            for (com.jrpetty.mcassistant.entity.TalkTopic t : new com.jrpetty.mcassistant.entity.TalkTopic[]{
+                    com.jrpetty.mcassistant.entity.TalkTopic.OPEN, com.jrpetty.mcassistant.entity.TalkTopic.HOW,
+                    com.jrpetty.mcassistant.entity.TalkTopic.DOING, com.jrpetty.mcassistant.entity.TalkTopic.ABOUT,
+                    com.jrpetty.mcassistant.entity.TalkTopic.PEOPLE, com.jrpetty.mcassistant.entity.TalkTopic.VILLAGE,
+                    com.jrpetty.mcassistant.entity.TalkTopic.DREAMS, com.jrpetty.mcassistant.entity.TalkTopic.HOBBY,
+                    com.jrpetty.mcassistant.entity.TalkTopic.JOKE}) {
+                String said = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, t, "");
+                helper.assertTrue(said != null && !said.isBlank(), "an answer to " + t);
+                heard.append(t).append(": ").append(said).append(" | ");
+            }
+            Kit.log("t20 a conversation with " + folk.displayNameCap() + " (" + me.hobby().word + ", hopes "
+                + me.ambition().hope + "): " + heard);
+            // A stranger asking it to come along is turned down.
+            String no = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.FOLLOW, "");
+            helper.assertTrue(!folk.isFollowing(you), "a folk does not go off with a stranger: " + no);
+            // Something it loves.
+            ItemStack loved = new ItemStack(switch (me.loves()) {
+                case FLOWERS -> Items.POPPY;
+                case SWEETS -> Items.COOKIE;
+                case GEMS -> Items.EMERALD;
+                case BOOKS -> Items.BOOK;
+                case MUSIC -> Items.NOTE_BLOCK;
+                case FISH -> Items.COD;
+                case TOOLS -> Items.IRON_PICKAXE;
+                case WOOL -> Items.WHITE_WOOL;
+                case GOLD -> Items.GOLD_INGOT;
+                default -> Items.POPPY;
+            }, 2);
+            you.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, loved);
+            int before = me.affinity(id);
+            String thanks = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.GIFT, "");
+            int after = me.affinity(id);
+            Kit.log("t20 gift of " + me.loves() + ": " + thanks + " (" + before + " -> " + after + ")");
+            helper.assertTrue(after >= before + 15, "a present it loves warms it: " + before + " -> " + after);
+            helper.assertTrue(you.getMainHandItem().getCount() == 1, "one of the two was given");
+            // Something it hates is refused.
+            you.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.ROTTEN_FLESH, 3));
+            int pre = me.affinity(id);
+            String ugh = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.GIFT, "");
+            helper.assertTrue(me.affinity(id) < pre && you.getMainHandItem().getCount() == 3,
+                "rotten flesh is refused and resented: " + ugh);
+            // A friend it goes with — and comes back from when asked.
+            me.feelFor(id, "friend", 60);
+            String yes = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.FOLLOW, "");
+            Kit.log("t20 asked along as a friend (mood " + me.mood() + "): " + yes);
+            helper.assertTrue(folk.isFollowing(you), "a folk goes along with a friend: " + yes);
+            com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.SAY, "you can go back to work now");
+            helper.assertTrue(!folk.isFollowing(you), "and goes back to its day when told it may");
+            // Plain words.
+            helper.assertTrue(com.jrpetty.mcassistant.entity.FolkTalk.understand("How are you today?")
+                == com.jrpetty.mcassistant.entity.TalkTopic.HOW, "how are you");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.FolkTalk.understand("tell me a joke")
+                == com.jrpetty.mcassistant.entity.TalkTopic.JOKE, "a joke");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.FolkTalk.understand("will you come with me?")
+                == com.jrpetty.mcassistant.entity.TalkTopic.FOLLOW, "come with me");
+            // Being hit is remembered.
+            int fond = me.affinity(id);
+            folk.hurt(level.damageSources().playerAttack(you), 1.0F);
+            Kit.log("t20 hit: " + fond + " -> " + me.affinity(id));
+            helper.assertTrue(me.affinity(id) <= fond - 25, "being hit sours it: " + fond + " -> " + me.affinity(id));
+            // All of it kept across a save.
+            net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+            me.save(tag);
+            com.jrpetty.mcassistant.entity.Persona back = new com.jrpetty.mcassistant.entity.Persona();
+            back.load(tag);
+            helper.assertTrue(back.hobby() == me.hobby() && back.ambition() == me.ambition()
+                && back.quirk().equals(me.quirk()) && back.affinity(id) == me.affinity(id)
+                && back.memories().size() == me.memories().size(), "a folk's inner life survives a save");
+            helper.succeed();
+        });
+    }
+
+    /** A village has a name and a history, and a player has a standing in it: ask a
+     *  folk how you can help and it sets you an errand from what the village needs;
+     *  hand it over and you are rewarded, and the village thinks better of you; turn
+     *  it against you and nobody will talk to you; and folk will tell you what they
+     *  think of each other. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t21_errands")
+    public static void t21_errands(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 7200, 7200, 32);
+        BlockPos heart = Kit.surface(level, 7200, 7200);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity other = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(folk != null && other != null, "two folk of one village");
+        level.setDayTime(1000);
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = folk.ownerId();
+            String name = Villages.name(village);
+            helper.assertTrue(!name.isEmpty() && name.equals(Villages.name(village)), "a village has a name of its own");
+            long day = level.getDayTime() / 24000L;
+            Villages.tell(village, day, "the test bell was rung");
+            boolean written = com.jrpetty.mcassistant.village.Chronicle.of(village).stream()
+                .anyMatch(e -> e.text().equals("the test bell was rung"));
+            helper.assertTrue(written, "what happens goes into the village's history");
+            ItemStack book = com.jrpetty.mcassistant.entity.Chronicles.book(village, day);
+            var content = book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+            helper.assertTrue(content != null && content.pages().size() >= 2, "the chronicle is a book with pages");
+            Kit.log("t21 " + name + "'s chronicle: " + content.pages().size() + " pages, titled "
+                + content.title().raw());
+
+            folk.life().traits().clear();
+            folk.life().traits().add(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL);
+            folk.life().traits().add(com.jrpetty.mcassistant.entity.Social.Trait.GENEROUS);
+            folk.ensurePersona();
+            other.ensurePersona();
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            com.jrpetty.mcassistant.entity.Persona me = folk.persona();
+            String asked = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.HELP, "");
+            Kit.log("t21 asked how to help: " + asked + " [" + com.jrpetty.mcassistant.entity.Errands.describe(me) + "]");
+            helper.assertTrue(me.hasErrand() && you.getUUID().equals(me.errandFor()), "asking to help gets an errand: " + asked);
+            if (!me.errandKind().equals("hunt")) {
+                ItemStack bring = new ItemStack(switch (me.errandItem()) {
+                    case "food" -> Items.BREAD;
+                    case "logs" -> Items.OAK_LOG;
+                    case "stone" -> Items.COBBLESTONE;
+                    case "iron" -> Items.IRON_INGOT;
+                    case "coal" -> Items.COAL;
+                    case "diamond" -> Items.DIAMOND;
+                    case "obsidian" -> Items.OBSIDIAN;
+                    case "flowers" -> Items.POPPY;
+                    case "fish" -> Items.COD;
+                    case "book" -> Items.BOOK;
+                    case "note_block" -> Items.NOTE_BLOCK;
+                    default -> net.minecraft.core.registries.BuiltInRegistries.ITEM.get(
+                        net.minecraft.resources.ResourceLocation.withDefaultNamespace(me.errandItem()));
+                }, me.errandCount());
+                you.getInventory().add(bring);
+                helper.assertTrue(com.jrpetty.mcassistant.entity.Errands.canDeliver(folk, you), "the errand can be handed over");
+                int xpBefore = you.totalExperience;
+                String done = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.DELIVER, "");
+                Kit.log("t21 handed over: " + done + " (xp " + xpBefore + " -> " + you.totalExperience + ")");
+                helper.assertTrue(!me.hasErrand(), "a delivered errand is done: " + done);
+                helper.assertTrue(you.totalExperience > xpBefore, "and rewarded with experience");
+                com.jrpetty.mcassistant.entity.Standing.View view = com.jrpetty.mcassistant.entity.Standing.of(
+                    village, you.getUUID(), level.getGameTime() + 1000);
+                Kit.log("t21 standing after the errand: " + com.jrpetty.mcassistant.entity.Standing.titleIn(village, view.title())
+                    + " (warmth " + view.score() + ", known to " + view.knownBy() + ")");
+                helper.assertTrue(view.title().atLeast(com.jrpetty.mcassistant.entity.Standing.Title.FRIEND),
+                    "helping the village makes you its friend: " + view.title());
+            }
+            // Folk on each other.
+            String ofOther = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.SAY,
+                "what do you think of " + other.displayNameCap() + "?");
+            Kit.log("t21 asked about " + other.displayNameCap() + ": " + ofOther);
+            helper.assertTrue(ofOther.contains(other.displayNameCap()), "a folk speaks of another by name: " + ofOther);
+            // A village turned against you.
+            me.feelFor(you.getUUID(), "x", -200);
+            other.persona().feelFor(you.getUUID(), "x", -200);
+            com.jrpetty.mcassistant.entity.Standing.stir(village, you.getUUID());
+            String shut = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.HOW, "");
+            Kit.log("t21 as an outcast: " + shut);
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Standing.of(village, you.getUUID(), level.getGameTime() + 2000).title()
+                == com.jrpetty.mcassistant.entity.Standing.Title.OUTCAST, "a village can turn against you");
+            helper.succeed();
+        });
+    }
+
+    /** A village's life together: two who grow close enough pledge themselves and
+     *  the village holds their wedding; a child is born small, plays, and grows up
+     *  in three days; every seventh evening is a feast; a death is a vigil. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t22_village_life")
+    public static void t22_village_life(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 7600, 7600, 32);
+        BlockPos heart = Kit.surface(level, 7600, 7600);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
+        helper.assertTrue(a != null && b != null, "two folk of one village");
+        level.setDayTime(1000);
+        VillageFolkEntity[] child = new VillageFolkEntity[1];
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = a.ownerId();
+            b.moveTo(a.getX() + 1.0, a.getY(), a.getZ(), 0.0F, 0.0F);
+            a.ensurePersona();
+            b.ensurePersona();
+            a.life().feel(b.getUUID(), b.displayNameCap(), 90);
+            b.life().feel(a.getUUID(), a.displayNameCap(), 90);
+            a.socialBeat();
+            long day = level.getDayTime() / 24000L;
+            Kit.log("t22 courtship: " + a.displayNameCap() + " & " + b.displayNameCap() + " partners "
+                + b.getUUID().equals(a.life().partner()) + ", tonight " + com.jrpetty.mcassistant.entity.Gatherings.tonight(village, day));
+            helper.assertTrue(b.getUUID().equals(a.life().partner()) && a.getUUID().equals(b.life().partner()),
+                "two who grow that close pledge themselves");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Gatherings.tonight(village, day)
+                == com.jrpetty.mcassistant.entity.Gatherings.Kind.WEDDING, "and the village holds a wedding");
+            a.insertItem(new ItemStack(Items.BREAD, 8));
+            b.insertItem(new ItemStack(Items.BREAD, 8));
+            child[0] = a.raiseChildWith(b);
+            helper.assertTrue(child[0] != null && child[0].isBaby(), "a child is born a child");
+            helper.assertTrue(child[0].getBbHeight() < a.getBbHeight() * 0.7F,
+                "and small: " + child[0].getBbHeight() + " against " + a.getBbHeight());
+            String chat = com.jrpetty.mcassistant.entity.FolkTalk.answer(child[0],
+                helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL), com.jrpetty.mcassistant.entity.TalkTopic.ABOUT, "");
+            Kit.log("t22 the child " + child[0].displayNameCap() + " says: " + chat);
+            child[0].bornDaysAgo(com.jrpetty.mcassistant.entity.VillageFolkEntity.GROW_DAYS);
+            // The calendar: a feast every seventh evening, a vigil after a death.
+            java.util.UUID elsewhere = java.util.UUID.randomUUID();
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Gatherings.tonight(elsewhere, 13)
+                == com.jrpetty.mcassistant.entity.Gatherings.Kind.FEAST, "every seventh evening is a feast");
+            com.jrpetty.mcassistant.entity.Gatherings.mourn(elsewhere, "Old Tom", 20);
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Gatherings.tonight(elsewhere, 20)
+                == com.jrpetty.mcassistant.entity.Gatherings.Kind.VIGIL, "a death is a vigil");
+        });
+        helper.runAtTickTime(260, () -> {
+            Kit.log("t22 three days on: " + child[0].displayNameCap() + " a child still? " + child[0].isBaby()
+                + ", height " + child[0].getBbHeight());
+            helper.assertTrue(!child[0].isBaby() && child[0].getBbHeight() > 1.5F, "a child grows up in three days");
+            helper.succeed();
+        });
+    }
+
+    /** A village that takes a player to its heart: as its honoured guest it resolves
+     *  to build them a house, keeps the bed for them and hands them the key; as its
+     *  hero it holds a night in their honour and gives them its medal. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t23_welcome")
+    public static void t23_welcome(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 8000, 8000, 32);
+        BlockPos heart = Kit.surface(level, 8000, 8000);
+        java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart.east(i), 0.0F);
+            helper.assertTrue(f != null, "folk " + i);
+            folk.add(f);
+        }
+        level.setDayTime(1000);
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = folk.get(0).ownerId();
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            long t = level.getGameTime();
+            for (VillageFolkEntity f : folk) {
+                f.ensurePersona();
+                f.persona().feelFor(you.getUUID(), you.getName().getString(), 40);
+            }
+            com.jrpetty.mcassistant.entity.Standing.stir(village, you.getUUID());
+            Villages.noteProject(village, "storage", t);
+            com.jrpetty.mcassistant.entity.Welcome.check(level, you, village);
+            var guest = com.jrpetty.mcassistant.village.Chronicle.guest(village, you.getUUID());
+            helper.assertTrue(guest != null, "an honoured guest is to have a house");
+            helper.assertTrue(Villages.projectsWanted(village).contains("guesthouse"),
+                "and the village sets about building it: " + Villages.projectsWanted(village));
+            Villages.noteProject(village, "guesthouse", t);
+            helper.assertTrue(guest.built, "the house goes up");
+            helper.assertTrue(Villages.inAGuestHouse(village, new BlockPos((int) guest.x, (int) guest.y, (int) guest.z)),
+                "its bed is kept for the guest");
+            String key = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk.get(1), you, com.jrpetty.mcassistant.entity.TalkTopic.OPEN, "");
+            Kit.log("t23 the key: " + key);
+            boolean hasKey = false;
+            for (ItemStack st : you.getInventory().items) hasKey |= st.is(Items.TRIPWIRE_HOOK);
+            helper.assertTrue(hasKey, "the guest is handed the key: " + key);
+            // A hero.
+            for (VillageFolkEntity f : folk) f.persona().feelFor(you.getUUID(), you.getName().getString(), 40);
+            com.jrpetty.mcassistant.entity.Standing.stir(village, you.getUUID());
+            com.jrpetty.mcassistant.entity.Welcome.check(level, you, village);
+            long day = level.getDayTime() / 24000L;
+            helper.assertTrue(guest.hero, "a village names its hero");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Gatherings.tonight(village, day)
+                == com.jrpetty.mcassistant.entity.Gatherings.Kind.HONOUR, "and celebrates them tonight");
+            String medal = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk.get(2), you, com.jrpetty.mcassistant.entity.TalkTopic.OPEN, "");
+            Kit.log("t23 the medal: " + medal);
+            boolean hasMedal = false;
+            for (ItemStack st : you.getInventory().items) hasMedal |= st.is(Items.GOLD_NUGGET);
+            helper.assertTrue(hasMedal, "and gives them its medal: " + medal);
+            helper.succeed();
+        });
+    }
+
+    /** The one the village looks up to becomes its elder, and the village says so. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t24_elder")
+    public static void t24_elder(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 8400, 8400, 32);
+        BlockPos heart = Kit.surface(level, 8400, 8400);
+        java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (int i = 0; i < 4; i++) folk.add(VillageFolkSpawnerBlock.raise(level, heart.east(i), 0.0F));
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = folk.get(0).ownerId();
+            for (VillageFolkEntity f : folk) f.ensurePersona();
+            VillageFolkEntity wise = folk.get(2);
+            for (VillageFolkEntity f : folk) if (f != wise) f.life().feel(wise.getUUID(), wise.displayNameCap(), 80);
+            long day = level.getDayTime() / 24000L + 1;
+            Villages.chooseElder(village, day);
+            Kit.log("t24 elder of " + Villages.name(village) + ": " + Villages.elderName(village));
+            helper.assertTrue(wise.getUUID().equals(Villages.elder(village)) && wise.isElder(),
+                "the folk everybody looks up to is the elder: " + Villages.elderName(village));
+            helper.assertTrue(Villages.news(village).stream().anyMatch(n -> n.text().contains("village elder")),
+                "and the village says so");
+            // The register: every resident, the elder marked.
+            net.minecraft.world.item.ItemStack book = com.jrpetty.mcassistant.entity.Chronicles.register(village, day);
+            net.minecraft.world.item.component.WrittenBookContent content =
+                book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT);
+            String all = content == null ? "" : content.pages().stream()
+                .map(pg -> pg.raw().getString()).collect(java.util.stream.Collectors.joining(" | "));
+            Kit.log("t24 the register: " + all.substring(0, Math.min(400, all.length())));
+            helper.assertTrue(all.contains(wise.displayNameCap() + "§r (elder)") && all.contains("Elder: " + wise.displayNameCap()),
+                "the register lists everybody and marks the elder");
+            helper.succeed();
+        });
+    }
+
+    /** Word gets round: a folk who thinks well of a player tells a friend, who greets
+     *  them as somebody they have heard of; and a grudge softens with the days. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t25_gossip")
+    public static void t25_gossip(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 8800, 8800, 32);
+        BlockPos heart = Kit.surface(level, 8800, 8800);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
+        helper.assertTrue(a != null && b != null, "two folk of one village");
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = a.ownerId();
+            a.ensurePersona();
+            b.ensurePersona();
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            a.persona().feelFor(you.getUUID(), you.getName().getString(), 60);
+            a.life().feel(b.getUUID(), b.displayNameCap(), 50);
+            b.life().feel(a.getUUID(), a.displayNameCap(), 50);
+            helper.assertTrue(!b.persona().knows(you.getUUID()), "the second has never met you");
+            a.gossip(b, true, false, village);
+            Kit.log("t25 " + b.displayNameCap() + " heard from " + b.persona().heardFrom(you.getUUID())
+                + ", thinks " + b.persona().affinity(you.getUUID()));
+            helper.assertTrue(a.displayNameCap().equals(b.persona().heardFrom(you.getUUID()))
+                && b.persona().affinity(you.getUUID()) > 0, "and hears about you from the first");
+            helper.assertTrue(!b.persona().knows(you.getUUID()), "which is not the same as meeting you");
+            String hello = com.jrpetty.mcassistant.entity.FolkTalk.answer(b, you,
+                com.jrpetty.mcassistant.entity.TalkTopic.OPEN, "");
+            Kit.log("t25 on meeting: " + hello);
+            helper.assertTrue(hello.contains(a.displayNameCap()), "so it greets you as somebody it has heard of: " + hello);
+            helper.assertTrue(b.persona().knows(you.getUUID()), "and now it knows you");
+            // A grudge softens.
+            long day = level.getDayTime() / 24000L;
+            b.persona().feelFor(you.getUUID(), you.getName().getString(), -60);
+            int before = b.persona().affinity(you.getUUID());
+            b.persona().mend(day + 1, 2);
+            b.persona().mend(day + 1, 2);
+            b.persona().mend(day + 2, 2);
+            Kit.log("t25 a grudge: " + before + " -> " + b.persona().affinity(you.getUUID()));
+            helper.assertTrue(b.persona().affinity(you.getUUID()) == before + 4, "a grudge softens a little each day");
+            // A friend brings you something, unasked — but not every time you pass.
+            boolean given = false;
+            a.insertItem(new ItemStack(Items.POPPY));      // what it gives is what it has: a flower it picked
+            for (int i = 0; i < 60 && !given; i++) given = a.present(you);
+            int carried = 0;
+            for (int i = 0; i < you.getInventory().getContainerSize(); i++) carried += you.getInventory().getItem(i).getCount();
+            Kit.log("t25 a present: " + given + ", you now carry " + carried + " item(s)");
+            helper.assertTrue(given && carried > 0, "a folk fond of you gives you a present");
+            helper.assertTrue(!a.present(you), "and not another the same day");
+            // Set on by a monster: kill it and you saved its life.
+            net.minecraft.world.entity.monster.Zombie zombie = net.minecraft.world.entity.EntityType.ZOMBIE.create(level);
+            zombie.moveTo(b.getX() + 1.0, b.getY(), b.getZ(), 0.0F, 0.0F);
+            level.addFreshEntity(zombie);
+            b.hurt(level.damageSources().mobAttack(zombie), 1.0F);
+            helper.assertTrue(b.besetBy(zombie.getUUID()), "a folk set on by a monster is in danger from it");
+            int fond = b.persona().affinity(you.getUUID());
+            b.rescuedBy(you, "zombie");
+            zombie.discard();
+            Kit.log("t25 rescued: " + fond + " -> " + b.persona().affinity(you.getUUID()) + "; news: "
+                + Villages.news(village).get(0).text());
+            helper.assertTrue(b.persona().affinity(you.getUUID()) > fond
+                && Villages.news(village).stream().anyMatch(n -> n.text().contains("saved " + b.displayNameCap())),
+                "and whoever saves it is remembered for it");
+            helper.succeed();
+        });
+    }
+
+    /** A miner with ore and stone to spare sells a bundle for an emerald, and keeps the emerald. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t26_trade")
+    public static void t26_trade(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 9200, 9200, 32);
+        BlockPos heart = Kit.surface(level, 9200, 9200);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a folk");
+        helper.runAtTickTime(20, () -> {
+            a.ensurePersona();
+            a.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);
+            a.insertItem(new ItemStack(Items.RAW_COPPER, 20));
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            you.getInventory().add(new ItemStack(Items.EMERALD, 1));
+            String offer = com.jrpetty.mcassistant.entity.FolkTalk.answer(a, you,
+                com.jrpetty.mcassistant.entity.TalkTopic.TRADE, "");
+            Kit.log("t26 the offer: " + offer);
+            helper.assertTrue(offer.contains("coin") && offer.contains("an emerald") && com.jrpetty.mcassistant.entity.Trade.canPay(a, you),
+                "it offers what it has to spare, for coin or what you can pay: " + offer);
+            String done = com.jrpetty.mcassistant.entity.FolkTalk.answer(a, you,
+                com.jrpetty.mcassistant.entity.TalkTopic.DELIVER, "");
+            int goods = 0, emeralds = 0;
+            for (int i = 0; i < you.getInventory().getContainerSize(); i++) {
+                ItemStack st = you.getInventory().getItem(i);
+                if (st.is(Items.EMERALD)) emeralds += st.getCount();
+                else goods += st.getCount();
+            }
+            Kit.log("t26 the deal: " + done + " — you have " + goods + " goods, " + emeralds + " emeralds; "
+                + a.displayNameCap() + " has " + a.countCarried(st -> st.is(Items.EMERALD)) + " emerald(s)");
+            helper.assertTrue(goods >= 8 && emeralds == 0 && a.countCarried(st -> st.is(Items.EMERALD)) == 1,
+                "the goods change hands, and so does the price");
+            helper.assertTrue(!com.jrpetty.mcassistant.entity.Trade.live(a, you), "and the deal is done");
+            helper.succeed();
+        });
+    }
+
+    /** Everybody sleeps: two guards keep the night in two watches, the founders' camp
+     *  has a bed each, the village plans a house for every two people without one,
+     *  and a bed somebody brings a folk is laid at the camp and slept in. */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t27_night")
+    public static void t27_night(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 9600, 9600, 32);
+        Kit.prepare(level, 9600, 9600, 24);
+        BlockPos heart = Kit.surface(level, 9600, 9600);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
+        VillageFolkEntity c = VillageFolkSpawnerBlock.raise(level, heart.west(), 0.0F);
+        helper.assertTrue(a != null && b != null && c != null, "three folk of one village");
+        helper.runAtTickTime(20, () -> {
+            java.util.UUID village = a.ownerId();
+            a.setJob(StationTask.GUARD);
+            b.setJob(StationTask.GUARD);
+            a.setShift(AssistantEntity.Shift.ALWAYS);
+            b.setShift(AssistantEntity.Shift.ALWAYS);
+            level.setDayTime(15000);                       // (the sky darkens on the next tick)
+        });
+        boolean[] w = new boolean[4];
+        helper.runAtTickTime(24, () -> {
+            w[0] = a.onShift();
+            w[1] = b.onShift();
+            level.setDayTime(20000);
+        });
+        helper.runAtTickTime(28, () -> {
+            w[2] = a.onShift();
+            w[3] = b.onShift();
+            level.setDayTime(6000);
+        });
+        helper.runAtTickTime(32, () -> {
+            java.util.UUID village = a.ownerId();
+            Kit.log("t27 watches: " + a.displayNameCap() + " " + w[0] + "/" + w[2] + ", "
+                + b.displayNameCap() + " " + w[1] + "/" + w[3] + "; by day " + a.onShift() + "/" + b.onShift()
+                + "; night? " + level.isNight());
+            helper.assertTrue(w[0] != w[1] && w[2] != w[3] && w[0] != w[2],
+                "two guards keep the night in two watches, and each sleeps half of it");
+            helper.assertTrue(a.onShift() && b.onShift(), "and both are on duty by day");
+            // The founders' camp.
+            BlockPos chest = heart;
+            int laid = com.jrpetty.mcassistant.VillageSpawner.pitchCamp(level, chest, 3);
+            int camp = com.jrpetty.mcassistant.VillageSpawner.campBeds(level, chest).size();
+            Kit.log("t27 the camp: " + laid + " laid, " + camp + " standing");
+            helper.assertTrue(laid == 3 && camp == 3, "the founders lay a bed each round the heart");
+            // Houses until there is a bed for everyone.
+            Villages.noteProject(village, "storage", level.getGameTime());
+            Villages.noteProject(village, "shelter", level.getGameTime());
+            Villages.noteProject(village, "well", level.getGameTime());
+            Villages.noteProject(village, "house", level.getGameTime());
+            java.util.List<String> want = Villages.projectsWanted(village);
+            Kit.log("t27 3 folk, homes for " + Villages.bedsPlanned(village) + ": wanted " + want);
+            helper.assertTrue(Villages.bedsPlanned(village) >= 3 || want.contains("house"),
+                "a village with more people than its homes have beds builds another house");
+            // A bed somebody brings.
+            c.insertItem(new ItemStack(Items.RED_BED));
+            helper.assertTrue(c.layGivenBed() && c.bedPos() != null
+                    && com.jrpetty.mcassistant.VillageSpawner.campBeds(level, chest).size() == 4,
+                "a bed brought to a folk is laid at the camp, and it is that folk's");
+            // A builder carries the camp's beds into a house a bed at a time, as each is laid, and
+            // takes up a bed nobody calls theirs before one somebody does.
+            BlockPos mine = c.bedPos();
+            int before = com.jrpetty.mcassistant.VillageSpawner.campBeds(level, chest).size();
+            boolean carried = c.bedFromTheCamp();
+            int after = com.jrpetty.mcassistant.VillageSpawner.campBeds(level, chest).size();
+            boolean kept = level.getBlockState(mine).getBlock() instanceof net.minecraft.world.level.block.BedBlock;
+            int packed = 0;
+            for (ItemStack st : c.getInventoryItems()) if (st.is(net.minecraft.tags.ItemTags.BEDS)) packed += st.getCount();
+            Kit.log("t27 a bed for a house: carried " + carried + ", camp " + before + " -> " + after
+                + ", its own still standing " + kept + ", beds in the pack " + packed);
+            helper.assertTrue(carried && after == before - 1 && kept && packed >= 1,
+                "one camp bed is carried in for the house, and not the one somebody sleeps in");
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ the stores
+
+    private static int holding(ServerLevel level, BlockPos at, net.minecraft.world.item.Item item) {
+        if (!(level.getBlockEntity(at) instanceof net.minecraft.world.Container c)) return -1;
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(item)) n += c.getItem(i).getCount();
+        return n;
+    }
+
+    /**
+     * The carriers stock the storehouse. A field's chest and a furnace's finished ingots are
+     * carried in to the storehouse's chest, not to the founding chest nearer the heart; the
+     * field keeps its seed and its seed carrots, the furnace its ore. Then a farmer who has
+     * run out of seed draws it from the storehouse.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 8000, batch = "t28_stores")
+    public static void t28_stores(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 10800, 10800, 64);
+        Kit.prepare(level, 10800, 10800, 64);
+        BlockPos heart = Kit.surface(level, 10800, 10800);
+        VillageFolkEntity carrier = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(carrier != null, "a village to carry for");
+        carrier.setJob(StationTask.HAUL);
+        java.util.UUID village = carrier.ownerId();
+        // The storehouse's chest north of the square; a field's chest and a furnace out in the plots.
+        BlockPos store = Kit.surface(level, 10808, 10778);
+        BlockPos field = Kit.surface(level, 10840, 10804);
+        BlockPos oven = Kit.surface(level, 10760, 10804);
+        level.setBlockAndUpdate(store, Blocks.CHEST.defaultBlockState());
+        level.setBlockAndUpdate(field, Blocks.CHEST.defaultBlockState());
+        level.setBlockAndUpdate(oven, Blocks.FURNACE.defaultBlockState());
+        for (BlockPos p : List.of(store, field, oven)) com.jrpetty.mcassistant.entity.ZoneChests.mark(level, p);
+        Villages.builtAtForTests(village, "storage", store);
+        net.minecraft.world.Container fieldBox = (net.minecraft.world.Container) level.getBlockEntity(field);
+        fieldBox.setItem(0, new ItemStack(Items.COBBLESTONE, 64));
+        fieldBox.setItem(1, new ItemStack(Items.WHEAT, 40));
+        fieldBox.setItem(2, new ItemStack(Items.CARROT, 20));
+        fieldBox.setItem(3, new ItemStack(Items.WHEAT_SEEDS, 10));
+        net.minecraft.world.Container ovenBox = (net.minecraft.world.Container) level.getBlockEntity(oven);
+        ovenBox.setItem(0, new ItemStack(Items.RAW_IRON, 8));
+        ovenBox.setItem(2, new ItemStack(Items.IRON_INGOT, 16));
+        BlockPos depot = Villages.depot(level, village);
+        Kit.log("t28 stores " + Villages.storeChests(level, village) + "; the depot " + depot + ", the storehouse " + store);
+        helper.assertTrue(store.equals(depot), "loads go to the storehouse, not the founding chest nearer the heart: " + depot);
+
+        VillageFolkEntity[] farmer = new VillageFolkEntity[1];
+        long[] stocked = { -1 };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);   // carrying is day work
+            // The daily break is skipped, the carrier's and the farmer's: this is where the loads go, not the pace. (A
+            // break comes at the folk's own hour and runs to 4500 ticks for an easygoing carrier that is its own
+            // easygoing leader; one that fell on the walk to the furnace outlasted the 5000 ticks below.)
+            if (carrier.breakNowForTests() || farmer[0] != null && farmer[0].breakNowForTests()) level.setDayTime(level.getDayTime() + 200);
+            Villages.noteAttempt(village, level.getGameTime());                 // and nobody builds meanwhile
+            int ingots = holding(level, store, Items.IRON_INGOT), cobble = holding(level, store, Items.COBBLESTONE);
+            if (t % 600 == 0) {
+                Kit.log("t28 @" + t + " store: iron " + ingots + ", cobble " + cobble + ", wheat "
+                    + holding(level, store, Items.WHEAT) + ", seeds " + holding(level, store, Items.WHEAT_SEEDS)
+                    + "; field: cobble " + holding(level, field, Items.COBBLESTONE) + ", carrots " + holding(level, field, Items.CARROT)
+                    + "; furnace out " + ovenBox.getItem(2).getCount() + " — " + carrier.debugLine()
+                    + (farmer[0] == null ? "" : " | " + farmer[0].debugLine()));
+            }
+            if (stocked[0] < 0) {
+                if (ingots >= 16 && cobble >= 64) {
+                    stocked[0] = t;
+                    Kit.log("t28 the storehouse is stocked at tick " + t + ": field carrots " + holding(level, field, Items.CARROT)
+                        + ", field seeds " + holding(level, field, Items.WHEAT_SEEDS) + ", furnace ore " + ovenBox.getItem(0).getCount());
+                    helper.assertTrue(holding(level, field, Items.CARROT) == 16, "the field keeps sixteen carrots to plant");
+                    helper.assertTrue(holding(level, field, Items.WHEAT_SEEDS) == 10, "and all its seed");
+                    helper.assertTrue(ovenBox.getItem(0).is(Items.RAW_IRON) && ovenBox.getItem(0).getCount() == 8,
+                        "the furnace keeps its ore; only what it made is carried");
+                    // Now a farmer with no seed, and seed in the storehouse.
+                    ((net.minecraft.world.Container) level.getBlockEntity(store)).setItem(26, new ItemStack(Items.WHEAT_SEEDS, 32));
+                    VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, 10800, 10830), 0.0F);
+                    helper.assertTrue(f != null, "a farmer for the village");
+                    f.removeMatching(st -> st.is(Items.WHEAT_SEEDS) || st.is(Items.CARROT) || st.is(Items.POTATO)
+                        || st.is(Items.BEETROOT_SEEDS), 999);
+                    f.setJob(StationTask.FARM);
+                    farmer[0] = f;
+                } else if (t >= 5000) {
+                    helper.fail("the storehouse was not stocked in 5000 ticks: iron " + ingots + ", cobble " + cobble
+                        + " — " + carrier.debugLine());
+                }
+                return;
+            }
+            int seeds = farmer[0].countCarried(st -> st.is(Items.WHEAT_SEEDS));
+            if (seeds >= 8) {
+                Kit.log("t28 the farmer drew " + seeds + " seed from the storehouse by tick " + t
+                    + " (the storehouse has " + holding(level, store, Items.WHEAT_SEEDS) + " left)");
+                helper.succeed();
+            } else if (t - stocked[0] >= 2600) {
+                helper.fail("a farmer with no seed did not draw any from the storehouse in 2600 ticks — " + farmer[0].debugLine());
+            }
+        });
+    }
+
+    // ============================================================ the town's life
+
+    /**
+     * The small things: a house and a storehouse raised on the plan's lots, and round them a
+     * fire in the hearth, a number by the door with the family's names, a washing line, the
+     * windows lit after dark, a street sign at the corner, stalls on the square with the
+     * stores' goods on them, and a scarecrow in a field.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t29_town_life")
+    public static void t29_town_life(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 11400, 11400, 48);
+        Kit.prepare(level, 11400, 11400, 48);
+        BlockPos heart = Kit.surface(level, 11400, 11400);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a village");
+        java.util.UUID village = folk.ownerId();
+        Villages.Village v = Villages.get(village);
+        // A house whose back is to the north (so it has the washing line), and the storehouse.
+        com.jrpetty.mcassistant.village.TownPlan.Lot home = null;
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot l : com.jrpetty.mcassistant.village.TownPlan.candidates("house")) {
+            if (l.kind() == com.jrpetty.mcassistant.village.TownPlan.Kind.LOT && l.back() == com.jrpetty.mcassistant.village.TownPlan.NORTH
+                    && l.distance() < 40) { home = l; break; }
+        }
+        helper.assertTrue(home != null, "a lot for a house");
+        BlockPos houseAt = Kit.surface(level, heart.getX() + home.x(), heart.getZ() + home.z());
+        Direction houseBack = Villages.direction(home.back());
+        com.jrpetty.mcassistant.village.TownPlan.Lot civic = com.jrpetty.mcassistant.village.TownPlan.candidates("storage").get(0);
+        BlockPos storeAt = Kit.surface(level, heart.getX() + civic.x(), heart.getZ() + civic.z());
+        Direction storeBack = Villages.direction(civic.back());
+        BuildGoal.stamp(level, "house", houseAt, houseBack, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        BuildGoal.stamp(level, "storage", storeAt, storeBack, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.BIRCH));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "house", houseAt, houseBack);
+        com.jrpetty.mcassistant.village.Ledger.built(village, "storage", storeAt, storeBack);
+        var all = com.jrpetty.mcassistant.village.Ledger.buildings(village);
+        helper.assertTrue(all.size() == 2, "the ledger has both buildings: " + all);
+        var house = all.get(0);
+        // A field of farmland to stand a scarecrow by.
+        BlockPos field = heart.offset(-30, 0, -30);
+        field = Kit.surface(level, field.getX(), field.getZ());
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -3; dz <= 3; dz++) {
+            level.setBlock(field.offset(dx, -1, dz), Blocks.FARMLAND.defaultBlockState(), 3);
+        }
+        com.jrpetty.mcassistant.entity.TownLife.dressNow(level, village, heart, all,
+            List.of(Items.BREAD, Items.CARROT, Items.APPLE, Items.WHITE_WOOL, Items.IRON_INGOT, Items.EGG));
+        boolean crow = com.jrpetty.mcassistant.entity.TownLife.scarecrow(level, field, 4);
+
+        var fit = com.jrpetty.mcassistant.entity.TownLife.fittings(house);
+        Kit.log("t29 the house: " + fit.windows().size() + " windows, door " + fit.door() + ", chimneys " + fit.chimneys()
+            + ", address " + java.util.Arrays.toString(com.jrpetty.mcassistant.entity.TownLife.address(village, heart, house)));
+        helper.assertTrue(!fit.chimneys().isEmpty() && level.getBlockState(fit.chimneys().get(0).above()).is(Blocks.CAMPFIRE),
+            "a fire in the house's hearth, smoking from its chimney");
+        // The sign by the door.
+        String signText = null;
+        for (BlockPos p : BlockPos.betweenClosed(fit.door().offset(-2, 0, -2), fit.door().offset(2, 2, 2))) {
+            if (level.getBlockEntity(p) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                StringBuilder t = new StringBuilder();
+                for (int i = 0; i < 4; i++) t.append(sign.getFrontText().getMessage(i, false).getString()).append(" / ");
+                signText = t.toString();
+            }
+        }
+        Kit.log("t29 the sign by the door: " + signText);
+        helper.assertTrue(signText != null && signText.startsWith("No. "), "a number by the house's door");
+        // The washing line behind it.
+        BlockPos line = houseAt.relative(houseBack, fit.half()[1] + 1).above(2);
+        int banners = 0;
+        for (BlockPos p : BlockPos.betweenClosed(line.relative(houseBack).offset(-4, 0, -4), line.relative(houseBack).offset(4, 0, 4))) {
+            if (level.getBlockState(p).getBlock() instanceof net.minecraft.world.level.block.WallBannerBlock) banners++;
+        }
+        Kit.log("t29 the washing line: " + level.getBlockState(line) + ", " + banners + " things on it");
+        helper.assertTrue(level.getBlockState(line).getBlock() instanceof net.minecraft.world.level.block.FenceBlock && banners == 4,
+            "a washing line behind the house with the wash on it");
+        // The windows after dark.
+        com.jrpetty.mcassistant.entity.TownLife.lightsNow(level, all, true);
+        int lit = 0, lamps = 0;
+        for (BlockPos w : fit.windows()) if (level.getBlockState(w).is(Blocks.YELLOW_STAINED_GLASS_PANE)) lit++;
+        for (BlockPos in : fit.insides()) if (in != null && level.getBlockState(in).is(Blocks.LIGHT)) lamps++;
+        com.jrpetty.mcassistant.entity.TownLife.lightsNow(level, all, false);
+        int still = 0;
+        for (BlockPos w : fit.windows()) if (level.getBlockState(w).is(Blocks.YELLOW_STAINED_GLASS_PANE)) still++;
+        Kit.log("t29 lights: " + lit + " of " + fit.windows().size() + " windows lit, " + lamps + " lamps; after dawn " + still);
+        helper.assertTrue(lit >= fit.windows().size() / 2 && lamps > 0 && still == 0, "the windows light up after dark and go out at dawn");
+        // A street sign at the corner of the South Road and the street round the square.
+        BlockPos post = Kit.surface(level, heart.getX() + 3, heart.getZ() + 17).below(2);   // under the lantern
+        java.util.List<String> names = new java.util.ArrayList<>();
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            if (level.getBlockEntity(post.relative(d)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                names.add(sign.getFrontText().getMessage(1, false).getString());
+            }
+        }
+        Kit.log("t29 the corner of " + names + " (post " + level.getBlockState(post.below()) + ")");
+        helper.assertTrue(names.contains("South Road") && names.size() == 2, "a street sign with both streets' names");
+        // The stalls, and the goods on them.
+        int stalls = 0, goods = 0;
+        for (int[] s : new int[][]{ { 8, 8 }, { -8, 8 }, { 8, -8 }, { -8, -8 } }) {
+            // A stall's awning is the top of its column.
+            if (level.getBlockState(Kit.surface(level, heart.getX() + s[0], heart.getZ() + s[1]).below())
+                    .is(net.minecraft.tags.BlockTags.WOOL)) stalls++;
+        }
+        for (var f : level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class, around(heart, 14))) {
+            if (f.getTags().contains("mca_stall") && !f.getItem().isEmpty()) goods++;
+        }
+        Kit.log("t29 the square: " + stalls + " stalls, " + goods + " goods out on them");
+        helper.assertTrue(stalls == 4 && goods == 6, "four stalls on the square with the stores' goods on them");
+        Kit.log("t29 the field's scarecrow: " + crow);
+        helper.assertTrue(crow, "a scarecrow by the field");
+        // And the village's own visits light the windows when night falls.
+        level.setDayTime(18000);
+        com.jrpetty.mcassistant.entity.TownLife.resetForTests();
+        com.jrpetty.mcassistant.entity.TownLife.tick(level, v);
+        int night = 0;
+        for (BlockPos w : fit.windows()) if (level.getBlockState(w).is(Blocks.YELLOW_STAINED_GLASS_PANE)) night++;
+        Kit.log("t29 at midnight " + night + " windows are lit");
+        helper.assertTrue(night > 0, "the village lights its own windows at night");
+        level.setDayTime(6000);
+        helper.succeed();
+    }
+
+    /**
+     * Money: a new village's purse, coin minted from the stores' gold in the Iron Age, a
+     * day's wages, prices that move with the stores, a folk's market-day treat, and a player
+     * buying a lot of bread at a stall and selling the village some iron.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t30_market")
+    public static void t30_market(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(7000);
+        Kit.hold(level, 12000, 12000, 32);
+        Kit.prepare(level, 12000, 12000, 32);
+        BlockPos heart = Kit.surface(level, 12000, 12000);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a village");
+        folk.setJob(StationTask.FARM);
+        java.util.UUID village = folk.ownerId();
+        Villages.Village v = Villages.get(village);
+        BlockPos chest = Kit.surface(level, heart.getX() + 4, heart.getZ());
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.BREAD, 64));
+        box.setItem(1, new ItemStack(Items.APPLE, 16));
+        box.setItem(2, new ItemStack(Items.COOKIE, 8));
+        box.setItem(3, new ItemStack(Items.GOLD_INGOT, 4));
+        Villages.ageForTests(village, Villages.Age.IRON);
+
+        // The founders' purse.
+        com.jrpetty.mcassistant.entity.Market.tick(level, v);
+        int opened = com.jrpetty.mcassistant.village.Ledger.coins(village);
+        // Gold into coin, when the treasury is low.
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(village, opened);
+        int minted = com.jrpetty.mcassistant.entity.Market.mint(level, v);
+        // A day's wages.
+        int paid = com.jrpetty.mcassistant.entity.Market.payWages(level, v);
+        Kit.log("t30 the treasury opened with " + opened + "; minted " + minted + " from gold; paid " + paid
+            + " in wages; " + folk.displayNameCap() + " has " + folk.purse() + "; treasury " + com.jrpetty.mcassistant.village.Ledger.coins(village));
+        helper.assertTrue(opened == com.jrpetty.mcassistant.entity.Market.FOUNDING_PURSE, "a new village has the founders' purse");
+        helper.assertTrue(minted == 18 && ((ItemStack) box.getItem(3)).getCount() == 2, "two bars of gold minted into eighteen coins");
+        // [econ-wages] Its wage by what its job is worth, never under the living wage (JobWorth), at the leader's rate.
+        int due = com.jrpetty.mcassistant.entity.JobWorth.atLeadersRate(village, com.jrpetty.mcassistant.entity.Wealth.wage(folk));
+        helper.assertTrue(paid >= 1 && paid == due && folk.purse() == paid, "a working folk is paid its wage: " + paid + " of " + due);
+        // Prices move with the stores.
+        var bread = com.jrpetty.mcassistant.entity.Market.goodFor(new ItemStack(Items.BREAD));
+        int plenty = com.jrpetty.mcassistant.entity.Market.sellPrice(bread, 64, false);
+        int scarce = com.jrpetty.mcassistant.entity.Market.sellPrice(bread, 4, false);
+        int buys = com.jrpetty.mcassistant.entity.Market.buyPrice(bread, 64, false);
+        Kit.log("t30 eight bread: " + plenty + "c with plenty, " + scarce + "c when scarce; the village pays " + buys + "c");
+        helper.assertTrue(plenty < scarce && buys < plenty, "dear when scarce, cheap when plenty, and it buys for less than it sells");
+        int days = 0;
+        for (long d = 0; d < 7; d++) if (com.jrpetty.mcassistant.entity.Market.marketDay(village, d)) days++;
+        helper.assertTrue(days == 1, "one market day a week");
+        // A folk's treat.
+        folk.earn(10);
+        int before = folk.purse(), treasury = com.jrpetty.mcassistant.village.Ledger.coins(village);
+        String treat = com.jrpetty.mcassistant.entity.Market.folkBuys(level, v, folk);
+        Kit.log("t30 " + folk.displayNameCap() + " (likes " + folk.persona().food() + ") bought " + treat + "; purse "
+            + before + " -> " + folk.purse() + ", treasury " + treasury + " -> " + com.jrpetty.mcassistant.village.Ledger.coins(village));
+        helper.assertTrue(treat != null && folk.purse() < before
+            && com.jrpetty.mcassistant.village.Ledger.coins(village) == treasury + before - folk.purse(),
+            "a folk spends its savings on a treat, and the coin goes back to the treasury");
+        // A player at a stall — once the larder is full: the village sells no bread it needs (Budget).
+        for (int i = 4; i < 18; i++) box.setItem(i, new ItemStack(Items.BREAD, 64));
+        com.jrpetty.mcassistant.entity.Budget.forget(village);
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 20));   // in the pack, not the hand
+        treasury = com.jrpetty.mcassistant.village.Ledger.coins(village);
+        String bought = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, new ItemStack(Items.BREAD));
+        int coins = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        int breadHeld = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+            if (p.getInventory().getItem(i).is(Items.BREAD)) breadHeld += p.getInventory().getItem(i).getCount();
+        }
+        Kit.log("t30 the player: " + bought + " (" + coins + " coins left, " + breadHeld + " bread)");
+        helper.assertTrue(breadHeld == 8 && coins < 20 && com.jrpetty.mcassistant.village.Ledger.coins(village) == treasury + 20 - coins,
+            "a player buys a lot of bread with coin, and the coin goes into the treasury");
+        p.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_INGOT, 8));
+        String sold = com.jrpetty.mcassistant.entity.Market.deal(level, v, p, ItemStack.EMPTY);
+        int after = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        Kit.log("t30 the player: " + sold + " (" + after + " coins now, " + p.getMainHandItem().getCount() + " iron in hand)");
+        helper.assertTrue(after > coins && p.getMainHandItem().getCount() == 4, "the village buys iron from a player for coin");
+        // The stalls' price signs.
+        com.jrpetty.mcassistant.entity.TownLife.dressNow(level, village, heart, java.util.List.of(),
+            java.util.List.of(Items.BREAD, Items.APPLE, Items.COOKIE));
+        java.util.List<String> signs = new java.util.ArrayList<>();
+        for (BlockPos q : BlockPos.betweenClosed(heart.offset(3, 0, 3), heart.offset(12, 4, 12))) {
+            if (level.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                signs.add(sign.getFrontText().getMessage(0, false).getString() + " / " + sign.getFrontText().getMessage(1, false).getString());
+            }
+        }
+        Kit.log("t30 the stall's signs: " + signs);
+        helper.assertTrue(signs.stream().anyMatch(t -> t.startsWith("8 Bread ")) && signs.stream().anyMatch(t -> t.startsWith("We buy:")),
+            "a stall shows its prices, and what the village is buying");
+        helper.succeed();
+    }
+
+    /**
+     * The crafts, from one village's stores: a blacksmith beats iron into a pick or a blade, a
+     * tailor makes a bed, a beekeeper sets up a hive and takes its honey, a brewer brews
+     * healing, an enchanter binds books and enchants the smith's work, a cook makes apple
+     * cider. Then the café's counter shows the cider, a folk has one on its break, and a
+     * player buys one and the enchanted thing from the shop's counter.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t32_crafts")
+    public static void t32_crafts(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(7000);
+        Kit.hold(level, 13600, 12000, 32);
+        Kit.prepare(level, 13600, 12000, 32);
+        BlockPos heart = Kit.surface(level, 13600, 12000);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a village");
+        java.util.UUID village = folk.ownerId();
+        Villages.Village v = Villages.get(village);
+        Villages.ageForTests(village, Villages.Age.NETHER);
+        BlockPos chest = Kit.surface(level, heart.getX() + 4, heart.getZ());
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.IRON_INGOT, 40));
+        box.setItem(1, new ItemStack(Items.OAK_PLANKS, 32));
+        box.setItem(2, new ItemStack(Items.WHITE_WOOL, 16));
+        box.setItem(3, new ItemStack(Items.GLASS_BOTTLE, 6));
+        box.setItem(4, new ItemStack(Items.GLASS, 6));
+        box.setItem(5, new ItemStack(Items.MELON_SLICE, 4));
+        box.setItem(6, new ItemStack(Items.GOLD_NUGGET, 4));
+        box.setItem(7, new ItemStack(Items.SUGAR_CANE, 6));
+        box.setItem(8, new ItemStack(Items.LEATHER, 2));
+        box.setItem(9, new ItemStack(Items.LAPIS_LAZULI, 9));
+        box.setItem(10, new ItemStack(Items.APPLE, 8));
+        box.setItem(11, new ItemStack(Items.POTATO, 20));
+        java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock =
+            what -> com.jrpetty.mcassistant.entity.Market.stock(level, village, what);
+
+        // The blacksmith.
+        folk.setJob(StationTask.SMITH);
+        int iron = stock.applyAsInt(s -> s.is(Items.IRON_INGOT));
+        boolean smithed = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        int ironTools = stock.applyAsInt(s -> s.isDamageableItem()
+            && net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().startsWith("iron_"));
+        Kit.log("t32 the blacksmith: " + smithed + ", iron " + iron + " -> " + stock.applyAsInt(s -> s.is(Items.IRON_INGOT))
+            + ", iron things in the stores " + ironTools);
+        helper.assertTrue(smithed && ironTools >= 1 && stock.applyAsInt(s -> s.is(Items.IRON_INGOT)) < iron,
+            "the blacksmith makes iron tools or armour out of the stores' iron");
+        // The tailor.
+        folk.setJob(StationTask.TAILOR);
+        java.util.function.Predicate<ItemStack> cloth = s -> s.is(ItemTags.BEDS) || s.is(ItemTags.WOOL_CARPETS) || s.is(ItemTags.BANNERS);
+        int clothBefore = stock.applyAsInt(cloth);
+        boolean tailored = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        Kit.log("t32 the tailor: " + tailored + ", beds/rugs/banners " + clothBefore + " -> " + stock.applyAsInt(cloth));
+        helper.assertTrue(tailored && stock.applyAsInt(cloth) > clothBefore, "the tailor makes a bed (or rugs, or a banner) from wool");
+        // The beekeeper: the hive it brought set down, then the honey once it is full.
+        folk.setJob(StationTask.BEEKEEP);
+        com.jrpetty.mcassistant.village.Ledger.addCoins(village, 200);       // the kits are bought from a pedlar
+        boolean hiveKit = com.jrpetty.mcassistant.entity.Trades.kit(folk);
+        boolean hived = hiveKit && com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        BlockPos hive = null;
+        BlockPos c = folk.workZone().center();
+        for (BlockPos q : BlockPos.betweenClosed(c.offset(-6, -3, -6), c.offset(6, 4, 6))) {
+            if (level.getBlockState(q).is(Blocks.BEEHIVE)) { hive = q.immutable(); break; }
+        }
+        helper.assertTrue(hived && hive != null, "the beekeeper sets up a hive");
+        level.setBlock(hive, level.getBlockState(hive).setValue(net.minecraft.world.level.block.BeehiveBlock.HONEY_LEVEL, 5), 3);
+        boolean harvested = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        int honey = stock.applyAsInt(s -> s.is(Items.HONEY_BOTTLE) || s.is(Items.HONEYCOMB));
+        Kit.log("t32 the beekeeper: hive at " + hive.toShortString() + ", harvested " + harvested + ", honey " + honey
+            + ", bees " + level.getEntitiesOfClass(net.minecraft.world.entity.animal.Bee.class, new AABB(hive).inflate(8)).size());
+        helper.assertTrue(harvested && honey >= 1, "the beekeeper takes the honey from a full hive");
+        // The brewer: the stand it brought set down and loaded with water and nether wart (the
+        // brew itself, twenty seconds a step, is t40's).
+        folk.setJob(StationTask.BREW);
+        boolean brewKit = com.jrpetty.mcassistant.entity.Trades.kit(folk);
+        // Without its brewery the brewer keeps the stand in its pack; with one, it goes down inside.
+        boolean waited = !com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v)
+            || folk.countCarried(s -> s.is(Items.BREWING_STAND)) == 1;
+        BlockPos bc = Kit.surface(level, heart.getX() - 14, heart.getZ() + 14);
+        com.jrpetty.mcassistant.village.Ledger.built(village, "brewery", bc, Direction.NORTH);
+        boolean brewed = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        BlockPos standAt = null;
+        for (BlockPos q : BlockPos.betweenClosed(bc.offset(-8, -3, -8), bc.offset(8, 4, 8))) {
+            if (level.getBlockState(q).is(Blocks.BREWING_STAND)) { standAt = q.immutable(); break; }
+        }
+        String loadedWith = standAt != null && level.getBlockEntity(standAt) instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity st
+            ? st.getItem(0).getHoverName().getString() + " + " + st.getItem(3).getHoverName().getString() : "no stand";
+        Kit.log("t32 the brewer: kit " + brewKit + ", kept it till the brewery stood " + waited + ", " + brewed
+            + ", the stand at " + standAt + " with " + loadedWith);
+        helper.assertTrue(brewKit && waited && brewed && loadedWith.contains("Water") && loadedWith.contains("Nether Wart"),
+            "the brewer keeps the stand it brought till the brewery stands, then sets it down there and loads it");
+        // The enchanter: the table it brought set down, a book bound, then the smith's work enchanted.
+        folk.setJob(StationTask.ENCHANT);
+        com.jrpetty.mcassistant.entity.Trades.kit(folk);
+        com.jrpetty.mcassistant.village.Ledger.built(village, "library", Kit.surface(level, heart.getX() + 14, heart.getZ() + 14), Direction.NORTH);
+        int spells = 0;
+        for (int i = 0; i < 3; i++) if (com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v)) spells++;
+        int enchanted = stock.applyAsInt(ItemStack::isEnchanted);
+        Kit.log("t32 the enchanter: " + spells + " pieces of work, enchanted things " + enchanted
+            + ", lapis left " + stock.applyAsInt(s -> s.is(Items.LAPIS_LAZULI)));
+        helper.assertTrue(spells >= 2 && enchanted >= 1, "the enchanter binds books and enchants the smith's work with lapis");
+        // The cook.
+        folk.setJob(StationTask.COOK);
+        boolean cooked = com.jrpetty.mcassistant.entity.Crafts.now(folk, level, v);
+        int drinks = stock.applyAsInt(com.jrpetty.mcassistant.entity.Cafe::isDrink);
+        Kit.log("t32 the cook: " + cooked + ", drinks " + drinks);
+        helper.assertTrue(cooked && drinks == 3, "the cook makes three apple ciders");
+
+        // The café, its counter set out.
+        BlockPos at = Kit.surface(level, heart.getX(), heart.getZ() - 16);
+        BuildGoal.stamp(level, "cafe", at, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "cafe", at, Direction.NORTH);
+        BlockPos shopAt = Kit.surface(level, heart.getX() + 16, heart.getZ() - 16);
+        BuildGoal.stamp(level, "shop", shopAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "shop", shopAt, Direction.NORTH);
+        com.jrpetty.mcassistant.entity.TownLife.dressNow(level, village, heart,
+            com.jrpetty.mcassistant.village.Ledger.buildings(village), java.util.List.of());
+        java.util.function.Function<BlockPos, java.util.List<ItemStack>> counters = where -> {
+            java.util.List<ItemStack> out = new java.util.ArrayList<>();
+            for (net.minecraft.world.entity.decoration.ItemFrame f : level.getEntitiesOfClass(
+                    net.minecraft.world.entity.decoration.ItemFrame.class, new AABB(where).inflate(6),
+                    f -> f.getTags().contains("mca_stall"))) {
+                if (!f.getItem().isEmpty()) out.add(f.getItem().copy());
+            }
+            return out;
+        };
+        // Frames hung on ground loaded this tick are found from a later tick on (and the village
+        // may set the counter out afresh meanwhile): look until the drink is there, or long enough.
+        final long from = helper.getTick();
+        final boolean[] looked = { false };
+        helper.onEachTick(() -> {
+            if (looked[0]) return;
+            java.util.List<ItemStack> menu = counters.apply(at);
+            if (!menu.stream().anyMatch(com.jrpetty.mcassistant.entity.Cafe::isDrink) && helper.getTick() - from < 200) return;
+            looked[0] = true;
+            java.util.List<String> tags = new java.util.ArrayList<>();
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-4, 0, -4), at.offset(4, 2, 4))) {
+                if (level.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                    tags.add(sign.getFrontText().getMessage(0, false).getString() + " / " + sign.getFrontText().getMessage(2, false).getString());
+                }
+            }
+            Kit.log("t32 the café's counter: " + menu.stream().map(s -> s.getHoverName().getString()).toList() + "; tags " + tags);
+            helper.assertTrue(menu.stream().anyMatch(com.jrpetty.mcassistant.entity.Cafe::isDrink),
+                "the café's counter has the cider on it");
+            helper.assertTrue(tags.stream().anyMatch(t -> t.startsWith("Apple Cider")), "with a price tag in front");
+            // A folk on its break.
+            folk.earn(10);
+            int purse = folk.purse();
+            String had = com.jrpetty.mcassistant.entity.Cafe.folkBuys(level, v, folk);
+            Kit.log("t32 at the café " + folk.displayNameCap() + " had " + had + "; purse " + purse + " -> " + folk.purse());
+            helper.assertTrue(had != null && folk.purse() < purse, "a folk buys a drink or a bite at the café out of its wages");
+            // A player at the café's counter, and at the shop's.
+            net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+            ItemStack cider = menu.stream().filter(com.jrpetty.mcassistant.entity.Cafe::isDrink).findFirst().orElse(ItemStack.EMPTY);
+            String bought = com.jrpetty.mcassistant.entity.Market.buy(level, v, p, cider);
+            folk.setJob(StationTask.SHOP);
+            String shopped = com.jrpetty.mcassistant.entity.Cafe.keepShop(level, v);
+            java.util.List<ItemStack> wares = counters.apply(shopAt);
+            ItemStack best = wares.stream().filter(ItemStack::isEnchanted).findFirst().orElse(ItemStack.EMPTY);
+            String boughtToo = com.jrpetty.mcassistant.entity.Market.buy(level, v, p, best);
+            int drinksHeld = 0, enchantedHeld = 0;
+            for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+                ItemStack s = p.getInventory().getItem(i);
+                if (com.jrpetty.mcassistant.entity.Cafe.isDrink(s)) drinksHeld += s.getCount();
+                if (s.isEnchanted()) enchantedHeld++;
+            }
+            Kit.log("t32 the player: " + bought + " / the shopkeeper: " + shopped + ", wares "
+                + wares.stream().map(s -> s.getHoverName().getString()).toList() + " / " + boughtToo
+                + " (" + com.jrpetty.mcassistant.entity.Market.coinsHeld(p) + " coins left)");
+            helper.assertTrue(drinksHeld == 1, "a player buys a cider at the café");
+            helper.assertTrue(enchantedHeld == 1, "and an enchanted thing from the shop");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * A raid on a walled village. The wall is up; the village hangs its four gates and puts up
+     * the alarm bell and the ladders to the watch's posts. After dark a raiding party comes at
+     * a gate: the bell rings, the gates are shut, the guard climbs to its post on the wall and
+     * holds it there with its bow, and everybody else stops work for shelter. When the band is
+     * gone the bell stops, the night goes into the village's history, and in the morning the
+     * gates are opened again.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "t33_raid")
+    public static void t33_raid(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(14000);
+        level.updateSkyBrightness();
+        Kit.hold(level, 14400, 12000, 56);
+        Kit.prepare(level, 14400, 12000, 56);
+        // The band gathers at the town's edge (Raids.edge: its reach and eight, forty-nine blocks out), which is the
+        // held square's outermost chunks: live before it comes, or it is set down there unseen, comes into sight
+        // after the watch has beaten the rest off, and keeps the bell ringing all night.
+        long settling = System.nanoTime();
+        boolean live = Kit.live(level, 14400, 12000, 56);
+        Kit.log("t33 the ground live " + live + " in " + (System.nanoTime() - settling) / 1_000_000L + " ms ("
+            + Kit.notLive(level, 14400, 12000, 56) + " chunks not)");
+        helper.assertTrue(live, "the town's ground live before the band comes: " + Kit.notLive(level, 14400, 12000, 56) + " chunks not");
+        BlockPos heart = Kit.surface(level, 14400, 12000);
+        VillageFolkEntity guard = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(guard != null && farmer != null, "a village of two");
+        java.util.UUID village = guard.ownerId();
+        Villages.Village v = Villages.get(village);
+        helper.assertTrue(village.equals(farmer.ownerId()), "both of the one village");
+        Villages.ageForTests(village, Villages.Age.STONE);
+        guard.setJob(StationTask.GUARD);
+        farmer.setJob(StationTask.FARM);
+        guard.insertItem(new ItemStack(Items.BOW));
+        guard.insertItem(new ItemStack(Items.ARROW, 48));
+        // The wall, as a village's builder leaves it.
+        BuildGoal.stamp(level, "fortify", heart, Direction.NORTH, com.jrpetty.mcassistant.village.TownPlan.PLAZA,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        Villages.noteProject(village, "fortify", level.getGameTime());
+        Villages.builtAtForTests(village, "fortify", heart);
+        int gates = com.jrpetty.mcassistant.entity.Watch.keep(level, v, true);
+        BlockPos bell = com.jrpetty.mcassistant.entity.Watch.bell(level, v, true);
+        java.util.List<com.jrpetty.mcassistant.entity.Watch.Post> posts = com.jrpetty.mcassistant.entity.Watch.posts(level, village);
+        int ladders = 0;
+        for (var p : posts) if (level.getBlockState(p.foot()).is(Blocks.LADDER)) ladders++;
+        Kit.log("t33 the wall: " + gates + " gates hung, bell at " + bell + ", " + posts.size() + " posts, " + ladders + " ladders");
+        helper.assertTrue(gates == 4, "a gate hung in each of the wall's four gaps, got " + gates);
+        helper.assertTrue(bell != null && level.getBlockState(bell).is(Blocks.BELL), "the alarm bell on the square");
+        helper.assertTrue(posts.size() >= 4 && ladders == posts.size(), "the watch's posts on the wall, a ladder to each");
+        // A raiding party.
+        var alarm = com.jrpetty.mcassistant.entity.Raids.raidNow(level, v);
+        int band = com.jrpetty.mcassistant.entity.Raids.bandSize(village);
+        int shutDoors = 0, allDoors = 0;
+        for (var g : com.jrpetty.mcassistant.entity.Watch.gates(level, village)) {
+            for (BlockPos d : g.doors()) {
+                allDoors++;
+                if (!level.getBlockState(d).getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) shutDoors++;
+            }
+        }
+        Kit.log("t33 the raid: " + band + " raiders (" + com.jrpetty.mcassistant.entity.Raids.why(village) + "), "
+            + shutDoors + " of " + allDoors + " doors shut; the farmer on shift " + farmer.onShift() + ", the guard " + guard.onShift());
+        helper.assertTrue(alarm != null && band >= 3, "a raiding party of three or more");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Raids.underAlarm(village), "the bell is ringing");
+        helper.assertTrue(allDoors == 12 && shutDoors == allDoors, "every gate shut");
+        helper.assertTrue(!farmer.onShift() && guard.onShift(), "the guard turns out, the farmer stops work");
+        final int doorsTotal = allDoors;
+        final long[] upAt = { -1 };
+        final boolean[] cleared = { false };
+        final long[] endedAt = { -1 };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 5 == 0) com.jrpetty.mcassistant.entity.Raids.guardDuty(guard);
+            if (t % 100 == 0 && upAt[0] < 0) {
+                int alive = 0;
+                for (java.util.UUID u : com.jrpetty.mcassistant.entity.Raids.band(village)) {
+                    if (level.getEntity(u) instanceof net.minecraft.world.entity.LivingEntity m && m.isAlive()) alive++;
+                }
+                Kit.log("t33 at tick " + t + " alarm " + com.jrpetty.mcassistant.entity.Raids.underAlarm(village)
+                    + " (" + com.jrpetty.mcassistant.entity.Raids.why(village) + "), band alive " + alive
+                    + ", posts " + com.jrpetty.mcassistant.entity.Watch.posts(level, village).size()
+                    + ", heading for a post " + com.jrpetty.mcassistant.entity.Raids.headingForPost(guard)
+                    + ", difficulty " + level.getDifficulty() + "; the guard: " + guard.debugLine() + " post " + guard.post()
+                    + ", target " + (guard.getTarget() == null ? "none" : guard.getTarget().getType().toShortString()));
+            }
+            if (upAt[0] < 0 && guard.holdingAPost()) {
+                upAt[0] = t;
+                Kit.log("t33 the guard is on the wall at tick " + t + " (" + guard.blockPosition().toShortString()
+                    + ", post " + guard.post().toShortString() + ")");
+            }
+            if (upAt[0] >= 0 && !cleared[0] && t >= upAt[0] + 40) {
+                // The band is beaten off.
+                int killed = 0, unseen = 0;
+                for (java.util.UUID u : com.jrpetty.mcassistant.entity.Raids.band(village)) {
+                    if (level.getEntity(u) instanceof net.minecraft.world.entity.LivingEntity m) {
+                        if (m.isAlive()) { m.kill(); killed++; }
+                    } else unseen++;
+                }
+                Kit.log("t33 the band beaten off at tick " + t + ": " + killed + " killed, " + unseen + " not in sight");
+                cleared[0] = true;
+            }
+            if (cleared[0] && endedAt[0] < 0) {
+                // Any of the band that comes into sight after (it was set down on ground not yet live) goes the same way.
+                for (java.util.UUID u : com.jrpetty.mcassistant.entity.Raids.band(village)) {
+                    if (level.getEntity(u) instanceof net.minecraft.world.entity.LivingEntity m && m.isAlive()) {
+                        Kit.log("t33 one of the band came into sight at tick " + t + " at " + m.blockPosition().toShortString() + ": beaten off too");
+                        m.kill();
+                    }
+                }
+                if (t % 100 == 0) {
+                    var about = com.jrpetty.mcassistant.entity.WatchClears.aboutForTests(level, village);
+                    StringBuilder seen = new StringBuilder();
+                    for (var m : about) seen.append(m.getType().toShortString()).append('@').append(m.blockPosition().toShortString()).append(' ');
+                    Kit.log("t33 at tick " + t + " the bell still rings (" + com.jrpetty.mcassistant.entity.Raids.why(village) + "); monsters about "
+                        + about.size() + " [" + seen.toString().trim() + "]; the guard: " + guard.debugLine() + " post " + guard.post());
+                }
+                if (t % 20 == 0) com.jrpetty.mcassistant.entity.Raids.tick(level, v);
+                if (!com.jrpetty.mcassistant.entity.Raids.underAlarm(village)) {
+                    endedAt[0] = t;
+                    java.util.List<String> lines = new java.util.ArrayList<>();
+                    for (var e : com.jrpetty.mcassistant.village.Chronicle.of(village)) lines.add(e.text());
+                    String last = lines.isEmpty() ? "" : lines.get(lines.size() - 1);
+                    Kit.log("t33 the bell stopped at tick " + t + "; the chronicle: " + last + "; the guard came down to "
+                        + guard.blockPosition().toShortString() + "; the farmer on shift " + farmer.onShift());
+                    helper.assertTrue(lines.stream().anyMatch(x -> x.contains("raiders came at the")), "the raid goes into the village's history");
+                    helper.assertTrue(guard.post() == null, "the guard comes down off the wall");
+                    // Morning: the gates are opened again.
+                    level.setDayTime(24000L + 1000L);
+                    com.jrpetty.mcassistant.entity.Raids.tick(level, v);
+                    int open = 0;
+                    for (var g : com.jrpetty.mcassistant.entity.Watch.gates(level, village)) {
+                        for (BlockPos d : g.doors()) {
+                            if (level.getBlockState(d).getValue(net.minecraft.world.level.block.DoorBlock.OPEN)) open++;
+                        }
+                    }
+                    Kit.log("t33 in the morning " + open + " of " + doorsTotal + " doors open");
+                    helper.assertTrue(open == doorsTotal, "the gates opened in the morning");
+                    helper.succeed();
+                }
+            }
+            if (t == 1500 && upAt[0] < 0) {
+                helper.fail("the guard never got onto the wall: " + guard.debugLine());
+            }
+        });
+    }
+
+    /**
+     * How a village is doing: its contentment rises when the larder is full; work goes slower
+     * with bare hands than with a wooden pick, and slower with wood than iron; on the day of
+     * rest nobody but the watch works and the morning service is held; and a widow is free
+     * to love again, and grieves.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t34_contentment")
+    public static void t34_contentment(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 15200, 12000, 32);
+        Kit.prepare(level, 15200, 12000, 32);
+        BlockPos heart = Kit.surface(level, 15200, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(a != null && b != null, "a village of two");
+        java.util.UUID village = a.ownerId();
+        a.setJob(StationTask.FARM);
+        b.setJob(StationTask.MINE);
+        // Contentment: an empty larder, then a full one.
+        for (BlockPos store : Villages.storeChests(level, village)) {
+            if (level.getBlockEntity(store) instanceof net.minecraft.world.Container c) c.clearContent();
+        }
+        Villages.forgetStock();
+        com.jrpetty.mcassistant.entity.Contentment.resetForTests();
+        var hungry = com.jrpetty.mcassistant.entity.Contentment.of(level, village);
+        BlockPos chest = Kit.surface(level, heart.getX() + 4, heart.getZ());
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        for (int i = 0; i < 5; i++) box.setItem(i, new ItemStack(Items.BREAD, 64));
+        Villages.forgetStock();
+        com.jrpetty.mcassistant.entity.Contentment.resetForTests();
+        var fed = com.jrpetty.mcassistant.entity.Contentment.of(level, village);
+        Kit.log("t34 contentment: hungry " + hungry.score() + " " + hungry.bad() + ", fed " + fed.score() + " " + fed.good()
+            + " — " + com.jrpetty.mcassistant.entity.Contentment.line(level, village));
+        helper.assertTrue(fed.score() > hungry.score() && fed.food() > hungry.food(), "a full larder makes a happier village");
+        // Tools: the right tool by its tier, bare hands slowest. Measured on its level and tool
+        // alone (plainPaceForTests): with the cap on the pace at 55% a folk whose random quirk,
+        // nature, mood and village came to over half could have both picks at the half-second
+        // floor, and wood and iron would read the same. (PaceGameTests has the rest of it.)
+        a.plainPaceForTests(true);
+        net.minecraft.world.level.block.state.BlockState stone = Blocks.STONE.defaultBlockState();
+        a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        int bare = a.workTicksFor(stone);
+        a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.WOODEN_PICKAXE));
+        int wood = a.workTicksFor(stone);
+        a.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_PICKAXE));
+        int iron = a.workTicksFor(stone);
+        int ore = a.workTicksFor(Blocks.IRON_ORE.defaultBlockState());
+        Kit.log("t34 a block of stone: " + bare + " ticks bare-handed, " + wood + " with a wooden pick, " + iron
+            + " with an iron one; iron ore " + ore + " with the iron pick");
+        helper.assertTrue(bare > wood && wood > iron, "bare hands slowest, then wood, then iron");
+        helper.assertTrue(ore > iron, "ore is harder work than stone");
+        a.plainPaceForTests(false);
+        // The day of rest.
+        Villages.ageForTests(village, Villages.Age.STONE);
+        long founded = Math.max(0L, com.jrpetty.mcassistant.village.Chronicle.foundedOn(village));
+        long day = founded + 7;
+        while (!com.jrpetty.mcassistant.entity.RestDay.today(village, day)) day++;
+        level.setDayTime(day * 24000L + 2000L);
+        boolean off = !a.onShift();
+        boolean spent = com.jrpetty.mcassistant.entity.RestDay.spend(a);
+        String now = com.jrpetty.mcassistant.entity.RestDay.now(village, level.getDayTime());
+        Kit.log("t34 day " + day + " is the day of rest: off work " + off + ", " + now + ", " + a.displayNameCap() + " is " + a.hobbyNow());
+        helper.assertTrue(off && spent && "the morning service".equals(now), "on the day of rest folk go to the morning service, not to work");
+        // A widow.
+        a.life().partnerWith(b.getUUID(), b.displayNameCap());
+        b.life().partnerWith(a.getUUID(), a.displayNameCap());
+        a.ensurePersona();
+        b.kill();
+        a.refreshMood();
+        Kit.log("t34 after " + b.displayNameCap() + " died: partner " + a.life().partner() + ", mood " + a.persona().mood()
+            + " " + a.persona().moodWhy());
+        helper.assertTrue(a.life().partner() == null, "a widow is free to love again");
+        helper.assertTrue(a.persona().moodWhy().contains("grief"), "and grieves");
+        helper.succeed();
+    }
+
+    /**
+     * A life in the village: a child learns a trade at a grown-up's side and grows up into it
+     * with a few levels' knack; folk grow old and at the end of their years die in their sleep;
+     * the dead get a headstone in the graveyard, a place in the register and in its family
+     * trees; and a player buys a round at the tavern.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "t35_life")
+    public static void t35_life(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1500);                 // after the morning assembly: a child at it learns nothing
+        Kit.hold(level, 16000, 12000, 40);
+        Kit.prepare(level, 16000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 16000, 12000);
+        VillageFolkEntity mum = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity dad = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(mum != null && dad != null, "a village of two");
+        java.util.UUID village = mum.ownerId();
+        Villages.Village v = Villages.get(village);
+        mum.setJob(StationTask.FARM);
+        dad.setJob(StationTask.MINE);
+        VillageFolkEntity child = mum.raiseChildWith(dad);
+        helper.assertTrue(child != null && child.isBaby(), "a child");
+        child.bornDaysAgo(1);
+        final long[] apprenticed = { -1 }, grown = { -1 };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (apprenticed[0] < 0 && child.apprenticedTo() != StationTask.NONE) {
+                apprenticed[0] = t;
+                Kit.log("t35 at tick " + t + " " + child.displayNameCap() + " is " + child.hobbyNow());
+                child.bornDaysAgo(3);                 // and grows up at its next look round
+            }
+            if (apprenticed[0] >= 0 && grown[0] < 0 && !child.isBaby()) {
+                grown[0] = t;
+                Kit.log("t35 grown up at tick " + t + ": " + child.stationTask() + " at level " + child.veteranLevel()
+                    + " (learned " + child.apprenticedTo() + ")");
+                helper.assertTrue(child.stationTask() == child.apprenticedTo(), "grown up into the trade it learned");
+                helper.assertTrue(child.veteranLevel() >= 3, "with a few levels' knack already");
+                rest(helper, level, village, v, heart, mum, dad, child);
+            }
+            if (t == 850 && grown[0] < 0) helper.fail("no apprenticeship and growing up: " + child.debugLine());
+        });
+    }
+
+    /**
+     * Civic life: the council votes on what to build and a well-liked player sways it; a friend
+     * of the village becomes a citizen; a thief seen at the stores is fined, then tried, then
+     * banished, and pays off what it owes; two villages too close together fall out over the
+     * land, and a player makes peace between them; and the village raises a statue to its hero.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t36_civics")
+    public static void t36_civics(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 17000, 12000, 40);
+        Kit.prepare(level, 17000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 17000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        VillageFolkEntity c = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        helper.assertTrue(a != null && b != null && c != null, "a village of three");
+        java.util.UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        a.setJob(StationTask.FARM);
+        b.setJob(StationTask.MINE);
+        c.setJob(StationTask.WOOD);
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.moveTo(heart.getX() + 0.5, heart.getY(), heart.getZ() + 3.5);
+        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 40));
+        for (VillageFolkEntity f : List.of(a, b, c)) {
+            f.ensurePersona();
+            f.persona().feelFor(p.getUUID(), p.getName().getString(), 65);
+            com.jrpetty.mcassistant.entity.Standing.stir(village, p.getUUID());
+        }
+        // The council, and a player's proposal.
+        var council = com.jrpetty.mcassistant.entity.Council.members(village);
+        String put = com.jrpetty.mcassistant.entity.Council.propose(a, p, "you should build a library");
+        List<String> order = com.jrpetty.mcassistant.entity.Council.order(village, List.of("cafe", "tavern", "library"));
+        String news = com.jrpetty.mcassistant.entity.Council.news(a);
+        Kit.log("t36 the council " + council.size() + ": " + put + " -> " + order + " / " + news);
+        helper.assertTrue(council.size() == 3, "the three of them sit on the council");
+        helper.assertTrue(order.get(0).equals("library"), "the council, swayed by a friend, votes for the library first: " + order);
+        helper.assertTrue(news.contains("voted"), "and the vote is news");
+        // Citizenship.
+        String citizen = com.jrpetty.mcassistant.entity.Citizens.ask(a, p);
+        int left = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        Kit.log("t36 citizenship: " + citizen + " (" + left + " coins left)");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Citizens.is(village, p.getUUID()) && left == 40 - com.jrpetty.mcassistant.entity.Citizens.FEE,
+            "a friend of the village becomes a citizen, for the fee");
+        // A thief at the stores: seen, fined; again, tried; again, banished.
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 1);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.BREAD, 20));
+        helper.assertTrue(Villages.storeChests(level, village).contains(chest), "the chest is one of the village's stores");
+        net.minecraft.world.entity.player.Player thief = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        thief.moveTo(heart.getX() + 2.5, heart.getY(), heart.getZ() + 2.5);
+        com.jrpetty.mcassistant.entity.Laws.onOpen(new net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock(
+            thief, InteractionHand.MAIN_HAND, chest, new BlockHitResult(Vec3.atCenterOf(chest), Direction.UP, chest, false)));
+        box.setItem(0, new ItemStack(Items.BREAD, 14));
+        thief.getInventory().add(new ItemStack(Items.BREAD, 6));            // into the thief's pack
+        com.jrpetty.mcassistant.entity.Laws.onClose(new net.neoforged.neoforge.event.entity.player.PlayerContainerEvent.Close(thief, thief.inventoryMenu));
+        int owed1 = com.jrpetty.mcassistant.entity.Laws.owes(village, thief.getUUID());
+        int seen = com.jrpetty.mcassistant.entity.Laws.offences(village, thief.getUUID());
+        com.jrpetty.mcassistant.entity.Laws.offence(level, v, thief, "breaking the well", 5);
+        int owed2 = com.jrpetty.mcassistant.entity.Laws.owes(village, thief.getUUID());
+        long day = level.getDayTime() / 24000L;
+        boolean banishedBefore = com.jrpetty.mcassistant.entity.Laws.banished(village, thief.getUUID(), day);
+        com.jrpetty.mcassistant.entity.Laws.offence(level, v, thief, "breaking the well again", 5);
+        boolean banished = com.jrpetty.mcassistant.entity.Laws.banished(village, thief.getUUID(), day);
+        Kit.log("t36 the thief: offences " + seen + ", owed " + owed1 + " then " + owed2 + ", banished " + banishedBefore + " -> " + banished
+            + "; outlaw " + com.jrpetty.mcassistant.entity.Laws.outlaw(village, thief) + "; a's opinion " + a.persona().affinity(thief.getUUID()));
+        helper.assertTrue(seen == 1 && owed1 > 0, "seen taking from the stores, and fined");
+        helper.assertTrue(owed2 > owed1, "tried for the second, and fined more");
+        helper.assertTrue(!banishedBefore && banished && com.jrpetty.mcassistant.entity.Laws.outlaw(village, thief), "banished for the third");
+        thief.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        String paid = com.jrpetty.mcassistant.entity.Laws.pay(a, thief);
+        Kit.log("t36 the thief pays: " + paid);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Laws.owes(village, thief.getUUID()) == 0, "and pays off every coin it owes");
+        // A neighbour too close for comfort.
+        java.util.UUID otherId = java.util.UUID.randomUUID();
+        Villages.restore(level, otherId, new BlockPos(17200, heart.getY(), 12000), Villages.Age.STONE, List.of("storage"), 10);
+        Villages.Village other = Villages.get(otherId);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Diplomacy.neighbours(v, other), "two villages, neighbours");
+        for (int d = 0; d < 8; d++) com.jrpetty.mcassistant.entity.Diplomacy.daily(level, v, other, day + d);
+        int sour = com.jrpetty.mcassistant.village.Ledger.relation(village, otherId);
+        String rivals = com.jrpetty.mcassistant.entity.Diplomacy.rivals(a);
+        Kit.log("t36 after eight days as neighbours: " + sour + " (" + com.jrpetty.mcassistant.entity.Diplomacy.terms(sour).words + "): " + rivals);
+        boolean bordered = com.jrpetty.mcassistant.entity.Bonds.border(village, otherId);
+        helper.assertTrue(sour < 0 || bordered, "too close: they fall out over the land, or walk the line and agree a border");
+        if (sour >= 0) {                                         // a border agreed: sour them for what follows
+            com.jrpetty.mcassistant.village.Ledger.relate(village, otherId, -10 - sour);
+            sour = -10;
+        }
+        helper.assertTrue(rivals.contains(Villages.name(otherId)), "and say so");
+        int coins = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        String peace = com.jrpetty.mcassistant.entity.Diplomacy.peace(a, p, "make peace with " + Villages.name(otherId));
+        int mended = com.jrpetty.mcassistant.village.Ledger.relation(village, otherId);
+        Kit.log("t36 peace: " + peace + " (" + sour + " -> " + mended + ", coins " + coins + " -> " + com.jrpetty.mcassistant.entity.Market.coinsHeld(p) + ")");
+        helper.assertTrue(mended == Math.min(100, sour + 25) && com.jrpetty.mcassistant.entity.Market.coinsHeld(p) == coins - com.jrpetty.mcassistant.entity.Diplomacy.PEACE_COST,
+            "a player carries gifts between them and mends it");
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        // Soured past mending; a day's roll may bring the elders to a truce instead, so a few days of it.
+        for (int k = 9; k < 16 && lines.stream().noneMatch(x -> x.contains("fell into a feud")); k++) {
+            // No truce standing between them (one called on an earlier day holds the relation off a feud).
+            com.jrpetty.mcassistant.village.Ledger.note(village, "truce/" + otherId, "");
+            com.jrpetty.mcassistant.village.Ledger.note(otherId, "truce/" + village, "");
+            com.jrpetty.mcassistant.village.Ledger.relate(village, otherId, -200);
+            com.jrpetty.mcassistant.entity.Diplomacy.daily(level, v, other, day + k);
+            lines.clear();
+            for (var e : com.jrpetty.mcassistant.village.Chronicle.of(village)) lines.add(e.text());
+        }
+        com.jrpetty.mcassistant.entity.Contentment.resetForTests();
+        var mood = com.jrpetty.mcassistant.entity.Contentment.of(level, village);
+        Kit.log("t36 a feud: " + lines.get(lines.size() - 1) + "; contentment " + mood.bad());
+        helper.assertTrue(lines.stream().anyMatch(x -> x.contains("fell into a feud")), "the feud goes into the history");
+        helper.assertTrue(mood.bad().contains("the feud"), "and weighs on the village");
+        // A statue for the hero.
+        // The smelter's smooth stone in the stores: an armour stand stands on a slab of it, as a player's does.
+        BlockPos masons = Kit.surface(level, heart.getX() - 4, heart.getZ() - 4);
+        level.setBlock(masons, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, masons);
+        ((net.minecraft.world.Container) level.getBlockEntity(masons)).setItem(0, new ItemStack(Items.SMOOTH_STONE, 3));
+        boolean raised = com.jrpetty.mcassistant.entity.Citizens.statue(level, v, p);
+        BlockPos spot = v.centre().offset(5, 0, -5);
+        int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, spot.getX(), spot.getZ()) - 1;
+        Kit.log("t36 the statue: " + raised + ", plinth " + level.getBlockState(new BlockPos(spot.getX(), y, spot.getZ())));
+        helper.assertTrue(raised && com.jrpetty.mcassistant.village.Ledger.statue(village, p.getUUID()), "the village raises its hero a statue");
+        helper.succeed();
+    }
+
+    /**
+     * What a village does for a player: the quest board on the hall (take a posting, bring the
+     * iron, get paid; clear the spiders, get paid), a folk hired for an adventure who comes home
+     * with a story and what it carried, a house built to order from the player's own makings,
+     * the town ledger, and the storekeeper who gives to friends, lends tools and sells to strangers.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t37_services")
+    public static void t37_services(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 18000, 12000, 40);
+        Kit.prepare(level, 18000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 18000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        VillageFolkEntity c = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        helper.assertTrue(a != null && b != null && c != null, "a village of three");
+        java.util.UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        a.setJob(StationTask.STORE);
+        b.setJob(StationTask.FARM);
+        c.setJob(StationTask.MINE);
+        Villages.noteProject(village, "storage", level.getGameTime());
+        com.jrpetty.mcassistant.village.Ledger.addCoins(village, 100);
+        BlockPos hallAt = Kit.surface(level, heart.getX(), heart.getZ() - 22);
+        BuildGoal.stamp(level, "hall", hallAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "hall", hallAt, Direction.NORTH);
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 1);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.BREAD, 32));
+        box.setItem(1, new ItemStack(Items.IRON_PICKAXE));
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.moveTo(heart.getX() + 1.5, heart.getY(), heart.getZ() + 1.5);
+        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 30));
+        for (VillageFolkEntity f : List.of(a, b, c)) {
+            f.ensurePersona();
+            f.persona().feelFor(p.getUUID(), p.getName().getString(), 40);
+        }
+        // What a player says, understood.
+        helper.assertTrue(com.jrpetty.mcassistant.entity.FolkTalk.understand("could I have 16 bread please") == com.jrpetty.mcassistant.entity.TalkTopic.STORES
+            && com.jrpetty.mcassistant.entity.FolkTalk.understand("what's on the quest board?") == com.jrpetty.mcassistant.entity.TalkTopic.QUESTS
+            && com.jrpetty.mcassistant.entity.FolkTalk.understand("come adventuring with me") == com.jrpetty.mcassistant.entity.TalkTopic.HIRE
+            && com.jrpetty.mcassistant.entity.FolkTalk.understand("could you build me a house") == com.jrpetty.mcassistant.entity.TalkTopic.COMMISSION
+            && com.jrpetty.mcassistant.entity.FolkTalk.understand("could I see the ledger") == com.jrpetty.mcassistant.entity.TalkTopic.LEDGER,
+            "the folk understand what a player asks for");
+        // The quest board.
+        long day = level.getDayTime() / 24000L;
+        var board = com.jrpetty.mcassistant.entity.Quests.postings(village);
+        board.clear();
+        for (var q : com.jrpetty.mcassistant.entity.Quests.samples(day)) if (q.takenBy == null) board.add(q);
+        var written = com.jrpetty.mcassistant.entity.Quests.paintOn(level, com.jrpetty.mcassistant.village.Ledger.buildings(village).stream()
+            .filter(x -> x.structure().equals("hall")).findFirst().orElseThrow(), board);
+        String firstSign = written.isEmpty() ? "" : level.getBlockEntity(written.get(0)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign
+            ? sign.getFrontText().getMessage(0, false).getString() + " " + sign.getFrontText().getMessage(1, false).getString() : "";
+        Kit.log("t37 the quest board: " + written.size() + " postings hung on the hall; the first reads " + firstSign);
+        helper.assertTrue(written.size() >= 3 && firstSign.startsWith("WANTED"), "the postings hang on the hall's front");
+        var iron = board.get(0);
+        int coins0 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        String took = com.jrpetty.mcassistant.entity.Quests.use(level, v, p, iron);
+        p.getInventory().setItem(21, new ItemStack(Items.IRON_INGOT, 40));
+        String paid = com.jrpetty.mcassistant.entity.Quests.use(level, v, p, iron);
+        int coins1 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        int ironStored = com.jrpetty.mcassistant.entity.Market.stock(level, village, x -> x.is(Items.IRON_INGOT));
+        Kit.log("t37 " + took + " / " + paid + " (coins " + coins0 + " -> " + coins1 + ", iron in the stores " + ironStored + ")");
+        helper.assertTrue(coins1 == coins0 + iron.reward && ironStored == 40 && !board.contains(iron), "the iron goes into the stores and the posting pays");
+        var spiders = board.stream().filter(q -> q.kind.equals("clear")).findFirst().orElseThrow();
+        com.jrpetty.mcassistant.entity.Quests.use(level, v, p, spiders);
+        for (int i = 0; i < spiders.count; i++) {
+            net.minecraft.world.entity.monster.Spider sp = EntityType.SPIDER.create(level);
+            sp.moveTo(1.0, 0.0, 1.0);
+            com.jrpetty.mcassistant.entity.Quests.killed(level, p, sp);
+        }
+        String cleared = com.jrpetty.mcassistant.entity.Quests.use(level, v, p, spiders);
+        int coins2 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        Kit.log("t37 " + cleared + " (coins " + coins1 + " -> " + coins2 + ")");
+        helper.assertTrue(coins2 == coins1 + spiders.reward, "the spiders cleared, and paid for");
+        // Hiring a folk.
+        p.moveTo(b.getX() + 1.0, b.getY(), b.getZ());
+        int coins3 = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        b.persona().setMood(60, List.of());
+        String hired = com.jrpetty.mcassistant.entity.Hire.ask(b, p);
+        boolean going = b.isHired() && p.getUUID().equals(b.hiredBy());
+        b.insertItem(new ItemStack(Items.BONE, 3));
+        for (int i = 0; i < 2; i++) {
+            net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(level);
+            z.moveTo(b.getX() + 3, b.getY(), b.getZ());
+            com.jrpetty.mcassistant.entity.Hire.onDeath(new net.neoforged.neoforge.event.entity.living.LivingDeathEvent(z,
+                level.damageSources().mobAttack(b)));
+        }
+        String home = com.jrpetty.mcassistant.entity.FolkTalk.answer(b, p, com.jrpetty.mcassistant.entity.TalkTopic.STAY, "");
+        int bones = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.BONE)) bones += p.getInventory().getItem(i).getCount();
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        for (var e : com.jrpetty.mcassistant.village.Chronicle.of(village)) lines.add(e.text());
+        String story = lines.stream().filter(x -> x.contains("adventuring")).findFirst().orElse("");
+        Kit.log("t37 hired: " + hired + " / " + home + " / " + story + " (bones handed over " + bones + ", coins "
+            + coins3 + " -> " + com.jrpetty.mcassistant.entity.Market.coinsHeld(p) + ")");
+        helper.assertTrue(going && com.jrpetty.mcassistant.entity.Market.coinsHeld(p) == coins3 - com.jrpetty.mcassistant.entity.Hire.PRICE,
+            "hired for a day's coin, it goes along");
+        helper.assertTrue(!b.isHired() && bones == 3 && story.contains("2 monsters"), "home again: what it carried handed over, and a story told");
+        // A house to order.
+        p.getInventory().setItem(22, new ItemStack(Items.OAK_PLANKS, 64));
+        p.getInventory().setItem(23, new ItemStack(Items.COBBLESTONE, 32));
+        p.getInventory().setItem(24, new ItemStack(Items.GLASS, 8));
+        String house = com.jrpetty.mcassistant.entity.Services.commission(a, p);
+        int planks = com.jrpetty.mcassistant.entity.Market.stock(level, village, x -> x.is(Items.OAK_PLANKS));
+        Kit.log("t37 commission: " + house + " (planks in the stores " + planks + ", next projects " + Villages.projectsWanted(village) + ")");
+        helper.assertTrue(com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(village) != null && planks >= 64
+            && Villages.projectsWanted(village).contains("guesthouse"), "the makings go into the stores, and a house for the player goes on the list");
+        // The town ledger.
+        ItemStack ledger = com.jrpetty.mcassistant.entity.Services.ledger(level, village);
+        StringBuilder text = new StringBuilder();
+        for (var page : ledger.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT).pages()) text.append(page.raw().getString()).append(" | ");
+        Kit.log("t37 the ledger: " + text);
+        helper.assertTrue(text.indexOf("Town Ledger") >= 0 && text.indexOf("In the stores") >= 0 && text.indexOf("Who lives where") >= 0
+            && text.indexOf(a.displayNameCap()) >= 0 && text.indexOf("Building") >= 0, "the ledger: stores, residents, building, needs");
+        // The storekeeper — with a full larder: the village gives and sells no bread it needs (Budget).
+        for (int i = 2; i < 16; i++) box.setItem(i, new ItemStack(Items.BREAD, 64));
+        com.jrpetty.mcassistant.entity.Budget.forget(village);
+        String bread = com.jrpetty.mcassistant.entity.Services.stores(a, p, "could I have 8 bread?");
+        String wrong = com.jrpetty.mcassistant.entity.Services.stores(b, p, "could I have 8 bread?");
+        String lent = com.jrpetty.mcassistant.entity.Services.stores(a, p, "could I borrow the iron pickaxe?");
+        boolean hasPick = p.getInventory().contains(new ItemStack(Items.IRON_PICKAXE));
+        String back = com.jrpetty.mcassistant.entity.Services.returnLoan(a, p);
+        net.minecraft.world.entity.player.Player stranger = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        stranger.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 20));
+        String sold = com.jrpetty.mcassistant.entity.Services.stores(a, stranger, "could I have 4 bread");
+        int breadHeld = 0, strangerBread = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.BREAD)) breadHeld += p.getInventory().getItem(i).getCount();
+        for (int i = 0; i < stranger.getInventory().getContainerSize(); i++) if (stranger.getInventory().getItem(i).is(Items.BREAD)) strangerBread += stranger.getInventory().getItem(i).getCount();
+        Kit.log("t37 the storekeeper: " + bread + " / " + wrong + " / " + lent + " / " + back + " / " + sold);
+        helper.assertTrue(breadHeld == 8, "a friend is given bread from the stores");
+        helper.assertTrue(hasPick && !p.getInventory().contains(new ItemStack(Items.IRON_PICKAXE)), "a tool lent, and brought back");
+        helper.assertTrue(strangerBread == 4 && com.jrpetty.mcassistant.entity.Market.coinsHeld(stranger) < 20, "a stranger buys");
+        helper.succeed();
+    }
+
+    /**
+     * The land: settlers pick the flattest ground about them; the village levels the ground of
+     * the town (a knoll cut down, a hollow filled); its houses grow up (a garden fence, walls of
+     * brick, a second storey); a fisher's water gets a jetty and a boat; and a dry field gets an
+     * irrigation channel.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t38_land")
+    public static void t38_land(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 19000, 12000, 56);
+        Kit.prepare(level, 19000, 12000, 56);
+        BlockPos heart = Kit.surface(level, 19000, 12000);
+        int ground = heart.getY() - 1;
+        // Rough ground to the south-west: pillars of earth every few blocks.
+        BlockPos rough = heart.offset(-30, 0, 30);
+        for (int dx = -12; dx <= 12; dx += 3) {
+            for (int dz = -12; dz <= 12; dz += 3) {
+                int h = Math.floorMod(dx * 7 + dz * 13, 5);
+                for (int k = 0; k < h; k++) level.setBlock(rough.offset(dx, k, dz), Blocks.DIRT.defaultBlockState(), 3);
+            }
+        }
+        int roughHere = com.jrpetty.mcassistant.entity.Land.roughness(level, rough);
+        BlockPos flat = com.jrpetty.mcassistant.entity.Land.flattest(level, rough, 32);
+        int roughThere = flat == null ? -1 : com.jrpetty.mcassistant.entity.Land.roughness(level, flat);
+        Kit.log("t38 founding: roughness " + roughHere + " where it stood, the flattest ground about " + flat + " at " + roughThere);
+        helper.assertTrue(flat != null && roughThere < roughHere && !flat.equals(rough), "settlers pick the flattest ground about them");
+        // A village, a knoll and a hollow.
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(a != null && b != null, "a village of two");
+        java.util.UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        BlockPos knoll = heart.offset(16, 0, 16), hollow = heart.offset(-16, 0, -16);
+        for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int k = 0; k < 3; k++)
+            level.setBlock(knoll.offset(dx, k, dz), Blocks.DIRT.defaultBlockState(), 3);
+        for (int dx = -2; dx <= 1; dx++) for (int dz = -2; dz <= 1; dz++) for (int k = 1; k <= 2; k++)
+            level.setBlock(hollow.offset(dx, -k, dz), Blocks.AIR.defaultBlockState(), 3);
+        int moved = 0;
+        for (int i = 0; i < 4; i++) moved += com.jrpetty.mcassistant.entity.Land.level(level, v, 8000, 2000);
+        int knollTop = Kit.surface(level, knoll.getX(), knoll.getZ()).getY() - 1;
+        int hollowTop = Kit.surface(level, hollow.getX(), hollow.getZ()).getY() - 1;
+        Kit.log("t38 levelling: " + moved + " blocks moved; the knoll's top now " + knollTop + ", the hollow's " + hollowTop + ", the square " + ground);
+        helper.assertTrue(knollTop == ground && hollowTop == ground, "the knoll cut down and the hollow filled to the square's level");
+        // A house grows up.
+        Villages.ageForTests(village, Villages.Age.IRON);
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 1);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        // What a house growing up is made of, paid for out of the stores: timber, stone, brick and wool.
+        net.minecraft.world.Container growing = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        ItemStack[] makings = {
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_LOG, 64), new ItemStack(Items.COBBLESTONE, 64),
+            new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.STONE_BRICKS, 64),
+            new ItemStack(Items.BRICKS, 64), new ItemStack(Items.BRICKS, 64), new ItemStack(Items.WHITE_WOOL, 32),
+            new ItemStack(Items.GLASS_PANE, 32), new ItemStack(Items.TORCH, 16) };
+        for (int i = 0; i < makings.length; i++) growing.setItem(i, makings[i]);
+        BlockPos houseAt = Kit.surface(level, heart.getX(), heart.getZ() - 26);
+        BuildGoal.stamp(level, "house", houseAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "house", houseAt, Direction.NORTH);
+        // The room the village has is its beds, counted (Villages.bedsMadeUp; the households do it every half a minute).
+        Villages.recountBeds(village);
+        Villages.bedsMadeUp(level, village);
+        int roomBefore = Villages.housing(village);
+        for (int i = 0; i < 80 && !com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt); i++) {
+            com.jrpetty.mcassistant.entity.Grow.work(level, v, 3000);
+        }
+        // The new bedrooms' beds are made and put in out of the stores, one a turn.
+        for (int i = 0; i < 12 && com.jrpetty.mcassistant.entity.Grow.furnish(level, v); i++) { }
+        Villages.recountBeds(village);
+        Villages.bedsMadeUp(level, village);
+        int bricks = 0, upstairs = 0, beds = 0, fences = 0;
+        for (BlockPos q : BlockPos.betweenClosed(houseAt.offset(-6, -1, -6), houseAt.offset(6, 12, 6))) {
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(q);
+            if (st.is(Blocks.BRICKS)) bricks++;
+            if (q.getY() == houseAt.getY() + 4 && !st.isAir()) upstairs++;
+            if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock) beds++;
+            if (st.is(Blocks.OAK_FENCE) || st.is(Blocks.OAK_FENCE_GATE)) fences++;
+        }
+        Kit.log("t38 the house: grown " + com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt) + ", " + bricks + " bricks, "
+            + upstairs + " blocks on the new floor, " + beds + " bed blocks, " + fences + " fence posts; room " + roomBefore
+            + " -> " + Villages.housing(village));
+        helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.grown(village, houseAt) && upstairs >= 10 && beds >= 10,
+            "the house gets its second storey, with more beds");
+        helper.assertTrue(bricks >= 15 && fences >= 10, "brick walls and a garden fence");
+        helper.assertTrue(Villages.housing(village) == roomBefore + 2, "more room in the village");
+        // The waterfront.
+        Kit.pond(level, heart.getX() - 26, heart.getZ(), 5);
+        var dock = com.jrpetty.mcassistant.entity.Waterfront.site(level, new BlockPos(heart.getX() - 26, ground, heart.getZ()), 8);
+        helper.assertTrue(dock != null, "somewhere to run a jetty out");
+        int laid = com.jrpetty.mcassistant.entity.Waterfront.build(level, dock);
+        boolean moored = com.jrpetty.mcassistant.entity.Waterfront.moor(level, dock);
+        boolean again = com.jrpetty.mcassistant.entity.Waterfront.moor(level, dock);
+        boolean lamp = level.getBlockState(dock.end().above(2)).is(Blocks.LANTERN);
+        Kit.log("t38 the jetty: " + dock + ", " + laid + " blocks laid, a boat moored " + moored + " (and a second " + again + "), lantern " + lamp);
+        helper.assertTrue(laid >= 3 && lamp && moored && !again, "a jetty with a lantern, and one boat tied up alongside");
+        // A dry field, irrigated.
+        BlockPos field = new BlockPos(heart.getX() + 26, ground, heart.getZ() - 26);
+        for (int dx = -4; dx <= 4; dx++) for (int dz = -4; dz <= 4; dz++) {
+            level.setBlock(field.offset(dx, 0, dz), Blocks.FARMLAND.defaultBlockState(), 3);
+            level.setBlock(field.offset(dx, 1, dz), Blocks.WHEAT.defaultBlockState(), 3);
+        }
+        int dug = com.jrpetty.mcassistant.entity.Waterfront.irrigate(level, village, field, 4, 100);
+        int more = com.jrpetty.mcassistant.entity.Waterfront.irrigate(level, village, field, 4, 100);
+        Kit.log("t38 irrigation: " + dug + " blocks of channel, then " + more + "; water at the middle " + level.getBlockState(field).is(Blocks.WATER));
+        helper.assertTrue(dug >= 5 && more == 0 && level.getBlockState(field).is(Blocks.WATER), "a channel of water through the field");
+        helper.succeed();
+    }
+
+    /**
+     * The elder's orders: the elder looks the village over and gives an order; a player it
+     * thinks well of can put another to it; the order shifts the village's make-up (one miner
+     * a day goes to the fields, the river or the hunt under "fill the larder"); it heads the quest board on the hall,
+     * and every folk can say what it is.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t39_orders")
+    public static void t39_orders(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 20000, 12000, 40);
+        Kit.prepare(level, 20000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 20000, 12000);
+        // Four miners: a hand to spare even once the order counts only the trades the village can have.
+        StationTask[] trades = { StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.FARM, StationTask.MINE,
+            StationTask.MINE, StationTask.MINE, StationTask.MINE, StationTask.WOOD, StationTask.SMELT };
+        List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (int i = 0; i < trades.length; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart.offset(i % 5 * 2, 0, i / 5 * 2), 0.0F);
+            helper.assertTrue(f != null, "folk " + i);
+            f.setJob(trades[i]);
+            f.ensurePersona();
+            folk.add(f);
+        }
+        java.util.UUID village = folk.get(0).ownerId();
+        Villages.Village v = Villages.get(village);
+        long founded = Math.max(0L, com.jrpetty.mcassistant.village.Chronicle.foundedOn(village));
+        long day = founded + 3;
+        level.setDayTime(day * 24000L + 1000L);
+        Villages.chooseElder(village, day);
+        com.jrpetty.mcassistant.entity.Orders.consider(level, village, day);
+        var first = com.jrpetty.mcassistant.entity.Orders.current(village);
+        String elderName = Villages.elderName(village);
+        Kit.log("t39 elder " + elderName + " ordered " + first);
+        helper.assertTrue(first != null && !elderName.isEmpty(), "the elder gives an order");
+        VillageFolkEntity elder = null;
+        for (VillageFolkEntity f : folk) if (f.getUUID().equals(Villages.elder(village))) elder = f;
+        helper.assertTrue(elder != null, "the elder is one of them");
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        elder.persona().feelFor(p.getUUID(), p.getName().getString(), 60);
+        String asked = com.jrpetty.mcassistant.entity.Orders.talk(elder, p, "you should order the village to fill the larder");
+        var now = com.jrpetty.mcassistant.entity.Orders.current(village);
+        double farms = Villages.share(village, StationTask.FARM), mines = Villages.share(village, StationTask.MINE);
+        double fish = Villages.share(village, StationTask.FISH), hunt = Villages.share(village, StationTask.HUNT);
+        Kit.log("t39 petition: " + asked + " -> " + now + "; farms " + farms + ", fish " + fish + ", hunt " + hunt + ", mines " + mines);
+        helper.assertTrue(now == com.jrpetty.mcassistant.entity.Orders.Order.LARDER, "a friend of the elder can put an order to it");
+        // A town of ten has a fisher and a hunter in its shape, and none yet: those are the food trades short
+        // (and the fields want more again under the order).
+        helper.assertTrue(fish < 0 && hunt < 0 && farms < 0.5 && mines > 0, "the order wants more food hands and can spare a miner");
+        var food = com.jrpetty.mcassistant.entity.Orders.moves(village, folk.get(4), day);
+        Kit.log("t39 the miner's choices, shortest first: " + food);
+        helper.assertTrue(food.size() >= 2 && food.stream().allMatch(t -> now.boost(t) > 0),
+            "the food trades in turn, so a fisher with no water near goes to the next: " + food);
+        VillageFolkEntity miner = folk.get(4);
+        StationTask moved = com.jrpetty.mcassistant.entity.Orders.move(village, miner, day);
+        // The move counts once the folk has really changed trade (VillageFolkEntity.changedTrade).
+        if (moved != null) com.jrpetty.mcassistant.entity.Orders.moved(village, day);
+        StationTask again = com.jrpetty.mcassistant.entity.Orders.move(village, folk.get(5), day);
+        StationTask farmer = com.jrpetty.mcassistant.entity.Orders.move(village, folk.get(0), day + 1);
+        Kit.log("t39 a miner moves to " + moved + "; a second the same day " + again + "; a farmer " + farmer);
+        helper.assertTrue(moved != null && now.boost(moved) > 0 && again == null && farmer == null,
+            "one spare hand a day goes where the order wants it, and nobody leaves the ordered trade");
+        // The board, and what folk say.
+        BlockPos hallAt = Kit.surface(level, heart.getX(), heart.getZ() - 22);
+        BuildGoal.stamp(level, "hall", hallAt, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "hall", hallAt, Direction.NORTH);
+        com.jrpetty.mcassistant.entity.Quests.paint(level, v);
+        var hall = com.jrpetty.mcassistant.village.Ledger.buildings(village).stream().filter(x -> x.structure().equals("hall")).findFirst().orElseThrow();
+        var spots = com.jrpetty.mcassistant.entity.Quests.spots(level, hall);
+        String head = !spots.isEmpty() && level.getBlockEntity(spots.get(0)) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign
+            ? sign.getFrontText().getMessage(0, false).getString() + " / " + sign.getFrontText().getMessage(1, false).getString() : "";
+        String said = com.jrpetty.mcassistant.entity.Orders.talk(folk.get(9) == elder ? folk.get(8) : folk.get(9), p, "");
+        Kit.log("t39 the board's head: " + head + "; a folk says: " + said);
+        helper.assertTrue(head.startsWith("ELDER'S ORDERS / Fill the"), "the order heads the board on the hall");
+        helper.assertTrue(said.contains("fill the larder"), "and folk know it");
+        helper.succeed();
+    }
+
+    /**
+     * The trades' kits, and real brewing and beekeeping. The brewer arrives with a brewing stand,
+     * blaze powder, nether wart and soul sand (once: the village does not get a second); the
+     * brewery standing without its stands (nothing in the village could make one), the brewer sets
+     * its own down where the drawing has one; it brews for real: three water bottles and a wart,
+     * twenty seconds, then a glistering melon (made of a melon slice and gold), twenty seconds, and
+     * three potions of healing come out to the stores. The beekeeper sets down the hive it brought,
+     * with its swarm, and makes a second from honeycomb and planks when the bees fill the first.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1400, batch = "t40_kits")
+    public static void t40_kits(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 22000, 12000, 40);
+        Kit.prepare(level, 22000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 22000, 12000);
+        VillageFolkEntity brewer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(brewer != null, "a village");
+        java.util.UUID village = brewer.ownerId();
+        Villages.Village v = Villages.get(village);
+        Villages.ageForTests(village, Villages.Age.NETHER);
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 3);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.GLASS, 12));
+        box.setItem(1, new ItemStack(Items.MELON_SLICE, 4));
+        box.setItem(2, new ItemStack(Items.GOLD_INGOT, 2));
+        box.setItem(3, new ItemStack(Items.HONEYCOMB, 3));
+        box.setItem(4, new ItemStack(Items.OAK_LOG, 4));
+        java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock =
+            what -> com.jrpetty.mcassistant.entity.Market.stock(level, village, what);
+
+        // The kit, once.
+        brewer.setJob(StationTask.BREW);
+        com.jrpetty.mcassistant.village.Ledger.addCoins(brewer.ownerId(), 200);   // bought from a pedlar, out of the treasury
+        boolean first = com.jrpetty.mcassistant.entity.Trades.kit(brewer);
+        boolean again = com.jrpetty.mcassistant.entity.Trades.kit(brewer);
+        int stands = brewer.countCarried(s -> s.is(Items.BREWING_STAND)), powder = brewer.countCarried(s -> s.is(Items.BLAZE_POWDER));
+        int wart = brewer.countCarried(s -> s.is(Items.NETHER_WART)), soul = brewer.countCarried(s -> s.is(Items.SOUL_SAND));
+        Kit.log("t40 the brewer's kit: " + first + " (again " + again + "): stand " + stands + ", blaze powder " + powder
+            + ", nether wart " + wart + ", soul sand " + soul);
+        helper.assertTrue(first && !again && stands == 1 && powder == 8 && wart == 4 && soul == 4,
+            "the first brewer brings a brewing stand, blaze powder, nether wart and soul sand; the village gets one kit");
+
+        // The brewery, put up without its stands.
+        BlockPos at = Kit.surface(level, heart.getX() + 14, heart.getZ());
+        BuildGoal.stampOnly(level, "brewery", at, Direction.NORTH, 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK), p -> p.part() != BuildGoal.Part.BREWING);
+        com.jrpetty.mcassistant.village.Ledger.built(village, "brewery", at, Direction.NORTH);
+        java.util.Set<BlockPos> planned = new java.util.HashSet<>();
+        for (BuildGoal.Placement p : BuildGoal.plan("brewery", at, Direction.NORTH, 13)) {
+            if (p.part() == BuildGoal.Part.BREWING) planned.add(p.pos());
+        }
+        boolean loaded = com.jrpetty.mcassistant.entity.Crafts.now(brewer, level, v);
+        BlockPos stand = null;
+        for (BlockPos q : BlockPos.betweenClosed(at.offset(-8, -2, -8), at.offset(8, 4, 8))) {
+            if (level.getBlockState(q).is(Blocks.BREWING_STAND)) { stand = q.immutable(); break; }
+        }
+        helper.assertTrue(loaded && stand != null && planned.contains(stand),
+            "the brewer sets its stand down in the brewery, where the drawing has one (" + stand + ")");
+        var bs = (net.minecraft.world.level.block.entity.BrewingStandBlockEntity) level.getBlockEntity(stand);
+        Kit.log("t40 the stand at " + stand.toShortString() + ": " + bs.getItem(0).getHoverName().getString() + " x3, "
+            + bs.getItem(3).getHoverName().getString() + ", fuel " + bs.getItem(4).getHoverName().getString());
+        helper.assertTrue(bs.getItem(3).is(Items.NETHER_WART) && bs.getItem(0).is(Items.POTION) && bs.getItem(4).is(Items.BLAZE_POWDER),
+            "three bottles of water and a wart in the stand, fired with blaze powder");
+        final BlockPos standAt = stand;
+        java.util.function.Function<net.minecraft.core.Holder<net.minecraft.world.item.alchemy.Potion>, Integer> potions = pot ->
+            stock.applyAsInt(s -> s.is(Items.POTION) && s.getOrDefault(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
+                net.minecraft.world.item.alchemy.PotionContents.EMPTY).is(pot));
+        // Twenty seconds a brew, then the bees: one sequence, a step at a time.
+        final long[] mark = { helper.getTick() };
+        final int[] phase = { 0 };
+        final VillageFolkEntity[] keeper = { null };
+        final int[] combAtStart = { 0 };
+        final BlockPos meadow = Kit.surface(level, heart.getX() - 16, heart.getZ() + 12);
+        java.util.function.IntSupplier hives = () -> {
+            int n = 0;
+            for (BlockPos q : BlockPos.betweenClosed(meadow.offset(-7, -3, -7), meadow.offset(7, 4, 7))) {
+                if (level.getBlockState(q).is(Blocks.BEEHIVE)) n++;
+            }
+            return n;
+        };
+        helper.onEachTick(() -> {
+            long now = helper.getTick();
+            if (phase[0] == 0) {
+                if (now - mark[0] < 430) return;
+                var st = (net.minecraft.world.level.block.entity.BrewingStandBlockEntity) level.getBlockEntity(standAt);
+                String brewed = st.getItem(0).getHoverName().getString();
+                boolean reagent = com.jrpetty.mcassistant.entity.Crafts.now(brewer, level, v);
+                Kit.log("t40 twenty seconds on: " + brewed + "; then " + reagent + ", in the stand " + st.getItem(3).getHoverName().getString()
+                    + "; gold left " + stock.applyAsInt(s -> s.is(Items.GOLD_INGOT)));
+                helper.assertTrue(st.getItem(3).is(Items.GLISTERING_MELON_SLICE) || potions.apply(net.minecraft.world.item.alchemy.Potions.HEALING) > 0,
+                    "the awkward potions get a glistering melon, made of a melon slice and gold");
+                phase[0] = 1;
+                mark[0] = now;
+                return;
+            }
+            if (phase[0] == 1) {
+                if (now - mark[0] < 430) return;
+                com.jrpetty.mcassistant.entity.Crafts.now(brewer, level, v);
+                int healing = potions.apply(net.minecraft.world.item.alchemy.Potions.HEALING);
+                Kit.log("t40 the brew out: potions of healing in the stores " + healing);
+                helper.assertTrue(healing >= 3, "three potions of healing come out of the stand to the stores");
+                // The beekeeper, on its meadow, with the hive it brought.
+                VillageFolkEntity k = VillageFolkSpawnerBlock.raise(level, meadow, 0.0F);
+                helper.assertTrue(k != null, "a beekeeper");
+                k.joinVillage(village, heart);
+                k.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(meadow, 6, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the meadow");
+                k.setJob(StationTask.BEEKEEP);
+                combAtStart[0] = stock.applyAsInt(s -> s.is(Items.HONEYCOMB));
+                boolean kit = com.jrpetty.mcassistant.entity.Trades.kit(k);
+                boolean swarm = k.countCarried(com.jrpetty.mcassistant.entity.Trades::isSwarm) == 1;
+                boolean placed = com.jrpetty.mcassistant.entity.Crafts.now(k, level, v);
+                Kit.log("t40 the beekeeper's kit " + kit + " (a swarm " + swarm + "), set down " + placed + ": " + hives.getAsInt() + " hive");
+                helper.assertTrue(kit && swarm && placed && hives.getAsInt() == 1, "the beekeeper brings a hive with a swarm, and sets it on its meadow");
+                keeper[0] = k;
+                phase[0] = 2;
+                mark[0] = now;
+                return;
+            }
+            if (phase[0] == 2) {
+                int bees = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Bee.class, new AABB(meadow).inflate(16), b -> b.isAlive()).size();
+                if (bees < 2 && now - mark[0] < 100) return;
+                phase[0] = 3;
+                // The beekeeper's own work may have made the second hive already: either way, it is
+                // made of the stores' comb.
+                boolean more = hives.getAsInt() >= 2 || com.jrpetty.mcassistant.entity.Crafts.now(keeper[0], level, v);
+                int n = hives.getAsInt();
+                Kit.log("t40 the beekeeper: swarm of " + bees + "; a second hive " + more + " (" + n + " hives), honeycomb "
+                    + combAtStart[0] + " -> " + stock.applyAsInt(s -> s.is(Items.HONEYCOMB)));
+                helper.assertTrue(bees >= 2, "the swarm comes out of the hive it brought");
+                helper.assertTrue(more && n == 2 && stock.applyAsInt(s -> s.is(Items.HONEYCOMB)) == combAtStart[0] - 3,
+                    "a second hive is made of three honeycomb and six planks, not out of thin air");
+                helper.succeed();
+            }
+        });
+    }
+
+    /**
+     * The links between the trades: a farmer plants the cane it brought by the field's water and
+     * cuts it; a rancher milks a cow, walks a wild sheep home on a lead, and — nothing else wild
+     * near — buys a drover's pair; a smelter digs sand off a pond's bed for glass; a guard drinks a
+     * healing potion when hurt; the cook bakes a cake with the milk and sends the buckets back.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "t41_supply")
+    public static void t41_supply(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(3000);
+        // Wide: the rancher looks for wild animals 48 blocks round its pen, and only on loaded ground.
+        Kit.hold(level, 24000, 12000, 80);
+        Kit.prepare(level, 24000, 12000, 80);
+        BlockPos heart = Kit.surface(level, 24000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        java.util.UUID village = farmer.ownerId();
+        Villages.Village v = Villages.get(village);
+        Villages.ageForTests(village, Villages.Age.IRON);
+        java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock =
+            what -> com.jrpetty.mcassistant.entity.Market.stock(level, village, what);
+
+        // Cane by the water.
+        BlockPos field = Kit.surface(level, heart.getX() - 14, heart.getZ() - 14);
+        level.setBlock(field.below(), Blocks.WATER.defaultBlockState(), 3);
+        farmer.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(field, 5, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the field");
+        farmer.setJob(StationTask.FARM);
+        com.jrpetty.mcassistant.village.Ledger.addCoins(village, 50);        // the cuttings are bought from a pedlar
+        boolean cuttings = com.jrpetty.mcassistant.entity.Trades.kit(farmer);
+        int cane = farmer.countCarried(s -> s.is(Items.SUGAR_CANE));
+        String planted = com.jrpetty.mcassistant.entity.Links.cane(farmer, level);
+        BlockPos caneAt = null;
+        for (BlockPos q : BlockPos.betweenClosed(field.offset(-2, -1, -2), field.offset(2, 1, 2))) {
+            if (level.getBlockState(q).is(Blocks.SUGAR_CANE)) { caneAt = q.immutable(); break; }
+        }
+        Kit.log("t41 the cuttings: bought " + cuttings + ", cane " + cane + ", planted " + planted + " at " + caneAt
+            + "; coins " + com.jrpetty.mcassistant.village.Ledger.coins(village));
+        helper.assertTrue(cuttings && cane == 3 && planted != null && caneAt != null,
+            "the first farmer brings cane cuttings and plants one on the water's edge (" + planted + ")");
+        level.setBlock(caneAt.above(), Blocks.SUGAR_CANE.defaultBlockState(), 2 | 16);
+        level.setBlock(caneAt.above(2), Blocks.SUGAR_CANE.defaultBlockState(), 2 | 16);
+        int before = farmer.countCarried(s -> s.is(Items.SUGAR_CANE));
+        String cut = com.jrpetty.mcassistant.entity.Links.cane(farmer, level);
+        int after = farmer.countCarried(s -> s.is(Items.SUGAR_CANE));
+        Kit.log("t41 the farmer: " + planted + "; then " + cut + " (" + before + " -> " + after + "), the bottom left "
+            + level.getBlockState(caneAt).is(Blocks.SUGAR_CANE));
+        helper.assertTrue(after == before + 2 && level.getBlockState(caneAt).is(Blocks.SUGAR_CANE),
+            "the cane is cut down to its bottom, which grows again");
+
+        // The rancher: a cow milked.
+        BlockPos pen = Kit.surface(level, heart.getX() + 14, heart.getZ() - 14);
+        VillageFolkEntity rancher = VillageFolkSpawnerBlock.raise(level, pen, 0.0F);
+        rancher.joinVillage(village, heart);
+        rancher.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(pen, 6, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the pen");
+        rancher.setJob(StationTask.RANCH);
+        boolean leads = com.jrpetty.mcassistant.entity.Trades.kit(rancher);
+        rancher.insertItem(new ItemStack(Items.BUCKET));
+        net.minecraft.world.entity.animal.Cow cow = EntityType.COW.create(level);
+        cow.moveTo(pen.getX() + 2.5, pen.getY(), pen.getZ() + 0.5, 0.0F, 0.0F);
+        level.addFreshEntity(cow);
+        // A wild sheep out in the country, and nothing else wild about.
+        for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new AABB(pen).inflate(64, 32, 64))) {
+            if (a != cow) a.discard();
+        }
+        net.minecraft.world.entity.animal.Sheep sheep = EntityType.SHEEP.create(level);
+        sheep.moveTo(pen.getX() + 0.5, pen.getY(), pen.getZ() + 26.5, 0.0F, 0.0F);
+        level.addFreshEntity(sheep);
+        final long from = helper.getTick();
+        final int[] step = { 0 };
+        final String[] milked = { null };
+        helper.onEachTick(() -> {
+            if (step[0] == 0) {
+                // The animals added this tick are seen from a later one.
+                if (level.getEntitiesOfClass(net.minecraft.world.entity.animal.Cow.class, new AABB(pen).inflate(8)).isEmpty()
+                        && helper.getTick() - from < 100) return;
+                milked[0] = com.jrpetty.mcassistant.entity.Links.milk(rancher, level);
+                helper.assertTrue(milked[0] != null && rancher.countCarried(s -> s.is(Items.MILK_BUCKET)) == 1,
+                    "the rancher milks the cow into its bucket");
+                boolean off = com.jrpetty.mcassistant.entity.Drover.consider(rancher, level);
+                Kit.log("t41 the rancher: leads " + leads + " (" + rancher.countCarried(s -> s.is(Items.LEAD)) + "), " + milked[0]
+                    + "; the pen has a cow and no pair, off for the sheep: " + off);
+                helper.assertTrue(leads && off && com.jrpetty.mcassistant.entity.Drover.busy(rancher),
+                    "with no pair in the pen the rancher takes a lead out for a wild sheep");
+                step[0] = 1;
+                return;
+            }
+            if (step[0] == 1) {
+                double dx = sheep.getX() - (pen.getX() + 0.5), dz = sheep.getZ() - (pen.getZ() + 0.5);
+                boolean home = !com.jrpetty.mcassistant.entity.Drover.busy(rancher) && dx * dx + dz * dz < 6.0 * 6.0;
+                if (!home && helper.getTick() - from < 1200) return;
+                Kit.log("t41 the sheep after " + (helper.getTick() - from) + " ticks: " + Math.round(Math.sqrt(dx * dx + dz * dz))
+                    + " blocks from the pen, leashed " + sheep.isLeashed() + ", the rancher's leads " + rancher.countCarried(s -> s.is(Items.LEAD))
+                    + ", " + rancher.debugLine());
+                helper.assertTrue(home && !sheep.isLeashed(), "the rancher walks the wild sheep home on the lead and lets it off in the pen");
+                helper.assertTrue(rancher.countCarried(s -> s.is(Items.LEAD)) == 2, "and keeps its lead");
+                // Nothing else wild near: the drover's pair.
+                com.jrpetty.mcassistant.village.Ledger.addCoins(rancher.ownerId(), 50);   // the drover is paid
+                for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                        new AABB(pen).inflate(64, 32, 64))) {
+                    if (a != cow && a != sheep) a.discard();
+                }
+                boolean bought = com.jrpetty.mcassistant.entity.Drover.consider(rancher, level);
+                step[0] = 2;
+                int sheepNow = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Sheep.class, new AABB(pen).inflate(10)).size();
+                Kit.log("t41 nothing wild left: the drover's pair " + bought + "; sheep by the pen " + sheepNow);
+                helper.assertTrue(bought, "with nothing wild for fifty blocks the village buys a drover's pair, once");
+                helper.assertTrue(!com.jrpetty.mcassistant.entity.Drover.consider(rancher, level), "and only once");
+                rest41(helper, level, village, v, heart, stock, rancher);
+            }
+        });
+    }
+
+    /** t41 after the pen: sand for glass, a guard's potion, and a cake. */
+    private static void rest41(GameTestHelper helper, ServerLevel level, java.util.UUID village, Villages.Village v, BlockPos heart,
+                               java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock, VillageFolkEntity rancher) {
+        // A pond with a sandy bed, six blocks out.
+        for (int dz = -1; dz <= 1; dz++) {
+            BlockPos top = Kit.surface(level, heart.getX() + 6, heart.getZ() + dz);
+            level.setBlock(top.below(2), Blocks.SAND.defaultBlockState(), 3);
+            level.setBlock(top.below(), Blocks.WATER.defaultBlockState(), 3);
+        }
+        VillageFolkEntity smelter = VillageFolkSpawnerBlock.raise(level, heart.offset(2, 0, -2), 0.0F);
+        smelter.joinVillage(village, heart);
+        smelter.setJob(StationTask.SMELT);
+        String dug = com.jrpetty.mcassistant.entity.Links.sand(smelter, level);
+        int sand = smelter.countCarried(s -> s.is(Items.SAND));
+        Kit.log("t41 the smelter: " + dug + ", carrying " + sand);
+        helper.assertTrue(dug != null && sand >= 1, "the smelter digs sand off the pond's bed for glass");
+
+        // A guard, hurt, with the brewer's healing.
+        VillageFolkEntity guard = VillageFolkSpawnerBlock.raise(level, heart.offset(-2, 0, 2), 0.0F);
+        guard.joinVillage(village, heart);
+        guard.setJob(StationTask.GUARD);
+        guard.insertItem(net.minecraft.world.item.alchemy.PotionContents.createItemStack(Items.POTION,
+            net.minecraft.world.item.alchemy.Potions.HEALING));
+        guard.setHealth(5.0F);
+        boolean drank = com.jrpetty.mcassistant.entity.Links.drinkIfHurt(guard);
+        Kit.log("t41 the guard: drank " + drank + ", health " + guard.getHealth() + ", bottles " + guard.countCarried(s -> s.is(Items.GLASS_BOTTLE)));
+        helper.assertTrue(drank && guard.getHealth() >= 9.0F && guard.countCarried(s -> s.is(Items.GLASS_BOTTLE)) == 1,
+            "a guard badly hurt drinks a healing potion");
+
+        // A cake from the stores, the buckets back.
+        BlockPos chest = Kit.surface(level, heart.getX() - 3, heart.getZ() - 3);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.MILK_BUCKET));
+        box.setItem(1, new ItemStack(Items.MILK_BUCKET));
+        box.setItem(2, new ItemStack(Items.MILK_BUCKET));
+        box.setItem(3, new ItemStack(Items.SUGAR_CANE, 2));
+        box.setItem(4, new ItemStack(Items.EGG, 1));
+        box.setItem(5, new ItemStack(Items.WHEAT, 15));
+        box.setItem(6, new ItemStack(Items.BREAD, 12));
+        // Whatever the café is shortest of first (baked potatoes from the founding stores, maybe), then the cake.
+        String baked = null;
+        for (int i = 0; i < 4 && stock.applyAsInt(s -> s.is(Items.CAKE)) == 0; i++) baked = com.jrpetty.mcassistant.entity.Cafe.cook(level, v);
+        int cakes = stock.applyAsInt(s -> s.is(Items.CAKE)), buckets = stock.applyAsInt(s -> s.is(Items.BUCKET));
+        Kit.log("t41 the cook: " + baked + "; cakes " + cakes + ", empty buckets back " + buckets);
+        helper.assertTrue(cakes == 1 && buckets == 3, "the cook bakes a cake with the rancher's milk and sends the buckets back");
+        helper.succeed();
+    }
+
+    /**
+     * Beds into a house that went up without them. A house got beds only on the day it was built,
+     * from whatever wool the stores held that day, and never after: the long game's village of
+     * forty-eight had four. Now one is made of the stores' wool and planks and carried in, one a
+     * turn, and a house that has all its beds is left alone.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t43_beds")
+    public static void t43_beds(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 26000, 12000, 40);
+        Kit.prepare(level, 26000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 26000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        java.util.UUID village = f.ownerId();
+        Villages.Village v = Villages.get(village);
+        BlockPos at = Kit.surface(level, heart.getX() + 20, heart.getZ());
+        BuildGoal.stamp(level, "house", at, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "house", at, Direction.NORTH);
+        java.util.function.IntSupplier beds = () -> {
+            int n = 0;
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-9, -3, -9), at.offset(9, 8, 9))) {
+                if (level.getBlockState(q).is(net.minecraft.tags.BlockTags.BEDS)) n++;
+            }
+            return n;
+        };
+        int drawn = beds.getAsInt();
+        // Built with no wool to hand: no beds.
+        for (BlockPos q : BlockPos.betweenClosed(at.offset(-9, -3, -9), at.offset(9, 8, 9))) {
+            if (level.getBlockState(q).is(net.minecraft.tags.BlockTags.BEDS)) level.setBlock(q, Blocks.AIR.defaultBlockState(), 2 | 16);
+        }
+        boolean none = com.jrpetty.mcassistant.entity.Grow.furnish(level, v);
+        // Wool for one bed in the stores.
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() - 3);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.BLUE_WOOL, 3));
+        box.setItem(1, new ItemStack(Items.OAK_PLANKS, 3));
+        boolean put = com.jrpetty.mcassistant.entity.Grow.furnish(level, v);
+        int after = beds.getAsInt();
+        boolean blue = false;
+        for (BlockPos q : BlockPos.betweenClosed(at.offset(-9, -3, -9), at.offset(9, 8, 9))) {
+            if (level.getBlockState(q).is(Blocks.BLUE_BED)) blue = true;
+        }
+        boolean more = com.jrpetty.mcassistant.entity.Grow.furnish(level, v);
+        Kit.log("t43 the house's drawing has " + drawn / 2 + " beds; with no wool a bed put in: " + none
+            + "; with three wool: " + put + " (" + after / 2 + " in, blue " + blue + ", wool left "
+            + box.getItem(0).getCount() + "); and with none left: " + more);
+        helper.assertTrue(drawn >= 2 && !none, "a house's beds wait for the wool");
+        helper.assertTrue(put && after == 2 && blue && box.getItem(0).isEmpty(),
+            "three wool and three planks from the stores make a bed, carried into the house that had none");
+        helper.assertTrue(!more, "and no more than the stores can make");
+        helper.succeed();
+    }
+
+    /**
+     * A farmer puts its field by the water nearest the village: a pond just past the town's
+     * edge one way, another twice as far the other, and the village marks out its farmland on the
+     * near one's side, the first field beside it.
+     * And monsters about a village with no wall don't ring the bell (it rang the first night
+     * in every new village, and in one never stopped: nobody worked for three days).
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t42_fields")
+    public static void t42_fields(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 26000, 12000, 120);
+        Kit.prepare(level, 26000, 12000, 120);
+        BlockPos heart = Kit.surface(level, 26000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        java.util.UUID village = farmer.ownerId();
+        int reach = Villages.townReach(village);
+        int nearX = heart.getX() + reach + 12, farZ = heart.getZ() - (reach + 45);
+        Kit.pond(level, nearX, heart.getZ(), 3);
+        Kit.pond(level, heart.getX(), farZ, 3);
+        BlockPos site = farmer.fieldSiteForTests();
+        int fromPond = site == null ? -1 : Math.max(Math.abs(site.getX() - nearX), Math.abs(site.getZ() - heart.getZ()));
+        int fromHeart = site == null ? -1 : Math.max(Math.abs(site.getX() - heart.getX()), Math.abs(site.getZ() - heart.getZ()));
+        Kit.log("t42 the town reaches " + reach + "; ponds at " + (reach + 12) + " east and " + (reach + 45)
+            + " north; the field goes at " + site + ", " + fromPond + " from the near pond, " + fromHeart + " from the heart");
+        helper.assertTrue(site != null && fromPond <= 18 && site.getX() - heart.getX() > reach,
+            "the farmland is marked out on the side of the nearest water, and the field goes beside it");
+        // Monsters about a village with no wall, at night: no bell.
+        level.setDayTime(14000);
+        for (int i = 0; i < 5; i++) {
+            net.minecraft.world.entity.monster.Zombie z = EntityType.ZOMBIE.create(level);
+            z.moveTo(heart.getX() + 3.5 + i, heart.getY(), heart.getZ() + 3.5, 0.0F, 0.0F);
+            z.setPersistenceRequired();
+            level.addFreshEntity(z);
+        }
+        final long from = helper.getTick();
+        helper.onEachTick(() -> {
+            if (helper.getTick() - from < 40) return;
+            int near = level.getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class, new AABB(heart).inflate(12)).size();
+            Villages.Village v = Villages.get(village);
+            com.jrpetty.mcassistant.entity.Raids.tick(level, v);
+            boolean bell = com.jrpetty.mcassistant.entity.Raids.underAlarm(village);
+            Kit.log("t42 " + near + " zombies about the open village; the bell " + (bell ? "rings" : "is quiet"));
+            for (net.minecraft.world.entity.monster.Zombie z : level.getEntitiesOfClass(net.minecraft.world.entity.monster.Zombie.class,
+                    new AABB(heart).inflate(16))) z.discard();
+            helper.assertTrue(near >= 4 && !bell, "monsters about a village with no wall don't ring a bell it hasn't got");
+            helper.succeed();
+        });
+    }
+
+    /** The rest of t35, once the child is grown: old age, the grave, the register, the tavern. */
+    private static void rest(GameTestHelper helper, ServerLevel level, java.util.UUID village, Villages.Village v, BlockPos heart,
+                             VillageFolkEntity mum, VillageFolkEntity dad, VillageFolkEntity child) {
+        // Old age.
+        level.setDayTime((level.getDayTime() / 24000L) * 24000L + 600L);
+        int lifespan = mum.lifespan();
+        mum.setAgeForTests(lifespan + 1);              // past its years
+        String name = mum.displayNameCap();
+        Kit.log("t35 " + name + " is " + mum.ageYears() + " (lifespan " + lifespan + "), old " + mum.isOld());
+        mum.growOldForTests();
+        java.util.List<com.jrpetty.mcassistant.village.Ledger.Grave> graves = com.jrpetty.mcassistant.village.Ledger.graves(village);
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        for (var e : com.jrpetty.mcassistant.village.Chronicle.of(village)) lines.add(e.text());
+        Kit.log("t35 after: alive " + mum.isAlive() + ", graves " + graves + ", last news " + lines.get(lines.size() - 1));
+        helper.assertTrue(!mum.isAlive(), "dies at the end of its years");
+        helper.assertTrue(graves.stream().anyMatch(g -> g.name().equals(name) && g.cause().equals("of old age")), "and is recorded among the dead");
+        helper.assertTrue(lines.stream().anyMatch(x -> x.contains("died peacefully in their sleep")), "peacefully, says the history");
+        // The graveyard.
+        BlockPos yard = Kit.surface(level, heart.getX(), heart.getZ() - 18);
+        BuildGoal.stamp(level, "graveyard", yard, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "graveyard", yard, Direction.NORTH);
+        // The masons' stone bricks in the stores: a headstone is chiselled out of them (two slabs, Masonry),
+        // never out of cobble.
+        BlockPos masons = Kit.surface(level, heart.getX() - 4, heart.getZ() - 4);
+        level.setBlock(masons, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, masons);
+        ((net.minecraft.world.Container) level.getBlockEntity(masons)).setItem(0, new ItemStack(Items.STONE_BRICKS, 3));
+        int stones = com.jrpetty.mcassistant.entity.Graves.tend(level, village);
+        int[] plot = com.jrpetty.mcassistant.entity.Graves.PLOTS[0];
+        BlockPos mound = yard.relative(Direction.EAST, plot[0]).relative(Direction.NORTH, plot[1]);
+        String carved = level.getBlockEntity(mound) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign
+            ? sign.getFrontText().getMessage(0, false).getString() : "";
+        Kit.log("t35 the graveyard: " + stones + " stones put up; the first says " + carved);
+        helper.assertTrue(stones == 1 && level.getBlockState(mound.relative(Direction.NORTH)).is(Blocks.CHISELED_STONE_BRICKS)
+            && carved.equals(name), "a headstone with the name on it");
+        // The register.
+        ItemStack book = com.jrpetty.mcassistant.entity.Chronicles.register(village, level.getDayTime() / 24000L);
+        StringBuilder text = new StringBuilder();
+        for (var page : book.get(net.minecraft.core.component.DataComponents.WRITTEN_BOOK_CONTENT).pages()) {
+            text.append(page.raw().getString()).append(" | ");
+        }
+        Kit.log("t35 the register: " + text);
+        helper.assertTrue(text.indexOf("In memory") >= 0 && text.indexOf("Families") >= 0 && text.indexOf(name + " †") >= 0,
+            "the register remembers the dead and the families");
+        // The tavern, and a round.
+        BlockPos inn = Kit.surface(level, heart.getX() + 18, heart.getZ() - 18);
+        BuildGoal.stamp(level, "tavern", inn, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "tavern", inn, Direction.NORTH);
+        var tav = com.jrpetty.mcassistant.entity.Tavern.of(village);
+        com.jrpetty.mcassistant.entity.Tavern.board(level, tav);
+        dad.teleportTo(inn.getX() + 1.5, inn.getY(), inn.getZ() + 0.5);
+        child.teleportTo(inn.getX() + 2.5, inn.getY(), inn.getZ() - 1.5);
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 10));
+        String said = com.jrpetty.mcassistant.entity.Tavern.round(level, v, p);
+        int left = com.jrpetty.mcassistant.entity.Market.coinsHeld(p);
+        Kit.log("t35 the tavern: " + said + " (" + left + " coins left)");
+        helper.assertTrue(said.startsWith("You bought a round for 2") && left == 8, "a round for the two in the tavern, a coin a head");
+        helper.succeed();
+    }
+
+    /**
+     * A village and the colony it founded: the road between them laid from one avenue to the
+     * other, a bridge where it crosses water, a signpost at each end; then a caravan that sets
+     * out with the mother's surplus bread, unloads it in the colony's stores, and comes home.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t31_roads")
+    public static void t31_roads(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        int ax = 12800, az = 12800, bx = 13020;
+        for (int x = ax - 48; x <= bx + 48; x += 48) {
+            Kit.hold(level, x, az, 40);
+            Kit.prepare(level, x, az, 40);
+        }
+        BlockPos a = Kit.surface(level, ax, az), b = Kit.surface(level, bx, az);
+        VillageFolkEntity m1 = VillageFolkSpawnerBlock.raise(level, a, 0.0F);
+        VillageFolkEntity m2 = VillageFolkSpawnerBlock.raise(level, a.east(), 0.0F);
+        VillageFolkEntity c1 = VillageFolkSpawnerBlock.raise(level, b, 0.0F);
+        helper.assertTrue(m1 != null && m2 != null && c1 != null, "a village of two and a colony of one");
+        Villages.Village mother = Villages.get(m1.ownerId()), colony = Villages.get(c1.ownerId());
+        helper.assertTrue(mother != null && colony != null && !mother.id().equals(colony.id()), "two villages");
+        com.jrpetty.mcassistant.village.Ledger.link(mother.id(), colony.id());
+        // The road is paid for out of the mother village's stores: planks for the bridge, fences
+        // for its rails and posts, lanterns, signs, and stone and earth to bank it up.
+        BlockPos roadStores = Kit.surface(level, ax + 3, az + 3);
+        level.setBlock(roadStores, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, roadStores);
+        net.minecraft.world.Container roadBox = (net.minecraft.world.Container) level.getBlockEntity(roadStores);
+        ItemStack[] roadMakings = {
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
+            new ItemStack(Items.OAK_LOG, 64), new ItemStack(Items.OAK_FENCE, 64), new ItemStack(Items.LANTERN, 16),
+            new ItemStack(Items.OAK_SIGN, 16), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
+            new ItemStack(Items.DIRT, 64), new ItemStack(Items.DIRT, 64), new ItemStack(Items.TORCH, 16) };
+        for (int i = 0; i < roadMakings.length; i++) roadBox.setItem(i, roadMakings[i]);
+        // A pond across the road's way.
+        int px = ax + 100;
+        for (int dx = -3; dx <= 3; dx++) for (int dz = -4; dz <= 4; dz++) {
+            BlockPos g = Kit.surface(level, px + dx, az + dz).below();
+            level.setBlock(g, Blocks.WATER.defaultBlockState(), 3);
+        }
+        int laid = com.jrpetty.mcassistant.entity.Roads.lay(level, mother, colony, 1000);
+        int[] state = com.jrpetty.mcassistant.village.Ledger.road(colony.id());
+        BlockPos mid = Kit.surface(level, ax + 60, az).below();
+        BlockPos deck = Kit.surface(level, px, az).below();
+        Kit.log("t31 the road: " + laid + " steps laid, done " + (state != null && state[2] == 1) + "; at the middle "
+            + level.getBlockState(mid) + "; over the pond " + level.getBlockState(deck)
+            + ", its rail " + level.getBlockState(deck.above().relative(Direction.SOUTH, 2)));
+        helper.assertTrue(state != null && state[2] == 1, "the road is finished");
+        helper.assertTrue(level.getBlockState(mid).is(Blocks.DIRT_PATH), "a worn road out in the country");
+        helper.assertTrue(level.getBlockState(deck).is(Blocks.SPRUCE_PLANKS)
+            && level.getBlockState(deck.above().relative(Direction.SOUTH, 2)).getBlock() instanceof net.minecraft.world.level.block.FenceBlock,
+            "a bridge with rails over the water");
+        java.util.List<String> posts = new java.util.ArrayList<>();
+        for (BlockPos at : new BlockPos[]{ a.offset(41, 0, 3), b.offset(-41, 0, -3) }) {
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-1, -3, -1), at.offset(1, 4, 1))) {
+                if (level.getBlockEntity(q) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                    posts.add(sign.getFrontText().getMessage(1, false).getString());
+                }
+            }
+        }
+        Kit.log("t31 the signposts say: " + posts);
+        helper.assertTrue(posts.contains(Villages.name(colony.id())) && posts.contains(Villages.name(mother.id())),
+            "a signpost at each end, to the other town");
+        // A caravan.
+        BlockPos chest = Kit.surface(level, ax + 4, az + 4);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.BREAD, 64));
+        box.setItem(1, new ItemStack(Items.BREAD, 64));
+        int before = com.jrpetty.mcassistant.entity.Market.stock(level, colony.id(), st -> st.is(Items.BREAD));
+        boolean out = com.jrpetty.mcassistant.entity.Caravans.setOut(level, mother, colony);
+        VillageFolkEntity carrier = m1.trip() != null ? m1 : m2;
+        int llamas = level.getEntitiesOfClass(net.minecraft.world.entity.animal.horse.Llama.class, around(a, 12),
+            l -> l.getTags().contains("mca_caravan")).size();
+        Kit.log("t31 the caravan set out: " + out + ", " + carrier.displayNameCap() + " carrying "
+            + carrier.countCarried(st -> st.is(Items.BREAD)) + " bread, " + llamas + " llama");
+        helper.assertTrue(out && carrier.trip() != null && carrier.countCarried(st -> st.is(Items.BREAD)) >= 32 && llamas == 0,
+            "a caravan sets out with the mother's spare bread on its own back (no llama out of nowhere)");
+        Kit.log("t31 before unloading: carrier " + carrier.stationTask() + " keeps " + carrier.depositReserve(new ItemStack(Items.BREAD, 64))
+            + " of a stack of bread; the colony's stores " + Villages.storeChests(level, colony.id()) + "; " + carrier.debugLine());
+        int carried = carrier.countCarried(st -> st.is(Items.BREAD));
+        // The colony buys what it sent for, at the family price: it has the coin.
+        com.jrpetty.mcassistant.village.Ledger.addCoins(colony.id(), 60);
+        int colonyCoins = com.jrpetty.mcassistant.village.Ledger.coins(colony.id());
+        int motherCoins = com.jrpetty.mcassistant.village.Ledger.coins(mother.id());
+        com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, carrier);
+        int after = com.jrpetty.mcassistant.entity.Market.stock(level, colony.id(), st -> st.is(Items.BREAD));
+        int left = carrier.countCarried(st -> st.is(Items.BREAD));
+        StringBuilder chests = new StringBuilder();
+        for (BlockPos c : Villages.storeChests(level, colony.id())) {
+            chests.append(c.toShortString()).append('{');
+            if (level.getBlockEntity(c) instanceof net.minecraft.world.Container box2) {
+                int used = 0, bread = 0;
+                for (int i = 0; i < box2.getContainerSize(); i++) {
+                    if (!box2.getItem(i).isEmpty()) used++;
+                    if (box2.getItem(i).is(Items.BREAD)) bread += box2.getItem(i).getCount();
+                }
+                chests.append(used).append(" slots used, bread ").append(bread);
+            }
+            chests.append("} ");
+        }
+        Kit.log("t31 at the colony: its bread " + before + " -> " + after + "; the carrier's " + carried + " -> " + left
+            + "; stores " + chests + "; homeward " + (carrier.trip() != null && carrier.trip().homeward()));
+        helper.assertTrue(left <= carried - 32 && carrier.trip() != null && carrier.trip().homeward(),
+            "the caravan unloads in the colony's stores and turns for home");
+        int colonyPaid = colonyCoins - com.jrpetty.mcassistant.village.Ledger.coins(colony.id());
+        com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, carrier);
+        int motherGot = com.jrpetty.mcassistant.village.Ledger.coins(mother.id()) - motherCoins;
+        Kit.log("t31 the goods were bought: the colony paid " + colonyPaid + ", the mother's treasury took " + motherGot);
+        helper.assertTrue(carrier.trip() == null, "and is home again");
+        helper.assertTrue(colonyPaid > 0 && motherGot >= colonyPaid, "the colony paid for the goods it sent for, and the coin came home");
+        helper.succeed();
+    }
+
+    // ===================================================== vanilla villagers
+
+    /** A villager appears the ordinary way: the join event should catch it. */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t05_takeover_join")
+    public static void t05_takeover_join(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        // [emerald] The old takeover is off by default now (two peoples, kept apart): on for this test, which keeps it working.
+        com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(true);
+        Kit.hold(level, 2900, 2900, 48);
+        BlockPos at = Kit.surface(level, 2900, 2900);
+        Villager v = EntityType.VILLAGER.create(level);
+        v.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        level.addFreshEntity(v);
+        helper.runAtTickTime(40, () -> {
+            int villagers = level.getEntitiesOfClass(Villager.class, around(at, 8)).size();
+            // (Sixteen: two seconds is long enough for it to be on its way to its ground.)
+            List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(at, 16));
+            Kit.log("t05 villagers left: " + villagers + ", folk: " + folk.size());
+            for (VillageFolkEntity far : level.getEntitiesOfClass(VillageFolkEntity.class, around(at, 64))) {
+                Kit.log("t05   a folk " + Math.round(Math.sqrt(far.blockPosition().distSqr(at))) + " away: " + far.debugLine());
+            }
+            helper.assertTrue(villagers == 0, "the villager should have been swapped out, " + villagers + " remain");
+            helper.assertTrue(folk.size() == 1, "one folk should stand where the villager was, found " + folk.size());
+            com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(null);   // [emerald]
+            helper.succeed();
+        });
+    }
+
+    /** A villager that got into the world WITHOUT the join event catching it
+     *  — the way a chunk load or world generation delivers them. The periodic
+     *  sweep is what must find it. */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "t06_takeover_sweep")
+    public static void t06_takeover_sweep(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        // [emerald] The old takeover is off by default now (two peoples, kept apart): on for this test, which keeps it working.
+        com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(true);
+        Kit.hold(level, 3000, 2900, 48);
+        BlockPos at = Kit.surface(level, 3000, 2900);
+        VillagerTakeover.suspended = true;
+        Villager v = EntityType.VILLAGER.create(level);
+        v.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0, 0);
+        v.setVillagerXp(20);            // one somebody has traded with — the old guard's blind spot
+        v.setCustomName(net.minecraft.network.chat.Component.literal("Bob the Trader"));
+        level.addFreshEntity(v);
+        helper.runAtTickTime(20, () -> {
+            helper.assertTrue(level.getEntitiesOfClass(Villager.class, around(at, 8)).size() == 1,
+                "test setup: the villager should still be there while the takeover is suspended");
+            VillagerTakeover.suspended = false;
+        });
+        helper.runAtTickTime(240, () -> {
+            // The converted folk is off to claim ground by now: look for it anywhere near.
+            int villagers = level.getEntitiesOfClass(Villager.class, around(at, 8)).size();
+            List<VillageFolkEntity> found = level.getEntitiesOfClass(VillageFolkEntity.class, around(at, 200));
+            int folk = found.size();
+            Kit.log("t06 after the sweep: villagers " + villagers + ", folk " + folk
+                + (found.isEmpty() ? "" : " — " + found.get(0).debugLine()));
+            helper.assertTrue(villagers == 0, "the sweep should have converted the villager, " + villagers + " remain");
+            helper.assertTrue(folk == 1, "one folk should have taken its place, found " + folk);
+            com.jrpetty.mcassistant.AssistantConfig.replaceVillagersForTests(null);   // [emerald]
+            helper.succeed();
+        });
+    }
+
+    // ========================================================== the village
+
+    /** THE test: twelve folk from nothing, on generous ground, for three whole
+     *  game days. Nobody touches them. Crops grow five times faster than in a
+     *  real game, so that a farm has a harvest inside the test — nothing else
+     *  is sped up. */
+    @GameTest(template = EMPTY, timeoutTicks = 74000, batch = "t10_village_of_twelve")
+    public static void t10_village_of_twelve(GameTestHelper helper) {
+        final ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(true, level.getServer());
+        level.getGameRules().getRule(GameRules.RULE_WEATHER_CYCLE).set(false, level.getServer());
+        level.getGameRules().getRule(GameRules.RULE_RANDOMTICKING).set(15, level.getServer());
+        level.setWeatherParameters(1000000, 0, false, false);
+        level.setDayTime(1000);
+
+        final int cx = 3500, cz = 3500;
+        Kit.hold(level, cx, cz, 140);
+        Kit.generousTerrain(level, cx, cz);
+        final BlockPos heart = Kit.surface(level, cx, cz);
+        for (int i = 0; i < 12; i++) {
+            VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+            helper.assertTrue(f != null, "raise() returned nobody for folk " + i);
+        }
+        Kit.log("t10 shape wanted for 12: " + java.util.Arrays.toString(VillageMath.shapeOf(12)));
+        final int[] dugFirst = { 0 };                                   // what the crew had dug by the first afternoon
+
+        final Kit.Expect ex = new Kit.Expect();
+        final long[] nextDash = {0};
+        final boolean[] done = new boolean[6];
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t >= nextDash[0]) {
+                Kit.dashboard(level, heart, "soak");
+                nextDash[0] = t < 1200 ? t + 300 : (t < 12000 ? t + 1200 : t + 2400);
+            }
+            Villages.Village v = Villages.nearest(level, heart, 600);
+            List<AssistantEntity> crew = v == null ? List.of() : Villages.folkOf(v.id());
+
+            if (!done[0] && t >= 1500) {
+                done[0] = true;
+                Kit.log("---- checkpoint 1500: trades and ground");
+                ex.that(v != null, "a village exists");
+                ex.that(crew.size() >= 12, "all twelve are still here (" + crew.size() + ")");
+                Map<StationTask, Integer> by = new EnumMap<>(StationTask.class);
+                int zoned = 0, indoor = 0;
+                for (AssistantEntity a : crew) {
+                    by.merge(a.stationTask(), 1, Integer::sum);
+                    if (a.workZone() != null) zoned++;
+                }
+                Kit.log("  trades: " + by);
+                ex.that(by.getOrDefault(StationTask.NONE, 0) == 0, "every folk has chosen a trade");
+                ex.that(by.getOrDefault(StationTask.FARM, 0) >= 3, "at least three farmers");
+                ex.that(by.getOrDefault(StationTask.WOOD, 0) >= 1, "at least one woodcutter");
+                ex.that(by.getOrDefault(StationTask.MINE, 0) >= 1, "at least one miner");
+                ex.that(zoned >= 9, "at least nine have claimed ground (" + zoned + ")");
+            }
+            if (!done[1] && t >= 4500) {
+                done[1] = true;
+                Kit.log("---- checkpoint 4500: past the checklist, actually working");
+                int ready = 0;
+                for (AssistantEntity a : crew) if (a.missingEssentials().isEmpty()) ready++;
+                ex.that(ready >= 9, "at least nine have nothing missing from their checklist (" + ready + ")");
+                var world = Kit.census(level, cx, cz, 90);
+                ex.that(world.get("farmland") > 0, "some ground has been tilled (" + world.get("farmland") + ")");
+            }
+            if (!done[2] && t >= 12000) {
+                done[2] = true;
+                Kit.log("---- checkpoint 12000: producing");
+                var chests = Kit.chestContents(level, cx, cz, 110);
+                // Cut and brought in — whether still logs in a chest, sawn into planks and sticks, or in a
+                // woodcutter's pack on its way: the builders draw the stores' logs as soon as they come,
+                // so the chests alone were empty at this moment in some runs and full in others.
+                int carried = 0;
+                for (AssistantEntity a : crew) carried += a.countCarried(st -> st.is(net.minecraft.tags.ItemTags.LOGS));
+                int timber = chests.getOrDefault("logs", 0) + chests.getOrDefault("planks", 0) + chests.getOrDefault("stick", 0) + carried;
+                ex.that(timber > 0, "logs have been cut and brought in: " + chests.getOrDefault("logs", 0) + " in chests, "
+                    + chests.getOrDefault("planks", 0) + " planks, " + chests.getOrDefault("stick", 0) + " sticks, " + carried + " carried");
+                var world = Kit.census(level, cx, cz, 90);
+                // Mined and banked — whether it is still lying in a chest or has already
+                // gone into a wall (the builders draw on it as soon as it arrives).
+                int stoneBanked = chests.getOrDefault("stone", 0) + world.getOrDefault("cobble", 0);
+                // What the miners have dug, counted off their own deeds — the founding
+                // stores hold cobblestone, so what is in the chests says nothing about it.
+                int dug = 0;
+                for (AssistantEntity a : crew) dug += a.deedCount(AssistantEntity.Deed.BLOCKS_MINED);
+                Kit.log("  stone in chests + built: " + stoneBanked + "; blocks dug by the crew: " + dug);
+                Kit.log("  " + minersReport(crew));
+                dugFirst[0] = dug;
+                ex.that(dug >= 20, "the miners have dug (" + dug + " blocks)");
+                ex.that(world.get("wheat") > 0 || chests.getOrDefault("wheat", 0) > 0,
+                    "wheat has been grown (" + world.get("wheat") + " standing, " + chests.getOrDefault("wheat", 0) + " stored)");
+                ex.that(crew.size() >= 12, "nobody has died yet (" + crew.size() + " of 12+)");
+            }
+            if (!done[3] && t >= 24000) {
+                done[3] = true;
+                Kit.log("---- checkpoint 24000: a full day");
+                ex.that(crew.size() >= 11, "at most one lost in a day (" + crew.size() + " of 12+)");
+                var chests = Kit.chestContents(level, cx, cz, 110);
+                var world = Kit.census(level, cx, cz, 90);
+                // The village keeps its goods in its stores at the heart, not in a chest a hand:
+                // nobody sets a chest of its own down any more.
+                int stored = 0;
+                for (int n : chests.values()) stored += n;
+                ex.that(stored > 0, "the stores at the heart are in use (" + world.get("chests") + " chests, " + stored + " items)");
+                ex.that(world.get("farmland") >= 20, "the fields are tilled (" + world.get("farmland") + ")");
+                Kit.log("  " + ex.summary());
+            }
+            if (!done[4] && t >= 48000) {
+                done[4] = true;
+                Kit.log("---- checkpoint 48000: two days");
+                var chests = Kit.chestContents(level, cx, cz, 110);
+                var worldNow = Kit.census(level, cx, cz, 90);
+                int stoneBanked = chests.getOrDefault("stone", 0) + worldNow.getOrDefault("cobble", 0);
+                int dug = 0;
+                for (AssistantEntity a : crew) dug += a.deedCount(AssistantEntity.Deed.BLOCKS_MINED);
+                Kit.log("  stone in chests + built: " + stoneBanked + "; blocks dug by the crew: " + dug);
+                Kit.log("  " + minersReport(crew));
+                // Still at it on the second day: more dug than by the first afternoon, and a fair
+                // pile in all (106 and 78 on two runs of the same build; the patches on this
+                // ground are shallow, and a hand moves on from a spent one).
+                ex.that(dug >= Math.max(60, dugFirst[0] + 5), "the miners keep digging (" + dug + " blocks, "
+                    + dugFirst[0] + " by the first afternoon)");
+                ex.that(crew.size() >= 11, "at most one lost in two days (" + crew.size() + ")");
+                Kit.log("  " + ex.summary());
+            }
+            if (!done[5] && t >= 72000) {
+                done[5] = true;
+                Kit.log("---- checkpoint 72000: three days");
+                ex.that(crew.size() >= 11, "at most one lost in three days (" + crew.size() + " of 12+)");
+                ex.that(v != null && !Villages.builtList(v.id()).isEmpty(),
+                    "the village has built something: " + (v == null ? "-" : Villages.builtList(v.id())));
+                Kit.log("  " + ex.summary());
+                if (ex.clean()) helper.succeed(); else helper.fail(ex.summary());
+            }
+        });
+    }
+
+    /** Each miner's own count, so a report says which mine is pulling its weight: what it has
+     *  dug, in how many runs, and how many of the last ones in a row came home empty. */
+    private static String minersReport(List<AssistantEntity> crew) {
+        StringBuilder sb = new StringBuilder("miners:");
+        for (AssistantEntity a : crew) {
+            if (a.stationTask() != StationTask.MINE) continue;
+            sb.append(' ').append(a.displayNameCap()).append(' ')
+                .append(a.deedCount(AssistantEntity.Deed.BLOCKS_MINED)).append(" dug in ")
+                .append(a.mineRuns).append(" runs (").append(a.barrenMineRuns).append(" empty);");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Fast time: the speed asked for is the game's tick rate, steps walk 1, 2, 4 … max and back,
+     * and normal is normal again. All within one tick, so nothing else in the batch notices.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 20, batch = "t44_time")
+    public static void t44_time(GameTestHelper helper) {
+        net.minecraft.server.MinecraftServer server = helper.getLevel().getServer();
+        try {
+            com.jrpetty.mcassistant.TimeSpeed.set(server, 16, null);
+            helper.assertTrue(Math.abs(server.tickRateManager().tickrate() - 320.0F) < 0.5F,
+                "16x is 320 ticks a second (" + server.tickRateManager().tickrate() + ")");
+            com.jrpetty.mcassistant.TimeSpeed.step(server, 1, null);
+            helper.assertTrue(com.jrpetty.mcassistant.TimeSpeed.factor(server) == 32, "a step faster is 32x");
+            com.jrpetty.mcassistant.TimeSpeed.set(server, 12, null);
+            com.jrpetty.mcassistant.TimeSpeed.step(server, -1, null);
+            helper.assertTrue(com.jrpetty.mcassistant.TimeSpeed.factor(server) == 8, "a step slower from 12x is 8x");
+            com.jrpetty.mcassistant.TimeSpeed.set(server, com.jrpetty.mcassistant.TimeSpeed.MAX, null);
+            helper.assertTrue(server.tickRateManager().tickrate() >= 9999.0F, "max is vanilla's ceiling");
+            com.jrpetty.mcassistant.TimeSpeed.step(server, 0, null);
+            helper.assertTrue(com.jrpetty.mcassistant.TimeSpeed.factor(server) == 1, "normal is normal");
+        } finally {
+            com.jrpetty.mcassistant.TimeSpeed.set(server, 1, null);
+        }
+        helper.succeed();
+    }
+
+    /**
+     * The Village Storehouse: twenty-seven units laid in a cube join into one store of 729
+     * slots, its goods kept at the door; a unit taken out parts it and the goods wait in the
+     * door; put back, it joins again with them; the door taken out carries them away. And a
+     * village with one keeps its goods there: the stores are the storehouse first, and its
+     * folk need no chest of their own.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t45_storehouse")
+    public static void t45_storehouse(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.log("t45 block drops: " + level.getGameRules().getBoolean(GameRules.RULE_DOBLOCKDROPS));
+        level.getGameRules().getRule(GameRules.RULE_DOBLOCKDROPS).set(true, level.getServer());
+        level.setDayTime(6000);
+        Kit.hold(level, 27000, 12000, 40);
+        Kit.prepare(level, 27000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 27000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        java.util.UUID village = f.ownerId();
+        BlockPos origin = Kit.surface(level, heart.getX() + 9, heart.getZ() + 9);
+        for (BlockPos p : BlockPos.betweenClosed(origin.offset(-1, 0, -1), origin.offset(3, 4, 3))) {
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
+        }
+        net.minecraft.world.level.block.state.BlockState unit = com.jrpetty.mcassistant.block.StorehouseBlock.loose();
+        com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(Direction.SOUTH);
+        try {
+            int n = 0;
+            for (int y = 0; y < 3; y++) for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++) {
+                if (++n == 27) continue;
+                level.setBlock(origin.offset(x, y, z), unit, 3);
+            }
+            helper.assertFalse(com.jrpetty.mcassistant.block.StorehouseBlock.isFormed(level.getBlockState(origin)),
+                "twenty-six units are only units");
+            level.setBlock(origin.offset(2, 2, 2), unit, 3);
+        } finally {
+            com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(null);
+        }
+        BlockPos door = origin.offset(com.jrpetty.mcassistant.block.StorehouseBlock.doorOffset(Direction.SOUTH));
+        helper.assertTrue(com.jrpetty.mcassistant.block.StorehouseBlock.isDoor(level.getBlockState(door)),
+            "the twenty-seventh joins them, the door at the front: " + level.getBlockState(door));
+        helper.assertTrue(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity s0 && s0.isStore(),
+            "the goods live at the door");
+        com.jrpetty.mcassistant.block.StorehouseBlockEntity store = (com.jrpetty.mcassistant.block.StorehouseBlockEntity) level.getBlockEntity(door);
+        helper.assertTrue(store.getContainerSize() == 729, "as much as twenty-seven chests");
+        ItemStack left = store.insert(new ItemStack(Items.COBBLESTONE, 64 * 40));
+        helper.assertTrue(left.isEmpty() && store.used() == 40, "forty stacks of stone go in (" + store.used() + ")");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Storehouses.stands(village), "the village knows its storehouse");
+        helper.assertTrue(!Villages.storeChests(level, village).isEmpty() && Villages.storeChests(level, village).get(0).equals(door),
+            "the stores are the storehouse first: " + Villages.storeChests(level, village));
+        helper.assertTrue(f.usesVillageStores(), "its folk keep their goods in the village's stores");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.JobSpec.missing(f).stream().noneMatch(g -> g.contains("chest")),
+            "and want no chest of their own: " + com.jrpetty.mcassistant.entity.JobSpec.missing(f));
+
+        // A unit taken out: the store parts, the goods wait in the door unit.
+        BlockPos corner = origin.offset(2, 2, 2);
+        level.setBlock(corner, Blocks.AIR.defaultBlockState(), 3);
+        helper.assertFalse(com.jrpetty.mcassistant.block.StorehouseBlock.isFormed(level.getBlockState(door)), "one gone, it comes apart");
+        helper.assertTrue(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity w && w.used() == 40,
+            "the goods wait in the door unit");
+        helper.assertFalse(com.jrpetty.mcassistant.entity.Storehouses.stands(village), "no storehouse while it is apart");
+        // Put back: joined again, the goods with it.
+        com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(Direction.SOUTH);
+        try {
+            level.setBlock(corner, unit, 3);
+        } finally {
+            com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(null);
+        }
+        helper.assertTrue(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity again
+            && again.isStore() && again.used() == 40, "whole again, with its goods");
+        // No bottom to it: eight hundred stacks more (past its first 729 slots) and every one goes in;
+        // it grows a few rows at a time and always keeps empty rows in hand.
+        com.jrpetty.mcassistant.block.StorehouseBlockEntity big = (com.jrpetty.mcassistant.block.StorehouseBlockEntity) level.getBlockEntity(door);
+        int refused = 0;
+        for (int i = 0; i < 800; i++) {
+            refused += big.insert(new ItemStack(i % 2 == 0 ? Items.OAK_LOG : Items.DIRT, 64)).getCount();
+        }
+        int empty = 0;
+        for (int i = 0; i < big.getContainerSize(); i++) if (big.getItem(i).isEmpty()) empty++;
+        Kit.log("t45 the storehouse grown: " + big.used() + " stacks in " + big.getContainerSize() + " slots (" + big.rows()
+            + " rows), " + empty + " empty, " + refused + " refused");
+        helper.assertTrue(refused == 0 && big.used() == 840 && big.rows() > 81 && empty >= 18,
+            "the storehouse takes all 840 stacks and keeps room to spare: " + big.used() + " in " + big.getContainerSize());
+        // Saved and loaded, every stack comes back, the last slots too.
+        net.minecraft.nbt.CompoundTag saved = big.saveWithoutMetadata(level.registryAccess());
+        com.jrpetty.mcassistant.block.StorehouseBlockEntity copy =
+            new com.jrpetty.mcassistant.block.StorehouseBlockEntity(door, level.getBlockState(door));
+        copy.loadWithComponents(saved, level.registryAccess());
+        helper.assertTrue(copy.used() == 840 && copy.getContainerSize() >= 840,
+            "a grown storehouse saves and loads whole: " + copy.used() + " stacks in " + copy.getContainerSize());
+
+        // The door taken out: the unit dropped carries the goods. (Once the ground's entities are
+        // live: a drop made in the tick the chunks were first held is there, but not yet seen.)
+        final boolean[] broken = { false };
+        helper.onEachTick(() -> {
+            if (broken[0] || !level.isPositionEntityTicking(door)) return;
+            broken[0] = true;
+            level.destroyBlock(door, false);
+            boolean carried = false;
+            StringBuilder seen = new StringBuilder();
+            for (net.minecraft.world.entity.item.ItemEntity drop : level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class,
+                    new AABB(door).inflate(4))) {
+                int n = com.jrpetty.mcassistant.block.StorehouseBlockEntity.stacksCarried(drop.getItem());
+                seen.append(drop.getItem()).append(" carrying ").append(n).append("; ");
+                if (drop.getItem().is(McAssistantMod.STOREHOUSE_ITEM.get()) && n >= 840) carried = true;
+            }
+            Kit.log("t45 the door broken at tick " + helper.getTick() + ": " + level.getBlockState(door) + ", dropped " + seen);
+            helper.assertTrue(carried, "the door unit carries all 840 stacks away: " + seen);
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Clearing out an old chest: with the storehouse standing, a hand walks to an old village
+     * chest, empties it, takes the chest up, and carries the lot into the storehouse.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "t46_retire")
+    public static void t46_retire(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 28000, 12000, 40);
+        Kit.prepare(level, 28000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 28000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        java.util.UUID village = f.ownerId();
+        BlockPos origin = Kit.surface(level, heart.getX() - 10, heart.getZ() + 6);
+        for (BlockPos p : BlockPos.betweenClosed(origin.offset(-1, 0, -1), origin.offset(3, 4, 3))) {
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
+        }
+        BlockPos door = com.jrpetty.mcassistant.block.StorehouseBlock.form(level, origin, Direction.EAST);
+        BlockPos old = Kit.surface(level, heart.getX() + 7, heart.getZ() - 5);
+        level.setBlock(old, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, old);
+        // (Something no trade uses: logs were sawn for a sign on the way and came up one short.)
+        if (level.getBlockEntity(old) instanceof net.minecraft.world.Container c) c.setItem(0, new ItemStack(Items.AMETHYST_SHARD, 12));
+        // (The founding chest at the heart is an old chest too, once there is a storehouse.)
+        BlockPos next = com.jrpetty.mcassistant.entity.Retiring.next(f, level, village);
+        helper.assertTrue(next != null && (next.equals(old) || next.equals(heart)), "an old chest to clear: " + next);
+        com.jrpetty.mcassistant.entity.Retiring.release(next);
+        final boolean[] sent = { false };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            // Once it has taken up its trade (which clears its queue), send it to the old chest.
+            if (!sent[0]) {
+                if (t < 60) return;
+                sent[0] = true;
+                f.clearQueue();
+                f.enqueue(Job.retire(old));
+                f.enqueue(Job.depositAt(door));
+            }
+            if (t % 200 == 0) {
+                StringBuilder inStore = new StringBuilder();
+                if (level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity s0) {
+                    for (int i = 0; i < s0.getContainerSize(); i++) if (!s0.getItem(i).isEmpty()) inStore.append(s0.getItem(i)).append(' ');
+                } else {
+                    inStore.append("no store: ").append(level.getBlockState(door));
+                }
+                Kit.log("t46 @" + t + " old chest " + level.getBlockState(old) + ", storehouse " + inStore + " — " + f.debugLine());
+            }
+            if (!level.getBlockState(old).isAir()) return;
+            if (!(level.getBlockEntity(door) instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity store)) return;
+            int logs = 0, chests = 0;
+            for (int i = 0; i < store.getContainerSize(); i++) {
+                ItemStack s = store.getItem(i);
+                if (s.is(Items.AMETHYST_SHARD)) logs += s.getCount();
+                if (s.is(Items.CHEST)) chests += s.getCount();
+            }
+            if (logs >= 12 && chests >= 1) helper.succeed();
+        });
+    }
+
+    /**
+     * The Village Board: a new village puts its board up on its square — fifty panels, ten
+     * wide and five high, facing the heart — and it says what the village is doing, how it is
+     * getting on and what it is working towards.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "t47_board")
+    public static void t47_board(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 29000, 12000, 40);
+        Kit.prepare(level, 29000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 29000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        java.util.UUID village = f.ownerId();
+        BlockPos anchor = com.jrpetty.mcassistant.entity.VillageBoards.boardOf(village);
+        helper.assertTrue(anchor != null, "the founders put up their board");
+        Direction facing = level.getBlockState(anchor).getValue(com.jrpetty.mcassistant.block.VillageBoardBlock.FACING);
+        int panels = 0;
+        for (int c = 0; c < com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE; c++) {
+            for (int r = 0; r < com.jrpetty.mcassistant.block.VillageBoardBlock.HIGH; r++) {
+                if (level.getBlockState(com.jrpetty.mcassistant.block.VillageBoardBlock.cell(anchor, facing, c, r)).getBlock()
+                        instanceof com.jrpetty.mcassistant.block.VillageBoardBlock) panels++;
+            }
+        }
+        BlockPos middle = com.jrpetty.mcassistant.block.VillageBoardBlock.cell(anchor, facing, 5, 0);
+        boolean facesIn = middle.relative(facing, 4).distSqr(heart) < middle.relative(facing.getOpposite(), 4).distSqr(heart);
+        Kit.log("t47 the board at " + anchor.toShortString() + " facing " + facing + ", " + panels + " panels, faces the heart " + facesIn);
+        helper.assertTrue(panels == 50, "fifty panels, ten by five: " + panels);
+        helper.assertTrue(facesIn, "it faces into the square");
+        helper.runAfterDelay(120, () -> {
+            if (!(level.getBlockEntity(anchor) instanceof com.jrpetty.mcassistant.block.VillageBoardBlockEntity board)) {
+                helper.fail("the writing lives at the bottom-left panel");
+                return;
+            }
+            java.util.List<String> lines = board.lines();
+            Kit.log("t47 the board says: " + String.join(" / ", lines));
+            String name = Villages.name(village);
+            helper.assertTrue(lines.contains("TH|" + name), "its name at the top: " + name);
+            helper.assertTrue(lines.contains("LH|What we're doing") && lines.contains("RH|How we're doing")
+                && lines.contains("FH|What we're working towards"), "what it is doing, how it is doing, what it is working towards");
+            helper.assertTrue(lines.stream().anyMatch(l -> l.contains("Next to build") || l.contains("Building ")), "what it is building");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * A level in every trade, and pay by trade: a farmer's experience stays with farming when it
+     * is moved to the furnaces, where it starts again; a smith is paid more than a farmer, and a
+     * good day's work earns a little more; and its nature makes it quicker or slower at its work.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t48_levels_and_pay")
+    public static void t48_levels_and_pay(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 30000, 12000, 24);
+        Kit.prepare(level, 30000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 30000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        f.setJob(StationTask.FARM);
+        f.awardXp(6000);
+        int farming = f.veteranLevel();
+        f.setJob(StationTask.SMELT);
+        int smelting = f.veteranLevel();
+        f.awardXp(200);
+        Kit.log("t48 levels: farming " + farming + ", smelting on starting " + smelting + ", now " + f.tradeLevels());
+        helper.assertTrue(farming >= 10, "a farmer's level from its farming: " + farming);
+        helper.assertTrue(smelting == 0, "new to the furnaces: level nought there, not " + smelting);
+        helper.assertTrue(f.tradeLevel(StationTask.FARM) == farming, "and it is still a farmer of level " + farming);
+        f.setJob(StationTask.FARM);
+        helper.assertTrue(f.veteranLevel() == farming, "back at farming, its old level");
+        // Pay by trade.
+        f.setJob(StationTask.FARM);
+        int farmerWage = com.jrpetty.mcassistant.entity.Wealth.wage(f);
+        f.setJob(StationTask.SMITH);
+        int smithWage = com.jrpetty.mcassistant.entity.Wealth.wage(f);
+        f.note(AssistantEntity.Deed.THINGS_MADE, 50);
+        int goodDay = com.jrpetty.mcassistant.entity.Wealth.wage(f);
+        Kit.log("t48 wages: farmer " + farmerWage + ", smith " + smithWage + ", smith after a good day " + goodDay
+            + "; worth: " + com.jrpetty.mcassistant.entity.Wealth.line(f) + "; skill: " + com.jrpetty.mcassistant.entity.Skill.line(f));
+        // [econ-wages] Pay by worth (JobWorth): for the same years at it, a smith's day is worth more than a field
+        // hand's (harder work, much more skill), and the town's posted rates say so. This folk is a seasoned farmer
+        // and a smith new to the forge, whose own day is worth about the same in a hamlet: that is its hand, not its trade.
+        int farmRate = com.jrpetty.mcassistant.entity.Wealth.tradeWage(StationTask.FARM, f.ownerId());
+        int smithRate = com.jrpetty.mcassistant.entity.Wealth.tradeWage(StationTask.SMITH, f.ownerId());
+        Kit.log("t48 the posted rates: a farmer " + farmRate + ", a smith " + smithRate + "; the smith's day: "
+            + com.jrpetty.mcassistant.entity.Wealth.breakdown(f));
+        helper.assertTrue(smithRate > farmRate, "a smith earns more than a farmer: " + smithRate + " against " + farmRate);
+        helper.assertTrue(goodDay == smithWage + 2, "a hard day's work earns two more: " + goodDay);
+        com.jrpetty.mcassistant.village.Ledger.addCoins(f.ownerId(), 100);      // the village has sold its surplus
+        int paid = com.jrpetty.mcassistant.entity.Market.payWages(level, Villages.get(f.ownerId()));
+        helper.assertTrue(paid >= goodDay && f.purse() >= goodDay, "paid from the treasury: " + paid + ", purse " + f.purse());
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Wealth.wage(f) == smithWage, "and that work is paid for now");
+        int skill = com.jrpetty.mcassistant.entity.Skill.percent(f);
+        helper.assertTrue(Math.abs(skill) <= com.jrpetty.mcassistant.entity.Skill.MOST, "its nature counts for at most a fifth: " + skill);
+        helper.succeed();
+    }
+
+    /**
+     * Everything a player can say to a folk gets a sensible answer: every topic on the talk
+     * screen, plain words for the new ones (the way somewhere, a kind word, money, what it is
+     * good at), a walk to the village board, and its card — who it is, at a glance.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t49_every_word")
+    public static void t49_every_word(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 31000, 12000, 32);
+        Kit.prepare(level, 31000, 12000, 32);
+        level.setDayTime(1000);
+        BlockPos heart = Kit.surface(level, 31000, 12000);
+        VillageFolkEntity folk = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(folk != null, "a folk to talk to");
+        helper.runAtTickTime(20, () -> {
+            folk.ensurePersona();
+            folk.setJob(StationTask.FARM);
+            net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            StringBuilder heard = new StringBuilder();
+            java.util.Set<com.jrpetty.mcassistant.entity.TalkTopic> needWords = java.util.EnumSet.of(
+                com.jrpetty.mcassistant.entity.TalkTopic.SAY, com.jrpetty.mcassistant.entity.TalkTopic.PROPOSE,
+                com.jrpetty.mcassistant.entity.TalkTopic.PEACE, com.jrpetty.mcassistant.entity.TalkTopic.STIR,
+                com.jrpetty.mcassistant.entity.TalkTopic.RETRADE, com.jrpetty.mcassistant.entity.TalkTopic.BUILD,
+                com.jrpetty.mcassistant.entity.TalkTopic.STORES, com.jrpetty.mcassistant.entity.TalkTopic.PACK,
+                com.jrpetty.mcassistant.entity.TalkTopic.GUIDE, com.jrpetty.mcassistant.entity.TalkTopic.FOLLOW,
+                com.jrpetty.mcassistant.entity.TalkTopic.HIRE, com.jrpetty.mcassistant.entity.TalkTopic.BYE);
+            for (com.jrpetty.mcassistant.entity.TalkTopic t : com.jrpetty.mcassistant.entity.TalkTopic.values()) {
+                if (needWords.contains(t)) continue;
+                String said = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, t, "");
+                helper.assertTrue(said != null, "an answer to " + t);
+                boolean core = t == com.jrpetty.mcassistant.entity.TalkTopic.HOW || t == com.jrpetty.mcassistant.entity.TalkTopic.DOING
+                    || t == com.jrpetty.mcassistant.entity.TalkTopic.PRAISE || t == com.jrpetty.mcassistant.entity.TalkTopic.WORTH
+                    || t == com.jrpetty.mcassistant.entity.TalkTopic.KNACK || t == com.jrpetty.mcassistant.entity.TalkTopic.ABOUT;
+                helper.assertTrue(!core || !said.isBlank(), "a real answer to " + t);
+                heard.append(t).append(": ").append(said.length() > 90 ? said.substring(0, 90) + "…" : said).append(" | ");
+            }
+            Kit.log("t49 every topic: " + heard);
+            // Plain words for the new topics.
+            String[][] words = {
+                { "Could you show me the way to the board?", "GUIDE" }, { "well done, great job", "PRAISE" },
+                { "how much do you earn?", "WORTH" }, { "what are you good at?", "KNACK" } };
+            for (String[] w : words) {
+                com.jrpetty.mcassistant.entity.TalkTopic got = com.jrpetty.mcassistant.entity.FolkTalk.understand(w[0]);
+                helper.assertTrue(got.name().equals(w[1]), "\"" + w[0] + "\" means " + w[1] + ", not " + got);
+            }
+            // The way to the board.
+            BlockPos lectern = com.jrpetty.mcassistant.entity.VillageBoards.lectern(folk.ownerId());
+            String way = com.jrpetty.mcassistant.entity.FolkTalk.answer(folk, you, com.jrpetty.mcassistant.entity.TalkTopic.GUIDE, "board");
+            Kit.log("t49 the way to the board: " + way + " (to " + folk.guideTo() + ", board at " + lectern + ")");
+            helper.assertTrue(lectern != null && lectern.equals(folk.guideTo()), "it sets off for the board: " + way);
+            String card = com.jrpetty.mcassistant.entity.FolkTalk.card(folk);
+            String now = com.jrpetty.mcassistant.entity.FolkTalk.nowDoing(folk);
+            Kit.log("t49 its card: " + card.replace('\n', ' ') + " — now: " + now);
+            helper.assertTrue(card.contains("Trade|") && card.contains("Worth|") && card.contains("At its work|"), "its card says who it is");
+            helper.assertTrue(!now.isBlank(), "and what it is doing");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * The morning assembly: the bell, everybody walks to the board and takes a place in the
+     * rows before it — not in a heap — the elder says what the day holds, and they go to work.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "t50_assembly")
+    public static void t50_assembly(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 32000, 12000, 40);
+        Kit.prepare(level, 32000, 12000, 40);
+        level.setDayTime(5000);
+        BlockPos heart = Kit.surface(level, 32000, 12000);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null && stood >= 4, "a village of a few: " + stood);
+        int[] best = { 0, 0, 0 };   // most in their places, furthest line, furthest phase
+        java.util.List<String> trail = new java.util.ArrayList<>();
+        helper.runAtTickTime(20, () -> helper.assertTrue(com.jrpetty.mcassistant.entity.Assemblies.startNow(level, v,
+            com.jrpetty.mcassistant.entity.Assemblies.Kind.MORNING), "the bell is rung"));
+        for (int t = 40; t <= 1500; t += 20) {
+            final int at = t;
+            helper.runAtTickTime(t, () -> {
+                int[] p = com.jrpetty.mcassistant.entity.Assemblies.progress(v.id());
+                if (p == null) {
+                    if (best[2] < 9) {
+                        best[2] = 9;
+                        trail.add(at + ": over");
+                    }
+                    return;
+                }
+                best[0] = Math.max(best[0], p[1]);
+                best[1] = Math.max(best[1], p[3]);
+                best[2] = Math.max(best[2], p[0]);
+                if (at % 100 == 0) trail.add(at + ": " + com.jrpetty.mcassistant.entity.Assemblies.debug(v.id()));
+            });
+        }
+        helper.runAtTickTime(1520, () -> {
+            Kit.log("t50 the morning assembly: " + String.join(" | ", trail) + " — most in place " + best[0] + ", lines " + best[1]);
+            helper.assertTrue(best[0] >= 3, "they came and took their places: " + best[0]);
+            helper.assertTrue(best[1] >= 3, "the elder spoke: " + best[1] + " lines");
+            helper.assertTrue(best[2] >= 4, "and it closed and they went to work: " + best[2]);
+            helper.succeed();
+        });
+    }
+
+    /**
+     * An election: the three the village thinks most of stand, every grown folk votes, the
+     * count is read out before the board, and the one with the most is the elder.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1800, batch = "t51_election")
+    public static void t51_election(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 33000, 12000, 40);
+        Kit.prepare(level, 33000, 12000, 40);
+        level.setDayTime(24000L * 5 + 5000);
+        BlockPos heart = Kit.surface(level, 33000, 12000);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null && stood >= 4, "a village of a few: " + stood);
+        helper.runAtTickTime(20, () -> {
+            for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) f.ensurePersona();
+            long day = level.getDayTime() / 24000L;
+            java.util.LinkedHashMap<VillageFolkEntity, Integer> votes = Villages.election(v.id(), day);
+            StringBuilder sb = new StringBuilder();
+            votes.forEach((f, n) -> sb.append(f.displayNameCap()).append('=').append(n).append(' '));
+            Kit.log("t51 standing and the count: " + sb);
+            helper.assertTrue(!votes.isEmpty() && votes.size() <= 3, "up to three stand: " + votes.size());
+            int total = votes.values().stream().mapToInt(Integer::intValue).sum();
+            helper.assertTrue(total >= 4, "every grown folk votes: " + total);
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Assemblies.startNow(level, v,
+                com.jrpetty.mcassistant.entity.Assemblies.Kind.ELECTION), "the election is called");
+        });
+        helper.runAtTickTime(1700, () -> {
+            long day = level.getDayTime() / 24000L;
+            java.util.UUID elder = Villages.elder(v.id());
+            Kit.log("t51 after the count: elder " + elder + ", elected on day " + Villages.electedOn(v.id())
+                + " (today " + day + "), " + com.jrpetty.mcassistant.entity.Assemblies.debug(v.id()));
+            helper.assertTrue(Villages.electedOn(v.id()) == day, "the village chose its elder today");
+            helper.assertTrue(elder != null, "and has one");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * An envoy: one village's elder sends a folk to its neighbour to offer trade; it walks there,
+     * the neighbour gathers before its board to hear it, its elder answers in its own way, and
+     * the envoy turns for home with the answer.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "t52_envoy")
+    public static void t52_envoy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 34000, 12000, 40);
+        Kit.prepare(level, 34000, 12000, 40);
+        Kit.hold(level, 34300, 12000, 40);
+        Kit.prepare(level, 34300, 12000, 40);
+        level.setDayTime(2000);
+        BlockPos homeHeart = Kit.surface(level, 34000, 12000), hostHeart = Kit.surface(level, 34300, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, homeHeart, 0.0F, 5);
+        VillageFolkSpawnerBlock.raiseParty(level, hostHeart, 0.0F, 5);
+        Villages.Village home = Villages.nearest(level, homeHeart, Villages.VILLAGE_RANGE);
+        Villages.Village host = Villages.nearest(level, hostHeart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(home != null && host != null && !home.id().equals(host.id()), "two villages");
+        com.jrpetty.mcassistant.village.Ledger.relate(home.id(), host.id(), 35);
+        final VillageFolkEntity[] envoy = { null };
+        helper.runAtTickTime(20, () -> {
+            for (AssistantEntity a : Villages.folkOf(home.id())) if (a instanceof VillageFolkEntity f) f.ensurePersona();
+            for (AssistantEntity a : Villages.folkOf(host.id())) if (a instanceof VillageFolkEntity f) f.ensurePersona();
+            long day = level.getDayTime() / 24000L;
+            Villages.chooseElder(home.id(), day);
+            Villages.chooseElder(host.id(), day);
+            boolean sent = com.jrpetty.mcassistant.entity.Envoys.send(level, home, host, com.jrpetty.mcassistant.entity.Envoys.Errand.TRADE, day);
+            for (AssistantEntity a : Villages.folkOf(home.id())) {
+                if (a instanceof VillageFolkEntity f && f.trip() != null && f.trip().errand() != null) envoy[0] = f;
+            }
+            Kit.log("t52 the envoy: sent " + sent + ", " + (envoy[0] == null ? "nobody" : envoy[0].displayNameCap())
+                + "; home " + com.jrpetty.mcassistant.entity.Envoys.debug(home.id()) + "; host " + com.jrpetty.mcassistant.entity.Envoys.debug(host.id()));
+            helper.assertTrue(sent && envoy[0] != null, "an envoy sets out");
+            // The walk is the caravans' (t31): here it arrives, by the host's board.
+            com.jrpetty.mcassistant.entity.Caravans.arriveForTests(level, envoy[0]);
+            BlockPos at = hostHeart.east(3);
+            envoy[0].moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0.0F, 0.0F);
+        });
+        for (int t = 60; t <= 2000; t += 20) {
+            helper.runAtTickTime(t, () -> com.jrpetty.mcassistant.entity.Assemblies.tick(level, host));
+        }
+        java.util.List<String> trail = new java.util.ArrayList<>();
+        for (int t = 100; t <= 2200; t += 150) {
+            final int at = t;
+            helper.runAtTickTime(t, () -> trail.add(at + ": " + com.jrpetty.mcassistant.entity.Assemblies.debug(host.id())));
+        }
+        helper.runAtTickTime(2250, () -> {
+            VillageFolkEntity e = envoy[0];
+            Kit.log("t52 the audience: " + String.join(" | ", trail));
+            Kit.log("t52 after: trip " + (e.trip() == null ? "none" : (e.trip().homeward() ? "homeward" : "still there"))
+                + "; pact " + com.jrpetty.mcassistant.entity.Envoys.pact(home.id(), host.id())
+                + "; relation " + com.jrpetty.mcassistant.village.Ledger.relation(home.id(), host.id())
+                + "; host " + com.jrpetty.mcassistant.entity.Envoys.debug(host.id()) + "; latest " + com.jrpetty.mcassistant.entity.Envoys.latest(host.id()));
+            helper.assertTrue(trail.stream().anyMatch(x -> x.contains("ENVOY")), "the host village gathers to hear the envoy");
+            helper.assertTrue(e.trip() != null && e.trip().homeward(), "and the envoy turns for home with the answer");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * A scout: sent out across the land toward a town it has never seen, it walks there in
+     * stages, finds it (and swaps news of the land with it), turns, comes home along its own
+     * trail, and the town goes into the atlas.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "t53_scout")
+    public static void t53_scout(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 36000, 12000, 40);
+        Kit.prepare(level, 36000, 12000, 40);
+        Kit.hold(level, 36260, 12000, 40);
+        Kit.prepare(level, 36260, 12000, 40);
+        level.setDayTime(1500);
+        BlockPos homeHeart = Kit.surface(level, 36000, 12000), farHeart = Kit.surface(level, 36260, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, homeHeart, 0.0F, 4);
+        VillageFolkSpawnerBlock.raiseParty(level, farHeart, 0.0F, 3);
+        Villages.Village home = Villages.nearest(level, homeHeart, Villages.VILLAGE_RANGE);
+        Villages.Village far = Villages.nearest(level, farHeart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(home != null && far != null && !home.id().equals(far.id()), "two villages");
+        final VillageFolkEntity[] scout = { null };
+        helper.runAtTickTime(20, () -> {
+            for (AssistantEntity a : Villages.folkOf(home.id())) {
+                if (a instanceof VillageFolkEntity f && !f.isBaby()) { scout[0] = f; break; }
+            }
+            scout[0].setJob(StationTask.SCOUT);
+            com.jrpetty.mcassistant.entity.Scouts.sendForTests(scout[0], level, far.centre());
+            helper.assertTrue(scout[0].expedition() != null, "the scout sets out");
+        });
+        java.util.List<String> trail = new java.util.ArrayList<>();
+        final boolean[] wasOut = { false };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            VillageFolkEntity s = scout[0];
+            if (s == null || t < 40) return;
+            if (t % 300 == 0) {
+                trail.add(t + ": " + (s.expedition() == null ? "home" : (s.expedition().returning() ? "returning" : "out"))
+                    + " at " + s.blockPosition().getX() + "," + s.blockPosition().getZ() + " finds " + (s.expedition() == null ? "-" : s.expedition().finds()));
+            }
+            if (s.expedition() != null) { wasOut[0] = true; return; }
+            if (!wasOut[0]) return;
+            Kit.log("t53 the scout's day: " + String.join(" | ", trail));
+            Kit.log("t53 the atlas: " + com.jrpetty.mcassistant.entity.Scouts.debug(home.id()) + "; the far town's: "
+                + com.jrpetty.mcassistant.entity.Scouts.debug(far.id()) + "; the board says: " + com.jrpetty.mcassistant.entity.Scouts.boardLine(home.id()));
+            String told = com.jrpetty.mcassistant.entity.Scouts.tell(s);
+            Kit.log("t53 ask the scout: " + told);
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Scouts.atlas(home.id()).stream().anyMatch(x ->
+                x.kind() == com.jrpetty.mcassistant.entity.Scouts.Kind.TOWN && x.label().equals(Villages.name(far.id()))), "the far town is in the atlas");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Scouts.met(home.id(), far.id()), "and the two towns know each other now");
+            helper.assertTrue(s.blockPosition().distSqr(home.centre()) < 24 * 24, "and the scout came home");
+            helper.assertTrue(told.contains(Villages.name(far.id())), "and can tell you about it");
+            helper.succeed();
+        });
+        helper.runAtTickTime(5900, () -> {
+            Kit.log("t53 the scout's day (not home): " + String.join(" | ", trail) + "; " + (scout[0] == null ? "" : scout[0].debugLine()));
+            helper.fail("the scout never came home");
+        });
+    }
+
+    /**
+     * The town's works are done by hand: a street is not laid until a folk from the village has
+     * walked to it, and then it is laid there, in its hands.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2600, batch = "t54_town_hands")
+    public static void t54_town_hands(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        Kit.hold(level, 38000, 12000, 48);
+        Kit.prepare(level, 38000, 12000, 48);
+        level.setDayTime(2000);
+        BlockPos heart = Kit.surface(level, 38000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.function.IntSupplier paths = () -> {
+            int n = 0;
+            for (int dx = -40; dx <= 40; dx++) {
+                for (int dz = -40; dz <= 40; dz++) {
+                    int x = heart.getX() + dx, z = heart.getZ() + dz;
+                    int y = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                    if (level.getBlockState(new BlockPos(x, y - 1, z)).is(Blocks.DIRT_PATH)) n++;
+                }
+            }
+            return n;
+        };
+        final int[] counts = { 0, 0 };
+        java.util.Set<String> seen = new java.util.TreeSet<>();
+        helper.runAtTickTime(10, () -> {
+            // Everybody out at the edge of town, thirty blocks from the first street to be laid.
+            BlockPos edge = Kit.surface(level, heart.getX(), heart.getZ() - 30);
+            for (AssistantEntity a : Villages.folkOf(v.id())) a.moveTo(edge.getX() + 0.5, edge.getY(), edge.getZ() + 0.5, 0.0F, 0.0F);
+            counts[0] = paths.getAsInt();
+            com.jrpetty.mcassistant.entity.TownWork.tick(level, v);
+            counts[1] = paths.getAsInt();
+            Kit.log("t54 at the call: paths " + counts[0] + " -> " + counts[1]);
+        });
+        helper.onEachTick(() -> {
+            if (helper.getTick() % 20 != 0) return;
+            for (AssistantEntity a : Villages.folkOf(v.id())) {
+                if (a instanceof VillageFolkEntity f) {
+                    String doing = com.jrpetty.mcassistant.entity.TownJobs.doing(f);
+                    if (doing != null) seen.add(f.displayNameCap() + ": " + doing);
+                }
+            }
+        });
+        helper.runAtTickTime(2400, () -> {
+            int after = paths.getAsInt();
+            Kit.log("t54 by hand: paths " + counts[1] + " -> " + after + "; the hands at it: " + seen);
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+            helper.assertTrue(counts[1] == counts[0], "nothing laid while the hands are thirty blocks off: " + counts[0] + " -> " + counts[1]);
+            helper.assertTrue(after > counts[1], "and the streets laid once a hand got there: " + after);
+            helper.assertTrue(!seen.isEmpty(), "by somebody from the village");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * The treasury keeps the coin going round: short of coin, every working folk gets the same
+     * share of its wage (not the first on the list all of it); what the village is saving for is
+     * left in the treasury; and the day of rest's tithe brings coin back out of the purses.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t55_treasury")
+    public static void t55_treasury(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(7000);
+        Kit.hold(level, 40000, 12000, 24);
+        Kit.prepare(level, 40000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 40000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.UUID id = v.id();
+        java.util.List<VillageFolkEntity> hands = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (a instanceof VillageFolkEntity f && !f.isBaby()) { f.setJob(StationTask.FARM); f.spend(f.purse()); hands.add(f); }
+        }
+        int bill = com.jrpetty.mcassistant.entity.Market.wageBill(id);
+        // Half the day's wages in the treasury.
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        int half = bill / 2;
+        com.jrpetty.mcassistant.village.Ledger.addCoins(id, half);
+        int paid = com.jrpetty.mcassistant.entity.Market.payWages(level, v);
+        int got = 0, most = 0;
+        for (VillageFolkEntity f : hands) { if (f.purse() > 0) got++; most = Math.max(most, f.purse() - com.jrpetty.mcassistant.entity.Wealth.wage(f)); }
+        Kit.log("t55 wages: bill " + bill + " for " + hands.size() + " hands; " + half + " in the treasury; paid " + paid + " to " + got + " folk");
+        helper.assertTrue(paid == half && got >= 2 && got >= Math.min(hands.size(), half) - 1 && most <= 0,
+            "short of coin, the wages are shared out (" + paid + " to " + got + " folk), nobody paid over its wage");
+        // Saving up: twelve coin put by for a kit, fifteen in the treasury, so only three go in wages.
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        com.jrpetty.mcassistant.village.Ledger.addCoins(id, 15);
+        com.jrpetty.mcassistant.entity.Market.saveFor(id, "kit.TEST", 12, level.getGameTime());
+        int paidSaving = com.jrpetty.mcassistant.entity.Market.payWages(level, v);
+        int left = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        Kit.log("t55 saving for a kit: paid " + paidSaving + ", the treasury keeps " + left);
+        helper.assertTrue(paidSaving <= 3 && left >= 12, "what it is saving for stays in the treasury: paid " + paidSaving + ", kept " + left);
+        com.jrpetty.mcassistant.entity.Market.bought(id, "kit.TEST");
+        // The tithe: a folk with fifty-two coin gives four of them.
+        VillageFolkEntity rich = hands.get(0);
+        rich.spend(rich.purse());
+        rich.earn(52);
+        int before = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        long day = level.getDayTime() / 24000L;
+        int tithe = com.jrpetty.mcassistant.entity.Market.tithe(level, v, day);
+        int again = com.jrpetty.mcassistant.entity.Market.tithe(level, v, day);
+        Kit.log("t55 the tithe: " + tithe + " coin (" + rich.displayNameCap() + " now has " + rich.purse() + "); again the same day " + again);
+        helper.assertTrue(tithe >= 4 && rich.purse() == 48 && com.jrpetty.mcassistant.village.Ledger.coins(id) == before + tithe && again == 0,
+            "the tithe: one in ten of what a folk holds over a dozen, once a week");
+        helper.succeed();
+    }
+
+    /**
+     * The traders and the wool: the morning's traders buy what the village has to spare at a fair
+     * price, enough toward the wages; and houses waiting on beds get their wool bought every
+     * morning, saved up for when the treasury is short.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t62_traders")
+    public static void t62_traders(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(7000);
+        Kit.hold(level, 54000, 12000, 24);
+        Kit.prepare(level, 54000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 54000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.UUID id = v.id();
+        for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isBaby()) f.setJob(StationTask.FARM);
+        java.util.List<BlockPos> stores = Villages.storeChests(level, id);
+        helper.assertTrue(!stores.isEmpty(), "the village has its stores");
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(stores.get(0));
+        helper.assertTrue(box != null, "a chest at the stores");
+        int slot = -1;
+        for (int i = 0; i < box.getContainerSize() && slot < 0; i++) if (box.getItem(i).isEmpty()) slot = i;
+        helper.assertTrue(slot >= 0, "room in the stores");
+        box.setItem(slot, new ItemStack(Items.LEATHER, 64));
+        // An empty treasury on a working morning: the traders come for what it has to spare.
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        int bill = com.jrpetty.mcassistant.entity.Market.wageBill(id);
+        java.util.function.Predicate<ItemStack> eats = st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null;
+        int foodBefore = com.jrpetty.mcassistant.entity.Market.stock(level, id, eats);
+        int in = com.jrpetty.mcassistant.entity.Market.trade(level, v);
+        int leather = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.LEATHER));
+        int foodAfter = com.jrpetty.mcassistant.entity.Market.stock(level, id, eats);
+        Kit.log("t62 the traders: wages " + bill + ", they paid " + in + " coin; leather left " + leather
+            + "; the larder " + foodBefore + " -> " + foodAfter);
+        helper.assertTrue(foodAfter == foodBefore, "a small larder is not for sale: " + foodBefore + " -> " + foodAfter);
+        helper.assertTrue(in > 0 && leather < 64 && leather >= 16, "the traders bought spare leather and left a reserve: "
+            + in + " coin, " + leather + " left");
+        // Two houses with no beds made up and no wool: the wool is saved for, then bought.
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        Villages.noteProject(id, "house", level.getGameTime());
+        Villages.noteProject(id, "house", level.getGameTime());
+        long day = level.getDayTime() / 24000L;
+        int none = com.jrpetty.mcassistant.entity.Market.buyWool(level, v, day);
+        int putBy = com.jrpetty.mcassistant.entity.Market.saved(id, level.getGameTime());
+        com.jrpetty.mcassistant.village.Ledger.addCoins(id, 40);
+        int paid = com.jrpetty.mcassistant.entity.Market.buyWool(level, v, day);
+        int wool = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(net.minecraft.tags.ItemTags.WOOL));
+        Kit.log("t62 the wool: beds short " + com.jrpetty.mcassistant.entity.Market.bedsShort(id) + "; with no coin it spent " + none
+            + " and put by " + putBy + "; with 40 it paid " + paid + " for " + wool + " wool");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Market.bedsShort(id) > 0, "the houses are waiting on beds");
+        helper.assertTrue(none == 0 && putBy > 0, "short of coin, the wool is saved for: " + putBy);
+        helper.assertTrue(paid > 0 && wool >= 8, "with the coin, the wool is bought into the stores: " + wool);
+        // A larder run dry: the farmer still goes to its field (its work is the food); a woodcutter waits on rations.
+        for (BlockPos c : Villages.storeChests(level, id)) {
+            if (level.getBlockEntity(c) instanceof net.minecraft.world.Container box2) {
+                for (int i = 0; i < box2.getContainerSize(); i++) if (eats.test(box2.getItem(i))) box2.setItem(i, ItemStack.EMPTY);
+            }
+        }
+        VillageFolkEntity hand = null;
+        for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isBaby()) { hand = f; break; }
+        helper.assertTrue(hand != null, "a hand");
+        hand.removeMatching(eats, 999);
+        hand.setJob(StationTask.FARM);
+        java.util.List<String> farmer = com.jrpetty.mcassistant.entity.JobSpec.missing(hand);
+        hand.setJob(StationTask.WOOD);
+        java.util.List<String> woodcutter = com.jrpetty.mcassistant.entity.JobSpec.missing(hand);
+        Kit.log("t62 an empty larder: the farmer is missing " + farmer + "; the woodcutter " + woodcutter);
+        helper.assertTrue(!farmer.contains("food (its rations)") && woodcutter.contains("food (its rations)"),
+            "a farmer works to fill an empty larder; other hands wait on their rations");
+        // The day's work is the revenue: fifty coins' worth made yesterday, ten of it sold to the
+        // traders this morning, so forty more come in.
+        com.jrpetty.mcassistant.village.Ledger.note(id, "output.week", "50,30");
+        int before = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        int took = com.jrpetty.mcassistant.entity.Market.takings(level, v, 10);
+        int after = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        Kit.log("t62 the day's work: " + took + " coin taken, the treasury " + before + " -> " + after);
+        helper.assertTrue(took == 40 && after == before + 40, "yesterday's output, less what was sold, is the treasury's takings");
+        helper.succeed();
+    }
+
+    /**
+     * A field that is full grows: a new farmer's plot is one nine-by-nine square; most of it under
+     * crops, it lays out the squares round it (twenty-seven across); half-empty, it stays as it is.
+     * (Where the fields go is t65's.)
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t63_field")
+    public static void t63_field(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 56000, 12000, 96);
+        Kit.prepare(level, 56000, 12000, 96);
+        BlockPos heart = Kit.surface(level, 56000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        BlockPos site = Kit.surface(level, heart.getX() + 64, heart.getZ());
+        farmer.setJob(StationTask.FARM);
+        farmer.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(site, 4, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "Farm");
+        farmer.moveTo(site.getX() + 0.5, site.getY(), site.getZ() + 0.5, 0.0F, 0.0F);
+        // Ten squares of farmland: not full, and it stays nine across.
+        int n = 0;
+        for (int dx = -4; dx <= 4 && n < 10; dx++) {
+            for (int dz = -4; dz <= 4 && n < 10; dz++, n++) level.setBlockAndUpdate(site.offset(dx, -1, dz), Blocks.FARMLAND.defaultBlockState());
+        }
+        farmer.growTheFieldForTests();
+        int before = farmer.workZone().radius();
+        // Most of it under crops: it grows a ring.
+        for (int dx = -4; dx <= 4; dx++) {
+            for (int dz = -4; dz <= 4; dz++) {
+                if (Math.abs(dx) + Math.abs(dz) > 6) continue;
+                level.setBlockAndUpdate(site.offset(dx, -1, dz), Blocks.FARMLAND.defaultBlockState());
+            }
+        }
+        farmer.growTheFieldForTests();
+        int after = farmer.workZone().radius();
+        Kit.log("t63 the field: " + (2 * before + 1) + " across half-empty, " + (2 * after + 1) + " across once full; " + farmer.debugLine());
+        helper.assertTrue(before == 4, "a half-empty field stays as it is: " + before);
+        helper.assertTrue(after == 13, "a full square lays out the squares round it, three by three: " + after);
+        helper.succeed();
+    }
+
+    /**
+     * The village's farmland. The village marks out one side of the town for its fields — the side
+     * whose ground is best (here the west, where the water is) — and lays them out there in squares
+     * a full-grown field across, side by side and never overlapping: the first farmer takes the
+     * nearest, the second the one beside it. The town keeps off them: its lots on that side, past
+     * its first block, are not built on (it grows the other three ways), and no mine or wood is
+     * staked on them.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t65_farmland")
+    public static void t65_farmland(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 60000, 12000, 112);
+        Kit.prepare(level, 60000, 12000, 112);
+        BlockPos heart = Kit.surface(level, 60000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        java.util.UUID id = farmer.ownerId();
+        int west = com.jrpetty.mcassistant.village.TownPlan.WEST;
+        // Water by the west's first two squares.
+        for (int[] f : Villages.fieldSquares(west).subList(0, 2)) Kit.pond(level, heart.getX() + f[0], heart.getZ() + f[1], 2);
+        int side = farmer.chooseFieldsSideForTests();
+        Kit.log("t65 the farmland: side " + side + " (" + com.jrpetty.mcassistant.village.Ledger.note(id, "fields.way") + ")");
+        helper.assertTrue(side == west && Villages.fieldsSide(id) == west, "the village marks out its farmland where the water is (west): " + side);
+
+        farmer.setJob(StationTask.FARM);
+        BlockPos first = farmer.farmSiteForTests();
+        int[] sq0 = Villages.fieldSquares(west).get(0), sq1 = Villages.fieldSquares(west).get(1);
+        Kit.log("t65 the first field: " + (first == null ? "none" : first.toShortString()) + " (square " + sq0[0] + "," + sq0[1] + " from the heart)");
+        helper.assertTrue(first != null && first.getX() == heart.getX() + sq0[0] && first.getZ() == heart.getZ() + sq0[1],
+            "the first field goes on the farmland's nearest square: " + first);
+        farmer.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(first, 13, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "Farm");
+
+        VillageFolkEntity second = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(second != null && id.equals(second.ownerId()), "a second folk of the village");
+        second.setJob(StationTask.FARM);
+        BlockPos next = second.farmSiteForTests();
+        Kit.log("t65 the next field: " + (next == null ? "none" : next.toShortString()));
+        helper.assertTrue(next != null && next.getX() == heart.getX() + sq1[0] && next.getZ() == heart.getZ() + sq1[1],
+            "the next field goes on the square beside it: " + next);
+        com.jrpetty.mcassistant.entity.WorkZone a = farmer.workZone();
+        com.jrpetty.mcassistant.entity.WorkZone b = com.jrpetty.mcassistant.entity.WorkZone.around(next, 13, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH);
+        helper.assertFalse(a.overlaps(b), "full-grown, the two fields do not overlap");
+
+        // The town keeps off the farmland: a lot on the west side past the first block is not built on;
+        // its twin on the east side, and the first block's lots, are.
+        com.jrpetty.mcassistant.village.TownPlan.Lot onFields = null, twin = null, near = null;
+        for (com.jrpetty.mcassistant.village.TownPlan.Lot l : com.jrpetty.mcassistant.village.TownPlan.lots()) {
+            if (l.kind() != com.jrpetty.mcassistant.village.TownPlan.Kind.LOT) continue;
+            if (l.x() == -47 && l.z() == 8) onFields = l;
+            if (l.x() == 47 && l.z() == 8) twin = l;
+            if (l.x() == -22 && l.z() == 8) near = l;
+        }
+        helper.assertTrue(onFields != null && twin != null && near != null, "the plan's lots");
+        boolean keptOff = Villages.lotKeptOff(id, heart, onFields);
+        boolean twinFree = !Villages.lotKeptOff(id, heart, twin), nearFree = !Villages.lotKeptOff(id, heart, near);
+        Kit.log("t65 the town's lots: west of the first block kept off " + keptOff + "; east free " + twinFree + "; first block free " + nearFree);
+        helper.assertTrue(keptOff && twinFree && nearFree, "the town builds round its farmland, not on it");
+        helper.assertTrue(Villages.onFarmland(id, heart, heart.offset(-60, 0, 0), 8) && !Villages.onFarmland(id, heart, heart.offset(60, 0, 0), 8),
+            "and no mine or wood is staked on it");
+        helper.succeed();
+    }
+
+    /**
+     * Production chests and couriers. A farmer sets its production chest down on its own plot (the
+     * corner of its field nearest the town); what it makes goes in there, and it is paid for it as
+     * it puts it in. A courier brings the chest's goods in to the storehouse — the harvest, not the
+     * field's seed — and the chest is the farmer's for good, never cleared away as an old chest.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "t66_production")
+    public static void t66_production(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        Kit.hold(level, 62000, 12000, 80);
+        Kit.prepare(level, 62000, 12000, 80);
+        BlockPos heart = Kit.surface(level, 62000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        java.util.UUID village = farmer.ownerId();
+        BlockPos store = Kit.surface(level, heart.getX() + 8, heart.getZ() - 22);
+        level.setBlockAndUpdate(store, Blocks.CHEST.defaultBlockState());
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, store);
+        Villages.builtAtForTests(village, "storage", store);
+        BlockPos site = Kit.surface(level, heart.getX() + 56, heart.getZ() + 16);
+        farmer.setJob(StationTask.FARM);
+        farmer.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(site, 4, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "Farm");
+        farmer.moveTo(site.getX() + 0.5, site.getY(), site.getZ() + 0.5, 0.0F, 0.0F);
+        farmer.insertItem(new ItemStack(Items.CHEST));
+        BlockPos chest = farmer.productionChestForTests();
+        Kit.log("t66 the production chest: " + (chest == null ? "none" : chest.toShortString()) + " for the field at " + site.toShortString());
+        helper.assertTrue(chest != null && level.getBlockState(chest).is(Blocks.CHEST), "the farmer sets its production chest down");
+        helper.assertTrue(Math.max(Math.abs(chest.getX() - site.getX()), Math.abs(chest.getZ() - site.getZ())) <= 16
+            && chest.getX() < site.getX() && chest.getZ() < site.getZ(),
+            "on its own plot, at the corner nearest the town: " + chest.toShortString());
+        // What it makes goes into the production chest, and it is paid for it there.
+        farmer.insertItem(new ItemStack(Items.WHEAT, 48));
+        Job put = farmer.villageDepositJob();
+        String want = chest.getX() + " " + chest.getY() + " " + chest.getZ();
+        helper.assertTrue(put != null && put.type() == Job.Type.DEPOSIT && want.equals(put.arg()),
+            "its output goes to its production chest: " + put);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.WHEAT, 48));
+        box.setItem(1, new ItemStack(Items.BREAD, 16));
+        box.setItem(2, new ItemStack(Items.WHEAT_SEEDS, 12));
+        farmer.removeMatching(st -> st.is(Items.WHEAT), 999);
+
+        VillageFolkEntity courier = VillageFolkSpawnerBlock.raise(level, heart.south(2), 0.0F);
+        helper.assertTrue(courier != null && village.equals(courier.ownerId()), "a courier for the village");
+        courier.setJob(StationTask.HAUL);
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);   // carrying is day work
+            Villages.noteAttempt(village, level.getGameTime());                 // and nobody builds meanwhile
+            int wheat = holding(level, store, Items.WHEAT), bread = holding(level, store, Items.BREAD);
+            if (t % 600 == 0) {
+                Kit.log("t66 @" + t + " store: wheat " + wheat + ", bread " + bread + "; the production chest: wheat "
+                    + holding(level, chest, Items.WHEAT) + ", seeds " + holding(level, chest, Items.WHEAT_SEEDS) + " — " + courier.debugLine());
+            }
+            if (wheat >= 48 && bread >= 16) {
+                Kit.log("t66 the courier brought the harvest in by tick " + t + "; the chest keeps " + holding(level, chest, Items.WHEAT_SEEDS) + " seed");
+                helper.assertTrue(level.getBlockState(chest).is(Blocks.CHEST), "the production chest stays where it is");
+                helper.assertTrue(holding(level, chest, Items.WHEAT_SEEDS) >= 8, "and keeps the field's seed");
+                helper.succeed();
+            } else if (t >= 5600) {
+                helper.fail("the courier did not bring the production chest's goods in: wheat " + wheat + ", bread " + bread
+                    + " — " + courier.debugLine());
+            }
+        });
+    }
+
+    /**
+     * The price list: everything the village's folk can mine, grow, catch or make has a price, and
+     * the prices hang together — what is made is worth what went into it and a little for the work.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t67_prices")
+    public static void t67_prices(GameTestHelper helper) {
+        com.jrpetty.mcassistant.entity.Prices.reset();
+        int priced = com.jrpetty.mcassistant.entity.Prices.priced();
+        java.util.List<String> unpriced = new java.util.ArrayList<>();
+        int survival = 0;
+        for (net.minecraft.world.item.Item item : net.minecraft.core.registries.BuiltInRegistries.ITEM) {
+            if (item == Items.AIR || item instanceof net.minecraft.world.item.SpawnEggItem) continue;
+            if (com.jrpetty.mcassistant.entity.Prices.each(item) <= 0) continue;          // not to be had in survival
+            survival++;
+            if (!com.jrpetty.mcassistant.entity.Prices.known(item)) {
+                unpriced.add(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item).getPath());
+            }
+        }
+        double diamond = com.jrpetty.mcassistant.entity.Prices.each(Items.DIAMOND);
+        double pick = com.jrpetty.mcassistant.entity.Prices.each(Items.DIAMOND_PICKAXE);
+        double ingot = com.jrpetty.mcassistant.entity.Prices.each(Items.IRON_INGOT);
+        double block = com.jrpetty.mcassistant.entity.Prices.each(Items.IRON_BLOCK);
+        double sword = com.jrpetty.mcassistant.entity.Prices.each(Items.DIAMOND_SWORD);
+        double nether = com.jrpetty.mcassistant.entity.Prices.each(Items.NETHERITE_SWORD);
+        double chest = com.jrpetty.mcassistant.entity.Prices.each(Items.IRON_CHESTPLATE);
+        double stairs = com.jrpetty.mcassistant.entity.Prices.each(Items.OAK_STAIRS);
+        double beacon = com.jrpetty.mcassistant.entity.Prices.each(Items.BEACON);
+        Kit.log("t67 " + com.jrpetty.mcassistant.entity.Prices.summary() + "; " + survival + " to be had in survival, "
+            + unpriced.size() + " only guessed at: " + unpriced.subList(0, Math.min(60, unpriced.size())));
+        Kit.log("t67 diamond " + diamond + ", diamond pickaxe " + pick + ", iron " + ingot + ", block of iron " + block
+            + ", diamond sword " + sword + ", netherite sword " + nether + ", iron chestplate " + chest + ", oak stairs " + stairs
+            + ", beacon " + beacon + ", command block " + com.jrpetty.mcassistant.entity.Prices.each(Items.COMMAND_BLOCK));
+        helper.assertTrue(priced >= 900, "a price for nine hundred things and more: " + priced);
+        helper.assertTrue(unpriced.size() * 20 <= survival, "all but a few of what can be had are priced by name or recipe: "
+            + unpriced.size() + " of " + survival + " guessed at");
+        helper.assertTrue(diamond == 24.0 && ingot == 1.5, "the board's own prices stand");
+        helper.assertTrue(pick >= 3 * diamond && pick < 3 * diamond * 1.5, "a diamond pickaxe is its three diamonds and the work: " + pick);
+        helper.assertTrue(block >= 9 * ingot && block <= 9 * ingot * 1.2, "a block of iron is nine ingots: " + block);
+        helper.assertTrue(nether > sword, "netherite is worth more than the diamond it is made from");
+        helper.assertTrue(stairs > 0 && com.jrpetty.mcassistant.entity.Prices.known(Items.OAK_STAIRS), "even the stairs have a price");
+        helper.assertTrue(beacon > 200, "a beacon is its nether star and more: " + beacon);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Prices.each(Items.COMMAND_BLOCK) == 0, "and nothing for what nobody can make");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Economy.kindOf(new ItemStack(Items.DEEPSLATE_BRICKS))
+                == com.jrpetty.mcassistant.entity.Economy.Kind.STONE
+            && com.jrpetty.mcassistant.entity.Economy.kindOf(new ItemStack(Items.OAK_SAPLING)) == com.jrpetty.mcassistant.entity.Economy.Kind.PLANT,
+            "and it knows what sort of goods each is (a miner is paid for deepslate bricks, a woodcutter for saplings)");
+        helper.succeed();
+    }
+
+    /**
+     * The village's own needs first. Short of food it sells nothing but a glut (its mountain of
+     * cobblestone): not its swords, not its bread. With a full larder, every hand tooled and its
+     * beds made, what is over is for sale — a stranger buys a spare sword from the storekeeper at
+     * the price list's worth and a quarter over — and it still keeps a sword for itself.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t68_budget")
+    public static void t68_budget(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 64000, 12000, 40);
+        Kit.prepare(level, 64000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 64000, 12000);
+        VillageFolkEntity keeper = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(keeper != null, "a village");
+        keeper.setJob(StationTask.STORE);
+        java.util.UUID id = keeper.ownerId();
+        BlockPos[] chests = { Kit.surface(level, heart.getX() + 6, heart.getZ() + 6), Kit.surface(level, heart.getX() + 8, heart.getZ() + 6),
+            Kit.surface(level, heart.getX() + 10, heart.getZ() + 6) };
+        for (BlockPos c : chests) {
+            level.setBlockAndUpdate(c, Blocks.CHEST.defaultBlockState());
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, c);
+        }
+        net.minecraft.world.Container a = (net.minecraft.world.Container) level.getBlockEntity(chests[0]);
+        net.minecraft.world.Container b = (net.minecraft.world.Container) level.getBlockEntity(chests[1]);
+        net.minecraft.world.Container c = (net.minecraft.world.Container) level.getBlockEntity(chests[2]);
+        for (int i = 0; i < 5; i++) a.setItem(i, new ItemStack(Items.IRON_SWORD));
+        for (int i = 0; i < 26; i++) b.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+        com.jrpetty.mcassistant.entity.Budget.forget(id);
+        java.util.List<String> wants = com.jrpetty.mcassistant.entity.Budget.wants(level, id);
+        int swordsHungry = com.jrpetty.mcassistant.entity.Budget.spare(level, id, new ItemStack(Items.IRON_SWORD));
+        int cobble = com.jrpetty.mcassistant.entity.Budget.spare(level, id, new ItemStack(Items.COBBLESTONE));
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        String early = com.jrpetty.mcassistant.entity.Budget.answer(keeper, p);
+        Kit.log("t68 short of food: wants " + wants + "; spare swords " + swordsHungry + ", cobblestone " + cobble + "; says: " + early);
+        helper.assertTrue(wants.contains("a full larder"), "a village short of food wants a full larder first: " + wants);
+        helper.assertTrue(swordsHungry == 0, "and sells none of its swords meanwhile");
+        helper.assertTrue(cobble > 0, "only its glut of cobblestone");
+        // A full larder: now what is over is for sale.
+        for (int i = 0; i < 14; i++) c.setItem(i, new ItemStack(Items.BREAD, 64));
+        com.jrpetty.mcassistant.entity.Budget.forget(id);
+        java.util.List<String> fed = com.jrpetty.mcassistant.entity.Budget.wants(level, id);
+        int swords = com.jrpetty.mcassistant.entity.Budget.spare(level, id, new ItemStack(Items.IRON_SWORD));
+        int bread = com.jrpetty.mcassistant.entity.Budget.spare(level, id, new ItemStack(Items.BREAD));
+        String offer = com.jrpetty.mcassistant.entity.Budget.answer(keeper, p);
+        Kit.log("t68 fed: wants " + fed + "; spare swords " + swords + ", bread " + bread + "; says: " + offer
+            + " | the purse: " + com.jrpetty.mcassistant.entity.Budget.line(level, id));
+        helper.assertTrue(fed.isEmpty(), "fed, bedded and tooled, it wants nothing more for itself: " + fed);
+        helper.assertTrue(swords >= 1 && swords < 5, "it can spare swords, and keeps one for itself: " + swords);
+        helper.assertTrue(bread > 0, "and bread over a full larder");
+        int coinsBefore = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        String sold = com.jrpetty.mcassistant.entity.Services.stores(keeper, p, "could I have an iron sword?");
+        int got = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.IRON_SWORD)) got++;
+        int coinsAfter = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        Kit.log("t68 the storekeeper: " + sold + " (treasury " + coinsBefore + " -> " + coinsAfter + ", " + got + " sword)");
+        helper.assertTrue(got == 1 && coinsAfter == coinsBefore + 5, "a stranger buys a spare sword for 5 coins (4, and a quarter over)");
+        helper.succeed();
+    }
+
+    /**
+     * What two neighbours are to each other beyond the number (Bonds): they remember their
+     * dealings; no village stakes a plot nearer a neighbour's heart than its own, and crowded
+     * neighbours agree a border; a truce keeps a cooled feud from flaring; a village friendly with
+     * both brings two at odds to terms; neighbours on good terms marry across the boundary (one
+     * moves); a player carries a letter between elders, and one honoured in both brokers a pact.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t69_bonds")
+    public static void t69_bonds(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        for (int x : new int[]{ 66000, 66200, 66100 }) {
+            int z = x == 66100 ? 12300 : 12000;
+            Kit.hold(level, x, z, 40);
+            Kit.prepare(level, x, z, 40);
+        }
+        level.setDayTime(2000);
+        BlockPos ha = Kit.surface(level, 66000, 12000), hb = Kit.surface(level, 66200, 12000), hc = Kit.surface(level, 66100, 12300);
+        VillageFolkSpawnerBlock.raiseParty(level, ha, 0.0F, 5);
+        VillageFolkSpawnerBlock.raiseParty(level, hb, 0.0F, 5);
+        VillageFolkSpawnerBlock.raiseParty(level, hc, 0.0F, 3);
+        Villages.Village a = Villages.nearest(level, ha, Villages.VILLAGE_RANGE);
+        Villages.Village b = Villages.nearest(level, hb, Villages.VILLAGE_RANGE);
+        Villages.Village c = Villages.nearest(level, hc, Villages.VILLAGE_RANGE);
+        helper.assertTrue(a != null && b != null && c != null && !a.id().equals(b.id()) && !c.id().equals(a.id()) && !c.id().equals(b.id()),
+            "three villages");
+        helper.runAtTickTime(20, () -> {
+            for (Villages.Village v : List.of(a, b, c)) {
+                for (AssistantEntity x : Villages.folkOf(v.id())) if (x instanceof VillageFolkEntity f) f.ensurePersona();
+            }
+            long day = level.getDayTime() / 24000L;
+            java.util.UUID ia = a.id(), ib = b.id(), ic = c.id();
+            // Memory.
+            com.jrpetty.mcassistant.entity.Bonds.remember(ia, ib, day, 4, "traders did good business");
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Bonds.memories(ib, ia).size() == 1
+                && com.jrpetty.mcassistant.entity.Bonds.feeling(ia, ib, day) == 4, "both villages remember it");
+            // The border: not a plot nearer the neighbour's heart than its own.
+            boolean over = com.jrpetty.mcassistant.entity.Bonds.overBorder(ia, ha, hb.offset(-20, 0, 0), 4);
+            boolean home = com.jrpetty.mcassistant.entity.Bonds.overBorder(ia, ha, ha.offset(40, 0, 0), 4);
+            com.jrpetty.mcassistant.entity.Bonds.agreeBorder(ia, ib, day);
+            Kit.log("t69 the border: by their heart over " + over + ", by ours over " + home + "; agreed "
+                + com.jrpetty.mcassistant.entity.Bonds.border(ia, ib));
+            helper.assertTrue(over && !home && com.jrpetty.mcassistant.entity.Bonds.border(ib, ia), "the border between them");
+            // A go-between, and the truce it brings.
+            com.jrpetty.mcassistant.village.Ledger.relate(ia, ib, -60 - com.jrpetty.mcassistant.village.Ledger.relation(ia, ib));
+            com.jrpetty.mcassistant.village.Ledger.relate(ia, ic, 30);
+            com.jrpetty.mcassistant.village.Ledger.relate(ib, ic, 30);
+            int made = com.jrpetty.mcassistant.entity.Bonds.mediateForTests(a, b, day);
+            boolean truce = com.jrpetty.mcassistant.entity.Bonds.truce(ia, ib, day);
+            int held = com.jrpetty.mcassistant.entity.Bonds.underTruceForTests(ia, ib, day, -45, -20);
+            Kit.log("t69 the go-between: +" + made + ", truce " + truce + "; a -20 day under the truce comes to " + held);
+            helper.assertTrue(made > 0 && truce, "a village friendly with both brings them to terms, and a truce");
+            helper.assertTrue(-45 + held > com.jrpetty.mcassistant.entity.Diplomacy.FEUD, "and no falling back into a feud while it lasts");
+            // A marriage across the boundary.
+            com.jrpetty.mcassistant.village.Ledger.relate(ia, ib, 30 - com.jrpetty.mcassistant.village.Ledger.relation(ia, ib));
+            VillageFolkEntity[] wed = com.jrpetty.mcassistant.entity.Bonds.marry(level, a, b, day, new java.util.Random(7));
+            Kit.log("t69 the wedding: " + (wed == null ? "none" : wed[0].displayNameCap() + " moved to " + Villages.name(wed[0].ownerId())
+                + ", married to " + wed[1].displayNameCap()) + "; ties " + com.jrpetty.mcassistant.entity.Bonds.ties(ia, ib));
+            helper.assertTrue(wed != null && wed[0].ownerId().equals(wed[1].ownerId()) && wed[1].getUUID().equals(wed[0].life().partner())
+                && com.jrpetty.mcassistant.entity.Bonds.ties(ia, ib) == 1, "a wedding across the boundary: one moves, both married");
+            // A letter from one elder to the other.
+            net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+            VillageFolkEntity writer = null, reader = null;
+            for (AssistantEntity x : Villages.folkOf(ia)) if (x instanceof VillageFolkEntity f && !f.isBaby()) writer = f;
+            for (AssistantEntity x : Villages.folkOf(ib)) if (x instanceof VillageFolkEntity f && !f.isBaby()) reader = f;
+            String asked = com.jrpetty.mcassistant.entity.Bonds.letter(writer, p, Villages.name(ib));
+            ItemStack letter = ItemStack.EMPTY;
+            for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.WRITTEN_BOOK)) letter = p.getInventory().getItem(i);
+            int before = com.jrpetty.mcassistant.village.Ledger.relation(ia, ib);
+            boolean wrote = !letter.isEmpty();
+            String delivered = !wrote ? "no letter" : com.jrpetty.mcassistant.entity.Bonds.deliver(reader, p, letter);
+            int after = com.jrpetty.mcassistant.village.Ledger.relation(ia, ib);
+            Kit.log("t69 the letter: " + asked + " / " + delivered + " (" + before + " -> " + after + ")");
+            helper.assertTrue(wrote && after == before + 8 && letter.isEmpty(), "a letter carried from one elder to the other warms them");
+            // A pact brokered by a player honoured in both.
+            for (java.util.UUID v : List.of(ia, ib)) {
+                for (AssistantEntity x : Villages.folkOf(v)) {
+                    if (x instanceof VillageFolkEntity f) f.persona().feelFor(p.getUUID(), p.getName().getString(), 60);
+                }
+                com.jrpetty.mcassistant.entity.Standing.stir(v, p.getUUID());
+            }
+            String pact = com.jrpetty.mcassistant.entity.Bonds.broker(writer, p, Villages.name(ib));
+            Kit.log("t69 the pact: " + pact + "; bonds " + com.jrpetty.mcassistant.entity.Diplomacy.report());
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Envoys.pact(ia, ib), "an honoured friend of both brokers a trade pact");
+            helper.succeed();
+        });
+    }
+
+    /**
+     * What a player and the folk can do together, small to large: a meal, dice, a lesson, a keepsake,
+     * a repair, a feast paid for, something made to order; a bulk order, a supply contract, a stall of
+     * your own on the square that the folk buy from, the bank, investing, the auction, a caravan
+     * escort, a chartered trade route, and where things are dear.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t70_dealings")
+    public static void t70_dealings(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 68000, 12000, 40);
+        Kit.prepare(level, 68000, 12000, 40);
+        Kit.hold(level, 68300, 12000, 24);
+        Kit.prepare(level, 68300, 12000, 24);
+        BlockPos heart = Kit.surface(level, 68000, 12000);
+        VillageFolkEntity keeper = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity smith = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        helper.assertTrue(keeper != null && smith != null && farmer != null, "a village of three");
+        java.util.UUID village = keeper.ownerId();
+        Villages.Village v = Villages.get(village);
+        keeper.setJob(StationTask.STORE);
+        smith.setJob(StationTask.SMITH);
+        farmer.setJob(StationTask.FARM);
+        for (VillageFolkEntity f : List.of(keeper, smith, farmer)) f.ensurePersona();
+        // Well-found stores: a full larder and a glut of stone.
+        BlockPos[] at = { Kit.surface(level, heart.getX() + 6, heart.getZ() + 6), Kit.surface(level, heart.getX() + 8, heart.getZ() + 6) };
+        for (BlockPos c : at) {
+            level.setBlockAndUpdate(c, Blocks.CHEST.defaultBlockState());
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, c);
+        }
+        net.minecraft.world.Container food = (net.minecraft.world.Container) level.getBlockEntity(at[0]);
+        net.minecraft.world.Container stone = (net.minecraft.world.Container) level.getBlockEntity(at[1]);
+        for (int i = 0; i < 14; i++) food.setItem(i, new ItemStack(Items.BREAD, 64));
+        for (int i = 0; i < 26; i++) stone.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+        com.jrpetty.mcassistant.entity.Budget.forget(village);
+        net.minecraft.world.entity.player.Player p = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        p.moveTo(heart.getX() + 1.5, heart.getY(), heart.getZ() + 1.5);
+        p.getInventory().setItem(30, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        p.getInventory().setItem(31, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        p.getInventory().setItem(32, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        p.getInventory().setItem(35, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
+        String name = p.getName().getString();
+        long day = level.getDayTime() / 24000L;
+        java.util.List<String> said = new java.util.ArrayList<>();
+        // A meal together.
+        p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.COOKED_BEEF, 2));
+        int before = farmer.persona().affinity(p.getUUID());
+        said.add("meal: " + com.jrpetty.mcassistant.entity.Dealings.meal(farmer, p));
+        helper.assertTrue(farmer.persona().affinity(p.getUUID()) > before && p.getMainHandItem().getCount() == 1, "a meal together");
+        // Dice.
+        farmer.earn(20);
+        said.add("dice: " + com.jrpetty.mcassistant.entity.Dealings.dice(farmer, p, "dice for 5"));
+        // A lesson, with a hoe in hand: once a day.
+        p.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_HOE));
+        String lesson = com.jrpetty.mcassistant.entity.Dealings.teach(farmer, p);
+        String again = com.jrpetty.mcassistant.entity.Dealings.teach(farmer, p);
+        said.add("lesson: " + lesson + " / " + again);
+        helper.assertTrue(again.contains("One lesson a day"), "a lesson, once a day");
+        // A keepsake from a close friend.
+        farmer.persona().feelFor(p.getUUID(), name, 60);
+        said.add("keepsake: " + com.jrpetty.mcassistant.entity.Dealings.keepsake(farmer, p));
+        boolean keepsake = false;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
+            ItemStack s = p.getInventory().getItem(i);
+            if (s.getHoverName().getString().contains("keepsake")) keepsake = true;
+        }
+        helper.assertTrue(keepsake, "a keepsake from a close friend");
+        // A repair at the smith's: coin, and an ingot for every quarter of the wear (three, for a sword 150 worn,
+        // from the player's own with none in the stores; it once took a scrap, and the order below the rest).
+        ItemStack worn = new ItemStack(Items.IRON_SWORD);
+        worn.setDamageValue(150);
+        p.setItemInHand(InteractionHand.MAIN_HAND, worn);
+        p.getInventory().setItem(33, new ItemStack(Items.IRON_INGOT, 6));
+        said.add("repair: " + com.jrpetty.mcassistant.entity.Dealings.repair(smith, p));
+        helper.assertTrue(p.getMainHandItem().getDamageValue() == 0, "the smith mends a worn sword");
+        // Made to order, from the player's own makings: ready tomorrow.
+        p.getInventory().setItem(34, new ItemStack(Items.STICK, 2));
+        String order = com.jrpetty.mcassistant.entity.Dealings.order(smith, p, "make me an iron sword");
+        String early = com.jrpetty.mcassistant.entity.Dealings.order(smith, p, "is it ready");
+        level.setDayTime(level.getDayTime() + 24000L);
+        int swords = 0;
+        String ready = com.jrpetty.mcassistant.entity.Dealings.order(smith, p, "is it ready");
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.IRON_SWORD)) swords++;
+        said.add("order: " + order + " / " + early + " / " + ready);
+        helper.assertTrue(swords == 2, "made to order, and handed over the next day");
+        level.setDayTime(level.getDayTime() - 24000L);
+        // A feast on the player.
+        said.add("feast: " + com.jrpetty.mcassistant.entity.Dealings.sponsor(keeper, p));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Gatherings.sponsored(village, day), "a feast paid for tonight");
+        // A bulk order out of the glut.
+        int cobbleBefore = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.COBBLESTONE)) cobbleBefore += p.getInventory().getItem(i).getCount();
+        said.add("bulk: " + com.jrpetty.mcassistant.entity.Commerce.bulk(keeper, p, "I'd like to order 128 cobblestone"));
+        int cobble = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.COBBLESTONE)) cobble += p.getInventory().getItem(i).getCount();
+        helper.assertTrue(cobble - cobbleBefore == 128, "a bulk order out of what the village can spare");
+        // A stall on the square (of the player's own barrel and sign if the stores can't spare them), and
+        // market day at it: the coin goes into its till (PlayerStalls).
+        p.getInventory().add(new ItemStack(Items.BARREL));
+        p.getInventory().add(new ItemStack(Items.OAK_SIGN));
+        said.add("stall: " + com.jrpetty.mcassistant.entity.Commerce.stall(keeper, p, ""));
+        com.jrpetty.mcassistant.entity.PlayerStalls.Booth booth = com.jrpetty.mcassistant.entity.PlayerStalls.boothOf(village, p.getUUID());
+        helper.assertTrue(booth != null, "a stall of the player's own on the square: " + said.get(said.size() - 1));
+        net.minecraft.world.Container barrel = (net.minecraft.world.Container) level.getBlockEntity(booth.at());
+        barrel.setItem(0, new ItemStack(Items.APPLE, 8));
+        for (VillageFolkEntity f : List.of(keeper, smith, farmer)) f.earn(10);
+        int sales = com.jrpetty.mcassistant.entity.Commerce.stallDayForTests(level, v, day);
+        int till = com.jrpetty.mcassistant.entity.PlayerStalls.till(village, p.getUUID());
+        said.add("stall day: " + sales + " coins, " + till + " in the till");
+        helper.assertTrue(sales > 0 && till == sales, "the folk buy from a player's stall, and the coin goes into its till");
+        // The bank: put by, take out, borrow (a friend), repay.
+        int treasury = com.jrpetty.mcassistant.village.Ledger.coins(village);
+        said.add("bank: " + com.jrpetty.mcassistant.entity.Commerce.bank(keeper, p, "deposit 20"));
+        helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.coins(village) == treasury + 20, "a deposit into the treasury");
+        said.add("bank: " + com.jrpetty.mcassistant.entity.Commerce.bank(keeper, p, "withdraw 5"));
+        for (VillageFolkEntity f : List.of(keeper, smith, farmer)) f.persona().feelFor(p.getUUID(), name, 40);
+        com.jrpetty.mcassistant.entity.Standing.stir(village, p.getUUID());
+        com.jrpetty.mcassistant.village.Ledger.addCoins(village, 100);
+        said.add("bank: " + com.jrpetty.mcassistant.entity.Commerce.bank(keeper, p, "borrow 10"));
+        said.add("bank: " + com.jrpetty.mcassistant.entity.Commerce.bank(keeper, p, "repay"));
+        String account = com.jrpetty.mcassistant.village.Ledger.note(village, "bank/" + p.getUUID());
+        helper.assertTrue(account != null && account.startsWith("15|0"), "fifteen put by, nothing owed: " + account);
+        // Investing, an escort, the auction.
+        said.add("invest: " + com.jrpetty.mcassistant.entity.Commerce.invest(keeper, p, "invest 50"));
+        helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.note(village, "invest/" + p.getUUID()).startsWith("50|"), "coin in the works");
+        said.add("escort: " + com.jrpetty.mcassistant.entity.Commerce.escort(keeper, p));
+        stone.setItem(26, new ItemStack(Items.DIAMOND_SWORD));
+        food.setItem(20, new ItemStack(Items.DIAMOND_SWORD));
+        com.jrpetty.mcassistant.entity.Budget.forget(village);
+        com.jrpetty.mcassistant.entity.Commerce.auctionForTests(level, v, day, true);
+        said.add("auction: " + com.jrpetty.mcassistant.entity.Commerce.auction(keeper, p, ""));
+        said.add("auction: " + com.jrpetty.mcassistant.entity.Commerce.auction(keeper, p, "I bid 60"));
+        com.jrpetty.mcassistant.entity.Commerce.auctionForTests(level, v, day + 1, false);
+        said.add("auction: " + com.jrpetty.mcassistant.entity.Commerce.auction(keeper, p, ""));
+        int diamond = 0;
+        for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.DIAMOND_SWORD)) diamond++;
+        helper.assertTrue(diamond == 1, "the auction's best bid takes the lot");
+        // A trade route of the player's own, to the neighbour.
+        VillageFolkSpawnerBlock.raiseParty(level, Kit.surface(level, 68300, 12000), 0.0F, 3);
+        Villages.Village other = Villages.nearest(level, Kit.surface(level, 68300, 12000), Villages.VILLAGE_RANGE);
+        helper.assertTrue(other != null && !other.id().equals(village), "a neighbour");
+        said.add("charter: " + com.jrpetty.mcassistant.entity.Commerce.charter(keeper, p, Villages.name(other.id())));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Envoys.pact(village, other.id()), "a chartered trade route: the caravans run it");
+        said.add("prices: " + com.jrpetty.mcassistant.entity.Commerce.prices(keeper, p, "where's bread dear?"));
+        said.add("haggle: " + com.jrpetty.mcassistant.entity.Dealings.haggle(keeper, p));
+        said.add("contract: " + com.jrpetty.mcassistant.entity.Commerce.contract(keeper, p, ""));
+        said.add("account: " + com.jrpetty.mcassistant.entity.Commerce.account(village, p.getUUID()));
+        Kit.log("t70 " + String.join(" || ", said));
+        helper.succeed();
+    }
+
+    /** A farmer's ten buckets of water, bought for it out of the treasury once. */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t64_buckets")
+    public static void t64_buckets(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 58000, 12000, 24);
+        Kit.prepare(level, 58000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 58000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        farmer.setJob(StationTask.FARM);
+        java.util.UUID id = farmer.ownerId();
+        com.jrpetty.mcassistant.village.Ledger.takeCoins(id, com.jrpetty.mcassistant.village.Ledger.coins(id));
+        com.jrpetty.mcassistant.village.Ledger.addCoins(id, 30);
+        boolean got = com.jrpetty.mcassistant.entity.Trades.buckets(farmer);
+        int buckets = farmer.countCarried(st -> st.is(Items.WATER_BUCKET));
+        int coins = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        boolean again = com.jrpetty.mcassistant.entity.Trades.buckets(farmer);
+        Kit.log("t64 the buckets: got " + got + ", " + buckets + " of water; the treasury 30 -> " + coins + "; again " + again);
+        helper.assertTrue(got && buckets == 10 && coins == 30 - com.jrpetty.mcassistant.entity.Trades.BUCKETS && !again,
+            "a farmer's ten buckets of water, bought once out of the treasury");
+        helper.succeed();
+    }
+
+    /**
+     * The hunter: out on its grounds it takes a grown wild cow, never the last pair of pigs, and
+     * brings the meat and the hide home.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 3000, batch = "t56_hunter")
+    public static void t56_hunter(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 42000, 12000, 64);
+        Kit.prepare(level, 42000, 12000, 64);
+        BlockPos heart = Kit.surface(level, 42000, 12000);
+        VillageFolkEntity hunter = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(hunter != null, "a village");
+        BlockPos grounds = Kit.surface(level, heart.getX() + 30, heart.getZ());
+        for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new AABB(grounds).inflate(64, 32, 64))) a.discard();
+        hunter.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(grounds, 20, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "Hunting Grounds");
+        hunter.setJob(StationTask.HUNT);
+        hunter.insertItem(new ItemStack(Items.IRON_SWORD));
+        for (int i = 0; i < 4; i++) {
+            net.minecraft.world.entity.animal.Cow cow = EntityType.COW.create(level);
+            cow.moveTo(grounds.getX() + 0.5 + i, grounds.getY(), grounds.getZ() + 3.5, 0.0F, 0.0F);
+            level.addFreshEntity(cow);
+        }
+        for (int i = 0; i < 2; i++) {
+            net.minecraft.world.entity.animal.Pig pig = EntityType.PIG.create(level);
+            pig.moveTo(grounds.getX() + 0.5 + i, grounds.getY(), grounds.getZ() - 3.5, 0.0F, 0.0F);
+            level.addFreshEntity(pig);
+        }
+        hunter.moveTo(grounds.getX() + 0.5, grounds.getY(), grounds.getZ() + 0.5, 0.0F, 0.0F);
+        final java.util.List<String> trail = new java.util.ArrayList<>();
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 20 == 0 && hunter.peekJob() == null) hunter.huntForTests();
+            int cows = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Cow.class, new AABB(grounds).inflate(40, 16, 40),
+                net.minecraft.world.entity.LivingEntity::isAlive).size();
+            int pigs = level.getEntitiesOfClass(net.minecraft.world.entity.animal.Pig.class, new AABB(grounds).inflate(40, 16, 40),
+                net.minecraft.world.entity.LivingEntity::isAlive).size();
+            int game = hunter.countCarried(com.jrpetty.mcassistant.entity.AssistantEntity.GAME);
+            if (t % 200 == 0) trail.add(t + ": cows " + cows + ", pigs " + pigs + ", game " + game + " — " + hunter.debugLine());
+            if (t > 40 && cows <= 3 && game > 0) {
+                Kit.log("t56 the hunt: " + String.join(" | ", trail) + " | at " + t + ": cows " + cows + ", pigs " + pigs + ", game " + game);
+                helper.assertTrue(pigs == 2, "the last pair of pigs is left to breed: " + pigs);
+                helper.succeed();
+            }
+        });
+        helper.runAtTickTime(2900, () -> {
+            Kit.log("t56 the hunt (no kill): " + String.join(" | ", trail));
+            helper.fail("the hunter never took a cow");
+        });
+    }
+
+    /**
+     * The village's books: what a working folk banks is its output, valued at the market's worth;
+     * the morning closes the day and keeps it; and the traders buy no more than the town made.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t57_economy")
+    public static void t57_economy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 44000, 12000, 24);
+        Kit.prepare(level, 44000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 44000, 12000);
+        VillageFolkEntity farmer = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(farmer != null, "a village");
+        farmer.setJob(StationTask.FARM);
+        Villages.Village v = Villages.get(farmer.ownerId());
+        com.jrpetty.mcassistant.entity.Economy.produced(farmer, new ItemStack(Items.BREAD, 16));       // its kit, put back: not made
+        com.jrpetty.mcassistant.entity.Economy.produced(farmer, new ItemStack(Items.BREAD, 40));
+        com.jrpetty.mcassistant.entity.Economy.produced(farmer, new ItemStack(Items.COBBLESTONE, 64));   // not a farmer's work
+        com.jrpetty.mcassistant.entity.Economy.closeTheDay(level, v, 1);
+        int made = com.jrpetty.mcassistant.entity.Economy.yesterday(v.id());
+        String line = com.jrpetty.mcassistant.entity.Economy.line(v.id());
+        String page = com.jrpetty.mcassistant.entity.Economy.page(level, v);
+        Kit.log("t57 the books: made " + made + "; " + line + " | page: " + page.replace("\n", " / "));
+        helper.assertTrue(made == 12, "forty loaves at 0.3 are twelve coins' worth, and the stone is no farmer's: " + made);
+        helper.assertTrue(page.contains("Best producers") && page.contains(farmer.displayNameCap()), "the page names the best producers");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Economy.worth(v.id()) >= 0, "the village's worth is counted");
+        helper.succeed();
+    }
+
+    /**
+     * Fetching an animal home as a player does: the feed held out, the animal following the hand
+     * home to the pen, and fed there.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "t58_lure")
+    public static void t58_lure(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 46000, 12000, 64);
+        Kit.prepare(level, 46000, 12000, 64);
+        BlockPos heart = Kit.surface(level, 46000, 12000);
+        VillageFolkEntity rancher = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(rancher != null, "a village");
+        BlockPos pen = Kit.surface(level, heart.getX() + 14, heart.getZ());
+        for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new AABB(pen).inflate(64, 32, 64))) a.discard();
+        rancher.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(pen, 6, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the pen");
+        rancher.setJob(StationTask.RANCH);
+        rancher.insertItem(new ItemStack(Items.WHEAT, 8));
+        rancher.moveTo(pen.getX() + 0.5, pen.getY(), pen.getZ() + 0.5, 0.0F, 0.0F);
+        net.minecraft.world.entity.animal.Sheep sheep = EntityType.SHEEP.create(level);
+        sheep.moveTo(pen.getX() + 0.5, pen.getY(), pen.getZ() + 22.5, 0.0F, 0.0F);
+        level.addFreshEntity(sheep);
+        final boolean[] set = { false };
+        final String[] held = { "" };
+        final java.util.List<String> trail = new java.util.ArrayList<>();
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (!set[0] && t > 5) set[0] = com.jrpetty.mcassistant.entity.Drover.consider(rancher, level);
+            if (com.jrpetty.mcassistant.entity.Drover.busy(rancher)) {
+                if (t % 10 == 0) com.jrpetty.mcassistant.entity.Drover.drive(rancher, level);
+                if (rancher.getMainHandItem().is(Items.WHEAT)) held[0] = "wheat";
+            }
+            if (t % 200 == 0) trail.add(t + ": sheep " + sheep.blockPosition().toShortString() + " leashed " + sheep.isLeashed()
+                + ", rancher " + rancher.blockPosition().toShortString() + " holding " + rancher.getMainHandItem().getItem());
+            if (set[0] && !com.jrpetty.mcassistant.entity.Drover.busy(rancher)) {
+                double d = Math.sqrt(sheep.distanceToSqr(pen.getX() + 0.5, sheep.getY(), pen.getZ() + 0.5));
+                Kit.log("t58 the lure: " + String.join(" | ", trail) + " | home at " + t + ", " + Math.round(d) + " from the pen; held " + held[0]
+                    + "; leashed " + sheep.isLeashed() + "; herd " + sheep.getTags());
+                helper.assertTrue(d < 8 && "wheat".equals(held[0]) && !sheep.isLeashed() && sheep.getTags().contains("mca_herd"),
+                    "the sheep followed the wheat home to the pen, no lead");
+                helper.succeed();
+            }
+        });
+        helper.runAtTickTime(2300, () -> {
+            Kit.log("t58 the lure (not home): " + String.join(" | ", trail));
+            helper.fail("the sheep never came home");
+        });
+    }
+
+    /**
+     * Every town its own: a town on the coast takes up fishing from its first days and calls its
+     * elder the harbourmaster; a desert town rebuilds in sandstone; a new town's name fits its land.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t59_land")
+    public static void t59_land(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(6000);
+        Kit.hold(level, 48000, 12000, 24);
+        Kit.prepare(level, 48000, 12000, 24);
+        BlockPos heart = Kit.surface(level, 48000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.UUID id = v.id();
+        boolean fishPlains = Villages.wants(id, StationTask.FISH);
+        com.jrpetty.mcassistant.entity.Homeland.setForTests(id, com.jrpetty.mcassistant.entity.Homeland.Land.COAST);
+        boolean fishCoast = Villages.wants(id, StationTask.FISH);
+        String title = com.jrpetty.mcassistant.entity.Homeland.leaderTitle(id);
+        String status = com.jrpetty.mcassistant.VillageCommands.statusText(level, v);
+        String coastName = com.jrpetty.mcassistant.entity.Homeland.nameForTests(id, com.jrpetty.mcassistant.entity.Homeland.Land.COAST);
+        com.jrpetty.mcassistant.entity.Homeland.setForTests(id, com.jrpetty.mcassistant.entity.Homeland.Land.DESERT);
+        var desert = com.jrpetty.mcassistant.entity.Homeland.walls(id);
+        Kit.log("t59 the land: six folk on the plains want a fisher " + fishPlains + ", on the coast " + fishCoast + "; the leader is the "
+            + title + "; a coast town is called " + coastName + "; desert walls " + (desert == null ? "none" : desert.block())
+            + "; status: " + status.replaceAll(".*(Land: [^.]*).*", "$1"));
+        helper.assertTrue(!fishPlains && fishCoast, "a coast town takes up fishing from its first days");
+        helper.assertTrue("harbourmaster".equals(title), "and its elder is the harbourmaster: " + title);
+        helper.assertTrue(status.contains("Land: on the coast"), "the status says where it stands");
+        helper.assertTrue(coastName != null && coastName.startsWith("Ash") && !coastName.equals("Ash"), "a coast town's name fits: " + coastName);
+        helper.assertTrue(desert != null && desert.block() == Blocks.CUT_SANDSTONE, "a desert town rebuilds in sandstone");
+        helper.succeed();
+    }
+
+    /**
+     * The pen: once the village has built one, the rancher brings a wild sheep home through the
+     * gate (opened to go through, shut behind) into the fenced square.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2600, batch = "t60_pen")
+    public static void t60_pen(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 50000, 12000, 72);
+        Kit.prepare(level, 50000, 12000, 72);
+        BlockPos heart = Kit.surface(level, 50000, 12000);
+        VillageFolkEntity rancher = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(rancher != null, "a village");
+        java.util.UUID id = rancher.ownerId();
+        BlockPos penAt = Kit.surface(level, heart.getX() + 16, heart.getZ());
+        for (net.minecraft.world.entity.animal.Animal a : level.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
+                new AABB(penAt).inflate(70, 32, 70))) a.discard();
+        com.jrpetty.mcassistant.entity.goal.BuildGoal.stamp(level, "pen", penAt, net.minecraft.core.Direction.SOUTH, 13,
+            p -> p.part() == com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.GATE
+                ? Blocks.OAK_FENCE_GATE.defaultBlockState() : Blocks.OAK_FENCE.defaultBlockState());
+        com.jrpetty.mcassistant.village.Ledger.built(id, "pen", penAt, net.minecraft.core.Direction.SOUTH);
+        var pen = com.jrpetty.mcassistant.entity.Drover.pen(id);
+        helper.assertTrue(pen != null && level.getBlockState(pen.gate()).getBlock() instanceof net.minecraft.world.level.block.FenceGateBlock,
+            "the pen stands, with its gate");
+        rancher.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(pen.centre(), 3, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "The Pen");
+        rancher.setJob(StationTask.RANCH);
+        rancher.insertItem(new ItemStack(Items.WHEAT, 8));
+        rancher.moveTo(pen.centre().getX() + 0.5, pen.centre().getY(), pen.centre().getZ() - 6.5, 0.0F, 0.0F);
+        net.minecraft.world.entity.animal.Sheep sheep = EntityType.SHEEP.create(level);
+        sheep.moveTo(pen.centre().getX() + 0.5, pen.centre().getY(), pen.centre().getZ() - 24.5, 0.0F, 0.0F);
+        level.addFreshEntity(sheep);
+        final boolean[] set = { false };
+        final long[] inAt = { -1 };
+        final java.util.List<String> trail = new java.util.ArrayList<>();
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (!set[0] && t > 5) set[0] = com.jrpetty.mcassistant.entity.Drover.consider(rancher, level);
+            boolean open = level.getBlockState(pen.gate()).getValue(net.minecraft.world.level.block.FenceGateBlock.OPEN);
+            if (t % 200 == 0) trail.add(t + ": sheep " + sheep.blockPosition().toShortString() + " rancher " + rancher.blockPosition().toShortString()
+                + " gate " + (open ? "open" : "shut"));
+            if (inAt[0] < 0 && pen.inside(sheep.blockPosition())) inAt[0] = t;
+            if (inAt[0] >= 0 && t - inAt[0] > 200 && !com.jrpetty.mcassistant.entity.Drover.busy(rancher)) {
+                // Caught in the gateway on its way out: the gate is shut behind it once it is through
+                // (the gate is minded every half-second), so look again in a moment.
+                boolean through = open && !pen.inside(rancher.blockPosition())
+                    && rancher.distanceToSqr(pen.gate().getX() + 0.5, pen.gate().getY(), pen.gate().getZ() + 0.5) < 3.0 * 3.0;
+                if (through && t - inAt[0] < 600) return;
+                Kit.log("t60 the pen: " + String.join(" | ", trail) + " | in at " + inAt[0] + ", now " + t + ": gate " + (open ? "open" : "shut")
+                    + ", sheep inside " + pen.inside(sheep.blockPosition()));
+                helper.assertTrue(pen.inside(sheep.blockPosition()), "the sheep is in the pen");
+                helper.assertTrue(!open || pen.inside(rancher.blockPosition()), "and the gate is shut behind (or the rancher is still in it)");
+                helper.succeed();
+            }
+        });
+        helper.runAtTickTime(2500, () -> {
+            Kit.log("t60 the pen (not in): " + String.join(" | ", trail));
+            helper.fail("the sheep never went into the pen");
+        });
+    }
+
+    /**
+     * The fisher fishes: from eight blocks off a pond, it walks to the bank, casts, and lands fish.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "t61_fisher")
+    public static void t61_fisher(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 52000, 12000, 32);
+        Kit.prepare(level, 52000, 12000, 32);
+        BlockPos heart = Kit.surface(level, 52000, 12000);
+        VillageFolkEntity fisher = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(fisher != null, "a village");
+        BlockPos pond = Kit.surface(level, heart.getX() + 12, heart.getZ());
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                level.setBlock(pond.offset(dx, -1, dz), Blocks.WATER.defaultBlockState(), 3);
+                level.setBlock(pond.offset(dx, -2, dz), Blocks.WATER.defaultBlockState(), 3);
+            }
+        }
+        fisher.assignPlot(com.jrpetty.mcassistant.entity.WorkZone.around(pond, 6, com.jrpetty.mcassistant.entity.WorkZone.DEFAULT_DEPTH), "the pond");
+        fisher.setJob(StationTask.FISH);
+        fisher.insertItem(new ItemStack(Items.FISHING_ROD));
+        fisher.moveTo(pond.getX() + 0.5, pond.getY(), pond.getZ() + 8.5, 0.0F, 0.0F);
+        fisher.enqueue(com.jrpetty.mcassistant.entity.Job.fish(2));
+        final java.util.List<String> trail = new java.util.ArrayList<>();
+        java.util.function.Predicate<ItemStack> fish = st -> st.is(Items.COD) || st.is(Items.SALMON) || st.is(Items.PUFFERFISH)
+            || st.is(Items.TROPICAL_FISH) || st.is(Items.STRING) || st.is(Items.BONE) || st.is(Items.LEATHER) || st.is(Items.BOWL) || st.is(Items.SADDLE);
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            int caught = fisher.countCarried(fish);
+            if (t % 200 == 0) trail.add(t + ": at " + fisher.blockPosition().toShortString() + ", caught " + caught + ", job " + fisher.peekJob());
+            if (caught >= 1) {
+                Kit.log("t61 the fisher: " + String.join(" | ", trail) + " | landed " + caught + " at " + t + " from " + fisher.blockPosition().toShortString());
+                helper.succeed();
+            }
+        });
+        helper.runAtTickTime(2300, () -> {
+            Kit.log("t61 the fisher (nothing): " + String.join(" | ", trail));
+            helper.fail("the fisher caught nothing");
+        });
+    }
+
+    /**
+     * The leader runs the village. With the larder empty the leader calls a famine at its morning
+     * look at the books: the larder ordered filled at once, more food-makers wanted, the fields to
+     * be widened sooner. A hardworking, grumpy leader drives the village (faster work, shorter
+     * breaks) and wears an easygoing folk down; a cheerful, generous one lifts it, and its village
+     * has its children sooner. With the stores full again the famine is over.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "t71_leader")
+    public static void t71_leader(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 70000, 12000, 40);
+        Kit.prepare(level, 70000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 70000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 10);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.UUID id = v.id();
+        java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isBaby()) folk.add(f);
+        helper.assertTrue(folk.size() >= 3, "a village of grown folk: " + folk.size());
+        long day = level.getDayTime() / 24000L;
+        VillageFolkEntity elder = folk.get(0), other = folk.get(1);
+        Villages.electElder(id, elder, day);
+        elder.life().setTraitsForTests(com.jrpetty.mcassistant.entity.Social.Trait.HARDWORKING,
+            com.jrpetty.mcassistant.entity.Social.Trait.GRUMPY);
+        other.life().setTraitsForTests(com.jrpetty.mcassistant.entity.Social.Trait.EASYGOING,
+            com.jrpetty.mcassistant.entity.Social.Trait.SOCIABLE);
+        // The larder emptied.
+        java.util.function.Predicate<ItemStack> eats = st -> st.get(net.minecraft.core.component.DataComponents.FOOD) != null
+            || st.is(Items.WHEAT);
+        for (BlockPos c : Villages.storeChests(level, id)) {
+            if (level.getBlockEntity(c) instanceof net.minecraft.world.Container box) {
+                for (int i = 0; i < box.getContainerSize(); i++) if (eats.test(box.getItem(i))) box.setItem(i, ItemStack.EMPTY);
+            }
+        }
+        // And their packs: the leader counts the bread folk carry as the village's too.
+        for (AssistantEntity a : Villages.folkOf(id)) a.removeMatching(eats, 999);
+        Villages.resetStockForTests();
+        com.jrpetty.mcassistant.entity.Leader.resetForTests();
+        int hard = com.jrpetty.mcassistant.entity.Leader.spirits(other);
+        com.jrpetty.mcassistant.entity.Leader.morning(level, v, day);
+        com.jrpetty.mcassistant.entity.Leader.Plan plan = com.jrpetty.mcassistant.entity.Leader.plan(id);
+        com.jrpetty.mcassistant.entity.Orders.Order order = com.jrpetty.mcassistant.entity.Orders.current(id);
+        int pace = com.jrpetty.mcassistant.entity.Leader.pace(id);
+        double rest = com.jrpetty.mcassistant.entity.Leader.restScale(id);
+        double farm = com.jrpetty.mcassistant.entity.Leader.foodFactor(id, StationTask.FARM);
+        Kit.log("t71 the leader: " + com.jrpetty.mcassistant.entity.Leader.line(id) + "; order " + order
+            + "; farm factor " + farm + "; an easygoing folk's spirits under it " + hard);
+        helper.assertTrue(plan == com.jrpetty.mcassistant.entity.Leader.Plan.FAMINE, "an empty larder is a famine: " + plan);
+        helper.assertTrue(order == com.jrpetty.mcassistant.entity.Orders.Order.LARDER, "the larder ordered filled at once: " + order);
+        helper.assertTrue(farm > 1.0 && com.jrpetty.mcassistant.entity.Leader.widening(id), "more farmers, and the fields widened sooner");
+        helper.assertTrue(pace > 0 && rest < 1.0, "a hardworking leader drives the village: work " + pace + "%, breaks x" + rest);
+        helper.assertTrue(hard < 0, "and an easygoing folk feels it: " + hard);
+        // A cheerful, generous leader instead.
+        elder.life().setTraitsForTests(com.jrpetty.mcassistant.entity.Social.Trait.CHEERFUL,
+            com.jrpetty.mcassistant.entity.Social.Trait.GENEROUS);
+        com.jrpetty.mcassistant.entity.Leader.resetForTests();
+        int kind = com.jrpetty.mcassistant.entity.Leader.spirits(other);
+        double family = com.jrpetty.mcassistant.entity.Leader.family(id);
+        Kit.log("t71 a cheerful, generous leader: spirits " + kind + ", families x" + family
+            + ", pay " + com.jrpetty.mcassistant.entity.Leader.payRate(id) + "%");
+        helper.assertTrue(kind > 0 && kind > hard, "a cheerful, generous leader lifts everybody: " + kind);
+        helper.assertTrue(family < 1.0, "and its village has its children sooner: x" + family);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Leader.payRate(id) > 100, "and pays over the odds");
+        // The stores full again: the famine is over.
+        BlockPos chest = Villages.storeChests(level, id).get(0);
+        net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        for (int i = 0; i < 8; i++) box.setItem(i, new ItemStack(Items.BREAD, 64));
+        Villages.resetStockForTests();
+        com.jrpetty.mcassistant.entity.Leader.morning(level, v, day + 1);
+        com.jrpetty.mcassistant.entity.Leader.Plan after = com.jrpetty.mcassistant.entity.Leader.plan(id);
+        Kit.log("t71 with the stores full: " + com.jrpetty.mcassistant.entity.Leader.line(id));
+        helper.assertTrue(after != com.jrpetty.mcassistant.entity.Leader.Plan.FAMINE
+            && after != com.jrpetty.mcassistant.entity.Leader.Plan.SHORT, "the famine is over: " + after);
+        // A full larder eaten down three meals for every one grown (the four-hundred-day run: 1,110
+        // meals, 46 grown and 151 eaten a day, 37 folk) is short commons now, not in a week's time;
+        // the same larder with as much grown as eaten is not; and once short, a village that grows
+        // four meals for every five it eats stays short until it grows nearly enough.
+        com.jrpetty.mcassistant.entity.Leader.Plan STEADY = com.jrpetty.mcassistant.entity.Leader.Plan.STEADY,
+            SHORT = com.jrpetty.mcassistant.entity.Leader.Plan.SHORT;
+        com.jrpetty.mcassistant.entity.Leader.Plan draining = com.jrpetty.mcassistant.entity.Leader.decideForTests(1110, 37, 46, 151, 2.0, STEADY);
+        com.jrpetty.mcassistant.entity.Leader.Plan even = com.jrpetty.mcassistant.entity.Leader.decideForTests(1110, 37, 150, 151, 2.0, STEADY);
+        com.jrpetty.mcassistant.entity.Leader.Plan stays = com.jrpetty.mcassistant.entity.Leader.decideForTests(610, 37, 106, 151, 2.0, SHORT);
+        com.jrpetty.mcassistant.entity.Leader.Plan fresh = com.jrpetty.mcassistant.entity.Leader.decideForTests(610, 37, 106, 151, 2.0, STEADY);
+        helper.assertTrue(draining == SHORT, "a larder emptying three to one is short commons at once: " + draining);
+        helper.assertTrue(even != SHORT && even != com.jrpetty.mcassistant.entity.Leader.Plan.FAMINE, "an even larder is not: " + even);
+        helper.assertTrue(stays == SHORT && fresh != SHORT, "short stays short till nearly enough is grown: " + stays + " / " + fresh);
+        helper.succeed();
+    }
+
+    /**
+     * The young: a child that has learned no trade grows up and is set to work by the leader, at
+     * what the village most needs.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t72_young")
+    public static void t72_young(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 72000, 12000, 32);
+        Kit.prepare(level, 72000, 12000, 32);
+        BlockPos heart = Kit.surface(level, 72000, 12000);
+        VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null, "a village");
+        java.util.UUID id = v.id();
+        VillageFolkEntity kid = null, elder = null;
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (!(a instanceof VillageFolkEntity f)) continue;
+            if (elder == null) elder = f;
+            else if (kid == null) kid = f;
+        }
+        helper.assertTrue(kid != null && elder != null, "an elder and a child");
+        Villages.electElder(id, elder, level.getDayTime() / 24000L);
+        kid.setStation(null, StationTask.NONE);
+        kid.setChild(true);
+        kid.childhoodForTests(1);
+        boolean stillChild = kid.isBaby();
+        kid.childhoodForTests(VillageFolkEntity.GROW_DAYS);
+        Kit.log("t72 the young: a child of a day still a child " + stillChild + "; grown at "
+            + VillageFolkEntity.GROW_DAYS + " days: child " + kid.isBaby() + ", trade " + kid.stationTask());
+        helper.assertTrue(stillChild, "a day-old child is still a child");
+        helper.assertTrue(!kid.isBaby() && kid.stationTask() != StationTask.NONE,
+            "grown, it is set to work by the leader: " + kid.stationTask());
+        helper.succeed();
+    }
+
+    /**
+     * Every building grows up with its village (Ages). A tavern built of timber in the Wood Age is
+     * rebuilt in stone in the Stone Age, with lamp posts by its door; slate-roofed with dressed-stone
+     * footings in the Iron Age; and roofed in copper in the Diamond Age — every block paid for out
+     * of the stores, and what came off put back in them.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "t73_ages")
+    public static void t73_ages(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 74000, 12000, 40);
+        Kit.prepare(level, 74000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 74000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a village");
+        java.util.UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 1);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, chest);
+        net.minecraft.world.Container stores = (net.minecraft.world.Container) level.getBlockEntity(chest);
+        ItemStack[] makings = {
+            new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
+            new ItemStack(Items.COBBLED_DEEPSLATE, 64), new ItemStack(Items.COPPER_INGOT, 64), new ItemStack(Items.COPPER_INGOT, 64),
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.TORCH, 16), new ItemStack(Items.COBBLESTONE, 64),
+            new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.STONE_BRICKS, 64),
+            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_LOG, 32), new ItemStack(Items.GLASS_PANE, 32),
+            new ItemStack(Items.COPPER_INGOT, 64), new ItemStack(Items.COPPER_INGOT, 64) };
+        for (int i = 0; i < makings.length; i++) stores.setItem(i, makings[i]);
+        BlockPos at = Kit.surface(level, heart.getX() + 18, heart.getZ() - 18);
+        BuildGoal.stamp(level, "tavern", at, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "tavern", at, Direction.NORTH);
+        java.util.function.IntSupplier timberWalls = () -> {
+            int n = 0;
+            for (BuildGoal.Placement p : BuildGoal.plan("tavern", at, Direction.NORTH, 13)) {
+                if (p.part() == BuildGoal.Part.BLOCK && p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL
+                    && level.getBlockState(p.pos()).is(net.minecraft.tags.BlockTags.PLANKS)) n++;
+            }
+            return n;
+        };
+        java.util.function.Function<net.minecraft.world.level.block.Block, Integer> count = block -> {
+            int n = 0;
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-9, -2, -9), at.offset(9, 14, 9))) if (level.getBlockState(q).is(block)) n++;
+            return n;
+        };
+        int timberBefore = timberWalls.getAsInt();
+        // A lamp post carries a lantern if the smith has made one, a torch till then (Masonry).
+        int lampsBefore = count.apply(Blocks.LANTERN) + count.apply(Blocks.TORCH);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+        int stoneWalls, timberAfter, lamps, slate, footings, copper, upstairs = 0;
+        boolean tall;
+        try {
+            Villages.ageForTests(village, Villages.Age.STONE);
+            for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
+            timberAfter = timberWalls.getAsInt();
+            stoneWalls = count.apply(Blocks.STONE_BRICKS);
+            lamps = count.apply(Blocks.LANTERN) + count.apply(Blocks.TORCH);
+            Villages.ageForTests(village, Villages.Age.IRON);
+            for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
+            slate = count.apply(Blocks.DEEPSLATE_TILE_STAIRS) + count.apply(Blocks.DEEPSLATE_TILE_SLAB) + count.apply(Blocks.DEEPSLATE_TILES);
+            footings = count.apply(Blocks.STONE_BRICKS);
+            tall = com.jrpetty.mcassistant.entity.Grow.tall(village, at);
+            for (BlockPos q : BlockPos.betweenClosed(at.offset(-8, 5, -8), at.offset(8, 7, 8))) if (!level.getBlockState(q).isAir()) upstairs++;
+            Villages.ageForTests(village, Villages.Age.DIAMOND);
+            for (int i = 0; i < 30; i++) com.jrpetty.mcassistant.entity.Ages.work(level, v, 400);
+            copper = count.apply(Blocks.CUT_COPPER_STAIRS) + count.apply(Blocks.CUT_COPPER_SLAB) + count.apply(Blocks.CUT_COPPER);
+        } finally {
+            com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        }
+        int copperLeft = com.jrpetty.mcassistant.entity.Market.stock(level, village, st -> st.is(Items.COPPER_INGOT));
+        int planksBack = com.jrpetty.mcassistant.entity.Market.stock(level, village, st -> st.is(net.minecraft.tags.ItemTags.PLANKS));
+        Kit.log("t73 the tavern through the ages: timber walls " + timberBefore + " -> " + timberAfter + ", stone " + stoneWalls
+            + ", lamps " + lamps + "; Iron Age slate " + slate + ", stone bricks " + footings + "; Diamond Age copper " + copper
+            + " (copper left " + copperLeft + " of 128); planks in the stores " + planksBack);
+        helper.assertTrue(timberBefore > 0 && timberAfter == 0 && stoneWalls > 0, "the Stone Age rebuilds the timber walls in stone");
+        helper.assertTrue(lamps > lampsBefore, "and puts lamp posts by the door: " + lampsBefore + " -> " + lamps);
+        Kit.log("t73 the Iron Age's second storey: tall " + tall + ", " + upstairs + " blocks four to six above the ground");
+        helper.assertTrue(slate > 0, "the Iron Age slates the roof");
+        helper.assertTrue(tall && upstairs >= 30, "and puts a second storey on the tavern: tall " + tall + ", " + upstairs + " blocks up there");
+        helper.assertTrue(copper > 0 && copperLeft < 128, "the Diamond Age roofs a great building in copper, paid in copper");
+        helper.succeed();
+    }
+
+    /**
+     * The new kinds of building the ages bring (a fountain, a manor house, a bell tower) are drawn
+     * and stand up, and every building that goes up a storey in the Iron Age has a taller drawing
+     * of itself than it had: its walls built up again over a new floor, with a ladder up to it.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t74_new_buildings")
+    public static void t74_new_buildings(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 76000, 12000, 48);
+        Kit.prepare(level, 76000, 12000, 48);
+        BlockPos heart = Kit.surface(level, 76000, 12000);
+        StringBuilder log = new StringBuilder();
+        for (String name : java.util.List.of("fountain", "manor", "belltower")) {
+            java.util.List<com.jrpetty.mcassistant.entity.goal.Blueprints.Cell> cells = com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name);
+            helper.assertTrue(!cells.isEmpty() && BuildGoal.STRUCTURES.contains(name), "a drawing of the " + name);
+            log.append(name).append(' ').append(cells.size()).append(" blocks; ");
+        }
+        int beds = 0;
+        for (com.jrpetty.mcassistant.entity.goal.Blueprints.Cell c : com.jrpetty.mcassistant.entity.goal.Blueprints.cells("manor")) {
+            if (c.key().part() == BuildGoal.Part.BED) beds++;
+        }
+        helper.assertTrue(beds == 6, "a manor house sleeps six: " + beds);
+        for (String name : com.jrpetty.mcassistant.entity.Ages.TALL) {
+            int base = com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name).size();
+            java.util.List<com.jrpetty.mcassistant.entity.goal.Blueprints.Cell> tall =
+                com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name + com.jrpetty.mcassistant.entity.goal.Blueprints.TALL);
+            int ladders = 0, top = 0, baseTop = 0;
+            for (com.jrpetty.mcassistant.entity.goal.Blueprints.Cell c : tall) {
+                if (c.key().part() == BuildGoal.Part.LADDER) ladders++;
+                top = Math.max(top, c.h());
+            }
+            for (com.jrpetty.mcassistant.entity.goal.Blueprints.Cell c : com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name)) {
+                baseTop = Math.max(baseTop, c.h());
+            }
+            log.append(name).append(" ").append(base).append("->").append(tall.size()).append(" blocks, ")
+                .append(baseTop).append("->").append(top).append(" high, ladder ").append(ladders).append("; ");
+            helper.assertTrue(tall.size() > base && top > baseTop, "the " + name + " has a storey more: " + base + " -> " + tall.size());
+        }
+        // Stamped on the ground: the three new ones and a tall tavern stand up.
+        int x = heart.getX() - 30;
+        for (String name : java.util.List.of("fountain", "manor", "belltower", "tavern" + com.jrpetty.mcassistant.entity.goal.Blueprints.TALL)) {
+            BlockPos at = new BlockPos(x, heart.getY(), heart.getZ());
+            int put = BuildGoal.stamp(level, name, at, Direction.NORTH, 13,
+                com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            log.append(name).append(" stamped ").append(put).append("; ");
+            helper.assertTrue(put > 10, "the " + name + " stands: " + put + " blocks");
+            x += 18;
+        }
+        Kit.log("t74 the new buildings: " + log);
+        helper.succeed();
+    }
+
+    /**
+     * A bed in a house is a home, however high the roof over it: the ground floor of a two-storey
+     * house lies ten or eleven under its ridge, and every bed in every house was once passed over
+     * as buried (a town of fifty-eight had thirty-five beds made up and sixteen folk in them). A bed
+     * down in the rock, in nothing the village built, is still nobody's.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t75_house_beds")
+    public static void t75_house_beds(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 78000, 12000, 40);
+        Kit.prepare(level, 78000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 78000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a village");
+        java.util.UUID village = a.ownerId();
+        BlockPos at = Kit.surface(level, heart.getX() + 18, heart.getZ() - 18);
+        BuildGoal.stamp(level, "house2", at, Direction.NORTH, 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(village, "house", at, Direction.NORTH);
+        int beds = 0, homes = 0, deepest = 0;
+        java.util.List<BlockPos> heads = new java.util.ArrayList<>();
+        for (BlockPos p : BlockPos.betweenClosed(at.offset(-8, -2, -8), at.offset(8, 14, 8))) {
+            net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+            if (!(st.getBlock() instanceof net.minecraft.world.level.block.BedBlock)
+                    || st.getValue(net.minecraft.world.level.block.BedBlock.PART)
+                        != net.minecraft.world.level.block.state.properties.BedPart.HEAD) continue;
+            beds++;
+            heads.add(p.immutable());
+            deepest = Math.max(deepest, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                p.getX(), p.getZ()) - p.getY());
+            if (!Villages.buriedBed(level, village, p)) homes++;
+        }
+        // And one under a dozen blocks of rock, well away from anything built (the test world is
+        // flat and a few blocks deep, so the rock is piled over it rather than the bed dug down).
+        BlockPos deep = Kit.surface(level, heart.getX() - 25, heart.getZ() + 25);
+        net.minecraft.world.level.block.state.BlockState red = Blocks.RED_BED.defaultBlockState()
+            .setValue(net.minecraft.world.level.block.BedBlock.FACING, Direction.NORTH);
+        level.setBlock(deep, red.setValue(net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.FOOT), 3);
+        level.setBlock(deep.north(), red.setValue(net.minecraft.world.level.block.BedBlock.PART,
+            net.minecraft.world.level.block.state.properties.BedPart.HEAD), 3);
+        for (int dy = 1; dy <= 12; dy++) {
+            if (level.getBlockState(deep.above(dy)).isAir()) level.setBlock(deep.above(dy), Blocks.STONE.defaultBlockState(), 3);
+            if (level.getBlockState(deep.north().above(dy)).isAir()) level.setBlock(deep.north().above(dy), Blocks.STONE.defaultBlockState(), 3);
+        }
+        boolean buried = Villages.buriedBed(level, village, deep.north());
+        Villages.recountBeds(village);                     // counted once already, when the village was founded
+        int madeUp = Villages.bedsMadeUp(level, village);
+        Kit.log("t75 a two-storey house: " + beds + " beds, " + homes + " homes, the deepest " + deepest
+            + " under its roof; made up " + madeUp + "; a bed down in the rock buried " + buried);
+        helper.assertTrue(beds >= 4 && homes == beds, "every bed in a house is a home: " + homes + " of " + beds);
+        helper.assertTrue(madeUp >= beds, "and the village counts them made up: " + madeUp + " of " + beds);
+        helper.assertTrue(buried, "a bed down in the rock is nobody's home");
+        // Two beds side by side are two beds: the one beside a claimed bed is free (a bed within a
+        // block and a half of a claimed one used to count as taken, and every house slept half).
+        BlockPos one = null, two = null;
+        for (BlockPos h : heads) for (BlockPos k : heads) if (!h.equals(k) && h.distSqr(k) <= 2.0 && one == null) { one = h; two = k; }
+        helper.assertTrue(one != null, "the house has two beds side by side");
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(b != null && village.equals(b.ownerId()), "a second folk of the village");
+        a.claimBedNear(one);
+        b.claimBedNear(one);
+        Kit.log("t75 beds side by side: " + one + " and " + two + "; claimed " + a.bedPos() + " and " + b.bedPos());
+        helper.assertTrue(one.equals(a.bedPos()) && two.equals(b.bedPos()),
+            "the bed beside a claimed one is free to claim: " + a.bedPos() + ", " + b.bedPos());
+        helper.succeed();
+    }
+
+    /**
+     * The village chooses its leader (Elections). Folk care about different things (Values) and vote
+     * by them: one who cares for the larder above all prefers the one who stands for it. The ones
+     * the village thinks most of stand, each for something of its own; on the day the folk walk to
+     * the board to vote; the count makes the winner leader, with what it promised as its mandate;
+     * and a leader's death calls an election two days on.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1600, batch = "t76_election")
+    public static void t76_election(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        Kit.hold(level, 80000, 12000, 48);
+        Kit.prepare(level, 80000, 12000, 48);
+        level.setDayTime(24000L * 9 + 2000);
+        BlockPos heart = Kit.surface(level, 80000, 12000);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 8);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null && stood >= 6, "a village of eight: " + stood);
+        java.util.UUID id = v.id();
+        long[] day = new long[1];
+        String[] winner = { "" };
+        helper.runAtTickTime(40, () -> {
+            day[0] = level.getDayTime() / 24000L;
+            java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+            for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f) { f.ensurePersona(); folk.add(f); }
+            // What a folk cares about decides how it votes.
+            VillageFolkEntity voter = folk.get(0);
+            com.jrpetty.mcassistant.entity.Values.setForTests(voter, com.jrpetty.mcassistant.entity.Values.Value.FOOD, 95);
+            com.jrpetty.mcassistant.entity.Values.setForTests(voter, com.jrpetty.mcassistant.entity.Values.Value.SAFETY, 5);
+            String pick = com.jrpetty.mcassistant.entity.Elections.preferForTests(level, voter,
+                java.util.UUID.randomUUID(), com.jrpetty.mcassistant.entity.Values.Value.FOOD,
+                java.util.UUID.randomUUID(), com.jrpetty.mcassistant.entity.Values.Value.SAFETY);
+            Kit.log("t76 a folk who minds the larder (" + com.jrpetty.mcassistant.entity.Values.describe(voter) + ") between the larder and the watch: " + pick);
+            helper.assertTrue(pick.startsWith("A|"), "one who cares for the larder votes for the one who stands for it: " + pick);
+            StringBuilder types = new StringBuilder();
+            for (VillageFolkEntity f : folk) types.append(f.displayNameCap()).append(' ').append(com.jrpetty.mcassistant.entity.Values.brief(f)).append("; ");
+            Kit.log("t76 the village's folk: " + types);
+            // The ones who stand.
+            int standing = com.jrpetty.mcassistant.entity.Elections.callForTests(level, v, day[0]);
+            java.util.List<String> who = com.jrpetty.mcassistant.entity.Elections.standingForTests(id);
+            java.util.List<String> board = com.jrpetty.mcassistant.entity.Elections.board(id, day[0]);
+            Kit.log("t76 standing: " + who + "; the board: " + board);
+            helper.assertTrue(standing >= 2, "at least two stand: " + who);
+            helper.assertTrue(board.stream().anyMatch(l -> l.contains("ELECTION TODAY")), "the board calls the village to vote: " + board);
+            // The polls open: late in the day every folk's hour has come.
+            level.setDayTime(day[0] * 24000L + 10500);
+        });
+        helper.runAtTickTime(900, () -> {
+            int voted = 0, walked = 0;
+            for (AssistantEntity a : Villages.folkOf(id)) {
+                boolean[] b = com.jrpetty.mcassistant.entity.Elections.votedForTests(id, a.getUUID());
+                if (b[0]) voted++;
+                if (b[1]) walked++;
+            }
+            Kit.log("t76 the polls: " + voted + " voted, " + walked + " walked to the board; " + com.jrpetty.mcassistant.entity.Elections.line(id, day[0]));
+            helper.assertTrue(walked >= 1, "folk walk to the board to cast their votes: " + walked);
+            com.jrpetty.mcassistant.entity.Elections.Result r = com.jrpetty.mcassistant.entity.Elections.countForTests(level, v);
+            java.util.UUID elder = Villages.elder(id);
+            Kit.log("t76 the count: winner " + (r.winner() == null ? "none" : r.winner().name() + " for " + r.winner().platform())
+                + ", " + r.voted() + " of " + r.voters() + " voted; elder now " + Villages.elderName(id)
+                + "; mandate " + com.jrpetty.mcassistant.entity.Elections.mandate(id) + "; " + com.jrpetty.mcassistant.entity.Elections.line(id, day[0]));
+            helper.assertTrue(r.winner() != null && r.winner().id().equals(elder), "the winner leads");
+            winner[0] = r.winner().name();
+            helper.assertTrue(r.voted() == r.voters(), "every grown folk's vote is counted: " + r.voted() + " of " + r.voters());
+            helper.assertTrue(com.jrpetty.mcassistant.entity.Elections.mandate(id) == r.winner().platform(), "with what it stood for as its mandate");
+            // The leader dies: an election two days on.
+            for (AssistantEntity a : Villages.folkOf(id)) if (a.getUUID().equals(elder)) a.kill();
+        });
+        helper.runAtTickTime(920, () -> {
+            String line = com.jrpetty.mcassistant.entity.Elections.line(id, day[0]);
+            Kit.log("t76 after the leader's death: " + line);
+            helper.assertTrue(line.contains("on day " + (day[0] + 2)), "an election is called two days on: " + line);
+            helper.assertTrue(!line.contains(winner[0] + " leads"), "and the dead leader leads no more: " + line);
+            helper.succeed();
+        });
+    }
+
+    /**
+     * Homes: a couple and their children share a house, rented from the village (it gives none), the
+     * children's beds across the room from theirs; a child born into a full house gets a bed bought
+     * at the shop; a grown child moves out into a place of its own; a player buys a house and lets
+     * it, and collects the rent; and every household starts as the village's tenant, rich or poor
+     * (t77_rent_then_buy has the saving up and the buying). Twins come now and then, triplets
+     * rarely, quadruplets hardly ever.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t77_homes")
+    public static void t77_homes(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 6 + 2000);
+        Kit.hold(level, 82000, 12000, 48);
+        Kit.prepare(level, 82000, 12000, 48);
+        BlockPos heart = Kit.surface(level, 82000, 12000);
+        // Twins and more, by the odds.
+        int[] litters = new int[5];
+        net.minecraft.util.RandomSource rr = net.minecraft.util.RandomSource.create(77L);
+        for (int i = 0; i < 200000; i++) litters[VillageFolkEntity.litter(rr)]++;
+        Kit.log("t77 two hundred thousand births: " + litters[1] + " single, " + litters[2] + " twins, " + litters[3] + " triplets, " + litters[4] + " quadruplets");
+        helper.assertTrue(litters[2] > 8000 && litters[2] < 15000, "twins about one birth in seventeen: " + litters[2]);
+        helper.assertTrue(litters[3] > 200 && litters[3] < litters[2] / 5, "triplets far rarer: " + litters[3]);
+        helper.assertTrue(litters[4] > 0 && litters[4] < litters[3] / 5, "quadruplets rarest of all: " + litters[4]);
+
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a village");
+        java.util.UUID id = a.ownerId();
+        Villages.Village v = Villages.get(id);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(b != null && id.equals(b.ownerId()), "a second folk");
+        java.util.function.Function<Integer, BlockPos> house = n -> {
+            BlockPos at = Kit.surface(level, heart.getX() - 30 + 14 * n, heart.getZ() + 22);
+            BuildGoal.stamp(level, "house", at, Direction.NORTH, 13,
+                com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            com.jrpetty.mcassistant.village.Ledger.built(id, "house", at, Direction.NORTH);
+            return at;
+        };
+        BlockPos one = house.apply(0);
+        // Three children: one more than the house has beds for.
+        java.util.List<VillageFolkEntity> kids = new java.util.ArrayList<>();
+        for (int i = 0; i < 3; i++) {
+            a.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 2));
+            b.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BREAD, 2));
+            VillageFolkEntity c = a.raiseChildWith(b);
+            helper.assertTrue(c != null, "a child born");
+            kids.add(c);
+        }
+        for (AssistantEntity e : Villages.folkOf(id)) {
+            if (e instanceof VillageFolkEntity f && f.isBaby() && !kids.contains(f)) kids.add(f);   // twins
+        }
+        a.earn(30);
+        b.earn(30);
+        // The stores: a chest at the heart (a house's own chest is never the stores').
+        BlockPos stores = Kit.surface(level, heart.getX() + 4, heart.getZ() - 4);
+        level.setBlock(stores, Blocks.CHEST.defaultBlockState(), 3);
+        Villages.forgetStores(id);
+        for (int i = 0; i < 3; i++) {
+            com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WHITE_BED));
+        }
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        java.util.List<java.util.UUID> in = com.jrpetty.mcassistant.entity.Homes.membersForTests(id, one);
+        java.util.List<BlockPos> beds = com.jrpetty.mcassistant.entity.Homes.bedsForTests(level, id, one);
+        Kit.log("t77 the family: " + in.size() + " under one roof (" + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, one)
+            + "), " + beds.size() + " beds; " + com.jrpetty.mcassistant.entity.Homes.line(level, id) + "; a child's bed: "
+            + com.jrpetty.mcassistant.entity.Homes.whyForTests(one) + "; beds in the stores "
+            + com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(net.minecraft.tags.ItemTags.BEDS)) + ", store chests "
+            + Villages.storeChests(level, id));
+        helper.assertTrue(in.contains(a.getUUID()) && in.contains(b.getUUID()), "the couple share a house");
+        for (VillageFolkEntity c : kids) helper.assertTrue(in.contains(c.getUUID()), "and their children live with them");
+        helper.assertTrue("RENTED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, one)), "the village lets its houses, never gives them: "
+            + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, one));
+        helper.assertTrue(beds.size() >= 2 + kids.size(), "a bed bought for the child the house had no bed for: " + beds.size() + " beds for " + in.size());
+        BlockPos ma = com.jrpetty.mcassistant.entity.Homes.bedFor(level, a), mb = com.jrpetty.mcassistant.entity.Homes.bedFor(level, b);
+        helper.assertTrue(ma != null && mb != null && ma.distSqr(mb) <= 2.0, "the parents sleep side by side: " + ma + ", " + mb);
+        java.util.Set<BlockPos> used = new java.util.HashSet<>(java.util.List.of(ma, mb));
+        StringBuilder kb = new StringBuilder();
+        for (VillageFolkEntity c : kids) {
+            BlockPos cb = com.jrpetty.mcassistant.entity.Homes.bedFor(level, c);
+            kb.append(c.displayNameCap()).append(' ').append(cb).append("; ");
+            helper.assertTrue(cb != null && used.add(cb), "every child a bed of its own: " + kb);
+            helper.assertTrue(cb.distSqr(ma) > 2.0 && cb.distSqr(mb) > 2.0, "apart from the parents' beds: " + kb);
+        }
+        Kit.log("t77 the parents' beds " + ma + " " + mb + "; the children's " + kb);
+        // A child grows up and moves out, into the next house built.
+        BlockPos two = house.apply(1);
+        VillageFolkEntity grown = kids.get(0);
+        grown.childhoodForTests(VillageFolkEntity.GROW_DAYS + 2);
+        helper.assertTrue(!grown.isBaby(), "the eldest has grown up");
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        Kit.log("t77 grown up: " + grown.displayNameCap() + " lives at " + com.jrpetty.mcassistant.entity.Homes.homeOf(grown)
+            + " (the family's " + one + ", the new house " + two + "); moving its things to " + com.jrpetty.mcassistant.entity.Homes.movingToForTests(grown.getUUID()));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.membersForTests(id, two).contains(grown.getUUID()), "a grown child moves into a place of its own");
+        helper.assertTrue(!com.jrpetty.mcassistant.entity.Homes.membersForTests(id, one).contains(grown.getUUID()), "and off its parents' books");
+        // A player buys a house, and lets it.
+        BlockPos three = house.apply(2);
+        net.minecraft.world.entity.player.Player you = helper.makeMockPlayer(net.minecraft.world.level.GameType.SURVIVAL);
+        you.setPos(three.getX() + 0.5, three.getY(), three.getZ() + 0.5);
+        com.jrpetty.mcassistant.village.Ledger.addCitizen(id, you.getUUID(), you.getName().getString());
+        you.getInventory().add(new net.minecraft.world.item.ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), 64));
+        String bought = com.jrpetty.mcassistant.entity.Homes.playerBuys(level, you);
+        int left = com.jrpetty.mcassistant.entity.Market.coinsHeld(you);
+        Kit.log("t77 a player buys: " + bought + " (" + left + " coins left)");
+        helper.assertTrue("PLAYER".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, three)), "the player owns the house: " + bought);
+        helper.assertTrue(left < 64, "and paid for it");
+        VillageFolkEntity d = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        helper.assertTrue(d != null, "a folk with nowhere to live");
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        helper.assertTrue(!com.jrpetty.mcassistant.entity.Homes.membersForTests(id, three).contains(d.getUUID()), "a player's house is not the village's to give");
+        String let = com.jrpetty.mcassistant.entity.Homes.playerLets(level, you, 2);
+        d.earn(10);
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        String rent = com.jrpetty.mcassistant.entity.Homes.playerCollects(level, you);
+        Kit.log("t77 let: " + let + " | tenant " + d.displayNameCap() + " in " + com.jrpetty.mcassistant.entity.Homes.homeOf(d) + " | " + rent
+            + " | " + d.displayNameCap() + " says: " + com.jrpetty.mcassistant.entity.Homes.talk(d));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.membersForTests(id, three).contains(d.getUUID()), "a household takes the house the player lets");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Market.coinsHeld(you) == left + 2, "and the player collects the rent: " + rent);
+        // Rich or poor, a household starts as the village's tenant, even in a town that sells outright:
+        // the one with coin buys on payday if it wants to (t77_rent_then_buy), the one without is housed all the same.
+        com.jrpetty.mcassistant.entity.Homes.saleForTests(true);
+        BlockPos four = house.apply(3), five = house.apply(4);
+        VillageFolkEntity rich = VillageFolkSpawnerBlock.raise(level, heart.north(2), 0.0F);
+        VillageFolkEntity poor = VillageFolkSpawnerBlock.raise(level, heart.south(2), 0.0F);
+        helper.assertTrue(rich != null && poor != null, "two more folk");
+        rich.earn(200);
+        poor.spend(poor.purse());
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        BlockPos rh = com.jrpetty.mcassistant.entity.Homes.homeOf(rich), ph = com.jrpetty.mcassistant.entity.Homes.homeOf(poor);
+        String rt = rh == null ? null : com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, rh), pt = ph == null ? null : com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, ph);
+        Kit.log("t77 moving in: " + rich.displayNameCap() + " " + rt + " (purse " + rich.purse() + "), " + poor.displayNameCap() + " " + pt
+            + "; " + com.jrpetty.mcassistant.entity.Homes.line(level, id));
+        helper.assertTrue("RENTED".equals(rt), "a folk with the coin moves in as a tenant too: " + rt);
+        helper.assertTrue("RENTED".equals(pt), "and one without a coin is housed all the same, as a tenant: " + pt);
+        com.jrpetty.mcassistant.entity.Homes.saleForTests(null);
+        helper.succeed();
+    }
+
+    /**
+     * Rent first, then buy: every household moves in as the village's tenant; on payday the rent goes
+     * from its purses into the treasury (and into the books); a Homemaker with savings puts them by,
+     * buys its house and pays no more rent, while a Free Spirit with the same savings goes on renting;
+     * a Homemaker with only a little puts by what it can spare over a dozen coins and keeps renting;
+     * and one with nothing is housed all the same, its rent on the slate (or let off by a generous leader).
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t77_rent")
+    public static void t77_rent_then_buy(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 8 + 7000);                        // past the morning's payday: only ours runs
+        Kit.hold(level, 82000, 16000, 48);
+        Kit.prepare(level, 82000, 16000, 48);
+        BlockPos heart = Kit.surface(level, 82000, 16000);
+        VillageFolkEntity homemaker = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(homemaker != null, "a village");
+        java.util.UUID id = homemaker.ownerId();
+        Villages.Village v = Villages.get(id);
+        VillageFolkEntity free = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        VillageFolkEntity saver = VillageFolkSpawnerBlock.raise(level, heart.west(2), 0.0F);
+        VillageFolkEntity broke = VillageFolkSpawnerBlock.raise(level, heart.north(2), 0.0F);
+        helper.assertTrue(free != null && saver != null && broke != null, "four households of one");
+        for (int n = 0; n < 4; n++) {
+            BlockPos at = Kit.surface(level, heart.getX() - 30 + 14 * n, heart.getZ() + 22);
+            BuildGoal.stamp(level, "house", at, Direction.NORTH, 13,
+                com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            com.jrpetty.mcassistant.village.Ledger.built(id, "house", at, Direction.NORTH);
+        }
+        // Who they are: a Homemaker, a Free Spirit, another Homemaker; all four at work, so all four pay rent.
+        com.jrpetty.mcassistant.entity.Values.setForTests(homemaker, com.jrpetty.mcassistant.entity.Values.Value.HOMES, 100);
+        com.jrpetty.mcassistant.entity.Values.setForTests(free, com.jrpetty.mcassistant.entity.Values.Value.LEISURE, 100);
+        com.jrpetty.mcassistant.entity.Values.setForTests(saver, com.jrpetty.mcassistant.entity.Values.Value.HOMES, 100);
+        for (VillageFolkEntity f : java.util.List.of(homemaker, free, saver, broke)) {
+            f.setJob(StationTask.FARM);
+            f.spend(f.purse());
+            f.rentFree(false);                                       // come since the founding: the founders' houses are t84's
+        }
+        homemaker.earn(200);
+        free.earn(200);
+        saver.earn(20);
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        java.util.Map<VillageFolkEntity, BlockPos> at = new java.util.LinkedHashMap<>();
+        for (VillageFolkEntity f : java.util.List.of(homemaker, free, saver, broke)) {
+            BlockPos h = com.jrpetty.mcassistant.entity.Homes.homeOf(f);
+            helper.assertTrue(h != null, f.displayNameCap() + " has a house");
+            helper.assertTrue("RENTED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, h)),
+                "every household starts as the village's tenant: " + f.displayNameCap() + " " + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, h));
+            at.put(f, h);
+        }
+        java.util.function.Function<VillageFolkEntity, int[]> terms = f -> com.jrpetty.mcassistant.entity.Homes.termsForTests(id, at.get(f));
+        int rentH = terms.apply(homemaker)[0], rentF = terms.apply(free)[0], rentS = terms.apply(saver)[0], rentB = terms.apply(broke)[0];
+        int price = terms.apply(homemaker)[3];
+        helper.assertTrue(rentH >= 1 && rentF >= 1 && rentS >= 1 && rentB >= 1, "a house has a rent: " + rentH + ", " + rentF + ", " + rentS + ", " + rentB);
+        helper.assertTrue(price > rentH * 10, "and a price well beyond it: " + price + " against " + rentH + " a day");
+        helper.assertTrue(200 - rentH >= price + 12, "the Homemaker has the price and more: " + price);
+        helper.assertTrue(20 - rentS > 12 && 20 - rentS - 12 < terms.apply(saver)[3], "the other Homemaker has something to put by, not the price");
+        // Payday.
+        int treasury = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        int[] tb = terms.apply(broke), ts = terms.apply(saver);
+        boolean generous = com.jrpetty.mcassistant.entity.Homes.generous(id);
+        Kit.log("t77 payday: treasury " + treasury + " -> " + com.jrpetty.mcassistant.village.Ledger.coins(id) + " (rent " + rentH + "/" + rentF + "/"
+            + rentS + "/" + rentB + ", price " + price + ", rent on the books " + com.jrpetty.mcassistant.entity.Economy.rentToday(id) + ")"
+            + " | " + homemaker.displayNameCap() + ": " + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(homemaker)) + ", purse " + homemaker.purse()
+            + " | " + free.displayNameCap() + ": " + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(free)) + ", purse " + free.purse()
+            + " | " + saver.displayNameCap() + ": put by " + ts[2] + ", purse " + saver.purse()
+            + " | " + broke.displayNameCap() + ": owes " + tb[1] + (generous ? " (a generous leader)" : "")
+            + " | " + com.jrpetty.mcassistant.entity.Homes.line(level, id));
+        Kit.log("t77 they say: " + com.jrpetty.mcassistant.entity.Homes.talk(homemaker) + " | " + com.jrpetty.mcassistant.entity.Homes.talk(free)
+            + " | " + com.jrpetty.mcassistant.entity.Homes.talk(saver) + " | " + com.jrpetty.mcassistant.entity.Homes.talk(broke));
+        helper.assertTrue("OWNED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(homemaker))),
+            "the Homemaker with savings buys its house: " + com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(homemaker)));
+        helper.assertTrue(homemaker.purse() == 200 - rentH - price, "out of its purse, after the day's rent: " + homemaker.purse());
+        // Its net worth counts the house it owns, beside its loose money (the Folk page lays it out).
+        int worthNow = com.jrpetty.mcassistant.entity.Wealth.worth(homemaker);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.ownedShare(homemaker) == price && worthNow >= homemaker.purse() + price,
+            "its net worth counts the house it owns: worth " + worthNow + ", loose " + homemaker.purse() + ", the house " + price);
+        helper.assertTrue("RENTED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(free))), "the Free Spirit with the same savings goes on renting");
+        helper.assertTrue(free.purse() == 200 - rentF && terms.apply(free)[2] == 0, "paying its rent, and putting nothing by: " + free.purse());
+        helper.assertTrue("RENTED".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, at.get(saver))) && ts[2] == 20 - rentS - 12
+            && saver.purse() == 12, "the Homemaker without the price puts by all it has over a dozen, and goes on renting: " + ts[2] + " put by, purse " + saver.purse());
+        helper.assertTrue(at.get(broke).equals(com.jrpetty.mcassistant.entity.Homes.homeOf(broke)), "the one with nothing is housed all the same");
+        helper.assertTrue(tb[1] == rentB || generous && tb[1] == 0, "its rent on the slate (or let off by a generous leader): " + tb[1]);
+        int rentIn = rentH + rentF + rentS;
+        helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.coins(id) == treasury + rentIn + price,
+            "the rent and the price go into the treasury: " + treasury + " -> " + com.jrpetty.mcassistant.village.Ledger.coins(id));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Economy.rentToday(id) == rentIn, "and the rent into the books: " + com.jrpetty.mcassistant.entity.Economy.rentToday(id));
+        // The books' Homes page: a row a household, with what it wants and why.
+        net.minecraft.nbt.CompoundTag report = com.jrpetty.mcassistant.entity.Homes.report(level, id);
+        net.minecraft.nbt.ListTag rows = report.getList("rows", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        String freeWhy = "", ownerStatus = "";
+        for (int i = 0; i < rows.size(); i++) {
+            net.minecraft.nbt.CompoundTag r = rows.getCompound(i);
+            if (r.getLong("anchor") == at.get(free).asLong()) freeWhy = (r.getBoolean("wants") ? "wants: " : "") + r.getString("why");
+            if (r.getLong("anchor") == at.get(homemaker).asLong()) ownerStatus = r.getString("status");
+        }
+        Kit.log("t77 the books: " + report);
+        helper.assertTrue(rows.size() == 4 && report.getInt("saving") >= 1 && report.getInt("owned") == 1, "a row for each household, one owned and one saving: " + report);
+        helper.assertTrue(freeWhy.contains("Free Spirit"), "the Free Spirit rents by choice: " + freeWhy);
+        helper.assertTrue("owns".equals(ownerStatus), "the Homemaker owns: " + ownerStatus);
+        // The next payday: the owner pays no rent, the tenant does.
+        int ownerPurse = homemaker.purse(), freePurse = free.purse();
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        helper.assertTrue(homemaker.purse() == ownerPurse, "an owner pays no rent: " + ownerPurse + " -> " + homemaker.purse());
+        helper.assertTrue(free.purse() == freePurse - rentF, "a tenant goes on paying: " + freePurse + " -> " + free.purse());
+        helper.succeed();
+    }
+
+    /**
+     * The founders' houses: the folk who start a village live rent-free in the houses it builds them, and
+     * pay rent from the first payday they can afford it (a week of it in hand over the dozen coins a head
+     * they live on), and never go back to free, even when their purses run low again.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t84_founders_rent")
+    public static void t84_founders_rent_free(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 8 + 7000);                        // past the morning's payday: only ours runs
+        Kit.hold(level, 84000, 16000, 48);
+        Kit.prepare(level, 84000, 16000, 48);
+        BlockPos heart = Kit.surface(level, 84000, 16000);
+        VillageFolkEntity poor = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(poor != null, "a village");
+        java.util.UUID id = poor.ownerId();
+        Villages.Village v = Villages.get(id);
+        VillageFolkEntity rich = VillageFolkSpawnerBlock.raise(level, heart.east(2), 0.0F);
+        helper.assertTrue(rich != null, "two founders");
+        helper.assertTrue(poor.rentFree() && rich.rentFree(), "the founding party lives rent-free");
+        for (int n = 0; n < 2; n++) {
+            BlockPos at = Kit.surface(level, heart.getX() - 16 + 16 * n, heart.getZ() + 22);
+            BuildGoal.stamp(level, "house", at, Direction.NORTH, 13,
+                com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+            com.jrpetty.mcassistant.village.Ledger.built(id, "house", at, Direction.NORTH);
+        }
+        for (VillageFolkEntity f : java.util.List.of(poor, rich)) {
+            f.setJob(StationTask.FARM);
+            f.spend(f.purse());
+            com.jrpetty.mcassistant.entity.Values.setForTests(f, com.jrpetty.mcassistant.entity.Values.Value.LEISURE, 100);   // content to rent
+        }
+        poor.earn(5);
+        rich.earn(100);
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        BlockPos ph = com.jrpetty.mcassistant.entity.Homes.homeOf(poor), rh = com.jrpetty.mcassistant.entity.Homes.homeOf(rich);
+        helper.assertTrue(ph != null && rh != null && !ph.equals(rh), "a house each");
+        int rent = com.jrpetty.mcassistant.entity.Homes.termsForTests(id, ph)[0];
+        helper.assertTrue(rent >= 1 && 100 >= 7 * rent + 12 && 5 < 7 * rent + 12, "the rent, and what affording it takes: " + rent);
+        // Payday: the one that can afford it starts paying; the other lives on rent-free, owing nothing.
+        int treasury = com.jrpetty.mcassistant.village.Ledger.coins(id);
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        Kit.log("t84 payday one: " + poor.displayNameCap() + " purse " + poor.purse() + " free " + poor.rentFree() + "; "
+            + rich.displayNameCap() + " purse " + rich.purse() + " free " + rich.rentFree() + "; treasury " + treasury + " -> "
+            + com.jrpetty.mcassistant.village.Ledger.coins(id) + " | " + com.jrpetty.mcassistant.entity.Homes.talk(poor)
+            + " | " + com.jrpetty.mcassistant.entity.Homes.line(level, id));
+        helper.assertTrue(poor.purse() == 5 && poor.rentFree(), "a founder who cannot afford it pays nothing: " + poor.purse());
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.termsForTests(id, ph)[1] == 0, "and owes nothing");
+        helper.assertTrue(!rich.rentFree() && rich.purse() == 100 - rent, "a founder who can afford it pays from today: " + rich.purse());
+        helper.assertTrue(com.jrpetty.mcassistant.village.Ledger.coins(id) == treasury + rent, "into the treasury");
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Homes.talk(poor).contains("rent-free"), "and says so: " + com.jrpetty.mcassistant.entity.Homes.talk(poor));
+        net.minecraft.nbt.CompoundTag report = com.jrpetty.mcassistant.entity.Homes.report(level, id);
+        helper.assertTrue(report.getInt("rent_free") == 1, "the books count one household rent-free: " + report.getInt("rent_free"));
+        // The poor one saves up enough: it pays from that payday on.
+        poor.earn(7 * rent + 12);
+        int before = poor.purse();
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        helper.assertTrue(!poor.rentFree() && poor.purse() == before - rent, "once it can afford it, it pays: " + before + " -> " + poor.purse());
+        // Never free again: purses empty, the rent goes on the slate (or a generous leader lets it off) like anybody's.
+        rich.spend(rich.purse());
+        com.jrpetty.mcassistant.entity.Homes.paydayForTests(level, v);
+        int owes = com.jrpetty.mcassistant.entity.Homes.termsForTests(id, rh)[1];
+        boolean generous = com.jrpetty.mcassistant.entity.Homes.generous(id);
+        helper.assertTrue(!rich.rentFree() && (owes == rent || generous && owes == 0), "and never goes back to free: owes " + owes);
+        helper.succeed();
+    }
+
+    /**
+     * The leader's hall: the best and biggest building in the town, on the great lot behind the
+     * board, kept for it; the courtyard before the board; and whoever leads the village lives in
+     * the hall with its family, until another is elected and the household changes over.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "t78_leaders_hall")
+    public static void t78_leaders_hall(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 4 + 2000);
+        Kit.hold(level, 84000, 12000, 64);
+        Kit.prepare(level, 84000, 12000, 64);
+        BlockPos heart = Kit.surface(level, 84000, 12000);
+        // The biggest and the tallest of everything a village builds.
+        java.util.List<String> all = new java.util.ArrayList<>(com.jrpetty.mcassistant.Showcase.ORDER);
+        int hallCells = com.jrpetty.mcassistant.entity.goal.Blueprints.cells("townhall").size(), hallTop = 0;
+        for (var c : com.jrpetty.mcassistant.entity.goal.Blueprints.cells("townhall")) hallTop = Math.max(hallTop, c.h());
+        StringBuilder sizes = new StringBuilder();
+        for (String name : all) {
+            int n = com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name).size(), top = 0;
+            for (var c : com.jrpetty.mcassistant.entity.goal.Blueprints.cells(name)) top = Math.max(top, c.h());
+            sizes.append(name).append(' ').append(n).append('/').append(top).append("; ");
+            helper.assertTrue(n < hallCells, "the leader's hall is bigger than the " + name + ": " + hallCells + " against " + n);
+            helper.assertTrue(top < hallTop, "and taller: " + hallTop + " against " + top + " for the " + name);
+        }
+        Kit.log("t78 the leader's hall: " + hallCells + " blocks, " + hallTop + " high; the rest: " + sizes);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null && stood >= 4, "a village");
+        java.util.UUID id = v.id();
+        BlockPos board = com.jrpetty.mcassistant.entity.VillageBoards.boardOf(id);
+        Direction facing = com.jrpetty.mcassistant.entity.VillageBoards.facingOf(id);
+        helper.assertTrue(board != null && facing != null, "the village has its board");
+        BlockPos mid = board.relative(com.jrpetty.mcassistant.block.VillageBoardBlock.right(facing), com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE / 2);
+        // Its lot: the great lot behind the board, offered it first and nobody else.
+        int[] seat = Villages.seatLotForTests(id);
+        helper.assertTrue(seat != null, "a lot kept for the leader's hall");
+        int sx = v.centre().getX() + seat[0], sz = v.centre().getZ() + seat[1];
+        double fromBoard = Math.sqrt(Math.pow(sx - mid.getX(), 2) + Math.pow(sz - mid.getZ(), 2));
+        Villages.Site hall = Villages.siteFor(level, id, "hall");
+        Villages.Site site = Villages.siteFor(level, id, "townhall");
+        Kit.log("t78 the board at " + mid + " facing " + facing + "; the hall's lot at " + sx + "," + sz + " (" + Math.round(fromBoard)
+            + " from the board); the leader's hall sited at " + (site == null ? "nowhere" : site.anchor() + " facing " + site.facing())
+            + "; the meeting hall at " + (hall == null ? "nowhere" : hall.anchor()));
+        helper.assertTrue(fromBoard <= 16, "the lot is just behind the board: " + Math.round(fromBoard));
+        helper.assertTrue(site != null && site.anchor().getX() == sx && site.anchor().getZ() == sz, "the leader's hall goes on it");
+        helper.assertTrue(hall == null || hall.anchor().getX() != sx || hall.anchor().getZ() != sz, "and the meeting hall does not");
+        // The courtyard: before the board, clear of it.
+        int[] court = Villages.courtRectForTests(id);
+        Villages.Site cs = Villages.siteFor(level, id, "court");
+        helper.assertTrue(court != null && cs != null, "a courtyard before the board");
+        BlockPos front = mid.relative(facing, 4);
+        helper.assertTrue(front.getX() >= court[0] && front.getX() <= court[1] && front.getZ() >= court[2] && front.getZ() <= court[3],
+            "the courtyard lies in front of the board: " + java.util.Arrays.toString(court));
+        helper.assertTrue(!(mid.getX() >= court[0] && mid.getX() <= court[1] && mid.getZ() >= court[2] && mid.getZ() <= court[3]),
+            "and not on it");
+        int laid = BuildGoal.stamp(level, "court", cs.anchor(), cs.facing(), 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        helper.assertTrue(laid > 40, "the courtyard is laid: " + laid);
+        // Built: the leader moves in.
+        int put = BuildGoal.stamp(level, "townhall", site.anchor(), site.facing(), 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(id, "townhall", site.anchor(), site.facing());
+        helper.assertTrue(put > 1000, "the leader's hall stands: " + put + " blocks");
+        java.util.List<VillageFolkEntity> folk = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f && !f.isBaby()) folk.add(f);
+        VillageFolkEntity first = folk.get(0), second = folk.get(1);
+        long day = level.getDayTime() / 24000L;
+        Villages.electElder(id, first, day);
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        BlockPos home = com.jrpetty.mcassistant.entity.Homes.homeOf(first);
+        BlockPos bed = com.jrpetty.mcassistant.entity.Homes.bedFor(level, first);
+        java.util.List<BlockPos> beds = com.jrpetty.mcassistant.entity.Homes.bedsForTests(level, id, site.anchor());
+        Kit.log("t78 " + first.displayNameCap() + " leads: lives at " + home + ", sleeps at " + bed + "; the hall's beds " + beds
+            + " | " + com.jrpetty.mcassistant.entity.Homes.talk(first));
+        helper.assertTrue(site.anchor().equals(home), "the leader lives in the leader's hall");
+        helper.assertTrue("GIVEN".equals(com.jrpetty.mcassistant.entity.Homes.tenureForTests(id, site.anchor())),
+            "rent-free, the one roof the village gives: it goes with the office");
+        helper.assertTrue(bed != null && beds.contains(bed), "and sleeps in its own bed there");
+        helper.assertTrue(beds.size() >= 4, "a bed for two and the children's: " + beds.size());
+        // Another is elected: the households change over.
+        Villages.electElder(id, second, day + 10);
+        com.jrpetty.mcassistant.entity.Homes.tickForTests(level, v);
+        Kit.log("t78 " + second.displayNameCap() + " elected: lives at " + com.jrpetty.mcassistant.entity.Homes.homeOf(second)
+            + "; " + first.displayNameCap() + " now at " + com.jrpetty.mcassistant.entity.Homes.homeOf(first));
+        helper.assertTrue(site.anchor().equals(com.jrpetty.mcassistant.entity.Homes.homeOf(second)), "the new leader moves in");
+        helper.assertTrue(!site.anchor().equals(com.jrpetty.mcassistant.entity.Homes.homeOf(first)), "and the old one moves out");
+        helper.succeed();
+    }
+
+    /**
+     * The shop keeps what a house wants: the shopkeeper makes up chests, barrels, torches, candles, a
+     * fishing rod and plain stone tools at its bench out of what the stores can spare, never into the
+     * builders' timber and stone, and they go on its shelves.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t79_shop_wares")
+    public static void t79_shop_wares(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 86000, 12000, 32);
+        Kit.prepare(level, 86000, 12000, 32);
+        BlockPos heart = Kit.surface(level, 86000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a village");
+        Villages.Village v = Villages.get(a.ownerId());
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 3);
+        level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
+        level.setBlock(chest.east(), Blocks.CHEST.defaultBlockState(), 3);
+        Villages.forgetStores(v.id());
+        java.util.function.Consumer<net.minecraft.world.item.ItemStack> put = st -> com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, st);
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS, 64));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS, 50));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COAL, 20));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 64));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STRING, 6));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.HONEYCOMB, 2));
+        java.util.function.Function<net.minecraft.world.item.Item, Integer> n = it -> com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), st -> st.is(it));
+        // A new village is short of timber for its age: the shop's bench leaves every plank of it be.
+        int planks0 = com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.PLANKS));
+        int chests0 = n.apply(net.minecraft.world.item.Items.CHEST);
+        for (int i = 0; i < 6; i++) com.jrpetty.mcassistant.entity.Cafe.keepShop(level, v);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.PLANKS)) == planks0
+            && n.apply(net.minecraft.world.item.Items.CHEST) == chests0, "the Wood Age's timber is put by, not made into chests");
+        // In the Iron Age only iron is put by: timber, stone and coal are there to spare past the builders' share.
+        Villages.ageForTests(v.id(), Villages.Age.IRON);
+        com.jrpetty.mcassistant.entity.Stockroom.resetForTests();
+        java.util.List<String> made = new java.util.ArrayList<>();
+        for (int i = 0; i < 14; i++) {
+            String m = com.jrpetty.mcassistant.entity.Cafe.keepShop(level, v);
+            if (m != null) made.add(m);
+        }
+        int planks = com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), st -> st.is(net.minecraft.tags.ItemTags.PLANKS));
+        int cobble = com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), st -> st.is(net.minecraft.world.item.Items.COBBLESTONE));
+        Kit.log("t79 the shop's bench: " + made + "; planks left " + planks + ", cobble left " + cobble + "; for sale: "
+            + com.jrpetty.mcassistant.entity.Cafe.shopGoods(level, v.id()).size());
+        helper.assertTrue(n.apply(net.minecraft.world.item.Items.TORCH) >= 8, "torches made");
+        helper.assertTrue(n.apply(net.minecraft.world.item.Items.CHEST) >= 1, "a chest made");
+        helper.assertTrue(n.apply(net.minecraft.world.item.Items.STONE_PICKAXE) >= 1, "a stone pick made");
+        helper.assertTrue(n.apply(net.minecraft.world.item.Items.CANDLE) >= 1, "a candle made");
+        helper.assertTrue(planks >= 48, "never into the builders' timber: " + planks);
+        helper.assertTrue(cobble >= 48, "nor their stone: " + cobble);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Cafe.houseware(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST))
+            && com.jrpetty.mcassistant.entity.Cafe.shopWorthy(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CHEST)), "and a chest is for sale");
+        helper.succeed();
+    }
+
+    /**
+     * The insides of a village's buildings, furnished better age by age out of its stores: a rug down
+     * the middle of each room and a barrel and a pot of flowers by the wall in the Stone Age; the rug
+     * bordered, a shelf of books and a lantern on the barrel in the Iron Age; candles and more in the
+     * Diamond Age. The doorway and the way in are kept clear, and nothing is put in that the stores
+     * did not hold.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "t80_interiors")
+    public static void t80_interiors(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, 88000, 12000, 40);
+        Kit.prepare(level, 88000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 88000, 12000);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a village");
+        java.util.UUID id = a.ownerId();
+        Villages.Village v = Villages.get(id);
+        BlockPos chest = Kit.surface(level, heart.getX() + 3, heart.getZ() + 3);
+        for (int i = 0; i < 4; i++) level.setBlock(chest.east(i), Blocks.CHEST.defaultBlockState(), 3);
+        Villages.forgetStores(id);
+        BlockPos home = Kit.surface(level, heart.getX() - 20, heart.getZ() + 20);
+        BlockPos manor = Kit.surface(level, heart.getX() + 20, heart.getZ() + 20);
+        BuildGoal.stamp(level, "house", home, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        BuildGoal.stamp(level, "manor", manor, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        com.jrpetty.mcassistant.village.Ledger.built(id, "house", home, Direction.NORTH);
+        com.jrpetty.mcassistant.village.Ledger.built(id, "manor", manor, Direction.NORTH);
+        java.util.function.Consumer<net.minecraft.world.item.ItemStack> put = st -> com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, st);
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.RED_CARPET, 64));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.YELLOW_CARPET, 32));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BARREL, 8));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FLOWER_POT, 8));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.POPPY, 8));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.BOOKSHELF, 8));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN, 8));
+        put.accept(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.CANDLE, 8));
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
+        java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+        java.util.function.Function<BlockPos, java.util.Map<String, Integer>> census = at -> {
+            java.util.Map<String, Integer> n = new java.util.TreeMap<>();
+            for (BlockPos p : BlockPos.betweenClosed(at.offset(-7, 0, -7), at.offset(7, 10, 7))) {
+                net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
+                String k = st.is(net.minecraft.tags.BlockTags.WOOL_CARPETS) ? "carpet" : st.is(Blocks.BARREL) ? "barrel"
+                    : st.is(Blocks.BOOKSHELF) ? "shelf" : st.is(Blocks.LANTERN) ? "lantern" : st.is(net.minecraft.tags.BlockTags.CANDLES) ? "candle"
+                    : st.is(net.minecraft.tags.BlockTags.FLOWER_POTS) ? "pot" : null;
+                if (k != null) n.merge(k, 1, Integer::sum);
+            }
+            return n;
+        };
+        java.util.Map<String, Integer> before = census.apply(home);
+        String[] ages = { "STONE", "IRON", "DIAMOND" };
+        java.util.Map<String, java.util.Map<String, Integer>> after = new java.util.LinkedHashMap<>();
+        for (String age : ages) {
+            Villages.ageForTests(id, Villages.Age.valueOf(age));
+            for (int i = 0; i < 12; i++) com.jrpetty.mcassistant.entity.Interiors.work(level, v, 40);
+            after.put(age, census.apply(home));
+            after.put(age + " manor", census.apply(manor));
+        }
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        Kit.log("t80 the house before " + before + "; then " + after + "; the manor's plan for the Diamond Age "
+            + com.jrpetty.mcassistant.entity.Interiors.planForTests(level, id, new com.jrpetty.mcassistant.village.Ledger.Building("manor", manor, Direction.NORTH), 3)
+            + " (" + com.jrpetty.mcassistant.entity.Interiors.statsForTests(new com.jrpetty.mcassistant.village.Ledger.Building("manor", manor, Direction.NORTH))
+            + "; the house " + com.jrpetty.mcassistant.entity.Interiors.statsForTests(new com.jrpetty.mcassistant.village.Ledger.Building("house", home, Direction.NORTH)) + ")");
+        java.util.Map<String, Integer> stone = after.get("STONE"), iron = after.get("IRON"), diamond = after.get("DIAMOND manor");
+        helper.assertTrue(stone.getOrDefault("carpet", 0) > before.getOrDefault("carpet", 0), "a rug down the middle in the Stone Age: " + stone);
+        helper.assertTrue(stone.getOrDefault("barrel", 0) >= 1, "and a barrel by the wall: " + stone);
+        java.util.Map<String, Integer> ironManor = after.get("IRON manor");
+        helper.assertTrue(iron.getOrDefault("shelf", 0) + ironManor.getOrDefault("shelf", 0) >= 1, "a shelf of books in the Iron Age: " + iron + ", the manor " + ironManor);
+        helper.assertTrue(ironManor.getOrDefault("shelf", 0) >= 2, "and the manor's walls lined with them: " + ironManor);
+        helper.assertTrue(iron.getOrDefault("lantern", 0) > before.getOrDefault("lantern", 0), "and a lantern: " + iron);
+        helper.assertTrue(diamond.getOrDefault("candle", 0) >= 1, "candles in the Diamond Age: " + diamond);
+        // The door stays clear: the cell inside it and the one beyond.
+        BlockPos door = null;
+        for (BuildGoal.Placement p : BuildGoal.plan("house", home, Direction.NORTH, 13)) if (p.part() == BuildGoal.Part.DOOR) door = p.pos();
+        helper.assertTrue(door != null && level.getBlockState(door.relative(Direction.NORTH)).isAir(), "and the way in is clear");
+        helper.succeed();
+    }
+
+    /**
+     * Every town its own look: for every land, each part of a building has six to a dozen kinds it may
+     * be made of, best first, every one a real block the woods, the mine or the smeltery can give, and
+     * nothing precious (no iron, no gold) in any wall or roof.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 40, batch = "t81_palettes")
+    public static void t81_palettes(GameTestHelper helper) {
+        StringBuilder log = new StringBuilder();
+        com.jrpetty.mcassistant.entity.goal.Blueprints.Style[] parts = {
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FLOOR,
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_STAIR, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_SLAB,
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_BLOCK, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.POST,
+            com.jrpetty.mcassistant.entity.goal.Blueprints.Style.FOUNDATION, com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY };
+        for (com.jrpetty.mcassistant.entity.Homeland.Land land : com.jrpetty.mcassistant.entity.Homeland.Land.values()) {
+            java.util.UUID v = java.util.UUID.randomUUID();
+            com.jrpetty.mcassistant.entity.Homeland.setForTests(v, land);
+            com.jrpetty.mcassistant.entity.Palettes.forget(v);
+            for (var part : parts) {
+                java.util.List<net.minecraft.world.item.Item> kinds = com.jrpetty.mcassistant.entity.Palettes.ranked(v, part);
+                helper.assertTrue(kinds.size() >= 6 && kinds.size() <= 12, land + " " + part + ": six to a dozen kinds, got " + kinds.size());
+                for (net.minecraft.world.item.Item it : kinds) {
+                    helper.assertTrue(it instanceof net.minecraft.world.item.BlockItem, land + " " + part + ": " + it + " is a block");
+                    helper.assertTrue(!com.jrpetty.mcassistant.entity.Palettes.precious(new net.minecraft.world.item.ItemStack(it)),
+                        land + " " + part + ": nothing precious, got " + it);
+                    String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).getPath();
+                    helper.assertTrue(!id.contains("iron") && !id.contains("gold"), land + " " + part + ": no iron or gold, got " + id);
+                }
+            }
+            log.append(land).append(": ").append(com.jrpetty.mcassistant.entity.Palettes.line(v)).append("; ");
+        }
+        Kit.log("t81 the looks: " + log);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Palettes.precious(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.IRON_BLOCK)),
+            "an iron block is never a roof");
+        helper.succeed();
+    }
+
+    /**
+     * The town's books (Annals): each morning the village is written down (its people, births and
+     * deaths, comings and goings, beds, money, output by kind and by trade, stores, contentment), kept
+     * day after day; the analytics screen's snapshot carries every series, every trade, every folk and
+     * the leader's profile, and a reading of what drives its growth; and it fits in one packet.
+     */
+    /**
+     * The town's books, item by item: a farmer's bread brought home and a smith's lantern made in the
+     * stores (an ingot beaten to nuggets, eight and a torch made a lantern) go into the day's making,
+     * with the lantern and the spare nugget made and the ingot and the torch used; the morning writes
+     * them down, the analytics read them back with who made what, and the leader reads the rate.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t83_production")
+    public static void t83_production(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        com.jrpetty.mcassistant.entity.Economy.resetForTests();
+        level.setDayTime(24000L * 2 + 2000);
+        Kit.hold(level, 97000, 12000, 32);
+        Kit.prepare(level, 97000, 12000, 32);
+        BlockPos heart = Kit.surface(level, 97000, 12000);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        java.util.UUID id = f.ownerId();
+        Villages.Village v = Villages.get(id);
+        f.setJob(StationTask.FARM);
+        // The sixteen loaves of its kit, put in the stores, were baked by nobody; the five after them were.
+        com.jrpetty.mcassistant.entity.Economy.produced(f, new ItemStack(Items.BREAD, 16));
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Economy.todayForTests(id, "bread")[0] == 0, "a kit put back is not made");
+        com.jrpetty.mcassistant.entity.Economy.produced(f, new ItemStack(Items.BREAD, 5));
+        java.util.function.Consumer<ItemStack> put = st -> com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, st);
+        put.accept(new ItemStack(Items.IRON_INGOT, 20));
+        put.accept(new ItemStack(Items.TORCH, 4));
+        com.jrpetty.mcassistant.entity.Economy.openCraft(id, StationTask.SMITH);
+        String made = com.jrpetty.mcassistant.entity.Crafts.ironworkForTests(level, v);
+        com.jrpetty.mcassistant.entity.Economy.closeCraft();
+        int[] lantern = com.jrpetty.mcassistant.entity.Economy.todayForTests(id, "lantern");
+        int[] ingot = com.jrpetty.mcassistant.entity.Economy.todayForTests(id, "iron_ingot");
+        int[] nugget = com.jrpetty.mcassistant.entity.Economy.todayForTests(id, "iron_nugget");
+        int[] bread = com.jrpetty.mcassistant.entity.Economy.todayForTests(id, "bread");
+        Kit.log("t83 the smith: " + made + "; lantern " + java.util.Arrays.toString(lantern) + ", ingot " + java.util.Arrays.toString(ingot)
+            + ", nugget " + java.util.Arrays.toString(nugget) + ", bread " + java.util.Arrays.toString(bread));
+        helper.assertTrue(bread[0] == 5, "the farmer's bread is in the day's making: " + bread[0]);
+        helper.assertTrue(made != null && lantern[0] == 1 && ingot[1] == 1 && nugget[0] == 1,
+            "the lantern made, the nugget left over, the ingot used: " + made);
+        long day = level.getDayTime() / 24000L;
+        com.jrpetty.mcassistant.entity.Economy.closeTheDay(level, v, day);
+        com.jrpetty.mcassistant.entity.Annals.record(level, v, day);
+        net.minecraft.nbt.CompoundTag snap = com.jrpetty.mcassistant.entity.Annals.snapshot(level, v);
+        net.minecraft.nbt.ListTag items = snap.getCompound("production").getList("items", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        net.minecraft.nbt.CompoundTag breadRow = null, lanternRow = null, ingotRow = null;
+        for (int i = 0; i < items.size(); i++) {
+            net.minecraft.nbt.CompoundTag r = items.getCompound(i);
+            if (r.getString("id").equals("bread")) breadRow = r;
+            if (r.getString("id").equals("lantern")) lanternRow = r;
+            if (r.getString("id").equals("iron_ingot")) ingotRow = r;
+        }
+        Kit.log("t83 the books: " + items.size() + " things; bread " + breadRow + "; lantern " + lanternRow + "; ingot " + ingotRow);
+        helper.assertTrue(breadRow != null && breadRow.getInt("d1") == 5 && breadRow.getLong("total") == 5
+            && breadRow.getString("by").contains("Farmer"), "the bread written down, and who made it: " + breadRow);
+        helper.assertTrue(lanternRow != null && lanternRow.getInt("d1") == 1 && lanternRow.getString("by").toLowerCase().contains("smith")
+            && lanternRow.getInt("on_hand") >= 1, "the lantern, its maker and the one in the stores: " + lanternRow);
+        helper.assertTrue(ingotRow != null && ingotRow.getInt("used7") == 1, "the ingot used: " + ingotRow);
+        // The Stock page: every thing in store, with how many, where, and what it is worth.
+        net.minecraft.nbt.ListTag stock = snap.getCompound("stock").getList("rows", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        long ingotsInStore = -1, lanternsInStore = -1;
+        for (int i = 0; i < stock.size(); i++) {
+            net.minecraft.nbt.CompoundTag r = stock.getCompound(i);
+            if (r.getString("id").equals("iron_ingot")) ingotsInStore = r.getLong("n");
+            if (r.getString("id").equals("lantern")) lanternsInStore = r.getLong("n");
+        }
+        Kit.log("t83 the stock: " + stock.size() + " things, " + snap.getCompound("stock").getLong("total") + " in all, worth "
+            + snap.getCompound("stock").getInt("worth") + "; ingots " + ingotsInStore + ", lanterns " + lanternsInStore);
+        helper.assertTrue(ingotsInStore >= 19 && lanternsInStore >= 1 && snap.getCompound("stock").getInt("worth") > 0,
+            "the Stock page lists what is in store: ingots " + ingotsInStore + ", lanterns " + lanternsInStore);
+        double rate = com.jrpetty.mcassistant.entity.Annals.ratePerDay(id,
+            com.jrpetty.mcassistant.entity.Annals.forTask(Villages.Task.FOOD), 7);
+        helper.assertTrue(rate >= 5, "the leader reads the food coming in: " + rate + " a day");
+        helper.succeed();
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "t82_annals")
+    public static void t82_annals(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 3 + 2000);
+        Kit.hold(level, 90000, 12000, 40);
+        Kit.prepare(level, 90000, 12000, 40);
+        BlockPos heart = Kit.surface(level, 90000, 12000);
+        int stood = VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 6);
+        Villages.Village v = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+        helper.assertTrue(v != null && stood >= 4, "a village");
+        java.util.UUID id = v.id();
+        long day = level.getDayTime() / 24000L;
+        // Five mornings: a birth on the second, a death on the third, a folk come from away on the fourth.
+        for (int d = 0; d < 5; d++) {
+            if (d == 1) com.jrpetty.mcassistant.entity.Annals.born(id);
+            if (d == 2) com.jrpetty.mcassistant.entity.Annals.died(id, "of old age");
+            if (d == 3) com.jrpetty.mcassistant.entity.Annals.moved(null, id);
+            com.jrpetty.mcassistant.entity.Annals.record(level, v, day + d);
+        }
+        int kept = com.jrpetty.mcassistant.entity.Annals.daysForTests(id);
+        helper.assertTrue(kept == 5, "five mornings in the books: " + kept);
+        helper.assertTrue(com.jrpetty.mcassistant.entity.Annals.lastForTests(id, "pop") >= 4, "the people counted");
+        net.minecraft.nbt.CompoundTag snap = com.jrpetty.mcassistant.entity.Annals.snapshot(level, v);
+        int[] born = snap.getCompound("series").getIntArray("born");
+        int[] died = snap.getCompound("series").getIntArray("died");
+        int[] came = snap.getCompound("series").getIntArray("moved_in");
+        helper.assertTrue(born.length == 5 && born[1] == 1 && died[2] == 1 && came[3] == 1, "the day's births, deaths and comings, each on its day: "
+            + java.util.Arrays.toString(born) + java.util.Arrays.toString(died) + java.util.Arrays.toString(came));
+        helper.assertTrue(snap.getCompound("causes").getInt("of old age") == 1, "and what they died of");
+        net.minecraft.nbt.ListTag people = snap.getList("people", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        net.minecraft.nbt.ListTag jobs = snap.getList("jobs", net.minecraft.nbt.Tag.TAG_COMPOUND);
+        net.minecraft.nbt.ListTag drivers = snap.getList("drivers", net.minecraft.nbt.Tag.TAG_STRING);
+        helper.assertTrue(people.size() >= 4, "every folk in it: " + people.size());
+        helper.assertTrue(jobs.size() >= 1, "every trade in it: " + jobs.size());
+        helper.assertTrue(drivers.size() >= 4, "a reading of what drives it: " + drivers);
+        helper.assertTrue(!snap.getCompound("leader").getString("name").isEmpty(), "and who leads it");
+        helper.assertTrue(!snap.getString("board").isEmpty(), "and the board's own page");
+        net.minecraft.nbt.CompoundTag society = snap.getCompound("society");
+        int counted = 0;
+        for (int a : society.getIntArray("ages")) counted += a;
+        helper.assertTrue(counted == people.size(), "everybody in the age pyramid: " + counted + " of " + people.size());
+        helper.assertTrue(society.getInt("gini") >= 0 && society.getInt("gini") <= 100 && society.getList("richest", 8).size() >= 1,
+            "how the money is spread: " + society);
+        helper.assertTrue(!snap.getList("buildings", 10).isEmpty() || com.jrpetty.mcassistant.village.Ledger.buildings(id).isEmpty(),
+            "every building in it");
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        try {
+            net.minecraft.nbt.NbtIo.write(snap, new java.io.DataOutputStream(bytes));
+        } catch (java.io.IOException e) {
+            helper.fail("the snapshot would not write: " + e);
+        }
+        StringBuilder why = new StringBuilder();
+        for (int i = 0; i < drivers.size(); i++) why.append(drivers.getString(i)).append(" | ");
+        Kit.log("t82 the books: " + kept + " days, " + people.size() + " folk, " + jobs.size() + " trades, " + bytes.size() + " bytes; why: " + why);
+        helper.assertTrue(bytes.size() < 200000, "it fits in a packet: " + bytes.size() + " bytes");
+        // A year and more: the oldest let go.
+        for (int d = 5; d < com.jrpetty.mcassistant.entity.Annals.KEEP + 10; d++) com.jrpetty.mcassistant.entity.Annals.record(level, v, day + d);
+        int long_ = com.jrpetty.mcassistant.entity.Annals.daysForTests(id);
+        net.minecraft.nbt.CompoundTag big = com.jrpetty.mcassistant.entity.Annals.snapshot(level, v);
+        java.io.ByteArrayOutputStream bigBytes = new java.io.ByteArrayOutputStream();
+        try {
+            net.minecraft.nbt.NbtIo.write(big, new java.io.DataOutputStream(bigBytes));
+        } catch (java.io.IOException e) {
+            helper.fail("the long books would not write: " + e);
+        }
+        Kit.log("t82 four hundred days and more: " + long_ + " kept, " + bigBytes.size() + " bytes");
+        helper.assertTrue(long_ == com.jrpetty.mcassistant.entity.Annals.KEEP, "four hundred days kept, the oldest let go: " + long_);
+        helper.assertTrue(bigBytes.size() < 1000000, "and still one packet: " + bigBytes.size());
+        helper.succeed();
+    }
+}

@@ -1,0 +1,138 @@
+# The tavern: a broad timber inn on a stone footing. A big stone hearth at the
+# back with its fire, a bar of casks down one side with the barrels behind it,
+# tables with cloths and benches for the evening, a corner for the music with
+# its note blocks, lanterns hung low, and a lamp either side of the door.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name tavern
+layer -1
+.....F.....
+.FFFFFFFFF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FFFFFFFFF.
+.....k.....
+layer 0
+.....S.....
+.LwwShSwwL.
+.wQ.k.kmmw.
+.wCQ.....w.
+.w.Q..>P<w.
+.w.Q.....w.
+.w.Q.....w.
+.w....>P<w.
+.w.......w.
+.LwwwDwwwL.
+...........
+layer 1
+.....S.....
+.LWWSSSWWL.
+.WQ......W.
+.G.......G.
+.W.....X.W.
+.G.......G.
+.W.......W.
+.G.....X.G.
+.W.......W.
+.LGGW.WGGL.
+...........
+layer 2
+.....S.....
+.LWWSSSWWL.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.LGGWWWGGL.
+...........
+layer 3
+.....S.....
+.LWWSSSWWL.
+.W.......W.
+.W..j....W.
+.W.....j.W.
+.W.......W.
+.W...j...W.
+.W.....j.W.
+.W.......W.
+.LWWWWWWWL.
+...j...j...
+layer 4
+vvvvvvvvvvv
+.L-------L.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.L-------L.
+^^^^^^^^^^^
+layer 5
+.....S.....
+vvvvvvvvvvv
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+^^^^^^^^^^^
+...........
+layer 6
+.....S.....
+...........
+vvvvvvvvvvv
+.W.......W.
+.W.......W.
+.G.......G.
+.W.......W.
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+layer 7
+.....S.....
+...........
+...........
+vvvvvvvvvvv
+.W.......W.
+.W.......W.
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+...........
+layer 8
+.....S.....
+...........
+...........
+...........
+vvvvvvvvvvv
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+...........
+...........
+layer 9
+.....S.....
+...........
+...........
+...........
+...........
+___________
+...........
+...........
+...........
+...........
+...........

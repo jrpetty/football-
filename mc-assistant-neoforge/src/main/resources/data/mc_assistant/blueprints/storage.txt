@@ -1,0 +1,86 @@
+# The storehouse: the village's stores under one roof. A small log-framed
+# shed on a stone footing round a Village Storehouse — twenty-seven storehouse
+# units ($) stacked three by three by three, which join into one store the size
+# of twenty-seven chests, its door facing the shed's door. Barrels by the door.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name storage
+layer -1
+.......
+.FFFFF.
+.FfffF.
+.FfffF.
+.FfffF.
+.FfffF.
+.FfffF.
+.FFFFF.
+.......
+layer 0
+.......
+.LwwwL.
+.wQtQw.
+.w$$$w.
+.L$$$L.
+.w$$$w.
+.wQ.Qw.
+.LwDwL.
+.......
+layer 1
+.......
+.LWGWL.
+.W...W.
+.W$$$W.
+.L$$$L.
+.G$$$G.
+.W...W.
+.LW.WL.
+.......
+layer 2
+.......
+.LWWWL.
+.W...W.
+.W$$$W.
+.L$$$L.
+.W$$$W.
+.W...W.
+.LWWWL.
+...j...
+layer 3
+>.....<
+>L---L<
+>|fff|<
+>|fff|<
+>|fff|<
+>|fff|<
+>|fff|<
+>L---L<
+>..|..<
+layer 4
+.>...<.
+.>WWW<.
+.>...<.
+.>...<.
+.>...<.
+.>...<.
+.>...<.
+.>WGW<.
+.>...<.
+layer 5
+..>.<..
+..>W<..
+..>.<..
+..>.<..
+..>.<..
+..>.<..
+..>.<..
+..>W<..
+..>.<..
+layer 6
+..._...
+..._...
+..._...
+..._...
+..._...
+..._...
+..._...
+..._...
+..._...

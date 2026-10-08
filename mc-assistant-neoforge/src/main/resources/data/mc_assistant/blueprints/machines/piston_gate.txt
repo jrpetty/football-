@@ -1,0 +1,38 @@
+# [redstone] The piston gate: a two-wide, two-high door in the wall, of the wall's own stone, on four sticky
+# pistons, worked by a lever on the inside of the wall beside it.
+#
+# Thrown, the lever powers the block it is fixed to. That block powers the upper left piston beside it and the
+# redstone on top of it, which climbs over a slab (a slab carries no power, so the line is not cut) and runs
+# along the top of the gate under a capping course to the far post; each block it runs over is powered, and
+# with it the upper right piston under its end. Each lower piston comes with the one above it (a piston is also
+# moved by power at the block over it, the game's own rule). The four push their four blocks into the doorway,
+# and it is shut tight. Thrown back, the sticky pistons draw the blocks back into the wall, and the way is open:
+# two wide and two high, for folk and players. The front of the drawing is the inside of the town, where the
+# guards come to the lever. Laid in the wall's main gate, it takes the place of the wooden doors (they go back
+# to the stores); the pillars either side of the gate keep their lanterns on top.
+name piston_gate
+key # casing
+key W door
+key Q sticky_piston facing=right
+key q sticky_piston facing=left
+key L lever face=wall facing=front
+key r redstone_wire
+key = casing_slab type=bottom
+layer -1
+########
+########
+layer 0
+#QW..Wq#
+........
+layer 1
+#QW..Wq#
+L.......
+layer 2
+r#######
+........
+layer 3
+=rrrrrr#
+........
+layer 4
+ #######
+........

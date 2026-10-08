@@ -1,0 +1,83 @@
+# [police] The watch house, the town's police station (from the Stone Age, once the town keeps a watch of three:
+# WatchHouse): a squat house of the watch's own, all of stone and brick, with a lantern on a post either side of its
+# door. Inside the door the front room: the records shelf down the left wall, where the watch keeps its case files,
+# and on the right the front desk, a counter of barrels with the casebook open on a lectern behind it, where the
+# constable sits and folk come to tell what they saw; the notice board of the wanted (wall signs, put up by the
+# watch: WatchHouse) on the wall beside it. Across the back, behind a passage, two cells, each with a bed along its
+# outer wall. Their fronts are drawn as fence posts either side of a wooden door: the watch sets iron bars in the
+# posts' place and hangs an iron door in each, of the town's own iron (WatchHouse), once it can spare it. The
+# lanterns hang flush under the stone ceiling, one in each cell, one over the passage and one over the front room.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name watchhouse
+layer -1
+...........
+.FFFFFFFFF.
+.FFFFFFFFF.
+.FFFFFFFFF.
+.FFFFFFFFF.
+.FFFFFFFFF.
+.FFFFFFFFF.
+.FFFFFFFFF.
+.FFFFFFFFF.
+.FFFFFFFFF.
+.....k.....
+layer 0
+...........
+.ZSSSSSSSZ.
+.S...S...S.
+.SB..S..BS.
+.SPDPSPDPS.
+.S.......S.
+.SK....r.S.
+.SK...QQ.S.
+.S.......S.
+.ZSSSDSSSZ.
+...P...P...
+layer 1
+...........
+.ZSSSSSSSZ.
+.S...S...S.
+.S...S...S.
+.SP.PSP.PS.
+.G.......G.
+.SK......S.
+.GK......G.
+.S.......S.
+.ZSGS.SGSZ.
+...l...l...
+layer 2
+...........
+.ZSSSSSSSZ.
+.S...S...S.
+.S.j.S.j.S.
+.SSSSSSSSS.
+.S...j...S.
+.S.......S.
+.S...j...S.
+.S.......S.
+.ZSSSSSSSZ.
+...........
+layer 3
+...........
+.SSSSSSSSS.
+.SSSSSSSSS.
+.SSSSSSSSS.
+.SSSSSSSSS.
+.SSSSSSSSS.
+.SSSSSSSSS.
+.SSSSSSSSS.
+.SSSSSSSSS.
+.SSSSSSSSS.
+...........
+layer 4
+...........
+.sssssssss.
+.s.......s.
+.s.......s.
+.s.......s.
+.s.......s.
+.s.......s.
+.s.......s.
+.s.......s.
+.sssssssss.
+...........

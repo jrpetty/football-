@@ -1,0 +1,118 @@
+# The bank: a stone house of business. A counter across the room with a lantern on its far
+# end, the banker behind it; the lectern before the counter's end, where the bank's ledger
+# lies open for anybody to read; and at the back the vault, walled in dressed stone, its
+# strongboxes along the back wall. The vault's front is left open in the middle and over the
+# counter side: the banker sets iron bars there, made of the village's own iron (Bank), so the
+# gate and the grille are bars, and the coin can be seen and not touched. The two hanging
+# lanterns hang flush under the ceiling, one over the counter and one over the strongboxes:
+# never over a walkway, never at head height.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name bank
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.SSSSSSS.
+.SQQ.QQS.
+.S.....S.
+.SSS.SSS.
+.S.....S.
+.S.SSSSS.
+.S....rS.
+.S.....S.
+.SSSDSSS.
+.........
+layer 1
+.........
+.SSSSSSS.
+.S.....S.
+.S.....S.
+.SS...SS.
+.G.....G.
+.S....lS.
+.G.....G.
+.S.....S.
+.SGG.GGS.
+.........
+layer 2
+.........
+.SSSSSSS.
+.S.j...S.
+.S.....S.
+.SSSSSSS.
+.S.....S.
+.S..j..S.
+.S.....S.
+.S.....S.
+.SSSSSSS.
+.........
+layer 3
+>.......<
+>L-----L<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>L-----L<
+>.......<
+layer 4
+.>.....<.
+.>SSSSS<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>SSSSS<.
+.>.....<.
+layer 5
+..>...<..
+..>SSS<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>SSS<..
+..>...<..
+layer 6
+...>.<...
+...>S<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>S<...
+...>.<...
+layer 7
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....

@@ -1,0 +1,70 @@
+# The diver's shed: a little timber shed on the bank of the town's diving water, its door looking out over the water
+# (entity/Divers). Along the back wall the smoker the kelp is dried in, the bench it is packed into blocks at, and the
+# barrel the diving gear is kept in, with a lantern standing on it; in the front corner the campfire that is its drying
+# rack, four kelp at a time over it for nothing. A window in each side wall and a pitched roof over beams.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name divershed
+layer -1
+.......
+.FFFFF.
+.FFFFF.
+.FFFFF.
+.FFFFF.
+.FFFFF.
+.......
+layer 0
+.......
+.LwwwL.
+.wMTQw.
+.w...w.
+.wh..w.
+.LwDwL.
+.......
+layer 1
+.......
+.LWWWL.
+.W..lW.
+.G...G.
+.W...W.
+.LW.WL.
+.......
+layer 2
+.......
+.LWWWL.
+.W...W.
+.W...W.
+.W...W.
+.LWWWL.
+.......
+layer 3
+vvvvvvv
+.L---L.
+.|...|.
+.|...|.
+.|...|.
+.L---L.
+^^^^^^^
+layer 4
+.......
+vvvvvvv
+.W...W.
+.W...W.
+.W...W.
+^^^^^^^
+.......
+layer 5
+.......
+.......
+vvvvvvv
+.W...W.
+^^^^^^^
+.......
+.......
+layer 6
+.......
+.......
+.......
+_______
+.......
+.......
+.......

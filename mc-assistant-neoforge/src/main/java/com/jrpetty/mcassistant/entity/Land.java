@@ -1,0 +1,335 @@
+package com.jrpetty.mcassistant.entity;
+
+import com.jrpetty.mcassistant.village.Ledger;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * The lie of the land.
+ * <ul>
+ * <li><b>Where to found a village.</b> Settlers look about them before they put down a
+ *     camp: of the ground within a long stone's throw, the flattest dry piece wins.</li>
+ * <li><b>Levelling the town.</b> Once there is a village, its people level the ground of the
+ *     town a little every day: knolls cut down, hollows filled, to the level of the square,
+ *     so that houses and streets stand true. Only earth, sand, gravel and plain stone are
+ *     dug, never what anybody built, a field or a tree, and never more than six blocks up or
+ *     down: a hill stays a hill, it just stops at the edge of town. What is cut from rock
+ *     goes into the stores as cobblestone.</li>
+ * </ul>
+ */
+public final class Land {
+
+    private Land() {}
+
+    /** The most a cell is cut down or built up to the town's level. */
+    public static final int MOST = 6;
+    /** Cells looked at, and changes made, per village per pass. */
+    static final int LOOK = 220, CHANGES = 10;
+    /** How much of the earth cut from the town's knolls is kept in the stores for its hollows. */
+    private static final int KEEP_EARTH = 256;
+
+    // ------------------------------------------------------------------ where to found
+
+    /** The ground at a column: the first free block above it, looking through trees. */
+    @Nullable
+    public static BlockPos surface(ServerLevel level, int x, int z) {
+        // Only ground that is loaded already: asking for the height of a chunk that is not would
+        // load (or generate) it there and then, and stall the server for seconds.
+        net.minecraft.world.level.chunk.LevelChunk chunk = level.getChunkSource().getChunkNow(x >> 4, z >> 4);
+        if (chunk == null) return null;
+        int y = chunk.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x & 15, z & 15) + 1;
+        if (y <= level.getMinBuildHeight() + 1) return null;
+        BlockPos at = new BlockPos(x, y, z);
+        int guard = 0;
+        while (guard++ < 24) {
+            BlockState below = level.getBlockState(at.below());
+            boolean plant = below.canBeReplaced() && below.getFluidState().isEmpty() && !below.isAir();
+            if (below.is(BlockTags.LOGS) || below.is(BlockTags.LEAVES) || plant) at = at.below();
+            else break;
+        }
+        return at;
+    }
+
+    /** Is every chunk within r of here loaded already (so reading it loads nothing)? */
+    public static boolean areaLoaded(ServerLevel level, BlockPos c, int r) {
+        for (int cx = (c.getX() - r) >> 4; cx <= (c.getX() + r) >> 4; cx++) {
+            for (int cz = (c.getZ() - r) >> 4; cz <= (c.getZ() + r) >> 4; cz++) {
+                if (level.getChunkSource().getChunkNow(cx, cz) == null) return false;
+            }
+        }
+        return true;
+    }
+
+    /** How rough a piece of ground is: the spread of heights over ±16, sampled every four blocks.
+     *  Max value if any of it is water or not loaded. */
+    public static int roughness(ServerLevel level, BlockPos centre) {
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        long sum = 0, n = 0;
+        int[] ys = new int[81];
+        int k = 0;
+        for (int dx = -16; dx <= 16; dx += 4) {
+            for (int dz = -16; dz <= 16; dz += 4) {
+                int x = centre.getX() + dx, z = centre.getZ() + dz;
+                if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) return Integer.MAX_VALUE;
+                BlockPos s = surface(level, x, z);
+                if (s == null) return Integer.MAX_VALUE;
+                if (!level.getBlockState(s.below()).getFluidState().isEmpty() && Math.abs(dx) <= 8 && Math.abs(dz) <= 8) {
+                    return Integer.MAX_VALUE;                                       // a pond in the middle of it
+                }
+                ys[k++] = s.getY();
+                lo = Math.min(lo, s.getY());
+                hi = Math.max(hi, s.getY());
+                sum += s.getY();
+                n++;
+            }
+        }
+        double mean = sum / (double) Math.max(1, n);
+        double dev = 0;
+        for (int i = 0; i < k; i++) dev += Math.abs(ys[i] - mean);
+        dev /= Math.max(1, k);
+        return (hi - lo) * 4 + (int) Math.round(dev * 6);
+    }
+
+    /** The flattest dry ground within reach of here (here itself if nothing is better). */
+    @Nullable
+    public static BlockPos flattest(ServerLevel level, BlockPos around, int reach) {
+        BlockPos best = null;
+        int bestScore = Integer.MAX_VALUE;
+        for (int dx = -reach; dx <= reach; dx += 8) {
+            for (int dz = -reach; dz <= reach; dz += 8) {
+                int x = around.getX() + dx, z = around.getZ() + dz;
+                if (level.getChunkSource().getChunkNow(x >> 4, z >> 4) == null) continue;
+                BlockPos g = surface(level, x, z);
+                if (g == null) continue;
+                BlockState under = level.getBlockState(g.below());
+                if (under.is(Blocks.WATER) || under.isAir() || under.is(BlockTags.LEAVES)) continue;
+                int r = roughness(level, g);
+                if (r == Integer.MAX_VALUE) continue;
+                int score = r * 4 + (int) Math.sqrt(dx * dx + dz * dz) / 4;     // flat first, near second
+                if (score < bestScore) { bestScore = score; best = g; }
+            }
+        }
+        return best;
+    }
+
+    // ------------------------------------------------------------------ levelling the town
+
+    private static final Map<UUID, Integer> CURSOR = new ConcurrentHashMap<>();
+    private static final Map<UUID, Integer> MOVED = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> LAST = new ConcurrentHashMap<>();
+
+    public static void resetForTests() {
+        CURSOR.clear();
+        MOVED.clear();
+        LAST.clear();
+    }
+
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Post event) {
+        // Every village once in a hundred ticks, as before, but not all on the same tick: a world
+        // of a dozen villages and their colonies did all their levelling, growing and dock-keeping
+        // in one tick, a spike every five seconds. Now a fifth of them every twenty ticks.
+        int tick = event.getServer().getTickCount();
+        if (tick % 20 != 1) return;
+        int phase = (tick / 20) % 5;
+        com.jrpetty.mcassistant.Guard.run("land", () -> {
+            for (ServerLevel level : event.getServer().getAllLevels()) {
+                for (Villages.Village v : Villages.every()) {
+                    if (Math.floorMod(v.id().hashCode(), 5) != phase) continue;
+                    if (!v.dim().equals(level.dimension()) || !level.isLoaded(v.centre())) continue;
+                    long t0 = System.nanoTime();
+                    if (com.jrpetty.mcassistant.AssistantConfig.villageReshapeLand()) level(level, v, LOOK, CHANGES);
+                    long t1 = System.nanoTime();
+                    Grow.tick(level, v);
+                    long t2 = System.nanoTime();
+                    Waterfront.tick(level, v);
+                    long t3 = System.nanoTime();
+                    Nether.tick(level, v);
+                    long t4 = System.nanoTime();
+                    long took = (t4 - t0) / 1_000_000L;
+                    // Anything that took a village's land work over 25 ms is worth knowing about, and which part.
+                    if (took > 25) com.mojang.logging.LogUtils.getLogger().info(
+                        "[MCA-SLOW] {}: the land's work took {} ms (levelling {}, houses {}, waterfront {}, gateway {})",
+                        Villages.name(v.id()), took, (t1 - t0) / 1_000_000L, (t2 - t1) / 1_000_000L,
+                        (t3 - t2) / 1_000_000L, (t4 - t3) / 1_000_000L);
+                }
+            }
+        });
+    }
+
+    /** The town's radius for levelling: its streets and lots as they stand, never more than 48. */
+    static int reach(UUID village) {
+        return Math.min(48, Villages.townReach(village));
+    }
+
+    /**
+     * One pass of levelling: look at so many cells of the town, change at most so many blocks.
+     * Returns the blocks changed.
+     */
+    public static int level(ServerLevel level, Villages.Village v, int look, int changes) {
+        UUID id = v.id();
+        int r = reach(id);
+        int side = 2 * r + 1, cells = side * side;
+        int target = v.centre().getY() - 1;                       // the square's ground
+        int cursor = CURSOR.getOrDefault(id, 0);
+        int done = 0;
+        // Fields, mines, pens and fishing grounds are worked as they lie: left alone.
+        java.util.List<int[]> zones = new java.util.ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(id)) {
+            if (a.workZone() == null) continue;
+            switch (a.stationTask()) {
+                case FARM, MINE, RANCH, FISH -> {
+                    BlockPos zc = a.workZone().center();
+                    zones.add(new int[]{ zc.getX(), zc.getZ(), a.workZone().radius() + 2 });
+                }
+                default -> { }
+            }
+        }
+        boolean noEarth = false;                                  // the stores ran out of earth this pass
+        int i = 0;
+        for (; i < look && done < changes; i++) {
+            int c = (cursor + i) % cells;
+            int x = v.centre().getX() - r + c % side, z = v.centre().getZ() - r + c / side;
+            if (!areaLoaded(level, new BlockPos(x, target, z), 1)) continue;
+            boolean worked = false;
+            for (int[] zn : zones) if (Math.abs(x - zn[0]) <= zn[2] && Math.abs(z - zn[1]) <= zn[2]) { worked = true; break; }
+            if (worked) continue;
+            int got = cell(level, v, x, z, target, noEarth);
+            if (got == WAIT) break;                               // a digger is on the way there: the rest waits
+            if (got < 0) noEarth = true;
+            else done += got;
+        }
+        int next = (cursor + i) % cells;
+        // A full sweep with nothing left to do: say so once.
+        int moved = MOVED.merge(id, done, Integer::sum);
+        if (next < cursor) {
+            if (moved == 0 && LAST.getOrDefault(id, -1L) > 0) {
+                Villages.tell(id, level.getDayTime() / 24000L, "the ground of the town was levelled, from the square to the last street");
+                LAST.put(id, -1L);
+            } else if (moved > 0) {
+                LAST.put(id, level.getGameTime());
+            }
+            MOVED.put(id, 0);
+        }
+        CURSOR.put(id, next);
+        return done;
+    }
+
+    /** What cell returns while it waits for a hand to come and dig it (TownJobs). */
+    static final int WAIT = -2;
+
+    /** One column: a block cut off the top, or a block of earth laid on it. Returns blocks changed,
+     *  -1 if it wanted filling and the stores had no earth to fill it with, or WAIT. */
+    static int cell(ServerLevel level, Villages.Village v, int x, int z, int target, boolean noEarth) {
+        BlockPos top = surface(level, x, z);
+        if (top == null) return 0;
+        BlockPos ground = top.below();
+        int diff = ground.getY() - target;
+        if (diff == 0 || Math.abs(diff) > MOST) return 0;
+        if (inABuilding(v.id(), ground)) return 0;
+        BlockState g = level.getBlockState(ground);
+        if (!earth(g) || level.getBlockEntity(ground) != null) return 0;
+        // Never next to water (a cut would drain it into the town), never under anything placed.
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            if (!level.getFluidState(ground.relative(d)).isEmpty() || !level.getFluidState(top.relative(d)).isEmpty()) return 0;
+        }
+        BlockState above = level.getBlockState(top);
+        if (!above.isAir() && !(above.canBeReplaced() && above.getFluidState().isEmpty())) return 0;
+        if (diff < 0 && (noEarth || Market.stock(level, v.id(), s -> s.is(Items.DIRT) || s.is(Items.COARSE_DIRT)
+                || s.is(Items.GRASS_BLOCK) || s.is(Items.ROOTED_DIRT)) == 0)) return diff < 0 && noEarth ? 0 : -1;
+        // Dug and filled by hand, with a spade (TownJobs).
+        if (!TownJobs.atWork(level, v, "levelling", ground, "levelling the ground", AssistantEntity.StationTask.MINE)) return WAIT;
+        if (diff > 0) {
+            // Cut: the plant on top goes, then the block; the one beneath shows grass if it is earth.
+            if (!above.isAir()) level.setBlock(top, Blocks.AIR.defaultBlockState(), 3);
+            level.setBlock(ground, Blocks.AIR.defaultBlockState(), 3);
+            BlockState under = level.getBlockState(ground.below());
+            if (under.is(Blocks.DIRT)) level.setBlock(ground.below(), Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            if (g.is(BlockTags.BASE_STONE_OVERWORLD) || g.is(Blocks.COBBLESTONE)) {
+                ItemStack spoil = Market.intoStores(level, v.id(), new ItemStack(Items.COBBLESTONE));
+                if (!spoil.isEmpty()) { /* the stores are full: the rubble is carted off */ }
+            } else if (dirt(g) || g.is(Blocks.SAND) || g.is(Blocks.RED_SAND) || g.is(Blocks.GRAVEL)) {
+                // The earth cut off a knoll goes into the stores too: it is what fills the hollows.
+                // A few stacks of it are kept; past that it is carted off, not given chests of its own.
+                net.minecraft.world.item.Item dug = dirt(g) ? Items.DIRT : g.getBlock().asItem();
+                if (Market.stock(level, v.id(), s -> s.is(dug)) < KEEP_EARTH) {
+                    ItemStack spoil = Market.intoStores(level, v.id(), new ItemStack(dug));
+                    if (!spoil.isEmpty()) { /* the stores are full: the earth is carted off */ }
+                }
+            }
+            dust(level, ground, g);
+            return 1;
+        }
+        // Fill: earth on top, the old top buried. The earth comes out of the stores now (the
+        // cuts' earth, mostly), a block a fill, and no earth, no fill.
+        if (noEarth) return 0;
+        if (!TownWork.take(level, v, s -> s.is(Items.DIRT) || s.is(Items.COARSE_DIRT) || s.is(Items.GRASS_BLOCK)
+                || s.is(Items.ROOTED_DIRT), 1)) return -1;
+        if (!above.isAir()) level.setBlock(top, Blocks.AIR.defaultBlockState(), 3);
+        if (g.is(Blocks.GRASS_BLOCK)) level.setBlock(ground, Blocks.DIRT.defaultBlockState(), 3);
+        level.setBlock(top, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+        dust(level, top, Blocks.DIRT.defaultBlockState());
+        return 1;
+    }
+
+    private static void dust(ServerLevel level, BlockPos at, BlockState s) {
+        level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, s), at.getX() + 0.5, at.getY() + 0.8, at.getZ() + 0.5,
+            6, 0.3, 0.2, 0.3, 0.05);
+        if (level.getRandom().nextInt(4) == 0) {
+            level.playSound(null, at, SoundEvents.GRAVEL_BREAK, SoundSource.BLOCKS, 0.4F, 0.9F + level.getRandom().nextFloat() * 0.2F);
+        }
+    }
+
+    /** Earth that digs out as dirt. */
+    private static boolean dirt(BlockState s) {
+        return s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.DIRT) || s.is(Blocks.COARSE_DIRT) || s.is(Blocks.PODZOL)
+            || s.is(Blocks.ROOTED_DIRT) || s.is(Blocks.MYCELIUM);
+    }
+
+    /** What may be dug or built up: plain earth, sand, gravel and stone. */
+    static boolean earth(BlockState s) {
+        return s.is(Blocks.GRASS_BLOCK) || s.is(Blocks.DIRT) || s.is(Blocks.COARSE_DIRT) || s.is(Blocks.PODZOL)
+            || s.is(Blocks.ROOTED_DIRT) || s.is(Blocks.MYCELIUM) || s.is(Blocks.SAND) || s.is(Blocks.RED_SAND)
+            || s.is(Blocks.GRAVEL) || s.is(Blocks.CLAY) || s.is(Blocks.SNOW_BLOCK) || s.is(BlockTags.BASE_STONE_OVERWORLD)
+            || s.is(Blocks.SANDSTONE) || s.is(Blocks.TERRACOTTA);
+    }
+
+    /** Within (or right beside) something the village built, or is building. */
+    static boolean inABuilding(UUID village, BlockPos at) {
+        for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(village).entrySet()) {
+            int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(e.getKey());
+            int r = Math.max(Math.max(half[0], half[1]), e.getValue().radius()) + 2;
+            BlockPos c = e.getValue().anchor();
+            if (Math.abs(at.getX() - c.getX()) <= r && Math.abs(at.getZ() - c.getZ()) <= r) return true;
+        }
+        for (Ledger.Building b : Ledger.buildings(village)) {
+            if (b.structure().equals("fortify")) {
+                int d = Math.max(Math.abs(at.getX() - b.anchor().getX()), Math.abs(at.getZ() - b.anchor().getZ()));
+                if (d >= Watch.R - 1 && d <= Watch.R + 1) return true;
+                continue;
+            }
+            int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(b.structure());
+            int r = Math.max(half[0], half[1]) + 1;
+            if (Math.abs(at.getX() - b.anchor().getX()) <= r && Math.abs(at.getZ() - b.anchor().getZ()) <= r) return true;
+        }
+        return false;
+    }
+}

@@ -1,0 +1,247 @@
+package com.jrpetty.mcassistant.entity.goal;
+
+import com.jrpetty.mcassistant.entity.AssistantEntity;
+import com.jrpetty.mcassistant.entity.Job;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
+
+import javax.annotation.Nullable;
+import java.util.EnumSet;
+import java.util.function.Predicate;
+
+/**
+ * Withdraw: the reverse of deposit — walk to a chest that holds the wanted
+ * item (remembered chests first) and load up to N of it into the backpack.
+ * "grab 10 iron from the chest", "take logs from storage", "get food from
+ * the chest".
+ */
+public class WithdrawGoal extends Goal {
+
+    private final AssistantEntity assistant;
+    @Nullable private Job job;
+    @Nullable private BlockPos chestPos;
+    private int stuckTicks;
+    private double bestDistSq = Double.MAX_VALUE;
+    private int myGen;
+    private String word = "";
+    /** At the storehouse's counter: when it got there, and the storekeeper serving it (or null: itself). */
+    private int serviceStart = -1;
+    @Nullable private com.jrpetty.mcassistant.entity.VillageFolkEntity keeper;
+
+    public WithdrawGoal(AssistantEntity assistant) {
+        this.assistant = assistant;
+        this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
+    }
+
+    /** Turn a spoken item word into a stack matcher. */
+    public static Predicate<ItemStack> matcherFor(String rawWord) {
+        String w = rawWord.trim().toLowerCase();
+        if (w.endsWith("s") && w.length() > 3) w = w.substring(0, w.length() - 1);
+        final String word = w;
+        // "torches" -> "torche" -> also try "torch" so plurals in -es match.
+        final String base = word.endsWith("e") && word.length() > 3
+            ? word.substring(0, word.length() - 1) : word;
+        return switch (word) {
+            case "everything", "stuff", "my stuff", "all", "loot", "item" -> s -> true;
+            case "log", "wood" -> s -> s.is(ItemTags.LOGS);
+            case "plank" -> s -> s.is(ItemTags.PLANKS);
+            // Exact, not "contains": "chest" would take a chestplate, "axe" a
+            // pickaxe and a waxed block, "furnace" a blast furnace.
+            case "chest" -> s -> s.is(net.minecraft.world.item.Items.CHEST);
+            case "furnace" -> s -> s.is(net.minecraft.world.item.Items.FURNACE);
+            case "axe" -> s -> BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().endsWith("_axe");
+            case "fuel" -> s -> s.is(net.minecraft.world.item.Items.COAL)
+                || s.is(net.minecraft.world.item.Items.CHARCOAL)
+                || s.is(ItemTags.LOGS) || s.is(ItemTags.PLANKS);
+            case "ore" -> AssistantEntity.SMELTABLE_ORE;
+            case "wheat" -> s -> s.is(net.minecraft.world.item.Items.WHEAT);
+            case "stone", "cobble", "cobblestone", "rock" -> s ->
+                BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().contains("cobble")
+                    || BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().equals("stone");
+            case "food" -> s -> s.get(DataComponents.FOOD) != null;
+            // A hand's rations: food, but nothing that would poison it, and not the raw chicken.
+            case "ration", "meal" -> s -> s.get(DataComponents.FOOD) != null
+                && !s.is(net.minecraft.world.item.Items.ROTTEN_FLESH) && !s.is(net.minecraft.world.item.Items.SPIDER_EYE)
+                && !s.is(net.minecraft.world.item.Items.POISONOUS_POTATO) && !s.is(net.minecraft.world.item.Items.PUFFERFISH)
+                && !s.is(net.minecraft.world.item.Items.CHICKEN) && !s.is(net.minecraft.world.item.Items.SUSPICIOUS_STEW);
+            case "tool" -> ItemStack::isDamageableItem;
+            default -> {
+                // Multi-word tokens like "iron ingot"/"raw iron" -> "iron_ingot"/"raw_iron".
+                final String underscore = word.replace(' ', '_');
+                yield s -> {
+                    String path = BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
+                    return path.contains(word) || path.contains(base) || path.contains(underscore);
+                };
+            }
+        };
+    }
+
+    @Override
+    public boolean canUse() {
+        Job j = assistant.peekJob();
+        return j != null && j.type() == Job.Type.WITHDRAW && assistant.getTarget() == null;
+    }
+
+    @Override
+    public boolean canContinueToUse() {
+        return job != null && assistant.getTarget() == null && assistant.taskGen() == myGen;
+    }
+
+    @Override
+    public void start() {
+        this.job = assistant.peekJob();
+        this.myGen = assistant.taskGen();
+        this.stuckTicks = 0;
+        this.bestDistSq = Double.MAX_VALUE;
+        this.chestPos = null;
+        this.serviceStart = -1;
+        this.keeper = null;
+        if (job == null || job.arg() == null) {
+            finish("I didn't catch what to fetch.");
+            return;
+        }
+        // "word" fetches from the chests around the hand; "word@x y z" from
+        // the chests around that spot — the village stores, fetched from the
+        // plot sixty blocks out.
+        String arg = job.arg();
+        BlockPos anchor = null;
+        int radius = 32;
+        int at = arg.indexOf('@');
+        if (at >= 0) {
+            String[] p = arg.substring(at + 1).split(" ");
+            arg = arg.substring(0, at);
+            if (p.length == 3 || p.length == 4) {
+                try {
+                    anchor = new BlockPos(Integer.parseInt(p[0]), Integer.parseInt(p[1]),
+                        Integer.parseInt(p[2]));
+                    if (p.length == 4) radius = Integer.parseInt(p[3]);
+                } catch (NumberFormatException ignored) { }
+            }
+        }
+        this.word = arg;
+        this.chestPos = anchor != null
+            ? assistant.findChestWithNear(anchor, matcherFor(word), radius)
+            : assistant.findChestWith(matcherFor(word), 24);
+        if (chestPos == null) {
+            finish("I can't find a chest with " + word + " "
+                + (anchor != null ? "in the stores." : "within 24 blocks."));
+        }
+    }
+
+    @Override
+    public void stop() {
+        this.job = null;
+        this.chestPos = null;
+        this.serviceStart = -1;
+        this.keeper = null;
+        assistant.getNavigation().stop();
+    }
+
+    private void finish(String message) {
+        assistant.say(message);
+        assistant.pollJob();
+        this.job = null;
+        this.chestPos = null;
+        assistant.getNavigation().stop();
+    }
+
+    @Override
+    public void tick() {
+        if (job == null || chestPos == null) return;
+
+        double distSq = assistant.getEyePosition().distanceToSqr(
+            chestPos.getX() + 0.5, chestPos.getY() + 0.5, chestPos.getZ() + 0.5);
+        assistant.getLookControl().setLookAt(
+            chestPos.getX() + 0.5, chestPos.getY() + 0.5, chestPos.getZ() + 0.5);
+
+        if (distSq > AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH) {
+            if (assistant.getNavigation().isDone()) {
+                BlockPos walkTo = com.jrpetty.mcassistant.block.StorehouseBlock.approach(assistant.level(), chestPos);
+                assistant.getNavigation().moveTo(
+                    walkTo.getX() + 0.5, walkTo.getY(), walkTo.getZ() + 0.5, 1.1D);
+            }
+            // Progress-based, not a fixed number of ticks: the village stores
+            // can be a long walk from the plot, and a fixed budget gave up on
+            // every one of them halfway there.
+            if (distSq < bestDistSq - 1.0) {
+                bestDistSq = distSq;
+                stuckTicks = 0;
+            } else if (++stuckTicks > 300) {
+                if (assistant.isSettler() && chestPos != null && assistant.putBeside(chestPos)) {
+                    stuckTicks = 0;
+                    bestDistSq = Double.MAX_VALUE;
+                    return;
+                }
+                finish("I couldn't reach the chest.");
+            }
+            return;
+        }
+
+        BlockEntity be = assistant.level().getBlockEntity(chestPos);
+        if (!(be instanceof Container container)) {
+            finish("The chest is gone.");
+            return;
+        }
+
+        // At the Village Storehouse with its storekeeper at the counter: the storekeeper serves it — a
+        // moment at the counter while it fetches the goods out and hands them over. With nobody at
+        // the counter, the folk helps itself as it always has (Storekeeping).
+        boolean store = container instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity
+            && assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity;
+        if (store && serviceStart < 0) {
+            serviceStart = assistant.tickCount;
+            keeper = com.jrpetty.mcassistant.entity.Storekeeping.counterFor((com.jrpetty.mcassistant.entity.VillageFolkEntity) assistant);
+        }
+        if (keeper != null && assistant.tickCount - serviceStart < com.jrpetty.mcassistant.entity.Storekeeping.SERVICE_TICKS) {
+            if (keeper.isAlive() && !keeper.isSleeping()) {
+                keeper.getLookControl().setLookAt(assistant, 30.0F, 30.0F);
+                if ((assistant.tickCount - serviceStart) % 10 == 0) keeper.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                return;
+            }
+            keeper = null;                                          // gone from the counter: it helps itself
+        }
+
+        // [econ-prices] Its own food at the town's stores, once the town keeps a shop: bought at the town's price, the
+        // cheaper if its own is dear (Purchases), not taken.
+        if (assistant instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity vf
+                && com.jrpetty.mcassistant.entity.Purchases.buysFood(vf, word, chestPos)
+                && assistant.level() instanceof net.minecraft.server.level.ServerLevel server) {
+            int got = com.jrpetty.mcassistant.entity.Purchases.get(server, vf, matcherFor(word), job.amount(),
+                com.jrpetty.mcassistant.entity.Purchases.Need.FOOD);
+            assistant.rememberChest(chestPos, container);
+            finish(got > 0 ? "Bought " + got + " " + word + " at the town's price." : "No " + word + " to be had at a price I'll pay.");
+            return;
+        }
+        Predicate<ItemStack> match = matcherFor(word);
+        int wanted = job.amount();
+        int moved = 0;
+        java.util.List<ItemStack> took = new java.util.ArrayList<>();
+        for (int i = 0; i < container.getContainerSize() && moved < wanted; i++) {
+            ItemStack slot = container.getItem(i);
+            if (slot.isEmpty() || !match.test(slot)) continue;
+            int take = Math.min(wanted - moved, slot.getCount());
+            ItemStack taking = slot.copyWithCount(take);
+            ItemStack leftover = assistant.insertGiven(taking);
+            int actuallyTaken = take - leftover.getCount();
+            if (actuallyTaken > 0) took.add(slot.copyWithCount(actuallyTaken));
+            slot.shrink(actuallyTaken);
+            if (slot.isEmpty()) container.setItem(i, ItemStack.EMPTY);
+            moved += actuallyTaken;
+            if (!leftover.isEmpty()) break; // backpack is full
+        }
+        container.setChanged();
+        if (store && !took.isEmpty()) {
+            com.jrpetty.mcassistant.entity.Storekeeping.withdrew((com.jrpetty.mcassistant.entity.VillageFolkEntity) assistant, keeper, took);
+        }
+        assistant.rememberChest(chestPos, container);
+        finish(moved > 0
+            ? "Got " + moved + " " + word + " from the chest."
+            : "That chest had no " + word + " (or my pack is full).");
+    }
+}

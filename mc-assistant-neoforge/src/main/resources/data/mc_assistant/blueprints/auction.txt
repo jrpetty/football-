@@ -1,0 +1,128 @@
+# The auction house: the market day's auction under a roof, once a town of the Iron Age has held a few on its square
+# (entity/Auctions). A timber hall on a stone footing under a steep roof that runs from the gable over the door to the
+# back, tall windows down both sides. At the back the barrels the lots wait in, a bookshelf of the sales books either
+# side with a lantern standing on each; before them the auctioneer's rostrum (a lectern), the auctioneer behind it;
+# open floor where the lot is held up, and three rows of benches either side of the aisle for the bidders, twelve
+# places in all. A lamp hung flush under the ceiling over the benches by each wall.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name auction
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+....k....
+layer 0
+.........
+.LwwwwwL.
+.wKQQQKw.
+.wK...Kw.
+.w..r..w.
+.w.....w.
+.wvv.vvw.
+.wvv.vvw.
+.wvv.vvw.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.Wl...lW.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.LGW.WGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.LWWWWWL.
+.........
+layer 3
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+.Wj...jW.
+.W.....W.
+.W.....W.
+.LWWWWWL.
+.........
+layer 4
+>.......<
+>L-----L<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>L-----L<
+>.......<
+layer 5
+.>.....<.
+.>WWWWW<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>WWWWW<.
+.>.....<.
+layer 6
+..>...<..
+..>WWW<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>WWW<..
+..>...<..
+layer 7
+...>.<...
+...>W<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>W<...
+...>.<...
+layer 8
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....

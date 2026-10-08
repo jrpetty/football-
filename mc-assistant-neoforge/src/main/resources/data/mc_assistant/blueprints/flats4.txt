@@ -1,0 +1,298 @@
+# A block of flats (the Iron Age): four storeys of small flats for the young and the hard-up,
+# two to a landing, off a stair that winds up the back of the hall. Each flat a room with a bed (two
+# for a couple's flat), a chest, a table and a lantern; the ground floor's doors are hung once it
+# stands, and the balconies' iron railings put up (Flats). Outside, a town house: a slate plinth,
+# stone walls with toothed brick quoins, windows in three bays, window boxes, balconies, the front
+# door under a fanlight and a pediment with a lantern either side, a bracketed cornice, a pitched
+# slate roof with a dormer, stone gables, and a brick chimney stack out of each gable.
+# Drawn by tools/flats_design.py (redraw it there); rows run from the back of the building (top) to
+# the front (bottom, the door).
+name flats4
+layer -1
+...........
+FFFFFFFFFFF
+FffffffFFFF
+FffffffFFFF
+FffffffFFFF
+FFFFFFFFFFF
+FffffffFFFF
+FffffffFFFF
+FffffffFFFF
+FFFFFFFFFFF
+........k..
+layer 0
+..d..d..d..
+RRRRRRRRRRR
+R.C..P.W^SR
+RB.....W.SR
+R.........R
+RWWWWWWW..R
+R......W..R
+RBB.......R
+Rc...P.W..R
+RRRRRRRRDRR
+..d..d.....
+layer 1
+..*..*..*..
+ZSGSSGSSGSZ
+Z....X.W.>Z
+G......W.SS
+S.........G
+SWWWWWWW..S
+S......W..S
+G.........G
+Z....X.W..Z
+ZSGSSGSS.SZ
+..*..*.....
+layer 2
+...........
+ZZGSSGSSGZZ
+Sj.....W..S
+G......W.vS
+S......W..G
+SWWWWWWW..S
+Sj.....W.jS
+G......W..G
+S......W..S
+ZZGSSGSSGZZ
+.n....nj.j.
+layer 3
+...........
+ZSSSSSSSSSZ
+Zfffffff..Z
+Sfffffff<.S
+SfffffffffS
+SfffffffffS
+SfffffffffS
+SfffffffffS
+ZfffffffffZ
+ZSSSSSSSSSZ
+.======>R<.
+layer 4
+..=..=..=..
+ZZSSSSSSSZZ
+S..C.P.W^.S
+SBB....W..S
+S......Y.PS
+SWWWWWWW..S
+S......W..S
+SB.....Y..S
+Sc...P.W..S
+ZZSSSSSSSZZ
+........_..
+layer 5
+...........
+ZSGSSGSSGSZ
+Z....X.W.>Z
+G......W..S
+S.........G
+SWWWWWWW..S
+S......W..S
+G.........G
+Z....X.W..Z
+ZSGSSGSSGSZ
+...........
+layer 6
+...........
+ZZGSSGSSGZZ
+Sj.....W..S
+G......W.vS
+S......W..G
+SWWWWWWW..S
+Sj.....W.jS
+G......W..G
+S......W..S
+ZZGSSGSSGZZ
+.n....n....
+layer 7
+...........
+ZSSSSSSSSSZ
+Zfffffff..Z
+Sfffffff<.S
+SfffffffffS
+SfffffffffS
+SfffffffffS
+SfffffffffS
+ZfffffffffZ
+ZSSSSSSSSSZ
+.======....
+layer 8
+..=..=..=..
+ZZSSSSSSSZZ
+S.C..P.W^.S
+SB.....W..S
+S......Y.PS
+SWWWWWWW..S
+S......W..S
+SBB....Y..S
+Sc...P.W..S
+ZZSSSSSSSZZ
+........=..
+layer 9
+...........
+ZSGSSGSSGSZ
+Z....X.W.>Z
+G......W..S
+S.........G
+SWWWWWWW..S
+S......W..S
+G.........G
+Z....X.W..Z
+ZSGSSGSSGSZ
+...........
+layer 10
+...........
+ZZGSSGSSGZZ
+Sj.....W..S
+G......W.vS
+S......W..G
+SWWWWWWW..S
+Sj.....W.jS
+G......W..G
+S......W..S
+ZZGSSGSSGZZ
+.n....n....
+layer 11
+...........
+ZSSSSSSSSSZ
+Zfffffff..Z
+Sfffffff<.S
+SfffffffffS
+SfffffffffS
+SfffffffffS
+SfffffffffS
+ZfffffffffZ
+ZSSSSSSSSSZ
+.======....
+layer 12
+..=..=..=..
+ZZSSSSSSSZZ
+S..C.P.WP.S
+SBB....W..S
+S......Y.PS
+SWWWWWWW..S
+S......W..S
+SB.....Y..S
+Sc...P.W..S
+ZZSSSSSSSZZ
+........=..
+layer 13
+...........
+ZSGSSGSSGSZ
+Z....X.W..Z
+G......W..S
+S.........G
+SWWWWWWW..S
+S......W..S
+G.........G
+Z....X.W..Z
+ZSGSSGSSGSZ
+...........
+layer 14
+uu.uu.uu.uu
+ZZGSSGSSGZZ
+Sj.....W..S
+G......W..S
+S......W..G
+SWWWWWWW..S
+Sj.....W.jS
+G......W..G
+S......W..S
+ZZGSSGSSGZZ
+nn.nn.nn.nn
+layer 15
+vvvvvvvvvvv
+ZSSSSSSSSSZ
+ZsssssssssZ
+SsssssssssS
+SsssssssssS
+SsssssssssS
+SsssssssssS
+SsssssssssS
+ZsssssssssZ
+ZSSSSSSSSSZ
+^^^^^^^^^^^
+layer 16
+...........
+vvvvvvvvvvv
+S.........S
+S.........S
+S.........S
+Z.........Z
+S.........S
+S.........S
+S.........S
+^^^^SGS^^^^
+...........
+layer 17
+...........
+...........
+vvvvvvvvvvv
+S.........S
+S.........S
+Z.........Z
+S.........S
+S.........S
+^^^^S.S^^^^
+....SGS....
+...........
+layer 18
+...........
+...........
+...........
+vvvvvvvvvvv
+S.........S
+Z.........Z
+S.........S
+^^^^>R<^^^^
+....>R<....
+....>R<....
+....>R<....
+layer 19
+...........
+...........
+...........
+...........
+vvvvvvvvvvv
+ZZRRRRRRRZZ
+^^^^^^^^^^^
+....._.....
+....._.....
+....._.....
+....._.....
+layer 20
+...........
+...........
+...........
+...........
+...........
+ZZ_______ZZ
+...........
+...........
+...........
+...........
+...........
+layer 21
+...........
+...........
+...........
+...........
+...........
+ZZ.......ZZ
+...........
+...........
+...........
+...........
+...........
+layer 22
+...........
+...........
+...........
+...........
+...........
+ZZ.......ZZ
+...........
+...........
+...........
+...........
+...........

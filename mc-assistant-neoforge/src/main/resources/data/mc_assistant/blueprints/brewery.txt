@@ -1,0 +1,95 @@
+# The brewery: a timber still-house on a stone footing, two brewing stands on a
+# stone bench, cauldrons of water, casks along the wall, a chest of finished
+# brews, a glass window to the street, lanterns hung low over the work.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name brewery
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffFF
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.LwwwwwL.
+.w.S&S&w.
+.wQ....wS
+.wQ...Cw.
+.wQ....w.
+.w....Tw.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.W.I.I.W.
+.G.....GS
+.WQ....W.
+.G.....G.
+.W.....W.
+.LGW.WGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W..j..W.
+.W.....WS
+.W.....W.
+.W.....W.
+.W.....W.
+.LWWWWWL.
+..j...j..
+layer 3
+vvvvvvvvv
+.L-----L.
+.|fffff|.
+.|fffff|S
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.L-----L.
+^^^^^^^^^
+layer 4
+.........
+vvvvvvvvv
+.W.....W.
+.W.....WS
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+layer 5
+.........
+.........
+vvvvvvvvv
+.W.....WS
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+.........
+layer 6
+.........
+.........
+.........
+vvvvvvvvS
+.W.....W.
+^^^^^^^^^
+.........
+.........
+.........
+layer 7
+.........
+.........
+.........
+........S
+_________
+.........
+.........
+.........
+.........
