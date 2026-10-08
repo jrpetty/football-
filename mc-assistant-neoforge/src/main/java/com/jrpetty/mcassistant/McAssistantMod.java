@@ -347,9 +347,9 @@ public final class McAssistantMod {
             })
             .build());
 
-    /** Master switch for the chat / slash / voice command layer. Off while the
+    /** Master switch for the chat / slash command layer. Off while the
      *  specialisation flow (spawner -> management screen -> zone marker) is the
-     *  way you run a crew; the parser and voice engine stay built, just idle. */
+     *  way you run a crew; the parser stays built, just idle. */
     public static final boolean MANUAL_COMMANDS_ENABLED = false;
 
     public McAssistantMod(IEventBus modBus, net.neoforged.fml.ModContainer container) {

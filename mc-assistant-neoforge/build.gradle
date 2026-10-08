@@ -37,16 +37,6 @@ dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-    // Vosk: offline speech-to-text for the push-to-talk voice control.
-    // Embedded in the mod jar via NeoForge's jar-in-jar so users install
-    // one file. JNA (vosk's only dependency) already ships with Minecraft.
-    jarJar(implementation('com.alphacephei:vosk')) {
-        version {
-            strictly '[0.3.45,0.4)'
-            prefer '0.3.45'
-        }
-    }
 }
 
 neoForge {

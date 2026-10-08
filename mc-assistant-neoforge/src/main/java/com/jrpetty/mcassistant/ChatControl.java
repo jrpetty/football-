@@ -26,9 +26,8 @@ import java.util.regex.Pattern;
  *   3. bare imperatives   — "gather 128 logs and put it in the chest"
  *
  * Sentences split on "and" / "then" / commas into a sequence of queued jobs.
- * This is also the voice path (push-to-talk types recognized speech into
- * chat), so: RULE — every capability MUST land here with natural phrasings
- * the same day it lands as a command.
+ * RULE — every capability MUST land here with natural phrasings the same day
+ * it lands as a command.
  */
 public final class ChatControl {
 
@@ -121,7 +120,7 @@ public final class ChatControl {
         + "|sort|organize|organise|tidy|cleanup|clean|pickup|hunt|hunting|food"
         + "|light|torch|lighting|lights)\\b");
 
-    // Spoken-number words -> value. Voice recognition writes numbers as words
+    // Number words -> value. Players often write numbers as words
     // ("gather twenty logs"), but the parser reads digits, so we convert first.
     private static final java.util.Map<String, Integer> NUM_SMALL = java.util.Map.ofEntries(
         java.util.Map.entry("zero", 0), java.util.Map.entry("one", 1), java.util.Map.entry("two", 2),
@@ -812,7 +811,7 @@ public final class ChatControl {
     }
 
     /**
-     * Convert spoken number words into digits so voice amounts work:
+     * Convert number words into digits so worded amounts work:
      * "twenty" -> "20", "one hundred twenty eight" -> "128", "a hundred" ->
      * "100". Runs before clause-splitting because "and" can be part of a
      * number ("hundred and twenty"). Digits already in the text pass through,
@@ -927,8 +926,7 @@ public final class ChatControl {
                     + "\"how much iron do we have?\", \"enchant your gear\" (spends earned xp + lapis), "
                     + "\"what do you see/have?\", open (my gear), \"keep the chest stocked with 64 logs\", "
                     + "\"tend the farm every 20 minutes\" (recurring chores; \"stop routines\" cancels), "
-                    + "\"be a miner/farmer/lumberjack/builder\" + \"work on your own\", \"your name is <name>\", \"version\" (which build), spawn, dismiss. "
-                    + "Hold the voice key (default V) to speak any of this.");
+                    + "\"be a miner/farmer/lumberjack/builder\" + \"work on your own\", \"your name is <name>\", \"version\" (which build), spawn, dismiss.");
                 case GATHER -> {
                     Job job = Job.gather(act.gatherKind(), act.amount());
                     a.enqueue(job);

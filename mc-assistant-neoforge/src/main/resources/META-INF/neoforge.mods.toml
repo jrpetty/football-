@@ -15,8 +15,7 @@ too: /assistant, "!follow", "!gather logs 16", "!stop", "!jobs", "!status".
 It's mortal — a live HP readout floats over its head and it regenerates out
 of combat. Right-click it to manage its backpack, armor, and tools, with
 Stop / Follow / Stay / Guard / Deposit / Come buttons. Craft an Assistant
-Spawner block to summon it anywhere. Works with any speech-to-text that
-types into chat for hands-free voice control.
+Spawner block to summon it anywhere.
 '''
 authors = "jrpetty"
 
