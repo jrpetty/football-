@@ -89,10 +89,10 @@ final class PoliceStage {
         prisoner.moveTo(cell.inside().getX() + 0.5, cell.inside().getY(), cell.inside().getZ() + 0.5, 0.0F, 0.0F);
         WatchHouse.setDoor(level, cell.door(), false);
         BlockPos front = cell.front();
-        out.add(view("cell", front.relative(b.facing().getOpposite(), 1).relative(b.facing().getCounterClockWise(), 1), cell.inside().above()));
+        out.add(view(level, "cell", front.relative(b.facing().getOpposite(), 1).relative(b.facing().getCounterClockWise(), 1), cell.inside().above()));
         BlockPos door = WatchHouse.at(b, WatchHouse.OUTSIDE);
         BlockPos outside = door.relative(b.facing().getOpposite(), 7).relative(b.facing().getClockWise(), 4).above(2);
-        out.add(view("house", outside, b.anchor().above(2)));
+        out.add(view(level, "house", outside, door.above(1)));                 // its front, the door and the lanterns
         // A guard on the beat, greeting a folk on the square by name.
         VillageFolkEntity beat = guards.get(0), passer = folk.get(1);
         Police.setDutyForTests(level, beat, Roster.Duty.BEAT.name());
@@ -104,7 +104,7 @@ final class PoliceStage {
         FolkTalk.speak(beat, "Afternoon, " + passer.displayNameCap() + ". All well at home?");
         passer.sayLater("All well, " + beat.displayNameCap() + ", thanks.", 40);
         Beats.felt(id, sq, level.getGameTime());
-        out.add(view("beat", sq.relative(Direction.SOUTH, 5).relative(Direction.EAST, 1).above(1), sq.relative(Direction.EAST, 1).above(1)));
+        out.add(view(level, "beat", sq.relative(Direction.SOUTH, 5).relative(Direction.EAST, 1).above(1), sq.relative(Direction.EAST, 1).above(1)));
         // A chase down the east avenue: its own guard and its own culprit, not the beat's.
         out.add(chase(level, v, ground(level, v.centre().relative(Direction.EAST, 20)), guards.get(2), folk.get(3)));
         // An arrest on a lead, walked to the second cell.
@@ -116,10 +116,10 @@ final class PoliceStage {
             f.moveTo(start.getX() + 1.5, start.getY(), start.getZ() + 0.5, 0.0F, 0.0F);
             if (g.countCarried(s -> s.is(Items.LEAD)) == 0) g.insertItem(new ItemStack(Items.LEAD));
             WatchHouse.arrest(level, v, g, f, 0, "a breach of the peace", (level.getDayTime() / 24000L + 1) * 24000L + 1000L);
-            out.add(view("arrest", start.relative(b.facing().getClockWise(), 6).above(1), start.above(1)));
+            out.add(view(level, "arrest", start.relative(b.facing().getClockWise(), 6).above(1), start.above(1)));
         }
         BlockPos board = VillageBoards.lectern(id);
-        if (board != null) out.add(view("board", board.relative(Direction.SOUTH, 4).above(1), board.above(1)));
+        if (board != null) out.add(view(level, "board", board.relative(Direction.SOUTH, 4).above(1), board.above(1)));
         out.add("the roster: " + Roster.words(level, v));
         return out;
     }
@@ -224,7 +224,7 @@ final class PoliceStage {
         BlockPos from = ground(level, at.relative(Direction.WEST, 9));
         g.moveTo(from.getX() + 0.5, from.getY(), from.getZ() + 0.5, -90.0F, 0.0F);
         Incidents.startChase(level, v, g, f, 0, "a theft at the market", true);
-        return view("chase", run.relative(Direction.SOUTH, 9).relative(Direction.EAST, 8).above(2), run.relative(Direction.EAST, 6).above(1))
+        return view(level, "chase", run.relative(Direction.SOUTH, 9).relative(Direction.EAST, 8).above(2), run.relative(Direction.EAST, 6).above(1))
             + "\n" + g.displayNameCap() + " is after " + f.displayNameCap();
     }
 
@@ -248,7 +248,51 @@ final class PoliceStage {
         return new BlockPos(p.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()), p.getZ());
     }
 
-    private static String view(String name, BlockPos eye, BlockPos at) {
-        return "VIEW " + name + " " + eye.getX() + " " + eye.getY() + " " + eye.getZ() + " " + at.getX() + " " + at.getY() + " " + at.getZ();
+    /** A scene's "VIEW name x y z ax ay az": the camera's feet (moved to a clear spot, clearEye) and what it looks at. */
+    private static String view(ServerLevel level, String name, BlockPos eye, BlockPos at) {
+        BlockPos e = clearEye(level, eye, at);
+        return "VIEW " + name + " " + e.getX() + " " + e.getY() + " " + e.getZ() + " " + at.getX() + " " + at.getY() + " " + at.getZ();
+    }
+
+    /**
+     * Where the camera stands for a scene: its spot as planned if the eye's block and the one over it are air and the line
+     * from the eye (1.62 over the feet) to the subject runs clear; else stepped up, then back from the subject and to
+     * either side, a block at a time, till one is. A chase shot from inside a tree's leaves showed nothing of the chase.
+     */
+    static BlockPos clearEye(ServerLevel level, BlockPos eye, BlockPos at) {
+        double ax = eye.getX() - at.getX(), az = eye.getZ() - at.getZ();
+        double len = Math.sqrt(ax * ax + az * az);
+        if (len < 0.5) { ax = 0; az = 1; } else { ax /= len; az /= len; }
+        int[] sides = { 0, 2, -2, 4, -4, 6, -6 };
+        for (int back = 0; back <= 10; back += 2) {
+            for (int side : sides) {
+                for (int up = 0; up <= 8; up++) {
+                    BlockPos p = BlockPos.containing(eye.getX() + 0.5 + ax * back - az * side, eye.getY() + up, eye.getZ() + 0.5 + az * back + ax * side);
+                    if (clearFrom(level, p, at)) return p;
+                }
+            }
+        }
+        return eye;
+    }
+
+    /** Is the eye at these feet in the open (its block and the one over it air) with a clear line to the subject? */
+    static boolean clearFrom(ServerLevel level, BlockPos feet, BlockPos at) {
+        if (!level.getBlockState(feet.above()).isAir() || !level.getBlockState(feet.above(2)).isAir()) return false;
+        net.minecraft.world.phys.Vec3 from = new net.minecraft.world.phys.Vec3(feet.getX() + 0.5, feet.getY() + 1.62, feet.getZ() + 0.5);
+        net.minecraft.world.phys.Vec3 to = net.minecraft.world.phys.Vec3.atCenterOf(at);
+        double dist = from.distanceTo(to);
+        BlockPos last = null;
+        for (double s = 0.0; s < dist - 1.0; s += 0.25) {
+            BlockPos p = BlockPos.containing(from.lerp(to, s / dist));
+            if (p.equals(last)) continue;
+            last = p;
+            if (p.equals(at)) break;
+            BlockState st = level.getBlockState(p);
+            if (st.isAir() || !st.getFluidState().isEmpty() && st.getCollisionShape(level, p).isEmpty()) continue;
+            // Seen through: iron bars and panes (a cell's front), glass. Leaves and every other solid block stop the eye.
+            if (st.getBlock() instanceof net.minecraft.world.level.block.IronBarsBlock || st.getBlock() instanceof net.minecraft.world.level.block.TransparentBlock) continue;
+            if (st.getBlock() instanceof net.minecraft.world.level.block.LeavesBlock || !st.getCollisionShape(level, p).isEmpty()) return false;
+        }
+        return true;
     }
 }

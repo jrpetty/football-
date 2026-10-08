@@ -1063,9 +1063,24 @@ public class PoliceGameTests {
         VillageFolkEntity[] led = new VillageFolkEntity[2];
         helper.runAtTickTime(20, () -> {
             helper.assertTrue(watchOf(village).isEmpty(), "no watch to begin with");
+            // A tree's crown where the chase's camera would stand (twenty east of the town's middle, then nine south and
+            // eight east, two up): the camera steps out of it, and every scene's camera stands in the open.
+            BlockPos run = v.centre().relative(Direction.EAST, 20);
+            BlockPos crown = run.relative(Direction.SOUTH, 9).relative(Direction.EAST, 8);
+            int cy = Kit.surface(level, crown.getX(), crown.getZ()).getY();
+            for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) for (int dy = 1; dy <= 5; dy++) {
+                level.setBlock(new BlockPos(crown.getX() + dx, cy + dy, crown.getZ() + dz), Blocks.OAK_LEAVES.defaultBlockState(), 2);
+            }
             List<String> said = Police.stageForTests(level, v, heart.offset(24, 0, 22));
             String out = String.join("\n", said);
             Kit.log("pl11 the stage said:\n" + out);
+            java.util.regex.Matcher vm = java.util.regex.Pattern.compile("VIEW (\\S+) (-?\\d+) (-?\\d+) (-?\\d+) (-?\\d+) (-?\\d+) (-?\\d+)").matcher(out);
+            while (vm.find()) {
+                BlockPos eye = new BlockPos(Integer.parseInt(vm.group(2)), Integer.parseInt(vm.group(3)), Integer.parseInt(vm.group(4)));
+                BlockPos at = new BlockPos(Integer.parseInt(vm.group(5)), Integer.parseInt(vm.group(6)), Integer.parseInt(vm.group(7)));
+                helper.assertTrue(Police.clearViewForTests(level, eye, at), "the " + vm.group(1) + " camera in the open with a clear line to its subject");
+                helper.assertTrue(!level.getBlockState(eye.above()).is(Blocks.OAK_LEAVES), "the " + vm.group(1) + " camera not in the leaves");
+            }
             List<VillageFolkEntity> watch = watchOf(village);
             helper.assertTrue(out.contains("appointed to the watch for the stage"), "the stage appoints its own guards");
             helper.assertTrue(watch.size() >= 3, "three guards now: " + names(watch));

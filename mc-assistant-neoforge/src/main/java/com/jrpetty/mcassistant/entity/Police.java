@@ -1102,6 +1102,11 @@ public final class Police extends SavedData {
         return PoliceStage.stage(level, v, at);
     }
 
+    /** Is a camera with its feet here in the open, with a clear line to the subject (PoliceStage.clearFrom)? */
+    public static boolean clearViewForTests(ServerLevel level, BlockPos feet, BlockPos at) {
+        return PoliceStage.clearFrom(level, feet, at);
+    }
+
     // ---- the watch house and the cells
 
     /** The watch house stamped here facing north (its door to the south) and put on the town's books, as its builders would leave it. */
