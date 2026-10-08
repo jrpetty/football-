@@ -544,14 +544,21 @@ public class DisastersGameTests {
                 // the river came up, and the draining touching nothing else. What else changed while it stood (the
                 // town's own work, a door opened or shut) is told, not counted: the flood never left its cells.
                 int water = 0, notBack = 0, touched = 0;
+                StringBuilder cellsOff = new StringBuilder();
                 Map<BlockPos, BlockState> after = new HashMap<>();
                 for (Map.Entry<BlockPos, BlockState> e : before.entrySet()) {
                     BlockPos p = e.getKey();
                     BlockState st = level.getBlockState(p);
                     after.put(p, st);
-                    if (st.is(Blocks.WATER) && !e.getValue().is(Blocks.WATER)) water++;
+                    // Water of any kind (a waterlogged block too) where there was none.
+                    if (!st.getFluidState().isEmpty() && e.getValue().getFluidState().isEmpty()) water++;
                     if (cells.contains(p)) {
-                        if (!st.equals(e.getValue())) notBack++;
+                        // A cell the town built in while the water stood (a lamp post, a fence) is the town's now, not the
+                        // flood's: the draining leaves it be, as it would a player's block. The rest are as they were.
+                        BlockState risen = high.get(p);
+                        boolean built = risen != null && !risen.is(Blocks.WATER) && risen.getFluidState().isEmpty();
+                        if (!built && !st.equals(e.getValue()) && notBack++ < 8) cellsOff.append(" | ").append(p.toShortString()).append(' ')
+                            .append(e.getValue()).append(" -> ").append(high.get(p)).append(" -> ").append(st);
                     } else if (!st.equals(high.get(p))) {
                         touched++;
                     }
@@ -559,7 +566,7 @@ public class DisastersGameTests {
                 Map<BlockPos, BlockState> others = new HashMap<>(before);
                 others.keySet().removeAll(cells);
                 Kit.log("dd04 out of the house by tick " + outAt[0] + " to " + inside.blockPosition().toShortString() + " (health " + health[0] + " -> "
-                    + inside.getHealth() + "); drained " + drained + " cells; water left where none was: " + water + ", cells not as they were: " + notBack
+                    + inside.getHealth() + "); drained " + drained + " cells; water left where none was: " + water + ", cells not as they were: " + notBack + cellsOff
                     + ", other blocks the draining changed: " + touched + "; changed meanwhile by the town: " + differences(others, after)
                     + "; levee planned: " + Floods.leveePlanForTests(id).size() + "; record: " + Disasters.logForTests(id));
                 helper.assertTrue(inside.isAlive() && inside.getHealth() >= health[0], "nobody drowned: " + inside.getHealth());
