@@ -697,7 +697,7 @@ public final class Villages {
      * the roll was low, so it is corrected on the spot.
      */
     public static int headcount(@Nullable UUID villageId) {
-        int live = folkOf(villageId).size();
+        int live = loadedCount(villageId);
         if (villageId == null) return live;
         Integer roll = POP.get(villageId);
         if (roll == null || live > roll) {
@@ -709,7 +709,9 @@ public final class Villages {
 
     /** Everybody who is actually here to be given a job right now. */
     public static int loadedCount(@Nullable UUID villageId) {
-        return folkOf(villageId).size();
+        // Counted, not listed: asked many times a second (every board, every folk's mood), and folkOf's list was made
+        // only to be measured.
+        return villageId == null ? 0 : AssistantEntity.countFor(villageId);
     }
 
     /**

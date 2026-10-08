@@ -326,6 +326,17 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return out;
     }
 
+    /** How many allFor would list, without the list. */
+    public static int countFor(UUID ownerId) {
+        Map<String, AssistantEntity> m = BY_OWNER.get(ownerId);
+        if (m == null) return 0;
+        int n = 0;
+        for (AssistantEntity a : m.values()) {
+            if (a.isAlive()) n++;
+        }
+        return n;
+    }
+
     public static List<String> namesFor(UUID ownerId) {
         List<String> out = new ArrayList<>();
         for (AssistantEntity a : allFor(ownerId)) out.add(a.getAssistantName());
