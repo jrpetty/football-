@@ -756,7 +756,7 @@ public class DiverGameTests {
             }
             done[0] = true;
             int planted = 0;
-            for (BlockPos p : spots) if (level.getBlockState(p).is(Blocks.KELP)) planted++;
+            for (BlockPos p : spots) if (level.getBlockState(p).is(Blocks.KELP) || level.getBlockState(p).is(Blocks.KELP_PLANT)) planted++;
             Kit.log("dv06 done at " + tick + ": " + planted + " planted, up for air " + w.surfaced + " times, the longest under " + underFor[0]
                 + " ticks, the least air " + least[0] + "; out on the bank " + !f.isInWater() + " at " + f.blockPosition().toShortString());
             helper.assertTrue(planted == 12, "every plant set on the floor of the tank: " + planted);
@@ -889,6 +889,18 @@ public class DiverGameTests {
                     List<Turtle> babies = level.getEntitiesOfClass(Turtle.class, new AABB(egg[0]).inflate(3), Turtle::isBaby);
                     Kit.log("dv07 hatched: " + babies.size() + " hatchlings; the egg block " + level.getBlockState(egg[0]));
                     helper.assertTrue(!babies.isEmpty(), "the eggs hatched");
+                    // The diver's walk along the beach: it sees the hatchlings (the books' hatched), opens the nest's gate
+                    // for them or feeds them.
+                    put(f, w.beach());
+                    helper.assertTrue(Divers.startForTests(f, level, Divers.Job.BEACH), "to the hatchlings");
+                    phase[0] = 7;
+                }
+                case 7 -> {
+                    if (Divers.jobOf(f) != null) return;
+                    List<Turtle> babies = level.getEntitiesOfClass(Turtle.class, new AABB(egg[0]).inflate(12, 4, 12), Turtle::isBaby);
+                    Kit.log("dv07 the beach walked at " + tick + ": hatched in the books " + w.hatched + ", " + babies.size() + " hatchlings about");
+                    helper.assertTrue(w.hatched >= 1, "the hatchlings in the books: " + w.hatched);
+                    helper.assertTrue(!babies.isEmpty(), "a hatchling still about");
                     // A hatchling out on the open sand, all but grown.
                     Turtle baby = babies.get(0);
                     BlockPos open = null;
@@ -1011,7 +1023,7 @@ public class DiverGameTests {
                     }
                     if (Divers.jobOf(f) != null) return;
                     int planted = 0;
-                    for (BlockPos p : spots) if (level.getBlockState(p).is(Blocks.KELP)) planted++;
+                    for (BlockPos p : spots) if (level.getBlockState(p).is(Blocks.KELP) || level.getBlockState(p).is(Blocks.KELP_PLANT)) planted++;
                     Kit.log("dv08 dived at " + tick + ": planted " + planted + "; water breathing " + breathing[0] + ", least air " + least[0]
                         + ", up for air " + w.surfaced + " times");
                     helper.assertTrue(planted == 3, "the dive done: " + planted);
