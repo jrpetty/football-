@@ -6454,11 +6454,21 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         if (want == null) return false;
         // The makings, from the stores: wood, stone and iron cover every kit
-        // and fixture recipe between them.
-        scoopFromChests(s -> metalAllowed(s) && (s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS) || s.is(Items.STICK)
-            || s.is(Items.IRON_INGOT) || s.is(Items.STRING) || s.is(Items.COAL)
-            || s.is(Items.COBBLESTONE) || s.is(Blocks.COBBLED_DEEPSLATE.asItem())),
-            12, chestRange(), false);
+        // and fixture recipe between them. Only what this piece is made of: a
+        // smelter making itself a furnace used to pocket the town's string, its
+        // coal and its iron along with the cobble, and the opening ribbon of the
+        // bridge the town had voted for went unmade for want of the string.
+        final String making = want;
+        java.util.function.Predicate<ItemStack> wood = s -> s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS) || s.is(Items.STICK);
+        java.util.function.Predicate<ItemStack> makings = switch (making) {
+            case "fishing_rod" -> wood.or(s -> s.is(Items.STRING));
+            case "shears" -> s -> s.is(Items.IRON_INGOT);
+            case "torch" -> wood.or(s -> s.is(Items.COAL));
+            case "furnace" -> s -> s.is(Items.COBBLESTONE) || s.is(Blocks.COBBLED_DEEPSLATE.asItem());
+            case "bread" -> s -> false;
+            default -> wood;                                         // the wooden tools, the chest
+        };
+        scoopFromChests(s -> metalAllowed(s) && makings.test(s), 12, chestRange(), false);
         int many = "bread".equals(want)
             ? Math.max(1, Math.min(8, countStocked(s -> s.is(Items.WHEAT)) / 3)) : 1;
         CraftPlanner.Result plan = CraftPlanner.plan(this, want, many);

@@ -134,10 +134,10 @@ public final class Keepsakes {
         ItemStack got = switch (s.keepsake) {
             case FEATHER -> ownOrStores(f, level, v, st -> st.is(Items.FEATHER));
             case FLOWER -> ownOrStores(f, level, v, st -> st.is(ItemTags.SMALL_FLOWERS));
-            // A pretty one of its own if it has one; out of the stores only a plain flint pebble: the town's gems
-            // (its amethyst and quartz, the museum's and the market's) are not a folk's to pocket for luck.
-            case STONE -> ownOrStores(f, level, v, st -> st.is(Items.FLINT) || st.is(Items.AMETHYST_SHARD) || st.is(Items.QUARTZ),
-                st -> st.is(Items.FLINT));
+            // A plain flint pebble: the town's gems (its amethyst and quartz, the museum's and the market's) are not a
+            // folk's to pocket for luck, out of the stores or out of a load it is carrying to them (a hand clearing an
+            // old chest of twelve shards brought eleven to the storehouse).
+            case STONE -> ownOrStores(f, level, v, st -> st.is(Items.FLINT));
             case BOOK -> ownOrStores(f, level, v, st -> st.is(Items.BOOK));
             case COIN -> f.earnedInAll() > 0 && f.spend(1) ? new ItemStack(McAssistantMod.VILLAGE_COIN.get()) : ItemStack.EMPTY;
             case TOY -> QuestItems.make(level, v, maker(f, level), McAssistantMod.WOODEN_TOY.get());

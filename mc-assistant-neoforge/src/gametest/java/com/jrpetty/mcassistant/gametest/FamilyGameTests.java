@@ -357,6 +357,7 @@ public class FamilyGameTests {
         Object[][] fam = new Object[1][];
         int[] lines = { 0 };
         String[] wed = { "" };
+        long[] evening = { DAY };
         helper.runAtTickTime(5, () -> {
             gran.life().widowed();
             fam[0] = family(helper, level, mother, father, heart.offset(-16, 0, 16));
@@ -370,8 +371,12 @@ public class FamilyGameTests {
             wed[0] = father.displayNameCap() + " and " + mother.displayNameCap() + " were wed";
             Villages.tell(id, day - 3, wed[0]);
             Villages.tell(id, day - 5, "the well was opened");
-            // Bedtime, after supper.
-            level.setDayTime(DAY + 13000);
+            // Bedtime, after supper, on an evening the town has nothing on: not its weekly meeting (the eve of its day of
+            // rest, or the day itself: TownMeeting) nor a gathering (the weekly feast, a wedding...: Gatherings), which
+            // call the grandmother and the child to the square and hold them there, the story waiting all evening.
+            while (com.jrpetty.mcassistant.entity.TownMeeting.dueForTests(id, evening[0] / 24000L)
+                    || com.jrpetty.mcassistant.entity.Gatherings.tonight(id, evening[0] / 24000L) != null) evening[0] += 24000L;
+            level.setDayTime(evening[0] + 13000);
             level.updateSkyBrightness();
             for (VillageFolkEntity f : List.of(father, mother, gran)) f.clearQueue();
             List<String> story = Families.storyForTests(level, child);
@@ -388,7 +393,7 @@ public class FamilyGameTests {
             long t = helper.getTick();
             if (t < 6 || fam[0] == null) return;
             long tod = level.getDayTime() % 24000L;
-            if (tod > 13600L) level.setDayTime(DAY + 13000);
+            if (tod > 13600L) level.setDayTime(evening[0] + 13000);
             if (t % 20 != 0) return;
             VillageFolkEntity child = (VillageFolkEntity) fam[0][1];
             int told = Families.storyToldForTests(child);

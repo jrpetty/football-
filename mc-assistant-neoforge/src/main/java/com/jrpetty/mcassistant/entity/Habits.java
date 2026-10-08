@@ -212,6 +212,9 @@ public final class Habits {
         // spends its morning choosing one (its agenda waits while it walks: one of a new town of twelve was still out
         // walking, with no trade, when the other eleven had theirs).
         if (beforeWork && (f.stationTask() == StationTask.NONE || f.workZone() == null)) return false;
+        // Sat down on a bench for its break (Seats): that is its break, and the birds wait (it got up from the bench
+        // to feed them, a few seconds after sitting down).
+        if (Seats.sitting(f)) return false;
         UUID village = f.ownerId();
         if (village == null || Raids.underAlarm(village)) return false;
         if (TownJobs.busy(f) || Assemblies.attending(f) || School.teaching(f) || Birthdays.busy(f) || Families.busy(f)
