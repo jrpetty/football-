@@ -343,7 +343,6 @@ public final class Crime extends SavedData {
 
         public String name() { return name; }
 
-        public double weight() { return weight; }
     }
 
     /** A case: the deed as it was (the truth, kept from everybody till it is proven), what the watch found, and how it ended. */
@@ -413,9 +412,7 @@ public final class Crime extends SavedData {
         // For the tests and the quests (who did it is the books' secret till the court has it).
         public Stage stage() { return stage; }
         public UUID culprit() { return culprit; }
-        public String culpritName() { return culpritName; }
         @Nullable public UUID victim() { return victim; }
-        public String victimName() { return victimName; }
         public int coins() { return coins; }
         public int worth() { return worth; }
         public String goods() { return goods; }
@@ -430,7 +427,6 @@ public final class Crime extends SavedData {
         public List<Clue> clues() { return List.copyOf(clues); }
         public List<String> notes() { return List.copyOf(notes); }
         public List<BlockPos> trail() { return List.copyOf(trail); }
-        public boolean confessed() { return confessed; }
         public Set<UUID> cleared() { return Set.copyOf(cleared); }
         public int fine() { return fine; }
         public int finePaid() { return finePaid; }

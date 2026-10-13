@@ -1582,11 +1582,6 @@ public class MineGoal extends Goal {
         if (assistant.stashable() > 0) assistant.enqueueFront(Job.deposit());
     }
 
-    /** Tests: the phase it is in. */
-    public String phaseForTests() {
-        return phase.name();
-    }
-
     private void sweepDrops(BlockPos around) {
         for (ItemEntity drop : assistant.level().getEntitiesOfClass(
                 ItemEntity.class, new AABB(around).inflate(2.5))) {

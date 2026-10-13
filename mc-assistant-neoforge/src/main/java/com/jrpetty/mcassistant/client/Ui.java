@@ -183,7 +183,4 @@ public final class Ui {
         return (float) (lifetimeXp - here) / (float) (next - here);
     }
 
-    public static Component text(String s) {
-        return Component.literal(s);
-    }
 }

@@ -7064,11 +7064,6 @@ public class VillageFolkEntity extends AssistantEntity {
         return Math.max(48, village == null ? 48 : Villages.storesRadius(village));
     }
 
-    /** How much of this the village's stores hold near its heart. */
-    private int storesHold(BlockPos heart, java.util.function.Predicate<net.minecraft.world.item.ItemStack> what) {
-        return storesHold(heart, 48, what);
-    }
-
     /** How much of this the stores within {@code radius} of the heart hold, as high and as deep as
      *  the village's own count of them reaches (Villages.STORES_TALL). */
     private int storesHold(BlockPos heart, int radius,

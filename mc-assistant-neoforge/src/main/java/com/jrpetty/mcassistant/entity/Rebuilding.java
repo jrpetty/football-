@@ -437,13 +437,6 @@ public final class Rebuilding {
         return t == null || t.rebuilds.isEmpty() ? "" : t.rebuilds.get(0).waits;
     }
 
-    /** Tests: is this folk lodging away from a burnt or flooded home tonight, and where? Null if not. */
-    @Nullable
-    public static String lodgeForTests(VillageFolkEntity f) {
-        Lodge l = LODGE.get(f.getUUID());
-        return l == null ? null : l.with + (l.bed == null ? "" : " " + l.bed.toShortString());
-    }
-
     /** Tests: is this folk's home burnt or flooded? */
     public static boolean displacedForTests(VillageFolkEntity f) {
         return displaced(f);

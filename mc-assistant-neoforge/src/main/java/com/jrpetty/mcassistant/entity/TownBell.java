@@ -871,12 +871,6 @@ public final class TownBell {
         return p == Peal.NOON ? a.noonWhat : p == Peal.DUSK ? a.duskWhat : a.dawn >= 0 ? "got up" : "";
     }
 
-    /** Is it on its way home from the dusk bell (the tests)? */
-    public static boolean homeward(VillageFolkEntity f) {
-        Answer a = ANSWERS.get(f.getUUID());
-        return a != null && a.homeward && a.bellDay == bellDay(f.level().getDayTime());
-    }
-
     /** Where it hangs, in words. */
     private static String where(ServerLevel level, Villages.Village v, BlockPos bell) {
         BlockPos hall = hallFront(v.id()), tower = Villages.builtAt(v.id(), "belltower"), chapel = Villages.builtAt(v.id(), "chapel");

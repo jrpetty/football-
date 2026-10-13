@@ -485,11 +485,6 @@ public final class Museum {
         return false;
     }
 
-    /** What is on show. */
-    public static List<MuseumRecords.Shown> exhibits(UUID village) {
-        return new ArrayList<>(MuseumRecords.book(village).shown);
-    }
-
     /** The renown the museum's collection brings the town: each thing on show, the rarer the more. */
     public static int renown(UUID village) {
         if (!MuseumRecords.has(village)) return 0;

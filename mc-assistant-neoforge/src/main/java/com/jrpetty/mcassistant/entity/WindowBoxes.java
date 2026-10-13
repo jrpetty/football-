@@ -151,13 +151,6 @@ public final class WindowBoxes {
         return true;
     }
 
-    /** Tests: a box made now by the recipe, out of the stores. */
-    @Nullable
-    public static String makeForTests(ServerLevel level, UUID village) {
-        Villages.Village v = Villages.get(village);
-        return v == null ? null : make(level, v, null);
-    }
-
     // ------------------------------------------------------------------ hung
 
     /** Who of a household sees to its garden and its boxes: one that loves gardening, else the one with most put by. */

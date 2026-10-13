@@ -2049,13 +2049,6 @@ public final class Interviews {
         return bar < 0 ? l : l.substring(bar + 1);
     }
 
-    /** Every line on its card, oldest first (tests, the command). */
-    public static List<String> cardLines(UUID folk) {
-        List<String> out = new ArrayList<>();
-        for (String l : InterviewBook.of().cards.getOrDefault(folk, List.of())) out.add(l.substring(l.indexOf('|') + 1));
-        return out;
-    }
-
     /** Its spirits (VillageFolkEntity.refreshMood): proud of a post won at interview, a little down at one missed. */
     public static int mood(VillageFolkEntity f, long day, int m, List<Object[]> why) {
         long[] a = InterviewBook.of().after.get(f.getUUID());
@@ -2736,13 +2729,6 @@ public final class Interviews {
     @Nullable
     public static Interview pendingForTests(UUID village, String post) {
         return pending(village, post);
-    }
-
-    /** Tests: the latest held for a post. */
-    @Nullable
-    public static Interview heldForTests(UUID village, String post) {
-        for (Interview iv : held(village)) if (iv.post.equals(post)) return iv;
-        return null;
     }
 
     /** Tests: a candidate's word put in by a player, as the talk screen takes it. */

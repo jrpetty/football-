@@ -228,8 +228,4 @@ public final class Bakery {
         return out;
     }
 
-    /** Tests: how many of this the bakery means to keep by. */
-    public static int wantedForTests(UUID village, Item what, long day) {
-        return wanted(village, what, day);
-    }
 }

@@ -1275,13 +1275,6 @@ public final class PlayerLaw {
         return badgeArrest(level, p, f, badge);
     }
 
-    public static void constableForTests(UUID village, UUID player, String name, boolean sworn) {
-        CompoundTag c = constable(village, player);
-        c.putString("name", name);
-        c.putLong("sworn", sworn ? 1 : 0);
-        Police.changed();
-    }
-
     public static UUID badgeTownForTests(ItemStack s) {
         return badgeTown(s);
     }

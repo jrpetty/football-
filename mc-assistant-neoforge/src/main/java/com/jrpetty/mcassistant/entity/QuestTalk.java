@@ -53,11 +53,6 @@ public final class QuestTalk {
         return t != null && f.level().getGameTime() - t < 2400L;
     }
 
-    /** Tests: as if the player had asked this folk for work just now. */
-    public static void askedForTests(VillageFolkEntity f, Player p) {
-        ASKED.put(f.getUUID() + "/" + p.getUUID(), f.level().getGameTime());
-    }
-
     // ------------------------------------------------------------------ its way of putting it
 
     /** One of four ways of saying a thing, by the folk's nature: plain, grumpy, shy, cheerful. */

@@ -492,11 +492,6 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     public ModelPart rightLeg() { return rightLeg; }
     public ModelPart leftLeg() { return leftLeg; }
 
-    /** The trade's name, as the pictures and the parts know it. */
-    public static String tradeOf(AssistantEntity folk) {
-        return TRADES[outfit(folk)];
-    }
-
     /**
      * [caves] Which trade's outfit a folk wears: its own, by StationTask's order (a trade after the drawn ones, the
      * banker, wraps round as before). The cave dweller has its own: the delver's helm and lamp (lit in the dark, and

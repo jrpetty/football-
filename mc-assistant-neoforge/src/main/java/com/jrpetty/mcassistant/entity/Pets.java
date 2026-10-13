@@ -3776,18 +3776,6 @@ public final class Pets {
         return errandNow(level, member, place(job, village, h.anchor.asLong(), a, level.getGameTime(), thing));
     }
 
-    /** Tests: the household's round for its pet now (what it wants looked at again today). */
-    public static void householdForTests(ServerLevel level, VillageFolkEntity member) {
-        UUID village = member.ownerId();
-        Villages.Village v = village == null ? null : Villages.get(village);
-        Homes.Home h = v == null ? null : Homes.homeOf(village, member.getUUID());
-        Families.Pet p = h == null ? null : Families.pet(village, h.anchor.asLong());
-        if (p == null || !(level.getEntity(p.id()) instanceof TamableAnimal a)) return;
-        WANT_LOOKED.remove(village + "/" + h.anchor.asLong());
-        long dt = level.getDayTime();
-        household(level, v, h, p, a, know(village, p, a, dt / 24000L), dt / 24000L, dt % 24000L);
-    }
-
     /** Tests: the household's bowl, or null. */
     @Nullable
     public static BlockPos bowlForTests(ServerLevel level, VillageFolkEntity member) {
@@ -3827,12 +3815,6 @@ public final class Pets {
     /** Tests: the pet's care, as the ledger keeps it. */
     public static String careForTests(UUID village, UUID pet) {
         return write(care(village, pet));
-    }
-
-    /** Tests: the pet's age in years and its birth day. */
-    public static long[] ageForTests(UUID village, UUID pet, long day) {
-        Care c = care(village, pet);
-        return new long[]{ years(c, day), c.born };
     }
 
     /** Tests: the town's animals all told, and its cap. */

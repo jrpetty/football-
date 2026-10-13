@@ -107,7 +107,6 @@ public final class Ferries {
         public Direction way() { return way; }
         public int width() { return width; }
         public int surface() { return surface; }
-        @Nullable public UUID ferryman() { return ferryman; }
 
         /** The first water from a bank: where its jetty starts (0: the town's side, 1: the far side). */
         BlockPos root(int end) {

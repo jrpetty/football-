@@ -67,17 +67,8 @@ public final class Thatch {
         sparkForTests = null;
     }
 
-    /** Tests: the chimney's spark always flies (true), never (false), or as the dice fall (null). */
-    public static void sparkForTests(@Nullable Boolean on) {
-        sparkForTests = on;
-    }
-
     public static boolean isThatch(BlockState s) {
         return s.getBlock() instanceof ThatchBlock || s.getBlock() instanceof ThatchBlock.Stairs || s.getBlock() instanceof ThatchBlock.Slab;
-    }
-
-    public static boolean isThatch(ItemStack s) {
-        return s.is(WorkItems.THATCH_ITEM.get()) || s.is(WorkItems.THATCH_STAIRS_ITEM.get()) || s.is(WorkItems.THATCH_SLAB_ITEM.get());
     }
 
     // ------------------------------------------------------------------ roofed in thatch

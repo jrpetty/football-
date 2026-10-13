@@ -510,10 +510,6 @@ public final class Villages {
         return new ArrayList<>(ALL.values());
     }
 
-    public static void register(Village village) {
-        ALL.put(village.id(), village);
-    }
-
     @Nullable
     public static Village get(@Nullable UUID id) {
         return id == null ? null : ALL.get(id);
@@ -593,10 +589,6 @@ public final class Villages {
     /** Restore a settlement from what one of its folk remembers. Village
      *  state lives in memory only, so the folk carry it: the first one to
      *  load puts its village — and how far it had got — back on the map. */
-    public static void restore(Level level, UUID id, BlockPos centre, Age age, List<String> built) {
-        restore(level, id, centre, age, built, 0);
-    }
-
     public static void restore(Level level, UUID id, BlockPos centre, Age age,
                                List<String> built, int population) {
         ALL.putIfAbsent(id, new Village(id, centre, level.dimension()));
@@ -628,18 +620,6 @@ public final class Villages {
     }
 
     private static final Map<UUID, Long> LAST_BIRTH = new ConcurrentHashMap<>();
-
-    /**
-     * May this settlement raise another child yet? One clock for the whole
-     * village, because the per-folk clocks alone let a dozen fed hands stood
-     * together produce a child every few seconds. The gap shortens as the
-     * village grows — a hundred folk can raise a child every half minute,
-     * twelve every few minutes — so growth is steady rather than explosive at
-     * either end.
-     */
-    public static boolean mayBirth(UUID villageId, long gameTime) {
-        return mayBirth(villageId, gameTime, 1);
-    }
 
     /** As mayBirth, with the gap between births stretched this many times (lean times). */
     public static boolean mayBirth(UUID villageId, long gameTime, int stretch) {
@@ -3235,13 +3215,4 @@ public final class Villages {
         return at;
     }
 
-    /** What an idle hand should be gathering for the age the village is in —
-     *  the answer to "there is nothing in my own trade to do right now". */
-    public static Task gatherFor(Age age) {
-        return switch (age) {
-            case WOOD -> Task.LOGS;
-            case STONE -> Task.STONE;
-            case IRON, DIAMOND, NETHER -> Task.IRON;
-        };
-    }
 }

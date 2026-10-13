@@ -1606,13 +1606,6 @@ public final class Kitchen {
         return f.ownerId() != null && mealOut(level, f, f.ownerId(), lunch ? Meals.Meal.LUNCH : Meals.Meal.SUPPER);
     }
 
-    /** Tests: the cook's look at the tables now. */
-    @Nullable
-    public static String setOutForTests(ServerLevel level, UUID village, @Nullable VillageFolkEntity cook) {
-        Villages.Village v = Villages.get(village);
-        return v == null ? null : setOut(level, v, cook);
-    }
-
     /** Tests: the reserve's look now. */
     @Nullable
     public static String reserveForTests(ServerLevel level, UUID village) {

@@ -147,23 +147,6 @@ public final class WorkItems {
         }
     }
 
-    /** One of the work items, by name (the tests, the commands): null if there is none so called. */
-    public static Item byName(String name) {
-        return switch (name) {
-            case "pit_prop" -> PIT_PROP_ITEM.get();
-            case "rope_coil" -> ROPE_COIL.get();
-            case "ore_sack" -> ORE_SACK.get();
-            case "felling_saw" -> FELLING_SAW.get();
-            case "thatch" -> THATCH_ITEM.get();
-            case "thatch_stairs" -> THATCH_STAIRS_ITEM.get();
-            case "thatch_slab" -> THATCH_SLAB_ITEM.get();
-            case "milestone" -> MILESTONE_ITEM.get();
-            case "shipping_crate" -> SHIPPING_CRATE_ITEM.get();
-            case "window_box" -> WINDOW_BOX_ITEM.get();
-            default -> null;
-        };
-    }
-
     /** All eight, one of each, as stacks (the showcase). */
     public static java.util.List<ItemStack> showcase() {
         return java.util.List.of(new ItemStack(PIT_PROP_ITEM.get()), new ItemStack(ROPE_COIL.get()), new ItemStack(ORE_SACK.get()),

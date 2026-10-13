@@ -394,7 +394,6 @@ public final class CaveDwellers {
         @Nullable public CaveTrips.Plan plan() { return plan; }
         public double days() { return days; }
         public long turnAt() { return turnAt; }
-        public long startTime() { return startTime; }
         public int nights() { return nights; }
         @Nullable public BlockPos camp() { return camp; }
         public List<BlockPos> campWalls() { return List.copyOf(campWalls); }

@@ -65,11 +65,6 @@ public final class Bridges {
 
     private static volatile Poll poll = Bridges::byTheTown;
 
-    /** The seam: put the bridge to the town this way (null: back to the referendum, or the council in a small town). */
-    public static void pollBy(@Nullable Poll p) {
-        poll = p == null ? Bridges::byTheTown : p;
-    }
-
     /** The referendum the ferry's bridge was put to (its question's id), while it is open or its great work is building. */
     static final String WORKS_NOTE = "ferry/works";
     /** A great-work bridge this near the ferry's crossing does its work. */
@@ -91,11 +86,6 @@ public final class Bridges {
         PLANS.clear();
         forced = null;
         poll = Bridges::byTheTown;
-    }
-
-    /** Tests: the next vote goes this way (null: as the council would have it). */
-    public static void voteForTests(@Nullable Verdict v) {
-        forced = v;
     }
 
     // ------------------------------------------------------------------ the town's day

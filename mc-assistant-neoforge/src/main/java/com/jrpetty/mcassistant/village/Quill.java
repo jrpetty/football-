@@ -173,11 +173,6 @@ public final class Quill {
         return (vowel ? "an " : "a ") + word;
     }
 
-    /** "Marrow's", "Moss's". */
-    public static String his(String name) {
-        return name + "'s";
-    }
-
     /** A sentence made to end as a sentence does. */
     public static String stop(String s) {
         if (s == null) return "";
@@ -191,11 +186,6 @@ public final class Quill {
             return in == '.' || in == '!' || in == '?' ? t : t + ".";
         }
         return c == '.' || c == '!' || c == '?' || c == ':' ? t : t + ".";
-    }
-
-    /** "day 12"; with its season, if there is one: "day 12, in the spring of the town's second year". */
-    public static String onDay(long day) {
-        return "day " + day;
     }
 
     // ------------------------------------------------------------------ the voice

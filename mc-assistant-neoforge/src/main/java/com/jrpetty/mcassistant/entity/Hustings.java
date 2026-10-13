@@ -459,12 +459,6 @@ public final class Hustings {
 
     // ------------------------------------------------------------------ the council seat
 
-    /** Does this player sit on the council (offered a seat by the winner it stood against)? */
-    public static boolean seated(UUID village, UUID player) {
-        String s = Ledger.note(village, "civic.seat");
-        return s != null && s.startsWith(player.toString());
-    }
-
     /** The council's vote (Council.vote): a seated player's proposal has a councillor's vote as well as a citizen's. */
     static void seatVotes(UUID village, Map<UUID, String> proposals, Map<String, Integer> tally) {
         String s = Ledger.note(village, "civic.seat");
@@ -787,8 +781,4 @@ public final class Hustings {
         return out;
     }
 
-    /** Tests: how far the campaign has swayed this folk toward this candidate. */
-    public static int leanForTests(UUID village, UUID voter, UUID cand) {
-        return lean(village, voter, cand);
-    }
 }

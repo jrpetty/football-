@@ -454,11 +454,6 @@ public final class Beliefs {
         return marked;
     }
 
-    /** Tests: every marker the dead of the sea and the cairns are owed, put up now for nothing. */
-    public static int tendForTests(ServerLevel level, Villages.Village v) {
-        return tendForTests(level, v, true);
-    }
-
     /** Tests: every marker owed put up now, out of the stores unless {@code free} (as the town's works would). */
     public static int tendForTests(ServerLevel level, Villages.Village v, boolean free) {
         int n = 0;
@@ -734,11 +729,6 @@ public final class Beliefs {
                 + " in " + (chapel.structure().equals("chapel") ? "the chapel" : "the hall") + ", for " + b.words);
         }
         return true;
-    }
-
-    /** Tests: the shrine set up now, for nothing. True if it hangs. */
-    public static boolean shrineForTests(ServerLevel level, Villages.Village v) {
-        return shrine(level, v, true);
     }
 
     /** Tests: the shrine set up now, out of the stores unless {@code free}. True if it hangs. */

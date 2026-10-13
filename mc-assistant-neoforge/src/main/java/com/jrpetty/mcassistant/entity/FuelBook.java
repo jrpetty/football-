@@ -77,11 +77,6 @@ public final class FuelBook {
         kelpForTests = null;
     }
 
-    public static void kelpForTests(@Nullable Boolean on) {
-        kelpForTests = on;
-        KELP_SEEN.clear();
-    }
-
     // ------------------------------------------------------------------ kelp first
 
     /** Has the town dried kelp blocks in its stores for the fires? Looked at once every half a minute. */
@@ -100,19 +95,6 @@ public final class FuelBook {
     /** The stores changed under the fires (kelp blocks banked or drawn): the next look reads them afresh. */
     public static void forget(@Nullable UUID village) {
         if (village != null) KELP_SEEN.remove(village);
-    }
-
-    /**
-     * The fuel a courier carries out to the smelter with its ore: four kelp blocks (eighty firings) while the stores
-     * have them, and only with none, eight coal or charcoal as before. Returns how many it took.
-     */
-    public static int drawForSmelter(AssistantEntity c, BlockPos heart, int radius) {
-        int kelp = c.drawFrom(heart, KELP_BLOCK, 4, radius);
-        if (kelp > 0) {
-            forget(c.ownerId());
-            return kelp;
-        }
-        return c.drawFrom(heart, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 8, radius);
     }
 
     /** Is this smelter carrying fuel it will burn now: kelp blocks, or with none in the stores, coal or wood? */

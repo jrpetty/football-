@@ -40,7 +40,4 @@ public final class FolkLooks {
         return SKIN[skin(folk)];
     }
 
-    public static boolean bearded(Entity folk) {
-        return BEARDED[skin(folk)];
-    }
 }

@@ -450,12 +450,4 @@ public final class Ropes {
         return new boolean[]{ r != null, r != null && r.down };
     }
 
-    /** Tests: a folk set on this rope now, down it or up it. */
-    public static boolean startForTests(VillageFolkEntity f, BlockPos top, boolean down) {
-        if (!(f.level() instanceof ServerLevel level)) return false;
-        Rope r = at(level, top);
-        if (r == null) return false;
-        start(f, r, down);
-        return true;
-    }
 }

@@ -248,12 +248,6 @@ public final class Assemblies {
         return null;
     }
 
-    private static int adults(UUID village) {
-        int n = 0;
-        for (AssistantEntity a : Villages.folkOf(village)) if (!a.isBaby()) n++;
-        return n;
-    }
-
     /** Move it on: ring the bell, wait for them, speak, eat, close, let them go. */
     static void step(ServerLevel level, Assembly a, long now) {
         if (a.lastStep == now) return;

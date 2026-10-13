@@ -285,11 +285,6 @@ public final class QuestItems {
         return ItemStack.EMPTY;
     }
 
-    static boolean inStores(ServerLevel level, Villages.Village v, Predicate<ItemStack> what) {
-        for (BlockPos p : Villages.storeChests(level, v.id())) if (inChest(level, p, what) > 0) return true;
-        return false;
-    }
-
     // ------------------------------------------------------------------ dropped
 
     /** A thing dropped where it was lost (a child's toy on the path): it lies there till it is picked up. */

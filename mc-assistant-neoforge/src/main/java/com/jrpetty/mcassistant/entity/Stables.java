@@ -428,12 +428,6 @@ public final class Stables {
 
     static final Map<UUID, Herd> HERDS = new ConcurrentHashMap<>();
 
-    /** As last counted, or null. */
-    @Nullable
-    public static Herd herd(UUID village) {
-        return HERDS.get(village);
-    }
-
     static Herd count(ServerLevel level, Villages.Village v, List<AbstractHorse> herd) {
         int horses = 0, donkeys = 0, mules = 0, saddled = 0, chested = 0, foals = 0, catches = 0;
         for (AbstractHorse h : herd) {
@@ -1342,8 +1336,4 @@ public final class Stables {
         return w == null ? null : w.chore.name();
     }
 
-    /** Tests: the stall each of the village's animals has. */
-    public static Vec3 stallForTests(Stable st, int i) {
-        return st.stall(i);
-    }
 }

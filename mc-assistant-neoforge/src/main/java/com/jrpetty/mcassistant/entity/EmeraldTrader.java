@@ -184,8 +184,6 @@ public final class EmeraldTrader {
         public BlockPos centre() { return centre; }
         public List<Seller> sellers() { return folk; }
         public long raided() { return raided; }
-        public long visited() { return visited; }
-        public int trips() { return trips; }
 
         boolean within(int x, int z, int margin) {
             return x >= x0 - margin && x <= x1 + margin && z >= z0 - margin && z <= z1 + margin;

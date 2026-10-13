@@ -240,7 +240,6 @@ public final class NetherRuns {
         public double days() { return days; }
         public long turnAt() { return turnAt; }
         @Nullable public BlockPos gate() { return gate; }
-        @Nullable public BlockPos netherPortal() { return netherPortal; }
         public Set<UUID> through() { return Set.copyOf(through); }
         public Map<String, Integer> haul() { return haul; }
         public Map<Item, Integer> storedItems() { return storedItems; }
@@ -249,15 +248,12 @@ public final class NetherRuns {
         public int mined() { return mined; }
         public int barters() { return barters; }
         public int blazes() { return blazes; }
-        public int deflected() { return deflected; }
         public int retreats() { return retreats; }
         public int potions() { return potions; }
         public int slain() { return slain; }
         public int placed() { return placed; }
         public int cut() { return cut; }
         public String guestName() { return guestName; }
-        @Nullable public UUID guest() { return guest; }
-        public List<String> fallen() { return List.copyOf(fallen); }
         public List<String> lost() { return List.copyOf(lost); }
         public boolean homeward() { return homeward; }
         public boolean reported() { return reported; }
@@ -1672,11 +1668,6 @@ public final class NetherRuns {
         if (lead != null) turnBack(level.getServer(), r, lead, why);
     }
 
-    /** Tests: the run's phase set. */
-    public static void phaseForTests(Run r, Run.Phase p, long now) {
-        r.phase(p, now);
-    }
-
     /** Tests: this runner lost in the Nether now (the search given up). */
     public static void loseForTests(ServerLevel level, VillageFolkEntity m, Run r) {
         lose(level, m, r, "the others searched for it, and could not find it");
@@ -1686,12 +1677,6 @@ public final class NetherRuns {
     public static boolean retreatingForTests(Run r, UUID folk) {
         Leg l = r.legs.get(folk);
         return l != null && l.retreating;
-    }
-
-    /** Tests: the run under way by town, whoever asks (the stage too). */
-    @Nullable
-    public static Run runForTests(UUID village) {
-        return run(village);
     }
 
     /** Tests: who went through today forgotten. */

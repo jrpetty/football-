@@ -232,17 +232,6 @@ public final class Scouts {
         };
     }
 
-    /** The nearest thing of this kind the atlas knows, or null. */
-    @Nullable
-    public static Find nearest(UUID village, Kind kind, BlockPos from) {
-        Find best = null;
-        for (Find f : atlas(village)) {
-            if (f.kind() != kind) continue;
-            if (best == null || f.at().distSqr(from) < best.at().distSqr(from)) best = f;
-        }
-        return best;
-    }
-
     /** Have this village's scouts found (or been found by) that one? */
     public static boolean met(UUID a, UUID b) {
         return Ledger.note(a, "scouted/" + b) != null || Ledger.note(b, "scouted/" + a) != null;

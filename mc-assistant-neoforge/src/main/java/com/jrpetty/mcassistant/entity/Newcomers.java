@@ -1244,11 +1244,6 @@ public final class Newcomers {
 
     // ------------------------------------------------------------------ tests and the stage
 
-    /** Tests: these folk leave their town for that one, as refugees of this cause. Returns the party's number. */
-    public static String sendForTests(ServerLevel level, Villages.Village from, Villages.Village to, List<VillageFolkEntity> household, Cause c) {
-        return send(level, from, to, household, c);
-    }
-
     /** Tests: what would send a household away from this town today (WAR, FAMINE), or "". */
     public static String causeForTests(ServerLevel level, Villages.Village v) {
         Cause c = cause(level, v, level.getDayTime() / 24000L);

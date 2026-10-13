@@ -172,7 +172,6 @@ public final class InterviewBook extends SavedData {
         public int refs() { return refs; }
         public int boast() { return boast; }
         public int evidence() { return evidence; }
-        public int nerves() { return nerves; }
         /** Its score as it stands: the paper, and what its interview has made of it so far. */
         public int score() { return paper + interview(); }
         public String evidenceWords() { return evidenceWords; }
@@ -337,7 +336,6 @@ public final class InterviewBook extends SavedData {
         public String reason() { return reason; }
         public long dueDay() { return dueDay; }
         public String where() { return where; }
-        public String chairName() { return chairName; }
 
         @Nullable
         Cand cand(UUID who) {

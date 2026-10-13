@@ -239,10 +239,6 @@ public final class QuestStories {
         return false;
     }
 
-    static RandomSource random(ServerLevel level) {
-        return level.getRandom();
-    }
-
     /**
      * A folk keeping at a player's heels (a lost child led home, the cave dweller come down the mine), by night as by
      * day: a folk's own walking with a player gives up at dusk, and these cannot. With the player gone off or out of
@@ -296,11 +292,6 @@ public final class QuestStories {
     }
 
     private static volatile Trial trial = QuestStories::council;
-
-    /** [crime] Let another court hear the stories' charges. */
-    public static void trials(Trial t) {
-        trial = t;
-    }
 
     static Verdict hear(ServerLevel level, Villages.Village v, List<VillageFolkEntity> accused, String charge, boolean evidence, Player accuser) {
         return trial.hear(level, v, accused, charge, evidence, accuser);

@@ -1834,16 +1834,6 @@ public final class FieldTools {
         return craft(level, v, f);
     }
 
-    /** Tests: a trade outside the crafts at the bench now (the rancher, the fisher, the smelter), for these. */
-    @Nullable
-    public static String makeForTests(ServerLevel level, VillageFolkEntity f, List<Item> items) {
-        Villages.Village v = Villages.get(f.ownerId());
-        if (v == null) return null;
-        MADE.remove(f.getUUID());
-        WANTS.remove(v.id());
-        return makeFor(level, v, f, level.getGameTime(), items);
-    }
-
     public static Map<Item, Integer> wantedForTests(ServerLevel level, Villages.Village v) {
         demandOnce();                                                     // the shop's order book, as the first server round puts it there
         WANTS.remove(v.id());

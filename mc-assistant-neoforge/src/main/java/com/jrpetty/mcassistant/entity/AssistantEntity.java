@@ -2242,8 +2242,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
     }
 
-    public Perk perk30() { return perk30; }
-
     /** Settle the level-30 perk. Once, and only at 30. */
     public void choosePerk(Perk pick) {
         if (veteranLevel() < 30) {
@@ -2267,8 +2265,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** So many more a courier takes on each load of its round (a village folk's Strong Back: FolkSkills). */
     protected int haulLoadBonus() { return 0; }
-
-    public Trait trait() { return trait; }
 
     /** Settle this one's quirk. Derived from its id so it is stable across a
      *  reload and identical on any machine that asks. */
@@ -4519,8 +4515,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     private int carryTarget = 24;
     private static final int[] CARRY_STEPS = { 8, 24, 48, 0 };
 
-    public int carryTarget() { return carryTarget; }
-
     public String carryLabel() {
         return carryTarget == 0 ? "Full pack" : "Bank " + carryTarget;
     }
@@ -5251,9 +5245,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public boolean nearDeathSite() {
         return deathSite != null && deathSite.distSqr(blockPosition()) < 20.0 * 20.0;
     }
-
-    /** The place it remembers dying, if it has one. */
-    @Nullable public BlockPos deathSite() { return deathSite; }
 
     /** The map's skull: where this one last died, while the grief is fresh.
      *  Empty after a day — an old danger spot is just a spot. */
@@ -7701,10 +7692,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             return true;
         }
         return false;
-    }
-
-    private int loadFrom(BlockPos chestPos, int max) {
-        return loadFrom(chestPos, max, s -> true);
     }
 
     /** What a stack is worth carrying across the village. Zero for a trade's own

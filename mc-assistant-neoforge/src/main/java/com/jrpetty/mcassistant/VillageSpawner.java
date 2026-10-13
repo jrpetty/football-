@@ -441,18 +441,6 @@ public final class VillageSpawner {
     /** Where the founding stores' further chests go: a ring two blocks out from the first, clear of the camp's beds. */
     private static final int[][] STORE_RING = { {2, 0}, {-2, 0}, {0, 2}, {0, -2}, {2, 2}, {-2, -2}, {2, -2}, {-2, 2} };
 
-    /**
-     * The founding stores of a party bigger than the usual (entity/Founding). The one chest every
-     * village is founded with (supplyChest) seeds and lights a dozen; for every sixteen more there
-     * is a second of the same, bread, seed, saplings, light, planks and stone, up to six of them;
-     * and the bedding of those the camp has no room for (it lays as many as it has level ground for) is carried in chests
-     * of its own, up to two of them, for the first houses to be made up with. Every chest is the
-     * village's stores (ZoneChests.mark), in a ring round the first. Returns the chests set down.
-     */
-    public static int foundingStores(ServerLevel level, BlockPos heart, int folk) {
-        return foundingStores(level, heart, folk, Math.min(folk, CAMP.length));
-    }
-
     /** The founding stores, knowing how many beds the camp could actually be laid with (broken ground lays
      *  fewer than it has room for): the bedding chests carry the rest. */
     public static int foundingStores(ServerLevel level, BlockPos heart, int folk, int campBeds) {

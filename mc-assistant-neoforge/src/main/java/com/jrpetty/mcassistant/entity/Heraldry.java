@@ -525,11 +525,6 @@ public final class Heraldry {
         choose(level, v);
     }
 
-    /** Tests: the banner drawn afresh from the town as it is (not kept). */
-    public static Design drawForTests(UUID village) {
-        return draw(village);
-    }
-
     /** Tests: the places the banner hangs, as the town stands, and whether it hangs there. */
     public static List<String> placesForTests(ServerLevel level, UUID village) {
         List<String> out = new ArrayList<>();

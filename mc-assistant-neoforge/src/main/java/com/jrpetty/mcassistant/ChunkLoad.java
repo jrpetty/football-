@@ -110,13 +110,6 @@ public final class ChunkLoad {
         lastReport = 0;
     }
 
-    /** How many chunks are still waiting to be forced for this owner. */
-    public static int pending(UUID owner) {
-        int n = 0;
-        for (Key k : WANTED.keySet()) if (k.owner().equals(owner)) n++;
-        return n;
-    }
-
     /** Force (on=true) or release (on=false) a (2r+1)x(2r+1) square of fully
      *  ticking chunks around {@code center}, owned by {@code owner}. Forcing is
      *  queued and happens over the next few seconds; releasing is at once. */

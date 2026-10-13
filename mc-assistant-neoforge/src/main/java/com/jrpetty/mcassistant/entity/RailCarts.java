@@ -714,11 +714,6 @@ public final class RailCarts {
         return r != null && r.stage == Stage.ABOARD && f.getVehicle() instanceof AbstractMinecart;
     }
 
-    /** Has this folk a ride on just now (walking to the platform, waiting there, or aboard)? */
-    public static boolean riding(VillageFolkEntity f) {
-        return RIDES.containsKey(f.getUUID());
-    }
-
     /** May this folk get into this cart: the one its ride is in? (Aboard.) */
     public static boolean mayBoard(VillageFolkEntity f, Entity vehicle) {
         Ride r = RIDES.get(f.getUUID());
@@ -1023,11 +1018,6 @@ public final class RailCarts {
         Cart c = cart(village, line, role);
         Railways.Line l = Railways.line(village, line);
         return c != null && l != null && dispatch(level, l, c, to);
-    }
-
-    /** Tests: a ride booked for this folk now. */
-    public static void bookForTests(VillageFolkEntity f, ServerLevel level, Railways.Line l, int from, int to) {
-        book(f, level, f.ownerId(), l, from, to, null);
     }
 
     /** Tests: a cart record for a cart the test made, standing at an end. */

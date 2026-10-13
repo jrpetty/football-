@@ -76,7 +76,6 @@ public final class Caravans {
         public UUID destination() { return back ? from : to; }
         public boolean homeward() { return back; }
         @Nullable public Envoys.Errand errand() { return errand; }
-        public boolean trading() { return trade; }
     }
 
     @SubscribeEvent

@@ -460,7 +460,6 @@ public final class Draughts {
             this.challenge = challenge;
         }
 
-        UUID mover() { return toMove == RED ? red : black; }
         BlockPos seatOf(UUID u) { return u.equals(red) ? redSeat : blackSeat; }
         String nameOf(UUID u) { return u.equals(red) ? redName : blackName; }
         UUID otherOf(UUID u) { return u.equals(red) ? black : red; }
@@ -1037,11 +1036,6 @@ public final class Draughts {
     /** Tests: this folk's record {won, lost, drawn}. */
     public static int[] recordForTests(UUID village, UUID folk) {
         return record(village, folk);
-    }
-
-    /** Tests: a board set out at this post for the town now, out of the stores. */
-    public static boolean placeForTests(ServerLevel level, Villages.Village v, BlockPos post, String where) {
-        return place(level, v, post, where);
     }
 
     /** Tests: the town's look at setting its boards out, now. */

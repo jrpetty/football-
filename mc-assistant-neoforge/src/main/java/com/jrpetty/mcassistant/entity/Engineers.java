@@ -1123,20 +1123,6 @@ public final class Engineers {
         return out;
     }
 
-    /** Is this chest a machine's input (the smelter's ore and fuel, the sorter's delivery chest), which is no store of the
-     *  town's to take from or put into (ZoneChests)? */
-    public static boolean machineInput(@Nullable UUID id, BlockPos pos) {
-        if (id == null || WORKS.get(id) == null) return false;
-        for (Machine m : WORKS.get(id).machines) {
-            if (m.origin.distManhattan(pos) > 32) continue;
-            if (m.kind == Kind.SMELTER && (smelterChests(m, true).contains(pos) || smelterChests(m, false).contains(pos))) return true;
-            if (m.kind == Kind.SORTER) {
-                for (Machines.Cell c : Machines.drawing(m.kind.drawing).of('D')) if (Machines.at(m.origin, m.back, c).equals(pos)) return true;
-            }
-        }
-        return false;
-    }
-
     /** As machineInput, for any town: the chests every town's machines feed from. */
     public static boolean anyMachineInput(BlockPos pos) {
         java.util.Set<Long> in = inputs;
@@ -1716,15 +1702,6 @@ public final class Engineers {
     public static boolean lookAtStoresForTests(ServerLevel level, Villages.Village v) {
         LOOKED.remove(v.id());
         return lookAtStores(level, v);
-    }
-
-    /** Tests: a machine of this kind put on the town's books at a chosen site (the site as siting would find it). */
-    public static Machine planForTests(ServerLevel level, Villages.Village v, Kind k, BlockPos origin, Direction back) {
-        Machine m = new Machine(k, origin, back);
-        Machines.Drawing d = Machines.drawing(k.drawing);
-        m.casing = casingFor(level, v, d.count('#') + 8);
-        if (k == Kind.MELON) m.crop = cropFor(level, v);
-        return bookForTests(v, m);
     }
 
     /** Tests: a site found by siting (siteForTests) put on the town's books as it is. */

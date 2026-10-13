@@ -85,7 +85,6 @@ public final class Style {
 
     @Nullable public Garment wants() { return want; }
     public int wantColour() { return wantColour; }
-    public boolean ordered() { return ordered; }
 
     // ------------------------------------------------------------------ for the client
 

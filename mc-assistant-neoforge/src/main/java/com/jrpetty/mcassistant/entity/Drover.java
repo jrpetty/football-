@@ -527,16 +527,6 @@ public final class Drover {
         return out;
     }
 
-    /**
-     * [sf] One grown animal past the herd kept, of the kind the pen has most of past it, or null when every
-     * kind is at the herd kept or under. Never one of a kind down to its breeding pair, whatever is asked; never
-     * one with a name or on a lead; and the pair in love are left to it.
-     */
-    @Nullable
-    static Animal surplus(ServerLevel level, BlockPos pen, int r, int keep) {
-        return surplus(level, pen, r, keep, null);
-    }
-
     /** [fletcher] The same, a kind first if it has any past the herd kept (the hens, while the fletcher is short of feathers). */
     @Nullable
     static Animal surplus(ServerLevel level, BlockPos pen, int r, int keep, @Nullable EntityType<?> first) {

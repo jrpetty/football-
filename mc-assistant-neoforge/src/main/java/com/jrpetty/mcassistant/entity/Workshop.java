@@ -915,14 +915,6 @@ public final class Workshop {
             + "and it goes on the shelves for you to buy at the counter, once the village's own needs are met.";
     }
 
-    /** Is this on a player's order at the shop: then it is for sale there. */
-    static boolean ordered(UUID village, ItemStack s) {
-        Shop shop = SHOPS.get(village);
-        if (shop == null) return false;
-        for (Order o : shop.orders) if (s.is(o.item())) return true;
-        return false;
-    }
-
     // ------------------------------------------------------------------ the card
 
     /** "Making a stone sword for the shop": what a maker at the shop's bench is at, or null. */

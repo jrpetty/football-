@@ -35,11 +35,6 @@ public class KitchenFoodItem extends Item {
         this.made = made;
     }
 
-    /** What eating one does: its hunger, its saturation, and any good in it. */
-    public FoodProperties meal() {
-        return food;
-    }
-
     @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);

@@ -781,13 +781,6 @@ public final class Fleet {
             && (h.stage == Stage.BOARDING || h.stage == Stage.OUT || h.stage == Stage.FISHING || h.stage == Stage.HOME);
     }
 
-    /** What it is about with the fleet, or null. */
-    @Nullable
-    public static Stage stageOf(VillageFolkEntity f) {
-        Hand h = HANDS.get(f.getUUID());
-        return h == null ? null : h.stage;
-    }
-
     /**
      * Every tick (VillageFolkEntity.aiStep), before the storm, the gatherings and the rest of its day: a hand with the
      * fleet walks out to its boat, rows, fishes, rows home and lands its catch. True while that is its day.

@@ -283,11 +283,6 @@ public final class Habits {
         return st == null ? null : st.doing;
     }
 
-    /** Tests: the day it last did this habit, or -1. */
-    public static long doneForTests(VillageFolkEntity f, Habit h) {
-        return st(f).done[h.ordinal()];
-    }
-
     private static boolean release(VillageFolkEntity f, @Nullable St st) {
         if (st != null && st.doing != null) {
             if (st.sat && f.getPose() == Pose.SITTING) f.setPose(Pose.STANDING);

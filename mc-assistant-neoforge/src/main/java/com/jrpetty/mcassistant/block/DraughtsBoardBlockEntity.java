@@ -46,14 +46,6 @@ public class DraughtsBoardBlockEntity extends BlockEntity {
         return to;
     }
 
-    public String redName() {
-        return red;
-    }
-
-    public String blackName() {
-        return black;
-    }
-
     /** The board as it stands now (a move made, a game set out), sent to whoever is near. */
     public void show(byte[] now, int movedFrom, int movedTo, String redName, String blackName) {
         cells = now.clone();

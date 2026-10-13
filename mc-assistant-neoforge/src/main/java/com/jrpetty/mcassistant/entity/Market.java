@@ -1084,14 +1084,6 @@ public final class Market {
         return g.bundle() > 1 ? g.bundle() + " " + g.name().toLowerCase() : shown.getHoverName().getString();
     }
 
-    /** What the village asks for a lot of what is on a counter: more for an enchanted thing, and
-     *  more for a master's work than a beginner's (Craftsmanship). */
-    static int price(Good g, ItemStack shown, int stock, boolean marketDay) {
-        int p = sellPrice(g, stock, marketDay);
-        if (shown.isEnchanted()) p *= 3;
-        return (int) Math.max(1, Math.round(p * Craftsmanship.worth(shown)));
-    }
-
     /** As price, at this village's counters: at the town's price today (PriceIndex: [econ-prices]), what its sellers
      *  make marked down when it is slow, and never sold for less than it cost (Stockroom). */
     public static int price(ServerLevel level, UUID village, Good g, ItemStack shown, int stock, boolean marketDay) {

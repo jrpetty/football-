@@ -67,11 +67,6 @@ final class DiverRaids {
         monumentForTests = null;
     }
 
-    /** Tests: a monument here, as the look would find it. */
-    static void monumentForTests(@Nullable BlockPos at) {
-        monumentForTests = at;
-    }
-
     /** Once a week, in the Iron Age and after: is there a monument in reach? */
     static void tick(ServerLevel level, Villages.Village v, Divers.Waterside w) {
         if (Villages.ageOf(v.id()).ordinal() < Villages.Age.IRON.ordinal()) return;

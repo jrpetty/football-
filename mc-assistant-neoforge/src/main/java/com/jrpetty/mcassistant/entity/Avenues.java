@@ -241,9 +241,4 @@ public final class Avenues {
         return n;
     }
 
-    /** Tests: the trees standing along the avenues. */
-    public static int treesForTests(ServerLevel level, Villages.Village v) {
-        return trees(level, v.id());
-    }
-
 }

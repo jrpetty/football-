@@ -832,8 +832,4 @@ public final class Purchases {
         LAST.remove(f.getUUID());
     }
 
-    /** Tests: the thing the last get() came away with. */
-    public static ItemStack lastForTests() {
-        return lastGot.copy();
-    }
 }

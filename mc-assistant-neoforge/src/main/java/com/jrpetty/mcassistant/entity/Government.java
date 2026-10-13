@@ -697,11 +697,6 @@ public final class Government {
         return Elections.voters(village).size();
     }
 
-    /** Tests: the form that suits these axes best. */
-    public static Form chooseForTests(int[] axes) {
-        return choose(axes);
-    }
-
     /** Tests: the vote of no confidence called now. Returns the question's number, or -1. */
     public static int deposeForTests(ServerLevel level, Villages.Village v) {
         Identity.Rec r = Identity.rec(v.id());

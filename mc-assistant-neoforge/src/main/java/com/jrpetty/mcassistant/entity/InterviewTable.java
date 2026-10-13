@@ -390,8 +390,4 @@ final class InterviewTable {
             s.pos().getZ() + 0.5 - s.look().getStepZ() * 0.1);
     }
 
-    /** Tests and the stage: a stack of what a table set out by the board takes, for the stores. */
-    static ItemStack[] makingsForTests() {
-        return new ItemStack[]{ new ItemStack(Items.OAK_PLANKS, 24) };
-    }
 }

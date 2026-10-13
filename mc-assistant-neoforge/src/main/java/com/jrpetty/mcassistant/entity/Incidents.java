@@ -109,11 +109,6 @@ final class Incidents {
         return TASKS.get(f.getUUID());
     }
 
-    @Nullable
-    static Task task(UUID f) {
-        return TASKS.get(f);
-    }
-
     private static void put(VillageFolkEntity f, Task t) {
         TASKS.put(f.getUUID(), t);
         f.clearQueue();
@@ -1169,11 +1164,6 @@ final class Incidents {
             f.walkTo(to, speed);
             PATHED.put(f.getUUID(), f.tickCount);
         }
-    }
-
-    /** Tests: a task put on a folk as the watch would (a chase, a fight's two). */
-    static void putForTests(VillageFolkEntity f, Task t) {
-        put(f, t);
     }
 
     @Nullable

@@ -450,10 +450,6 @@ public final class Disasters extends SavedData {
     /** Tests: rain on the towns (true), none (false), or the world's own (null). */
     private static volatile Boolean rainForTests;
 
-    public static void rainForTests(@Nullable Boolean on) {
-        rainForTests = on;
-    }
-
     /** Is it raining on this town (not snowing, and not a desert under a rainy sky)? */
     static boolean raining(ServerLevel level, Villages.Village v) {
         Boolean t = rainForTests;
@@ -492,12 +488,6 @@ public final class Disasters extends SavedData {
         if (wet) t.dryDays = 0;
         else t.dryDays += (int) gone;
         Droughts.daily(level, v, t, day);
-    }
-
-    /** Dry for so many days running (the town's own count). */
-    public static int dryDays(UUID village) {
-        Town t = known(village);
-        return t == null ? 0 : t.dryDays;
     }
 
     /** Is it dry enough that the town keeps a fire watch at night: three dry days, a drought, or the nights after a fire? */
@@ -729,15 +719,6 @@ public final class Disasters extends SavedData {
         Rebuilding.resetForTests();
         FireSafety.resetForTests();
         BucketChain.resetForTests();
-    }
-
-    /** Tests: the town's weather set: dry for so many days, wet on so many of the last seven. */
-    public static void weatherForTests(UUID village, int dryDays, int wetDays) {
-        Town t = town(village);
-        t.dryDays = dryDays;
-        t.wetWeek = 0;
-        for (int i = 0; i < Math.min(7, wetDays); i++) t.wetWeek |= 1 << i;
-        dirty();
     }
 
     /** Tests: the town's record of its disasters, a line each. */

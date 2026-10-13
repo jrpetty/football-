@@ -51,13 +51,6 @@ public final class Districts {
             this.label = label;
         }
 
-        public static District byName(String s) {
-            try {
-                return valueOf(s.toUpperCase(Locale.ROOT));
-            } catch (RuntimeException e) {
-                return OUTSKIRTS;
-            }
-        }
     }
 
     /** Round the square: the lots facing the ring street and the great lots beside it (their

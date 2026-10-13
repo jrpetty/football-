@@ -396,9 +396,4 @@ public final class Midwinter {
         return g == null ? List.of() : new ArrayList<>(g);
     }
 
-    /** The presents planned now (whatever the day), for this midwinter. */
-    public static void planForTests(ServerLevel level, Villages.Village v) {
-        long day = level.getDayTime() / 24000L;
-        plan(level, v, Festivals.town(v.id()), Festivals.dayThisYear(v.id(), day, Festivals.Feast.MIDWINTER));
-    }
 }

@@ -911,12 +911,6 @@ public class EconomyGameTests {
         return n;
     }
 
-    private static java.util.List<ItemStack> contents(Container c) {
-        java.util.List<ItemStack> out = new ArrayList<>();
-        for (int i = 0; i < c.getContainerSize(); i++) out.add(c.getItem(i));
-        return out;
-    }
-
     @GameTest(template = EMPTY, timeoutTicks = 24600, batch = "ec10_farmer_day")
     public static void ec10_farmer_day(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();

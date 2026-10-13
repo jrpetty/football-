@@ -343,15 +343,6 @@ public final class WarAndPeace {
         return Wrong.INSULT;
     }
 
-    /**
-     * Something done to a town by a neighbour, in its books: for the other work to write in (a broken deal
-     * by the trade between towns, a spy caught by the watch).
-     */
-    public static void grievance(UUID us, UUID them, Wrong kind, String what, long day) {
-        if (us == null || them == null || us.equals(them)) return;
-        WarBooks.wrong(us, them, day, kind, what);
-    }
-
     /** What it holds against them from the last month, all told. */
     static int wronged(UUID us, UUID them, long day) {
         int w = 0;

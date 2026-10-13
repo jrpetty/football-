@@ -618,8 +618,4 @@ public final class MapFinds {
         return found(village);
     }
 
-    /** The vanilla id of a structure a spot is (for the log and the tests). */
-    static String id(@Nullable Holder<Structure> h) {
-        return h == null ? "dungeon" : h.unwrapKey().map(ResourceKey::location).map(ResourceLocation::toString).orElse("?");
-    }
 }

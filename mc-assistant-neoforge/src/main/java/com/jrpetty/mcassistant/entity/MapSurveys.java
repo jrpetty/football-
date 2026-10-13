@@ -233,10 +233,6 @@ public final class MapSurveys {
         instant = on;
     }
 
-    static boolean instant() {
-        return instant;
-    }
-
     /** The town's survey under way, or null. */
     @Nullable
     public static Survey of(UUID village) {
@@ -1410,17 +1406,6 @@ public final class MapSurveys {
     /** Whether this block can take a sheet into it (a chest in the map room). */
     static boolean chest(Block b) {
         return b == Blocks.CHEST || b == Blocks.BARREL || b == Blocks.TRAPPED_CHEST;
-    }
-
-    /** The player who asked for a commission, if any is online. */
-    @Nullable
-    static Player asker(ServerLevel level, String forWhom) {
-        String[] p = forWhom.split(";", 2);
-        try {
-            return level.getServer().getPlayerList().getPlayer(UUID.fromString(p[0]));
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
     }
 
 }

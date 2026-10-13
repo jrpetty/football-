@@ -1189,11 +1189,4 @@ final class WatchHouse {
         return t == null ? "" : t.getString("state");
     }
 
-    static Vec3 centre(BlockPos p) {
-        return new Vec3(p.getX() + 0.5, p.getY(), p.getZ() + 0.5);
-    }
-
-    static AABB box(Cell c) {
-        return new AABB(c.inside()).inflate(1.5, 1.0, 1.5);
-    }
 }

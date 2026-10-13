@@ -378,11 +378,6 @@ public final class Bank {
         return building(village) == null ? 0 : deposits(state(village));
     }
 
-    /** What its mortgages still owe, all told. */
-    public static int loansOut(UUID village) {
-        return building(village) == null ? 0 : loansOut(state(village));
-    }
-
     /** A week's payment that pays off so much over so many weeks at so much a week (rounded up). */
     static int payment(int lent, int bp, int weeks) {
         if (lent <= 0 || weeks <= 0) return 0;

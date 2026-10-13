@@ -384,7 +384,4 @@ public final class NetherHome {
         }
     }
 
-    static ResourceLocation id(Item it) {
-        return BuiltInRegistries.ITEM.getKey(it);
-    }
 }

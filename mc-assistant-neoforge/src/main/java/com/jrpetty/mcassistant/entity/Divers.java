@@ -892,11 +892,6 @@ public final class Divers {
         return DIVES.containsKey(f.getUUID()) || TOWED.containsKey(f.getUUID());
     }
 
-    /** Is this folk in the water on a dive (not to be climbed out of the water by its own instinct)? */
-    public static boolean diving(AssistantEntity a) {
-        return DIVES.containsKey(a.getUUID()) || TOWED.containsKey(a.getUUID());
-    }
-
     /** The job of the dive in hand, or null (tests, its card). */
     @Nullable
     public static Job jobOf(VillageFolkEntity f) {

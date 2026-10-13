@@ -201,9 +201,4 @@ public final class MapArchive {
         return out;
     }
 
-    /** A map's id, or -1. */
-    static int idOf(ItemStack s) {
-        MapId m = s.get(DataComponents.MAP_ID);
-        return m == null ? -1 : m.id();
-    }
 }

@@ -1678,14 +1678,6 @@ public final class Auctions {
         if (s != null && s.phase == Phase.CALLING) round(level, v, s, level.getGameTime());
     }
 
-    /** Tests: the lot being called ("name high highName calls"), or null when there is none. */
-    @Nullable
-    public static String lotForTests(UUID village) {
-        Sale s = SALES.get(village);
-        Lot lot = s == null || s.phase != Phase.CALLING ? null : s.lot();
-        return lot == null ? null : lot.name() + " " + lot.high + " " + lot.highName + " " + lot.calls;
-    }
-
     /** Tests: the next bid the auctioneer will take on the lot being called (0: none being called), and who has it now. */
     public static int nextBidForTests(UUID village) {
         Sale s = SALES.get(village);
