@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
 
 /**
  * [culture2] A town's own table: the dish it is known for, from what its land gives, and a second from what its folk

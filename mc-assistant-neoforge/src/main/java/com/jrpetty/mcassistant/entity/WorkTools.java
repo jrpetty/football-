@@ -47,7 +47,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
 
 /**
  * [workitems] The tools of the mine, the woods and the roads (item/WorkItems), in the town's hands.

@@ -1,7 +1,6 @@
 package com.jrpetty.mcassistant;
 
 import com.jrpetty.mcassistant.entity.Architecture;
-import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.Beliefs;
 import com.jrpetty.mcassistant.entity.Cuisine;
 import com.jrpetty.mcassistant.entity.FolkTalk;

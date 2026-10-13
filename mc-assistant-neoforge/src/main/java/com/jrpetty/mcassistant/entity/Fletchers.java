@@ -40,7 +40,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Predicate;
 
 /**
  * [fletcher] The fletcher: the watch's arrows, made the way a player makes them, out of what the town really has.

@@ -1,7 +1,6 @@
 package com.jrpetty.mcassistant.item;
 
 import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
-import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;

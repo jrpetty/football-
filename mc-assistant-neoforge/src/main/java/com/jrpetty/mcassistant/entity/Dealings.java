@@ -2,7 +2,6 @@ package com.jrpetty.mcassistant.entity;
 
 import com.jrpetty.mcassistant.McAssistantMod;
 import com.jrpetty.mcassistant.village.Ledger;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;

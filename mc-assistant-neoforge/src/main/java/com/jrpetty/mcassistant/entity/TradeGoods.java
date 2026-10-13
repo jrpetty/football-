@@ -4,7 +4,6 @@ import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.item.CivicItems;
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.item.Item;

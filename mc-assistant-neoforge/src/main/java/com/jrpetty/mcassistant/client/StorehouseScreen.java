@@ -1,6 +1,5 @@
 package com.jrpetty.mcassistant.client;
 
-import com.jrpetty.mcassistant.block.StorehouseBlockEntity;
 import com.jrpetty.mcassistant.menu.StorehouseMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;

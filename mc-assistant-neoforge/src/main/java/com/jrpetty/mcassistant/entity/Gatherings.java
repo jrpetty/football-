@@ -1,14 +1,11 @@
 package com.jrpetty.mcassistant.entity;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 import javax.annotation.Nullable;
 import java.util.ArrayDeque;

@@ -4,7 +4,6 @@ import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.Job;
 import com.jrpetty.mcassistant.entity.RecipeBook;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.item.Item;

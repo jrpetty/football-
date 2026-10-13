@@ -3,7 +3,6 @@ package com.jrpetty.mcassistant.entity;
 import com.jrpetty.mcassistant.village.Chronicle;
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;

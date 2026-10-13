@@ -3,7 +3,6 @@ package com.jrpetty.mcassistant.gametest;
 import com.jrpetty.mcassistant.AssistantConfig;
 import com.jrpetty.mcassistant.McAssistantMod;
 import com.jrpetty.mcassistant.VillageSpawner;
-import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.Economy;
 import com.jrpetty.mcassistant.entity.FolkSkills;

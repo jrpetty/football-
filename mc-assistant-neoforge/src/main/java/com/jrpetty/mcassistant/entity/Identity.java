@@ -1,6 +1,5 @@
 package com.jrpetty.mcassistant.entity;
 
-import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;

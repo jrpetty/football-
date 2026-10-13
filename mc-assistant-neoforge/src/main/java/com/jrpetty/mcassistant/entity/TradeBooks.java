@@ -16,7 +16,6 @@ import com.jrpetty.mcassistant.village.TradeBookWriter.Person;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;

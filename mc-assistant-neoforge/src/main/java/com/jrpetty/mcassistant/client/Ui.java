@@ -2,7 +2,6 @@ package com.jrpetty.mcassistant.client;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.network.chat.Component;
 
 /**
  * One look for every assistant screen: the same palette, the same panel, the

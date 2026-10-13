@@ -19,7 +19,6 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.UUID;
 
 /**

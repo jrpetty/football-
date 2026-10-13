@@ -18,7 +18,6 @@ import com.jrpetty.mcassistant.entity.TalkTopic;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
 import com.jrpetty.mcassistant.entity.ZoneChests;
-import com.jrpetty.mcassistant.item.IndividualItems;
 import com.jrpetty.mcassistant.village.Chronicle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;

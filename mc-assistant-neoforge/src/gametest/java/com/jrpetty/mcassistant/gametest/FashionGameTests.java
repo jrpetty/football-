@@ -8,7 +8,6 @@ import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.Fashion;
 import com.jrpetty.mcassistant.entity.Festivals;
 import com.jrpetty.mcassistant.entity.FolkTalk;
-import com.jrpetty.mcassistant.entity.Gazette;
 import com.jrpetty.mcassistant.entity.Market;
 import com.jrpetty.mcassistant.entity.PriceIndex;
 import com.jrpetty.mcassistant.entity.Prices;

@@ -8,7 +8,6 @@ import com.jrpetty.mcassistant.entity.QuestBook.Step;
 import com.jrpetty.mcassistant.entity.QuestBook.StepType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;

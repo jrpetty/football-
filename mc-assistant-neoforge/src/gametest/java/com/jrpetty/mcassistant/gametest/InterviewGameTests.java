@@ -11,7 +11,6 @@ import com.jrpetty.mcassistant.entity.InterviewBook;
 import com.jrpetty.mcassistant.entity.Interviews;
 import com.jrpetty.mcassistant.entity.JobMarket;
 import com.jrpetty.mcassistant.entity.Market;
-import com.jrpetty.mcassistant.entity.Names;
 import com.jrpetty.mcassistant.entity.School;
 import com.jrpetty.mcassistant.entity.Social;
 import com.jrpetty.mcassistant.entity.Standing;

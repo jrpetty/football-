@@ -1,7 +1,6 @@
 package com.jrpetty.mcassistant.gametest;
 
 import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
-import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
 import com.jrpetty.mcassistant.entity.Assemblies;
 import com.jrpetty.mcassistant.entity.Birthdays;

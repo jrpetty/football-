@@ -1,7 +1,6 @@
 package com.jrpetty.mcassistant.entity;
 
 import com.jrpetty.mcassistant.village.Ledger;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Item;

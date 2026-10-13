@@ -4,7 +4,6 @@ import com.jrpetty.mcassistant.Showcase;
 import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
 import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
-import com.jrpetty.mcassistant.entity.CityTree;
 import com.jrpetty.mcassistant.entity.Disasters;
 import com.jrpetty.mcassistant.entity.Elections;
 import com.jrpetty.mcassistant.entity.Ethos;

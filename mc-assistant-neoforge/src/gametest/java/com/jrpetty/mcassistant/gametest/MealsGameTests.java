@@ -16,7 +16,6 @@ import net.minecraft.world.level.block.Blocks;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
-import java.util.UUID;
 
 /**
  * Everybody eats: the midday meal and supper (two meals a day: no breakfast), the children and the old and the folk between
