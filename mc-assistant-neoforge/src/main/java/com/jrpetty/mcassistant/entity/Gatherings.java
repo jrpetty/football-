@@ -1,6 +1,5 @@
 package com.jrpetty.mcassistant.entity;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -50,7 +49,6 @@ public final class Gatherings {
     private static final Map<UUID, Deque<Wedding>> WEDDINGS = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> DIED = new ConcurrentHashMap<>();
     private static final Map<UUID, String> DIED_NAME = new ConcurrentHashMap<>();
-    private static final Map<UUID, Long> LAST_ROCKET = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> LAST_BELL = new ConcurrentHashMap<>();
     private static final Map<String, Long> DONE = new ConcurrentHashMap<>();
 
@@ -83,7 +81,6 @@ public final class Gatherings {
         HONOURED.clear();
         DIED.clear();
         DIED_NAME.clear();
-        LAST_ROCKET.clear();
         LAST_BELL.clear();
         DONE.clear();
         SPONSORED_ON.clear();
@@ -170,35 +167,6 @@ public final class Gatherings {
             server.sendParticles(ParticleTypes.HAPPY_VILLAGER, f.getX(), f.getY() + 2.0, f.getZ(), 3, 0.3, 0.2, 0.3, 0.0);
             dance(f, r);
         }
-    }
-
-    private static void celebrate(VillageFolkEntity f, ServerLevel server, BlockPos heart, boolean first, long day, UUID village) {
-        RandomSource r = f.getRandom();
-        if (first) {
-            f.persona().remember(day, "I watched the fireworks the night we came into " + Villages.ageOf(village).label, 5);
-            f.persona().feasted(day);
-        }
-        long now = f.level().getGameTime();
-        Long last = LAST_ROCKET.get(village);
-        if (last == null || now - last >= 40) {
-            LAST_ROCKET.put(village, now);
-            paidLaunch(server, village, heart, r);
-        }
-        if (r.nextInt(4) == 0) FolkTalk.speak(f, FolkTalk.pick(r, "To " + Villages.name(village) + "!", "Ooooh!", "Look at that one!",
-            Villages.ageOf(village).label.substring(4, 5).toUpperCase() + Villages.ageOf(village).label.substring(5) + " at last!"));
-        dance(f, r);
-    }
-
-    /**
-     * [fireworks] A rocket over the heart of the village: one of the fireworks maker's, out of the stores (FireworkShows.salute);
-     * with none put by, a bonfire's sparks instead. (A rocket used to be made here of a gunpowder and a paper, its stars and
-     * colours out of nothing.)
-     */
-    static void paidLaunch(ServerLevel server, java.util.UUID village, BlockPos heart, RandomSource r) {
-        Villages.Village v = Villages.get(village);
-        if (v != null && FireworkShows.salute(server, v, heart, 1) > 0) return;
-        server.sendParticles(net.minecraft.core.particles.ParticleTypes.FLAME, heart.getX() + 0.5, heart.getY() + 0.3, heart.getZ() + 0.5,
-            6, 0.3, 0.2, 0.3, 0.01);
     }
 
     /** A little jig. */

@@ -268,14 +268,6 @@ public final class QuestItems {
         return ItemStack.EMPTY;
     }
 
-    static int inChest(ServerLevel level, @Nullable BlockPos at, Predicate<ItemStack> what) {
-        Container c = chest(level, at);
-        if (c == null) return 0;
-        int n = 0;
-        for (int i = 0; i < c.getContainerSize(); i++) if (what.test(c.getItem(i))) n += c.getItem(i).getCount();
-        return n;
-    }
-
     /** Is this quest's thing anywhere in the town's stores? Taken out (the storekeeper's buy-back). */
     static ItemStack outOfStores(ServerLevel level, Villages.Village v, Predicate<ItemStack> what) {
         for (BlockPos p : Villages.storeChests(level, v.id())) {
