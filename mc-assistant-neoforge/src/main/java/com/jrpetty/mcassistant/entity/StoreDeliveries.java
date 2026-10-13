@@ -66,7 +66,6 @@ public final class StoreDeliveries {
         int carried, delivered;
         long taken, progress;
         double best = Double.MAX_VALUE;
-        int orderId = -1;
 
         Delivery(int id, String key, Predicate<ItemStack> what, ItemStack sample, int count, boolean back, long queued) {
             this.id = id;

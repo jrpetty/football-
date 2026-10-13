@@ -48,7 +48,7 @@ public class OrdersScreen extends Screen {
     private int left, top;
     @Nullable private Button jobButton, shiftButton;
     @Nullable private Button depthSurface, depthIron, depthDiamond, dropOff, escortBtn;
-    @Nullable private Button claimBedBtn, stanceBtn, carryBtn;
+    @Nullable private Button claimBedBtn, stanceBtn;
     private int shownStance;
     @Nullable private Button quarryBtn;
     private int shownJob = -1;
@@ -107,7 +107,7 @@ public class OrdersScreen extends Screen {
         // How big a load it gathers before walking it to the chest — yours to
         // set, because a big field wants fewer, fuller trips and a slow
         // trickle wants banking promptly.
-        carryBtn = this.addRenderableWidget(Button.builder(
+        this.addRenderableWidget(Button.builder(
                 Component.literal(BotInfo.of(bot).carryLabel()), b -> {
                     sendOrder(bot, AssistantActions.CARRY_NEXT);
                     b.setMessage(Component.literal(nextCarryLabel(b.getMessage().getString())));

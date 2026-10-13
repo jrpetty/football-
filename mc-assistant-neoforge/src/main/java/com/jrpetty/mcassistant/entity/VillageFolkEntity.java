@@ -5982,13 +5982,8 @@ public class VillageFolkEntity extends AssistantEntity {
     /** The pickup has nothing left worth the walk: choose the next round at once. */
     @Override
     protected void routeSpent() {
-        if (preferredChest() != null) spentPickups.put(preferredChest().asLong(), tickCount);
         if (tickCount - routeTick > 200) routeTick = -100000;
     }
-
-    /** Pickups that came up empty, and when: passed over a while (a field's chest keeps its seed,
-     *  and counted fuller than the furnace's ingots, it was chosen and found empty again and again). */
-    private final java.util.Map<Long, Integer> spentPickups = new java.util.HashMap<>();
 
     /**
      * What a worker makes goes into its own production chest at its plot — and only that: the

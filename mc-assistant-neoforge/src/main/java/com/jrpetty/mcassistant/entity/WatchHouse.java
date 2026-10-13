@@ -66,7 +66,7 @@ final class WatchHouse {
         { { -2, 0, 2 }, { -3, 0, 2 }, { -3, 0, 3 }, { -2, 0, 1 }, { -2, 0, 0 }, { -3, 0, 1 }, { -1, 0, 1 }, { -3, 1, 1 }, { -1, 1, 1 } },
         { { 2, 0, 2 }, { 3, 0, 2 }, { 3, 0, 3 }, { 2, 0, 1 }, { 2, 0, 0 }, { 1, 0, 1 }, { 3, 0, 1 }, { 1, 1, 1 }, { 3, 1, 1 } } };
     /** The front desk's lectern, where the desk's guard stands behind the counter, and where a visitor stands before it. */
-    static final int[] LECTERN = { 2, 0, -1 }, DESK = { 3, 0, -1 }, COUNTER = { 2, 0, -3 }, INSIDE = { 0, 0, -3 }, OUTSIDE = { 0, 0, -5 };
+    static final int[] LECTERN = { 2, 0, -1 }, DESK = { 3, 0, -1 }, INSIDE = { 0, 0, -3 }, OUTSIDE = { 0, 0, -5 };
     /** The notice board: two signs of the wanted on the right wall, the roster on the left. */
     static final int[] WANTED_A = { 3, 1, -3 }, WANTED_B = { 3, 1, -1 }, ROSTER = { -3, 1, -3 };
 

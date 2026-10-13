@@ -49,7 +49,6 @@ public final class Crier {
         final List<String> lines;
         final List<String> read = new ArrayList<>();
         @Nullable UUID crier;
-        String crierName = "";
         BlockPos stand;
         /** When the news was begun, when this crier was sent, its last step, its next line. */
         long startedAt, sentAt, lastStep, nextAt, closeSince = -1;
@@ -132,7 +131,6 @@ public final class Crier {
 
     private static void appoint(Cry c, VillageFolkEntity f, long now) {
         c.crier = f.getUUID();
-        c.crierName = f.displayNameCap();
         c.sentAt = now;
         c.lastStep = now;
         c.walkTick = -1000;

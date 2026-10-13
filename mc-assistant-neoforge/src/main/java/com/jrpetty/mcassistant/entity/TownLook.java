@@ -53,8 +53,6 @@ public final class TownLook {
     private TownLook() {}
 
     public static final String WINDMILL = "windmill", BAKERY = "bakery", INN = "inn", ORCHARD = "orchard", ALLOTMENTS = "allotments";
-    /** The buildings this batch adds to what the builders can raise. */
-    public static final List<String> BUILDINGS = List.of(WINDMILL, BAKERY, INN, ORCHARD, ALLOTMENTS);
 
     /** Everything that is only in memory forgotten (the tests share one JVM). */
     public static void resetForTests() {

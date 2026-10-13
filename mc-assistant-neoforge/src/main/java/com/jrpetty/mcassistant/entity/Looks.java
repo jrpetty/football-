@@ -44,7 +44,6 @@ public final class Looks {
     public static final String[] EYE_SHAPE_WORDS = {"round", "wide", "narrow", "hooded", "deep", "almond"};
     public static final String[] BROW_WORDS = {"straight", "thick", "arched", "stern", "soft", "bushy", "joined"};
     public static final String[] STYLE_WORDS = {"crop", "short", "long", "braid", "bun", "curls", "shaved", "ponytail", "tied", "balding", "wild", "bob"};
-    public static final String[] TEXTURE_WORDS = {"straight", "wavy", "curly"};
     public static final String[] FACIAL_WORDS = {"none", "stubble", "moustache", "beard", "long beard", "sideburns", "goatee"};
     public static final String[] SCAR_WORDS = {"none", "right cheek", "left cheek", "brow"};
     // END GENERATED WORDS

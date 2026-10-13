@@ -283,14 +283,14 @@ public final class NetherRuns {
 
     /** One runner's part of the run: its clocks, what it is digging or placing, what came into its pack out of the Nether. */
     static final class Leg {
-        long next, stillTick, spoke = -100000, ate = -100000, drank = -100000, shield = -100000, deflect = -100000, crossed = -100000,
-            seen, digTick, waitFrom = -1, scan = -100000, collect = -100000, called = -100000, gateSince = -1;
-        @Nullable BlockPos stillAt, digging, claim, lastSeen, pillarFrom;
+        long next, stillTick, spoke = -100000, ate = -100000, drank = -100000, deflect = -100000, crossed = -100000,
+            seen, digTick, waitFrom = -1, collect = -100000, called = -100000, gateSince = -1;
+        @Nullable BlockPos stillAt, digging, claim, lastSeen;
         int dug, digNeeded, pillar, cutSteps, stuck;
         boolean retreating, arrived, cutting;
         /** Where it is making for (NetherWork.makeFor), and when it started cutting its way there. */
         @Nullable BlockPos goal;
-        long cutSince = -1, threw = -100000, shot = -100000, shielding = -1;
+        long threw = -100000, shot = -100000, shielding = -1;
         /** When a helper took up the block it has claimed (its own minute to get at it, not the leader's). */
         long claimSince = -1;
         @Nullable UUID foe;

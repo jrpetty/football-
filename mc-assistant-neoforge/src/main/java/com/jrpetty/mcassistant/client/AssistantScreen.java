@@ -23,8 +23,6 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
     private static final int SLOT_BG = 0xFF8B8B8B;
     private static final int SLOT_HI = 0xFF373737;
 
-    private int shownJob = -1;
-
     public AssistantScreen(AssistantMenu menu, Inventory playerInv, Component title) {
         super(menu, playerInv, title);
         this.imageWidth = 176;
@@ -43,7 +41,6 @@ public class AssistantScreen extends AbstractContainerScreen<AssistantMenu> {
         // area sizing, dig depth) lives on the orders sheet, once.
         int bh = 18;
         AssistantEntity a = this.menu.getAssistant();
-        this.shownJob = a == null ? -1 : a.clientJobOrdinal();
         // A village's folk take no orders and stash nothing for you: their pack is to
         // look at, and the way back is to the conversation it was opened from.
         if (a instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity) {

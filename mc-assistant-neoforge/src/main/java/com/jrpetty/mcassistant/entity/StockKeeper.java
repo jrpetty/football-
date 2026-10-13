@@ -534,7 +534,6 @@ public final class StockKeeper {
                 StoreDeliveries.Delivery d = StoreDeliveries.queue(level, id, w.key(), w.is().and(s -> !Weave.unsellable(s)), w.sample(), k, false);   // [weave] never a stolen thing
                 Order o = new Order(nextOrder++, w.key(), Route.STOREHOUSE, k, b.day);
                 o.delivery = d;
-                d.orderId = o.id;
                 b.orders.add(o);
             }
             supplied(b, w.key());

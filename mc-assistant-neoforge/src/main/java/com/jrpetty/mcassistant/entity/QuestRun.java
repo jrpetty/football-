@@ -161,7 +161,6 @@ public final class QuestRun {
     private static final Map<UUID, String> MARKS_SENT = new ConcurrentHashMap<>();
     /** The folk a story has a part for, and its quest: rebuilt every second. */
     private static volatile Map<UUID, Integer> cast = Map.of();
-    private static final Map<String, Long> THANKED = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> LOOKED = new ConcurrentHashMap<>();
     /** Givers put up for the pictures (/village quests stage), stood still till this game time. */
     private static final Map<UUID, Long> STAGED = new ConcurrentHashMap<>();
@@ -175,7 +174,6 @@ public final class QuestRun {
     public static void resetForTests() {
         MARKS_SENT.clear();
         cast = Map.of();
-        THANKED.clear();
         LOOKED.clear();
         STAGED.clear();
         QuestStories.resetForTests();

@@ -948,7 +948,7 @@ public final class EmeraldTrader {
         /** The villagers it is going round, and which it is with. */
         final List<UUID> round = new ArrayList<>();
         int at;
-        int lastTrade = -1000, withSince, arrivedTick, waitSince = -1, lookedTick = -1000;
+        int lastTrade = -1000, withSince, arrivedTick, waitSince = -1;
         /** The villagers' levels when it came, to see who went up. */
         final Map<UUID, Integer> levelsWhenCame = new HashMap<>();
         /** The village's villagers as last looked at, and when. */

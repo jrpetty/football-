@@ -135,8 +135,6 @@ public final class Kitchen {
 
     static final Predicate<ItemStack> LUNCH = s -> s.is(lunch());
     static final Predicate<ItemStack> BANDAGE = s -> s.is(bandage());
-    /** What the tea is steeped from: sweet berries, or any small flower. */
-    static final Predicate<ItemStack> LEAVES = s -> s.is(Items.SWEET_BERRIES) || s.is(ItemTags.SMALL_FLOWERS);
 
     /** One of the kitchen's own, in a folk's hand while it is eaten, drunk or bound. */
     static boolean prop(ItemStack s) {

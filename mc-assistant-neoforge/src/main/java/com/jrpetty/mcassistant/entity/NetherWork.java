@@ -139,7 +139,6 @@ public final class NetherWork {
         final EnumMap<Job, List<BlockPos>> found = new EnumMap<>(Job.class);
         final Map<Long, UUID> claims = new HashMap<>();
         int looked;
-        @Nullable BlockPos look;
         @Nullable BlockPos spawner;
         boolean located;
 
@@ -433,7 +432,6 @@ public final class NetherWork {
                     return false;
                 }
                 leg.cutting = true;
-                leg.cutSince = now;
                 return true;
             }
         }
@@ -444,7 +442,6 @@ public final class NetherWork {
                     return false;
                 }
                 leg.cutting = true;
-                leg.cutSince = now;
             }
         }
         return true;
@@ -455,7 +452,6 @@ public final class NetherWork {
         BlockPos feet = f.blockPosition();
         if (!level.getBlockState(feet.above(2)).isAir() || leg.pillar >= PILLAR_MOST) return false;
         if (f.countMatching(s -> s.is(Items.COBBLESTONE)) < 1) return false;
-        if (leg.pillar == 0) leg.pillarFrom = feet.immutable();
         f.getNavigation().stop();
         f.setPos(feet.getX() + 0.5, feet.getY() + 1.0, feet.getZ() + 0.5);
         f.getJumpControl().jump();
@@ -474,7 +470,6 @@ public final class NetherWork {
             f.setPos(under.getX() + 0.5, under.getY(), under.getZ() + 0.5);
         }
         leg.pillar--;
-        if (leg.pillar <= 0) leg.pillarFrom = null;
         return true;
     }
 
@@ -765,7 +760,6 @@ public final class NetherWork {
             for (int k = far; k >= 8; k -= 4) {
                 BlockPos look = groundNear(level, home.relative(d, k).relative(d.getClockWise(), (i / 4) * 6));
                 if (look == null) continue;
-                s.look = look;
                 return new Task(Job.LOOK, look, null, now);
             }
         }

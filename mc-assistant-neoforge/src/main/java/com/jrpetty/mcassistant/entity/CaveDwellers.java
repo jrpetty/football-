@@ -324,7 +324,7 @@ public final class CaveDwellers {
         final List<Find> found = new ArrayList<>();
         final Set<String> left = new HashSet<>();
         int mined, opened, slain, torches, caves;
-        boolean explored, reported;
+        boolean reported;
         /** The furthest any of them got from the leader (the tests, and the log). */
         double spread;
         final Set<UUID> home = new HashSet<>();
@@ -2122,7 +2122,6 @@ public final class CaveDwellers {
         p.mouth = at.immutable();
         p.target = null;
         p.frontierFails = 0;
-        p.explored = false;
         e.waypoint = null;
         if (p.trail.isEmpty() || p.trail.get(p.trail.size() - 1).distSqr(at) > 4) p.trail.add(at.immutable());
         p.mouthCrumb = p.trail.size() - 1;
@@ -2320,7 +2319,6 @@ public final class CaveDwellers {
      * ones stay listed). On to the next cave while the day allows it; home otherwise.
      */
     static void caveDone(ServerLevel level, VillageFolkEntity f, Scouts.Expedition e, Party p) {
-        p.explored = true;
         BlockPos key = p.caveKey != null ? p.caveKey : p.cave;
         int todo = 0, waiting = 0;
         if (key != null) {

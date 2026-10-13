@@ -91,7 +91,6 @@ public final class Couriers {
         int worth;
         int priority;
         long queued;
-        @Nullable UUID courier;
         String courierName = "";
         long taken;
         Stage stage = Stage.QUEUED;
@@ -423,7 +422,6 @@ public final class Couriers {
         }
         if (r == null) return null;
         long now = level.getGameTime();
-        r.courier = c.getUUID();
         r.courierName = c.displayNameCap();
         r.taken = now;
         r.stage = r.kind == Kind.KIT || r.kind == Kind.SMELTER ? Stage.PACKING : Stage.OUT;

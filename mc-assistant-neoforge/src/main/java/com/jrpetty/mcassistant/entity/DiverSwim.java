@@ -78,12 +78,10 @@ public final class DiverSwim {
 
     /** A swim in hand: where it is going, and how it is getting on (Divers' dives keep one each). */
     static final class Stroke {
-        Vec3 to = Vec3.ZERO;
         /** Gone up for air, and waiting at the top: where it was going when it went. */
         boolean surfacing;
         int breaths;
-        /** Where it was last tick it made way, and when. */
-        Vec3 last = Vec3.ZERO;
+        /** When it last made way. */
         long madeWay;
         int lifts;
         /** Where it is going up to for air: the nearest open water over it (never up under a jetty or the ice). */
@@ -103,7 +101,6 @@ public final class DiverSwim {
      * {@code to}. Its own walking is stopped while it swims, and its float held off (Divers.underwater).
      */
     static Way steer(VillageFolkEntity f, Stroke s, Vec3 to, long now) {
-        s.to = to;
         f.getNavigation().stop();
         if (!s.surfacing && shortOfBreath(f)) {
             s.surfacing = true;
@@ -137,7 +134,6 @@ public final class DiverSwim {
             if (f.getAirSupply() < FULL_AIR) return Way.BREATHING;
             s.surfacing = false;
             s.madeWay = now;
-            s.last = f.position();
             s.near = Double.MAX_VALUE;
         }
         Vec3 p = f.position();
@@ -152,7 +148,6 @@ public final class DiverSwim {
                 if (hl > 0.05) {
                     move(f, new Vec3(h.x / hl * PACE * 1.5, f.getDeltaMovement().y, h.z / hl * PACE * 1.5), edge);
                     s.madeWay = now;
-                    s.last = p;
                     return Way.MOVING;
                 }
             }
@@ -180,7 +175,6 @@ public final class DiverSwim {
             s.near = len;
             s.madeWay = now;
         }
-        s.last = p;
         return Way.MOVING;
     }
 
