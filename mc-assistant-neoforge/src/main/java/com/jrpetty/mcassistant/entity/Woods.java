@@ -540,8 +540,4 @@ public final class Woods {
         return new int[]{ g.trunks, g.saplings.size(), g.want };
     }
 
-    /** Tests: is a sapling plantable on this spot (open earth, open sky, room round it)? */
-    public static boolean plantableForTests(ServerLevel level, BlockPos at) {
-        return plantable(level, at, false);
-    }
 }

@@ -1024,11 +1024,6 @@ public final class Health {
         f.health().stretch = ticks;
     }
 
-    /** Tests: today's luck not yet tried. */
-    public static void untriedForTests(VillageFolkEntity f) {
-        f.health().triedDay = -1;
-    }
-
     public static void wetTicksForTests(VillageFolkEntity f, int ticks) {
         f.health().wetDay = f.level().getDayTime() / 24000L;
         f.health().wet = ticks;

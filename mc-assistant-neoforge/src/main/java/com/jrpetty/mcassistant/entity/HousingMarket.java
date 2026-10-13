@@ -2419,13 +2419,6 @@ public final class HousingMarket {
         costCouncilHouses(level, village, level.getDayTime() / 24000L);
     }
 
-    /** Tests: {blocks, labour, book, custom} on the books for the house on this ground, or null. */
-    @Nullable
-    public static int[] costOfForTests(UUID village, BlockPos anchor) {
-        Cost c = Cost.decode(Ledger.note(village, COST + anchor.asLong()));
-        return c == null ? null : new int[]{ c.blocks(), c.labour(), c.book(), c.custom() ? 1 : 0 };
-    }
-
     /** Tests: the house on this ground sold by this folk (its household has left it), as when its owners move up. */
     public static int sellForTests(ServerLevel level, Villages.Village v, BlockPos anchor, @Nullable VillageFolkEntity seller) {
         Homes.Home h = Homes.homes(v.id()).get(anchor.asLong());

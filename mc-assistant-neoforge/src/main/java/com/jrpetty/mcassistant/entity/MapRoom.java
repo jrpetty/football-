@@ -471,12 +471,6 @@ public final class MapRoom {
         return r == null ? List.of() : r.frames();
     }
 
-    /** Tests: the day the map was last drawn, or -1. */
-    public static long drawnForTests(UUID village) {
-        Record r = record(village);
-        return r == null ? -1 : r.day();
-    }
-
     /** Tests: as if the map had been drawn on this day (to make it due). */
     public static void drawnOnForTests(UUID village, long day) {
         Record r = record(village);

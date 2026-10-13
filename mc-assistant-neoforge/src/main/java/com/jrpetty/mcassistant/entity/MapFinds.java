@@ -618,11 +618,6 @@ public final class MapFinds {
         return found(village);
     }
 
-    /** Tests: is this spot one the town has been near? */
-    public static boolean exploredForTests(ServerLevel level, Villages.Village v, BlockPos p) {
-        return explored(level, v, p);
-    }
-
     /** The vanilla id of a structure a spot is (for the log and the tests). */
     static String id(@Nullable Holder<Structure> h) {
         return h == null ? "dungeon" : h.unwrapKey().map(ResourceKey::location).map(ResourceLocation::toString).orElse("?");

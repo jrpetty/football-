@@ -247,11 +247,6 @@ public final class Visitors {
         return false;
     }
 
-    /** Tests: the visitors in a town now. */
-    public static List<VillageFolkEntity> inTownForTests(ServerLevel level, UUID town) {
-        return inTown(level, town, null);
-    }
-
     /** The visitor's stay, for a game test. */
     @Nullable
     public static String stageForTests(VillageFolkEntity f) {

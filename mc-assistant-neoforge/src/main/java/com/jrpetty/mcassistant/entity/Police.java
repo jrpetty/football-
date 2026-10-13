@@ -1001,12 +1001,6 @@ public final class Police extends SavedData {
 
     // ------------------------------------------------------------------ the tests
 
-    public static Map<UUID, String> rosterForTests(ServerLevel level, Villages.Village v) {
-        Map<UUID, String> out = new LinkedHashMap<>();
-        for (Map.Entry<UUID, Roster.Duty> e : Roster.today(level, v).entrySet()) out.put(e.getKey(), e.getValue().name());
-        return out;
-    }
-
     /** The roster drawn for that day (and kept as that day's, for the week's grid). */
     public static Map<UUID, String> drawForTests(ServerLevel level, Villages.Village v, long day) {
         Map<UUID, String> out = new LinkedHashMap<>();
@@ -1048,10 +1042,6 @@ public final class Police extends SavedData {
     public static String taskForTests(VillageFolkEntity f) {
         Incidents.Task t = Incidents.task(f);
         return t == null ? "" : t.kind.name();
-    }
-
-    public static int trustForTests(UUID village) {
-        return trust(village);
     }
 
     public static int tallyForTests(UUID village, long since, String kind) {

@@ -2002,18 +2002,6 @@ public final class Bank {
         saveHead(v.id(), s);
     }
 
-    /** Tests: a folk's deposit, as the morning would make it (from its purse). */
-    public static int depositForTests(VillageFolkEntity f, int n) {
-        UUID id = f.ownerId();
-        return id == null || !open(id) ? 0 : deposit(id, state(id), f, n);
-    }
-
-    /** Tests: a folk draws on its account. */
-    public static int withdrawForTests(VillageFolkEntity f, int n) {
-        UUID id = f.ownerId();
-        return id == null || !open(id) ? 0 : withdraw(id, state(id), f, n);
-    }
-
     /** Tests: a player at the bank, as if it had said this to the banker. */
     public static String playerForTests(ServerLevel level, UUID village, Player p, String text) {
         return open(village) ? handle(level, village, p, text.toLowerCase(Locale.ROOT)) : "";

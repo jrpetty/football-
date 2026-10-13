@@ -411,11 +411,6 @@ public final class Paintings {
         return n;
     }
 
-    /** Tests: is this an artist (a whittler or a gardener), and is tonight one of its painting evenings? */
-    public static boolean tonightForTests(VillageFolkEntity f, long day) {
-        return artist(f) && tonight(f, day);
-    }
-
     /** Tests: a picture's title and painter, as it carries them; null for any other painting. */
     @Nullable
     public static String[] aboutForTests(ItemStack s) {

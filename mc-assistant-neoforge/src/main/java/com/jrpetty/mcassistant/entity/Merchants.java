@@ -324,25 +324,11 @@ public final class Merchants {
         return FolkTalk.pick(f.getRandom(), "A pleasure! You'll not see those again till next market day.", "Done! Mind how you go with them.");
     }
 
-    /** Tests: the town's buying off the stall, now. What it bought. */
-    public static String townBuysForTests(ServerLevel level, VillageFolkEntity f) {
-        Visitors.Visit v = Visitors.visit(f);
-        Villages.Village town = v == null ? null : Villages.get(v.town);
-        return town == null ? "" : townBuys(level, town, f, v, level.getDayTime() / 24000L);
-    }
-
     /** Tests: a player asks the merchant to trade, and hands over the price. What it said each time. */
     public static String[] buyForTests(VillageFolkEntity f, Player p) {
         Visitors.Visit v = Visitors.visit(f);
         if (v == null) return new String[]{ "", "" };
         return new String[]{ offer(f, v, p), close(f, v, p) };
-    }
-
-    /** Tests: the wares a merchant would bring this town today. */
-    public static List<Item> choiceForTests(ServerLevel level, Villages.Village v) {
-        List<Item> out = new ArrayList<>();
-        for (Ware w : choose(level, v, level.getDayTime() / 24000L)) out.add(w.item());
-        return out;
     }
 
     /** Tests: does the town want this lot (its needs)? */

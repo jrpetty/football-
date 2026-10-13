@@ -1782,11 +1782,6 @@ public final class Engineers {
         return round(level, v, m, f);
     }
 
-    /** Tests: the watch's look at the gate now. */
-    public static void gateWatchForTests(ServerLevel level, Villages.Village v) {
-        gateWatch(level, v);
-    }
-
     /** Tests: a machine's planned blocks. */
     public static List<Machines.Placement> planOfForTests(ServerLevel level, Villages.Village v, Machine m) {
         return plan(level, v, m);

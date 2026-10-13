@@ -1034,11 +1034,6 @@ public final class Draughts {
         return new int[]{ res[0] == RED ? BLACK : res[0] == BLACK ? RED : 0, res[1] };
     }
 
-    /** Tests: how sharp a player this folk is. */
-    public static int clevernessForTests(VillageFolkEntity f) {
-        return cleverness(f);
-    }
-
     /** Tests: this folk's record {won, lost, drawn}. */
     public static int[] recordForTests(UUID village, UUID folk) {
         return record(village, folk);

@@ -1303,11 +1303,6 @@ public final class Newcomers {
         return p.getString("stage") + "|" + title(p) + "|" + p.getString("target");
     }
 
-    /** Tests: one look at the settling in of a town's newcomers, as on the day given. */
-    public static void settlingForTests(ServerLevel level, Villages.Village v, long day) {
-        settling(level, v, day);
-    }
-
     /** Tests: how a settled newcomer is getting on (its card line), or "". */
     public static String settledForTests(VillageFolkEntity f) {
         return cardLine(f);

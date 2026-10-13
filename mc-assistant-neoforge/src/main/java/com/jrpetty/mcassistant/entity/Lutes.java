@@ -268,12 +268,6 @@ public final class Lutes {
 
     // ------------------------------------------------------------------ tests
 
-    /** Tests: a busker in a town with no shop makes its own lute now. */
-    public static ItemStack makeOwnForTests(ServerLevel level, VillageFolkEntity f) {
-        Villages.Village v = f.ownerId() == null ? null : Villages.get(f.ownerId());
-        return v == null ? ItemStack.EMPTY : makeOwn(level, v, f);
-    }
-
     /** Tests: the lute into its hand, as a busker at its pitch takes it up (Buskers.busk). Whether it holds one now. */
     public static boolean inHandForTests(VillageFolkEntity f) {
         inHand(f);

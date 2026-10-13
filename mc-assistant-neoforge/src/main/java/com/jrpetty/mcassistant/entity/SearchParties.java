@@ -578,8 +578,4 @@ public final class SearchParties {
         return s == null ? "none" : s.stage.name() + (s.finder != null ? " found" : "") + " point " + s.point + "/" + s.points.size();
     }
 
-    /** Tests: a step cut for a stuck folk, toward a spot (true if one was). */
-    public static boolean cutAStepForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f, BlockPos toward) {
-        return cutAStep(level, v, f, toward);
-    }
 }

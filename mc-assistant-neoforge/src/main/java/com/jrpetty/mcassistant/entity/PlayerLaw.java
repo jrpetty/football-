@@ -1286,11 +1286,6 @@ public final class PlayerLaw {
         return badgeTown(s);
     }
 
-    /** A badge sworn to a town in a player's name, as a guard swears one. */
-    public static void bindForTests(ItemStack badge, UUID village, String player) {
-        bind(badge, village, player);
-    }
-
     /** The town's round for the players now (the put-backs watched, the wanted kept out of the way). */
     public static void tickForTests(ServerLevel level, Villages.Village v) {
         tick(level, v);

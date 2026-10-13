@@ -1947,11 +1947,4 @@ public final class FieldTools {
         return n;
     }
 
-    /** Tests: the evening's garden round now. */
-    public static void gardenForTests(ServerLevel level, VillageFolkEntity f) {
-        Villages.Village v = Villages.get(f.ownerId());
-        if (v == null) return;
-        GARDENED.remove(f.getUUID());
-        garden(level, v, f, level.getGameTime());
-    }
 }

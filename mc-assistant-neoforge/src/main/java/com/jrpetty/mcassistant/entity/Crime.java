@@ -1572,10 +1572,6 @@ public final class Crime extends SavedData {
         return Trial.openNow(level, v) != null;
     }
 
-    public static boolean sittingForTests(UUID village) {
-        return Trial.sitting(village) != null;
-    }
-
     /** A record set for a test: so many convictions already. */
     public static void recordForTests(VillageFolkEntity f, int convictions) {
         folk(f.getUUID()).putInt("convictions", convictions);
@@ -1647,9 +1643,4 @@ public final class Crime extends SavedData {
         return known(f.getUUID()) ? folk(f.getUUID()).getInt("owes") + folk(f.getUUID()).getInt("owesTown") : 0;
     }
 
-    @Nullable
-    public static Vec3 sitForTests(ServerLevel level, Villages.Village v) {
-        BlockPos at = Trial.stocksAt(level, v);
-        return at == null ? null : Trial.sitSpot(level, at);
-    }
 }

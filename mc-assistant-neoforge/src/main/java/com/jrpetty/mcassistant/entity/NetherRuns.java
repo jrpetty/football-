@@ -1666,12 +1666,6 @@ public final class NetherRuns {
         Ledger.note(r.village, "nether.run", "");
     }
 
-    /** Tests: the run's haul as it stands, by item, carried by the team. */
-    public static Map<Item, Integer> carriedForTests(Run r, VillageFolkEntity f) {
-        Leg l = r.legs.get(f.getUUID());
-        return l == null ? Map.of() : Map.copyOf(l.got);
-    }
-
     /** Tests: the run turns for home now. */
     public static void homeForTests(ServerLevel level, Run r, String why) {
         VillageFolkEntity lead = find(level.getServer(), r.village, r.leader);

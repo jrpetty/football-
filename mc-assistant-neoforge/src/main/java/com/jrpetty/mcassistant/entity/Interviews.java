@@ -2773,12 +2773,6 @@ public final class Interviews {
         step(level, v);
     }
 
-    /** Tests: the panel's choice for a post the town keeps (the constable, the cave team's leader), loaded; or null. */
-    @Nullable
-    public static VillageFolkEntity holderForTests(UUID village, String post) {
-        return holder(village, post);
-    }
-
     /** Tests: the constable as the watch's own reckoning has it (Inquiry), the panel's choice first. */
     @Nullable
     public static VillageFolkEntity constableForTests(UUID village) {

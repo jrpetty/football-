@@ -1085,12 +1085,6 @@ public final class TradeDeals {
     }
 
     @Nullable
-    public static UUID sellerForTests(UUID a, UUID b) {
-        Deal d = deal(a, b);
-        return d == null ? null : d.seller;
-    }
-
-    @Nullable
     public static Item[] goodsForTests(UUID a, UUID b) {
         Deal d = deal(a, b);
         return d == null ? null : new Item[]{ d.x, d.y };
@@ -1128,11 +1122,6 @@ public final class TradeDeals {
     /** The town's morning of the trades' leans, now. */
     public static void leanForTests(ServerLevel level, Villages.Village v) {
         leanMorning(level, v, level.getDayTime() / 24000L);
-    }
-
-    public static void forgetLeanForTests(UUID village) {
-        LEAN.remove(village);
-        Ledger.note(village, "trade.lean", "");
     }
 
     /** Tests: the carrier's trip written down, taken out of its head as a restart does, and given back. */

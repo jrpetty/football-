@@ -593,8 +593,4 @@ public final class Droughts {
         return n;
     }
 
-    /** Tests: buckets of water this farmer has carried to its field. */
-    public static int carriesForTests(VillageFolkEntity f) {
-        return CARRIES.getOrDefault(f.getUUID(), 0);
-    }
 }

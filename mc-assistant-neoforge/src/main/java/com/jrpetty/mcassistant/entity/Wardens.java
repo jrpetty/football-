@@ -464,8 +464,4 @@ public final class Wardens {
         return q;
     }
 
-    /** Tests: is this warden out on its round? */
-    public static boolean walkingForTests(VillageFolkEntity f) {
-        return WALKS.containsKey(f.getUUID());
-    }
 }

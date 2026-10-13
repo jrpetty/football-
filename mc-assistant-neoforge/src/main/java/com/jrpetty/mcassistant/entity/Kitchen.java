@@ -1640,12 +1640,6 @@ public final class Kitchen {
         else MERRY_FOR_TESTS.put(folk, merry);
     }
 
-    /** Tests: so many gatherings ahead that want a honey cake. */
-    public static void occasionsForTests(UUID village, int n) {
-        OCCASIONS_FOR_TESTS.put(village, n);
-        WANTS.remove(village);
-    }
-
     /** Tests: one second of its day now (the binding's wait forgotten). */
     public static void secondForTests(VillageFolkEntity f) {
         BOUND.remove(f.getUUID());

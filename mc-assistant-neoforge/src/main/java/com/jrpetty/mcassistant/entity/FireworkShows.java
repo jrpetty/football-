@@ -615,13 +615,6 @@ public final class FireworkShows {
         return s == null ? null : new int[]{ s.fired, s.planned, s.programme.length };
     }
 
-    /** Tests: the display's launch spot and its crew. */
-    @Nullable
-    public static BlockPos spotForTests(UUID village) {
-        Show s = SHOWS.get(village);
-        return s == null ? null : s.spot;
-    }
-
     /** Tests: the next step of the town's display, now, whenever it was due (as the server's tick does it, when due). */
     public static void stepForTests(ServerLevel level, UUID village) {
         Show s = SHOWS.get(village);

@@ -1952,17 +1952,4 @@ public final class Library {
         return "The " + com.jrpetty.mcassistant.village.TradeBookWriter.craft(key, noun).possessive() + " Book";
     }
 
-    /** [weave] Tests: the librarian's own book written now, out of the stores. Its catalogue entry, or null. */
-    @Nullable
-    public static Title writeLibrarianBookForTests(ServerLevel level, Villages.Village v) {
-        Ledger.Building b = building(v.id());
-        if (b == null) return null;
-        Shelf shelf = LibraryRecords.shelf(v.id());
-        TradeBooks.Draft d = TradeBooks.librarianOf(level, v, shelf);
-        if (d == null) return null;
-        Job j = new Job(v.id(), d.master().getUUID(), "writing " + bookTitle(d.key(), d.noun()), level.getGameTime(), d, null, -1);
-        if (!fetch(level, v, j, d.master())) return null;
-        finish(level, v, b, j, d.master());
-        return shelf.tradeBook("LIBRARY");
-    }
 }

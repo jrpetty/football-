@@ -618,8 +618,4 @@ public final class LawBook {
         propose(level, v, r, l, value, level.getDayTime() / 24000L);
     }
 
-    /** Tests: the law-book this town would want now. */
-    public static int[] desiredForTests(ServerLevel level, UUID village) {
-        return desired(village, Identity.rec(village), level.getDayTime() / 24000L);
-    }
 }

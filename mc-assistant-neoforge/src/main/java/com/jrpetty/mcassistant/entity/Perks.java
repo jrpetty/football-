@@ -782,29 +782,6 @@ public final class Perks {
         return Fleet.keptIn(level, village, level.getDayTime() / 24000L);
     }
 
-    /** Tests: how much a town keeps crime down by itself (Mischief.prevention), the perks counted. */
-    public static double preventionForTests(Villages.Village v) {
-        return Mischief.prevention(v);
-    }
-
-    /** Tests: what a caravan from {@code from} to {@code to} would carry, lots, without taking anything. */
-    public static int caravanLotsForTests(ServerLevel level, Villages.Village from, UUID to) {
-        return Caravans.load(level, from, to, false, false).size();
-    }
-
-    /** Tests: a cold caught now, and its length in ticks. */
-    public static int coldForTests(ServerLevel level, VillageFolkEntity f) {
-        Health.catchCold(level, f, "caught for the test", level.getDayTime() / 24000L);
-        return f.health().cold;
-    }
-
-    /** Tests: a folk's mood worked out now, and its reasons' keys. */
-    public static List<String> moodKeysForTests(VillageFolkEntity f) {
-        f.ensurePersona();
-        f.refreshMood();
-        return new ArrayList<>(f.persona().moodWhy());
-    }
-
     /** Tests: a busker's better chance (over the plain), from its town's perks and its own. */
     public static double tipsForTests(VillageFolkEntity busker) {
         return tips(busker);

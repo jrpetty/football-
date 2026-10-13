@@ -1435,11 +1435,6 @@ public final class Fleet {
         return far;
     }
 
-    public static int caughtForTests(UUID village) {
-        Town t = TOWNS.get(village);
-        return t == null ? 0 : t.caught;
-    }
-
     public static boolean anyOutForTests(UUID village) {
         Town t = TOWNS.get(village);
         return t != null && !t.crew.isEmpty();

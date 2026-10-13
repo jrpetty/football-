@@ -586,11 +586,6 @@ public final class FireSafety {
         return v == null ? null : spark(level, v, Disasters.town(village), true);
     }
 
-    /** Tests: the dice for a spark always come up (true) or fall as they will (null). */
-    public static void alwaysSparkForTests(@Nullable Boolean on) {
-        sparkForTests = on;
-    }
-
     /** Tests: the town's care after its fires: {stone round the forges (rule), stone laid, cauldrons (rule), cauldrons set, station wanted}. */
     public static int[] careForTests(UUID village) {
         Disasters.Town t = Disasters.known(village);

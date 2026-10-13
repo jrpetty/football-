@@ -394,10 +394,4 @@ public final class Keepsakes {
         if (f.level() instanceof ServerLevel level) tick(f, level);
     }
 
-    /** Tests: everything it carries for good. */
-    public static List<ItemStack> carriedForTests(VillageFolkEntity f) {
-        List<ItemStack> out = new ArrayList<>();
-        for (ItemStack s : f.getInventoryItems()) if (isCarried(s)) out.add(s);
-        return out;
-    }
 }

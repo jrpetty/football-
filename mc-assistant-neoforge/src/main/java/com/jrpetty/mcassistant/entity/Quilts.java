@@ -434,11 +434,6 @@ public final class Quilts {
         return quilted(level, bedPart);
     }
 
-    /** Tests: the households that would buy one now. */
-    public static int buyersForTests(ServerLevel level, Villages.Village v) {
-        return buyers(level, v).size();
-    }
-
     /** Tests: this folk buys a quilt now. */
     public static boolean buyForTests(ServerLevel level, VillageFolkEntity f) {
         Villages.Village v = f.ownerId() == null ? null : Villages.get(f.ownerId());

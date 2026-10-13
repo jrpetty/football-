@@ -246,8 +246,4 @@ public final class Avenues {
         return trees(level, v.id());
     }
 
-    /** Tests: is a sapling of the stores' a kind the avenues take? */
-    public static boolean plantableForTests(ItemStack s) {
-        return TownLook.plantable(s) || s.is(Items.OAK_SAPLING);
-    }
 }

@@ -1371,9 +1371,4 @@ public final class Annals {
         return d.isEmpty() ? -1 : d.get(d.size() - 1).values()[key(key)];
     }
 
-    public static List<String> driversForTests(ServerLevel level, Villages.Village v) {
-        List<VillageFolkEntity> folk = new ArrayList<>();
-        for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f) folk.add(f);
-        return drivers(level, v, folk, days(v.id()));
-    }
 }

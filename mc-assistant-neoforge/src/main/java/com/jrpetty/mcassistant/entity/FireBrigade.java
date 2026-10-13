@@ -808,13 +808,6 @@ public final class FireBrigade {
         return new int[]{ t.blazes.size(), blocks, hands };
     }
 
-    /** Tests: lightning struck here, now (as the game's own bolt tells it). */
-    public static void struckForTests(ServerLevel level, UUID village, BlockPos at) {
-        Town t = TOWNS.computeIfAbsent(village, k -> new Town());
-        t.strike = at.immutable();
-        t.struckAt = level.getGameTime();
-    }
-
     /** Tests: is this a fire of the town's (on or next to its own blocks)? */
     public static boolean oursForTests(ServerLevel level, UUID village, BlockPos p) {
         Villages.Village v = Villages.get(village);

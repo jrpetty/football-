@@ -1379,12 +1379,6 @@ public final class MapSurveys {
         return of(village);
     }
 
-    /** Tests: a sheet's colours, by its id. */
-    @Nullable
-    public static MapItemSavedData sheetForTests(ServerLevel level, int id) {
-        return data(level, id);
-    }
-
     /** Tests: the hall's wall made due (as if drawn so many days ago). */
     public static void wallDrawnForTests(UUID village, long day) {
         Wall w = wall(village);

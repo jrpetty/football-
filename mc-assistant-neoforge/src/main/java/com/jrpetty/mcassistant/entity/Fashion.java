@@ -1666,8 +1666,4 @@ public final class Fashion {
         f.life().feel(other.getUUID(), other.displayNameCap(), affinity - f.life().affinity(other.getUUID()));
     }
 
-    /** Tests: the client's number for this folk, as it would be sent now. */
-    public static long packedForTests(VillageFolkEntity f) {
-        return f.style().pack(inFashion(f));
-    }
 }

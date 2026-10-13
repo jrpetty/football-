@@ -798,22 +798,4 @@ public final class Petitions {
         return c == null ? BlockPos.ZERO : BlockPos.of(c.getLong("at"));
     }
 
-    /** Tests: is this folk off to the board to sign? */
-    public static boolean signingForTests(VillageFolkEntity f) {
-        return SIGNING.containsKey(f.getUUID());
-    }
-
-    /** Tests: the folk who agree with a petition sent to sign it now (whatever the hour). */
-    public static int sendSignersForTests(ServerLevel level, Villages.Village v, int petition) {
-        CompoundTag c = byId(v.id(), petition);
-        if (c == null) return 0;
-        int n = 0;
-        for (VillageFolkEntity f : Civics.grown(v.id())) {
-            if (agrees(v, f, c)) {
-                SIGNING.put(f.getUUID(), new Signing(petition, f.tickCount));
-                n++;
-            }
-        }
-        return n;
-    }
 }

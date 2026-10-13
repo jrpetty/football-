@@ -572,11 +572,6 @@ public final class Traditions {
         return out;
     }
 
-    /** Tests: what the crier was last given of the customs and the motto. */
-    public static List<String> criedForTests(UUID village) {
-        return CRIED.getOrDefault(village, List.of());
-    }
-
     /** Tests: the great days looked over now. */
     public static List<Custom> adoptForTests(ServerLevel level, Villages.Village v) {
         adopt(level, v);

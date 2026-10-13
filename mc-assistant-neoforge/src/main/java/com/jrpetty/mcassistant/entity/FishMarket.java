@@ -1033,13 +1033,6 @@ public final class FishMarket {
         return m.landed + " " + m.sold + " " + m.open + " " + m.closed + " " + m.boats + " glut " + String.format(Locale.ROOT, "%.2f", glut(m));
     }
 
-    /** Tests: the market shut now, and the unsold catch put away by this cook (or none). */
-    public static void shutForTests(ServerLevel level, Villages.Village v, @Nullable VillageFolkEntity cook) {
-        Mart m = mart(v.id());
-        if (m.open) shut(level, v, m);
-        putAway(level, v, m, cook);
-    }
-
     /** Tests: a new day at the market (the figures cleared). */
     public static void newDayForTests(Villages.Village v, long day, int boats) {
         Mart m = mart(v.id());

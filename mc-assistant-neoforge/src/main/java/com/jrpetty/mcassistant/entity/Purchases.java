@@ -837,12 +837,6 @@ public final class Purchases {
         LAST.remove(f.getUUID());
     }
 
-    /** Tests: what the poor box has given this town since the morning, in hundredths. */
-    public static long poorBoxForTests(UUID village) {
-        long[] b = POOR_BOX.get(village);
-        return b == null ? 0 : b[0];
-    }
-
     /** Tests: the thing the last get() came away with. */
     public static ItemStack lastForTests() {
         return lastGot.copy();

@@ -1012,13 +1012,6 @@ public final class RailCarts {
         work(level, v);
     }
 
-    /** Tests: the cart of this kind on the line, or null. */
-    @Nullable
-    public static AbstractMinecart cartForTests(ServerLevel level, UUID village, String line, Role role) {
-        Cart c = cart(village, line, role);
-        return c == null ? null : entity(level, c);
-    }
-
     /** Tests: where the cart stands: {at, going}. */
     public static int[] cartStateForTests(UUID village, String line, Role role) {
         Cart c = cart(village, line, role);
@@ -1035,11 +1028,6 @@ public final class RailCarts {
     /** Tests: a ride booked for this folk now. */
     public static void bookForTests(VillageFolkEntity f, ServerLevel level, Railways.Line l, int from, int to) {
         book(f, level, f.ownerId(), l, from, to, null);
-    }
-
-    /** Tests: put a cart of the stores' on the line now (the works done at once). */
-    public static boolean putOnForTests(ServerLevel level, Villages.Village v, Railways.Line l, Role role) {
-        return putOn(level, v, l, role);
     }
 
     /** Tests: a cart record for a cart the test made, standing at an end. */

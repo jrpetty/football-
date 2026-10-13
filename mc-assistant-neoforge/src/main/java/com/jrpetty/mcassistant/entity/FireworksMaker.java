@@ -1402,11 +1402,6 @@ public final class FireworksMaker {
         return true;
     }
 
-    /** Tests: the folk's run for its creeper's powder, looked at now. */
-    public static boolean fetchForTests(VillageFolkEntity f, ServerLevel level) {
-        return fetch(f, level);
-    }
-
     // ------------------------------------------------------------------ the tally
 
     /** The trade's own books: stars, display rockets, elytra rockets, displays, rockets fired, gunpowder fetched from creepers. */

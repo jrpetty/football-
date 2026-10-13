@@ -1655,14 +1655,6 @@ public final class Railways {
         return l;
     }
 
-    /** Tests: plan the line between two towns now. */
-    @Nullable
-    public static Line planLinkForTests(ServerLevel level, Villages.Village a, Villages.Village b) {
-        Line l = linkTo(a.id(), b.id());
-        for (int i = 0; i < 3 && l == null; i++) l = planLink(level, a, b, level.getDayTime() / 24000L);
-        return l;
-    }
-
     /** Tests: lay as much of the line as the stores run to (the works done at once: TownJobs.instantForTests). */
     public static int layForTests(ServerLevel level, Villages.Village v, Line l, int steps) {
         if (l.state == State.PLANNED) l.state = State.LAYING;

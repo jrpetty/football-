@@ -460,9 +460,4 @@ public final class StreetFurniture {
         return board(level, v);
     }
 
-    /** Tests: the day's notice pinned up again whatever was pinned up today. */
-    public static boolean repinForTests(ServerLevel level, Villages.Village v) {
-        PINNED.remove(v.id());
-        return notice(level, v);
-    }
 }

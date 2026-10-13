@@ -4583,15 +4583,6 @@ public class VillageFolkEntity extends AssistantEntity {
         recheckKit();
     }
 
-    /** Tests: the look at the rack, now. True if it came away with a tool. */
-    public boolean toolFromTheRackForTests() {
-        Toolrack.Tool tool = Toolrack.of(stationTask());
-        int before = tool == null ? 0 : countCarried(st -> Toolrack.is(tool, st));
-        rackTick = -100000;
-        toolFromTheRack();
-        return tool != null && countCarried(st -> Toolrack.is(tool, st)) > before;
-    }
-
     /** What a hand at its work eats: food, but not what would poison it (WithdrawGoal's "ration"). */
     private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> RATION =
         com.jrpetty.mcassistant.entity.goal.WithdrawGoal.matcherFor("ration");

@@ -166,11 +166,6 @@ public class FieldBlockEntity extends BlockEntity implements Container {
         return out;
     }
 
-    /** Tests: the index forgotten (a fresh ground). */
-    public static void resetIndexForTests() {
-        for (Map<ResourceKey<Level>, Set<Long>> m : INDEX.values()) m.clear();
-    }
-
     /** Known by the index the moment it is in a level (placed, or its chunk loaded), and again on its first tick there. */
     @Override
     public void setLevel(Level level) {
