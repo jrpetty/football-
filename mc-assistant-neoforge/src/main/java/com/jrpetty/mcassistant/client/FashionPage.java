@@ -39,7 +39,7 @@ public final class FashionPage {
         }
         List<Component> tip = null;
         int lw = w * 9 / 20, rx = x + lw + 8, rw = w - lw - 8;
-        int maxL = (int) ((lw - 6) / 0.75F), maxR = (int) ((rw - 6) / 0.75F);
+        int maxR = (int) ((rw - 6) / 0.75F);
         // The season's look.
         Ui.section(g, font, "This " + m.getString("season"), x, y, lw);
         int sy = y + 12;

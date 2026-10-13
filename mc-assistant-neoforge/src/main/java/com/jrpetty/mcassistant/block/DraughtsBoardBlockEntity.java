@@ -42,10 +42,6 @@ public class DraughtsBoardBlockEntity extends BlockEntity {
         return cells;
     }
 
-    public int lastFrom() {
-        return from;
-    }
-
     public int lastTo() {
         return to;
     }

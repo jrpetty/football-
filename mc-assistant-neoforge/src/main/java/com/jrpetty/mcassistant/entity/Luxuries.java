@@ -673,14 +673,6 @@ public final class Luxuries {
         return n;
     }
 
-    /** "glass_pane", "red_carpet": is this a luxury's name in the books (the town's books' filter)? */
-    public static boolean luxuryId(String id) {
-        String p = id.contains(":") ? id.substring(id.indexOf(':') + 1) : id;
-        return p.endsWith("_carpet") || p.endsWith("_banner") || p.endsWith("candle") || p.equals("painting") || p.equals("glass_pane")
-            || p.equals("flower_pot") || p.equals("lantern") || p.equals("bookshelf") || p.equals("rug") || p.equals("banner")
-            || p.toLowerCase(Locale.ROOT).equals("glass");
-    }
-
     /**
      * The showcase (/village decor showcase, for the pictures): a little village raised where it is asked, a
      * smith and a farmer wed and living in a house of the Iron Age, its stores filled with what the house

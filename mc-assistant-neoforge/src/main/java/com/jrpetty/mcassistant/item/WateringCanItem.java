@@ -214,9 +214,4 @@ public class WateringCanItem extends Item {
         return new Poured(soaked, plants, grew);
     }
 
-    /** Does a crop on this square want water (its farmland not wet through, or it still growing)? Used to pick a patch. */
-    public static boolean thirsty(Level level, BlockPos farmland) {
-        BlockState gs = level.getBlockState(farmland);
-        return gs.getBlock() instanceof FarmBlock && gs.getValue(FarmBlock.MOISTURE) < FarmBlock.MAX_MOISTURE;
-    }
 }

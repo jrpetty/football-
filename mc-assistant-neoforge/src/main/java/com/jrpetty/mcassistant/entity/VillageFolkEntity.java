@@ -1825,12 +1825,6 @@ public class VillageFolkEntity extends AssistantEntity {
         Cuisine.ate(this, meal);                                    // [culture2] its town's own dish, or a neighbour's
     }
 
-    /** One meal's worth out of the village's stores and into the pack (Meals), booked; how many came. */
-    public int mealFromTheStores() {
-        if (!(level() instanceof net.minecraft.server.level.ServerLevel server)) return 0;
-        return drawFromTheStores(server, Meals.FOOD, 1);
-    }
-
     public void makeShowcase(StationTask trade) {
         this.showcase = true;
         setNoAi(true);
@@ -4636,41 +4630,6 @@ public class VillageFolkEntity extends AssistantEntity {
         if (onShift() && Couriers.sendOut(this, "ration", want - have)) brain("asked the storehouse to send rations out");
     }
 
-    /**
-     * Up to {@code n} of what matches, out of the village's own stores (the storehouse and the chests
-     * round the heart: never a household's chest, a guest house's or a worker's production chest) and
-     * into the pack, as a hand at the counter would be handed them; booked in the storehouse's books.
-     * Returns how many.
-     */
-    private int drawFromTheStores(net.minecraft.server.level.ServerLevel server,
-                                  java.util.function.Predicate<net.minecraft.world.item.ItemStack> what, int n) {
-        UUID village = ownerId();
-        if (village == null || n <= 0) return 0;
-        int moved = 0;
-        boolean full = false;
-        java.util.List<net.minecraft.world.item.ItemStack> fromStore = new java.util.ArrayList<>();
-        for (BlockPos p : Villages.storeChests(server, village)) {
-            if (moved >= n || full) break;
-            if (!(server.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
-            boolean store = c instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity;
-            for (int i = 0; i < c.getContainerSize() && moved < n; i++) {
-                net.minecraft.world.item.ItemStack st = c.getItem(i);
-                if (st.isEmpty() || !what.test(st)) continue;
-                int take = Math.min(st.getCount(), n - moved);
-                net.minecraft.world.item.ItemStack left = insertGiven(st.copyWithCount(take));
-                int taken = take - left.getCount();
-                if (taken <= 0) { full = true; break; }               // the pack is full
-                if (store) fromStore.add(st.copyWithCount(taken));
-                st.shrink(taken);
-                if (st.isEmpty()) c.setItem(i, net.minecraft.world.item.ItemStack.EMPTY);
-                moved += taken;
-            }
-            c.setChanged();
-        }
-        if (!fromStore.isEmpty()) drewFromStorehouse(fromStore);
-        return moved;
-    }
-
     /** Tests: the look at its rations, now. */
     public void rationsAheadForTests() {
         rationAheadTick = -100000;
@@ -6105,11 +6064,6 @@ public class VillageFolkEntity extends AssistantEntity {
         return out;
     }
 
-    /** Is this one of the village's production chests? */
-    static boolean isProductionChest(UUID village, BlockPos pos) {
-        return productionChests(village).contains(pos.asLong());
-    }
-
     /** Its old production chest, which it is bringing along to its new plot, or null. */
     @Nullable
     public BlockPos oldProductionChest() {
@@ -6126,11 +6080,6 @@ public class VillageFolkEntity extends AssistantEntity {
             if (f.oldProductionChest != null) out.add(f.oldProductionChest.asLong());
         }
         return out;
-    }
-
-    /** Is this chest one a worker of the village has in use (chestsInUse)? */
-    static boolean chestInUse(UUID village, BlockPos pos) {
-        return chestsInUse(village).contains(pos.asLong());
     }
 
     /** Is this chest in use by a worker other than {@code who}? Only its own worker takes it up. */

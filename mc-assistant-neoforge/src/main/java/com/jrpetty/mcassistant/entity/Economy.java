@@ -454,11 +454,6 @@ public final class Economy {
         return d == null ? 0 : d.tax;
     }
 
-    public static int townYesterday(UUID village) {
-        Day d = YESTERDAY.get(village);
-        return d == null ? 0 : d.town;
-    }
-
     /** The rent taken today so far, and yesterday's (the books' Homes and Money pages). */
     public static int rentToday(UUID village) {
         Day d = TODAY.get(village);

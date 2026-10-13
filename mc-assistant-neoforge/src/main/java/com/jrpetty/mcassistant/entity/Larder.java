@@ -89,12 +89,6 @@ public final class Larder {
         IN_TODAY.computeIfAbsent(village, k -> new double[SOURCES])[source(trade)] += meals;
     }
 
-    /** Yesterday's food in: {fields, fish, hunt, pen, kitchens, farmers, fishers, hunters, ranchers}, or null. */
-    @Nullable
-    public static double[] yesterdayIn(UUID village) {
-        return IN_YESTERDAY.get(village);
-    }
-
     /** Today's so far, in words: "12 from the fields, 3 fish" (/village economy). */
     public static String todayLine(UUID village) {
         double[] d = todayIn(village);

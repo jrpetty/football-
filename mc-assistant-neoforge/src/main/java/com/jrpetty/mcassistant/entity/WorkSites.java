@@ -80,13 +80,6 @@ public final class WorkSites extends SavedData {
         return out;
     }
 
-    /** How many props stand in all (in this level). */
-    public static int propCount(ServerLevel level) {
-        int n = 0;
-        for (Set<Long> in : of(level).props.values()) n += in.size();
-        return n;
-    }
-
     // ------------------------------------------------------------------ the window boxes
 
     public static void boxHung(ServerLevel level, BlockPos pos) {

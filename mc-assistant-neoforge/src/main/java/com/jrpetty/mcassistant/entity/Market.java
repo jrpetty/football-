@@ -609,8 +609,6 @@ public final class Market {
         return bill;
     }
 
-    /** The village's tax: this much in the hundred of every wage stays in the treasury on payday. */
-    public static final int TAX_PERCENT = 10;
     /** No tax is taken while the treasury (over what it is saving for) holds this many days' wages. */
     public static final int TAX_TILL_DAYS = 7;
 

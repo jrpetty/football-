@@ -500,7 +500,6 @@ public final class Envoys {
         int chem = chemistry(host, from);
         long day = level.getDayTime() / 24000L;
         String fn = Villages.name(from);
-        UUID envoyId = envoy.getUUID();
         int warmth = (ht.kindly() ? 15 : 0) + (ht == Temper.PRICKLY ? -15 : 0) + (ht == Temper.WARY ? -10 : 0) + chem * 10
             + Perks.envoyWarmth(from, envoy);                       // [perks] a Diplomat's envoy, a Smooth-talker sent
         switch (errand) {

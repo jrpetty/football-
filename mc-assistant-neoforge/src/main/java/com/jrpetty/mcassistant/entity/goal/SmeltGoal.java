@@ -492,12 +492,6 @@ public class SmeltGoal extends Goal {
         return true;
     }
 
-    @Nullable
-    private BlockPos findFurnace(String canonical) {
-        findFurnaces(canonical);
-        return furnaces.isEmpty() ? null : furnaces.get(0);
-    }
-
     /** No furnace nearby but we're carrying one: set it down next to us so
      *  smelting works anywhere (surface or deep in a mine). Mirrors CraftGoal
      *  placing its own crafting table. */

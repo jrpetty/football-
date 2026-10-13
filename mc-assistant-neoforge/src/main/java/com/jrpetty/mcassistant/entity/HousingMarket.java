@@ -397,15 +397,6 @@ public final class HousingMarket {
         return Math.max(2, (int) Math.round(base * near * Quarters.homePercent(village, anchor) / 100.0 * index(village)));
     }
 
-    static String plotWords(UUID village, BlockPos anchor) {
-        Villages.Village v = Villages.get(village);
-        int d = v == null ? 50 : Math.max(Math.abs(anchor.getX() - v.centre().getX()), Math.abs(anchor.getZ() - v.centre().getZ()));
-        int p = Quarters.homePercent(village, anchor);
-        String where = d <= TownPlan.RING + TownPlan.PERIOD ? "near the square" : d <= TownPlan.RING + 2 * TownPlan.PERIOD ? "on the second ring"
-            : "out at the edge";
-        return where + (p > 100 ? ", by the park" : p < 100 ? ", in the crafts' smoke" : "");
-    }
-
     static int permit(int blocks, int labour) {
         return Math.max(PERMIT_LEAST, (int) Math.round((blocks + labour) * PERMIT_PERCENT / 100.0));
     }

@@ -499,18 +499,6 @@ public final class StoreFloor {
             + "; " + served + (served == 1 ? " thing" : " things") + " sold over the counter today";
     }
 
-    /** Every assistant behind its counter now (the stage for the smoke). */
-    static void postNow(ServerLevel level, Villages.Village v) {
-        for (VillageFolkEntity a : StoreStaff.in(v.id(), ShopRoles.Role.ASSISTANT)) {
-            Post p = postOf(level, a);
-            if (p == null || p.stand() == null) continue;
-            a.teleportTo(p.stand().getX() + 0.5, p.stand().getY(), p.stand().getZ() + 0.5);
-            BlockPos ahead = p.counter().relative(p.front(), 3);
-            a.getLookControl().setLookAt(ahead.getX() + 0.5, ahead.getY() + 1.5, ahead.getZ() + 0.5);
-            DOING.put(a.getUUID(), "Serving at the counter");
-        }
-    }
-
     /** Tests: every counter of the shop's premises and where its assistant would stand, as "counter|stand". */
     public static List<String> postsForTests(ServerLevel level, UUID village) {
         List<String> out = new ArrayList<>();

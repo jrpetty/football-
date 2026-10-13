@@ -28,9 +28,6 @@ public final class JobSpec {
 
     private JobSpec() {}
 
-    /** Radius around the work zone's centre we accept fixtures (chest/furnace/water) in. */
-    private static final int FIXTURE_RANGE = 12;
-
     /** Human-readable checklist for a job, shown before it's even assigned. */
     public static List<String> checklist(AssistantEntity.StationTask task) {
         if (task == AssistantEntity.StationTask.NONE) return List.of();
@@ -198,14 +195,6 @@ public final class JobSpec {
     private static boolean heldTool(AssistantEntity a, List<ZoneChests.Found> stores, String suffix) {
         return held(a, stores, s -> !s.isEmpty()
             && BuiltInRegistries.ITEM.getKey(s.getItem()).getPath().endsWith(suffix));
-    }
-
-    /** Is there somewhere to unload at this spot? Used for a hauler's drop-off. */
-    private static boolean chestNear(AssistantEntity a, BlockPos where) {
-        for (ZoneChests.Found f : ZoneChests.around(a.level(), where, FIXTURE_RANGE, 5)) {
-            if (isStorage(f)) return true;
-        }
-        return false;
     }
 
     /**

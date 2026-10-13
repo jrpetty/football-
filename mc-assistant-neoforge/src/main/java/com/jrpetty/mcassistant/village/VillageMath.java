@@ -43,11 +43,6 @@ public final class VillageMath {
      *  a different distance. */
     public static final int SCAN = 48;
 
-    /** How far the village heart can see on its own: the range its stores are
-     *  counted over, and the size of settlement that needs no carriers. Past
-     *  this a town relies on its haulers, which is what haulers are for. */
-    public static final int CORE = 128;
-
     /** The furthest a search will ever start from the heart. A town has to be
      *  allowed to spread or its people have nowhere to work; it does not have
      *  to be allowed to spread without limit. */
@@ -112,11 +107,6 @@ public final class VillageMath {
         return loadedRadiusChunks(folk) * 16;
     }
 
-    /** Is this settlement entirely inside its own loaded ring? */
-    public static boolean fullyAwake(int folk) {
-        return loadedRadiusBlocks(folk) >= plotReach(folk);
-    }
-
     /** How far out the village's own stores are counted from: as far as its plots
      *  reach. It was capped at the core (128), and a town of sixty-six with its mines a
      *  hundred and fifty blocks out could not see the iron banked in them — its Iron Age
@@ -124,16 +114,6 @@ public final class VillageMath {
      *  sweep of the loaded chunks' chest lists, cached for ten seconds a village. */
     public static int storesRadius(int folk) {
         return Math.min(MAX_REACH + SCAN, plotReach(folk) + 8);
-    }
-
-    /**
-     * Has this place outgrown what its heart can see? Past this size the
-     * outlying plots bank into their own chests and it takes a CARRIER to get
-     * that into the stores the plan reads — so a town this big that has no
-     * hauler is a town that will starve in a full barn.
-     */
-    public static boolean needsCarriers(int folk) {
-        return plotReach(folk) > storesRadius(folk);
     }
 
     // ------------------------------------------------------------ trade shares
@@ -248,11 +228,6 @@ public final class VillageMath {
      *  the dark. */
     public static int ironForTheWatch(int folk) {
         return Math.max(1, shapeOf(folk)[GUARD]) * ARMOUR_SET;
-    }
-
-    /** Iron to put a decent tool in every hand in the place. */
-    public static int ironForTools(int folk) {
-        return folk * TOOL_IRON;
     }
 
     /** Iron to armour everybody, not just the watch — what a town works

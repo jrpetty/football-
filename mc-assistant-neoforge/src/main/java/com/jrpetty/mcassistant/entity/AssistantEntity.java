@@ -279,7 +279,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     // Player-parity reach: same as a survival player's default
     // block_interaction_range (4.5) and entity_interaction_range (3.0).
     public static final double BLOCK_REACH = 4.5;
-    public static final double ENTITY_REACH = 3.0;
 
     // Owner UUID -> (lowercase name -> live assistant). One owner can run a
     // whole crew; commands route by name or to the nearest one.
@@ -1238,11 +1237,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         return best;
     }
 
-    /** Forget a spot that has been worked out. */
-    public void forgetRichSpot(BlockPos pos) {
-        richSpots.removeIf(k -> BlockPos.of(k).distSqr(pos) < 64.0);
-    }
-
     private int driftTick = -1000;   // pace the roam so idling reads as patrol
     private int revisitTick = -1000;
     private int beatCorner;          // which corner of the patch it is heading for
@@ -1933,16 +1927,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             furnace.setItem(2, left);
             furnace.setChanged();
         }
-    }
-
-    public void setHaulRoute(@Nullable BlockPos pickup, @Nullable BlockPos delivery) {
-        if (pickup == null || delivery == null || pickup.equals(delivery)) return;
-        if (pickup.equals(preferredChest) && delivery.equals(deliveryChest)) return;
-        preferredChest = pickup.immutable();
-        deliveryChest = delivery.immutable();
-        lastGoodChest = pickup.immutable();
-        setStation(pickup, StationTask.HAUL);   // the pickup IS the post
-        forgetChestIndex();
     }
 
     /** No route of its own: a village's courier takes its runs from the storehouse (Couriers),
@@ -3017,11 +3001,6 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             }
         }
         return false;
-    }
-
-    /** What this one has cost you so far: iron, gold, diamonds. For the ledger. */
-    public int[] wageLedger() {
-        return new int[]{ ironPaid, goldPaid, diamondPaid, wagesPaid };
     }
 
     /** How long until its next payday, in ticks (negative when overdue). */

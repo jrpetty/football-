@@ -95,21 +95,10 @@ public record BotInfo(String branch, int daysServed, String topDeed,
         return carry == 0 ? "Full pack" : "Bank " + carry;
     }
 
-    /** The guard's combat stance, as its button label. */
-    public String stanceLabel() {
-        return AssistantEntity.Stance.byOrdinal(stance).label;
-    }
-
     /** The perk's display name, or empty while undecided. */
     public String perkLabel() {
         AssistantEntity.Perk[] all = AssistantEntity.Perk.values();
         return perk > 0 && perk < all.length ? all[perk].label : "";
-    }
-
-    /** How the diet reads on screen: the pace, and what bought it. */
-    public String dietLine() {
-        return AssistantEntity.foodLabel(diet) + " — working at " + diet + "%"
-            + (lastMeal.isEmpty() ? "" : ", last ate " + lastMeal);
     }
 
     /** Green when well fed, red when it is living on scraps. */

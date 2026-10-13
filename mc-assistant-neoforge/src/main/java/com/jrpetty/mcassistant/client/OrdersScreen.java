@@ -40,7 +40,6 @@ public class OrdersScreen extends Screen {
     private static final int Y_PATCH     = 100;
     private static final int Y_SEC_HAND  = 122;
     private static final int Y_HAND1     = 132;
-    private static final int Y_HAND2     = 154;
     private static final int Y_SEC_DUTY  = 176;
     private static final int Y_DUTY      = 186;
     private static final int Y_FOOTER    = 208;

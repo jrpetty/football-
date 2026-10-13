@@ -442,7 +442,6 @@ public final class CaveDwellers {
         public int opened() { return party.opened; }
         public int slain() { return party.slain; }
         public int torches() { return party.torches; }
-        public boolean atTable() { return table != null; }
     }
 
     /** The day each cave dweller last went out. */

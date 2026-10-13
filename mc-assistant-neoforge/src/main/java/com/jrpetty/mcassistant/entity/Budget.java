@@ -163,11 +163,6 @@ public final class Budget {
         return b;
     }
 
-    /** Is the village making enough for itself — fed, bedded, tooled and paid — so that it can sell? */
-    public static boolean selfSufficient(ServerLevel level, UUID village) {
-        return books(level, village).wants.isEmpty();
-    }
-
     /** What it still wants for itself before it sells ("a full larder", "beds for everyone"...). */
     public static List<String> wants(ServerLevel level, UUID village) {
         return List.copyOf(books(level, village).wants);

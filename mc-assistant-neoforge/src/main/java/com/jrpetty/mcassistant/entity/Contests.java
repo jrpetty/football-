@@ -54,8 +54,6 @@ public final class Contests {
 
     /** The fishing contest: from the late morning, for an hour. */
     static final long FISH_AT = 4000L, HOUR = 1000L;
-    /** The sports day: late morning. */
-    static final long RACE_AT = 4000L;
     /** What the winner of the fishing contest is given, out of the treasury, at most. */
     public static final int PURSE = 5;
     static final int MOST_ANGLERS = 6, MOST_RUNNERS = 8;
@@ -63,14 +61,6 @@ public final class Contests {
     /** Which of the three rest days it is: 0 the fishing contest, 1 the sports day, 2 neither. */
     static int turn(long day) {
         return Math.floorMod(Math.floorDiv(day, 7L), 3);
-    }
-
-    public static boolean fishingDay(UUID village, long day) {
-        return RestDay.today(village, day) && turn(day) == 0;
-    }
-
-    public static boolean raceDay(UUID village, long day) {
-        return RestDay.today(village, day) && turn(day) == 1;
     }
 
     private static volatile boolean quick;

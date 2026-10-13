@@ -1646,13 +1646,6 @@ public final class Engineers {
         return line + (building != null ? "; building " + building : "") + ".";
     }
 
-    /** All the machines' output, all told: for the trade's book and the town's books. */
-    public static int outputAllTold(UUID id) {
-        int n = 0;
-        for (Machine m : works(id).machines) n += m.output;
-        return n;
-    }
-
     // ------------------------------------------------------------------ the books kept
 
     /** The works written into the town's ledger (they outlast a restart). */

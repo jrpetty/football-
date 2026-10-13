@@ -360,16 +360,6 @@ public final class NetherHome {
         return null;
     }
 
-    /** Tests and the stage: the trophies on the gateway, by name. */
-    public static List<String> trophiesShown(ServerLevel level, Villages.Village v) {
-        List<String> out = new ArrayList<>();
-        for (BlockPos spot : trophySpots(level, v)) {
-            ItemFrame f = frame(level, spot);
-            if (f != null && !f.getItem().isEmpty()) out.add(f.getItem().getHoverName().getString());
-        }
-        return out;
-    }
-
     // ------------------------------------------------------------------ the town's look, once a minute
 
     /** The town's look at what the runs come to (NetherRunners.tick): a trophy up when one is due; the wart farm kept by
@@ -392,19 +382,6 @@ public final class NetherHome {
             String did = tend(level, v, farmer);
             if (did != null) farmer.brain(did);
         }
-    }
-
-    /** The farm's wart as it stands, for the page: ripe of planted. */
-    public static int[] farmState(ServerLevel level, UUID village) {
-        int planted = 0, ripe = 0;
-        for (BlockPos g : farm(village)) {
-            if (!level.isLoaded(g)) continue;
-            BlockState w = level.getBlockState(g.above());
-            if (!w.is(Blocks.NETHER_WART)) continue;
-            planted++;
-            if (w.getValue(NetherWartBlock.AGE) >= 3) ripe++;
-        }
-        return new int[]{ planted, ripe };
     }
 
     static ResourceLocation id(Item it) {

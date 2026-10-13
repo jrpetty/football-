@@ -677,12 +677,6 @@ public final class TradeBooks {
         return first != null ? first : change;
     }
 
-    /** [weave] Tests: the librarian's book's draft now, or null. */
-    @Nullable
-    static Draft librarianOf(ServerLevel level, Villages.Village v, LibraryRecords.Shelf shelf) {
-        return librarian(new Ctx(level, v, level.getDayTime() / 24000L), shelf);
-    }
-
     /** The draft of one trade's book now (the tests, the stage), or null if it has no master. */
     @Nullable
     static Draft draftOf(ServerLevel level, Villages.Village v, StationTask t, LibraryRecords.Shelf shelf) {

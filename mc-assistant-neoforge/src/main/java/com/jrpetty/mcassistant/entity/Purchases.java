@@ -685,11 +685,6 @@ public final class Purchases {
         return Math.max(1, (int) Math.round(low * Leader.payRate(village) / 100.0));
     }
 
-    /** How far the cost of living is over the lowest wage, a day (nought when it fits): for the leader and the wages. */
-    public static double livingShort(ServerLevel level, UUID village) {
-        return Math.max(0, costOfLiving(level, village) - lowestWage(village));
-    }
-
     /** This morning's alarm on the cost of living, or null when it fits (or the shop is not open: nobody pays yet). */
     @Nullable
     public static String alarm(UUID village) {

@@ -75,12 +75,6 @@ public final class Gatherings {
         return SPONSORED_ON.getOrDefault(village, -1L) == day;
     }
 
-    /** Who is paying for tonight's feast, or null. */
-    @Nullable
-    public static String sponsorOf(UUID village, long day) {
-        return sponsored(village, day) ? SPONSOR.get(village) : null;
-    }
-
     public static void mourn(UUID village, String name, long day) {
         DIED.put(village, day);
         DIED_NAME.put(village, name);

@@ -168,12 +168,6 @@ public final class LeisureItems {
         return LANTERN_ITEMS.get(c).get();
     }
 
-    /** The colour of a paper lantern, or null for anything else. */
-    @Nullable
-    public static DyeColor lanternColour(ItemStack s) {
-        return s.getItem() instanceof BlockItem b && b.getBlock() instanceof PaperLanternBlock l ? l.colour() : null;
-    }
-
     /** Every one of the seven, a lantern of each colour among them: what the town's books and the tests go through. */
     public static List<Item> all() {
         List<Item> out = new ArrayList<>(List.of(QUILT_ITEM.get(), LUTE.get(), DRAUGHTS_BOARD_ITEM.get(), KITE.get(), LEATHER_FOOTBALL.get(),

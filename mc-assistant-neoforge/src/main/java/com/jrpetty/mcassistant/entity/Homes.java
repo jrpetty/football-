@@ -1414,14 +1414,6 @@ public final class Homes {
         h.saved = 0;
     }
 
-    /** A house bought back from the household leaving it, at half what it paid: out of the treasury (as far as it
-     *  has it), into the books as bought in. Returns what was paid. */
-    static int boughtBack(UUID village, int price) {
-        int paid = Ledger.takeCoins(village, Math.max(0, price));
-        Economy.spent(village, paid);
-        return paid;
-    }
-
     /** Saved up: the household buys the house it rents from the village, for its price, into the treasury. No more rent. */
     static void buy(ServerLevel level, Villages.Village v, Home h, List<VillageFolkEntity> household, long day) {
         UUID id = v.id();

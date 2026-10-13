@@ -74,11 +74,6 @@ public final class Bakery {
         return 0;
     }
 
-    /** Does this want wheat (so the mill's is worth fetching)? */
-    static boolean wheaten(Item what) {
-        return what == Items.BREAD || what == Items.COOKIE || what == Items.CAKE;
-    }
-
     /** The hand at the ovens now (the town's works call it "baking"), or null. */
     @Nullable
     static VillageFolkEntity baker(UUID village) {

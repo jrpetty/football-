@@ -231,12 +231,6 @@ public final class Beliefs {
         return village != null && of(village) != null && Math.floorMod(day + village.hashCode() + 3, 7) == 3;
     }
 
-    /** The next sacred day from this one (this one, if it is). */
-    static long nextSacred(UUID village, long day) {
-        for (int i = 0; i < 7; i++) if (Math.floorMod(day + i + village.hashCode() + 3, 7) == 3) return day + i;
-        return day;
-    }
-
     /**
      * What the town's faith forbids this folk today, in words, or null (VillageFolkEntity.onBreak: its trade's work
      * waits): the fishers on the Sea's day, the miners on the Stone's, the woodcutters on the Stars', the farmers on the

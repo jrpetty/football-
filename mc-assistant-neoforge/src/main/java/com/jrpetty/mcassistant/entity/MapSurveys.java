@@ -585,16 +585,6 @@ public final class MapSurveys {
         return net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.withDefaultNamespace(c.getName() + "_wool"));
     }
 
-    /** Can the stores run to a banner (one put by, or six wool of a colour and a plank)? */
-    static boolean bannerToHand(ServerLevel level, Villages.Village v) {
-        if (Crafts.stock(level, v, s -> s.is(ItemTags.BANNERS) && s.get(DataComponents.BANNER_PATTERNS) == null) > 0) return true;
-        for (DyeColor c : DyeColor.values()) {
-            net.minecraft.world.item.Item wool = woolOf(c);
-            if (Crafts.stock(level, v, s -> s.is(wool)) >= 6) return Crafts.stock(level, v, s -> s.is(ItemTags.PLANKS) || s.is(ItemTags.LOGS)) > 0;
-        }
-        return false;
-    }
-
     /** The banner set up here, facing the street (away from the building), named for its place. True if it stands. */
     static boolean plantBanner(ServerLevel level, Villages.Village v, Marker m, BlockPos at, DyeColor c) {
         BlockState st = BannerBlock.byColor(c).defaultBlockState();
@@ -1433,8 +1423,4 @@ public final class MapSurveys {
         }
     }
 
-    /** Draws the decorations: the frame types the region's marks use, kept here for the books (MapsPage). */
-    static String markWord(net.minecraft.core.Holder<net.minecraft.world.level.saveddata.maps.MapDecorationType> t) {
-        return t == MapDecorationTypes.RED_X ? "x" : t == MapDecorationTypes.TARGET_X ? "+" : "o";
-    }
 }

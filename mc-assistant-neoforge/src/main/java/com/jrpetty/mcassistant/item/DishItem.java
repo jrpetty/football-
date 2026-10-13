@@ -30,11 +30,6 @@ public class DishItem extends Item {
         this.good = good;
     }
 
-    /** Served in a bowl: the bowl comes back when it is eaten. */
-    public boolean inABowl() {
-        return bowl;
-    }
-
     @Override
     public ItemStack finishUsingItem(ItemStack stack, Level level, LivingEntity who) {
         ItemStack left = super.finishUsingItem(stack, level, who);

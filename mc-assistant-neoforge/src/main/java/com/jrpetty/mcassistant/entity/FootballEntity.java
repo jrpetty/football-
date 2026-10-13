@@ -119,10 +119,6 @@ public class FootballEntity extends Entity {
         heldAt = now;
     }
 
-    public boolean usedSince(long t) {
-        return heldAt >= t;
-    }
-
     // ------------------------------------------------------------------ the physics
 
     @Override

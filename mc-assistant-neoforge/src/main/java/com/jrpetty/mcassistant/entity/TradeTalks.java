@@ -189,11 +189,9 @@ public final class TradeTalks {
 
         public boolean deal() { return end == End.DEAL && settled != null && table != null; }
         public boolean envoySells() { return table != null && table.seller().equals(envoyTown); }
-        public double gainEnvoy() { return envoySells() ? gainSeller : gainBuyer; }
         public double gainHost() { return envoySells() ? gainBuyer : gainSeller; }
         /** How much ground the host's leader gave, as a share of the room to agree. */
         public double hostGave() { return envoySells() ? buyerGave : sellerGave; }
-        public double envoyGave() { return envoySells() ? sellerGave : buyerGave; }
         public Manner hostManner() { return envoySells() ? buyer : seller; }
     }
 

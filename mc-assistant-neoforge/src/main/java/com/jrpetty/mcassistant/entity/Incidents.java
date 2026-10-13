@@ -1177,11 +1177,6 @@ final class Incidents {
     }
 
     @Nullable
-    static Player playerOf(ServerLevel level, @Nullable UUID id) {
-        return id == null ? null : level.getPlayerByUUID(id);
-    }
-
-    @Nullable
     static ServerPlayer serverPlayer(ServerLevel level, @Nullable UUID id) {
         return id == null ? null : level.getServer().getPlayerList().getPlayer(id);
     }

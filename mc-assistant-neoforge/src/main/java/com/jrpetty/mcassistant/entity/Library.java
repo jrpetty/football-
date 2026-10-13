@@ -333,14 +333,6 @@ public final class Library {
         }
     }
 
-    /** What stands at a place ("lectern", "shelf N/S"), or empty. */
-    static ItemStack itemAt(ServerLevel level, Ledger.Building b, String where) {
-        if (where.equals("lectern")) return onLectern(level, b);
-        int[] at = slotOf(where);
-        if (at == null || !(level.getBlockEntity(shelfAt(b, at[0])) instanceof ChiseledBookShelfBlockEntity shelf)) return ItemStack.EMPTY;
-        return shelf.getItem(at[1]);
-    }
-
     /** The book taken out of its place, or empty. */
     static ItemStack takeFrom(ServerLevel level, Ledger.Building b, String where) {
         if (where.equals("lectern")) {

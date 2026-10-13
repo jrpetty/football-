@@ -309,8 +309,6 @@ public final class Kitchen {
     private static final Map<Long, Block> CLOTHS = new ConcurrentHashMap<>();
     /** Tests: merry (true), sensible (false), or as its nature has it (missing). */
     private static final Map<UUID, Boolean> MERRY_FOR_TESTS = new ConcurrentHashMap<>();
-    /** Tests: occasions ahead that want a honey cake, by village. */
-    private static final Map<UUID, Integer> OCCASIONS_FOR_TESTS = new ConcurrentHashMap<>();
     private static final String STAGED = "mca_kitchen_staged";
 
     public static void resetForTests() {
@@ -329,7 +327,6 @@ public final class Kitchen {
         TABLES.clear();
         CLOTHS.clear();
         MERRY_FOR_TESTS.clear();
-        OCCASIONS_FOR_TESTS.clear();
     }
 
     // ------------------------------------------------------------------ who makes what
@@ -446,7 +443,7 @@ public final class Kitchen {
 
     /** Honey cakes for the gatherings of today and tomorrow: a birthday one each, a wedding, Founding Day or a festival two. */
     static int cakesWanted(ServerLevel level, UUID id, long day) {
-        int n = OCCASIONS_FOR_TESTS.getOrDefault(id, 0);
+        int n = 0;
         for (AssistantEntity a : Villages.folkOf(id)) {
             if (!(a instanceof VillageFolkEntity f) || f.isShowcase() || f.isHired()) continue;
             long[] next = Birthdays.next(f, day);

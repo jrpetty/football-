@@ -93,16 +93,6 @@ public final class Stacking {
         return rest.isEmpty() ? ItemStack.EMPTY : rest;
     }
 
-    /** Is there room in this container for any of this: a part stack of the same, or an empty slot? */
-    public static boolean hasRoomFor(Container c, ItemStack s) {
-        int cap = cap(c, s);
-        for (int i = 0; i < c.getContainerSize(); i++) {
-            ItemStack in = c.getItem(i);
-            if (in.isEmpty() || (in.getCount() < cap && ItemStack.isSameItemSameComponents(in, s))) return true;
-        }
-        return false;
-    }
-
     /**
      * Top up the part stacks of one container from the others like them, the later into the
      * earlier, without moving anything else. Returns how many stacks that freed (merged away).

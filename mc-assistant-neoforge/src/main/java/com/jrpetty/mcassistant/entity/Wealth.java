@@ -43,16 +43,6 @@ public final class Wealth {
         }
     }
 
-    /**
-     * [econ-wages] What a trade is worth in a hamlet's coin for how hard it is and the skill it takes, before its
-     * value to the town, its scarcity and the folk's own hand (JobWorth): a field hand 2, a miner 2, a smith 3.
-     * The fixed tiers of one, two and three a day it used to be are gone: a job is paid what it is worth.
-     */
-    public static int baseWage(StationTask t) {
-        if (t == StationTask.NONE) return 0;
-        return Math.max(1, (int) Math.round(JobWorth.UNIT * JobWorth.wantedPost(t, null).difficulty()));
-    }
-
     /** The bonus for what it did since it was last paid: two for a hard day, one for a fair one. */
     public static int bonus(VillageFolkEntity f) {
         int done = f.deedsTotal() - f.paidDeeds();
@@ -151,19 +141,6 @@ public final class Wealth {
             out.add(f.displayNameCap() + " the " + f.stationTask().title.toLowerCase(java.util.Locale.ROOT) + " " + wage(f));
         }
         return String.join(", ", out);
-    }
-
-    /** [econ-wages] The pay scale in a village today, a line to each rate: what a journeyman at each job here is paid. */
-    public static java.util.List<String> payScale(java.util.UUID village) {
-        java.util.Map<Integer, java.util.List<String>> byPay = new java.util.TreeMap<>(java.util.Comparator.reverseOrder());
-        for (JobWorth.Worth w : JobWorth.shown(JobWorth.scale(null, village))) {
-            byPay.computeIfAbsent(w.rate(), k -> new java.util.ArrayList<>()).add(w.post().title.toLowerCase(java.util.Locale.ROOT));
-        }
-        java.util.List<String> out = new java.util.ArrayList<>();
-        for (var e : byPay.entrySet()) {
-            out.add(capital(String.join(", ", e.getValue())) + ": " + e.getKey() + (e.getKey() == 1 ? " coin" : " coins") + " a day");
-        }
-        return out;
     }
 
     /**

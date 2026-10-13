@@ -235,9 +235,6 @@ public final class Caravans {
         return true;
     }
 
-    private static final Item[] CARPETS = { Items.RED_CARPET, Items.BLUE_CARPET, Items.GREEN_CARPET, Items.YELLOW_CARPET,
-        Items.PURPLE_CARPET, Items.ORANGE_CARPET, Items.CYAN_CARPET, Items.MAGENTA_CARPET };
-
     /** A carrier if there is one at the heart, else any grown hand that is not keeping watch or leading a build. */
     @Nullable
     static VillageFolkEntity choose(Villages.Village v) {

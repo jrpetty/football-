@@ -193,7 +193,6 @@ public class VillageGameTests {
         Kit.hold(level, 2800, 2800, 48);
         List<String> said = Kit.command(level, "village spawnat 2800 2800 3");
         Kit.log("t04 spawnat said: " + said);
-        List<String> folkLines = null;
         helper.runAtTickTime(60, () -> {
             BlockPos here = Kit.surface(level, 2800, 2800);
             List<VillageFolkEntity> folk = level.getEntitiesOfClass(VillageFolkEntity.class, around(here, 20));

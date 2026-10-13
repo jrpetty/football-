@@ -81,11 +81,6 @@ public class VillageBoardBlockEntity extends BlockEntity {
         return heart;
     }
 
-    /** How many are coming, once they have been chosen. */
-    public int foundingCount() {
-        return count;
-    }
-
     /** This board waits for a village to be founded with its heart here. */
     public void waitFor(BlockPos heartAt) {
         founding = com.jrpetty.mcassistant.entity.Founding.PENDING;

@@ -455,15 +455,6 @@ public final class ZonePresets {
             x + 0.5, y + 1.2, z + 0.5, 3, 0.1, 0.3, 0.1, 0.0);
     }
 
-    /** How many of this owner's live crew are working that zone right now. */
-    public static int workersOn(Player player, Preset preset) {
-        int n = 0;
-        for (AssistantEntity a : AssistantEntity.allFor(player.getUUID())) {
-            if (a.isAlive() && preset.zone().equals(a.workZone())) n++;
-        }
-        return n;
-    }
-
     /** How many of this owner's live crew are already working that patch. */
     public static int crewOn(AssistantEntity bot, String presetName) {
         if (bot.getOwnerId() == null) return 1;

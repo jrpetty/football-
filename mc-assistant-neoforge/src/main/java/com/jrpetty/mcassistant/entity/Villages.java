@@ -1203,12 +1203,6 @@ public final class Villages {
         return cut == null ? 1.0 : cut.getOrDefault(trade, 1.0);
     }
 
-    @Nullable
-    public static Need nextNeed(net.minecraft.server.level.ServerLevel level, UUID villageId) {
-        List<Need> all = needs(level, villageId);
-        return all.isEmpty() ? null : all.get(0);
-    }
-
     private static List<Need> wantsFor(net.minecraft.server.level.ServerLevel level, UUID villageId) {
         Village v = get(villageId);
         int folk = headcount(villageId);
@@ -2197,13 +2191,6 @@ public final class Villages {
      */
     public static int larderForBirth(UUID villageId) {
         return com.jrpetty.mcassistant.village.VillageMath.larderForBirth(headcount(villageId));
-    }
-
-    /** True when the village's stores hold enough food for it to raise children. */
-    public static boolean larderFull(net.minecraft.server.level.ServerLevel level, UUID villageId) {
-        Village v = get(villageId);
-        if (v == null) return false;
-        return stock(level, v.centre(), Task.FOOD, storesRadius(villageId)) >= larderForBirth(villageId);
     }
 
     /** Every village's folk, together: what the whole world holds. */

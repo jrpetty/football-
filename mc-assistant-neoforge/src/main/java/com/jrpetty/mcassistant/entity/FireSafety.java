@@ -81,8 +81,6 @@ public final class FireSafety {
     private static final Map<UUID, int[]> ROUND = new ConcurrentHashMap<>();
     /** The forges of each building, by its anchor (read off its drawing once). */
     private static final Map<Long, List<BlockPos>> FORGES = new ConcurrentHashMap<>();
-    /** Tests: the next spark's roll always comes up (true), or as the dice fall (null). */
-    private static volatile Boolean sparkForTests;
 
     static void resetForTests() {
         SPARKS.clear();
@@ -91,7 +89,6 @@ public final class FireSafety {
         WATCHER.clear();
         ROUND.clear();
         FORGES.clear();
-        sparkForTests = null;
     }
 
     // ------------------------------------------------------------------ the town's look
@@ -179,7 +176,7 @@ public final class FireSafety {
         BlockPos forge = (BlockPos) pick[0];
         Ledger.Building b = (Ledger.Building) pick[1];
         @SuppressWarnings("unchecked") List<BlockPos> burn = (List<BlockPos>) pick[2];
-        if (!force && !Boolean.TRUE.equals(sparkForTests)) {
+        if (!force) {
             double weather = t.drought ? 3.0 : t.dryDays >= 3 ? 2.0 : Disasters.raining(level, v) ? 0.5 : 1.0;
             double much = Math.min(2.0, Math.max(0.5, burn.size() / 3.0));
             double water = cauldronNear(level, forge) ? 0.5 : 1.0;

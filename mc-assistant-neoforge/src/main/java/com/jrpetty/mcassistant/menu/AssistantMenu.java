@@ -21,25 +21,8 @@ import javax.annotation.Nullable;
  */
 public class AssistantMenu extends AbstractContainerMenu {
 
-    // Button ids fired by the screen widgets.
-    public static final int BTN_STOP = 0;
-    public static final int BTN_FOLLOW = 1;
-    public static final int BTN_STAY = 2;
-    public static final int BTN_GUARD = 3;
+    // Button id fired by the screen's Stash widget (AssistantActions.STASH).
     public static final int BTN_DEPOSIT = 4;
-    public static final int BTN_COME = 5;
-    // Specialisation panel.
-    public static final int BTN_JOB_PREV = 6;
-    public static final int BTN_JOB_NEXT = 7;
-    public static final int BTN_WORK = 8;
-    public static final int BTN_DEPTH_DOWN = 9;
-    public static final int BTN_DEPTH_UP = 10;
-    public static final int BTN_SET_HOME = 11;
-    // Work area, set from the screen — no crafting required.
-    public static final int BTN_ZONE_HERE = 12;
-    public static final int BTN_ZONE_SHRINK = 13;
-    public static final int BTN_ZONE_GROW = 14;
-    public static final int BTN_ZONE_SHOW = 15;
 
     private final Container container;
     @Nullable private final AssistantEntity assistant;
