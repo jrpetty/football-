@@ -357,6 +357,7 @@ public class PathsGameTests {
         Kit.hold(level, cx, cz, outer + 32);
         Kit.prepare(level, cx, cz, outer + 32);
         BlockPos heart = Kit.surface(level, cx, cz);
+        Kit.generousTerrain(level, cx, cz);
         Kit.log(tag + " found " + FOLK + ": " + Kit.command(level, "village found " + FOLK + " " + cx + " " + cz));
         server.tickRateManager().setTickRate(10000.0F);
         final long[] state = { 0, 0, 0 };           // [0] 0 founding, 1 growing, 2 over; [1] the tick it began; [2] the next look
@@ -371,6 +372,7 @@ public class PathsGameTests {
                     if (v == null) { state[0] = 2; helper.fail("no village at " + heart); return; }
                     id[0] = v.id();
                     Villages.ageForTests(v.id(), Villages.Age.IRON);
+                    Kit.stockForGrowth(level, v);
                     state[0] = 1;
                     state[1] = t;
                     state[2] = t + 6000;
@@ -381,6 +383,7 @@ public class PathsGameTests {
                 state[2] = t + 12000;
                 Villages.Village v = Villages.get(id[0]);
                 if (v == null) { state[0] = 2; helper.fail("the village is gone"); return; }
+                Kit.stockForGrowth(level, v);
                 double day = (t - state[1]) / 24000.0;
                 com.jrpetty.mcassistant.entity.WayAudit.Report r = com.jrpetty.mcassistant.entity.WayAudit.check(level, v);
                 Kit.log(String.format(tag + " day %.1f: %d folk, built %s", day, Villages.headcount(v.id()), Villages.builtList(v.id())));

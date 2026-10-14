@@ -154,33 +154,7 @@ public class IntegrityGameTests {
          * how it fells and quarries): wood, stone, glass, the fittings, each up to so much.
          */
         void stock(Villages.Village v) {
-            Object[][] want = {
-                { net.minecraft.world.item.Items.OAK_LOG, 256 }, { net.minecraft.world.item.Items.OAK_PLANKS, 384 },
-                { net.minecraft.world.item.Items.COBBLESTONE, 512 }, { net.minecraft.world.item.Items.STONE_BRICKS, 192 },
-                { net.minecraft.world.item.Items.OAK_STAIRS, 192 }, { net.minecraft.world.item.Items.OAK_SLAB, 128 },
-                { net.minecraft.world.item.Items.STONE_BRICK_STAIRS, 64 }, { net.minecraft.world.item.Items.STONE_BRICK_SLAB, 64 },
-                { net.minecraft.world.item.Items.GLASS_PANE, 128 }, { net.minecraft.world.item.Items.GLASS, 32 },
-                { net.minecraft.world.item.Items.OAK_DOOR, 16 }, { net.minecraft.world.item.Items.TORCH, 64 },
-                { net.minecraft.world.item.Items.LANTERN, 32 }, { net.minecraft.world.item.Items.CHEST, 24 },
-                { net.minecraft.world.item.Items.BARREL, 24 }, { net.minecraft.world.item.Items.FURNACE, 8 },
-                { net.minecraft.world.item.Items.CRAFTING_TABLE, 8 }, { net.minecraft.world.item.Items.LADDER, 64 },
-                { net.minecraft.world.item.Items.OAK_FENCE, 64 }, { net.minecraft.world.item.Items.OAK_FENCE_GATE, 8 },
-                { net.minecraft.world.item.Items.WHITE_BED, 16 }, { net.minecraft.world.item.Items.BRICKS, 128 },
-                { net.minecraft.world.item.Items.BREAD, 128 }, { net.minecraft.world.item.Items.HAY_BLOCK, 16 },
-                { net.minecraft.world.item.Items.BOOKSHELF, 16 }, { net.minecraft.world.item.Items.LECTERN, 4 },
-                { net.minecraft.world.item.Items.WHITE_CARPET, 32 }, { net.minecraft.world.item.Items.POPPY, 32 },
-                { net.minecraft.world.item.Items.SMOOTH_STONE_SLAB, 64 }, { net.minecraft.world.item.Items.SMOKER, 4 },
-            };
-            for (Object[] w : want) {
-                net.minecraft.world.item.Item it = (net.minecraft.world.item.Item) w[0];
-                int have = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(it));
-                int need = (Integer) w[1] - have;
-                while (need > 0) {
-                    int k = Math.min(need, it.getDefaultMaxStackSize());
-                    com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(it, k));
-                    need -= k;
-                }
-            }
+            Kit.stockForGrowth(level, v);            // [paths] the one list, shared with the paths growth (PathsGameTests)
         }
 
         /** Note what was wrong with each building the first time it is seen in the register. */
