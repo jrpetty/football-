@@ -10629,3 +10629,74 @@ The game tests `RedstoneGameTests` (rs01 to rs10) check that:
   furnaces burning, counted to the trade;
 * every part comes from its real recipe out of the stores, and no observer is made without quartz;
 * left to its own day, the engineer plans a street lamp the stores can run to, walks out to it and builds it.
+
+## Tidy mining
+
+A cave the town has worked looks worked by careful people: one lit main stair, the odd marked way in or out, the ore
+that showed taken, and no forest of pillars, stray cobblestone steps or abandoned half-stairs.
+
+### Steps that come down again (Footholds)
+
+Every block a folk lays only to get somewhere (building up under itself to an ore in a cave's roof, a ledge or a
+tree; a block bridged across a gap; the steps it builds to climb out of a hole it fell into; a Nether runner's pillar
+to the glowstone) is booked as a foothold: whose it is, its town, the block, when, and what for. Once the work is done
+the folk comes down its own pillar a block at a time, top to bottom, and each block goes back into its pack (nothing
+from nothing). Called away before it was done (the night, a fight, a full pack, the bell), it leaves the blocks
+standing on the books and takes them up the next time it passes within reach; a day on, anybody of its town passing
+takes them up. Only a block a folk laid itself, and only while it is still that block, ever comes down: never the
+cave's own rock, another's work, a block somebody stands on, or one built on since. A folk never takes up a step that
+would leave it stranded on a ledge, and never drops more than three or into water or lava coming down: such a step
+is kept as its way down and booked as a kept route. A folk that climbed out of a hole steps off its steps onto the
+ground beside and takes them up from there.
+
+### Ways in and out, shared and remembered (MineStairs)
+
+The town remembers every way into the rock and out of it: each miner's plot keeps one main staircase, and every way a
+folk cut to get out from below, and every foothold kept as a way down, is kept too, with the day it was last walked.
+A folk lost underground tries the known ways nearest it first (up to forty blocks off, each checked for a walk onto
+it) before it cuts a way of its own, and a way it cuts is booked for the next one lost there. A way out, or a kept way
+down, that nobody has walked for five days is let go (its steps no longer spared, a kept pillar handed back to be
+taken down); a mine's main stairs are kept for good. A known way that is broken is mended as it is climbed.
+
+### One staircase to a plot
+
+A village miner walks to the head of its plot's stairs (not just the middle of the plot) and goes down them step for
+step, mending a step that was filled in or had its floor taken, and cuts on only below where they end. Runs that began
+a block or two off the last run's head used to cut a fresh staircase beside the old one every time.
+
+### Every ore that shows, and none through the rock (OreSight, OreNotes)
+
+Folk find ore the way a player does. An ore counts only when it shows (a face open to the air, or a cave's water or
+lava) and the folk has a clear line to it from its eyes within six blocks (a ray from its eyes to the ore or to an
+open face of it). A vein is followed as it is dug: each block taken lays the next bare. Nothing is found by searching
+the rock: not by the miner, the cave team, or a hand sent for iron or coal.
+
+- **The miner.** In open ground (a cave, a ravine, an old working) it looks round each new spot before it moves on, a
+  slice a tick, and takes every ore it sees that its patch allows and its pick will take: in the walls, the floor and
+  the roof, building itself up to one out of reach and taking the steps down after, and whole veins (no small budget
+  left half a seam in the wall any more). In its own cut tunnel the dig's look at each fresh face does the same. On
+  its way up with a full pack it notes the ore it passes, and whoever next works within sight of a note takes it.
+- **The cave team.** Each member looks round as it goes; every ore that shows goes on the cave's list and every vein
+  on the list is worked in the end, whatever the trip was sent for (the most wanted first). Ore in the roof out of
+  reach is built up to on steps of the team's cobblestone, and the steps come down after. A vein with no face open
+  stays in the rock.
+- **The record.** OreNotes keeps the ore seen and left (out of reach, the way up, the run over), and for each stretch
+  of ground how much ore was taken from it and when it was last swept, so the town knows a stretch is worked out.
+
+The rules stand: never under the town, never a step of a staircase or a route's supports, never into lava or water;
+a cave is never dug out wholesale (only its ore), and the swept passages are lit.
+
+### Cost
+
+A miner's look round reads at most 512 blocks and casts at most four rays a tick, only while it is working in open
+ground; in a cut tunnel nothing more than the dig's own look at the faces it opens. A folk's look for its own
+leftovers is once a second and reads only the chunks within reach of it (an index by chunk), and stops at once when
+the world has none on its books. The known-route look is a walk over the town's staircases once per folk lost below.
+
+### Tests
+
+TidyMinesGameTests (x 1760000-1779999): a folk builds up to an ore seven high and every block comes down into its pack;
+cut short mid-climb, its steps wait and come down the next time it is by them; two runs to the same depth keep one
+staircase; a known way out twenty blocks off is walked to rather than a new one cut; a way cut is booked and the next
+folk uses it; a folk buried in a hole climbs out and leaves nothing behind; a cave section is left with no ore showing
+(the roof's ore built up to) and the ore hidden in the rock left where it is.

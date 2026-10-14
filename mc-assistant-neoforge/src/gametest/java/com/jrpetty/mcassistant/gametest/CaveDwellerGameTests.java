@@ -529,8 +529,9 @@ public class CaveDwellerGameTests {
     /**
      * A team of two (the one at level six leading) into the test's cave, which nobody has mapped (a day's plan), with a
      * second iron vein hidden two blocks behind the east wall. They keep together the whole way (never more than ten
-     * blocks apart, out or in); the hidden vein is found and mined; the cave's list ends with every vein mined but the
-     * obsidian, which waits for a better pick; home the same day, the ore in the storehouse.
+     * blocks apart, out or in); [mines] the hidden vein, with no face open to the cave, is left in the rock (nobody sees
+     * through it); the cave's list ends with every vein mined but the obsidian, which waits for a better pick; home the
+     * same day, the ore in the storehouse.
      */
     @GameTest(template = EMPTY, timeoutTicks = 7200, batch = "cd05_team_trip")
     public static void cd05_team_trip(GameTestHelper helper) {
@@ -583,12 +584,12 @@ public class CaveDwellerGameTests {
                 + "); torches set " + p.torches() + " of " + p.drawn() + " drawn");
             for (String line : CaveDwellers.page(level, t.v())) Kit.log("cd05 page: " + line);
             helper.assertTrue(spread[0] <= 10.0, "together the whole way: never more than ten blocks apart: " + spread[0]);
-            helper.assertTrue(hiddenGone, "the vein hidden two blocks behind the wall found and mined");
+            helper.assertTrue(!hiddenGone, "[mines] the vein hidden two blocks behind the wall is not seen through the rock: left");
             helper.assertTrue(veins.contains("obsidian 2 waiting"), "the obsidian on the list, waiting for a better pick: " + veins);
             boolean allMined = !veins.isEmpty();
             for (String v : veins.split("; ")) if (!v.startsWith("obsidian") && !v.endsWith(" mined")) allMined = false;
-            helper.assertTrue(allMined && veins.split("; ").length >= 6, "every other vein on the list mined (six veins): " + veins);
-            helper.assertTrue(raw >= 6, "the iron in the storehouse, the hidden vein's too: +" + raw);
+            helper.assertTrue(allMined && veins.split("; ").length >= 5, "every other vein on the list mined (five veins that show): " + veins);
+            helper.assertTrue(raw >= 5, "the iron in the storehouse: +" + raw);
             helper.assertTrue(day == day0, "home the same day");
             helper.succeed();
         });

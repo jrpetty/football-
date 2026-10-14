@@ -3581,6 +3581,28 @@ def redstone_stage(r, look, cx, cz):
     say("alive after the redstone works: %s" % client_alive())
 
 
+def mines_stage(r, look, cx, cz):
+    """[mines] The town's worked mine, as a careful town leaves it: from above its first face, down the one main
+    stair (lit, the same stair every run), and from the stair's foot along the gallery: no forest of pillars, no stray
+    cobble steps, no half-stairs, the ore that showed taken. Not wired in: call it from main() on a grown town."""
+    out = r.cmd("execute positioned %d 100 %d run village mine" % (cx, cz))
+    say("mines: " + out[:400])
+    m = re.search(r"first face at (-?\d+), (-?\d+)", out)
+    if not m:
+        say("mines: no mine yet")
+        return
+    mx, mz = int(m.group(1)), int(m.group(2))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("tp %s %d %d %d" % (USER, mx + 12, 140, mz + 12))
+    time.sleep(10)                                     # the mine's chunks arrive
+    hy = ground_height(r, mx, mz)
+    look("40-mines-from-above", mx + 9.5, hy + 14, mz + 9.5, mx + 0.5, hy - 2, mz + 0.5, wait=8)
+    look("40-mines-the-stair", mx + 0.5, hy + 2, mz + 0.5, mx + 0.5, hy - 8, mz - 6.5, wait=8)
+    look("40-mines-below", mx + 0.5, hy - 10, mz + 0.5, mx + 6.5, hy - 12, mz + 0.5, wait=8)
+    say("alive after the mines: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
