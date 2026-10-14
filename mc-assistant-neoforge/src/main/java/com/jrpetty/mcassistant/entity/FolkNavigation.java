@@ -56,6 +56,13 @@ public class FolkNavigation extends GroundPathNavigation {
     private long deferredAt = Long.MIN_VALUE;
     private int deferredRun;
 
+    private static boolean budgetInTests;
+
+    /** Tests: the budget in force on the test server too (the perf probes), or not. */
+    public static void budgetForTests(boolean on) {
+        budgetInTests = on;
+    }
+
     /** How many folk path searches have been put off a tick for want of budget since the server started. */
     public static long deferredInAll() {
         return deferredInAll;
@@ -76,6 +83,9 @@ public class FolkNavigation extends GroundPathNavigation {
         }
         long budget = com.jrpetty.mcassistant.AssistantConfig.pathBudgetMs() * 1_000_000L;
         if (budget <= 0 || spentNanos < budget) return true;
+        // On the game tests' server, only when a test asks: a search put off by a busy machine's clock would make
+        // the other features' tests depend on how busy it is.
+        if (this.level.getServer() instanceof net.minecraft.gametest.framework.GameTestServer && !budgetInTests) return true;
         if (this.path != null && !this.path.isDone() && targets.contains(getTargetPos())) return true;
         if (deferredAt == tick - 1 && deferredRun >= MOST_DEFERRED_TICKS) return true;
         if (this.level.getNearestPlayer(this.mob, WATCHED) != null) return true;

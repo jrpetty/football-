@@ -137,6 +137,7 @@ public final class TownLod {
     public static void reset() {
         TOWNS.clear();
         asleep = 0;
+        liveInTests = false;
         dirtyParked.clear();
         serverMean = null;
         serverMeanAt = Long.MIN_VALUE;
@@ -163,6 +164,20 @@ public final class TownLod {
         if (own.days() >= MIN_OWN_DAYS) return own;
         Rates mean = serverMean();
         return mean.days() > 0 ? mean : own;
+    }
+
+    /** The game tests' server runs with nobody in it: every town is held awake there unless a test asks. */
+    private static boolean liveInTests;
+
+    /** Is the players' reckoning in force (the config's townLod, and on a test server only when a test asks)? */
+    private static boolean live(MinecraftServer server) {
+        if (!AssistantConfig.townLod()) return false;
+        return liveInTests || !(server instanceof net.minecraft.gametest.framework.GameTestServer);
+    }
+
+    /** Tests: the players' reckoning in force on the test server too (the perf probes), or not. */
+    public static void liveForTests(boolean on) {
+        liveInTests = on;
     }
 
     /** Tests: hold every town at this level (null: back to the players' reckoning), at once. */
@@ -230,7 +245,7 @@ public final class TownLod {
         if (level == null) return;
         Town t = town(v.id());
         long time = level.getGameTime();
-        Lod want = forced != null ? forced : !AssistantConfig.townLod() ? Lod.FULL : reckon(level, v);
+        Lod want = forced != null ? forced : !live(server) ? Lod.FULL : reckon(level, v);
         if (want != Lod.AWAY) {
             t.lastNear = time;
             Lod was = t.lod;
@@ -239,11 +254,15 @@ public final class TownLod {
             learn(level, v, t, time);
             return;
         }
+        if (t.lod == null) {
+            // First seen (a world just opened, the player perhaps not in it yet): it waits like any other.
+            t.lod = Lod.FULL;
+            t.lastNear = time;
+        }
         if (t.lod != Lod.AWAY) {
-            // A town first seen with nobody near sleeps at once (a world just opened); one somebody has just left
-            // waits a while, so a player stepping out and back does not wake it again and again.
-            boolean firstLook = t.lod == null;
-            if (!now && !firstLook && time - t.lastNear < AssistantConfig.townLodAwaySeconds() * 20L) return;
+            // A town somebody has just left waits a while, so a player stepping out and back does not wake it again
+            // and again.
+            if (!now && time - t.lastNear < AssistantConfig.townLodAwaySeconds() * 20L) return;
             if (Founding.near(level, v.centre(), FOUNDING_NEAR)) return;      // its founding holds its own ground
             sleep(level, v, t);
             return;
