@@ -1040,6 +1040,7 @@ public final class Battles {
             for (Armies.Fighter f : us.fighters) {
                 if (!f.crossbow() || f.down() || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
                 company++;
+                Armies.arm(e, f);                                      // its crossbow in its hand to span
                 if (!Armies.spanning(e, f, EVERY)) {
                     Armies.outOfArrows(e, f);
                     continue;
@@ -1113,6 +1114,7 @@ public final class Battles {
             int shot = 0;
             for (Armies.Fighter f : side[i].fighters) {
                 if (f.role != BattleModel.Role.ARCHER || f.crossbow || f.down() || !(level.getEntity(f.id) instanceof VillageFolkEntity archer)) continue;
+                Armies.arm(archer, f);                                 // [war-bows] its bow in its hand to loose
                 Entity m = marks.get(level.getRandom().nextInt(marks.size()));
                 if (Armies.loose(level, archer, m.getX(), m.getY(), m.getZ(), 5.0F)) {
                     shot++;

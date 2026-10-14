@@ -161,4 +161,21 @@ class BattleModelTest {
             }
         }
     }
+
+    @Test
+    @DisplayName("[war-bows] the missile arm: a Captain's liking, a mix by turns, a third of the arrows gathered, the words")
+    void missileArm() {
+        assertEquals(BattleModel.Ranged.CROSSBOWS, BattleModel.Ranged.parse(" Crossbows "));
+        assertNull(BattleModel.Ranged.parse("slings"));
+        for (int k = 0; k < 6; k++) {
+            assertTrue(BattleModel.Ranged.CROSSBOWS.crossbowFor(k) && !BattleModel.Ranged.BOWS.crossbowFor(k), "all of one kind");
+            assertEquals(k % 2 == 1, BattleModel.Ranged.MIX.crossbowFor(k), "a mix by turns");
+        }
+        assertNotNull(BattleModel.Ranged.liking(-7), "any nature has a liking");
+        assertEquals(10, BattleModel.recovered(31));
+        assertEquals(0, BattleModel.recovered(-4));
+        assertEquals("12 bows, 8 crossbows", BattleModel.missileWords(12, 8));
+        assertEquals("1 crossbow", BattleModel.missileWords(0, 1));
+        assertEquals("no bows", BattleModel.missileWords(0, 0));
+    }
 }

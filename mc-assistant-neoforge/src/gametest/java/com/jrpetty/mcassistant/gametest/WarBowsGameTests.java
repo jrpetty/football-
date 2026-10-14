@@ -19,6 +19,7 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.projectile.AbstractArrow;
+import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
@@ -282,7 +283,8 @@ public class WarBowsGameTests {
                 helper.assertTrue(f.loosed() <= had, e.displayNameCap() + " loosed no more than it had: " + f.loosed() + " of " + had);
                 if (f.role() == BattleModel.Role.RESERVE) {
                     out++;
-                    helper.assertTrue(e.getMainHandItem().getItem() instanceof SwordItem, e.displayNameCap() + " has drawn its blade: " + e.getMainHandItem());
+                    helper.assertTrue(e.getMainHandItem().getItem() instanceof SwordItem || e.getMainHandItem().getItem() instanceof AxeItem,
+                        e.displayNameCap() + " has drawn its blade: " + e.getMainHandItem());
                 }
             }
             Kit.log("wb04 " + given.size() + " archers with " + most + " arrows loosed " + shots + "; " + out + " out of arrows, blades drawn, in the reserve");

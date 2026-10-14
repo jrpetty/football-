@@ -364,6 +364,16 @@ public final class Armies {
         return !FIGHTERS.isEmpty() && e instanceof VillageFolkEntity && FIGHTERS.containsKey(e.getUUID());
     }
 
+    /**
+     * [war-bows] An archer in an army's ranks: its bow or crossbow is the army's to put in its hand (the folk's own
+     * fighting does not swap it for a blade when a stray arrow finds it; AssistantEntity.combatTick).
+     */
+    public static boolean archerInLine(net.minecraft.world.entity.Entity e) {
+        if (FIGHTERS.isEmpty() || !(e instanceof VillageFolkEntity)) return false;
+        Fighter x = FIGHTERS.get(e.getUUID());
+        return x != null && x.role == BattleModel.Role.ARCHER && !x.down();
+    }
+
     /** Is any army in the field? */
     public static boolean any() {
         return !FIGHTERS.isEmpty();
@@ -971,6 +981,7 @@ public final class Armies {
             if (f.peekJob() != null) f.clearQueue();
             f.showWar(flags(x), x.army == null ? ItemStack.EMPTY : x.army.surcoat);
             f.hobbyNow = doing(x);
+            if (x.role == BattleModel.Role.ARCHER) arm(f, x);        // [war-bows] its bow or crossbow back in its hand, whatever moved it
             if (x.rank == Rank.BEARER && !(f.getMainHandItem().getItem() instanceof BannerItem)) {   // its standard back in its hand
                 int i = FolkCombat.slot(f, s -> s.getItem() instanceof BannerItem);
                 if (i >= 0) FolkCombat.swap(f, i);

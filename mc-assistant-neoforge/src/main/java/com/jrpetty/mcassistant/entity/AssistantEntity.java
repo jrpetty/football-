@@ -5311,6 +5311,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     /** Pick the right weapon for the current fight. */
     private void combatTick() {
         if (FolkCombat.busy(this)) return;                        // [war] the axe in hand for a raised shield, a moment yet
+        if (Armies.archerInLine(this)) return;                    // [war-bows] an archer in the ranks keeps the bow its army gave it
         LivingEntity t = getTarget();
         if (t == null || !t.isAlive()) return;
         if (wantsRanged()) {

@@ -6558,6 +6558,39 @@ and the war's books are not told it a second time.
 open air, stepping back or up from inside the ground or behind a hill, or along its line for a view underground.
 Every smoke shot asks first.
 
+## Bows and crossbows in the wars [war-bows]
+
+**Two missile arms.** An army's archers carry longbows or crossbows, and each fights its own way. **Bowmen** draw
+together on the order (the drawn-bow pose a beat before the volley) and loose high, arcing volleys every three seconds:
+quick, but a light arrow (two or three damage at the end of its arc). **Crossbowmen** (from the Iron Age: the fletcher
+makes crossbows of sticks, string, an iron ingot and a tripwire hook) form a company of two ranks before the line. The
+front rank, spanned, looses flat and hard by the crossbow's own shot (CrossbowItem.performShooting: the crossbow's power,
+about seven damage; Piercing and Multishot work as on any crossbow) on "Crossbows, loose!"; then on "Reload!" it steps
+back and kneels to span (five seconds; Quick Charge shortens it), the crossbow's own loading pose and sounds, while the
+spanned rank behind steps up (the counter-march). Once the lines close the company falls back behind the shields.
+
+**The mix** follows the Captain's liking (one in three favours bows, crossbows or a mix), or the town's decree
+(`/village admin army ranged <bows|crossbows|mix>`, Ledger `war.ranged`). At the muster the missile arm is made up to a
+third of the army (a half for a Captain of the winged line or the skirmish screen) out of the armoury, then the stores,
+to the line's weakest without a shield; a skilled archer (a veteran, or ten levels at the watch) of an Iron Age town
+takes the best enchanted bow (Power, Punch) or crossbow (Piercing, Quick Charge, Multishot) the town holds. The home
+guard is drawn from the line first, so the field army keeps its missiles. The muster and the war page say it:
+"12 bows, 8 crossbows". On a war footing the fletcher makes crossbows ahead of the war (one for every six of the militia,
+every four under a Captain who favours them; none for one who likes only bows).
+
+**Ammunition is real.** A quiver of sixteen arrows from the stores each; every arrow loosed is one out of a pack, counted
+by the battle. An archer whose quiver is empty draws its blade and joins the reserve. When the field is held, the victor
+gathers a third of all the arrows loosed on it (both sides') into its supply, to go home to its stores. Nothing is made
+out of nothing.
+
+**Walls and players.** In an assault the defenders' crossbows man the town wall's posts (CastleWall), nearest the gate,
+and loose from the parapet; in a raid an Iron Age town's guards take crossbows from the stores for the wall. A player
+who joins a side is issued a crossbow or a bow and a quiver from the armoury (else the stores) if it has none. The admin
+kit (`army kit <tier>`) gives every fourth fighter a missile with arrows: crossbows from the iron tier, as the town likes.
+
+**Its cost:** nothing per tick past the battle's own beat (every half second): a reload counter per crossbowman, and a
+volley's shots. Tests: WarBowsGameTests (wb01-wb06), BattleModelTest.missileArm.
+
 ## Vassal towns
 
 A town beaten in a war fought for lordship over it, or whose gate was taken by a great and hard town, becomes
