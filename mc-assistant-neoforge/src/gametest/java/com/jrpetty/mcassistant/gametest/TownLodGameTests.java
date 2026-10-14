@@ -202,9 +202,15 @@ public class TownLodGameTests {
                     Kit.log("lod03 walks travelled out of sight in a minute: " + travelled);
                     helper.assertTrue(travelled > 0, "out of sight, folk travel their walks");
                     for (AssistantEntity a : Villages.folkOf(id)) {
-                        BlockPos p = a.blockPosition();
-                        helper.assertTrue(level.getBlockState(p).getCollisionShape(level, p).isEmpty() && !a.isInWaterOrBubble(),
-                            a.getAssistantName() + " stands clear and dry at " + p.toShortString());
+                        // Its body in no block (feet on farmland or a path sit a little into the block below them);
+                        // one sat on a bench or a seat is sat in it, as it should be.
+                        if (a.isPassenger() || a.getPose() == net.minecraft.world.entity.Pose.SITTING || level.getBlockState(a.blockPosition()).getBlock() instanceof net.minecraft.world.level.block.StairBlock
+                                || level.getBlockState(a.blockPosition()).getBlock() instanceof net.minecraft.world.level.block.SlabBlock) continue;
+                        helper.assertTrue(level.noCollision(a, a.getBoundingBox().deflate(0.05)) && !a.isInWaterOrBubble(),
+                            a.getAssistantName() + " stands clear and dry at " + a.position() + " (feet in "
+                                + level.getBlockState(a.blockPosition()) + ", under it " + level.getBlockState(a.blockPosition().below())
+                                + ", travelling " + (a.getNavigation() instanceof com.jrpetty.mcassistant.entity.FolkNavigation n && n.travelling())
+                                + ", on ground " + a.onGround() + ", moving " + a.getDeltaMovement() + ")");
                     }
                     you[0] = helper.makeMockServerPlayerInLevel();
                     net.neoforged.neoforge.network.registration.NetworkRegistry.configureMockConnection(you[0].connection.getConnection());
