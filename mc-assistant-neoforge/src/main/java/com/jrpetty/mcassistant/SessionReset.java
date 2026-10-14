@@ -67,6 +67,7 @@ public final class SessionReset {
         Town.resetAll();
         Requests.resetAll();
         ChunkLoad.reset();
+        com.jrpetty.mcassistant.entity.TownLod.reset();
         com.jrpetty.mcassistant.entity.Reach.reset();
     }
 }

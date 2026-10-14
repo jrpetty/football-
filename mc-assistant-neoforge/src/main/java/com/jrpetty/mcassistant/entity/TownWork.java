@@ -269,6 +269,7 @@ public final class TownWork {
 
     /** Take so many of a thing out of the village's stores; all or nothing. */
     static boolean take(ServerLevel level, Villages.Village v, Predicate<ItemStack> what, int n) {
+        if (TownLod.away(v.id())) return TownLod.take(v.id(), what, n);      // [scale] out of a sleeping town's kept stores
         boolean before = ZoneChests.askAs(true);
         try {
             List<ZoneChests.Found> stores = ZoneChests.around(level, v.centre(), Villages.storesRadius(v.id()), 32);

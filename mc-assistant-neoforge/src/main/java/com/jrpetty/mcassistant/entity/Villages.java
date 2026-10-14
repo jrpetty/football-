@@ -503,6 +503,7 @@ public final class Villages {
         STOCK_TICK.clear();
         NO_WATER.clear();                   // [sf] the water no fisher could fish
         STEADY.clear();                     // [sf] the stores' last good morning reading
+        TownLod.reset();                    // [scale] every town's level of detail, and a test's forced level
     }
 
     /** Every settlement this session knows about. */

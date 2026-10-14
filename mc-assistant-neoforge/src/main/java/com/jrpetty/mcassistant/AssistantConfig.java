@@ -65,6 +65,11 @@ public final class AssistantConfig {
     public static final ModConfigSpec.BooleanValue VILLAGE_WATCH_POLICES_PLAYERS;
     public static final ModConfigSpec.BooleanValue VILLAGE_PLAYER_JAIL;
     public static final ModConfigSpec.IntValue VILLAGE_PLAYER_JAIL_SECONDS;
+    /** [scale] Level of detail for towns (entity/TownLod) and the server's tick budget (entity/TownScheduler). */
+    public static final ModConfigSpec.BooleanValue TOWN_LOD;
+    public static final ModConfigSpec.IntValue TOWN_LOD_FULL_RANGE;
+    public static final ModConfigSpec.IntValue TOWN_LOD_AWAY_SECONDS;
+    public static final ModConfigSpec.IntValue TOWN_LOD_STEP_SECONDS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -288,6 +293,27 @@ public final class AssistantConfig {
             .defineInRange("villagePlayerJailSeconds", 120, 10, 1200);
         b.pop();
 
+        b.comment("How much of the world's towns the server simulates in full (many big towns).")
+         .push("performance");
+        TOWN_LOD = b.comment(
+                "Level of detail for towns. A town with no player near goes to sleep: the chunks it keeps",
+                "loaded for its work are let go and it is simulated by a step every few seconds, at the rates",
+                "it was measured to work at while somebody was there (its stores, its treasury, its children).",
+                "It goes on trading and is at war as before. When a player comes near it wakes, and what it",
+                "made while it slept is in its stores. Off, every town keeps its chunks loaded and ticks in full.")
+            .define("townLod", true);
+        TOWN_LOD_FULL_RANGE = b.comment(
+                "How near a town's ground (in blocks) a player must be for it to run in full; within view",
+                "distance it still runs, its town-wide planners at a slower beat.")
+            .defineInRange("townLodFullRange", 128, 32, 1024);
+        TOWN_LOD_AWAY_SECONDS = b.comment(
+                "How long a town waits with nobody near before it goes to sleep, in seconds.")
+            .defineInRange("townLodAwaySeconds", 60, 5, 3600);
+        TOWN_LOD_STEP_SECONDS = b.comment(
+                "How often a sleeping town's step runs, in seconds.")
+            .defineInRange("townLodStepSeconds", 5, 1, 60);
+        b.pop();
+
         SPEC = b.build();
     }
 
@@ -342,6 +368,10 @@ public final class AssistantConfig {
     public static boolean villageWatchPolicesPlayers() { return read(VILLAGE_WATCH_POLICES_PLAYERS, true); }   // [police]
     public static boolean villagePlayerJail() { return read(VILLAGE_PLAYER_JAIL, false); }
     public static int villagePlayerJailSeconds() { return read(VILLAGE_PLAYER_JAIL_SECONDS, 120); }
+    public static boolean townLod() { return read(TOWN_LOD, true); }                          // [scale]
+    public static int townLodFullRange() { return read(TOWN_LOD_FULL_RANGE, 128); }
+    public static int townLodAwaySeconds() { return read(TOWN_LOD_AWAY_SECONDS, 60); }
+    public static int townLodStepSeconds() { return read(TOWN_LOD_STEP_SECONDS, 5); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */
