@@ -3,6 +3,7 @@ package com.jrpetty.mcassistant;
 import com.jrpetty.mcassistant.entity.TradeWagon;
 import com.jrpetty.mcassistant.entity.Villages;
 import com.jrpetty.mcassistant.entity.WagonStage;
+import com.jrpetty.mcassistant.entity.WagonManifest;
 import com.jrpetty.mcassistant.entity.Wagons;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -48,7 +49,7 @@ public final class WagonCommands {
         out.add(Villages.name(v.id()) + ": " + (Wagons.owned(v.id()) == null ? "no wagon" : Wagons.owned(v.id()).label) + " — "
             + Wagons.stateForTests(level, v.id()));
         TradeWagon w = Wagons.wagonForTests(level, v.id());
-        if (w != null) out.addAll(Wagons.manifestText(level, w));
+        if (w != null) out.addAll(WagonManifest.text(level, w));
         return say(ctx, out);
     }
 

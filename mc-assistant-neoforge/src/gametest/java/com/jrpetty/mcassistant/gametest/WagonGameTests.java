@@ -9,6 +9,7 @@ import com.jrpetty.mcassistant.entity.TradeWagon;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
 import com.jrpetty.mcassistant.entity.Villages;
 import com.jrpetty.mcassistant.entity.WagonKind;
+import com.jrpetty.mcassistant.entity.WagonManifest;
 import com.jrpetty.mcassistant.entity.Wagons;
 import com.jrpetty.mcassistant.entity.ZoneChests;
 import com.jrpetty.mcassistant.village.Ledger;
@@ -271,7 +272,7 @@ public class WagonGameTests {
             if (helper.getTick() % 10 != 0) return;
             TradeWagon w = Wagons.wagonForTests(level, p.a().id());
             if (w == null || !"ROAD".equals(Wagons.phaseForTests(w))) return;
-            List<String> m = Wagons.manifestText(level, w);
+            List<String> m = WagonManifest.text(level, w);
             String all = String.join(" | ", m);
             Kit.log("wg04 the manifest: " + all);
             String from = Villages.name(p.a().id()), to = Villages.name(p.b().id());

@@ -207,7 +207,7 @@ public class TradeWagon extends Entity {
 
     /** The load changed: its summary for the client worked out again (only when it really differs). */
     void cargoChanged() {
-        String sum = Wagons.summary(cargo);
+        String sum = WagonManifest.summary(cargo);
         if (!sum.equals(entityData.get(CARGO))) entityData.set(CARGO, sum);
     }
 
@@ -428,7 +428,7 @@ public class TradeWagon extends Entity {
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
         if (hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
-        if (!level().isClientSide && level() instanceof ServerLevel sl) Wagons.interact(sl, this, player);
+        if (!level().isClientSide && level() instanceof ServerLevel sl) WagonManifest.interact(sl, this, player);
         return InteractionResult.sidedSuccess(level().isClientSide);
     }
 
