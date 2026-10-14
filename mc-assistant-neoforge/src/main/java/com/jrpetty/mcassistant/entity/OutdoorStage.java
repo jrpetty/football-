@@ -171,13 +171,13 @@ public final class OutdoorStage {
     }
 
     @Nullable
-    private static BlockPos part(String structure, BlockPos anchor, BuildGoal.Part part) {
+    static BlockPos part(String structure, BlockPos anchor, BuildGoal.Part part) {
         for (BuildGoal.Placement p : BuildGoal.plan(structure, anchor, Direction.NORTH, 13)) if (p.part() == part) return p.pos();
         return null;
     }
 
     @Nullable
-    private static VillageFolkEntity standIn(ServerLevel level, BlockPos pos, StationTask trade, String name, float yaw) {
+    static VillageFolkEntity standIn(ServerLevel level, BlockPos pos, StationTask trade, String name, float yaw) {
         VillageFolkEntity f = McAssistantMod.VILLAGE_FOLK.get().create(level);
         if (f == null) return null;
         int top = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos.getX(), pos.getZ());

@@ -236,6 +236,7 @@ public final class TownPlan {
             case "apiary" -> "edge";                  // [roles-b] the bees' garden, out at the edge by the meadows (Apiary)
             case "enchanter" -> "civic";              // [roles-b] the enchanter's tower, among the trades (CraftScale)
             case "huntlodge", "barn" -> "edge";       // [roles-d] the hunter's lodge toward the wild, the barn out by the pen
+            case "wheelwright" -> "civic";            // [roles-e] the wheelwright's shed, among the trades by the yard
             default -> "home";
         };
     }

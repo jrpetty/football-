@@ -2093,7 +2093,8 @@ public final class Interviews {
         if (Villages.folkOf(id).size() < 4 || coming(id).size() >= 2) return;
         InterviewBook.Town town = InterviewBook.town(id);
         List<Post> posts = new ArrayList<>(List.of(Post.of("constable"), Post.of("caveleader"), Post.of("auctioneer"),
-            Post.of(Sexton.POST)));                                                         // [roles-a] the chapel's keeper
+            Post.of(Sexton.POST),                                                           // [roles-a] the chapel's keeper
+            Post.of(Wheelwrights.POST), Post.of(Carters.POST), Post.of(TownPlanner.POST)));  // [roles-e] the wagons, the road, the plans
         for (StationTask t : StationTask.values()) if (t != StationTask.NONE && Lessons.of(t) != null) posts.add(Post.master(t));
         for (Post p : posts) {
             if (p == null || !InterviewPosts.stands(level, v, p) || pending(id, p.key()) != null) continue;

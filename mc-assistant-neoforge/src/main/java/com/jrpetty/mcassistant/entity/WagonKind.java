@@ -12,7 +12,7 @@ import java.util.function.Predicate;
  * [wagons] The three wagons a town builds as it grows, and what each is: a handcart the driver pulls in the Wood Age,
  * an open wagon with side boards behind a draught animal from the Stone Age, and from the Iron Age a bigger covered
  * wagon under a canvas in the town's colours with iron tyres and two lanterns. Each is made at the bench from real
- * makings out of the stores (Wagons.build). The client draws each from its own model (client/TradeWagonModel).
+ * makings out of the stores ([roles-e] by the wheelwright, as a work order: Wagons.build, Wheelwrights). The client draws each from its own model (client/TradeWagonModel).
  */
 public enum WagonKind {
     HANDCART("handcart", Villages.Age.WOOD, 9, 0.11, false, false, 0, 16.0F,

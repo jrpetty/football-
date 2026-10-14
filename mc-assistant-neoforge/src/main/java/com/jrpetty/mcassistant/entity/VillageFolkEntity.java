@@ -550,6 +550,10 @@ public class VillageFolkEntity extends AssistantEntity {
         // Called to the town's own work (TownJobs): to the spot, and at it.
         if (!withAPlayer && tickCount % 4 == 3 && level() instanceof net.minecraft.server.level.ServerLevel works
                 && TownJobs.hold(this, works)) return;
+        // [roles-e] Called away from its trade for a stint of its post's work (PostStints): the wheelwright to its bench or
+        // the wagon's side, the town planner to the hall's table.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel posts
+                && (tickCount % 4 == 1 ? PostStints.hold(this, posts) : PostStints.busy(this))) return;
         // The town's calendar (TownCalendar): the ringer to the town bell; to the midday meal at the noon bell,
         // home at the dusk bell; round to a friend with a birthday present.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel calendar
@@ -2831,6 +2835,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (Health.laidUp(this)) return "laid up";
         if (Assemblies.attending(this)) return "at a gathering";
         if (TownJobs.busy(this)) return "on the town's work";
+        if (PostStints.busy(this)) return "at its post's work";                  // [roles-e]
         if (School.teaching(this)) return "teaching";
         if (id != null && Raids.underAlarm(id)) return "the alarm";
         if (OutdoorWeather.keepsIn(this)) return "the rain";                 // [roles-d]

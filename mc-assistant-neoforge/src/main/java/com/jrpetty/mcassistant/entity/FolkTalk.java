@@ -126,6 +126,8 @@ public final class FolkTalk {
         // crossing, a golem, a lamp (OutdoorTalk).
         String outdoor = typed ? OutdoorTalk.talk(f, p, text) : null;
         if (outdoor != null) return manner(f, outdoor);
+        String roads = typed ? RoadPosts.talk(f, p, text) : null;          // [roles-e] the wagon, its road, the town's plans
+        if (roads != null) return manner(f, roads);
         String lower = text.toLowerCase(Locale.ROOT);
         if (!text.isEmpty() && (lower.contains("sorry") || lower.contains("apolog"))) {
             return manner(f, apology(f, p, op, day));
@@ -354,6 +356,7 @@ public final class FolkTalk {
         if (post != Hospitality.Role.NONE && post != Hospitality.Role.LINE_COOK) sb.append(" post=").append(post.name());
         if (village != null && !f.isBaby() && Inn.inn(village) != null && Inn.keeper(village) == f) sb.append(" inn");
         if (Windmill.isMiller(f)) sb.append(" miller");
+        if (!f.isBaby()) sb.append(RoadPosts.contextFlags(f));                // [roles-e] wheelwright, carter, planner
         return sb.toString();
     }
 
@@ -472,6 +475,7 @@ public final class FolkTalk {
                 + (couriers == 1 ? " courier" : " couriers") : ""));
         }
         line(sb, "Wage", JobWorth.cardLine(f));            // [econ-wages] what it is paid and why: its job's worth here
+        line(sb, "Post", RoadPosts.cardLine(f));           // [roles-e] the wheelwright, the carter, the town planner
         // Its schooling (a child: what it is learning and how far; the teacher: its school).
         line(sb, f.isBaby() ? "School" : "Teaches", School.cardLine(f));
         String levels = f.tradeLevels();
@@ -832,6 +836,8 @@ public final class FolkTalk {
         if (about != null) return cap(about) + ".";
         String tools = FieldTools.doing(f);                     // [fields] filling its can, round its traps, at the nesting box
         if (tools != null) return cap(tools) + ".";
+        String post = PostStints.doing(f);                      // [roles-e] at its post's work: the wagon, the town's plans
+        if (post != null) return cap(post) + ".";
         String hobby = f.hobbyNow();
         if (hobby != null) return pick(r, "My own time now — ", "Day's work's done, so ") + hobby + ".";
         if (f.offWorkNow() && f.onShift()) return pick(r, "Taking a breather. ", "A short break. ") + "Back to work in a bit.";

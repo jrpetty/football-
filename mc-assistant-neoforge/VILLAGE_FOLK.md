@@ -11920,3 +11920,77 @@ any wheat it was carrying still in its pack.
 
 Smoke: `roles_c_stage` in tools/realworld/smoke.py (`/village hospitality stage`). Tests: HospitalityGameTests (ho01 to
 ho07).
+## Roads, wagons and the watch's ranks [roles-e]
+
+The town's wagon is built and mended by a wheelwright and driven by a carter; the watch has its sergeants in peacetime,
+the same ranks it takes into the field; and a town with a hall has a planner who sets out what is to be built next.
+These are posts, not trades: the holder keeps its own trade and gives the post part of its day, and each is chosen at
+interview (reckoned from the best suited until one is held), paid, dressed and in the talk menu.
+
+### The wheelwright (Wheelwrights)
+- **Who.** A town with a wagon, or one on the bench, keeps a wheelwright: the best at wood and iron (a hand at the
+  shop's bench, a woodcutter, a smith; a hard worker), never the elder or the watch. Paid an office's allowance; a
+  leather jacket and a flat cap.
+- **A wagon is a work order.** When a trading town wants a wagon (its first, or a better one for its age) and its stores
+  hold every making, they are set by out of the stores at once and held in the order. The wheelwright builds it at the
+  bench of its shed by day, a stint of a couple of minutes at a time and back to its trade between: a handcart in about
+  two visits, an open wagon in three, a covered wagon in four. Done, the old wagon is broken up for its planks and the new
+  one stands in the yard. "the wheelwright set to work on a covered wagon", "built the town a covered wagon over 4 visits".
+- **Mending.** A wagon home in its yard battered below nine tenths of its strength is mended at its side: two planks from
+  the stores a step, iron every third step of a drawn wagon's, till it is whole. With no planks or iron in the stores it
+  says so and waits.
+- **The shed** (blueprints/wheelwright.txt): a timber cart shed open at the front under a beamed lintel, on a stone
+  course, under a steep gabled roof; its bench, grindstone, anvil, barrels of spokes and chest of makings along the back,
+  timber seasoning along the side. Built once a town of ten in the Stone Age has a wagon or one on the bench, among the
+  trades; until then the wheelwright works by the yard.
+- **Trouble.** The order and its makings are kept in the town's books: through a restart, or the wheelwright's death,
+  the next wheelwright takes the half-built wagon up where it was left. An order nobody works at for ten days is given up
+  and its makings go back to the stores. By day only, never in a storm or with the bell ringing.
+- **Talk**: "How's the wagon coming on?" (Trade, Shop): how far on it is and its makings; whether the wagon wants
+  mending; or what the stores are short of for the next one. Anybody else points to the wheelwright.
+- **Paid shift: the wheelwright's hand** ("wagon"): the town's battered wagon is marked; right-click it holding planks of
+  your own, two a step, till it is sound. Offered by the wheelwright whatever its trade.
+
+### The carter (Carters)
+- **Who.** A town with a wagon keeps a carter, chosen at interview: a steady hand, a courier (the roads are its work) or a
+  rancher (it knows horses) first. It is the town's first pick to drive a caravan or a shipment; anybody else drives only
+  when it is away or busy.
+- **Paid by the run.** Home from a run it is paid its fee out of the treasury: a share of a day's pay, more for a longer
+  road, two days' at most. An empty treasury: the run is counted, nothing paid.
+- **Its dress.** A long driving coat and a felt hat; on the bench a driving whip in its other hand, made once from the
+  stores (a stick, string and leather: also at the bench as the Driving Whip), kept in its pack between runs.
+- **Talk**: "Where's the wagon bound?" (Trade, Services): out on the road and where to, or waiting in the yard, and its
+  runs and fees.
+
+### The watch's ranks (WatchRanks)
+- **A sergeant for every six guards**, drawn each morning with the roster: the most seasoned after the captain (the
+  constable once the town has one, else the most seasoned guard). A sergeant keeps its stripes while it is on the watch
+  and the watch is big enough. "was made a sergeant of the watch" goes into the chronicle.
+- **A pay step**: a sergeant's allowance on its wage, and the captain's when the captain is not the constable (the
+  constable is paid as the constable). Both show in the wage's breakdown.
+- **A kit marker**: a brass band on a sergeant's right arm, on the walls as on the beat; a captain who is not the constable
+  wears a brass band on each arm and its belt.
+- **War**: when the town takes the field, its army's sergeants are the watch's sergeants first, then the veterans of most
+  battles; the Captain is the roster's captain as before.
+- The roster's words, the guard's card, the Watch page and "/village police" name the sergeants.
+
+### The town planner (TownPlanner)
+- **Who.** A town of twelve with a meeting hall keeps a planner: a curious, hard-working, older head, never the elder (who
+  leads; the planner advises). An office's allowance; a waistcoat and a felt hat.
+- **Its morning.** Each morning it looks at the next building the town wants. On a morning that is a new one, it goes to
+  the hall's table a while to draw it up, and sets it out: "the town planner set out the plans for the bakery: ...", with
+  why the town wants it. The same plan is not set out twice.
+- **Talk**: "What's being built next?" (Town, Council): what the builders are on, what goes up next and why, and the two
+  after it. Anybody else points to the planner and says what it last heard.
+
+### The books
+"/village roads" lists the wheelwright (its order, its shed, the wagon's strength, what it waits for, what it has built
+and mended), the carter (its runs and fees), the planner (what it last set out) and the watch's captain and sergeants.
+"/village offices" shows the new allowances.
+
+### Cost
+Once a second a look at each loaded town's order and wagon (map reads) and, in the morning only, the planner's; the
+holders are looked up at most every five seconds a town. A stint is a map look-up in the holder's own tick. The ranks are
+drawn once a day with the roster. The carter's whip is looked at once a second only while a wagon is being driven.
+
+Smoke: `roles_e_stage` in tools/realworld/smoke.py (`/village roads stage`). Tests: RoadsRanksGameTests (re01 to re07).

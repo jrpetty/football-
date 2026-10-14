@@ -305,6 +305,7 @@ public final class TownJobs {
             if (!(a instanceof VillageFolkEntity f) || !fit(f, works)
                 || ON.containsKey(f.getUUID()) && busy(f) && (least(works) || !onLeast(f))) continue;
             if (RESTING.containsKey(f.getUUID())) continue;              // had its turn: somebody else's now
+            if (PostStints.busy(f)) continue;                            // [roles-e] at its post's work: the wagon, the town's plans
             if (over != null && !spare(f, over)) continue;               // past the eighth: only a hand standing idle
             AssistantEntity.StationTask trade = f.stationTask();
             // Not yet decided on a trade: it is about to, and that comes first. (Once decided, a

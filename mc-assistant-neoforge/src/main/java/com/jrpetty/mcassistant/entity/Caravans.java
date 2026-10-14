@@ -249,6 +249,7 @@ public final class Caravans {
             if (Villages.holdsTheLead(v.id(), f.getUUID(), now)) continue;
             double score = f.blockPosition().distSqr(v.centre());
             if (f.stationTask() == AssistantEntity.StationTask.HAUL) score -= 1e6;
+            score += Carters.lean(f);                                       // [roles-e] the carter first, whenever it is free
             score += Quirks.tripPull(f);                                    // [perks] a wanderer first, a homebody last
             if (score < bestScore) { bestScore = score; best = f; }
         }
@@ -514,6 +515,7 @@ public final class Caravans {
         f.trip(null);
         Riding.caravanHome(f, level);                            // the donkey led back to the stable (Riding)
         Wagons.home(f, level);                                   // [wagons] the wagon parked in its yard, its animal led home
+        Carters.tripHome(level, f, t);                           // [roles-e] the carter paid for the run
         if (t.errand != null) {
             Envoys.home(level, f, t);
             return;

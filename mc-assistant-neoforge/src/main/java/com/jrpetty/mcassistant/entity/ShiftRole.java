@@ -90,7 +90,15 @@ public enum ShiftRole {
         List.of("A batch the stores are short of shows on your card: bread, cookies, a pie or a cake.",
             "Right-click the bakery's oven to put it in: its makings come out of the town's stores.",
             "Right-click again once it says READY: too soon and it is not done, too late and it burns.",
-            "The bake goes into the town's stores; a burnt batch pays nothing."));
+            "The bake goes into the town's stores; a burnt batch pays nothing.")),
+    // [roles-e] The wheelwright's hand: the town's battered wagon, home in its yard, mended with the player's own planks
+    // (Wheelwrights: the shift's part); offered by the wheelwright, whatever its trade (RoadPosts.bosses).
+    WAGON("wagon", "Wheelwright's hand", "Master wheelwright", "the wagon yard", 0.8, 600,
+        "the town's wagon home in its yard, battered", Set.of(),
+        List.of("The town's wagon, home in its yard and battered, is marked.",
+            "Right-click it holding planks of your own: two planks mend it a step.",
+            "Keep at it till it is sound; each step is paid when it is.",
+            "A wagon driven off before you are done is no fault of yours."));
 
     public final String id, title, senior, place;
     /** The wage a task, in coin, before the town's pay level, the stars and the skill. */

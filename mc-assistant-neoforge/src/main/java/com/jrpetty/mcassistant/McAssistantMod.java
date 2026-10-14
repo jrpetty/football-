@@ -382,6 +382,7 @@ public final class McAssistantMod {
         com.jrpetty.mcassistant.item.InterviewItems.register(modBus);  // [interviews] the letter of application
         com.jrpetty.mcassistant.item.KitchenItems.register(modBus);    // [kitchen] the kitchen, the cellar and the healer's shelf
         com.jrpetty.mcassistant.item.PoliceItems.register(modBus);     // [police] the Constable's Badge
+        com.jrpetty.mcassistant.item.RoadItems.register(modBus);       // [roles-e] the carter's driving whip
         com.jrpetty.mcassistant.item.DishItems.register(modBus);       // [culture2] the towns' own dishes
         com.jrpetty.mcassistant.item.DiningItems.register(modBus);     // [dining] the plate, the cup, the place setting, a chair's seat
         com.jrpetty.mcassistant.entity.TownWays.joinIdentity();        // [culture2] its sections of the Identity page

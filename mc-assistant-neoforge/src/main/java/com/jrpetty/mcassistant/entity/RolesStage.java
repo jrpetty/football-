@@ -104,7 +104,7 @@ public final class RolesStage {
     }
 
     /** Its office's garments (Weave.office), in this colour: a body garment and a hat. */
-    private static void dress(VillageFolkEntity f, String office, DyeColor colour) {
+    static void dress(VillageFolkEntity f, String office, DyeColor colour) {
         if (office.isEmpty()) return;
         Style s = f.style();
         int c = colour.getId();

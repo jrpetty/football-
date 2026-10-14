@@ -89,6 +89,8 @@ public final class Asks {
         BUILDINGS.put("honey house", "apiary");
         BUILDINGS.put("enchanter's tower", "enchanter");  // [roles-b] the enchanter's tower (CraftScale)
         BUILDINGS.put("enchanting tower", "enchanter");
+        BUILDINGS.put("wheelwright", Wheelwrights.SHED);  // [roles-e] the wheelwright's shed (Wheelwrights)
+        BUILDINGS.put("cart shed", Wheelwrights.SHED);
     }
 
     /** The trade named in a line, or null. */
