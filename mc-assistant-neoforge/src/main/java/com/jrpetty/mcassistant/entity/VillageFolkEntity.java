@@ -5282,8 +5282,9 @@ public class VillageFolkEntity extends AssistantEntity {
     /** [watch-clears] Sent after a creeper, any guard draws the town's bow, whatever its years (WatchClears.mayDraw). */
     @Override
     public boolean mayShoot(net.minecraft.world.item.ItemStack s) {
-        return super.mayShoot(s) || (s.is(net.minecraft.world.item.Items.BOW) || s.is(net.minecraft.world.item.Items.CROSSBOW))
-            && stationTask() == StationTask.GUARD && WatchClears.mayDraw(this);
+        boolean bowish = s.is(net.minecraft.world.item.Items.BOW) || s.is(net.minecraft.world.item.Items.CROSSBOW);
+        return super.mayShoot(s) || bowish && stationTask() == StationTask.GUARD && WatchClears.mayDraw(this)
+            || bowish && (Armies.inLine(this) || stationTask() == StationTask.GUARD && !isBaby());   // [war] the watch and an army's bows, like anybody's
     }
 
     /** [watch-clears] A shout for help is the watch's to answer: a farmer, a cook or a child that ran at the monster

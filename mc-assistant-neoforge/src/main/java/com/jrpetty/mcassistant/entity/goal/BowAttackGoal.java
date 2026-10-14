@@ -102,9 +102,16 @@ public class BowAttackGoal extends Goal {
         }
         if (!drawing()) {
             if (--attackTimer <= 0) assistant.startUsingItem(InteractionHand.MAIN_HAND);
-        } else if (assistant.getTicksUsingItem() >= 20) {
+        } else if (assistant.getTicksUsingItem() >= com.jrpetty.mcassistant.entity.FolkCombat.draw(assistant, distSq)) {
+            // [war] Never through a friend: the shot held, and a step aside to clear it (FolkCombat).
+            if (!com.jrpetty.mcassistant.entity.FolkCombat.clearShot(assistant, t)) {
+                if (!post) assistant.getMoveControl().strafe(0.0F, assistant.tickCount / 40 % 2 == 0 ? 0.5F : -0.5F);
+                return;
+            }
+            boolean full = assistant.getTicksUsingItem() >= 20;
             assistant.stopUsingItem();
-            assistant.performRangedAttack(t, 1.6F);
+            // A full draw carries; a quick one up close is a softer shot.
+            assistant.performRangedAttack(t, full || distSq >= 64 ? 1.6F : 1.1F);
             this.attackTimer = 10;   // nock the next one
         }
     }
@@ -116,7 +123,7 @@ public class BowAttackGoal extends Goal {
      *  pack here, when the charge actually takes. */
     private void tickCrossbow(LivingEntity t, ItemStack hand, boolean inRange) {
         if (CrossbowItem.isCharged(hand)) {
-            if (inRange && --attackTimer <= 0) {
+            if (inRange && --attackTimer <= 0 && com.jrpetty.mcassistant.entity.FolkCombat.clearShot(assistant, t)) {
                 if (hand.getItem() instanceof CrossbowItem cb) {
                     cb.performShooting(assistant.level(), assistant, InteractionHand.MAIN_HAND,
                         hand, 1.6F, com.jrpetty.mcassistant.entity.Fletchers.spread(assistant, 6.0F), t);   // [fletcher] practised aim

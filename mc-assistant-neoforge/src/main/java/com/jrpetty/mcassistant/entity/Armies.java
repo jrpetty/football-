@@ -732,6 +732,10 @@ public final class Armies {
             if (f.peekJob() != null) f.clearQueue();
             f.showWar(flags(x), x.army == null ? ItemStack.EMPTY : x.army.surcoat);
             f.hobbyNow = doing(x);
+            if (x.rank == Rank.BEARER && !(f.getMainHandItem().getItem() instanceof BannerItem)) {   // its standard back in its hand
+                int i = FolkCombat.slot(f, s -> s.getItem() instanceof BannerItem);
+                if (i >= 0) FolkCombat.swap(f, i);
+            }
         }
         switch (x.order) {
             case YIELDED -> {

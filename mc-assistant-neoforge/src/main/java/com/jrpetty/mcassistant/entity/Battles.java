@@ -14,6 +14,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.BossEvent;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -570,6 +571,7 @@ public final class Battles {
                     if (e == null) continue;
                     double d = e.distanceToSqr(me);
                     if (f.rank == Armies.Rank.SERGEANT && o.rank == Armies.Rank.SERGEANT) d *= 0.4;   // sergeant seeks sergeant
+                    if (e instanceof LivingEntity l) d *= 0.6 + 0.4 * l.getHealth() / Math.max(1.0F, l.getMaxHealth());   // and the wounded, to finish
                     if (d < bd) { bd = d; best = o; }
                 }
                 if (best == null) continue;

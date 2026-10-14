@@ -198,10 +198,9 @@ public final class Vassals {
     }
 
     /** [Envoys.send] The coin a tribute carrier carries: a fifth of the treasury, on the week's day. */
-    static int purse(UUID from, UUID to, Envoys.Errand errand) {
+    static int purse(UUID from, UUID to, Envoys.Errand errand, long day) {
         if (errand != Envoys.Errand.GIFT || !to.equals(overlord(from))) return 0;
         Bond b = bond(from);
-        long day = Bonds.today();
         if (b == null || (day - b.since()) % WEEK != 0) return 0;
         return Ledger.takeCoins(from, (int) Math.floor(Ledger.coins(from) * SHARE));
     }

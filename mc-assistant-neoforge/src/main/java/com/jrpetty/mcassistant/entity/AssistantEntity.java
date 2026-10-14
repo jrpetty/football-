@@ -57,7 +57,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
-import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.OpenDoorGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
 import net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal;
@@ -3930,7 +3929,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         this.goalSelector.addGoal(2, new ExploreGoal(this)); // relocate to fresh terrain when the area's dry
         this.goalSelector.addGoal(2, new HuntGoal(this)); // flagless coordinator
         this.goalSelector.addGoal(3, new BowAttackGoal(this));
-        this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.25D, true));
+        this.goalSelector.addGoal(4, new com.jrpetty.mcassistant.entity.goal.FolkFightGoal(this));   // [war] the blade's fight (FolkCombat)
         this.goalSelector.addGoal(5, new FollowOwnerGoal(this, 1.2D, 4.0F, 32.0F));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
@@ -5310,6 +5309,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     /** Pick the right weapon for the current fight. */
     private void combatTick() {
+        if (FolkCombat.busy(this)) return;                        // [war] the axe in hand for a raised shield, a moment yet
         LivingEntity t = getTarget();
         if (t == null || !t.isAlive()) return;
         if (wantsRanged()) {
@@ -5341,11 +5341,12 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     public void performRangedAttack(LivingEntity target, float velocity) {
         if (removeMatching(s -> s.is(Items.ARROW), 1) < 1) return;
         Arrow arrow = new Arrow(level(), this, new ItemStack(Items.ARROW), getMainHandItem().copy());
-        double dx = target.getX() - getX();
-        double dy = target.getY(0.3333) - arrow.getY();
-        double dz = target.getZ() - getZ();
+        net.minecraft.world.phys.Vec3 aim = FolkCombat.lead(this, target, velocity);   // [war] where it will be: the shot leads it
+        double dx = aim.x - getX();
+        double dy = aim.y - arrow.getY();
+        double dz = aim.z - getZ();
         double horiz = Math.sqrt(dx * dx + dz * dz);
-        arrow.shoot(dx, dy + horiz * 0.2, dz, 1.6F, Fletchers.spread(this, 6.0F));   // [fletcher] the butts have steadied its aim
+        arrow.shoot(dx, dy + horiz * 0.2, dz, velocity, Fletchers.spread(this, 6.0F));   // [fletcher] the butts have steadied its aim; [war] the draw's own force
         this.playSound(net.minecraft.sounds.SoundEvents.SKELETON_SHOOT, 1.0F,
             1.0F / (getRandom().nextFloat() * 0.4F + 0.8F));
         level().addFreshEntity(arrow);
@@ -5409,6 +5410,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  Vanilla's own blocking rules do the damage math — this only decides
      *  when the arm goes up. */
     private void tendShield() {
+        if (FolkCombat.handlesShield(this)) return;              // [war] mid-fight the shield arm is the fight's (FolkCombat)
         if (stationTask != StationTask.GUARD || !can(Ability.GUARD_SHIELD)) return;
         ItemStack off = getItemBySlot(EquipmentSlot.OFFHAND);
         if (!off.is(Items.SHIELD)) {
@@ -9602,6 +9604,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
         if (tickCount % 5 == 0) avoidStupidDeaths();
         if (tickCount % 5 == 0) tendShield();
+        if (tickCount % 3 == 0) FolkCombat.react(this);         // [war] an arrow coming: the shield up (FolkCombat)
         // A hand that hasn't seen you in a game-day looks up and waves when
         // you walk back in. Small, and the base feels lived in.
         if (tickCount % 40 == 0) {

@@ -1016,7 +1016,7 @@ public final class NetherWork {
                     break;
                 }
             }
-            f.performRangedAttack(m, 1.0F);
+            f.performRangedAttack(m, 1.6F);                 // [war] the full draw it always loosed (the force is the draw's now)
         }
     }
 

@@ -1716,7 +1716,7 @@ public final class WarAndPeace {
 
     /** [Envoys.send] Coin a suing envoy carries to pay what its side will concede (the elder's own reckoning of the terms). */
     static int peacePurse(ServerLevel level, UUID from, UUID to, Envoys.Errand errand) {
-        int tribute = Vassals.purse(from, to, errand);                           // [war] a vassal's week's tribute, in coin
+        int tribute = Vassals.purse(from, to, errand, level.getDayTime() / 24000L);                           // [war] a vassal's week's tribute, in coin
         if (tribute > 0) return tribute;
         if (errand != Envoys.Errand.PEACE || !Wars.atWar(from, to)) return 0;
         Terms t = terms(level, from, to);
