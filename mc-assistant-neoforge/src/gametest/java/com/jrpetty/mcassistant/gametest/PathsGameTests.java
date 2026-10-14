@@ -200,10 +200,13 @@ public class PathsGameTests {
             helper.assertTrue(lamp != null, "a lamp by the path");
             helper.assertTrue(!com.jrpetty.mcassistant.entity.Footways.street(v, lamp.getX(), lamp.getZ()) && !way.contains(lamp.atY(way.get(0).getY())),
                 "the lamp off the street and the path");
-            helper.assertTrue(com.jrpetty.mcassistant.entity.DoorWays.lit(level, d, way), "the way lit");
             var walk = com.jrpetty.mcassistant.entity.Footways.reach(level, heart, 60, 16, 200000);
             helper.assertTrue(walk.contains(d.pos().asLong()), "the door reached from the heart");
-            helper.succeed();
+            // The light is worked out at the end of the tick: looked at on the next.
+            helper.runAfterDelay(2, () -> {
+                helper.assertTrue(com.jrpetty.mcassistant.entity.DoorWays.lit(level, d, way), "the way lit");
+                helper.succeed();
+            });
         });
     }
 
@@ -227,8 +230,9 @@ public class PathsGameTests {
                 level.setBlock(heart.offset(dx, h, dz), Blocks.DIRT.defaultBlockState(), 3);
             BlockPos stand = heart.offset(0, 0, 21);
             f.moveTo(stand.getX() + 0.5, g, stand.getZ() + 0.5);
-            f.getNavigation().moveTo(heart.getX() + 0.5, g + 2, heart.getZ() + 25.5, 1.0);
-            var path = f.getNavigation().getPath();
+            f.getNavigation().stop();
+            var path = f.getNavigation().createPath(heart.offset(0, 2, 25), 0);
+            if (path != null) f.getNavigation().moveTo(path, 1.0);
             Kit.log("pa03 path " + (path == null ? "none" : path.getNodeCount() + " nodes to " + path.getEndNode() + " reach " + path.canReach()));
             helper.assertTrue(path != null && !path.canReach(), "no way up the bank");
             com.jrpetty.mcassistant.entity.StuckSpots.gaveUp(f, f.blockPosition());
