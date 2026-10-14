@@ -270,6 +270,11 @@ public final class ServicePoints {
 
     /** A player right-clicked a point: its screen. False if it is not one. */
     public static boolean openAt(ServerPlayer p, BlockPos pos) {
+        return openAt(p, pos, "");
+    }
+
+    /** As openAt, on this tab ("" for the trade's first). */
+    public static boolean openAt(ServerPlayer p, BlockPos pos, String tab) {
         if (!(p.level() instanceof ServerLevel level)) return false;
         Point point = at(level, pos);
         if (point == null) {
@@ -277,7 +282,7 @@ public final class ServicePoints {
                 "A service counter: set it in a town's shop, café, tavern or store and it serves there."), true);
             return true;
         }
-        open(p, new Session(point.role(), point.village(), point.pos(), null, firstTab(point.role())));
+        open(p, new Session(point.role(), point.village(), point.pos(), null, tab.isEmpty() ? firstTab(point.role()) : tab));
         return true;
     }
 
@@ -568,6 +573,11 @@ public final class ServicePoints {
                 }
             }
         }
+    }
+
+    /** The points looked for afresh (a stage set a counter in). */
+    static void resetPointsForStage() {
+        POINTS.clear();
     }
 
     /** Tests: fit the town's counters now. */

@@ -289,6 +289,7 @@ public final class VillageCommands {
             .then(WorkshopCommands.node())
             // [econ-store] The stock book: every ware's cover, its reorder point, the orders in flight, the stock-outs.
             .then(StoreCommands.node())
+            .then(ServiceCommands.node())                 // [shops-homes] the service screens' stage
             // The storehouse: its books for the day, its storekeeper and couriers, and its run list.
             .then(Commands.literal("stores").executes(ctx -> page(ctx, 5)))
             // The town's mine (TownMine): where it was opened, the faces worked out, who works which face and how deep.

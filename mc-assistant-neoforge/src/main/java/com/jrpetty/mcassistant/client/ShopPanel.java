@@ -59,7 +59,7 @@ final class ShopPanel implements ServiceScreen.Panel {
     private final Map<String, ItemStack> icons = new LinkedHashMap<>();
     private final Scroll listScroll = new Scroll(), basketScroll = new Scroll();
     private int subtotal, total;
-    private boolean buys, haggles, selling;
+    private boolean buys, haggles, selling, first = true;
     private String cat = ALL;
     private int selected = -1;
     /** The last basket sent: until the server has answered it, its own basket is not read back over ours. */
@@ -126,6 +126,8 @@ final class ShopPanel implements ServiceScreen.Panel {
         receipts.clear();
         ListTag rl = body.getList("receipts", Tag.TAG_STRING);
         for (int i = 0; i < rl.size(); i++) receipts.add(rl.getString(i));
+        if (first) selling = data.getString("tab").equals("sell");          // opened on its Sell tab
+        first = false;
         buys = body.getBoolean("buys");
         haggles = body.getBoolean("haggles");
         if (!buys) selling = false;
