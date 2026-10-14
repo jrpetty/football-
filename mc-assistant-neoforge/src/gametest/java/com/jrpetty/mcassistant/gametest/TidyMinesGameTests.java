@@ -183,6 +183,11 @@ public class TidyMinesGameTests {
                 return;
             }
             if (away[0] < 0) return;
+            if (back[0] < 0 && t - away[0] < 100 && f.distanceToSqr(floor.getX() + 7.5, floor.getY(), floor.getZ() + 2.5) > 0.5) {
+                // Kept away (the test's stand-in for its errand elsewhere): not let walk back past its steps.
+                f.getNavigation().stop();
+                f.moveTo(floor.getX() + 7.5, floor.getY(), floor.getZ() + 2.5, f.getYRot(), 0.0F);
+            }
             if (back[0] < 0 && t - away[0] >= 100) {
                 helper.assertTrue(Footholds.countForTests(level, floor, 12) == left[0], "its steps wait, booked, while it is away");
                 back[0] = t;
