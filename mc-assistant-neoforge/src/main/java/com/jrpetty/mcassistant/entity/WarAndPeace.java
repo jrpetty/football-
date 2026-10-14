@@ -142,7 +142,11 @@ public final class WarAndPeace {
         TRADE("a trade deal on our terms"),
         REVENGE("satisfaction for the wrongs done us"),
         FREE_COLONY("our colony left in peace"),
-        DEFENCE("to stand firm against their demands");
+        DEFENCE("to stand firm against their demands"),
+        /** [war] Lordship over them: a vassal's tribute every week, its guards at our call (Vassals). */
+        SUBJUGATE("lordship over them"),
+        /** [war] A vassal's war for its freedom from its overlord (Vassals). */
+        INDEPENDENCE("our freedom");
 
         public final String words;
         Goal(String words) { this.words = words; }
@@ -332,6 +336,7 @@ public final class WarAndPeace {
         UUID id = v.id();
         if (!Villages.folkOf(id).isEmpty()) Ledger.note(id, "wp.strength", Integer.toString(own(level, id).strength()));
         Battlefields.tidy(level, id, day);                                      // [war] a battlefield's trampled ground grassed over
+        Vassals.daily(level, v, day);                                            // [war] a vassal's tribute, levies and way out; an overlord's upkeep
         for (Map.Entry<String, String> n : Ledger.notes(id).entrySet()) {
             String key = n.getKey();
             if (key.startsWith("wp.banner/")) {
@@ -576,6 +581,8 @@ public final class WarAndPeace {
         if (!on()) return no("wars are switched off (villageWars)");
         if (Wars.atWar(x, y)) return no("already at war with " + n);
         if (!Wars.enemies(x).isEmpty() || !Wars.enemies(y).isEmpty()) return no("one war at a time");
+        if (Vassals.isVassal(x)) return no("a vassal of " + name(Vassals.overlord(x)) + " makes no war of its own");     // [war]
+        if (Vassals.isVassal(y)) return no(name(y) + " is " + name(Vassals.overlord(y)) + "'s vassal: war with it is war with its overlord");
         if (quarrel(x, y) != null || quarrel(y, x) != null) return no("a quarrel with " + n + " is already under way");
         if (Villages.headcount(x) < MIN_FOLK || Villages.headcount(y) < 3) return no("too few folk for a war");
         int r = Ledger.relation(x, y);
@@ -637,6 +644,10 @@ public final class WarAndPeace {
             return new Pick(Goal.TRADE, 0, dealWords(deal, y));
         }
         int ours = Villages.headcount(x), theirs = Villages.headcount(y);
+        // [war] A great town, half as big again and ambitious, wants the other for its vassal.
+        if (great(x) && ours * 2 >= theirs * 3 && (t == Envoys.Temper.PRICKLY || t == Envoys.Temper.SHREWD) && !Vassals.isVassal(y) && !Vassals.isVassal(x)) {
+            return new Pick(Goal.SUBJUGATE, 0, "lordship over " + name(y) + ": its tribute every week, its guards at our call");
+        }
         if (ours * 10 >= theirs * 13 && (t == Envoys.Temper.PRICKLY || t == Envoys.Temper.SHREWD)) {
             int amount = 8 + theirs / 2;
             return new Pick(Goal.TRIBUTE, amount, amount + " coins in tribute");
@@ -1014,6 +1025,8 @@ public final class WarAndPeace {
     @Nullable
     static Envoys.Answer answer(ServerLevel level, UUID host, UUID from, Envoys.Errand errand, VillageFolkEntity envoy, Caravans.Trip t) {
         long day = level.getDayTime() / 24000L;
+        Envoys.Answer tribute = Vassals.received(level, host, from, errand, envoy, t);       // [war] a vassal's tribute come in
+        if (tribute != null) return tribute;
         if (errand == Envoys.Errand.WAR) {
             Quarrel q = quarrel(from, host);
             if (q != null && !Wars.atWar(from, host)) return ultimatum(level, host, from, q, t, day);
@@ -1123,6 +1136,17 @@ public final class WarAndPeace {
                 // And sat down to it there and then (TradeTalks): a standing deal, if the two towns' books lay a table.
                 String struck = strike(level, aggressor, defender, day);
                 return (deal.isEmpty() ? "a trade pact" : dealWords(deal, defender)) + (struck == null ? "" : "; " + struck);
+            }
+            case SUBJUGATE -> {
+                // [war] Lordship: the whole of it makes them our vassal; part of it, a tribute promised.
+                if (share >= 2) return Vassals.make(level, aggressor, defender, day, "by the treaty of day " + day);
+                int paid = pay(defender, aggressor, Math.max(5, Ledger.coins(defender) / 5), t);
+                return paid + " coins in tribute";
+            }
+            case INDEPENDENCE -> {
+                // [war] A vassal's war for its freedom: won, it is free.
+                Vassals.free(level, aggressor, day, "by the treaty of day " + day);
+                return "freedom for " + an;
             }
             case FREE_COLONY -> {
                 UUID colony = colonyOf(text);
@@ -1692,6 +1716,8 @@ public final class WarAndPeace {
 
     /** [Envoys.send] Coin a suing envoy carries to pay what its side will concede (the elder's own reckoning of the terms). */
     static int peacePurse(ServerLevel level, UUID from, UUID to, Envoys.Errand errand) {
+        int tribute = Vassals.purse(from, to, errand);                           // [war] a vassal's week's tribute, in coin
+        if (tribute > 0) return tribute;
         if (errand != Envoys.Errand.PEACE || !Wars.atWar(from, to)) return 0;
         Terms t = terms(level, from, to);
         if (t.coins() > 0 && t.defender().equals(from)) return Ledger.takeCoins(from, t.coins());
@@ -1922,11 +1948,12 @@ public final class WarAndPeace {
      */
     static Wear wear(ServerLevel level, UUID id, long day) {
         List<String> why = new ArrayList<>();
-        int by = 0;
+        int by = Vassals.wear(id);                                               // [war] a vassal's resentment wears on it like a war
+        if (by > 0) why.add("our vassalage to " + name(Vassals.overlord(id)));
         List<UUID> foes = Wars.enemies(id);
         int away = 0;
         for (VillageFolkEntity g : WarFooting.militia(id)) if (awayOnGarrison(g)) away++;
-        if (foes.isEmpty() && away == 0) return new Wear(0, why);
+        if (foes.isEmpty() && away == 0) return new Wear(by, why);
         if (!foes.isEmpty()) {
             long since = Long.MAX_VALUE;
             for (UUID e : foes) since = Math.min(since, Math.max(0, Wars.since(id, e)));
@@ -2036,10 +2063,11 @@ public final class WarAndPeace {
 
     /** [Contentment.compute] The war on the town's spirits: less content the wearier it is. */
     public static int contentment(UUID village, List<String> good, List<String> bad) {
+        int vassal = Vassals.contentment(village, bad);                          // [war] the bond resented
         int w = weariness(village);
-        if (w < 10) return 0;
+        if (w < 10) return vassal;
         bad.add(0, w >= WORN_OUT ? "folk are sick of the war" : w >= WEARY ? "the war wears on us" : "the war");
-        return -Math.min(12, w / 8);
+        return vassal - Math.min(12, w / 8);
     }
 
     /**
@@ -2049,6 +2077,7 @@ public final class WarAndPeace {
     public static int mood(VillageFolkEntity f, long day, int m, List<Object[]> why) {
         UUID v = f.ownerId();
         if (v == null || f.isBaby()) return m;
+        m = Vassals.mood(f, m, why);                                             // [war] a vassal's folk resent it
         int w = weariness(v);
         if (w < 10) return m;                          // (a town at peace, or a war only begun: nothing read)
         Values.Value cares = Values.top(f);
@@ -2507,6 +2536,7 @@ public final class WarAndPeace {
                 + (g > 0 ? "; " + g + " of their guards on our walls" : "") + ".");
         }
         for (String l : Campaigns.lines(level, v)) out.add("RW|" + l + ".");          // [war] the armies in the field
+        for (String l : Vassals.lines(v)) out.add("RW|" + l + ".");                     // [war] a vassal, or an overlord
         int w = weariness(v);
         if (w >= 10) out.add((w >= WEARY ? "RW" : "RN") + "|The town is " + wearyWord(w) + " (" + w + "/100)"
             + (wearyWhy(v).isEmpty() ? "" : ": " + wearyWhy(v)) + ".");
@@ -2687,7 +2717,9 @@ public final class WarAndPeace {
             wars.add(w);
         }
         out.put("wars", wars);
-        out.put("armies", strings(Campaigns.lines(level, id)));                         // [war] the armies in the field
+        List<String> field = Campaigns.lines(level, id);                               // [war] the armies in the field, and the realm
+        field.addAll(Vassals.lines(id));
+        out.put("armies", strings(field));
         List<String> quarrels = new ArrayList<>(), griev = new ArrayList<>(), treaties = new ArrayList<>(), allies = new ArrayList<>();
         for (String l : board(level, id, day)) if (l.startsWith("RW|") || l.startsWith("RM|")) quarrels.add(l.substring(3));
         for (Villages.Village o : Diplomacy.neighboursOf(id)) {

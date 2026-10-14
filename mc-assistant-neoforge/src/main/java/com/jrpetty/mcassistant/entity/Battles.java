@@ -129,6 +129,10 @@ public final class Battles {
         long lastVolley;
         int gateHits;
         boolean gateDown;
+        /** How far the lines have drifted off their marks (0 dressed, 1 ragged): a sergeant's shout straightens them. */
+        double ragged = 0.6;
+        /** Settled without a blow (a surrender taken at the parley), or one side gone behind its walls rather than fight. */
+        boolean settled, withdrew;
 
         Battle(Campaigns.Campaign c, BlockPos centre, double ax, double az, boolean assault, boolean detailed) {
             this.c = c;
@@ -181,6 +185,7 @@ public final class Battles {
                 spirit(level, now);
                 bars(level);
             }
+            if (phase.ordinal() <= BattleModel.Phase.ADVANCE.ordinal()) life(level, now);
             switch (phase) {
                 case FORM -> form(level, in);
                 case PARLEY -> parley(level, in);
@@ -208,6 +213,58 @@ public final class Battles {
         void to(ServerLevel level, BattleModel.Phase p) {
             phase = p;
             phaseAt = level.getGameTime();
+        }
+
+        // -------------------------------------------------------------- the lines alive
+
+        /**
+         * The lines before the clash are folk, not pieces: the ranks drift and a sergeant dresses them, one with its
+         * nerves gone steps back and is pulled into line, shields are banged and a word passed to a neighbour, and
+         * between the lines the taunts and songs fly (heard in the chat of anybody near). A beat of it a side, at most.
+         */
+        void life(ServerLevel level, long now) {
+            ragged = Math.min(1.0, ragged + 0.012);
+            for (int i = 0; i < 2; i++) {
+                Armies.Army a = side[i];
+                for (Armies.Fighter f : a.fighters) {
+                    if (f.nerves <= 0) continue;
+                    if (--f.nerves == 1) say(level, a.officer(Armies.Rank.SERGEANT), FolkTalk.pick(level.getRandom(), "You! Back in line!",
+                        "Steady, lad — back where you belong.", "Nobody steps back. Nobody!"));
+                }
+                if (ragged > 0.85 && i == (int) (now / 20 % 2)) {
+                    say(level, a.officer(Armies.Rank.SERGEANT), FolkTalk.pick(level.getRandom(), "Dress the line! Straighten up!", "Close up there — shoulder to shoulder!"));
+                    if (i == 1) ragged = 0.2;
+                }
+                if (level.getRandom().nextInt(4) != 0) continue;
+                Armies.Fighter f = a.fighters.get(level.getRandom().nextInt(a.fighters.size()));
+                if (f.down() || f.rank != Armies.Rank.NONE || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
+                switch (level.getRandom().nextInt(4)) {
+                    case 0 -> {
+                        if (e.getOffhandItem().getItem() instanceof ShieldItem) {
+                            e.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+                            level.playSound(null, e.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.NEUTRAL, 0.5F, 0.8F + level.getRandom().nextFloat() * 0.3F);
+                        }
+                    }
+                    case 1 -> Armies.shout(e, FolkTalk.pick(e.getRandom(), "Stay by me.", "Look at the size of that one.", "My hands won't stop shaking.",
+                        "Just like the drill. Just like the drill.", "Mind my back, I'll mind yours."));
+                    case 2 -> { if (!f.veteran && f.power <= 8 && phase != BattleModel.Phase.CLASH) { f.nerves = 4; Armies.shout(e, "I— I can't…"); } }
+                    default -> { if (phase == BattleModel.Phase.FORM || phase == BattleModel.Phase.PARLEY) taunt(level, i, e); }
+                }
+            }
+        }
+
+        /** A taunt, a jest or a song across the field, in the speaker's own town's words; heard in the chat of anybody near. */
+        void taunt(ServerLevel level, int i, VillageFolkEntity e) {
+            String us = name(i), them = name(1 - i);
+            String motto = Heraldry.motto(side[i].town);
+            String line = FolkTalk.pick(e.getRandom(),
+                "Go home to your mothers, " + them + "!", them + "? I've seen fiercer chickens!", "Your banner'll look grand on our hall wall!",
+                "We'll be home for supper. Will you?", "Is that a shield or a door you pulled off its hinges?", "Oi! Your Captain's helmet's on backwards!",
+                "♪ Oh " + us + " stands, and " + us + " stays, through the longest of days ♪", "♪ Shields up, lads, and steady the line ♪",
+                motto == null || motto.isEmpty() ? us + "! " + us + "!" : motto + "!");
+            line = TownSpeech.local(e, line);
+            Armies.shout(e, line);
+            Raids.tellNear(level, e.blockPosition(), 48, Component.literal("[" + us + "'s line] " + line).withStyle(ChatFormatting.GRAY), false);
         }
 
         // -------------------------------------------------------------- the phases
@@ -281,7 +338,11 @@ public final class Battles {
                 say(level, caps[0], terms(0));
                 story.add("The Captains met between the lines; " + name(1) + " would not hear " + name(0) + "'s terms.");
             }
-            if (in == half + 4 * EVERY) say(level, caps[1], refusal());
+            if (in == half + 4 * EVERY) {
+                int outcome = parleyTerms(level);
+                if (outcome == 0) say(level, caps[1], refusal());
+                if (settled || withdrew) return;
+            }
             if (in >= Math.max(soon(PARLEY), half + 6 * EVERY)) to(level, BattleModel.Phase.SPEECH);
         }
 
@@ -659,6 +720,7 @@ public final class Battles {
             BattleModel.Side s = new BattleModel.Side(name(i), a.size(), a.power(), a.count(BattleModel.Role.ARCHER), a.morale, a.tactic);
             s.yielded = a.size() - a.standing() - a.behind;
             s.captainDown = captainDown[i];
+            s.formation = a.formation;
             return s;
         }
 
@@ -764,6 +826,54 @@ public final class Battles {
             level.playSound(null, at(origin(i)), SoundEvents.ARROW_SHOOT, SoundSource.NEUTRAL, 2.0F, 0.8F);
         }
 
+        // -------------------------------------------------------------- the parley's last word
+
+        /**
+         * At the parley: does the side much the weaker (under BattleModel.HOPELESS, allies counted) offer to yield,
+         * by its Captain's boldness and its town's pride; and does the other take it, by its temper, what it holds
+         * against them (blood, a broken treaty) and its ambition? Taken: peace there and then on the stronger's
+         * terms, the armies home, and the mercy remembered by every town. Refused: the battle (or, for a defender with
+         * a wall to go to, the walls: a siege), and the refusal remembered too. 0 nobody offered; 1 taken; 2 refused.
+         */
+        int parleyTerms(ServerLevel level) {
+            int weak = side[0].power() <= side[1].power() ? 0 : 1, strong = 1 - weak;
+            double odds = side[weak].power() / (double) Math.max(1, side[strong].power());
+            UUID w = side[weak].town, s = side[strong].town;
+            long day = level.getDayTime() / 24000L;
+            Random rng = new Random(Campaigns.seed(w, day * 13 + 5));
+            if (!BattleModel.offersSurrender(odds, side[weak].boldness, WarAndPeace.great(w), rng)) return 0;
+            Armies.Fighter capW = side[weak].officer(Armies.Rank.CAPTAIN), capS = side[strong].officer(Armies.Rank.CAPTAIN);
+            say(level, capW, "We'll not throw lives away for nothing. Name your terms.");
+            boolean vengeful = WarAndPeace.brokenFaith(s, w, day);
+            for (WarBooks.Grievance g : WarBooks.wrongs(s, w)) if (g.kind() == WarAndPeace.Wrong.BLOOD) vengeful = true;
+            WarBooks.Book book = WarBooks.book(s, w);
+            boolean ambitious = book != null && book.aggressor && (book.goal == WarAndPeace.Goal.SUBJUGATE || WarAndPeace.great(s));
+            boolean kindly = Envoys.temper(s).kindly();
+            if (BattleModel.acceptsSurrender(side[strong].boldness, kindly, vengeful, ambitious, rng)) {
+                say(level, capS, "Then lay down your arms and go home. The terms will be kept.");
+                story.add(name(weak) + " yielded at the parley, and " + name(strong) + " took its surrender: not a blow struck.");
+                settled = true;
+                winner = strong;
+                outcome = BattleModel.Outcome.SURRENDER;
+                Campaigns.yieldedAtParley(level, c, s, w, c.ground.name());
+                over = true;
+                close();
+                return 1;
+            }
+            say(level, capS, vengeful ? "No. You'll answer for what you did. Form up!" : "Too late for that. Form up, and fight.");
+            story.add(name(weak) + " offered to yield at the parley; " + name(strong) + " would not have it.");
+            Campaigns.refusedAtParley(level, c, s, w);
+            if (weak == 1 && !assault && Campaigns.walled(w)) {
+                withdrew = true;
+                winner = strong;
+                outcome = BattleModel.Outcome.RETREAT;
+                story.add(name(weak) + " drew back behind its walls rather than fight in the open.");
+                over = true;
+                close();
+            }
+            return 2;
+        }
+
         // -------------------------------------------------------------- on paper
 
         /**
@@ -779,6 +889,7 @@ public final class Battles {
                 over = true;
                 return;
             }
+            if (!assault && parleyTerms(level) != 0 && (settled || withdrew)) return;
             Random rng = new Random(Campaigns.seed(side[0].town, c.day * 31 + level.getGameTime()));
             BattleModel.Side x = model(0), y = model(1);
             int was0 = x.yielded, was1 = y.yielded;
@@ -952,9 +1063,23 @@ public final class Battles {
             if (k % 2 == 0) ordered.add(line.get(k));
             else ordered.add(0, line.get(k));
         }
-        rank(level, ordered, ox, oz, fx, fz, 0, 1.5, 12, yaw);
+        if (b == null) rank(level, ordered, ox, oz, fx, fz, 0, 1.5, 12, yaw);    // on parade: straight ranks
+        else shape(level, ordered, a.formation, ox, oz, fx, fz, yaw, b, side);
         BlockPos rise = b == null || a.tactic != BattleModel.Tactic.HILL_ARCHERS ? null : side == 0 ? b.c.ground.riseA() : b.c.ground.riseB();
+        double half = Math.max(2, (Math.min(ordered.size(), 14) - 1) * a.formation.spacing / 2);
+        BattleModel.Formation.Archers where = b == null ? BattleModel.Formation.Archers.BEHIND : a.formation.archers;
+        if (where == BattleModel.Formation.Archers.SCREEN && b.phase.ordinal() >= BattleModel.Phase.ADVANCE.ordinal()) where = BattleModel.Formation.Archers.BEHIND;
         if (rise != null) rank(level, archers, rise.getX() + 0.5, rise.getZ() + 0.5, fx, fz, 0, 1.5, 10, yaw);
+        else if (where == BattleModel.Formation.Archers.WINGS && archers.size() >= 2) {
+            // On either wing, a little forward and angled in, so the bows cross in front of the line.
+            int n = archers.size() / 2;
+            for (int w = 0; w < 2; w++) {
+                double sign = w == 0 ? 1 : -1, ax = fx * Math.cos(0.35) - sign * rx * Math.sin(0.35), az = fz * Math.cos(0.35) - sign * rz * Math.sin(0.35);
+                List<Armies.Fighter> wing = w == 0 ? archers.subList(0, n) : archers.subList(n, archers.size());
+                rank(level, wing, ox + rx * sign * (half + 3), oz + rz * sign * (half + 3), ax, az, 1, 1.8, 8, Armies.yawTo(ax, az));
+            }
+        } else if (where == BattleModel.Formation.Archers.SCREEN) rank(level, archers, ox, oz, fx, fz, 6, 3.0, 14, yaw);
+        else if (where == BattleModel.Formation.Archers.INSIDE) rank(level, archers, ox - fx * 3, oz - fz * 3, fx, fz, 0, 1.2, 4, yaw);
         else rank(level, archers, ox, oz, fx, fz, -4, 2.0, 14, yaw);
         boolean sent = b != null && b.reserveSent[side];
         // The riders on the right wing, a little back; sent, round the far end of their line.
@@ -976,6 +1101,62 @@ public final class Battles {
             if (cover != null) rank(level, reserve, cover.getX() + 0.5, cover.getZ() + 0.5, fx, fz, 0, 1.5, 8, yaw);
             else rank(level, reserve, ox + rx * wing, oz + rz * wing, fx, fz, -6, 1.5, 8, yaw);
         } else rank(level, reserve, ox, oz, fx, fz, -8, 1.6, 12, yaw);
+    }
+
+    /**
+     * The line drawn up in its formation's shape (BattleModel.Formation): ranks so deep and so far apart, bent into a
+     * wedge, a ring, a crescent or an echelon. Not a grid: each keeps a little way off its mark (less for a veteran,
+     * and less again just after its sergeant has dressed the line), the brave a step forward and the green a step
+     * back, the ends of the line a moment behind the middle on the advance, and one with the nerves gone a step back
+     * till it is pulled into line.
+     */
+    static void shape(ServerLevel level, List<Armies.Fighter> fs, BattleModel.Formation f, double ox, double oz, double fx, double fz, float yaw,
+                      Battle b, int side) {
+        int n = fs.size();
+        if (n == 0) return;
+        double rx = -fz, rz = fx;
+        int ranks = Math.max(f.ranks, (int) Math.ceil(n / 14.0));
+        int per = (n + ranks - 1) / ranks;
+        double half = Math.max(1, (per - 1) * f.spacing / 2);
+        double radius = Math.max(2.5, n * f.spacing / (2 * Math.PI));
+        for (int k = 0; k < n; k++) {
+            Armies.Fighter x = fs.get(k);
+            double across, depth;
+            float face = yaw;
+            switch (f.bend) {
+                case WEDGE -> {
+                    int r = (int) Math.floor(Math.sqrt(k));
+                    across = (k - r * r - r) * f.spacing;
+                    depth = 1.5 - r * 1.3;
+                }
+                case RING -> {
+                    double ang = 2 * Math.PI * k / n;
+                    double cx = Math.cos(ang), cz = Math.sin(ang);
+                    across = cx * radius;
+                    depth = cz * radius - radius;
+                    face = Armies.yawTo(fx * cz + rx * cx, fz * cz + rz * cx);
+                }
+                default -> {
+                    int row = k / per, inRow = Math.min(per, n - row * per), col = k % per;
+                    across = (col - (inRow - 1) / 2.0) * f.spacing + (row % 2) * f.spacing / 2;
+                    depth = -row * 1.4;
+                    if (f.bend == BattleModel.Formation.Bend.CRESCENT) depth += Math.pow(across / half, 2) * 3.0;
+                    if (f.bend == BattleModel.Formation.Bend.ECHELON) depth -= (across + half) / (2 * half) * 4.0;
+                }
+            }
+            depth += human(x, b, side, across);
+            double rag = b.ragged * (x.veteran ? 0.12 : 0.4);
+            double jx = ((x.id.getLeastSignificantBits() & 15) / 15.0 - 0.5) * 2 * rag, jz = (((x.id.getLeastSignificantBits() >> 4) & 15) / 15.0 - 0.5) * 2 * rag;
+            x.place(level, ox + fx * depth + rx * across + jx, oz + fz * depth + rz * across + jz, face);
+        }
+    }
+
+    /** A fighter's own step off its formation's mark, forward or back: brave or green, its nerves, the order reaching it late. */
+    static double human(Armies.Fighter x, Battle b, int side, double across) {
+        double d = x.veteran || x.power >= 12 ? 0.35 : x.power <= 7 ? -0.35 : 0.0;
+        if (x.nerves > 0) d -= 1.8;
+        if (b.phase == BattleModel.Phase.ADVANCE) d -= Math.min(b.forward[side], Math.abs(across) * 0.07);
+        return d;
     }
 
     /** A rank (two past {@code per}) {@code spacing} apart across, {@code depth} in front of (or behind) the origin. */
@@ -1131,8 +1312,12 @@ public final class Battles {
      */
     static void record(ServerLevel level, Campaigns.Campaign c, Battle b) {
         long day = level.getDayTime() / 24000L;
-        if (b.side[0] == null || b.side[1] == null) return;
+        if (b.side[0] == null || b.side[1] == null || b.settled) return;          // a surrender taken at the parley is the treaty's
         String[] names = { b.name(0), b.name(1) };
+        if (b.withdrew) {
+            for (int i = 0; i < 2; i++) WarBooks.course(b.side[i].town, b.side[1 - i].town, day, capital(c.name) + ": " + String.join(" ", b.story));
+            return;
+        }
         String summary = String.join(" ", b.story);
         int w = b.winner;
         for (int i = 0; i < 2; i++) {
@@ -1148,6 +1333,8 @@ public final class Battles {
             WarAndPeace.weariness(us, Math.max(0, Math.min(100, weary + (w < 0 ? 4 : w == i ? -3 : 10 + Math.min(10, b.down[i] * 2)))));
         }
         if (w >= 0) Campaigns.bump(b.side[w].town, b.side[1 - w].town, 1);
+        // Each side has seen the other's army for itself: its reckoning of them is what it saw, not rumour.
+        for (int i = 0; i < 2; i++) Intel.truth(level, b.side[i].town, b.side[1 - i].town, day, "seen on the field at " + c.name);
         veterans(level, c, b, day);
         if (!b.assault && w >= 0 && c.ground.known()) {
             Villages.Village wv = Villages.get(b.side[w].town);

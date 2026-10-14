@@ -420,7 +420,7 @@ public final class Campaigns {
             Battles.array(level, army, squareFacing(v, c.town(1 - i)), 0.0);
             Armies.Fighter cap = army.officer(Armies.Rank.CAPTAIN);
             Villages.tell(v.id(), day, "the army mustered on the square: " + army.size() + " strong" + (cap != null ? ", " + cap.what() + " in command" : "")
-                + "; " + Villages.name(v.id()) + " " + army.tactic.words);
+                + "; " + Villages.name(v.id()) + " draws up in " + army.formation.words + " (" + army.formation.how + ") and " + army.tactic.words);
             WarBooks.course(v.id(), i == 0 ? c.b : c.a, day, "our army mustered, " + army.size() + " strong" + (cap != null ? " under " + cap.what() : ""));
         }
         if (c.armies[0] == null) {
@@ -448,6 +448,55 @@ public final class Campaigns {
         boolean rise = (i == 0 ? g.riseA() : g.riseB()) != null, cover = (i == 0 ? g.coverA() : g.coverB()) != null;
         Random rng = new Random(seed(a.town, day));
         a.tactic = BattleModel.choose(a.boldness, a.cunning, odds, rise, cover, a.count(BattleModel.Role.RIDER), a.count(BattleModel.Role.ARCHER), a.size(), rng);
+        a.formation = formation(level, c, i, odds, rise);
+    }
+
+    /**
+     * The Captain's way of drawing up (BattleModel.prefer): its heart (a Guardian's shield wall), its temper, its
+     * battles behind it, the odds and the ground; and if the scouts have seen the other army drawn up before (a
+     * battle between them already), what beats that.
+     */
+    static BattleModel.Formation formation(ServerLevel level, Campaign c, int i, double odds, boolean rise) {
+        Armies.Army a = c.armies[i];
+        Armies.Fighter cap = a.officer(Armies.Rank.CAPTAIN);
+        boolean guardian = cap != null && level.getEntity(cap.id) instanceof VillageFolkEntity e && Values.top(e) == Values.Value.SAFETY;
+        int battles = cap == null ? 0 : Armies.battles(a.town, cap.id);
+        BattleModel.Formation seen = null;
+        String last = Ledger.note(a.town, "war.formation/" + a.enemy);
+        if (last != null && !last.isEmpty()) {
+            try { seen = BattleModel.Formation.valueOf(last); } catch (IllegalArgumentException ignored) { seen = null; }
+        }
+        return BattleModel.prefer(guardian, a.boldness, a.cunning, battles, odds, a.count(BattleModel.Role.ARCHER), a.count(BattleModel.Role.RIDER),
+            a.size(), rise, seen);
+    }
+
+    /**
+     * [Battles] A surrender taken at the parley: peace there and then on the stronger's terms (the whole of its goal
+     * from a beaten defender; a beaten aggressor withdraws its demands and pays for the trouble), and the mercy
+     * remembered: every town thinks the better of the victor, and the spared remember it.
+     */
+    static void yieldedAtParley(ServerLevel level, Campaign c, UUID strong, UUID weak, String field) {
+        long day = level.getDayTime() / 24000L;
+        WarAndPeace.Terms t = WarAndPeace.terms(level, c.a, c.b);
+        boolean defenderYields = weak.equals(t.defender());
+        WarBooks.Book ab = WarBooks.book(t.aggressor(), t.defender());
+        int coins = defenderYields && ab != null && (t.goal() == WarAndPeace.Goal.TRIBUTE || t.goal() == WarAndPeace.Goal.REVENGE) ? ab.amount : 0;
+        int reparations = defenderYields ? 0 : Math.max(t.reparations(), Math.min(Ledger.coins(weak) / 5, 10));
+        WarAndPeace.Terms terms = new WarAndPeace.Terms(t.aggressor(), t.defender(), t.goal(), t.balance(), defenderYields ? 2 : 0, coins, reparations, t.words());
+        Villages.tell(strong, day, "at the parley on " + field + ", " + Villages.name(weak) + " yielded and we took its surrender: not a blow struck");
+        Villages.tell(weak, day, "at the parley on " + field + ", our Captain yielded to " + Villages.name(strong) + ", and it was taken: we were spared");
+        WarAndPeace.makePeace(level, c.a, c.b, day, terms, "at the parley on " + field, null);
+        for (Villages.Village o : Villages.every()) if (!o.id().equals(strong) && !o.id().equals(weak)) Ledger.relate(o.id(), strong, 2);
+        Bonds.remember(weak, strong, day, 3, "they took our surrender on " + field + " and spared us");
+    }
+
+    /** [Battles] A surrender refused at the parley: every town thinks the worse of the victor, and the refused hold it against it. */
+    static void refusedAtParley(ServerLevel level, Campaign c, UUID strong, UUID weak) {
+        long day = level.getDayTime() / 24000L;
+        for (Villages.Village o : Villages.every()) if (!o.id().equals(strong) && !o.id().equals(weak)) Ledger.relate(o.id(), strong, -2);
+        WarBooks.wrong(weak, strong, day, WarAndPeace.Wrong.INSULT, "our surrender refused on " + c.ground.name());
+        Villages.tell(weak, day, "our Captain offered to yield on " + c.ground.name() + "; " + Villages.name(strong) + " would not have it");
+        Villages.tell(strong, day, Villages.name(weak) + " offered to yield on " + c.ground.name() + "; we would not have it");
     }
 
     static long seed(UUID town, long day) {
@@ -802,6 +851,11 @@ public final class Campaigns {
         c.result = b.result();
         c.won = b.winner();
         c.atTheGate = b.assault;
+        if (b.withdrew) c.holdWalls = true;
+        for (int i = 0; i < 2; i++) {
+            Armies.Army a = c.armies[i];
+            if (a != null && !b.settled) Ledger.note(a.enemy, "war.formation/" + a.town, a.formation.name());   // how it drew up, seen
+        }
         c.battle = null;
         Battles.record(level, c, b);
         stage(c, Stage.AFTER, level.getGameTime(), level.getGameTime() + soon(400L));
@@ -846,6 +900,10 @@ public final class Campaigns {
         Villages.tell(c.b, day, Villages.name(c.a) + " took the town, " + how + ", and the elder made peace on its terms");
         Villages.tell(c.a, day, "our army took " + Villages.name(c.b) + ", " + how);
         WarAndPeace.makePeace(level, c.a, c.b, day, whole, "with " + Villages.name(c.b) + " taken, " + how, null);
+        // A great town, prickly or shrewd, takes a town whose gate it broke for its vassal, whatever it went to war for.
+        Envoys.Temper t2 = Envoys.temper(c.a);
+        if (t.goal() != WarAndPeace.Goal.SUBJUGATE && t.goal() != WarAndPeace.Goal.INDEPENDENCE && WarAndPeace.great(c.a) && !Vassals.isVassal(c.b)
+            && (t2 == Envoys.Temper.PRICKLY || t2 == Envoys.Temper.SHREWD)) Vassals.make(level, c.a, c.b, day, "its gate taken");
         Villages.Village v = c.town(1);
         if (v != null) Raids.allClear(level, v);
         goHome(level, c, "the town was taken");
@@ -1012,7 +1070,7 @@ public final class Campaigns {
             if (a == null) { s.append("-;"); continue; }
             List<String> fs = new ArrayList<>();
             for (Armies.Fighter f : a.fighters) fs.add(f.encode());
-            s.append(a.tactic.ordinal()).append('/').append(a.morale).append('/').append(a.behind).append('/').append(a.behindPower).append('/')
+            s.append(a.tactic.ordinal()).append(':').append(a.formation.ordinal()).append('/').append(a.morale).append('/').append(a.behind).append('/').append(a.behindPower).append('/')
                 .append(a.supplyCode()).append('/').append(String.join("&", fs)).append(';');
         }
         List<String> blocks = new ArrayList<>();
@@ -1069,7 +1127,9 @@ public final class Campaigns {
             String[] q = code.split("/", 6);
             if (q.length < 6) continue;
             Armies.Army army = new Armies.Army(i == 0 ? c.a : c.b, i == 0 ? c.b : c.a);
-            army.tactic = BattleModel.Tactic.values()[Integer.parseInt(q[0])];
+            String[] tf = q[0].split(":");
+            army.tactic = BattleModel.Tactic.values()[Integer.parseInt(tf[0])];
+            if (tf.length > 1) army.formation = BattleModel.Formation.values()[Integer.parseInt(tf[1])];
             army.morale = Integer.parseInt(q[1]);
             army.behind = Integer.parseInt(q[2]);
             army.behindPower = Integer.parseInt(q[3]);

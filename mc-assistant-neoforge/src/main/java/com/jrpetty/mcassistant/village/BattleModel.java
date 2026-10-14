@@ -53,6 +53,124 @@ public final class BattleModel {
         public boolean flanks() { return this == HIDDEN_RESERVE || this == CAVALRY; }
     }
 
+    /**
+     * How an army draws up: a shape out of history, with a reason to choose it and what beats it. The shapes are
+     * data: how many ranks deep, how far apart, where the archers stand, how the line is bent (Battles draws them).
+     * Every shape keeps a reserve, a guard on the camp and the Captain's place by the banner.
+     */
+    public enum Formation {
+        SHIELD_WALL("a shield wall", "two deep with shields locked, as the old kings fought", "it holds against a charge",
+            "archers and a flank", 2, 1.1, Archers.BEHIND, Bend.STRAIGHT),
+        WINGED_LINE("a line with its archers on the wings", "men-at-arms in the middle and the bows angled in on either flank, as at Agincourt",
+            "it shoots an enemy to pieces as it comes on", "a wedge that reaches it quickly", 2, 1.5, Archers.WINGS, Bend.STRAIGHT),
+        WEDGE("a wedge", "the boar's snout: the best at its point, the rest spreading behind", "it breaks a thin line",
+            "a crescent that closes round it", 1, 1.4, Archers.BEHIND, Bend.WEDGE),
+        SCHILTRON("a schiltron", "a tight ring, every face outward", "nothing rides into it",
+            "archers, who cannot miss a target that will not move", 1, 1.2, Archers.INSIDE, Bend.RING),
+        CRESCENT("a crescent", "the horns thrown forward to fold round them", "it envelops an enemy that comes at its middle",
+            "a refused flank, or a wedge at a horn", 1, 1.5, Archers.BEHIND, Bend.CRESCENT),
+        ECHELON("an echelon", "the line stepped back from one end, its weak flank refused", "the outnumbered keep their flank",
+            "a straight push at its forward end", 1, 1.5, Archers.BEHIND, Bend.ECHELON),
+        SKIRMISH("a line behind a screen of skirmishers", "the bows loose out in front, to fall back through the line", "it bleeds an enemy before the lines meet",
+            "a quick charge that catches the screen", 1, 1.5, Archers.SCREEN, Bend.STRAIGHT);
+
+        /** Where the archers stand. */
+        public enum Archers { BEHIND, WINGS, INSIDE, SCREEN }
+        /** The line's shape. */
+        public enum Bend { STRAIGHT, WEDGE, RING, CRESCENT, ECHELON }
+
+        public final String words, how, why, beatenBy;
+        public final int ranks;
+        public final double spacing;
+        public final Archers archers;
+        public final Bend bend;
+
+        Formation(String words, String how, String why, String beatenBy, int ranks, double spacing, Archers archers, Bend bend) {
+            this.words = words;
+            this.how = how;
+            this.why = why;
+            this.beatenBy = beatenBy;
+            this.ranks = ranks;
+            this.spacing = spacing;
+            this.archers = archers;
+            this.bend = bend;
+        }
+    }
+
+    /**
+     * What this shape is worth against that one in the clash, as a share of its bite: a wedge breaks a winged
+     * line, a crescent folds round a wedge, a schiltron stands against riders, archers ruin a schiltron and a shield
+     * wall, a shield wall blunts a charge. 1.0 for no edge either way.
+     */
+    public static double edge(Formation us, Formation them) {
+        return switch (us) {
+            case WEDGE -> them == Formation.WINGED_LINE || them == Formation.SKIRMISH ? 1.25 : them == Formation.CRESCENT ? 0.8 : 1.0;
+            case CRESCENT -> them == Formation.WEDGE ? 1.25 : them == Formation.ECHELON ? 0.85 : 1.0;
+            case WINGED_LINE -> them == Formation.SCHILTRON || them == Formation.SHIELD_WALL ? 1.2 : them == Formation.WEDGE ? 0.85 : 1.0;
+            case SKIRMISH -> them == Formation.SCHILTRON || them == Formation.SHIELD_WALL ? 1.15 : 1.0;
+            case SHIELD_WALL -> them == Formation.WEDGE ? 1.1 : 1.0;
+            case ECHELON -> them == Formation.CRESCENT ? 1.15 : 1.0;
+            case SCHILTRON -> 1.0;
+        };
+    }
+
+    /** What a shape is worth when the other side's riders come round its flank (a schiltron has no flank). */
+    public static double flankShock(Formation f) {
+        return f == Formation.SCHILTRON ? 0.2 : f == Formation.CRESCENT || f == Formation.ECHELON ? 0.6 : 1.0;
+    }
+
+    /**
+     * The Captain's own way of drawing up, by its heart and its temper ({@code guardian}: it cares most for safe
+     * streets; {@code boldness} -2 to 2; {@code cunning}), what it has (archers, riders), its battles behind it, and
+     * the day: the odds, a rise for the bows, and the enemy's shape if the scouts have seen how it draws up (then it
+     * draws up to beat it, if it knows how).
+     */
+    public static Formation prefer(boolean guardian, int boldness, boolean cunning, int battles, double odds, int archers, int riders, int size,
+                                   boolean rise, Formation enemy) {
+        if (enemy != null && battles >= 1) {
+            for (Formation f : Formation.values()) if (edge(f, enemy) > 1.1 && fits(f, archers, size)) return f;
+        }
+        if (riders == 0 && enemy == null && odds < 0.7) return Formation.ECHELON;
+        if (odds < 0.6) return guardian ? Formation.SHIELD_WALL : Formation.ECHELON;
+        if (cunning && archers * 3 >= size && archers >= 3) return rise ? Formation.WINGED_LINE : Formation.SKIRMISH;
+        if (cunning && size >= 10) return Formation.CRESCENT;
+        if (boldness >= 2 || boldness >= 1 && odds >= 1.2) return Formation.WEDGE;
+        if (guardian || boldness < 0) return Formation.SHIELD_WALL;
+        return archers * 4 >= size && archers >= 2 ? Formation.WINGED_LINE : Formation.SHIELD_WALL;
+    }
+
+    static boolean fits(Formation f, int archers, int size) {
+        return switch (f) {
+            case WINGED_LINE, SKIRMISH -> archers >= 2 && archers * 4 >= size;
+            case CRESCENT -> size >= 8;
+            default -> true;
+        };
+    }
+
+    // ------------------------------------------------------------------ the parley
+
+    /** Under this strength against theirs (allies counted), and only then, a side thinks of yielding at the parley. */
+    public static final double HOPELESS = 1.0 / 2.5;
+
+    /**
+     * Does the weaker side offer to yield at the parley? Only when it is heavily outnumbered (under {@link
+     * #HOPELESS}); then the more hopeless, the likelier, less for a bold Captain or a proud town.
+     */
+    public static boolean offersSurrender(double odds, int boldness, boolean proud, Random rng) {
+        if (odds >= HOPELESS) return false;
+        double p = Math.min(0.9, (HOPELESS - odds) / HOPELESS + 0.35) - boldness * 0.12 - (proud ? 0.2 : 0.0);
+        return rng.nextDouble() < p;
+    }
+
+    /**
+     * Does the stronger side take a surrender offered? A vengeful leader (blood spilt, a treaty broken) or an
+     * ambitious one after the town itself wants the battle; a kindly one takes it.
+     */
+    public static boolean acceptsSurrender(int boldness, boolean kindly, boolean vengeful, boolean ambitious, Random rng) {
+        double p = 0.65 + (kindly ? 0.25 : 0.0) - (vengeful ? 0.45 : 0.0) - (ambitious ? 0.25 : 0.0) - Math.max(0, boldness) * 0.08;
+        return rng.nextDouble() < p;
+    }
+
     /** How a battle went for the side that lost it (the winner's is always HELD). */
     public enum Outcome {
         HELD("held the field"),
@@ -143,6 +261,8 @@ public final class BattleModel {
         public final String name;
         public final int size;
         public final Tactic tactic;
+        /** How it draws up (the clash's edge: edge()). */
+        public Formation formation = Formation.SHIELD_WALL;
         public int yielded, dead, morale;
         /** The sum of its standing fighters' worth (and, in the field, of those not drawn in detail). */
         public int power;
@@ -259,16 +379,17 @@ public final class BattleModel {
                 double bite;
                 if (!clash) {
                     // The archers' duel: the bows alone, the more on a rise; a shield wall takes it on its shields.
-                    bite = us.archers * 0.9 * (us.tactic == Tactic.HILL_ARCHERS ? 1.3 : 1.0) * (them.tactic == Tactic.SHIELD_WALL ? 0.75 : 1.0);
+                    bite = us.archers * 0.9 * (us.tactic == Tactic.HILL_ARCHERS ? 1.3 : 1.0) * (them.tactic == Tactic.SHIELD_WALL ? 0.75 : 1.0)
+                        * (us.formation == Formation.SKIRMISH || us.formation == Formation.WINGED_LINE ? 1.2 : 1.0);
                 } else {
                     double per = us.power / (double) Math.max(1, us.size);
-                    bite = us.standing() * per * 0.2;
+                    bite = us.standing() * per * 0.2 * edge(us.formation, them.formation);
                     if (them.tactic.holds() && round < 5) bite *= 0.85;                  // they come on into a wall that waits for them
                     if (us.tactic == Tactic.FEIGNED_RETREAT && round == 5) bite *= 1.6; // turned on them, drawn on and out of order
                     if (us.tactic.flanks() && round >= 6 && !flankDone[i]) {
                         flankDone[i] = true;
                         them.flanked = true;
-                        them.shake(FLANKED);
+                        them.shake((int) Math.round(FLANKED * flankShock(them.formation)));
                         story.add(us.name + " " + (us.tactic == Tactic.CAVALRY ? "rode round" : "came out on") + " " + them.name + "'s flank.");
                     }
                 }

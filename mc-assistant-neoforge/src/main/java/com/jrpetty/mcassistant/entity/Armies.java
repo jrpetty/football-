@@ -127,6 +127,8 @@ public final class Armies {
         boolean sit;
         /** Wounded, and bound by its medic: out of the fight, but on its feet at the back. */
         boolean tended;
+        /** Beats left of a fit of nerves (a step back out of the line, till its sergeant pulls it in). */
+        int nerves;
         /** The enemy it beat down, this battle (the brave are honoured). */
         int downed;
         /** Where and when it was last seen in the world (the campaign calls it back from there). */
@@ -205,6 +207,8 @@ public final class Armies {
         int boldness;
         boolean cunning;
         BattleModel.Tactic tactic = BattleModel.Tactic.STRAIGHT;
+        /** How it draws up for battle (its Captain's own way, and the day's). */
+        BattleModel.Formation formation = BattleModel.Formation.SHIELD_WALL;
         int morale = 60;
         /** Its supply: leads, cloth and poles for the tents, a campfire, logs for a ram, bandages. */
         final Map<Item, Integer> supply = new LinkedHashMap<>();
@@ -220,6 +224,7 @@ public final class Armies {
         public UUID enemy() { return enemy; }
         public List<Fighter> fighters() { return fighters; }
         public BattleModel.Tactic tactic() { return tactic; }
+        public BattleModel.Formation formation() { return formation; }
         public int morale() { return morale; }
 
         @Nullable

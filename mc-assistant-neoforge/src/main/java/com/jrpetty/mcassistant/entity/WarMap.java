@@ -263,6 +263,7 @@ public final class WarMap {
         out.put("spies", spies);
         net.minecraft.nbt.ListTag armies = new net.minecraft.nbt.ListTag();          // [war] the armies in the field, where they are
         for (String l : Campaigns.lines(level, us)) armies.add(net.minecraft.nbt.StringTag.valueOf(l));
+        for (String l : Vassals.lines(us)) armies.add(net.minecraft.nbt.StringTag.valueOf(l));
         out.put("armies", armies);
         ListTag caps = new ListTag();
         for (Spies.Captive k : Spies.captives(us)) caps.add(StringTag.valueOf("We hold " + k.name() + " of " + Villages.name(k.home()) + ", since day " + k.day()));

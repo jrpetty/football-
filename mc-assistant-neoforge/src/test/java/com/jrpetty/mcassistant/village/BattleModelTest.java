@@ -103,4 +103,34 @@ class BattleModelTest {
         assertEquals(BattleModel.Tactic.FEIGNED_RETREAT, BattleModel.choose(0, true, 1.0, false, false, 0, 1, 12, r));
         assertNotNull(BattleModel.choose(-2, false, 2.0, false, true, 0, 0, 3, r));
     }
+
+    @Test
+    @DisplayName("each formation has what beats it, and a Captain draws up to its own heart and to the day")
+    void formations() {
+        assertTrue(BattleModel.edge(BattleModel.Formation.WEDGE, BattleModel.Formation.WINGED_LINE) > 1.0, "a wedge breaks a winged line");
+        assertTrue(BattleModel.edge(BattleModel.Formation.CRESCENT, BattleModel.Formation.WEDGE) > 1.0, "a crescent folds round a wedge");
+        assertTrue(BattleModel.edge(BattleModel.Formation.WINGED_LINE, BattleModel.Formation.SCHILTRON) > 1.0, "archers ruin a schiltron");
+        assertTrue(BattleModel.flankShock(BattleModel.Formation.SCHILTRON) < 0.5, "a schiltron has no flank");
+        assertEquals(BattleModel.Formation.SHIELD_WALL, BattleModel.prefer(true, -1, false, 0, 1.0, 1, 0, 12, false, null), "a cautious Guardian");
+        assertEquals(BattleModel.Formation.WEDGE, BattleModel.prefer(false, 2, false, 0, 1.0, 1, 0, 12, false, null), "a bold one");
+        BattleModel.Formation shrewd = BattleModel.prefer(false, 1, true, 0, 1.0, 5, 0, 12, true, null);
+        assertTrue(shrewd == BattleModel.Formation.WINGED_LINE || shrewd == BattleModel.Formation.SKIRMISH, "a shrewd one with bows: " + shrewd);
+        assertEquals(BattleModel.Formation.CRESCENT, BattleModel.prefer(false, 2, false, 2, 1.0, 1, 0, 12, false, BattleModel.Formation.WEDGE),
+            "a veteran Captain draws up to beat the wedge its scouts saw");
+    }
+
+    @Test
+    @DisplayName("only the hopelessly outnumbered offer to yield at the parley, and the vengeful seldom take it")
+    void parley() {
+        int offered = 0, offeredHopeless = 0, taken = 0, takenVengeful = 0;
+        for (int i = 0; i < TRIALS; i++) {
+            if (BattleModel.offersSurrender(0.6, -1, false, rng(i))) offered++;
+            if (BattleModel.offersSurrender(0.15, -1, false, rng(i))) offeredHopeless++;
+            if (BattleModel.acceptsSurrender(0, true, false, false, rng(i))) taken++;
+            if (BattleModel.acceptsSurrender(1, false, true, true, rng(i))) takenVengeful++;
+        }
+        assertEquals(0, offered, "somewhat weaker is no reason to yield");
+        assertTrue(offeredHopeless > TRIALS / 2, "hopeless and timid, most yield: " + offeredHopeless);
+        assertTrue(taken > takenVengeful * 3, "a kindly victor takes a surrender far oftener than a vengeful, ambitious one: " + taken + " / " + takenVengeful);
+    }
 }

@@ -416,6 +416,7 @@ public class BattleGameTests {
         });
         helper.succeedWhen(() -> {
             Campaigns.Campaign c = camp.get();
+            helper.assertTrue(c != null && doors.get() != null && c.stage().ordinal() >= Campaigns.Stage.ASSAULT.ordinal(), "the assault begun");
             helper.assertTrue(!Wars.atWar(a.id(), b.id()), "the town made peace");
             int left = 0;
             for (BlockPos p : doors.get()) if (level.getBlockState(p).getBlock() instanceof net.minecraft.world.level.block.DoorBlock) left++;
@@ -473,6 +474,7 @@ public class BattleGameTests {
                             Caravans.arriveForTests(level, f);
                             WarAndPeace.audienceForTests(level, f);
                         }
+                        for (int leg = 0; leg < 2 && f.trip() != null && f.trip().homeward(); leg++) Caravans.arriveForTests(level, f);   // and home again
                     }
                 }
                 if (Wars.atWar(a.id(), b.id()) && !warred) { warred = true; path += " war@" + k; }

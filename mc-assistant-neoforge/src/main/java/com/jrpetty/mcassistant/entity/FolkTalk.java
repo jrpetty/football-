@@ -703,6 +703,7 @@ public final class FolkTalk {
             case "birthday" -> Birthdays.moodWords(f);
             case "anniversary" -> Families.moodWords(f);
             case "warweary", "warproud" -> WarAndPeace.moodWords(f, why);     // [war-peace]
+            case "vassal" -> Vassals.moodWords(f);                            // [war] a vassal's folk resent it
             case "bard", "visit" -> Visitors.moodWords(f, why);        // [batchG] the bard's songs, a friend from away
             case "cold" -> Health.moodWords(f);                                     // [batchA]
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
