@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { execSync } from 'node:child_process';
 import { loadCategories, loadContestants, loadProviders, loadSettings, hasApiKey, snapshotContestant, contestantConfigHash } from '../core/config.ts';
-import { computeCost, emptyUsage } from '../core/cost.ts';
+import { computeCost, effectivePricing, emptyUsage } from '../core/cost.ts';
 import { createRng } from '../core/rng.ts';
 import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
 import { ROOT } from '../core/paths.ts';
@@ -435,11 +435,13 @@ export async function estimateRun(req: RunRequest): Promise<RunEstimate> {
       // A per-answer cap (or a same-for-all limit) can also stop a reply short: each call writes at most its allowance.
       if (pictures === 0) output = Math.min(output, allow.tokens * Math.max(1, perCaseCalls));
       // Picture-making programs are billed per image (plus the prompt text), not per output token.
-      const testCost = isManual ? 0 : pictures > 0 ? n * estimateImageUsd(c, pictures, input, plannedImageSettings(c, provider?.baseUrl, providerType)) : (n * (input * c.pricing.inputPerM + output * c.pricing.outputPerM)) / 1e6;
+      // Long prompts can switch a model to its long-prompt rate card (e.g. Claude Haiku 5.5 above 100K tokens).
+      const rate = effectivePricing(c.pricing, input / Math.max(1, perCaseCalls));
+      const testCost = isManual ? 0 : pictures > 0 ? n * estimateImageUsd(c, pictures, input, plannedImageSettings(c, provider?.baseUrl, providerType)) : (n * (input * rate.inputPerM + output * rate.outputPerM)) / 1e6;
       const modelMax = t.definition.maxOutputTokens === 'model-max' && pictures === 0 && n > 0;
       const maxOut = modelMax ? allow.tokens : 0;
       if (modelMax && !firstMax) firstMax = allow;
-      const testMax = !modelMax || isManual ? testCost : (n * (input * c.pricing.inputPerM + maxOut * perCaseCalls * c.pricing.outputPerM)) / 1e6;
+      const testMax = !modelMax || isManual ? testCost : (n * (input * rate.inputPerM + maxOut * perCaseCalls * rate.outputPerM)) / 1e6;
       costMax += testMax;
       if (modelMax) {
         anyModelMax = true;

@@ -57,6 +57,12 @@ export interface Pricing {
   source?: string;
   /** ISO date the price was last verified by a human. */
   verifiedAt?: string | null;
+  /**
+   * A second rate card for long prompts (e.g. Claude Haiku 5.5: higher rates when one request's prompt is over 100K
+   * tokens). Applies per request, when input + cached + cache-write tokens exceed `aboveTokens`. Unset fields fall back
+   * to this card's own input rate, like the base card.
+   */
+  longPrompt?: { aboveTokens: number; inputPerM: number; outputPerM: number; cachedInputPerM?: number; cacheWritePerM?: number };
 }
 
 export interface ContestantOptions {
