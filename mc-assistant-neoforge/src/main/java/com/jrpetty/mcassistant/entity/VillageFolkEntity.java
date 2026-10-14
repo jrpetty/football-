@@ -39,6 +39,8 @@ public class VillageFolkEntity extends AssistantEntity {
 
     @Nullable private BlockPos villageCentre;
     private int agendaTick = -1000;
+    /** How often (ticks) a folk with no trade claims one outside its agenda: cheap, but needs no more than once a second. */
+    private static final int CLAIM_EVERY = 20;
     private int searchFailTick = -100000;
 
     public VillageFolkEntity(EntityType<? extends PathfinderMob> type, Level level) {
@@ -485,12 +487,9 @@ public class VillageFolkEntity extends AssistantEntity {
                 && (tickCount % 4 == 3 ? Culture.hold(this, culture) : Culture.busy(this))) return;
         // [fireworks] One of a display's crew, at the rack behind the launch spot (FireworkShows): before the gathering.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel rack && FireworkShows.hold(this, rack)) return;
-        // No trade yet (a founder, or one just let go from its trade): it claims the one its village is short of
-        // now, whatever else has it just now. The claim is cheap and the village reckons its shape from what its folk
-        // ARE; only the search for ground waits for the agenda (takeUpATrade). A new village's founders were held at
-        // their first morning assembly till well into the morning with no trade, and the last let go were still
-        // without one an hour in, the farms and the fishing they would have taken unclaimed.
-        if (!withAPlayer && tickCount % 20 == 9 && !level().isNight()) claimATrade();
+        // No trade yet (a founder, one let go from its trade): it claims one by day even while a gathering holds it,
+        // as the founders' first morning assembly does for their first hour. Only the search for ground waits.
+        if (!withAPlayer && tickCount % CLAIM_EVERY == CLAIM_EVERY / 2 && !level().isNight()) claimATrade();
         // The village coming together (Assemblies): the bell rung, it goes, finds a place and takes part.
         if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel gathering
                 && Assemblies.attend(this, gathering)) {
@@ -3931,7 +3930,10 @@ public class VillageFolkEntity extends AssistantEntity {
 
     private int triedTrades;
 
-    /** With no trade and no ground: take up the trade the village is most short of (not one it fears). */
+    /**
+     * With no trade and no ground: take up the trade the village is most short of (not one it fears). Only the
+     * claim, which is cheap and makes the village's shape count this folk; finding ground is takeUpATrade's.
+     */
     private void claimATrade() {
         if (stationTask() != StationTask.NONE || workZone() != null || ownerId() == null || isBaby()) return;
         if (trip != null || expedition != null || Raids.underAlarm(ownerId())) return;
