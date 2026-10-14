@@ -10629,3 +10629,51 @@ The game tests `RedstoneGameTests` (rs01 to rs10) check that:
   furnaces burning, counted to the trade;
 * every part comes from its real recipe out of the stores, and no observer is made without quartz;
 * left to its own day, the engineer plans a street lamp the stores can run to, walks out to it and builds it.
+
+## Buildings kept whole: the placement gate, the upkeep and the audit
+
+[integrity] A town is a dozen kinds of work all putting blocks into the same few acres: the builders, the lamp posts,
+the window boxes, the signs, the street works, the gardens, the furnishing, the ground works, the festivals. Each of them
+used to ask only whether the cell it wanted was free, and a cell in a building's porch, in its doorway or on the step in
+front of its door very often is: a torch went into a well's wall course before its builder got there (and the builder,
+finding the cell "filled", passed it over for good), torches stood in the middle of the avenues, and a building set over
+a meadow kept a floor of grass because its footing's cells were "filled" with the ground.
+
+**One gate.** Every block a town's own works set down now goes through one gate (entity/TownBlocks), saying why it wants
+the cell. What the cell is to the town decides: a building's own cells and the room inside it and under its eaves are
+its builders' and repairers' alone (and the furnishers', but only in the cells its drawing leaves empty, never a wall);
+its doorways, the two cells in front of every door (at the door's height and the one over it) and its stairs and ladders
+with their headroom are nobody's but the building's own and the door-way works'; the streets and avenues of the town plan
+are the street works' (a lamp or a sign only at the kerb, never in the middle); the square's open ground is the street
+works' and the town's civic things' (its stalls, its feasts, its golem, its lanterns); the board and the storehouse are
+taken up by nobody. The founders' camp at the very heart is open ground until it is taken up. Outside a town's reach the
+gate always says yes, so a hired hand's builds are as they were. Other systems can register cells of their own to keep
+(outdoor steps, a stall's place) and add reasons of their own.
+
+**The builder finishes to the drawing.** A town's builder asks the gate for every cell, so it never builds into another
+building or across a doorway. Something of another kind in one of its own cells (earth where its footing, floor or wall
+goes, a fence post, a torch, a crop) now comes out into its pack and the drawing's block goes in, instead of being passed
+over as filled. A building given up half built (its lot given up because its builders could not get to it) is taken down
+again, top first, its blocks into the stores, unless the town takes the same building up again on the same ground.
+
+**Upkeep.** On the town's rounds (every quarter minute) a few buildings are looked over, each about once a day, against
+the drawing they stand to now (a house given its second storey against the two-storey drawing): not the exact block (a
+builder builds of what the town has, and the town refaces in stone and brick as it grows) but the right part in the right
+shape: a stair where a stair goes, a slab where a slab goes, a full block of something built in a wall, a door in the
+doorway, a bed where the bed goes; and nothing that is no part of the building in its doorways, on the step in front of
+them or over its stairs. What is wrong goes on the town's repair list, and a hand of the town works the list, the worst
+building first, a dozen blocks a visit, out of the stores and in the building's own look (what the rest of its walls,
+roof and floor are made of); what comes out goes back into the stores. A cell the stores have nothing for waits for them.
+A building whose second storey is going up, the founders' first house and a folk's own house are left alone.
+
+The board says how many buildings need repair and how many were repaired today ("Upkeep: 2 buildings need repair; 1
+repaired today"), and the town's books' Buildings page says "needs repair" or "repaired" by each building and counts
+those that need it. The chronicle notes each building mended. The same engine rebuilds a building to a newer drawing or
+a new look: a renovation is put on the list with its own fixes, and the hands work it as they work repairs.
+
+**The audit.** `/village integrity` (operators) looks the nearest town over and says: how true its buildings are to
+their drawings (in all, and the worst), the blocks missing, wrong or in the wrong shape, anything in a doorway or a way
+in, anything standing in its roads, anything half built (given up, or going up and not a block further in two days),
+how many are on the repair list; and then the first dozen findings, each with what put it there where that can be told.
+`/village integrity views` says where to look at the four buildings furthest from their drawings from;
+`/village integrity survey` has every building looked over at once.

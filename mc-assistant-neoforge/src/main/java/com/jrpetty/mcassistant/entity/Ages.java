@@ -382,6 +382,7 @@ public final class Ages {
                 if (com.jrpetty.mcassistant.village.TownPlan.isStreet(dx, dz)
                     || com.jrpetty.mcassistant.village.TownPlan.isSquare(dx, dz)) continue;
             }
+            if (v != null && !TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, s, s.above())) continue;   // [integrity] nobody's porch or way in
             Block light = Blocks.LANTERN;
             if (!free) {
                 if (!TownJobs.atWork(level, v, "walls", s, "putting up lamp posts")) return n;

@@ -190,6 +190,7 @@ public final class MineSafety {
         int put = 0;
         for (BlockPos s : spots(level, top)) {
             if (put >= most) return put;
+            if (v != null && !TownBlocks.mayPlace(level, v, s, TownBlocks.Why.MINE)) continue;            // [integrity]
             if (!free && !paid(level, v, head, "fencing the mine stairs", WOODEN_FENCE)) return -put - 1;
             level.setBlock(s, post(level, s), 3);
             put++;

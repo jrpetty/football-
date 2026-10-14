@@ -48,6 +48,7 @@ public final class TownWork {
         golem(level, v);
         Weather.rods(level, v);                     // [wf] a lightning rod on each tall roof, of the stores' copper
         DoorWays.tick(level, v);                    // a way in a folk can walk at every door
+        Restore.tick(level, v);                     // [integrity] the buildings looked over and mended to their drawings
         MineSafety.tick(level, v);                  // [mine-safety] the mine's stair heads fenced, the sign up
         TownLook.tick(level, v);                    // [batchE] the trees, benches, allotments, orchard, mill, bakery and inn
         Store.tick(level, v);                       // [econ-store] the shop's staff, its stock book and its deliveries
@@ -110,6 +111,7 @@ public final class TownWork {
             // made one (or left the nuggets for one), a torch if not (Masonry).
             // [nether] In the Nether Age, glowstone from the runners' dust where the stores have it (NetherHome.lampLight).
             if (!Masonry.canLight(level, v) && !NetherHome.canLamp(level, v)) return 0;
+            if (!TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, top.above(), top.above(2), top.above(3))) return 0;   // [integrity]
             if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a lamp post")) return -1;
             net.minecraft.world.level.block.Block light = NetherHome.lampLight(level, v);
             if (light == null) light = Masonry.light(level, v);
@@ -135,6 +137,7 @@ public final class TownWork {
         if (!ironAge && avenue && lampSpot(dx, dz) && above.isAir() && ground.isSolid()
                 && !level.getBlockState(top.above(2)).isSolid()) {
             if (Market.stock(level, v.id(), s -> s.is(Items.TORCH) || s.is(Items.COAL) || s.is(Items.CHARCOAL)) == 0) return 0;
+            if (!TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, top.above(), top.above(2))) return 0;              // [integrity]
             if (!TownJobs.atWork(level, v, "streets", top.above(), "putting up a street light")) return -1;
             if (!take(level, v, s -> s.is(Items.TORCH), 1)) {
                 if (!take(level, v, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 1)) return 0;
@@ -156,6 +159,7 @@ public final class TownWork {
         }
         if (!earth(ground) && !(ground.is(Blocks.DIRT_PATH) && (square ? stoneAge : avenue && ironAge))) return 0;
         if (!above.isAir() && !(above.canBeReplaced() && above.getFluidState().isEmpty())) return 0;
+        if (!TownBlocks.mayPlace(level, v, top, TownBlocks.Why.ROAD)) return 0;                                    // [integrity] not a building's floor
         BlockState paving = null;
         if (square && stoneAge) {
             Predicate<ItemStack> stone = ironAge ? s -> s.is(Items.STONE_BRICKS) : s -> s.is(Items.COBBLESTONE);

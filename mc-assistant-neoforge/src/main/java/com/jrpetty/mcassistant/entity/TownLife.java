@@ -347,6 +347,7 @@ public final class TownLife {
         for (int a : new int[]{ -2, -1, 1, 2 }) wash.add(base.relative(right, a).relative(back).above(2));
         for (BlockPos p : fences) if (!level.getBlockState(p).isAir()) return false;
         for (BlockPos p : wash) if (!level.getBlockState(p).isAir() || !level.getBlockState(p.below()).isAir()) return false;
+        if (v != null && (!TownBlocks.mayAll(level, v, TownBlocks.Why.DECOR, fences) || !TownBlocks.mayAll(level, v, TownBlocks.Why.DECOR, wash))) return false;   // [integrity]
         int n = fences.size();
         if (!free && !TownJobs.atWork(level, v, "yards", base, "putting up a washing line")) return false;
         if (!free && !Crafts.take(level, v, s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), n)
@@ -429,6 +430,7 @@ public final class TownLife {
             boolean clear = true;
             for (int h = 0; h <= 2; h++) if (!level.getBlockState(foot.above(h)).isAir()) clear = false;
             if (!clear) continue;
+            if (v != null && !TownBlocks.mayAll(level, v, TownBlocks.Why.FIELD, foot, foot.above(), foot.above(2))) continue;   // [integrity]
             Direction look = Direction.getNearest((double) (centre.getX() - x), 0.0, (double) (centre.getZ() - z));
             if (look.getAxis() == Direction.Axis.Y) look = Direction.NORTH;
             if (!free && (Crafts.stock(level, v, st -> st.is(Items.CARVED_PUMPKIN) || st.is(Items.PUMPKIN)) == 0
@@ -518,6 +520,7 @@ public final class TownLife {
         BlockState there = level.getBlockState(at);
         if (!(there.getBlock() instanceof WallSignBlock)) {
             if (!there.isAir()) return;
+            if (v != null && !TownBlocks.mayPlace(level, v, at, TownBlocks.Why.SIGN)) return;            // [integrity]
             if (!free && (v == null || !Crafts.sign(level, v))) return;
             level.setBlock(at, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
         }
@@ -560,6 +563,11 @@ public final class TownLife {
         for (BlockPos p : foot) {
             if (level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()) != ground.getY()) return false;
             for (int h = 0; h <= 3; h++) if (!level.getBlockState(p.above(h)).isAir()) return false;
+        }
+        if (v != null) {                                                                                // [integrity] the whole stall, or none
+            List<BlockPos> cells = new ArrayList<>();
+            for (BlockPos p : foot) for (int h = 0; h <= 3; h++) cells.add(p.above(h));
+            if (!TownBlocks.mayAll(level, v, TownBlocks.Why.CIVIC, cells)) return false;
         }
         if (!free && (v == null || !TownJobs.atWork(level, v, "market", ground, "putting up a market stall"))) return false;
         if (!free && (v == null || !payForStall(level, v))) return false;
@@ -825,6 +833,7 @@ public final class TownLife {
             BlockState there = level.getBlockState(spot);
             boolean ours = there.getBlock() instanceof WallSignBlock;
             if (!ours && (!there.isAir() || !level.getBlockState(wall).isSolid())) continue;
+            if (!ours && v != null && !TownBlocks.mayPlace(level, v, spot, TownBlocks.Why.SIGN)) continue;   // [integrity]
             if (!ours && named && HouseSigns.window(level.getBlockState(wall))) continue;   // [paths] never on a window
             String[] put = lines;
             if (named) {                                     // [paths] the household's name and trade, the number kept
@@ -943,6 +952,7 @@ public final class TownLife {
         for (BlockPos p : List.of(post, post.above(), post.above(2), signNS, signEW)) {
             if (!level.getBlockState(p).isAir()) return false;
         }
+        if (v != null && !TownBlocks.mayAll(level, v, TownBlocks.Why.SIGN, post, post.above(), post.above(2), signNS, signEW)) return false;   // [integrity]
         if (!free && !TownJobs.atWork(level, v, "signs", post, "putting up a street sign")) return false;
         net.minecraft.world.level.block.Block light = free ? Blocks.LANTERN : payForPost(level, v);
         if (light == null) return false;

@@ -576,6 +576,7 @@ public final class Petitions {
     /** The bench: a stair out of the stores (or two planks), its back to the house and its seat to the street. */
     static boolean bench(ServerLevel level, Villages.Village v, BlockPos at) {
         if (!Petitions.clear(level, at)) return false;
+        if (!TownBlocks.mayPlace(level, v, at, TownBlocks.Why.DECOR)) return false;                  // [integrity]
         BlockState stair = Blocks.OAK_STAIRS.defaultBlockState();
         if (TownWork.take(level, v, s -> s.is(Items.SPRUCE_STAIRS), 1)) stair = Blocks.SPRUCE_STAIRS.defaultBlockState();
         else if (!TownWork.take(level, v, s -> s.is(ItemTags.WOODEN_STAIRS), 1) && !TownWork.take(level, v, s -> s.is(ItemTags.PLANKS), 2)) return false;
@@ -593,6 +594,7 @@ public final class Petitions {
     /** The street light: a fence post (one put by, or two planks) and a torch on it (one put by, or made of coal and a stick). */
     static boolean lamp(ServerLevel level, Villages.Village v, BlockPos at) {
         if (!Petitions.clear(level, at) || !level.getBlockState(at.above(2)).canBeReplaced()) return false;
+        if (!TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, at, at.above())) return false;          // [integrity]
         if (!TownWork.take(level, v, s -> s.is(Items.TORCH), 1)) {
             if (!TownWork.take(level, v, s -> s.is(Items.COAL) || s.is(Items.CHARCOAL), 1)) return false;
             if (!TownWork.take(level, v, s -> s.is(ItemTags.PLANKS), 1)) {
@@ -617,6 +619,9 @@ public final class Petitions {
      */
     static boolean well(ServerLevel level, Villages.Village v, BlockPos mid) {
         if (Market.stock(level, v.id(), s -> s.is(Items.COBBLESTONE)) < 8) return false;
+        for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) {                              // [integrity]
+            if (!TownBlocks.mayPlace(level, v, mid.offset(dx, dz == 0 && dx == 0 ? -1 : 0, dz), TownBlocks.Why.CIVIC)) return false;
+        }
         boolean full = TownWork.take(level, v, s -> s.is(Items.WATER_BUCKET), 1);
         if (!full) {
             if (pond(level, v.centre()) == null || !TownWork.take(level, v, s -> s.is(Items.BUCKET), 1)) return false;
@@ -676,6 +681,7 @@ public final class Petitions {
             if (p.distSqr(first) > 12 * 12 || laid >= 16) break;
             BlockState over = level.getBlockState(p.above());
             if (!over.isAir() && !(over.canBeReplaced() && over.getFluidState().isEmpty())) continue;
+            if (!TownBlocks.mayPlace(level, v, p, TownBlocks.Why.ROAD)) continue;                          // [integrity]
             if (!over.isAir()) level.removeBlock(p.above(), false);
             level.setBlockAndUpdate(p, Blocks.DIRT_PATH.defaultBlockState());
             laid++;

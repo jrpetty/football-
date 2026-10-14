@@ -5537,6 +5537,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (level().getMaxLocalRawBrightness(pos) >= 6) return;
         if (!level().getBlockState(pos).canBeReplaced()) return;
         if (!level().getBlockState(pos.below()).isFaceSturdy(level(), pos.below(), net.minecraft.core.Direction.UP)) return;
+        if (!TownBlocks.mayPlace(level(), pos, TownBlocks.Why.LAMP)) return;       // [integrity] not in a road, a doorway, a room
         if (removeMatching(s -> s.is(Items.TORCH), 1) == 1) {
             level().setBlockAndUpdate(pos, Blocks.TORCH.defaultBlockState());
         }
@@ -8919,6 +8920,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     if (!level().getBlockState(p.below()).isSolid()) continue;
                     if (getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p))) continue;
                     if (workZone != null && !workZone.containsColumn(p)) continue;
+                    if (!TownBlocks.mayPlace(level(), p, TownBlocks.Why.FURNISH)) continue;   // [integrity]
                     double score = p.distSqr(feet) + Math.abs(dy) * 3.0;
                     if (score < bestScore) { bestScore = score; best = p; }
                 }
