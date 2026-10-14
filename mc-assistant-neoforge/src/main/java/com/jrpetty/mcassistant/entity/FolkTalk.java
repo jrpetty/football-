@@ -298,11 +298,14 @@ public final class FolkTalk {
     /**
      * [talk-ui] An operator's look at the talk screen, for the pictures (/village talkview): it opens on this folk at
      * {@code category} (chat, about, ask, trade, town, world, profile or skills), the GUI at {@code guiScale} when it is
-     * 1 or more (0 leaves it as it is). Nothing is said, and nothing changes between the two.
+     * 1 or more (0 leaves it as it is), the window at {@code window} ("640x480") when it is set. Nothing is said, and
+     * nothing changes between the two.
      */
-    public static void show(VillageFolkEntity f, ServerPlayer p, String category, int guiScale) {
+    public static void show(VillageFolkEntity f, ServerPlayer p, String category, int guiScale, String window) {
+        String size = window == null ? "" : window.toLowerCase(Locale.ROOT).replaceAll("[^0-9x]", "");
         String extra = "show=" + category.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "")
-            + (guiScale > 0 ? " guiscale=" + Math.min(6, guiScale) : "");
+            + (guiScale > 0 ? " guiscale=" + Math.min(6, guiScale) : "")
+            + (size.matches("\\d{3,4}x\\d{3,4}") ? " window=" + size : "");
         send(f, p, true, "", "", extra);
     }
 

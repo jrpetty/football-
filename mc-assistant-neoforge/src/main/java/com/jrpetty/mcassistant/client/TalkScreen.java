@@ -131,6 +131,8 @@ public class TalkScreen extends Screen {
     private final long openedAt = Util.getMillis();
     private long listAt, bubbleAt, flashAt, noticeAt, waitingSince;
     private String flashFull = "", notice = "";
+    private List<FormattedCharSequence> noticeLines = List.of(), emptyLines = List.of();
+    private int emptyWidth = -1;
     private Entry flashEntry;
     /** The number keys' caps, worked out once. */
     private static final String[] KEYS = { "", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
@@ -322,6 +324,7 @@ public class TalkScreen extends Screen {
         sProfileEmpty = t("ui.profile_empty");
         sSkillsEmpty = t("ui.skills_empty");
         pageBarFor = null;
+        emptyWidth = -1;
     }
 
     /** The header's words, clipped to their room, and its mood and standing as inks and fractions. */
@@ -333,12 +336,14 @@ public class TalkScreen extends Screen {
         nameW = titleWidth(font, nameShown);
         aboutShown = UiStyle.clip(font, last.about(), textW);
         String doing = last.doing().isEmpty() ? "" : I18n.get("talk.mc_assistant.ui.now", last.doing());
-        doingShown = UiStyle.clip(font, doing, textW);
+        // The town, right, on the doing line's row under the links: the doing line gives way to it.
         int whereRoom = Math.max(0, px + pw - S2 - (linkX - 40));
         whereShown = UiStyle.clip(font, last.village(), whereRoom);
+        int doingRoom = px + pw - S2 - font.width(whereShown) - S3 - tx;
+        doingShown = UiStyle.clip(font, doing, Math.max(10, Math.min(textW, doingRoom)));
         headerCut = compact || !aboutShown.equals(last.about()) || !doingShown.equals(doing) || !whereShown.equals(last.village())
             || !nameShown.equals(last.name());
-        headerTip = last.name() + "\n" + last.about() + (doing.isEmpty() ? "" : "\n" + doing)
+        headerTip = last.name() + "\n" + last.about() + "\n" + hearts(last.affinity()) + " " + last.standing() + (doing.isEmpty() ? "" : "\n" + doing)
             + (last.village().isEmpty() ? "" : "\n" + last.village());
         int mood = Math.max(0, Math.min(100, last.mood()));
         moodInk = mood >= MOOD_GOOD ? SUCCESS : mood >= MOOD_FAIR ? WARNING : DANGER;
@@ -350,7 +355,8 @@ public class TalkScreen extends Screen {
         affFrac = (aff + 100) / 200F;
         int half = textW / 2, barW = statusBarW();
         moodShown = UiStyle.clip(font, face(mood) + " " + last.moodWord(), Math.max(10, half - barW - S1 - 2));
-        standingShown = UiStyle.clip(font, hearts(aff) + " " + last.standing(), Math.max(10, textW - half - barW - S1));
+        // Compact, the hearts alone say it (the word is in the header's tooltip).
+        standingShown = UiStyle.clip(font, compact ? hearts(aff) : hearts(aff) + " " + last.standing(), Math.max(10, textW - half - barW - S1));
     }
 
     private int statusBarW() {
@@ -382,7 +388,7 @@ public class TalkScreen extends Screen {
             List<Entry> sugg = new ArrayList<>(questEntries());
             for (Entry e : TalkMenu.suggested(ctx)) if (!sugg.contains(e)) sugg.add(e);
             if (!sugg.isEmpty()) {
-                rows.add(new Row(RowType.HEAD, null, t("ui.suggested"), "", "", true, "", false, 0, y, HEAD_H, ItemStack.EMPTY));
+                rows.add(new Row(RowType.HEAD, null, t("ui.suggested").toUpperCase(Locale.ROOT), "", "", true, "", false, 0, y, HEAD_H, ItemStack.EMPTY));
                 y += HEAD_H;
                 for (Entry e : sugg) {
                     rows.add(row(e, y, w, key > 9 ? 0 : key, true));
@@ -391,11 +397,12 @@ public class TalkScreen extends Screen {
                 }
                 y += S1;
             }
-            rows.add(new Row(RowType.HEAD, null, t(category.labelKey()), "", "", true, "", false, 0, y, HEAD_H, ItemStack.EMPTY));
+            rows.add(new Row(RowType.HEAD, null, t("cat." + category.id).toUpperCase(Locale.ROOT), "", "", true, "", false, 0, y, HEAD_H, ItemStack.EMPTY));
             y += HEAD_H;
             List<Entry> list = TalkMenu.visible(category.entries(), ctx);
             if (list.isEmpty()) y = addNote(y, t("ui.empty_category"));
             for (Entry e : list) {
+                if (sugg.contains(e)) continue;                  // already at the top, under Suggested
                 rows.add(row(e, y, w, key > 9 ? 0 : key, false));
                 key++;
                 y += ROW + ROW_GAP;
@@ -566,6 +573,7 @@ public class TalkScreen extends Screen {
         Entry e = r.entry();
         if (!r.enabled()) {
             notice = r.why();
+            noticeLines = TextCache.splitPlain(font, notice, convW - 16);
             noticeAt = Util.getMillis();
             return;
         }
@@ -1007,7 +1015,7 @@ public class TalkScreen extends Screen {
         }
         // Why an option could not be picked, a moment.
         if (!notice.isEmpty() && Util.getMillis() - noticeAt < NOTICE_MS) {
-            List<FormattedCharSequence> nl = TextCache.splitPlain(font, notice, convW - 16);
+            List<FormattedCharSequence> nl = noticeLines;
             int nh = Math.min(2, nl.size()) * LINE + 6;
             g.fill(x + 2, top, x + convW - 2, top + nh, DANGER_SOFT);
             g.fill(x + 2, top, x + 4, top + nh, DANGER_FILL);
@@ -1023,7 +1031,11 @@ public class TalkScreen extends Screen {
         talkScroll.fit(bubblesHeight + waitH, view);
         if (bubbles.isEmpty() && !waiting) {
             int ty = top + (bottom - top) / 2 - LINE;
-            for (FormattedCharSequence l : TextCache.splitPlain(font, sEmpty, inner - S2)) {
+            if (emptyWidth != inner) {
+                emptyLines = TextCache.splitPlain(font, sEmpty, inner - S2);
+                emptyWidth = inner;
+            }
+            for (FormattedCharSequence l : emptyLines) {
                 g.drawString(font, l, x + (convW - font.width(l)) / 2, ty, TEXT_MUTED, false);
                 ty += LINE;
             }
