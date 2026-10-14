@@ -346,6 +346,8 @@ public final class TownBlocks {
         /** Doorways, ways in and stairs, by BlockPos.asLong. */
         final Map<Long, Zone> special = new HashMap<>();
         final Map<Long, Integer> specialOwner = new HashMap<>();
+        /** The game tick it was last checked against the register. */
+        long checked = Long.MIN_VALUE;
 
         Index(long made, int signature) {
             this.made = made;
@@ -415,9 +417,14 @@ public final class TownBlocks {
 
     static Index index(Level level, Villages.Village v) {
         long now = level.getGameTime();
-        int sig = signature(v.id());
         Index ix = INDEX.get(v.id());
-        if (ix != null && ix.signature == sig && now - ix.made < KEEP && now >= ix.made) return ix;
+        // Asked many times in a tick (a festival's patch, a column of ground work): checked against the register once.
+        if (ix != null && ix.checked == now) return ix;
+        int sig = signature(v.id());
+        if (ix != null && ix.signature == sig && now - ix.made < KEEP && now >= ix.made) {
+            ix.checked = now;
+            return ix;
+        }
         ix = build(v, now, sig);
         INDEX.put(v.id(), ix);
         return ix;

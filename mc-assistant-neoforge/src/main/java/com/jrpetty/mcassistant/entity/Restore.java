@@ -506,6 +506,9 @@ public final class Restore {
     private static final int LOOK = 3;
     /** Blocks put right in one visit. */
     private static final int BUDGET = 12;
+    /** Buildings on the list looked at in one visit (the worst first): a long list waiting on the stores is not
+     *  walked end to end every quarter minute. */
+    private static final int JOBS_A_VISIT = 3;
 
     /** One visit (TownWork.tick): a few buildings looked over, a few blocks put right. */
     public static void tick(ServerLevel level, Villages.Village v) {
@@ -565,8 +568,9 @@ public final class Restore {
     public static int work(ServerLevel level, Villages.Village v, int budget) {
         int done = 0;
         long day = level.getDayTime() / 24000L;
+        int jobs = 0;
         for (Job j : queue(v.id())) {
-            if (done >= budget) break;
+            if (done >= budget || jobs++ >= JOBS_A_VISIT) break;
             if (!Land.areaLoaded(level, j.building.anchor(), 10)) continue;
             if (j.reason == Reason.REPAIR && skip(v.id(), j.building)) {
                 enqueue(v.id(), j.building, j.design, List.of(), j.reason, 0);
@@ -576,7 +580,7 @@ public final class Restore {
                 .thenComparingInt(f -> f.pos().getY()));
             List<Fix> left = new ArrayList<>();
             boolean waited = false;
-            Map<String, Block> look = lookOf(level, j);
+            Map<String, Block> look = new HashMap<>();        // the building's own look, worked out when first wanted
             for (Fix f : j.fixes) {
                 if (done >= budget || waited) { left.add(f); continue; }
                 // Still wrong? (Something else may have put it right, or a hand mended it meanwhile.)
@@ -621,6 +625,7 @@ public final class Restore {
         // What to put in, before anything comes out: a wall is not opened up for want of the block to close it.
         BlockState put = null;
         if (want != null) {
+            if (look.isEmpty()) look.putAll(lookOf(level, j));
             put = fromStores(level, v, want, look, j.building.facing(), at);
             if (put == null) return 0;
         }
