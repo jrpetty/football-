@@ -456,6 +456,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // a farmer's water carried to its parched field (Disasters).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel disasterLevel
                 && Disasters.hold(this, disasterLevel)) return;
+        if (!withAPlayer && Muster.hold(this)) return;          // [defence] the bell: in the crowd on the square, and kept there
         // [wf] A thunderstorm: indoors, everybody but the watch, and there till it has passed (Weather).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel stormLevel
                 && Weather.shelter(this, stormLevel)) return;
