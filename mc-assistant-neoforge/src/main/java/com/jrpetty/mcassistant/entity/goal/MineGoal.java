@@ -34,6 +34,14 @@ public class MineGoal extends Goal {
 
     private enum Phase { DESCEND, TUNNEL, RETURN, SHAFT, CLIMB, ASCEND }
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+    /** [mines] The last few ores left for later, and why (tests and the debug line read them). */
+    private static final java.util.concurrent.ConcurrentLinkedDeque<String> LEFT = new java.util.concurrent.ConcurrentLinkedDeque<>();
+
+    /** Tests: the last few ores any miner left for later, and why. */
+    public static java.util.List<String> leftForTests() {
+        return new java.util.ArrayList<>(LEFT);
+    }
     private final AssistantEntity assistant;
     @Nullable private Job job;
     private Phase phase = Phase.DESCEND;
@@ -1500,6 +1508,9 @@ public class MineGoal extends Goal {
     /** An ore seen and left (out of reach, the way up, the run over): on the books for whoever next works near it. */
     private void noteForLater(BlockPos p, String why) {
         givenUp.add(p.asLong());
+        LOG.debug("[MCA-MINES] {} left the ore at {} for later: {}", assistant.getAssistantName(), p.toShortString(), why);
+        LEFT.addLast(p.toShortString() + ": " + why);
+        while (LEFT.size() > 16) LEFT.pollFirst();
         com.jrpetty.mcassistant.entity.OreSight.note(assistant, "left the ore at " + p.toShortString() + " for later: " + why);
         if (assistant.level() instanceof net.minecraft.server.level.ServerLevel sl && mayDig(p)) com.jrpetty.mcassistant.entity.OreNotes.noted(sl, p);
     }

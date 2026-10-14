@@ -458,6 +458,7 @@ public class TidyMinesGameTests {
             int standing = Footholds.countForTests(level, floor, 10);
             built[0] = Math.max(built[0], standing);
             if (t % 50 == 0 && t < 600) Kit.log("tmn07 @" + t + " y " + String.format(java.util.Locale.ROOT, "%.2f", f.getY()) + " standing " + standing);
+            if (t % 200 == 0) Kit.log("tmn07 @" + t + " left " + com.jrpetty.mcassistant.entity.goal.MineGoal.leftForTests());
             if (t % 200 == 0) Kit.log("tmn07 @" + t + " at " + f.blockPosition().toShortString() + ": ore showing " + showing + " " + where + ", steps standing " + standing + " — " + f.debugLine());
             if (t > 20 && showing == 0 && standing == 0) {
                 BlockState h = level.getBlockState(hidden);
