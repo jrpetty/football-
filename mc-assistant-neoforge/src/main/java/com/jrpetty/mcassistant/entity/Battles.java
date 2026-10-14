@@ -237,7 +237,7 @@ public final class Battles {
         void batter(ServerLevel level, long in) {
             if (c.gate == null) { gateDown = true; return; }
             if (in % 40 != 0) return;
-            if (in == 0 || gateHits == 0) order(level, 0, "Bring up the ram! At the gate!");
+            if (gateHits == 0) order(level, 0, "Bring up the ram! At the gate!");
             gateHits++;
             BlockPos g = c.gate;
             level.playSound(null, g, SoundEvents.ZOMBIE_ATTACK_WOODEN_DOOR, SoundSource.BLOCKS, 3.0F, 0.6F);
@@ -287,10 +287,10 @@ public final class Battles {
 
         void speech(ServerLevel level, long in) {
             for (int i = 0; i < 2; i++) array(level, side[i], origin(i), 0, this, i);
-            if (in == 0) for (int i = 0; i < 2; i++) say(level, side[i].officer(Armies.Rank.CAPTAIN), rousing(i));
-            if (in == 80) for (int i = 0; i < 2; i++) say(level, side[i].officer(Armies.Rank.CAPTAIN), FolkTalk.pick(level.getRandom(),
+            if (in == EVERY) for (int i = 0; i < 2; i++) say(level, side[i].officer(Armies.Rank.CAPTAIN), rousing(i));
+            if (in == Math.min(80, soon(SPEECH) - 2 * EVERY)) for (int i = 0; i < 2; i++) say(level, side[i].officer(Armies.Rank.CAPTAIN), FolkTalk.pick(level.getRandom(),
                 "Mind your sergeants. Keep your places. Follow the banner!", "Shields together. Nobody runs. Nobody!", "For " + name(i) + "!"));
-            if (in == soon(SPEECH)) {
+            if (in >= soon(SPEECH)) {
                 // The beat of silence, then the horn and the battle cry.
                 for (int i = 0; i < 2; i++) {
                     Armies.horn(level, at(origin(i)), 3);
@@ -411,10 +411,11 @@ public final class Battles {
                 Armies.Army us = side[i], them = side[1 - i];
                 // The reserve: round the flank once the lines are locked, or into a gap when the line thins.
                 boolean thin = us.count(BattleModel.Role.LINE) * 4 < lineSize(us) * 3;
-                if (!reserveSent[i] && us.count(BattleModel.Role.RESERVE) > 0 && (us.tactic.flanks() && in >= 200 || thin || in >= 600)) {
+                if (!reserveSent[i] && us.count(BattleModel.Role.RESERVE) + us.count(BattleModel.Role.RIDER) > 0 && (us.tactic.flanks() && in >= 200 || thin || in >= 600)) {
                     reserveSent[i] = true;
                     boolean left = level.getRandom().nextBoolean();
-                    order(level, i, us.tactic.flanks() ? "Reserve, round their " + (left ? "left" : "right") + "!" : "Reserve, into the gap!");
+                    order(level, i, us.tactic == BattleModel.Tactic.CAVALRY ? "Riders! Round their " + (left ? "left" : "right") + " — now!"
+                        : us.tactic.flanks() ? "Reserve, round their " + (left ? "left" : "right") + "!" : "Reserve, into the gap!");
                     if (us.tactic.flanks()) story.add(name(i) + " sent its reserve round " + name(1 - i) + "'s flank.");
                 }
                 engage(level, i, them);
@@ -452,6 +453,7 @@ public final class Battles {
             for (Armies.Fighter f : side[i].fighters) {
                 if (f.down() || f.role == BattleModel.Role.MEDIC || f.role == BattleModel.Role.ARCHER || f.rank == Armies.Rank.BEARER) continue;
                 if (f.role == BattleModel.Role.RESERVE && !reserveSent[i]) continue;
+                if (f.role == BattleModel.Role.RIDER && side[i].tactic == BattleModel.Tactic.CAVALRY && !reserveSent[i]) continue;
                 if (f.rank == Armies.Rank.CAPTAIN && side[i].count(BattleModel.Role.LINE) > 2) continue;
                 Armies.Fighter cur = f.foe == null ? null : Armies.fighter(f.foe);
                 if (cur != null && !cur.down() && level.getGameTime() % 100 != f.stagger * 10) continue;
@@ -476,7 +478,7 @@ public final class Battles {
         boolean reserveAtFlank(ServerLevel level, int i) {
             double[] o = origin(1 - i);
             for (Armies.Fighter f : side[i].fighters) {
-                if (f.role != BattleModel.Role.RESERVE || f.down() || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
+                if (f.role != BattleModel.Role.RESERVE && f.role != BattleModel.Role.RIDER || f.down() || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
                 double dx = e.getX() - o[0], dz = e.getZ() - o[1];
                 if (dx * dx + dz * dz < 12 * 12) return true;
             }
@@ -848,7 +850,7 @@ public final class Battles {
         }
 
         String rousing(int i) {
-            boolean attacking = i == 0 && !assault || i == 0;
+            boolean attacking = i == 0;
             String n = name(i);
             return attacking ? n + "! They would not give us what is owed. Today we take it — follow the banner!"
                 : "They've come for what's ours, " + n + ". They'll not have it. Shields together!";
@@ -926,7 +928,7 @@ public final class Battles {
         double fx = origin[2], fz = origin[3], rx = -fz, rz = fx;
         double ox = origin[0] + fx * forward, oz = origin[1] + fz * forward;
         float yaw = Armies.yawTo(fx, fz);
-        List<Armies.Fighter> line = new ArrayList<>(), archers = new ArrayList<>(), reserve = new ArrayList<>();
+        List<Armies.Fighter> line = new ArrayList<>(), archers = new ArrayList<>(), reserve = new ArrayList<>(), riders = new ArrayList<>();
         for (Armies.Fighter f : a.fighters) {
             if (f.down() || f.order == Armies.Order.ENGAGE || f.order == Armies.Order.ROUT) continue;
             if (f.rank == Armies.Rank.CAPTAIN) {
@@ -938,6 +940,7 @@ public final class Battles {
                 case MEDIC -> { if (b == null || b.phase.ordinal() < BattleModel.Phase.CLASH.ordinal()) f.place(level, ox - fx * 13, oz - fz * 13, yaw); }
                 case ARCHER -> archers.add(f);
                 case RESERVE -> reserve.add(f);
+                case RIDER -> riders.add(f);
                 default -> line.add(f);
             }
             f.speed = b != null && b.phase == BattleModel.Phase.ADVANCE ? 0.55 : 0.75;
@@ -954,6 +957,13 @@ public final class Battles {
         if (rise != null) rank(level, archers, rise.getX() + 0.5, rise.getZ() + 0.5, fx, fz, 0, 1.5, 10, yaw);
         else rank(level, archers, ox, oz, fx, fz, -4, 2.0, 14, yaw);
         boolean sent = b != null && b.reserveSent[side];
+        // The riders on the right wing, a little back; sent, round the far end of their line.
+        double wingR = Math.max(8, line.size() * 0.75 + 5);
+        if (sent && b.phase == BattleModel.Phase.CLASH && a.tactic == BattleModel.Tactic.CAVALRY) {
+            double[] them = b.origin(1 - side);
+            rank(level, riders, them[0] + rx * wingR, them[1] + rz * wingR, -rx, -rz, 0, 2.5, 6, Armies.yawTo(-rx, -rz));
+            for (Armies.Fighter f : riders) f.speed = 1.3;
+        } else rank(level, riders, ox + rx * wingR, oz + rz * wingR, fx, fz, -2, 2.5, 6, yaw);
         if (sent && b.phase == BattleModel.Phase.CLASH) {
             // Round the flank: out past the end of their line, then in at it.
             double[] them = b.origin(1 - side);
@@ -1188,6 +1198,7 @@ public final class Battles {
             if (!(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
             if (f.dead) { dies(e, f); continue; }
             if (e.isLeashed()) e.dropLeash(true, false);
+            if (e.isPassenger()) e.stopRiding();                   // the horse left at the square, for the rancher to bring in
             if (v == null || !f.town.equals(a.town)) continue;
             ItemStack held = e.getMainHandItem();
             if (held.getItem() instanceof BannerItem && Arms.lent(held)) {

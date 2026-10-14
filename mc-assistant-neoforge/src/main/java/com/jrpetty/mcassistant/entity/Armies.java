@@ -454,6 +454,7 @@ public final class Armies {
             for (Fighter o : a.fighters) if (o.town.equals(f.town) && o.rank == Rank.SERGEANT) has = true;
             if (!has) f.rank = Rank.SERGEANT;
         }
+        mountUp(level, v, a, byId);
         VillageFolkEntity medic = medicOf(level, v, pool);
         if (medic != null) {
             Fighter m = new Fighter(medic.getUUID(), medic.displayNameCap(), id, BattleModel.Role.MEDIC);
@@ -468,6 +469,36 @@ public final class Armies {
         supply(level, v, a, siege);
         a.morale = BattleModel.startMorale(a.boldness, atTheGate, veterans(a), !WarAndPeace.garrisonAt(level, id).isEmpty());
         return a;
+    }
+
+    /** The most riders an army puts on the town's horses. */
+    static final int RIDERS = 4;
+
+    /**
+     * The town's saddled horses, if it keeps a stable: the Captain up on one, and up to four of the line's best as
+     * riders for the flank. They mount in the stable (Riding.mount: the horse goes where its rider would walk) and
+     * ride back to the square; home again they get down, and the rancher brings the horses in (Stables).
+     */
+    static int mountUp(ServerLevel level, Villages.Village v, Army a, Map<UUID, VillageFolkEntity> byId) {
+        Stables.Stable st = Stables.stableNow(v.id(), level.getGameTime());
+        if (st == null || !level.isLoaded(st.anchor())) return 0;
+        List<Fighter> riders = new ArrayList<>();
+        Fighter cap = a.officer(Rank.CAPTAIN);
+        if (cap != null) riders.add(cap);
+        List<Fighter> line = new ArrayList<>();
+        for (Fighter f : a.fighters) if (f.role == BattleModel.Role.LINE && f.rank == Rank.NONE && f.town.equals(v.id())) line.add(f);
+        line.sort((x, y) -> Integer.compare(y.power, x.power));
+        riders.addAll(line.subList(0, Math.min(RIDERS, line.size())));
+        int n = 0;
+        for (Fighter f : riders) {
+            VillageFolkEntity g = byId.get(f.id);
+            if (g == null || g.isPassenger()) continue;
+            net.minecraft.world.entity.animal.horse.AbstractHorse h = Riding.freeHorse(level, v.id(), st);
+            if (h == null || !Riding.mount(g, h)) break;
+            if (f.rank != Rank.CAPTAIN) f.role = BattleModel.Role.RIDER;
+            n++;
+        }
+        return n;
     }
 
     @Nullable
@@ -724,7 +755,7 @@ public final class Armies {
             }
             if (level.getNearestPlayer(f, 48.0) == null && level.getNearestPlayer(x.tx, x.ty, x.tz, 48.0, false) == null) {
                 f.getNavigation().stop();
-                f.moveTo(x.tx, x.ty, x.tz, x.yaw, 0.0F);
+                Riding.carry(f, x.tx, x.ty, x.tz);                     // its horse and all, if it rides
                 return;
             }
             double d = Math.sqrt(d2);
@@ -752,13 +783,17 @@ public final class Armies {
         if (!level.isPositionEntityTicking(to) || level.getNearestPlayer(f, 32.0) != null
             || level.getNearestPlayer(x.tx, x.ty, x.tz, 32.0, false) != null) return;
         f.getNavigation().stop();
-        f.moveTo(x.tx, x.ty, x.tz, x.yaw, 0.0F);
+        Riding.carry(f, x.tx, x.ty, x.tz);                     // its horse and all, if it rides
     }
 
     static void face(VillageFolkEntity f, float yaw) {
         f.setYRot(yaw);
         f.setYHeadRot(yaw);
         f.yBodyRot = yaw;
+        if (f.getVehicle() instanceof LivingEntity horse) {
+            horse.setYRot(yaw);
+            horse.yBodyRot = yaw;
+        }
     }
 
     static void raiseShield(VillageFolkEntity f) {

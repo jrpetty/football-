@@ -440,7 +440,7 @@ public final class Campaigns {
         double odds = odds(level, a.town, a.enemy, day);
         boolean rise = (i == 0 ? g.riseA() : g.riseB()) != null, cover = (i == 0 ? g.coverA() : g.coverB()) != null;
         Random rng = new Random(seed(a.town, day));
-        a.tactic = BattleModel.choose(a.boldness, a.cunning, odds, rise, cover, 0, a.count(BattleModel.Role.ARCHER), a.size(), rng);
+        a.tactic = BattleModel.choose(a.boldness, a.cunning, odds, rise, cover, a.count(BattleModel.Role.RIDER), a.count(BattleModel.Role.ARCHER), a.size(), rng);
     }
 
     static long seed(UUID town, long day) {
