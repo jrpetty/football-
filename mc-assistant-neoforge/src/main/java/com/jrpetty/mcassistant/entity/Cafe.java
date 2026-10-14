@@ -316,7 +316,7 @@ public final class Cafe {
         int changed = 0;
         for (int k = 0; k < tops.size(); k++) {
             BlockPos at = tops.get(k);
-            if (!level.getBlockState(at).is(Blocks.BARREL)) continue;          // not built yet
+            if (!ServicePoints.isCounter(level.getBlockState(at))) continue;   // not built yet ([shops-homes] or the service counter)
             ItemStack want = k < goods.size() ? goods.get(k) : ItemStack.EMPTY;
             if (TownLife.frameOn(level, at.above(), want, true)) changed++;
             priceTag(level, village, v, at, f.door(), want, free);
@@ -513,7 +513,7 @@ public final class Cafe {
         Stockroom.sold(level, v.id(), Stockroom.Seller.SHOP, pick, 1, price);
         ItemStack bought = pick.copyWithCount(1);
         // A treat is its own: kept off the stores, and carried along when it moves house (Homes).
-        if (!forWork) Homes.keepsake(bought, f);
+        if (!forWork) Homes.keepsake(bought, f, Homes.Source.BOUGHT);   // [shops-homes] bought with its own coin
         ItemStack left = f.insertItem(bought);
         if (!left.isEmpty()) Crafts.store(level, v, left);
         return bought.getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + " for " + String.format(java.util.Locale.ROOT, "%.2f", each)

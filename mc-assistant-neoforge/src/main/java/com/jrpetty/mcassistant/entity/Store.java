@@ -166,6 +166,7 @@ public final class Store {
         if (!level.isLoaded(p)) return;
         BlockEntity be = level.getBlockEntity(p);
         if (!(be instanceof Container c) || ZoneChests.isVillageStore(be)) return;
+        if (WorkStock.isMakings(be)) return;                                // [shops-homes] the bench's makings are not for sale
         if (!out.contains(c)) out.add(c);
     }
 
@@ -544,7 +545,7 @@ public final class Store {
 
     /** The flattest dry spot near here for the store (its corners and middle within a block of one another), within
      *  thirty blocks; else here. */
-    private static BlockPos flatGround(ServerLevel level, BlockPos near) {
+    static BlockPos flatGround(ServerLevel level, BlockPos near) {
         for (int ring = 0; ring <= 30; ring += 3) {
             for (int dx = -ring; dx <= ring; dx += 3) {
                 for (int dz = -ring; dz <= ring; dz += 3) {
@@ -568,7 +569,7 @@ public final class Store {
     }
 
     /** The store's ground cleared of what the world grew on it (trees, leaves, grass, flowers) so its air is clear. */
-    private static void clearSite(ServerLevel level, BlockPos at) {
+    static void clearSite(ServerLevel level, BlockPos at) {
         for (BlockPos p : BlockPos.betweenClosed(at.offset(-7, 0, -11), at.offset(7, 16, 11))) {
             net.minecraft.world.level.block.state.BlockState st = level.getBlockState(p);
             if (st.isAir()) continue;

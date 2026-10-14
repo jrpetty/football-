@@ -547,7 +547,8 @@ public final class Families {
             case GRAVE -> { }                    // a flower not laid stays in its pack: it is its own, or the town's gift
         }
         for (ItemStack s : back) {
-            ItemStack left = c == null ? s : Homes.insertInto(c, s);
+            // [shops-homes] Only the household's own goes back in its chest; what came out of the stores goes back there.
+            ItemStack left = c == null || !Homes.isKeepsake(s) ? s : Homes.insertInto(c, s);
             if (!left.isEmpty() && v != null) Crafts.store(level, v, left);
         }
         if (c != null) c.setChanged();

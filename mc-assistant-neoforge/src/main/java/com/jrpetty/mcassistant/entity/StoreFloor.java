@@ -93,7 +93,7 @@ public final class StoreFloor {
             if (!level.isLoaded(b.anchor())) continue;
             Store.Layout l = Store.layout(b);
             for (BlockPos c : l.counters()) {
-                if (!level.getBlockState(c).is(Blocks.BARREL)) continue;          // not built yet
+                if (!ServicePoints.isCounter(level.getBlockState(c))) continue;   // not built yet ([shops-homes] or the service counter)
                 Direction f = front(c, l.door());
                 BlockPos stand = null;
                 for (BlockPos p : new BlockPos[]{ c.relative(f.getOpposite()), c.relative(f.getClockWise()), c.relative(f.getCounterClockWise()) }) {
@@ -146,7 +146,7 @@ public final class StoreFloor {
             if (!level.isLoaded(b.anchor())) continue;
             Store.Layout l = Store.layout(b);
             for (BlockPos at : l.counters()) {
-                if (!level.getBlockState(at).is(Blocks.BARREL)) continue;
+                if (!ServicePoints.isCounter(level.getBlockState(at))) continue;   // [shops-homes] a cask, or the service counter
                 ItemStack want = k < goods.size() ? goods.get(k) : ItemStack.EMPTY;
                 k++;
                 if (frameOn(level, at.above(), want)) changed++;
@@ -463,6 +463,7 @@ public final class StoreFloor {
         if (!(assistant.level() instanceof ServerLevel level) || assistant.ownerId() == null) return false;
         if (ShopRoles.role(assistant) != ShopRoles.Role.ASSISTANT || !ShopStock.open(assistant.ownerId())) return false;
         if (!Market.isCoin(p.getMainHandItem())) return false;
+        if (ServicePoints.coinAtKeeper(assistant, p)) return true;       // [shops-homes] its counter's screen
         Post post = postOf(level, assistant);
         if (post == null || post.stand() == null) return false;
         if (assistant.distanceToSqr(post.stand().getX() + 0.5, post.stand().getY(), post.stand().getZ() + 0.5) > 2.5 * 2.5) return false;

@@ -340,6 +340,13 @@ public final class Dealings {
 
     private static final Map<UUID, Order> ORDERS = new ConcurrentHashMap<>();
 
+    /** [shops-homes] This player's order with this village: the thing, the day it is ready, who makes it; or null. */
+    @Nullable
+    static Order orderOf(UUID player, UUID village) {
+        Order o = ORDERS.get(player);
+        return o != null && o.village().equals(village) ? o : null;
+    }
+
     /** Has this player a craftsman's order in with this village? */
     public static boolean hasOrder(UUID player, UUID village) {
         Order o = ORDERS.get(player);
@@ -374,6 +381,18 @@ public final class Dealings {
         if (!craftsman(f.stationTask())) return "That's work for a smith, a tailor or a carpenter — ask one of them.";
         Item want = Services.itemNamed(text);
         if (want == null) return "What shall I make? Say what — \"make me an iron sword\".";
+        return commission(level, f, p, want);
+    }
+
+    /** [shops-homes] A made-to-order piece for the player, by the thing itself (the smithy's screen): what the hand is
+     *  up to, of the player's makings and what the village can spare, paid now and ready tomorrow. */
+    static String commission(ServerLevel level, VillageFolkEntity f, Player p, Item want) {
+        UUID village = f.ownerId();
+        if (village == null) return "I can't make anything without a workshop.";
+        long d = day(f);
+        Order mine = ORDERS.get(p.getUUID());
+        if (mine != null && mine.village().equals(village)) return "One order at a time: your " + new ItemStack(mine.item()).getHoverName().getString()
+            .toLowerCase(Locale.ROOT) + " first.";
         // Only what its hand is up to: a beginner at the anvil forges tools, not a diamond chestplate.
         int skill = f.veteranLevel();
         if (!Craftsmanship.canMake(skill, want)) return Craftsmanship.beyond(f, want);

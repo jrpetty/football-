@@ -240,7 +240,7 @@ public final class Couriers {
             for (int i = 0; i < box.getContainerSize(); i++) {
                 ItemStack st = box.getItem(i);
                 if (st.isEmpty()) { room = true; continue; }
-                if (AssistantEntity.haulWeight(st) <= 0) continue;
+                if (AssistantEntity.haulWeight(st) <= 0 || WorkStock.kit(level, p, st)) continue;   // [shops-homes] the kit stays
                 held += st.getCount();
                 if (st.get(net.minecraft.core.component.DataComponents.FOOD) != null) food += st.getCount();
             }
@@ -550,7 +550,7 @@ public final class Couriers {
             if (!reach(c, at)) return walk(c, level, v, o, r, at);
             if (!c.transferReady()) return true;                     // still handling the last load
             boolean all = c.can(AssistantEntity.Ability.HAUL_FULL_PACK);
-            int n = c.loadFrom(at, all ? 512 : 256, s -> AssistantEntity.haulWeight(s) > 0);
+            int n = c.loadFrom(at, all ? 512 : 256, s -> AssistantEntity.haulWeight(s) > 0 && !WorkStock.kit(level, at, s));   // [shops-homes] the kit stays
             n += Crates.packFrom(c, at);                            // [workitems] and what is left packed into its crates, nine stacks a crate
             r.moved += n;
             if (r.moved <= 0) {                                       // nothing worth carrying after all

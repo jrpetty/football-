@@ -855,8 +855,11 @@ public class VillageFolkEntity extends AssistantEntity {
             hobbyNow = "on the way to the shop";
             return true;
         }
+        ServiceQueue.Turn turn = ServiceQueue.turn(this, server, ServiceRole.SHOP, "");   // [shops-homes] in line at the counter
+        if (turn == ServiceQueue.Turn.BUSY) return true;
         shopDay = day;
         shopSetOff = -1;
+        if (turn == ServiceQueue.Turn.CLOSED) return false;
         String bought = Cafe.folkShops(server, v, this, forWork);
         if (bought != null) {
             FolkTalk.speak(this, forWork ? "New tools for the job: " + bought + ". Money well spent."
@@ -890,8 +893,11 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             return true;
         }
+        ServiceQueue.Turn turn = ServiceQueue.turn(this, server, ServiceRole.CAFE, "");   // [shops-homes] in line at the counter
+        if (turn == ServiceQueue.Turn.BUSY) return true;
         cafeDay = day;
         cafeSetOff = -1;
+        if (turn == ServiceQueue.Turn.CLOSED) return false;
         String had = Cafe.folkBuys(server, v, this);
         if (had != null) {
             String[] lines = { "A " + had + " — just the thing.", "Nothing like a " + had + " on my break.",
@@ -2416,6 +2422,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (FolkNeeds.low(this, FolkNeeds.SOCIAL) && keepCompany(server)) return;
         if (FolkNeeds.low(this, FolkNeeds.COMFORT) && homeComfort(server)) return;
         if (Habits.favouritePlace(this, server)) return;   // [individual] its favourite spot in town
+        if (ShoppingTrips.errand(this, server)) return;   // [shops-homes] its shopping list: to the shop, served, home with it
         if (homeComfort(server)) return;              // its savings, spent on its home
         if (Fashion.shopping(this, server)) return;   // [fashion] to the shop for the season's look it wants
         if (PlayerStalls.errand(this, server)) return;   // a player's stall on the square, for what it wants (PlayerStalls)

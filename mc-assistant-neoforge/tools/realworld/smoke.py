@@ -3926,6 +3926,49 @@ def war_stage(r, look, cx, cz):
     say("alive after the war stage: %s" % client_alive())
 
 
+def shops_homes_stage(r, look, cx, cz):
+    """[shops-homes] Served at the counter, and homes that keep things (entity/ServicePoints, ShopDesk, HomeStores):
+    the shop stood up by the town with its service counter fitted, its wares on the counters and three folk queuing
+    at the counter held still (/village service stage); the shop's interior from its door; the queue; a poor
+    household's house and a well-off one's side by side, and each inside. Then the screens: the shop's on Food (the
+    first kind), with a full basket, its Sell tab (with the Wanted makings), the bank's desk and the smithy's anvil,
+    and the shop's again for the small-window picture (run the client small). Not wired into main(): call it in a grown town."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 4000")
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    out = r.cmd("execute positioned %d 100 %d run village service stage" % (cx - 30, cz + 30))
+    say("service stage: " + out[:2000])
+    num = r"(-?[\d.]+)"
+    shots = re.findall(r"SHOT (\S+) " + " ".join([num] * 6), out)
+    if not shots:
+        say("no shop to photograph")
+        r.cmd("gamemode creative %s" % USER)
+        return
+    for name, ex, ey, ez, ax, ay, az in shots:
+        look("shops-" + name, float(ex), float(ey), float(ez), float(ax), float(ay), float(az), wait=8)
+    c = re.search(r"COUNTER (-?\d+) (-?\d+) (-?\d+)", out)
+    if c:
+        x, y, z = (int(v) for v in c.groups())
+        r.cmd("gamemode creative %s" % USER)
+        r.cmd("tp %s %d %d %d" % (USER, x, y, z + 2))
+        time.sleep(4)
+        for tab in ("buy", "full", "sell"):
+            say("screen %s: %s" % (tab, r.cmd("execute as %s run village service open shop %s" % (USER, tab))[:200]))
+            time.sleep(4)
+            shot("shops-screen-" + tab)
+        for role in ("bank", "smithy", "tavern"):
+            say("screen %s: %s" % (role, r.cmd("execute as %s run village service open %s" % (USER, role))[:200]))
+            time.sleep(4)
+            shot("shops-screen-" + role)
+        r.cmd("tp %s %d %d %d" % (USER, x, y, z + 2))
+        say("small window: " + r.cmd("execute as %s run village service open shop full" % USER)[:200])
+        time.sleep(2)
+        # The screen lays itself out to the window: the harness's own window size and GUI scale make the small picture.
+        shot("shops-screen-small")
+    say("stage done: " + r.cmd("execute positioned %d 100 %d run village service stage done" % (cx - 30, cz + 30))[:200])
+    r.cmd("gamemode creative %s" % USER)
+    say("alive after the shops and homes: %s" % client_alive())
 def styles_stage(r, look, cx, cz):
     """[styles] The renovation (entity/Renovation, /village theme stage). Run from well out to the west of the town,
     /village theme stage lays out one of the town's houses as an older town left it: earth and a block of gold patched

@@ -307,7 +307,7 @@ public final class Market {
 
     /** How much of what matches the stores hold. */
     public static int stock(ServerLevel level, UUID village, Predicate<ItemStack> what) {
-        int n = 0;
+        int n = WorkStock.own(what);                                    // [shops-homes] a maker at work counts its own chest
         for (BlockPos p : Villages.storeChests(level, village)) {
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
             for (int i = 0; i < c.getContainerSize(); i++) {
@@ -1148,6 +1148,8 @@ public final class Market {
         Villages.Village v = Villages.nearest(level, pos, 40);
         if (v == null) return;
         Player p = e.getEntity();
+        if (!p.isShiftKeyDown() && p instanceof net.minecraft.server.level.ServerPlayer sp
+                && ServicePoints.openAtCounterCask(sp, pos, frame)) return;   // [shops-homes] the counter's screen: one way to buy
         if (frame.getTags().contains(StoreFloor.FRAME_TAG)) {      // [econ-store] the shop's own counter (StoreFloor)
             p.displayClientMessage(Component.literal(StoreFloor.playerBuys(level, v, p, frame.getItem(), pos)), true);
             return;

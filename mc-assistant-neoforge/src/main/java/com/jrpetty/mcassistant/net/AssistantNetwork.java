@@ -150,6 +150,8 @@ public final class AssistantNetwork {
                 folk.openManagementScreen(player);
                 return;
             }
+            // [shops-homes] A trade's business (For sale, the bank, Mend this, a haggle): its service screen, one way to do it.
+            if (com.jrpetty.mcassistant.entity.ServicePoints.fromTalk(folk, player, com.jrpetty.mcassistant.entity.TalkTopic.of(payload.topic()))) return;
             String text = payload.text().length() > FolkTalkPayload.MAX_TEXT
                 ? payload.text().substring(0, FolkTalkPayload.MAX_TEXT) : payload.text();
             com.jrpetty.mcassistant.entity.FolkTalk.handle(folk, player,

@@ -5751,6 +5751,104 @@ that a ware nobody has is ordered from the crafters and what they make goes into
 is staffed with one keeper, a crafter, an assistant and a stock keeper; and that a folk buying at a counter is
 served there by its assistant. The unit test `BlueprintSoundnessTest` checks the store's drawing.
 
+## Served at the counter, and homes that keep things
+
+**One way to be served.** Every trade that serves the public serves at a *service point*, the same way for players
+and folk (`entity/ServicePoints`):
+
+| Trade | Its point | Keeps | What you can do there |
+|---|---|---|---|
+| Shop and town store | the service counter | 7am to 7pm | buy (a basket), sell to the town, order what is not in, haggle |
+| Café | the service counter | 6:30am to 8pm | buy from its menu, order more |
+| Tavern | the service counter at the bar | 4:30pm to 1:30am | a drink or a hot meal, a round for the room, a room at the inn |
+| Bank | the ledger desk (its lectern) | 7:30am to 5:30pm | deposit, withdraw, repay or take a mortgage, the statement |
+| Smithy | the anvil | 7am to 6pm | mend what you carry (metal), a piece made to order, collect it, use the anvil yourself |
+| Tailor's | the loom in the workshop | 7am to 6pm | mend leather and cloth, a piece made to order, collect it, use the loom yourself |
+
+* **The service counter** is a block (three slabs over a barrel between two planks). Once a day the town fits one in
+  each shop, store, café and tavern, in place of the counter cask beside the gap the keeper gets behind by, out of
+  four of the stores' planks and that cask (what was in it goes back to the stock); it shows a ware in its frame like
+  any counter. Its customers' side is its front; the keeper stands behind it.
+* **The screen.** Right-click the point (or the counter's casks, or the keeper with coin in hand, or the talk options
+  *For sale*, *Bank*, *Mend this* and *Haggle*). The header has the keeper, the hours, open or shut, your standing and
+  your coin. The shop's panel has its kinds of goods down the left (Food, Drink, Clothes, Tools, Household, Comforts,
+  Materials), each line with its price, how many are in, which way its price is going and why ("dear: it's short",
+  "cheap: a glut"), and *Order* for what is not in (on the workshop's book, ready in about a day and a half). The
+  basket on the right has − and + on each line (shift for a stack), the sum, every discount as its own line (a friend
+  of the town, a citizen, a haggle or a medal; unwelcome: double; never under nine tenths of the price) and *Buy*.
+  *Sell* lists what you carry that the town buys, at its paying price (four fifths). The other trades' panels are
+  rows of things to do, with an amount where one is wanted and the reason when something cannot be done. Keys: Up and
+  Down, Enter, + and −, Tab through the kinds, B to buy, Esc to leave. Each dealing goes in your ledger at that town
+  (the last six, on the Sell tab).
+* **The same rules for everybody.** Every button is checked on the server: still near, the trade open, the request
+  new (a double click or a resend after lag is answered once), the stock there and the coin enough; then the goods
+  leave the shop's own casks and chests (short, the stores', booked as a stock-out) and the coin goes to the treasury.
+  The screen never prices anything itself: the basket is kept on the server and priced there. It keeps itself up to
+  date while it is open. Closed, or with its keeper away, it says so and when it opens next.
+* **Folk at the counter.** Folk walk up to the counter, wait their turn in a line out in front of it, and are served a
+  few seconds each by the keeper ("Next, please! What can I get you?"), at the same prices, out of their own purses.
+
+**What folk need, and buy.** Each folk keeps a shopping list, made again each morning (`entity/Needs`): food for its
+household's larder (two days of meals a head, bought by whoever has most in its purse), the tool of its trade when it
+has none, a larder for a home without one, candles for the evenings, a wardrobe when the household chest fills,
+something warm in winter, a cake for a birthday in the house, books for a reader, a toy for the household's child,
+the pet's treats, a lute for the musical. The poor buy only what keeps them fed and at work; the better off, more.
+Once a day in its own time a folk takes the top of its list it can pay for (three things at most) to the shop while it
+is open, queues, buys, and carries it home (`entity/ShoppingTrips`). The shop keeps what the lists ask for in its range
+(the stock keeper orders it from the storehouse or the crafters by the game's recipes, as the age allows). Its card
+says what it wants and what it last bought.
+
+**Homes that keep things** (`entity/HomeStores`, `entity/Belongings`). A home's storage is its own: the household
+chest, the larder (a barrel), the wardrobe (a second chest) and the toy box (a third, with children), each named for
+what it keeps, which keeps the town's stores, builders and couriers out of it (only chests bearing the village's mark
+are ever the stores', and a player's own chest is never named or touched). What a folk brings home of its own goes in
+where it belongs: food to the larder, clothes to the wardrobe, toys to the toy box, the rest to the chest; a new larder
+or wardrobe it bought is set down against a wall. Meals come out of the larder first, then the chest; in the morning a
+folk with no tool of its trade on it takes its own out of the chest. Old towns: the households' chests are named the
+first day. The folk profile's Belongings tab shows what is really in them.
+
+**Only what the household owns.** A household's boxes hold only its own things, and each says whose it is and how
+it came by it: bought with its own coin (at the shop, a stall, the auction), given (a present, a prize, the town's
+gift), made in its own time (an allotment's harvest), passed on by family, or brought at the founding (four loaves
+of each founder's own). Nothing of the town's stores is ever carried home: moving house takes only what is owned;
+once a day each household's boxes are looked over, and anything that is nobody's (an errand's leftovers, something
+swept up off the step, what an old town had left in its houses) goes back to the stores, and a dead owner's things
+pass to the household by inheritance. The trades' displays the town sets in a house (a fisher's barrel of cod) are
+named as displays, the house's furnishing and no household box.
+
+**The shop as a business** (`entity/ShopBusiness`). The shop keeps two kinds of stock: its makings (in its makings
+chest, by its bench, kept stocked from the stores by the couriers as the workshops' are) and its wares (on its
+counters and in its stockroom). Its keeper and hands make wares out of the makings when a ware is below what the
+stock keeper keeps of it (from what sells, what folk asked for and could not have, the shopping lists, the fashions
+and the age's new makes). Its **till** keeps what it took over the counter, what its makings cost (at the town's
+price) and its wages: the day's and the week's, and the profit, on the Sell tab, on the keeper's card and on
+`/village stock`. Each **week** the keeper looks over its range: a line new since last week is announced on the board
+and in the chronicle ("New at Wren's: cake!") and shows NEW on the screen; a line gone off it is cleared at a markdown,
+never under the least the town lets it go for. The screen marks lines new, back in stock, on clearance or sold out
+(with Order). The **Wanted** list on the Sell tab is the makings the shop is short of that the stores cannot send: it
+buys them from players at a little over the town's paying price (never at a price that could be sold back at a
+profit), into its makings chest. Ask the keeper about its work and it talks business: what sells best this week,
+what it is short of, what is new, and the till.
+
+**Workshops keep their makings** (`entity/WorkStock`). The smithy's chest has the iron, coal and sticks and a spare
+pick and axe; the tailor's the wool, string, leather and dyes; the café's the wheat, sugar, eggs and cocoa; the
+fletcher's the sticks, flint and feathers; the brewery's the bottles, wart and blaze powder; the library's the lapis,
+books and paper. Each minute the town looks; a making under half of what the chest keeps is sent for from the stores
+(never more than half of what they hold), carried over by a courier, or by the maker itself if no courier comes. A
+maker at work takes out of its own chest first. Out on the plots, a producer's work chest keeps its kit (a miner's
+torches and spare pick, a farmer's seed and spare hoe, a woodcutter's spare axe, a fisher's spare rod): the couriers
+leave it when they empty the chest.
+
+The game tests `ShopsHomesGameTests` (sk01 to sk16) check the counter fitted and found; a player's purchase (coin and
+goods exact), sale at four fifths, order of what is not in, and a double request answered once; a closed shop refusing;
+two folk queuing and served in turn; the bank's deposit, the tavern's drink and the smith's mending; the shopping
+list by means and the shop's range; a folk's trip, bread into the larder, coin and goods conserved; the larder feeding
+a meal; the counters showing the stock; ten days of homes filling, none empty, everything in them the household's own
+with how it came by it, the town's things sent back; the smithy's chest stocked from the stores and worked from; and
+the shop as a business (sk17 to sk22): its wares made from its makings chest, its makings ordered and delivered with
+the goods conserved and their cost in its till, a missed sale a new line at the review, a dropped line cleared at a
+markdown above the floor, the Wanted list filled by a player and paid, and the till balancing.
+
 ## What every job is worth
 
 Every job in a town is paid for what it is worth: what it brings the town, how hard it is to get hands

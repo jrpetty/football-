@@ -319,6 +319,7 @@ public final class StockKeeper {
             out.putIfAbsent(key, new Ware(key, s -> s.is(it), one, false, it, 1, 1));
         }
         Fashion.wares(level, v).forEach(out::putIfAbsent);     // [fashion] the garments, the season's look first: the tailor's, never the crafters'
+        Needs.wares(level, v).forEach(out::putIfAbsent);       // [shops-homes] what the folk's shopping lists ask for today
         // Whatever folk and players bought or asked for this week, that the range has not got.
         for (Line l : b.lines.values()) {
             if (out.containsKey(l.key) || Line.week(l.sold) + Line.week(l.missed) == 0) continue;
@@ -355,6 +356,12 @@ public final class StockKeeper {
         if (fromStores > 0) l.outs[0]++;
         l.lastSale = b.day;
         save(b);
+    }
+
+    /** [shops-homes] Out lately and in again: its screen's "back in stock". */
+    static boolean backInStock(ServerLevel level, UUID village, ItemStack one) {
+        Line l = book(level, village).lines.get(Stockroom.key(one));
+        return l != null && l.outs[0] == 0 && (l.outs[1] > 0 || l.outs[2] > 0);
     }
 
     /** Wanted at the counter and none to be had anywhere: a stock-out, and demand all the same. */

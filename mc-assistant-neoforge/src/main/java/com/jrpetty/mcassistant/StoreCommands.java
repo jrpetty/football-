@@ -52,7 +52,8 @@ public final class StoreCommands {
     private static int book(CommandContext<CommandSourceStack> ctx) {
         Villages.Village v = here(ctx);
         if (v == null) return 0;
-        String page = StockKeeper.page(ctx.getSource().getLevel(), v);
+        String page = StockKeeper.page(ctx.getSource().getLevel(), v)
+            + "\nTill: " + com.jrpetty.mcassistant.entity.ShopBusiness.tillLine(ctx.getSource().getLevel(), v.id());   // [shops-homes]
         for (String line : page.split("\n")) ctx.getSource().sendSuccess(() -> Component.literal(line), false);
         return 1;
     }
