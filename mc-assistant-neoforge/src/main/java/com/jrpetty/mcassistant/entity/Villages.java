@@ -668,6 +668,7 @@ public final class Villages {
         for (AssistantEntity a : folkOf(villageId)) if (a.bedPos() != null) out.add(a.bedPos());
         out.addAll(CaveDwellers.awayBeds(villageId));          // [caves] the cave team's, away on a trip, stay theirs
         out.addAll(NetherRuns.awayBeds(villageId));            // [nether] and the Nether runners', away through the gateway
+        out.addAll(Wagons.awayBeds(villageId));                // [wagons] and a wagon's crew's, out of sight on the road
         return out;
     }
 

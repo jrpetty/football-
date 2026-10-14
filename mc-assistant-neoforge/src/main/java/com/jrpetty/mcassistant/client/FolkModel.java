@@ -589,6 +589,14 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
             arm.xRot = arm.xRot * 0.5F - Mth.PI / 10.0F;
         }
 
+        // [wagons] A crate carried to or from a wagon: both arms out under it.
+        if (com.jrpetty.mcassistant.client.WagonClientHooks.isCarrying(folk.getId())) {
+            rightArm.xRot = -1.15F;
+            leftArm.xRot = -1.15F;
+            rightArm.zRot = 0.12F;
+            leftArm.zRot = -0.12F;
+        }
+
         // Breathing: the arms never hang dead still.
         float breath = Mth.cos(ageInTicks * 0.09F) * 0.05F + 0.05F;
         rightArm.zRot += breath;
