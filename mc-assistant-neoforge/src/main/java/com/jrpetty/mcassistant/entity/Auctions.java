@@ -63,7 +63,8 @@ import java.util.function.Predicate;
  *     its pack.</li>
  * <li><b>The auction</b> starts at nine. The auctioneer (the elder, or the leader, or whoever the town looks up to)
  *     takes its stand on the square, with the lot held up over it for all to see; the folk who want something come and
- *     stand before it. It calls the lots in turn, from the reserve (half what the thing is worth), and the folk bid
+ *     stand before it. It calls the lots in turn, from the reserve (half what the thing is worth; for the town's own,
+ *     never under the least the town lets it go for: [market] Market.leastLot), and the folk bid
  *     with their own coin, up to what the thing is worth to them: its worth by their means (the poor bow out early, the
  *     wealthy go high), their nature (the thrifty least of all, the generous and the free spirits more) and their wants
  *     (a smith for a diamond, the enchanter for a book, a musician for a disc, the rancher for a saddle; a collector
@@ -269,7 +270,10 @@ public final class Auctions {
             int spare = count.getOrDefault(e.getKey(), 0) - keep(level, v.id(), one);
             if (spare <= 0) continue;
             int worth = Math.max(2, (int) Math.round(Prices.of(one)));
-            out.add(new Lot(one, Owner.TOWN, null, Villages.name(v.id()), provenance(level, v.id(), one), reserve(worth), worth));
+            // [market] The town's own lot never goes under the least it lets a thing go for: won at half its worth, a
+            // diamond sold straight back at the stall for more.
+            int reserve = Math.max(reserve(worth), Market.leastLot(level, v.id(), one, 1));
+            out.add(new Lot(one, Owner.TOWN, null, Villages.name(v.id()), provenance(level, v.id(), one), reserve, Math.max(worth, reserve)));
         }
         out.sort((a, b) -> Integer.compare(b.worth, a.worth));
         List<Lot> lots = new ArrayList<>();

@@ -997,6 +997,7 @@ public final class Villages {
         // [econ-trade] A standing trade deal leans the shares (TradeDeals.lean): fewer farmers where the bread comes in
         // reliably from a partner, more miners where stone is promised to one; back at once if the deliveries stop.
         t *= TradeDeals.lean(villageId, slot.trade());
+        t *= MarketLean.lean(villageId, slot.trade());     // [market] production follows prices: dear goods want hands
         // [fleet] A town with a fishing fleet wants a fisher for every one of its boats (Fleet).
         if (slot.trade() == AssistantEntity.StationTask.FISH) t = Math.max(t, Fleet.handsWanted(villageId));
         // Houses waiting on beds want the wool: twice the ranchers (their sheep) till they are made up.
