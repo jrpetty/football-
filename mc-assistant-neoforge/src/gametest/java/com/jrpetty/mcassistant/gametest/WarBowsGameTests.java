@@ -355,10 +355,14 @@ public class WarBowsGameTests {
                     Set<UUID> both = new HashSet<>(log.get(k));
                     both.retainAll(log.get(k - 1));
                     helper.assertTrue(both.isEmpty(), "side " + i + ": volley " + k + " by the other rank, not the one that just loosed");
-                    if (k >= 2) helper.assertTrue(new HashSet<>(log.get(k)).containsAll(log.get(k - 2)) || new HashSet<>(log.get(k - 2)).containsAll(log.get(k)),
-                        "side " + i + ": the first rank back two volleys on");
-                    checked++;
+                    if (k >= 2) checked++;
                 }
+                // The same rank every other volley: a crossbowman who held his bolt (no mark in sight) may miss his
+                // rank's turn, but never looses in the other rank's.
+                Set<UUID> first = new HashSet<>(), second = new HashSet<>();
+                for (int k = 0; k < log.size(); k++) (k % 2 == 0 ? first : second).addAll(log.get(k));
+                first.retainAll(second);
+                helper.assertTrue(first.isEmpty(), "side " + i + ": the first rank back two volleys on, the second between: " + first);
             }
             helper.assertTrue(checked >= 2, "volleys enough to see the ranks change: " + checked);
             helper.succeed();
