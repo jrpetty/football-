@@ -3600,6 +3600,52 @@ def market_stage(r, look, cx, cz):
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the market: %s" % client_alive())
 
+def wagons_stage(r, look, cx, cz):
+    """[wagons] The trade wagons (entity/Wagons, TradeWagon, client/TradeWagonRenderer). Three scenes set by
+    /village wagon stage, each saying where to look from (VIEW name x y z ax ay az: the eyes' feet and what they look
+    at), the wagon held still for the camera with a mixed load showing (oak and spruce logs, wheat as bales, iron and
+    coal in open barrels, bread in open crates, stone as blocks, potatoes in sacks), its horse in the shafts and its
+    driver on the bench:
+      1. road: the open wagon on a stretch of worn road laid out past the town, close up from above its bed, and from
+         the side at a walker's height;
+      2. loading: the covered wagon in the town's yard by the trading post, from behind into its open back, the driver
+         carrying a crate out to it and the load rising;
+      3. night: the covered wagon on the road after dark, its two lanterns lit.
+    Then /village wagon stage done (the load into the town's stores, the wagon parked, the crew free)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    num = r"(-?\d+)"
+    pattern = r"VIEW (\S+) " + " ".join([num] * 6)
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 40, cz + 60                          # past the first houses, where the stage lays its own road
+
+    def stage(which, x, z, settle):
+        y = ground_height(r, x, z)
+        r.cmd("tp %s %d %d %d" % (USER, x + 10, y + 12, z + 10))
+        time.sleep(settle)                             # the scene's ground arrives at the server and the client
+        out = r.cmd("execute positioned %d %d %d run village wagon stage %s" % (x, y + 1, z, which))
+        say("wagon stage %s: %s" % (which, out[:600]))
+        return re.findall(pattern, out)
+
+    def shoot(views, wait):
+        for name, x, y, z, ax, ay, az in views:
+            look("44-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=wait)
+
+    shoot(stage("road", sx, sz, 8), 5)
+    shoot(stage("loading", cx, cz, 4), 3)              # the crates going out to it: a few seconds into the loading
+    # After dark (forward only: see midday), the covered wagon back on the stretch of road with its lanterns lit.
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    r.cmd("time add %d" % ((15000 - now) % 24000))
+    shoot(stage("night", sx, sz, 3), 5)
+    say("wagon: " + r.cmd("execute positioned %d %d %d run village wagon" % (cx, hy + 1, cz))[:900])
+    say("wagon let go: " + r.cmd("execute positioned %d %d %d run village wagon stage done" % (cx, hy + 1, cz))[:200])
+    midday(r)
+    say("alive after the wagons: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
@@ -4019,6 +4065,10 @@ def main():
         culture2_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("culture2 stage failed: %s" % e)
+    try:
+        wagons_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("wagons stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
