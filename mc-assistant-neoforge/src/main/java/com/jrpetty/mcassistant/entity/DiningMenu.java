@@ -220,9 +220,9 @@ public final class DiningMenu {
     }
 
     /** Can the kitchen make one now, out of the stores (the whole way, by the game's recipe)? */
-    static boolean makeable(ServerLevel level, Villages.Village v, Dish d, @Nullable VillageFolkEntity cook) {
+    static boolean makeable(ServerLevel level, Villages.Village v, DiningPlaces.Place p, Dish d, @Nullable VillageFolkEntity cook) {
         if (d.got() == Got.SHELF) return false;
-        Bench.Hand hand = Bench.handOf(level, v, cook, "cafe");
+        Bench.Hand hand = Bench.handOf(level, v, cook, p.kind.structure);          // the place's own smoker, oven and hearth
         ItemStack target = d.whole() != null ? d.whole().get() : d.one();
         return Bench.plan(level, v, target.getItem(), 1, hand).ok();
     }
@@ -266,7 +266,7 @@ public final class DiningMenu {
         for (Dish d : dishes()) {
             if (!d.where().contains(p.kind) || !d.meals().contains(meal)) continue;
             boolean local = own != null && d.one().is(own.item());
-            boolean available = portionsCut(p, d) > 0 || ready(level, p.village, d, held) > 0 || makeable(level, v, d, null);
+            boolean available = portionsCut(p, d) > 0 || ready(level, p.village, d, held) > 0 || makeable(level, v, p, d, null);
             double each = each(level, p, d, null);
             FoodProperties f = PlaceSettingBlock.foodOf(d.one());
             out.add(new Line(d, coins(each), each, !available, d == special, local, f == null ? 0 : f.nutrition(), d.about()));
@@ -295,7 +295,7 @@ public final class DiningMenu {
         for (Dish d : dishes()) {
             if (d.course() != Course.MAINS || !d.where().contains(p.kind) || !d.meals().contains(meal)) continue;
             int n = ready(level, v.id(), d, held) * 2 + (d.got() == Got.MADE ? makingsHeld(d, held) : 0);
-            if (own != null && d.one().is(own.item()) && (n > 0 || makeable(level, v, d, null))) return d;
+            if (own != null && d.one().is(own.item()) && (n > 0 || makeable(level, v, p, d, null))) return d;
             if (n > bestN) { bestN = n; best = d; }
         }
         return best;

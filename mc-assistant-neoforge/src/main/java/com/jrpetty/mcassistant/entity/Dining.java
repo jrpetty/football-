@@ -122,6 +122,8 @@ public final class Dining {
         public final double each;
         public int quality;
         public String cook = "";
+        /** Where it was cooked (the station the cook stood at). */
+        @Nullable public BlockPos at;
 
         Line(String dish, int price, double each) {
             this.dish = dish;
@@ -131,7 +133,7 @@ public final class Dining {
 
         @Nullable public Dish dishDef() { return DiningMenu.byId(dish); }
 
-        boolean drink() {
+        public boolean drink() {
             Dish d = dishDef();
             return d != null && d.course() == Course.DRINKS;
         }
@@ -567,6 +569,7 @@ public final class Dining {
             }
             l.got = made;
             l.cook = f.displayNameCap();
+            l.at = station.immutable();
             t.phase = 1;
             t.until = now + cookTicks(f, d);
             holdProp(f, made);
@@ -677,7 +680,7 @@ public final class Dining {
         if (town != null) {
             made = Cuisine.make(level, v, town, cook);
         } else {
-            Bench.Hand hand = Bench.handOf(level, v, cook, "cafe");
+            Bench.Hand hand = Bench.handOf(level, v, cook, p.kind.structure);    // the place's own smoker, oven and hearth
             Bench.Plan plan = Bench.plan(level, v, target.getItem(), 1, hand);
             made = plan.ok() ? Bench.make(level, v, plan, cook, hand) : ItemStack.EMPTY;
         }
@@ -989,7 +992,7 @@ public final class Dining {
             int have = clean(level, p, plate) + (plate ? dirty[0] : dirty[1]) + onTables(level, p, plate);
             if (have >= want) continue;
             net.minecraft.world.item.Item it = plate ? DiningItems.PLATE.get() : DiningItems.CUP.get();
-            Bench.Hand hand = Bench.handOf(level, v, Hospitality.first(v.id(), Hospitality.Role.HEAD_COOK), "cafe");
+            Bench.Hand hand = Bench.handOf(level, v, Hospitality.first(v.id(), Hospitality.Role.HEAD_COOK), p.kind.structure);
             Bench.Plan plan = Bench.plan(level, v, it, want - have, hand);
             if (!plan.ok()) continue;
             ItemStack made = Bench.make(level, v, plan, null, hand);

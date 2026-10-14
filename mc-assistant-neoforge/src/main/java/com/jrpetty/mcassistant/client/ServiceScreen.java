@@ -62,7 +62,9 @@ public class ServiceScreen extends Screen {
         super(Component.literal(data.getString("title")));
         this.data = data;
         this.kind = data.getString("kind");
-        this.panel = kind.equals("shop") ? new ShopPanel(this) : new DeskPanel(this);
+        this.panel = kind.equals("shop") ? new ShopPanel(this)
+            : kind.equals("dining") ? new DiningPanel(this)                  // [dining] the order screen
+            : new DeskPanel(this);
         this.nextNonce = data.getInt("nonce") + 1;
         this.panel.setData(data);
     }
@@ -101,7 +103,7 @@ public class ServiceScreen extends Screen {
     /** Send a button's request (the panels call this). */
     void send(String action, CompoundTag args) {
         int n = nextNonce++;
-        if (action.equals("buy") || action.equals("sell") || action.equals("order")) waitingOn = n;
+        if (action.equals("buy") || action.equals("sell") || action.equals("order") || action.equals("pay")) waitingOn = n;   // [dining] the bill
         PacketDistributor.sendToServer(new ServiceActionPayload(data.getString("role"), action, args, n));
     }
 

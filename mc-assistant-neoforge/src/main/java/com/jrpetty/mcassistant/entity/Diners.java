@@ -208,7 +208,7 @@ public final class Diners {
             if (Dining.atTable(p.building, t.number()) != null || claimed(p, t.number())) continue;
             if (Seats.taken(level, t.seat(), null) || Seats.claimed(t.seat())) continue;
             BlockState s = level.getBlockState(t.cell());
-            if (s.getBlock() instanceof PlaceSettingBlock && s.getValue(PlaceSettingBlock.HOUSE)) continue;   // not yet cleared
+            if (!PlaceSettingBlock.isCloth(s) && !s.isAir()) continue;   // not yet cleared, or the cook's cheese set out on it
             if (!level.getEntitiesOfClass(net.minecraft.world.entity.player.Player.class, new net.minecraft.world.phys.AABB(t.seat()).inflate(0.6)).isEmpty()) continue;
             double d = near == null ? t.number() : near.distSqr(t.seat());
             if (d < bestD) { bestD = d; best = t; }
@@ -241,6 +241,11 @@ public final class Diners {
                 it.remove();
                 Seats.stand(f, null);
                 continue;
+            }
+            if (d.stage == Stage.GOING && !Seats.sitting(f)) Seats.dine(f, level, tb.seat(), f.tickCount + 12000);
+            if (d.stage == Stage.GOING && Seats.seated(f)) {
+                d.stage = Stage.SEATED;
+                d.since = now;
             }
             if (d.stage == Stage.GOING) {
                 if (now - d.since > Dining.STUCK * 3) { abandon(level, d); it.remove(); Seats.stand(f, null); }

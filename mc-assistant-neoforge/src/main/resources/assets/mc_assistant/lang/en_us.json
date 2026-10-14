@@ -452,5 +452,9 @@
   "talk.mc_assistant.ui.why.meal": "Hold some food to share.",
   "talk.mc_assistant.ui.why.repair": "Hold the worn thing you want mended.",
   "talk.mc_assistant.ui.why.teach": "Hold a tool of its trade.",
-  "talk.mc_assistant.ui.why.shunned": "The town has turned against you: only a gift, or paying what you owe, will be heard."
+  "talk.mc_assistant.ui.why.shunned": "The town has turned against you: only a gift, or paying what you owe, will be heard.",
+  "block.mc_assistant.place_setting": "Place Setting",
+  "item.mc_assistant.plate": "Plate",
+  "item.mc_assistant.cup": "Cup",
+  "entity.mc_assistant.dining_seat": "Seat"
 }

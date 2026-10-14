@@ -73,15 +73,21 @@ public final class Hospitality {
     /** What has to be done at a place, each by whoever the place's staff has for it (duty). */
     public enum Duty { COOK, SERVE, WASH, TILL }
 
-    /** The order the jobs are filled in (the first wanted first), and who covers each duty, best first. */
+    /** The order the jobs are filled in (the first wanted first). */
     static final Role[] FILL_ORDER = { Role.HEAD_COOK, Role.BARKEEP, Role.WAITER, Role.BAKER, Role.INNKEEPER, Role.POT_WASHER, Role.HOST };
-    private static final Map<Duty, Role[]> COVER = new EnumMap<>(Duty.class);
+    /** Who does each duty, best first: the jobs that are for it, and the jobs that stand in when the town has none of
+     *  those at all (a café's one cook carries and washes; a busy waiter is waited for, not replaced by the cook). */
+    private static final Map<Duty, Role[]> FOR = new EnumMap<>(Duty.class), STANDS_IN = new EnumMap<>(Duty.class);
 
     static {
-        COVER.put(Duty.COOK, new Role[]{ Role.HEAD_COOK, Role.LINE_COOK, Role.BAKER, Role.WAITER, Role.HOST, Role.POT_WASHER, Role.BARKEEP });
-        COVER.put(Duty.SERVE, new Role[]{ Role.WAITER, Role.HOST, Role.BARKEEP, Role.LINE_COOK, Role.POT_WASHER, Role.HEAD_COOK, Role.BAKER });
-        COVER.put(Duty.WASH, new Role[]{ Role.POT_WASHER, Role.WAITER, Role.LINE_COOK, Role.HOST, Role.BARKEEP, Role.HEAD_COOK, Role.BAKER });
-        COVER.put(Duty.TILL, new Role[]{ Role.HOST, Role.BARKEEP, Role.HEAD_COOK, Role.WAITER, Role.LINE_COOK, Role.INNKEEPER });
+        FOR.put(Duty.COOK, new Role[]{ Role.HEAD_COOK, Role.LINE_COOK, Role.BAKER });
+        STANDS_IN.put(Duty.COOK, new Role[]{ Role.WAITER, Role.HOST, Role.POT_WASHER, Role.BARKEEP });
+        FOR.put(Duty.SERVE, new Role[]{ Role.WAITER, Role.HOST, Role.BARKEEP });
+        STANDS_IN.put(Duty.SERVE, new Role[]{ Role.LINE_COOK, Role.POT_WASHER, Role.HEAD_COOK, Role.BAKER });
+        FOR.put(Duty.WASH, new Role[]{ Role.POT_WASHER });
+        STANDS_IN.put(Duty.WASH, new Role[]{ Role.WAITER, Role.LINE_COOK, Role.HOST, Role.BARKEEP, Role.HEAD_COOK, Role.BAKER });
+        FOR.put(Duty.TILL, new Role[]{ Role.HOST, Role.BARKEEP });
+        STANDS_IN.put(Duty.TILL, new Role[]{ Role.HEAD_COOK, Role.WAITER, Role.LINE_COOK, Role.INNKEEPER });
     }
 
     /** Folk past twenty for each further waiter; folk for each further line cook (with a restaurant). */
@@ -95,6 +101,7 @@ public final class Hospitality {
 
     public static void resetForTests() {
         LOOKED.clear();
+        TRADE.clear();
     }
 
     // ------------------------------------------------------------------ who is what
@@ -106,13 +113,23 @@ public final class Hospitality {
         return Role.LINE_COOK;
     }
 
+    private record Kept(int tick, List<VillageFolkEntity> folk) {}
+
+    /** The trade, looked for once a tick a town at most (the dining pass asks it for every dish it hands out). */
+    private static final Map<UUID, Kept> TRADE = new ConcurrentHashMap<>();
+
     /** The cook's trade in a town, grown and alive, in a steady order. */
     static List<VillageFolkEntity> trade(UUID village) {
+        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        int tick = server == null ? -1 : server.getTickCount();
+        Kept k = TRADE.get(village);
+        if (k != null && k.tick() == tick && tick >= 0) return k.folk();
         List<VillageFolkEntity> out = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (a instanceof VillageFolkEntity f && f.stationTask() == StationTask.COOK && !f.isBaby() && f.isAlive()) out.add(f);
         }
         out.sort(Comparator.comparing(VillageFolkEntity::getUUID));
+        TRADE.put(village, new Kept(tick, out));
         return out;
     }
 
@@ -259,6 +276,7 @@ public final class Hospitality {
 
     /** This folk in this job: the tag on, its ground the job's place, said so, and in the town's news. */
     static void appoint(ServerLevel level, Villages.Village v, VillageFolkEntity f, Role role) {
+        TRADE.remove(v.id());
         untag(f);
         if (!role.tag.isEmpty()) f.addTag(role.tag);
         Ledger.Building at = placeFor(v.id(), role);
@@ -307,13 +325,23 @@ public final class Hospitality {
     // ------------------------------------------------------------------ duties
 
     /**
-     * Who does this duty at a place now: the first of the jobs that cover it (COVER) with a free, awake hand on shift;
-     * small places combine the jobs this way (a café's one cook cooks, carries and washes). {@code free} says which
-     * hands are free of other dining work. Null if nobody can.
+     * Who does this duty at a place now: the nearest free, awake hand of the first job that is for it; with nobody in
+     * those jobs at all (awake), the jobs that stand in for them: small places combine the jobs this way (a café's one
+     * cook cooks, carries and washes). {@code free} says which hands are free of other dining work. Null if nobody can
+     * (the work waits for a hand).
      */
     @Nullable
     static VillageFolkEntity duty(ServerLevel level, UUID village, Duty d, BlockPos near, java.util.function.Predicate<VillageFolkEntity> free) {
-        for (Role r : COVER.get(d)) {
+        boolean anyFor = false;
+        for (Role r : FOR.get(d)) for (VillageFolkEntity f : in(village, r)) if (!f.isSleeping()) { anyFor = true; break; }
+        VillageFolkEntity got = nearestOf(level, village, FOR.get(d), near, free);
+        return got != null || anyFor ? got : nearestOf(level, village, STANDS_IN.get(d), near, free);
+    }
+
+    @Nullable
+    private static VillageFolkEntity nearestOf(ServerLevel level, UUID village, Role[] roles, BlockPos near,
+                                               java.util.function.Predicate<VillageFolkEntity> free) {
+        for (Role r : roles) {
             VillageFolkEntity best = null;
             double bestD = Double.MAX_VALUE;
             for (VillageFolkEntity f : in(village, r)) {
@@ -330,8 +358,9 @@ public final class Hospitality {
 
     /**
      * Its shift (VillageFolkEntity.onShift asks first): a hand with a dining job in hand is at work till it is done; the
-     * barkeep keeps the tavern's hours, the baker the small hours, the floor its dining room's (half an hour before to
-     * set the tables, half an hour after to clear). Null for everybody else, and for the kitchen: its usual day.
+     * barkeep keeps the tavern's hours (and sleeps the morning), the baker the small hours; the kitchen and the floor
+     * work their dining room's hours (from half an hour before, to set the tables and stock the pass, to half an hour
+     * after, to clear) on top of their usual day. Null for everybody else, and outside those hours: its usual day.
      */
     @Nullable
     public static Boolean shift(VillageFolkEntity f) {
@@ -341,9 +370,10 @@ public final class Hospitality {
         return switch (role(f)) {
             case BARKEEP -> ServiceRole.TAVERN.hours.isOpen(Math.floorMod(t + PREP, 24000L)) || ServiceRole.TAVERN.hours.isOpen(Math.floorMod(t - PREP, 24000L));
             case BAKER -> t >= 22000L || t < 7000L;
-            case WAITER, HOST, POT_WASHER -> {
+            case WAITER, HOST, POT_WASHER, HEAD_COOK, LINE_COOK -> {
                 ServiceRole served = f.ownerId() == null ? ServiceRole.CAFE : DiningPlaces.servedBy(f.ownerId());
-                yield served.hours.isOpen(Math.floorMod(t + PREP, 24000L)) || served.hours.isOpen(Math.floorMod(t - PREP, 24000L));
+                boolean open = served.hours.isOpen(Math.floorMod(t + PREP, 24000L)) || served.hours.isOpen(Math.floorMod(t - PREP, 24000L));
+                yield open ? Boolean.TRUE : null;
             }
             default -> null;
         };

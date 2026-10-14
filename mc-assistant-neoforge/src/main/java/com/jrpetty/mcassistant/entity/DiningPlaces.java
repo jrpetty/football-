@@ -321,7 +321,7 @@ public final class DiningPlaces {
         if (p.board == null || !level.isLoaded(p.board)) return;
         BlockState here = level.getBlockState(p.board);
         if (!(here.getBlock() instanceof WallSignBlock)) {
-            if (!here.isAir() || !TownBlocks.mayBuild(level, v, p.board, p.building.anchor(), TownBlocks.Why.RENOVATE)) return;
+            if (!here.isAir() || !TownBlocks.mayBuild(level, v, p.board, p.building.anchor(), TownBlocks.Why.SIGN)) return;
             if (!Crafts.sign(level, v)) return;
             Direction out = p.door == null ? Direction.NORTH : StoreFloor.front(p.building.anchor(), p.door);
             level.setBlock(p.board, net.minecraft.world.level.block.Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, out), 3);

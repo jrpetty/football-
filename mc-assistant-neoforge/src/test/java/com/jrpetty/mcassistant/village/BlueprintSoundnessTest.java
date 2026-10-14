@@ -708,6 +708,7 @@ class BlueprintSoundnessTest {
         "store 5 9 6 9 front",
         "storehouse 1 1 1 1 none",
         "tavern 4 5 5 5 front",
+        "restaurant 4 5 5 5 front",                                     // [dining] the tavern's frame: the same civic lot
         "theatre 4 5 4 5 none",
         "townhall 5 10 6 10 front",
         "townlibrary 4 5 5 5 front",

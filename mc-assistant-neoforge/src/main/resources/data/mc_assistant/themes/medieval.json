@@ -10,7 +10,7 @@
   "dark_woods": ["dark_oak", "spruce", "mangrove"],
 
   "sets": {
-    "great": ["hall", "chapel", "library", "granary", "tavern", "guesthouse", "market", "watchtower", "lighthouse",
+    "great": ["hall", "chapel", "library", "granary", "tavern", "restaurant", "guesthouse", "market", "watchtower", "lighthouse",
               "barracks", "belltower", "manor", "townhall"],
     "homes": ["house", "house2"]
   },
