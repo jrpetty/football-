@@ -1025,6 +1025,7 @@ public final class Battles {
         boolean watched = Campaigns.watched(level, centre) && c.armies[0] != null && c.armies[1] != null;
         Battle b = new Battle(c, centre, ax, az, assault, watched);
         b.began = b.phaseAt = level.getGameTime();
+        b.ragged = 0.6 - 0.35 * Math.min(drilled(c.armies[0]), drilled(c.armies[1]));   // a drilled army draws up the straighter
         if (!watched) {
             b.onPaper(level);
             return b;
@@ -1040,6 +1041,21 @@ public final class Battles {
             + " are forming up for battle on " + c.ground.name() + ".").withStyle(ChatFormatting.GOLD), false);
         LOG.info("[MCA-WAR] {} fought in full at {}", c.name, centre.toShortString());
         return b;
+    }
+
+    /**
+     * How drilled an army is, 0 to 1: its veterans, and its militia's turns at the training yard (ten turns, as good
+     * as a battle). A drilled army forms faster and straighter.
+     */
+    static double drilled(@Nullable Armies.Army a) {
+        if (a == null || a.fighters.isEmpty()) return 0;
+        java.util.Map<UUID, Militia.Member> m = Militia.members(a.town);
+        double sum = 0;
+        for (Armies.Fighter f : a.fighters) {
+            Militia.Member mm = m.get(f.id);
+            sum += f.veteran ? 1.0 : mm == null ? 0.5 : Math.min(1.0, mm.drills() / 10.0);   // the watch drills daily
+        }
+        return sum / a.fighters.size();
     }
 
     /** Wait so long, or less for the tests. */

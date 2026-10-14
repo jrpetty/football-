@@ -463,6 +463,7 @@ public final class Campaigns {
         Random rng = new Random(seed(a.town, day));
         a.tactic = BattleModel.choose(a.boldness, a.cunning, odds, rise, cover, a.count(BattleModel.Role.RIDER), a.count(BattleModel.Role.ARCHER), a.size(), rng);
         a.formation = formation(level, c, i, odds, rise);
+        Ledger.note(a.town, "war.prefers", a.formation.name());                // the armoury leans to it from now (WarWorks.wants)
     }
 
     /**

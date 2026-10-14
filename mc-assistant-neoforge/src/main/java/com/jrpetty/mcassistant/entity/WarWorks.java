@@ -590,7 +590,11 @@ public final class WarWorks {
         List<Want> out = new ArrayList<>();
         out.add(new Want("blades", s -> s.getItem() instanceof SwordItem, militia));
         out.add(new Want("armour", s -> s.getItem() instanceof ArmorItem, (militia + 1) / 2));
-        out.add(new Want("bows", s -> s.is(Items.BOW) || s.is(Items.CROSSBOW), militia / 3));
+        // [war] Leaning to the Captain's way of drawing up (Campaigns: "war.prefers"): shields for a wall or a ring, bows for a winged line.
+        String prefers = String.valueOf(Ledger.note(village, "war.prefers"));
+        boolean walls = prefers.equals("SHIELD_WALL") || prefers.equals("SCHILTRON"), bowmen = prefers.equals("WINGED_LINE") || prefers.equals("SKIRMISH");
+        out.add(new Want("bows", s -> s.is(Items.BOW) || s.is(Items.CROSSBOW), bowmen ? militia / 2 : militia / 3));
+        if (walls) out.add(new Want("shields", s -> s.getItem() instanceof net.minecraft.world.item.ShieldItem, militia));
         out.add(new Want("arrows", s -> s.is(Items.ARROW), 16 * ((militia + 1) / 2)));
         return out;
     }
