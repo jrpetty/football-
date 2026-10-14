@@ -59,8 +59,15 @@ public final class UiStyle {
 
     /** Status inks, for text and small marks: good, careful, bad, and plain information. */
     public static final int SUCCESS = 0xFF15591E, WARNING = 0xFF6E4A00, DANGER = 0xFF8E2416, INFO = 0xFF1D4A86;
+    /** A soft bed for a warning line (a reason something cannot be done), under DANGER ink. */
+    public static final int DANGER_SOFT = 0xFFEACBC2;
     /** Status fills, for bars and badges (never a text colour). */
     public static final int SUCCESS_FILL = 0xFF4E9A3A, WARNING_FILL = 0xFFD39B2A, DANGER_FILL = 0xFFC2452F, INFO_FILL = 0xFF4A82C8;
+
+    /** A suggestion's warm tile and its gold spine: what is worth doing now. */
+    public static final int HIGHLIGHT = 0xFFE4DBC2, HIGHLIGHT_HOVER = 0xFFEEE6D0, HIGHLIGHT_SPINE = 0xFFC08A1E;
+    /** A page of reading (a profile, a list of facts): a pale recessed bed, and the cards on it. */
+    public static final int PAGE = 0xFFD0D0D0, CARD = 0xFFE2E2E2;
 
     /** Speech: what the other one says, and what you say. */
     public static final int BUBBLE_THEM = 0xFFF6F3EC, BUBBLE_YOU = 0xFFD5E6C2;

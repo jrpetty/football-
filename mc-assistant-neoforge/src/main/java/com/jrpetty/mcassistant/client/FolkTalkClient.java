@@ -25,11 +25,31 @@ public final class FolkTalkClient {
     public static void reply(FolkReplyPayload reply) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
+        guiScale(mc, reply.context());
         if (mc.screen instanceof TalkScreen talk && talk.entityId() == reply.entityId()) {
             talk.update(reply);
         } else if (reply.open()) {
             Entity e = mc.level.getEntity(reply.entityId());
             if (e != null) mc.setScreen(new TalkScreen(reply));
+        }
+    }
+
+    /**
+     * [talk-ui] An operator's /village talkview asks for the GUI at a scale ("guiscale=3" in the reply's context), so
+     * the pictures can show the talk screen small. Only ever sent by that command; a player's own talk never carries it.
+     */
+    private static void guiScale(Minecraft mc, String context) {
+        if (context == null) return;
+        int at = context.indexOf("guiscale=");
+        if (at < 0) return;
+        int end = context.indexOf(' ', at);
+        try {
+            int scale = Integer.parseInt(context.substring(at + "guiscale=".length(), end < 0 ? context.length() : end));
+            if (scale < 0 || scale > 6 || mc.options.guiScale().get() == scale) return;
+            mc.options.guiScale().set(scale);
+            mc.resizeDisplay();
+        } catch (NumberFormatException ignored) {
+            // not a number: left as it is
         }
     }
 
