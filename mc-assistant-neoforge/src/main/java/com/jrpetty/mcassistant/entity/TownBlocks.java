@@ -108,7 +108,7 @@ public final class TownBlocks {
         /** Fields, pens, orchards, allotments. */
         FIELD(Zone.OPEN),
         /** The ground made level, raised or cut (Terraform, Land, ParkGround). */
-        TERRAFORM(Zone.OPEN),
+        TERRAFORM(Zone.OPEN, Zone.ROAD, Zone.SQUARE),
         /** A levee, a sea wall, flood works. */
         LEVEE(Zone.OPEN),
         /** Ropes, pit props, ladders down a shaft, mine stairs. */

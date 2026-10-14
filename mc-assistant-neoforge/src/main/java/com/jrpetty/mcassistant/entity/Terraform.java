@@ -287,6 +287,11 @@ public final class Terraform {
             if (!natural(chunk.getBlockState(m.set(x, y, z)))) return -1;
         }
         if (!levelled && target == ground && top <= ground) return 0;
+        // [integrity] Nothing cut or banked under a building, its doorway or the way in to it.
+        BlockPos probe = new BlockPos(x, target, z);
+        Villages.Village town = TownBlocks.townAt(level, probe);
+        if (town != null && (!TownBlocks.mayPlace(level, town, probe, TownBlocks.Why.TERRAFORM)
+                || !TownBlocks.mayPlace(level, town, probe.above(), TownBlocks.Why.TERRAFORM))) return -1;
         int changed = 0;
         BlockState air = Blocks.AIR.defaultBlockState();
         for (int y = top; y > target; y--) {
