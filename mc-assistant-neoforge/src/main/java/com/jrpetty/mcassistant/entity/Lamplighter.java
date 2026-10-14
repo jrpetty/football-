@@ -262,8 +262,10 @@ public final class Lamplighter {
         return out;
     }
 
-    /** Tests: one step of the round now (the works done at once with TownJobs.instantForTests). */
+    /** Tests: one step of the round now (the works done at once with TownJobs.instantForTests), the posts found afresh
+     *  (the town's own second may have found none before the test put its post up). */
     public static boolean roundForTests(ServerLevel level, Villages.Village v) {
+        FOUND_DAY.remove(v.id());
         return round(level, v);
     }
 
