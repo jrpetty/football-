@@ -150,8 +150,9 @@ public final class Worth {
 
     /** How a thing is made: at the crafting table, in a furnace, at the stonecutter, at the smithing table; or had by
      *  emptying another (the bucket a bucket of milk leaves when it is drunk), which prices nothing and is a way to the
-     *  empty thing all the same (replacement). */
-    public enum Way { CRAFT, SMELT, CUT, SMITH, EMPTY }
+     *  empty thing all the same (replacement); or salvaged (an iron sword melted down to a nugget), which is a way to
+     *  the scrap but never what the scrap is held to be worth more than. */
+    public enum Way { CRAFT, SMELT, CUT, SMITH, EMPTY, SALVAGE }
 
     /** One part of a recipe: any one of these things, so many of it. */
     public record Part(List<String> options, int n) {
@@ -183,12 +184,18 @@ public final class Worth {
         }
     }
 
+    /** Is this a making (what a thing is held to be worth at least), not an emptying or a salvage? */
+    public static boolean makes(Recipe r) {
+        return r.way() != Way.EMPTY && r.way() != Way.SALVAGE;
+    }
+
     /** What a batch is worth made this way out of makings worth {@code makings}, of so many pieces. */
     public static double made(Way way, double makings, int pieces) {
         return switch (way) {
             case SMELT -> makings + SMELT_COST;
             case CUT -> makings * CUT_MARKUP;
             case EMPTY -> makings;
+            case SALVAGE -> makings + SMELT_COST;
             case CRAFT, SMITH -> makings * CRAFT_MARKUP + CRAFT_PER_PART * pieces;
         };
     }
@@ -268,7 +275,7 @@ public final class Worth {
             for (Map.Entry<String, Double> e : anchor.entrySet()) {
                 double floor = Double.NaN;
                 for (Recipe r : byOut.getOrDefault(e.getKey(), List.of())) {
-                    if (r.way() == Way.EMPTY || unmaking(r, byOut)) continue;
+                    if (!makes(r) || unmaking(r, byOut)) continue;
                     double c = cost(r, k -> v.getOrDefault(k, Double.NaN));
                     if (!Double.isNaN(c) && (Double.isNaN(floor) || c < floor)) floor = c;
                 }

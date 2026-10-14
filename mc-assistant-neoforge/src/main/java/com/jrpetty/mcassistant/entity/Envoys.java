@@ -227,6 +227,12 @@ public final class Envoys {
         }
     }
 
+    /** Tests: what this village's elder would send its neighbour today, with the dice set by the seed. */
+    @Nullable
+    public static Errand chooseForTests(ServerLevel level, Villages.Village from, Villages.Village to, long day, long seed) {
+        return choose(level, from, to, day, new java.util.Random(seed));
+    }
+
     /** What this village's elder would send its neighbour, if anything, today. */
     @Nullable
     static Errand choose(ServerLevel level, Villages.Village from, Villages.Village to, long day, java.util.Random rng) {
@@ -238,6 +244,10 @@ public final class Envoys {
             case WARY -> 1;
         };
         keen = Math.max(0, Math.min(5, keen + Ethos.envoyKeen(x)));   // [identity] a peaceable or mercantile town sends more
+        // [market] A hungry town sends to a neighbour with food to spare, whatever its elder's temper: food first.
+        boolean hungryTrade = Market.hungry(x) && TradeDeals.talksDue(level, x, y, day)
+            && TradeBook.of(level, y).get(TradeBook.Ware.FOOD).status() == TradeBook.Status.SURPLUS;
+        if (hungryTrade && Ledger.relation(x, y) > Diplomacy.FRIENDLY - 30) return Errand.TRADE;
         if (rng.nextInt(6) >= keen) return null;
         int r = Ledger.relation(x, y);
         Diplomacy.Terms terms = Diplomacy.terms(r);

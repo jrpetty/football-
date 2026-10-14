@@ -42,6 +42,14 @@ class B:
             fh.write("\n".join(lines) + "\n")
 
 
+def door_lamp(b, dx, h, dz):
+    """[blueprints] A lantern hung over the way in, from a beam end out of the wall over the door (or from
+    what is already there to hang it from)."""
+    if b.get(dx, h + 3, dz - 1) is None:
+        b.set(dx, h + 3, dz - 1, "|")
+    b.set(dx, h + 2, dz - 1, "j")
+
+
 def gable_x(b, x0, x1, z0, z1, h0, gable_x0=None, gable_x1=None, gable="W", window=None, ridge="_"):
     """A roof whose ridge runs across (along dx), sloping to the front and the back.
     Eaves at z0 (front) and z1 (back) at height h0; each row one in and one up.
@@ -214,7 +222,8 @@ def storage():
     b = B("storage", 3, 4, """The storehouse: the village's stores under one roof. A small log-framed
 shed on a stone footing round a Village Storehouse — twenty-seven storehouse
 units ($) stacked three by three by three, which join into one store the size
-of twenty-seven chests, its door facing the shed's door. Barrels by the door.""")
+of twenty-seven chests, its door facing the shed's door. Barrels by the door (none behind the
+units, where nobody could get at them).""")
     b.ring(-2, 2, -1, -3, 3, "F")
     b.fill(-1, 1, -1, -2, 2, "f")
     for h in (0, 1, 2):
@@ -226,8 +235,6 @@ of twenty-seven chests, its door facing the shed's door. Barrels by the door."""
     b.set(-2, 1, -1, "G")
     b.set(2, 1, -1, "G")
     b.set(0, 1, 3, "G")
-    b.set(-1, 0, 2, "Q")
-    b.set(1, 0, 2, "Q")
     for h in (0, 1, 2):                                   # the Village Storehouse
         for x in (-1, 0, 1):
             for z in (-1, 0, 1):
@@ -384,6 +391,8 @@ bench and the tailor's loom, a furnace, the stores of the trade, barrels and a h
         b.set(-3, 3, z, "|")
         b.set(3, 3, z, "|")
     b.fill(-2, 2, 3, -2, 2, "f")
+    for h in range(0, 4):                                   # [blueprints] the ladder up the left wall to the hayloft
+        b.set(-2, h, 0, "J")
     b.set(-2, 4, 2, "y")
     b.set(-1, 4, 2, "y")
     b.set(2, 4, 2, "y")
@@ -506,7 +515,7 @@ battlemented deck with a pitched lookout roof, and lanterns for the watch.""")
     b.set(0, 0, -2, "D")
     b.set(0, 1, -2, ".")
     for h in (3, 5):
-        b.set(0, h, -2, "G")
+        b.set(0, h + 1 if h == 3 else h, -2, "G")           # [blueprints] the lowest a course up, over the door's lamp
         b.set(-2, h, 0, "G")
         b.set(2, h, 0, "G")
     for h in range(0, 8):
@@ -532,6 +541,7 @@ battlemented deck with a pitched lookout roof, and lanterns for the watch.""")
                 b.set(x, h, z, "P")
     hip(b, -3, 3, -3, 3, 11)
     b.set(0, 13, 0, "j")                                    # the watch's lantern, hung in the peak of the roof
+    door_lamp(b, 0, 0, -2)
     b.write()
 
 
@@ -571,6 +581,7 @@ lamp room at the top with its fire burning, and a pointed roof over it.""")
     hip(b, -2, 2, -2, 2, 20)
     b.set(0, 21, 0, "R")
     b.set(0, 22, 0, "P")
+    door_lamp(b, 0, 0, -2)
     b.write()
 
 
@@ -632,6 +643,7 @@ steep roof, pews in rows facing the altar, and candles of light either side.""")
         b.set(0, 4, z, "j")                                 # the lights hung from them
     b.ring(-W_, W_, 5, -D_ + 3, D_, "S")
     gable_z(b, -W_ - 1, W_ + 1, -D_ + 3, D_ + 1, 5, gable_z1=D_)
+    door_lamp(b, 0, 0, -9)
     b.write()
 
 
@@ -662,7 +674,7 @@ between two stone pillars with lanterns, steps up to it front and back.""")
 
 def granary():
     b = B("granary", 3, 3, """The granary: a squat round-shouldered store on a stone base, hay stacked to
-the rafters, three chests of grain and a conical roof.""")
+the rafters either side of the door, three chests of grain along the back and a conical roof.""")
     b.fill(-2, 2, -1, -2, 2, "F")
     b.set(-3, -1, 0, "F")
     b.set(3, -1, 0, "F")
@@ -675,14 +687,15 @@ the rafters, three chests of grain and a conical roof.""")
     b.set(0, 0, -2, "D")
     b.set(0, 1, -2, ".")
     b.set(0, 2, 2, "G")
-    b.set(-1, 0, 1, "C")
-    b.set(0, 0, 1, "C")
-    b.set(1, 0, 1, "C")
-    b.set(-1, 0, -1, "y")
-    b.set(1, 0, -1, "y")
-    b.fill(-1, 1, 1, 1, 1, "y")
-    b.fill(-1, 1, 2, 0, 1, "y")
+    # [blueprints] The three chests of grain along the back, nothing on their lids; the hay stacked to the
+    # rafters either side of the door.
+    for x in (-1, 0, 1):
+        b.set(x, 0, 1, "C")
+    for x in (-1, 1):
+        for h in (0, 1, 2):
+            b.set(x, h, -1, "y")
     hip(b, -3, 3, -3, 3, 4)
+    b.set(0, 3, -3, "j")                                    # [blueprints] the door lit, a lantern under the eaves
     b.write()
 
 
@@ -886,8 +899,12 @@ and lanterns hung from the beams. The enchanter works here.""")
 
 def cafe():
     b = B("cafe", 4, 4, """The cafe: a bright timber room with big windows on the street, a counter of
-casks where the cook serves, a smoker and a bench behind it, little tables
-with cloths and chairs round them, flowers by the door, lanterns overhead.""")
+casks across the room where the cook serves (a gap in the middle to get behind it), and behind
+it the way along to the smoker, the bench and the chests against the back wall; little tables
+with cloths in the window either side of the door, a chair at each, flowers by the door,
+lanterns overhead.""")
+    # [blueprints] Made over: the counter brought forward a row, so that the cook can get at the smoker, the
+    # bench and both chests, and the tables into the windows, the counter's front clear for its price tags.
     b.ring(-3, 3, -1, -3, 3, "F")
     b.fill(-2, 2, -1, -2, 2, "f")
     for h in (0, 1, 2):
@@ -899,27 +916,26 @@ with cloths and chairs round them, flowers by the door, lanterns overhead.""")
     for z in (-1, 0, 1):
         b.set(-3, 1, z, "G")
         b.set(3, 1, z, "G")
-    for x in (-2, -1, 0, 1):
-        b.set(x, 0, 1, "Q")                                 # the counter
+    for x in (-2, -1, 1, 2):
+        b.set(x, 0, 0, "Q")                                 # the counter
     b.set(-2, 0, 2, "M")                                    # the smoker behind it
     b.set(0, 0, 2, "T")
     b.set(1, 0, 2, "C")
     b.set(2, 0, 2, "C")
-    b.set(2, 0, -1, "P")                                    # a table with its cloth
-    b.set(2, 1, -1, "X")
-    b.set(2, 0, -2, "<")                                    # and its chairs
-    b.set(-2, 0, -1, "P")
-    b.set(-2, 1, -1, "X")
-    b.set(-2, 0, -2, ">")
+    for x in (-2, 2):
+        b.set(x, 0, -2, "P")                                # a table in each window with its cloth
+        b.set(x, 1, -2, "X")
+    b.set(-1, 0, -2, "<")                                   # and its chair
+    b.set(1, 0, -2, ">")
     b.ring(-3, 3, 3, -3, 3, "-", corner="L")
     for z in range(-2, 3):
         b.set(-3, 3, z, "|")
         b.set(3, 3, z, "|")
     b.fill(-2, 2, 3, -2, 2, "f")
     gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
-    b.set(-2, 2, -1, "j")                                   # a lamp over each table, the floor between clear
-    b.set(2, 2, -1, "j")
-    b.set(0, 2, 1, "j")                                     # and one over the counter
+    b.set(-2, 2, -2, "j")                                   # a lamp over each table, the floor between clear
+    b.set(2, 2, -2, "j")
+    b.set(0, 2, 1, "j")                                     # and one over the way behind the counter
     b.set(-2, 2, -4, "j")
     b.set(2, 2, -4, "j")
     b.set(-2, -1, -4, "d")                                  # flowers either side of the door
@@ -933,10 +949,13 @@ with cloths and chairs round them, flowers by the door, lanterns overhead.""")
 
 
 def shop():
-    b = B("shop", 4, 4, """The shop: a timber shopfront with a wide window either side of the door, a
-counter of casks across the room with the day's goods laid out on it, shelves
-of barrels and chests behind it, a crafting table in the back room behind the counter
-for the shop's hands (Workshop), and a lantern over the door.""")
+    b = B("shop", 4, 4, """The shop: a timber-framed shop with its gable to the street, a wide window either
+side of the door and a lantern hung from a beam end over it, a window in the gable. Inside, a rug
+from the door to the counter of casks across the room (the day's goods laid out on it, a gap in the
+middle to get behind), a cask either side of the door with more goods on it, and behind the counter
+the shelves: a cask on a cask, a chest either side of the hands' bench (Workshop) with a lamp on it.
+Every chest can be opened and every cask got at. Lanterns hung from the loft over the floor.""")
+    # [blueprints] Made over: the gable to the street, nothing stacked on a chest, the displays by the door.
     b.ring(-3, 3, -1, -3, 3, "F")
     b.fill(-2, 2, -1, -2, 2, "f")
     for h in (0, 1, 2):
@@ -944,27 +963,37 @@ for the shop's hands (Workshop), and a lantern over the door.""")
     b.set(0, 0, -3, "D")
     b.set(0, 1, -3, ".")
     for x in (-2, -1, 1, 2):
-        b.set(x, 1, -3, "G")
+        b.set(x, 1, -3, "G")                                # the shop windows either side of the door
     for z in (-1, 1):
         b.set(-3, 1, z, "G")
         b.set(3, 1, z, "G")
+    b.set(0, 1, 3, "G")                                     # a light over the bench
     for x in (-2, -1, 1, 2):
         b.set(x, 0, 0, "Q")                                 # the counter, a gap to get behind
-    for x in (-2, -1, 0, 1):
-        b.set(x, 0, 2, "Q" if x % 2 else "C")               # shelves of barrels and chests
-        b.set(x, 1, 2, "Q")
+    b.set(-2, 0, 2, "Q")                                    # the shelves: a cask on a cask,
+    b.set(-2, 1, 2, "Q")
+    b.set(-1, 0, 2, "C")                                    # a chest either side of the bench, their lids clear
+    b.set(0, 0, 2, "T")                                     # the hands' bench (Workshop)
+    b.set(0, 1, 2, "l")                                     # with a lamp on it
+    b.set(1, 0, 2, "C")
     # (The back right-hand corner kept clear behind the counter: where the ladder goes up when the shop
     # is given a second storey, Blueprints.raised.)
-    b.set(-2, 0, 1, "T")                                    # the hands' bench, behind the counter (Workshop)
-    b.ring(-3, 3, 3, -3, 3, "-", corner="L")
-    for z in range(-2, 3):
-        b.set(-3, 3, z, "|")
-        b.set(3, 3, z, "|")
+    b.set(-2, 0, -2, "Q")                                   # a cask of goods either side of the door
+    b.set(2, 0, -2, "Q")
+    b.set(0, 0, -2, "X")                                    # the rug from the door to the counter
+    b.set(0, 0, -1, "X")
+    b.ring(-3, 3, 3, -3, 3, "|", corner="L")
+    for x in range(-2, 3):
+        b.set(x, 3, -3, "-")
+        b.set(x, 3, 3, "-")
     b.fill(-2, 2, 3, -2, 2, "f")
-    gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
-    b.set(0, 2, -4, "j")
-    b.set(-2, 2, 1, "j")                                    # over the bench
-    b.set(2, 2, 0, "j")                                     # over the counter's end, not the way behind it
+    gable_z(b, -4, 4, -4, 4, 3, gable_z0=-3, gable_z1=3)
+    b.set(0, 4, -3, "G")                                    # the gable's window over the street
+    b.set(0, 3, -4, "|")                                    # a beam end out over the door
+    b.set(0, 2, -4, "j")                                    # and the lantern hung from it
+    b.set(0, 2, 1, "j")                                     # over the way behind the counter
+    b.set(-2, 2, -1, "j")                                   # over the shop floor
+    b.set(2, 2, -1, "j")
     b.write()
 
 
@@ -1157,6 +1186,7 @@ standing on each bookshelf either side of the blackboard.""")
     for x in (-2, 2):
         b.set(x, 3, -1, "j")                               # hung flush under the ceiling, over the desks by the wall
         b.set(x, 1, 3, "l")                                # standing on the bookshelf beside the blackboard
+    door_lamp(b, 0, 0, -4)
     b.write()
 
 

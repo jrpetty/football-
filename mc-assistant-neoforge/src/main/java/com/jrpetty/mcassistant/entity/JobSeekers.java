@@ -64,11 +64,10 @@ public final class JobSeekers {
     /** Out of work, it goes to look once in so many days whatever is up. */
     static final long LOOK_EVERY = 3;
     /**
-     * How long a folk can go with no trade, or without ground to work its trade at (no wood to cut, no seam to
-     * dig, every search for a plot come to nothing) before it counts as out of work: two minutes, so
-     * a hand between one plot and the next, or just taking up its trade, does not.
+     * How long a folk can go with no trade, or no ground to work its trade at, before it counts as out
+     * of work: two minutes, so a hand between one plot and the next, or just taking up a trade, does not.
      */
-    static final long NO_GROUND_FOR = 2400L;
+    static final long NO_WORK_FOR = 2400L;
 
     /** A reason to move, what it counts for, and how the folk would put it. */
     public enum Why {
@@ -173,7 +172,7 @@ public final class JobSeekers {
     /** Folk an operator sent to read the board, reason or none (they apply only with one). */
     private static final Set<UUID> SENT = ConcurrentHashMap.newKeySet();
     /** Since when each folk has had no trade, or no ground to work its trade at (looked at as it thinks about the board). */
-    private static final Map<UUID, Long> NO_GROUND = new ConcurrentHashMap<>();
+    private static final Map<UUID, Long> NO_WORK = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
         VISITS.clear();
@@ -184,7 +183,7 @@ public final class JobSeekers {
         LOOKED.clear();
         FORCED.clear();
         SENT.clear();
-        NO_GROUND.clear();
+        NO_WORK.clear();
     }
 
     /** Off to read the notices at its next step, whatever the hour (it still goes only with a reason). */
@@ -304,7 +303,7 @@ public final class JobSeekers {
         Long next = NEXT.get(me);
         if (next != null && now < next && now >= next - THINK * 2) return false;
         NEXT.put(me, now + THINK + Math.floorMod(me.hashCode(), 40));
-        noteGround(f, now);
+        noteWork(f, now);
         if (resume(f, level)) return true;                         // a child on the road too, after a restart
         if (f.isBaby()) return false;
         if (offered(f, level)) return true;
@@ -314,29 +313,28 @@ public final class JobSeekers {
     // ------------------------------------------------------------------ reasons
 
     /**
-     * Out of work: no trade, or a trade it has had no ground to work at, for two minutes and more (a
-     * woodcutter with no wood within reach, a miner with no hill to dig: the village's shape gave it
-     * the trade, but there is no living in it here). A folk with no trade YET is not out of work: a
-     * founder, or one just let go from its trade, takes up what its own village is short of at its
-     * next thought (VillageFolkEntity.takeUpATrade). Counted out of work at once, the founders of a
-     * new village were sent off to read an empty board the moment the morning assembly let them go,
-     * and stood there with no trade while the village's farms and fishing went unclaimed.
+     * Out of work: no trade, or no ground to work its trade at, for {@link #NO_WORK_FOR} and more (a
+     * woodcutter with no wood within reach, a miner with no hill to dig). A folk with no trade yet is not:
+     * it takes up the one its own village is short of first (VillageFolkEntity.claimATrade).
      */
     public static boolean outOfWork(VillageFolkEntity f) {
-        if (f.isBaby()) return false;
-        Long since = NO_GROUND.get(f.getUUID());
+        Long since = NO_WORK.get(f.getUUID());
         long now = f.level().getGameTime();
-        return since != null && (f.stationTask() == StationTask.NONE || f.workZone() == null)
-            && now >= since && now - since >= NO_GROUND_FOR;
+        return since != null && withoutWork(f) && now >= since && now - since >= NO_WORK_FOR;
     }
 
-    /** As it thinks about the board: has it a trade and ground for it, and if not, since when has it had none? */
-    private static void noteGround(VillageFolkEntity f, long now) {
-        if (!f.isBaby() && (f.stationTask() == StationTask.NONE || f.workZone() == null)) {
-            Long since = NO_GROUND.get(f.getUUID());
-            if (since == null || since > now) NO_GROUND.put(f.getUUID(), now);
+    /** A grown folk with no trade, or no ground for the one it has. */
+    private static boolean withoutWork(VillageFolkEntity f) {
+        return !f.isBaby() && (f.stationTask() == StationTask.NONE || f.workZone() == null);
+    }
+
+    /** As it thinks about the board: since when has it been without work, if it is? */
+    private static void noteWork(VillageFolkEntity f, long now) {
+        if (withoutWork(f)) {
+            Long since = NO_WORK.get(f.getUUID());
+            if (since == null || since > now) NO_WORK.put(f.getUUID(), now);
         } else {
-            NO_GROUND.remove(f.getUUID());
+            NO_WORK.remove(f.getUUID());
         }
     }
 
@@ -825,7 +823,7 @@ public final class JobSeekers {
         VISITS.remove(me);
         LEAVING.remove(me);
         FORCED.remove(me);
-        NO_GROUND.remove(me);
+        NO_WORK.remove(me);
         m.clearQueue();
         m.getNavigation().stop();
         m.stopFollowing();

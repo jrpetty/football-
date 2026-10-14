@@ -301,6 +301,9 @@ public final class Prices {
             List<Worth.Part> parts = new ArrayList<>();
             List<String> back = new ArrayList<>();
             boolean ok = true;
+            // A tool or a piece of armour into the furnace is scrap, not a making (Worth.Way.SALVAGE).
+            if (way == Worth.Way.SMELT && r.getIngredients().size() == 1 && r.getIngredients().get(0).getItems().length > 0
+                    && r.getIngredients().get(0).getItems()[0].isDamageableItem()) way = Worth.Way.SALVAGE;
             for (Ingredient ing : r.getIngredients()) {
                 if (ing.isEmpty()) continue;
                 List<String> options = new ArrayList<>();

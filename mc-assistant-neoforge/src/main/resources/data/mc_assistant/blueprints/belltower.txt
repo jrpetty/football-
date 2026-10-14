@@ -33,22 +33,22 @@ layer 2
 .S...S.
 .S...S.
 .SSSSS.
-.......
+...j...
 layer 3
 .......
 .SSSSS.
 .S.H.S.
 .G...G.
 .S...S.
-.SSGSS.
-.......
+.SSSSS.
+...|...
 layer 4
 .......
 .SSSSS.
 .S.H.S.
 .S...S.
 .S...S.
-.SSSSS.
+.SSGSS.
 .......
 layer 5
 .......

@@ -963,6 +963,29 @@ def economy_stage(r, look, cx, cz):
     say("alive after the economy: %s" % client_alive())
 
 
+def talk_ui_stage(r):
+    """The talk screen (client/TalkScreen, TalkMenu), face to face with the folk the player stands before: each of its
+    six categories (Chat, About, Ask, Trade, Town, World), its profile and skills pages, then at GUI scale 3, and in a
+    small 640x480 window at scale 2 (320x240 of GUI: the compact layout), the window put back after.
+    /village talkview opens it on the nearest folk at a category, a scale and a window size."""
+    def view(name, what, wait=3):
+        say("talkview %s: %s" % (what, r.cmd("execute as %s at @s run village talkview %s" % (USER, what))))
+        time.sleep(wait)
+        shot(name)
+
+    for n, cat in enumerate(("chat", "about", "ask", "trade", "town", "world")):
+        view("talk-ui-%d-%s" % (n + 1, cat), cat)
+    view("talk-ui-7-profile", "profile")
+    view("talk-ui-8-skills", "skills")
+    view("talk-ui-9-scale3", "trade 3", wait=4)
+    view("talk-ui-10-small-window", "ask 2 640x480", wait=5)
+    view("talk-ui-11-small-chat", "chat 2 640x480", wait=3)
+    # Back as it was: the full window at scale 2, and the screen shut.
+    say("talkview back: " + r.cmd("execute as %s at @s run village talkview chat 2 1280x720" % USER))
+    time.sleep(4)
+    say("alive after the talk screen: %s" % client_alive())
+
+
 def wages_stage(r, look, cx, cz):
     """What every job is worth (entity/JobWorth): the day's pay scale drawn up now; the wages page on the screen
     (the pay level, the lowest wage against the cost of living, the bill against what comes in, every job's worth
@@ -3582,6 +3605,43 @@ def redstone_stage(r, look, cx, cz):
 
 
 
+def town_blueprints_stage(r, look, cx, cz):
+    """[blueprints] The designs walked through (BlueprintSoundnessTest): the shop made over, its gable to
+    the street and its lantern from the beam end, then in at its door to the rug, the counter and the
+    shelves behind it (both chests' lids clear); the café's counter brought forward with the way behind
+    it to the smoker and the chests; the town store's flower beds and window boxes; the sky garden's new
+    stair up out of its hall. Each building's back is to the north: (dx, h, dz) of its drawing is at
+    x + dx, y + h, z - dz. Not wired in: call it from main() to run it."""
+    bx, by, bz = cx - 300, 150, cz + 200
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("tp %s %d %d %d" % (USER, bx + 20, by + 20, bz + 30))
+    time.sleep(10)
+    out = r.cmd("execute positioned %d %d %d run village showcase buildings" % (bx, by, bz))
+    at = {name: (int(x), int(y), int(z))
+          for name, x, y, z in re.findall(r"(\w+) (-?\d+) (-?\d+) (-?\d+)", out.replace("SHOWCASE", ""))}
+    say("town blueprints stage: " + ", ".join(n for n in ("shop", "cafe", "store", "skygarden") if n in at))
+    if "shop" in at:
+        x, y, z = at["shop"]
+        look("tb-1-shop-front", x + 4.5, y + 3, z + 9.5, x + 0.5, y + 2.5, z + 0.5, wait=8)
+        look("tb-2-shop-counter", x + 0.5, y + 1.6, z + 2.0, x + 0.5, y + 0.5, z - 2.5, wait=6)
+    if "cafe" in at:
+        x, y, z = at["cafe"]
+        look("tb-3-cafe-counter", x + 0.5, y + 1.6, z + 2.0, x + 0.5, y + 0.5, z - 2.5, wait=6)
+    if "store" in at:
+        x, y, z = at["store"]
+        look("tb-4-store-front", x + 7.5, y + 4, z + 16.5, x + 0.5, y + 3, z + 7.5, wait=8)
+    if "skygarden" in at:
+        x, y, z = at["skygarden"]
+        look("tb-5-skygarden-stair", x - 1.5, y + 1.6, z + 3.5, x - 3.5, y + 3.5, z - 3.5, wait=6)
+    r.cmd("time set 18000")
+    if "shop" in at:
+        x, y, z = at["shop"]
+        look("tb-6-shop-by-night", x + 4.5, y + 3, z + 9.5, x + 0.5, y + 2.5, z + 0.5, wait=8)
+    r.cmd("time set 6000")
+    say("alive after the town blueprints: %s" % client_alive())
+
+
 def market_stage(r, look, cx, cz):
     """[market] The town economy (village/Worth, entity/Market, PriceIndex, MarketLean): the prices reckoned now and
     said in chat (each good's price, its arrow and why; the coin, the spread and the trades' leans); then the Prices
@@ -3791,6 +3851,10 @@ def main():
     say("talk: " + r.cmd("execute as %s at @s run village talk what are your skills" % USER))
     time.sleep(3)
     shot("16-talk-skills")
+    try:
+        talk_ui_stage(r)
+    except Exception as e:  # noqa: BLE001
+        say("talk ui stage failed: %s" % e)
     say("alive after talking: %s" % client_alive())
     # The town's books (the analytics screen the village board opens): eight mornings
     # first, so there are days in them, with an hour or so of the village's work in each

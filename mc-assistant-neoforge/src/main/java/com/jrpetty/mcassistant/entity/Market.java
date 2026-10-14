@@ -587,13 +587,13 @@ public final class Market {
     // ------------------------------------------------------------------ [market] the upkeep
 
     /** The days of wages the treasury holds before its upkeep bites, and the share of what it holds over that a day. */
-    public static final int UPKEEP_OVER_DAYS = 14, UPKEEP_ONE_IN = 40;
+    public static final int UPKEEP_OVER_DAYS = 14, UPKEEP_ONE_IN = 20;
     /** What the upkeep took on its last morning: {day, coin}, by the village. */
     private static final java.util.Map<UUID, long[]> UPKEEP = new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
      * The town's upkeep: its roads, lamps and wells, the tools it wears out, the guilds' and the road-wardens' dues
-     * (coin that goes out of the town for good). A fortieth a day of what the treasury holds over a fortnight's wages and
+     * (coin that goes out of the town for good). A twentieth a day of what the treasury holds over a fortnight's wages and
      * what it is saving for; nothing from a treasury under that. The sink that keeps a busy town from hoarding coin the
      * world paid it for its work (takings, the traders), so its coin holds its value: a treasury settles at a few weeks'
      * wages, and what is over goes round as pay. Returns the coin.
@@ -631,7 +631,7 @@ public final class Market {
         for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity) folk++;
         long[] u = UPKEEP.get(village);
         return "Coin: " + Ledger.coins(village) + " in the treasury, " + purses + " in " + folk + " folk's purses"
-            + (u != null ? "; the upkeep took " + u[1] + " on day " + (u[0] + 1) + " (a fortieth of what the treasury held over a fortnight's wages)" : "")
+            + (u != null ? "; the upkeep took " + u[1] + " on day " + (u[0] + 1) + " (a twentieth of what the treasury held over a fortnight's wages)" : "")
             + ". The town asks a tenth over its prices and pays four fifths of them; nobody buys under nine tenths.";
     }
 
@@ -1021,6 +1021,11 @@ public final class Market {
 
     /** Villages whose larder was low this morning (under half what a birth wants put by). */
     private static final java.util.Map<UUID, Boolean> HUNGRY = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Tests: this village's morning count said hungry, or not. */
+    public static void hungryForTests(UUID village, boolean hungry) {
+        HUNGRY.put(village, hungry);
+    }
 
     /** Is the village's larder low (this morning's count)? Its farms and waters take more hands. */
     public static boolean hungry(UUID village) {
