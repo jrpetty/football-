@@ -70,6 +70,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue TOWN_LOD_FULL_RANGE;
     public static final ModConfigSpec.IntValue TOWN_LOD_AWAY_SECONDS;
     public static final ModConfigSpec.IntValue TOWN_LOD_STEP_SECONDS;
+    public static final ModConfigSpec.IntValue PATH_BUDGET_MS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -222,9 +223,10 @@ public final class AssistantConfig {
             .defineInRange("villageColonyAt", 40, 10, 500);
         VILLAGE_WORLD_CAP = b.comment(
                 "The most Village Folk the whole world may hold. Past it no village raises",
-                "a child or sends out a founding party. Every one of them is a ticking",
-                "entity: three hundred cost a server about twenty milliseconds a tick.")
-            .defineInRange("villageWorldCap", 200, 20, 5000);
+                "a child or sends out a founding party. With townLod on, only the towns a",
+                "player is near tick their folk (a town of five hundred costs about as much",
+                "as the one you stand in); with it off every one of them ticks everywhere.")
+            .defineInRange("villageWorldCap", 2500, 20, 5000);
         VILLAGE_BUILD_SPEED = b.comment(
                 "How fast village builders lay their blocks, as a percentage: 100 is the",
                 "usual pace, 200 twice as fast, 50 half. (The materials still have to be",
@@ -312,6 +314,10 @@ public final class AssistantConfig {
         TOWN_LOD_STEP_SECONDS = b.comment(
                 "How often a sleeping town's step runs, in seconds.")
             .defineInRange("townLodStepSeconds", 5, 1, 60);
+        PATH_BUDGET_MS = b.comment(
+                "How many milliseconds of each tick the folk may spend finding their way, all told. Past it a",
+                "folk's search waits a tick (never one near a player, never two ticks running). 0: no limit.")
+            .defineInRange("pathBudgetMs", 10, 0, 50);
         b.pop();
 
         SPEC = b.build();
@@ -356,7 +362,7 @@ public final class AssistantConfig {
     public static boolean villageColonies() { return read(VILLAGE_COLONIES, true); }
     public static boolean villagesShareGoods() { return read(VILLAGES_SHARE_GOODS, false); }
     public static int villageColonyAt() { return read(VILLAGE_COLONY_AT, 40); }
-    public static int villageWorldCap() { return read(VILLAGE_WORLD_CAP, 200); }
+    public static int villageWorldCap() { return read(VILLAGE_WORLD_CAP, 2500); }
     public static int villageBuildSpeed() { return read(VILLAGE_BUILD_SPEED, 100); }
     public static boolean villageReshapeLand() { return read(VILLAGE_RESHAPE_LAND, true); }
     public static boolean villagePhantoms() { return read(VILLAGE_PHANTOMS, false); }
@@ -372,6 +378,7 @@ public final class AssistantConfig {
     public static int townLodFullRange() { return read(TOWN_LOD_FULL_RANGE, 128); }
     public static int townLodAwaySeconds() { return read(TOWN_LOD_AWAY_SECONDS, 60); }
     public static int townLodStepSeconds() { return read(TOWN_LOD_STEP_SECONDS, 5); }
+    public static int pathBudgetMs() { return read(PATH_BUDGET_MS, 10); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */

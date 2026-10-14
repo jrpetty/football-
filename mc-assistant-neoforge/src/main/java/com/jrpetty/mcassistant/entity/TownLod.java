@@ -80,7 +80,7 @@ public final class TownLod {
     private static final int FOUNDING_NEAR = 16;
     /** The ledger's notes (survive a restart): the learned rates, and an asleep town's state. */
     private static final String RATES_NOTE = "lod.rates", AWAY_NOTE = "lod.away",
-        PARKED_NOTE = "lod.parked";
+        PARKED_NOTE = "lod.parked", OTHERS_NOTE = "lod.others";
 
     private TownLod() {}
 
@@ -104,6 +104,11 @@ public final class TownLod {
         long wokeAt;
         @Nullable Rates rates;
         boolean ratesRead;
+        // Asleep: what others do to it (shipments, taxes, the war), measured from when, to be taken out of its rates.
+        @Nullable Rates others;
+        final Map<String, Double> byOthers = new HashMap<>();
+        long othersFrom;
+        int coinsFrom, coinsByStep;
     }
 
     /** A chunk request of a town's let go while it sleeps, to be made again when it wakes. */
@@ -287,6 +292,7 @@ public final class TownLod {
         t.applying = false;
         t.sleptAt = level.getGameTime();
         t.lastStep = t.sleptAt;
+        t.othersFrom = 0;
         Map<String, Integer> stores = level.isLoaded(v.centre()) ? storesNow(level, v.id()) : null;
         if (stores != null) t.held.putAll(stores);
         int r = areaChunks(v.id());
@@ -366,15 +372,58 @@ public final class TownLod {
         t.lastStep = time;
         if (days <= 0) return;
         Rates r = ratesFor(v.id());
+        Rates others = othersAsleep(v.id(), t);
         int heads = Villages.headcount(v.id());
-        for (Map.Entry<String, Double> e : r.items().entrySet()) t.pending.merge(e.getKey(), e.getValue() * heads * days, Double::sum);
-        t.coinDue += r.coin() * heads * days;
+        // The town's own rates, less what the rest of the world still does to it asleep (a shipment, a tax, the war's
+        // cost): that was in what it was measured to do watched, and it goes on happening, so it is not done twice.
+        for (Map.Entry<String, Double> e : r.items().entrySet()) {
+            double rate = e.getValue() - others.items().getOrDefault(e.getKey(), 0.0);
+            t.pending.merge(e.getKey(), rate * heads * days, Double::sum);
+        }
+        for (Map.Entry<String, Double> e : others.items().entrySet()) {
+            if (!r.items().containsKey(e.getKey())) t.pending.merge(e.getKey(), -e.getValue() * heads * days, Double::sum);
+        }
+        t.coinDue += (r.coin() - others.coin()) * heads * days;
         int coins = (int) t.coinDue;                       // whole coins only; the rest waits for the next step
+        int moved = coins > 0 ? coins : coins < 0 ? -Ledger.takeCoins(v.id(), -coins) : 0;
         if (coins > 0) Ledger.addCoins(v.id(), coins);
-        else if (coins < 0) Ledger.takeCoins(v.id(), -coins);
         t.coinDue -= coins;
+        t.coinsByStep += moved;
         if (r.growth() > 0) t.birthsDue += r.growth() * heads * days;
+        learnOthers(v.id(), t, time, heads);
         save(v.id(), t);
+    }
+
+    /** What the rest of the world does to this sleeping town (learned while it sleeps), or nothing yet. */
+    private static Rates othersAsleep(UUID village, Town t) {
+        if (t.others == null) t.others = read(Ledger.note(village, OTHERS_NOTE));
+        return t.others;
+    }
+
+    /**
+     * Asleep a day at a time: the goods that came and went by others' hands (store and take) and the coin the
+     * treasury gained or lost beyond what the step moved, per head per day, into the running mean.
+     */
+    private static void learnOthers(UUID village, Town t, long time, int heads) {
+        if (t.othersFrom == 0) {
+            markOthers(village, t, time);
+            return;
+        }
+        if (time - t.othersFrom < LEARN_EVERY) return;
+        double days = (time - t.othersFrom) / 24000.0, h = Math.max(1, heads);
+        Map<String, Double> items = new HashMap<>();
+        for (Map.Entry<String, Double> e : t.byOthers.entrySet()) items.put(e.getKey(), e.getValue() / days / h);
+        double coin = (Ledger.coins(village) - t.coinsFrom - t.coinsByStep) / days / h;
+        t.others = merge(othersAsleep(village, t), new Rates(items, coin, 0, days));
+        Ledger.note(village, OTHERS_NOTE, write(t.others));
+        markOthers(village, t, time);
+    }
+
+    private static void markOthers(UUID village, Town t, long time) {
+        t.othersFrom = time;
+        t.coinsFrom = Ledger.coins(village);
+        t.coinsByStep = 0;
+        t.byOthers.clear();
     }
 
     // ------------------------------------------------------------------ the stores, asleep
@@ -396,6 +445,7 @@ public final class TownLod {
         Town t = TOWNS.get(village);
         if (t == null || stack.isEmpty()) return stack;
         t.pending.merge(Economy.id(stack), (double) stack.getCount(), Double::sum);
+        t.byOthers.merge(Economy.id(stack), (double) stack.getCount(), Double::sum);
         return ItemStack.EMPTY;
     }
 
@@ -412,6 +462,7 @@ public final class TownLod {
             int k = Math.min(left, have(t, key));
             if (k <= 0) continue;
             t.pending.merge(key, (double) -k, Double::sum);
+            t.byOthers.merge(key, (double) -k, Double::sum);
             left -= k;
         }
         return true;
