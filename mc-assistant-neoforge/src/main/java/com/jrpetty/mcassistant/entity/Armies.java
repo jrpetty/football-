@@ -212,6 +212,8 @@ public final class Armies {
         int morale = 60;
         /** Its supply: leads, cloth and poles for the tents, a campfire, logs for a ram, bandages. */
         final Map<Item, Integer> supply = new LinkedHashMap<>();
+        /** Its Captain carries a war horn (WarHorn): its signals are horn calls, else drums. */
+        boolean horn;
         /** Its surcoat (a tabard of its town's arms), drawn on its fighters (shared; never handed out). */
         ItemStack surcoat = ItemStack.EMPTY;
 
@@ -433,6 +435,7 @@ public final class Armies {
             if (c != null) {
                 c.rank = Rank.CAPTAIN;
                 a.captain = c.id;
+                a.horn = WarHorn.arm(level, v, captain);
             }
         }
         // The reserve: the weakest quarter of the line (not the Captain).

@@ -447,7 +447,7 @@ public final class Campaigns {
         for (int i = 0; i < 2; i++) {
             if (c.armies[i] == null) continue;
             Villages.Village v = c.town(i);
-            if (v != null) Armies.horn(level, v.centre(), 0);
+            if (v != null) WarHorn.signal(level, c.armies[i], v.centre(), WarHorn.Signal.MUSTER);
         }
         stage(c, Stage.MUSTER, now, now + soon(MUSTER_TICKS));
     }
@@ -580,7 +580,7 @@ public final class Campaigns {
             if (a == null || v == null) continue;
             BlockPos to = c.holdWalls ? siegeCamp(level, c) : campSpot(c, i);
             route(c, i, v.centre(), to);
-            Armies.horn(level, v.centre(), 2);
+            WarHorn.signal(level, a, v.centre(), WarHorn.Signal.MARCH);
         }
         stage(c, c.holdWalls ? Stage.SIEGE_MARCH : Stage.MARCH, now, now);
         announce(level, c, Villages.name(c.a) + "'s army is on the march" + (c.armies[1] != null ? ", and " + Villages.name(c.b) + "'s" : "")

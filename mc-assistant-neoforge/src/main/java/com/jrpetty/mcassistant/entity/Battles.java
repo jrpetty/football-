@@ -215,6 +215,47 @@ public final class Battles {
             phaseAt = level.getGameTime();
         }
 
+        // -------------------------------------------------------------- a player's horn
+
+        /**
+         * [WarHorn.blown] A player who commands side i sounds a call: the charge (from the volleys or the advance, straight
+         * to the clash), the rally (heart, once in a while), the retreat in good order, or the lines dressed. What was
+         * done, or null for a call that orders nothing now.
+         */
+        @Nullable
+        String horn(ServerLevel level, int i, WarHorn.Signal s) {
+            switch (s) {
+                case CHARGE -> {
+                    if (phase != BattleModel.Phase.VOLLEYS && phase != BattleModel.Phase.ADVANCE && phase != BattleModel.Phase.FORM) return null;
+                    order(level, i, "Charge!");
+                    shields(false);
+                    to(level, BattleModel.Phase.CLASH);
+                    return "charge!";
+                }
+                case RALLY -> {
+                    long now = level.getGameTime();
+                    if (now - rallied[i] < 300) return null;
+                    rallied[i] = now;
+                    side[i].morale = Math.min(100, side[i].morale + BattleModel.RALLY);
+                    order(level, i, "To the banner! Rally!");
+                    return "rallied";
+                }
+                case RETREAT -> {
+                    if (phase.ordinal() >= BattleModel.Phase.PURSUIT.ordinal()) return null;
+                    breakSide(level, i, BattleModel.Outcome.RETREAT);
+                    return "falls back in good order";
+                }
+                case FORM -> {
+                    ragged = 0.2;
+                    order(level, i, "Dress the line!");
+                    return "the lines dressed";
+                }
+                default -> {
+                    return null;
+                }
+            }
+        }
+
         // -------------------------------------------------------------- the lines alive
 
         /**
@@ -270,6 +311,7 @@ public final class Battles {
         // -------------------------------------------------------------- the phases
 
         void form(ServerLevel level, long in) {
+            if (in == EVERY) for (int i = 0; i < 2; i++) WarHorn.signal(level, side[i], at(origin(i)), WarHorn.Signal.FORM);
             for (int i = 0; i < 2; i++) array(level, side[i], i == 1 && assault && !gateDown ? behindTheGate() : origin(i), 0, this, i);
             if (in % 40 == 0) for (int i = 0; i < 2; i++) Armies.drum(level, at(origin(i)), in % 80 == 0);
             if (assault && !gateDown) {
@@ -354,7 +396,7 @@ public final class Battles {
             if (in >= soon(SPEECH)) {
                 // The beat of silence, then the horn and the battle cry.
                 for (int i = 0; i < 2; i++) {
-                    Armies.horn(level, at(origin(i)), 3);
+                    WarHorn.signal(level, side[i], at(origin(i)), WarHorn.Signal.BEGIN);
                     Armies.cry(level, at(origin(i)), false);
                     cheer(level, i, false);
                 }
@@ -455,6 +497,7 @@ public final class Battles {
                         side[1 - i].morale -= BattleModel.DRAWN_ON;
                         story.add(name(i) + " gave ground, drew " + name(1 - i) + " on, and turned on it.");
                     } else order(level, i, "Charge!");
+                    WarHorn.signal(level, side[i], at(origin(i)), WarHorn.Signal.CHARGE);
                     Armies.cry(level, at(origin(i)), false);
                 }
                 shields(false);
@@ -602,7 +645,8 @@ public final class Battles {
             }
             for (Armies.Fighter f : side[winner].fighters) if (f.order == Armies.Order.ENGAGE) { f.order = Armies.Order.PLACE; f.foe = null; }
             cheer(level, winner, true);
-            Armies.horn(level, at(origin(winner)), 4);
+            WarHorn.signal(level, side[winner], at(origin(winner)), WarHorn.Signal.VICTORY);
+            WarHorn.signal(level, side[loser], at(origin(loser)), WarHorn.Signal.RETREAT);
             story.add(name(loser) + " " + o.words + "; " + name(winner) + " held the field.");
             Raids.tellNear(level, centre, 240, Component.literal("[War] " + capital(c.name) + ": " + story.get(story.size() - 1)).withStyle(ChatFormatting.GOLD), false);
             to(level, BattleModel.Phase.PURSUIT);
@@ -737,6 +781,7 @@ public final class Battles {
                 if (cap != null && !cap.down() && a.morale < BattleModel.WAVER && a.morale >= BattleModel.BREAK && now - rallied[i] > 300) {
                     rallied[i] = now;
                     a.morale += BattleModel.RALLY;
+                    WarHorn.signal(level, a, at(origin(i)), WarHorn.Signal.RALLY);
                     order(level, i, FolkTalk.pick(level.getRandom(), "Hold the line! Hold!", "Stand fast, " + name(i) + "! Stand!", "To me! To the banner!"));
                 }
             }

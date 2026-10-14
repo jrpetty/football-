@@ -261,6 +261,7 @@ public final class Raids {
         ALARMS.put(v.id(), a);
         Watch.shut(level, v.id(), true);
         Watch.ring(level, v);
+        WarHorn.alarm(level, v);                                   // [war] the town's war horn, if it has one
         a.lastRing = level.getGameTime();
         String name = Villages.name(v.id());
         tellNear(level, v.centre(), 160, Component.literal("The bell is ringing in " + name + ": " + why + "!")
