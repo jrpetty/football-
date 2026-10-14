@@ -54,6 +54,11 @@ public class GatherGoal extends Goal {
             };
         }
 
+        /** [mines] An ore in the rock: only taken where it shows and the folk can see it, never through the rock. */
+        public boolean isOre() {
+            return this == IRON || this == COAL;
+        }
+
         /** Player rules: ores and stone yield nothing without the right pickaxe. */
         public boolean needsProperTool() {
             return this == STONE || this == IRON || this == COAL || this == OBSIDIAN;
@@ -85,6 +90,8 @@ public class GatherGoal extends Goal {
     public record Request(Kind kind, int amount) {}
 
     private static final int SEARCH_RADIUS = 16;
+    /** [mines] How far across a block may be from it and still be "over its head", built straight up to. */
+    private static final int OVERHEAD = 2;
     /** The scan starts tight and only widens when the near ground is worked
      *  out — a dense forest is read in a fraction of the blocks, and a picked-
      *  over one still gets the full look before anybody gives up. */
@@ -101,7 +108,6 @@ public class GatherGoal extends Goal {
     private double bestDist;               // the nearest it has got to the current block
     private int targetTicks;               // ticks spent going after the current block, all told
     private int myGen;
-    @Nullable private BlockPos pillarBase; // feet spot we jumped from, to fill while pillaring up
     private int builtBlocks;               // blocks spent building a way to the target (capped)
     private int buildTicks;                // hard time cap on building so it can never loop forever
     private boolean announcedReroute;      // say "going after another" only once per run
@@ -156,7 +162,6 @@ public class GatherGoal extends Goal {
         this.stuckTicks = 0;
         this.bestDist = Double.MAX_VALUE;
         this.targetTicks = 0;
-        this.pillarBase = null;
         this.builtBlocks = 0;
         this.buildTicks = 0;
         this.announcedReroute = false;
@@ -276,6 +281,7 @@ public class GatherGoal extends Goal {
         if (request == null) return;
 
         if (collected >= request.amount()) {
+            if (com.jrpetty.mcassistant.entity.Footholds.comeDown(assistant)) return;   // [mines] down its steps first
             finish("Done — gathered " + collected + " " + request.kind().label + ".");
             return;
         }
@@ -283,6 +289,8 @@ public class GatherGoal extends Goal {
         if (targetPos == null
             || !request.kind().matches(assistant.level().getBlockState(targetPos))
             || !rankAllows(request.kind(), assistant.level().getBlockState(targetPos))) {
+            // [mines] Down the steps it built to the last one first, each block back into its pack.
+            if (com.jrpetty.mcassistant.entity.Footholds.comeDown(assistant)) return;
             targetPos = findNearest();
             assistant.claimTarget(targetPos);   // tell the crew where I'm headed
             workTicks = 0;
@@ -291,7 +299,6 @@ public class GatherGoal extends Goal {
             targetTicks = 0;
             builtBlocks = 0;
             buildTicks = 0;
-            pillarBase = null;
             if (targetPos == null) {
                 finish(collected > 0
                     ? "Got " + collected + " " + request.kind().label + " — that's all there is within " + SEARCH_RADIUS + " blocks."
@@ -336,6 +343,14 @@ public class GatherGoal extends Goal {
             } else if (!moving || targetTicks % 4 == 0) {
                 stuckTicks++;
             }
+            // [mines] Right over its head, out of reach: up to it on steps of its own from here, at once (wandering
+            // off after a way round to a block in a cave's roof took it out of sight of the block altogether).
+            BlockPos at = assistant.feetPos();
+            if (Math.max(Math.abs(targetPos.getX() - at.getX()), Math.abs(targetPos.getZ() - at.getZ())) <= OVERHEAD
+                    && targetPos.getY() - at.getY() >= 2 && buildTicks < 300 && builtBlocks < 32 && pillarUp(at)) {
+                buildTicks++;
+                return;
+            }
             // Can't just WALK there? Make a way to it: dig through the ground in the
             // way (e.g. the dirt over the stone), pillar up to a higher block, or bridge
             // a gap — instead of standing there looking at it. Digging needs no blocks;
@@ -371,6 +386,8 @@ public class GatherGoal extends Goal {
         }
 
         // In range: put in the work, then break the block and sweep the drops.
+        com.jrpetty.mcassistant.entity.Footholds.stillUp(assistant);   // [mines] at work up its steps: they stay under it
+        if (com.jrpetty.mcassistant.entity.Footholds.climbing(assistant)) assistant.getNavigation().stop();   // [mines] and it stays on them
         if (++workTicks < workNeeded) {
             if (workTicks % 8 == 0) {
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
@@ -465,6 +482,7 @@ public class GatherGoal extends Goal {
             assistant.getLookControl().setLookAt(
                 floorAhead.getX() + 0.5, floorAhead.getY() + 0.5, floorAhead.getZ() + 0.5);
             if (placeBlock(floorAhead)) {
+                com.jrpetty.mcassistant.entity.Footholds.laid(assistant, floorAhead, com.jrpetty.mcassistant.entity.Footholds.Purpose.BRIDGE);   // [mines]
                 builtBlocks++;
                 assistant.getNavigation().moveTo(ahead.getX() + 0.5, ahead.getY(), ahead.getZ() + 0.5, 1.0D);
                 return true;
@@ -473,25 +491,12 @@ public class GatherGoal extends Goal {
         return false;
     }
 
-    /** Rise one level under our feet toward a higher target, clearing any ceiling
-     *  first. Uses a carried building block; returns true if it acted (false if
-     *  it has none to pillar with). */
+    /** Rise one level under our feet toward a higher target, clearing any ceiling first: a block of its pack laid
+     *  under it and booked to come down again after (Footholds). False if it has nothing to build with. */
     private boolean pillarUp(BlockPos feet) {
-        if (assistant.countMatching(NightShelterGoal.SHELTER_BLOCK) == 0) return false;
-        assistant.getNavigation().stop();
         BlockPos aboveHead = feet.above(2);
         if (solid(aboveHead)) { digThrough(aboveHead); return true; } // clear the ceiling first
-        assistant.getLookControl().setLookAt(feet.getX() + 0.5, feet.getY() - 1.0, feet.getZ() + 0.5);
-        if (assistant.onGround()) {
-            pillarBase = feet;
-            assistant.tryHop();
-            return true;
-        }
-        if (pillarBase != null && assistant.getY() - pillarBase.getY() > 0.45
-            && assistant.level().getBlockState(pillarBase).canBeReplaced()) {
-            if (placeBlock(pillarBase)) { pillarBase = null; builtBlocks++; }
-        }
-        return true;
+        return com.jrpetty.mcassistant.entity.Footholds.rise(assistant, com.jrpetty.mcassistant.entity.Footholds.Purpose.CLIMB);
     }
 
     /** Break one obstructing block (never next to lava/water), sweep its drop,
@@ -586,7 +591,6 @@ public class GatherGoal extends Goal {
             announcedReroute = true;
         }
         targetPos = null;
-        pillarBase = null;
         builtBlocks = 0;
     }
 
@@ -684,8 +688,12 @@ public class GatherGoal extends Goal {
             // test above rejects all but a handful of positions.
             if (respectCrew && assistant.takenByCrew(pos)) continue;
             if (respectCrew && assistant.outsideMyShare(pos)) continue;
+            // [mines] No looking through rock: an ore only where it shows (a face open to the air).
+            if (request.kind().isOre() && !com.jrpetty.mcassistant.entity.OreSight.exposed(assistant.level(), pos)) continue;
             double d = pos.distSqr(feet) + Math.abs(pos.getY() - feet.getY()) * 16.0;
             if (d < bestDist) {
+                // [mines] ...and where it can see it from here, or saw it before (OreNotes): a ray only for a winner.
+                if (request.kind().isOre() && !oreKnown(pos)) continue;
                 // Last of all, and only for a candidate that would actually win:
                 // this reads a few hundred blocks. A settlement's woodcutter must
                 // not fell the pillars of its own houses.
@@ -695,6 +703,12 @@ public class GatherGoal extends Goal {
             }
         }
         return best;
+    }
+
+    /** [mines] An ore it knows of: in a clear line from its eyes, or seen before and noted (OreNotes). */
+    private boolean oreKnown(BlockPos pos) {
+        if (assistant.level() instanceof net.minecraft.server.level.ServerLevel sl && com.jrpetty.mcassistant.entity.OreNotes.isNoted(sl, pos)) return true;
+        return com.jrpetty.mcassistant.entity.OreSight.seen(assistant.level(), assistant.getEyePosition(), pos, assistant);
     }
 
     /**

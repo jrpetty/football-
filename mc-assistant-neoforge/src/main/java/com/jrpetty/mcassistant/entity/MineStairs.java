@@ -47,6 +47,15 @@ public final class MineStairs extends SavedData {
     private final LinkedHashMap<Long, List<Long>> stairs = new LinkedHashMap<>();
     /** How many staircases stand a step on each block: the floors nobody may break. */
     private final HashMap<Long, Integer> floors = new HashMap<>();
+    /** [mines] When each staircase was last walked, up or down (game time): the ways nobody uses are let go. */
+    private final HashMap<Long, Long> used = new HashMap<>();
+
+    /** [mines] The kinds of way a key names, by its y: a mine's main stairs (a plot's), stairs a folk cut to get out,
+     *  footholds kept as a way down. Only the main stairs are kept for good. */
+    public enum Kind { MAIN, OUT, KEPT }
+
+    /** [mines] A way out or a kept way down nobody has walked for this long (five days) is let go. */
+    public static final long UNUSED = 5L * 24000L;
 
     private MineStairs() {}
 
@@ -100,6 +109,7 @@ public final class MineStairs extends SavedData {
             m.floor(p.asLong());
         }
         m.stairs.put(key, list);
+        m.used.put(key, level.getGameTime());   // [mines]
         m.trim();
         m.setDirty();
     }
@@ -111,26 +121,102 @@ public final class MineStairs extends SavedData {
         return !m.floors.isEmpty() && m.floors.containsKey(pos.asLong());
     }
 
-    /** A staircase near here, head first, and the step of it nearest this spot. */
-    public record Near(List<BlockPos> steps, int index, double distance) {}
+    /** A staircase near here (its key), head first to the step of it nearest this spot. */
+    public record Near(long key, List<BlockPos> steps, int index, double distance) {}
 
     /** The staircase with a step nearest this spot, within so many blocks; null when there is none. */
     @Nullable
     public static Near nearest(ServerLevel level, BlockPos at, int within) {
+        List<Near> all = near(level, at, within, 1);
+        return all.isEmpty() ? null : all.get(0);
+    }
+
+    /**
+     * [mines] The known ways up near this spot, nearest first, one to a staircase and at most so many: each staircase's
+     * step nearest the spot, within so many blocks. A folk going up tries them in turn (path-checked) before it cuts
+     * a way of its own.
+     */
+    public static List<Near> near(ServerLevel level, BlockPos at, int within, int most) {
         MineStairs m = of(level);
-        double best = (double) within * within;
-        List<Long> found = null;
-        int index = -1;
-        for (List<Long> list : m.stairs.values()) {
+        double limit = (double) within * within;
+        List<Near> out = new ArrayList<>();
+        for (Map.Entry<Long, List<Long>> e : m.stairs.entrySet()) {
+            List<Long> list = e.getValue();
+            double best = limit;
+            int index = -1;
             for (int i = 0; i < list.size(); i++) {
                 double d = BlockPos.of(list.get(i)).distSqr(at);
-                if (d <= best) { best = d; found = list; index = i; }
+                if (d <= best) { best = d; index = i; }
             }
+            if (index < 0) continue;
+            List<BlockPos> steps = new ArrayList<>(index + 1);
+            for (int i = 0; i <= index; i++) steps.add(BlockPos.of(list.get(i)));
+            out.add(new Near(e.getKey(), steps, index, Math.sqrt(best)));
         }
-        if (found == null) return null;
-        List<BlockPos> steps = new ArrayList<>(index + 1);
-        for (int i = 0; i <= index; i++) steps.add(BlockPos.of(found.get(i)));
-        return new Near(steps, index, Math.sqrt(best));
+        out.sort(java.util.Comparator.comparingDouble(Near::distance));
+        return out.size() > most ? new ArrayList<>(out.subList(0, most)) : out;
+    }
+
+    /** [mines] The whole staircase at this key, head first (empty when there is none). */
+    public static List<BlockPos> steps(ServerLevel level, long key) {
+        List<Long> list = of(level).stairs.get(key);
+        List<BlockPos> out = new ArrayList<>(list == null ? 0 : list.size());
+        if (list != null) for (long s : list) out.add(BlockPos.of(s));
+        return out;
+    }
+
+    /** [mines] The staircase at this key was walked just now: kept on. */
+    public static void used(ServerLevel level, long key) {
+        MineStairs m = of(level);
+        if (!m.stairs.containsKey(key)) return;
+        m.used.put(key, level.getGameTime());
+        m.setDirty();
+    }
+
+    /** [mines] What kind of way this key names. */
+    public static Kind kindOf(long key) {
+        int y = BlockPos.getY(key);
+        return y == 1 ? Kind.OUT : y == 2 ? Kind.KEPT : Kind.MAIN;
+    }
+
+    /** [mines] The key a way out cut by a folk is kept under: where it came out. */
+    public static long outKey(BlockPos top) {
+        return BlockPos.asLong(top.getX(), 1, top.getZ());
+    }
+
+    /** [mines] Footholds kept as a way down (Footholds.keep), top first, booked as a route under where they stand. */
+    static void keptRoute(ServerLevel level, List<BlockPos> topFirst) {
+        if (topFirst.isEmpty()) return;
+        BlockPos top = topFirst.get(0);
+        long key = BlockPos.asLong(top.getX(), 2, top.getZ());
+        record(level, key, topFirst);
+    }
+
+    /**
+     * [mines] The ways nobody has walked for UNUSED let go (the town's tidy round of its routes): a way out forgotten
+     * (its steps no longer spared), kept footholds handed back to be taken down. A mine's main stairs are never let go.
+     */
+    static void forgetUnused(ServerLevel level, long now) {
+        MineStairs m = of(level);
+        List<Long> gone = new ArrayList<>();
+        for (Long key : m.stairs.keySet()) {
+            if (kindOf(key) == Kind.MAIN) continue;
+            Long at = m.used.get(key);
+            if (at == null || at > now) { m.used.put(key, now); m.setDirty(); continue; }   // an older save: from now
+            if (now - at > UNUSED) gone.add(key);
+        }
+        for (long key : gone) {
+            List<Long> list = m.stairs.remove(key);
+            m.used.remove(key);
+            if (list == null) continue;
+            for (long s : list) m.unfloor(s);
+            if (kindOf(key) == Kind.KEPT) {
+                List<BlockPos> steps = new ArrayList<>(list.size());
+                for (long s : list) steps.add(BlockPos.of(s));
+                Footholds.unkeep(level, steps);
+            }
+            m.setDirty();
+        }
     }
 
     /** [mine-safety] The head of the staircase at this key (its first step, at the top), or null. */
@@ -167,6 +253,7 @@ public final class MineStairs extends SavedData {
         while (stairs.size() > MOST_STAIRS) {
             Long oldest = stairs.keySet().iterator().next();
             for (long s : stairs.remove(oldest)) unfloor(s);
+            used.remove(oldest);   // [mines]
         }
     }
 
@@ -284,6 +371,7 @@ public final class MineStairs extends SavedData {
                 m.floor(s);
             }
             m.stairs.put(one.getLong("Key"), list);
+            if (one.contains("Used")) m.used.put(one.getLong("Key"), one.getLong("Used"));   // [mines]
         }
         return m;
     }
@@ -297,6 +385,8 @@ public final class MineStairs extends SavedData {
             long[] steps = new long[e.getValue().size()];
             for (int i = 0; i < steps.length; i++) steps[i] = e.getValue().get(i);
             one.putLongArray("Steps", steps);
+            Long at = used.get(e.getKey());
+            if (at != null) one.putLong("Used", at);   // [mines]
             all.add(one);
         }
         tag.put("Stairs", all);
@@ -307,6 +397,7 @@ public final class MineStairs extends SavedData {
         MineStairs m = of(level);
         m.stairs.clear();
         m.floors.clear();
+        m.used.clear();   // [mines]
         m.setDirty();
         BELOW.clear();
         SENT.clear();

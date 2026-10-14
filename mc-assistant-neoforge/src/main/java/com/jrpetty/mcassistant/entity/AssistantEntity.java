@@ -6888,6 +6888,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
      *  then digs where it stands rather than never digging. */
     private boolean walkToTheShaftHead() {
         BlockPos head = workZone.center();
+        if (level() instanceof net.minecraft.server.level.ServerLevel sl) { BlockPos stairs = MineStairs.head(sl, MineStairs.plotKey(head)); if (stairs != null) head = stairs; }   // [mines] the plot's own stairs
         double dx = head.getX() + 0.5 - getX();
         double dz = head.getZ() + 0.5 - getZ();
         if (dx * dx + dz * dz <= 6.25) { shaftHeadTries = 0; return false; }   // within two and a half blocks
@@ -8201,7 +8202,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         }
         for (BlockPos pos : BlockPos.betweenClosed(lo, hi)) {
             if (!inZone(pos)) continue; // the goal filters by zone; so must we
-            if (kind.matches(level().getBlockState(pos))) return true;
+            if (kind.matches(level().getBlockState(pos)) && (!kind.isOre() || OreSight.exposed(level(), pos))) return true;   // [mines] ore that shows
         }
         return false;
     }
@@ -9490,7 +9491,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // where the pathfinder gave up against a wall while following — otherwise
         // the stuck timer would reset and self-rescue (dig/climb) would never fire.
         if (tickCount % 20 == 0) {
-            boolean wantsToMove = !this.getNavigation().isDone();
+            boolean wantsToMove = !this.getNavigation().isDone() && !Footholds.climbing(this);   // [mines] up its own steps it stands still on purpose
             if (!wantsToMove && mode == Mode.FOLLOW) {
                 Player o = getOwnerPlayer();
                 if (o != null && distanceToSqr(o) > 9.0) wantsToMove = true; // trailing, but pinned

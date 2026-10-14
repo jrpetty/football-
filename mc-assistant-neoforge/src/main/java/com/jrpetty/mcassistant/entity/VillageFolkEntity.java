@@ -364,6 +364,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // Lost underground with no way up it can walk (a mine run cut short, a fall into a cave): sent up
         // the nearest stairs, or to cut its own (MineStairs).
         if (tickCount % 100 == 71 && level() instanceof net.minecraft.server.level.ServerLevel below) MineStairs.lookForAWayUp(this, below);
+        if (tickCount % 20 == 17) Footholds.passBy(this);      // [mines] its own steps and pillars taken down as it passes
         Park.tick(this);                                       // sat on a park bench, or on its way round the park
         Seats.tick(this);                                      // [townlife] sat down on its break or at a gathering (Seats)
         if (tickCount % 20 == 13) NightLight.tick(this);       // [townlife] a light in its hand out of doors after dark (NightLight)

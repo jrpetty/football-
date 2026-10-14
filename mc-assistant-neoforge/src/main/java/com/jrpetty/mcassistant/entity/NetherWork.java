@@ -456,6 +456,7 @@ public final class NetherWork {
         f.setPos(feet.getX() + 0.5, feet.getY() + 1.0, feet.getZ() + 0.5);
         f.getJumpControl().jump();
         NetherOutpost.place(level, f, r, feet, Blocks.COBBLESTONE.defaultBlockState());
+        Footholds.laid(f, feet, Footholds.Purpose.CLIMB);   // [mines] booked: a pillar a run cut short is taken down later
         leg.pillar++;
         return true;
     }
