@@ -789,11 +789,18 @@ public final class Armies {
     static void walk(VillageFolkEntity f, Fighter x, ServerLevel level) {
         if (!x.placed) return;
         double dx = x.tx - f.getX(), dz = x.tz - f.getZ(), d2 = dx * dx + dz * dz;
-        if (d2 <= 0.6) {
+        if (d2 <= 0.3) {
             if (!f.getNavigation().isDone()) f.getNavigation().stop();
             face(f, x.yaw);
             x.stuckSince = 0;
             x.stuckBest = Double.MAX_VALUE;
+            return;
+        }
+        if (d2 <= 2.5) {
+            // The last step onto its mark by eye, not by path (a path ends where it likes, a block out).
+            if (!f.getNavigation().isDone()) f.getNavigation().stop();
+            f.getMoveControl().setWantedPosition(x.tx, x.ty, x.tz, 0.5);
+            if (d2 <= 0.8) face(f, x.yaw);
             return;
         }
         if (d2 > 48.0 * 48.0) {

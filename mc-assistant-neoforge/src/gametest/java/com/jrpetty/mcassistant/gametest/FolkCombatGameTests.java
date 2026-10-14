@@ -108,6 +108,7 @@ public class FolkCombatGameTests {
         AtomicReference<VillageFolkEntity> g = new AtomicReference<>();
         helper.runAtTickTime(20, () -> {
             VillageFolkEntity f = guard(level, folk(v.id()).get(0), ground(level, x + 20, 20), new ItemStack(Items.IRON_SWORD), true, 2);
+            f.setNoAi(true);                                            // it stands where it is; its eye for arrows is its own (FolkCombat.react)
             f.setYRot(180.0F);
             f.setYHeadRot(180.0F);
             f.yBodyRot = 180.0F;

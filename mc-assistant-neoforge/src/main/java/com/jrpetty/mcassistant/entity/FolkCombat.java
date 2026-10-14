@@ -102,6 +102,14 @@ public final class FolkCombat {
     public static boolean raiseNow(LivingEntity e, int ticks) { return raise(e, ticks); }
     public static boolean jumpNow(net.minecraft.world.entity.Mob m, long now) { return jumpForCrit(m, now); }
 
+    /** Ticks till this one's next blow is ready (as its own cooldown runs); a long while for one not fighting with this brain. */
+    public static int readyIn(LivingEntity e, long now) {
+        State s = STATES.get(e.getUUID());
+        if (s == null) return Integer.MAX_VALUE;
+        int wait = cooldown(e.getMainHandItem()) + (int) Math.round((1.0 - skill(e)) * 3);
+        return (int) Math.max(0, s.lastBlow + wait - now);
+    }
+
     /** Is a crit on its way (it has jumped for one, and it is not yet spent)? */
     public static boolean critComing(LivingEntity e, long now) {
         State s = STATES.get(e.getUUID());
