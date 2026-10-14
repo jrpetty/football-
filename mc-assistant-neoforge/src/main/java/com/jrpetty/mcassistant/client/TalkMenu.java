@@ -219,10 +219,10 @@ public final class TalkMenu {
     static final Entry LESSON = say("lesson", Items.WRITTEN_BOOK, "What's my next lesson?");
     static final Entry SEE_TO = ask("see_to", Items.GLISTERING_MELON_SLICE, TalkTopic.SEE_TO);   // [roles-a] the healer
     // [roles-b] The crafts' own: the tailor's orders, the brewer's potions, the enchanter's table, the beekeeper's honey.
-    static final Entry TAILOR = ask("tailor_order", Items.WHITE_BANNER, TalkTopic.TAILOR);
-    static final Entry POTION = ask("potion", Items.POTION, TalkTopic.POTION);
-    static final Entry ENCHANT = ask("enchant", Items.ENCHANTED_BOOK, TalkTopic.ENCHANT);
-    static final Entry HONEY = ask("honey", Items.HONEY_BOTTLE, TalkTopic.HONEY);
+    static final Entry TAILOR = ask("tailor_order", Items.WHITE_BANNER, TalkTopic.TAILOR, trade("TAILOR"));
+    static final Entry POTION = ask("potion", Items.POTION, TalkTopic.POTION, trade("BREW"));
+    static final Entry ENCHANT = ask("enchant", Items.ENCHANTED_BOOK, TalkTopic.ENCHANT, trade("ENCHANT"));
+    static final Entry HONEY = ask("honey", Items.HONEY_BOTTLE, TalkTopic.HONEY, trade("BEEKEEP"));
 
     /** The profile and skills pages, the work record and the pack: the header's links. */
     public static final Entry PROFILE = special("profile", Items.PAPER, Kind.PAGE);
@@ -293,7 +293,8 @@ public final class TalkMenu {
                 prompt("make", Items.ANVIL, TalkTopic.ORDER, "Make me an iron sword"),
                 REPAIR,
                 HAGGLE,
-                ROCKETS),
+                ROCKETS,
+                TAILOR, POTION, ENCHANT, HONEY),                             // [roles-b] each only at its own craft
             group("money", Items.GOLD_INGOT,
                 BANK,
                 prompt("invest", Items.RAW_GOLD, TalkTopic.INVEST, "I'd like to invest 50 coins"),
@@ -307,8 +308,7 @@ public final class TalkMenu {
                 ask("sponsor", Items.PUMPKIN_PIE, TalkTopic.SPONSOR),
                 ask("escort", Items.SHIELD, TalkTopic.ESCORT),
                 ask("charter", Items.MINECART, TalkTopic.CHARTER),
-                SEE_TO),                                                     // [roles-a] the healer sees to you
-            group("crafts", Items.LOOM, TAILOR, POTION, ENCHANT, HONEY)),      // [roles-b] the crafts' services
+                SEE_TO)),                                                    // [roles-a] the healer sees to you
         // Town: its ways, its people, its government, its law, its records.
         List.of(
             say("ways", Items.WHITE_BANNER, "What's this town like?"),
