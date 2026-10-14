@@ -122,7 +122,7 @@ public class FolkNavigation extends GroundPathNavigation {
     private static final double PACE = 2.92;
     /** The slowest and fastest a travelled walk goes, blocks a tick. */
     private static final double SLOWEST = 0.05, FASTEST = 0.6;
-    /** How often a travelled walk looks for a player come into sight (then the rest is walked). */
+    /** How often a walk under way looks whether it has gone out of sight (then the rest may be travelled). */
     private static final int LOOK_EVERY = 20;
 
     /** Where a travelled walk ends, and the game tick it gets there (-1: not yet reckoned, the speed not yet set). */
@@ -130,6 +130,9 @@ public class FolkNavigation extends GroundPathNavigation {
     @Nullable private Path travelPath;
     /** Where the walk is going, when the travel is only its part out of sight (then walked on from the edge of it). */
     @Nullable private net.minecraft.world.phys.Vec3 travelGoal;
+    /** Where and when the travel set out: a travel sent somewhere else on the way keeps its time on the road. */
+    @Nullable private net.minecraft.world.phys.Vec3 travelFrom;
+    private long travelStart;
     private long arriveAt = -1;
     /** Walks travelled all told (the perf probes read it). */
     private static long travelledInAll;
@@ -182,6 +185,7 @@ public class FolkNavigation extends GroundPathNavigation {
 
     /** Travel to this block, and (goal not null) walk on from it to the goal. */
     private boolean travelTo(BlockPos to, @Nullable net.minecraft.world.phys.Vec3 goal, double speed) {
+        boolean onTheWay = travelling();
         net.minecraft.world.level.pathfinder.Node end = new net.minecraft.world.level.pathfinder.Node(to.getX(), to.getY(), to.getZ());
         Path travel = new Path(java.util.List.of(end), to, true);
         if (!super.moveTo(travel, speed)) return false;
@@ -189,7 +193,13 @@ public class FolkNavigation extends GroundPathNavigation {
         this.travelPath = this.path;
         this.travelGoal = goal;
         this.arriveAt = -1;
-        travelledInAll++;
+        // Sent somewhere else on the way (a goal that picks a fresh spot each time it asks): the time already on the
+        // road counts, as the steps already taken would have.
+        if (!onTheWay) {
+            this.travelFrom = this.mob.position();
+            this.travelStart = this.level.getGameTime();
+            travelledInAll++;
+        }
         return true;
     }
 
@@ -227,7 +237,8 @@ public class FolkNavigation extends GroundPathNavigation {
         if (this.arriveAt < 0) {
             double speed = this.speedModifier * this.mob.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
             double pace = Math.max(SLOWEST, Math.min(FASTEST, PACE * speed * speed));
-            this.arriveAt = now + (long) Math.ceil(Math.sqrt(to.distToCenterSqr(this.mob.position())) * DETOUR / pace);
+            net.minecraft.world.phys.Vec3 from = this.travelFrom != null ? this.travelFrom : this.mob.position();
+            this.arriveAt = this.travelStart + (long) Math.ceil(Math.sqrt(to.distToCenterSqr(from)) * DETOUR / pace);
         }
         if (now >= this.arriveAt) {
             this.travelTo = null;
@@ -251,8 +262,9 @@ public class FolkNavigation extends GroundPathNavigation {
             }
             return;
         }
-        // Somebody has come into sight of it: the rest of the way is walked, seen.
-        if ((now + this.mob.getId()) % LOOK_EVERY == 0 && !FolkLod.unseen(this.mob)) {
+        // Somebody has come into sight of it: the rest of the way is walked, seen (looked at every tick: a player
+        // can come over a hill, or out of a door, in any one).
+        if (!FolkLod.unseen(this.mob)) {
             net.minecraft.world.phys.Vec3 goal = this.travelGoal != null ? this.travelGoal : net.minecraft.world.phys.Vec3.atBottomCenterOf(to);
             this.travelTo = null;
             this.travelGoal = null;
