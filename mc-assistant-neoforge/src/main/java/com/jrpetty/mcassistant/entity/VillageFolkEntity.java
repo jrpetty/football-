@@ -321,6 +321,21 @@ public class VillageFolkEntity extends AssistantEntity {
         }
     }
 
+    /** [scale] Asleep in its bed, or standing still out of everybody's sight, the game's movement is skipped for the
+     *  tick (FolkLod). */
+    @Override
+    public void travel(net.minecraft.world.phys.Vec3 input) {
+        if (!level().isClientSide && FolkLod.rests(this, input)) return;
+        super.travel(input);
+    }
+
+    /** [scale] Out of everybody's sight, the shoving between folk worked out every other tick (FolkLod). */
+    @Override
+    protected void pushEntities() {
+        if (!level().isClientSide && FolkLod.shovesLess(this)) return;
+        super.pushEntities();
+    }
+
     @Override
     public void aiStep() {
         super.aiStep();
@@ -577,7 +592,9 @@ public class VillageFolkEntity extends AssistantEntity {
             Villages.chooseElder(ownerId(), level().getDayTime() / 24000L);
             if (level() instanceof net.minecraft.server.level.ServerLevel polls) {
                 Villages.Village home = Villages.get(ownerId());
-                if (home != null) {
+                // [scale] The town's rounds, at its beat and within the tick's budget (TownScheduler).
+                if (home != null && TownScheduler.due(polls, home.id(), TownScheduler.Job.ROUNDS)) {
+                    long started = TownScheduler.start();
                     Elections.tick(polls, home);
                     Homes.tick(polls, home);
                     Families.tick(polls, home);          // pets, gardens, graves visited, anniversaries (Families)
@@ -591,6 +608,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Cartographers.tick(polls, home);     // [cartographer] the town chooses its cartographer once its map room stands
                     Divers.tick(polls, home);            // [diver] a town by the water finds it, and takes up its diver
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
+                    TownScheduler.done(started);
                 }
             }
             if (level() instanceof net.minecraft.server.level.ServerLevel orders) Orders.consider(orders, ownerId(), level().getDayTime() / 24000L);
@@ -598,7 +616,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // The town's streets, worn and paved and lit a little at a time (TownWork).
         if (ownerId() != null && level() instanceof net.minecraft.server.level.ServerLevel townLevel) {
             Villages.Village home = Villages.get(ownerId());
-            if (home != null) {
+            if (home != null && TownScheduler.due(townLevel, home.id(), TownScheduler.Job.STREETS)) {
+                long started = TownScheduler.start();
                 TownWork.tick(townLevel, home);
                 Tidy.tick(townLevel, home);             // [tidy] the tidy crew: floors in the buildings, the eyesores, the town's looks
                 TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
@@ -606,6 +625,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 Library.tick(townLevel, home);          // [library] its books written, shelved, lent and read
                 Assemblies.tick(townLevel, home);       // the morning assembly, openings, feasts, the council, elections
                 Contentment.daily(townLevel, home);     // how it is doing; at its worst, folk leave
+                TownScheduler.done(started);
             }
         }
         if (withAPlayer) return;
@@ -2935,8 +2955,11 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!Villages.mayBake(village, now)) return false;
         int held = countCarried(st -> st.is(net.minecraft.world.item.Items.WHEAT));
         int radius = Math.min(112, Math.max(32, Villages.storesRadius(village)));
-        int inStores = storesHold(heart, radius,
+        // [scale] The stores' wheat as a neighbour counted it a moment ago, rather than every chest searched again.
+        Integer known = FolkLod.recentCount(level(), village, "wheat");
+        int inStores = known != null ? known : storesHold(heart, radius,
             st -> st.is(net.minecraft.world.item.Items.WHEAT));
+        if (known == null) FolkLod.counted(level(), village, "wheat", inStores);
         if (held + inStores < 9) return false;
         Villages.noteBake(village, now);
         int take = Math.min(24, inStores);
@@ -6742,11 +6765,14 @@ public class VillageFolkEntity extends AssistantEntity {
         int mine = tradeLevel(wanted) + Quirks.pull(this, wanted);                 // [perks] a quirk's pull to a trade
         VillageFolkEntity best = null;
         int bestLevel = mine;
+        // [scale] Whether a trade has hands over, reckoned once a trade, not once a folk: the reckoning goes over the
+        // whole town, and asked for each of its folk in turn it was the town's size squared, every agenda.
+        java.util.Map<StationTask, Boolean> over = new java.util.EnumMap<>(StationTask.class);
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || f == this || f.isBaby() || !f.isAlive()) continue;
             StationTask theirs = f.stationTask();
             if (theirs == wanted || theirs == StationTask.NONE && !f.isAutonomous()) continue;
-            if (theirs != StationTask.NONE && !Villages.overStaffed(village, theirs)) continue;
+            if (theirs != StationTask.NONE && !over.computeIfAbsent(theirs, t -> Villages.overStaffed(village, t))) continue;
             int lv = f.tradeLevel(wanted) + Quirks.pull(f, wanted);               // [perks] Green Fingers to the fields...
             if (lv > bestLevel) { bestLevel = lv; best = f; }
         }

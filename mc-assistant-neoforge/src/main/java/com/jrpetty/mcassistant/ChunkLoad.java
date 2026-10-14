@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
@@ -48,7 +49,20 @@ import java.util.UUID;
 public final class ChunkLoad {
 
     public static final TicketController CONTROLLER = new TicketController(
-        ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, "stations"), null);
+        ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, "stations"), ChunkLoad::reloaded);
+
+    /** [scale] The tickets the world came back with (saved forced, from before a restart), till the first tick puts
+     *  them in FORCED: the world opens before the session's reset, which would otherwise forget them. Kept so a town
+     *  that sleeps after a restart lets go of the chunks it forced in the last session too (TownLod). */
+    private static final List<Key> RELOADED = new ArrayList<>();
+
+    private static void reloaded(ServerLevel level, net.neoforged.neoforge.common.world.chunk.TicketHelper tickets) {
+        synchronized (RELOADED) {
+            tickets.getEntityTickets().forEach((owner, set) -> {
+                for (long chunk : set.ticking()) RELOADED.add(new Key(level.dimension(), owner, chunk));
+            });
+        }
+    }
 
     private static final Logger LOG = LogUtils.getLogger();
 
@@ -101,6 +115,11 @@ public final class ChunkLoad {
         event.register(CONTROLLER);
     }
 
+    /** How many chunks the mod holds forced right now (for the perf probes and the status line). */
+    public static int forcedCount() {
+        return FORCED.size();
+    }
+
     /** Forget everything queued (the world is closing or another is opening). */
     public static void reset() {
         WANTED.clear();
@@ -140,8 +159,40 @@ public final class ChunkLoad {
         for (int[] c : cells) {
             Key key = new Key(level.dimension(), owner, ChunkPos.asLong(cx + c[0], cz + c[1]));
             if (FORCED.contains(key) || WANTED.containsKey(key)) continue;
+            // [scale] On a sleeping town's ground: kept for its waking, not forced (TownLod).
+            if (com.jrpetty.mcassistant.entity.TownLod.park(level, owner, cx + c[0], cz + c[1])) continue;
             WANTED.put(key, new Want(level, owner, cx + c[0], cz + c[1]));
         }
+    }
+
+    /**
+     * [scale] Let go of every chunk forced, or waiting to be, in this box of chunks in this level, where {@code let}
+     * agrees (given who asked for it and which chunk); returns what was let go, so it can be asked for again (a town going to sleep,
+     * TownLod). Its chunks then unload as any chunk nobody holds, and its folk are saved with them.
+     */
+    public static List<com.jrpetty.mcassistant.entity.TownLod.Parked> releaseWithin(ServerLevel level, int minX, int minZ,
+            int maxX, int maxZ, java.util.function.BiPredicate<UUID, Long> let) {
+        List<com.jrpetty.mcassistant.entity.TownLod.Parked> out = new ArrayList<>();
+        java.util.function.Predicate<Key> inside = k -> {
+            if (!k.dimension().equals(level.dimension())) return false;
+            int x = ChunkPos.getX(k.chunk()), z = ChunkPos.getZ(k.chunk());
+            return x >= minX && x <= maxX && z >= minZ && z <= maxZ && let.test(k.owner(), k.chunk());
+        };
+        for (Iterator<Key> it = FORCED.iterator(); it.hasNext(); ) {
+            Key k = it.next();
+            if (!inside.test(k)) continue;
+            it.remove();
+            CONTROLLER.forceChunk(level, k.owner(), ChunkPos.getX(k.chunk()), ChunkPos.getZ(k.chunk()), false, true);
+            out.add(new com.jrpetty.mcassistant.entity.TownLod.Parked(k.owner(), k.chunk()));
+        }
+        for (Iterator<java.util.Map.Entry<Key, Want>> it = WANTED.entrySet().iterator(); it.hasNext(); ) {
+            java.util.Map.Entry<Key, Want> e = it.next();
+            if (!inside.test(e.getKey())) continue;
+            it.remove();
+            dropAsk(e.getValue());
+            out.add(new com.jrpetty.mcassistant.entity.TownLod.Parked(e.getKey().owner(), e.getKey().chunk()));
+        }
+        return out;
     }
 
     private static void dropAsk(Want w) {
@@ -158,6 +209,12 @@ public final class ChunkLoad {
     }
 
     private static void onServerTickGuarded(ServerTickEvent.Post event) {
+        if (!RELOADED.isEmpty()) {
+            synchronized (RELOADED) {
+                FORCED.addAll(RELOADED);
+                RELOADED.clear();
+            }
+        }
         if (WANTED.isEmpty()) return;
         int forced = 0;
         boolean hard = false;

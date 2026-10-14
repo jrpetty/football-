@@ -9491,7 +9491,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         // where the pathfinder gave up against a wall while following — otherwise
         // the stuck timer would reset and self-rescue (dig/climb) would never fire.
         if (tickCount % 20 == 0) {
-            boolean wantsToMove = !this.getNavigation().isDone() && !Footholds.climbing(this);   // [mines] up its own steps it stands still on purpose
+            // [scale] A walk travelled out of sight stands still till it is there (FolkLod): not stuck.
+            boolean wantsToMove = !this.getNavigation().isDone() && !Footholds.climbing(this)   // [mines] up its own steps it stands still on purpose
+                && !(this.getNavigation() instanceof FolkNavigation travel && travel.travelling());
             if (!wantsToMove && mode == Mode.FOLLOW) {
                 Player o = getOwnerPlayer();
                 if (o != null && distanceToSqr(o) > 9.0) wantsToMove = true; // trailing, but pinned

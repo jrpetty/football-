@@ -307,6 +307,7 @@ public final class Market {
 
     /** How much of what matches the stores hold. */
     public static int stock(ServerLevel level, UUID village, Predicate<ItemStack> what) {
+        if (TownLod.away(village)) return TownLod.stock(village, what);       // [scale] a sleeping town's stores, kept
         int n = WorkStock.own(what);                                    // [shops-homes] a maker at work counts its own chest
         for (BlockPos p : Villages.storeChests(level, village)) {
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
@@ -1302,6 +1303,7 @@ public final class Market {
      * along, and filled chest after chest without topping up the one before.
      */
     static ItemStack intoStores(ServerLevel level, UUID village, ItemStack stack) {
+        if (TownLod.away(village)) return TownLod.store(village, stack);      // [scale] kept for the town's waking
         Economy.storesIn(village, stack);                                       // a maker's work, item by item
         List<BlockPos> stores = new ArrayList<>(Villages.storeChests(level, village));
         List<net.minecraft.world.Container> boxes = new ArrayList<>();

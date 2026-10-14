@@ -597,10 +597,12 @@ public final class CaveDwellers {
         if (have(id) >= wanted(id)) return null;
         VillageFolkEntity best = null;
         int bestScore = Integer.MIN_VALUE;
+        // [scale] Whether a trade can spare a hand, reckoned once a trade, not once a folk (it reckons the whole town).
+        java.util.Map<StationTask, Boolean> spares = new java.util.EnumMap<>(StationTask.class);
         for (AssistantEntity a : Villages.folkOf(id)) {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || f.isElder()) continue;
             if (f.trip() != null || f.expedition() != null) continue;
-            if (!spare(id, f.stationTask())) continue;
+            if (!spares.computeIfAbsent(f.stationTask(), t -> spare(id, t))) continue;
             int age = f.ageYears();
             if (age < 18 || age > 50) continue;                       // fit for a day underground (JobMarket.ages)
             int score = fitness(f) + Interviews.preferred(id, "caveplace", f);     // [interviews] the panel's choice first

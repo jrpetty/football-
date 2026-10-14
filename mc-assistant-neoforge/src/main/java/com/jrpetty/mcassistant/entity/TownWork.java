@@ -274,6 +274,7 @@ public final class TownWork {
     /** Take so many of a thing out of the village's stores; all or nothing. [shops-homes] A maker at its work takes
      *  out of its own workshop chest first (WorkStock), and only the rest out of the stores. */
     static boolean take(ServerLevel level, Villages.Village v, Predicate<ItemStack> what, int n) {
+        if (TownLod.away(v.id())) return TownLod.take(v.id(), what, n);      // [scale] out of a sleeping town's kept stores
         List<ItemStack> own = WorkStock.takeOwn(what, n);
         int got = 0;
         for (ItemStack s : own) got += s.getCount();

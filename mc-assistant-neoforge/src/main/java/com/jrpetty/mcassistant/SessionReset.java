@@ -68,6 +68,7 @@ public final class SessionReset {
         Town.resetAll();
         Requests.resetAll();
         ChunkLoad.reset();
+        com.jrpetty.mcassistant.entity.TownLod.reset();
         com.jrpetty.mcassistant.entity.Wagons.reset();
         com.jrpetty.mcassistant.entity.Reach.reset();
         com.jrpetty.mcassistant.entity.Campaigns.resetSession();   // [war] the armies in the field read again from the new world's books

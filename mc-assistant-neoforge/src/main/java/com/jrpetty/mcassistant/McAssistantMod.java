@@ -409,6 +409,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(IndividualCommands.class);        // [individual] /village individual
         NeoForge.EVENT_BUS.register(SessionReset.class);
         NeoForge.EVENT_BUS.register(ChunkLoad.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.TownLod.class);     // [scale] towns' level of detail
         NeoForge.EVENT_BUS.register(StallWatch.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Market.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Roads.class);
