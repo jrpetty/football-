@@ -336,6 +336,7 @@ public final class TownJobs {
             score += Hospitality.townWorkLean(f, works);                 // [dining] the baker to the ovens; the floor kept at its post
             score += Sexton.lean(f, works);                              // [roles-a] the sexton to the graves and the chapel's candles
             score += Lamplighter.lean(f, works);                         // [roles-a] a quarter's warden to the street lamps
+            score += Windmill.lean(f, works);                            // [roles-c] the miller to the mill
             if (!f.missingEssentials().isEmpty()) score += 20;            // short of its kit: its trade is idle anyway
             score -= Math.sqrt(f.blockPosition().distSqr(at)) / 4.0;
             if (score > bestScore) { bestScore = score; best = f; }

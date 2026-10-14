@@ -161,6 +161,16 @@ public final class TalkMenu {
         return c -> !c.known() || c.tradeIs(t);
     }
 
+    /** [roles-c] Shown to a folk of this trade holding this post in it ("post=BAKER"), or when nothing is known. */
+    private static Predicate<Context> post(String trade, String post) {
+        return c -> !c.known() || c.tradeIs(trade) && c.value("post").equals(post);
+    }
+
+    /** [roles-c] Shown to a folk of one of these trades with this flag ("inn", "miller"), or when nothing is known. */
+    private static Predicate<Context> keeps(String flag, String... trades) {
+        return c -> !c.known() || c.tradeIs(trades) && c.has(flag);
+    }
+
     // ------------------------------------------------------------------ the catalogue
 
     private static Entry ask(String id, Item icon, TalkTopic t) {
@@ -242,6 +252,15 @@ public final class TalkMenu {
     static final Entry DIVE_READY = say("diver_ready", Items.SEA_PICKLE, "Have you got my clay yet?", trade("DIVER"));
     static final Entry ORE = say("mine_ore", Items.RAW_IRON, "Could I buy some coal or ore?", trade("MINE"));
     static final Entry ARROWS = say("fletcher_arrows", Items.ARROW, "Could I buy some arrows?", trade("FLETCHER"));
+    // [roles-c] The hospitality posts' own (HospitalityTalk hears the words): the inn's room, the barkeep's pint, round and
+    // bottles, the baker's bread, the miller's sack, and the rancher's meat from its butcher's block.
+    static final Entry ROOM = say("inn_room", Items.RED_BED, "A room for the night, please", keeps("inn", "COOK", "SHOP"));
+    static final Entry PINT = say("bar_pint", Items.HONEY_BOTTLE, "A pint, please", post("COOK", "BARKEEP"));
+    static final Entry ROUND = say("bar_round", Items.CAULDRON, "A round for the house!", post("COOK", "BARKEEP"));
+    static final Entry BOTTLES = say("bar_bottles", Items.GLASS_BOTTLE, "Here are my empty bottles", post("COOK", "BARKEEP"));
+    static final Entry BREAD = say("bakery_bread", Items.BREAD, "Some fresh bread, please", post("COOK", "BAKER"));
+    static final Entry SACK = say("mill_sack", Items.WHEAT, "Could I buy a sack of wheat?", keeps("miller", "FARM"));
+    static final Entry MEAT = say("ranch_meat", Items.BEEF, "Could I buy some meat?", trade("RANCH"));
     static final Entry ATLAS = ask("atlas", Items.SPYGLASS, TalkTopic.ATLAS);                     // the scout's own, by name
     static final Entry LETTER = ask("letter", Items.FEATHER, TalkTopic.LETTER);                  // the courier's (the post) own
 
@@ -317,7 +336,8 @@ public final class TalkMenu {
                 ROCKETS,
                 TAILOR, POTION, ENCHANT, HONEY,                              // [roles-b] each only at its own craft
                 GROWING, PRODUCE, TIMBER, FRESH_FISH, HIDES, WOOL, HORSE, ORE, ARROWS,   // [roles-d] the outdoor trades' goods
-                VILLAGERS, EMERALD_ASK, DIVE, DIVE_READY),
+                VILLAGERS, EMERALD_ASK, DIVE, DIVE_READY,
+                ROOM, PINT, ROUND, BOTTLES, BREAD, SACK, MEAT),                      // [roles-c] the hospitality posts' own
             group("money", Items.GOLD_INGOT,
                 BANK,
                 prompt("invest", Items.RAW_GOLD, TalkTopic.INVEST, "I'd like to invest 50 coins"),
@@ -432,6 +452,19 @@ public final class TalkMenu {
         };
     }
 
+    /** [roles-c] What this folk is the one to ask about: its post's own (the baker's bread, the barkeep's pint, the inn's
+     *  room, the mill's sack) before its trade's. */
+    private static Entry ownOf(Context c) {
+        Entry post = switch (c.value("post")) {
+            case "BAKER" -> BREAD;
+            case "BARKEEP" -> PINT;
+            default -> null;
+        };
+        if (post == null && c.has("inn")) post = ROOM;
+        if (post == null && c.has("miller")) post = SACK;
+        return post != null ? post : forTrade(c.trade());
+    }
+
     /** The most suggestions the screen shows besides a quest's own buttons. */
     public static final int MAX_SUGGESTED = 3;
 
@@ -452,7 +485,7 @@ public final class TalkMenu {
             if (c.has("interview")) out.add(INTERVIEWS);
             if (c.has("apprentice")) out.add(LESSON);
             if (c.has("leader")) out.add(LEADER);
-            Entry own = c.has("child") ? GODPARENT : forTrade(c.trade());
+            Entry own = c.has("child") ? GODPARENT : ownOf(c);
             if (own != null && own.shows(c) && !out.contains(own)) out.add(own);
         }
         return out.size() > MAX_SUGGESTED ? List.copyOf(out.subList(0, MAX_SUGGESTED)) : out;

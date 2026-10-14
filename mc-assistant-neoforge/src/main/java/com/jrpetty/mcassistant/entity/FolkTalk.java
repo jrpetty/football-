@@ -119,6 +119,9 @@ public final class FolkTalk {
         if (typed && f.stationTask() == AssistantEntity.StationTask.DIVER && Divers.meant(text)) {
             return manner(f, Divers.talk(f, p, text));
         }
+        // [roles-c] Asked of the hospitality posts: a room, a pint, a round, the bottles back, bread, the mill's wheat, meat.
+        String hospitality = typed ? HospitalityTalk.talk(f, p, text) : null;
+        if (hospitality != null) return manner(f, hospitality);
         // [roles-d] Asked of an outdoor trade's own work: produce, timber, fish, the boat, a hunt, hides, wool, a horse, the
         // crossing, a golem, a lamp (OutdoorTalk).
         String outdoor = typed ? OutdoorTalk.talk(f, p, text) : null;
@@ -346,6 +349,11 @@ public final class FolkTalk {
         if (Birthdays.today(f)) sb.append(" birthday");
         if (!f.isBaby() && Interviews.shortlisted(f)) sb.append(" interview");
         if (PlayerCivic.isApprenticeOf(f, p)) sb.append(" apprentice");
+        // [roles-c] Its post in the cook's trade ("post=BARKEEP"), and whether it keeps the inn or the mill.
+        Hospitality.Role post = Hospitality.role(f);
+        if (post != Hospitality.Role.NONE && post != Hospitality.Role.LINE_COOK) sb.append(" post=").append(post.name());
+        if (village != null && !f.isBaby() && Inn.inn(village) != null && Inn.keeper(village) == f) sb.append(" inn");
+        if (Windmill.isMiller(f)) sb.append(" miller");
         return sb.toString();
     }
 

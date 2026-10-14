@@ -15,6 +15,7 @@ import java.util.UUID;
 /**
  * [shops-homes] The tavern's bar: a drink of the café's or a hot meal out of the stores at the town's price, a round
  * for everybody in (Tavern.round: a coin a head, raised glasses), and a room for the night at the inn (Inn.rent).
+ * [roles-c] A drink is poured the barkeep's way (Tavern.pint, its till and books); empty bottles are paid back here.
  */
 final class TavernDesk implements ServicePoints.Desk {
 
@@ -29,7 +30,8 @@ final class TavernDesk implements ServicePoints.Desk {
 
     @Override
     public int fingerprint(ServicePoints.Visit visit) {
-        return visit.player() == null ? 0 : Market.coinsHeld(visit.player()) * 31 + inTonight(visit);
+        return visit.player() == null ? 0 : Market.coinsHeld(visit.player()) * 31 + inTonight(visit)
+            + visit.player().getInventory().countItem(Items.GLASS_BOTTLE) * 1009;                 // [roles-c] the bottles row
     }
 
     /** How many of the town are in the tavern now. */
@@ -66,6 +68,9 @@ final class TavernDesk implements ServicePoints.Desk {
         d.section("For the room");
         d.row("round", "Buy a round", "A round for everybody in", in == 0 ? "Nobody's in yet." : in + " in: a coin a head, " + in + (in == 1 ? " coin." : " coins."),
             new ItemStack(Items.HONEY_BOTTLE), in == 0 ? "Nobody's in to drink it." : held < in ? "A round is " + in + " coins; you've " + held + "." : "");
+        int bottles = visit.player() == null ? 0 : visit.player().getInventory().countItem(Items.GLASS_BOTTLE);     // [roles-c]
+        d.row("bottles", "Bring back", "Your empty bottles", "A coin for every " + Tavern.BOTTLE_DEPOSIT + "; they go back in the stores.",
+            new ItemStack(Items.GLASS_BOTTLE), bottles < Tavern.BOTTLE_DEPOSIT ? "You've " + bottles + " empty bottles on you." : "");
         if (Inn.inn(id) != null) {
             d.section("The inn");
             d.row("room", "Take a room", "A room for the night", Inn.ROOM + " coins a night; your bed till morning.", new ItemStack(Items.RED_BED), "");
@@ -91,7 +96,9 @@ final class TavernDesk implements ServicePoints.Desk {
         ServerPlayer p = visit.player();
         if (p == null) return ServicePoints.Result.no("");
         return switch (action) {
-            case "drink", "meal" -> pour(visit, args.getString("id"), action.equals("meal") ? meal(level, visit.village().id()) : ItemStack.EMPTY);
+            case "drink" -> result(Tavern.pint(level, visit.village(), p, args.getString("id"), visit.keeper()));   // [roles-c]
+            case "meal" -> pour(visit, args.getString("id"), meal(level, visit.village().id()));
+            case "bottles" -> result(Tavern.bottlesBack(level, visit.village(), p, visit.keeper()));              // [roles-c]
             case "round" -> {
                 String said = Tavern.round(level, visit.village(), p);
                 yield said.startsWith("You bought") ? ServicePoints.Result.done(said) : ServicePoints.Result.no(said);
@@ -104,15 +111,17 @@ final class TavernDesk implements ServicePoints.Desk {
         };
     }
 
-    /** A drink (or the meal) out of the stores, paid for at the town's price into the treasury. */
+    /** [roles-c] What the bar said, as the desk's answer. */
+    private static ServicePoints.Result result(Inn.Let l) {
+        return l.ok() ? ServicePoints.Result.done(l.said()) : ServicePoints.Result.no(l.said());
+    }
+
+    /** The meal out of the stores, paid for at the town's price into the treasury. (A drink: Tavern.pint.) */
     private static ServicePoints.Result pour(ServicePoints.Visit visit, String id, ItemStack meal) {
         ServerLevel level = visit.level();
         ServerPlayer p = visit.player();
         UUID village = visit.village().id();
         ItemStack one = meal;
-        if (one.isEmpty()) {
-            for (ItemStack s : Cafe.drinksInStores(level, village)) if (Goods.lineId(s).equals(id)) { one = s.copyWithCount(1); break; }
-        }
         if (one.isEmpty()) return ServicePoints.Result.no("That's all gone just now.");
         ShopDesk.Quote q = ShopDesk.quote(level, village, p, List.of(one), List.of(1));
         if (Market.coinsHeld(p) < q.total()) return ServicePoints.Result.no(Goods.name(one) + " is " + q.total() + ". You've " + Market.coinsHeld(p) + ".");

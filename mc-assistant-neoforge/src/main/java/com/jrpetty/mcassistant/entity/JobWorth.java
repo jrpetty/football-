@@ -229,6 +229,8 @@ public final class JobWorth {
             case "COOK/WAITER" -> new Post(key, title, trade, role, 1, 0, 0.8, 0.0, "on your feet all evening", "serves the tables");
             case "COOK/POT_WASHER" -> new Post(key, title, trade, role, 1, 0, 0.6, 0.0, "hot, wet work", "keeps the plates clean");
             case "COOK/HOST" -> new Post(key, title, trade, role, 0, 1, 1.0, 0.0, "greeting and the till", "runs the dining room's front");
+            // [roles-c] The kitchen hand cooks the café's shelf beside the cooks (what it makes is its own), and less skilled.
+            case "COOK/KITCHEN_HAND" -> new Post(key, title, trade, role, 1, 0, 0.2, 1.0, "hot work, peeling and scrubbing", "helps the cooks");
             case TEACH -> new Post(key, title, trade, role, 0, 4, 1.2, 0.0, "learned work", "teaches the children");
             default -> key.contains("HEAL")
                 ? new Post(key, title, trade, role, 1, 4, 1.3, 1.0, "learned work", "keeps folk well")     // a healer, if the town has one

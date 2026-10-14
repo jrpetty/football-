@@ -1255,6 +1255,7 @@ public final class Weave {
         if (Museum.isCurator(f)) return "curator";
         if (f.getUUID().equals(Crier.crier(id))) return "crier";
         if (Wardens.quarterOf(f) != null) return "warden";
+        if (Windmill.isMiller(f)) return "miller";                     // [roles-c] the windmill's keeper
         return "";
     }
 
@@ -1276,6 +1277,7 @@ public final class Weave {
             case "warden" -> new Garment[]{ Garment.LONG_COAT, Garment.FLAT_CAP };
             case "sexton" -> new Garment[]{ Garment.LONG_COAT, Garment.FLAT_CAP };
             case "healer" -> new Garment[]{ Garment.WOOL_SHAWL };
+            case "miller" -> new Garment[]{ Garment.FLAT_CAP, Garment.WAISTCOAT };   // [roles-c] the miller's dusty cap and waistcoat
             default -> new Garment[0];
         };
     }

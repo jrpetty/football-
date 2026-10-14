@@ -33,6 +33,10 @@ import java.util.function.Predicate;
  *     mill, so the storehouse has room for everything else.</li>
  * <li><b>The bakery's flour.</b> The baker fetches its wheat from the mill first, and with a mill to grind
  *     it bakes twice the batch at a time (Bakery).</li>
+ * <li>[roles-c] <b>The miller.</b> One of the farmers keeps the mill: the one living nearest it, chosen once the mill
+ *     stands (and again if it leaves the fields). It is first for the mill's work at the town's works (the sails, the
+ *     loads carried up), paid an allowance for the office (Offices), dressed for it (Weave), and sells a player a sack
+ *     of the mill's wheat when the mill has more than the bakery's two sacks (its talk option).</li>
  * </ul>
  */
 public final class Windmill {
@@ -59,7 +63,93 @@ public final class Windmill {
     /** The depth of the sails (the front of the tower is -2; the axle sticks out one more). */
     static final int SAILS = -3;
 
+    /** [roles-c] The tag on the town's miller (a farmer), kept on the folk in the world so a restart keeps it. */
+    public static final String MILLER = "mca_miller";
+    /** [roles-c] The mill keeps this much for the bakery (two sacks) before the miller sells any; a player's sack. */
+    static final int MILL_KEEP = 2 * Bakery.SACK, PLAYERS_SACK = 16;
+
     static void resetForTests() {
+    }
+
+    // ------------------------------------------------------------------ [roles-c] the miller
+
+    /** The town's miller: a farmer of its, grown and alive, wearing the tag; or null. */
+    @Nullable
+    public static VillageFolkEntity miller(@Nullable UUID village) {
+        if (village == null) return null;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a instanceof VillageFolkEntity f && f.getTags().contains(MILLER)) {
+                if (f.stationTask() == AssistantEntity.StationTask.FARM && !f.isBaby() && f.isAlive()) return f;
+                f.removeTag(MILLER);                                      // left the fields: no longer the miller
+            }
+        }
+        return null;
+    }
+
+    /** Is this folk the town's miller? */
+    public static boolean isMiller(VillageFolkEntity f) {
+        return f.getTags().contains(MILLER) && f.stationTask() == AssistantEntity.StationTask.FARM;
+    }
+
+    /** A miller chosen when the mill stands and has none: the farmer living nearest it (its home, else where it stands). */
+    @Nullable
+    static VillageFolkEntity appointMiller(ServerLevel level, Villages.Village v, Ledger.Building b) {
+        if (miller(v.id()) != null) return null;
+        BlockPos door = door(b);
+        VillageFolkEntity best = null;
+        double bestD = Double.MAX_VALUE;
+        for (AssistantEntity a : Villages.folkOf(v.id())) {
+            if (!(a instanceof VillageFolkEntity f) || f.stationTask() != AssistantEntity.StationTask.FARM || f.isBaby() || !f.isAlive()) continue;
+            BlockPos home = f.getHome() != null ? f.getHome() : f.blockPosition();
+            double d = home.distSqr(door);
+            if (d < bestD) { bestD = d; best = f; }
+        }
+        if (best == null) return null;
+        best.addTag(MILLER);
+        best.brain("became the town's miller");
+        FolkTalk.speak(best, "The mill's mine to keep now. Sails, sacks and all.");
+        Villages.tell(v.id(), level.getDayTime() / 24000L, best.displayNameCap() + " became the town's miller");
+        return best;
+    }
+
+    /** [TownJobs.choose] The miller is first for the mill's work. */
+    static double lean(VillageFolkEntity f, String works) {
+        return works.equals("mill") && isMiller(f) ? 200 : 0;
+    }
+
+    /**
+     * A sack of the mill's wheat sold to a player by its miller, at the town's price into the treasury: never the
+     * bakery's two sacks. Returns what the miller says.
+     */
+    static String sellSack(ServerLevel level, Villages.Village v, VillageFolkEntity miller, net.minecraft.world.entity.player.Player p, int want) {
+        Ledger.Building b = mill(v.id());
+        if (b == null) return "There's no mill standing yet.";
+        int spare = grain(level, v.id()) - MILL_KEEP;
+        if (spare <= 0) return "The mill's only got the bakery's wheat in it. Come back after the harvest.";
+        int n = Math.min(Math.max(1, want), Math.min(spare, 64));
+        ItemStack sample = new ItemStack(Items.WHEAT);
+        int price = Math.max(Market.askLot(level, v.id(), sample, n), Market.leastLot(level, v.id(), sample, n));
+        int coins = Market.coinsHeld(p);
+        if (coins < price) return n + " wheat would be " + price + " coins. You've " + coins + ".";
+        int got = draw(level, v.id(), n);
+        if (got <= 0) return "Somebody's just had the last of it.";
+        if (got < n) price = Math.max(Market.askLot(level, v.id(), sample, got), Market.leastLot(level, v.id(), sample, got));
+        Market.payOut(p, price);
+        Ledger.addCoins(v.id(), price);
+        Economy.sold(v.id(), price);
+        Stockroom.sold(level, v.id(), Stockroom.Seller.STORES, sample, got, price);
+        ItemStack sack = new ItemStack(Items.WHEAT, got);
+        if (!p.getInventory().add(sack)) p.drop(sack, false);
+        miller.persona().remember(level.getDayTime() / 24000L, "sold " + p.getName().getString() + " a sack of the mill's wheat", 1);
+        return "There: " + got + " wheat, straight out of the mill. " + price + (price == 1 ? " coin" : " coins") + " to the town's chest.";
+    }
+
+    /** The miller's card: its mill, and the wheat in it. */
+    @Nullable
+    static String cardPart(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null || !isMiller(f) || !(f.level() instanceof ServerLevel level) || mill(village) == null) return null;
+        return "the town's miller: " + grain(level, village) + " wheat in the mill";
     }
 
     @Nullable
@@ -175,6 +265,7 @@ public final class Windmill {
     static boolean tick(ServerLevel level, Villages.Village v) {
         Ledger.Building b = mill(v.id());
         if (b == null || !Land.areaLoaded(level, b.anchor(), 8)) return false;
+        appointMiller(level, v, b);                                       // [roles-c] the mill's keeper, once it stands
         if (sails(level, v, b, 3) > 0) return true;
         if (passing(level, v, b) > 0) return true;
         return carryUp(level, v, b) > 0;
@@ -256,7 +347,9 @@ public final class Windmill {
         if (b == null || !level.isLoaded(b.anchor())) return null;
         int hung = 0;
         for (BlockPos p : cloth(b)) if (level.getBlockState(p).is(BlockTags.WOOL)) hung++;
-        return "the windmill " + (hung >= CLOTH.length ? "with its sails up" : "waiting on its sails") + ", " + grain(level, village) + " wheat in it";
+        VillageFolkEntity miller = miller(village);                      // [roles-c] its miller by name
+        return "the windmill " + (hung >= CLOTH.length ? "with its sails up" : "waiting on its sails") + ", " + grain(level, village) + " wheat in it"
+            + (miller == null ? "" : ", " + miller.displayNameCap() + " its miller");
     }
 
     static String line(ServerLevel level, Villages.Village v) {
@@ -271,6 +364,14 @@ public final class Windmill {
         int n = 0;
         for (int i = 0; i < rounds; i++) if (tick(level, v)) n++;
         return n;
+    }
+
+    /** [roles-c] Tests: the miller chosen now if the mill has none; the town's miller either way. */
+    @Nullable
+    public static VillageFolkEntity millerForTests(ServerLevel level, Villages.Village v) {
+        Ledger.Building b = mill(v.id());
+        if (b != null) appointMiller(level, v, b);
+        return miller(v.id());
     }
 
     /** Tests: the wheat in the mill. */

@@ -72,7 +72,10 @@ TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           "engineer",
           # [roles-a] The healer's own (FolkModel.outfit picks it for HEAL), and the banker's and the ferryman's, who
           # wore the shopkeeper's and the fisher's till now.
-          "healer", "banker", "ferryman"]
+          "healer", "banker", "ferryman",
+          # [roles-c] The hospitality posts' own, over the cook's trade (FolkModel.outfit picks them by the folk's post):
+          # the baker's, the barkeep's, the innkeeper's (the host's too) and the waiter's.
+          "baker", "barkeep", "innkeeper", "waiter"]
 
 PARTS = [
     # The body every folk has: a villager's head and nose, a coat over a body,
@@ -324,6 +327,17 @@ PARTS = [
     # [roles-a] Ferryman: a knitted cap, and a coil of rope over the shoulder.
     ("ferryman_cap", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -11, -4, 8, 3, 8, 0.6)], "ferryman"),
     ("ferryman_rope", "body", (0, 0, 0), (0, 0, 0), [(64, 16, -5, 0.5, -3.2, 10, 2, 7, 0)], "ferryman"),
+    # [roles-c] Baker: a soft white cap, and a floury bib apron over its smock.
+    ("baker_cap", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4.5, -11, -4.5, 9, 2, 9, 0)], "baker"),
+    ("baker_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 16, -4, 2, -4.5, 8, 13, 1, 0)], "baker"),
+    # [roles-c] Barkeep: a long dark bar apron from the waist, and a cloth over the shoulder.
+    ("barkeep_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 0, -4, 9, -4.5, 8, 11, 1, 0)], "barkeep"),
+    ("barkeep_towel", "body", (0, 0, 0), (0, 0, 0), [(100, 0, 1.2, -0.8, -4.2, 3, 6, 1, 0)], "barkeep"),
+    # [roles-c] Innkeeper: the ring of the rooms' keys at its hip.
+    ("innkeeper_keys", "body", (0, 0, 0), (0, 0, 0), [(96, 0, 4.4, 8.5, -1, 1, 4, 2, 0)], "innkeeper"),
+    # [roles-c] Waiter: a long white apron from the waist, and a napkin over its forearm.
+    ("waiter_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 0, -4, 9, -4.5, 8, 12, 1, 0)], "waiter"),
+    ("waiter_napkin", "left_arm", (0, 0, 0), (0, 0, 0), [(100, 0, -1, 5, -2, 4, 2, 4, 0.35)], "waiter"),
 ]
 
 
@@ -1802,6 +1816,132 @@ def outfit_ferryman():
     return cv
 
 
+def outfit_baker():
+    """[roles-c] The baker: a cream smock to the thigh with its sleeves pushed up to the elbow and flour on the forearms,
+    a white bib apron floury down the front, a soft white cap, flour-dusted grey trousers and brown work shoes."""
+    cv = Canvas()
+    cream = (232, 224, 204)
+    flour = (246, 244, 238)
+
+    def smock(x, y):
+        c = grain(cream, x, y, 4, 450)
+        return lit(c, 1.06) if noise(x, y, 451) > 0.82 else c                 # a dusting of flour
+    coat = coat_to(cv, smock, 14)
+    coat.row(0, lambda x: (196, 168, 120) if x % 8 in (3, 4) else smock(x, 0))   # an open collar
+    coat.row(13, lambda x: lit(cream, 0.84))                                     # the hem
+    sleeves(cv, smock, 6, cuff=lit(cream, 0.88))
+    for name in ("right_arm", "left_arm"):
+        arm = Box(cv, name)
+        for face in ("front", "right", "left"):                                  # floury forearms
+            arm.put(face, 1, 8, flour)
+            arm.put(face, 2, 10, flour)
+    legs(cv, lambda x, y: lit(grain((128, 126, 122), x, y, 4, 452), 1.12) if noise(x, y, 453) > 0.85 else grain((128, 126, 122), x, y, 4, 452),
+         leather((112, 80, 52)), boot_from=10, sole=(48, 36, 26))
+    ap = apron_box(cv, "baker_apron", (240, 236, 226), pocket_row=8)
+    for (x, y) in ((2, 3), (5, 4), (3, 6), (6, 9), (1, 11)):
+        ap.put("front", x, y, flour)                                             # flour where its hands have been
+    ap.put("front", 4, 7, (214, 196, 160))                                       # a smear of dough
+    cap = Box(cv, "baker_cap")
+    cap.all(lambda face, x, y, w, h: lit(flour, 0.94) if (x + y) % 5 == 0 else grain(flour, x, y, 3, 454))
+    cap.fill("bottom", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else lit(flour, 0.82))
+    cap.row(1, lambda x: lit(flour, 0.88))                                       # its band
+    face_paint(cv, [])
+    return cv
+
+
+def outfit_barkeep():
+    """[roles-c] The barkeep: a white shirt with its sleeves rolled and held by black garters, a burgundy waistcoat with
+    brass buttons, a long dark bar apron from the waist to the shin, a striped cloth over the left shoulder, dark
+    trousers and black boots."""
+    cv = Canvas()
+    shirt = (234, 232, 224)
+    vest = (112, 34, 42)
+    brass = (204, 168, 80)
+    sh = cloth(shirt, 3, 460)
+
+    def body(x, y):
+        return grain(vest, x, y, 5, 461) if 1 <= y <= 11 else sh(x, y)
+    coat = coat_to(cv, body, 12)
+    for face in ("right", "left"):
+        for y in range(1, 12):
+            coat.put(face, 0, y, sh(0, y))                                      # the shirt at the armholes
+    for y in range(1, 12):
+        coat.put("front", 3, y, lit(vest, 0.72))                                # the waistcoat's front edges
+        coat.put("front", 4, y, lit(vest, 0.72))
+    for y in (3, 6, 9):
+        coat.put("front", 3, y, brass)
+    coat.row(0, lambda x: (40, 36, 34) if x % 8 in (3, 4) else sh(x, 0))        # a black neckcloth
+    sleeves(cv, sh, 6, cuff=lit(shirt, 0.86))
+    for name in ("right_arm", "left_arm"):
+        Box(cv, name).row(3, (30, 28, 30))                                       # the sleeve garters
+    legs(cv, cloth((52, 48, 46), 4, 462), leather((30, 26, 24)), boot_from=9, sole=(18, 16, 14))
+    ap = apron_box(cv, "barkeep_apron", (46, 44, 52))
+    ap.row(0, lambda x: (150, 120, 70))                                          # its waistband
+    ap.put("front", 6, 6, (120, 60, 50))                                         # a splash of the evening's cider
+    towel = Box(cv, "barkeep_towel")
+    towel.all(lambda face, x, y, w, h: (196, 54, 50) if y % 3 == 1 else grain((236, 232, 222), x, y, 3, 463))
+    face_paint(cv, [])
+    return cv
+
+
+def outfit_innkeeper():
+    """[roles-c] The innkeeper: a bottle-green coat to the knee with brass buttons, open over a cream waistcoat and a white
+    shirt, a red kerchief at the neck, brown breeches and boots; the ring of the rooms' iron keys at its hip."""
+    cv = Canvas()
+    green = (44, 86, 60)
+    cream = (220, 206, 168)
+    brass = (204, 168, 80)
+
+    def coat_f(x, y):
+        if 2 <= x % 8 <= 5 and 1 <= y <= 11:                                     # the waistcoat at the open front
+            return grain(cream, x, y, 4, 470)
+        return grain(green, x, y, 5, 471)
+    coat = coat_to(cv, coat_f, 16)
+    coat.row(0, lambda x: (176, 44, 40) if x % 8 in (2, 3, 4, 5) else grain(green, x, 0, 5, 471))   # the kerchief
+    for y in (3, 6, 9):
+        coat.put("front", 1, y, brass)
+        coat.put("front", 6, y, brass)
+        coat.put("front", 4, y, lit(cream, 0.7))                                 # the waistcoat's buttons
+    coat.row(15, lambda x: lit(green, 0.74))                                     # the hem
+    sleeves(cv, lambda x, y: grain(green, x, y, 5, 472), 9, cuff=lit(green, 0.78))
+    legs(cv, cloth((120, 88, 58), 5, 473), leather((64, 44, 30)), boot_from=7, sole=(30, 22, 16))
+    keys = Box(cv, "innkeeper_keys")
+    iron = (150, 152, 158)
+    keys.all(lambda face, x, y, w, h: lit(iron, 0.7) if y == 0 else (iron if (x + y) % 2 else lit(iron, 0.82)))
+    face_paint(cv, [])
+    return cv
+
+
+def outfit_waiter():
+    """[roles-c] The waiter: a white shirt, a black waistcoat and bow tie, a long white apron from the waist to the shin,
+    a white napkin over its left forearm, black trousers and polished black shoes."""
+    cv = Canvas()
+    shirt = (240, 240, 236)
+    black = (34, 34, 38)
+    sh = cloth(shirt, 3, 480)
+
+    def body(x, y):
+        return grain(black, x, y, 3, 481) if 2 <= y <= 11 else sh(x, y)
+    coat = coat_to(cv, body, 12)
+    for face in ("right", "left"):
+        for y in range(2, 12):
+            coat.put(face, 0, y, sh(0, y))                                      # the shirt at the armholes
+    for y in range(2, 12):
+        coat.put("front", 3, y, sh(3, y) if y <= 3 else lit(black, 1.4))        # the shirt at the waistcoat's opening
+    for y in (5, 8):
+        coat.put("front", 4, y, (190, 190, 196))                                # its buttons
+    for x in (2, 3, 4, 5):
+        coat.put("front", x, 1, black if x in (2, 5) else lit(black, 1.3))      # the bow tie
+    sleeves(cv, sh, 9, cuff=lit(shirt, 0.9))
+    legs(cv, cloth((30, 30, 34), 3, 482), lambda x, y: grain((16, 16, 18), x, y, 2, 483), boot_from=11, sole=(10, 10, 12))
+    ap = apron_box(cv, "waiter_apron", (244, 244, 240))
+    ap.row(0, lambda x: lit((244, 244, 240), 0.86))                              # its waistband
+    nap = Box(cv, "waiter_napkin")
+    nap.all(lambda face, x, y, w, h: lit(shirt, 0.92) if (x + y) % 4 == 0 else grain(shirt, x, y, 2, 484))
+    face_paint(cv, [])
+    return cv
+
+
 def outfit_rancher():
     """A leather waistcoat over a blue shirt, chaps, a wool shawl, a wide hat."""
     cv = Canvas()
@@ -2664,6 +2804,10 @@ OUTFITS = {
     "healer": outfit_healer,                                              # [roles-a]
     "banker": outfit_banker,                                              # [roles-a]
     "ferryman": outfit_ferryman,                                          # [roles-a]
+    "baker": outfit_baker,                                                # [roles-c]
+    "barkeep": outfit_barkeep,                                            # [roles-c]
+    "innkeeper": outfit_innkeeper,                                        # [roles-c]
+    "waiter": outfit_waiter,                                              # [roles-c]
 }
 def emerald_glow():
     """[emerald] The emerald trader's little lantern, lit whatever the light round it."""

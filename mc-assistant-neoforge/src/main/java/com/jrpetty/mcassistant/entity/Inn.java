@@ -38,13 +38,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * and a common room with a bar at the front (inn.txt), built from the Iron Age, or in a town of thirty, on a
  * lot by the avenue where it comes in through the gate, once there is somebody to keep it. It is run by an
  * innkeeper: the café's cook, else the shopkeeper, who lets its rooms at three coins a night and puts the
- * coin in the town's till (the treasury).
+ * coin in the town's till (the treasury). [roles-c] The town's innkeeper (or its host standing in: Hospitality) keeps a
+ * coin in three of every room it lets, a traveller's as well as a player's; the rest goes in the till.
  * <ul>
  * <li><b>Travellers.</b> A caravan's driver, an envoy, or a folk on the road to a new home who is in a town
  *     with an inn between dusk and dawn takes a room there for the night, out of its own purse: it walks to
  *     its bed, sleeps till morning, and goes on its way. With no coin, or no bed free, it goes on as before.</li>
  * <li><b>Players.</b> Right-click the inn's sign by its door, or the innkeeper with village coins in your
- *     hand, to take a room for the night: the innkeeper gives you one of the beds, and that bed is yours to
+ *     hand, or ask the innkeeper for "a room for the night" ([roles-c] its talk option), to take a room for the night: the innkeeper gives you one of the beds, and that bed is yours to
  *     sleep in until the next morning. It does not become your home: your respawn point stays where it was.
  *     The inn's beds are for paying guests: without a room, nobody sleeps in one.</li>
  * </ul>
@@ -193,10 +194,23 @@ public final class Inn {
         return null;
     }
 
-    /** The coin into the till: the treasury, the day's books, and the inn's own count. */
     /** [dining] The innkeeper keeps one coin in this many of a room's fee. */
     static final int KEEPERS_SHARE = 3;
 
+    /**
+     * [roles-c] The keeper's share of a room's fee, paid into its purse: a coin in three to the town's innkeeper, or to
+     * its host standing in (Hospitality.innkeeper); nothing to a cook or a shopkeeper only minding the inn. Returns it.
+     */
+    static int payKeeper(UUID village, @Nullable VillageFolkEntity keeper, int fee) {
+        Hospitality.Role r = Hospitality.role(keeper);
+        int share = keeper != null && (r == Hospitality.Role.INNKEEPER || r == Hospitality.Role.HOST) ? fee / KEEPERS_SHARE : 0;
+        if (share <= 0) return 0;
+        keeper.earn(share);
+        Ledger.note(village, "inn.share", Integer.toString(count(village, "inn.share") + share));
+        return share;
+    }
+
+    /** The coin into the till: the treasury, the day's books, and the inn's own count. */
     static void till(UUID village, int coins, boolean player) {
         Ledger.addCoins(village, coins);
         Economy.sold(village, coins);
@@ -222,30 +236,38 @@ public final class Inn {
         return room + (Math.abs(across) >= 3 ? ", the bed by the wall" : ", the bed by the partition");
     }
 
+    /** [roles-c] What came of asking for a room: who answered (null with no keeper), its words, and whether a room was let. */
+    record Let(@Nullable VillageFolkEntity keeper, String said, boolean ok) {}
+
     /**
      * A player takes a room for the night: the innkeeper's, three coins (less if the player has talked the
      * town down today: Dealings), into the till. Returns what the player is told.
      */
     public static String rent(ServerLevel level, Villages.Village v, Player p) {
+        Let l = let(level, v, p);
+        if (l.keeper() == null) return l.said();
+        return l.keeper().displayNameCap() + ": \"" + l.said() + "\"" + (l.ok() ? " (Your bed until morning; it does not change where you wake.)" : "");
+    }
+
+    /** [roles-c] A room asked for: the keeper's own words (for the sign, the bar's desk and the keeper's talk alike). */
+    static Let let(ServerLevel level, Villages.Village v, Player p) {
         UUID id = v.id();
         Ledger.Building b = inn(id);
-        if (b == null) return Villages.name(id) + " has no inn yet.";
+        if (b == null) return new Let(null, Villages.name(id) + " has no inn yet.", false);
         VillageFolkEntity keeper = keeper(id);
-        if (keeper == null) return "The inn's shut: there's nobody to keep it. (It wants a cook or a shopkeeper in the town.)";
+        if (keeper == null) return new Let(null, "The inn's shut: there's nobody to keep it. (It wants a cook or a shopkeeper in the town.)", false);
         long day = level.getDayTime() / 24000L;
         Standing.Title title = Standing.of(id, p.getUUID(), level.getGameTime()).title();
-        if (title == Standing.Title.OUTCAST || Laws.banished(id, p.getUUID(), day)) return keeper.displayNameCap() + ": \"No room. Not for you.\"";
+        if (title == Standing.Title.OUTCAST || Laws.banished(id, p.getUUID(), day)) return new Let(keeper, "No room. Not for you.", false);
         BlockPos have = roomOf(level, id, p.getUUID());
-        if (have != null) return keeper.displayNameCap() + ": \"You've a room already: " + where(b, have) + ". Sleep well.\"";
+        if (have != null) return new Let(keeper, "You've a room already: " + where(b, have) + ". Sleep well.", false);
         BlockPos bed = freeBed(level, id, b);
-        if (bed == null) return keeper.displayNameCap() + ": \"Sorry, we're full tonight.\"";
+        if (bed == null) return new Let(keeper, "Sorry, we're full tonight.", false);
         int price = Dealings.haggled(id, p.getUUID(), day, ROOM);
         int coins = Market.coinsHeld(p);
-        if (coins < price) return keeper.displayNameCap() + ": \"A room's " + price + " coins a night. You've " + coins + ".\"";
+        if (coins < price) return new Let(keeper, "A room's " + price + " coins a night. You've " + coins + ".", false);
         Market.payOut(p, price);
-        // [dining] The innkeeper's share of the room (a coin in three); the rest to the till.
-        int share = Hospitality.role(keeper) == Hospitality.Role.INNKEEPER ? price / KEEPERS_SHARE : 0;
-        if (share > 0) keeper.earn(share);
+        int share = payKeeper(id, keeper, price);                         // [roles-c] the keeper's share; the rest to the till
         till(id, price - share, true);
         Ledger.note(id, bookingKey(bed), p.getUUID() + "|" + until(level.getDayTime()));
         level.playSound(null, bed, SoundEvents.WOOL_PLACE, SoundSource.BLOCKS, 0.6F, 1.0F);
@@ -254,7 +276,7 @@ public final class Inn {
         if (keeper.distanceToSqr(p) < 32.0 * 32.0) FolkTalk.speak(keeper, said);
         keeper.persona().remember(day, "let a room at the inn to " + p.getName().getString(), 1);
         if (count(id, "inn.players") == 1) Villages.tell(id, day, p.getName().getString() + " took the first room at the inn");
-        return keeper.displayNameCap() + ": \"" + said + "\" (Your bed until morning; it does not change where you wake.)";
+        return new Let(keeper, said, true);
     }
 
     // ------------------------------------------------------------------ the town's part
@@ -354,7 +376,7 @@ public final class Inn {
         if (b == null || keeper(v.id()) == null) return null;
         BlockPos bed = freeBed(level, v.id(), b);
         if (bed == null || f.purse() < ROOM || !f.spend(ROOM)) return null;
-        till(v.id(), ROOM, false);
+        till(v.id(), ROOM - payKeeper(v.id(), keeper(v.id()), ROOM), false);   // [roles-c] the keeper's share of a traveller's room
         long day = level.getDayTime() / 24000L;
         LODGERS.put(f.getUUID(), new Lodger(v.id(), bed, day, f.tickCount));
         f.getNavigation().stop();
@@ -445,7 +467,9 @@ public final class Inn {
         if (l != null) return "lodging at the inn in " + Villages.name(l.village()) + " tonight";
         UUID village = f.ownerId();
         if (village == null || inn(village) == null || keeper(village) != f) return null;
-        return "keeps the inn: " + count(village, "inn.guests") + " guests so far, " + count(village, "inn.takings") + " coins in the till";
+        int share = count(village, "inn.share");                       // [roles-c] and what it has kept of the fees
+        return "keeps the inn: " + count(village, "inn.guests") + " guests so far, " + count(village, "inn.takings") + " coins in the till"
+            + (share > 0 ? ", " + share + " its own share" : "");
     }
 
     static String line(ServerLevel level, Villages.Village v) {

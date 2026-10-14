@@ -82,7 +82,15 @@ public enum ShiftRole {
         List.of("A sheep of the town's flock is marked.",
             "Shear it with your own shears: the wool goes straight into the town's stores.",
             "Shearing one of the flock that is not marked is a mistake.",
-            "A quick, clean job earns stars."));
+            "A quick, clean job earns stars.")),
+    // [roles-c] The baker's hand: a batch of what the stores are shortest of, into the bakery's oven and out before it
+    // burns, the makings out of the stores and the bake into them (HospitalityShifts).
+    BAKE("bake", "Baker's hand", "Master baker", "the bakery", 1.2, 600,
+        "a bakery, and bread or cakes short in the stores", Set.of(StationTask.COOK),
+        List.of("A batch the stores are short of shows on your card: bread, cookies, a pie or a cake.",
+            "Right-click the bakery's oven to put it in: its makings come out of the town's stores.",
+            "Right-click again once it says READY: too soon and it is not done, too late and it burns.",
+            "The bake goes into the town's stores; a burnt batch pays nothing."));
 
     public final String id, title, senior, place;
     /** The wage a task, in coin, before the town's pay level, the stars and the skill. */

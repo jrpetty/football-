@@ -206,6 +206,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"banker_visor", "head", "banker"},
         {"ferryman_cap", "head", "ferryman"},
         {"ferryman_rope", "body", "ferryman"},
+        {"baker_cap", "head", "baker"},
+        {"baker_apron", "body", "baker"},
+        {"barkeep_apron", "body", "barkeep"},
+        {"barkeep_towel", "body", "barkeep"},
+        {"innkeeper_keys", "body", "innkeeper"},
+        {"waiter_apron", "body", "waiter"},
+        {"waiter_napkin", "left_arm", "waiter"},
         // END GENERATED WEARERS
     };
 
@@ -463,6 +470,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         head.addOrReplaceChild("banker_visor", CubeListBuilder.create().texOffs(64, 12).addBox(-4.0F, -9.0F, -7.2F, 8.0F, 1.0F, 3.0F, new CubeDeformation(0.1F)), PartPose.ZERO);
         head.addOrReplaceChild("ferryman_cap", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 3.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
         body.addOrReplaceChild("ferryman_rope", CubeListBuilder.create().texOffs(64, 16).addBox(-5.0F, 0.5F, -3.2F, 10.0F, 2.0F, 7.0F), PartPose.ZERO);
+        head.addOrReplaceChild("baker_cap", CubeListBuilder.create().texOffs(64, 0).addBox(-4.5F, -11.0F, -4.5F, 9.0F, 2.0F, 9.0F), PartPose.ZERO);
+        body.addOrReplaceChild("baker_apron", CubeListBuilder.create().texOffs(64, 16).addBox(-4.0F, 2.0F, -4.5F, 8.0F, 13.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("barkeep_apron", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, 9.0F, -4.5F, 8.0F, 11.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("barkeep_towel", CubeListBuilder.create().texOffs(100, 0).addBox(1.2F, -0.8F, -4.2F, 3.0F, 6.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("innkeeper_keys", CubeListBuilder.create().texOffs(96, 0).addBox(4.4F, 8.5F, -1.0F, 1.0F, 4.0F, 2.0F), PartPose.ZERO);
+        body.addOrReplaceChild("waiter_apron", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, 9.0F, -4.5F, 8.0F, 12.0F, 1.0F), PartPose.ZERO);
+        leftArm.addOrReplaceChild("waiter_napkin", CubeListBuilder.create().texOffs(100, 0).addBox(-1.0F, 5.0F, -2.0F, 4.0F, 2.0F, 4.0F, new CubeDeformation(0.35F)), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }
@@ -488,6 +502,10 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
      * [roles-a] the banker's waistcoat and the ferryman's jacket, and the rest).
      */
     public static int outfit(AssistantEntity folk) {
+        if (folk instanceof VillageFolkEntity v) {                      // [roles-c] its post's own (the baker's, the waiter's)
+            int post = v.clientPostOutfit();
+            if (post > 0 && post < TRADES.length) return post;
+        }
         return OutfitIndex.of(folk.clientJobOrdinal());
     }
 

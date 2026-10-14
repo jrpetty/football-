@@ -166,6 +166,9 @@ public final class ShiftTasks {
             case WOOD, SHEAR -> {
                 return OutdoorShifts.post(level, v, r);                                 // [roles-d]
             }
+            case BAKE -> {
+                return HospitalityShifts.post(level, v);                                // [roles-c] the bakery's oven
+            }
             case HEALER -> {
                 // [roles-a] The infirmary, with somebody laid up who has not been seen to lately.
                 com.jrpetty.mcassistant.village.Ledger.Building ward = Infirmary.of(id);
@@ -213,6 +216,7 @@ public final class ShiftTasks {
             case BUILD -> buildTask(level, p, s, v, now);
             case HEALER -> healerTask(level, p, s, v, now);              // [roles-a]
             case WOOD, SHEAR -> OutdoorShifts.task(level, p, s, v, now);  // [roles-d]
+            case BAKE -> HospitalityShifts.task(level, p, v, now);         // [roles-c]
         };
         if (t != null) {
             s.task = t;
@@ -235,6 +239,7 @@ public final class ShiftTasks {
             case HEALER -> "Nobody needs seeing to just now. Wait at the infirmary.";   // [roles-a]
             case WOOD -> "No grown trees to fell just now. Wait by the woods.";        // [roles-d]
             case SHEAR -> "The flock's all shorn just now. Wait by the pen.";          // [roles-d]
+            case BAKE -> "Nothing's short at the bakery just now. Wait by the ovens.";  // [roles-c]
         };
     }
 
@@ -663,6 +668,7 @@ public final class ShiftTasks {
                 }
             }
             case WOOD, SHEAR -> OutdoorShifts.watch(level, p, s, t);                       // [roles-d]
+            case BAKE -> HospitalityShifts.watch(level, p, s, t);                          // [roles-c] in the oven
             case BUILD -> {
                 if (t.leg == 1) {
                     for (int i = t.marks.size() - 1; i >= 0; i--) {
@@ -705,6 +711,7 @@ public final class ShiftTasks {
         return switch (s.role) {
             case WAITER -> waiterClick(level, p, s, t, at);
             case COOK -> cookClick(level, p, s, t, at);
+            case BAKE -> HospitalityShifts.use(level, p, s, t, at);                        // [roles-c] in, and out
             case HAUL, SMELT, BUILD -> t.leg == 0 ? load(level, p, s, t, at) : t.to != null && near(at, t.to, 1) && s.role != ShiftRole.BUILD && unload(level, p, s, t);
             default -> false;
         };

@@ -49,7 +49,8 @@ public final class Offices {
         AUCTIONEER("the auctioneer", 0.30),
         MASTER("a master of its trade", 0.25),
         WARDEN("a quarter's warden", 0.20),
-        CRIER("the town crier", 0.15);
+        CRIER("the town crier", 0.15),
+        MILLER("the miller", 0.20);                                     // [roles-c] the windmill's keeper
 
         public final String words;
         public final double share;
@@ -101,6 +102,7 @@ public final class Offices {
         give(out, Sexton.holder(id), Office.SEXTON);
         if (LibraryRecords.has(id)) give(out, LibraryRecords.shelf(id).librarian, Office.LIBRARIAN);
         give(out, Crier.crier(id), Office.CRIER);
+        give(out, Windmill.miller(id), Office.MILLER);                  // [roles-c]
         // The auctioneer paid as an office only when the panel chose one other than the elder, for whom calling the
         // auctions is part of leading (its own coin, JobWorth.Pay elder).
         VillageFolkEntity auctioneer = Auctions.house(id) != null ? Interviews.holder(id, "auctioneer") : null;

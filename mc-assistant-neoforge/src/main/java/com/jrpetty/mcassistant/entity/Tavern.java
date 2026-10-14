@@ -16,6 +16,8 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.NoteBlock;
 import net.minecraft.world.level.block.WallSignBlock;
@@ -33,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 /**
  * The tavern, of an evening.
@@ -49,6 +52,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *     stores, a bottle a head (the bottles go back). A folk in for the evening with a few coins
  *     put by buys itself one. With none in the stores, the round is drunk in water, and the
  *     tavern's books (Stockroom) count the drink it had not got, so the cook makes more.</li>
+ * <li>[roles-c] <b>The barkeep</b> (Hospitality.Role.BARKEEP) pours a round when it is behind the bar, and keeps a coin
+ *     in four of it; the rest goes in the till (the treasury), and the tavern keeps its own count of its takings and
+ *     rounds. Ask it for a pint (its talk option) and it pours you one of the café's drinks out of the stores at the
+ *     town's price. Bring your empty bottles back to it: a coin for every three, out of the till, and the bottles go
+ *     back in the stores for the cook to fill again.</li>
  * </ul>
  */
 public final class Tavern {
@@ -60,6 +68,13 @@ public final class Tavern {
     private static final Set<String> TOASTED = ConcurrentHashMap.newKeySet();
     /** The evening each folk last bought itself a drink at the bar. */
     private static final Map<UUID, Long> DRANK = new ConcurrentHashMap<>();
+
+    /** [roles-c] The barkeep keeps a coin in this many of a round it pours. */
+    static final int ROUND_SHARE = 4;
+    /** [roles-c] Empty bottles brought back to the bar are paid a coin for every this many. */
+    static final int BOTTLE_DEPOSIT = 3;
+    /** [roles-c] How near the tavern's middle the barkeep must be to be behind its bar. */
+    static final double BAR_REACH = 12.0;
 
     public static void resetForTests() {
         BEAT.clear();
@@ -137,6 +152,7 @@ public final class Tavern {
         Ledger.addCoins(v.id(), price);
         Economy.spentInTown(v.id(), price);
         Stockroom.sold(level, v.id(), Stockroom.Seller.TAVERN, d, 1, price);
+        book(v.id(), "tavern.takings", price);                         // [roles-c] the tavern's own count
         drunk(level, v, f, d);
     }
 
@@ -305,8 +321,12 @@ public final class Tavern {
         int coins = Market.coinsHeld(p);
         if (coins < price) return "A round for " + in.size() + " is " + price + " coins. You have " + coins + ".";
         Market.payOut(p, price);
-        com.jrpetty.mcassistant.village.Ledger.addCoins(v.id(), price);
-        Economy.sold(v.id(), price);
+        // [roles-c] The barkeep behind the bar pours it, and keeps its share; the rest to the till.
+        VillageFolkEntity barkeep = barkeep(level, v.id(), tav);
+        int share = barkeep == null ? 0 : price / ROUND_SHARE;
+        if (share > 0) barkeep.earn(share);
+        till(v.id(), price - share);
+        book(v.id(), "tavern.rounds", 1);
         long day = level.getDayTime() / 24000L;
         String name = p.getName().getString();
         int poured = 0;
@@ -332,12 +352,130 @@ public final class Tavern {
             level.sendParticles(ParticleTypes.HAPPY_VILLAGER, f.getX(), f.getY() + 2.0, f.getZ(), 4, 0.3, 0.2, 0.3, 0.0);
         }
         if (TOASTED.size() > 4096) TOASTED.clear();
+        if (barkeep != null) {                                          // [roles-c] behind the bar, pouring
+            barkeep.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            FolkTalk.speak(barkeep, FolkTalk.pick(barkeep.getRandom(), "A round on " + name + "! Glasses up!",
+                "One each, coming up. Courtesy of " + name + ".", "Drinks all round! Thank " + name + "."));
+            barkeep.persona().remember(day, "poured a round " + name + " bought", 1);
+        }
         level.playSound(null, tav.anchor(), SoundEvents.GENERIC_DRINK, SoundSource.NEUTRAL, 1.0F, 1.0F);
         Villages.tell(v.id(), day, name + " bought a round at the tavern");
         Standing.stir(v.id(), p.getUUID());
-        return "You bought a round for " + in.size() + " (" + price + (price == 1 ? " coin" : " coins") + "). Cheers!"
+        return "You bought a round for " + in.size() + " (" + price + (price == 1 ? " coin" : " coins") + ")"
+            + (barkeep != null ? ", poured by " + barkeep.displayNameCap() : "") + ". Cheers!"
             + (poured == 0 ? " (Water all round: there's nothing from the café in the stores.)"
                 : poured < in.size() ? " (" + poured + " of the café's drinks, and water for the rest.)" : "");
+    }
+
+    // ------------------------------------------------------------------ [roles-c] the barkeep and the till
+
+    /** The barkeep behind the tavern's bar now (awake, in the tavern), or null: the bar serves itself. */
+    @Nullable
+    static VillageFolkEntity barkeep(ServerLevel level, UUID village, Ledger.Building tav) {
+        for (VillageFolkEntity f : Hospitality.in(village, Hospitality.Role.BARKEEP)) {
+            if (f.level() == level && !f.isSleeping() && f.distanceToSqr(tav.anchor().getX() + 0.5, tav.anchor().getY(), tav.anchor().getZ() + 0.5)
+                    <= BAR_REACH * BAR_REACH) return f;
+        }
+        return null;
+    }
+
+    /** The coin into the till: the treasury, the day's books, and the tavern's own count. */
+    static void till(UUID village, int coins) {
+        if (coins <= 0) return;
+        Ledger.addCoins(village, coins);
+        Economy.sold(village, coins);
+        book(village, "tavern.takings", coins);
+    }
+
+    /** One of the tavern's own counts, so much more. */
+    static void book(UUID village, String key, int n) {
+        Ledger.note(village, key, Integer.toString(count(village, key) + n));
+    }
+
+    /** One of the tavern's own counts (its takings, its rounds, the bottles back). */
+    static int count(UUID village, String key) {
+        String s = Ledger.note(village, key);
+        try {
+            return s == null || s.isEmpty() ? 0 : Integer.parseInt(s.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /**
+     * A drink for a player at the bar: one of the café's drinks out of the stores (the one named, else any), at the
+     * town's price into the till, booked as the tavern's sale. Returns what to tell the player, and whether it went
+     * through. The bar's desk (TavernDesk) and the barkeep's talk both pour this way.
+     */
+    static Inn.Let pint(ServerLevel level, Villages.Village v, Player p, @Nullable String lineId, @Nullable VillageFolkEntity barkeep) {
+        UUID village = v.id();
+        if (LawBook.dry(village)) return new Inn.Let(barkeep, "Nothing's poured here: the town's dry by law.", false);
+        ItemStack one = ItemStack.EMPTY;
+        List<ItemStack> drinks = Cafe.drinksInStores(level, village);
+        for (ItemStack s : drinks) if (lineId == null || Goods.lineId(s).equals(lineId)) { one = s.copyWithCount(1); break; }
+        if (one.isEmpty()) {
+            Cafe.Drink usual = Cafe.DRINKS.get(Math.floorMod(p.getUUID().hashCode(), Cafe.DRINKS.size()));
+            Stockroom.missed(level, village, Stockroom.Seller.TAVERN, Cafe.drink(usual));
+            return new Inn.Let(barkeep, drinks.isEmpty() ? "The casks are dry: there's nothing from the café in the stores. Ask the cook."
+                : "That's all gone just now.", false);
+        }
+        if (!(p instanceof net.minecraft.server.level.ServerPlayer sp)) return new Inn.Let(barkeep, "That's all gone just now.", false);
+        ShopDesk.Quote q = ShopDesk.quote(level, village, sp, List.of(one), List.of(1));
+        if (Market.coinsHeld(p) < q.total()) return new Inn.Let(barkeep, Goods.name(one) + " is " + q.total() + ". You've " + Market.coinsHeld(p) + ".", false);
+        ItemStack want = one;
+        if (!TownWork.take(level, v, s -> ItemStack.isSameItemSameComponents(s, want), 1)) return new Inn.Let(barkeep, "That's all gone just now.", false);
+        Market.payOut(p, q.total());
+        till(village, q.total());
+        Stockroom.sold(level, village, Stockroom.Seller.TAVERN, one, 1, q.total());
+        if (!p.getInventory().add(one.copy())) p.drop(one.copy(), false);
+        if (barkeep != null) barkeep.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        return new Inn.Let(barkeep, Goods.name(one) + ", " + q.total() + (q.total() == 1 ? " coin" : " coins") + ". Good health!"
+            + " Bring the bottle back when you're done: a coin for every " + BOTTLE_DEPOSIT + ".", true);
+    }
+
+    /**
+     * Empty bottles brought back to the bar: a coin for every three, out of the till, and the bottles into the stores
+     * for the cook to fill again. An odd one or two are left with the player till it has three. Nothing is paid that
+     * the till has not got.
+     */
+    static Inn.Let bottlesBack(ServerLevel level, Villages.Village v, Player p, @Nullable VillageFolkEntity barkeep) {
+        Predicate<ItemStack> empty = s -> s.is(Items.GLASS_BOTTLE) && s.getComponentsPatch().isEmpty();
+        int held = 0;
+        for (ItemStack s : p.getInventory().items) if (empty.test(s)) held += s.getCount();
+        if (held == 0) return new Inn.Let(barkeep, "You've no empty bottles on you. Bring them back here: a coin for every " + BOTTLE_DEPOSIT + ".", false);
+        int coins = held / BOTTLE_DEPOSIT;
+        if (coins == 0) return new Inn.Let(barkeep, "That's " + held + ". Bring me " + BOTTLE_DEPOSIT + " and that's a coin.", false);
+        int paid = Ledger.takeCoins(v.id(), coins);
+        if (paid == 0) return new Inn.Let(barkeep, "The till's empty, I'm sorry. Keep them till it isn't.", false);
+        int bottles = paid * BOTTLE_DEPOSIT, left = bottles;
+        for (ItemStack s : p.getInventory().items) {
+            if (left <= 0) break;
+            if (!empty.test(s)) continue;
+            int k = Math.min(left, s.getCount());
+            s.shrink(k);
+            left -= k;
+        }
+        p.getInventory().setChanged();
+        Crafts.store(level, v, new ItemStack(Items.GLASS_BOTTLE, bottles));
+        Dealings.giveCoins(p, paid);
+        book(v.id(), "tavern.bottles", bottles);
+        if (barkeep != null) barkeep.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        return new Inn.Let(barkeep, bottles + " bottles back: " + paid + (paid == 1 ? " coin" : " coins") + " for you. The cook'll fill them again."
+            + (held > bottles ? " (Keep the other " + (held - bottles) + " till you've three.)" : ""), true);
+    }
+
+    /** [roles-c] The tavern's books in a line (/village hospitality, the barkeep's card). */
+    static String booksLine(UUID village) {
+        return count(village, "tavern.takings") + " coins taken, " + count(village, "tavern.rounds") + " rounds poured, "
+            + count(village, "tavern.bottles") + " bottles brought back";
+    }
+
+    /** [roles-c] The barkeep's card: behind the bar, and the tavern's books. */
+    @Nullable
+    static String cardPart(VillageFolkEntity f) {
+        UUID village = f.ownerId();
+        if (village == null || Hospitality.role(f) != Hospitality.Role.BARKEEP || of(village) == null) return null;
+        return "keeps the tavern's bar: " + booksLine(village);
     }
 
     /** For the status line. */

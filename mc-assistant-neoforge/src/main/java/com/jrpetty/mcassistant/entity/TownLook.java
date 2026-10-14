@@ -313,6 +313,10 @@ public final class TownLook {
         if (inn != null) parts.add(inn);
         String bakery = Bakery.cardPart(f);
         if (bakery != null) parts.add(bakery);
+        String mill = Windmill.cardPart(f);                            // [roles-c] the miller; the barkeep's bar
+        if (mill != null) parts.add(mill);
+        String bar = Tavern.cardPart(f);
+        if (bar != null) parts.add(bar);
         return parts.isEmpty() ? null : String.join("; ", parts);
     }
 

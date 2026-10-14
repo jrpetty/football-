@@ -1753,6 +1753,21 @@ public class VillageFolkEntity extends AssistantEntity {
         builder.define(DATA_LOOK, 0L);                  // [individual]
         builder.define(DATA_MARKS, 0);
         builder.define(DATA_MANNER, 0);
+        builder.define(DATA_POST, 0);                   // [roles-c]
+    }
+
+    /** [roles-c] The clothes of its post within its trade (an outfit's number, OutfitIndex.ofPost: the baker's whites,
+     *  the barkeep's waistcoat...), 0 for its trade's own; sent only when it changes. */
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_POST =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+
+    /** [roles-c] Its post's outfit (client/FolkModel.outfit), 0 for its trade's own. */
+    public int clientPostOutfit() { return this.entityData.get(DATA_POST); }
+
+    /** [roles-c] Dressed for its post (an outfit's number, 0 for its trade's own). */
+    public void showPost(int outfit) {
+        if (this.entityData.get(DATA_POST) != outfit) this.entityData.set(DATA_POST, outfit);
     }
 
     /** [police] The watch's duty and kit, for its clothes (Police.flags, client/WatchLayer): the duty, the constable, the badge. */
@@ -5469,6 +5484,7 @@ public class VillageFolkEntity extends AssistantEntity {
             String b = stationTask() == StationTask.SHOP ? ShopRoles.badge(this)
                 : stationTask() == StationTask.COOK ? Hospitality.badge(this) : "";   // [dining] "[Waiter]", "[Barkeep]"
             roleBadge = b.isEmpty() ? "" : "[" + b + "]";
+            showPost(com.jrpetty.mcassistant.client.OutfitIndex.ofPost(Hospitality.role(this).name()));   // [roles-c] dressed for it
         }
         return roleBadge;
     }

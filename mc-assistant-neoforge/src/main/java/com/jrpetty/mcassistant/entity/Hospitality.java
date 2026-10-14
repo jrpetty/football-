@@ -28,6 +28,9 @@ import java.util.function.ToDoubleFunction;
  * <li><b>Waiter</b>: takes the orders at the tables, carries the trays from the pass, clears and resets the tables.</li>
  * <li><b>Pot washer</b>: washes the plates and the cups; nothing goes back on the shelf unwashed.</li>
  * <li><b>Host</b>: greets and seats, takes the payment and runs the till; orders the kitchen's supplies.</li>
+ * <li>[roles-c] <b>Kitchen hand</b>: peels, scrubs and stirs for the cooks, cooks the café's shelf beside them, and
+ *     washes up where there is no pot washer. The town's kitchens grow by one for every forty folk past thirty, so the
+ *     cook's trade is no longer held to its two hands however big the town.</li>
  * </ul>
  * <b>How many.</b> By the town and its places (want): a head cook wherever there is a kitchen; a barkeep with a tavern;
  * a baker with a bakery; an innkeeper with an inn; waiters with the dining rooms, one more for every thirty-five folk
@@ -53,7 +56,8 @@ public final class Hospitality {
         INNKEEPER("Innkeeper", "Innkeeper", "mca_innkeeper"),
         WAITER("Waiter", "Waiter", "mca_waiter"),
         POT_WASHER("Pot washer", "Pot washer", "mca_pot_washer"),
-        HOST("Host", "Host", "mca_host");
+        HOST("Host", "Host", "mca_host"),
+        KITCHEN_HAND("Kitchen hand", "Kitchen hand", "mca_kitchen_hand");                // [roles-c]
 
         public final String title, badge, tag;
 
@@ -64,7 +68,7 @@ public final class Hospitality {
         }
 
         /** The kitchen's jobs (at the stove). */
-        public boolean kitchen() { return this == HEAD_COOK || this == LINE_COOK || this == BAKER; }
+        public boolean kitchen() { return this == HEAD_COOK || this == LINE_COOK || this == BAKER || this == KITCHEN_HAND; }
 
         /** The front of the house (with the customers). */
         public boolean front() { return this == WAITER || this == HOST || this == BARKEEP || this == INNKEEPER; }
@@ -74,17 +78,18 @@ public final class Hospitality {
     public enum Duty { COOK, SERVE, WASH, TILL }
 
     /** The order the jobs are filled in (the first wanted first). */
-    static final Role[] FILL_ORDER = { Role.HEAD_COOK, Role.BARKEEP, Role.WAITER, Role.BAKER, Role.INNKEEPER, Role.POT_WASHER, Role.HOST };
+    static final Role[] FILL_ORDER = { Role.HEAD_COOK, Role.BARKEEP, Role.WAITER, Role.BAKER, Role.INNKEEPER, Role.POT_WASHER, Role.HOST,
+        Role.KITCHEN_HAND };
     /** Who does each duty, best first: the jobs that are for it, and the jobs that stand in when the town has none of
      *  those at all (a café's one cook carries and washes; a busy waiter is waited for, not replaced by the cook). */
     private static final Map<Duty, Role[]> FOR = new EnumMap<>(Duty.class), STANDS_IN = new EnumMap<>(Duty.class);
 
     static {
-        FOR.put(Duty.COOK, new Role[]{ Role.HEAD_COOK, Role.LINE_COOK, Role.BAKER });
+        FOR.put(Duty.COOK, new Role[]{ Role.HEAD_COOK, Role.LINE_COOK, Role.KITCHEN_HAND, Role.BAKER });
         STANDS_IN.put(Duty.COOK, new Role[]{ Role.WAITER, Role.HOST, Role.POT_WASHER, Role.BARKEEP });
         FOR.put(Duty.SERVE, new Role[]{ Role.WAITER, Role.HOST, Role.BARKEEP });
-        STANDS_IN.put(Duty.SERVE, new Role[]{ Role.LINE_COOK, Role.POT_WASHER, Role.HEAD_COOK, Role.BAKER });
-        FOR.put(Duty.WASH, new Role[]{ Role.POT_WASHER });
+        STANDS_IN.put(Duty.SERVE, new Role[]{ Role.LINE_COOK, Role.KITCHEN_HAND, Role.POT_WASHER, Role.HEAD_COOK, Role.BAKER });
+        FOR.put(Duty.WASH, new Role[]{ Role.POT_WASHER, Role.KITCHEN_HAND });
         STANDS_IN.put(Duty.WASH, new Role[]{ Role.WAITER, Role.LINE_COOK, Role.HOST, Role.BARKEEP, Role.HEAD_COOK, Role.BAKER });
         FOR.put(Duty.TILL, new Role[]{ Role.HOST, Role.BARKEEP });
         STANDS_IN.put(Duty.TILL, new Role[]{ Role.HEAD_COOK, Role.WAITER, Role.LINE_COOK, Role.INNKEEPER });
@@ -92,6 +97,9 @@ public final class Hospitality {
 
     /** Folk past twenty for each further waiter; folk for each further line cook (with a restaurant). */
     static final int FOLK_PER_WAITER = 35, FOLK_PER_LINE_COOK = 40;
+    /** [roles-c] A town's kitchens take on a first kitchen hand at this size, another for every so many folk more, and no
+     *  more than so many in all (a kitchen's stoves and sink have room for that many hands beside the cooks). */
+    static final int KITCHEN_HAND_FROM = 30, FOLK_PER_KITCHEN_HAND = 40, KITCHEN_HANDS_MOST = 4;
     /** How often the staff are looked over (ticks). */
     static final long LOOK = 1200L;
     /** The waiters a dining room keeps at most, for its tables: one to every three. */
@@ -191,7 +199,20 @@ public final class Hospitality {
         if (restaurant || anyKitchen && folk >= 40) w.put(Role.POT_WASHER, 1);
         if (restaurant && folk >= 30) w.put(Role.HOST, 1);
         if (restaurant) w.put(Role.LINE_COOK, folk / FOLK_PER_LINE_COOK);
+        int hands = kitchenHands(folk, anyKitchen);                                       // [roles-c]
+        if (hands > 0) w.put(Role.KITCHEN_HAND, hands);
         return w;
+    }
+
+    /** [roles-c] The kitchen hands a town of this many wants, with a kitchen (a café's, a tavern's or a restaurant's). */
+    static int kitchenHands(int folk, boolean anyKitchen) {
+        if (!anyKitchen || folk < KITCHEN_HAND_FROM) return 0;
+        return Math.min(KITCHEN_HANDS_MOST, 1 + (folk - KITCHEN_HAND_FROM) / FOLK_PER_KITCHEN_HAND);
+    }
+
+    /** [roles-c] Tests: the jobs a town wants now (the kitchen hands among them). */
+    public static Map<Role, Integer> wantForTests(UUID village) {
+        return want(village);
     }
 
     /** How many more of the cook's trade the town's shape should count, past its usual cooks (Villages.target): every
@@ -271,7 +292,7 @@ public final class Hospitality {
             return switch (r) {
                 case HEAD_COOK, BAKER -> kitchen * 2 + (f.life().has(Social.Trait.HARDWORKING) ? 3 : 0);
                 case WAITER, HOST, BARKEEP, INNKEEPER -> face * 2 + kitchen / 4;
-                case POT_WASHER -> 10 - kitchen + (f.life().has(Social.Trait.HARDWORKING) ? 2 : 0);
+                case POT_WASHER, KITCHEN_HAND -> 10 - kitchen + (f.life().has(Social.Trait.HARDWORKING) ? 2 : 0);   // [roles-c] a new hand learns
                 default -> 0;
             };
         };
@@ -297,6 +318,7 @@ public final class Hospitality {
             case WAITER -> "I'm waiting tables at " + place + ". Table for two? This way.";
             case POT_WASHER -> "Pot washer at " + place + ". Not a plate goes out dirty on my watch.";
             case HOST -> "I'll be greeting folk at " + place + ". Welcome, welcome!";
+            case KITCHEN_HAND -> "Kitchen hand at " + place + ". Peeling, scrubbing, stirring: whatever the cook says.";   // [roles-c]
             default -> "Back at the stove.";
         });
         Villages.tell(v.id(), level.getDayTime() / 24000L, f.displayNameCap() + " became the " + role.title.toLowerCase(java.util.Locale.ROOT)
@@ -373,7 +395,7 @@ public final class Hospitality {
         return switch (role(f)) {
             case BARKEEP -> ServiceRole.TAVERN.hours.isOpen(Math.floorMod(t + PREP, 24000L)) || ServiceRole.TAVERN.hours.isOpen(Math.floorMod(t - PREP, 24000L));
             case BAKER -> t >= 22000L || t < 7000L;
-            case WAITER, HOST, POT_WASHER, HEAD_COOK, LINE_COOK -> {
+            case WAITER, HOST, POT_WASHER, HEAD_COOK, LINE_COOK, KITCHEN_HAND -> {
                 ServiceRole served = f.ownerId() == null ? ServiceRole.CAFE : DiningPlaces.servedBy(f.ownerId());
                 boolean open = served.hours.isOpen(Math.floorMod(t + PREP, 24000L)) || served.hours.isOpen(Math.floorMod(t - PREP, 24000L));
                 yield open ? Boolean.TRUE : null;
@@ -410,6 +432,7 @@ public final class Hospitality {
         if (f.stationTask() != StationTask.COOK || f.ownerId() == null) return false;
         if (Dining.work(f, level)) return true;
         Role r = role(f);
+        if (r == Role.BAKER && Bakery.work(f, level)) return true;          // [roles-c] the bakery's ovens: the baker's own post
         if (!r.front() && r != Role.POT_WASHER) return false;
         return DiningPlaces.standAtPost(f, level, r);
     }
