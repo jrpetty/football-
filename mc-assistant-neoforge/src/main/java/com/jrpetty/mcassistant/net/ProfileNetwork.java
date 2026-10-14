@@ -44,11 +44,13 @@ public final class ProfileNetwork {
 
     private static void handleAsk(FolkProfileAskPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.player() instanceof ServerPlayer player) answer(player, payload);
+            if (!(context.player() instanceof ServerPlayer player)) return;
+            FolkProfilePayload out = answer(player, payload);
+            if (out != null) PacketDistributor.sendToPlayer(player, out);
         });
     }
 
-    /** The answer to an ask: the profile sent, or nothing (no such folk here, or asked again too soon). */
+    /** The answer to an ask, to send: the profile, or null (no such folk here, or asked again too soon). */
     @Nullable
     public static FolkProfilePayload answer(ServerPlayer player, FolkProfileAskPayload payload) {
         if (!(player.level() instanceof ServerLevel level)) return null;
@@ -58,9 +60,7 @@ public final class ProfileNetwork {
         Entity e = level.getEntity(payload.folk());
         if (!(e instanceof VillageFolkEntity f) || !f.isAlive()) return null;
         LAST.put(player.getUUID(), now);
-        FolkProfilePayload out = new FolkProfilePayload(FolkProfile.build(f, player), payload.open());
-        PacketDistributor.sendToPlayer(player, out);
-        return out;
+        return new FolkProfilePayload(FolkProfile.build(f, player), payload.open());
     }
 
     /** Open this folk's profile on this player's screen, at a tab (the profile command; the smoke's pictures). */
