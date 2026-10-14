@@ -42,6 +42,8 @@ public class IntegrityGameTests {
     private static final int FOLK = Integer.getInteger("integrity.folk", 30);
     private static final boolean REPAIRS = !Boolean.getBoolean("integrity.norepair");
     private static final boolean STRICT = Boolean.getBoolean("integrity.strict");
+    /** The age the town is put in at its founding (-Dintegrity.age), so it wants the whole run of its buildings. */
+    private static final String AGE = System.getProperty("integrity.age", "IRON");
 
     /**
      * A town founded and grown flat out for some in-game days with every feature live (the watch up, the town's
@@ -66,6 +68,7 @@ public class IntegrityGameTests {
         Kit.hold(level, cx, cz, outer + 32);
         Kit.prepare(level, cx, cz, outer + 32);
         BlockPos heart = Kit.surface(level, cx, cz);
+        Kit.generousTerrain(level, cx, cz);
         Kit.log("ti01 found " + FOLK + ": " + Kit.command(level, "village found " + FOLK + " " + cx + " " + cz));
         server.tickRateManager().setTickRate(10000.0F);
         Growth g = new Growth(helper, level, heart);
@@ -115,6 +118,8 @@ public class IntegrityGameTests {
                 }
                 id = v.id();
                 began = t;
+                Villages.ageForTests(id, Villages.Age.valueOf(AGE));
+                stock(v);
                 Kit.log("ti01 town " + Villages.name(id) + " of " + Villages.headcount(id) + " founded at tick " + t);
                 return false;
             }
@@ -129,6 +134,7 @@ public class IntegrityGameTests {
             int day = (int) (ran / 24000L);
             if (day != lastDay) {
                 lastDay = day;
+                stock(v);
                 TownAudit.Report r = TownAudit.check(level, v);
                 Kit.log("ti01 day " + day + " " + Villages.ageOf(id).label + ", " + Villages.headcount(id) + " folk, "
                     + Ledger.buildings(id).size() + " buildings: " + r.summary());
@@ -141,6 +147,40 @@ public class IntegrityGameTests {
                 return true;
             }
             return false;
+        }
+
+        /**
+         * The stores topped up with what building takes, so the town grows at speed (a test of how it builds, not of
+         * how it fells and quarries): wood, stone, glass, the fittings, each up to so much.
+         */
+        void stock(Villages.Village v) {
+            Object[][] want = {
+                { net.minecraft.world.item.Items.OAK_LOG, 256 }, { net.minecraft.world.item.Items.OAK_PLANKS, 384 },
+                { net.minecraft.world.item.Items.COBBLESTONE, 512 }, { net.minecraft.world.item.Items.STONE_BRICKS, 192 },
+                { net.minecraft.world.item.Items.OAK_STAIRS, 192 }, { net.minecraft.world.item.Items.OAK_SLAB, 128 },
+                { net.minecraft.world.item.Items.STONE_BRICK_STAIRS, 64 }, { net.minecraft.world.item.Items.STONE_BRICK_SLAB, 64 },
+                { net.minecraft.world.item.Items.GLASS_PANE, 128 }, { net.minecraft.world.item.Items.GLASS, 32 },
+                { net.minecraft.world.item.Items.OAK_DOOR, 16 }, { net.minecraft.world.item.Items.TORCH, 64 },
+                { net.minecraft.world.item.Items.LANTERN, 32 }, { net.minecraft.world.item.Items.CHEST, 24 },
+                { net.minecraft.world.item.Items.BARREL, 24 }, { net.minecraft.world.item.Items.FURNACE, 8 },
+                { net.minecraft.world.item.Items.CRAFTING_TABLE, 8 }, { net.minecraft.world.item.Items.LADDER, 64 },
+                { net.minecraft.world.item.Items.OAK_FENCE, 64 }, { net.minecraft.world.item.Items.OAK_FENCE_GATE, 8 },
+                { net.minecraft.world.item.Items.WHITE_BED, 16 }, { net.minecraft.world.item.Items.BRICKS, 128 },
+                { net.minecraft.world.item.Items.BREAD, 128 }, { net.minecraft.world.item.Items.HAY_BLOCK, 16 },
+                { net.minecraft.world.item.Items.BOOKSHELF, 16 }, { net.minecraft.world.item.Items.LECTERN, 4 },
+                { net.minecraft.world.item.Items.WHITE_CARPET, 32 }, { net.minecraft.world.item.Items.POPPY, 32 },
+                { net.minecraft.world.item.Items.SMOOTH_STONE_SLAB, 64 }, { net.minecraft.world.item.Items.SMOKER, 4 },
+            };
+            for (Object[] w : want) {
+                net.minecraft.world.item.Item it = (net.minecraft.world.item.Item) w[0];
+                int have = com.jrpetty.mcassistant.entity.Market.stock(level, id, s -> s.is(it));
+                int need = (Integer) w[1] - have;
+                while (need > 0) {
+                    int k = Math.min(need, it.getDefaultMaxStackSize());
+                    com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(it, k));
+                    need -= k;
+                }
+            }
         }
 
         /** Note what was wrong with each building the first time it is seen in the register. */
