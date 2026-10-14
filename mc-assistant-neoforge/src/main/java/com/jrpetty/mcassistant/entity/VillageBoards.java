@@ -403,6 +403,8 @@ public final class VillageBoards {
             if (shorts.size() >= 4) break;
         }
         out.add(shorts.isEmpty() ? "LG|We're short of nothing that matters." : "LW|Short of: " + String.join(", ", shorts) + ".");
+        String board = WantedBoard.boardLine(level, id);                          // [earning] the Wanted board's orders
+        if (board != null) out.add("LW|" + board);
 
         // ---- how we're doing
         out.add("RH|How we're doing");

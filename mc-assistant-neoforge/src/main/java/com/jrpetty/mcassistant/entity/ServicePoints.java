@@ -373,7 +373,8 @@ public final class ServicePoints {
             return;
         }
         Desk desk = deskOf(s);
-        int print = desk.fingerprint(visit) * 31 + statusPrint(visit) * 17 + s.tab.hashCode() + s.message.hashCode();
+        int print = desk.fingerprint(visit) * 31 + statusPrint(visit) * 17 + s.tab.hashCode() + s.message.hashCode()
+            + EarnDesk.print(visit) * 7;                                                   // [earning] the line, the shift
         long now = visit.level().getGameTime();
         if (!force && print == s.lastPrint && now - s.lastSent < RESEND) return;
         s.lastPrint = print;
@@ -433,7 +434,9 @@ public final class ServicePoints {
         t.putString("tab", s.tab);
         t.putInt("nonce", s.lastNonce);
         t.putString("kind", deskOf(s).kind(visit.role()));
-        t.put("body", deskOf(s).body(visit, s.tab));
+        CompoundTag body = deskOf(s).body(visit, s.tab);
+        if (!s.dining && "desk".equals(t.getString("kind"))) EarnDesk.extend(visit, body);     // [earning] we buy, work, the changer
+        t.put("body", body);
         t.putString("message", s.message);
         t.putBoolean("messageOk", s.messageOk);
         return t;
@@ -471,7 +474,8 @@ public final class ServicePoints {
             r = Result.no(st.words());
         } else {
             try {
-                r = deskOf(s).act(visit, action, args);
+                r = EarnDesk.handles(action) ? EarnDesk.act(visit, action, args)            // [earning]
+                    : deskOf(s).act(visit, action, args);
             } catch (RuntimeException e) {
                 LOG_ONCE.computeIfAbsent(visit.role().id + "/" + action, k -> {
                     com.mojang.logging.LogUtils.getLogger().warn("[shops-homes] service {} {} failed", k, e.toString());

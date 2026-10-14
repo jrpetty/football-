@@ -487,6 +487,9 @@ public final class PlayerServices {
     public static final int BUSY = 3;
     /** The most the treasury pays out in bounties in a night. */
     public static final int NIGHT_PURSE = 12;
+    /** [earning] How far beyond the town's reach a kill still counts (the walls and the fields under them), and what a raid
+     *  night multiplies (each kill's pay and the night's purse). */
+    public static final int NEAR_WALLS = 16, RAID_TIMES = 2;
 
     /** A village's night: what its watch has had to do, whether the board has a bounty up, what it has paid and to whom. */
     static final class Night {
@@ -560,7 +563,7 @@ public final class PlayerServices {
 
     /** A monster killed in the night: by the watch (a folk of the town), or by a player (the bounty). */
     static void killed(ServerLevel level, Entity killer, LivingEntity dead) {
-        Villages.Village v = townAt(level, dead.blockPosition());
+        Villages.Village v = townNear(level, dead.blockPosition(), NEAR_WALLS);        // [earning] near the walls counts
         if (v == null) return;
         Night n = nightOf(level, v.id());
         n.kills++;
@@ -597,7 +600,9 @@ public final class PlayerServices {
         long day = day(level);
         Standing.Title title = Standing.of(id, p.getUUID(), level.getGameTime()).title();
         if (title == Standing.Title.OUTCAST || Laws.banished(id, p.getUUID(), day)) return 0;
-        int want = Math.min(bountyOn(dead), NIGHT_PURSE - n.paid);
+        boolean raid = Raids.underAlarm(id) || n.bell;                             // [earning] a raid night pays more
+        int purse = NIGHT_PURSE * (raid ? RAID_TIMES : 1);
+        int want = Math.min(bountyOn(dead) * (raid ? RAID_TIMES : 1), purse - n.paid);
         if (want <= 0) {
             if (!n.spent) {
                 n.spent = true;
@@ -606,18 +611,16 @@ public final class PlayerServices {
             }
             return 0;
         }
-        int pay = Ledger.takeCoins(id, want);
+        String kind = Quests.kind(dead);
+        kind = kind.endsWith("s") ? kind.substring(0, kind.length() - 1) : kind;
+        int pay = Earnings.fromTreasury(p, id, want, Earnings.Source.BOUNTY,          // [earning] booked and told as every payment
+            "the watch of " + Villages.name(id), "for the " + kind + (raid ? " (raid night)" : ""));
         if (pay <= 0) return 0;
-        Economy.spent(id, pay);
-        give(p, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), pay));
         n.paid += pay;
         n.paidTo.merge(p.getUUID(), pay, Integer::sum);
         String name = p.getName().getString();
         n.names.put(p.getUUID(), name);
-        String what = Quests.kind(dead);
-        what = what.endsWith("s") ? what.substring(0, what.length() - 1) : what;
-        p.sendSystemMessage(Component.literal("Bounty: " + coins(pay) + " from the treasury of " + Villages.name(id) + " for the " + what
-            + ". Thank you! (" + n.paid + " of tonight's " + NIGHT_PURSE + " paid)").withStyle(ChatFormatting.YELLOW));
+        p.displayClientMessage(Component.literal("Bounty: " + n.paid + " of tonight's " + purse + "c paid.").withStyle(ChatFormatting.YELLOW), true);
         // Whoever of the town is nearest says thank you, and thinks the better of you for it.
         VillageFolkEntity near = null;
         double best = 24.0 * 24.0;
@@ -658,6 +661,20 @@ public final class PlayerServices {
         } else if (n != null && n.posted && !n.told) {
             summary(v.id(), n);
         }
+    }
+
+    /** [earning] The town this spot is in, or within so many blocks beyond its reach (its walls, the fields under them). */
+    @Nullable
+    static Villages.Village townNear(ServerLevel level, BlockPos p, int margin) {
+        Villages.Village in = townAt(level, p);
+        if (in != null || margin <= 0) return in;
+        for (Villages.Village v : Villages.every()) {
+            if (!v.dim().equals(level.dimension())) continue;
+            BlockPos c = v.centre();
+            int reach = Villages.townReach(v.id()) + margin;
+            if (Math.max(Math.abs(p.getX() - c.getX()), Math.abs(p.getZ() - c.getZ())) <= reach && Math.abs(p.getY() - c.getY()) <= 48) return v;
+        }
+        return null;
     }
 
     /** For the village board: the night's bounty, if one is up. */

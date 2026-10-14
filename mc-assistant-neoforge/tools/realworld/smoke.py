@@ -4096,6 +4096,56 @@ def paths_stage(r, look, cx, cz):
     say("alive after the town's ways: %s" % client_alive())
 
 
+def earning_stage(r, look, cx, cz):
+    """[earning] Ways for the player to earn the towns' coin (entity/Buyers, WantedBoard, Shifts, ShiftTasks,
+    EarnBoard; client/ShopPanel, ShiftHud, EarningsPage). The shop is stood up with its counter and folk queuing
+    (/village service stage), then /village earnings stage puts the player behind the counter on a counter hand's
+    shift, with goods to sell and the Wanted board's orders up. Pictures:
+      1. 48-earning-1-shift-hud: the shift HUD mid-task at the counter (the customer first in line, the par bar, pay);
+      2. 48-earning-2-sell: the store's Sell tab (the Wanted board's orders at the top, each line's price, how many
+         more the counter wants, Sell 1 / Stack / All);
+      3. 48-earning-3-work: the counter's Work tab (the line, each customer's patience, Serve);
+      4. 48-earning-4-page: the Earnings page on the town's books (the purse, the week by source, the job board of
+         ways to earn here);
+      5. 48-earning-5-summary: the end-of-shift summary card (/village earnings stage done).
+    Then /village service stage done. Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("time set 3000")
+    r.cmd("weather clear")
+    r.cmd("gamemode spectator %s" % USER)
+    out = r.cmd("execute positioned %d 100 %d run village service stage" % (cx - 30, cz + 30))
+    say("service stage: " + out[:600])
+    c = re.search(r"COUNTER (-?\d+) (-?\d+) (-?\d+)", out)
+    if not c:
+        say("no counter to work at; nothing to photograph")
+        r.cmd("gamemode creative %s" % USER)
+        return
+    x, y, z = (int(v) for v in c.groups())
+    r.cmd("gamemode survival %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, x, y, z + 2))
+    time.sleep(4)
+    staged = r.cmd("execute as %s at @s run village earnings stage" % USER)
+    say("earning stage: " + staged[:400])
+    time.sleep(6)                                       # the HUD finds the first customer in line
+    shot("48-earning-1-shift-hud")
+    for tab in ("sell", "work"):
+        say("screen %s: %s" % (tab, r.cmd("execute as %s run village service open shop %s" % (USER, tab))[:200]))
+        time.sleep(4)
+        shot("48-earning-%d-%s" % (2 if tab == "sell" else 3, tab))
+    r.cmd("execute as %s run village stats close" % USER)
+    say("earnings: " + r.cmd("execute as %s at @s run village earnings" % USER)[:300])
+    time.sleep(5)                                       # the page asks for itself and comes back
+    shot("48-earning-4-page")
+    r.cmd("execute as %s run village stats close" % USER)
+    say("wanted: " + r.cmd("execute positioned %d %d %d run village earnings wanted" % (x, y, z))[:400])
+    say("clock off: " + r.cmd("execute as %s run village earnings stage done" % USER)[:300])
+    time.sleep(2)
+    shot("48-earning-5-summary")
+    say("stage done: " + r.cmd("execute positioned %d 100 %d run village service stage done" % (cx - 30, cz + 30))[:200])
+    r.cmd("gamemode creative %s" % USER)
+    say("alive after earning: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

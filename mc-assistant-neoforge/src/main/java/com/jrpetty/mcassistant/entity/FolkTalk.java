@@ -112,7 +112,7 @@ public final class FolkTalk {
         }
         // [quests] A quest's step waiting on it (a word, a hand-over, a choice), work asked for, an offer taken: a child's too.
         String quest = QuestTalk.answer(f, p, topic, text);
-        if (quest != null) return manner(f, quest);
+        if (quest != null) return manner(f, topic == TalkTopic.JOBS ? EarnBoard.withWork(f, quest) : quest);   // [earning] work going
         // [diver] Asked of a diver: clay or sea pickles brought up from the bed, or the order collected (Divers.meant).
         if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.DIVER && Divers.meant(text)) {
             return manner(f, Divers.talk(f, p, text));
@@ -196,7 +196,8 @@ public final class FolkTalk {
             case STORES -> Services.stores(f, p, text);
             case ORDERS -> Orders.talk(f, p, text);
             case WORKINGS -> ShopBusiness.talk(f, Trades.explain(f));   // [shops-homes] and the keeper's business
-            case SHORT -> Trades.shortages(f);
+            case SHORT -> EarnBoard.withWork(f, Trades.shortages(f));          // [earning] and the work going
+            case SHIFTS -> Shifts.talk(f, p);                                  // [earning] paid shifts: asked twice of the boss, taken
             case RETRADE -> Asks.retrade(f, p, text);
             case BUILD -> Asks.build(f, p, text);
             case GUIDE -> Guide.ask(f, p, text);

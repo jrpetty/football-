@@ -51,6 +51,8 @@ public final class Shipments {
     public static final int OVERDUE_DAYS = 7;
     /** The ledger's key for a shipment. */
     static final String KEY = "ship/";
+    /** [earning] A contract key so prefixed is carried by a player's hand (HaulContracts): no carrier, no road. */
+    public static final String HAND = "hand/";
 
     // ------------------------------------------------------------------ the seam
 
@@ -147,8 +149,8 @@ public final class Shipments {
         Shipment s = new Shipment(UUID.randomUUID(), from, to, contract, taken, Math.max(0, coinDue), day, day + days);
         OPEN.put(s.id(), s);
         save(s);
-        Carrier c = carrier;
-        boolean carried = false;
+        Carrier c = contract.startsWith(HAND) ? null : carrier;                      // [earning] a player carries it
+        boolean carried = contract.startsWith(HAND);
         if (c != null) {
             try {
                 carried = c.carry(level, s);
@@ -221,6 +223,7 @@ public final class Shipments {
         }
         // A carrier that lost track of a shipment: the road settles it a week after its due day.
         for (Shipment s : new ArrayList<>(OPEN.values())) {
+            if (s.contract().startsWith(HAND)) continue;                          // [earning] HaulContracts settles a player's load
             if (!ROAD.containsKey(s.id()) && day > s.due() + OVERDUE_DAYS) delivered(level, s.id(), s.manifest());
         }
     }

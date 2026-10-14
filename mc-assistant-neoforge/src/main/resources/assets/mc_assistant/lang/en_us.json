@@ -285,6 +285,8 @@
   "talk.mc_assistant.favours.tip": "A favour, what the village is short of, the lost and found, the elder's orders, the quest board",
   "talk.mc_assistant.favour": "A favour?",
   "talk.mc_assistant.favour.tip": "Could it spare anything?",
+  "talk.mc_assistant.shifts": "Any shifts going?",
+  "talk.mc_assistant.shifts.tip": "Paid work in town: ask the boss of a job twice to take a shift",
   "talk.mc_assistant.short": "What's short?",
   "talk.mc_assistant.short.tip": "What the village is short of, and how you could help",
   "talk.mc_assistant.lost": "Lost & found",
