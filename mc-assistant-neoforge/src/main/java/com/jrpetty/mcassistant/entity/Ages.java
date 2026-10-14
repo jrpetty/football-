@@ -54,7 +54,8 @@ public final class Ages {
 
     /** The village's great buildings: copper roofs in the Diamond Age. */
     static final Set<String> GREAT = Set.of("hall", "chapel", "library", "granary", "tavern", "guesthouse", "market",
-        "watchtower", "lighthouse", "barracks", "belltower", "manor", "townhall");
+        "watchtower", "lighthouse", "barracks", "belltower", "manor", "townhall",
+        "restaurant");                                                        // [dining] as the themes have it (their @great)
 
     /** The buildings that go up a storey in the Iron Age: the meeting hall becomes a town hall, the tavern
      *  an inn with rooms over the bar, the library and the shops a floor of their own above. */

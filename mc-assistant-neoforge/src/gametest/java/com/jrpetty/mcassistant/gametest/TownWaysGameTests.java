@@ -993,7 +993,9 @@ public class TownWaysGameTests {
         start(level, 2000L);
         Town t = town(helper, level, 1514000, 5, Homeland.Land.MOUNTAIN);
         UUID id = t.id();
-        mound(level, t.heart().getX() + 24, Z, 5, 6);
+        // The high ground off the avenue (the town's gate keeps a road clear of a cairn as of anything else).
+        final int highX = t.heart().getX() + 24, highZ = Z + 9;
+        mound(level, highX, highZ, 5, 6);
         TownWays.heartForTests(id, Values.Value.SAFETY, Values.Value.SAFETY);
         helper.runAtTickTime(10, () -> {
             Villages.Village v = village(helper, id);
@@ -1019,8 +1021,8 @@ public class TownWaysGameTests {
             helper.assertTrue(marked == 1 && cairn != null, "a cairn raised for " + name);
             helper.assertTrue(level.getBlockState(cairn).is(Blocks.COBBLESTONE) && level.getBlockState(cairn.above()).is(Blocks.COBBLESTONE_WALL),
                 "of rough stone");
-            helper.assertTrue(cairn.getY() > t.heart().getY() && Math.abs(cairn.getX() - (t.heart().getX() + 24)) <= 5
-                && Math.abs(cairn.getZ() - Z) <= 5, "on the high ground, off the square: " + cairn.toShortString());
+            helper.assertTrue(cairn.getY() > t.heart().getY() && Math.abs(cairn.getX() - highX) <= 5
+                && Math.abs(cairn.getZ() - highZ) <= 5, "on the high ground, off the square: " + cairn.toShortString());
             helper.assertTrue(board != null && "Under the stone".equals(board[0]) && name.equals(board[1]), "\"Under the stone\", and its name");
             helper.assertTrue(stock(level, id, Items.COBBLESTONE) == cobble - 2, "two of the stores' cobblestone");
 

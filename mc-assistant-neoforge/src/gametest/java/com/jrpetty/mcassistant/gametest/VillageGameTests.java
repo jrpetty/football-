@@ -144,7 +144,11 @@ public class VillageGameTests {
             for (VillageFolkEntity f : folk) villages.add(f.ownerId());
             helper.assertTrue(villages.size() == 1, "the founding party should be one village, found " + villages.size());
             // A second spawner, placed within reach, adds one settler to that village.
-            BlockPos next = Kit.surface(level, 2610, 2600);   // clear of the party
+            // Clear of the party: a block is not set down where somebody stands (the game's own rule), and the
+            // seventy stand on a spiral out to fourteen or so.
+            BlockPos next = Kit.surface(level, 2610, 2600);
+            for (int x = 2611; x < 2640 && !level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,
+                    new AABB(next).inflate(0.5, 1, 0.5)).isEmpty(); x++) next = Kit.surface(level, x, 2600);
             ItemStack more = new ItemStack(McAssistantMod.FOLK_SPAWNER_ITEM.get());
             player.setItemInHand(InteractionHand.MAIN_HAND, more);
             more.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
@@ -1235,6 +1239,9 @@ public class VillageGameTests {
     public static void t27_night(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        // Midday, with no gathering due: the clock is wherever the last test left it, and founders set down in the
+        // morning are called to the morning's assembly (a guard too, by day), which held one off duty for the test.
+        level.setDayTime(6000);
         Kit.hold(level, 9600, 9600, 32);
         Kit.prepare(level, 9600, 9600, 24);
         BlockPos heart = Kit.surface(level, 9600, 9600);

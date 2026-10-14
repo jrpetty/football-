@@ -176,13 +176,16 @@ public class SupplyGameTests {
         VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(builder != null, "a village");
         Villages.Village v = Villages.get(builder.ownerId());
-        BlockPos at = Kit.surface(level, 91000, 12014);
+        // On its spot on the square, as the town plan gives it (the town's gate keeps the avenues from any building).
+        Villages.Site site = Villages.siteFor(level, v.id(), "monument");
+        helper.assertTrue(site != null, "the town plan has a spot for the monument");
+        BlockPos at = site.anchor();
         for (int i = 0; i < 4; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
         builder.insertItem(new ItemStack(Items.TORCH, 8));
         helper.assertTrue(builder.countCarried(s -> s.is(Items.LANTERN)) == 0, "no lantern to its name");
-        builder.enqueue(Job.buildAt("monument", at, Direction.NORTH, 0));
+        builder.enqueue(Job.buildAt("monument", at, site.facing(), 0));
         java.util.List<BlockPos> lights = new java.util.ArrayList<>();
-        for (BuildGoal.Placement p : BuildGoal.plan("monument", at, Direction.NORTH, 0)) {
+        for (BuildGoal.Placement p : BuildGoal.plan("monument", at, site.facing(), 0)) {
             if (p.part() == BuildGoal.Part.LANTERN) lights.add(p.pos());
         }
         helper.assertTrue(lights.size() >= 4, "the monument has lanterns drawn: " + lights.size());
