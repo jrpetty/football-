@@ -3865,7 +3865,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
             BlockPos p = feet.relative(dir);
             if (level().getBlockState(p).canBeReplaced()
-                && level().getBlockState(p.below()).isSolid()) {
+                && level().getBlockState(p.below()).isSolid()
+                && TownBlocks.mayPlace(level(), p, TownBlocks.Why.LAMP)) {                     // [integrity]
                 final net.minecraft.world.item.Item want = lamp.getItem();
                 if (removeMatching(s -> s.is(want), 1) == 1) {
                     level().setBlockAndUpdate(p, lit.defaultBlockState());
