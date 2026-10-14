@@ -121,6 +121,8 @@ public final class WarAndPeace {
     static final int AFTER_WAR = 14;
     /** How hawkish an elder must be to put war to the council. */
     static final int HAWK = 3;
+    /** A great town: this many folk or more, in the Iron Age or later. Great towns rub against their neighbours. */
+    static final int GREAT_FOLK = 70;
     /** A town smaller than this does not go to war (nor is one smaller than three worth the trouble). */
     static final int MIN_FOLK = 5;
     /** A herald gone this long without a word is given up on. */
@@ -271,15 +273,55 @@ public final class WarAndPeace {
         if (quarrel(x, y) != null) { step(level, a, b, day); return; }
         if (quarrel(y, x) != null) { step(level, b, a, day); return; }
         if (!on()) return;
+        rivalry(a, b, day, rng);
         Villages.Village first = rng.nextBoolean() ? a : b, second = first == a ? b : a;
         for (Villages.Village[] p : new Villages.Village[][]{ { first, second }, { second, first } }) {
-            if (rng.nextInt(3) != 0) continue;                       // even a hawk lets most days go by
+            // Even a hawk lets most days go by; a great town's council sits on the question more often.
+            if (rng.nextInt(great(p[0].id()) ? 2 : 3) != 0) continue;
             Decision d = weigh(level, p[0], p[1], day);
             if (d.go()) {
                 callCouncil(level, p[0], p[1], day, d, Boolean.FALSE);
                 return;
             }
         }
+    }
+
+    /** A great town: big (GREAT_FOLK and more) and grown into the Iron Age or later. */
+    static boolean great(UUID id) {
+        if (GREAT_FOR_TESTS.contains(id)) return true;
+        return Villages.headcount(id) >= GREAT_FOLK && Villages.ageOf(id).ordinal() >= Villages.Age.IRON.ordinal();
+    }
+
+    /** Tests: towns taken as great whatever their size and age. */
+    private static final java.util.Set<UUID> GREAT_FOR_TESTS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** Tests: take this town as a great one. */
+    public static void greatForTests(UUID id) { GREAT_FOR_TESTS.add(id); }
+
+    /** What two neighbours fall out over when one of them is a great town: each a real wrong, in its own words. */
+    private static final String[] FRICTION = {
+        "a quarrel over the land at the boundary between our fields",
+        "blows at the boundary between their woodcutters and ours",
+        "a sheep of ours that went missing near their pens",
+        "their traders tore up a deal with ours at the market",
+        "a quarrel over the land where both our miners were digging",
+    };
+
+    /**
+     * Great towns crowd each other: once a day for two neighbours, if either is a great town, now and then something
+     * comes between them (about one day in twelve, one in six when both are great). It is remembered, written in the
+     * books as a real grievance, sours the two towns' standing with each other and is told in both towns' news. Peace
+     * stays the likelier way: gifts, trade, treaties and a dove for a leader still mend what this wears down.
+     */
+    static void rivalry(Villages.Village a, Villages.Village b, long day, Random rng) {
+        UUID x = a.id(), y = b.id();
+        int greats = (great(x) ? 1 : 0) + (great(y) ? 1 : 0);
+        if (greats == 0 || rng.nextInt(greats == 2 ? 6 : 12) != 0) return;
+        String what = FRICTION[rng.nextInt(FRICTION.length)];
+        Bonds.remember(x, y, day, -3, what);
+        Ledger.relate(x, y, -6);
+        Villages.tell(x, day, "trouble with " + name(y) + ": " + what);
+        Villages.tell(y, day, "trouble with " + name(x) + ": " + what);
     }
 
     /** Once a day for each town: its banners, its allies' guards, the cost of its war, its strength noted. */
@@ -407,8 +449,10 @@ public final class WarAndPeace {
         if (Ledger.relation(us, them) <= -80) h += 1;
         int ways = Ethos.warLean(us);                                  // [identity] a martial or warlike town, a peaceable one
         h += ways;
+        boolean proud = great(us);                                     // a great town, grown proud and pressed for land
+        if (proud) h += 2;
         String who = "the elder is " + t.words + (cares == null ? "" : ", a " + cares.type + " at heart")
-            + (ways > 0 ? ", of a martial town" : ways < 0 ? ", of a peaceable town" : "");
+            + (ways > 0 ? ", of a martial town" : ways < 0 ? ", of a peaceable town" : "") + (proud ? ", of a great and proud town" : "");
         return new Stance(h, who + (h >= HAWK ? " (a hawk, " + h + ")" : " (a dove, " + h + ")"));
     }
 
@@ -531,7 +575,9 @@ public final class WarAndPeace {
         if (quarrel(x, y) != null || quarrel(y, x) != null) return no("a quarrel with " + n + " is already under way");
         if (Villages.headcount(x) < MIN_FOLK || Villages.headcount(y) < 3) return no("too few folk for a war");
         int r = Ledger.relation(x, y);
-        if (r > Diplomacy.FEUD) return no("not in a feud with " + n + " (" + r + ")");
+        // A great town goes to its council over a strained neighbour, not only one in open feud.
+        int feud = great(x) ? Diplomacy.UNEASY - 10 : Diplomacy.FEUD;
+        if (r > feud) return no("not in a feud with " + n + " (" + r + ")");
         if (!realGrievance(x, y, day)) return no("nothing real held against " + n);
         boolean broken = brokenFaith(x, y, day);
         WarBooks.Treaty tr = WarBooks.treaty(x, y);

@@ -763,4 +763,44 @@ public class WarAndPeaceGameTests {
             helper.succeed();
         });
     }
+
+    // ------------------------------------------------------------------ wp11
+
+    /**
+     * Great towns (seventy folk and more, in the Iron Age) rub against their neighbours: over two months troubles come
+     * between them, real grievances sour their standing and are told in their news, and a strained neighbour is enough
+     * for a great town's council; two small towns side by side have none of it.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "wp11_great_towns")
+    public static void wp11_great_towns(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        start(level);
+        int x = 780000;
+        Villages.Village a = town(level, x, 6), b = town(level, x + 300, 4);
+        Villages.Village c = town(level, x + 600, 6), d = town(level, x + 900, 4);
+        helper.assertTrue(a != null && b != null && c != null && d != null, "four towns");
+        helper.runAtTickTime(20, () -> {
+            long day = level.getDayTime() / 24000L;
+            WarAndPeace.greatForTests(a.id());
+            WarAndPeace.greatForTests(b.id());
+            int greatBefore = Ledger.relation(a.id(), b.id()), smallBefore = Ledger.relation(c.id(), d.id());
+            for (int k = 0; k < 60; k++) {
+                WarAndPeace.dailyForTests(level, a, b, day + k);
+                WarAndPeace.dailyForTests(level, c, d, day + k);
+            }
+            int great = Ledger.relation(a.id(), b.id()), small = Ledger.relation(c.id(), d.id());
+            Kit.log("wp11 after sixty days: the great towns " + greatBefore + " -> " + great + ", quarrel " + WarAndPeace.quarrelStage(a.id(), b.id())
+                + ", at war " + Wars.atWar(a.id(), b.id()) + "; the small towns " + smallBefore + " -> " + small);
+            helper.assertTrue(chronicled(a.id(), "trouble with") && chronicled(b.id(), "trouble with"), "the troubles are told in both towns");
+            helper.assertTrue(great <= greatBefore - 18 || WarAndPeace.quarrelStage(a.id(), b.id()) != null || Wars.atWar(a.id(), b.id()),
+                "the great towns' standing soured: " + greatBefore + " -> " + great);
+            helper.assertTrue(small == smallBefore && !chronicled(c.id(), "trouble with"), "the small towns are left in peace: " + small);
+            Ledger.relate(c.id(), d.id(), -35 - Ledger.relation(c.id(), d.id()));
+            WarAndPeace.greatForTests(c.id());
+            WarAndPeace.Decision dc = WarAndPeace.weigh(level, c, d, day + 60);
+            Kit.log("wp11 a great town at -35: " + dc.why());
+            helper.assertTrue(!dc.why().contains("not in a feud"), "a strained neighbour is enough for a great town: " + dc.why());
+            helper.succeed();
+        });
+    }
 }
