@@ -100,6 +100,11 @@ public final class Tavern {
         f.getLookControl().setLookAt(hearth.getX() + 0.5, hearth.getY() + 1.0, hearth.getZ() + 0.5);
         tell(f, level, village);
         Villages.Village v = Villages.get(village);
+        if (v != null && f.purse() >= 3 && DRANK.getOrDefault(f.getUUID(), -1L) != day && !LawBook.dry(v.id())) {
+            ServiceQueue.Turn turn = ServiceQueue.turn(f, level, ServiceRole.TAVERN, "a drink");   // [shops-homes] served at the bar, in turn
+            if (turn == ServiceQueue.Turn.BUSY) return true;
+            if (turn == ServiceQueue.Turn.CLOSED) DRANK.put(f.getUUID(), day);
+        }
         if (v != null) drink(f, level, v, day);
         return true;
     }

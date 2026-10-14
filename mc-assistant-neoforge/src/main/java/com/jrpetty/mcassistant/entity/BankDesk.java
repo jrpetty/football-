@@ -57,6 +57,10 @@ final class BankDesk implements ServicePoints.Desk {
                 new ItemStack(Items.TRIPWIRE_HOOK), "");
         }
         d.section("The bank").line(Bank.line(id));
+        if (visit.point() != null) {
+            d.row("use", "Read", "The bank's ledger", "Open on its desk for anybody to read (crouch and click it to go straight to it).",
+                new ItemStack(Items.WRITTEN_BOOK), "");
+        }
         return d.build();
     }
 
@@ -64,6 +68,7 @@ final class BankDesk implements ServicePoints.Desk {
     public ServicePoints.Result act(ServicePoints.Visit visit, String action, CompoundTag args) {
         ServerPlayer p = visit.player();
         UUID id = visit.village().id();
+        if (action.equals("use")) return ServicePoints.useItYourself(visit);
         if (p == null || !Bank.open(id)) return ServicePoints.Result.no("The bank isn't open for business yet.");
         int n = Math.max(0, args.getInt("amount"));
         String said = switch (action) {

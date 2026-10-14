@@ -5807,6 +5807,29 @@ or wardrobe it bought is set down against a wall. Meals come out of the larder f
 folk with no tool of its trade on it takes its own out of the chest. Old towns: the households' chests are named the
 first day. The folk profile's Belongings tab shows what is really in them.
 
+**Only what the household owns.** A household's boxes hold only its own things, and each says whose it is and how
+it came by it: bought with its own coin (at the shop, a stall, the auction), given (a present, a prize, the town's
+gift), made in its own time (an allotment's harvest), passed on by family, or brought at the founding (four loaves
+of each founder's own). Nothing of the town's stores is ever carried home: moving house takes only what is owned;
+once a day each household's boxes are looked over, and anything that is nobody's (an errand's leftovers, something
+swept up off the step, what an old town had left in its houses) goes back to the stores, and a dead owner's things
+pass to the household by inheritance. The trades' displays the town sets in a house (a fisher's barrel of cod) are
+named as displays, the house's furnishing and no household box.
+
+**The shop as a business** (`entity/ShopBusiness`). The shop keeps two kinds of stock: its makings (in its makings
+chest, by its bench, kept stocked from the stores by the couriers as the workshops' are) and its wares (on its
+counters and in its stockroom). Its keeper and hands make wares out of the makings when a ware is below what the
+stock keeper keeps of it (from what sells, what folk asked for and could not have, the shopping lists, the fashions
+and the age's new makes). Its **till** keeps what it took over the counter, what its makings cost (at the town's
+price) and its wages: the day's and the week's, and the profit, on the Sell tab, on the keeper's card and on
+`/village stock`. Each **week** the keeper looks over its range: a line new since last week is announced on the board
+and in the chronicle ("New at Wren's: cake!") and shows NEW on the screen; a line gone off it is cleared at a markdown,
+never under the least the town lets it go for. The screen marks lines new, back in stock, on clearance or sold out
+(with Order). The **Wanted** list on the Sell tab is the makings the shop is short of that the stores cannot send: it
+buys them from players at a little over the town's paying price (never at a price that could be sold back at a
+profit), into its makings chest. Ask the keeper about its work and it talks business: what sells best this week,
+what it is short of, what is new, and the till.
+
 **Workshops keep their makings** (`entity/WorkStock`). The smithy's chest has the iron, coal and sticks and a spare
 pick and axe; the tailor's the wool, string, leather and dyes; the café's the wheat, sugar, eggs and cocoa; the
 fletcher's the sticks, flint and feathers; the brewery's the bottles, wart and blaze powder; the library's the lapis,
@@ -5820,8 +5843,11 @@ The game tests `ShopsHomesGameTests` (sk01 to sk16) check the counter fitted and
 goods exact), sale at four fifths, order of what is not in, and a double request answered once; a closed shop refusing;
 two folk queuing and served in turn; the bank's deposit, the tavern's drink and the smith's mending; the shopping
 list by means and the shop's range; a folk's trip, bread into the larder, coin and goods conserved; the larder feeding
-a meal; the counters showing the stock; ten days of homes filling, none empty; and the smithy's chest stocked from the
-stores and worked from.
+a meal; the counters showing the stock; ten days of homes filling, none empty, everything in them the household's own
+with how it came by it, the town's things sent back; the smithy's chest stocked from the stores and worked from; and
+the shop as a business (sk17 to sk22): its wares made from its makings chest, its makings ordered and delivered with
+the goods conserved and their cost in its till, a missed sale a new line at the review, a dropped line cleared at a
+markdown above the floor, the Wanted list filled by a player and paid, and the till balancing.
 
 ## What every job is worth
 
