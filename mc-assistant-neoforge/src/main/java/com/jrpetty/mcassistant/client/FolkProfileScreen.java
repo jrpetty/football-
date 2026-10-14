@@ -56,6 +56,8 @@ public class FolkProfileScreen extends Screen {
     /** The tabs, as the server's FolkProfile.TABS names them, and as shown. */
     private static final String[] TAB_IDS = { "about", "life", "work", "day", "things" };
     private static final String[] TAB_NAMES = { "About", "Life", "Work", "Day", "Belongings" };
+    /** The same, short, for a narrow window. */
+    private static final String[] TAB_SHORT = { "About", "Life", "Work", "Day", "Owns" };
     /** How often the open screen asks for a fresh profile, in client ticks (three seconds). */
     private static final int REFRESH_TICKS = 60;
     /** Within this distance the folk can be talked to (the server's talk range). */
@@ -96,18 +98,30 @@ public class FolkProfileScreen extends Screen {
     /** A profile from the server: open it (when asked to), or refresh the one up, if it is this folk's. */
     public static void receive(CompoundTag data, boolean open) {
         Minecraft mc = Minecraft.getInstance();
+        if (data.getBoolean("close")) {                                       // the server's word to shut it
+            if (mc.screen instanceof FolkProfileScreen up) up.onClose();
+            return;
+        }
         if (!data.hasUUID("uuid")) return;
         UUID id = data.getUUID("uuid");
         if (mc.screen instanceof FolkProfileScreen up && up.folk.equals(id)) {
             up.update(data);
+            if (data.contains("tab")) up.tab = tabOf(data.getString("tab"), up.tab);
             return;
         }
-        if (!open || !id.equals(pendingId)) return;
-        FolkProfileScreen s = new FolkProfileScreen(id, data, pendingParent);
-        if (pendingTab != null) for (int i = 0; i < TAB_IDS.length; i++) if (TAB_IDS[i].equals(pendingTab)) s.tab = i;
+        // Opened by asking (open), or sent by the server unasked (the profile command): never a stale answer for another.
+        if (!open || pendingId != null && !id.equals(pendingId)) return;
+        FolkProfileScreen s = new FolkProfileScreen(id, data, id.equals(pendingId) ? pendingParent : mc.screen instanceof FolkProfileScreen ? null : mc.screen);
+        s.tab = tabOf(data.contains("tab") ? data.getString("tab") : pendingTab, 0);
         pendingId = null;
         pendingParent = null;
         mc.setScreen(s);
+    }
+
+    private static int tabOf(@Nullable String id, int otherwise) {
+        if (id != null && id.equalsIgnoreCase("belongings")) id = "things";
+        if (id != null) for (int i = 0; i < TAB_IDS.length; i++) if (TAB_IDS[i].equalsIgnoreCase(id)) return i;
+        return otherwise;
     }
 
     // ------------------------------------------------------------------ state
@@ -290,9 +304,10 @@ public class FolkProfileScreen extends Screen {
         for (int i = 0; i < TAB_NAMES.length; i++) {
             boolean over = inside(mx, my, x, y, each - 2, TABS_H - 2);
             UiStyle.topTab(g, x, y, each - 2, TABS_H - 2, UiStyle.State.of(true, i == tab, over));
-            String label = UiStyle.clip(font, TAB_NAMES[i], each - 18);
-            g.drawString(font, label, x + (each - 2 - font.width(label)) / 2 + 3, y + 4, i == tab ? UiStyle.TEXT : UiStyle.TEXT_MUTED, false);
-            if (each >= 56) UiStyle.keyCap(g, font, KEYS[i], x + 2, y + 3);
+            boolean keys = each >= 64;
+            String label = UiStyle.clip(font, each >= 70 ? TAB_NAMES[i] : TAB_SHORT[i], each - (keys ? 20 : 6));
+            g.drawString(font, label, x + (each - 2 - font.width(label)) / 2 + (keys ? 5 : 0), y + 4, i == tab ? UiStyle.TEXT : UiStyle.TEXT_MUTED, false);
+            if (keys) UiStyle.keyCap(g, font, KEYS[i], x + 2, y + 3);
             x += each;
         }
         return null;

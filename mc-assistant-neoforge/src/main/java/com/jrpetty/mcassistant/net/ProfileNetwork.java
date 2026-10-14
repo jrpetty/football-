@@ -3,6 +3,7 @@ package com.jrpetty.mcassistant.net;
 import com.jrpetty.mcassistant.McAssistantMod;
 import com.jrpetty.mcassistant.entity.FolkProfile;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -60,6 +61,21 @@ public final class ProfileNetwork {
         FolkProfilePayload out = new FolkProfilePayload(FolkProfile.build(f, player), payload.open());
         PacketDistributor.sendToPlayer(player, out);
         return out;
+    }
+
+    /** Open this folk's profile on this player's screen, at a tab (the profile command; the smoke's pictures). */
+    public static void show(ServerPlayer player, VillageFolkEntity f, String tab) {
+        CompoundTag data = FolkProfile.build(f, player);
+        data.putString("tab", tab);
+        LAST.put(player.getUUID(), player.level().getGameTime());
+        PacketDistributor.sendToPlayer(player, new FolkProfilePayload(data, true));
+    }
+
+    /** Shut the profile on this player's screen, if it is up. */
+    public static void close(ServerPlayer player) {
+        CompoundTag data = new CompoundTag();
+        data.putBoolean("close", true);
+        PacketDistributor.sendToPlayer(player, new FolkProfilePayload(data, false));
     }
 
     /** The world has closed (SessionReset): forget who was sent what. */

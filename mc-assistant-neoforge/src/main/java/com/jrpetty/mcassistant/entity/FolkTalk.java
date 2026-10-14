@@ -347,7 +347,12 @@ public final class FolkTalk {
         // On horseback, or about the horses (Stables, Riding): "Riding Bay to the north mine".
         String horses = Stables.doing(f);
         if (horses != null) return horses;
-        if (f.offWorkNow()) return park != null ? "Off work: " + park.substring(0, 1).toLowerCase(Locale.ROOT) + park.substring(1) : "Off work";
+        if (f.offWorkNow()) {
+            // [folk-ui] Off work, and why: its break, the day of rest, or the day's work done (it said "Off work" for each).
+            String why = f.offWorkWhy();
+            String head = why.equals("on a break") ? "On its break" : why.equals("the day of rest") ? "The day of rest" : "Off work";
+            return park != null ? head + ": " + park.substring(0, 1).toLowerCase(Locale.ROOT) + park.substring(1) : head;
+        }
         String delivery = StoreDeliveries.doing(f);            // [econ-store] a delivery for the shop
         if (delivery != null) return delivery;
         String run = Couriers.doing(f);

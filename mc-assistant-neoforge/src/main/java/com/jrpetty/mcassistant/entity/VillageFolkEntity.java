@@ -671,6 +671,7 @@ public class VillageFolkEntity extends AssistantEntity {
     long needsAt() { return needsAt; }
     void needsAt(long t) { needsAt = t; }
     public long companyAt() { return companyAt; }
+    void companyAt(long t) { companyAt = t; }
 
     // ------------------------------ money --------------------------------------
 

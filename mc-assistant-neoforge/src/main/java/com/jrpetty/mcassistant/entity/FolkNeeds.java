@@ -64,6 +64,17 @@ public final class FolkNeeds {
         return worst;
     }
 
+    /** Tests: its history as the needs read it: the day it came, the night it last slept in a bed, meals missed in a row,
+     *  when it last ate (game time) and when it last had company (game time, -1 never). */
+    public static void historyForTests(VillageFolkEntity f, long joined, long slept, int missed, long lastAte, long company) {
+        f.persona().since = joined;
+        f.persona().sleptDay = slept;
+        f.meals().missedInRow = missed;
+        f.meals().lastAte = lastAte;
+        f.companyAt(company);
+        f.needsAt(Long.MIN_VALUE / 2);
+    }
+
     /** Tests: work them out now, whatever was kept. */
     public static int[] nowForTests(VillageFolkEntity f) {
         f.needsAt(Long.MIN_VALUE / 2);

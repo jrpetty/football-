@@ -294,6 +294,8 @@ public class CityScreen extends Screen {
         if (days().length == 0 && !TODAY_PAGES.contains(page())) {
             UiStyle.empty(g, font, NO_BOOKS_TITLE, NO_BOOKS_HINT, x, y, cw, Math.min(ch, 60));
         } else {
+            // [folk-ui] Nothing a page draws can spill past the panel, whatever the window's size.
+            g.enableScissor(left + sideW() + 2, y - 2, left + w - 2, top + h - 2);
             switch (page()) {
                 case "Overview" -> overview(g, x, y, cw, ch, mouseX, mouseY);
                 case "Growth" -> growth(g, x, y, cw, ch, mouseX, mouseY);
@@ -380,6 +382,7 @@ public class CityScreen extends Screen {
                 }
                 default -> board(g, x, y, cw, ch);
             }
+            g.disableScissor();
         }
         if (links.draw(g, font)) hover = null;                          // [teleport] a name's buttons, over everything
         if (hover != null) g.renderComponentTooltip(font, hover, hoverX, hoverY);
@@ -585,7 +588,7 @@ public class CityScreen extends Screen {
     private void overview(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
         if (kpis.isEmpty()) readKpis();
         int cols = cw >= 420 ? 6 : 3, rows = (kpis.size() + cols - 1) / cols, gap = UiStyle.S1;
-        int kw = (cw - (cols - 1) * gap) / cols, kh = 40;
+        int kw = (cw - (cols - 1) * gap) / cols, kh = rows * (40 + gap) > ch / 2 ? 28 : 40;   // a short window: the cards without their note
         for (int i = 0; i < kpis.size(); i++) {
             int kx = x + (i % cols) * (kw + gap), ky = y + (i / cols) * (kh + gap);
             kpiCard(g, kpis.get(i), kx, ky, kw, kh, mx, my);
@@ -656,10 +659,15 @@ public class CityScreen extends Screen {
         UiStyle.card(g, x, y, w, h, k.colour());
         g.drawString(font, UiStyle.clip(font, k.label().toUpperCase(Locale.ROOT), w - 8), x + 6, y + 4, UiStyle.TEXT_FAINT, false);
         UiStyle.title(g, font, UiStyle.clip(font, k.value(), w - 10), x + 6, y + 15);
+        int sw = Math.min(40, w / 3), sx = x + w - sw - 4;
+        if (h < 36) {                                           // the short card: no note, the trend beside the value
+            if (k.gauge() < 0) UiStyle.trend(g, font, k.delta(), k.upIsGood(), sx - 10, y + 15);
+            if (in(mx, my, x, y, w, h)) tip(k.label() + ": " + k.value() + " (" + k.note() + ")\n" + k.tip(), mx, my);
+            return;
+        }
         int tx = x + 6;
         if (k.gauge() < 0) tx += UiStyle.trend(g, font, k.delta(), k.upIsGood(), tx, y + h - 11) + 2;
         small(g, UiStyle.clip(font, k.note(), (int) ((w - (tx - x) - 4) / 0.75)), tx, y + h - 10, UiStyle.TEXT_MUTED);
-        int sw = Math.min(40, w / 3), sx = x + w - sw - 4;
         if (k.gauge() >= 0) UiStyle.bar(g, sx, y + 18, sw, 4, k.gauge() / 100F, k.colour());
         else UiStyle.sparkline(g, sx, y + 14, sw, 12, k.spark(), RANGES[range] == 0 ? k.spark().length : RANGES[range], k.colour());
         if (in(mx, my, x, y, w, h)) tip(k.label() + ": " + k.value() + "\n" + k.tip(), mx, my);
