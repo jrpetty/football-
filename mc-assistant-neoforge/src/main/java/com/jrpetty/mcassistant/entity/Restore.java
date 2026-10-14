@@ -153,6 +153,26 @@ public final class Restore {
         return out;
     }
 
+    /**
+     * [styles] What it takes to rebuild a building from one drawing to another in place: every cell of the new drawing
+     * that does not hold what it wants (diff), and every cell of the old drawing the new one leaves empty that still
+     * holds the old building's block, to come out (FOREIGN, nothing wanted). Enqueue the result with Reason.RENOVATE.
+     */
+    public static List<Fix> diffRenovation(Level level, Ledger.Building b, String fromDesign, String toDesign) {
+        List<Fix> out = diff(level, b, toDesign);
+        java.util.Set<Long> keep = new java.util.HashSet<>();
+        for (BuildGoal.Placement p : BuildGoal.plan(toDesign, b.anchor(), b.facing(), 13)) keep.add(p.pos().asLong());
+        java.util.Set<Long> listed = new java.util.HashSet<>();
+        for (Fix f : out) listed.add(f.pos().asLong());
+        for (BuildGoal.Placement p : BuildGoal.plan(fromDesign, b.anchor(), b.facing(), 13)) {
+            if (p.part() == BuildGoal.Part.CLEAR || keep.contains(p.pos().asLong()) || !level.isLoaded(p.pos())) continue;
+            BlockState st = level.getBlockState(p.pos());
+            if (empty(st) || natural(st) || !listed.add(p.pos().asLong())) continue;
+            out.add(new Fix(p.pos().immutable(), null, Kind.FOREIGN, st));
+        }
+        return out;
+    }
+
     private static Direction bedHead(BuildGoal.Placement p, Direction facing) {
         return p.way() == Blueprints.Way.UP ? facing : Blueprints.world(p.way(), facing);
     }
