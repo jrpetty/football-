@@ -281,7 +281,7 @@ public final class Tidy {
             case ROAD -> "mending the street";
             case STRAY -> "taking up a stray block";
             case HALF_TREE -> "finishing a half-felled tree, and replanting";
-            case TORCH -> "taking up a torch left on the ground";
+            case TORCH -> "seeing to a torch left on the ground";
             case SCAR -> "grassing over a scar";
             case LEAVES -> "clearing leaves left hanging";
         };

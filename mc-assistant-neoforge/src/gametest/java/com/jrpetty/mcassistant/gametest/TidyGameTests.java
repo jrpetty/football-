@@ -290,14 +290,15 @@ public class TidyGameTests {
         final TidyAudit.Report[] before = { null };
         final boolean[] over = { false };
         final String[] verdict = { null };
-        // The verdict is given from the test's own ticks (an assertion thrown from a server tick listener is no test's).
-        final Runnable[] poll = new Runnable[1];
-        poll[0] = () -> {
-            if (verdict[0] == null) helper.runAfterDelay(100, poll[0]);
-            else if (verdict[0].isEmpty()) helper.succeed();
-            else helper.fail(verdict[0]);
-        };
-        helper.runAfterDelay(100, poll[0]);
+        // The verdict is given from the test's own sequence (an assertion thrown from a server tick listener is no test's).
+        helper.startSequence()
+            .thenWaitUntil(() -> {
+                if (verdict[0] == null) throw new net.minecraft.gametest.framework.GameTestAssertException("the town is still growing");
+            })
+            .thenExecute(() -> {
+                if (!verdict[0].isEmpty()) helper.fail(verdict[0]);
+            })
+            .thenSucceed();
         java.util.function.Consumer<net.neoforged.neoforge.event.tick.ServerTickEvent.Post> each = e -> {
             if (over[0]) return;
             try {

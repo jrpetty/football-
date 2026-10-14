@@ -104,8 +104,11 @@ final class TidyFixes {
                 if (level.getBlockState(top).is(Blocks.DIRT) && level.getBlockState(top.above()).isAir()) level.setBlockAndUpdate(top, Blocks.GRASS_BLOCK.defaultBlockState());
                 return any;
             }
-            case STRAY, LEAVES, TORCH -> {
+            case STRAY, LEAVES -> {
                 return takeUp(level, v, p);
+            }
+            case TORCH -> {
+                return torch(level, v, p);
             }
             case SCAFFOLD -> {
                 boolean any = false;
@@ -157,6 +160,32 @@ final class TidyFixes {
                 level.setBlockAndUpdate(p, Blocks.GRASS_BLOCK.defaultBlockState());
                 return true;
             }
+        }
+        return false;
+    }
+
+    /** Another light this near a dropped torch lights its ground well enough without it. */
+    static final int LIT_WITHOUT = 5;
+
+    /**
+     * A torch dropped on the ground: in a street or on the square, taken up (the street's own lamps light it); on open
+     * ground, set on a post of the stores' fence so the light stays where somebody wanted it, but looks meant; taken up
+     * only if another light is near, else left (somebody wanted the dark lit).
+     */
+    private static boolean torch(ServerLevel level, Villages.Village v, BlockPos p) {
+        BlockPos c = v.centre();
+        int dx = p.getX() - c.getX(), dz = p.getZ() - c.getZ();
+        if (TownPlan.isStreet(dx, dz) || TownPlan.isSquare(dx, dz)) return takeUp(level, v, p);
+        if (level.getBlockState(p.above()).isAir() && mayChange(level, v, p, TownBlocks.Why.LAMP)
+                && mayChange(level, v, p.above(), TownBlocks.Why.LAMP) && Crafts.fence(level, v)) {
+            level.setBlockAndUpdate(p, Blocks.OAK_FENCE.defaultBlockState());
+            level.setBlockAndUpdate(p.above(), Blocks.TORCH.defaultBlockState());
+            return true;
+        }
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-LIT_WITHOUT, -2, -LIT_WITHOUT), p.offset(LIT_WITHOUT, 3, LIT_WITHOUT))) {
+            if (q.equals(p)) continue;
+            BlockState st = level.getBlockState(q);
+            if (st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH) || st.is(Blocks.LANTERN) || st.is(Blocks.GLOWSTONE)) return takeUp(level, v, p);
         }
         return false;
     }

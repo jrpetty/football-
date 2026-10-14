@@ -10675,7 +10675,10 @@ town sends whatever hand it can spare for its works (couriers first). Worst firs
 * strikes scaffolding;
 * mends a pothole;
 * fells a half-felled tree and plants a sapling of the same kind where it stood (never on a street);
-* clears hanging leaves and takes up a dropped torch;
+* clears hanging leaves;
+* sees to a dropped torch: in a street or on the square it is taken up (the street lamps light those). On open ground
+  it is put on a fence post, so the light stays but looks like it was meant to be there. If the stores have no fence,
+  it is taken up only when another light is nearby;
 * grasses over a scar;
 * takes up the camp beds. A folk that still sleeps in one is moved, but only when a bed in a house is free, and
   never while it is asleep;
