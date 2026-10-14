@@ -722,6 +722,23 @@ public final class Raids {
         return true;
     }
 
+    // ------------------------------------------------------------------ [defence] for an army at the gates
+
+    /**
+     * [defence] The bell rung for something on the town (an enemy army, a siege): the gates shut, the town mustered on
+     * the square and the watch ringed round it (Muster), kept up until {@link #allClear}. Already ringing, it is kept
+     * up. Returns whether it was rung now.
+     */
+    public static boolean alarm(ServerLevel level, Villages.Village v, String why, @Nullable Direction from) {
+        return warAlarm(level, v, why, from, Long.MAX_VALUE / 4);
+    }
+
+    /** [defence] The all-clear: the bell stops now, whatever it rang for; the town goes back to its day. */
+    public static void allClear(ServerLevel level, Villages.Village v) {
+        Alarm a = ALARMS.get(v.id());
+        if (a != null) end(level, v, a);
+    }
+
     // ------------------------------------------------------------------ the tests
 
     /** Raise a raiding party now (the tests, the showcase). */

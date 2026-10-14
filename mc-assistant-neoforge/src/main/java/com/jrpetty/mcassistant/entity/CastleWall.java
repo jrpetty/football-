@@ -1240,6 +1240,40 @@ public final class CastleWall {
         return out;
     }
 
+    /**
+     * A gatehouse of the town wall: the way out it faces, the middle of its gateway at the road's level on the outer
+     * face (where an attacker comes at it), its doors (lower halves; empty until they are hung), and a spot just
+     * inside it in the street. Whether it stands: its doors hung.
+     */
+    public record Gate(Direction out, BlockPos gateway, List<BlockPos> doors, BlockPos inside, boolean stands) {}
+
+    /** The town wall's gatehouses, one on each avenue (empty while the wall is off or its ground not loaded). */
+    public static List<Gate> gates(ServerLevel level, UUID id) {
+        List<Gate> out = new ArrayList<>();
+        Villages.Village v = Villages.get(id);
+        if (v == null || !live()) return out;
+        State st = STATES.computeIfAbsent(id, k -> new State());
+        if (st.wall == null) work(level, v, st, FREE, 0);
+        Wall w = st.wall;
+        if (w == null) return out;
+        BlockPos c = v.centre();
+        for (int side = 0; side < 4; side++) {
+            int floor = w.fits[side].floor(0), line = w.sides.of(side);
+            List<BlockPos> doors = new ArrayList<>();
+            boolean hung = true;
+            for (int a = -WallPlan.GATE; a <= WallPlan.GATE; a++) {
+                int[] o = WallPlan.offset(side, line + WallPlan.THICK - 1, a);
+                BlockPos d = new BlockPos(c.getX() + o[0], floor, c.getZ() + o[1]);
+                if (level.hasChunk(d.getX() >> 4, d.getZ() >> 4) && level.getBlockState(d).getBlock() instanceof DoorBlock) doors.add(d);
+                else hung = false;
+            }
+            int[] g = WallPlan.offset(side, line + WallPlan.THICK - 1, 0), in = WallPlan.offset(side, line - 2, 0);
+            out.add(new Gate(outward(side), new BlockPos(c.getX() + g[0], floor, c.getZ() + g[1]), doors,
+                new BlockPos(c.getX() + in[0], floor, c.getZ() + in[1]), hung));
+        }
+        return out;
+    }
+
     /** Where a raiding band gathers, out past the wall if it stands: never nearer the heart than this. */
     public static int outside(UUID id, int near) {
         if (!live() || !stands(id)) return near;
