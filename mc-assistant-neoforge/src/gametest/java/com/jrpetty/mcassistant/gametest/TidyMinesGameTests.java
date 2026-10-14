@@ -171,7 +171,8 @@ public class TidyMinesGameTests {
             keepAtWork(level, f);
             long t = helper.getTick();
             int standing = Footholds.countForTests(level, floor, 12);
-            if (t % 100 == 0) Kit.log("tmn02 @" + t + " at " + f.blockPosition().toShortString() + ", steps standing " + standing + " — " + f.debugLine());
+            if (t % 100 == 0) Kit.log("tmn02 @" + t + " at " + f.blockPosition().toShortString() + ", steps standing " + standing
+                + " " + Footholds.standingNear(level, floor, 12) + " — " + f.debugLine());
             if (away[0] < 0 && standing >= 3) {
                 // Called away: the job off, and off somewhere else.
                 away[0] = t;
@@ -452,6 +453,7 @@ public class TidyMinesGameTests {
             }
             int standing = Footholds.countForTests(level, floor, 10);
             built[0] = Math.max(built[0], standing);
+            if (t % 50 == 0 && t < 600) Kit.log("tmn07 @" + t + " y " + String.format(java.util.Locale.ROOT, "%.2f", f.getY()) + " standing " + standing);
             if (t % 200 == 0) Kit.log("tmn07 @" + t + " at " + f.blockPosition().toShortString() + ": ore showing " + showing + ", steps standing " + standing + " — " + f.debugLine());
             if (t > 20 && showing == 0 && standing == 0) {
                 BlockState h = level.getBlockState(hidden);

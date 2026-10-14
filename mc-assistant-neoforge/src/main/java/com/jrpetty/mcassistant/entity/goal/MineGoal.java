@@ -1558,6 +1558,7 @@ public class MineGoal extends Goal {
             BlockPos feet = assistant.feetPos();
             if (inReach(ore)) {
                 com.jrpetty.mcassistant.entity.Footholds.stillUp(assistant);
+                assistant.getNavigation().stop();                       // there: it stands to its work
                 beginDig(ore, false);
                 if (currentDig != null) return;
                 why = "not mine to break";

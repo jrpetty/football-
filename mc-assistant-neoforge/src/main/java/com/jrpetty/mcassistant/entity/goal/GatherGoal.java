@@ -386,6 +386,7 @@ public class GatherGoal extends Goal {
 
         // In range: put in the work, then break the block and sweep the drops.
         com.jrpetty.mcassistant.entity.Footholds.stillUp(assistant);   // [mines] at work up its steps: they stay under it
+        if (com.jrpetty.mcassistant.entity.Footholds.climbing(assistant)) assistant.getNavigation().stop();   // [mines] and it stays on them
         if (++workTicks < workNeeded) {
             if (workTicks % 8 == 0) {
                 assistant.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
