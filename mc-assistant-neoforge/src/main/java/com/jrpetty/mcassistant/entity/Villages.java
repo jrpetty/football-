@@ -392,6 +392,7 @@ public final class Villages {
         Workshop.resetForTests();
         Store.resetForTests();                                     // [econ-store]
         Sweepers.resetForTests();
+        Tidy.resetForTests();                                      // [tidy]
         Meals.resetForTests();
         Stables.resetForTests();
         TownLook.resetForTests();           // [batchE] the town's look

@@ -589,6 +589,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Villages.Village home = Villages.get(ownerId());
             if (home != null) {
                 TownWork.tick(townLevel, home);
+                Tidy.tick(townLevel, home);             // [tidy] the tidy crew: floors in the buildings, the eyesores, the town's looks
                 TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
                 Museum.tick(townLevel, home);           // the museum's finds and its archive
                 Library.tick(townLevel, home);          // [library] its books written, shelved, lent and read

@@ -524,7 +524,7 @@ public class BuildGoal extends Goal {
             // Clearing takes nothing out of the pack. A plant to be cleared stands in a soft cell, and counted
             // here it asked for "7 nothing" that no stores could ever hold: no house was built for sixty days.
             if (p.part() == Part.CLEAR) continue;
-            if (soft(assistant.level().getBlockState(p.pos()))) {
+            if (wants(p, assistant.level().getBlockState(p.pos()))) {                // [tidy] bare earth under a floor too
                 pending.merge(p.part(), 1, Integer::sum);
             }
         }
@@ -666,6 +666,27 @@ public class BuildGoal extends Goal {
      */
     public static boolean soft(BlockState st) {
         return st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS);
+    }
+
+    /**
+     * [tidy] Bare ground the world made (grass, dirt, podzol, mycelium, moss, a worn path) where the drawing wants a
+     * block laid: the floor and the footing are laid over it, not left as the meadow they went up on. A grass block
+     * is no soft cell, so it used to count as built: every house on a meadow kept its grass for a floor, and the
+     * tall grass and flowers came up through it again.
+     */
+    public static boolean earthUnderfoot(Placement p, BlockState st) {
+        return p.part() == Part.BLOCK && p.style() != Blueprints.Style.SOIL && bareEarth(st);
+    }
+
+    /** [tidy] Ground grass grows on, or will: no floor of a building. */
+    public static boolean bareEarth(BlockState st) {
+        return st.is(Blocks.GRASS_BLOCK) || st.is(Blocks.DIRT) || st.is(Blocks.COARSE_DIRT) || st.is(Blocks.PODZOL)
+            || st.is(Blocks.MYCELIUM) || st.is(Blocks.ROOTED_DIRT) || st.is(Blocks.MOSS_BLOCK) || st.is(Blocks.DIRT_PATH);
+    }
+
+    /** [tidy] Does this cell still want its part: open, or bare earth where the drawing lays a block (not a park's lawn)? */
+    private boolean wants(Placement p, BlockState st) {
+        return soft(st) || !com.jrpetty.mcassistant.entity.Park.STRUCTURE.equals(building) && earthUnderfoot(p, st);
     }
 
     /** May the wall stand on this column: open ground the world made, not a floor, a
@@ -814,7 +835,7 @@ public class BuildGoal extends Goal {
                 if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st) || isWildPlant(st)) { target = p; break; }   // [econ-store] a plant
                 // [districts] Earth above a park's lawn, still to be dug away (entity/ParkGround).
                 if (com.jrpetty.mcassistant.entity.ParkGround.dig(p, st)) { target = p; break; }
-            } else if (soft(st)) {
+            } else if (wants(p, st)) {                                       // [tidy] or bare earth where a floor goes
                 if (!assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p.pos()))) {
                     target = p;
                     break;
@@ -1030,6 +1051,11 @@ public class BuildGoal extends Goal {
                 return;
             }
             state = stateFor(part, target.way());
+        }
+        // [tidy] Bare earth where the floor goes: the turf lifted (the earth into the pack) and the floor laid in its place.
+        if (bareEarth(assistant.level().getBlockState(pos))) {
+            ItemStack turf = assistant.insertItem(new ItemStack(Items.DIRT));
+            if (!turf.isEmpty()) net.minecraft.world.level.block.Block.popResource(assistant.level(), pos.above(), turf);
         }
         if (part == Part.BED) {
             // A bed is TWO cells, which no other part is. If the second cell

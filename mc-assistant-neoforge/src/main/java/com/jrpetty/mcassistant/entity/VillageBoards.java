@@ -480,6 +480,8 @@ public final class VillageBoards {
         out.addAll(Auctions.board(level, id));                     // [fleet] the auction on the square: today's lots, or the last sale
         int content = Contentment.score(id);
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
+        String looks = Tidy.boardLine(level, id);                  // [tidy] the town's looks, what spoils them, clean-up day
+        if (looks != null) { Tidy.Looks l = Tidy.looks(id); out.add((l != null && l.score() >= Tidy.PROUD ? "RG" : l != null && l.score() < Tidy.UNTIDY ? "RW" : "RN") + "|" + looks); }
         String alarm = Raids.why(id);
         out.add(alarm != null ? "RB|THE BELL IS RINGING: " + alarm + "!" : "RM|The watch: all quiet.");
         out.addAll(Crime.board(level, id));                 // [crime] a theft reported, a trial, the stocks, the month's crime
