@@ -195,11 +195,14 @@ public final class Hospitality {
     }
 
     /** How many more of the cook's trade the town's shape should count, past its usual cooks (Villages.target): every
-     *  job wanted but the head cook's, and the restaurant's line cooks. */
+     *  job its places want, the head cook's too once it has a place to eat out (a small town's share of cooks can be
+     *  none, and its kitchen was then the first hand the town moved to other work), and the restaurant's line cooks. */
     public static int staffWanted(@Nullable UUID village) {
         if (village == null) return 0;
+        Map<Role, Integer> w = want(village);
+        boolean places = DiningPlaces.stands(village, "cafe") || DiningPlaces.stands(village, "tavern") || DiningPlaces.stands(village, DiningPlaces.RESTAURANT);
         int n = 0;
-        for (Map.Entry<Role, Integer> e : want(village).entrySet()) if (e.getKey() != Role.HEAD_COOK) n += e.getValue();
+        for (Map.Entry<Role, Integer> e : w.entrySet()) if (e.getKey() != Role.HEAD_COOK || places) n += e.getValue();
         return n;
     }
 
