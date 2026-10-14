@@ -55,7 +55,11 @@ public final class DoorWays {
 
     /** One thing to do for a door's way: dig out a cell, or lay a block in one. No place: the way runs
      *  into something built, and is not the town's to make. */
-    public record Fix(@Nullable BlockPos pos, boolean dig) {}
+    public record Fix(@Nullable BlockPos pos, boolean dig, boolean top) {
+        public Fix(@Nullable BlockPos pos, boolean dig) {
+            this(pos, dig, false);
+        }
+    }
 
     private static final Fix BLOCKED = new Fix(null, true);
 
@@ -97,7 +101,9 @@ public final class DoorWays {
                 for (ItemStack drop : Block.getDrops(there, level, fix.pos(), null)) TownWork.give(level, v, drop);
                 level.destroyBlock(fix.pos(), false);
             } else {
-                BlockState lay = takeFill(level, v, fix.pos().getY() == d.pos().getY() - 1);
+                // [paths] The top of a step (the block a folk treads on) in cobblestone, like the doorstep: a step of
+                // bare earth is a scar the rain and the sweepers argue over. Earth only under it, out of sight.
+                BlockState lay = takeFill(level, v, fix.pos().getY() == d.pos().getY() - 1 || fix.top());
                 if (lay == null) return done > 0 ? 1 : 0;         // nothing in the stores to lay: another day
                 level.setBlockAndUpdate(fix.pos(), lay);
             }
@@ -187,7 +193,7 @@ public final class DoorWays {
                 if (!solid(level, feet.atY(bottom - 1))) return BLOCKED;      // too deep a hole to build up
                 BlockState there = level.getBlockState(feet.atY(bottom));
                 if (!there.canBeReplaced() || there.getFluidState().is(FluidTags.LAVA)) return BLOCKED;
-                return new Fix(feet.atY(bottom), false);
+                return new Fix(feet.atY(bottom), false, bottom == feet.getY() - 1);   // [paths] the top of the fill: trodden on
             }
             walk = want;
             prev = col;
