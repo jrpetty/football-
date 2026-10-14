@@ -126,6 +126,8 @@ public class MineGoal extends Goal {
     @Nullable private BlockPos reachFrom;
     @Nullable private BlockPos reachBack;
     private int reachTicks;
+    /** Ore this run tried for and could not get at: not gone after again this run (it is noted for later). */
+    private final java.util.HashSet<Long> givenUp = new java.util.HashSet<>();
     /** A reach that takes longer than this is given up (the ore noted for another day); and the walk back after it. */
     private static final int REACH_TICKS = 600, REACH_BACK_TICKS = 300;
     /** Where it may stand to get at an ore: within this many blocks of it across, and how many places it path-checks. */
@@ -196,6 +198,7 @@ public class MineGoal extends Goal {
         this.reachFor = null;
         this.reachFrom = null;
         this.reachBack = null;
+        this.givenUp.clear();
         com.jrpetty.mcassistant.entity.WorkZone plot = assistant.workZone();
         this.stairsKey = com.jrpetty.mcassistant.entity.MineStairs.plotKey(plot != null ? plot.center() : cursor);
         this.townGround = townGroundNow();
@@ -1482,7 +1485,7 @@ public class MineGoal extends Goal {
             if (assistant.level() instanceof net.minecraft.server.level.ServerLevel sl && mayDig(p)) com.jrpetty.mcassistant.entity.OreNotes.noted(sl, p);
             return;
         }
-        if (veinQueue.contains(p) || !mayDig(p) || !com.jrpetty.mcassistant.entity.OreSight.harvestable(assistant, s)) return;
+        if (veinQueue.contains(p) || givenUp.contains(p.asLong()) || !mayDig(p) || !com.jrpetty.mcassistant.entity.OreSight.harvestable(assistant, s)) return;
         if (stairFloors.contains(p.asLong()) || com.jrpetty.mcassistant.entity.MineStairs.isFloor(assistant.level(), p)) return;
         if (com.jrpetty.mcassistant.entity.Footholds.isKept(assistant.level(), p)) return;
         if (s.is(BlockTags.IRON_ORES)) veinQueue.addFirst(p); else veinQueue.addLast(p);
@@ -1496,6 +1499,7 @@ public class MineGoal extends Goal {
 
     /** An ore seen and left (out of reach, the way up, the run over): on the books for whoever next works near it. */
     private void noteForLater(BlockPos p) {
+        givenUp.add(p.asLong());
         com.jrpetty.mcassistant.entity.OreSight.note(assistant, "left the ore at " + p.toShortString() + " for later");
         if (assistant.level() instanceof net.minecraft.server.level.ServerLevel sl && mayDig(p)) com.jrpetty.mcassistant.entity.OreNotes.noted(sl, p);
     }
@@ -1556,12 +1560,14 @@ public class MineGoal extends Goal {
                 beginDig(ore, false);
                 if (currentDig != null) return;
                 done = true;                                   // not its to break after all
-            } else if (feet.getX() == reachFrom.getX() && feet.getZ() == reachFrom.getZ() && feet.getY() >= reachFrom.getY()) {
+            } else if (byIt(feet, ore) && feet.getY() >= reachFrom.getY() && assistant.onGround()) {
                 if (com.jrpetty.mcassistant.entity.Footholds.rise(assistant, com.jrpetty.mcassistant.entity.Footholds.Purpose.CLIMB)) return;
                 done = true;                                   // no blocks left, or its head against the roof
             } else {
                 if (assistant.getNavigation().isDone()) {
                     assistant.getNavigation().moveTo(reachFrom.getX() + 0.5, reachFrom.getY(), reachFrom.getZ() + 0.5, 1.0D);
+                    // Within a block of it the path-finder calls it there: the last step is taken by hand.
+                    assistant.getMoveControl().setWantedPosition(reachFrom.getX() + 0.5, reachFrom.getY(), reachFrom.getZ() + 0.5, 1.0D);
                 }
                 return;
             }
@@ -1582,6 +1588,11 @@ public class MineGoal extends Goal {
         reachFrom = null;
         reachBack = null;
         lookAgain = true;
+    }
+
+    /** Standing in a column by the ore (as near it across as the places it chooses to build up from). */
+    private static boolean byIt(BlockPos feet, BlockPos ore) {
+        return Math.abs(feet.getX() - ore.getX()) <= REACH_ACROSS && Math.abs(feet.getZ() - ore.getZ()) <= REACH_ACROSS;
     }
 
     /** A place to stand: a sturdy floor, two blocks of room, dry. */

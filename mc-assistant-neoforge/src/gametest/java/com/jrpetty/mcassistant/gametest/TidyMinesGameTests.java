@@ -67,17 +67,14 @@ public class TidyMinesGameTests {
     }
 
     /**
-     * A folk of a town whose heart is well off to one side (not its founder, who has the town to build), on no trade
-     * (a miner's plot is moved to its town's mine), doing only the work the test gives it, a pick and cobblestone in
-     * its pack, stood here. The test gives it its work at once: a hand with nothing queued takes cobblestone it carries
-     * back to the builders' stores.
+     * The one folk of a town whose heart is well off to one side, on no trade and left to no work of its own choosing
+     * (a second folk is given a trade by its town at once, and a miner's plot is moved to its town's mine), a pick and
+     * cobblestone in its pack, stood here. The test gives it its work at once: a hand with nothing queued takes the
+     * cobblestone it carries back to the builders' stores.
      */
     private static VillageFolkEntity folk(ServerLevel level, int x, BlockPos at, ItemStack pick) {
-        BlockPos heart = Kit.surface(level, x - 40, Z + 30);
-        VillageFolkEntity founder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
-        if (founder == null) return null;
-        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart.south(3), 0.0F);
-        if (f == null || !founder.ownerId().equals(f.ownerId())) return null;
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x - 40, Z + 30), 0.0F);
+        if (f == null) return null;
         f.setAutonomous(false);
         f.clearQueue();
         f.getInventoryItems().clear();
@@ -155,7 +152,7 @@ public class TidyMinesGameTests {
 
     /**
      * The same climb, cut short three steps up (its job called off, and the folk called away): its steps stand,
-     * booked; the next time it is by them it takes them all down, back into its pack.
+     * booked; back at the work, it takes them all down first, back into its pack.
      */
     @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "tmn02_interrupted")
     public static void tmn02_interrupted(GameTestHelper helper) {
@@ -169,7 +166,7 @@ public class TidyMinesGameTests {
         helper.assertTrue(f != null, "a folk");
         f.enqueueFront(Job.gather(GatherGoal.Kind.IRON, 1));
         long[] away = { -1 }, back = { -1 };
-        int[] left = { 0 };
+        int[] left = { 0 }, packed = { 0 };
         helper.onEachTick(() -> {
             keepAtWork(level, f);
             long t = helper.getTick();
@@ -188,15 +185,18 @@ public class TidyMinesGameTests {
             if (back[0] < 0 && t - away[0] >= 100) {
                 helper.assertTrue(Footholds.countForTests(level, floor, 12) == left[0], "its steps wait, booked, while it is away");
                 back[0] = t;
+                packed[0] = cobble(f);
                 f.moveTo(floor.getX() + 1.5, floor.getY(), floor.getZ() + 2.5, 0.0F, 0.0F);   // beside the foot of its steps
+                f.enqueueFront(Job.gather(GatherGoal.Kind.IRON, 1));                          // back at the work
                 Kit.log("tmn02 back by them at " + t);
                 return;
             }
             if (back[0] > 0 && standing == 0) {
                 int blocks = cobbleBlocks(level, floor.offset(-3, 0, -3), ore.offset(3, -1, 3));
-                Kit.log("tmn02 cleared at " + t + " (" + (t - back[0]) + " after it came back): cobble in pack " + cobble(f) + "/" + COBBLE + ", left standing " + blocks);
+                Kit.log("tmn02 cleared at " + t + " (" + (t - back[0]) + " after it came back): cobble in pack " + cobble(f) + " (" + packed[0]
+                    + " before, " + left[0] + " steps), left standing " + blocks);
                 helper.assertTrue(blocks == 0, "the leftovers are taken down: " + blocks + " standing");
-                helper.assertTrue(cobble(f) == COBBLE, "back in its pack: " + cobble(f) + "/" + COBBLE);
+                helper.assertTrue(cobble(f) == packed[0] + left[0], "back in its pack: " + cobble(f) + " = " + packed[0] + " + " + left[0]);
                 helper.succeed();
             }
         });

@@ -111,15 +111,17 @@ public final class OreSight {
      */
     public static final class Look {
         private final int sight, side, cells;
+        private final java.util.function.Predicate<BlockState> wanted;
 
-        /** A look as far as a folk notices ore at its work (SIGHT). */
+        /** A look for ore as far as a folk notices it at its work (SIGHT). */
         public Look() {
-            this(SIGHT);
+            this(SIGHT, OreSight::isOre);
         }
 
-        /** A look this far round (a cave team lighting a cave looks across it: CAVE_SIGHT). */
-        public Look(int sight) {
+        /** A look this far round for these blocks (a cave team lighting a cave looks across it for ore and obsidian). */
+        public Look(int sight, java.util.function.Predicate<BlockState> wanted) {
             this.sight = sight;
+            this.wanted = wanted;
             this.side = 2 * sight + 1;
             this.cells = side * side * side;
             this.index = cells;
@@ -163,12 +165,12 @@ public final class OreSight {
                 cell.set(ox + x, oy + y, oz + z);
                 double dx = cell.getX() + 0.5 - eye.x, dy = cell.getY() + 0.5 - eye.y, dz = cell.getZ() + 0.5 - eye.z;
                 if (dx * dx + dy * dy + dz * dz > most) continue;
-                if (!level.isLoaded(cell) || !isOre(level.getBlockState(cell))) continue;
+                if (!level.isLoaded(cell) || !wanted.test(level.getBlockState(cell))) continue;
                 if (exposed(level, cell)) showing.add(cell.immutable());
             }
             for (int rays = 0; rays < RAYS_PER_TICK && !showing.isEmpty(); rays++) {
                 BlockPos p = showing.poll();
-                if (isOre(level.getBlockState(p)) && seen(level, eye, p, a)) seen.accept(p);
+                if (wanted.test(level.getBlockState(p)) && seen(level, eye, p, a)) seen.accept(p);
             }
         }
     }

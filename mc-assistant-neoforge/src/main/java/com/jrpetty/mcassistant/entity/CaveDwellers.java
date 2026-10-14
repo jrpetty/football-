@@ -419,7 +419,7 @@ public final class CaveDwellers {
         @Nullable UUID foe;
         int foeTick, ateTick = -1000, torchTick = -1000, spokeTick = -1000, followTick = -1000, climbs;
         /** [mines] Its look round for ore that shows (OreSight), and where it last began one. */
-        final OreSight.Look look = new OreSight.Look(OreSight.CAVE_SIGHT);
+        final OreSight.Look look = new OreSight.Look(OreSight.CAVE_SIGHT, st -> oreOf(st) != null);
         @Nullable BlockPos lookedFrom;
         boolean lookAgain = true;
         /** Its crafting table set down (CaveCraft), when, and what it is making; when it last looked at its tools. */
@@ -2497,11 +2497,13 @@ public final class CaveDwellers {
         String ore = oreOf(st);
         if (ore == null) return;
         List<Vein> list = veins(p.village, p.caveKey);
+        List<BlockPos> blocks = flood(level, at, ore);
         for (Vein v : list) {
             if (!v.ore().equals(ore)) continue;
-            if (v.at().equals(at) || "todo".equals(v.state()) && v.at().distSqr(at) <= 4) return;
+            if (v.at().equals(at)) return;
+            if ("mined".equals(v.state())) continue;                   // what is left of a vein taken is a vein of its own
+            for (BlockPos q : blocks) if (q.distSqr(v.at()) <= 4) return;   // a vein already on the list
         }
-        List<BlockPos> blocks = flood(level, at, ore);
         String state = takes(picks(level, p), st) ? "todo" : "waiting";
         list.add(new Vein(ore, at, blocks.size(), 0, state));
         saveVeins(p.village, p.caveKey, list);
@@ -2766,8 +2768,8 @@ public final class CaveDwellers {
         if (reach > 4.3 * 4.3) {
             // [mines] Over its head, out of reach from the cave floor: up to it on steps of its own, from right under it.
             BlockPos under = standBy(level, f, b) == null ? underIt(level, f, b) : null;
-            if (under != null && feet.getX() == under.getX() && feet.getZ() == under.getZ() && feet.getY() >= under.getY()
-                    && Footholds.rise(f, Footholds.Purpose.CLIMB)) {
+            if (under != null && Math.abs(feet.getX() - b.getX()) <= 1 && Math.abs(feet.getZ() - b.getZ()) <= 1
+                    && feet.getY() >= under.getY() && f.onGround() && Footholds.rise(f, Footholds.Purpose.CLIMB)) {
                 d.digTick = f.tickCount;
                 f.hobbyNow = "building up to the " + (ore == null ? "rock" : ore);
                 return true;
