@@ -219,6 +219,7 @@ public final class Dining {
         DiningPlaces.resetForTests();
         Hospitality.resetForTests();
         ROUND.clear();
+        STAFF_FED.clear();
         nextId = 1;
         quickForTests(false);
     }
@@ -358,6 +359,13 @@ public final class Dining {
                 continue;
             }
             Task t = e.getValue();
+            if (f.ownerId() != null && Raids.underAlarm(f.ownerId())) {      // the bell: everybody to safety, the work back in the queue
+                giveBack(t);
+                it.remove();
+                DOING.remove(e.getKey());
+                dropProp(f);
+                continue;
+            }
             boolean over;
             try {
                 over = drive(level, f, t, now);
@@ -401,7 +409,7 @@ public final class Dining {
     private static void handOut(ServerLevel level, long now) {
         for (Order o : sortedOrders()) {
             Place p = placeOf(level, o);
-            if (p == null) continue;
+            if (p == null || Raids.underAlarm(o.village)) continue;
             for (int i = 0; i < o.lines.size(); i++) {
                 Line l = o.lines.get(i);
                 Dish d = l.dishDef();
@@ -635,6 +643,15 @@ public final class Dining {
      * rest for the next orders. Empty if nothing can be had (and nothing taken).
      */
     static ItemStack produce(ServerLevel level, Villages.Village v, Place p, Dish d, @Nullable VillageFolkEntity cook) {
+        WorkStock.beginWith(shelf(level, p));                     // the kitchen's own pantry first, then the stores
+        try {
+            return producing(level, v, p, d, cook);
+        } finally {
+            WorkStock.end();
+        }
+    }
+
+    private static ItemStack producing(ServerLevel level, Villages.Village v, Place p, Dish d, @Nullable VillageFolkEntity cook) {
         String cut = DiningMenu.cutKey(p, d);
         int left = DiningMenu.CUT.getOrDefault(cut, 0);
         if (d.portions() > 1 && left > 0) {
@@ -710,7 +727,7 @@ public final class Dining {
     private static void refund(ServerPlayer sp, Order o, int coins) {
         int back = Math.min(coins, o.paidCoins);
         if (back <= 0) return;
-        Ledger.addCoins(o.village, -back);
+        Ledger.takeCoins(o.village, back);
         o.paidCoins -= back;
         ItemStack c = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), back);
         if (!sp.getInventory().add(c)) sp.drop(c, false);
@@ -925,12 +942,49 @@ public final class Dining {
 
     // ------------------------------------------------------------------ the house's crockery
 
+    /** What a kitchen's pantry keeps, filled from the stores by the couriers (WorkStock.sendFor): the roasts' and the
+     *  fish's raw makings, the vegetables and the bowls for the stews, the baking's wheat, eggs and sugar. Data. */
+    static final List<WorkStock.Making> PANTRY = List.of(
+        pantry(Items.BEEF, 4), pantry(Items.PORKCHOP, 4), pantry(Items.MUTTON, 4), pantry(Items.CHICKEN, 4), pantry(Items.COD, 4),
+        pantry(Items.SALMON, 4), pantry(Items.RABBIT, 2), pantry(Items.POTATO, 8), pantry(Items.CARROT, 4), pantry(Items.BEETROOT, 6),
+        pantry(Items.BROWN_MUSHROOM, 2), pantry(Items.RED_MUSHROOM, 2), pantry(Items.BOWL, 4), pantry(Items.WHEAT, 8), pantry(Items.EGG, 4),
+        pantry(Items.SUGAR, 4));
+
+    private static WorkStock.Making pantry(net.minecraft.world.item.Item it, int keep) {
+        return new WorkStock.Making(s -> s.is(it) && s.getComponentsPatch().isEmpty(), it, keep, Bench.words(it, keep));
+    }
+
+    /**
+     * The kitchen's pantry kept (the round, once a minute): its chest named for it (so the stores never reach in: one
+     * truth), and what it is running low of sent for from the stores, for the couriers to carry over (StoreDeliveries).
+     */
+    static void keepPantry(ServerLevel level, Villages.Village v, Place p) {
+        BlockPos at = shelfPos(level, p);
+        if (at == null || !(level.getBlockEntity(at) instanceof Container c)) return;
+        String name = cap(p.words().replace("the ", "")) + ": kitchen";
+        if (level.getBlockEntity(at) instanceof net.minecraft.world.Nameable n && (n.getCustomName() == null || !n.getCustomName().getString().equals(name))
+                && (n.getCustomName() == null || ZoneChests.isVillageStore(level.getBlockEntity(at)))) {
+            level.getBlockEntity(at).applyComponents(net.minecraft.core.component.DataComponentMap.builder()
+                .set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal(name)).build(),
+                net.minecraft.core.component.DataComponentPatch.EMPTY);
+            level.getBlockEntity(at).setChanged();
+            Villages.forgetStores(v.id());
+        }
+        WorkStock.sendFor(level, v, PANTRY, name, at, c);
+    }
+
     /** The place's shelf: the first chest in it (else the town's stores). */
     @Nullable
     static Container shelf(ServerLevel level, Place p) {
+        BlockPos at = shelfPos(level, p);
+        return at != null && level.getBlockEntity(at) instanceof Container c ? c : null;
+    }
+
+    @Nullable
+    private static BlockPos shelfPos(ServerLevel level, Place p) {
         for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement pl
                 : com.jrpetty.mcassistant.entity.goal.BuildGoal.plan(p.building.structure(), p.building.anchor(), p.building.facing(), 13)) {
-            if (level.getBlockState(pl.pos()).getBlock() instanceof ChestBlock && level.getBlockEntity(pl.pos()) instanceof Container c) return c;
+            if (level.getBlockState(pl.pos()).getBlock() instanceof ChestBlock) return pl.pos();
         }
         return null;
     }
@@ -1151,6 +1205,7 @@ public final class Dining {
         ROUND.put(v.id(), now);
         long day = level.getDayTime() / 24000L;
         for (Place p : DiningPlaces.of(level, v.id())) {
+            keepPantry(level, v, p);
             keepCrockery(level, v, p);
             for (Table t : p.tables) {
                 BlockState s = level.getBlockState(t.cell());
@@ -1158,11 +1213,38 @@ public final class Dining {
                 if (atTable(p.building, t.number()) != null) continue;
                 TO_CLEAR.computeIfAbsent(p.building.anchor().asLong(), k -> ConcurrentHashMap.newKeySet()).add(t.number());
             }
+            staffMeal(level, v, p, day);
             String key = p.building.anchor().asLong() + "/" + day;
             if (!BOARDED.containsKey(key)) {
                 DiningPlaces.writeBoard(level, v, p, DiningMenu.board(level, p));
                 BOARDED.put(key, now);
             }
+        }
+    }
+
+    private static final Map<String, Long> STAFF_FED = new ConcurrentHashMap<>();
+    /** How long after closing the staff sit down to their supper (longer than the round's minute, so it is not missed). */
+    static final long STAFF_MEAL_WINDOW = 1500L;
+
+    /**
+     * The staff's supper, once the place has shut for the night (the first round in the half hour after closing): each
+     * of the trade still at the place eats a plain meal out of the stores at the town's charge, and it is their supper.
+     */
+    static void staffMeal(ServerLevel level, Villages.Village v, Place p, long day) {
+        long t = level.getDayTime() % 24000L;
+        int close = p.kind.role.hours.close();
+        if (Math.floorMod(t - close, 24000L) > STAFF_MEAL_WINDOW) return;
+        String key = p.building.anchor().asLong() + "/" + day;
+        if (STAFF_FED.putIfAbsent(key, day) != null) return;
+        for (VillageFolkEntity f : Hospitality.trade(v.id())) {
+            if (f.isSleeping() || f.distanceToSqr(p.centre().getX(), p.centre().getY(), p.centre().getZ()) > 24 * 24) continue;
+            ItemStack food = Crafts.takeOne(level, v, Meals.FOOD);
+            if (food.isEmpty()) break;
+            FoodProperties fp = food.get(net.minecraft.core.component.DataComponents.FOOD);
+            if (fp != null) f.heal(fp.nutrition() * 0.5F);
+            f.meals().ate(level.getGameTime(), food.getHoverName().getString().toLowerCase(java.util.Locale.ROOT));
+            Meals.ateOut(f, level);
+            FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Staff supper at last.", "That's the last table. Sit down, everyone, and eat."));
         }
     }
 

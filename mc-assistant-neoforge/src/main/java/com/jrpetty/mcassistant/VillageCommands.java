@@ -341,6 +341,7 @@ public final class VillageCommands {
             // [econ-trade] Trade between towns: the trade book, the deals, the talks (TradeCommands).
             .then(TradeCommands.build())
             .then(WagonCommands.build())                       // [wagons] the trade wagons
+            .then(DiningCommands.build())                      // [dining] the cafés, taverns and restaurants, and their staff
             // [war-scouting] The war map, the reports on the enemy, the pickets (ScoutingCommands).
             .then(ScoutingCommands.build())
             // What every village you have met thinks of you.

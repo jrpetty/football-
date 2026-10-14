@@ -98,7 +98,7 @@ public class DiningGameTests {
         UUID id = first.ownerId();
         List<VillageFolkEntity> folk = new ArrayList<>();
         folk.add(first);
-        for (int i = 0; i < 2 + others; i++) {
+        for (int i = 0; i < 3 + others; i++) {
             VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart.south(2 + (i % 6)).east(i / 6), 0.0F);
             helper.assertTrue(f != null && id.equals(f.ownerId()), "folk " + i);
             f.setJob(StationTask.NONE);
@@ -125,7 +125,8 @@ public class DiningGameTests {
         DiningPlaces.Place place = DiningPlaces.place(level, id, b);
         helper.assertTrue(place != null && !place.tables.isEmpty(), "the restaurant is a place to eat with tables");
         Dining.quickForTests(true);
-        VillageFolkEntity cook = folk.get(0), waiter = folk.get(1), washer = folk.get(2);
+        // (Not the town's first folk: it leads the town, and keeps the leader's hours.)
+        VillageFolkEntity cook = folk.get(1), waiter = folk.get(2), washer = folk.get(3);
         Hospitality.appointForTests(level, v, cook, Hospitality.Role.HEAD_COOK);
         Hospitality.appointForTests(level, v, waiter, Hospitality.Role.WAITER);
         Hospitality.appointForTests(level, v, washer, Hospitality.Role.POT_WASHER);
@@ -336,13 +337,13 @@ public class DiningGameTests {
         ServerLevel level = helper.getLevel();
         ItemStack cider = Cafe.drink(Cafe.DRINKS.get(0));
         Town t = town(helper, 1881300, 1, new ItemStack(Items.BEEF, 6), cider.copyWithCount(4));
-        VillageFolkEntity diner = t.folk().get(3);
+        VillageFolkEntity diner = t.folk().get(4);
         int[] start = new int[3];
         helper.startSequence()
             .thenExecuteAfter(5, () -> {
                 diner.earn(40);
                 start[0] = diner.purse();
-                start[1] = Ledger.coins(t.id());
+                start[1] = Dining.booksForTests(t.id())[0];
                 start[2] = t.waiter().purse();
                 helper.assertTrue(Diners.dineForTests(level, diner, t.place()), "a free table");
                 DiningPlaces.Table tb = t.place().table(Diners.tableForTests(diner));
@@ -352,7 +353,8 @@ public class DiningGameTests {
             .thenWaitUntil(() -> helper.assertTrue(Diners.stageForTests(diner) == null, "eaten, paid and gone: " + Diners.stageForTests(diner)
                 + " " + (Dining.order(Diners.orderForTests(diner)) == null ? "" : steps(Dining.order(Diners.orderForTests(diner))))))
             .thenExecute(() -> {
-                int spent = start[0] - diner.purse(), till = Ledger.coins(t.id()) - start[1], tip = t.waiter().purse() - start[2];
+                // The till's own books (the treasury moves for the town's other business meanwhile: wages, upkeep).
+                int spent = start[0] - diner.purse(), till = Dining.booksForTests(t.id())[0] - start[1], tip = t.waiter().purse() - start[2];
                 Kit.log("dn02 a folk's dinner: spent " + spent + ", the till +" + till + ", the waiter's tip " + tip + "; ate " + diner.meals().lastWhat());
                 helper.assertTrue(spent > 0 && spent == till + tip, "the coin conserved: spent " + spent + " = till " + till + " + tip " + tip);
                 helper.assertTrue(!diner.meals().lastWhat().isEmpty(), "its meal booked");
@@ -418,7 +420,8 @@ public class DiningGameTests {
                 for (Dining.Line l : o.lines) if (l.step == Dining.Step.STRUCK) struck++;
                 helper.assertTrue(struck == 1, "one roast struck off: " + steps(o));
                 helper.assertTrue(Market.coinsHeld(pl[0]) == 30 - o.total(), "paid for the one only: " + Market.coinsHeld(pl[0]) + " left of 30, bill " + o.total());
-                helper.assertTrue(Ledger.coins(t.id()) - till[0] == o.total(), "the till keeps only what was served");
+                helper.assertTrue(Ledger.coins(t.id()) - till[0] == o.total(), "the till keeps only what was served: +"
+                    + (Ledger.coins(t.id()) - till[0]) + " for a bill of " + o.total());
                 Kit.noLeftoverPlayers(level);
             })
             .thenSucceed();
@@ -478,7 +481,9 @@ public class DiningGameTests {
             })
             .thenWaitUntil(() -> helper.assertTrue(carried(pl[0], s -> ItemStack.isSameItemSameComponents(s, cider)) == 1, "brought out to the player"))
             .thenExecute(() -> {
-                helper.assertTrue(t.waiter().distanceTo(pl[0]) < 6, "by the runner's own hand: " + t.waiter().distanceTo(pl[0]));
+                double nearest = Double.MAX_VALUE;
+                for (VillageFolkEntity f : Hospitality.in(t.id(), Hospitality.Role.WAITER)) nearest = Math.min(nearest, f.distanceTo(pl[0]));
+                helper.assertTrue(nearest < 6, "brought by the waiter's own hand: the nearest waiter " + nearest + " away");
                 Kit.noLeftoverPlayers(level);
             })
             .thenSucceed();
@@ -496,7 +501,7 @@ public class DiningGameTests {
                 Villages.noteProject(t.id(), s, level.getGameTime());
             }
             List<VillageFolkEntity> cooks = new ArrayList<>();
-            for (int i = 3; i < 12; i++) {
+            for (int i = 4; i < 13; i++) {
                 VillageFolkEntity f = t.folk().get(i);
                 f.setJob(StationTask.COOK);
                 cooks.add(f);

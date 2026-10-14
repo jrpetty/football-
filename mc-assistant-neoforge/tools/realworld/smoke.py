@@ -3884,6 +3884,55 @@ def styles_stage(r, look, cx, cz):
     say("theme: " + r.cmd("execute positioned %d 0 %d run village theme" % (cx, cz))[:900])
 
 
+def dining_stage(r, look, cx, cz):
+    """[dining] Eating out (entity/Dining, Diners, Hospitality, client/DiningPanel). /village dining stage sets the
+    evening's service in the nearest town's restaurant (built beside the heart to its drawing if it has none): its head
+    cook, waiter and pot washer at work, five diners sat at the tables ordering from the stores, the kitchen cooking.
+    It says where to look from (VIEW name x y z ax ay az). Pictures:
+      1. 47-dining-1-room: the dining room full of an evening, from the door;
+      2. 47-dining-2-plate: a table close up, once its plate is down;
+      3. 47-dining-3-kitchen: the kitchen at work from the pass (the cook at the smoker, the smoke);
+      4. 47-dining-4-waiter: the waiter carrying a plate (the dining room again, a little later);
+      5. 47-dining-5-menu: the order screen at a free table.
+    Then /village dining stage done. Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("weather clear")
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    r.cmd("time add %d" % ((12300 - now) % 24000))     # evening: dinner on
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx + 12, hy + 12, cz + 12))
+    time.sleep(6)
+    out = r.cmd("execute positioned %d %d %d run village dining stage" % (cx, hy + 1, cz))
+    say("dining stage: " + out[:900])
+    num = r"(-?\d+)"
+    views = {v[0]: v[1:] for v in re.findall(r"VIEW (\S+) " + " ".join([num] * 6), out)}
+
+    def shoot(name, view, wait):
+        if view not in views:
+            say("no view %s" % view)
+            return
+        x, y, z, ax, ay, az = (int(n) for n in views[view])
+        look(name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    time.sleep(20)                                      # the waiter takes the orders; the kitchen starts
+    shoot("47-dining-1-room", "dining-room", 4)
+    shoot("47-dining-3-kitchen", "kitchen", 3)
+    time.sleep(25)                                      # the first plates down
+    shoot("47-dining-2-plate", "plate", 3)
+    shoot("47-dining-4-waiter", "dining-room", 3)
+    r.cmd("gamemode creative %s" % USER)
+    say("menu: " + r.cmd("execute as %s at @s run village dining stage menu" % USER)[:200])
+    time.sleep(3)
+    shot("47-dining-5-menu")
+    say("dining: " + r.cmd("execute positioned %d %d %d run village dining" % (cx, hy + 1, cz))[:900])
+    say("let go: " + r.cmd("execute positioned %d %d %d run village dining stage done" % (cx, hy + 1, cz))[:200])
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    say("alive after dining: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
