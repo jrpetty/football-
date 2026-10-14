@@ -1233,7 +1233,8 @@ public final class Weave {
 
     /**
      * The office a folk dresses for: the steward of a player leader, the constable, the librarian, the auctioneer, a
-     * cave dweller home from the caves; "" for none.
+     * cave dweller home from the caves; [roles-a] the healer, the elder, the sexton, the teacher, the curator, the crier
+     * and a quarter's warden; "" for none.
      */
     public static String role(VillageFolkEntity f) {
         UUID id = f.ownerId();
@@ -1246,6 +1247,14 @@ public final class Weave {
         if (LibraryRecords.has(id) && f.getUUID().equals(LibraryRecords.shelf(id).librarian)) return "librarian";
         if (Auctions.holds(id) && f.getUUID().equals(Villages.elder(id))) return "auctioneer";
         if (f.stationTask() == StationTask.CAVE && !CaveDwellers.caving(f)) return "caver";
+        // [roles-a] The other offices: the healer, the elder, the sexton, the teacher, the curator, the crier, a warden.
+        if (f.stationTask() == StationTask.HEAL) return "healer";
+        if (f.isElder()) return "elder";
+        if (Sexton.is(f)) return "sexton";
+        if (School.isTeacher(f)) return "teacher";
+        if (Museum.isCurator(f)) return "curator";
+        if (f.getUUID().equals(Crier.crier(id))) return "crier";
+        if (Wardens.quarterOf(f) != null) return "warden";
         return "";
     }
 
@@ -1257,6 +1266,16 @@ public final class Weave {
             case "auctioneer" -> new Garment[]{ Garment.TOP_HAT, Garment.FELT_HAT, Garment.WAISTCOAT };
             case "steward" -> new Garment[]{ Garment.LONG_COAT, Garment.WAISTCOAT, Garment.FELT_HAT };
             case "caver" -> new Garment[]{ Garment.LEATHER_JACKET, Garment.FLAT_CAP };
+            // [roles-a] The elder's long robe of office and a top hat; the teacher's and the curator's waistcoats; the
+            // crier's long coat (its tabard, in the season's colour) and felt hat; the warden's coat for the night round;
+            // the sexton's sober coat and cap; the healer's shawl over its gown.
+            case "elder" -> new Garment[]{ Garment.LONG_COAT, Garment.TOP_HAT, Garment.FELT_HAT };
+            case "teacher" -> new Garment[]{ Garment.WAISTCOAT, Garment.WOOL_SHAWL, Garment.FLAT_CAP };
+            case "curator" -> new Garment[]{ Garment.WAISTCOAT, Garment.FELT_HAT };
+            case "crier" -> new Garment[]{ Garment.LONG_COAT, Garment.FELT_HAT };
+            case "warden" -> new Garment[]{ Garment.LONG_COAT, Garment.FLAT_CAP };
+            case "sexton" -> new Garment[]{ Garment.LONG_COAT, Garment.FLAT_CAP };
+            case "healer" -> new Garment[]{ Garment.WOOL_SHAWL };
             default -> new Garment[0];
         };
     }
@@ -1283,6 +1302,9 @@ public final class Weave {
             case "auctioneer" -> Auctions.busy(f);
             case "librarian" -> Library.busy(f);
             case "steward" -> true;
+            case "elder" -> true;                                       // [roles-a] the leader is always the leader
+            case "crier" -> Crier.busy(f);                              // [roles-a] its hat on to cry the news
+            case "warden" -> Wardens.walking(f);                        // [roles-a] on its round
             default -> false;
         };
     }
@@ -1292,13 +1314,16 @@ public final class Weave {
         String r = role(f);
         double s = switch (r) {
             case "steward" -> 1.5;
+            case "elder" -> 1.5;                                        // [roles-a] the leader's look is the town's
             case "auctioneer" -> 1.0;
+            case "teacher", "curator", "healer", "sexton" -> 0.5;       // [roles-a]
             case "constable", "librarian", "caver" -> 0.5;
             default -> 0.0;
         };
         if (s > 0) why.add(switch (r) {
             case "steward" -> "the leader's steward";
             case "caver" -> "back from the caves";
+            case "elder" -> "the elder";
             default -> "the " + r;
         });
         return s;

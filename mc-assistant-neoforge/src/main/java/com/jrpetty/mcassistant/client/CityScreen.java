@@ -2612,6 +2612,25 @@ public class CityScreen extends Screen {
                 cy += 9;
             }
         }
+        // [roles-a] Their health (Health.report): who is down, the infirmary's beds, the healers, and today's care.
+        CompoundTag care = data.getCompound("care");
+        if (care.contains("sick") && cy < bottom - 30) {
+            cy += 4;
+            Ui.section(g, font, "Health", cx, cy, col);
+            cy += 12;
+            int sick = care.getInt("sick"), laid = care.getInt("laid");
+            String healers = care.getString("healers");
+            String[] rows = {
+                sick == 0 && laid == 0 ? "Everyone is well" : sick + (sick == 1 ? " down with a cold" : " down with colds") + ", " + laid + " laid up",
+                !care.getBoolean("infirmary") ? "No infirmary yet" : "Infirmary: " + care.getInt("beds_taken") + " of " + care.getInt("beds") + " beds taken",
+                !healers.isEmpty() ? (healers.contains(",") ? "Healers: " : "Healer: ") + healers
+                    : care.getInt("healers_wanted") > 0 ? "Healer: wanted, not yet chosen" : "No healer: the care crew sees to them",
+                "Today: " + care.getInt("tended") + " seen to, " + care.getInt("remedies") + " with a remedy" };
+            for (int i = 0; i < rows.length && cy < bottom - 8; i++) {
+                small(g, Ui.clip(font, rows[i], (int) (col / 0.75)), cx, cy, i == 0 && sick > 0 ? Ui.WARN : Ui.MUTED);
+                cy += 9;
+            }
+        }
         // The second column: the money and the families.
         cx = x + col + 8;
         cy = y;

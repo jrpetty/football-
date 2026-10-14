@@ -464,6 +464,9 @@ public class TalkScreen extends Screen {
         if (e.topic() == TalkTopic.MEAL && held.get(DataComponents.FOOD) == null) return t("ui.why.meal");
         if (e.topic() == TalkTopic.REPAIR && !(held.isDamageableItem() && held.isDamaged())) return t("ui.why.repair");
         if (e.topic() == TalkTopic.TEACH && held.isEmpty()) return t("ui.why.teach");
+        if (e.topic() == TalkTopic.SEE_TO && minecraft != null && minecraft.player != null                     // [roles-a]
+                && minecraft.player.getHealth() >= minecraft.player.getMaxHealth() - 0.5F
+                && !minecraft.player.hasEffect(net.minecraft.world.effect.MobEffects.POISON)) return t("ui.why.see_to");
         return "";
     }
 

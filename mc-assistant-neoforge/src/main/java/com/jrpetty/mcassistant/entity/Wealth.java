@@ -112,6 +112,7 @@ public final class Wealth {
         StringBuilder sb = new StringBuilder(JobWorth.figures(f));
         if (pay.elder() > 0) sb.append(", +").append(pay.elder()).append(" as the elder");
         if (pay.teaching() > 0) sb.append(", +").append(pay.teaching()).append(" for teaching the school");
+        if (pay.office() > 0) sb.append(Offices.words(f, JobWorth.dayUnit(f)));          // [roles-a] its offices' allowance
         int b = pay.deeds();
         if (b > 0) sb.append(", +").append(b).append(b == 2 ? " for a hard day's work" : " for a fair day's work");
         int haggled = FolkSkills.haggled(f, earned(f));

@@ -121,6 +121,7 @@ public final class Graves {
             BlockState earth = level.getBlockState(mound.below());
             if (earth.is(Blocks.GRASS_BLOCK) || earth.is(Blocks.DIRT)) level.setBlock(mound.below(), Blocks.COARSE_DIRT.defaultBlockState(), 3);
             fresh = true;
+            if (!free && v != null) Sexton.laidToRest(level, v, g.name(), mound);   // [roles-a] the words said over it
         }
         BlockState sign = level.getBlockState(mound);
         if (!(sign.getBlock() instanceof WallSignBlock)) {

@@ -188,6 +188,9 @@ public final class FolkSkills {
             "it could sell sand in the desert", StationTask.EMERALD, StationTask.SHOP),
         SHOWMAN("showman", "Showman", Family.TRADE, "a feast it is at lifts the town 2 for two days", 0, null,
             "it knows how to put on a show", StationTask.FIREWORKS),
+        // [roles-a] The healer's: a patient it sees to gets over a cold a quarter sooner (Health.tend).
+        BEDSIDE_MANNER("bedside_manner", "Bedside Manner", Family.TRADE, "a patient it sees to mends a quarter sooner", 0, null,
+            "a kind word and a steady hand at the bedside", StationTask.HEAL, StationTask.BREW),
         // ---------------------------------------------------------------- [perks] the masters' (level thirty)
         MASTER_MINER("master_miner", "Master Miner", Family.MASTER, "+12% pace; one ore in five gives one more", 12, null,
             "a lifetime at the rock face", StationTask.MINE, StationTask.CAVE),
@@ -209,7 +212,8 @@ public final class FolkSkills {
             "it could carry the town on its back", StationTask.HAUL, StationTask.STORE),
         GRAND_MASTER("grand_master", "Grand Master", Family.MASTER, "+12% pace at its trade", 12, null,
             "there is nothing left to teach it", StationTask.SCOUT, StationTask.BANK, StationTask.FERRY, StationTask.FLETCHER, StationTask.GOLEMS,
-                StationTask.FIREWORKS, StationTask.CARTOGRAPHER, StationTask.EMERALD, StationTask.DIVER, StationTask.NETHER, StationTask.REDSTONE);
+                StationTask.FIREWORKS, StationTask.CARTOGRAPHER, StationTask.EMERALD, StationTask.DIVER, StationTask.NETHER, StationTask.REDSTONE,
+                StationTask.HEAL);                                                     // [roles-a]
 
         public final String key, title, effect, why;
         public final Family family;

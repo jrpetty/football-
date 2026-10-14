@@ -41,38 +41,15 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     public static final ModelLayerLocation LAYER = new ModelLayerLocation(
         ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, "village_folk"), "main");
 
-    /** The trades, in StationTask order, by the names the pictures use. */
-    public static final String[] TRADES = {
-        "none", "farmer", "lumberjack", "miner", "rancher",
-        "guard", "smelter", "fisher", "storekeeper", "hauler",
-        "blacksmith", "tailor", "beekeeper", "brewer", "enchanter", "cook", "shopkeeper", "scout", "hunter",
-        "cavedweller",                                         // [caves] not in StationTask's order: see outfit()
-        "fletcher", "golemkeeper",                             // [fletcher] [golems] the same
-        "fireworks",                                           // [fireworks] the same
-        "cartographer",                                        // [cartographer] likewise
-        "emerald",                                             // [emerald] the emerald trader's: see outfit()
-        "diver",                                               // [diver] its own too: see outfit()
-        "netherrunner",                                        // [nether] nor this: see outfit()
-        "engineer",                                            // [redstone] the redstone engineer's: see outfit()
-    };
+    /** The trades, in StationTask order, by the names the pictures use ([roles-a] kept in OutfitIndex, free of the client). */
+    public static final String[] TRADES = OutfitIndex.NAMES;
 
-    /** [caves] The cave dweller's outfit, after the trades drawn in StationTask's order (those before it). */
-    public static final int CAVE_OUTFIT = 19;
-    /** [fletcher] [golems] The fletcher's and the golem keeper's own outfits, after the cave dweller's. */
-    public static final int FLETCHER_OUTFIT = 20, GOLEMS_OUTFIT = 21;
-    /** [fireworks] The fireworks maker's outfit, after the golem keeper's: the sooty apron, the goggles, the bright scarf. */
-    public static final int FIREWORKS_OUTFIT = 22;
-    /** [cartographer] The cartographer's outfit, after the fireworks maker's. */
-    public static final int CARTO_OUTFIT = 23;
-    /** [emerald] The emerald trader's outfit: the merchant's green coat, the wide hat, the pack (tools/folk_art.py). */
-    public static final int EMERALD_OUTFIT = 24;
-    /** [diver] The diver's outfit, after the emerald trader's. */
-    public static final int DIVER_OUTFIT = 25;
-    /** [nether] The Nether runner's outfit, after the diver's. */
-    public static final int NETHER_OUTFIT = 26;
-
-    /** [redstone] The redstone engineer's outfit: the work coat piped in red, the toolbelt and the goggles. */
-    public static final int ENGINEER_OUTFIT = 27;
+    /** The outfits drawn since StationTask's first trades (OutfitIndex). */
+    public static final int CAVE_OUTFIT = OutfitIndex.CAVE;
+    public static final int FLETCHER_OUTFIT = OutfitIndex.FLETCHER, GOLEMS_OUTFIT = OutfitIndex.GOLEMS;
+    public static final int FIREWORKS_OUTFIT = OutfitIndex.FIREWORKS, CARTO_OUTFIT = OutfitIndex.CARTOGRAPHER;
+    public static final int EMERALD_OUTFIT = OutfitIndex.EMERALD, DIVER_OUTFIT = OutfitIndex.DIVER, NETHER_OUTFIT = OutfitIndex.NETHER;
+    public static final int ENGINEER_OUTFIT = OutfitIndex.ENGINEER, HEALER_OUTFIT = OutfitIndex.HEALER;
 
     /** Which part each trade wears: {part, the part it hangs from, the trade}. */
     private static final String[][] WEARERS = {
@@ -222,6 +199,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         {"engineer_pouch", "body", "engineer"},
         {"engineer_spanner", "body", "engineer"},
         {"engineer_coil", "body", "engineer"},
+        {"healer_coif", "head", "healer"},
+        {"healer_apron", "body", "healer"},
+        {"healer_satchel", "body", "healer"},
+        {"banker_band", "head", "banker"},
+        {"banker_visor", "head", "banker"},
+        {"ferryman_cap", "head", "ferryman"},
+        {"ferryman_rope", "body", "ferryman"},
         // END GENERATED WEARERS
     };
 
@@ -472,6 +456,13 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         body.addOrReplaceChild("engineer_pouch", CubeListBuilder.create().texOffs(96, 12).addBox(-5.6F, 9.6F, -2.0F, 2.0F, 3.0F, 4.0F), PartPose.ZERO);
         body.addOrReplaceChild("engineer_spanner", CubeListBuilder.create().texOffs(110, 12).addBox(4.5F, 9.6F, -1.0F, 1.0F, 5.0F, 1.0F).texOffs(114, 12).addBox(4.0F, 14.4F, -1.5F, 2.0F, 2.0F, 2.0F), PartPose.ZERO);
         body.addOrReplaceChild("engineer_coil", CubeListBuilder.create().texOffs(64, 22).addBox(-2.0F, 8.2F, 3.6F, 4.0F, 4.0F, 2.0F), PartPose.ZERO);
+        head.addOrReplaceChild("healer_coif", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 2.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        body.addOrReplaceChild("healer_apron", CubeListBuilder.create().texOffs(64, 16).addBox(-4.0F, 2.0F, -4.5F, 8.0F, 13.0F, 1.0F), PartPose.ZERO);
+        body.addOrReplaceChild("healer_satchel", CubeListBuilder.create().texOffs(96, 12).addBox(0.5F, 8.0F, 3.4F, 3.0F, 4.0F, 2.0F), PartPose.ZERO);
+        head.addOrReplaceChild("banker_band", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -9.0F, -4.0F, 8.0F, 1.0F, 8.0F, new CubeDeformation(0.55F)), PartPose.ZERO);
+        head.addOrReplaceChild("banker_visor", CubeListBuilder.create().texOffs(64, 12).addBox(-4.0F, -9.0F, -7.2F, 8.0F, 1.0F, 3.0F, new CubeDeformation(0.1F)), PartPose.ZERO);
+        head.addOrReplaceChild("ferryman_cap", CubeListBuilder.create().texOffs(64, 0).addBox(-4.0F, -11.0F, -4.0F, 8.0F, 3.0F, 8.0F, new CubeDeformation(0.6F)), PartPose.ZERO);
+        body.addOrReplaceChild("ferryman_rope", CubeListBuilder.create().texOffs(64, 16).addBox(-5.0F, 0.5F, -3.2F, 10.0F, 2.0F, 7.0F), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 128);
         // END GENERATED GEOMETRY
     }
@@ -493,24 +484,11 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
     public ModelPart leftLeg() { return leftLeg; }
 
     /**
-     * [caves] Which trade's outfit a folk wears: its own, by StationTask's order (a trade after the drawn ones, the
-     * banker, wraps round as before). The cave dweller has its own: the delver's helm and lamp (lit in the dark, and
-     * left on over an iron helmet), the oilskin coat, the rope and the spare pick.
+     * Which trade's outfit a folk wears: its own (OutfitIndex.of: the cave dweller's helm and lamp, the healer's gown,
+     * [roles-a] the banker's waistcoat and the ferryman's jacket, and the rest).
      */
     public static int outfit(AssistantEntity folk) {
-        int job = folk.clientJobOrdinal();
-        if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
-        if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
-        if (job == AssistantEntity.StationTask.BANK.ordinal()) return 16;           // the banker in the shopkeeper's clothes (its number wrapped round to the blank "none")
-        if (job == AssistantEntity.StationTask.FLETCHER.ordinal()) return FLETCHER_OUTFIT;   // [fletcher] apron, quiver, feathered cap
-        if (job == AssistantEntity.StationTask.GOLEMS.ordinal()) return GOLEMS_OUTFIT;       // [golems] riveted apron, orange scarf
-        if (job == AssistantEntity.StationTask.FIREWORKS.ordinal()) return FIREWORKS_OUTFIT;   // [fireworks] "fireworks"
-        if (job == AssistantEntity.StationTask.CARTOGRAPHER.ordinal()) return CARTO_OUTFIT;   // [cartographer] the scholar's coat
-        if (job == AssistantEntity.StationTask.EMERALD.ordinal()) return EMERALD_OUTFIT;   // [emerald] "emerald": the merchant's coat
-        if (job == AssistantEntity.StationTask.DIVER.ordinal()) return DIVER_OUTFIT; // [diver] "diver": the wetsuit and goggles
-        if (job == AssistantEntity.StationTask.NETHER.ordinal()) return NETHER_OUTFIT;   // [nether] "netherrunner"
-        if (job == AssistantEntity.StationTask.REDSTONE.ordinal()) return ENGINEER_OUTFIT;   // [redstone] "engineer"
-        return Math.floorMod(job, CAVE_OUTFIT);
+        return OutfitIndex.of(folk.clientJobOrdinal());
     }
 
     @Override

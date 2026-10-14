@@ -242,6 +242,7 @@ public final class VillageCommands {
             // [batchA] The town's care: who is ill, the infirmary, the poor box, the old visited, newcomers welcomed;
             // for operators, a cold caught now and an infirmary set out on a stage (Health).
             .then(com.jrpetty.mcassistant.entity.Health.command())
+            .then(com.jrpetty.mcassistant.entity.Offices.command())             // [roles-a] who holds each office, and its allowance
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
             .then(com.jrpetty.mcassistant.entity.Perks.command())           // [perks] /village perks: wonders, the leader, quirks
             .then(com.jrpetty.mcassistant.entity.Referendums.command())     // [civic] /village referendum: the town's vote, the great works
@@ -636,6 +637,7 @@ public final class VillageCommands {
                     case DIVER -> net.minecraft.world.item.Items.KELP;            // [diver]
                     case NETHER -> net.minecraft.world.item.Items.BLAZE_ROD;      // [nether]
                     case REDSTONE -> net.minecraft.world.item.Items.REPEATER;     // [redstone]
+                    case HEAL -> net.minecraft.world.item.Items.GLISTERING_MELON_SLICE;   // [roles-a]
                     case NONE -> net.minecraft.world.item.Items.AIR;
                 }));
             folk.rename(switch (trades[i]) {

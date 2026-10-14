@@ -329,10 +329,13 @@ public final class TownJobs {
                 case DIVER -> score -= 40;               // [diver] its day is in the water (and it watches it)
                 case NETHER -> score -= 60;              // [nether] its day is through the gateway, or resting from it
                 case REDSTONE -> score -= 20;            // [redstone] its day is at the machines, and its one hand
+                case HEAL -> score -= 40;                // [roles-a] its day is at the infirmary and the bedsides
                 default -> { if (trade.isCraft()) score -= 10; }
             }
             if (f.workedOut()) score += 25;                              // nothing to work at in its own trade
             score += Hospitality.townWorkLean(f, works);                 // [dining] the baker to the ovens; the floor kept at its post
+            score += Sexton.lean(f, works);                              // [roles-a] the sexton to the graves and the chapel's candles
+            score += Lamplighter.lean(f, works);                         // [roles-a] a quarter's warden to the street lamps
             if (!f.missingEssentials().isEmpty()) score += 20;            // short of its kit: its trade is idle anyway
             score -= Math.sqrt(f.blockPosition().distSqr(at)) / 4.0;
             if (score > bestScore) { bestScore = score; best = f; }

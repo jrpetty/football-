@@ -847,14 +847,22 @@ public final class Beliefs {
         return keepRite(level, v, by, level.getDayTime() / 24000L);
     }
 
-    /** Who leads the rites: the elder, or the eldest with none. */
+    /** Who leads the rites: [roles-a] the town's sexton where it keeps one (Sexton), else the elder, or the eldest with none. */
     @Nullable
     static VillageFolkEntity leader(UUID village) {
+        VillageFolkEntity sexton = Sexton.holder(village);
+        if (sexton != null) return sexton;
         VillageFolkEntity e = Orders.elderOf(village);
         if (e != null) return e;
         UUID eldest = FoundingDay.eldest(village);
         for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f && f.getUUID().equals(eldest)) return f;
         return null;
+    }
+
+    /** [roles-a] Tests: who leads the town's rites now. */
+    @Nullable
+    public static VillageFolkEntity leaderForTests(UUID village) {
+        return leader(village);
     }
 
     /** Who leads the rites, looked up at most once every five seconds a town (every folk asks, every few ticks, at dawn). */
@@ -1005,7 +1013,8 @@ public final class Beliefs {
             ? " (the faith's day comes once a week, mid-week from the day of rest)" : "") + ".");
         VillageFolkEntity lead = leader(village);
         String last = TownWays.note(village, "rites.last");
-        out.add("Its rites are led by " + (lead == null ? "its elder" : lead.displayNameCap()) + " (the town keeps no chaplain)"
+        boolean sexton = lead != null && Sexton.is(lead);                                   // [roles-a]
+        out.add("Its rites are led by " + (lead == null ? "its elder" : lead.displayNameCap()) + (sexton ? ", its sexton" : " (the town keeps no sexton)")
             + (last == null ? "." : "; last: " + last + "."));
         int sea = 0, cairns = 0;
         for (String[] r : Culture.rows(village, TownWays.PREFIX + BURIALS)) {

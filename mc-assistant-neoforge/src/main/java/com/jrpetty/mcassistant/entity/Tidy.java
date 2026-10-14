@@ -375,6 +375,7 @@ public final class Tidy {
     private static boolean light(ServerLevel level, Villages.Village v, Crew c, Eyesores.Walk w) {
         for (BlockPos p : w.dark) {
             if (c.leave.containsKey(p.asLong()) || level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, p) >= LIT) continue;
+            if (Lamplighter.dousedNear(v.id(), p)) continue;                    // [roles-a] its post's torch is only down for the day
             BlockPos post = verge(level, v, p);
             if (post == null) {
                 c.leave.put(p.asLong(), level.getGameTime() + LEAVE * NO_ROOM_LEAVE);

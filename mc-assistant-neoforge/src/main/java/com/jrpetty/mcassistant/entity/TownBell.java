@@ -262,6 +262,7 @@ public final class TownBell {
             if (f.isSleeping()) score -= 10;
             score -= Math.sqrt(f.blockPosition().distSqr(at)) / 4.0;
             score -= Fears.bellPenalty(f, v.id());              // [individual] nobody afraid of heights up the bell tower
+            score += Sexton.ringLean(f, p);                     // [roles-a] the sexton rings the noon and dusk bells
             if (score > bestScore) { bestScore = score; best = f; }
         }
         d.ringer = best == null ? null : best.getUUID();

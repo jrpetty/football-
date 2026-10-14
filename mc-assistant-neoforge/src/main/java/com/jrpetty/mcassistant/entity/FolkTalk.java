@@ -223,6 +223,7 @@ public final class FolkTalk {
             case KEEPSAKE -> Dealings.keepsake(f, p);
             case ORDER -> Dealings.order(f, p, text);
             case REPAIR -> Dealings.repair(f, p);
+            case SEE_TO -> Healers.seeTo(f, p);                                // [roles-a] the healer sees to a player
             case TOWN_MAP -> PlayerServices.townMap(f, p);                    // [players] a map of the town
             case MAPS -> Cartographers.talk(f, p, text);                      // [cartographer] explorer maps, a commission, a copy
             case LOST -> PlayerServices.lostAndFound(f, p);                   // [players] the Lost and Found
@@ -869,6 +870,7 @@ public final class FolkTalk {
             case DIVER -> Divers.doing(f, r);             // [diver] on the bed of the water, at the shed, or watching it
             case NETHER -> NetherRunners.doing(f, r);     // [nether] through the gateway, or resting from the last run
             case REDSTONE -> Engineers.doing(f, r);       // [redstone] at the bench, or at a machine
+            case HEAL -> Healers.doing(f, r);             // [roles-a] at a bedside, or at the infirmary
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";
@@ -1473,6 +1475,7 @@ public final class FolkTalk {
         if (has(t, "keepsake", "remember you by", "a memento")) return TalkTopic.KEEPSAKE;
         if (has(t, "make me ", "craft me ", "forge me ", "sew me ") && Services.itemNamed(t) != null) return TalkTopic.ORDER;
         if (has(t, "is it ready", "is my order", "my order ready", "collect my order")) return TalkTopic.BULK;
+        if (has(t, "see to me", "i'm hurt", "im hurt", "i am hurt", "heal me", "patch me up", "i'm wounded", "bandage me")) return TalkTopic.SEE_TO;   // [roles-a]
         if (has(t, "repair", "mend ", "mend this", "fix my", "fix this")) return TalkTopic.REPAIR;
         if (has(t, "pay for the feast", "pay for a feast", "pay for tonight", "throw a feast", "feast on me", "sponsor")) return TalkTopic.SPONSOR;
         if (has(t, "contract", "i'll sign", "ill sign", "sign me up", "i'll do it")) return TalkTopic.CONTRACT;

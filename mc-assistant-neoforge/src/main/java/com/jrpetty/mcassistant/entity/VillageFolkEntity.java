@@ -1307,6 +1307,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = WarAndPeace.mood(this, day, m, why);        // [war-peace] weary of the war (or a Guardian's pride in it)
         m = Visitors.mood(this, day, m, why);           // [batchG] a night of the bard's songs, a day with a friend from away
         m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
+        m = Healers.mood(this, day, m, why);            // [roles-a] a safe birth, the healer at it
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Police.mood(this, day, m, why);             // [police] a night in the cells, a fine, helped by the watch
@@ -4770,6 +4771,7 @@ public class VillageFolkEntity extends AssistantEntity {
             case DIVER -> "The Kelp Beds";        // [diver]
             case NETHER -> "The Gateway";         // [nether]
             case REDSTONE -> "The Works";         // [redstone] the engineer's machines round the town
+            case HEAL -> "The Infirmary";         // [roles-a] the healer's ward
             default -> "The Commons";
         };
         // Two farms in one village should not share a name.
@@ -5333,6 +5335,9 @@ public class VillageFolkEntity extends AssistantEntity {
             case CARTOGRAPHER -> Cartographers.STRUCTURE;   // [cartographer] the map room
             case DIVER -> Divers.SHED;            // [diver] the diver's shed on the bank
             case REDSTONE -> Engineers.WORKSHOP;  // [redstone] the engineer's bench and plans (Engineers)
+            case HEAL -> Infirmary.STRUCTURE;     // [roles-a] the healer's ward (Healers)
+            // [roles-a] None for the emerald trader on purpose: its post is the Trading Post (EmeraldTrader.POST), which the
+            // trade itself sets as its station when it takes the trader on (EmeraldTrader.take), since its day is on the road.
             default -> null;
         };
     }
@@ -6071,6 +6076,12 @@ public class VillageFolkEntity extends AssistantEntity {
         return isHired() && super.canUsePortal(allowPassengers);
     }
 
+    /** [roles-a] The healer's day: its round of the laid-up, and the infirmary between them (Healers.work). */
+    @Override
+    protected boolean healerWork() {
+        return level() instanceof net.minecraft.server.level.ServerLevel server && Healers.work(this, server);
+    }
+
     /** [redstone] The engineer's day at the town's machines (Engineers.work). */
     @Override
     protected boolean redstoneWork() {
@@ -6705,6 +6716,7 @@ public class VillageFolkEntity extends AssistantEntity {
             FolkTalk.speak(this, FolkTalk.pick(getRandom(), word.substring(0, 1).toUpperCase() + word.substring(1) + "! All at once!", "More than we bargained for — and every one perfect."));
         }
         Villages.noteBirth(village, level().getGameTime());
+        Healers.attendBirth(server, village, this, partner, brood, bornOn);   // [roles-a] the healer at the birth
         // The settlement is bigger than it was, so it keeps more ground awake.
         // Re-taken at the new radius, which is a superset of the old one, so
         // nothing is dropped and nothing is doubled.

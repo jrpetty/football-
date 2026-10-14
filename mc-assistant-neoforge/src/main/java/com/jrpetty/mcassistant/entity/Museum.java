@@ -622,6 +622,9 @@ public final class Museum {
         }
         VillageFolkEntity pick = chooseCurator(id);
         if (pick == null) return null;
+        // [roles-a] The curator's post is one the town gives its own at interview (InterviewPosts, kind CURATOR): with two
+        // or more who could take it, held open a day for it, and given after it to the panel's choice (chooseCurator).
+        if (Interviews.vacancy(level, id, CURATOR_POST, pick)) return null;
         String was = book.curatorName;
         book.curator = pick.getUUID();
         book.curatorName = pick.displayNameCap();
@@ -637,22 +640,54 @@ public final class Museum {
         return pick;
     }
 
-    /** The folk with the most curiosity and learning (a curious nature, a reader, the enchanter), else the eldest. */
+    /** [roles-a] The curator's post in the interviews' books (InterviewPosts). */
+    static final String CURATOR_POST = "curator";
+
+    /** May this folk keep the museum: grown, at home, its own? */
+    static boolean curatorFit(VillageFolkEntity f) {
+        return f.isAlive() && !f.isBaby() && !f.isShowcase() && !f.isHired();
+    }
+
+    /** How the town weighs a folk for curator: curiosity and learning (a curious nature, a reader, the enchanter), age. */
+    static double curatorScore(VillageFolkEntity f) {
+        double s = f.ageYears() * 0.5;
+        if (f.life().rolled() && f.life().has(Social.Trait.CURIOUS)) s += 30;
+        if (f.persona().rolled() && f.persona().hobby() == Persona.Hobby.READING) s += 30;
+        if (f.stationTask() == AssistantEntity.StationTask.ENCHANT) s += 15;
+        if (f.stationTask() == AssistantEntity.StationTask.GUARD || f.stationTask() == AssistantEntity.StationTask.SCOUT) s -= 40;
+        if (f.isElder()) s -= 15;
+        return s;
+    }
+
+    /** The folk with the most curiosity and learning, else the eldest; [roles-a] the interview's choice before them all. */
     @Nullable
     static VillageFolkEntity chooseCurator(UUID village) {
         VillageFolkEntity best = null;
         double bestScore = -Double.MAX_VALUE;
         for (AssistantEntity a : Villages.folkOf(village)) {
-            if (!(a instanceof VillageFolkEntity f) || !f.isAlive() || f.isBaby() || f.isShowcase() || f.isHired()) continue;
-            double s = f.ageYears() * 0.5;
-            if (f.life().rolled() && f.life().has(Social.Trait.CURIOUS)) s += 30;
-            if (f.persona().rolled() && f.persona().hobby() == Persona.Hobby.READING) s += 30;
-            if (f.stationTask() == AssistantEntity.StationTask.ENCHANT) s += 15;
-            if (f.stationTask() == AssistantEntity.StationTask.GUARD || f.stationTask() == AssistantEntity.StationTask.SCOUT) s -= 40;
-            if (f.isElder()) s -= 15;
+            if (!(a instanceof VillageFolkEntity f) || !curatorFit(f)) continue;
+            double s = curatorScore(f) + Interviews.preferred(village, CURATOR_POST, f);
             if (s > bestScore) { bestScore = s; best = f; }
         }
         return best;
+    }
+
+    /** [roles-a] The museum's curator now (InterviewPosts.holder), or null. */
+    @Nullable
+    static VillageFolkEntity curatorNow(UUID village) {
+        if (!MuseumRecords.has(village)) return null;
+        UUID c = MuseumRecords.book(village).curator;
+        if (c == null) return null;
+        for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f && f.isAlive() && f.getUUID().equals(c)) return f;
+        return null;
+    }
+
+    /** [roles-a] The panel's choice made curator (InterviewPosts.give): the old one, if any, steps aside for it. */
+    static void appointCurator(ServerLevel level, Villages.Village v, VillageFolkEntity winner) {
+        if (!MuseumRecords.has(v.id())) return;
+        MuseumRecords.Book book = MuseumRecords.book(v.id());
+        book.curator = null;
+        curator(level, v, book, level.getDayTime() / 24000L, level.getGameTime());
     }
 
     /** Is this folk the museum's curator? */

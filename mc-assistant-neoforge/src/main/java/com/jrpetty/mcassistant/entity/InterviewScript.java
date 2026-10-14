@@ -334,6 +334,7 @@ final class InterviewScript {
             case DIVER -> "How long have you been diving, and how long can you hold your breath?";   // [diver]
             case NETHER -> "How long have you carried a blade, and have you ever been through a portal?";   // [nether]
             case REDSTONE -> "How long have you worked with redstone, and can you tell an observer from a comparator?";   // [redstone]
+            case HEAL -> "How long have you nursed the sick, and what do you give for a cold, and for a wound?";   // [roles-a]
             case NONE -> "What have you done, till now?";
             // A trade come in since: asked in its own words.
             default -> "How long have you been at " + t.label + "?";
@@ -521,6 +522,10 @@ final class InterviewScript {
             case REDSTONE -> new String[]{ "The cane farm's pistons won't stop: out, in, out, in, with no cane grown. What's wrong?",
                 "An observer's watching the place a piston's head comes into: it sees the head and fires it again. Move the observer.",
                 "Pull the redstone up and lay it again.", "Leave it. It'll stop when it's tired." };
+            // [roles-a] The healer's first rule (Health.tend): the wound first, and the potion to it; the honey to a cold.
+            case HEAL -> new String[]{ "Two come in at once: one with a cold, one cut badly on the watch. The stores have one healing potion. What then?",
+                "The cut first: bind it, and the potion to it. Honey for the cold, or tea, and see to it next.",
+                "The cold first: it came in first.", "Give them half the potion each." };
             default -> new String[]{ "What would you do first, in the post?",
                 "Learn how it's done here first — ask who did it before me — and then do it better.", "Get to work.", "I'm not sure, to be honest." };
         };

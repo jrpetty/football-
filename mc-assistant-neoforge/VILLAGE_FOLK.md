@@ -11647,3 +11647,74 @@ Selling, orders, contracts and the changer are button presses.
 
 ### Tests
 EarningGameTests er01-er12 (x 1,880,000 to 1,899,999 at z 66,000); EarnMathTest (the stars, the skill, the glut).
+
+## Civic, care and faith posts [roles-a]
+
+Every office in the town is a real job: somebody holds it, it takes part of their day, they dress for it, and the town
+pays for it.
+
+### The healer (Healers, Health)
+- **Who.** A Stone Age town with its infirmary keeps a healer, one for every forty folk and three at most. The town
+  chooses from the hands it can spare, favouring a kind, patient nature, a brewer's knowledge of potions and an older
+  head. When two or more could take the post, it goes to interview (the "healer" post). The healer is a trade of its
+  own (StationTask.HEAL) and wears its own clothes: a sage gown, a white apron and coif, and a satchel of herbs. It has
+  a Bedside Manner knack (a patient it sees to mends a quarter sooner) and a master's knack. Its pay is a learned
+  trade's, with a service that keeps folk well.
+- **Its day.** By day it minds the infirmary. When somebody is laid up, the town's round (every five seconds) sends the
+  healer to the bedside, at the infirmary or at home. There it gives the best remedy the stores have: honey or tea
+  for a cold, a bandage or the brewer's potion for a wound, or a golden carrot. A bottle goes back to the stores. With
+  nothing in the stores it sits with the patient anyway. If the healer is ill, asleep, away or dead, the town's care
+  crew (TownJobs "care", the brewer first) does the round as before, so nobody goes untended.
+- **Births.** The healer attends every birth it can. The chronicle says who saw the child into the world, and the
+  parents are happier for two days.
+- **War.** The healer is the army's medic first (else the cook, else the brewer). While it is away with the army, the
+  town's care crew does the rounds at home.
+- **The player.** "I'm hurt. Could you see to me?" (the healer's suggested talk option, or typed "I'm hurt" or "heal
+  me"). If you hold a bandage, the healer binds it for a small fee. Otherwise it gives the best remedy in the stores
+  at the market's price plus the fee, or a rest and a kind word for a coin when the stores are bare. It also cures
+  poison. A healer's assistant shift (ShiftRole "heal") marks a patient. Stand at its bedside and you see to it in your
+  name, with the stores' remedies, and are paid by the task.
+- **The books.** "/village care" names the healers. The Society page has a Health section: who is down, the
+  infirmary's beds, the healers and today's care. The operator's "people trade heal 3" raises healers.
+
+### Pay for offices (Offices)
+The constable, the leader's steward, the sexton, the cave team's leader, the librarian, the museum's curator, the
+auctioneer (one the panel chose; the elder calls them as part of leading), a trade's master, a quarter's warden and the day's crier each draw an allowance on top of their wage. The
+allowance is a fixed share of a day's unit at the town's pay level, at least one coin, and a folk is paid for its two
+best offices. It shows in the wage breakdown ("+2 as the constable"). "/village offices" lists who holds what and what
+it pays. The elder's coin and the teacher's mornings are paid as before.
+
+### Office dress (Weave)
+Besides the steward, constable, librarian, auctioneer and caver, these now dress for their office:
+- the elder: a long robe and a top hat;
+- the teacher and the curator: a waistcoat;
+- the crier: a long coat as its tabard, and a felt hat while it cries the news;
+- the wardens: a long coat, plus a lantern from the stores on the night round, put back afterwards;
+- the sexton: a sober coat and cap;
+- the healer: a shawl over its gown.
+
+The banker and the ferryman have their own clothes at last: a waistcoat, sleeve garters and a green eyeshade for the
+banker; a navy waterman's jacket, a red knitted cap and a coil of rope for the ferryman. A witness can describe every
+trade by its clothes.
+
+### The sexton (Sexton)
+A town of eight or more with a chapel keeps a sexton. It is a post, not a trade: the town picks an older, steady,
+quiet hand each day and keeps the one an interview chose. The sexton:
+- leads the faith's rites in place of the elder;
+- is the first hand at the graves, and over a newly dug grave says the words while the folk nearby stand by (the
+  chronicle records it);
+- rings the noon and dusk bells before anybody else;
+- keeps a candle from the stores on the chapel's altar, lit at dusk and snuffed in the morning.
+
+### The lamplighter (Lamplighter)
+Before the Iron Age's lanterns, a town's street lights are torches on fence posts. A quarter's warden (or a spare
+hand) takes each torch down after the dawn bell and puts it back before the dusk bell. The doused posts are kept in
+the town's books, so a restart loses nothing. The town's looks and its tidy crew count a doused post as lit, and the
+streets' works never put a second lamp on one. Any post not lit by nightfall is lit at once, so the streets are never
+dark. From the Iron Age the lamps are lanterns, which burn day and night.
+
+### More interview posts
+The fireworks maker and the museum's curator are now chosen at interview when two or more could take the post, like
+the other specialists. The sexton is reckoned daily, like the constable.
+
+Smoke: `roles_a_stage` in tools/realworld/smoke.py (`/village offices stage`).

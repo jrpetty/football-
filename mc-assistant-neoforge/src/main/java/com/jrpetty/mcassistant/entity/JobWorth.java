@@ -640,11 +640,12 @@ public final class JobWorth {
         return Math.min(1.65, k);
     }
 
-    /** What its work earns today, part by part (Wealth.earned): its job's worth, the teaching, the elder's coin, the day's work. */
+    /** What its work earns today, part by part (Wealth.earned): its job's worth, the teaching, the elder's coin, [roles-a] its
+     *  offices' allowance (Offices), the day's work. */
     public record Pay(Post post, int level, double skill, double raw, int worthPart, boolean floored, boolean capped, int teaching,
-                      int elder, int deeds) {
+                      int elder, int office, int deeds) {
         public int total() {
-            return worthPart + teaching + elder + deeds;
+            return worthPart + teaching + elder + office + deeds;
         }
     }
 
@@ -662,7 +663,13 @@ public final class JobWorth {
             teaching = Math.max(1, (int) Math.round(s.payLevel * UNIT * (tw == null ? 1.7 : tw.factor())
                 * skillCurve(School.bestLevel(f)) * TEACHING_SHARE));
         }
-        return new Pay(p, lv, k, raw, part, r < s.floor, r > s.cap, teaching, f.isElder() ? 1 : 0, Wealth.bonus(f));
+        return new Pay(p, lv, k, raw, part, r < s.floor, r > s.cap, teaching, f.isElder() ? 1 : 0,
+            Offices.allowance(f, s.payLevel * UNIT), Wealth.bonus(f));                          // [roles-a] its offices
+    }
+
+    /** [roles-a] A day's unit of pay at this folk's town today (its pay level times the unit): what an office's share is of. */
+    public static double dayUnit(VillageFolkEntity f) {
+        return scale(f).payLevel * UNIT;
     }
 
     /** What its work earns today, part by part. */

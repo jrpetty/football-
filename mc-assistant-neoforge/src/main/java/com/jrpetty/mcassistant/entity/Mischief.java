@@ -935,12 +935,19 @@ final class Mischief {
             case SHOP -> "a shopkeeper's apron";
             case SCOUT -> "a scout's cloak";
             case HUNT -> "a hunter's leathers";
-            case BANK -> "a banker's coat";
+            case BANK -> "a banker's waistcoat and green eyeshade";   // [roles-a] as drawn now (OutfitIndex)
             case CAVE -> "a cave dweller's kit";
             case FLETCHER -> "a fletcher's apron and quiver";      // [fletcher]
             case GOLEMS -> "a golem keeper's riveted apron";      // [golems]
             case CARTOGRAPHER -> "a cartographer's long blue coat";  // [cartographer]
             case DIVER -> "a diver's wetsuit and goggles";           // [diver]
+            // [roles-a] The trades that fell to "plain clothes", as each is drawn (OutfitIndex, tools/folk_art.py).
+            case FERRY -> "a waterman's navy jacket and a red knitted cap";
+            case FIREWORKS -> "a sooty apron and goggles";
+            case EMERALD -> "a merchant's green coat and wide hat";
+            case NETHER -> "a Nether runner's scorched coat trimmed in gold";
+            case REDSTONE -> "an engineer's grey coat piped in red";
+            case HEAL -> "a healer's white apron and coif";
             default -> "plain clothes";
         };
     }

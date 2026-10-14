@@ -250,7 +250,7 @@ public final class Eyesores {
         }
         if (street && !kept && !Villages.onFarmland(v.id(), dx, dz, 0, 0)) {
             w.streets++;
-            if (level.getBrightness(LightLayer.BLOCK, at.above()) >= 8) w.lit++;
+            if (level.getBrightness(LightLayer.BLOCK, at.above()) >= 8 || Lamplighter.dousedNear(v.id(), at)) w.lit++;   // [roles-a] doused for the day
             else if (w.dark.size() < 64 && (dx * 7 + dz * 3) % 5 == 0) w.dark.add(at.above().immutable());
             for (int up = 1; up <= 3 && w.overhang.size() < 64; up++) {
                 if (level.getBlockState(at.above(up)).getBlock() instanceof LeavesBlock && !PlayerBlocks.placed(level, at.above(up))) {

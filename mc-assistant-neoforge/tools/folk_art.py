@@ -69,7 +69,10 @@ TRADES = ["none", "farmer", "lumberjack", "miner", "rancher", "guard",
           # [nether] And the Nether runner's (FolkModel.outfit picks it for NETHER).
           "netherrunner",
           # [redstone] The redstone engineer's own (FolkModel.outfit picks it for REDSTONE).
-          "engineer"]
+          "engineer",
+          # [roles-a] The healer's own (FolkModel.outfit picks it for HEAL), and the banker's and the ferryman's, who
+          # wore the shopkeeper's and the fisher's till now.
+          "healer", "banker", "ferryman"]
 
 PARTS = [
     # The body every folk has: a villager's head and nose, a coat over a body,
@@ -311,6 +314,16 @@ PARTS = [
     ("engineer_spanner", "body", (0, 0, 0), (0, 0, 0),
      [(110, 12, 4.5, 9.6, -1, 1, 5, 1, 0), (114, 12, 4, 14.4, -1.5, 2, 2, 2, 0)], "engineer"),
     ("engineer_coil", "body", (0, 0, 0), (0, 0, 0), [(64, 22, -2, 8.2, 3.6, 4, 4, 2, 0)], "engineer"),
+    # [roles-a] Healer: a white linen coif, a clean apron over a sage gown, and a satchel of herbs at the hip.
+    ("healer_coif", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -11, -4, 8, 2, 8, 0.6)], "healer"),
+    ("healer_apron", "body", (0, 0, 0), (0, 0, 0), [(64, 16, -4, 2, -4.5, 8, 13, 1, 0)], "healer"),
+    ("healer_satchel", "body", (0, 0, 0), (0, 0, 0), [(96, 12, 0.5, 8.0, 3.4, 3, 4, 2, 0)], "healer"),
+    # [roles-a] Banker: a green eyeshade on a band round the head.
+    ("banker_band", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -9, -4, 8, 1, 8, 0.55)], "banker"),
+    ("banker_visor", "head", (0, 0, 0), (0, 0, 0), [(64, 12, -4, -9, -7.2, 8, 1, 3, 0.1)], "banker"),
+    # [roles-a] Ferryman: a knitted cap, and a coil of rope over the shoulder.
+    ("ferryman_cap", "head", (0, 0, 0), (0, 0, 0), [(64, 0, -4, -11, -4, 8, 3, 8, 0.6)], "ferryman"),
+    ("ferryman_rope", "body", (0, 0, 0), (0, 0, 0), [(64, 16, -5, 0.5, -3.2, 10, 2, 7, 0)], "ferryman"),
 ]
 
 
@@ -1678,6 +1691,117 @@ def outfit_engineer():
     return cv
 
 
+def outfit_healer():
+    """[roles-a] The healer: a sage-green linen gown to the knee, its sleeves rolled to the elbow for the work; a clean
+    white apron over it with a pocket of bandages; a white linen coif; a leather strap across the chest to a satchel of
+    herbs at the back of the hip, a sprig of green showing at its flap; soft brown shoes."""
+    cv = Canvas()
+    sage = (122, 146, 112)
+    linen = (236, 234, 224)
+
+    def gown(x, y):
+        c = grain(sage, x, y, 5, 420)
+        return lit(c, 0.92) if (x + 2 * y) % 7 == 0 else c              # the linen's weave
+    coat = coat_to(cv, gown, 15)
+    coat.row(0, lambda x: grain(linen, x, 0, 3, 421))                   # the shift's collar showing
+    for y in range(1, 9):                                                # the strap across the chest to the satchel
+        coat.put("front", min(7, 1 + y * 6 // 8), y, (112, 80, 50))
+    coat.row(14, lambda x: lit(sage, 0.8))                               # the hem
+    sleeves(cv, gown, 6, cuff=linen)
+    for name in ("right_arm", "left_arm"):
+        Box(cv, name).row(6, lambda x: grain(linen, x, 6, 3, 422))       # rolled to the elbow
+    legs(cv, cloth((96, 104, 90), 5, 423), leather((104, 74, 48)), boot_from=10, sole=(40, 30, 22))
+    apron_box(cv, "healer_apron", linen, pocket_row=7)
+    ap = Box(cv, "healer_apron")
+    for x in (3, 4):
+        ap.put("front", x, 6, (250, 248, 240))                           # a roll of bandage in the pocket
+    ap.put("front", 6, 9, (176, 150, 140))                               # a mark of the day's work
+    coif = Box(cv, "healer_coif")
+    coif.all(lambda face, x, y, w, h: grain(linen, x, y, 3, 424))
+    coif.fill("bottom", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else lit(linen, 0.85))
+    coif.row(1, lambda x: lit(linen, 0.9))                               # its hem
+    sat = Box(cv, "healer_satchel")
+    sat.all(lambda face, x, y, w, h: grain((134, 96, 60), x, y, 4, 425))
+    sat.fill("top", lambda x, y, w, h: (84, 132, 60) if (x + y) % 2 else (64, 108, 48))   # the herbs at its flap
+    for face in ("left", "right", "back"):
+        sat.fill(face, lambda x, y, w, h: (104, 72, 44) if y == 0 else None)              # the flap
+    face_paint(cv, [])
+    return cv
+
+
+def outfit_banker():
+    """[roles-a] The banker: a white shirt with red sleeve garters, a charcoal waistcoat with a gold watch chain across
+    it, grey striped trousers and polished black shoes; a green eyeshade for the ledgers."""
+    cv = Canvas()
+    shirt = (236, 234, 228)
+    vest = (52, 54, 62)
+    gold = (214, 180, 80)
+    sh = cloth(shirt, 3, 430)
+
+    def body(x, y):
+        return grain(vest, x, y, 4, 431) if 1 <= y <= 11 else sh(x, y)
+    coat = coat_to(cv, body, 12)
+    for face in ("right", "left"):
+        w, _ = coat.size(face)
+        for y in range(1, 12):
+            coat.put(face, 0, y, sh(0, y))                                # the shirt at the armholes
+    for y in range(1, 12):
+        coat.put("front", 3, y, lit(vest, 0.75))                         # the waistcoat's front edges
+        coat.put("front", 4, y, lit(vest, 0.75))
+    for y in (3, 6, 9):
+        coat.put("front", 3, y, gold)                                     # its buttons
+    for x in range(0, 3):
+        coat.put("front", x, 6 + x // 2, gold)                           # the watch chain to its pocket
+    coat.row(0, lambda x: (130, 30, 34) if x % 8 in (3, 4) else sh(x, 0))  # a dark red tie at the collar
+    sleeves(cv, sh, 9, cuff=lit(shirt, 0.88))
+    for name in ("right_arm", "left_arm"):
+        Box(cv, name).row(3, lambda x: (168, 36, 40))                     # the sleeve garters
+    legs(cv, lambda x, y: grain((78, 80, 88) if x % 3 else (98, 100, 108), x, y, 3, 432), lambda x, y: grain((24, 24, 28), x, y, 2, 433),
+         boot_from=11, sole=(16, 16, 18))
+    band = Box(cv, "banker_band")
+    band.all(lambda face, x, y, w, h: grain((40, 40, 44), x, y, 3, 434))
+    band.fill("top", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else (40, 40, 44))
+    band.fill("bottom", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else (40, 40, 44))
+    visor = Box(cv, "banker_visor")
+    visor.all(lambda face, x, y, w, h: (64, 132, 84) if (x + y) % 3 else (52, 112, 70))   # the green celluloid
+    face_paint(cv, [])
+    return cv
+
+
+def outfit_ferryman():
+    """[roles-a] The ferryman: a navy waterman's jacket with brass buttons over a striped jersey, a red knitted cap,
+    canvas trousers rolled at the ankle over tall boots, and a coil of hemp rope slung from the shoulder."""
+    cv = Canvas()
+    navy = (38, 52, 86)
+    brass = (196, 160, 74)
+
+    def jacket(x, y):
+        if 2 <= x % 8 <= 5 and y <= 9:                                    # the jersey showing at the open front
+            return (230, 228, 220) if y % 2 else (60, 74, 118)
+        return grain(navy, x, y, 5, 440)
+    coat = coat_to(cv, jacket, 13)
+    for y in (3, 6, 9):
+        coat.put("front", 1, y, brass)
+        coat.put("front", 6, y, brass)
+    coat.row(12, lambda x: lit(navy, 0.78))
+    sleeves(cv, lambda x, y: grain(navy, x, y, 5, 441), 9, cuff=lit(navy, 0.8))
+    legs(cv, cloth((150, 138, 108), 5, 442), leather((40, 36, 30)), boot_from=8, sole=(22, 20, 18))
+    for name in ("right_leg", "left_leg"):
+        Box(cv, name).row(7, lambda x: lit((150, 138, 108), 0.82))       # rolled at the ankle
+    cap = Box(cv, "ferryman_cap")
+    red = (168, 40, 36)
+    cap.all(lambda face, x, y, w, h: lit(red, 0.86) if (x + y) % 2 else grain(red, x, y, 4, 443))   # the knit
+    cap.fill("bottom", lambda x, y, w, h: False if 1 <= x <= 6 and 1 <= y <= 6 else lit(red, 0.7))
+    cap.row(2, lambda x: lit(red, 0.7))                                   # its turned-up brim
+    rope = Box(cv, "ferryman_rope")
+    hemp = (184, 156, 104)
+    rope.all(lambda face, x, y, w, h: lit(hemp, 0.78) if (x + y) % 3 == 0 else grain(hemp, x, y, 5, 444))
+    rope.fill("top", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else hemp)
+    rope.fill("bottom", lambda x, y, w, h: False if 1 <= x <= w - 2 and 1 <= y <= h - 2 else lit(hemp, 0.8))
+    face_paint(cv, [])
+    return cv
+
+
 def outfit_rancher():
     """A leather waistcoat over a blue shirt, chaps, a wool shawl, a wide hat."""
     cv = Canvas()
@@ -2537,6 +2661,9 @@ OUTFITS = {
     "diver": outfit_diver,                                                # [diver]
     "netherrunner": outfit_netherrunner,                                  # [nether]
     "engineer": outfit_engineer,                                          # [redstone]
+    "healer": outfit_healer,                                              # [roles-a]
+    "banker": outfit_banker,                                              # [roles-a]
+    "ferryman": outfit_ferryman,                                          # [roles-a]
 }
 def emerald_glow():
     """[emerald] The emerald trader's little lantern, lit whatever the light round it."""

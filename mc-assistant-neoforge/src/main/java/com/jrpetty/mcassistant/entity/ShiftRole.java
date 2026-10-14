@@ -60,7 +60,14 @@ public enum ShiftRole {
         List.of("Collect the blocks at the storehouse (a deposit is held for them).",
             "Place each one on its marked spot: it is set the way the drawing has it.",
             "A block in the wrong spot is refused and counts as a mistake.",
-            "Pay is by the block; the deposit comes back when they are all in."));
+            "Pay is by the block; the deposit comes back when they are all in.")),
+    // [roles-a] The healer's assistant: the round of the laid-up, with the stores' remedies (Health.tendByHand).
+    HEALER("heal", "Healer's assistant", "Infirmary nurse", "the infirmary", 0.8, 500,
+        "an infirmary, and somebody laid up", Set.of(StationTask.HEAL),
+        List.of("A patient laid up shows on your card: at the infirmary or at home, marked.",
+            "Go to the bedside: standing by it, you give the best remedy the stores have (honey, a bandage, a potion).",
+            "With nothing in the stores you sit with them a while, which helps a little.",
+            "A quick round earns stars; each patient seen to pays at once."));
 
     public final String id, title, senior, place;
     /** The wage a task, in coin, before the town's pay level, the stars and the skill. */

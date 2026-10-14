@@ -53,7 +53,8 @@ import java.util.function.Predicate;
  * <li><b>The hurt.</b> Once the town has its infirmary, a folk down to three fifths of its health and out of
  *     any fight walks there and lies in one of its beds, mending half a heart more every eight seconds than
  *     it would on its own (twice the pace), until it is nine tenths whole.</li>
- * <li><b>The healer.</b> The town's care is a works of its own (TownJobs "care", the brewer before anybody,
+ * <li><b>The healer.</b> [roles-a] A town with its healer (Healers, StationTask.HEAL) sends it to each bedside;
+ *     without one free, the town's care is a works of its own (TownJobs "care", the brewer before anybody,
  *     else a hand the town can spare): one folk goes round the infirmary's patients, and visits the bedridden
  *     at home, about a minute apart, with a honey bottle, a golden carrot, the brewer's healing potion or a
  *     handful of sweet berries out of the stores (the potion first for a wound, the honey first for a cold);
@@ -677,21 +678,53 @@ public final class Health {
     }
 
     /**
-     * The healer's round: the neediest patient not seen to in the last minute, by the town's care (TownJobs
-     * "care": the brewer before anybody), at its bedside. Returns who was seen to, or null.
+     * The healer's round: the neediest patient not seen to in the last minute, by the town's healer at its bedside
+     * ([roles-a] Healers), else the town's care (TownJobs "care": the brewer before anybody). Returns who was seen
+     * to, or null.
      */
     @Nullable
     static VillageFolkEntity care(ServerLevel level, Villages.Village v, long now, long day) {
         for (VillageFolkEntity p : patients(v.id())) {
             State s = p.health();
             if (now - s.tended < CARE_EVERY && now >= s.tended) continue;
+            if (ShiftTasks.patientTaken(p.getUUID())) continue;               // [roles-a] a player on its shift is going to it
             String what = s.infirmary ? "tending " + p.displayNameCap() + " at the infirmary"
                 : "visiting " + p.displayNameCap() + ", laid up at home";
+            // [roles-a] The town's healer first (Healers): sent to the bedside, and it sees to the patient when it gets there.
+            VillageFolkEntity healer = Healers.forPatient(v, p);
+            if (healer != null) {
+                if (!Healers.atBedside(healer, p)) return null;
+                tend(level, v, p, healer, day, now);
+                Healers.seen(healer, p);
+                return p;
+            }
             if (!TownJobs.atWork(level, v, "care", p.blockPosition(), what, StationTask.BREW)) return null;
             tend(level, v, p, carer(level, v, p, what), day, now);
             return p;
         }
         return null;
+    }
+
+    /** [roles-a] The patients due for care now (not seen to within the minute), the neediest first: the healer's round's
+     *  and a player's shift's (ShiftTasks). */
+    public static List<VillageFolkEntity> dueForCare(UUID village, long now) {
+        List<VillageFolkEntity> out = new ArrayList<>();
+        for (VillageFolkEntity p : patients(village)) {
+            long tended = p.health().tended;
+            if (now - tended >= CARE_EVERY || now < tended) out.add(p);
+        }
+        return out;
+    }
+
+    /** [roles-a] A player on its shift as the healer's assistant at the bedside: the patient seen to as the healer would
+     *  (the stores' remedies), in the player's name. Says what with. */
+    public static String tendByHand(ServerLevel level, Villages.Village v, VillageFolkEntity p, net.minecraft.world.entity.player.Player by) {
+        long now = level.getGameTime(), day = level.getDayTime() / 24000L;
+        String name = by.getName().getString();
+        tend(level, v, p, null, name, day, now);
+        p.persona().feelFor(by.getUUID(), name, 2);
+        p.sayLater(FolkTalk.pick(p.getRandom(), "Thank you, " + name + ".", "*cough* That's kind of you.", "Bless you, " + name + "."), 30);
+        return p.health().tendedWith;
     }
 
     /** Who is at the bedside: the town's care, else (the works done at once, as in the tests) the nearest well folk. */
@@ -709,6 +742,12 @@ public final class Health {
         return near;
     }
 
+    /** [roles-a] Is this one of the remedies the healer gives (honey, a golden carrot, berries, a healing potion, the
+     *  kitchen's bandage and tea)? For the trade's card (Trades) and the stores' books. */
+    public static boolean isRemedy(ItemStack s) {
+        return HONEY.what().test(s) || CARROT.what().test(s) || BERRIES.what().test(s) || POTION.what().test(s) || Kitchen.BANDAGE.test(s);
+    }
+
     /** What the healer gives, out of the stores. */
     record Remedy(String word, Predicate<ItemStack> what, int eases, float heals, boolean bottle) {}
 
@@ -719,6 +758,12 @@ public final class Health {
 
     /** At the bedside: a remedy out of the stores, or company alone. */
     static void tend(ServerLevel level, Villages.Village v, VillageFolkEntity p, @Nullable VillageFolkEntity carer, long day, long now) {
+        tend(level, v, p, carer, null, day, now);
+    }
+
+    /** At the bedside, by a folk, or by a player ([roles-a] {@code byName}: the healer's assistant on its shift). */
+    static void tend(ServerLevel level, Villages.Village v, VillageFolkEntity p, @Nullable VillageFolkEntity carer, @Nullable String byName,
+                     long day, long now) {
         State s = p.health();
         List<Remedy> order = s.wounded && s.cold <= 0 ? List.of(POTION, CARROT, HONEY, BERRIES) : List.of(HONEY, CARROT, BERRIES, POTION);
         Remedy kitchen = Kitchen.remedy(level, v, p, s.wounded && s.cold <= 0);      // [kitchen] a bandage for a wound, the healer's tea for a cold
@@ -729,10 +774,11 @@ public final class Health {
             got = Crafts.takeOne(level, v, r.what());
             if (!got.isEmpty()) { used = r; break; }
         }
-        String who = carer == null ? "the town's healer" : carer.displayNameCap();
+        String who = carer != null ? carer.displayNameCap() : byName != null ? byName : "the town's healer";
         RandomSource r = p.getRandom();
         Book b = book(v.id(), day);
         int eased = used == null ? COMFORT : used.eases();
+        if (carer != null && FolkSkills.active(carer, FolkSkills.Knack.BEDSIDE_MANNER)) eased += eased / 4;   // [roles-a] its knack
         if (used == null) {
             p.heal(1.0F);
             b.comforted++;
@@ -833,6 +879,10 @@ public final class Health {
         out.putInt("week", caughtThisWeek(id, day));
         Ledger.Building b = Infirmary.of(id);
         out.putBoolean("infirmary", b != null);
+        List<String> hs = new ArrayList<>();                                   // [roles-a] the town's healers (Healers)
+        for (VillageFolkEntity h : Healers.healers(id)) hs.add(h.displayNameCap());
+        out.putString("healers", String.join(", ", hs));
+        out.putInt("healers_wanted", Healers.wanted(id));
         if (b != null) {
             List<BlockPos> beds = Infirmary.beds(level, b);
             int taken = 0;
@@ -867,6 +917,10 @@ public final class Health {
             String c = cardLine(f);
             if (!c.isEmpty()) out.add("  " + f.displayNameCap() + ": " + c);
         }
+        List<String> hs = new ArrayList<>();                                   // [roles-a] the town's healers (Healers)
+        for (VillageFolkEntity h : Healers.healers(id)) hs.add(h.displayNameCap() + " (level " + h.tradeLevel(StationTask.HEAL) + ")");
+        out.add("  Healers: " + (hs.isEmpty() ? "none" + (Healers.wanted(id) > 0 ? " yet (the town wants " + Healers.wanted(id) + ")"
+            : "; the town's care crew sees to the sick") : String.join(", ", hs)));
         Book k = book(id, day);
         out.add("  Today: " + k.caught + " caught, " + k.recovered + " got over it, " + k.tended + " seen to (" + k.remedies
             + " with a remedy, " + k.comforted + " with company), " + k.mended + " half-hearts mended in the infirmary's beds"
@@ -964,11 +1018,21 @@ public final class Health {
     public static VillageFolkEntity careForTests(ServerLevel level, UUID village) {
         Villages.Village v = Villages.get(village);
         if (v == null) return null;
-        for (VillageFolkEntity p : patients(village)) p.health().tended = 0L;
-        return care(level, v, level.getGameTime(), level.getDayTime() / 24000L);
+        long now = level.getGameTime();
+        for (VillageFolkEntity p : patients(village)) p.health().tended = now - CARE_EVERY - 1;   // [roles-a] due even in a world a minute old
+        return care(level, v, now, level.getDayTime() / 24000L);
     }
 
     /** Tests: laid up now, for so long, for this ("cold", "wound"). */
+    /** [roles-a] Tests: laid up in bed where it stands now (as if it had walked to its bed), for so long, for this. */
+    public static void patientForTests(VillageFolkEntity f, long ticks, String why) {
+        layUpForTests(f, ticks, why);
+        State s = f.health();
+        s.lying = true;
+        s.infirmary = false;
+        s.tended = f.level().getGameTime() - CARE_EVERY - 1;
+    }
+
     public static void layUpForTests(VillageFolkEntity f, long ticks, String why) {
         State s = f.health();
         s.laidUntil = f.level().getGameTime() + ticks;

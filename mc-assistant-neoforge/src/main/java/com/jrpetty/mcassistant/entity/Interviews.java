@@ -2091,7 +2091,8 @@ public final class Interviews {
         UUID id = v.id();
         if (Villages.folkOf(id).size() < 4 || coming(id).size() >= 2) return;
         InterviewBook.Town town = InterviewBook.town(id);
-        List<Post> posts = new ArrayList<>(List.of(Post.of("constable"), Post.of("caveleader"), Post.of("auctioneer")));
+        List<Post> posts = new ArrayList<>(List.of(Post.of("constable"), Post.of("caveleader"), Post.of("auctioneer"),
+            Post.of(Sexton.POST)));                                                         // [roles-a] the chapel's keeper
         for (StationTask t : StationTask.values()) if (t != StationTask.NONE && Lessons.of(t) != null) posts.add(Post.master(t));
         for (Post p : posts) {
             if (p == null || !InterviewPosts.stands(level, v, p) || pending(id, p.key()) != null) continue;

@@ -48,11 +48,12 @@ import java.util.function.Predicate;
  *     the houses, rugs and banners, and binds the books the library's shelves are made of;</li>
  * <li><b>the beekeeper</b> (Stone Age, a meadow outside the town) keeps hives, plants
  *     flowers round them for the bees, and takes the honey and the comb;</li>
- * <li><b>the brewer</b> (Diamond Age, at the brewery) brews potions — healing for the watch,
+ * <li><b>the brewer</b> (Iron Age, at the brewery) brews potions — healing for the watch,
  *     swiftness, night vision, leaping, water breathing — from what the stores hold;</li>
- * <li><b>the enchanter</b> (Nether Age, at the library) binds books from cane and leather
+ * <li><b>the enchanter</b> (Diamond Age, at the library) binds books from cane and leather
  *     and puts enchantments on the village's best tools and armour with lapis.</li>
  * </ul>
+ * The ages are those the trades' slots ask for (Villages.SLOTS), which have the last word.
  */
 public final class Crafts {
 
