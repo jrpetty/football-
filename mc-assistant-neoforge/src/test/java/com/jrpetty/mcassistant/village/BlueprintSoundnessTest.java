@@ -30,6 +30,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * out of Blueprints.java, so a new mark there is known here too); and the same again for every
  * building the Iron Age puts a storey on (Ages.TALL), raised as Blueprints.raised raises it.
  *
+ * <p>[blueprints] And, for the way a town looks and is got about in: a building with doors has one onto the
+ * street with clear ground (or steps) two places out from it, and is got into through its doors and not
+ * through a gap in its walls; no one-block hole in a wall that is not a window; every chest opens (nothing
+ * solid on its lid) and every chest and cask can be got at; every furnished storey can be walked up to (a bare
+ * roof space need not be); no hole in an upper floor that somebody would fall down; everywhere in behind the
+ * doors and walled in has a roof over it; the shop's, the café's and the store's counters have room in front
+ * for their price tags and their customers; and every drawing keeps the footprint and the door side the town
+ * plan's lots are sized by.
+ *
  * <p>A cell outside a drawing is open air above the ground (layer 0 and up) and the ground itself
  * below it (layer -1 and down): the builder levels a lot before it lays a footing. Each check lists
  * every fault it finds, the drawing, the layer and the place in it, before it fails.
@@ -324,6 +333,10 @@ class BlueprintSoundnessTest {
             }
         }
         if (up != null) for (int h = 0; h <= eaves; h++) d.put(up[0], h, up[1], ladder);
+        for (Cell c : cells) {                                   // [blueprints] a loft's ladder carried on up
+            if (c.h() != eaves || !"LADDER".equals(c.key().part())) continue;
+            for (int h = eaves + 1; h < eaves + lift; h++) d.put(c.dx(), h, c.dz(), c.key());
+        }
         // A way up is wanted where the old ceiling is boarded, a floor to stand on up there.
         boolean floored = false;
         for (Cell c : cells) if (c.h() == eaves && "FLOOR".equals(c.key().style())) floored = true;
@@ -598,18 +611,580 @@ class BlueprintSoundnessTest {
         report("the way in", faults);
     }
 
+    // ------------------------------------------------------------------ [blueprints] the footprints kept
+
+    /** Half the width and depth on the ground (Blueprints.groundHalf: layer 0 and under) and of everything (fullHalf). */
+    static int[] footprint(Drawing d) {
+        int gw = 0, gd = 0, fw = 0, fd = 0;
+        for (Cell c : cells(d)) {
+            fw = Math.max(fw, Math.abs(c.dx()));
+            fd = Math.max(fd, Math.abs(c.dz()));
+            if (c.h() > 0) continue;
+            gw = Math.max(gw, Math.abs(c.dx()));
+            gd = Math.max(gd, Math.abs(c.dz()));
+        }
+        return new int[]{ gw, gd, fw, fd };
+    }
+
+    /** Which side of the building its way in from the street is on: front, back, left, right, or none (no door). */
+    static String doorSide(Drawing d) {
+        Set<Long> outside = walk(d, false);
+        List<Cell> street = streetDoors(d, outside);
+        if (street.isEmpty()) return "none";
+        Cell c = street.get(0);
+        int[] out = outIn(c, outside)[0];
+        int sx = Integer.signum(out[0] - c.dx()), sz = Integer.signum(out[2] - c.dz());
+        return sz < 0 ? "front" : sz > 0 ? "back" : sx < 0 ? "left" : "right";
+    }
+
+    /**
+     * Every drawing's footprint and the side its door is on, as the town plan lays its lots out for them (a
+     * lot is sized by the building's half-width and half-depth: Blueprints.groundHalf and fullHalf, and its door
+     * faces the street). Change a footprint or turn a door and the lots no longer fit: change it here only with
+     * the town plan. "name groundW groundD fullW fullD doorSide".
+     */
+    static final List<String> FOOTPRINTS = List.of(
+        "allotments 4 4 4 4 none",
+        "arena 5 10 5 10 none",
+        "armoury 3 3 4 4 front",
+        "auction 3 5 4 5 front",
+        "bakery 4 3 4 4 front",
+        "bank 3 4 4 5 front",
+        "barracks 3 6 4 7 front",
+        "belltower 2 3 3 3 front",
+        "brewery 4 3 4 4 front",
+        "cafe 4 4 4 4 front",
+        "cathedral 5 10 6 11 front",
+        "chapel 3 10 4 10 front",
+        "clockworkgate 5 4 6 4 right",
+        "colossus 4 4 4 4 none",
+        "court 5 3 5 3 none",
+        "divershed 2 2 3 3 front",
+        "firestation 3 4 3 4 front",
+        "flats 5 5 5 5 front",
+        "flats4 5 5 5 5 front",
+        "fletcher 2 2 3 3 front",
+        "fountain 3 3 3 3 none",
+        "gateway 4 2 4 2 none",
+        "golemyard 2 2 3 3 none",
+        "granary 3 3 3 3 front",
+        "grandbazaar 5 10 5 10 none",
+        "grandlibrary 5 10 6 11 front",
+        "graveyard 4 4 4 4 none",
+        "greatforge 5 9 6 10 front",
+        "greatlighthouse 4 4 4 4 front",
+        "guesthouse 3 5 4 5 front",
+        "hall 4 8 5 8 front",
+        "house 4 4 4 4 front",
+        "house2 4 4 4 4 front",
+        "infirmary 3 5 4 5 front",
+        "inn 4 4 4 5 front",
+        "library 3 5 4 5 front",
+        "lighthouse 3 3 3 3 front",
+        "lodge 4 5 5 5 front",
+        "manor 5 6 6 6 front",
+        "maproom 3 3 4 4 front",
+        "market 4 4 5 5 none",
+        "monument 3 3 3 3 none",
+        "museum 5 5 5 5 front",
+        "observatory 5 5 5 5 front",
+        "orchard 4 4 4 4 none",
+        "park 5 5 5 5 none",
+        "pitch 5 10 5 10 none",
+        "postoffice 3 4 4 4 front",
+        "powderhut 3 4 3 4 front",
+        "range 5 5 5 5 none",
+        "redstoneworks 3 3 4 4 front",
+        "school 3 5 4 5 front",
+        "shelter 2 2 3 3 none",
+        "shop 3 3 4 4 front",
+        "skygarden 5 8 5 8 front",
+        "smeltery 3 3 4 4 none",
+        "smithy 3 3 4 4 none",
+        "stable 4 4 5 5 none",
+        "station 2 4 2 4 none",
+        "statue 2 2 2 2 none",
+        "storage 2 3 3 4 front",
+        "store 5 9 6 9 front",
+        "storehouse 1 1 1 1 none",
+        "tavern 4 5 5 5 front",
+        "theatre 4 5 4 5 none",
+        "townhall 5 10 6 10 front",
+        "townlibrary 4 5 5 5 front",
+        "tradingpost 2 2 3 3 none",
+        "trainingyard 4 3 4 3 none",
+        "villa 5 5 5 5 front",
+        "watchhouse 4 5 4 5 front",
+        "watchtower 2 2 3 3 front",
+        "well 2 2 2 2 none",
+        "windmill 2 2 4 3 front",
+        "workshop 3 3 4 4 none"
+    );
+
+    @Test
+    @DisplayName("[blueprints] every drawing keeps its footprint and its door's side (the town plan's lots are sized by them)")
+    void footprintsKept() throws IOException {
+        Map<String, String> want = new HashMap<>();
+        for (String f : FOOTPRINTS) want.put(f.substring(0, f.indexOf(' ')), f);
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawn()) {
+            int[] f = footprint(d);
+            String got = d.name + " " + f[0] + " " + f[1] + " " + f[2] + " " + f[3] + " " + doorSide(d);
+            if (!want.containsKey(d.name)) faults.add(d.name + ": a new drawing, not in FOOTPRINTS: " + got);
+            else if (!want.get(d.name).equals(got)) faults.add(d.name + ": was \"" + want.get(d.name) + "\", now \"" + got + "\"");
+        }
+        report("footprints", faults);
+    }
+
+    // ------------------------------------------------------------------ [blueprints] the way in, the rooms, the roof
+
+    /** The two places a door is between, at its own level: before it (toward its front) and behind it. */
+    static int[][] sides(Cell door) {
+        int[] s = step(door.key().way());
+        return new int[][]{ { door.dx() - s[0], door.h(), door.dz() - s[1] }, { door.dx() + s[0], door.h(), door.dz() + s[1] } };
+    }
+
+    static List<Cell> doors(Drawing d) {
+        List<Cell> out = new ArrayList<>();
+        for (Cell c : cells(d)) if (isDoor(c.key())) out.add(c);
+        return out;
+    }
+
+    /** The doors that open onto the open air: one side of them got to from round the lot with every door shut. */
+    static List<Cell> streetDoors(Drawing d, Set<Long> outside) {
+        List<Cell> out = new ArrayList<>();
+        for (Cell c : doors(d)) {
+            for (int[] p : sides(c)) if (outside.contains(Drawing.at(p[0], p[1], p[2]))) { out.add(c); break; }
+        }
+        return out;
+    }
+
+    /** The side of a street door that is out in the open, and the side that is in. */
+    static int[][] outIn(Cell door, Set<Long> outside) {
+        int[][] s = sides(door);
+        return outside.contains(Drawing.at(s[0][0], s[0][1], s[0][2])) ? s : new int[][]{ s[1], s[0] };
+    }
+
+    /** The columns the walls of the ground storey stand in (as Blueprints.raised finds them), and its eaves. */
+    static Set<Long> ring(Drawing d) {
+        Set<Long> ring = new HashSet<>();
+        int eaves = eaves(d);
+        for (Cell c : cells(d)) {
+            if (c.h() < 0 || c.h() >= eaves) continue;
+            if ((wallish(c.key()) && !"LANTERN".equals(c.key().part())) || isDoor(c.key())) ring.add(Drawing.at(c.dx(), 0, c.dz()));
+        }
+        return ring;
+    }
+
+    /** The lowest roof course at layer 2 or over (as Blueprints.raised finds it); the top of the drawing if none. */
+    static int eaves(Drawing d) {
+        int eaves = Integer.MAX_VALUE;
+        for (Cell c : cells(d)) if (c.h() >= 2 && roofish(c.key())) eaves = Math.min(eaves, c.h());
+        return eaves == Integer.MAX_VALUE ? d.maxH + 1 : eaves;
+    }
+
+    /** Is there anything over this place, higher than a body standing in it: a roof, a ceiling, a canopy? */
+    static boolean covered(Drawing d, int x, int h, int z) {
+        for (int y = h + 2; y <= d.maxH; y++) {
+            Shape s = d.shapeAt(x, y, z);
+            if (s != Shape.AIR && s != Shape.SMALL && s != Shape.LANTERN && s != Shape.LADDER) return true;
+        }
+        return false;
+    }
+
+    @Test
+    @DisplayName("[blueprints] a building with doors has one onto the street, with clear ground (or steps) in front of it")
+    void aDoorOntoTheStreet() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            List<Cell> doors = doors(d);
+            if (doors.isEmpty()) continue;
+            Set<Long> outside = walk(d, false);
+            List<Cell> street = streetDoors(d, outside);
+            if (street.isEmpty()) {
+                faults.add(d.name + ": none of its " + doors.size() + " doors opens onto the street (the first at "
+                    + d.where(doors.get(0).dx(), doors.get(0).h(), doors.get(0).dz()) + ")");
+                continue;
+            }
+            for (Cell c : street) {
+                // Two clear places straight out from it: nobody comes out of a door into a wall or off a drop.
+                int[][] oi = outIn(c, outside);
+                int ox = oi[0][0] - c.dx(), oz = oi[0][2] - c.dz();
+                int fx = c.dx() + 2 * ox, fz = c.dz() + 2 * oz;
+                boolean clear = false;
+                for (int h = c.h() - 1; h <= c.h() + 1; h++) if (outside.contains(Drawing.at(fx, h, fz))) clear = true;
+                if (!clear) faults.add(d.where(c.dx(), c.h(), c.dz()) + ": the second place out of the door (dx " + fx + ", dz " + fz
+                    + ") is not clear ground, nor a step up or down");
+            }
+        }
+        report("the door onto the street", faults);
+    }
+
+    @Test
+    @DisplayName("[blueprints] nothing floats: every block of a building holds on to the rest of it, down to the ground")
+    void nothingFloats() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> held = new HashSet<>();
+            ArrayDeque<Cell> todo = new ArrayDeque<>();
+            Map<Long, Cell> all = new HashMap<>();
+            for (Cell c : cells(d)) {
+                all.put(Drawing.at(c.dx(), c.h(), c.dz()), c);
+                if (c.h() <= 0 && held.add(Drawing.at(c.dx(), c.h(), c.dz()))) todo.add(c);
+            }
+            while (!todo.isEmpty()) {
+                Cell c = todo.poll();
+                // Face to face, or edge to edge (a hipped roof's courses step in a block as they go up).
+                for (int x = -1; x <= 1; x++) {
+                    for (int y = -1; y <= 1; y++) {
+                        for (int z = -1; z <= 1; z++) {
+                            if (Math.abs(x) + Math.abs(y) + Math.abs(z) > 2 || x == 0 && y == 0 && z == 0) continue;
+                            long k = Drawing.at(c.dx() + x, c.h() + y, c.dz() + z);
+                            Cell m = all.get(k);
+                            if (m != null && held.add(k)) todo.add(m);
+                        }
+                    }
+                }
+            }
+            int loose = 0;
+            String first = null;
+            for (Cell c : cells(d)) {
+                if (held.contains(Drawing.at(c.dx(), c.h(), c.dz()))) continue;
+                loose++;
+                if (first == null) first = d.where(c.dx(), c.h(), c.dz());
+            }
+            if (loose > 0) faults.add(first + ": " + loose + " blocks hold on to nothing");
+        }
+        report("floating blocks", faults);
+    }
+
+    @Test
+    @DisplayName("[blueprints] a lamp by every door onto the street: nobody fumbles for the way in after dark")
+    void doorwaysAreLit() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> outside = walk(d, false);
+            for (Cell c : streetDoors(d, outside)) {
+                int[][] oi = outIn(c, outside);
+                int[] out = oi[0], in = oi[1];
+                boolean lit = false;
+                for (Cell l : cells(d)) {
+                    String part = l.key().part();
+                    if (!part.equals("LANTERN") && !part.equals("TORCH") && !part.equals("CAMPFIRE")) continue;
+                    if (l.h() < c.h() - 1 || l.h() > c.h() + 3) continue;
+                    // Out in front of it, or (a door at the very edge of its lot) hung just inside it: a door lets the light by.
+                    if (Math.abs(l.dx() - out[0]) <= 2 && Math.abs(l.dz() - out[2]) <= 2) lit = true;
+                    if (Math.abs(l.dx() - in[0]) + Math.abs(l.dz() - in[2]) <= 1) lit = true;
+                }
+                if (!lit) faults.add(d.where(c.dx(), c.h(), c.dz()) + ": no lamp within two places of the way in");
+            }
+        }
+        report("lit doorways", faults);
+    }
+
+    @Test
+    @DisplayName("[blueprints] a building is got into through its doors, not through a gap in its walls")
+    void inOnlyByTheDoors() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> outside = walk(d, false);
+            Set<Long> ring = ring(d);
+            for (Cell c : streetDoors(d, outside)) {
+                int[] in = outIn(c, outside)[1];
+                if (!outside.contains(Drawing.at(in[0], in[1], in[2]))) continue;
+                // In behind the door and out again without it: find where, the way a builder would (the shortest
+                // way out from behind the door, with the door shut) and say where it crosses the walls' line.
+                faults.add(d.where(c.dx(), c.h(), c.dz()) + ": the inside is open to the street besides the door: " + gap(d, in, ring));
+            }
+        }
+        report("gaps in the walls", faults);
+    }
+
+    /** The shortest way out from a place inside with the doors shut: where it goes through the walls' line. */
+    static String gap(Drawing d, int[] from, Set<Long> ring) {
+        Map<Long, Long> came = new HashMap<>();
+        ArrayDeque<int[]> todo = new ArrayDeque<>();
+        long start = Drawing.at(from[0], from[1], from[2]);
+        came.put(start, start);
+        todo.add(from);
+        int x0 = d.minX - 1, x1 = d.maxX + 1, z0 = d.minZ - 1, z1 = d.maxZ + 1;
+        while (!todo.isEmpty()) {
+            int[] p = todo.poll();
+            if (p[0] <= x0 || p[0] >= x1 || p[2] <= z0 || p[2] >= z1) {
+                // Back along the way, to the first place in the walls' line.
+                List<int[]> way = new ArrayList<>();
+                long k = Drawing.at(p[0], p[1], p[2]);
+                way.add(p);
+                while (came.get(k) != k) {
+                    k = came.get(k);
+                    way.add(0, new int[]{ signed((k >> 40) & 0xfffff), signed((k >> 20) & 0xfffff), signed(k & 0xfffff) });
+                }
+                for (int[] q : way) if (ring.contains(Drawing.at(q[0], 0, q[2]))) return "through layer " + q[1] + " (dx " + q[0] + ", dz " + q[2] + ")";
+                int[] q = way.get(Math.min(way.size() - 1, 1));
+                return "by layer " + q[1] + " (dx " + q[0] + ", dz " + q[2] + ")";
+            }
+            for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                for (int dh = -3; dh <= 1; dh++) {
+                    int nx = p[0] + n[0], nh = p[1] + dh, nz = p[2] + n[1];
+                    if (dh == 1 && !passable(d.shapeAt(p[0], p[1] + 2, p[2]))) continue;
+                    boolean clearDown = true;
+                    for (int y = nh + 1; y <= p[1] + 1 && dh < 0; y++) if (!passable(d.shapeAt(nx, y, nz))) clearDown = false;
+                    if (!clearDown || !stand(d, nx, nh, nz, false)) continue;
+                    long k = Drawing.at(nx, nh, nz);
+                    if (came.containsKey(k)) continue;
+                    came.put(k, Drawing.at(p[0], p[1], p[2]));
+                    todo.add(new int[]{ nx, nh, nz });
+                }
+            }
+        }
+        return "somewhere";
+    }
+
+    @Test
+    @DisplayName("[blueprints] no one-block hole in a wall: what is open in a wall is a window, a door or a doorway")
+    void noHolesInTheWalls() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> ring = ring(d);
+            int eaves = eaves(d);
+            for (long k : ring) {
+                int x = signed((k >> 40) & 0xfffff), z = signed(k & 0xfffff);
+                for (int h = 0; h < eaves; h++) {
+                    if (d.key(x, h, z) != null) continue;
+                    Key below = d.key(x, h - 1, z);
+                    if (isDoor(below)) continue;                                                // a door's upper half
+                    Shape b = d.shapeAt(x, h - 1, z), a = d.shapeAt(x, h + 1, z);
+                    if (!(floor(b) || b == Shape.POST) || !(floor(a) || a == Shape.POST)) continue;
+                    // Walled either side along the wall's line, and open both sides across it: a hole through a wall.
+                    boolean alongX = wallAt(d, x - 1, h, z) && wallAt(d, x + 1, h, z)
+                        && passable(d.shapeAt(x, h, z - 1)) && passable(d.shapeAt(x, h, z + 1));
+                    boolean alongZ = wallAt(d, x, h, z - 1) && wallAt(d, x, h, z + 1)
+                        && passable(d.shapeAt(x - 1, h, z)) && passable(d.shapeAt(x + 1, h, z));
+                    if (alongX || alongZ) faults.add(d.where(x, h, z) + ": a one-block hole in the wall (glaze it, or wall it)");
+                }
+            }
+        }
+        report("holes in the walls", faults);
+    }
+
+    static boolean wallAt(Drawing d, int x, int h, int z) {
+        Key k = d.key(x, h, z);
+        return k != null && (wallish(k) || isDoor(k));
+    }
+
+    @Test
+    @DisplayName("[blueprints] every chest opens (nothing solid on its lid) and every chest and cask can be got at")
+    void chestsAndCasksCanBeGotAt() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> reach = walk(d);
+            for (Cell c : cells(d)) {
+                String part = c.key().part();
+                if (!part.equals("CHEST") && !part.equals("BARREL")) continue;
+                String here = d.where(c.dx(), c.h(), c.dz());
+                Key lid = d.key(c.dx(), c.h() + 1, c.dz());
+                // A chest will not open under a whole block that carries redstone: anything solid but glass.
+                if (part.equals("CHEST") && lid != null && shape(lid) == Shape.FULL && !"GLASS".equals(lid.style())) {
+                    faults.add(here + ": the chest cannot be opened, " + d.where(c.dx(), c.h() + 1, c.dz()) + " sits on its lid");
+                }
+                boolean ok = false;
+                for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                    for (int h = c.h() - 2; h <= c.h(); h++) if (reach.contains(Drawing.at(c.dx() + n[0], h, c.dz() + n[1]))) ok = true;
+                }
+                if (!ok) faults.add(here + ": nobody can get to it");
+            }
+        }
+        report("chests and casks", faults);
+    }
+
+    @Test
+    @DisplayName("[blueprints] every storey can be walked to: no floor under a roof that nobody can get up to")
+    void everyStoreyHasAWayUp() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> reach = walk(d);
+            Set<Long> ring = ring(d);
+            if (ring.isEmpty()) continue;
+            Set<Long> lost = new HashSet<>();
+            for (int h = 1; h <= d.maxH; h++) {
+                for (int x = d.minX; x <= d.maxX; x++) {
+                    for (int z = d.minZ; z <= d.maxZ; z++) {
+                        if (!stand(d, x, h, z) || reach.contains(Drawing.at(x, h, z)) || !covered(d, x, h, z)) continue;
+                        if (!within(ring, x, z)) continue;
+                        lost.add(Drawing.at(x, h, z));
+                    }
+                }
+            }
+            // Gathered into floors: a floor of three places or more, not all of it tucked under the roof's slope, is a storey.
+            Set<Long> done = new HashSet<>();
+            for (long k : lost) {
+                if (done.contains(k)) continue;
+                List<int[]> floor = new ArrayList<>();
+                ArrayDeque<Long> todo = new ArrayDeque<>(List.of(k));
+                done.add(k);
+                while (!todo.isEmpty()) {
+                    long q = todo.poll();
+                    int x = signed((q >> 40) & 0xfffff), h = signed((q >> 20) & 0xfffff), z = signed(q & 0xfffff);
+                    floor.add(new int[]{ x, h, z });
+                    for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                        for (int dh = -1; dh <= 1; dh++) {
+                            long m = Drawing.at(x + n[0], h + dh, z + n[1]);
+                            if (lost.contains(m) && done.add(m)) todo.add(m);
+                        }
+                    }
+                }
+                if (floor.size() < 3) continue;                                         // the top of a dresser
+                // A floor with something on it (a bed, a chest, a lamp, a rug) or a door onto it is a storey somebody
+                // is meant to be on; a bare one is the roof space, boarded over and shut up.
+                boolean furnished = false;
+                for (int[] p : floor) {
+                    for (int y = p[1]; y <= p[1] + 1; y++) {
+                        Key on = d.key(p[0], y, p[2]);
+                        if (on != null && furnishing(on)) furnished = true;
+                        for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                            Key m = d.key(p[0] + n[0], y, p[2] + n[1]);
+                            if (m != null && furnishing(m) && !"LADDER".equals(m.part()) && !("LANTERN".equals(m.part()) && y > p[1])) furnished = true;
+                        }
+                    }
+                }
+                if (!furnished) continue;
+                int[] p = floor.get(0);
+                faults.add(d.where(p[0], p[1], p[2]) + ": a floor of " + floor.size() + " places nobody can get up to");
+            }
+        }
+        report("storeys with no way up", faults);
+    }
+
+    /** Something put in a room for somebody: not the building itself, nor a flower bed on a roof garden. */
+    static boolean furnishing(Key k) {
+        return !"BLOCK".equals(k.part()) && !"WINDOW".equals(k.part()) && !"FLOWER".equals(k.part()) && !"FENCE".equals(k.part());
+    }
+
+    /** Is this inside the walls' outline (between its walls both ways)? */
+    static boolean within(Set<Long> ring, int x, int z) {
+        boolean l = false, r = false, f = false, b = false;
+        for (long k : ring) {
+            int rx = signed((k >> 40) & 0xfffff), rz = signed(k & 0xfffff);
+            if (rz == z && rx < x) l = true;
+            if (rz == z && rx > x) r = true;
+            if (rx == x && rz < z) f = true;
+            if (rx == x && rz > z) b = true;
+        }
+        return l && r && f && b;
+    }
+
+    @Test
+    @DisplayName("[blueprints] no hole in an upper floor that somebody walking on it would fall down")
+    void noHolesInTheFloors() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> reach = walk(d);
+            for (int h = 1; h <= d.maxH; h++) {
+                for (int x = d.minX; x <= d.maxX; x++) {
+                    for (int z = d.minZ; z <= d.maxZ; z++) {
+                        if (!passable(d.shapeAt(x, h, z)) || d.shapeAt(x, h, z) == Shape.LADDER) continue;
+                        // Somebody walking the floor beside it, on the same boards.
+                        boolean beside = false;
+                        for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                            Key under = d.key(x + n[0], h, z + n[1]);
+                            if (under != null && "FLOOR".equals(under.style()) && reach.contains(Drawing.at(x + n[0], h + 1, z + n[1]))) beside = true;
+                        }
+                        if (!beside || !passable(d.shapeAt(x, h + 1, z))) continue;
+                        int y = h;
+                        while (y > d.minH - 1 && passable(d.shapeAt(x, y, z)) && d.shapeAt(x, y, z) != Shape.LADDER) y--;
+                        int fall = h + 1 - (y + 1);
+                        if (d.shapeAt(x, y, z) == Shape.LADDER) continue;                       // a ladder's well
+                        if (fall >= 3) faults.add(d.where(x, h, z) + ": a hole in the floor, a fall of " + fall + " (rail it, or floor it)");
+                    }
+                }
+            }
+        }
+        report("holes in the floors", faults);
+    }
+
+    @Test
+    @DisplayName("[blueprints] the roof keeps the rain out: everywhere in behind the doors has a roof over it")
+    void roofsKeepTheRainOut() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> outside = walk(d, false), all = walk(d, true);
+            if (streetDoors(d, outside).isEmpty()) continue;
+            int open = 0;
+            String first = null;
+            for (long k : all) {
+                if (outside.contains(k)) continue;
+                int x = signed((k >> 40) & 0xfffff), h = signed((k >> 20) & 0xfffff), z = signed(k & 0xfffff);
+                if (covered(d, x, h, z) || !enclosed(d, x, h, z)) continue;     // a roof garden, a gallery, a roof's slope
+                open++;
+                if (first == null) first = d.where(x, h, z);
+            }
+            if (open > 0) faults.add(first + ": open to the sky in behind the doors (" + open + " places)");
+        }
+        report("roofs", faults);
+    }
+
+    /** Walled in at head height every way: a room (its doorways lead on to more walls), not a terrace or a roof. */
+    static boolean enclosed(Drawing d, int x, int h, int z) {
+        for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+            int cx = x, cz = z;
+            boolean wall = false;
+            while (cx >= d.minX && cx <= d.maxX && cz >= d.minZ && cz <= d.maxZ) {
+                cx += n[0];
+                cz += n[1];
+                if (!passable(d.shapeAt(cx, h + 1, cz)) || isDoor(d.key(cx, h, cz))) { wall = true; break; }
+            }
+            if (!wall) return false;
+        }
+        return true;
+    }
+
+    @Test
+    @DisplayName("[blueprints] a counter has room in front of it for its price tag and its customer")
+    void countersFaceTheirCustomers() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            String base = d.name.replace("_tall", "");
+            if (!base.equals("shop") && !base.equals("cafe") && !base.equals("store")) continue;
+            List<Cell> doors = doors(d);
+            if (doors.isEmpty()) continue;
+            Cell door = doors.get(0);
+            for (Cell c : doors(d)) if (c.h() < door.h() || c.h() == door.h() && c.dz() < door.dz()) door = c;
+            Set<Long> reach = walk(d);
+            for (Cell c : cells(d)) {
+                if (!"BARREL".equals(c.key().part()) || d.key(c.dx(), c.h() + 1, c.dz()) != null) continue;
+                if (base.equals("store") && !(c.dz() < 0 && c.h() == 0)) continue;
+                // As Cafe.priceTag: the side toward the door, the one more that way.
+                int ddx = door.dx() - c.dx(), ddz = door.dz() - c.dz();
+                int fx = c.dx(), fz = c.dz();
+                if (Math.abs(ddz) >= Math.abs(ddx)) fz += ddz >= 0 ? 1 : -1; else fx += ddx >= 0 ? 1 : -1;
+                String here = d.where(c.dx(), c.h(), c.dz());
+                if (d.key(fx, c.h(), fz) != null) faults.add(here + ": no room for its price tag, " + d.where(fx, c.h(), fz) + " is there");
+                if (c.h() <= 1 && !reach.contains(Drawing.at(fx, c.h(), fz)) && !reach.contains(Drawing.at(fx, c.h() - 1, fz))) {
+                    faults.add(here + ": nobody can come up to it from the door's side");
+                }
+            }
+        }
+        report("counters", faults);
+    }
+
     /**
      * Every place somebody can stand, walking in from round the lot: on a floor with headroom, or on a
      * ladder; stepping across, up a block (a stair, a step, a jump) or down a few, and up and down ladders.
      */
     static Set<Long> walk(Drawing d) {
-        int x0 = d.minX - 1, x1 = d.maxX + 1, z0 = d.minZ - 1, z1 = d.maxZ + 1, top = d.maxH + 2;
+        return walk(d, true);
+    }
+
+    /** As walk, with the doors open or (for what lies behind them) shut. [blueprints] */
+    static Set<Long> walk(Drawing d, boolean doorsOpen) {
+        // Round the lot two wide: the street a door opens onto is clear ground two places out. [blueprints]
+        int x0 = d.minX - 2, x1 = d.maxX + 2, z0 = d.minZ - 2, z1 = d.maxZ + 2, top = d.maxH + 2;
         Set<Long> seen = new HashSet<>();
         ArrayDeque<int[]> todo = new ArrayDeque<>();
         for (int x = x0; x <= x1; x++) {
             for (int z = z0; z <= z1; z++) {
                 if (x != x0 && x != x1 && z != z0 && z != z1) continue;
-                if (stand(d, x, 0, z) && seen.add(Drawing.at(x, 0, z))) todo.add(new int[]{ x, 0, z });
+                if (stand(d, x, 0, z, doorsOpen) && seen.add(Drawing.at(x, 0, z))) todo.add(new int[]{ x, 0, z });
             }
         }
         while (!todo.isEmpty()) {
@@ -632,7 +1207,7 @@ class BlueprintSoundnessTest {
             if (d.shapeAt(x, h, z) == Shape.LADDER || d.shapeAt(x, h - 1, z) == Shape.LADDER) next.add(new int[]{ x, h - 1, z });
             for (int[] q : next) {
                 if (q[1] < -1 || q[1] > top) continue;
-                if (!stand(d, q[0], q[1], q[2])) continue;
+                if (!stand(d, q[0], q[1], q[2], doorsOpen)) continue;
                 if (seen.add(Drawing.at(q[0], q[1], q[2]))) todo.add(q);
             }
         }
@@ -641,9 +1216,18 @@ class BlueprintSoundnessTest {
 
     /** Somebody can be here: room for the body, and a floor under the feet or a ladder in hand. */
     static boolean stand(Drawing d, int x, int h, int z) {
+        return stand(d, x, h, z, true);
+    }
+
+    static boolean stand(Drawing d, int x, int h, int z, boolean doorsOpen) {
+        if (!doorsOpen && (isDoor(d.key(x, h, z)) || isDoor(d.key(x, h - 1, z)) && d.key(x, h, z) == null)) return false;
         Shape feet = d.shapeAt(x, h, z), head = d.shapeAt(x, h + 1, z);
         if (!passable(feet) || !passable(head)) return false;
         if (feet == Shape.LADDER || d.shapeAt(x, h - 1, z) == Shape.LADDER) return true;
         return floor(d.shapeAt(x, h - 1, z));
+    }
+
+    static boolean isDoor(Key k) {
+        return k != null && "DOOR".equals(k.part());
     }
 }

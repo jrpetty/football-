@@ -25,7 +25,7 @@ layer 0
 .w.......w.
 .wPP...PPw.
 .w.......w.
-.w.......w.
+.wJ......w.
 .wPP...PPw.
 .w.y...y&w.
 .LwwgggwwL.
@@ -37,7 +37,7 @@ layer 1
 .G.......G.
 .W.......W.
 .G.......G.
-.W.......W.
+.WJ......W.
 .W.......W.
 .W.......W.
 .LWW...WWL.
@@ -49,7 +49,7 @@ layer 2
 .G.......G.
 .W.......W.
 .G.......G.
-.W.......W.
+.WJ......W.
 .W.......W.
 .W.......W.
 .LWW...WWL.
@@ -61,7 +61,7 @@ layer 3
 .W.......W.
 .W.......W.
 .W...j...W.
-.W.......W.
+.WJ......W.
 .W.......W.
 .W.......W.
 .LWW...WWL.
@@ -73,7 +73,7 @@ vvvvvvvvvvv
 .|fffffff|.
 .|fffffff|.
 .|fffffff|.
-.|fffffff|.
+.|Jffffff|.
 .|fffffff|.
 .|fffffff|.
 .L-------L.

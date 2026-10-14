@@ -123,6 +123,9 @@ public final class Blueprints {
         key('l', BuildGoal.Part.LANTERN, Style.NONE, Way.UP);
         key('j', BuildGoal.Part.LANTERN, Style.HANGING, Way.UP);
         key('H', BuildGoal.Part.LADDER, Style.NONE, Way.FRONT);
+        // [blueprints] A ladder up a side wall: 'J' on the wall to its left (facing right), 'i' on the wall to its right.
+        key('J', BuildGoal.Part.LADDER, Style.NONE, Way.RIGHT);
+        key('i', BuildGoal.Part.LADDER, Style.NONE, Way.LEFT);
         key('o', BuildGoal.Part.OBSIDIAN, Style.NONE, Way.UP);
         key('~', BuildGoal.Part.WATER, Style.NONE, Way.UP);
         key('y', BuildGoal.Part.HAY, Style.NONE, Way.UP);
@@ -287,6 +290,11 @@ public final class Blueprints {
         }
         if (up != null && ladder != null) {
             for (int h = 0; h <= eaves; h++) out.add(new Cell(up[0], h, up[1], ladder));
+        }
+        // [blueprints] A ladder up through the old ceiling to a loft goes on up through the new storey to it.
+        for (Cell c : cells) {
+            if (c.h() != eaves || c.key().part() != BuildGoal.Part.LADDER) continue;
+            for (int h = eaves + 1; h < eaves + lift; h++) out.add(new Cell(c.dx(), h, c.dz(), c.key()));
         }
         return List.copyOf(out);
     }

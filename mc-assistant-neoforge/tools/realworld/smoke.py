@@ -3649,6 +3649,42 @@ def styles_stage(r, look, cx, cz):
     say("theme: " + r.cmd("execute positioned %d 0 %d run village theme" % (cx, cz))[:900])
 
 
+def town_blueprints_stage(r, look, cx, cz):
+    """[blueprints] The designs walked through (BlueprintSoundnessTest): the shop made over, its gable to
+    the street and its lantern from the beam end, then in at its door to the rug, the counter and the
+    shelves behind it (both chests' lids clear); the café's counter brought forward with the way behind
+    it to the smoker and the chests; the town store's flower beds and window boxes; the sky garden's new
+    stair up out of its hall. Each building's back is to the north: (dx, h, dz) of its drawing is at
+    x + dx, y + h, z - dz. Not wired in: call it from main() to run it."""
+    bx, by, bz = cx - 300, 150, cz + 200
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("tp %s %d %d %d" % (USER, bx + 20, by + 20, bz + 30))
+    time.sleep(10)
+    out = r.cmd("execute positioned %d %d %d run village showcase buildings" % (bx, by, bz))
+    at = {name: (int(x), int(y), int(z))
+          for name, x, y, z in re.findall(r"(\w+) (-?\d+) (-?\d+) (-?\d+)", out.replace("SHOWCASE", ""))}
+    say("town blueprints stage: " + ", ".join(n for n in ("shop", "cafe", "store", "skygarden") if n in at))
+    if "shop" in at:
+        x, y, z = at["shop"]
+        look("tb-1-shop-front", x + 4.5, y + 3, z + 9.5, x + 0.5, y + 2.5, z + 0.5, wait=8)
+        look("tb-2-shop-counter", x + 0.5, y + 1.6, z + 2.0, x + 0.5, y + 0.5, z - 2.5, wait=6)
+    if "cafe" in at:
+        x, y, z = at["cafe"]
+        look("tb-3-cafe-counter", x + 0.5, y + 1.6, z + 2.0, x + 0.5, y + 0.5, z - 2.5, wait=6)
+    if "store" in at:
+        x, y, z = at["store"]
+        look("tb-4-store-front", x + 7.5, y + 4, z + 16.5, x + 0.5, y + 3, z + 7.5, wait=8)
+    if "skygarden" in at:
+        x, y, z = at["skygarden"]
+        look("tb-5-skygarden-stair", x - 1.5, y + 1.6, z + 3.5, x - 3.5, y + 3.5, z - 3.5, wait=6)
+    r.cmd("time set 18000")
+    if "shop" in at:
+        x, y, z = at["shop"]
+        look("tb-6-shop-by-night", x + 4.5, y + 3, z + 9.5, x + 0.5, y + 2.5, z + 0.5, wait=8)
+    r.cmd("time set 6000")
+    say("alive after the town blueprints: %s" % client_alive())
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
