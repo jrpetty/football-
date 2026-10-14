@@ -426,6 +426,12 @@ public final class Stockroom {
         save(b);
     }
 
+    /** [roles-c] Tests: how many of this a seller was asked for today and had not got. */
+    public static int missedTodayForTests(ServerLevel level, UUID village, Seller s, ItemStack what) {
+        Line l = book(level, village, s).lines.get(key(what));
+        return l == null ? 0 : l.missed[0];
+    }
+
     /** Made: so many, and what one cost. */
     static void made(Book b, Line l, int n, double each) {
         l.made[0] += n;

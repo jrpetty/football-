@@ -205,13 +205,13 @@ public final class Hospitality {
     }
 
     /** [roles-c] The kitchen hands a town of this many wants, with a kitchen (a café's, a tavern's or a restaurant's). */
-    static int kitchenHands(int folk, boolean anyKitchen) {
+    public static int kitchenHands(int folk, boolean anyKitchen) {
         if (!anyKitchen || folk < KITCHEN_HAND_FROM) return 0;
         return Math.min(KITCHEN_HANDS_MOST, 1 + (folk - KITCHEN_HAND_FROM) / FOLK_PER_KITCHEN_HAND);
     }
 
-    /** [roles-c] Tests: the jobs a town wants now (the kitchen hands among them). */
-    public static Map<Role, Integer> wantForTests(UUID village) {
+    /** [roles-c] The jobs a town wants filled now, the kitchen hands among them (the books: /village hospitality). */
+    public static Map<Role, Integer> wanted(UUID village) {
         return want(village);
     }
 

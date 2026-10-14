@@ -1233,7 +1233,8 @@ public final class Weave {
 
     /**
      * The office a folk dresses for: the steward of a player leader, the constable, the librarian, the auctioneer, a
-     * cave dweller home from the caves; [roles-a] the healer, the elder, the sexton, the teacher, the curator, the crier
+     * cave dweller home from the caves; [roles-a] the healer, the elder, the sexton, the teacher, the curator, [roles-c] the
+     * miller, [roles-a] the crier
      * and a quarter's warden; "" for none.
      */
     public static String role(VillageFolkEntity f) {
@@ -1253,9 +1254,9 @@ public final class Weave {
         if (Sexton.is(f)) return "sexton";
         if (School.isTeacher(f)) return "teacher";
         if (Museum.isCurator(f)) return "curator";
+        if (Windmill.isMiller(f)) return "miller";                     // [roles-c] the windmill's keeper: a standing duty, before the day's crier
         if (f.getUUID().equals(Crier.crier(id))) return "crier";
         if (Wardens.quarterOf(f) != null) return "warden";
-        if (Windmill.isMiller(f)) return "miller";                     // [roles-c] the windmill's keeper
         return "";
     }
 

@@ -11850,3 +11850,73 @@ when there is work there. A hunting party is a map read from the hunter's own wo
 unless used. Parties, fleet guests and errands are kept in memory only: a restart ends them.
 
 Smoke: `roles_d_stage` in tools/realworld/smoke.py (`/village outdoor stage`). Tests: OutdoorTradesGameTests (od01 to od07).
+
+## Food and hospitality [roles-c]
+
+The cook's trade is split into the jobs a town's kitchens, bars, inns and bakery want (Hospitality). The dining work
+gave it the head cook, the waiters, the pot washers and the host; this round makes the baker, the innkeeper and the
+barkeep real posts, adds kitchen hands and a miller, and gives each a word for the player and its own clothes.
+
+### The posts
+- **Baker**: the bakery is its post, not the town's works. Through its own small hours it walks to the windmill for a
+  sack of wheat (27) when the stores are low on it and carries it back on its own back, then stands at the ovens and
+  puts a batch in every twenty seconds or so: bread, cookies, pumpkin pie or cake, whatever the stores are shortest of,
+  by the game's own recipes and out of the stores (three wheat to a loaf, and never the farmers' last twelve). Short of
+  wheat with the mill still holding some, it fetches another sack. With nothing short it helps at the café. With the
+  makings gone it says so, and the café's books count the bread it could not bake (Stockroom), once a day. The works'
+  crew bakes only in a town with no baker, or one laid up or stuck on its way.
+- **Kitchen hand**: one from thirty folk wherever a kitchen stands (a café's, a tavern's or a restaurant's), another for
+  every forty folk more, four at most. They are counted in the cook's share, so the trade grows past its two hands. A
+  kitchen hand cooks the café's shelf beside the cooks, helps with the orders, and washes up first where there is no
+  pot washer. It is paid as a less skilled hand than a cook.
+- **Innkeeper** (or the host standing in): keeps a coin in three of every room it lets, a traveller's as well as a
+  player's, and the rest goes in the till. Its card shows its guests, the till and its own share.
+- **Barkeep**: behind the tavern's bar it pours a round a player buys and keeps a coin in four; the rest goes in the till
+  (the treasury). The tavern keeps its own count of its takings, its rounds and the bottles brought back. Every drink
+  of a round comes out of the stores and its bottle goes back in them.
+- **Miller**: the farmer living nearest the windmill keeps it, chosen once the mill stands (and again if it leaves the
+  fields). It is first for the mill's work at the town's works (hanging the sails, carrying the stores' spare wheat up),
+  paid an office allowance (/village offices) and dressed for it (a flat cap and a waistcoat).
+
+### What you can ask of them (HospitalityTalk)
+Each is in the talk menu under Trade > Shop, shown only at its post and suggested when you talk to it, and understood
+typed as well:
+- **Innkeeper**: "A room for the night, please": a bed at the inn till morning for its fee (three coins), as at the
+  inn's sign. Ask anybody else in the town and they tell you who keeps the inn.
+- **Barkeep**: "A pint, please": one of the café's drinks out of the stores at the town's price. "A round for the
+  house!": a drink for everybody in the tavern, a coin a head, when the barkeep is behind its bar. "Here are my empty
+  bottles": a coin for every three, out of the till; the bottles go back in the stores for the cook to fill again (an
+  odd one or two stay with you). The bar's own screen has a "Bring back" row for the bottles too.
+- **Baker**: "Some fresh bread, please": bread, cookies, a pie or a cake out of the stores.
+- **Miller**: "Could I buy a sack of wheat?": sixteen wheat (or the number you say) out of the mill itself, never the
+  bakery's two sacks.
+- **Rancher**: "Could I buy some meat?": meat of the herd's cull from its butcher's block, out of the stores, once the
+  town's larder is full.
+
+Everything sold comes out of the stores (or the mill) at the town's price, into the treasury, and is booked as a sale.
+What the town cannot spare it says so. Somebody the town has turned out is sold nothing.
+
+### Their clothes
+The baker (cream smock, floury apron, soft white cap), the barkeep (burgundy waistcoat, long dark bar apron, a cloth
+over the shoulder), the innkeeper and the host (bottle-green coat, the rooms' keys at the hip) and the waiter (black
+waistcoat and bow tie, long white apron, a napkin over the arm) wear their own (tools/folk_art.py). The kitchen's own
+(head cook, kitchen hands, pot washers) keep the cook's whites.
+
+### A paid shift: the baker's hand ("bake")
+The bake the stores are shortest of shows on your card. Right-click the bakery's oven to put it in (its makings come out
+of the stores), and again once it says READY to take it out into the stores. Too soon and it is not done; too late and
+it burns, the batch thrown out and the task unpaid. With the stores out of the makings meanwhile, the ticket goes back,
+no fault of yours.
+
+### The books
+"/village hospitality" lists the jobs the town wants filled, who holds each and what each is doing, the bakery's day,
+the tavern's books, the inn and the windmill with its miller.
+
+### Cost
+The baker's round runs only for the baker on its shift: a short walk, and a plan of the bake once a batch (every 400
+ticks at most). The miller is looked for on the windmill's own visit (once a quarter-minute a town). The bar, the inn
+and the talk cost nothing unless used. A baker's round is kept in memory: after a restart it starts its round afresh,
+any wheat it was carrying still in its pack.
+
+Smoke: `roles_c_stage` in tools/realworld/smoke.py (`/village hospitality stage`). Tests: HospitalityGameTests (ho01 to
+ho07).

@@ -245,6 +245,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.Offices.command())             // [roles-a] who holds each office, and its allowance
             .then(com.jrpetty.mcassistant.entity.CraftsStage.command())         // [roles-b] the crafts' hands and benches; the pictures' stage
             .then(com.jrpetty.mcassistant.entity.OutdoorStage.command())        // [roles-d] the lodge, the barn, the parties; the stage
+            .then(com.jrpetty.mcassistant.entity.HospitalityStage.command())    // [roles-c] the kitchens, the bar, the inn, the bakery; the stage
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
             .then(com.jrpetty.mcassistant.entity.Perks.command())           // [perks] /village perks: wonders, the leader, quirks
             .then(com.jrpetty.mcassistant.entity.Referendums.command())     // [civic] /village referendum: the town's vote, the great works

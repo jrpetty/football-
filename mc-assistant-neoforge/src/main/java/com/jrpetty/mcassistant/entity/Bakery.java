@@ -313,6 +313,11 @@ public final class Bakery {
             f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             return true;
         }
+        if (sackWanted(level, v.id())) {                                  // short of wheat, and the mill has some: another sack
+            r.leg = Leg.TO_MILL;
+            r.legSince = now;
+            return true;
+        }
         outOfMakings(level, v, f, r);
         r.leg = Leg.NONE;
         r.idleUntil = now + BATCH_EVERY;

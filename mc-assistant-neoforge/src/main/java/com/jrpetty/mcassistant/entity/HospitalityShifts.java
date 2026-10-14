@@ -142,13 +142,13 @@ public final class HospitalityShifts {
         if (now > t.burnAt + BURN_WINDOW) burnt(level, p, s, t, Bench.words(t.item, t.count).toLowerCase(Locale.ROOT));
     }
 
-    /** Tests: the batch in the oven ready now. */
-    public static void readyForTests(Player p) {
+    /** Tests: the batch in the oven ready now ({@code burnt}: left past burning). */
+    public static void readyForTests(Player p, boolean burnt) {
         Shift s = Shifts.ON.get(p.getUUID());
         if (s != null && s.task != null && s.task.leg == 1) {
             long now = p.level().getGameTime();
-            s.task.readyAt = now;
-            s.task.burnAt = now + BURN_WINDOW;
+            s.task.readyAt = burnt ? now - 2 * BURN_WINDOW : now;
+            s.task.burnAt = burnt ? now - 1 : now + BURN_WINDOW;
         }
     }
 

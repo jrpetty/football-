@@ -4413,6 +4413,65 @@ def roles_d_stage(r, look, cx, cz):
     say("alive after the outdoor trades: %s" % client_alive())
 
 
+def roles_c_stage(r, look, cx, cz):
+    """[roles-c] Food and hospitality (entity/Hospitality, Bakery, Tavern, Inn, Windmill, HospitalityTalk,
+    HospitalityShifts, HospitalityStage). Out past the town to the north-west, /village hospitality stage sets out from
+    palettes and stand-ins: the posts in a row in their own clothes (head cook, cook and kitchen hand in whites, pot
+    washer, waiter, host, barkeep, innkeeper, baker, and the miller); the bakery with the baker at its lit ovens; the
+    tavern with the barkeep behind its bar and the evening's company with their drinks; the inn with its keeper at the
+    door, the rooms' keys in hand. Pictures:
+      1. 54-roles-c-1-row: the row of the hospitality posts;
+      2. 54-roles-c-2-bakery-front, 3. 54-roles-c-3-bakery-inside: the bakery, and the baker at its ovens;
+      4. 54-roles-c-4-tavern: the barkeep behind its bar;
+      5. 54-roles-c-5-inn: the innkeeper at the inn's door;
+      6. 54-roles-c-6-talk: the talk screen's Trade options face to face with the barkeep (its own: a pint).
+    Each camera is kept in open air (clear_camera). Then /village hospitality, the town's own posts and books in words.
+    Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    sx, sz = cx - 140, cz - 140                        # out past the town, on ground of its own
+    hy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 30, sz + 20))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village hospitality stage" % (sx, sz))
+    say("hospitality stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for hospitality; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view %s" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        x, y, z = clear_camera(r, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5)
+        look("54-roles-c-" + picture, x, y, z, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("row", "1-row", 10)
+    shoot("bakery-front", "2-bakery-front", 8)
+    shoot("bakery-inside", "3-bakery-inside", 6)
+    shoot("tavern-inside", "4-tavern", 8)
+    shoot("inn-front", "5-inn", 8)
+    # The talk screen with the barkeep of the row (the seventh from the west end), its own option suggested.
+    if "row" in views:
+        tx, ty, tz = views["row"][3] + 3, views["row"][4], views["row"][5]
+        r.cmd("gamemode creative %s" % USER)
+        r.cmd("tp %s %d %d %d facing %d %d %d" % (USER, tx, ty, tz + 2, tx, ty + 1, tz))
+        time.sleep(3)
+        say("talkview: " + r.cmd("execute as %s at @s run village talkview trade 2" % USER))
+        time.sleep(4)
+        shot("54-roles-c-6-talk")
+        r.cmd("execute as %s at @s run village talkview chat 2 1280x720" % USER)
+        r.cmd("gamemode spectator %s" % USER)
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    say("hospitality: " + r.cmd("execute positioned %d %d %d run village hospitality" % (cx, ground_height(r, cx, cz) + 1, cz))[:1200])
+    say("alive after hospitality: %s" % client_alive())
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
