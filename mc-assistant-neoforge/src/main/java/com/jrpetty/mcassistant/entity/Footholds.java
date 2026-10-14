@@ -89,7 +89,7 @@ public final class Footholds extends SavedData {
     /** Climbs under way: the folk, and the game time it last rose. */
     private static final Map<UUID, Long> CLIMBING = new ConcurrentHashMap<>();
     /** When each level's unused routes were last looked over. */
-    private static final Map<ServerLevel, Long> ROUTES_LOOKED = new ConcurrentHashMap<>();
+    private static final Map<net.minecraft.resources.ResourceKey<Level>, Long> ROUTES_LOOKED = new ConcurrentHashMap<>();
 
     private Footholds() {}
 
@@ -482,9 +482,9 @@ public final class Footholds extends SavedData {
     /** Every so often, the routes nobody has used for a long while are let go (MineStairs.forgetUnused). */
     private static void lookOverRoutes(ServerLevel level) {
         long now = level.getGameTime();
-        Long last = ROUTES_LOOKED.get(level);
+        Long last = ROUTES_LOOKED.get(level.dimension());
         if (last != null && now - last < ROUTES_EVERY && now >= last) return;
-        ROUTES_LOOKED.put(level, now);
+        ROUTES_LOOKED.put(level.dimension(), now);
         MineStairs.forgetUnused(level, now);
     }
 

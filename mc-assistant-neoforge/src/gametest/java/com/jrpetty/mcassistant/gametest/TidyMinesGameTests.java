@@ -66,10 +66,18 @@ public class TidyMinesGameTests {
         Kit.prepare(level, x, Z, radius);
     }
 
-    /** A folk of a town whose heart is well off to one side, a pick and cobblestone in its pack, stood here. */
+    /**
+     * A miner of a town whose heart is well off to one side (not its founder, who has the town to build), doing only the
+     * work the test gives it, a pick and cobblestone in its pack, stood here.
+     */
     private static VillageFolkEntity folk(ServerLevel level, int x, BlockPos at, ItemStack pick) {
-        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, Kit.surface(level, x - 40, Z + 30), 0.0F);
-        if (f == null) return null;
+        BlockPos heart = Kit.surface(level, x - 40, Z + 30);
+        VillageFolkEntity founder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        if (founder == null) return null;
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart.south(3), 0.0F);
+        if (f == null || !founder.ownerId().equals(f.ownerId())) return null;
+        f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);   // a miner: its cobblestone is its own
+        f.setAutonomous(false);
         f.clearQueue();
         f.getInventoryItems().clear();
         f.insertItem(pick);
@@ -77,6 +85,8 @@ public class TidyMinesGameTests {
         f.insertItem(new ItemStack(Items.TORCH, 16));
         f.insertItem(new ItemStack(Items.BREAD, 8));
         f.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0.0F, 0.0F);
+        f.assignPlot(WorkZone.around(at, 8, at.getY() - 12), "the test's ground");   // its ground where it stands
+        f.setAutonomous(false);
         return f;
     }
 
@@ -171,7 +181,7 @@ public class TidyMinesGameTests {
                 away[0] = t;
                 left[0] = standing;
                 f.clearQueue();
-                f.moveTo(floor.getX() + 14.5, floor.getY(), floor.getZ() + 0.5, 0.0F, 0.0F);
+                f.moveTo(floor.getX() + 7.5, floor.getY(), floor.getZ() + 2.5, 0.0F, 0.0F);   // out of reach of its steps
                 Kit.log("tmn02 called away at " + t + " with " + standing + " steps standing");
                 return;
             }
