@@ -916,6 +916,7 @@ public final class Decor {
     private static boolean put(ServerLevel level, Spot spot, Piece p, List<ItemStack> got) {
         ItemStack thing = got.get(0), inside = got.size() > 1 ? got.get(1) : ItemStack.EMPTY;
         BlockPos at = spot.at();
+        if (!TownBlocks.mayPlace(level, at, TownBlocks.Why.FURNISH)) return false;   // [integrity] never a doorway, a stair, a wall
         switch (p.shape()) {
             case FLOOR, LAMP -> {
                 Block block = Block.byItem(thing.getItem());

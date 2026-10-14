@@ -317,10 +317,15 @@ public final class Tidy {
 
     // ------------------------------------------------------------------ putting it right
 
-    /** [integrity] Every block the crew changes in the town goes through here: never a player's block. To be
-     *  routed through TownBlocks.mayPlace (the one gate) once that lands. */
+    /** Every block the crew changes in the town goes through here: never a player's block, and through the town's one
+     *  placement gate ([integrity] TownBlocks: tidying touches open ground, the roads and the square, never a building
+     *  or a door's way in). */
     static boolean mayChange(ServerLevel level, Villages.Village v, BlockPos pos) {
-        return !PlayerBlocks.placed(level, pos);
+        return mayChange(level, v, pos, TownBlocks.Why.TIDY);
+    }
+
+    static boolean mayChange(ServerLevel level, Villages.Village v, BlockPos pos, TownBlocks.Why why) {
+        return !PlayerBlocks.placed(level, pos) && TownBlocks.mayPlace(level, v, pos, why);
     }
 
     /** Taken up: what it gives into the stores, and the block gone. */
@@ -460,7 +465,7 @@ public final class Tidy {
 
     /** A sapling of the felled tree's own kind, out of the stores (any sapling failing that), where it stood. */
     private static void replant(ServerLevel level, Villages.Village v, BlockPos at, Block log) {
-        if (!level.getBlockState(at).isAir()) return;
+        if (!level.getBlockState(at).isAir() || !mayChange(level, v, at, TownBlocks.Why.NATURE)) return;
         ResourceLocation key = BuiltInRegistries.BLOCK.getKey(log);
         Item own = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(key.getNamespace(),
             key.getPath().replace("stripped_", "").replace("_log", "_sapling").replace("_wood", "_sapling")));
@@ -577,6 +582,7 @@ public final class Tidy {
         for (BlockPos p : w.verges) {
             if (c.leave.containsKey(p.asLong()) || !level.getBlockState(p).isAir() || !level.getBlockState(p.below()).is(Blocks.GRASS_BLOCK)) continue;
             if (((p.getX() - h.getX()) + (p.getZ() - h.getZ()) & 3) != 0) continue;     // a bed every few blocks, not a hedge of them
+            if (!mayChange(level, v, p, TownBlocks.Why.GARDEN)) continue;
             BlockState flower = flowerFromTheStores(level, v);
             if (flower == null) return;
             if (!TownJobs.atWork(level, v, "tidy", p, "planting a flower bed by the street", AssistantEntity.StationTask.HAUL)) {
@@ -615,7 +621,7 @@ public final class Tidy {
                 if (Math.abs(y + 1 - street.getY()) > 1 || !level.getBlockState(g).isFaceSturdy(level, g, Direction.UP)) continue;
                 if (!level.getBlockState(g.above()).canBeReplaced() || !level.getBlockState(g.above(2)).isAir()
                         || !level.getBlockState(g.above()).getFluidState().isEmpty()) continue;
-                if (!mayChange(level, v, g.above())) continue;
+                if (!mayChange(level, v, g.above(), TownBlocks.Why.LAMP) || !mayChange(level, v, g.above(2), TownBlocks.Why.LAMP)) continue;
                 return g.above();
             }
         }

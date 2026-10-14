@@ -111,6 +111,10 @@ public final class Floors {
      * floor it with (it waits for them).
      */
     public static boolean put(ServerLevel level, Villages.Village v, Fix f) {
+        // [integrity] The building's own cells, mended to its drawing: through the town's gate as a repair.
+        Ledger.Building own = buildingAt(v.id(), f);
+        if (PlayerBlocks.placed(level, f.pos())
+                || own != null && !TownBlocks.mayBuild(level, v, f.pos(), own.anchor(), TownBlocks.Why.REPAIR)) return false;
         BlockState there = level.getBlockState(f.pos());
         if (!f.lay()) {
             if (!BuildGoal.isWildPlant(there)) return true;

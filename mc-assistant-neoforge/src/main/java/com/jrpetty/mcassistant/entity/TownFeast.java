@@ -295,6 +295,7 @@ public final class TownFeast {
             Decor d = decor(f).get(i % decor(f).size());
             BlockPos at = Festivals.groundAt(level, v.centre().getX() + RING[i][0], v.centre().getZ() + RING[i][1]);
             if (at == null || !Festivals.open(level, at) || !level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)) continue;
+            if (!TownBlocks.mayAll(level, v, TownBlocks.Why.CIVIC, at, at.above())) continue;                // [integrity]
             ItemStack paid = Crafts.takeOne(level, v, d.pay());
             if (paid.isEmpty()) {
                 // A wall post of a cobblestone, for the Stone Feast; nothing else is made for a night.
