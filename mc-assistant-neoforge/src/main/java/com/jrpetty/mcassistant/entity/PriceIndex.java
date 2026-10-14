@@ -1,5 +1,6 @@
 package com.jrpetty.mcassistant.entity;
 
+import com.jrpetty.mcassistant.village.Worth;
 import com.jrpetty.mcassistant.village.Ledger;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -62,14 +63,11 @@ public final class PriceIndex {
 
     private PriceIndex() {}
 
-    /** The band a price stays in, about its usual worth. */
-    static final double LOWEST = 0.4, DEAREST = 3.0;
-    /** The most a price moves in a day, and the least it bothers to (a move smaller than this is made whole). */
-    static final double MOST_A_DAY = 0.15, LEAST_A_DAY = 0.03;
-    /** How much of the way to where it is heading a price goes in a day. */
-    static final double PACE = 0.35;
-    /** The days of want a town's stock and day's making cover at the usual price. */
-    static final double DAYS_COVER = 3.0;
+    /** The band a price stays in, about its usual worth; its daily pace (the arithmetic is Worth's: [market]). */
+    static final double LOWEST = Worth.LOWEST, DEAREST = Worth.DEAREST;
+    static final double MOST_A_DAY = Worth.MOST_A_DAY, LEAST_A_DAY = Worth.LEAST_A_DAY;
+    static final double PACE = Worth.PACE;
+    static final double DAYS_COVER = Worth.DAYS_COVER;
     /** How much of yesterday's smoothed figure is kept against yesterday's own (the rest). */
     static final double KEEP = 0.6;
     /** Days of past prices kept, yesterday first. */
@@ -156,11 +154,12 @@ public final class PriceIndex {
         return g.value() * factor(village, "g:" + g.name());
     }
 
-    /** What this thing is usually worth, anywhere: what a buyer expects to pay before it sees the price. */
+    /** What this thing is usually worth, anywhere: what a buyer expects to pay before it sees the price. [market] Its
+     *  own worth on the price list (a bamboo plank is not an oak one), as the board's good prices it. */
     public static double usual(ItemStack what) {
         if (what.isEmpty()) return 0.0;
         Market.Good g = Market.goodFor(what);
-        return g != null ? g.value() : Prices.of(what.copyWithCount(1));
+        return g != null ? Prices.eachAsGood(g, what) : Prices.of(what.copyWithCount(1));
     }
 
     /** [econ-prices] Today's price of this thing against its usual worth: 1 is the usual, 2 twice it. */
@@ -396,13 +395,8 @@ public final class PriceIndex {
         System.arraycopy(l.past, 0, l.past, 1, HISTORY - 1);
         l.past[0] = fresh ? 0 : l.factor;
         double was = l.factor;
-        double gap = target - was;
-        double step = gap * PACE;
-        double most = was * MOST_A_DAY, least = was * LEAST_A_DAY;
-        if (Math.abs(gap) <= least) step = gap;                                         // near enough: there
-        else if (Math.abs(step) < least) step = Math.signum(gap) * least;                // a few in the hundred at the least
-        step = Math.max(-most, Math.min(most, step));
-        l.factor = clamp(was + step);
+        double[] band = band(l.key);
+        l.factor = band == null ? Worth.step(was, target) : Worth.step(was, target, band[0], band[1]);   // [market]
         // Why, in a few words, when it is going one way.
         if (l.factor > was * 1.01) {
             l.why = oldOutput > 1 && madeYesterday < oldOutput * 0.6 ? "less made" : oldDemand >= 0 && wantedYesterday > Math.max(2, oldDemand * 1.4)
@@ -420,23 +414,19 @@ public final class PriceIndex {
      * not pay for. Within the band.
      */
     static double target(int stock, int bundle, double output, double demand, double refused) {
-        double scarcity = Market.scarcity(bundle, stock);
-        double t;
-        if (demand < 0.5 && output < 0.5) {
-            t = scarcity;
-        } else {
-            double cover = (stock + output) / Math.max(0.25, demand);
-            double byDemand = Math.sqrt(DAYS_COVER / Math.max(0.1, cover));
-            // A thing wanted by the dozen a day goes by its cover; one wanted now and then mostly by the stores' count.
-            double w = Math.min(1.0, demand / (demand + bundle));
-            t = Math.pow(scarcity, 1 - w) * Math.pow(byDemand, w);
-        }
-        if (refused > 0) t *= 1.0 - 0.5 * refused / (refused + demand + 1.0);
-        return clamp(t);
+        return Worth.target(stock, bundle, output, demand, refused);
     }
 
-    private static double clamp(double f) {
-        return Math.max(LOWEST, Math.min(DEAREST, f));
+    /**
+     * [market] A narrower band for what is money more than goods: the gold bar is the coin's own standard (nine coins, by
+     * the mint and the furnace) and does not move at all; the emerald, the villagers' coin, only a little. Null: the
+     * usual band.
+     */
+    @Nullable
+    static double[] band(String key) {
+        if (key.equals("g:Gold")) return new double[]{ 1.0, 1.0 };
+        if (key.equals("g:Emerald")) return new double[]{ 0.8, 1.25 };
+        return null;
     }
 
     // ------------------------------------------------------------------ the news
@@ -718,7 +708,7 @@ public final class PriceIndex {
                     String[] f = parts[i].split("~", -1);
                     if (f.length < 10) continue;
                     Line l = new Line(f[0]);
-                    l.factor = clamp(Double.parseDouble(f[1]));
+                    l.factor = Worth.clamp(Double.parseDouble(f[1]));
                     l.target = Double.parseDouble(f[2]);
                     l.demand = Double.parseDouble(f[3]);
                     l.output = Double.parseDouble(f[4]);

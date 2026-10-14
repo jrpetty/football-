@@ -1,5 +1,6 @@
 package com.jrpetty.mcassistant.entity;
 
+import com.jrpetty.mcassistant.village.Worth;
 import com.jrpetty.mcassistant.McAssistantMod;
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.core.BlockPos;
@@ -85,9 +86,15 @@ public final class Market {
     /** Coins minted from one gold ingot. */
     public static final int COINS_PER_GOLD = 9;
 
-    /** One kind of thing the market deals in: what it is called, what it matches, what
-     *  one is worth in coin, how many make a lot, and the village need it answers. */
-    public record Good(String name, Predicate<ItemStack> what, double value, int bundle, Villages.Task need) {}
+    /** One kind of thing the market deals in: what it is called, what it matches, the price the board names for one
+     *  (its anchor), how many make a lot, and the village need it answers. */
+    public record Good(String name, Predicate<ItemStack> what, double anchor, int bundle, Villages.Task need) {
+        /** [market] What one is worth, in coin: the value engine's number for it (Prices.ofGood): the board's price for
+         *  what is gathered, and for what is made never under its makings and the work. One number everywhere. */
+        public double value() {
+            return Prices.ofGood(this);
+        }
+    }
 
     private static Good good(String name, Item item, double value, int bundle, Villages.Task need) {
         return new Good(name, s -> s.is(item), value, bundle, need);
@@ -159,7 +166,7 @@ public final class Market {
         good("Lapis", Items.LAPIS_LAZULI, 0.5, 8, Villages.Task.NONE),
         good("Redstone", Items.REDSTONE, 0.3, 8, Villages.Task.NONE),
         good("Diamond", Items.DIAMOND, 24.0, 1, Villages.Task.DIAMOND),
-        good("Emerald", Items.EMERALD, 6.0, 1, Villages.Task.NONE),
+        good("Emerald", Items.EMERALD, 2.5, 1, Villages.Task.NONE),     // [market] the villagers' rate (BaseWorth)
         good("Obsidian", Items.OBSIDIAN, 3.0, 1, Villages.Task.OBSIDIAN),
         good("Glass", Items.GLASS, 0.2, 8, Villages.Task.NONE),
         good("Arrows", Items.ARROW, 0.1, 16, Villages.Task.NONE),
@@ -262,6 +269,13 @@ public final class Market {
         return out;
     }
 
+    /** [market] Every good on the board, the café's drinks and the brewer's potions with them. */
+    public static List<Good> boardGoods() {
+        List<Good> all = new ArrayList<>(GOODS);
+        all.addAll(DRINKS_AND_POTIONS);
+        return all;
+    }
+
     /** What the market calls this thing, or null if it does not deal in it. */
     @Nullable
     public static Good goodFor(ItemStack s) {
@@ -311,25 +325,24 @@ public final class Market {
         return g.value() * scarcity(g, stock);
     }
 
-    /** The stores' count against four lots of a thing (the usual), as a factor of its worth: 0.5 to 3. */
+    /** The stores' count against four lots of a thing (the usual), as a factor of its worth (Worth.scarcity). */
     public static double scarcity(Good g, int stock) {
         return scarcity(g.bundle(), stock);
     }
 
     static double scarcity(int bundle, int stock) {
-        int target = bundle * 4;
-        double s = Math.sqrt((target + bundle) / (double) (Math.max(0, stock) + bundle));
-        return Math.max(0.5, Math.min(3.0, s));
+        return Worth.scarcity(bundle, stock);
     }
 
     /** What the village asks for a lot of this, by the stores' count alone (no town to ask: the tests of the curve). */
     public static int sellPrice(Good g, int stock, boolean marketDay) {
-        return Math.max(1, (int) Math.round(each(g, stock) * g.bundle() * (marketDay ? 0.9 : 1.0)));
+        return Worth.askLot(each(g, stock), g.bundle(), Worth.SELL, marketDay);
     }
 
     /** What the village pays for a lot of this, by the stores' count alone. Always less than it would ask for it back. */
     public static int buyPrice(Good g, int stock, boolean marketDay) {
-        return Math.max(1, (int) Math.floor(each(g, stock) * g.bundle() * 0.55 * (marketDay ? 1.1 : 1.0)));
+        double each = each(g, stock);
+        return Worth.bidLot(each, each, g.bundle(), marketDay);
     }
 
     /** [econ-prices] One of a good on the board, at this town's price today (PriceIndex). */
@@ -337,20 +350,82 @@ public final class Market {
         return PriceIndex.each(level, village, g);
     }
 
-    /** [econ-prices] What this town asks for a lot of a good on the board today: its price (PriceIndex), a tenth off on
-     *  market day. */
+    // ------------------------------------------------------------------ [market] the price desk
+
+    /*
+     * One asking price, one paying price and one least price, for everybody at every counter (Worth): the town asks its
+     * price today (PriceIndex) and the keeper's margin over it (about a tenth: StockKeeper), a little less on market
+     * day; it pays four fifths of its price, never more than nine tenths of the cheapest it sells the thing or its
+     * makings for (Prices.replacement); and whatever a buyer's discounts, a lot never goes for under nine tenths of the
+     * price. Folk and players pay the same; nobody can buy of a town and sell back to it at a profit.
+     */
+
+    /** The keeper's margin on this thing today: the stock keeper's (raised when it sells out, lowered when it sits),
+     *  within Worth's bounds; food never as dear. */
+    public static double margin(UUID village, ItemStack one) {
+        double m = StockKeeper.markup(village, Stockroom.key(one.copyWithCount(1)));
+        double most = one.get(net.minecraft.core.component.DataComponents.FOOD) != null ? Worth.FOOD_MOST_MARGIN : Worth.MOST_MARGIN;
+        return Math.max(Worth.LEAST_MARGIN, Math.min(most, m));
+    }
+
+    /** What the town asks for one of this today, to the hundredth: its price, the margin, market day. */
+    public static double askEach(ServerLevel level, UUID village, ItemStack one) {
+        if (one.isEmpty()) return 0;
+        ItemStack single = one.copyWithCount(1);
+        return PriceIndex.each(level, village, single) * margin(village, single)
+            * (marketDay(village, level.getDayTime() / 24000L) ? Worth.MARKET_DAY_ASK : 1.0);
+    }
+
+    /** What the town asks for so many of this today, in whole coins (Worth.askLot). */
+    public static int askLot(ServerLevel level, UUID village, ItemStack one, int n) {
+        if (one.isEmpty()) return 0;
+        ItemStack single = one.copyWithCount(1);
+        return Worth.askLot(PriceIndex.each(level, village, single), n, margin(village, single),
+            marketDay(village, level.getDayTime() / 24000L));
+    }
+
+    /** The least the town lets so many of this go for today, every discount taken: always more than it would pay for
+     *  them (Worth.leastLot). An enchanted thing at its enchanted price, a master's piece at its mark's. */
+    public static int leastLot(ServerLevel level, UUID village, ItemStack one, int n) {
+        if (one.isEmpty()) return 0;
+        ItemStack single = one.copyWithCount(1);
+        double each = PriceIndex.each(level, village, single) * (single.isEnchanted() ? 3 : 1) * Craftsmanship.worth(single);
+        return Worth.leastLot(each, n);
+    }
+
+    /** What the town pays for so many of this today, in whole coins, 0 if they are not worth a coin to it (Worth.bidLot):
+     *  four fifths of its price, never more than nine tenths of the cheapest it sells it or its makings for. */
+    public static int bidLot(ServerLevel level, UUID village, ItemStack one, int n) {
+        if (one.isEmpty() || isCoin(one)) return 0;
+        ItemStack single = one.copyWithCount(1);
+        double each = PriceIndex.each(level, village, single);
+        double rep = Prices.replacement(level, village, single);
+        if (single.isEnchanted()) {
+            each *= 2;
+            rep = each;
+        }
+        return Worth.bidLot(each, rep, n, marketDay(village, level.getDayTime() / 24000L));
+    }
+
+    /** [econ-prices] What this town asks for a lot of a good on the board today: its price (PriceIndex) and the margin,
+     *  a little off on market day. */
     public static int sellPrice(ServerLevel level, UUID village, Good g, boolean marketDay) {
-        return Math.max(1, (int) Math.round(PriceIndex.each(level, village, g) * g.bundle() * (marketDay ? 0.9 : 1.0)));
+        ItemStack one = PriceIndex.sampleOfGood(g);
+        double m = one.isEmpty() ? Worth.SELL : margin(village, one);
+        return Worth.askLot(PriceIndex.each(level, village, g), g.bundle(), m, marketDay);
     }
 
     /** [econ-prices] As sellPrice, for a lot of this very thing (a ware the board does not name: Budget.goodFor). */
     public static int sellPrice(ServerLevel level, UUID village, Good g, ItemStack one, boolean marketDay) {
-        return Math.max(1, (int) Math.round(PriceIndex.each(level, village, one) * g.bundle() * (marketDay ? 0.9 : 1.0)));
+        ItemStack single = one.copyWithCount(1);
+        return Worth.askLot(PriceIndex.each(level, village, single), g.bundle(), margin(village, single), marketDay);
     }
 
-    /** [econ-prices] What this town pays for a lot of a good today: a little over half its price, a tenth more on market day. */
+    /** [econ-prices] What this town pays for a lot of a good today (bidLot, for the good's own thing): the "We buy" sign. */
     public static int buyPrice(ServerLevel level, UUID village, Good g, boolean marketDay) {
-        return Math.max(1, (int) Math.floor(PriceIndex.each(level, village, g) * g.bundle() * 0.55 * (marketDay ? 1.1 : 1.0)));
+        ItemStack one = PriceIndex.sampleOfGood(g);
+        if (one.isEmpty()) return Worth.bidLot(PriceIndex.each(level, village, g), -1, g.bundle(), marketDay);
+        return Worth.bidLot(PriceIndex.each(level, village, one), Prices.replacement(level, village, one), g.bundle(), marketDay);
     }
 
     /** What the village would buy, most wanted first: what it is short of, by what it needs now. */
@@ -402,6 +477,7 @@ public final class Market {
         int k = 1;
         for (Good g : wanted(level, village)) {
             int p = buyPrice(level, village, g, md);                                       // [econ-prices]
+            if (p <= 0) continue;                                                          // [market] not worth a coin a lot
             lines[k++] = g.bundle() + " " + g.name() + " " + p + "c";
             if (k > 3) break;
         }
@@ -1062,6 +1138,7 @@ public final class Market {
         else if (title.atLeast(Standing.Title.FRIEND)) price = Math.max(1, price - price / 10);
         if (Citizens.is(id, p.getUUID())) price = Math.max(1, price - Math.max(1, price / 10));   // a citizen's ten off
         price = Dealings.haggled(id, p.getUUID(), level.getDayTime() / 24000L, price);           // talked down today
+        price = Math.max(price, leastLot(level, id, shown, g.bundle()));   // [market] never under the least: no buying to sell back
         if (p.isShiftKeyDown()) return lot + ": " + price + coinWord(price) + ". Right-click to buy.";
         int coins = coinsHeld(p);
         if (coins < price) {
@@ -1090,7 +1167,7 @@ public final class Market {
         int p = sellPrice(level, village, g, shown, marketDay);
         if (shown.isEnchanted()) p *= 3;
         p = (int) Math.max(1, Math.round(p * Craftsmanship.worth(shown)));
-        return Stockroom.asked(level, village, shown, p, g.bundle());
+        return Math.max(leastLot(level, village, shown, g.bundle()), Stockroom.asked(level, village, shown, p, g.bundle()));   // [market]
     }
 
     /** A counter's price tag: what is on it and what a lot costs. */
@@ -1118,8 +1195,13 @@ public final class Market {
         UUID id = v.id();
         if (hand.getCount() < g.bundle()) return "The village buys " + g.name().toLowerCase() + " by the " + g.bundle() + ".";
         if (hand.isDamaged()) return "Nobody here wants a worn " + hand.getHoverName().getString().toLowerCase() + ".";
-        int price = buyPrice(level, id, g, md);                                     // [econ-prices]
-        if (hand.isEnchanted()) price *= 2;
+        if (Services.given(id, p.getUUID(), level.getDayTime() / 24000L, hand.getItem()) > 0) {
+            return "We gave you that this morning, friend — keep it, it's yours.";                  // [market] no gift sold back
+        }
+        // [market] Its price today, four fifths of it (a little more on market day), never over what it sells the thing
+        // or its makings for: the one paying price (bidLot).
+        int price = bidLot(level, id, hand, g.bundle());
+        if (price <= 0) return "A lot of " + g.bundle() + " " + g.name().toLowerCase() + " isn't worth a coin to the village just now.";
         if (p.isShiftKeyDown()) return "The village would pay " + price + coinWord(price) + " for " + lotName(g, hand) + ".";
         if (Ledger.coins(id) < price) return "The village hasn't the coin to pay for that.";
         ItemStack lot = hand.copyWithCount(g.bundle());

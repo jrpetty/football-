@@ -30,10 +30,11 @@ import java.util.function.Predicate;
  *     the contract lapses.</li>
  * <li><b>Your own market stall.</b> Rent a stall on the square a week at a time, stock its barrel and
  *     set your prices: the folk buy from it out of their own purses, into its till (PlayerStalls).</li>
- * <li><b>The village bank.</b> Put coin by at the treasury and it earns a little every week; borrow
- *     against your good name, and pay it back — a debt left a fortnight shames you.</li>
- * <li><b>Investing.</b> Put coin into the village's works: for two weeks you take a share of what the
- *     village takes in each day.</li>
+ * <li><b>The village bank.</b> Put coin by at the treasury and it earns a little every week, out of what
+ *     the treasury's loans earn ([market] no coin from nothing); borrow against your good name, and pay
+ *     it back — a debt left a fortnight shames you.</li>
+ * <li><b>Investing.</b> Put coin into the village's works: for two weeks it earns its share of how the
+ *     works do (up to a half in the hundred a day), and then comes back to your account.</li>
  * <li><b>The auction.</b> On market day the village puts up its finest spare thing for bids; the best
  *     bid takes it the day after.</li>
  * <li><b>Caravan escort.</b> Sign on to guard the next caravan: walk with it and be paid on arrival.</li>
@@ -137,7 +138,7 @@ public final class Commerce {
             int count = (int) num(o[1]), deposit = (int) num(o[2]);
             long due = num(o[3]);
             if (it == null) { Ledger.note(village, key, ""); return "Your order's gone astray. Order again?"; }
-            int total = bulkPrice(it, count);
+            int total = bulkPrice(level, village, it, count);
             if (Budget.spare(level, village, new ItemStack(it)) < count) {
                 if (day > due) {
                     Ledger.note(village, key, "");
@@ -158,12 +159,12 @@ public final class Commerce {
         if (want == null) return "Order what? Say what and how many — \"I'd like to order 256 cobblestone\".";
         int count = Math.max(1, Math.min(1024, number(text, 64)));
         if (Prices.each(want) <= 0) return "We don't deal in " + name(want) + ".";
-        int total = bulkPrice(want, count);
+        int total = bulkPrice(level, village, want, count);
         int spare = Budget.spare(level, village, new ItemStack(want));
         if (spare >= count) {
             if (Market.coinsHeld(p) < total) return count + " " + name(want) + " would be " + total + " coins, a tenth off for the quantity. You've " + Market.coinsHeld(p) + ".";
             int got = handOver(level, v, p, want, count);
-            int paid = got == count ? total : bulkPrice(want, got);
+            int paid = got == count ? total : bulkPrice(level, village, want, got);
             Market.payOut(p, paid);
             Ledger.addCoins(village, paid);
             Economy.sold(village, paid);
@@ -179,8 +180,12 @@ public final class Commerce {
             + " coins down, " + (total - deposit) + " when you collect, within the week.";
     }
 
-    static int bulkPrice(Item it, int count) {
-        return (int) Math.max(1, Math.ceil(Budget.playerPrice(new ItemStack(it)) * 0.9 * count));
+    /** A bulk order's price: a tenth off the town's asking price for so many ([market] its price today and the keeper's
+     *  margin: Market.askEach), never under the least it lets them go for. */
+    static int bulkPrice(net.minecraft.server.level.ServerLevel level, UUID village, Item it, int count) {
+        ItemStack one = new ItemStack(it);
+        int tenthOff = (int) Math.max(1, Math.ceil(Market.askEach(level, village, one) * 0.9 * count));
+        return Math.max(tenthOff, Market.leastLot(level, village, one, count));
     }
 
     // ------------------------------------------------------------------ 13. supply contracts
@@ -291,6 +296,9 @@ public final class Commerce {
         int deposit = b == null ? 0 : (int) num(b[0]);
         int loan = b == null || b.length < 2 ? 0 : (int) num(b[1]);
         long since = b == null || b.length < 3 ? day : num(b[2]);
+        // [market] What of the loan is coin lent (the rest is interest run up on it): a repayment pays the interest first,
+        // and the interest paid is what the savers' interest comes out of (bankWeek). An old account: all of it lent.
+        int lent = b == null || b.length < 4 ? loan : (int) Math.min(loan, num(b[3]));
         int n = number(text, 0);
         String name = p.getName().getString();
         if (t.contains("deposit") || t.contains("put by") || t.contains("save")) {
@@ -312,6 +320,9 @@ public final class Commerce {
             if (n <= 0) return "You've no coin on you to pay it with.";
             Market.payOut(p, n);
             Ledger.addCoins(village, n);
+            int interest = Math.max(0, Math.min(n, loan - lent));
+            lent = Math.max(0, lent - (n - interest));
+            if (interest > 0) Ledger.note(village, POOL, Long.toString(num(String.valueOf(Ledger.note(village, POOL))) + interest));
             loan -= n;
             if (loan == 0) f.persona().feelFor(p.getUUID(), name, 2);
         } else if (t.contains("borrow") || t.contains("loan") || t.contains("lend")) {
@@ -324,26 +335,40 @@ public final class Commerce {
             Ledger.takeCoins(village, n);
             Dealings.giveCoins(p, n);
             loan = n;
+            lent = n;
             since = day;
         } else {
-            return "Your account: " + deposit + " coins put by (it earns a coin in fifty a week)" + (loan > 0 ? ", and " + loan
+            return "Your account: " + deposit + " coins put by (it earns up to a coin in fifty a week, out of what our loans earn)" + (loan > 0 ? ", and " + loan
                 + " coins owed (a tenth a week; pay it within the fortnight)" : "") + ". Say \"deposit 20\", \"withdraw 10\", \"borrow 30\" or \"repay\".";
         }
-        Ledger.note(village, key, deposit + "|" + loan + "|" + since);
+        Ledger.note(village, key, deposit + "|" + loan + "|" + since + "|" + lent);
         return "Done. You've " + deposit + " coins put by with us" + (loan > 0 ? ", and owe " + loan : "") + ".";
     }
 
-    /** A week at the bank: deposits earn, loans grow; a debt left two weeks shames the borrower. */
+    /** [market] The interest the treasury's loans to players have paid in, and not yet paid out to its savers. */
+    static final String POOL = "bank.pool";
+
+    /**
+     * A week at the bank: deposits earn, loans grow; a debt left two weeks shames the borrower. [market] A saver's
+     * interest (a coin in fifty a week) comes out of what the treasury's loans have paid in interest, six parts in ten of
+     * it at the most, as the bank's does (Bank): no loans repaid, no interest. It used to come out of the treasury
+     * itself, the wages' purse: five hundred coins put by drew ten a week for nothing.
+     */
     static void bankWeek(ServerLevel level, Villages.Village v, long day) {
+        long pool = num(String.valueOf(Ledger.note(v.id(), POOL)));
+        long payable = pool * 6 / 10;
         for (Map.Entry<String, String> e : notesStarting(v.id(), "bank/")) {
             String[] b = e.getValue().split("\\|", -1);
             int deposit = (int) num(b[0]);
             int loan = b.length > 1 ? (int) num(b[1]) : 0;
             long since = b.length > 2 ? num(b[2]) : day;
-            int interest = deposit / 50;
+            int lent = b.length > 3 ? (int) Math.min(loan, num(b[3])) : loan;
+            int interest = (int) Math.min(payable, deposit / 50);
             if (interest > 0 && Ledger.coins(v.id()) > interest + Market.wageBill(v.id())) {
                 Ledger.takeCoins(v.id(), interest);
                 deposit += interest;
+                payable -= interest;
+                pool -= interest;
             }
             if (loan > 0) {
                 loan += Math.max(1, loan / 10);
@@ -358,8 +383,9 @@ public final class Commerce {
                     Villages.tell(v.id(), day, "a debt to the treasury has gone unpaid for a fortnight");
                 }
             }
-            Ledger.note(v.id(), e.getKey(), deposit + "|" + loan + "|" + since);
+            Ledger.note(v.id(), e.getKey(), deposit + "|" + loan + "|" + since + "|" + lent);
         }
+        Ledger.note(v.id(), POOL, Long.toString(Math.max(0, pool)));
     }
 
     // ------------------------------------------------------------------ 16. investing
@@ -378,30 +404,59 @@ public final class Commerce {
         if (Market.coinsHeld(p) < n) return "To invest " + n + " coins you'd need " + n + " coins. You've " + Market.coinsHeld(p) + ".";
         Market.payOut(p, n);
         Ledger.addCoins(village, n);
-        Ledger.note(village, key, n + "|" + (day + 14));
+        Ledger.note(village, key, n + "|" + (day + 14) + "|0");
         String name = p.getName().getString();
         Villages.tell(village, day, name + " put " + n + " coins into the village's works");
         Standing.stir(village, p.getUUID());
-        return "Thank you! " + n + " coins into our works — for two weeks you'll have your share of what we take in each day, paid into your account here.";
+        return "Thank you! " + n + " coins into our works — for two weeks they earn their share of how the works do, up to a half in the "
+            + "hundred a day, paid into your account here; and at the end they come back to you there.";
     }
 
-    /** The morning's dividends: each investor's share of yesterday's takings, into its account. */
+    /** [market] A day's dividend on a stake, at most: a half in the hundred, as the works do (yesterday's making against the
+     *  week's: a town making less than it was pays less). */
+    static final double DIVIDEND_MOST = 0.005;
+
+    /**
+     * The morning's dividends: each investor's share of how the works did yesterday, into its account; and at the end of
+     * its two weeks its stake back. [market] A stake used to buy a share of the whole day's takings (a quarter of them for
+     * a hundred coins, three hundred and fifty back in a fortnight in a busy town) and was never returned: now it earns
+     * up to a half in the hundred a day, by how yesterday's making stood against the week's, and comes back whole.
+     */
     static void dividends(Villages.Village v, long day) {
-        int taken = Math.max(0, Economy.yesterday(v.id()));
-        if (taken <= 0) return;
+        double going = Economy.weekAverage(v.id()) <= 0 ? 0.0
+            : Math.max(0.0, Math.min(1.0, Economy.yesterday(v.id()) / (double) Economy.weekAverage(v.id())));
         for (Map.Entry<String, String> e : notesStarting(v.id(), "invest/")) {
             String[] i = e.getValue().split("\\|", -1);
-            if (i.length < 2 || day > num(i[1])) { Ledger.note(v.id(), e.getKey(), ""); continue; }
+            if (i.length < 2) { Ledger.note(v.id(), e.getKey(), ""); continue; }
             int stake = (int) num(i[0]);
-            int share = Math.max(1, (int) Math.round(taken * Math.min(0.25, stake / 400.0)));
-            if (Ledger.coins(v.id()) < share + Market.wageBill(v.id())) continue;
-            Ledger.takeCoins(v.id(), share);
+            long end = num(i[1]);
+            int carry = i.length > 2 ? (int) num(i[2]) : 0;              // hundredths of a coin not yet paid
             String bankKey = "bank/" + e.getKey().substring("invest/".length());
-            String[] b = fields(v.id(), bankKey);
-            int deposit = b == null ? 0 : (int) num(b[0]);
-            String rest = b == null || b.length < 3 ? "0|" + day : b[1] + "|" + b[2];
-            Ledger.note(v.id(), bankKey, (deposit + share) + "|" + rest);
+            if (day > end) {
+                // The stake home, into the account, when the treasury can spare it over the wages.
+                if (Ledger.coins(v.id()) < stake + Market.wageBill(v.id())) continue;
+                Ledger.takeCoins(v.id(), stake);
+                credit(v.id(), bankKey, stake, day);
+                Ledger.note(v.id(), e.getKey(), "");
+                continue;
+            }
+            carry += (int) Math.round(stake * DIVIDEND_MOST * going * 100);
+            int share = carry / 100;
+            if (share > 0 && Ledger.coins(v.id()) >= share + Market.wageBill(v.id())) {
+                Ledger.takeCoins(v.id(), share);
+                credit(v.id(), bankKey, share, day);
+                carry -= share * 100;
+            }
+            Ledger.note(v.id(), e.getKey(), stake + "|" + end + "|" + carry);
         }
+    }
+
+    /** So many coins onto a player's account at the treasury. */
+    private static void credit(UUID village, String bankKey, int n, long day) {
+        String[] b = fields(village, bankKey);
+        int deposit = b == null ? 0 : (int) num(b[0]);
+        String rest = b == null || b.length < 3 ? "0|" + day : b[1] + "|" + b[2] + (b.length > 3 ? "|" + b[3] : "");
+        Ledger.note(village, bankKey, (deposit + n) + "|" + rest);
     }
 
     // ------------------------------------------------------------------ 17. the auction
@@ -468,6 +523,7 @@ public final class Commerce {
             for (Budget.Offer o : offers) if (o.each() >= 5 && (finest == null || o.each() > finest.each())) finest = o;
             if (finest == null) return;
             int reserve = (int) Math.max(1, Math.round(finest.each() * 0.8));
+            reserve = Math.max(reserve, Market.leastLot(level, v.id(), new ItemStack(finest.item()), 1));   // [market] never under the least
             Ledger.note(v.id(), "auction", idOf(finest.item()) + "|" + reserve + "|0||" + "|" + day);
             Villages.tell(v.id(), day, "up for auction today: " + finest.name() + ", bids from " + reserve + " coins");
         }
@@ -607,6 +663,7 @@ public final class Commerce {
             for (Budget.Offer o : offers) if (finest == null || o.each() > finest.each()) finest = o;
             if (finest != null) {
                 int reserve = (int) Math.max(1, Math.round(finest.each() * 0.8));
+                reserve = Math.max(reserve, Market.leastLot(level, v.id(), new ItemStack(finest.item()), 1));   // [market]
                 Ledger.note(v.id(), "auction", idOf(finest.item()) + "|" + reserve + "|0||" + "|" + day);
             }
         } else {
