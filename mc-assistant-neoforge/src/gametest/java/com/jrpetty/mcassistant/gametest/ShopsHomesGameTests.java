@@ -605,6 +605,12 @@ public class ShopsHomesGameTests {
                         point(level, t.id(), ServiceRole.SHOP)).words()));
             }
             if (!left[0] || busy || !ShoppingTrips.stageForTests(f).equals("none")) return;
+            if (ShoppingTrips.paidForTests(f) == 0) {                      // turned away (the keeper stepped off): again
+                Kit.log("sk12 a trip came to nothing at " + (helper.getTick() - started[0]) + "; again");
+                left[0] = false;
+                ShoppingTrips.againForTests(f);
+                return;
+            }
             Belongings.resetForTests();
             Belongings.View view = Belongings.ofHome(level, t.id(), home);
             int atHome = 0, candles = 0;
