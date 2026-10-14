@@ -54,8 +54,8 @@ import java.util.UUID;
  *     every style, at every age, over every style's dressing, change for change.</li>
  * <li><b>st02</b>: the materials: never a precious block or one of the Nether's or the End's, at any age; from the Iron
  *     Age no earth, gravel or sand in a wall, a floor or a roof, the builder going down the theme's stand-ins (stone
- *     bricks, cobblestone, stone, planks...) and else waiting; a young town still builds with what it has; the earth of a
- *     flower box is earth; the theme's own quartz footings are not held against it.</li>
+ *     bricks, cobblestone, stone, planks...) and else waiting; a young town's wall is never of earth either (it waits); the
+ *     earth of a flower box is earth; the theme's own quartz footings are not held against it.</li>
  * <li><b>st03</b>: a second theme, pure data (the test theme), end to end: not offered; given to a town, its blocks
  *     first, its own house design, its own ages; a medieval house of the town's renovated into it.</li>
  * <li><b>st04</b>: an old house renovated to today's design, out of the stores, turn by turn: the household kept and
@@ -384,12 +384,15 @@ public class StylesGameTests {
             // The earth of a flower box is earth, in any age.
             Item soil = Materials.choiceForTests(g, Blueprints.Style.SOIL, held(Items.DIRT));
             helper.assertTrue(soil == Items.DIRT, "a flower box of earth: " + name(soil));
-            // A young town builds with what it has: earth will do for now, but never the Nether's or a precious block.
+            // A young town's wall is never of earth either ([integrity]: earth only where earth goes), nor the Nether's or a
+            // precious block: with only those in hand it waits for planks or stone; with planks it builds.
             Item early = Materials.choiceForTests(y, Blueprints.Style.WALL, held(Items.NETHERRACK, Items.DIAMOND_BLOCK, Items.DIRT));
             Item early2 = Materials.choiceForTests(y, Blueprints.Style.WALL, held(Items.NETHERRACK, Items.EMERALD_BLOCK));
-            seen.add("wood age: " + name(early) + ", " + name(early2));
-            helper.assertTrue(early == Items.DIRT && early2 == null, "a Wood Age wall of earth, never netherrack or emerald: "
+            Item early3 = Materials.choiceForTests(y, Blueprints.Style.WALL, held(Items.NETHERRACK, Items.DIRT, Items.OAK_PLANKS));
+            seen.add("wood age: " + name(early) + ", " + name(early2) + ", " + name(early3));
+            helper.assertTrue(early == null && early2 == null, "a Wood Age wall waits rather than lay earth, never netherrack or emerald: "
                 + name(early) + ", " + name(early2));
+            helper.assertTrue(early3 == Items.OAK_PLANKS, "and is built of planks when it has them: " + name(early3));
             // What stands in a building that is not fit, for the renovation.
             boolean dirtIron = Materials.unfit(g, Blueprints.Style.WALL, Blocks.DIRT.defaultBlockState());
             boolean dirtWood = Materials.unfit(y, Blueprints.Style.WALL, Blocks.DIRT.defaultBlockState());
