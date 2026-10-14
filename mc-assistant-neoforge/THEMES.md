@@ -69,8 +69,12 @@ maps each purpose to a list of lines, best first:
 - `list(F):pattern`: each of the look's list `F` (`footing`, `dressed`).
 
 A builder takes the first of these it has; short of all of them it goes on to the
-materials' stand-ins (below). Doors, beds, chests, glass and the other furniture are not
-part of a theme: they are the same things in every town.
+materials' stand-ins (below). The fittings and the furniture are not part of a theme: the
+letters for doors (`D`, `Y`), ladders (`H` against the back wall, `J` with the wall on its
+left, `i` with the wall on its right), beds, chests, workstations, glass and lights are
+placed exactly as the legend in `Blueprints.java` says, the same things in every town, so
+the folk always find a way in, a way up and a bed. A theme changes how they look by drawing
+its own design (below), not by renaming them.
 
 ### ages: the make-over
 
