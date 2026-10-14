@@ -57,6 +57,8 @@ public class WagonGameTests {
         Kit.reset(level);
         Wagons.resetForTests();
         Shipments.resetForTests();
+        com.jrpetty.mcassistant.entity.TradeDeals.resetForTests();
+        Wagons.registerCarrier();                                      // (a test before may have taken it away)
         Wagons.ambushForTests(false);
         level.setDayTime(24000L * 6 + 2000);
         for (TradeWagon w : level.getEntitiesOfClass(TradeWagon.class, new AABB(x - 64, -64, Z - 64, x + APART + 64, 320, Z + 64))) w.discard();
@@ -315,6 +317,78 @@ public class WagonGameTests {
                 helper.assertTrue(bw == 40, "and delivered all of it, coming back into the world at the other end: " + bw);
                 helper.succeed();
             }
+        });
+    }
+
+    // ------------------------------------------------------------------ wg07: a real deal, end to end by wagon
+
+    /**
+     * Two towns strike a real contract (stone for bread and coin, TradeTalks); the seller's turn is dispatched as the
+     * economy does it (TradeDeals.ship, Shipments.dispatch) and the seller's wagon takes it: out of the stores at once,
+     * the whole load aboard the whole way, and at the other end the load into the buyer's stores and the coin due from
+     * its treasury to the seller's, nothing made or lost on the way.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "wg07_deal_by_wagon")
+    public static void wg07_deal_by_wagon(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 1818000;
+        Pair p = towns(helper, level, x);
+        Wagons.nearForTests(true);
+        UUID a = p.a().id(), b = p.b().id();
+        for (int k = 0; k < 2; k++) {
+            ItemStack[] stone = new ItemStack[k == 0 ? 27 : 13];
+            for (int i = 0; i < stone.length; i++) stone[i] = new ItemStack(Items.COBBLESTONE, 64);
+            chest(level, p.a(), k, stone);
+        }
+        chest(level, p.a(), 2, new ItemStack(Items.BREAD, 10));
+        ItemStack[] bread = new ItemStack[24];
+        for (int i = 0; i < bread.length; i++) bread[i] = new ItemStack(Items.BREAD, 64);
+        chest(level, p.b(), 0, bread);
+        com.jrpetty.mcassistant.entity.TradeTalks.Talk k = com.jrpetty.mcassistant.entity.TradeTalks.negotiate(level, a, b);
+        helper.assertTrue(k.deal(), "a contract is struck: " + k.end() + " — " + k.why());
+        com.jrpetty.mcassistant.entity.TradeDeals.strikeForTests(level, k);
+        for (Villages.Village v : new Villages.Village[]{ p.a(), p.b() }) wagon(helper, level, v, WagonKind.COVERED, true);
+        UUID seller = k.table().seller();
+        UUID buyer = seller.equals(a) ? b : a;
+        Item sent = k.table().x();
+        int sellerStores = stores(level, seller, sent);
+        Shipments.Shipment s = com.jrpetty.mcassistant.entity.TradeDeals.shipNowForTests(level, a, b);
+        helper.assertTrue(s != null && s.from().equals(seller), "the seller's load dispatched: " + (s == null ? "none" : Shipments.words(s)));
+        TradeWagon w = Wagons.wagonForTests(level, seller);
+        helper.assertTrue(w != null && s.id().equals(Wagons.shipmentForTests(w)), "and taken by the seller's wagon: "
+            + Wagons.stateForTests(level, seller));
+        int pieces = s.pieces();
+        helper.assertTrue(sellerStores - stores(level, seller, sent) == pieces, "out of the seller's stores at once: " + pieces);
+        int[] before = new int[3];                                    // the buyer's stock and both treasuries, as it pulls in
+        Kit.log("wg07 the deal: " + com.jrpetty.mcassistant.entity.TradeDeals.words(a, b) + "; shipped " + Shipments.words(s) + ", "
+            + s.coinDue() + " coin due on delivery");
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(level.getDayTime() + 24000 - level.getDayTime() % 24000 + 1000);
+            if (t % 5 != 0) return;
+            String phase = Wagons.phaseForTests(w);
+            if (Shipments.get(s.id()) != null) {
+                int aboard = Wagons.aboardForTests(w, sent);
+                if (!"FETCH".equals(phase) && aboard != pieces) {
+                    helper.fail("the load changed on the way at " + t + ": " + aboard + " of " + pieces + " — " + Wagons.stateForTests(level, seller));
+                    return;
+                }
+                before[0] = stores(level, buyer, sent);
+                before[1] = Ledger.coins(buyer);
+                before[2] = Ledger.coins(seller);
+                if (t % 400 == 0) Kit.log("wg07 @" + t + ": " + Wagons.stateForTests(level, seller));
+                return;
+            }
+            int got = stores(level, buyer, sent) - before[0];
+            int paid = before[1] - Ledger.coins(buyer), earned = Ledger.coins(seller) - before[2];
+            Kit.log("wg07 delivered at " + t + ": the buyer took " + got + " of " + pieces + ", paid " + paid + "; the seller earned " + earned
+                + "; deliveries " + java.util.Arrays.toString(com.jrpetty.mcassistant.entity.TradeDeals.numbersForTests(a, b)));
+            helper.assertTrue(got == pieces && Wagons.aboardForTests(w, sent) == 0, "the whole load into the buyer's stores: " + got + " of " + pieces);
+            helper.assertTrue(paid == earned && paid == s.coinDue(), "the coin due, from the buyer's treasury to the seller's: " + paid
+                + " paid, " + earned + " earned, " + s.coinDue() + " due");
+            int[] n = com.jrpetty.mcassistant.entity.TradeDeals.numbersForTests(a, b);
+            helper.assertTrue(n != null && n[3] == 1 && n[5] == 0, "one delivery made by the deal's books, none short: " + java.util.Arrays.toString(n));
+            helper.succeed();
         });
     }
 

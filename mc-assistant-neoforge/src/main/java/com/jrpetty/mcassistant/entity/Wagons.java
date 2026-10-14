@@ -169,6 +169,11 @@ public final class Wagons {
     @SubscribeEvent
     public static void onServerStarting(ServerStartingEvent event) {
         reset();
+        registerCarrier();
+    }
+
+    /** The wagons (and, for a town with none, its carriers on foot) take the economy's shipments (Shipments.Carrier). */
+    public static void registerCarrier() {
         Shipments.register(Wagons::carry);
     }
 
@@ -425,17 +430,22 @@ public final class Wagons {
         return true;
     }
 
-    /** The Shipments carrier: the town's wagon takes the economy's load (already out of the stores) if it can. */
+    /**
+     * The Shipments carrier: the economy's load (already out of the stores) goes by the town's wagon if it has one free
+     * that holds it; else on a carrier's back (and a pack donkey's, if the stable has one), walked as a caravan is, so
+     * a town without a wagon still sends its goods where they can be seen. False (the road takes it) only with nobody
+     * to carry it or more than a back can.
+     */
     static boolean carry(ServerLevel level, Shipments.Shipment s) {
         Villages.Village fv = Villages.get(s.from()), tv = Villages.get(s.to());
         if (fv == null || tv == null || !fv.dim().equals(level.dimension())) return false;
-        TradeWagon w = parkedWagon(level, fv);
-        if (w == null) return false;
         int stacks = 0;
         for (ItemStack m : s.manifest()) stacks += (m.getCount() + m.getMaxStackSize() - 1) / Math.max(1, m.getMaxStackSize());
-        if (stacks > w.kind().slots) return false;                          // more than it holds: the road takes it
+        TradeWagon w = parkedWagon(level, fv);
+        if (w != null && stacks > w.kind().slots) w = null;                 // more than it holds
         VillageFolkEntity driver = Caravans.choose(fv);
-        if (driver == null || !crew(level, fv, w, driver)) return false;
+        if (driver == null) return false;
+        if (w == null || !crew(level, fv, w, driver)) return onFoot(level, s, fv, tv, driver, stacks);
         for (ItemStack m : s.manifest()) {
             ItemStack rest = m.copy();
             while (!rest.isEmpty()) {
@@ -456,6 +466,30 @@ public final class Wagons {
         FolkTalk.speak(driver, "A load for " + Villages.name(tv.id()) + ". I'll take the " + w.kind().label + ".");
         LOG.info("[MCA-WAGON] {}'s {} takes shipment {} to {}: {}", Villages.name(fv.id()), w.kind().label, s.id(),
             Villages.name(tv.id()), Shipments.words(s));
+        return true;
+    }
+
+    /** A shipment on a carrier's back: if it has the room, its trip set and a pack donkey sent for (Riding.packFor). */
+    private static boolean onFoot(ServerLevel level, Shipments.Shipment s, Villages.Village fv, Villages.Village tv, VillageFolkEntity f,
+                                  int stacks) {
+        int free = 0;
+        for (ItemStack x : f.getInventoryItems()) if (x.isEmpty()) free++;
+        if (free < stacks + 1) return false;                              // a slot spare for its bread
+        for (ItemStack m : s.manifest()) {
+            ItemStack rest = m.copy();
+            while (!rest.isEmpty()) {
+                ItemStack left = f.insertGiven(rest.split(rest.getMaxStackSize()));
+                if (!left.isEmpty()) Market.intoStores(level, fv.id(), left);  // counted above; never lost
+            }
+        }
+        f.clearQueue();
+        Caravans.Trip t = new Caravans.Trip(fv.id(), tv.id(), new ArrayList<>(Caravans.way(fv, tv)));
+        t.shipment = s.id();
+        t.gainedTick = f.tickCount;
+        f.trip(t);
+        Riding.packFor(level, fv, f);
+        FolkTalk.speak(f, "A load for " + Villages.name(tv.id()) + ". On my back it goes!");
+        LOG.info("[MCA-WAGON] {} carries shipment {} to {} on foot: {}", f.displayNameCap(), s.id(), Villages.name(tv.id()), Shipments.words(s));
         return true;
     }
 
@@ -1127,6 +1161,8 @@ public final class Wagons {
                     if (!s.isEmpty()) aboard.add(s);
                 }
                 w.cargoChanged();
+            } else if (id != null && known(t.from, id)) {
+                aboard.addAll(offTheBack(level, f, Shipments.get(id)));      // carried on foot: off its back (and its donkey's)
             }
             if (id != null && known(t.from, id)) {
                 Shipments.delivered(level, id, aboard);
@@ -1145,11 +1181,32 @@ public final class Wagons {
             if (w != null) turnHome(level, f, t);
             return;
         }
+        Caravans.release(level, f, t);
         TradeTrips.over(f);
         f.trip(null);
         home(f, level);
-        Villages.tell(t.from, day, "our " + (w == null ? "wagon" : w.kind().label) + " came home from " + Villages.name(t.to));
+        Riding.caravanHome(f, level);
+        Villages.tell(t.from, day, "our " + (w == null ? "carrier" : w.kind().label) + " came home from " + Villages.name(t.to));
         f.say("Back from " + Villages.name(t.to) + "!");
+    }
+
+    /** The shipment's goods off a carrier's back (its pack donkey's chest emptied onto it first): as much as it has of each. */
+    private static List<ItemStack> offTheBack(ServerLevel level, VillageFolkEntity f, Shipments.Shipment s) {
+        Riding.unpack(f, level);
+        List<ItemStack> out = new ArrayList<>();
+        var inv = f.getInventoryItems();
+        for (ItemStack want : s.manifest()) {
+            int n = want.getCount();
+            for (int i = 0; i < inv.size() && n > 0; i++) {
+                ItemStack x = inv.get(i);
+                if (x.isEmpty() || !ItemStack.isSameItemSameComponents(x, want)) continue;
+                int k = Math.min(n, x.getCount());
+                out.add(x.split(k));
+                if (x.isEmpty()) inv.set(i, ItemStack.EMPTY);
+                n -= k;
+            }
+        }
+        return out;
     }
 
     /**
@@ -1164,7 +1221,14 @@ public final class Wagons {
     /** Caravans.abandon (the carrier died or was lost on the road): the wagon lost with it, its load spilt where it stands. */
     public static void lost(VillageFolkEntity f, ServerLevel level) {
         UUID id = DRIVING.remove(f.getUUID());
-        if (id == null) return;
+        if (id == null) {
+            // A shipment carried on foot: lost with its carrier (what it carried falls where it fell, with its pack).
+            Caravans.Trip t = f.trip();
+            if (t != null && t.shipment != null && known(t.from, t.shipment)) {
+                Shipments.lost(level, t.shipment, List.of(), "its carrier, " + f.displayNameCap() + ", was lost on the road");
+            }
+            return;
+        }
         if (level.getEntity(id) instanceof TradeWagon w && w.isAlive()) {
             wreck(level, w, "lost with its driver, " + f.displayNameCap());
             return;
