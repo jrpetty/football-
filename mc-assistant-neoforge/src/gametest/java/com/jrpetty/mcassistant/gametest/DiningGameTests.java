@@ -52,8 +52,8 @@ import java.util.function.Predicate;
  * [dining] Eating out: a player and a folk served the same way, from a real kitchen, by real hands (Dining, Diners,
  * DiningMenu, DiningPlaces, DiningDesk, Hospitality, PlaceSettingBlock).
  * <ul>
- * <li><b>dn01</b>: a player orders at a table: the roast is cooked from the stores' raw beef by the named head cook at the
- *     smoker, the drink goes out first, the waiter sets both down on a plate and a cup on the table's cloth; the player
+ * <li><b>dn01</b>: a player orders at a table: the roast is cooked from the stores' raw beef by a named cook of the
+ *     kitchen at the smoker, the drink goes out first, the waiter sets both down on a plate and a cup on the table's cloth; the player
  *     eats it in bites (the beef's whole hunger, no more) and pays with a tip; coin and food conserved end to end; the
  *     waiter clears and the pot washer washes the plate and the cup back onto the shelf.</li>
  * <li><b>dn02</b>: a folk dines out the same way: sits, the waiter takes its order, it is cooked and served, eaten bite by
@@ -287,8 +287,12 @@ public class DiningGameTests {
             .thenExecute(() -> {
                 Dining.Order o = ord[0];
                 Dining.Line beef = o.lines.get(1);
-                helper.assertTrue(beef.cook.equals(t.cook().displayNameCap()), "cooked by the head cook, " + t.cook().displayNameCap() + ": " + beef.cook
-                    + " (" + roles(t) + ")");
+                // By a named hand of the kitchen's trade (the head cook, or, if the town has moved it to other work meanwhile,
+                // whoever of the trade stands in: a small place combines the jobs).
+                boolean ofTheTrade = false;
+                for (VillageFolkEntity f : t.folk()) ofTheTrade |= f.displayNameCap().equals(beef.cook) && f.stationTask() == StationTask.COOK;
+                Kit.log("dn01 the roast cooked by " + beef.cook + " at " + beef.at + " (" + roles(t) + ")");
+                helper.assertTrue(ofTheTrade, "cooked by a named cook of the trade: " + beef.cook + " (" + roles(t) + ")");
                 helper.assertTrue(smoker.equals(beef.at), "the roast at the smoker: " + beef.at + " not " + smoker);
                 helper.assertTrue(inStores(t.store(), s -> s.is(Items.BEEF)) == start[2] - 1, "one raw beef out of the stores");
                 helper.assertTrue(inStores(t.store(), s -> s.is(Items.COOKED_BEEF)) == 0, "the roast is on the plate, not left in the stores");
