@@ -10644,8 +10644,8 @@ checked on each visit. Earth found where the drawing wants a block is lifted int
 whatever the rest of that floor is made of, taken from the stores. Plants on the floor are taken up. A building whose
 drawing includes earth keeps it: a flower box, the beds of an orchard or allotment, and a park's lawn.
 
-**What spoils a town.** The town is walked column by column, a few thousand columns at a time, so the whole town is
-covered every couple of minutes. The walk notes every eyesore it finds, worst first:
+**What spoils a town.** The town is walked column by column, a small slice every second, so even the largest town
+is covered about once a minute. The walk notes every eyesore it finds, worst first:
 
 * a **spill**: lava lying in the town, or a lone puddle of water;
 * a **hole** two or more blocks deep, or a **pothole** in a street or on the square;

@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * [tidy] The town cares for its looks, and its folk keep it so themselves.
  *
  * <ul>
- * <li><b>The tidy crew.</b> The town's streets are walked a few thousand columns a visit (Eyesores), and what spoils
+ * <li><b>The tidy crew.</b> The town's streets are walked a slice a second (Eyesores), and what spoils
  *     them is put right worst first by a hand at the spot: the street sweeper (Sweepers) when there is nothing lying
  *     about for its broom, and otherwise whoever the town can spare for its works (TownJobs "tidy", the couriers
  *     first). A spill filled, a hole filled with ground that matches round it (turf on top on a lawn, a path's earth

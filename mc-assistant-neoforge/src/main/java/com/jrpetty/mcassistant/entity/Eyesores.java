@@ -25,8 +25,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * [tidy] What spoils a town's looks, found by walking it column by column: a few thousand columns a visit, the whole
- * town gone over every couple of minutes, every spot written down with what it is.
+ * [tidy] What spoils a town's looks, found by walking it column by column: a slice a second (Tidy), the whole
+ * town gone over about once a minute, every spot written down with what it is.
  *
  * <ul>
  * <li><b>Spills</b>: lava lying in the town; a lone puddle of water (a bucket spilt, a spring left where a pond was
