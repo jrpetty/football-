@@ -448,13 +448,17 @@ public class TidyMinesGameTests {
             keepAtWork(level, f);
             long t = helper.getTick();
             int showing = 0;
+            List<String> where = new ArrayList<>();
             for (BlockPos p : BlockPos.betweenClosed(floor.offset(-5, -2, -5), floor.offset(5, 7, 5))) {
-                if (OreSight.isOre(level.getBlockState(p)) && OreSight.exposed(level, p)) showing++;
+                if (OreSight.isOre(level.getBlockState(p)) && OreSight.exposed(level, p)) {
+                    showing++;
+                    where.add(p.subtract(floor).toShortString());
+                }
             }
             int standing = Footholds.countForTests(level, floor, 10);
             built[0] = Math.max(built[0], standing);
             if (t % 50 == 0 && t < 600) Kit.log("tmn07 @" + t + " y " + String.format(java.util.Locale.ROOT, "%.2f", f.getY()) + " standing " + standing);
-            if (t % 200 == 0) Kit.log("tmn07 @" + t + " at " + f.blockPosition().toShortString() + ": ore showing " + showing + ", steps standing " + standing + " — " + f.debugLine());
+            if (t % 200 == 0) Kit.log("tmn07 @" + t + " at " + f.blockPosition().toShortString() + ": ore showing " + showing + " " + where + ", steps standing " + standing + " — " + f.debugLine());
             if (t > 20 && showing == 0 && standing == 0) {
                 BlockState h = level.getBlockState(hidden);
                 Kit.log("tmn07 swept at " + t + ": the hidden ore " + h.getBlock() + ", raw iron " + f.countMatching(s -> s.is(Items.RAW_IRON))

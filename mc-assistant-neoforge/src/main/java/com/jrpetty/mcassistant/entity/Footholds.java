@@ -379,9 +379,11 @@ public final class Footholds extends SavedData {
         return best;
     }
 
-    /** Is anybody (a folk, a player, an animal) standing on this block? */
+    /** Is anybody (a folk, a player, an animal) standing on this block: its feet on the block's top, over it? */
     private static boolean stoodOn(ServerLevel level, BlockPos pos) {
-        return !level.getEntitiesOfClass(LivingEntity.class, new AABB(pos.above()).inflate(0.2, 0.0, 0.2)).isEmpty();
+        double top = pos.getY() + 1.0;
+        AABB over = new AABB(pos.getX(), top, pos.getZ(), pos.getX() + 1.0, top + 0.5, pos.getZ() + 1.0).deflate(0.01, 0.0, 0.01);
+        return !level.getEntitiesOfClass(LivingEntity.class, over, e -> Math.abs(e.getBoundingBox().minY - top) < 0.1).isEmpty();
     }
 
     /**
