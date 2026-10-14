@@ -33,22 +33,22 @@ layer 2
 .S...S.
 .S...S.
 .LSSSL.
-.......
+...j...
 layer 3
 .......
 .LSSSL.
 .S.H.S.
 .G...G.
 .S...S.
-.LSGSL.
-.......
+.LSSSL.
+...|...
 layer 4
 .......
 .LSSSL.
 .S.H.S.
 .S...S.
 .S...S.
-.LSSSL.
+.LSGSL.
 .......
 layer 5
 .......

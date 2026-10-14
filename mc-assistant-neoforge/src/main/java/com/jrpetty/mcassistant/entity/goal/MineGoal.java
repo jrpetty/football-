@@ -1356,6 +1356,7 @@ public class MineGoal extends Goal {
                         net.minecraft.world.level.LightLayer.BLOCK, cursor) == 0
                     && assistant.level().getBlockState(cursor).canBeReplaced()
                     && assistant.level().getBlockState(floor).isFaceSturdy(assistant.level(), floor, Direction.UP)
+                    && com.jrpetty.mcassistant.entity.TownBlocks.mayPlace(assistant.level(), cursor, com.jrpetty.mcassistant.entity.TownBlocks.Why.LAMP)   // [integrity]
                     && assistant.removeMatching(s -> s.is(Items.TORCH), 1) == 1) {
                     assistant.level().setBlockAndUpdate(cursor, Blocks.TORCH.defaultBlockState());
                     assistant.placeSound(cursor);

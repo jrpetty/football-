@@ -17,7 +17,7 @@ layer 0
 .LwwwwwL.
 .wTNUC.w.
 .w.....w.
-.w....Qw.
+.wJ...Qw.
 .w....Qw.
 .wy...&w.
 .Lw...wL.
@@ -27,7 +27,7 @@ layer 1
 .LWGWGWL.
 .W.....W.
 .G.....G.
-.W.....W.
+.WJ....W.
 .G.....G.
 .W.....W.
 .LW...WL.
@@ -37,7 +37,7 @@ layer 2
 .LWWWWWL.
 .W..j..W.
 .W.....W.
-.W.....W.
+.WJ....W.
 .W.....W.
 .W.....W.
 .LW---WL.
@@ -47,7 +47,7 @@ vvvvvvvvv
 .L-----L.
 .|fffff|.
 .|fffff|.
-.|fffff|.
+.|Jffff|.
 .|fffff|.
 .|fffff|.
 .L-----L.

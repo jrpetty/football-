@@ -118,6 +118,9 @@ def draw():
                 put(TOP + 1 + k, dx, dz, 'S' if (k < whole - 1 or half % 2) else 'R')
             if half % 2:
                 put(TOP + 1 + whole, dx, dz, '_')
+    # [blueprints] A lantern hung over the doors in the portico, from a beam end out of the wall over them.
+    put(4, 0, -4, '|')
+    put(3, 0, -4, 'j')
     return layers
 
 

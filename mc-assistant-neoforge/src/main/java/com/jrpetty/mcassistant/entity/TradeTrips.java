@@ -95,7 +95,7 @@ final class TradeTrips {
         String line = String.join("|", "v1", t.from.toString(), t.to.toString(), t.back ? "1" : "0", Integer.toString(t.at),
             t.errand == null ? "" : t.errand.name(), t.trade ? "1" : "0", Integer.toString(t.purse), t.deal == null ? "" : t.deal,
             Integer.toString(t.earned), t.waiting ? "1" : "0", unsold.toString(), Long.toString(now),
-            t.outcome == null ? "" : t.outcome.replace("|", "/"));
+            t.outcome == null ? "" : t.outcome.replace("|", "/"), t.shipment == null ? "" : t.shipment.toString());
         String key = KEY + f.getUUID();
         if (!line.equals(Ledger.note(t.from, key))) Ledger.note(t.from, key, line);
     }
@@ -135,6 +135,7 @@ final class TradeTrips {
             t.deal = p[8].isEmpty() ? null : p[8];
             t.earned = Integer.parseInt(p[9]);
             t.outcome = outcome;
+            if (p.length > 14 && !p[14].isEmpty()) t.shipment = UUID.fromString(p[14]);   // [wagons] a shipment's trip
             // An envoy that was waiting to be heard comes to the board again (Envoys.arrived), and asks again.
             if (p[10].equals("1") && !back) t.at = way.size();
             if (!p[11].isEmpty()) {

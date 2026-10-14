@@ -17,15 +17,31 @@ import net.minecraft.resources.ResourceLocation;
  * spend, its trades' levels, the knacks it chose (with why and when) and the ones still open
  * to it, one fact a line, made by FolkSkills.encode. It rides last, so every field before it
  * is where it always was.
+ *
+ * <p>{@code context} rides after it: what the talk screen needs to offer only what applies, as space-separated
+ * {@code key} or {@code key=value} flags (FolkTalk.talkContext): the folk's trade, a child, the elder, a master of its
+ * trade; the player's standing there, a citizen, the leader, a fine owed, an apprentice of it; its birthday, an
+ * interview it is on the list for. An operator's {@code /village talkview} adds {@code show=<category>} and
+ * {@code guiscale=<n>}, for the pictures. Empty from an older server: the screen then offers everything.
  */
 public record FolkReplyPayload(int entityId, boolean open, String name, String about, String said,
                                int mood, String moodWord, int affinity, String standing,
                                boolean following, String asked, String village, String errand,
                                boolean canDeliver, String doing, String card, String places,
-                               String skills) implements CustomPacketPayload {
+                               String skills, String context) implements CustomPacketPayload {
 
     /** The longest Skills page the codec carries, in characters (the folk's side clips to fit). */
     public static final int MAX_SKILLS = 8192;
+    /** The longest context line the codec carries. */
+    public static final int MAX_CONTEXT = 512;
+
+    /** A reply with no context: the talk screen offers everything (as from an older server). */
+    public FolkReplyPayload(int entityId, boolean open, String name, String about, String said, int mood, String moodWord,
+                            int affinity, String standing, boolean following, String asked, String village, String errand,
+                            boolean canDeliver, String doing, String card, String places, String skills) {
+        this(entityId, open, name, about, said, mood, moodWord, affinity, standing, following, asked, village, errand,
+            canDeliver, doing, card, places, skills, "");
+    }
 
     public static final CustomPacketPayload.Type<FolkReplyPayload> TYPE =
         new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, "folk_reply"));
@@ -50,11 +66,13 @@ public record FolkReplyPayload(int entityId, boolean open, String name, String a
             buf.writeUtf(p.card(), 2048);
             buf.writeUtf(p.places(), 1024);
             buf.writeUtf(p.skills() == null ? "" : p.skills(), MAX_SKILLS);
+            buf.writeUtf(p.context() == null ? "" : p.context(), MAX_CONTEXT);
         },
         buf -> new FolkReplyPayload(buf.readVarInt(), buf.readBoolean(), buf.readUtf(64), buf.readUtf(256),
             buf.readUtf(2048), buf.readVarInt(), buf.readUtf(64), buf.readVarInt(), buf.readUtf(64),
             buf.readBoolean(), buf.readUtf(256), buf.readUtf(256), buf.readUtf(256), buf.readBoolean(),
-            buf.readUtf(256), buf.readUtf(2048), buf.readUtf(1024), buf.readUtf(MAX_SKILLS)));
+            buf.readUtf(256), buf.readUtf(2048), buf.readUtf(1024), buf.readUtf(MAX_SKILLS),
+            buf.readUtf(MAX_CONTEXT)));
 
     @Override
     public CustomPacketPayload.Type<? extends CustomPacketPayload> type() {

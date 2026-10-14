@@ -672,7 +672,7 @@ public final class Sweepers {
             boolean mine = appointed(c);
             if (!mine && !(idle && !sweeperAbout(village))) return false;
             look(level, v, t, false);
-            if (!anyFor(level, c, t) && !snowFor(c, t)) return false;   // [wf] or snow on the streets
+            if (!anyFor(level, c, t) && !snowFor(c, t) && !(mine && Tidy.anyFor(v))) return false;   // [wf] or snow on the streets; [tidy] or eyesores
             b = new Broom(!mine, now);
             b.village = village;
             BROOMS.put(c.getUUID(), b);
@@ -686,6 +686,8 @@ public final class Sweepers {
             // [wf] Nothing lying about: the snow off the streets, paths and square, in a snowy town.
             BlockPos snow = snowPatch(c, level, t, b, now);
             if (snow != null) return shovel(c, level, v, t, b, snow, o, now);
+            // [tidy] Nothing for the broom: the town's eyesores, put right (Tidy) — the appointed sweeper only, its sack empty.
+            if (!b.courier && b.sack.isEmpty() && b.lost.isEmpty() && Tidy.broom(c, level, v, o)) return true;
             if (b.sack.isEmpty() && b.lost.isEmpty()) {
                 putAway(t, c);
                 return false;
@@ -706,6 +708,7 @@ public final class Sweepers {
      *  ordinary load, the courier's way). */
     private static void putAway(Town t, VillageFolkEntity c) {
         Broom b = BROOMS.remove(c.getUUID());
+        Tidy.forget(c);                                               // [tidy] nor any eyesore it was going to
         if (b != null && b.heap != null) t.claimed.remove(b.heap);
         if (b != null && b.snow != null) t.snowClaimed.remove(b.snow.asLong());
         // Players' things still in hand: to the Lost and Found with them (or set down again, still theirs).
@@ -995,6 +998,14 @@ public final class Sweepers {
         List<String> who = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f && appointed(f)) who.add(f.displayNameCap());
         out.putString("sweepers", String.join(", ", who));
+        TownLooks.report(level, v.id(), out);                          // [tidy] the town's looks and today's tidying
+    }
+
+    /** [tidy] How many heaps are lying about the town now (looked over at most every five seconds). */
+    static int lying(ServerLevel level, Villages.Village v) {
+        Town t = town(level, v.id());
+        look(level, v, t, false);
+        return t.heaps;
     }
 
     /** The sweeping in a line, from the storehouse's report: for the Stores page and /village stores. */
@@ -1005,7 +1016,10 @@ public final class Sweepers {
             + (t.getInt("lying") == 1 ? " item" : " items") + " (" + t.getInt("lying_goods") + " goods; " + t.getInt("sweepable") + " for the broom)."
             + (t.getInt("snow_cleared") > 0 || t.getInt("snow_lying") > 0
                 ? " Snow cleared off the streets today: " + t.getInt("snow_cleared") + " layers (" + t.getInt("snowballs") + " snowballs banked); "
-                    + t.getInt("snow_lying") + " patches still lying." : "");
+                    + t.getInt("snow_lying") + " patches still lying." : "")
+            + (t.contains("looks") ? " The town's looks: " + t.getInt("looks") + " (" + t.getString("looks_word") + "; "      // [tidy]
+                + t.getString("looks_parts") + ")" + (t.getString("looks_worst").isEmpty() ? "" : ", to see to: " + t.getString("looks_worst"))
+                + "; " + t.getInt("eyesores") + " eyesores about the town, " + t.getInt("tidied") + " tidied today." : "");
     }
 
     /** /village sweeper: the town's sweeping in words. */

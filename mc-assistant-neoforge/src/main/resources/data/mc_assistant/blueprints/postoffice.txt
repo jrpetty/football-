@@ -19,7 +19,7 @@ layer -1
 layer 0
 .........
 .LwwwwwL.
-.wQQQQQw.
+.wQQKQQw.
 .w..r..w.
 .w==.==w.
 .w.....w.
@@ -45,7 +45,7 @@ layer 2
 .W..j..W.
 .W.....W.
 .LWWWWWL.
-.........
+....j....
 layer 3
 >.......<
 >L-----L<
@@ -55,7 +55,7 @@ layer 3
 >|fffff|<
 >|fffff|<
 >L-----L<
->.......<
+>...|...<
 layer 4
 .>.....<.
 .>WWWWW<.

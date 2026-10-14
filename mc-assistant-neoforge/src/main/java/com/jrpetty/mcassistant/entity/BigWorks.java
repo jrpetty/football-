@@ -138,6 +138,7 @@ public final class BigWorks {
         List<Proposal> out = new ArrayList<>();
         Map<Work, Integer> want = new LinkedHashMap<>();
         for (Work w : Work.values()) {
+            if (w == Work.WALL && CastleWall.live()) continue;   // [defence] the castle wall is the town's wall
             int s = wanted(level, v, w);
             if (s > 0) want.put(w, s);
         }
@@ -702,6 +703,15 @@ public final class BigWorks {
                 return false;                                       // its ground asleep: the works wait for somebody there
             }
             BlockState here = level.getBlockState(p.pos());
+            // [integrity] A wall or a canal leaves the town's streets, its buildings and their ways in alone (a wall
+            // across a street is a gateway there); a bridge, a harbour or a great road may cross a street.
+            Work kind = Work.named(w.getString("kind"));
+            TownBlocks.Why why = kind == Work.WALL || kind == Work.CANAL ? TownBlocks.Why.LEVEE : TownBlocks.Why.ROAD;
+            if (kind != Work.AQUEDUCT && !TownBlocks.mayPlace(level, p.pos(), why)) {
+                w.putInt("spared", w.getInt("spared") + 1);
+                next++;
+                continue;
+            }
             if (p.part() == WorksPlans.Part.DIG) {
                 next++;
                 if (WorksPlans.openGround(here)) {

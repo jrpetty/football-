@@ -83,11 +83,28 @@ public final class Rebuilding {
 
     /** The drawing a building stands to now: a house with its second storey, a raised building's tall one. */
     static String drawing(UUID village, Ledger.Building b) {
+        return Themes.design(village, plainDrawing(village, b));          // [styles] the theme's own design of it, if any
+    }
+
+    private static String plainDrawing(UUID village, Ledger.Building b) {
         if (b.structure().equals("house") && Ledger.grown(village, b.anchor())) return "house2";
         if (Grow.tall(village, b.anchor()) && com.jrpetty.mcassistant.entity.goal.Blueprints.has(b.structure() + com.jrpetty.mcassistant.entity.goal.Blueprints.TALL)) {
             return b.structure() + com.jrpetty.mcassistant.entity.goal.Blueprints.TALL;
         }
         return b.structure();
+    }
+
+    /** [styles] What each place of a building's drawing is for (its Blueprints.Style), for what may be put back there. */
+    private static Map<Long, com.jrpetty.mcassistant.entity.goal.Blueprints.Style> styles(UUID village, BlockPos anchor) {
+        Map<Long, com.jrpetty.mcassistant.entity.goal.Blueprints.Style> out = new HashMap<>();
+        for (Ledger.Building b : Ledger.buildings(village)) {
+            if (!b.anchor().equals(anchor)) continue;
+            for (BuildGoal.Placement p : BuildGoal.plan(drawing(village, b), b.anchor(), b.facing(), 13)) {
+                if (p.part() == BuildGoal.Part.BLOCK) out.put(p.pos().asLong(), p.style());
+            }
+            break;
+        }
+        return out;
     }
 
     /** The building as it stands: what is at each place of its drawing now (nothing, a flame or air left out). */
@@ -191,6 +208,7 @@ public final class Rebuilding {
         BlockPos first = BlockPos.of(r.cells.keySet().iterator().next());
         if (!TownJobs.atWork(level, v, "rebuild", first, "rebuilding " + r.where + " after the fire")) return 0;
         int n = 0;
+        Map<Long, com.jrpetty.mcassistant.entity.goal.Blueprints.Style> styles = styles(v.id(), r.anchor);   // [styles]
         var it = r.cells.entrySet().iterator();
         while (it.hasNext() && n < most) {
             Map.Entry<Long, BlockState> c = it.next();
@@ -202,7 +220,17 @@ public final class Rebuilding {
                 continue;
             }
             BlockState was = c.getValue();
-            String short_ = pay(level, v, was);
+            // [styles] What stood there is not put back if it was never fit to build with (earth in an Iron Age wall, a
+            // block of the Nether's): the town's proper block goes in instead, out of the stores (Materials).
+            var style = styles.get(c.getKey());
+            String short_ = null;
+            boolean paid = false;
+            if (style != null && Materials.unfit(v.id(), style, was)) {
+                BlockState instead = Materials.take(level, v, style);
+                if (instead == null) short_ = "proper building blocks";
+                else { was = instead; paid = true; }
+            }
+            if (!paid && short_ == null) short_ = pay(level, v, was);
             if (short_ != null) {
                 r.waits = short_;
                 Disasters.dirty();

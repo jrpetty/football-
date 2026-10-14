@@ -588,6 +588,7 @@ public final class Golems {
     @Nullable
     static IronGolem raise(ServerLevel level, Villages.Village v, BlockPos base, Direction across, Direction face, @Nullable VillageFolkEntity by) {
         if (!tFits(level, base, across)) return null;
+        if (!TownBlocks.mayAll(level, v, TownBlocks.Why.CIVIC, tCells(base, across))) return null;            // [integrity]
         if (Crafts.stock(level, v, s -> s.is(Items.IRON_BLOCK)) < BLOCKS || !pumpkin(level, v)) return null;
         if (!Crafts.take(level, v, s -> s.is(Items.IRON_BLOCK), BLOCKS)) return null;
         for (BlockPos p : tCells(base, across)) if (!level.getBlockState(p).isAir()) level.removeBlock(p, false);   // the grass cut back
@@ -788,6 +789,7 @@ public final class Golems {
         if (!t.kept.isEmpty() && Seasons.season(id, level.getDayTime() / 24000L) != Seasons.Season.WINTER) thaw(level, v, t);
         for (Kept k : t.kept) {
             if (!(level.getEntity(k.golem) instanceof Mob g) || !g.isAlive()) continue;
+            if (k.kind != Kind.SNOW && Muster.golem(level, v, g)) continue;   // [defence] into the ring round the square
             if (!g.hasRestriction()) g.restrictTo(k.post, k.kind == Kind.SNOW ? 2 : BEAT);
             if (k.kind == Kind.SNOW) continue;                        // up on the tower: no way back up a ladder for it
             LivingEntity target = g.getTarget();

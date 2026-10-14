@@ -90,6 +90,7 @@ public final class Ledger extends SavedData {
         }
         all.add(new Building(structure, anchor.immutable(), facing));
         l.setDirty();
+        com.jrpetty.mcassistant.entity.Renovation.built(village, structure, anchor.immutable(), facing);   // [styles] what it was built to
     }
 
     /** Everything this village has built, in the order it went up. */

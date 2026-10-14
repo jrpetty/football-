@@ -96,15 +96,22 @@ public final class ShopStock {
 
     /** What the shop asks for one of this, in coin: what it costs in the town today (PriceIndex), with the
      *  shop's margin on it (raised when a ware sells out, lowered when it sits: StockKeeper), and a slow ware
-     *  marked down, never under what it cost (Stockroom). */
+     *  marked down, never under what it cost (Stockroom). [market] The town's one asking price (Market.askLot). */
     public static int price(ServerLevel level, UUID village, ItemStack one) {
+        return lotPrice(level, village, one, 1);
+    }
+
+    /** [market] What the shop asks for so many of this, in whole coins: the town's asking price for the lot
+     *  (Market.askLot: its price today and the keeper's margin), an enchanted piece three times its worth, a slow ware
+     *  marked down (Stockroom), and never under the least the town lets a lot go for (Market.leastLot). The same for
+     *  folk and players. */
+    public static int lotPrice(ServerLevel level, UUID village, ItemStack one, int n) {
         if (one.isEmpty()) return 0;
         ItemStack single = one.copyWithCount(1);
-        double each = PriceIndex.each(level, village, single);
-        double markup = StockKeeper.markup(village, Stockroom.key(single));
-        int p = (int) Math.max(1, Math.round(each * markup));
-        if (single.isEnchanted()) p = Math.max(p, (int) Math.round(PriceIndex.usual(single) * 3));
-        return Stockroom.asked(level, village, single, p, 1);
+        int k = Math.max(1, n);
+        int p = Market.askLot(level, village, single, k);
+        if (single.isEnchanted()) p = Math.max(p, (int) Math.round(PriceIndex.usual(single) * 3 * k));
+        return Math.max(Market.leastLot(level, village, single, k), Stockroom.asked(level, village, single, p, k));
     }
 
     /** One of what matches, as the shop or the stores hold it (for the books), or nothing. */

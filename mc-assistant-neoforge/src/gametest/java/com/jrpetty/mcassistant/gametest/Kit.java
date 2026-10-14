@@ -66,10 +66,18 @@ final class Kit {
         AssistantEntity.resetRegistryForTests();
         com.jrpetty.mcassistant.entity.MineStairs.resetForTests(level);
         com.jrpetty.mcassistant.entity.DoorWays.resetForTests();
+        com.jrpetty.mcassistant.entity.StuckSpots.resetForTests();          // [paths] the stuck spots forgotten
+        com.jrpetty.mcassistant.entity.HouseSigns.resetForTests();          // [paths] no home signs waiting
+        com.jrpetty.mcassistant.entity.Footways.liveForTests(true);         // [paths] the paths work on, as in a game
+        com.jrpetty.mcassistant.entity.TownBlocks.resetForTests();          // [integrity]
+        com.jrpetty.mcassistant.entity.Restore.resetForTests();             // [integrity]
+        // [integrity] The daily survey and repairs stood down for the other features' tests; IntegrityGameTests stand them up.
+        com.jrpetty.mcassistant.entity.Restore.standDownForTests(true);
         // What the town's works build is checked here at once; who builds it, by hand, in t54.
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
         // [police] The watch stood down to its old round for the other features' tests; PoliceGameTests stand it up.
         com.jrpetty.mcassistant.entity.Police.standDownForTests(true);
+        com.jrpetty.mcassistant.entity.CastleWall.standDownForTests(true);   // [defence] the town wall, for the defence tests only
     }
 
     /**
@@ -374,6 +382,40 @@ final class Kit {
             .withSource(sink).withLevel(level).withPosition(Vec3.ZERO);
         level.getServer().getCommands().performPrefixedCommand(src, text);
         return said;
+    }
+
+    /**
+     * The stores topped up with what building takes, so a town grows at speed in a long test (a test of how it builds and
+     * lays out, not of how it fells and quarries): wood, stone, glass, the fittings, each up to so much. [integrity] [paths]
+     */
+    static void stockForGrowth(ServerLevel level, Villages.Village v) {
+        Object[][] want = {
+            { net.minecraft.world.item.Items.OAK_LOG, 256 }, { net.minecraft.world.item.Items.OAK_PLANKS, 384 },
+            { net.minecraft.world.item.Items.COBBLESTONE, 512 }, { net.minecraft.world.item.Items.STONE_BRICKS, 192 },
+            { net.minecraft.world.item.Items.OAK_STAIRS, 192 }, { net.minecraft.world.item.Items.OAK_SLAB, 128 },
+            { net.minecraft.world.item.Items.STONE_BRICK_STAIRS, 64 }, { net.minecraft.world.item.Items.STONE_BRICK_SLAB, 64 },
+            { net.minecraft.world.item.Items.GLASS_PANE, 128 }, { net.minecraft.world.item.Items.GLASS, 32 },
+            { net.minecraft.world.item.Items.OAK_DOOR, 16 }, { net.minecraft.world.item.Items.TORCH, 64 },
+            { net.minecraft.world.item.Items.LANTERN, 32 }, { net.minecraft.world.item.Items.CHEST, 24 },
+            { net.minecraft.world.item.Items.BARREL, 24 }, { net.minecraft.world.item.Items.FURNACE, 8 },
+            { net.minecraft.world.item.Items.CRAFTING_TABLE, 8 }, { net.minecraft.world.item.Items.LADDER, 64 },
+            { net.minecraft.world.item.Items.OAK_FENCE, 64 }, { net.minecraft.world.item.Items.OAK_FENCE_GATE, 8 },
+            { net.minecraft.world.item.Items.WHITE_BED, 16 }, { net.minecraft.world.item.Items.BRICKS, 128 },
+            { net.minecraft.world.item.Items.BREAD, 128 }, { net.minecraft.world.item.Items.HAY_BLOCK, 16 },
+            { net.minecraft.world.item.Items.BOOKSHELF, 16 }, { net.minecraft.world.item.Items.LECTERN, 4 },
+            { net.minecraft.world.item.Items.WHITE_CARPET, 32 }, { net.minecraft.world.item.Items.POPPY, 32 },
+            { net.minecraft.world.item.Items.SMOOTH_STONE_SLAB, 64 }, { net.minecraft.world.item.Items.SMOKER, 4 },
+        };
+        for (Object[] w : want) {
+            net.minecraft.world.item.Item it = (net.minecraft.world.item.Item) w[0];
+            int have = com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), s -> s.is(it));
+            int need = (Integer) w[1] - have;
+            while (need > 0) {
+                int k = Math.min(need, it.getDefaultMaxStackSize());
+                com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new net.minecraft.world.item.ItemStack(it, k));
+                need -= k;
+            }
+        }
     }
 
     // ------------------------------------------------------------ expectations

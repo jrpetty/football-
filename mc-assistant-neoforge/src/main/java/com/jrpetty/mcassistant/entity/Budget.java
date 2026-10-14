@@ -50,8 +50,9 @@ public final class Budget {
 
     private Budget() {}
 
-    /** What a player pays over the price list's worth. */
-    public static final double PLAYER_MARKUP = 1.25;
+    /** What a player pays over the price list's worth, where there is no town's price to ask ([market] the town's one
+     *  spread: Worth.SELL). */
+    public static final double PLAYER_MARKUP = com.jrpetty.mcassistant.village.Worth.SELL;
     /** A glut: so far over what it keeps that even a struggling village sells it. */
     private static final int GLUT = 4;
     /** How long a look at the stores is trusted. */
@@ -288,7 +289,7 @@ public final class Budget {
             if (Weave.unsellable(one)) continue;                                              // [weave] a forged coin is never sold
             int n = spare(level, village, one);
             if (n <= 0) continue;
-            double each = playerPrice(one);
+            double each = playerPrice(level, village, one);
             if (each <= 0) continue;
             out.add(new Offer(it, n, each));
         }
@@ -297,7 +298,13 @@ public final class Budget {
         return out.size() > most ? out.subList(0, most) : out;
     }
 
-    /** A player's price for one of these: the market's or the price list's worth, and a quarter over. */
+    /** [market] A player's price for one of these in this town: the town's one asking price (Market.askEach). */
+    public static double playerPrice(ServerLevel level, UUID village, ItemStack one) {
+        return Market.askEach(level, village, one);
+    }
+
+    /** A player's price for one of these where no town is asked: the market's or the price list's worth, and the
+     *  town's margin over it. */
     public static double playerPrice(ItemStack one) {
         Market.Good g = Market.goodFor(one);
         double worth = g != null ? g.value() : Prices.of(one.copyWithCount(1));

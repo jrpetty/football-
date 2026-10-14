@@ -12,6 +12,9 @@ at before the game ever runs.
     blueprints.py render <out_dir> [names...]   one picture per building
     blueprints.py sheet <out.png> [names...]    every building on one sheet
     blueprints.py check                          parse every drawing, report counts
+    blueprints.py contact <out_dir> [names...]   contact sheets, a page of eight buildings at a time:
+                                                 each from the front, from the back, and cut away
+                                                 above the ground floor to show its rooms
 
 The legend is the game's (Blueprints.LEGEND); keep the two in step.
 """
@@ -58,6 +61,8 @@ LEGEND = {
     "t": ("torch", "torch", None),
     "l": ("lantern", "lantern", None), "j": ("lantern", "hanging", None),
     "H": ("ladder", "ladder", "F"),
+    "J": ("ladder", "ladder", "R"),        # up a side wall, the wall on its left
+    "i": ("ladder", "ladder", "L"),        # up a side wall, the wall on its right
     "o": ("obsidian", "cube", None),
     "~": ("water", "water", None),
     "y": ("hay", "cube", None),
@@ -238,7 +243,13 @@ def voxels(cells):
         elif shape == "hanging":
             put(bx, by, bz, 1, 3, 1, 3, 1, 3, "lantern")
         elif shape == "ladder":
-            put(bx, by, bz, 0, N, 0, N, 3 if d == "F" else 0, 4 if d == "F" else 1, "ladder")
+            # flat against the block behind it: F faces the door (wall at the back), R faces right (wall left)...
+            if d == "R":
+                put(bx, by, bz, 0, 1, 0, N, 0, N, "ladder")
+            elif d == "L":
+                put(bx, by, bz, N - 1, N, 0, N, 0, N, "ladder")
+            else:
+                put(bx, by, bz, 0, N, 0, N, 0, 1, "ladder")
         elif shape == "water":
             put(bx, by, bz, 0, N, 0, N - 1, 0, N, "water")
         elif shape == "flower":
@@ -341,6 +352,61 @@ def draw(cells, scale=7, ground=True, label=None):
     return img
 
 
+def turned(cells):
+    """The building turned round, to be looked at from the back (its stairs and ladders turned with it)."""
+    turn = {"B": "F", "F": "B", "L": "R", "R": "L"}
+    out = []
+    for dx, h, dz, ch in cells:
+        mat, shape, d = LEGEND[ch]
+        if d in turn:
+            # find the mark of the same thing facing the other way, if the legend has one
+            for k, v in LEGEND.items():
+                if v[0] == mat and v[1] == shape and v[2] == turn[d]:
+                    ch = k
+                    break
+        out.append((-dx, h, -dz, ch))
+    return out
+
+
+def cut(cells, above):
+    """Everything up to and including layer {above}: the building cut away to show its rooms."""
+    return [c for c in cells if c[1] <= above]
+
+
+def contact(out, paths, per=8):
+    """[blueprints] Contact sheets: per building its front, its back and its ground floor cut away."""
+    os.makedirs(out, exist_ok=True)
+    tiles = []
+    for p in paths:
+        name, cells = parse(p)
+        views = [draw(cells, scale=4), draw(turned(cells), scale=4), draw(cut(cells, 1), scale=4)]
+        w = sum(v.width for v in views) + 20
+        h = max(v.height for v in views) + 26
+        tile = Image.new("RGB", (w, h), (205, 225, 245))
+        x = 0
+        for v in views:
+            tile.paste(v, (x, h - 26 - v.height))
+            x += v.width + 10
+        ImageDraw.Draw(tile).text((8, h - 20), name + "   (front / back / ground floor)", fill=(20, 20, 20))
+        tiles.append(tile)
+    pages = []
+    for k in range(0, len(tiles), per):
+        group = tiles[k:k + per]
+        cols = 2
+        w = max(t.width for t in group)
+        hs = [max(t.height for t in group[r:r + cols]) for r in range(0, len(group), cols)]
+        sheet = Image.new("RGB", (cols * w, sum(hs)), (205, 225, 245))
+        y = 0
+        for r, row_h in zip(range(0, len(group), cols), hs):
+            for c, t in enumerate(group[r:r + cols]):
+                sheet.paste(t, (c * w, y + row_h - t.height))
+            y += row_h
+        name = os.path.join(out, "contact-%02d.png" % (k // per + 1))
+        sheet.save(name)
+        pages.append(name)
+    return pages
+
+
 def counts(cells):
     out = {}
     for _, _, _, ch in cells:
@@ -369,6 +435,10 @@ def main(argv):
             name, cells = parse(path)
             draw(cells, label=name).save(os.path.join(out, name + ".png"))
             print("drew", name)
+        return
+    if argv[0] == "contact":
+        for page in contact(argv[1], names(argv[2:])):
+            print("wrote", page)
         return
     if argv[0] == "sheet":
         imgs = [draw(parse(p)[1], scale=5, label=parse(p)[0]) for p in names(argv[2:])]
