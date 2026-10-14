@@ -2371,6 +2371,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         if (Habits.favouritePlace(this, server)) return;   // [individual] its favourite spot in town
+        if (ShoppingTrips.errand(this, server)) return;   // [shops-homes] its shopping list: to the shop, served, home with it
         if (homeComfort(server)) return;              // its savings, spent on its home
         if (Fashion.shopping(this, server)) return;   // [fashion] to the shop for the season's look it wants
         if (PlayerStalls.errand(this, server)) return;   // a player's stall on the square, for what it wants (PlayerStalls)

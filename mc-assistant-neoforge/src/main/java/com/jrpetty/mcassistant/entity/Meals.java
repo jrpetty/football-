@@ -1,9 +1,7 @@
 package com.jrpetty.mcassistant.entity;
 
-import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 
 import javax.annotation.Nullable;
@@ -265,8 +263,7 @@ public final class Meals {
         boolean fedWhereItStands = f.isBaby() || f.stationTask() == AssistantEntity.StationTask.NONE;
         Homes.Home home = Homes.homeOf(village, f.getUUID());
         if (home != null && (fedWhereItStands || f.blockPosition().closerThan(home.anchor, HOME_REACH))) {
-            BlockPos chest = Homes.chestOf(level, village, home);
-            if (chest != null && level.getBlockEntity(chest) instanceof Container c && takeOne(c, f)) {
+            if (HomeStores.takeFood(level, village, home, f, FOOD)) {          // [shops-homes] the larder, then the chest
                 if (f.eatFromPack()) return true;
             }
         }
@@ -286,8 +283,7 @@ public final class Meals {
      */
     static boolean eatAtHome(ServerLevel level, VillageFolkEntity f, UUID village) {
         Homes.Home home = Homes.homeOf(village, f.getUUID());
-        BlockPos chest = home == null ? null : Homes.chestOf(level, village, home);
-        if (chest != null && level.getBlockEntity(chest) instanceof Container c && takeOne(c, f) && f.eatFromPack()) return true;
+        if (home != null && HomeStores.takeFood(level, village, home, f, FOOD) && f.eatFromPack()) return true;   // [shops-homes] the larder first
         return f.eatFromPack();
     }
 
@@ -295,21 +291,6 @@ public final class Meals {
     static boolean hadToday(VillageFolkEntity f, Meal m, long day) {
         Book b = f.meals();
         return b.day == day && (b.taken & (1 << m.ordinal())) != 0;
-    }
-
-    /** One meal's worth out of a chest and into the pack. */
-    private static boolean takeOne(Container c, VillageFolkEntity f) {
-        for (int i = 0; i < c.getContainerSize(); i++) {
-            ItemStack st = c.getItem(i);
-            if (st.isEmpty() || !FOOD.test(st)) continue;
-            ItemStack left = f.insertGiven(st.copyWithCount(1));
-            if (!left.isEmpty()) return false;                     // the pack is full
-            st.shrink(1);
-            if (st.isEmpty()) c.setItem(i, ItemStack.EMPTY);
-            c.setChanged();
-            return true;
-        }
-        return false;
     }
 
     // ------------------------------------------------------------------ what a player reads

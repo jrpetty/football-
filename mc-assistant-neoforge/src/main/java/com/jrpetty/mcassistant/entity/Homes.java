@@ -1143,6 +1143,12 @@ public final class Homes {
 
     // ------------------------------------------------------------------ belongings
 
+    /** [shops-homes] What the household living at this house has at home, read from its chest, larder, wardrobe and
+     *  toy box (Belongings: the folk profile's Belongings tab, the town's pages). */
+    public static Belongings.View possessions(ServerLevel level, UUID village, BlockPos anchor) {
+        return Belongings.ofHome(level, village, anchor);
+    }
+
     private static final String KEEP = "mca_keepsake";
 
     /** Mark a thing as this folk's own (a present, something it bought for itself): never banked in the stores. */
@@ -1213,7 +1219,7 @@ public final class Homes {
         for (int i = 0; i < pack.size(); i++) {
             ItemStack s = pack.get(i);
             if (s.isEmpty() || !isKeepsake(s) || Keepsakes.isCarried(s)) continue;   // [individual] its keepsake, stick, spectacles stay on it
-            ItemStack left = insertInto(c, s.copy());
+            ItemStack left = HomeStores.putAway(level, village, f, c, s.copy());     // [shops-homes] the larder, the wardrobe, the toy box
             pack.set(i, left);
         }
         c.setChanged();
