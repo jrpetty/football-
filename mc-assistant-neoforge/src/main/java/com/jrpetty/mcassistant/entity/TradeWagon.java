@@ -123,6 +123,8 @@ public class TradeWagon extends Entity {
     int quietChecks;
     long driverMissingSince = -1;
     @Nullable BlockPos window;
+    /** Held still for the pictures (WagonStage): the crew kept in place, nothing driven. */
+    boolean held;
     /** Wrecked (Wagons.wreck): its removal is not a loss to be reckoned again. */
     boolean wrecked;
     /** The leg's ambush has been rolled (once a leg). */

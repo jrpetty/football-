@@ -559,6 +559,7 @@ public final class Wagons {
             return;
         }
         if (w.phase != TradeWagon.Phase.PARKED && w.tickCount % 20 == 5) crewKnown(w);
+        if (w.held) { held(level, w); return; }
         switch (w.phase) {
             case PARKED -> parked(level, w);
             case FETCH -> fetch(level, w);
@@ -566,6 +567,20 @@ public final class Wagons {
             case ROAD -> road(level, w);
             case UNLOADING -> loading(level, w, false);
             case FAR -> stillQuiet(level, w);
+        }
+    }
+
+    /** Held for the pictures: the animal in the shafts, the driver on the bench, or (loading) carrying crates round and round. */
+    private static void held(ServerLevel level, TradeWagon w) {
+        AbstractHorse a = animal(level, w);
+        if (a != null) holdInShafts(level, w, a);
+        VillageFolkEntity d = driver(level, w);
+        if (d == null) return;
+        if (w.phase == TradeWagon.Phase.LOADING) {
+            if (w.phaseTicks >= TradeWagon.LOAD_TICKS - 1) w.phaseTicks = TradeWagon.LOAD_TICKS / 2;   // the second half, over and over
+            loadingWalk(level, w, d, true);
+        } else if (d.getVehicle() != w && w.kind().drawn) {
+            boardIfNear(w, d, true);
         }
     }
 
@@ -694,16 +709,7 @@ public final class Wagons {
         if (a != null) holdInShafts(level, w, a);
         int t = w.phaseTicks;
         int fill = w.realFill();
-        if (in) w.setShownFill(fill * Math.min(4, t * 4 / TradeWagon.LOAD_TICKS) / 4);
-        else w.setShownFill(fill * (4 - Math.min(4, t * 4 / TradeWagon.LOAD_TICKS)) / 4);
-        BlockPos stores = storesNear(level, w);
-        Vec3 tail = w.spot(level, -TradeWagon.HALF_LENGTH - 1.0, 0);
-        int leg = t / (TradeWagon.LOAD_TICKS / 4);                       // four walks: there, back, there, back
-        boolean toStores = leg % 2 == 0;
-        // In: empty-handed to the stores, a crate back to the wagon. Out: a crate to the stores, empty-handed back.
-        boolean laden = in != toStores;
-        w.setCarrying(laden ? d : null);
-        if (t % 10 == 0) d.walkTo(toStores ? stores : BlockPos.containing(tail), 0.9D);
+        loadingWalk(level, w, d, in);
         if (t < TradeWagon.LOAD_TICKS) return;
         w.setCarrying(null);
         if (in) {
@@ -736,6 +742,22 @@ public final class Wagons {
             if (d.trip() == null) parkUp(level, w);
             else abandonTrip(level, w, "its trip went on without it");
         }
+    }
+
+    /** The driver's walks with the crates, and the load rising (or falling) a quarter at a time as each comes. */
+    private static void loadingWalk(ServerLevel level, TradeWagon w, VillageFolkEntity d, boolean in) {
+        int t = w.phaseTicks;
+        int fill = w.realFill();
+        int quarters = Math.min(4, t * 4 / TradeWagon.LOAD_TICKS);
+        w.setShownFill(in ? fill * quarters / 4 : fill * (4 - quarters) / 4);
+        BlockPos stores = storesNear(level, w);
+        Vec3 tail = w.spot(level, -TradeWagon.HALF_LENGTH - 1.0, 0);
+        int leg = t / (TradeWagon.LOAD_TICKS / 4);                       // four walks: there, back, there, back
+        boolean toStores = leg % 2 == 0;
+        // In: empty-handed to the stores, a crate back to the wagon. Out: a crate to the stores, empty-handed back.
+        boolean laden = in != toStores;
+        w.setCarrying(laden ? d : null);
+        if (t % 10 == 0) d.walkTo(toStores ? stores : BlockPos.containing(tail), 0.9D);
     }
 
     /** The nearest store chest within reach of the wagon, or a spot beside it where the crates are stacked. */
@@ -784,6 +806,10 @@ public final class Wagons {
         if (w.tickCount % RECORD_EVERY == 0) record(w);
         if (w.route != null && w.s >= w.route.length() - 0.05) {
             w.speedNow = 0;
+            if (w.realFill() == 0) {                                     // nothing aboard to carry off: its business at once
+                legDone(level, w, d);
+                return;
+            }
             w.setPhase(TradeWagon.Phase.UNLOADING);
             if (d.getVehicle() == w) d.stopRiding();
             d.setPose(Pose.STANDING);
@@ -1045,7 +1071,11 @@ public final class Wagons {
     /** Caravans.arrive, home: the animal led back to the stable, the guards to their posts, the wagon parked. */
     static void home(VillageFolkEntity f, ServerLevel level) {
         TradeWagon w = wagonFor(level, f);
-        if (w == null) return;
+        if (w != null) home(w, level);
+    }
+
+    /** Home: anything left aboard into the stores, and parked. */
+    static void home(TradeWagon w, ServerLevel level) {
         // Anything left aboard (the stores were full) goes into them now, or onto the ground at the heart: never lost.
         Villages.Village v = Villages.get(w.town);
         for (int i = 0; i < w.cargo.getContainerSize(); i++) {
@@ -1938,6 +1968,12 @@ public final class Wagons {
     }
 
     public static double alongForTests(TradeWagon w) { return w.s; }
+
+    /** Tests: the point of its route this far along, and the way the road runs there (radians). */
+    public static double[] pointForTests(TradeWagon w, double along) {
+        if (w.route == null) return new double[]{ w.getX(), w.getZ(), 0 };
+        return new double[]{ w.route.xAt(along), w.route.zAt(along), w.route.heading(along, 2.0) };
+    }
     public static double lengthForTests(TradeWagon w) { return w.route == null ? 0 : w.route.length(); }
     public static int stageForTests(TradeWagon w) { return w.stage; }
     public static String phaseForTests(TradeWagon w) { return w.phase.name(); }
