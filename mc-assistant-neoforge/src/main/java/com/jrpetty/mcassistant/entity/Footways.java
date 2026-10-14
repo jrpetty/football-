@@ -252,12 +252,15 @@ public final class Footways {
         return TownPlan.isSquare(x - v.centre().getX(), z - v.centre().getZ());
     }
 
+    /** How far the bell frame's slabs and lamps reach from its middle (BellFrame.pieces: two each side). */
+    private static final int BELL_REACH = 2;
+
     /** The heart's own ground on the square: the founders' camp and the stores, kept as they are. */
     public static final int CAMP = 4;
 
     /**
      * Is this spot (in the world) on the square's open ground: on the square, but not the camp at its middle, the well's or
-     * a monument's place, the board or the courtyard before it? Nothing is set down there but what the square was laid out
+     * a monument's place, the bell's frame, the board or the courtyard before it? Nothing is set down there but what the square was laid out
      * for: no bed, no chest, no stall.
      */
     public static boolean squareOpen(Villages.Village v, int x, int z) {
@@ -267,6 +270,8 @@ public final class Footways {
         for (TownPlan.Lot s : TownPlan.squareSpots()) {
             if (Math.abs(dx - s.x()) <= s.halfAcross() + 1 && Math.abs(dz - s.z()) <= s.halfDeep() + 1) return false;
         }
+        BellFrame.Frame bell = BellFrame.of(v.id());                  // the town bell's frame: its posts, its roof, its lamps
+        if (bell != null && Math.abs(x - bell.origin.getX()) <= BELL_REACH && Math.abs(z - bell.origin.getZ()) <= BELL_REACH) return false;
         int[] court = Villages.courtRect(v.id());
         if (court != null && x >= court[0] - 1 && x <= court[1] + 1 && z >= court[2] - 1 && z <= court[3] + 1) return false;
         BlockPos board = VillageBoards.boardOf(v.id());
