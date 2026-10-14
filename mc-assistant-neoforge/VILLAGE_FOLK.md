@@ -1391,7 +1391,9 @@ their customers; nothing floats; and every design keeps the footprint and the si
 back and cut away above the ground floor, to look them over before the game runs. The store has a
 flower bed either side of its steps and window boxes upstairs; a lantern hangs from a beam end over
 twenty-odd doors that had none; the sky garden's terraces have a stair up to them at last, and the
-grand library's galleries are clear of their lecterns.
+grand library's galleries are clear of their lecterns. A game test (bp01) stands the shop, café, store,
+workshop, granary, stable, post office and storehouse shed up in the world and checks the blocks the same way:
+every chest opens by the game's own rule, every ladder and lantern holds, every street door's way out is clear.
 
 Builders take the place the town plan has for the building. Of the first few good
 lots they pick the one that costs least to build on. They level it (filling the low
