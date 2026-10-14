@@ -1,6 +1,7 @@
 package com.jrpetty.mcassistant.entity;
 
 import com.jrpetty.mcassistant.AssistantConfig;
+import com.jrpetty.mcassistant.CameraCommands;
 import com.jrpetty.mcassistant.ChunkLoad;
 import com.jrpetty.mcassistant.Guard;
 import com.jrpetty.mcassistant.McAssistantMod;
@@ -12,8 +13,10 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.BannerItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -425,13 +428,19 @@ public final class Campaigns {
 
     /** The armies raised and drawn up on their squares (the one holding its walls at its gate, later). */
     static void muster(ServerLevel level, Campaign c) {
+        muster(level, c, cap());
+    }
+
+    /** As {@link #muster(ServerLevel, Campaign)}, at most {@code detail} a side drawn in full. */
+    static void muster(ServerLevel level, Campaign c, int detail) {
         long now = level.getGameTime(), day = level.getDayTime() / 24000L;
+        lookAgain(level, c);
         int raised = 0;
         for (int i = 0; i < 2; i++) {
             Villages.Village v = c.town(i);
             if (v == null) continue;
             if (i == 1 && c.holdWalls) continue;                       // it raises its army when the enemy is at the gate
-            Armies.Army army = Armies.raise(level, v, i == 0 ? c.b : c.a, false, i == 0 && c.siegeAim, cap());
+            Armies.Army army = Armies.raise(level, v, i == 0 ? c.b : c.a, false, i == 0 && c.siegeAim, detail);
             if (army == null) continue;
             c.armies[i] = army;
             Armies.enlist(army);
@@ -461,6 +470,20 @@ public final class Campaigns {
             if (v != null) WarHorn.signal(level, c.armies[i], v.centre(), WarHorn.Signal.MUSTER);
         }
         stage(c, Stage.MUSTER, now, now + soon(MUSTER_TICKS));
+    }
+
+    /**
+     * [field] A field chosen blind (its ground asleep when the war's council sat) looked for again at the muster, from
+     * whatever ground is to hand now (players about), with the same chooser.
+     */
+    static void lookAgain(ServerLevel level, Campaign c) {
+        Villages.Village x = c.town(0), y = c.town(1);
+        if (c.ground.known() || c.holdWalls || x == null || y == null) return;
+        Battlefields.Ground g = Battlefields.choose(level, x, y);
+        if (!g.known()) return;
+        c.ground = g;
+        c.name = "the Battle of " + g.name();
+        LOG.info("[MCA-WAR] {}: the field looked for again at the muster, {} at {}", Villages.name(c.a), g.name(), g.centre().toShortString());
     }
 
     /** The Captain's choice of tactics for army i, by the ground on its side, the odds, its temper and its kit. */
@@ -796,6 +819,7 @@ public final class Campaigns {
             return;
         }
         c.battle = Battles.open(level, c, c.ground.centre(), c.ground.ax(), c.ground.az(), false);
+        if (c.battle.detailed() && c.ground.known()) Battlefields.clearBrush(level, c.ground);     // [field] the lines' ground trampled clear
         stage(c, Stage.BATTLE, now, now);
     }
 
@@ -1275,12 +1299,15 @@ public final class Campaigns {
 
     /** Fighters a side on the stage. */
     static final int STAGED = 16;                                       // [war-bows] sixteen: a line, and a company of each missile
+    /** [field] A staged battle draws every fighter of an admin's big armies in full (two towns of seventy field forty a side). */
+    static final int STAGED_DETAIL = 48;
     /** How far east a staged neighbour is raised, with none near (past the founding reach of two villages' range). */
     public static final int NEIGHBOUR = 260;
 
     /**
-     * Pictures: a battle staged between the nearest town and its neighbour (a neighbour raised 260 blocks east with
-     * none near), twelve a side armed for nothing as a showcase, at war, with the field at {@code at}, and set at this
+     * Pictures: a battle staged between the town and its enemy (else its nearest neighbour; a neighbour raised 260 blocks
+     * east with none near), sixteen a side armed for nothing as a showcase where it has not an army of its own on the
+     * watch already, at war, with the field at {@code at} (null: the field its Captains choose between them), and set at this
      * phase and held there: drawn up on their squares (muster); in column on the road (march); the lines formed in
      * their formations (lineup); the Captains and their standards met in the middle (parley); the archers' duel
      * (volley); the lines locked (clash); one side broken and running (rout); the medics at work and the captives led
@@ -1289,20 +1316,14 @@ public final class Campaigns {
      * here already is staged on to a later phase (the same armies, one muster, one outcome); an earlier phase starts
      * it afresh.
      */
-    public static List<String> stage(ServerLevel level, Villages.Village v, BlockPos at, String phase) {
+    public static List<String> stage(ServerLevel level, Villages.Village v, @Nullable BlockPos at, String phase) {
         List<String> out = new ArrayList<>();
         Campaign going = ofTown(v.id());
         if (going != null && going.staged >= 0 && PHASES.indexOf(phase) >= going.staged && going.armies[0] != null && going.armies[1] != null) {
             restage(level, going, phase);
             return staged(level, going, phase, out);
         }
-        Villages.Village o = null;
-        double best = 400.0 * 400.0;
-        for (Villages.Village n : Villages.every()) {
-            if (n.id().equals(v.id()) || !n.dim().equals(v.dim())) continue;
-            double d = n.centre().distSqr(v.centre());
-            if (d < best) { best = d; o = n; }
-        }
+        Villages.Village o = opponent(v);
         if (o == null) {
             // Far enough off (two villages' reach) that the party founds a town of its own rather than joining this one.
             BlockPos there = Battlefields.surface(level, v.centre().offset(NEIGHBOUR, 0, 0));
@@ -1316,7 +1337,7 @@ public final class Campaigns {
         }
         for (Villages.Village t : new Villages.Village[]{ v, o }) {
             Heraldry.chooseForTests(level, t);
-            showcaseArmy(level, t);
+            if (WarFooting.militia(t.id()).size() < STAGED + STAGED / 4) showcaseArmy(level, t);   // [field] an army raised already is kept as kitted
         }
         long day = level.getDayTime() / 24000L;
         if (!Wars.atWar(v.id(), o.id())) WarAndPeace.declare(level, v.id(), o.id(), day, WarAndPeace.Goal.TRIBUTE, 20, "twenty coins in tribute");
@@ -1333,9 +1354,10 @@ public final class Campaigns {
             return out;
         }
         double dx = o.centre().getX() - v.centre().getX(), dz = o.centre().getZ() - v.centre().getZ(), n = Math.max(1, Math.sqrt(dx * dx + dz * dz));
-        c.ground = Battlefields.groundAt(level, at, dx / n, dz / n, Villages.name(v.id()) + " Field");
+        c.ground = at != null ? Battlefields.groundAt(level, at, dx / n, dz / n, Villages.name(v.id()) + " Field")
+            : Battlefields.choose(level, v, o, true);                      // [field] the Captains' own choice, its ground made to look at
         c.name = "the Battle of " + c.ground.name();
-        muster(level, c);
+        muster(level, c, Math.max(cap(), STAGED_DETAIL));
         if (c.armies[0] == null || c.armies[1] == null) {
             out.add("NO-STAGE an army could not be raised");
             return out;
@@ -1343,6 +1365,23 @@ public final class Campaigns {
         c.staged = 0;
         restage(level, c, phase);
         return staged(level, c, phase, out);
+    }
+
+    /** [field] Who a town stages a battle against: its enemy, else its nearest neighbour within 400 blocks. */
+    @Nullable
+    static Villages.Village opponent(Villages.Village v) {
+        for (UUID e : Wars.enemies(v.id())) {
+            Villages.Village o = Villages.get(e);
+            if (o != null && o.dim().equals(v.dim())) return o;
+        }
+        Villages.Village o = null;
+        double best = 400.0 * 400.0;
+        for (Villages.Village n : Villages.every()) {
+            if (n.id().equals(v.id()) || !n.dim().equals(v.dim())) continue;
+            double d = n.centre().distSqr(v.centre());
+            if (d < best) { best = d; o = n; }
+        }
+        return o;
     }
 
     /** [war-polish] The staged campaign brought on to this phase: drawn up on the squares, the columns on the road, or its one battle set at it. */
@@ -1358,6 +1397,7 @@ public final class Campaigns {
                 if (c.battle == null) {
                     for (int i = 0; i < 2; i++) c.ways.set(i, new ArrayList<>(List.of(campSpot(c, i))));
                     c.battle = Battles.openStaged(level, c, c.ground.centre(), c.ground.ax(), c.ground.az());
+                    if (c.ground.known()) Battlefields.clearBrush(level, c.ground);
                     stage(c, Stage.BATTLE, level.getGameTime(), level.getGameTime());
                 }
                 c.battle.stagePhase(level, phase);
@@ -1370,7 +1410,13 @@ public final class Campaigns {
     static List<String> staged(ServerLevel level, Campaign c, String phase, List<String> out) {
         for (int i = 0; i < 2; i++) snap(level, c.armies[i]);
         out.add("STAGED " + phase + " " + Villages.name(c.a) + " against " + Villages.name(c.b) + " on " + c.ground.name() + " ("
-            + c.armies[0].formation.words + " against " + c.armies[1].formation.words + ")");
+            + c.armies[0].formation.words + " against " + c.armies[1].formation.words + "), " + c.armies[0].size() + " against " + c.armies[1].size());
+        BlockPos f = c.ground.centre();
+        out.add("FIELD " + f.getX() + " " + f.getY() + " " + f.getZ());           // [field] where the pictures go, and each town's heart
+        for (int i = 0; i < 2; i++) {
+            Villages.Village t = c.town(i);
+            if (t != null) out.add("TOWN " + Villages.name(t.id()).replace(' ', '_') + " " + t.centre().getX() + " " + t.centre().getY() + " " + t.centre().getZ());
+        }
         out.addAll(views(level, c));
         return out;
     }
@@ -1414,6 +1460,19 @@ public final class Campaigns {
         TownWork.give(level, t, new ItemStack(net.minecraft.world.item.Items.LEATHER));
     }
 
+    /** [field] Pictures: every staged battle in this world let go (an older stage left standing would crowd the new one's pictures). How many. */
+    public static int unstageAll(ServerLevel level) {
+        int n = 0;
+        for (Campaign c : new ArrayList<>(ACTIVE.values())) {
+            if (c.staged < 0) continue;
+            Villages.Village t = c.town(0);
+            if (t == null || !t.dim().equals(level.dimension())) continue;
+            unstage(level, c.a);
+            n++;
+        }
+        return n;
+    }
+
     /** Pictures: the staged battle let go, the armies home. */
     public static String unstage(ServerLevel level, UUID town) {
         Campaign c = ofTown(town);
@@ -1453,14 +1512,20 @@ public final class Campaigns {
                 Villages.Village v = c.town(0);
                 if (v != null && a != null) {
                     double[] o = squareFacing(v, c.town(1));
-                    view(level, out, "muster", o[0] + o[2] * 16 - o[3] * 4, o[1] + o[3] * 16 + o[2] * 4, 7, o[0] - o[2] * 4, o[1] - o[3] * 4);
+                    Vec3 at = midst(level, ALL, a);
+                    if (at == null) view(level, out, "muster", o[0] + o[2] * 16 - o[3] * 4, o[1] + o[3] * 16 + o[2] * 4, 7, o[0] - o[2] * 4, o[1] - o[3] * 4);
+                    else frame(level, out, "muster", at, o[2] * 18 - o[3] * 5, o[3] * 18 + o[2] * 5, 7);
                 }
             }
             case MARCH, SIEGE_MARCH, HOME -> {
                 if (a != null && !c.ways.get(0).isEmpty()) {
-                    BlockPos h = c.head(0);
                     double[] d = heading(c.ways.get(0), c.along[0]);
-                    view(level, out, "column", h.getX() + d[0] * 10 - d[1] * 9, h.getZ() + d[1] * 10 + d[0] * 9, 5, h.getX() - d[0] * 8, h.getZ() - d[1] * 8);
+                    Vec3 at = midst(level, ALL, a);                                 // [field] the whole column framed, from ahead and to one side
+                    if (at == null) {
+                        BlockPos h = c.head(0);
+                        at = new Vec3(h.getX() - d[0] * 8, h.getY(), h.getZ() - d[1] * 8);
+                    }
+                    frame(level, out, "column", at, d[0] * 12 - d[1] * 14, d[1] * 12 + d[0] * 14, 7);
                 }
             }
             case CAMP, SIEGE_CAMP -> {
@@ -1474,23 +1539,29 @@ public final class Campaigns {
                 Battles.Battle b = c.battle;
                 BlockPos m = b == null ? c.ground.centre() : b.centre;
                 double ax = b == null ? c.ground.ax() : b.ax, az = b == null ? c.ground.az() : b.az;
-                view(level, out, "side", m.getX() - az * 30, m.getZ() + ax * 30, 10, m.getX(), m.getZ());
+                // [field] Each shot framed on the fighters it is of (where they stand now), from a set offset, its view checked clear.
+                Vec3 all = midst(level, STANDING, c.armies[0], c.armies[1]);
+                Vec3 mid = all != null ? all : Vec3.atBottomCenterOf(Battlefields.surface(level, m));
+                frame(level, out, "side", mid, -az * 30, ax * 30, 10);
                 if (b != null) {
                     // [war-polish] From a raised point behind each army: over its ranks, to the enemy's.
                     for (int i = 0; i < 2; i++) {
                         double[] o = b.origin(i);
-                        view(level, out, "behind" + i, o[0] - o[2] * 24, o[1] - o[3] * 24, 9, o[0] + o[2] * 6, o[1] + o[3] * 6);
+                        Vec3 own = midst(level, STANDING, c.armies[i]);
+                        Vec3 at = own != null ? own.add(o[2] * 6, 0, o[3] * 6) : new Vec3(o[0] + o[2] * 6, mid.y, o[1] + o[3] * 6);
+                        frame(level, out, "behind" + i, at, -o[2] * 30, -o[3] * 30, 9);
                     }
                 }
                 BlockPos hill = c.ground.view();
-                if (hill != null) view(level, out, "hill", hill.getX(), hill.getZ(), 4, m.getX(), m.getZ());
-                else view(level, out, "high", m.getX() - az * 40 - ax * 30, m.getZ() + ax * 40 - az * 30, 26, m.getX(), m.getZ());
+                if (hill != null) frame(level, out, "hill", mid, hill.getX() + 0.5 - mid.x, hill.getZ() + 0.5 - mid.z, 4);
+                else frame(level, out, "high", mid, -az * 40 - ax * 30, ax * 40 - az * 30, 26);
                 Armies.Fighter cap = a == null ? null : a.officer(Armies.Rank.CAPTAIN);
                 if (cap != null && level.getEntity(cap.id) instanceof VillageFolkEntity e) {
                     double fx = -Math.sin(Math.toRadians(e.getYRot())), fz = Math.cos(Math.toRadians(e.getYRot()));
                     view(level, out, "captain", e.getX() + fx * 4 + fz * 1.5, e.getZ() + fz * 4 - fx * 1.5, 1.6, e.getX(), e.getZ());
                 }
-                view(level, out, "clash", m.getX() - az * 16 + ax * 6, m.getZ() + ax * 16 + az * 6, 4, m.getX(), m.getZ());
+                Vec3 lines = midst(level, f -> !f.down() && f.role() == BattleModel.Role.LINE, c.armies[0], c.armies[1]);
+                frame(level, out, "clash", lines != null ? lines : mid, -az * 18 + ax * 6, ax * 18 + az * 6, 5);
                 if (b != null && a != null) {
                     // [war-bows] The crossbow company close to, from its flank (a rank loosing, a rank kneeling to span); the
                     // archers' volley side on, far enough off to see the arc from the bows to where it falls.
@@ -1518,10 +1589,64 @@ public final class Campaigns {
             5, g.getX(), g.getZ());
     }
 
-    /** One view: an eye {@code up} over the ground at (x, z), looking at the ground at (tx, tz) a little over it. */
+    /** One view: an eye {@code up} over the ground at (x, z), looking at the ground at (tx, tz) a little over it (framed: see {@link #frame}). */
     static void view(ServerLevel level, List<String> out, String name, double x, double z, double up, double tx, double tz) {
-        BlockPos eye = Battlefields.surface(level, BlockPos.containing(x, 0, z)), at = Battlefields.surface(level, BlockPos.containing(tx, 0, tz));
-        out.add("VIEW " + name + " " + eye.getX() + " " + (int) Math.round(eye.getY() + up) + " " + eye.getZ() + " " + at.getX() + " " + (at.getY() + 1) + " " + at.getZ());
+        BlockPos at = Battlefields.surface(level, BlockPos.containing(tx, 0, tz));
+        frame(level, out, name, new Vec3(tx, at.getY(), tz), x - tx, z - tz, up);
+    }
+
+    /** Which fighters a shot is of. */
+    static final java.util.function.Predicate<Armies.Fighter> ALL = f -> true, STANDING = f -> !f.down();
+    /** [field] Turns (degrees) round its target a blocked camera tries, in order, before it rises over the target instead. */
+    static final double[] TURNS = { 0, 35, -35, 70, -70, 110, -110, 180 };
+    /** The last resort's height over the target: from straight above and a little out, nothing stands between. */
+    static final double OVERHEAD = 24.0;
+
+    /** [field] The middle of these armies' fighters (those {@code which} takes) as they stand now, or null with none of them to be seen. */
+    @Nullable
+    static Vec3 midst(ServerLevel level, java.util.function.Predicate<Armies.Fighter> which, @Nullable Armies.Army... armies) {
+        double x = 0, y = 0, z = 0;
+        int n = 0;
+        for (Armies.Army a : armies) {
+            if (a == null) continue;
+            for (Armies.Fighter f : a.fighters) {
+                if (!which.test(f) || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
+                x += e.getX();
+                y += e.getY();
+                z += e.getZ();
+                n++;
+            }
+        }
+        return n == 0 ? null : new Vec3(x / n, y / n, z / n);
+    }
+
+    /**
+     * [field] One view framed on {@code target} (feet level): the camera {@code ox, oz} out from it and {@code up} over the
+     * higher of the target and the ground or treetops there, looking at it a block up, as "VIEW name x y z tx ty tz". The
+     * camera is checked to see its mark (CameraCommands.clearSpot: stepped back or up out of a hill or a wall); one
+     * that cannot is turned round the target, and failing every turn it looks down on it from overhead.
+     */
+    static void frame(ServerLevel level, List<String> out, String name, Vec3 target, double ox, double oz, double up) {
+        Vec3 aim = target.add(0, 1.0, 0);
+        Vec3 feet = null;
+        for (double turn : TURNS) {
+            double r = Math.toRadians(turn), cos = Math.cos(r), sin = Math.sin(r);
+            double x = aim.x + ox * cos - oz * sin, z = aim.z + ox * sin + oz * cos;
+            Vec3 try0 = new Vec3(x, Math.max(treetops(level, x, z), aim.y) + up, z);
+            CameraCommands.Spot spot = CameraCommands.clearSpot(level, try0, aim);
+            if (spot.how().equals("unloaded")) { feet = try0; break; }            // the pictures' own camera looks again once there
+            if (!spot.how().equals("blocked")) { feet = spot.feet(); break; }
+        }
+        if (feet == null) feet = aim.add(ox * 0.25, OVERHEAD, oz * 0.25);
+        out.add("VIEW " + name + " " + Mth.floor(feet.x) + " " + (int) Math.round(feet.y) + " " + Mth.floor(feet.z) + " " + Mth.floor(aim.x) + " "
+            + Mth.floor(aim.y) + " " + Mth.floor(aim.z));
+    }
+
+    /** The top of whatever stands at (x, z), leaves and all; the floor of the world if its ground is not to hand. */
+    static int treetops(ServerLevel level, double x, double z) {
+        int bx = Mth.floor(x), bz = Mth.floor(z);
+        if (!level.hasChunk(bx >> 4, bz >> 4)) return level.getMinBuildHeight();
+        return level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, bx, bz);
     }
 
     /** Tests and pictures: a campaign begun now between these two, whatever the war's day says. */

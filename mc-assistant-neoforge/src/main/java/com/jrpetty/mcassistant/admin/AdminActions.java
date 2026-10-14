@@ -308,12 +308,21 @@ public final class AdminActions {
                 for (ServerLevel l : c.server().getAllLevels()) l.setDayTime(day * 24000L + t);
                 yield Done.ok("The time set to " + a.word(0, "noon"), null);
             }
-            case "world.found" -> found(c, c.pos(), a.num(0, 20), AdminTools.age(a.word(1, "wood")));
+            case "world.found" -> {
+                BlockPos at = c.pos();
+                if (a.word(2, "here").equals("open")) {                            // [field] the nearest open grassland or savanna
+                    BlockPos open = AdminTools.openSite(c.level(), at, 0, OPEN_SEARCH);
+                    if (open == null) yield Done.no("No open grassland or savanna clear of other towns within " + OPEN_SEARCH + " blocks.");
+                    at = surface(c.level(), open);
+                }
+                yield found(c, at, a.num(0, 20), AdminTools.age(a.word(1, "wood")), null);
+            }
             case "world.rival" -> {
-                int x = v.centre().getX() + a.num(0, 260), z = v.centre().getZ();
-                c.level().getChunk(x >> 4, z >> 4);
-                BlockPos at = new BlockPos(x, c.level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
-                yield found(c, at, a.num(1, 20), Villages.ageOf(v.id()));
+                // [field] So far off, on open ground clear of every town (east first, else round about); due east failing that.
+                int d = a.num(0, 260);
+                BlockPos open = AdminTools.openSite(c.level(), v.centre(), d, d + RIVAL_SLACK);
+                BlockPos at = surface(c.level(), open != null ? open : v.centre().offset(d, 0, 0));
+                yield found(c, at, a.num(1, 20), Villages.ageOf(v.id()), v.id());
             }
             case "world.tp" -> teleport(c, a.rest(0));
             case "scenario" -> AdminScripts.scenario(c, a.word(0, ""));
@@ -528,7 +537,16 @@ public final class AdminActions {
         return start(job, "skipping " + days + " day(s), a day every " + WARP_TICKS + " ticks");
     }
 
-    private static Done found(AdminRunner.Ctx c, BlockPos at, int folk, @Nullable Villages.Age age) {
+    /** [field] How far an open site is looked for: round the admin for a new town, past the distance asked for a rival. */
+    static final int OPEN_SEARCH = 640, RIVAL_SLACK = 96;
+
+    private static BlockPos surface(ServerLevel level, BlockPos p) {
+        level.getChunk(p.getX() >> 4, p.getZ() >> 4);
+        return new BlockPos(p.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()), p.getZ());
+    }
+
+    /** A town founded here with so many folk at an age, as a job; {@code rivalOf}, paired with that town as its rival once it stands. */
+    private static Done found(AdminRunner.Ctx c, BlockPos at, int folk, @Nullable Villages.Age age, @Nullable UUID rivalOf) {
         ServerLevel level = c.level();
         for (int dx = -2; dx <= 2; dx++) for (int dz = -2; dz <= 2; dz++) level.getChunk((at.getX() >> 4) + dx, (at.getZ() >> 4) + dz);
         if (Villages.nearest(level, at, Villages.VILLAGE_RANGE * 2) != null) return Done.no("There is a town near there already.");
@@ -544,6 +562,7 @@ public final class AdminActions {
                 done = v == null ? 0 : Villages.headcount(v.id());
                 if (v == null || (done < folk * 9 / 10 && ticks < FOUNDING_WAIT)) return ticks >= FOUNDING_WAIT * 2;
                 AdminRunner.newest = v.id();
+                if (rivalOf != null) AdminTools.pairRivals(rivalOf, v.id());
                 if (age != null && age != Villages.Age.WOOD) AdminTools.setAge(level, v, age);
                 AdminRunner.decree(level, v, "the town was founded with " + done + " folk" + (age == null ? "" : " in " + age.label));
                 outcome("founded " + Villages.name(v.id()) + " with " + done + " folk" + (age == null ? "" : ", " + age.label));

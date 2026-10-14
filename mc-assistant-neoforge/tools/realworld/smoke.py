@@ -44,16 +44,22 @@ def shot(name):
 def clear_camera(r, x, y, z, tx, ty, tz):
     """[war-polish] Every shot's camera kept out of the ground: the server says where a camera whose feet stand at
     x y z (eyes 1.62 above) sees tx ty tz from open air (/village camera), stepping back or up till it does; a spot
-    whose ground has not arrived yet is visited first and asked again. Where to stand, as given if it cannot tell."""
-    def ask():
+    whose ground has not arrived yet is visited first and asked again. [field] A view that cannot be cleared is not
+    shot at the wall: the camera rises over its mark, and failing that looks down on it from overhead. Where to stand,
+    as given if it cannot tell."""
+    def ask(x, y, z):
         out = r.cmd("village camera %.2f %.2f %.2f %.2f %.2f %.2f" % (x, y, z, tx, ty, tz))
         m = re.search(r"CAMERA (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (\w+)", out)
         return (float(m.group(1)), float(m.group(2)), float(m.group(3)), m.group(4)) if m else (x, y, z, "unknown")
-    cx, cy, cz, how = ask()
+    cx, cy, cz, how = ask(x, y, z)
     if how == "unloaded":
         r.cmd("tp %s %.2f %.2f %.2f" % (USER, x, y, z))
         time.sleep(3)
-        cx, cy, cz, how = ask()
+        cx, cy, cz, how = ask(x, y, z)
+    for rise, out in ((12, 0.0), (24, 0.25)):           # blocked: up over the mark, then overhead and a little out
+        if how != "blocked":
+            break
+        cx, cy, cz, how = ask(tx + (x - tx) * out if out else x, ty + rise, tz + (z - tz) * out if out else z)
     if how != "clear":                                  # moved, blocked, or not checked (unloaded, no answer): said
         say("camera at %.1f %.1f %.1f %s: now %.1f %.1f %.1f" % (x, y, z, how, cx, cy, cz))
     return cx, cy, cz
@@ -3896,20 +3902,23 @@ def defence_stage(r, look, cx, cz):
 
 def war_stage(r, look, cx, cz):
     """[war] Organised battles, phase by phase (entity/Campaigns, Armies, Battles, Battlefields, WarDress). [war-polish]
-    The admin toolkit's battle scenario (/village admin scenario battle: this town and a rival 260 blocks east, both
-    Iron Age towns of seventy, twenty a side raised and kitted, at war), then /village admin army phase <phase> staged
-    on, one battle start to end: each army drawn up on its square in its battle colours (trims, tunics, painted
-    shields, company standards on the helm, name tags in its colour); the column on the road; the line-up in ranks and
-    files from a raised point behind each army and from the side and the hill; the Captains at the parley, close to;
-    the horn; the volleys; the charge; the clash at mid-distance; the rout; the aftermath. Each phase says where to
-    look from (VIEW name eye target). Then /village war battle, the stage struck, and the town's war page."""
+    The admin toolkit's battle scenario (/village admin scenario battle: a town on the nearest open grassland or
+    savanna and a rival about 260 blocks off on open ground, both Iron Age towns of seventy, forty-five a side on the
+    watch, at war), then /village admin army phase <phase> town:newest staged on, one battle start to end, on the field
+    the Captains choose between the two (flat and open): each army drawn up on its square in its battle colours; the
+    column on the road; the line-up in ranks and files from behind each army, the side and the hill; the Captains at
+    the parley; the horn; the volleys; the charge; the clash; the rout; the aftermath. Each phase says where to look
+    from (VIEW name eye target, framed on the fighters and cleared by the server), where the field is (FIELD) and the
+    two towns (TOWN). [field] Every older staged battle is struck first, so only the scenario's two towns are in the
+    pictures. Then /village war battle, the stage struck, and the town's war page."""
     pattern = r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)"
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
     r.cmd("weather clear")
-    # Two new towns of seventy on open ground well away from the grown one (the scenario founds here and 260 east):
-    # the nearest plains or savanna past 600 blocks west of it.
+    say("older stages: " + r.cmd("village battle stage clear"))
+    # Start the search for open ground well away from the grown town: the nearest plains or savanna past 600 blocks
+    # west of it (the scenario founds on the nearest open grassland clear of every town from there).
     sx, sz = cx - 700, cz
     for biome in ("minecraft:plains", "minecraft:savanna"):
         m = re.search(r"\[(-?\d+), (~|-?\d+), (-?\d+)\]", r.cmd("execute positioned %d 64 %d run locate biome %s" % (cx - 700, cz, biome)))
@@ -3917,22 +3926,24 @@ def war_stage(r, look, cx, cz):
             sx, sz = int(m.group(1)), int(m.group(3))
             break
     r.cmd("tp %s %d %d %d" % (USER, sx + 130, 150, sz + 40))
-    time.sleep(12)                                     # the ground of both towns and the field between arrives
+    time.sleep(12)
     hy = ground_height(r, sx, sz)
-    here = "execute positioned %d %d %d run " % (sx, hy + 1, sz)
-    say("scenario at %d, %d: %s" % (sx, sz, r.cmd(here + "village admin scenario battle")[:400]))
+    say("scenario at %d, %d: %s" % (sx, sz, r.cmd("execute positioned %d %d %d run village admin scenario battle" % (sx, hy + 1, sz))[:400]))
     for _ in range(90):                                # the founders of both towns arrive; the armies raised and kitted
         time.sleep(4)
         if "No admin jobs running" in r.cmd("village admin jobs"):
             break
-    cx, cz = sx, sz
-    fx, fz = cx + 130, cz                              # the field: halfway to the rival, 260 east
-    r.cmd("tp %s %d %d %d" % (USER, fx, hy + 30, fz + 30))
-    time.sleep(10)                                     # the field's ground arrives
+    place = {}
 
     def stage(phase, settle):
-        out = r.cmd(here + "village admin army phase %s" % phase)
-        say("battle %s: %s" % (phase, out[:700]))
+        out = r.cmd("village admin army phase %s town:newest" % phase)
+        say("battle %s: %s" % (phase, out[:900]))
+        f = re.search(r"FIELD (-?\d+) (-?\d+) (-?\d+)", out)
+        if f:
+            place["field"] = tuple(int(v) for v in f.groups())
+        towns = re.findall(r"TOWN (\S+) (-?\d+) (-?\d+) (-?\d+)", out)
+        if towns:
+            place["town"] = tuple(int(v) for v in towns[0][1:])
         time.sleep(settle)
         return {name: (int(x), int(y), int(z), int(ax), int(ay), int(az)) for name, x, y, z, ax, ay, az in re.findall(pattern, out)}
 
@@ -3942,11 +3953,19 @@ def war_stage(r, look, cx, cz):
                 x, y, z, ax, ay, az = views[name]
                 look("50-war-" + prefix + "-" + name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
 
+    def visit(key, up):                                # the client's ground there arrives before the first shot of it
+        if key in place:
+            x, y, z = place[key]
+            r.cmd("tp %s %d %d %d" % (USER, x, y + up, z))
+            time.sleep(10)
+
     views = stage("muster", 6)                         # drawn up on the square in the battle colours
+    visit("town", 20)
     shoot(views, "1", ["muster"], 6)
     views = stage("march", 6)                          # in column on the road behind the banner
-    shoot(views, "2", ["column"], 6)
+    shoot(views, "2", ["column"], 10)
     views = stage("lineup", 8)                         # ranks and files, from behind each army, the side and the hill
+    visit("field", 30)
     shoot(views, "3", ["behind0", "behind1", "side", "hill", "high", "captain"], 5)
     views = stage("parley", 8)                         # the Captains and their standards met in the middle, close to
     shoot(views, "4", ["parley", "side"], 4)
@@ -3961,16 +3980,18 @@ def war_stage(r, look, cx, cz):
     shoot(views, "6d", ["arc"], 2)
     views = stage("charge", 2)                         # the lines running in
     shoot(views, "7", ["side", "behind0"], 2)
-    views = stage("clash", 6)                          # the lines locked: sparks, dust, the din, at mid-distance
+    views = stage("clash", 6)                          # the lines locked: sparks, dust, the din, framed on the two lines
     shoot(views, "8", ["clash", "hill", "captain"], 3)
     views = stage("rout", 4)                           # one side broken and running, the other cheering
     shoot(views, "9", ["hill", "high", "side"], 3)
     views = stage("aftermath", 8)                      # the medics binding the wounded, the captives led off
     shoot(views, "10", ["clash", "side"], 4)
+    tx, ty, tz = place.get("town", (sx, hy, sz))
+    here = "execute positioned %d %d %d run " % (tx, ty + 1, tz)
     say("battle: " + r.cmd(here + "village war battle")[:900])
     say("end: " + r.cmd(here + "village battle stage end"))
     r.cmd("gamemode creative %s" % USER)
-    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    r.cmd("tp %s %d %d %d" % (USER, tx, ty + 1, tz))
     time.sleep(3)
     say("books: " + r.cmd("execute as %s at @s run village war books" % USER))
     time.sleep(4)
