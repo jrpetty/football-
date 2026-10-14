@@ -805,7 +805,7 @@ public final class Ferries {
         Entity first = boat.getFirstPassenger();
         boolean manAboard = man != null && first == man;
         for (Entity p : List.copyOf(boat.getPassengers())) {
-            if (p instanceof Player || p == man) continue;
+            if (p instanceof Player || p == man || BoatSeats.rider(p) != null) continue;   // [roles-d] a player on its seat
             if (p instanceof VillageFolkEntity f && PASSAGES.containsKey(f.getUUID())) continue;
             p.stopRiding();
         }
@@ -818,8 +818,9 @@ public final class Ferries {
         // A passenger aboard behind the ferryman: across.
         for (Entity p : boat.getPassengers()) {
             if (p == man) continue;
-            if (p instanceof Player || p instanceof VillageFolkEntity) {
-                start(level, v, c, boat, 1 - c.boatAt, p);
+            Player seated = BoatSeats.rider(p);                         // [roles-d] a player sat behind the ferryman
+            if (p instanceof Player || p instanceof VillageFolkEntity || seated != null) {
+                start(level, v, c, boat, 1 - c.boatAt, seated != null ? seated : p);
                 return;
             }
         }
@@ -874,7 +875,7 @@ public final class Ferries {
         VillageFolkEntity man = ferrymanOf(level, c);
         if (voy.passenger != null) {
             Entity p = level.getEntity(voy.passenger);
-            if (p != null && p.getVehicle() == boat) land(level, v, c, boat, man, p, voy.to);
+            if (p != null && p.getRootVehicle() == boat) land(level, v, c, boat, man, p, voy.to);   // [roles-d] or on its seat in it
         }
         if (man != null && c.crossings % 25 == 0) {
             FolkTalk.speak(man, FolkTalk.pick(level.getRandom(), "That's " + c.crossings + " crossings now. My arms know it.",
@@ -983,7 +984,7 @@ public final class Ferries {
             return "Come down to the jetty (" + s.getX() + ", " + s.getZ() + ") and I'll hand you in. A coin a crossing.";
         }
         if (boat.getFirstPassenger() != f || boat.getPassengers().size() >= 2) return "Give me a moment to get to the oars.";
-        if (!p.startRiding(boat)) return "Mind the step... no, there's no room just now. A moment.";
+        if (!BoatSeats.seat(level, p, boat)) return "Mind the step... no, there's no room just now. A moment.";
         return Market.coinsHeld(p) >= FARE ? "In you get. Sit still and we'll be over in no time. A coin when we land."
             : "In you get. No coin? I'll take you all the same; pay me next time.";
     }

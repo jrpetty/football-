@@ -11718,3 +11718,76 @@ The fireworks maker and the museum's curator are now chosen at interview when tw
 the other specialists. The sexton is reckoned daily, like the constable.
 
 Smoke: `roles_a_stage` in tools/realworld/smoke.py (`/village offices stage`).
+
+
+## The outdoor and resource trades, finished [roles-d]
+
+The farmer, woodcutter, fisher, hunter, rancher, scout, ferryman, golem keeper, engineer, miner and fletcher each have
+something of their own for the player, a place of their own where it fits, a paid shift where one fits, and their own
+trouble with the weather.
+
+### What you can ask of them (OutdoorTalk)
+Each is in the talk menu (the Trade category: the shop and services groups), suggested when you talk to one of the
+trade, and understood typed as well:
+- **Farmer**: "What's growing in your fields?" (its crops by kind and how many are ripe, the season, what the town could
+  sell); "Could I buy some of your produce?" (wheat, carrots, potatoes, beetroot, pumpkins, melons or cane).
+- **Woodcutter**: "I'd like a timber order": logs in bulk, a tenth off, of the kind the stores hold most of (or the kind
+  you name). At once if the town can spare them, else a quarter down and the rest within the week.
+- **Fisher**: "Could I buy some fresh fish?"; "Can I come out on the boat with you?": with a fleet, a seat in its boat
+  on the next morning's sail. Be by its boat at the quay as it pushes off and it hands you in; tied up again, you are
+  set down on the quay with a fish for your supper. A town with no fleet says so.
+- **Hunter**: "Could I buy leather and feathers?"; "Can I come hunting with you?": till late morning (or the rain, or
+  the bell) it hunts wherever you lead, never a herd's beast or the last of a kind, and hands you half the meat taken.
+- **Rancher**: "Could I buy some wool?"; "Could I buy a horse?": one of the town's broken horses (never the last two the
+  couriers ride), yours to ride or lead home, its saddle with it at the traders' price.
+- **Ferryman**: "Take me across, please": with the boat at your landing you are handed in behind it and rowed over now;
+  the fare, a coin, is paid on the far landing (no coin, carried all the same). The boat on the far side is called over.
+- **Golem keeper**: "Could you build a golem for my base?": an iron golem stood up beside you the game's own way, from
+  your own iron (four blocks, or thirty-six ingots) and a pumpkin, for the keeper's fee of ten coins. It is yours: the
+  town never posts it or takes it in hand. Lead it home.
+- **Engineer**: "Could you light my street?": the town's lamp post nearest you gets a lamp that lights itself at dusk,
+  first in the engineer's work. You pay its fee; the parts are the town's.
+- **Miner, fletcher**: coal and raw ore; arrows.
+- **Emerald trader, diver**: buttons for what they already understood ("What do the villagers sell?", "Find us a
+  Mending book"; "Could you dive for 16 clay?", "Have you got my clay yet?").
+
+Everything sold comes out of the stores at the town's own price, into its treasury, and is booked as a sale. What the
+town cannot spare it says so, and why; short of coin, you are told the price. The scout's own option is the atlas, the
+courier's the post, the smelter's mending at the forge where there is no smith. The crafts' own (tailor, brewer,
+enchanter, beekeeper) are the crafts' work.
+
+### Their places (OutdoorBases)
+- **The hunter's lodge** (blueprints/huntlodge.txt): a log cabin at the town's edge, built once a town of ten keeps a
+  hunter. A smoker at the back is its smoking rack; a chest of makings (arrows, string, coal for the smoker, kept topped
+  up from the stores by the couriers: WorkStock); a barrel for the hides, a hide rug and a drying fire by the door. With
+  a pack heavy with game, or any on its way home in the afternoon, the hunter takes out what the smoker has done, loads
+  its raw game with the chest's coal under it, and tops up its arrows. The game's own smoker does the smoking.
+- **The barn** (blueprints/barn.txt): a timber barn with a hay loft out by the pen, built once a town of twelve has a pen
+  and a rancher. Its chest keeps the herd's feed (wheat, seeds, carrots) and a spare pair of shears; a rancher short of
+  feed or shears fetches them there.
+- **The scouts' desk**: with a map room standing, a scout home from the land writes its finds up at the cartographer's
+  table instead of standing at the board.
+
+### Weather and the year (OutdoorWeather)
+The woodcutter and the hunter come in out of the rain where it rains on their ground (never in a desert or a
+snowfield), and go back out when it clears; the bell calls them in as it does everybody. In the town's winter the
+beekeeper leaves the hives' honey for the bees: no comb taken, no bees bred, no flowers set. It looks the hives over
+once a day and spends the rest on the houses' wants.
+
+### Paid shifts (OutdoorShifts)
+- **Woodcutter's hand** ("wood"): a grown tree in the woodcutter's wood is marked. Every log you fell goes into the
+  stores; with the trunk down you are handed a sapling from the stores to plant where it stood. Left unplanted, it costs
+  stars.
+- **Shearer** ("shear"): a sheep of the town's flock in wool is marked. Shear it with your own shears and the wool goes
+  into the stores; shearing one of the flock not marked is a mistake.
+
+### The books
+"/village outdoor" lists the lodge and what its smoker has done, the barn, the scouts' desk, the hunting parties out,
+who the rain keeps in and the hives' winter. The admin panel's "people trade" raises any of these trades.
+
+### Cost
+The lodge and the barn are looked at once every ten seconds by their own hand (a map read between) and walked to only
+when there is work there. A hunting party is a map read from the hunter's own work. Talk and shifts cost nothing
+unless used. Parties, fleet guests and errands are kept in memory only: a restart ends them.
+
+Smoke: `roles_d_stage` in tools/realworld/smoke.py (`/village outdoor stage`). Tests: OutdoorTradesGameTests (od01 to od07).

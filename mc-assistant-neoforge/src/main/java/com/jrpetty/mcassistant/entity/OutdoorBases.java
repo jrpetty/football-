@@ -58,7 +58,7 @@ public final class OutdoorBases {
     /** Coal into the smoker at a time, and the arrows a hunter with a bow keeps. */
     static final int FUEL_AT_ONCE = 4, ARROWS_KEPT = 16;
     /** Feed a rancher fetches from the barn, and the least it carries before it goes. */
-    static final int FEED_TAKE = 16, FEED_LOW = 6;
+    public static final int FEED_TAKE = 16, FEED_LOW = 6;
 
     /** What goes in the smoker, what burns in it, and the herd's feed. */
     static final Predicate<ItemStack> GAME = OutdoorTalk.GAME;

@@ -825,7 +825,7 @@ public final class Fleet {
             FolkTalk.speak(f, "No sign of " + g.name() + ". The tide won't wait.");
             return;
         }
-        if (p.startRiding(b)) {
+        if (BoatSeats.seat(level, p, b)) {
             FolkTalk.speak(f, "In you get, " + g.name() + ". Sit still, and mind the line.");
             f.brain("out with " + g.name() + " aboard");
         }
@@ -834,7 +834,8 @@ public final class Fleet {
     /** Tied up: a player aboard set down on the quay, with a fish of the catch out of the fisher's pack for its supper. */
     private static void landGuest(ServerLevel level, VillageFolkEntity f, Boat b, BlockPos stand) {
         for (Entity e : List.copyOf(b.getPassengers())) {
-            if (!(e instanceof Player p)) continue;
+            Player p = BoatSeats.rider(e);
+            if (p == null) continue;
             p.stopRiding();
             p.teleportTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
             ItemStack fish = ItemStack.EMPTY;

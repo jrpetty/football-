@@ -156,6 +156,12 @@ public final class OutdoorShifts {
         return level.getBlockState(p.below()).is(BlockTags.DIRT) ? p : null;
     }
 
+    /** Tests: the trunk's base found in this column, or null. */
+    @Nullable
+    public static BlockPos trunkBaseForTests(ServerLevel level, int x, int z) {
+        return trunkBase(level, x, z);
+    }
+
     /** The logs of the trunk standing on this base. */
     static int trunk(ServerLevel level, BlockPos base) {
         int n = 0;

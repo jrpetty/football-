@@ -417,6 +417,7 @@ public final class TalkMenu {
             case "FLETCHER" -> ARROWS;
             case "SCOUT" -> ATLAS;
             case "HAUL" -> LETTER;                                           // the courier carries the post (Post)
+            case "SMELT" -> REPAIR;                                          // mends at its forge where there is no smith
             default -> null;
         };
     }

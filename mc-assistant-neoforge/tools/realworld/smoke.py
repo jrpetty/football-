@@ -4287,6 +4287,64 @@ def roles_a_stage(r, look, cx, cz):
     say("offices: " + r.cmd("execute positioned %d %d %d run village offices" % (cx, ground_height(r, cx, cz) + 1, cz))[:1200])
     say("alive after the civic posts: %s" % client_alive())
 
+def roles_d_stage(r, look, cx, cz):
+    """[roles-d] The outdoor and resource trades finished (entity/OutdoorTalk, OutdoorBases, OutdoorWeather, OutdoorShifts,
+    OutdoorStage). Out past the town to the south-west, /village outdoor stage sets out from palettes and stand-ins: the
+    outdoor trades in a row in their own clothes (farmer, woodcutter, fisher, hunter, rancher, scout, ferryman, golem
+    keeper, engineer, emerald trader, diver); the hunter's lodge with the hunter at its smoker and the drying fire lit;
+    the barn by a fenced pen of sheep with the rancher; and a player's iron golem stood up beside its keeper. Pictures:
+      1. 53-roles-d-1-trades: the row of the outdoor trades;
+      2. 53-roles-d-2-lodge-front, 3. 53-roles-d-3-lodge-inside: the hunter's lodge, and its smoker;
+      4. 53-roles-d-4-barn: the barn and the pen;
+      5. 53-roles-d-5-golem: the player's golem;
+      6. 53-roles-d-6-talk: the talk screen's Trade options face to face with the fisher (its own: fresh fish).
+    Each camera is kept in open air (clear_camera). Then /village outdoor, the town's own lodge, barn and parties in
+    words. Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    sx, sz = cx - 140, cz + 140                        # out past the town, on ground of its own
+    hy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 30, sz + 20))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village outdoor stage" % (sx, sz))
+    say("outdoor stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the outdoor trades; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view %s" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        x, y, z = clear_camera(r, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5)
+        look("53-roles-d-" + picture, x, y, z, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("trades", "1-trades", 10)
+    shoot("lodge-front", "2-lodge-front", 8)
+    shoot("lodge-inside", "3-lodge-inside", 6)
+    shoot("barn", "4-barn", 8)
+    shoot("golem", "5-golem", 8)
+    # The talk screen with the fisher of the row (the third from the west end), its own option suggested.
+    if "trades" in views:
+        tx, ty, tz = views["trades"][3] - 6, views["trades"][4], views["trades"][5]
+        r.cmd("gamemode creative %s" % USER)
+        r.cmd("tp %s %d %d %d facing %d %d %d" % (USER, tx, ty, tz + 2, tx, ty + 1, tz))
+        time.sleep(3)
+        say("talkview: " + r.cmd("execute as %s at @s run village talkview trade 2" % USER))
+        time.sleep(4)
+        shot("53-roles-d-6-talk")
+        r.cmd("execute as %s at @s run village talkview chat 2 1280x720" % USER)
+        r.cmd("gamemode spectator %s" % USER)
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    say("outdoor: " + r.cmd("execute positioned %d %d %d run village outdoor" % (cx, ground_height(r, cx, cz) + 1, cz))[:1200])
+    say("alive after the outdoor trades: %s" % client_alive())
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

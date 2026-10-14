@@ -47,7 +47,7 @@ import java.util.regex.Pattern;
  *     wherever the player walks till the hunt is over, the town's own rules still kept (never a herd's animal, never the
  *     last of a kind), and a share of the meat for the player at the end.</li>
  * <li><b>The rancher</b>: wool out of the stores, or one of the town's own horses (never the last two the couriers ride),
- *     led off on a lead, its saddle with it.</li>
+ *     the player's now, its saddle with it.</li>
  * <li><b>The ferryman</b>: across the water now (Ferries.takeAcross), the fare a coin on the far landing.</li>
  * <li><b>The golem keeper</b>: an iron golem for the player's base, stood up the game's own way from the player's own
  *     iron and pumpkin, for the keeper's fee; the town never posts it or adopts it.</li>
@@ -189,6 +189,14 @@ public final class OutdoorTalk {
         return null;
     }
 
+    /** A thing's name in lower-case words: its shown name, or its id in words where the server has no names loaded. */
+    static String word(Item it) {
+        String shown = new ItemStack(it).getHoverName().getString();
+        String w = shown.startsWith("item.") || shown.startsWith("block.")
+            ? net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it).getPath().replace('_', ' ') : shown;
+        return w.toLowerCase(Locale.ROOT);
+    }
+
     // ------------------------------------------------------------------ the farmer
 
     /** "What's growing?": the crops in its field by kind and how many are ripe, the season, and what the stores can spare. */
@@ -205,7 +213,8 @@ public final class OutdoorTalk {
                     BlockPos at = Fields.cropIn(level, x, c.getY(), zz);
                     if (at == null) continue;
                     BlockState st = level.getBlockState(at);
-                    String name = Goods.name(new ItemStack(st.getBlock().asItem())).toLowerCase(Locale.ROOT);
+                    // The crop's own name (a wheat plant's item is its seeds).
+                    String name = word(st.getBlock().asItem()).replace(" seeds", "");
                     int[] n = crops.computeIfAbsent(name, k -> new int[2]);
                     n[0]++;
                     if (st.getBlock() instanceof CropBlock cb && cb.isMaxAge(st)) n[1]++;
@@ -232,7 +241,7 @@ public final class OutdoorTalk {
         List<String> spare = new ArrayList<>();
         for (Item it : PRODUCE.kinds()) {
             int n = Budget.spare(level, v.id(), new ItemStack(it));
-            if (n > 0) spare.add(n + " " + Goods.name(new ItemStack(it)).toLowerCase(Locale.ROOT));
+            if (n > 0) spare.add(n + " " + word(it));
             if (spare.size() >= 3) break;
         }
         sb.append(spare.isEmpty() ? " The town needs all it has; there's nothing to sell." : " We could spare " + String.join(", ", spare)
@@ -257,10 +266,10 @@ public final class OutdoorTalk {
                 : "the town's short itself (it wants " + String.join(", ", wants) + "), and sees to itself first.");
         }
         ItemStack sample = new ItemStack(it);
-        String word = Goods.name(sample).toLowerCase(Locale.ROOT);
+        String word = word(it);
         int want = DIGITS.matcher(text).find() ? Services.countIn(text) : goods.lot();
         int spare = Budget.spare(level, village, sample);
-        if (spare <= 0) return "We can't spare any " + word + ": the town needs all it has of it.";
+        if (spare <= 0) return "We can't spare any " + Bench.plural(word) + ": the town needs all it has.";
         int n = Math.min(want, Math.min(spare, sample.getMaxStackSize()));
         boolean unwelcome = Standing.of(village, p.getUUID(), level.getGameTime()).title() == Standing.Title.UNWELCOME;
         int price = price(level, village, sample, n, unwelcome);
@@ -320,7 +329,7 @@ public final class OutdoorTalk {
             if (n > most) { most = n; log = it; }
         }
         int count = DIGITS.matcher(text).find() ? Commerce.number(text, 64) : 64;
-        return Commerce.bulk(f, p, "I'd like to order " + count + " " + Goods.name(new ItemStack(log)).toLowerCase(Locale.ROOT));
+        return Commerce.bulk(f, p, "I'd like to order " + count + " " + word(log));
     }
 
     // ------------------------------------------------------------------ the hunter
@@ -390,7 +399,7 @@ public final class OutdoorTalk {
 
     // ------------------------------------------------------------------ the rancher's horses
 
-    /** "Could I buy a horse?": one of the town's own tamed horses (never the last two), led off on a lead, its saddle with it. */
+    /** "Could I buy a horse?": one of the town's own tamed horses (never the last two), the player's now, its saddle with it. */
     static String horse(ServerLevel level, Villages.Village v, VillageFolkEntity f, Player p) {
         List<AbstractHorse> herd = new ArrayList<>();
         for (AbstractHorse h : Stables.animals(level, v.id())) {
@@ -412,12 +421,11 @@ public final class OutdoorTalk {
         h.setOwnerUUID(p.getUUID());
         h.removeTag(Stables.STEED);
         h.removeTag(Drover.HERD);
-        h.setLeashedTo(p, true);
         long day = level.getDayTime() / 24000L;
         Villages.tell(v.id(), day, f.displayNameCap() + " sold " + name + ", one of the town's horses, to " + p.getName().getString());
         f.persona().remember(day, "sold " + name + " to " + p.getName().getString(), 2);
-        return name + "'s yours: " + price + " coins to the town" + (saddled ? ", saddle and all" : "") + ". Lead it home gently; it likes"
-            + " an apple now and then.";
+        return name + "'s yours: " + price + " coins to the town" + (saddled ? ", saddle and all. Ride it home" : ". Put a lead on it and walk"
+            + " it home") + "; it likes an apple now and then.";
     }
 
     // ------------------------------------------------------------------ the golem keeper

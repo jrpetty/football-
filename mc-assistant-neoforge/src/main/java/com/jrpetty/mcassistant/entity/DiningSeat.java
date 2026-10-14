@@ -52,7 +52,8 @@ public class DiningSeat extends Entity {
         super.tick();
         if (level().isClientSide) return;
         BlockPos chair = BlockPos.containing(getX(), getY() - SIT_DROP + 0.1, getZ());
-        if (getPassengers().isEmpty() || !(level().getBlockState(chair).getBlock() instanceof StairBlock)) discard();
+        // [roles-d] A seat in a boat (BoatSeats) has no chair under it: it stays while it rides the boat.
+        if (getPassengers().isEmpty() || !isPassenger() && !(level().getBlockState(chair).getBlock() instanceof StairBlock)) discard();
     }
 
     @Override
