@@ -386,22 +386,56 @@ public final class Restore {
     public record Scaffold(Ledger.Building building, int placed, long since) {}
 
     private static final Map<UUID, Map<Long, Scaffold>> SCAFFOLDS = new ConcurrentHashMap<>();
+    /** The Ledger note the scaffolds are kept under, so a restart does not forget a frame left standing:
+     *  "structure,x,y,z,facing,since;..." */
+    private static final String SCAFFOLD_NOTE = "integrity/scaffolds";
 
     /** A building was given up on its ground (Villages.rejectSite): what was laid of it is to come down. */
     public static void abandoned(UUID village, Ledger.Building b, long now) {
-        SCAFFOLDS.computeIfAbsent(village, k -> new ConcurrentHashMap<>()).putIfAbsent(b.anchor().asLong(), new Scaffold(b, -1, now));
+        if (of(village).putIfAbsent(b.anchor().asLong(), new Scaffold(b, -1, now)) == null) save(village);
     }
 
     /** The town has taken a building up again on this ground: it is not scaffolding to clear. */
     public static void resumed(UUID village, BlockPos anchor) {
-        Map<Long, Scaffold> m = SCAFFOLDS.get(village);
-        if (m != null) m.remove(anchor.asLong());
+        if (of(village).remove(anchor.asLong()) != null) save(village);
     }
 
     /** What is standing given up, half built. */
     public static List<Scaffold> scaffolds(UUID village) {
-        Map<Long, Scaffold> m = SCAFFOLDS.get(village);
-        return m == null ? List.of() : new ArrayList<>(m.values());
+        return new ArrayList<>(of(village).values());
+    }
+
+    /** A town's scaffolds, read back from its Ledger note the first time they are asked for. */
+    private static Map<Long, Scaffold> of(UUID village) {
+        return SCAFFOLDS.computeIfAbsent(village, k -> {
+            Map<Long, Scaffold> m = new ConcurrentHashMap<>();
+            String note = Ledger.note(village, SCAFFOLD_NOTE);
+            if (note == null || note.isEmpty()) return m;
+            for (String one : note.split(";")) {
+                String[] f = one.split(",");
+                if (f.length != 6) continue;
+                try {
+                    Direction d = Direction.byName(f[4]);
+                    if (d == null) continue;
+                    BlockPos a = new BlockPos(Integer.parseInt(f[1]), Integer.parseInt(f[2]), Integer.parseInt(f[3]));
+                    m.put(a.asLong(), new Scaffold(new Ledger.Building(f[0], a, d), -1, Long.parseLong(f[5])));
+                } catch (NumberFormatException ignored) {
+                    // an unreadable entry from an older or damaged save: dropped
+                }
+            }
+            return m;
+        });
+    }
+
+    private static void save(UUID village) {
+        StringBuilder sb = new StringBuilder();
+        for (Scaffold s : of(village).values()) {
+            BlockPos a = s.building().anchor();
+            if (sb.length() > 0) sb.append(';');
+            sb.append(s.building().structure()).append(',').append(a.getX()).append(',').append(a.getY()).append(',').append(a.getZ())
+                .append(',').append(s.building().facing().getName()).append(',').append(s.since());
+        }
+        Ledger.note(village, SCAFFOLD_NOTE, sb.toString());
     }
 
     /** The cells of a given-up building that still hold something it laid (its drawing's cells, not the world's
@@ -421,8 +455,8 @@ public final class Restore {
 
     /** Take down up to so many blocks of what was given up, top first, into the stores. Returns how many. */
     static int clearScaffolds(ServerLevel level, Villages.Village v, int budget) {
-        Map<Long, Scaffold> m = SCAFFOLDS.get(v.id());
-        if (m == null || m.isEmpty()) return 0;
+        Map<Long, Scaffold> m = of(v.id());
+        if (m.isEmpty()) return 0;
         int done = 0;
         for (Scaffold s : new ArrayList<>(m.values())) {
             if (done >= budget) break;
@@ -432,10 +466,10 @@ public final class Restore {
             boolean standing = false;
             for (Ledger.Building o : Ledger.buildings(v.id())) if (o.anchor().equals(b.anchor()) && o.structure().equals(b.structure())) standing = true;
             Villages.Site again = Villages.sitesOf(v.id()).get(b.structure());
-            if (standing || (again != null && again.anchor().equals(b.anchor()))) { m.remove(b.anchor().asLong()); continue; }
+            if (standing || (again != null && again.anchor().equals(b.anchor()))) { m.remove(b.anchor().asLong()); save(v.id()); continue; }
             List<BlockPos> left = laid(level, v, b);
             if (s.placed() < 0) m.put(b.anchor().asLong(), new Scaffold(b, left.size(), s.since()));
-            if (left.isEmpty()) { m.remove(b.anchor().asLong()); continue; }
+            if (left.isEmpty()) { m.remove(b.anchor().asLong()); save(v.id()); continue; }
             left.sort(Comparator.comparingInt((BlockPos p) -> -p.getY()));
             for (BlockPos p : left) {
                 if (done >= budget) break;
