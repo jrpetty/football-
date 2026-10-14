@@ -901,4 +901,63 @@ public class DefenceGameTests {
         CastleWall.standDownForTests(true);
         helper.succeed();
     }
+
+    /** How far the river runs past the east wall's line each way in dw07 (its inner face at 42, the towers out to 48). */
+    private static final int RIVER_IN = 36, RIVER_OUT = 54;
+
+    /**
+     * An avenue that meets the wall over a river (its water a block under the banks, as a river lies): the east gate's
+     * passage stands on a causeway level with the banks, not at the water line, and the road goes on out of the gate
+     * and in from it across the water to dry ground. Walked across the avenue's width from bank to bank, every column's
+     * floor is solid and every step dry.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "dw07_gate_over_water")
+    public static void dw07_gate_over_water(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final int x = 1752000;
+        ground(level, x, Z, 96);
+        BlockPos heart = flat(level, x, Z, 84);
+        level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 6000L);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a town");
+        UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        Villages.ageForTests(village, Villages.Age.STONE);
+        CastleWall.standDownForTests(false);
+        CastleWall.readyForTests(true);
+        built(village, heart, firstBlock());
+        // A river two deep across the east avenue, through the wall's line, its water's top a block under the banks.
+        for (int dx = RIVER_IN; dx <= RIVER_OUT; dx++) {
+            for (int dz = -16; dz <= 16; dz++) {
+                level.setBlock(heart.offset(dx, -1, dz), Blocks.AIR.defaultBlockState(), 2 | 16);
+                for (int dy = -3; dy <= -2; dy++) level.setBlock(heart.offset(dx, dy, dz), Blocks.WATER.defaultBlockState(), 2 | 16);
+            }
+        }
+        CastleWall.plannedForTests(level, v);
+        CastleWall.buildNow(level, v, true);
+        Kit.log("dw07 " + String.join(" | ", CastleWall.lines(level, v)));
+        int y0 = heart.getY();
+        List<String> wrong = new ArrayList<>();
+        for (int dz = -WallPlan.GATE; dz <= WallPlan.GATE; dz++) {
+            for (int dx = RIVER_IN - 1; dx <= RIVER_OUT + 1; dx++) {
+                BlockPos at = heart.offset(dx, 0, dz);
+                BlockState floor = level.getBlockState(at.below());
+                boolean solid = floor.isFaceSturdy(level, at.below(), net.minecraft.core.Direction.UP) && floor.getFluidState().isEmpty();
+                boolean dry = level.getBlockState(at).getFluidState().isEmpty() && level.getBlockState(at.above()).getFluidState().isEmpty();
+                if (!solid || !dry) wrong.add(dx + "," + dz + (solid ? "" : " floor " + floor.getBlock()) + (dry ? "" : " wet"));
+            }
+        }
+        BlockPos door = heart.offset(WallPlan.line(0) + WallPlan.THICK - 1, 0, 0);
+        Kit.log("dw07 across the avenue at " + y0 + ": " + wrong.size() + " wrong " + wrong.subList(0, Math.min(12, wrong.size()))
+            + "; the gate's middle door at the banks' level: " + level.getBlockState(door).getBlock());
+        helper.assertTrue(level.getBlockState(door).getBlock() instanceof DoorBlock,
+            "the gate's doors hang at the banks' level, not at the water line: " + level.getBlockState(door));
+        helper.assertTrue(wrong.isEmpty(), "the passage and the road out of the gate and in from it solid and dry from bank to bank: "
+            + wrong.size() + " not, the first " + wrong.subList(0, Math.min(6, wrong.size())));
+        // The river still runs either side of the causeway.
+        helper.assertTrue(level.getBlockState(heart.offset(RIVER_OUT - 2, -2, 10)).is(Blocks.WATER), "the river still runs beside the road");
+        CastleWall.standDownForTests(true);
+        helper.succeed();
+    }
 }

@@ -62,7 +62,9 @@ import java.util.function.Predicate;
  * The wall is one closed ring: the gates and the posterns (their doors shut at dusk and on the alarm) are its only
  * ways through. Where its line crosses water it stands on piers with arches between them, a grate of iron bars (a
  * fence in the Wood Age) under each arch from the bed to over the water: the water flows, nobody walks or swims
- * through. An avenue over water crosses on a causeway to its gate. A field on the line is harvested into the stores and
+ * through. An avenue over water crosses on a causeway to its gate: the passage's floor at the banks' level (never down
+ * at the water line), and the road carried on out of the gate and in from it to the first dry ground, filled where the
+ * water is shallow and on a deck with piers where it is deep (CAUSEWAY_MOST each way). A field on the line is harvested into the stores and
  * the wall stands on its ground (the farmers keep to what is left either side, off the ring); a pen's fence on the
  * line goes back to the stores and the wall takes its place, so the pen stays closed. Somebody's building on the line
  * is built round: the wall is laid in every cell of the line the town's placement gate allows (TownBlocks, Why.WALL),
@@ -123,6 +125,11 @@ public final class CastleWall {
     static final int BRIDGE = 3;
     /** Every this many columns over water a pier; arches with a grate under them between. */
     static final int PIER_EVERY = 4;
+    /** The longest causeway a gate over water is given each way along its avenue, to the first dry ground: water wider
+     *  than this (a lake) has none, rather than a pier to nowhere. */
+    static final int CAUSEWAY_MOST = 24;
+    /** Water up to this deep under a causeway is filled to its deck; deeper, the deck is a bridge on piers. */
+    static final int CAUSEWAY_FILL = 4;
     /** A want's flag: laid round somebody's work (a column of theirs on the line): it fills what is empty there and
      *  keeps whatever stands (their planks are not the palisade's, to be refaced). */
     static final int ROUND = 8;
@@ -431,6 +438,7 @@ public final class CastleWall {
         int lo = WallPlan.lo(s, side) - WallPlan.TOWER, hi = WallPlan.hi(s, side) + WallPlan.TOWER;
         int n = hi - lo + 1;
         int[] g = new int[n], k = new int[n], f = new int[n];
+        boolean[] wetGate = new boolean[n];
         int up = WallPlan.height(Villages.Age.NETHER.ordinal()) + 4;
         WallPlan.Sides was = old(v.id());
         List<WallPlan.Tower> wasTowers = was == null ? List.of() : WallPlan.towers(was);
@@ -462,6 +470,7 @@ public final class CastleWall {
                 if (u == 1) mid = y;
             }
             int level0 = most != Integer.MIN_VALUE ? Math.max(most, surface) : surface;
+            wetGate[i] = Math.abs(a) <= WallPlan.GATE && most == Integer.MIN_VALUE && wet;
             if (Math.abs(a) <= WallPlan.GATE || road && WallPlan.onCrossStreet(a)) k[i] = OPENING;   // a causeway over water
             else if (most == Integer.MIN_VALUE && wet) k[i] = WATER;
             else if (theirs) k[i] = BUILT;
@@ -470,6 +479,7 @@ public final class CastleWall {
             g[i] = k[i] == BUILT ? Integer.MIN_VALUE : level0;
             f[i] = k[i] == WATER ? surface : mid != Integer.MIN_VALUE ? mid : level0 != Integer.MIN_VALUE ? level0 : c.getY();
         }
+        gateDeck(level, c, side, line, lo, g, f, wetGate);
         boolean any = false;
         for (int i = 0; i < n; i++) if (g[i] != Integer.MIN_VALUE) any = true;
         if (!any) java.util.Arrays.fill(g, c.getY());
@@ -488,6 +498,43 @@ public final class CastleWall {
         List<int[]> jogs = jogs(level, v, s, side, g, lo);
         if (jogs == null) return null;
         return new Fit(lo, g, k, f, jogs);
+    }
+
+    /**
+     * A gate over water: its passage one level floor across the avenue, at the banks' level where the road comes
+     * off dry ground (the water's top at least, a block over it at most: the causeway never climbs a hill), never down
+     * at the water line. A gate on dry ground is left as it is.
+     */
+    private static void gateDeck(ServerLevel level, BlockPos c, int side, int line, int lo, int[] g, int[] f, boolean[] wetGate) {
+        int deck = Integer.MIN_VALUE;
+        boolean wet = false;
+        for (int a = -WallPlan.GATE; a <= WallPlan.GATE; a++) {
+            int i = a - lo;
+            if (i < 0 || i >= f.length) return;
+            wet |= wetGate[i];
+            deck = Math.max(deck, f[i]);
+        }
+        if (!wet || deck == Integer.MIN_VALUE) return;
+        int bank = Math.max(bankLevel(level, c, side, line + WallPlan.THICK - 1, 1), bankLevel(level, c, side, line, -1));
+        int floor = bank == Integer.MIN_VALUE ? deck + 1 : Math.max(deck, Math.min(bank, deck + 1));
+        for (int a = -WallPlan.GATE; a <= WallPlan.GATE; a++) {
+            int i = a - lo;
+            f[i] = floor;
+            if (g[i] != Integer.MIN_VALUE) g[i] = Math.max(g[i], floor);
+        }
+    }
+
+    /** Where the avenue through a gate comes to dry ground, going out ({@code step} 1, from the outer face) or in (-1,
+     *  from the inner face): its ground's level, or MIN_VALUE if there is none within CAUSEWAY_MOST. */
+    private static int bankLevel(ServerLevel level, BlockPos c, int side, int face, int step) {
+        for (int k = 1; k <= CAUSEWAY_MOST; k++) {
+            int[] o = WallPlan.offset(side, face + step * k, 0);
+            int x = c.getX() + o[0], z = c.getZ() + o[1];
+            if (!level.hasChunk(x >> 4, z >> 4)) return Integer.MIN_VALUE;
+            int y = ground(level, x, z, c.getY(), false);
+            if (y != Integer.MIN_VALUE) return y;
+        }
+        return Integer.MIN_VALUE;
     }
 
     /** Is this cell (or a cell of this column, from the sky down to the world's own ground) something not of the
@@ -806,6 +853,20 @@ public final class CastleWall {
         final Set<Long> cut = new HashSet<>();
         /** A player's block met where the wall still wants to lay: the line is fitted again, round it. */
         volatile boolean replan;
+        /** Each side's gate causeway, {out, in}: how many columns it runs past the wall's faces (0: dry ground there,
+         *  or no dry ground in reach). Worked out once for the wall, when its gate is first looked at. */
+        private final int[][] spurs = new int[4][];
+
+        /** How far the causeway runs from this side's gate, out ({@code outward}) or in (0 while its ground is not all
+         *  loaded: worked out when it is). */
+        int spur(ServerLevel level, int side, boolean outward) {
+            if (spurs[side] == null) {
+                int[] made = spurs(level, this, side);
+                if (made[0] < 0 || made[1] < 0) return 0;
+                spurs[side] = made;
+            }
+            return spurs[side][outward ? 0 : 1];
+        }
 
         /** Work out the jogs' cells and the line they leave, from the fits. */
         void jogs() {
@@ -892,6 +953,47 @@ public final class CastleWall {
         return w;
     }
 
+    /**
+     * A gate's causeway, one column of the avenue's width: so many columns on from the wall's face this way, its deck's
+     * top a block under the passage's floor. Water up to CAUSEWAY_FILL deep is filled to the deck; deeper, the deck
+     * stands on a pier every PIER_EVERY columns and the water flows under it. The way over it is cleared to head height.
+     */
+    static void causeway(ServerLevel level, int x, int z, Direction dir, int floor, int length, List<Want> out) {
+        for (int k = 1; k <= length; k++) {
+            int px = x + dir.getStepX() * k, pz = z + dir.getStepZ() * k;
+            if (!level.hasChunk(px >> 4, pz >> 4)) return;
+            int bed = foot(level, px, pz, floor - 1);
+            boolean fill = bed != Integer.MIN_VALUE && floor - bed <= CAUSEWAY_FILL;
+            boolean pier = bed != Integer.MIN_VALUE && (fill || k % PIER_EVERY == 0);
+            int from = pier ? bed : floor - 1;
+            for (int y = from; y < floor; y++) out.add(new Want(new BlockPos(px, y, pz), Role.BODY, dir, 0));
+            out.add(new Want(new BlockPos(px, floor, pz), Role.AIR, dir, 0));
+            out.add(new Want(new BlockPos(px, floor + 1, pz), Role.AIR, dir, 0));
+        }
+    }
+
+    /** How far a side's gate causeway runs, {out, in}: across the avenue's width, to the first column where none of it
+     *  is over water (0 where the gate's faces are on dry ground already, or no dry ground is in reach; -1 where its
+     *  ground is not loaded yet). */
+    static int[] spurs(ServerLevel level, Wall w, int side) {
+        int line = w.sides.of(side);
+        return new int[]{ spurLength(level, w, side, line + WallPlan.THICK - 1, 1), spurLength(level, w, side, line, -1) };
+    }
+
+    private static int spurLength(ServerLevel level, Wall w, int side, int face, int step) {
+        for (int k = 1; k <= CAUSEWAY_MOST; k++) {
+            boolean wet = false;
+            for (int a = -WallPlan.GATE; a <= WallPlan.GATE && !wet; a++) {
+                int[] o = WallPlan.offset(side, face + step * k, a);
+                int x = w.heart.getX() + o[0], z = w.heart.getZ() + o[1];
+                if (!level.hasChunk(x >> 4, z >> 4)) return -1;
+                wet = ground(level, x, z, w.heart.getY(), false) == Integer.MIN_VALUE && waterTop(level, x, z, w.heart.getY(), false) != Integer.MIN_VALUE;
+            }
+            if (!wet) return k - 1;
+        }
+        return 0;
+    }
+
     /** Which way is out of the town, on a side. */
     static Direction outward(int side) {
         return switch (side) {
@@ -968,6 +1070,8 @@ public final class CastleWall {
                 if (gate) dress(w, a, x, z, floor, top, outD, in, out);
             }
             for (int y = floor + 3; y <= top - 2; y++) out.add(new Want(new BlockPos(x, y, z), Role.BODY, outD, 0));
+            // Over water: the road carried on out of the gate (from its outer face) and in from it (its inner face).
+            if (gate && layer != 1) causeway(level, x, z, layer == 2 ? outD : in, floor, w.spur(level, c.side(), layer == 2), out);
         } else if (kind == WATER) {
             // Over water: a pier every few columns; between them an arch over the water, a grate under it to the bed.
             int surface = f.floor(a);
