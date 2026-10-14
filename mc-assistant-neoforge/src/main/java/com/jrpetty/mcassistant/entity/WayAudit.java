@@ -193,8 +193,8 @@ public final class WayAudit {
     static boolean litter(ServerLevel level, BlockPos p, BlockState st, boolean onFloor) {
         if (st.isAir() || st.canBeReplaced()) return false;
         if (st.is(BlockTags.BEDS) || st.hasBlockEntity()) return !(st.getBlock() instanceof net.minecraft.world.level.block.SignBlock);
-        // Lamps and their posts, flowers in pots, carpets, banners: the square's own furniture.
-        if (st.is(BlockTags.FENCES) || st.is(BlockTags.WALLS) || st.getBlock() instanceof net.minecraft.world.level.block.LanternBlock
+        // Lamps and their posts, flowers in pots, carpets, banners, the watch's ladders up the wall: the square's own furniture.
+        if (st.is(BlockTags.CLIMBABLE) || st.is(BlockTags.FENCES) || st.is(BlockTags.WALLS) || st.getBlock() instanceof net.minecraft.world.level.block.LanternBlock
             || st.getBlock() instanceof net.minecraft.world.level.block.TorchBlock || st.is(BlockTags.FLOWER_POTS)
             || st.is(BlockTags.WOOL_CARPETS) || st.is(BlockTags.BANNERS) || st.is(BlockTags.SLABS) || st.is(BlockTags.STAIRS))
             return false;
