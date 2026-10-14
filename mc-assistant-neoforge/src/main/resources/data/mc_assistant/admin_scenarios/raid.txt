@@ -1,0 +1,4 @@
+# [admin] A raid on the nearest town: its watch raised and armed in iron, then a band of ten at the gate.
+village admin army raise 12 iron
+village admin army raid 10
+say Raiders at the gate; the bell rings.

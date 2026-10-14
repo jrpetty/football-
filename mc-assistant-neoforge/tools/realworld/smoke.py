@@ -4096,6 +4096,42 @@ def paths_stage(r, look, cx, cz):
     say("alive after the town's ways: %s" % client_alive())
 
 
+def admin_stage(r, look, cx, cz):
+    """[admin] The admin toolkit (/village admin, client/AdminScreen, entity/AdminTools), in a grown town. The panel opened
+    on each of its areas and photographed (the area's actions down the middle, the town's live report and the jobs on
+    the right); an action chosen and dry-run; then the age jump: the town from high over its square as it stands, the
+    age set to the next one with its buildings renovated at once (ages next, then build renovate as a job), and the
+    same view after. What /village admin inspect town and the log say, in words. Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("help: " + r.cmd("village admin help")[:600])
+    areas = ["town", "ages", "people", "army", "economy", "build", "events", "world", "debug"]
+    for i, area in enumerate(areas):
+        say("panel %s: %s" % (area, r.cmd("execute as %s at @s run village admin panel %s" % (USER, area))[:120]))
+        time.sleep(3 if i == 0 else 2)                  # the first opening carries the lists; then a refresh lands
+        shot("55-admin-%d-%s" % (i + 1, area))
+    say("panel shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("dry run: " + r.cmd("execute positioned %d %d %d run village admin people add 50 --dry-run" % (cx, hy + 1, cz))[:400])
+    say("inspect: " + r.cmd("execute positioned %d %d %d run village admin inspect town" % (cx, hy + 1, cz))[:900])
+    # The age jump: before and after, from high over the square.
+    r.cmd("gamemode spectator %s" % USER)
+    look("55-admin-10-age-before", cx - 30.5, hy + 28, cz + 30.5, cx + 0.5, hy + 2, cz + 0.5, wait=8)
+    say("ages next: " + r.cmd("execute positioned %d %d %d run village admin ages next" % (cx, hy + 1, cz))[:400])
+    say("renovate: " + r.cmd("execute positioned %d %d %d run village admin build renovate" % (cx, hy + 1, cz))[:300])
+    for _ in range(30):                                # the renovation job: a building a tick
+        time.sleep(2)
+        if "No admin jobs running" in r.cmd("village admin jobs"):
+            break
+    look("55-admin-11-age-after", cx - 30.5, hy + 28, cz + 30.5, cx + 0.5, hy + 2, cz + 0.5, wait=8)
+    say("log: " + r.cmd("village admin log 8")[:900])
+    say("alive after the admin stage: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

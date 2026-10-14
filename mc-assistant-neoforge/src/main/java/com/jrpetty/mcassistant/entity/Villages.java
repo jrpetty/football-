@@ -139,6 +139,14 @@ public final class Villages {
     /** Tests only: put a village straight into an age. */
     public static void ageForTests(UUID id, Age age) { AGE.put(id, age); }
 
+    /** [admin] The age set by decree (AdminTools): kept, dated and told as coming of age is; the rest is AdminTools'. */
+    public static void decreeAge(net.minecraft.server.level.ServerLevel level, UUID id, Age age) {
+        if (AGE.put(id, age) == age) return;
+        long day = level.getDayTime() / 24000L;
+        AGED_ON.put(id, day);
+        tell(id, day, "the village came into " + age.label);
+    }
+
     /** Tests: the stores counted afresh on the next look. */
     public static void resetStockForTests() { STOCK_TICK.clear(); STEADY.clear(); }
 
@@ -2409,7 +2417,7 @@ public final class Villages {
     }
 
     /** The building is up, or its lot given up: the crew on it is free for the next. */
-    private static void crewDone(UUID villageId, String project) {
+    static void crewDone(UUID villageId, String project) {               // [admin] package: AdminTools.unstick resets crews
         Map<UUID, Crew> m = CREWS.get(villageId);
         if (m == null) return;
         boolean any = m.values().removeIf(c -> project.equals(c.project));

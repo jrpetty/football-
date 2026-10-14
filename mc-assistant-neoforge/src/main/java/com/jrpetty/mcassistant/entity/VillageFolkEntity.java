@@ -588,6 +588,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level() instanceof net.minecraft.server.level.ServerLevel valuing) Values.daily(valuing, this, level().getDayTime() / 24000L);
         // Its own knacks (FolkSkills): a point to spend, chosen at a quiet moment; a guard's armour kept up.
         if (level() instanceof net.minecraft.server.level.ServerLevel knackLevel) FolkSkills.tick(knackLevel, this);
+        long adminT0 = com.jrpetty.mcassistant.admin.AdminProbe.start();      // [admin] the town's own rounds timed, only while watched
         if (ownerId() != null) {
             Villages.chooseElder(ownerId(), level().getDayTime() / 24000L);
             if (level() instanceof net.minecraft.server.level.ServerLevel polls) {
@@ -628,6 +629,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 TownScheduler.done(started);
             }
         }
+        com.jrpetty.mcassistant.admin.AdminProbe.stop(ownerId(), adminT0);       // [admin]
         if (withAPlayer) return;
         keepTrail();
         agenda();

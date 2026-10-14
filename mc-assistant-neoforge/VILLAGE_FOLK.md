@@ -11408,3 +11408,55 @@ The game tests `PathsGameTests` check that:
 * a folk walks into a box through a wooden door, not through an iron one;
 * (not required, minutes long) pa10: a town of forty founded and grown for eight days with every feature live and its
   stores kept stocked, its ways looked over every half day; pa11 the same town with the paths work switched off, to compare.
+
+## The admin toolkit [admin]
+
+An operator's tools for testing and running towns: fast-forward to any age, add folk by the hundred, arm an army,
+start a war and jump to its battle, fill the stores, put up every building, skip days, bring about any event. One list
+of actions (village/AdminSpec) makes the commands, the help, the tab completion and the panel, so they always agree.
+
+**Honest state.** Every action changes the town the way play would have, so it runs on by itself afterwards
+(entity/AdminTools). Setting an age sets the age the town's own rules read (its trades, research and building rules
+open), stocks its stores with the age's goods, brings its folk's tools up to the age, and renovates its buildings at
+once (`instant`, a building a tick) or leaves it to the builders (`queued`); `fill` raises the headcount to the age's
+size. Folk are raised as a founding party is (named, kitted, the town's own pick of trade), couples are pledged and
+wed by the town, camp beds are pitched and the houses left to the builders. A war is declared, a battle staged and a
+peace made through the war's own code; a raid's band is the raid's own with its size set; a market day is the market's.
+Every change is written in the town's chronicle as "By decree: ..." and in `<world>/mcassistant/admin-log.txt`.
+
+**Permissions.** Operator level 2 by default (the single-player owner always). Server config
+(`serverconfig/mc_assistant-server.toml`): `adminTools` on/off, `level`, `areaLevels` (per area), `allowedPlayers`
+(names or UUIDs), `disabledAreas`, `destructiveLevel`, `confirmSeconds`, `entityWarning`. Each area is also a NeoForge
+permission node, `mc_assistant.admin.<area>`, for permission mods.
+
+**Safety.** Destructive actions (remove or kill folk, empty the stores, restore a snapshot) below `destructiveLevel`
+print what they will do and a `/village admin confirm <id>` good for thirty seconds. `--dry-run` on anything says what
+would change and changes nothing. Big actions run as jobs over ticks (four folk a tick, a building a tick, a day every
+half second), with a boss bar, `/village admin jobs` and `/village admin cancel <job>`; hard caps (500 folk a call, 60
+days, 40 raiders, 200 soldiers) and an entity-count warning. `--snapshot`, or `/village admin snapshot`, keeps a copy
+of a town's **saved data only** (age, treasury, every note in its books, its research), not blocks or folk;
+`/village admin restore <snapshot>` puts it back.
+
+**Inspect.** `inspect town` (age and what the next one needs, people by trade, children, elders and couples, homes and
+beds, stores, treasury, wars and vassals, the town's own tick cost, problems found), `inspect folk folk:<name>`,
+`inspect building` (the nearest building: its design, stamp and renovation). `debug cost` gives the server's tick time
+and each town's measured cost; `debug overlay lots|wall|stuck|ore|chests` draws particles only you see for a minute,
+`debug overlay wanted` says what the age, the shops and the jobs want; `debug audit` runs the town audit.
+
+**Presets, scripts, scenarios.** `preset save <name>` keeps a town's setup (age, population, the watch and its kit,
+the stores' main goods) as an editable text file; `preset apply <name>` brings another town up to it. `run <file>`
+runs `<world>/mcassistant/admin-scripts/<file>.txt`: one command a line, `#` comments, `wait <s>`, `waitfor <n>
+[town:x]`, `say <text>`; two examples are copied in (`iron-age-war`, `big-city`). `scenario battle|market|restaurant|
+raid|big-city|earning` builds a ready-made scene from the same kind of script shipped in the mod (two Iron Age towns
+of seventy at war and lined up; a busy market day; a full dinner service; a raid; a city of five hundred; a town with
+work posted).
+
+**The panel** (an unbound key under Controls, the board's **Admin** button, or `/village admin panel [area]`):
+the areas down the left with a search over every action and your recent actions to run again; the town picker and a
+live status strip (tick time, folk, jobs) across the top; the area's actions in the middle, the chosen one's values
+with **Dry run** and **Run** below; the town's live report and the jobs on the right. A destructive action asks to
+confirm and offers a snapshot first; a big one offers a snapshot before it starts. The panel only builds command lines:
+the server runs each exactly as typed, permissions and all.
+
+**Cost.** Nothing runs when nobody uses it: the job queue returns at once when empty, the tick-cost probe is one
+volatile read a folk tick unless somebody is looking, the market-day and raid-size hooks read an empty map.

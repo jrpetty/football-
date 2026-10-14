@@ -129,6 +129,18 @@ nether <target> [n] · boat <x y z> · patrol <a> <b> · clear [size] ·
 lightup [radius] · bridge · jobs · status · open · role <role> ·
 auto <on|off> · night <on|off> · rename <name> · dismiss`
 
+### The admin toolkit (operators) [admin]
+
+`/village admin <area> <action> [values] [town:<name|id|nearest|all|newest>] [folk:<name|uuid|@trade|@all>] [--dry-run] [--snapshot]`
+— everything an operator needs to test or run towns, with tab completion for every value. `/village admin help [area]`
+lists the actions with an example each. Areas: `town` (inspect, snapshot, restore, preset), `ages` (set, next, needs,
+meet; research unlock/all/knacks), `people` (add, trade, children, elders, couples, charter, remove, kill, heal, skill,
+needs, grow, marry, births, leader, election), `army` (kit, raise, war, phase, vassal, free, raid, peace), `economy`
+(coin, pay, fill, give, empty, price, wagon, market, till), `build` (finish, all, named, walls, renovate, unstick, place),
+`events now <event>`, `world` (skip, season, weather, time, found, rival, tp, scenario, run, scripts), `debug` (overlay,
+audit, cost). And: `log [n]`, `jobs`, `cancel <job>`, `confirm <id>`, `panel [area]`. The panel: an unbound key under
+Controls, or the **Admin** button on the village board's books. See VILLAGE_FOLK.md, "The admin toolkit".
+
 ## 10. Automatic systems (no command needed)
 
 - **Grave guard** — if the owner dies within ~128 blocks, the nearest
