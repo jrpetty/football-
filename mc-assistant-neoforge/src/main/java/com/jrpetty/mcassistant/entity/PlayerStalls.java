@@ -76,8 +76,9 @@ import java.util.function.Predicate;
  *     of its trade, food in a hungry village, a comfort for its home, something nice when it is well
  *     off), it walks to the stall and weighs the price against the going one: the thrifty want it
  *     cheaper, the comfortable pay a tenth over, the well-off a quarter, the wealthy a little more,
- *     and nobody half as much again; and nobody pays more than the village asks for what the village
- *     has itself. At the market's own stalls on market day it weighs the players' stalls too, as it
+ *     and nobody half as much again; and for what the village has itself nobody pays more than the
+ *     least the village would let it go for ([market] Market.leastLot: no buying it of the town to
+ *     sell it on to the town's own folk). At the market's own stalls on market day it weighs the players' stalls too, as it
  *     would any other seller. Paid out of its own purse into the stall's till; the goods go into its
  *     pack, or home with it. Too dear, and it says so.</li>
  * <li><b>The books.</b> Every sale booked (who, what, for how much), a week of takings and all of them,
@@ -524,7 +525,10 @@ public final class PlayerStalls {
             boolean fav = favourite != null && s.is(favourite);
             boolean villageHas = Market.stock(level, id, x -> ItemStack.isSameItemSameComponents(x, s)) > 0;
             Offer o = new Offer(s.copyWithCount(1), key, n, priceN, goingN, fav);
-            if (priceN > most(goingN, willing(f, fav), villageHas)) {
+            // [market] For what the town has on its own shelves, no more than the least the town lets it go for: bought at
+            // the town's counter with every discount and sold to its folk at a stall, a lot made a middleman's profit.
+            int least = villageHas ? Market.leastLot(level, id, s, n) : Integer.MAX_VALUE;
+            if (priceN > Math.min(least, most(goingN, willing(f, fav), villageHas))) {
                 if (dearest == null || o.ratio() > dearest.ratio()) dearest = o;
                 continue;
             }

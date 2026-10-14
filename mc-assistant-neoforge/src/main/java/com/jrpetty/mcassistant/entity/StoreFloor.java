@@ -212,6 +212,7 @@ public final class StoreFloor {
         if (shown.isEmpty()) return new String[]{ "", "Sold out", "", "" };
         int each = ShopStock.price(level, village, shown);
         int lot = lotOf(shown);
+        int forLot = ShopStock.lotPrice(level, village, shown, lot);                 // [market] the lot's own price
         String name = shown.getHoverName().getString(), one = name, two = "";
         if (name.length() > 15) {
             int cut = name.lastIndexOf(' ', 15);
@@ -220,7 +221,8 @@ public final class StoreFloor {
             two = name.substring(cut).trim();
             if (two.length() > 15) two = two.substring(0, 15);
         }
-        return new String[]{ one, two, each + (each == 1 ? " coin" : " coins") + (lot > 1 ? " each" : ""), lot > 1 ? lot + " for " + each * lot : "" };
+        return lot > 1 ? new String[]{ one, two, lot + " for " + forLot + (forLot == 1 ? " coin" : " coins"), "" }
+            : new String[]{ one, two, each + (each == 1 ? " coin" : " coins"), "" };
     }
 
     /** How many a player buys at once: the board's lot (eight loaves...), never more than sixteen. */
@@ -374,7 +376,7 @@ public final class StoreFloor {
             for (int i = 0; i < c.getContainerSize() && one.isEmpty(); i++) if (!c.getItem(i).isEmpty() && what.test(c.getItem(i))) one = c.getItem(i).copyWithCount(1);
         }
         if (one.isEmpty()) one = StockKeeper.sampleFor(what);
-        int price = one.isEmpty() ? n : ShopStock.price(level, id, one) * n;
+        int price = one.isEmpty() ? n : ShopStock.lotPrice(level, id, one, n);      // [market] the same price as a player's
         price = FolkSkills.thrifty(buyer, price);
         if (buyer.purse() < price) return new Sale(false, null, post.counter(), price, ItemStack.EMPTY, "purse");
         List<ItemStack> got = ShopStock.takeStacks(level, v, what, n, buyer);
@@ -415,11 +417,12 @@ public final class StoreFloor {
         }
         int short_ = lot - ShopStock.held(level, id, same);
         if (short_ > 0 && Budget.spare(level, id, shown) < short_) return "They can't spare " + name + " — the village needs it itself just now.";
-        int price = ShopStock.price(level, id, shown) * lot;
+        int price = ShopStock.lotPrice(level, id, shown, lot);                      // [market] the town's one asking price
         if (title == Standing.Title.UNWELCOME) price *= 2;
         else if (title.atLeast(Standing.Title.FRIEND)) price = Math.max(1, price - price / 10);
         if (Citizens.is(id, p.getUUID())) price = Math.max(1, price - Math.max(1, price / 10));
         price = Dealings.haggled(id, p.getUUID(), day, price);
+        price = Math.max(price, Market.leastLot(level, id, shown, lot));            // [market] never under the least
         String coins = price == 1 ? " coin" : " coins";
         if (p.isShiftKeyDown()) return name + ": " + price + coins + ". Right-click to buy.";
         int held = Market.coinsHeld(p);

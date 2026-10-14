@@ -511,8 +511,10 @@ output, the worth and the three best paid, and any folk will tell you who earns 
 Everything the folk can mine, grow, catch or make has a price in village coin, and they are
 paid for all of it:
 
-* **The market's board first.** A loaf 0.3, a log 0.25, a cobblestone 0.04, an iron ingot
-  1.5, a gold ingot 9, a diamond 24. The board, the shop and the wages never disagree.
+* **The market's board names a price** for what it deals in: a log 0.25, a cobblestone 0.04, an
+  iron ingot 1.5, a gold ingot 9, a diamond 24. For anything made, that is never under its
+  makings and the work: a loaf is at least its three wheat and the baker's time (0.39). The
+  board, the shop and the wages never disagree (see *The town economy*, at the end).
 * **Everything gathered** is on a base list: every ore (in the block and out of it), every
   kind of stone, earth and sand, the Nether's and the End's blocks, crops and seeds,
   saplings, flowers, mushrooms and coral, everything from animals and monsters (hides,
@@ -5640,7 +5642,7 @@ want for themselves.
   every ware its sellers deal in. Supply is what its stores and its shop hold and what it made yesterday;
   demand is what was sold at its counters, what was asked for and not there, what folk drew from the stores
   and what went into making other things. Three days' want on hand is the usual price; less makes it dear,
-  more makes it cheap. What folk would not pay brings a price down. A price stays between four tenths and
+  more makes it cheap. What folk would not pay brings a price down. A price stays between half and
   three times what the thing is usually worth, and moves a little each day (never more than fifteen in the
   hundred), so bread does not double overnight. A new town sells at the usual worth until its first morning.
   Market day's tenth off, a slow ware's markdown and the shop's floor at what a thing cost to make still apply.
@@ -10648,3 +10650,52 @@ The game tests `RedstoneGameTests` (rs01 to rs10) check that:
   furnaces burning, counted to the trade;
 * every part comes from its real recipe out of the stores, and no observer is made without quartz;
 * left to its own day, the engineer plans a street lamp the stores can run to, walks out to it and builds it.
+
+## The town economy
+
+One worth for everything, one price for everybody, and coin that holds its value. (The arithmetic is in
+`village/Worth`, with a plain test; the towns' prices in `PriceIndex`; the counters in `Market`.)
+
+* **What a thing is worth.** Gathered things are worth the effort and the rarity of getting them: a block of
+  stone a few hundredths, an ore by its depth and the pick it wants, the Nether's and the End's dearer for the
+  journey, a crop by its growing, a monster's drop by the fight, a treasure by how seldom it is found (the base
+  list, `village/BaseWorth`). Made things are worth their cheapest makings and the work on top (a tenth and a
+  little a part at the table, the fuel in a furnace, next to nothing at the stonecutter), less what the recipe
+  gives back (a cake's three buckets). The market's board names a price for what it deals in; for a made good
+  that is never under its makings and the work, and the town's books say which were raised. The emerald is
+  worth what a villager gives one for (twenty wheat, six loaves: 2.5 coins); a gold ingot is its nine coins.
+* **What it costs in a town.** Each town's price is that worth times a factor of how its stock stands against
+  what it wants (sold, asked for and not there, drawn, used up, and what it is short of for its next age),
+  between half and three times, moving a little a day with eight days' history. The gold bar never moves; the
+  emerald only a little. Short, a thing grows dear ("wanted for the Iron Age"); a glut grows cheap.
+* **One price for everybody.** The town asks its price and the keeper's margin (about a tenth; the stock keeper
+  nudges it between a twentieth and a quarter, food never over a fifth), a little less on market day: at the
+  stalls, the shop, the store's counter, the fish market and the storekeeper's, folk and players alike.
+  A friend, a citizen, a haggle or the town's key take a little off a player's price, but **no lot ever goes
+  for under nine tenths of the town's price**. The town **pays four fifths of its price** for what a player
+  brings (a little more on market day), never more than nine tenths of the cheapest it sells the thing or its
+  makings for, and nothing for a lot not worth a coin to it. So no round of buying from a town, making,
+  breaking or emptying, and selling back to it, ever comes out ahead.
+* **Coin.** Coin comes in from the world for the town's work (the morning's takings and the passing traders),
+  from the mint (nine a gold bar) and from players; it goes round as wages, rent, tithe and what the folk buy;
+  and it goes out on what the town buys from outside, what it pays players, and its **upkeep**: a twentieth a day
+  of whatever the treasury holds over a fortnight's wages, so a busy town's treasury settles at a few weeks' pay
+  instead of hoarding. Savings at the treasury earn only out of what its loans earn; coin put into the works
+  earns up to a half in the hundred a day and comes back after two weeks. A friend's free share at the stores
+  is a couple of coins' worth a day, and the stall will not buy a gift back.
+* **Trade between towns.** Each town's trade book reads its surpluses and shortages from its own stores and prices.
+  An envoy and the other town's leader strike a contract only where both gain by their own prices after the haul
+  (a cart's carrying both ways over the road between them, and the risk of losing a load): so many of one town's
+  surplus each delivery, for so many of the other's and coin, every few days for three weeks. A hungry town sends
+  to the neighbour with food over first, whatever its elder's temper, and deals in food first. Each delivery goes
+  by the trade wagons when the town has them, by a caravan when a hand can go, and by the road when none can; the
+  goods leave the sender's stores when they set out and reach the other's when they arrive, and the buyer pays on
+  delivery. A load lost or nothing to send is a shortfall; three in a row and the contract ends. The Trade page
+  shows each contract, why it stands, what each side has gained by its own prices, and what is on the road; ask a
+  folk what the town trades and it will tell you.
+* **Production follows prices.** A trade whose goods are dear wants more hands (up to a quarter more), one whose
+  goods are a glut fewer; the Prices page says which trades lean, and why.
+* **Seeing it.** The Prices page (and `/village prices`) has each good's price, its arrow and why, the coin in
+  the treasury and the purses, the upkeep, the spread and the leans; the price signs show the arrow; a folk
+  asked about prices tells you what has moved.
+

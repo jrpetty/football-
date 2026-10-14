@@ -4349,7 +4349,7 @@ public class VillageGameTests {
      * The village's own needs first. Short of food it sells nothing but a glut (its mountain of
      * cobblestone): not its swords, not its bread. With a full larder, every hand tooled and its
      * beds made, what is over is for sale — a stranger buys a spare sword from the storekeeper at
-     * the price list's worth and a quarter over — and it still keeps a sword for itself.
+     * the town's asking price ([market] its price and the keeper's tenth over) — and it still keeps a sword for itself.
      */
     @GameTest(template = EMPTY, timeoutTicks = 100, batch = "t68_budget")
     public static void t68_budget(GameTestHelper helper) {
@@ -4403,7 +4403,7 @@ public class VillageGameTests {
         for (int i = 0; i < p.getInventory().getContainerSize(); i++) if (p.getInventory().getItem(i).is(Items.IRON_SWORD)) got++;
         int coinsAfter = com.jrpetty.mcassistant.village.Ledger.coins(id);
         Kit.log("t68 the storekeeper: " + sold + " (treasury " + coinsBefore + " -> " + coinsAfter + ", " + got + " sword)");
-        helper.assertTrue(got == 1 && coinsAfter == coinsBefore + 5, "a stranger buys a spare sword for 5 coins (4, and a quarter over)");
+        helper.assertTrue(got == 1 && coinsAfter == coinsBefore + 4, "a stranger buys a spare sword for 4 coins (4, and the town's tenth over, rounded)");   // [market] one spread
         helper.succeed();
     }
 
