@@ -43,11 +43,17 @@ public final class Floors {
     /** One thing to put right inside a building: earth where a block is drawn ({@code lay}), or a plant on its floor. */
     public record Fix(BlockPos pos, boolean lay, Blueprints.Style style, String building) {}
 
+    /** What the round last found inside each building (by village, by anchor): the looks are measured off this, so no
+     *  tick has to go over every building of a big town at once. */
+    private static final Map<UUID, Map<Long, Integer>> KNOWN = new ConcurrentHashMap<>();
+
     /** The drawing's placements for a building, worked out once (they never change for an anchor). */
     private static final Map<String, List<BuildGoal.Placement>> PLANS = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
         PLANS.clear();
+        KNOWN.clear();
+        CURSOR.clear();
     }
 
     /** The drawing a building of the register stands to: a house given its second storey is the two-storey house. */
@@ -94,7 +100,15 @@ public final class Floors {
         return out;
     }
 
-    /** How much grass and earth is inside this village's buildings now: {earth where a floor is drawn, plants on floors}. */
+    /** How much grass, earth and weeds the round last found inside the village's buildings (cheap: no building looked at). */
+    public static int known(UUID village) {
+        int n = 0;
+        for (int k : KNOWN.getOrDefault(village, Map.of()).values()) n += k;
+        return n;
+    }
+
+    /** How much grass and earth is inside this village's buildings now, every building looked at: {earth where a floor
+     *  is drawn, plants on floors}. For the audit and the tests. */
     public static int[] count(Level level, UUID village) {
         int[] n = new int[2];
         for (Ledger.Building b : Ledger.buildings(village)) {
@@ -118,7 +132,7 @@ public final class Floors {
         BlockState there = level.getBlockState(f.pos());
         if (!f.lay()) {
             if (!BuildGoal.isWildPlant(there)) return true;
-            for (ItemStack drop : Block.getDrops(there, level, f.pos(), null)) TownWork.give(level, v, drop);
+            for (ItemStack drop : Block.getDrops(there, level, f.pos(), null)) TidyFixes.store(level, v, f.pos(), drop);
             level.setBlock(f.pos(), Blocks.AIR.defaultBlockState(), 3);
             return true;
         }
@@ -128,7 +142,7 @@ public final class Floors {
         // Anything growing on the earth comes up with the turf.
         BlockState above = level.getBlockState(f.pos().above());
         if (BuildGoal.isWildPlant(above)) level.setBlock(f.pos().above(), Blocks.AIR.defaultBlockState(), 2 | 16);
-        TownWork.give(level, v, new ItemStack(Items.DIRT));
+        TidyFixes.store(level, v, f.pos(), new ItemStack(Items.DIRT));
         level.setBlockAndUpdate(f.pos(), floor);
         return true;
     }
@@ -201,6 +215,7 @@ public final class Floors {
                 continue;                                              // going up again just now: the builder's
             }
             List<Fix> fixes = inside(level, v.id(), b);
+            KNOWN.computeIfAbsent(v.id(), k -> new ConcurrentHashMap<>()).put(b.anchor().asLong(), fixes.size());
             if (!fixes.isEmpty()) {
                 CURSOR.put(v.id(), cursor);
                 return fixes.get(0);
@@ -209,6 +224,12 @@ public final class Floors {
         }
         CURSOR.put(v.id(), cursor);
         return null;
+    }
+
+    /** Every building looked over now, what is inside each kept (the audit, the command, the tests). */
+    static void lookOverAll(ServerLevel level, Villages.Village v) {
+        Map<Long, Integer> known = KNOWN.computeIfAbsent(v.id(), k -> new ConcurrentHashMap<>());
+        for (Ledger.Building b : Ledger.buildings(v.id())) known.put(b.anchor().asLong(), inside(level, v.id(), b).size());
     }
 
     /** Every fix inside the building this one is in, within a few blocks of it (done together, the hand once there). */

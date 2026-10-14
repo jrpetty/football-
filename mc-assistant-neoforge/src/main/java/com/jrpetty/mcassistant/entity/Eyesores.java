@@ -376,23 +376,28 @@ public final class Eyesores {
     }
 
     /** Earth and rock as a cut or a folk's tower leaves it: what a pillar or a stray block is made of. */
+    private static final java.util.Set<net.minecraft.world.level.block.Block> ROUGH = java.util.Set.of(
+        Blocks.DIRT, Blocks.COARSE_DIRT, Blocks.ROOTED_DIRT, Blocks.GRASS_BLOCK, Blocks.GRAVEL, Blocks.SAND, Blocks.RED_SAND,
+        Blocks.COBBLESTONE, Blocks.MOSSY_COBBLESTONE, Blocks.COBBLED_DEEPSLATE, Blocks.NETHERRACK,
+        Blocks.STONE, Blocks.DEEPSLATE, Blocks.ANDESITE, Blocks.DIORITE, Blocks.GRANITE, Blocks.TUFF);
+    /** Ground with no turf on it: bare earth, or rock cut open. */
+    private static final java.util.Set<net.minecraft.world.level.block.Block> BARE = java.util.Set.of(
+        Blocks.DIRT, Blocks.COARSE_DIRT, Blocks.ROOTED_DIRT,
+        Blocks.STONE, Blocks.ANDESITE, Blocks.DIORITE, Blocks.GRANITE, Blocks.DEEPSLATE, Blocks.TUFF);
+
+    /** Earth and rock as a cut or a folk's tower leaves it: what a pillar or a stray block is made of. */
     public static boolean rough(BlockState st) {
-        return st.is(Blocks.DIRT) || st.is(Blocks.COARSE_DIRT) || st.is(Blocks.ROOTED_DIRT) || st.is(Blocks.GRASS_BLOCK)
-            || st.is(Blocks.GRAVEL) || st.is(Blocks.SAND) || st.is(Blocks.RED_SAND)
-            || st.is(Blocks.COBBLESTONE) || st.is(Blocks.MOSSY_COBBLESTONE) || st.is(Blocks.COBBLED_DEEPSLATE) || st.is(Blocks.NETHERRACK)
-            || st.is(Blocks.STONE) || st.is(Blocks.DEEPSLATE) || st.is(Blocks.ANDESITE) || st.is(Blocks.DIORITE) || st.is(Blocks.GRANITE)
-            || st.is(Blocks.TUFF);
+        return ROUGH.contains(st.getBlock());
     }
 
     /** Ground with no turf on it: bare earth, or rock cut open. */
     public static boolean bare(BlockState st) {
-        return st.is(Blocks.DIRT) || st.is(Blocks.COARSE_DIRT) || st.is(Blocks.ROOTED_DIRT)
-            || st.is(Blocks.STONE) || st.is(Blocks.ANDESITE) || st.is(Blocks.DIORITE) || st.is(Blocks.GRANITE)
-            || st.is(Blocks.DEEPSLATE) || st.is(Blocks.TUFF);
+        return BARE.contains(st.getBlock());
     }
 
+    /** A block's plain name for the notes ("cobblestone", "coarse dirt"). */
     private static String name(BlockState st) {
-        return st.getBlock().getName().getString().toLowerCase(java.util.Locale.ROOT);
+        return net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).getPath().replace('_', ' ');
     }
 
     /**

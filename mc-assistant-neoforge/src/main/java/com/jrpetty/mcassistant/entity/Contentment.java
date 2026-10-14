@@ -148,7 +148,7 @@ public final class Contentment {
         if (feasts > 0) good.add("feast days kept");
         feasts += Festivals.contentment(id, day, good);           // [batchB] a festival kept in the last few days
         feasts += Perks.contentment(id, good, bad);               // [perks] the new civics, the wonders, the leader, its legacies
-        feasts += Tidy.contentment(id, good, bad);                // [tidy] proud of how the town looks, or put out by a mess
+        feasts += TownLooks.contentment(id, good, bad);                // [tidy] proud of how the town looks, or put out by a mess
         int score = Math.max(0, Math.min(100, foodPts + homesPts + moodPts + safety + amenities + wages + rest + feasts));
         score = Math.max(0, Math.min(100, score + WarAndPeace.contentment(id, good, bad)));   // [war-peace] war-weariness
         score = Math.max(0, Math.min(100, score + Identity.contentment(id, day, good, bad)));   // [identity] its ways, laws, rulers, traits

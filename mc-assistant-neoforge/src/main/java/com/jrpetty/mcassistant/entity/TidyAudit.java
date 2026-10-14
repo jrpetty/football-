@@ -45,7 +45,7 @@ public final class TidyAudit {
             r.measure("lying", Sweepers.lying(level, v));
         });
         TownAudit.register(LOOKS, (level, v, r) -> {
-            Tidy.Looks l = Tidy.measureForTests(level, v);
+            TownLooks.Looks l = TownLooks.measureNow(level, v);
             r.measure(LOOKS, l.score());
             r.measure("looks_tidiness", l.tidiness());
             r.measure("looks_greenery", l.greenery());
@@ -57,7 +57,7 @@ public final class TidyAudit {
 
     /** What the audit found. */
     public record Report(int eyesores, Map<Eyesores.Kind, Integer> byKind, int campBedsHoused, int earthInside, int plantsInside,
-                         int lying, Tidy.Looks looks, List<Eyesores.Spot> spots) {
+                         int lying, TownLooks.Looks looks, List<Eyesores.Spot> spots) {
 
         /** No grass, earth or plant inside any building. */
         public boolean noGrassInside() {
@@ -81,7 +81,7 @@ public final class TidyAudit {
     public static Report check(ServerLevel level, UUID village) {
         Villages.Village v = Villages.get(village);
         if (v == null) return null;
-        Tidy.Looks looks = Tidy.measureForTests(level, v);
+        TownLooks.Looks looks = TownLooks.measureNow(level, v);
         Eyesores.Walk w = Eyesores.last(village);
         if (w == null) w = new Eyesores.Walk();
         Map<Eyesores.Kind, Integer> by = new EnumMap<>(Eyesores.Kind.class);

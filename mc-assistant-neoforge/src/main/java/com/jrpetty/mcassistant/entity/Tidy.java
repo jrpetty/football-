@@ -58,23 +58,32 @@ public final class Tidy {
 
     private Tidy() {}
 
-    /** How often a town's crew is looked at (ticks), and how many columns of the town are walked each time. */
+    /** How often a town's crew is looked at (ticks). */
     static final long EVERY = 100L;
-    static final int WALK = 2500;
+    /** How often the town is walked on, and how many of its columns each time: a slice a second, so no one tick carries
+     *  a whole town's walk (the largest town, 183 columns square, is gone over in about a minute). */
+    static final long WALK_EVERY = 20L;
+    static final int WALK = 500;
     /** How near the spot a fix is put right along with the one the hand was sent to. */
     static final int ALONG = 4;
     /** A spot nobody could get to, or put right, is left this long. */
     static final long LEAVE = 6000L;
-    /** The looks below which the elder calls a clean-up day; days between them. */
-    static final int UNTIDY = 50, PROUD = 70;
-    public static final int UNTIDY_FOR_TESTS = UNTIDY;
-    static final long CLEANUP_EVERY = 3;
-    /** A hole filled this deep at most (a deeper one is a shaft, or a cave's mouth: somebody's to see to by hand). */
-    static final int DEEPEST = 8;
+    /** Crews out on a clean-up day (TownLooks), and on any other. */
+    static final int CLEANUP_CREWS = 3;
+    /** A dark corner with no room for a lamp post beside it is looked at again only after this many times the usual wait. */
+    static final int NO_ROOM_LEAVE = 4;
+    /** Block light a street cell wants after dark (the game's monsters spawn below it). */
+    static final int LIT = 8;
+    /** A flower bed every so many blocks along a verge (a bed, not a hedge of flowers). */
+    static final int FLOWER_EVERY = 4;
+    /** The sweeper puts an eyesore right within this many blocks of it (and this far up or down). */
+    static final double BROOM_REACH = 3.0, BROOM_UP = 5.0;
+    /** The sweeper gives an eyesore up when it has got no nearer in this long. */
+    static final long BROOM_STUCK = 400L;
 
-    /** A town's crew: what it is going for, what it has done today, and its looks. */
+    /** A town's crew: what it is going for, and what it has done today. */
     static final class Crew {
-        long looked = -100000L;
+        long looked = -100000L, walked = -100000L;
         @Nullable Floors.Fix floor;
         final Map<String, Eyesores.Spot> going = new HashMap<>();
         /** Spots left alone a while (nobody could get to them, or nothing in the stores to put them right with), till when. */
@@ -83,13 +92,13 @@ public final class Tidy {
         final Map<Eyesores.Kind, Integer> done = new java.util.EnumMap<>(Eyesores.Kind.class);
         int flowers, trimmed, lamps;
         long day = -1L;
-        @Nullable Looks looks;
-        long cleanupCalled = -100L;
-    }
 
-    /** The town's looks, out of a hundred, and what they are made of. */
-    public record Looks(int score, int tidiness, int greenery, int lighting, int flowers, int finished, int eyesores, int grassInside,
-                        String word, String worst) {}
+        int doneToday() {
+            int n = floored + plantsUp + flowers + trimmed + lamps;
+            for (int k : done.values()) n += k;
+            return n;
+        }
+    }
 
     private static final Map<UUID, Crew> CREWS = new ConcurrentHashMap<>();
     /** The sweepers' own spots (a sweeper with nothing for its broom tidies), by sweeper. */
@@ -102,6 +111,7 @@ public final class Tidy {
         BROOM_PROGRESS.clear();
         Floors.resetForTests();
         Eyesores.resetForTests();
+        TownLooks.resetForTests();
     }
 
     static Crew crew(ServerLevel level, UUID id) {
@@ -113,39 +123,61 @@ public final class Tidy {
             c.plantsUp = 0;
             c.done.clear();
             c.flowers = c.trimmed = c.lamps = 0;
-            String kept = Ledger.note(id, "tidy_cleanup");
-            try {
-                if (kept != null) c.cleanupCalled = Long.parseLong(kept);
-            } catch (NumberFormatException ignored) {
-            }
         }
         return c;
     }
 
     // ------------------------------------------------------------------ the round
 
+    /** Villages whose round has gone wrong once (said once in the log, not every five seconds). */
+    private static final java.util.Set<UUID> FAULTED = ConcurrentHashMap.newKeySet();
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     /** From the town's rounds (the folk's tick, beside TownWork.tick): a walk on through the town, and the crew's next piece of work. */
     public static void tick(ServerLevel level, Villages.Village v) {
         long now = level.getGameTime();
         Crew c = crew(level, v.id());
-        if (now - c.looked < EVERY && now >= c.looked) return;
-        c.looked = now;
+        boolean walk = now - c.walked >= WALK_EVERY || now < c.walked, work = now - c.looked >= EVERY || now < c.looked;
+        if (!walk && !work) return;
         if (!level.isLoaded(v.centre())) return;
+        try {
+            if (walk) {
+                c.walked = now;
+                walkOn(level, v);
+            }
+            if (work) {
+                c.looked = now;
+                round(level, v, c, now);
+            }
+        } catch (RuntimeException e) {
+            // Never a crash in a folk's tick for the look of the town: said once, and the round tried again next time.
+            if (FAULTED.add(v.id())) LOG.error("[MCA-TIDY] the tidy round of {} went wrong", Villages.name(v.id()), e);
+        }
+    }
+
+    /** A slice more of the town walked over; a whole walk done, the town's looks measured afresh. */
+    private static void walkOn(ServerLevel level, Villages.Village v) {
         Eyesores.Walk before = Eyesores.last(v.id());
         Eyesores.step(level, v, WALK);
         Eyesores.Walk walk = Eyesores.last(v.id());
-        if (walk != null && walk != before) {
-            c.looks = measure(level, v, walk);
-            noticed(level, v, c);
-        }
+        if (walk != null && walk != before) TownLooks.measured(level, v, TownLooks.measure(level, v, walk));
+    }
+
+    private static void round(ServerLevel level, Villages.Village v, Crew c, long now) {
         if (Raids.underAlarm(v.id())) return;
         c.leave.values().removeIf(until -> until < now);
         if (floors(level, v, c)) return;
-        int crews = cleanupDay(level, v.id()) ? 3 : 1;
+        int crews = TownLooks.cleanupDay(level, v.id()) ? CLEANUP_CREWS : 1;
         for (int k = 0; k < crews; k++) {
             if (!eyesore(level, v, c, k == 0 ? "tidy" : "tidy/" + (k + 1))) break;
         }
-        if (c.looks != null && c.looks.score() >= PROUD) proud(level, v, c);
+        TownLooks.Looks l = TownLooks.looks(v.id());
+        if (l != null && l.score() >= TownLooks.PROUD && c.going.isEmpty()) proud(level, v, c);
+    }
+
+    /** How much the crews (and the sweepers) have tidied in the town today. */
+    static int doneToday(ServerLevel level, UUID village) {
+        return crew(level, village).doneToday();
     }
 
     /** Inside the buildings: earth under a floor floored, a plant on a floor taken up. True while at it. */
@@ -223,7 +255,7 @@ public final class Tidy {
             }
         }
         for (Eyesores.Spot o : along) {
-            if (fix(level, v, o)) {
+            if (TidyFixes.fix(level, v, o)) {
                 c.done.merge(o.kind(), 1, Integer::sum);
                 if (by != null) by.brain("tidied " + o.kind().words + " (" + o.note() + ")");
             } else {
@@ -277,7 +309,7 @@ public final class Tidy {
         }
         double dx = s.pos().getX() + 0.5 - f.getX(), dz = s.pos().getZ() + 0.5 - f.getZ();
         double d = Math.sqrt(dx * dx + dz * dz);
-        if (d <= 3.0 && Math.abs(s.pos().getY() - f.getY()) <= 5) {
+        if (d <= BROOM_REACH && Math.abs(s.pos().getY() - f.getY()) <= BROOM_UP) {
             f.getNavigation().stop();
             f.getLookControl().setLookAt(s.pos().getX() + 0.5, s.pos().getY() + 0.5, s.pos().getZ() + 0.5);
             f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
@@ -291,7 +323,7 @@ public final class Tidy {
         if (dd < pr[0] - 5) {
             pr[0] = dd;
             pr[1] = now;
-        } else if (now - pr[1] > 400L || now < pr[1]) {
+        } else if (now - pr[1] > BROOM_STUCK || now < pr[1]) {
             c.leave.put(s.pos().asLong(), now + LEAVE);
             BROOM.remove(f.getUUID());
             f.brain("could not get to " + s.kind().words + "; left it a while");
@@ -315,278 +347,70 @@ public final class Tidy {
         BROOM_PROGRESS.remove(f.getUUID());
     }
 
-    // ------------------------------------------------------------------ putting it right
+    // ------------------------------------------------------------------ a proud town
 
-    /** Every block the crew changes in the town goes through here: never a player's block, and through the town's one
-     *  placement gate ([integrity] TownBlocks: tidying touches open ground, the roads and the square, never a building
-     *  or a door's way in). */
-    static boolean mayChange(ServerLevel level, Villages.Village v, BlockPos pos) {
-        return mayChange(level, v, pos, TownBlocks.Why.TIDY);
+    /**
+     * A town that is well kept or better, and has nothing worse to see to: the leaves hanging over its streets trimmed,
+     * its dark corners lit, flowers along its streets. One thing a visit.
+     */
+    private static void proud(ServerLevel level, Villages.Village v, Crew c) {
+        Eyesores.Walk w = Eyesores.last(v.id());
+        if (w == null) return;
+        if (trim(level, v, c, w) || light(level, v, c, w)) return;
+        flowerBed(level, v, c, w);
     }
 
-    static boolean mayChange(ServerLevel level, Villages.Village v, BlockPos pos, TownBlocks.Why why) {
-        return !PlayerBlocks.placed(level, pos) && TownBlocks.mayPlace(level, v, pos, why);
-    }
-
-    /** Taken up: what it gives into the stores, and the block gone. */
-    private static boolean takeUp(ServerLevel level, Villages.Village v, BlockPos p) {
-        if (!mayChange(level, v, p)) return false;
-        BlockState st = level.getBlockState(p);
-        if (st.isAir()) return true;
-        for (ItemStack drop : Block.getDrops(st, level, p, level.getBlockEntity(p))) TownWork.give(level, v, drop);
-        level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
-        return true;
-    }
-
-    /** Put one eyesore right. False if it could not be (nothing in the stores to do it with, or not the crew's to touch). */
-    static boolean fix(ServerLevel level, Villages.Village v, Eyesores.Spot s) {
-        BlockPos p = s.pos();
-        if (!mayChange(level, v, p)) return false;
-        BlockState st = level.getBlockState(p);
-        switch (s.kind()) {
-            case SPILL -> {
-                BlockState fill = ground(level, v, p, true);
-                if (fill == null) return false;
-                level.setBlockAndUpdate(p, fill);
-                return true;
-            }
-            case HOLE, ROAD -> {
-                int want = s.kind() == Eyesores.Kind.ROAD ? minAround(level, p) : medianAround(level, p);
-                if (want - p.getY() > DEEPEST) return false;
-                boolean any = false;
-                for (int y = p.getY() + 1; y <= want; y++) {
-                    BlockPos q = new BlockPos(p.getX(), y, p.getZ());
-                    BlockState at = level.getBlockState(q);
-                    if (!at.canBeReplaced() || !mayChange(level, v, q)) break;
-                    BlockState fill = ground(level, v, q, y == want);
-                    if (fill == null) return any;
-                    if (!at.isAir()) level.setBlock(q, Blocks.AIR.defaultBlockState(), 2 | 16);
-                    level.setBlockAndUpdate(q, fill);
-                    any = true;
-                }
-                return any;
-            }
-            case PILLAR -> {
-                int floor = maxAround(level, p);
-                boolean any = false;
-                for (int y = p.getY(); y > floor; y--) any |= takeUp(level, v, new BlockPos(p.getX(), y, p.getZ()));
-                BlockPos top = new BlockPos(p.getX(), floor, p.getZ());
-                if (level.getBlockState(top).is(Blocks.DIRT) && level.getBlockState(top.above()).isAir()) level.setBlockAndUpdate(top, Blocks.GRASS_BLOCK.defaultBlockState());
-                return any;
-            }
-            case STRAY, LEAVES, TORCH -> {
-                return takeUp(level, v, p);
-            }
-            case SCAFFOLD -> {
-                boolean any = false;
-                BlockPos q = p;
-                while (level.getBlockState(q).is(Blocks.SCAFFOLDING) && q.getY() > p.getY() - 32) {
-                    any |= takeUp(level, v, q);
-                    q = q.below();
-                }
-                return any;
-            }
-            case CAMP_BED -> {
-                return campBed(level, v, p);
-            }
-            case CHEST -> {
-                if (!(level.getBlockEntity(p) instanceof Container box)) return false;
-                for (int i = 0; i < box.getContainerSize(); i++) {
-                    ItemStack in = box.getItem(i);
-                    if (in.isEmpty()) continue;
-                    ItemStack go = in.copy();
-                    TownWork.give(level, v, go);
-                    box.setItem(i, go);                       // what found no room stays in it
-                    if (!go.isEmpty()) return false;
-                }
-                Retiring.unmark(level, p);
-                return takeUp(level, v, p);
-            }
-            case HALF_TREE -> {
-                int base = p.getY();
-                while (base > p.getY() - 12 && level.getBlockState(new BlockPos(p.getX(), base - 1, p.getZ())).is(BlockTags.LOGS)) base--;
-                Block log = st.getBlock();
-                for (int y = p.getY(); y >= base; y--) takeUp(level, v, new BlockPos(p.getX(), y, p.getZ()));
-                BlockPos ground = new BlockPos(p.getX(), base - 1, p.getZ());
-                if (level.getBlockState(ground).is(Blocks.DIRT)) level.setBlockAndUpdate(ground, Blocks.GRASS_BLOCK.defaultBlockState());
-                BlockPos c = v.centre();
-                int dx = p.getX() - c.getX(), dz = p.getZ() - c.getZ();
-                if (!TownPlan.isStreet(dx, dz) && !TownPlan.isSquare(dx, dz)) replant(level, v, ground.above(), log);
-                return true;
-            }
-            case SCAR -> {
-                if (!st.is(Blocks.DIRT) && !st.is(Blocks.COARSE_DIRT) && !st.is(Blocks.ROOTED_DIRT)) {
-                    if (!TownWork.take(level, v, it -> it.is(Items.DIRT), 1)) return false;
-                    for (ItemStack drop : Block.getDrops(st, level, p, null)) TownWork.give(level, v, drop);
-                }
-                BlockState up = level.getBlockState(p.above());
-                if (!up.isAir()) {
-                    if (!up.canBeReplaced()) return false;
-                    level.setBlock(p.above(), Blocks.AIR.defaultBlockState(), 3);
-                }
-                level.setBlockAndUpdate(p, Blocks.GRASS_BLOCK.defaultBlockState());
-                return true;
-            }
+    /** Leaves over the street, at head height: trimmed back. True while at it. */
+    private static boolean trim(ServerLevel level, Villages.Village v, Crew c, Eyesores.Walk w) {
+        for (BlockPos p : w.overhang) {
+            if (!(level.getBlockState(p).getBlock() instanceof LeavesBlock) || c.leave.containsKey(p.asLong())) continue;
+            if (!TownJobs.atWork(level, v, "tidy", p, "trimming the leaves over the street", AssistantEntity.StationTask.HAUL)) return true;
+            if (TidyFixes.takeUp(level, v, p)) c.trimmed++;
+            return true;
         }
         return false;
     }
 
-    /** A camp bed taken up into the stores: never one somebody is in; one somebody calls its own only if there is a
-     *  bed in a house for it (it is told to find that one tonight). */
-    private static boolean campBed(ServerLevel level, Villages.Village v, BlockPos head) {
-        BlockState st = level.getBlockState(head);
-        if (!(st.getBlock() instanceof BedBlock) || st.getValue(BedBlock.OCCUPIED)) return false;
-        for (AssistantEntity a : Villages.folkOf(v.id())) {
-            if (!head.equals(a.bedPos())) continue;
-            if (a.isSleeping()) return false;
-            int spare = Villages.bedsMadeUp(level, v.id()) - claimedInHouses(level, v);
-            if (spare <= 0) return false;
-            a.forgetBed();
-            if (a instanceof VillageFolkEntity f) f.brain("the camp is being taken up: a bed in a house tonight");
-        }
-        BlockPos other = st.getValue(BedBlock.PART) == BedPart.HEAD
-            ? head.relative(st.getValue(BedBlock.FACING).getOpposite()) : head.relative(st.getValue(BedBlock.FACING));
-        if (!mayChange(level, v, other)) return false;
-        level.setBlock(other, Blocks.AIR.defaultBlockState(), 2 | 16);
-        level.setBlock(head, Blocks.AIR.defaultBlockState(), 3);
-        TownWork.give(level, v, new ItemStack(st.getBlock().asItem()));
-        return true;
-    }
-
-    private static int claimedInHouses(ServerLevel level, Villages.Village v) {
-        int n = 0;
-        for (AssistantEntity a : Villages.folkOf(v.id())) {
-            BlockPos b = a.bedPos();
-            if (b != null && Math.max(Math.abs(b.getX() - v.centre().getX()), Math.abs(b.getZ() - v.centre().getZ()))
-                    > com.jrpetty.mcassistant.VillageSpawner.CAMP_REACH) n++;
-        }
-        return n;
-    }
-
-    /** A sapling of the felled tree's own kind, out of the stores (any sapling failing that), where it stood. */
-    private static void replant(ServerLevel level, Villages.Village v, BlockPos at, Block log) {
-        if (!level.getBlockState(at).isAir() || !mayChange(level, v, at, TownBlocks.Why.NATURE)) return;
-        ResourceLocation key = BuiltInRegistries.BLOCK.getKey(log);
-        Item own = BuiltInRegistries.ITEM.get(ResourceLocation.fromNamespaceAndPath(key.getNamespace(),
-            key.getPath().replace("stripped_", "").replace("_log", "_sapling").replace("_wood", "_sapling")));
-        ItemStack got = own != Items.AIR ? Crafts.takeOne(level, v, s -> s.is(own)) : ItemStack.EMPTY;
-        if (got.isEmpty()) got = Crafts.takeOne(level, v, s -> s.is(ItemTags.SAPLINGS));
-        if (got.isEmpty() || !(got.getItem() instanceof BlockItem bi)) return;
-        BlockState sapling = bi.getBlock().defaultBlockState();
-        if (!sapling.canSurvive(level, at)) {
-            TownWork.give(level, v, got);
-            return;
-        }
-        level.setBlockAndUpdate(at, sapling);
-    }
-
-    /**
-     * Ground to lay here, out of the stores: on top ({@code top}) what the ground round it is (turf, a path, the
-     * street's stone, sand), below it earth or cobble. Null if the stores have nothing for it.
-     */
-    @Nullable
-    static BlockState ground(ServerLevel level, Villages.Village v, BlockPos p, boolean top) {
-        if (top) {
-            Map<Block, Integer> round = new HashMap<>();
-            for (Direction d : Direction.Plane.HORIZONTAL) {
-                int y = Eyesores.top(level, p.getX() + d.getStepX(), p.getZ() + d.getStepZ());
-                Block b = level.getBlockState(new BlockPos(p.getX() + d.getStepX(), y, p.getZ() + d.getStepZ())).getBlock();
-                round.merge(b, 1, Integer::sum);
-            }
-            Block most = null;
-            int best = 0;
-            for (Map.Entry<Block, Integer> e : round.entrySet()) {
-                if (e.getValue() > best && e.getKey() != Blocks.WATER && e.getKey() != Blocks.LAVA) {
-                    best = e.getValue();
-                    most = e.getKey();
-                }
-            }
-            if (most == Blocks.GRASS_BLOCK || most == Blocks.DIRT_PATH || most == Blocks.FARMLAND) {
-                if (TownWork.take(level, v, s -> s.is(Items.DIRT), 1)) return most == Blocks.DIRT_PATH ? Blocks.DIRT_PATH.defaultBlockState()
-                    : Blocks.GRASS_BLOCK.defaultBlockState();
-            } else if (most != null && most.asItem() != Items.AIR && Eyesores.rough(most.defaultBlockState())
-                    || most == Blocks.STONE_BRICKS || most == Blocks.SANDSTONE) {
-                Item item = most.asItem();
-                if (TownWork.take(level, v, s -> s.is(item), 1)) return most.defaultBlockState();
-            }
-        }
-        if (TownWork.take(level, v, s -> s.is(Items.DIRT), 1)) return top ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.DIRT.defaultBlockState();
-        if (TownWork.take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return Blocks.COBBLESTONE.defaultBlockState();
-        if (TownWork.take(level, v, s -> s.is(Items.COBBLED_DEEPSLATE), 1)) return Blocks.COBBLED_DEEPSLATE.defaultBlockState();
-        return null;
-    }
-
-    private static int[] around(ServerLevel level, BlockPos p) {
-        int[] h = new int[8];
-        int i = 0;
-        for (int ox = -1; ox <= 1; ox++) for (int oz = -1; oz <= 1; oz++) if (ox != 0 || oz != 0) h[i++] = Eyesores.top(level, p.getX() + ox, p.getZ() + oz);
-        java.util.Arrays.sort(h);
-        return h;
-    }
-
-    private static int medianAround(ServerLevel level, BlockPos p) {
-        return around(level, p)[4];
-    }
-
-    private static int maxAround(ServerLevel level, BlockPos p) {
-        int m = Integer.MIN_VALUE;
-        for (Direction d : Direction.Plane.HORIZONTAL) m = Math.max(m, Eyesores.top(level, p.getX() + d.getStepX(), p.getZ() + d.getStepZ()));
-        return m;
-    }
-
-    private static int minAround(ServerLevel level, BlockPos p) {
-        int m = Integer.MAX_VALUE;
-        for (Direction d : Direction.Plane.HORIZONTAL) m = Math.min(m, Eyesores.top(level, p.getX() + d.getStepX(), p.getZ() + d.getStepZ()));
-        return m;
-    }
-
-    // ------------------------------------------------------------------ a proud town
-
-    /**
-     * A town that is well kept or better, and has nothing worse to see to: flowers along its streets, the leaves
-     * hanging over them trimmed, its dark corners lit. One thing a visit.
-     */
-    private static void proud(ServerLevel level, Villages.Village v, Crew c) {
-        if (!c.going.isEmpty()) return;
-        Eyesores.Walk w = Eyesores.last(v.id());
-        if (w == null) return;
-        BlockPos h = v.centre();
-        // Leaves over the street, at head height: trimmed back.
-        for (BlockPos p : w.overhang) {
-            if (!(level.getBlockState(p).getBlock() instanceof LeavesBlock) || c.leave.containsKey(p.asLong())) continue;
-            if (!TownJobs.atWork(level, v, "tidy", p, "trimming the leaves over the street", AssistantEntity.StationTask.HAUL)) return;
-            if (takeUp(level, v, p)) c.trimmed++;
-            return;
-        }
-        // A dark stretch of street: a light on a post at its side.
+    /** A dark stretch of street: a light on a post at its side, of the stores' fence and torch. True while at it. */
+    private static boolean light(ServerLevel level, Villages.Village v, Crew c, Eyesores.Walk w) {
         for (BlockPos p : w.dark) {
-            if (c.leave.containsKey(p.asLong())) continue;
-            if (level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, p) >= 8) continue;
+            if (c.leave.containsKey(p.asLong()) || level.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, p) >= LIT) continue;
             BlockPos post = verge(level, v, p);
             if (post == null) {
-                c.leave.put(p.asLong(), level.getGameTime() + LEAVE * 4);
+                c.leave.put(p.asLong(), level.getGameTime() + LEAVE * NO_ROOM_LEAVE);
                 continue;
             }
-            if (Market.stock(level, v.id(), s -> s.is(Items.TORCH)) == 0) break;
-            if (!TownJobs.atWork(level, v, "tidy", post, "lighting a dark corner of the street", AssistantEntity.StationTask.HAUL)) return;
-            if (!Crafts.fence(level, v)) { c.leave.put(p.asLong(), level.getGameTime() + LEAVE); return; }
-            if (!TownWork.take(level, v, s -> s.is(Items.TORCH), 1)) { TownWork.give(level, v, new ItemStack(Items.OAK_FENCE)); return; }
+            if (Market.stock(level, v.id(), s -> s.is(Items.TORCH)) == 0) return false;
+            if (!TownJobs.atWork(level, v, "tidy", post, "lighting a dark corner of the street", AssistantEntity.StationTask.HAUL)) return true;
+            if (!Crafts.fence(level, v)) {
+                c.leave.put(p.asLong(), level.getGameTime() + LEAVE);
+                return true;
+            }
+            if (!TownWork.take(level, v, s -> s.is(Items.TORCH), 1)) {
+                TidyFixes.store(level, v, post, new ItemStack(Items.OAK_FENCE));
+                return true;
+            }
             level.setBlockAndUpdate(post, Blocks.OAK_FENCE.defaultBlockState());
             level.setBlockAndUpdate(post.above(), Blocks.TORCH.defaultBlockState());
             c.lamps++;
-            return;
+            return true;
         }
-        // Flower beds along the streets, up to two for every building.
-        int want = Math.max(6, 2 * Ledger.buildings(v.id()).size());
+        return false;
+    }
+
+    /** A flower bed on a verge by the street, up to two for every building, out of the stores' flowers (or bone meal). */
+    private static void flowerBed(ServerLevel level, Villages.Village v, Crew c, Eyesores.Walk w) {
+        int want = Math.max(TownLooks.LEAST_FLOWERS, TownLooks.FLOWERS_A_BUILDING * Ledger.buildings(v.id()).size());
         if (w.flowers + c.flowers >= want) return;
+        BlockPos h = v.centre();
         for (BlockPos p : w.verges) {
             if (c.leave.containsKey(p.asLong()) || !level.getBlockState(p).isAir() || !level.getBlockState(p.below()).is(Blocks.GRASS_BLOCK)) continue;
-            if (((p.getX() - h.getX()) + (p.getZ() - h.getZ()) & 3) != 0) continue;     // a bed every few blocks, not a hedge of them
-            if (!mayChange(level, v, p, TownBlocks.Why.GARDEN)) continue;
+            if (Math.floorMod((p.getX() - h.getX()) + (p.getZ() - h.getZ()), FLOWER_EVERY) != 0) continue;
+            if (!TidyFixes.mayChange(level, v, p, TownBlocks.Why.GARDEN)) continue;
             BlockState flower = flowerFromTheStores(level, v);
             if (flower == null) return;
             if (!TownJobs.atWork(level, v, "tidy", p, "planting a flower bed by the street", AssistantEntity.StationTask.HAUL)) {
-                TownWork.give(level, v, new ItemStack(flower.getBlock().asItem()));
+                TidyFixes.store(level, v, p, new ItemStack(flower.getBlock().asItem()));
                 return;
             }
             level.setBlockAndUpdate(p, flower);
@@ -621,143 +445,11 @@ public final class Tidy {
                 if (Math.abs(y + 1 - street.getY()) > 1 || !level.getBlockState(g).isFaceSturdy(level, g, Direction.UP)) continue;
                 if (!level.getBlockState(g.above()).canBeReplaced() || !level.getBlockState(g.above(2)).isAir()
                         || !level.getBlockState(g.above()).getFluidState().isEmpty()) continue;
-                if (!mayChange(level, v, g.above(), TownBlocks.Why.LAMP) || !mayChange(level, v, g.above(2), TownBlocks.Why.LAMP)) continue;
+                if (!TidyFixes.mayChange(level, v, g.above(), TownBlocks.Why.LAMP) || !TidyFixes.mayChange(level, v, g.above(2), TownBlocks.Why.LAMP)) continue;
                 return g.above();
             }
         }
         return null;
-    }
-
-    // ------------------------------------------------------------------ the looks
-
-    /** Weight of one eyesore in the looks (a spill far worse than a scar). */
-    private static double weight(Eyesores.Kind k) {
-        return k.worst / 20.0;
-    }
-
-    /** The town's looks, measured off a whole walk of it. */
-    static Looks measure(ServerLevel level, Villages.Village v, Eyesores.Walk w) {
-        UUID id = v.id();
-        int reach = Villages.townReach(id);
-        int columns = (2 * reach + 1) * (2 * reach + 1);
-        double weighed = 0;
-        Eyesores.Kind worstKind = null;
-        int worstN = 0;
-        for (Map.Entry<Eyesores.Kind, Integer> e : w.counts.entrySet()) {
-            weighed += weight(e.getKey()) * e.getValue();
-            if (e.getValue() * e.getKey().worst > worstN) {
-                worstN = e.getValue() * e.getKey().worst;
-                worstKind = e.getKey();
-            }
-        }
-        int[] inside = Floors.count(level, id);
-        int grassInside = inside[0] + inside[1];
-        weighed += grassInside * 0.5;
-        int lying = Sweepers.lying(level, v);
-        weighed += lying * 0.3;
-        double allowance = Math.max(10.0, columns / 200.0);
-        int tidiness = (int) Math.round(40.0 * Math.max(0.0, 1.0 - weighed / allowance));
-        int greenery = w.green + w.bare == 0 ? 10 : (int) Math.round(15.0 * Math.min(1.0, w.green / (double) (w.green + w.bare) / 0.8));
-        int lighting = w.streets == 0 ? 10 : (int) Math.round(15.0 * Math.min(1.0, w.lit / (double) w.streets / 0.6));
-        int buildings = Ledger.buildings(id).size();
-        int flowers = (int) Math.round(10.0 * Math.min(1.0, w.flowers / (double) Math.max(6, 2 * buildings)));
-        int sites = Villages.sitesOf(id).size();
-        int finished = buildings + sites == 0 ? 10 : (int) Math.round(20.0 * buildings / (double) (buildings + sites));
-        int score = Math.max(0, Math.min(100, tidiness + greenery + lighting + flowers + finished));
-        String worst = grassInside > 0 && (worstKind == null || grassInside * 40 > worstN) ? "grass growing inside the buildings"
-            : worstKind == null ? "" : worstKind.words + (w.count(worstKind) > 1 ? " (" + w.count(worstKind) + ")" : "");
-        return new Looks(score, tidiness, greenery, lighting, flowers, finished, w.total(), grassInside, word(score), worst);
-    }
-
-    public static String word(int score) {
-        return score >= 85 ? "a picture" : score >= PROUD ? "well kept" : score >= UNTIDY ? "tidy enough" : score >= 30 ? "untidy" : "a mess";
-    }
-
-    /** The town's looks as last measured, or null before its first whole walk. */
-    @Nullable
-    public static Looks looks(UUID village) {
-        Crew c = CREWS.get(village);
-        return c == null ? null : c.looks;
-    }
-
-    /** Is today the town's clean-up day (called by its elder)? */
-    public static boolean cleanupDay(ServerLevel level, UUID village) {
-        Crew c = CREWS.get(village);
-        return c != null && c.cleanupCalled == level.getDayTime() / 24000L;
-    }
-
-    /** A new measure of the looks: folk notice, and an untidy town has its elder call a clean-up day. */
-    private static void noticed(ServerLevel level, Villages.Village v, Crew c) {
-        Looks l = c.looks;
-        if (l == null) return;
-        long day = level.getDayTime() / 24000L;
-        long t = level.getDayTime() % 24000L;
-        if (l.score() < UNTIDY && day - c.cleanupCalled >= CLEANUP_EVERY && t < 6000L && Villages.headcount(v.id()) >= 6) {
-            c.cleanupCalled = day;
-            Ledger.note(v.id(), "tidy_cleanup", Long.toString(day));
-            String elder = Villages.elderName(v.id());
-            Villages.tell(v.id(), day, (elder.isEmpty() ? "The town" : "Elder " + elder) + " called a clean-up day: the town had become "
-                + l.word() + (l.worst().isEmpty() ? "" : " (" + l.worst() + ")"));
-            for (AssistantEntity a : Villages.folkOf(v.id())) {
-                if (a instanceof VillageFolkEntity f && !f.isBaby() && level.getRandom().nextInt(6) == 0) {
-                    FolkTalk.speak(f, FolkTalk.pick(level.getRandom(), "Clean-up day! Grab a broom.", "About time somebody tidied this place.",
-                        "Many hands make light work."));
-                }
-            }
-        }
-        // Somebody passing remarks on it, now and then.
-        if (level.getRandom().nextInt(4) == 0) {
-            List<AssistantEntity> folk = Villages.folkOf(v.id());
-            if (!folk.isEmpty() && folk.get(level.getRandom().nextInt(folk.size())) instanceof VillageFolkEntity f && !f.isBaby() && !f.isSleeping()) {
-                String line = l.score() >= 85 ? FolkTalk.pick(level.getRandom(), "Doesn't the town look a picture?", "I do like what we've done with the place.")
-                    : l.score() < 30 ? FolkTalk.pick(level.getRandom(), "The square's a mess. Does nobody sweep round here?", "Look at the state of this town.")
-                    : l.score() < UNTIDY ? (l.worst().isEmpty() ? "The place could do with a tidy."
-                        : FolkTalk.pick(level.getRandom(), "The place could do with a tidy.", "Somebody ought to see to " + l.worst() + "."))
-                    : null;
-                if (line != null) FolkTalk.speak(f, line);
-            }
-        }
-    }
-
-    /** [tidy] Contentment's say: proud of a town that looks a picture, put out by a mess. */
-    public static int contentment(@Nullable UUID village, List<String> good, List<String> bad) {
-        Looks l = village == null ? null : looks(village);
-        if (l == null) return 0;
-        if (l.score() >= 85) { good.add("the town looks a picture"); return 3; }
-        if (l.score() >= PROUD) { good.add("a well-kept town"); return 1; }
-        if (l.score() < 30) { bad.add("the town's a mess"); return -4; }
-        if (l.score() < UNTIDY) { bad.add("the town's untidy"); return -2; }
-        return 0;
-    }
-
-    /** The board's line: the looks, what spoils them, the crew's day. Null before the first walk. */
-    @Nullable
-    public static String boardLine(ServerLevel level, UUID village) {
-        Looks l = looks(village);
-        if (l == null) return null;
-        Crew c = crew(level, village);
-        int done = c.floored + c.plantsUp + c.flowers + c.trimmed + c.lamps;
-        for (int n : c.done.values()) done += n;
-        return "Looks: " + l.score() + " (" + l.word() + ")" + (l.worst().isEmpty() ? "" : "; to see to: " + l.worst())
-            + (cleanupDay(level, village) ? "; today is clean-up day" : "")
-            + (done > 0 ? "; tidied today: " + done : "") + ".";
-    }
-
-    /** Into the storehouse's report (Sweepers.report): the looks and the tidying, for the town's books. */
-    static void report(ServerLevel level, UUID village, net.minecraft.nbt.CompoundTag out) {
-        Looks l = looks(village);
-        if (l == null) return;
-        Crew c = crew(level, village);
-        out.putInt("looks", l.score());
-        out.putString("looks_word", l.word());
-        out.putString("looks_worst", l.worst());
-        out.putInt("eyesores", l.eyesores());
-        out.putInt("grass_inside", l.grassInside());
-        int done = c.floored + c.plantsUp;
-        for (int n : c.done.values()) done += n;
-        out.putInt("tidied", done);
-        out.putString("looks_parts", "tidiness " + l.tidiness() + "/40, greenery " + l.greenery() + "/15, lighting " + l.lighting()
-            + "/15, flowers " + l.flowers() + "/10, finished " + l.finished() + "/20");
     }
 
     // ------------------------------------------------------------------ the command
@@ -791,8 +483,8 @@ public final class Tidy {
         if (r == null) return 0;
         StringBuilder sb = new StringBuilder("THE TOWN'S LOOKS " + Villages.name(v.id()) + ": ");
         sb.append(String.join(" ", r.lines()));
-        String board = boardLine(level, v.id());
-        if (board != null) sb.append(" Board: ").append(board);
+        String board = TownLooks.boardLine(level, v.id());
+        if (board != null) sb.append(" Board: ").append(board.substring(board.indexOf('|') + 1));
         int shown = 0;
         for (Eyesores.Spot s : r.spots()) {
             if (shown++ >= 12) break;
@@ -808,16 +500,9 @@ public final class Tidy {
 
     /** Tests: the town's crew looked at now (as every five seconds). */
     public static void tickForTests(ServerLevel level, Villages.Village v) {
-        crew(level, v.id()).looked = -100000L;
-        tick(level, v);
-    }
-
-    /** Tests: the town walked at once and its looks measured. */
-    public static Looks measureForTests(ServerLevel level, Villages.Village v) {
-        Eyesores.Walk w = Eyesores.walkNow(level, v);
         Crew c = crew(level, v.id());
-        c.looks = measure(level, v, w);
-        return c.looks;
+        c.looked = c.walked = -100000L;
+        tick(level, v);
     }
 
     /** Tests: today's floors, {cells floored, plants taken up}. */
@@ -836,10 +521,5 @@ public final class Tidy {
     public static int[] proudForTests(ServerLevel level, UUID village) {
         Crew c = crew(level, village);
         return new int[]{ c.flowers, c.trimmed, c.lamps };
-    }
-
-    /** Tests: as though the elder had called a clean-up day today (true) or none for days (false). */
-    public static void cleanupForTests(ServerLevel level, UUID village, boolean today) {
-        crew(level, village).cleanupCalled = today ? level.getDayTime() / 24000L : -100L;
     }
 }

@@ -998,7 +998,7 @@ public final class Sweepers {
         List<String> who = new ArrayList<>();
         for (AssistantEntity a : Villages.folkOf(v.id())) if (a instanceof VillageFolkEntity f && appointed(f)) who.add(f.displayNameCap());
         out.putString("sweepers", String.join(", ", who));
-        Tidy.report(level, v.id(), out);                          // [tidy] the town's looks and today's tidying
+        TownLooks.report(level, v.id(), out);                          // [tidy] the town's looks and today's tidying
     }
 
     /** [tidy] How many heaps are lying about the town now (looked over at most every five seconds). */
