@@ -166,17 +166,17 @@ public final class ChunkLoad {
     }
 
     /**
-     * [scale] Let go of every chunk forced, or waiting to be, in this box of chunks in this level, whoever asked for
-     * it, where {@code let} agrees; returns what was let go, so it can be asked for again (a town going to sleep,
+     * [scale] Let go of every chunk forced, or waiting to be, in this box of chunks in this level, where {@code let}
+     * agrees (given who asked for it and which chunk); returns what was let go, so it can be asked for again (a town going to sleep,
      * TownLod). Its chunks then unload as any chunk nobody holds, and its folk are saved with them.
      */
     public static List<com.jrpetty.mcassistant.entity.TownLod.Parked> releaseWithin(ServerLevel level, int minX, int minZ,
-            int maxX, int maxZ, java.util.function.LongPredicate let) {
+            int maxX, int maxZ, java.util.function.BiPredicate<UUID, Long> let) {
         List<com.jrpetty.mcassistant.entity.TownLod.Parked> out = new ArrayList<>();
         java.util.function.Predicate<Key> inside = k -> {
             if (!k.dimension().equals(level.dimension())) return false;
             int x = ChunkPos.getX(k.chunk()), z = ChunkPos.getZ(k.chunk());
-            return x >= minX && x <= maxX && z >= minZ && z <= maxZ && let.test(k.chunk());
+            return x >= minX && x <= maxX && z >= minZ && z <= maxZ && let.test(k.owner(), k.chunk());
         };
         for (Iterator<Key> it = FORCED.iterator(); it.hasNext(); ) {
             Key k = it.next();

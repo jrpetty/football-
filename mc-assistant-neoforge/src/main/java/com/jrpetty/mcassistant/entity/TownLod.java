@@ -325,7 +325,7 @@ public final class TownLod {
         int r = areaChunks(v.id());
         ChunkPos c = new ChunkPos(v.centre());
         List<Parked> let = ChunkLoad.releaseWithin(level, c.x - r, c.z - r, c.x + r, c.z + r,
-            chunk -> !awakeTownOwns(level, chunk));
+            (owner, chunk) -> !awakeTownOwns(level, chunk) && !aPlayersCrew(level, owner));
         t.parked.addAll(let);
         save(v.id(), t);
         saveParked(v.id(), t);
@@ -354,6 +354,11 @@ public final class TownLod {
             t.pending.size(), (int) t.birthsDue);
     }
 
+    /** Is this the station of a player's own assistant (not a town's folk)? Its post stays loaded as ever. */
+    private static boolean aPlayersCrew(ServerLevel level, UUID owner) {
+        return level.getEntity(owner) instanceof AssistantEntity a && !(a instanceof VillageFolkEntity);
+    }
+
     /** Is this chunk inside the ground of a town that is awake (so not to be let go for a sleeping neighbour)? */
     private static boolean awakeTownOwns(ServerLevel level, long chunk) {
         int x = ChunkPos.getX(chunk), z = ChunkPos.getZ(chunk);
@@ -370,7 +375,7 @@ public final class TownLod {
      * awake one)? If so it is kept for the town's waking instead, and true is returned.
      */
     public static boolean park(ServerLevel level, UUID owner, int chunkX, int chunkZ) {
-        if (asleep == 0) return false;
+        if (asleep == 0 || aPlayersCrew(level, owner)) return false;
         long chunk = ChunkPos.asLong(chunkX, chunkZ);
         Town sleeper = null;
         UUID asleepId = null;
