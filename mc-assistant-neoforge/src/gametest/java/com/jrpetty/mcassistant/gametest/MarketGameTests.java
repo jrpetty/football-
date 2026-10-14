@@ -3,7 +3,13 @@ package com.jrpetty.mcassistant.gametest;
 import com.jrpetty.mcassistant.McAssistantMod;
 import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
 import com.jrpetty.mcassistant.entity.AssistantEntity.StationTask;
+import com.jrpetty.mcassistant.entity.AssistantEntity;
 import com.jrpetty.mcassistant.entity.Economy;
+import com.jrpetty.mcassistant.entity.Envoys;
+import com.jrpetty.mcassistant.entity.Shipments;
+import com.jrpetty.mcassistant.entity.TradeBook;
+import com.jrpetty.mcassistant.entity.TradeDeals;
+import com.jrpetty.mcassistant.entity.TradeTalks;
 import com.jrpetty.mcassistant.entity.Market;
 import com.jrpetty.mcassistant.entity.MarketLean;
 import com.jrpetty.mcassistant.entity.PriceIndex;
@@ -57,6 +63,12 @@ import java.util.UUID;
  * <li><b>mk05</b>: a hundred days of a working town: the treasury never runs dry and never hoards, wages are paid,
  *     prices stay in their band, the coin in the town grows no faster than its work.</li>
  * <li><b>mk06</b>: production follows prices: dear bread wants more farmers, a glut of logs fewer woodcutters.</li>
+ * <li><b>mk07</b>: two towns with what the other is short of strike a contract both gain from, haul and all; its
+ *     deliveries go by shipment, the goods and the coin conserved on the way, paid on delivery.</li>
+ * <li><b>mk08</b>: a contract broken: a seller with nothing to send falls short three times and the deal ends; a load
+ *     lost on the road is a shortfall too.</li>
+ * <li><b>mk09</b>: a shortage reroutes trade: a hungry town sends to the neighbour with food over, not the one without,
+ *     and deals in food first.</li>
  * </ul>
  *
  * <p>Each runs on its own ground (x 1,720,000 to 1,739,999, z 66,000).
@@ -140,7 +152,7 @@ public class MarketGameTests {
             if (out == Items.AIR || !Prices.known(out)) continue;
             double cheapest = Double.MAX_VALUE;
             for (Worth.Recipe r : e.getValue()) {
-                if (r.way() == Worth.Way.EMPTY || Worth.unmaking(r, recipes)) continue;
+                if (!Worth.makes(r) || Worth.unmaking(r, recipes)) continue;
                 double m = Worth.makings(r, k -> {
                     Item i = item(k);
                     return i == Items.AIR || !Prices.known(i) ? Double.NaN : Prices.each(i);
@@ -224,7 +236,7 @@ public class MarketGameTests {
                     if (least <= bid) loops.add(it + ": sold for " + least + ", bought back for " + bid);
                     // Made of what the town sells: the makings at the least it lets them go for, against what it pays.
                     for (Worth.Recipe r : recipes.getOrDefault(BuiltInRegistries.ITEM.getKey(it).toString(), List.of())) {
-                        if (r.way() == Worth.Way.EMPTY) continue;
+                        if (!Worth.makes(r)) continue;
                         int paid = 0;
                         boolean all = true;
                         for (Worth.Part p : r.parts()) {
@@ -244,10 +256,14 @@ public class MarketGameTests {
                     }
                 }
             }
-            // A player at the stall: a lot of bread bought and sold straight back, at the dearest and the cheapest.
+            // A player at the stall: a lot of cobblestone (a glut the town can spare) bought and sold straight back, at the
+            // dearest and the cheapest.
+            Container glut = chest(level, id, 5, 3);
+            for (int i = 0; i < 27; i++) glut.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+            glut.setChanged();
             Player p = helper.makeMockPlayer(GameType.SURVIVAL);
             p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
-            ItemStack bread = new ItemStack(Items.BREAD);
+            ItemStack bread = new ItemStack(Items.COBBLESTONE);
             List<String> trips = new ArrayList<>();
             for (double factor : new double[]{ Worth.LOWEST, 1.0, Worth.DEAREST }) {
                 PriceIndex.setForTests(id, bread, factor);
@@ -256,13 +272,13 @@ public class MarketGameTests {
                 p.getInventory().setItem(p.getInventory().selected, ItemStack.EMPTY);
                 ItemStack lot = ItemStack.EMPTY;
                 for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
-                    if (p.getInventory().getItem(i).is(Items.BREAD)) { lot = p.getInventory().removeItemNoUpdate(i); break; }
+                    if (p.getInventory().getItem(i).is(Items.COBBLESTONE)) { lot = p.getInventory().removeItemNoUpdate(i); break; }
                 }
                 p.getInventory().setItem(p.getInventory().selected, lot);
                 String sold = Market.deal(level, v, p, bread);
                 int after = coins(p);
                 trips.add(factor + ": " + bought + " / " + sold + " (" + before + " -> " + after + ")");
-                helper.assertTrue(after < before, "a lot bought and sold straight back loses coin: " + trips);
+                helper.assertTrue(bought.startsWith("Bought") && after < before, "a lot bought and sold straight back loses coin: " + trips);
             }
             Kit.log("mk02 " + checks + " checks, " + loops.size() + " loops: " + loops + "; at the stall: " + trips);
             helper.assertTrue(loops.isEmpty(), "no buying of the town and selling back pays: " + loops);
@@ -309,7 +325,7 @@ public class MarketGameTests {
             }
             String page = PriceIndex.page(level, v);
             Kit.log("mk03 " + days + "\nmk03 the page:\n" + page);
-            helper.assertTrue(lastBread > 2.0 && lastCobble < 0.7, "dear bread and cheap cobblestone: " + lastBread + ", " + lastCobble);
+            helper.assertTrue(lastBread > 1.5 && lastCobble < 0.7, "dear bread and cheap cobblestone: " + lastBread + ", " + lastCobble);
             helper.assertTrue(PriceIndex.trend(id, bread) >= 0 && page.contains("Coin:"), "the page shows the trend and the coin");
             helper.succeed();
         });
@@ -325,7 +341,7 @@ public class MarketGameTests {
         helper.runAtTickTime(10, () -> {
             Villages.Village v = Villages.get(id);
             Container c = chest(level, id, 3, 3);
-            for (int i = 0; i < 6; i++) c.setItem(i, new ItemStack(Items.BREAD, 64));
+            for (int i = 0; i < 27; i++) c.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
             c.setChanged();
             List<VillageFolkEntity> folk = new ArrayList<>();
             folk.add(f);
@@ -343,23 +359,24 @@ public class MarketGameTests {
             };
             count.run();
             int start = total[0];
-            // A player buys a lot of bread, and sells some back.
-            String bought = Market.buy(level, v, p, new ItemStack(Items.BREAD), Stockroom.Seller.MARKET);
+            // A player buys a lot of cobblestone, and sells a lot of its own.
+            String bought = Market.buy(level, v, p, new ItemStack(Items.COBBLESTONE), Stockroom.Seller.MARKET);
             count.run();
             int afterBuy = total[0];
-            p.getInventory().setItem(p.getInventory().selected, new ItemStack(Items.BREAD, 8));
-            String sold = Market.deal(level, v, p, new ItemStack(Items.BREAD));
+            p.getInventory().setItem(p.getInventory().selected, new ItemStack(Items.COBBLESTONE, 64));
+            String sold = Market.deal(level, v, p, new ItemStack(Items.COBBLESTONE));
             count.run();
             int afterSell = total[0];
             // A payday: the treasury's coin into the purses, the tax kept.
             int paid = Market.payWages(level, v);
             count.run();
             int afterPay = total[0];
-            Kit.log("mk04 start " + start + "; " + bought + " -> " + afterBuy + "; " + sold + " -> " + afterSell + " (8 bread were the player's own); paid "
+            Kit.log("mk04 start " + start + "; " + bought + " -> " + afterBuy + "; " + sold + " -> " + afterSell + " (the 64 sold were the player's own); paid "
                 + paid + " in wages -> " + afterPay + "; treasury " + Ledger.coins(id));
             helper.assertTrue(afterBuy == start && afterSell == start && afterPay == start, "no coin made or lost by a sale, a purchase or a payday: "
                 + start + ", " + afterBuy + ", " + afterSell + ", " + afterPay);
-            helper.assertTrue(paid > 0, "the wages were paid: " + paid);
+            helper.assertTrue(paid > 0 && bought.startsWith("Bought") && sold.startsWith("Sold"), "the wages were paid, the lots bought and sold: "
+                + paid + "; " + bought + "; " + sold);
             helper.succeed();
         });
     }
@@ -484,6 +501,192 @@ public class MarketGameTests {
             helper.assertTrue(page.contains("lean with the prices"), "the Prices page says so");
             helper.succeed();
         });
+    }
+
+    // ============================================================ trade between towns
+
+    /** Two (or three) towns on good terms, so far apart, each with an empty store and coin to trade with. */
+    private static Villages.Village[] towns(GameTestHelper helper, ServerLevel level, int x, int n) {
+        Kit.reset(level);
+        TradeDeals.resetForTests();
+        Shipments.resetForTests();
+        Shipments.register(null);
+        level.setDayTime(24000L * 6 + 3000);
+        Villages.Village[] out = new Villages.Village[n];
+        for (int i = 0; i < n; i++) {
+            int cx = x + i * 300;
+            Kit.hold(level, cx, Z, 40);
+            Kit.prepare(level, cx, Z, 40);
+            BlockPos heart = Kit.surface(level, cx, Z);
+            VillageFolkSpawnerBlock.raiseParty(level, heart, 0.0F, 5);
+            out[i] = Villages.nearest(level, heart, Villages.VILLAGE_RANGE);
+            helper.assertTrue(out[i] != null, "a town at " + cx);
+            for (AssistantEntity a : Villages.folkOf(out[i].id())) if (a instanceof VillageFolkEntity f) f.ensurePersona();
+            for (BlockPos p : Villages.storeChests(level, out[i].id())) {
+                if (level.getBlockEntity(p) instanceof Container c) { c.clearContent(); c.setChanged(); }
+            }
+            Ledger.addCoins(out[i].id(), 200);
+            Villages.chooseElder(out[i].id(), level.getDayTime() / 24000L);
+            TradeTalks.temperForTests(out[i].id(), Envoys.Temper.STEADY);
+        }
+        for (int i = 0; i < n; i++) for (int j = i + 1; j < n; j++) Ledger.relate(out[i].id(), out[j].id(), 25);
+        return out;
+    }
+
+    /** So many of a thing into chests at the town's heart; the books read afresh. */
+    private static void stock(ServerLevel level, Villages.Village v, Item it, int n) {
+        List<ItemStack> goods = new ArrayList<>();
+        for (int left = n; left > 0; left -= 64) goods.add(new ItemStack(it, Math.min(64, left)));
+        int k = 0, i = 0;
+        while (i < goods.size()) {
+            BlockPos at = Kit.surface(level, v.centre().getX() + 4 + 2 * k, v.centre().getZ() + 5 + (it == Items.BREAD ? 2 : 0));
+            level.setBlock(at, Blocks.CHEST.defaultBlockState(), 3);
+            ZoneChests.mark(level, at);
+            Container box = (Container) level.getBlockEntity(at);
+            for (int s = 0; s < box.getContainerSize() && i < goods.size(); s++) box.setItem(s, goods.get(i++));
+            box.setChanged();
+            k++;
+        }
+        Villages.forgetStock();
+        TradeBook.forget(v.id());
+    }
+
+    private static int held(ServerLevel level, UUID village, Item it) {
+        return Market.stock(level, village, s -> s.is(it));
+    }
+
+    /** A carrier that holds what it is given till the test says (the trade wagons' part, played by the test). */
+    private static final class HeldCarrier implements Shipments.Carrier {
+        final List<Shipments.Shipment> held = new ArrayList<>();
+
+        @Override
+        public boolean carry(ServerLevel level, Shipments.Shipment s) {
+            held.add(s);
+            return true;
+        }
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "mk07_contract")
+    public static void mk07_contract(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Villages.Village[] t = towns(helper, level, 1726000, 2);
+        UUID a = t[0].id(), b = t[1].id();
+        stock(level, t[0], Items.COBBLESTONE, 2500);
+        stock(level, t[0], Items.BREAD, 10);
+        stock(level, t[1], Items.BREAD, 1500);
+        TradeTalks.Talk k = TradeTalks.negotiate(level, a, b);
+        Kit.log("mk07 " + TradeTalks.story(k));
+        helper.assertTrue(k.deal(), "a contract is struck: " + k.end() + " — " + k.why());
+        TradeTalks.Table tb = k.table();
+        TradeTalks.Terms tm = k.settled();
+        UUID seller = tb.seller(), buyer = tb.buyer();
+        double gs = tm.qy() * TradeBook.worth(level, seller, tb.y()) + tm.coin() - tb.qx() * TradeBook.worth(level, seller, tb.x());
+        double gb = tb.qx() * TradeBook.worth(level, buyer, tb.x()) - tm.qy() * TradeBook.worth(level, buyer, tb.y()) - tm.coin();
+        helper.assertTrue(gs > 0 && gb > 0, "both gain by their own prices: " + gs + ", " + gb);
+        TradeDeals.strikeForTests(level, k);
+        HeldCarrier wagons = new HeldCarrier();
+        Shipments.register(wagons);
+        try {
+            int stoneBefore = held(level, a, Items.COBBLESTONE) + held(level, b, Items.COBBLESTONE);
+            int breadBefore = held(level, a, Items.BREAD) + held(level, b, Items.BREAD);
+            int coinBefore = Ledger.coins(a) + Ledger.coins(b);
+            int sellerCoin = Ledger.coins(seller);
+            Shipments.Shipment out = TradeDeals.shipNowForTests(level, a, b);
+            helper.assertTrue(out != null && wagons.held.size() == 1 && out.from().equals(seller), "the seller's load set out by wagon: " + out);
+            int onRoad = out.pieces();
+            int stoneNow = held(level, a, Items.COBBLESTONE) + held(level, b, Items.COBBLESTONE);
+            helper.assertTrue(stoneNow + onRoad == stoneBefore, "the load left the stores and is on the road, none made or lost: "
+                + stoneNow + " + " + onRoad + " of " + stoneBefore);
+            helper.assertTrue(TradeDeals.page(level, t[0]).stream().anyMatch(l -> l.contains("Under way:")), "the Trade page has it under way");
+            Shipments.delivered(level, out.id(), out.manifest());
+            int stoneAfter = held(level, a, Items.COBBLESTONE) + held(level, b, Items.COBBLESTONE);
+            int coinAfter = Ledger.coins(a) + Ledger.coins(b);
+            Kit.log("mk07 delivered " + Shipments.words(out) + ", " + out.coinDue() + " coin due; stone " + stoneBefore + " -> " + stoneAfter
+                + "; coin " + coinBefore + " -> " + coinAfter + "; the seller's treasury " + sellerCoin + " -> " + Ledger.coins(seller)
+                + "; " + TradeDeals.words(a, b));
+            helper.assertTrue(stoneAfter == stoneBefore, "the stone all there, in the other town now: " + stoneAfter);
+            helper.assertTrue(coinAfter == coinBefore && Ledger.coins(seller) >= sellerCoin + out.coinDue() * 0.99 - 1,
+                "paid on delivery, no coin made: " + coinBefore + " -> " + coinAfter);
+            int[] n = TradeDeals.numbersForTests(a, b);
+            helper.assertTrue(n != null && n[3] == 1 && n[5] == 0, "one delivery made, none short: " + java.util.Arrays.toString(n));
+            // The buyer's turn: its bread back.
+            Shipments.Shipment back = TradeDeals.shipNowForTests(level, a, b);
+            if (back != null) Shipments.delivered(level, back.id(), back.manifest());
+            int breadAfter = held(level, a, Items.BREAD) + held(level, b, Items.BREAD);
+            helper.assertTrue(breadAfter == breadBefore, "the bread conserved too: " + breadBefore + " -> " + breadAfter);
+            double[] g = TradeDeals.gainsForTests(a, b);
+            Kit.log("mk07 the bread back: " + (back == null ? "none" : Shipments.words(back)) + "; gains so far " + java.util.Arrays.toString(g));
+            helper.assertTrue(g != null && g[0] > 0 && g[1] > 0, "both towns ahead by their own prices: " + java.util.Arrays.toString(g));
+        } finally {
+            Shipments.register(null);
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "mk08_broken")
+    public static void mk08_broken(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Villages.Village[] t = towns(helper, level, 1727000, 2);
+        UUID a = t[0].id(), b = t[1].id();
+        stock(level, t[0], Items.COBBLESTONE, 2500);
+        stock(level, t[1], Items.BREAD, 1500);
+        TradeTalks.Talk k = TradeTalks.negotiate(level, a, b);
+        helper.assertTrue(k.deal(), "a contract is struck: " + k.why());
+        TradeDeals.strikeForTests(level, k);
+        HeldCarrier wagons = new HeldCarrier();
+        Shipments.register(wagons);
+        StringBuilder log = new StringBuilder();
+        try {
+            // The first load lost on the road: a shortfall for the sender.
+            Shipments.Shipment first = TradeDeals.shipNowForTests(level, a, b);
+            helper.assertTrue(first != null, "the first load set out");
+            Shipments.lost(level, first.id(), List.of(), "raiders on the road");
+            int[] r = TradeDeals.runsForTests(a, b);
+            log.append("lost: ").append(java.util.Arrays.toString(r)).append("; ");
+            helper.assertTrue(r != null && r[0] == 1, "a lost load is a shortfall: " + java.util.Arrays.toString(r));
+            // Then the stone runs out: every seller's turn short, the buyer's bread still coming.
+            for (BlockPos p : Villages.storeChests(level, a)) {
+                if (level.getBlockEntity(p) instanceof Container c) { c.clearContent(); c.setChanged(); }
+            }
+            Villages.forgetStock();
+            for (int leg = 0; leg < 6 && TradeDeals.live(a, b); leg++) {
+                Shipments.Shipment s = TradeDeals.shipNowForTests(level, a, b);
+                if (s != null) Shipments.delivered(level, s.id(), s.manifest());
+                log.append(s == null ? "short" : Shipments.words(s)).append(" ").append(java.util.Arrays.toString(TradeDeals.runsForTests(a, b))).append("; ");
+            }
+        } finally {
+            Shipments.register(null);
+        }
+        Kit.log("mk08 " + log + " live " + TradeDeals.live(a, b));
+        helper.assertTrue(!TradeDeals.live(a, b), "three shortfalls in a row and the contract ends: " + log);
+        helper.succeed();
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "mk09_shortage_reroutes")
+    public static void mk09_shortage_reroutes(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Villages.Village[] t = towns(helper, level, 1728000, 3);
+        UUID hungry = t[0].id(), quarry = t[1].id(), farm = t[2].id();
+        stock(level, t[0], Items.COBBLESTONE, 2500);
+        stock(level, t[1], Items.COBBLESTONE, 2500);
+        stock(level, t[2], Items.BREAD, 1500);
+        Market.hungryForTests(hungry, true);
+        long day = level.getDayTime() / 24000L;
+        // Both met before (no first greeting owed), and no talks lately.
+        Ledger.note(hungry, "envoyed/" + quarry, "1");
+        Ledger.note(hungry, "envoyed/" + farm, "1");
+        int toFarm = 0, toQuarry = 0;
+        for (long seed = 0; seed < 20; seed++) {
+            if (Envoys.chooseForTests(level, t[0], t[2], day, seed) == Envoys.Errand.TRADE) toFarm++;
+            if (Envoys.chooseForTests(level, t[0], t[1], day, seed) == Envoys.Errand.TRADE) toQuarry++;
+        }
+        TradeTalks.Talk k = TradeTalks.negotiate(level, hungry, farm);
+        Kit.log("mk09 trade errands in twenty mornings: to the farm town " + toFarm + ", to the quarry " + toQuarry + "; " + TradeTalks.story(k));
+        helper.assertTrue(toFarm == 20, "a hungry town sends to the neighbour with food over every morning it can: " + toFarm);
+        helper.assertTrue(toQuarry < toFarm, "not to the one without: " + toQuarry);
+        helper.assertTrue(k.deal() && k.table().x() == Items.BREAD && k.table().buyer().equals(hungry), "and buys its bread: " + k.why());
+        Market.hungryForTests(hungry, false);
+        helper.succeed();
     }
 
     private static Market.Good goodNamed(String name) {

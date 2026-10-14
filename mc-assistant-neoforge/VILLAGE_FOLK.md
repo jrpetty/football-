@@ -10659,7 +10659,7 @@ One worth for everything, one price for everybody, and coin that holds its value
   breaking or emptying, and selling back to it, ever comes out ahead.
 * **Coin.** Coin comes in from the world for the town's work (the morning's takings and the passing traders),
   from the mint (nine a gold bar) and from players; it goes round as wages, rent, tithe and what the folk buy;
-  and it goes out on what the town buys from outside, what it pays players, and its **upkeep**: a fortieth a day
+  and it goes out on what the town buys from outside, what it pays players, and its **upkeep**: a twentieth a day
   of whatever the treasury holds over a fortnight's wages, so a busy town's treasury settles at a few weeks' pay
   instead of hoarding. Savings at the treasury earn only out of what its loans earn; coin put into the works
   earns up to a half in the hundred a day and comes back after two weeks. A friend's free share at the stores

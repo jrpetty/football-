@@ -102,6 +102,11 @@ public final class Shipments {
         carrier = c;
     }
 
+    /** Is a carrier registered (the trade wagons)? With none, the town's own caravans carry its deals, and the road the rest. */
+    public static boolean hasCarrier() {
+        return carrier != null;
+    }
+
     /** A contract keeper listens for its own shipments: those whose contract key starts with {@code prefix}. */
     public static void listen(String prefix, Listener l) {
         LISTENERS.put(prefix, l);

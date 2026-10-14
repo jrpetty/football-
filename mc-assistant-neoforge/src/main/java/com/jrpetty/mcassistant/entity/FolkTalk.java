@@ -39,6 +39,10 @@ import java.util.function.Predicate;
  */
 public final class FolkTalk {
 
+    /** [market] Asked about the town's trade with its neighbours (TradeDeals.talk), not about a folk's own trade. */
+    static final String[] TRADE_WORDS = { "trade with", "we trade", "town trade", "our deals", "trade deal", "trading with",
+        "export", "import", "caravans", "what do we sell", "what do we buy" };
+
     private FolkTalk() {}
 
     // ------------------------------------------------------------------ entry
@@ -198,7 +202,8 @@ public final class FolkTalk {
             case GUIDE -> Guide.ask(f, p, text);
             case PRAISE -> praise(f, p, op, day);
             // and its savings and its mortgage at the bank; [econ-prices] or, asked about prices, how they stand (Purchases)
-            case WORTH -> has(text.toLowerCase(java.util.Locale.ROOT), "price", "dear", "cost of living", "the slate")
+            case WORTH -> has(text.toLowerCase(java.util.Locale.ROOT), TRADE_WORDS) ? TradeDeals.talk(f)          // [market] the town's trade
+                : has(text.toLowerCase(java.util.Locale.ROOT), "price", "dear", "cost of living", "the slate")
                 ? Purchases.talk(f) : Wealth.talk(f, text) + Bank.talkLine(f);
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
@@ -1381,6 +1386,7 @@ public final class FolkTalk {
                 "your worth", "you worth", "how much are you", "get paid", "your pay", "best paid", "highest paid", "paid the most",
                 "richest", "most money",
                 "prices", "how dear", "cost of living", "the slate")) return TalkTopic.WORTH;    // [econ-prices] prices, too
+        if (has(t, TRADE_WORDS)) return TalkTopic.WORTH;                                  // [market] and the town's trade
         if (has(t, "good at", "your skill", "talent", "best at", "your level", "what level", "how skilled", "your knack")) return TalkTopic.KNACK;
         if (has(t, "cave", "underground", "mineshaft", "spawner", "dungeon", "ravine")) return TalkTopic.CAVES;     // [caves]
         if (has(t, "fashion", "in style", "the rage", "trend", "what are you wearing", "your coat", "your hat", "your scarf",

@@ -78,6 +78,8 @@ public final class TradeDeals {
         int outLoaded, backLoaded;
         /** The last three deliveries of each side's goods, in the hundred of what was agreed. */
         String sRecent = "", bRecent = "";
+        /** [market] The shipment under way for this deal (Shipments), or empty: carried by a wagon or the road. */
+        String ship = "";
 
         UUID other(UUID v) { return v.equals(seller) ? buyer : seller; }
         boolean sells(UUID v) { return v.equals(seller); }
@@ -93,7 +95,7 @@ public final class TradeDeals {
                 Integer.toString(due), Integer.toString(made), Integer.toString(sShort), Integer.toString(bShort),
                 Integer.toString(sRun), Integer.toString(bRun), Integer.toString(sOwes), Integer.toString(bOwes),
                 num(sGot), num(bGot), sellerSends ? "s" : "b", onRoad ? "1" : "0", broken ? "1" : "0",
-                Integer.toString(outLoaded), Integer.toString(backLoaded), sRecent, bRecent);
+                Integer.toString(outLoaded), Integer.toString(backLoaded), sRecent, bRecent, ship);
         }
 
         @Nullable
@@ -137,6 +139,7 @@ public final class TradeDeals {
                 d.backLoaded = Integer.parseInt(p[31]);
                 d.sRecent = p[32];
                 d.bRecent = p[33];
+                d.ship = p.length > 34 ? p[34] : "";                       // [market] a deal saved before shipments: none
                 return d;
             } catch (RuntimeException e) {
                 return null;
@@ -370,10 +373,11 @@ public final class TradeDeals {
         Villages.Village s = Villages.get(d.seller), b = Villages.get(d.buyer);
         if (s == null || b == null) { drop(d); return; }
         if (!Envoys.pact(d.seller, d.buyer)) { close(level, d, "torn up when the two fell out", day); return; }
-        boolean road = Caravans.between(d.seller, d.buyer) || TradeTrips.pending(d.seller, d.buyer);
+        boolean road = Caravans.between(d.seller, d.buyer) || TradeTrips.pending(d.seller, d.buyer) || shipping(d);   // [market]
         if (d.onRoad && !road) {
             // The caravan never came home: lost on the road, and what it carried with it.
             d.onRoad = false;
+            d.ship = "";
             UUID sender = d.sellerSends ? d.buyer : d.seller;          // (the turn had passed on when it set out)
             fellShort(level, d, sender, day, "its caravan was lost on the road");
             recent(d, true, 0);
@@ -404,8 +408,10 @@ public final class TradeDeals {
         UUID from = d.sellerSends ? d.seller : d.buyer, to = d.other(from);
         Villages.Village fv = Villages.get(from), tv = Villages.get(to);
         if (fv == null || tv == null) return false;
-        VillageFolkEntity carrier = Caravans.choose(fv);
-        if (carrier == null) return false;
+        // [market] The trade wagons carry it when there are any (Shipments); with none, a caravan walks it, and with no
+        // hand for a caravan the road carries it all the same: a delivery never simply fails to set out.
+        VillageFolkEntity carrier = Shipments.hasCarrier() ? null : Caravans.choose(fv);
+        if (carrier == null) return ship(level, d, day);
         Item item = d.sends(from);
         int agreed = d.sendsEach(from);
         int loaded = 0;
@@ -450,6 +456,138 @@ public final class TradeDeals {
         LOG.info("[MCA-TRADE] delivery {} -> {}: {} of {} {}, {} coin carried", Villages.name(from), tn, loaded, agreed,
             item == null ? "-" : TradeTalks.name(item), carried);
         return true;
+    }
+
+    // ------------------------------------------------------------------ [market] by shipment (Shipments)
+
+    /** The contract key of a deal's shipments: "deal/&lt;seller&gt;&gt;&lt;buyer&gt;". */
+    static String contract(Deal d) {
+        return "deal/" + d.seller + ">" + d.buyer;
+    }
+
+    /** Is a shipment of this deal's under way? */
+    static boolean shipping(Deal d) {
+        if (d.ship.isEmpty()) return false;
+        try {
+            return Shipments.get(UUID.fromString(d.ship)) != null;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * A delivery by shipment: the sender's own goods, as agreed and as it can spare them, out of its stores and on their
+     * way (Shipments.dispatch); on the seller's turn the buyer pays the deal's coin, pro rata, when they arrive. Nothing
+     * to send is a shortfall there and then. Each turn is one leg, one way: the deal's turns alternate as the caravans' do.
+     */
+    static boolean ship(ServerLevel level, Deal d, long day) {
+        UUID from = d.sellerSends ? d.seller : d.buyer, to = d.other(from);
+        Item item = d.sends(from);
+        int agreed = d.sendsEach(from);
+        int can = item == null ? 0 : Math.min(agreed, Math.max(0, Budget.spare(level, from, new ItemStack(item))));
+        boolean sellerLeg = from.equals(d.seller);
+        int coinDue = sellerLeg && agreed > 0 ? (int) Math.round(d.coin * Math.min(1.0, can / (double) agreed)) : 0;
+        Shipments.Shipment s = can <= 0 ? null : Shipments.dispatch(level, from, to, contract(d), stacks(item, can), coinDue);
+        d.due++;
+        d.next = Math.max(d.next + d.every, day + 1);
+        d.sellerSends = !d.sellerSends;
+        if (s == null) {
+            if (item != null && agreed > 0) {
+                fellShort(level, d, from, day, "it had no " + TradeTalks.name(item) + " to spare");
+                recent(d, sellerLeg, 0);
+            }
+            if (d.broken) close(level, d, "broken", day); else save(d);
+            return item == null || agreed <= 0;
+        }
+        d.ship = s.id().toString();
+        d.onRoad = true;
+        save(d);
+        TradeBook.Ware w = TradeBook.Ware.of(new ItemStack(item));
+        if (w != null) TradeBook.moved(from, w, -can);
+        TradeBook.forget(from);
+        LOG.info("[MCA-TRADE] shipment {} -> {}: {} of {} {}, {} coin due", Villages.name(from), Villages.name(to), can, agreed, TradeTalks.name(item), coinDue);
+        return true;
+    }
+
+    /** So many of a thing in whole stacks. */
+    private static List<ItemStack> stacks(Item item, int n) {
+        List<ItemStack> out = new ArrayList<>();
+        int max = Math.max(1, new ItemStack(item).getMaxStackSize());
+        for (int left = n; left > 0; left -= max) out.add(new ItemStack(item, Math.min(max, left)));
+        return out;
+    }
+
+    /** A deal's shipment settled (Shipments): delivered goods booked against what was agreed, debts squared, or a loss. */
+    private static final Shipments.Listener SETTLE = new Shipments.Listener() {
+        @Override
+        public void delivered(ServerLevel level, Shipments.Shipment s, List<ItemStack> arrived, int paid) {
+            Deal d = deal(s.from(), s.to());
+            if (d == null || !s.contract().equals(contract(d))) return;          // the deal ended meanwhile: goods and coin settled
+            long day = level.getDayTime() / 24000L;
+            boolean sellerLeg = s.from().equals(d.seller);
+            Item item = d.sends(s.from());
+            int agreed = d.sendsEach(s.from()), got = 0;
+            for (ItemStack a : arrived) if (item != null && a.is(item)) got += a.getCount();
+            double f = agreed <= 0 ? 1.0 : Math.min(1.0, got / (double) agreed);
+            // Each side's worth of the goods by its own prices, as the caravans reckon it.
+            double atSender = item == null ? 0 : TradeBook.worth(level, s.from(), item), atReceiver = item == null ? 0 : TradeBook.worth(level, s.to(), item);
+            int square = squareDebts(d);
+            if (sellerLeg) {
+                d.sGot += paid - got * atSender;
+                d.bGot += got * atReceiver - paid;
+            } else {
+                d.bGot -= got * atSender;
+                d.sGot += got * atReceiver;
+            }
+            if (f < 0.8 && item != null) fellShort(level, d, s.from(), day, "it sent only " + got + " of the " + agreed + " " + TradeTalks.name(item));
+            else if (sellerLeg) d.sRun = 0; else d.bRun = 0;
+            recent(d, sellerLeg, f);
+            d.made++;
+            d.onRoad = false;
+            d.ship = "";
+            TradeBook.Ware w = item == null ? null : TradeBook.Ware.of(new ItemStack(item));
+            if (w != null && got > 0) TradeBook.moved(s.to(), w, got);
+            if (w == TradeBook.Ware.FOOD && got > 0) Leader.foodIn(s.to(), new ItemStack(item, got));
+            TradeBook.forget(s.to());
+            if (f >= 0.8) Ledger.relate(s.from(), s.to(), 1);
+            String came = item == null || got == 0 ? "nothing" : TradeTalks.lot(item, got);
+            log(s.to(), day, "from " + Villages.name(s.from()) + " by our deal: " + came + (paid > 0 ? ", we paid " + paid + " coin" : "")
+                + (square > 0 ? ", " + square + " coin of debts squared" : ""));
+            log(s.from(), day, "to " + Villages.name(s.to()) + " by our deal: " + came + (paid > 0 ? ", they paid us " + paid + " coin" : ""));
+            if (d.broken) close(level, d, "broken", day); else save(d);
+        }
+
+        @Override
+        public void lost(ServerLevel level, Shipments.Shipment s, String why) {
+            Deal d = deal(s.from(), s.to());
+            if (d == null || !s.contract().equals(contract(d))) return;
+            long day = level.getDayTime() / 24000L;
+            boolean sellerLeg = s.from().equals(d.seller);
+            d.onRoad = false;
+            d.ship = "";
+            fellShort(level, d, s.from(), day, "its load was lost on the road (" + why + ")");
+            recent(d, sellerLeg, 0);
+            if (d.broken) close(level, d, "broken", day); else save(d);
+        }
+    };
+
+    static {
+        Shipments.listen("deal/", SETTLE);
+    }
+
+    /** What either side owes the other (penalties, coin it could not find), paid as far as the payer's treasury runs.
+     *  Returns the coin moved. */
+    static int squareDebts(Deal d) {
+        int moved = 0;
+        if (d.bOwes > 0) {
+            int paid = Ledger.takeCoins(d.buyer, d.bOwes);
+            if (paid > 0) { Ledger.addCoins(d.seller, paid); d.bOwes -= paid; d.bGot -= paid; d.sGot += paid; moved += paid; }
+        }
+        if (d.sOwes > 0) {
+            int paid = Ledger.takeCoins(d.seller, d.sOwes);
+            if (paid > 0) { Ledger.addCoins(d.buyer, paid); d.sOwes -= paid; d.sGot -= paid; d.bGot += paid; moved += paid; }
+        }
+        return moved;
     }
 
     /**
@@ -947,6 +1085,10 @@ public final class TradeDeals {
                 + ((s ? d.sOwes : d.bOwes) > 0 ? "; we owe " + (s ? d.sOwes : d.bOwes) : "") + ((s ? d.bOwes : d.sOwes) > 0 ? "; they owe " + (s ? d.bOwes : d.sOwes) : "")
                 + (d.onRoad ? "; a caravan on the road" : "; next due day " + d.next));
         }
+        for (Deal d : ds) out.add("  why, with " + Villages.name(d.other(id)) + ": " + why(level, d, id) + ".");   // [market]
+        List<String> transit = transitLines(id);
+        out.add(transit.isEmpty() ? "Under way: nothing on the road." : "Under way:");
+        for (String t : transit) out.add("  " + t);
         List<String> leans = new ArrayList<>();
         for (StationTask tr : new StationTask[]{ StationTask.FARM, StationTask.MINE, StationTask.WOOD, StationTask.RANCH, StationTask.FISH }) {
             double l = lean(id, tr);
@@ -970,6 +1112,50 @@ public final class TradeDeals {
         }
         for (String past : list(id, "deals.past")) out.add("  past: " + past);
         return out;
+    }
+
+    /**
+     * [market] Why a deal stands, for this town: what the seller has over and the buyer is short of, what comes back,
+     * and the gain each delivery was struck at by this town's own prices.
+     */
+    static String why(ServerLevel level, Deal d, UUID us) {
+        boolean sell = d.sells(us);
+        String partner = Villages.name(d.other(us));
+        String x = TradeTalks.name(d.x), y = d.y == null ? null : TradeTalks.name(d.y);
+        String core = sell ? "we have " + x + " to spare and " + partner + " is short of it" : partner + " has " + x + " to spare and we are short of it";
+        String back = y == null ? (d.coin > 0 ? ", paid in coin" : "") : sell ? "; it pays us in " + y + " we want" : "; we pay in " + y + " we have over";
+        double gain = sell ? d.sGain : d.bGain;
+        return core + back + " (" + signed(gain) + " coin to us a delivery, by our prices, when it was struck)";
+    }
+
+    /** [market] The loads on the road to or from this town, in words: "16 bread to Oakford, due day 12". */
+    static List<String> transitLines(UUID village) {
+        List<String> out = new ArrayList<>();
+        for (Shipments.Shipment s : Shipments.inTransit(village)) {
+            boolean outgoing = s.from().equals(village);
+            out.add(Shipments.words(s) + (outgoing ? " to " + Villages.name(s.to()) : " from " + Villages.name(s.from()))
+                + ", due day " + (s.due() + 1) + (s.coinDue() > 0 ? ", " + s.coinDue() + " coin on delivery" : ""));
+        }
+        return out;
+    }
+
+    /** [market] "What does the town trade?" — a folk's answer: the deals, why, and what is on the road. */
+    public static String talk(VillageFolkEntity f) {
+        UUID id = f.ownerId();
+        if (id == null || !(f.level() instanceof ServerLevel level)) return "Trade? We've no town to trade for.";
+        List<Deal> ds = deals(id);
+        if (ds.isEmpty()) {
+            TradeBook.Book b = TradeBook.of(level, id);
+            return "We've no deals with anybody just now. " + capital(TradeBook.summary(b)) + ".";
+        }
+        List<String> parts = new ArrayList<>();
+        for (Deal d : ds) parts.add("with " + Villages.name(d.other(id)) + ", " + dealWords(d, id) + ": " + why(level, d, id));
+        int road = Shipments.inTransit(id).size();
+        return "We trade " + String.join("; and ", parts) + "." + (road > 0 ? " There " + (road == 1 ? "is a load" : "are " + road + " loads") + " on the road now." : "");
+    }
+
+    private static String capital(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     /** The trade page for the town's books (CityScreen's Trade tab). */
@@ -1018,9 +1204,13 @@ public final class TradeDeals {
             c.putLong("next", d.next);
             c.putBoolean("road", d.onRoad);
             c.putInt("penalty", d.penalty);
+            c.putString("why", why(level, d, id));                         // [market] why the deal exists
             deals.add(c);
         }
         out.put("deals", deals);
+        ListTag transit = new ListTag();                                   // [market] what is on the road
+        for (String t : transitLines(id)) transit.add(StringTag.valueOf(t));
+        out.put("transit", transit);
         ListTag talks = new ListTag();
         for (String t : list(id, "talks")) {
             String[] p = t.split("\\|", 3);
@@ -1070,6 +1260,24 @@ public final class TradeDeals {
     public static String words(UUID a, UUID b) {
         Deal d = deal(a, b);
         return d == null ? null : dealWords(d, a);
+    }
+
+    /** Tests: the deal's next delivery sent now by shipment (Shipments), whoever's turn it is. The shipment, or null. */
+    @Nullable
+    public static Shipments.Shipment shipNowForTests(ServerLevel level, UUID a, UUID b) {
+        Deal d = deal(a, b);
+        if (d == null) return null;
+        ship(level, d, level.getDayTime() / 24000L);
+        Deal now = deal(a, b);
+        if (now == null || now.ship.isEmpty()) return null;
+        return Shipments.get(UUID.fromString(now.ship));
+    }
+
+    /** Tests: {the seller's run of shortfalls, the buyer's, broken 0/1}, or null when the deal is gone. */
+    @Nullable
+    public static int[] runsForTests(UUID a, UUID b) {
+        Deal d = deal(a, b);
+        return d == null ? null : new int[]{ d.sRun, d.bRun, d.broken ? 1 : 0 };
     }
 
     /** {agreed of the seller's goods, agreed of the buyer's, coin, made, due, short seller, short buyer}, or null. */

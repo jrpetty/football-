@@ -49,6 +49,7 @@ class WorthTest {
             List.of("bucket", "bucket", "bucket")));
         r.add(Worth.Recipe.of("sugar", 1, Worth.Way.CRAFT, p("sugar_cane", 1)));
         r.add(Worth.Recipe.of("bucket", 1, Worth.Way.EMPTY, p("milk_bucket", 1)));
+        r.add(Worth.Recipe.of("iron_nugget", 1, Worth.Way.SALVAGE, p("iron_pickaxe", 1)));
         r.add(new Worth.Recipe("torch", 4, List.of(new Worth.Part(List.of("coal", "charcoal"), 1), p("stick", 1)), Worth.Way.CRAFT, List.of()));
         r.add(Worth.Recipe.of("charcoal", 1, Worth.Way.SMELT, p("log", 1)));
         return r;
@@ -114,7 +115,7 @@ class WorthTest {
             if (gathered().containsKey(e.getKey())) continue;
             double cheapest = Double.MAX_VALUE, cheapestMakings = 0;
             for (Worth.Recipe r : e.getValue()) {
-                if (r.way() == Worth.Way.EMPTY || Worth.unmaking(r, byOut)) continue;
+                if (!Worth.makes(r) || Worth.unmaking(r, byOut)) continue;
                 double c = Worth.cost(r, k -> v.getOrDefault(k, Double.NaN));
                 if (c < cheapest) {
                     cheapest = c;
