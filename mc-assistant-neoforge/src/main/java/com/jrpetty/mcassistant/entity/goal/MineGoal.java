@@ -413,7 +413,7 @@ public class MineGoal extends Goal {
                 continue;
             }
             if (startReach(vein)) return;
-            noteForLater(vein);
+            noteForLater(vein, "nowhere to get at it from");
         }
         if (chasing() && !look.idle()) return;            // [mines] it looks round a new spot before it moves on
         if (moveTarget != null) {
@@ -1498,9 +1498,9 @@ public class MineGoal extends Goal {
     }
 
     /** An ore seen and left (out of reach, the way up, the run over): on the books for whoever next works near it. */
-    private void noteForLater(BlockPos p) {
+    private void noteForLater(BlockPos p, String why) {
         givenUp.add(p.asLong());
-        com.jrpetty.mcassistant.entity.OreSight.note(assistant, "left the ore at " + p.toShortString() + " for later");
+        com.jrpetty.mcassistant.entity.OreSight.note(assistant, "left the ore at " + p.toShortString() + " for later: " + why);
         if (assistant.level() instanceof net.minecraft.server.level.ServerLevel sl && mayDig(p)) com.jrpetty.mcassistant.entity.OreNotes.noted(sl, p);
     }
 
@@ -1553,16 +1553,19 @@ public class MineGoal extends Goal {
         if (ore == null) return;
         reachTicks++;
         boolean done = !isOre(assistant.level().getBlockState(ore)) || reachTicks > REACH_TICKS;
+        String why = "it took too long";
         if (!done) {
             BlockPos feet = assistant.feetPos();
             if (inReach(ore)) {
                 com.jrpetty.mcassistant.entity.Footholds.stillUp(assistant);
                 beginDig(ore, false);
                 if (currentDig != null) return;
-                done = true;                                   // not its to break after all
+                why = "not mine to break";
+                done = true;
             } else if (byIt(feet, ore) && feet.getY() >= reachFrom.getY() && assistant.onGround()) {
                 if (com.jrpetty.mcassistant.entity.Footholds.rise(assistant, com.jrpetty.mcassistant.entity.Footholds.Purpose.CLIMB)) return;
-                done = true;                                   // no blocks left, or its head against the roof
+                why = "could not build up from " + feet.toShortString();   // no blocks left, or its head against the roof
+                done = true;
             } else {
                 if (assistant.getNavigation().isDone()) {
                     assistant.getNavigation().moveTo(reachFrom.getX() + 0.5, reachFrom.getY(), reachFrom.getZ() + 0.5, 1.0D);
@@ -1571,7 +1574,7 @@ public class MineGoal extends Goal {
                 }
                 return;
             }
-            if (isOre(assistant.level().getBlockState(ore))) noteForLater(ore);
+            if (isOre(assistant.level().getBlockState(ore))) noteForLater(ore, why);
             reachTicks = Math.max(reachTicks, REACH_TICKS + 1);
         }
         // Done with it: down its own steps first, a block at a time, then back to where it left its work.
@@ -1583,7 +1586,7 @@ public class MineGoal extends Goal {
             if (assistant.getNavigation().isDone()) assistant.getNavigation().moveTo(back.getX() + 0.5, back.getY(), back.getZ() + 0.5, 1.0D);
             return;
         }
-        if (isOre(assistant.level().getBlockState(ore))) noteForLater(ore);
+        if (isOre(assistant.level().getBlockState(ore)) && !givenUp.contains(ore.asLong())) noteForLater(ore, why);
         reachFor = null;
         reachFrom = null;
         reachBack = null;

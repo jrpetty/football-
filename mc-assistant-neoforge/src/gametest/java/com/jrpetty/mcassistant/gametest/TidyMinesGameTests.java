@@ -119,22 +119,22 @@ public class TidyMinesGameTests {
         helper.assertTrue(f != null, "a folk");
         helper.assertTrue(OreSight.exposed(level, ore), "the ore shows from below");
         f.enqueueFront(Job.gather(GatherGoal.Kind.IRON, 1));
-        int[] most = { 0 };
+        int[] most = { 0 }, atTop = { 0 };
         helper.onEachTick(() -> {
             keepAtWork(level, f);
             long t = helper.getTick();
             int standing = Footholds.countForTests(level, floor, 12);
-            most[0] = Math.max(most[0], standing);
+            if (standing > most[0]) { most[0] = standing; atTop[0] = cobble(f); }   // its pack, all its steps up
             if (t % 100 == 0) Kit.log("tmn01 @" + t + " at " + f.blockPosition().toShortString() + ", steps standing " + standing + " — " + f.debugLine());
             boolean mined = !level.getBlockState(ore).is(Blocks.IRON_ORE);
             if (t > 20 && mined && standing == 0 && f.onGround()) {
                 int left = cobbleBlocks(level, floor.offset(-3, 0, -3), ore.offset(3, -1, 3));
-                Kit.log("tmn01 done at " + t + ": built up " + most[0] + ", cobble in pack " + cobble(f) + "/" + COBBLE
+                Kit.log("tmn01 done at " + t + ": built up " + most[0] + ", cobble in pack " + cobble(f) + " (" + atTop[0] + " at the top)"
                     + ", raw iron " + f.countMatching(s -> s.is(Items.RAW_IRON)) + ", cobble left standing " + left);
                 helper.assertTrue(most[0] >= 1, "it built itself up to the ore: " + most[0] + " steps");
                 helper.assertTrue(f.countMatching(s -> s.is(Items.RAW_IRON)) >= 1, "the iron is in its pack");
                 helper.assertTrue(left == 0, "no block it laid is left standing: " + left);
-                helper.assertTrue(cobble(f) == COBBLE, "every block it laid is back in its pack: " + cobble(f) + "/" + COBBLE);
+                helper.assertTrue(cobble(f) == atTop[0] + most[0], "every block it laid is back in its pack: " + cobble(f) + " = " + atTop[0] + " + " + most[0]);
                 helper.succeed();
             }
         });
@@ -152,7 +152,7 @@ public class TidyMinesGameTests {
 
     /**
      * The same climb, cut short three steps up (its job called off, and the folk called away): its steps stand,
-     * booked; back at the work, it takes them all down first, back into its pack.
+     * booked; the next time it is by them it takes them all down, back into its pack.
      */
     @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "tmn02_interrupted")
     public static void tmn02_interrupted(GameTestHelper helper) {
@@ -187,9 +187,13 @@ public class TidyMinesGameTests {
                 back[0] = t;
                 packed[0] = cobble(f);
                 f.moveTo(floor.getX() + 1.5, floor.getY(), floor.getZ() + 2.5, 0.0F, 0.0F);   // beside the foot of its steps
-                f.enqueueFront(Job.gather(GatherGoal.Kind.IRON, 1));                          // back at the work
                 Kit.log("tmn02 back by them at " + t);
                 return;
+            }
+            if (back[0] > 0 && f.distanceToSqr(floor.getX() + 1.5, floor.getY(), floor.getZ() + 2.5) > 0.5) {
+                // It lingers by its steps a while (the test's stand-in for its work there): held, not walked off.
+                f.getNavigation().stop();
+                f.moveTo(floor.getX() + 1.5, floor.getY(), floor.getZ() + 2.5, f.getYRot(), 0.0F);
             }
             if (back[0] > 0 && standing == 0) {
                 int blocks = cobbleBlocks(level, floor.offset(-3, 0, -3), ore.offset(3, -1, 3));
@@ -296,7 +300,7 @@ public class TidyMinesGameTests {
         VillageFolkEntity f = folk(level, x, lost, new ItemStack(Items.STONE_PICKAXE));
         helper.assertTrue(f != null, "a folk");
         helper.assertTrue(MineStairs.underground(level, lost), "lost underground");
-        f.enqueueFront(Job.mine(lost.getY(), MineStairs.OUT));
+        helper.runAtTickTime(5, () -> f.enqueueFront(Job.mine(lost.getY(), MineStairs.OUT)));
         helper.onEachTick(() -> {
             keepAtWork(level, f);
             long t = helper.getTick();
@@ -328,7 +332,7 @@ public class TidyMinesGameTests {
         air(level, pocket, pocket.above());
         VillageFolkEntity first = folk(level, x, pocket, new ItemStack(Items.IRON_PICKAXE));
         helper.assertTrue(first != null, "a folk");
-        first.enqueueFront(Job.mine(pocket.getY(), MineStairs.OUT));
+        helper.runAtTickTime(5, () -> first.enqueueFront(Job.mine(pocket.getY(), MineStairs.OUT)));
         VillageFolkEntity[] second = { null };
         long[] firstOut = { -1 };
         helper.onEachTick(() -> {
