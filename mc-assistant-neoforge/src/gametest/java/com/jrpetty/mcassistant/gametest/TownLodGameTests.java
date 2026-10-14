@@ -238,7 +238,7 @@ public class TownLodGameTests {
 
     private static final double DAYS = Double.parseDouble(System.getProperty("lod.days", "10"));
     /** Days the town settles in before it is measured: its founding stores eaten down, its fields and pens up. */
-    private static final int WARM = 3;
+    private static final int WARM = 5;
     /** Below this many of a kind over the stretch, the kind is too few to compare (a handful either way). */
     private static final int FEW = 24;
     /** How near the sleeping town's change must come to the watched town's, of the watched one's. */
@@ -292,10 +292,33 @@ public class TownLodGameTests {
         return out;
     }
 
+    /** How uncertain each of those trends is (twice its standard error, times the stretch): the day-to-day noise of
+     *  the stores (a hundred stone drawn for a building one day, a mine's haul the next) read as a trend. */
+    private static Map<String, Double> noise(java.util.List<Map<String, Integer>> days) {
+        Map<String, Double> slopes = trend(days), out = new HashMap<>();
+        int n = days.size();
+        if (n < 3) return out;
+        double mx = (n - 1) / 2.0, sxx = 0;
+        for (int i = 0; i < n; i++) sxx += (i - mx) * (i - mx);
+        for (Map.Entry<String, Double> e : slopes.entrySet()) {
+            double b = e.getValue() / (n - 1), my = 0;
+            for (Map<String, Integer> d : days) my += d.getOrDefault(e.getKey(), 0);
+            my /= n;
+            double ss = 0;
+            for (int i = 0; i < n; i++) {
+                double r = days.get(i).getOrDefault(e.getKey(), 0) - (my + b * (i - mx));
+                ss += r * r;
+            }
+            out.put(e.getKey(), 2.0 * Math.sqrt(ss / (n - 2) / sxx) * (n - 1));
+        }
+        return out;
+    }
+
     /**
-     * A town of twenty on generous ground (it farms, fells, quarries and keeps cattle), watched for three days to
+     * A town of twenty on generous ground (it farms, fells, quarries and keeps cattle), watched for five days to
      * settle and then for {@code lod.days} days (ten), and then asleep for as long: its stores (kind by kind), treasury
-     * and roll change asleep as they did watched, each within a fifth (or a couple of dozen, for a kind barely moved).
+     * and roll change asleep as they did watched (the trend of the daily counts), each within a fifth, a couple of dozen
+     * for a kind barely moved, or the watched trend's own day-to-day noise (twice its standard error).
      */
     @GameTest(template = "empty", timeoutTicks = 1_200_000, batch = "lod02_full_vs_away")
     public static void lod02_full_vs_away(GameTestHelper helper) {
@@ -349,7 +372,7 @@ public class TownLodGameTests {
                         }
                         pic[2] = picture(level, id);
                         level.getServer().tickRateManager().setTickRate(20.0F);
-                        compare(helper, pic, trend(watched), trend(asleep), asleep.get(asleep.size() - 1));
+                        compare(helper, pic, trend(watched), noise(watched), trend(asleep), asleep.get(asleep.size() - 1));
                         TownLod.forceForTests(level.getServer(), null);
                         pass(helper);
                         return true;
@@ -366,7 +389,7 @@ public class TownLodGameTests {
      * for what its folk used in the moments since).
      */
     private static void compare(GameTestHelper helper, Map<String, Integer>[] pic, Map<String, Double> watched,
-                                Map<String, Double> asleep, Map<String, Integer> kept) {
+                                Map<String, Double> noise, Map<String, Double> asleep, Map<String, Integer> kept) {
         java.util.Set<String> kinds = new java.util.TreeSet<>(watched.keySet());
         kinds.addAll(asleep.keySet());
         StringBuilder report = new StringBuilder();
@@ -375,8 +398,12 @@ public class TownLodGameTests {
             boolean folk = "folk".equals(k);
             int full = folk ? pic[1].getOrDefault(k, 0) - pic[0].getOrDefault(k, 0) : (int) Math.round(watched.getOrDefault(k, 0.0));
             int away = folk ? pic[2].getOrDefault(k, 0) - pic[1].getOrDefault(k, 0) : (int) Math.round(asleep.getOrDefault(k, 0.0));
-            report.append(k).append(" full ").append(full).append(" away ").append(away).append("; ");
-            double allowed = Math.max(TOLERANCE * Math.abs(full), "folk".equals(k) ? 2 : FEW);
+            report.append(k).append(" full ").append(full).append(" away ").append(away);
+            if (!folk) report.append(" (noise ").append(Math.round(noise.getOrDefault(k, 0.0))).append(')');
+            report.append("; ");
+            // Within a fifth, or a couple of dozen for a kind barely moved, or the watched trend's own noise.
+            double allowed = Math.max(Math.max(TOLERANCE * Math.abs(full), "folk".equals(k) ? 2 : FEW),
+                folk ? 0 : noise.getOrDefault(k, 0.0));
             if (Math.abs(away - full) > allowed) wrong.append(k).append(' ');
         }
         Kit.log("lod02 " + DAYS + " days, the trend watched vs asleep: " + report);
