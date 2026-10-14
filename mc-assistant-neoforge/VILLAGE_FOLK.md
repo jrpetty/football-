@@ -1343,8 +1343,8 @@ with plain blocks, so a building is never held up.
 | Shelter | 7×7 | Four log posts, a low stone wall and a pitched roof |
 | Well | 5×5 | Stone curb round water, four posts, a little roof with a hanging lantern |
 | Smeltery | 9×9 | Stone forge open to the street, three furnaces under a brick chimney, anvil, bench and chests |
-| Workshop | 9×9 | Timber workroom with a wide door, a bench and the tailor's loom, furnace, barrels and a hayloft |
-| Granary | 7×7 | Squat store on a stone base, full of hay, three chests, hipped roof |
+| Workshop | 9×9 | Timber workroom with a wide door, a bench and the tailor's loom, furnace, barrels and a hayloft up a ladder |
+| Granary | 7×7 | Squat store on a stone base, a stack of hay to the rafters between two chests of grain, hay by the door, a lantern under the eaves, hipped roof |
 | Market | 11×11 | Open hall on log posts under a broad hipped roof, stalls of hay and barrels, a fountain, lanterns hung from the eaves over the stalls |
 | Meeting hall | 11×19 | Long timber hall: tall windows, a pair of doors up steps between lamp posts, a long table, lanterns hung from the rafters down both sides, the elder's seat |
 | Chapel | 9×21 | Stone nave with tall windows, a bell tower over the door (a ladder up to its bell), pews, an altar and lights hung from tie beams |
@@ -1355,12 +1355,12 @@ with plain blocks, so a building is never held up.
 | Gateway | 9×5 | The Nether Age's obsidian frame on a stone dais between lantern pillars |
 | Wall | ring of 27 | Round the square: battlements, a gate onto each avenue, lantern pillars, corner towers |
 | Pen | 7×7 | Fence ring with a gate, once there is a rancher |
-| Stable | 9×9 | Tall timber barn on a stone footing: four fenced stalls either side of an aisle, hay at the front and in the loft, a sunken trough and a cauldron, three gates across a door four high, once the village has horses |
+| Stable | 9×9 | Tall timber barn on a stone footing: four fenced stalls either side of an aisle, hay at the front and in the loft (a ladder up to it), a sunken trough and a cauldron, three gates across a door four high, once the village has horses |
 | Tavern | 11×11 | Broad timber inn: stone hearth with its fire and chimney, a bar of casks, tables and benches, note blocks, lanterns |
 | Graveyard | 9×9 | Fenced plot with a gate, a path to a stone cross, lanterns on the corner posts, twelve graves |
 | House, grown | 9×9 | The family house with a second storey: a ladder up to two more beds and a chest under the eaves |
-| Café | 9×9 | Bright timber room with big windows on the street, a counter of casks, a smoker behind it, little tables and chairs, flowers by the door |
-| Shop | 9×9 | Timber shopfront with a window either side of the door, a counter of casks with the goods on it, shelves of barrels behind |
+| Café | 9×9 | Bright timber room with big windows on the street, a counter of casks across the room with a way behind it to the smoker, the bench and the chests, a little table with its chair in each window, flowers by the door |
+| Shop | 9×9 | Timber-framed shop with its gable to the street, a window either side of the door and a lantern over it from a beam end, a window in the gable; inside a rug from the door to a counter of casks with the goods on it, a cask of goods either side of the door, and behind the counter a cask on a cask and a chest either side of the hands' bench with a lamp on it (every chest opens, every cask can be got at) |
 | Smithy | 9×9 | Stone forge open to the street between log pillars: two furnaces under a brick hood, the anvil, a grindstone, a quenching tub, a bench and chests |
 | Brewery | 9×9 | Timber still-house on a stone footing: two brewing stands on a stone bench, cauldrons, casks, a window to the street |
 | Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
@@ -1375,6 +1375,23 @@ not over the middle of the floor; a torch or a standing lantern stands on someth
 wall at its back; a door opens onto a floor with headroom; water is held in its basin; and every bed,
 bench, bell and storey can be walked to from the street, up the stairs and the ladders, in the
 buildings the Iron Age puts a second storey on as well. (A test reads every drawing and checks it.)
+
+**Every design walked through.** The same test (BlueprintSoundnessTest, which runs without the game)
+goes round every design, and every one the Iron Age raises, as somebody coming up the street would.
+A building with doors has one onto the street, with clear ground (or steps) two places out from it
+and a lamp by it; it is got into through its doors and not through a gap in its walls, and there is
+no one-block hole in a wall that is not a window. Every chest opens (nothing solid sits on its lid)
+and every chest and cask can be got at; every furnished storey can be walked up to, by stairs or a
+ladder (a ladder up a side wall where one up the back would come out under the roof's slope); no hole
+in an upper floor would drop anybody down a storey; everywhere walled in behind the doors has a roof
+over it; the shop's, the café's and the store's counters are clear in front for their price tags and
+their customers; nothing floats; and every design keeps the footprint and the side its door is on
+(the town plan's lots are sized by them). It names each fault by design, layer and place.
+`tools/blueprints.py contact <dir>` draws contact sheets of every design, from the front, from the
+back and cut away above the ground floor, to look them over before the game runs. The store has a
+flower bed either side of its steps and window boxes upstairs; a lantern hangs from a beam end over
+twenty-odd doors that had none; the sky garden's terraces have a stair up to them at last, and the
+grand library's galleries are clear of their lecterns.
 
 Builders take the place the town plan has for the building. Of the first few good
 lots they pick the one that costs least to build on. They level it (filling the low
