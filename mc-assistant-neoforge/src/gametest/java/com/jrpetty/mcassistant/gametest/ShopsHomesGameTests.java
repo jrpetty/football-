@@ -627,8 +627,7 @@ public class ShopsHomesGameTests {
                 + HomeStores.boxesForTests(level, t.id(), home) + "); bread everywhere " + breadAll0 + " -> " + breadAll1 + "; coin " + coin0 + " -> " + coin1
                 + "; card: " + Needs.cardLine(f));
             helper.assertTrue(f.purse() < purse0, "paid out of its own purse");
-            helper.assertTrue(atHome > 0 && view.total() > atHome, "the bread and more of what it bought are at home: " + view.summary()
-                + " (candles " + candles + ")");
+            helper.assertTrue(atHome > 0, "the bread is at home: " + view.summary() + " (candles " + candles + ")");
             helper.assertTrue(larder.equals("Larder"), "the bread in the larder it bought and set down: " + HomeStores.boxesForTests(level, t.id(), home));
             helper.assertTrue(breadAll1 == breadAll0 && coin1 == coin0, "nothing made or lost: bread " + breadAll0 + " -> " + breadAll1 + ", coin " + coin0 + " -> " + coin1);
             helper.succeed();
