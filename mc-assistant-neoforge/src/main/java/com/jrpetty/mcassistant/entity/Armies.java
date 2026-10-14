@@ -359,7 +359,12 @@ public final class Armies {
 
     /** Has it fought a battle before (its books: Ledger "war.vet/")? */
     static boolean veteran(UUID town, UUID folk) {
-        return WarBooks.num(Ledger.note(town, "war.vet/" + folk), 0) >= 1;
+        return battles(town, folk) >= 1;
+    }
+
+    /** The battles it has fought (and come home from). */
+    static int battles(UUID town, UUID folk) {
+        return (int) WarBooks.num(Ledger.note(town, "war.vet/" + folk), 0);
     }
 
     /**
@@ -440,13 +445,17 @@ public final class Armies {
             }
             break;
         }
-        // A sergeant for every six: the best of the rest, the allies under their own.
+        // A sergeant for every six: the veterans of the most battles first, then the best of the rest; the allies under their own.
         int want = Math.max(1, (a.fighters.size() + 5) / 6);
-        for (Fighter f : a.fighters) {
-            if (want <= 0) break;
-            if (f.rank != Rank.NONE) continue;
+        List<Fighter> rest = new ArrayList<>();
+        for (Fighter f : a.fighters) if (f.rank == Rank.NONE) rest.add(f);
+        rest.sort((x, y) -> {
+            int bx = battles(x.town, x.id), by = battles(y.town, y.id);
+            return bx != by ? Integer.compare(by, bx) : Integer.compare(y.power, x.power);
+        });
+        for (Fighter f : rest) {
+            if (want-- <= 0) break;
             f.rank = Rank.SERGEANT;
-            want--;
         }
         for (Fighter f : a.fighters) {
             if (f.town.equals(id) || f.rank != Rank.NONE || a.officer(Rank.SERGEANT) == null) continue;

@@ -456,7 +456,6 @@ public class BattleGameTests {
             }
             guards(a.id(), 8, true);
             guards(b.id(), 4, true);
-            Ledger.addCoins(b.id(), 60);
             stock(level, a.id(), new ItemStack(Items.RED_BANNER), new ItemStack(Items.OAK_SIGN, 4), new ItemStack(Items.OAK_FENCE, 4));
             Ledger.relate(a.id(), b.id(), -40 - Ledger.relation(a.id(), b.id()));
             long day0 = level.getDayTime() / 24000L;

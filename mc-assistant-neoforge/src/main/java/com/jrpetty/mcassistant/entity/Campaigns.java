@@ -176,6 +176,13 @@ public final class Campaigns {
         Battles.resetForTests();
     }
 
+    /** A new world (or the same one opened again): the campaigns read again from its books at the first tick. */
+    public static void resetSession() {
+        ACTIVE.clear();
+        loaded = false;
+        Armies.resetForTests();
+    }
+
     /** Tests: every field taken as watched (true: in full), or as unwatched (false: on paper); null for the players as they are. */
     public static void watchForTests(@Nullable Boolean on) {
         watchForTests = on;
@@ -1130,6 +1137,20 @@ public final class Campaigns {
                 + (h != null ? " at " + h.getX() + ", " + h.getZ() : ""));
         }
         return out;
+    }
+
+    /** A folk's battles for its card: "A veteran of 2 battles, called Brannoc the Bold"; in the field, what it is about. Null if neither. */
+    @Nullable
+    public static String veteranLine(VillageFolkEntity f) {
+        UUID town = f.ownerId();
+        if (town == null) return null;
+        Armies.Fighter x = Armies.fighter(f.getUUID());
+        String now = x == null ? null : "In the field: " + Armies.doing(x);
+        int n = Armies.battles(town, f.getUUID());
+        if (n <= 0) return now;
+        String nick = Ledger.note(town, "war.nick/" + f.getUUID());
+        String vet = "A veteran of " + (n == 1 ? "a battle" : n + " battles") + (nick == null || nick.isEmpty() ? "" : ", called " + f.displayNameCap() + " " + nick);
+        return now == null ? vet : now + "; " + vet.substring(0, 1).toLowerCase(Locale.ROOT) + vet.substring(1);
     }
 
     static String spirit(Armies.Army a) {

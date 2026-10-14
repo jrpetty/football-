@@ -2595,6 +2595,8 @@ public final class WarAndPeace {
             + (w >= 25 ? " (the town " + wearyWord(w) + (Values.top(f) == Values.Value.SAFETY && w < WEARY ? ", though it would see it through" : "") + ")" : "");
         if (f.getUUID().equals(peaceCandidate(v))) war = (war == null ? "" : war + "; ") + "standing for peace at the election";
         String council = vote == null || about == null ? null : "On the council of war it " + vote + " war with " + about;
+        String vet = Campaigns.veteranLine(f);                                   // [war] its battles, and the name they won it
+        if (vet != null) war = war == null ? vet : war + "; " + vet.substring(0, 1).toLowerCase(Locale.ROOT) + vet.substring(1);
         if (war == null && council == null) return null;
         return war == null ? council + "." : council == null ? war + "." : war + "; " + council.substring(0, 1).toLowerCase(Locale.ROOT) + council.substring(1) + ".";
     }

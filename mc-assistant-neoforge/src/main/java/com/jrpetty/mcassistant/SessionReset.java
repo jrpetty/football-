@@ -68,5 +68,6 @@ public final class SessionReset {
         Requests.resetAll();
         ChunkLoad.reset();
         com.jrpetty.mcassistant.entity.Reach.reset();
+        com.jrpetty.mcassistant.entity.Campaigns.resetSession();   // [war] the armies in the field read again from the new world's books
     }
 }
