@@ -821,6 +821,44 @@ class BlueprintSoundnessTest {
     }
 
     @Test
+    @DisplayName("[blueprints] nothing floats: every block of a building holds on to the rest of it, down to the ground")
+    void nothingFloats() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> held = new HashSet<>();
+            ArrayDeque<Cell> todo = new ArrayDeque<>();
+            Map<Long, Cell> all = new HashMap<>();
+            for (Cell c : cells(d)) {
+                all.put(Drawing.at(c.dx(), c.h(), c.dz()), c);
+                if (c.h() <= 0 && held.add(Drawing.at(c.dx(), c.h(), c.dz()))) todo.add(c);
+            }
+            while (!todo.isEmpty()) {
+                Cell c = todo.poll();
+                // Face to face, or edge to edge (a hipped roof's courses step in a block as they go up).
+                for (int x = -1; x <= 1; x++) {
+                    for (int y = -1; y <= 1; y++) {
+                        for (int z = -1; z <= 1; z++) {
+                            if (Math.abs(x) + Math.abs(y) + Math.abs(z) > 2 || x == 0 && y == 0 && z == 0) continue;
+                            long k = Drawing.at(c.dx() + x, c.h() + y, c.dz() + z);
+                            Cell m = all.get(k);
+                            if (m != null && held.add(k)) todo.add(m);
+                        }
+                    }
+                }
+            }
+            int loose = 0;
+            String first = null;
+            for (Cell c : cells(d)) {
+                if (held.contains(Drawing.at(c.dx(), c.h(), c.dz()))) continue;
+                loose++;
+                if (first == null) first = d.where(c.dx(), c.h(), c.dz());
+            }
+            if (loose > 0) faults.add(first + ": " + loose + " blocks hold on to nothing");
+        }
+        report("floating blocks", faults);
+    }
+
+    @Test
     @DisplayName("[blueprints] a lamp by every door onto the street: nobody fumbles for the way in after dark")
     void doorwaysAreLit() throws IOException {
         List<String> faults = new ArrayList<>();
