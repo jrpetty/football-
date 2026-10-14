@@ -148,6 +148,7 @@ public final class JobWorth {
         /** "miner", "stock keeper", "teacher": one who does it. */
         public String noun() {
             if (role != null) return role.title.toLowerCase(Locale.ROOT);
+            if (key.startsWith("COOK/")) return title.toLowerCase(Locale.ROOT);       // [dining] "waiter", "barkeep"
             if (trade == null) return "teacher";
             return JobMarket.noun(trade);
         }
@@ -219,6 +220,15 @@ public final class JobWorth {
             case "SHOP/CRAFTER" -> new Post(key, title, trade, role, 0, 2, 0.0, 1.0, "skilled work at the bench", "");
             case "SHOP/STOCK_KEEPER" -> new Post(key, title, trade, role, 2, 3, 1.15, 0.0, "a hard, skilled job",
                 "keeps the shop's shelves full");
+            // [dining] The cook's trade's jobs (Hospitality): the head cook runs the kitchen; the baker and the line cooks
+            // make; the floor, the bar, the inn and the sink make nothing and are paid for what they do for the house.
+            case "COOK/HEAD_COOK" -> new Post(key, title, trade, role, 1, 3, 0.6, 1.0, "hot work that takes much skill", "runs the kitchen and its menu");
+            case "COOK/BAKER" -> new Post(key, title, trade, role, 1, 2, 0.0, 1.0, "early, hot work", "");
+            case "COOK/BARKEEP" -> new Post(key, title, trade, role, 0, 1, 0.9, 0.0, "late nights behind the bar", "keeps the tavern's bar");
+            case "COOK/INNKEEPER" -> new Post(key, title, trade, role, 0, 1, 0.9, 0.0, "steady work", "keeps the inn's rooms");
+            case "COOK/WAITER" -> new Post(key, title, trade, role, 1, 0, 0.8, 0.0, "on your feet all evening", "serves the tables");
+            case "COOK/POT_WASHER" -> new Post(key, title, trade, role, 1, 0, 0.6, 0.0, "hot, wet work", "keeps the plates clean");
+            case "COOK/HOST" -> new Post(key, title, trade, role, 0, 1, 1.0, 0.0, "greeting and the till", "runs the dining room's front");
             case TEACH -> new Post(key, title, trade, role, 0, 4, 1.2, 0.0, "learned work", "teaches the children");
             default -> key.contains("HEAL")
                 ? new Post(key, title, trade, role, 1, 4, 1.3, 1.0, "learned work", "keeps folk well")     // a healer, if the town has one
@@ -262,6 +272,12 @@ public final class JobWorth {
                             ShopRoles.Role.ASSISTANT }) {
                         out.add(make("SHOP/" + r.name(), r.title, t, r));
                     }
+                } else if (t == StationTask.COOK) {
+                    // [dining] The plain cook (a line cook), then each of the trade's jobs (Hospitality).
+                    out.add(make(t.name(), t.title, t, null));
+                    for (Hospitality.Role r : Hospitality.Role.values()) {
+                        if (r != Hospitality.Role.NONE && r != Hospitality.Role.LINE_COOK) out.add(make("COOK/" + r.name(), r.title, t, null));
+                    }
                 } else {
                     out.add(make(t.name(), t == StationTask.HAUL ? "Courier" : t.title, t, null));
                 }
@@ -290,6 +306,11 @@ public final class JobWorth {
     /** This folk's job. */
     public static Post postOf(VillageFolkEntity f) {
         StationTask t = f.stationTask();
+        if (t == StationTask.COOK) {                                                   // [dining] its job in the kitchen or on the floor
+            Hospitality.Role r = Hospitality.role(f);
+            Post p = r == Hospitality.Role.LINE_COOK || r == Hospitality.Role.NONE ? null : post("COOK/" + r.name());
+            if (p != null) return p;
+        }
         return postFor(t, t == StationTask.SHOP ? ShopRoles.role(f) : null);
     }
 

@@ -47,6 +47,8 @@ public class BuildGoal extends Goal {
         // the crafts' buildings and the amenities: missing here, a village's builder was told
         // "I can build: ..." and the café, the shop and the smithy never went up
         "cafe", "shop", "smithy", "brewery", "library", "tavern", "graveyard", "house2",
+        // [dining] the restaurant: its dining room, its kitchen behind the pass (entity/DiningPlaces)
+        "restaurant",
         // the Village Storehouse laid into a storehouse shed built before there were units
         "storehouse",
         // what the later ages add: a fountain on the square, a manor house, a bell tower

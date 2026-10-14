@@ -281,7 +281,8 @@ public final class Restore {
             case HAY -> st.is(Blocks.HAY_BLOCK);
             case BARREL -> b instanceof net.minecraft.world.level.block.BarrelBlock;
             case FLOWER -> st.is(BlockTags.SMALL_FLOWERS) || st.is(BlockTags.FLOWER_POTS) || st.is(BlockTags.FLOWERS);
-            case CARPET -> b instanceof net.minecraft.world.level.block.CarpetBlock;
+            case CARPET -> b instanceof net.minecraft.world.level.block.CarpetBlock
+                || com.jrpetty.mcassistant.block.PlaceSettingBlock.laidCloth(st);   // [dining] a table laid on its cloth
             case ANVIL -> b instanceof net.minecraft.world.level.block.AnvilBlock;
             case CAULDRON -> b instanceof net.minecraft.world.level.block.AbstractCauldronBlock;
             case BELL -> b instanceof net.minecraft.world.level.block.BellBlock;

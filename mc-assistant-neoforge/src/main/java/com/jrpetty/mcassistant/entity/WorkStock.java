@@ -185,7 +185,7 @@ public final class WorkStock {
         return chest != null && StoreDeliveries.fetchOwn(f, level, chest);
     }
 
-    private static void sendFor(ServerLevel level, Villages.Village v, List<Making> makings, String destName, BlockPos chest, Container c) {
+    static void sendFor(ServerLevel level, Villages.Village v, List<Making> makings, String destName, BlockPos chest, Container c) {   // [dining] the kitchens' pantries too
         for (Making k : makings) {
             int have = count(c, k.is());
             String key = deliveryKey(chest, k);
@@ -226,6 +226,12 @@ public final class WorkStock {
 
     static void end() {
         MAKER.remove();
+    }
+
+    /** [dining] A kitchen sets to work: its pantry (a dining room's kitchen chest) is where its makings come from first,
+     *  till end(). */
+    static void beginWith(@Nullable Container pantry) {
+        MAKER.set(pantry);
     }
 
     /** How many of what matches the maker at work has in its own chest (0 when nobody is at work). */

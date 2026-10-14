@@ -1,0 +1,140 @@
+# [dining] The restaurant: a timber dining room on a stone footing, the kitchen across the back behind the pass. The
+# kitchen has its hearth in the back wall under the chimney, a smoker and an oven for the roasts and the fish, the bench
+# for the cold plates, a brewing stand for the tea, the sink (a cauldron) where the plates are washed, and the shelf (a
+# chest) where the clean ones stand. The pass is a counter of casks with a gap for the waiters (the service counter goes
+# in beside it), under a lantern. The dining room has six tables with white cloths, each with its own chair, in
+# pairs along the windows like booths, lanterns hung low over them; flowers either side of the door.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name restaurant
+layer -1
+.....F.....
+.FFFFFFFFF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FFFFFFFFF.
+..d..k..d..
+layer 0
+.....S.....
+.LwwShSwwL.
+.wCMU.TI&w.
+.w.......w.
+.wQQQ.QQQw.
+.w>P...P<w.
+.w>P...P<w.
+.w.......w.
+.w>P...P<w.
+.LwwwDwwwL.
+..*.....*..
+layer 1
+.....S.....
+.LWWSSSWWL.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.X...X.G.
+.W.X...X.W.
+.G.......G.
+.W.X...X.W.
+.LGGW.WGGL.
+...........
+layer 2
+.....S.....
+.LWWSSSWWL.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.G.......G.
+.W.......W.
+.LGGWWWGGL.
+...........
+layer 3
+.....S.....
+.LWWSSSWWL.
+.W.......W.
+.W...j...W.
+.W.......W.
+.W.j...j.W.
+.W.......W.
+.W.......W.
+.W.j...j.W.
+.LWWWWWWWL.
+...j...j...
+layer 4
+vvvvvvvvvvv
+.L-------L.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.|fffffff|.
+.L-------L.
+^^^^^^^^^^^
+layer 5
+.....S.....
+vvvvvvvvvvv
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+.W.......W.
+^^^^^^^^^^^
+...........
+layer 6
+.....S.....
+...........
+vvvvvvvvvvv
+.W.......W.
+.W.......W.
+.G.......G.
+.W.......W.
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+layer 7
+.....S.....
+...........
+...........
+vvvvvvvvvvv
+.W.......W.
+.W.......W.
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+...........
+layer 8
+.....S.....
+...........
+...........
+...........
+vvvvvvvvvvv
+.W.......W.
+^^^^^^^^^^^
+...........
+...........
+...........
+...........
+layer 9
+.....S.....
+...........
+...........
+...........
+...........
+___________
+...........
+...........
+...........
+...........
+...........

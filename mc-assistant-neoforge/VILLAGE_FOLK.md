@@ -11265,6 +11265,58 @@ wall behind `castleWalls`.
 `/village wall stage` (ops: the same, and the views to photograph it); `/village muster` (ops: the bell rung for a
 drill, a minute long, and the views over the square).
 
+## Eating out: cafés, taverns and restaurants [dining]
+
+A town's places to eat out serve a player and a folk the one way, from a real kitchen, by real hands. (`entity/Dining`
+the orders, the kitchen, the floor and the wash; `Diners` the folk who dine out and the player's chair; `DiningMenu` the
+card; `DiningPlaces` the places as they stand; `DiningDesk` and `client/DiningPanel` the order screen; `Hospitality` the
+jobs; `block/PlaceSettingBlock` the plate and the cup.)
+
+* **The places.** The café (breakfast, cakes and tea, a light lunch), the tavern (drinks, pies and stews of an
+  evening) and, from the Stone Age once a town has its café, a cook and two dozen folk, the **restaurant**: a timber
+  dining room on a stone footing with six tables in booths along the windows, each with its own chair and a cloth,
+  lanterns hung low, and behind the pass the kitchen (the hearth under the chimney, a smoker and an oven, the bench,
+  a brewing stand for the tea, the sink, the shelf of clean plates). Each place's tables, stations, pass and sink are
+  read off the building as it stands. A menu board by the door gives the day's special and the hours.
+* **The card.** Drinks, starters, mains and desserts for the place and the meal (breakfast, lunch, dinner): roasts
+  and fish cooked to order from the raw, stews over the hearth, pies, bread and cheese, cake by the slice (seven to a
+  cake, the rest kept for the next order), the café's bottles, the cellar's mead and cider, and the towns' own dishes.
+  The head cook's special is the town's own dish when it can be made, else the main the stores hold most makings for;
+  the town's dish is marked local; warming dishes lead in autumn and winter. A dish with nothing ready and nothing to
+  make it of is **sold out** and cannot be ordered. Prices are the town's asking price (the market's one spread) and a
+  little for the table: a tenth at the café, a sixth at the tavern, a quarter at the restaurant.
+* **A player orders.** Right-click a chair at a table and sit (crouch to get up), or right-click the table's cloth, or a
+  waiter at work: the order screen opens for that table and the waiter comes over. Pick from the cards (picture, price,
+  what is in it, the hunger it gives, the special and local badges), choose how it is served (at the table, to take
+  away, or brought to you anywhere in town by a runner) and whether to pay now, and Order. The screen shows each dish
+  as it goes (ordered, cooking and by whom, on its way, on your table). Right-click the plate to eat a bite, the cup to
+  sip; then Pay, with a tip for the waiter if you like. Walk off with the bill unpaid and it comes out of your purse;
+  what you cannot pay the staff remember.
+* **The kitchen.** Tickets in order, drinks first. The cook walks to the dish's station, takes its makings out of the
+  stores and makes it by the game's own recipe (or plates what is ready), a few seconds at it with the smoke and the
+  sizzle, faster and finer the better the hand (a good cook's and a master's dish a little more filling). A green hand
+  burns one now and then: thrown out and made again. A dish whose makings run out mid-service is struck off: the
+  diner is told and not charged.
+* **The floor and the wash.** The waiter takes the plate off the pass, carries it in hand to the table and sets it on a
+  plate on the table's cloth (the carpet is kept and goes back after); the drink comes first, in a cup at the plate's
+  corner. When the diner has eaten and paid it clears the table; the pot washer washes each plate and cup at the sink
+  and only then puts it back on the shelf. Plates and cups are real (three bricks make three plates; two bricks and a
+  clay ball two cups), the house's own, and made again of the stores' bricks when it is short.
+* **Folk dine out** of an evening by their means and their mood: never the poor, now and then those getting by, most
+  evenings the wealthy; twice as likely on payday, more on the day of rest, a couple together when both are free. They
+  sit, the waiter takes their order (a word each side), they eat bite by bite, chat with the next table, pay to the
+  hundredth (on the slate if short), tip when pleased, and go; it is their supper, and they are happier for the day.
+* **The jobs.** The cook's trade is split like the shop's: **head cook** (runs the kitchen and its menu), **cooks**
+  (the line), **baker** (the bakery's ovens in the small hours), **barkeep** (behind the tavern's bar through its
+  hours), **innkeeper** (the inn's rooms, a coin in three of each room's fee), **waiter**, **pot washer** and **host**
+  (the front and the till). Each is a post on the books with its own pay, on the nameplate and the card; the town's
+  shape counts them in the cook's share, by its size and its places (a waiter more for every thirty-five folk past
+  twenty, up to one for three tables). Small places combine the jobs: with no waiter the cook carries, with no pot
+  washer the waiter washes; a busy waiter is waited for, not replaced. The floor and the bar keep their place's hours.
+* **Seeing it.** `/village dining` lists each place's tables, orders and clean plates, the takings, the plates washed,
+  the dishes burnt and what each of the staff is doing. Orders, the wash and cut portions are saved with the world: a
+  restart puts the work in hand back in the queue.
+
 
 ## The town's ways: doors, paths, lots and names by the doors
 

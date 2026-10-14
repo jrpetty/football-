@@ -717,6 +717,7 @@ public final class JobMarket {
         { "golemyard", "GOLEMS" },                                                     // [golems] the golem yard
         { "powderhut", "FIREWORKS" },                                                       // [fireworks]
         { "maproom", "CARTOGRAPHER" },                                                          // [cartographer]
+        { "restaurant", "COOK" },                                                               // [dining] its kitchen and its floor
     };
 
     /** How many hands short the town is at a trade, as its shape has it (the trade's share, less who works it). */

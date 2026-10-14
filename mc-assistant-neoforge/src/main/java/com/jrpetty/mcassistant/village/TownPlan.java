@@ -220,6 +220,7 @@ public final class TownPlan {
                  "redstoneworks",                                              // [redstone] the redstone workshop (entity/Engineers)
                  "theatre",                                                    // [batchD] the theatre
                  "townlibrary",                                                // [library] the town library
+                 "restaurant",                                                 // [dining] the restaurant, among the trades
                  "bakery", "inn" -> "civic";                                   // [batchE] the bakery and the inn
             case "windmill", "orchard", "allotments" -> "fields";        // [batchE] by the farm gate (entity/TownLook.fieldLots)
             case "watchtower" -> "corner";

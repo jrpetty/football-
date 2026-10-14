@@ -775,6 +775,7 @@ public final class FolkTalk {
             case "windowbox" -> WindowBoxes.moodWords(f);                            // [workitems]
             case "interviewed", "passedover" -> Interviews.moodWords(f, why);          // [interviews]
             case "cake", "drink" -> Kitchen.moodWords(f, why);                         // [kitchen]
+            case "dined", "tipped" -> Dining.moodWords(f, why);                        // [dining]
             case "homecooking", "delicacy", "townfeast", "ownfeast", "blessed" -> TownWays.moodWords(f, why);   // [culture2]
             case "quilt", "warmquilt", "draughts", "kite", "kickabout", "lanterns" -> Pastimes.moodWords(f, why);   // [leisure]
             default -> "";

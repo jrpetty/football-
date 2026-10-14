@@ -200,6 +200,7 @@ public final class Meals {
         if ((b.taken & bit) != 0) return;
         // A ration eaten at its work since this mealtime began is this meal.
         long began = level.getGameTime() - (tod - m.from);
+        if (Diners.dining(f)) return;                       // [dining] out to dinner: the meal is at the table (ateOut)
         if (b.lastAte >= began) {
             had(f, b, m, bit, village, day);
             return;
@@ -240,6 +241,26 @@ public final class Meals {
             FolkTalk.speak(f, f.isBaby() ? "I'm hungry." : "No " + m.label + " for me today. Is there nothing in the stores?");
         }
         f.refreshMood();
+    }
+
+    /**
+     * [dining] Dinner out eaten (Diners): the meal on now (else supper, if its hour is gone by and it is not had) is had.
+     */
+    public static void ateOut(VillageFolkEntity f, ServerLevel level) {
+        UUID village = f.ownerId();
+        if (village == null) return;
+        Book b = f.meals();
+        long time = level.getDayTime(), day = time / 24000L;
+        Meal m = Meal.at((int) (time % 24000L));
+        if (m == null) m = Meal.SUPPER;
+        int bit = 1 << m.ordinal();
+        if (b.day == day && (b.taken & bit) != 0) return;
+        if (b.day != day) {
+            b.day = day;
+            b.taken = 0;
+            b.eaten = 0;
+        }
+        had(f, b, m, bit, village, day);
     }
 
     private static void had(VillageFolkEntity f, Book b, Meal m, int bit, UUID village, long day) {
