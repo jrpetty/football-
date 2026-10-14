@@ -10677,3 +10677,62 @@ in, anything standing in its roads, anything half built (given up, or going up a
 how many are on the repair list; and then the first dozen findings, each with what put it there where that can be told.
 `/village integrity views` says where to look at the four buildings furthest from their drawings from;
 `/village integrity survey` has every building looked over at once.
+
+## The town's ways: doors, paths, lots and names by the doors
+
+[paths] A town is walked as well as looked at. Its folk must get in at every door, never stand stuck against something
+for good, and its buildings must stand on their lots with a way round each.
+
+**A way to every door.** On its rounds of the streets (TownWork, every fifteen seconds for one town, six buildings a
+visit) the town first makes each door's way in walkable (DoorWays: the doorway dug out, a doorstep and steps cut into a
+bank or built up out of a hollow, their tops in cobblestone), then lays the path from the door straight out to its street:
+worn into the earth, or laid in what the street itself is laid in (cobbles, stone bricks) out of the stores; the grass and
+flowers taken off it, and loose earth, gravel, sand, a scaffold left standing or rubble off any building's ground taken
+out of the two places before the door. Where the path is dark at night (block light under 8 at its doorstep or its street
+end), a lamp goes up beside it on the lot's own ground, never on the street or the path: a post of the town's wood with a
+lantern from the Iron Age, a torch on a post before. All by hand (TownJobs) and through the town's gate (TownBlocks:
+DOORWAY, LAMP).
+
+**Nobody stuck for good.** When a folk's stuck detector gives its path up, the spot is looked at (StuckSpots): what stood
+toward the next step of its path: a missing step (a bank two high), a block in the way, a low block overhead, a wall, a
+fence, a drop, water, somebody in the way. On the town's own open ground (a street, the square, a lot's open ground; never
+in a building, a field or a pen) its own fault is mended there and then by the folk that met it: the bank's top block cut
+out into a step, a stray block dug out (into the stores), a hole in a street filled from the stores. A spot mended six
+times is left and only written down. The count of give-ups, of mends and of folk going nowhere for more than half a minute
+is kept in the town's books (the ledger's notes, so a restart keeps it); the spots themselves are kept in memory. The
+village board's panels, a rain barrel, the stocks and the ferry bell no longer let the game's path finder plan a way
+through them (they are a plank thick or near full height on less than a block): the board was where a new town's folk
+were stuck most, two hundred and seventy times in a day and a half.
+
+**Lots kept apart.** A building is never sited where its ground, eaves and all, would overlap or touch a building
+standing or going up (Footways.crowds, in Villages.siteFor and a household's own lot in HousingMarket): most buildings
+leave a block of their eleven-block lot, so neighbours back to back keep a way of two between them; the few that fill
+their lots (a villa, a block of flats, the museum) go to another lot rather than stand wall to wall with another such.
+
+**Whose house it is.** Every home (a house, a two-storey house, a manor, a villa) has a sign by its front door, beside it
+at head height on the wall, never on a window, in the town's own wood: the head of the household's name (with "& family"
+for more than one), their trade (or the two trades of a couple, "Farmer & Miner"), the house's number and its street. An
+empty house says "To let"; a player's house the player's name. The town's rounds keep it right: a household that moves in
+or out, buys the house or lets it has its sign seen to on the next round (ten seconds), any other change (a new trade, a
+death) on the town's round of its buildings; a sign knocked down is put back. Old towns' houses get theirs on their next
+round. A long name is cut with an ellipsis.
+
+**Looking it over.** `/village paths` gives the town's ways in words: every door, whether a folk can walk to it from the
+heart and through it (Footways.reach: a block up, three down, through wooden doors and gates, up ladders), doors with no
+street straight out of them, doors with a wall or another building in the two places before them, buildings overlapping or
+touching, anything left on the square's open ground (the founders' camp beds counted apart), the spots folk gave up at,
+and anybody stuck over half a minute. The same checks are in the town's audit (TownAudit, under "ways"). For operators,
+`/village paths signs` sees to every home's sign now, `/village paths now` does a few rounds of the doors' ways and paths
+on the spot, and `/village paths views` says where to stand for the pictures (the smoke's paths stage).
+
+The game tests `PathsGameTests` check that:
+* a house a farmer rents has the farmer's name and "Farmer" by its door, with its number, on a sign of the town's wood
+  beside the door, not on a window; knocked down, it is put back; the farmer moves out and it says "To let", the number kept;
+* a dark door's way to its street is worn into a path all the way, a lamp goes up beside it off the street and the path,
+  the way is lit, and the door is reached from the heart;
+* a folk stopped below a bank two high with no step gives up, the spot is written down as a missing step, and a step is
+  cut into the bank there, all on the town's books;
+* a villa is never sited wall to wall with the villa on the lot behind it, a house is; the audit sees two touching;
+* a folk walks into a box through a wooden door, not through an iron one;
+* (not required, minutes long) pa10: a town of forty founded and grown for eight days with every feature live and its
+  stores kept stocked, its ways looked over every half day; pa11 the same town with the paths work switched off, to compare.
