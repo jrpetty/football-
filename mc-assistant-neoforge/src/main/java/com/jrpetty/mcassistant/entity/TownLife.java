@@ -804,7 +804,10 @@ public final class TownLife {
         Direction right = b.facing().getClockWise();
         String[] where = address(village, heart, b);
         String[] lines = new String[4];
-        if (b.structure().equals("house")) {
+        boolean named = HouseSigns.named(b.structure());   // [paths] a home's sign: who lives there and their trade (HouseSigns)
+        if (named) {
+            lines = null;                                     // worked out by the door, with what the sign says now
+        } else if (b.structure().equals("house")) {
             List<String> who = residents(village, b, f);
             lines[0] = where != null ? where[0] : "";
             lines[1] = where != null ? where[1] : "";
@@ -822,12 +825,24 @@ public final class TownLife {
             BlockState there = level.getBlockState(spot);
             boolean ours = there.getBlock() instanceof WallSignBlock;
             if (!ours && (!there.isAir() || !level.getBlockState(wall).isSolid())) continue;
+            if (!ours && named && HouseSigns.window(level.getBlockState(wall))) continue;   // [paths] never on a window
+            String[] put = lines;
+            if (named) {                                     // [paths] the household's name and trade, the number kept
+                String[] was = null;
+                if (ours && level.getBlockEntity(spot) instanceof SignBlockEntity old) {
+                    was = new String[4];
+                    for (int i = 0; i < 4; i++) was[i] = old.getFrontText().getMessage(i, false).getString();
+                }
+                put = HouseSigns.lines(village, b, where, was);
+                if (put == null) return ours;
+            }
             if (!ours) {
                 if (!free && !TownJobs.atWork(level, v, "signs", spot, "nailing up a house sign")) return false;
                 if (!free && !Crafts.sign(level, v)) return false;
-                level.setBlock(spot, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
+                Block board = named ? HouseSigns.signOf(village) : Blocks.SPRUCE_WALL_SIGN;   // [paths] the town's wood
+                level.setBlock(spot, board.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
             }
-            if (level.getBlockEntity(spot) instanceof SignBlockEntity sign) write(sign, lines);
+            if (level.getBlockEntity(spot) instanceof SignBlockEntity sign) write(sign, put);
             return true;
         }
         return false;

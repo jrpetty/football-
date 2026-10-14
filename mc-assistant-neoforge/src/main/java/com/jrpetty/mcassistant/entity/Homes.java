@@ -2139,6 +2139,25 @@ public final class Homes {
         }
     }
 
+    /**
+     * [paths] Who lives in the house at this anchor, for the name by its door (HouseSigns): the household as it is on the
+     * books (and how many of them are about the town now, in the order they moved in), whether it stands to let, and
+     * whose it is if a player's. Null if the house is not on the books.
+     */
+    public record Household(List<VillageFolkEntity> folk, int members, boolean vacant, boolean player, String landlord) {}
+
+    @Nullable
+    public static Household householdAt(UUID village, BlockPos anchor) {
+        Home h = homes(village).get(anchor.asLong());
+        if (h == null) return null;
+        List<VillageFolkEntity> folk = new ArrayList<>();
+        for (UUID m : List.copyOf(h.members)) {
+            VillageFolkEntity f = loaded(village, m);
+            if (f != null && f.isAlive()) folk.add(f);
+        }
+        return new Household(folk, h.members.size(), h.vacant(), h.tenure == Tenure.PLAYER, h.landlordName);
+    }
+
     // ------------------------------------------------------------------ tests
 
     /** Tests: who lives in the house at this anchor. */

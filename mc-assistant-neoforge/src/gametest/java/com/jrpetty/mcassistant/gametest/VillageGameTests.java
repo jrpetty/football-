@@ -1460,7 +1460,7 @@ public class VillageGameTests {
             }
         }
         Kit.log("t29 the sign by the door: " + signText);
-        helper.assertTrue(signText != null && signText.startsWith("No. "), "a number by the house's door");
+        helper.assertTrue(signText != null && signText.contains("No. "), "a number by the house's door");   // [paths] under its household's name (HouseSigns)
         // The washing line behind it.
         BlockPos line = houseAt.relative(houseBack, fit.half()[1] + 1).above(2);
         int banners = 0;
