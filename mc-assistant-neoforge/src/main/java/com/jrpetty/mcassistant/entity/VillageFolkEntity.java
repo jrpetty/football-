@@ -331,6 +331,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // [nether] Out on a Nether run, on either side of the gateway (or one of the town's in the Nether by itself): the
         // run is its day, and nothing of the town's that would send it home to bed or the square reaches it (NetherRuns).
         if (level() instanceof net.minecraft.server.level.ServerLevel runs && NetherRuns.hold(this, runs)) return;
+        if (level() instanceof net.minecraft.server.level.ServerLevel field && Armies.hold(this, field)) return;   // [war] in an army: its place in the ranks
         if (tickCount % 20 == 17) Aboard.step(this);           // [mine-safety] out of a boat it never meant to board
         if (tickCount % 20 == 3) persona.town = ownerId();      // [identity] how fast it trusts a player is its town's (Treatment)
         // [transport] Sat in a cart or the ferry: the ride (or the rowing) is its day till it is off again.
@@ -1696,6 +1697,8 @@ public class VillageFolkEntity extends AssistantEntity {
         builder.define(DATA_CHILD, false);
         builder.define(DATA_STYLE, 0L);                 // [fashion]
         builder.define(DATA_POLICE, 0);                 // [police]
+        builder.define(DATA_WAR, 0);                    // [war]
+        builder.define(DATA_SURCOAT, net.minecraft.world.item.ItemStack.EMPTY);   // [war]
         builder.define(DATA_LOOK, 0L);                  // [individual]
         builder.define(DATA_MARKS, 0);
         builder.define(DATA_MANNER, 0);
@@ -1710,6 +1713,26 @@ public class VillageFolkEntity extends AssistantEntity {
 
     public void showPolice(int flags) {
         if (this.entityData.get(DATA_POLICE) != flags) this.entityData.set(DATA_POLICE, flags);
+    }
+
+    // ------------------------------ [war] its part in an army (Armies), for its clothes (client/ArmyLayer) ------------
+
+    private static final net.minecraft.network.syncher.EntityDataAccessor<Integer> DATA_WAR =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.INT);
+    private static final net.minecraft.network.syncher.EntityDataAccessor<net.minecraft.world.item.ItemStack> DATA_SURCOAT =
+        net.minecraft.network.syncher.SynchedEntityData.defineId(
+            VillageFolkEntity.class, net.minecraft.network.syncher.EntityDataSerializers.ITEM_STACK);
+
+    /** Its role and rank in an army, and whether it has yielded (Armies.flags); 0 out of the field. */
+    public int clientWar() { return this.entityData.get(DATA_WAR); }
+
+    /** The surcoat of its town's arms worn over its armour in the field (empty out of it). */
+    public net.minecraft.world.item.ItemStack clientSurcoat() { return this.entityData.get(DATA_SURCOAT); }
+
+    public void showWar(int flags, net.minecraft.world.item.ItemStack surcoat) {
+        if (this.entityData.get(DATA_WAR) != flags) this.entityData.set(DATA_WAR, flags);
+        if (!net.minecraft.world.item.ItemStack.matches(this.entityData.get(DATA_SURCOAT), surcoat)) this.entityData.set(DATA_SURCOAT, surcoat.copy());
     }
 
     // ------------------------------ [individual] its own: face, body, manner, life ------------

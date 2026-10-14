@@ -54,6 +54,12 @@ public final class WarPage {
             lines.add(new Line('W', "The war footing has cost " + war.getInt("cost") + " coins (the militia's pay, and the work lost to it)."));
             lines.add(new Line('N', capital(war.getString("outlook")) + "."));
             lines.add(new Line('M', capital(war.getString("banner")) + "."));
+            List<String> fought = strings(war, "battles");                           // [war] the battles, and the score
+            if (!fought.isEmpty()) {
+                int score = war.getInt("score");
+                lines.add(new Line(score >= 0 ? 'G' : 'W', "Battles: " + fought.size() + ", the war's score " + (score > 0 ? "+" : "") + score));
+                for (String b : fought) lines.add(new Line('C', b));
+            }
             for (String c : strings(war, "course")) lines.add(new Line('C', c));
         }
         List<String> last = strings(m, "last_course");
@@ -61,6 +67,8 @@ public final class WarPage {
             lines.add(new Line('H', last.get(0)));
             for (String c : last.subList(1, last.size())) lines.add(new Line('C', c));
         }
+        List<String> armies = strings(m, "armies");                                    // [war] the armies in the field
+        if (!armies.isEmpty()) section(lines, "The armies in the field", armies, 'W', null);
         section(lines, "Quarrels and the council of war", strings(m, "quarrels"), 'W', "No quarrel under way.");
         section(lines, "Allies", strings(m, "allies"), 'G', "No sworn allies.");
         section(lines, "Held against our neighbours (the last month)", strings(m, "grievances"), 'N', "Nothing.");

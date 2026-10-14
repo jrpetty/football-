@@ -66,8 +66,11 @@ import java.util.function.BiConsumer;
  * real banner out of the stores), the chronicle and the gazette, the neighbours taking sides by how they
  * feel about each, and the allies called.
  *
- * <p><b>A war is a standoff.</b> Nobody marches; the towns scout each other, stand on a war footing and
- * count its cost. Allies who answer the call send guards, who walk over and stand on the walls of the town
+ * <p><b>A war is fought in the field.</b> [war] From its second day the side that likes its chances takes the
+ * field (Campaigns): the armies muster, march, camp and meet in an organised battle (Battles), and a town that
+ * holds its walls is besieged. Each battle moves the war's score, and the score how each side reckons its
+ * chances, the white flag and the terms (edge). Between battles the towns scout each other, stand on a war
+ * footing and count its cost. Allies who answer the call send guards, who walk over and stand on the walls of the town
  * they are sworn to, raising its strength as anybody reckons it, and go home at the peace. After the war
  * has stood a while (three days for a soft elder, a week for a prickly one) the side that reckons itself
  * the weaker, by its scouts' reports or by rumour, sues for peace under a white flag. If neither reckons
@@ -1610,6 +1613,15 @@ public final class WarAndPeace {
         if (changed) WarBooks.save(us, them, b);
     }
 
+    /**
+     * [war] What the war's battles have done to how a town reckons its chances against the other: a third again
+     * for every battle more it has won than lost (a gate taken counts two), as much less for every one more lost.
+     */
+    static double edge(UUID us, UUID them) {
+        int s = Math.max(-4, Math.min(4, Campaigns.score(us, them)));
+        return Math.pow(4.0 / 3.0, s);
+    }
+
     /** Is the cost of the war footing telling on this town (by its books)? */
     static boolean tired(UUID v, WarBooks.Book b, long day) {
         return b.cost >= Math.max(15, Ledger.coins(v) / 4) || day - b.began >= standDays(v) + 5;
@@ -1643,15 +1655,19 @@ public final class WarAndPeace {
         // A town that has voted for peace (its peace candidate elected) talks, whatever its elder's temper.
         if (mandate(x, day) && day - bx.lastPeaceTry >= 2) { sue(level, a, b, day, "the town voted for peace"); return; }
         if (mandate(y, day) && day - by.lastPeaceTry >= 2) { sue(level, b, a, day, "the town voted for peace"); return; }
+        if (Campaigns.of(x, y) != null) return;                         // [war] the armies are out: the battle speaks first
         boolean xStood = day - bx.began >= standDays(x), yStood = day - by.began >= standDays(y);
-        double rx = own(level, x).strength() / (double) Math.max(1, of(level, x, y, day).strength());
-        double ry = own(level, y).strength() / (double) Math.max(1, of(level, y, x, day).strength());
+        double rx = own(level, x).strength() / (double) Math.max(1, of(level, x, y, day).strength()) * edge(x, y);
+        double ry = own(level, y).strength() / (double) Math.max(1, of(level, y, x, day).strength()) * edge(y, x);
         boolean xWeak = xStood && rx < 0.8 && day - bx.lastPeaceTry >= 2, yWeak = yStood && ry < 0.8 && day - by.lastPeaceTry >= 2;
         if (xWeak && (!yWeak || rx <= ry)) { sue(level, a, b, day, "we are the weaker"); return; }
         if (yWeak) { sue(level, b, a, day, "we are the weaker"); return; }
-        if (!xStood || !yStood) return;
-        boolean xTired = tired(x, bx, day) && day - bx.lastPeaceTry >= 2, yTired = tired(y, by, day) && day - by.lastPeaceTry >= 2;
-        if (!xTired && !yTired) return;
+        boolean xTired = xStood && yStood && tired(x, bx, day) && day - bx.lastPeaceTry >= 2;
+        boolean yTired = xStood && yStood && tired(y, by, day) && day - by.lastPeaceTry >= 2;
+        if (!xTired && !yTired) {
+            Campaigns.warDay(level, a, b, day);                           // [war] nobody talks yet: the armies may take the field
+            return;
+        }
         double bitesX = bx.cost / (double) Math.max(1, Ledger.coins(x)), bitesY = by.cost / (double) Math.max(1, Ledger.coins(y));
         if (xTired && (!yTired || bitesX >= bitesY)) sue(level, a, b, day, "the war footing has cost us " + bx.cost + " coins");
         else sue(level, b, a, day, "the war footing has cost us " + by.cost + " coins");
@@ -1693,7 +1709,7 @@ public final class WarAndPeace {
         UUID defender = aggressor.equals(x) ? y : x;
         WarBooks.Book ab = aggressor.equals(x) ? bx : by;
         Goal goal = ab == null ? Goal.DEFENCE : ab.goal;
-        double balance = own(level, aggressor).strength() / (double) Math.max(1, own(level, defender).strength());
+        double balance = own(level, aggressor).strength() / (double) Math.max(1, own(level, defender).strength()) * edge(aggressor, defender);
         int share = goal == Goal.DEFENCE ? 0 : balance >= 1.5 ? 2 : balance >= 1.1 ? 1 : 0;
         int coins = 0;
         if (share > 0 && ab != null && (goal == Goal.TRIBUTE || goal == Goal.REVENGE)) coins = share >= 2 ? ab.amount : ab.amount / 2;
@@ -2489,6 +2505,7 @@ public final class WarAndPeace {
             if (!names.isEmpty() || g > 0) out.add("RN|Our allies: " + (names.isEmpty() ? "none" : String.join(", ", names))
                 + (g > 0 ? "; " + g + " of their guards on our walls" : "") + ".");
         }
+        for (String l : Campaigns.lines(level, v)) out.add("RW|" + l + ".");          // [war] the armies in the field
         int w = weariness(v);
         if (w >= 10) out.add((w >= WEARY ? "RW" : "RN") + "|The town is " + wearyWord(w) + " (" + w + "/100)"
             + (wearyWhy(v).isEmpty() ? "" : ": " + wearyWhy(v)) + ".");
@@ -2662,9 +2679,12 @@ public final class WarAndPeace {
             BlockPos at = WarBanner.where(id, foe);
             w.putString("banner", at == null ? "no banner yet" : "the war banner at " + at.getX() + ", " + at.getY() + ", " + at.getZ());
             w.put("course", strings(WarBooks.course(id, foe)));
+            w.putInt("score", Campaigns.score(id, foe));                                 // [war] the battles, and the war's score
+            w.put("battles", strings(battles(id, foe)));
             wars.add(w);
         }
         out.put("wars", wars);
+        out.put("armies", strings(Campaigns.lines(level, id)));                         // [war] the armies in the field
         List<String> quarrels = new ArrayList<>(), griev = new ArrayList<>(), treaties = new ArrayList<>(), allies = new ArrayList<>();
         for (String l : board(level, id, day)) if (l.startsWith("RW|") || l.startsWith("RM|")) quarrels.add(l.substring(3));
         for (Villages.Village o : Diplomacy.neighboursOf(id)) {
@@ -2710,6 +2730,17 @@ public final class WarAndPeace {
         long feast = feastDay(id);
         if (feast >= day) election.add("a feast for the peace on day " + (feast + 1));
         out.put("election", strings(election));
+        return out;
+    }
+
+    /** [war] The battles of the war with them, in words: "day 140, the Battle of Ashby Field: won (3 of ours down, 7 of theirs)". */
+    static List<String> battles(UUID us, UUID them) {
+        List<String> out = new ArrayList<>();
+        for (String e : WarBooks.list(us, "wp.battles/" + them)) {
+            String[] p = e.split("\\|");
+            if (p.length < 5) continue;
+            out.add("day " + p[0] + ", " + p[1] + ": " + p[2] + " (" + p[3] + " of ours down, " + p[4] + " of theirs)");
+        }
         return out;
     }
 
@@ -2887,6 +2918,16 @@ public final class WarAndPeace {
 
     /** Tests and the command: where this town's war banner hangs for the war with that one, or null. */
     @Nullable
+    /** [war] Tests: the battles of the war in this town's books, as written ("day|name|won|ours down|theirs down|how"). */
+    public static List<String> battlesForTests(UUID us, UUID them) {
+        return WarBooks.list(us, "wp.battles/" + them);
+    }
+
+    /** [war] Tests: the war's course in this town's books. */
+    public static List<String> courseForTests(UUID us, UUID them) {
+        return WarBooks.course(us, them);
+    }
+
     public static BlockPos bannerAt(UUID us, UUID them) {
         return WarBanner.where(us, them);
     }

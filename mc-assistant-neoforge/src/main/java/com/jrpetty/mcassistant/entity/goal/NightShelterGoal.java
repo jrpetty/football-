@@ -63,6 +63,7 @@ public class NightShelterGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (com.jrpetty.mcassistant.entity.Armies.inLine(a)) return false;   // [war] in the ranks: its Captain's orders, not its own
         if (!a.isAutonomous() || a.isRetreating()) return false;
         // A settler goes home at night; it does not wall itself into the hole
         // it is standing in. A miner sealed itself in whenever any monster was

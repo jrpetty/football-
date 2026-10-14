@@ -158,6 +158,8 @@ public class WarAndPeaceGameTests {
     private static void start(ServerLevel level) {
         Kit.reset(level);
         WarAndPeace.resetForTests();
+        com.jrpetty.mcassistant.entity.Campaigns.resetForTests();
+        com.jrpetty.mcassistant.entity.Campaigns.fieldForTests(false);    // [war] the diplomacy alone: the armies stay home (BattleGameTests)
         level.setDayTime(40L * 24000L + 11200L);                // just after the day's dealings: nothing rolls its dice mid-test
     }
 

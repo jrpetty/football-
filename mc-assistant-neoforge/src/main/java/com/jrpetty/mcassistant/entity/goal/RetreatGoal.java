@@ -30,6 +30,7 @@ public class RetreatGoal extends Goal {
 
     @Override
     public boolean canUse() {
+        if (com.jrpetty.mcassistant.entity.Armies.inLine(assistant)) return false;   // [war] in the ranks: its Captain's orders, not its own
         // Badly hurt in (or just out of) a fight...
         if (assistant.getHealth() <= assistant.getMaxHealth() * 0.35F
             && (assistant.getTarget() != null

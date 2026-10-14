@@ -285,6 +285,17 @@ public final class Spies {
         LOG.info("[MCA-SPY] {} of {} caught {} of {}; held at {}", g.displayNameCap(), us, spy.displayNameCap(), them, holdAt(v).toShortString());
     }
 
+    /**
+     * [war] One taken on the field of battle (Battles), held like a spy: by the barracks of the town that took it
+     * (its own step takes it there once its captor's army is home), let go at the peace or in an exchange.
+     */
+    public static void takeInBattle(UUID holder, UUID who, String name, UUID home, long day) {
+        load();
+        Captive c = new Captive(who, name, home, holder, day);
+        HELD.put(who, c);
+        Ledger.note(holder, "captive/" + who, c.encode());
+    }
+
     /** Where a town keeps its captives: by its barracks, else its hall, else the square. */
     static BlockPos holdAt(Villages.Village v) {
         for (String s : new String[]{ "barracks", "townhall", "hall" }) {

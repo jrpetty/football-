@@ -45,6 +45,9 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_FOUNDING_MOST;
     public static final ModConfigSpec.IntValue VILLAGE_CHARTER_FOLK;
     public static final ModConfigSpec.BooleanValue VILLAGE_WARS;
+    public static final ModConfigSpec.IntValue BATTLE_DETAIL;      // [war]
+    public static final ModConfigSpec.IntValue BATTLE_DEATHS;      // [war]
+    public static final ModConfigSpec.IntValue BATTLE_VIEW;        // [war]
     public static final ModConfigSpec.IntValue VILLAGE_LOADED_CHUNKS;
     public static final ModConfigSpec.BooleanValue REPLACE_VILLAGERS;
     public static final ModConfigSpec.BooleanValue PROTECT_TRADED_VILLAGERS;
@@ -179,6 +182,18 @@ public final class AssistantConfig {
                 "the enemy, the town on a war footing, war bands, raids, sieges and peace talks. Off, a feud",
                 "stays a feud and nobody marches.")
             .define("villageWars", true);
+        BATTLE_DETAIL = b.comment(
+                "[war] How many of each army's fighters are drawn in full on a battlefield a player is watching; the",
+                "rest of a bigger army fight on paper alongside them. Lower it on a busy server.")
+            .defineInRange("battleDetail", 24, 4, 60);
+        BATTLE_DEATHS = b.comment(
+                "[war] The chance in a hundred that a fighter beaten down in battle dies rather than yields. Every",
+                "death is written in the town's books, mourned and remembered.")
+            .defineInRange("battleDeaths", 5, 0, 100);
+        BATTLE_VIEW = b.comment(
+                "[war] How near (in blocks) a player must be to a battlefield, a march or a siege for it to be fought",
+                "in full; with nobody that near it is reckoned on paper, with the same outcomes.")
+            .defineInRange("battleView", 112, 32, 256);
         VILLAGE_LOADED_CHUNKS = b.comment(
                 "How many chunks around its heart a settlement keeps ticking while",
                 "nobody is there, as a radius. Six is a 13x13 square (169 chunks): the",
@@ -327,6 +342,9 @@ public final class AssistantConfig {
     public static int villageFoundingMost() { return read(VILLAGE_FOUNDING_MOST, 500); }
     public static int villageCharterFolk() { return read(VILLAGE_CHARTER_FOLK, 70); }
     public static boolean villageWars() { return read(VILLAGE_WARS, true); }
+    public static int battleDetail() { return read(BATTLE_DETAIL, 24); }
+    public static int battleDeaths() { return read(BATTLE_DEATHS, 5); }
+    public static double battleView() { return read(BATTLE_VIEW, 112); }
     public static int villageLoadedChunks() { return read(VILLAGE_LOADED_CHUNKS, 6); }
     public static boolean replaceVillagers() {                                            // [emerald] off: two peoples
         Boolean t = replaceForTests;

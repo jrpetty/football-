@@ -1,0 +1,1190 @@
+package com.jrpetty.mcassistant.entity;
+
+import com.jrpetty.mcassistant.AssistantConfig;
+import com.jrpetty.mcassistant.ChunkLoad;
+import com.jrpetty.mcassistant.Guard;
+import com.jrpetty.mcassistant.McAssistantMod;
+import com.jrpetty.mcassistant.village.BattleModel;
+import com.jrpetty.mcassistant.village.Ledger;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.BannerItem;
+import net.minecraft.world.item.ItemStack;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
+
+import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * [war] A war's campaigns: the armies taking the field, from the muster to the march home.
+ *
+ * <p><b>Taking the field.</b> Once a day of a war (WarAndPeace.warDay), from its second day and with two days'
+ * rest after a battle, the side that likes its chances takes the field: the aggressor if it reckons itself a
+ * match for them, else the defender if it reckons itself the stronger by a fifth. The other side's Captain,
+ * warned by its pickets, marches out to meet it if it reckons itself fit to (two thirds their strength) or has
+ * no wall to stand behind; otherwise it holds its walls, and the campaign is a siege.
+ *
+ * <p><b>The muster.</b> In the afternoon (a war decided in the morning gives everybody, players too, half a day's
+ * notice: the horn and a word in the chat of every player near either town, then again as it begins), the
+ * army is raised (Armies.raise) and draws up on the square in its ranks facing the enemy; the Captain names
+ * its tactics; folk come out to see it off; the horn, and it marches.
+ *
+ * <p><b>The march.</b> In column, two or three abreast, the banner at its head, along the road to its camp
+ * behind its line on the field (Battlefields.choose), at a steady pace (the head waits for the stragglers),
+ * with a drum now and then. The head is a reckoning, not a folk: it goes on whether anybody watches or not, and
+ * the fighters keep their places behind it where their ground is awake; a fighter left behind where nobody can
+ * see it is set down in its place when it is next about.
+ *
+ * <p><b>The camp.</b> Tents, the fire and the banner (Battlefields.pitch), sentries out, the rest round the fire.
+ * An army that is there by the afternoon fights the same day; later, it camps the night and the battle is at
+ * dawn, to the drums.
+ *
+ * <p><b>The battle</b> (Battles): in full in front of any player within view of the field, on paper otherwise,
+ * by the same model. <b>The siege</b>: an aggressor that held the field and is after more than satisfaction
+ * marches on the town (or comes straight to it if it held its walls): the bell rung there (Raids.alarm, from the
+ * side it comes from), a camp before the gate, a ram of three logs (Battlefields.ram) if it brought the logs,
+ * and at dawn the gate battered down and the defenders who are left fought before it. A town whose gate is
+ * taken makes peace on the aggressor's terms there and then. Without a ram the town is starved out only if its
+ * siege stores (WarStores) run out before the besiegers' patience; else they go home.
+ *
+ * <p><b>Home.</b> The armies march home, the wounded with them and the captives on leads; the supply back into
+ * the stores, everybody back to their trades. A fighter far away where nobody is (its ground asleep) is called
+ * home: its ground woken for a moment (ChunkLoad), it is set down at home.
+ *
+ * <p><b>What it costs.</b> Nothing at all with no campaign. With one, a second's look at it (the stage, the
+ * column's head, whether anybody watches) and, in a battle, the conductor twice a second (Battles); every
+ * fighter's own step is its own tick (Armies.hold). A campaign is kept with the world (Ledger "war.campaign" on
+ * the town that took the field): a restart in the middle of a march carries on; in the middle of a battle, the
+ * battle is reckoned on paper.
+ */
+@EventBusSubscriber(modid = McAssistantMod.MODID)
+public final class Campaigns {
+
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
+    private Campaigns() {}
+
+    /** Where a campaign has got to. */
+    public enum Stage { NOTICE, MUSTER, MARCH, CAMP, BATTLE, AFTER, SIEGE_MARCH, SIEGE_CAMP, ASSAULT, HOME, DONE }
+
+    /** Days' rest after a battle before either side takes the field again. */
+    static final int REST_DAYS = 2;
+    /** The column's pace, blocks a tick (two and a half a second: a steady march). */
+    static final double PACE = 0.125;
+    /** The muster's notice: the town is told in the morning and draws up in the afternoon, at this hour. */
+    static final long MUSTER_HOUR = 6000L;
+    /** At least this long between the word going round and the muster (a player's time to get there). */
+    static final long NOTICE = 1200L;
+    /** How long the army stands drawn up on the square before it marches. */
+    static final long MUSTER_TICKS = 900L;
+    /** Arrived by this hour, it fights today; later, it camps the night and fights at dawn. */
+    static final long LATEST_BATTLE = 8000L;
+    /** A battle at dawn begins at this hour (the sun just up). */
+    static final long DAWN = 200L;
+    /** How long a siege camp sits before the assault (by day). */
+    static final long SIEGE_WAIT = 1200L;
+    /** How long the march home may take before everybody is simply home. */
+    static final long HOME_MOST = 3600L;
+    /** How long a fighter's ground is woken to call it on. */
+    static final long PULL_TICKS = 200L;
+
+    /** A campaign: the two armies, where they are, and the ground. */
+    public static final class Campaign {
+        /** The side that took the field, and the other. */
+        final UUID a, b;
+        final Armies.Army[] armies = new Armies.Army[2];
+        Stage stage = Stage.NOTICE;
+        long stageAt, nextAt;
+        Battlefields.Ground ground;
+        /** The defender stays behind its walls: a siege from the start. */
+        boolean holdWalls;
+        /** The aggressor is after more than the field: a won field goes on to the town. */
+        boolean siegeAim;
+        /** Each army's road and how far along it its head has got. */
+        final List<List<BlockPos>> ways = new ArrayList<>(List.of(new ArrayList<>(), new ArrayList<>()));
+        final double[] along = new double[2];
+        final Battlefields.Camp[] camps = new Battlefields.Camp[2];
+        @Nullable List<BlockPos> ram;
+        @Nullable BlockPos gate;
+        Direction gateOut = Direction.NORTH;
+        int gateHits;
+        @Nullable Battles.Battle battle;
+        @Nullable BattleModel.Result result;
+        /** Which army (0 or 1) won the last fight, -1 none yet. */
+        int won = -1;
+        /** The last fight was at the gate (an assault), not on the field. */
+        boolean atTheGate;
+        String name = "";
+        long day;
+        final UUID ticketOwner;
+        final List<long[]> pulls = new ArrayList<>();
+        final int stagger;
+
+        Campaign(UUID a, UUID b) {
+            this.a = a;
+            this.b = b;
+            this.ticketOwner = UUID.nameUUIDFromBytes(("campaign/" + a + "/" + b).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            this.stagger = Math.floorMod(a.hashCode() ^ b.hashCode(), 20);
+        }
+
+        public UUID attacker() { return a; }
+        public UUID defender() { return b; }
+        public Stage stage() { return stage; }
+        @Nullable public Armies.Army army(int i) { return armies[i]; }
+        public Battlefields.Ground ground() { return ground; }
+        @Nullable public Battles.Battle battle() { return battle; }
+        public String name() { return name; }
+        public int won() { return won; }
+
+        Villages.Village town(int i) {
+            return Villages.get(i == 0 ? a : b);
+        }
+
+        /** Where army i's head is now: along its road. */
+        BlockPos head(int i) {
+            return pointAlong(ways.get(i), along[i]);
+        }
+    }
+
+    private static final Map<String, Campaign> ACTIVE = new ConcurrentHashMap<>();
+    private static volatile boolean loaded;
+    @Nullable private static Boolean watchForTests;
+    /** Do the armies take the field at all (the diplomacy's own tests keep them home)? */
+    private static volatile boolean field = true;
+    private static volatile boolean hurry;
+
+    public static void resetForTests() {
+        ACTIVE.clear();
+        loaded = true;
+        watchForTests = null;
+        hurry = false;
+        field = true;
+        Armies.resetForTests();
+        Battles.resetForTests();
+    }
+
+    /** Tests: every field taken as watched (true: in full), or as unwatched (false: on paper); null for the players as they are. */
+    public static void watchForTests(@Nullable Boolean on) {
+        watchForTests = on;
+    }
+
+    /** Tests of the war's diplomacy alone: the armies kept home (true again at the next reset). */
+    public static void fieldForTests(boolean on) {
+        field = on;
+    }
+
+    /** Tests: the waits cut short (the notice, the muster, the camp, the siege) and the march four times the pace. */
+    public static void hurryForTests(boolean on) {
+        hurry = on;
+    }
+
+    /** Are the waits cut short (the tests, the pictures)? */
+    static boolean hurried() {
+        return hurry;
+    }
+
+    static long soon(long ticks) {
+        return hurry ? Math.min(ticks, 60L) : ticks;
+    }
+
+    /** The chance in a hundred that one beaten down in battle does not get up (the config's battleDeaths). */
+    static int deathPercent() {
+        return Battles.deathsForTests != null ? Battles.deathsForTests : AssistantConfig.battleDeaths();
+    }
+
+    /** How many of each side's fighters are drawn in full (the config's battleDetail); the rest fight on paper alongside. */
+    static int cap() {
+        return AssistantConfig.battleDetail();
+    }
+
+    /** Is anybody watching this spot: a player (or a spectator) within view of it (the config's battleView)? */
+    static boolean watched(ServerLevel level, @Nullable BlockPos at) {
+        if (watchForTests != null) return watchForTests;
+        if (at == null) return false;
+        double r = AssistantConfig.battleView();
+        for (ServerPlayer p : level.players()) {
+            double dx = p.getX() - at.getX(), dz = p.getZ() - at.getZ();
+            if (dx * dx + dz * dz <= r * r) return true;
+        }
+        return false;
+    }
+
+    /** The campaign between these two, or null. */
+    @Nullable
+    public static Campaign of(UUID x, UUID y) {
+        return ACTIVE.get(Ledger.pair(x, y));
+    }
+
+    /** The campaign this town is in, or null. */
+    @Nullable
+    public static Campaign ofTown(UUID town) {
+        for (Campaign c : ACTIVE.values()) if (c.a.equals(town) || c.b.equals(town)) return c;
+        return null;
+    }
+
+    // ------------------------------------------------------------------ the war's day: does anybody take the field?
+
+    /**
+     * [WarAndPeace.warDay] Once a day of a war: whether a side takes the field today, and the campaign begun if
+     * so (the muster this afternoon). Whether one began.
+     */
+    static boolean warDay(ServerLevel level, Villages.Village x, Villages.Village y, long day) {
+        if (!WarAndPeace.on() || !field || of(x.id(), y.id()) != null || ofTown(x.id()) != null || ofTown(y.id()) != null) return false;
+        long began = Math.max(Wars.since(x.id(), y.id()), 0);
+        if (day - began < 1) return false;                                   // the day it was declared, nobody marches yet
+        if (day - lastBattle(x.id(), y.id()) < REST_DAYS) return false;
+        WarBooks.Book bx = WarBooks.book(x.id(), y.id()), by = WarBooks.book(y.id(), x.id());
+        Villages.Village aggressor = by != null && by.aggressor ? y : x, defender = aggressor == x ? y : x;
+        double odds = odds(level, aggressor.id(), defender.id(), day);
+        Villages.Village takes = null;
+        if (odds >= 0.9 || Armies.boldness(Envoys.temper(aggressor.id())) >= 2 && odds >= 0.7) takes = aggressor;
+        else if (1.0 / Math.max(0.01, odds(level, defender.id(), aggressor.id(), day)) <= 1.0 / 1.2) takes = defender;
+        if (takes == null) return false;
+        Villages.Village other = takes == aggressor ? defender : aggressor;
+        WarBooks.Book book = WarBooks.book(takes.id(), other.id());
+        boolean aim = takes == aggressor && book != null && book.goal != WarAndPeace.Goal.DEFENCE;
+        boolean walls = walled(other.id());
+        boolean meet = !walls || odds(level, other.id(), takes.id(), day) >= 2.0 / 3.0;
+        return begin(level, takes, other, day, !meet, aim) != null;
+    }
+
+    /** Our strength against theirs as we reckon it (WarAndPeace). */
+    static double odds(ServerLevel level, UUID us, UUID them, long day) {
+        return WarAndPeace.own(level, us).strength() / (double) Math.max(1, WarAndPeace.of(level, us, them, day).strength());
+    }
+
+    static boolean walled(UUID town) {
+        return CastleWall.stands(town) || Villages.hasBuilt(town, "fortify");
+    }
+
+    /** The day of the last battle between these two (-100 if none). */
+    static long lastBattle(UUID x, UUID y) {
+        return WarBooks.num(Ledger.note(x, "wp.battleday/" + y), -100);
+    }
+
+    /**
+     * A campaign begun: {@code x} takes the field against {@code y}; {@code holdWalls}, y stays behind its walls;
+     * {@code siegeAim}, x is after the town. The word goes round and the muster is set for the afternoon.
+     */
+    @Nullable
+    static Campaign begin(ServerLevel level, Villages.Village x, Villages.Village y, long day, boolean holdWalls, boolean siegeAim) {
+        Campaign c = new Campaign(x.id(), y.id());
+        c.day = day;
+        c.holdWalls = holdWalls;
+        c.siegeAim = siegeAim || holdWalls;
+        c.ground = Battlefields.choose(level, x, y);
+        c.name = "the Battle of " + c.ground.name();
+        long now = level.getGameTime(), tod = level.getDayTime() % 24000L;
+        c.stage = Stage.NOTICE;
+        c.stageAt = now;
+        c.nextAt = now + soon(Math.max(NOTICE, MUSTER_HOUR - tod));
+        ACTIVE.put(Ledger.pair(x.id(), y.id()), c);
+        String xn = Villages.name(x.id()), yn = Villages.name(y.id());
+        String what = holdWalls ? xn + " will march on " + yn + ", which means to hold its walls"
+            : xn + " will take the field against " + yn + ", and " + yn + " will march out to meet it";
+        Villages.tell(x.id(), day, "the council resolved to take the field against " + yn + ": the army musters on the square this afternoon");
+        Villages.tell(y.id(), day, "our pickets brought word: " + xn + " is mustering its army; " + (holdWalls ? "we hold our walls" : "we march out to meet it"));
+        WarBooks.course(x.id(), y.id(), day, "we resolved to take the field against " + yn);
+        WarBooks.course(y.id(), x.id(), day, xn + " took the field against us; " + (holdWalls ? "we held our walls" : "we marched out to meet it"));
+        announce(level, c, what + ". The armies muster this afternoon.", true);
+        save(c);
+        LOG.info("[MCA-WAR] campaign: {} against {} (holds walls {}, after the town {}), field {} at {}", xn, yn, holdWalls, c.siegeAim,
+            c.ground.name(), c.ground.centre().toShortString());
+        return c;
+    }
+
+    /** Word to every player near either town (or the field): a line in the chat, and the horn if {@code horn}. */
+    static void announce(ServerLevel level, Campaign c, String line, boolean horn) {
+        Component msg = Component.literal("[War] " + line).withStyle(ChatFormatting.GOLD);
+        for (ServerPlayer p : level.players()) {
+            boolean near = false;
+            for (int i = 0; i < 2 && !near; i++) {
+                Villages.Village v = c.town(i);
+                if (v != null && p.blockPosition().closerThan(v.centre(), 240)) near = true;
+            }
+            if (!near && c.ground != null && p.blockPosition().closerThan(c.ground.centre(), 240)) near = true;
+            if (!near) continue;
+            p.sendSystemMessage(msg);
+            if (horn) Armies.horn(level, p.blockPosition().offset(8, 2, 0), 1);
+        }
+    }
+
+    // ------------------------------------------------------------------ the second
+
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Post event) {
+        if (!loaded) {
+            loaded = true;
+            Guard.run("campaigns load", Campaigns::load);
+        }
+        if (ACTIVE.isEmpty()) return;
+        int tick = event.getServer().getTickCount();
+        Guard.run("campaigns", () -> {
+            for (Iterator<Campaign> it = ACTIVE.values().iterator(); it.hasNext(); ) {
+                Campaign c = it.next();
+                ServerLevel level = levelOf(event.getServer(), c);
+                if (level == null) continue;
+                if (c.battle != null && (tick + c.stagger) % Battles.EVERY == 0) c.battle.tick(level);
+                if ((tick + c.stagger) % 20 != 0) continue;
+                second(level, c);
+            }
+        });
+    }
+
+    @Nullable
+    static ServerLevel levelOf(net.minecraft.server.MinecraftServer server, Campaign c) {
+        Villages.Village v = Villages.get(c.a);
+        return v == null ? null : server.getLevel(v.dim());
+    }
+
+    /** A campaign's second: its pulls let go, its stage seen to, and on to the next when it is time. */
+    static void second(ServerLevel level, Campaign c) {
+        long now = level.getGameTime();
+        for (Iterator<long[]> it = c.pulls.iterator(); it.hasNext(); ) {
+            long[] p = it.next();
+            if (now < p[1]) continue;
+            ChunkLoad.setLoaded(level, c.ticketOwner, BlockPos.of(p[0]), 0, false);
+            it.remove();
+        }
+        if (c.stage != Stage.DONE && c.stage != Stage.HOME && !Wars.atWar(c.a, c.b)) {
+            // Peace made while the armies were out (a white flag, a player's word): everybody home.
+            if (c.battle != null) c.battle.abandon(level);
+            c.battle = null;
+            goHome(level, c, "peace was made");
+        }
+        switch (c.stage) {
+            case NOTICE -> { if (now >= c.nextAt) muster(level, c); }
+            case MUSTER -> { if (now >= c.nextAt) march(level, c); else drawnUp(level, c); }
+            case MARCH, SIEGE_MARCH -> marching(level, c);
+            case CAMP, SIEGE_CAMP -> camping(level, c);
+            case BATTLE, ASSAULT -> fighting(level, c);
+            case AFTER -> { if (now >= c.nextAt) afterBattle(level, c); }
+            case HOME -> homeward(level, c);
+            case DONE -> { }
+        }
+        if (c.stage == Stage.DONE) {
+            for (long[] p : c.pulls) ChunkLoad.setLoaded(level, c.ticketOwner, BlockPos.of(p[0]), 0, false);
+            c.pulls.clear();
+        } else if (now % 200 < 20) save(c);
+    }
+
+    static void stage(Campaign c, Stage s, long now, long until) {
+        c.stage = s;
+        c.stageAt = now;
+        c.nextAt = until;
+        if (s != Stage.DONE) {
+            save(c);
+            return;
+        }
+        ACTIVE.remove(Ledger.pair(c.a, c.b), c);
+        Ledger.forget(c.a, "war.campaign");
+    }
+
+    // ------------------------------------------------------------------ the muster
+
+    /** The armies raised and drawn up on their squares (the one holding its walls at its gate, later). */
+    static void muster(ServerLevel level, Campaign c) {
+        long now = level.getGameTime(), day = level.getDayTime() / 24000L;
+        int raised = 0;
+        for (int i = 0; i < 2; i++) {
+            Villages.Village v = c.town(i);
+            if (v == null) continue;
+            if (i == 1 && c.holdWalls) continue;                       // it raises its army when the enemy is at the gate
+            Armies.Army army = Armies.raise(level, v, i == 0 ? c.b : c.a, false, i == 0 && c.siegeAim, cap());
+            if (army == null) continue;
+            c.armies[i] = army;
+            Armies.enlist(army);
+            raised++;
+            choose(level, c, i);
+            arm(level, army);
+            Battles.array(level, army, squareFacing(v, c.town(1 - i)), 0.0);
+            Armies.Fighter cap = army.officer(Armies.Rank.CAPTAIN);
+            Villages.tell(v.id(), day, "the army mustered on the square: " + army.size() + " strong" + (cap != null ? ", " + cap.what() + " in command" : "")
+                + "; " + Villages.name(v.id()) + " " + army.tactic.words);
+            WarBooks.course(v.id(), i == 0 ? c.b : c.a, day, "our army mustered, " + army.size() + " strong" + (cap != null ? " under " + cap.what() : ""));
+        }
+        if (c.armies[0] == null) {
+            Villages.tell(c.a, day, "the muster came to nothing: nobody to march");
+            stage(c, Stage.DONE, now, now);
+            return;
+        }
+        announce(level, c, Villages.name(c.a) + (c.armies[1] != null ? " and " + Villages.name(c.b) + " are" : " is") + " mustering for war on "
+            + (c.armies[1] != null ? "their squares" : "its square") + ". " + view(c), true);
+        for (int i = 0; i < 2; i++) {
+            if (c.armies[i] == null) continue;
+            Villages.Village v = c.town(i);
+            if (v != null) Armies.horn(level, v.centre(), 0);
+        }
+        stage(c, Stage.MUSTER, now, now + soon(MUSTER_TICKS));
+    }
+
+    /** The Captain's choice of tactics for army i, by the ground on its side, the odds, its temper and its kit. */
+    static void choose(ServerLevel level, Campaign c, int i) {
+        Armies.Army a = c.armies[i];
+        if (a == null) return;
+        Battlefields.Ground g = c.ground;
+        long day = level.getDayTime() / 24000L;
+        double odds = odds(level, a.town, a.enemy, day);
+        boolean rise = (i == 0 ? g.riseA() : g.riseB()) != null, cover = (i == 0 ? g.coverA() : g.coverB()) != null;
+        Random rng = new Random(seed(a.town, day));
+        a.tactic = BattleModel.choose(a.boldness, a.cunning, odds, rise, cover, 0, a.count(BattleModel.Role.ARCHER), a.size(), rng);
+    }
+
+    static long seed(UUID town, long day) {
+        return town.getMostSignificantBits() * 0x9E3779B97F4A7C15L + day * 0xBF58476D1CE4E5B9L + 7L;
+    }
+
+    /** Weapons in hand for the field. */
+    static void arm(ServerLevel level, Armies.Army a) {
+        for (Armies.Fighter f : a.fighters) if (level.getEntity(f.id) instanceof VillageFolkEntity e) Armies.arm(e, f);
+    }
+
+    /** The muster's spot: the square, facing the enemy town. */
+    static double[] squareFacing(Villages.Village v, @Nullable Villages.Village enemy) {
+        double fx = 1, fz = 0;
+        if (enemy != null) {
+            double dx = enemy.centre().getX() - v.centre().getX(), dz = enemy.centre().getZ() - v.centre().getZ(), d = Math.max(1, Math.sqrt(dx * dx + dz * dz));
+            fx = dx / d;
+            fz = dz / d;
+        }
+        return new double[]{ v.centre().getX() + 0.5 + fx * 4, v.centre().getZ() + 0.5 + fz * 4, fx, fz };
+    }
+
+    /** Drawn up on the square: the Captain's words once, and folk come out to see them off. */
+    static void drawnUp(ServerLevel level, Campaign c) {
+        long since = level.getGameTime() - c.stageAt;
+        if (since < soon(200L) || since >= soon(200L) + 20) return;               // ten seconds in, once
+        for (int i = 0; i < 2; i++) {
+            Armies.Army a = c.armies[i];
+            if (a == null) continue;
+            Armies.Fighter cap = a.officer(Armies.Rank.CAPTAIN);
+            if (cap != null && level.getEntity(cap.id) instanceof VillageFolkEntity e) {
+                Armies.shout(e, Battles.muster(a, c));
+            }
+            Villages.Village v = c.town(i);
+            if (v != null) seeOff(level, v, a);
+        }
+    }
+
+    /** Folk out on the square to see the army off: a wave and a word from a few. */
+    static void seeOff(ServerLevel level, Villages.Village v, Armies.Army a) {
+        int said = 0;
+        for (AssistantEntity e : Villages.folkOf(v.id())) {
+            if (said >= 6) break;
+            if (!(e instanceof VillageFolkEntity f) || Armies.inLine(f) || !f.isAlive() || f.distanceToSqr(v.centre().getX(), f.getY(), v.centre().getZ()) > 40 * 40) continue;
+            f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+            Armies.shout(f, FolkTalk.pick(f.getRandom(), "Come home safe!", "Give them what for!", "For " + Villages.name(v.id()) + "!",
+                "Mind yourselves out there!", "We'll keep the fires lit for you!"));
+            said++;
+        }
+    }
+
+    /** "Watch from the rise at x, z", for the players. */
+    static String view(Campaign c) {
+        BlockPos v = c.ground.view();
+        BlockPos f = c.ground.centre();
+        return "The field: " + c.ground.name() + " (" + f.getX() + ", " + f.getZ() + ")" + (v != null ? "; watch from the rise at " + v.getX() + ", " + v.getZ() : "") + ".";
+    }
+
+    // ------------------------------------------------------------------ the march
+
+    /** The armies set off for their camps: the horn, the column formed, the road. */
+    static void march(ServerLevel level, Campaign c) {
+        long now = level.getGameTime();
+        for (int i = 0; i < 2; i++) {
+            Armies.Army a = c.armies[i];
+            Villages.Village v = c.town(i);
+            if (a == null || v == null) continue;
+            BlockPos to = c.holdWalls ? siegeCamp(level, c) : campSpot(c, i);
+            route(c, i, v.centre(), to);
+            Armies.horn(level, v.centre(), 2);
+        }
+        stage(c, c.holdWalls ? Stage.SIEGE_MARCH : Stage.MARCH, now, now);
+        announce(level, c, Villages.name(c.a) + "'s army is on the march" + (c.armies[1] != null ? ", and " + Villages.name(c.b) + "'s" : "")
+            + ". " + (c.holdWalls ? Villages.name(c.b) + " has shut its gates." : view(c)), false);
+    }
+
+    /** Army i's camp: behind its line, a dozen and more blocks back from where it draws up. */
+    static BlockPos campSpot(Campaign c, int i) {
+        double back = Battlefields.GAP / 2.0 + 14.0;
+        return c.ground.at(i == 0 ? -back : back, 0);
+    }
+
+    /** Its road from here to there: out by the avenue, along the road, in. */
+    static void route(Campaign c, int i, BlockPos from, BlockPos to) {
+        List<BlockPos> way = new ArrayList<>();
+        way.add(from);
+        BlockPos exit = Roads.exit(from, to);
+        if (exit.distSqr(from) > 16) way.add(exit);
+        way.add(to);
+        c.ways.set(i, way);
+        c.along[i] = 0;
+    }
+
+    static double length(List<BlockPos> way) {
+        double n = 0;
+        for (int k = 1; k < way.size(); k++) n += Math.sqrt(flat(way.get(k - 1), way.get(k)));
+        return n;
+    }
+
+    static double flat(BlockPos p, BlockPos q) {
+        double dx = p.getX() - q.getX(), dz = p.getZ() - q.getZ();
+        return dx * dx + dz * dz;
+    }
+
+    /** The point so far along the way (and the way's last point past its end). */
+    static BlockPos pointAlong(List<BlockPos> way, double d) {
+        if (way.isEmpty()) return BlockPos.ZERO;
+        if (d <= 0) return way.get(0);
+        for (int k = 1; k < way.size(); k++) {
+            BlockPos p = way.get(k - 1), q = way.get(k);
+            double seg = Math.sqrt(flat(p, q));
+            if (d <= seg && seg > 0) {
+                double t = d / seg;
+                return BlockPos.containing(p.getX() + (q.getX() - p.getX()) * t, p.getY(), p.getZ() + (q.getZ() - p.getZ()) * t);
+            }
+            d -= seg;
+        }
+        return way.get(way.size() - 1);
+    }
+
+    /** The way's heading at so far along it, as a unit vector. */
+    static double[] heading(List<BlockPos> way, double d) {
+        BlockPos p = pointAlong(way, Math.max(0, d - 2)), q = pointAlong(way, d + 2);
+        double dx = q.getX() - p.getX(), dz = q.getZ() - p.getZ(), n = Math.sqrt(dx * dx + dz * dz);
+        if (n < 0.01) {
+            BlockPos s = way.get(0), e = way.get(way.size() - 1);
+            dx = e.getX() - s.getX();
+            dz = e.getZ() - s.getZ();
+            n = Math.max(0.01, Math.sqrt(dx * dx + dz * dz));
+        }
+        return new double[]{ dx / n, dz / n };
+    }
+
+    /**
+     * A second of the march: each column's head on along its road (watched, it waits for its stragglers), every
+     * fighter given its place in the column behind it; a drum now and then; at the end, the camp.
+     */
+    static void marching(ServerLevel level, Campaign c) {
+        long now = level.getGameTime();
+        boolean all = true;
+        for (int i = 0; i < 2; i++) {
+            Armies.Army a = c.armies[i];
+            if (a == null || c.ways.get(i).isEmpty()) continue;
+            double len = length(c.ways.get(i));
+            if (c.along[i] < len) {
+                all = false;
+                boolean seen = watched(level, c.head(i));
+                if (!seen || closedUp(level, a)) c.along[i] = Math.min(len, c.along[i] + PACE * 20 * (hurry ? 4 : 1));
+                if (seen && (now / 20) % 3 == 0) Armies.drum(level, c.head(i), (now / 20) % 6 == 0);
+                if (seen && pull(level, c, a, c.head(i))) LOG.debug("[MCA-WAR] called up the stragglers of {}", Villages.name(a.town));
+            }
+            column(level, c, i);
+        }
+        if (!all) return;
+        boolean siege = c.stage == Stage.SIEGE_MARCH;
+        for (int i = 0; i < 2; i++) {
+            Armies.Army a = c.armies[i];
+            if (a == null) continue;
+            if (siege && i == 1) continue;
+            double[] h = heading(c.ways.get(i), length(c.ways.get(i)));
+            BlockPos at = c.ways.get(i).get(c.ways.get(i).size() - 1);
+            double fx = siege ? c.gateOut.getOpposite().getStepX() : (i == 0 ? c.ground.ax() : -c.ground.ax());
+            double fz = siege ? c.gateOut.getOpposite().getStepZ() : (i == 0 ? c.ground.az() : -c.ground.az());
+            if (Math.abs(fx) + Math.abs(fz) < 0.01) { fx = h[0]; fz = h[1]; }
+            ItemStack banner = bannerOf(level, a);
+            c.camps[i] = watched(level, at) ? Battlefields.pitch(level, a, at, fx, fz, banner) : null;
+            if (c.camps[i] != null && c.camps[i].banner != null) dropBanner(level, a);
+            Battles.camp(level, a, at, fx, fz, c.camps[i]);
+        }
+        long tod = level.getDayTime() % 24000L;
+        long until = tod < LATEST_BATTLE ? now + soon(siege ? SIEGE_WAIT : 1200L) : now + soon(24000L - tod + DAWN);
+        if (siege) {
+            Villages.Village v = c.town(1);
+            if (v != null) {
+                Raids.alarm(level, v, "the army of " + Villages.name(c.a) + " is at the gate", c.gateOut);
+                standDown(level, c, 1);                                            // the beaten field army home, then all who can fight at the gate
+                c.armies[1] = defenders(level, c, v);
+            }
+            Armies.Army at = c.armies[0];
+            c.ram = c.gate == null ? null : Battlefields.ram(level, at, c.gate, c.gateOut);
+            if (c.ram != null) Villages.tell(c.a, level.getDayTime() / 24000L, "our army built a ram of logs before " + Villages.name(c.b) + "'s gate");
+        }
+        stage(c, siege ? Stage.SIEGE_CAMP : Stage.CAMP, now, until);
+        String when = until - now > 6000 ? "at dawn" : "within the hour";
+        announce(level, c, (siege ? Villages.name(c.a) + "'s army is camped before the gate of " + Villages.name(c.b)
+            : "The armies are camped on " + c.ground.name()) + "; battle " + when + ". " + (siege ? "" : view(c)), false);
+    }
+
+    /** Are the column's fighters (those about) in their places, near enough to march on? */
+    static boolean closedUp(ServerLevel level, Armies.Army a) {
+        int seen = 0, behind = 0;
+        for (Armies.Fighter f : a.fighters) {
+            if (f.down() || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
+            seen++;
+            double dx = e.getX() - f.tx, dz = e.getZ() - f.tz;
+            if (dx * dx + dz * dz > 10 * 10) behind++;
+        }
+        return seen == 0 || behind * 3 <= seen;
+    }
+
+    /** Every fighter of army i its place in the column: the banner and the Captain at the head, two or three abreast. */
+    static void column(ServerLevel level, Campaign c, int i) {
+        Armies.Army a = c.armies[i];
+        List<BlockPos> way = c.ways.get(i);
+        if (a == null || way.isEmpty()) return;
+        List<Armies.Fighter> order = Battles.columnOrder(a);
+        order.removeIf(f -> f.order == Armies.Order.CAPTIVE);                // the taken walk with those who took them
+        Armies.Army other = c.armies[1 - i];
+        if (other != null) for (Armies.Fighter f : other.fighters) if (f.order == Armies.Order.CAPTIVE && !f.dead) order.add(f);
+        int abreast = order.size() > 18 ? 3 : 2;
+        for (int k = 0; k < order.size(); k++) {
+            Armies.Fighter f = order.get(k);
+            int row = k / abreast, col = k % abreast;
+            double back = c.along[i] - row * 2.0;
+            BlockPos p = pointAlong(way, back);
+            double[] h = heading(way, Math.max(0, back));
+            double across = (col - (abreast - 1) / 2.0) * 1.6;
+            f.speed = 0.7;
+            if (f.order == Armies.Order.YIELDED) f.order = Armies.Order.PLACE;   // the wounded walk with the column
+            f.place(level, p.getX() + 0.5 - h[1] * across, p.getZ() + 0.5 + h[0] * across, Armies.yawTo(h[0], h[1]));
+        }
+    }
+
+    /** The banner its bearer carries (a copy of it), or null. */
+    @Nullable
+    static ItemStack bannerOf(ServerLevel level, Armies.Army a) {
+        if (a.bearer == null || !(level.getEntity(a.bearer) instanceof VillageFolkEntity e)) return null;
+        ItemStack held = e.getMainHandItem();
+        return held.getItem() instanceof BannerItem ? held.copy() : null;
+    }
+
+    /** The bearer's banner planted in the camp: out of its hand. */
+    static void dropBanner(ServerLevel level, Armies.Army a) {
+        if (a.bearer != null && level.getEntity(a.bearer) instanceof VillageFolkEntity e && e.getMainHandItem().getItem() instanceof BannerItem) {
+            e.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        }
+    }
+
+    /** The planted banner back in its bearer's hand (or the supply), the camp struck. */
+    static void strike(ServerLevel level, Campaign c, int i) {
+        Armies.Army a = c.armies[i];
+        if (a == null) return;
+        for (Armies.Fighter f : a.fighters) f.sit = false;
+        ItemStack banner = Battlefields.strike(level, a, c.camps[i]);
+        c.camps[i] = null;
+        if (banner.isEmpty()) return;
+        if (a.bearer != null && level.getEntity(a.bearer) instanceof VillageFolkEntity e && e.getMainHandItem().isEmpty()) {
+            e.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, banner);
+        } else {
+            Villages.Village v = c.town(i);
+            if (v != null) TownWork.give(level, v, Arms.unlend(banner));
+        }
+    }
+
+    // ------------------------------------------------------------------ the camp
+
+    /** A second in camp: the sentries' beat (Battles.camp gives the places); at the hour, the drums and the lines. */
+    static void camping(ServerLevel level, Campaign c) {
+        long now = level.getGameTime();
+        for (int i = 0; i < 2; i++) if (c.armies[i] != null && (now / 20) % 15 == 0) Battles.sentries(level, c.armies[i], now);
+        if (now < c.nextAt) return;
+        for (int i = 0; i < 2; i++) strike(level, c, i);
+        if (c.stage == Stage.SIEGE_CAMP) {
+            assault(level, c);
+            return;
+        }
+        if (c.armies[1] == null) {                                             // nobody came out to meet it
+            c.won = 0;
+            onTo(level, c);
+            return;
+        }
+        c.battle = Battles.open(level, c, c.ground.centre(), c.ground.ax(), c.ground.az(), false);
+        stage(c, Stage.BATTLE, now, now);
+    }
+
+    /** The siege's assault: the ram at the gate (or, with none, the blockade weighed), then the fight at the gate. */
+    static void assault(ServerLevel level, Campaign c) {
+        long now = level.getGameTime();
+        Armies.Army at = c.armies[0], def = c.armies[1];
+        if (c.ram == null && c.gate != null) {
+            Random rng = new Random(seed(c.a, c.day + 99));
+            boolean falls = BattleModel.gateFalls(at.power(), def == null ? 0 : def.power(), true, false, (int) WarStores.siegeDays(c.b), 3, rng);
+            if (falls) {
+                Villages.tell(c.b, level.getDayTime() / 24000L, "the siege stores ran out: the town opened its gate to " + Villages.name(c.a));
+                c.won = 0;
+                taken(level, c, "starved out");
+            } else {
+                Villages.tell(c.a, level.getDayTime() / 24000L, "with no ram and " + Villages.name(c.b) + "'s stores holding out, our army gave up the siege");
+                c.won = 1;
+                goHome(level, c, "the siege was given up");
+            }
+            return;
+        }
+        c.gateHits = 0;
+        BlockPos front = c.gate == null ? c.head(0) : c.gate.relative(c.gateOut, Battlefields.GAP / 2 + 2);   // the defenders just before their gate
+        c.battle = Battles.open(level, c, front, -c.gateOut.getStepX(), -c.gateOut.getStepZ(), true);
+        stage(c, Stage.ASSAULT, now, now);
+    }
+
+    /** The defenders at their own gate: the army raised there and then, everybody who can fight, no home guard. */
+    @Nullable
+    static Armies.Army defenders(ServerLevel level, Campaign c, Villages.Village v) {
+        Armies.Army a = Armies.raise(level, v, c.a, true, false, cap());
+        if (a == null) return null;
+        a.tactic = BattleModel.Tactic.SHIELD_WALL;
+        Armies.enlist(a);
+        arm(level, a);
+        BlockPos inside = c.gate == null ? v.centre() : c.gate.relative(c.gateOut.getOpposite(), 4);
+        Battles.array(level, a, new double[]{ inside.getX() + 0.5, inside.getZ() + 0.5, c.gateOut.getStepX(), c.gateOut.getStepZ() }, 0.0);
+        return a;
+    }
+
+    /** Where the besiegers camp: out from the gate that faces them (CastleWall's, else the watch's), else the town's edge. */
+    static BlockPos siegeCamp(ServerLevel level, Campaign c) {
+        Villages.Village v = c.town(1), from = c.town(0);
+        if (v == null || from == null) return c.ground.centre();
+        BlockPos best = null;
+        Direction out = Direction.NORTH;
+        double bd = Double.MAX_VALUE;
+        for (CastleWall.Gate g : CastleWall.gates(level, v.id())) {
+            if (!g.stands()) continue;
+            double d = g.gateway().distSqr(from.centre());
+            if (d < bd) { bd = d; best = g.gateway(); out = g.out(); }
+        }
+        if (best == null) {
+            for (Watch.Gate g : Watch.gates(level, v.id())) {
+                if (g.doors().isEmpty()) continue;
+                double d = g.doors().get(0).distSqr(from.centre());
+                if (d < bd) { bd = d; best = g.doors().get(0); out = g.out(); }
+            }
+        }
+        if (best == null) {
+            best = Roads.exit(v.centre(), from.centre());
+            double dx = from.centre().getX() - v.centre().getX(), dz = from.centre().getZ() - v.centre().getZ();
+            out = Direction.getNearest(dx, 0, dz);
+            c.gate = null;
+        } else c.gate = best;
+        c.gateOut = out;
+        return best.relative(out, 28);
+    }
+
+    // ------------------------------------------------------------------ the battle
+
+    /** A second of the battle: the conductor works twice a second (Battles.Battle.tick); here, only whether it is over. */
+    static void fighting(ServerLevel level, Campaign c) {
+        Battles.Battle b = c.battle;
+        if (b == null) {
+            stage(c, Stage.AFTER, level.getGameTime(), level.getGameTime());
+            return;
+        }
+        if (!b.over()) return;
+        c.result = b.result();
+        c.won = b.winner();
+        c.atTheGate = b.assault;
+        c.battle = null;
+        Battles.record(level, c, b);
+        stage(c, Stage.AFTER, level.getGameTime(), level.getGameTime() + soon(400L));
+    }
+
+    /** After the battle: on to the town, or home. */
+    static void afterBattle(ServerLevel level, Campaign c) {
+        if (c.atTheGate) {
+            // The fight at the gate: won, the town is taken; lost, the besiegers go home.
+            if (c.won == 0) taken(level, c, "its gate taken");
+            else goHome(level, c, "the assault was thrown back");
+            return;
+        }
+        onTo(level, c);
+    }
+
+    /** The field won by the aggressor that is after the town: on to the town; else everybody home. */
+    static void onTo(ServerLevel level, Campaign c) {
+        long now = level.getGameTime();
+        if (c.won == 0 && c.siegeAim && Wars.atWar(c.a, c.b) && c.armies[0] != null && c.armies[0].standing() > 0) {
+            Armies.Army beaten = c.armies[1];
+            if (beaten != null) {
+                Villages.Village v = c.town(1);
+                if (v != null) sendHome(level, c, 1, v.centre());
+            }
+            BlockPos to = siegeCamp(level, c);
+            route(c, 0, c.head(0), to);
+            stage(c, Stage.SIEGE_MARCH, now, now);
+            announce(level, c, Villages.name(c.a) + "'s army marches on " + Villages.name(c.b) + ".", true);
+            return;
+        }
+        goHome(level, c, c.won < 0 ? "neither side would give way" : "the field was decided");
+    }
+
+    /** A town taken: peace on the aggressor's whole terms, there and then; the bell stops. */
+    static void taken(ServerLevel level, Campaign c, String how) {
+        long day = level.getDayTime() / 24000L;
+        if (c.gate != null) Battles.breakGate(level, c);
+        WarAndPeace.Terms t = WarAndPeace.terms(level, c.a, c.b);
+        WarAndPeace.Terms whole = new WarAndPeace.Terms(c.a, c.b, t.goal(), Math.max(1.5, t.balance()), 2, t.coins(), 0, t.words());
+        bump(c.a, c.b, 2);
+        Villages.tell(c.b, day, Villages.name(c.a) + " took the town, " + how + ", and the elder made peace on its terms");
+        Villages.tell(c.a, day, "our army took " + Villages.name(c.b) + ", " + how);
+        WarAndPeace.makePeace(level, c.a, c.b, day, whole, "with " + Villages.name(c.b) + " taken, " + how, null);
+        Villages.Village v = c.town(1);
+        if (v != null) Raids.allClear(level, v);
+        goHome(level, c, "the town was taken");
+    }
+
+    /** The war's score between them (the battles each has won, the other's lost): "wp.score/". */
+    public static int score(UUID us, UUID them) {
+        return (int) WarBooks.num(Ledger.note(us, "wp.score/" + them), 0);
+    }
+
+    static void bump(UUID winner, UUID loser, int by) {
+        Ledger.note(winner, "wp.score/" + loser, Integer.toString(score(winner, loser) + by));
+        Ledger.note(loser, "wp.score/" + winner, Integer.toString(score(loser, winner) - by));
+    }
+
+    // ------------------------------------------------------------------ home
+
+    /** Everybody home: the camps struck, the ram taken apart, the bell stopped, the columns on the road home. */
+    static void goHome(ServerLevel level, Campaign c, String why) {
+        long now = level.getGameTime();
+        for (int i = 0; i < 2; i++) {
+            strike(level, c, i);
+            Villages.Village v = c.town(i);
+            if (c.armies[i] != null && v != null) sendHome(level, c, i, v.centre());
+        }
+        if (c.armies[0] != null) Battlefields.unram(level, c.armies[0], c.ram);
+        c.ram = null;
+        Villages.Village d = c.town(1);
+        if (d != null && c.holdWalls || d != null && c.stage == Stage.SIEGE_CAMP || d != null && c.stage == Stage.ASSAULT) Raids.allClear(level, d);
+        LOG.info("[MCA-WAR] campaign of {} against {}: home ({})", Villages.name(c.a), Villages.name(c.b), why);
+        stage(c, Stage.HOME, now, now + HOME_MOST);
+    }
+
+    /** Army i on the road home from wherever its head is. */
+    static void sendHome(ServerLevel level, Campaign c, int i, BlockPos home) {
+        Armies.Army a = c.armies[i];
+        if (a == null) return;
+        BlockPos from = c.ways.get(i).isEmpty() ? home : c.head(i);
+        List<BlockPos> way = new ArrayList<>();
+        way.add(from);
+        way.add(Roads.exit(home, from));
+        way.add(home);
+        c.ways.set(i, way);
+        c.along[i] = 0;
+    }
+
+    /** A second of the march home; once home (or past the time), the army stood down. */
+    static void homeward(ServerLevel level, Campaign c) {
+        long now = level.getGameTime();
+        boolean home = true;
+        for (int i = 0; i < 2; i++) {
+            Armies.Army a = c.armies[i];
+            if (a == null || c.ways.get(i).isEmpty()) continue;
+            double len = length(c.ways.get(i));
+            if (c.along[i] < len) {
+                home = false;
+                boolean seen = watched(level, c.head(i));
+                if (!seen || closedUp(level, a)) c.along[i] = Math.min(len, c.along[i] + PACE * 20 * (hurry ? 4 : 1));
+            } else if (!allHome(level, c, a)) {
+                home = false;
+            }
+            column(level, c, i);
+        }
+        if (!home && now < c.nextAt) return;
+        for (int i = 0; i < 2; i++) if (c.armies[i] != null) standDown(level, c, i);
+        stage(c, Stage.DONE, now, now);
+    }
+
+    /** Is everybody of this army home (or nowhere to be found, its ground asleep: then called home)? */
+    static boolean allHome(ServerLevel level, Campaign c, Armies.Army a) {
+        Villages.Village v = Villages.get(a.town);
+        if (v == null) return true;
+        boolean all = true;
+        for (Armies.Fighter f : a.fighters) {
+            if (f.order == Armies.Order.CAPTIVE) continue;
+            if (level.getEntity(f.id) instanceof VillageFolkEntity e) {
+                if (e.distanceToSqr(v.centre().getX(), e.getY(), v.centre().getZ()) > 40 * 40) all = false;
+            } else if (f.seenAt != null && f.seenAt.distSqr(v.centre()) > 64 * 64) {
+                pullAt(level, c, f.seenAt);
+                all = false;
+            }
+        }
+        return all;
+    }
+
+    /** Stood down: the fighters back to their lives, the captives handed to the barracks, the supply back in the stores. */
+    static void standDown(ServerLevel level, Campaign c, int i) {
+        Armies.Army a = c.armies[i];
+        if (a == null) return;
+        Battles.homecoming(level, c, a);
+        Armies.unload(level, a);
+        Armies.discharge(level, a);
+        c.armies[i] = null;
+    }
+
+    // ------------------------------------------------------------------ calling the stragglers up
+
+    /**
+     * The army's fighters that are nowhere about (their ground asleep since nobody was near) called up to where
+     * the army is watched: their ground woken for a few seconds (a ticket of this campaign's), and once they stir
+     * their own step sets them down in their places. Whether any were called.
+     */
+    static boolean pull(ServerLevel level, Campaign c, Armies.Army a, BlockPos near) {
+        boolean any = false;
+        for (Armies.Fighter f : a.fighters) {
+            if (f.dead || f.seenAt == null || level.getEntity(f.id) != null) continue;
+            if (f.seenAt.distSqr(near) < 96 * 96) continue;
+            any |= pullAt(level, c, f.seenAt);
+        }
+        return any;
+    }
+
+    static boolean pullAt(ServerLevel level, Campaign c, BlockPos at) {
+        long key = new BlockPos(at.getX() >> 4 << 4, 0, at.getZ() >> 4 << 4).asLong();
+        for (long[] p : c.pulls) if (p[0] == key) return false;
+        if (c.pulls.size() >= 8) return false;
+        ChunkLoad.setLoaded(level, c.ticketOwner, BlockPos.of(key), 0, true);
+        c.pulls.add(new long[]{ key, level.getGameTime() + PULL_TICKS });
+        return true;
+    }
+
+    // ------------------------------------------------------------------ a player in the ranks
+
+    /**
+     * A player joins the town's army in the field: a citizen as a volunteer, anybody else as a sword for hire, paid
+     * {@code hire} coins out of the town's treasury if it has them. It fights under the town's Captain: the enemy's
+     * fighters take it for one of the enemy, and its blows beat them down (they yield) as their own do. What the
+     * Captain says to it.
+     */
+    public static String join(ServerLevel level, Villages.Village v, ServerPlayer p, boolean citizen, int hire) {
+        Campaign c = ofTown(v.id());
+        String n = Villages.name(v.id());
+        if (c == null) return n + " has no army in the field.";
+        UUID side = Armies.sideOf(p);
+        if (side != null) return "You already fight for " + Villages.name(side) + ".";
+        UUID enemy = c.a.equals(v.id()) ? c.b : c.a;
+        if (Ledger.citizen(enemy, p.getUUID())) return "You're a citizen of " + Villages.name(enemy) + ". You'll not fight against your own.";
+        long day = level.getDayTime() / 24000L;
+        if (!citizen) {
+            int paid = QuestRewards.fromTreasury(level, v.id(), hire);
+            if (paid <= 0) return n + " cannot pay a sword for hire just now.";
+            Dealings.giveCoins(p, paid);
+            Villages.tell(v.id(), day, p.getName().getString() + " was hired to fight for the town against " + Villages.name(enemy) + ", for " + hire + " coins");
+        } else {
+            Villages.tell(v.id(), day, p.getName().getString() + " volunteered to fight for the town against " + Villages.name(enemy));
+        }
+        Armies.volunteer(p, v.id());
+        WarBooks.course(v.id(), enemy, day, p.getName().getString() + (citizen ? " volunteered for our army" : " fought for us for hire"));
+        return citizen ? "Welcome to the ranks. Stand with the line, keep your place, and mind the banner."
+            : "There's your pay, out of the treasury. Stand with the line, and fight well.";
+    }
+
+    // ------------------------------------------------------------------ the books (kept with the world)
+
+    /** The campaign written into the books of the town that took the field (Ledger "war.campaign"). */
+    static void save(Campaign c) {
+        StringBuilder s = new StringBuilder();
+        s.append(c.b).append(';').append(c.stage.ordinal()).append(';').append(c.holdWalls ? 1 : 0).append(';').append(c.siegeAim ? 1 : 0)
+            .append(';').append(c.won).append(';').append(c.day).append(';');
+        Battlefields.Ground g = c.ground;
+        s.append(g.centre().asLong()).append(';').append(String.format(Locale.ROOT, "%.4f,%.4f", g.ax(), g.az())).append(';').append(WarBooks.clean(g.name())).append(';');
+        for (int i = 0; i < 2; i++) {
+            Armies.Army a = c.armies[i];
+            if (a == null) { s.append("-;"); continue; }
+            List<String> fs = new ArrayList<>();
+            for (Armies.Fighter f : a.fighters) fs.add(f.encode());
+            s.append(a.tactic.ordinal()).append('/').append(a.morale).append('/').append(a.behind).append('/').append(a.behindPower).append('/')
+                .append(a.supplyCode()).append('/').append(String.join("&", fs)).append(';');
+        }
+        List<String> blocks = new ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            Battlefields.Camp camp = c.camps[i];
+            if (camp == null) continue;
+            for (BlockPos p : camp.wool) blocks.add("w" + i + "@" + p.asLong());
+            for (BlockPos p : camp.poles) blocks.add("p" + i + "@" + p.asLong());
+            if (camp.fire != null) blocks.add("f" + i + "@" + camp.fire.asLong());
+        }
+        if (c.ram != null) for (BlockPos p : c.ram) blocks.add("r0@" + p.asLong());
+        s.append(String.join(",", blocks)).append(';').append(c.gate == null ? "" : Long.toString(c.gate.asLong())).append(';').append(c.gateOut.get3DDataValue());
+        Ledger.note(c.a, "war.campaign", s.toString());
+    }
+
+    /**
+     * Back from the books after a restart: a campaign that was on the road carries on from its stage's start (its
+     * column's head back at the road's start: its fighters are where they were); one in the middle of a battle is
+     * reckoned on paper; the camps' and the ram's blocks are known, to be taken up.
+     */
+    static void load() {
+        for (Villages.Village v : Villages.every()) {
+            String s = Ledger.note(v.id(), "war.campaign");
+            if (s == null || s.isEmpty()) continue;
+            try {
+                Campaign c = decode(v.id(), s);
+                if (c != null) {
+                    ACTIVE.put(Ledger.pair(c.a, c.b), c);
+                    for (Armies.Army a : c.armies) if (a != null) Armies.enlist(a);
+                }
+            } catch (RuntimeException e) {
+                LOG.warn("[MCA-WAR] a campaign in {}'s books would not read; let go", Villages.name(v.id()));
+                Ledger.forget(v.id(), "war.campaign");
+            }
+        }
+    }
+
+    @Nullable
+    static Campaign decode(UUID a, String s) {
+        String[] p = s.split(";", -1);
+        if (p.length < 15) return null;
+        Campaign c = new Campaign(a, UUID.fromString(p[0]));
+        c.stage = Stage.values()[Integer.parseInt(p[1])];
+        c.holdWalls = "1".equals(p[2]);
+        c.siegeAim = "1".equals(p[3]);
+        c.won = Integer.parseInt(p[4]);
+        c.day = Long.parseLong(p[5]);
+        String[] ax = p[7].split(",");
+        c.ground = new Battlefields.Ground(BlockPos.of(Long.parseLong(p[6])), Double.parseDouble(ax[0]), Double.parseDouble(ax[1]), null, null, null, null, null, p[8], false);
+        c.name = "the Battle of " + p[8];
+        for (int i = 0; i < 2; i++) {
+            String code = p[9 + i];
+            if (code.equals("-")) continue;
+            String[] q = code.split("/", 6);
+            if (q.length < 6) continue;
+            Armies.Army army = new Armies.Army(i == 0 ? c.a : c.b, i == 0 ? c.b : c.a);
+            army.tactic = BattleModel.Tactic.values()[Integer.parseInt(q[0])];
+            army.morale = Integer.parseInt(q[1]);
+            army.behind = Integer.parseInt(q[2]);
+            army.behindPower = Integer.parseInt(q[3]);
+            army.supplyFrom(q[4]);
+            for (String f : q[5].split("&")) {
+                Armies.Fighter fi = Armies.Fighter.decode(f);
+                if (fi == null) continue;
+                army.fighters.add(fi);
+                if (fi.rank == Armies.Rank.CAPTAIN) army.captain = fi.id;
+                if (fi.rank == Armies.Rank.BEARER) army.bearer = fi.id;
+                if (fi.role == BattleModel.Role.MEDIC) army.medic = fi.id;
+            }
+            c.armies[i] = army;
+        }
+        for (String b : p[11].split(",")) {
+            if (b.length() < 4) continue;
+            int i = b.charAt(1) - '0';
+            BlockPos pos = BlockPos.of(Long.parseLong(b.substring(3)));
+            if (b.charAt(0) == 'r') {
+                if (c.ram == null) c.ram = new ArrayList<>();
+                c.ram.add(pos);
+                continue;
+            }
+            if (c.camps[i] == null) c.camps[i] = new Battlefields.Camp(pos);
+            switch (b.charAt(0)) {
+                case 'w' -> c.camps[i].wool.add(pos);
+                case 'p' -> c.camps[i].poles.add(pos);
+                default -> c.camps[i].fire = pos;
+            }
+        }
+        if (!p[12].isEmpty()) c.gate = BlockPos.of(Long.parseLong(p[12]));
+        c.gateOut = Direction.from3DDataValue(Integer.parseInt(p[13]));
+        // Its roads begin again from where it stood; a battle under way is reckoned on paper.
+        if (c.stage == Stage.BATTLE || c.stage == Stage.ASSAULT) c.stage = Stage.CAMP;
+        c.nextAt = 0;
+        if (c.stage == Stage.MARCH || c.stage == Stage.SIEGE_MARCH || c.stage == Stage.HOME) {
+            for (int i = 0; i < 2; i++) {
+                Villages.Village v = c.town(i);
+                if (c.armies[i] == null || v == null) continue;
+                BlockPos to = c.stage == Stage.HOME ? v.centre() : c.stage == Stage.SIEGE_MARCH ? c.gate == null ? c.ground.centre() : c.gate.relative(c.gateOut, 28) : campSpot(c, i);
+                route(c, i, c.stage == Stage.HOME ? c.ground.centre() : v.centre(), to);
+            }
+        }
+        if (c.stage == Stage.CAMP || c.stage == Stage.SIEGE_CAMP) {
+            for (int i = 0; i < 2; i++) if (c.armies[i] != null) c.ways.set(i, new ArrayList<>(List.of(c.camps[i] != null ? c.camps[i].centre : campSpot(c, i))));
+        }
+        return c;
+    }
+
+    // ------------------------------------------------------------------ the books' and the board's lines
+
+    /** The campaign in a line or two for the town's war page and its board: the armies, their strength and spirit, where. */
+    public static List<String> lines(ServerLevel level, UUID town) {
+        List<String> out = new ArrayList<>();
+        Campaign c = ofTown(town);
+        if (c == null) return out;
+        out.add(capital(c.name) + ": " + words(c.stage) + (c.stage == Stage.CAMP || c.stage == Stage.MARCH ? " (" + c.ground.name() + ")" : ""));
+        for (int i = 0; i < 2; i++) {
+            Armies.Army a = c.armies[i];
+            if (a == null) continue;
+            Armies.Fighter cap = a.officer(Armies.Rank.CAPTAIN);
+            BlockPos h = c.ways.get(i).isEmpty() ? null : c.head(i);
+            out.add(Villages.name(a.town) + "'s army: " + a.standing() + " of " + a.size() + " standing, spirit " + spirit(a)
+                + (cap != null ? ", " + cap.what() : "") + ", " + a.tactic.name().toLowerCase(Locale.ROOT).replace('_', ' ')
+                + (h != null ? " at " + h.getX() + ", " + h.getZ() : ""));
+        }
+        return out;
+    }
+
+    static String spirit(Armies.Army a) {
+        int m = a.morale;
+        return m >= 70 ? "eager" : m >= 50 ? "steady" : m >= BattleModel.WAVER ? "shaken" : m >= BattleModel.BREAK ? "wavering" : "broken";
+    }
+
+    static String words(Stage s) {
+        return switch (s) {
+            case NOTICE -> "the army musters this afternoon";
+            case MUSTER -> "the army is drawn up on the square";
+            case MARCH -> "the armies are on the march";
+            case CAMP -> "the armies are camped on the field";
+            case BATTLE -> "battle is joined";
+            case AFTER -> "the battle is over; the wounded are tended";
+            case SIEGE_MARCH -> "the army marches on the town";
+            case SIEGE_CAMP -> "the town is besieged";
+            case ASSAULT -> "the gate is under assault";
+            case HOME -> "the armies are on their way home";
+            case DONE -> "the armies are home";
+        };
+    }
+
+    static String capital(String s) {
+        return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    // ------------------------------------------------------------------ tests and pictures
+
+    /** Tests and pictures: a campaign begun now between these two, whatever the war's day says. */
+    @Nullable
+    public static Campaign beginForTests(ServerLevel level, Villages.Village x, Villages.Village y, boolean holdWalls, boolean siegeAim) {
+        return begin(level, x, y, level.getDayTime() / 24000L, holdWalls, siegeAim);
+    }
+
+    /** Tests: the campaign's next stage now. */
+    public static void nextForTests(ServerLevel level, Campaign c) {
+        c.nextAt = 0;
+        second(level, c);
+    }
+
+    /** Tests: the columns' heads at the end of their roads. */
+    public static void arriveForTests(Campaign c) {
+        for (int i = 0; i < 2; i++) if (!c.ways.get(i).isEmpty()) c.along[i] = length(c.ways.get(i));
+    }
+
+    /** Tests: the campaign as it would be read back from the books. */
+    @Nullable
+    public static Campaign reloadForTests(Campaign c) {
+        save(c);
+        return decode(c.a, Ledger.note(c.a, "war.campaign"));
+    }
+
+    /** Tests: the campaigns under way. */
+    public static List<Campaign> activeForTests() {
+        return new ArrayList<>(ACTIVE.values());
+    }
+}
