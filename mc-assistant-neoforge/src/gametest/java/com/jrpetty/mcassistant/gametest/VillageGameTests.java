@@ -103,10 +103,14 @@ public class VillageGameTests {
     @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "t02_spawner_block")
     public static void t02_spawner_block(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
+        // The ground held and its creatures loaded before the reset: folk an earlier test left on it (t01's, next door,
+        // its chunks unloaded before it could be cleared) come back with it and are cleared, so their village does not
+        // stand in this founding's way.
+        Kit.hold(level, 2600, 2600, 96);
+        Kit.live(level, 2600, 2600, 96);
         Kit.reset(level);
         com.jrpetty.mcassistant.entity.Founding.resetForTests(level.getServer());
         ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        Kit.hold(level, 2600, 2600, 96);
         BlockPos ground = Kit.surface(level, 2600, 2600);
         ItemStack stack = new ItemStack(McAssistantMod.FOLK_SPAWNER_ITEM.get());
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
@@ -438,8 +442,11 @@ public class VillageGameTests {
         VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(builder != null, "could not found a village for the hall");
         Villages.Village v = Villages.nearest(level, heart, 100);
-        BlockPos hallAt = Kit.surface(level, 3614, 3600);
-        BlockPos wellAt = Kit.surface(level, 3590, 3600);
+        // On the ground the town plan gives them (a great lot by the square, the well's spot on it): the town's gate
+        // keeps its avenues and its square from any building that has not been given its place there.
+        Villages.Site hallSite = Villages.siteFor(level, v.id(), "hall"), wellSite = Villages.siteFor(level, v.id(), "well");
+        helper.assertTrue(hallSite != null && wellSite != null, "the town plan has ground for a hall and a well");
+        BlockPos hallAt = hallSite.anchor(), wellAt = wellSite.anchor();
         for (int i = 0; i < 12; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
         builder.insertItem(new ItemStack(Items.CHEST, 2));
         builder.insertItem(new ItemStack(Items.CRAFTING_TABLE, 2));
@@ -449,8 +456,8 @@ public class VillageGameTests {
         builder.insertItem(new ItemStack(Items.OAK_STAIRS, 64));
         builder.insertItem(new ItemStack(Items.OAK_STAIRS, 64));
         builder.insertItem(new ItemStack(Items.OAK_STAIRS, 64));
-        builder.enqueue(Job.buildAt("hall", hallAt, Direction.WEST, 0));
-        builder.enqueue(Job.buildAt("well", wellAt, Direction.EAST, 0));
+        builder.enqueue(Job.buildAt("hall", hallAt, hallSite.facing(), 0));
+        builder.enqueue(Job.buildAt("well", wellAt, wellSite.facing(), 0));
         helper.onEachTick(() -> {
             long t = helper.getTick();
             if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);      // building is day work
@@ -460,7 +467,7 @@ public class VillageGameTests {
                 boolean ridge = !level.getBlockState(hallAt.above(9)).isAir();
                 boolean roof = !level.getBlockState(wellAt.above(3)).isAir();
                 Kit.log("t13 hall and well stand at tick " + t + "; hall ridge " + ridge + ", well roof " + roof);
-                boolean stairs = level.getBlockState(hallAt.above(5).relative(Direction.NORTH, 4)).getBlock()
+                boolean stairs = level.getBlockState(hallAt.above(5).relative(hallSite.facing().getClockWise(), 4)).getBlock()
                     instanceof net.minecraft.world.level.block.StairBlock;
                 Kit.log("t13 the hall's roof is of stairs: " + stairs);
                 helper.assertTrue(ridge, "the hall's ridge should be up (nine above the floor)");
@@ -480,15 +487,18 @@ public class VillageGameTests {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         level.setDayTime(1000);
-        Kit.hold(level, 3800, 3800, 48);
-        Kit.prepare(level, 3800, 3800, 48);
+        Kit.hold(level, 3800, 3800, 72);                                        // the gateway's lot is out at the edge
+        Kit.prepare(level, 3800, 3800, 72);
         BlockPos heart = Kit.surface(level, 3800, 3800);
         VillageFolkEntity builder = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
         helper.assertTrue(builder != null, "could not found a village for the great works");
         Villages.Village v = Villages.nearest(level, heart, 100);
-        BlockPos marketAt = Kit.surface(level, 3814, 3800);
-        BlockPos gateAt = Kit.surface(level, 3788, 3800);
-        BlockPos monumentAt = Kit.surface(level, 3800, 3814);
+        // On the ground the town plan gives them (as t13): the market facing the square, the monument on it, the
+        // gateway out at the edge.
+        Villages.Site market = Villages.siteFor(level, v.id(), "market"), gate = Villages.siteFor(level, v.id(), "gateway"),
+            monument = Villages.siteFor(level, v.id(), "monument");
+        helper.assertTrue(market != null && gate != null && monument != null, "the town plan has ground for the great works");
+        BlockPos marketAt = market.anchor(), gateAt = gate.anchor(), monumentAt = monument.anchor();
         for (int i = 0; i < 12; i++) builder.insertItem(new ItemStack(Items.COBBLESTONE, 64));
         builder.insertItem(new ItemStack(Items.OAK_LOG, 64));
         builder.insertItem(new ItemStack(Items.CHEST, 2));
@@ -496,9 +506,9 @@ public class VillageGameTests {
         builder.insertItem(new ItemStack(Items.FURNACE, 1));
         builder.insertItem(new ItemStack(Items.TORCH, 8));
         builder.insertItem(new ItemStack(Items.OBSIDIAN, 10));
-        builder.enqueue(Job.buildAt("market", marketAt, Direction.WEST, 0));
-        builder.enqueue(Job.buildAt("gateway", gateAt, Direction.EAST, 0));
-        builder.enqueue(Job.buildAt("monument", monumentAt, Direction.NORTH, 0));
+        builder.enqueue(Job.buildAt("market", marketAt, market.facing(), 0));
+        builder.enqueue(Job.buildAt("gateway", gateAt, gate.facing(), 0));
+        builder.enqueue(Job.buildAt("monument", monumentAt, monument.facing(), 0));
         helper.onEachTick(() -> {
             long t = helper.getTick();
             if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);      // building is day work
@@ -1238,27 +1248,23 @@ public class VillageGameTests {
             b.setJob(StationTask.GUARD);
             a.setShift(AssistantEntity.Shift.ALWAYS);
             b.setShift(AssistantEntity.Shift.ALWAYS);
-            level.setDayTime(15000);                       // (the sky darkens on the next tick)
-        });
-        boolean[] w = new boolean[4];
-        helper.runAtTickTime(24, () -> {
-            w[0] = a.onShift();
-            w[1] = b.onShift();
-            level.setDayTime(20000);
-        });
-        helper.runAtTickTime(28, () -> {
-            w[2] = a.onShift();
-            w[3] = b.onShift();
-            level.setDayTime(6000);
         });
         helper.runAtTickTime(32, () -> {
             java.util.UUID village = a.ownerId();
+            // The hour set and the sky brought up to it in the same tick as the guards are asked: the clock is the
+            // whole server's, and another test may set it between two ticks.
+            boolean[] w = new boolean[6];
+            for (int i = 0; i < 3; i++) {
+                level.setDayTime(new long[]{ 15000, 20000, 6000 }[i]);       // the first watch, the second, the day
+                level.updateSkyBrightness();
+                w[2 * i] = a.onShift();
+                w[2 * i + 1] = b.onShift();
+            }
             Kit.log("t27 watches: " + a.displayNameCap() + " " + w[0] + "/" + w[2] + ", "
-                + b.displayNameCap() + " " + w[1] + "/" + w[3] + "; by day " + a.onShift() + "/" + b.onShift()
-                + "; night? " + level.isNight());
+                + b.displayNameCap() + " " + w[1] + "/" + w[3] + "; by day " + w[4] + "/" + w[5]);
             helper.assertTrue(w[0] != w[1] && w[2] != w[3] && w[0] != w[2],
                 "two guards keep the night in two watches, and each sleeps half of it");
-            helper.assertTrue(a.onShift() && b.onShift(), "and both are on duty by day");
+            helper.assertTrue(w[4] && w[5], "and both are on duty by day");
             // The founders' camp.
             BlockPos chest = heart;
             int laid = com.jrpetty.mcassistant.VillageSpawner.pitchCamp(level, chest, 3);
@@ -1700,11 +1706,20 @@ public class VillageGameTests {
         for (BlockPos q : BlockPos.betweenClosed(bc.offset(-8, -3, -8), bc.offset(8, 4, 8))) {
             if (level.getBlockState(q).is(Blocks.BREWING_STAND)) { standAt = q.immutable(); break; }
         }
-        String loadedWith = standAt != null && level.getBlockEntity(standAt) instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity st
-            ? st.getItem(0).getHoverName().getString() + " + " + st.getItem(3).getHoverName().getString() : "no stand";
+        // By what is in it, not by its name (a server with no names loaded shows the key).
+        boolean water = false, wart = false;
+        String loadedWith = "no stand";
+        if (standAt != null && level.getBlockEntity(standAt) instanceof net.minecraft.world.level.block.entity.BrewingStandBlockEntity st) {
+            ItemStack bottle = st.getItem(0), ingredient = st.getItem(3);
+            var contents = bottle.get(net.minecraft.core.component.DataComponents.POTION_CONTENTS);
+            water = bottle.is(Items.POTION) && contents != null && contents.is(net.minecraft.world.item.alchemy.Potions.WATER);
+            wart = ingredient.is(Items.NETHER_WART);
+            loadedWith = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(bottle.getItem()) + (water ? " (water)" : "")
+                + " + " + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(ingredient.getItem());
+        }
         Kit.log("t32 the brewer: kit " + brewKit + ", kept it till the brewery stood " + waited + ", " + brewed
             + ", the stand at " + standAt + " with " + loadedWith);
-        helper.assertTrue(brewKit && waited && brewed && loadedWith.contains("Water") && loadedWith.contains("Nether Wart"),
+        helper.assertTrue(brewKit && waited && brewed && water && wart,
             "the brewer keeps the stand it brought till the brewery stands, then sets it down there and loads it");
         // The enchanter: the table it brought set down, a book bound, then the smith's work enchanted.
         folk.setJob(StationTask.ENCHANT);
@@ -4752,8 +4767,12 @@ public class VillageGameTests {
         int made = com.jrpetty.mcassistant.entity.Economy.yesterday(v.id());
         String line = com.jrpetty.mcassistant.entity.Economy.line(v.id());
         String page = com.jrpetty.mcassistant.entity.Economy.page(level, v);
-        Kit.log("t57 the books: made " + made + "; " + line + " | page: " + page.replace("\n", " / "));
-        helper.assertTrue(made == 12, "forty loaves at 0.3 are twelve coins' worth, and the stone is no farmer's: " + made);
+        // A loaf's worth is the value engine's (Prices: the board's price, raised to its makings and the work).
+        double loaf = com.jrpetty.mcassistant.entity.Market.goodFor(new ItemStack(Items.BREAD)).value();
+        int forty = (int) Math.round(40 * loaf);
+        Kit.log("t57 the books: made " + made + " (forty loaves at " + loaf + ": " + forty + "); " + line + " | page: " + page.replace("\n", " / "));
+        helper.assertTrue(loaf > 0 && made == forty,
+            "forty loaves are " + forty + " coins' worth (the kit's sixteen put back are not made), and the stone is no farmer's: " + made);
         helper.assertTrue(page.contains("Best producers") && page.contains(farmer.displayNameCap()), "the page names the best producers");
         helper.assertTrue(com.jrpetty.mcassistant.entity.Economy.worth(v.id()) >= 0, "the village's worth is counted");
         helper.succeed();
