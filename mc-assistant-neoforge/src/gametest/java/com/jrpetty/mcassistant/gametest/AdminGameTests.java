@@ -187,7 +187,9 @@ public class AdminGameTests {
         BlockPos chest = Kit.surface(level, v.centre().getX() + 3, v.centre().getZ() + 3);
         level.setBlock(chest, Blocks.CHEST.defaultBlockState(), 3);
         ZoneChests.mark(level, chest);
-        ((Container) level.getBlockEntity(chest)).setItem(0, new ItemStack(Items.IRON_HELMET, 2));
+        Container box = (Container) level.getBlockEntity(chest);
+        box.setItem(0, new ItemStack(Items.IRON_HELMET));                // a helmet does not stack: two slots
+        box.setItem(1, new ItemStack(Items.IRON_HELMET));
         AdminRunner.Outcome o = run(src(level, v, 4, new ArrayList<>()), "army kit", "iron stores");
         helper.assertTrue(o.ok(), "kit ran: " + o.lines());
         String line = String.join(" ", o.lines());
@@ -196,7 +198,7 @@ public class AdminGameTests {
         List<VillageFolkEntity> watch = AdminTools.guards(v.id());
         helper.assertTrue(watch.size() >= 4, "four on the watch (" + watch.size() + ")");
         for (VillageFolkEntity g : watch) helper.assertTrue(g.getItemBySlot(EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE), g.displayNameCap() + " wears iron");
-        helper.assertTrue(((Container) level.getBlockEntity(chest)).getItem(0).isEmpty(), "the stores' helmets were used");
+        helper.assertTrue(box.getItem(0).isEmpty() && box.getItem(1).isEmpty(), "the stores' helmets were used");
         helper.succeed();
     }
 

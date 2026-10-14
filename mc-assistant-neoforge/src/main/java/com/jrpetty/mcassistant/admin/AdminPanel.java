@@ -59,7 +59,8 @@ public final class AdminPanel {
         List<String> w = AdminArgs.tokens(l);
         if (w.size() >= 2 && AdminSpec.byPath(w.get(0) + " " + w.get(1)) != null) {
             String p = w.get(0) + " " + w.get(1);
-            return new String[]{ p, l.substring(Math.min(l.length(), l.indexOf(w.get(1)) + w.get(1).length())).trim() };
+            int at = l.indexOf(w.get(1), w.get(0).length()) + w.get(1).length();
+            return new String[]{ p, l.substring(Math.min(l.length(), at)).trim() };
         }
         if (!w.isEmpty() && AdminSpec.byPath(w.get(0)) != null) return new String[]{ w.get(0), l.substring(w.get(0).length()).trim() };
         return new String[]{ "", "" };

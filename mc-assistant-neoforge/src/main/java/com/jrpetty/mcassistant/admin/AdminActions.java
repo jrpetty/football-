@@ -220,8 +220,7 @@ public final class AdminActions {
                 if (g.isEmpty()) yield Done.no(Villages.name(v.id()) + " has no watch (army raise first).");
                 String tier = a.word(0, "iron");
                 AdminTools.Kit k = AdminTools.kit(level, v, g, tier, !a.word(1, "stores").equals("decree"));
-                yield Done.ok(k.fighters() + " of the watch armed in " + tier + ": " + k.fromStores() + " pieces from the stores, " + k.byDecree()
-                    + " by decree supply", "the watch was armed in " + tier);
+                yield Done.ok(k.fighters() + " of the watch armed in " + tier + ": " + k.words(), "the watch was armed in " + tier);
             }
             case "army.raise" -> raiseArmy(c, v, a.num(0, 12), a.word(1, "iron"));
             case "army.war" -> {
@@ -446,7 +445,7 @@ public final class AdminActions {
         }, j -> {
             AdminTools.Kit k = AdminTools.kit(level, v, army, tier, true);
             String said = army.size() + " put on the watch of " + Villages.name(v.id()) + " (" + raised[0] + " raised for it), armed in " + tier + ": "
-                + k.fromStores() + " pieces from the stores, " + k.byDecree() + " by decree supply";
+                + k.words();
             AdminRunner.decree(level, v, army.size() + " were called to the watch and armed in " + tier);
             jobOutcome(j, said);
         });

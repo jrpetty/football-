@@ -86,9 +86,8 @@ public final class AdminRunner {
         List<String> lines = new ArrayList<>();
         boolean any = false;
         String job = null;
-        if (c.action().big()) {
-            if (c.args().flag(AdminSpec.SNAPSHOT)) for (Villages.Village v : towns) lines.add(AdminSnapshots.take(c.server(), v).text());
-            else lines.add("A big change: /save-all first is wise; add --snapshot to keep a copy of the town's saved data.");
+        if (c.action().big() && c.args().flag(AdminSpec.SNAPSHOT)) {
+            for (Villages.Village v : towns) lines.add(AdminSnapshots.take(c.server(), v).text());
         }
         for (Villages.Village v : scopeTowns(c.action(), towns)) {
             AdminTools.Done d;
@@ -104,6 +103,9 @@ public final class AdminRunner {
             AdminLog.append(c.server(), c.who(), c.action().path() + (c.args().positional().isEmpty() ? "" : " " + String.join(" ", c.args().positional())),
                 v == null ? "world" : Villages.name(v.id()), (d.ok() ? "ok: " : "failed: ") + d.text());
             if (d.ok() && d.decree() != null) decree(c.level(), v, d.decree());
+        }
+        if (c.action().big() && !c.args().flag(AdminSpec.SNAPSHOT) && any) {
+            lines.add("A big change: /save-all first is wise; --snapshot keeps a copy of the town's saved data next time.");
         }
         return new Outcome(any, lines, null, job);
     }

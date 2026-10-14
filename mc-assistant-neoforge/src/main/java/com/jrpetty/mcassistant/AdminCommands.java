@@ -71,7 +71,17 @@ public final class AdminCommands {
                     .executes(ctx -> run(ctx, a, StringArgumentType.getString(ctx, "values"))));
             if (words.length > 1) head.then(leaf);
         }
-        for (LiteralArgumentBuilder<CommandSourceStack> h : heads.values()) admin.then(h);
+        // A head with actions under it ("ages"), typed alone: that area's help.
+        for (Map.Entry<String, LiteralArgumentBuilder<CommandSourceStack>> e : heads.entrySet()) {
+            AdminSpec.Action only = AdminSpec.byPath(e.getKey());
+            if (only == null) {
+                AdminSpec.Area area = null;
+                for (AdminSpec.Action a : AdminSpec.all()) if (a.path().startsWith(e.getKey() + " ")) { area = a.area(); break; }
+                String key = area == null ? "" : area.key();
+                e.getValue().executes(ctx -> help(ctx, key));
+            }
+            admin.then(e.getValue());
+        }
         admin.then(Commands.literal("help").executes(ctx -> help(ctx, ""))
                 .then(Commands.argument("area", StringArgumentType.word())
                     .suggests((ctx, b) -> SharedSuggestionProvider.suggest(areaKeys(), b))

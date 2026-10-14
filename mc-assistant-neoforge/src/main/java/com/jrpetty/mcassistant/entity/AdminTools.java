@@ -513,7 +513,12 @@ public final class AdminTools {
     private static final int BOW_EVERY = 4, CROSSBOW_EVERY = 8, TRIDENT_EVERY = 10;
 
     /** How a kit went: pieces out of the stores, and pieces made by decree. */
-    public record Kit(int fighters, int fromStores, int byDecree) {}
+    public record Kit(int fighters, int fromStores, int byDecree) {
+        /** "3 pieces from the stores, 17 by decree supply". */
+        public String words() {
+            return fromStores + (fromStores == 1 ? " piece" : " pieces") + " from the stores, " + byDecree + " by decree supply";
+        }
+    }
 
     /** The town's watch. */
     public static List<VillageFolkEntity> guards(UUID village) {

@@ -563,7 +563,7 @@ public class AdminScreen extends Screen {
             UiStyle.click();
             String town = state.getString("town");
             if ("server".equals(modal)) {
-                if (b == 1) { send("snapshot town:" + town); return true; }
+                if (b == 1) { send("snapshot town:\"" + town + "\""); return true; }
                 if (b == 2) send("confirm " + state.getString("confirm"));
             } else {
                 if (b == 1) send(pendingLine + " " + AdminSpec.SNAPSHOT);
