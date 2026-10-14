@@ -1036,7 +1036,13 @@ public final class Battles {
             if (us == null) return;
             boolean onWall = onWall(i);
             List<Armies.Fighter> ready = new ArrayList<>();
-            int company = 0;
+            int company = 0, front = 0;
+            for (Armies.Fighter f : us.fighters) if (f.crossbow() && !f.down() && f.file == 0) front++;
+            if (front == 0 || front == us.missiles(true)) {
+                // One rank only (the books do not keep the ranks over a restart, or the other rank fell): told off afresh by turns.
+                int k = 0;
+                for (Armies.Fighter f : us.fighters) if (f.crossbow() && !f.down()) f.file = k++ % 2;
+            }
             for (Armies.Fighter f : us.fighters) {
                 if (!f.crossbow() || f.down() || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
                 company++;
