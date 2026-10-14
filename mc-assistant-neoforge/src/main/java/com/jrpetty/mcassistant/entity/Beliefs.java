@@ -859,6 +859,12 @@ public final class Beliefs {
         return null;
     }
 
+    /** [roles-a] Tests: who leads the town's rites now. */
+    @Nullable
+    public static VillageFolkEntity leaderForTests(UUID village) {
+        return leader(village);
+    }
+
     /** Who leads the rites, looked up at most once every five seconds a town (every folk asks, every few ticks, at dawn). */
     private static final Map<UUID, Object[]> LEADER = new ConcurrentHashMap<>();
 

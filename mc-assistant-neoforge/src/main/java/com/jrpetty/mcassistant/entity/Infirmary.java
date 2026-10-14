@@ -165,6 +165,7 @@ public final class Infirmary {
         BlockPos aisle = new BlockPos(x, y, beds.isEmpty() ? z + 2 : beds.get(0).getZ());
         VillageFolkEntity healer = standIn(level, aisle, false, "Bramble");
         if (healer != null) {
+            healer.makeShowcase(StationTask.HEAL);                      // [roles-a] in the healer's own clothes
             healer.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.HONEY_BOTTLE));
             if (!beds.isEmpty()) healer.getLookControl().setLookAt(beds.get(0).getX() + 0.5, y + 0.6, beds.get(0).getZ() + 0.5);
             FolkTalk.speak(healer, "Here — honey for that throat. You'll be right as rain.");

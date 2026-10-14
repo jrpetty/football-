@@ -130,7 +130,7 @@ public final class Lamplighter {
     /** The town's lit street posts, found from its plan's lamp spots (at most MOST, nearest the heart first). */
     static List<BlockPos> find(ServerLevel level, Villages.Village v) {
         List<BlockPos> out = new ArrayList<>();
-        int r = Math.min(96, Villages.townReach(v.id()));
+        int r = Math.min(96, Math.max(48, Villages.townReach(v.id())));      // the plan's first rings, however young the town
         BlockPos c = v.centre();
         for (int ring = 0; ring <= r && out.size() < MOST; ring++) {
             for (int dx = -ring; dx <= ring && out.size() < MOST; dx++) {

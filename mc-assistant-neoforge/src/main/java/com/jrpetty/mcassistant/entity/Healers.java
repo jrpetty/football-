@@ -193,7 +193,21 @@ public final class Healers {
 
     /** Free to go to a bedside: up, well, about the town, not called elsewhere. */
     static boolean free(VillageFolkEntity h) {
-        return h.isAlive() && !h.isBaby() && !h.isSleeping() && h.health().cold <= 0 && !Health.laidUp(h) && TownJobs.fit(h, "care");
+        return unfit(h).isEmpty();
+    }
+
+    /** Why a healer cannot go to a bedside just now, or "" (the card, and the tests' logs). */
+    static String unfit(VillageFolkEntity h) {
+        if (!h.isAlive() || h.isBaby()) return "gone";
+        if (h.isSleeping()) return "asleep";
+        if (h.health().cold > 0 || Health.laidUp(h)) return "ill itself";
+        if (!TownJobs.fit(h, "care")) return "busy elsewhere";
+        return "";
+    }
+
+    /** Tests: why this healer cannot go to a bedside just now ("" if it can). */
+    public static String unfitForTests(VillageFolkEntity h) {
+        return unfit(h);
     }
 
     /**
@@ -440,7 +454,7 @@ public final class Healers {
         f.schoolXp(StationTask.HEAL, 20);
         LOG.info("[MCA-HEALERS] {} saw to the player {} with {} for {}", f.displayNameCap(), p.getName().getString(), what, price);
         return FolkTalk.pick(r, "Hold still. There — " + what + ". " + Dealings.coins(price) + ", and mind how you go.",
-            "That's " + what + " seen to. " + Dealings.coins(price) + ", please; and rest it a while.");
+            "There: you're seen to, with " + what + ". " + Dealings.coins(price) + ", please; and rest it a while.");
     }
 
     private static ItemStack sampleOf(ServerLevel level, UUID village, Predicate<ItemStack> what) {
@@ -492,6 +506,11 @@ public final class Healers {
         if (looked != null && now - looked < 1200L && now >= looked) return;
         LOOKED.put(id, now);
         if (ready(id)) fillThePost(level, v);
+    }
+
+    /** Tests: a birth in the town now, these parents, this child (VillageFolkEntity.raise's part). */
+    public static void attendBirthForTests(ServerLevel level, VillageFolkEntity mother, VillageFolkEntity father, VillageFolkEntity child) {
+        attendBirth(level, mother.ownerId(), mother, father, List.of(child), level.getDayTime() / 24000L);
     }
 
     /** Tests: the town's look at the post, now. */

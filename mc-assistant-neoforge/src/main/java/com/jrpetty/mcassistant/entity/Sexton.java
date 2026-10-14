@@ -251,7 +251,18 @@ public final class Sexton {
         });
     }
 
-    /** The books' lines (the Culture page through Beliefs.lines): who keeps the chapel. */
+    /** Tests: the chapel's candle seen to now (by the works, done at once with TownJobs.instantForTests). */
+    public static boolean candlesForTests(ServerLevel level, Villages.Village v) {
+        return candles(level, v);
+    }
+
+    /** Tests: the altar's candle, or null. */
+    @Nullable
+    public static BlockPos candleForTests(ServerLevel level, UUID id) {
+        return candle(level, id);
+    }
+
+    /** The books' lines ("/village offices"): who keeps the chapel, and its altar's candle. */
     static List<String> lines(ServerLevel level, UUID id) {
         List<String> out = new ArrayList<>();
         if (!stands(id)) return out;

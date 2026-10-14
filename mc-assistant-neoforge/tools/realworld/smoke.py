@@ -4238,6 +4238,55 @@ def earning_stage(r, look, cx, cz):
     say("alive after earning: %s" % client_alive())
 
 
+def roles_a_stage(r, look, cx, cz):
+    """[roles-a] The civic, care and faith posts (entity/Healers, Offices, Sexton, Lamplighter, RolesStage). Out past
+    the town to the north-east, /village offices stage sets out from palettes and stand-ins: the office dress in a row
+    (the healer, the banker and the ferryman in their own clothes at last; the elder, teacher, curator, crier, warden
+    with its lantern and the sexton in their offices' garments); the infirmary with the healer at a bedside; the sexton
+    at a new grave with two of the town standing by; and a street of torch posts with the lamplighter at one. Pictures:
+      1. 51-roles-a-1-healer-front, 2. 51-roles-a-2-healer-ward: the healer at the infirmary;
+      3. 51-roles-a-3-dress: the office dress, the row;
+      4. 51-roles-a-4-sexton: the sexton at the burial;
+      5. 51-roles-a-5-lamps-dusk: the lamplighter at its posts at dusk.
+    Each camera is kept in open air (clear_camera). Then /village offices, the town's own offices in words. Not wired
+    into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    sx, sz = cx + 120, cz - 120                        # out past the town, on ground of its own
+    hy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 30, sz + 20))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village offices stage" % (sx, sz))
+    say("roles stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the civic posts; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view %s" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        x, y, z = clear_camera(r, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5)
+        look("51-roles-a-" + picture, x, y, z, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("healer-front", "1-healer-front", 10)
+    shoot("healer-ward", "2-healer-ward", 6)
+    shoot("dress", "3-dress", 8)
+    shoot("sexton", "4-sexton", 8)
+    r.cmd("time set 12600")                            # dusk: the lamplighter at its round
+    time.sleep(3)
+    shoot("lamps", "5-lamps-dusk", 8)
+    r.cmd("time set 6000")
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    say("offices: " + r.cmd("execute positioned %d %d %d run village offices" % (cx, ground_height(r, cx, cz) + 1, cz))[:1200])
+    say("alive after the civic posts: %s" % client_alive())
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

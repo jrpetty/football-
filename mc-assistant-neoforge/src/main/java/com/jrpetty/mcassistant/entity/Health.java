@@ -1017,11 +1017,21 @@ public final class Health {
     public static VillageFolkEntity careForTests(ServerLevel level, UUID village) {
         Villages.Village v = Villages.get(village);
         if (v == null) return null;
-        for (VillageFolkEntity p : patients(village)) p.health().tended = 0L;
-        return care(level, v, level.getGameTime(), level.getDayTime() / 24000L);
+        long now = level.getGameTime();
+        for (VillageFolkEntity p : patients(village)) p.health().tended = now - CARE_EVERY - 1;   // [roles-a] due even in a world a minute old
+        return care(level, v, now, level.getDayTime() / 24000L);
     }
 
     /** Tests: laid up now, for so long, for this ("cold", "wound"). */
+    /** [roles-a] Tests: laid up in bed where it stands now (as if it had walked to its bed), for so long, for this. */
+    public static void patientForTests(VillageFolkEntity f, long ticks, String why) {
+        layUpForTests(f, ticks, why);
+        State s = f.health();
+        s.lying = true;
+        s.infirmary = false;
+        s.tended = f.level().getGameTime() - CARE_EVERY - 1;
+    }
+
     public static void layUpForTests(VillageFolkEntity f, long ticks, String why) {
         State s = f.health();
         s.laidUntil = f.level().getGameTime() + ticks;

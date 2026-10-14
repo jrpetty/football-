@@ -101,7 +101,10 @@ public final class Offices {
         give(out, Sexton.holder(id), Office.SEXTON);
         if (LibraryRecords.has(id)) give(out, LibraryRecords.shelf(id).librarian, Office.LIBRARIAN);
         give(out, Crier.crier(id), Office.CRIER);
-        if (Auctions.holds(id)) give(out, Villages.elder(id), Office.AUCTIONEER);
+        // The auctioneer paid as an office only when the panel chose one other than the elder, for whom calling the
+        // auctions is part of leading (its own coin, JobWorth.Pay elder).
+        VillageFolkEntity auctioneer = Auctions.house(id) != null ? Interviews.holder(id, "auctioneer") : null;
+        if (auctioneer != null && !auctioneer.getUUID().equals(Villages.elder(id))) give(out, auctioneer, Office.AUCTIONEER);
         if (PlayerLeader.leaderId(id) != null) {
             String s = Ledger.note(id, "civic.steward");
             if (s != null && !s.isEmpty()) {
@@ -211,8 +214,20 @@ public final class Offices {
         return out;
     }
 
+    /** Tests: how a witness describes a folk of this trade by its clothes (Mischief.outfit). */
+    public static String clothesForTests(StationTask t) {
+        return Mischief.outfit(t);
+    }
+
     public static LiteralArgumentBuilder<CommandSourceStack> command() {
-        return Commands.literal("offices").executes(ctx -> {
+        return Commands.literal("offices")
+            .then(Commands.literal("stage").requires(s -> s.hasPermission(2)).executes(ctx -> {
+                // [roles-a] The posts set out for the pictures, here (RolesStage): "VIEW name x y z ax ay az" lines.
+                List<String> lines = RolesStage.stage(ctx.getSource().getLevel(), net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition()));
+                for (String l : lines) ctx.getSource().sendSuccess(() -> Component.literal(l), false);
+                return lines.size();
+            }))
+            .executes(ctx -> {
             ServerLevel level = ctx.getSource().getLevel();
             Villages.Village v = PlayerServices.townAt(level, net.minecraft.core.BlockPos.containing(ctx.getSource().getPosition()));
             if (v == null) {
