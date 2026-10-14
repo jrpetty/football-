@@ -232,14 +232,6 @@ public class ShopsHomesGameTests {
         return Homes.homeOf(f);
     }
 
-    /** Every coin there is: the treasury, every purse, and these players' packs. */
-    private static long coin(UUID id, ServerPlayer... players) {
-        long n = Ledger.coins(id);
-        for (AssistantEntity a : Villages.folkOf(id)) if (a instanceof VillageFolkEntity f) n += f.purse();
-        for (ServerPlayer p : players) n += Market.coinsHeld(p);
-        return n;
-    }
-
     // ============================================================ the counter
 
     @GameTest(template = EMPTY, timeoutTicks = 200, batch = "sk01_counter_fitted")
@@ -590,7 +582,7 @@ public class ShopsHomesGameTests {
         Store.putForTests(level, t.id(), new ItemStack(Items.BARREL, 2));
         f.earn(200);
         Predicate<ItemStack> bread = s -> s.is(Items.BREAD), candle = s -> s.is(Items.CANDLE);
-        long coin0 = coin(t.id());
+        int took0 = com.jrpetty.mcassistant.entity.ShopBusiness.till(level, t.id(), 1)[0];
         int breadAll0 = ShopStock.held(level, t.id(), bread) + f.countCarried(bread) + Market.stock(level, t.id(), bread);
         int purse0 = f.purse();
         f.teleportTo(home.getX() + 0.5, home.getY() + 1, home.getZ() + 0.5);
@@ -622,14 +614,15 @@ public class ShopsHomesGameTests {
                 if (th.stack().is(Items.CANDLE)) candles += th.stack().getCount();
             }
             int breadAll1 = ShopStock.held(level, t.id(), bread) + f.countCarried(bread) + Market.stock(level, t.id(), bread) + atHome;
-            long coin1 = coin(t.id());
+            int took = com.jrpetty.mcassistant.entity.ShopBusiness.till(level, t.id(), 1)[0] - took0;
             Kit.log("sk12 the trip: purse " + purse0 + " -> " + f.purse() + "; at home " + view.summary() + " (boxes "
-                + HomeStores.boxesForTests(level, t.id(), home) + "); bread everywhere " + breadAll0 + " -> " + breadAll1 + "; coin " + coin0 + " -> " + coin1
+                + HomeStores.boxesForTests(level, t.id(), home) + "); bread everywhere " + breadAll0 + " -> " + breadAll1 + "; the till took " + took
                 + "; card: " + Needs.cardLine(f));
             helper.assertTrue(f.purse() < purse0, "paid out of its own purse");
             helper.assertTrue(atHome > 0, "the bread is at home: " + view.summary() + " (candles " + candles + ")");
             helper.assertTrue(larder.equals("Larder"), "the bread in the larder it bought and set down: " + HomeStores.boxesForTests(level, t.id(), home));
-            helper.assertTrue(breadAll1 == breadAll0 && coin1 == coin0, "nothing made or lost: bread " + breadAll0 + " -> " + breadAll1 + ", coin " + coin0 + " -> " + coin1);
+            helper.assertTrue(breadAll1 == breadAll0, "no bread made or lost: " + breadAll0 + " -> " + breadAll1);
+            helper.assertTrue(took == purse0 - f.purse(), "its coin went over the counter into the shop's till: " + (purse0 - f.purse()) + " paid, " + took + " taken");
             helper.succeed();
         });
     }
@@ -640,8 +633,8 @@ public class ShopsHomesGameTests {
         Town t = town(helper, 1874900, 1, 2000L);
         helper.runAtTickTime(5, () -> {
             VillageFolkEntity f = t.folk().get(0);
-            BlockPos home = house(level, t.id(), Kit.surface(level, t.heart().getX() - 20, t.heart().getZ() + 20));
-            Homes.tickForTests(level, t.v());
+            BlockPos home = ownHome(level, t, f, Kit.surface(level, t.heart().getX() - 30, t.heart().getZ() + 20));
+            helper.assertTrue(home != null, "a home of its own");
             // A barrel inside, the household's larder, with its bread.
             BlockPos chest = com.jrpetty.mcassistant.entity.Families.homeChestForTests(level, f);
             helper.assertTrue(chest != null, "a house with its chest");
@@ -701,8 +694,11 @@ public class ShopsHomesGameTests {
         Town t = town(helper, 1877300, 3, 2000L);
         helper.runAtTickTime(5, () -> {
             List<BlockPos> homes = new ArrayList<>();
-            for (int i = 0; i < 3; i++) homes.add(house(level, t.id(), Kit.surface(level, t.heart().getX() - 30 + 14 * i, t.heart().getZ() + 24)));
-            Homes.tickForTests(level, t.v());
+            for (int i = 0; i < 3; i++) {
+                BlockPos h = ownHome(level, t, t.folk().get(i), Kit.surface(level, t.heart().getX() - 40 + 14 * i, t.heart().getZ() + 24 + 14 * i));
+                helper.assertTrue(h != null, "a home for each household");
+                if (!homes.contains(h)) homes.add(h);
+            }
             HomeStores.claimForTests(level, t.v());
             int[] tiers = { 15, 60, 250 };
             for (int i = 0; i < 3; i++) t.folk().get(i).earn(tiers[i]);
