@@ -49,8 +49,12 @@ public final class Palettes {
 
     private static final Map<UUID, Look> LOOKS = new ConcurrentHashMap<>();
 
+    /** [styles] Each village's ranked items by part (before the thatch), worked out once per look. */
+    private static final Map<UUID, Map<Blueprints.Style, List<Item>>> RANKED = new ConcurrentHashMap<>();
+
     public static void resetForTests() {
         LOOKS.clear();
+        RANKED.clear();
     }
 
     /** The village's look, worked out from its land (and kept). */
@@ -62,11 +66,13 @@ public final class Palettes {
     /** Forget a village's look (its land surveyed afresh, its style or its theme changed). */
     public static void forget(UUID village) {
         LOOKS.remove(village);
+        RANKED.remove(village);
     }
 
     /** [styles] Every village's look forgotten (the themes read afresh). */
     static void forgetAll() {
         LOOKS.clear();
+        RANKED.clear();
     }
 
     /** [styles] The look of a town of this theme on this land: the theme's lands (data/mc_assistant/themes). */
@@ -81,13 +87,19 @@ public final class Palettes {
      */
     public static List<Item> ranked(@Nullable UUID village, Blueprints.Style style) {
         ThemeData t = Themes.of(village);
-        Look l = of(village);
+        List<Item> out = village == null ? rankedFor(t, of(null), style)
+            : RANKED.computeIfAbsent(village, k -> new ConcurrentHashMap<>()).computeIfAbsent(style, k -> rankedFor(t, of(village), style));
+        return t.thatch() ? Thatch.palette(village, style, out) : out;
+    }
+
+    /** [styles] The theme's ranked items for a part, in a look (each id once, those that are items). */
+    private static List<Item> rankedFor(ThemeData t, Look l, Blueprints.Style style) {
         List<Item> out = new ArrayList<>();
         for (String id : t.rankedIds(style.name(), l.theme())) {
             Item it = Themes.item(id);
             if (it != Items.AIR && !out.contains(it)) out.add(it);
         }
-        return t.thatch() ? Thatch.palette(village, style, out) : out;   // [workitems] thatch first on a Wood Age roof, with wheat to spare
+        return List.copyOf(out);   // [workitems] thatch first on a Wood Age roof, with wheat to spare
     }
 
     /** Never in a wall or a roof: the metals and the gems (an iron roof is a fortune left out in the rain). */
