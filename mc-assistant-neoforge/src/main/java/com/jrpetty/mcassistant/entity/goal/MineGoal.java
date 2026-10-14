@@ -412,6 +412,7 @@ public class MineGoal extends Goal {
             if (startReach(vein)) return;
             noteForLater(vein);
         }
+        if (chasing() && !look.idle()) return;            // [mines] it looks round a new spot before it moves on
         if (moveTarget != null) {
             moveTick();
             return;
@@ -1441,14 +1442,38 @@ public class MineGoal extends Goal {
     private void lookRound() {
         if (phase == Phase.ASCEND || phase == Phase.CLIMB || reachFor != null) return;
         if (lookAgain && look.idle()) {
-            look.begin(assistant);
             lookAgain = false;
+            // In a cut tunnel what shows is what its own digging laid bare, and the dig's own look at each fresh face
+            // (digTick) sees it; the look round is for open ground: a cave, a ravine, an old working.
+            if (!inTheOpen()) return;
+            look.begin(assistant);
             if (chasing() && assistant.level() instanceof net.minecraft.server.level.ServerLevel sl) {
                 for (BlockPos p : com.jrpetty.mcassistant.entity.OreNotes.near(sl, cursor, com.jrpetty.mcassistant.entity.OreSight.SIGHT)) saw(p);
             }
         }
         look.step(assistant, this::saw);
     }
+
+    /** Room round its head more than a tunnel's: open ground, worth a look round. */
+    private boolean inTheOpen() {
+        net.minecraft.world.level.Level lv = assistant.level();
+        BlockPos eye = BlockPos.containing(assistant.getEyePosition());
+        BlockPos.MutableBlockPos c = new BlockPos.MutableBlockPos();
+        int open = 0;
+        for (int dx = -OPEN_REACH; dx <= OPEN_REACH; dx++) {
+            for (int dy = -OPEN_REACH; dy <= OPEN_REACH; dy++) {
+                for (int dz = -OPEN_REACH; dz <= OPEN_REACH; dz++) {
+                    c.set(eye.getX() + dx, eye.getY() + dy, eye.getZ() + dz);
+                    if (lv.getBlockState(c).getCollisionShape(lv, c).isEmpty() && ++open > OPEN_CELLS) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** How far round its eyes it feels for open ground, and how many open blocks there (of 125) mean more than a
+     *  tunnel or a stair (a stair and the gallery off it come to under twenty). */
+    private static final int OPEN_REACH = 2, OPEN_CELLS = 24;
 
     /** An ore it sees: on its list to take, if it may and can (its patch, never a stair's floor, a pick for it). */
     private void saw(BlockPos p) {

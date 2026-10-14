@@ -168,11 +168,12 @@ public class EscapeGoal extends Goal {
         return stepOffTries < STEP_OFF_TRIES && a.onGround() && Footholds.isOwn(a, a.feetPos().below());
     }
 
-    /** [mines] Ground beside its steps it can step onto: level with it or a step down, firm, two blocks of room. */
+    /** [mines] Ground beside its steps it can step onto: a step up (out of the top of a hole), level, or a step down;
+     *  firm, with two blocks of room. */
     @Nullable
     private BlockPos groundBeside(BlockPos feet) {
         for (Direction d : Direction.Plane.HORIZONTAL) {
-            for (int dy = 0; dy >= -1; dy--) {
+            for (int dy = 1; dy >= -1; dy--) {
                 BlockPos c = feet.relative(d).above(dy);
                 BlockPos floor = c.below();
                 if (Footholds.isOwn(a, floor)) continue;

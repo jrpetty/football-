@@ -31,10 +31,11 @@ public final class OreSight {
 
     private OreSight() {}
 
-    /** How far a folk sees ore from its eyes: a player's reach and a little over. */
-    public static final int SIGHT = 5;
+    /** How far a folk notices ore from its eyes: a little over a player's reach, so ore in a roof just out of reach
+     *  is seen (and built up to), and no further (a look round reads (2 * SIGHT + 1) cubed blocks). */
+    public static final int SIGHT = 6;
     /** Blocks of the look round read in one tick. */
-    static final int CELLS_PER_TICK = 192;
+    static final int CELLS_PER_TICK = 512;
     /** Rays cast in one tick, at most. */
     static final int RAYS_PER_TICK = 4;
     /** How far inside a face its middle is taken (a ray to the very edge of a block can glance off the next one). */

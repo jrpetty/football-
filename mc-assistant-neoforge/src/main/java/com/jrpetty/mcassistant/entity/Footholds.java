@@ -323,8 +323,9 @@ public final class Footholds extends SavedData {
         lookOverRoutes(level);
         Footholds books = of(level);
         if (books.holds.isEmpty()) return;
-        if (climbing(f) || !f.onGround() || f.getTarget() != null || f.isPassenger() || f.isSleeping()) return;
+        if (!f.onGround() || f.getTarget() != null || f.isPassenger() || f.isSleeping()) return;
         BlockPos under = f.feetPos().below();
+        if (climbing(f) && isOwn(f, under)) return;                      // up its own steps, at work: left to it
         Hold h = books.holds.get(under.asLong());
         // Its own climb's pillar, called away before it came down: down it now, a block at a time.
         if (h != null && h.purpose() == Purpose.CLIMB && !h.kept() && isOwn(f, under)) {
