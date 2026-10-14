@@ -262,7 +262,7 @@ public class DiningGameTests {
         BlockPos smoker = t.place().stations.get(DiningPlaces.Station.SMOKER);
         int[] start = new int[4];
         ServerPlayer[] pl = new ServerPlayer[1];
-        int[] orderId = { -1 };
+        Dining.Order[] ord = new Dining.Order[1];
         helper.startSequence()
             .thenExecuteAfter(5, () -> {
                 helper.assertTrue(smoker != null, "the restaurant has its smoker");
@@ -277,17 +277,18 @@ public class DiningGameTests {
                 Dining.Order o = Dining.orderOf(pl[0].getUUID());
                 helper.assertTrue(o != null && o.lines.size() == 2, "the order is in: " + ServicePoints.messageForTests(pl[0]));
                 helper.assertTrue(o.lines.get(0).drink(), "the drink goes first");
-                orderId[0] = o.id;
+                ord[0] = o;
                 helper.assertTrue(Market.coinsHeld(pl[0]) == 30, "nothing paid yet: it is paid from the bill");
             })
             .thenWaitUntil(() -> {
-                Dining.Order o = Dining.order(orderId[0]);
+                Dining.Order o = ord[0];
                 helper.assertTrue(o != null && o.allServed(), "served: " + (o == null ? "gone" : steps(o)));
             })
             .thenExecute(() -> {
-                Dining.Order o = Dining.order(orderId[0]);
+                Dining.Order o = ord[0];
                 Dining.Line beef = o.lines.get(1);
-                helper.assertTrue(beef.cook.equals(t.cook().displayNameCap()), "cooked by the head cook, " + t.cook().displayNameCap() + ": " + beef.cook);
+                helper.assertTrue(beef.cook.equals(t.cook().displayNameCap()), "cooked by the head cook, " + t.cook().displayNameCap() + ": " + beef.cook
+                    + " (" + roles(t) + ")");
                 helper.assertTrue(smoker.equals(beef.at), "the roast at the smoker: " + beef.at + " not " + smoker);
                 helper.assertTrue(inStores(t.store(), s -> s.is(Items.BEEF)) == start[2] - 1, "one raw beef out of the stores");
                 helper.assertTrue(inStores(t.store(), s -> s.is(Items.COOKED_BEEF)) == 0, "the roast is on the plate, not left in the stores");
@@ -312,7 +313,8 @@ public class DiningGameTests {
                 Kit.log("dn01 paid " + due + " and a tip; " + ServicePoints.messageForTests(pl[0]));
                 helper.assertTrue(Market.coinsHeld(pl[0]) == 30 - due - 1, "the bill and a tip out of the pack");
                 helper.assertTrue(Ledger.coins(t.id()) - start[0] == due, "the bill into the till");
-                helper.assertTrue(t.waiter().purse() - start[1] == 1, "the tip to the waiter");
+                helper.assertTrue(o.tip == 1 && t.waiter().purse() - start[1] == 1, "the tip to the waiter: " + o.tip + ", its purse +"
+                    + (t.waiter().purse() - start[1]) + " (" + roles(t) + ")");
                 Kit.noLeftoverPlayers(level);
             })
             .thenWaitUntil(() -> helper.assertTrue(!(level.getBlockState(tb.cell()).getBlock() instanceof PlaceSettingBlock),
@@ -322,6 +324,13 @@ public class DiningGameTests {
                 && onShelf(level, t.place(), DiningItems.CUP.get()) == 4, "the plate and the cup washed and back on the shelf"))
             .thenExecute(() -> helper.assertTrue(Dining.booksForTests(t.id())[1] >= 2, "the pot washer washed them"))
             .thenSucceed();
+    }
+
+    private static String roles(Town t) {
+        StringBuilder sb = new StringBuilder();
+        for (VillageFolkEntity f : t.folk()) sb.append(f.displayNameCap()).append('=').append(f.stationTask()).append('/')
+            .append(Hospitality.role(f)).append(f.isSleeping() ? " asleep" : "").append(' ');
+        return sb.toString().trim();
     }
 
     private static String steps(Dining.Order o) {
@@ -339,6 +348,7 @@ public class DiningGameTests {
         Town t = town(helper, 1881300, 1, new ItemStack(Items.BEEF, 6), cider.copyWithCount(4));
         VillageFolkEntity diner = t.folk().get(4);
         int[] start = new int[3];
+        Dining.Order[] folkOrder = new Dining.Order[1];
         helper.startSequence()
             .thenExecuteAfter(5, () -> {
                 diner.earn(40);
@@ -350,11 +360,12 @@ public class DiningGameTests {
                 diner.teleportTo(tb.seat().getX() + 0.5, tb.seat().getY() + 0.5, tb.seat().getZ() + 0.5);
             })
             .thenWaitUntil(() -> helper.assertTrue(Diners.orderForTests(diner) > 0, "the waiter takes its order: " + Diners.stageForTests(diner)))
+            .thenExecute(() -> folkOrder[0] = Dining.order(Diners.orderForTests(diner)))
             .thenWaitUntil(() -> helper.assertTrue(Diners.stageForTests(diner) == null, "eaten, paid and gone: " + Diners.stageForTests(diner)
                 + " " + (Dining.order(Diners.orderForTests(diner)) == null ? "" : steps(Dining.order(Diners.orderForTests(diner))))))
             .thenExecute(() -> {
                 // The till's own books (the treasury moves for the town's other business meanwhile: wages, upkeep).
-                int spent = start[0] - diner.purse(), till = Dining.booksForTests(t.id())[0] - start[1], tip = t.waiter().purse() - start[2];
+                int spent = start[0] - diner.purse(), till = Dining.booksForTests(t.id())[0] - start[1], tip = folkOrder[0].tip;
                 Kit.log("dn02 a folk's dinner: spent " + spent + ", the till +" + till + ", the waiter's tip " + tip + "; ate " + diner.meals().lastWhat());
                 helper.assertTrue(spent > 0 && spent == till + tip, "the coin conserved: spent " + spent + " = till " + till + " + tip " + tip);
                 helper.assertTrue(!diner.meals().lastWhat().isEmpty(), "its meal booked");
@@ -394,7 +405,7 @@ public class DiningGameTests {
         ServerLevel level = helper.getLevel();
         Town t = town(helper, 1883700, 0, new ItemStack(Items.BEEF, 1));
         ServerPlayer[] pl = new ServerPlayer[1];
-        int[] orderId = { -1 };
+        Dining.Order[] ord = new Dining.Order[1];
         int[] till = { 0 };
         helper.startSequence()
             .thenExecuteAfter(5, () -> {
@@ -408,14 +419,14 @@ public class DiningGameTests {
                 press(pl[0], ServiceRole.RESTAURANT, "order", new CompoundTag());
                 Dining.Order o = Dining.orderOf(pl[0].getUUID());
                 helper.assertTrue(o != null && o.lines.size() == 2 && o.paid, "two roasts ordered and paid: " + ServicePoints.messageForTests(pl[0]));
-                orderId[0] = o.id;
+                ord[0] = o;
             })
             .thenWaitUntil(() -> {
-                Dining.Order o = Dining.order(orderId[0]);
+                Dining.Order o = ord[0];
                 helper.assertTrue(o != null && o.allServed(), "the one served, the other struck: " + (o == null ? "gone" : steps(o)));
             })
             .thenExecute(() -> {
-                Dining.Order o = Dining.order(orderId[0]);
+                Dining.Order o = ord[0];
                 int struck = 0;
                 for (Dining.Line l : o.lines) if (l.step == Dining.Step.STRUCK) struck++;
                 helper.assertTrue(struck == 1, "one roast struck off: " + steps(o));
@@ -540,13 +551,17 @@ public class DiningGameTests {
                 helper.assertTrue(o != null, "ordered");
                 orderId[0] = o.id;
             })
-            .thenWaitUntil(() -> helper.assertTrue("COOK".equals(Dining.jobForTests(t.cook())), "at the stove"))
+            .thenWaitUntil(() -> {
+                boolean cooking = false;
+                for (VillageFolkEntity f : t.folk()) cooking |= "COOK".equals(Dining.jobForTests(f));
+                helper.assertTrue(cooking, "a cook at the stove: " + roles(t));
+            })
             .thenExecute(() -> {
                 Dining.restartForTests(level);
                 Dining.Order o = Dining.order(orderId[0]);
                 helper.assertTrue(o != null && o.lines.get(0).step != Dining.Step.COOKING, "read back, the stove's work back in the queue: "
                     + (o == null ? "gone" : steps(o)));
-                helper.assertTrue(Dining.jobForTests(t.cook()) == null, "nobody's hands full after the restart");
+                for (VillageFolkEntity f : t.folk()) helper.assertTrue(Dining.jobForTests(f) == null, "nobody's hands full after the restart");
             })
             .thenWaitUntil(() -> {
                 Dining.Order o = Dining.order(orderId[0]);

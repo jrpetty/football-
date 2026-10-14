@@ -213,7 +213,7 @@ public final class DiningPlaces {
     /** Does a town want a restaurant: from the Stone Age, once it has its café, a cook and two dozen folk. */
     public static boolean wanted(UUID village, int folk) {
         if (folk < RESTAURANT_FROM || Villages.ageOf(village).ordinal() < Villages.Age.STONE.ordinal()) return false;
-        if (!Villages.hasBuilt(village, "cafe")) return false;
+        if (!stands(village, "cafe")) return false;
         for (AssistantEntity a : Villages.folkOf(village)) if (a.stationTask() == AssistantEntity.StationTask.COOK) return true;
         return false;
     }
@@ -239,9 +239,17 @@ public final class DiningPlaces {
 
     /** The trade a town's floor staff serve: its restaurant's, else its café's, else its tavern's. */
     static ServiceRole servedBy(UUID village) {
-        if (Villages.hasBuilt(village, RESTAURANT)) return ServiceRole.RESTAURANT;
-        if (Villages.hasBuilt(village, "cafe")) return ServiceRole.CAFE;
+        if (stands(village, RESTAURANT)) return ServiceRole.RESTAURANT;
+        if (stands(village, "cafe")) return ServiceRole.CAFE;
         return ServiceRole.TAVERN;
+    }
+
+    /** Does the town have one of these standing: finished (Villages) or on its books (the ledger the places are read
+     *  from: a renovated or an older town's building counts too). */
+    static boolean stands(UUID village, String structure) {
+        if (Villages.hasBuilt(village, structure)) return true;
+        for (Ledger.Building b : Ledger.buildings(village)) if (b.structure().equals(structure)) return true;
+        return false;
     }
 
     // ------------------------------------------------------------------ reading a place

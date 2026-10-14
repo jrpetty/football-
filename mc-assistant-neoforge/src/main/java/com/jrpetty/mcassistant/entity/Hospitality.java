@@ -175,13 +175,13 @@ public final class Hospitality {
     static Map<Role, Integer> want(UUID village) {
         Map<Role, Integer> w = new EnumMap<>(Role.class);
         int folk = Villages.headcount(village);
-        boolean cafe = Villages.hasBuilt(village, "cafe"), tavern = Villages.hasBuilt(village, "tavern");
-        boolean restaurant = Villages.hasBuilt(village, DiningPlaces.RESTAURANT);
+        boolean cafe = DiningPlaces.stands(village, "cafe"), tavern = DiningPlaces.stands(village, "tavern");
+        boolean restaurant = DiningPlaces.stands(village, DiningPlaces.RESTAURANT);
         boolean anyKitchen = cafe || tavern || restaurant;
         w.put(Role.HEAD_COOK, 1);
         if (tavern) w.put(Role.BARKEEP, 1);
-        if (Villages.hasBuilt(village, "bakery")) w.put(Role.BAKER, 1);
-        if (Villages.hasBuilt(village, "inn") || Villages.hasBuilt(village, "guesthouse")) w.put(Role.INNKEEPER, 1);
+        if (DiningPlaces.stands(village, "bakery")) w.put(Role.BAKER, 1);
+        if (DiningPlaces.stands(village, "inn") || DiningPlaces.stands(village, "guesthouse")) w.put(Role.INNKEEPER, 1);
         if (anyKitchen && (restaurant || folk >= 20)) {
             int waiters = 1 + Math.max(0, folk - 20) / FOLK_PER_WAITER;
             int tables = DiningPlaces.tablesIn(village);
