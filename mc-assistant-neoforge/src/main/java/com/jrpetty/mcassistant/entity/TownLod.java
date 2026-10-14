@@ -99,6 +99,9 @@ public final class TownLod {
         final java.util.ArrayDeque<Count> counts = new java.util.ArrayDeque<>();
         // Asleep: the stores as they stood, what came and went since, the coin and children due, the chunks let go.
         final Map<String, Integer> held = new HashMap<>();
+        // [scale] The stores' one-of-a-kind goods (named, enchanted, worn, a plate): counted as they stood, never spent
+        // asleep; they stay in the real chests.
+        final Map<String, Integer> aside = new HashMap<>();
         final Map<String, Double> pending = new HashMap<>();
         double coinDue, birthsDue;
         long sleptAt;
@@ -322,6 +325,8 @@ public final class TownLod {
         t.othersFrom = 0;
         Map<String, Integer> stores = level.isLoaded(v.centre()) ? storesNow(level, v.id()) : null;
         if (stores != null) t.held.putAll(stores);
+        t.aside.clear();
+        if (stores != null) t.aside.putAll(storesAside(level, v.id()));
         int r = areaChunks(v.id());
         ChunkPos c = new ChunkPos(v.centre());
         List<Parked> let = ChunkLoad.releaseWithin(level, c.x - r, c.z - r, c.x + r, c.z + r,
@@ -344,6 +349,7 @@ public final class TownLod {
         int parked = t.parked.size();
         t.parked.clear();
         t.held.clear();
+        t.aside.clear();
         t.applying = true;
         t.wokeAt = level.getGameTime();
         t.counts.clear();
@@ -469,6 +475,10 @@ public final class TownLod {
             ItemStack kind = kind(key);
             if (!kind.isEmpty() && what.test(kind)) n += have(t, key);
         }
+        for (Map.Entry<String, Integer> e : t.aside.entrySet()) {
+            ItemStack kind = kind(e.getKey());
+            if (!kind.isEmpty() && what.test(kind)) n += e.getValue();
+        }
         return n;
     }
 
@@ -529,6 +539,19 @@ public final class TownLod {
             for (int i = 0; i < c.getContainerSize(); i++) {
                 ItemStack s = c.getItem(i);
                 if (!s.isEmpty() && s.isComponentsPatchEmpty()) out.merge(Economy.id(s), s.getCount(), Integer::sum);
+            }
+        }
+        return out;
+    }
+
+    /** What the town's stores hold that storesNow leaves out: the goods with components of their own, by item. */
+    static Map<String, Integer> storesAside(ServerLevel level, UUID village) {
+        Map<String, Integer> out = new HashMap<>();
+        for (BlockPos p : Villages.storeChests(level, village)) {
+            if (!(level.getBlockEntity(p) instanceof Container c)) continue;
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                ItemStack s = c.getItem(i);
+                if (!s.isEmpty() && !s.isComponentsPatchEmpty()) out.merge(Economy.id(s), s.getCount(), Integer::sum);
             }
         }
         return out;
@@ -721,6 +744,7 @@ public final class TownLod {
             readCounts(p[5], t.held);
             Map<String, Double> pending = readMap(p[6]);
             t.pending.putAll(pending);
+            if (p.length > 7) readCounts(p[7], t.aside);       // [scale] older notes have none
             String parked = Ledger.note(village, PARKED_NOTE);
             for (String s : parked == null || parked.isEmpty() ? new String[0] : parked.split(",")) {
                 int at = s.indexOf('@');
@@ -751,7 +775,7 @@ public final class TownLod {
             held.append(e.getKey()).append('=').append(e.getValue());
         }
         Ledger.note(village, AWAY_NOTE, String.join(";", "v1", Long.toString(t.sleptAt), Long.toString(t.lastStep),
-            Double.toString(t.coinDue), Double.toString(t.birthsDue), held, writeMap(t.pending)));
+            Double.toString(t.coinDue), Double.toString(t.birthsDue), held, writeMap(t.pending), writeCounts(t.aside)));
     }
 
     /** The chunks a sleeping town let go (when it sleeps, and when a request is kept for it). */
@@ -777,6 +801,15 @@ public final class TownLod {
         } catch (RuntimeException e) {
             return Rates.NONE;
         }
+    }
+
+    private static String writeCounts(Map<String, Integer> m) {
+        StringBuilder b = new StringBuilder();
+        for (Map.Entry<String, Integer> e : m.entrySet()) {
+            if (!b.isEmpty()) b.append(',');
+            b.append(e.getKey()).append('=').append(e.getValue());
+        }
+        return b.toString();
     }
 
     private static String writeMap(Map<String, Double> m) {
