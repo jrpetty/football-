@@ -505,6 +505,9 @@ public final class FireworksMaker {
         if (b == null || maker(id) != null || !Villages.wants(id, TRADE)) return;
         VillageFolkEntity best = null;
         int bestScore = Integer.MIN_VALUE;
+        // [scale] Whether a trade has hands over, once a trade, not once a folk (it reckons the whole town).
+        java.util.Map<StationTask, Boolean> over = new java.util.EnumMap<>(StationTask.class);
+        java.util.Map<StationTask, Integer> handsAt = new java.util.EnumMap<>(StationTask.class);
         for (int pass = 0; pass < 2 && best == null; pass++) {
             for (AssistantEntity a : Villages.folkOf(id)) {
                 if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive()) continue;
@@ -512,8 +515,9 @@ public final class FireworksMaker {
                 StationTask t = f.stationTask();
                 if (t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.BANK || t == StationTask.CAVE
                     || t == StationTask.FERRY || t == StationTask.SCOUT || t == StationTask.NETHER) continue;   // [nether]
-                boolean spare = t == StationTask.NONE || Villages.overStaffed(id, t) || !t.isCraft() && hands(id, t) >= 3;
-                if (pass == 0 ? !spare : t != StationTask.NONE && hands(id, t) < 2) continue;   // never a trade's only hand
+                boolean spare = t == StationTask.NONE || over.computeIfAbsent(t, x -> Villages.overStaffed(id, x))
+                    || !t.isCraft() && handsAt.computeIfAbsent(t, x -> hands(id, x)) >= 3;
+                if (pass == 0 ? !spare : t != StationTask.NONE && handsAt.computeIfAbsent(t, x -> hands(id, x)) < 2) continue;   // never a trade's only hand
                 int score = suits(f);
                 if (score > bestScore) { bestScore = score; best = f; }
             }

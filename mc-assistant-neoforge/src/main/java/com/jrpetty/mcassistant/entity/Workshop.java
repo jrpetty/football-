@@ -286,6 +286,8 @@ public final class Workshop {
         if (Villages.wants(id, StationTask.SHOP) && Villages.share(id, StationTask.SHOP) > -1.0) return null;
         VillageFolkEntity best = null;
         double bestScore = -Double.MAX_VALUE;
+        // [scale] Whether a trade has hands over, once a trade, not once a folk (it reckons the whole town).
+        java.util.Map<StationTask, Boolean> over = new java.util.EnumMap<>(StationTask.class);
         for (AssistantEntity a : Villages.folkOf(id)) {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || !f.isAlive() || f.isHired() || f.isShowcase()) continue;
             if (TownJobs.busy(f) || f.isSleeping()) continue;
@@ -293,7 +295,7 @@ public final class Workshop {
             double score;
             if (t == StationTask.NONE) score = 100;
             else if (t == StationTask.HAUL || t == StationTask.STORE || t == StationTask.GUARD || t == StationTask.SCOUT || t.isCraft()) continue;
-            else if (Villages.overStaffed(id, t) && f.workedOut()) score = 50;
+            else if (f.workedOut() && over.computeIfAbsent(t, x -> Villages.overStaffed(id, x))) score = 50;
             else continue;
             score -= Math.sqrt(f.blockPosition().distSqr(at)) / 16.0;
             if (score > bestScore) { bestScore = score; best = f; }
