@@ -67,6 +67,7 @@ public final class Tidy {
     static final long LEAVE = 6000L;
     /** The looks below which the elder calls a clean-up day; days between them. */
     static final int UNTIDY = 50, PROUD = 70;
+    public static final int UNTIDY_FOR_TESTS = UNTIDY;
     static final long CLEANUP_EVERY = 3;
     /** A hole filled this deep at most (a deeper one is a shaft, or a cave's mouth: somebody's to see to by hand). */
     static final int DEEPEST = 8;

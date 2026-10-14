@@ -1,7 +1,11 @@
 package com.jrpetty.mcassistant.gametest;
 
 import com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock;
+import com.jrpetty.mcassistant.entity.Eyesores;
 import com.jrpetty.mcassistant.entity.Floors;
+import com.jrpetty.mcassistant.entity.Founding;
+import com.jrpetty.mcassistant.entity.PlayerBlocks;
+import com.jrpetty.mcassistant.entity.TidyAudit;
 import com.jrpetty.mcassistant.entity.Job;
 import com.jrpetty.mcassistant.entity.Tidy;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
@@ -211,5 +215,369 @@ public class TidyGameTests {
                 helper.fail("the old house still has grass inside: " + fixes(left) + "; done " + java.util.Arrays.toString(Tidy.floorsForTests(level, village)));
             }
         });
+    }
+
+    // ============================================================ the long growth: every eyesore, and who left it
+
+    private static final double DAYS = Double.parseDouble(System.getProperty("tidy.days", "5"));
+    private static final int FOLK = Integer.getInteger("tidy.folk", 40);
+
+    /** The audit in the log, every eyesore with what most likely left it (the first so many of each kind). */
+    private static void report(ServerLevel level, String label, TidyAudit.Report r) {
+        for (String line : r.lines()) Kit.log("tdy10 " + label + " " + line);
+        java.util.Map<Eyesores.Kind, Integer> shown = new java.util.EnumMap<>(Eyesores.Kind.class);
+        for (Eyesores.Spot s : r.spots()) {
+            int n = shown.merge(s.kind(), 1, Integer::sum);
+            if (n > 6) continue;
+            Kit.log("tdy10 " + label + "   " + s.kind() + " at " + s.pos().toShortString() + " (" + s.note() + "): " + Eyesores.cause(level, s));
+        }
+    }
+
+    /**
+     * A town founded and grown flat out for some days ({@code -Dtidy.days}, five by default) with everything live:
+     * every day the town is audited (every eyesore, what most likely left it, the camp, the grass inside the
+     * buildings, the looks), and at the end it must be cared for: no camp bed left out once everybody is housed, no
+     * grass inside a building, nothing bad (a spill, a hole, a pillar) standing two audits running, few eyesores left
+     * at all, and looks of tidy enough or better.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400000, batch = "tdy10_long_growth")
+    public static void tdy10_long_growth(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        net.minecraft.server.MinecraftServer server = level.getServer();
+        Kit.reset(level);
+        Founding.resetForTests(server);
+        com.jrpetty.mcassistant.entity.Police.standDownForTests(false);
+        com.jrpetty.mcassistant.entity.Identity.liveForTests();
+        com.jrpetty.mcassistant.entity.Perks.liveForTests(true);
+        com.jrpetty.mcassistant.entity.Interviews.liveForTests(true);
+        com.jrpetty.mcassistant.entity.Weave.liveForTests(true);
+        com.jrpetty.mcassistant.entity.TownJobs.instantForTests(false);
+        int cx = 1670000;
+        int outer = com.jrpetty.mcassistant.village.FoundingPlan.coreRadius(FOLK) + com.jrpetty.mcassistant.village.FoundingPlan.BAND_MAX;
+        Kit.hold(level, cx, Z, outer + 32);
+        Kit.prepare(level, cx, Z, outer + 32);
+        BlockPos heart = Kit.surface(level, cx, Z);
+        Kit.log("tdy10 found " + FOLK + ": " + Kit.command(level, "village found " + FOLK + " " + cx + " " + Z));
+        server.tickRateManager().setTickRate(10000.0F);
+        final long[] phase = { 0, 0 };
+        final UUID[] id = { null };
+        final TidyAudit.Report[] before = { null };
+        final boolean[] over = { false };
+        final String[] verdict = { null };
+        // The verdict is given from the test's own ticks (an assertion thrown from a server tick listener is no test's).
+        final Runnable[] poll = new Runnable[1];
+        poll[0] = () -> {
+            if (verdict[0] == null) helper.runAfterDelay(100, poll[0]);
+            else if (verdict[0].isEmpty()) helper.succeed();
+            else helper.fail(verdict[0]);
+        };
+        helper.runAfterDelay(100, poll[0]);
+        java.util.function.Consumer<net.neoforged.neoforge.event.tick.ServerTickEvent.Post> each = e -> {
+            if (over[0]) return;
+            try {
+                long t = helper.getTick();
+                if (phase[0] == 0) {
+                    if (Founding.near(level, heart, 8)) {
+                        if (t % 1000 == 0) Kit.log("tdy10 founding @" + t + " " + Founding.status(server));
+                        return;
+                    }
+                    Villages.Village v = Villages.nearest(level, heart, 64);
+                    if (v == null) { over[0] = true; verdict[0] = "no village at " + heart; return; }
+                    id[0] = v.id();
+                    phase[0] = 1;
+                    phase[1] = t;
+                    Kit.log("tdy10 town " + Villages.name(v.id()) + " of " + Villages.headcount(v.id()) + " founded at tick " + t);
+                    return;
+                }
+                long ran = t - phase[1];
+                if (ran > 0 && ran % 24000 == 0) {
+                    TidyAudit.Report r = TidyAudit.check(level, id[0]);
+                    Villages.Village v = Villages.get(id[0]);
+                    Kit.log("tdy10 ---- day " + ran / 24000 + ": " + Villages.headcount(id[0]) + " folk, built " + Villages.builtList(id[0]).size()
+                        + ", beds made up " + Villages.bedsMadeUp(level, id[0]) + ", camp " + com.jrpetty.mcassistant.VillageSpawner.campBeds(level, v.centre()).size()
+                        + ", tidied today " + Tidy.doneForTests(level, id[0]) + " floors " + java.util.Arrays.toString(Tidy.floorsForTests(level, id[0]))
+                        + " proud " + java.util.Arrays.toString(Tidy.proudForTests(level, id[0])));
+                    if (r != null) report(level, "day " + ran / 24000, r);
+                    if (ran >= (long) (DAYS * 24000L) && r != null) {
+                        over[0] = true;
+                        server.tickRateManager().setTickRate(20.0F);
+                        java.util.Set<Long> bad = new java.util.HashSet<>();
+                        if (before[0] != null) {
+                            for (Eyesores.Spot s : before[0].spots()) {
+                                if (s.kind().worst >= Eyesores.Kind.PILLAR.worst) bad.add(s.pos().asLong());
+                            }
+                        }
+                        int standing = 0;
+                        for (Eyesores.Spot s : r.spots()) if (bad.contains(s.pos().asLong())) standing++;
+                        boolean housed = Villages.bedsMadeUp(level, id[0]) >= Villages.headcount(id[0]);
+                        Kit.log("tdy10 END: standing bad eyesores " + standing + ", housed " + housed + ", looks " + r.looks().score());
+                        List<String> wrong = new java.util.ArrayList<>();
+                        if (!r.noGrassInside()) wrong.add("grass inside the buildings: " + r.earthInside() + " earth, " + r.plantsInside() + " plants");
+                        if (housed && r.campBedsHoused() > 0) wrong.add("camp beds left out with everybody housed: " + r.campBedsHoused());
+                        if (standing > 0) wrong.add("spills, holes or pillars standing a day: " + standing);
+                        if (r.looks().score() < Tidy.UNTIDY_FOR_TESTS) wrong.add("the town not tidy enough: " + r.lines());
+                        verdict[0] = String.join("; ", wrong);
+                        return;
+                    }
+                    before[0] = r;
+                }
+            } catch (RuntimeException ex) {
+                over[0] = true;
+                server.tickRateManager().setTickRate(20.0F);
+                verdict[0] = "thrown: " + ex;
+                Kit.LOG.error("tdy10", ex);
+            }
+        };
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(each);
+    }
+
+    // ============================================================ the crew
+
+    /** A store chest of the village's by the heart, with these in it. */
+    private static Container stores(ServerLevel level, BlockPos heart, int dx, ItemStack... goods) {
+        BlockPos at = Kit.surface(level, heart.getX() + dx, heart.getZ() + 3);
+        level.setBlockAndUpdate(at, Blocks.CHEST.defaultBlockState());
+        com.jrpetty.mcassistant.entity.ZoneChests.mark(level, at);
+        Container c = (Container) level.getBlockEntity(at);
+        for (int i = 0; i < goods.length; i++) c.setItem(i, goods[i].copy());
+        return c;
+    }
+
+    private static int count(Container c, net.minecraft.world.item.Item it) {
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(it)) n += c.getItem(i).getCount();
+        return n;
+    }
+
+    private static int countTag(Container c, net.minecraft.tags.TagKey<net.minecraft.world.item.Item> tag) {
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) if (c.getItem(i).is(tag)) n += c.getItem(i).getCount();
+        return n;
+    }
+
+    /** The ground's top block at this offset from the heart. */
+    private static BlockPos ground(ServerLevel level, BlockPos heart, int dx, int dz) {
+        return Kit.surface(level, heart.getX() + dx, heart.getZ() + dz).below();
+    }
+
+    private static String census(Eyesores.Walk w) {
+        return w.total() + " " + w.counts;
+    }
+
+    /**
+     * The tidy crew puts every kind of eyesore right, out of the stores and into them: a cobble pillar a folk left,
+     * a stray block, a three-deep hole, a scar of bare earth in the turf, a crownless trunk (finished, and a sapling
+     * planted), a torch dropped on the ground, a puddle of lava, leaves hanging in the air with no trunk, a pothole in
+     * the avenue. And it leaves alone what is not its to touch: a pillar a player built, and one on a house's lot.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "tdy03_crew_clears")
+    public static void tdy03_crew_clears(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        int x = 1662000;
+        Kit.hold(level, x, Z, 64);
+        Kit.prepare(level, x, Z, 64);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(f != null, "a village");
+        f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.HAUL);     // no ground of its own staked over the eyesores
+        UUID village = f.ownerId();
+        Villages.Village v = Villages.get(village);
+        Container store = stores(level, heart, 2, new ItemStack(Items.DIRT, 32), new ItemStack(Items.OAK_SAPLING, 2));
+        int cobbleBefore = count(store, Items.COBBLESTONE);
+        // The eyesores.
+        BlockPos pillar = ground(level, heart, 6, -20);
+        for (int h = 1; h <= 3; h++) level.setBlockAndUpdate(pillar.above(h), Blocks.COBBLESTONE.defaultBlockState());
+        BlockPos stray = ground(level, heart, -6, -20).above();
+        level.setBlockAndUpdate(stray, Blocks.COBBLESTONE.defaultBlockState());
+        BlockPos hole = ground(level, heart, 8, 20);
+        for (int h = 0; h < 3; h++) level.setBlockAndUpdate(hole.below(h), Blocks.AIR.defaultBlockState());
+        BlockPos scar = ground(level, heart, -8, 20);
+        level.setBlockAndUpdate(scar, Blocks.DIRT.defaultBlockState());
+        BlockPos tree = ground(level, heart, 20, 6);
+        for (int h = 1; h <= 3; h++) level.setBlockAndUpdate(tree.above(h), Blocks.OAK_LOG.defaultBlockState());
+        BlockPos torch = ground(level, heart, 20, -6).above();
+        level.setBlockAndUpdate(torch, Blocks.TORCH.defaultBlockState());
+        BlockPos lava = ground(level, heart, -20, 8);
+        level.setBlockAndUpdate(lava, Blocks.LAVA.defaultBlockState());
+        BlockPos leaves = ground(level, heart, -20, -8).above(6);
+        level.setBlock(leaves, Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.DISTANCE, 7), 2 | 16);
+        BlockPos pothole = ground(level, heart, 0, 24);
+        level.setBlockAndUpdate(pothole, Blocks.AIR.defaultBlockState());
+        // Not the crew's: a player's pillar, and a pillar on a house's lot.
+        BlockPos players = ground(level, heart, 12, -24);
+        for (int h = 1; h <= 3; h++) {
+            level.setBlockAndUpdate(players.above(h), Blocks.COBBLESTONE.defaultBlockState());
+            PlayerBlocks.markForTests(level, players.above(h), true);
+        }
+        BlockPos lot = Kit.surface(level, x - 24, Z - 24);
+        Ledger.built(village, "house", lot, Direction.NORTH);
+        BlockPos lotPillar = ground(level, heart, -24, -24 + 6);
+        for (int h = 1; h <= 3; h++) level.setBlockAndUpdate(lotPillar.above(h), Blocks.COBBLESTONE.defaultBlockState());
+
+        Tidy.measureForTests(level, v);
+        Eyesores.Walk w = Eyesores.last(village);
+        Kit.log("tdy03 found: " + census(w));
+        for (Eyesores.Spot sp : w.spots) Kit.log("tdy03   " + sp.kind() + " at " + sp.pos().toShortString() + " (" + sp.note() + ")");
+        Eyesores.Kind[] want = { Eyesores.Kind.PILLAR, Eyesores.Kind.STRAY, Eyesores.Kind.HOLE, Eyesores.Kind.SCAR, Eyesores.Kind.HALF_TREE,
+            Eyesores.Kind.TORCH, Eyesores.Kind.SPILL, Eyesores.Kind.LEAVES, Eyesores.Kind.ROAD };
+        for (Eyesores.Kind k : want) helper.assertTrue(w.count(k) >= 1, "found " + k + ": " + census(w));
+        for (Eyesores.Spot sp : w.spots) {
+            helper.assertTrue(!sp.pos().equals(players.above(3)) && !sp.pos().equals(lotPillar.above(3)), "not a player's or a lot's: " + sp);
+        }
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 10 != 0) return;
+            Tidy.tickForTests(level, v);
+            Eyesores.Walk now = Eyesores.walkNow(level, v);
+            int left = 0;
+            for (Eyesores.Kind k : want) left += now.count(k);
+            if (left == 0) {
+                Kit.log("tdy03 tidy by tick " + t + ": done " + Tidy.doneForTests(level, village) + "; the stores: cobble "
+                    + (count(store, Items.COBBLESTONE) - cobbleBefore) + " in, dirt left " + count(store, Items.DIRT) + ", logs "
+                    + countTag(store, net.minecraft.tags.ItemTags.LOGS) + ", torches " + count(store, Items.TORCH));
+                helper.assertTrue(level.getBlockState(pillar.above()).isAir() && level.getBlockState(stray).isAir(), "the pillar and the stray block taken up");
+                helper.assertTrue(Eyesores.Kind.values().length > 0 && level.getBlockState(hole).isSolidRender(level, hole), "the hole filled: " + level.getBlockState(hole));
+                helper.assertTrue(level.getBlockState(scar).is(Blocks.GRASS_BLOCK), "the scar grassed: " + level.getBlockState(scar));
+                helper.assertTrue(!level.getBlockState(tree.above()).is(net.minecraft.tags.BlockTags.LOGS)
+                    && level.getBlockState(tree.above()).is(net.minecraft.tags.BlockTags.SAPLINGS), "the trunk felled and a sapling planted: " + level.getBlockState(tree.above()));
+                helper.assertTrue(level.getBlockState(lava).getFluidState().isEmpty() && !level.getBlockState(torch).is(Blocks.TORCH)
+                    && level.getBlockState(leaves).isAir(), "the lava, the torch and the leaves gone");
+                helper.assertTrue(level.getBlockState(pothole).isSolidRender(level, pothole), "the pothole mended: " + level.getBlockState(pothole));
+                helper.assertTrue(level.getBlockState(players.above(3)).is(Blocks.COBBLESTONE) && level.getBlockState(lotPillar.above(3)).is(Blocks.COBBLESTONE),
+                    "the player's pillar and the lot's left standing");
+                helper.assertTrue(count(store, Items.COBBLESTONE) - cobbleBefore >= 4 && count(store, Items.TORCH) >= 1
+                    && countTag(store, net.minecraft.tags.ItemTags.LOGS) >= 3, "what was taken up went into the stores");
+                helper.succeed();
+            } else if (t >= 2200) {
+                StringBuilder sb = new StringBuilder();
+                for (Eyesores.Spot sp : now.spots) sb.append(sp.kind()).append('@').append(sp.pos().toShortString()).append(' ');
+                helper.fail("still untidy: " + census(now) + " " + sb + "; done " + Tidy.doneForTests(level, village));
+            }
+        });
+    }
+
+    /**
+     * The founders' camp taken up once everybody has a bed in a house: the camp's beds go into the stores, one a
+     * folk calls its own only once there is a house bed for it; none is taken from under a sleeper.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "tdy04_camp_taken_up")
+    public static void tdy04_camp_taken_up(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        int x = 1663000;
+        Kit.hold(level, x, Z, 64);
+        Kit.prepare(level, x, Z, 64);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        VillageFolkEntity b = VillageFolkSpawnerBlock.raise(level, heart.east(), 0.0F);
+        helper.assertTrue(a != null && b != null, "a village of two");
+        UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        int laid = com.jrpetty.mcassistant.VillageSpawner.pitchCamp(level, heart, 4);
+        Container store = stores(level, heart, 2);
+        int campBefore = com.jrpetty.mcassistant.VillageSpawner.campBeds(level, heart).size();
+        helper.assertTrue(laid >= 2 && campBefore >= 2, "a camp: " + laid);
+        // A house with four beds, beyond the camp.
+        BlockPos house = Kit.surface(level, x + 22, Z);
+        BuildGoal.stamp(level, "house", house, Direction.NORTH, 13, p -> {
+            if (p.part() == BuildGoal.Part.BLOCK) return p.style() == Blueprints.Style.FLOOR ? Blocks.OAK_PLANKS.defaultBlockState() : Blocks.COBBLESTONE.defaultBlockState();
+            if (p.part() == BuildGoal.Part.BED) return Blocks.BLUE_BED.defaultBlockState();
+            if (p.part() == BuildGoal.Part.DOOR) return Blocks.OAK_DOOR.defaultBlockState();
+            return null;
+        });
+        Ledger.built(village, "house", house, Direction.NORTH);
+        // One of them calls a camp bed its own.
+        BlockPos campHead = com.jrpetty.mcassistant.VillageSpawner.campBeds(level, heart).get(0);
+        a.forgetBed();
+        a.takeBedForTests(campHead);
+        helper.assertTrue(campHead.equals(a.bedPos()), "a sleeps at the camp: " + a.bedPos());
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 10 != 0) return;
+            Tidy.tickForTests(level, v);
+            int camp = com.jrpetty.mcassistant.VillageSpawner.campBeds(level, heart).size();
+            if (camp == 0) {
+                int beds = countTag(store, net.minecraft.tags.ItemTags.BEDS);
+                Kit.log("tdy04 the camp taken up by tick " + t + ": " + campBefore + " beds, " + beds + " into the stores; a's bed now " + a.bedPos()
+                    + "; done " + Tidy.doneForTests(level, village));
+                helper.assertTrue(beds >= campBefore, "the camp's beds into the stores: " + beds + " of " + campBefore);
+                helper.assertTrue(!campHead.equals(a.bedPos()), "a let go of its camp bed for a house's");
+                helper.succeed();
+            } else if (t >= 2200) {
+                helper.fail("the camp still out: " + camp + " beds; made up " + Villages.bedsMadeUp(level, village) + " for " + Villages.headcount(village)
+                    + "; walk " + census(Eyesores.walkNow(level, v)));
+            }
+        });
+    }
+
+    /**
+     * The town's looks: a town strewn with stray blocks measures a mess; the folk are put out (contentment), the
+     * elder calls a clean-up day of a morning and the board says so; once the crew has been round, the looks are up.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 2400, batch = "tdy05_looks_and_cleanup")
+    public static void tdy05_looks_and_cleanup(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(24000L * 3 + 1000);
+        int x = 1664000;
+        Kit.hold(level, x, Z, 64);
+        Kit.prepare(level, x, Z, 64);
+        BlockPos heart = Kit.surface(level, x, Z);
+        VillageFolkEntity f = null;
+        for (int i = 0; i < 6; i++) {
+            f = VillageFolkSpawnerBlock.raise(level, heart.offset(i % 3, 0, i / 3), 0.0F);
+            if (f != null) f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.HAUL);
+        }
+        helper.assertTrue(f != null, "a village of six");
+        UUID village = f.ownerId();
+        Villages.Village v = Villages.get(village);
+        stores(level, heart, 2, new ItemStack(Items.DIRT, 64));
+        for (int i = 0; i < 40; i++) {
+            int dx = -30 + (i % 10) * 6 + 1, dz = -30 + (i / 10) * 15 + 2;
+            if (TownPlanSquare.near(dx, dz)) continue;
+            level.setBlockAndUpdate(ground(level, heart, dx, dz).above(), Blocks.COBBLESTONE.defaultBlockState());
+        }
+        Tidy.Looks mess = Tidy.measureForTests(level, v);
+        Kit.log("tdy05 the messy town: " + mess);
+        helper.assertTrue(mess.score() < 50, "a town strewn with stray blocks looks untidy or worse: " + mess);
+        Tidy.cleanupForTests(level, village, false);
+        final Tidy.Looks[] first = { null };
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (t % 10 != 0) return;
+            if (level.getDayTime() % 24000L > 5000L) level.setDayTime(24000L * 3 + 1000);     // of a morning, all the test
+            Tidy.tickForTests(level, v);
+            if (first[0] == null && Tidy.cleanupDay(level, village)) {
+                first[0] = Tidy.looks(village);
+                List<String> board = com.jrpetty.mcassistant.entity.VillageBoards.compose(level, village);
+                String said = String.join(" | ", board);
+                boolean news = false;
+                for (Villages.News n : Villages.news(village)) news |= n.text().contains("clean-up day");
+                Kit.log("tdy05 clean-up day called at tick " + t + "; the board: " + Tidy.boardLine(level, village) + "; news " + news);
+                helper.assertTrue(said.contains("Looks:") && said.contains("clean-up day"), "the board shows the looks and the clean-up day");
+                helper.assertTrue(news, "the clean-up day is in the town's news");
+                java.util.List<String> good = new java.util.ArrayList<>(), bad = new java.util.ArrayList<>();
+                helper.assertTrue(Tidy.contentment(village, good, bad) < 0 && !bad.isEmpty(), "the folk are put out by it: " + bad);
+            }
+            if (first[0] != null) {
+                Tidy.Looks now = Tidy.measureForTests(level, v);
+                if (now.score() >= 50 && now.eyesores() == 0) {
+                    Kit.log("tdy05 tidied by tick " + t + ": looks " + mess.score() + " -> " + now.score() + " " + now);
+                    helper.succeed();
+                }
+            }
+            if (t >= 2200) helper.fail("not tidied: clean-up " + Tidy.cleanupDay(level, village) + ", looks " + Tidy.looks(village));
+        });
+    }
+
+    /** Spots of the square kept clear in the tests (the well and monuments, the heart). */
+    private static final class TownPlanSquare {
+        static boolean near(int dx, int dz) {
+            return Math.abs(dx) <= 3 && Math.abs(dz) <= 3 || Math.abs(dx) <= 5 && Math.abs(Math.abs(dz) - 8) <= 5
+                || Math.abs(dz) <= 5 && Math.abs(Math.abs(dx) - 8) <= 5;
+        }
     }
 }

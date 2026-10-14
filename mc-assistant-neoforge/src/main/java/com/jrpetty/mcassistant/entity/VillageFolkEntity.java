@@ -2303,6 +2303,9 @@ public class VillageFolkEntity extends AssistantEntity {
         childhood();
     }
 
+    /** [tidy] Tests only: this bed its own, as though it had lain down in it. */
+    public void takeBedForTests(BlockPos pos) { takeBed(pos); }
+
     /** Tests only: a child born this many days ago. */
     public void bornDaysAgo(long days) { bornDay = level().getDayTime() / 24000L - days; }
 

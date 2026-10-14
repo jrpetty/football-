@@ -418,6 +418,31 @@ public final class Eyesores {
         return now != null && now.kind() == spot.kind();
     }
 
+    /** What most likely left this eyesore, as far as the ground round it tells (for the long tests' reports). */
+    public static String cause(ServerLevel level, Spot s) {
+        BlockPos p = s.pos();
+        boolean tree = false;
+        for (BlockPos q : BlockPos.betweenClosed(p.offset(-3, -4, -3), p.offset(3, 6, 3))) {
+            if (level.getBlockState(q).is(BlockTags.LOGS)) { tree = true; break; }
+        }
+        return switch (s.kind()) {
+            case PILLAR -> tree ? "a woodcutter towered up to a tree's top (GatherGoal) and left its tower"
+                : "a folk towered up (GatherGoal, EscapeGoal) or walled itself in for the night (NightShelterGoal) and left it";
+            case STRAY -> s.note().contains("air") ? "a night shelter's roof, a tower's top or a bridge's end left hanging"
+                : "a block set down and left (a folk's tower's foot, a builder's spare)";
+            case HOLE -> "dug and left open (a miner's pit, a cut of the ground, a block taken for a tower)";
+            case ROAD -> "a block of the street taken up and not put back";
+            case SCAR -> "ground cut (the founding's terraforming, a builder's levelling) and never grassed over";
+            case HALF_TREE -> "a woodcutter (or a builder clearing its lot) left the trunk standing";
+            case LEAVES -> "a tree felled from under its crown";
+            case TORCH -> "dropped by a folk working in the dark (torchIfDark) or lighting an area";
+            case SPILL -> s.note().equals("lava") ? "lava: a bucket spilt, or the ground opened to a lava pool" : "a bucket spilt, or a spring left by a filled pond";
+            case SCAFFOLD -> "scaffolding left from a build";
+            case CAMP_BED -> "the founders' camp, never taken up once the houses were built";
+            case CHEST -> "a chest of the old stores, left out once the storehouse stood";
+        };
+    }
+
     /** Is this column (an offset from the heart) the town's open ground, not kept off for a building, a field...? */
     public static boolean open(UUID village, int dx, int dz) {
         Survey s = SURVEYS.get(village);
