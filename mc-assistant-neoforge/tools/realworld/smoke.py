@@ -4626,6 +4626,10 @@ def main():
         war_stage(r, look, cx, cz)                     # [war] the battle, phase by phase
     except Exception as e:  # noqa: BLE001
         say("war stage failed: %s" % e)
+    try:
+        admin_stage(r, look, cx, cz)                   # [admin] last: it jumps the town's age
+    except Exception as e:  # noqa: BLE001
+        say("admin stage failed: %s" % e)
     alive = client_alive()
     say("alive at the end: %s" % alive)
     say("PASS the client drew the village and kept running" if alive else "FAIL the client died while drawing the village")
