@@ -294,7 +294,8 @@ public final class Market {
     /** Is this the village's market day? Once a week, a day of its own. */
     public static boolean marketDay(UUID village, long day) {
         return Math.floorMod(day + village.hashCode(), 7L) == 0
-            || Ethos.extraMarket(village, day);                          // [identity] a mercantile town's second market day
+            || Ethos.extraMarket(village, day)                           // [identity] a mercantile town's second market day
+            || AdminTools.marketDecreed(village, day);                   // [admin] a market day by decree
     }
 
     /** How many days until the next market day (0: today). */

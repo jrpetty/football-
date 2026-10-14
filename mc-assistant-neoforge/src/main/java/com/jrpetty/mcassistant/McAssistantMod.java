@@ -368,6 +368,7 @@ public final class McAssistantMod {
     public McAssistantMod(IEventBus modBus, net.neoforged.fml.ModContainer container) {
         // Every tunable number lives in config/mc_assistant-common.toml.
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON, AssistantConfig.SPEC);
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, com.jrpetty.mcassistant.admin.AdminConfig.SPEC);   // [admin] the admin toolkit's switches
         ENTITY_TYPES.register(modBus);
         MENU_TYPES.register(modBus);
         BLOCKS.register(modBus);

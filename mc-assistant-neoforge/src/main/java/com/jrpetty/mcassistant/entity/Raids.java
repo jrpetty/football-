@@ -305,7 +305,7 @@ public final class Raids {
         RAIDED.put(id, day);
         Direction from = Watch.SIDES[Math.floorMod((int) day + id.hashCode(), 4)];
         Villages.Age age = Villages.ageOf(id);
-        int n = Math.max(3, Math.min(10, 2 + 2 * guards(id) + age.ordinal()));
+        int n = AdminTools.raidSize(id, Math.max(3, Math.min(10, 2 + 2 * guards(id) + age.ordinal())));   // [admin] a band's size by decree
         // [watch-clears] At the town's edge, not thirty blocks from the heart: in a town of ninety that was among its
         // houses, and the band was in the streets before the bell had stopped its first peal.
         BlockPos base = edge(level, v, from);
