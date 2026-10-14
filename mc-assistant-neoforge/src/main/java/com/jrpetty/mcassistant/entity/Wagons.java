@@ -1134,7 +1134,7 @@ public final class Wagons {
                 }
                 w.cargoChanged();
             }
-            if (id != null && Shipments.get(id) != null) {
+            if (id != null && known(t.from, id)) {
                 Shipments.delivered(level, id, aboard);
                 FolkTalk.speak(f, "Your load from " + Villages.name(t.from) + ", all present!");
             } else if (!aboard.isEmpty()) {
@@ -1156,6 +1156,15 @@ public final class Wagons {
         home(f, level);
         Villages.tell(t.from, day, "our " + (w == null ? "wagon" : w.kind().label) + " came home from " + Villages.name(t.to));
         f.say("Back from " + Villages.name(t.to) + "!");
+    }
+
+    /**
+     * Is this shipment still open (not settled already)? The origin's shipments are read in from its ledger first, so
+     * after a restart a load in a wagon is not taken for settled, and none is settled twice.
+     */
+    private static boolean known(@Nullable UUID origin, UUID shipment) {
+        if (origin != null) Shipments.inTransit(origin);
+        return Shipments.get(shipment) != null;
     }
 
     /** Caravans.abandon (the carrier died or was lost on the road): the wagon lost with it, its load spilt where it stands. */
@@ -1393,7 +1402,7 @@ public final class Wagons {
             e.setDefaultPickUpDelay();
             level.addFreshEntity(e);
         }
-        if (w.shipment != null) Shipments.lost(level, w.shipment, List.of(), "the " + w.kind().label + " was " + why);
+        if (w.shipment != null && known(w.town, w.shipment)) Shipments.lost(level, w.shipment, List.of(), "the " + w.kind().label + " was " + why);
         w.spawnAtLocation(new ItemStack(Items.OAK_PLANKS, Math.max(2, w.kind().makings.get(0).count() / 4)), 0.5F);
         VillageFolkEntity d = driver(level, w);
         if (d != null && d.trip() != null && d.trip().shipment != null) {
@@ -1459,7 +1468,7 @@ public final class Wagons {
             if (!s.isEmpty()) aboard.add(s);
         }
         if (w.shipment != null) {
-            Shipments.lost(level, w.shipment, aboard, "the " + w.kind().label + " could not go on: " + why);
+            if (known(w.town, w.shipment)) Shipments.lost(level, w.shipment, aboard, "the " + w.kind().label + " could not go on: " + why);
             if (d != null && d.trip() != null && w.shipment.equals(d.trip().shipment)) {
                 TradeTrips.over(d);
                 d.trip(null);
@@ -1576,7 +1585,8 @@ public final class Wagons {
         String[] p = at == null ? new String[0] : at.split("\\|", -1);
         if (p.length > 8 && !p[8].isEmpty()) {
             try {
-                Shipments.lost(level, UUID.fromString(p[8]), List.of(), "the wagon was " + why);
+                UUID id = UUID.fromString(p[8]);
+                if (known(f.town, id)) Shipments.lost(level, id, List.of(), "the wagon was " + why);
             } catch (IllegalArgumentException ignored) {
                 // no shipment
             }
