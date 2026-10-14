@@ -9516,6 +9516,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                     giveUps = giveUpAt != null && giveUpAt.closerThan(here, 2.0) ? giveUps + 1 : 1;
                     giveUpAt = here;
                     if (giveUps >= 2 && isSettler()) wedgedUntil = tickCount + 200;   // a hired hand never digs through a player's walls
+                    if (isSettler()) StuckSpots.gaveUp(this, here);   // [paths] what was in the way, written down, the town's fault mended
                     // Give up properly: stop, stand still, and refuse to start
                     // another path for ten seconds. Without the block the brain
                     // simply re-issues the route it just failed at.
@@ -9528,6 +9529,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             } else {
                 this.stuckStreak = 0;
             }
+            if (isSettler()) StuckSpots.second(this, wantsToMove);   // [paths] going nowhere for half a minute: on the books
             this.lastPathPos = this.position();
         }
 

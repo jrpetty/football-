@@ -2944,6 +2944,7 @@ public final class Villages {
                 if (bad.contains(BlockPos.asLong(x, 0, z))) continue;
                 // Too big for the lot (a hall on an ordinary lot): not this one.
                 if (half[0] > lot.halfAcross() || half[1] > lot.halfDeep()) continue;
+                if (Footways.crowds(villageId, project, x, z, direction(lot.back()))) continue;   // [paths] never wall to wall with a neighbour
                 free++;
                 net.minecraft.core.Direction back = direction(lot.back());
                 boolean turned = back.getAxis() == net.minecraft.core.Direction.Axis.X;
