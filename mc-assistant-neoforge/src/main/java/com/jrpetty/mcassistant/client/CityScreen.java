@@ -531,10 +531,23 @@ public class CityScreen extends Screen {
 
     private final List<Kpi> kpis = new ArrayList<>(6);
 
+    /** An alert as the Overview draws it, its words made once: how bad, what, the page's name with its arrow, the page, its tooltip. */
+    private record Alert(int level, String text, String go, int page, String tip) {}
+
+    private final List<Alert> alerts = new ArrayList<>();
+
     /** The six readings, from the books (series) and the Overview's tag (BoardOverview). */
     private void readKpis() {
         kpis.clear();
         CompoundTag ov = data.getCompound("overview");
+        alerts.clear();
+        ListTag al = ov.getList("alerts", Tag.TAG_COMPOUND);
+        for (int i = 0; i < al.size(); i++) {
+            CompoundTag a = al.getCompound(i);
+            int page = pageNumber(a.getString("page"));
+            alerts.add(new Alert(a.getInt("level"), a.getString("text"), a.getString("page") + " \u203A", page,
+                a.getString("text") + "\nClick to open " + SECTIONS[sectionOf(Math.max(0, page))].name() + " \u203A " + a.getString("page") + "."));
+        }
         CompoundTag homes = data.getCompound("homes");
         int[] fd = series("food_days10");
         kpis.add(new Kpi("Food", String.format(Locale.ROOT, "%.1f days", last(fd) / 10.0), change(fd, 7, 10.0, "days"),
@@ -598,7 +611,6 @@ public class CityScreen extends Screen {
         boolean wide = cw >= 360;
         int lw = wide ? (cw - UiStyle.S3) / 2 : cw, rx = wide ? x + lw + UiStyle.S3 : x;
         // What needs attention now.
-        ListTag alerts = data.getCompound("overview").getList("alerts", Tag.TAG_COMPOUND);
         UiStyle.heading(g, font, "Needs attention", x, top2, lw);
         int ay = top2 + 12;
         if (alerts.isEmpty()) {
@@ -607,20 +619,19 @@ public class CityScreen extends Screen {
         }
         int alertsEnd = wide ? bottom - 4 : top2 + 12 + Math.min(alerts.size(), 4) * 13;
         for (int i = 0; i < alerts.size() && ay + 12 <= alertsEnd; i++) {
-            CompoundTag a = alerts.getCompound(i);
-            int level = a.getInt("level");
+            Alert a = alerts.get(i);
+            int level = a.level();
             int fill = level >= 2 ? UiStyle.DANGER_FILL : level == 1 ? UiStyle.WARNING_FILL : UiStyle.INFO_FILL;
             boolean over = in(mx, my, x, ay - 1, lw, 12);
             UiStyle.tile(g, x, ay - 1, lw, 12, over ? UiStyle.State.HOVER : UiStyle.State.NORMAL);
             g.fill(x + 1, ay, x + 4, ay + 10, fill);
-            String go = a.getString("page") + " \u203A";
+            String go = a.go();
             int gw = font.width(go);
-            UiStyle.text(g, font, a.getString("text"), x + 7, ay + 1, lw - gw - 12, level >= 2 ? UiStyle.DANGER : UiStyle.TEXT);
+            UiStyle.text(g, font, a.text(), x + 7, ay + 1, lw - gw - 12, level >= 2 ? UiStyle.DANGER : UiStyle.TEXT);
             g.drawString(font, go, x + lw - gw - 3, ay + 1, UiStyle.ACCENT, false);
             if (over) {
-                int page = pageNumber(a.getString("page"));
-                zones.add(new Zone(x, ay - 1, x + lw, ay + 11, () -> openPage(page)));
-                tip(a.getString("text") + "\nClick to open " + SECTIONS[sectionOf(Math.max(0, page))].name() + " \u203A " + a.getString("page") + ".", mx, my);
+                zones.add(new Zone(x, ay - 1, x + lw, ay + 11, () -> openPage(a.page())));
+                tip(a.tip(), mx, my);
             }
             ay += 13;
         }

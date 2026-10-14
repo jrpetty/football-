@@ -65,6 +65,9 @@ public class FolkProfileScreen extends Screen {
 
     private static final int MAX_W = 460, MAX_H = 320, MIN_W = 240, MIN_H = 180;
     private static final int HEADER_H = 62, TABS_H = 18, FOOT_H = 24, PORTRAIT_W = 44;
+    /** The folk in its portrait: how big (a grown folk some sixty pixels tall), and how far below the frame its box
+     *  reaches, so the frame holds its head and shoulders. */
+    private static final int PORTRAIT_SCALE = 34, PORTRAIT_DROP = 40;
     /** The label column of a fact row, and the need meters' label column. */
     private static final int KEY_W = 86, NEED_LABEL_W = 52;
 
@@ -184,6 +187,7 @@ public class FolkProfileScreen extends Screen {
         left = (width - w) / 2;
         top = (height - h) / 2;
         laidW = -1;
+        thoughtLines = List.of();                                         // wrapped again for the new width
     }
 
     @Override
@@ -252,7 +256,8 @@ public class FolkProfileScreen extends Screen {
         LivingEntity e = entity();
         if (e != null) {
             g.enableScissor(px + 1, py + 1, px + PORTRAIT_W - 1, py + ph - 1);
-            InventoryScreen.renderEntityInInventoryFollowsMouse(g, px, py, px + PORTRAIT_W, py + ph + 18, 22, 0.0625F, mx, my, e);
+            // Head and shoulders: drawn large, the box reaching below the frame so the face sits in it.
+            InventoryScreen.renderEntityInInventoryFollowsMouse(g, px, py, px + PORTRAIT_W, py + ph + PORTRAIT_DROP, PORTRAIT_SCALE, 0.0625F, mx, my, e);
             g.disableScissor();
         } else {
             g.fill(px + 1, py + ph - 10, px + PORTRAIT_W - 1, py + ph - 1, jobColour);
