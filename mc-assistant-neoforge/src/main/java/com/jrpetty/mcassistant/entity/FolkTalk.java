@@ -181,7 +181,7 @@ public final class FolkTalk {
             case CENSUS -> census(f, p);
             case CITIZEN -> Citizens.ask(f, p);
             case COUNCIL -> Council.news(f) + " " + Elections.talk(f) + Referendums.talk(f);   // [civic] and the town's vote
-            case HOUSE -> Homes.talk(f);
+            case HOUSE -> Needs.withHome(f, Homes.talk(f));   // [shops-homes] and what it keeps there, and wants for it
             case HOUSING -> Homes.ask(f, p, text);
             case FINE -> Laws.pay(f, p);
             case RIVALS -> Diplomacy.rivals(f);

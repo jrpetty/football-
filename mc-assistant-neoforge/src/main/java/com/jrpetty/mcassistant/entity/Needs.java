@@ -246,6 +246,18 @@ public final class Needs {
         return "I must get " + w.words() + " at the shop, " + w.why() + ".";
     }
 
+    /** Its words on its home, with what it keeps there and what it is after for it ("We keep 12 food, ... I must get candles"). */
+    @Nullable
+    public static String withHome(VillageFolkEntity f, @Nullable String home) {
+        String base = home == null ? "" : home;
+        if (!(f.level() instanceof ServerLevel level)) return home;
+        Belongings.View v = Belongings.of(level, f);
+        String keep = v.total() > 0 ? " " + v.summary() : "";
+        String want = talk(f);
+        String out = (base + keep + (want == null ? "" : " " + want)).trim();
+        return out.isEmpty() ? home : out;
+    }
+
     /** What the town's folk want, by ware, for the shop's range (StockKeeper.range): what is on their lists today. */
     static Map<String, StockKeeper.Ware> wares(ServerLevel level, Villages.Village v) {
         Map<String, StockKeeper.Ware> out = new java.util.LinkedHashMap<>();
