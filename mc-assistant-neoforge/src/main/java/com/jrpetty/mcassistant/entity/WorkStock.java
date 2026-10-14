@@ -129,7 +129,8 @@ public final class WorkStock {
                 c.setChanged();
             }
         }
-        be.applyComponents(net.minecraft.core.component.DataComponentMap.builder()
+        // [dining] With what it holds kept: a name applied alone empties a chest (its contents are a component too).
+        be.applyComponents(net.minecraft.core.component.DataComponentMap.builder().addAll(be.collectComponents())
             .set(DataComponents.CUSTOM_NAME, Component.literal(want)).build(), net.minecraft.core.component.DataComponentPatch.EMPTY);
         be.setChanged();
     }

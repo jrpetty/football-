@@ -964,7 +964,9 @@ public final class Dining {
         String name = cap(p.words().replace("the ", "")) + ": kitchen";
         if (level.getBlockEntity(at) instanceof net.minecraft.world.Nameable n && (n.getCustomName() == null || !n.getCustomName().getString().equals(name))
                 && (n.getCustomName() == null || ZoneChests.isVillageStore(level.getBlockEntity(at)))) {
-            level.getBlockEntity(at).applyComponents(net.minecraft.core.component.DataComponentMap.builder()
+            // Named with what it holds kept: applying a name alone would empty a chest (its contents are a component too).
+            var be = level.getBlockEntity(at);
+            be.applyComponents(net.minecraft.core.component.DataComponentMap.builder().addAll(be.collectComponents())
                 .set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal(name)).build(),
                 net.minecraft.core.component.DataComponentPatch.EMPTY);
             level.getBlockEntity(at).setChanged();
