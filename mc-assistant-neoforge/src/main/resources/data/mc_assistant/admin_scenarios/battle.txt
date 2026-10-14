@@ -1,0 +1,15 @@
+# [admin] Two Iron Age towns of seventy, at war, drawn up for battle between them.
+# Founds a town here (or uses the one that stands here), a rival 260 blocks east, arms twenty of each, declares war
+# and stages the line-up. Takes a minute or two while the founders arrive.
+say Founding two Iron Age towns of seventy; the founders take a minute or two to arrive.
+village admin world found 70 iron
+waitfor 60
+village admin ages set iron none
+village admin world rival 260 70
+waitfor 60 town:newest
+village admin ages set iron none town:newest
+village admin army raise 20 iron
+village admin army raise 20 iron town:newest
+village admin army war rival
+village admin army phase lineup
+say Ready: the two armies are lined up between the towns. /village admin army phase clash to go on.

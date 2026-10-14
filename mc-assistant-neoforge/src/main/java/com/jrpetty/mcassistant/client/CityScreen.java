@@ -402,6 +402,7 @@ public class CityScreen extends Screen {
         rx -= cw;
         UiStyle.button(g, font, "Close", rx, top + 6, cw, 18, UiStyle.State.of(true, false, in(mx, my, rx, top + 6, cw, 18)));
         closeX = rx;
+        rx = AdminClient.boardButton(g, font, rx, top + 6, mx, my);      // [admin] the admin panel, for operators
         rx -= UiStyle.S2;
         for (int i = RANGE_NAMES.length - 1; i >= 0; i--) {
             int bw = font.width(RANGE_NAMES[i]) + 8;
@@ -3825,6 +3826,7 @@ public class CityScreen extends Screen {
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (links.click(mx, my, button)) return true;                    // [teleport] a folk's name, or its buttons
+        if (AdminClient.boardClick(mx, my)) return true;                  // [admin]
         for (Zone z : new ArrayList<>(zones)) {
             if (mx >= z.x0() && mx < z.x1() && my >= z.y0() && my < z.y1()) { z.act().run(); return true; }
         }
