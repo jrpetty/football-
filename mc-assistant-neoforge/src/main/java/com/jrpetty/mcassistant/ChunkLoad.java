@@ -51,21 +51,6 @@ public final class ChunkLoad {
     public static final TicketController CONTROLLER = new TicketController(
         ResourceLocation.fromNamespaceAndPath(McAssistantMod.MODID, "stations"), ChunkLoad::reloaded);
 
-    /** [scale] Chunks a sleeping town let go, released a few a tick: a town of five hundred let go of six thousand at
-     *  once, and the game unloaded and saved them all in the next tick or two (two seconds). */
-    private static final LinkedHashMap<Key, ServerLevel> RELEASING = new LinkedHashMap<>();
-    private static final int RELEASED_PER_TICK = 48;
-
-    private static void releaseSome() {
-        int n = 0;
-        for (Iterator<java.util.Map.Entry<Key, ServerLevel>> it = RELEASING.entrySet().iterator(); it.hasNext() && n < RELEASED_PER_TICK; n++) {
-            java.util.Map.Entry<Key, ServerLevel> e = it.next();
-            Key k = e.getKey();
-            CONTROLLER.forceChunk(e.getValue(), k.owner(), ChunkPos.getX(k.chunk()), ChunkPos.getZ(k.chunk()), false, true);
-            it.remove();
-        }
-    }
-
     /** [scale] The tickets the world came back with (saved forced, from before a restart), till the first tick puts
      *  them in FORCED: the world opens before the session's reset, which would otherwise forget them. Kept so a town
      *  that sleeps after a restart lets go of the chunks it forced in the last session too (TownLod). */
@@ -139,7 +124,6 @@ public final class ChunkLoad {
     public static void reset() {
         WANTED.clear();
         FORCED.clear();
-        RELEASING.clear();
         asking = 0;
         lastReport = 0;
     }
@@ -177,10 +161,6 @@ public final class ChunkLoad {
             if (FORCED.contains(key) || WANTED.containsKey(key)) continue;
             // [scale] On a sleeping town's ground: kept for its waking, not forced (TownLod).
             if (com.jrpetty.mcassistant.entity.TownLod.park(level, owner, cx + c[0], cz + c[1])) continue;
-            if (RELEASING.remove(key) != null) {               // [scale] still held: asked for again before it went
-                FORCED.add(key);
-                continue;
-            }
             WANTED.put(key, new Want(level, owner, cx + c[0], cz + c[1]));
         }
     }
@@ -202,7 +182,7 @@ public final class ChunkLoad {
             Key k = it.next();
             if (!inside.test(k)) continue;
             it.remove();
-            RELEASING.put(k, level);                      // let go a few a tick (releaseSome), not all at once
+            CONTROLLER.forceChunk(level, k.owner(), ChunkPos.getX(k.chunk()), ChunkPos.getZ(k.chunk()), false, true);
             out.add(new com.jrpetty.mcassistant.entity.TownLod.Parked(k.owner(), k.chunk()));
         }
         for (Iterator<java.util.Map.Entry<Key, Want>> it = WANTED.entrySet().iterator(); it.hasNext(); ) {
@@ -229,7 +209,6 @@ public final class ChunkLoad {
     }
 
     private static void onServerTickGuarded(ServerTickEvent.Post event) {
-        if (!RELEASING.isEmpty()) releaseSome();
         if (!RELOADED.isEmpty()) {
             synchronized (RELOADED) {
                 FORCED.addAll(RELOADED);
