@@ -90,6 +90,8 @@ public class GatherGoal extends Goal {
     public record Request(Kind kind, int amount) {}
 
     private static final int SEARCH_RADIUS = 16;
+    /** [mines] How far across a block may be from it and still be "over its head", built straight up to. */
+    private static final int OVERHEAD = 2;
     /** The scan starts tight and only widens when the near ground is worked
      *  out — a dense forest is read in a fraction of the blocks, and a picked-
      *  over one still gets the full look before anybody gives up. */
@@ -339,6 +341,14 @@ public class GatherGoal extends Goal {
                 stuckTicks = 0;
             } else if (!moving || targetTicks % 4 == 0) {
                 stuckTicks++;
+            }
+            // [mines] Right over its head, out of reach: up to it on steps of its own from here, at once (wandering
+            // off after a way round to a block in a cave's roof took it out of sight of the block altogether).
+            BlockPos at = assistant.feetPos();
+            if (Math.max(Math.abs(targetPos.getX() - at.getX()), Math.abs(targetPos.getZ() - at.getZ())) <= OVERHEAD
+                    && targetPos.getY() - at.getY() >= 2 && buildTicks < 300 && builtBlocks < 32 && pillarUp(at)) {
+                buildTicks++;
+                return;
             }
             // Can't just WALK there? Make a way to it: dig through the ground in the
             // way (e.g. the dirt over the stone), pillar up to a higher block, or bridge

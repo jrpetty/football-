@@ -210,7 +210,7 @@ public final class Footholds extends SavedData {
         if (!a.onGround()) return true;                                  // still settling on the last one
         if (risen(a, feet) >= MOST_HIGH) return false;
         if (!roomAbove(level, feet)) return false;
-        if (!level.getBlockState(feet).canBeReplaced() || !level.getFluidState(feet).isEmpty()) return false;
+        if (!clearUnderfoot(a, level, feet)) return false;
         BlockState block = takeBlock(a);
         if (block == null) return false;
         a.getNavigation().stop();
@@ -219,6 +219,20 @@ public final class Footholds extends SavedData {
         a.placeSound(feet);
         a.swing(InteractionHand.MAIN_HAND);
         laid(a, feet, purpose);
+        return true;
+    }
+
+    /**
+     * Its own spot clear to lay a block in: open, dry, or a torch in it (set there to light its work: taken up into its
+     * pack first, nothing lost).
+     */
+    private static boolean clearUnderfoot(AssistantEntity a, ServerLevel level, BlockPos feet) {
+        if (!level.getFluidState(feet).isEmpty()) return false;
+        BlockState here = level.getBlockState(feet);
+        if (here.canBeReplaced()) return true;
+        if (!here.is(Blocks.TORCH) && !here.is(Blocks.WALL_TORCH)) return false;
+        if (!a.insertItem(new ItemStack(Items.TORCH)).isEmpty()) return false;
+        level.destroyBlock(feet, false, a);
         return true;
     }
 
