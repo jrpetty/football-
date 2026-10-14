@@ -58,7 +58,7 @@ layer 2
 .G.........G.
 .W.........W.
 .LGWGWWWGWGL.
-.............
+......j......
 layer 3
 .............
 .LWWWWWWWWWL.
@@ -72,7 +72,7 @@ layer 3
 .W..j...j..W.
 .W.........W.
 .LWWWWWWWWWL.
-.............
+......|......
 layer 4
 vvvvvvvvvvvvv
 .L---------L.

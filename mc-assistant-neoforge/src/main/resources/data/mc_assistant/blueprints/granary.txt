@@ -13,7 +13,7 @@ FFFFFFF
 layer 0
 .......
 .LwwwL.
-.wCCCw.
+.wCyCw.
 .w...w.
 .wy.yw.
 .LwDwL.
@@ -21,7 +21,7 @@ layer 0
 layer 1
 .......
 .LwwwL.
-.wyyyw.
+.w.y.w.
 .w...w.
 .w...w.
 .Lw.wL.
@@ -29,8 +29,8 @@ layer 1
 layer 2
 .......
 .LWGWL.
-.WyyyW.
-.WyyyW.
+.W.y.W.
+.W...W.
 .W...W.
 .LWWWL.
 .......
@@ -41,7 +41,7 @@ layer 3
 .W...W.
 .W...W.
 .LWWWL.
-.......
+...j...
 layer 4
 vvvvvvv
 >.....<
