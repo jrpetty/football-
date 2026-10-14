@@ -61,7 +61,8 @@ public final class WatchPage {
             if (duty.startsWith("the walls: the bell") || duty.equals("the fire") || duty.equals("the flood")) colour = CRISIS;
             if (i % 2 == 0) g.fill(x, ly - 1, x + lw, ly + 17, Ui.ROW);
             g.fill(x + 2, ly + 1, x + 6, ly + 5, colour);
-            String name = r.getString("name") + (r.getBoolean("constable") ? " (constable)" : r.getBoolean("captain") ? " (captain)" : "");
+            String name = r.getString("name") + (r.getBoolean("constable") ? " (constable)" : r.getBoolean("captain") ? " (captain)"
+                : r.getBoolean("sergeant") ? " (sergeant)" : "");                // [roles-e]
             small(g, font, Ui.clip(font, name, (int) ((lw * 0.45F) / 0.75F)), x + 9, ly, Ui.INK);
             small(g, font, Ui.clip(font, duty, (int) ((lw * 0.5F) / 0.75F)), x + 9 + (int) (lw * 0.45F), ly, colour);
             String rec = r.getInt("arrests") + " arr · " + r.getInt("solved") + " solved · " + r.getInt("fights") + " fights · " + r.getInt("helped") + " helped · "

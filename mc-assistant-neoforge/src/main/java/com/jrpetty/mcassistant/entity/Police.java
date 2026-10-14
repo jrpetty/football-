@@ -350,6 +350,7 @@ public final class Police extends SavedData {
         if (village != null && g.getUUID().equals(captainId(village))) bits |= 1 << 5;
         if (g.countCarried(s -> s.is(com.jrpetty.mcassistant.item.PoliceItems.CONSTABLE_BADGE.get())) > 0) bits |= 1 << 6;
         if (d.policing() || Incidents.task(g) != null || WatchHouse.escorting(g) != null) bits |= 1 << 7;
+        if (WatchRanks.isSergeant(g)) bits |= 1 << 8;                      // [roles-e] a sergeant's brass armband (WatchLayer)
         return bits;
     }
 
@@ -612,6 +613,8 @@ public final class Police extends SavedData {
             Roster.Duty d = Roster.dutyOf(level, f);
             if (d != null) parts.add("today: " + d.words);
             if (f.getUUID().equals(captainId(village))) parts.add("captain of the watch");
+            String rank = WatchRanks.rank(f);                                // [roles-e] a sergeant's stripes
+            if (!rank.isEmpty()) parts.add(rank);
             CompoundTag r = guard(f.getUUID());
             String rec = record(f.getUUID());
             if (!rec.isEmpty()) parts.add(rec);
@@ -800,6 +803,7 @@ public final class Police extends SavedData {
             row.putString("letter", d.letter);
             row.putBoolean("defence", d.defence);
             row.putBoolean("captain", g.getUUID().equals(captainId(id)));
+            row.putBoolean("sergeant", WatchRanks.isSergeant(g));                // [roles-e]
             row.putBoolean("constable", g == constable);
             row.putBoolean("both", Roster.bothKinds(id, g.getUUID()));
             String now = doingLine(g);
@@ -889,7 +893,8 @@ public final class Police extends SavedData {
             Roster.Duty d = watch ? Roster.dutyOf(level, f) : null;
             String mine = d != null ? " I'm on " + d.words + "." : "";
             String captain = town(v.id()).getString("captainName");
-            return "Today's roster" + (captain.isEmpty() ? "" : ", as Captain " + captain + " drew it") + ": " + Roster.words(level, v) + "." + mine;
+            return "Today's roster" + (captain.isEmpty() ? "" : ", as Captain " + captain + " drew it") + ": " + Roster.words(level, v) + "."
+                + WatchRanks.rosterWords(v.id()) + mine;                       // [roles-e] and its sergeants
         }
         if (t.contains("curfew")) return Beats.curfew(f.ownerId()) ? "There's a curfew on: indoors from the tenth bell till first light. The watch will see you home."
             : "No curfew. The council only calls one when the nights get bad.";
@@ -937,7 +942,7 @@ public final class Police extends SavedData {
         List<String> out = new ArrayList<>();
         UUID id = v.id();
         out.add("The watch of " + Villages.name(id) + ": " + Patrols.watch(id).size() + " guards; trust " + trust(id) + " (" + trustWord(trust(id)) + ").");
-        out.add("Roster: " + Roster.words(level, v) + ".");
+        out.add("Roster: " + Roster.words(level, v) + "." + WatchRanks.rosterWords(id));   // [roles-e] the sergeants
         out.add(WatchHouse.statusLine(level, v));
         out.addAll(WatchHouse.prisoners(level, id));
         out.addAll(PlayerLaw.wantedLines(id));

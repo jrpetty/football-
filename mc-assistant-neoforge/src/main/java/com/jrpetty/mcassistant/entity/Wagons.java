@@ -44,9 +44,11 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * [wagons] The trade wagons: who has one, what it carries, and the trip it makes (TradeWagon is the thing itself).
  *
- * <p><b>A town's wagon.</b> A town that trades builds a wagon at the bench once a day can spare the makings
- * (WagonKind): a handcart in the Wood Age, an open wagon from the Stone Age, a covered wagon from the Iron Age, the
- * old one broken up for its planks when the new one is made. A drawn wagon needs a stable or a trading post (its
+ * <p><b>A town's wagon.</b> A town that trades has a wagon built once it can spare the makings (WagonKind): a handcart
+ * in the Wood Age, an open wagon from the Stone Age, a covered wagon from the Iron Age, the old one broken up for its
+ * planks when the new one is made. [roles-e] Its wheelwright builds it at the bench over several visits, the makings set
+ * by out of the stores in its work order, and mends it when it comes home battered (Wheelwrights); its carter drives it
+ * (Carters). A drawn wagon needs a stable or a trading post (its
  * shed), and a horse, a donkey, a mule or a llama of the town's own to pull it on the day. Idle, it stands parked by
  * the trading post, square to the street.
  *
@@ -348,28 +350,41 @@ public final class Wagons {
         return best;
     }
 
-    /** Builds (or betters) the town's wagon if it should and can. Returns the wagon built, or null. */
-    @Nullable
-    static TradeWagon build(ServerLevel level, Villages.Village v, long day) {
-        if (!trades(v)) return null;
+    /**
+     * The town's wagon wanted (its first, or a better one for its age): [roles-e] the wheelwright's work order opened, the
+     * makings set by out of the stores, if it can spare them (Wheelwrights.open). The wagon itself stands in the yard
+     * once the wheelwright has built it at its bench, over several visits (Wheelwrights.finish, {@link #replace}).
+     */
+    static void build(ServerLevel level, Villages.Village v, long day) {
+        if (!trades(v)) return;
         WagonKind want = buildable(v), have = owned(v.id());
         if (have != null && have.ordinal() >= want.ordinal()) {
             ensureParked(level, v, have);
-            return null;
+            return;
         }
+        Wheelwrights.open(level, v, want, day);                          // [roles-e] a work order, not a wagon out of the air
+    }
+
+    /**
+     * [roles-e] The wheelwright's wagon done (Wheelwrights.finish): the old one, home in its yard, broken up for its
+     * planks, and the new one parked there. Null (nothing done) while the old one is out on the road or not to hand.
+     */
+    @Nullable
+    static TradeWagon replace(ServerLevel level, Villages.Village v, WagonKind k) {
+        WagonKind have = owned(v.id());
         TradeWagon old = have == null ? null : wagonOf(level, v.id());
-        if (have != null && (old == null || old.phase != TradeWagon.Phase.PARKED)) return null;     // out, or not to hand: another day
-        for (WagonKind.Making m : want.makings) if (Market.stock(level, v.id(), m.what()) < m.count()) return null;
-        for (WagonKind.Making m : want.makings) Crafts.take(level, v, m.what(), m.count());
+        if (have != null && (old == null || old.phase != TradeWagon.Phase.PARKED || old.driver != null)) return null;
         if (old != null) {
+            for (int i = 0; i < old.cargo.getContainerSize(); i++) {
+                ItemStack s = old.cargo.removeItemNoUpdate(i);
+                if (!s.isEmpty()) Crafts.store(level, v, s);                // anything left aboard, to the stores
+            }
             Crafts.store(level, v, new ItemStack(Items.OAK_PLANKS, have.makings.get(0).count() / 2));   // the old one broken up
+            old.wrecked = true;
             old.discard();
         }
-        TradeWagon w = spawn(level, v, want);
-        Villages.tell(v.id(), day, (have == null ? "the wheelwright built the town a " : "the wheelwright built a ")
-            + want.label + " for the trade road" + (have == null ? "" : ", and broke up the old " + have.label + " for its planks")
-            + ", of " + want.makingsWords());
-        LOG.info("[MCA-WAGON] {} built a {} ({})", Villages.name(v.id()), want.label, have == null ? "its first" : "instead of its " + have.label);
+        TradeWagon w = spawn(level, v, k);
+        if (w != null) LOG.info("[MCA-WAGON] {} has a new {} ({})", Villages.name(v.id()), k.label, have == null ? "its first" : "instead of its " + have.label);
         return w;
     }
 
@@ -388,6 +403,8 @@ public final class Wagons {
         w.setPhase(TradeWagon.Phase.PARKED);
         if (!level.addFreshEntity(w)) return null;
         own(v.id(), k, w.getUUID());
+        Wheelwrights.forget(v.id());                                    // [roles-e] a wagon to keep and drive: the posts reckoned afresh
+        Carters.forget(v.id());
         return w;
     }
 
@@ -580,6 +597,7 @@ public final class Wagons {
 
     /** TradeWagon.tick (server): whatever its phase asks. */
     static void tick(ServerLevel level, TradeWagon w) {
+        if (w.prop) return;                                              // [roles-e] a prop for the pictures: nothing to do
         if (w.town == null || w.tickCount % 100 == 17 && Villages.get(w.town) == null) {
             letGo(level, w);                                             // its town is no more: nothing to carry for
             w.wrecked = true;
@@ -1191,6 +1209,7 @@ public final class Wagons {
         f.trip(null);
         home(f, level);
         Riding.caravanHome(f, level);
+        Carters.tripHome(level, f, t);                                   // [roles-e] the carter paid for the run
         Villages.tell(t.from, day, "our " + (w == null ? "carrier" : w.kind().label) + " came home from " + Villages.name(t.to));
         f.say("Back from " + Villages.name(t.to) + "!");
     }
@@ -1819,6 +1838,11 @@ public final class Wagons {
 
     /** Tests and the pictures: give the town a wagon of this kind now, in its yard (no makings taken). */
     @Nullable
+    /** [roles-e] Tests: the day's look at the town's wagon now (a work order opened if it wants one and can spare the makings). */
+    public static void buildForTests(ServerLevel level, Villages.Village v) {
+        build(level, v, level.getDayTime() / 24000L);
+    }
+
     public static TradeWagon giveForTests(ServerLevel level, UUID town, WagonKind k) {
         Villages.Village v = Villages.get(town);
         if (v == null) return null;

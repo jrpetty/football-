@@ -231,6 +231,7 @@ public final class Roster {
                 t.remove("captain");
                 t.putString("captainName", "");
             }
+            WatchRanks.draw(v.id(), t, watch, captain, day);                 // [roles-e] a sergeant for every six, drawn with it
             // The week's rosters, for the Watch page's grid: seven days kept.
             CompoundTag week = t.getCompound("week");
             week.put(Long.toString(day), nr.copy());

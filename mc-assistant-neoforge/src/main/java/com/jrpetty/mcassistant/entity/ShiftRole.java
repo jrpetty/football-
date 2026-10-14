@@ -82,7 +82,15 @@ public enum ShiftRole {
         List.of("A sheep of the town's flock is marked.",
             "Shear it with your own shears: the wool goes straight into the town's stores.",
             "Shearing one of the flock that is not marked is a mistake.",
-            "A quick, clean job earns stars."));
+            "A quick, clean job earns stars.")),
+    // [roles-e] The wheelwright's hand: the town's battered wagon, home in its yard, mended with the player's own planks
+    // (Wheelwrights: the shift's part); offered by the wheelwright, whatever its trade (RoadPosts.bosses).
+    WAGON("wagon", "Wheelwright's hand", "Master wheelwright", "the wagon yard", 0.8, 600,
+        "the town's wagon home in its yard, battered", Set.of(),
+        List.of("The town's wagon, home in its yard and battered, is marked.",
+            "Right-click it holding planks of your own: two planks mend it a step.",
+            "Keep at it till it is sound; each step is paid when it is.",
+            "A wagon driven off before you are done is no fault of yours."));
 
     public final String id, title, senior, place;
     /** The wage a task, in coin, before the town's pay level, the stars and the skill. */

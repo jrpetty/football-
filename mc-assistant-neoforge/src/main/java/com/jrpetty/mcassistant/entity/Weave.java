@@ -1234,7 +1234,7 @@ public final class Weave {
     /**
      * The office a folk dresses for: the steward of a player leader, the constable, the librarian, the auctioneer, a
      * cave dweller home from the caves; [roles-a] the healer, the elder, the sexton, the teacher, the curator, the crier
-     * and a quarter's warden; "" for none.
+     * and a quarter's warden; [roles-e] the carter, the wheelwright and the town planner; "" for none.
      */
     public static String role(VillageFolkEntity f) {
         UUID id = f.ownerId();
@@ -1255,6 +1255,10 @@ public final class Weave {
         if (Museum.isCurator(f)) return "curator";
         if (f.getUUID().equals(Crier.crier(id))) return "crier";
         if (Wardens.quarterOf(f) != null) return "warden";
+        // [roles-e] The roads' posts and the hall's: the carter, the wheelwright, the town planner.
+        if (Carters.is(f)) return "carter";
+        if (Wheelwrights.is(f)) return "wheelwright";
+        if (TownPlanner.is(f)) return "planner";
         return "";
     }
 
@@ -1276,6 +1280,11 @@ public final class Weave {
             case "warden" -> new Garment[]{ Garment.LONG_COAT, Garment.FLAT_CAP };
             case "sexton" -> new Garment[]{ Garment.LONG_COAT, Garment.FLAT_CAP };
             case "healer" -> new Garment[]{ Garment.WOOL_SHAWL };
+            // [roles-e] The carter's long driving coat and felt hat; the wheelwright's leather jacket and flat cap; the
+            // town planner's waistcoat (a long coat before the Iron Age) and felt hat.
+            case "carter" -> new Garment[]{ Garment.LONG_COAT, Garment.FELT_HAT, Garment.WOOL_SCARF };
+            case "wheelwright" -> new Garment[]{ Garment.LEATHER_JACKET, Garment.FLAT_CAP };
+            case "planner" -> new Garment[]{ Garment.WAISTCOAT, Garment.LONG_COAT, Garment.FELT_HAT };
             default -> new Garment[0];
         };
     }
@@ -1305,6 +1314,8 @@ public final class Weave {
             case "elder" -> true;                                       // [roles-a] the leader is always the leader
             case "crier" -> Crier.busy(f);                              // [roles-a] its hat on to cry the news
             case "warden" -> Wardens.walking(f);                        // [roles-a] on its round
+            case "carter" -> Wagons.busy(f);                            // [roles-e] on the bench
+            case "wheelwright", "planner" -> PostStints.busy(f);        // [roles-e] at the bench, at the hall's table
             default -> false;
         };
     }
@@ -1317,6 +1328,7 @@ public final class Weave {
             case "elder" -> 1.5;                                        // [roles-a] the leader's look is the town's
             case "auctioneer" -> 1.0;
             case "teacher", "curator", "healer", "sexton" -> 0.5;       // [roles-a]
+            case "planner" -> 0.5;                                      // [roles-e] the plans for the town's look
             case "constable", "librarian", "caver" -> 0.5;
             default -> 0.0;
         };

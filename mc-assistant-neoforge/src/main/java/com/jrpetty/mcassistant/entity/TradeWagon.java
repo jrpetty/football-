@@ -127,6 +127,8 @@ public class TradeWagon extends Entity {
     boolean held;
     /** Wrecked (Wagons.wreck): its removal is not a loss to be reckoned again. */
     boolean wrecked;
+    /** [roles-e] A wagon set out for the pictures (RoadsStage): nobody's, never driven, never saved as a prop. */
+    boolean prop;
     /** The leg's ambush has been rolled (once a leg). */
     boolean ambushRolled;
     private double groundY = Double.NaN, frontY, rearY;
@@ -430,7 +432,9 @@ public class TradeWagon extends Entity {
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
         if (hand != InteractionHand.MAIN_HAND) return InteractionResult.PASS;
-        if (!level().isClientSide && level() instanceof ServerLevel sl) WagonManifest.interact(sl, this, player);
+        if (!level().isClientSide && level() instanceof ServerLevel sl && !Wheelwrights.mendByHand(sl, this, player)) {   // [roles-e] a shift's mending
+            WagonManifest.interact(sl, this, player);
+        }
         return InteractionResult.sidedSuccess(level().isClientSide);
     }
 

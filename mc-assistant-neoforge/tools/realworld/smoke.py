@@ -4413,6 +4413,58 @@ def roles_d_stage(r, look, cx, cz):
     say("alive after the outdoor trades: %s" % client_alive())
 
 
+def roles_e_stage(r, look, cx, cz):
+    """[roles-e] Roads, wagons and the watch's ranks (entity/Wheelwrights, Carters, WatchRanks, TownPlanner, RoadsStage).
+    Out past the town to the south-east, /village roads stage sets out from palettes, stand-ins and prop wagons (nobody's,
+    never driven): the wheelwright's shed with an open wagon before its bay and the wheelwright at its bench; a battered
+    covered wagon with the wheelwright mending it, planks in hand; a laden covered wagon in the shafts with the carter on
+    the bench in its driving coat, its whip in hand; the roads' posts in their dress in a row (wheelwright, carter, town
+    planner); and the watch's ranks in a row (the captain with a brass band on each arm, two sergeants with theirs on the
+    right arm, three of the watch). Pictures:
+      1. 56-roles-e-1-shed: the wheelwright's shed from the front, its open bay and the wagon before it;
+      2. 56-roles-e-2-bench: inside, the wheelwright at its bench, the grindstone and the anvil;
+      3. 56-roles-e-3-mend: the wheelwright mending a battered covered wagon;
+      4. 56-roles-e-4-carter: the carter on the bench, whip in hand, the horse in the shafts;
+      5. 56-roles-e-5-posts: the wheelwright, the carter and the town planner in their dress;
+      6. 56-roles-e-6-watch: the watch's ranks, the brass bands on the captain's and the sergeants' arms.
+    Each camera is kept in open air (clear_camera). Then /village roads, the town's own wheelwright, carter, planner and
+    ranks in words. Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    sx, sz = cx + 150, cz + 150                        # out past the town, on ground of its own
+    hy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 30, sz + 20))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village roads stage" % (sx, sz))
+    say("roads stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the roads' posts; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view %s" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        x, y, z = clear_camera(r, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5)
+        look("56-roles-e-" + picture, x, y, z, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("shed", "1-shed", 10)
+    shoot("bench", "2-bench", 6)
+    shoot("mend", "3-mend", 8)
+    shoot("carter", "4-carter", 8)
+    shoot("posts", "5-posts", 8)
+    shoot("watch", "6-watch", 8)
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    say("roads: " + r.cmd("execute positioned %d %d %d run village roads" % (cx, ground_height(r, cx, cz) + 1, cz))[:1200])
+    say("alive after the roads' posts: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

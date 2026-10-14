@@ -26,9 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * [roles-a] The town's offices, and the allowance each pays on top of its holder's wage. An office is not a trade: the
  * constable stays on the watch, the librarian at its own trade; but the office takes some of its day, and a town that
  * asks it of a folk pays for it. Who holds each is the office's own system's to say (Inquiry, CaveDwellers, Library,
- * Museum, Crier, Wardens, PlayerLeader, Auctions, PlayerTrades, Sexton); this class only gathers them, once every five
- * seconds a town, for the wage (JobWorth.payOf), the wage's breakdown (Wealth.breakdown) and the books
- * ("/village offices").
+ * Museum, Crier, Wardens, PlayerLeader, Auctions, PlayerTrades, Sexton; [roles-e] TownPlanner, Wheelwrights, WatchRanks);
+ * this class only gathers them, once every five seconds a town, for the wage (JobWorth.payOf), the wage's breakdown
+ * (Wealth.breakdown) and the books ("/village offices").
  *
  * <p>Each office's allowance is a fixed share of a day's unit at the town's pay level (so it grows with the town as its
  * wages do), at least a coin; a folk holding several is paid for its two best. The elder's coin and the teacher's
@@ -49,7 +49,13 @@ public final class Offices {
         AUCTIONEER("the auctioneer", 0.30),
         MASTER("a master of its trade", 0.25),
         WARDEN("a quarter's warden", 0.20),
-        CRIER("the town crier", 0.15);
+        CRIER("the town crier", 0.15),
+        // [roles-e] The town planner at the hall, the wheelwright at its shed, and the watch's ranks (WatchRanks): the
+        // captain who is not the constable (the constable is paid as the constable), and a sergeant for every six guards.
+        PLANNER("the town planner", 0.35),
+        WHEELWRIGHT("the wheelwright", 0.30),
+        WATCH_CAPTAIN("the captain of the watch", 0.30),
+        SERGEANT("a sergeant of the watch", 0.20);
 
         public final String words;
         public final double share;
@@ -122,6 +128,12 @@ public final class Offices {
             if (t != StationTask.NONE && f.tradeLevel(t) >= Lessons.MASTER && Lessons.of(t) != null) mastered.add(t);
         }
         for (StationTask t : mastered) give(out, PlayerTrades.masterOf(id, t), Office.MASTER);
+        // [roles-e] The town planner, the wheelwright, and the watch's ranks.
+        give(out, TownPlanner.holder(id), Office.PLANNER);
+        give(out, Wheelwrights.holder(id), Office.WHEELWRIGHT);
+        UUID captain = Police.captainId(id);
+        if (captain != null && Inquiry.constable(id) == null) give(out, captain, Office.WATCH_CAPTAIN);
+        for (UUID s : WatchRanks.sergeants(id)) give(out, s, Office.SERGEANT);
         return out;
     }
 

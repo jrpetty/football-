@@ -682,7 +682,7 @@ public final class Shifts {
         for (Offer o : offers(level, v, p)) {
             if (!o.whyNot().isEmpty()) continue;
             open.add(o);
-            if (o.role().bosses.contains(f.stationTask())) mine = o;
+            if (o.role().bosses.contains(f.stationTask()) || RoadPosts.bosses(f, o.role())) mine = o;   // [roles-e] a post's own
         }
         if (onShift(p)) return "You're on a shift already. Get on with it!";
         String key = f.getUUID() + "/" + p.getUUID();

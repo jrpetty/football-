@@ -28,6 +28,8 @@ public final class WatchModel {
 
     final ModelPart head, body, rightArm, leftArm;
     final ModelPart coatBody, coatSkirt, collar, sleeveRight, sleeveLeft, sash, belt, badge, armband;
+    /** [roles-e] A rank's band on the right arm: a sergeant's, and (with the left's) a captain's. */
+    final ModelPart rankBand;
 
     public WatchModel(ModelPart root) {
         this.head = root.getChild("head");
@@ -43,6 +45,7 @@ public final class WatchModel {
         this.sleeveRight = rightArm.getChild("coat_sleeve_right");
         this.sleeveLeft = leftArm.getChild("coat_sleeve_left");
         this.armband = leftArm.getChild("armband");
+        this.rankBand = rightArm.getChild("rank_band");
     }
 
     public static LayerDefinition createBodyLayer() {
@@ -70,6 +73,8 @@ public final class WatchModel {
             .addBox(-1.0F, -2.0F, -2.0F, 4.0F, 10.0F, 4.0F, new CubeDeformation(0.85F)), PartPose.ZERO);
         leftArm.addOrReplaceChild("armband", CubeListBuilder.create().texOffs(64, 20)
             .addBox(-1.0F, 1.0F, -2.0F, 4.0F, 2.0F, 4.0F, new CubeDeformation(0.95F)), PartPose.ZERO);
+        rightArm.addOrReplaceChild("rank_band", CubeListBuilder.create().texOffs(64, 20)
+            .addBox(-3.0F, 1.0F, -2.0F, 4.0F, 2.0F, 4.0F, new CubeDeformation(0.95F)), PartPose.ZERO);
         return LayerDefinition.create(mesh, 128, 64);
     }
 

@@ -166,6 +166,9 @@ public final class ShiftTasks {
             case WOOD, SHEAR -> {
                 return OutdoorShifts.post(level, v, r);                                 // [roles-d]
             }
+            case WAGON -> {
+                return Wheelwrights.shiftPost(level, v);                                // [roles-e]
+            }
             case HEALER -> {
                 // [roles-a] The infirmary, with somebody laid up who has not been seen to lately.
                 com.jrpetty.mcassistant.village.Ledger.Building ward = Infirmary.of(id);
@@ -213,6 +216,7 @@ public final class ShiftTasks {
             case BUILD -> buildTask(level, p, s, v, now);
             case HEALER -> healerTask(level, p, s, v, now);              // [roles-a]
             case WOOD, SHEAR -> OutdoorShifts.task(level, p, s, v, now);  // [roles-d]
+            case WAGON -> Wheelwrights.shiftTask(level, p, s, v, now);    // [roles-e]
         };
         if (t != null) {
             s.task = t;
@@ -233,6 +237,7 @@ public final class ShiftTasks {
             case WATCH -> "On to the next post.";
             case BUILD -> "Nothing to lay just now.";
             case HEALER -> "Nobody needs seeing to just now. Wait at the infirmary.";   // [roles-a]
+            case WAGON -> "The wagon's sound just now. Wait by the yard.";              // [roles-e]
             case WOOD -> "No grown trees to fell just now. Wait by the woods.";        // [roles-d]
             case SHEAR -> "The flock's all shorn just now. Wait by the pen.";          // [roles-d]
         };
@@ -663,6 +668,7 @@ public final class ShiftTasks {
                 }
             }
             case WOOD, SHEAR -> OutdoorShifts.watch(level, p, s, t);                       // [roles-d]
+            case WAGON -> Wheelwrights.shiftWatch(level, p, s, t);                         // [roles-e]
             case BUILD -> {
                 if (t.leg == 1) {
                     for (int i = t.marks.size() - 1; i >= 0; i--) {

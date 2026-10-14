@@ -33,10 +33,12 @@ import java.util.UUID;
  *     for them: the constable of the watch (Inquiry), the leader of the cave team (CaveDwellers), the auctioneer once
  *     the auction house stands (Auctions), and the master of a trade that takes apprentices (PlayerTrades), when the old
  *     master retires or dies and two of level twenty-five are left at it; and [roles-a] the sexton of a town with a
- *     chapel (Sexton).</li>
+ *     chapel (Sexton); and [roles-e] the wheelwright and the carter of a town with a wagon (Wheelwrights, Carters), and
+ *     the town planner of a town with a hall (TownPlanner).</li>
  * </ul>
  * The constable stands at the head of the watch: the watch's roster (Roster) calls it its captain, and in a war the field
- * captain is the same folk; there is no other captain in the town's books.
+ * captain is the same folk; there is no other captain in the town's books. [roles-e] Beneath it, a sergeant for every six
+ * guards, drawn with the roster from the most seasoned (WatchRanks), not chosen at interview.
  */
 final class InterviewPosts {
 
@@ -47,7 +49,8 @@ final class InterviewPosts {
         TRADER, DIVER,                                                         // [emerald] the emerald trader's place; [diver] the diver's
         RUNNER,                                                                // [nether] a place on the Nether runners
         ENGINEER,                                                              // [redstone] the redstone engineer's post
-        HEALER, SEXTON, CURATOR, FIREWORKS }                                   // [roles-a] the infirmary, the chapel, the museum, the powder hut
+        HEALER, SEXTON, CURATOR, FIREWORKS,                                    // [roles-a] the infirmary, the chapel, the museum, the powder hut
+        WHEELWRIGHT, CARTER, PLANNER }                                         // [roles-e] the wagons' shed, the trade road, the hall
 
     /** A post: its kind, its key in the books, the trade it is of (for the questions and the master), a notice's number. */
     record Post(Kind kind, String key, @Nullable StationTask trade, int opening) {
@@ -88,6 +91,9 @@ final class InterviewPosts {
                 case Sexton.POST -> new Post(Kind.SEXTON, key, null, -1);                                    // [roles-a]
                 case Museum.CURATOR_POST -> new Post(Kind.CURATOR, key, null, -1);                           // [roles-a]
                 case FireworksMaker.POST -> new Post(Kind.FIREWORKS, key, StationTask.FIREWORKS, -1);        // [roles-a]
+                case Wheelwrights.POST -> new Post(Kind.WHEELWRIGHT, key, null, -1);                         // [roles-e]
+                case Carters.POST -> new Post(Kind.CARTER, key, null, -1);                                   // [roles-e]
+                case TownPlanner.POST -> new Post(Kind.PLANNER, key, null, -1);                              // [roles-e]
                 default -> null;
             };
         }
@@ -127,6 +133,9 @@ final class InterviewPosts {
                 case SEXTON -> "sexton";
                 case CURATOR -> "museum curator";
                 case FIREWORKS -> "fireworks maker";
+                case WHEELWRIGHT -> "wheelwright";                          // [roles-e]
+                case CARTER -> "carter";
+                case PLANNER -> "town planner";
                 case MASTER -> "master " + (trade == null ? "hand" : JobMarket.noun(trade));
             };
         }
@@ -151,7 +160,8 @@ final class InterviewPosts {
             return kind == Kind.TEACHER || kind == Kind.LIBRARIAN || kind == Kind.STEWARD || kind == Kind.AUCTIONEER
                 || kind == Kind.FERRYMAN || kind == Kind.BANKER || trade == StationTask.SHOP || trade == StationTask.COOK
                 || kind == Kind.TRADER                                  // [emerald] a stranger at every stall
-                || kind == Kind.HEALER || kind == Kind.SEXTON || kind == Kind.CURATOR;   // [roles-a] the sick, the mourners, the visitors
+                || kind == Kind.HEALER || kind == Kind.SEXTON || kind == Kind.CURATOR   // [roles-a] the sick, the mourners, the visitors
+                || kind == Kind.PLANNER;                                    // [roles-e] the council, and anybody who asks
         }
 
         /** What a folk who cares for it would see in the post. */
@@ -171,6 +181,8 @@ final class InterviewPosts {
                 case HEALER -> Values.Value.SAFETY;                         // [roles-a] folk kept well
                 case SEXTON, CURATOR -> Values.Value.TRADITION;             // [roles-a] the old ways, the town's past
                 case FIREWORKS -> Values.Value.LEISURE;                     // [roles-a] the town's nights
+                case WHEELWRIGHT, CARTER -> Values.Value.WEALTH;            // [roles-e] the town's trade on the road
+                case PLANNER -> Values.Value.PROGRESS;                      // [roles-e] the town that is to be
                 default -> {
                     Values.Value v = trade == null ? null : Values.taughtBy(trade);
                     yield v == null ? Values.Value.WEALTH : v;
@@ -200,6 +212,9 @@ final class InterviewPosts {
                 case SEXTON -> "the chapel";
                 case CURATOR -> "the museum";
                 case FIREWORKS -> "the powder hut";
+                case WHEELWRIGHT -> "the wheelwright's shed";                // [roles-e]
+                case CARTER -> "the trade road";
+                case PLANNER -> "the hall";
                 default -> trade == null ? "the town" : JobMarket.workWords(trade);
             };
         }
@@ -248,6 +263,9 @@ final class InterviewPosts {
             case SEXTON -> Sexton.fit(f, village);                                                   // [roles-a] steady, at home
             case CURATOR -> Museum.curatorFit(f);                                                    // [roles-a]
             case FIREWORKS -> FireworksMaker.eligible(f, village);                                   // [roles-a] as its appointing has it
+            case WHEELWRIGHT -> Wheelwrights.fit(f, village);                                        // [roles-e] wood and iron to spare
+            case CARTER -> Carters.fit(f, village);                                                  // [roles-e] a steady hand for the road
+            case PLANNER -> TownPlanner.fit(f, village);                                             // [roles-e] a head for the town's plans
             case OPENING -> {
                 StationTask want = p.tradeFor(village);
                 // One of the town's own for a new workplace: not its elder, not a hand its own trade cannot spare.
@@ -407,6 +425,27 @@ final class InterviewPosts {
                 if (f.persona().rolled() && f.persona().hobby() == Persona.Hobby.READING) good.add("a great reader");
                 return (int) Math.max(0, Math.round(Museum.curatorScore(f)));
             }
+            case WHEELWRIGHT -> {
+                // [roles-e] As the town's own reckoning weighs them (Wheelwrights.score): wood and iron, the shop's bench.
+                int wood = f.tradeLevel(StationTask.WOOD), smith = f.tradeLevel(StationTask.SMITH);
+                if (Workshop.isHand(f)) good.add("a hand at the shop's bench");
+                if (wood > 0) good.add("knows its timber (level " + wood + " in the woods)");
+                if (smith > 0) good.add("can shrink an iron tyre on (level " + smith + " at the forge)");
+                if (f.life().has(Social.Trait.HARDWORKING)) good.add("a hard worker");
+                return Math.max(0, Wheelwrights.score(f));
+            }
+            case CARTER -> {
+                int haul = f.tradeLevel(StationTask.HAUL), ranch = f.tradeLevel(StationTask.RANCH);
+                if (haul > 0) good.add("knows the roads (level " + haul + " carrying)");
+                if (ranch > 0) good.add("good with horses (level " + ranch + " at the pens)");
+                if (f.life().has(Social.Trait.EASYGOING)) good.add("steady on the bench");
+                return Math.max(0, Carters.score(f));
+            }
+            case PLANNER -> {
+                if (f.life().has(Social.Trait.CURIOUS)) good.add("always asking what the town could be");
+                if (f.ageYears() >= 40) good.add("has seen the town grow");
+                return Math.max(0, TownPlanner.score(f));
+            }
             case FIREWORKS -> {
                 int lv = f.tradeLevel(StationTask.FIREWORKS);
                 if (lv > 0) good.add("level " + lv + " at the powder hut");
@@ -507,6 +546,9 @@ final class InterviewPosts {
             case SEXTON -> Sexton.stands(id);                                                        // [roles-a] a chapel, eight folk
             case CURATOR -> Museum.building(id) != null;                                             // [roles-a]
             case FIREWORKS -> FireworksMaker.ready(id) && FireworksMaker.maker(id) == null;          // [roles-a] the hut waits
+            case WHEELWRIGHT -> Wheelwrights.stands(id);                                             // [roles-e] a wagon, or one on the bench
+            case CARTER -> Carters.stands(id);                                                       // [roles-e] a wagon to drive
+            case PLANNER -> TownPlanner.stands(id);                                                  // [roles-e] a hall, twelve folk
             case OPENING -> {
                 JobMarket.Opening o = JobMarket.opening(id, p.opening());
                 yield o != null && o.state() == JobMarket.State.OPEN;
@@ -539,6 +581,9 @@ final class InterviewPosts {
             case SEXTON -> Sexton.holder(id);                               // [roles-a]
             case CURATOR -> Museum.curatorNow(id);
             case FIREWORKS -> FireworksMaker.maker(id);
+            case WHEELWRIGHT -> Wheelwrights.holder(id);                    // [roles-e]
+            case CARTER -> Carters.holder(id);
+            case PLANNER -> TownPlanner.holder(id);
             case CAVE_PLACE, FLETCHER, TRADER, DIVER, RUNNER, ENGINEER, HEALER, OPENING -> null;
         };
     }
@@ -664,6 +709,18 @@ final class InterviewPosts {
                 FireworksMaker.appoint(level, v, day);
                 return FireworksMaker.maker(id) == winner ? "took up the fireworks, at the powder hut" : "is to take up the fireworks";
             }
+            case WHEELWRIGHT -> {
+                Wheelwrights.forget(id);                                    // [roles-e] the town's wheelwright looked up afresh
+                return "builds and mends the town's wagons";
+            }
+            case CARTER -> {
+                Carters.forget(id);
+                return "drives the town's wagon, paid by the run";
+            }
+            case PLANNER -> {
+                TownPlanner.forget(id);
+                return "draws up the town's plans at the hall";
+            }
             case CONSTABLE -> { return "leads the watch as its constable"; }
             case CAVE_LEADER -> { return "leads the cave team"; }
             case AUCTIONEER -> { return "calls the auctions"; }
@@ -685,7 +742,8 @@ final class InterviewPosts {
     static List<String> keys() {
         List<String> out = new ArrayList<>(List.of("teacher", "librarian", "constable", "caveleader", "caveplace", "ferryman",
             "auctioneer", "banker", "steward", "golemkeeper", EmeraldTrader.POST_KEY,
-            Healers.POST, Sexton.POST, Museum.CURATOR_POST, FireworksMaker.POST));             // [roles-a]
+            Healers.POST, Sexton.POST, Museum.CURATOR_POST, FireworksMaker.POST,              // [roles-a]
+            Wheelwrights.POST, Carters.POST, TownPlanner.POST));                              // [roles-e]
         for (StationTask t : StationTask.values()) {
             if (t == StationTask.NONE) continue;
             out.add(t.name().toLowerCase(Locale.ROOT));

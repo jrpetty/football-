@@ -114,7 +114,9 @@ public class BuildGoal extends Goal {
         // [roles-b] the beekeeper's apiary and honey house, and the enchanter's tower (entity/Apiary, CraftScale)
         "apiary", "enchanter",
         // [roles-d] the hunter's lodge (its smoker, hides and makings) and the rancher's barn by the pen (entity/OutdoorBases)
-        "huntlodge", "barn");
+        "huntlodge", "barn",
+        // [roles-e] the wheelwright's shed: its bench, grindstone and anvil, where the wagons are built (entity/Wheelwrights)
+        "wheelwright");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

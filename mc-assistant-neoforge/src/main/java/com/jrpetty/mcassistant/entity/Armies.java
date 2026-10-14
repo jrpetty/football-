@@ -512,10 +512,14 @@ public final class Armies {
             break;
         }
         // A sergeant for every six: the veterans of the most battles first, then the best of the rest; the allies under their own.
+        // [roles-e] The watch's own sergeants in peacetime (WatchRanks) before anybody.
         int want = Math.max(1, (a.fighters.size() + 5) / 6);
         List<Fighter> rest = new ArrayList<>();
         for (Fighter f : a.fighters) if (f.rank == Rank.NONE) rest.add(f);
+        java.util.Comparator<Fighter> peace = WatchRanks.peacetimeFirst(id);
         rest.sort((x, y) -> {
+            int p = peace.compare(x, y);
+            if (p != 0) return p;
             int bx = battles(x.town, x.id), by = battles(y.town, y.id);
             return bx != by ? Integer.compare(by, bx) : Integer.compare(y.power, x.power);
         });
