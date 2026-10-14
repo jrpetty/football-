@@ -4157,6 +4157,7 @@ def admin_stage(r, look, cx, cz):
     age set to the next one with its buildings renovated at once (ages next, then build renovate as a job), and the
     same view after. What /village admin inspect town and the log say, in words. Not wired into main()."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("made an operator for the panel: " + r.cmd("op %s" % USER))     # the panel is for operators only
     r.cmd("gamemode creative %s" % USER)
     midday(r)
     r.cmd("weather clear")
