@@ -47,6 +47,12 @@ public final class StuckSpots {
     private static final int MOST_MENDS = 6;
     /** How long going nowhere is "stuck" for the books: half a minute. */
     public static final int LONG = 600;
+    /** How long a folk goes nowhere before it is helped out of where it is: twenty seconds, so none reaches LONG. */
+    static final int RESCUE = 400;
+    /** How far off a folk's goal may be for it to be set down beside it; further, it is set down on the nearest street. */
+    static final int NEAR_GOAL = 24;
+    /** How far round a stuck folk the nearest street is looked for. */
+    static final int STREET_LOOK = 16;
     /** How deep a hole in a street is filled. */
     private static final int MOST_FILL = DoorWays.MOST_FILL;
 
@@ -76,12 +82,17 @@ public final class StuckSpots {
         int since;
         int wanting;
         int seconds;
-        boolean counted;
+        boolean counted, rescued;
     }
 
     private static final Map<UUID, Going> GOING = new ConcurrentHashMap<>();
     /** Folk stuck longer than {@link #LONG}, by village: who, where and for what. */
     private static final Map<UUID, List<String>> LONG_STUCK = new ConcurrentHashMap<>();
+
+    /** Tests: help this folk out of where it is, going where its path goes. */
+    public static boolean rescueForTests(ServerLevel level, AssistantEntity a) {
+        return rescue(level, a, a.getNavigation().getPath());
+    }
 
     public static void resetForTests() {
         SPOTS.clear();
@@ -108,11 +119,16 @@ public final class StuckSpots {
             g.wanting = 0;
             g.seconds = 0;
             g.counted = false;
+            g.rescued = false;
             return;
         }
         g.seconds++;
         Path p = a.getNavigation().getPath();
         if (wantsToMove && p != null && p.getTarget().distSqr(a.blockPosition()) > 4.0) g.wanting++;
+        if (!g.rescued && a.tickCount - g.since >= RESCUE && g.wanting * 2 >= g.seconds && a.ownerId() != null) {
+            g.rescued = true;
+            if (rescue((ServerLevel) a.level(), a, p)) return;      // moved: the count starts again from where it is
+        }
         if (!g.counted && a.tickCount - g.since >= LONG && g.wanting * 2 >= g.seconds) {
             g.counted = true;
             UUID village = a.ownerId();
@@ -126,6 +142,50 @@ public final class StuckSpots {
             Ledger.note(village, "paths.longstuck", Integer.toString(count(village, "paths.longstuck") + 1));
             a.brain("stuck going nowhere for half a minute");
         }
+    }
+
+    /**
+     * A folk that has gone nowhere for twenty seconds, on its town's ground, is helped out the way the town helps a hand that
+     * cannot reach its plot or its chest (AssistantEntity.putBeside): set down beside where it was going if that is near,
+     * else on the nearest street, where its path starts afresh. Never out in the wilds (the town's ground only), at most
+     * once in a while for a folk (putBeside's own pace), and written in the town's books. True if it was moved.
+     */
+    static boolean rescue(ServerLevel level, AssistantEntity a, @Nullable Path p) {
+        Villages.Village v = Villages.get(a.ownerId());
+        if (v == null || !v.dim().equals(level.dimension())) return false;
+        BlockPos here = a.blockPosition();
+        int reach = Villages.townReach(v.id());
+        if (Math.max(Math.abs(here.getX() - v.centre().getX()), Math.abs(here.getZ() - v.centre().getZ())) > reach) return false;
+        BlockPos goal = p == null ? null : p.getTarget();
+        boolean moved;
+        if (goal != null && goal.distManhattan(here) <= NEAR_GOAL) moved = a.putBeside(goal);
+        else {
+            BlockPos street = nearestStreet(level, v, here);
+            moved = street != null && a.putBeside(street);
+        }
+        if (!moved) return false;
+        Ledger.note(v.id(), "paths.rescued", Integer.toString(count(v.id(), "paths.rescued") + 1));
+        a.brain("going nowhere: helped out of where it was stuck");
+        return true;
+    }
+
+    /** The nearest place on a street (or the square) within STREET_LOOK of here where a folk could stand. */
+    @Nullable
+    static BlockPos nearestStreet(ServerLevel level, Villages.Village v, BlockPos here) {
+        for (int r = 1; r <= STREET_LOOK; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) continue;
+                    int x = here.getX() + dx, z = here.getZ() + dz;
+                    if (!Footways.street(v, x, z) && !Footways.square(v, x, z)) continue;
+                    if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                    int top = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                    BlockPos feet = new BlockPos(x, top, z);
+                    if (Footways.standable(level, feet) && !level.getFluidState(feet).is(FluidTags.WATER)) return feet;
+                }
+            }
+        }
+        return null;
     }
 
     /** Folk of this village stuck for more than half a minute since the books were opened (or the tests began). */
@@ -321,8 +381,9 @@ public final class StuckSpots {
     /** A line for the town's books: how often its folk were stuck, how often the way was mended, the worst spot. */
     public static String line(UUID village) {
         int stuck = count(village, "paths.stuck"), mended = count(village, "paths.mended"), lng = count(village, "paths.longstuck");
+        int helped = count(village, "paths.rescued");
         List<Spot> s = spots(village);
-        return stuck + " times stuck, " + mended + " mended on the spot, " + lng + " stuck over half a minute"
+        return stuck + " times stuck, " + mended + " mended on the spot, " + helped + " helped out, " + lng + " stuck over half a minute"
             + (s.isEmpty() ? "" : "; worst: " + s.get(0));
     }
 }

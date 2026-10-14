@@ -247,6 +247,35 @@ public class PathsGameTests {
         });
     }
 
+    /**
+     * A folk shut in a glass box on the avenue, its path to a spot a few blocks off going nowhere: it is helped out (set
+     * down beside where it was going, as a hand that cannot reach its plot is) and the town's books count it.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 100, batch = "pa06_helped_out")
+    public static void pa06_helped_out(GameTestHelper helper) {
+        int x = 1706000, z = Z;
+        VillageFolkEntity f = founder(helper, x, z, 48);
+        ServerLevel level = helper.getLevel();
+        UUID id = f.ownerId();
+        BlockPos heart = Kit.surface(level, x, z);
+        helper.runAtTickTime(10, () -> {
+            BlockPos box = heart.offset(0, 0, 20);
+            for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) for (int h = 0; h <= 2; h++)
+                if (dx != 0 || dz != 0 || h == 2) level.setBlock(box.offset(dx, h, dz), Blocks.GLASS.defaultBlockState(), 3);
+            f.moveTo(box.getX() + 0.5, box.getY(), box.getZ() + 0.5);
+            BlockPos goal = heart.offset(0, 0, 27);
+            f.getNavigation().stop();
+            var path = f.getNavigation().createPath(goal, 0);
+            if (path != null) f.getNavigation().moveTo(path, 1.0);
+            helper.assertTrue(path != null && !path.canReach(), "no way out of the box");
+            boolean helped = com.jrpetty.mcassistant.entity.StuckSpots.rescueForTests(level, f);
+            Kit.log("pa06 helped out " + helped + ", now at " + f.blockPosition().toShortString() + "; " + com.jrpetty.mcassistant.entity.StuckSpots.line(id));
+            helper.assertTrue(helped && f.blockPosition().distManhattan(goal) <= 4, "set down by where it was going: " + f.blockPosition().toShortString());
+            helper.assertTrue(com.jrpetty.mcassistant.entity.StuckSpots.count(id, "paths.rescued") == 1, "on the town's books");
+            helper.succeed();
+        });
+    }
+
     // ============================================================ lots apart
 
     /**
@@ -373,7 +402,7 @@ public class PathsGameTests {
                 if (state[0] == 0) {
                     if (com.jrpetty.mcassistant.entity.Founding.near(level, heart, 8)) return;
                     Villages.Village v = Villages.nearest(level, heart, 64);
-                    if (v == null) { state[0] = 2; helper.fail("no village at " + heart); return; }
+                    if (v == null) { state[0] = 2; helper.runAfterDelay(1, () -> helper.fail("no village at " + heart)); return; }
                     id[0] = v.id();
                     Villages.ageForTests(v.id(), Villages.Age.IRON);
                     Kit.stockForGrowth(level, v);
@@ -386,7 +415,7 @@ public class PathsGameTests {
                 if (t < state[2]) return;
                 state[2] = t + 12000;
                 Villages.Village v = Villages.get(id[0]);
-                if (v == null) { state[0] = 2; helper.fail("the village is gone"); return; }
+                if (v == null) { state[0] = 2; helper.runAfterDelay(1, () -> helper.fail("the village is gone")); return; }
                 Kit.stockForGrowth(level, v);
                 double day = (t - state[1]) / 24000.0;
                 com.jrpetty.mcassistant.entity.WayAudit.Report r = com.jrpetty.mcassistant.entity.WayAudit.check(level, v);
@@ -400,8 +429,12 @@ public class PathsGameTests {
                     state[0] = 2;
                     server.tickRateManager().setTickRate(20.0F);
                     com.jrpetty.mcassistant.entity.Footways.liveForTests(true);
-                    if (r.clean()) helper.succeed();
-                    else helper.fail("the town's ways after " + DAYS + " days: " + r.lines().get(0));
+                    for (Ledger.Building b : Ledger.buildings(v.id())) Kit.log(tag + "   building " + b.structure() + " " + b.anchor().toShortString() + " back " + b.facing());
+                    // Ended through the test's own sequence: a failure thrown from a server tick listener stops the server.
+                    String why = r.clean() ? null : "the town's ways after " + DAYS + " days: " + r.lines().get(0);
+                    helper.runAfterDelay(1, () -> {
+                        if (why == null) helper.succeed(); else helper.fail(why);
+                    });
                 }
             } catch (RuntimeException ex) {
                 state[0] = 2;
