@@ -29,7 +29,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.BushBlock;
 import net.minecraft.world.level.block.FarmBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
@@ -973,11 +972,9 @@ public final class Wagons {
             String at = Ledger.note(town, AT);
             if (at == null || at.isEmpty()) continue;
             String[] p = at.split("\\|", -1);
-            if (p.length > 7 && !p[0].equals("PARKED") && (p[5].equals(b.toString()) || p[6].equals(b.toString())
-                    || p[5].equals(a.toString()) || p[6].equals(a.toString()))
-                    && (p[5].equals(a.toString()) || p[6].equals(a.toString())) && (p[5].equals(b.toString()) || p[6].equals(b.toString()))) {
-                return true;
-            }
+            if (p.length <= 7 || p[0].equals("PARKED")) continue;
+            String sa = a.toString(), sb = b.toString();
+            if (p[5].equals(sa) && p[6].equals(sb) || p[5].equals(sb) && p[6].equals(sa)) return true;
         }
         return false;
     }
@@ -1239,7 +1236,8 @@ public final class Wagons {
         if (!level.getFluidState(under).isEmpty()) return true;              // no bridge
         if (g.getBlock() instanceof FarmBlock) return true;                  // a field
         BlockState on = level.getBlockState(under.above());
-        return on.getBlock() instanceof BushBlock && !on.is(Blocks.SHORT_GRASS) && !on.is(Blocks.FERN);   // crops, saplings
+        return on.getBlock() instanceof net.minecraft.world.level.block.CropBlock || on.getBlock() instanceof net.minecraft.world.level.block.StemBlock
+            || on.is(net.minecraft.tags.BlockTags.SAPLINGS);              // a crop or a young tree (flowers and grass are driven over)
     }
 
     /**

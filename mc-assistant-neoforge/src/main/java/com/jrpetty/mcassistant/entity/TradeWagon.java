@@ -129,7 +129,7 @@ public class TradeWagon extends Entity {
     boolean wrecked;
     /** The leg's ambush has been rolled (once a leg). */
     boolean ambushRolled;
-    private double groundY = Double.NaN;
+    private double groundY = Double.NaN, frontY, rearY;
 
     // ------------------------------------------------------------------ client state (cached; no allocation per frame)
 
@@ -280,14 +280,10 @@ public class TradeWagon extends Entity {
         }
     }
 
-    /** Uphill slower, downhill a little careful: from the two axles' ground. */
+    /** Uphill slower, downhill a little careful: from the two axles' ground (as place last found it). */
     private double slope() {
-        if (route == null || Double.isNaN(groundY)) return 1.0;
-        double head = route.heading(s, 3.0);
-        double fx = Math.cos(head), fz = Math.sin(head);
-        double front = ground((ServerLevel) level(), getX() + fx * HALF_LENGTH, getZ() + fz * HALF_LENGTH, groundY);
-        double rear = ground((ServerLevel) level(), getX() - fx * HALF_LENGTH, getZ() - fz * HALF_LENGTH, groundY);
-        double rise = (front - rear) / (2 * HALF_LENGTH);
+        if (Double.isNaN(groundY)) return 1.0;
+        double rise = (frontY - rearY) / (2 * HALF_LENGTH);
         if (rise > 0.05) return Math.max(0.45, 1.0 - rise * 1.6);
         if (rise < -0.05) return 0.85;
         return 1.0;
@@ -304,6 +300,8 @@ public class TradeWagon extends Entity {
         double gy = ground(level, x, z, Double.isNaN(groundY) ? getY() : groundY);
         double front = ground(level, x + fx * HALF_LENGTH, z + fz * HALF_LENGTH, gy);
         double rear = ground(level, x - fx * HALF_LENGTH, z - fz * HALF_LENGTH, gy);
+        frontY = front;
+        rearY = rear;
         double target = Math.max(gy, (front + rear) * 0.5);
         groundY = Double.isNaN(groundY) ? target : groundY + Mth.clamp(target - groundY, -0.35, 0.35);
         float yaw = (float) (Math.toDegrees(head) - 90.0);
@@ -334,10 +332,13 @@ public class TradeWagon extends Entity {
         if (route == null) return false;
         double ahead = Math.min(route.length(), s + HALF_LENGTH + 1.5);
         if (ahead - s < 0.5) return false;
-        double head = route.heading(ahead, 2.0);
-        double fx = Math.cos(head), fz = Math.sin(head);
-        double x = route.xAt(ahead) - fz * lane, z = route.zAt(ahead) + fx * lane;
-        return Wagons.noRoad(level, x, z, Double.isNaN(groundY) ? getY() : groundY);
+        // A step from the block before to this one: a climbing road rises a block at a time, a wall all at once.
+        double before = Math.max(s, ahead - 1.0);
+        double h1 = route.heading(before, 2.0), h2 = route.heading(ahead, 2.0);
+        double x1 = route.xAt(before) - Math.sin(h1) * lane, z1 = route.zAt(before) + Math.cos(h1) * lane;
+        double x2 = route.xAt(ahead) - Math.sin(h2) * lane, z2 = route.zAt(ahead) + Math.cos(h2) * lane;
+        double g1 = ground(level, x1, z1, Double.isNaN(groundY) ? getY() : groundY);
+        return Wagons.noRoad(level, x2, z2, g1);
     }
 
     /** Ground height at (x, z): the top of what a wheel would stand on; {@code fallback} if that ground is not loaded. */
