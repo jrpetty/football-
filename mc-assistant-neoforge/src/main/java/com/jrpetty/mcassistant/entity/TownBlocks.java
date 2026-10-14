@@ -353,6 +353,8 @@ public final class TownBlocks {
         }
     }
 
+    /** Half the founders' camp at the heart of the square (TownWork does not pave it either). */
+    static final int CAMP = 4;
     private static final Map<UUID, Index> INDEX = new ConcurrentHashMap<>();
     private static final Map<UUID, Map<Long, Zone>> EXTRA = new ConcurrentHashMap<>();
     /** How long what the gate knows of a town is kept before it is worked out again anyway. */
@@ -383,7 +385,8 @@ public final class TownBlocks {
         if (fitting(st)) return new Here(Zone.FITTING, null, false);
         int dx = pos.getX() - v.centre().getX(), dz = pos.getZ() - v.centre().getZ();
         if (Math.max(Math.abs(dx), Math.abs(dz)) <= TownPlan.reach() && atGround(level, pos, st)) {
-            if (TownPlan.isSquare(dx, dz)) return new Here(Zone.SQUARE, null, false);
+            // The founders' camp at the very heart is the camp's (its beds, its chests, its fire) until [tidy] takes it up.
+            if (TownPlan.isSquare(dx, dz)) return new Here(Math.max(Math.abs(dx), Math.abs(dz)) <= CAMP ? Zone.OPEN : Zone.SQUARE, null, false);
             if (TownPlan.isStreet(dx, dz)) return new Here(Zone.ROAD, null, false);
         }
         return new Here(Zone.OPEN, null, false);

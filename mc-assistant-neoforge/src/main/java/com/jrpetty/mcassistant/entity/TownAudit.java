@@ -292,6 +292,9 @@ public final class TownAudit {
             || st.getBlock() instanceof net.minecraft.world.level.block.ChainBlock;
     }
 
+    /** Each site going up: {blocks laid when last counted, the tick it last changed}. */
+    private static final Map<String, long[]> GOING = new java.util.concurrent.ConcurrentHashMap<>();
+
     /** Buildings left half built: a site given up with blocks on it, or a building of the register far short of
      *  its drawing. */
     static final class HalfBuilt implements Check {
@@ -313,6 +316,18 @@ public final class TownAudit {
             }
             for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(v.id()).entrySet()) {
                 r.measure("going_up/" + e.getKey(), 1);
+                if (e.getKey().equals("fortify") || !BuildGoal.STRUCTURES.contains(e.getKey())) continue;
+                // A building going up that has not gained a block in two days has stalled: half built, and left so.
+                Ledger.Building b = new Ledger.Building(e.getKey(), e.getValue().anchor(), e.getValue().facing());
+                int laid = Restore.laid(level, v, b).size();
+                String key = v.id() + "/" + e.getKey() + "/" + b.anchor().asLong();
+                long[] was = GOING.get(key);
+                if (was == null || was[0] != laid) {
+                    GOING.put(key, new long[]{ laid, level.getGameTime() });
+                } else if (laid > 0 && level.getGameTime() - was[1] > 48000L) {
+                    n++;
+                    r.find(HALF_BUILT, b.anchor(), "the " + b.structure() + " going up has stood at " + laid + " blocks since tick " + was[1]);
+                }
             }
             r.measure("half_built", n);
         }
