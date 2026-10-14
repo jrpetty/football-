@@ -19,6 +19,7 @@ import com.jrpetty.mcassistant.entity.FolkTalk;
 import com.jrpetty.mcassistant.entity.Market;
 import com.jrpetty.mcassistant.entity.OutdoorBases;
 import com.jrpetty.mcassistant.entity.OutdoorShifts;
+import com.jrpetty.mcassistant.entity.OutdoorStage;
 import com.jrpetty.mcassistant.entity.OutdoorTalk;
 import com.jrpetty.mcassistant.entity.OutdoorWeather;
 import com.jrpetty.mcassistant.entity.Raids;
@@ -88,6 +89,7 @@ import java.util.function.Predicate;
  *     by it), and in at the bell; the beekeeper leaves the hives' honey in winter.</li>
  * <li><b>od07</b>: the paid shifts: a woodcutter's hand fells a marked tree into the stores and plants it back; a
  *     shearer shears a marked sheep of the flock, the wool to the stores.</li>
+ * <li><b>od08</b>: "/village outdoor stage" sets out every view for the pictures; "/village outdoor" reads the books.</li>
  * </ul>
  * Band x 2,020,000 to 2,039,999, z 66,000; a batch each.
  */
@@ -235,6 +237,10 @@ public class OutdoorTradesGameTests {
             if (OutdoorTalk.ask(StationTask.valueOf(ph[0]), ph[1]) == null) unheard.add(ph[0] + ": \"" + ph[1] + "\"");
         }
         helper.assertTrue(OutdoorTalk.ask(StationTask.FARM, "Could I have 8 bread?") == null, "the stores' words are not the farmer's");
+        helper.assertTrue(OutdoorTalk.ask(StationTask.RANCH, "Tell me about your horse") == null
+            && OutdoorTalk.ask(StationTask.HUNT, "Where do you hide when it rains?") == null
+            && OutdoorTalk.ask(StationTask.REDSTONE, "Do you like lamps?") == null
+            && OutdoorTalk.ask(StationTask.WOOD, "What wood is best?") == null, "talk of a thing buys nothing: a sale is asked for");
         helper.assertTrue(Divers.meant("Have you got my clay yet?") && Divers.meant("Could you dive for 16 clay?"), "the diver's buttons are its words");
         helper.assertTrue(EmeraldTrader.meant("What do the villagers sell?") && EmeraldTrader.meant("Find us a Mending book"),
             "the emerald trader's buttons are its words");
@@ -358,6 +364,7 @@ public class OutdoorTradesGameTests {
             Kit.log("od03 across at tick " + helper.getTick() + ": the player at " + pl.blockPosition().toShortString() + "; coins " + coins0 + " -> "
                 + Market.coinsHeld(pl) + "; fares " + fares0 + " -> " + c.fares + ", players " + c.players);
             Kit.noLeftoverPlayers(level);
+            Ferries.weatherForTests(null);
             helper.assertTrue(asked[0].contains("In you get"), "handed in behind the ferryman: " + asked[0]);
             helper.assertTrue(pl.getX() > x0 + 5, "set down on the far landing: " + pl.blockPosition().toShortString());
             helper.assertTrue(Market.coinsHeld(pl) == coins0 - Ferries.FARE && c.fares == fares0 + Ferries.FARE, "a coin of fare paid");
@@ -609,6 +616,32 @@ public class OutdoorTradesGameTests {
             helper.assertTrue(st != null && st[0] >= 1, "planted back: the task done and paid");
             helper.assertTrue(tookShear.isEmpty() && shearTask != null && shearTask.contains("sheep"), "a marked sheep to shear: " + shearTask);
             helper.assertTrue(sh.isSheared() && wool1 > wool0 && st2 != null && st2[0] >= 1, "shorn, the wool into the stores, the task paid");
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ od08: the stage for the pictures, and the books
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "od08_stage")
+    public static void od08_stage(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        int x = 2032000;
+        List<VillageFolkEntity> folk = town(helper, x, DAY + 3000, StationTask.NONE, StationTask.NONE);
+        UUID id = folk.get(0).ownerId();
+        helper.runAtTickTime(5, () -> {
+            Kit.hold(level, x + 200, Z, 64);
+            Kit.prepare(level, x + 200, Z, 64);
+            List<String> views = OutdoorStage.stage(level, Kit.surface(level, x + 200, Z));
+            List<String> names = new ArrayList<>();
+            for (String v : views) if (v.startsWith("VIEW ")) names.add(v.split(" ")[1]);
+            List<IronGolem> golems = level.getEntitiesOfClass(IronGolem.class, new AABB(new BlockPos(x + 200, -64, Z)).inflate(48, 400, 48));
+            List<String> books = OutdoorStage.lines(level, id);
+            Kit.log("od08 views " + names + "; golems " + golems.size() + "; the books " + books);
+            for (net.minecraft.world.entity.Entity e : level.getEntitiesOfClass(net.minecraft.world.entity.Entity.class,
+                    new AABB(new BlockPos(x + 200, -64, Z)).inflate(48, 400, 48), e -> e.getTags().contains("folk_lineup"))) e.discard();
+            helper.assertTrue(names.containsAll(List.of("trades", "lodge-front", "lodge-inside", "barn", "golem")), "every view staged: " + names);
+            helper.assertTrue(golems.size() == 1, "the player's golem stood up on the stage: " + golems.size());
+            helper.assertTrue(books.size() >= 3 && books.get(0).startsWith("Hunter's lodge"), "the town's outdoor books in words: " + books);
             helper.succeed();
         });
     }

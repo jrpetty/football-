@@ -123,19 +123,21 @@ public final class OutdoorTalk {
     @Nullable
     public static Ask ask(StationTask trade, String text) {
         String t = text == null ? "" : text.toLowerCase(Locale.ROOT);
+        // A sale or an order wants words that ask for one: "tell me about your horse" buys nothing.
         boolean buy = has(t, "buy", "sell me", "could i have", "can i have", "i'd like", "some of your");
         return switch (trade) {
             case FARM -> has(t, "growing", "your crops", "your field", "the harvest") ? Ask.GROWING
-                : has(t, "produce", "vegetable") || buy && sold(PRODUCE, t) ? Ask.PRODUCE : null;
-            case WOOD -> has(t, "timber", "lumber") || buy && has(t, " log", "wood") ? Ask.TIMBER : null;
-            case FISH -> has(t, "boat", "come out", "go out with", "sail") ? Ask.BOAT
-                : has(t, "fresh fish") || buy && (t.contains("fish") || sold(FISH, t)) ? Ask.FISH : null;
+                : buy && (has(t, "produce", "vegetable") || sold(PRODUCE, t)) ? Ask.PRODUCE : null;
+            case WOOD -> has(t, "timber", "lumber", " log", "wood") && (buy || t.contains("order")) ? Ask.TIMBER : null;
+            case FISH -> has(t, "on the boat", "come out", "go out with", "out fishing with", "sail with") ? Ask.BOAT
+                : buy && (t.contains("fish") || sold(FISH, t)) ? Ask.FISH : null;
             case HUNT -> has(t, "come hunting", "go hunting", "hunt with", "take me hunting", "hunting with") ? Ask.HUNT
-                : has(t, "leather", "feather", "hide") ? Ask.HIDES : null;
-            case RANCH -> t.contains("horse") ? Ask.HORSE : t.contains("wool") || has(t, "fleece") ? Ask.WOOL : null;
-            case FERRY -> has(t, "across", "cross", "row me", "the other side", "far bank") ? Ask.ACROSS : null;
+                : buy && has(t, "leather", "feather", "hide") ? Ask.HIDES : null;
+            case RANCH -> has(t, "buy", "sell me") && t.contains("horse") ? Ask.HORSE : buy && has(t, "wool", "fleece") ? Ask.WOOL : null;
+            case FERRY -> has(t, "across", "cross over", "cross the", "row me", "the other side", "far bank") ? Ask.ACROSS : null;
             case GOLEMS -> t.contains("golem") && (buy || has(t, "build", "make", "for my", "for me")) ? Ask.GOLEM : null;
-            case REDSTONE -> has(t, "light my", "light the", "lamp", "street light", "lights on my") ? Ask.LAMPS : null;
+            case REDSTONE -> has(t, "light my", "light up my", "light the street", "lamp on", "lamp post", "street lamp", "street light")
+                ? Ask.LAMPS : null;
             case MINE -> buy && (has(t, "coal", " ore", "raw iron", "raw copper", "raw gold") || sold(ORE, t)) ? Ask.ORE : null;
             case FLETCHER -> buy && t.contains("arrow") ? Ask.ARROWS : null;
             default -> null;
