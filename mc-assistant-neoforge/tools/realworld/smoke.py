@@ -3581,6 +3581,46 @@ def redstone_stage(r, look, cx, cz):
     say("alive after the redstone works: %s" % client_alive())
 
 
+def paths_stage(r, look, cx, cz):
+    """[paths] The town's ways in a grown town (entity/Footways, DoorWays, StuckSpots, HouseSigns, WayAudit). The homes'
+    signs are seen to and the doors' paths laid on the spot (/village paths signs, /village paths now), then the
+    pictures: a street of homes with their household's names and trades by the doors, four homes' doors close to (the
+    sign, the paved path out to the street and its lamp), and the same street at night with its lamps lit. Then
+    /village paths: the doors reached from the heart, the lots, the square and the stuck spots, in words."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    here = "execute positioned %d %d %d run " % (cx, hy + 1, cz)
+    say("paths signs: " + r.cmd(here + "village paths signs")[:300])
+    say("paths now: " + r.cmd(here + "village paths now")[:300])
+    out = r.cmd(here + "village paths views")
+    say("paths views: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no homes with doors to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("34-paths-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("street", "1-street-of-signs", 10)
+    for i in range(1, 5):
+        shoot("home-%d" % i, "%d-home-%d-sign-and-path" % (i + 1, i), 8)
+    r.cmd("time set 18000")
+    time.sleep(4)
+    shoot("street", "6-street-at-night", 8)
+    r.cmd("time set 6000")
+    say("paths: " + r.cmd(here + "village paths")[:1500])
+    say("alive after the town's ways: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

@@ -185,8 +185,95 @@ public final class WayAudit {
         return out;
     }
 
-    /** Which way a building's door faces, in a word. */
-    static String facing(Direction d) {
-        return d.getSerializedName();
+    // ------------------------------------------------------------------ /village paths
+
+    /**
+     * /village paths: the town's ways in words (the doors, the lots, the square, the stuck spots). {@code views}: where to
+     * stand to see the signs by the homes' doors and the paths to the street (VIEW lines, for the pictures). {@code signs}
+     * (operators): every home's sign seen to now, out of the stores. {@code now} (operators): a few rounds of the doors'
+     * ways and paths, done on the spot.
+     */
+    public static com.mojang.brigadier.builder.LiteralArgumentBuilder<net.minecraft.commands.CommandSourceStack> command() {
+        return net.minecraft.commands.Commands.literal("paths")
+            .executes(ctx -> {
+                Villages.Village v = Quarters.near(ctx);
+                if (v == null) {
+                    ctx.getSource().sendFailure(net.minecraft.network.chat.Component.literal("No village yet."));
+                    return 0;
+                }
+                String text = "THE TOWN'S WAYS " + Villages.name(v.id()) + ": " + String.join(" | ", report(ctx.getSource().getLevel(), v));
+                ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(text), false);
+                return 1;
+            })
+            .then(net.minecraft.commands.Commands.literal("views").executes(ctx -> {
+                Villages.Village v = Quarters.near(ctx);
+                if (v == null) return 0;
+                List<String> views = views(ctx.getSource().getLevel(), v);
+                ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("PATHS | " + String.join(" | ", views)), false);
+                return views.size();
+            }))
+            .then(net.minecraft.commands.Commands.literal("signs").requires(src -> src.hasPermission(2)).executes(ctx -> {
+                Villages.Village v = Quarters.near(ctx);
+                if (v == null) return 0;
+                ServerLevel level = ctx.getSource().getLevel();
+                int n = 0;
+                TownJobs.instantForTests(true);
+                try {
+                    for (Ledger.Building b : Ledger.buildings(v.id())) {
+                        if (HouseSigns.named(b.structure()) && TownLife.addressSign(level, v.id(), v.centre(), b, v, false)) n++;
+                    }
+                } finally {
+                    TownJobs.instantForTests(false);
+                }
+                int done = n;
+                ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("PATHS | " + done + " home signs up"), false);
+                return n;
+            }))
+            .then(net.minecraft.commands.Commands.literal("now").requires(src -> src.hasPermission(2)).executes(ctx -> {
+                Villages.Village v = Quarters.near(ctx);
+                if (v == null) return 0;
+                ServerLevel level = ctx.getSource().getLevel();
+                int n = 0;
+                TownJobs.instantForTests(true);
+                try {
+                    for (int i = 0; i < 4; i++) {
+                        for (Ledger.Building b : Ledger.buildings(v.id())) {
+                            if (Footways.skip(b.structure())) continue;
+                            for (DoorWays.Door d : DoorWays.doorsOf(level, b)) {
+                                if (DoorWays.mend(level, v, d, 16) > 0) n++;
+                                else if (DoorWays.approach(level, v, d, 16) > 0) n++;
+                            }
+                        }
+                    }
+                } finally {
+                    TownJobs.instantForTests(false);
+                }
+                int done = n;
+                ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("PATHS | " + done + " pieces of work done at the doors"), false);
+                return n;
+            }));
+    }
+
+    /** Where to stand for the pictures: before a few homes' doors (their signs), and along a street of them. */
+    public static List<String> views(ServerLevel level, Villages.Village v) {
+        List<String> out = new ArrayList<>();
+        int homes = 0;
+        for (Ledger.Building b : Ledger.buildings(v.id())) {
+            if (!HouseSigns.named(b.structure())) continue;
+            BlockPos door = TownLife.fittings(b).door();
+            if (door == null) continue;
+            Direction front = b.facing().getOpposite();
+            BlockPos eye = door.relative(front, 5).relative(front.getClockWise(), 2).above(2);
+            out.add("VIEW home-" + (++homes) + " " + eye.getX() + " " + eye.getY() + " " + eye.getZ() + " "
+                + door.getX() + " " + (door.getY() + 1) + " " + door.getZ());
+            if (homes == 1) {
+                // Down the street the first home stands on: a row of doors and their signs.
+                BlockPos far = door.relative(front, 3).relative(front.getClockWise(), 14).above(4);
+                BlockPos aim = door.relative(front, 1).relative(front.getCounterClockWise(), 6).above(1);
+                out.add("VIEW street " + far.getX() + " " + far.getY() + " " + far.getZ() + " " + aim.getX() + " " + aim.getY() + " " + aim.getZ());
+            }
+            if (homes >= 4) break;
+        }
+        return out;
     }
 }

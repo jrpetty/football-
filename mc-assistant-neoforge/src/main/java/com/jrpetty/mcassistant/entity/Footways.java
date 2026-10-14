@@ -38,6 +38,18 @@ public final class Footways {
 
     private Footways() {}
 
+    /** The paths work live (the lots kept apart, the paths to doors laid, the stuck spots mended); off only for the tests'
+     *  look at a town grown without it. */
+    private static volatile boolean live = true;
+
+    public static boolean live() {
+        return live;
+    }
+
+    public static void liveForTests(boolean on) {
+        live = on;
+    }
+
     /** The furthest a folk drops without thinking twice (AssistantEntity.CAREFUL_DROP). */
     public static final int DROP = 3;
 
@@ -195,6 +207,7 @@ public final class Footways {
      * to another lot instead.
      */
     public static boolean crowds(UUID village, String project, int x, int z, Direction back) {
+        if (!live) return false;
         int[] mine = footprint(project, new BlockPos(x, 0, z), back, true);
         for (Ledger.Building b : Ledger.buildings(village)) {
             if (skip(b.structure())) continue;

@@ -265,6 +265,7 @@ public final class DoorWays {
      * (or nothing the town can do: a door with no street straight out of it), -1 if it waits for a hand.
      */
     public static int approach(ServerLevel level, Villages.Village v, Door d, int budget) {
+        if (!Footways.live()) return 0;
         List<BlockPos> way = pathTo(v, d);
         if (way == null) return 0;
         int done = 0;
@@ -401,6 +402,17 @@ public final class DoorWays {
     /** Is the way in at this door one a folk can walk? */
     public static boolean walkable(Level level, Door d) {
         return next(level, d) == null;
+    }
+
+    /** Tests: the way straight out of a door to its street. */
+    @Nullable
+    public static List<BlockPos> pathToForTests(Villages.Village v, Door d) {
+        return pathTo(v, d);
+    }
+
+    /** Tests: is this bare earth, not a path? */
+    public static boolean earthForTests(BlockState st) {
+        return earth(st);
     }
 
     public static void resetForTests() {

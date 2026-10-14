@@ -66,6 +66,8 @@ final class Kit {
         AssistantEntity.resetRegistryForTests();
         com.jrpetty.mcassistant.entity.MineStairs.resetForTests(level);
         com.jrpetty.mcassistant.entity.DoorWays.resetForTests();
+        com.jrpetty.mcassistant.entity.StuckSpots.resetForTests();          // [paths] the stuck spots forgotten
+        com.jrpetty.mcassistant.entity.Footways.liveForTests(true);         // [paths] the paths work on, as in a game
         // What the town's works build is checked here at once; who builds it, by hand, in t54.
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
         // [police] The watch stood down to its old round for the other features' tests; PoliceGameTests stand it up.

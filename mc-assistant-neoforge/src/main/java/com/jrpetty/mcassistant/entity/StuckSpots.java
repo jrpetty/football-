@@ -153,7 +153,7 @@ public final class StuckSpots {
         s.times++;
         s.last = level.getGameTime();
         Ledger.note(id, "paths.stuck", Integer.toString(count(id, "paths.stuck") + 1));
-        if (s.mended >= MOST_MENDS) return;
+        if (s.mended >= MOST_MENDS || !Footways.live()) return;
         Direction d = toward(here, p);
         if (d == null) return;
         if (mend(level, v, a, here, d, cause)) {
