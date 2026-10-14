@@ -1803,6 +1803,9 @@ public class VillageGameTests {
     public static void t33_raid(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
+        // [defence] The old way, kept behind its switch: the watch on the walls, everybody else indoors (the muster at the
+        // square, which a town does now, is DefenceGameTests' dw04).
+        com.jrpetty.mcassistant.entity.Muster.forTests(false);
         level.setDayTime(14000);
         level.updateSkyBrightness();
         Kit.hold(level, 14400, 12000, 56);

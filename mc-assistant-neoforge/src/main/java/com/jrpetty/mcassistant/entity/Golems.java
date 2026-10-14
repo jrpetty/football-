@@ -788,6 +788,7 @@ public final class Golems {
         if (!t.kept.isEmpty() && Seasons.season(id, level.getDayTime() / 24000L) != Seasons.Season.WINTER) thaw(level, v, t);
         for (Kept k : t.kept) {
             if (!(level.getEntity(k.golem) instanceof Mob g) || !g.isAlive()) continue;
+            if (k.kind != Kind.SNOW && Muster.golem(level, v, g)) continue;   // [defence] into the ring round the square
             if (!g.hasRestriction()) g.restrictTo(k.post, k.kind == Kind.SNOW ? 2 : BEAT);
             if (k.kind == Kind.SNOW) continue;                        // up on the tower: no way back up a ladder for it
             LivingEntity target = g.getTarget();

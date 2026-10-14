@@ -3999,6 +3999,7 @@ public class VillageFolkEntity extends AssistantEntity {
         int fx = c.getX() - villageCentre.getX(), fz = c.getZ() - villageCentre.getZ();
         if (Math.max(Math.abs(fx), Math.abs(fz)) - grown <= Villages.FIRST_BLOCK) return;
         if (Villages.builtOver(id, fx, fz, grown, grown)) return;
+        if (CastleWall.fieldKeptOff(id, fx, fz, grown)) return;              // [defence] off the town wall's ring
         for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
             BlockPos a = b.anchor();
             if (Math.max(Math.abs(a.getX() - c.getX()), Math.abs(a.getZ() - c.getZ())) <= grown + 8) return;
@@ -4701,6 +4702,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 if (p == null || Math.abs(p.getY() - heart.getY()) > FIELD_CLIMB || taken(p, FIELD_MOST)) continue;
                 if (Bonds.overBorder(town, heart, p, FIELD_MOST)) continue;           // that side of the border is theirs
                 if (Villages.builtOver(town, f[0], f[1], FIELD_MOST, FIELD_MOST) || buildingNear(town, p, FIELD_MOST + 4)) continue;
+                if (CastleWall.fieldKeptOff(town, f[0], f[1], FIELD_MOST)) continue;   // [defence] off the town wall's ring
                 if (soilField(p) || farmable(p)) return p;
             }
             return null;
@@ -5278,6 +5280,7 @@ public class VillageFolkEntity extends AssistantEntity {
      *  its bed across the town, the same, children too: not a walk through the streets with the band in them. */
     @Override
     protected boolean bedtime() {
+        if (Muster.gather(this)) return true;               // [defence] the bell: to the square, not to bed
         if (Raids.underAlarm(ownerId()) && (bedPos() == null && !isBaby() || WatchClears.bedFar(this))) return Raids.shelter(this);
         // The day of rest, by day: the service, the games, walking out — not bed at noon.
         if (!Raids.underAlarm(ownerId()) && RestDay.now(ownerId(), level().getDayTime()) != null) {

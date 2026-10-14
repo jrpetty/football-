@@ -138,6 +138,7 @@ public final class BigWorks {
         List<Proposal> out = new ArrayList<>();
         Map<Work, Integer> want = new LinkedHashMap<>();
         for (Work w : Work.values()) {
+            if (w == Work.WALL && CastleWall.live()) continue;   // [defence] the castle wall is the town's wall
             int s = wanted(level, v, w);
             if (s > 0) want.put(w, s);
         }
