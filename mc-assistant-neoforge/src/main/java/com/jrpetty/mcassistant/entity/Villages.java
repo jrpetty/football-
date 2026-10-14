@@ -942,8 +942,9 @@ public final class Villages {
 
     /** Is this village big enough (and far enough on) to want this trade at all? */
     public static boolean wants(@Nullable UUID villageId, AssistantEntity.StationTask trade) {
-        List<AssistantEntity> folk = folkOf(villageId);
-        int total = Math.max(1, Math.max(folk.size(), headcount(villageId)));
+        // [scale] The headcount is never below the folk loaded (it is the higher of them and the roll): the list of
+        // them was made only to be measured, and this is asked for every trade of every share a folk reckons.
+        int total = Math.max(1, headcount(villageId));
         Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         for (Slot slot : SLOTS) if (slot.trade() == trade) return wantedHere(slot, villageId, total, at);
         return false;

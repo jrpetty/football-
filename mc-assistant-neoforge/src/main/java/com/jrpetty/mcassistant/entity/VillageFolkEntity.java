@@ -319,6 +319,13 @@ public class VillageFolkEntity extends AssistantEntity {
         }
     }
 
+    /** [scale] Standing still out of everybody's sight, the game's movement is skipped for the tick (FolkLod). */
+    @Override
+    public void travel(net.minecraft.world.phys.Vec3 input) {
+        if (!level().isClientSide && FolkLod.restsUnseen(this, input)) return;
+        super.travel(input);
+    }
+
     @Override
     public void aiStep() {
         super.aiStep();
@@ -6657,11 +6664,14 @@ public class VillageFolkEntity extends AssistantEntity {
         int mine = tradeLevel(wanted) + Quirks.pull(this, wanted);                 // [perks] a quirk's pull to a trade
         VillageFolkEntity best = null;
         int bestLevel = mine;
+        // [scale] Whether a trade has hands over, reckoned once a trade, not once a folk: the reckoning goes over the
+        // whole town, and asked for each of its folk in turn it was the town's size squared, every agenda.
+        java.util.Map<StationTask, Boolean> over = new java.util.EnumMap<>(StationTask.class);
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || f == this || f.isBaby() || !f.isAlive()) continue;
             StationTask theirs = f.stationTask();
             if (theirs == wanted || theirs == StationTask.NONE && !f.isAutonomous()) continue;
-            if (theirs != StationTask.NONE && !Villages.overStaffed(village, theirs)) continue;
+            if (theirs != StationTask.NONE && !over.computeIfAbsent(theirs, t -> Villages.overStaffed(village, t))) continue;
             int lv = f.tradeLevel(wanted) + Quirks.pull(f, wanted);               // [perks] Green Fingers to the fields...
             if (lv > bestLevel) { bestLevel = lv; best = f; }
         }

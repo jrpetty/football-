@@ -56,11 +56,13 @@ public class FolkNavigation extends GroundPathNavigation {
     private long deferredAt = Long.MIN_VALUE;
     private int deferredRun;
 
-    private static boolean budgetInTests;
-
-    /** Tests: the budget in force on the test server too (the perf probes), or not. */
-    public static void budgetForTests(boolean on) {
-        budgetInTests = on;
+    /**
+     * Are the savings for scale in force (FolkLod.scaling)? Everywhere but the game tests' server, where only a test
+     * that asks has them: a search put off by a busy machine's clock, or a walk re-planned later because nobody is
+     * near (nobody ever is, in a test), would make the other features' tests depend on them.
+     */
+    private boolean scaling() {
+        return FolkLod.scaling(this.level);
     }
 
     /** How many folk path searches have been put off a tick for want of budget since the server started. */
@@ -83,9 +85,7 @@ public class FolkNavigation extends GroundPathNavigation {
         }
         long budget = com.jrpetty.mcassistant.AssistantConfig.pathBudgetMs() * 1_000_000L;
         if (budget <= 0 || spentNanos < budget) return true;
-        // On the game tests' server, only when a test asks: a search put off by a busy machine's clock would make
-        // the other features' tests depend on how busy it is.
-        if (this.level.getServer() instanceof net.minecraft.gametest.framework.GameTestServer && !budgetInTests) return true;
+        if (!scaling()) return true;
         if (this.path != null && !this.path.isDone() && targets.contains(getTargetPos())) return true;
         if (deferredAt == tick - 1 && deferredRun >= MOST_DEFERRED_TICKS) return true;
         if (this.level.getNearestPlayer(this.mob, WATCHED) != null) return true;
@@ -93,6 +93,143 @@ public class FolkNavigation extends GroundPathNavigation {
         deferredAt = tick;
         deferredInAll++;
         return false;
+    }
+
+    /** [scale] Out of a player's close sight, a walk is planned again for a block changed by it at most this often
+     *  (the game's own is once a second): a farmer's tilling beside a neighbour's path re-planned it every second. */
+    private static final long UNWATCHED_RECOMPUTE_TICKS = 60L;
+
+    /**
+     * [scale] The game re-plans a walk whenever a block changes beside it, once a second at most. Out of a player's close
+     * sight, once in three: the walk goes on as planned meanwhile (as it does for the second the game waits), and a
+     * block that truly bars it is met by the walk's own stuck checks as ever.
+     */
+    @Override
+    public void recomputePath() {
+        if (this.level.getGameTime() - this.timeLastRecompute < UNWATCHED_RECOMPUTE_TICKS && scaling()
+                && this.level.getNearestPlayer(this.mob, WATCHED) == null) return;
+        super.recomputePath();
+    }
+
+    // ------------------------------------------------------------ [scale] walks out of everybody's sight (FolkLod)
+
+    /** A walk shorter than this is walked: it costs little, and it is mostly a step about a field or a bench. */
+    private static final double TRAVEL_FROM = 8.0;
+    /** A route is this much longer than the straight line, about (round the houses, along the streets). */
+    private static final double DETOUR = 1.2;
+    /** How fast a folk's body goes on the flat at a given speed (blocks a tick per speed squared: the game's
+     *  ground friction and its mobs' walking, worked through: 0.32 walks 0.30 blocks a tick). */
+    private static final double PACE = 2.92;
+    /** The slowest and fastest a travelled walk goes, blocks a tick. */
+    private static final double SLOWEST = 0.05, FASTEST = 0.6;
+    /** How often a travelled walk looks for a player come into sight (then the rest is walked). */
+    private static final int LOOK_EVERY = 20;
+
+    /** Where a travelled walk ends, and the game tick it gets there (-1: not yet reckoned, the speed not yet set). */
+    @Nullable private BlockPos travelTo;
+    @Nullable private Path travelPath;
+    private long arriveAt = -1;
+    /** Walks travelled all told (the perf probes read it). */
+    private static long travelledInAll;
+
+    /** Is a walk being travelled out of sight just now (the folk stands where it set out till it is there)? */
+    public boolean travelling() {
+        return travelTo != null && this.path != null && this.path == travelPath && !this.path.isDone();
+    }
+
+    /** How many walks have been travelled out of sight since the server started. */
+    public static long travelledInAll() {
+        return travelledInAll;
+    }
+
+    /** Walk to a place: travelled if nobody can see either end (FolkLod), else walked as ever. */
+    @Override
+    public boolean moveTo(double x, double y, double z, double speed) {
+        return travel(x, y, z, speed) || super.moveTo(x, y, z, speed);
+    }
+
+    @Override
+    public boolean moveTo(double x, double y, double z, int accuracy, double speed) {
+        return travel(x, y, z, speed) || super.moveTo(x, y, z, accuracy, speed);
+    }
+
+    /**
+     * A walk out of everybody's sight, taken as travel: a village folk on its own business (not hired, fighting, riding
+     * or on a lead), going further than {@link #TRAVEL_FROM} and no further than a search would reach, both ends out of
+     * sight, and somewhere it can stand at the end (the target or a block beside it) in loaded ground. True if so.
+     */
+    private boolean travel(double x, double y, double z, double speed) {
+        if (!(this.mob instanceof VillageFolkEntity f) || f.ownerId() == null || f.isHired() || f.getTarget() != null
+                || f.isPassenger() || f.isLeashed() || f.isInWaterOrBubble() || !f.onGround()) return false;
+        // Asked again for where it is already travelling (a goal re-issues its walk every tick): the travel goes on.
+        if (travelling() && this.travelTo.distToCenterSqr(x, y, z) <= 3.0) {
+            this.speedModifier = speed;
+            return true;
+        }
+        double d2 = f.distanceToSqr(x, y, z);
+        if (d2 < TRAVEL_FROM * TRAVEL_FROM || d2 > REACH * REACH) return false;
+        if (!FolkLod.unseen(f) || !FolkLod.unseenAt(this.level, x, y, z)) return false;
+        BlockPos to = FolkLod.standAt(this.level, BlockPos.containing(x, y, z), f.position());
+        if (to == null) return false;
+        net.minecraft.world.level.pathfinder.Node end = new net.minecraft.world.level.pathfinder.Node(to.getX(), to.getY(), to.getZ());
+        Path travel = new Path(java.util.List.of(end), to, true);
+        if (!super.moveTo(travel, speed)) return false;
+        this.travelTo = to;
+        this.travelPath = this.path;
+        this.arriveAt = -1;
+        travelledInAll++;
+        return true;
+    }
+
+    /** A travelled walk counts its time, and at its end the folk is there; one a player comes to see is walked on. */
+    @Override
+    public void tick() {
+        if (this.travelTo != null) {
+            if (!travelling()) {
+                this.travelTo = null;
+            } else {
+                travelTick();
+                return;
+            }
+        }
+        super.tick();
+    }
+
+    private void travelTick() {
+        long now = this.level.getGameTime();
+        BlockPos to = this.travelTo;
+        if (this.arriveAt < 0) {
+            double speed = this.speedModifier * this.mob.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.MOVEMENT_SPEED);
+            double pace = Math.max(SLOWEST, Math.min(FASTEST, PACE * speed * speed));
+            this.arriveAt = now + (long) Math.ceil(Math.sqrt(to.distToCenterSqr(this.mob.position())) * DETOUR / pace);
+        }
+        if (now >= this.arriveAt) {
+            this.travelTo = null;
+            if (FolkLod.standable(this.level, to)) {
+                this.mob.teleportTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
+                this.mob.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
+                this.path.setNextNodeIndex(this.path.getNodeCount());
+            } else {
+                // The ground changed while it was on its way: it walks from where it is.
+                double sp = this.speedModifier;
+                this.path = null;
+                super.moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, sp);
+            }
+            return;
+        }
+        // Somebody has come into sight of it: the rest of the way is walked, seen.
+        if ((now + this.mob.getId()) % LOOK_EVERY == 0 && !FolkLod.unseen(this.mob)) {
+            this.travelTo = null;
+            double sp = this.speedModifier;
+            this.path = null;
+            super.moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, sp);
+        }
+    }
+
+    @Override
+    public void stop() {
+        this.travelTo = null;
+        super.stop();
     }
 
     @Nullable

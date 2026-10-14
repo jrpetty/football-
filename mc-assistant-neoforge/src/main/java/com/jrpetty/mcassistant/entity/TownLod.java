@@ -68,8 +68,9 @@ public final class TownLod {
     private static final int AREA_MARGIN_CHUNKS = 2;
     /** A town is measured over at least this many ticks of being watched before the rates are taken. */
     private static final long LEARN_EVERY = 24000L;
-    /** The rates learned are a running mean over about this many days (an older day counts for less). */
-    private static final double LEARN_SPAN_DAYS = 3.0;
+    /** The rates learned are a running mean over about this many days, a week (an older day counts for less): long
+     *  enough that a day's noise (a chest emptied for a build the day before the count) does not set the rate. */
+    private static final double LEARN_SPAN_DAYS = 7.0;
     /** Learned over less than this, a town is simulated at the server's mean rates instead of its own. */
     private static final double MIN_OWN_DAYS = 0.5;
     /** How many lots of a woken town's goods go into (or out of) its stores in one tick. */

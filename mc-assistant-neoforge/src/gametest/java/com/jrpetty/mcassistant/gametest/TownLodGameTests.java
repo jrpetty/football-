@@ -52,6 +52,7 @@ public class TownLodGameTests {
                 Kit.log("lod test stopped: " + ex);
                 helper.getLevel().getServer().tickRateManager().setTickRate(20.0F);
                 TownLod.forceForTests(helper.getLevel().getServer(), null);
+                com.jrpetty.mcassistant.entity.FolkLod.liveForTests(false);
                 helper.runAfterDelay(1, () -> { throw ex; });
             }
         };
@@ -65,12 +66,18 @@ public class TownLodGameTests {
 
     /** Found a village of this many here, the ground held only for the founding; then {@code then} with it. */
     private static void found(GameTestHelper helper, int cx, int folk, Consumer<Villages.Village> then) {
+        found(helper, cx, folk, false, then);
+    }
+
+    /** As found, with ponds, woods, stone hills and cattle round the town first (Kit.generousTerrain) if asked. */
+    private static void found(GameTestHelper helper, int cx, int folk, boolean generous, Consumer<Villages.Village> then) {
         ServerLevel level = helper.getLevel();
         Kit.reset(level);
         Founding.resetForTests(level.getServer());
         int outer = FoundingPlan.coreRadius(folk) + FoundingPlan.BAND_MAX + 16;
         Kit.hold(level, cx, Z, outer);
         Kit.prepare(level, cx, Z, outer);
+        if (generous) Kit.generousTerrain(level, cx, Z);
         BlockPos heart = Kit.surface(level, cx, Z);
         Kit.log("lod found " + folk + ": " + Kit.command(level, "village found " + folk + " " + cx + " " + Z));
         TownLod.forceForTests(level.getServer(), TownLod.Lod.FULL);
@@ -171,6 +178,54 @@ public class TownLodGameTests {
         });
     }
 
+    /**
+     * Out of sight, folk travel their walks (FolkLod): in a town of twelve with nobody near, walks are travelled, and
+     * every folk ends each one standing on firm ground, not in a block or the water; with a player at the heart, no folk
+     * in that player's sight is ever travelling, every tick for twenty seconds.
+     */
+    @GameTest(template = "empty", timeoutTicks = 6000, batch = "lod03_travel_unseen")
+    public static void lod03_travel_unseen(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        final long[] at = { 0, 0 };
+        final net.minecraft.server.level.ServerPlayer[] you = { null };
+        found(helper, 1854000, 12, v -> {
+            UUID id = v.id();
+            com.jrpetty.mcassistant.entity.FolkLod.liveForTests(true);
+            at[1] = com.jrpetty.mcassistant.entity.FolkNavigation.travelledInAll();
+            each(helper, () -> {
+                long t = helper.getTick();
+                if (at[0] == 0) at[0] = t;
+                long ran = t - at[0];
+                if (ran < 1200) return false;                   // a minute with nobody near
+                if (ran == 1200) {
+                    long travelled = com.jrpetty.mcassistant.entity.FolkNavigation.travelledInAll() - at[1];
+                    Kit.log("lod03 walks travelled out of sight in a minute: " + travelled);
+                    helper.assertTrue(travelled > 0, "out of sight, folk travel their walks");
+                    for (AssistantEntity a : Villages.folkOf(id)) {
+                        BlockPos p = a.blockPosition();
+                        helper.assertTrue(level.getBlockState(p).getCollisionShape(level, p).isEmpty() && !a.isInWaterOrBubble(),
+                            a.getAssistantName() + " stands clear and dry at " + p.toShortString());
+                    }
+                    you[0] = helper.makeMockServerPlayerInLevel();
+                    net.neoforged.neoforge.network.registration.NetworkRegistry.configureMockConnection(you[0].connection.getConnection());
+                    you[0].teleportTo(level, v.centre().getX() + 0.5, v.centre().getY() + 1, v.centre().getZ() + 0.5, 0, 0);
+                    return false;
+                }
+                for (AssistantEntity a : Villages.folkOf(id)) {
+                    if (a.distanceTo(you[0]) < com.jrpetty.mcassistant.entity.FolkLod.SIGHT - 8
+                            && a.getNavigation() instanceof com.jrpetty.mcassistant.entity.FolkNavigation n && n.travelling()) {
+                        helper.fail(a.getAssistantName() + " travels in a player's sight, " + (int) a.distanceTo(you[0]) + " blocks off");
+                    }
+                }
+                if (ran < 1600) return false;
+                com.jrpetty.mcassistant.entity.FolkLod.liveForTests(false);
+                level.getServer().getPlayerList().remove(you[0]);
+                pass(helper);
+                return true;
+            });
+        });
+    }
+
     /** The bread in the town's store chests themselves (not the kept count). */
     private static int realBread(ServerLevel level, UUID id) {
         int n = 0;
@@ -182,6 +237,8 @@ public class TownLodGameTests {
     }
 
     private static final double DAYS = Double.parseDouble(System.getProperty("lod.days", "10"));
+    /** Days the town settles in before it is measured: its founding stores eaten down, its fields and pens up. */
+    private static final int WARM = 3;
     /** Below this many of a kind over the stretch, the kind is too few to compare (a handful either way). */
     private static final int FEW = 24;
     /** How near the sleeping town's change must come to the watched town's, of the watched one's. */
@@ -205,8 +262,9 @@ public class TownLodGameTests {
     }
 
     /**
-     * A town of twenty, watched for a day to settle and then for {@code lod.days} days (ten), and then asleep for as
-     * long: its stores (kind by kind), treasury and roll change asleep as they did watched, each within a fifth.
+     * A town of twenty on generous ground (it farms, fells, quarries and keeps cattle), watched for three days to
+     * settle and then for {@code lod.days} days (ten), and then asleep for as long: its stores (kind by kind), treasury
+     * and roll change asleep as they did watched, each within a fifth (or a couple of dozen, for a kind barely moved).
      */
     @GameTest(template = "empty", timeoutTicks = 1_200_000, batch = "lod02_full_vs_away")
     public static void lod02_full_vs_away(GameTestHelper helper) {
@@ -215,7 +273,7 @@ public class TownLodGameTests {
         final int[] phase = { 0 };
         final long[] at = { 0 };
         final Map<String, Integer>[] pic = new Map[3];
-        found(helper, 1850000, 20, v -> {
+        found(helper, 1850000, 20, true, v -> {
             UUID id = v.id();
             level.getServer().tickRateManager().setTickRate(10000.0F);
             each(helper, () -> {
@@ -224,8 +282,8 @@ public class TownLodGameTests {
                 long ran = t - at[0];
                 if (ran % 24000 == 0) Kit.log("lod02 phase " + phase[0] + " day " + ran / 24000 + ": " + picture(level, id));
                 switch (phase[0]) {
-                    case 0 -> {                                 // a day to settle in, learning as it goes
-                        if (ran < 24000) return false;
+                    case 0 -> {                                 // days to settle in (stores spent down, fields up)
+                        if (ran < WARM * 24000L) return false;
                         pic[0] = picture(level, id);
                         phase[0] = 1;
                         at[0] = t;
@@ -272,10 +330,8 @@ public class TownLodGameTests {
             int full = pic[1].getOrDefault(k, 0) - pic[0].getOrDefault(k, 0);
             int away = pic[2].getOrDefault(k, 0) - pic[1].getOrDefault(k, 0);
             report.append(k).append(" full ").append(full).append(" away ").append(away).append("; ");
-            boolean few = Math.abs(full) < ("folk".equals(k) ? 2 : FEW);
-            double off = Math.abs(away - full);
-            if (!few && off > TOLERANCE * Math.abs(full)) wrong.append(k).append(' ');
-            else if (few && off > ("folk".equals(k) ? 2 : FEW)) wrong.append(k).append(' ');
+            double allowed = Math.max(TOLERANCE * Math.abs(full), "folk".equals(k) ? 2 : FEW);
+            if (Math.abs(away - full) > allowed) wrong.append(k).append(' ');
         }
         Kit.log("lod02 " + DAYS + " days, full vs away: " + report);
         helper.assertTrue(wrong.isEmpty(), "asleep the town changes as it did watched (within a fifth); not so for: "

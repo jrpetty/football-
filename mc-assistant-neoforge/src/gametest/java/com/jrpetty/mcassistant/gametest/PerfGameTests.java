@@ -30,7 +30,7 @@ import java.util.UUID;
  *
  * <p>Before and after in the same run, on the same machine at the same moment: with {@code perf.alt} the run
  * alternates blocks of that many ticks between the towns' level of detail ("lod") and every town held awake in full
- * as before it ("all-awake", TownLod forced FULL and the path budget off), and totals each apart, the first {@code perf.settle} ticks of a
+ * as before it ("all-awake": TownLod forced FULL, FolkLod and the path budget off), and totals each apart, the first {@code perf.settle} ticks of a
  * block (the towns waking or going to sleep) left out of them and reported on their own.
  *
  * <p>Each window logs the wall ms per tick (avg and worst), the server thread's own CPU ms per tick (the honest
@@ -162,7 +162,7 @@ public class PerfGameTests {
             if (want != mode) {
                 mode = want;
                 com.jrpetty.mcassistant.entity.TownLod.liveForTests(true);
-                com.jrpetty.mcassistant.entity.FolkNavigation.budgetForTests(mode == 0);
+                com.jrpetty.mcassistant.entity.FolkLod.liveForTests(mode == 0);
                 com.jrpetty.mcassistant.entity.TownLod.forceForTests(server, mode == 1 ? com.jrpetty.mcassistant.entity.TownLod.Lod.FULL : null);
                 Kit.log("[PERF] phase " + phase + " day " + String.format("%.2f", ran / 24000.0) + ": " + MODE[mode]);
             }
@@ -187,7 +187,8 @@ public class PerfGameTests {
             Kit.log("[PERF] TOTAL waking and going to sleep: " + settling.line());
             com.jrpetty.mcassistant.entity.TownLod.forceForTests(server, null);
             com.jrpetty.mcassistant.entity.TownLod.liveForTests(false);
-            com.jrpetty.mcassistant.entity.FolkNavigation.budgetForTests(false);
+            com.jrpetty.mcassistant.entity.FolkLod.liveForTests(false);
+            if (player != null) server.getPlayerList().remove(player);
             over = true;
             server.tickRateManager().setTickRate(20.0F);
             helper.runAfterDelay(1, helper::succeed);      // from the framework's tick, not this listener
@@ -235,9 +236,10 @@ public class PerfGameTests {
             long heapMb = (rt.totalMemory() - rt.freeMemory()) >> 20;
             double tps = window.ticks * 1e9 / Math.max(1, System.nanoTime() - windowWall);
             Kit.log(String.format("[PERF] phase %d %s day %.2f %s tps %.0f | forced %d loaded %d | folk entities %d all %d"
-                    + " | heads %s| heap %d MB | paths put off %d", phase, MODE[Math.max(0, mode)], ran / 24000.0, window.line(), tps, ChunkLoad.forcedCount(),
+                    + " | heads %s| heap %d MB | paths put off %d, walks travelled %d", phase, MODE[Math.max(0, mode)], ran / 24000.0, window.line(), tps, ChunkLoad.forcedCount(),
                 level.getChunkSource().getLoadedChunksCount(), folk, entities, heads, heapMb,
-                com.jrpetty.mcassistant.entity.FolkNavigation.deferredInAll()));
+                com.jrpetty.mcassistant.entity.FolkNavigation.deferredInAll(),
+                com.jrpetty.mcassistant.entity.FolkNavigation.travelledInAll()));
             window.clear();
             windowWall = System.nanoTime();
         }
