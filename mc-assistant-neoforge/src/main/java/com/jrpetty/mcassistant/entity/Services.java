@@ -308,15 +308,21 @@ public final class Services {
     private static List<Item> names;
     private static List<String> nameWords;
 
-    /** The item a line of words names, longest name first ("iron pickaxe" before "iron"). */
+    /**
+     * The item a line of words names, longest name first ("iron pickaxe" before "iron"). Each item answers to its name
+     * in the server's language and to its id in words ("iron sword"), so a request is understood on a server whose
+     * language differs from the player's, or that has no names loaded at all (a dedicated server shows the key).
+     */
     @Nullable
     public static Item itemNamed(String text) {
         if (names == null) {
             List<Object[]> all = new ArrayList<>();
             for (Item it : BuiltInRegistries.ITEM) {
                 if (it == Items.AIR) continue;
-                String n = new ItemStack(it).getHoverName().getString().toLowerCase(Locale.ROOT);
-                if (n.length() >= 3) all.add(new Object[]{ it, n });
+                String shown = new ItemStack(it).getHoverName().getString().toLowerCase(Locale.ROOT);
+                String id = BuiltInRegistries.ITEM.getKey(it).getPath().replace('_', ' ');
+                if (shown.length() >= 3) all.add(new Object[]{ it, shown });
+                if (id.length() >= 3 && !id.equals(shown)) all.add(new Object[]{ it, id });
             }
             all.sort((a, b) -> ((String) b[1]).length() - ((String) a[1]).length());
             List<Item> its = new ArrayList<>();
