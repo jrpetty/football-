@@ -4355,6 +4355,34 @@ def main():
         wagons_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("wagons stage failed: %s" % e)
+    try:
+        town_blueprints_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("town blueprints stage failed: %s" % e)
+    try:
+        market_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("market stage failed: %s" % e)
+    try:
+        integrity_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("integrity stage failed: %s" % e)
+    try:
+        tidy_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("tidy stage failed: %s" % e)
+    try:
+        defence_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("defence stage failed: %s" % e)
+    try:
+        styles_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("styles stage failed: %s" % e)
+    try:
+        paths_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("paths stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
