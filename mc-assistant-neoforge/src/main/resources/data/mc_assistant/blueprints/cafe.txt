@@ -1,6 +1,8 @@
 # The cafe: a bright timber room with big windows on the street, a counter of
-# casks where the cook serves, a smoker and a bench behind it, little tables
-# with cloths and chairs round them, flowers by the door, lanterns overhead.
+# casks across the room where the cook serves (a gap in the middle to get behind it), and behind
+# it the way along to the smoker, the bench and the chests against the back wall; little tables
+# with cloths in the window either side of the door, a chair at each, flowers by the door,
+# lanterns overhead.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name cafe
 layer -1
@@ -17,10 +19,10 @@ layer 0
 .........
 .LwwwwwL.
 .wM.TCCwS
-.wQQQQ.w.
 .w.....w.
-.wP...Pw.
-.w>...<w.
+.wQQ.QQw.
+.w.....w.
+.wP<.>Pw.
 .LwwDwwL.
 ..*...*..
 layer 1
@@ -29,8 +31,8 @@ layer 1
 .W.....WS
 .G.....G.
 .G.....G.
-.GX...XG.
-.W.....W.
+.G.....G.
+.WX...XW.
 .LGG.GGL.
 .........
 layer 2
@@ -39,8 +41,8 @@ layer 2
 .W.....WS
 .W..j..W.
 .W.....W.
-.Wj...jW.
 .W.....W.
+.Wj...jW.
 .LWWWWWL.
 ..j...j..
 layer 3
