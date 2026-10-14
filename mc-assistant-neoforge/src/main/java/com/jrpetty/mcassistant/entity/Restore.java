@@ -494,10 +494,21 @@ public final class Restore {
             if (standing || (again != null && again.anchor().equals(b.anchor()))) { m.remove(b.anchor().asLong()); save(v.id()); continue; }
             List<BlockPos> left = laid(level, v, b);
             if (s.placed() < 0) m.put(b.anchor().asLong(), new Scaffold(b, left.size(), s.since()));
-            if (left.isEmpty()) { m.remove(b.anchor().asLong()); save(v.id()); continue; }
+            // Gone once nothing of it stands above the ground (its footing filled back as the stores' earth allows).
+            boolean standsUp = false;
+            for (BlockPos p : left) if (p.getY() >= b.anchor().getY()) { standsUp = true; break; }
+            if (left.isEmpty() || !standsUp && Market.stock(level, v.id(), it -> it.is(Items.DIRT)) == 0) {
+                m.remove(b.anchor().asLong());
+                save(v.id());
+                continue;
+            }
             left.sort(Comparator.comparingInt((BlockPos p) -> -p.getY()));
             for (BlockPos p : left) {
                 if (done >= budget) break;
+                // The footing, in the ground: earth back in its place out of the stores (grass on top), or the
+                // footing left as a pad of stone; never a pit where a house was begun.
+                boolean ground = p.getY() < b.anchor().getY();
+                if (ground && !Crafts.take(level, v, it -> it.is(Items.DIRT), 1)) continue;
                 if (!TownJobs.atWork(level, v, "repairs", p, "taking down a building given up")) return done;
                 BlockState st = level.getBlockState(p);
                 if (level.getBlockEntity(p) instanceof net.minecraft.world.Container c) {
@@ -507,7 +518,9 @@ public final class Restore {
                     }
                 }
                 for (ItemStack drop : Block.getDrops(st, level, p, level.getBlockEntity(p))) Crafts.store(level, v, drop);
-                level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
+                BlockState back = !ground ? Blocks.AIR.defaultBlockState()
+                    : level.getBlockState(p.above()).isAir() ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.DIRT.defaultBlockState();
+                level.setBlock(p, back, 3);
                 TownBlocks.traced(v, p, TownBlocks.Why.TIDY);
                 done++;
             }
