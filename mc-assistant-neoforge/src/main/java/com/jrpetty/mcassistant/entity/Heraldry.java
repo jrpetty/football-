@@ -467,6 +467,7 @@ public final class Heraldry {
             }
         }
         out.addAll(Arms.places(level, village));                     // [arms] the wall's towers, the board's poles
+        out.addAll(CastleWall.bannerPlaces(level, village));         // [defence] over each gate of the town wall
         return out;
     }
 

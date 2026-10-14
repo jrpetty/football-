@@ -3838,9 +3838,9 @@ def tidy_stage(r, look, cx, cz):
 
 def defence_stage(r, look, cx, cz):
     """[defence] The town wall and the muster (entity/CastleWall, entity/Muster), in a grown town. The wall laid round
-    the town as it plans it (/village wall stage: out of nothing, for the pictures) and photographed from high over the
-    south-west (the whole ring), over the north gatehouse, outside the west gate and at a corner tower; what /village wall
-    says. Then the bell rung for a drill (/village muster): twenty seconds on, from over the square, the folk gathered in
+    the town as it plans it (/village wall stage: out of nothing, for the pictures) and photographed from clear air high
+    over the town (the whole ring), over the north gatehouse, outside the west gate and at a corner tower; what /village
+    wall says. A gate close up (/village wall gate): open by day, shut at night with its lanterns lit, a wagon in it. Then the bell rung for a drill (/village muster): twenty seconds on, from over the square, the folk gathered in
     the middle and the watch ringed round them facing out, and again from the ring's edge; what the town's news says
     after the all-clear. Not wired in."""
     r.cmd("gamemode spectator %s" % USER)
@@ -3854,6 +3854,17 @@ def defence_stage(r, look, cx, cz):
     for i, (name, x, y, z, ax, ay, az) in enumerate(views):
         look("40-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=10 if i == 0 else 6)
     say("wall: " + r.cmd("execute positioned %d %d %d run village wall" % (cx, gy + 1, cz))[:900])
+    # A gate close up: open by day; shut at night with its lanterns lit; a wagon of the town's in its passage.
+    for what, prefix, before in (("day", "42-", None), ("night", "43-", "time set 18000"), ("wagon", "44-", "time set 6000")):
+        if before:
+            r.cmd(before)
+            time.sleep(3)
+        out = r.cmd("execute positioned %d %d %d run village wall gate %s" % (cx, gy + 1, cz, what))
+        say("wall gate %s: %s" % (what, out[:500]))
+        for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+            look(prefix + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=6)
+    say("wagon let go: " + r.cmd("execute positioned %d %d %d run village wagon stage done" % (cx, gy + 1, cz))[:200])
+    midday(r)
     out = r.cmd("execute positioned %d %d %d run village muster" % (cx, gy + 1, cz))
     say("muster: " + out[:600])
     time.sleep(20)                                     # the town runs to the square, the watch takes its places

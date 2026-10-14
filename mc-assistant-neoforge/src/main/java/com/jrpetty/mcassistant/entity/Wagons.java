@@ -1302,6 +1302,7 @@ public final class Wagons {
         int bx = Mth.floor(x), bz = Mth.floor(z);
         if (!level.hasChunk(bx >> 4, bz >> 4)) return false;
         int gy = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
+        if (CastleWall.underArch(bx, bz) != Integer.MIN_VALUE) return false;           // [defence] a gate's passage is road
         if (gy - y > TradeWagon.STEP || y - gy > TradeWagon.DROP) return true;
         BlockPos under = new BlockPos(bx, gy - 1, bz);
         BlockState g = level.getBlockState(under);

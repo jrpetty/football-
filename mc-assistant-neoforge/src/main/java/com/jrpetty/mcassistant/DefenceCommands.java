@@ -27,6 +27,7 @@ import java.util.List;
  *   /village wall now        (ops) a batch of the wall's works now, as a hand would lay it
  *   /village wall build      (ops) the whole wall laid at once, out of nothing (the pictures; the stores are not touched)
  *   /village wall stage      (ops) the smoke stage: the wall built, and VIEW lines to photograph it from the air
+ *   /village wall gate day|night|wagon  (ops) a gate close up: open by day, shut at night, a wagon in its passage
  *   /village muster          (ops) the bell rung for a drill (a minute with nobody in sight): the town gathers on the
  *                            square and the watch rings it round; VIEW lines over the square
  * </pre>
@@ -41,7 +42,9 @@ public final class DefenceCommands {
             .then(Commands.literal("wall").executes(DefenceCommands::page)
                 .then(Commands.literal("now").requires(src -> src.hasPermission(2)).executes(DefenceCommands::now))
                 .then(Commands.literal("build").requires(src -> src.hasPermission(2)).executes(ctx -> build(ctx, false)))
-                .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(ctx -> build(ctx, true))))
+                .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(ctx -> build(ctx, true)))
+                .then(Commands.literal("gate").requires(src -> src.hasPermission(2))
+                    .then(Commands.argument("what", com.mojang.brigadier.arguments.StringArgumentType.word()).executes(DefenceCommands::gate))))
             .then(Commands.literal("muster").requires(src -> src.hasPermission(2)).executes(DefenceCommands::muster)));
     }
 
@@ -80,17 +83,32 @@ public final class DefenceCommands {
         if (stage) {
             WallPlan.Sides s = CastleWall.sides(v.id());
             BlockPos c = v.centre();
-            int far = Math.max(Math.max(s.n(), s.e()), Math.max(s.s(), s.w()));
             int y = c.getY();
-            // From high over the south-west, the whole ring; over the north gatehouse; along the east walkway.
-            out.add(view("wall-1-from-the-air", c.getX() - far - 30, y + far + 20, c.getZ() + far + 30, c.getX(), y, c.getZ()));
-            out.add(view("wall-2-the-north-gatehouse", c.getX() + 6, y + 12, c.getZ() - s.n() + 14, c.getX(), y + 4, c.getZ() - s.n() - 3));
-            out.add(view("wall-3-outside-the-west-gate", c.getX() - s.w() - 24, y + 8, c.getZ() + 10, c.getX() - s.w(), y + 4, c.getZ()));
+            // From clear air high over the town, the whole ring; over the north gatehouse; outside the west gate; a corner.
+            int[] air = CastleWall.airView(level, v);
+            out.add(view("wall-1-from-the-air", air[0], air[1], air[2], air[3], air[4], air[5]));
+            // The gates at their own floors (a town on a hill has them well above or below its heart).
+            int ny = y, wy = y;
+            for (CastleWall.Gate g : CastleWall.gates(level, v.id())) {
+                if (g.out() == net.minecraft.core.Direction.NORTH) ny = g.gateway().getY();
+                if (g.out() == net.minecraft.core.Direction.WEST) wy = g.gateway().getY();
+            }
+            out.add(view("wall-2-the-north-gatehouse", c.getX() + 6, ny + 12, c.getZ() - s.n() + 14, c.getX(), ny + 3, c.getZ() - s.n() - 3));
+            out.add(view("wall-3-outside-the-west-gate", c.getX() - s.w() - 24, wy + 8, c.getZ() + 10, c.getX() - s.w(), wy + 3, c.getZ()));
             out.add(view("wall-4-a-corner-tower", c.getX() + s.e() + 18, y + 16, c.getZ() + s.s() + 18, c.getX() + s.e() + 3, y + 6, c.getZ() + s.s() + 3));
         }
         out.addAll(CastleWall.lines(level, v));
         ctx.getSource().sendSuccess(() -> Component.literal(String.join(" | ", out)), false);
         return Math.max(1, n);
+    }
+
+    private static int gate(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = near(ctx);
+        if (v == null) return 0;
+        String what = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "what");
+        List<String> out = CastleWall.gateStage(ctx.getSource().getLevel(), v, what);
+        ctx.getSource().sendSuccess(() -> Component.literal(String.join(" | ", out)), false);
+        return 1;
     }
 
     private static int muster(CommandContext<CommandSourceStack> ctx) {

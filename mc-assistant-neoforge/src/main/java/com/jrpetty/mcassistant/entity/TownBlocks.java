@@ -118,7 +118,9 @@ public final class TownBlocks {
         /** Trees planted or felled, grass and flowers. */
         NATURE(Zone.OPEN),
         /** Anything else a town's works set down. */
-        OTHER(Zone.OPEN);
+        OTHER(Zone.OPEN),
+        /** [defence] The town wall (CastleWall): on open ground and across the roads it closes with its gates. */
+        WALL(Zone.OPEN, Zone.ROAD);
 
         private final Set<Zone> zones;
 
@@ -287,7 +289,7 @@ public final class TownBlocks {
      */
     private static boolean onWallRing(Villages.Village v, BlockPos pos, Why why) {
         switch (why) {
-            case ROAD, DOORWAY, TIDY, TERRAFORM, MINE, NATURE -> { return false; }
+            case ROAD, DOORWAY, TIDY, TERRAFORM, MINE, NATURE, WALL -> { return false; }
             case LAMP, SIGN -> { return CastleWall.onWall(v.id(), v.centre(), pos); }   // [defence] never on the wall itself (its walkway, its towers)
             default -> { return CastleWall.reserved(v.id(), v.centre(), pos); }
         }
@@ -295,7 +297,7 @@ public final class TownBlocks {
 
     private static boolean allowed(Level level, Villages.Village v, BlockPos pos, Why why, Here h, @Nullable BlockPos ownAnchor) {
         // A building's own work, on its own building: any of its cells, its doorways and stairs included.
-        if (why.own() && ownAnchor != null && h.owner != null && h.owner.building.anchor().equals(ownAnchor)) return true;
+        if (why.own() && ownAnchor != null && h.owner != null && h.owner.building.anchor().equals(ownAnchor)) return !("pen".equals(h.owner.building.structure()) && CastleWall.onWall(v.id(), v.centre(), pos));   // [defence] a pen's fence never back into the wall's line
         Zone z = h.zone;
         switch (z) {
             case OPEN -> { return !onWallRing(v, pos, why); }

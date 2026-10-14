@@ -308,6 +308,7 @@ public class TradeWagon extends Entity {
         float turned = Mth.rotLerp(0.35F, getYRot(), yaw);
         float pitch = (float) Math.toDegrees(Math.atan2(rear - front, 2 * HALF_LENGTH));
         setPos(x, groundY, z);
+        if (tickCount % 10 == 0) CastleWall.wagonAt(level, town, x, z);              // [defence] the gate opened for it
         setYRot(turned);
         setXRot(Mth.clamp(pitch, -20.0F, 20.0F));
     }
@@ -345,6 +346,7 @@ public class TradeWagon extends Entity {
     static double ground(ServerLevel level, double x, double z, double fallback) {
         int bx = Mth.floor(x), bz = Mth.floor(z);
         if (!level.hasChunk(bx >> 4, bz >> 4)) return fallback;
+        int arch = CastleWall.underArch(bx, bz); if (arch != Integer.MIN_VALUE) return arch;   // [defence] through a gate, under its arch
         return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bx, bz);
     }
 

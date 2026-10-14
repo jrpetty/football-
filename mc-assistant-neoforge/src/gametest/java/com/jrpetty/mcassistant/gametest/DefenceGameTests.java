@@ -118,7 +118,12 @@ public class DefenceGameTests {
     private static int count(ServerLevel level, BlockPos heart, WallPlan.Sides s, java.util.function.Predicate<BlockState> what) {
         int n = 0;
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int[] col : WallPlan.columns(s, WallPlan.towers(s))) {
+        List<int[]> cols = new ArrayList<>(WallPlan.columns(s, WallPlan.towers(s)));
+        // And the gates' dressing out in front of each arch (the sign, the lanterns' brackets).
+        for (int side = 0; side < 4; side++) {
+            for (int a = -WallPlan.GATE; a <= WallPlan.GATE; a++) cols.add(WallPlan.offset(side, s.of(side) + WallPlan.THICK, a));
+        }
+        for (int[] col : cols) {
             for (int dy = -4; dy <= 16; dy++) {
                 if (what.test(level.getBlockState(p.set(heart.getX() + col[0], heart.getY() + dy, heart.getZ() + col[1])))) n++;
             }
@@ -182,8 +187,9 @@ public class DefenceGameTests {
     /**
      * A Stone Age town with houses on its first block all round and one on the next ring out to the east. Its wall is
      * planned on the plan's lines (42 out, 67 to the east, with the street before it clear) and enclosing every lot
-     * built and the square; a lamp post, a field, a pond and a paved cross street on its line are left as they are (a
-     * gap at the first three, a postern with doors under an arch at the street); a gatehouse on each avenue; the
+     * built and the square; a field and a pond on its line are built over (no gap), a lamp post (not the town's) is
+     * gone round and left as it was, a paved cross street goes out through a postern with doors under an arch; a
+     * gatehouse on each avenue; the
      * walkway capped, the battlements, a lantern on the merlons, torches on the inner face; the towers with their
      * ladders and crenels; the steps up from inside; all in cobblestone; the ring kept off the lots.
      */
@@ -235,16 +241,20 @@ public class DefenceGameTests {
             + " laid, " + counts[2] + " left out | " + String.join(" | ", CastleWall.lines(level, v)));
         helper.assertTrue(counts[1] > 6000 && counts[0] * 100 >= counts[1] * 97, "the wall laid: " + counts[0] + " of " + counts[1]);
 
-        // Nothing built over: the lamp post, the field and the pond as they were.
+        // The lamp post is not the town's: left as it was, the wall gone round it. No gap at the field and the pond.
         helper.assertTrue(level.getBlockState(post).is(Blocks.OAK_FENCE) && level.getBlockState(post.above(2)).is(Blocks.LANTERN), "the lamp post left be");
-        helper.assertTrue(level.getBlockState(field).is(Blocks.FARMLAND) && level.getBlockState(field.above()).isAir(), "the field left be");
-        helper.assertTrue(level.getBlockState(pond).is(Blocks.WATER) && level.getBlockState(pond.above()).isAir(), "the pond left be");
-        // The street out north: a postern, open over the paving inside, doors in the outer face, the wall over it.
-        int topN = CastleWall.topForTests(village, TownPlan.NORTH, 15);
+        helper.assertTrue(String.join(" ", CastleWall.lines(level, v)).contains("round an unknown build"), "the wall gone round the lamp post");
+        for (BlockPos p : new BlockPos[]{ field.above(), pond }) {
+            helper.assertTrue(level.getBlockState(p.above()).is(Blocks.COBBLESTONE) || level.getBlockState(p.above()).is(Blocks.MOSSY_COBBLESTONE),
+                "the wall stands at " + p.toShortString() + ": " + level.getBlockState(p.above()));
+        }
+        // The street out north: a postern, open over the paving inside under its arch, doors in the outer face.
         for (int sx = 14; sx <= 16; sx++) {
-            for (int h = 0; h <= 2; h++) {
+            for (int h = 0; h <= 1; h++) {
                 helper.assertTrue(level.getBlockState(heart.offset(sx, h, -42)).isAir(), "the postern open at " + sx + " h" + h);
             }
+            BlockState arch = level.getBlockState(heart.offset(sx, 2, -42));
+            helper.assertTrue(sx == 15 ? arch.isAir() : arch.is(Blocks.COBBLESTONE_STAIRS), "the postern's arch at " + sx + ": " + arch);
             helper.assertTrue(level.getBlockState(heart.offset(sx, 0, -44)).getBlock() instanceof DoorBlock, "a door in the postern at " + sx);
             helper.assertTrue(level.getBlockState(heart.offset(sx, 3, -42)).is(Blocks.COBBLESTONE), "the wall over the postern at " + sx);
             helper.assertTrue(level.getBlockState(heart.offset(sx, -1, -42)).is(Blocks.COBBLESTONE), "the street's paving under it");
@@ -500,6 +510,12 @@ public class DefenceGameTests {
                 for (VillageFolkEntity f : folk) sb.append(String.format(" %.1f", flatDist(f, at)));
                 sb.append("; guards");
                 for (VillageFolkEntity g : watch) sb.append(String.format(" %.1f%s", flatDist(g, at), g.holdingAPost() ? "^" : ""));
+                for (VillageFolkEntity g : watch) {
+                    BlockPos m = Muster.markForTests(level, v, g);
+                    if (m == null || Muster.onMarkForTests(level, v, g)) continue;
+                    sb.append(" | off its mark: at ").append(g.blockPosition().subtract(at).toShortString()).append(" mark ").append(m.subtract(at).toShortString())
+                        .append(" ").append(level.getBlockState(m)).append(" on ").append(level.getBlockState(m.below())).append(g.getNavigation().isDone() ? " (stopped)" : "");
+                }
                 Kit.log(sb.toString());
             }
             switch (phase[0]) {
@@ -510,7 +526,8 @@ public class DefenceGameTests {
                     List<VillageFolkEntity> ring = Muster.ringForTests(level, v);
                     int wants = Math.min(watch.size(), (int) size[2]);
                     boolean ringed = ring.size() == wants;
-                    for (VillageFolkEntity g : ring) if (Math.abs(flatDist(g, at) - size[1]) > 1.6) ringed = false;
+                    // Each guard of the ring in its place: on the ring, and stood there (not walking round it to its mark).
+                    for (VillageFolkEntity g : ring) if (Math.abs(flatDist(g, at) - size[1]) > 1.6 || !Muster.onMarkForTests(level, v, g)) ringed = false;
                     int up = 0;
                     for (VillageFolkEntity g : watch) if (!ring.contains(g) && g.holdingAPost()) up++;
                     if (folkIn && ringed && up >= watch.size() - wants) {
@@ -586,5 +603,302 @@ public class DefenceGameTests {
                 default -> { }
             }
         });
+    }
+    // ------------------------------------------------------------------ dw05: a full ring
+
+    /** The world's own ground (or a field's earth): where a walk down a column of the wall ends. */
+    private static boolean earth(BlockState b) {
+        return b.is(BlockTags.DIRT) || b.is(Blocks.GRASS_BLOCK) || b.is(BlockTags.BASE_STONE_OVERWORLD) || b.is(Blocks.FARMLAND)
+            || b.is(BlockTags.SAND) || b.is(Blocks.GRAVEL) || b.is(Blocks.DIRT_PATH);
+    }
+
+    /**
+     * Walk the whole ring as the wall runs (CastleWall.ringForTests: every column of each side, its corner towers, and
+     * round every jog), from the walkway down to the ground: at every level something stands across it (stone, a door,
+     * a grate). Returns the gaps, as "dx,dz,dy" of the first cell across (empty: closed).
+     */
+    private static List<String> gaps(ServerLevel level, UUID village, BlockPos heart, WallPlan.Sides s) {
+        List<String> out = new ArrayList<>();
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        List<int[]> ring = CastleWall.ringForTests(village);
+        if (ring.isEmpty()) out.add("no ring");
+        for (int[] e : ring) {
+            int top = e[6];
+            for (int y = top - 1; y > top - 64; y--) {
+                boolean barrier = false, ground = true;
+                for (int u = 0; u < WallPlan.THICK; u++) {
+                    p.set(e[2 * u], y, e[2 * u + 1]);
+                    BlockState b = level.getBlockState(p);
+                    if (!b.getCollisionShape(level, p).isEmpty()) barrier = true;
+                    if (!earth(b)) ground = false;
+                }
+                if (ground) break;
+                if (!barrier) out.add((e[0] - heart.getX()) + "," + (e[1] - heart.getZ()) + "," + (y - heart.getY()));
+            }
+        }
+        return out;
+    }
+
+    /**
+     * A Stone Age town whose wall's line crosses a river, a field of wheat, a pen and a lamp post (neither the town's), a
+     * paved cross street, a worn path and a ravine. The wall is one closed ring: walked column by column all round, from
+     * its walkway to the ground, something stands across it at every level; its only ways through are its four gates
+     * and the postern, and at night every one of their doors is shut. Over the river piers and grated arches (the water
+     * still under them); the wheat harvested off the line, the field beyond it as it was; the pen and the lamp post
+     * left as they were, the wall gone out round them; the ravine built down into. Every building inside. Each gate has the town's name over its arch and a
+     * lantern either side; a wagon's wheels find its passage's floor; roads out leave by the gates; a guard of the watch
+     * goes to keep a gate. Into the Iron Age, a portcullis over each gate: dropped at the bell, raised at the all-clear.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 1200, batch = "dw05_full_ring")
+    public static void dw05_full_ring(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final int x = 1748000;
+        ground(level, x, Z, 96);
+        BlockPos heart = flat(level, x, Z, 84);
+        level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 6000L);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a town");
+        UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        Villages.ageForTests(village, Villages.Age.STONE);
+        CastleWall.standDownForTests(false);
+        CastleWall.readyForTests(true);
+        built(village, heart, firstBlock());
+        int y0 = heart.getY();
+        // A river across the east line (three deep), a field of wheat across the west, a pen across the south.
+        for (int dx = 30; dx <= 60; dx++) {
+            for (int dz = 17; dz <= 21; dz++) {
+                level.setBlock(heart.offset(dx, -4, dz), Blocks.DIRT.defaultBlockState(), 2 | 16);
+                for (int dy = -3; dy <= -1; dy++) level.setBlock(heart.offset(dx, dy, dz), Blocks.WATER.defaultBlockState(), 2 | 16);
+            }
+        }
+        for (int dx = -47; dx <= -38; dx++) {
+            for (int dz = 18; dz <= 21; dz++) {
+                level.setBlock(heart.offset(dx, -1, dz), Blocks.FARMLAND.defaultBlockState(), 2 | 16);
+                level.setBlock(heart.offset(dx, 0, dz), Blocks.WHEAT.defaultBlockState()
+                    .setValue(net.minecraft.world.level.block.CropBlock.AGE, 7), 2 | 16);
+            }
+        }
+        for (int dx = -18; dx <= -14; dx++) {
+            for (int dz = 38; dz <= 48; dz++) {
+                if (dx == -18 || dx == -14 || dz == 38 || dz == 48) level.setBlock(heart.offset(dx, 0, dz), Blocks.OAK_FENCE.defaultBlockState(), 3);
+            }
+        }
+        // A paved cross street out north (a postern); a worn path out west (not a street of the plan: walled across).
+        for (int sx = 14; sx <= 16; sx++) {
+            for (int sz = -30; sz >= -60; sz--) level.setBlock(heart.offset(sx, -1, sz), Blocks.COBBLESTONE.defaultBlockState(), 3);
+        }
+        for (int dx = -30; dx >= -60; dx--) {
+            for (int dz = -19; dz <= -18; dz++) level.setBlock(heart.offset(dx, -1, dz), Blocks.DIRT_PATH.defaultBlockState(), 3);
+        }
+        // A lamp post on the north line.
+        BlockPos post = heart.offset(-15, 0, -43);
+        level.setBlock(post, Blocks.OAK_FENCE.defaultBlockState(), 3);
+        level.setBlock(post.above(), Blocks.OAK_FENCE.defaultBlockState(), 3);
+        level.setBlock(post.above(2), Blocks.LANTERN.defaultBlockState(), 3);
+        // A ravine across the south line, as deep as the test world's ground goes (three, on stone).
+        for (int dx = 31; dx <= 33; dx++) {
+            for (int dz = 36; dz <= 50; dz++) {
+                level.setBlock(heart.offset(dx, -4, dz), Blocks.STONE.defaultBlockState(), 2 | 16);
+                for (int dy = -3; dy <= -1; dy++) level.setBlock(heart.offset(dx, dy, dz), Blocks.AIR.defaultBlockState(), 2 | 16);
+            }
+        }
+
+        WallPlan.Sides s = CastleWall.plannedForTests(level, v);
+        helper.assertTrue(WallPlan.first().equals(s), "the first wall: " + s);
+        int laid = CastleWall.buildNow(level, v, true);
+        int[] counts = CastleWall.countsForTests(village);
+        Kit.log("dw05 built " + laid + " blocks: " + counts[0] + " laid, " + counts[2] + " kept of somebody's | "
+            + String.join(" | ", CastleWall.lines(level, v)));
+        // What each column was taken for.
+        helper.assertTrue(CastleWall.kindForTests(village, TownPlan.EAST, 19) == 3, "the river's columns over water: " + CastleWall.kindForTests(village, TownPlan.EAST, 19));
+        helper.assertTrue(CastleWall.kindForTests(village, TownPlan.NORTH, 15) == 2, "the street's a postern: " + CastleWall.kindForTests(village, TownPlan.NORTH, 15));
+
+        // The whole ring closed, at night with every gate and postern shut.
+        CastleWall.shutForTests(level, village, true);
+        List<BlockPos> doors = CastleWall.doorsForTests(village);
+        int open = 0;
+        for (BlockPos d : doors) {
+            BlockState b = level.getBlockState(d);
+            if (!(b.getBlock() instanceof DoorBlock) || b.getValue(DoorBlock.OPEN)) open++;
+        }
+        List<String> gaps = gaps(level, village, heart, s);
+        List<int[]> ways = CastleWall.openingsForTests(village);
+        int gates = 0, posterns = 0;
+        for (int[] w : ways) { if (w[2] == 1) gates++; else posterns++; }
+        Kit.log("dw05 the ring at night: " + gaps.size() + " gaps" + (gaps.isEmpty() ? "" : " (" + String.join(" ", gaps.subList(0, Math.min(12, gaps.size()))) + ")")
+            + "; " + gates + " gates, " + posterns + " posterns, " + doors.size() + " doors, " + open + " open");
+        helper.assertTrue(gaps.isEmpty(), "the ring closed from the walkway to the ground: " + gaps.size() + " gaps, the first "
+            + String.join(" ", gaps.subList(0, Math.min(6, gaps.size()))));
+        helper.assertTrue(gates == 4 && posterns == 1, "the gates and the postern the only ways through: " + gates + " gates, " + posterns + " posterns");
+        helper.assertTrue(open == 0 && doors.size() == 4 * 5 + 3, "every door hung and shut at night: " + open + " open of " + doors.size());
+        CastleWall.shutForTests(level, village, false);
+        int opened = 0;
+        for (BlockPos d : doors) if (level.getBlockState(d).getBlock() instanceof DoorBlock && level.getBlockState(d).getValue(DoorBlock.OPEN)) opened++;
+        helper.assertTrue(opened == doors.size(), "the doors open by day: " + opened + " of " + doors.size());
+
+        // The river: piers and arches, a grate under each arch, the water still flowing under it.
+        BlockState grate = level.getBlockState(heart.offset(43, -2, 19)), under = level.getBlockState(heart.offset(42, -2, 19));
+        BlockState pier = level.getBlockState(heart.offset(43, -2, 20));
+        helper.assertTrue(grate.is(Blocks.IRON_BARS), "a grate under the arch: " + grate);
+        helper.assertTrue(under.is(Blocks.WATER), "the water under the arch: " + under);
+        helper.assertTrue(pier.is(Blocks.COBBLESTONE) || pier.is(Blocks.MOSSY_COBBLESTONE), "a pier in the river: " + pier);
+        // The field: the wheat off the line, the rest of the field as it was.
+        helper.assertTrue(!level.getBlockState(heart.offset(-43, 0, 19)).is(Blocks.WHEAT) && level.getBlockState(heart.offset(-47, 0, 19)).is(Blocks.WHEAT)
+            && level.getBlockState(heart.offset(-38, 0, 19)).is(Blocks.WHEAT), "the wheat harvested off the line only");
+        // The pen and the lamp post: not the town's, left as they were, the wall gone out round them.
+        for (int dz = 38; dz <= 48; dz++) {
+            helper.assertTrue(level.getBlockState(heart.offset(-18, 0, dz)).is(Blocks.OAK_FENCE) && level.getBlockState(heart.offset(-16, 0, dz)).isAir() == (dz != 38 && dz != 48),
+                "the pen as it was at " + dz);
+        }
+        helper.assertTrue(level.getBlockState(post).is(Blocks.OAK_FENCE) && level.getBlockState(post.above(2)).is(Blocks.LANTERN), "the lamp post left be");
+        String said = String.join(" ", CastleWall.lines(level, v));
+        helper.assertTrue(said.contains("south wall goes out round") && said.contains("north wall goes out round"), "the wall gone round them: " + said);
+        // The ravine built down into, the path and the lamp post's place walled across.
+        BlockState deep = level.getBlockState(heart.offset(32, -3, 43));
+        helper.assertTrue(deep.is(Blocks.COBBLESTONE) || deep.is(Blocks.MOSSY_COBBLESTONE), "the wall down in the ravine: " + deep);
+        helper.assertTrue(level.getBlockState(heart.offset(-43, 0, -19)).is(Blocks.COBBLESTONE) || level.getBlockState(heart.offset(-43, 0, -19)).is(Blocks.MOSSY_COBBLESTONE), "the path walled across");
+        // Every building inside.
+        int[] in = CastleWall.enclosed(village);
+        Kit.log("dw05 inside the wall: " + in[0] + " of " + in[1] + " buildings");
+        helper.assertTrue(in[1] > 0 && in[0] == in[1], "every building inside: " + in[0] + " of " + in[1]);
+        // The south gate's dressing: the town's name over the arch, a lantern hung either side.
+        BlockPos sign = heart.offset(0, 2, 45);
+        helper.assertTrue(level.getBlockEntity(sign) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sb
+            && sb.getFrontText().getMessage(1, false).getString().equals(Villages.name(village)), "the town's name over the gate");
+        for (int sx : new int[]{ -2, 2 }) {
+            BlockState l = level.getBlockState(heart.offset(sx, 2, 45));
+            helper.assertTrue(l.is(Blocks.LANTERN) && l.getValue(net.minecraft.world.level.block.LanternBlock.HANGING), "a lantern hung beside the gate at " + sx + ": " + l);
+        }
+        // Wagons: through the gate's passage on its floor; the road out leaves by the gate.
+        helper.assertTrue(CastleWall.underArch(heart.getX(), heart.getZ() + 43) == y0, "a wagon's wheels on the gate's floor: " + CastleWall.underArch(heart.getX(), heart.getZ() + 43));
+        BlockPos out = CastleWall.pastTheGate(v, heart.offset(41, 0, 0));
+        helper.assertTrue(out.getX() - heart.getX() == 42 + WallPlan.BAND + 3 && out.getZ() == heart.getZ(), "the road out by the east gate: " + out.subtract(heart).toShortString());
+
+        // The Iron Age: a portcullis over each gate, dropped at the bell and raised at the all-clear.
+        Villages.ageForTests(village, Villages.Age.IRON);
+        CastleWall.buildNow(level, v, true);
+        helper.assertTrue(level.getBlockState(heart.offset(0, 2, 43)).is(Blocks.IRON_BARS), "the portcullis over the south gate, raised");
+        Raids.warAlarm(level, v, "a drill", Direction.SOUTH, 400L);
+        CastleWall.keep(level, v);
+        boolean dropped = level.getBlockState(heart.offset(0, 0, 43)).is(Blocks.IRON_BARS) && level.getBlockState(heart.offset(1, 1, 43)).is(Blocks.IRON_BARS);
+        Raids.allClear(level, v);
+        CastleWall.keep(level, v);
+        boolean raised = level.getBlockState(heart.offset(0, 0, 43)).isAir() && level.getBlockState(heart.offset(0, 2, 43)).is(Blocks.IRON_BARS);
+        helper.assertTrue(dropped && raised, "the portcullis dropped at the bell (" + dropped + ") and raised at the all-clear (" + raised + ")");
+        helper.assertTrue(gaps(level, village, heart, CastleWall.sides(village)).isEmpty(), "the ring still closed in the Iron Age's stone");
+
+        // A guard of the watch goes to keep a gate.
+        VillageFolkEntity g = guard(level, heart.offset(3, 0, 3));
+        helper.assertTrue(g != null, "a guard");
+        final long[] since = { helper.getTick() };
+        helper.onEachTick(() -> {
+            if (!g.isAlive()) helper.fail("the guard died");
+            CastleWall.warden(g);
+            double best = Double.MAX_VALUE;
+            for (int[] w : CastleWall.openingsForTests(village)) {
+                if (w[2] != 1) continue;
+                int[] o = WallPlan.offset(w[0], s.of(w[0]), w[1]);
+                best = Math.min(best, Math.sqrt(g.distanceToSqr(heart.getX() + o[0] + 0.5, g.getY(), heart.getZ() + o[1] + 0.5)));
+            }
+            if (best <= 7.0) {
+                Kit.log("dw05 the guard at a gate after " + (helper.getTick() - since[0]) + " ticks");
+                CastleWall.standDownForTests(true);
+                helper.succeed();
+            } else if (helper.getTick() - since[0] > 900) helper.fail("the guard never went to keep a gate: " + String.format("%.1f", best) + " off");
+        });
+    }
+    // ------------------------------------------------------------------ dw06: a player's build on the line
+
+    /**
+     * A player's hut (planks, a door, a chest inside) stands on the north line of a town's wall when it is planned; and
+     * after it is planned, before it is built, a player sets a log down on the line further along. Not a block of either
+     * is changed, no stone is laid in the hut, the wall goes out round both (clear of them by a block), and the ring is
+     * still closed all round; /village wall says so.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "dw06_player_build")
+    public static void dw06_player_build(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        final int x = 1750000;
+        ground(level, x, Z, 96);
+        BlockPos heart = flat(level, x, Z, 84);
+        level.setDayTime((level.getDayTime() / 24000L + 1) * 24000L + 6000L);
+        VillageFolkEntity a = VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(a != null, "a town");
+        UUID village = a.ownerId();
+        Villages.Village v = Villages.get(village);
+        Villages.ageForTests(village, Villages.Age.STONE);
+        CastleWall.standDownForTests(false);
+        CastleWall.readyForTests(true);
+        built(village, heart, firstBlock());
+        // The player's hut across the north line: planks, a roof, a door on the town's side, a chest inside.
+        Map<BlockPos, BlockState> hut = new HashMap<>();
+        for (int dx = -18; dx <= -14; dx++) {
+            for (int dz = -46; dz <= -40; dz++) {
+                boolean wall = dx == -18 || dx == -14 || dz == -46 || dz == -40;
+                for (int dy = 0; dy <= 3; dy++) {
+                    BlockPos p = heart.offset(dx, dy, dz);
+                    level.setBlock(p, wall || dy == 3 ? Blocks.OAK_PLANKS.defaultBlockState() : Blocks.AIR.defaultBlockState(), 2 | 16);
+                    if (wall || dy == 3) com.jrpetty.mcassistant.entity.PlayerBlocks.markForTests(level, p, true);
+                }
+            }
+        }
+        level.setBlock(heart.offset(-16, 0, -40), Blocks.AIR.defaultBlockState(), 3);
+        level.setBlock(heart.offset(-16, 1, -40), Blocks.AIR.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.PlayerBlocks.markForTests(level, heart.offset(-16, 0, -40), false);
+        com.jrpetty.mcassistant.entity.PlayerBlocks.markForTests(level, heart.offset(-16, 1, -40), false);
+        level.setBlock(heart.offset(-16, 0, -44), Blocks.CHEST.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.PlayerBlocks.markForTests(level, heart.offset(-16, 0, -44), true);
+        for (int dx = -18; dx <= -14; dx++) {
+            for (int dz = -46; dz <= -40; dz++) {
+                for (int dy = 0; dy <= 3; dy++) hut.put(heart.offset(dx, dy, dz), level.getBlockState(heart.offset(dx, dy, dz)));
+            }
+        }
+        WallPlan.Sides s = CastleWall.plannedForTests(level, v);
+        helper.assertTrue(WallPlan.first().equals(s), "the first wall: " + s);
+        // After the wall is planned: a player's log on the line, further along.
+        BlockPos log = heart.offset(20, 0, -43);
+        level.setBlock(log, Blocks.OAK_LOG.defaultBlockState(), 3);
+        com.jrpetty.mcassistant.entity.PlayerBlocks.markForTests(level, log, true);
+        CastleWall.buildNow(level, v, true);
+        String said = String.join(" | ", CastleWall.lines(level, v));
+        Kit.log("dw06 " + said);
+        // Not a block of the hut changed: its planks, its door's place, its chest, the air in its rooms.
+        int changed = 0;
+        String first = null;
+        for (Map.Entry<BlockPos, BlockState> e : hut.entrySet()) {
+            if (!level.getBlockState(e.getKey()).equals(e.getValue())) {
+                changed++;
+                if (first == null) first = e.getKey().subtract(heart).toShortString() + " " + level.getBlockState(e.getKey());
+            }
+        }
+        helper.assertTrue(changed == 0, "the hut as the player left it: " + changed + " blocks changed, the first " + first);
+        helper.assertTrue(level.getBlockState(log).is(Blocks.OAK_LOG), "the player's log left be");
+        // Clear of them by a block: nothing of the wall's next to the hut or the log.
+        int near = 0;
+        for (int dx = -19; dx <= -13; dx++) {
+            for (int dz = -47; dz <= -39; dz++) {
+                for (int dy = 0; dy <= 4; dy++) {
+                    BlockState b = level.getBlockState(heart.offset(dx, dy, dz));
+                    if (b.is(Blocks.COBBLESTONE) || b.is(Blocks.MOSSY_COBBLESTONE)) near++;
+                }
+            }
+        }
+        helper.assertTrue(near == 0, "no stone of the wall in or against the hut: " + near);
+        // The ring closed all round, by going round.
+        CastleWall.shutForTests(level, village, true);
+        List<String> gaps = gaps(level, village, heart, s);
+        Kit.log("dw06 the ring: " + gaps.size() + " gaps" + (gaps.isEmpty() ? "" : " (" + String.join(" ", gaps.subList(0, Math.min(12, gaps.size()))) + ")"));
+        helper.assertTrue(gaps.isEmpty(), "the ring closed round the player's builds: " + gaps.size() + " gaps, the first "
+            + String.join(" ", gaps.subList(0, Math.min(6, gaps.size()))));
+        int posterns = 0;
+        for (int[] w : CastleWall.openingsForTests(village)) if (w[2] == 0) posterns++;
+        helper.assertTrue(posterns == 0, "no way through but the gates (fitted again over the wall begun): " + posterns + " posterns");
+        helper.assertTrue(said.contains("north wall goes out round a player's build (-18 to -14") && said.contains("north wall goes out round a player's build (20 to 20"),
+            "the book says it went round both: " + said);
+        CastleWall.standDownForTests(true);
+        helper.succeed();
     }
 }
