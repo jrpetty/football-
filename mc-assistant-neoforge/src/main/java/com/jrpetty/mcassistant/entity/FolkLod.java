@@ -15,12 +15,12 @@ import net.minecraft.world.phys.Vec3;
  * <li>A walk with both ends out of sight is <em>travelled</em> (FolkNavigation): no path is searched and no step is
  *     taken; the folk stands where it set out for as long as the walk would take it, and is then where it was going.
  *     A player coming into sight of it on the way has it walk the rest.</li>
- * <li>A folk standing still out of sight on firm ground skips the game's movement for the tick (no collisions worked
- *     out for a body that does not move), all but one tick in {@link #SETTLE_EVERY}, so a block taken from under it
- *     still lets it fall; one asleep in its bed skips it, seen or not (it is laid there). Out of sight, the shoving
- *     between folk is worked out every other tick.</li>
+ * <li>A folk standing still on firm ground skips the game's movement for the tick (no collisions worked out for a
+ *     body that does not move): all but one tick in {@link #SETTLE_EVERY} out of sight, all but one in
+ *     {@link #SETTLE_EVERY_SEEN} in it, so a block taken from under it still lets it fall; one asleep in its bed skips
+ *     it always (it is laid there). Out of sight, the shoving between folk is worked out every other tick.</li>
  * </ul>
- * In sight, nothing changes. On the game tests' server none of it is in force unless a test asks ({@link #liveForTests}):
+ * In sight, nothing shows. On the game tests' server none of it is in force unless a test asks ({@link #liveForTests}):
  * nobody is ever in sight there, and the other features' tests watch their folk walk.
  */
 public final class FolkLod {
@@ -29,6 +29,8 @@ public final class FolkLod {
     public static final double SIGHT = 72.0;
     /** A folk standing still out of sight still moves one tick in this many (staggered by its id). */
     private static final int SETTLE_EVERY = 10;
+    /** In sight, one tick in this many (a fifth of a second: no fall shows late by more). */
+    private static final int SETTLE_EVERY_SEEN = 4;
 
     private static boolean liveInTests;
 
@@ -99,8 +101,9 @@ public final class FolkLod {
      * way but a travelled one) and not drifting; and not on its tick of the {@link #SETTLE_EVERY}.
      */
     static boolean rests(VillageFolkEntity f, Vec3 input) {
-        if (f.isSleeping() && scaling(f.level()) && !f.isPassenger()) return true;
-        return restsUnseen(f, input);
+        if (!scaling(f.level())) return false;
+        if (f.isSleeping() && !f.isPassenger()) return true;
+        return standsStill(f, input);
     }
 
     /** Out of sight, the shoving between folk is worked out on every other tick only (nobody sees a crowd settle). */
@@ -108,14 +111,20 @@ public final class FolkLod {
         return (f.tickCount + f.getId()) % 2 == 0 && unseen(f);
     }
 
-    private static boolean restsUnseen(VillageFolkEntity f, Vec3 input) {
-        if ((f.tickCount + f.getId()) % SETTLE_EVERY == 0) return false;
+    /**
+     * Standing still on firm ground and dry, not riding or ridden, asked to go nowhere (no input, no walk under way but
+     * a travelled one) and not drifting: the game's movement would leave it where it is. It is skipped all but one tick
+     * in {@link #SETTLE_EVERY} out of sight, and one in {@link #SETTLE_EVERY_SEEN} in sight (a block taken from under it
+     * lets it fall a fifth of a second late at most; nothing else of it shows).
+     */
+    private static boolean standsStill(VillageFolkEntity f, Vec3 input) {
+        int beat = (f.tickCount + f.getId()) % SETTLE_EVERY;
+        if (beat == 0 || beat % SETTLE_EVERY_SEEN == 0 && !unseen(f)) return false;
         if (!f.onGround() || f.isInWaterOrBubble() || f.isInLava() || f.isPassenger() || f.isVehicle()) return false;
         if (input.lengthSqr() > 1.0E-6) return false;
         Vec3 v = f.getDeltaMovement();
         if (v.x * v.x + v.z * v.z > 1.0E-4) return false;
-        if (!(f.getNavigation().isDone() || f.getNavigation() instanceof FolkNavigation n && n.travelling())) return false;
-        return unseen(f);
+        return f.getNavigation().isDone() || f.getNavigation() instanceof FolkNavigation n && n.travelling();
     }
 
     /** A town's stores counted for something are not counted for it again by every idle folk for this long. */
