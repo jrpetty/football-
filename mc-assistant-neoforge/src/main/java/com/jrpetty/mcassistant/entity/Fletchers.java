@@ -708,7 +708,21 @@ public final class Fletchers {
         if (Villages.ageOf(v.id()).ordinal() < Villages.Age.IRON.ordinal()) return 0;
         int want = 0;
         for (VillageFolkEntity g : bestArchers(v.id())) if (g.countCarried(s -> s.getItem() instanceof CrossbowItem) == 0) want++;
-        return want - Crafts.stock(level, v, s -> s.getItem() instanceof CrossbowItem);
+        want += forTheWar(v.id());
+        return want - Crafts.stock(level, v, s -> s.getItem() instanceof CrossbowItem) - WarWorks.inArmoury(level, v.id(), s -> s.getItem() instanceof CrossbowItem);
+    }
+
+    /**
+     * [war-bows] Crossbows made ahead of a war for the army's crossbow company: on a war footing (or the tension before
+     * one), one for every six of the militia (one for every four under a Captain who favours them), none for a town
+     * whose Captain likes only bows. Made like any other, of sticks, string, iron and a tripwire hook.
+     */
+    static int forTheWar(UUID village) {
+        if (Wars.footing(village) == Wars.Footing.PEACE) return 0;
+        com.jrpetty.mcassistant.village.BattleModel.Ranged r = Armies.rangedFor(village, null);
+        if (r == com.jrpetty.mcassistant.village.BattleModel.Ranged.BOWS) return 0;
+        int militia = Militia.members(village).size();
+        return militia / (r == com.jrpetty.mcassistant.village.BattleModel.Ranged.CROSSBOWS ? 4 : 6);
     }
 
     /** A crossbow: three sticks, two string, an iron ingot and a tripwire hook (an ingot, a stick and a plank make two). */

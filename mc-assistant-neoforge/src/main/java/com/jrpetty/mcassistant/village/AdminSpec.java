@@ -203,6 +203,8 @@ public final class AdminSpec {
         add("army.war", Area.ARMY, "army war", T, "Declare war on another town.", "army war Ashby", Param.of("enemy", Kind.TOWN));
         add("army.phase", Area.ARMY, "army phase", T, "Jump a battle with its enemy to a phase (or surrender, peace).", "army phase lineup",
             Param.of("phase", Kind.PHASE));
+        add("army.ranged", Area.ARMY, "army ranged", T, "What the army's missile men carry: bows, crossbows, or a mix.", "army ranged crossbows",
+            Param.words("arm", "bows", "crossbows", "mix"));
         add("army.vassal", Area.ARMY, "army vassal", T, "Make the town a vassal of another.", "army vassal Ashby", Param.of("overlord", Kind.TOWN));
         add("army.free", Area.ARMY, "army free", T, "Free a vassal town.", "army free");
         add("army.raid", Area.ARMY, "army raid", T, "A raiding band of N at the gate now.", "army raid 8", Param.num("size", 1, MOST_RAID, 6));

@@ -228,6 +228,7 @@ public final class AdminActions {
                 yield o == null ? Done.no("No town called " + a.word(0, "") + ".") : AdminTools.war(level, v, o);
             }
             case "army.phase" -> AdminTools.phase(level, v, a.word(0, "lineup").toLowerCase(Locale.ROOT));
+            case "army.ranged" -> AdminTools.ranged(v, a.word(0, "mix"));
             case "army.vassal" -> {
                 Villages.Village o = AdminRunner.town(a.word(0, ""));
                 yield o == null ? Done.no("No town called " + a.word(0, "") + ".") : AdminTools.vassal(level, v, o);

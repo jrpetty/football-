@@ -3954,6 +3954,11 @@ def war_stage(r, look, cx, cz):
     shoot(views, "5", ["captain", "behind0"], 2)
     views = stage("volley", 4)                         # "Archers, loose!": the arrows arcing over onto raised shields
     shoot(views, "6", ["side", "hill"], 2)
+    # [war-bows] The crossbow company close to from its flank (a rank loosing flat, a rank kneeling to span, the ranks
+    # changing places), twice to catch both; the archers' volley side on, wide enough to see the arc and where it falls.
+    shoot(views, "6b", ["crossbows"], 3)
+    shoot(views, "6c", ["crossbows"], 2)
+    shoot(views, "6d", ["arc"], 2)
     views = stage("charge", 2)                         # the lines running in
     shoot(views, "7", ["side", "behind0"], 2)
     views = stage("clash", 6)                          # the lines locked: sparks, dust, the din, at mid-distance

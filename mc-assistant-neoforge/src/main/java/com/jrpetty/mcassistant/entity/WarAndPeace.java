@@ -478,6 +478,17 @@ public final class WarAndPeace {
         return false;
     }
 
+    /** [war-bows] The town's missile arm as it stands, its militia's bows and crossbows: "12 bows, 8 crossbows". */
+    static String missiles(UUID v) {
+        int bows = 0, crossbows = 0;
+        for (VillageFolkEntity g : WarFooting.militia(v)) {
+            if (awayOnGarrison(g)) continue;
+            if (g.countCarried(s -> s.getItem() instanceof net.minecraft.world.item.CrossbowItem) > 0) crossbows++;
+            else if (g.countCarried(s -> s.getItem() instanceof net.minecraft.world.item.BowItem) > 0) bows++;
+        }
+        return com.jrpetty.mcassistant.village.BattleModel.missileWords(bows, crossbows);
+    }
+
     /** One number for a town's strength: its guards most, their iron and bows, its wall, and a little for its numbers. */
     static int strength(int folk, int guards, int armoured, int archers, int walls) {
         return Math.max(1, guards * 3 + armoured * 2 + archers + walls * 2 + folk / 5);
@@ -2646,7 +2657,7 @@ public final class WarAndPeace {
         String rem = calendarLine(id, day);
         if (rem != null) out.add(rem);
         out.add("Our strength: " + mine.strength() + " (" + mine.guards() + " guards, " + mine.armoured() + " in iron, " + mine.archers()
-            + " with bows" + (mine.garrison() > 0 ? ", " + mine.garrison() + " of them our allies'" : "") + (mine.walls() > 0 ? ", a wall" : "") + ").");
+            + " with bows (" + missiles(id) + ")" + (mine.garrison() > 0 ? ", " + mine.garrison() + " of them our allies'" : "") + (mine.walls() > 0 ? ", a wall" : "") + ").");
         for (UUID foe : Wars.enemies(id)) {
             WarBooks.Book b = WarBooks.book(id, foe);
             Reckoning theirs = of(level, id, foe, day);
@@ -2692,7 +2703,7 @@ public final class WarAndPeace {
         out.putInt("stand", standDays(id));
         Reckoning mine = own(level, id);
         out.putInt("strength", mine.strength());
-        out.putString("strength_words", mine.guards() + " guards, " + mine.armoured() + " in iron, " + mine.archers() + " with bows"
+        out.putString("strength_words", mine.guards() + " guards, " + mine.armoured() + " in iron, " + mine.archers() + " with bows (" + missiles(id) + ")"
             + (mine.garrison() > 0 ? ", " + mine.garrison() + " allies'" : "") + (mine.walls() > 0 ? ", a wall" : ", no wall"));
         ListTag wars = new ListTag();
         for (UUID foe : Wars.enemies(id)) {

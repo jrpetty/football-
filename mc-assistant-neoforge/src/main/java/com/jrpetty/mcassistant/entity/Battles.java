@@ -83,6 +83,15 @@ public final class Battles {
     static final long FORM = 600L, PARLEY = 400L, SPEECH = 200L, CHAMPIONS = 800L, VOLLEY = 60L, PURSUIT = 200L, AFTERMATH = 600L;
     /** Volleys in the archers' duel before the lines come on. */
     static final int VOLLEYS = 4;
+    /**
+     * [war-bows] The crossbow company's volleys, a rank at a time (the counter-march): one every three seconds while a
+     * rank stands spanned. The front rank stands this far before the line, the reloading rank kneels this far, and once
+     * the lines are this close the company falls back behind the shields.
+     */
+    static final long BOLT_EVERY = 60L;
+    static final double BOLT_FRONT = 4.2, BOLT_BACK = 2.6, BOLT_RETIRE = 10.0;
+    /** [war-bows] The crossbow volleys remembered, by side (who loosed each), for the books' tests: the last few. */
+    static final int BOLT_LOG = 8;
     /** Captives taken in one battle, at most: the rest are let go on their word. */
     static final int CAPTIVES_MOST = 8;
     /** Bursts of the clash's sparks a beat, at most. */
@@ -155,6 +164,16 @@ public final class Battles {
         boolean settled, withdrew;
         /** [war-polish] Staged at the charge: the lines run in till they all but meet, and are held there. */
         boolean charging;
+        /** [war-bows] The arrows each side has loosed on this field (a third gathered again by the side that holds it). */
+        final int[] spent = new int[2];
+        /** [war-bows] When each side's crossbow company last loosed a rank. */
+        final long[] lastBolt = { -1000, -1000 };
+        /** [war-bows] Who loosed each of the last few crossbow volleys, by side (the counter-march, rank by rank). */
+        final List<List<UUID>> bolted0 = new ArrayList<>(), bolted1 = new ArrayList<>();
+        /** [war-bows] The arrows gathered off the field once it is held: -1 not yet. */
+        int gathered = -1;
+        /** [war-bows] The defenders' places on the town wall in an assault (CastleWall's posts, nearest the gate first), found once. */
+        @Nullable List<Watch.Post> wall;
 
         Battle(Campaigns.Campaign c, BlockPos centre, double ax, double az, boolean assault, boolean detailed) {
             this.c = c;
@@ -176,6 +195,12 @@ public final class Battles {
         @Nullable public BattleModel.Result result() { return paper; }
         public List<String> captives() { return captives; }
         public int down(int i) { return down[i]; }
+        /** [war-bows] The arrows side i has loosed; who loosed each of its last crossbow volleys; the arrows gathered (-1 not yet). */
+        public int spent(int i) { return spent[i]; }
+        public List<List<UUID>> bolted(int i) { return i == 0 ? bolted0 : bolted1; }
+        public int gathered() { return gathered; }
+        /** [war-bows] Tests: the field left now, its spent arrows gathered by the side that holds it. */
+        public void gatherForTests() { gather(); }
 
         String name(int i) {
             return Villages.name(side[i].town);
@@ -208,6 +233,7 @@ public final class Battles {
                 bars(level);
             }
             if (phase.ordinal() <= BattleModel.Phase.ADVANCE.ordinal()) life(level, now);
+            if (phase.ordinal() < BattleModel.Phase.PURSUIT.ordinal()) for (int i = 0; i < 2; i++) crossbows(level, i, now);   // [war-bows]
             switch (phase) {
                 case FORM -> form(level, in);
                 case PARLEY -> parley(level, in);
@@ -565,6 +591,9 @@ public final class Battles {
             for (int i = 0; i < 2; i++) array(level, side[i], origin(i), 0, this, i);
             shields(true);
             boolean any = side[0].count(BattleModel.Role.ARCHER) + side[1].count(BattleModel.Role.ARCHER) > 0;
+            if (any && now - lastVolley >= VOLLEY - Armies.BOW_DRAW && now - lastVolley < VOLLEY) {
+                for (int i = 0; i < 2; i++) if (volleys[i] < VOLLEYS || hold == BattleModel.Phase.VOLLEYS) drawBows(level, i);   // [war-bows] "Draw!"
+            }
             if (any && now - lastVolley >= VOLLEY) {
                 lastVolley = now;
                 for (int i = 0; i < 2; i++) {
@@ -607,7 +636,7 @@ public final class Battles {
             for (int i = 0; i < 2; i++) array(level, side[i], origin(i), 0, this, i);
             if (in % 60 == 0 && side[0].count(BattleModel.Role.ARCHER) + side[1].count(BattleModel.Role.ARCHER) > 0) {
                 for (int i = 0; i < 2; i++) volley(level, i, false);
-            }
+            } else if (in % 60 == 60 - Armies.BOW_DRAW) for (int i = 0; i < 2; i++) drawBows(level, i);   // [war-bows]
             if (!held() && (gap() <= 5 || in > 900)) {
                 for (int i = 0; i < 2; i++) {
                     if (fellBack[i]) {
@@ -650,7 +679,7 @@ public final class Battles {
             if (now - lastVolley >= VOLLEY + 20) {
                 lastVolley = now;
                 for (int i = 0; i < 2; i++) volley(level, i, true);
-            }
+            } else if (now - lastVolley >= VOLLEY) for (int i = 0; i < 2; i++) drawBows(level, i);   // [war-bows]
             for (int i = 0; i < 2; i++) tend(level, i, 10.0);        // the medic pulls back those down near its own lines
             sparks(level);
             if (held()) return;                                    // [war-polish] staged: the lines stay locked; nobody breaks on a stage
@@ -797,8 +826,24 @@ public final class Battles {
             if (in == EVERY) takeCaptives(level);
             if (in < soon(AFTERMATH) || held()) return;             // [war-polish] staged: the field stays as it is
             for (int i = 0; i < 2; i++) bannerHome(level, i);
+            gather();
             over = true;
             close();
+        }
+
+        /**
+         * [war-bows] The spent arrows gathered off the field by the side that holds it: a third of all loosed there, both
+         * sides' (the rest broken, lost or trodden in), into its supply to go home to its stores. Never more than were
+         * loosed; once.
+         */
+        void gather() {
+            if (gathered >= 0) return;
+            gathered = 0;
+            if (winner < 0 || side[winner] == null) return;
+            gathered = BattleModel.recovered(spent[0] + spent[1]);
+            if (gathered <= 0) return;
+            side[winner].supply.merge(Items.ARROW, gathered, Integer::sum);
+            story.add(name(winner) + " gathered " + gathered + " arrows off the field.");
         }
 
         /**
@@ -972,6 +1017,89 @@ public final class Battles {
             for (int i = 0; i < 2; i++) for (Armies.Fighter f : side[i].fighters) f.shieldUp = up && f.role == BattleModel.Role.LINE && !f.down();
         }
 
+        /** [war-bows] Side i's bowmen draw for the coming volley (their bows bent, the pose that says a volley is coming). */
+        void drawBows(ServerLevel level, int i) {
+            for (Armies.Fighter f : side[i].fighters) {
+                if (f.role == BattleModel.Role.ARCHER && !f.crossbow && !f.down() && level.getEntity(f.id) instanceof VillageFolkEntity e) Armies.draw(e);
+            }
+        }
+
+        /**
+         * [war-bows] Side i's crossbow company, a beat: every crossbow spanning counts down to loaded (one whose quiver is
+         * empty draws its blade and joins the reserve); then, every few seconds while it may shoot, the spanned front rank
+         * looses together at the enemy's line, flat and hard ("Crossbows, loose!"), and the ranks change places (the
+         * counter-march): it falls back a step to kneel and reload ("Reload!") while the rank behind steps up spanned. On a
+         * town wall in an assault every spanned crossbow looses from the parapet.
+         */
+        void crossbows(ServerLevel level, int i, long now) {
+            Armies.Army us = side[i];
+            if (us == null) return;
+            boolean onWall = onWall(i);
+            List<Armies.Fighter> ready = new ArrayList<>();
+            int company = 0;
+            for (Armies.Fighter f : us.fighters) {
+                if (!f.crossbow() || f.down() || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
+                company++;
+                if (!Armies.spanning(e, f, EVERY)) {
+                    Armies.outOfArrows(e, f);
+                    continue;
+                }
+                if (f.reload <= 0 && net.minecraft.world.item.CrossbowItem.isCharged(e.getMainHandItem()) && (onWall || f.file == 0)) ready.add(f);
+            }
+            if (company == 0 || ready.isEmpty() || now - lastBolt[i] < BOLT_EVERY || !boltsFly(i, onWall)) return;
+            List<LivingEntity> marks = new ArrayList<>();
+            for (Armies.Fighter f : side[1 - i].fighters) {
+                if (f.down() || f.role == BattleModel.Role.MEDIC) continue;
+                if (!onWall && f.role != BattleModel.Role.LINE) continue;              // at their line: flat shots hit what is in front
+                if (level.getEntity(f.id) instanceof LivingEntity l) marks.add(l);
+            }
+            if (marks.isEmpty()) return;
+            List<UUID> who = new ArrayList<>();
+            for (Armies.Fighter f : ready) {
+                if (!(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
+                LivingEntity m = nearest(e, marks);
+                if (m != null && Armies.bolt(level, e, m)) {
+                    who.add(f.id);
+                    f.loosed++;
+                    spent[i]++;
+                    Armies.span(e, f);                                     // straight to spanning the next
+                }
+            }
+            if (who.isEmpty()) return;
+            lastBolt[i] = now;
+            volleys[i]++;
+            List<List<UUID>> log = bolted(i);
+            log.add(who);
+            if (log.size() > BOLT_LOG) log.remove(0);
+            order(level, i, onWall ? "From the wall — crossbows, loose!" : "Crossbows, loose!");
+            if (!onWall) {
+                for (Armies.Fighter f : us.fighters) if (f.crossbow()) f.file = 1 - f.file;    // the counter-march
+                say(level, Armies.fighter(who.get(0)), "Reload!");
+            }
+        }
+
+        /** [war-bows] May side i's crossbows shoot now: from a wall in an assault; in the field, in the volleys and on the advance till the lines close. */
+        boolean boltsFly(int i, boolean onWall) {
+            if (onWall) return phase.ordinal() >= BattleModel.Phase.FORM.ordinal() && phase.ordinal() <= BattleModel.Phase.CLASH.ordinal();
+            return phase == BattleModel.Phase.VOLLEYS || phase == BattleModel.Phase.ADVANCE && !charging && gap() > BOLT_RETIRE;
+        }
+
+        /** [war-bows] Side i's crossbows stand on its town's wall: the defenders of an assault, the gate still shut, a wall to stand on. */
+        boolean onWall(int i) {
+            return i == 1 && assault && !gateDown && wall != null && !wall.isEmpty();
+        }
+
+        @Nullable
+        static LivingEntity nearest(Entity from, List<LivingEntity> marks) {
+            LivingEntity best = null;
+            double bd = Double.MAX_VALUE;
+            for (LivingEntity l : marks) {
+                double d = l.distanceToSqr(from);
+                if (d < bd) { bd = d; best = l; }
+            }
+            return best;
+        }
+
         /** A volley from side i's archers: each at one of theirs (the line, or over it at the back once the lines meet). */
         void volley(ServerLevel level, int i, boolean over) {
             List<Entity> marks = new ArrayList<>();
@@ -984,9 +1112,14 @@ public final class Battles {
             if (marks.isEmpty()) return;
             int shot = 0;
             for (Armies.Fighter f : side[i].fighters) {
-                if (f.role != BattleModel.Role.ARCHER || f.down() || !(level.getEntity(f.id) instanceof VillageFolkEntity archer)) continue;
+                if (f.role != BattleModel.Role.ARCHER || f.crossbow || f.down() || !(level.getEntity(f.id) instanceof VillageFolkEntity archer)) continue;
                 Entity m = marks.get(level.getRandom().nextInt(marks.size()));
-                if (Armies.loose(level, archer, m.getX(), m.getY(), m.getZ(), 5.0F)) shot++;
+                if (Armies.loose(level, archer, m.getX(), m.getY(), m.getZ(), 5.0F)) {
+                    shot++;
+                    f.loosed++;
+                    spent[i]++;
+                }
+                if (archer.countMatching(s -> s.is(Items.ARROW)) == 0) Armies.outOfArrows(archer, f);   // [war-bows] blades, and into the reserve
             }
             if (shot == 0) return;
             volleys[i]++;
@@ -1257,6 +1390,7 @@ public final class Battles {
         double ox = origin[0] + fx * forward, oz = origin[1] + fz * forward;
         float yaw = Armies.yawTo(fx, fz);
         List<Armies.Fighter> line = new ArrayList<>(), archers = new ArrayList<>(), reserve = new ArrayList<>(), riders = new ArrayList<>();
+        List<Armies.Fighter> bolts = new ArrayList<>();                    // [war-bows] the crossbow company
         Armies.Fighter captain = null, bearer = null, medic = null;
         for (Armies.Fighter f : a.fighters) {
             if (f.down() || f.order == Armies.Order.ENGAGE || f.order == Armies.Order.ROUT) continue;
@@ -1264,7 +1398,7 @@ public final class Battles {
             if (f.rank == Armies.Rank.BEARER) { bearer = f; continue; }
             switch (f.role) {
                 case MEDIC -> medic = f;
-                case ARCHER -> archers.add(f);
+                case ARCHER -> (f.crossbow ? bolts : archers).add(f);
                 case RESERVE -> reserve.add(f);
                 case RIDER -> riders.add(f);
                 default -> line.add(f);
@@ -1273,6 +1407,9 @@ public final class Battles {
         }
         double back = b == null ? rank(level, paradeOrder(line), ox, oz, fx, fz, 0, 1.5, 12, yaw)     // on parade: straight ranks
             : shape(level, lineOrder(level, line, a.formation), a.formation, ox, oz, fx, fz, yaw, b, side);
+        // [war-bows] The crossbows: in two ranks before the line while they shoot, the front spanned and the rear kneeling to
+        // reload; on the town wall's parapet in an assault; once the lines close (and on parade), behind the shields with the bows.
+        if (!crossbowsForward(level, bolts, b, side, ox, oz, fx, fz, yaw)) archers.addAll(bolts);
         BlockPos rise = b == null || a.tactic != BattleModel.Tactic.HILL_ARCHERS ? null : side == 0 ? b.c.ground.riseA() : b.c.ground.riseB();
         int ranks = a.formation.ranksFor(line.size()), per = (line.size() + ranks - 1) / Math.max(1, ranks);
         double half = Math.max(2, (per - 1) * a.formation.spacing / 2);
@@ -1318,6 +1455,47 @@ public final class Battles {
         if (medic != null && (b == null || b.phase.ordinal() < BattleModel.Phase.CLASH.ordinal())) {
             medic.place(level, ox + fx * (last - GROUP_GAP), oz + fz * (last - GROUP_GAP), yaw);
         }
+    }
+
+    /**
+     * [war-bows] The crossbow company placed for shooting, if it shoots from where it stands: on the town wall's posts
+     * (nearest the gate first) for the defenders of an assault; else in the field from the forming up till the lines
+     * close, in two ranks before the line, the rank to shoot next in front and the reloading rank a step behind it,
+     * kneeling, its files half a file over so the ranks pass through each other as they change places. False when it
+     * stands behind the line with the bows.
+     */
+    static boolean crossbowsForward(ServerLevel level, List<Armies.Fighter> bolts, @Nullable Battle b, int side, double ox, double oz,
+                                    double fx, double fz, float yaw) {
+        if (bolts.isEmpty() || b == null) return false;
+        if (b.assault && side == 1 && !b.gateDown) {
+            if (b.wall == null) b.wall = wallPosts(level, b);
+            if (!b.wall.isEmpty()) {
+                for (int k = 0; k < bolts.size(); k++) {
+                    Watch.Post p = b.wall.get(k % b.wall.size());
+                    double spread = (k / b.wall.size()) * 0.8;               // more than posts: shoulder to shoulder along the walkway
+                    Armies.Fighter x = bolts.get(k);
+                    x.place(level, p.stand().getX() + 0.5 + p.out().getStepZ() * spread, p.stand().getZ() + 0.5 + p.out().getStepX() * spread,
+                        Armies.yawTo(p.out().getStepX(), p.out().getStepZ()));
+                    x.ty = p.stand().getY();
+                }
+                return true;
+            }
+        }
+        if (b.phase.ordinal() > BattleModel.Phase.ADVANCE.ordinal() || b.charging || b.phase == BattleModel.Phase.ADVANCE && b.gap() <= BOLT_RETIRE) return false;
+        List<Armies.Fighter> front = new ArrayList<>(), back = new ArrayList<>();
+        for (Armies.Fighter x : bolts) (x.file == 0 ? front : back).add(x);
+        double rx = -fz, rz = fx;
+        rank(level, front, ox, oz, fx, fz, BOLT_FRONT, 2.0, 14, yaw);
+        rank(level, back, ox + rx * 1.0, oz + rz * 1.0, fx, fz, BOLT_BACK, 2.0, 14, yaw);
+        return true;
+    }
+
+    /** [war-bows] The defending town's wall posts, nearest the battle's centre (its gate) first. */
+    static List<Watch.Post> wallPosts(ServerLevel level, Battle b) {
+        Armies.Army d = b.side[1];
+        List<Watch.Post> out = d == null ? new ArrayList<>() : new ArrayList<>(CastleWall.posts(level, d.town));
+        out.sort(Comparator.comparingDouble(p -> p.stand().distSqr(b.centre)));
+        return out;
     }
 
     /** On parade: the sergeants at the ends of the line, the rest between. */

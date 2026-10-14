@@ -509,8 +509,8 @@ public final class AdminTools {
 
     private static final EquipmentSlot[] KIT_SLOTS = { EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET, EquipmentSlot.MAINHAND };
 
-    /** Every n-th fighter carries a bow (with arrows), a crossbow from iron up, a trident from diamond up. */
-    private static final int BOW_EVERY = 4, CROSSBOW_EVERY = 8, TRIDENT_EVERY = 10;
+    /** Every n-th fighter carries a missile (a bow, or from iron up a crossbow as the town's Captain likes, with arrows), a trident from diamond up. */
+    private static final int BOW_EVERY = 4, TRIDENT_EVERY = 10, KIT_ARROWS = 32;
 
     /** How a kit went: pieces out of the stores, and pieces made by decree. */
     public record Kit(int fighters, int fromStores, int byDecree) {
@@ -535,7 +535,8 @@ public final class AdminTools {
     public static Kit kit(ServerLevel level, Villages.Village v, List<VillageFolkEntity> fighters, String tier, boolean storesFirst) {
         Item[] set = TIER.getOrDefault(tier, TIER.get("iron"));
         int rank = new ArrayList<>(TIER.keySet()).indexOf(tier);
-        int stores = 0, decree = 0, n = 0;
+        int stores = 0, decree = 0, n = 0, missiles = 0;
+        com.jrpetty.mcassistant.village.BattleModel.Ranged ranged = Armies.rangedFor(v.id(), null);
         for (VillageFolkEntity f : fighters) {
             for (int s = 0; s < KIT_SLOTS.length; s++) {
                 Item piece = set[s];
@@ -547,20 +548,37 @@ public final class AdminTools {
             }
             n++;
             if (n % BOW_EVERY == 0) {
-                f.insertGiven(new ItemStack(Items.BOW));
-                f.insertGiven(new ItemStack(Items.ARROW, 32));
+                // [war-bows] The missile arm: bows, and from iron up crossbows as the town's Captain likes; arrows with them.
+                Item missile = rank >= 2 && ranged.crossbowFor(missiles++) ? Items.CROSSBOW : Items.BOW;
+                giveKit(level, v, f, missile, 1, storesFirst);             // (the pieces counted are the armour and blades)
+                giveKit(level, v, f, Items.ARROW, KIT_ARROWS, storesFirst);
             } else {
                 ItemStack shield = new ItemStack(Items.SHIELD);
                 Heraldry.Design d = Heraldry.design(v.id());
                 if (d != null) Arms.emblazon(shield, Heraldry.item(level, v.id(), d));
                 f.setItemSlot(EquipmentSlot.OFFHAND, shield);
             }
-            if (rank >= 2 && n % CROSSBOW_EVERY == 0) f.insertGiven(new ItemStack(Items.CROSSBOW));
             if (rank >= 3 && n % TRIDENT_EVERY == 0) f.insertGiven(new ItemStack(Items.TRIDENT));
             if (rank >= 2) f.insertGiven(PotionContents.createItemStack(Items.POTION, Potions.HEALING));
             f.setHealth(f.getMaxHealth());
         }
         return new Kit(n, stores, decree);
+    }
+
+    /** [war-bows] So many of a thing into a fighter's pack: out of the stores where they hold them, else by decree. Whether the stores gave them. */
+    private static boolean giveKit(ServerLevel level, Villages.Village v, VillageFolkEntity f, Item what, int n, boolean storesFirst) {
+        boolean stored = storesFirst && TownWork.take(level, v, s -> s.is(what), n);
+        ItemStack left = f.insertGiven(new ItemStack(what, n));
+        if (!left.isEmpty()) TownWork.give(level, v, left);
+        return stored;
+    }
+
+    /** [war-bows] The town's missile arm by decree: bows, crossbows or a mix (Ledger "war.ranged"; Armies.rangedFor). */
+    public static Done ranged(Villages.Village v, String word) {
+        com.jrpetty.mcassistant.village.BattleModel.Ranged r = com.jrpetty.mcassistant.village.BattleModel.Ranged.parse(word);
+        if (r == null) return Done.no("Bows, crossbows or mix.");
+        Ledger.note(v.id(), "war.ranged", r.name());
+        return Done.ok(Villages.name(v.id()) + "'s army will carry " + r.words, "the army was ordered to carry " + r.words);
     }
 
     /** Put a grown folk on the watch (one not already on it, not the leader); null when the town has none to spare. */

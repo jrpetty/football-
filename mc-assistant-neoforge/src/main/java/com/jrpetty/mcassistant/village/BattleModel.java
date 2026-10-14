@@ -230,6 +230,53 @@ public final class BattleModel {
     /** A detailed battle's phases, in order. */
     public enum Phase { FORM, PARLEY, SPEECH, CHAMPIONS, VOLLEYS, ADVANCE, CLASH, PURSUIT, AFTERMATH, DONE }
 
+    // ------------------------------------------------------------------ [war-bows] the missile arm
+
+    /**
+     * [war-bows] What a commander favours for its missile arm: longbows (quick to draw, a light arrow in a high arc),
+     * crossbows (slow to span, a heavy bolt flat and hard), or both. Set by decree (Ledger "war.ranged"), else the
+     * Captain's own liking.
+     */
+    public enum Ranged {
+        BOWS("bows"), CROSSBOWS("crossbows"), MIX("a mix of bows and crossbows");
+
+        public final String words;
+
+        Ranged(String words) { this.words = words; }
+
+        /** "bows", "crossbows" or "mix" (any case); null for anything else. */
+        public static Ranged parse(String s) {
+            if (s == null) return null;
+            for (Ranged r : values()) if (r.name().equalsIgnoreCase(s.trim())) return r;
+            return null;
+        }
+
+        /** A commander's own liking, by a number fixed for it (its id's hash): one in three favours each. */
+        public static Ranged liking(int nature) {
+            return values()[Math.floorMod(nature, values().length)];
+        }
+
+        /** For the k-th missile man (from 0) who could carry either: a crossbow? A mix gives every other one. */
+        public boolean crossbowFor(int k) {
+            return this == CROSSBOWS || this == MIX && k % 2 == 1;
+        }
+    }
+
+    /** [war-bows] Of the arrows loosed on a field, the share the side that holds it gathers again: one in three (the rest broken, lost or trodden in). */
+    public static final int RECOVER_ONE_IN = 3;
+
+    /** [war-bows] The arrows gathered off a field where so many were loosed, both sides together. */
+    public static int recovered(int loosed) {
+        return Math.max(0, loosed) / RECOVER_ONE_IN;
+    }
+
+    /** [war-bows] An army's missile arm in words: "12 bows, 8 crossbows", "4 bows", "no bows". */
+    public static String missileWords(int bows, int crossbows) {
+        if (bows <= 0 && crossbows <= 0) return "no bows";
+        String b = bows + (bows == 1 ? " bow" : " bows"), c = crossbows + (crossbows == 1 ? " crossbow" : " crossbows");
+        return crossbows <= 0 ? b : bows <= 0 ? c : b + ", " + c;
+    }
+
     // ------------------------------------------------------------------ a fighter's worth
 
     /** What a blade is worth: none, wood or stone, iron, diamond or better. */

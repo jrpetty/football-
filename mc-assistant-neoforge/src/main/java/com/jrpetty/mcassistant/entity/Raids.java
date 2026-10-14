@@ -526,10 +526,15 @@ public final class Raids {
 
     /** Bow and arrows out of the village's stores, if the guard has none of its own. */
     static void arm(ServerLevel level, Villages.Village v, VillageFolkEntity g) {
-        if (g.countCarried(s -> s.is(Items.BOW) || s.is(Items.CROSSBOW)) == 0
-                && TownWork.take(level, v, s -> s.is(Items.BOW), 1)) {
-            ItemStack left = g.insertItem(new ItemStack(Items.BOW));
-            if (!left.isEmpty()) g.spawnAtLocation(left);
+        // [war-bows] From the Iron Age, a crossbow for the wall where the stores have one (flat and hard from the parapet), else a bow.
+        if (g.countCarried(s -> s.is(Items.BOW) || s.is(Items.CROSSBOW)) == 0) {
+            boolean iron = Villages.ageOf(v.id()).ordinal() >= Villages.Age.IRON.ordinal();
+            net.minecraft.world.item.Item w = iron && TownWork.take(level, v, s -> s.is(Items.CROSSBOW), 1) ? Items.CROSSBOW
+                : TownWork.take(level, v, s -> s.is(Items.BOW), 1) ? Items.BOW : null;
+            if (w != null) {
+                ItemStack left = g.insertItem(new ItemStack(w));
+                if (!left.isEmpty()) g.spawnAtLocation(left);
+            }
         }
         // A healing potion from the brewer, drunk if the fight goes badly (Links.drinkIfHurt).
         if (g.countCarried(Links::healing) == 0) {

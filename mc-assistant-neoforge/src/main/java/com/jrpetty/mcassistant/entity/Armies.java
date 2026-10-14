@@ -22,6 +22,8 @@ import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.BannerItem;
+import net.minecraft.world.item.BowItem;
+import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -29,6 +31,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.ProjectileWeaponItem;
 import net.minecraft.world.item.ShieldItem;
 import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.component.ChargedProjectiles;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -138,6 +141,12 @@ public final class Armies {
         final int stagger;
         long stuckSince;
         double stuckBest = Double.MAX_VALUE;
+        /** [war-bows] An archer's missile: a crossbow (else a bow). */
+        boolean crossbow;
+        /** [war-bows] Ticks left spanning its crossbow (0: spanned, or a bow); the arrows it has loosed this battle. */
+        int reload, loosed;
+        /** [war-bows] Which of the crossbow company's two ranks it stands in: 0 the rank to shoot next, 1 the one reloading behind it. */
+        int file;
 
         Fighter(UUID id, String name, UUID town, BattleModel.Role role) {
             this.id = id;
@@ -153,6 +162,13 @@ public final class Armies {
         public Rank rank() { return rank; }
         public Order order() { return order; }
         public boolean down() { return order == Order.YIELDED || order == Order.CAPTIVE || dead; }
+        /** [war-bows] A crossbowman (an archer with a crossbow). */
+        public boolean crossbow() { return crossbow && role == BattleModel.Role.ARCHER; }
+        public int reload() { return reload; }
+        public int loosed() { return loosed; }
+        public int file() { return file; }
+        /** [war-bows] Down on one knee, spanning its crossbow. */
+        boolean kneels() { return crossbow() && reload > 0; }
 
         /** Stand here, facing this way. */
         void place(ServerLevel level, double x, double z, float facing) {
@@ -176,12 +192,12 @@ public final class Armies {
 
         String encode() {
             return id + ":" + role.ordinal() + ":" + rank.ordinal() + ":" + power + ":" + (veteran ? 1 : 0) + ":" + town + ":" + WarBooks.clean(name).replace(":", " ")
-                + ":" + order.ordinal() + ":" + (dead ? 1 : 0);
+                + ":" + order.ordinal() + ":" + (dead ? 1 : 0) + ":" + (crossbow ? 1 : 0);
         }
 
         @Nullable
         static Fighter decode(String s) {
-            String[] p = s.split(":", 9);
+            String[] p = s.split(":", 10);                     // [war-bows] the tenth, its crossbow, missing from older books
             if (p.length < 9) return null;
             try {
                 Fighter f = new Fighter(UUID.fromString(p[0]), p[6], UUID.fromString(p[5]), BattleModel.Role.values()[Integer.parseInt(p[1])]);
@@ -190,6 +206,7 @@ public final class Armies {
                 f.veteran = "1".equals(p[4]);
                 f.order = Order.values()[Integer.parseInt(p[7])];
                 f.dead = "1".equals(p[8]);
+                f.crossbow = p.length > 9 && "1".equals(p[9]);
                 return f;
             } catch (RuntimeException e) {
                 return null;
@@ -216,6 +233,8 @@ public final class Armies {
         boolean horn;
         /** Its surcoat (a tabard of its town's arms), drawn on its fighters (shared; never handed out). */
         ItemStack surcoat = ItemStack.EMPTY;
+        /** [war-bows] What its Captain favours for the missile arm (or the town's decree). */
+        BattleModel.Ranged ranged = BattleModel.Ranged.MIX;
 
         Army(UUID town, UUID enemy) {
             this.town = town;
@@ -261,7 +280,21 @@ public final class Armies {
             return n;
         }
 
-        int carried(Item it) {
+        public BattleModel.Ranged ranged() { return ranged; }
+
+        /** [war-bows] Its archers on their feet with a bow (false) or a crossbow (true). */
+        public int missiles(boolean crossbows) {
+            int n = 0;
+            for (Fighter f : fighters) if (f.role == BattleModel.Role.ARCHER && !f.down() && f.crossbow == crossbows) n++;
+            return n;
+        }
+
+        /** [war-bows] "12 bows, 8 crossbows". */
+        public String missileWords() {
+            return BattleModel.missileWords(missiles(false), missiles(true));
+        }
+
+        public int carried(Item it) {
             return supply.getOrDefault(it, 0);
         }
 
@@ -395,12 +428,15 @@ public final class Armies {
         Map<UUID, Boolean> vet = new LinkedHashMap<>();
         for (VillageFolkEntity g : pool) vet.put(g.getUUID(), veteran(g.ownerId() == null ? id : g.ownerId(), g.getUUID()));
         pool.sort((x, y) -> Integer.compare(power(y, vet.get(y.getUUID())), power(x, vet.get(x.getUUID()))));
-        // The home guard: the weakest of the town's own, one in five, kept back to man the walls.
+        // The home guard: the weakest of the town's own, one in five, kept back to man the walls. [war-bows] The line's
+        // weakest first, so the field army keeps its missile arm (a bowman counts a little less than a shield in the line).
         int keep = atTheGate ? 0 : pool.size() / 5;
-        for (int i = pool.size() - 1; i >= 0 && keep > 0; i--) {
-            if (id.equals(pool.get(i).ownerId())) {
-                pool.remove(i);
-                keep--;
+        for (int pass = 0; pass < 2; pass++) {
+            for (int i = pool.size() - 1; i >= 0 && keep > 0; i--) {
+                if (id.equals(pool.get(i).ownerId()) && (pass == 1 || !WarAndPeace.archer(pool.get(i)))) {
+                    pool.remove(i);
+                    keep--;
+                }
             }
         }
         if (pool.isEmpty()) return null;
@@ -423,14 +459,25 @@ public final class Armies {
         }
         Map<UUID, VillageFolkEntity> byId = new LinkedHashMap<>();
         for (VillageFolkEntity g : pool) byId.put(g.getUUID(), g);
-        // Kit for the field, out of the armoury and the stores: a shield for the line, arrows for the bows.
+        // Kit for the field, out of the armoury and the stores: a shield for the line, arrows for the bows. [war-bows] The
+        // missile arm made up to its share out of the armoury and the stores, each archer's bow or crossbow chosen by the
+        // Captain's liking, and the best of the enchanted ones to the skilled.
+        a.ranged = rangedFor(id, captain);
+        issueMissiles(level, v, a, byId);
+        int k = 0;
         for (Fighter f : a.fighters) {
             VillageFolkEntity g = byId.get(f.id);
             if (WarAndPeace.archer(g)) topUpArrows(level, v, g, a);
             f.role = bow(g) ? BattleModel.Role.ARCHER : BattleModel.Role.LINE;
+            if (f.role == BattleModel.Role.ARCHER) {
+                f.crossbow = chooseMissile(g, a.ranged, k++);
+                betterMissile(level, v, g, f);
+            }
             if (f.role == BattleModel.Role.LINE && !shield(g)) shieldUp(level, v, g);
             f.power = power(g, f.veteran);
         }
+        int file = 0;
+        for (Fighter f : a.fighters) if (f.crossbow()) f.file = file++ % 2;      // the crossbow company in two ranks
         if (captain != null) {
             Fighter c = find(a, captain.getUUID());
             if (c != null) {
@@ -578,11 +625,232 @@ public final class Armies {
     /** Arrows for a bow, out of the stores: up to sixteen in its pack. */
     static void topUpArrows(ServerLevel level, Villages.Village v, VillageFolkEntity g, Army a) {
         int have = g.countMatching(s -> s.is(Items.ARROW));
-        if (have >= 16) return;
-        for (ItemStack s : Caravans.takeOut(level, v, s -> s.is(Items.ARROW), 16 - have)) {
+        if (have >= QUIVER) return;
+        for (ItemStack s : Caravans.takeOut(level, v, s -> s.is(Items.ARROW), QUIVER - have)) {
             ItemStack left = g.insertGiven(s);
             if (!left.isEmpty()) TownWork.give(level, v, left);
         }
+    }
+
+    // ------------------------------------------------------------------ [war-bows] the missile arm
+
+    /** [war-bows] The arrows a missile man takes out of the stores: a quiver of sixteen. */
+    static final int QUIVER = 16;
+    /** [war-bows] The army's missile arm, where it can be armed: one in three of its fighters (one in two for a Captain of bows' formations). */
+    static final int MISSILE_SHARE = 3, MISSILE_SHARE_BOWMEN = 2;
+    /** [war-bows] A skilled archer (its level at the watch) may be given an enchanted bow or crossbow out of the stores. */
+    static final int SKILLED = 10;
+    /**
+     * [war-bows] A crossbow spanned for the field (the foot in the stirrup, the cord hauled back with a belt hook): five
+     * seconds to reload, against a longbow's one-second draw. Quick Charge shortens it as it shortens the crossbow's
+     * own charge (CrossbowItem.getChargeDuration, a second and a quarter unenchanted).
+     */
+    static final int CROSSBOW_RELOAD = 100, BOW_DRAW = 20, PLAIN_CHARGE = 25;
+    /** [war-bows] The crossbow's arrow leaves at the crossbow's own power (CrossbowItem's ARROW_POWER, private there): flat and hard. */
+    static final float BOLT_SPEED = 3.15F, BOLT_SPREAD = 1.5F;
+    /** [war-bows] An arrow's fall a tick (AbstractArrow's default gravity), for laying a bolt on its mark. */
+    static final double GRAVITY = 0.05;
+
+    /** [war-bows] The town's decree for its missile arm (Ledger "war.ranged"), else its Captain's own liking. */
+    static BattleModel.Ranged rangedFor(UUID town, @Nullable VillageFolkEntity captain) {
+        BattleModel.Ranged decreed = BattleModel.Ranged.parse(Ledger.note(town, "war.ranged"));
+        if (decreed != null) return decreed;
+        return BattleModel.Ranged.liking(captain == null ? town.hashCode() : captain.getUUID().hashCode());
+    }
+
+    /** [war-bows] Is this a crossbow (else a bow) for the field? */
+    static boolean crossbowItem(ItemStack s) {
+        return s.getItem() instanceof CrossbowItem;
+    }
+
+    /**
+     * [war-bows] The missile arm made up to its share (a third of the army, a half for a Captain of bows' formations) out of
+     * the armoury, then the stores: a bow or a crossbow, as the Captain likes and the town has them, to the weakest of the
+     * line without one, with a quiver of arrows (none to be had: the weapon back where it came from, and no more issued).
+     */
+    static void issueMissiles(ServerLevel level, Villages.Village v, Army a, Map<UUID, VillageFolkEntity> byId) {
+        String prefers = String.valueOf(Ledger.note(v.id(), "war.prefers"));
+        int share = prefers.equals("WINGED_LINE") || prefers.equals("SKIRMISH") ? MISSILE_SHARE_BOWMEN : MISSILE_SHARE;
+        int want = a.fighters.size() / share, have = 0;
+        List<VillageFolkEntity> line = new ArrayList<>();
+        for (Fighter f : a.fighters) {
+            VillageFolkEntity g = byId.get(f.id);
+            if (g == null) continue;
+            if (WarAndPeace.archer(g)) have++;
+            else if (!(g.getOffhandItem().getItem() instanceof ShieldItem)) line.add(g);   // the shields stay in the line
+        }
+        line.sort((x, y) -> Integer.compare(power(x, false), power(y, false)));
+        int k = have;
+        for (VillageFolkEntity g : line) {
+            if (have >= want) return;
+            boolean cross = a.ranged.crossbowFor(k);
+            ItemStack w = takeMissile(level, v, cross);
+            if (w.isEmpty()) w = takeMissile(level, v, !cross);
+            if (w.isEmpty()) return;
+            List<ItemStack> arrows = Caravans.takeOut(level, v, s -> s.is(Items.ARROW), QUIVER);
+            if (arrows.isEmpty()) {
+                WarWorks.returnArms(level, v, w);
+                return;
+            }
+            for (ItemStack s : arrows) {
+                ItemStack left = g.insertGiven(s);
+                if (!left.isEmpty()) TownWork.give(level, v, left);
+            }
+            ItemStack left = g.insertGiven(WatchKit.mark(w));
+            if (!left.isEmpty()) { WarWorks.returnArms(level, v, WatchKit.unmarked(left)); continue; }
+            have++;
+            k++;
+        }
+    }
+
+    /** [war-bows] A bow or a crossbow out of the armoury, else the stores; empty if neither holds one. */
+    static ItemStack takeMissile(ServerLevel level, Villages.Village v, boolean crossbow) {
+        java.util.function.Predicate<ItemStack> is = s -> crossbow ? crossbowItem(s) : s.getItem() instanceof BowItem;
+        ItemStack w = WarWorks.takeArms(level, v, is);
+        return w.isEmpty() ? Crafts.takeOne(level, v, is) : w;
+    }
+
+    /** [war-bows] Which it carries into the field, if it has both: the k-th archer as the Captain likes. */
+    static boolean chooseMissile(VillageFolkEntity g, BattleModel.Ranged ranged, int k) {
+        boolean bow = g.countMatching(s -> s.getItem() instanceof BowItem) > 0 || g.getMainHandItem().getItem() instanceof BowItem;
+        boolean cross = g.countMatching(Armies::crossbowItem) > 0 || crossbowItem(g.getMainHandItem());
+        return cross && (!bow || ranged.crossbowFor(k));
+    }
+
+    /**
+     * [war-bows] From the Iron Age a skilled archer (a veteran, or ten levels at the watch) carries the best enchanted
+     * weapon of its kind the armoury or the stores hold, if better than its own: Power or Punch on a bow; Piercing, Quick
+     * Charge or (rarely) Multishot on a crossbow. Its own goes back where the other came from.
+     */
+    static void betterMissile(ServerLevel level, Villages.Village v, VillageFolkEntity g, Fighter f) {
+        if (Villages.ageOf(v.id()).ordinal() < Villages.Age.IRON.ordinal()) return;
+        if (!f.veteran && g.tradeLevel(AssistantEntity.StationTask.GUARD) < SKILLED) return;
+        java.util.function.Predicate<ItemStack> kind = s -> f.crossbow ? crossbowItem(s) : s.getItem() instanceof BowItem;
+        int own = 0;
+        for (ItemStack s : g.getInventoryItems()) if (kind.test(s)) own = Math.max(own, enchanted(s));
+        if (kind.test(g.getMainHandItem())) own = Math.max(own, enchanted(g.getMainHandItem()));
+        final int mine = own;
+        ItemStack better = WarWorks.takeArms(level, v, s -> kind.test(s) && enchanted(s) > mine);
+        if (better.isEmpty()) better = Crafts.takeOne(level, v, s -> kind.test(s) && enchanted(s) > mine);
+        if (better.isEmpty()) return;
+        // Its own back into the stores, the better one in its pack (arm() puts it in its hand).
+        ItemStack old = ItemStack.EMPTY;
+        if (kind.test(g.getMainHandItem())) {
+            old = g.getMainHandItem().copy();
+            g.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+        } else {
+            for (ItemStack s : g.getInventoryItems()) if (kind.test(s)) { old = s.copy(); s.setCount(0); break; }
+        }
+        if (!old.isEmpty()) WarWorks.returnArms(level, v, WatchKit.unmarked(old));
+        ItemStack left = g.insertGiven(WatchKit.mark(better));
+        if (!left.isEmpty()) WarWorks.returnArms(level, v, WatchKit.unmarked(left));
+    }
+
+    /** [war-bows] How enchanted a missile weapon is: the sum of its enchantments' levels. */
+    static int enchanted(ItemStack s) {
+        int n = 0;
+        for (var e : s.getEnchantments().entrySet()) n += e.getIntValue();
+        return n;
+    }
+
+    /** [war-bows] How long this one takes to make ready another shot (ticks): its crossbow's span, or a bow's draw. */
+    public static int reloadTicks(LivingEntity e, ItemStack weapon) {
+        if (!crossbowItem(weapon)) return BOW_DRAW;
+        return Math.max(BOW_DRAW, CROSSBOW_RELOAD * CrossbowItem.getChargeDuration(weapon, e) / PLAIN_CHARGE);
+    }
+
+    /** [war-bows] A crossbowman sets to spanning its crossbow: down on one knee, the crossbow's own loading pose and sounds. */
+    static void span(VillageFolkEntity e, Fighter x) {
+        ItemStack hand = e.getMainHandItem();
+        if (!crossbowItem(hand) || CrossbowItem.isCharged(hand)) return;
+        x.reload = reloadTicks(e, hand);
+        if (!e.isUsingItem()) e.startUsingItem(InteractionHand.MAIN_HAND);
+    }
+
+    /**
+     * [war-bows] A beat of spanning: {@code ticks} nearer, and once done, an arrow out of its pack laid in the crossbow
+     * (with Multishot, three in the groove off the one arrow, as the crossbow's own loader lays them). False if its
+     * quiver is empty: it has nothing to load.
+     */
+    static boolean spanning(VillageFolkEntity e, Fighter x, int ticks) {
+        ItemStack hand = e.getMainHandItem();
+        if (!crossbowItem(hand)) return true;
+        if (CrossbowItem.isCharged(hand)) { x.reload = 0; return true; }
+        if (x.reload <= 0) { span(e, x); return e.countMatching(s -> s.is(Items.ARROW)) > 0; }
+        if (!e.isUsingItem()) e.startUsingItem(InteractionHand.MAIN_HAND);   // kept at it, whatever else stirred it
+        x.reload -= ticks;
+        if (x.reload > 0) return true;
+        x.reload = 0;
+        if (e.isUsingItem() && e.getUsedItemHand() == InteractionHand.MAIN_HAND) e.stopUsingItem();
+        if (e.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return false;
+        int n = e.level() instanceof ServerLevel sl
+            ? net.minecraft.world.item.enchantment.EnchantmentHelper.processProjectileCount(sl, hand, e, 1) : 1;
+        List<ItemStack> load = new ArrayList<>();
+        for (int i = 0; i < Math.max(1, n); i++) load.add(new ItemStack(Items.ARROW));
+        hand.set(net.minecraft.core.component.DataComponents.CHARGED_PROJECTILES, ChargedProjectiles.of(load));
+        e.level().playSound(null, e.getX(), e.getY(), e.getZ(), SoundEvents.CROSSBOW_LOADING_END, SoundSource.NEUTRAL, 1.0F, 1.0F);
+        return true;
+    }
+
+    /**
+     * [war-bows] A crossbow's shot at this mark, by the crossbow's own shooting (CrossbowItem.performShooting): the
+     * arrow at the crossbow's power, flat and hard, Piercing and all. Whether it shot (it was spanned).
+     */
+    static boolean bolt(ServerLevel level, VillageFolkEntity e, LivingEntity mark) {
+        ItemStack hand = e.getMainHandItem();
+        if (!(hand.getItem() instanceof CrossbowItem cb) || !CrossbowItem.isCharged(hand)) return false;
+        // Laid on the mark along the line of sight, a hair over for the drop (the crossbow's own aim at a target is set
+        // for a pillager's slower shot, and at this power would carry over their heads).
+        double dx = mark.getX() - e.getX(), dz = mark.getZ() - e.getZ(), d = Math.max(1.0, Math.sqrt(dx * dx + dz * dz));
+        double t = d / BOLT_SPEED, drop = GRAVITY * t * t / 2.0;
+        double dy = mark.getY(0.5) - e.getEyeY() + drop;
+        face(e, yawTo(dx, dz));
+        e.setXRot((float) -Math.toDegrees(Math.atan2(dy, d)));
+        e.xRotO = e.getXRot();
+        cb.performShooting(level, e, InteractionHand.MAIN_HAND, hand, BOLT_SPEED, BOLT_SPREAD, null);
+        hand.set(net.minecraft.core.component.DataComponents.CHARGED_PROJECTILES, ChargedProjectiles.EMPTY);   // a spent charge never fires twice
+        return true;
+    }
+
+    /** [war-bows] A bow drawn for the coming volley: the arrow nocked and the string back (the pose anyone reads as a volley coming). */
+    static void draw(VillageFolkEntity e) {
+        if (e.getMainHandItem().getItem() instanceof BowItem && !e.isUsingItem() && e.countMatching(s -> s.is(Items.ARROW)) > 0) {
+            e.startUsingItem(InteractionHand.MAIN_HAND);
+        }
+    }
+
+    /**
+     * [war-bows] Its quiver empty: the archer puts up its bow, draws its blade and joins the reserve (to go in with it,
+     * round the flank or into a gap).
+     */
+    static void outOfArrows(VillageFolkEntity e, Fighter x) {
+        if (e.isUsingItem() && e.getUsedItemHand() == InteractionHand.MAIN_HAND) e.stopUsingItem();
+        x.role = BattleModel.Role.RESERVE;
+        x.reload = 0;
+        arm(e, x);
+        shout(e, e.getRandom().nextBoolean() ? "I'm out of arrows! Blades!" : "Empty quiver — I'll take my sword to them!");
+    }
+
+    /**
+     * [war-bows] A player fighting for a side (Campaigns.join) issued a missile weapon by the armoury if it has none: a
+     * crossbow or a bow as the town's Captain likes and the armoury (else the stores) holds them, with a quiver of arrows.
+     * What it was given, in words, or null.
+     */
+    @Nullable
+    static String issueTo(ServerLevel level, Villages.Village v, Player p) {
+        if (p.getInventory().contains(s -> s.getItem() instanceof ProjectileWeaponItem)) return null;
+        boolean cross = rangedFor(v.id(), null) != BattleModel.Ranged.BOWS;
+        ItemStack w = takeMissile(level, v, cross);
+        if (w.isEmpty()) w = takeMissile(level, v, !cross);
+        if (w.isEmpty()) return null;
+        String what = crossbowItem(w) ? "a crossbow" : "a bow";
+        p.getInventory().placeItemBackInInventory(w);
+        int arrows = 0;
+        for (ItemStack s : Caravans.takeOut(level, v, s -> s.is(Items.ARROW), QUIVER)) {
+            arrows += s.getCount();
+            p.getInventory().placeItemBackInInventory(s);
+        }
+        return what + (arrows > 0 ? " and " + arrows + " arrows" : "");
     }
 
     /** A shield out of the armoury (else the stores) for one of the line, booked to it like the militia's arms. */
@@ -750,7 +1018,7 @@ public final class Armies {
                 else lowerShield(f, x);
                 walk(f, x, level);
                 boolean there = x.placed && (x.tx - f.getX()) * (x.tx - f.getX()) + (x.tz - f.getZ()) * (x.tz - f.getZ()) <= 0.6;
-                Pose want = x.sit && there ? Pose.SITTING : Pose.STANDING;
+                Pose want = x.kneels() && there ? Pose.CROUCHING : x.sit && there ? Pose.SITTING : Pose.STANDING;   // [war-bows] spanning on one knee
                 if (f.getPose() != want) f.setPose(want);
             }
         }
@@ -867,19 +1135,23 @@ public final class Armies {
         if (x.rank == Rank.BEARER || x.role == BattleModel.Role.MEDIC) return;
         ItemStack held = f.getMainHandItem();
         boolean wantBow = x.role == BattleModel.Role.ARCHER;
-        if (wantBow ? held.getItem() instanceof ProjectileWeaponItem : held.getItem() instanceof SwordItem) return;
+        // [war-bows] Its own missile: the crossbow for a crossbowman, the bow for an archer (either, if it has only the one).
+        java.util.function.Predicate<ItemStack> mine = s -> x.crossbow ? crossbowItem(s) : s.getItem() instanceof BowItem;
+        if (wantBow ? mine.test(held) : held.getItem() instanceof SwordItem) return;
         int best = -1;
         float bite = -1;
         List<ItemStack> pack = f.getInventoryItems();
         for (int i = 0; i < pack.size(); i++) {
             ItemStack s = pack.get(i);
-            if (wantBow && s.getItem() instanceof ProjectileWeaponItem) { best = i; break; }
+            if (wantBow && mine.test(s)) { best = i; break; }
+            if (wantBow && s.getItem() instanceof ProjectileWeaponItem && best < 0) best = i;
             if (!wantBow && (s.getItem() instanceof SwordItem || s.getItem() instanceof net.minecraft.world.item.AxeItem) && Militia.bite(s) > bite) {
                 bite = Militia.bite(s);
                 best = i;
             }
         }
         if (best < 0) return;
+        if (wantBow && held.getItem() instanceof ProjectileWeaponItem && !mine.test(pack.get(best))) return;   // the one it has, in its hand already
         ItemStack weapon = pack.get(best).copy();
         pack.get(best).setCount(0);
         stow(f, EquipmentSlot.MAINHAND);
@@ -892,6 +1164,7 @@ public final class Armies {
      */
     static boolean loose(ServerLevel level, VillageFolkEntity archer, double tx, double ty, double tz, float spread) {
         if (!(archer.getMainHandItem().getItem() instanceof ProjectileWeaponItem)) return false;
+        if (archer.isUsingItem() && archer.getUsedItemHand() == InteractionHand.MAIN_HAND) archer.stopUsingItem();   // [war-bows] the drawn string let go
         if (archer.removeMatching(s -> s.is(Items.ARROW), 1) < 1) return false;
         Arrow arrow = new Arrow(level, archer, new ItemStack(Items.ARROW), archer.getMainHandItem().copy());
         arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
@@ -1036,6 +1309,31 @@ public final class Armies {
     // ------------------------------------------------------------------ tests
 
     /** Tests: the fighters in the field now, by town. */
+    /** [war-bows] Tests: this folk's crossbow spanned in full (an arrow out of its pack) and shot at that mark: the bolt, or null. */
+    @Nullable
+    public static AbstractArrow boltForTests(ServerLevel level, VillageFolkEntity e, LivingEntity mark) {
+        Fighter x = new Fighter(e.getUUID(), e.displayNameCap(), e.getUUID(), BattleModel.Role.ARCHER);
+        x.crossbow = true;
+        span(e, x);
+        for (int i = 0; i < 100 && !CrossbowItem.isCharged(e.getMainHandItem()); i++) if (!spanning(e, x, Battles.EVERY)) return null;
+        return bolt(level, e, mark) ? newest(level, e) : null;
+    }
+
+    /** [war-bows] Tests: this folk's bow loosed in a volley's high arc at that mark: the arrow, or null. */
+    @Nullable
+    public static AbstractArrow looseForTests(ServerLevel level, VillageFolkEntity e, LivingEntity mark) {
+        return loose(level, e, mark.getX(), mark.getY(), mark.getZ(), 0.0F) ? newest(level, e) : null;
+    }
+
+    @Nullable
+    private static AbstractArrow newest(ServerLevel level, VillageFolkEntity e) {
+        AbstractArrow best = null;
+        for (AbstractArrow a : level.getEntitiesOfClass(AbstractArrow.class, e.getBoundingBox().inflate(4.0), a -> a.getOwner() == e)) {
+            if (best == null || a.tickCount < best.tickCount) best = a;
+        }
+        return best;
+    }
+
     public static Map<UUID, List<Fighter>> fieldForTests() {
         Map<UUID, List<Fighter>> out = new LinkedHashMap<>();
         for (Fighter f : FIGHTERS.values()) if (f.army != null) out.computeIfAbsent(f.army.town, k -> new ArrayList<>()).add(f);

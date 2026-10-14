@@ -612,6 +612,32 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
 
         swingTool(folk, rightMain ? HumanoidArm.RIGHT : HumanoidArm.LEFT);
         FolkPoses.apply(this, folk, limbSwing, limbSwingAmount, ageInTicks, young);   // [individual] its gait and its moments
+        missilePose(folk, rightMain);                                  // [war-bows] over the gait: a drawn bow, a crossbow spanned
+    }
+
+    /**
+     * [war-bows] A bow drawn (both arms up along its line of sight, the string hand back, as a player draws); a crossbow
+     * being spanned (the crossbow's own loading pose, the cord hauled back to the stirrup) or held spanned at the
+     * shoulder, ready to loose. Vanilla's own arm poses, so a volley reads as one at any distance.
+     */
+    private void missilePose(VillageFolkEntity folk, boolean rightMain) {
+        net.minecraft.world.item.ItemStack main = folk.getMainHandItem();
+        boolean using = folk.isUsingItem() && folk.getUsedItemHand() == net.minecraft.world.InteractionHand.MAIN_HAND;
+        if (main.getItem() instanceof net.minecraft.world.item.CrossbowItem) {
+            if (using) net.minecraft.client.model.AnimationUtils.animateCrossbowCharge(rightArm, leftArm, folk, rightMain);
+            else if (net.minecraft.world.item.CrossbowItem.isCharged(main)) {
+                net.minecraft.client.model.AnimationUtils.animateCrossbowHold(rightArm, leftArm, head, rightMain);
+            }
+            return;
+        }
+        if (!using || !(main.getItem() instanceof net.minecraft.world.item.BowItem)) return;
+        float draw = rightMain ? 0.0F : 0.4F, bow = rightMain ? 0.4F : 0.0F;
+        rightArm.yRot = -0.1F + head.yRot - draw;
+        leftArm.yRot = 0.1F + head.yRot + bow;
+        rightArm.xRot = -Mth.HALF_PI + head.xRot;
+        leftArm.xRot = -Mth.HALF_PI + head.xRot;
+        rightArm.zRot = 0.0F;
+        leftArm.zRot = 0.0F;
     }
 
     /** [individual] Its own parts: the hair's boxes put away under a hat (a bun and curls) or a hood (the rest), the pipe

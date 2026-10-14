@@ -441,8 +441,11 @@ public final class Campaigns {
             Battles.array(level, army, squareFacing(v, c.town(1 - i)), 0.0);
             Armies.Fighter cap = army.officer(Armies.Rank.CAPTAIN);
             Villages.tell(v.id(), day, "the army mustered on the square: " + army.size() + " strong" + (cap != null ? ", " + cap.what() + " in command" : "")
-                + "; " + Villages.name(v.id()) + " draws up in " + army.formation.words + " (" + army.formation.how + ") and " + army.tactic.words);
-            WarBooks.course(v.id(), i == 0 ? c.b : c.a, day, "our army mustered, " + army.size() + " strong" + (cap != null ? " under " + cap.what() : ""));
+                + "; " + Villages.name(v.id()) + " draws up in " + army.formation.words + " (" + army.formation.how + ") and " + army.tactic.words
+                + "; its missiles " + army.missileWords() + (army.missiles(true) > 0 || army.ranged != com.jrpetty.mcassistant.village.BattleModel.Ranged.MIX
+                    ? " (its Captain favours " + army.ranged.words + ")" : ""));           // [war-bows] "12 bows, 8 crossbows"
+            WarBooks.course(v.id(), i == 0 ? c.b : c.a, day, "our army mustered, " + army.size() + " strong" + (cap != null ? " under " + cap.what() : "")
+                + ", " + army.missileWords());
         }
         WarDress.dress(level, c);                                          // [war-polish] each side in a colour of its own, once
         if (c.armies[0] == null) {
@@ -1077,8 +1080,10 @@ public final class Campaigns {
         }
         Armies.volunteer(p, v.id());
         WarBooks.course(v.id(), enemy, day, p.getName().getString() + (citizen ? " volunteered for our army" : " fought for us for hire"));
-        return citizen ? "Welcome to the ranks. Stand with the line, keep your place, and mind the banner."
-            : "There's your pay, out of the treasury. Stand with the line, and fight well.";
+        String issued = Armies.issueTo(level, v, p);                          // [war-bows] a bow or a crossbow from the armoury
+        String kit = issued == null ? "" : " The armoury gives you " + issued + ".";
+        return (citizen ? "Welcome to the ranks. Stand with the line, keep your place, and mind the banner."
+            : "There's your pay, out of the treasury. Stand with the line, and fight well.") + kit;
     }
 
     // ------------------------------------------------------------------ the books (kept with the world)
@@ -1269,7 +1274,7 @@ public final class Campaigns {
     public static final List<String> PHASES = List.of("muster", "march", "lineup", "parley", "horn", "volley", "charge", "clash", "rout", "aftermath");
 
     /** Fighters a side on the stage. */
-    static final int STAGED = 12;
+    static final int STAGED = 16;                                       // [war-bows] sixteen: a line, and a company of each missile
     /** How far east a staged neighbour is raised, with none near (past the founding reach of two villages' range). */
     public static final int NEIGHBOUR = 260;
 
@@ -1370,7 +1375,7 @@ public final class Campaigns {
         return out;
     }
 
-    /** Fifteen of the town's grown folk to the watch (twelve march; the rest are its home guard), armed in iron for nothing (a showcase), one in four with a bow; folk raised to make them up. */
+    /** Twenty of the town's grown folk to the watch (sixteen march; the rest are its home guard), armed in iron for nothing (a showcase), two in five with a bow or a crossbow; folk raised to make them up. */
     static void showcaseArmy(ServerLevel level, Villages.Village t) {
         List<VillageFolkEntity> grown = new ArrayList<>();
         UUID elder = Villages.elder(t.id());
@@ -1391,8 +1396,8 @@ public final class Campaigns {
             f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new ItemStack(net.minecraft.world.item.Items.IRON_LEGGINGS));
             f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(net.minecraft.world.item.Items.IRON_BOOTS));
             f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(net.minecraft.world.item.Items.IRON_SWORD));
-            if (n % 4 == 3) {
-                f.insertGiven(new ItemStack(net.minecraft.world.item.Items.BOW));
+            if (n % 5 == 3 || n % 5 == 1) {                                 // [war-bows] a company of bows and one of crossbows
+                f.insertGiven(new ItemStack(n % 5 == 3 ? net.minecraft.world.item.Items.BOW : net.minecraft.world.item.Items.CROSSBOW));
                 f.insertGiven(new ItemStack(net.minecraft.world.item.Items.ARROW, 32));
             } else {
                 ItemStack shield = new ItemStack(net.minecraft.world.item.Items.SHIELD);
@@ -1486,6 +1491,18 @@ public final class Campaigns {
                     view(level, out, "captain", e.getX() + fx * 4 + fz * 1.5, e.getZ() + fz * 4 - fx * 1.5, 1.6, e.getX(), e.getZ());
                 }
                 view(level, out, "clash", m.getX() - az * 16 + ax * 6, m.getZ() + ax * 16 + az * 6, 4, m.getX(), m.getZ());
+                if (b != null && a != null) {
+                    // [war-bows] The crossbow company close to, from its flank (a rank loosing, a rank kneeling to span); the
+                    // archers' volley side on, far enough off to see the arc from the bows to where it falls.
+                    double[] o = b.origin(0);
+                    Armies.Fighter xb = null;
+                    for (Armies.Fighter f : a.fighters) if (f.crossbow() && !f.down()) { xb = f; break; }
+                    if (xb != null && xb.placed) {
+                        view(level, out, "crossbows", xb.tx - o[3] * 7 + o[2] * 5, xb.tz + o[2] * 7 + o[3] * 5, 2.2, xb.tx, xb.tz);
+                    }
+                    double mx = (o[0] + m.getX()) / 2 - o[2] * 3, mz = (o[1] + m.getZ()) / 2 - o[3] * 3;
+                    view(level, out, "arc", mx - o[3] * 26, mz + o[2] * 26, 7, mx, mz);
+                }
                 view(level, out, "parley", m.getX() - az * 6, m.getZ() + ax * 6, 1.5, m.getX(), m.getZ());   // [war-polish] the envoys close to
                 if (c.stage == Stage.ASSAULT && c.gate != null) gateView(level, c, out);
             }
