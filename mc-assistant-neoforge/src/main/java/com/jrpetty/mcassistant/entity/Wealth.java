@@ -226,8 +226,11 @@ public final class Wealth {
             + Bank.worthOf(f);                                         // its savings at the bank, less what it owes on its house
     }
 
+    /** The worth that makes a folk wealthy (and its RICH dream come true: Dreams). */
+    public static final int WEALTHY_WORTH = 250;
+
     public static Tier tier(int worth) {
-        return worth >= 250 ? Tier.WEALTHY : worth >= 90 ? Tier.WELL_OFF : worth >= 30 ? Tier.COMFORTABLE
+        return worth >= WEALTHY_WORTH ? Tier.WEALTHY : worth >= 90 ? Tier.WELL_OFF : worth >= 30 ? Tier.COMFORTABLE
             : worth >= 8 ? Tier.GETTING_BY : Tier.POOR;
     }
 

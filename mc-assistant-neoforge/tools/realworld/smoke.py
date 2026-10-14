@@ -3146,6 +3146,55 @@ def individual_stage(r, look, cx, cz):
     say("alive after every folk its own person: %s" % client_alive())
 
 
+def window_size(w, h):
+    """[folk-ui] Resize the game's window (xdotool, on the virtual display): the GUI scale follows, as for a player."""
+    try:
+        out = subprocess.run(["xdotool", "search", "--name", "Minecraft", "windowsize", "%@", str(w), str(h)],
+                             capture_output=True, text=True, timeout=20)
+        say("window %dx%d: %s" % (w, h, "done" if out.returncode == 0 else (out.stderr.strip() or "no window")[:200]))
+    except Exception as e:  # noqa: BLE001
+        say("window resize failed: %s" % e)
+
+
+def folk_ui_stage(r, look, cx, cz):
+    """[folk-ui] The village board as a dashboard, and a folk's profile. At the village the smoke spawned, the books
+    open at the Overview (the six readings with their trends, what needs attention, today's news), then at People >
+    Folk, Economy > Money and Civic > Research; then the nearest folk's profile on each of its five tabs (About, Life,
+    Work, Day, Belongings); then the window shrunk to 640x400, so the GUI is small, and the Overview and a profile again
+    there (nothing may spill over or overlap); then the window put back."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    midday(r)
+    r.cmd("weather clear")
+    r.cmd("gamemode creative %s" % USER)
+    say("to the village: " + r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run tp %s ~2 ~ ~2"
+                                   % (cx, cz, USER)))
+    time.sleep(5)
+    for n, (page, picture) in enumerate(((0, "overview"), (6, "people-folk"), (2, "economy-money"), (13, "civic-research"))):
+        say("stats %s: %s" % (picture, r.cmd("execute as %s at @s run village stats %d" % (USER, page))))
+        time.sleep(3)
+        shot("40-board-%d-%s" % (n + 1, picture))
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    for n, tab in enumerate(("about", "life", "work", "day", "belongings")):
+        say("profile %s: %s" % (tab, r.cmd("execute as %s at @s run village individual profile %s" % (USER, tab))))
+        time.sleep(3)
+        shot("40-profile-%d-%s" % (n + 1, tab))
+    say("profile shut: " + r.cmd("execute as %s at @s run village individual profile close" % USER))
+    window_size(640, 400)
+    time.sleep(3)
+    say("stats small: " + r.cmd("execute as %s at @s run village stats 0" % USER))
+    time.sleep(3)
+    shot("40-small-1-overview")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("profile small: " + r.cmd("execute as %s at @s run village individual profile day" % USER))
+    time.sleep(3)
+    shot("40-small-2-profile-day")
+    say("profile shut: " + r.cmd("execute as %s at @s run village individual profile close" % USER))
+    window_size(1280, 720)
+    time.sleep(3)
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the board and the profile: %s" % client_alive())
+
+
 def emerald_stage(r, look, cx, cz):
     """[emerald] The emerald trader (entity/EmeraldTrader), and the two peoples kept apart (TwoPeoples, VanillaVillages).
     Run well out past the town to the north (the villagers' ground must not be the town's), /village emerald stage sets
@@ -4190,6 +4239,10 @@ def main():
         individual_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("individual stage failed: %s" % e)
+    try:
+        folk_ui_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("folk ui stage failed: %s" % e)
     try:
         emerald_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001

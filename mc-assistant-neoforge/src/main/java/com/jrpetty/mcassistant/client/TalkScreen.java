@@ -640,6 +640,12 @@ public class TalkScreen extends Screen {
 
     private void openWork() {
         if (minecraft == null || minecraft.level == null) return;
+        // [folk-ui] A village folk's record is its full profile now (FolkProfileScreen); a crew hand's, its record screen.
+        if (minecraft.level.getEntity(last.entityId()) instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity) {
+            saidBye = true;
+            FolkProfileScreen.openEntity(last.entityId(), null, this);
+            return;
+        }
         if (minecraft.level.getEntity(last.entityId()) instanceof com.jrpetty.mcassistant.entity.AssistantEntity a) {
             saidBye = true;
             minecraft.setScreen(new RecordScreen(a));

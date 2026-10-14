@@ -34,6 +34,8 @@ import java.util.TreeMap;
  *                                    places, dreams, keepsakes carried, its readers and its left-handers
  *   /village individual folk NAME    one folk: its looks, its card's lines and its story
  *   /village individual card         (a player) the nearest folk's card opened on your screen, at its About page
+ *   /village individual profile [TAB] (a player) [folk-ui] the nearest folk's profile on your screen, at a tab (about,
+ *                                    life, work, day, things); "close" shuts it
  *   /village individual stage        (ops) the smoke's stage where you stand: a crowd of eighteen of every age, a
  *                                    family of five, an old folk on the bench by the well with its pipe
  * </pre>
@@ -49,6 +51,8 @@ public final class IndividualCommands {
                 .then(Commands.literal("folk").then(Commands.argument("name", StringArgumentType.greedyString())
                     .executes(IndividualCommands::folk)))
                 .then(Commands.literal("card").executes(IndividualCommands::card))
+                .then(Commands.literal("profile").executes(ctx -> profile(ctx, "about"))
+                    .then(Commands.argument("tab", StringArgumentType.word()).executes(ctx -> profile(ctx, StringArgumentType.getString(ctx, "tab")))))
                 .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(IndividualCommands::stage))));
     }
 
@@ -139,6 +143,30 @@ public final class IndividualCommands {
         boolean shown = IndividualStage.card(ctx.getSource().getLevel(), p);
         if (!shown) ctx.getSource().sendFailure(Component.literal("Nobody near enough to talk to."));
         return shown ? 1 : 0;
+    }
+
+    /** [folk-ui] The nearest folk's profile, opened on the player's screen at a tab (or shut, for "close"). */
+    private static int profile(CommandContext<CommandSourceStack> ctx, String tab) {
+        if (!(ctx.getSource().getEntity() instanceof net.minecraft.server.level.ServerPlayer p)) {
+            ctx.getSource().sendFailure(Component.literal("Only a player can be shown a profile."));
+            return 0;
+        }
+        if (tab.equalsIgnoreCase("close")) {
+            com.jrpetty.mcassistant.net.ProfileNetwork.close(p);
+            return 1;
+        }
+        VillageFolkEntity best = null;
+        for (VillageFolkEntity f : p.serverLevel().getEntitiesOfClass(VillageFolkEntity.class, p.getBoundingBox().inflate(32.0), VillageFolkEntity::isAlive)) {
+            if (best == null || f.distanceToSqr(p) < best.distanceToSqr(p)) best = f;
+        }
+        if (best == null) {
+            ctx.getSource().sendFailure(Component.literal("Nobody within thirty-two blocks."));
+            return 0;
+        }
+        com.jrpetty.mcassistant.net.ProfileNetwork.show(p, best, tab);
+        final String name = best.displayNameCap();
+        ctx.getSource().sendSuccess(() -> Component.literal("PROFILE " + name + " at " + tab), false);
+        return 1;
     }
 
     private static int stage(CommandContext<CommandSourceStack> ctx) {

@@ -346,7 +346,7 @@ jobs:
       - name: Install a virtual display and software OpenGL
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri libglx-mesa0 libxrandr2 libxxf86vm1 libxi6 libxcursor1 libxinerama1 imagemagick netcat-openbsd
+          sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri libglx-mesa0 libxrandr2 libxxf86vm1 libxi6 libxcursor1 libxinerama1 imagemagick netcat-openbsd xdotool
 
       - name: Prepare a server directory and a client directory
         working-directory: mc-assistant-neoforge
