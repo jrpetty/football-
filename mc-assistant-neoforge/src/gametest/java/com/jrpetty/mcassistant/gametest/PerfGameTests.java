@@ -190,7 +190,7 @@ public class PerfGameTests {
             com.jrpetty.mcassistant.entity.FolkNavigation.budgetForTests(false);
             over = true;
             server.tickRateManager().setTickRate(20.0F);
-            helper.succeed();
+            helper.runAfterDelay(1, helper::succeed);      // from the framework's tick, not this listener
         }
 
         /** Wait out the foundings, then let go of the test's own holds and set the player down. */

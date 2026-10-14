@@ -38,7 +38,8 @@ public class TownLodGameTests {
     /**
      * Run {@code step} every server tick till it says it is done. Not helper.onEachTick: that books an entry for every
      * tick up to the timeout and walks them all each tick, and these tests run for hundreds of thousands. A failed
-     * assertion is handed to the test framework to fail the test.
+     * assertion is handed to the test framework to fail the test, and a pass (pass) too: the framework starts the next
+     * batch from inside a pass, and not from inside a tick listener.
      */
     private static void each(GameTestHelper helper, java.util.function.BooleanSupplier step) {
         final boolean[] over = { false };
@@ -48,12 +49,18 @@ public class TownLodGameTests {
                 over[0] = step.getAsBoolean();
             } catch (RuntimeException ex) {
                 over[0] = true;
+                Kit.log("lod test stopped: " + ex);
                 helper.getLevel().getServer().tickRateManager().setTickRate(20.0F);
                 TownLod.forceForTests(helper.getLevel().getServer(), null);
                 helper.runAfterDelay(1, () -> { throw ex; });
             }
         };
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(listener);
+    }
+
+    /** The test passed, said from the framework's own tick. */
+    private static void pass(GameTestHelper helper) {
+        helper.runAfterDelay(1, helper::succeed);
     }
 
     /** Found a village of this many here, the ground held only for the founding; then {@code then} with it. */
@@ -155,7 +162,7 @@ public class TownLodGameTests {
                         Kit.log("lod01 woke after " + (t - at[0]) + " ticks: bread in the chests " + now + " (was " + before[1] + ")");
                         helper.assertTrue(now >= before[1] + 40, "the bread made asleep is in its real chests: " + before[1] + " -> " + now);
                         TownLod.forceForTests(level.getServer(), null);
-                        helper.succeed();
+                        pass(helper);
                         return true;
                     }
                 }
@@ -246,7 +253,7 @@ public class TownLodGameTests {
                         level.getServer().tickRateManager().setTickRate(20.0F);
                         compare(helper, pic);
                         TownLod.forceForTests(level.getServer(), null);
-                        helper.succeed();
+                        pass(helper);
                         return true;
                     }
                 }
