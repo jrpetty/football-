@@ -68,9 +68,14 @@ public final class Worth {
      * buy what it would pay nothing for (a coin a lot of cookies was a coin out of nothing).
      */
     public static int bidLot(double each, double replacement, int lot, boolean marketDay) {
+        return Math.max(0, (int) Math.floor(bidEach(each, replacement, marketDay) * Math.max(1, lot) + 1e-9));
+    }
+
+    /** What the town pays for one, to the hundredth (bidLot before the rounding down): BUY of its price, a little more on
+     *  market day, never more than FLOOR of the replacement (a negative replacement: none known). */
+    public static double bidEach(double each, double replacement, boolean marketDay) {
         double per = Math.max(0, each) * BUY * (marketDay ? MARKET_DAY_BID : 1.0);
-        if (replacement >= 0) per = Math.min(per, replacement * FLOOR);
-        return Math.max(0, (int) Math.floor(per * Math.max(1, lot) + 1e-9));
+        return replacement >= 0 ? Math.min(per, replacement * FLOOR) : per;
     }
 
     // ------------------------------------------------------------------ a town's price

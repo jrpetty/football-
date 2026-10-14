@@ -321,6 +321,21 @@ public final class Prices {
             if (!ok || parts.isEmpty()) continue;
             out.add(new Worth.Recipe(BuiltInRegistries.ITEM.getKey(made.getItem()).toString(), made.getCount(), parts, way, back));
         }
+        // [market] What is made in the world rather than at a table: waxed with a honeycomb, weathered by the air, set by
+        // water, stripped with an axe, carved with shears. Worth what it came from and next to nothing for the doing.
+        for (Item item : BuiltInRegistries.ITEM) {
+            ResourceLocation key = BuiltInRegistries.ITEM.getKey(item);
+            if (!key.getNamespace().equals("minecraft")) continue;
+            String path = key.getPath();
+            if (path.startsWith("waxed_")) inWorld(out, path, path.substring(6), "honeycomb", Worth.Way.CRAFT);
+            for (String age : new String[]{ "exposed_", "weathered_", "oxidized_" }) {
+                if (path.startsWith(age)) inWorld(out, path, path.substring(age.length()), null, Worth.Way.CUT);
+                else if (path.startsWith("waxed_" + age)) inWorld(out, path, "waxed_" + path.substring(6 + age.length()), null, Worth.Way.CUT);
+            }
+            if (path.endsWith("_concrete")) inWorld(out, path, path + "_powder", null, Worth.Way.CUT);
+            if (path.startsWith("stripped_")) inWorld(out, path, path.substring(9), null, Worth.Way.CUT);
+        }
+        inWorld(out, "carved_pumpkin", "pumpkin", null, Worth.Way.CUT);
         // A full thing emptied is a way to the empty one (a bucket of milk drunk leaves a bucket): it prices nothing, but
         // the town reckons it when it buys a bucket back (replacement).
         for (Item item : BuiltInRegistries.ITEM) {
@@ -332,6 +347,16 @@ public final class Prices {
                 Worth.Part.of(BuiltInRegistries.ITEM.getKey(item).toString(), 1)));
         }
         return out;
+    }
+
+    /** A making in the world, if both things are in the game: one {@code made} from one {@code from} (and a {@code with}). */
+    private static void inWorld(List<Worth.Recipe> out, String made, String from, @Nullable String with, Worth.Way way) {
+        if (BuiltInRegistries.ITEM.getOptional(ResourceLocation.withDefaultNamespace(made)).isEmpty()
+            || BuiltInRegistries.ITEM.getOptional(ResourceLocation.withDefaultNamespace(from)).isEmpty()) return;
+        List<Worth.Part> parts = new ArrayList<>();
+        parts.add(Worth.Part.of("minecraft:" + from, 1));
+        if (with != null) parts.add(Worth.Part.of("minecraft:" + with, 1));
+        out.add(new Worth.Recipe("minecraft:" + made, 1, parts, way, List.of()));
     }
 
     /** What sort of goods each made thing is: food if it feeds, else what its makings all are, else a craft. */
@@ -374,6 +399,12 @@ public final class Prices {
                     fromRecipes++;
                 }
             }
+        }
+        // [market] An anvil worn: two thirds of a whole one chipped, a third damaged.
+        Double anvil = VALUE.get(Items.ANVIL);
+        if (anvil != null) {
+            VALUE.putIfAbsent(Items.CHIPPED_ANVIL, anvil * 2 / 3);
+            VALUE.putIfAbsent(Items.DAMAGED_ANVIL, anvil / 3);
         }
         // The smithing table's netherite: the diamond piece, an ingot and the template, and the work.
         upgrade(Items.DIAMOND_SWORD, Items.NETHERITE_SWORD);

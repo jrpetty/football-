@@ -347,6 +347,8 @@ public final class Commerce {
 
     /** [market] The interest the treasury's loans to players have paid in, and not yet paid out to its savers. */
     static final String POOL = "bank.pool";
+    /** [market] Tenths of the loans' interest the savers may have (the rest stays against a bad debt), as at the bank. */
+    static final int SAVERS_SHARE = 6;
 
     /**
      * A week at the bank: deposits earn, loans grow; a debt left two weeks shames the borrower. [market] A saver's
@@ -356,7 +358,7 @@ public final class Commerce {
      */
     static void bankWeek(ServerLevel level, Villages.Village v, long day) {
         long pool = num(String.valueOf(Ledger.note(v.id(), POOL)));
-        long payable = pool * 6 / 10;
+        long payable = pool * SAVERS_SHARE / 10;
         for (Map.Entry<String, String> e : notesStarting(v.id(), "bank/")) {
             String[] b = e.getValue().split("\\|", -1);
             int deposit = (int) num(b[0]);

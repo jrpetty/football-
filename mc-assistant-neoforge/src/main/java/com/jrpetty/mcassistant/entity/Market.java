@@ -389,7 +389,7 @@ public final class Market {
     public static int leastLot(ServerLevel level, UUID village, ItemStack one, int n) {
         if (one.isEmpty()) return 0;
         ItemStack single = one.copyWithCount(1);
-        double each = PriceIndex.each(level, village, single) * (single.isEnchanted() ? 3 : 1) * Craftsmanship.worth(single);
+        double each = PriceIndex.each(level, village, single) * (single.isEnchanted() ? ENCHANTED_ASK : 1) * Craftsmanship.worth(single);
         return Worth.leastLot(each, n);
     }
 
@@ -397,15 +397,25 @@ public final class Market {
      *  four fifths of its price, never more than nine tenths of the cheapest it sells it or its makings for. */
     public static int bidLot(ServerLevel level, UUID village, ItemStack one, int n) {
         if (one.isEmpty() || isCoin(one)) return 0;
+        return Math.max(0, (int) Math.floor(bidEach(level, village, one) * Math.max(1, n) + 1e-9));
+    }
+
+    /** What the town pays for one of this today, to the hundredth (bidLot before the rounding down; the Prices page). An
+     *  enchanted piece at twice its plain price, and not to be had from its makings. */
+    public static double bidEach(ServerLevel level, UUID village, ItemStack one) {
+        if (one.isEmpty() || isCoin(one)) return 0;
         ItemStack single = one.copyWithCount(1);
         double each = PriceIndex.each(level, village, single);
         double rep = Prices.replacement(level, village, single);
         if (single.isEnchanted()) {
-            each *= 2;
+            each *= ENCHANTED_BID;
             rep = each;
         }
-        return Worth.bidLot(each, rep, n, marketDay(village, level.getDayTime() / 24000L));
+        return Worth.bidEach(each, rep, marketDay(village, level.getDayTime() / 24000L));
     }
+
+    /** An enchanted piece: asked at three times its plain price, bought at twice it. */
+    static final int ENCHANTED_ASK = 3, ENCHANTED_BID = 2;
 
     /** [econ-prices] What this town asks for a lot of a good on the board today: its price (PriceIndex) and the margin,
      *  a little off on market day. */
@@ -601,12 +611,24 @@ public final class Market {
         return took;
     }
 
+    /** What the folk of a town hold in their purses, all told. */
+    public static int purses(UUID village) {
+        int n = 0;
+        for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f) n += f.purse();
+        return n;
+    }
+
+    /** What the upkeep took on its last morning, and the day: {day, coin}, or null. */
+    @Nullable
+    public static long[] lastUpkeep(UUID village) {
+        long[] u = UPKEEP.get(village);
+        return u == null ? null : u.clone();
+    }
+
     /** The coin in a town and where it is: the treasury, the folk's purses, the upkeep's last take (the Prices page). */
     public static String coinLine(UUID village) {
-        int purses = 0, folk = 0;
-        for (AssistantEntity a : Villages.folkOf(village)) {
-            if (a instanceof VillageFolkEntity f) { purses += f.purse(); folk++; }
-        }
+        int purses = purses(village), folk = 0;
+        for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity) folk++;
         long[] u = UPKEEP.get(village);
         return "Coin: " + Ledger.coins(village) + " in the treasury, " + purses + " in " + folk + " folk's purses"
             + (u != null ? "; the upkeep took " + u[1] + " on day " + (u[0] + 1) + " (a fortieth of what the treasury held over a fortnight's wages)" : "")
@@ -1206,7 +1228,7 @@ public final class Market {
      *  make marked down when it is slow, and never sold for less than it cost (Stockroom). */
     public static int price(ServerLevel level, UUID village, Good g, ItemStack shown, int stock, boolean marketDay) {
         int p = sellPrice(level, village, g, shown, marketDay);
-        if (shown.isEnchanted()) p *= 3;
+        if (shown.isEnchanted()) p *= ENCHANTED_ASK;
         p = (int) Math.max(1, Math.round(p * Craftsmanship.worth(shown)));
         return Math.max(leastLot(level, village, shown, g.bundle()), Stockroom.asked(level, village, shown, p, g.bundle()));   // [market]
     }

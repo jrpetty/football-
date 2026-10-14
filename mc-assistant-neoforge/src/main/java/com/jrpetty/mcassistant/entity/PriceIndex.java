@@ -590,6 +590,16 @@ public final class PriceIndex {
         ListTag moves = new ListTag();
         for (String m : moveLines(village)) moves.add(StringTag.valueOf(m));
         out.put("moves", moves);
+        // [market] The coin, the spread and the trades' leans (the second row of cards, and a note).
+        out.putInt("treasury", Ledger.coins(village));
+        out.putInt("purses", Market.purses(village));
+        out.putInt("bill", Market.wageBill(village));
+        long[] upkeep = Market.lastUpkeep(village);
+        out.putInt("upkeep", upkeep == null ? 0 : (int) upkeep[1]);
+        out.putInt("ask100", (int) Math.round(Worth.SELL * 100));
+        out.putInt("bid100", (int) Math.round(Worth.BUY * 100));
+        out.putInt("floor100", (int) Math.round(Worth.FLOOR * 100));
+        out.putString("lean", MarketLean.line(village));
         ListTag rows = new ListTag();
         for (Line l : shown(village)) {
             ItemStack one = sampleOf(l.key);
@@ -601,6 +611,8 @@ public final class PriceIndex {
             double usual = usual(one);
             r.putInt("usual100", (int) Math.round(usual * 100));
             r.putInt("each100", (int) Math.round(usual * l.factor * 100));
+            r.putInt("ask100", (int) Math.round(Market.askEach(level, village, one) * 100));     // [market] what the town asks
+            r.putInt("bid100", (int) Math.round(Market.bidEach(level, village, one) * 100));     // [market] and pays
             r.putInt("factor100", (int) Math.round(l.factor * 100));
             r.putInt("target100", (int) Math.round(l.target * 100));
             r.putInt("trend", l.trend());

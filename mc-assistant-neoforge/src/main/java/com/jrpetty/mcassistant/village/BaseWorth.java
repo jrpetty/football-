@@ -145,6 +145,8 @@ public final class BaseWorth {
         "mourner_pottery_sherd 3.0 C", "plenty_pottery_sherd 3.0 C", "prize_pottery_sherd 3.0 C",
         "scrape_pottery_sherd 3.0 C", "sheaf_pottery_sherd 3.0 C", "shelter_pottery_sherd 3.0 C",
         "skull_pottery_sherd 3.0 C", "snort_pottery_sherd 3.0 C",
+        // [market] The banner patterns found, not made (a bastion's, a trial chamber's, a wandering trader's).
+        "globe_banner_pattern 6.0 C", "piglin_banner_pattern 6.0 C", "flow_banner_pattern 8.0 C", "guster_banner_pattern 8.0 C",
         "chainmail_helmet 6.0 C", "chainmail_chestplate 10.0 C", "chainmail_leggings 8.0 C", "chainmail_boots 5.0 C",
         "bell 12.0 C", "enchanted_book 4.0 C", "written_book 2.5 C", "filled_map 1.5 C",
         "suspicious_stew 0.4 F", "tipped_arrow 0.5 C", "firework_star 0.5 C", "potion 1.0 C",

@@ -892,10 +892,34 @@ public class CityScreen extends Screen {
 
     private static final String[] PRICE_HEADS = { "Good", "Today", "Usual", "", "Week", "Stock", "Made a day", "Wanted a day", "Why" };
 
+    /** [market] The gap between rows of cards on a page. */
+    private static final int CARD_GAP = 4;
+
+    /**
+     * [market] The Prices page's second row: the coin in the treasury (and how many days' wages it is), in the folk's
+     * purses, the town's spread, and its upkeep. Returns the row's bottom; an older server's report (no coin in it)
+     * draws nothing and returns {@code y - CARD_GAP}.
+     */
+    private int moneyCards(GuiGraphics g, CompoundTag p, int x, int y, int cardW, int cardH) {
+        if (!p.contains("treasury")) return y - CARD_GAP;
+        int treasury = p.getInt("treasury"), bill = Math.max(1, p.getInt("bill"));
+        int days = treasury / bill;
+        card(g, x, y, cardW, cardH, "Treasury", treasury + "c", days + (days == 1 ? " day's" : " days'") + " wages",
+            treasury <= 0 ? RED : days < 2 ? AMBER : GREEN);
+        card(g, x + cardW + CARD_GAP, y, cardW, cardH, "In purses", p.getInt("purses") + "c", "the folk's own coin", BLUE);
+        card(g, x + 2 * (cardW + CARD_GAP), y, cardW, cardH, "The town's spread",
+            String.format(Locale.ROOT, "asks +%d%%", p.getInt("ask100") - 100),
+            String.format(Locale.ROOT, "pays %d%%, sells at %d%% at least", p.getInt("bid100"), p.getInt("floor100")), BLUE);
+        int upkeep = p.getInt("upkeep");
+        card(g, x + 3 * (cardW + CARD_GAP), y, cardW, cardH, "Upkeep", upkeep + "c",
+            upkeep > 0 ? "on what it holds over " + com.jrpetty.mcassistant.entity.Market.UPKEEP_OVER_DAYS + " days' pay" : "nothing: no hoard to keep up", upkeep > 0 ? AMBER : GREEN);
+        return y + cardH;
+    }
+
     /**
      * The town's prices (entity/PriceIndex, Purchases): the cost of living against the lowest wage, the folk on the
      * slate, what the folk thought too dear and what they bought more of for being cheap, the week's big moves; then a
-     * row a thing: today's price against its usual worth (the bar: where it stands between four tenths and three times
+     * row a thing: today's price against its usual worth (the bar: where it stands between half and three times
      * its worth), which way it is going, the week's move, what is on hand, made and wanted a day, and why it moved.
      */
     private void prices(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
@@ -916,7 +940,7 @@ public class CityScreen extends Screen {
             p.getInt("slateFolk") + (p.getInt("slateFolk") == 1 ? " folk owes" : " folk owe") + ", paid from wages", p.getInt("slateFolk") > 0 ? AMBER : GREEN);
         card(g, x + 3 * (cardW + 4), y, cardW, cardH, "Too dear · cheap", p.getInt("refused") + " · " + p.getInt("bargains"),
             "left on the shelf · bought extra", p.getInt("refused") > p.getInt("bargains") ? AMBER : BLUE);
-        int ty = y + cardH + 5, wrap = (int) (cw / 0.75);
+        int ty = moneyCards(g, p, x, y + cardH + CARD_GAP, cardW, cardH) + 5, wrap = (int) (cw / 0.75);
         List<String> notes = new ArrayList<>();
         if (p.getLong("day") < 0) notes.add("Not reckoned yet: everything sells at its usual worth until the town's first morning.");
         if (!p.getBoolean("open")) notes.add("No shop open yet: the folk take what they need for themselves from the stores, free.");
@@ -924,6 +948,7 @@ public class CityScreen extends Screen {
         if (!p.getString("refusedWhat").isEmpty()) notes.add("Too dear for the folk yesterday: " + p.getString("refusedWhat") + ".");
         if (!p.getString("bargainWhat").isEmpty()) notes.add("Bought more of for being cheap: " + p.getString("bargainWhat") + ".");
         if (!p.getString("fleet").isEmpty()) notes.add(p.getString("fleet") + ".");   // [fleet] the fish market's catch and prices
+        if (!p.getString("lean").isEmpty()) notes.add(p.getString("lean"));               // [market] production follows prices
         ListTag moves = p.getList("moves", Tag.TAG_STRING);
         for (int i = 0; i < moves.size(); i++) notes.add("~" + moves.getString(i) + ".");
         for (String n : notes) {
@@ -966,6 +991,8 @@ public class CityScreen extends Screen {
                 tip.add(Component.literal("Supply: " + r.getInt("stock") + " on hand, " + num(r.getInt("made10") / 10.0) + " made a day"));
                 tip.add(Component.literal("Demand: " + num(r.getInt("wanted10") / 10.0) + " wanted a day; yesterday " + r.getInt("missed")
                     + " wanted and not there, " + r.getInt("refused") + " too dear, " + r.getInt("bargains") + " bought extra for cheapness"));
+                if (r.contains("ask100")) tip.add(Component.literal(String.format(Locale.ROOT,   // [market] the one spread
+                    "The town asks %.2fc a piece and pays %.2fc", r.getInt("ask100") / 100.0, r.getInt("bid100") / 100.0)));
                 hover = tip;
                 hoverX = mx;
                 hoverY = my;

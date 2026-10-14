@@ -3581,6 +3581,25 @@ def redstone_stage(r, look, cx, cz):
     say("alive after the redstone works: %s" % client_alive())
 
 
+
+def market_stage(r, look, cx, cz):
+    """[market] The town economy (village/Worth, entity/Market, PriceIndex, MarketLean): the prices reckoned now and
+    said in chat (each good's price, its arrow and why; the coin, the spread and the trades' leans); then the Prices
+    page of the town's books on the screen: the cost of living, the treasury, the purses, the spread and the upkeep
+    over the table of prices. Not wired into main(): call it after the books are open, in a grown town."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    midday(r)
+    r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 1, cz))
+    time.sleep(3)
+    say("prices: " + r.cmd("execute positioned %d 100 %d run village prices now" % (cx, cz))[:1200])
+    say("prices page: " + r.cmd("execute as %s at @s run village prices page" % USER)[:200])
+    time.sleep(4)
+    shot("40-market-1-prices")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the market: %s" % client_alive())
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
