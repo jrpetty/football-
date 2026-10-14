@@ -562,6 +562,29 @@ public final class Themes {
         return out;
     }
 
+    /**
+     * The blocks the theme makes a place of this kind of (a Blueprints.Style's name): its part's lists for every land
+     * and building style, what its ages and its styles' dressing turn such a block into, and its land stones. What a
+     * renovation to the theme leaves standing in such a place (Renovation); its palettes and street are not counted.
+     */
+    public static Set<Block> namedFor(ThemeData t, String part) {
+        @SuppressWarnings("unchecked")
+        Set<Block> got = (Set<Block>) COMPILED.get("namedFor|" + t.id + "|" + part);
+        if (got != null) return got;
+        Set<Block> out = new java.util.HashSet<>();
+        for (String land : t.map("lands").keySet()) {
+            ThemeData.Look base = t.look(land);
+            for (String id : t.rankedIds(part, base)) out.add(block(id));
+            for (Architecture.Style st : Architecture.Style.values()) for (String id : t.rankedIds(part, t.styled(st.name(), base))) out.add(block(id));
+        }
+        collect(t.list("ages", part), out);
+        collect(t.map("styles"), out);
+        collect(t.map("land_stone"), out);
+        out.remove(Blocks.AIR);
+        COMPILED.put("namedFor|" + t.id + "|" + part, out);
+        return out;
+    }
+
     private static void collect(Object o, Set<Block> out) {
         if (o instanceof Map<?, ?> m) {
             for (Map.Entry<?, ?> e : m.entrySet()) {

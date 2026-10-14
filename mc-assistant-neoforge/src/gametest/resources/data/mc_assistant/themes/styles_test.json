@@ -35,7 +35,11 @@
   },
   "street": {"lamp_post": "end_rod", "light": "sea_lantern"},
   "palettes": {
-    "civic": {"walls": "end_stone_bricks", "frame": "purpur_pillar", "roof_stair": "purpur_stairs", "roof_slab": "purpur_slab",
-              "roof_block": "purpur_block", "floor": "purpur_block"}
+    "civic":       {"walls": "end_stone_bricks", "frame": "purpur_pillar", "roof_stair": "purpur_stairs", "roof_slab": "purpur_slab",
+                    "roof_block": "purpur_block", "floor": "purpur_block"},
+    "house_stone": {"walls": "end_stone_bricks", "frame": "purpur_pillar", "roof_stair": "purpur_stairs", "roof_slab": "purpur_slab",
+                    "roof_block": "purpur_block", "floor": "purpur_block"},
+    "house_brick": {"walls": "end_stone_bricks", "frame": "purpur_pillar", "roof_stair": "purpur_stairs", "roof_slab": "purpur_slab",
+                    "roof_block": "purpur_block", "floor": "purpur_block"}
   }
 }

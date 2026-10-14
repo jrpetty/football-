@@ -543,7 +543,7 @@ public final class Renovation {
         static boolean ofTheme(UUID village, Blueprints.Style style, BlockState s) {
             Item it = s.getBlock().asItem();
             if (Palettes.ranked(village, style).contains(it)) return true;
-            return Materials.named(Themes.of(village), s.getBlock());
+            return Themes.namedFor(Themes.of(village), style.name()).contains(s.getBlock());
         }
 
         @Override
