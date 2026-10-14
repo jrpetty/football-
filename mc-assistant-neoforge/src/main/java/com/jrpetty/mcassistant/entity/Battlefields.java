@@ -265,12 +265,20 @@ public final class Battlefields {
         return c;
     }
 
-    /** Air over solid, dry ground for {@code height} blocks above this spot (and the spot itself). */
-    static boolean open(ServerLevel level, BlockPos at, int height) {
+    /** Air over solid, dry ground for {@code height} blocks above this spot (the town's leave asked by the caller). */
+    static boolean openGround(ServerLevel level, BlockPos at, int height) {
         BlockState under = level.getBlockState(at.below());
         if (!under.isFaceSturdy(level, at.below(), Direction.UP) || !under.getFluidState().isEmpty()) return false;
         for (int y = 0; y <= height; y++) if (!level.getBlockState(at.above(y)).canBeReplaced()) return false;
         return true;
+    }
+
+    /**
+     * Air over solid, dry ground for {@code height} blocks above this spot (and the spot itself), and a town's leave to
+     * set something down there (TownBlocks: never into a building, a doorway or a road).
+     */
+    static boolean open(ServerLevel level, BlockPos at, int height) {
+        return TownBlocks.mayPlace(level, at, TownBlocks.Why.OTHER) && openGround(level, at, height);
     }
 
     /** One tent, its ridge running in the door's line: two poles each end, the ridge and the sloping sides. */
@@ -331,7 +339,7 @@ public final class Battlefields {
         List<BlockPos> beam = new ArrayList<>();
         for (int k = 2; k < 2 + RAM_LOGS; k++) {
             BlockPos p = surface(level, gate.relative(out, k));
-            if (!level.getBlockState(p).canBeReplaced()) return null;
+            if (!level.getBlockState(p).canBeReplaced() || !TownBlocks.mayPlace(level, p, TownBlocks.Why.OTHER)) return null;
             beam.add(p);
         }
         army.use(Items.OAK_LOG, RAM_LOGS);
@@ -362,7 +370,7 @@ public final class Battlefields {
         List<String> worn = new ArrayList<>();
         for (int k = 0; k < SCARS * 2 && worn.size() < SCARS; k++) {
             BlockPos p = surface(level, g.at(rng.nextGaussian() * 3.0, (rng.nextDouble() - 0.5) * 18.0)).below();
-            if (!level.isLoaded(p) || !level.getBlockState(p).is(Blocks.GRASS_BLOCK)) continue;
+            if (!level.isLoaded(p) || !level.getBlockState(p).is(Blocks.GRASS_BLOCK) || !TownBlocks.mayPlace(level, p, TownBlocks.Why.OTHER)) continue;
             level.setBlock(p, (rng.nextBoolean() ? Blocks.COARSE_DIRT : Blocks.DIRT).defaultBlockState(), 3);
             if (level.getBlockState(p.above()).is(net.minecraft.tags.BlockTags.REPLACEABLE_BY_TREES)) level.setBlock(p.above(), Blocks.AIR.defaultBlockState(), 3);
             worn.add(Long.toString(p.asLong()));

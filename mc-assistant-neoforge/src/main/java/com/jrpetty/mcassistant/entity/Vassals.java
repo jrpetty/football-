@@ -306,7 +306,7 @@ public final class Vassals {
     }
 
     static boolean hang(ServerLevel level, BlockPos at, Direction facing, ItemStack cloth, boolean pole) {
-        if (!(cloth.getItem() instanceof BannerItem bi)) return false;
+        if (!(cloth.getItem() instanceof BannerItem bi) || !TownBlocks.mayPlace(level, at, TownBlocks.Why.SIGN)) return false;
         if (pole) {
             level.setBlock(at, BannerBlock.byColor(bi.getColor()).defaultBlockState()
                 .setValue(BannerBlock.ROTATION, RotationSegment.convertToSegment(facing)), 3);
@@ -330,7 +330,8 @@ public final class Vassals {
         Direction f = VillageBoards.facingOf(v.id());
         if (foot == null || f == null || !f.getAxis().isHorizontal()) return;
         BlockPos at = Battlefields.surface(level, foot.relative(f, 3).relative(f.getClockWise(), 4));
-        if (!Battlefields.open(level, at, 2) || !TownWork.take(level, lord, s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), 1)) return;
+        if (!TownBlocks.mayPlace(level, at, TownBlocks.Why.CIVIC) || !Battlefields.openGround(level, at, 2)
+            || !TownWork.take(level, lord, s -> s.is(net.minecraft.tags.ItemTags.WOODEN_FENCES), 1)) return;
         ItemStack cloth = overlordsCloth(level, lord);
         level.setBlock(at, Blocks.OAK_FENCE.defaultBlockState(), 3);
         level.setBlock(at.above(), Blocks.OAK_SIGN.defaultBlockState().setValue(StandingSignBlock.ROTATION, RotationSegment.convertToSegment(f)), 3);
