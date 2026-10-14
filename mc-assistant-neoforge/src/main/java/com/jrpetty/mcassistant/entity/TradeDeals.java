@@ -340,6 +340,7 @@ public final class TradeDeals {
     /** Every few seconds (Caravans' round): trips kept, each town's morning, and the deals' caravans due. */
     public static void tick(ServerLevel level) {
         TradeTrips.keep(level);
+        Shipments.tick(level);                                   // [market] the road's own loads come in (once in five seconds)
         long dayTime = level.getDayTime(), t = dayTime % 24000L, day = dayTime / 24000L;
         if (t < 1000L || t > 11000L) return;
         for (Villages.Village v : Villages.every()) {
@@ -802,6 +803,7 @@ public final class TradeDeals {
 
     /** The town's morning: its book's rates, and the trades' leans. */
     static void morning(ServerLevel level, Villages.Village v, long day) {
+        Shipments.inTransit(v.id());                             // [market] its loads under way read in from its ledger (once)
         TradeBook.morning(level, v);
         leanMorning(level, v, day);
     }
