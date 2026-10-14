@@ -675,6 +675,22 @@ public class BuildGoal extends Goal {
         return st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS);
     }
 
+    /**
+     * [tidy] Bare ground the world made (grass, dirt, podzol, mycelium, moss, a worn path) where the drawing wants a
+     * block laid: no floor of a building (Floors, the tidy crew's round; the builder takes it out and lays the drawing's
+     * block in its place: [integrity] wrongHere). A grass block is no soft cell, so it used to count as built: every
+     * house on a meadow kept its grass for a floor, and the tall grass and flowers came up through it again.
+     */
+    public static boolean earthUnderfoot(Placement p, BlockState st) {
+        return p.part() == Part.BLOCK && p.style() != Blueprints.Style.SOIL && bareEarth(st);
+    }
+
+    /** [tidy] Ground grass grows on, or will: no floor of a building. */
+    public static boolean bareEarth(BlockState st) {
+        return st.is(Blocks.GRASS_BLOCK) || st.is(Blocks.DIRT) || st.is(Blocks.COARSE_DIRT) || st.is(Blocks.PODZOL)
+            || st.is(Blocks.MYCELIUM) || st.is(Blocks.ROOTED_DIRT) || st.is(Blocks.MOSS_BLOCK) || st.is(Blocks.DIRT_PATH);
+    }
+
     /** May the wall stand on this column: open ground the world made, not a floor, a
      *  field, a path, water, or anything somebody has put up there? */
     public static boolean wallFits(net.minecraft.world.level.Level level, int x, int z, int g) {

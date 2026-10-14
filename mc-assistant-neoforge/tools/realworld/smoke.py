@@ -3691,6 +3691,35 @@ def integrity_stage(r, look, cx, cz):
     say("alive after the integrity look: %s" % client_alive())
 
 
+
+def tidy_stage(r, look, cx, cz):
+    """[tidy] The town's looks (entity/Tidy, Eyesores, Floors). In a grown town: /village tidy names its looks out of a
+    hundred and every eyesore still about it ("SPOT kind x y z"). Pictures: the square from above (no camp beds left
+    on it once the town is housed, no chests left out), the worst eyesores still standing up close (none, in a town
+    that cares for itself), then /village tidy now (the crew's rounds on the spot) and the square again; and inside
+    the first house, its floor (boards, never the meadow's grass)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    out = r.cmd("execute positioned %d %d %d run village tidy" % (cx, hy + 1, cz))
+    say("tidy: " + out[:1500])
+    look("34-tidy-1-square", cx + 0.5, hy + 22, cz + 18.5, cx + 0.5, hy, cz + 0.5, wait=10)
+    spots = re.findall(r"SPOT (\S+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for i, (kind, x, y, z) in enumerate(spots[:3]):
+        x, y, z = int(x), int(y), int(z)
+        look("34-tidy-%d-%s" % (2 + i, kind), x + 4.5, y + 4, z + 4.5, x + 0.5, y + 0.5, z + 0.5, wait=6)
+    out = r.cmd("execute positioned %d %d %d run village tidy now" % (cx, hy + 1, cz))
+    say("tidy now: " + out[:1500])
+    look("34-tidy-5-square-after", cx + 0.5, hy + 22, cz + 18.5, cx + 0.5, hy, cz + 0.5, wait=8)
+    houses = re.findall(r"house at (-?\d+), (-?\d+), (-?\d+)", r.cmd("execute positioned %d %d %d run village buildings" % (cx, hy + 1, cz)))
+    if houses:
+        x, y, z = (int(v) for v in houses[0])
+        look("34-tidy-6-house-floor", x + 0.5, y + 2.5, z + 0.5, x + 2.5, y - 1, z + 2.5, wait=6)
+    say("alive after the tidy stage: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

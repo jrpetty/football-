@@ -155,6 +155,7 @@ public final class TownAudit {
         register(new Fidelity());
         register(new Roads());
         register(new HalfBuilt());
+        TidyAudit.registerChecks();                     // [tidy] grass inside the buildings, the eyesores, the looks
     }
 
     /** Run every check on the town. */
