@@ -11335,7 +11335,9 @@ each side of each gate. The walkway never steps more than a block at a time.
 **A full ring.** The wall is one closed ring: its gates and posterns are its only ways through, their doors shut at dusk
 and on the alarm. Over a river, a lake or the sea's edge it stands on piers, one every four blocks, with arches between
 them and a grate of iron bars (a fence in the Wood Age) under each arch from the bed to over the water: the water flows
-under it, nobody walks or swims through. An avenue over water crosses on a causeway to its gate. A field on its line is
+under it, nobody walks or swims through. An avenue over water crosses on a causeway to its gate: the passage floored at
+the banks' level, never at the water line, and the road carried on out of the gate and in from it to the first dry
+ground (filled where the water is shallow, a deck on piers where it is deep; 24 blocks at most each way). A field on its line is
 harvested into the stores and the wall stands on its earth; the farmers keep to what is left either side, off the ring.
 A town pen's fence on the line goes back to the stores and the wall takes its place, so the pen stays closed. One of the
 town's own buildings on the line is built round: the wall is laid in every cell of the line the town's placement gate
