@@ -693,6 +693,13 @@ public final class Restore {
             if (one.isEmpty() && fullStyle(want.style())) {
                 one = Crafts.takeOne(level, v, s -> BuildGoal.isBuildingBlock(s) && !Palettes.precious(s));
             }
+            // A roof's stair or slab cut there of the stores' planks: six make four stairs, three make six slabs.
+            if (one.isEmpty() && (want.style() == Blueprints.Style.ROOF_STAIR || want.style() == Blueprints.Style.ROOF_STAIR_TOP)) {
+                return make(level, v, 6, Blocks.OAK_STAIRS, Items.OAK_STAIRS, 3);
+            }
+            if (one.isEmpty() && (want.style() == Blueprints.Style.ROOF_SLAB || want.style() == Blueprints.Style.ROOF_SLAB_TOP)) {
+                return make(level, v, 3, Blocks.OAK_SLAB, Items.OAK_SLAB, 5);
+            }
             if (one.isEmpty() || !(one.getItem() instanceof BlockItem bi)) return null;
             return bi.getBlock().defaultBlockState();
         }
@@ -701,8 +708,36 @@ public final class Restore {
         }
         java.util.function.Predicate<ItemStack> part = BuildGoal.itemForPart(want.part());
         ItemStack one = Crafts.takeOne(level, v, s -> part.test(s) && s.getItem() instanceof BlockItem);
-        if (one.isEmpty() || !(one.getItem() instanceof BlockItem bi)) return null;
+        if (one.isEmpty() || !(one.getItem() instanceof BlockItem bi)) return made(level, v, want);
         return bi.getBlock().defaultBlockState();
+    }
+
+    /**
+     * A wooden part made there and then of the stores' planks, as a hand would at a bench, when the stores have none
+     * made: a door (six planks make three, two go back), a chest, a crafting table, a ladder's rungs, a fence, a gate,
+     * a barrel, a roof stair (six planks make four) or a roof slab (three make six). A house left with no door for want
+     * of a door was a house nobody could get into. Null if the planks are not there either.
+     */
+    @Nullable
+    private static BlockState made(ServerLevel level, Villages.Village v, BuildGoal.Placement want) {
+        return switch (want.part()) {
+            case DOOR -> make(level, v, 6, Blocks.OAK_DOOR, Items.OAK_DOOR, 2);
+            case CHEST -> make(level, v, 8, Blocks.CHEST, Items.CHEST, 0);
+            case CRAFTING_TABLE -> make(level, v, 4, Blocks.CRAFTING_TABLE, Items.CRAFTING_TABLE, 0);
+            case LADDER -> make(level, v, 4, Blocks.LADDER, Items.LADDER, 2);
+            case FENCE -> make(level, v, 4, Blocks.OAK_FENCE, Items.OAK_FENCE, 2);
+            case GATE -> make(level, v, 4, Blocks.OAK_FENCE_GATE, Items.OAK_FENCE_GATE, 0);
+            case BARREL -> make(level, v, 7, Blocks.BARREL, Items.BARREL, 0);
+            default -> null;
+        };
+    }
+
+    /** Planks made into a thing: so many planks out of the stores, one of it set, the rest of the batch back in. */
+    @Nullable
+    private static BlockState make(ServerLevel level, Villages.Village v, int planks, Block block, net.minecraft.world.item.Item item, int spare) {
+        if (!Crafts.usePlanks(level, v, planks)) return null;
+        if (spare > 0) Crafts.store(level, v, new ItemStack(item, spare));
+        return block.defaultBlockState();
     }
 
     private static BlockState giveBucket(ServerLevel level, Villages.Village v) {
