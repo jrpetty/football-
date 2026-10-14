@@ -75,6 +75,16 @@ public class VillageBoardBlock extends Block implements EntityBlock {
         };
     }
 
+    /**
+     * [paths] Nobody walks through a board. A panel is a plank thick, so the game took its cell for open ground and planned
+     * paths through it, and folk walking into the square under its face stood pressed against it, going nowhere: the spot
+     * by the board was where a new town's folk were stuck most, a hundred times and more a day.
+     */
+    @Override
+    protected boolean isPathfindable(BlockState state, net.minecraft.world.level.pathfinder.PathComputationType type) {
+        return false;
+    }
+
     // ------------------------------------------------------------------ the shape of a board
 
     /** Which way is "right" along the board, as you stand in front of it reading. */

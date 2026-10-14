@@ -258,8 +258,12 @@ public class PoliceGameTests {
                 if (!Police.taskForTests(g).isEmpty()) busy.add(g);
                 boolean atGate = false;
                 for (Watch.Gate gate : Watch.gates(level, village)) if (g.blockPosition().distSqr(gate.inside()) <= 8 * 8) atGate = true;
-                if (g.post() != null || Raids.headingForPost(g) || atGate) walls.add(g);
-                if (g.holdingAPost()) up.add(g);
+                // [defence] The bell's posts now: the ring round the town gathered on the square, and the wall for those over.
+                BlockPos muster = com.jrpetty.mcassistant.entity.Muster.pointForTests(village);
+                boolean ring = com.jrpetty.mcassistant.entity.Muster.inRing(g);
+                if (g.post() != null || Raids.headingForPost(g) || atGate || ring) walls.add(g);
+                if (g.holdingAPost() || ring && muster != null && Math.sqrt(g.blockPosition().distSqr(muster))
+                        <= com.jrpetty.mcassistant.entity.Muster.sizeForTests(village)[1] + 2) up.add(g);
             }
             if (t % 100 == 0) Kit.log("pl01 tick " + t + ": for the walls " + names(walls) + "; up " + names(up) + "; still on police work " + names(busy));
             if (busy.isEmpty() && walls.size() == watch.size() && !up.isEmpty()) {
@@ -267,7 +271,7 @@ public class PoliceGameTests {
                 helper.succeed();
                 return;
             }
-            if (t > 1500) helper.fail("pl01 not every guard went to the walls: for the walls " + names(walls) + ", up " + names(up) + ", busy " + names(busy));
+            if (t > 1500) helper.fail("pl01 not every guard went to its post for the bell (the walls or the ring): for the walls " + names(walls) + ", up " + names(up) + ", busy " + names(busy));
         });
     }
 

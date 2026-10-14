@@ -936,6 +936,7 @@ public final class Scouts {
     static void placeTorch(ServerLevel level, VillageFolkEntity f) {
         BlockPos at = f.blockPosition();
         if (!level.getBlockState(at).canBeReplaced() || !level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)) return;
+        if (!TownBlocks.mayPlace(level, at, TownBlocks.Why.LAMP)) return;                       // [integrity]
         if (f.removeMatching(s -> s.is(Items.TORCH), 1) < 1) return;
         level.setBlockAndUpdate(at, net.minecraft.world.level.block.Blocks.TORCH.defaultBlockState());
         f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);

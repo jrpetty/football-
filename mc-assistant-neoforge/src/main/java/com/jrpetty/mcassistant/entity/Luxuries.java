@@ -410,6 +410,8 @@ public final class Luxuries {
         Map<String, Long> book = Decor.book(village, h.anchor);
         List<BlockPos> placed = new ArrayList<>();
         ItemStack one = c.stack().copyWithCount(1);
+        // [integrity] Never into a doorway, a stair or a wall (the panes go into the drawing's own windows).
+        if (c.kind() != Kind.PANE && !TownBlocks.mayPlace(level, v, spot.at(), TownBlocks.Why.FURNISH)) return false;
         switch (c.kind()) {
             case PANE -> {
                 Decor.Room room = Decor.room(village, b);

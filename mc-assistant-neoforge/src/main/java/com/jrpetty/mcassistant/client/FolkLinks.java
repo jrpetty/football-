@@ -32,10 +32,11 @@ import java.util.UUID;
  *   <li><b>Teleport to (name)</b>, for a player in creative (and an operator, on a server: FolkTeleport says why).
  *       The screen shuts, and the server, which checks it all again, says in chat how it went. On the folk's own
  *       card it is offered only when you are not already beside the folk, in sight of it;</li>
+ *   <li><b>Profile</b>, everywhere: the folk's whole profile (FolkProfileScreen), Esc coming back here;</li>
  *   <li><b>Show card</b>, in the books, when the folk is near enough to talk to (the card is the server's to give,
  *       and it gives it only within talking range, as a right-click would).</li>
  * </ul>
- * A name with nothing to offer is no link at all: a survival player far from everybody sees the books as before.
+ * Every name offers at least its Profile.
  *
  * <p>A screen keeps one of these: {@link #begin} at the start of its frame, {@link #add} where it draws a name,
  * {@link #draw} last of all, and {@link #click} first thing in its mouseClicked.
@@ -115,8 +116,10 @@ public final class FolkLinks {
 
     /** What can be done with this folk from here, now. */
     private List<Action> actions(UUID id, String name) {
-        List<Action> out = new ArrayList<>(2);
+        List<Action> out = new ArrayList<>(3);
         Entity near = nearby().get(id);
+        // [folk-ui] Its profile, from anywhere its name is a link; Esc on the profile comes back here.
+        out.add(new Action("Profile", () -> FolkProfileScreen.open(id, null, Minecraft.getInstance().screen)));
         if (mayTeleport() && !(card && beside(near))) out.add(new Action("Teleport to " + name, () -> teleport(id)));
         Minecraft mc = Minecraft.getInstance();
         if (!card && near != null && mc.player != null && near.distanceToSqr(mc.player) <= CARD_RANGE * CARD_RANGE) {

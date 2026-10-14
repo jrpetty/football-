@@ -284,12 +284,13 @@ public final class Purchases {
     public static double priceEach(ServerLevel level, UUID village, ItemStack one, @Nullable VillageFolkEntity buyer) {
         if (one.isEmpty()) return 0;
         ItemStack s = one.copyWithCount(1);
-        double p = PriceIndex.each(level, village, s);
+        // [market] The town's one asking price: its price today, the keeper's margin, a little off on market day
+        // (Market.askEach); a player pays the same at the counter.
+        double p = Market.askEach(level, village, s);
         if (Market.goodFor(s) != null) {
             if (s.isEnchanted()) p *= 3;
             p *= Craftsmanship.worth(s);
         }
-        if (Market.marketDay(village, level.getDayTime() / 24000L)) p *= 0.9;
         p = asked(level, village, s, p);
         if (buyer != null && buyer.knacks().has(FolkSkills.Knack.THRIFTY)) p *= 0.9;
         p = Perks.priceEach(village, s, buyer, p);         // [perks] Guild Monopolies / Free Market, Private Larders, a Smooth-talker
@@ -661,7 +662,7 @@ public final class Purchases {
             Market.Good bread = Market.goodFor(new ItemStack(Items.BREAD));
             best = bread == null ? 0.3 : PriceIndex.each(level, village, bread);
         }
-        return best;
+        return best * com.jrpetty.mcassistant.village.Worth.SELL;              // [market] at the counter, the town's margin on it
     }
 
     /** The cheapest rent a household pays in the town (a house's, by its size and quarter), a day. */

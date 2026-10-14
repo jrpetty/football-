@@ -161,6 +161,7 @@ public final class WelcomeSign {
         boolean up = posted && ss.getBlock() instanceof StandingSignBlock;
         String did = "written up";
         if (!up) {
+            if (!TownBlocks.mayAll(level, v, TownBlocks.Why.SIGN, post, sign)) return null;   // [integrity]
             if (!toHand(level, v, posted)) return null;               // nobody is sent till the stores can pay for it
             if (TownJobs.busyElsewhere(level, id, TownJobs.LEAST)) return null;   // the town's other works first
             if (!TownJobs.atWork(level, v, TownJobs.LEAST, post, "putting up the welcome sign")) return null;

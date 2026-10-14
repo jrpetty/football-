@@ -392,6 +392,7 @@ public final class Villages {
         Workshop.resetForTests();
         Store.resetForTests();                                     // [econ-store]
         Sweepers.resetForTests();
+        Tidy.resetForTests();                                      // [tidy]
         Meals.resetForTests();
         Stables.resetForTests();
         TownLook.resetForTests();           // [batchE] the town's look
@@ -669,6 +670,7 @@ public final class Villages {
         for (AssistantEntity a : folkOf(villageId)) if (a.bedPos() != null) out.add(a.bedPos());
         out.addAll(CaveDwellers.awayBeds(villageId));          // [caves] the cave team's, away on a trip, stay theirs
         out.addAll(NetherRuns.awayBeds(villageId));            // [nether] and the Nether runners', away through the gateway
+        out.addAll(Wagons.awayBeds(villageId));                // [wagons] and a wagon's crew's, out of sight on the road
         return out;
     }
 
@@ -999,6 +1001,7 @@ public final class Villages {
         // [econ-trade] A standing trade deal leans the shares (TradeDeals.lean): fewer farmers where the bread comes in
         // reliably from a partner, more miners where stone is promised to one; back at once if the deliveries stop.
         t *= TradeDeals.lean(villageId, slot.trade());
+        t *= MarketLean.lean(villageId, slot.trade());     // [market] production follows prices: dear goods want hands
         // [fleet] A town with a fishing fleet wants a fisher for every one of its boats (Fleet).
         if (slot.trade() == AssistantEntity.StationTask.FISH) t = Math.max(t, Fleet.handsWanted(villageId));
         // Houses waiting on beds want the wool: twice the ranchers (their sheep) till they are made up.
@@ -2938,6 +2941,7 @@ public final class Villages {
                         && overlaps(court, v.centre().getX() + lot.x(), v.centre().getZ() + lot.z(), lot.halfAcross(), lot.halfDeep())) continue;
                 // The farmland and the pastures are kept off: the town grows round them.
                 if (lotKeptOff(villageId, v.centre(), lot)) continue;
+                if (CastleWall.keptOff(villageId, lot)) continue;      // [defence] the town wall's ring
                 int x = v.centre().getX() + lot.x();
                 int z = v.centre().getZ() + lot.z();
                 // [emerald] Never on a village of villagers' ground, nor within its margin (VanillaVillages).
@@ -2946,6 +2950,7 @@ public final class Villages {
                 if (bad.contains(BlockPos.asLong(x, 0, z))) continue;
                 // Too big for the lot (a hall on an ordinary lot): not this one.
                 if (half[0] > lot.halfAcross() || half[1] > lot.halfDeep()) continue;
+                if (Footways.crowds(villageId, project, x, z, direction(lot.back()))) continue;   // [paths] never wall to wall with a neighbour
                 free++;
                 net.minecraft.core.Direction back = direction(lot.back());
                 boolean turned = back.getAxis() == net.minecraft.core.Direction.Axis.X;
@@ -3091,6 +3096,7 @@ public final class Villages {
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);
         if (gone != null) {
+            Restore.abandoned(villageId, new com.jrpetty.mcassistant.village.Ledger.Building(project, gone.anchor(), gone.facing()), gameTime);   // [integrity] what was laid of it comes down
             why(whyNot(villageId), TAKEN);
             BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet())
                 .add(BlockPos.asLong(gone.anchor().getX(), 0, gone.anchor().getZ()));

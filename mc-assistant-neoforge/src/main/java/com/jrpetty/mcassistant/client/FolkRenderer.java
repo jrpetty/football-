@@ -111,6 +111,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new WatchLayer(this, new WatchModel(context.bakeLayer(WatchModel.LAYER))));   // [police] the sash, the coat, the badge
         this.addLayer(new NetherClient.CharmLayer(this, context.getItemInHandRenderer()));   // [nether] the gold charm on the brow
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new WagonClient.CrateLayer(this, context.getBlockRenderDispatcher()));   // [wagons] a crate to the wagon
     }
 
     @Override

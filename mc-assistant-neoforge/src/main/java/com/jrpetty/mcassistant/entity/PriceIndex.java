@@ -1,5 +1,6 @@
 package com.jrpetty.mcassistant.entity;
 
+import com.jrpetty.mcassistant.village.Worth;
 import com.jrpetty.mcassistant.village.Ledger;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -62,14 +63,11 @@ public final class PriceIndex {
 
     private PriceIndex() {}
 
-    /** The band a price stays in, about its usual worth. */
-    static final double LOWEST = 0.4, DEAREST = 3.0;
-    /** The most a price moves in a day, and the least it bothers to (a move smaller than this is made whole). */
-    static final double MOST_A_DAY = 0.15, LEAST_A_DAY = 0.03;
-    /** How much of the way to where it is heading a price goes in a day. */
-    static final double PACE = 0.35;
-    /** The days of want a town's stock and day's making cover at the usual price. */
-    static final double DAYS_COVER = 3.0;
+    /** The band a price stays in, about its usual worth; its daily pace (the arithmetic is Worth's: [market]). */
+    static final double LOWEST = Worth.LOWEST, DEAREST = Worth.DEAREST;
+    static final double MOST_A_DAY = Worth.MOST_A_DAY, LEAST_A_DAY = Worth.LEAST_A_DAY;
+    static final double PACE = Worth.PACE;
+    static final double DAYS_COVER = Worth.DAYS_COVER;
     /** How much of yesterday's smoothed figure is kept against yesterday's own (the rest). */
     static final double KEEP = 0.6;
     /** Days of past prices kept, yesterday first. */
@@ -156,11 +154,12 @@ public final class PriceIndex {
         return g.value() * factor(village, "g:" + g.name());
     }
 
-    /** What this thing is usually worth, anywhere: what a buyer expects to pay before it sees the price. */
+    /** What this thing is usually worth, anywhere: what a buyer expects to pay before it sees the price. [market] Its
+     *  own worth on the price list (a bamboo plank is not an oak one), as the board's good prices it. */
     public static double usual(ItemStack what) {
         if (what.isEmpty()) return 0.0;
         Market.Good g = Market.goodFor(what);
-        return g != null ? g.value() : Prices.of(what.copyWithCount(1));
+        return g != null ? Prices.eachAsGood(g, what) : Prices.of(what.copyWithCount(1));
     }
 
     /** [econ-prices] Today's price of this thing against its usual worth: 1 is the usual, 2 twice it. */
@@ -198,7 +197,7 @@ public final class PriceIndex {
     }
 
     /** One of a good on the board, to show: the first item it matches (looked up once, then kept). */
-    static ItemStack sampleOfGood(Market.Good g) {
+    public static ItemStack sampleOfGood(Market.Good g) {
         ItemStack kept = SAMPLE_OF.get(g.name());
         if (kept != null) return kept.copy();
         ItemStack found = ItemStack.EMPTY;
@@ -323,6 +322,14 @@ public final class PriceIndex {
                 m[1] += l.missed[1];
             }
         }
+        // [market] What the town is short of for its next age (Villages.needs: the timber, the stone, the food in the
+        // stores): wanted, a third of the shortfall a day, so a good the town needs grows dear and is made and bought in.
+        Map<Villages.Task, Integer> shortOf = new java.util.EnumMap<>(Villages.Task.class);
+        for (Villages.Need n : Villages.needs(level, id)) {
+            if (n.task() != Villages.Task.NONE && n.task() != Villages.Task.BUILD && n.amount() > 0) shortOf.merge(n.task(), n.amount(), Math::max);
+        }
+        Villages.Age age = Villages.ageOf(id);
+        String purpose = age.next() == age ? "the town's works" : age.next().label;
         // Every good on the board is priced; a ware besides only once something has been done with it.
         List<String> keys = new ArrayList<>();
         for (Market.Good g : Market.GOODS) keys.add("g:" + g.name());
@@ -330,10 +337,13 @@ public final class PriceIndex {
         for (String k : sold.keySet()) if (!keys.contains(k)) keys.add(k);
         for (String k : t.tally.keySet()) if (!keys.contains(k)) keys.add(k);
         for (String k : keys) {
-            int bundle = 1;
+            int bundle = 1, needed = 0;
             if (k.startsWith("g:")) {
                 Market.Good g = goodNamed(k.substring(2));
-                if (g != null) bundle = g.bundle();
+                if (g != null) {
+                    bundle = g.bundle();
+                    needed = (int) Math.ceil(shortOf.getOrDefault(g.need(), 0) / DAYS_COVER);
+                }
             }
             int have = stores.getOrDefault(k, 0);
             // The shop's own shelves, once it keeps them apart from the stores (ShopStock): supply too. While it sells
@@ -349,8 +359,10 @@ public final class PriceIndex {
                 l = new Line(k);
                 t.lines.put(k, l);
             }
-            int wanted = c[0] + c[1] + f[DRAWN] + m[1];
+            int wanted = c[0] + c[1] + f[DRAWN] + m[1] + needed;
+            double was = l.factor;
             move(l, have, bundle, m[0], wanted, f[REFUSED], fresh);
+            if (needed > 0 && l.factor > was * 1.01) l.why = "wanted for " + purpose;          // [market] the town's own want
             l.dayWanted = c[0] + f[DRAWN] + m[1];
             l.dayMissed = c[1];
             l.dayMade = m[0];
@@ -396,13 +408,8 @@ public final class PriceIndex {
         System.arraycopy(l.past, 0, l.past, 1, HISTORY - 1);
         l.past[0] = fresh ? 0 : l.factor;
         double was = l.factor;
-        double gap = target - was;
-        double step = gap * PACE;
-        double most = was * MOST_A_DAY, least = was * LEAST_A_DAY;
-        if (Math.abs(gap) <= least) step = gap;                                         // near enough: there
-        else if (Math.abs(step) < least) step = Math.signum(gap) * least;                // a few in the hundred at the least
-        step = Math.max(-most, Math.min(most, step));
-        l.factor = clamp(was + step);
+        double[] band = band(l.key);
+        l.factor = band == null ? Worth.step(was, target) : Worth.step(was, target, band[0], band[1]);   // [market]
         // Why, in a few words, when it is going one way.
         if (l.factor > was * 1.01) {
             l.why = oldOutput > 1 && madeYesterday < oldOutput * 0.6 ? "less made" : oldDemand >= 0 && wantedYesterday > Math.max(2, oldDemand * 1.4)
@@ -420,23 +427,19 @@ public final class PriceIndex {
      * not pay for. Within the band.
      */
     static double target(int stock, int bundle, double output, double demand, double refused) {
-        double scarcity = Market.scarcity(bundle, stock);
-        double t;
-        if (demand < 0.5 && output < 0.5) {
-            t = scarcity;
-        } else {
-            double cover = (stock + output) / Math.max(0.25, demand);
-            double byDemand = Math.sqrt(DAYS_COVER / Math.max(0.1, cover));
-            // A thing wanted by the dozen a day goes by its cover; one wanted now and then mostly by the stores' count.
-            double w = Math.min(1.0, demand / (demand + bundle));
-            t = Math.pow(scarcity, 1 - w) * Math.pow(byDemand, w);
-        }
-        if (refused > 0) t *= 1.0 - 0.5 * refused / (refused + demand + 1.0);
-        return clamp(t);
+        return Worth.target(stock, bundle, output, demand, refused);
     }
 
-    private static double clamp(double f) {
-        return Math.max(LOWEST, Math.min(DEAREST, f));
+    /**
+     * [market] A narrower band for what is money more than goods: the gold bar is the coin's own standard (nine coins, by
+     * the mint and the furnace) and does not move at all; the emerald, the villagers' coin, only a little. Null: the
+     * usual band.
+     */
+    @Nullable
+    static double[] band(String key) {
+        if (key.equals("g:Gold")) return new double[]{ 1.0, 1.0 };
+        if (key.equals("g:Emerald")) return new double[]{ 0.8, 1.25 };
+        return null;
     }
 
     // ------------------------------------------------------------------ the news
@@ -587,6 +590,16 @@ public final class PriceIndex {
         ListTag moves = new ListTag();
         for (String m : moveLines(village)) moves.add(StringTag.valueOf(m));
         out.put("moves", moves);
+        // [market] The coin, the spread and the trades' leans (the second row of cards, and a note).
+        out.putInt("treasury", Ledger.coins(village));
+        out.putInt("purses", Market.purses(village));
+        out.putInt("bill", Market.wageBill(village));
+        long[] upkeep = Market.lastUpkeep(village);
+        out.putInt("upkeep", upkeep == null ? 0 : (int) upkeep[1]);
+        out.putInt("ask100", (int) Math.round(Worth.SELL * 100));
+        out.putInt("bid100", (int) Math.round(Worth.BUY * 100));
+        out.putInt("floor100", (int) Math.round(Worth.FLOOR * 100));
+        out.putString("lean", MarketLean.line(village));
         ListTag rows = new ListTag();
         for (Line l : shown(village)) {
             ItemStack one = sampleOf(l.key);
@@ -598,6 +611,8 @@ public final class PriceIndex {
             double usual = usual(one);
             r.putInt("usual100", (int) Math.round(usual * 100));
             r.putInt("each100", (int) Math.round(usual * l.factor * 100));
+            r.putInt("ask100", (int) Math.round(Market.askEach(level, village, one) * 100));     // [market] what the town asks
+            r.putInt("bid100", (int) Math.round(Market.bidEach(level, village, one) * 100));     // [market] and pays
             r.putInt("factor100", (int) Math.round(l.factor * 100));
             r.putInt("target100", (int) Math.round(l.target * 100));
             r.putInt("trend", l.trend());
@@ -625,8 +640,11 @@ public final class PriceIndex {
         StringBuilder sb = new StringBuilder();
         sb.append(t.day < 0 ? "Not reckoned yet: everything sells at its usual worth until the town's first morning."
             : "Reckoned " + (t.day >= today ? "this morning" : "on day " + (t.day + 1)) + " from yesterday's supply and demand"
-                + (Market.marketDay(id, today) ? "; market day: a tenth off at the stalls" : "") + ".");
+                + (Market.marketDay(id, today) ? "; market day: a little off at every counter, a little more paid for what is brought" : "") + ".");
         sb.append('\n').append(Purchases.livingLine(level, id)).append('\n');
+        sb.append(Market.coinLine(id)).append('\n');                                       // [market] the coin and the spread
+        String lean = MarketLean.line(id);
+        if (!lean.isEmpty()) sb.append(lean).append('\n');                                  // [market] production follows prices
         int[] slate = Purchases.slates(id);
         if (slate[0] > 0) sb.append(slate[0]).append(slate[0] == 1 ? " folk owes " : " folk owe ").append(slate[1])
             .append(slate[1] == 1 ? " coin" : " coins").append(" on the slate, to be paid from their wages.\n");
@@ -718,7 +736,7 @@ public final class PriceIndex {
                     String[] f = parts[i].split("~", -1);
                     if (f.length < 10) continue;
                     Line l = new Line(f[0]);
-                    l.factor = clamp(Double.parseDouble(f[1]));
+                    l.factor = Worth.clamp(Double.parseDouble(f[1]));
                     l.target = Double.parseDouble(f[2]);
                     l.demand = Double.parseDouble(f[3]);
                     l.output = Double.parseDouble(f[4]);

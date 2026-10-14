@@ -74,6 +74,12 @@ public final class Grow {
         return age.ordinal() >= Villages.Age.IRON.ordinal() ? BRICK : STONE;
     }
 
+    /** [styles] As palette(age), in the town's theme ("house_brick", "house_stone"; these where it has none). */
+    public static Showcase.Palette palette(@javax.annotation.Nullable UUID village, Villages.Age age) {
+        boolean iron = age.ordinal() >= Villages.Age.IRON.ordinal();
+        return Themes.palette(village, iron ? "house_brick" : "house_stone", palette(age));
+    }
+
     /** Every quarter of a minute: a little more done to the village's houses. */
     public static void tick(ServerLevel level, Villages.Village v) {
         UUID id = v.id();
@@ -111,6 +117,7 @@ public final class Grow {
                 }
             }
             level.setBlock(empty.get(0), Blocks.BOOKSHELF.defaultBlockState(), 3);
+            TownBlocks.traced(v, empty.get(0), TownBlocks.Why.REPAIR);                   // [integrity] the library's own shelf
             return true;
         }
         return false;
@@ -207,7 +214,7 @@ public final class Grow {
             done += reface(level, v, b, age, budget - done, Ledger.grown(id, b.anchor()), false);
             if (done >= budget) break;
             if (age.ordinal() >= Villages.Age.IRON.ordinal() && !Ledger.grown(id, b.anchor())) {
-                done += storey(level, v, b, budget - done, palette(age), false);
+                done += storey(level, v, b, budget - done, palette(v.id(), age), false);
                 break;                                                   // one house at a time
             }
         }
@@ -304,6 +311,7 @@ public final class Grow {
     /** Somewhere in a house's plot to plant or fence: open air on plain ground, nobody else's building. */
     static boolean plot(ServerLevel level, UUID village, Ledger.Building b, BlockPos at) {
         if (!level.getBlockState(at).isAir()) return false;
+        if (!TownBlocks.mayPlace(level, Villages.get(village), at, TownBlocks.Why.GARDEN)) return false;   // [integrity] no way in fenced off
         BlockState ground = level.getBlockState(at.below());
         if (!(ground.is(Blocks.GRASS_BLOCK) || ground.is(Blocks.DIRT) || ground.is(Blocks.COARSE_DIRT) || ground.is(Blocks.PODZOL))) return false;
         for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(village).entrySet()) {
@@ -333,7 +341,7 @@ public final class Grow {
      */
     public static int reface(ServerLevel level, Villages.Village v, Ledger.Building b, Villages.Age age, int budget,
                              boolean grown, boolean free) {
-        Block want = palette(age).walls();
+        Block want = palette(v.id(), age).walls();
         // The land's own stone, while the stores have it (Homeland): sandstone in the desert,
         // terracotta in the badlands, andesite in the hills, mossy stone in the jungle.
         Homeland.Stone local = Homeland.walls(v.id());
@@ -618,7 +626,7 @@ public final class Grow {
         garden(level, v, b, true);
         if (age.ordinal() >= Villages.Age.IRON.ordinal()) {
             STARTED.computeIfAbsent(v.id(), k -> ConcurrentHashMap.newKeySet()).add(b.anchor().asLong());
-            for (int i = 0; i < 40 && !Ledger.grown(v.id(), b.anchor()); i++) storey(level, v, b, 400, palette(age), true);
+            for (int i = 0; i < 40 && !Ledger.grown(v.id(), b.anchor()); i++) storey(level, v, b, 400, palette(v.id(), age), true);
         }
         reface(level, v, b, age, 1000, Ledger.grown(v.id(), b.anchor()), true);
     }

@@ -40,6 +40,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_MAX_FOLK;
     public static final ModConfigSpec.BooleanValue VILLAGE_BREEDING;
     public static final ModConfigSpec.BooleanValue VILLAGE_RAIDS;
+    public static final ModConfigSpec.BooleanValue RAID_MUSTER, CASTLE_WALLS;      // [defence]
     public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
     public static final ModConfigSpec.IntValue VILLAGE_FOUNDING_MOST;
     public static final ModConfigSpec.IntValue VILLAGE_CHARTER_FOLK;
@@ -58,6 +59,8 @@ public final class AssistantConfig {
     public static final ModConfigSpec.DoubleValue VILLAGE_CROP_GROWTH;
     /** [disasters] Fire from the forges, floods and droughts (entity/Disasters), and how rare. */
     public static final ModConfigSpec.BooleanValue VILLAGE_DISASTERS;
+    /** [styles] The look new towns build in (a theme: data/mc_assistant/themes, THEMES.md). */
+    public static final ModConfigSpec.ConfigValue<String> VILLAGE_THEME;
     public static final ModConfigSpec.IntValue VILLAGE_SPARK_DAYS;
     public static final ModConfigSpec.IntValue VILLAGE_FLOOD_RAIN_DAYS;
     public static final ModConfigSpec.IntValue VILLAGE_DROUGHT_DAYS;
@@ -147,6 +150,14 @@ public final class AssistantConfig {
                 "Raiders come at walled villages with a watch, about one night in five:",
                 "the bell rings, the guards take the walls, everybody else goes indoors.")
             .define("villageRaids", true);
+        RAID_MUSTER = b.comment(                                                       // [defence]
+                "When the bell rings, everybody but the watch runs to the village square and the guards ring them",
+                "round there (entity/Muster). Off: the old way, the guards on the walls and everybody else indoors.")
+            .define("raidMusterAtSquare", true);
+        CASTLE_WALLS = b.comment(                                                      // [defence]
+                "Towns plan a castle wall round the whole town and build it out of their stores, upgrading it as",
+                "they come of age and moving it out as they grow (entity/CastleWall).")
+            .define("castleWalls", true);
         VILLAGE_BREEDING = b.comment(
                 "Let settlements grow their own people. Two folk who are fed and in work",
                 "have a chance of raising a child, which costs them the food it takes.",
@@ -294,6 +305,13 @@ public final class AssistantConfig {
         VILLAGE_PLAYER_JAIL_SECONDS = b.comment(
                 "How long a player is kept in the cells, in seconds, when villagePlayerJail is on.")
             .defineInRange("villagePlayerJailSeconds", 120, 10, 1200);
+        // [styles] The towns' look (entity/Themes).
+        VILLAGE_THEME = b.comment(
+                "The look the towns build in: a theme from data/mc_assistant/themes (a datapack may add one).",
+                "\"medieval\" is the folk's own timber, stone and slate. A town keeps the theme it was given;",
+                "an operator may change one town's with /village theme set <theme>, and its older buildings are",
+                "renovated to the new look by its own builders.")
+            .define("villageTheme", "medieval");
         b.pop();
 
         b.comment("How much of the world's towns the server simulates in full (many big towns).")
@@ -349,6 +367,8 @@ public final class AssistantConfig {
     public static int villageMaxFolk() { return read(VILLAGE_MAX_FOLK, 12); }
     public static boolean villageBreeding() { return read(VILLAGE_BREEDING, true); }
     public static boolean villageRaids() { return read(VILLAGE_RAIDS, true); }
+    public static boolean raidMuster() { return read(RAID_MUSTER, true); }           // [defence]
+    public static boolean castleWalls() { return read(CASTLE_WALLS, true); }         // [defence]
     public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
     public static int villageFoundingMost() { return read(VILLAGE_FOUNDING_MOST, 500); }
     public static int villageCharterFolk() { return read(VILLAGE_CHARTER_FOLK, 70); }
@@ -373,6 +393,7 @@ public final class AssistantConfig {
     public static boolean villagePhantoms() { return read(VILLAGE_PHANTOMS, false); }
     public static double villageCropGrowth() { return read(VILLAGE_CROP_GROWTH, 2.0); }
     public static boolean villageDisasters() { return read(VILLAGE_DISASTERS, true); }          // [disasters]
+    public static String villageTheme() { return read(VILLAGE_THEME, "medieval"); }               // [styles]
     public static int villageSparkDays() { return read(VILLAGE_SPARK_DAYS, 10); }
     public static int villageFloodRainDays() { return read(VILLAGE_FLOOD_RAIN_DAYS, 3); }
     public static int villageDroughtDays() { return read(VILLAGE_DROUGHT_DAYS, 6); }

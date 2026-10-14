@@ -211,6 +211,9 @@ public final class TradeTalks {
         return (int) Math.max(w.ware().lot, Math.max(w.want() / 3.0, steady));
     }
 
+    /** [market] How much more a hungry town's want of food counts, choosing what to deal in. */
+    static final double FOOD_FIRST = 3.0;
+
     static int lots(int n, int lot) {
         return lot <= 1 ? n : n / lot * lot;
     }
@@ -229,7 +232,9 @@ public final class TradeTalks {
             double vs = TradeBook.worth(level, s.town(), e.item()), vb = TradeBook.worth(level, b.town(), e.item())
                 * Fame.importWorth(b.town(), s.town(), e.item());   // [identity] its tariffs; the seller's fame and rank
             double gain = (vb - vs) * n;
-            if (gain > bestX) { bestX = gain; x = e.item(); qx = n; sx = vs; bx = vb; }
+            // [market] Food first for a town going hungry: its want ranks over any other gain.
+            double rank = e.ware() == TradeBook.Ware.FOOD && Market.hungry(b.town()) ? gain * FOOD_FIRST : gain;
+            if (rank > bestX) { bestX = rank; x = e.item(); qx = n; sx = vs; bx = vb; }
         }
         if (x == null) return null;
         TradeBook.Ware xw = TradeBook.Ware.of(new ItemStack(x));
@@ -285,6 +290,22 @@ public final class TradeTalks {
         return bargain(buy, envoyTown, hostTown, mh, me, every, renewal);
     }
 
+    /** [market] Coin a piece carted a thousand blocks: the carter's day, the cart, the beasts' feed. */
+    static final double HAUL_PER_PIECE_KM = 0.004;
+
+    /**
+     * [market] What carrying a delivery each way costs between these two towns: so much a piece a thousand blocks for
+     * both loads, and the chance of losing the seller's (Shipments.ROAD_LOSS_PER_THOUSAND) on what it is worth.
+     */
+    static double haul(Table t) {
+        Villages.Village a = Villages.get(t.seller()), b = Villages.get(t.buyer());
+        if (a == null || b == null) return 0;
+        double km = Math.sqrt(a.centre().distSqr(b.centre())) / 1000.0;
+        int pieces = t.qx() + (t.y() == null ? 0 : t.yMax());
+        double risk = Shipments.ROAD_LOSS_PER_THOUSAND / 100.0 * km * t.qx() * t.sx();
+        return pieces * km * HAUL_PER_PIECE_KM + risk;
+    }
+
     /** The least a side will deal for: a twenty-fifth of what the goods are worth to it, a quarter of a coin at least. */
     static double margin(double worth) {
         return Math.max(0.25, 0.04 * worth);
@@ -296,8 +317,11 @@ public final class TradeTalks {
      */
     public static Talk bargain(Table t, UUID envoyTown, UUID hostTown, Manner ms, Manner mb, int every, boolean renewal) {
         boolean envoySells = t.seller().equals(envoyTown);
-        double floor = t.sellerFloor(margin(t.qx() * t.sx()));
-        double ceiling = Math.min(t.buyerCeiling(margin(t.qx() * t.bx())), t.canPay());
+        // [market] The haul, shared: the carting of both loads over the road between them and the risk of losing one. A
+        // deal that does not cover it is not worth the road (cheap stone does not travel far; bread does).
+        double haul = haul(t);
+        double floor = t.sellerFloor(margin(t.qx() * t.sx())) + haul / 2;
+        double ceiling = Math.min(t.buyerCeiling(margin(t.qx() * t.bx())), t.canPay()) - haul / 2;
         List<Offer> offers = new ArrayList<>();
         double room = ceiling - floor;
         if (room < 0.25) {

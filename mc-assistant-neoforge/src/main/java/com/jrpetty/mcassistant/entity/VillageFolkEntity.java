@@ -39,6 +39,8 @@ public class VillageFolkEntity extends AssistantEntity {
 
     @Nullable private BlockPos villageCentre;
     private int agendaTick = -1000;
+    /** How often (ticks) a folk with no trade claims one outside its agenda: cheap, but needs no more than once a second. */
+    private static final int CLAIM_EVERY = 20;
     private int searchFailTick = -100000;
 
     public VillageFolkEntity(EntityType<? extends PathfinderMob> type, Level level) {
@@ -417,6 +419,9 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // [batchE] A traveller in a town with an inn after dusk: a room for the night, and on its way in the morning (Inn).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel innLevel && Inn.lodging(this, innLevel)) return;
+        // [wagons] Riding guard on the town's wagon: that is its work till the wagon is home (it gets down to fight).
+        if (!withAPlayer && Wagons.guarding(this) && level() instanceof net.minecraft.server.level.ServerLevel wagonLevel
+                && (tickCount % 5 != 1 || Wagons.escort(this, wagonLevel))) return;
         // On the road with a caravan: walked step by step, not thought about once in five seconds.
         if (trip != null && !withAPlayer && tickCount % 10 == 0 && level() instanceof net.minecraft.server.level.ServerLevel road) {
             Caravans.drive(this, road);
@@ -500,12 +505,9 @@ public class VillageFolkEntity extends AssistantEntity {
                 && (tickCount % 4 == 3 ? Culture.hold(this, culture) : Culture.busy(this))) return;
         // [fireworks] One of a display's crew, at the rack behind the launch spot (FireworkShows): before the gathering.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel rack && FireworkShows.hold(this, rack)) return;
-        // No trade yet (a founder, or one just let go from its trade): it claims the one its village is short of
-        // now, whatever else has it just now. The claim is cheap and the village reckons its shape from what its folk
-        // ARE; only the search for ground waits for the agenda (takeUpATrade). A new village's founders were held at
-        // their first morning assembly till well into the morning with no trade, and the last let go were still
-        // without one an hour in, the farms and the fishing they would have taken unclaimed.
-        if (!withAPlayer && tickCount % 20 == 9 && !level().isNight()) claimATrade();
+        // No trade yet (a founder, one let go from its trade): it claims one by day even while a gathering holds it,
+        // as the founders' first morning assembly does for their first hour. Only the search for ground waits.
+        if (!withAPlayer && tickCount % CLAIM_EVERY == CLAIM_EVERY / 2 && !level().isNight()) claimATrade();
         // The village coming together (Assemblies): the bell rung, it goes, finds a place and takes part.
         if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel gathering
                 && Assemblies.attend(this, gathering)) {
@@ -614,6 +616,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (home != null && TownScheduler.due(townLevel, home.id(), TownScheduler.Job.STREETS)) {
                 long started = TownScheduler.start();
                 TownWork.tick(townLevel, home);
+                Tidy.tick(townLevel, home);             // [tidy] the tidy crew: floors in the buildings, the eyesores, the town's looks
                 TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
                 Museum.tick(townLevel, home);           // the museum's finds and its archive
                 Library.tick(townLevel, home);          // [library] its books written, shelved, lent and read
@@ -678,6 +681,20 @@ public class VillageFolkEntity extends AssistantEntity {
     /** Strong Back (FolkSkills): a bigger load on each trip of its round. */
     @Override
     protected int haulLoadBonus() { return FolkSkills.haulBonus(this); }
+
+    // ------------------------------ its needs (FolkNeeds) ---------------------
+
+    /** [folk-ui] Its needs as last worked out (FolkNeeds.of), and when: kept here so they cost nothing between looks. */
+    private final int[] needs = new int[FolkNeeds.COUNT];
+    private long needsAt = Long.MIN_VALUE / 2;
+    /** [folk-ui] The game time it last had somebody awake to talk to beside it (socialBeat); -1 never. Saved. */
+    private long companyAt = -1;
+
+    int[] needsKept() { return needs; }
+    long needsAt() { return needsAt; }
+    void needsAt(long t) { needsAt = t; }
+    public long companyAt() { return companyAt; }
+    void companyAt(long t) { companyAt = t; }
 
     // ------------------------------ money --------------------------------------
 
@@ -1469,16 +1486,16 @@ public class VillageFolkEntity extends AssistantEntity {
         if (persona.ambitionMet() || !persona.rolled()) return;
         UUID village = ownerId();
         boolean met = switch (persona.ambition()) {
-            case MASTER -> veteranLevel() >= 10;
-            case FAMILY -> life.children() >= 2;
-            case FRIENDS -> life.friends().size() >= 5;
+            case MASTER -> veteranLevel() >= Dreams.MASTER_LEVEL;
+            case FAMILY -> life.children() >= Dreams.FAMILY_CHILDREN;
+            case FRIENDS -> life.friends().size() >= Dreams.FRIENDS_WANTED;
             case DIAMOND -> countCarried(st -> st.is(net.minecraft.world.item.Items.DIAMOND)) > 0;
             case NETHER -> village != null && Villages.ageOf(village) == Villages.Age.NETHER;
             case GREAT_WORK -> village != null && Villages.greatWorks(village) >= 1;
-            case GARDEN -> persona.flowersPlanted() >= 6;
+            case GARDEN -> persona.flowersPlanted() >= Dreams.GARDEN_FLOWERS;
             case WELL_FED -> village != null && villageCentre != null
                 && level() instanceof net.minecraft.server.level.ServerLevel server
-                && persona.since() >= 0 && level().getDayTime() / 24000L - persona.since() >= 6
+                && persona.since() >= 0 && level().getDayTime() / 24000L - persona.since() >= Dreams.WELL_FED_DAYS
                 && Villages.stock(server, villageCentre, Villages.Task.FOOD, Villages.storesRadius(village))
                     >= 2 * com.jrpetty.mcassistant.village.VillageMath.foodWanted(Villages.headcount(village));
             // [individual] The dreams of a life (Dreams).
@@ -1902,6 +1919,7 @@ public class VillageFolkEntity extends AssistantEntity {
             life.feel(other.getUUID(), other.displayNameCap(), delta);
             if (isSleeping() || other.isSleeping()) continue;
             int now = life.affinity(other.getUUID());
+            companyAt = level().getGameTime();                                // [folk-ui] company, for its needs (FolkNeeds)
             boolean partners = other.getUUID().equals(life.partner());
             if (offWork) getLookControl().setLookAt(other, 30.0F, 30.0F);
             if (!partners && life.partner() == null && other.life.partner() == null && !isBaby() && !other.isBaby()
@@ -2328,6 +2346,9 @@ public class VillageFolkEntity extends AssistantEntity {
         childhood();
     }
 
+    /** [tidy] Tests only: this bed its own, as though it had lain down in it. */
+    public void takeBedForTests(BlockPos pos) { takeBed(pos); }
+
     /** Tests only: a child born this many days ago. */
     public void bornDaysAgo(long days) { bornDay = level().getDayTime() / 24000L - days; }
 
@@ -2385,6 +2406,10 @@ public class VillageFolkEntity extends AssistantEntity {
             if (away != null) { walkTo(away, 0.9D); socialWalkTick = tickCount; }
             return;
         }
+        // [folk-ui] Its needs first (FolkNeeds): lonely, it goes looking for company before anything it would do on its
+        // own; short of comfort, its savings go on its home before its favourite spot.
+        if (FolkNeeds.low(this, FolkNeeds.SOCIAL) && keepCompany(server)) return;
+        if (FolkNeeds.low(this, FolkNeeds.COMFORT) && homeComfort(server)) return;
         if (Habits.favouritePlace(this, server)) return;   // [individual] its favourite spot in town
         if (homeComfort(server)) return;              // its savings, spent on its home
         if (Fashion.shopping(this, server)) return;   // [fashion] to the shop for the season's look it wants
@@ -2410,24 +2435,7 @@ public class VillageFolkEntity extends AssistantEntity {
             return;
         }
         if (typeOuting(server)) return;               // an hour of its own kind (Values)
-        VillageFolkEntity mate = company(server);
-        if (mate != null) {
-            if (distanceToSqr(mate) > 9.0) {
-                if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
-                    walkTo(mate.blockPosition(), 0.8D);
-                    socialWalkTick = tickCount;
-                }
-            } else {
-                getNavigation().stop();
-                getLookControl().setLookAt(mate, 30.0F, 30.0F);
-                // A word or two about what is going on (Smalltalk).
-                if (tickCount - lastSmalltalk > 1200 && getRandom().nextInt(3) == 0 && Smalltalk.chat(this, mate, server)) {
-                    lastSmalltalk = tickCount;
-                    mate.lastSmalltalk = mate.tickCount;
-                }
-            }
-            return;
-        }
+        if (keepCompany(server)) return;
         if (!getNavigation().isDone()) return;
         int reach = life.has(Social.Trait.CURIOUS) ? 24 : life.has(Social.Trait.SHY) ? 12 : 6;
         if (villageCentre.distSqr(blockPosition()) > (double) (reach + 4) * (reach + 4)) {
@@ -2438,6 +2446,27 @@ public class VillageFolkEntity extends AssistantEntity {
                 villageCentre.getZ() + getRandom().nextInt(2 * reach + 1) - reach);
             if (to != null) { walkTo(to, 0.7D); socialWalkTick = tickCount; }
         }
+    }
+
+    /** Off to whoever it would spend its evening with (company), or beside them already: true while it has some. */
+    private boolean keepCompany(net.minecraft.server.level.ServerLevel server) {
+        VillageFolkEntity mate = company(server);
+        if (mate == null) return false;
+        if (distanceToSqr(mate) > 9.0) {
+            if (getNavigation().isDone() || tickCount - socialWalkTick >= 100) {
+                walkTo(mate.blockPosition(), 0.8D);
+                socialWalkTick = tickCount;
+            }
+        } else {
+            getNavigation().stop();
+            getLookControl().setLookAt(mate, 30.0F, 30.0F);
+            // A word or two about what is going on (Smalltalk).
+            if (tickCount - lastSmalltalk > 1200 && getRandom().nextInt(3) == 0 && Smalltalk.chat(this, mate, server)) {
+                lastSmalltalk = tickCount;
+                mate.lastSmalltalk = mate.tickCount;
+            }
+        }
+        return true;
     }
 
     @Nullable private BlockPos typeOutingAt;
@@ -2498,7 +2527,8 @@ public class VillageFolkEntity extends AssistantEntity {
                 return f;
             }
         }
-        if (!life.has(Social.Trait.SOCIABLE) || ownerId() == null) return null;
+        // The sociable, and anyone lonely (FolkNeeds), will take whoever is nearest.
+        if (!life.has(Social.Trait.SOCIABLE) && !FolkNeeds.low(this, FolkNeeds.SOCIAL) || ownerId() == null) return null;
         UUID village = ownerId();
         VillageFolkEntity best = null;
         double nearest = 16.0 * 16.0;
@@ -2806,8 +2836,12 @@ public class VillageFolkEntity extends AssistantEntity {
     /** This folk's own hour for bed: a sociable one stays up, a hard worker turns in early. */
     public long bedtimeTick() {
         return LawBook.bedtime(ownerId(), 14000L + Math.floorMod(getUUID().getMostSignificantBits(), 600L)   // [identity] a curfew
-            + (life.has(Social.Trait.SOCIABLE) ? 1500L : 0L) - (life.has(Social.Trait.HARDWORKING) ? 800L : 0L));
+            + (life.has(Social.Trait.SOCIABLE) ? 1500L : 0L) - (life.has(Social.Trait.HARDWORKING) ? 800L : 0L)
+            - (FolkNeeds.low(this, FolkNeeds.REST) ? TIRED_EARLY : 0L));     // [folk-ui] worn out: early to bed (FolkNeeds)
     }
+
+    /** [folk-ui] How much earlier a folk short of rest goes to bed: an hour. */
+    static final long TIRED_EARLY = 1000L;
 
     /** Where this hand's ground was when the agenda last looked, and since when. */
     @Nullable private WorkZone lastPlot;
@@ -3126,6 +3160,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Caravans.drive(this, road);
             return;
         }
+        if (Wagons.guarding(this)) return;              // [wagons] riding guard on a wagon: the road is the day's work
         if (expedition != null) return;                 // out scouting: the land is the day's work
         // The bell is ringing: everybody but the watch drops what it is doing and gets indoors
         // (the watch's orders are in its station brain: Raids.guardDuty).
@@ -3455,6 +3490,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         BlockPos spot = nextInTheRow(bank);
         if (spot == null) { brain("no room in the row for another furnace"); return; }
+        if (!TownBlocks.mayPlace(level(), spot, TownBlocks.Why.FURNISH)) { brain("no room in the row for another furnace"); return; }   // [integrity]
         net.minecraft.world.level.block.state.BlockState first = level().getBlockState(bank.get(0));
         net.minecraft.core.Direction faces = first.hasProperty(net.minecraft.world.level.block.AbstractFurnaceBlock.FACING)
             ? first.getValue(net.minecraft.world.level.block.AbstractFurnaceBlock.FACING) : net.minecraft.core.Direction.NORTH;
@@ -3567,6 +3603,7 @@ public class VillageFolkEntity extends AssistantEntity {
                         if (!level().getBlockState(p).canBeReplaced() || !level().getFluidState(p).isEmpty()) continue;
                         if (!level().getBlockState(p.below()).isFaceSturdy(level(), p.below(), net.minecraft.core.Direction.UP)) continue;
                         if (getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p))) continue;
+                        if (!TownBlocks.mayPlace(level(), p, TownBlocks.Why.CIVIC)) continue;            // [integrity]
                         if (removeMatching(st -> st.is(net.minecraft.world.item.Items.CHEST), 1) < 1) return;
                         level().setBlockAndUpdate(p, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
                         ZoneChests.mark(level(), p);
@@ -3954,7 +3991,10 @@ public class VillageFolkEntity extends AssistantEntity {
 
     private int triedTrades;
 
-    /** With no trade and no ground: take up the trade the village is most short of (not one it fears). */
+    /**
+     * With no trade and no ground: take up the trade the village is most short of (not one it fears). Only the
+     * claim, which is cheap and makes the village's shape count this folk; finding ground is takeUpATrade's.
+     */
     private void claimATrade() {
         if (stationTask() != StationTask.NONE || workZone() != null || ownerId() == null || isBaby()) return;
         if (trip != null || expedition != null || Raids.underAlarm(ownerId())) return;
@@ -4022,6 +4062,7 @@ public class VillageFolkEntity extends AssistantEntity {
         int fx = c.getX() - villageCentre.getX(), fz = c.getZ() - villageCentre.getZ();
         if (Math.max(Math.abs(fx), Math.abs(fz)) - grown <= Villages.FIRST_BLOCK) return;
         if (Villages.builtOver(id, fx, fz, grown, grown)) return;
+        if (CastleWall.fieldKeptOff(id, fx, fz, grown)) return;              // [defence] off the town wall's ring
         for (com.jrpetty.mcassistant.village.Ledger.Building b : com.jrpetty.mcassistant.village.Ledger.buildings(id)) {
             BlockPos a = b.anchor();
             if (Math.max(Math.abs(a.getX() - c.getX()), Math.abs(a.getZ() - c.getZ())) <= grown + 8) return;
@@ -4724,6 +4765,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 if (p == null || Math.abs(p.getY() - heart.getY()) > FIELD_CLIMB || taken(p, FIELD_MOST)) continue;
                 if (Bonds.overBorder(town, heart, p, FIELD_MOST)) continue;           // that side of the border is theirs
                 if (Villages.builtOver(town, f[0], f[1], FIELD_MOST, FIELD_MOST) || buildingNear(town, p, FIELD_MOST + 4)) continue;
+                if (CastleWall.fieldKeptOff(town, f[0], f[1], FIELD_MOST)) continue;   // [defence] off the town wall's ring
                 if (soilField(p) || farmable(p)) return p;
             }
             return null;
@@ -5301,6 +5343,7 @@ public class VillageFolkEntity extends AssistantEntity {
      *  its bed across the town, the same, children too: not a walk through the streets with the band in them. */
     @Override
     protected boolean bedtime() {
+        if (Muster.gather(this)) return true;               // [defence] the bell: to the square, not to bed
         if (Raids.underAlarm(ownerId()) && (bedPos() == null && !isBaby() || WatchClears.bedFar(this))) return Raids.shelter(this);
         // The day of rest, by day: the service, the games, walking out — not bed at noon.
         if (!Raids.underAlarm(ownerId()) && RestDay.now(ownerId(), level().getDayTime()) != null) {
@@ -6308,6 +6351,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     if (!below.isFaceSturdy(level, p.below(), net.minecraft.core.Direction.UP) || !below.getFluidState().isEmpty()) continue;
                     if (!level.getBlockState(p).canBeReplaced() || !level.getBlockState(p).getFluidState().isEmpty()) continue;
                     if (below.is(Blocks.FARMLAND)) continue;
+                    if (!TownBlocks.mayPlace(level, p, TownBlocks.Why.FIELD)) continue;   // [integrity] the next spot over, never a road or a way in
                     boolean onAPlot = false;
                     if (village != null) {
                         for (AssistantEntity a : Villages.folkOf(village)) {
@@ -6841,21 +6885,38 @@ public class VillageFolkEntity extends AssistantEntity {
         // [economy] A farmer with a ripe field takes the harvest in first: the break waits (Fields).
         if (Fields.harvestWaits(this)) return false;
         long day = level().getDayTime() % 24000L;
-        long bits = getUUID().getLeastSignificantBits();
-        // Partners take their break together: both work it out from the same one of
-        // their two ids, so it is the same hour for both.
-        UUID partner = life.partner();
-        if (partner != null && partner.getLeastSignificantBits() < bits) bits = partner.getLeastSignificantBits();
-        long start = 1000L + Math.floorMod(bits, 8000L);
+        long start = breakStart();
+        if (day < start) return false;                               // early out: most of the day, no more work than this
+        return day < start + breakLength();
+    }
+
+    /**
+     * When today's break starts, in day ticks (0 at six in the morning). With {@link #breakLength} the one place the
+     * break is worked out, so the break it takes and the break its day planner shows (FolkSchedule) are the same. A
+     * start past the end of the day means it waits for the noon bell.
+     */
+    public long breakStart() {
+        long start = 1000L + Math.floorMod(breakBits(), 8000L);
         // A town that keeps the bell takes its break together, at the noon bell (TownBell).
-        start = TownBell.breakFrom(ownerId(), level(), start);
-        long length = 1200L + Math.floorMod(bits >>> 24, 1200L);
+        return TownBell.breakFrom(ownerId(), level(), start);
+    }
+
+    /** How long today's break lasts, in ticks: its own, shorter for the hard-working, longer for the easygoing. */
+    public long breakLength() {
+        long length = 1200L + Math.floorMod(breakBits() >>> 24, 1200L);
         if (life.has(Social.Trait.HARDWORKING)) length /= 2;
         if (life.has(Social.Trait.EASYGOING)) length = length * 3 / 2;
         // A hard-driving leader cuts the breaks short; an easygoing one lets them run on.
         length = (long) (length * Leader.restScale(ownerId()));
-        length = (long) (length * FolkSkills.breakScale(this));      // Early Riser: a shorter break
-        return day >= start && day < start + length;
+        return (long) (length * FolkSkills.breakScale(this));        // Early Riser: a shorter break
+    }
+
+    /** The id the break hour comes from: partners take their break together, from the lower of their two ids. */
+    private long breakBits() {
+        long bits = getUUID().getLeastSignificantBits();
+        UUID partner = life.partner();
+        if (partner != null && partner.getLeastSignificantBits() < bits) bits = partner.getLeastSignificantBits();
+        return bits;
     }
 
     /** Tests: is this its break hour (a test of a trade's pace skips it)? */
@@ -7028,12 +7089,12 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos heart = villageCentre;
         if (heart == null) return false;
         int blocks = blocksToLay(project, site, stillToLay(project, site));
-        int carried = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
+        int carried = countCarried(BUILT_OF) + roofPiecesCarried();
         // Three parts in four is enough to begin: the rest is dug while the walls go up, and
         // a build that waited for every last block stood in front of its list for days.
         int least = blocks * 3 / 4;
         return carried >= least
-            || carried + storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock) >= least;
+            || carried + storesHold(heart, buildStoresRadius(), BUILT_OF) >= least;
     }
 
     /**
@@ -7135,9 +7196,9 @@ public class VillageFolkEntity extends AssistantEntity {
 
         // Timber and stone: only worth a trip if the village has enough. (The roof's stairs and
         // slabs in the pack count: they are laid in place of blocks.)
-        int carried = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
+        int carried = countCarried(BUILT_OF) + roofPiecesCarried();
         if (carried < least) {
-            int inStores = storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock);
+            int inStores = storesHold(heart, buildStoresRadius(), BUILT_OF);
             if (carried + inStores < least) { buildNote("build: stores hold " + inStores + ", need " + (least - carried)); return false; }      // not yet
         }
 
@@ -7234,13 +7295,14 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // Then the bulk of it, timber and stone, into whatever room the pack has left once the
         // fixtures and the finishing are in it (see above).
-        int carriedNow = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
+        int carriedNow = countCarried(BUILT_OF) + roofPiecesCarried();
         if (carriedNow < blocks) {
             // The cheapest first: stone before planks, planks before logs.
             int got = 0;
             for (int tier = 0; tier <= 2 && got < blocks - carriedNow; tier++) {
                 final int cost = tier;
-                got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost,
+                got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost
+                        && !Restore.earthyItem(st),                                    // [integrity] no wall of earth
                     blocks - carriedNow - got, buildStoresRadius());
             }
             if (got > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
@@ -7248,7 +7310,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // The roof's stairs and slabs count: they are cut from the planks and laid in place of
         // blocks. Counted without them, a builder that had cut its roof out of the founding planks
         // was always "carrying 128 of 216", never began, and a village of twelve built nothing.
-        int blocksNow = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
+        int blocksNow = countCarried(BUILT_OF) + roofPiecesCarried();
         // A full pack is a load to begin on. Three parts in four of a building bigger than one pack
         // can hold never fit in it: the meeting hall's drawing alone (five hundred and forty-odd
         // blocks, its roof stairs, planks, beams and footing each a stack or three of their own, its
@@ -7261,6 +7323,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (blocksNow < least && !fullLoad) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
         return blocksNow >= least || fullLoad;
     }
+
+    /** [integrity] What a building's load is counted in: building blocks, not earth (a pack of dirt is no load). */
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> BUILT_OF =
+        st -> BuildGoal.isBuildingBlock(st) && !Restore.earthyItem(st);
 
     /** The least of timber and stone a full pack must hold to count as a load to begin on (six
      *  stacks): a pack full of its trade's own goods with a handful of planks in it is no load. */
@@ -8259,6 +8325,7 @@ public class VillageFolkEntity extends AssistantEntity {
             tag.putLong("ValuesDay", valuesDay);
         }
         tag.putInt("Purse", purse);
+        tag.putLong("CompanyAt", companyAt);                                 // [folk-ui] FolkNeeds' company
         tag.putInt("PaidDeeds", paidDeeds);
         tag.putInt("EarnedInAll", earnedInAll);
         CompoundTag trades = new CompoundTag();
@@ -8345,6 +8412,7 @@ public class VillageFolkEntity extends AssistantEntity {
             }
         }
         this.purse = tag.getInt("Purse");
+        this.companyAt = tag.contains("CompanyAt") ? tag.getLong("CompanyAt") : -1;   // [folk-ui] older saves: never yet
         this.paidDeeds = tag.getInt("PaidDeeds");
         this.earnedInAll = tag.getInt("EarnedInAll");
         tradeXp.clear();

@@ -511,8 +511,10 @@ output, the worth and the three best paid, and any folk will tell you who earns 
 Everything the folk can mine, grow, catch or make has a price in village coin, and they are
 paid for all of it:
 
-* **The market's board first.** A loaf 0.3, a log 0.25, a cobblestone 0.04, an iron ingot
-  1.5, a gold ingot 9, a diamond 24. The board, the shop and the wages never disagree.
+* **The market's board names a price** for what it deals in: a log 0.25, a cobblestone 0.04, an
+  iron ingot 1.5, a gold ingot 9, a diamond 24. For anything made, that is never under its
+  makings and the work: a loaf is at least its three wheat and the baker's time (0.39). The
+  board, the shop and the wages never disagree (see *The town economy*, at the end).
 * **Everything gathered** is on a base list: every ore (in the block and out of it), every
   kind of stone, earth and sand, the Nether's and the End's blocks, crops and seeds,
   saplings, flowers, mushrooms and coral, everything from animals and monsters (hides,
@@ -1345,8 +1347,8 @@ with plain blocks, so a building is never held up.
 | Shelter | 7×7 | Four log posts, a low stone wall and a pitched roof |
 | Well | 5×5 | Stone curb round water, four posts, a little roof with a hanging lantern |
 | Smeltery | 9×9 | Stone forge open to the street, three furnaces under a brick chimney, anvil, bench and chests |
-| Workshop | 9×9 | Timber workroom with a wide door, a bench and the tailor's loom, furnace, barrels and a hayloft |
-| Granary | 7×7 | Squat store on a stone base, full of hay, three chests, hipped roof |
+| Workshop | 9×9 | Timber workroom with a wide door, a bench and the tailor's loom, furnace, barrels and a hayloft up a ladder |
+| Granary | 7×7 | Squat store on a stone base, three chests of grain along the back, hay stacked to the rafters either side of the door, a lantern under the eaves, hipped roof |
 | Market | 11×11 | Open hall on log posts under a broad hipped roof, stalls of hay and barrels, a fountain, lanterns hung from the eaves over the stalls |
 | Meeting hall | 11×19 | Long timber hall: tall windows, a pair of doors up steps between lamp posts, a long table, lanterns hung from the rafters down both sides, the elder's seat |
 | Chapel | 9×21 | Stone nave with tall windows, a bell tower over the door (a ladder up to its bell), pews, an altar and lights hung from tie beams |
@@ -1357,12 +1359,12 @@ with plain blocks, so a building is never held up.
 | Gateway | 9×5 | The Nether Age's obsidian frame on a stone dais between lantern pillars |
 | Wall | ring of 27 | Round the square: battlements, a gate onto each avenue, lantern pillars, corner towers |
 | Pen | 7×7 | Fence ring with a gate, once there is a rancher |
-| Stable | 9×9 | Tall timber barn on a stone footing: four fenced stalls either side of an aisle, hay at the front and in the loft, a sunken trough and a cauldron, three gates across a door four high, once the village has horses |
+| Stable | 9×9 | Tall timber barn on a stone footing: four fenced stalls either side of an aisle, hay at the front and in the loft (a ladder up to it), a sunken trough and a cauldron, three gates across a door four high, once the village has horses |
 | Tavern | 11×11 | Broad timber inn: stone hearth with its fire and chimney, a bar of casks, tables and benches, note blocks, lanterns |
 | Graveyard | 9×9 | Fenced plot with a gate, a path to a stone cross, lanterns on the corner posts, twelve graves |
 | House, grown | 9×9 | The family house with a second storey: a ladder up to two more beds and a chest under the eaves |
-| Café | 9×9 | Bright timber room with big windows on the street, a counter of casks, a smoker behind it, little tables and chairs, flowers by the door |
-| Shop | 9×9 | Timber shopfront with a window either side of the door, a counter of casks with the goods on it, shelves of barrels behind |
+| Café | 9×9 | Bright timber room with big windows on the street, a counter of casks across the room with a way behind it to the smoker, the bench and the chests, a little table with its chair in each window, flowers by the door |
+| Shop | 9×9 | Timber-framed shop with its gable to the street, a window either side of the door and a lantern over it from a beam end, a window in the gable; inside a rug from the door to a counter of casks with the goods on it, a cask of goods either side of the door, and behind the counter a cask on a cask and a chest either side of the hands' bench with a lamp on it (every chest opens, every cask can be got at) |
 | Smithy | 9×9 | Stone forge open to the street between log pillars: two furnaces under a brick hood, the anvil, a grindstone, a quenching tub, a bench and chests |
 | Brewery | 9×9 | Timber still-house on a stone footing: two brewing stands on a stone bench, cauldrons, casks, a window to the street |
 | Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
@@ -1377,6 +1379,25 @@ not over the middle of the floor; a torch or a standing lantern stands on someth
 wall at its back; a door opens onto a floor with headroom; water is held in its basin; and every bed,
 bench, bell and storey can be walked to from the street, up the stairs and the ladders, in the
 buildings the Iron Age puts a second storey on as well. (A test reads every drawing and checks it.)
+
+**Every design walked through.** The same test (BlueprintSoundnessTest, which runs without the game)
+goes round every design, and every one the Iron Age raises, as somebody coming up the street would.
+A building with doors has one onto the street, with clear ground (or steps) two places out from it
+and a lamp by it; it is got into through its doors and not through a gap in its walls, and there is
+no one-block hole in a wall that is not a window. Every chest opens (nothing solid sits on its lid)
+and every chest and cask can be got at; every furnished storey can be walked up to, by stairs or a
+ladder (a ladder up a side wall where one up the back would come out under the roof's slope); no hole
+in an upper floor would drop anybody down a storey; everywhere walled in behind the doors has a roof
+over it; the shop's, the café's and the store's counters are clear in front for their price tags and
+their customers; nothing floats; and every design keeps the footprint and the side its door is on
+(the town plan's lots are sized by them). It names each fault by design, layer and place.
+`tools/blueprints.py contact <dir>` draws contact sheets of every design, from the front, from the
+back and cut away above the ground floor, to look them over before the game runs. The store has a
+flower bed either side of its steps and window boxes upstairs; a lantern hangs from a beam end over
+twenty-odd doors that had none; the sky garden's terraces have a stair up to them at last, and the
+grand library's galleries are clear of their lecterns. A game test (bp01) stands the shop, café, store,
+workshop, granary, stable, post office and storehouse shed up in the world and checks the blocks the same way:
+every chest opens by the game's own rule, every ladder and lantern holds, every street door's way out is clear.
 
 Builders take the place the town plan has for the building. Of the first few good
 lots they pick the one that costs least to build on. They level it (filling the low
@@ -5653,7 +5674,7 @@ want for themselves.
   every ware its sellers deal in. Supply is what its stores and its shop hold and what it made yesterday;
   demand is what was sold at its counters, what was asked for and not there, what folk drew from the stores
   and what went into making other things. Three days' want on hand is the usual price; less makes it dear,
-  more makes it cheap. What folk would not pay brings a price down. A price stays between four tenths and
+  more makes it cheap. What folk would not pay brings a price down. A price stays between half and
   three times what the thing is usually worth, and moves a little each day (never more than fifteen in the
   hundred), so bread does not double overnight. A new town sells at the usual worth until its first morning.
   Market day's tenth off, a slow ware's markdown and the shop's floor at what a thing cost to make still apply.
@@ -10661,3 +10682,359 @@ The game tests `RedstoneGameTests` (rs01 to rs10) check that:
   furnaces burning, counted to the trade;
 * every part comes from its real recipe out of the stores, and no observer is made without quartz;
 * left to its own day, the engineer plans a street lamp the stores can run to, walks out to it and builds it.
+
+## The town economy
+
+One worth for everything, one price for everybody, and coin that holds its value. (The arithmetic is in
+`village/Worth`, with a plain test; the towns' prices in `PriceIndex`; the counters in `Market`.)
+
+* **What a thing is worth.** Gathered things are worth the effort and the rarity of getting them: a block of
+  stone a few hundredths, an ore by its depth and the pick it wants, the Nether's and the End's dearer for the
+  journey, a crop by its growing, a monster's drop by the fight, a treasure by how seldom it is found (the base
+  list, `village/BaseWorth`). Made things are worth their cheapest makings and the work on top (a tenth and a
+  little a part at the table, the fuel in a furnace, next to nothing at the stonecutter), less what the recipe
+  gives back (a cake's three buckets). The market's board names a price for what it deals in; for a made good
+  that is never under its makings and the work, and the town's books say which were raised. The emerald is
+  worth what a villager gives one for (twenty wheat, six loaves: 2.5 coins); a gold ingot is its nine coins.
+* **What it costs in a town.** Each town's price is that worth times a factor of how its stock stands against
+  what it wants (sold, asked for and not there, drawn, used up, and what it is short of for its next age),
+  between half and three times, moving a little a day with eight days' history. The gold bar never moves; the
+  emerald only a little. Short, a thing grows dear ("wanted for the Iron Age"); a glut grows cheap.
+* **One price for everybody.** The town asks its price and the keeper's margin (about a tenth; the stock keeper
+  nudges it between a twentieth and a quarter, food never over a fifth), a little less on market day: at the
+  stalls, the shop, the store's counter, the fish market and the storekeeper's, folk and players alike.
+  A friend, a citizen, a haggle or the town's key take a little off a player's price, but **no lot ever goes
+  for under nine tenths of the town's price**. The town **pays four fifths of its price** for what a player
+  brings (a little more on market day), never more than nine tenths of the cheapest it sells the thing or its
+  makings for, and nothing for a lot not worth a coin to it. So no round of buying from a town, making,
+  breaking or emptying, and selling back to it, ever comes out ahead.
+* **Coin.** Coin comes in from the world for the town's work (the morning's takings and the passing traders),
+  from the mint (nine a gold bar) and from players; it goes round as wages, rent, tithe and what the folk buy;
+  and it goes out on what the town buys from outside, what it pays players, and its **upkeep**: a twentieth a day
+  of whatever the treasury holds over a fortnight's wages, so a busy town's treasury settles at a few weeks' pay
+  instead of hoarding. Savings at the treasury earn only out of what its loans earn; coin put into the works
+  earns up to a half in the hundred a day and comes back after two weeks. A friend's free share at the stores
+  is a couple of coins' worth a day, and the stall will not buy a gift back.
+* **Trade between towns.** Each town's trade book reads its surpluses and shortages from its own stores and prices.
+  An envoy and the other town's leader strike a contract only where both gain by their own prices after the haul
+  (a cart's carrying both ways over the road between them, and the risk of losing a load): so many of one town's
+  surplus each delivery, for so many of the other's and coin, every few days for three weeks. A hungry town sends
+  to the neighbour with food over first, whatever its elder's temper, and deals in food first. Each delivery goes
+  by the trade wagons when the town has them, by a caravan when a hand can go, and by the road when none can; the
+  goods leave the sender's stores when they set out and reach the other's when they arrive, and the buyer pays on
+  delivery. A load lost or nothing to send is a shortfall; three in a row and the contract ends. The Trade page
+  shows each contract, why it stands, what each side has gained by its own prices, and what is on the road; ask a
+  folk what the town trades and it will tell you.
+* **Production follows prices.** A trade whose goods are dear wants more hands (up to a quarter more), one whose
+  goods are a glut fewer; the Prices page says which trades lean, and why.
+* **Seeing it.** The Prices page (and `/village prices`) has each good's price, its arrow and why, the coin in
+  the treasury and the purses, the upkeep, the spread and the leans; the price signs show the arrow; a folk
+  asked about prices tells you what has moved.
+## The town's look as data, and renovation [styles]
+
+**Themes.** What a town's buildings are made of is data, not code: a *theme*
+(`data/mc_assistant/themes/<id>.json`, which a datapack may override or add to). The
+folk's own look is the `medieval` theme, and it chooses block for block what the code
+chose before (StylesGameTests st01 holds it to the old code, frozen, over a million
+choices). A theme says, for every kind of block a design asks for (the wall, the floor,
+the roof stair, the post...), which blocks a builder reaches for first, given the town's
+land and its building style; what each age makes of the town's buildings; how each
+building style dresses its houses; the lamp posts, benches and street lights; the land's
+own walling; and the palettes a storey is put up in. A theme may also draw its own
+version of any design (`blueprints/<theme>/<design>.txt`), built in place of the usual
+one. Every town builds in the config's theme (`villageTheme`, "medieval"); an operator
+gives one town another with `/village theme set <id>`, and `/village theme` shows the
+town's theme, the themes on offer and its renovation list. How to write a theme (the
+alien one is meant to be only this): THEMES.md.
+
+**Materials.** Never, at any age, a block of the theme's forbidden list as building
+material: no diamond, emerald, gold, iron or lapis blocks, nothing of the Nether's or the
+End's (netherrack, nether brick, blackstone, basalt, quartz, obsidian, end stone,
+purpur), unless the theme names that block itself (the Nether Age's quartz footings).
+From the Iron Age no earth, gravel, sand or wool in a wall, a floor or a roof: a builder
+short of the town's own block goes down the theme's stand-ins for its age (stone bricks,
+cobblestone, stone, bricks, planks...) and, past them, waits for the stores. A young
+town still builds with whatever proper block it has. The earth of a flower box is earth.
+The builders, the rebuilders after a fire and the renovation all keep to this.
+
+**Renovation.** Every building is stamped when it goes up with what it was built to:
+its design's version (a changed drawing is a new version), the theme, the age and the
+style. Once a day (a slice of the town a turn) the town goes over its buildings; one whose
+design or theme is not the current one, or that has earth or a precious block in its
+walls, goes on the renovation list, the most out of date and the oldest first. Two at a
+time, a turn every half a minute by day, a hand rebuilds it in place from the stores, a
+few blocks a turn from the bottom up: the new design's walls, floors and roof; the old
+design's leftovers taken down into the stores; doors, windows and ladders put in. Its
+furniture is moved, never lost: a chest with everything in it, a furnace, a lectern, a
+sign; its beds are all moved in one moment, by day, so the household is never a bed
+short at night. The household stays: it is the same house on the same ground. One only
+an age or a style behind is the ages' make-over's and the style's dressers', as before.
+A building with no stamp (an older save) is looked over for its design only; its
+materials are left as they are. The chronicle says when a building is renovated.
+
+| Test | What it proves |
+|---|---|
+| st01 | the medieval theme is the old code, choice for choice (looks, parts, ages, styles, streets, palettes, whole dressings) |
+| st02 | the materials, age by age: no junk, no precious or Nether blocks, the stand-ins in order, a young town unblocked |
+| st03 | a second theme, pure data, end to end: its blocks, its design, its ages; a medieval house renovated into it |
+| st04 | an old design renovated turn by turn from the stores: household and beds kept, the chest moved whole, gold and earth out |
+
+## Buildings kept whole: the placement gate, the upkeep and the audit
+
+[integrity] A town is a dozen kinds of work all putting blocks into the same few acres: the builders, the lamp posts,
+the window boxes, the signs, the street works, the gardens, the furnishing, the ground works, the festivals. Each of them
+used to ask only whether the cell it wanted was free, and a cell in a building's porch, in its doorway or on the step in
+front of its door very often is: a torch went into a well's wall course before its builder got there (and the builder,
+finding the cell "filled", passed it over for good), torches stood in the middle of the avenues, and a building set over
+a meadow kept a floor of grass because its footing's cells were "filled" with the ground.
+
+**One gate.** Every block a town's own works set down now goes through one gate (entity/TownBlocks), saying why it wants
+the cell. What the cell is to the town decides: a building's own cells and the room inside it and under its eaves are
+its builders' and repairers' alone (and the furnishers', but only in the cells its drawing leaves empty, never a wall);
+its doorways, the two cells in front of every door (at the door's height and the one over it) and its stairs and ladders
+with their headroom are nobody's but the building's own and the door-way works'; the streets and avenues of the town plan
+are the street works' (a lamp or a sign only at the kerb, never in the middle); the square's open ground is the street
+works' and the town's civic things' (its stalls, its feasts, its golem, its lanterns); the board and the storehouse are
+taken up by nobody. The founders' camp at the very heart is open ground until it is taken up. Outside a town's reach the
+gate always says yes, so a hired hand's builds are as they were. Other systems can register cells of their own to keep
+(outdoor steps, a stall's place) and add reasons of their own.
+
+**The builder finishes to the drawing.** A town's builder asks the gate for every cell, so it never builds into another
+building or across a doorway. Something of another kind in one of its own cells (earth where its footing, floor or wall
+goes, a fence post, a torch, a crop) now comes out into its pack and the drawing's block goes in, instead of being passed
+over as filled. A building given up half built (its lot given up because its builders could not get to it) is taken down
+again, top first, its blocks into the stores, unless the town takes the same building up again on the same ground.
+
+**Upkeep.** On the town's rounds (every quarter minute) a few buildings are looked over, each about once a day, against
+the drawing they stand to now (a house given its second storey against the two-storey drawing): not the exact block (a
+builder builds of what the town has, and the town refaces in stone and brick as it grows) but the right part in the right
+shape: a stair where a stair goes, a slab where a slab goes, a full block of something built in a wall, a door in the
+doorway, a bed where the bed goes; and nothing that is no part of the building in its doorways, on the step in front of
+them or over its stairs. What is wrong goes on the town's repair list, and a hand of the town works the list, the worst
+building first, a dozen blocks a visit, out of the stores and in the building's own look (what the rest of its walls,
+roof and floor are made of); what comes out goes back into the stores. A cell the stores have nothing for waits for them.
+A building whose second storey is going up, the founders' first house and a folk's own house are left alone.
+
+The board says how many buildings need repair and how many were repaired today ("Upkeep: 2 buildings need repair; 1
+repaired today"), and the town's books' Buildings page says "needs repair" or "repaired" by each building and counts
+those that need it. The chronicle notes each building mended. The same engine rebuilds a building to a newer drawing or
+a new look: a renovation is put on the list with its own fixes, and the hands work it as they work repairs.
+
+**The audit.** `/village integrity` (operators) looks the nearest town over and says: how true its buildings are to
+their drawings (in all, and the worst), the blocks missing, wrong or in the wrong shape, anything in a doorway or a way
+in, anything standing in its roads, anything half built (given up, or going up and not a block further in two days),
+how many are on the repair list; and then the first dozen findings, each with what put it there where that can be told.
+`/village integrity views` says where to look at the four buildings furthest from their drawings from;
+`/village integrity survey` has every building looked over at once.
+## A town that cares for its looks
+
+A town looks after itself. Its folk notice when it gets untidy, they go round putting it right, and a proud town makes
+itself prettier still.
+
+**No grass inside a building.** A building's floor and footing are laid over whatever ground it goes up on. Before,
+a builder treated a grass block like any other solid block and counted it as already built. Every house put up on a
+meadow kept the meadow as its floor, and tall grass grew back up through it. Now the builder lifts the turf (the
+earth goes into its pack) and lays the boards or stone in its place. It also takes up any grass or flowers standing
+where the room is meant to be open. Older buildings are fixed on the tidy crew's daily round. A few buildings are
+checked on each visit. Earth found where the drawing wants a block is lifted into the stores and floored over with
+whatever the rest of that floor is made of, taken from the stores. Plants on the floor are taken up. A building whose
+drawing includes earth keeps it: a flower box, the beds of an orchard or allotment, and a park's lawn.
+
+**What spoils a town.** The town is walked column by column, a small slice every second, so even the largest town
+is covered about once a minute. The walk notes every eyesore it finds, worst first:
+
+* a **spill**: lava lying in the town, or a lone puddle of water;
+* a **hole** two or more blocks deep, or a **pothole** in a street or on the square;
+* a **pillar** of earth or stone standing on its own, left by a folk that towered up to a treetop or walled itself
+  in for the night;
+* a **stray block** sitting on the ground or hanging in the air;
+* **scaffolding** left standing;
+* a **half-felled tree**: a trunk or stump with no crown;
+* **leaves** hanging in the air with no trunk;
+* a **torch** dropped on the ground by a folk working in the dark;
+* a **scar**: bare earth or rock in the turf that was cut and never grassed over;
+* the founders' **camp beds** still on the square once everybody has a bed in a house, and **chests** left out once
+  the storehouse stands.
+
+The walk never counts anything in or around a building or a building site (its lot, the way in to each door, its
+steps). It also leaves alone the fields, the mine, a worker's own ground, the square's well and monuments, the
+board, and anything a player put there. Every block a player sets down near a town is remembered, and the crew never
+touches it.
+
+**The tidy crew.** The street sweeper starts on the eyesores once there is nothing left for its broom. Otherwise the
+town sends whatever hand it can spare for its works (couriers first). Worst first, the crew:
+
+* fills a spill;
+* fills a hole with ground that matches what is around it: turf on a lawn, a path's earth on a path, the street's
+  own stone on a street;
+* takes down a pillar and takes up a stray block;
+* strikes scaffolding;
+* mends a pothole;
+* fells a half-felled tree and plants a sapling of the same kind where it stood (never on a street);
+* clears hanging leaves;
+* sees to a dropped torch: in a street or on the square it is taken up (the street lamps light those). On open ground
+  it is put on a fence post, so the light stays but looks like it was meant to be there. If the stores have no fence,
+  it is taken up only when another light is nearby;
+* grasses over a scar;
+* takes up the camp beds. A folk that still sleeps in one is moved, but only when a bed in a house is free, and
+  never while it is asleep;
+* empties chests left out into the stores and takes them up.
+
+Everything the crew takes up goes into the stores, and everything it lays comes out of them. When the stores have
+nothing to fill a hole with, the hole waits.
+
+**The town's looks.** The town is scored out of a hundred:
+
+* tidiness, up to 40: the eyesores, grass inside buildings, and anything lying about;
+* greenery, up to 15: how much of the open ground is turf;
+* lighting, up to 15: how much of the streets is lit after dark;
+* flowers, up to 10;
+* finished buildings, up to 20: buildings standing against buildings still going up.
+
+From the score up: *a picture* (85 or more), *well kept* (70), *tidy enough* (50), *untidy* (30), *a mess* (below 30).
+The score is on the village board, on the Stores page of the town's books (with the sweeping), and from
+`/village tidy`, which also lists each eyesore still about. `/village tidy now`, for ops, runs the crew's rounds on
+the spot.
+
+**The folk notice.** A town that looks a picture makes its folk a little more content, and a mess makes them less
+so. They say so ("The square's a mess. Does nobody sweep round here?"). When the town falls below tidy enough, the
+elder calls a **clean-up day** one morning (at most once every three days). It goes into the town's news and onto the
+board, and three crews go out instead of one. A **proud town** (well kept or better), with nothing worse to see to,
+plants flower beds along its streets from the stores' flowers (or bone meal), trims leaves hanging over the streets,
+and puts a lamp post in each dark corner.
+
+**The tests.** The `TidyGameTests` class:
+
+* a house raised by a builder on a meadow has no grass inside, both once it stands and after a day of fast random
+  ticks;
+* an old house with grass for half its floor is floored in its own boards;
+* the crew clears every kind of eyesore, and leaves a player's pillar and one on a house's lot alone;
+* the camp is taken up once everybody has a house bed;
+* a messy town brings a clean-up day and then tidies up;
+* a long growth test grows a town for several days and audits it each day. The audit logs every eyesore with what
+  most likely left it. At the end it requires: no grass inside, no camp bed out, no spill, hole or pillar left
+  standing for a day, and looks of tidy enough or better.
+## The town wall and the muster at the square
+
+<!-- [defence] entity/CastleWall, village/WallPlan, entity/Muster, DefenceCommands -->
+
+A castle's curtain wall round the whole town, and, when the bell rings, the town gathered on its square with the watch
+round it.
+
+**The plan.** The wall is drawn with the town plan: a rectangle round the town proper, each side on the plan's own line
+past the last ring of lots the town has taken that way, with that ring's outer street clear inside it (the first wall's
+inner face is 42 blocks out, so the street at 39 to 41 runs all round inside it). Every building on the plan is inside;
+the fields, pens, mines and woods may lie outside. The wall keeps a ring seven deep for itself (the wall and its towers,
+which stand out from it, never into the street): no lot on it is offered, and the first row of fields keeps off it. A
+town in an old save has its wall drawn round what it has built the first time it is looked at.
+
+**The wall.** Three thick; five high in the Wood and Stone Ages, six in the Iron Age, seven after. A walkway two wide
+along its top, crenellated battlements on the outer face over a coping line, a lantern on every fourth merlon and a
+torch on the inner face every eight blocks, a base course of the age's weathered stone along its foot and a weathered
+stone here and there in its faces. A tower seven square at each corner and every 30 blocks or so (never on a cross
+street), three higher than the walkway, its parapet on a course of corbels, crenellated, a lantern on top; the walkway
+runs through it, a ladder goes up inside it from the street and another on to its top. On each avenue a gatehouse: a
+gate as wide as the avenue, five doors under an arch between two flanking towers, the walkway carried over it. Where a
+paved cross street runs out through the wall, a postern with doors under an arch. A flight of steps up from inside on
+each side of each gate. The walkway never steps more than a block at a time; the wall leaves a gap rather than go over
+water, a field, a road or anything somebody built.
+
+**By age.** A log palisade with plank walks (Wood); cobblestone, a little mossy (Stone); stone bricks with mossy and
+cracked ones and smooth stone coping (Iron); deepslate bricks and polished deepslate (Diamond); deepslate tiles and
+chiselled deepslate (Nether). Every block out of the stores. Short of the age's stone it goes up in the last age's and is
+refaced when the stone comes, the old stone back into the stores; coming of age, it is raised a block.
+
+**Built.** Once the town has the essentials (eight grown folk or more, the storehouse up, no hunger, the beds made), a
+hand the town can spare walks out to it by day and lays a dozen blocks every five seconds (never in an alarm, never more
+hands than the town's works may take), the stores keeping 48 of each stone back for the builders. A section at a time:
+the four gatehouses, the corner towers, the towers between, then the curtain in runs, the ones by the gates first. The
+chronicle says as each section is finished. It is looked over a section at a time all the while, so whatever a creeper
+or a siege knocks out is put back.
+
+**Moved out.** When the town takes a lot past its wall, that side's line moves out a ring (the chronicle says so); the
+new section goes up, and once the new wall stands the old line comes down, its stone into the stores, and its ground is
+given back to the lots.
+
+**The gates.** Shut at dusk (or the town's own hour) and whenever the bell rings, opened in the morning; folk open the
+doors to pass, monsters can't. A raiding band gathers out past the wall where it stands.
+
+**The muster.** When the bell rings (a raid, a raiding party sighted, monsters inside the wall, an enemy on the
+approach), every folk not of the watch drops what it is doing (out of bed, if it was asleep) and runs to the square:
+the open ground before the board, or by the heart. The children and the frail take the middle, the rest close round
+them, and they wait there till the bell stops. Folk far out come in through the gates, or shelter where they are if
+something is between them and the square or there is no way there. Nobody works.
+
+The watch rings them round: as many guards as the ring wants (one every four blocks of it, three to twelve) stand evenly
+round the crowd facing out, the captain (the constable, or the most seasoned guard) on the side the trouble comes from,
+calling out. A monster that comes at the square is met by the nearest guard of the ring, which steps out to it and back
+to its place once it is down. Guards past what the ring wants go up on the walls with bows as before (the square's wall
+posts and the town wall's gatehouse towers), and the town's iron golems take places in the ring between the guards. At
+the all-clear the folk go back to what they were doing (or to bed), and the history has the muster with the night.
+
+The old way (everybody indoors, every guard to the walls) is kept behind the config switch `raidMusterAtSquare`; the
+wall behind `castleWalls`.
+
+**Commands.** `/village wall` (the wall: its lines, how much is laid, what it still wants, its gates); `/village wall now`
+(ops: a batch of its works now); `/village wall build` (ops: all of it at once, out of nothing, for the pictures);
+`/village wall stage` (ops: the same, and the views to photograph it); `/village muster` (ops: the bell rung for a
+drill, a minute long, and the views over the square).
+
+
+## The town's ways: doors, paths, lots and names by the doors
+
+[paths] A town is walked as well as looked at. Its folk must get in at every door, never stand stuck against something
+for good, and its buildings must stand on their lots with a way round each.
+
+**A way to every door.** On its rounds of the streets (TownWork, every fifteen seconds for one town, six buildings a
+visit) the town first makes each door's way in walkable (DoorWays: the doorway dug out, a doorstep and steps cut into a
+bank or built up out of a hollow, their tops in cobblestone), then lays the path from the door straight out to its street:
+worn into the earth, or laid in what the street itself is laid in (cobbles, stone bricks) out of the stores; the grass and
+flowers taken off it, and loose earth, gravel, sand, a scaffold left standing or rubble off any building's ground taken
+out of the two places before the door. Where the path is dark at night (block light under 8 at its doorstep or its street
+end), a lamp goes up beside it on the lot's own ground, never on the street or the path: a post of the town's wood with a
+lantern from the Iron Age, a torch on a post before. All by hand (TownJobs) and through the town's gate (TownBlocks:
+DOORWAY, LAMP).
+
+**Nobody stuck for good.** When a folk's stuck detector gives its path up, the spot is looked at (StuckSpots): what stood
+toward the next step of its path: a missing step (a bank two high), a block in the way, a low block overhead, a wall, a
+fence, a drop, water, somebody in the way. On the town's own open ground (a street, the square, a lot's open ground; never
+in a building, a field or a pen) its own fault is mended there and then by the folk that met it: the bank's top block cut
+out into a step, a stray block dug out (into the stores), a hole in a street filled from the stores. A spot mended six
+times is left and only written down. The count of give-ups, of mends and of folk going nowhere for more than half a minute
+is kept in the town's books (the ledger's notes, so a restart keeps it); the spots themselves are kept in memory. The
+village board's panels, a rain barrel, the stocks and the ferry bell no longer let the game's path finder plan a way
+through them (they are a plank thick or near full height on less than a block): the board was where a new town's folk
+were stuck most, two hundred and seventy times in a day and a half.
+
+**Lots kept apart.** A building is never sited where its ground, eaves and all, would overlap or touch a building
+standing or going up (Footways.crowds, in Villages.siteFor and a household's own lot in HousingMarket): most buildings
+leave a block of their eleven-block lot, so neighbours back to back keep a way of two between them; the few that fill
+their lots (a villa, a block of flats, the museum) go to another lot rather than stand wall to wall with another such.
+
+**Whose house it is.** Every home (a house, a two-storey house, a manor, a villa) has a sign by its front door, beside it
+at head height on the wall, never on a window, in the town's own wood: the head of the household's name (with "& family"
+for more than one), their trade (or the two trades of a couple, "Farmer & Miner"), the house's number and its street. An
+empty house says "To let"; a player's house the player's name. The town's rounds keep it right: a household that moves in
+or out, buys the house or lets it has its sign seen to on the next round (ten seconds), any other change (a new trade, a
+death) on the town's round of its buildings; a sign knocked down is put back. Old towns' houses get theirs on their next
+round. A long name is cut with an ellipsis.
+
+**Looking it over.** `/village paths` gives the town's ways in words: every door, whether a folk can walk to it from the
+heart and through it (Footways.reach: a block up, three down, through wooden doors and gates, up ladders), doors with no
+street straight out of them, doors with a wall or another building in the two places before them, buildings overlapping or
+touching, anything left on the square's open ground (the founders' camp beds counted apart), the spots folk gave up at,
+and anybody stuck over half a minute. The same checks are in the town's audit (TownAudit, under "ways"). For operators,
+`/village paths signs` sees to every home's sign now, `/village paths now` does a few rounds of the doors' ways and paths
+on the spot, and `/village paths views` says where to stand for the pictures (the smoke's paths stage).
+
+The game tests `PathsGameTests` check that:
+* a house a farmer rents has the farmer's name and "Farmer" by its door, with its number, on a sign of the town's wood
+  beside the door, not on a window; knocked down, it is put back; the farmer moves out and it says "To let", the number kept;
+* a dark door's way to its street is worn into a path all the way, a lamp goes up beside it off the street and the path,
+  the way is lit, and the door is reached from the heart;
+* a folk stopped below a bank two high with no step gives up, the spot is written down as a missing step, and a step is
+  cut into the bank there, all on the town's books;
+* a villa is never sited wall to wall with the villa on the lot behind it, a house is; the audit sees two touching;
+* a folk walks into a box through a wooden door, not through an iron one;
+* (not required, minutes long) pa10: a town of forty founded and grown for eight days with every feature live and its
+  stores kept stocked, its ways looked over every half day; pa11 the same town with the paths work switched off, to compare.

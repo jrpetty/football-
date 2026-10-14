@@ -62,12 +62,14 @@ public final class SessionReset {
         Villages.resetForTests();
         VillagerTakeover.resetForTests();
         VillageSpawner.resetForTests();
+        com.jrpetty.mcassistant.net.ProfileNetwork.reset();       // [folk-ui] when each player was last sent a profile
         Colonies.reset();
         AssistantEntity.resetRegistryForTests();
         Town.resetAll();
         Requests.resetAll();
         ChunkLoad.reset();
         com.jrpetty.mcassistant.entity.TownLod.reset();
+        com.jrpetty.mcassistant.entity.Wagons.reset();
         com.jrpetty.mcassistant.entity.Reach.reset();
     }
 }

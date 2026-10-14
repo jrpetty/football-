@@ -162,6 +162,10 @@ public final class Avenues {
             Crafts.store(level, v, one);
             return false;
         }
+        if (!TownBlocks.mayPlace(level, v, p, TownBlocks.Why.NATURE)) {                  // [integrity]
+            Crafts.store(level, v, one);
+            return false;
+        }
         if (!level.getBlockState(p).isAir()) level.destroyBlock(p, false);
         level.setBlock(p, grows.defaultBlockState(), 3);
         level.playSound(null, p, SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 0.8F, 1.0F);

@@ -249,10 +249,22 @@ public final class Services {
     private static final Map<UUID, Map<UUID, List<Loan>>> LOANS = new ConcurrentHashMap<>();
     /** How much a friend has been given free today. */
     private static final Map<String, Integer> GIVEN = new ConcurrentHashMap<>();
+    /** [market] What it came to at the town's price, and how many of each thing (village/player/day[/item]). */
+    private static final Map<String, Double> GIVEN_WORTH = new ConcurrentHashMap<>();
+    private static final Map<String, Integer> GIVEN_ITEMS = new ConcurrentHashMap<>();
+    /** [market] A friend's free share a day, in coin at the town's price. */
+    static final double FRIENDS_SHARE = 2.0;
+
+    /** [market] How many of this the stores gave this player free today (the stall does not buy a gift back). */
+    public static int given(UUID village, UUID player, long day, Item item) {
+        return GIVEN_ITEMS.getOrDefault(village + "/" + player + "/" + day + "/" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(item), 0);
+    }
 
     public static void resetForTests() {
         LOANS.clear();
         GIVEN.clear();
+        GIVEN_WORTH.clear();
+        GIVEN_ITEMS.clear();
         LOANS_READ.clear();
     }
 
@@ -406,31 +418,35 @@ public final class Services {
                 : "we see to ourselves first, and we're still short: we want " + String.join(", ", wants) + ".");
         }
         n = Math.min(n, spare);
-        // A friend's share, free, up to a stack a day.
+        // A friend's share, free: [market] a few coins' worth a day at the town's price (a loaf or two, a few torches), not
+        // a stack of anything (sixty-four ingots a day, sold at the stall, was coin out of nothing); and the stall will
+        // not buy back what it gave (given).
         String key = village + "/" + p.getUUID() + "/" + day;
         int givenToday = GIVEN.getOrDefault(key, 0);
-        if (friend && givenToday + n <= 64) {
+        double shareWorth = PriceIndex.each(level, village, sample) * n;
+        if (friend && givenToday + n <= 64 && GIVEN_WORTH.getOrDefault(key, 0.0) + shareWorth <= FRIENDS_SHARE) {
             List<ItemStack> got = take(level, village, what, n);
             int count = 0;
             for (ItemStack s : got) { count += s.getCount(); give(p, s); }
             Stockroom.sold(level, village, Stockroom.Seller.STORES, sample, count, 0);
             GIVEN.put(key, givenToday + count);
-            if (GIVEN.size() > 256) GIVEN.clear();
+            GIVEN_WORTH.merge(key, PriceIndex.each(level, village, sample) * count, Double::sum);
+            GIVEN_ITEMS.merge(key + "/" + net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(sample.getItem()), count, Integer::sum);
+            if (GIVEN.size() > 256) { GIVEN.clear(); GIVEN_WORTH.clear(); GIVEN_ITEMS.clear(); }
             return "Take " + count + " " + word + ", friend — there's no charge between us." + (count < want ? " That's all we have." : "");
         }
-        // Anybody else pays: the price list's worth and a quarter over (Budget).
-        double each = Budget.playerPrice(sample);
-        int price = (int) Math.max(1, Math.round(each * n));
+        // Anybody else pays: [market] the town's one asking price (Market.askLot), never under the least.
+        int price = Market.askLot(level, village, sample, n);
         if (title == Standing.Title.UNWELCOME) price *= 2;
-        price = Dealings.haggled(village, p.getUUID(), day, price);                 // talked down today (Dealings)
+        price = Math.max(Dealings.haggled(village, p.getUUID(), day, price), Market.leastLot(level, village, sample, n));   // talked down today
         int coins = Market.coinsHeld(p);
         if (coins < price) return n + " " + word + " would be " + price + " coins. You've " + coins + ".";
         List<ItemStack> got = take(level, village, what, n);
         int count = 0;
         for (ItemStack s : got) { count += s.getCount(); give(p, s); }
         if (count == 0) return "Somebody's just taken the last of it.";
-        price = Dealings.haggled(village, p.getUUID(), day,
-            (int) Math.max(1, Math.round(each * count)) * (title == Standing.Title.UNWELCOME ? 2 : 1));
+        price = Math.max(Dealings.haggled(village, p.getUUID(), day,
+            Market.askLot(level, village, sample, count) * (title == Standing.Title.UNWELCOME ? 2 : 1)), Market.leastLot(level, village, sample, count));
         Market.payOut(p, price);
         Ledger.addCoins(village, price);
         Economy.sold(village, price);

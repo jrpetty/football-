@@ -70,6 +70,8 @@ public class TownTradeGameTests {
     private static Pair towns(GameTestHelper helper, ServerLevel level, int x) {
         Kit.reset(level);
         TradeDeals.resetForTests();
+        // [wagons] These are the caravans' own tests (a deal's carrier walks it): no shipment carrier for them.
+        com.jrpetty.mcassistant.entity.Shipments.register(null);
         level.setDayTime(24000L * 6 + 3000);
         Villages.Village[] out = new Villages.Village[2];
         for (int i = 0; i < 2; i++) {

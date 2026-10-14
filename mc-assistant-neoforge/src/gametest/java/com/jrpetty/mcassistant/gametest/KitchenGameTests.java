@@ -784,7 +784,10 @@ public class KitchenGameTests {
                     + "; worth " + each + "c");
                 helper.assertTrue(!ways.isEmpty(), "a real recipe for " + things[i]);
                 helper.assertTrue(age == ages[i], things[i] + " belongs to " + ages[i].label + ", not " + age.label);
-                helper.assertTrue(Prices.known(things[i]) && Math.abs(each - worth[i]) < 0.001, things[i] + " is worth " + worth[i] + ": " + each);
+                // [market] The board's named price is an anchor: never under it, raised to the makings and the work when it
+                // was set under them (the cheese, the cider, the tea).
+                helper.assertTrue(Prices.known(things[i]) && each >= worth[i] - 0.001,
+                    things[i] + " is worth " + worth[i] + " or its makings: " + each);
                 helper.assertTrue(Market.goodFor(new ItemStack(things[i])) != null, "the market deals in " + things[i]);
             }
             helper.assertTrue(RecipeBook.waysFor(level, KitchenItems.BANDAGE.get()).size() >= 2, "a bandage of paper or of wool");
