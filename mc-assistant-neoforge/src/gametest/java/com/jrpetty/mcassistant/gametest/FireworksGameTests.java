@@ -266,14 +266,15 @@ public class FireworksGameTests {
         String n1 = ((ChestBlockEntity) level.getBlockEntity(spare)).getCustomName() == null ? "" : ((ChestBlockEntity) level.getBlockEntity(spare)).getCustomName().getString();
         int hutPowder = FireworksMaker.hutPowder(level, id), storesPowder = stock(level, id, Items.GUNPOWDER);
         BlockState c = level.getBlockState(cauldron);
-        BlockPos signAt = FireworksMaker.signAt(id);
+        BlockPos signAt = FireworksMaker.signAt(level, id);
         String[] sign = new String[4];
         if (signAt != null && level.getBlockEntity(signAt) instanceof SignBlockEntity s) {
             for (int i = 0; i < 4; i++) sign[i] = s.getFrontText().getMessage(i, false).getString();
         }
         Kit.log("fw02 fitted out (" + made + "): chests '" + n0 + "', '" + n1 + "'; bread in the stores " + stock(level, id, Items.BREAD)
             + " (storehouse " + CaveDwellerGameTests.inStorehouse(t, Items.BREAD) + "); powder hut " + hutPowder + ", stores " + storesPowder
-            + "; cauldron " + c + "; buckets " + CaveDwellerGameTests.inStorehouse(t, Items.BUCKET) + "; sign " + String.join(" / ", sign));
+            + "; cauldron " + c + "; buckets " + CaveDwellerGameTests.inStorehouse(t, Items.BUCKET) + "; sign " + String.join(" / ", sign) + " at " + (signAt == null ? "-" : signAt.toShortString() + " " + level.getBlockState(signAt)
+            + "; round it " + java.util.Arrays.stream(net.minecraft.core.Direction.values()).map(d -> d + "=" + level.getBlockState(signAt.relative(d)).getBlock()).toList()));
         helper.assertTrue(FireworksMaker.HUT_NAME.equals(n0) && FireworksMaker.HUT_NAME.equals(n1), "both chests the hut's own: " + n0 + ", " + n1);
         helper.assertTrue(!Villages.storeChests(level, id).contains(powder) && !Villages.storeChests(level, id).contains(spare),
             "the stores never count the hut's chests");

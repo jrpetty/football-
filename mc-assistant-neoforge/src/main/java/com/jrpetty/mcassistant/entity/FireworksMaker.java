@@ -413,15 +413,43 @@ public final class FireworksMaker {
         return fit.door() == null ? null : fit.door().above(2).relative(fit.front());
     }
 
+    /** Where the hut's sign hangs in the world: the spot of the sign that is there (over the door, or beside it at head
+     *  height when a lamp took the place over it), else where it would go. */
+    @Nullable
+    public static BlockPos signAt(ServerLevel level, @Nullable UUID village) {
+        Ledger.Building b = hut(village);
+        if (b == null) return null;
+        Fit fit = fit(b);
+        if (fit.door() == null) return null;
+        for (BlockPos at : signSpots(fit)) if (level.isLoaded(at) && level.getBlockState(at).getBlock() instanceof WallSignBlock) return at;
+        return signAt(village);
+    }
+
+    /** The places a sign may hang, best first: on the wall over the door, then either side of it at head height. */
+    private static List<BlockPos> signSpots(Fit fit) {
+        BlockPos door = fit.door();
+        Direction f = fit.front();
+        return List.of(door.above(2).relative(f), door.above().relative(f.getClockWise()).relative(f),
+            door.above().relative(f.getCounterClockWise()).relative(f));
+    }
+
     /** The sign over the door, out of the stores (a sign, or two planks), its words kept to the truth. */
     static boolean hangTheSign(ServerLevel level, Villages.Village v, Ledger.Building b, Fit fit, @Nullable VillageFolkEntity maker) {
         if (fit.door() == null) return false;
-        BlockPos wall = fit.door().above(2), at = wall.relative(fit.front());
-        if (!level.isLoaded(at)) return false;
-        BlockState st = level.getBlockState(at);
+        // The sign that hangs already, wherever it is; else the first free place on a solid wall (a lamp may hang over
+        // the door: the sign goes beside it, at head height, and the lamp stays).
+        BlockPos at = null;
+        for (BlockPos p : signSpots(fit)) {
+            if (!level.isLoaded(p)) return false;
+            if (level.getBlockState(p).getBlock() instanceof WallSignBlock) { at = p; break; }
+        }
         boolean hung = false;
-        if (!(st.getBlock() instanceof WallSignBlock)) {
-            if (!st.isAir() || !level.getBlockState(wall).isSolid() || !Crafts.sign(level, v)) return false;
+        if (at == null) {
+            for (BlockPos p : signSpots(fit)) {
+                BlockPos wall = p.relative(fit.front().getOpposite());
+                if (level.getBlockState(p).isAir() && level.getBlockState(wall).isSolid()) { at = p; break; }
+            }
+            if (at == null || !Crafts.sign(level, v)) return false;
             level.setBlock(at, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, fit.front()), 3);
             hung = true;
         }

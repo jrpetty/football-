@@ -904,7 +904,7 @@ public final class FireworkShows {
         out.add("VIEW hut " + eye.getX() + " " + eye.getY() + " " + eye.getZ() + " " + b.anchor().getX() + " " + (b.anchor().getY() + 1) + " " + b.anchor().getZ());
         BlockPos in = door.relative(fit.front().getOpposite(), 1);
         out.add("VIEW maker " + in.getX() + " " + in.getY() + " " + in.getZ() + " " + stand.getX() + " " + (stand.getY() + 1) + " " + stand.getZ());
-        BlockPos sign = FireworksMaker.signAt(id);
+        BlockPos sign = FireworksMaker.signAt(level, id);
         if (sign != null) {
             BlockPos se = sign.relative(fit.front(), 4).below(1);
             out.add("VIEW sign " + se.getX() + " " + se.getY() + " " + se.getZ() + " " + sign.getX() + " " + sign.getY() + " " + sign.getZ());
