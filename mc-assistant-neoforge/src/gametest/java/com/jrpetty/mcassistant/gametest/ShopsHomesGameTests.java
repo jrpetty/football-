@@ -586,6 +586,7 @@ public class ShopsHomesGameTests {
         f.teleportTo(home.getX() + 0.5, home.getY() + 1, home.getZ() + 0.5);
         ShoppingTrips.againForTests(f);
         boolean[] left = { false };
+        long[] started = { helper.getTick() };
         helper.onEachTick(() -> {
             if (t.keeper().isAlive()) {
                 ServicePoints.Point p = point(level, t.id(), ServiceRole.SHOP);
@@ -593,6 +594,14 @@ public class ShopsHomesGameTests {
             }
             boolean busy = ShoppingTrips.errand(f, level);
             if (busy) left[0] = true;
+            long waited = helper.getTick() - started[0];
+            if (waited == 60 || waited == 1500 || waited == 2900) {
+                Kit.log("sk12 at " + waited + ": trip " + ShoppingTrips.stageForTests(f) + ", busy " + busy + ", at " + f.blockPosition().toShortString()
+                    + " doing '" + f.hobbyNow() + "', purse " + f.purse() + ", list " + Needs.listForTests(level, f) + ", in the house "
+                    + Homes.membersForTests(t.id(), home) + ", the shop open " + ShopStock.open(t.id()) + ", the counter "
+                    + (point(level, t.id(), ServiceRole.SHOP) == null ? "none" : ServicePoints.status(level, t.id(), ServiceRole.SHOP,
+                        point(level, t.id(), ServiceRole.SHOP)).words()));
+            }
             if (!left[0] || busy || !ShoppingTrips.stageForTests(f).equals("none")) return;
             Belongings.resetForTests();
             Belongings.View view = Belongings.ofHome(level, t.id(), home);
@@ -777,6 +786,8 @@ public class ShopsHomesGameTests {
                 if (c.getItem(i).is(Items.COAL)) coalIn += c.getItem(i).getCount();
             }
             int storesIron1 = Market.stock(level, t.id(), iron);
+            BlockPos shopChest = WorkStock.chestOf(level, t.id(), StationTask.SHOP);
+            int shopIron = shopChest == null ? 0 : count((Container) level.getBlockEntity(shopChest), iron);
             String name = level.getBlockEntity(chest) instanceof Nameable n && n.getCustomName() != null ? n.getCustomName().getString() : "";
             boolean inStores = Villages.storeChests(level, t.id()).contains(chest);
             smith.teleportTo(at.getX() + 0.5, at.getY() + 1, at.getZ() + 0.5);
@@ -789,7 +800,8 @@ public class ShopsHomesGameTests {
                 + " -> " + storesIron1 + " -> " + storesIron2 + "; the smith made " + made + " pieces, the chest's iron " + ironIn + " -> " + ironAfter);
             helper.assertTrue(name.equals("Smithy: makings") && !inStores, "the chest is the smithy's, not the stores'");
             helper.assertTrue(ironIn >= 8 && coalIn >= 8, "its makings delivered: " + ironIn + " iron, " + coalIn + " coal");
-            helper.assertTrue(storesIron0 - storesIron1 == ironIn, "out of the stores, nothing made: " + storesIron0 + " -> " + storesIron1);
+            helper.assertTrue(storesIron0 - storesIron1 == ironIn + shopIron, "out of the stores (to the smithy's chest and the shop's), nothing made: "
+                + storesIron0 + " -> " + storesIron1 + ", " + ironIn + " and " + shopIron);
             helper.assertTrue(made > 0 && ironAfter < ironIn, "the smith works from its own chest: " + ironIn + " -> " + ironAfter);
             helper.succeed();
         });

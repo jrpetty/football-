@@ -129,23 +129,21 @@ public final class WorkStock {
         Component name = n.getCustomName();
         if (name != null && name.getString().equals(want)) return;
         if (name != null && !ZoneChests.isVillageStore(be)) return;               // somebody else's: let be
-        // What the stores had put in it before it was the workshop's goes back to the stores first: one truth.
-        if (be instanceof Container c && level.getServer() != null) {
+        HomeStores.rename(be, want);
+        // What was in it that is not the workshop's makings goes where it belongs: the shop's wares to its shelves, the
+        // rest back to the stores (one truth: nothing kept twice, nothing lost).
+        if (be instanceof Container c) {
             Villages.Village v = Villages.nearest(level, at, 96);
-            if (v != null) {
-                for (int i = 0; i < c.getContainerSize(); i++) {
-                    ItemStack s = c.getItem(i);
-                    if (s.isEmpty() || keeps(trade, s)) continue;
-                    ItemStack left = s.copy();
-                    TownWork.give(level, v, left);
-                    c.setItem(i, left);
-                }
-                c.setChanged();
+            if (v == null) return;
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                ItemStack s = c.getItem(i);
+                if (s.isEmpty() || keeps(trade, s)) continue;
+                ItemStack left = trade == StationTask.SHOP ? Store.put(level, v.id(), s.copy()) : s.copy();
+                if (!left.isEmpty()) TownWork.give(level, v, left);
+                c.setItem(i, left);
             }
+            c.setChanged();
         }
-        be.applyComponents(net.minecraft.core.component.DataComponentMap.builder()
-            .set(DataComponents.CUSTOM_NAME, Component.literal(want)).build(), net.minecraft.core.component.DataComponentPatch.EMPTY);
-        be.setChanged();
     }
 
     private static boolean keeps(StationTask trade, ItemStack s) {

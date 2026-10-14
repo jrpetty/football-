@@ -59,6 +59,18 @@ public final class HomeStores {
     /** The name of a trade's display barrel the town set in a house (Decor): the house's furnishing, no household's box. */
     public static final String DISPLAY = "Trade Display";
 
+    /**
+     * Give a box a name, keeping everything else it has (what is in it above all: setting a block entity's components
+     * without its contents empties it). The one way the shops and homes name a chest or a cask.
+     */
+    public static void rename(BlockEntity be, String name) {
+        net.minecraft.core.component.DataComponentMap.Builder b = net.minecraft.core.component.DataComponentMap.builder();
+        b.addAll(be.collectComponents());
+        b.set(DataComponents.CUSTOM_NAME, Component.literal(name));
+        be.applyComponents(b.build(), net.minecraft.core.component.DataComponentPatch.EMPTY);
+        be.setChanged();
+    }
+
     /** One box of a home's storage: where, and what it keeps. */
     public record Box(BlockPos pos, Kind kind) {}
 
@@ -188,10 +200,7 @@ public final class HomeStores {
                 Component name = n.getCustomName();
                 if (name != null && !ZoneChests.isVillageStore(be) && Kind.named(name.getString()) == null) continue;   // somebody else's name: theirs
                 if (name != null && name.getString().equals(b.kind().label)) continue;
-                be.applyComponents(net.minecraft.core.component.DataComponentMap.builder()
-                    .set(DataComponents.CUSTOM_NAME, Component.literal(b.kind().label)).build(),
-                    net.minecraft.core.component.DataComponentPatch.EMPTY);
-                be.setChanged();
+                rename(be, b.kind().label);
                 named++;
             }
             audit(level, v, h);

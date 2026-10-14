@@ -238,9 +238,7 @@ public final class ShoppingTrips {
             level.setBlock(spot.at(), state, 3);
             BlockEntity be = level.getBlockEntity(spot.at());
             if (be != null) {
-                be.applyComponents(net.minecraft.core.component.DataComponentMap.builder()
-                    .set(DataComponents.CUSTOM_NAME, Component.literal(kind.label)).build(), net.minecraft.core.component.DataComponentPatch.EMPTY);
-                be.setChanged();
+                HomeStores.rename(be, kind.label);
             }
             s.shrink(1);
             HomeStores.resetFor(h);
