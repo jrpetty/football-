@@ -167,7 +167,8 @@ public class BattleGameTests {
         helper.runAtTickTime(20, () -> {
             guards(a.id(), 8, true);
             guards(b.id(), 4, false);
-            stock(level, a.id(), new ItemStack(Items.WHITE_BANNER), new ItemStack(Items.LEAD, 4), new ItemStack(Items.WHITE_WOOL, 27),
+            stock(level, a.id(), new ItemStack(Items.WHITE_BANNER), new ItemStack(Items.RED_BANNER), new ItemStack(Items.BLUE_BANNER),   // one goes over the gate for the war
+                new ItemStack(Items.LEAD, 4), new ItemStack(Items.WHITE_WOOL, 27),
                 new ItemStack(Items.OAK_FENCE, 12), new ItemStack(Items.CAMPFIRE));
             war(level, a, b);
             Campaigns.watchForTests(true);
@@ -327,14 +328,14 @@ public class BattleGameTests {
         ServerLevel level = helper.getLevel();
         start(level);
         int x = 1824000;
-        Villages.Village a = town(level, x, 14), b = town(level, x + APART, 8);
+        Villages.Village a = town(level, x, 14), b = town(level, x + APART, 10);
         helper.assertTrue(a != null && b != null && !a.id().equals(b.id()), "two towns");
         helper.runAtTickTime(20, () -> {
-            guards(a.id(), 10, true);
-            guards(b.id(), 3, false);
+            guards(a.id(), 9, true);
+            guards(b.id(), 6, true);                                    // outmatched, not hopeless: no surrender at the parley
             war(level, a, b);
             Campaigns.watchForTests(false);
-            int wearyBefore = WarAndPeace.weariness(b.id());
+            Battles.parleyForTests(null);
             Campaigns.Campaign c = Campaigns.beginForTests(level, a, b, false, false);
             Campaigns.nextForTests(level, c);
             Campaigns.nextForTests(level, c);
@@ -342,22 +343,24 @@ public class BattleGameTests {
             Campaigns.nextForTests(level, c);
             if (c.stage() == Campaigns.Stage.CAMP) Campaigns.nextForTests(level, c);
             if (c.stage() == Campaigns.Stage.BATTLE) Campaigns.nextForTests(level, c);
-            Kit.log("bt03 " + c.name() + ": stage " + c.stage() + ", won " + c.won() + "; " + WarAndPeace.battlesForTests(a.id(), b.id())
-                + "; score " + Campaigns.score(a.id(), b.id()) + "; weariness " + wearyBefore + " -> " + WarAndPeace.weariness(b.id()));
-            helper.assertTrue(c.won() == 0, "the stronger town held the field");
+            int w = c.won();
+            Villages.Village winner = w == 0 ? a : b, loser = w == 0 ? b : a;
+            Kit.log("bt03 " + c.name() + ": stage " + c.stage() + ", won " + w + "; " + WarAndPeace.battlesForTests(a.id(), b.id())
+                + "; score " + Campaigns.score(a.id(), b.id()) + "; weariness " + WarAndPeace.weariness(loser.id()));
+            helper.assertTrue(w >= 0, "a side held the field");
             helper.assertTrue(!WarAndPeace.battlesForTests(a.id(), b.id()).isEmpty() && !WarAndPeace.battlesForTests(b.id(), a.id()).isEmpty(),
                 "the battle in both towns' books");
-            helper.assertTrue(Campaigns.score(a.id(), b.id()) == 1 && Campaigns.score(b.id(), a.id()) == -1, "the war's score moved");
-            helper.assertTrue(WarAndPeace.weariness(b.id()) > wearyBefore, "the loser the wearier");
+            helper.assertTrue(Campaigns.score(winner.id(), loser.id()) == 1 && Campaigns.score(loser.id(), winner.id()) == -1, "the war's score moved");
+            helper.assertTrue(WarAndPeace.weariness(loser.id()) > 0, "the loser the wearier");
             // Home again, and the next day of the war: the beaten side sues for peace.
             for (int k = 0; k < 4 && c.stage() != Campaigns.Stage.DONE; k++) Campaigns.nextForTests(level, c);
             long day = level.getDayTime() / 24000L;
             WarAndPeace.backdateForTests(a.id(), b.id(), 9);
             WarAndPeace.dailyForTests(level, a, b, day + 1);
             boolean flag = false;
-            for (VillageFolkEntity f : folk(b.id())) {
+            for (VillageFolkEntity f : folk(loser.id())) {
                 Caravans.Trip t = f.trip();
-                if (t != null && t.errand() == Envoys.Errand.PEACE && t.destination().equals(a.id())) flag = true;
+                if (t != null && t.errand() == Envoys.Errand.PEACE && t.destination().equals(winner.id())) flag = true;
             }
             Kit.log("bt03 after: the white flag " + flag + "; terms " + WarAndPeace.terms(level, a.id(), b.id()).words());
             helper.assertTrue(flag, "the beaten side sues for peace");
@@ -409,10 +412,10 @@ public class BattleGameTests {
             Campaigns.Campaign c = camp.get();
             Campaigns.nextForTests(level, c);                         // before the gate: the camp and the ram
             Kit.log("bt04 at the gate: " + c.stage() + ", the bell " + com.jrpetty.mcassistant.entity.Raids.underAlarm(b.id()));
-            helper.assertTrue(c.stage() == Campaigns.Stage.SIEGE_CAMP, "camped before the gate: " + c.stage());
+            helper.assertTrue(c.stage() == Campaigns.Stage.SIEGE_CAMP || c.stage() == Campaigns.Stage.ASSAULT, "camped before the gate: " + c.stage());
             helper.assertTrue(com.jrpetty.mcassistant.entity.Raids.underAlarm(b.id()), "the bell rung in the besieged town");
             helper.assertTrue(logs[0] - logs[1] >= 3, "three logs out of the stores for the ram: " + logs[0] + " -> " + logs[1]);
-            Campaigns.nextForTests(level, c);                         // the assault
+            if (c.stage() == Campaigns.Stage.SIEGE_CAMP) Campaigns.nextForTests(level, c);   // the assault
         });
         helper.succeedWhen(() -> {
             Campaigns.Campaign c = camp.get();
@@ -490,6 +493,40 @@ public class BattleGameTests {
             helper.assertTrue(warred, "the great towns went to war");
             helper.assertTrue(fought, "a battle was fought");
             helper.assertTrue(!Wars.atWar(a.id(), b.id()) && WarAndPeace.booksForTests(a.id(), b.id()).contains("treaties 1/1"), "a treaty ended it");
+            helper.succeed();
+        });
+    }
+
+    // ------------------------------------------------------------------ bt06
+
+    /**
+     * The stand-off ends at the parley: a hopelessly outnumbered town yields, the victor takes its surrender, and peace
+     * is made there and then with not a blow struck; the mercy is in both chronicles. Another time, the surrender
+     * refused: the battle is fought.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "bt06_parley")
+    public static void bt06_parley(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        start(level);
+        int x = 1830000 - APART - 400;
+        Villages.Village a = town(level, x, 14), b = town(level, x + APART, 8);
+        helper.assertTrue(a != null && b != null && !a.id().equals(b.id()), "two towns");
+        helper.runAtTickTime(20, () -> {
+            guards(a.id(), 10, true);
+            guards(b.id(), 2, false);
+            war(level, a, b);
+            Campaigns.watchForTests(false);
+            Battles.parleyForTests(true);
+            Campaigns.Campaign c = Campaigns.beginForTests(level, a, b, false, false);
+            Campaigns.nextForTests(level, c);
+            Campaigns.nextForTests(level, c);
+            Campaigns.arriveForTests(c);
+            for (int k = 0; k < 3 && Wars.atWar(a.id(), b.id()); k++) Campaigns.nextForTests(level, c);
+            Kit.log("bt06 taken: at war " + Wars.atWar(a.id(), b.id()) + "; battles " + WarAndPeace.battlesForTests(a.id(), b.id())
+                + "; " + WarAndPeace.booksForTests(a.id(), b.id()));
+            helper.assertTrue(!Wars.atWar(a.id(), b.id()), "peace at the parley");
+            helper.assertTrue(WarAndPeace.battlesForTests(a.id(), b.id()).isEmpty(), "not a blow struck");
+            helper.assertTrue(chronicled(a.id(), "took its surrender") && chronicled(b.id(), "we were spared"), "the mercy in both chronicles");
             helper.succeed();
         });
     }

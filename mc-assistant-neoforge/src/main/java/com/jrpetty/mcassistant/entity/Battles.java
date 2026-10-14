@@ -88,9 +88,17 @@ public final class Battles {
 
     /** Tests: the chance of a death, whatever the config says (null: as it says). */
     @Nullable static Integer deathsForTests;
+    /** Tests: the parley's surrender, offered and then taken (true) or refused (false) whatever the odds; null as the model has it. */
+    @Nullable static Boolean parleyForTests;
 
     static void resetForTests() {
         deathsForTests = null;
+        parleyForTests = null;
+    }
+
+    /** Tests: a surrender at the parley offered and taken (true), offered and refused (false), or as the model has it (null). */
+    public static void parleyForTests(@Nullable Boolean taken) {
+        parleyForTests = taken;
     }
 
     /** Tests: deaths at this chance in a hundred (null: the config's). */
@@ -277,7 +285,7 @@ public final class Battles {
                     say(level, a.officer(Armies.Rank.SERGEANT), FolkTalk.pick(level.getRandom(), "Dress the line! Straighten up!", "Close up there — shoulder to shoulder!"));
                     if (i == 1) ragged = 0.2;
                 }
-                if (level.getRandom().nextInt(4) != 0) continue;
+                if (a.fighters.isEmpty() || level.getRandom().nextInt(4) != 0) continue;
                 Armies.Fighter f = a.fighters.get(level.getRandom().nextInt(a.fighters.size()));
                 if (f.down() || f.rank != Armies.Rank.NONE || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
                 switch (level.getRandom().nextInt(4)) {
@@ -888,7 +896,7 @@ public final class Battles {
             UUID w = side[weak].town, s = side[strong].town;
             long day = level.getDayTime() / 24000L;
             Random rng = new Random(Campaigns.seed(w, day * 13 + 5));
-            if (!BattleModel.offersSurrender(odds, side[weak].boldness, WarAndPeace.great(w), rng)) return 0;
+            if (parleyForTests == null && !BattleModel.offersSurrender(odds, side[weak].boldness, WarAndPeace.great(w), rng)) return 0;
             Armies.Fighter capW = side[weak].officer(Armies.Rank.CAPTAIN), capS = side[strong].officer(Armies.Rank.CAPTAIN);
             say(level, capW, "We'll not throw lives away for nothing. Name your terms.");
             boolean vengeful = WarAndPeace.brokenFaith(s, w, day);
@@ -896,7 +904,7 @@ public final class Battles {
             WarBooks.Book book = WarBooks.book(s, w);
             boolean ambitious = book != null && book.aggressor && (book.goal == WarAndPeace.Goal.SUBJUGATE || WarAndPeace.great(s));
             boolean kindly = Envoys.temper(s).kindly();
-            if (BattleModel.acceptsSurrender(side[strong].boldness, kindly, vengeful, ambitious, rng)) {
+            if (parleyForTests != null ? parleyForTests : BattleModel.acceptsSurrender(side[strong].boldness, kindly, vengeful, ambitious, rng)) {
                 say(level, capS, "Then lay down your arms and go home. The terms will be kept.");
                 story.add(name(weak) + " yielded at the parley, and " + name(strong) + " took its surrender: not a blow struck.");
                 settled = true;

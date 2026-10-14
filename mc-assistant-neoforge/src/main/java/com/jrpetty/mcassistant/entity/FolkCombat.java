@@ -80,6 +80,7 @@ public final class FolkCombat {
     static final class State {
         long lastBlow = -1000, shieldDownUntil, raisedUntil, critUntil, axeUntil, reactAt = -1;
         int blows, crits, blocked, minGap = Integer.MAX_VALUE;
+        float dealt;
         int strafe = 1;
     }
 
@@ -180,8 +181,10 @@ public final class FolkCombat {
         AttributeInstance dmg = mob.getAttribute(Attributes.ATTACK_DAMAGE);
         if (crit && dmg != null) dmg.addOrUpdateTransientModifier(new AttributeModifier(CRIT_ID, CRIT, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
         boolean hit;
+        float before = target.getHealth();
         try {
             hit = mob.doHurtTarget(target);
+            s.dealt += Math.max(0.0F, before - target.getHealth());
         } finally {
             if (dmg != null) dmg.removeModifier(CRIT_ID);
         }
@@ -291,10 +294,11 @@ public final class FolkCombat {
             lower(e);
             s.raisedUntil = 0;
         }
-        for (AbstractArrow arrow : level.getEntitiesOfClass(AbstractArrow.class, e.getBoundingBox().inflate(12.0), x -> !x.onGround() && x.getOwner() != e)) {
+        for (AbstractArrow arrow : level.getEntitiesOfClass(AbstractArrow.class, e.getBoundingBox().inflate(20.0), x -> !x.onGround() && x.getOwner() != e)) {
             Vec3 v = arrow.getDeltaMovement(), to = e.position().add(0, e.getBbHeight() * 0.5, 0).subtract(arrow.position());
             if (v.lengthSqr() < 0.04 || v.normalize().dot(to.normalize()) < 0.9) continue;
-            if (s.reactAt < 0) s.reactAt = now + Math.max(0, Math.round((1.0 - skill(e)) * 4));
+            // A moment's reaction: none for the practised (its eye on the bows), a few ticks for a recruit.
+            if (s.reactAt < 0) s.reactAt = now + Math.max(0, Math.round((0.8 - skill(e)) * 8));
             if (now >= s.reactAt) {
                 raise(e, 20);
                 s.reactAt = -1;
@@ -429,6 +433,12 @@ public final class FolkCombat {
     }
 
     // ------------------------------------------------------------------ tests
+
+    /** Tests: the damage its blows have done. */
+    public static float dealtForTests(LivingEntity e) {
+        State s = STATES.get(e.getUUID());
+        return s == null ? 0 : s.dealt;
+    }
 
     /** Tests: blows struck, crits, blows blocked, the shortest gap between two blows. */
     public static int[] statsForTests(LivingEntity e) {

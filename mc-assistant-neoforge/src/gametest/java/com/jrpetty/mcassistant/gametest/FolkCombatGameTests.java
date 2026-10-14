@@ -115,7 +115,8 @@ public class FolkCombatGameTests {
             Skeleton s = mob(level, EntityType.SKELETON, ground(level, x + 20, -2), false, 0);
             Arrow arrow = new Arrow(level, s, new ItemStack(Items.ARROW), new ItemStack(Items.BOW));
             arrow.setPos(s.getX(), s.getEyeY(), s.getZ());
-            arrow.shoot(f.getX() - s.getX(), f.getY(0.5) - s.getEyeY() + 0.3, f.getZ() - s.getZ(), 1.4F, 0.0F);
+            double h = Math.sqrt((f.getX() - s.getX()) * (f.getX() - s.getX()) + (f.getZ() - s.getZ()) * (f.getZ() - s.getZ()));
+            arrow.shoot(f.getX() - s.getX(), f.getY(0.5) - s.getEyeY() + h * 0.2, f.getZ() - s.getZ(), 1.6F, 0.0F);   // a skeleton's own arc
             level.addFreshEntity(arrow);
         });
         helper.runAtTickTime(80, () -> {
@@ -370,8 +371,9 @@ public class FolkCombatGameTests {
             Kit.log("fc08 the duel: the veteran " + java.util.Arrays.toString(vet) + ", the recruit " + java.util.Arrays.toString(rec)
                 + "; skill " + FolkCombat.skill(p[0]) + " against " + FolkCombat.skill(p[1]));
             helper.assertTrue(FolkCombat.skill(p[0]) > FolkCombat.skill(p[1]), "the veteran the more practised");
-            helper.assertTrue(vet[0] + vet[1] > rec[0] + rec[1] || vet[2] > rec[2], "the veteran had the better of it: " + java.util.Arrays.toString(vet)
-                + " against " + java.util.Arrays.toString(rec));
+            float dv = FolkCombat.dealtForTests(p[0]), dr = FolkCombat.dealtForTests(p[1]);
+            Kit.log("fc08 damage dealt: the veteran " + dv + ", the recruit " + dr);
+            helper.assertTrue(dv > dr, "the veteran had the better of it: dealt " + dv + " against " + dr);
             helper.succeed();
         });
     }
