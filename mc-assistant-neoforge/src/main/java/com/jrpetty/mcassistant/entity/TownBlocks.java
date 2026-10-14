@@ -287,7 +287,8 @@ public final class TownBlocks {
      */
     private static boolean onWallRing(Villages.Village v, BlockPos pos, Why why) {
         switch (why) {
-            case ROAD, DOORWAY, TIDY, LAMP, SIGN, TERRAFORM, MINE, NATURE -> { return false; }
+            case ROAD, DOORWAY, TIDY, TERRAFORM, MINE, NATURE -> { return false; }
+            case LAMP, SIGN -> { return CastleWall.onWall(v.id(), v.centre(), pos); }   // [defence] never on the wall itself (its walkway, its towers)
             default -> { return CastleWall.reserved(v.id(), v.centre(), pos); }
         }
     }

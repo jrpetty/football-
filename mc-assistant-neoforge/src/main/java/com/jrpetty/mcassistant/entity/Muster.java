@@ -46,6 +46,8 @@ public final class Muster {
     static final int RING_LEAST = 3, RING_MOST = 12;
     /** How near the square a monster has to come before a guard of the ring steps out to it. */
     static final double STEP_OUT = 7.0;
+    /** How many looks a child stands at the edge of the crowd before it is lifted through to its place. */
+    static final int LIFT_AFTER = 20;
 
     /** A town's muster: where, how big, and who stands where. */
     static final class Gathering {
@@ -57,6 +59,8 @@ public final class Muster {
         final Set<UUID> golems = new HashSet<>();
         final Set<UUID> sheltering = new HashSet<>();
         final Map<UUID, Integer> stuck = new HashMap<>();
+        /** How many looks each child has stood at the edge of the crowd, short of its place. */
+        final Map<UUID, Integer> atEdge = new HashMap<>();
         long lastCall = -100000L;
         /** The middle places still kept for the children and the frail on their way. */
         int kept;
@@ -196,6 +200,17 @@ public final class Muster {
         if (d2 > 40 * 40 && (g.sheltering.contains(f.getUUID()) || threatNear(level, f, 10.0))) {
             g.sheltering.add(f.getUUID());
             return Raids.shelter(f);
+        }
+        // A child or one of the frail come late to a crowd already close round its place in the middle: the grown
+        // folk lift it through to it, as anybody would (it cannot shoulder its way in).
+        if (d2 > 2.0 && (f.isBaby() || Neighbourly.frail(f)) && d2 <= (g.inner + 2.5) * (g.inner + 2.5)) {
+            int at = g.atEdge.merge(f.getUUID(), 1, Integer::sum);
+            if (at >= LIFT_AFTER) {
+                f.getNavigation().stop();
+                f.teleportTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5);
+                g.atEdge.remove(f.getUUID());
+                return true;
+            }
         }
         if (d2 > 2.0) {
             if (f.getNavigation().isDone() || f.tickCount % 20 == 0) {
