@@ -173,6 +173,9 @@ public final class Makers {
         declare("constable_badge", "the smith (the shop's workshop with no smith)",
             "for the town's constable when it has none, and for each player the watch swears in as a special constable",
             "Police.smith / Police.badges");
+        // [roles-e] The carter's driving whip, of the stores' stick, string and leather (Carters.make).
+        declare("driving_whip", "the town, at its bench, for its carter", "once for the carter of a town with a wagon, when it first takes the bench",
+            "Carters.whip");
         // [leisure] Home and play (entity/Pastimes: the trades' turns from Crafts.now, the shop's book through
         // Workshop.demand, and the town's own bench where the town has neither trade nor shop; the busker's own lute).
         declare("patchwork_quilt", "the tailor (the shop's workshop with no tailor)",

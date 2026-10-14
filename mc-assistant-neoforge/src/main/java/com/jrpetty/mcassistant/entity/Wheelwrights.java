@@ -417,6 +417,13 @@ public final class Wheelwrights {
     private static void finish(ServerLevel level, Villages.Village v, Order o) {
         UUID id = v.id();
         WagonKind had = Wagons.owned(id);
+        if (had != null && had.ordinal() >= o.kind.ordinal()) {
+            // The town has as good a wagon already (given it meanwhile): not broken up for a lesser one; the makings back.
+            for (ItemStack s : o.makings) Crafts.store(level, v, s.copy());
+            save(id, null);
+            LOG.info("[MCA-WHEEL] {} has a {} already: its {} order closed, the makings back in the stores", Villages.name(id), had.label, o.kind.label);
+            return;
+        }
         TradeWagon w = Wagons.replace(level, v, o.kind);
         if (w == null) {
             status(id, "the " + o.kind.label + " is built, and waits for the old " + (had == null ? "wagon" : had.label) + " to come home");
@@ -656,7 +663,7 @@ public final class Wheelwrights {
         TradeWagon w = Wagons.wagonOf(level, id);
         out.add("Wheelwright: " + (h == null ? (stands(id) ? "none yet" : "not kept (no wagon, none on the bench)") : h.displayNameCap()
             + " (" + h.stationTask().label + ")") + "; shed: " + (Villages.builtAt(id, SHED) != null ? "built" : shedWanted(id) ? "wanted" : "none"));
-        if (o != null) out.add("  On the bench: " + orderWords(o) + "; makings held: " + o.encode().substring(o.encode().lastIndexOf('|') + 1));
+        if (o != null) out.add("  On the bench: " + orderWords(o) + "; makings held: " + makingsWords(o));
         if (k != null) out.add("  The town's " + k.label + ": " + (w == null ? "out of sight" : Math.round(w.hp) + " of " + Math.round(k.health)
             + (w.hp < k.health * MEND_BELOW ? ", to be mended" : ", sound")));
         String s = status(id);
