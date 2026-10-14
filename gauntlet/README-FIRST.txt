@@ -29,4 +29,8 @@ No typing needed. Just clicks.
 Blocked even after Unblock? Open the extracted folder, click the address bar, type powershell,
    press Enter, paste:  Get-ChildItem -Recurse | Unblock-File   press Enter, then try again.
 
+Smart App Control still blocks start-gauntlet.bat? Skip it: in the Gauntlet folder click the
+   address bar, type powershell, press Enter, paste this line and press Enter:
+   node scripts\prepare.mjs; Start-Process node 'src\cli.ts serve'; Start-Sleep 5; Start-Process http://localhost:7777
+
 Stuck? Open SETUP-WINDOWS.md (right-click, Open with, Notepad) for the troubleshooting list.
