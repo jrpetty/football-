@@ -345,6 +345,24 @@ public final class Restore {
         return fixed != null && day - fixed <= 1 ? "repaired" : "";
     }
 
+    /** The board's line: how many buildings need repair, and how many were put right today (null: nothing to say). */
+    @Nullable
+    public static String boardLine(UUID village, long day) {
+        int need = 0, renovating = 0;
+        for (Job j : queue(village)) if (j.reason == Reason.RENOVATE) renovating++; else need++;
+        int mended = 0;
+        for (Ledger.Building b : Ledger.buildings(village)) {
+            Long fixed = REPAIRED.get(b.anchor().asLong());
+            if (fixed != null && fixed == day) mended++;
+        }
+        if (need == 0 && renovating == 0 && mended == 0) return null;
+        StringBuilder sb = new StringBuilder(need > 0 ? "RW|Upkeep: " : "RN|Upkeep: ");
+        sb.append(need == 0 ? "every building sound" : need + (need == 1 ? " building needs" : " buildings need") + " repair");
+        if (renovating > 0) sb.append("; ").append(renovating).append(" being made over");
+        if (mended > 0) sb.append("; ").append(mended).append(" repaired today");
+        return sb.append('.').toString();
+    }
+
     /** {blocks put right, buildings mended} by this town's hands. */
     public static int[] tally(UUID village) {
         int[] t = TALLY.get(village);

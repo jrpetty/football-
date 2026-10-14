@@ -243,4 +243,197 @@ public class IntegrityGameTests {
             helper.succeed();
         }
     }
+
+    // ------------------------------------------------------------------ the gate, the repairs, the scaffolds
+
+    /** A village of one on flat ground, its stores a storehouse; and a shop stamped on a lot to the north, registered. */
+    private record Town(UUID id, Villages.Village v, BlockPos heart, com.jrpetty.mcassistant.entity.VillageFolkEntity hand,
+                        Ledger.Building shop) {}
+
+    private static Town town(GameTestHelper helper, int x) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(2000);
+        Kit.hold(level, x, Z, 64);
+        Kit.prepare(level, x, Z, 64);
+        BlockPos heart = Kit.surface(level, x, Z);
+        com.jrpetty.mcassistant.entity.VillageFolkEntity hand = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(hand != null, "a village");
+        UUID id = hand.ownerId();
+        storehouse(helper, level, heart.offset(6, 0, 6));
+        // On the first lot north of the square, across the ring street, its door to the south (its back to the north).
+        BlockPos at = Kit.surface(level, x + 8, Z - 22);
+        com.jrpetty.mcassistant.entity.goal.BuildGoal.stamp(level, "shop", at, net.minecraft.core.Direction.NORTH, 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
+        Ledger.built(id, "shop", at, net.minecraft.core.Direction.NORTH);
+        TownBlocks.invalidate(id);
+        Ledger.Building shop = null;
+        for (Ledger.Building b : Ledger.buildings(id)) if (b.anchor().equals(at)) shop = b;
+        return new Town(id, Villages.get(id), heart, hand, shop);
+    }
+
+    private static void storehouse(GameTestHelper helper, ServerLevel level, BlockPos near) {
+        BlockPos origin = Kit.surface(level, near.getX(), near.getZ());
+        net.minecraft.world.level.block.state.BlockState unit = com.jrpetty.mcassistant.block.StorehouseBlock.loose();
+        com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(net.minecraft.core.Direction.SOUTH);
+        try {
+            for (int y = 0; y < 3; y++) for (int x = 0; x < 3; x++) for (int z = 0; z < 3; z++) {
+                level.setBlock(origin.offset(x, y, z), unit, 3);
+            }
+        } finally {
+            com.jrpetty.mcassistant.block.StorehouseBlock.hintFront(null);
+        }
+    }
+
+    private static void give(ServerLevel level, Town t, net.minecraft.world.item.Item it, int n) {
+        while (n > 0) {
+            int k = Math.min(n, it.getDefaultMaxStackSize());
+            com.jrpetty.mcassistant.entity.Homes.storeForTests(level, t.v(), new net.minecraft.world.item.ItemStack(it, k));
+            n -= k;
+        }
+    }
+
+    /** The door of a building, and its way out. */
+    private static BlockPos[] door(Town t) {
+        for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement p : com.jrpetty.mcassistant.entity.goal.BuildGoal.plan("shop",
+                t.shop().anchor(), t.shop().facing(), 13)) {
+            if (p.part() == com.jrpetty.mcassistant.entity.goal.BuildGoal.Part.DOOR) {
+                return new BlockPos[]{ p.pos(), p.pos().relative(t.shop().facing().getOpposite()) };
+            }
+        }
+        return null;
+    }
+
+    /** The gate's zones round a stamped shop, and what it lets in where. */
+    @GameTest(template = "empty", timeoutTicks = 100, batch = "ti02_gate_zones")
+    public static void ti02_gate_zones(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 1622000);
+        helper.assertTrue(t.shop() != null, "the shop is registered");
+        BlockPos[] d = door(t);
+        helper.assertTrue(d != null, "the shop has a door");
+        BlockPos door = d[0], step = d[1], step2 = step.relative(t.shop().facing().getOpposite());
+        Kit.Expect e = new Kit.Expect();
+        e.that(TownBlocks.zone(level, t.v(), door) == TownBlocks.Zone.DOORWAY, "the door's cell is a doorway: " + TownBlocks.zone(level, t.v(), door));
+        e.that(TownBlocks.zone(level, t.v(), door.above()) == TownBlocks.Zone.DOORWAY, "and the cell over it");
+        e.that(TownBlocks.zone(level, t.v(), step) == TownBlocks.Zone.APPROACH, "the step in front is the way in: " + TownBlocks.zone(level, t.v(), step));
+        e.that(TownBlocks.zone(level, t.v(), step2) == TownBlocks.Zone.APPROACH, "and the one in front of that: " + TownBlocks.zone(level, t.v(), step2));
+        e.that(!TownBlocks.mayPlace(level, t.v(), step, TownBlocks.Why.LAMP), "no lamp post on the step");
+        e.that(!TownBlocks.mayPlace(level, t.v(), step2.above(), TownBlocks.Why.WINDOW_BOX), "no window box over the way in");
+        e.that(!TownBlocks.mayPlace(level, t.v(), door, TownBlocks.Why.FURNISH), "nothing put in the doorway");
+        e.that(TownBlocks.mayPlace(level, t.v(), step, TownBlocks.Why.DOORWAY), "the door-way works may cut a step there");
+        BlockPos mid = t.shop().anchor().above(1);
+        e.that(TownBlocks.zone(level, t.v(), mid) == TownBlocks.Zone.BUILDING, "the middle of the shop is the building's: " + TownBlocks.zone(level, t.v(), mid));
+        e.that(!TownBlocks.mayPlace(level, t.v(), mid, TownBlocks.Why.LAMP), "no lamp post inside it");
+        BlockPos wall = null;
+        for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement p : com.jrpetty.mcassistant.entity.goal.BuildGoal.plan("shop",
+                t.shop().anchor(), t.shop().facing(), 13)) {
+            if (p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL) { wall = p.pos(); break; }
+        }
+        e.that(wall != null && !TownBlocks.mayPlace(level, t.v(), wall, TownBlocks.Why.FURNISH), "nothing furnished into a wall");
+        e.that(wall != null && TownBlocks.mayBuild(level, t.v(), wall, t.shop().anchor(), TownBlocks.Why.REPAIR), "its own repairer may set its wall");
+        e.that(wall != null && !TownBlocks.mayBuild(level, t.v(), wall, t.heart(), TownBlocks.Why.BUILD), "another building's builder may not");
+        // A road: the avenue south of the square, in its middle and at its edge.
+        BlockPos avenue = Kit.surface(level, t.heart().getX(), t.heart().getZ() + 30);
+        e.that(TownBlocks.zone(level, t.v(), avenue) == TownBlocks.Zone.ROAD, "the avenue is road: " + TownBlocks.zone(level, t.v(), avenue));
+        e.that(!TownBlocks.mayPlace(level, t.v(), avenue, TownBlocks.Why.LAMP), "no lamp in the middle of the avenue");
+        BlockPos kerb = Kit.surface(level, t.heart().getX() + com.jrpetty.mcassistant.village.TownPlan.AVENUE, t.heart().getZ() + 30);
+        e.that(TownBlocks.mayPlace(level, t.v(), kerb, TownBlocks.Why.LAMP), "a lamp at its edge");
+        e.that(!TownBlocks.mayPlace(level, t.v(), avenue, TownBlocks.Why.FIELD), "no field on it");
+        BlockPos open = Kit.surface(level, t.heart().getX() + 30, t.heart().getZ() + 30);
+        e.that(TownBlocks.mayPlace(level, t.v(), open, TownBlocks.Why.FIELD), "open ground is open: " + TownBlocks.zone(level, t.v(), open));
+        if (!e.clean()) { helper.fail(e.summary()); return; }
+        helper.succeed();
+    }
+
+    /** A shop knocked about (holes in its walls, a roof stair gone, its door out, earth in its wall, a fence on its
+     *  step) is found by the survey, listed, and mended by the town out of its stores to its drawing. */
+    @GameTest(template = "empty", timeoutTicks = 2000, batch = "ti03_repairs")
+    public static void ti03_repairs(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 1624000);
+        helper.assertTrue(t.shop() != null, "the shop is registered");
+        helper.assertTrue(Restore.fidelity(level, t.id(), t.shop()) >= 0.999, "the shop stands whole as stamped: "
+            + Restore.diff(level, t.id(), t.shop()));
+        java.util.List<com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement> plan = com.jrpetty.mcassistant.entity.goal.BuildGoal.plan("shop",
+            t.shop().anchor(), t.shop().facing(), 13);
+        int walls = 0, stairs = 0;
+        BlockPos dirtAt = null;
+        for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement p : plan) {
+            if (p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL && walls < 4) {
+                level.setBlock(p.pos(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                walls++;
+            } else if (p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.WALL && dirtAt == null) {
+                dirtAt = p.pos();
+                level.setBlock(p.pos(), net.minecraft.world.level.block.Blocks.DIRT.defaultBlockState(), 3);
+            } else if (p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.ROOF_STAIR && stairs < 2) {
+                level.setBlock(p.pos(), net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                stairs++;
+            }
+        }
+        BlockPos[] d = door(t);
+        level.destroyBlock(d[0], false);
+        level.setBlock(d[1], net.minecraft.world.level.block.Blocks.OAK_FENCE.defaultBlockState(), 3);
+        java.util.List<Restore.Fix> fixes = Restore.diff(level, t.id(), t.shop());
+        Kit.log("ti03 knocked about: " + fixes.size() + " things wrong");
+        helper.assertTrue(fixes.size() >= 9, "the diff sees what was done: " + fixes);
+        give(level, t, net.minecraft.world.item.Items.OAK_PLANKS, 64);
+        give(level, t, net.minecraft.world.item.Items.OAK_STAIRS, 16);
+        give(level, t, net.minecraft.world.item.Items.OAK_DOOR, 2);
+        Restore.standDownForTests(false);
+        final BlockPos dirt = dirtAt;
+        helper.onEachTick(() -> {
+            long tick = helper.getTick();
+            if (tick % 20 != 0) return;
+            Restore.survey(level, t.v());
+            Restore.work(level, t.v(), 8);
+            TownAudit.Report r = TownAudit.check(level, t.v(), TownAudit.FIDELITY);
+            if (tick % 200 == 0) Kit.log("ti03 @" + tick + " " + r.summary() + " queue " + Restore.queue(t.id()).size());
+            if (r.measure("fidelity") >= 0.999 && r.count(TownAudit.FOREIGN) == 0) {
+                Kit.Expect e = new Kit.Expect();
+                e.that(Restore.status(t.id(), t.shop().anchor(), level.getDayTime() / 24000L).equals("repaired"), "the shop says it was repaired: "
+                    + Restore.status(t.id(), t.shop().anchor(), level.getDayTime() / 24000L));
+                e.that(level.getBlockState(d[0]).getBlock() instanceof net.minecraft.world.level.block.DoorBlock, "its door is back");
+                e.that(level.getBlockState(d[1]).isAir(), "its step is clear");
+                e.that(!level.getBlockState(dirt).is(net.minecraft.world.level.block.Blocks.DIRT), "no earth in its wall");
+                e.that(Restore.tally(t.id())[0] >= 9, "the town counts what it mended: " + java.util.Arrays.toString(Restore.tally(t.id())));
+                Restore.standDownForTests(true);
+                if (!e.clean()) { helper.fail(e.summary()); return; }
+                helper.succeed();
+            } else if (tick > 1900) {
+                Restore.standDownForTests(true);
+                helper.fail("not mended: " + r.summary() + " " + r.lines(20));
+            }
+        });
+    }
+
+    /** A building given up half built (its lot given up) is taken down, its blocks into the stores. */
+    @GameTest(template = "empty", timeoutTicks = 2000, batch = "ti04_scaffold_cleared")
+    public static void ti04_scaffold_cleared(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 1626000);
+        BlockPos at = Kit.surface(level, t.heart().getX() - 30, t.heart().getZ() - 30);
+        int laid = com.jrpetty.mcassistant.entity.goal.BuildGoal.stampOnly(level, "house", at, net.minecraft.core.Direction.NORTH, 13,
+            com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK), p -> p.pos().getY() <= at.getY() + 1);
+        helper.assertTrue(laid > 10, "half a house laid: " + laid);
+        Restore.abandoned(t.id(), new Ledger.Building("house", at, net.minecraft.core.Direction.NORTH), level.getGameTime());
+        int before = com.jrpetty.mcassistant.entity.Market.stock(level, t.id(), s -> true);
+        Restore.standDownForTests(false);
+        helper.onEachTick(() -> {
+            long tick = helper.getTick();
+            if (tick % 20 != 0) return;
+            Restore.tick(level, t.v());
+            TownAudit.Report r = TownAudit.check(level, t.v(), TownAudit.HALF_BUILT);
+            if (r.count(TownAudit.HALF_BUILT) == 0) {
+                int after = com.jrpetty.mcassistant.entity.Market.stock(level, t.id(), s -> true);
+                Restore.standDownForTests(true);
+                Kit.log("ti04 cleared at tick " + tick + "; stores " + before + " -> " + after);
+                if (after <= before) { helper.fail("what came down did not go into the stores: " + before + " -> " + after); return; }
+                helper.succeed();
+            } else if (tick > 1900) {
+                Restore.standDownForTests(true);
+                helper.fail("still half built: " + r.lines(10));
+            }
+        });
+    }
 }
