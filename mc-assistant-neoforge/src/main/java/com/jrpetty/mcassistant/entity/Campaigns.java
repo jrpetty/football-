@@ -1260,9 +1260,11 @@ public final class Campaigns {
 
     /** Fighters a side on the stage. */
     static final int STAGED = 12;
+    /** How far east a staged neighbour is raised, with none near (past the founding reach of two villages' range). */
+    public static final int NEIGHBOUR = 260;
 
     /**
-     * Pictures: a battle staged between the nearest town and its neighbour (a neighbour raised 180 blocks east with
+     * Pictures: a battle staged between the nearest town and its neighbour (a neighbour raised 260 blocks east with
      * none near), twelve a side armed for nothing as a showcase, at war, with the field at {@code at}, and set at this
      * phase and held there: drawn up on their squares (muster); in column on the road (march); the lines formed in
      * their formations (lineup); the Captains and their standards met in the middle (parley); the archers' duel
@@ -1279,9 +1281,11 @@ public final class Campaigns {
             if (d < best) { best = d; o = n; }
         }
         if (o == null) {
-            BlockPos there = Battlefields.surface(level, v.centre().offset(180, 0, 0));
-            com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raiseParty(level, there, 0.0F, STAGED + 2);
-            o = Villages.nearest(level, there, Villages.VILLAGE_RANGE);
+            // Far enough off (two villages' reach) that the party founds a town of its own rather than joining this one.
+            BlockPos there = Battlefields.surface(level, v.centre().offset(NEIGHBOUR, 0, 0));
+            com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raiseParty(level, there, 0.0F, STAGED + 4);
+            o = Villages.nearest(level, there, Villages.VILLAGE_RANGE * 2);
+            if (o != null && o.id().equals(v.id())) o = null;
             if (o == null) {
                 out.add("NO-STAGE no neighbour could be raised");
                 return out;

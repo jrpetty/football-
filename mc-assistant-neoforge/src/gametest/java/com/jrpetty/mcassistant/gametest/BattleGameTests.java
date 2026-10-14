@@ -545,12 +545,13 @@ public class BattleGameTests {
         Villages.Village a = town(level, x, 6);
         helper.assertTrue(a != null, "a town");
         helper.runAtTickTime(20, () -> {
-            Kit.hold(level, x + 180, Z, 64);
-            Kit.prepare(level, x + 180, Z, 64);
-            Kit.hold(level, x + 90, Z, 48);
-            Kit.prepare(level, x + 90, Z, 48);
+            int far = Campaigns.NEIGHBOUR;
+            Kit.hold(level, x + far, Z, 64);
+            Kit.prepare(level, x + far, Z, 64);
+            Kit.hold(level, x + far / 2, Z, 64);
+            Kit.prepare(level, x + far / 2, Z, 64);
             for (String phase : Campaigns.PHASES) {
-                List<String> out = Campaigns.stage(level, a, Kit.surface(level, x + 90, Z), phase);
+                List<String> out = Campaigns.stage(level, a, Kit.surface(level, x + far / 2, Z), phase);
                 Kit.log("bt07 " + phase + ": " + String.join(" | ", out));
                 helper.assertTrue(!out.isEmpty() && out.get(0).startsWith("STAGED " + phase), "staged at " + phase + ": " + out);
                 helper.assertTrue(out.size() > 1, "something to look at, at " + phase);

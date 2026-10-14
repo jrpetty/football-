@@ -3846,7 +3846,7 @@ def defence_stage(r, look, cx, cz):
 
 def war_stage(r, look, cx, cz):
     """[war] Organised battles, phase by phase (entity/Campaigns, Armies, Battles, Battlefields). /village battle stage
-    <phase>, run on open ground east of the town, stages a battle between the town and its neighbour (one raised 180
+    <phase>, run on open ground east of the town, stages a battle between the town and its neighbour (one raised 260
     blocks east when there is none near), twelve a side armed for nothing, the field at that spot, and holds it at
     that phase; it says where to look from (VIEW name eye target). Cinematic pictures, from the hill and close to:
     each army drawn up on its square in its surcoats before it marches; the column on the road behind its banner;
@@ -3860,7 +3860,7 @@ def war_stage(r, look, cx, cz):
     midday(r)
     r.cmd("weather clear")
     hy = ground_height(r, cx, cz)
-    fx, fz = cx + 90, cz                               # the field: open ground east of the town, towards the neighbour
+    fx, fz = cx + 130, cz                              # the field: open ground east of the town, towards the neighbour
     r.cmd("tp %s %d %d %d" % (USER, fx, hy + 30, fz + 30))
     time.sleep(10)                                     # the field's ground arrives
 

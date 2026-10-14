@@ -34,7 +34,7 @@ import java.util.List;
  *   /village war battle next    (ops) the campaign's next stage now (a march brought to its end first); prints
  *                               "STAGE name" and what to look at now
  *   /village battle stage &lt;phase&gt;  (ops) for the pictures: a battle staged between the nearest town and its neighbour
- *                               (one raised 180 blocks east with none near), twelve a side armed for nothing, the field
+ *                               (one raised 260 blocks east with none near), twelve a side armed for nothing, the field
  *                               here, set at muster, march, lineup, parley, volley, clash, rout or aftermath and held
  *                               there; prints "STAGED ..." and "VIEW name x y z ax ay az" for each scene to look at
  *   /village battle stage end   (ops) the staged battle let go: the armies home
