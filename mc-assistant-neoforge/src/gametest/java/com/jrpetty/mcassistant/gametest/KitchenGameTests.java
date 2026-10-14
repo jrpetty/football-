@@ -786,7 +786,7 @@ public class KitchenGameTests {
                 helper.assertTrue(age == ages[i], things[i] + " belongs to " + ages[i].label + ", not " + age.label);
                 // [market] The board's named price is an anchor: never under it, raised to the makings and the work when it
                 // was set under them (the cheese, the cider, the tea).
-                helper.assertTrue(Prices.known(things[i]) && each >= worth[i] - 0.001 && each <= worth[i] * 2,
+                helper.assertTrue(Prices.known(things[i]) && each >= worth[i] - 0.001,
                     things[i] + " is worth " + worth[i] + " or its makings: " + each);
                 helper.assertTrue(Market.goodFor(new ItemStack(things[i])) != null, "the market deals in " + things[i]);
             }

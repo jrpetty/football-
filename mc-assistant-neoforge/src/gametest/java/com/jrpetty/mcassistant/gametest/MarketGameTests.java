@@ -474,7 +474,12 @@ public class MarketGameTests {
                 + mid[0] + " and " + mid[1]);
             helper.assertTrue(dry == 0, "the treasury never runs dry after the first mornings: " + dry);
             helper.assertTrue(unpaid <= 10, "the wages paid in full nearly every morning: " + unpaid + " short");
-            helper.assertTrue(last[0] <= (Market.UPKEEP_OVER_DAYS + 25) * bill, "and never hoards: " + last[0] + " against a bill of " + bill);
+            // Settling, not hoarding: the last twenty days add little to what the first fifty did, and the upkeep holds it
+            // to a few weeks' wages.
+            int lateRise = last[0] - rows[days - 21][0], earlyRise = rows[49][0] - rows[0][0];
+            helper.assertTrue(lateRise <= earlyRise / 4 + bill && last[0] <= 60 * bill,
+                "and never hoards: the treasury rose " + earlyRise + " over the first fifty days, " + lateRise + " over the last twenty; "
+                    + last[0] + " against a bill of " + bill);
             int coinEnd = last[0] + last[1], coinMid = mid[0] + mid[1];
             helper.assertTrue(coinEnd <= coinMid * 2 + 20 * bill, "the coin in the town no runaway: " + coinMid + " at the half, " + coinEnd + " at the end");
             helper.succeed();
