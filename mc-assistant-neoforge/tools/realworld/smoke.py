@@ -4679,7 +4679,7 @@ def main():
         flats_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("flats failed: %s" % e)
-    for name, stage in (("shops and homes", shops_homes_stage), ("dining", dining_stage)):
+    for name, stage in (("shops and homes", shops_homes_stage), ("dining", dining_stage), ("earning", earning_stage)):
         try:
             stage(r, look, cx, cz)
         except Exception as e:  # noqa: BLE001
