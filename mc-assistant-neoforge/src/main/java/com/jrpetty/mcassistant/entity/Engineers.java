@@ -1308,14 +1308,62 @@ public final class Engineers {
     static Machine lampSite(ServerLevel level, Villages.Village v) {
         for (BlockPos top : lampSpots(level, v)) {
             if (!lampable(level, top) || machineAt(v.id(), top.above()) != null) continue;
-            Machine m = new Machine(Kind.LAMP, top.above(), Direction.NORTH);
-            m.casing = casingFor(level, v, 2);
-            // An old post stays as it is: only its light changes. Its fence posts are the drawing's posts.
-            BlockState post = level.getBlockState(top.above());
-            if (post.is(BlockTags.FENCES) || post.is(BlockTags.WALLS)) m.crop = BuiltInRegistries.BLOCK.getKey(post.getBlock()).getPath();
-            return m;
+            return lampAt(level, v, top);
         }
         return null;
+    }
+
+    /** A lamp machine for the post standing on this ground. */
+    private static Machine lampAt(ServerLevel level, Villages.Village v, BlockPos top) {
+        Machine m = new Machine(Kind.LAMP, top.above(), Direction.NORTH);
+        m.casing = casingFor(level, v, 2);
+        // An old post stays as it is: only its light changes. Its fence posts are the drawing's posts.
+        BlockState post = level.getBlockState(top.above());
+        if (post.is(BlockTags.FENCES) || post.is(BlockTags.WALLS)) m.crop = BuiltInRegistries.BLOCK.getKey(post.getBlock()).getPath();
+        return m;
+    }
+
+    /** [roles-d] How near the player a post must stand to be "my street's", and the engineer's fee for seeing to it. */
+    static final int LAMP_NEAR = 12, LAMP_FEE = 6;
+
+    /**
+     * [roles-d] "Light my street" (the engineer's talk option, OutdoorTalk): the town's lamp post nearest the player given a
+     * lamp that lights itself at dusk, first in the engineer's work (planned now, built out of the stores like any of its
+     * lamps). The player pays the engineer's fee; the parts are the town's. No post near, every post near lit already,
+     * the stores short of a lamp's makings, a lamp of a player's already going up: told so, and nothing paid.
+     */
+    public static String lightStreet(ServerLevel level, Villages.Village v, VillageFolkEntity f, net.minecraft.world.entity.player.Player p) {
+        Works w = works(v.id());
+        for (Machine m : w.machines) {
+            if (m.kind == Kind.LAMP && m.state == State.BUILDING) {
+                return "I've a lamp going up already, at " + m.origin.getX() + ", " + m.origin.getZ() + ". Yours after that one.";
+            }
+        }
+        BlockPos at = p.blockPosition(), best = null;
+        boolean anyNear = false;
+        for (BlockPos top : lampSpots(level, v)) {
+            double dx = top.getX() - at.getX(), dz = top.getZ() - at.getZ();
+            if (dx * dx + dz * dz > LAMP_NEAR * LAMP_NEAR) continue;
+            anyNear = true;
+            if (!lampable(level, top) || machineAt(v.id(), top.above()) != null) continue;
+            if (best == null || top.distSqr(at) < best.distSqr(at)) best = top;
+        }
+        if (best == null) return anyNear ? "Every post along here has its lamp already. They light themselves at dusk."
+            : "There's no post of the town's near you to put a lamp on: they stand along the streets. Stand by the one you want lit.";
+        if (!affordable(level, v, Kind.LAMP)) {
+            return "The stores can't spare a lamp's makings just now: glowstone for the lamp, redstone, and quartz for its sensor.";
+        }
+        int coins = Market.coinsHeld(p);
+        if (coins < LAMP_FEE) return "My fee's " + LAMP_FEE + " coins; the parts are the town's. You've " + coins + ".";
+        Machine m = lampAt(level, v, best);
+        Market.payOut(p, LAMP_FEE);
+        f.earn(LAMP_FEE);
+        w.machines.add(0, m);                                           // first: next() takes the first machine building
+        save(v.id());
+        Villages.tell(v.id(), level.getDayTime() / 24000L, f.displayNameCap() + " took on a street lamp for " + p.getName().getString()
+            + " at " + best.getX() + ", " + best.getZ());
+        return "Right: a lamp on the post at " + best.getX() + ", " + best.getZ() + ", one that lights itself at dusk. I'll be there"
+            + " shortly. " + LAMP_FEE + " coins for my trouble; the parts are the town's.";
     }
 
     @Nullable

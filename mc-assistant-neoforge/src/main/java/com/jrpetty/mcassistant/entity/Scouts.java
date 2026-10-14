@@ -312,15 +312,16 @@ public final class Scouts {
             if (Spying.instead(f, level, v, day)) return true;
             if (setOut(f, level, v, day)) return true;
         }
-        // At the board, with the atlas.
+        // At the board, with the atlas; [roles-d] or, once the map room stands, writing its finds up at its table.
+        OutdoorBases.Desk desk = OutdoorBases.scoutDesk(level, id);
         BlockPos board = VillageBoards.lectern(id);
-        BlockPos at = board != null ? board : v.centre();
-        BlockPos spot = at.relative(Direction.from2DDataValue(Math.floorMod(f.getUUID().hashCode() + 1, 4)), 3);
-        if (f.blockPosition().distSqr(spot) > 9) {
+        BlockPos at = desk != null ? desk.table() : board != null ? board : v.centre();
+        BlockPos spot = desk != null ? desk.stand() : at.relative(Direction.from2DDataValue(Math.floorMod(f.getUUID().hashCode() + 1, 4)), 3);
+        if (f.blockPosition().distSqr(spot) > (desk != null ? 2 : 9)) {
             if (f.getNavigation().isDone()) f.walkTo(spot, 0.8D);
         } else {
-            f.getLookControl().setLookAt(at.getX() + 0.5, at.getY() + 1.5, at.getZ() + 0.5);
-            f.hobbyNow = "going over the atlas";
+            f.getLookControl().setLookAt(at.getX() + 0.5, at.getY() + (desk != null ? 1.0 : 1.5), at.getZ() + 0.5);
+            f.hobbyNow = desk != null ? "writing up its finds at the map room's table" : "going over the atlas";
         }
         return true;
     }

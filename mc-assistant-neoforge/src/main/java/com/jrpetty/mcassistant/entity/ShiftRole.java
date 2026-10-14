@@ -67,7 +67,22 @@ public enum ShiftRole {
         List.of("A patient laid up shows on your card: at the infirmary or at home, marked.",
             "Go to the bedside: standing by it, you give the best remedy the stores have (honey, a bandage, a potion).",
             "With nothing in the stores you sit with them a while, which helps a little.",
-            "A quick round earns stars; each patient seen to pays at once."));
+            "A quick round earns stars; each patient seen to pays at once.")),
+    // [roles-d] The woodcutter's hand: a grown tree of the town's wood felled, its logs to the stores, a sapling set back
+    // (OutdoorShifts).
+    WOOD("wood", "Woodcutter's hand", "Head woodsman", "the woods", 0.8, 900,
+        "grown trees in the town's wood", Set.of(StationTask.WOOD),
+        List.of("A grown tree in the town's wood is marked.",
+            "Fell it, every log of it: the logs go straight into the town's stores.",
+            "Then plant a sapling where it stood: one from the stores is handed you if they have one.",
+            "A tree left unplanted costs stars.")),
+    // [roles-d] The shearer: a sheep of the town's flock shorn with the player's own shears, the wool to the stores.
+    SHEAR("shear", "Shearer", "Head shepherd", "the pen", 0.4, 300,
+        "sheep of the town's flock in wool", Set.of(StationTask.RANCH),
+        List.of("A sheep of the town's flock is marked.",
+            "Shear it with your own shears: the wool goes straight into the town's stores.",
+            "Shearing one of the flock that is not marked is a mistake.",
+            "A quick, clean job earns stars."));
 
     public final String id, title, senior, place;
     /** The wage a task, in coin, before the town's pay level, the stars and the skill. */

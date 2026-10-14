@@ -1,0 +1,96 @@
+# [roles-d] The barn: a timber barn on a stone footing out by the pen, with a hay loft under a pitched roof, where the
+# rancher keeps the herd's feed dry (entity/OutdoorBases). Hay bales stacked at the back either side of the chest for
+# the feed and the spare shears, a water trough (a cauldron) by the side wall, a ladder up to the loft and more hay up
+# there; windows along both sides and a lantern hung from the loft's beam.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name barn
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.LwwwwwL.
+.wyyCyyw.
+.wy...yw.
+.wJ....w.
+.w....&w.
+.w.....w.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.W.....W.
+.G.....G.
+.WJ....W.
+.G.....G.
+.W.....W.
+.LWW.WWL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.WJ.j..W.
+.W.....W.
+.W.....W.
+.LWWWWWL.
+....j....
+layer 3
+vvvvvvvvv
+.L-----L.
+.|fffff|.
+.|fffff|.
+.|Jffff|.
+.|fffff|.
+.|fffff|.
+.L-----L.
+^^^^^^^^^
+layer 4
+.........
+vvvvvvvvv
+.Wyy.yyW.
+.W.....W.
+.W.....W.
+.W.....W.
+.Wy...yW.
+^^^^^^^^^
+.........
+layer 5
+.........
+.........
+vvvvvvvvv
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+.........
+layer 6
+.........
+.........
+.........
+vvvvvvvvv
+.W.....W.
+^^^^^^^^^
+.........
+.........
+.........
+layer 7
+.........
+.........
+.........
+.........
+_________
+.........
+.........
+.........
+.........

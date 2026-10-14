@@ -72,6 +72,9 @@ public final class Asks {
         BUILDINGS.put("museum", "museum");
         BUILDINGS.put("infirmary", "infirmary");          // [batchA] (Infirmary)
         BUILDINGS.put("hospital", "infirmary");
+        BUILDINGS.put("hunting lodge", OutdoorBases.LODGE);   // [roles-d] before the Delvers' "lodge" (OutdoorBases)
+        BUILDINGS.put("hunter's lodge", OutdoorBases.LODGE);
+        BUILDINGS.put("barn", OutdoorBases.BARN);
         BUILDINGS.put("lodge", "lodge");                  // [caves] the Delvers' Lodge (Lodge)
         BUILDINGS.put("delvers", "lodge");
         BUILDINGS.put("map room", "maproom");             // [cartographer] the map room (Cartographers)

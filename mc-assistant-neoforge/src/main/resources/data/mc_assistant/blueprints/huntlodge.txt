@@ -1,0 +1,70 @@
+# [roles-d] The hunter's lodge: a log cabin on a stone course at the town's edge, under a steep roof with an overhang,
+# where the hunter smokes its game and keeps its gear (entity/OutdoorBases). Along the back wall the smoker that is its
+# smoking rack, the chest for its makings (arrows, string, the smoker's coal) and the barrel the hides are kept in; a
+# hide rug on the floor and a lantern hung over it. Outside, to the right of the door, the drying fire.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name huntlodge
+layer -1
+.......
+.FFFFF.
+.FfffF.
+.FfffF.
+.FfffF.
+.FFFFF.
+.......
+layer 0
+.......
+.LwwwL.
+.wMCQw.
+.w...w.
+.wX..w.
+.LwDwL.
+.....h.
+layer 1
+.......
+.LWGWL.
+.W...W.
+.G...G.
+.W...W.
+.LW.WL.
+.......
+layer 2
+.......
+.LWWWL.
+.W...W.
+.W.j.W.
+.W...W.
+.LWWWL.
+...j...
+layer 3
+>.....<
+>L---L<
+>|fff|<
+>|fff|<
+>|fff|<
+>L---L<
+>..|..<
+layer 4
+.>...<.
+.>WWW<.
+.>...<.
+.>...<.
+.>...<.
+.>WWW<.
+.>...<.
+layer 5
+..>.<..
+..>W<..
+..>.<..
+..>.<..
+..>.<..
+..>W<..
+..>.<..
+layer 6
+..._...
+..._...
+..._...
+..._...
+..._...
+..._...
+..._...

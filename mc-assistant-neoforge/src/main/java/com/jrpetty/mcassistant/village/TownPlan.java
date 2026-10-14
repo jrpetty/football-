@@ -233,6 +233,7 @@ public final class TownPlan {
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
             case "powderhut" -> "edge";               // [fireworks] the powder hut, away from the houses (FireworksMaker)
             case "divershed" -> "edge";               // [diver] on the bank of its water (Divers.shedSite), out at the edge
+            case "huntlodge", "barn" -> "edge";       // [roles-d] the hunter's lodge toward the wild, the barn out by the pen
             default -> "home";
         };
     }

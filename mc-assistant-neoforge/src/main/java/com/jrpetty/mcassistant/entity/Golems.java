@@ -807,7 +807,8 @@ public final class Golems {
         BlockPos c = v.centre();
         AABB box = new AABB(c).inflate(reach, 24, reach);
         int n = 0;
-        for (IronGolem g : level.getEntitiesOfClass(IronGolem.class, box, g -> g.isAlive() && !g.getTags().contains(TAG))) {
+        for (IronGolem g : level.getEntitiesOfClass(IronGolem.class, box, g -> g.isAlive() && !g.getTags().contains(TAG)
+                && !g.getTags().contains(OutdoorTalk.PLAYERS_GOLEM))) {                 // [roles-d] a player's own, never the town's
             boolean ours = false;
             for (Kept k : t.kept) if (k.golem.equals(g.getUUID())) ours = true;
             if (ours) continue;

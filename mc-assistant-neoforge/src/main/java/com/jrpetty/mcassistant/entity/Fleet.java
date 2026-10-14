@@ -26,6 +26,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.vehicle.Boat;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -168,6 +169,7 @@ public final class Fleet {
     public static void resetForTests() {
         TOWNS.clear();
         HANDS.clear();
+        GUESTS.clear();                                                // [roles-d]
         weatherForTests = null;
         fromForTests = -1;
         FishMarket.resetForTests();
@@ -766,6 +768,90 @@ public final class Fleet {
             && !Health.laidUp(f) && !Visitors.is(f) && !Nether.away(f);
     }
 
+    // ------------------------------------------------------------------ [roles-d] a player out with a fisher
+
+    /** A player going out with a fisher: who, and the day it is for. */
+    record Guest(UUID player, String name, long day) {}
+
+    /** The guests, by the fisher they go out with. */
+    private static final Map<UUID, Guest> GUESTS = new ConcurrentHashMap<>();
+    /** How near its boat a guest must be when the fisher sets off to be handed in (blocks). */
+    static final int GUEST_NEAR = 8;
+
+    /**
+     * "Can I come out on the boat?" (OutdoorTalk): a seat in its boat when it next sets off (this morning's sail if it has
+     * not gone yet, else tomorrow's), the player handed in behind it at the quay as it pushes off, and set down on the quay
+     * with a fish of the catch for its supper when it ties up. A town with no fleet, or its fisher not one of the crew
+     * (nothing to row), says so.
+     */
+    public static String takeGuest(VillageFolkEntity f, Player p) {
+        UUID id = f.ownerId();
+        if (!(f.level() instanceof ServerLevel level) || !has(id)) {
+            return "We've no fleet here: I fish from the bank. You're welcome to sit by me and watch, mind.";
+        }
+        long time = level.getDayTime() % 24000L, day = level.getDayTime() / 24000L;
+        Hand h = HANDS.get(f.getUUID());
+        boolean today = h != null && h.stage == Stage.BOARDING || h == null && time < SAIL_UNTIL;
+        if (h != null && h.stage != Stage.BOARDING) {
+            return "I'm out already. Come down to the quay at first light tomorrow and I'll take you along.";
+        }
+        Guest was = GUESTS.put(f.getUUID(), new Guest(p.getUUID(), p.getName().getString(), today ? day : day + 1));
+        String quay = t(id) == null || t(id).quay == null ? "the quay" : "the quay (" + t(id).quay.start().getX() + ", " + t(id).quay.start().getZ() + ")";
+        if (was != null && !was.player().equals(p.getUUID())) {
+            Player other = level.getPlayerByUUID(was.player());
+            if (other != null) other.displayClientMessage(Component.literal(f.displayNameCap()
+                + " is taking " + p.getName().getString() + " out instead."), true);
+        }
+        return today ? "Come on, then: down to " + quay + ", and stand by my boat. I'll hand you in as we push off."
+            : "We're done going out for today. Be at " + quay + " at first light, by my boat, and you'll come along.";
+    }
+
+    @Nullable
+    private static Town t(@Nullable UUID village) {
+        return village == null ? null : TOWNS.get(village);
+    }
+
+    /** Pushing off: its guest for today, by the boat, handed in behind it (the second seat: the fisher keeps the oars). */
+    private static void seatGuest(ServerLevel level, VillageFolkEntity f, @Nullable Boat b) {
+        if (b == null || GUESTS.isEmpty()) return;
+        Guest g = GUESTS.get(f.getUUID());
+        if (g == null) return;
+        long day = level.getDayTime() / 24000L;
+        if (g.day() < day) { GUESTS.remove(f.getUUID()); return; }
+        if (g.day() > day) return;
+        GUESTS.remove(f.getUUID());
+        Player p = level.getPlayerByUUID(g.player());
+        if (p == null || p.isPassenger() || p.distanceToSqr(b) > (double) GUEST_NEAR * GUEST_NEAR || b.getPassengers().size() >= 2) {
+            FolkTalk.speak(f, "No sign of " + g.name() + ". The tide won't wait.");
+            return;
+        }
+        if (p.startRiding(b)) {
+            FolkTalk.speak(f, "In you get, " + g.name() + ". Sit still, and mind the line.");
+            f.brain("out with " + g.name() + " aboard");
+        }
+    }
+
+    /** Tied up: a player aboard set down on the quay, with a fish of the catch out of the fisher's pack for its supper. */
+    private static void landGuest(ServerLevel level, VillageFolkEntity f, Boat b, BlockPos stand) {
+        for (Entity e : List.copyOf(b.getPassengers())) {
+            if (!(e instanceof Player p)) continue;
+            p.stopRiding();
+            p.teleportTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
+            ItemStack fish = ItemStack.EMPTY;
+            for (ItemStack s : f.getInventoryItems()) {
+                if (!s.isEmpty() && s.is(ItemTags.FISHES)) { fish = s.split(1); break; }
+            }
+            if (!fish.isEmpty() && !p.getInventory().add(fish)) p.drop(fish, false);
+            FolkTalk.speak(f, fish.isEmpty() ? "Home again, and nothing to show for it. That's fishing." : "Home again. Here: one for your supper.");
+        }
+    }
+
+    /** Tests: the guest booked with this fisher, as "name day", or "". */
+    public static String guestForTests(VillageFolkEntity f) {
+        Guest g = GUESTS.get(f.getUUID());
+        return g == null ? "" : g.name() + " " + g.day();
+    }
+
     // ------------------------------------------------------------------ a hand's day, tick by tick
 
     /** Is this folk out with the fleet just now (in a boat, or on its way to or from one)? */
@@ -858,6 +944,7 @@ public final class Fleet {
     }
 
     private static void setOff(VillageFolkEntity f, ServerLevel level, Town t, Hand h, long now) {
+        seatGuest(level, f, boatOf(level, h));                        // [roles-d] a player going out with it
         h.stage = Stage.OUT;
         h.since = now;
         h.wp = 0;
@@ -894,6 +981,7 @@ public final class Fleet {
         }
         // Home: tied up at its berth, out onto the quay.
         f.stopRiding();
+        landGuest(level, f, b, standFor(t.quay, b.blockPosition()));     // [roles-d] its guest set down too
         f.getNavigation().stop();
         h.stage = Stage.LANDING;
         h.since = now;

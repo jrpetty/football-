@@ -218,6 +218,27 @@ public final class TalkMenu {
     static final Entry MEAL = ask("meal", Items.BREAD, TalkTopic.MEAL);
     static final Entry LESSON = say("lesson", Items.WRITTEN_BOOK, "What's my next lesson?");
     static final Entry SEE_TO = ask("see_to", Items.GLISTERING_MELON_SLICE, TalkTopic.SEE_TO);   // [roles-a] the healer
+    // [roles-d] The outdoor and resource trades' own: their goods out of the stores, and what they will take you along on.
+    static final Entry GROWING = say("farm_growing", Items.WHEAT_SEEDS, "What's growing in your fields?", trade("FARM"));
+    static final Entry PRODUCE = say("farm_produce", Items.CARROT, "Could I buy some of your produce?", trade("FARM"));
+    static final Entry TIMBER = say("wood_timber", Items.OAK_LOG, "I'd like a timber order", trade("WOOD"));
+    static final Entry FRESH_FISH = say("fish_buy", Items.COD, "Could I buy some fresh fish?", trade("FISH"));
+    static final Entry BOAT = say("fish_boat", Items.OAK_BOAT, "Can I come out on the boat with you?", trade("FISH"));
+    static final Entry HUNTING = say("hunt_go", Items.BOW, "Can I come hunting with you?", trade("HUNT"));
+    static final Entry HIDES = say("hunt_hides", Items.LEATHER, "Could I buy leather and feathers?", trade("HUNT"));
+    static final Entry WOOL = say("ranch_wool", Items.WHITE_WOOL, "Could I buy some wool?", trade("RANCH"));
+    static final Entry HORSE = say("ranch_horse", Items.SADDLE, "Could I buy a horse?", trade("RANCH"));
+    static final Entry ACROSS = say("ferry_across", Items.SPRUCE_BOAT, "Take me across, please", trade("FERRY"));
+    static final Entry GOLEM = say("golem_order", Items.IRON_BLOCK, "Could you build a golem for my base?", trade("GOLEMS"));
+    static final Entry LAMPS = say("lamp_street", Items.REDSTONE_LAMP, "Could you light my street?", trade("REDSTONE"));
+    static final Entry VILLAGERS = say("emerald_sells", Items.EMERALD, "What do the villagers sell?", trade("EMERALD"));
+    static final Entry EMERALD_ASK = prompt("emerald_ask", Items.ENCHANTED_BOOK, TalkTopic.SAY, "Find us a Mending book", trade("EMERALD"));
+    static final Entry DIVE = prompt("diver_clay", Items.CLAY_BALL, TalkTopic.SAY, "Could you dive for 16 clay?", trade("DIVER"));
+    static final Entry DIVE_READY = say("diver_ready", Items.SEA_PICKLE, "Have you got my clay yet?", trade("DIVER"));
+    static final Entry ORE = say("mine_ore", Items.RAW_IRON, "Could I buy some coal or ore?", trade("MINE"));
+    static final Entry ARROWS = say("fletcher_arrows", Items.ARROW, "Could I buy some arrows?", trade("FLETCHER"));
+    static final Entry ATLAS = ask("atlas", Items.SPYGLASS, TalkTopic.ATLAS);                     // the scout's own, by name
+    static final Entry LETTER = ask("letter", Items.FEATHER, TalkTopic.LETTER);                  // the courier's (the post) own
 
     /** The profile and skills pages, the work record and the pack: the header's links. */
     public static final Entry PROFILE = special("profile", Items.PAPER, Kind.PAGE);
@@ -288,7 +309,9 @@ public final class TalkMenu {
                 prompt("make", Items.ANVIL, TalkTopic.ORDER, "Make me an iron sword"),
                 REPAIR,
                 HAGGLE,
-                ROCKETS),
+                ROCKETS,
+                GROWING, PRODUCE, TIMBER, FRESH_FISH, HIDES, WOOL, HORSE, ORE, ARROWS,   // [roles-d] the outdoor trades' goods
+                VILLAGERS, EMERALD_ASK, DIVE, DIVE_READY),
             group("money", Items.GOLD_INGOT,
                 BANK,
                 prompt("invest", Items.RAW_GOLD, TalkTopic.INVEST, "I'd like to invest 50 coins"),
@@ -302,7 +325,8 @@ public final class TalkMenu {
                 ask("sponsor", Items.PUMPKIN_PIE, TalkTopic.SPONSOR),
                 ask("escort", Items.SHIELD, TalkTopic.ESCORT),
                 ask("charter", Items.MINECART, TalkTopic.CHARTER),
-                SEE_TO)),                                                    // [roles-a] the healer sees to you
+                SEE_TO,
+                BOAT, HUNTING, ACROSS, GOLEM, LAMPS)),                          // [roles-d] out with them, across, a golem, a lamp                                                    // [roles-a] the healer sees to you
         // Town: its ways, its people, its government, its law, its records.
         List.of(
             say("ways", Items.WHITE_BANNER, "What's this town like?"),
@@ -330,8 +354,8 @@ public final class TalkMenu {
         // World: the neighbours, the scouts, the caves, the Nether, maps.
         List.of(
             ask("rivals", Items.RED_BANNER, TalkTopic.RIVALS),
-            ask("letter", Items.FEATHER, TalkTopic.LETTER),
-            ask("atlas", Items.SPYGLASS, TalkTopic.ATLAS),
+            LETTER,
+            ATLAS,
             group("caves", Items.COBBLED_DEEPSLATE,
                 CAVES,
                 prompt("caves_ask", Items.TORCH, TalkTopic.CAVES, "Cave team, look east", trade("CAVE")),
@@ -379,6 +403,20 @@ public final class TalkMenu {
             case "SHOP" -> FOR_SALE;
             case "COOK" -> MEAL;
             case "HEAL" -> SEE_TO;                                           // [roles-a]
+            case "FARM" -> GROWING;                                          // [roles-d] the outdoor trades' own
+            case "WOOD" -> TIMBER;
+            case "FISH" -> FRESH_FISH;
+            case "HUNT" -> HUNTING;
+            case "RANCH" -> HORSE;
+            case "FERRY" -> ACROSS;
+            case "GOLEMS" -> GOLEM;
+            case "REDSTONE" -> LAMPS;
+            case "EMERALD" -> VILLAGERS;
+            case "DIVER" -> DIVE;
+            case "MINE" -> ORE;
+            case "FLETCHER" -> ARROWS;
+            case "SCOUT" -> ATLAS;
+            case "HAUL" -> LETTER;                                           // the courier carries the post (Post)
             default -> null;
         };
     }

@@ -110,7 +110,9 @@ public class BuildGoal extends Goal {
         "greatforge", "skygarden", "clockworkgate", "colossus", "grandbazaar", "arena", "grandlibrary", "cathedral",
         "greatlighthouse", "observatory",
         // [redstone] the redstone engineer's workshop: its bench, its lectern of plans, its chests of parts (entity/Engineers)
-        "redstoneworks");
+        "redstoneworks",
+        // [roles-d] the hunter's lodge (its smoker, hides and makings) and the rancher's barn by the pen (entity/OutdoorBases)
+        "huntlodge", "barn");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest
