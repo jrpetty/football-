@@ -290,7 +290,7 @@ public final class TownJobs {
         // The beds made up and room in the stores may have one hand past the eighth: a town of eight had
         // one hand, always at the levelling on its hillside, and five houses stood a week with twelve beds
         // unmade and no child born for want of one.
-        boolean extra = essential(works) && busy < cap + 1;
+        boolean extra = (essential(works) || works.equals(TIDY)) && busy < cap + 1;   // [tidy] the crew is never starved of its one hand
         if (busy >= cap && !extra) {
             if (busy >= Math.max(1, adults / 4)) return null;
             over = java.util.EnumSet.noneOf(AssistantEntity.StationTask.class);
@@ -353,6 +353,10 @@ public final class TownJobs {
         if (!f.workedOut()) return false;
         return trade == AssistantEntity.StationTask.NONE || !f.missingEssentials().isEmpty() || over.contains(trade);
     }
+
+    /** [tidy] The tidy crew's works (Tidy): called only with an eyesore waiting, it may have the one hand past the eighth
+     *  (a town of forty had its works' hands all at the streets and beds, and a dropped torch lay four days). */
+    static final String TIDY = "tidy";
 
     /** The works a village has done even while it is young: its beds made up, room in its stores. */
     static boolean essential(String works) {
