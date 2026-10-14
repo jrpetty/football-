@@ -235,6 +235,7 @@ public final class TownPlan {
             case "divershed" -> "edge";               // [diver] on the bank of its water (Divers.shedSite), out at the edge
             case "apiary" -> "edge";                  // [roles-b] the bees' garden, out at the edge by the meadows (Apiary)
             case "enchanter" -> "civic";              // [roles-b] the enchanter's tower, among the trades (CraftScale)
+            case "huntlodge", "barn" -> "edge";       // [roles-d] the hunter's lodge toward the wild, the barn out by the pen
             default -> "home";
         };
     }

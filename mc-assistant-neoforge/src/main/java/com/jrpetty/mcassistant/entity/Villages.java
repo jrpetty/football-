@@ -386,12 +386,15 @@ public final class Villages {
             case "divershed" -> "the diver's shed";               // [diver]
             case "redstoneworks" -> "the redstone workshop";      // [redstone]
             case "enchanter" -> "the enchanter's tower";          // [roles-b]
+            case "huntlodge" -> "the hunter's lodge";             // [roles-d]
+            case "barn" -> "the barn";                            // [roles-d]
             default -> "the " + structure;
         };
     }
 
     public static void resetForTests() {
         MADE_UP.clear();
+        OutdoorTalk.resetForTests(); OutdoorBases.resetForTests(); OutdoorWeather.resetForTests();   // [roles-d]
         Perks.resetForTests();                                     // [perks] quiet between the tests; the wonders forgotten
         Bank.resetForTests();
         Culture.resetForTests();                                   // [batchD] the banner's works, the customs, the theatre, the band
@@ -1895,6 +1898,9 @@ public final class Villages {
         if (EmeraldTrader.postWanted(villageId)) extras.add(EmeraldTrader.POST);
         // [roles-b] The apiary, once a town of twenty keeps a beekeeper (Apiary): out at the edge, its hives brought over.
         if (Apiary.wanted(villageId, folk)) extras.add(Apiary.STRUCTURE);
+        // [roles-d] The hunter's lodge, once a town of ten keeps a hunter; the barn, once a town of twelve has its pen and a rancher.
+        if (OutdoorBases.lodgeWanted(villageId)) extras.add(OutdoorBases.LODGE);
+        if (OutdoorBases.barnWanted(villageId)) extras.add(OutdoorBases.BARN);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -2313,6 +2319,7 @@ public final class Villages {
             case "tradingpost" -> EmeraldTrader.why(villageId);    // [emerald]
             case "divershed" -> Divers.shedWhy(villageId);         // [diver]
             case "redstoneworks" -> Engineers.why(villageId);      // [redstone]
+            case "huntlodge", "barn" -> OutdoorBases.why(project);   // [roles-d]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]

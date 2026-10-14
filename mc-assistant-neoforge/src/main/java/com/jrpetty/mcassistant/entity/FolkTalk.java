@@ -86,6 +86,7 @@ public final class FolkTalk {
             TalkTopic quest = QuestTalk.heard(f, p, text);              // [quests] "any work?", "I'll do it", a choice by name
             if (quest != null) topic = quest;
         }
+        boolean typed = topic == TalkTopic.SAY;                          // [roles-d] said in words, before they are understood
         if (topic == TalkTopic.SAY) topic = understand(text);
         boolean firstMeeting = op.lastTalkDay < 0 && op.lastGiftDay < 0;
         String heard = op.heardFrom;
@@ -114,9 +115,14 @@ public final class FolkTalk {
         String quest = QuestTalk.answer(f, p, topic, text);
         if (quest != null) return manner(f, topic == TalkTopic.JOBS ? EarnBoard.withWork(f, quest) : quest);   // [earning] work going
         // [diver] Asked of a diver: clay or sea pickles brought up from the bed, or the order collected (Divers.meant).
-        if (topic == TalkTopic.SAY && f.stationTask() == AssistantEntity.StationTask.DIVER && Divers.meant(text)) {
+        // [roles-d] Heard as said, however the rest of the talk would take the words ("is my order ready?" is the diver's too).
+        if (typed && f.stationTask() == AssistantEntity.StationTask.DIVER && Divers.meant(text)) {
             return manner(f, Divers.talk(f, p, text));
         }
+        // [roles-d] Asked of an outdoor trade's own work: produce, timber, fish, the boat, a hunt, hides, wool, a horse, the
+        // crossing, a golem, a lamp (OutdoorTalk).
+        String outdoor = typed ? OutdoorTalk.talk(f, p, text) : null;
+        if (outdoor != null) return manner(f, outdoor);
         String lower = text.toLowerCase(Locale.ROOT);
         if (!text.isEmpty() && (lower.contains("sorry") || lower.contains("apolog"))) {
             return manner(f, apology(f, p, op, day));

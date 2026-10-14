@@ -2818,6 +2818,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (TownJobs.busy(this)) return "on the town's work";
         if (School.teaching(this)) return "teaching";
         if (id != null && Raids.underAlarm(id)) return "the alarm";
+        if (OutdoorWeather.keepsIn(this)) return "the rain";                 // [roles-d]
         if (id != null && RestDay.now(id, level().getDayTime()) != null) return "the day of rest";
         Boolean bell = TownBell.shift(this);
         if (bell != null && !bell) return "the town bell";
@@ -2845,6 +2846,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // The bell: every guard turns out, whichever watch it keeps; nobody else works.
         UUID alarmed = ownerId();
         if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;
+        if (OutdoorWeather.keepsIn(this)) return false;     // [roles-d] the woodcutter and the hunter in out of the rain
         Boolean serving = Hospitality.shift(this);            // [dining] the bar's, the floor's and the baker's own hours
         if (serving != null) return serving;
         // The day of rest: nobody works but the watch.
@@ -4581,7 +4583,8 @@ public class VillageFolkEntity extends AssistantEntity {
             || Cartographers.surveying(this)          // [cartographer] out walking the town (or the country) with its sheets
             || Divers.busy(this)                       // [diver] on a dive: the water and the shed are its ground
             || Engineers.abroad(this)                  // [redstone] the engineer at a machine, a guard sent to the gate's lever
-            || Dining.busy(this);                      // [dining] a plate to carry, a dish to cook, a runner out in town
+            || Dining.busy(this)                       // [dining] a plate to carry, a dish to cook, a runner out in town
+            || OutdoorBases.abroad(this) || OutdoorTalk.partying(this);   // [roles-d] to the lodge or the barn; hunting with a player
     }
 
     /** What it just drew out of the Village Storehouse: one request, served by the storekeeper at the
@@ -5526,8 +5529,10 @@ public class VillageFolkEntity extends AssistantEntity {
         WorkZone z = workZone();
         if (z == null) return false;
         bowFromTheStores();
-        BlockPos c = z.center();
-        int r = z.radius() + 16;
+        if (OutdoorBases.hunterDuty(this, server)) return true;       // [roles-d] the lodge: the smoker loaded, the smoked meat home
+        BlockPos party = OutdoorTalk.huntingWith(this, server);      // [roles-d] out with a player: its grounds are where it leads
+        BlockPos c = party != null ? party : z.center();
+        int r = party != null ? OutdoorTalk.PARTY_GROUND : z.radius() + 16;
         net.minecraft.world.entity.animal.Animal quarry = null;
         double best = Double.MAX_VALUE;
         for (net.minecraft.world.entity.animal.Animal a : server.getEntitiesOfClass(net.minecraft.world.entity.animal.Animal.class,
@@ -5548,6 +5553,12 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             enqueue(Job.hunt(word, 1));
             brain("after a " + word);
+            return true;
+        }
+        // [roles-d] Out with a player and nothing in sight: at its side, not off across its own grounds.
+        if (party != null) {
+            if (distanceToSqr(party.getX() + 0.5, party.getY(), party.getZ() + 0.5) > 6 * 6 && getNavigation().isDone()) walkTo(party, 1.0D);
+            brain("hunting alongside a player");
             return true;
         }
         // Nothing to take here: another part of the grounds.
@@ -5614,6 +5625,7 @@ public class VillageFolkEntity extends AssistantEntity {
     protected boolean cullWork() {
         if (cullMark != null && peekJob() == null) cullMark = null;       // that cull is over, one way or the other
         if (stationTask() != StationTask.RANCH || ownerId() == null || peekJob() != null || Drover.busy(this)) return false;
+        if (level() instanceof net.minecraft.server.level.ServerLevel barn && OutdoorBases.rancherDuty(this, barn)) return true;   // [roles-d] feed from the barn
         if (tickCount - cullTick < 600) return false;
         return cullNow();
     }

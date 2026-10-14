@@ -589,7 +589,8 @@ public final class WatchClears {
                  "lodge",                                                         // [caves] the Delvers' Lodge
                  "fletcher",                                                      // [fletcher] the fletcher's hut
                  "maproom",                                                      // [cartographer] the map room
-                 "divershed" -> true;                                             // [diver] the diver's shed
+                 "divershed",                                                     // [diver] the diver's shed
+                 "huntlodge", "barn" -> true;                                     // [roles-d] the hunter's lodge, the barn
             default -> false;
         };
     }

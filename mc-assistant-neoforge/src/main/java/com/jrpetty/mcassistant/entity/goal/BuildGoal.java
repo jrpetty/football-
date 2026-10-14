@@ -113,6 +113,8 @@ public class BuildGoal extends Goal {
         "redstoneworks",
         // [roles-b] the beekeeper's apiary and honey house, and the enchanter's tower (entity/Apiary, CraftScale)
         "apiary", "enchanter");
+        // [roles-d] the hunter's lodge (its smoker, hides and makings) and the rancher's barn by the pen (entity/OutdoorBases)
+        "huntlodge", "barn");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

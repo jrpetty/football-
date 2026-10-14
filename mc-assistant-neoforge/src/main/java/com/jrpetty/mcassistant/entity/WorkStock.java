@@ -68,7 +68,12 @@ public final class WorkStock {
         StationTask.BEEKEEP, List.of(m(Items.STRING, 8), m(Items.GLASS_BOTTLE, 6), tag(net.minecraft.tags.ItemTags.SMALL_FLOWERS, Items.DANDELION, 4, "4 flowers")),
         // The shop's bench: what its keeper and hands make its wares of, kept apart from the wares on its shelves.
         StationTask.SHOP, List.of(tag(ItemTags.PLANKS, Items.OAK_PLANKS, 32, "32 planks"), m(Items.STICK, 16), m(Items.COBBLESTONE, 16),
-            m(Items.IRON_INGOT, 8), m(Items.STRING, 8), m(Items.COAL, 8)));
+            m(Items.IRON_INGOT, 8), m(Items.STRING, 8), m(Items.COAL, 8)),
+        // [roles-d] The outdoor trades' bases (OutdoorBases): the hunter's lodge (its arrows, string for a bow, coal for the
+        // smoker) and the rancher's barn (the herd's feed and a spare pair of shears).
+        StationTask.HUNT, List.of(m(Items.ARROW, 32), m(Items.STRING, 8), tag(ItemTags.COALS, Items.CHARCOAL, 8, "8 coal or charcoal")),
+        StationTask.RANCH, List.of(m(Items.WHEAT, 32), m(Items.WHEAT_SEEDS, 16), m(Items.CARROT, 8),
+            new Making(s -> s.is(Items.SHEARS), Items.SHEARS, 1, "a spare pair of shears")));
 
     /** The kit a producer keeps in its own work chest out on its plot: never carried off by the couriers. */
     static final Map<StationTask, List<Making>> KIT = Map.of(
@@ -95,6 +100,7 @@ public final class WorkStock {
     public static BlockPos chestOf(ServerLevel level, UUID village, StationTask trade) {
         if (!MAKINGS.containsKey(trade)) return null;
         String building = CraftScale.houseOf(village, trade);              // [roles-b] the tower's, or the library's till then
+        String building = workshopOf(trade);
         if (building == null) return null;
         for (Ledger.Building b : Ledger.buildings(village)) {
             if (!b.structure().equals(building) || !level.isLoaded(b.anchor())) continue;
@@ -116,10 +122,18 @@ public final class WorkStock {
         ShopBusiness.makings(v.id(), level.getDayTime() / 24000L, (int) Math.round(PriceIndex.each(level, v.id(), sample) * n));
     }
 
+    /** [roles-d] Where a trade's makings chest stands: its workshop, or its base out by its ground (the lodge, the barn). */
+    @Nullable
+    static String workshopOf(StationTask trade) {
+        String b = VillageFolkEntity.buildingFor(trade);
+        return b != null ? b : OutdoorBases.baseOf(trade);
+    }
+
     /** The name a workshop's chest bears: "Smithy: makings". */
     static String nameFor(StationTask trade) {
-        String b = VillageFolkEntity.buildingFor(trade);
-        String place = b == null ? trade.title : Character.toUpperCase(b.charAt(0)) + b.substring(1);
+        String b = workshopOf(trade);
+        String label = b == null ? null : OutdoorBases.label(b);                     // [roles-d] "Hunter's lodge: makings"
+        String place = b == null ? trade.title : label != null ? label : Character.toUpperCase(b.charAt(0)) + b.substring(1);
         return place + ": makings";
     }
 

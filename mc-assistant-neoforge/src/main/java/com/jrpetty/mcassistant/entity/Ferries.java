@@ -805,7 +805,7 @@ public final class Ferries {
         Entity first = boat.getFirstPassenger();
         boolean manAboard = man != null && first == man;
         for (Entity p : List.copyOf(boat.getPassengers())) {
-            if (p instanceof Player || p == man) continue;
+            if (p instanceof Player || p == man || BoatSeats.rider(p) != null) continue;   // [roles-d] a player on its seat
             if (p instanceof VillageFolkEntity f && PASSAGES.containsKey(f.getUUID())) continue;
             p.stopRiding();
         }
@@ -818,8 +818,9 @@ public final class Ferries {
         // A passenger aboard behind the ferryman: across.
         for (Entity p : boat.getPassengers()) {
             if (p == man) continue;
-            if (p instanceof Player || p instanceof VillageFolkEntity) {
-                start(level, v, c, boat, 1 - c.boatAt, p);
+            Player seated = BoatSeats.rider(p);                         // [roles-d] a player sat behind the ferryman
+            if (p instanceof Player || p instanceof VillageFolkEntity || seated != null) {
+                start(level, v, c, boat, 1 - c.boatAt, seated != null ? seated : p);
                 return;
             }
         }
@@ -874,7 +875,7 @@ public final class Ferries {
         VillageFolkEntity man = ferrymanOf(level, c);
         if (voy.passenger != null) {
             Entity p = level.getEntity(voy.passenger);
-            if (p != null && p.getVehicle() == boat) land(level, v, c, boat, man, p, voy.to);
+            if (p != null && p.getRootVehicle() == boat) land(level, v, c, boat, man, p, voy.to);   // [roles-d] or on its seat in it
         }
         if (man != null && c.crossings % 25 == 0) {
             FolkTalk.speak(man, FolkTalk.pick(level.getRandom(), "That's " + c.crossings + " crossings now. My arms know it.",
@@ -953,6 +954,39 @@ public final class Ferries {
             }
         }
         return "The bell rings out over the water.";
+    }
+
+    /** [roles-d] How near the boat a player asking to cross must be to be handed in (blocks). */
+    static final int HAND_IN = 8;
+
+    /**
+     * [roles-d] "Take me across" (the ferryman's talk option, OutdoorTalk): with the boat at the player's landing and the
+     * ferryman at the oars, the player is handed in behind it and rowed over (idle sets off with a passenger aboard); the
+     * fare, a coin, is paid on the far landing (land). With the boat on the far side, it is called over as the bell would.
+     * Not running, the rain, the boat out on the water, the player away up the bank: told so.
+     */
+    public static String takeAcross(VillageFolkEntity f, Player p) {
+        UUID id = f.ownerId();
+        Crossing c = id == null ? null : crossing(id);
+        if (c == null || !(f.level() instanceof ServerLevel level)) return "There's no ferry here. Not yet, anyway.";
+        if (c.state != State.RUNNING) return c.state == State.RETIRED ? "The ferry's retired: the bridge takes you over now." : "The ferry isn't running yet.";
+        if (badWeather(level)) return "Not in this weather. Nobody's going out on the water till it clears.";
+        Boat boat = boat(level, c);
+        if (boat == null) return "The boat isn't in the water. I'm waiting on the town to put one in.";
+        if (VOYAGES.containsKey(id)) return "I'm out on the water just now. Wait on the jetty; I'll be back for you.";
+        int end = c.side(p.blockPosition());
+        if (c.boatAt != end) {
+            CALLED.put(id, new long[]{ end, level.getGameTime() + 1200L });
+            return "Wait on the jetty: I'll row over for you. A coin a crossing.";
+        }
+        if (p.distanceToSqr(boat) > (double) HAND_IN * HAND_IN) {
+            BlockPos s = c.stand(end);
+            return "Come down to the jetty (" + s.getX() + ", " + s.getZ() + ") and I'll hand you in. A coin a crossing.";
+        }
+        if (boat.getFirstPassenger() != f || boat.getPassengers().size() >= 2) return "Give me a moment to get to the oars.";
+        if (!BoatSeats.seat(level, p, boat)) return "Mind the step... no, there's no room just now. A moment.";
+        return Market.coinsHeld(p) >= FARE ? "In you get. Sit still and we'll be over in no time. A coin when we land."
+            : "In you get. No coin? I'll take you all the same; pay me next time.";
     }
 
     // ------------------------------------------------------------------ passengers

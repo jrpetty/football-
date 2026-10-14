@@ -687,6 +687,7 @@ public final class Crafts {
         int r = Math.min(6, z.radius());
         if (!Land.areaLoaded(level, c, r + 8)) return null;
         List<BlockPos> hives = hivesAt(level, c, r);
+        if (OutdoorWeather.hivesInWinter(level, v, f, hives)) return null;   // [roles-d] winter: the honey left for the bees
         if (!hives.isEmpty()) Apiary.meadowSeen(v, f, c);              // [roles-b] where its hives are, till the apiary stands
         // [fields] With a bee smoker, every full hive smoked and emptied on the one round, and more from each (FieldTools).
         String smoked = FieldTools.smokedHarvest(level, v, f, hives);
