@@ -108,6 +108,7 @@ public final class Raids {
         QUIETED.clear();
         CLIMB.clear();
         Watch.resetForTests();
+        CastleWall.resetForTests(); Muster.resetForTests();   // [defence]
         Patrols.resetForTests();
         WatchClears.resetForTests();                       // [watch-clears]
     }
@@ -179,6 +180,7 @@ public final class Raids {
         long t = level.getDayTime() % 24000L;
         long day = level.getDayTime() / 24000L;
         WarWorks.keep(level, v);                           // [war-prep] the works on the wall and the armoury, on a war footing
+        CastleWall.keep(level, v);                         // [defence] the town wall: its gates, its works, its repairs
         // The wall's gates, the posts' ladders and the bell, seen to every minute.
         if (now - KEPT.getOrDefault(id, -100000L) >= 1200L) {
             KEPT.put(id, now);
@@ -269,8 +271,10 @@ public final class Raids {
             if (folk.getRandom().nextInt(3) != 0) continue;
             FolkTalk.speak(folk, folk.stationTask() == AssistantEntity.StationTask.GUARD
                 ? FolkTalk.pick(folk.getRandom(), "To the walls!", "The bell! Bows, everyone!", "Watch, with me!")
+                : Muster.on() ? FolkTalk.pick(folk.getRandom(), "To the square, quick!", "The bell — everybody to the square!", "Leave it — to the square!")   // [defence]
                 : FolkTalk.pick(folk.getRandom(), "Inside, quick!", "Get indoors!", "The bell — everybody in!"));
         }
+        Muster.raised(level, v);                           // [defence] everybody up and to the square
         return a;
     }
 
@@ -329,6 +333,7 @@ public final class Raids {
      *  ground is loaded; never nearer the heart than just outside the wall. */
     static BlockPos edge(ServerLevel level, Villages.Village v, Direction from) {
         int near = Watch.R + 18;
+        near = CastleWall.outside(v.id(), near);              // [defence] out past the town wall, where it stands
         for (int out = Math.max(near, Villages.townReach(v.id()) + 8); out > near; out -= 8) {
             BlockPos at = v.centre().relative(from, out);
             if (level.isLoaded(at) && level.isLoaded(at.relative(from.getClockWise(), 10))
@@ -439,6 +444,7 @@ public final class Raids {
         }
         // A bad raid: homes lost, or the place too few to keep: its homeless go to a neighbour (JobMarket).
         if (a.raid) JobMarket.raided(level, v, a.lost);
+        Muster.end(level, v);                                // [defence] the muster stood down, into the history
         Fletchers.raidOver(level, v, a.raid);                // [fletcher] every quiver filled, and the reserve made good
         Golems.raidOver(level, v, a.raid || "a raid".equals(a.why));   // [golems] the raids counted, for the keeper and the gates
     }
@@ -496,6 +502,7 @@ public final class Raids {
         if (v == null) return false;
         if (a.armed.add(g.getUUID())) arm(level, v, g);
         if (WatchClears.hunting(g)) return true;              // [watch-clears] out among the houses after one
+        Boolean ring = Muster.guard(level, v, g, a.from); if (ring != null) return ring;   // [defence] the ring round the square
         boolean archer = g.countCarried(s -> s.is(Items.BOW) || s.is(Items.CROSSBOW)) > 0 && g.hasArrows();
         if (archer) {
             Watch.Post p = postFor(level, v, g, a);
@@ -510,6 +517,7 @@ public final class Raids {
         UUID id = g.ownerId();
         if (id == null || !ALARMS.containsKey(id) || !(g.level() instanceof ServerLevel level)) return false;
         if (g.countCarried(s -> s.is(Items.BOW) || s.is(Items.CROSSBOW)) == 0 || !g.hasArrows()) return false;
+        if (Muster.inRing(g)) return false;                    // [defence] its place is in the ring round the square
         return !Watch.posts(level, id).isEmpty();
     }
 
@@ -543,6 +551,7 @@ public final class Raids {
     @Nullable
     static Watch.Post postFor(ServerLevel level, Villages.Village v, VillageFolkEntity g, Alarm a) {
         List<Watch.Post> posts = new ArrayList<>(Watch.posts(level, v.id()));
+        posts.addAll(CastleWall.posts(level, v.id()));         // [defence] the town wall's gatehouse towers
         if (posts.isEmpty()) return null;
         Direction from = a.from;
         posts.sort(Comparator.comparingInt((Watch.Post p) -> from != null && p.out() == from ? 0 : 1));
@@ -711,6 +720,23 @@ public final class Raids {
         a = raise(level, v, why, from);
         a.holdUntil = until;
         return true;
+    }
+
+    // ------------------------------------------------------------------ [defence] for an army at the gates
+
+    /**
+     * [defence] The bell rung for something on the town (an enemy army, a siege): the gates shut, the town mustered on
+     * the square and the watch ringed round it (Muster), kept up until {@link #allClear}. Already ringing, it is kept
+     * up. Returns whether it was rung now.
+     */
+    public static boolean alarm(ServerLevel level, Villages.Village v, String why, @Nullable Direction from) {
+        return warAlarm(level, v, why, from, Long.MAX_VALUE / 4);
+    }
+
+    /** [defence] The all-clear: the bell stops now, whatever it rang for; the town goes back to its day. */
+    public static void allClear(ServerLevel level, Villages.Village v) {
+        Alarm a = ALARMS.get(v.id());
+        if (a != null) end(level, v, a);
     }
 
     // ------------------------------------------------------------------ the tests

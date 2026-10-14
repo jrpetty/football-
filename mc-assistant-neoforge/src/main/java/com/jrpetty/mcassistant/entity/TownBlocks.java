@@ -279,12 +279,23 @@ public final class TownBlocks {
 
     // ------------------------------------------------------------------ the rules
 
+    /**
+     * [defence] The castle wall's ring is kept for the wall: no building, furnishing, dressing, garden, field or works
+     * set down on it. Streets, lamps, tidying, the ground's levelling, nature and the mine's fences may still touch it.
+     */
+    private static boolean onWallRing(Villages.Village v, BlockPos pos, Why why) {
+        switch (why) {
+            case ROAD, DOORWAY, TIDY, LAMP, SIGN, TERRAFORM, MINE, NATURE -> { return false; }
+            default -> { return CastleWall.reserved(v.id(), v.centre(), pos); }
+        }
+    }
+
     private static boolean allowed(Level level, Villages.Village v, BlockPos pos, Why why, Here h, @Nullable BlockPos ownAnchor) {
         // A building's own work, on its own building: any of its cells, its doorways and stairs included.
         if (why.own() && ownAnchor != null && h.owner != null && h.owner.building.anchor().equals(ownAnchor)) return true;
         Zone z = h.zone;
         switch (z) {
-            case OPEN -> { return true; }
+            case OPEN -> { return !onWallRing(v, pos, why); }
             case FITTING -> { return false; }
             case BUILDING -> {
                 if (!why.touches(Zone.BUILDING)) return false;

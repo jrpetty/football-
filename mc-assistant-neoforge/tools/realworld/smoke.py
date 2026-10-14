@@ -3720,6 +3720,36 @@ def tidy_stage(r, look, cx, cz):
     say("alive after the tidy stage: %s" % client_alive())
 
 
+
+def defence_stage(r, look, cx, cz):
+    """[defence] The town wall and the muster (entity/CastleWall, entity/Muster), in a grown town. The wall laid round
+    the town as it plans it (/village wall stage: out of nothing, for the pictures) and photographed from high over the
+    south-west (the whole ring), over the north gatehouse, outside the west gate and at a corner tower; what /village wall
+    says. Then the bell rung for a drill (/village muster): twenty seconds on, from over the square, the folk gathered in
+    the middle and the watch ringed round them facing out, and again from the ring's edge; what the town's news says
+    after the all-clear. Not wired in."""
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    gy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx - 60, gy + 60, cz + 60))
+    time.sleep(10)                                     # the town's ground out to the wall arrives
+    out = r.cmd("execute positioned %d %d %d run village wall stage" % (cx, gy + 1, cz))
+    say("wall stage: " + out[:900])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look("40-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=10 if i == 0 else 6)
+    say("wall: " + r.cmd("execute positioned %d %d %d run village wall" % (cx, gy + 1, cz))[:900])
+    out = r.cmd("execute positioned %d %d %d run village muster" % (cx, gy + 1, cz))
+    say("muster: " + out[:600])
+    time.sleep(20)                                     # the town runs to the square, the watch takes its places
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look("41-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=4)
+    time.sleep(70)                                     # the drill's minute out, and the all-clear
+    say("after the muster: " + r.cmd("execute positioned %d %d %d run village news" % (cx, gy + 1, cz))[:700])
+    say("alive after the defence stage: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
