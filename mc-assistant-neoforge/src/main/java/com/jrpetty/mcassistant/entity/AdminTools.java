@@ -593,6 +593,83 @@ public final class AdminTools {
         return null;
     }
 
+    // ------------------------------------------------------------------ [field] open ground for a scenario's towns
+
+    /** The rival founded for a town (Ledger note on each, the other's id): who "army war rival" means. */
+    static final String RIVAL = "admin.rival";
+    /** The biomes a battle scenario founds its towns in: open grassland (and the savannas, BiomeTags.IS_SAVANNA). */
+    static final java.util.Set<net.minecraft.resources.ResourceKey<net.minecraft.world.level.biome.Biome>> OPEN_BIOMES = java.util.Set.of(
+        net.minecraft.world.level.biome.Biomes.PLAINS, net.minecraft.world.level.biome.Biomes.SUNFLOWER_PLAINS, net.minecraft.world.level.biome.Biomes.MEADOW);
+    /** How far apart the rings and bearings an open site is looked for on stand (blocks, and sixteen bearings). */
+    static final int SITE_RING = 32, SITE_BEARINGS = 16;
+    /** At most so many spots in open country have their ground made and looked over (each a few chunks). */
+    static final int SITE_CHECKS = 8;
+    /** A town's heart wants ground this level: its height within so many blocks over 32 by 32. */
+    static final int SITE_ROUGH = 4;
+
+    /** The rival an admin founded for this town, if it still stands in the same world. */
+    @Nullable
+    static Villages.Village rivalOf(Villages.Village v) {
+        String id = Ledger.note(v.id(), RIVAL);
+        if (id == null || id.isEmpty()) return null;
+        try {
+            Villages.Village o = Villages.get(UUID.fromString(id));
+            return o != null && o.dim().equals(v.dim()) ? o : null;
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** Two towns paired as rivals by an admin (a scenario's): each the other's foe for "army war rival". */
+    public static void pairRivals(UUID a, UUID b) {
+        Ledger.note(a, RIVAL, b.toString());
+        Ledger.note(b, RIVAL, a.toString());
+    }
+
+    /**
+     * Open ground to found a town on, between {@code nearest} and {@code farthest} blocks of {@code from}: open grassland
+     * or savanna by its biome (read without making the ground), clear of every town by two towns' range, level enough
+     * for a heart; nearest {@code nearest} first, east first (the way a rival is raised). Null if none is found.
+     */
+    @Nullable
+    public static BlockPos openSite(ServerLevel level, BlockPos from, int nearest, int farthest) {
+        List<BlockPos> open = new ArrayList<>();
+        for (int r = nearest; r <= farthest; r += SITE_RING) {
+            for (int k = 0; k < SITE_BEARINGS; k++) {
+                if (r == 0 && k > 0) break;                                                // the spot itself, once
+                int turn = (k + 1) / 2 * (k % 2 == 0 ? 1 : -1);                           // 0, -1, 1, -2, 2...: east, then either side of it
+                double ang = Math.PI * 2 * turn / SITE_BEARINGS;
+                BlockPos p = BlockPos.containing(from.getX() + Math.cos(ang) * r, from.getY(), from.getZ() + Math.sin(ang) * r);
+                var biome = level.getBiome(p);
+                if (!(biome.is(net.minecraft.tags.BiomeTags.IS_SAVANNA) || OPEN_BIOMES.stream().anyMatch(biome::is))) continue;
+                if (Villages.nearest(level, p, Villages.VILLAGE_RANGE * 2) != null) continue;
+                open.add(p);
+            }
+        }
+        int checks = 0;
+        for (BlockPos p : open) {
+            if (checks++ >= SITE_CHECKS) break;
+            if (level(level, p)) return p;
+        }
+        return null;
+    }
+
+    /** Is the ground round this spot level enough for a town's heart (its chunks made to look)? Water at the heart will not do. */
+    private static boolean level(ServerLevel level, BlockPos p) {
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        for (int dx = -16; dx <= 16; dx += 8) {
+            for (int dz = -16; dz <= 16; dz += 8) {
+                int x = p.getX() + dx, z = p.getZ() + dz;
+                level.getChunk(x >> 4, z >> 4);
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                if (!level.getBlockState(new BlockPos(x, y - 1, z)).getFluidState().isEmpty()) return false;
+                lo = Math.min(lo, y);
+                hi = Math.max(hi, y);
+            }
+        }
+        return hi - lo <= SITE_ROUGH;
+    }
+
     /** Declare war between the two, a quarrel over the land first (as the war's own pictures do). */
     public static Done war(ServerLevel level, Villages.Village a, Villages.Village b) {
         if (a.id().equals(b.id())) return Done.no("A town cannot go to war with itself.");
@@ -606,13 +683,15 @@ public final class AdminTools {
             : Done.no("No war: wars are switched off on this server (villageWars), or the two cannot fight.");
     }
 
-    /** The other town a war action means: its enemy, else its nearest neighbour in the same world. */
+    /** The other town a war action means: its enemy, else the rival founded for it (world rival), else its nearest neighbour in the same world. */
     @Nullable
     public static Villages.Village foeOf(Villages.Village v) {
         for (UUID e : Wars.enemies(v.id())) {
             Villages.Village o = Villages.get(e);
             if (o != null) return o;
         }
+        Villages.Village rival = rivalOf(v);
+        if (rival != null) return rival;
         Villages.Village best = null;
         double d = Double.MAX_VALUE;
         for (Villages.Village o : Villages.every()) {
@@ -636,12 +715,7 @@ public final class AdminTools {
             return Done.ok("Peace between " + Villages.name(v.id()) + " and " + Villages.name(o.id()) + ": " + text,
                 phase.equals("surrender") ? "the town surrendered to " + Villages.name(o.id()) : "peace was made with " + Villages.name(o.id()));
         }
-        BlockPos at = v.centre();
-        if (o != null) {
-            int x = (v.centre().getX() + o.centre().getX()) / 2, z = (v.centre().getZ() + o.centre().getZ()) / 2;
-            if (level.isLoaded(new BlockPos(x, 0, z))) at = new BlockPos(x, level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z), z);
-        }
-        List<String> out = Campaigns.stage(level, v, at, phase);
+        List<String> out = Campaigns.stage(level, v, null, phase);               // [field] on the field its Captains choose
         boolean ok = !out.isEmpty() && !out.get(0).startsWith("NO-");
         return ok ? new Done(true, String.join("\n", out), "the armies were brought to the " + phase) : Done.no(out.isEmpty() ? "No battle." : out.get(0));
     }

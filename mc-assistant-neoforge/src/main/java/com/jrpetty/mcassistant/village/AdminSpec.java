@@ -245,9 +245,10 @@ public final class AdminSpec {
             Param.words("season", "spring", "summer", "autumn", "winter"));
         add("world.weather", Area.WORLD, "world weather", W, "Set the weather.", "world weather rain", Param.words("weather", "clear", "rain", "thunder"));
         add("world.time", Area.WORLD, "world time", W, "Set the time of day.", "world time dusk", Param.words("time", "dawn", "noon", "dusk", "midnight"));
-        big("world.found", Area.WORLD, "world found", W, "Found a new town here with N folk, at an age.", "world found 70 iron",
-            Param.num("folk", 2, MOST_FOLK, 20), Param.of("age", Kind.AGE).opt().or("wood"));
-        big("world.rival", Area.WORLD, "world rival", T, "Found a rival town so far off.", "world rival 260 30",
+        big("world.found", Area.WORLD, "world found", W, "Found a new town here (or on the nearest open grassland) with N folk, at an age.",
+            "world found 70 iron open", Param.num("folk", 2, MOST_FOLK, 20), Param.of("age", Kind.AGE).opt().or("wood"),
+            Param.words("where", "here", "open").opt().or("here"));
+        big("world.rival", Area.WORLD, "world rival", T, "Found a rival town so far off, on open ground clear of other towns.", "world rival 260 30",
             Param.num("distance", 200, 2000, 260), Param.num("folk", 2, MOST_FOLK, 20).opt());
         add("world.tp", Area.WORLD, "world tp", W, "Teleport to a town, a folk or a building.", "world tp Oakford", Param.of("where", Kind.TEXT));
         big("scenario", Area.WORLD, "scenario", W, "Build a ready-made scene to test a feature.", "scenario battle", Param.of("name", Kind.SCENARIO));

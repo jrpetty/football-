@@ -6436,9 +6436,13 @@ outcomes.
   **surcoat** of the town's arms over their armour; the Captain wears a cloak of the arms, sergeants a
   sash, and the medic a white one. Folk come out to see the army off, and the horn sounds.
 * **The march.** The army marches in column, two or three abreast, with the banner at its head and a drum
-  now and then. It follows the road to its camp behind its line on the battlefield: the flattest open
-  ground between the towns, off fields and buildings and near the road. The battlefield is named after
-  the nearer town ("Ashby Field"). Players are told where it is and where the hill to watch from is.
+  now and then. It follows the road to its camp behind its line on the battlefield: flat open ground
+  between the towns with room for both lines (48 blocks by 40), off fields and buildings. A field is fit
+  only if its ground is within three blocks of height all over, with no ravine, pit, cave mouth or cliff
+  more than two blocks deep, no tree, no water and nothing built on it; the Captains look near the road
+  first, then wider, and only then take the least bad, or meet at the edge of the larger town's fields.
+  Each line's ground is trampled clear of tall grass and saplings. The battlefield is named after the
+  nearer town ("Ashby Field"). Players are told where it is and where the hill to watch from is.
 * **The camp.** Tents of wool on fence poles, a campfire, the war banner planted, sentries out, and the
   rest sitting round the fire. An army there by the afternoon fights the same day; one that arrives later
   fights at dawn, and the camp is struck to the drums.
@@ -11553,7 +11557,8 @@ the stores' main goods) as an editable text file; `preset apply <name>` brings a
 runs `<world>/mcassistant/admin-scripts/<file>.txt`: one command a line, `#` comments, `wait <s>`, `waitfor <n>
 [town:x]`, `say <text>`; two examples are copied in (`iron-age-war`, `big-city`). `scenario battle|market|restaurant|
 raid|big-city|earning` builds a ready-made scene from the same kind of script shipped in the mod (two Iron Age towns
-of seventy at war and lined up; a busy market day; a full dinner service; a raid; a city of five hundred; a town with
+of seventy on open grassland or savanna, forty-five a side on the watch, at war and lined up on open ground between
+them; a busy market day; a full dinner service; a raid; a city of five hundred; a town with
 work posted).
 
 **The panel** (an unbound key under Controls, the board's **Admin** button, or `/village admin panel [area]`):

@@ -30,10 +30,15 @@ import java.util.UUID;
  * [war] The ground a war is fought on, and what an army puts on it: the battlefield its Captains choose, the
  * camps, the ram before a gate, and the cairn left when it is over.
  *
- * <p><b>The field.</b> Open, fairly flat ground between the two towns, off anybody's fields and buildings and
- * near the road: the stretch of the road from a third to two thirds of the way, and the ground a dozen blocks
- * either side of it, looked over once (a few hundred looks at the height of the ground, once a war) and the
- * flattest, clearest patch of it taken. Its name is the nearer town's ("Ashby Field"). On it each side may find
+ * <p><b>The field.</b> [field] Flat open ground between the two towns, room for both lines, the gap between them
+ * and the ranks behind (48 blocks along by 40 across), off anybody's town, fields and buildings: every second
+ * column of it looked at, and a field is fit only with its ground within three blocks of height all over, no hole
+ * or drop more than two blocks under its own level (a ravine, a pit, a cave open to the sky, a cliff), no tree, no
+ * water and nothing built on it. The Captains look near the road's middle first (45 fields), then wider (64 more),
+ * and take the flattest fit one nearest the middle; with none fit, the least bad (rougher, a tree or two, still no
+ * chasm); with not even that, the edge of the larger town's fields, ground the town made flat. Each line's ground
+ * is trampled clear of brush (tall grass, ferns, saplings; never a tree) when the battle is fought in full. Its
+ * name is the nearer town's ("Ashby Field"). On it each side may find
  * a rise behind its own line (for its archers), cover on a flank (trees: for a hidden reserve), and off to one
  * side a hill to watch from, which the players are told of. With the ground unknown (nobody near, its chunks
  * asleep) it is the middle of the road, and the battle is reckoned on paper anyway.
@@ -51,6 +56,8 @@ import java.util.UUID;
  */
 public final class Battlefields {
 
+    private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
+
     private Battlefields() {}
 
     /** The wool and the poles of a tent. */
@@ -59,10 +66,39 @@ public final class Battlefields {
     static final int RAM_LOGS = 3;
     /** How far apart the two lines draw up, centre to centre. */
     static final int GAP = 24;
-    /** The field's size, to look over: so long (along the road between the towns) and so wide. */
-    static final int LONG = 40, WIDE = 28;
-    /** Steeper than this (the spread of the ground's height over the field) and it is no field for a battle. */
-    static final int ROUGH = 6;
+    /**
+     * The field's size, looked over: so far either way along the line between the armies (the lines a gap apart, the
+     * ranks, the archers and the Captain behind each) and so far either way across it (the frontage of a line of
+     * forty in two or three ranks, its wings and reserve).
+     */
+    static final int HALF_LONG = 24, HALF_WIDE = 20;
+    /** How far apart the columns looked at stand (blocks): fine enough that no ravine or pit two blocks wide slips between. */
+    static final int LOOK_STEP = 2;
+    /** A fit field: its ground within so many blocks of height over the whole of it, and no hole or drop deeper than so many under its own level. */
+    static final int MAX_RANGE = 3, MAX_DROP = 2;
+    /** The least bad, when no fit field is to be found after the wide search: rougher, a tree or two and a puddle allowed, still no chasm. */
+    static final int LOOSE_RANGE = 6, LOOSE_DROP = 3, LOOSE_TREES = 6, LOOSE_WET = 4;
+    /** Past the larger town's own reach, so far again to the edge of its fields (the last resort: flat ground the town made). */
+    static final int FIELDS_OUT = 28;
+    /** A field's corner from its middle (blocks): a town's reach plus this is too near the town to fight in. */
+    static final int FIELD_RADIUS = (int) Math.ceil(Math.sqrt(HALF_LONG * HALF_LONG + HALF_WIDE * HALF_WIDE));
+    /** How far behind its front rank each line's ground is cleared of brush. */
+    static final int BRUSH_BEHIND = 6;
+
+    /**
+     * Where the Captains look, in turn, as {t, across}: t the share of the road from the first town's side, across the
+     * blocks off it to the first side's right. The near ring first (the road's middle and either side of it); the wide
+     * ring only when none of those will do. 45 and 64 looks: the most a war's choice of field costs (once a campaign).
+     */
+    static final double[][] NEAR = ring(0.30, 0.70, 0.05, 0, 14, -14, 28, -28);
+    static final double[][] WIDE = ring(0.15, 0.85, 0.10, 42, -42, 56, -56, 70, -70, 84, -84);
+
+    private static double[][] ring(double from, double to, double step, double... across) {
+        List<double[]> out = new ArrayList<>();
+        int n = (int) Math.round((to - from) / step);
+        for (int i = 0; i <= n; i++) for (double a : across) out.add(new double[]{ from + i * step, a });
+        return out.toArray(new double[0][]);
+    }
 
     /** The ground chosen: its middle, the way from the first town's side to the second's, what is on it. */
     public record Ground(BlockPos centre, double ax, double az, @Nullable BlockPos riseA, @Nullable BlockPos riseB,
@@ -79,70 +115,201 @@ public final class Battlefields {
     }
 
     /**
-     * The battlefield between these towns: the flattest open patch near the road from a third to two thirds of
-     * the way (from {@code a}'s side to {@code b}'s). With none of it to look at, the road's middle, unknown.
+     * What a look over a field found: the lowest, highest and middle (median) height of its ground, how deep its deepest
+     * hole goes under that middle, how many of the columns looked at stand under a tree, in water or on anything a
+     * hand made (a crop, a floor, a wall), and how far the ground strays from its middle on average.
+     */
+    record Survey(int lo, int hi, int median, int deepest, int trees, int wet, int built, double spread) {
+        static final Survey UNFIT = new Survey(0, Integer.MAX_VALUE, 0, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, 99);
+
+        int range() { return hi - lo; }
+
+        /** Flat open ground: no hole, no drop, no tree, no water, nothing built. */
+        boolean fit() { return range() <= MAX_RANGE && deepest <= MAX_DROP && trees == 0 && wet == 0 && built == 0; }
+
+        /** Rough, but a battle could be fought on it. */
+        boolean bearable() { return range() <= LOOSE_RANGE && deepest <= LOOSE_DROP && trees <= LOOSE_TREES && wet <= LOOSE_WET && built == 0; }
+
+        double badness() { return range() * 4.0 + spread * 6.0 + deepest * 3.0 + trees * 3.0 + wet * 4.0; }
+    }
+
+    /** A field looked at: its middle (x, z), its survey, and its score (lower is better: rough ground, off the road's middle). */
+    record Look(double x, double z, Survey survey, double score) {}
+
+    /**
+     * The battlefield between these towns, chosen by its Captains from the ground they can see (its chunks to hand):
+     * the flattest open field near the road's middle, else wider off it; failing any fit field, the least bad; failing
+     * even that, the edge of the larger town's fields. With none of it to look at, the road's middle, unknown.
      */
     static Ground choose(ServerLevel level, Villages.Village a, Villages.Village b) {
+        return choose(level, a, b, false);
+    }
+
+    /** As {@link #choose(ServerLevel, Villages.Village, Villages.Village)}; {@code load}: ground not yet made is made to look at (an admin's scenario, never a tick). */
+    static Ground choose(ServerLevel level, Villages.Village a, Villages.Village b, boolean load) {
         BlockPos ea = Roads.exit(a.centre(), b.centre()), eb = Roads.exit(b.centre(), a.centre());
-        double dx = eb.getX() - ea.getX(), dz = eb.getZ() - ea.getZ(), len = Math.max(1.0, Math.sqrt(dx * dx + dz * dz));
-        double ax = dx / len, az = dz / len;
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
-        for (int i = 0; i <= 6; i++) {
-            double t = 0.35 + i * 0.05;
-            for (int side = -1; side <= 1; side++) {
-                double cx = ea.getX() + dx * t - az * side * 14.0, cz = ea.getZ() + dz * t + ax * side * 14.0;
-                double score = roughness(level, cx, cz, ax, az);
-                if (score < 0) continue;
-                score += Math.abs(t - 0.5) * 20.0 + Math.abs(side) * 2.0;          // the middle and the road preferred
-                if (score < bestScore) {
-                    bestScore = score;
-                    best = BlockPos.containing(cx, 0, cz);
+        double[] axis = axis(ea, eb);
+        int[] looked = { 0 };
+        Look pick = pick(level, ea, eb, load, looked);
+        BlockPos centre;
+        if (pick != null) {
+            centre = surface(level, BlockPos.containing(pick.x(), 0, pick.z()));
+        } else if (looked[0] > 0) {
+            Villages.Village big = Villages.headcount(a.id()) >= Villages.headcount(b.id()) ? a : b, other = big == a ? b : a;
+            centre = surface(level, edgeOfFields(big, other));
+            LOG.info("[MCA-WAR] no field fit to fight on between {} and {} ({} looked at): the edge of {}'s fields", Villages.name(a.id()),
+                Villages.name(b.id()), looked[0], Villages.name(big.id()));
+        } else {
+            BlockPos mid = BlockPos.containing((ea.getX() + eb.getX()) / 2.0, a.centre().getY(), (ea.getZ() + eb.getZ()) / 2.0);
+            return new Ground(mid, axis[0], axis[1], null, null, null, null, null, nearerName(mid, a, b), false);
+        }
+        return ground(level, centre, axis[0], axis[1], nearerName(centre, a, b));
+    }
+
+    /** Tests: the field the Captains would choose between these two ends of a road (the ground made if need be), or null if none will do. */
+    @Nullable
+    public static Ground chooseForTests(ServerLevel level, BlockPos from, BlockPos to) {
+        Look pick = pick(level, from, to, true, new int[1]);
+        if (pick == null) return null;
+        double[] axis = axis(from, to);
+        return ground(level, surface(level, BlockPos.containing(pick.x(), 0, pick.z())), axis[0], axis[1], "Test Field");
+    }
+
+    /** Tests: is a field centred here, facing from {@code from} to {@code to}, fit to fight on? */
+    public static boolean fitForTests(ServerLevel level, BlockPos centre, BlockPos from, BlockPos to) {
+        double[] axis = axis(from, to);
+        Survey s = survey(level, centre.getX() + 0.5, centre.getZ() + 0.5, axis[0], axis[1], true);
+        return s != null && s.fit();
+    }
+
+    /**
+     * The best field between the road's two ends: the fit field scoring best in the near ring, else in the wide ring;
+     * failing both, the least bad of all the bearable ones; null if none is even that. {@code looked[0]}: how many
+     * fields had their ground to hand (none: the choice is made blind).
+     */
+    @Nullable
+    static Look pick(ServerLevel level, BlockPos ea, BlockPos eb, boolean load, int[] looked) {
+        double dx = eb.getX() - ea.getX(), dz = eb.getZ() - ea.getZ();
+        double[] axis = axis(ea, eb);
+        Look bestLoose = null;
+        for (double[][] ring : new double[][][]{ NEAR, WIDE }) {
+            Look bestFit = null;
+            for (double[] c : ring) {
+                double t = c[0], across = c[1];
+                double cx = ea.getX() + 0.5 + dx * t - axis[1] * across, cz = ea.getZ() + 0.5 + dz * t + axis[0] * across;
+                if (nearTown(level, cx, cz)) continue;
+                Survey s = survey(level, cx, cz, axis[0], axis[1], load);
+                if (s == null) continue;
+                looked[0]++;
+                if (!s.bearable()) continue;
+                Look l = new Look(cx, cz, s, s.badness() + Math.abs(t - 0.5) * 20.0 + Math.abs(across) / 14.0 * 2.0);
+                if (s.fit() && (bestFit == null || l.score() < bestFit.score())) bestFit = l;
+                if (bestLoose == null || l.score() < bestLoose.score()) bestLoose = l;
+            }
+            if (bestFit != null) return bestFit;
+        }
+        return bestLoose;
+    }
+
+    /**
+     * The ground of a field centred here, its lines facing along {@code ax, az}: every second column of it looked at.
+     * Null if its ground is not to hand (and not to be made); {@link Survey#UNFIT} as soon as it plainly will not do.
+     */
+    @Nullable
+    static Survey survey(ServerLevel level, double cx, double cz, double ax, double az, boolean load) {
+        int[] heights = new int[(2 * HALF_LONG / LOOK_STEP + 1) * (2 * HALF_WIDE / LOOK_STEP + 1)];
+        int n = 0, lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE, trees = 0, wet = 0, built = 0;
+        for (int i = -HALF_LONG; i <= HALF_LONG; i += LOOK_STEP) {
+            for (int j = -HALF_WIDE; j <= HALF_WIDE; j += LOOK_STEP) {
+                int x = Mth.floor(cx + ax * i - az * j), z = Mth.floor(cz + az * i + ax * j);
+                if (!level.hasChunk(x >> 4, z >> 4)) {
+                    if (!load) return null;
+                    level.getChunk(x >> 4, z >> 4);
                 }
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                BlockState top = level.getBlockState(new BlockPos(x, y - 1, z));
+                if (!top.getFluidState().isEmpty() || top.is(BlockTags.ICE)) wet++;
+                else if (top.is(BlockTags.LOGS) || level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) > y) trees++;
+                else if (!naturalGround(top)) built++;
+                heights[n++] = y;
+                lo = Math.min(lo, y);
+                hi = Math.max(hi, y);
+                if (hi - lo > LOOSE_RANGE + LOOSE_DROP || trees > LOOSE_TREES || wet > LOOSE_WET || built > 0) return Survey.UNFIT;
             }
         }
-        boolean known = best != null;
-        if (best == null) best = BlockPos.containing(ea.getX() + dx * 0.5, a.centre().getY(), ea.getZ() + dz * 0.5);
-        BlockPos centre = known ? surface(level, best) : best;
-        Villages.Village nearer = centre.distSqr(a.centre()) <= centre.distSqr(b.centre()) ? a : b;
-        String name = Villages.name(nearer.id()) + " Field";
-        if (!known) return new Ground(centre, ax, az, null, null, null, null, null, name, false);
+        int[] sorted = java.util.Arrays.copyOf(heights, n);
+        java.util.Arrays.sort(sorted);
+        int median = sorted[n / 2];
+        double stray = 0;
+        for (int k = 0; k < n; k++) stray += Math.abs(heights[k] - median);
+        return new Survey(lo, hi, median, median - lo, trees, wet, built, stray / n);
+    }
+
+    /** The ground the world laid down (earth, sand, stone, snow, a road's path), not a crop, a floor or a wall. */
+    static boolean naturalGround(BlockState st) {
+        return st.is(BlockTags.DIRT) || st.is(BlockTags.SAND) || st.is(BlockTags.BASE_STONE_OVERWORLD) || st.is(BlockTags.TERRACOTTA)
+            || st.is(Blocks.GRAVEL) || st.is(Blocks.DIRT_PATH) || st.is(Blocks.SNOW_BLOCK) || st.is(Blocks.SNOW) || st.is(Blocks.POWDER_SNOW)
+            || st.is(Blocks.CLAY) || st.is(Blocks.CALCITE) || st.is(Blocks.SANDSTONE) || st.is(Blocks.RED_SANDSTONE);
+    }
+
+    /** Is a field centred here on (or against) a town's own ground? */
+    static boolean nearTown(ServerLevel level, double x, double z) {
+        for (Villages.Village v : Villages.every()) {
+            if (!v.dim().equals(level.dimension())) continue;
+            double r = Villages.townReach(v.id()) + FIELD_RADIUS, dx = v.centre().getX() - x, dz = v.centre().getZ() - z;
+            if (dx * dx + dz * dz < r * r) return true;
+        }
+        return false;
+    }
+
+    /** The last resort: just past the edge of the larger town's fields, on the side towards the other (ground the town made flat). */
+    static BlockPos edgeOfFields(Villages.Village big, Villages.Village other) {
+        double[] axis = axis(big.centre(), other.centre());
+        double out = Villages.townReach(big.id()) + FIELDS_OUT + HALF_LONG;
+        return BlockPos.containing(big.centre().getX() + 0.5 + axis[0] * out, big.centre().getY(), big.centre().getZ() + 0.5 + axis[1] * out);
+    }
+
+    /** The unit way from one spot to another, {ax, az} (east if they stand together). */
+    static double[] axis(BlockPos from, BlockPos to) {
+        double dx = to.getX() - from.getX(), dz = to.getZ() - from.getZ(), len = Math.sqrt(dx * dx + dz * dz);
+        return len < 1.0 ? new double[]{ 1, 0 } : new double[]{ dx / len, dz / len };
+    }
+
+    static String nearerName(BlockPos p, Villages.Village a, Villages.Village b) {
+        return Villages.name((p.distSqr(a.centre()) <= p.distSqr(b.centre()) ? a : b).id()) + " Field";
+    }
+
+    /** A known field here: its rises, its cover and its hill to watch from looked for round it. */
+    static Ground ground(ServerLevel level, BlockPos centre, double ax, double az, String name) {
         return new Ground(centre, ax, az, rise(level, centre, ax, az, -1), rise(level, centre, ax, az, 1), cover(level, centre, ax, az, -1),
             cover(level, centre, ax, az, 1), view(level, centre, ax, az), name, true);
     }
 
-    /**
-     * How rough a field centred here is: the spread of the ground's height over it, worse for water, a crop, a
-     * building's stone or a tree on it; -1 if it will not do at all (its ground not to hand, in a town, too steep).
-     */
-    static double roughness(ServerLevel level, double cx, double cz, double ax, double az) {
-        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE, bad = 0;
-        for (int i = -4; i <= 4; i++) {
-            for (int j = -2; j <= 2; j++) {
-                int x = Mth.floor(cx + ax * i * (LONG / 8.0) - az * j * (WIDE / 4.0)), z = Mth.floor(cz + az * i * (LONG / 8.0) + ax * j * (WIDE / 4.0));
-                if (!level.hasChunk(x >> 4, z >> 4)) return -1;
-                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-                lo = Math.min(lo, y);
-                hi = Math.max(hi, y);
-                BlockState st = level.getBlockState(new BlockPos(x, y - 1, z));
-                if (!st.getFluidState().isEmpty() || st.is(Blocks.FARMLAND) || st.is(BlockTags.LOGS) || st.is(BlockTags.PLANKS)
-                    || st.is(Blocks.COBBLESTONE) || st.is(Blocks.STONE_BRICKS) || st.is(BlockTags.CROPS)) bad++;
-                if (level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) > y + 1) bad++;          // under a tree
+    /** The brush trampled flat where the lines stand and run in: tall grass, ferns, dead bushes and saplings, never a tree. How many went. */
+    static int clearBrush(ServerLevel level, Ground g) {
+        int cleared = 0, reach = GAP / 2 + BRUSH_BEHIND;
+        for (int along = -reach; along <= reach; along++) {
+            for (int across = -HALF_WIDE; across <= HALF_WIDE; across++) {
+                BlockPos p = g.at(along, across);
+                if (!level.isLoaded(p)) continue;
+                BlockPos at = new BlockPos(p.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()), p.getZ());
+                if (brush(level.getBlockState(at))) {
+                    level.setBlock(at, Blocks.AIR.defaultBlockState(), 3);         // a tall plant's top half goes with it
+                    cleared++;
+                }
             }
         }
-        BlockPos mid = BlockPos.containing(cx, lo, cz);
-        for (Villages.Village v : Villages.every()) {
-            if (v.dim().equals(level.dimension()) && v.centre().distSqr(mid) < (double) Villages.VILLAGE_RANGE * Villages.VILLAGE_RANGE) return -1;
-        }
-        if (hi - lo > ROUGH || bad > 8) return -1;
-        return (hi - lo) * 2.0 + bad * 3.0;
+        return cleared;
+    }
+
+    static boolean brush(BlockState st) {
+        return st.is(Blocks.SHORT_GRASS) || st.is(Blocks.TALL_GRASS) || st.is(Blocks.FERN) || st.is(Blocks.LARGE_FERN) || st.is(Blocks.DEAD_BUSH)
+            || st.is(BlockTags.SAPLINGS);
     }
 
     /** The pictures: the field here, its way from the first town's side to the second's given, what is round it looked over. */
     static Ground groundAt(ServerLevel level, BlockPos at, double ax, double az, String name) {
-        BlockPos centre = surface(level, at);
-        return new Ground(centre, ax, az, rise(level, centre, ax, az, -1), rise(level, centre, ax, az, 1), cover(level, centre, ax, az, -1),
-            cover(level, centre, ax, az, 1), view(level, centre, ax, az), name, true);
+        return ground(level, surface(level, at), ax, az, name);
     }
 
     static BlockPos surface(ServerLevel level, BlockPos p) {

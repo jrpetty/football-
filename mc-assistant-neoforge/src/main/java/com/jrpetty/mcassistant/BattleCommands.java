@@ -38,6 +38,7 @@ import java.util.List;
  *                               here, set at muster, march, lineup, parley, volley, clash, rout or aftermath and held
  *                               there; prints "STAGED ..." and "VIEW name x y z ax ay az" for each scene to look at
  *   /village battle stage end   (ops) the staged battle let go: the armies home
+ *   /village battle stage clear (ops) [field] every staged battle in this world let go (before staging a new one)
  *   /village war battle view    (ops) where to look from now: "VIEW name x y z ax ay az" for each scene (the muster,
  *                               the column, the camp, the lines from the side and the hill, the Captain, the clash,
  *                               the gate)
@@ -57,7 +58,7 @@ public final class BattleCommands {
                 .then(Commands.literal("stage").requires(src -> src.hasPermission(2))
                     .then(Commands.argument("phase", com.mojang.brigadier.arguments.StringArgumentType.word())
                         .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(
-                            java.util.stream.Stream.concat(Campaigns.PHASES.stream(), java.util.stream.Stream.of("end")), b))
+                            java.util.stream.Stream.concat(Campaigns.PHASES.stream(), java.util.stream.Stream.of("end", "clear")), b))
                         .executes(BattleCommands::stagePhase))))
             .then(Commands.literal("war")
                 .then(Commands.literal("join").executes(BattleCommands::join))
@@ -135,10 +136,15 @@ public final class BattleCommands {
     }
 
     private static int stagePhase(CommandContext<CommandSourceStack> ctx) {
-        Villages.Village v = near(ctx);
-        if (v == null) return 0;
         ServerLevel level = ctx.getSource().getLevel();
         String phase = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "phase");
+        if (phase.equals("clear")) {
+            int n = Campaigns.unstageAll(level);
+            ctx.getSource().sendSuccess(() -> Component.literal("CLEARED " + n + " staged battle(s)"), false);
+            return 1;
+        }
+        Villages.Village v = near(ctx);
+        if (v == null) return 0;
         if (phase.equals("end")) {
             String done = Campaigns.unstage(level, v.id());
             ctx.getSource().sendSuccess(() -> Component.literal(done), false);
