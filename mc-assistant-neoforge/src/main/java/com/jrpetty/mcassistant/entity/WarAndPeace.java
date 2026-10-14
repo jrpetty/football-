@@ -331,6 +331,7 @@ public final class WarAndPeace {
     static void townDaily(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
         if (!Villages.folkOf(id).isEmpty()) Ledger.note(id, "wp.strength", Integer.toString(own(level, id).strength()));
+        Battlefields.tidy(level, id, day);                                      // [war] a battlefield's trampled ground grassed over
         for (Map.Entry<String, String> n : Ledger.notes(id).entrySet()) {
             String key = n.getKey();
             if (key.startsWith("wp.banner/")) {

@@ -6316,7 +6316,8 @@ outcomes.
 * **Afterwards.** Each battle is written into both towns' chronicles and the war's books, with its name
   and story. It moves the war's score: winning a battle counts one, taking a gate counts two. The score
   changes how each side reckons its chances, which decides who sues for peace under a white flag and
-  what the treaty concedes. The loser grows wearier. A cairn and a sign mark where the lines met ("The
+  what the treaty concedes. The loser grows wearier. Where the lines met, the grass is trampled bare, and it grows back three
+  days later. A cairn and a sign mark the spot ("The
   Battle of / Ashby Field / day 140 / Ashby v Brook"). Every fighter remembers the battle. The bravest
   (two or more of the enemy beaten down, or a champion's win) get a medal struck from a nugget out of the
   stores, and a name: "Brannoc the Bold". Captives are held at the winner's barracks until the peace.

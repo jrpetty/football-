@@ -24,6 +24,7 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * [war] The ground a war is fought on, and what an army puts on it: the battlefield its Captains choose, the
@@ -41,6 +42,9 @@ import java.util.List;
  * supply), a campfire, the war banner planted by it. Struck at dawn, every block of it back in the supply.
  *
  * <p><b>The ram.</b> Three logs out of the supply, a beam laid on the road before the gate.
+ *
+ * <p><b>The field after.</b> Where the lines met, a scatter of the grass trampled to bare earth, grown over again
+ * three days later (the winner's books keep where).
  *
  * <p><b>The cairn.</b> Where the lines met: five cobblestones out of the winner's stores, and a sign
  * ("The Battle of / Ashby Field / day 140 / Ashby v Brook").
@@ -334,6 +338,44 @@ public final class Battlefields {
         if (beam == null) return;
         for (BlockPos p : beam) if (takeUp(level, p, Blocks.OAK_LOG)) army.supply.merge(Items.OAK_LOG, 1, Integer::sum);
         beam.clear();
+    }
+
+    // ------------------------------------------------------------------ the field after the battle
+
+    /** How long a battlefield's trampled ground is left before it grows over. */
+    static final int SCAR_DAYS = 3;
+    /** The most of a field trampled bare (blocks). */
+    static final int SCARS = 24;
+
+    /**
+     * Where the lines met, trampled: a scatter of the grass along the clash worn to bare earth, written in the
+     * winner's books (Ledger "war.scars/day") to be grassed over again in three days (tidy).
+     */
+    static void trample(ServerLevel level, UUID town, Ground g, long day, java.util.Random rng) {
+        List<String> worn = new ArrayList<>();
+        for (int k = 0; k < SCARS * 2 && worn.size() < SCARS; k++) {
+            BlockPos p = surface(level, g.at(rng.nextGaussian() * 3.0, (rng.nextDouble() - 0.5) * 18.0)).below();
+            if (!level.isLoaded(p) || !level.getBlockState(p).is(Blocks.GRASS_BLOCK)) continue;
+            level.setBlock(p, (rng.nextBoolean() ? Blocks.COARSE_DIRT : Blocks.DIRT).defaultBlockState(), 3);
+            if (level.getBlockState(p.above()).is(net.minecraft.tags.BlockTags.REPLACEABLE_BY_TREES)) level.setBlock(p.above(), Blocks.AIR.defaultBlockState(), 3);
+            worn.add(Long.toString(p.asLong()));
+        }
+        if (!worn.isEmpty()) com.jrpetty.mcassistant.village.Ledger.note(town, "war.scars/" + day, String.join(",", worn));
+    }
+
+    /** Once a day: a battlefield's ground trampled three days and more ago grassed over again, where it is still bare. */
+    static void tidy(ServerLevel level, UUID town, long day) {
+        for (java.util.Map.Entry<String, String> n : com.jrpetty.mcassistant.village.Ledger.notes(town).entrySet()) {
+            if (!n.getKey().startsWith("war.scars/") || day - WarBooks.num(n.getKey().substring(10), day) < SCAR_DAYS) continue;
+            boolean all = true;
+            for (String one : n.getValue().split(",")) {
+                BlockPos p = BlockPos.of(WarBooks.num(one, 0));
+                if (!level.isLoaded(p)) { all = false; continue; }
+                BlockState st = level.getBlockState(p);
+                if (st.is(Blocks.COARSE_DIRT) || st.is(Blocks.DIRT)) level.setBlock(p, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
+            }
+            if (all) com.jrpetty.mcassistant.village.Ledger.forget(town, n.getKey());
+        }
     }
 
     // ------------------------------------------------------------------ the cairn

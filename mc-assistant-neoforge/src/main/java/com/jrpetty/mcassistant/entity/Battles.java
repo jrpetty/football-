@@ -1152,6 +1152,7 @@ public final class Battles {
         if (!b.assault && w >= 0 && c.ground.known()) {
             Villages.Village wv = Villages.get(b.side[w].town);
             if (wv != null) Battlefields.cairn(level, wv, c.ground, new String[]{ "The Battle of", c.ground.name(), "day " + day, names[0] + " v " + names[1] });
+            if (b.detailed) Battlefields.trample(level, b.side[w].town, c.ground, day, new Random(Campaigns.seed(b.side[w].town, day)));
         }
         Raids.tellNear(level, b.centre, 400, Component.literal("[War] " + capital(c.name) + ": " + (w < 0 ? "drawn" : names[w] + " held the field; "
             + names[1 - w] + " " + b.outcome.words) + ".").withStyle(ChatFormatting.GOLD), false);
