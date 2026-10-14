@@ -61,6 +61,8 @@ public final class WarMapPage {
         List<String> rest = new ArrayList<>();
         for (CompoundTag p : pickets) rest.add("Picket: " + p.getString("name") + " on " + p.getString("road") + (p.getBoolean("running") ? " — running home with word!" : ""));
         for (CompoundTag s : spies) rest.add("Out: " + s.getString("name") + ", " + s.getString("doing"));
+        ListTag armies = m.getList("armies", Tag.TAG_STRING);                      // [war] the armies in the field
+        for (int i = 0; i < armies.size(); i++) rest.add(armies.getString(i));
         ListTag caps = m.getList("captives", Tag.TAG_STRING);
         for (int i = 0; i < caps.size(); i++) rest.add(caps.getString(i));
         if (!rest.isEmpty() && cy < y + h - 12) {

@@ -6115,9 +6115,9 @@ the dummies.
 
 ## War and peace
 
-Towns can go to war with each other, but rarely and never for nothing. A war between towns is an armed
-standoff: it is declared, the towns scout each other and stand on a war footing, and it ends at the
-table with a treaty. Nobody marches, and no block is broken. Turn it off with `villageWars = false` in
+Towns can go to war with each other, but rarely and never for nothing. A war is declared, the towns scout each
+other and stand on a war footing, their armies take the field (see *Armies in the field* below), and it
+ends at the table with a treaty. Turn it off with `villageWars = false` in
 the config; then a feud stays a feud.
 
 * **How a war begins.** Two neighbours must be in a feud, and one must hold something real against the
@@ -6259,6 +6259,78 @@ The game tests `WarAndPeaceGameTests` (wp01 to wp10) check that:
 * at the peace the militia stands down, the volunteers go back to their trades, the danger pay ends, a
   feast is called, the memorial goes up with the name of the spy the war cost, and Remembrance Day falls
   on the day of the peace a year later.
+
+## Armies in the field: organised battles
+
+From a war's second day the side that likes its chances takes the field: the aggressor if it reckons itself
+a match for the enemy, else the defender if it reckons itself a fifth stronger. Two days' rest follow every
+battle. Everything below is fought in full in front of any player within `battleView` blocks (112 by
+default) of where it happens, and reckoned on paper otherwise, by the same numbers and with the same
+outcomes.
+
+* **The word goes round.** Players near either town get a line in the chat and a horn: the army musters
+  this afternoon. The other town's pickets bring the news, and its Captain marches out to meet the army, or,
+  with a wall to stand behind and too weak to fight in the open, holds its walls.
+* **The muster.** On the square, the army draws up in its ranks facing the enemy: the watch and the
+  militia called up, less a home guard of one in five. The **Captain** is the constable (else the watch's
+  captain, else its best guard). There is a **sergeant** for every six fighters, and allies' guards march
+  under their own sergeant. A **standard-bearer** carries the town's banner, taken out of the stores. The
+  **medic** is the cook (else the brewer) and carries bandages. Fighters with a bow and arrows are
+  **archers**; the rest form the **shield line**, and the weakest quarter of the line is the **reserve**.
+  The line gets shields from the armoury, the archers get arrows from the stores, and the army carries
+  leads, tent cloth and poles, a campfire, and, if it means to take a town, three logs for a ram. All of
+  it comes out of the stores and goes back at the end; a town without something goes without it. The
+  Captain chooses tactics by the ground, the odds and its temper: a shield wall, archers on a rise, a
+  hidden reserve behind trees on the flank, a feigned retreat, or straight at them. Everybody wears a
+  **surcoat** of the town's arms over their armour; the Captain wears a cloak of the arms, sergeants a
+  sash, and the medic a white one. Folk come out to see the army off, and the horn sounds.
+* **The march.** The army marches in column, two or three abreast, with the banner at its head and a drum
+  now and then. It follows the road to its camp behind its line on the battlefield: the flattest open
+  ground between the towns, off fields and buildings and near the road. The battlefield is named after
+  the nearer town ("Ashby Field"). Players are told where it is and where the hill to watch from is.
+* **The camp.** Tents of wool on fence poles, a campfire, the war banner planted, sentries out, and the
+  rest sitting round the fire. An army there by the afternoon fights the same day; one that arrives later
+  fights at dawn, and the camp is struck to the drums.
+* **The battle.** The lines form 24 blocks apart. The two Captains meet in the middle and parley: last
+  terms, refused. Each Captain makes a speech, there is a beat of silence, then the horn and the battle
+  cry. A bold Captain may offer single combat, and the two champions fight till one yields. Then the
+  archers' duel: "Archers, loose!", volleys arcing together onto raised shields. The advance: "Shields up!
+  Advance!", then "Charge!". In the clash each fighter takes its man (sergeant seeks sergeant) while the
+  archers shoot over the line. The reserve goes round the flank or into a gap. In the crisis the banner
+  falls when its bearer yields, the Captain may go down, and the Captain calls "Hold the line!". At the
+  break, the beaten side falls back in good order, routs, or surrenders on its knees. A short pursuit
+  follows, then "Let them go!". In the aftermath the medics bind the wounded, the winner leads the
+  loser's wounded away captive (on leads), and a fallen banner is carried off as a trophy. Players near
+  the field see a bar at the top of the screen with both sides' strength and spirit, and the orders over
+  the hotbar.
+* **Wounds before deaths.** A fighter beaten down to its last hearts yields and kneels, its weapon put
+  away, and nobody strikes it again. Only `battleDeaths` in a hundred (5 by default) die, and every one
+  is mourned and remembered. Nobody outside the battle is touched: not a passer-by, not a medic, not a
+  player who has not joined.
+* **Sieges.** An aggressor that wins the field, and is after more than satisfaction, marches on the
+  town; a town that holds its walls is besieged straight away. The bell rings there. The besiegers camp
+  before the gate (the town wall's gatehouse) and build a ram of three logs. At dawn the ram breaks in
+  the gate's doors and the defenders fight before it. A town whose gate is taken makes peace on the
+  aggressor's whole terms. Without a ram, the besiegers can only wait for the town's siege stores to run
+  out, and often go home.
+* **Afterwards.** Each battle is written into both towns' chronicles and the war's books, with its name
+  and story. It moves the war's score: winning a battle counts one, taking a gate counts two. The score
+  changes how each side reckons its chances, which decides who sues for peace under a white flag and
+  what the treaty concedes. The loser grows wearier. A cairn and a sign mark where the lines met ("The
+  Battle of / Ashby Field / day 140 / Ashby v Brook"). Every fighter remembers the battle. The bravest
+  (two or more of the enemy beaten down, or a champion's win) get a medal struck from a nugget out of the
+  stores, and a name: "Brannoc the Bold". Captives are held at the winner's barracks until the peace.
+* **You.** `/village war battle` tells you where the armies are, how strong they are and how their
+  spirit stands, plus where the field is and the hill to watch it from. The war page in the town's books
+  shows the same, with every battle and the war's score. `/village war join` puts you in the ranks of the
+  nearest town at war: as a volunteer if you are its citizen, or as a sword for hire (ten coins out of its
+  treasury) if not. The enemy then takes you for one of theirs.
+* **Cost.** With no army in the field, nothing. With one, the campaign is checked once a second, and the
+  battle in full twice a second (both armies' fighters only, never a look round the world). A fighter in
+  the field skips its own day; its step is a path to its place a few times a second. Each army is drawn
+  in full to `battleDetail` fighters (24 by default); the rest of a bigger army fights on paper alongside
+  them. A campaign is kept in the town's books, so a restart in the middle of a march carries on, and one
+  in the middle of a battle has the battle reckoned on paper.
 
 ## Dry land and safe mines
 

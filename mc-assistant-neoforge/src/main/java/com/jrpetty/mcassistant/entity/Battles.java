@@ -213,7 +213,7 @@ public final class Battles {
         // -------------------------------------------------------------- the phases
 
         void form(ServerLevel level, long in) {
-            for (int i = 0; i < 2; i++) array(level, side[i], origin(i), 0, this, i);
+            for (int i = 0; i < 2; i++) array(level, side[i], i == 1 && assault && !gateDown ? behindTheGate() : origin(i), 0, this, i);
             if (in % 40 == 0) for (int i = 0; i < 2; i++) Armies.drum(level, at(origin(i)), in % 80 == 0);
             if (assault && !gateDown) {
                 batter(level, in);
@@ -224,6 +224,13 @@ public final class Battles {
                 if (assault) { to(level, BattleModel.Phase.SPEECH); return; }
                 to(level, BattleModel.Phase.PARLEY);
             }
+        }
+
+        /** Where the defenders stand while their gate holds: inside it, facing it. */
+        double[] behindTheGate() {
+            if (c.gate == null) return origin(1);
+            BlockPos in = c.gate.relative(c.gateOut.getOpposite(), 5);
+            return new double[]{ in.getX() + 0.5, in.getZ() + 0.5, c.gateOut.getStepX(), c.gateOut.getStepZ() };
         }
 
         /** The ram at the gate: a blow every two seconds, the gate down at the tenth. */
@@ -421,6 +428,7 @@ public final class Battles {
                 lastVolley = now;
                 for (int i = 0; i < 2; i++) volley(level, i, true);
             }
+            for (int i = 0; i < 2; i++) tend(level, i, 10.0);        // the medic pulls back those down near its own lines
             sparks(level);
             for (int i = 0; i < 2; i++) {
                 BattleModel.Outcome o = BattleModel.breaks(model(i), model(1 - i));
@@ -557,7 +565,7 @@ public final class Battles {
         /** The medics at their work, the captives taken, the fallen banner taken up; then the battle is over. */
         void aftermath(ServerLevel level, long in) {
             for (int i = 0; i < 2; i++) if (i == winner || winner < 0) array(level, side[i], origin(i), 0, this, i);
-            for (int i = 0; i < 2; i++) tend(level, i);
+            for (int i = 0; i < 2; i++) tend(level, i, 40.0);
             if (in == EVERY) takeCaptives(level);
             if (in < soon(AFTERMATH)) return;
             for (int i = 0; i < 2; i++) bannerHome(level, i);
@@ -565,8 +573,12 @@ public final class Battles {
             close();
         }
 
-        /** Side i's medic to its nearest wounded, and the wound bound (a bandage out of its pack): back on its feet, sore. */
-        void tend(ServerLevel level, int i) {
+        /**
+         * Side i's medic to its nearest wounded within {@code reach} of its own lines (in the clash, only those it can
+         * get to without walking into the fight), and the wound bound (a bandage out of its pack): out of the fight, but
+         * on its feet and carried home with its own rather than taken.
+         */
+        void tend(ServerLevel level, int i, double reach) {
             Armies.Army a = side[i];
             if (a.medic == null || !(level.getEntity(a.medic) instanceof VillageFolkEntity medic)) return;
             Armies.Fighter m = Armies.fighter(a.medic);
@@ -574,8 +586,11 @@ public final class Battles {
             VillageFolkEntity best = null;
             Armies.Fighter bestF = null;
             double bd = 40 * 40;
+            double[] o = origin(i);
             for (Armies.Fighter f : a.fighters) {
-                if (f.order != Armies.Order.YIELDED || f.dead || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
+                if (f.order != Armies.Order.YIELDED || f.tended || f.dead || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
+                double ox = e.getX() - (o[0] - o[2] * 6), oz = e.getZ() - (o[1] - o[3] * 6);
+                if (ox * ox + oz * oz > reach * reach) continue;
                 double d = e.distanceToSqr(medic);
                 if (d < bd) { bd = d; best = e; bestF = f; }
             }
@@ -587,8 +602,10 @@ public final class Battles {
             best.heal(bound ? 8.0F : 2.0F);
             medic.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             Armies.shout(medic, FolkTalk.pick(medic.getRandom(), "Hold still — I've got you.", "Easy now. You'll mend.", "There. On your feet, slowly."));
-            bestF.order = Armies.Order.PLACE;
-            best.setPose(Pose.STANDING);
+            bestF.tended = true;                                    // out of the fight, on its feet, back with the medic
+            bestF.place(level, o[0] - o[2] * 14 + o[3] * (bestF.stagger - 5) * 0.8, o[1] - o[3] * 14 - o[2] * (bestF.stagger - 5) * 0.8,
+                Armies.yawTo(o[2], o[3]));
+            bestF.speed = 0.6;
         }
 
         /** The winner leads off the loser's wounded left on the field: captives, on leads where it brought them. */
@@ -600,7 +617,7 @@ public final class Battles {
             long day = level.getDayTime() / 24000L;
             int n = 0;
             for (Armies.Fighter f : l.fighters) {
-                if (f.order != Armies.Order.YIELDED || f.dead) continue;
+                if (f.order != Armies.Order.YIELDED || f.dead || f.tended) continue;     // the medic's are carried off with their own
                 if (n >= CAPTIVES_MOST || captors.isEmpty()) break;
                 Armies.Fighter by = captors.remove(0);
                 capture(level, f, by, w, day);

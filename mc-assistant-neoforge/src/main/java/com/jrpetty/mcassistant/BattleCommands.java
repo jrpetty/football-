@@ -31,7 +31,11 @@ import java.util.List;
  *                               now if it is not), and the campaign begun at once, its waits short; prints
  *                               "FIELD x y z AXIS ax az VIEW x y z" (or "VIEW none")
  *   /village war battle siege   (ops) as stage, the neighbour holding its walls
- *   /village war battle next    (ops) the campaign's next stage now
+ *   /village war battle next    (ops) the campaign's next stage now (a march brought to its end first); prints
+ *                               "STAGE name" and what to look at now
+ *   /village war battle view    (ops) where to look from now: "VIEW name x y z ax ay az" for each scene (the muster,
+ *                               the column, the camp, the lines from the side and the hill, the Captain, the clash,
+ *                               the gate)
  * </pre>
  */
 public final class BattleCommands {
@@ -49,7 +53,8 @@ public final class BattleCommands {
                 .then(Commands.literal("battle").executes(BattleCommands::status)
                     .then(Commands.literal("stage").requires(src -> src.hasPermission(2)).executes(ctx -> stage(ctx, false)))
                     .then(Commands.literal("siege").requires(src -> src.hasPermission(2)).executes(ctx -> stage(ctx, true)))
-                    .then(Commands.literal("next").requires(src -> src.hasPermission(2)).executes(BattleCommands::next)))));
+                    .then(Commands.literal("next").requires(src -> src.hasPermission(2)).executes(BattleCommands::next))
+                    .then(Commands.literal("view").requires(src -> src.hasPermission(2)).executes(BattleCommands::view)))));
     }
 
     @Nullable
@@ -126,8 +131,23 @@ public final class BattleCommands {
             ctx.getSource().sendFailure(Component.literal(Villages.name(v.id()) + " has no army in the field."));
             return 0;
         }
-        Campaigns.nextForTests(ctx.getSource().getLevel(), c);
-        ctx.getSource().sendSuccess(() -> Component.literal("STAGE " + c.stage()), false);
+        ServerLevel level = ctx.getSource().getLevel();
+        Campaigns.onForPictures(level, c);
+        String out = "STAGE " + c.stage() + "\n" + String.join("\n", Campaigns.views(level, c));
+        ctx.getSource().sendSuccess(() -> Component.literal(out), false);
+        return 1;
+    }
+
+    private static int view(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = near(ctx);
+        if (v == null) return 0;
+        Campaigns.Campaign c = Campaigns.ofTown(v.id());
+        if (c == null) {
+            ctx.getSource().sendFailure(Component.literal(Villages.name(v.id()) + " has no army in the field."));
+            return 0;
+        }
+        String out = "STAGE " + c.stage() + "\n" + String.join("\n", Campaigns.views(ctx.getSource().getLevel(), c));
+        ctx.getSource().sendSuccess(() -> Component.literal(out), false);
         return 1;
     }
 }

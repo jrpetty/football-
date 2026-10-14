@@ -125,6 +125,8 @@ public final class Armies {
         boolean dead, shieldUp;
         /** In camp: sits by the fire once it is in its place. */
         boolean sit;
+        /** Wounded, and bound by its medic: out of the fight, but on its feet at the back. */
+        boolean tended;
         /** The enemy it beat down, this battle (the brave are honoured). */
         int downed;
         /** Where and when it was last seen in the world (the campaign calls it back from there). */
@@ -657,8 +659,9 @@ public final class Armies {
             case YIELDED -> {
                 f.setTarget(null);
                 f.getNavigation().stop();
-                if (f.getPose() != Pose.CROUCHING) f.setPose(Pose.CROUCHING);
-                if (x.placed) walk(f, x, level);                  // carried back by the medic: it walks, bent double
+                Pose want = x.tended ? Pose.STANDING : Pose.CROUCHING;
+                if (f.getPose() != want) f.setPose(want);
+                if (x.placed) walk(f, x, level);                  // bound by the medic: back behind the lines
             }
             case CAPTIVE -> {
                 f.setTarget(null);

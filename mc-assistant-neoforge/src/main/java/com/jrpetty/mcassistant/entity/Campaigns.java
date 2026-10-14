@@ -659,7 +659,7 @@ public final class Campaigns {
             double[] h = heading(way, Math.max(0, back));
             double across = (col - (abreast - 1) / 2.0) * 1.6;
             f.speed = 0.7;
-            if (f.order == Armies.Order.YIELDED) f.order = Armies.Order.PLACE;   // the wounded walk with the column
+            if (f.order == Armies.Order.YIELDED) { f.order = Armies.Order.PLACE; f.tended = false; }   // the wounded walk with the column
             f.place(level, p.getX() + 0.5 - h[1] * across, p.getZ() + 0.5 + h[0] * across, Armies.yawTo(h[0], h[1]));
         }
     }
@@ -1159,16 +1159,86 @@ public final class Campaigns {
 
     // ------------------------------------------------------------------ tests and pictures
 
+    /**
+     * Pictures: where to look from for what the campaign is doing now, as "VIEW name x y z ax ay az" (an eye and what it
+     * looks at): the army drawn up on the square, the column on the road, the camp, both armies drawn up from the
+     * side and from the hill, the Captain with the banner close to, the clash, the ram at the gate.
+     */
+    public static List<String> views(ServerLevel level, Campaign c) {
+        List<String> out = new ArrayList<>();
+        Armies.Army a = c.armies[0];
+        switch (c.stage) {
+            case MUSTER -> {
+                Villages.Village v = c.town(0);
+                if (v != null && a != null) {
+                    double[] o = squareFacing(v, c.town(1));
+                    view(level, out, "muster", o[0] + o[2] * 16 - o[3] * 4, o[1] + o[3] * 16 + o[2] * 4, 7, o[0] - o[2] * 4, o[1] - o[3] * 4);
+                }
+            }
+            case MARCH, SIEGE_MARCH, HOME -> {
+                if (a != null && !c.ways.get(0).isEmpty()) {
+                    BlockPos h = c.head(0);
+                    double[] d = heading(c.ways.get(0), c.along[0]);
+                    view(level, out, "column", h.getX() + d[0] * 10 - d[1] * 9, h.getZ() + d[1] * 10 + d[0] * 9, 5, h.getX() - d[0] * 8, h.getZ() - d[1] * 8);
+                }
+            }
+            case CAMP, SIEGE_CAMP -> {
+                for (int i = 0; i < 2; i++) {
+                    Battlefields.Camp camp = c.camps[i];
+                    if (camp != null) view(level, out, "camp" + i, camp.centre.getX() + 12, camp.centre.getZ() + 12, 9, camp.centre.getX(), camp.centre.getZ());
+                }
+                if (c.stage == Stage.SIEGE_CAMP && c.gate != null) gateView(level, c, out);
+            }
+            case BATTLE, ASSAULT, AFTER -> {
+                Battles.Battle b = c.battle;
+                BlockPos m = b == null ? c.ground.centre() : b.centre;
+                double ax = b == null ? c.ground.ax() : b.ax, az = b == null ? c.ground.az() : b.az;
+                view(level, out, "side", m.getX() - az * 34, m.getZ() + ax * 34, 9, m.getX(), m.getZ());
+                BlockPos hill = c.ground.view();
+                if (hill != null) view(level, out, "hill", hill.getX(), hill.getZ(), 4, m.getX(), m.getZ());
+                else view(level, out, "high", m.getX() - az * 40 - ax * 30, m.getZ() + ax * 40 - az * 30, 26, m.getX(), m.getZ());
+                Armies.Fighter cap = a == null ? null : a.officer(Armies.Rank.CAPTAIN);
+                if (cap != null && level.getEntity(cap.id) instanceof VillageFolkEntity e) {
+                    double fx = -Math.sin(Math.toRadians(e.getYRot())), fz = Math.cos(Math.toRadians(e.getYRot()));
+                    view(level, out, "captain", e.getX() + fx * 4 + fz * 1.5, e.getZ() + fz * 4 - fx * 1.5, 1.6, e.getX(), e.getZ());
+                }
+                view(level, out, "clash", m.getX() - az * 16 + ax * 6, m.getZ() + ax * 16 + az * 6, 4, m.getX(), m.getZ());
+                if (c.stage == Stage.ASSAULT && c.gate != null) gateView(level, c, out);
+            }
+            default -> { }
+        }
+        return out;
+    }
+
+    static void gateView(ServerLevel level, Campaign c, List<String> out) {
+        BlockPos g = c.gate;
+        Direction o = c.gateOut;
+        view(level, out, "gate", g.getX() + o.getStepX() * 16 + o.getClockWise().getStepX() * 7, g.getZ() + o.getStepZ() * 16 + o.getClockWise().getStepZ() * 7,
+            5, g.getX(), g.getZ());
+    }
+
+    /** One view: an eye {@code up} over the ground at (x, z), looking at the ground at (tx, tz) a little over it. */
+    static void view(ServerLevel level, List<String> out, String name, double x, double z, double up, double tx, double tz) {
+        BlockPos eye = Battlefields.surface(level, BlockPos.containing(x, 0, z)), at = Battlefields.surface(level, BlockPos.containing(tx, 0, tz));
+        out.add("VIEW " + name + " " + eye.getX() + " " + (int) Math.round(eye.getY() + up) + " " + eye.getZ() + " " + at.getX() + " " + (at.getY() + 1) + " " + at.getZ());
+    }
+
     /** Tests and pictures: a campaign begun now between these two, whatever the war's day says. */
     @Nullable
     public static Campaign beginForTests(ServerLevel level, Villages.Village x, Villages.Village y, boolean holdWalls, boolean siegeAim) {
         return begin(level, x, y, level.getDayTime() / 24000L, holdWalls, siegeAim);
     }
 
-    /** Tests: the campaign's next stage now. */
+    /** Tests and pictures: the campaign's next stage now (a march at its end first). */
     public static void nextForTests(ServerLevel level, Campaign c) {
         c.nextAt = 0;
         second(level, c);
+    }
+
+    /** Pictures: a column on the road brought to its end, and the campaign on to its next stage. */
+    public static void onForPictures(ServerLevel level, Campaign c) {
+        if (c.stage == Stage.MARCH || c.stage == Stage.SIEGE_MARCH || c.stage == Stage.HOME) arriveForTests(c);
+        nextForTests(level, c);
     }
 
     /** Tests: the columns' heads at the end of their roads. */
