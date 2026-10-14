@@ -112,8 +112,9 @@ public final class TownBlocks {
         TERRAFORM(Zone.OPEN, Zone.ROAD, Zone.SQUARE),
         /** A levee, a sea wall, flood works. */
         LEVEE(Zone.OPEN),
-        /** Ropes, pit props, ladders down a shaft, mine stairs. */
-        MINE(Zone.OPEN),
+        /** Ropes, pit props, ladders down a shaft, mine stairs, and the fence round a stair head (which may stand in a
+         *  road where the stairs come up in one: a fence is better than an open hole). */
+        MINE(Zone.OPEN, Zone.ROAD),
         /** Trees planted or felled, grass and flowers. */
         NATURE(Zone.OPEN),
         /** Anything else a town's works set down. */

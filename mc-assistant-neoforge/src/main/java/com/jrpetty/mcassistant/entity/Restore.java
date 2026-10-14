@@ -792,7 +792,7 @@ public final class Restore {
     /**
      * A wooden part made there and then of the stores' planks, as a hand would at a bench, when the stores have none
      * made: a door (six planks make three, two go back), a chest, a crafting table, a ladder's rungs, a fence, a gate,
-     * a barrel, a roof stair (six planks make four) or a roof slab (three make six). A house left with no door for want
+     * a barrel, a roof stair (six planks make four) or a roof slab (three make six); a cauldron of seven iron. A house left with no door for want
      * of a door was a house nobody could get into. Null if the planks are not there either.
      */
     @Nullable
@@ -805,6 +805,7 @@ public final class Restore {
             case FENCE -> make(level, v, 4, Blocks.OAK_FENCE, Items.OAK_FENCE, 2);
             case GATE -> make(level, v, 4, Blocks.OAK_FENCE_GATE, Items.OAK_FENCE_GATE, 0);
             case BARREL -> make(level, v, 7, Blocks.BARREL, Items.BARREL, 0);
+            case CAULDRON -> Crafts.take(level, v, s -> s.is(Items.IRON_INGOT), 7) ? Blocks.CAULDRON.defaultBlockState() : null;
             default -> null;
         };
     }
