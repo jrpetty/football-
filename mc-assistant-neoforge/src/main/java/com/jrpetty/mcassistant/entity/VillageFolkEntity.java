@@ -834,8 +834,11 @@ public class VillageFolkEntity extends AssistantEntity {
             hobbyNow = "on the way to the shop";
             return true;
         }
+        ServiceQueue.Turn turn = ServiceQueue.turn(this, server, ServiceRole.SHOP, "");   // [shops-homes] in line at the counter
+        if (turn == ServiceQueue.Turn.BUSY) return true;
         shopDay = day;
         shopSetOff = -1;
+        if (turn == ServiceQueue.Turn.CLOSED) return false;
         String bought = Cafe.folkShops(server, v, this, forWork);
         if (bought != null) {
             FolkTalk.speak(this, forWork ? "New tools for the job: " + bought + ". Money well spent."
@@ -869,8 +872,11 @@ public class VillageFolkEntity extends AssistantEntity {
             }
             return true;
         }
+        ServiceQueue.Turn turn = ServiceQueue.turn(this, server, ServiceRole.CAFE, "");   // [shops-homes] in line at the counter
+        if (turn == ServiceQueue.Turn.BUSY) return true;
         cafeDay = day;
         cafeSetOff = -1;
+        if (turn == ServiceQueue.Turn.CLOSED) return false;
         String had = Cafe.folkBuys(server, v, this);
         if (had != null) {
             String[] lines = { "A " + had + " — just the thing.", "Nothing like a " + had + " on my break.",

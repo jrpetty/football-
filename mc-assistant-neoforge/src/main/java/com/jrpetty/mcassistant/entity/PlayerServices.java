@@ -184,10 +184,24 @@ public final class PlayerServices {
             }
             if (!atForge(level, f)) return "I can mend that at my forge — come and find me there, by the furnace.";
         }
+        return mend(level, v, f, p, p.getMainHandItem(), false);
+    }
+
+    /** [shops-homes] What mending this would cost, in words, or why it cannot be mended (the smithy's screen). */
+    public static String mendQuote(ServerLevel level, Villages.Village v, VillageFolkEntity f, Player p, ItemStack held) {
+        return mend(level, v, f, p, held, true);
+    }
+
+    /**
+     * [shops-homes] Mend this thing of the player's (in its hand, or picked on the smithy's screen): the metal out of
+     * the stores at the market's price, then the player's own, a unit for every quarter of the wear, and the fee. With
+     * {@code dryRun}, only what it would cost ("QUOTE|price|what"), nothing taken.
+     */
+    static String mend(ServerLevel level, Villages.Village v, VillageFolkEntity f, Player p, ItemStack held, boolean dryRun) {
+        UUID village = v.id();
         long day = day(level);
         Standing.Title title = Standing.of(village, p.getUUID(), level.getGameTime()).title();
         if (title == Standing.Title.OUTCAST || Laws.banished(village, p.getUUID(), day)) return "I'll not lift a hammer for you.";
-        ItemStack held = p.getMainHandItem();
         if (held.isEmpty() || !held.isDamageableItem() || !held.isDamaged()) return "Hand me whatever wants mending — it looks fine to me.";
         Item tool = held.getItem();
         Predicate<ItemStack> metal = s -> !s.isEmpty() && s != held && !s.isDamageableItem() && tool.isValidRepairItem(held, s);
@@ -225,6 +239,7 @@ public final class PlayerServices {
         int price = Dealings.haggled(village, p.getUUID(), day, metalPrice + REPAIR_FEE);
         int have = Market.coinsHeld(p);
         String bill = fromStores > 0 ? " (" + Storekeeping.list(List.of(sample.copyWithCount(fromStores))) + " from the stores, and the work)" : " for the work";
+        if (dryRun) return "QUOTE|" + price + "|" + coins(price) + bill;
         if (have < price) return "Mending that would be " + coins(price) + bill + ". You've " + have + ".";
         // The metal: out of the stores, then out of the player's pack.
         int got = 0;

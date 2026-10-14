@@ -316,7 +316,7 @@ public final class Cafe {
         int changed = 0;
         for (int k = 0; k < tops.size(); k++) {
             BlockPos at = tops.get(k);
-            if (!level.getBlockState(at).is(Blocks.BARREL)) continue;          // not built yet
+            if (!ServicePoints.isCounter(level.getBlockState(at))) continue;   // not built yet ([shops-homes] or the service counter)
             ItemStack want = k < goods.size() ? goods.get(k) : ItemStack.EMPTY;
             if (TownLife.frameOn(level, at.above(), want, true)) changed++;
             priceTag(level, village, v, at, f.door(), want, free);

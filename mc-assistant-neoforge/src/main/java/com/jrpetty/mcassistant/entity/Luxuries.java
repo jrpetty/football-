@@ -208,9 +208,12 @@ public final class Luxuries {
             f.hobbyNow = "off to the shop for " + want.words;
             return true;
         }
+        ServiceQueue.Turn turn = ServiceQueue.turn(f, level, ServiceRole.SHOP, want.words);   // [shops-homes] in line at the counter
+        if (turn == ServiceQueue.Turn.BUSY) return true;
         e.setOff = -1;
         e.want = null;
         f.comfortDay(day);
+        if (turn == ServiceQueue.Turn.CLOSED) return false;
         String bought = buy(level, v, f, h, b, want);
         if (bought != null) {
             f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);

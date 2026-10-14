@@ -1148,6 +1148,8 @@ public final class Market {
         Villages.Village v = Villages.nearest(level, pos, 40);
         if (v == null) return;
         Player p = e.getEntity();
+        if (!p.isShiftKeyDown() && p instanceof net.minecraft.server.level.ServerPlayer sp
+                && ServicePoints.openAtCounterCask(sp, pos, frame)) return;   // [shops-homes] the counter's screen: one way to buy
         if (frame.getTags().contains(StoreFloor.FRAME_TAG)) {      // [econ-store] the shop's own counter (StoreFloor)
             p.displayClientMessage(Component.literal(StoreFloor.playerBuys(level, v, p, frame.getItem(), pos)), true);
             return;

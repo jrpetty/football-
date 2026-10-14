@@ -179,6 +179,19 @@ public final class PriceIndex {
         return l == null ? 0 : l.trend();
     }
 
+    /** [shops-homes] Why this thing is dear or cheap today, in a few words for a shop's list ("dear: it's short",
+     *  "cheap: a glut", or the town's own reason), or "" at its usual price. */
+    public static String hint(UUID village, ItemStack one) {
+        Line l = town(village).lines.get(keyOf(one));
+        if (l == null) return "";
+        if (l.factor >= HINT_DEAR) return l.why.isEmpty() ? "dear: it's short" : "dear: " + l.why;
+        if (l.factor <= HINT_CHEAP) return l.why.isEmpty() ? "cheap: a glut" : "cheap: " + l.why;
+        return "";
+    }
+
+    /** [shops-homes] How far off its usual a price is before the shop's list says why: a seventh over, an eighth under. */
+    static final double HINT_DEAR = 1.15, HINT_CHEAP = 0.87;
+
     /** A thing's name in the town's prices: the board's good it is ("g:Bread"), or the sellers' ware ("w:candle"). */
     static String keyOf(ItemStack s) {
         Market.Good g = Market.goodFor(s);

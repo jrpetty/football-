@@ -259,6 +259,18 @@ public final class McAssistantMod {
 
     public static final DeferredItem<BlockItem> STOCKS_ITEM =
         ITEMS.registerSimpleBlockItem(STOCKS);
+    // [shops-homes] The service counter: where a town's shop, store, café and tavern serve whoever comes, folk and
+    // players alike (entity/ServicePoints). Three slabs over a barrel between two planks.
+    public static final DeferredBlock<com.jrpetty.mcassistant.block.ServiceCounterBlock> SERVICE_COUNTER =
+        BLOCKS.registerBlock("service_counter",
+            com.jrpetty.mcassistant.block.ServiceCounterBlock::new,
+            BlockBehaviour.Properties.of()
+                .mapColor(MapColor.WOOD)
+                .strength(2.5F)
+                .sound(SoundType.WOOD));
+
+    public static final DeferredItem<BlockItem> SERVICE_COUNTER_ITEM =
+        ITEMS.registerSimpleBlockItem(SERVICE_COUNTER);
 
     /** [crime] A copper coin cast to pass for the town's own: what a forger passes at the stores (entity/Mischief). */
     public static final DeferredItem<net.minecraft.world.item.Item> FORGED_COIN =
@@ -338,6 +350,7 @@ public final class McAssistantMod {
                 out.accept(PET_TREAT.get());
                 for (DeferredItem<com.jrpetty.mcassistant.item.GarmentItem> g : GARMENTS) out.accept(g.get());   // [fashion]
                 out.accept(STOCKS_ITEM.get());              // [crime]
+                out.accept(SERVICE_COUNTER_ITEM.get());     // [shops-homes]
                 out.accept(FORGED_COIN.get());              // [crime]
                 for (DeferredItem<?> q : java.util.List.of(QUEST_JOURNAL, SEALED_LETTER, PARCEL, PEACE_TERMS, SPY_REPORT,   // [quests]
                         SMUGGLERS_LEDGER, MINERS_JOURNAL, WOODEN_TOY, CHILDS_DRAWING, HEIRLOOM_RING, HEIRLOOM_LOCKET, TOWN_MEDAL, TOWN_KEY)) {
@@ -397,6 +410,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Caravans.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Raids.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Tavern.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.ServicePoints.class);   // [shops-homes] the service screens
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Citizens.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Laws.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Diplomacy.class);
