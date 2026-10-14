@@ -197,7 +197,7 @@ public final class PriceIndex {
     }
 
     /** One of a good on the board, to show: the first item it matches (looked up once, then kept). */
-    static ItemStack sampleOfGood(Market.Good g) {
+    public static ItemStack sampleOfGood(Market.Good g) {
         ItemStack kept = SAMPLE_OF.get(g.name());
         if (kept != null) return kept.copy();
         ItemStack found = ItemStack.EMPTY;
@@ -322,6 +322,14 @@ public final class PriceIndex {
                 m[1] += l.missed[1];
             }
         }
+        // [market] What the town is short of for its next age (Villages.needs: the timber, the stone, the food in the
+        // stores): wanted, a third of the shortfall a day, so a good the town needs grows dear and is made and bought in.
+        Map<Villages.Task, Integer> shortOf = new java.util.EnumMap<>(Villages.Task.class);
+        for (Villages.Need n : Villages.needs(level, id)) {
+            if (n.task() != Villages.Task.NONE && n.task() != Villages.Task.BUILD && n.amount() > 0) shortOf.merge(n.task(), n.amount(), Math::max);
+        }
+        Villages.Age age = Villages.ageOf(id);
+        String purpose = age.next() == age ? "the town's works" : age.next().label;
         // Every good on the board is priced; a ware besides only once something has been done with it.
         List<String> keys = new ArrayList<>();
         for (Market.Good g : Market.GOODS) keys.add("g:" + g.name());
@@ -329,10 +337,13 @@ public final class PriceIndex {
         for (String k : sold.keySet()) if (!keys.contains(k)) keys.add(k);
         for (String k : t.tally.keySet()) if (!keys.contains(k)) keys.add(k);
         for (String k : keys) {
-            int bundle = 1;
+            int bundle = 1, needed = 0;
             if (k.startsWith("g:")) {
                 Market.Good g = goodNamed(k.substring(2));
-                if (g != null) bundle = g.bundle();
+                if (g != null) {
+                    bundle = g.bundle();
+                    needed = (int) Math.ceil(shortOf.getOrDefault(g.need(), 0) / DAYS_COVER);
+                }
             }
             int have = stores.getOrDefault(k, 0);
             // The shop's own shelves, once it keeps them apart from the stores (ShopStock): supply too. While it sells
@@ -348,8 +359,10 @@ public final class PriceIndex {
                 l = new Line(k);
                 t.lines.put(k, l);
             }
-            int wanted = c[0] + c[1] + f[DRAWN] + m[1];
+            int wanted = c[0] + c[1] + f[DRAWN] + m[1] + needed;
+            double was = l.factor;
             move(l, have, bundle, m[0], wanted, f[REFUSED], fresh);
+            if (needed > 0 && l.factor > was * 1.01) l.why = "wanted for " + purpose;          // [market] the town's own want
             l.dayWanted = c[0] + f[DRAWN] + m[1];
             l.dayMissed = c[1];
             l.dayMade = m[0];
@@ -615,8 +628,11 @@ public final class PriceIndex {
         StringBuilder sb = new StringBuilder();
         sb.append(t.day < 0 ? "Not reckoned yet: everything sells at its usual worth until the town's first morning."
             : "Reckoned " + (t.day >= today ? "this morning" : "on day " + (t.day + 1)) + " from yesterday's supply and demand"
-                + (Market.marketDay(id, today) ? "; market day: a tenth off at the stalls" : "") + ".");
+                + (Market.marketDay(id, today) ? "; market day: a little off at every counter, a little more paid for what is brought" : "") + ".");
         sb.append('\n').append(Purchases.livingLine(level, id)).append('\n');
+        sb.append(Market.coinLine(id)).append('\n');                                       // [market] the coin and the spread
+        String lean = MarketLean.line(id);
+        if (!lean.isEmpty()) sb.append(lean).append('\n');                                  // [market] production follows prices
         int[] slate = Purchases.slates(id);
         if (slate[0] > 0) sb.append(slate[0]).append(slate[0] == 1 ? " folk owes " : " folk owe ").append(slate[1])
             .append(slate[1] == 1 ? " coin" : " coins").append(" on the slate, to be paid from their wages.\n");

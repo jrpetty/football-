@@ -519,6 +519,7 @@ public final class Market {
         HousingMarket.payday(level, v, day);             // [econ-housing] the housing market weighed; a house of its own commissioned
         if (RestDay.today(id, day)) tithe(level, v, day);
         Bank.morning(level, v, day);                     // the bank: the day's savings in, and on its seventh day its round (Bank)
+        upkeep(level, v, day);                           // [market] the town's upkeep, out of what it holds over a fortnight's wages
         Villages.checkRank(level, v, day);
         News.morning(level, v, day);
         if (marketDay(id, day)) {
@@ -571,6 +572,45 @@ public final class Market {
         Economy.sold(id, coins);
         Villages.tell(id, day, "Traders came for market day and bought " + String.join(", ", sold) + " for " + coins + " coin");
         return coins;
+    }
+
+    // ------------------------------------------------------------------ [market] the upkeep
+
+    /** The days of wages the treasury holds before its upkeep bites, and the share of what it holds over that a day. */
+    public static final int UPKEEP_OVER_DAYS = 14, UPKEEP_ONE_IN = 40;
+    /** What the upkeep took on its last morning: {day, coin}, by the village. */
+    private static final java.util.Map<UUID, long[]> UPKEEP = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The town's upkeep: its roads, lamps and wells, the tools it wears out, the guilds' and the road-wardens' dues
+     * (coin that goes out of the town for good). A fortieth a day of what the treasury holds over a fortnight's wages and
+     * what it is saving for; nothing from a treasury under that. The sink that keeps a busy town from hoarding coin the
+     * world paid it for its work (takings, the traders), so its coin holds its value: a treasury settles at a few weeks'
+     * wages, and what is over goes round as pay. Returns the coin.
+     */
+    public static int upkeep(ServerLevel level, Villages.Village v, long day) {
+        UUID id = v.id();
+        int keep = UPKEEP_OVER_DAYS * Math.max(1, wageBill(id)) + saved(id, level.getGameTime());
+        int over = Ledger.coins(id) - keep;
+        if (over <= 0) return 0;
+        int took = Ledger.takeCoins(id, (over + UPKEEP_ONE_IN - 1) / UPKEEP_ONE_IN);
+        if (took > 0) {
+            Economy.spent(id, took);
+            UPKEEP.put(id, new long[]{ day, took });
+        }
+        return took;
+    }
+
+    /** The coin in a town and where it is: the treasury, the folk's purses, the upkeep's last take (the Prices page). */
+    public static String coinLine(UUID village) {
+        int purses = 0, folk = 0;
+        for (AssistantEntity a : Villages.folkOf(village)) {
+            if (a instanceof VillageFolkEntity f) { purses += f.purse(); folk++; }
+        }
+        long[] u = UPKEEP.get(village);
+        return "Coin: " + Ledger.coins(village) + " in the treasury, " + purses + " in " + folk + " folk's purses"
+            + (u != null ? "; the upkeep took " + u[1] + " on day " + (u[0] + 1) + " (a fortieth of what the treasury held over a fortnight's wages)" : "")
+            + ". The town asks a tenth over its prices and pays four fifths of them; nobody buys under nine tenths.";
     }
 
     /** From the Iron Age: gold from the stores into coin, while the treasury is low. Returns the coin minted. */
@@ -916,6 +956,7 @@ public final class Market {
     }
 
     public static void resetForTests() {
+        UPKEEP.clear();
         BEDS_SHORT.clear();
         HUNGRY.clear();
         SAVING.clear();
@@ -1254,6 +1295,11 @@ public final class Market {
             }
         }
         return left;
+    }
+
+    /** Tests: a lot into the stores as a maker's work would go ([market] the hundred days). */
+    public static ItemStack intoStoresForTests(ServerLevel level, UUID village, ItemStack stack) {
+        return intoStores(level, village, stack);
     }
 
     /** The coin a player carries. */
