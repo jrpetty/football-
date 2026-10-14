@@ -270,7 +270,7 @@ public class DefenceGameTests {
         // The walkway along the north: capped, clear over it, the battlements on its outer face.
         int top = CastleWall.topForTests(village, TownPlan.NORTH, -20);
         helper.assertTrue(top == heart.getY() + 5, "five high in the Stone Age: " + (top - heart.getY()));
-        for (int ax = -24; ax <= -18; ax++) {
+        for (int ax = -21; ax <= -15; ax++) {                      // a plain run of curtain, between two towers
             for (int z = -42; z >= -43; z--) {
                 helper.assertTrue(level.getBlockState(new BlockPos(heart.getX() + ax, top - 1, heart.getZ() + z)).is(Blocks.COBBLESTONE), "the walkway's cap at " + ax + "," + z);
                 helper.assertTrue(level.getBlockState(new BlockPos(heart.getX() + ax, top, heart.getZ() + z)).isAir()
@@ -280,7 +280,7 @@ public class DefenceGameTests {
             BlockState b = level.getBlockState(new BlockPos(heart.getX() + ax, top, heart.getZ() - 44));
             helper.assertTrue(merlon ? b.is(Blocks.COBBLESTONE) : b.isAir(), "the battlements at " + ax + ": " + b);
         }
-        helper.assertTrue(level.getBlockState(new BlockPos(heart.getX() - 24, top + 1, heart.getZ() - 44)).is(Blocks.LANTERN), "a lantern on a merlon");
+        helper.assertTrue(level.getBlockState(new BlockPos(heart.getX() - 16, top + 1, heart.getZ() - 44)).is(Blocks.LANTERN), "a lantern on a merlon");
         helper.assertTrue(level.getBlockState(new BlockPos(heart.getX() - 20, heart.getY() + 3, heart.getZ() - 41)).is(Blocks.WALL_TORCH), "a torch on the inner face");
         // The towers: a ladder up from the street inside each tower of a side, the corners crenellated.
         int ladders = count(level, heart, s, st -> st.is(Blocks.LADDER));

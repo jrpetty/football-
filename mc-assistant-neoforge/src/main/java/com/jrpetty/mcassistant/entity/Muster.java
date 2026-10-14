@@ -48,6 +48,10 @@ public final class Muster {
     static final double STEP_OUT = 7.0;
     /** How many looks a child stands at the edge of the crowd before it is lifted through to its place. */
     static final int LIFT_AFTER = 20;
+    /** How many points round the ring are looked at for level ground when the place is chosen. */
+    static final int RING_LOOKS = 24;
+    /** How near its mark a guard of the ring stands (blocks). */
+    static final double PLACED = 0.3;
 
     /** A town's muster: where, how big, and who stands where. */
     static final class Gathering {
@@ -151,13 +155,17 @@ public final class Muster {
         int[] court = Villages.courtRect(v.id());
         if (court != null) want = new BlockPos((court[0] + court[1]) / 2, heart.getY(), (court[2] + court[3]) / 2);
         int reach = (int) Math.ceil(inner + 1);
+        // The ring stands round the crowd: its whole circle wants level ground clear of the heart's stall and the
+        // board, or a guard's mark falls on a block it cannot stand on and the ring stands lopsided.
+        double ringR = inner + 2.5;
+        int ringOut = (int) Math.ceil(ringR + 1);
         BlockPos best = null;
         int bestScore = Integer.MIN_VALUE;
         for (int dx = -8; dx <= 8; dx += 2) {
             for (int dz = -8; dz <= 8; dz += 2) {
                 BlockPos col = want.offset(dx, 0, dz);
                 // On the square: inside its wall's line.
-                if (Math.max(Math.abs(col.getX() - heart.getX()), Math.abs(col.getZ() - heart.getZ())) > com.jrpetty.mcassistant.village.TownPlan.PLAZA - reach - 1) continue;
+                if (Math.max(Math.abs(col.getX() - heart.getX()), Math.abs(col.getZ() - heart.getZ())) > com.jrpetty.mcassistant.village.TownPlan.PLAZA - ringOut - 1) continue;
                 BlockPos c = Assemblies.standable(level, col, heart.getY());
                 if (c == null) continue;
                 int room = 0, all = 0;
@@ -169,9 +177,15 @@ public final class Muster {
                         if (p != null && Math.abs(p.getY() - c.getY()) <= 1) room++;
                     }
                 }
-                int score = room * 4 - (Math.abs(dx) + Math.abs(dz));
+                int ringRoom = 0;
+                for (int i = 0; i < RING_LOOKS; i++) {
+                    double a = 2 * Math.PI * i / RING_LOOKS;
+                    BlockPos p = Assemblies.standable(level, BlockPos.containing(c.getX() + 0.5 + ringR * Math.cos(a), c.getY(), c.getZ() + 0.5 + ringR * Math.sin(a)), c.getY());
+                    if (p != null && p.getY() == c.getY()) ringRoom++;
+                }
+                int score = room * 4 + ringRoom * 8 - (Math.abs(dx) + Math.abs(dz));
                 if (score > bestScore) { bestScore = score; best = c; }
-                if (room == all && dx == 0 && dz == 0) return c;
+                if (room == all && ringRoom == RING_LOOKS && dx == 0 && dz == 0) return c;
             }
         }
         if (best != null) return best;
@@ -228,6 +242,20 @@ public final class Muster {
             f.getLookControl().setLookAt(g.at.getX() + 0.5, f.getEyeY(), g.at.getZ() + 0.5);
         }
         return true;
+    }
+
+    /**
+     * Between its looks (the folk think once in five seconds), the muster holds a folk of the town (VillageFolkEntity
+     * aiStep, before the day's errands): nothing else of its day (a meal, the assembly, a neighbour's call, indoors at
+     * the sight of a monster with the ring round it) takes it out of its place in the crowd. Its place is looked to
+     * twice a second; a folk sheltering where it is, or laid up, is left to that.
+     */
+    public static boolean hold(VillageFolkEntity f) {
+        UUID id = f.ownerId();
+        if (!called(id) || f.stationTask() == AssistantEntity.StationTask.GUARD || f.isHired() || Health.laidUp(f)) return false;
+        Gathering g = NOW.get(id);
+        if ((f.tickCount + f.getId()) % 10 != 0) return g != null && !g.sheltering.contains(f.getUUID());
+        return gather(f) && (g == null || !g.sheltering.contains(f.getUUID()));
     }
 
     /** A folk's place in the crowd: the children and the frail nearest the middle (their places kept for them
@@ -310,16 +338,23 @@ public final class Muster {
             return true;
         }
         BlockPos spot = ringSpot(level, g, k, ring.size(), from);
-        double dx = guard.getX() - (spot.getX() + 0.5), dz = guard.getZ() - (spot.getZ() + 0.5);
-        if (dx * dx + dz * dz > 1.0) {
+        // Its exact place on the ring (not the middle of the block it falls in), so the ring stands evenly spaced.
+        double[] at = ringPoint(g, k, ring.size(), from);
+        double tx = BlockPos.containing(at[0], spot.getY(), at[1]).equals(spot) ? at[0] : spot.getX() + 0.5;
+        double tz = BlockPos.containing(at[0], spot.getY(), at[1]).equals(spot) ? at[1] : spot.getZ() + 0.5;
+        double dx = guard.getX() - tx, dz = guard.getZ() - tz, d2 = dx * dx + dz * dz;
+        if (d2 > 2.25) {
             if (guard.getNavigation().isDone() || guard.tickCount % 20 == 0) {
-                guard.getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.3D);
+                guard.getNavigation().moveTo(tx, spot.getY(), tz, 1.3D);
             }
+        } else if (d2 > PLACED * PLACED) {
+            guard.getNavigation().stop();
+            guard.teleportTo(tx, spot.getY(), tz);                  // the last shuffle onto its mark (the path ends a block short)
         } else {
             guard.getNavigation().stop();
             // Facing out, away from the folk.
-            double ox = spot.getX() + 0.5 - (g.at.getX() + 0.5), oz = spot.getZ() + 0.5 - (g.at.getZ() + 0.5);
-            guard.getLookControl().setLookAt(spot.getX() + 0.5 + ox * 4, guard.getEyeY(), spot.getZ() + 0.5 + oz * 4);
+            double ox = tx - (g.at.getX() + 0.5), oz = tz - (g.at.getZ() + 0.5);
+            guard.getLookControl().setLookAt(tx + ox * 4, guard.getEyeY(), tz + oz * 4);
         }
         // The captain calls out, every so often.
         if (k == 0 && level.getGameTime() - g.lastCall > 240L) {
@@ -331,10 +366,21 @@ public final class Muster {
         return true;
     }
 
-    /** A guard's place in the ring: evenly round it, the first (the captain) toward the trouble. */
-    static BlockPos ringSpot(ServerLevel level, Gathering g, int k, int of, @Nullable Direction from) {
+    /** Where on the ring the k-th of so many guards stands: evenly round it, the first (the captain) toward the
+     *  trouble. {x, z}. */
+    static double[] ringPoint(Gathering g, int k, int of, @Nullable Direction from) {
+        double ang = angle(k, of, from);
+        return new double[]{ g.at.getX() + 0.5 + g.ring * Math.cos(ang), g.at.getZ() + 0.5 + g.ring * Math.sin(ang) };
+    }
+
+    private static double angle(int k, int of, @Nullable Direction from) {
         double base = from == null ? 0.0 : Math.atan2(from.getStepZ(), from.getStepX());
-        double ang = base + 2 * Math.PI * k / Math.max(1, of);
+        return base + 2 * Math.PI * k / Math.max(1, of);
+    }
+
+    /** A guard's place in the ring as a block to stand in: its point's, or the nearest along its line that will do. */
+    static BlockPos ringSpot(ServerLevel level, Gathering g, int k, int of, @Nullable Direction from) {
+        double ang = angle(k, of, from);
         for (double r : new double[]{ g.ring, g.ring + 1, g.ring - 1, g.ring + 2 }) {
             BlockPos col = BlockPos.containing(g.at.getX() + 0.5 + r * Math.cos(ang), g.at.getY(), g.at.getZ() + 0.5 + r * Math.sin(ang));
             BlockPos p = Assemblies.standable(level, col, g.at.getY());
