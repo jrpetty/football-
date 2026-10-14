@@ -23,7 +23,8 @@ import java.util.UUID;
  * feature live, run flat out while the server's cost per tick is logged ([PERF] lines). Run it under Java Flight
  * Recorder to see where the time goes (scratchpad perf/scale.sh).
  *
- * <p>System properties: {@code perf.towns} the founding sizes ("250,100"); {@code perf.player} the town a stand-in
+ * <p>System properties: {@code perf.towns} the founding sizes ("250,100"; none: the probe passes at once, so the
+ * suite's own run costs nothing); {@code perf.player} the town a stand-in
  * player stands in (-1: none); {@code perf.days} how long with the player there; {@code perf.awayDays} how long after
  * that with the player far off from every town; {@code perf.warm} days left out of the totals at the start of each
  * phase (the founding's settling in).
@@ -42,7 +43,9 @@ public class PerfGameTests {
 
     private static final int X0 = 1840000, Z = 66000, SPACING = 1200, FAR_X = 1858000;
     private static final int WINDOW = 1200;
-    private static final int[] FOLK = parse(System.getProperty("perf.towns", "250,100"));
+    /** The founding sizes; with none given (the suite's own run) the probe passes at once and costs nothing. */
+    private static final String TOWNS = System.getProperty("perf.towns", "");
+    private static final int[] FOLK = TOWNS.isEmpty() ? new int[0] : parse(TOWNS);
     private static final int PLAYER_IN = Integer.getInteger("perf.player", 0);
     private static final double DAYS = Double.parseDouble(System.getProperty("perf.days", "1"));
     private static final double AWAY_DAYS = Double.parseDouble(System.getProperty("perf.awayDays", "0.5"));
@@ -81,6 +84,10 @@ public class PerfGameTests {
 
     @GameTest(template = "empty", timeoutTicks = 2_000_000, required = false, batch = "perf01_towns")
     public static void perf01_towns(GameTestHelper helper) {
+        if (FOLK.length == 0) {
+            helper.succeed();                         // a probe, run by hand (scratchpad perf/scale.sh), not by the suite
+            return;
+        }
         ServerLevel level = helper.getLevel();
         MinecraftServer server = level.getServer();
         Kit.reset(level);
