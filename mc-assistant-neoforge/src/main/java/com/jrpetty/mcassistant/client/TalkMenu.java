@@ -218,6 +218,11 @@ public final class TalkMenu {
     static final Entry MEAL = ask("meal", Items.BREAD, TalkTopic.MEAL);
     static final Entry LESSON = say("lesson", Items.WRITTEN_BOOK, "What's my next lesson?");
     static final Entry SEE_TO = ask("see_to", Items.GLISTERING_MELON_SLICE, TalkTopic.SEE_TO);   // [roles-a] the healer
+    // [roles-b] The crafts' own: the tailor's orders, the brewer's potions, the enchanter's table, the beekeeper's honey.
+    static final Entry TAILOR = ask("tailor_order", Items.WHITE_BANNER, TalkTopic.TAILOR);
+    static final Entry POTION = ask("potion", Items.POTION, TalkTopic.POTION);
+    static final Entry ENCHANT = ask("enchant", Items.ENCHANTED_BOOK, TalkTopic.ENCHANT);
+    static final Entry HONEY = ask("honey", Items.HONEY_BOTTLE, TalkTopic.HONEY);
 
     /** The profile and skills pages, the work record and the pack: the header's links. */
     public static final Entry PROFILE = special("profile", Items.PAPER, Kind.PAGE);
@@ -302,7 +307,8 @@ public final class TalkMenu {
                 ask("sponsor", Items.PUMPKIN_PIE, TalkTopic.SPONSOR),
                 ask("escort", Items.SHIELD, TalkTopic.ESCORT),
                 ask("charter", Items.MINECART, TalkTopic.CHARTER),
-                SEE_TO)),                                                    // [roles-a] the healer sees to you
+                SEE_TO),                                                     // [roles-a] the healer sees to you
+            group("crafts", Items.LOOM, TAILOR, POTION, ENCHANT, HONEY)),      // [roles-b] the crafts' services
         // Town: its ways, its people, its government, its law, its records.
         List.of(
             say("ways", Items.WHITE_BANNER, "What's this town like?"),
@@ -379,6 +385,10 @@ public final class TalkMenu {
             case "SHOP" -> FOR_SALE;
             case "COOK" -> MEAL;
             case "HEAL" -> SEE_TO;                                           // [roles-a]
+            case "TAILOR" -> TAILOR;                                         // [roles-b]
+            case "BREW" -> POTION;                                           // [roles-b]
+            case "ENCHANT" -> ENCHANT;                                       // [roles-b]
+            case "BEEKEEP" -> HONEY;                                         // [roles-b]
             default -> null;
         };
     }

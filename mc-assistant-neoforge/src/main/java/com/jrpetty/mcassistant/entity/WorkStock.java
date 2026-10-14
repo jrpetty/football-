@@ -26,7 +26,8 @@ import java.util.function.Predicate;
  * [shops-homes] A workshop's own chest, holding what its maker works with. The smithy's chest has the iron, the coal,
  * the sticks and a spare pick and axe; the tailor's the wool, the string, the leather and the dyes; the café's the
  * wheat, the sugar, the eggs and the cocoa; the fletcher's the sticks, the flint and the feathers; the brewery's the
- * bottles, the wart and the blaze powder; the library's the lapis, the books and the paper. Out on the plots, a
+ * bottles, the wart and the blaze powder; the enchanter's tower's (the library's, till it stands) the lapis, the books
+ * and the paper; [roles-b] the apiary's honey house the string for its candles, the bottles and flowers. Out on the plots, a
  * producer's own work chest keeps its kit by its harvest: a miner's torches and a spare pick, a farmer's seed and a
  * spare hoe, a woodcutter's spare axe, a fisher's spare rod (the couriers leave the kit when they empty it).
  * <ul>
@@ -63,6 +64,8 @@ public final class WorkStock {
         StationTask.FLETCHER, List.of(m(Items.STICK, 32), m(Items.FLINT, 16), m(Items.FEATHER, 16)),
         StationTask.BREW, List.of(m(Items.GLASS_BOTTLE, 9), m(Items.NETHER_WART, 8), m(Items.BLAZE_POWDER, 4), m(Items.SUGAR, 4)),
         StationTask.ENCHANT, List.of(m(Items.LAPIS_LAZULI, 16), m(Items.BOOK, 8), m(Items.PAPER, 16)),
+        // [roles-b] The apiary's honey house: the candle bench's string, the bottles for the honey, flowers for the bees.
+        StationTask.BEEKEEP, List.of(m(Items.STRING, 8), m(Items.GLASS_BOTTLE, 6), tag(net.minecraft.tags.ItemTags.SMALL_FLOWERS, Items.DANDELION, 4, "4 flowers")),
         // The shop's bench: what its keeper and hands make its wares of, kept apart from the wares on its shelves.
         StationTask.SHOP, List.of(tag(ItemTags.PLANKS, Items.OAK_PLANKS, 32, "32 planks"), m(Items.STICK, 16), m(Items.COBBLESTONE, 16),
             m(Items.IRON_INGOT, 8), m(Items.STRING, 8), m(Items.COAL, 8)));
@@ -91,7 +94,7 @@ public final class WorkStock {
     @Nullable
     public static BlockPos chestOf(ServerLevel level, UUID village, StationTask trade) {
         if (!MAKINGS.containsKey(trade)) return null;
-        String building = VillageFolkEntity.buildingFor(trade);
+        String building = CraftScale.houseOf(village, trade);              // [roles-b] the tower's, or the library's till then
         if (building == null) return null;
         for (Ledger.Building b : Ledger.buildings(village)) {
             if (!b.structure().equals(building) || !level.isLoaded(b.anchor())) continue;

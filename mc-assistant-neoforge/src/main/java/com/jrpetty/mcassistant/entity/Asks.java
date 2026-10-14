@@ -82,6 +82,10 @@ public final class Asks {
         BUILDINGS.put("diver", "divershed");              // [diver] the diver's shed (Divers)
         BUILDINGS.put("kelp", "divershed");
         BUILDINGS.put("redstoneworks", "redstoneworks");  // [redstone] the redstone workshop (Engineers)
+        BUILDINGS.put("apiary", "apiary");                // [roles-b] the beekeeper's apiary (Apiary)
+        BUILDINGS.put("honey house", "apiary");
+        BUILDINGS.put("enchanter's tower", "enchanter");  // [roles-b] the enchanter's tower (CraftScale)
+        BUILDINGS.put("enchanting tower", "enchanter");
     }
 
     /** The trade named in a line, or null. */

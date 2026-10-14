@@ -1430,7 +1430,8 @@ public final class Interviews {
             VillageFolkEntity f = Civics.find(level, w.id);
             StationTask t = o.task();
             if (f != null && t != null) {
-                BlockPos at = Villages.builtAt(id, workplaceOf(t));
+                String house = CraftScale.scales(t) ? CraftScale.houseOf(id, t) : workplaceOf(t);   // [roles-b] the tower, the apiary
+                BlockPos at = house == null || house.isEmpty() ? null : Villages.builtAt(id, house);
                 f.setWorkZone(null);
                 f.setStation(at != null ? at : f.blockPosition(), t);
                 f.setAutonomous(true);

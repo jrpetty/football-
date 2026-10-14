@@ -233,6 +233,8 @@ public final class TownPlan {
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
             case "powderhut" -> "edge";               // [fireworks] the powder hut, away from the houses (FireworksMaker)
             case "divershed" -> "edge";               // [diver] on the bank of its water (Divers.shedSite), out at the edge
+            case "apiary" -> "edge";                  // [roles-b] the bees' garden, out at the edge by the meadows (Apiary)
+            case "enchanter" -> "civic";              // [roles-b] the enchanter's tower, among the trades (CraftScale)
             default -> "home";
         };
     }

@@ -525,7 +525,8 @@ public final class ServicePoints {
         if (!(e.getLevel() instanceof ServerLevel level) || !(e.getEntity() instanceof ServerPlayer p)) return;
         if (e.getHand() != InteractionHand.MAIN_HAND || p.isShiftKeyDown()) return;
         BlockState s = level.getBlockState(e.getPos());
-        if (!ServiceRole.Point.LECTERN.is(s) && !ServiceRole.Point.ANVIL.is(s) && !ServiceRole.Point.LOOM.is(s)) return;
+        if (!ServiceRole.Point.LECTERN.is(s) && !ServiceRole.Point.ANVIL.is(s) && !ServiceRole.Point.LOOM.is(s)
+                && !ServiceRole.Point.BREWING.is(s) && !ServiceRole.Point.ENCHANTING.is(s)) return;     // [roles-b] the stand, the table
         if (!p.getMainHandItem().isEmpty() && !Market.isCoin(p.getMainHandItem())) return;   // a book for the lectern, a pick to mend: as ever
         Point point = at(level, e.getPos());
         if (point == null) return;
@@ -562,6 +563,10 @@ public final class ServicePoints {
             case BANK -> folk.stationTask() == AssistantEntity.StationTask.BANK ? ServiceRole.BANK : null;
             case REPAIR -> folk.stationTask() == AssistantEntity.StationTask.SMITH ? ServiceRole.SMITHY
                 : folk.stationTask() == AssistantEntity.StationTask.TAILOR ? ServiceRole.TAILOR : null;
+            // [roles-b] The tailor's orders at its table, the brewer's stand, the enchanter's table.
+            case TAILOR -> folk.stationTask() == AssistantEntity.StationTask.TAILOR ? ServiceRole.TAILOR : null;
+            case POTION -> folk.stationTask() == AssistantEntity.StationTask.BREW ? ServiceRole.BREWERY : null;
+            case ENCHANT -> folk.stationTask() == AssistantEntity.StationTask.ENCHANT ? ServiceRole.ENCHANTER : null;
             default -> null;
         };
         if (role == null) return false;

@@ -5298,7 +5298,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // The couriers are the storehouse's staff, and work out of it too (Couriers): their post is
         // the storehouse, where they wait between runs and report back after each.
         String building = trade == StationTask.HAUL ? "storage"
-            : trade == StationTask.SHOP ? Store.buildingForShop(ownerId()) : buildingFor(trade);   // [econ-store] the store once it stands
+            : trade == StationTask.SHOP ? Store.buildingForShop(ownerId())   // [econ-store] the store once it stands
+            : CraftScale.houseOf(ownerId(), trade);                           // [roles-b] the library till the tower; the apiary
         if (building == null) return;
         if (tickCount - buildingCheckTick < 1200) return;
         buildingCheckTick = tickCount;
@@ -5325,7 +5326,8 @@ public class VillageFolkEntity extends AssistantEntity {
             case SMITH -> "smithy";
             case TAILOR -> "workshop";
             case BREW -> "brewery";
-            case ENCHANT -> "library";
+            case ENCHANT -> CraftScale.TOWER;       // [roles-b] its own tower (the library till it stands: CraftScale.houseOf)
+            case BEEKEEP -> Apiary.STRUCTURE;       // [roles-b] the apiary once it stands; its own meadow till then
             case COOK -> "cafe";
             case SHOP -> "shop";
             case BANK -> "bank";                  // the banker (Bank)
@@ -7980,7 +7982,8 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // The smeltery is the smelter's ground for good (workInTheBuilding): short of ore
         // or coal it waits for the carriers, it does not wander off to stake new ground.
-        if (buildingFor(trade) != null && ownerId() != null && Villages.builtAt(ownerId(), buildingFor(trade)) != null) return false;
+        String house = CraftScale.houseOf(ownerId(), trade);                  // [roles-b] the workshop it works in now
+        if (house != null && ownerId() != null && Villages.builtAt(ownerId(), house) != null) return false;
         avoidHere = workZone();
         searchBearing++;
         BlockPos site = findSite(trade, radiusFor(trade));

@@ -88,8 +88,9 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.RANCH, 1, 14),
         // [economy] Fishers from eight (a town of fifteen had none, and no fish), and more when the larder is short (Leader).
         new Slot(AssistantEntity.StationTask.FISH, 1, 8),
-        // The crafts, as a village grows into them: each wants its age and its building
-        // (Crafts, Cafe), and one or two hands at most, however big the town.
+        // The crafts, as a village grows into them: each wants its age and its building (Crafts, Cafe). The max is the
+        // first hand's: [roles-b] the smith, tailor, beekeeper, brewer, enchanter and banker grow by a hand each sixty
+        // folk, held to the benches their workshops have (CraftScale.most).
         new Slot(AssistantEntity.StationTask.COOK, 1, 14, Age.STONE, 2),
         new Slot(AssistantEntity.StationTask.SMITH, 1, 16, Age.IRON, 1),
         new Slot(AssistantEntity.StationTask.TAILOR, 1, 18, Age.STONE, 1),
@@ -384,6 +385,7 @@ public final class Villages {
             case "tradingpost" -> "the Trading Post";             // [emerald]
             case "divershed" -> "the diver's shed";               // [diver]
             case "redstoneworks" -> "the redstone workshop";      // [redstone]
+            case "enchanter" -> "the enchanter's tower";          // [roles-b]
             default -> "the " + structure;
         };
     }
@@ -429,6 +431,9 @@ public final class Villages {
         BUILT_AT.clear();
         TownLife.resetForTests();
         Crafts.resetForTests();
+        CraftScale.resetForTests();         // [roles-b] the benches counted, the apiary's errands, the potion orders
+        Apiary.resetForTests();
+        CraftServices.resetForTests();
         Raids.resetForTests();
         Contentment.resetForTests();
         RestDay.resetForTests();
@@ -755,7 +760,7 @@ public final class Villages {
             double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // The first hand of a craft the village has grown into comes before one more of a trade
-            // it already has plenty of: a craft is one or two hands however big the town, and its
+            // it already has plenty of: a craft is a few hands at most (CraftScale), and its
             // share never outweighed the farms' and the mines', which grow with every newcomer.
             if (slot.trade().isCraft() && have.getOrDefault(slot.trade(), 0) == 0) deficit += 2.0;
             // Ties break toward the trade the village wants most of, which
@@ -923,6 +928,7 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.DIVER) return Divers.ready(villageId);        // [diver] water near enough to dive in
         if (trade == AssistantEntity.StationTask.REDSTONE) return Engineers.ready(villageId);  // [redstone] redstone and quartz in the stores
         if (trade == AssistantEntity.StationTask.HEAL) return Healers.ready(villageId);        // [roles-a] the infirmary standing
+        if (trade == AssistantEntity.StationTask.ENCHANT) return CraftScale.enchanterReady(villageId);   // [roles-b] its tower, or the library
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -1035,7 +1041,8 @@ public final class Villages {
         double ways = Ethos.extraHands(villageId, slot.trade());
         t = t * Ethos.shareLean(villageId, slot.trade()) + ways;
         int max = slot.max() == Integer.MAX_VALUE ? Integer.MAX_VALUE
-            : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade()) + (int) Math.ceil(ways);
+            : CraftScale.most(villageId, slot.trade(), total, slot.max())       // [roles-b] the crafts grow with the town
+                + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade()) + (int) Math.ceil(ways);
         // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.
         double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null
             ? Workshop.handsWanted(villageId) + ShopRoles.staffWanted(villageId)        // [econ-store] and its assistants and stock keeper
@@ -1886,6 +1893,8 @@ public final class Villages {
         if (Cartographers.wantsMapRoom(villageId) && built(villageId, Cartographers.STRUCTURE) < 1) extras.add(Cartographers.STRUCTURE);
         // [emerald] The Trading Post, once the town trades with the villagers (EmeraldTrader).
         if (EmeraldTrader.postWanted(villageId)) extras.add(EmeraldTrader.POST);
+        // [roles-b] The apiary, once a town of twenty keeps a beekeeper (Apiary): out at the edge, its hives brought over.
+        if (Apiary.wanted(villageId, folk)) extras.add(Apiary.STRUCTURE);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -1928,6 +1937,8 @@ public final class Villages {
         if (built(villageId, "lighthouse") < 1) out.add("lighthouse");
         if (built(villageId, "chapel") < 1) out.add("chapel");
         if (folk >= 24 && built(villageId, "library") < 1) extras.add("library");
+        // [roles-b] The enchanter's own tower, so it no longer shares the library (CraftScale).
+        if (folk >= 24 && built(villageId, CraftScale.TOWER) < 1) extras.add(CraftScale.TOWER);
         // And a bell tower on the square, to ring the town's hours.
         if (folk >= 24 && built(villageId, "belltower") < 1) extras.add("belltower");
         if (at == Age.DIAMOND) { homesAndAmenities(villageId, folk, out, extras); return out; }
@@ -2308,6 +2319,9 @@ public final class Villages {
             case "statue" -> PublicFund.why(villageId);                   // [batchF]
             case "firestation" -> FireSafety.why(villageId);              // [disasters]
             case "townlibrary" -> Library.why(villageId);                 // [library]
+            case "apiary" -> "an apiary out at the edge of the town: the beekeeper's hives in a fenced garden, and a honey house "
+                + "where the spare comb is dipped into candles";                  // [roles-b]
+            case "enchanter" -> "a tower for the enchanter: its table in a ring of bookshelves, so it no longer shares the library";   // [roles-b]
             default -> "the " + project;
         };
     }

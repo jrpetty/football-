@@ -25,11 +25,15 @@ public enum ServiceRole {
     TAILOR("tailor", "Tailor's", "tailor", new ServiceHours(1000, 12000), Point.LOOM, List.of("workshop"), AssistantEntity.StationTask.TAILOR),
     // [dining] The restaurant: lunch and dinner, from eleven till nine; its counter opens the order screen (DiningDesk).
     RESTAURANT("restaurant", "Restaurant", "host", new ServiceHours(5000, 15000), Point.COUNTER, List.of(DiningPlaces.RESTAURANT),
-        AssistantEntity.StationTask.COOK);
+        AssistantEntity.StationTask.COOK),
+    // [roles-b] The brewer's stand (potions bought or brewed to order) and the enchanter's table (CraftDesk).
+    BREWERY("brewery", "Brewery", "brewer", new ServiceHours(1000, 12000), Point.BREWING, List.of("brewery"), AssistantEntity.StationTask.BREW),
+    ENCHANTER("enchanter", "Enchanter's", "enchanter", new ServiceHours(1000, 12000), Point.ENCHANTING, List.of(CraftScale.TOWER, CraftScale.LIBRARY),
+        AssistantEntity.StationTask.ENCHANT);
 
     /** What a role serves at. */
     public enum Point {
-        COUNTER, LECTERN, ANVIL, LOOM;
+        COUNTER, LECTERN, ANVIL, LOOM, BREWING, ENCHANTING;
 
         /** Is this block a point of this kind? */
         public boolean is(BlockState s) {
@@ -38,6 +42,8 @@ public enum ServiceRole {
                 case LECTERN -> s.getBlock() instanceof LecternBlock;
                 case ANVIL -> s.getBlock() instanceof AnvilBlock;
                 case LOOM -> s.getBlock() instanceof LoomBlock;
+                case BREWING -> s.getBlock() instanceof net.minecraft.world.level.block.BrewingStandBlock;          // [roles-b]
+                case ENCHANTING -> s.getBlock() instanceof net.minecraft.world.level.block.EnchantingTableBlock;   // [roles-b]
             };
         }
     }
@@ -83,6 +89,7 @@ public enum ServiceRole {
             case TAVERN -> TavernDesk.INSTANCE;
             case RESTAURANT -> DiningDesk.INSTANCE;                       // [dining]
             case SMITHY, TAILOR -> MakerDesk.INSTANCE;
+            case BREWERY, ENCHANTER -> CraftDesk.INSTANCE;                  // [roles-b]
         };
     }
 

@@ -84,7 +84,12 @@ public enum TalkTopic {
     MAPS("What maps have you?"),                           // [cartographer] Cartographers: explorer maps, a commission
     NETHER("What's it like in the Nether?"),               // [nether] NetherGuests: the runners' report; an ask, going along, the chart
     SHIFTS("Any shifts going?"),                           // [earning] Shifts: a paid shift, from the boss
-    SEE_TO("I'm hurt. Could you see to me?");              // [roles-a] Healers: a remedy and a fee, from the healer
+    SEE_TO("I'm hurt. Could you see to me?"),              // [roles-a] Healers: a remedy and a fee, from the healer
+    // [roles-b] The crafts' services (CraftServices): an order at the tailor's, a potion, an enchanting, honey.
+    TAILOR("Could you make me something?"),
+    POTION("Could you brew me a potion?"),
+    ENCHANT("Could you enchant this?"),
+    HONEY("Could I buy some honey?");
 
     public final String line;
 

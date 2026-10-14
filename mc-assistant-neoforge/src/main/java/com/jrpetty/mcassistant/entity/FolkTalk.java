@@ -224,6 +224,10 @@ public final class FolkTalk {
             case ORDER -> Dealings.order(f, p, text);
             case REPAIR -> Dealings.repair(f, p);
             case SEE_TO -> Healers.seeTo(f, p);                                // [roles-a] the healer sees to a player
+            case TAILOR -> CraftServices.tailor(f, p, text);                   // [roles-b] the crafts' services
+            case POTION -> CraftServices.potion(f, p, text);
+            case ENCHANT -> CraftServices.enchant(f, p);
+            case HONEY -> CraftServices.honey(f, p, text);
             case TOWN_MAP -> PlayerServices.townMap(f, p);                    // [players] a map of the town
             case MAPS -> Cartographers.talk(f, p, text);                      // [cartographer] explorer maps, a commission, a copy
             case LOST -> PlayerServices.lostAndFound(f, p);                   // [players] the Lost and Found
@@ -843,7 +847,7 @@ public final class FolkTalk {
                 "With the bees" + place + ". Honey's nearly ready.");
             case BREW -> pick(r, "Brewing" + place + ". Something for the watch's cuts and bruises.",
                 "Minding the brews" + place + ". Don't touch the green one.");
-            case ENCHANT -> pick(r, "In the library" + place + ", putting a little magic into the village's tools.",
+            case ENCHANT -> pick(r, "At my table" + place + ", putting a little magic into the village's tools.",   // [roles-b] the tower, or the library
                 "Reading, mostly. And enchanting" + place + " — a blade that never dulls.");
             case COOK -> pick(r, "Cooking at the café" + place + ". Pull up a seat!",
                 "In the café" + place + " — the cider's fresh today.");
@@ -1476,6 +1480,9 @@ public final class FolkTalk {
         if (has(t, "make me ", "craft me ", "forge me ", "sew me ") && Services.itemNamed(t) != null) return TalkTopic.ORDER;
         if (has(t, "is it ready", "is my order", "my order ready", "collect my order")) return TalkTopic.BULK;
         if (has(t, "see to me", "i'm hurt", "im hurt", "i am hurt", "heal me", "patch me up", "i'm wounded", "bandage me")) return TalkTopic.SEE_TO;   // [roles-a]
+        if (has(t, "enchant this", "enchant my", "enchant it", "enchant a ", "an enchantment")) return TalkTopic.ENCHANT;   // [roles-b]
+        if (has(t, "brew me", "a potion", "potion of", "some potions")) return TalkTopic.POTION;                          // [roles-b]
+        if (has(t, "honey", "honeycomb", "candles", "beeswax")) return TalkTopic.HONEY;                                   // [roles-b]
         if (has(t, "repair", "mend ", "mend this", "fix my", "fix this")) return TalkTopic.REPAIR;
         if (has(t, "pay for the feast", "pay for a feast", "pay for tonight", "throw a feast", "feast on me", "sponsor")) return TalkTopic.SPONSOR;
         if (has(t, "contract", "i'll sign", "ill sign", "sign me up", "i'll do it")) return TalkTopic.CONTRACT;

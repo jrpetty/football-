@@ -243,6 +243,7 @@ public final class VillageCommands {
             // for operators, a cold caught now and an infirmary set out on a stage (Health).
             .then(com.jrpetty.mcassistant.entity.Health.command())
             .then(com.jrpetty.mcassistant.entity.Offices.command())             // [roles-a] who holds each office, and its allowance
+            .then(com.jrpetty.mcassistant.entity.CraftsStage.command())         // [roles-b] the crafts' hands and benches; the pictures' stage
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
             .then(com.jrpetty.mcassistant.entity.Perks.command())           // [perks] /village perks: wonders, the leader, quirks
             .then(com.jrpetty.mcassistant.entity.Referendums.command())     // [civic] /village referendum: the town's vote, the great works

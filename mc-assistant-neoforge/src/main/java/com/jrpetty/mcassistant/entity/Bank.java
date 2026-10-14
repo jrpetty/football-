@@ -450,7 +450,8 @@ public final class Bank {
     static void appoint(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
         Ledger.Building b = building(id);
-        if (b == null || banker(id) != null) return;
+        // [roles-b] One banker, and a clerk at the counter once the town is a hundred and twenty (CraftScale).
+        if (b == null || hands(id, StationTask.BANK) >= CraftScale.most(id, StationTask.BANK, Villages.headcount(id), 1)) return;
         VillageFolkEntity best = null;
         int bestScore = Integer.MIN_VALUE;
         for (int pass = 0; pass < 2 && best == null; pass++) {

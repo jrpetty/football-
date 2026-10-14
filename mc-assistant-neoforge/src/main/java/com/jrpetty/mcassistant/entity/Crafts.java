@@ -46,14 +46,16 @@ import java.util.function.Predicate;
  *     village can spare after that, lanterns (nuggets and a torch) and a cauldron;</li>
  * <li><b>the tailor</b> (Stone Age, at the workshop) turns the rancher's wool into beds for
  *     the houses, rugs and banners, and binds the books the library's shelves are made of;</li>
- * <li><b>the beekeeper</b> (Stone Age, a meadow outside the town) keeps hives, plants
- *     flowers round them for the bees, and takes the honey and the comb;</li>
+ * <li><b>the beekeeper</b> (Stone Age, a meadow outside the town, then the apiary once it stands) keeps hives,
+ *     plants flowers round them for the bees, takes the honey and the comb, and dips candles of the spare comb
+ *     (Apiary);</li>
  * <li><b>the brewer</b> (Iron Age, at the brewery) brews potions — healing for the watch,
  *     swiftness, night vision, leaping, water breathing — from what the stores hold;</li>
- * <li><b>the enchanter</b> (Diamond Age, at the library) binds books from cane and leather
- *     and puts enchantments on the village's best tools and armour with lapis.</li>
+ * <li><b>the enchanter</b> (Diamond Age, at its tower; at the library till that stands) binds books from cane
+ *     and leather and puts enchantments on the village's best tools and armour with lapis.</li>
  * </ul>
- * The ages are those the trades' slots ask for (Villages.SLOTS), which have the last word.
+ * The ages are those the trades' slots ask for (Villages.SLOTS), which have the last word. [roles-b] How many hands
+ * each keeps, and the benches they work at, grow with the town (CraftScale).
  */
 public final class Crafts {
 
@@ -70,6 +72,7 @@ public final class Crafts {
         UUID village = f.ownerId();
         Villages.Village v = village == null ? null : Villages.get(village);
         if (v == null) return false;
+        if (Apiary.errand(f, level)) return true;                     // [roles-b] out after a wild bees' nest
         if (WorkStock.fetchOwn(f, level)) return true;                // [shops-homes] its chest's makings, when no courier came
         int last = LAST.getOrDefault(f.getUUID(), -100000);
         // Quicker for a practised hand (a percent a level at its craft, to thirty), a cheerful one, a
@@ -78,7 +81,7 @@ public final class Crafts {
         // village's work (AssistantEntity.workBonusPercent): twenty seconds a piece for a new hand,
         // fourteen at level thirty, nine at the very most.
         int every = f.pacedTicks(EVERY, 100);
-        String building = VillageFolkEntity.buildingFor(f.stationTask());
+        String building = CraftScale.houseOf(v.id(), f.stationTask());    // [roles-b] the library, till the tower stands
         if (building != null && Villages.builtAt(v.id(), building) == null) every = every * 3 / 2;
         if (f.tickCount - last < every && f.tickCount >= last) return false;
         LAST.put(f.getUUID(), f.tickCount);
@@ -92,7 +95,8 @@ public final class Crafts {
         WorkStock.begin(level, v, f);                                  // [shops-homes] its own workshop chest first
         String made;
         try {
-            made = Luxuries.craft(level, v, f, true);                 // a turn at what the houses wait on (Luxuries)
+            made = CraftScale.tend(level, v, f);                      // [roles-b] another bench as the town grows; the table to the tower
+            if (made == null) made = Luxuries.craft(level, v, f, true);   // a turn at what the houses wait on (Luxuries)
             if (made == null) made = Pets.craft(level, v, f);         // [pets] a turn at the pets' beds, collars, bowls, treats
             if (made == null) made = TradeGoods.craft(level, v, f);   // [player-civic] a master's own: the reinforced pick, the stout, the pie, a journal
             if (made == null) made = WorkTools.craft(level, v, f);    // [workitems] ropes and sacks, the saw, props, crates, boxes, milestones
@@ -683,6 +687,7 @@ public final class Crafts {
         int r = Math.min(6, z.radius());
         if (!Land.areaLoaded(level, c, r + 8)) return null;
         List<BlockPos> hives = hivesAt(level, c, r);
+        if (!hives.isEmpty()) Apiary.meadowSeen(v, f, c);              // [roles-b] where its hives are, till the apiary stands
         // [fields] With a bee smoker, every full hive smoked and emptied on the one round, and more from each (FieldTools).
         String smoked = FieldTools.smokedHarvest(level, v, f, hives);
         if (smoked != null) return smoked;
@@ -706,7 +711,11 @@ public final class Crafts {
             return name(got);
         }
         // No hive yet: the one it carries (the one it brought lets its swarm out).
-        if (hives.isEmpty()) return setHive(level, f, c, r, 0);
+        if (hives.isEmpty()) {
+            String set = setHive(level, f, c, r, 0);
+            // [roles-b] None carried: its old meadow's hives brought to the apiary, else a wild nest looked for.
+            return set != null ? set : Apiary.noHives(level, v, f, c, r);
+        }
         int bees = beesAt(level, c, r, hives);
         // The hives are filling up: another, out of comb and planks.
         if (hives.size() < MAX_HIVES && bees >= 2 * hives.size()) {
@@ -735,9 +744,17 @@ public final class Crafts {
                 return "two bees fed a flower each; there'll be a new bee soon";
             }
         }
+        // [roles-b] The spare comb into candles at the apiary's bench (Apiary).
+        String dipped = Apiary.candles(level, v, f);
+        if (dipped != null) return dipped;
         // Between harvests: flowers round the hives.
-        String bloom = bloom(level, v, hives.get(0), 6);
-        return bloom;
+        return bloom(level, v, hives.get(0), 6);
+    }
+
+    /** Tests: a turn of the beekeeper's own work. */
+    @Nullable
+    public static String beekeepForTests(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        return beekeep(level, v, f);
     }
 
     /** The hives on a meadow (wild nests count too). */
@@ -787,7 +804,7 @@ public final class Crafts {
     }
 
     /** Shears in hand, or out of the stores (the smith makes them). */
-    private static boolean shears(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+    static boolean shears(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
         if (f.countCarried(s -> s.is(Items.SHEARS)) > 0) return true;
         if (!take(level, v, s -> s.is(Items.SHEARS), 1)) return false;
         ItemStack left = f.insertItem(new ItemStack(Items.SHEARS));
@@ -795,7 +812,7 @@ public final class Crafts {
         return true;
     }
 
-    private static void wearShears(VillageFolkEntity f) {
+    static void wearShears(VillageFolkEntity f) {
         for (ItemStack s : f.getInventoryItems()) {
             if (!s.is(Items.SHEARS)) continue;
             s.setDamageValue(s.getDamageValue() + 1);
@@ -822,7 +839,7 @@ public final class Crafts {
     }
 
     @Nullable
-    private static BlockPos hiveSpot(ServerLevel level, BlockPos c, int r, int k) {
+    static BlockPos hiveSpot(ServerLevel level, BlockPos c, int r, int k) {
         int[][] tries = { { 2, 2 }, { -2, 2 }, { 2, -2 }, { -2, -2 }, { 0, 3 }, { 3, 0 } };
         for (int i = k; i < tries.length + k; i++) {
             int[] t = tries[i % tries.length];
@@ -972,9 +989,9 @@ public final class Crafts {
     // ------------------------------------------------------------------ the brewer
 
     /** A brew: the potion, the reagent that makes it from an awkward potion, and how many the village likes to have. */
-    private record Brew(Holder<Potion> potion, Item reagent, int keep) {}
+    record Brew(Holder<Potion> potion, Item reagent, int keep) {}
 
-    private static List<Brew> brews(Villages.Village v) {
+    static List<Brew> brews(Villages.Village v) {
         int watch = Math.max(1, guards(v));
         return List.of(
             new Brew(Potions.HEALING, Items.GLISTERING_MELON_SLICE, Math.min(9, watch * 2 + 1)),
@@ -987,7 +1004,7 @@ public final class Crafts {
             new Brew(Potions.STRENGTH, Items.BLAZE_POWDER, 2));
     }
 
-    private static boolean isPotion(ItemStack s, Holder<Potion> pot) {
+    static boolean isPotion(ItemStack s, Holder<Potion> pot) {
         return s.is(Items.POTION) && s.getOrDefault(net.minecraft.core.component.DataComponents.POTION_CONTENTS,
             PotionContents.EMPTY).is(pot);
     }
@@ -1085,6 +1102,11 @@ public final class Crafts {
     /** What the village is shortest of, against what it likes to keep, that the brewer has the reagent for. */
     @Nullable
     private static Brew wanted(ServerLevel level, Villages.Village v, VillageFolkEntity f) {
+        // [roles-b] A player's order first, while the stores have none of it to hand over (CraftServices).
+        Holder<Potion> ordered = CraftServices.orderedPotion(level, v);
+        if (ordered != null) {
+            for (Brew b : brews(v)) if (b.potion().equals(ordered) && reagent(level, v, f, b, false)) return b;
+        }
         Brew best = null;
         double bestFill = 1.0;
         for (Brew b : brews(v)) {
@@ -1103,7 +1125,7 @@ public final class Crafts {
      * carrot, a carrot and the same gold; sugar is ground from sugar cane; blaze powder is only
      * spent on strength while there is plenty left to fire the stand.
      */
-    private static boolean reagent(ServerLevel level, Villages.Village v, VillageFolkEntity f, Brew b, boolean use) {
+    static boolean reagent(ServerLevel level, Villages.Village v, VillageFolkEntity f, Brew b, boolean use) {
         Item r = b.reagent();
         if (r == Items.BLAZE_POWDER) {
             return have(level, v, f, s -> s.is(Items.BLAZE_POWDER)) >= 5 && (!use || use(level, v, f, s -> s.is(Items.BLAZE_POWDER), 1));
@@ -1213,24 +1235,9 @@ public final class Crafts {
         String laid = EmeraldTrader.layBook(level, v, f);
         if (laid != null) return laid;
         if (have(level, v, f, s -> s.is(Items.LAPIS_LAZULI)) < 3 || stock(level, v, s -> s.is(Items.BOOK)) < 1) return null;
-        // Bookshelves as the game counts them: two blocks out from the table, level with it or one
-        // up, with nothing but air between (fifteen is as strong as it gets).
-        int shelves = 0;
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
-                if (Math.max(Math.abs(dx), Math.abs(dz)) != 2) continue;
-                for (int dy = 0; dy <= 1; dy++) {
-                    BlockPos p = table.offset(dx, dy, dz);
-                    BlockPos between = table.offset(dx / 2, dy, dz / 2);
-                    if (level.getBlockState(p).is(Blocks.BOOKSHELF) && level.getBlockState(between).isAir()) shelves++;
-                }
-            }
-        }
-        shelves = Math.min(15, shelves);
-        // The shelves set how strong the work can be, and so does the enchanter's own hand: a
-        // beginner lays the first rank only, however many books are round it (Craftsmanship).
+        int shelves = shelvesRound(level, table);
         int skill = f.veteranLevel();
-        int tier = Math.min(shelves >= 15 ? 3 : shelves >= 6 ? 2 : 1, Craftsmanship.enchantTier(skill));
+        int tier = tier(shelves, skill);
         var reg = level.registryAccess().registryOrThrow(Registries.ENCHANTMENT);
         for (BlockPos p : Villages.storeChests(level, v.id())) {
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
@@ -1254,9 +1261,32 @@ public final class Crafts {
         return null;
     }
 
+    /** Bookshelves as the game counts them round an enchanting table: two blocks out, level with it or one up, with
+     *  nothing but air between (fifteen is as strong as it gets). */
+    static int shelvesRound(ServerLevel level, BlockPos table) {
+        int shelves = 0;
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dz = -2; dz <= 2; dz++) {
+                if (Math.max(Math.abs(dx), Math.abs(dz)) != 2) continue;
+                for (int dy = 0; dy <= 1; dy++) {
+                    BlockPos p = table.offset(dx, dy, dz);
+                    BlockPos between = table.offset(dx / 2, dy, dz / 2);
+                    if (level.getBlockState(p).is(Blocks.BOOKSHELF) && level.getBlockState(between).isAir()) shelves++;
+                }
+            }
+        }
+        return Math.min(15, shelves);
+    }
+
+    /** How strong the work can be: the shelves round the table set it, and so does the enchanter's own hand (a beginner
+     *  lays the first rank only, however many books are round it: Craftsmanship). */
+    static int tier(int shelves, int skill) {
+        return Math.min(shelves >= 15 ? 3 : shelves >= 6 ? 2 : 1, Craftsmanship.enchantTier(skill));
+    }
+
     /** What the enchanter puts on a thing: what it is for, made better and longer-lasting; stronger
      *  with more bookshelves round the table. */
-    private static List<Map.Entry<ResourceKey<Enchantment>, Integer>> spellFor(ItemStack s, int tier, boolean bound) {
+    static List<Map.Entry<ResourceKey<Enchantment>, Integer>> spellFor(ItemStack s, int tier, boolean bound) {
         String path = BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
         boolean good = path.startsWith("iron_") || path.startsWith("diamond_") || path.startsWith("netherite_") || s.is(Items.BOW);
         if (!good) return List.of();
@@ -1274,7 +1304,7 @@ public final class Crafts {
     }
 
     /** Would this work make the thing better: is any of it stronger than what is on it already? */
-    private static boolean betters(ItemStack s, List<Map.Entry<ResourceKey<Enchantment>, Integer>> spell,
+    static boolean betters(ItemStack s, List<Map.Entry<ResourceKey<Enchantment>, Integer>> spell,
                                    net.minecraft.core.Registry<Enchantment> reg) {
         var on = s.getOrDefault(net.minecraft.core.component.DataComponents.ENCHANTMENTS,
             net.minecraft.world.item.enchantment.ItemEnchantments.EMPTY);

@@ -1,0 +1,201 @@
+# [roles-b] The enchanter's tower: a square stone tower under a tall, steep spire roof, where the enchanter works on
+# its own, no longer sharing the library (entity/CraftScale). On the ground floor the enchanting table stands in the
+# middle of a ring of fifteen bookshelves, one block clear of it all round as the game wants them (the strongest work
+# needs all fifteen), with a gap in the ring at the front to walk in by. A walk runs round between the shelves and the
+# walls: the makings chest (lapis, books, paper) in the back left corner, a lectern in the back right. Windows on three
+# floors, a lantern hung over the table from the ceiling. Another table, as the town grows, goes against a wall of the
+# walk (CraftScale.freeSpot).
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name enchanter
+layer -1
+...........
+.FFFFFFFFF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FfffffffF.
+.FFFFFFFFF.
+.....k.....
+layer 0
+...........
+.LSSSSSSSL.
+.SC.....rS.
+.S.KKKKK.S.
+.S.K...K.S.
+.S.K.E.K.S.
+.S.K...K.S.
+.S.KK.KK.S.
+.S.......S.
+.LSSSDSSSL.
+...........
+layer 1
+...........
+.LSSSGSSSL.
+.S.......S.
+.S.......S.
+.G.......G.
+.S.......S.
+.G.......G.
+.S.......S.
+.S.......S.
+.LSSS.SSSL.
+...........
+layer 2
+...........
+.LSSSSSSSL.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.LSSSSSSSL.
+...........
+layer 3
+...........
+.LSSSSSSSL.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.LSSSSSSSL.
+...........
+layer 4
+...........
+.LSSSGSSSL.
+.S.......S.
+.S.......S.
+.G.......G.
+.S.......S.
+.G.......G.
+.S.......S.
+.S.......S.
+.LSSSGSSSL.
+...........
+layer 5
+...........
+.LSSSSSSSL.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.LSSSSSSSL.
+...........
+layer 6
+...........
+.LSSSSSSSL.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.S.......S.
+.LSSSSSSSL.
+...........
+layer 7
+...........
+.LSSSGSSSL.
+.S.......S.
+.S.......S.
+.G.......G.
+.S.......S.
+.G.......G.
+.S.......S.
+.S.......S.
+.LSSSGSSSL.
+...........
+layer 8
+...........
+.LSSSSSSSL.
+.S.......S.
+.S.......S.
+.S.......S.
+.S...j...S.
+.S.......S.
+.S.......S.
+.S.......S.
+.LSSSSSSSL.
+...........
+layer 9
+vvvvvvvvvvv
+>L-------L<
+>|fffffff|<
+>|fffffff|<
+>|fffffff|<
+>|fffffff|<
+>|fffffff|<
+>|fffffff|<
+>|fffffff|<
+>L-------L<
+^^^^^^^^^^^
+layer 10
+...........
+.vvvvvvvvv.
+.>.......<.
+.>.......<.
+.>.......<.
+.>.......<.
+.>.......<.
+.>.......<.
+.>.......<.
+.^^^^^^^^^.
+...........
+layer 11
+...........
+...........
+..vvvvvvv..
+..>.....<..
+..>.....<..
+..>.....<..
+..>.....<..
+..>.....<..
+..^^^^^^^..
+...........
+...........
+layer 12
+...........
+...........
+...........
+...vvvvv...
+...>...<...
+...>...<...
+...>...<...
+...^^^^^...
+...........
+...........
+...........
+layer 13
+...........
+...........
+...........
+...........
+....vvv....
+....>.<....
+....^^^....
+...........
+...........
+...........
+...........
+layer 14
+...........
+...........
+...........
+...........
+...........
+....._.....
+...........
+...........
+...........
+...........
+...........

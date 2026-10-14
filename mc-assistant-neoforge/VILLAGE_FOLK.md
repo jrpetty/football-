@@ -11718,3 +11718,58 @@ The fireworks maker and the museum's curator are now chosen at interview when tw
 the other specialists. The sexton is reckoned daily, like the constable.
 
 Smoke: `roles_a_stage` in tools/realworld/smoke.py (`/village offices stage`).
+
+## Crafts at city scale [roles-b]
+
+A city keeps more than one smith. The crafts grow with the town, each held to the benches its workshop has, and each
+craft does something for the player.
+
+### More hands, more benches (CraftScale)
+- **Hands.** The smith, the tailor, the brewer and the beekeeper keep one hand, then one more for every sixty folk, to
+  four at most (three beekeepers, three enchanters). The bank takes a clerk beside its banker at a hundred and twenty.
+  A town of a hundred and fifty wants three smiths.
+- **Benches.** A craft worked at a bench (the anvil, the loom, the brewing stand, the enchanting table) keeps no more
+  hands than its workshops have benches. When the town wants more, a hand at its work makes another bench from the
+  stores by the game's own recipe and sets it against a wall of its workshop. The news says so: "Hale made a second
+  anvil for the smithy". Short of the makings, it notes what it lacks and waits. A workshop holds one bench of a
+  kind in the Stone Age, two in the Iron Age, three in the Diamond Age and four in the Nether Age.
+- **Old saves.** Benches are counted once a minute while a hand works, and the count is kept in the ledger. A town
+  keeps exactly the hands it had until its second bench goes in.
+- **"/village crafts"** lists each craft's hands, how many the town wants, its benches and its workshop.
+
+### The enchanter's tower
+The enchanter has its own tower now (enchanter.txt): a square stone tower under a tall spire roof. The enchanting
+table stands in a ring of fifteen bookshelves for the strongest work, with the makings chest and a lectern at the
+back. A Diamond Age town of twenty-four builds it. Until it stands, the enchanter works at the library as before. When
+the tower goes up, it carries the library's table over if the tower has none.
+
+### The apiary (Apiary)
+- **The building.** A fenced bee garden out at the edge of the town (apiary.txt), with a honey house at the back
+  holding the candle bench, a makings chest (string, bottles, flowers) and a barrel. A Stone Age town of twenty with a
+  beekeeper builds one.
+- **Moving in.** The beekeeper moves to the apiary and brings its hives from its old meadow in one go, honey and bees
+  and all. No bee is lost and none is made.
+- **Candles.** Spare comb (three are kept for a new hive) goes into candles at the bench: one comb and one string
+  each, up to sixteen in the stores. The houses, the chapel, the shop and the feasts burn them.
+- **Wild bees.** A beekeeper with no hive and no swarm looks round the town for a wild nest, a few chunks at a time.
+  This covers a town no pedlar visits, or one that cannot pay for a swarm. When it finds one, it walks out, lights a
+  campfire under the nest to calm the bees, cuts the comb with shears (or takes the honey with a bottle), takes the
+  nest down and carries the swarm home.
+
+### What the crafts do for you (CraftServices)
+- **The tailor** ("Make me something", or "make me a red banner"): beds, banners, carpets, leather clothes, a lead or a
+  bound book, made to order. Your makings are used first, then what the stores can spare. You pay now and collect
+  tomorrow. Its loom's screen lists the same orders.
+- **The brewer** ("A potion", or "brew me a potion of healing"): a potion from the stores if there is one to spare.
+  Otherwise it is brewed to order: you pay now, it is the next the stand brews, and you collect it when it is done.
+  If it never comes right in three days, you get your coin back. Without the makings (a ghast tear for
+  regeneration, say), it says so and takes nothing. The brewing stand in the brewery is a service point.
+- **The enchanter** ("Enchant this"): the good tool, blade, armour or bow in your hand, at its table. The shelves round
+  the table and its own skill set how strong the enchantment is. It takes three lapis and a book from the stores
+  (else your own) at the market's price, and three coins for each rank. With no lapis or no book anywhere, it tells you
+  which. Its table is a service point that lists everything in your pack it can improve, with the price and the
+  enchantment.
+- **The beekeeper** ("Honey", or "could I buy some candles?"): honey, comb or candles from the stores at the town's
+  price. With no honey in the stores, it fills your bottle (or one of the stores') at a full hive.
+
+The four are in the talk menu's Trade > Crafts group, and each is the trade's own suggestion.

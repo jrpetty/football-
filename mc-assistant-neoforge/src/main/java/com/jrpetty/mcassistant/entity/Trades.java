@@ -293,7 +293,7 @@ public final class Trades {
                 int have = Market.stock(level, village, n.what()) + f.countCarried(n.what());
                 if (have < n.want()) lacking.add(n.words() + " (from " + n.from() + ")");
             }
-            String building = VillageFolkEntity.buildingFor(t);
+            String building = CraftScale.houseOf(village, t);               // [roles-b] where it works now
             if (building != null && !Villages.hasBuilt(village, building)) {
                 lacking.add(Villages.spoken(building) + " to work in");
             }
@@ -569,7 +569,7 @@ public final class Trades {
     /** Has the village lost the one thing it could not make again (the hive, the stand, the table...)?
      *  Only if every place it could stand is in sight: ground out of view is not ground without it. */
     private static boolean lost(ServerLevel level, Villages.Village v, StationTask t) {
-        String building = VillageFolkEntity.buildingFor(t);
+        String building = CraftScale.houseOf(v.id(), t);                    // [roles-b]
         BlockPos at = building == null ? null : Villages.builtAt(v.id(), building);
         if (at != null && !Land.areaLoaded(level, at, 9)) return false;
         for (AssistantEntity a : Villages.folkOf(v.id())) {
@@ -611,7 +611,7 @@ public final class Trades {
      *  this trade works (by its post, or in its building)? */
     static boolean has(ServerLevel level, Villages.Village v, StationTask t, Item item, Block block) {
         if (anywhere(level, v.id(), s -> s.is(item))) return true;
-        String building = VillageFolkEntity.buildingFor(t);
+        String building = CraftScale.houseOf(v.id(), t);                    // [roles-b]
         if (building != null) {
             BlockPos at = Villages.builtAt(v.id(), building);
             if (at != null && find(level, at, 8, block) != null) return true;
@@ -672,7 +672,7 @@ public final class Trades {
     public static BlockPos workstation(VillageFolkEntity f, ServerLevel level, Villages.Village v,
                                        Block block, Predicate<ItemStack> item, BuildGoal.Part part) {
         String building = f.stationTask() == StationTask.SHOP ? Store.buildingForShop(v.id())   // [econ-store]
-            : VillageFolkEntity.buildingFor(f.stationTask());
+            : CraftScale.houseOf(v.id(), f.stationTask());                  // [roles-b] the library till the tower stands
         Ledger.Building b = null;
         if (building != null) {
             for (Ledger.Building k : Ledger.buildings(v.id())) if (k.structure().equals(building)) { b = k; break; }
