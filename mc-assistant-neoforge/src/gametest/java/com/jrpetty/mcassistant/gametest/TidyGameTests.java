@@ -219,6 +219,28 @@ public class TidyGameTests {
 
     // ============================================================ the long growth: every eyesore, and who left it
 
+    /** The stores topped up with what building takes (and earth for the crew to fill with), each up to so much. */
+    private static void stock(ServerLevel level, Villages.Village v) {
+        Object[][] want = {
+            { Items.OAK_LOG, 256 }, { Items.OAK_PLANKS, 384 }, { Items.COBBLESTONE, 512 }, { Items.STONE_BRICKS, 192 },
+            { Items.OAK_STAIRS, 192 }, { Items.OAK_SLAB, 128 }, { Items.STONE_BRICK_STAIRS, 64 }, { Items.STONE_BRICK_SLAB, 64 },
+            { Items.GLASS_PANE, 128 }, { Items.GLASS, 32 }, { Items.OAK_DOOR, 16 }, { Items.TORCH, 64 }, { Items.LANTERN, 32 },
+            { Items.CHEST, 24 }, { Items.BARREL, 24 }, { Items.FURNACE, 8 }, { Items.CRAFTING_TABLE, 8 }, { Items.LADDER, 64 },
+            { Items.OAK_FENCE, 64 }, { Items.OAK_FENCE_GATE, 8 }, { Items.WHITE_BED, 16 }, { Items.BRICKS, 128 },
+            { Items.BREAD, 128 }, { Items.HAY_BLOCK, 16 }, { Items.BOOKSHELF, 16 }, { Items.LECTERN, 4 }, { Items.WHITE_CARPET, 32 },
+            { Items.POPPY, 32 }, { Items.SMOOTH_STONE_SLAB, 64 }, { Items.SMOKER, 4 }, { Items.DIRT, 256 }, { Items.OAK_SAPLING, 16 },
+        };
+        for (Object[] w : want) {
+            net.minecraft.world.item.Item it = (net.minecraft.world.item.Item) w[0];
+            int need = (Integer) w[1] - com.jrpetty.mcassistant.entity.Market.stock(level, v.id(), s -> s.is(it));
+            while (need > 0) {
+                int k = Math.min(need, it.getDefaultMaxStackSize());
+                com.jrpetty.mcassistant.entity.Homes.storeForTests(level, v, new ItemStack(it, k));
+                need -= k;
+            }
+        }
+    }
+
     private static final double DAYS = Double.parseDouble(System.getProperty("tidy.days", "5"));
     private static final int FOLK = Integer.getInteger("tidy.folk", 40);
 
@@ -238,9 +260,11 @@ public class TidyGameTests {
      * every day the town is audited (every eyesore, what most likely left it, the camp, the grass inside the
      * buildings, the looks), and at the end it must be cared for: no camp bed left out once everybody is housed, no
      * grass inside a building, nothing bad (a spill, a hole, a pillar) standing two audits running, few eyesores left
-     * at all, and looks of tidy enough or better.
+     * at all, and looks of tidy enough or better. As [integrity]'s growth test: generous ground, the Iron Age, the
+     * stores topped up daily with what building takes (a test of how the town keeps itself, not of how it quarries).
+     * Not required (it runs for minutes); it fails when the bar is not met.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 400000, batch = "tdy10_long_growth")
+    @GameTest(template = EMPTY, timeoutTicks = 400000, required = false, batch = "tdy10_long_growth")
     public static void tdy10_long_growth(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         net.minecraft.server.MinecraftServer server = level.getServer();
@@ -257,6 +281,7 @@ public class TidyGameTests {
         Kit.hold(level, cx, Z, outer + 32);
         Kit.prepare(level, cx, Z, outer + 32);
         BlockPos heart = Kit.surface(level, cx, Z);
+        Kit.generousTerrain(level, cx, Z);
         Kit.log("tdy10 found " + FOLK + ": " + Kit.command(level, "village found " + FOLK + " " + cx + " " + Z));
         server.tickRateManager().setTickRate(10000.0F);
         final long[] phase = { 0, 0 };
@@ -284,6 +309,8 @@ public class TidyGameTests {
                     Villages.Village v = Villages.nearest(level, heart, 64);
                     if (v == null) { over[0] = true; verdict[0] = "no village at " + heart; return; }
                     id[0] = v.id();
+                    Villages.ageForTests(v.id(), Villages.Age.IRON);
+                    stock(level, v);
                     phase[0] = 1;
                     phase[1] = t;
                     Kit.log("tdy10 town " + Villages.name(v.id()) + " of " + Villages.headcount(v.id()) + " founded at tick " + t);
@@ -291,8 +318,10 @@ public class TidyGameTests {
                 }
                 long ran = t - phase[1];
                 if (ran > 0 && ran % 24000 == 0) {
-                    TidyAudit.Report r = TidyAudit.check(level, id[0]);
                     Villages.Village v = Villages.get(id[0]);
+                    if (v == null) { over[0] = true; verdict[0] = "the village is gone"; return; }
+                    stock(level, v);
+                    TidyAudit.Report r = TidyAudit.check(level, id[0]);
                     Kit.log("tdy10 ---- day " + ran / 24000 + ": " + Villages.headcount(id[0]) + " folk, built " + Villages.builtList(id[0]).size()
                         + ", beds made up " + Villages.bedsMadeUp(level, id[0]) + ", camp " + com.jrpetty.mcassistant.VillageSpawner.campBeds(level, v.centre()).size()
                         + ", tidied today " + Tidy.doneForTests(level, id[0]) + " floors " + java.util.Arrays.toString(Tidy.floorsForTests(level, id[0]))
