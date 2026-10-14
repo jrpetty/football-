@@ -229,7 +229,7 @@ public final class Ages {
             // Moss is a nicety: a footing waiting on vines that never come is not work left undone.
             if (want != null && !want.is(Blocks.MOSSY_COBBLESTONE) && !want.is(Blocks.MOSSY_STONE_BRICKS)) return false;
         }
-        return lampsDone(level, b, plan);
+        return lampsDone(level, v, b, plan);
     }
 
     /**
@@ -294,22 +294,56 @@ public final class Ages {
 
     // ------------------------------------------------------------------ lamp posts
 
-    /** Where the lamp posts by a building's doors go: either side of each ground-floor door, a step out. */
+    /** How far out from a door its lamp posts may stand at most (past a porch or the eaves), and how far to either side. */
+    private static final int LAMP_MOST_OUT = 4, LAMP_ASIDE = 2;
+
+    /**
+     * Where the lamp posts by a building's doors go: either side of each ground-floor door, on the first row out in
+     * front that is clear of the building and its eaves (the town's gate keeps a building's own ground, its porch and
+     * the ground under its eaves, for the building: a post set a step out from a door under a porch was refused there
+     * for ever). A door with no such row within reach has no posts.
+     */
     static java.util.List<BlockPos> lampSpots(Ledger.Building b, String plan) {
+        java.util.List<BuildGoal.Placement> parts = BuildGoal.plan(plan, b.anchor(), b.facing(), 13);
+        int x0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, z0 = Integer.MAX_VALUE, z1 = Integer.MIN_VALUE;
+        for (BuildGoal.Placement p : parts) {                     // the building's reach on the ground, eaves and porch included
+            if (p.part() == BuildGoal.Part.CLEAR) continue;
+            x0 = Math.min(x0, p.pos().getX());
+            x1 = Math.max(x1, p.pos().getX());
+            z0 = Math.min(z0, p.pos().getZ());
+            z1 = Math.max(z1, p.pos().getZ());
+        }
         java.util.List<BlockPos> out = new java.util.ArrayList<>();
         Direction front = b.facing().getOpposite();
-        for (BuildGoal.Placement p : BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
+        for (BuildGoal.Placement p : parts) {
             if (p.part() != BuildGoal.Part.DOOR || p.pos().getY() != b.anchor().getY()) continue;
-            BlockPos step = p.pos().relative(front);
-            out.add(step.relative(front.getClockWise(), 2));
-            out.add(step.relative(front.getCounterClockWise(), 2));
+            for (int step = 1; step <= LAMP_MOST_OUT; step++) {
+                BlockPos ahead = p.pos().relative(front, step);
+                BlockPos left = ahead.relative(front.getClockWise(), LAMP_ASIDE), right = ahead.relative(front.getCounterClockWise(), LAMP_ASIDE);
+                if (within(left, x0, x1, z0, z1) || within(right, x0, x1, z0, z1)) continue;
+                out.add(left);
+                out.add(right);
+                break;
+            }
         }
         return out;
     }
 
-    static boolean lampsDone(ServerLevel level, Ledger.Building b, String plan) {
-        for (BlockPos s : lampSpots(b, plan)) if (lampFits(level, s)) return false;
+    private static boolean within(BlockPos q, int x0, int x1, int z0, int z1) {
+        return q.getX() >= x0 && q.getX() <= x1 && q.getZ() >= z0 && q.getZ() <= z1;
+    }
+
+    /** Is every lamp post this building can have up (a spot out in the street or on the square never has one)? */
+    static boolean lampsDone(ServerLevel level, @Nullable Villages.Village v, Ledger.Building b, String plan) {
+        for (BlockPos s : lampSpots(b, plan)) if (lampFits(level, s) && !inTheWay(v, s)) return false;
         return true;
+    }
+
+    /** Out in the street or on the square: no lamp post there. */
+    private static boolean inTheWay(@Nullable Villages.Village v, BlockPos s) {
+        if (v == null) return false;
+        int dx = s.getX() - v.centre().getX(), dz = s.getZ() - v.centre().getZ();
+        return com.jrpetty.mcassistant.village.TownPlan.isStreet(dx, dz) || com.jrpetty.mcassistant.village.TownPlan.isSquare(dx, dz);
     }
 
     /** Open ground for a post and its lamp: air for two above firm ground, nobody's path or field. */
@@ -326,13 +360,7 @@ public final class Ages {
         if (v != null && Villages.ageOf(v.id()).ordinal() < Villages.Age.STONE.ordinal() && !free) return 0;
         int n = 0;
         for (BlockPos s : lampSpots(b, plan)) {
-            if (!lampFits(level, s)) continue;
-            // Never out in the street or on the square.
-            if (v != null) {
-                int dx = s.getX() - v.centre().getX(), dz = s.getZ() - v.centre().getZ();
-                if (com.jrpetty.mcassistant.village.TownPlan.isStreet(dx, dz)
-                    || com.jrpetty.mcassistant.village.TownPlan.isSquare(dx, dz)) continue;
-            }
+            if (!lampFits(level, s) || inTheWay(v, s)) continue;            // never out in the street or on the square
             if (v != null && !TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, s, s.above())) continue;   // [integrity] nobody's porch or way in
             Block light = Themes.streetLight(v == null ? null : v.id());   // [styles] the theme's light
             if (!free) {

@@ -174,7 +174,7 @@ public final class StreetFurniture {
 
     /**
      * Where a house can have its boxes: under its lowest windows, the front ones first. Never where the
-     * lamp posts by its door go (Ages: either side of the door, a step out), which is under the front
+     * lamp posts by its door go (Ages.lampSpots: either side of the door, out in front), which can be under the front
      * windows of a cottage: a cottage's boxes go under its side windows.
      */
     static List<Box> boxes(Ledger.Building b) {
