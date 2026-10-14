@@ -48,11 +48,14 @@ public final class ShoppingTrips {
     private static final Map<UUID, Trip> TRIPS = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> DONE = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> WAIT = new ConcurrentHashMap<>();
+    /** What each folk paid at the counter on its last trip (the card's books, the tests). */
+    private static final Map<UUID, Integer> PAID = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
         TRIPS.clear();
         DONE.clear();
         WAIT.clear();
+        PAID.clear();
     }
 
     /** Its shopping, a beat of it (VillageFolkEntity.socialise, in its own time). True while it is about it. */
@@ -132,6 +135,7 @@ public final class ShoppingTrips {
     /** At the counter, served: everything on the trip's list bought out of its own purse, made its own, and said. */
     private static List<String> buyAll(ServerLevel level, Villages.Village v, VillageFolkEntity f, List<Needs.Want> wants, long day) {
         List<String> got = new ArrayList<>();
+        int purse = f.purse();
         for (Needs.Want w : wants) {
             ItemStack bought = ShopDesk.folkBuy(level, v, f, w.sample(), w.count());
             if (bought == null) continue;
@@ -139,6 +143,7 @@ public final class ShoppingTrips {
             got.add(Goods.words(w.sample(), bought.getCount()));
         }
         Needs.bought(f, got, day);
+        PAID.put(f.getUUID(), purse - f.purse());
         if (got.isEmpty()) {
             FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "None of what I wanted. I'll try again tomorrow.", "Sold out! Tomorrow, then."));
             return got;
@@ -308,6 +313,11 @@ public final class ShoppingTrips {
     public static String stageForTests(VillageFolkEntity f) {
         Trip t = TRIPS.get(f.getUUID());
         return t == null ? "none" : t.bought ? "home" : "shop";
+    }
+
+    /** Tests: what it paid at the counter on its last trip. */
+    public static int paidForTests(VillageFolkEntity f) {
+        return PAID.getOrDefault(f.getUUID(), 0);
     }
 
     /** Tests: shop again today. */

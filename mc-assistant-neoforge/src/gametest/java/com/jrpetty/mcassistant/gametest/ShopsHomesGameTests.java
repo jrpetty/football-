@@ -622,7 +622,8 @@ public class ShopsHomesGameTests {
             helper.assertTrue(atHome > 0, "the bread is at home: " + view.summary() + " (candles " + candles + ")");
             helper.assertTrue(larder.equals("Larder"), "the bread in the larder it bought and set down: " + HomeStores.boxesForTests(level, t.id(), home));
             helper.assertTrue(breadAll1 == breadAll0, "no bread made or lost: " + breadAll0 + " -> " + breadAll1);
-            helper.assertTrue(took == purse0 - f.purse(), "its coin went over the counter into the shop's till: " + (purse0 - f.purse()) + " paid, " + took + " taken");
+            int paid = ShoppingTrips.paidForTests(f);
+            helper.assertTrue(paid > 0 && took == paid, "its coin went over the counter into the shop's till: " + paid + " paid, " + took + " taken");
             helper.succeed();
         });
     }
