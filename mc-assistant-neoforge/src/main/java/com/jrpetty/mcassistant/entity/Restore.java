@@ -502,6 +502,22 @@ public final class Restore {
         return looked;
     }
 
+    /** Every building looked over now (the operator's command, the smoke): how many. */
+    public static int surveyAll(ServerLevel level, Villages.Village v) {
+        int n = 0;
+        long now = level.getGameTime();
+        for (Ledger.Building b : Ledger.buildings(v.id())) {
+            if (!Land.areaLoaded(level, b.anchor(), 10) || skip(v.id(), b)) continue;
+            Job j = jobFor(v.id(), b.anchor());
+            if (j != null && j.reason == Reason.RENOVATE) continue;
+            String design = TownBlocks.designOf(v.id(), b);
+            enqueue(v.id(), b, design, diff(level, b, design), Reason.REPAIR, now);
+            SURVEYED.put(b.anchor().asLong(), now);
+            n++;
+        }
+        return n;
+    }
+
     /** Buildings the survey leaves alone: one being raised a storey (its roof is off on purpose), the founders'
      *  first house as they left it, a folk's own house, the wall. */
     private static boolean skip(UUID village, Ledger.Building b) {

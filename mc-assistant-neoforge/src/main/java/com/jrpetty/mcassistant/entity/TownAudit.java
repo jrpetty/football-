@@ -318,6 +318,61 @@ public final class TownAudit {
         }
     }
 
+    // ------------------------------------------------------------------ the command
+
+    /** /village integrity: the nearest town's audit in words; "views": where to look at its worst buildings from
+     *  ("VIEW name x y z at-x at-y at-z"); "survey": every building looked over now and listed. Operators only. */
+    public static com.mojang.brigadier.builder.LiteralArgumentBuilder<net.minecraft.commands.CommandSourceStack> command() {
+        return net.minecraft.commands.Commands.literal("integrity").requires(src -> src.hasPermission(2))
+            .executes(ctx -> tell(ctx, false))
+            .then(net.minecraft.commands.Commands.literal("views").executes(ctx -> tell(ctx, true)))
+            .then(net.minecraft.commands.Commands.literal("survey").executes(ctx -> {
+                Villages.Village v = near(ctx);
+                if (v == null) return 0;
+                ServerLevel level = ctx.getSource().getLevel();
+                int n = Restore.surveyAll(level, v);
+                ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal("SURVEY " + n + " buildings looked over; "
+                    + Restore.queue(v.id()).size() + " on the repair list"), false);
+                return n;
+            }));
+    }
+
+    @Nullable
+    private static Villages.Village near(com.mojang.brigadier.context.CommandContext<net.minecraft.commands.CommandSourceStack> ctx) {
+        BlockPos here = BlockPos.containing(ctx.getSource().getPosition());
+        Villages.Village v = Villages.nearest(ctx.getSource().getLevel(), here, Villages.VILLAGE_RANGE * 4);
+        if (v == null) ctx.getSource().sendFailure(net.minecraft.network.chat.Component.literal("No village near."));
+        return v;
+    }
+
+    private static int tell(com.mojang.brigadier.context.CommandContext<net.minecraft.commands.CommandSourceStack> ctx, boolean views) {
+        Villages.Village v = near(ctx);
+        if (v == null) return 0;
+        ServerLevel level = ctx.getSource().getLevel();
+        Report r = check(level, v);
+        StringBuilder sb = new StringBuilder("INTEGRITY " + Villages.name(v.id()) + ": " + r.summary());
+        if (views) {
+            List<BuildingReport> worst = new ArrayList<>(r.buildings);
+            worst.sort(java.util.Comparator.comparingDouble(BuildingReport::fidelity));
+            int k = 0;
+            for (BuildingReport b : worst) {
+                if (k >= 4) break;
+                BlockPos a = b.building().anchor();
+                net.minecraft.core.Direction front = b.building().facing().getOpposite();
+                BlockPos eye = a.relative(front, 12).relative(front.getClockWise(), 5).above(6);
+                sb.append("\nVIEW ").append(b.design()).append('-').append(k).append(' ').append(eye.getX()).append(' ').append(eye.getY())
+                    .append(' ').append(eye.getZ()).append(' ').append(a.getX()).append(' ').append(a.getY() + 2).append(' ').append(a.getZ())
+                    .append(" (").append(Math.round(b.fidelity() * 1000) / 10.0).append("% ").append(b.status()).append(')');
+                k++;
+            }
+        } else {
+            for (String line : r.lines(12)) sb.append("\n").append(line);
+        }
+        String text = sb.toString();
+        ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(text), false);
+        return 1;
+    }
+
     // ------------------------------------------------------------------ what put it there
 
     /** What put this block here, as far as can be told: whoever set it through the gate last, else a guess from the
