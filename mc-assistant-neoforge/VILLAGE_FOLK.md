@@ -6303,6 +6303,38 @@ outcomes.
   loser's wounded away captive (on leads), and a fallen banner is carried off as a trophy. Players near
   the field see a bar at the top of the screen with both sides' strength and spirit, and the orders over
   the hotbar.
+* **Formations.** Each army draws up in a shape from history, and each shape has a counter:
+  * a **shield wall**, two deep: holds against a charge, but is weak to archers and to a flank;
+  * a **line with archers on the wings**, angled in, as at Agincourt: ruins a shield wall or a schiltron,
+    but a wedge reaches it quickly;
+  * a **wedge** (the boar's snout): breaks a thin line, but a crescent folds round it;
+  * a **schiltron**: a tight ring that nothing rides into, but archers can't miss it;
+  * a **crescent**: envelops an enemy that comes at its middle;
+  * an **echelon**: refuses its weak flank when outnumbered;
+  * a **screen of skirmishers**: archers out in front who fall back through the line.
+
+  The Captain picks by its heart and temper. A cautious Guardian takes the shield wall, a bold one the
+  wedge, a shrewd one the winged line. It also weighs the odds, the ground (a rise for the bows) and its
+  kit. A veteran Captain who has seen how the enemy drew up last time draws up to beat it. The armoury
+  then leans the same way: more shields for a wall, more bows for a winged line. Militia drill and
+  veterans make an army form faster and straighter.
+* **Not a grid.** The ranks drift off their marks and the sergeants shout "Dress the line!". The brave
+  stand a step forward and the green a step back. One with the nerves gone steps out of line and is
+  pulled back in. The ends of the line come on a moment after the middle. Folk bang their shields and
+  talk to their neighbours, and taunts, jokes and battle songs (the town's motto among them) fly between
+  the lines and show in the chat of anybody near.
+* **Surrender at the parley.** Only a side that is hopelessly outnumbered (under about one to two and a
+  half, allies counted) thinks of yielding, and then its Captain's boldness and its town's pride decide.
+  The other side may refuse: a vengeful victor (blood spilt, a treaty broken) or an ambitious one wants
+  the battle. A surrender taken makes peace there and then on the stronger's terms, and every town
+  thinks the better of the victor for its mercy. A refusal is remembered too. Refused, the battle goes
+  ahead, or a defender with a wall falls back behind it for a siege.
+* **The War Horn.** Made from a goat horn and a leather, or from two bones, a copper ingot and a
+  leather. The Captain carries one (made from the stores at the muster) and sounds each signal on its
+  own call: muster, march, form up, begin, charge, rally, retreat, victory. An army without a horn beats
+  drums instead. A town with a horn in its stores sounds it for its alarm. A player can blow one too:
+  sneak-use picks the call, use sounds it. If you lead the town or fight in its army, its army in the
+  field near by takes the order: charge, rally, retreat in good order, or dress the lines.
 * **Wounds before deaths.** A fighter beaten down to its last hearts yields and kneels, its weapon put
   away, and nobody strikes it again. Only `battleDeaths` in a hundred (5 by default) die, and every one
   is mourned and remembered. Nobody outside the battle is touched: not a passer-by, not a medic, not a
@@ -6332,6 +6364,50 @@ outcomes.
   in full to `battleDetail` fighters (24 by default); the rest of a bigger army fights on paper alongside
   them. A campaign is kept in the town's books, so a restart in the middle of a march carries on, and one
   in the middle of a battle has the battle reckoned on paper.
+
+## Vassal towns
+
+A town beaten in a war fought for lordship over it, or whose gate was taken by a great and hard town, becomes
+the victor's vassal. Lordship is a war goal great, prickly or shrewd towns choose against a neighbour half
+their size again.
+
+* **What it owes.** Every seventh day a tribute goes to the overlord: a fifth of the treasury and the best
+  of its surplus, carried by one of its folk on the road and paid in on arrival. When the overlord is at
+  war, two of the vassal's guards march to its walls and fight in its army. A vassal makes no war or
+  treaty of its own, except the one for its freedom.
+* **How it shows.** The overlord's banner (from the overlord's stores) flies above the town's own, and a
+  reeve's post by the board carries the overlord's banner and a sign: "Ashby, vassal of Brannoc, tribute
+  weekly". It is on the board, the war page and the war map too.
+* **Its folk.** They resent it: lower spirits ("We work for Brannoc now"), lower contentment, and a
+  resentment that grows each day and wears on the town like a war, so some look for work elsewhere and a
+  few leave. The tribute drains its growth. The overlord pays a coin a day for each vassal's reeve.
+* **The way out.** The vassal buys its freedom once its treasury holds eight weeks' tribute and fifty
+  coins. It can also be freed in a treaty. Or, resentful enough and grown strong against its overlord
+  (or the overlord busy with another war), it rises in a war of independence, fought like any other: win
+  it and it is free.
+
+## How folk fight
+
+Every armed folk fights with one shared set of habits: the watch, the militia and the armies, the cave
+team, the Nether runners, and a farmer set on by a zombie.
+
+* **The blade.** It strikes when its weapon's cooldown is up, as a player's would: about every twelve
+  ticks for a sword, twenty and more for an axe. Between blows it steps back and circles out of reach. A
+  practised fighter jumps for a crit when it has room overhead. A sword sweeps the foes round its man,
+  and a blow on the run knocks harder.
+* **The shield.** Up when the other winds up to strike or an arrow is coming, with a moment's reaction
+  (quicker for a veteran), and down to strike. An axe on a raised shield knocks it aside for five
+  seconds, and a fighter with both an axe and a sword uses the axe for that. Shields wear with the blows
+  they stop; the watch's are replaced from the stores.
+* **The bow and the crossbow.** A full draw for range, a quick shot up close. The shot leads a moving
+  target. It is never loosed through a friend: the archer holds it and steps aside. Cornered, it goes
+  to the blade. The crossbow is spanned in its real charge time, carried loaded and loosed when the shot
+  is there. Every guard and every fighter in an army may use a bow or a crossbow.
+* **Healing.** Badly hurt and out of the line, it eats a golden apple or drinks a potion of healing from
+  its pack.
+* **Skill.** It comes from the trade and the battles fought: a guard is steadier than a farmer, and a
+  veteran of three battles steadier again. Skill speeds the shield's reaction, the swing's timing and
+  the crits.
 
 ## Dry land and safe mines
 
