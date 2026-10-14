@@ -81,6 +81,14 @@ import java.util.function.Predicate;
  *     founding, and none is empty; the town's stores never reach into a household's named chest.</li>
  * <li><b>sk16</b>: a smithy's chest is kept stocked with its makings by delivery from the stores, and the smith works
  *     from it.</li>
+ * <li><b>sk17</b>: the shop below its targets makes its wares from its own makings chest.</li>
+ * <li><b>sk18</b>: short of makings, the shop has them sent from the stores into its makings chest: goods conserved,
+ *     their cost in its till.</li>
+ * <li><b>sk19</b>: a sale the shop missed is a new line at its next review, announced.</li>
+ * <li><b>sk20</b>: a line nobody asks for any more is dropped at the review and cleared at a markdown, never under
+ *     the floor.</li>
+ * <li><b>sk21</b>: a player fills the shop's Wanted list and is paid, into the shop's makings chest.</li>
+ * <li><b>sk22</b>: the till balances: what it took, what its makings cost, its wages, its profit.</li>
  * </ul>
  *
  * <p>Each on its own ground, x 1,860,000 to 1,879,999 at z 66,000.
@@ -624,7 +632,9 @@ public class ShopsHomesGameTests {
             }
             helper.assertTrue(spot != null, "room for a larder");
             level.setBlock(spot, Blocks.BARREL.defaultBlockState(), 3);
-            ((Container) level.getBlockEntity(spot)).setItem(0, new ItemStack(Items.BREAD, 4));
+            ItemStack bought = new ItemStack(Items.BREAD, 4);
+            Homes.keepsake(bought, f, Homes.Source.BOUGHT);                    // the household's own, bought
+            ((Container) level.getBlockEntity(spot)).setItem(0, bought);
             HomeStores.claimForTests(level, t.v());
             f.removeMatching(s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null, 999);
             f.teleportTo(home.getX() + 0.5, home.getY() + 1, home.getZ() + 0.5);
@@ -689,9 +699,15 @@ public class ShopsHomesGameTests {
             Store.putForTests(level, t.id(), new ItemStack(Items.BREAD, 64));
             Store.putForTests(level, t.id(), new ItemStack(Items.CANDLE, 16));
             Store.putForTests(level, t.id(), new ItemStack(Items.BARREL, 4));
+            // Something of the town's left in a household's chest (an errand's leftovers): not theirs to keep.
+            BlockPos firstChest = null;
+            for (VillageFolkEntity f : t.folk()) if ((firstChest = com.jrpetty.mcassistant.entity.Families.homeChestForTests(level, f)) != null) break;
+            if (firstChest != null) ((Container) level.getBlockEntity(firstChest)).setItem(26, new ItemStack(Items.COBBLESTONE, 5));
+            int cobble0 = Market.stock(level, t.id(), s -> s.is(Items.COBBLESTONE));
             List<String> days = new ArrayList<>();
             for (int d = 1; d <= 10; d++) {
                 level.setDayTime(24000L * d + 3000L);
+                HomeStores.claimForTests(level, t.v());                       // the morning's look at the households' boxes
                 for (VillageFolkEntity f : t.folk()) {
                     f.earn(6);                                                   // a day's wage
                     List<String> got = ShoppingTrips.tripNowForTests(level, f);
@@ -711,9 +727,24 @@ public class ShopsHomesGameTests {
                 if (v.total() <= before.get(i)[0] || v.kinds() <= before.get(i)[1]) grew = false;
                 if (v.total() == 0) noneEmpty = false;
             }
+            // Every thing in every household's boxes is its own, and says how it came by it.
+            List<String> unowned = new ArrayList<>();
+            for (BlockPos h : homes) {
+                List<UUID> members = Homes.membersForTests(t.id(), h);
+                for (Belongings.Thing th : Belongings.ofHome(level, t.id(), h).things()) {
+                    UUID owner = Homes.ownerOf(th.stack());
+                    if (owner == null || !members.contains(owner) || Homes.sourceOf(th.stack()) == null) {
+                        unowned.add(th.stack().getCount() + " " + th.stack().getItem() + " in " + th.where() + " (" + owner + ", " + Homes.sourceOf(th.stack()) + ")");
+                    }
+                }
+            }
+            int cobble1 = Market.stock(level, t.id(), s -> s.is(Items.COBBLESTONE));
             boolean storesReach = false;
             for (BlockPos p : Villages.storeChests(level, t.id())) for (BlockPos h : homes) if (p.closerThan(h, 6)) storesReach = true;
-            Kit.log("sk15 ten days: " + days + " | homes: " + after);
+            Kit.log("sk15 ten days: " + days + " | homes: " + after + " | not the household's own: " + unowned + "; the town's cobble "
+                + cobble0 + " -> " + cobble1);
+            helper.assertTrue(unowned.isEmpty(), "everything at home is the household's own, bought, given, made, inherited or brought: " + unowned);
+            helper.assertTrue(firstChest == null || cobble1 == cobble0 + 5, "the town's cobble left in a home went back to the stores: " + cobble0 + " -> " + cobble1);
             helper.assertTrue(lived >= 2, "households in the houses: " + lived);
             helper.assertTrue(noneEmpty, "no lived-in home's storage is empty: " + after);
             helper.assertTrue(grew, "every home holds more and more kinds of things than at founding: " + after);
@@ -760,6 +791,186 @@ public class ShopsHomesGameTests {
             helper.assertTrue(ironIn >= 8 && coalIn >= 8, "its makings delivered: " + ironIn + " iron, " + coalIn + " coal");
             helper.assertTrue(storesIron0 - storesIron1 == ironIn, "out of the stores, nothing made: " + storesIron0 + " -> " + storesIron1);
             helper.assertTrue(made > 0 && ironAfter < ironIn, "the smith works from its own chest: " + ironIn + " -> " + ironAfter);
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ the shop as a business
+
+    /** The shop's makings chest, named and emptied, and what its makings chest holds of what matches. */
+    private static Container makings(GameTestHelper helper, ServerLevel level, Town t) {
+        BlockPos chest = WorkStock.roundForTests(level, t.v(), StationTask.SHOP);
+        helper.assertTrue(chest != null, "the shop has its makings chest");
+        StoreDeliveries.resetForTests();
+        Container c = (Container) level.getBlockEntity(chest);
+        return c;
+    }
+
+    private static int count(Container c, Predicate<ItemStack> what) {
+        int n = 0;
+        for (int i = 0; i < c.getContainerSize(); i++) if (!c.getItem(i).isEmpty() && what.test(c.getItem(i))) n += c.getItem(i).getCount();
+        return n;
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "sk17_shop_makes_from_makings")
+    public static void sk17_shop_makes_from_makings(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 1879100, 0, 2000L);
+        helper.runAtTickTime(5, () -> {
+            Container c = makings(helper, level, t);
+            c.setItem(0, new ItemStack(Items.OAK_PLANKS, 32));
+            c.setItem(1, new ItemStack(Items.STICK, 16));
+            c.setItem(2, new ItemStack(Items.COBBLESTONE, 16));
+            c.setChanged();
+            Predicate<ItemStack> any = s -> true;
+            int chest0 = count(c, any), wares0 = ShopStock.held(level, t.id(), any), stores0 = Market.stock(level, t.id(), any);
+            int made = 0;
+            for (int i = 0; i < 8; i++) if (Crafts.now(t.keeper(), level, t.v())) made++;
+            int chest1 = count(c, any), wares1 = ShopStock.held(level, t.id(), any), stores1 = Market.stock(level, t.id(), any);
+            Kit.log("sk17 the keeper worked " + made + " pieces; makings " + chest0 + " -> " + chest1 + ", wares " + wares0 + " -> " + wares1
+                + ", the stores " + stores0 + " -> " + stores1);
+            helper.assertTrue(made > 0 && wares1 > wares0, "wares made for the shelves: " + wares0 + " -> " + wares1);
+            helper.assertTrue(chest1 < chest0, "out of its own makings chest: " + chest0 + " -> " + chest1);
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "sk18_makings_ordered")
+    public static void sk18_makings_ordered(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 1879400, 0, 2000L);
+        helper.runAtTickTime(5, () -> {
+            Container c = makings(helper, level, t);
+            fill(t.id(), t.store(), new ItemStack(Items.COBBLESTONE, 40), new ItemStack(Items.STICK, 40));
+            Predicate<ItemStack> cobble = s -> s.is(Items.COBBLESTONE), sticks = s -> s.is(Items.STICK);
+            int all0 = Market.stock(level, t.id(), cobble) + count(c, cobble) + Market.stock(level, t.id(), sticks) + count(c, sticks);
+            WorkStock.roundForTests(level, t.v(), StationTask.SHOP);
+            List<String> queued = StoreDeliveries.listForTests(t.id());
+            StoreDeliveries.deliverAllNow(level, t.v());
+            int inChest = count(c, cobble) + count(c, sticks);
+            int all1 = Market.stock(level, t.id(), cobble) + count(c, cobble) + Market.stock(level, t.id(), sticks) + count(c, sticks);
+            int[] till = com.jrpetty.mcassistant.entity.ShopBusiness.till(level, t.id(), 1);
+            Kit.log("sk18 ordered " + queued + "; in the makings chest " + inChest + "; all of it " + all0 + " -> " + all1 + "; the till's makings " + till[1]);
+            helper.assertTrue(!queued.isEmpty() && inChest > 0, "makings ordered and delivered into its chest");
+            helper.assertTrue(all1 == all0, "nothing made or lost on the way: " + all0 + " -> " + all1);
+            helper.assertTrue(till[1] > 0, "their cost in the till at the town's price");
+            helper.succeed();
+        });
+    }
+
+    /** Has the chronicle told anything with these words in it? */
+    private static boolean told(UUID id, String words) {
+        for (com.jrpetty.mcassistant.village.Chronicle.Entry e : com.jrpetty.mcassistant.village.Chronicle.of(id)) if (e.text().contains(words)) return true;
+        return false;
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "sk19_missed_sale_new_line")
+    public static void sk19_missed_sale_new_line(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 1879700, 1, 2000L);
+        helper.runAtTickTime(5, () -> {
+            com.jrpetty.mcassistant.entity.ShopBusiness.reviewForTests(level, t.v());          // last week's range
+            VillageFolkEntity f = t.folk().get(0);
+            ServicePoints.Point p = point(level, t.id(), ServiceRole.SHOP);
+            BlockPos at = p.queueSpot(level, 0);
+            f.teleportTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+            f.earn(40);
+            ItemStack missed = ShopDesk.folkBuy(level, t.v(), f, new ItemStack(Items.CAKE), 1);
+            List<String> said = com.jrpetty.mcassistant.entity.ShopBusiness.reviewForTests(level, t.v());
+            Kit.log("sk19 a cake asked for and none in: " + (missed == null ? "missed" : "sold") + "; the review: " + said);
+            helper.assertTrue(missed == null, "no cake to be had");
+            helper.assertTrue(said.contains("new: minecraft:cake"), "a new line at the review: " + said);
+            helper.assertTrue(told(t.id(), "new at"), "and it is announced");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "sk20_slow_line_cleared")
+    public static void sk20_slow_line_cleared(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 1878800, 1, 2000L);
+        helper.runAtTickTime(5, () -> {
+            com.jrpetty.mcassistant.entity.ShopBusiness.reviewForTests(level, t.v());
+            VillageFolkEntity f = t.folk().get(0);
+            ServicePoints.Point p = point(level, t.id(), ServiceRole.SHOP);
+            BlockPos at = p.queueSpot(level, 0);
+            f.teleportTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+            f.earn(40);
+            ShopDesk.folkBuy(level, t.v(), f, new ItemStack(Items.CAKE), 1);
+            com.jrpetty.mcassistant.entity.ShopBusiness.reviewForTests(level, t.v());        // a new line this week
+            ItemStack cake = new ItemStack(Items.CAKE);
+            int before = ShopStock.lotPrice(level, t.id(), cake, 1);
+            level.setDayTime(level.getDayTime() + 24000L * 8);                               // a week and more with nobody asking
+            List<String> said = com.jrpetty.mcassistant.entity.ShopBusiness.reviewForTests(level, t.v());
+            int after = ShopStock.lotPrice(level, t.id(), cake, 1), ask = Market.askLot(level, t.id(), cake, 1), least = Market.leastLot(level, t.id(), cake, 1);
+            Kit.log("sk20 the review a week on: " + said + "; the cake " + before + " -> " + after + " (asking " + ask + ", least " + least + ")");
+            helper.assertTrue(said.contains("cleared: minecraft:cake"), "dropped from the range: " + said);
+            helper.assertTrue(after <= ask && after >= least, "marked down, never under the floor: " + after + " (" + least + " to " + ask + ")");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "sk21_wanted_supplied")
+    public static void sk21_wanted_supplied(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 1868300, 0, 2000L);
+        helper.runAtTickTime(5, () -> {
+            Container c = makings(helper, level, t);
+            Ledger.addCoins(t.id(), 200);
+            List<String> wanted = com.jrpetty.mcassistant.entity.ShopBusiness.wantedForTests(level, t.v());
+            String string = Goods.lineId(new ItemStack(Items.STRING));
+            ServicePoints.Point p = point(level, t.id(), ServiceRole.SHOP);
+            ServerPlayer pl = player(helper, p.queueSpot(level, 0), 0);
+            pl.getInventory().add(new ItemStack(Items.STRING, 8));
+            ServicePoints.openAt(pl, p.pos());
+            int treasury0 = Ledger.coins(t.id());
+            CompoundTag args = new CompoundTag();
+            args.putString("id", string);
+            args.putInt("n", 8);
+            press(pl, ServiceRole.SHOP, "supply", args);
+            int paid = Market.coinsHeld(pl), inChest = count(c, s -> s.is(Items.STRING));
+            Kit.log("sk21 wanted " + wanted + "; supplied string: paid " + paid + ", treasury " + treasury0 + " -> " + Ledger.coins(t.id())
+                + ", in the makings chest " + inChest + "; said " + ServicePoints.messageForTests(pl));
+            Kit.noLeftoverPlayers(level);
+            boolean listed = false;
+            for (String w : wanted) if (w.startsWith(string)) listed = true;
+            helper.assertTrue(listed, "string on the shop's Wanted list: " + wanted);
+            helper.assertTrue(paid > 0 && treasury0 - Ledger.coins(t.id()) == paid && inChest == 8, "paid out of the treasury, the string into its makings chest");
+            helper.assertTrue(carried(pl, s -> s.is(Items.STRING)) == 0, "out of the player's pack");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "sk22_till_balances")
+    public static void sk22_till_balances(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 1867100, 0, 2000L);
+        helper.runAtTickTime(5, () -> {
+            makings(helper, level, t);
+            Ledger.addCoins(t.id(), 200);
+            Store.putForTests(level, t.id(), new ItemStack(Items.BREAD, 16));
+            ServicePoints.Point p = point(level, t.id(), ServiceRole.SHOP);
+            ServerPlayer pl = player(helper, p.queueSpot(level, 0), 50);
+            pl.getInventory().add(new ItemStack(Items.STRING, 8));
+            ServicePoints.openAt(pl, p.pos());
+            int[] till0 = com.jrpetty.mcassistant.entity.ShopBusiness.till(level, t.id(), 1);
+            int coins0 = Market.coinsHeld(pl);
+            press(pl, ServiceRole.SHOP, "basket", basket(Goods.lineId(new ItemStack(Items.BREAD)), 3));
+            press(pl, ServiceRole.SHOP, "buy", new CompoundTag());
+            int spent = coins0 - Market.coinsHeld(pl);
+            CompoundTag args = new CompoundTag();
+            args.putString("id", Goods.lineId(new ItemStack(Items.STRING)));
+            args.putInt("n", 8);
+            int coins1 = Market.coinsHeld(pl);
+            press(pl, ServiceRole.SHOP, "supply", args);
+            int earned = Market.coinsHeld(pl) - coins1;
+            int[] till = com.jrpetty.mcassistant.entity.ShopBusiness.till(level, t.id(), 1);
+            Kit.log("sk22 bought for " + spent + ", supplied for " + earned + "; the till " + java.util.Arrays.toString(till0) + " -> "
+                + java.util.Arrays.toString(till) + "; " + com.jrpetty.mcassistant.entity.ShopBusiness.tillLine(level, t.id()));
+            Kit.noLeftoverPlayers(level);
+            helper.assertTrue(till[0] - till0[0] == spent && spent > 0, "the takings are what was paid at the counter");
+            helper.assertTrue(till[1] - till0[1] == earned && earned > 0, "the makings are what it paid for them");
+            helper.assertTrue(till[3] == till[0] - till[1] - till[2], "profit is takings less makings less wages");
             helper.succeed();
         });
     }

@@ -132,7 +132,7 @@ public final class Lutes {
         if (Purchases.open(id) && f.purse() >= Math.ceil(price) + 3) {
             int before = f.purse();
             if (Purchases.get(level, f, Lutes::isLute, 1, Purchases.Need.TREAT) > 0) {
-                for (ItemStack s : f.getInventoryItems()) if (isLute(s) && !Homes.isKeepsake(s)) { Homes.keepsake(s, f); break; }
+                for (ItemStack s : f.getInventoryItems()) if (isLute(s) && !Homes.isKeepsake(s)) { Homes.keepsake(s, f, Homes.Source.BOUGHT); break; }   // [shops-homes]
                 long day = level.getDayTime() / 24000L;
                 int paid = Math.max(0, before - f.purse());
                 f.persona().remember(day, "I bought a lute of my own" + (paid > 0 ? " with " + paid + " coins out of my hat" : ""), 4);

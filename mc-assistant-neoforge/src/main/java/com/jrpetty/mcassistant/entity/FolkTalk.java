@@ -195,7 +195,7 @@ public final class FolkTalk {
             case LEDGER -> Services.ledgerFor(f, p);
             case STORES -> Services.stores(f, p, text);
             case ORDERS -> Orders.talk(f, p, text);
-            case WORKINGS -> Trades.explain(f);
+            case WORKINGS -> ShopBusiness.talk(f, Trades.explain(f));   // [shops-homes] and the keeper's business
             case SHORT -> Trades.shortages(f);
             case RETRADE -> Asks.retrade(f, p, text);
             case BUILD -> Asks.build(f, p, text);
@@ -493,6 +493,7 @@ public final class FolkTalk {
         line(sb, "Own house", HousingMarket.cardLine(f));   // [econ-housing] its own house going up, built, or saved for
         line(sb, "Comforts", Decor.cardLine(f));            // its home's things, its trade's and its colour (Decor)
         line(sb, "Shopping", Needs.cardLine(f));            // [shops-homes] what it wants from the shop, and last bought
+        line(sb, "Business", ShopBusiness.cardLine(f));     // [shops-homes] the keeper: what sells, what it's short of, the till
         line(sb, "Style", Fashion.cardLine(f));             // [fashion] what it wears, its colours, the season's look
         for (String[] l : Visitors.cardLines(f)) line(sb, l[0], l[1]);   // [batchG] its gifts on show, its dog, its visits
         line(sb, "Quarter", Quarters.cardLine(f));          // its quarter of the town, the smoke, the park (Quarters)

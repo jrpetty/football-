@@ -63,7 +63,10 @@ public final class WorkStock {
         StationTask.COOK, List.of(m(Items.WHEAT, 32), m(Items.SUGAR, 16), m(Items.EGG, 8), m(Items.COCOA_BEANS, 8)),
         StationTask.FLETCHER, List.of(m(Items.STICK, 32), m(Items.FLINT, 16), m(Items.FEATHER, 16)),
         StationTask.BREW, List.of(m(Items.GLASS_BOTTLE, 9), m(Items.NETHER_WART, 8), m(Items.BLAZE_POWDER, 4), m(Items.SUGAR, 4)),
-        StationTask.ENCHANT, List.of(m(Items.LAPIS_LAZULI, 16), m(Items.BOOK, 8), m(Items.PAPER, 16)));
+        StationTask.ENCHANT, List.of(m(Items.LAPIS_LAZULI, 16), m(Items.BOOK, 8), m(Items.PAPER, 16)),
+        // The shop's bench: what its keeper and hands make its wares of, kept apart from the wares on its shelves.
+        StationTask.SHOP, List.of(tag(ItemTags.PLANKS, Items.OAK_PLANKS, 32, "32 planks"), m(Items.STICK, 16), m(Items.COBBLESTONE, 16),
+            m(Items.IRON_INGOT, 8), m(Items.STRING, 8), m(Items.COAL, 8)));
 
     /** The kit a producer keeps in its own work chest out on its plot: never carried off by the couriers. */
     static final Map<StationTask, List<Making>> KIT = Map.of(
@@ -98,6 +101,17 @@ public final class WorkStock {
             }
         }
         return null;
+    }
+
+    /** Is this a workshop's makings chest (named so)? The shop's is no part of its wares (Store.containers). */
+    public static boolean isMakings(net.minecraft.world.level.block.entity.BlockEntity be) {
+        return be instanceof net.minecraft.world.Nameable n && n.getCustomName() != null && n.getCustomName().getString().endsWith(": makings");
+    }
+
+    /** A delivery put away in a workshop's chest: the shop's makings are booked to its till at the town's price. */
+    static void delivered(ServerLevel level, Villages.Village v, BlockPos dest, ItemStack sample, int n) {
+        if (n <= 0 || !dest.equals(chestOf(level, v.id(), StationTask.SHOP))) return;
+        ShopBusiness.makings(v.id(), level.getDayTime() / 24000L, (int) Math.round(PriceIndex.each(level, v.id(), sample) * n));
     }
 
     /** The name a workshop's chest bears: "Smithy: makings". */

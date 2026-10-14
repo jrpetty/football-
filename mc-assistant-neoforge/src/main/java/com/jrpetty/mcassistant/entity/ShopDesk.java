@@ -192,6 +192,9 @@ public final class ShopDesk implements ServicePoints.Desk {
             e.putInt("trend", PriceIndex.trend(id, l.sample()));
             e.putString("hint", PriceIndex.hint(id, l.sample()));
             e.putBoolean("own", l.own());
+            e.putBoolean("new", ShopBusiness.isNew(id, l.sample()));
+            e.putBoolean("clearance", ShopBusiness.onClearance(id, l.sample()));
+            e.putBoolean("back", l.stock() > 0 && StockKeeper.backInStock(level, id, l.sample()));
             if (l.stock() <= 0) {
                 String why = l.orderable() == null ? "None in, and nobody here makes it." : orderWhy(level, visit.village(), l.orderable());
                 e.putString("why", why);
@@ -211,7 +214,24 @@ public final class ShopDesk implements ServicePoints.Desk {
         }
         t.put("cats", catList);
         t.put("quote", quoteTag(visit, lines));
-        if (visit.player() != null && visit.role() == ServiceRole.SHOP) t.put("sell", sellTag(visit));
+        if (visit.player() != null && visit.role() == ServiceRole.SHOP) {
+            t.put("sell", sellTag(visit));
+            ListTag wanted = new ListTag();
+            for (ShopBusiness.Wanted w : ShopBusiness.wanted(level, visit.village())) {
+                CompoundTag e = new CompoundTag();
+                e.putString("id", Goods.lineId(w.sample()));
+                e.put("item", w.sample().save(reg));
+                e.putString("name", Goods.name(w.sample()));
+                e.putInt("count", w.count());
+                e.putInt("price", w.price());
+                int have = 0;
+                for (ItemStack s : visit.player().getInventory().items) if (!s.isEmpty() && Goods.lineId(s).equals(Goods.lineId(w.sample()))) have += s.getCount();
+                e.putInt("have", have);
+                wanted.add(e);
+            }
+            t.put("wanted", wanted);
+            t.putString("till", ShopBusiness.tillLine(level, id));
+        }
         t.putBoolean("buys", visit.role() == ServiceRole.SHOP);
         t.putBoolean("haggles", visit.keeper() != null);
         ListTag receipts = new ListTag();
@@ -327,6 +347,7 @@ public final class ShopDesk implements ServicePoints.Desk {
             case "sell" -> sell(visit, args);
             case "order" -> order(visit, args);
             case "haggle" -> haggle(visit);
+            case "supply" -> ShopBusiness.supply(visit, args.getString("id"), args.getInt("n"));
             default -> ServicePoints.Result.no("");
         };
     }

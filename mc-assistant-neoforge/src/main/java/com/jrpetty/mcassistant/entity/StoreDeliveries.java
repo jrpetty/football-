@@ -363,6 +363,7 @@ public final class StoreDeliveries {
         d.stage = Stage.DONE;
         String place = d.dest != null ? "the " + d.destName.toLowerCase(java.util.Locale.ROOT) : place(v.id());
         if (d.dest == null) StockKeeper.delivered(level, v.id(), d, moved);
+        else WorkStock.delivered(level, v, d.dest, d.sample, moved);         // [shops-homes] the shop's makings, to its till
         if (d.courier) {
             int[] day = Couriers.office(level, v.id()).staff.computeIfAbsent(c.getUUID(), k -> new int[2]);
             day[0]++;
@@ -480,6 +481,7 @@ public final class StoreDeliveries {
             d.delivered = moved;
             d.stage = Stage.DONE;
             if (d.dest == null) StockKeeper.delivered(level, v.id(), d, moved);
+            else WorkStock.delivered(level, v, d.dest, d.sample, moved);     // [shops-homes]
         }
     }
 

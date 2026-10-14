@@ -865,9 +865,9 @@ public final class JobSeekers {
             if (chest != null && level.getBlockEntity(chest) instanceof net.minecraft.world.Container c) {
                 for (int i = 0; i < c.getContainerSize(); i++) {
                     ItemStack s = c.getItem(i);
-                    if (s.isEmpty() || !whole && !Homes.ownedBy(s, m)) continue;
+                    // [shops-homes] Only the household's own goes with it: the house's things stay with the house.
+                    if (s.isEmpty() || !Homes.isKeepsake(s) || !whole && !Homes.ownedBy(s, m)) continue;
                     ItemStack carried = s.copy();
-                    Homes.keepsake(carried, m);
                     ItemStack left = m.insertItem(carried);
                     c.setItem(i, left.isEmpty() ? ItemStack.EMPTY : s.copyWithCount(left.getCount()));
                 }

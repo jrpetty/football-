@@ -933,6 +933,12 @@ public final class Decor {
                     c.setItem(0, inside.copy());
                     c.setChanged();
                 }
+                // [shops-homes] The town's furnishing, on show: named for it, so it is no household's chest to fill (HomeStores).
+                if (level.getBlockEntity(at) instanceof net.minecraft.world.level.block.entity.BlockEntity be) {
+                    be.applyComponents(net.minecraft.core.component.DataComponentMap.builder().set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                        net.minecraft.network.chat.Component.literal(HomeStores.DISPLAY)).build(), net.minecraft.core.component.DataComponentPatch.EMPTY);
+                    be.setChanged();
+                }
                 sound(level, at, st);
             }
             case FRAME -> {

@@ -362,7 +362,12 @@ public final class VillageSpawner {
      * what do I put in the ground.
      */
     public static void starterKit(VillageFolkEntity folk) {
-        folk.insertGiven(new ItemStack(Items.BREAD, 16));
+        // [shops-homes] Four loaves of it its own, brought with it (what its household keeps at home from the first day);
+        // the rest its rations for the work.
+        ItemStack own = new ItemStack(Items.BREAD, 4);
+        com.jrpetty.mcassistant.entity.Homes.keepsake(own, folk, com.jrpetty.mcassistant.entity.Homes.Source.KIT);
+        folk.insertGiven(new ItemStack(Items.BREAD, 12));
+        folk.insertGiven(own);
         folk.insertGiven(new ItemStack(Items.STONE_AXE));
         folk.insertGiven(new ItemStack(Items.STONE_PICKAXE));
         folk.insertGiven(new ItemStack(Items.STONE_SWORD));

@@ -358,6 +358,12 @@ public final class StockKeeper {
         save(b);
     }
 
+    /** [shops-homes] Out lately and in again: its screen's "back in stock". */
+    static boolean backInStock(ServerLevel level, UUID village, ItemStack one) {
+        Line l = book(level, village).lines.get(Stockroom.key(one));
+        return l != null && l.outs[0] == 0 && (l.outs[1] > 0 || l.outs[2] > 0);
+    }
+
     /** Wanted at the counter and none to be had anywhere: a stock-out, and demand all the same. */
     static void missed(ServerLevel level, UUID village, ItemStack one, int n) {
         Book b = book(level, village);

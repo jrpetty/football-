@@ -409,6 +409,7 @@ public final class Stockroom {
     /** Sold: so many of this, for so much coin in all. */
     public static void sold(ServerLevel level, UUID village, Seller s, ItemStack what, int count, int coin) {
         if (what.isEmpty() || count <= 0) return;
+        if (s == Seller.SHOP) ShopBusiness.took(village, level.getDayTime() / 24000L, coin);   // [shops-homes] into its till
         Book b = book(level, village, s);
         Line l = line(b, key(what));
         l.sold[0] += count;

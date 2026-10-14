@@ -163,7 +163,7 @@ public final class ShoppingTrips {
         while (left > 0) {
             int k = Math.min(left, sample.getMaxStackSize());
             ItemStack mine = sample.copyWithCount(k);
-            Homes.keepsake(mine, f);
+            Homes.keepsake(mine, f, Homes.Source.BOUGHT);
             ItemStack over = f.insertItem(mine);
             if (!over.isEmpty()) {
                 // A full pack: what will not go back in as its own goes back in as it was (nothing lost).

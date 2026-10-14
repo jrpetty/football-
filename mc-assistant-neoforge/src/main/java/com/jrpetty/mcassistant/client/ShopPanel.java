@@ -35,7 +35,10 @@ final class ShopPanel implements ServiceScreen.Panel {
     private static final String ALL = "ALL";
 
     private record Line(String id, ItemStack stack, String cat, String name, int stock, int each, int trend, String hint,
-                        boolean own, String why, boolean order, String tip) {}
+                        boolean own, String why, boolean order, String tip, boolean fresh, boolean clearance, boolean back) {}
+
+    /** A making the shop wants of you: what, how many, for how much, and how many you carry. */
+    private record Want(String id, ItemStack stack, String name, int count, int price, int have) {}
 
     private record Sell(String id, ItemStack stack, String name, int have, int lot, int bid, String why) {}
 
@@ -45,6 +48,8 @@ final class ShopPanel implements ServiceScreen.Panel {
     private final List<Line> lines = new ArrayList<>();
     private final List<Line> shown = new ArrayList<>();
     private final List<Sell> sells = new ArrayList<>();
+    private final List<Want> wants = new ArrayList<>();
+    private String till = "";
     private final List<String[]> cats = new ArrayList<>();
     private final List<Priced> quoted = new ArrayList<>();
     private final List<String> adjustLabels = new ArrayList<>();
@@ -83,7 +88,8 @@ final class ShopPanel implements ServiceScreen.Panel {
             CompoundTag e = items.getCompound(i);
             ItemStack s = icons.computeIfAbsent(e.getString("id"), k -> ServiceScreen.stack(e, "item"));
             lines.add(new Line(e.getString("id"), s, e.getString("cat"), e.getString("name"), e.getInt("stock"), e.getInt("each"),
-                e.getInt("trend"), e.getString("hint"), e.getBoolean("own"), e.getString("why"), e.getBoolean("order"), e.getString("tip")));
+                e.getInt("trend"), e.getString("hint"), e.getBoolean("own"), e.getString("why"), e.getBoolean("order"), e.getString("tip"),
+                e.getBoolean("new"), e.getBoolean("clearance"), e.getBoolean("back")));
         }
         cats.clear();
         cats.add(new String[]{ ALL, "All" });
@@ -96,6 +102,14 @@ final class ShopPanel implements ServiceScreen.Panel {
             ItemStack s = icons.computeIfAbsent("sell:" + e.getString("id"), k -> ServiceScreen.stack(e, "item"));
             sells.add(new Sell(e.getString("id"), s, e.getString("name"), e.getInt("have"), e.getInt("lot"), e.getInt("bid"), e.getString("why")));
         }
+        wants.clear();
+        ListTag wl = body.getList("wanted", Tag.TAG_COMPOUND);
+        for (int i = 0; i < wl.size(); i++) {
+            CompoundTag e = wl.getCompound(i);
+            ItemStack st = icons.computeIfAbsent("want:" + e.getString("id"), k -> ServiceScreen.stack(e, "item"));
+            wants.add(new Want(e.getString("id"), st, e.getString("name"), e.getInt("count"), e.getInt("price"), e.getInt("have")));
+        }
+        till = body.getString("till");
         CompoundTag q = body.getCompound("quote");
         quoted.clear();
         ListTag ql = q.getList("lines", Tag.TAG_COMPOUND);
@@ -231,8 +245,10 @@ final class ShopPanel implements ServiceScreen.Panel {
         int room = priceRight - font.width(price) - S1 - tx;
         text(g, font, l.name(), tx, ry + 2, room, out ? TEXT_DISABLED : TEXT);
         String arrow = l.trend() > 0 ? "↑ " : l.trend() < 0 ? "↓ " : "";
-        String sub = out ? l.why() : l.stock() + " in" + (l.hint().isEmpty() ? "" : " · " + arrow + l.hint()) + (l.hint().isEmpty() && !arrow.isEmpty() ? " · " + arrow.trim() : "");
-        int subColour = out ? TEXT_FAINT : l.trend() > 0 ? WARNING : l.trend() < 0 ? SUCCESS : TEXT_FAINT;
+        String badge = out ? "Sold out · " : l.fresh() ? "NEW · " : l.back() ? "Back in stock · " : l.clearance() ? "Clearance · " : "";
+        String sub = badge + (out ? l.why() : l.stock() + " in" + (l.hint().isEmpty() ? "" : " · " + arrow + l.hint())
+            + (l.hint().isEmpty() && !arrow.isEmpty() ? " · " + arrow.trim() : ""));
+        int subColour = out ? TEXT_FAINT : l.fresh() || l.back() ? INFO : l.clearance() ? SUCCESS : l.trend() > 0 ? WARNING : l.trend() < 0 ? SUCCESS : TEXT_FAINT;
         boolean clipped = text(g, font, sub, tx, ry + 12, room, subColour);
         if (!out) g.drawString(font, price, priceRight - font.width(price), ry + 7, TEXT, false);
         if (bw > 0) {
@@ -249,9 +265,29 @@ final class ShopPanel implements ServiceScreen.Panel {
         int ly = bodyTop(), lh = y + h - ly;
         int lx = x, lw = basketX - S1 - x;
         well(g, lx, ly, lw, lh, PAGE);
-        listScroll.fit(sells.size() * ROW_H, lh - 2);
+        listScroll.fit((wants.size() + sells.size()) * ROW_H, lh - 2);
         g.enableScissor(lx + 1, ly + 1, lx + lw - 1, ly + lh - 1);
         int ry = ly + 1 - listScroll.offset();
+        for (Want w : wants) {
+            if (ry + ROW_H >= ly && ry <= ly + lh) {
+                int rx = lx + 1, rw = lw - 6;
+                boolean inList = mouseY >= ly && mouseY < ly + lh;
+                g.fill(rx, ry, rx + rw, ry + ROW_H, HIGHLIGHT);
+                g.fill(rx, ry, rx + 2, ry + ROW_H, HIGHLIGHT_SPINE);
+                g.renderItem(w.stack(), rx + 4, ry + 3);
+                int bx = rx + rw - S1 - 48;
+                int tx = rx + 4 + ICON + S1, room = bx - S1 - tx;
+                text(g, font, "Wanted: " + w.name(), tx, ry + 2, room, TEXT);
+                String sub = w.count() + " for " + w.price() + "c · you have " + w.have();
+                text(g, font, sub, tx, ry + 12, room, w.have() > 0 ? SUCCESS : TEXT_FAINT);
+                boolean can = w.have() > 0 && screen.open() && !screen.waiting();
+                boolean overB = inList && ServiceScreen.in(mouseX, mouseY, bx, ry + 3, 48, 16);
+                button(g, font, "Supply", bx, ry + 3, 48, 16, State.of(can, false, overB));
+                if (overB) tip = !screen.open() ? screen.status() : w.have() > 0 ? "Sell the shop what it is short of, at a good price"
+                    : "You've none of this on you: the shop is short of it for its bench.";
+            }
+            ry += ROW_H;
+        }
         for (int i = 0; i < sells.size(); i++, ry += ROW_H) {
             if (ry + ROW_H < ly || ry > ly + lh) continue;
             Sell s = sells.get(i);
@@ -272,7 +308,7 @@ final class ShopPanel implements ServiceScreen.Panel {
         }
         g.disableScissor();
         scrollBar(g, lx + lw - 4, ly + 1, lh - 2, listScroll.offset(), listScroll.max(), lh);
-        if (sells.isEmpty()) text(g, font, "Nothing you carry is wanted here.", lx + S2, ly + S2, lw - S4, TEXT_FAINT);
+        if (sells.isEmpty() && wants.isEmpty()) text(g, font, "Nothing you carry is wanted here.", lx + S2, ly + S2, lw - S4, TEXT_FAINT);
     }
 
     /** The basket: its lines with − and +, the sum, each discount, the total, Buy, Haggle. */
@@ -284,6 +320,13 @@ final class ShopPanel implements ServiceScreen.Panel {
         int listTop = by + 16, listH = Math.max(0, bh - 16 - footH - S1);
         if (selling) {
             int ry = listTop;
+            if (!till.isEmpty()) {
+                for (net.minecraft.util.FormattedCharSequence seq : TextCache.splitPlain(font, "The shop's till. " + till, basketW - S2 - 2)) {
+                    g.drawString(font, seq, bx + S1 + 2, ry, TEXT_FAINT, false);
+                    ry += 10;
+                }
+                ry += 4;
+            }
             if (receipts.isEmpty()) text(g, font, "Your dealings here will show here.", bx + S1 + 2, ry, basketW - S2, TEXT_FAINT);
             for (String r : receipts) {
                 if (ry + 10 > by + bh - 4) break;
@@ -410,11 +453,26 @@ final class ShopPanel implements ServiceScreen.Panel {
             }
         } else if (ServiceScreen.in(mouseX, mouseY, x, ly, basketX - S1 - x, lh)) {
             int i = (int) ((mouseY - ly - 1 + listScroll.offset()) / ROW_H);
+            if (i >= 0 && i < wants.size()) {
+                Want w = wants.get(i);
+                int rw = basketX - S1 - x - 6, rx = x + 1;
+                int bx = rx + rw - S1 - 48;
+                int ry = ly + 1 - listScroll.offset() + i * ROW_H;
+                if (ServiceScreen.in(mouseX, mouseY, bx, ry + 3, 48, 16) && w.have() > 0 && screen.open() && !screen.waiting()) {
+                    click();
+                    CompoundTag a = new CompoundTag();
+                    a.putString("id", w.id());
+                    a.putInt("n", w.count());
+                    screen.send("supply", a);
+                }
+                return true;
+            }
+            i -= wants.size();
             if (i < 0 || i >= sells.size()) return true;
             Sell s = sells.get(i);
             int rw = basketX - S1 - x - 6, rx = x + 1;
             int bx = rx + rw - S1 - 40;
-            int ry = ly + 1 - listScroll.offset() + i * ROW_H;
+            int ry = ly + 1 - listScroll.offset() + (i + wants.size()) * ROW_H;
             if (ServiceScreen.in(mouseX, mouseY, bx, ry + 3, 40, 16) && s.bid() > 0 && s.have() >= s.lot() && screen.open() && !screen.waiting()) {
                 click();
                 CompoundTag a = new CompoundTag();

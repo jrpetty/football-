@@ -16,6 +16,7 @@ public final class ShopsHomes {
     public static void tick(ServerLevel level, Villages.Village v) {
         ServicePoints.fitOut(level, v);
         WorkStock.tick(level, v);
+        if (ShopStock.open(v.id())) ShopBusiness.review(level, v);
         long day = level.getDayTime() / 24000L, t = level.getDayTime() % 24000L;
         if (CLAIMED.getOrDefault(v.id(), -1L) != day) {
             CLAIMED.put(v.id(), day);
@@ -42,5 +43,6 @@ public final class ShopsHomes {
         HomeStores.resetForTests();
         Belongings.resetForTests();
         WorkStock.resetForTests();
+        ShopBusiness.resetForTests();
     }
 }

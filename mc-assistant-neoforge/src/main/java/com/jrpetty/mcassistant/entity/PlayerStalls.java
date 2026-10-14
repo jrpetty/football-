@@ -636,7 +636,7 @@ public final class PlayerStalls {
     private static void deliver(ServerLevel level, Villages.Village v, VillageFolkEntity f, ItemStack got, Use use) {
         if (use == Use.HOME && f.carryHome(got.copyWithCount(1))) got.shrink(1);
         if (got.isEmpty()) return;
-        if (use == Use.HOME || use == Use.LUXURY) Homes.keepsake(got, f);
+        if (use == Use.HOME || use == Use.LUXURY) Homes.keepsake(got, f, Homes.Source.BOUGHT);   // [shops-homes]
         ItemStack left = f.insertItem(got);
         if (!left.isEmpty()) Crafts.store(level, v, left);
     }

@@ -1183,7 +1183,7 @@ public final class Auctions {
     /** The winner takes it home: worn, if it is something to wear and it has nothing on there; else its own keepsake,
      *  carried home to its chest of an evening (Homes). It remembers. */
     static void deliver(ServerLevel level, Villages.Village v, VillageFolkEntity f, ItemStack item, int price, long day) {
-        Homes.keepsake(item, f);
+        Homes.keepsake(item, f, Homes.Source.BOUGHT);               // [shops-homes] won, and paid for
         String what = lower(item.getHoverName().getString());
         if (Weave.wearWon(level, v, f, item, day)) item = ItemStack.EMPTY;  // [weave] a garment won is worn at once: the height of fashion
         if (item.getItem() instanceof ArmorItem armour) {

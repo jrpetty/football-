@@ -109,7 +109,7 @@ public final class ShopStock {
         if (one.isEmpty()) return 0;
         ItemStack single = one.copyWithCount(1);
         int k = Math.max(1, n);
-        int p = Market.askLot(level, village, single, k);
+        int p = ShopBusiness.cleared(village, single, Market.askLot(level, village, single, k));   // [shops-homes] a line cleared
         if (single.isEnchanted()) p = Math.max(p, (int) Math.round(PriceIndex.usual(single) * 3 * k));
         return Math.max(Market.leastLot(level, village, single, k), Stockroom.asked(level, village, single, p, k));
     }

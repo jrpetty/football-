@@ -101,7 +101,7 @@ public class ServiceScreen extends Screen {
     /** Send a button's request (the panels call this). */
     void send(String action, CompoundTag args) {
         int n = nextNonce++;
-        if (action.equals("buy") || action.equals("sell") || action.equals("order")) waitingOn = n;
+        if (action.equals("buy") || action.equals("sell") || action.equals("order") || action.equals("supply")) waitingOn = n;
         PacketDistributor.sendToServer(new ServiceActionPayload(data.getString("role"), action, args, n));
     }
 

@@ -187,7 +187,7 @@ public final class Quilts {
         int before = payer.purse();
         int got = Purchases.get(level, payer, Quilts::isQuilt, 1, Purchases.Need.HOME);
         if (got <= 0) return false;
-        for (ItemStack s : payer.getInventoryItems()) if (isQuilt(s) && !Homes.isKeepsake(s)) { Homes.keepsake(s, payer); break; }
+        for (ItemStack s : payer.getInventoryItems()) if (isQuilt(s) && !Homes.isKeepsake(s)) { Homes.keepsake(s, payer, Homes.Source.BOUGHT); break; }   // [shops-homes]
         long day = level.getDayTime() / 24000L;
         int paid = Math.max(0, before - payer.purse());
         payer.persona().remember(day, "I bought a patchwork quilt for our bed" + (paid > 0 ? ", " + paid + (paid == 1 ? " coin" : " coins") : ""), 2);

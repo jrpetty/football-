@@ -56,6 +56,9 @@ public final class HomeStores {
         }
     }
 
+    /** The name of a trade's display barrel the town set in a house (Decor): the house's furnishing, no household's box. */
+    public static final String DISPLAY = "Trade Display";
+
     /** One box of a home's storage: where, and what it keeps. */
     public record Box(BlockPos pos, Kind kind) {}
 
@@ -117,6 +120,7 @@ public final class HomeStores {
         java.util.EnumSet<Kind> taken = java.util.EnumSet.noneOf(Kind.class);
         List<BlockPos> unnamed = new ArrayList<>();
         for (BlockPos p : join(chests, barrels)) {
+            if (otherName(level, p)) continue;                    // a trade's display, a player's named chest: not the household's
             Kind k = nameOf(level, p);
             if (k != null && (k == Kind.SPARE || !taken.contains(k))) { out.add(new Box(p, k)); taken.add(k); }
             else unnamed.add(p);
@@ -142,6 +146,13 @@ public final class HomeStores {
     private static int radius(UUID village, Homes.Home h) {
         int[] half = BuildGoal.footprint(Homes.drawing(village, h));
         return Math.max(half[0], half[1]) + 1;
+    }
+
+    /** Does it bear a name of its own (a display's, somebody's), neither the village's mark nor a household box's? */
+    private static boolean otherName(ServerLevel level, BlockPos p) {
+        BlockEntity be = level.getBlockEntity(p);
+        if (!(be instanceof Nameable n) || n.getCustomName() == null) return false;
+        return Kind.named(n.getCustomName().getString()) == null && !ZoneChests.isVillageStore(be);
     }
 
     @Nullable
@@ -183,8 +194,48 @@ public final class HomeStores {
                 be.setChanged();
                 named++;
             }
+            audit(level, v, h);
         }
         return named;
+    }
+
+    /**
+     * What is in a household's boxes is its own, and says how it came by it: bought, given, made, passed on or brought
+     * at the founding (Homes.Source). Anything that is nobody's (the town's: left there by an errand, swept up off the
+     * step, put there before homes kept their own) goes back to the stores; a thing of somebody no longer living goes
+     * to the household by inheritance; an old keepsake that never said where it came from was a present. Once a day.
+     * Returns how many things went back to the stores.
+     */
+    static int audit(ServerLevel level, Villages.Village v, Homes.Home h) {
+        java.util.Set<UUID> living = new java.util.HashSet<>();
+        for (AssistantEntity a : Villages.folkOf(v.id())) if (a.isAlive()) living.add(a.getUUID());
+        VillageFolkEntity heir = null;
+        for (UUID m : h.members) if (level.getEntity(m) instanceof VillageFolkEntity f && !f.isBaby()) { heir = f; break; }
+        int back = 0;
+        for (Box b : of(level, v.id(), h)) {
+            if (!(level.getBlockEntity(b.pos()) instanceof Container c)) continue;
+            boolean changed = false;
+            for (int i = 0; i < c.getContainerSize(); i++) {
+                ItemStack s = c.getItem(i);
+                if (s.isEmpty()) continue;
+                UUID owner = Homes.ownerOf(s);
+                if (owner == null) {
+                    ItemStack left = s.copy();
+                    TownWork.give(level, v, left);
+                    back += s.getCount() - left.getCount();
+                    c.setItem(i, left);
+                    changed = true;
+                } else if (!living.contains(owner) && heir != null) {
+                    Homes.inherit(s, heir);
+                    changed = true;
+                } else if (Homes.sourceOf(s) == null) {
+                    VillageFolkEntity o = level.getEntity(owner) instanceof VillageFolkEntity f ? f : heir;
+                    if (o != null) { Homes.keepsake(s, o, null); changed = true; }
+                }
+            }
+            if (changed) c.setChanged();
+        }
+        return back;
     }
 
     /** Which box a thing of a household's goes in. */

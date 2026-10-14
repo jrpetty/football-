@@ -1151,11 +1151,58 @@ public final class Homes {
 
     private static final String KEEP = "mca_keepsake";
 
-    /** Mark a thing as this folk's own (a present, something it bought for itself): never banked in the stores. */
+    /** Mark a thing as this folk's own (a present, something it bought for itself): never banked in the stores. Where
+     *  it came from is kept if it says already (moved house, passed on), else it was given ([shops-homes] Source). */
     public static void keepsake(ItemStack s, VillageFolkEntity owner) {
+        keepsake(s, owner, null);
+    }
+
+    /**
+     * [shops-homes] How a thing came to be a household's own: bought with its own coin, given (a present, a prize, the
+     * town's gift), made in its own time, passed on by family, or brought with it when the town was founded. Nothing
+     * else is a household's: what the town's stores hold is never taken home.
+     */
+    public enum Source { BOUGHT, GIFT, CRAFT, INHERITED, KIT }
+
+    private static final String SOURCE = "mca_source";
+
+    /** [shops-homes] Mark a thing as this folk's own, and how it came by it (null: as it says already, else a gift). */
+    public static void keepsake(ItemStack s, VillageFolkEntity owner, @Nullable Source source) {
         if (s.isEmpty()) return;
         CompoundTag t = s.has(DataComponents.CUSTOM_DATA) ? s.get(DataComponents.CUSTOM_DATA).copyTag() : new CompoundTag();
         t.putString(KEEP, owner.getStringUUID());
+        if (source != null) t.putString(SOURCE, source.name());
+        else if (!t.contains(SOURCE)) t.putString(SOURCE, Source.GIFT.name());
+        s.set(DataComponents.CUSTOM_DATA, CustomData.of(t));
+    }
+
+    /** [shops-homes] How this owned thing came to its owner, or null if it is nobody's (the town's). */
+    @Nullable
+    public static Source sourceOf(ItemStack s) {
+        CustomData d = s.get(DataComponents.CUSTOM_DATA);
+        if (d == null || !d.contains(KEEP)) return null;
+        String src = d.copyTag().getString(SOURCE);
+        for (Source x : Source.values()) if (x.name().equals(src)) return x;
+        return null;
+    }
+
+    /** [shops-homes] Whose own this thing is, or null. */
+    @Nullable
+    public static UUID ownerOf(ItemStack s) {
+        CustomData d = s.get(DataComponents.CUSTOM_DATA);
+        if (d == null || !d.contains(KEEP)) return null;
+        try {
+            return UUID.fromString(d.copyTag().getString(KEEP));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** [shops-homes] Passed on: the same thing, its owner now this folk, by inheritance. */
+    static void inherit(ItemStack s, VillageFolkEntity heir) {
+        CompoundTag t = s.has(DataComponents.CUSTOM_DATA) ? s.get(DataComponents.CUSTOM_DATA).copyTag() : new CompoundTag();
+        t.putString(KEEP, heir.getStringUUID());
+        t.putString(SOURCE, Source.INHERITED.name());
         s.set(DataComponents.CUSTOM_DATA, CustomData.of(t));
     }
 
@@ -1204,9 +1251,9 @@ public final class Homes {
             for (int i = 0; i < c.getContainerSize(); i++) {
                 ItemStack s = c.getItem(i);
                 if (s.isEmpty()) continue;
-                if (!m.whole() && !ownedBy(s, f)) continue;
-                ItemStack carried = s.copy();
-                keepsake(carried, f);
+                // [shops-homes] Only what is the household's own goes with it: the house's own things stay with the house.
+                if (!isKeepsake(s) || !m.whole() && !ownedBy(s, f)) continue;
+                ItemStack carried = s.copy();                        // its owner and how it came by it go with it
                 ItemStack left = f.insertItem(carried);
                 c.setItem(i, left.isEmpty() ? ItemStack.EMPTY : s.copyWithCount(left.getCount()));
             }

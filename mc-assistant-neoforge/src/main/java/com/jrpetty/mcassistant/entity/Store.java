@@ -166,6 +166,7 @@ public final class Store {
         if (!level.isLoaded(p)) return;
         BlockEntity be = level.getBlockEntity(p);
         if (!(be instanceof Container c) || ZoneChests.isVillageStore(be)) return;
+        if (WorkStock.isMakings(be)) return;                                // [shops-homes] the bench's makings are not for sale
         if (!out.contains(c)) out.add(c);
     }
 

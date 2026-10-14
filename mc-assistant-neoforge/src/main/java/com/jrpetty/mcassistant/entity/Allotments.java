@@ -341,7 +341,9 @@ public final class Allotments {
             int want = Math.min(e.getValue(), f.countCarried(s -> s.is(it)));
             if (want <= 0) continue;
             int took = f.removeMatching(s -> s.is(it), want);
-            ItemStack left = Homes.insertInto(c, new ItemStack(it, took));
+            ItemStack grown = new ItemStack(it, took);
+            Homes.keepsake(grown, f, Homes.Source.CRAFT);                 // [shops-homes] grown on its own plot: the household's
+            ItemStack left = HomeStores.putAway(level, v.id(), home, grown, false);
             if (!left.isEmpty()) f.insertItem(left);
             moved += took - left.getCount();
         }
