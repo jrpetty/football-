@@ -41,6 +41,24 @@ def shot(name):
         say("screenshot %s failed: %s" % (name, e))
 
 
+def clear_camera(r, x, y, z, tx, ty, tz):
+    """[war-polish] Every shot's camera kept out of the ground: the server says where a camera whose feet stand at
+    x y z (eyes 1.62 above) sees tx ty tz from open air (/village camera), stepping back or up till it does; a spot
+    whose ground has not arrived yet is visited first and asked again. Where to stand, as given if it cannot tell."""
+    def ask():
+        out = r.cmd("village camera %.2f %.2f %.2f %.2f %.2f %.2f" % (x, y, z, tx, ty, tz))
+        m = re.search(r"CAMERA (-?[\d.]+) (-?[\d.]+) (-?[\d.]+) (\w+)", out)
+        return (float(m.group(1)), float(m.group(2)), float(m.group(3)), m.group(4)) if m else (x, y, z, "unknown")
+    cx, cy, cz, how = ask()
+    if how == "unloaded":
+        r.cmd("tp %s %.2f %.2f %.2f" % (USER, x, y, z))
+        time.sleep(3)
+        cx, cy, cz, how = ask()
+    if how not in ("clear", "unknown", "unloaded"):
+        say("camera at %.1f %.1f %.1f %s: now %.1f %.1f %.1f" % (x, y, z, how, cx, cy, cz))
+    return cx, cy, cz
+
+
 def client_alive():
     out = subprocess.run(["pgrep", "-f", "runSmoke"], capture_output=True, text=True)
     return bool(out.stdout.strip())
@@ -3866,28 +3884,44 @@ def defence_stage(r, look, cx, cz):
 
 
 def war_stage(r, look, cx, cz):
-    """[war] Organised battles, phase by phase (entity/Campaigns, Armies, Battles, Battlefields). /village battle stage
-    <phase>, run on open ground east of the town, stages a battle between the town and its neighbour (one raised 260
-    blocks east when there is none near), twelve a side armed for nothing, the field at that spot, and holds it at
-    that phase; it says where to look from (VIEW name eye target). Cinematic pictures, from the hill and close to:
-    each army drawn up on its square in its surcoats before it marches; the column on the road behind its banner;
-    both lines drawn up facing each other in their formations and colours (from the side and from the hill); the
-    Captain with the banner; the envoys meeting in the middle at the parley; the arrow volleys arcing over; the lines
-    locked in the clash; the rout; the medics and the captives after. Then /village battle stage end, /village war
-    battle, and the town's war page."""
+    """[war] Organised battles, phase by phase (entity/Campaigns, Armies, Battles, Battlefields, WarDress). [war-polish]
+    The admin toolkit's battle scenario (/village admin scenario battle: this town and a rival 260 blocks east, both
+    Iron Age towns of seventy, twenty a side raised and kitted, at war), then /village admin army phase <phase> staged
+    on, one battle start to end: each army drawn up on its square in its battle colours (trims, tunics, painted
+    shields, company standards on the helm, name tags in its colour); the column on the road; the line-up in ranks and
+    files from a raised point behind each army and from the side and the hill; the Captains at the parley, close to;
+    the horn; the volleys; the charge; the clash at mid-distance; the rout; the aftermath. Each phase says where to
+    look from (VIEW name eye target). Then /village war battle, the stage struck, and the town's war page."""
     pattern = r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)"
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     midday(r)
     r.cmd("weather clear")
-    hy = ground_height(r, cx, cz)
-    fx, fz = cx + 130, cz                              # the field: open ground east of the town, towards the neighbour
+    # Two new towns of seventy on open ground well away from the grown one (the scenario founds here and 260 east):
+    # the nearest plains or savanna past 600 blocks west of it.
+    sx, sz = cx - 700, cz
+    for biome in ("minecraft:plains", "minecraft:savanna"):
+        m = re.search(r"\[(-?\d+), (~|-?\d+), (-?\d+)\]", r.cmd("execute positioned %d 64 %d run locate biome %s" % (cx - 700, cz, biome)))
+        if m and abs(int(m.group(1)) - cx) + abs(int(m.group(3)) - cz) >= 450:
+            sx, sz = int(m.group(1)), int(m.group(3))
+            break
+    r.cmd("tp %s %d %d %d" % (USER, sx + 130, 150, sz + 40))
+    time.sleep(12)                                     # the ground of both towns and the field between arrives
+    hy = ground_height(r, sx, sz)
+    here = "execute positioned %d %d %d run " % (sx, hy + 1, sz)
+    say("scenario at %d, %d: %s" % (sx, sz, r.cmd(here + "village admin scenario battle")[:400]))
+    for _ in range(90):                                # the founders of both towns arrive; the armies raised and kitted
+        time.sleep(4)
+        if "No admin jobs running" in r.cmd("village admin jobs"):
+            break
+    cx, cz = sx, sz
+    fx, fz = cx + 130, cz                              # the field: halfway to the rival, 260 east
     r.cmd("tp %s %d %d %d" % (USER, fx, hy + 30, fz + 30))
     time.sleep(10)                                     # the field's ground arrives
 
     def stage(phase, settle):
-        out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village battle stage %s" % (fx, fz, phase))
-        say("battle stage %s: %s" % (phase, out[:700]))
+        out = r.cmd(here + "village admin army phase %s" % phase)
+        say("battle %s: %s" % (phase, out[:700]))
         time.sleep(settle)
         return {name: (int(x), int(y), int(z), int(ax), int(ay), int(az)) for name, x, y, z, ax, ay, az in re.findall(pattern, out)}
 
@@ -3897,30 +3931,34 @@ def war_stage(r, look, cx, cz):
                 x, y, z, ax, ay, az = views[name]
                 look("50-war-" + prefix + "-" + name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
 
-    views = stage("muster", 6)                         # drawn up on the square in surcoats, the banner, the Captain's cloak
+    views = stage("muster", 6)                         # drawn up on the square in the battle colours
     shoot(views, "1", ["muster"], 6)
-    views = stage("march", 6)                          # in column on the road, two or three abreast behind the banner
+    views = stage("march", 6)                          # in column on the road behind the banner
     shoot(views, "2", ["column"], 6)
-    views = stage("lineup", 8)                         # both armies across the field in their formations and colours
-    shoot(views, "3", ["hill", "high", "side", "captain"], 5)
-    views = stage("parley", 8)                         # the Captains and their standards met in the middle
+    views = stage("lineup", 8)                         # ranks and files, from behind each army, the side and the hill
+    shoot(views, "3", ["behind0", "behind1", "side", "hill", "high", "captain"], 5)
+    views = stage("parley", 8)                         # the Captains and their standards met in the middle, close to
     shoot(views, "4", ["parley", "side"], 4)
+    views = stage("horn", 2)                           # the horn, the battle cry
+    shoot(views, "5", ["captain", "behind0"], 2)
     views = stage("volley", 4)                         # "Archers, loose!": the arrows arcing over onto raised shields
-    shoot(views, "5", ["side", "hill", "high"], 2)
-    views = stage("clash", 6)                          # the lines locked: sparks, dust, the din
-    shoot(views, "6", ["clash", "hill", "high", "captain"], 3)
+    shoot(views, "6", ["side", "hill"], 2)
+    views = stage("charge", 2)                         # the lines running in
+    shoot(views, "7", ["side", "behind0"], 2)
+    views = stage("clash", 6)                          # the lines locked: sparks, dust, the din, at mid-distance
+    shoot(views, "8", ["clash", "hill", "captain"], 3)
     views = stage("rout", 4)                           # one side broken and running, the other cheering
-    shoot(views, "7", ["hill", "high", "side"], 3)
+    shoot(views, "9", ["hill", "high", "side"], 3)
     views = stage("aftermath", 8)                      # the medics binding the wounded, the captives led off
-    shoot(views, "8", ["clash", "side"], 4)
-    say("battle: " + r.cmd("execute positioned %d %d %d run village war battle" % (cx, hy + 1, cz))[:900])
-    say("end: " + r.cmd("execute positioned %d %d %d run village battle stage end" % (cx, hy + 1, cz)))
+    shoot(views, "10", ["clash", "side"], 4)
+    say("battle: " + r.cmd(here + "village war battle")[:900])
+    say("end: " + r.cmd(here + "village battle stage end"))
     r.cmd("gamemode creative %s" % USER)
     r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
     time.sleep(3)
     say("books: " + r.cmd("execute as %s at @s run village war books" % USER))
     time.sleep(4)
-    shot("50-war-9-page")
+    shot("50-war-11-page")
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the war stage: %s" % client_alive())
@@ -4223,7 +4261,9 @@ def main():
     def look(label, x, y, z, tx, ty, tz, wait=6):
         # A camera, not a player: spectator mode (nothing falls, no hand in the
         # picture) and the angles worked out here — yaw 0 looks south (+z), a
-        # positive pitch looks down, from eyes 1.62 above the feet.
+        # positive pitch looks down, from eyes 1.62 above the feet; never inside
+        # the ground or behind a hill (clear_camera).
+        x, y, z = clear_camera(r, x, y, z, tx, ty, tz)
         dx, dz = tx - x, tz - z
         yaw = math.degrees(math.atan2(-dx, dz))
         pitch = -math.degrees(math.atan2(ty - (y + 1.62), math.hypot(dx, dz)))
@@ -4780,7 +4820,8 @@ def mature():
     say("BOOKS " + r.cmd("execute positioned %d %d %d run village stats" % (cx, gy, cz)).replace("\n", " | "))
 
     def look(label, x, y, z, tx, ty, tz, wait=12):
-        # A camera: yaw 0 looks south (+z), a positive pitch looks down, eyes 1.62 above the feet.
+        # A camera: yaw 0 looks south (+z), a positive pitch looks down, eyes 1.62 above the feet; in open air (clear_camera).
+        x, y, z = clear_camera(r, x, y, z, tx, ty, tz)
         dx, dz = tx - x, tz - z
         yaw = math.degrees(math.atan2(-dx, dz))
         pitch = -math.degrees(math.atan2(ty - (y + 1.62), math.hypot(dx, dz)))
