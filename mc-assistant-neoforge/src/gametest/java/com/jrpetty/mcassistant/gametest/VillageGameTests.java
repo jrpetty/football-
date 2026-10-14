@@ -3313,6 +3313,44 @@ public class VillageGameTests {
         });
     }
 
+    /** By when (ticks) every founder has a trade: well inside its first morning assembly, which holds them about an hour. */
+    private static final int FOUNDERS_TRADED_BY = 400;
+
+    /**
+     * A new village's founders take up their trades at once, while the first morning assembly still holds them, and
+     * none is sent off to the job board as out of work for having no trade yet.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = FOUNDERS_TRADED_BY + 200, batch = "t10b_founders_take_up_trades")
+    public static void t10b_founders_take_up_trades(GameTestHelper helper) {
+        final ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.getGameRules().getRule(GameRules.RULE_DAYLIGHT).set(false, level.getServer());
+        level.setDayTime(1000);                                        // the hour the t10 village is founded at
+        final int cx = 3900, cz = 3900;
+        Kit.hold(level, cx, cz, 140);
+        Kit.generousTerrain(level, cx, cz);
+        final BlockPos heart = Kit.surface(level, cx, cz);
+        for (int i = 0; i < 12; i++) {
+            helper.assertTrue(VillageFolkSpawnerBlock.raise(level, heart, 0.0F) != null, "raise() returned nobody for folk " + i);
+        }
+        helper.runAtTickTime(FOUNDERS_TRADED_BY, () -> {
+            Villages.Village v = Villages.nearest(level, heart, 600);
+            helper.assertTrue(v != null, "a village was founded");
+            List<AssistantEntity> folk = Villages.folkOf(v.id());
+            Map<StationTask, Integer> trades = new EnumMap<>(StationTask.class);
+            int outOfWork = 0;
+            for (AssistantEntity a : folk) {
+                trades.merge(a.stationTask(), 1, Integer::sum);
+                if (a instanceof VillageFolkEntity f && com.jrpetty.mcassistant.entity.JobSeekers.outOfWork(f)) outOfWork++;
+            }
+            Kit.log("t10b trades at tick " + FOUNDERS_TRADED_BY + ": " + trades + "; shape " + java.util.Arrays.toString(VillageMath.shapeOf(12)));
+            helper.assertTrue(folk.size() == 12 && !trades.containsKey(StationTask.NONE),
+                "every founder has a trade by tick " + FOUNDERS_TRADED_BY + ": " + trades);
+            helper.assertTrue(outOfWork == 0, "no founder counts as out of work: " + outOfWork);
+            helper.succeed();
+        });
+    }
+
     /** Each miner's own count, so a report says which mine is pulling its weight: what it has
      *  dug, in how many runs, and how many of the last ones in a row came home empty. */
     private static String minersReport(List<AssistantEntity> crew) {
