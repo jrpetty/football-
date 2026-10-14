@@ -435,8 +435,8 @@ public class DefenceGameTests {
 
     /**
      * The bell rings on a town of seven folk (a child among them) and nine guards round a walled square. Every folk not
-     * of the watch makes for the square and gathers in the middle of it, the child among the nearest the middle; seven
-     * guards (all the ring wants) stand evenly round them, facing out, and the two over go up on the wall with bows. Two
+     * of the watch makes for the square and gathers in the middle of it, the child among the nearest the middle; as many
+     * guards as the ring wants stand evenly round them, facing out, and those over go up on the wall with bows. Two
      * zombies come at the square: the ring steps out and kills them, and nobody of the town is hurt; the guards go back
      * to their places. At the all-clear the folk go back to what they were doing, and the history has the muster.
      */
@@ -475,10 +475,8 @@ public class DefenceGameTests {
         for (int i = 0; i < 9; i++) {
             VillageFolkEntity g = guard(level, v.centre().offset(-6 + (i % 3) * 6, 0, -6 + (i / 3) * 6));
             helper.assertTrue(g != null, "a guard");
-            if (i >= 7) {
-                g.insertItem(new ItemStack(Items.BOW));
-                g.insertItem(new ItemStack(Items.ARROW, 48));
-            }
+            g.insertItem(new ItemStack(Items.BOW));
+            g.insertItem(new ItemStack(Items.ARROW, 48));
             watch.add(g);
         }
         for (VillageFolkEntity f : folk) if (!f.isBaby()) f.setJob(StationTask.FARM);
@@ -510,11 +508,12 @@ public class DefenceGameTests {
                     boolean folkIn = true;
                     for (VillageFolkEntity f : folk) if (flatDist(f, at) > size[0] + 1.5) folkIn = false;
                     List<VillageFolkEntity> ring = Muster.ringForTests(level, v);
-                    boolean ringed = ring.size() == 7;
+                    int wants = Math.min(watch.size(), (int) size[2]);
+                    boolean ringed = ring.size() == wants;
                     for (VillageFolkEntity g : ring) if (Math.abs(flatDist(g, at) - size[1]) > 1.6) ringed = false;
                     int up = 0;
                     for (VillageFolkEntity g : watch) if (!ring.contains(g) && g.holdingAPost()) up++;
-                    if (folkIn && ringed && up >= 1) {
+                    if (folkIn && ringed && up >= watch.size() - wants) {
                         Kit.log("dw04 gathered at tick " + t + ": the child " + String.format("%.1f", flatDist(child, at))
                             + " from the middle, " + up + " guards up on the wall");
                         helper.assertTrue(flatDist(child, at) <= 1.8, "the child in the middle: " + flatDist(child, at));
