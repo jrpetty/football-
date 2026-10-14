@@ -112,7 +112,7 @@ public class BuildGoal extends Goal {
         // [redstone] the redstone engineer's workshop: its bench, its lectern of plans, its chests of parts (entity/Engineers)
         "redstoneworks",
         // [roles-b] the beekeeper's apiary and honey house, and the enchanter's tower (entity/Apiary, CraftScale)
-        "apiary", "enchanter");
+        "apiary", "enchanter",
         // [roles-d] the hunter's lodge (its smoker, hides and makings) and the rancher's barn by the pen (entity/OutdoorBases)
         "huntlodge", "barn");
 

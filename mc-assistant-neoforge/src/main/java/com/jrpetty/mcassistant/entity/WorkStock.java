@@ -100,7 +100,7 @@ public final class WorkStock {
     public static BlockPos chestOf(ServerLevel level, UUID village, StationTask trade) {
         if (!MAKINGS.containsKey(trade)) return null;
         String building = CraftScale.houseOf(village, trade);              // [roles-b] the tower's, or the library's till then
-        String building = workshopOf(trade);
+        if (building == null && VillageFolkEntity.buildingFor(trade) == null) building = workshopOf(trade);   // [roles-d] an outdoor base
         if (building == null) return null;
         for (Ledger.Building b : Ledger.buildings(village)) {
             if (!b.structure().equals(building) || !level.isLoaded(b.anchor())) continue;
