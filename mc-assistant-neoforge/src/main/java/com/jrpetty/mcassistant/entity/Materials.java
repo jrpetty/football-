@@ -56,32 +56,53 @@ public final class Materials {
         return Themes.named(t).contains(b);
     }
 
+    /** What each theme has said of a block or an item: forbidden (1), rough (2), both, or neither; asked once. */
+    private static final java.util.Map<String, java.util.Map<Object, Integer>> SAID = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** Forget what was said (the themes read afresh). */
+    static void forget() {
+        SAID.clear();
+    }
+
+    private static int said(ThemeData t, BlockState s) {
+        return SAID.computeIfAbsent(t.id, k -> new java.util.concurrent.ConcurrentHashMap<>()).computeIfAbsent(s.getBlock(), k -> {
+            if (s.isAir() || named(t, s.getBlock())) return 0;
+            BlockState d = s.getBlock().defaultBlockState();
+            int out = 0;
+            for (String w : t.forbidden()) if (Themes.blocks(w).test(d)) { out |= 1; break; }
+            for (String w : t.rough()) if (Themes.blocks(w).test(d)) { out |= 2; break; }
+            return out;
+        });
+    }
+
+    private static int said(ThemeData t, ItemStack s) {
+        if (s.isEmpty()) return 0;
+        return SAID.computeIfAbsent(t.id, k -> new java.util.concurrent.ConcurrentHashMap<>()).computeIfAbsent(s.getItem(), k -> {
+            if (s.getItem() instanceof BlockItem bi && named(t, bi.getBlock())) return 0;
+            ItemStack one = new ItemStack(s.getItem());
+            int out = 0;
+            for (String w : t.forbidden()) if (Themes.items(w).test(one)) { out |= 1; break; }
+            for (String w : t.rough()) if (Themes.items(w).test(one)) { out |= 2; break; }
+            return out;
+        });
+    }
+
     /** A block the theme never builds with (and does not name as its own). */
     public static boolean forbidden(ThemeData t, BlockState s) {
-        if (s.isAir() || named(t, s.getBlock())) return false;
-        for (String w : t.forbidden()) if (Themes.blocks(w).test(s)) return true;
-        return false;
+        return (said(t, s) & 1) != 0;
     }
 
     public static boolean forbidden(ThemeData t, ItemStack s) {
-        if (s.isEmpty()) return false;
-        if (s.getItem() instanceof BlockItem bi && named(t, bi.getBlock())) return false;
-        for (String w : t.forbidden()) if (Themes.items(w).test(s)) return true;
-        return false;
+        return (said(t, s) & 1) != 0;
     }
 
     /** Rough fill (earth, gravel, sand, wool), not the theme's own. */
     public static boolean rough(ThemeData t, BlockState s) {
-        if (s.isAir() || named(t, s.getBlock())) return false;
-        for (String w : t.rough()) if (Themes.blocks(w).test(s)) return true;
-        return false;
+        return (said(t, s) & 2) != 0;
     }
 
     public static boolean rough(ThemeData t, ItemStack s) {
-        if (s.isEmpty()) return false;
-        if (s.getItem() instanceof BlockItem bi && named(t, bi.getBlock())) return false;
-        for (String w : t.rough()) if (Themes.items(w).test(s)) return true;
-        return false;
+        return (said(t, s) & 2) != 0;
     }
 
     /** Is the town past the age of rough fill and of any block it has (the Iron Age, in the medieval theme)? */

@@ -775,16 +775,7 @@ public final class Architecture {
      */
     @Nullable
     public static Post lampPost(ServerLevel level, Villages.Village v) {
-        Style st = of(v.id());
-        if (st == null) return null;
-        // [styles] The theme's: its style's "lamp_post" (none: the usual spruce posts).
-        Map<String, Object> m = Themes.style(Themes.of(v.id()), st);
-        Post p = null;
-        if (m.get("lamp_post") instanceof Map<?, ?> lp && cast(lp).get("block") instanceof String id && Themes.block(id) != Blocks.AIR) {
-            Predicate<ItemStack> pay = payOf(cast(lp).get("pay"));
-            int cost = cast(lp).get("cost") instanceof Number n ? n.intValue() : 2;
-            p = new Post(Themes.block(id), pay, cost);
-        }
+        Post p = postFor(v.id());
         return p != null && Crafts.stock(level, v, p.pay()) >= p.cost() ? p : null;
     }
 
@@ -794,16 +785,31 @@ public final class Architecture {
      */
     @Nullable
     public static Block benchStair(ServerLevel level, Villages.Village v) {
-        Style st = of(v.id());
-        // [styles] The theme's: its style's "bench" choices, in order, each paid for in one of its "pay" (none: wooden).
-        if (!(Themes.style(Themes.of(v.id()), st).get("bench") instanceof List<?> choices)) return null;
+        for (Post b : benchesFor(v.id())) if (Crafts.take(level, v, b.pay(), 1)) return b.block();
+        return null;
+    }
+
+    /** [styles] The town's style's lamp post in its theme ("lamp_post"), whatever the stores hold; null for the usual. */
+    @Nullable
+    static Post postFor(UUID village) {
+        Style st = of(village);
+        if (st == null) return null;
+        Map<String, Object> m = Themes.style(Themes.of(village), st);
+        if (!(m.get("lamp_post") instanceof Map<?, ?> lp) || !(cast(lp).get("block") instanceof String id) || Themes.block(id) == Blocks.AIR) return null;
+        int cost = cast(lp).get("cost") instanceof Number n ? n.intValue() : 2;
+        return new Post(Themes.block(id), payOf(cast(lp).get("pay")), cost);
+    }
+
+    /** [styles] The town's style's benches in its theme ("bench"), in the order they are tried; none for wooden ones. */
+    static List<Post> benchesFor(UUID village) {
+        List<Post> out = new ArrayList<>();
+        if (!(Themes.style(Themes.of(village), of(village)).get("bench") instanceof List<?> choices)) return out;
         for (Object o : choices) {
             if (!(o instanceof Map<?, ?> c) || !(cast(c).get("block") instanceof String id)) continue;
             Block b = Themes.block(id);
-            if (b == Blocks.AIR) continue;
-            if (Crafts.take(level, v, payOf(cast(c).get("pay")), 1)) return b;
+            if (b != Blocks.AIR) out.add(new Post(b, payOf(cast(c).get("pay")), 1));
         }
-        return null;
+        return out;
     }
 
     /** [styles] What pays for a theme's thing: any of its "pay" list (ids, tags). */

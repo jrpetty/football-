@@ -105,6 +105,7 @@ public final class Themes {
                 RESOLVED.clear();
                 MISSING.clear();
                 COMPILED.clear();
+                Materials.forget();
                 Palettes.forgetAll();
                 LOG.info("[MCA-THEME] themes: {}", new java.util.TreeSet<>(LOADED.keySet()));
             }
@@ -207,6 +208,7 @@ public final class Themes {
         RESOLVED.clear();
         MISSING.clear();
         COMPILED.clear();
+        Materials.forget();
     }
 
     // ------------------------------------------------------------------ the theme's own designs
@@ -255,7 +257,15 @@ public final class Themes {
 
     /** Does the block standing match this word: an id, "#a_tag", or an id with * in it ("*quartz*")? */
     public static Predicate<BlockState> blocks(String word) {
-        return STATE_MATCH.computeIfAbsent(ThemeData.id(word), w -> {
+        Predicate<BlockState> got = STATE_MATCH.get(word);
+        if (got != null) return got;
+        got = blocksOf(ThemeData.id(word));
+        STATE_MATCH.put(word, got);
+        return got;
+    }
+
+    private static Predicate<BlockState> blocksOf(String id) {
+        return STATE_MATCH.computeIfAbsent(id, w -> {
             if (w.startsWith("#")) {
                 TagKey<Block> tag = TagKey.create(Registries.BLOCK, ResourceLocation.parse(w.substring(1)));
                 return s -> s.is(tag);
@@ -271,7 +281,15 @@ public final class Themes {
 
     /** Does the item match this word: an id, "#a_tag", or an id with * in it? */
     public static Predicate<ItemStack> items(String word) {
-        return ITEM_MATCH.computeIfAbsent(ThemeData.id(word), w -> {
+        Predicate<ItemStack> got = ITEM_MATCH.get(word);
+        if (got != null) return got;
+        got = itemsOf(ThemeData.id(word));
+        ITEM_MATCH.put(word, got);
+        return got;
+    }
+
+    private static Predicate<ItemStack> itemsOf(String id) {
+        return ITEM_MATCH.computeIfAbsent(id, w -> {
             if (w.startsWith("#")) {
                 TagKey<Item> tag = TagKey.create(Registries.ITEM, ResourceLocation.parse(w.substring(1)));
                 return s -> s.is(tag);
@@ -345,8 +363,19 @@ public final class Themes {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    static Set<String> cachedSet(ThemeData t, String name) {
+        return (Set<String>) COMPILED.computeIfAbsent("set|" + t.id + "|" + name, k -> Set.copyOf(t.set(name)));
+    }
+
+    @SuppressWarnings("unchecked")
+    static List<Map<String, Object>> cachedRules(ThemeData t, String what, String kind, @Nullable String style) {
+        return (List<Map<String, Object>>) COMPILED.computeIfAbsent(what + "|" + t.id + "|" + style + "|" + kind,
+            k -> List.copyOf(what.equals("ages") ? t.ageRules(kind) : t.dressRules(style, kind)));
+    }
+
     private static Set<String> names(ThemeData t, Object v) {
-        if (v instanceof String s && s.startsWith("@")) return t.set(s.substring(1));
+        if (v instanceof String s && s.startsWith("@")) return cachedSet(t, s.substring(1));
         Set<String> out = new java.util.HashSet<>();
         if (v instanceof List<?> xs) for (Object x : xs) out.add(String.valueOf(x));
         else if (v instanceof String s) out.add(s);
@@ -355,7 +384,10 @@ public final class Themes {
 
     private static boolean anyMatch(Object v, Ctx c) {
         if (!(v instanceof List<?> xs)) return false;
-        for (Object x : xs) if (x instanceof String w && blocks(ThemeData.fill(w, c.look(), c.trim())).test(c.now())) return true;
+        for (Object x : xs) {
+            if (!(x instanceof String w)) continue;
+            if (blocks(w.indexOf('{') >= 0 ? ThemeData.fill(w, c.look(), c.trim()) : w).test(c.now())) return true;
+        }
         return false;
     }
 
@@ -425,8 +457,8 @@ public final class Themes {
             BlockState thatch = Thatch.reroof(age, style, now);
             if (thatch != null) return thatch;
         }
-        Ctx c = new Ctx(age, structure, t.set("homes").contains(structure), now, pos, landStone, false, false, null, null);
-        Result r = first(t, t.ageRules(style.name()), c);
+        Ctx c = new Ctx(age, structure, cachedSet(t, "homes").contains(structure), now, pos, landStone, false, false, null, null);
+        Result r = first(t, cachedRules(t, "ages", style.name(), null), c);
         return r == null ? null : r.want();
     }
 
@@ -435,7 +467,7 @@ public final class Themes {
     public static Result dress(ThemeData t, Architecture.Style st, String kind, Ctx c, Direction.Axis run) {
         RUN.set(run);
         try {
-            return first(t, t.dressRules(st.name(), kind), c);
+            return first(t, cachedRules(t, "dress", kind, st.name()), c);
         } finally {
             RUN.set(Direction.Axis.Y);
         }

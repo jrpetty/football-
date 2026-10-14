@@ -1259,7 +1259,7 @@ public class BuildGoal extends Goal {
         out.add(preferred(style).and(ok));
         out.add(secondBest(style).and(ok));
         for (Predicate<ItemStack> p : com.jrpetty.mcassistant.entity.Materials.fallback(town, style)) {
-            out.add(p.and(ok).and(BuildGoal::isBuildingBlock));
+            out.add(p.and(ok));
         }
         if (com.jrpetty.mcassistant.entity.Materials.anyGoes(town, style)) {
             if (style == Blueprints.Style.SOIL) out.add(null);
