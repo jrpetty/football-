@@ -485,6 +485,12 @@ public class VillageFolkEntity extends AssistantEntity {
                 && (tickCount % 4 == 3 ? Culture.hold(this, culture) : Culture.busy(this))) return;
         // [fireworks] One of a display's crew, at the rack behind the launch spot (FireworkShows): before the gathering.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel rack && FireworkShows.hold(this, rack)) return;
+        // No trade yet (a founder, or one just let go from its trade): it claims the one its village is short of
+        // now, whatever else has it just now. The claim is cheap and the village reckons its shape from what its folk
+        // ARE; only the search for ground waits for the agenda (takeUpATrade). A new village's founders were held at
+        // their first morning assembly till well into the morning with no trade, and the last let go were still
+        // without one an hour in, the farms and the fishing they would have taken unclaimed.
+        if (!withAPlayer && tickCount % 20 == 9 && !level().isNight()) claimATrade();
         // The village coming together (Assemblies): the bell rung, it goes, finds a place and takes part.
         if (!withAPlayer && tickCount % 4 == 1 && level() instanceof net.minecraft.server.level.ServerLevel gathering
                 && Assemblies.attend(this, gathering)) {
@@ -3877,9 +3883,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // cheap, only the search is not. A folk that had looked for ground a minute
         // before it lost its trade (married into another town, moved away, gave up
         // its fishing) stood about with none for up to two minutes more.
-        if (stationTask() == StationTask.NONE) {
-            setStation(blockPosition(), Fears.steer(this, Villages.needed(ownerId())));   // [individual] not a trade it fears
-        }
+        claimATrade();
         // Looking for ground is expensive and the answer rarely changes from
         // one second to the next. Once a minute is plenty, and it stops every
         // folk in a village re-running a quarter-million block reads on the
@@ -3926,6 +3930,13 @@ public class VillageFolkEntity extends AssistantEntity {
     }
 
     private int triedTrades;
+
+    /** With no trade and no ground: take up the trade the village is most short of (not one it fears). */
+    private void claimATrade() {
+        if (stationTask() != StationTask.NONE || workZone() != null || ownerId() == null || isBaby()) return;
+        if (trip != null || expedition != null || Raids.underAlarm(ownerId())) return;
+        setStation(blockPosition(), Fears.steer(this, Villages.needed(ownerId())));   // [individual] not a trade it fears
+    }
 
     /** The next trade worth trying when this one has nowhere to work. Ordered
      *  by how little ground it is fussy about: stone and timber are almost

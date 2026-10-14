@@ -418,7 +418,7 @@ public class PetsGameTests {
             BlockPos roof = Pets.roofForTests(level, child);
             BlockPos hearth = Families.hearthForTests(level, child);
             helper.assertTrue(roof != null && roof.getY() > hearth.getY() + 2, "the house has a roof over its rooms: " + roof);
-            helper.assertTrue(cat.isLying() && cat.getY() >= roof.getY() - 0.05 && cat.blockPosition().distManhattan(roof) <= 2,
+            helper.assertTrue(cat.isLying() && cat.getY() >= Pets.surface(level, roof) - 0.05 && cat.blockPosition().distManhattan(roof) <= 2,
                 "the cat up on the roof in the sun: at " + cat.blockPosition().toShortString() + ", the roof " + roof.toShortString()
                     + " (" + doing[0] + ")");
             Kit.log("pe03 on the roof at " + cat.blockPosition().toShortString() + " (" + (roof.getY() - hearth.getY())

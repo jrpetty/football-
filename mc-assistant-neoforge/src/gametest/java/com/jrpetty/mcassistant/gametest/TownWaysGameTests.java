@@ -685,7 +685,7 @@ public class TownWaysGameTests {
             Kit.log("cw04 in passing: " + (chat.isEmpty() ? "nothing" : String.join(" / ", chat.get(0))));
             helper.assertTrue(!chat.isEmpty(), "two folk pass the time with it");
             boolean any = false;
-            for (String[] c : chat) for (String s : sx.stream().map(TownSpeech.Saying::text).toList()) if (String.join(" ", c).toLowerCase().contains(s)) any = true;
+            for (String[] c : chat) for (String s : sx.stream().map(TownSpeech.Saying::text).toList()) if (String.join(" ", c).toLowerCase().contains(s.toLowerCase())) any = true;   // a saying may carry the town's name
             helper.assertTrue(any, "a saying of the town's among it");
             helper.succeed();
         });
