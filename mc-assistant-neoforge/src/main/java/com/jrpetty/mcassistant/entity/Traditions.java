@@ -396,6 +396,7 @@ public final class Traditions {
                 return false;
             }
             SHORT.remove(id);
+            if (!TownBlocks.mayPlace(level, v, spot, TownBlocks.Why.CIVIC)) continue;                       // [integrity]
             if (!TownJobs.atWork(level, v, "lanterns", spot, "setting out lanterns on the square for " + c.name())) return true;
             if (!Crafts.take(level, v, s -> s.is(lantern ? Items.LANTERN : Items.TORCH), 1)) return false;
             level.setBlock(spot, (lantern ? Blocks.LANTERN : Blocks.TORCH).defaultBlockState(), 3);

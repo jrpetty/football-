@@ -1056,6 +1056,8 @@ public final class Railways {
         Item railItem = powered ? Items.POWERED_RAIL : Items.RAIL;
         boolean haveRail = level.getBlockState(at).is(powered ? Blocks.POWERED_RAIL : Blocks.RAIL);
         if (!free && !haveRail && Market.stock(level, v.id(), s -> s.is(railItem)) == 0) return Laid.UNPAID;
+        // [integrity] Never through a building, its doorway or the way in to it.
+        for (int h = 0; h <= 2; h++) if (!TownBlocks.mayPlace(level, at.above(h), TownBlocks.Why.ROAD)) return Laid.BLOCKED;
         if (!free && !TownJobs.atWork(level, v, "railway", at, "laying " + l.name(), AssistantEntity.StationTask.HAUL)) return Laid.WAITING;
         // The way cleared: the rail's place and two above it, and in a cutting all the earth and rock up to the top of it
         // (a cutting open to the sky, not a tunnel).
