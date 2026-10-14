@@ -271,8 +271,20 @@ public final class TownWork {
         stack.setCount(left.getCount());
     }
 
-    /** Take so many of a thing out of the village's stores; all or nothing. */
+    /** Take so many of a thing out of the village's stores; all or nothing. [shops-homes] A maker at its work takes
+     *  out of its own workshop chest first (WorkStock), and only the rest out of the stores. */
     static boolean take(ServerLevel level, Villages.Village v, Predicate<ItemStack> what, int n) {
+        List<ItemStack> own = WorkStock.takeOwn(what, n);
+        int got = 0;
+        for (ItemStack s : own) got += s.getCount();
+        if (got >= n) return true;
+        if (takeFromStores(level, v, what, n - got)) return true;
+        WorkStock.putBackOwn(own);
+        return false;
+    }
+
+    /** Take so many of a thing out of the stores proper; all or nothing. */
+    private static boolean takeFromStores(ServerLevel level, Villages.Village v, Predicate<ItemStack> what, int n) {
         boolean before = ZoneChests.askAs(true);
         try {
             List<ZoneChests.Found> stores = ZoneChests.around(level, v.centre(), Villages.storesRadius(v.id()), 32);

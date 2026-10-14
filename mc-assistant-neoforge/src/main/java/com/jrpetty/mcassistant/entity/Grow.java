@@ -87,6 +87,7 @@ public final class Grow {
         if (now - LAST.getOrDefault(id, -100000L) < Ethos.growEvery(id, 300L)) return;   // [identity] sooner in a forward-looking town
         LAST.put(id, now);
         Luxuries.candles(level, v);                                  // the households' candles, lit at dusk (Luxuries)
+        ShopsHomes.tick(level, v);                                   // [shops-homes] counters, needs, homes' and workshops' stores
         if (!furnish(level, v)) shelve(level, v);
         work(level, v, Ethos.growBudget(id, 24));                    // [identity] and more at a time; less in a traditional one
         HousingMarket.tick(level, v);                                // [econ-housing] the council's houses costed; a folk's own house going up

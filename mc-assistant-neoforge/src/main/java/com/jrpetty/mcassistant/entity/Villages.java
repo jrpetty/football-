@@ -467,6 +467,7 @@ public final class Villages {
         Interiors.resetForTests();
         Decor.resetForTests();
         Luxuries.resetForTests();
+        ShopsHomes.resetAllForTests();                              // [shops-homes] counters, queues, lists, trips, homes' and workshops' stores
         Palettes.resetForTests();
         Court.resetForTests();
         School.resetForTests();
