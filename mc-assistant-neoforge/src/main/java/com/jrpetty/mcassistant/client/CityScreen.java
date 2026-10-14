@@ -2634,8 +2634,9 @@ public class CityScreen extends Screen {
         int ry = y + 10;
         int rows = (ch - 22) / 10;
         int start = Math.max(0, Math.min(scroll, Math.max(0, all.size() - rows)));
-        int furnished = 0, furnishOf = 0, tall = 0, going = 0;
+        int furnished = 0, furnishOf = 0, tall = 0, going = 0, mending = 0;
         for (CompoundTag b : all) {
+            if ("needs repair".equals(b.getString("repair"))) mending++;          // [integrity]
             furnished += b.getInt("furnished");
             furnishOf += b.getInt("furnish_of");
             if (b.getInt("storeys") > 1) tall++;
@@ -2647,6 +2648,7 @@ public class CityScreen extends Screen {
             g.fill(x - 2, ry - 1, x, ry + 9, DistrictMap.colour(b.getString("district")));   // its quarter's colour
             String where = b.getString("dir").equals("at the heart") ? "at the heart" : b.getInt("dist") + " " + b.getString("dir");
             String storeys = b.getBoolean("raising") ? "going up" : Integer.toString(b.getInt("storeys"));
+            if (b.contains("repair") && !b.getBoolean("raising")) storeys += " · " + b.getString("repair");   // [integrity]
             String fur = b.getInt("furnish_of") == 0 ? "—" : Math.round(b.getInt("furnished") * 100f / b.getInt("furnish_of")) + "%";
             String home = b.contains("living") ? b.getInt("living") + " · " + b.getString("tenure") : "";
             String quarter = b.getString("district") + (b.contains("smoke") ? " · smoky" : b.getBoolean("parkside") ? " · by park" : "");
@@ -2655,11 +2657,11 @@ public class CityScreen extends Screen {
                 if (BUILDING_COLS[c] >= tw - 20) break;
                 int colW = (c + 1 < BUILDING_COLS.length ? BUILDING_COLS[c + 1] : tw) - BUILDING_COLS[c] - 3;
                 small(g, Ui.clip(font, cells[c], (int) (colW / 0.75)), x + BUILDING_COLS[c], ry + 1,
-                    c == 3 && b.getBoolean("raising") ? Ui.WARN : c == 2 && b.contains("smoke") ? Ui.BAD : Ui.INK);
+                    c == 3 && (b.getBoolean("raising") || "needs repair".equals(b.getString("repair"))) ? Ui.WARN : c == 2 && b.contains("smoke") ? Ui.BAD : Ui.INK);
             }
             ry += 10;
         }
-        if (!buildingsMap) small(g, Ui.clip(font, all.size() + " buildings, " + tall + " of two storeys" + (going > 0 ? ", " + going + " going up" : "")
+        if (!buildingsMap) small(g, Ui.clip(font, all.size() + " buildings, " + tall + " of two storeys" + (going > 0 ? ", " + going + " going up" : "") + (mending > 0 ? ", " + mending + " needing repair" : "")
             + (furnishOf > 0 ? "; insides " + Math.round(furnished * 100f / furnishOf) + "% furnished for the age" : "")
             + (all.size() > rows ? " · scroll for more" : ""), (int) ((tw - toggleW - 4) / 0.75)), x, y + ch - 10, Ui.FAINT);
         // The side: how many of each, and what comes next.

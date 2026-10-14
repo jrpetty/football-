@@ -196,6 +196,15 @@ public final class Lanterns {
             for (ItemStack p : posts) Crafts.store(level, v, p);
             return 0;
         }
+        // [integrity] The whole line, posts, string and lanterns, on cells the town may hang it in, or none of it.
+        List<BlockPos> cells = new ArrayList<>();
+        for (int end : new int[]{ -HALF, HALF }) for (int y = 0; y < POST; y++) cells.add(mid.relative(along, end).above(y));
+        for (int i = -HALF + 1; i <= HALF - 1; i++) cells.add(mid.relative(along, i).above(POST - 1));
+        if (!TownBlocks.mayAll(level, v, TownBlocks.Why.CIVIC, cells)) {
+            for (ItemStack p : posts) Crafts.store(level, v, p);
+            Crafts.store(level, v, new ItemStack(Items.STRING, 2 * HALF - 1));
+            return 0;
+        }
         int k = 0;
         for (int end : new int[]{ -HALF, HALF }) {
             BlockPos foot = mid.relative(along, end);

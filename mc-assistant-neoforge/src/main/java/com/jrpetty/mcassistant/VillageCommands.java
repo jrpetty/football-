@@ -104,6 +104,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.QuestRun.command())              // [quests] /village quests [journal|offers|abandon <id>]
             // The town's quarters, the homes in the crafts' smoke and by the park, and the park (Quarters, Park).
             .then(com.jrpetty.mcassistant.entity.Quarters.command())
+            .then(com.jrpetty.mcassistant.entity.TownAudit.command())              // [integrity] /village integrity [views|survey]
             .then(com.jrpetty.mcassistant.entity.Sport.command())                 // [batchC] /village sport
             .then(com.jrpetty.mcassistant.entity.Pastimes.command())              // [leisure] /village items leisure [stage|make]
             // [batchE] The town's look: the avenues' trees, the street furniture, the allotments, the orchard, the

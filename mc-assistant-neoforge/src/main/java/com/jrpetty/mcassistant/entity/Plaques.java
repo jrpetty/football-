@@ -280,6 +280,8 @@ public final class Plaques {
 
     /** The plaque made and set: out of the stores, unless free. */
     private static boolean place(ServerLevel level, Villages.Village v, Plaque p, Culture.Spot spot, boolean free) {
+        if (v != null && !TownBlocks.mayAll(level, v, TownBlocks.Why.SIGN, p.wall() ? new BlockPos[]{ spot.at() }
+            : new BlockPos[]{ spot.at(), spot.at().above() })) return false;                                 // [integrity]
         if (p.wall()) {
             BlockState s = Blocks.OAK_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, spot.facing());
             if (!s.canSurvive(level, spot.at())) return false;

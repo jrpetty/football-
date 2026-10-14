@@ -221,6 +221,7 @@ public class GatherGoal extends Goal {
                 }
             }
             if (crowded) continue;
+            if (!com.jrpetty.mcassistant.entity.TownBlocks.mayPlace(assistant.level(), stump, com.jrpetty.mcassistant.entity.TownBlocks.Why.NATURE)) continue;   // [integrity] no tree in a road
             boolean plantedHere = false;
             var inv = assistant.getInventoryItems();
             boolean done = false;

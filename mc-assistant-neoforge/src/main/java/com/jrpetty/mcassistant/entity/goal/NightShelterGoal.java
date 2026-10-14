@@ -189,6 +189,7 @@ public class NightShelterGoal extends Goal {
             ItemStack s = inv.get(i);
             if (s.isEmpty() || !SHELTER_BLOCK.test(s)) continue;
             if (!(s.getItem() instanceof BlockItem bi)) continue;
+            if (!com.jrpetty.mcassistant.entity.TownBlocks.mayPlace(a.level(), p, com.jrpetty.mcassistant.entity.TownBlocks.Why.OTHER)) return false;   // [integrity]
             a.level().setBlockAndUpdate(p, bi.getBlock().defaultBlockState());
             s.shrink(1);
             if (s.isEmpty()) inv.set(i, ItemStack.EMPTY);

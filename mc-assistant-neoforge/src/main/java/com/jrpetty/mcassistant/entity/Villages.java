@@ -3090,6 +3090,7 @@ public final class Villages {
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);
         if (gone != null) {
+            Restore.abandoned(villageId, new com.jrpetty.mcassistant.village.Ledger.Building(project, gone.anchor(), gone.facing()), gameTime);   // [integrity] what was laid of it comes down
             why(whyNot(villageId), TAKEN);
             BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet())
                 .add(BlockPos.asLong(gone.anchor().getX(), 0, gone.anchor().getZ()));

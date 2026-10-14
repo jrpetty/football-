@@ -139,6 +139,11 @@ public class TorchAreaGoal extends Goal {
             return;
         }
 
+        // [integrity] Never a torch in a doorway, on a step, in the middle of a road or inside somebody's walls.
+        if (!com.jrpetty.mcassistant.entity.TownBlocks.mayPlace(assistant.level(), current, com.jrpetty.mcassistant.entity.TownBlocks.Why.LAMP)) {
+            current = null;
+            return;
+        }
         if (assistant.removeMatching(s -> s.is(Items.TORCH), 1) < 1) {
             finish("Out of torches — placed " + placed + " so far.");
             return;

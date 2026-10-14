@@ -111,6 +111,7 @@ public final class Grow {
                 }
             }
             level.setBlock(empty.get(0), Blocks.BOOKSHELF.defaultBlockState(), 3);
+            TownBlocks.traced(v, empty.get(0), TownBlocks.Why.REPAIR);                   // [integrity] the library's own shelf
             return true;
         }
         return false;
@@ -304,6 +305,7 @@ public final class Grow {
     /** Somewhere in a house's plot to plant or fence: open air on plain ground, nobody else's building. */
     static boolean plot(ServerLevel level, UUID village, Ledger.Building b, BlockPos at) {
         if (!level.getBlockState(at).isAir()) return false;
+        if (!TownBlocks.mayPlace(level, Villages.get(village), at, TownBlocks.Why.GARDEN)) return false;   // [integrity] no way in fenced off
         BlockState ground = level.getBlockState(at.below());
         if (!(ground.is(Blocks.GRASS_BLOCK) || ground.is(Blocks.DIRT) || ground.is(Blocks.COARSE_DIRT) || ground.is(Blocks.PODZOL))) return false;
         for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(village).entrySet()) {
