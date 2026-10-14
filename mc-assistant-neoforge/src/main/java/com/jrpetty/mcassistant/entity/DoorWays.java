@@ -114,7 +114,7 @@ public final class DoorWays {
 
     /** A block out of the stores to lay under a step: cobblestone for the doorstep, earth or stone below. */
     @Nullable
-    private static BlockState takeFill(ServerLevel level, Villages.Village v, boolean doorstep) {
+    static BlockState takeFill(ServerLevel level, Villages.Village v, boolean doorstep) {
         if (doorstep && TownWork.take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return Blocks.COBBLESTONE.defaultBlockState();
         if (TownWork.take(level, v, s -> s.is(Items.DIRT), 1)) return Blocks.DIRT.defaultBlockState();
         if (TownWork.take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return Blocks.COBBLESTONE.defaultBlockState();
@@ -285,10 +285,12 @@ public final class DoorWays {
             if (k < 2) {
                 for (BlockPos c : new BlockPos[]{ feet, feet.above() }) {
                     BlockState st = level.getBlockState(c);
-                    if (Footways.passable(level, c) || !strayBefore(level, v, c, st)) continue;
+                    if (Footways.passable(level, c) || !Footways.stray(level, v, c, st)) continue;
+                    if (!TownBlocks.mayBreak(level, v, c, TownBlocks.Why.DOORWAY)) continue;
                     if (!TownJobs.atWork(level, v, "streets", c, "clearing the way to a door")) return done > 0 ? 1 : -1;
                     for (ItemStack drop : Block.getDrops(st, level, c, null)) TownWork.give(level, v, drop);
                     level.destroyBlock(c, false);
+                    TownBlocks.traced(v, c, TownBlocks.Why.DOORWAY);
                     done++;
                 }
             }
@@ -296,7 +298,7 @@ public final class DoorWays {
             BlockState plant = level.getBlockState(feet);
             BlockPos floor = feet.below();
             BlockState ground = level.getBlockState(floor);
-            if (!earth(ground)) continue;
+            if (!TownWork.earth(ground) || !TownBlocks.mayPlace(level, v, floor, TownBlocks.Why.DOORWAY)) continue;
             BlockState lay = Blocks.DIRT_PATH.defaultBlockState();
             if (streetTop != null && !streetTop.is(Blocks.DIRT_PATH) && TownWork.take(level, v, s -> s.is(streetTop.getBlock().asItem()), 1)) lay = streetTop;
             if (!TownJobs.atWork(level, v, "streets", floor, "laying the path to a door")) {
@@ -305,6 +307,7 @@ public final class DoorWays {
             }
             if (!plant.isAir() && plant.canBeReplaced() && plant.getFluidState().isEmpty()) level.removeBlock(feet, false);
             level.setBlockAndUpdate(floor, lay);
+            TownBlocks.traced(v, floor, TownBlocks.Why.DOORWAY);
             done++;
         }
         if (done > 0) return 1;
@@ -324,15 +327,6 @@ public final class DoorWays {
         return null;
     }
 
-    /** A stray block before a door: loose earth, sand, gravel or a scaffold anywhere; rubble only off any building's ground
-     *  (a porch's stones are the building's own). */
-    private static boolean strayBefore(Level level, Villages.Village v, BlockPos c, BlockState st) {
-        if (st.hasBlockEntity()) return false;
-        if (st.is(Blocks.SCAFFOLDING) || st.is(Blocks.GRAVEL) || st.is(Blocks.SAND) || diggable(level, c, st)) return true;
-        return (st.is(Blocks.COBBLESTONE) || st.is(Blocks.COBBLED_DEEPSLATE) || st.is(Blocks.NETHERRACK))
-            && !Footways.builtOn(v, c.getX(), c.getZ());
-    }
-
     /** What the street at this place is laid in: its top block (a worn path, cobbles, bricks); null if it is not laid. */
     @Nullable
     private static BlockState streetTop(Level level, BlockPos street) {
@@ -342,12 +336,6 @@ public final class DoorWays {
         if (top.is(Blocks.DIRT_PATH) || top.is(Blocks.COBBLESTONE) || top.is(Blocks.STONE_BRICKS) || top.is(Blocks.GRAVEL)
             || top.is(Blocks.MOSSY_COBBLESTONE) || top.is(Blocks.POLISHED_ANDESITE) || top.is(Blocks.BRICKS)) return top;
         return null;
-    }
-
-    /** Grass and bare earth: what a path is worn into. */
-    static boolean earth(BlockState st) {
-        return st.is(Blocks.GRASS_BLOCK) || st.is(Blocks.DIRT) || st.is(Blocks.COARSE_DIRT) || st.is(Blocks.PODZOL)
-            || st.is(Blocks.MYCELIUM) || st.is(Blocks.ROOTED_DIRT);
     }
 
     /** The light a path wants, in the dark of night: as much as a torch gives a few blocks off. */
@@ -381,6 +369,7 @@ public final class DoorWays {
                 || !level.getBlockState(feet.above(2)).isAir()) continue;
             BlockState under = level.getBlockState(feet.below());
             if (!under.isFaceSturdy(level, feet.below(), Direction.UP) || under.is(Blocks.FARMLAND)) continue;
+            if (!TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, feet, feet.above(), feet.above(2))) continue;
             boolean iron = Villages.ageOf(v.id()).ordinal() >= Villages.Age.IRON.ordinal();
             if (iron && !Masonry.canLight(level, v)) iron = false;
             if (!iron && Market.stock(level, v.id(), s -> s.is(Items.TORCH)) == 0) return 0;
@@ -400,6 +389,7 @@ public final class DoorWays {
             } else {
                 level.setBlockAndUpdate(feet.above(), Blocks.TORCH.defaultBlockState());
             }
+            TownBlocks.traced(v, feet, TownBlocks.Why.LAMP);
             return 1;
         }
         return 0;
@@ -418,7 +408,7 @@ public final class DoorWays {
 
     /** Tests: is this bare earth, not a path? */
     public static boolean earthForTests(BlockState st) {
-        return earth(st);
+        return TownWork.earth(st);
     }
 
     public static void resetForTests() {

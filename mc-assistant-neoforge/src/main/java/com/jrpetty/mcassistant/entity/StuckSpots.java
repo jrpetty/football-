@@ -261,7 +261,8 @@ public final class StuckSpots {
             case "a missing step" -> {
                 // A bank two blocks high: its top block cut out, a step a folk can jump.
                 BlockPos top = ahead.above();
-                if (!stray(level, top, level.getBlockState(top))) return false;
+                if (!Footways.stray(level, v, top, level.getBlockState(top))) return false;
+                if (!TownBlocks.mayBreak(level, v, top, TownBlocks.Why.TIDY)) return false;
                 dig(level, v, top);
                 return true;
             }
@@ -269,9 +270,10 @@ public final class StuckSpots {
                 for (BlockPos c : new BlockPos[]{ ahead.above(), ahead }) {
                     BlockState st = level.getBlockState(c);
                     if (Footways.passable(level, c)) continue;
-                    if (!stray(level, c, st)) return false;
+                    if (!Footways.stray(level, v, c, st)) return false;
                     // A block standing on the street's own level is a stray one; the ground under a bank is not.
                     if (c.equals(ahead) && !cause.equals("a block in the way")) return false;
+                    if (!TownBlocks.mayBreak(level, v, c, TownBlocks.Why.TIDY)) return false;
                     dig(level, v, c);
                     return true;
                 }
@@ -286,9 +288,11 @@ public final class StuckSpots {
                 BlockPos fill = ahead.atY(bottom);
                 BlockState there = level.getBlockState(fill);
                 if (!there.canBeReplaced() || there.getFluidState().is(FluidTags.LAVA)) return false;
-                BlockState lay = fill(level, v);
+                if (!TownBlocks.mayPlace(level, v, fill, TownBlocks.Why.ROAD)) return false;
+                BlockState lay = DoorWays.takeFill(level, v, true);
                 if (lay == null) return false;
                 level.setBlockAndUpdate(fill, lay);
+                TownBlocks.traced(v, fill, TownBlocks.Why.ROAD);
                 return true;
             }
             default -> {
@@ -307,26 +311,11 @@ public final class StuckSpots {
         return !below.is(Blocks.FARMLAND);
     }
 
-    /** A block the town may take out of a way: the ground the world made, or a stray block of earth, rubble or scaffold. */
-    static boolean stray(ServerLevel level, BlockPos p, BlockState st) {
-        if (st.hasBlockEntity()) return false;
-        if (DoorWays.diggable(level, p, st)) return true;
-        return st.is(Blocks.COBBLESTONE) || st.is(Blocks.COBBLED_DEEPSLATE) || st.is(Blocks.SCAFFOLDING)
-            || st.is(Blocks.GRAVEL) || st.is(Blocks.SAND) || st.is(Blocks.NETHERRACK);
-    }
-
     private static void dig(ServerLevel level, Villages.Village v, BlockPos p) {
         BlockState there = level.getBlockState(p);
         for (ItemStack drop : Block.getDrops(there, level, p, null)) TownWork.give(level, v, drop);
         level.destroyBlock(p, false);
-    }
-
-    @Nullable
-    private static BlockState fill(ServerLevel level, Villages.Village v) {
-        if (TownWork.take(level, v, s -> s.is(Items.DIRT), 1)) return Blocks.DIRT.defaultBlockState();
-        if (TownWork.take(level, v, s -> s.is(Items.COBBLESTONE), 1)) return Blocks.COBBLESTONE.defaultBlockState();
-        if (TownWork.take(level, v, s -> s.is(Items.COBBLED_DEEPSLATE), 1)) return Blocks.COBBLED_DEEPSLATE.defaultBlockState();
-        return null;
+        TownBlocks.traced(v, p, TownBlocks.Why.TIDY);
     }
 
     /** A line for the town's books: how often its folk were stuck, how often the way was mended, the worst spot. */

@@ -91,8 +91,9 @@ public final class HouseSigns {
         return null;
     }
 
+    /** A line cut to the sign's width, with an ellipsis where it was cut. */
     private static String fit(String s) {
-        return s.length() <= WIDE ? s : s.substring(0, WIDE);
+        return s.length() <= WIDE ? s : s.substring(0, WIDE - 1) + "\u2026";
     }
 
     /** A wall sign of the town's own wood (its walls' planks), spruce if there is no such sign. */
@@ -107,6 +108,38 @@ public final class HouseSigns {
         String wood = Palettes.of(village).walls();
         Block b = BuiltInRegistries.BLOCK.get(ResourceLocation.withDefaultNamespace(wood + "_fence"));
         return b instanceof net.minecraft.world.level.block.FenceBlock ? b : Blocks.SPRUCE_FENCE;
+    }
+
+    /** Homes whose household changed (Homes.save), by village: their signs are seen to first on the next round. */
+    private static final java.util.Map<UUID, java.util.Set<Long>> CHANGED = new java.util.concurrent.ConcurrentHashMap<>();
+    /** How many changed homes' signs one round sees to (the rest wait for the next round, ten seconds on). */
+    static final int PER_ROUND = 4;
+
+    /** A household moved in or out of this home, bought it or let it: its sign wants seeing to. */
+    public static void changed(UUID village, net.minecraft.core.BlockPos anchor) {
+        CHANGED.computeIfAbsent(village, k -> java.util.concurrent.ConcurrentHashMap.newKeySet()).add(anchor.asLong());
+    }
+
+    /** One round (TownLife.tick): the signs of the homes that changed, a few at a time, out of the stores. */
+    static void round(net.minecraft.server.level.ServerLevel level, Villages.Village v) {
+        java.util.Set<Long> due = CHANGED.get(v.id());
+        if (due == null || due.isEmpty()) return;
+        java.util.Map<Long, Ledger.Building> homes = new java.util.HashMap<>();
+        for (Ledger.Building b : Ledger.buildings(v.id())) if (named(b.structure())) homes.put(b.anchor().asLong(), b);
+        int n = 0;
+        for (Long key : List.copyOf(due)) {
+            if (n >= PER_ROUND) break;
+            Ledger.Building b = homes.get(key);
+            if (b == null) { due.remove(key); continue; }      // a flat, or gone: not a home with a sign of its own
+            if (!level.isLoaded(b.anchor())) continue;           // its ground asleep: when it wakes
+            due.remove(key);
+            TownLife.addressSign(level, v.id(), v.centre(), b, v, false);
+            n++;
+        }
+    }
+
+    public static void resetForTests() {
+        CHANGED.clear();
     }
 
     /** A window, which a sign never goes on: glass, a pane. */

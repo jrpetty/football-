@@ -103,6 +103,7 @@ public final class TownLife {
                 if (b.structure().equals("tavern")) Tavern.board(level, v, b, false);
             }
         }
+        HouseSigns.round(level, v);                 // [paths] the signs of homes whose household changed, first
         // A street corner.
         if (all.size() >= 2) {
             List<int[]> corners = new ArrayList<>(corners(Villages.townReach(id)));

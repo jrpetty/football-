@@ -63,6 +63,30 @@ public final class WayAudit {
         }
     }
 
+    /** The town's audit's name for these checks, and its measures. */
+    public static final String WAYS = "ways";
+    public static final String DOORS = "doors", DOORS_REACHED = "doors_reached", LOT_OVERLAPS = "lot_overlaps",
+        LOT_TOUCHING = "lot_touching", DOORS_BLOCKED = "doors_blocked", SQUARE_CLUTTER = "square_clutter", STUCK_LONG = "stuck_long";
+
+    /** These checks, added to the town's audit (TownAudit) under {@link #WAYS}: its measures, and a finding for each fault. */
+    static void register() {
+        TownAudit.register(WAYS, (level, v, r) -> {
+            Report w = check(level, v);
+            r.measure(DOORS, w.doors());
+            r.measure(DOORS_REACHED, w.reachedShare());
+            r.measure(LOT_OVERLAPS, w.overlaps());
+            r.measure(LOT_TOUCHING, w.touching());
+            r.measure(DOORS_BLOCKED, w.blockedDoors());
+            r.measure(SQUARE_CLUTTER, w.clutter());
+            r.measure(STUCK_LONG, w.longStuck().size());
+            for (String s : w.unreached()) r.find(WAYS, v.centre(), "door not reached from the heart: " + s);
+            for (String s : w.crowding()) r.find(WAYS, v.centre(), "buildings crowded: " + s);
+            for (String s : w.blocked()) r.find(WAYS, v.centre(), "door against a wall: " + s);
+            for (String s : w.clutterAt()) r.find(WAYS, v.centre(), "on the square: " + s);
+            for (String s : w.longStuck()) r.find(WAYS, v.centre(), "stuck over half a minute: " + s);
+        });
+    }
+
     public static Report check(ServerLevel level, Villages.Village v) {
         List<Ledger.Building> all = new ArrayList<>();
         for (Ledger.Building b : Ledger.buildings(v.id())) if (!Footways.skip(b.structure())) all.add(b);

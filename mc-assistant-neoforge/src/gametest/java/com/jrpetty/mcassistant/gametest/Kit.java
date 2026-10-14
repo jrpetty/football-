@@ -67,6 +67,7 @@ final class Kit {
         com.jrpetty.mcassistant.entity.MineStairs.resetForTests(level);
         com.jrpetty.mcassistant.entity.DoorWays.resetForTests();
         com.jrpetty.mcassistant.entity.StuckSpots.resetForTests();          // [paths] the stuck spots forgotten
+        com.jrpetty.mcassistant.entity.HouseSigns.resetForTests();          // [paths] no home signs waiting
         com.jrpetty.mcassistant.entity.Footways.liveForTests(true);         // [paths] the paths work on, as in a game
         com.jrpetty.mcassistant.entity.TownBlocks.resetForTests();          // [integrity]
         com.jrpetty.mcassistant.entity.Restore.resetForTests();             // [integrity]

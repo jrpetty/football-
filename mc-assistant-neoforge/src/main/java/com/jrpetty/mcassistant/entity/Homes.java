@@ -206,6 +206,7 @@ public final class Homes {
         Ledger.note(village, "home/" + h.anchor.asLong(), h.tenure.name() + "|" + m + "|" + (h.landlord == null ? "" : h.landlord)
             + "|" + h.landlordName.replace("|", "") + "|" + h.price + "|" + h.rent + "|" + h.since + "|" + h.owed + "|" + (h.toLet ? "1" : "0")
             + "|" + h.saved);
+        HouseSigns.changed(village, h.anchor);       // [paths] the name by its door, seen to on the next round
     }
 
     /** Every house built for living in is on the books, empty until somebody moves in. */

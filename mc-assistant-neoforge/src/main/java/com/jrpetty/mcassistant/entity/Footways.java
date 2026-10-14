@@ -160,16 +160,31 @@ public final class Footways {
 
     /** As above, for a building of this kind with its middle here and its back toward {@code back}. */
     public static int[] footprint(String structure, BlockPos anchor, Direction back, boolean eaves) {
-        int[] h;
-        try {
-            h = Blueprints.has(structure) ? (eaves ? Blueprints.fullHalf(structure) : Blueprints.groundHalf(structure))
-                : BuildGoal.footprint(structure);
-        } catch (RuntimeException e) {
-            h = new int[]{ 4, 4 };
-        }
+        int[] h = half(structure, eaves);
         boolean turned = back.getAxis() == Direction.Axis.X;
         int hx = turned ? h[1] : h[0], hz = turned ? h[0] : h[1];
         return new int[]{ anchor.getX() - hx, anchor.getX() + hx, anchor.getZ() - hz, anchor.getZ() + hz };
+    }
+
+    /** Each drawing's half width and depth, footing and eaves ({width, depth, eaves width, eaves depth}), worked out once:
+     *  a drawing's cells are thousands, and the lots are weighed against every building in town. */
+    private static final Map<String, int[]> HALVES = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** A building's half width and depth: its footing, or all of it with the eaves. */
+    private static int[] half(String structure, boolean eaves) {
+        int[] h = HALVES.computeIfAbsent(structure, s -> {
+            try {
+                if (!Blueprints.has(s)) {
+                    int[] f = BuildGoal.footprint(s);
+                    return new int[]{ f[0], f[1], f[0], f[1] };
+                }
+                int[] g = Blueprints.groundHalf(s), f = Blueprints.fullHalf(s);
+                return new int[]{ g[0], g[1], f[0], f[1] };
+            } catch (RuntimeException e) {
+                return new int[]{ 4, 4, 4, 4 };            // a drawing that will not read: a house's ground
+            }
+        });
+        return eaves ? new int[]{ h[2], h[3] } : new int[]{ h[0], h[1] };
     }
 
     /** How many blocks of open ground lie between two pieces of ground (0: they touch; -1: they overlap). */
@@ -262,6 +277,19 @@ public final class Footways {
                 && Math.abs(z - mid.getZ()) <= com.jrpetty.mcassistant.block.VillageBoardBlock.WIDE / 2 + 2) return false;
         }
         return !builtOn(v, x, z);
+    }
+
+    /**
+     * A stray block the town may take out of a way: loose stuff anywhere (the ground the world made, sand, gravel, a
+     * scaffold left standing), rubble (cobblestone, cobbled deepslate, netherrack) only off a building's ground, since a
+     * porch's or a footing's stones are the building's own. Never a block with something in it.
+     */
+    public static boolean stray(Level level, Villages.Village v, BlockPos p, BlockState st) {
+        if (st.hasBlockEntity()) return false;
+        if (st.is(net.minecraft.world.level.block.Blocks.SCAFFOLDING) || st.is(net.minecraft.world.level.block.Blocks.GRAVEL)
+            || st.is(net.minecraft.world.level.block.Blocks.SAND) || DoorWays.diggable(level, p, st)) return true;
+        return (st.is(net.minecraft.world.level.block.Blocks.COBBLESTONE) || st.is(net.minecraft.world.level.block.Blocks.COBBLED_DEEPSLATE)
+            || st.is(net.minecraft.world.level.block.Blocks.NETHERRACK)) && !builtOn(v, p.getX(), p.getZ());
     }
 
     /** The doors of every building the town has put up. */
