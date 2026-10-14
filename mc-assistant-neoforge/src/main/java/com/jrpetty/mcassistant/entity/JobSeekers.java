@@ -64,7 +64,7 @@ public final class JobSeekers {
     /** Out of work, it goes to look once in so many days whatever is up. */
     static final long LOOK_EVERY = 3;
     /**
-     * How long a folk with a trade can go without ground to work it at (no wood to cut, no seam to
+     * How long a folk can go with no trade, or without ground to work its trade at (no wood to cut, no seam to
      * dig, every search for a plot come to nothing) before it counts as out of work: two minutes, so
      * a hand between one plot and the next, or just taking up its trade, does not.
      */
@@ -172,7 +172,7 @@ public final class JobSeekers {
     private static final Set<UUID> FORCED = ConcurrentHashMap.newKeySet();
     /** Folk an operator sent to read the board, reason or none (they apply only with one). */
     private static final Set<UUID> SENT = ConcurrentHashMap.newKeySet();
-    /** Since when each folk with a trade has had no ground to work it at (looked at as it thinks about the board). */
+    /** Since when each folk has had no trade, or no ground to work its trade at (looked at as it thinks about the board). */
     private static final Map<UUID, Long> NO_GROUND = new ConcurrentHashMap<>();
 
     public static void resetForTests() {
@@ -314,21 +314,25 @@ public final class JobSeekers {
     // ------------------------------------------------------------------ reasons
 
     /**
-     * Out of work: no trade at all, or a trade it has had no ground to work at for two minutes and
-     * more (a woodcutter with no wood within reach, a miner with no hill to dig: the village's shape
-     * gave it the trade, but there is no living in it here).
+     * Out of work: no trade, or a trade it has had no ground to work at, for two minutes and more (a
+     * woodcutter with no wood within reach, a miner with no hill to dig: the village's shape gave it
+     * the trade, but there is no living in it here). A folk with no trade YET is not out of work: a
+     * founder, or one just let go from its trade, takes up what its own village is short of at its
+     * next thought (VillageFolkEntity.takeUpATrade). Counted out of work at once, the founders of a
+     * new village were sent off to read an empty board the moment the morning assembly let them go,
+     * and stood there with no trade while the village's farms and fishing went unclaimed.
      */
     public static boolean outOfWork(VillageFolkEntity f) {
         if (f.isBaby()) return false;
-        if (f.stationTask() == StationTask.NONE) return true;
         Long since = NO_GROUND.get(f.getUUID());
         long now = f.level().getGameTime();
-        return since != null && f.workZone() == null && now >= since && now - since >= NO_GROUND_FOR;
+        return since != null && (f.stationTask() == StationTask.NONE || f.workZone() == null)
+            && now >= since && now - since >= NO_GROUND_FOR;
     }
 
-    /** As it thinks about the board: has it ground for its trade, and if not, since when has it had none? */
+    /** As it thinks about the board: has it a trade and ground for it, and if not, since when has it had none? */
     private static void noteGround(VillageFolkEntity f, long now) {
-        if (!f.isBaby() && f.stationTask() != StationTask.NONE && f.workZone() == null) {
+        if (!f.isBaby() && (f.stationTask() == StationTask.NONE || f.workZone() == null)) {
             Long since = NO_GROUND.get(f.getUUID());
             if (since == null || since > now) NO_GROUND.put(f.getUUID(), now);
         } else {
@@ -343,9 +347,9 @@ public final class JobSeekers {
         if (Wars.atWar(home, town)) return Reasons.NONE;                   // [war-peace] nobody goes over to the enemy
         List<Why> why = new ArrayList<>();
         StationTask mine = f.stationTask();
-        boolean noGround = mine != StationTask.NONE && outOfWork(f);
-        if (mine == StationTask.NONE || noGround) why.add(Why.OUT_OF_WORK);
-        else if (Villages.overStaffed(home, mine)) why.add(Why.IDLE);
+        boolean out = outOfWork(f), noGround = mine != StationTask.NONE && out;
+        if (out) why.add(Why.OUT_OF_WORK);
+        else if (mine != StationTask.NONE && Villages.overStaffed(home, mine)) why.add(Why.IDLE);
         int now = JobMarket.paidNow(f), there = JobMarket.likely(o.wage, town);
         boolean better = there >= now + 1 && there * 4 >= now * 5;
         if (better) why.add(Why.WAGES);
