@@ -90,6 +90,7 @@ public class WagonGameTests {
         for (int i = 0; i < goods.length; i++) box.setItem(i, goods[i].copy());
         box.setChanged();
         Villages.forgetStock();
+        com.jrpetty.mcassistant.entity.TradeBook.forget(v.id());
     }
 
     /** A grown, tamed horse of the town's, standing by its wagon. */
@@ -280,7 +281,8 @@ public class WagonGameTests {
             String from = Villages.name(p.a().id()), to = Villages.name(p.b().id());
             helper.assertTrue(m.get(0).contains(from + "'s wagon") && m.get(0).contains("from " + from + " to " + to),
                 "whose, and from where to where: " + m.get(0));
-            helper.assertTrue(all.contains("48 wheat") && all.contains("20 iron ingot") && all.contains("68 in all"), "what is aboard: " + all);
+            // (The goods' names go to the player to be put in its own language: here, on the server, they read as keys.)
+            helper.assertTrue(all.matches(".*48 \\S*wheat.*") && all.matches(".*20 \\S*iron.ingot.*") && all.contains("68 in all"), "what is aboard: " + all);
             helper.assertTrue(all.contains("Worth about ") && !all.contains("Worth about 0 "), "what it is worth: " + all);
             helper.assertTrue(all.contains("load sent to order") && all.contains("Driver: ") && all.contains("pulled by"), "its errand and crew: " + all);
             helper.assertTrue(all.contains("Spoken for"), "a shipment is not for sale off the wagon: " + all);

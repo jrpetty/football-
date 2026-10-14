@@ -62,8 +62,7 @@ public final class WagonManifest {
             for (Map.Entry<Item, Integer> e : load.entrySet()) {
                 pieces += e.getValue();
                 if (i++ > 0) goods.append(Component.literal(", ").withStyle(ChatFormatting.GRAY));
-                goods.append(Component.literal(e.getValue() + " " + new ItemStack(e.getKey()).getHoverName().getString().toLowerCase(java.util.Locale.ROOT))
-                    .withStyle(ChatFormatting.WHITE));
+                goods.append(Component.literal(e.getValue() + " ").append(new ItemStack(e.getKey()).getHoverName()).withStyle(ChatFormatting.WHITE));
             }
             goods.append(Component.literal(" (" + pieces + " in all, " + w.realFill() + "% full)").withStyle(ChatFormatting.DARK_GRAY));
             out.add(goods);
@@ -109,8 +108,8 @@ public final class WagonManifest {
             return null;
         }
         int price = Market.askLot(level, w.town, lot, lot.getCount());
-        return Component.literal("Sneak and use it to buy " + lot.getCount() + " " + lot.getHoverName().getString().toLowerCase(java.util.Locale.ROOT)
-            + " for " + price + " coins.").withStyle(ChatFormatting.GREEN);
+        return Component.literal("Sneak and use it to buy " + lot.getCount() + " ").append(lot.getHoverName())
+            .append(" for " + price + " coins.").withStyle(ChatFormatting.GREEN);
     }
 
     /** The lot a passer-by may buy: a bundle of the most plentiful good aboard a caravan's own wagon on the road. */
@@ -157,10 +156,21 @@ public final class WagonManifest {
             FolkTalk.speak(d, "A pleasure. Safe roads to you!");
         }
         w.cargoChanged();
-        Villages.tell(w.town, level.getDayTime() / 24000L, "sold " + lot.getCount() + " " + lot.getHoverName().getString().toLowerCase(java.util.Locale.ROOT)
+        Villages.tell(w.town, level.getDayTime() / 24000L, "sold " + lot.getCount() + " " + plainName(lot.getItem())
             + " off the " + w.kind().label + " on the road to " + p.getName().getString() + " for " + price + " coins");
-        return Component.literal("Bought " + lot.getCount() + " " + lot.getHoverName().getString().toLowerCase(java.util.Locale.ROOT) + " for " + price + " coins.")
+        return Component.literal("Bought " + lot.getCount() + " ").append(lot.getHoverName()).append(" for " + price + " coins.")
             .withStyle(ChatFormatting.GREEN);
+    }
+
+    /**
+     * A good's name for the town's news (plain words, kept as text): its name in the server's language, or, on a server
+     * with none (a dedicated one shows the key), its id in words ("amethyst shard"). The player's own messages are sent
+     * as the item's translatable name instead, and shown in the player's language.
+     */
+    static String plainName(Item it) {
+        String s = new ItemStack(it).getHoverName().getString();
+        if (s.startsWith("item.") || s.startsWith("block.")) s = BuiltInRegistries.ITEM.getKey(it).getPath().replace('_', ' ');
+        return s.toLowerCase(java.util.Locale.ROOT);
     }
 
     /** The load by item, most first. */

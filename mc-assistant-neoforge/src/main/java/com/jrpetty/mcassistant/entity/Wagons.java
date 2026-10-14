@@ -580,7 +580,12 @@ public final class Wagons {
 
     /** TradeWagon.tick (server): whatever its phase asks. */
     static void tick(ServerLevel level, TradeWagon w) {
-        if (w.town == null) { w.discard(); return; }
+        if (w.town == null || w.tickCount % 100 == 17 && Villages.get(w.town) == null) {
+            letGo(level, w);                                             // its town is no more: nothing to carry for
+            w.wrecked = true;
+            w.discard();
+            return;
+        }
         if (w.tickCount % 100 == 13 && !w.getUUID().equals(wagonIdOf(w.town))) {
             stale(level, w);
             return;
@@ -1283,8 +1288,8 @@ public final class Wagons {
     /** A walked path from the wagon to there (the animal's or the driver's own finding), as points; empty if none. */
     private static List<double[]> pathTo(ServerLevel level, TradeWagon w, BlockPos to) {
         List<double[]> out = new ArrayList<>();
-        Mob finder = animal(level, w);
-        if (finder == null) finder = driver(level, w);
+        Mob finder = driver(level, w);                                   // a folk looks further ahead than a horse
+        if (finder == null) finder = animal(level, w);
         if (finder == null || to.distSqr(w.blockPosition()) > 64 * 64) return out;
         Path p = finder.getNavigation().createPath(to, 1);
         if (p == null || !p.canReach()) return out;
