@@ -93,8 +93,14 @@ jobs:
   # -------------------------------------------------------------------------
   gametest:
     runs-on: ubuntu-latest
-    timeout-minutes: 150   # some 1,200 game tests now; 0.292.0 ran out at 60
+    # Some 850 game tests: one server ran out of 2h30m (0.302.0), so four servers each run a quarter, the classes
+    # dealt out by weight (tools/ci/shard_gametests.py).
+    timeout-minutes: 120
     continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
 
@@ -108,15 +114,17 @@ jobs:
         working-directory: mc-assistant-neoforge
         run: |
           chmod +x gradlew
+          python3 tools/ci/shard_gametests.py ${{ matrix.shard }} 4
           set +e
           ./gradlew --no-daemon -Pgametest=true runGameTestServer 2>&1 | tee gametest.log
           echo "gradle exit: ${PIPESTATUS[0]}"
           set -e
           # The part worth reading: our own reporting, the framework's verdicts,
           # and any crash — without the thousands of lines of engine start-up.
-          grep -aE "\[VT\]|GAME TEST|Game Test|game test|required|FAILED|Exception|Caused by|^\s+at com\.jrpetty|Crash|crash report|ERROR|Test '|test '|batch|Batch" gametest.log > vt-report.txt || true
-          wc -l gametest.log vt-report.txt
-          gzip -k -f gametest.log
+          grep -aE "\[VT\]|GAME TEST|Game Test|game test|required|FAILED|Exception|Caused by|^\s+at com\.jrpetty|Crash|crash report|ERROR|Test '|test '|batch|Batch" gametest.log > vt-report-${{ matrix.shard }}.txt || true
+          mv gametest.log gametest-${{ matrix.shard }}.log
+          wc -l gametest-${{ matrix.shard }}.log vt-report-${{ matrix.shard }}.txt
+          gzip -k -f gametest-${{ matrix.shard }}.log
 
       - name: Publish the report
         if: always()
@@ -128,8 +136,8 @@ jobs:
           make_latest: "false"
           body: "Raw output of the empirical village tests. Not a mod build."
           files: |
-            mc-assistant-neoforge/vt-report.txt
-            mc-assistant-neoforge/gametest.log.gz
+            mc-assistant-neoforge/vt-report-${{ matrix.shard }}.txt
+            mc-assistant-neoforge/gametest-${{ matrix.shard }}.log.gz
           overwrite_files: true
 
   # -------------------------------------------------------------------------
