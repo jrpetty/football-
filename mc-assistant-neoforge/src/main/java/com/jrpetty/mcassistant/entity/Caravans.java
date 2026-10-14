@@ -63,6 +63,8 @@ public final class Caravans {
         @Nullable String deal;
         /** [econ-trade] Of the coin in its purse, what the other town paid for goods (the rest is its own, going home). */
         int earned;
+        /** [wagons] A shipment's trip (Shipments, carried by the town's wagon: Wagons.carry); null for any other. */
+        @Nullable UUID shipment;
 
         Trip(UUID from, UUID to, List<BlockPos> way) {
             this.from = from;
@@ -132,7 +134,7 @@ public final class Caravans {
                         && (f.trip().to.equals(a) && f.trip().from.equals(b) || f.trip().to.equals(b) && f.trip().from.equals(a))) return true;
             }
         }
-        return false;
+        return Wagons.between(a, b);                            // [wagons] or a wagon out of sight on that road
     }
 
     /** A trade caravan: what one village has to spare and the other is short of, to be paid for there. */
@@ -190,6 +192,7 @@ public final class Caravans {
                 if (a instanceof VillageFolkEntity f && f.trip() != null
                         && (f.trip().to.equals(colony) || f.trip().from.equals(colony))) return true;
             }
+            if (Wagons.between(v.id(), colony)) return true;     // [wagons] or a wagon out of sight on its road
         }
         return false;
     }
@@ -241,6 +244,7 @@ public final class Caravans {
             if (!(a instanceof VillageFolkEntity f) || !f.isAlive() || f.isBaby() || f.isSleeping() || f.trip() != null) continue;
             if (f.stationTask() == AssistantEntity.StationTask.GUARD) continue;
             if (Interviews.busy(f) || Interviews.shortlisted(f)) continue;      // [interviews] it stays for its interview
+            if (Wagons.busy(f)) continue;                                   // [wagons] riding guard on a wagon
             now = f.level().getGameTime();
             if (Villages.holdsTheLead(v.id(), f.getUUID(), now)) continue;
             double score = f.blockPosition().distSqr(v.centre());
@@ -343,12 +347,13 @@ public final class Caravans {
     public static boolean drive(VillageFolkEntity f, ServerLevel level) {
         Trip t = f.trip();
         if (t == null) return false;
-        keepAwake(level, f, t);
+        if (!Wagons.busy(f)) keepAwake(level, f, t);           // [wagons] a wagon keeps its own ground awake
         Cartographers.onTheRoad(f, level, t);                     // [cartographer] the region's map: a copy for the road, filled in as it goes
         if (t.waiting) {
             Envoys.waitThere(level, f, t);
             return f.trip() != null;
         }
+        if (Wagons.drive(f, level, t)) return true;             // [wagons] the town's wagon has it: loaded, driven, unloaded
         if (RailCarts.caravan(f, level, t)) return true;        // [transport] by the line between the two towns, where there is one
         // The pack donkey fetched from the stable, tied and loaded, and kept up with (Riding).
         if (Riding.caravan(f, level, t)) return true;
@@ -410,10 +415,15 @@ public final class Caravans {
             Envoys.arrived(level, f, t);
             return;
         }
+        if (t.shipment != null) {                                // [wagons] a shipment's: delivered (Shipments settles it), and home
+            Wagons.shipmentLeg(level, f, t);
+            return;
+        }
         Villages.Village here = Villages.get(t.destination());
         Villages.Village other = Villages.get(t.back ? t.to : t.from);
         long day = level.getDayTime() / 24000L;
         Riding.unpack(f, level);                                 // the load out of the donkey's chest, to be sold (Riding)
+        Wagons.unpack(f, level);                                 // [wagons] or out of the wagon's bed
         Crates.unpackCaravan(level, f, t);                       // [workitems] its crates unpacked onto its back (home: the crates into the stores)
         // [econ-trade] A deal's delivery: the agreed goods and the agreed coin only, exchanged in person (TradeDeals).
         boolean dealt = t.deal != null && here != null && other != null && TradeDeals.exchange(level, f, t);
@@ -493,6 +503,7 @@ public final class Caravans {
             t.best = Double.MAX_VALUE;
             t.gainedTick = f.tickCount;
             f.say("Unloaded in " + Villages.name(here.id()) + ". Home again now.");
+            Wagons.turnHome(level, f, t);                        // [wagons] the goods for home into the wagon, and the way home
             return;
         }
         // Home: the llama back to its pasture, and the carrier back to its work.
@@ -502,6 +513,7 @@ public final class Caravans {
         TradeTrips.over(f);                                      // [econ-trade] the written trip let go
         f.trip(null);
         Riding.caravanHome(f, level);                            // the donkey led back to the stable (Riding)
+        Wagons.home(f, level);                                   // [wagons] the wagon parked in its yard, its animal led home
         if (t.errand != null) {
             Envoys.home(level, f, t);
             return;
@@ -562,7 +574,7 @@ public final class Caravans {
         t.window = here.immutable();
     }
 
-    private static void release(ServerLevel level, VillageFolkEntity f, Trip t) {
+    static void release(ServerLevel level, VillageFolkEntity f, Trip t) {
         if (t.window != null) ChunkLoad.setLoaded(level, owner(f), t.window, 1, false);
         t.window = null;
     }
@@ -579,6 +591,7 @@ public final class Caravans {
         Llama llama = llama(level, t);
         if (llama != null) llama.dropLeash(true, false);
         Riding.caravanLost(f, level);                            // its donkey let go, for the stable to bring in
+        Wagons.lost(f, level);                                   // [wagons] its wagon lost with it, the load spilt on the road
         release(level, f, t);
         TradeTrips.over(f);                                      // [econ-trade] the written trip let go
         f.trip(null);

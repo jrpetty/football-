@@ -404,6 +404,9 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // [batchE] A traveller in a town with an inn after dusk: a room for the night, and on its way in the morning (Inn).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel innLevel && Inn.lodging(this, innLevel)) return;
+        // [wagons] Riding guard on the town's wagon: that is its work till the wagon is home (it gets down to fight).
+        if (!withAPlayer && Wagons.guarding(this) && level() instanceof net.minecraft.server.level.ServerLevel wagonLevel
+                && (tickCount % 5 != 1 || Wagons.escort(this, wagonLevel))) return;
         // On the road with a caravan: walked step by step, not thought about once in five seconds.
         if (trip != null && !withAPlayer && tickCount % 10 == 0 && level() instanceof net.minecraft.server.level.ServerLevel road) {
             Caravans.drive(this, road);
@@ -3106,6 +3109,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Caravans.drive(this, road);
             return;
         }
+        if (Wagons.guarding(this)) return;              // [wagons] riding guard on a wagon: the road is the day's work
         if (expedition != null) return;                 // out scouting: the land is the day's work
         // The bell is ringing: everybody but the watch drops what it is doing and gets indoors
         // (the watch's orders are in its station brain: Raids.guardDuty).
