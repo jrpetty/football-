@@ -91,7 +91,7 @@ public class DefenceGameTests {
     }
 
     /** A house on the books on each of these lots (the ground left as it is: only the plan is under test). */
-    private static List<int[]> built(UUID village, BlockPos heart, List<TownPlan.Lot> lots) {
+    static List<int[]> built(UUID village, BlockPos heart, List<TownPlan.Lot> lots) {
         List<int[]> out = new ArrayList<>();
         for (TownPlan.Lot l : lots) {
             Ledger.built(village, "house", heart.offset(l.x(), 0, l.z()), Villages.direction(l.back()).getOpposite());
@@ -101,7 +101,7 @@ public class DefenceGameTests {
     }
 
     /** Lots all round the first block, and these others. */
-    private static List<TownPlan.Lot> firstBlock() {
+    static List<TownPlan.Lot> firstBlock() {
         List<TownPlan.Lot> out = new ArrayList<>();
         out.add(lot(b -> b[1] - b[3] <= -38 + 10 && b[1] - b[3] >= -38 && Math.abs(b[0]) < 30));   // out to the north edge
         out.add(lot(b -> b[0] + b[2] >= 28 && b[0] + b[2] <= 38 && Math.abs(b[1]) < 30));          // the east
@@ -311,6 +311,7 @@ public class DefenceGameTests {
         int other = count(level, heart, s, st -> st.is(Blocks.STONE_BRICKS) || st.is(Blocks.DEEPSLATE_BRICKS) || st.is(BlockTags.LOGS));
         Kit.log("dw01 cobblestone " + cobble + ", other ages' " + other);
         helper.assertTrue(cobble > 5000 && other == 0, "cobblestone, as the Stone Age builds: " + cobble + " (other " + other + ")");
+        WallHeightGameTests.assertCaps(helper, level, village, heart, "dw01");
         CastleWall.standDownForTests(true);
         helper.succeed();
     }
@@ -381,6 +382,7 @@ public class DefenceGameTests {
             }
         }
         helper.assertTrue(gateLogs == 0, "no log left in the north gatehouse: " + gateLogs);
+        WallHeightGameTests.assertCaps(helper, level, village, heart, "dw02");
         CastleWall.standDownForTests(true);
         helper.succeed();
     }
@@ -437,6 +439,7 @@ public class DefenceGameTests {
         boolean told = false;
         for (Villages.News n : Villages.news(village)) if (n.text().contains("old wall was taken down")) told = true;
         helper.assertTrue(told, "the town's news has the old wall coming down");
+        WallHeightGameTests.assertCaps(helper, level, village, heart, "dw03");
         CastleWall.standDownForTests(true);
         helper.succeed();
     }
@@ -804,6 +807,7 @@ public class DefenceGameTests {
             }
             if (best <= 7.0) {
                 Kit.log("dw05 the guard at a gate after " + (helper.getTick() - since[0]) + " ticks");
+                WallHeightGameTests.assertCaps(helper, level, village, heart, "dw05");
                 CastleWall.standDownForTests(true);
                 helper.succeed();
             } else if (helper.getTick() - since[0] > 900) helper.fail("the guard never went to keep a gate: " + String.format("%.1f", best) + " off");
@@ -898,6 +902,7 @@ public class DefenceGameTests {
         helper.assertTrue(posterns == 0, "no way through but the gates (fitted again over the wall begun): " + posterns + " posterns");
         helper.assertTrue(said.contains("north wall goes out round a player's build (-18 to -14") && said.contains("north wall goes out round a player's build (20 to 20"),
             "the book says it went round both: " + said);
+        WallHeightGameTests.assertCaps(helper, level, village, heart, "dw06");
         CastleWall.standDownForTests(true);
         helper.succeed();
     }
@@ -957,6 +962,7 @@ public class DefenceGameTests {
             + wrong.size() + " not, the first " + wrong.subList(0, Math.min(6, wrong.size())));
         // The river still runs either side of the causeway.
         helper.assertTrue(level.getBlockState(heart.offset(RIVER_OUT - 2, -2, 10)).is(Blocks.WATER), "the river still runs beside the road");
+        WallHeightGameTests.assertCaps(helper, level, village, heart, "dw07");
         CastleWall.standDownForTests(true);
         helper.succeed();
     }
