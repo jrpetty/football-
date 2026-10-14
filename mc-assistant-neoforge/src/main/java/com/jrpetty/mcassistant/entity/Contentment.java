@@ -148,6 +148,7 @@ public final class Contentment {
         if (feasts > 0) good.add("feast days kept");
         feasts += Festivals.contentment(id, day, good);           // [batchB] a festival kept in the last few days
         feasts += Perks.contentment(id, good, bad);               // [perks] the new civics, the wonders, the leader, its legacies
+        feasts += TownLooks.contentment(id, good, bad);                // [tidy] proud of how the town looks, or put out by a mess
         int score = Math.max(0, Math.min(100, foodPts + homesPts + moodPts + safety + amenities + wages + rest + feasts));
         score = Math.max(0, Math.min(100, score + WarAndPeace.contentment(id, good, bad)));   // [war-peace] war-weariness
         score = Math.max(0, Math.min(100, score + Identity.contentment(id, day, good, bad)));   // [identity] its ways, laws, rulers, traits
@@ -175,6 +176,8 @@ public final class Contentment {
             case "not everyone has a bed" -> FolkTalk.pick(r, "Another night on the ground. My back!", "We need more houses, and soon.");
             case "folk are low" -> FolkTalk.pick(r, "Nobody smiles round here any more.", "What's the point of it all?");
             case "we lost somebody" -> FolkTalk.pick(r, "I can't stop thinking about who we lost.", "It's not the same without them.");
+            case "the town's a mess", "the town's untidy" -> FolkTalk.pick(r, "The square's a mess. Does nobody sweep round here?",   // [tidy]
+                "Look at the state of this town.");
             default -> "Things aren't right in this village.";
         };
     }

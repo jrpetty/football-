@@ -66,10 +66,15 @@ final class Kit {
         AssistantEntity.resetRegistryForTests();
         com.jrpetty.mcassistant.entity.MineStairs.resetForTests(level);
         com.jrpetty.mcassistant.entity.DoorWays.resetForTests();
+        com.jrpetty.mcassistant.entity.TownBlocks.resetForTests();          // [integrity]
+        com.jrpetty.mcassistant.entity.Restore.resetForTests();             // [integrity]
+        // [integrity] The daily survey and repairs stood down for the other features' tests; IntegrityGameTests stand them up.
+        com.jrpetty.mcassistant.entity.Restore.standDownForTests(true);
         // What the town's works build is checked here at once; who builds it, by hand, in t54.
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
         // [police] The watch stood down to its old round for the other features' tests; PoliceGameTests stand it up.
         com.jrpetty.mcassistant.entity.Police.standDownForTests(true);
+        com.jrpetty.mcassistant.entity.CastleWall.standDownForTests(true);   // [defence] the town wall, for the defence tests only
     }
 
     /**

@@ -365,7 +365,7 @@ public final class Fields {
                 int x = c.getX() + (side == 0 ? edge : side == 1 ? -edge : o), zz = c.getZ() + (side == 2 ? edge : side == 3 ? -edge : o);
                 if (!level.hasChunk(x >> 4, zz >> 4)) continue;
                 BlockPos spot = torchSpot(level, x, c.getY(), zz);
-                if (spot == null) continue;
+                if (spot == null || !TownBlocks.mayPlace(level, v, spot, TownBlocks.Why.LAMP)) continue;   // [integrity]
                 boolean have = f.removeMatching(s -> s.is(Items.TORCH), 1) == 1
                     || Crafts.take(level, v, s -> s.is(Items.TORCH), 1);
                 if (!have) return;

@@ -392,6 +392,7 @@ public final class Villages {
         Workshop.resetForTests();
         Store.resetForTests();                                     // [econ-store]
         Sweepers.resetForTests();
+        Tidy.resetForTests();                                      // [tidy]
         Meals.resetForTests();
         Stables.resetForTests();
         TownLook.resetForTests();           // [batchE] the town's look
@@ -668,6 +669,7 @@ public final class Villages {
         for (AssistantEntity a : folkOf(villageId)) if (a.bedPos() != null) out.add(a.bedPos());
         out.addAll(CaveDwellers.awayBeds(villageId));          // [caves] the cave team's, away on a trip, stay theirs
         out.addAll(NetherRuns.awayBeds(villageId));            // [nether] and the Nether runners', away through the gateway
+        out.addAll(Wagons.awayBeds(villageId));                // [wagons] and a wagon's crew's, out of sight on the road
         return out;
     }
 
@@ -2937,6 +2939,7 @@ public final class Villages {
                         && overlaps(court, v.centre().getX() + lot.x(), v.centre().getZ() + lot.z(), lot.halfAcross(), lot.halfDeep())) continue;
                 // The farmland and the pastures are kept off: the town grows round them.
                 if (lotKeptOff(villageId, v.centre(), lot)) continue;
+                if (CastleWall.keptOff(villageId, lot)) continue;      // [defence] the town wall's ring
                 int x = v.centre().getX() + lot.x();
                 int z = v.centre().getZ() + lot.z();
                 // [emerald] Never on a village of villagers' ground, nor within its margin (VanillaVillages).
@@ -3090,6 +3093,7 @@ public final class Villages {
         Map<String, Site> pending = SITES.get(villageId);
         Site gone = pending == null ? null : pending.remove(project);
         if (gone != null) {
+            Restore.abandoned(villageId, new com.jrpetty.mcassistant.village.Ledger.Building(project, gone.anchor(), gone.facing()), gameTime);   // [integrity] what was laid of it comes down
             why(whyNot(villageId), TAKEN);
             BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet())
                 .add(BlockPos.asLong(gone.anchor().getX(), 0, gone.anchor().getZ()));

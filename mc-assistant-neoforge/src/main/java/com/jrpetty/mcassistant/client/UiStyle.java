@@ -307,4 +307,114 @@ public final class UiStyle {
 
         public int max() { return max; }
     }
+
+    // ------------------------------------------------------------------ [folk-ui] dashboard pieces (the board, the profile)
+
+    /** The numbers 0 to 999 as text, made once: a reading drawn every frame allocates nothing. */
+    private static final String[] NUMBERS = new String[1000];
+
+    /** {@code n} as text, from the made-once table for 0 to 999. */
+    public static String number(int n) {
+        if (n < 0 || n >= NUMBERS.length) return Integer.toString(n);
+        String s = NUMBERS[n];
+        if (s == null) NUMBERS[n] = s = Integer.toString(n);
+        return s;
+    }
+
+    /** A flat information card: a light face with a soft edge, a coloured spine down its left when {@code spine} is not 0. */
+    public static void card(GuiGraphics g, int x, int y, int w, int h, int spine) {
+        g.fill(x, y, x + w, y + h, EDGE_SOFT);
+        g.fill(x + 1, y + 1, x + w - 1, y + h - 1, TILE);
+        g.fill(x + 1, y + 1, x + w - 1, y + 2, HI);
+        if (spine != 0) g.fill(x + 1, y + 1, x + 3, y + h - 1, spine);
+    }
+
+    /** The fill for a 0..100 reading where more is better: green from {@code good}, amber from {@code fair}, else red. */
+    public static int levelFill(int value, int good, int fair) {
+        return value >= good ? SUCCESS_FILL : value >= fair ? WARNING_FILL : DANGER_FILL;
+    }
+
+    /** The ink for the same reading (for its number). */
+    public static int levelInk(int value, int good, int fair) {
+        return value >= good ? SUCCESS : value >= fair ? WARNING : DANGER;
+    }
+
+    /** A trend mark: ▲ up, ▼ down, ▸ flat, coloured by whether the move is good ({@code upIsGood}). Returns its width. */
+    public static int trend(GuiGraphics g, Font font, int delta, boolean upIsGood, int x, int y) {
+        String mark = delta > 0 ? "\u25B2" : delta < 0 ? "\u25BC" : "\u25B8";
+        int ink = delta == 0 ? TEXT_FAINT : (delta > 0) == upIsGood ? SUCCESS : DANGER;
+        g.drawString(font, mark, x, y, ink, false);
+        return font.width(mark);
+    }
+
+    /**
+     * A sparkline of the last {@code n} values (fewer if there are fewer) in a box: a 1px line joined column by column,
+     * the last point marked. Draws nothing for fewer than two values. No allocation: it walks the array.
+     */
+    public static void sparkline(GuiGraphics g, int x, int y, int w, int h, int[] values, int n, int colour) {
+        int len = Math.min(n, values.length);
+        if (len < 2 || w < 4 || h < 3) return;
+        int from = values.length - len;
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        for (int i = from; i < values.length; i++) { lo = Math.min(lo, values[i]); hi = Math.max(hi, values[i]); }
+        if (hi == lo) { hi++; lo--; }
+        int prevY = -1;
+        for (int c = 0; c < w; c++) {
+            int i = from + (int) ((long) c * (len - 1) / Math.max(1, w - 1));
+            int py = y + h - 1 - (int) ((long) (values[i] - lo) * (h - 1) / (hi - lo));
+            if (prevY < 0) prevY = py;
+            g.fill(x + c, Math.min(prevY, py), x + c + 1, Math.max(prevY, py) + 1, colour);
+            prevY = py;
+        }
+        g.fill(x + w - 2, prevY - 1, x + w + 1, prevY + 2, colour);
+    }
+
+    /** Small bars of the last {@code n} values, one a column group, from a zero baseline. Draws nothing for no values. */
+    public static void miniBars(GuiGraphics g, int x, int y, int w, int h, int[] values, int n, int colour) {
+        int len = Math.min(n, values.length);
+        if (len < 1 || w < 2 || h < 2) return;
+        int from = values.length - len, hi = 1;
+        for (int i = from; i < values.length; i++) hi = Math.max(hi, values[i]);
+        int bw = Math.max(1, w / len);
+        for (int i = 0; i < len; i++) {
+            int v = Math.max(0, values[from + i]);
+            int bh = Math.max(v > 0 ? 1 : 0, (int) ((long) v * h / hi));
+            int bx = x + i * w / len;
+            g.fill(bx, y + h - bh, bx + Math.max(1, bw - 1), y + h, colour);
+        }
+    }
+
+    /** A labelled meter: the label on the left, a bar, the value on the right; coloured by how well it stands. */
+    public static void meter(GuiGraphics g, Font font, String label, int value, int x, int y, int w, int labelW) {
+        g.drawString(font, clip(font, label, labelW - 2), x, y, TEXT_MUTED, false);
+        String num = number(value);
+        int numW = font.width("100");
+        int bx = x + labelW, bw = Math.max(8, w - labelW - numW - S1);
+        bar(g, bx, y + 2, bw, 5, value / 100F, levelFill(value, 60, 35));
+        g.drawString(font, num, x + w - font.width(num), y, levelInk(value, 60, 35), false);
+    }
+
+    /** A small badge: a coloured bed with light text, for a status word. Returns its width. */
+    public static int badge(GuiGraphics g, Font font, String text, int x, int y, int fill) {
+        int w = font.width(text) + 6;
+        g.fill(x, y, x + w, y + 11, fill);
+        g.fill(x, y, x + w, y + 1, Ui.lighten(fill, 0.35F));
+        g.drawString(font, text, x + 3, y + 2, TEXT_ON_DARK, true);
+        return w;
+    }
+
+    /** An empty state: a title and a helpful line, centred in the box. */
+    public static void empty(GuiGraphics g, Font font, String title, String hint, int x, int y, int w, int h) {
+        int cy = y + Math.max(0, (h - 22) / 2);
+        String t = clip(font, title, w - S2), d = clip(font, hint, w - S2);
+        g.drawString(font, t, x + (w - font.width(t)) / 2, cy, TEXT_MUTED, false);
+        g.drawString(font, d, x + (w - font.width(d)) / 2, cy + 12, TEXT_FAINT, false);
+    }
+
+    /** A sortable column heading: the label, the arrow when it is the sort, underlined under the mouse. */
+    public static void sortHeading(GuiGraphics g, Font font, String label, int x, int y, int w, boolean sorted, boolean down, boolean hover) {
+        String shown = clip(font, label + (sorted ? (down ? " \u25BC" : " \u25B2") : ""), w - 2);
+        g.drawString(font, shown, x, y, sorted ? ACCENT : TEXT_FAINT, false);
+        if (hover) g.fill(x, y + GLYPH, x + font.width(shown), y + GLYPH + 1, sorted ? ACCENT : TEXT_FAINT);
+    }
 }

@@ -133,6 +133,7 @@ public final class StreetFurniture {
         for (Seat s : seats(Villages.townReach(v.id()))) {
             BlockPos p = TownLook.ground(level, v.centre().getX() + s.dx(), v.centre().getZ() + s.dz());
             if (!level.isLoaded(p) || benchAt(level, p.below()) || benchAt(level, p) || !benchFits(level, v, s, p)) continue;
+            if (!TownBlocks.mayPlace(level, v, p, TownBlocks.Why.DECOR)) continue;          // [integrity]
             Architecture.Style style = Architecture.of(v.id());          // [culture2] stone benches in the stone towns
             boolean stone = style == Architecture.Style.HILL_FORT || style == Architecture.Style.GRAND_CIVIC || style == Architecture.Style.DESERT_COURT;
             if (!stone && !TownLook.canWooden(level, v, ItemTags.WOODEN_STAIRS, "stairs", 6)) return false;
@@ -248,6 +249,7 @@ public final class StreetFurniture {
 
     /** The box made and put up: the ledge, the pot on it, the flower in the pot. All of it, or none. */
     static boolean putUp(ServerLevel level, Villages.Village v, Box box) {
+        if (!TownBlocks.mayAll(level, v, TownBlocks.Why.WINDOW_BOX, box.ledge(), box.pot())) return false;   // [integrity]
         ItemStack flower = Crafts.takeOne(level, v, s -> s.is(ItemTags.SMALL_FLOWERS));
         if (flower.isEmpty()) return false;
         Block potted = potted(Block.byItem(flower.getItem()));
@@ -352,6 +354,7 @@ public final class StreetFurniture {
         boolean up = isNotice(level, at[0]) && isNotice(level, at[1]);
         if (up && pinned != null && pinned == day) return false;
         if (!up && !TownLook.canSign(level, v, 2)) return false;
+        if (!up && !TownBlocks.mayAll(level, v, TownBlocks.Why.SIGN, at)) return false;            // [integrity]
         if (!TownJobs.atWork(level, v, "furniture", at[0], up ? "pinning up the day's news" : "putting up the notice board")) return false;
         if (!up) {
             if (!TownLook.sign(level, v)) return false;

@@ -447,6 +447,8 @@ public final class VillageBoards {
         String homes = Homes.brief(level, id);                  // let, owned, saving to buy, and yesterday's rent
         out.add((room < folk ? "RW" : "RN") + "|Homes: room for " + room + ", beds made up for " + Villages.bedsMadeUp(level, id)
             + (homes.isEmpty() ? "" : "; " + homes) + ".");
+        String repairs = Restore.boardLine(id, day);                    // [integrity] the buildings that need repair, and those mended
+        if (repairs != null) out.add(repairs);
         int toMarket = Market.daysToMarket(id, day);
         if (Homeland.known(id) != null) out.add("RN|Land: " + Homeland.line(id) + ".");
         out.add("RN|Treasury: " + com.jrpetty.mcassistant.village.Ledger.coins(id) + " coins. Market "
@@ -480,6 +482,8 @@ public final class VillageBoards {
         out.addAll(Auctions.board(level, id));                     // [fleet] the auction on the square: today's lots, or the last sale
         int content = Contentment.score(id);
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
+        String looks = TownLooks.boardLine(level, id);             // [tidy] the town's looks, what spoils them, clean-up day
+        if (looks != null) out.add(looks);
         String alarm = Raids.why(id);
         out.add(alarm != null ? "RB|THE BELL IS RINGING: " + alarm + "!" : "RM|The watch: all quiet.");
         out.addAll(Crime.board(level, id));                 // [crime] a theft reported, a trial, the stocks, the month's crime

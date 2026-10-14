@@ -10698,4 +10698,202 @@ One worth for everything, one price for everybody, and coin that holds its value
 * **Seeing it.** The Prices page (and `/village prices`) has each good's price, its arrow and why, the coin in
   the treasury and the purses, the upkeep, the spread and the leans; the price signs show the arrow; a folk
   asked about prices tells you what has moved.
+## Buildings kept whole: the placement gate, the upkeep and the audit
 
+[integrity] A town is a dozen kinds of work all putting blocks into the same few acres: the builders, the lamp posts,
+the window boxes, the signs, the street works, the gardens, the furnishing, the ground works, the festivals. Each of them
+used to ask only whether the cell it wanted was free, and a cell in a building's porch, in its doorway or on the step in
+front of its door very often is: a torch went into a well's wall course before its builder got there (and the builder,
+finding the cell "filled", passed it over for good), torches stood in the middle of the avenues, and a building set over
+a meadow kept a floor of grass because its footing's cells were "filled" with the ground.
+
+**One gate.** Every block a town's own works set down now goes through one gate (entity/TownBlocks), saying why it wants
+the cell. What the cell is to the town decides: a building's own cells and the room inside it and under its eaves are
+its builders' and repairers' alone (and the furnishers', but only in the cells its drawing leaves empty, never a wall);
+its doorways, the two cells in front of every door (at the door's height and the one over it) and its stairs and ladders
+with their headroom are nobody's but the building's own and the door-way works'; the streets and avenues of the town plan
+are the street works' (a lamp or a sign only at the kerb, never in the middle); the square's open ground is the street
+works' and the town's civic things' (its stalls, its feasts, its golem, its lanterns); the board and the storehouse are
+taken up by nobody. The founders' camp at the very heart is open ground until it is taken up. Outside a town's reach the
+gate always says yes, so a hired hand's builds are as they were. Other systems can register cells of their own to keep
+(outdoor steps, a stall's place) and add reasons of their own.
+
+**The builder finishes to the drawing.** A town's builder asks the gate for every cell, so it never builds into another
+building or across a doorway. Something of another kind in one of its own cells (earth where its footing, floor or wall
+goes, a fence post, a torch, a crop) now comes out into its pack and the drawing's block goes in, instead of being passed
+over as filled. A building given up half built (its lot given up because its builders could not get to it) is taken down
+again, top first, its blocks into the stores, unless the town takes the same building up again on the same ground.
+
+**Upkeep.** On the town's rounds (every quarter minute) a few buildings are looked over, each about once a day, against
+the drawing they stand to now (a house given its second storey against the two-storey drawing): not the exact block (a
+builder builds of what the town has, and the town refaces in stone and brick as it grows) but the right part in the right
+shape: a stair where a stair goes, a slab where a slab goes, a full block of something built in a wall, a door in the
+doorway, a bed where the bed goes; and nothing that is no part of the building in its doorways, on the step in front of
+them or over its stairs. What is wrong goes on the town's repair list, and a hand of the town works the list, the worst
+building first, a dozen blocks a visit, out of the stores and in the building's own look (what the rest of its walls,
+roof and floor are made of); what comes out goes back into the stores. A cell the stores have nothing for waits for them.
+A building whose second storey is going up, the founders' first house and a folk's own house are left alone.
+
+The board says how many buildings need repair and how many were repaired today ("Upkeep: 2 buildings need repair; 1
+repaired today"), and the town's books' Buildings page says "needs repair" or "repaired" by each building and counts
+those that need it. The chronicle notes each building mended. The same engine rebuilds a building to a newer drawing or
+a new look: a renovation is put on the list with its own fixes, and the hands work it as they work repairs.
+
+**The audit.** `/village integrity` (operators) looks the nearest town over and says: how true its buildings are to
+their drawings (in all, and the worst), the blocks missing, wrong or in the wrong shape, anything in a doorway or a way
+in, anything standing in its roads, anything half built (given up, or going up and not a block further in two days),
+how many are on the repair list; and then the first dozen findings, each with what put it there where that can be told.
+`/village integrity views` says where to look at the four buildings furthest from their drawings from;
+`/village integrity survey` has every building looked over at once.
+## A town that cares for its looks
+
+A town looks after itself. Its folk notice when it gets untidy, they go round putting it right, and a proud town makes
+itself prettier still.
+
+**No grass inside a building.** A building's floor and footing are laid over whatever ground it goes up on. Before,
+a builder treated a grass block like any other solid block and counted it as already built. Every house put up on a
+meadow kept the meadow as its floor, and tall grass grew back up through it. Now the builder lifts the turf (the
+earth goes into its pack) and lays the boards or stone in its place. It also takes up any grass or flowers standing
+where the room is meant to be open. Older buildings are fixed on the tidy crew's daily round. A few buildings are
+checked on each visit. Earth found where the drawing wants a block is lifted into the stores and floored over with
+whatever the rest of that floor is made of, taken from the stores. Plants on the floor are taken up. A building whose
+drawing includes earth keeps it: a flower box, the beds of an orchard or allotment, and a park's lawn.
+
+**What spoils a town.** The town is walked column by column, a small slice every second, so even the largest town
+is covered about once a minute. The walk notes every eyesore it finds, worst first:
+
+* a **spill**: lava lying in the town, or a lone puddle of water;
+* a **hole** two or more blocks deep, or a **pothole** in a street or on the square;
+* a **pillar** of earth or stone standing on its own, left by a folk that towered up to a treetop or walled itself
+  in for the night;
+* a **stray block** sitting on the ground or hanging in the air;
+* **scaffolding** left standing;
+* a **half-felled tree**: a trunk or stump with no crown;
+* **leaves** hanging in the air with no trunk;
+* a **torch** dropped on the ground by a folk working in the dark;
+* a **scar**: bare earth or rock in the turf that was cut and never grassed over;
+* the founders' **camp beds** still on the square once everybody has a bed in a house, and **chests** left out once
+  the storehouse stands.
+
+The walk never counts anything in or around a building or a building site (its lot, the way in to each door, its
+steps). It also leaves alone the fields, the mine, a worker's own ground, the square's well and monuments, the
+board, and anything a player put there. Every block a player sets down near a town is remembered, and the crew never
+touches it.
+
+**The tidy crew.** The street sweeper starts on the eyesores once there is nothing left for its broom. Otherwise the
+town sends whatever hand it can spare for its works (couriers first). Worst first, the crew:
+
+* fills a spill;
+* fills a hole with ground that matches what is around it: turf on a lawn, a path's earth on a path, the street's
+  own stone on a street;
+* takes down a pillar and takes up a stray block;
+* strikes scaffolding;
+* mends a pothole;
+* fells a half-felled tree and plants a sapling of the same kind where it stood (never on a street);
+* clears hanging leaves;
+* sees to a dropped torch: in a street or on the square it is taken up (the street lamps light those). On open ground
+  it is put on a fence post, so the light stays but looks like it was meant to be there. If the stores have no fence,
+  it is taken up only when another light is nearby;
+* grasses over a scar;
+* takes up the camp beds. A folk that still sleeps in one is moved, but only when a bed in a house is free, and
+  never while it is asleep;
+* empties chests left out into the stores and takes them up.
+
+Everything the crew takes up goes into the stores, and everything it lays comes out of them. When the stores have
+nothing to fill a hole with, the hole waits.
+
+**The town's looks.** The town is scored out of a hundred:
+
+* tidiness, up to 40: the eyesores, grass inside buildings, and anything lying about;
+* greenery, up to 15: how much of the open ground is turf;
+* lighting, up to 15: how much of the streets is lit after dark;
+* flowers, up to 10;
+* finished buildings, up to 20: buildings standing against buildings still going up.
+
+From the score up: *a picture* (85 or more), *well kept* (70), *tidy enough* (50), *untidy* (30), *a mess* (below 30).
+The score is on the village board, on the Stores page of the town's books (with the sweeping), and from
+`/village tidy`, which also lists each eyesore still about. `/village tidy now`, for ops, runs the crew's rounds on
+the spot.
+
+**The folk notice.** A town that looks a picture makes its folk a little more content, and a mess makes them less
+so. They say so ("The square's a mess. Does nobody sweep round here?"). When the town falls below tidy enough, the
+elder calls a **clean-up day** one morning (at most once every three days). It goes into the town's news and onto the
+board, and three crews go out instead of one. A **proud town** (well kept or better), with nothing worse to see to,
+plants flower beds along its streets from the stores' flowers (or bone meal), trims leaves hanging over the streets,
+and puts a lamp post in each dark corner.
+
+**The tests.** The `TidyGameTests` class:
+
+* a house raised by a builder on a meadow has no grass inside, both once it stands and after a day of fast random
+  ticks;
+* an old house with grass for half its floor is floored in its own boards;
+* the crew clears every kind of eyesore, and leaves a player's pillar and one on a house's lot alone;
+* the camp is taken up once everybody has a house bed;
+* a messy town brings a clean-up day and then tidies up;
+* a long growth test grows a town for several days and audits it each day. The audit logs every eyesore with what
+  most likely left it. At the end it requires: no grass inside, no camp bed out, no spill, hole or pillar left
+  standing for a day, and looks of tidy enough or better.
+## The town wall and the muster at the square
+
+<!-- [defence] entity/CastleWall, village/WallPlan, entity/Muster, DefenceCommands -->
+
+A castle's curtain wall round the whole town, and, when the bell rings, the town gathered on its square with the watch
+round it.
+
+**The plan.** The wall is drawn with the town plan: a rectangle round the town proper, each side on the plan's own line
+past the last ring of lots the town has taken that way, with that ring's outer street clear inside it (the first wall's
+inner face is 42 blocks out, so the street at 39 to 41 runs all round inside it). Every building on the plan is inside;
+the fields, pens, mines and woods may lie outside. The wall keeps a ring seven deep for itself (the wall and its towers,
+which stand out from it, never into the street): no lot on it is offered, and the first row of fields keeps off it. A
+town in an old save has its wall drawn round what it has built the first time it is looked at.
+
+**The wall.** Three thick; five high in the Wood and Stone Ages, six in the Iron Age, seven after. A walkway two wide
+along its top, crenellated battlements on the outer face over a coping line, a lantern on every fourth merlon and a
+torch on the inner face every eight blocks, a base course of the age's weathered stone along its foot and a weathered
+stone here and there in its faces. A tower seven square at each corner and every 30 blocks or so (never on a cross
+street), three higher than the walkway, its parapet on a course of corbels, crenellated, a lantern on top; the walkway
+runs through it, a ladder goes up inside it from the street and another on to its top. On each avenue a gatehouse: a
+gate as wide as the avenue, five doors under an arch between two flanking towers, the walkway carried over it. Where a
+paved cross street runs out through the wall, a postern with doors under an arch. A flight of steps up from inside on
+each side of each gate. The walkway never steps more than a block at a time; the wall leaves a gap rather than go over
+water, a field, a road or anything somebody built.
+
+**By age.** A log palisade with plank walks (Wood); cobblestone, a little mossy (Stone); stone bricks with mossy and
+cracked ones and smooth stone coping (Iron); deepslate bricks and polished deepslate (Diamond); deepslate tiles and
+chiselled deepslate (Nether). Every block out of the stores. Short of the age's stone it goes up in the last age's and is
+refaced when the stone comes, the old stone back into the stores; coming of age, it is raised a block.
+
+**Built.** Once the town has the essentials (eight grown folk or more, the storehouse up, no hunger, the beds made), a
+hand the town can spare walks out to it by day and lays a dozen blocks every five seconds (never in an alarm, never more
+hands than the town's works may take), the stores keeping 48 of each stone back for the builders. A section at a time:
+the four gatehouses, the corner towers, the towers between, then the curtain in runs, the ones by the gates first. The
+chronicle says as each section is finished. It is looked over a section at a time all the while, so whatever a creeper
+or a siege knocks out is put back.
+
+**Moved out.** When the town takes a lot past its wall, that side's line moves out a ring (the chronicle says so); the
+new section goes up, and once the new wall stands the old line comes down, its stone into the stores, and its ground is
+given back to the lots.
+
+**The gates.** Shut at dusk (or the town's own hour) and whenever the bell rings, opened in the morning; folk open the
+doors to pass, monsters can't. A raiding band gathers out past the wall where it stands.
+
+**The muster.** When the bell rings (a raid, a raiding party sighted, monsters inside the wall, an enemy on the
+approach), every folk not of the watch drops what it is doing (out of bed, if it was asleep) and runs to the square:
+the open ground before the board, or by the heart. The children and the frail take the middle, the rest close round
+them, and they wait there till the bell stops. Folk far out come in through the gates, or shelter where they are if
+something is between them and the square or there is no way there. Nobody works.
+
+The watch rings them round: as many guards as the ring wants (one every four blocks of it, three to twelve) stand evenly
+round the crowd facing out, the captain (the constable, or the most seasoned guard) on the side the trouble comes from,
+calling out. A monster that comes at the square is met by the nearest guard of the ring, which steps out to it and back
+to its place once it is down. Guards past what the ring wants go up on the walls with bows as before (the square's wall
+posts and the town wall's gatehouse towers), and the town's iron golems take places in the ring between the guards. At
+the all-clear the folk go back to what they were doing (or to bed), and the history has the muster with the night.
+
+The old way (everybody indoors, every guard to the walls) is kept behind the config switch `raidMusterAtSquare`; the
+wall behind `castleWalls`.
+
+**Commands.** `/village wall` (the wall: its lines, how much is laid, what it still wants, its gates); `/village wall now`
+(ops: a batch of its works now); `/village wall build` (ops: all of it at once, out of nothing, for the pictures);
+`/village wall stage` (ops: the same, and the views to photograph it); `/village muster` (ops: the bell rung for a
+drill, a minute long, and the views over the square).

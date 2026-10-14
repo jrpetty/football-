@@ -615,6 +615,7 @@ public final class Annals {
         String[] page = VillageBoards.page(VillageBoards.compose(level, id));
         out.putString("board_title", page[0]);
         out.putString("board", page[1].length() > 20000 ? page[1].substring(0, 20000) : page[1]);
+        out.put("overview", BoardOverview.report(level, v, folk, out));   // [folk-ui] the Overview's readings and alerts
         return out;
     }
 
@@ -710,6 +711,9 @@ public final class Annals {
             c.putBoolean("leader", f.getUUID().equals(Villages.elder(id)));
             c.putBoolean("bed", f.bedPos() != null);
             c.putString("ill", Health.illWord(f));                   // [batchA] a cold, or mending (Health)
+            c.putString("now", FolkSchedule.now(f).label);           // [folk-ui] what it is doing now (FolkSchedule)
+            int need = FolkNeeds.pressing(f);                        // [folk-ui] the need it is short of, if any
+            c.putString("need", need < 0 ? "" : FolkNeeds.NAMES[need]);
             out.add(c);
         }
         return out;
@@ -1124,6 +1128,8 @@ public final class Annals {
             c.putString("dir", compass(dx, dz));
             c.putInt("storeys", Ledger.grown(id, b.anchor()) || Grow.tall(id, b.anchor()) ? 2 : 1);
             c.putBoolean("raising", Grow.raisingNow(id, b.anchor()));
+            String repair = Restore.status(id, b.anchor(), level.getDayTime() / 24000L);   // [integrity] "needs repair", "repaired"
+            if (!repair.isEmpty()) c.putString("repair", repair);
             int[] fur = Interiors.progress(level, id, b);
             c.putInt("furnished", fur[0]);
             c.putInt("furnish_of", fur[1]);

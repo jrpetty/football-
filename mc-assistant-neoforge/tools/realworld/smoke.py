@@ -3146,6 +3146,55 @@ def individual_stage(r, look, cx, cz):
     say("alive after every folk its own person: %s" % client_alive())
 
 
+def window_size(w, h):
+    """[folk-ui] Resize the game's window (xdotool, on the virtual display): the GUI scale follows, as for a player."""
+    try:
+        out = subprocess.run(["xdotool", "search", "--name", "Minecraft", "windowsize", "%@", str(w), str(h)],
+                             capture_output=True, text=True, timeout=20)
+        say("window %dx%d: %s" % (w, h, "done" if out.returncode == 0 else (out.stderr.strip() or "no window")[:200]))
+    except Exception as e:  # noqa: BLE001
+        say("window resize failed: %s" % e)
+
+
+def folk_ui_stage(r, look, cx, cz):
+    """[folk-ui] The village board as a dashboard, and a folk's profile. At the village the smoke spawned, the books
+    open at the Overview (the six readings with their trends, what needs attention, today's news), then at People >
+    Folk, Economy > Money and Civic > Research; then the nearest folk's profile on each of its five tabs (About, Life,
+    Work, Day, Belongings); then the window shrunk to 640x400, so the GUI is small, and the Overview and a profile again
+    there (nothing may spill over or overlap); then the window put back."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    midday(r)
+    r.cmd("weather clear")
+    r.cmd("gamemode creative %s" % USER)
+    say("to the village: " + r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run tp %s ~2 ~ ~2"
+                                   % (cx, cz, USER)))
+    time.sleep(5)
+    for n, (page, picture) in enumerate(((0, "overview"), (6, "people-folk"), (2, "economy-money"), (13, "civic-research"))):
+        say("stats %s: %s" % (picture, r.cmd("execute as %s at @s run village stats %d" % (USER, page))))
+        time.sleep(3)
+        shot("40-board-%d-%s" % (n + 1, picture))
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    for n, tab in enumerate(("about", "life", "work", "day", "belongings")):
+        say("profile %s: %s" % (tab, r.cmd("execute as %s at @s run village individual profile %s" % (USER, tab))))
+        time.sleep(3)
+        shot("40-profile-%d-%s" % (n + 1, tab))
+    say("profile shut: " + r.cmd("execute as %s at @s run village individual profile close" % USER))
+    window_size(640, 400)
+    time.sleep(3)
+    say("stats small: " + r.cmd("execute as %s at @s run village stats 0" % USER))
+    time.sleep(3)
+    shot("40-small-1-overview")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("profile small: " + r.cmd("execute as %s at @s run village individual profile day" % USER))
+    time.sleep(3)
+    shot("40-small-2-profile-day")
+    say("profile shut: " + r.cmd("execute as %s at @s run village individual profile close" % USER))
+    window_size(1280, 720)
+    time.sleep(3)
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the board and the profile: %s" % client_alive())
+
+
 def emerald_stage(r, look, cx, cz):
     """[emerald] The emerald trader (entity/EmeraldTrader), and the two peoples kept apart (TwoPeoples, VanillaVillages).
     Run well out past the town to the north (the villagers' ground must not be the town's), /village emerald stage sets
@@ -3660,6 +3709,140 @@ def market_stage(r, look, cx, cz):
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the market: %s" % client_alive())
 
+def wagons_stage(r, look, cx, cz):
+    """[wagons] The trade wagons (entity/Wagons, TradeWagon, client/TradeWagonRenderer). Three scenes set by
+    /village wagon stage, each saying where to look from (VIEW name x y z ax ay az: the eyes' feet and what they look
+    at), the wagon held still for the camera with a mixed load showing (oak and spruce logs, wheat as bales, iron and
+    coal in open barrels, bread in open crates, stone as blocks, potatoes in sacks), its horse in the shafts and its
+    driver on the bench:
+      1. road: the open wagon on a stretch of worn road laid out past the town, close up from above its bed, and from
+         the side at a walker's height;
+      2. loading: the covered wagon in the town's yard by the trading post, from behind into its open back, the driver
+         carrying a crate out to it and the load rising;
+      3. night: the covered wagon on the road after dark, its two lanterns lit.
+    Then /village wagon stage done (the load into the town's stores, the wagon parked, the crew free)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    num = r"(-?\d+)"
+    pattern = r"VIEW (\S+) " + " ".join([num] * 6)
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx + 40, cz + 60                          # past the first houses, where the stage lays its own road
+
+    def stage(which, x, z, settle):
+        y = ground_height(r, x, z)
+        r.cmd("tp %s %d %d %d" % (USER, x + 10, y + 12, z + 10))
+        time.sleep(settle)                             # the scene's ground arrives at the server and the client
+        out = r.cmd("execute positioned %d %d %d run village wagon stage %s" % (x, y + 1, z, which))
+        say("wagon stage %s: %s" % (which, out[:600]))
+        return re.findall(pattern, out)
+
+    def shoot(views, wait):
+        for name, x, y, z, ax, ay, az in views:
+            look("44-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=wait)
+
+    shoot(stage("road", sx, sz, 8), 5)
+    shoot(stage("loading", cx, cz, 4), 3)              # the crates going out to it: a few seconds into the loading
+    # After dark (forward only: see midday), the covered wagon back on the stretch of road with its lanterns lit.
+    m = re.search(r"(\d+)", r.cmd("time query daytime"))
+    now = int(m.group(1)) % 24000 if m else 6000
+    r.cmd("time add %d" % ((15000 - now) % 24000))
+    shoot(stage("night", sx, sz, 3), 5)
+    say("wagon: " + r.cmd("execute positioned %d %d %d run village wagon" % (cx, hy + 1, cz))[:900])
+    say("wagon let go: " + r.cmd("execute positioned %d %d %d run village wagon stage done" % (cx, hy + 1, cz))[:200])
+    midday(r)
+    say("alive after the wagons: %s" % client_alive())
+
+
+
+def integrity_stage(r, look, cx, cz):
+    """[integrity] The town's buildings held to their drawings (entity/TownBlocks, Restore, TownAudit). In a grown town:
+    /village integrity survey has every building looked over now and listed for repair; /village integrity views says
+    where to look at the four buildings furthest from their drawings (and their fidelity and status). Pictures: each
+    of them from in front of its door, a little up, so a hole in a wall, a roof stair short, a lamp post on the step
+    or a half-built frame shows; then the same again a game hour later, mended. Then the audit in words."""
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    say("integrity survey: " + r.cmd("execute positioned %d %d %d run village integrity survey" % (cx, hy + 1, cz))[:400])
+    out = r.cmd("execute positioned %d %d %d run village integrity views" % (cx, hy + 1, cz))
+    say("integrity views: " + out[:1400])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    if not views:
+        say("no buildings to look at; nothing to photograph")
+        return
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look("44-integrity-%d-%s-before" % (i + 1, name), int(x) + 0.5, int(y), int(z) + 0.5,
+             int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8)
+    r.cmd("time add 1000")                             # an hour of the town's rounds: the hands at the repair list
+    time.sleep(20)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look("44-integrity-%d-%s-after" % (i + 1, name), int(x) + 0.5, int(y), int(z) + 0.5,
+             int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=6)
+    say("integrity: " + r.cmd("execute positioned %d %d %d run village integrity" % (cx, hy + 1, cz))[:1400])
+    say("alive after the integrity look: %s" % client_alive())
+
+
+
+def tidy_stage(r, look, cx, cz):
+    """[tidy] The town's looks (entity/Tidy, Eyesores, Floors). In a grown town: /village tidy names its looks out of a
+    hundred and every eyesore still about it ("SPOT kind x y z"). Pictures: the square from above (no camp beds left
+    on it once the town is housed, no chests left out), the worst eyesores still standing up close (none, in a town
+    that cares for itself), then /village tidy now (the crew's rounds on the spot) and the square again; and inside
+    the first house, its floor (boards, never the meadow's grass)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    out = r.cmd("execute positioned %d %d %d run village tidy" % (cx, hy + 1, cz))
+    say("tidy: " + out[:1500])
+    look("34-tidy-1-square", cx + 0.5, hy + 22, cz + 18.5, cx + 0.5, hy, cz + 0.5, wait=10)
+    spots = re.findall(r"SPOT (\S+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for i, (kind, x, y, z) in enumerate(spots[:3]):
+        x, y, z = int(x), int(y), int(z)
+        look("34-tidy-%d-%s" % (2 + i, kind), x + 4.5, y + 4, z + 4.5, x + 0.5, y + 0.5, z + 0.5, wait=6)
+    out = r.cmd("execute positioned %d %d %d run village tidy now" % (cx, hy + 1, cz))
+    say("tidy now: " + out[:1500])
+    look("34-tidy-5-square-after", cx + 0.5, hy + 22, cz + 18.5, cx + 0.5, hy, cz + 0.5, wait=8)
+    houses = re.findall(r"house at (-?\d+), (-?\d+), (-?\d+)", r.cmd("execute positioned %d %d %d run village buildings" % (cx, hy + 1, cz)))
+    if houses:
+        x, y, z = (int(v) for v in houses[0])
+        look("34-tidy-6-house-floor", x + 0.5, y + 2.5, z + 0.5, x + 2.5, y - 1, z + 2.5, wait=6)
+    say("alive after the tidy stage: %s" % client_alive())
+
+
+
+def defence_stage(r, look, cx, cz):
+    """[defence] The town wall and the muster (entity/CastleWall, entity/Muster), in a grown town. The wall laid round
+    the town as it plans it (/village wall stage: out of nothing, for the pictures) and photographed from high over the
+    south-west (the whole ring), over the north gatehouse, outside the west gate and at a corner tower; what /village wall
+    says. Then the bell rung for a drill (/village muster): twenty seconds on, from over the square, the folk gathered in
+    the middle and the watch ringed round them facing out, and again from the ring's edge; what the town's news says
+    after the all-clear. Not wired in."""
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    gy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx - 60, gy + 60, cz + 60))
+    time.sleep(10)                                     # the town's ground out to the wall arrives
+    out = r.cmd("execute positioned %d %d %d run village wall stage" % (cx, gy + 1, cz))
+    say("wall stage: " + out[:900])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look("40-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=10 if i == 0 else 6)
+    say("wall: " + r.cmd("execute positioned %d %d %d run village wall" % (cx, gy + 1, cz))[:900])
+    out = r.cmd("execute positioned %d %d %d run village muster" % (cx, gy + 1, cz))
+    say("muster: " + out[:600])
+    time.sleep(20)                                     # the town runs to the square, the watch takes its places
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look("41-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=4)
+    time.sleep(70)                                     # the drill's minute out, and the all-clear
+    say("after the muster: " + r.cmd("execute positioned %d %d %d run village news" % (cx, gy + 1, cz))[:700])
+    say("alive after the defence stage: %s" % client_alive())
+
 
 def main():
     r = Rcon()
@@ -4057,6 +4240,10 @@ def main():
     except Exception as e:  # noqa: BLE001
         say("individual stage failed: %s" % e)
     try:
+        folk_ui_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("folk ui stage failed: %s" % e)
+    try:
         emerald_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("emerald stage failed: %s" % e)
@@ -4084,6 +4271,10 @@ def main():
         culture2_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("culture2 stage failed: %s" % e)
+    try:
+        wagons_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("wagons stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

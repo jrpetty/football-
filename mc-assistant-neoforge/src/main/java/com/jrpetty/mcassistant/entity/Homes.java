@@ -1876,6 +1876,53 @@ public final class Homes {
         return out;
     }
 
+    /**
+     * [folk-ui] Its home for its profile: the address, the sign by the door as TownLife puts it up (number, street, who
+     * lives there), on what terms, who it lives with, and the money: rent, price, put by. Empty when it has no home.
+     */
+    public static CompoundTag profile(VillageFolkEntity f) {
+        CompoundTag out = new CompoundTag();
+        UUID village = f.ownerId();
+        Home h = village == null ? null : homeOf(village, f.getUUID());
+        Villages.Village v = village == null ? null : Villages.get(village);
+        if (h == null || v == null) {
+            String at = lodgingAt(f);
+            out.putString("lodging", at == null ? "" : at);
+            return out;
+        }
+        String address = address(village, v, h);
+        out.putString("address", address);
+        out.putBoolean("flat", Flats.isFlat(h));
+        out.putString("terms", seat(h) ? "goes with leading the town" : h.tenure == Tenure.RENTED ? tenancy(village, h) : h.tenure.word);
+        out.putString("tenure", h.tenure.name());
+        out.putInt("rent", h.rent);
+        out.putInt("price", h.price);
+        out.putInt("saved", h.saved);
+        out.putLong("since", h.since);
+        net.minecraft.nbt.ListTag members = new net.minecraft.nbt.ListTag();
+        List<String> grown = new ArrayList<>();
+        for (UUID m : h.members) {
+            VillageFolkEntity o = loaded(village, m);
+            if (o == null) continue;
+            CompoundTag c = new CompoundTag();
+            c.putUUID("uuid", m);
+            c.putString("name", o.displayNameCap());
+            c.putBoolean("child", o.isBaby());
+            members.add(c);
+            if (!o.isBaby()) grown.add(o.displayNameCap());
+        }
+        out.put("members", members);
+        // The sign by its door (TownLife.addressSign): the number and street, then who lives there.
+        int comma = address.indexOf(", ");
+        net.minecraft.nbt.ListTag sign = new net.minecraft.nbt.ListTag();
+        sign.add(net.minecraft.nbt.StringTag.valueOf(comma > 0 ? address.substring(0, comma) : address));
+        sign.add(net.minecraft.nbt.StringTag.valueOf(comma > 0 ? address.substring(comma + 2) : ""));
+        sign.add(net.minecraft.nbt.StringTag.valueOf(grown.isEmpty() ? "" : grown.get(0)));
+        sign.add(net.minecraft.nbt.StringTag.valueOf(h.members.size() > 2 ? "& family" : grown.size() == 2 ? "& " + grown.get(1) : ""));
+        out.put("sign", sign);
+        return out;
+    }
+
     /** "I live at No. 4, Elm Street, with Tansy and the children — we rent it from the village at a coin a day, and we're saving to buy it." */
     public static String talk(VillageFolkEntity f) {
         UUID village = f.ownerId();

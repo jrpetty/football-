@@ -104,11 +104,13 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.QuestRun.command())              // [quests] /village quests [journal|offers|abandon <id>]
             // The town's quarters, the homes in the crafts' smoke and by the park, and the park (Quarters, Park).
             .then(com.jrpetty.mcassistant.entity.Quarters.command())
+            .then(com.jrpetty.mcassistant.entity.TownAudit.command())              // [integrity] /village integrity [views|survey]
             .then(com.jrpetty.mcassistant.entity.Sport.command())                 // [batchC] /village sport
             .then(com.jrpetty.mcassistant.entity.Pastimes.command())              // [leisure] /village items leisure [stage|make]
             // [batchE] The town's look: the avenues' trees, the street furniture, the allotments, the orchard, the
             // windmill, the bakery and the inn; `showcase` and `now` for operators and the pictures (TownLook).
             .then(com.jrpetty.mcassistant.entity.TownLook.command())
+            .then(com.jrpetty.mcassistant.entity.Tidy.command())                 // [tidy] /village tidy [now]: the town's looks, its eyesores
             .then(Commands.literal("people").executes(VillageCommands::people))
             // The knacks each folk chose for itself (FolkSkills): every folk of the nearest village, or one
             // by name; and, for operators and tests, a knack given to a folk as though it chose it.
@@ -338,6 +340,7 @@ public final class VillageCommands {
             .then(EconomyCommands.build())
             // [econ-trade] Trade between towns: the trade book, the deals, the talks (TradeCommands).
             .then(TradeCommands.build())
+            .then(WagonCommands.build())                       // [wagons] the trade wagons
             // [war-scouting] The war map, the reports on the enemy, the pickets (ScoutingCommands).
             .then(ScoutingCommands.build())
             // What every village you have met thinks of you.

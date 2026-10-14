@@ -201,6 +201,7 @@ public final class StoreFloor {
         BlockState there = level.getBlockState(at);
         if (!(there.getBlock() instanceof WallSignBlock)) {
             if (shown.isEmpty() || !there.isAir()) return;
+            if (!TownBlocks.mayPlace(level, v, at, TownBlocks.Why.FURNISH)) return;                  // [integrity]
             if (!Crafts.sign(level, v)) return;
             level.setBlock(at, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front), 3);
         }

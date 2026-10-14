@@ -34,6 +34,11 @@ public final class Dreams {
     private Dreams() {}
 
     /** Has its dream (one of the new ones) come true? (VillageFolkEntity.dreamCameTrue) */
+    /** [folk-ui] What each dream asks, shared by the check that it came true (met, VillageFolkEntity.dreamCameTrue) and
+     *  the profile's progress bar (goal), so the two never disagree. */
+    public static final int MASTER_LEVEL = 10, FAMILY_CHILDREN = 2, FRIENDS_WANTED = 5, GARDEN_FLOWERS = 6, WELL_FED_DAYS = 6,
+        BIG_FAMILY_CHILDREN = 4;
+
     public static boolean met(VillageFolkEntity f) {
         Individual.Self s = f.individual();
         UUID village = f.ownerId();
@@ -44,7 +49,7 @@ public final class Dreams {
             case WRITE_BOOK -> village != null && wroteABook(f, village);
             case GO_NETHER -> s.beenNether;
             case LEAD -> f.isElder();
-            case BIG_FAMILY -> f.life().children() >= 4;
+            case BIG_FAMILY -> f.life().children() >= BIG_FAMILY_CHILDREN;
             case RICH -> Wealth.tier(f) == Wealth.Tier.WEALTHY;
             default -> false;
         };
@@ -213,6 +218,57 @@ public final class Dreams {
         boolean wants = a.persona().ambition() == Persona.Ambition.BIG_FAMILY && !a.persona().ambitionMet()
             || b.persona().ambition() == Persona.Ambition.BIG_FAMILY && !b.persona().ambitionMet();
         return wants ? Math.max(1, odds - 1) : odds;
+    }
+
+    /**
+     * [folk-ui] Its dream as a goal for its profile: {fraction done 0..1000, words for how far}. Read off the same things
+     * {@link #met} and VillageFolkEntity.dreamCameTrue look at; a dream that is all or nothing is 0 or 1000.
+     */
+    public static Object[] goal(VillageFolkEntity f) {
+        Persona p = f.persona();
+        Individual.Self s = f.individual();
+        UUID village = f.ownerId();
+        if (p.ambitionMet()) return new Object[]{ 1000, "came true" };
+        return switch (p.ambition()) {
+            case MASTER -> part(f.veteranLevel(), MASTER_LEVEL, "level " + f.veteranLevel() + " of " + MASTER_LEVEL);
+            case FAMILY -> part(f.life().children(), FAMILY_CHILDREN, count(f.life().children(), "child", "children") + " of " + FAMILY_CHILDREN);
+            case BIG_FAMILY -> part(f.life().children(), BIG_FAMILY_CHILDREN, count(f.life().children(), "child", "children") + " of " + BIG_FAMILY_CHILDREN);
+            case FRIENDS -> part(f.life().friends().size(), FRIENDS_WANTED, count(f.life().friends().size(), "friend", "friends") + " of " + FRIENDS_WANTED);
+            case GARDEN -> part(p.flowersPlanted(), GARDEN_FLOWERS, p.flowersPlanted() + " of " + GARDEN_FLOWERS + " flowers planted");
+            case WELL_FED -> {
+                long days = p.since() < 0 ? 0 : f.level().getDayTime() / 24000L - p.since();
+                yield part((int) Math.min(WELL_FED_DAYS, days), WELL_FED_DAYS, "full stores for " + WELL_FED_DAYS + " days running");
+            }
+            case NETHER -> {
+                int at = village == null ? 0 : Villages.ageOf(village).ordinal();
+                yield part(at, Villages.Age.NETHER.ordinal(), village == null ? "" : "the town is in " + Villages.ageOf(village).label);
+            }
+            case GREAT_WORK -> part(village == null ? 0 : Math.min(1, Villages.greatWorks(village)), 1, "no great work yet");
+            case MARRY -> {
+                UUID best = f.life().bestFriend();
+                int warm = best == null ? 0 : f.life().affinity(best), want = Math.max(1, Beliefs.weddingWarmth(village));
+                yield part(Math.max(0, warm), want, best == null ? "nobody special yet" : "sweet on somebody");
+            }
+            case OWN_HOUSE -> {
+                int[] saving = Homes.savingFor(f);
+                yield saving == null || saving[1] <= 0 ? part(0, 1, "not saving yet")
+                    : part(saving[0], saving[1], saving[0] + " of " + saving[1] + " coins put by");
+            }
+            case RICH -> part(Wealth.worth(f), Wealth.WEALTHY_WORTH, "worth " + Wealth.worth(f) + " of " + Wealth.WEALTHY_WORTH + " coins");
+            case WRITE_BOOK -> part(s.literate ? 1 : 0, 2, s.literate ? "can read and write: the book is next" : "must learn its letters first");
+            case SEE_THE_SEA -> part(s.seenSea ? 1 : 0, 1, "never seen it");
+            case GO_NETHER -> part(s.beenNether ? 1 : 0, 1, volunteersForNether(f) ? "first to volunteer" : "waiting for a run");
+            case LEAD -> part(f.isElder() ? 1 : 0, 1, "will stand at the next election");
+            default -> part(0, 1, "");
+        };
+    }
+
+    private static Object[] part(int have, int want, String words) {
+        return new Object[]{ (int) Math.max(0, Math.min(1000, have * 1000L / Math.max(1, want))), words };
+    }
+
+    private static String count(int n, String one, String many) {
+        return n + " " + (n == 1 ? one : many);
     }
 
     // ------------------------------------------------------------------ in words

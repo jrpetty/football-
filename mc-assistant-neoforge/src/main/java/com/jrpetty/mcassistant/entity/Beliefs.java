@@ -495,6 +495,7 @@ public final class Beliefs {
 
     private static boolean raisePost(ServerLevel level, Villages.Village v, BlockPos at, String[] r, boolean free) {
         if (!level.getBlockState(at).canBeReplaced() || !level.getBlockState(at.above()).canBeReplaced()) return false;
+        if (v != null && !TownBlocks.mayAll(level, v, TownBlocks.Why.CIVIC, at, at.above())) return false;   // [integrity]
         if (!free) {
             if (!Crafts.take(level, v, s -> s.is(ItemTags.WOODEN_FENCES), 1) && !Crafts.planks(level, v, 2)) return false;
             if (!Crafts.sign(level, v)) {
@@ -537,6 +538,7 @@ public final class Beliefs {
 
     private static boolean raiseCairn(ServerLevel level, Villages.Village v, BlockPos at, String[] r, boolean free) {
         if (!level.getBlockState(at).canBeReplaced() || !level.getBlockState(at.above()).canBeReplaced()) return false;
+        if (v != null && !TownBlocks.mayAll(level, v, TownBlocks.Why.CIVIC, at, at.above(), at.north())) return false;   // [integrity]
         BlockPos front = at.relative(Direction.NORTH);
         if (!free) {
             if (!Masonry.take(level, v, Items.COBBLESTONE, 2)) return false;

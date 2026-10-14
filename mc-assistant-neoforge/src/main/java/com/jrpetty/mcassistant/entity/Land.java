@@ -256,6 +256,7 @@ public final class Land {
         if (diff < 0 && (noEarth || Market.stock(level, v.id(), s -> s.is(Items.DIRT) || s.is(Items.COARSE_DIRT)
                 || s.is(Items.GRASS_BLOCK) || s.is(Items.ROOTED_DIRT)) == 0)) return diff < 0 && noEarth ? 0 : -1;
         // Dug and filled by hand, with a spade (TownJobs).
+        if (!TownBlocks.mayAll(level, v, TownBlocks.Why.TERRAFORM, ground, top)) return 0;                     // [integrity]
         if (!TownJobs.atWork(level, v, "levelling", ground, "levelling the ground", AssistantEntity.StationTask.MINE)) return WAIT;
         if (diff > 0) {
             // Cut: the plant on top goes, then the block; the one beneath shows grass if it is earth.

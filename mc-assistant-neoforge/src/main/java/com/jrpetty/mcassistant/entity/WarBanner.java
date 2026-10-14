@@ -233,6 +233,7 @@ final class WarBanner {
 
     /** The banner set up on its pole, turned to {@code rotation}; the grass where it stands cleared first. */
     private static void plant(ServerLevel level, BlockPos spot, DyeColor c, int rotation) {
+        if (!TownBlocks.mayPlace(level, spot, TownBlocks.Why.CIVIC)) return;                         // [integrity]
         if (!level.getBlockState(spot.above()).isAir()) level.setBlock(spot.above(), Blocks.AIR.defaultBlockState(), 3);
         level.setBlock(spot, BannerBlock.byColor(c).defaultBlockState().setValue(BannerBlock.ROTATION, rotation), 3);
     }
@@ -240,6 +241,7 @@ final class WarBanner {
     private static boolean hangOn(ServerLevel level, BlockPos wall, BlockPos spot, Direction out, DyeColor c) {
         if (!level.isLoaded(spot) || !level.getBlockState(spot).isAir()) return false;
         if (!level.getBlockState(wall).isFaceSturdy(level, wall, out)) return false;
+        if (!TownBlocks.mayPlace(level, spot, TownBlocks.Why.SIGN)) return false;                   // [integrity] a banner on a wall, never a doorway
         BlockState banner = wallBanner(c).defaultBlockState();
         if (!banner.hasProperty(WallBannerBlock.FACING)) return false;
         level.setBlock(spot, banner.setValue(WallBannerBlock.FACING, out), 3);

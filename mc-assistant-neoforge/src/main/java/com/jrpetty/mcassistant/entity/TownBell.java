@@ -808,6 +808,12 @@ public final class TownBell {
         return dayTime % 24000L < LUNCH_ENDS - 300L;
     }
 
+    /** [folk-ui] Does this town's day run by its bell today (dawn to the dusk bell, the break at the noon bell)? */
+    public static boolean keeps(@Nullable UUID village, long dayTime) {
+        Day d = village == null ? null : DAYS.get(village);
+        return d != null && d.bellDay == bellDay(dayTime);
+    }
+
     /** Is the town up: not lying in for its dawn bell (the morning assembly waits for it: Assemblies)? */
     public static boolean up(@Nullable UUID village, long dayTime) {
         Day d = village == null ? null : DAYS.get(village);

@@ -13,80 +13,33 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 
 /**
- * The town's books, opened at the village board: how the village has grown and why.
+ * The town's books, opened at the village board: how the village has grown and why, laid out as a dashboard.
  *
- * <p>Eighteen pages, picked along the top: the <b>Overview</b> (the figures that matter, with how they
- * have moved over the week, and the first of what is driving it); <b>Growth</b> (its people over
- * time, births against deaths, comings and goings, what they died of); <b>Money</b> (what it makes,
- * takes in and pays out each day, the treasury and its worth, and its output by kind);
- * <b>Production</b> (every item it makes: yesterday, a day, a month, all told, used, in store,
- * worth, trend, who makes it, and the leader's reading of it against what is short); <b>Jobs</b>
- * (every trade: hands, level, pay, what it made yesterday and this week, per hand, and its share
- * of the whole, with any trade's own history a click away); <b>Folk</b> (everybody, sortable by any
- * column); <b>Society</b> (the age pyramid, moods, how evenly the money is spread, natures, skill,
- * families, friendships, the best liked and the best hand at each trade); <b>Leader</b> (who leads,
- * what it cares about, how long, what it promised, what the village thinks of it, the elections);
- * <b>Homes</b> (beds, households, tenure); <b>Buildings</b> (every building, where, its storeys,
- * how furnished, who lives there, and what is to be built next); <b>Stores</b> (food, timber,
- * stone, coal, iron over time); <b>Research</b> (the city's research tree: twenty civics in five
- * branches as columns of four, what the leader has the town studying and why, how far on, and what
- * was finished when); <b>Why</b> (what is driving its growth and what is holding it
- * back); <b>Trends</b> (per hand, per head); <b>Records</b> (its bests, its totals, its averages and
- * where it is heading); <b>News</b> (the chronicle); the <b>Board</b> itself; and the <b>School</b> (the
- * schoolhouse, its teacher, the morning's lesson, every child with the trade it leans to and how far
- * it has got, and who has left school as what); and <b>Trade</b> (what the town is good at and short of, its
- * deals with the neighbours, the talks that made them, and its farmers and miners over the days: TradePage). The charts follow
- * the mouse: the day under it, and every line's value that day. The range (a week, a month, a
- * hundred days, all of it) is picked at the top right.
+ * <p>[folk-ui] A header band with the town's banner, name, age and day, its people, mood and treasury, the charts' range
+ * and Close; down the left the sections (village/BoardPages: Overview, People, Economy, Town, Civic, Culture, Records),
+ * each holding its pages as tabs across the top. The <b>Overview</b> is the home page: six readings with their trend
+ * (food, homes and beds, jobs filled, coin a day, safety, looks), what needs attention now (entity/BoardOverview, each a
+ * click from its page), today's news and what is driving the town. Every page that was here still is, by the same number
+ * and name (/village stats, the commands, the smoke test). Folk, Stock and News find what is typed; a row of the Folk
+ * page opens that folk's profile (FolkProfileScreen). Keys: 1-7 the sections, Tab the next, left and right the pages.
+ *
+ * <p>The pages: Overview, News, Why and the Board itself; Folk (everybody, sortable by any column), Society, Growth,
+ * Homes, School and Interviews; Money, Production, Prices, Shops, Jobs, Stock, Stores, Trade, Auction and the Trading
+ * Post; Buildings, Transport, Maps, Caves, Nether, the Watch and its Cases; the Leader, Research, Identity, War and the
+ * War map; Culture, Fashion, the Library, the Museum and Perks; Records and Trends. The charts follow the mouse: the
+ * day under it, and every line's value that day.
  */
 public class CityScreen extends Screen {
 
-    // Research sits after the stores, before Why: the pages after it are one further on (/village stats <page>
-    // and the smoke test's page lists follow the same numbers).
-    private static final String[] TABS = { "Overview", "Growth", "Money", "Production", "Shops", "Jobs", "Folk", "Society", "Leader", "Homes",
-        "Buildings", "Stores", "Stock", "Research", "Why", "Trends", "Records", "News", "Board",
-        // The school and the museum, last, so the pages before them keep their numbers (School, Museum).
-        "School", "Museum",
-        // [batchD] The town's culture, after them: its banner, motto, customs, theatre, music, pictures and plaques (CulturePage).
-        "Culture",
-        // [econ-prices] The town's prices, after them (PriceIndex), so the pages before keep their numbers.
-        "Prices",
-        // [econ-trade] Trade between towns, after them (TradePage).
-        "Trade",
-        // [war-scouting] The war map: the enemy where it lies, the scouts' reports and their age (WarMapPage).
-        "War map",
-        // [war-peace] The war, after them for the same reason (WarPage).
-        "War",
-        // [caves] The caves' report (CavesPage).
-        "Caves",
-        // [fashion] What the town wears (FashionPage).
-        "Fashion",
-        // [crime] The watch's casebook and the crime rate, after them (CasesPage).
-        "Cases",
-        // [fleet] The auction and the fishing fleet, after them (AuctionPage).
-        "Auction",
-        // [library] The town library, after them (LibraryPage): its catalogue, its writers, its loans.
-        "Library",
-        // [transport] The railways, the carts, the ferry and the bridge, after them (TransportPage).
-        "Transport",
-        // [interviews] The town's interviews, coming and held, every candidate's score part by part (InterviewsPage).
-        "Interviews",
-        // [identity] What makes the town itself: its ethos, government, laws, traits, fame and renown (IdentityPage).
-        "Identity",
-        // [cartographer] The maps: the country as the cartographer drew it, the places found, the archive (MapsPage).
-        "Maps",
-        // [emerald] The emerald account, the villagers' villages, their villagers and offers (TradingPostPage).
-        "Trading Post",
-        // [nether] The Nether runners' page, after them (NetherPage): the runs, the outpost, the finds, the hauls.
-        "Nether",
-        // [perks] The wonders of the world, the town's ways, the leader's skills and legacies, the folk's quirks (PerksPage).
-        "Perks",
-        // [police] The watch as the town's police: the roster, the beats, the incidents, the cells, the crime rate (WatchPage).
-        "Watch" };
+    /** The pages, by number (BoardPages: the page ids other code and the commands open the books at). */
+    private static final String[] TABS = com.jrpetty.mcassistant.village.BoardPages.PAGES;
+    private static final String NO_BOOKS_TITLE = "The town's books are written each morning",
+        NO_BOOKS_HINT = "Come back tomorrow. Overview, Folk, Society, Leader and News have today's figures already.";
     /** The pages that read today's figures, not the books (so they show from the first day). */
-    private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
+    private static final java.util.Set<String> TODAY_PAGES = java.util.Set.of("Overview", "Folk", "Society", "Leader", "Buildings", "Why", "News", "Board",
         "Shops", "Homes", "Stock", "Research", "School", "Museum", "Culture", "Prices", "Trade", "War map", "War", "Caves",
         "Fashion",                                                                                    // [fashion]
         "Cases",                                                                                      // [crime]
@@ -102,6 +55,20 @@ public class CityScreen extends Screen {
         "Watch");                                                                                     // [police]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
+
+    /** [folk-ui] The board's sections, down the left (BoardPages): each a handful of the pages, its icon and words. */
+    private static final com.jrpetty.mcassistant.village.BoardPages.Section[] SECTIONS = com.jrpetty.mcassistant.village.BoardPages.SECTIONS;
+
+    static int sectionOf(int tab) {
+        return com.jrpetty.mcassistant.village.BoardPages.sectionOf(tab);
+    }
+
+    static int pageNumber(String name) {
+        return com.jrpetty.mcassistant.village.BoardPages.pageNumber(name);
+    }
+
+    /** The sidebar's width, wide with labels, or icons only in a narrow window; the header band's height. */
+    private static final int SIDE_W = 96, SIDE_NARROW = 26, HEAD_H = 30, SUB_H = 15;
 
     /** Line colours, readable on the light panel. */
     private static final int BLUE = 0xFF2E6FBF, RED = 0xFFB83227, GREEN = 0xFF23803A, AMBER = 0xFFB7791F, PURPLE = 0xFF7D3C98,
@@ -136,6 +103,8 @@ public class CityScreen extends Screen {
     public CityScreen(CompoundTag data) {
         super(Component.literal(data.getString("name")));
         this.data = data;
+        for (int i = 0; i < SECTIONS.length; i++) sectionIcons[i] = new net.minecraft.world.item.ItemStack(SECTIONS[i].icon());
+        readHead();
     }
 
     /** The server's answer: open the books (keeping the page that was open, if they are open already). */
@@ -158,7 +127,7 @@ public class CityScreen extends Screen {
         if (data.getBoolean("jobmarket_view")) next.jobsMarket = true;       // /village jobs books
         if (data.contains("tab")) next.tab = Math.max(0, Math.min(TABS.length - 1, data.getInt("tab")));   // a page asked for
         // A page asked for by its name (/village school page), whatever its number.
-        if (data.contains("page")) for (int i = 0; i < TABS.length; i++) if (TABS[i].equals(data.getString("page"))) next.tab = i;
+        if (data.contains("page") && pageNumber(data.getString("page")) >= 0) next.tab = pageNumber(data.getString("page"));
         if (data.contains("shopSeller")) next.shopSeller = data.getString("shopSeller");                   // a seller asked for (/village stall books)
         if (data.getBoolean("map")) buildingsMap = true;                 // the Buildings page's map asked for (/village districts map)
         mc.setScreen(next);
@@ -171,8 +140,8 @@ public class CityScreen extends Screen {
 
     @Override
     protected void init() {
-        this.w = Math.min(this.width - 12, 500);
-        this.h = Math.min(this.height - 12, 330);
+        this.w = Math.min(this.width - 12, 600);
+        this.h = Math.min(this.height - 12, 360);
         this.left = (this.width - w) / 2;
         this.top = (this.height - h) / 2;
     }
@@ -182,62 +151,58 @@ public class CityScreen extends Screen {
         return false;
     }
 
-    private int tabWidth(int i, boolean narrow) {
-        return narrow ? (int) (font.width(TABS[i]) * 0.75) + 6 : font.width(TABS[i]) + 8;
+    // ------------------------------------------------------------------ [folk-ui] where things sit
+
+    /** The sidebar's width now: labelled, or icons only when the window is narrow. */
+    private int sideW() {
+        return w < 440 ? SIDE_NARROW : SIDE_W;
     }
 
-    /** Where each tab sits: {x, y, width}; in one row if they fit, in the small hand if that makes them fit, else in two rows. */
+    /** The page's left edge and width, right of the sidebar. */
+    private int pageX() { return left + sideW() + UiStyle.S2; }
+    private int pageW() { return w - sideW() - 2 * UiStyle.S2; }
+
+    /** The current section's page tabs: {x, y, width, page number} each, in rows under the header (cached per size). */
     private int[][] tabBoxes() {
-        // Worked out once for the window's size and place and kept (it was worked out twice a frame, measuring every
-        // tab's name over and over: in two rows, every tab's row again for every tab). The boxes are only read.
         boolean keep = TextCache.fresh();
-        if (keep && boxes != null && boxesW == w && boxesLeft == left && boxesTop == top && boxesEpoch == TextCache.epoch()) {
+        int sec = sectionOf(tab);
+        if (keep && boxes != null && boxesW == w && boxesLeft == left && boxesTop == top && boxesEpoch == TextCache.epoch() && boxesSec == sec) {
             return boxes;
         }
-        int[][] made = layTabs();
+        int[][] made = layTabs(sec);
         if (keep) {
             boxes = made;
             boxesW = w;
             boxesLeft = left;
             boxesTop = top;
             boxesEpoch = TextCache.epoch();
+            boxesSec = sec;
         }
         return made;
     }
 
     /** The tab boxes as last worked out (tabBoxes), and for what. */
     private int[][] boxes;
-    private int boxesW, boxesLeft, boxesTop, boxesEpoch;
+    private int boxesW, boxesLeft, boxesTop, boxesEpoch, boxesSec = -1;
 
-    private int[][] layTabs() {
-        int[][] out = new int[TABS.length][];
-        int room = w - 8;
-        int total = 0, small = 0;
-        for (int i = 0; i < TABS.length; i++) { total += tabWidth(i, false) + 1; small += tabWidth(i, true) + 1; }
-        boolean narrow = total > room && small <= room;
-        boolean two = total > room && small > room;
-        int perRow = two ? (TABS.length + 1) / 2 : TABS.length;
-        int tx = left + 4, ty = top + 36;
-        for (int i = 0; i < TABS.length; i++) {
-            if (i == perRow) { tx = left + 4; ty += 14; }
-            boolean sm = narrow || (two && rowWidth(i < perRow ? 0 : perRow, i < perRow ? perRow : TABS.length) > room);
-            int tw = tabWidth(i, sm);
-            out[i] = new int[]{ tx, ty, tw, sm ? 1 : 0 };
+    private int[][] layTabs(int sec) {
+        String[] pages = SECTIONS[sec].pages();
+        int[][] out = new int[pages.length][];
+        int x0 = pageX(), room = pageW();
+        int tx = x0, ty = top + HEAD_H + UiStyle.S1;
+        for (int i = 0; i < pages.length; i++) {
+            int tw = font.width(pages[i]) + 2 * UiStyle.S2;
+            if (tx > x0 && tx + tw > x0 + room) { tx = x0; ty += SUB_H + 1; }
+            out[i] = new int[]{ tx, ty, Math.min(tw, room), pageNumber(pages[i]) };
             tx += tw + 1;
         }
         return out;
     }
 
-    private int rowWidth(int from, int to) {
-        int total = 0;
-        for (int i = from; i < to; i++) total += tabWidth(i, false) + 1;
-        return total;
-    }
-
-    /** Where the page itself begins, under the tabs. */
+    /** Where the page itself begins, under the section's page tabs. */
     private int pageTop() {
         int[][] boxes = tabBoxes();
-        return boxes[boxes.length - 1][1] + 18;
+        return boxes[boxes.length - 1][1] + SUB_H + UiStyle.S2;
     }
 
     private String page() {
@@ -258,19 +223,28 @@ public class CityScreen extends Screen {
         return data.getCompound("now");
     }
 
+    /** A list of the books' words, read out of the tag once and kept (the books do not change while they are open). */
     private List<String> strings(String key) {
-        List<String> out = new ArrayList<>();
-        ListTag l = data.getList(key, Tag.TAG_STRING);
-        for (int i = 0; i < l.size(); i++) out.add(l.getString(i));
-        return out;
+        return strings.computeIfAbsent(key, k -> {
+            List<String> out = new ArrayList<>();
+            ListTag l = data.getList(k, Tag.TAG_STRING);
+            for (int i = 0; i < l.size(); i++) out.add(l.getString(i));
+            return out;
+        });
     }
 
+    /** A list of the books' rows, read out once and kept; a page may sort it in place (it is the page's own order). */
     private List<CompoundTag> compounds(String key) {
-        List<CompoundTag> out = new ArrayList<>();
-        ListTag l = data.getList(key, Tag.TAG_COMPOUND);
-        for (int i = 0; i < l.size(); i++) out.add(l.getCompound(i));
-        return out;
+        return compounds.computeIfAbsent(key, k -> {
+            List<CompoundTag> out = new ArrayList<>();
+            ListTag l = data.getList(k, Tag.TAG_COMPOUND);
+            for (int i = 0; i < l.size(); i++) out.add(l.getCompound(i));
+            return out;
+        });
     }
+
+    private final java.util.Map<String, List<String>> strings = new java.util.HashMap<>();
+    private final java.util.Map<String, List<CompoundTag>> compounds = new java.util.HashMap<>();
 
     /** How many of the last days the range shows. */
     private int span() {
@@ -311,39 +285,17 @@ public class CityScreen extends Screen {
         hover = null;
         zones.clear();
         links.begin(mouseX, mouseY);                                     // [teleport]
-        Ui.panel(g, left, top, w, h, 34);
-        String head = data.getString("name") + " — " + data.getString("age") + ", " + data.getString("rank").toLowerCase(Locale.ROOT)
-            + ", day " + data.getLong("today");
-        g.drawString(font, Ui.clip(font, head, w - 140), left + 8, top + 6, Ui.INK, false);
-        String sub = data.getString("land") + " · " + data.getString("look");
-        g.drawString(font, Ui.clip(font, sub, w - 140), left + 8, top + 17, Ui.MUTED, false);
-        // The range, top right.
-        int rx = left + w - 8;
-        for (int i = RANGE_NAMES.length - 1; i >= 0; i--) {
-            int bw = font.width(RANGE_NAMES[i]) + 8;
-            rx -= bw;
-            boolean on = i == range;
-            g.fill(rx, top + 6, rx + bw - 2, top + 18, on ? Ui.ROW_PICK : Ui.ROW);
-            g.renderOutline(rx, top + 6, bw - 2, 12, Ui.EDGE_SOFT);
-            g.drawString(font, RANGE_NAMES[i], rx + 3, top + 8, on ? Ui.GOOD : Ui.MUTED, false);
-        }
-        g.drawString(font, "Close ×", left + w - 8 - font.width("Close ×"), top + 21, Ui.FAINT, false);
-        // The tabs (in the small hand, or in two rows, when the window is narrow).
-        int[][] boxes = tabBoxes();
-        for (int i = 0; i < TABS.length; i++) {
-            int tx = boxes[i][0], ty = boxes[i][1], tw = boxes[i][2];
-            boolean on = i == tab;
-            g.fill(tx, ty, tx + tw, ty + 13, on ? Ui.PANEL : Ui.HEADER);
-            g.renderOutline(tx, ty, tw, 13, on ? Ui.EDGE : Ui.EDGE_SOFT);
-            if (on) g.fill(tx + 1, ty + 12, tx + tw - 1, ty + 13, Ui.PANEL);
-            if (boxes[i][3] == 1) small(g, TABS[i], tx + 3, ty + 4, on ? Ui.INK : Ui.MUTED);
-            else g.drawString(font, TABS[i], tx + 4, ty + 3, on ? Ui.INK : Ui.MUTED, false);
-        }
-        int x = left + 8, y = pageTop(), cw = w - 16, ch = top + h - 8 - y;
+        UiStyle.shadow(g, left, top, w, h);
+        UiStyle.panel(g, left, top, w, h);
+        headerBand(g, mouseX, mouseY);
+        sidebar(g, mouseX, mouseY);
+        subTabs(g, mouseX, mouseY);
+        int x = pageX(), y = pageTop(), cw = pageW(), ch = top + h - UiStyle.S2 - y;
         if (days().length == 0 && !TODAY_PAGES.contains(page())) {
-            g.drawString(font, "The town's books are written each morning. Come back tomorrow for the first of them;", x, y, Ui.MUTED, false);
-            g.drawString(font, "the Folk, Society, Leader, Buildings, Why, News, Board and Research pages have today's figures.", x, y + 11, Ui.MUTED, false);
+            UiStyle.empty(g, font, NO_BOOKS_TITLE, NO_BOOKS_HINT, x, y, cw, Math.min(ch, 60));
         } else {
+            // [folk-ui] Nothing a page draws can spill past the panel, whatever the window's size.
+            g.enableScissor(left + sideW() + 2, y - 2, left + w - 2, top + h - 2);
             switch (page()) {
                 case "Overview" -> overview(g, x, y, cw, ch, mouseX, mouseY);
                 case "Growth" -> growth(g, x, y, cw, ch, mouseX, mouseY);
@@ -430,9 +382,136 @@ public class CityScreen extends Screen {
                 }
                 default -> board(g, x, y, cw, ch);
             }
+            g.disableScissor();
         }
         if (links.draw(g, font)) hover = null;                          // [teleport] a name's buttons, over everything
         if (hover != null) g.renderComponentTooltip(font, hover, hoverX, hoverY);
+    }
+
+    /** [folk-ui] The header band: the town's banner and name, its age and day; its people, mood and treasury; the range; Close. */
+    private void headerBand(GuiGraphics g, int mx, int my) {
+        UiStyle.headerBand(g, left, top, w, HEAD_H);
+        int x = left + UiStyle.S2, y = top + 5;
+        if (!flag.isEmpty()) {
+            g.renderItem(flag, x, y + 2);
+            x += 20;
+        }
+        // The right side first, so the name knows its room: Close, the range, then the readings.
+        int rx = left + w - UiStyle.S2;
+        int cw = font.width("Close") + 10;
+        rx -= cw;
+        UiStyle.button(g, font, "Close", rx, top + 6, cw, 18, UiStyle.State.of(true, false, in(mx, my, rx, top + 6, cw, 18)));
+        closeX = rx;
+        rx -= UiStyle.S2;
+        for (int i = RANGE_NAMES.length - 1; i >= 0; i--) {
+            int bw = font.width(RANGE_NAMES[i]) + 8;
+            rx -= bw;
+            boolean on = i == range, over = in(mx, my, rx, top + 8, bw - 1, 14);
+            UiStyle.tile(g, rx, top + 8, bw - 1, 14, UiStyle.State.of(true, on, over));
+            g.drawString(font, RANGE_NAMES[i], rx + 4, top + 11, on ? UiStyle.ACCENT : UiStyle.TEXT_MUTED, false);
+            if (over) tip("Show the charts over " + (RANGES[i] == 0 ? "every day of the books" : "the last " + RANGES[i] + " days") + ".", mx, my);
+        }
+        rangeX = rx;
+        rx -= UiStyle.S2;
+        for (int i = HEAD_STATS - 1; i >= 0; i--) {
+            String text = headStats[i];
+            int bw = font.width(text) + 6;
+            if (rx - bw < x + 120) break;                       // no room: the name comes first
+            rx -= bw;
+            UiStyle.badge(g, font, text, rx, top + 9, headFills[i]);
+            if (in(mx, my, rx, top + 9, bw, 11)) tip(headTips[i], mx, my);
+            rx -= UiStyle.S1;
+        }
+        int room = rx - x - UiStyle.S2;
+        UiStyle.title(g, font, UiStyle.clip(font, data.getString("name"), room - 8), x, y);
+        UiStyle.text(g, font, headSub, x, y + 11, room, UiStyle.TEXT_MUTED);
+        if (in(mx, my, x, y + 10, room, 10) && font.width(headSub) > room) tip(headSub, mx, my);
+    }
+
+    /** The header's readings, made once from the books: people, mood, treasury; their colours and their tooltips. */
+    private static final int HEAD_STATS = 3;
+    private final String[] headStats = new String[HEAD_STATS], headTips = new String[HEAD_STATS];
+    private final int[] headFills = new int[HEAD_STATS];
+    private String headSub = "";
+    private net.minecraft.world.item.ItemStack flag = net.minecraft.world.item.ItemStack.EMPTY;
+    private int closeX, rangeX;
+
+    private void readHead() {
+        CompoundTag ov = data.getCompound("overview"), n = now();
+        int pop = last(series("pop"));
+        if (pop == 0) pop = compounds("people").size();
+        headStats[0] = pop + " folk";
+        headFills[0] = UiStyle.INFO_FILL;
+        headTips[0] = pop + " folk live here (" + last(series("kids")) + " of them children). The People section has every one.";
+        int mood = ov.getInt("mood");
+        headStats[1] = "Mood " + mood;
+        headFills[1] = UiStyle.levelFill(mood, 60, 40);
+        headTips[1] = "The folk's mood, on average: " + mood + " of 100. The town as a whole is " + ov.getString("content_word")
+            + " (" + ov.getInt("content") + "/100): see Overview \u203A Why.";
+        headStats[2] = num(now().getInt("coins")) + "c";
+        headFills[2] = UiStyle.WARNING_FILL;
+        headTips[2] = "The treasury: " + now().getInt("coins") + " coins. Economy \u203A Money has where it comes from and goes.";
+        headSub = data.getString("age") + " \u00B7 " + data.getString("rank") + " \u00B7 day " + data.getLong("today")
+            + (data.getString("land").isEmpty() ? "" : " \u00B7 " + data.getString("land"));
+        flag = CulturePage.banner(data.getCompound("culture").getCompound("banner"));
+        if (n.isEmpty()) headStats[2] = "\u2014";
+    }
+
+    /** [folk-ui] The sections down the left: an icon each, and its name when there is room. */
+    private void sidebar(GuiGraphics g, int mx, int my) {
+        int sw = sideW(), x = left + 1, y = top + HEAD_H + 2, ih = 22;
+        g.fill(x, y, x + sw, top + h - 1, UiStyle.PANEL_HEADER);
+        g.fill(x + sw, y, x + sw + 1, top + h - 1, UiStyle.EDGE_SOFT);
+        int on = sectionOf(tab);
+        for (int i = 0; i < SECTIONS.length; i++) {
+            int iy = y + i * ih;
+            if (iy + ih > top + h - 2) break;
+            boolean over = in(mx, my, x, iy, sw, ih);
+            UiStyle.sideTab(g, x, iy, sw, ih, UiStyle.State.of(true, i == on, over));
+            g.renderItem(sectionIcons[i], x + 5, iy + 3);
+            if (sw > SIDE_NARROW) {
+                g.drawString(font, UiStyle.clip(font, SECTIONS[i].name(), sw - 30), x + 25, iy + 7, i == on ? UiStyle.TEXT : UiStyle.TEXT_MUTED, false);
+            }
+            if (over) tip(SECTIONS[i].name() + "\n" + SECTIONS[i].tip() + "\n(key " + (i + 1) + ")", mx, my);
+        }
+        // Keys, at the foot when there is room.
+        int fy = top + h - 14;
+        if (sw > SIDE_NARROW && fy > y + SECTIONS.length * ih + 4) {
+            UiStyle.text(g, font, "1-7 \u00B7 \u2190\u2192", x + 6, fy, sw - 8, UiStyle.TEXT_FAINT);
+        }
+    }
+
+    /** The section icons, made once. */
+    private final net.minecraft.world.item.ItemStack[] sectionIcons = new net.minecraft.world.item.ItemStack[SECTIONS.length];
+
+    /** [folk-ui] The section's pages, as tabs across the top of the page. */
+    private void subTabs(GuiGraphics g, int mx, int my) {
+        int[][] boxes = tabBoxes();
+        String[] pages = SECTIONS[sectionOf(tab)].pages();
+        for (int i = 0; i < boxes.length; i++) {
+            int tx = boxes[i][0], ty = boxes[i][1], tw = boxes[i][2];
+            boolean on = boxes[i][3] == tab, over = in(mx, my, tx, ty, tw, SUB_H);
+            UiStyle.topTab(g, tx, ty, tw, SUB_H, UiStyle.State.of(true, on, over));
+            String label = UiStyle.clip(font, pages[i], tw - 6);
+            g.drawString(font, label, tx + (tw - font.width(label)) / 2, ty + 4, on ? UiStyle.TEXT : UiStyle.TEXT_MUTED, false);
+        }
+        int ry = boxes[boxes.length - 1][1] + SUB_H;
+        g.fill(pageX(), ry, pageX() + pageW(), ry + 1, UiStyle.EDGE_SOFT);
+    }
+
+    private static boolean in(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx < x + w && my >= y && my < y + h;
+    }
+
+    /** A tooltip in words, wrapped, drawn last (over everything). */
+    private void tip(String text, int mx, int my) {
+        List<Component> lines = new ArrayList<>();
+        for (String part : text.split("\n")) {
+            for (FormattedCharSequence l : TextCache.splitPlain(font, part, 240)) lines.add(Component.literal(toPlain(l)));
+        }
+        hover = lines;
+        hoverX = mx;
+        hoverY = my;
     }
 
     @Override
@@ -442,52 +521,167 @@ public class CityScreen extends Screen {
 
     // ------------------------------------------------------------------ the pages
 
-    private void overview(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
-        CompoundTag now = now();
-        CompoundTag leader = data.getCompound("leader");
-        int[] pop = series("pop"), out = series("output"), coins = series("coins"), worth = series("worth");
-        int cardW = (cw - 3 * 4) / 4, cardH = 30;
-        card(g, x, y, cardW, cardH, "Population", Integer.toString(last(pop)), delta(pop, 7, ""), BLUE);
-        card(g, x + (cardW + 4), y, cardW, cardH, "Made a day", now.getInt("output_week_avg") + "c",
-            now.getInt("trend") == 0 ? "yesterday " + now.getInt("output_yesterday") : (now.getInt("trend") > 0 ? "+" : "") + now.getInt("trend") + "% on the week", GREEN);
-        card(g, x + 2 * (cardW + 4), y, cardW, cardH, "Treasury", now.getInt("coins") + "c", delta(coins, 7, "c"), AMBER);
-        card(g, x + 3 * (cardW + 4), y, cardW, cardH, "Worth", Math.max(0, now.getInt("worth")) + "c", delta(worth, 7, "c"), PURPLE);
-        int y2 = y + cardH + 4;
-        CompoundTag homes = data.getCompound("homes");
-        card(g, x, y2, cardW, cardH, "Content", now.getInt("content") + "/100", now.getString("content_word"),
-            now.getInt("content") >= 60 ? GREEN : now.getInt("content") >= 40 ? AMBER : RED);
-        card(g, x + (cardW + 4), y2, cardW, cardH, "Beds", homes.getInt("bedded") + "/" + homes.getInt("folk"),
-            "room for " + homes.getInt("room"), homes.getInt("folk") >= homes.getInt("room") ? RED : GREEN);
-        int[] fd = series("food_days10");
-        card(g, x + 2 * (cardW + 4), y2, cardW, cardH, "Food put by", String.format(Locale.ROOT, "%.1f days", last(fd) / 10.0),
-            now.getInt("food") + " in the stores", last(fd) < 15 ? RED : GREEN);
-        card(g, x + 3 * (cardW + 4), y2, cardW, cardH, data.getCompound("leader").getString("title").isEmpty() ? "Leader"
-            : capital(leader.getString("title")), leader.getString("name"),
-            leader.contains("approval") ? leader.getInt("approval") + "% approve" : "", BROWN);
-        // At the end of the line, what is lying about the town (entity/Sweepers): every one a thing the server ticks.
-        CompoundTag house = data.getCompound("storehouse");
-        String lying = house.contains("lying") ? "Lying about: " + house.getInt("lying") + (house.getInt("lying") == 1 ? " item" : " items") : "";
-        int lyingW = lying.isEmpty() ? 0 : (int) Math.ceil(font.width(lying) * 0.75F) + 8;
-        // And the town's renown, with the museum's share of it (Museum).
-        CompoundTag museum = data.getCompound("museum");
-        String renown = museum.getInt("renown") > 0 ? " · Renown " + museum.getInt("renown")
-            + (museum.getInt("renown_museum") > 0 ? " (the museum's finds " + museum.getInt("renown_museum") + ")" : "") : "";
-        small(g, Ui.clip(font, ages() + renown, (int) ((cw - lyingW) / 0.75)), x, y2 + cardH + 3, Ui.MUTED);
-        if (!lying.isEmpty()) small(g, lying, x + cw - lyingW + 8, y2 + cardH + 3, house.getInt("lying") > 40 ? Ui.WARN : Ui.MUTED);
-        int cy = y2 + cardH + 12;
-        int chartH = Math.max(50, (ch - (cy - y)) / 2 - 18);
-        int half = (cw - 6) / 2;
-        chart(g, x, cy, half, chartH, "Population", mx, my, new Series("Folk", pop, BLUE), new Series("Children", series("kids"), PINK));
-        chart(g, x + half + 6, cy, half, chartH, "Made a day (coins' worth)", mx, my, new Series("Output", out, GREEN),
-            new Series("Wages", series("wages"), RED));
-        int dy = cy + chartH + 16;
-        Ui.section(g, font, "What is driving it", x, dy, cw);
-        dy += 11;
-        List<String> drivers = strings("drivers");
-        for (String d : drivers) {
-            if (dy > y + ch - 9) break;
-            dy = driverLine(g, d, x, dy, cw, 1);
+    /**
+     * [folk-ui] One reading on the Overview: its name, its value as shown, a note under it (how it has moved), which way
+     * it moved and whether up is good, a 0..100 gauge when it has no history, its history for the sparkline, its colour
+     * and what it means in words. Made once, when the books open.
+     */
+    private record Kpi(String label, String value, String note, int delta, boolean upIsGood, int gauge, int[] spark,
+                       int colour, String tip) {}
+
+    private final List<Kpi> kpis = new ArrayList<>(6);
+
+    /** An alert as the Overview draws it, its words made once: how bad, what, the page's name with its arrow, the page, its tooltip. */
+    private record Alert(int level, String text, String go, int page, String tip) {}
+
+    private final List<Alert> alerts = new ArrayList<>();
+
+    /** The six readings, from the books (series) and the Overview's tag (BoardOverview). */
+    private void readKpis() {
+        kpis.clear();
+        CompoundTag ov = data.getCompound("overview");
+        alerts.clear();
+        ListTag al = ov.getList("alerts", Tag.TAG_COMPOUND);
+        for (int i = 0; i < al.size(); i++) {
+            CompoundTag a = al.getCompound(i);
+            int page = pageNumber(a.getString("page"));
+            alerts.add(new Alert(a.getInt("level"), a.getString("text"), a.getString("page") + " \u203A", page,
+                a.getString("text") + "\nClick to open " + SECTIONS[sectionOf(Math.max(0, page))].name() + " \u203A " + a.getString("page") + "."));
         }
+        CompoundTag homes = data.getCompound("homes");
+        int[] fd = series("food_days10");
+        kpis.add(new Kpi("Food", String.format(Locale.ROOT, "%.1f days", last(fd) / 10.0), change(fd, 7, 10.0, "days"),
+            last(fd) - ago(fd, 7), true, -1, fd, last(fd) < 20 ? UiStyle.DANGER_FILL : last(fd) < 40 ? UiStyle.WARNING_FILL : UiStyle.SUCCESS_FILL,
+            "Food put by: how many days the stores would feed the town at today's headcount (" + now().getInt("food")
+                + " in the stores). Under 4 days is a worry, under 2 an emergency. Economy \u203A Stores has it over time."));
+        int[] bedded = series("bedded"), room = series("room");
+        int folkNow = Math.max(homes.getInt("folk"), last(series("pop")));
+        kpis.add(new Kpi("Homes & beds", homes.getInt("bedded") + "/" + folkNow, "room for " + homes.getInt("room"),
+            last(bedded) - ago(bedded, 7), true, -1, room, homes.getInt("bedded") < folkNow ? UiStyle.WARNING_FILL : UiStyle.SUCCESS_FILL,
+            homes.getInt("bedded") + " of " + folkNow + " folk have a bed of their own; the houses have room for " + homes.getInt("room")
+                + ". The line is the room over time. People \u203A Homes has every household."));
+        int adults = ov.getInt("adults"), workers = ov.getInt("workers");
+        int[] filled = minus(series("adults"), series("idle"));
+        kpis.add(new Kpi("Jobs filled", workers + "/" + adults, adults == 0 ? "nobody grown yet" : (workers * 100 / Math.max(1, adults)) + "% at a trade",
+            last(filled) - ago(filled, 7), true, -1, filled, workers < adults ? UiStyle.WARNING_FILL : UiStyle.SUCCESS_FILL,
+            workers + " of " + adults + " grown folk have a trade. The line is the hands at work each day. Economy \u203A Jobs has every trade."));
+        int[] coins = series("coins");
+        int perDay = coins.length < 2 ? 0 : last(coins) - ago(coins, 1);
+        kpis.add(new Kpi("Coin a day", (perDay > 0 ? "+" : "") + perDay + "c", "treasury " + num(now().getInt("coins")) + "c",
+            perDay, true, -1, coins, perDay < 0 ? UiStyle.DANGER_FILL : UiStyle.SUCCESS_FILL,
+            "What the treasury gained (or lost) yesterday: takings, rent and tithe in, wages and the town's spending out. "
+                + "The line is the treasury over time. Economy \u203A Money has it all."));
+        int safety = ov.getInt("safety"), looks = ov.getInt("looks");
+        kpis.add(new Kpi("Safety", safety + "/100", safety >= 70 ? "safe" : safety >= 40 ? "uneasy" : "unsafe", 0, true, safety, new int[0],
+            UiStyle.levelFill(safety, 70, 40), "How safe the folk feel: the wall, the watch, the neighbours, a death or the alarm. "
+                + ov.getString("safety_why") + ". Town \u203A Watch has the watch."));
+        kpis.add(new Kpi("Looks", looks + "/100", looks >= 70 ? "handsome" : looks >= 40 ? "plain" : "shabby", 0, true, looks, new int[0],
+            UiStyle.levelFill(looks, 70, 40), "How the town looks: " + ov.getString("looks_why") + ". Culture has its banner and customs."));
+    }
+
+    /** a minus b, day by day (the shorter padded with nothing). */
+    private static int[] minus(int[] a, int[] b) {
+        int[] out = new int[Math.min(a.length, b.length)];
+        for (int i = 0; i < out.length; i++) out[i] = a[a.length - out.length + i] - b[b.length - out.length + i];
+        return out;
+    }
+
+    /** "+1.2 days in 7 days": how far a reading has moved, with the books' days, in words (scaled down by {@code per}). */
+    private static String change(int[] a, int back, double per, String unit) {
+        if (a.length < 2) return "first day of the books";
+        double d = (last(a) - ago(a, back)) / per;
+        int days = Math.min(back, a.length - 1);
+        return String.format(Locale.ROOT, "%s%.1f %s in %d %s", d > 0 ? "+" : "", d, unit, days, days == 1 ? "day" : "days");
+    }
+
+    /**
+     * [folk-ui] The Overview: six readings with their trend; what needs attention now (each a click away from its page);
+     * today's news; what is driving it; and, with room, the town over time.
+     */
+    private void overview(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+        if (kpis.isEmpty()) readKpis();
+        int cols = cw >= 420 ? 6 : 3, rows = (kpis.size() + cols - 1) / cols, gap = UiStyle.S1;
+        int kw = (cw - (cols - 1) * gap) / cols, kh = rows * (40 + gap) > ch / 2 ? 28 : 40;   // a short window: the cards without their note
+        for (int i = 0; i < kpis.size(); i++) {
+            int kx = x + (i % cols) * (kw + gap), ky = y + (i / cols) * (kh + gap);
+            kpiCard(g, kpis.get(i), kx, ky, kw, kh, mx, my);
+        }
+        int top2 = y + rows * (kh + gap) + UiStyle.S1;
+        int bottom = y + ch;
+        boolean wide = cw >= 360;
+        int lw = wide ? (cw - UiStyle.S3) / 2 : cw, rx = wide ? x + lw + UiStyle.S3 : x;
+        // What needs attention now.
+        UiStyle.heading(g, font, "Needs attention", x, top2, lw);
+        int ay = top2 + 12;
+        if (alerts.isEmpty()) {
+            g.drawString(font, "\u2714 All is well: nothing needs you just now.", x, ay, UiStyle.SUCCESS, false);
+            ay += UiStyle.LINE + 2;
+        }
+        int alertsEnd = wide ? bottom - 4 : top2 + 12 + Math.min(alerts.size(), 4) * 13;
+        for (int i = 0; i < alerts.size() && ay + 12 <= alertsEnd; i++) {
+            Alert a = alerts.get(i);
+            int level = a.level();
+            int fill = level >= 2 ? UiStyle.DANGER_FILL : level == 1 ? UiStyle.WARNING_FILL : UiStyle.INFO_FILL;
+            boolean over = in(mx, my, x, ay - 1, lw, 12);
+            UiStyle.tile(g, x, ay - 1, lw, 12, over ? UiStyle.State.HOVER : UiStyle.State.NORMAL);
+            g.fill(x + 1, ay, x + 4, ay + 10, fill);
+            String go = a.go();
+            int gw = font.width(go);
+            UiStyle.text(g, font, a.text(), x + 7, ay + 1, lw - gw - 12, level >= 2 ? UiStyle.DANGER : UiStyle.TEXT);
+            g.drawString(font, go, x + lw - gw - 3, ay + 1, UiStyle.ACCENT, false);
+            if (over) {
+                zones.add(new Zone(x, ay - 1, x + lw, ay + 11, () -> openPage(a.page())));
+                tip(a.tip(), mx, my);
+            }
+            ay += 13;
+        }
+        // Today's news, and what is driving the town.
+        int ny = wide ? top2 : ay + UiStyle.S2;
+        UiStyle.heading(g, font, "Today's news", rx, ny, lw);
+        ny += 12;
+        List<String> news = strings("news");
+        int newsEnd = Math.min(bottom, ny + Math.max(30, (bottom - ny) / 2));
+        if (news.isEmpty()) {
+            g.drawString(font, UiStyle.clip(font, "Nothing in the chronicle yet.", lw), rx, ny, UiStyle.TEXT_FAINT, false);
+            ny += UiStyle.LINE;
+        }
+        for (int i = 0; i < news.size() && ny + UiStyle.LINE <= newsEnd; i++) {
+            for (FormattedCharSequence l : TextCache.split(font, news.get(i), lw - 8)) {
+                if (ny + UiStyle.LINE > newsEnd) break;
+                g.drawString(font, l, rx + 6, ny, UiStyle.TEXT, false);
+                ny += UiStyle.LINE;
+            }
+            g.fill(rx, ny - UiStyle.LINE * 1 + 3, rx + 2, ny - UiStyle.LINE + 5, UiStyle.ACCENT_FILL);
+            ny += 2;
+        }
+        if (ny + 24 < bottom) {
+            ny += UiStyle.S1;
+            UiStyle.heading(g, font, "What is driving it", rx, ny, lw);
+            ny += 12;
+            for (String d : strings("drivers")) {
+                if (ny > bottom - 9) break;
+                ny = driverLine(g, d, rx, ny, lw, 1);
+            }
+        }
+    }
+
+    /** One reading's card: name, value, its move with a trend mark, and its sparkline or gauge; its words under the mouse. */
+    private void kpiCard(GuiGraphics g, Kpi k, int x, int y, int w, int h, int mx, int my) {
+        UiStyle.card(g, x, y, w, h, k.colour());
+        g.drawString(font, UiStyle.clip(font, k.label().toUpperCase(Locale.ROOT), w - 8), x + 6, y + 4, UiStyle.TEXT_FAINT, false);
+        UiStyle.title(g, font, UiStyle.clip(font, k.value(), w - 10), x + 6, y + 15);
+        int sw = Math.min(40, w / 3), sx = x + w - sw - 4;
+        if (h < 36) {                                           // the short card: no note, the trend beside the value
+            if (k.gauge() < 0) UiStyle.trend(g, font, k.delta(), k.upIsGood(), sx - 10, y + 15);
+            if (in(mx, my, x, y, w, h)) tip(k.label() + ": " + k.value() + " (" + k.note() + ")\n" + k.tip(), mx, my);
+            return;
+        }
+        int tx = x + 6;
+        if (k.gauge() < 0) tx += UiStyle.trend(g, font, k.delta(), k.upIsGood(), tx, y + h - 11) + 2;
+        small(g, UiStyle.clip(font, k.note(), (int) ((w - (tx - x) - 4) / 0.75)), tx, y + h - 10, UiStyle.TEXT_MUTED);
+        if (k.gauge() >= 0) UiStyle.bar(g, sx, y + 18, sw, 4, k.gauge() / 100F, k.colour());
+        else UiStyle.sparkline(g, sx, y + 14, sw, 12, k.spark(), RANGES[range] == 0 ? k.spark().length : RANGES[range], k.colour());
+        if (in(mx, my, x, y, w, h)) tip(k.label() + ": " + k.value() + "\n" + k.tip(), mx, my);
     }
 
     private String delta(int[] a, int back, String unit) {
@@ -1548,6 +1742,15 @@ public class CityScreen extends Screen {
     private void folk(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
         List<CompoundTag> people = compounds("people");
         people.sort(folkOrder());
+        String find = finds.getOrDefault("Folk", "").toLowerCase(Locale.ROOT);
+        if (!find.isEmpty()) {                                                // [folk-ui] typed: only those it finds
+            List<CompoundTag> found = new ArrayList<>();
+            for (CompoundTag p : people) {
+                if ((p.getString("name") + " " + p.getString("trade") + " " + p.getString("type") + " " + p.getString("now"))
+                        .toLowerCase(Locale.ROOT).contains(find)) found.add(p);
+            }
+            people = found;
+        }
         List<CompoundTag> players = compounds("players");
         // The town's money, in sum.
         int loose = 0, worth = 0, fund = 0, owned = 0, grown = 0;
@@ -1565,9 +1768,16 @@ public class CityScreen extends Screen {
             + (grown == 0 ? 0 : worth / grown) + " each)" + (fund > 0 ? " · put by toward houses " + num(fund) + "c" : "")
             + (owned > 0 ? " · in houses they own " + num(owned) + "c" : "")
             + (richest == null ? "" : " · richest " + richest.getString("name") + " (" + num(richest.getInt("worth")) + "c)");
-        small(g, Ui.clip(font, sums, (int) (cw / 0.75)), x, y, Ui.MUTED);
+        int findW = findBar(g, "Folk", "Type to find a folk", x, y - 1, cw, people.size());
+        small(g, Ui.clip(font, sums, (int) ((cw - findW - 4) / 0.75)), x, y, Ui.MUTED);
         y += 11;
         ch -= 11;
+        if (people.isEmpty()) {
+            UiStyle.empty(g, font, find.isEmpty() ? "Nobody lives here yet" : "Nobody matches \u201C" + find + "\u201D",
+                find.isEmpty() ? "Folk come as the town grows: homes, food and work bring them." : "Backspace to change it, Esc to clear it.",
+                x, y + 10, cw, 40);
+            return;
+        }
         // The players with a stake in it, along the foot (a line each, up to four).
         int playerRows = Math.min(4, players.size());
         int foot = playerRows == 0 ? 0 : 12 + 10 * playerRows;
@@ -1590,9 +1800,16 @@ public class CityScreen extends Screen {
                 Integer.toString(p.getInt("mood")), p.getString("type"),
                 p.getString("wealth").isEmpty() ? "a child" : p.getInt("worth") + "c · " + p.getString("wealth") };
             boolean over = mx >= x && mx < x + cw && my >= ry - 1 && my < ry + 9;
+            if (over && p.hasUUID("uuid")) {                                      // [folk-ui] a click: its profile
+                final UUID who = p.getUUID("uuid");
+                zones.add(new Zone(x - 2, ry - 1, x + cw, ry + 9, () -> { UiStyle.click(); FolkProfileScreen.open(who, null, this); }));
+                g.renderOutline(x - 2, ry - 1, cw + 2, 10, UiStyle.EDGE);
+            }
             if (over && !p.getString("wealth").isEmpty()) {
                 List<Component> tip = new ArrayList<>();
                 tip.add(Component.literal(p.getString("name") + ", " + p.getString("trade").toLowerCase(Locale.ROOT)));
+                if (!p.getString("now").isEmpty()) tip.add(Component.literal("Now: " + p.getString("now")
+                    + (p.getString("need").isEmpty() ? "" : " \u00B7 short of " + p.getString("need").toLowerCase(Locale.ROOT))).withColor(0xBFD7EA));
                 tip.add(Component.literal("Loose money: " + p.getInt("purse") + "c in its purse").withColor(0xE8C46A));
                 if (p.getInt("house_fund") > 0) tip.add(Component.literal("Put by toward a house: " + p.getInt("house_fund") + "c"));
                 if (p.getInt("house_owned") > 0) tip.add(Component.literal("Its share of the house it owns: " + p.getInt("house_owned") + "c"));
@@ -1628,7 +1845,7 @@ public class CityScreen extends Screen {
         for (var e : bands.entrySet()) bs.append(bs.length() == 0 ? "" : ", ").append(e.getValue()).append(' ').append(e.getKey());
         int ill = 0;                                                                         // [batchA] who is ill (Health)
         for (CompoundTag p : people) if (!p.getString("ill").isEmpty()) ill++;
-        small(g, Ui.clip(font, people.size() + " folk (" + bs + "); " + (ill > 0 ? ill + " ill; " : "") + purses + " coins loose in purses · the mouse over a row for its money laid out"
+        small(g, Ui.clip(font, people.size() + " folk (" + bs + "); " + (ill > 0 ? ill + " ill; " : "") + purses + " coins loose in purses · click a row for its profile"
             + " · click a heading to sort · ★ the leader", (int) (cw / 0.75)), x, y + ch - 10, Ui.FAINT);
         if (playerRows > 0) {
             int py = y + ch + 2;
@@ -1648,6 +1865,19 @@ public class CityScreen extends Screen {
                 py += 10;
             }
         }
+    }
+
+    /**
+     * [folk-ui] The find box at the top right of a page that finds things: what is typed (or how to start), and how many
+     * it found. Returns its width, for what shares the line.
+     */
+    private int findBar(GuiGraphics g, String page, String hint, int x, int y, int cw, int found) {
+        String typed = finds.getOrDefault(page, "");
+        String text = typed.isEmpty() ? hint : typed + "_  (" + found + ")";
+        int bw = Math.min(cw / 2, Math.max(90, font.width(text) + 10));
+        UiStyle.well(g, x + cw - bw, y, bw, 11, typed.isEmpty() ? UiStyle.WELL : UiStyle.TILE_SELECTED);
+        UiStyle.text(g, font, text, x + cw - bw + 4, y + 2, bw - 6, typed.isEmpty() ? UiStyle.TEXT_FAINT : UiStyle.TEXT);
+        return bw;
     }
 
     private Comparator<CompoundTag> folkOrder() {
@@ -2124,7 +2354,15 @@ public class CityScreen extends Screen {
     private String stockKind;
     private int stockSort = 1;
     private boolean stockDown = true;
-    private String stockFind = "";
+    /** [folk-ui] What is typed on a page that finds things (Folk, Stock, News), by page: kept while the books are open. */
+    private final java.util.Map<String, String> finds = new java.util.HashMap<>();
+    private static final java.util.Set<String> SEARCHABLE = java.util.Set.of("Folk", "Stock", "News");
+
+    /** What is typed on this page, "" for nothing yet; null when the page finds nothing. */
+    @javax.annotation.Nullable
+    private String findText() {
+        return SEARCHABLE.contains(page()) ? finds.getOrDefault(page(), "") : null;
+    }
 
     private static final String[] STOCK_HEADS = { "Item", "In store", "Stacks", "Storehouse", "Chests", "On the way", "Each", "Worth", "Kept back" };
 
@@ -2166,6 +2404,7 @@ public class CityScreen extends Screen {
             zones.add(new Zone(kx, ky, kx + kw, ky + 10, () -> { stockKind = pick; scroll = 0; }));
             kx += kw + 2;
         }
+        String stockFind = finds.getOrDefault("Stock", "");
         String findText = stockFind.isEmpty() ? "Type to find a thing" : "Find: " + stockFind + "_";
         int fw = (int) (font.width(findText) * 0.75) + 8;
         g.fill(x + cw - fw, ky, x + cw, ky + 10, Ui.ROW);
@@ -2634,8 +2873,9 @@ public class CityScreen extends Screen {
         int ry = y + 10;
         int rows = (ch - 22) / 10;
         int start = Math.max(0, Math.min(scroll, Math.max(0, all.size() - rows)));
-        int furnished = 0, furnishOf = 0, tall = 0, going = 0;
+        int furnished = 0, furnishOf = 0, tall = 0, going = 0, mending = 0;
         for (CompoundTag b : all) {
+            if ("needs repair".equals(b.getString("repair"))) mending++;          // [integrity]
             furnished += b.getInt("furnished");
             furnishOf += b.getInt("furnish_of");
             if (b.getInt("storeys") > 1) tall++;
@@ -2647,6 +2887,7 @@ public class CityScreen extends Screen {
             g.fill(x - 2, ry - 1, x, ry + 9, DistrictMap.colour(b.getString("district")));   // its quarter's colour
             String where = b.getString("dir").equals("at the heart") ? "at the heart" : b.getInt("dist") + " " + b.getString("dir");
             String storeys = b.getBoolean("raising") ? "going up" : Integer.toString(b.getInt("storeys"));
+            if (b.contains("repair") && !b.getBoolean("raising")) storeys += " · " + b.getString("repair");   // [integrity]
             String fur = b.getInt("furnish_of") == 0 ? "—" : Math.round(b.getInt("furnished") * 100f / b.getInt("furnish_of")) + "%";
             String home = b.contains("living") ? b.getInt("living") + " · " + b.getString("tenure") : "";
             String quarter = b.getString("district") + (b.contains("smoke") ? " · smoky" : b.getBoolean("parkside") ? " · by park" : "");
@@ -2655,11 +2896,11 @@ public class CityScreen extends Screen {
                 if (BUILDING_COLS[c] >= tw - 20) break;
                 int colW = (c + 1 < BUILDING_COLS.length ? BUILDING_COLS[c + 1] : tw) - BUILDING_COLS[c] - 3;
                 small(g, Ui.clip(font, cells[c], (int) (colW / 0.75)), x + BUILDING_COLS[c], ry + 1,
-                    c == 3 && b.getBoolean("raising") ? Ui.WARN : c == 2 && b.contains("smoke") ? Ui.BAD : Ui.INK);
+                    c == 3 && (b.getBoolean("raising") || "needs repair".equals(b.getString("repair"))) ? Ui.WARN : c == 2 && b.contains("smoke") ? Ui.BAD : Ui.INK);
             }
             ry += 10;
         }
-        if (!buildingsMap) small(g, Ui.clip(font, all.size() + " buildings, " + tall + " of two storeys" + (going > 0 ? ", " + going + " going up" : "")
+        if (!buildingsMap) small(g, Ui.clip(font, all.size() + " buildings, " + tall + " of two storeys" + (going > 0 ? ", " + going + " going up" : "") + (mending > 0 ? ", " + mending + " needing repair" : "")
             + (furnishOf > 0 ? "; insides " + Math.round(furnished * 100f / furnishOf) + "% furnished for the age" : "")
             + (all.size() > rows ? " · scroll for more" : ""), (int) ((tw - toggleW - 4) / 0.75)), x, y + ch - 10, Ui.FAINT);
         // The side: how many of each, and what comes next.
@@ -3053,7 +3294,10 @@ public class CityScreen extends Screen {
         }
         all.add("The chronicle, latest first:");
         all.addAll(strings("news"));
-        lines(g, all, x, y, cw, ch);
+        String find = finds.getOrDefault("News", "").toLowerCase(Locale.ROOT);
+        if (!find.isEmpty()) all.removeIf(l -> !l.toLowerCase(Locale.ROOT).contains(find) && !l.endsWith(":"));   // [folk-ui] found, under their headings
+        findBar(g, "News", "Type to find in the news", x, y, cw, all.size());
+        lines(g, all, x, y + 13, cw, ch - 13);
     }
 
     /** The ages and the day each began, read from the books: "Wood Age day 1 · Stone Age day 6 · ...". */
@@ -3584,21 +3828,25 @@ public class CityScreen extends Screen {
         for (Zone z : new ArrayList<>(zones)) {
             if (mx >= z.x0() && mx < z.x1() && my >= z.y0() && my < z.y1()) { z.act().run(); return true; }
         }
-        // The range buttons.
-        int rx = left + w - 8;
-        for (int i = RANGE_NAMES.length - 1; i >= 0; i--) {
+        // Close, and the range buttons (where the header last drew them).
+        if (in(mx, my, closeX, top + 6, font.width("Close") + 10, 18)) { UiStyle.click(); onClose(); return true; }
+        int rx = rangeX;
+        for (int i = 0; i < RANGE_NAMES.length; i++) {
             int bw = font.width(RANGE_NAMES[i]) + 8;
-            rx -= bw;
-            if (mx >= rx && mx < rx + bw - 2 && my >= top + 6 && my < top + 18) { range = i; return true; }
+            if (in(mx, my, rx, top + 8, bw - 1, 14)) { UiStyle.click(); range = i; return true; }
+            rx += bw;
         }
-        if (mx >= left + w - 8 - font.width("Close ×") && mx < left + w - 8 && my >= top + 20 && my < top + 30) { onClose(); return true; }
-        // The tabs.
-        int[][] boxes = tabBoxes();
-        for (int i = 0; i < TABS.length; i++) {
-            int tx = boxes[i][0], ty = boxes[i][1], tw = boxes[i][2];
-            if (mx >= tx && mx < tx + tw && my >= ty && my < ty + 13) { tab = i; scroll = 0; return true; }
+        // The sections, down the left.
+        int sy = top + HEAD_H + 2;
+        if (mx >= left && mx < left + 1 + sideW() && my >= sy) {
+            int i = (int) ((my - sy) / 22);
+            if (i >= 0 && i < SECTIONS.length) { openSection(i); return true; }
         }
-        int x = left + 8, y = pageTop(), cw = w - 16;
+        // The section's pages.
+        for (int[] b : tabBoxes()) {
+            if (in(mx, my, b[0], b[1], b[2], SUB_H)) { openPage(b[3]); return true; }
+        }
+        int x = pageX(), y = pageTop(), cw = pageW();
         if (page().equals("Jobs") && !jobsMarket) {
             y += 12;                                       // under the switch between the trades and the job market
             // A trade picked from the table: its own history below.
@@ -3627,6 +3875,20 @@ public class CityScreen extends Screen {
         return super.mouseClicked(mx, my, button);
     }
 
+    /** Open a page by its number, with a click and its scroll at the top. */
+    private void openPage(int page) {
+        if (page < 0 || page == tab) return;
+        UiStyle.click();
+        tab = page;
+        scroll = 0;
+    }
+
+    /** Open a section at its first page (or stay, if the page open is in it already). */
+    private void openSection(int i) {
+        if (sectionOf(tab) == i) return;
+        openPage(pageNumber(SECTIONS[i].pages()[0]));
+    }
+
     @Override
     public boolean mouseScrolled(double mx, double my, double dx, double dy) {
         scroll = Math.max(0, scroll - (int) Math.signum(dy) * 3);
@@ -3635,9 +3897,11 @@ public class CityScreen extends Screen {
 
     @Override
     public boolean charTyped(char c, int mods) {
-        // On the Stock page, what is typed finds a thing.
-        if (page().equals("Stock") && (Character.isLetterOrDigit(c) || c == ' ' || c == '_') && stockFind.length() < 24) {
-            stockFind += c;
+        // On a page that finds things, what is typed finds them (a digit starts a search only after a letter: alone, it
+        // picks a section).
+        String find = findText();
+        if (find != null && (Character.isLetter(c) || !find.isEmpty() && (Character.isDigit(c) || c == ' ' || c == '_')) && find.length() < 24) {
+            finds.put(page(), find + c);
             scroll = 0;
             return true;
         }
@@ -3646,15 +3910,24 @@ public class CityScreen extends Screen {
 
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
-        // On the Stock page, backspace takes back a letter of what is typed.
-        if (page().equals("Stock") && key == 259 && !stockFind.isEmpty()) {
-            stockFind = stockFind.substring(0, stockFind.length() - 1);
+        // Backspace takes back a letter of what is typed; Esc clears it before it closes the books.
+        String find = findText();
+        if (find != null && !find.isEmpty() && (key == 259 || key == 256)) {
+            finds.put(page(), key == 256 ? "" : find.substring(0, find.length() - 1));
             scroll = 0;
             return true;
         }
-        // Left and right: the next page.
-        if (key == 263) { tab = (tab + TABS.length - 1) % TABS.length; scroll = 0; return true; }
-        if (key == 262) { tab = (tab + 1) % TABS.length; scroll = 0; return true; }
+        // Left and right: the section's next page; 1-7 the sections; Tab and Shift-Tab the next and last section.
+        String[] pages = SECTIONS[sectionOf(tab)].pages();
+        int at = java.util.Arrays.asList(pages).indexOf(TABS[tab]);
+        if (key == 263) { openPage(pageNumber(pages[(at + pages.length - 1) % pages.length])); return true; }
+        if (key == 262) { openPage(pageNumber(pages[(at + 1) % pages.length])); return true; }
+        if (key >= 49 && key < 49 + SECTIONS.length && (find == null || find.isEmpty())) { openSection(key - 49); return true; }
+        if (key == 258) {
+            boolean back = (mods & 1) != 0;
+            openSection((sectionOf(tab) + (back ? SECTIONS.length - 1 : 1)) % SECTIONS.length);
+            return true;
+        }
         return super.keyPressed(key, scan, mods);
     }
 }

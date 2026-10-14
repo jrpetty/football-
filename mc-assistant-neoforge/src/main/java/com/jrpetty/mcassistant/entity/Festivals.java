@@ -485,7 +485,8 @@ public final class Festivals extends SavedData {
     /** Air, or what a block put there would push aside (grass, a flower, a layer of snow), and no water. */
     static boolean open(ServerLevel level, BlockPos p) {
         BlockState s = level.getBlockState(p);
-        return s.isAir() || s.canBeReplaced() && s.getFluidState().isEmpty();
+        return (s.isAir() || s.canBeReplaced() && s.getFluidState().isEmpty())
+            && TownBlocks.mayPlace(level, p, TownBlocks.Why.CIVIC);                // [integrity] never a doorway, a road or a building
     }
 
     /**
