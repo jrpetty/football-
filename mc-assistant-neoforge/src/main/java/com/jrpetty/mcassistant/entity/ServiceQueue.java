@@ -43,6 +43,9 @@ public final class ServiceQueue {
         final UUID folk;
         final long joined;
         long serving = -1, lastAsked;
+        /** [earning] What it asks for, and the player on a counter shift who served it (null: not yet). */
+        String wants = "";
+        @Nullable String byHand;
 
         Place(UUID folk, long now) {
             this.folk = folk;
@@ -90,6 +93,12 @@ public final class ServiceQueue {
             IN.put(f.getUUID(), key);
         }
         me.lastAsked = now;
+        if (!wants.isEmpty()) me.wants = wants;                                     // [earning]
+        if (me.byHand != null) {                                                   // [earning] served by a player on shift
+            SERVED_BY.put(f.getUUID(), me.byHand);
+            leave(f.getUUID());
+            return Turn.GO;
+        }
         line.removeIf(p -> now - p.lastAsked > FORGOTTEN || gone(level, p.folk));
         if (now - me.joined > GIVE_UP) {
             leave(f.getUUID());
@@ -110,6 +119,10 @@ public final class ServiceQueue {
         f.getNavigation().stop();
         f.getLookControl().setLookAt(point.pos().getX() + 0.5, point.pos().getY() + 1.0, point.pos().getZ() + 0.5);
         if (i != 0) return Turn.BUSY;
+        if (ShiftTasks.manned(level, point.pos())) {                               // [earning] the player on shift serves
+            if (me.serving < 0) me.serving = now;
+            return Turn.BUSY;
+        }
         VillageFolkEntity keeper = st.keeper();
         if (me.serving < 0) {
             me.serving = now;
@@ -166,8 +179,35 @@ public final class ServiceQueue {
     public static List<UUID> lineAt(BlockPos point) {
         List<Place> line = LINES.get(point.asLong());
         List<UUID> out = new ArrayList<>();
-        if (line != null) for (Place p : line) out.add(p.folk);
+        if (line != null) for (Place p : line) if (p.byHand == null) out.add(p.folk);   // [earning] served by hand: on its way
         return out;
+    }
+
+    /** [earning] A customer served by a player on a counter shift: it buys on its next turn. */
+    public static void servedByHand(UUID folk, String by) {
+        Place p = placeOf(folk);
+        if (p != null) p.byHand = by;
+    }
+
+    /** [earning] How much of a customer's patience is left, 1 (just come) to 0 (about to give up). */
+    public static float patience(UUID folk, long now) {
+        Place p = placeOf(folk);
+        return p == null ? 0F : Math.max(0F, 1F - (now - p.joined) / (float) GIVE_UP);
+    }
+
+    /** [earning] What a customer in line asks for ("" if it has not said). */
+    public static String wants(UUID folk) {
+        Place p = placeOf(folk);
+        return p == null ? "" : p.wants;
+    }
+
+    @Nullable
+    private static Place placeOf(UUID folk) {
+        Long key = IN.get(folk);
+        List<Place> line = key == null ? null : LINES.get(key);
+        if (line == null) return null;
+        for (Place p : line) if (p.folk.equals(folk)) return p;
+        return null;
     }
 
     /** Who served this folk last ("" at a counter nobody kept), or null if it has not been served. */

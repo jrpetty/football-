@@ -142,6 +142,9 @@ public final class Pets {
 
     /** A pet ages a year every so many days, as the folk do. */
     static final int DAYS_A_YEAR = VillageFolkEntity.DAYS_A_YEAR;
+    /** [earning] The reward a family gives for its lost pet brought home (when no quest pays for it). */
+    static final int PET_REWARD = 3;
+
     /** How old a stray taken in is reckoned to be. */
     static final int GROWN_AT = 2;
     /** Old at, and the years a pet lives at the most (give or take two, by the animal). */
@@ -2066,6 +2069,14 @@ public final class Pets {
                     "You brought " + c.name + " home!")
                 : FolkTalk.pick(a.getRandom(), c.name + "! Oh, you found " + c.name + "! Thank you, " + who + ".",
                     "Where was the rascal? Thank you, " + who + " — we were worried sick."));
+        }
+        // [earning] A pet the quest board was not holding: the family pays a little reward out of its own purse.
+        if (thanks != null && !thanks.isBaby() && !was.held()) {
+            int reward = Math.min(PET_REWARD, thanks.purse());
+            if (reward > 0 && thanks.spend(reward)) {
+                Earnings.giveCoins(finder, reward);
+                Earnings.record(finder, village, Earnings.Source.TIPS, reward, thanks.displayNameCap(), "as a reward for bringing " + c.name + " home");
+            }
         }
         Villages.tell(village, day, who + " found " + c.name + ", " + family(village, h) + " " + kindWord(c.cat()) + ", and brought it home");
         LOG.info("[MCA-PETS] {} brought {} home", who, c.name);

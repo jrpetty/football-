@@ -157,7 +157,7 @@ public final class ServiceStage {
         if (v == null) return "No village within reach.";
         ServicePoints.Point point = ServicePoints.nearest(level, v.id(), role, p.blockPosition());
         if (point == null) return "The town has no " + role.title.toLowerCase(java.util.Locale.ROOT) + " to serve at.";
-        ServicePoints.openAt(p, point.pos(), tab.equals("sell") ? "sell" : "");
+        ServicePoints.openAt(p, point.pos(), tab.equals("sell") || tab.equals("work") ? tab : "");   // [earning] the Work tab too
         int nonce = ServicePoints.nextNonceForTests(p);
         if (tab.equals("full") && role == ServiceRole.SHOP) {
             CompoundTag basket = new CompoundTag();

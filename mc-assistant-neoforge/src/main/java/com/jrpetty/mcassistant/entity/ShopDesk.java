@@ -214,8 +214,10 @@ public final class ShopDesk implements ServicePoints.Desk {
         }
         t.put("cats", catList);
         t.put("quote", quoteTag(visit, lines));
+        if (visit.player() != null && Buyers.buys(visit.role())) t.put("sell", Buyers.sellTag(visit));    // [earning] each counter its own
+        if (visit.player() != null && EarnDesk.counterRole(visit.role())) t.put("work", ShiftTasks.workTag(visit));   // [earning]
+        if (visit.player() != null && visit.role() == ServiceRole.SHOP) t.put("orders", WantedBoard.ordersTag(visit));   // [earning]
         if (visit.player() != null && visit.role() == ServiceRole.SHOP) {
-            t.put("sell", sellTag(visit));
             ListTag wanted = new ListTag();
             for (ShopBusiness.Wanted w : ShopBusiness.wanted(level, visit.village())) {
                 CompoundTag e = new CompoundTag();
@@ -232,7 +234,7 @@ public final class ShopDesk implements ServicePoints.Desk {
             t.put("wanted", wanted);
             t.putString("till", ShopBusiness.tillLine(level, id));
         }
-        t.putBoolean("buys", visit.role() == ServiceRole.SHOP);
+        t.putBoolean("buys", Buyers.buys(visit.role()));                         // [earning] the café buys its kitchen's too
         t.putBoolean("haggles", visit.keeper() != null);
         ListTag receipts = new ListTag();
         if (visit.player() != null) for (String r : receipts(id, visit.player().getUUID())) receipts.add(net.minecraft.nbt.StringTag.valueOf(r));
@@ -299,38 +301,6 @@ public final class ShopDesk implements ServicePoints.Desk {
         return t;
     }
 
-    /** What the player carries that the town buys: a line a kind, how many it has, what a lot fetches. */
-    private static ListTag sellTag(ServicePoints.Visit visit) {
-        ServerLevel level = visit.level();
-        UUID id = visit.village().id();
-        ServerPlayer p = visit.player();
-        Map<String, int[]> have = new LinkedHashMap<>();
-        Map<String, ItemStack> samples = new LinkedHashMap<>();
-        for (ItemStack s : p.getInventory().items) {
-            if (s.isEmpty() || Market.isCoin(s) || s.isDamaged()) continue;
-            String key = Goods.lineId(s);
-            have.computeIfAbsent(key, k -> new int[1])[0] += s.getCount();
-            samples.putIfAbsent(key, s.copyWithCount(1));
-        }
-        ListTag out = new ListTag();
-        for (Map.Entry<String, int[]> e : have.entrySet()) {
-            ItemStack one = samples.get(e.getKey());
-            int lot = sellLot(one);
-            int bid = Market.bidLot(level, id, one, lot);
-            CompoundTag t = new CompoundTag();
-            t.putString("id", e.getKey());
-            t.put("item", one.save(level.registryAccess()));
-            t.putString("name", Goods.name(one));
-            t.putString("cat", Goods.of(one).name());
-            t.putInt("have", e.getValue()[0]);
-            t.putInt("lot", lot);
-            t.putInt("bid", bid);
-            t.putString("why", bid <= 0 ? "Not worth a coin to the town just now." : "");
-            out.add(t);
-        }
-        return out;
-    }
-
     /** How many the town buys at once: the board's lot (eight loaves), else one. */
     static int sellLot(ItemStack one) {
         Market.Good g = Market.goodFor(one);
@@ -344,7 +314,8 @@ public final class ShopDesk implements ServicePoints.Desk {
         return switch (action) {
             case "basket" -> basket(visit, args);
             case "buy" -> buy(visit);
-            case "sell" -> sell(visit, args);
+            case "sell" -> Buyers.sell(visit, args.getString("id"), args.contains("n") ? args.getInt("n")      // [earning]
+                : Math.max(1, Math.min(64, args.getInt("lots"))) * sellLot(itemOf(visit, args.getString("id"))));
             case "order" -> order(visit, args);
             case "haggle" -> haggle(visit);
             case "supply" -> ShopBusiness.supply(visit, args.getString("id"), args.getInt("n"));
@@ -466,54 +437,11 @@ public final class ShopDesk implements ServicePoints.Desk {
         if (!left.isEmpty()) TownWork.give(level, v, left);
     }
 
-    /** The player sells the town so many lots of a thing it carries, at the town's paying price, into its stores. */
-    private static ServicePoints.Result sell(ServicePoints.Visit visit, CompoundTag args) {
-        ServerLevel level = visit.level();
-        UUID id = visit.village().id();
-        ServerPlayer p = visit.player();
-        if (p == null || visit.role() != ServiceRole.SHOP) return ServicePoints.Result.no("");
-        if (Standing.of(id, p.getUUID(), level.getGameTime()).title() == Standing.Title.OUTCAST) return ServicePoints.Result.no("Nobody here will trade with you.");
-        String key = args.getString("id");
-        int lots = Math.max(1, Math.min(64, args.getInt("lots")));
-        ItemStack one = ItemStack.EMPTY;
-        int have = 0;
-        for (ItemStack s : p.getInventory().items) {
-            if (s.isEmpty() || s.isDamaged() || !Goods.lineId(s).equals(key)) continue;
-            if (one.isEmpty()) one = s.copyWithCount(1);
-            have += s.getCount();
-        }
-        if (one.isEmpty()) return ServicePoints.Result.no("You've none of that on you now.");
-        if (Services.given(id, p.getUUID(), level.getDayTime() / 24000L, one.getItem()) > 0) {
-            return ServicePoints.Result.no("We gave you that this morning, friend: keep it, it's yours.");
-        }
-        int lot = sellLot(one);
-        int n = Math.min(have / lot, lots) * lot;
-        if (n <= 0) return ServicePoints.Result.no("The town buys " + Goods.name(one).toLowerCase(Locale.ROOT) + " by the " + lot + ".");
-        int price = Market.bidLot(level, id, one, n);
-        if (price <= 0) return ServicePoints.Result.no(Goods.words(one, n) + " isn't worth a coin to the town just now.");
-        if (Ledger.coins(id) < price) return ServicePoints.Result.no("The treasury hasn't the coin to pay for that just now.");
-        ItemStack lotStack = one.copyWithCount(n);
-        ItemStack left = Market.intoStores(level, id, lotStack);
-        int stored = n - left.getCount();
-        if (stored < n) {
-            if (stored > 0) TownWork.take(level, visit.village(), same(one), stored);
-            return ServicePoints.Result.no("The stores are full; they can't take any more just now.");
-        }
-        int toTake = n;
-        for (ItemStack s : p.getInventory().items) {
-            if (toTake <= 0) break;
-            if (s.isEmpty() || s.isDamaged() || !Goods.lineId(s).equals(key)) continue;
-            int k = Math.min(toTake, s.getCount());
-            s.shrink(k);
-            toTake -= k;
-        }
-        p.getInventory().setChanged();
-        int paid = Ledger.takeCoins(id, price);
-        Economy.spent(id, paid);
-        ItemStack coin = new ItemStack(McAssistantMod.VILLAGE_COIN.get(), paid);
-        if (!p.getInventory().add(coin)) p.drop(coin, false);
-        receipt(level, id, p.getUUID(), "Day " + level.getDayTime() / 24000L + ": sold " + Goods.words(one, n) + " for " + coins(paid));
-        return ServicePoints.Result.done("Sold " + Goods.words(one, n) + " for " + coins(paid) + ".");
+    /** [earning] One of the thing the player carries under this line id (empty if none). */
+    private static ItemStack itemOf(ServicePoints.Visit visit, String key) {
+        if (visit.player() == null) return ItemStack.EMPTY;
+        for (ItemStack s : visit.player().getInventory().items) if (!s.isEmpty() && Goods.lineId(s).equals(key)) return s.copyWithCount(1);
+        return ItemStack.EMPTY;
     }
 
     /** A thing not in: on the workshop's book for this player (the café's: the cook told), with when to come back. */

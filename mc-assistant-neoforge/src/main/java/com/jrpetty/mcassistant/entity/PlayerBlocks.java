@@ -38,6 +38,11 @@ public final class PlayerBlocks extends SavedData {
         return !p.placed.isEmpty() && p.placed.contains(pos.asLong());
     }
 
+    /** [earning] A block a player laid for the town on a shift (Builder's hand): the town's, not the player's own. */
+    public static void forget(ServerLevel level, BlockPos pos) {
+        markForTests(level, pos, false);
+    }
+
     /** Tests: as though a player had set a block down here (true) or broken it (false). */
     public static void markForTests(ServerLevel level, BlockPos pos, boolean on) {
         PlayerBlocks p = of(level);

@@ -1406,7 +1406,7 @@ public final class Dining {
                     if (y.contains("Got")) l.got = ItemStack.parseOptional(level.registryAccess(), y.getCompound("Got"));
                     // Work in hand at the restart goes back: off the stove onto the queue, out of a hand onto the pass.
                     if (l.step == Step.COOKING) l.step = l.got.isEmpty() ? Step.QUEUED : Step.PASS;
-                    if (l.step == Step.CARRYING) l.step = Step.PASS;
+                    if (l.step == Step.CARRYING) l.step = l.got.isEmpty() ? Step.QUEUED : Step.PASS;   // [earning] a player's plate is gone
                     o.lines.add(l);
                 }
                 // A folk's meal does not outlast a restart: it got up and went home (what was cooked back to the stores).

@@ -269,6 +269,7 @@ public final class TalkMenu {
             special("guide", Items.COMPASS, Kind.PLACES),
             ask("hire", Items.IRON_SWORD, TalkTopic.HIRE, c -> !c.has("child")),
             group("favours", Items.APPLE,
+                ask("shifts", Items.CLOCK, TalkTopic.SHIFTS),                 // [earning] a paid shift, from the boss
                 ask("favour", Items.APPLE, TalkTopic.FAVOUR),
                 ask("short", Items.COMPOSTER, TalkTopic.SHORT),
                 ask("lost", Items.BRUSH, TalkTopic.LOST),

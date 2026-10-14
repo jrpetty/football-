@@ -40,7 +40,13 @@ final class ShopPanel implements ServiceScreen.Panel {
     /** A making the shop wants of you: what, how many, for how much, and how many you carry. */
     private record Want(String id, ItemStack stack, String name, int count, int price, int have) {}
 
-    private record Sell(String id, ItemStack stack, String name, int have, int lot, int bid, String why) {}
+    private record Sell(String id, ItemStack stack, String name, int have, int lot, int bid, String why, int wants, String sub, boolean find) {}
+
+    /** [earning] An order on the town's Wanted board: what, how many, for how much, why, how long, and how many you carry. */
+    private record Order(String id, ItemStack stack, String name, int count, int price, String why, int days, int have) {}
+
+    /** [earning] A button drawn this frame, and what it does: the Sell and Work tabs' clicks go by these. */
+    private record Hit(int x0, int y0, int x1, int y1, Runnable act) {}
 
     private record Priced(String id, int n, int price) {}
 
@@ -49,6 +55,10 @@ final class ShopPanel implements ServiceScreen.Panel {
     private final List<Line> shown = new ArrayList<>();
     private final List<Sell> sells = new ArrayList<>();
     private final List<Want> wants = new ArrayList<>();
+    private final List<Order> orders = new ArrayList<>();                     // [earning]
+    private final List<Hit> hits = new ArrayList<>();                         // [earning]
+    private CompoundTag work = new CompoundTag();                             // [earning] the counter's shift
+    private boolean working;
     private String till = "";
     private final List<String[]> cats = new ArrayList<>();
     private final List<Priced> quoted = new ArrayList<>();
@@ -100,8 +110,17 @@ final class ShopPanel implements ServiceScreen.Panel {
         for (int i = 0; i < sl.size(); i++) {
             CompoundTag e = sl.getCompound(i);
             ItemStack s = icons.computeIfAbsent("sell:" + e.getString("id"), k -> ServiceScreen.stack(e, "item"));
-            sells.add(new Sell(e.getString("id"), s, e.getString("name"), e.getInt("have"), e.getInt("lot"), e.getInt("bid"), e.getString("why")));
+            sells.add(new Sell(e.getString("id"), s, e.getString("name"), e.getInt("have"), e.getInt("lot"), e.getInt("bid"), e.getString("why"),
+                e.getInt("wants"), e.getString("sub"), e.getBoolean("find")));
         }
+        orders.clear();                                                       // [earning] the Wanted board
+        ListTag ol = body.getList("orders", Tag.TAG_COMPOUND);
+        for (int i = 0; i < ol.size(); i++) {
+            CompoundTag e = ol.getCompound(i);
+            ItemStack st = icons.computeIfAbsent("order:" + e.getString("id"), k -> ServiceScreen.stack(e, "item"));
+            orders.add(new Order(e.getString("id"), st, e.getString("name"), e.getInt("count"), e.getInt("price"), e.getString("why"), e.getInt("days"), e.getInt("have")));
+        }
+        work = body.getCompound("work");
         wants.clear();
         ListTag wl = body.getList("wanted", Tag.TAG_COMPOUND);
         for (int i = 0; i < wl.size(); i++) {
@@ -126,11 +145,13 @@ final class ShopPanel implements ServiceScreen.Panel {
         receipts.clear();
         ListTag rl = body.getList("receipts", Tag.TAG_STRING);
         for (int i = 0; i < rl.size(); i++) receipts.add(rl.getString(i));
-        if (first) selling = data.getString("tab").equals("sell");          // opened on its Sell tab
+        if (first) selling = data.getString("tab").equals("sell") || data.getString("tab").equals("work");   // opened on its Sell or Work tab
+        if (first) working = data.getString("tab").equals("work");
         first = false;
         buys = body.getBoolean("buys");
         haggles = body.getBoolean("haggles");
-        if (!buys) selling = false;
+        if (work.isEmpty()) working = false;
+        if (!buys && !working) selling = false;
         // The server's basket is the basket, once it has answered the last one we sent.
         if (data.getInt("nonce") >= basketSent) {
             basket.clear();
@@ -176,7 +197,10 @@ final class ShopPanel implements ServiceScreen.Panel {
         tip = null;
         Font font = font();
         topTabs(g, font, mouseX, mouseY);
-        if (selling) {
+        hits.clear();
+        if (working) {
+            workList(g, font, mouseX, mouseY);
+        } else if (selling) {
             sellList(g, font, mouseX, mouseY);
         } else {
             categories(g, font, mouseX, mouseY);
@@ -187,15 +211,16 @@ final class ShopPanel implements ServiceScreen.Panel {
 
     private void topTabs(GuiGraphics g, Font font, int mouseX, int mouseY) {
         int tw = 56;
-        String[] labels = buys ? new String[]{ "Buy", "Sell" } : new String[]{ "Buy" };
+        String[] labels = tabLabels();
         for (int i = 0; i < labels.length; i++) {
             int tx = x + i * (tw + 2);
-            boolean sel = (i == 1) == selling;
+            boolean sel = labels[i].equals(currentTab());
             boolean over = ServiceScreen.in(mouseX, mouseY, tx, y, tw, TAB_H);
             topTab(g, tx, y, tw, TAB_H, State.of(true, sel, over));
             g.drawString(font, labels[i], tx + (tw - font.width(labels[i])) / 2, y + 4, sel ? TEXT : TEXT_MUTED, false);
         }
-        String note = selling ? "The town pays four fifths of its price" : shown.size() + (shown.size() == 1 ? " line" : " lines");
+        String note = working ? (work.getBoolean("onShift") ? "On shift: serve the first in line" : "Paid work at this counter")
+            : selling ? "Each counter buys its own trade's goods, less as it fills" : shown.size() + (shown.size() == 1 ? " line" : " lines");
         int nx = x + labels.length * (tw + 2) + S2;
         text(g, font, note, nx, y + 4, basketX - S2 - nx, TEXT_FAINT);
     }
@@ -263,54 +288,196 @@ final class ShopPanel implements ServiceScreen.Panel {
         if (over && tip == null) tip = clipped ? sub + "\n" + l.tip() : l.tip();
     }
 
+    /** [earning] The tabs this counter has: Buy, Sell where it buys, Work where a counter hand works. */
+    private String[] tabLabels() {
+        List<String> l = new ArrayList<>(List.of("Buy"));
+        if (buys) l.add("Sell");
+        if (!work.isEmpty()) l.add("Work");
+        return l.toArray(new String[0]);
+    }
+
+    private String currentTab() {
+        return working ? "Work" : selling ? "Sell" : "Buy";
+    }
+
+    /** A button drawn and its click kept for this frame. */
+    private void hitButton(GuiGraphics g, Font font, String label, int bx, int by, int bw, boolean enabled, int mouseX, int mouseY,
+                           String why, Runnable act) {
+        boolean over = ServiceScreen.in(mouseX, mouseY, bx, by, bw, 16);
+        button(g, font, label, bx, by, bw, 16, State.of(enabled, false, over));
+        if (over && !why.isEmpty()) tip = why;
+        if (enabled) hits.add(new Hit(bx, by, bx + bw, by + 16, act));
+    }
+
+    private boolean canAct() {
+        return screen.open() && !screen.waiting();
+    }
+
+    /** [earning] Sell: the town's Wanted board, the shop's bench's wants, then what you carry: each at what this counter
+     *  pays now (less as it fills), how many more it wants, and Sell 1 lot, a stack, or all. */
     private void sellList(GuiGraphics g, Font font, int mouseX, int mouseY) {
         int ly = bodyTop(), lh = y + h - ly;
         int lx = x, lw = basketX - S1 - x;
         well(g, lx, ly, lw, lh, PAGE);
-        listScroll.fit((wants.size() + sells.size()) * ROW_H, lh - 2);
+        listScroll.fit((orders.size() + wants.size() + sells.size()) * ROW_H, lh - 2);
         g.enableScissor(lx + 1, ly + 1, lx + lw - 1, ly + lh - 1);
         int ry = ly + 1 - listScroll.offset();
+        boolean inList = mouseY >= ly && mouseY < ly + lh;
+        int rx = lx + 1, rw = lw - 6;
+        for (Order o : orders) {
+            if (ry + ROW_H >= ly && ry <= ly + lh) {
+                g.fill(rx, ry, rx + rw, ry + ROW_H, HIGHLIGHT);
+                g.fill(rx, ry, rx + 2, ry + ROW_H, HIGHLIGHT_SPINE);
+                g.renderItem(o.stack(), rx + 4, ry + 3);
+                int bx = rx + rw - S1 - 48;
+                int tx = rx + 4 + ICON + S1, room = bx - S1 - tx;
+                text(g, font, "Wanted: " + o.count() + " " + o.name() + " " + o.why(), tx, ry + 2, room, TEXT);
+                String sub = o.price() + "c for all · " + (o.days() <= 0 ? "today" : o.days() + (o.days() == 1 ? " day" : " days")) + " · you have " + o.have();
+                text(g, font, sub, tx, ry + 12, room, o.have() > 0 ? SUCCESS : TEXT_FAINT);
+                String id = o.id();
+                if (inList) hitButton(g, font, "Deliver", bx, ry + 3, 48, o.have() > 0 && canAct(), mouseX, mouseY,
+                    o.have() > 0 ? "Hand it over to the board: paid at once out of the treasury" : "You carry none of this", () -> {
+                        CompoundTag a = new CompoundTag();
+                        a.putString("id", id);
+                        screen.send("deliver", a);
+                    });
+                else button(g, font, "Deliver", bx, ry + 3, 48, 16, State.DISABLED);
+            }
+            ry += ROW_H;
+        }
         for (Want w : wants) {
             if (ry + ROW_H >= ly && ry <= ly + lh) {
-                int rx = lx + 1, rw = lw - 6;
-                boolean inList = mouseY >= ly && mouseY < ly + lh;
                 g.fill(rx, ry, rx + rw, ry + ROW_H, HIGHLIGHT);
                 g.fill(rx, ry, rx + 2, ry + ROW_H, HIGHLIGHT_SPINE);
                 g.renderItem(w.stack(), rx + 4, ry + 3);
                 int bx = rx + rw - S1 - 48;
                 int tx = rx + 4 + ICON + S1, room = bx - S1 - tx;
-                text(g, font, "Wanted: " + w.name(), tx, ry + 2, room, TEXT);
-                String sub = w.count() + " for " + w.price() + "c · you have " + w.have();
-                text(g, font, sub, tx, ry + 12, room, w.have() > 0 ? SUCCESS : TEXT_FAINT);
-                boolean can = w.have() > 0 && screen.open() && !screen.waiting();
-                boolean overB = inList && ServiceScreen.in(mouseX, mouseY, bx, ry + 3, 48, 16);
-                button(g, font, "Supply", bx, ry + 3, 48, 16, State.of(can, false, overB));
-                if (overB) tip = !screen.open() ? screen.status() : w.have() > 0 ? "Sell the shop what it is short of, at a good price"
-                    : "You've none of this on you: the shop is short of it for its bench.";
+                text(g, font, "For the bench: " + w.name(), tx, ry + 2, room, TEXT);
+                text(g, font, w.count() + " for " + w.price() + "c · you have " + w.have(), tx, ry + 12, room, w.have() > 0 ? SUCCESS : TEXT_FAINT);
+                String id = w.id();
+                int n = w.count();
+                if (inList) hitButton(g, font, "Supply", bx, ry + 3, 48, w.have() > 0 && canAct(), mouseX, mouseY,
+                    w.have() > 0 ? "Sell the shop what its bench is short of, at a good price" : "You've none of this on you.", () -> {
+                        CompoundTag a = new CompoundTag();
+                        a.putString("id", id);
+                        a.putInt("n", n);
+                        screen.send("supply", a);
+                    });
             }
             ry += ROW_H;
         }
-        for (int i = 0; i < sells.size(); i++, ry += ROW_H) {
-            if (ry + ROW_H < ly || ry > ly + lh) continue;
-            Sell s = sells.get(i);
-            int rx = lx + 1, rw = lw - 6;
-            boolean inList = mouseY >= ly && mouseY < ly + lh;
-            boolean over = inList && ServiceScreen.in(mouseX, mouseY, rx, ry, rw, ROW_H);
-            if (over) g.fill(rx, ry, rx + rw, ry + ROW_H, TILE_HOVER);
-            g.renderItem(s.stack(), rx + 2, ry + 3);
-            int bx = rx + rw - S1 - 40;
-            int tx = rx + 2 + ICON + S1, room = bx - S1 - tx;
-            boolean can = s.bid() > 0 && s.have() >= s.lot();
-            text(g, font, s.name() + "  ×" + s.have(), tx, ry + 2, room, can ? TEXT : TEXT_DISABLED);
-            String sub = !s.why().isEmpty() ? s.why() : s.have() < s.lot() ? "Bought by the " + s.lot() + "." : (s.lot() > 1 ? s.lot() + " for " : "") + s.bid() + "c";
-            text(g, font, sub, tx, ry + 12, room, can ? TEXT_FAINT : DANGER);
-            boolean overB = inList && ServiceScreen.in(mouseX, mouseY, bx, ry + 3, 40, 16);
-            button(g, font, "Sell", bx, ry + 3, 40, 16, State.of(can && screen.open() && !screen.waiting(), false, overB));
-            if (overB) tip = !screen.open() ? screen.status() : can ? "Sell " + (s.lot() > 1 ? s.lot() : "one") + " (shift: all you have)" : sub;
+        for (Sell sl : sells) {
+            if (ry + ROW_H >= ly && ry <= ly + lh) {
+                boolean over = inList && ServiceScreen.in(mouseX, mouseY, rx, ry, rw, ROW_H);
+                if (over) g.fill(rx, ry, rx + rw, ry + ROW_H, TILE_HOVER);
+                g.renderItem(sl.stack(), rx + 2, ry + 3);
+                int bAll = 28, bStack = 36, bOne = 22;
+                int bx = rx + rw - S1 - bAll - bStack - bOne - 4;
+                int tx = rx + 2 + ICON + S1, room = bx - S1 - tx;
+                boolean can = sl.bid() > 0 && sl.have() >= sl.lot();
+                text(g, font, sl.name() + "  ×" + sl.have(), tx, ry + 2, room, can ? TEXT : TEXT_DISABLED);
+                String sub = !sl.why().isEmpty() ? sl.why() : sl.sub().isEmpty() ? (sl.lot() > 1 ? sl.lot() + " for " : "") + sl.bid() + "c" : sl.sub();
+                boolean clipped = text(g, font, sub, tx, ry + 12, room, can ? (sl.find() ? INFO : TEXT_FAINT) : DANGER);
+                if (over && clipped && tip == null) tip = sub;
+                String id = sl.id();
+                int lot = Math.max(1, sl.lot());
+                int stack = Math.min(sl.have(), Math.max(lot, sl.stack().getMaxStackSize() / lot * lot));
+                String why = !screen.open() ? screen.status() : can ? "" : sub;
+                if (inList) {
+                    hitButton(g, font, lot > 1 ? String.valueOf(lot) : "1", bx, ry + 3, bOne, can && canAct(), mouseX, mouseY,
+                        why.isEmpty() ? "Sell " + (lot > 1 ? "one lot of " + lot : "one") : why, () -> sell(id, lot));
+                    hitButton(g, font, "Stack", bx + bOne + 2, ry + 3, bStack, can && !sl.find() && canAct(), mouseX, mouseY,
+                        why.isEmpty() ? "Sell a stack (" + stack + "), each lot at the price it fetches by then" : why, () -> sell(id, stack));
+                    hitButton(g, font, "All", bx + bOne + bStack + 4, ry + 3, bAll, can && !sl.find() && canAct(), mouseX, mouseY,
+                        why.isEmpty() ? "Sell all you carry (" + sl.have() + ") while the counter wants it and its purse lasts" : why, () -> sell(id, sl.have()));
+                }
+            }
+            ry += ROW_H;
         }
         g.disableScissor();
         scrollBar(g, lx + lw - 4, ly + 1, lh - 2, listScroll.offset(), listScroll.max(), lh);
-        if (sells.isEmpty() && wants.isEmpty()) text(g, font, "Nothing you carry is wanted here.", lx + S2, ly + S2, lw - S4, TEXT_FAINT);
+        if (sells.isEmpty() && wants.isEmpty() && orders.isEmpty()) text(g, font, "Nothing you carry is wanted here.", lx + S2, ly + S2, lw - S4, TEXT_FAINT);
+    }
+
+    private void sell(String id, int n) {
+        CompoundTag a = new CompoundTag();
+        a.putString("id", id);
+        a.putInt("n", n);
+        screen.send("sell", a);
+    }
+
+    /** [earning] Work: on a shift here, the line (each customer's patience) and Serve; else the job, how it works, Take. */
+    private void workList(GuiGraphics g, Font font, int mouseX, int mouseY) {
+        int ly = bodyTop(), lh = y + h - ly;
+        int lx = x, lw = basketX - S1 - x;
+        well(g, lx, ly, lw, lh, PAGE);
+        int cy = ly + S1;
+        int tx = lx + S2, room = lw - 2 * S2;
+        if (work.getBoolean("onShift")) {
+            title(g, font, clip(font, work.getString("title"), room), tx, cy);
+            cy += 12;
+            long left = Math.max(0, work.getLong("ends") - work.getLong("now")) / 20;
+            text(g, font, work.getInt("tasks") + " served · " + work.getInt("pay") + "c pay · " + work.getInt("tips") + "c tips · "
+                + left / 60 + " min left", tx, cy, room, TEXT_MUTED);
+            cy += 14;
+            ListTag line = work.getList("line", Tag.TAG_COMPOUND);
+            if (line.isEmpty()) text(g, font, "Nobody in line. The next customer to come up is yours.", tx, cy, room, TEXT_FAINT);
+            for (int i = 0; i < line.size() && cy + ROW_H <= ly + lh - 22; i++) {
+                CompoundTag c = line.getCompound(i);
+                boolean first = c.getBoolean("first");
+                g.fill(lx + 1, cy, lx + lw - 1, cy + ROW_H, first ? HIGHLIGHT : TILE);
+                if (first) g.fill(lx + 1, cy, lx + 3, cy + ROW_H, HIGHLIGHT_SPINE);
+                int bx = lx + lw - S1 - 48;
+                text(g, font, (first ? "First: " : "") + c.getString("name") + (c.getString("wants").isEmpty() ? "" : ", for " + c.getString("wants")),
+                    tx, cy + 2, bx - tx - S1, TEXT);
+                float pat = c.getFloat("patience");
+                Ui.bar(g, tx, cy + 13, Math.min(90, bx - tx - S1), 5, pat, pat > 0.5F ? SUCCESS_FILL : pat > 0.25F ? WARNING_FILL : DANGER_FILL);
+                String folk = c.getString("id");
+                hitButton(g, font, "Serve", bx, cy + 3, 48, canAct(), mouseX, mouseY,
+                    first ? "Serve " + c.getString("name") + ": paid at once, quicker is better" : "Out of turn: a mistake (the first in line was here before)",
+                    () -> {
+                        CompoundTag a = new CompoundTag();
+                        a.putString("folk", folk);
+                        screen.send("serve", a);
+                    });
+                cy += ROW_H + 2;
+            }
+            hitButton(g, font, "Clock off", lx + lw - S1 - 64, ly + lh - 20, 64, true, mouseX, mouseY, "End your shift now: paid for what you've done",
+                () -> screen.send("quitShift", new CompoundTag()));
+            return;
+        }
+        title(g, font, clip(font, work.getString("title"), room), tx, cy);
+        cy += 12;
+        text(g, font, work.getString("hours") + " · " + work.getString("pay"), tx, cy, room, TEXT_MUTED);
+        cy += 10;
+        text(g, font, "Your skill: " + work.getString("level"), tx, cy, room, TEXT_FAINT);
+        cy += 14;
+        heading(g, font, "How this job works", tx, cy, room);
+        cy += 12;
+        ListTag how = work.getList("howTo", Tag.TAG_STRING);
+        for (int i = 0; i < how.size(); i++) {
+            for (net.minecraft.util.FormattedCharSequence seq : TextCache.splitPlain(font, "• " + how.getString(i), room)) {
+                if (cy > ly + lh - 30) break;
+                g.drawString(font, seq, tx, cy, TEXT_MUTED, false);
+                cy += 10;
+            }
+        }
+        String why = work.getString("why");
+        int by = ly + lh - 22;
+        if (!why.isEmpty()) text(g, font, why, tx, by - 11, room, DANGER);
+        hitButton(g, font, "Take a shift", tx, by, 80, why.isEmpty() && canAct(), mouseX, mouseY, why.isEmpty() ? "Four hours behind the counter, paid by the customer" : why,
+            () -> {
+                CompoundTag a = new CompoundTag();
+                a.putBoolean("standing", false);
+                screen.send("takeShift", a);
+            });
+        boolean standingOk = why.isEmpty() || why.startsWith("Opens");
+        hitButton(g, font, "Every day", tx + 84, by, 70, standingOk && canAct(), mouseX, mouseY,
+            standingOk ? "A standing job: your shift starts each day at its hours while you're in town" : why, () -> {
+                CompoundTag a = new CompoundTag();
+                a.putBoolean("standing", true);
+                screen.send("takeShift", a);
+            });
     }
 
     /** The basket: its lines with − and +, the sum, each discount, the total, Buy, Haggle. */
@@ -416,8 +583,25 @@ final class ShopPanel implements ServiceScreen.Panel {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         boolean shift = Screen.hasShiftDown();
         // The top tabs.
-        if (ServiceScreen.in(mouseX, mouseY, x, y, 56, TAB_H)) { selling = false; listScroll.reset(); click(); return true; }
-        if (buys && ServiceScreen.in(mouseX, mouseY, x + 58, y, 56, TAB_H)) { selling = true; listScroll.reset(); click(); return true; }
+        String[] labels = tabLabels();                                        // [earning] Buy, Sell, Work
+        for (int t = 0; t < labels.length; t++) {
+            if (!ServiceScreen.in(mouseX, mouseY, x + t * 58, y, 56, TAB_H)) continue;
+            selling = !labels[t].equals("Buy");
+            working = labels[t].equals("Work");
+            listScroll.reset();
+            click();
+            return true;
+        }
+        if (selling) {                                                        // [earning] the buttons drawn this frame
+            for (Hit hit : hits) {
+                if (mouseX >= hit.x0() && mouseX < hit.x1() && mouseY >= hit.y0() && mouseY < hit.y1()) {
+                    click();
+                    hit.act().run();
+                    return true;
+                }
+            }
+            return ServiceScreen.in(mouseX, mouseY, x, bodyTop(), basketX - x, h);
+        }
         int ly = bodyTop(), lh = y + h - ly;
         if (!selling) {
             int cy = ly;
@@ -453,36 +637,6 @@ final class ShopPanel implements ServiceScreen.Panel {
                 }
                 return true;
             }
-        } else if (ServiceScreen.in(mouseX, mouseY, x, ly, basketX - S1 - x, lh)) {
-            int i = (int) ((mouseY - ly - 1 + listScroll.offset()) / ROW_H);
-            if (i >= 0 && i < wants.size()) {
-                Want w = wants.get(i);
-                int rw = basketX - S1 - x - 6, rx = x + 1;
-                int bx = rx + rw - S1 - 48;
-                int ry = ly + 1 - listScroll.offset() + i * ROW_H;
-                if (ServiceScreen.in(mouseX, mouseY, bx, ry + 3, 48, 16) && w.have() > 0 && screen.open() && !screen.waiting()) {
-                    click();
-                    CompoundTag a = new CompoundTag();
-                    a.putString("id", w.id());
-                    a.putInt("n", w.count());
-                    screen.send("supply", a);
-                }
-                return true;
-            }
-            i -= wants.size();
-            if (i < 0 || i >= sells.size()) return true;
-            Sell s = sells.get(i);
-            int rw = basketX - S1 - x - 6, rx = x + 1;
-            int bx = rx + rw - S1 - 40;
-            int ry = ly + 1 - listScroll.offset() + (i + wants.size()) * ROW_H;
-            if (ServiceScreen.in(mouseX, mouseY, bx, ry + 3, 40, 16) && s.bid() > 0 && s.have() >= s.lot() && screen.open() && !screen.waiting()) {
-                click();
-                CompoundTag a = new CompoundTag();
-                a.putString("id", s.id());
-                a.putInt("lots", shift ? Math.max(1, s.have() / s.lot()) : 1);
-                screen.send("sell", a);
-            }
-            return true;
         }
         if (!selling && ServiceScreen.in(mouseX, mouseY, basketX, y, basketW, h)) return basketClick(mouseX, mouseY, shift);
         return false;

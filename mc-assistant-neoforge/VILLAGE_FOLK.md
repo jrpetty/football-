@@ -11488,3 +11488,85 @@ the server runs each exactly as typed, permissions and all.
 
 **Cost.** Nothing runs when nobody uses it: the job queue returns at once when empty, the tick-cost probe is one
 volatile read a folk tick unless somebody is looking, the market-day and raid-size hooks read an empty map.
+## Earning the towns' coin [earning]
+
+Every coin a player earns comes from somebody: a town's treasury, a folk's purse, or another town. Nothing is minted
+for the player, every payer has a day's purse, and every payment is told at once ("+12 coins from Harbour shop for
+32 wheat", in chat and as a toast in the corner) and booked on the player's Earnings page.
+
+### Selling at the counters (Buyers)
+- Each counter buys its own trade's goods: the store what the market board deals in and its bench's makings (sticks,
+  cobblestone, string, coal, planks), the café the kitchen's (wheat, sugar, eggs, meat, fish, roots), the tavern the
+  cellar's, the smith metal and fuel, the tailor wool, string, leather and dye. A thing nobody at a counter buys says
+  which counter in town does.
+- The price is the town's one paying price (four fifths of its price, never over nine tenths of what it sells the thing
+  or its makings for), the whole of it while the buyer wants plenty, falling as its stock nears what it keeps, and
+  nothing once it has it: selling a glut pays less and less, then nothing. Buying a lot and selling it back loses money.
+- A counter spends at most a quarter of the treasury (and ten) a day on what players bring.
+- Makings go into the trade's workshop chest (up to what it keeps), the rest into the stores.
+- The store's Sell tab: the Wanted board's orders at the top (Deliver), its bench's wants (Supply), then each thing you
+  carry with what it fetches now, how many more the counter wants, and Sell 1 lot / Stack / All. The smithy, the
+  tailor's and the tavern have the same as a "We buy" section. The store also buys finds: for the museum (a kind it
+  has not got), the library (written books) and the map room (explorer maps), a few a day.
+
+### The Wanted board (WantedBoard)
+Each morning the town posts what it is short of: the leader's forecast for the next age, the dining rooms' pantry, and
+in a war the war stores. At most five orders, each for so many, at a premium over the paying price (never over what the
+town sells it for) and by a day three days on. Hold the goods and use the town board or the storehouse, or Deliver on
+the store's Sell tab: paid at once out of the treasury, into the stores. Shown on the town board, the Sell tab and the
+Earnings page.
+
+### Paid shifts (Shifts, ShiftTasks)
+Take a job from the Earnings page, the counter's Work tab, or the boss in talk ("Any shifts going?", asked twice):
+once (four hours, to the job's closing) or as a standing job (it starts every day at its hours while you are in town).
+Each listing shows the role, its hours, the pay a task and a day, and what it needs. The shift HUD shows the role, the
+task in plain words, a marker and its way and distance, a par bar (or the stove's clock), tasks, pay, tips, the rating
+and the skill; the first time, a "how this job works" card.
+
+| Job | A task | Measured by |
+|---|---|---|
+| Counter hand | serve the first in line from the counter screen (the queue waits for you) | speed at the front against 12 s; out of turn is a mistake; one who gives up is a task failed |
+| Waiter | take the plate off the pass, set it down at its table | the walk against par; the wrong table is a mistake; a lost plate goes back to the kitchen, unpaid |
+| Cook | put the ticket's dish on at its station, take it off when ready | too soon is not done, too late burns it (thrown out, unpaid); caught late costs a star |
+| Farm hand | harvest a marked ripe crop (the harvest to the stores, the seed to you) and plant it back | left bare costs stars |
+| Hauler | load a workshop's short making at the storehouse, unload it into its chest | a deposit is held for the load; short loads are mistakes |
+| Smelter | collect raw ore, smelt it anywhere, bring the ingots to the smithy chest | paid by the ingot; fewer ingots than ore is a mistake |
+| Night watch | walk the four marked posts round the town; kill monsters in town | the round against par; each kill is a task too (the bounty on top) |
+| Builder's hand | lay a town building's missing blocks on their marked spots | a block in the wrong spot is refused, a mistake |
+
+Each task is rated one to five stars (speed against par, less a star a mistake or loss of quality), shown with its
+reason ("★★★★☆ — served in 8s, par 12s"), and paid at once out of the treasury: its wage (the town's pay level) times
+the stars (0.4 to 1.15 of it) times the skill. Happy customers tip out of their own purses. Skill per job runs
+Novice, Apprentice, Skilled, Expert, Master (two experience a star): a tenth more pay a level, more tips, and from
+Skilled the senior post (head cook, foreman: a quarter more). Two poor shifts in a row (under 2.5 stars, or nothing
+done) bring a warning; three lose a standing job for three days. A town that cannot pay does not offer the job
+("Unpaid"); each job's wages for players are budgeted at forty tasks a day. The end of a shift sums it up.
+
+### Bounties, contracts, the bank, property
+- The night bounty (PlayerServices) now counts kills just outside the town (its walls and fields), pays double on a raid
+  night (and doubles the night's purse), and is booked like any payment.
+- Haul contracts (HaulContracts): a town short of something a loaded neighbour can spare pays a player to fetch it: the
+  fee into escrow on accepting, a deposit for the load at the neighbour's storehouse (the goods out of its stores as a
+  hand-carried shipment), and on delivery the fee and the deposit back, the goods paid for town to town. Not delivered
+  by its day: the load goes back, the fee to the town.
+- The bank (BankCounter): the money changer swaps gold at the mint's rate both ways (nine coins a bar), emeralds and
+  diamonds at the town's spread; collect the rent your tenants have paid; sell a house you own outright back to the
+  town for four fifths of its price (its tenants stay on).
+
+### The Earnings page (EarnBoard, client/EarningsPage)
+On the town's books under Economy, and /village earnings: your purse; today's and this week's earnings by source (a
+bar each); your bank balance, rent waiting and earnings in each town; your job skills; and the ways to earn here now,
+each with its reward, distance and deadline: open shifts (Take, Every day), wanted orders, the bounty, haul contracts
+(Accept), and the best prices for what you carry here and in the towns about (a trade run). Marker on any of them sets
+a marker: an arrow and distance at the top of the screen and a column of sparks over the place. Folk asked "Any work
+for me?" or what the village is short of add one line of work going ("The smith's short of iron ingots, and pays
+well for it").
+
+### Cost
+Nothing ticks without a shift on: once a second per player on a shift (its task checked, a new one looked for), the
+HUD sent only when it changed. The posts of each job are found again at most every ten seconds a town; a builder's
+gaps at most every thirty seconds; the work-going line once a minute a town; the page is written only when asked for.
+Selling, orders, contracts and the changer are button presses.
+
+### Tests
+EarningGameTests er01-er12 (x 1,880,000 to 1,899,999 at z 66,000); EarnMathTest (the stars, the skill, the glut).

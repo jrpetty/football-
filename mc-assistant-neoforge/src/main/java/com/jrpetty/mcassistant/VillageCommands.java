@@ -102,6 +102,7 @@ public final class VillageCommands {
             .then(Commands.literal("folk").executes(VillageCommands::folk))
             .then(com.jrpetty.mcassistant.entity.FolkTeleport.command())          // [teleport] /village tp <name> (ops)
             .then(com.jrpetty.mcassistant.entity.QuestRun.command())              // [quests] /village quests [journal|offers|abandon <id>]
+            .then(com.jrpetty.mcassistant.entity.EarnCommands.command())          // [earning] /village earnings [shift|quit|wanted|stage]
             // The town's quarters, the homes in the crafts' smoke and by the park, and the park (Quarters, Park).
             .then(com.jrpetty.mcassistant.entity.Quarters.command())
             .then(com.jrpetty.mcassistant.entity.TownAudit.command())              // [integrity] /village integrity [views|survey]
