@@ -10629,3 +10629,89 @@ The game tests `RedstoneGameTests` (rs01 to rs10) check that:
   furnaces burning, counted to the trade;
 * every part comes from its real recipe out of the stores, and no observer is made without quartz;
 * left to its own day, the engineer plans a street lamp the stores can run to, walks out to it and builds it.
+
+## A town that cares for its looks
+
+A town looks after itself. Its folk notice when it gets untidy, they go round putting it right, and a proud town makes
+itself prettier still.
+
+**No grass inside a building.** A building's floor and footing are laid over whatever ground it goes up on. Before,
+a builder treated a grass block like any other solid block and counted it as already built. Every house put up on a
+meadow kept the meadow as its floor, and tall grass grew back up through it. Now the builder lifts the turf (the
+earth goes into its pack) and lays the boards or stone in its place. It also takes up any grass or flowers standing
+where the room is meant to be open. Older buildings are fixed on the tidy crew's daily round. A few buildings are
+checked on each visit. Earth found where the drawing wants a block is lifted into the stores and floored over with
+whatever the rest of that floor is made of, taken from the stores. Plants on the floor are taken up. A building whose
+drawing includes earth keeps it: a flower box, the beds of an orchard or allotment, and a park's lawn.
+
+**What spoils a town.** The town is walked column by column, a few thousand columns at a time, so the whole town is
+covered every couple of minutes. The walk notes every eyesore it finds, worst first:
+
+* a **spill**: lava lying in the town, or a lone puddle of water;
+* a **hole** two or more blocks deep, or a **pothole** in a street or on the square;
+* a **pillar** of earth or stone standing on its own, left by a folk that towered up to a treetop or walled itself
+  in for the night;
+* a **stray block** sitting on the ground or hanging in the air;
+* **scaffolding** left standing;
+* a **half-felled tree**: a trunk or stump with no crown;
+* **leaves** hanging in the air with no trunk;
+* a **torch** dropped on the ground by a folk working in the dark;
+* a **scar**: bare earth or rock in the turf that was cut and never grassed over;
+* the founders' **camp beds** still on the square once everybody has a bed in a house, and **chests** left out once
+  the storehouse stands.
+
+The walk never counts anything in or around a building or a building site (its lot, the way in to each door, its
+steps). It also leaves alone the fields, the mine, a worker's own ground, the square's well and monuments, the
+board, and anything a player put there. Every block a player sets down near a town is remembered, and the crew never
+touches it.
+
+**The tidy crew.** The street sweeper starts on the eyesores once there is nothing left for its broom. Otherwise the
+town sends whatever hand it can spare for its works (couriers first). Worst first, the crew:
+
+* fills a spill;
+* fills a hole with ground that matches what is around it: turf on a lawn, a path's earth on a path, the street's
+  own stone on a street;
+* takes down a pillar and takes up a stray block;
+* strikes scaffolding;
+* mends a pothole;
+* fells a half-felled tree and plants a sapling of the same kind where it stood (never on a street);
+* clears hanging leaves and takes up a dropped torch;
+* grasses over a scar;
+* takes up the camp beds. A folk that still sleeps in one is moved, but only when a bed in a house is free, and
+  never while it is asleep;
+* empties chests left out into the stores and takes them up.
+
+Everything the crew takes up goes into the stores, and everything it lays comes out of them. When the stores have
+nothing to fill a hole with, the hole waits.
+
+**The town's looks.** The town is scored out of a hundred:
+
+* tidiness, up to 40: the eyesores, grass inside buildings, and anything lying about;
+* greenery, up to 15: how much of the open ground is turf;
+* lighting, up to 15: how much of the streets is lit after dark;
+* flowers, up to 10;
+* finished buildings, up to 20: buildings standing against buildings still going up.
+
+From the score up: *a picture* (85 or more), *well kept* (70), *tidy enough* (50), *untidy* (30), *a mess* (below 30).
+The score is on the village board, on the Stores page of the town's books (with the sweeping), and from
+`/village tidy`, which also lists each eyesore still about. `/village tidy now`, for ops, runs the crew's rounds on
+the spot.
+
+**The folk notice.** A town that looks a picture makes its folk a little more content, and a mess makes them less
+so. They say so ("The square's a mess. Does nobody sweep round here?"). When the town falls below tidy enough, the
+elder calls a **clean-up day** one morning (at most once every three days). It goes into the town's news and onto the
+board, and three crews go out instead of one. A **proud town** (well kept or better), with nothing worse to see to,
+plants flower beds along its streets from the stores' flowers (or bone meal), trims leaves hanging over the streets,
+and puts a lamp post in each dark corner.
+
+**The tests.** The `TidyGameTests` class:
+
+* a house raised by a builder on a meadow has no grass inside, both once it stands and after a day of fast random
+  ticks;
+* an old house with grass for half its floor is floored in its own boards;
+* the crew clears every kind of eyesore, and leaves a player's pillar and one on a house's lot alone;
+* the camp is taken up once everybody has a house bed;
+* a messy town brings a clean-up day and then tidies up;
+* a long growth test grows a town for several days and audits it each day. The audit logs every eyesore with what
+  most likely left it. At the end it requires: no grass inside, no camp bed out, no spill, hole or pillar left
+  standing for a day, and looks of tidy enough or better.

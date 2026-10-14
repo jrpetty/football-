@@ -754,6 +754,50 @@ public final class Tidy {
             + "/15, flowers " + l.flowers() + "/10, finished " + l.finished() + "/20");
     }
 
+    // ------------------------------------------------------------------ the command
+
+    /**
+     * /village tidy: the town's looks and what spoils them (walked now), each eyesore a line "SPOT kind x y z" for the
+     * client smoke; /village tidy now (ops): the crew's rounds done on the spot first, no hand walked over.
+     */
+    public static com.mojang.brigadier.builder.LiteralArgumentBuilder<net.minecraft.commands.CommandSourceStack> command() {
+        return net.minecraft.commands.Commands.literal("tidy").executes(ctx -> tell(ctx, false))
+            .then(net.minecraft.commands.Commands.literal("now").requires(src -> src.hasPermission(2)).executes(ctx -> tell(ctx, true)));
+    }
+
+    private static int tell(com.mojang.brigadier.context.CommandContext<net.minecraft.commands.CommandSourceStack> ctx, boolean now) {
+        Villages.Village v = Quarters.near(ctx);
+        if (v == null) {
+            ctx.getSource().sendFailure(net.minecraft.network.chat.Component.literal("No village yet."));
+            return 0;
+        }
+        ServerLevel level = ctx.getSource().getLevel();
+        if (now) {
+            boolean was = TownJobs.instantNow();
+            TownJobs.instantForTests(true);
+            try {
+                for (int i = 0; i < 40; i++) tickForTests(level, v);
+            } finally {
+                TownJobs.instantForTests(was);
+            }
+        }
+        TidyAudit.Report r = TidyAudit.check(level, v.id());
+        if (r == null) return 0;
+        StringBuilder sb = new StringBuilder("THE TOWN'S LOOKS " + Villages.name(v.id()) + ": ");
+        sb.append(String.join(" ", r.lines()));
+        String board = boardLine(level, v.id());
+        if (board != null) sb.append(" Board: ").append(board);
+        int shown = 0;
+        for (Eyesores.Spot s : r.spots()) {
+            if (shown++ >= 12) break;
+            sb.append("\nSPOT ").append(s.kind().name().toLowerCase(java.util.Locale.ROOT)).append(' ').append(s.pos().getX()).append(' ')
+                .append(s.pos().getY()).append(' ').append(s.pos().getZ()).append(" (").append(s.note()).append(")");
+        }
+        String text = sb.toString();
+        ctx.getSource().sendSuccess(() -> net.minecraft.network.chat.Component.literal(text), false);
+        return 1;
+    }
+
     // ------------------------------------------------------------------ tests
 
     /** Tests: the town's crew looked at now (as every five seconds). */
