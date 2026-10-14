@@ -97,8 +97,8 @@ public final class TownBlocks {
         CIVIC(Zone.OPEN, Zone.SQUARE),
         /** A lamp post or a street light (at a road's edge, never in the middle of it). */
         LAMP(Zone.OPEN, Zone.ROAD, Zone.SQUARE),
-        /** A sign or a signpost (at a road's edge). */
-        SIGN(Zone.OPEN, Zone.ROAD, Zone.SQUARE),
+        /** A sign or a signpost (at a road's edge), a house's name board on its front. */
+        SIGN(Zone.OPEN, Zone.ROAD, Zone.SQUARE, Zone.EAVES),
         /** A window box, a sill, a planter on a building's face: under its eaves, never its doorway or way in. */
         WINDOW_BOX(Zone.OPEN, Zone.EAVES),
         /** The town's dressing out of doors: benches, planters, washing lines, scarecrows, banners. */
@@ -149,6 +149,18 @@ public final class TownBlocks {
         boolean ok = allowed(level, v, pos, why, h, null);
         if (!ok) refused(v, pos, why, h, null);
         return ok;
+    }
+
+    /** May every one of these cells be set, for this reason (a thing of several blocks goes up whole or not at all)? */
+    public static boolean mayAll(Level level, @Nullable Villages.Village v, Why why, BlockPos... cells) {
+        for (BlockPos p : cells) if (!mayPlace(level, v, p, why)) return false;
+        return true;
+    }
+
+    /** As mayAll, for a list. */
+    public static boolean mayAll(Level level, @Nullable Villages.Village v, Why why, java.util.Collection<BlockPos> cells) {
+        for (BlockPos p : cells) if (!mayPlace(level, v, p, why)) return false;
+        return true;
     }
 
     /** May a building's own work (build, repair, renovate) set this cell? Its own cells, and open ground, yes; another
@@ -385,7 +397,7 @@ public final class TownBlocks {
     }
 
     /** The town's own fittings, never to be built over or taken up by its works. */
-    static boolean fitting(BlockState st) {
+    public static boolean fitting(BlockState st) {
         return st.getBlock() instanceof com.jrpetty.mcassistant.block.VillageBoardBlock
             || st.getBlock() instanceof com.jrpetty.mcassistant.block.StorehouseBlock;
     }

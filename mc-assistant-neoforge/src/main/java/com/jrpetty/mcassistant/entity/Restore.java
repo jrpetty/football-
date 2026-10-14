@@ -188,8 +188,16 @@ public final class Restore {
     public static Kind judge(BlockState st, BuildGoal.Placement p) {
         if (serves(st, p)) return null;
         if (empty(st)) return Kind.MISSING;
+        if (earthy(st)) return Kind.WRONG;                                  // earth where a wall, a floor or a footing goes
         if (p.part() == BuildGoal.Part.BLOCK && solidish(st)) return Kind.SHAPE;
         return Kind.WRONG;
+    }
+
+    /** Earth, sand and gravel: the ground's, never a wall's or a floor's (a footing laid where the ground stood was
+     *  passed over as filled, and the shop stood on a floor of grass). */
+    public static boolean earthy(BlockState st) {
+        return st.is(BlockTags.DIRT) || st.is(BlockTags.SAND) || st.is(Blocks.GRAVEL) || st.is(Blocks.CLAY)
+            || st.is(Blocks.SNOW_BLOCK) || st.is(Blocks.FARMLAND) || st.is(Blocks.DIRT_PATH) || st.is(Blocks.SUSPICIOUS_GRAVEL);
     }
 
     private static boolean empty(BlockState st) {
@@ -226,7 +234,8 @@ public final class Restore {
                 case ROOF_SLAB, ROOF_SLAB_TOP, STONE_SLAB -> b instanceof net.minecraft.world.level.block.SlabBlock;
                 case PANE, GLASS -> glass(st);
                 case HANGING -> b instanceof net.minecraft.world.level.block.LanternBlock;
-                default -> fullCube(st) || (p.style() == Blueprints.Style.SOIL && (st.is(BlockTags.DIRT) || st.is(Blocks.FARMLAND)));
+                case SOIL, GENERIC -> fullCube(st) || earthy(st);
+                default -> fullCube(st) && !earthy(st);
             };
             case WINDOW -> glass(st);
             case DOOR -> b instanceof net.minecraft.world.level.block.DoorBlock;
