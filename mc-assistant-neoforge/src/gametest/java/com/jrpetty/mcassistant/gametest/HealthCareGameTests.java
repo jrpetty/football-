@@ -699,6 +699,7 @@ public class HealthCareGameTests {
         VillageFolkEntity friend = another(helper, heart.west(5), id);
         BlockPos[] home = new BlockPos[1];
         int[] phase = { 0 };
+        int[] had = { 0 };                                       // the household's own poppies before the call (a founder's posy, a picked one)
         helper.runAtTickTime(5, () -> {
             h1.life().widowed();
             h2.life().widowed();
@@ -723,6 +724,8 @@ public class HealthCareGameTests {
             Kit.log("hc06 the evening: " + java.util.Arrays.toString(w) + "; friend " + Neighbourly.errandForTests(friend) + "; hosts "
                 + Neighbourly.companyForTests(h1) + "/" + Neighbourly.companyForTests(h2));
             helper.assertTrue(w[1] == 1 && w[3] == 1 && Neighbourly.errandForTests(friend) != null, "the friend is sent to call");
+            Container box = (Container) level.getBlockEntity(com.jrpetty.mcassistant.entity.Families.homeChestForTests(level, h1));
+            had[0] = carried(h1, s -> s.is(Items.POPPY)) + carried(h2, s -> s.is(Items.POPPY)) + (box == null ? 0 : count(box, s -> s.is(Items.POPPY)));
             phase[0] = 1;
         });
         helper.onEachTick(() -> {
@@ -737,9 +740,9 @@ public class HealthCareGameTests {
                 Container chest = (Container) level.getBlockEntity(com.jrpetty.mcassistant.entity.Families.homeChestForTests(level, h1));
                 int poppies = carried(h1, s -> s.is(Items.POPPY)) + carried(h2, s -> s.is(Items.POPPY)) + (chest == null ? 0 : count(chest, s -> s.is(Items.POPPY)));
                 int still = carried(friend, s -> s.is(Items.POPPY));
-                Kit.log("hc06 over at " + t + ": " + java.util.Arrays.toString(w) + "; the household's poppies " + poppies + ", the friend's " + still
+                Kit.log("hc06 over at " + t + ": " + java.util.Arrays.toString(w) + "; the household's poppies " + poppies + " (had " + had[0] + "), the friend's " + still
                     + "; said " + Neighbourly.saidForTests());
-                helper.assertTrue(still == 0 && poppies == 1, "the poppy out of the friend's pack, the household's now (in hand, or its chest)");
+                helper.assertTrue(still == 0 && poppies == had[0] + 1, "the poppy out of the friend's pack, the household's now (in hand, or its chest)");
                 helper.assertTrue(remembers(h1, "housewarming") && remembers(h2, "housewarming") && remembers(friend, "housewarming"),
                     "everybody remembers the housewarming");
                 helper.succeed();

@@ -1634,7 +1634,7 @@ public final class Pets {
         if (!level.isRaining() && t >= 5000L && t < 9500L) {
             BlockPos roof = roofOf(level, village, h);
             if (roof != null) {
-                if (goTo(cat, roof.getX() + 0.5, roof.getY(), roof.getZ() + 0.5, 1.0D, 24.0)) {
+                if (goTo(cat, roof.getX() + 0.5, surface(level, roof), roof.getZ() + 0.5, 1.0D, 24.0)) {
                     rest(cat, true);
                     return "asleep on the roof in the sun";
                 }
@@ -1740,6 +1740,12 @@ public final class Pets {
     }
 
     @Nullable
+    /** Where a body stands at a spot: on the top of the block under it (a slab or a stair on the ridge is half high). */
+    public static double surface(ServerLevel level, BlockPos at) {
+        net.minecraft.world.phys.shapes.VoxelShape under = level.getBlockState(at.below()).getCollisionShape(level, at.below());
+        return under.isEmpty() ? at.getY() : at.getY() - 1 + under.max(net.minecraft.core.Direction.Axis.Y);
+    }
+
     private static BlockPos roofNow(ServerLevel level, UUID village, Homes.Home h) {
         Ledger.Building b = Homes.building(village, h.anchor);
         if (b == null) return null;
