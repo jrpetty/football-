@@ -22,7 +22,10 @@ public enum ServiceRole {
     TAVERN("tavern", "Tavern", "barkeep", new ServiceHours(10500, 19500), Point.COUNTER, List.of("tavern"), AssistantEntity.StationTask.COOK),
     BANK("bank", "Bank", "banker", new ServiceHours(1500, 11500), Point.LECTERN, List.of("bank"), AssistantEntity.StationTask.BANK),
     SMITHY("smithy", "Smithy", "smith", new ServiceHours(1000, 12000), Point.ANVIL, List.of("smithy"), AssistantEntity.StationTask.SMITH),
-    TAILOR("tailor", "Tailor's", "tailor", new ServiceHours(1000, 12000), Point.LOOM, List.of("workshop"), AssistantEntity.StationTask.TAILOR);
+    TAILOR("tailor", "Tailor's", "tailor", new ServiceHours(1000, 12000), Point.LOOM, List.of("workshop"), AssistantEntity.StationTask.TAILOR),
+    // [dining] The restaurant: lunch and dinner, from eleven till nine; its counter opens the order screen (DiningDesk).
+    RESTAURANT("restaurant", "Restaurant", "host", new ServiceHours(5000, 15000), Point.COUNTER, List.of(DiningPlaces.RESTAURANT),
+        AssistantEntity.StationTask.COOK);
 
     /** What a role serves at. */
     public enum Point {
@@ -78,6 +81,7 @@ public enum ServiceRole {
             case SHOP, CAFE -> ShopDesk.INSTANCE;
             case BANK -> BankDesk.INSTANCE;
             case TAVERN -> TavernDesk.INSTANCE;
+            case RESTAURANT -> DiningDesk.INSTANCE;                       // [dining]
             case SMITHY, TAILOR -> MakerDesk.INSTANCE;
         };
     }

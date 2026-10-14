@@ -332,6 +332,7 @@ public final class TownJobs {
                 default -> { if (trade.isCraft()) score -= 10; }
             }
             if (f.workedOut()) score += 25;                              // nothing to work at in its own trade
+            score += Hospitality.townWorkLean(f, works);                 // [dining] the baker to the ovens; the floor kept at its post
             if (!f.missingEssentials().isEmpty()) score += 20;            // short of its kit: its trade is idle anyway
             score -= Math.sqrt(f.blockPosition().distSqr(at)) / 4.0;
             if (score > bestScore) { bestScore = score; best = f; }

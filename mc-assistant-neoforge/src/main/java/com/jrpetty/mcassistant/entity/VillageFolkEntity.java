@@ -1290,6 +1290,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = WindowBoxes.mood(this, day, m, why);        // [workitems] its household's window boxes in flower
         m = Interviews.mood(this, day, m, why);          // [interviews] a post won at interview, or missed
         m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
+        m = Dining.mood(this, day, m, why);             // [dining] a dinner out tonight; a waiter's tip
         m = TownWays.mood(this, day, m, why);           // [culture2] its town's dish, its own festival, a rite's blessing
         m = Pastimes.mood(this, day, m, why);           // [leisure] a night under a quilt, a game won, a kite, a kickabout, the lanterns
         m = Perks.mood(this, day, m, why);              // [perks] Vespers, Remembrance, the almshouse, the Cathedral, its quirks
@@ -1516,6 +1517,7 @@ public class VillageFolkEntity extends AssistantEntity {
             if (StoreFloor.serveAPlayer(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;   // [econ-store]
             if (Buskers.tipFrom(this, sp, held)) return net.minecraft.world.InteractionResult.SUCCESS;     // [arms] a coin in the busker's hat
             if (Auctions.serveAPlayer(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;     // [fleet] the auctioneer's bid screen
+            if (Diners.staffClicked(this, sp)) return net.minecraft.world.InteractionResult.SUCCESS;     // [dining] a waiter at work: the menu
             FolkTalk.open(this, sp);
         }
         return net.minecraft.world.InteractionResult.sidedSuccess(level().isClientSide);
@@ -2546,6 +2548,7 @@ public class VillageFolkEntity extends AssistantEntity {
         long bedtime = bedtimeTick();
         if (t < 12000L || t >= bedtime) return false;
         if (isBaby()) return false;
+        if (Diners.evening(this, t)) return true;             // [dining] out to dinner at the café, the tavern, the restaurant
         if (familySupper(t)) return true;
         if (Tavern.evening(this, t)) return true;
         if (Allotments.evening(this, t)) return true;         // [batchE] some evenings, the household's allotment (Allotments)
@@ -2793,6 +2796,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // The bell: every guard turns out, whichever watch it keeps; nobody else works.
         UUID alarmed = ownerId();
         if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;
+        Boolean serving = Hospitality.shift(this);            // [dining] the bar's, the floor's and the baker's own hours
+        if (serving != null) return serving;
         // The day of rest: nobody works but the watch.
         if (alarmed != null && stationTask() != StationTask.GUARD && RestDay.now(alarmed, level().getDayTime()) != null) return false;
         // The town bell (TownBell): the day's work from the dawn bell to the dusk bell, and the bell's own business first.
@@ -4523,7 +4528,8 @@ public class VillageFolkEntity extends AssistantEntity {
             || Sweepers.sweeping(this)                 // (and the street sweeper about the town's streets)
             || Cartographers.surveying(this)          // [cartographer] out walking the town (or the country) with its sheets
             || Divers.busy(this)                       // [diver] on a dive: the water and the shed are its ground
-            || Engineers.abroad(this);                 // [redstone] the engineer at a machine, a guard sent to the gate's lever
+            || Engineers.abroad(this)                  // [redstone] the engineer at a machine, a guard sent to the gate's lever
+            || Dining.busy(this);                      // [dining] a plate to carry, a dish to cook, a runner out in town
     }
 
     /** What it just drew out of the Village Storehouse: one request, served by the storekeeper at the
@@ -5398,7 +5404,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (level().isClientSide) return "";
         if (tickCount - roleBadgeTick >= 200 || tickCount < roleBadgeTick) {
             roleBadgeTick = tickCount;
-            String b = stationTask() == StationTask.SHOP ? ShopRoles.badge(this) : "";
+            String b = stationTask() == StationTask.SHOP ? ShopRoles.badge(this)
+                : stationTask() == StationTask.COOK ? Hospitality.badge(this) : "";   // [dining] "[Waiter]", "[Barkeep]"
             roleBadge = b.isEmpty() ? "" : "[" + b + "]";
         }
         return roleBadge;
@@ -5408,7 +5415,8 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean craftWork() {
         return level() instanceof net.minecraft.server.level.ServerLevel server
-            && (StoreStaff.work(this, server) || Crafts.work(this, server));   // [econ-store] the counter, the stock book
+            && (StoreStaff.work(this, server) || Hospitality.work(this, server)   // [dining] the tables, the bar, the sink
+                || Crafts.work(this, server));   // [econ-store] the counter, the stock book
     }
 
     /**

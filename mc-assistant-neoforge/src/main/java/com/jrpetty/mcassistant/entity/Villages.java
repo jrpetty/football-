@@ -468,6 +468,7 @@ public final class Villages {
         Decor.resetForTests();
         Luxuries.resetForTests();
         ShopsHomes.resetAllForTests();                              // [shops-homes] counters, queues, lists, trips, homes' and workshops' stores
+        Dining.resetForTests();                                     // [dining] the orders, the hands at work, the diners, the wash
         Palettes.resetForTests();
         Court.resetForTests();
         School.resetForTests();
@@ -1014,7 +1015,8 @@ public final class Villages {
             : slot.max() + Math.max(0, boost) + Homeland.extraMost(villageId, slot.trade()) + (int) Math.ceil(ways);
         // And the shop's hands at its bench (Workshop): the shop's share is its keeper and the hands it wants.
         double hands = slot.trade() == AssistantEntity.StationTask.SHOP && villageId != null
-            ? Workshop.handsWanted(villageId) + ShopRoles.staffWanted(villageId) : 0;   // [econ-store] and its assistants and stock keeper
+            ? Workshop.handsWanted(villageId) + ShopRoles.staffWanted(villageId)        // [econ-store] and its assistants and stock keeper
+            : slot.trade() == AssistantEntity.StationTask.COOK ? Hospitality.staffWanted(villageId) : 0;   // [dining] the kitchens' and dining rooms' jobs
         // [war-prep] On a war footing the watch's share rises to meet the enemy, out of the trades a town can spare (WarFooting).
         // [perks] The Standing Army and a Guardian in office a guard more, the Militia one fewer (Perks.share).
         return WarFooting.share(villageId, slot.trade(), Perks.share(villageId, slot.trade(), Math.max(0.0, Math.min(max + hands, t + hands))));
@@ -1818,6 +1820,8 @@ public final class Villages {
         List<String> extras = new ArrayList<>();
         if (folk >= 14 && built(villageId, "cafe") < 1) extras.add("cafe");
         if (folk >= 12 && built(villageId, "tavern") < 1) extras.add("tavern");
+        // [dining] A restaurant, once the town has its café, a cook and two dozen folk (DiningPlaces).
+        if (DiningPlaces.wanted(villageId, folk) && built(villageId, DiningPlaces.RESTAURANT) < 1) extras.add(DiningPlaces.RESTAURANT);
         // A Stone Age village's square gets a fountain.
         if (folk >= 10 && built(villageId, "fountain") < 1) extras.add("fountain");
         // A schoolhouse, once there are children enough to fill one (School).
@@ -2239,6 +2243,7 @@ public final class Villages {
             case "market" -> "a market, stalls under one roof for what the village makes";
             case "chapel" -> "a chapel, which the Diamond Age asks for";
             case "cafe" -> "a café, where folk can sit down to a drink and a bite on their break";
+            case "restaurant" -> DiningPlaces.why(villageId);      // [dining]
             case "tavern" -> "a tavern, for the evenings: a fire, a tune and a story";
             case "graveyard" -> "a graveyard, to lay our dead to rest";
             case "smithy" -> "a smithy, for the watch's armour and the miners' picks";

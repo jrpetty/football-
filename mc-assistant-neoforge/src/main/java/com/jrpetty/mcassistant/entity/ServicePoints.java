@@ -191,6 +191,8 @@ public final class ServicePoints {
         VillageFolkEntity best = null;
         double bestD = Double.MAX_VALUE;
         BlockPos near = point != null ? point.pos() : null;
+        VillageFolkEntity hosting = Hospitality.keeperFor(village, role);      // [dining] the barkeep at its bar, the host at its counter
+        if (hosting != null && usable(hosting)) return hosting;
         if (role == ServiceRole.SHOP) {
             VillageFolkEntity k = Workshop.keeper(village);
             for (VillageFolkEntity a : StoreStaff.in(village, ShopRoles.Role.ASSISTANT)) {
@@ -256,6 +258,10 @@ public final class ServicePoints {
         boolean messageOk = true;
         /** The desk's own state for this screen (a shop's basket), kept on the server. */
         final CompoundTag state = new CompoundTag();
+        /** [dining] The order screen of a dining room (DiningDesk), and where it was opened (a table, the menu board):
+         *  the player must stay near that, not the counter. */
+        boolean dining;
+        @Nullable BlockPos near;
 
         Session(ServiceRole role, UUID village, @Nullable BlockPos point, @Nullable UUID keeper, String tab) {
             this.role = role;
@@ -291,6 +297,27 @@ public final class ServicePoints {
         return true;
     }
 
+    /** [dining] A player at a table (or the menu board) in a café, a tavern or a restaurant: the order screen for it. */
+    public static void openDining(ServerPlayer p, DiningPlaces.Place place, @Nullable DiningPlaces.Table table) {
+        if (!(p.level() instanceof ServerLevel level)) return;
+        Point point = nearest(level, place.village, place.kind.role, place.centre());
+        if (point != null && !point.building().equals(place.building)) point = null;
+        Session s = new Session(place.kind.role, place.village, point == null ? null : point.pos(), null, "menu");
+        s.dining = true;
+        s.near = table != null ? table.cell() : place.board != null ? place.board : p.blockPosition().immutable();
+        s.state.putLong("place", place.building.anchor().asLong());
+        if (table != null) {
+            s.state.putInt("table", table.number());
+            s.state.putString("mode", "table");
+        }
+        open(p, s);
+    }
+
+    /** [dining] The desk a screen is of: the dining room's order screen, or the trade's own. */
+    private static Desk deskOf(Session s) {
+        return s.dining ? DiningDesk.INSTANCE : s.role.desk();
+    }
+
     private static String firstTab(ServiceRole role) {
         return role == ServiceRole.SMITHY || role == ServiceRole.TAILOR ? "mend" : "buy";
     }
@@ -312,7 +339,10 @@ public final class ServicePoints {
         Villages.Village v = Villages.get(s.village);
         if (v == null) return null;
         Point point = null;
-        if (s.point != null) {
+        if (s.near != null) {                                                  // [dining] at a table: near it is near enough
+            if (s.point != null) for (Point q : of(level, s.village, s.role)) if (q.pos().equals(s.point)) { point = q; break; }
+            if (p.distanceToSqr(s.near.getX() + 0.5, s.near.getY() + 0.5, s.near.getZ() + 0.5) > (REACH + 2) * (REACH + 2)) return null;
+        } else if (s.point != null) {
             for (Point q : of(level, s.village, s.role)) if (q.pos().equals(s.point)) { point = q; break; }
             if (point == null) return null;                                    // taken up meanwhile
             if (p.distanceToSqr(s.point.getX() + 0.5, s.point.getY() + 0.5, s.point.getZ() + 0.5) > (REACH + 2) * (REACH + 2)
@@ -337,7 +367,7 @@ public final class ServicePoints {
             deliver(p, closedTag());
             return;
         }
-        Desk desk = s.role.desk();
+        Desk desk = deskOf(s);
         int print = desk.fingerprint(visit) * 31 + statusPrint(visit) * 17 + s.tab.hashCode() + s.message.hashCode();
         long now = visit.level().getGameTime();
         if (!force && print == s.lastPrint && now - s.lastSent < RESEND) return;
@@ -397,8 +427,8 @@ public final class ServicePoints {
         }
         t.putString("tab", s.tab);
         t.putInt("nonce", s.lastNonce);
-        t.putString("kind", visit.role().desk().kind(visit.role()));
-        t.put("body", visit.role().desk().body(visit, s.tab));
+        t.putString("kind", deskOf(s).kind(visit.role()));
+        t.put("body", deskOf(s).body(visit, s.tab));
         t.putString("message", s.message);
         t.putBoolean("messageOk", s.messageOk);
         return t;
@@ -436,7 +466,7 @@ public final class ServicePoints {
             r = Result.no(st.words());
         } else {
             try {
-                r = visit.role().desk().act(visit, action, args);
+                r = deskOf(s).act(visit, action, args);
             } catch (RuntimeException e) {
                 LOG_ONCE.computeIfAbsent(visit.role().id + "/" + action, k -> {
                     com.mojang.logging.LogUtils.getLogger().warn("[shops-homes] service {} {} failed", k, e.toString());
@@ -462,7 +492,9 @@ public final class ServicePoints {
 
     /** What anybody may do at a closed point: look, and read. */
     private static boolean readOnly(String action) {
-        return action.equals("statement") || action.equals("look") || action.equals("basket") || action.equals("use");
+        return action.equals("statement") || action.equals("look") || action.equals("basket") || action.equals("use")
+            || action.equals("add") || action.equals("remove") || action.equals("clear") || action.equals("mode")    // [dining] the basket, and
+            || action.equals("payNow") || action.equals("pay");                                                     // the bill, after hours too
     }
 
     /** Every second, the open screens brought up to date if what they show has changed (only those, and cheaply). */

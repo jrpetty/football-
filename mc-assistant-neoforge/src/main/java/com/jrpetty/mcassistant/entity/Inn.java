@@ -131,6 +131,8 @@ public final class Inn {
      */
     @Nullable
     static VillageFolkEntity keeper(UUID village) {
+        VillageFolkEntity host = Hospitality.innkeeper(village);       // [dining] the innkeeper (or the host) first
+        if (host != null) return host;
         VillageFolkEntity cook = null, shop = null;
         for (AssistantEntity a : Villages.folkOf(village)) {
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || !f.isAlive()) continue;
@@ -192,6 +194,9 @@ public final class Inn {
     }
 
     /** The coin into the till: the treasury, the day's books, and the inn's own count. */
+    /** [dining] The innkeeper keeps one coin in this many of a room's fee. */
+    static final int KEEPERS_SHARE = 3;
+
     static void till(UUID village, int coins, boolean player) {
         Ledger.addCoins(village, coins);
         Economy.sold(village, coins);
@@ -238,7 +243,10 @@ public final class Inn {
         int coins = Market.coinsHeld(p);
         if (coins < price) return keeper.displayNameCap() + ": \"A room's " + price + " coins a night. You've " + coins + ".\"";
         Market.payOut(p, price);
-        till(id, price, true);
+        // [dining] The innkeeper's share of the room (a coin in three); the rest to the till.
+        int share = Hospitality.role(keeper) == Hospitality.Role.INNKEEPER ? price / KEEPERS_SHARE : 0;
+        if (share > 0) keeper.earn(share);
+        till(id, price - share, true);
         Ledger.note(id, bookingKey(bed), p.getUUID() + "|" + until(level.getDayTime()));
         level.playSound(null, bed, SoundEvents.WOOL_PLACE, SoundSource.BLOCKS, 0.6F, 1.0F);
         String said = FolkTalk.pick(keeper.getRandom(), "There you are: ", "Here's your key: ", "Right you are: ")

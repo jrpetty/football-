@@ -46,6 +46,7 @@ public final class Asks {
     static final Map<String, String> BUILDINGS = new LinkedHashMap<>();
     static {
         BUILDINGS.put("storehouse", "storage");
+        BUILDINGS.put("restaurant", DiningPlaces.RESTAURANT);   // [dining]
         BUILDINGS.put("shelter", "shelter");
         BUILDINGS.put("house", "house");
         BUILDINGS.put("well", "well");

@@ -33,7 +33,7 @@ public final class Seats {
 
     private Seats() {}
 
-    static final int BREAK = 0, GATHERING = 1;
+    static final int BREAK = 0, GATHERING = 1, DINING = 2;   // [dining] at its table out to dinner (Diners)
     /** How far from where it is a folk on its break looks for a seat; how far from its place at a gathering. */
     static final int REACH = 10, AT_GATHERING = 2;
     /** How long it gives the walk to a seat before it gives the seat up. */
@@ -126,6 +126,7 @@ public final class Seats {
     static boolean stillFree(VillageFolkEntity f, Sit s) {
         if (!f.isAlive() || f.isSleeping() || f.getTarget() != null || f.isPassenger()) return false;
         if (s.why == GATHERING) return Assemblies.attending(f);
+        if (s.why == DINING) return Diners.dining(f);                // [dining] sat till it has eaten and paid
         if (Assemblies.attending(f) || TownCalendar.busy(f) || TownJobs.busy(f) || School.teaching(f)) return false;
         // Its break over, it is back to work. (A job queued meanwhile waits for the break's end, as its
         // trade does; one that walks it off somewhere sooner has it up off the seat anyway: tick.)
@@ -286,6 +287,14 @@ public final class Seats {
         f.setYBodyRot(s.yaw);
         f.setPose(Pose.SITTING);
         s.seated = true;
+    }
+
+    /** [dining] Down at its table's chair out to dinner: walked to it and sat on it till it gets up (Diners). */
+    static void dine(VillageFolkEntity f, ServerLevel level, BlockPos chair, int until) {
+        Sit s = SITTING.get(f.getUUID());
+        if (s != null && s.why == DINING && s.seat.equals(chair)) return;
+        if (!(level.getBlockState(chair).getBlock() instanceof StairBlock)) return;
+        drive(f, level, claim(f, level, chair, DINING, until));
     }
 
     /** Up off the seat, and the seat let go. */
