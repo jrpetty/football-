@@ -58,6 +58,8 @@ public final class AssistantConfig {
     public static final ModConfigSpec.DoubleValue VILLAGE_CROP_GROWTH;
     /** [disasters] Fire from the forges, floods and droughts (entity/Disasters), and how rare. */
     public static final ModConfigSpec.BooleanValue VILLAGE_DISASTERS;
+    /** [styles] The look new towns build in (a theme: data/mc_assistant/themes, THEMES.md). */
+    public static final ModConfigSpec.ConfigValue<String> VILLAGE_THEME;
     public static final ModConfigSpec.IntValue VILLAGE_SPARK_DAYS;
     public static final ModConfigSpec.IntValue VILLAGE_FLOOD_RAIN_DAYS;
     public static final ModConfigSpec.IntValue VILLAGE_DROUGHT_DAYS;
@@ -286,6 +288,13 @@ public final class AssistantConfig {
         VILLAGE_PLAYER_JAIL_SECONDS = b.comment(
                 "How long a player is kept in the cells, in seconds, when villagePlayerJail is on.")
             .defineInRange("villagePlayerJailSeconds", 120, 10, 1200);
+        // [styles] The towns' look (entity/Themes).
+        VILLAGE_THEME = b.comment(
+                "The look the towns build in: a theme from data/mc_assistant/themes (a datapack may add one).",
+                "\"medieval\" is the folk's own timber, stone and slate. A town keeps the theme it was given;",
+                "an operator may change one town's with /village theme set <theme>, and its older buildings are",
+                "renovated to the new look by its own builders.")
+            .define("villageTheme", "medieval");
         b.pop();
 
         SPEC = b.build();
@@ -336,6 +345,7 @@ public final class AssistantConfig {
     public static boolean villagePhantoms() { return read(VILLAGE_PHANTOMS, false); }
     public static double villageCropGrowth() { return read(VILLAGE_CROP_GROWTH, 2.0); }
     public static boolean villageDisasters() { return read(VILLAGE_DISASTERS, true); }          // [disasters]
+    public static String villageTheme() { return read(VILLAGE_THEME, "medieval"); }               // [styles]
     public static int villageSparkDays() { return read(VILLAGE_SPARK_DAYS, 10); }
     public static int villageFloodRainDays() { return read(VILLAGE_FLOOD_RAIN_DAYS, 3); }
     public static int villageDroughtDays() { return read(VILLAGE_DROUGHT_DAYS, 6); }
