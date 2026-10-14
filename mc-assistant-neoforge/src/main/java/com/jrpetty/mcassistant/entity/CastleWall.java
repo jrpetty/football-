@@ -68,8 +68,17 @@ import java.util.function.Predicate;
  * the wall stands on its ground (the farmers keep to what is left either side, off the ring); a pen's fence on the
  * line goes back to the stores and the wall takes its place, so the pen stays closed. Somebody's building on the line
  * is built round: the wall is laid in every cell of the line the town's placement gate allows (TownBlocks, Why.WALL),
- * and the building's own walls stand as that part of the ring. A ravine or a cliff is built down into, to its floor; a
- * gulf too deep to reach is bridged.
+ * and the building's own walls stand as that part of the ring.
+ *
+ * <h2>On the ground</h2>
+ * The wall is measured from the natural ground only (fitNow, ground): the surface under leaves, logs, plants, builds
+ * and anything floating, so a sky build, a showcase platform or a tree's canopy never lifts it. Its walkway keeps
+ * within a small band of that ground (shape): a block a column at most, never raised more than RAISE_MOST over the
+ * ground under it, and no block of it more than ABOVE_GROUND_MOST over its ground or ABOVE_HEART_MOST over the
+ * heart. Ground higher than that (a cliff, a mountain side) is left to stand as the barrier: the wall ends against it
+ * and goes on beyond. A dip (a ravine) is bridged at the walkway's level on arches, a pier every PIER_EVERY columns
+ * down to its floor; a gulf too deep for piers and too wide for one arch is left open as the barrier, with a note.
+ * Stone of an older fit standing over these caps is taken down into the stores (trims).
  *
  * <h2>The gates</h2>
  * Each avenue's gatehouse: an arched passage between its two flanking towers, a pair of doors on the outer face; from
@@ -102,7 +111,9 @@ public final class CastleWall {
 
     private CastleWall() {}
 
-    static final String SIDES = "castle.sides", OLD = "castle.old", FIT = "castle.fit3/", BEGUN = "castle.begun";
+    static final String SIDES = "castle.sides", OLD = "castle.old", FIT = "castle.fit4/", BEGUN = "castle.begun";
+    /** The fits of before the height caps: read once to find the stone they stood over the caps, then forgotten. */
+    static final String UNCAPPED_FIT = "castle.fit3/";
     /** How often the works on the wall are seen to (ticks), and the whole wall looked over. */
     static final long EVERY = 100L, SURVEY = 2400L;
     /** Blocks a hand lays at a time; what of each stone the stores keep back for the builders. */
@@ -123,6 +134,27 @@ public final class CastleWall {
     static final int DEEP = 48;
     /** A bridge's depth under the walkway, past the wall's height. */
     static final int BRIDGE = 3;
+    /** The most any block of the wall stands over the natural ground under it (a tower's crenels included). */
+    static final int ABOVE_GROUND_MOST = 12;
+    /** The most any block of the wall stands over the town's heart: ground higher than this is the barrier itself. */
+    static final int ABOVE_HEART_MOST = 24;
+    /** A tower's top over its walkway: the parapet's floor and the crenels on it. */
+    static final int TOWER_RISE = 3;
+    /** The tallest the wall stands (the Nether Age's): a fit, made once for every age, keeps its caps for this. */
+    static final int TALLEST = WallPlan.height(Villages.Age.NETHER.ordinal());
+    /** The most the walkway is raised over the ground under it to keep its steps to a block (curtain: a lantern on a
+     *  merlon over the walkway, at the tallest, still within ABOVE_GROUND_MOST). */
+    static final int RAISE_MOST = ABOVE_GROUND_MOST - TALLEST - 1;
+    /** A dip this deep under the ground either side of it (its rims) is bridged on arches, not followed down into. */
+    static final int DIP = 6;
+    /** How far along the line, each way, a dip's rims are looked for: a ravine up to about twice this wide is bridged. */
+    static final int RIM_REACH = 12;
+    /** The deepest a bridge's pier goes down under its rims; deeper, the dip is spanned by one arch or left open. */
+    static final int PIER_MOST = 16;
+    /** The widest run too deep for piers that one arch spans; a wider gulf is left open as the barrier. */
+    static final int ARCH_MOST = 7;
+    /** An arched span's deck under its walkway's cap: two courses, the arch's stairs under them. */
+    static final int SPAN_DECK = 2;
     /** Every this many columns over water a pier; arches with a grate under them between. */
     static final int PIER_EVERY = 4;
     /** The longest causeway a gate over water is given each way along its avenue, to the first dry ground: water wider
@@ -345,20 +377,47 @@ public final class CastleWall {
 
     /** What a column of a side is: the wall; (in fits made before the ring was closed) left out; an opening for a road
      *  (a gate on an avenue, a postern on a paved cross street); over water (piers and grated arches); round somebody's
-     *  work (laid where the placement gate allows, their own walls standing as that part of the ring). */
-    static final int WALL = 0, LEFT_OUT = 1, OPENING = 2, WATER = 3, BUILT = 4;
+     *  work (laid where the placement gate allows, their own walls standing as that part of the ring); a span over a dip
+     *  on arches; ground too high (a cliff: the wall ends against it); a gulf too deep and wide to span (left open). */
+    static final int WALL = 0, LEFT_OUT = 1, OPENING = 2, WATER = 3, BUILT = 4, SPAN = 5, CLIFF = 6, GULF = 7;
 
-    /** A side fitted to the ground: for each column along it, the ground its walkway is measured from (smoothed),
-     *  what it is, and its floor (an opening's road, the water's top under an arch); and where it goes round a build
-     *  that is not the town's (jogs: see JOG). */
-    record Fit(int lo, int[] ground, int[] kind, int[] floor, List<int[]> jogs) {
+    /** Is nothing of the wall laid at a column of this kind (the land itself stands as the barrier there)? */
+    static boolean open(int kind) {
+        return kind == LEFT_OUT || kind == CLIFF || kind == GULF;
+    }
+
+    /** A side fitted to the ground: for each column along it, the ground its walkway is measured from (shaped: see
+     *  shape), what it is, its floor (an opening's road, the water's top under an arch), the natural ground under it
+     *  (a span's: the dip's floor; MIN_VALUE none in reach), and the walkway an older, uncapped fit had there, as a
+     *  block-a-column envelope (MIN_VALUE: none over this one's; see trims); and where it goes round a build that is
+     *  not the town's (jogs: see JOG). */
+    record Fit(int lo, int[] ground, int[] kind, int[] floor, int[] natural, int[] was, List<int[]> jogs) {
         int ground(int a) { int i = a - lo; return i < 0 || i >= ground.length ? Integer.MIN_VALUE : ground[i]; }
         int kind(int a) { int i = a - lo; return i < 0 || i >= kind.length ? LEFT_OUT : kind[i]; }
         int floor(int a) { int i = a - lo; return i < 0 || i >= floor.length ? ground(a) : floor[i]; }
+        int natural(int a) { int i = a - lo; return i < 0 || i >= natural.length ? Integer.MIN_VALUE : natural[i]; }
+        int was(int a) { int i = a - lo; return i < 0 || i >= was.length ? Integer.MIN_VALUE : was[i]; }
+
+        /** This fit, with where an older one's walkway stood: the highest of it within a tower's half-width, falling
+         *  a block a column (the old walkway's climb toward a tower or a corner), so all of its stone is found. */
+        Fit over(Fit before) {
+            int n = ground.length, half = WallPlan.TOWER / 2;
+            int[] w = new int[n];
+            for (int i = 0; i < n; i++) {
+                w[i] = Integer.MIN_VALUE;
+                for (int j = i - half; j <= i + half; j++) w[i] = Math.max(w[i], before.ground(lo + j));
+            }
+            for (int i = 1; i < n; i++) if (w[i - 1] != Integer.MIN_VALUE) w[i] = Math.max(w[i], w[i - 1] - 1);
+            for (int i = n - 2; i >= 0; i--) if (w[i + 1] != Integer.MIN_VALUE) w[i] = Math.max(w[i], w[i + 1] - 1);
+            return new Fit(lo, ground, kind, floor, natural, w, jogs);
+        }
 
         String encode() {
             StringBuilder sb = new StringBuilder().append(lo);
-            for (int i = 0; i < ground.length; i++) sb.append(',').append(ground[i]).append(':').append(kind[i]).append(':').append(floor[i]);
+            for (int i = 0; i < ground.length; i++) {
+                sb.append(',').append(ground[i]).append(':').append(kind[i]).append(':').append(floor[i])
+                    .append(':').append(natural[i]).append(':').append(was[i]);
+            }
             sb.append(';');
             for (int j = 0; j < jogs.size(); j++) {
                 if (j > 0) sb.append(',');
@@ -386,14 +445,16 @@ public final class CastleWall {
                 }
                 String[] p = halves[0].split(",");
                 int n = p.length - 1;
-                int[] g = new int[n], k = new int[n], f = new int[n];
+                int[] g = new int[n], k = new int[n], f = new int[n], nat = new int[n], was = new int[n];
                 for (int i = 0; i < n; i++) {
                     String[] q = p[i + 1].split(":");
                     g[i] = Integer.parseInt(q[0]);
                     k[i] = Integer.parseInt(q[1]);
                     f[i] = Integer.parseInt(q[2]);
+                    nat[i] = q.length > 3 ? Integer.parseInt(q[3]) : g[i];                  // (an uncapped fit's: its own)
+                    was[i] = q.length > 4 ? Integer.parseInt(q[4]) : Integer.MIN_VALUE;
                 }
-                return new Fit(Integer.parseInt(p[0]), g, k, f, jogs);
+                return new Fit(Integer.parseInt(p[0]), g, k, f, nat, was, jogs);
             } catch (RuntimeException e) {
                 return null;
             }
@@ -427,7 +488,15 @@ public final class CastleWall {
         Fit have = Fit.decode(Ledger.note(v.id(), key));
         if (have != null) return have;
         Fit made = fitNow(level, v, s, side);
-        if (made != null) Ledger.note(v.id(), key, made.encode());
+        if (made == null) return null;
+        // The same side fitted before the caps: where its walkway stood, so what it raised over them comes down.
+        String uncapped = UNCAPPED_FIT + key.substring(FIT.length());
+        Fit before = Fit.decode(Ledger.note(v.id(), uncapped));
+        if (before != null) {
+            made = made.over(before);
+            Ledger.forget(v.id(), uncapped);
+        }
+        Ledger.note(v.id(), key, made.encode());
         return made;
     }
 
@@ -437,9 +506,8 @@ public final class CastleWall {
         int line = s.of(side);
         int lo = WallPlan.lo(s, side) - WallPlan.TOWER, hi = WallPlan.hi(s, side) + WallPlan.TOWER;
         int n = hi - lo + 1;
-        int[] g = new int[n], k = new int[n], f = new int[n];
+        int[] g = new int[n], k = new int[n], f = new int[n], nat = new int[n];
         boolean[] wetGate = new boolean[n];
-        int up = WallPlan.height(Villages.Age.NETHER.ordinal()) + 4;
         WallPlan.Sides was = old(v.id());
         List<WallPlan.Tower> wasTowers = was == null ? List.of() : WallPlan.towers(was);
         // Fitted again over a wall already begun (round a player's build): its own stone on the line is no ground.
@@ -470,6 +538,7 @@ public final class CastleWall {
                 if (u == 1) mid = y;
             }
             int level0 = most != Integer.MIN_VALUE ? Math.max(most, surface) : surface;
+            nat[i] = level0;
             wetGate[i] = Math.abs(a) <= WallPlan.GATE && most == Integer.MIN_VALUE && wet;
             if (Math.abs(a) <= WallPlan.GATE || road && WallPlan.onCrossStreet(a)) k[i] = OPENING;   // a causeway over water
             else if (most == Integer.MIN_VALUE && wet) k[i] = WATER;
@@ -483,13 +552,7 @@ public final class CastleWall {
         boolean any = false;
         for (int i = 0; i < n; i++) if (g[i] != Integer.MIN_VALUE) any = true;
         if (!any) java.util.Arrays.fill(g, c.getY());
-        // The walkway never steps more than a block at a time: raised where the ground falls away. A column with no
-        // level of its own (MIN_VALUE) takes it from its neighbours, and is never one to measure from (MIN_VALUE - 1
-        // would wrap round to the top of the world, and with it the whole side).
-        for (int pass = 0; pass < 2; pass++) {
-            for (int i = 1; i < n; i++) if (g[i - 1] != Integer.MIN_VALUE && g[i] < g[i - 1] - 1) g[i] = g[i - 1] - 1;
-            for (int i = n - 2; i >= 0; i--) if (g[i + 1] != Integer.MIN_VALUE && g[i] < g[i + 1] - 1) g[i] = g[i + 1] - 1;
-        }
+        shape(g, k, f, nat, c.getY());
         for (int i = 0; i < n; i++) {
             if (g[i] == Integer.MIN_VALUE || g[i] < c.getY() - 64) g[i] = c.getY();
             if (k[i] == BUILT && f[i] == c.getY()) f[i] = g[i];
@@ -497,7 +560,96 @@ public final class CastleWall {
         // The towers stand whatever is under them (built down into water, round somebody's work): none is left out.
         List<int[]> jogs = jogs(level, v, s, side, g, lo);
         if (jogs == null) return null;
-        return new Fit(lo, g, k, f, jogs);
+        int[] none = new int[n];
+        java.util.Arrays.fill(none, Integer.MIN_VALUE);
+        return new Fit(lo, g, k, f, nat, none, jogs);
+    }
+
+    /**
+     * The walkway's ground along a side, from the natural ground read under it (g, k, f in place; nat the natural
+     * ground, a dip's floor kept there): ground too high over the heart is left to stand as the barrier (CLIFF: the
+     * wall ends against it and goes on beyond); a dip is spanned at its rims' level (dips); then the walkway's steps
+     * are kept to a block a column by raising the lower side, never more than RAISE_MOST over its own ground, so the
+     * smoothing never runs away up a slope (a steep rise keeps its step: the wall's end abuts it).
+     */
+    static void shape(int[] g, int[] k, int[] f, int[] nat, int heartY) {
+        int n = g.length, ceiling = heartY + ABOVE_HEART_MOST - TALLEST - TOWER_RISE;
+        for (int i = 0; i < n; i++) {
+            if (k[i] == OPENING) {
+                if (g[i] != Integer.MIN_VALUE) g[i] = Math.min(g[i], ceiling);      // a gate is cut into the rise, never left
+            } else if ((k[i] == WALL || k[i] == BUILT) && nat[i] != Integer.MIN_VALUE && nat[i] > ceiling) {
+                k[i] = CLIFF;
+                g[i] = Integer.MIN_VALUE;
+            }
+        }
+        dips(g, k, f, nat);
+        int[] cap = new int[n];
+        for (int i = 0; i < n; i++) {
+            int own = g[i] != Integer.MIN_VALUE ? g[i] : nat[i];
+            cap[i] = own == Integer.MIN_VALUE ? Integer.MAX_VALUE : Math.min(own + RAISE_MOST, ceiling);
+        }
+        // A column with no level of its own (MIN_VALUE: somebody's work) takes it from its neighbours, and is never
+        // one to measure from (MIN_VALUE - 1 would wrap round to the top of the world).
+        for (int pass = 0; pass < 2; pass++) {
+            for (int i = 1; i < n; i++) stepUp(g, k, cap, i - 1, i);
+            for (int i = n - 2; i >= 0; i--) stepUp(g, k, cap, i + 1, i);
+        }
+    }
+
+    /** Raise a column's walkway to a block under its neighbour's, as far as its cap. */
+    private static void stepUp(int[] g, int[] k, int[] cap, int from, int to) {
+        if (g[from] == Integer.MIN_VALUE || open(k[to])) return;
+        int want = Math.min(g[from] - 1, cap[to]);
+        if (g[to] == Integer.MIN_VALUE || g[to] < want) g[to] = want;
+    }
+
+    /**
+     * The dips along a side: a run of columns (WALL, or a hole with no ground in reach) DIP or more under the ground
+     * either side (the highest within RIM_REACH each way, the lower of the two). Each run is spanned at its rims'
+     * level on arches (SPAN, its floor in nat); a run with a stretch too deep for piers (PIER_MOST, or no ground in
+     * reach) wider than one arch (ARCH_MOST) is left open as the barrier (GULF), as is a hole with no rim either way.
+     */
+    static void dips(int[] g, int[] k, int[] f, int[] nat) {
+        int n = g.length;
+        boolean[] dip = new boolean[n];
+        for (int i = 0; i < n; i++) {
+            if (k[i] != WALL) continue;
+            int left = rim(k, nat, i, -1), right = rim(k, nat, i, 1);
+            if (nat[i] == Integer.MIN_VALUE) dip[i] = true;
+            else if (left != Integer.MIN_VALUE && right != Integer.MIN_VALUE) dip[i] = Math.min(left, right) - nat[i] >= DIP;
+        }
+        for (int i0 = 0; i0 < n; ) {
+            if (!dip[i0]) { i0++; continue; }
+            int i1 = i0;
+            while (i1 + 1 < n && dip[i1 + 1]) i1++;
+            int left = rim(k, nat, i0, -1), right = rim(k, nat, i1, 1);
+            int level = left == Integer.MIN_VALUE ? right : right == Integer.MIN_VALUE ? left : Math.min(left, right);
+            int deep = 0, deepest = 0;
+            for (int i = i0; i <= i1; i++) {
+                boolean tooDeep = nat[i] == Integer.MIN_VALUE || level != Integer.MIN_VALUE && level - nat[i] > PIER_MOST;
+                deep = tooDeep ? deep + 1 : 0;
+                deepest = Math.max(deepest, deep);
+            }
+            boolean gulf = level == Integer.MIN_VALUE || deepest > ARCH_MOST;
+            for (int i = i0; i <= i1; i++) {
+                k[i] = gulf ? GULF : SPAN;
+                g[i] = gulf ? Integer.MIN_VALUE : level;
+                f[i] = gulf ? f[i] : level;
+            }
+            i0 = i1 + 1;
+        }
+    }
+
+    /** The highest natural ground (of dry columns the wall stands on) within RIM_REACH of this column, this way;
+     *  MIN_VALUE if none. */
+    private static int rim(int[] k, int[] nat, int i, int step) {
+        int best = Integer.MIN_VALUE;
+        for (int d = 1; d <= RIM_REACH; d++) {
+            int j = i + step * d;
+            if (j < 0 || j >= nat.length) break;
+            if ((k[j] == WALL || k[j] == OPENING || k[j] == BUILT) && nat[j] != Integer.MIN_VALUE) best = Math.max(best, nat[j]);
+        }
+        return best;
     }
 
     /**
@@ -537,14 +689,17 @@ public final class CastleWall {
         return Integer.MIN_VALUE;
     }
 
-    /** Is this cell (or a cell of this column, from the sky down to the world's own ground) something not of the
-     *  town's: a player's block; a chest, a bed or another block entity the town does not own; anything solid that is
-     *  not the world's own ground, the wall's own stone ({@code ours}: the wall is begun, or stood here), what grows
-     *  wild, or one of the town's registered buildings? */
+    /** Is this cell (or a cell of this column, from as high as the wall could reach over its natural ground down to
+     *  that ground) something not of the town's: a player's block; a chest, a bed or another block entity the town does
+     *  not own; anything solid that is not the world's own ground, the wall's own stone ({@code ours}: the wall is
+     *  begun, or stood here), what grows wild, or one of the town's registered buildings? A build high over the wall's
+     *  reach (a sky build, a showcase's platform) is not in its way: the wall goes on under it. */
     static boolean foreignAt(ServerLevel level, Villages.Village v, int x, int z, boolean ours) {
         BlockPos c = v.centre();
         int top = Math.min(level.getMaxBuildHeight() - 1, Math.max(c.getY() + 40,
             level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z)));
+        int under = ground(level, x, z, c.getY(), ours);
+        if (under != Integer.MIN_VALUE) top = Math.min(top, under + ABOVE_GROUND_MOST + RAISE_MOST + 2);   // (and a block clear)
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (int y = top; y > c.getY() - 40; y--) {
             BlockState st = level.getBlockState(p.set(x, y, z));
@@ -681,7 +836,7 @@ public final class CastleWall {
         int d = outward ? Math.max(WallPlan.THICK, bO1 + 2 - line) : Math.min(-WallPlan.THICK, bO0 - 4 - line);
         if (Math.abs(d) > JOG_MOST) return null;
         BlockPos c = v.centre();
-        int most = Integer.MIN_VALUE;
+        int most = Integer.MIN_VALUE, least = Integer.MAX_VALUE;
         for (int a = r0; a <= r1; a++) most = Math.max(most, g[Math.max(0, Math.min(g.length - 1, a - lo))]);
         List<int[]> cells = new ArrayList<>();
         for (int a = r0; a <= r1; a++) for (int u = 0; u < WallPlan.THICK; u++) cells.add(new int[]{ a, line + d + u });
@@ -699,8 +854,11 @@ public final class CastleWall {
             if (y != Integer.MIN_VALUE) {
                 if (townBuilt(level, v, new BlockPos(x, y, z))) return null;
                 most = Math.max(most, y);
+                least = Math.min(least, y);
             }
         }
+        // Level, but never raised more than RAISE_MOST over the lowest ground it crosses (cut into a rise instead).
+        if (least != Integer.MAX_VALUE) most = Math.min(most, least + RAISE_MOST);
         return new int[]{ r0, r1, d, most, JOGGED, bA0, bA1, 0 };
     }
 
@@ -710,20 +868,43 @@ public final class CastleWall {
         return was != null && WallPlan.cell(was, wasTowers, dx, dz) != null;
     }
 
-    /** The ground of a column: the first block of the world's own under whatever grows on it (plants, snow, a tree)
-     *  and, where the wall stands or stood, the wall itself. MIN_VALUE in water or a hole too deep. */
+    /**
+     * The natural ground of a column (the first air over it): from the surface under the leaves
+     * (MOTION_BLOCKING_NO_LEAVES) down past whatever grows on it (plants, snow, a tree), anybody's build, anything
+     * floating (a sky build, a showcase's platform, a bridge's deck) and, where the wall stands or stood, the wall
+     * itself, to the world's own ground: earth or stone with something under it, or a road's paving or a field's earth
+     * laid on it (see grounded). Earth far over the heart (more than ABOVE_HEART_MOST) with open air under it (a
+     * thick floating island, an overhang) gives way to the ground under that. MIN_VALUE in water or a hole too deep.
+     * A column of nothing the world grows (another world's stone) stands on its first solid block.
+     */
     static int ground(ServerLevel level, int x, int z, int aroundY, boolean inPlan) {
         int y = Math.min(level.getMaxBuildHeight() - 1, Math.max(aroundY + 40,
-            level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z)));
-        int least = aroundY - 40;
+            level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z)));
+        int least = aroundY - 40, firstSolid = Integer.MIN_VALUE, high = Integer.MIN_VALUE;
+        boolean under = false;                                   // open air met under the high ground
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (; y > least; y--) {
             BlockState st = level.getBlockState(p.set(x, y, z));
-            if (!st.getFluidState().isEmpty() && !st.is(Blocks.LADDER)) return Integer.MIN_VALUE;
+            if (!st.getFluidState().isEmpty() && !st.is(Blocks.LADDER)) return high != Integer.MIN_VALUE && !under ? high : Integer.MIN_VALUE;
+            if (high != Integer.MIN_VALUE && st.isAir()) under = true;
             if (wild(level, p, st) || inPlan && mine(st)) continue;
-            return y + 1;
+            if (grounded(level, p, st)) {
+                if (y + 1 <= aroundY + ABOVE_HEART_MOST || under) return y + 1;
+                if (high == Integer.MIN_VALUE) high = y + 1;     // high ground: solid to here, or floating?
+                continue;
+            }
+            if (firstSolid == Integer.MIN_VALUE && (y <= level.getMinBuildHeight() || !level.getBlockState(p.below()).isAir())) firstSolid = y + 1;
         }
-        return Integer.MIN_VALUE;
+        return high != Integer.MIN_VALUE ? high : firstSolid;
+    }
+
+    /** Is this block the world's own ground (not floating, not somebody's work): earth or stone with something under
+     *  it (not air), or a road's paving or a field's earth laid on earth or stone? */
+    static boolean grounded(ServerLevel level, BlockPos p, BlockState st) {
+        if (p.getY() <= level.getMinBuildHeight()) return natural(st);             // the world's floor
+        BlockState under = level.getBlockState(p.below());
+        if (natural(st)) return !under.isAir();
+        return (road(st) || st.is(Blocks.FARMLAND)) && natural(under);
     }
 
     /** The water's top at a column: the first air over it (MIN_VALUE where the column is dry, or a hole). */
@@ -837,13 +1018,35 @@ public final class CastleWall {
             this.stairs = WallPlan.stairs(sides, towers, height);
         }
 
-        /** The ground a tower's top is measured from. */
+        /** The ground a tower's top is measured from: the highest walkway ground under it, but never so high its top
+         *  stands more than ABOVE_GROUND_MOST over the lowest natural ground under it. */
         int towerGround(WallPlan.Tower t) {
             if (t.kind() == WallPlan.TowerKind.CORNER) return cornerGround[towers.indexOf(t)];
+            int half = WallPlan.TOWER / 2;
+            int[] r = reach(fits[t.side()], t.centre() - half, t.centre() + half, height + TOWER_RISE);
+            return Math.min(r[0], r[1]);
+        }
+
+        /** Over these columns of a fit: {the highest walkway ground, the most a walkway's ground may be for a part of
+         *  the wall {@code rise} over it to stand within ABOVE_GROUND_MOST of the lowest natural ground there}. */
+        static int[] reach(Fit f, int a0, int a1, int rise) {
+            int most = Integer.MIN_VALUE, least = Integer.MAX_VALUE;
+            for (int a = a0; a <= a1; a++) {
+                most = Math.max(most, f.ground(a));
+                int n = f.natural(a);
+                if (n != Integer.MIN_VALUE && f.kind(a) != SPAN) least = Math.min(least, n);
+            }
+            return new int[]{ most, least == Integer.MAX_VALUE ? Integer.MAX_VALUE : least + ABOVE_GROUND_MOST - rise };
+        }
+
+        /** Does a tower stand here: none of its columns along the line left open (a cliff, a gulf) or spanning a dip?
+         *  Where it does not, the curtain runs on through its place (or the land stands as the barrier). */
+        boolean sited(WallPlan.Tower t) {
+            if (t.kind() == WallPlan.TowerKind.CORNER) return true;
+            int half = WallPlan.TOWER / 2;
             Fit f = fits[t.side()];
-            int most = Integer.MIN_VALUE;
-            for (int a = t.centre() - 3; a <= t.centre() + 3; a++) most = Math.max(most, f.ground(a));
-            return most;
+            for (int a = t.centre() - half; a <= t.centre() + half; a++) if (open(f.kind(a)) || f.kind(a) == SPAN) return false;
+            return true;
         }
 
         /** The cells of the jogs round builds not of the town's: {side, layer (2 the outer face), the jog's level, its
@@ -903,9 +1106,10 @@ public final class CastleWall {
         }
 
         /** The walkway's level (where one stands on it) at this column of a side: its ground and the wall's height,
-         *  raised toward a tower that stands higher, a block a step. */
+         *  raised toward a tower that stands higher, a block a step, as far as the caps allow over its own ground. */
         int top(int side, int a) {
-            int g = fits[side].ground(a);
+            int own = fits[side].ground(a);
+            int g = own;
             for (int i = 0; i < 4; i++) {
                 for (int j = 0; j < 2; j++) {
                     if (ENDS[i][j * 2] != side) continue;
@@ -917,11 +1121,13 @@ public final class CastleWall {
                 }
             }
             for (WallPlan.Tower t : towers) {
-                if (t.kind() == WallPlan.TowerKind.CORNER || t.side() != side) continue;
+                if (t.kind() == WallPlan.TowerKind.CORNER || t.side() != side || !sited(t)) continue;
                 int r0 = t.centre() - 3, r1 = t.centre() + 3;
                 int d = a < r0 ? r0 - a : a > r1 ? a - r1 : 0;
                 g = Math.max(g, towerGround(t) - d);
             }
+            int n = fits[side].natural(a);
+            if (g > own && n != Integer.MIN_VALUE && fits[side].kind(a) != SPAN) g = Math.max(own, Math.min(g, n + RAISE_MOST));
             return g + height;
         }
     }
@@ -939,16 +1145,18 @@ public final class CastleWall {
             if (w.fits[side] == null) return null;
         }
         w.jogs();
-        // The corners: the higher of the two sides' ground under them.
+        // The corners: the higher of the two sides' ground under them, within the caps over the lower's.
         int[][] ends = ENDS;
         for (int i = 0; i < 4; i++) {
-            int most = Integer.MIN_VALUE;
+            int most = Integer.MIN_VALUE, cap = Integer.MAX_VALUE;
             for (int j = 0; j < 2; j++) {
                 int side = ends[i][j * 2], hiEnd = ends[i][j * 2 + 1];
                 int from = hiEnd == 1 ? WallPlan.hi(s, side) + 1 : WallPlan.lo(s, side) - WallPlan.TOWER;
-                for (int a = from; a < from + WallPlan.TOWER; a++) most = Math.max(most, w.fits[side].ground(a));
+                int[] r = Wall.reach(w.fits[side], from, from + WallPlan.TOWER - 1, w.height + TOWER_RISE);
+                most = Math.max(most, r[0]);
+                cap = Math.min(cap, r[1]);
             }
-            w.cornerGround[i] = most;
+            w.cornerGround[i] = Math.min(most, cap);
         }
         return w;
     }
@@ -1037,17 +1245,22 @@ public final class CastleWall {
         if (c == null) return out;
         if (!level.hasChunk(x >> 4, z >> 4)) return out;                     // never a chunk loaded for the wall's sake
         Direction outD = outward(c.side()), along = alongward(c.side()), in = outD.getOpposite();
-        if (c.kind() == WallPlan.Kind.TOWER) {
-            tower(level, w, c, x, z, out);
-            return out;
-        }
         Fit f = w.fits[c.side()];
         int a = c.across(), layer = c.layer();
         int kind = f.kind(a);
-        if (kind == LEFT_OUT) return out;
+        if (c.kind() == WallPlan.Kind.TOWER) {
+            if (w.sited(c.tower()) && !open(kind)) {
+                tower(level, w, c, x, z, out);
+                return out;
+            }
+            // No tower where the land is the barrier or the line spans a dip: the curtain runs on through its place.
+            if (c.tower().kind() == WallPlan.TowerKind.CORNER || layer >= WallPlan.THICK) return out;
+        }
+        if (open(kind)) return out;
         int top = w.top(c.side(), a);
-        int foot = foot(level, x, z, top - 1);
-        if (foot == Integer.MIN_VALUE || top - foot > DEEP + w.height) foot = top - w.height - BRIDGE;   // nothing to stand on within reach: bridged
+        int found = foot(level, x, z, top - 1);
+        // Nothing to stand on within reach: hung from the walkway's level.
+        int foot = found == Integer.MIN_VALUE || top - found > DEEP + w.height ? top - w.height - BRIDGE : found;
         boolean merlon = Math.floorMod(a, 2) == 0;
         if (kind == OPENING) {
             int floor = f.floor(a);
@@ -1088,6 +1301,20 @@ public final class CastleWall {
                     out.add(new Want(new BlockPos(x, surface, z), Role.ARCH, layer == 0 ? in : outD, 1));
                 }
                 for (int y = surface + 1; y <= top - 2; y++) out.add(new Want(new BlockPos(x, y, z), Role.BODY, outD, 0));
+            }
+        } else if (kind == SPAN) {
+            // Over a dip: the deck at the walkway's level; a pier down to the dip's floor every few columns where the
+            // floor is in reach (PIER_MOST), never deeper; an arch under the deck between them.
+            int under = top - 2 - SPAN_DECK;
+            boolean pier = Math.floorMod(a, PIER_EVERY) == 0 && found != Integer.MIN_VALUE && top - w.height - found <= PIER_MOST;
+            if (pier) {
+                for (int y = found; y <= top - 2; y++) {
+                    boolean face = layer != 1 && weathered(x, y, z);
+                    out.add(new Want(new BlockPos(x, y, z), face ? Role.ACCENT : Role.BODY, outD, 0));
+                }
+            } else {
+                out.add(new Want(new BlockPos(x, under, z), layer == 1 ? Role.BODY : Role.ARCH, layer == 0 ? in : outD, 1));
+                for (int y = under + 1; y <= top - 2; y++) out.add(new Want(new BlockPos(x, y, z), Role.BODY, outD, 0));
             }
         } else {
             // A flight of steps up from inside, cut into the inner face.
@@ -1323,6 +1550,8 @@ public final class CastleWall {
         long heldOpen;
         /** When the line was last fitted again round a player's build. */
         long replanned = -100000L;
+        /** The sections found with no stone of an older fit over their caps since the wall was last worked out. */
+        final Set<String> trimmed = new HashSet<>();
     }
 
     /**
@@ -1559,6 +1788,7 @@ public final class CastleWall {
             st.openings = openings(w);
             passages(id, w, st.openings);
             st.sections = sections(w);
+            st.trimmed.clear();
             st.names = new ArrayList<>(st.sections.keySet());
             st.at = 0;
             st.surveyed = now;
@@ -1768,12 +1998,18 @@ public final class CastleWall {
         int[] best = mode == FREE ? free(w.tier) : availability(level, v, w.tier);
         List<Want> todo = new ArrayList<>();
         List<Integer> how = new ArrayList<>();
+        boolean trim = !st.trimmed.contains(name);
+        List<BlockPos> over = new ArrayList<>();
         for (int[] col : cols) {
-            for (Want want : wants(level, w, col[0], col[1])) {
+            List<Want> wants = wants(level, w, col[0], col[1]);
+            for (Want want : wants) {
                 int d = doing(level, w, want, best);
                 if (d == PLACE || d == UPGRADE || d == CLEAR) { todo.add(want); how.add(d); }
             }
+            if (trim) trims(level, w, col[0], col[1], wants, over);
         }
+        if (trim && over.isEmpty()) st.trimmed.add(name);
+        if (!over.isEmpty()) return trimDown(level, v, over, mode, batch);  // what an older fit raised over the caps, first
         if (todo.isEmpty()) return 0;
         // From the bottom up, so nothing hangs in the air; near the first.
         Integer[] idx = new Integer[todo.size()];
@@ -1794,6 +2030,56 @@ public final class CastleWall {
             }
         }
         return set;
+    }
+
+    /**
+     * The stone of an older, uncapped fit (Fit.was) standing in this column over the wall as it is wanted now: the
+     * wall's own stone and fittings (never a player's, never where the placement gate says no), over its wanted top up
+     * to where the old walkway's towers could have reached; and, over a dip it now spans or where the land is now the
+     * barrier, everything of it down to the natural ground. None where no older fit stood here.
+     */
+    static void trims(ServerLevel level, Wall w, int dx, int dz, List<Want> wants, List<BlockPos> out) {
+        WallPlan.Cell c = WallPlan.cell(w.sides, w.towers, dx, dz);
+        if (c == null) return;
+        Fit f = w.fits[c.side()];
+        int was = f.was(c.across());
+        if (was == Integer.MIN_VALUE) return;
+        int x = w.heart.getX() + dx, z = w.heart.getZ() + dz;
+        Set<Integer> kept = new HashSet<>();
+        int top = Integer.MIN_VALUE;
+        for (Want want : wants) {
+            kept.add(want.pos().getY());
+            top = Math.max(top, want.pos().getY());
+        }
+        int kind = f.kind(c.across()), floor = f.natural(c.across());
+        boolean whole = kind == SPAN || open(kind) || top == Integer.MIN_VALUE;
+        int from = whole ? (floor != Integer.MIN_VALUE ? floor : was - DEEP) : top + 1;
+        int to = Math.min(level.getMaxBuildHeight() - 1, was + TALLEST + TOWER_RISE + 2);
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int y = to; y >= from; y--) {
+            if (kept.contains(y)) continue;
+            BlockState st = level.getBlockState(p.set(x, y, z));
+            if (st.isAir() || !mine(st) || wild(level, p, st) || PlayerBlocks.placed(level, p)) continue;
+            if (!may(level, w, p) || theirs(level, w, p)) continue;
+            out.add(p.immutable());
+        }
+    }
+
+    /** Take down stone over the caps, highest first (into the stores; a hand at it in the game). Returns blocks
+     *  taken, or -1 while a hand is on its way. */
+    private static int trimDown(ServerLevel level, Villages.Village v, List<BlockPos> over, int mode, int batch) {
+        over.sort(Comparator.comparingInt((BlockPos p) -> -p.getY()));
+        BlockPos first = over.get(0);
+        if (mode == HAND && !TownJobs.atWork(level, v, "the town wall", first, "taking the town wall down to its height")) return -1;
+        int n = 0;
+        for (BlockPos p : over) {
+            if (n >= batch) break;
+            if (mode == HAND && p.distManhattan(first) > 12) continue;
+            give(level, v, p, level.getBlockState(p), mode == FREE);
+            level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
+            n++;
+        }
+        return n;
     }
 
     /** Lay (or reface, or clear) one block, paid out of the stores. */
@@ -2167,6 +2453,17 @@ public final class CastleWall {
             for (Fit f : st.wall.fits) for (int k : f.kind()) if (k == WATER) water++;
             out.add("Gates: " + gates + ", posterns: " + posterns + " (" + st.doors.size() + " doors), " + (Boolean.TRUE.equals(st.shut) ? "shut" : "open")
                 + (water > 0 ? "; " + water + " columns over water on piers and grated arches" : ""));
+            int span = 0, cliff = 0, gulf = 0;
+            for (Fit f : st.wall.fits) {
+                for (int k : f.kind()) {
+                    if (k == SPAN) span++;
+                    else if (k == CLIFF) cliff++;
+                    else if (k == GULF) gulf++;
+                }
+            }
+            if (span > 0) out.add("Over a dip on arches: " + span + " columns, at the walkway's level");
+            if (cliff > 0) out.add("Against high ground: " + cliff + " columns where the wall ends and the rise itself is the barrier");
+            if (gulf > 0) out.add("Over a gulf too deep to bridge: " + gulf + " columns left open, the drop itself the barrier");
         }
         if (st.wall != null) {
             String[] names = { "north", "east", "south", "west" };
@@ -2332,7 +2629,7 @@ public final class CastleWall {
                     int c0 = j[MODE] == JOGGED ? j[R0] + WallPlan.THICK : j[A0], c1 = j[MODE] == JOGGED ? j[R1] - WallPlan.THICK : j[A1];
                     if (a >= c0 && a <= c1) left = true;
                 }
-                if (left) continue;
+                if (left || open(w.fits[side].kind(a))) continue;
                 int[] e = new int[7];
                 for (int u = 0; u < WallPlan.THICK; u++) {
                     int[] q = WallPlan.offset(side, line + u, a);
@@ -2389,7 +2686,47 @@ public final class CastleWall {
         st.shut = shut;
     }
 
-    /** Tests: a column's kind as the wall is fitted ({WALL 0, OPENING 2, WATER 3, BUILT 4}), -1 if not known. */
+    /** Tests: the natural ground of a column (the first air over it), through the wall's own stone; MIN_VALUE in
+     *  water or a hole. */
+    public static int naturalForTests(ServerLevel level, int x, int z, int aroundY) {
+        return ground(level, x, z, aroundY, true);
+    }
+
+    /** Tests: is this block the wall's own (its stone in any age, or one of its fittings)? */
+    public static boolean wallBlockForTests(BlockState st) {
+        return mine(st);
+    }
+
+    /**
+     * Tests: an old save's wall, as it was fitted before the caps: this side's fit kept as it was before them (the
+     * walkway's ground raised by {@code by} over these columns) and its stone laid that high, the fit to be made again.
+     */
+    public static void uncapForTests(ServerLevel level, Villages.Village v, int side, int a0, int a1, int by) {
+        State st = STATES.get(v.id());
+        if (st == null || st.wall == null) return;
+        Wall w = st.wall;
+        Fit f = w.fits[side];
+        int[] g = f.ground().clone();
+        for (int a = a0; a <= a1; a++) if (a - f.lo() >= 0 && a - f.lo() < g.length) g[a - f.lo()] += by;
+        String key = fitKey(w.sides, side);
+        Fit old = new Fit(f.lo(), g, f.kind(), f.floor(), g, f.was(), f.jogs());
+        Ledger.note(v.id(), UNCAPPED_FIT + key.substring(FIT.length()), old.encode());
+        Ledger.forget(v.id(), key);
+        int line = w.sides.of(side);
+        Block stone = PALETTES.get(Math.max(1, w.tier)).body();
+        for (int a = a0; a <= a1; a++) {
+            for (int u = 0; u < WallPlan.THICK; u++) {
+                int[] q = WallPlan.offset(side, line + u, a);
+                int x = w.heart.getX() + q[0], z = w.heart.getZ() + q[1];
+                for (int y = w.top(side, a) - 1; y < w.top(side, a) + by; y++) level.setBlock(new BlockPos(x, y, z), stone.defaultBlockState(), 2 | 16);
+            }
+        }
+        st.wall = null;
+        st.surveyed = -100000L;
+    }
+
+    /** Tests: a column's kind as the wall is fitted ({WALL 0, OPENING 2, WATER 3, BUILT 4, SPAN 5, CLIFF 6, GULF 7}),
+     *  -1 if not known. */
     public static int kindForTests(UUID id, int side, int across) {
         State st = STATES.get(id);
         return st == null || st.wall == null ? -1 : st.wall.fits[side].kind(across);
