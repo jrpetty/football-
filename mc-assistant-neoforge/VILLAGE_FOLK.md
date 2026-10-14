@@ -10664,6 +10664,16 @@ One worth for everything, one price for everybody, and coin that holds its value
   instead of hoarding. Savings at the treasury earn only out of what its loans earn; coin put into the works
   earns up to a half in the hundred a day and comes back after two weeks. A friend's free share at the stores
   is a couple of coins' worth a day, and the stall will not buy a gift back.
+* **Trade between towns.** Each town's trade book reads its surpluses and shortages from its own stores and prices.
+  An envoy and the other town's leader strike a contract only where both gain by their own prices after the haul
+  (a cart's carrying both ways over the road between them, and the risk of losing a load): so many of one town's
+  surplus each delivery, for so many of the other's and coin, every few days for three weeks. A hungry town sends
+  to the neighbour with food over first, whatever its elder's temper, and deals in food first. Each delivery goes
+  by the trade wagons when the town has them, by a caravan when a hand can go, and by the road when none can; the
+  goods leave the sender's stores when they set out and reach the other's when they arrive, and the buyer pays on
+  delivery. A load lost or nothing to send is a shortfall; three in a row and the contract ends. The Trade page
+  shows each contract, why it stands, what each side has gained by its own prices, and what is on the road; ask a
+  folk what the town trades and it will tell you.
 * **Production follows prices.** A trade whose goods are dear wants more hands (up to a quarter more), one whose
   goods are a glut fewer; the Prices page says which trades lean, and why.
 * **Seeing it.** The Prices page (and `/village prices`) has each good's price, its arrow and why, the coin in

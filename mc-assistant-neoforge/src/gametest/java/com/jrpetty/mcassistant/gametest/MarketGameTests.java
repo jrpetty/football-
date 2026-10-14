@@ -118,6 +118,16 @@ public class MarketGameTests {
         return f;
     }
 
+    /** A full larder and a mountain of cobblestone: a town fed, with a glut it sells (Budget.spare). */
+    private static void glut(ServerLevel level, UUID id) {
+        for (int k = 0; k < 4; k++) {
+            Container c = chest(level, id, -6 + 2 * k, -5);
+            for (int i = 0; i < 27; i++) c.setItem(i, new ItemStack(k == 0 ? Items.BREAD : Items.COBBLESTONE, 64));
+            c.setChanged();
+        }
+        com.jrpetty.mcassistant.entity.Budget.forget(id);
+    }
+
     private static int coins(Player p) {
         return Market.coinsHeld(p);
     }
@@ -258,9 +268,7 @@ public class MarketGameTests {
             }
             // A player at the stall: a lot of cobblestone (a glut the town can spare) bought and sold straight back, at the
             // dearest and the cheapest.
-            Container glut = chest(level, id, 5, 3);
-            for (int i = 0; i < 27; i++) glut.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
-            glut.setChanged();
+            glut(level, id);
             Player p = helper.makeMockPlayer(GameType.SURVIVAL);
             p.getInventory().setItem(20, new ItemStack(McAssistantMod.VILLAGE_COIN.get(), 64));
             ItemStack bread = new ItemStack(Items.COBBLESTONE);
@@ -341,8 +349,8 @@ public class MarketGameTests {
         helper.runAtTickTime(10, () -> {
             Villages.Village v = Villages.get(id);
             Container c = chest(level, id, 3, 3);
-            for (int i = 0; i < 27; i++) c.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
             c.setChanged();
+            glut(level, id);
             List<VillageFolkEntity> folk = new ArrayList<>();
             folk.add(f);
             f.setJob(StationTask.FARM);
@@ -684,7 +692,9 @@ public class MarketGameTests {
         Kit.log("mk09 trade errands in twenty mornings: to the farm town " + toFarm + ", to the quarry " + toQuarry + "; " + TradeTalks.story(k));
         helper.assertTrue(toFarm == 20, "a hungry town sends to the neighbour with food over every morning it can: " + toFarm);
         helper.assertTrue(toQuarry < toFarm, "not to the one without: " + toQuarry);
-        helper.assertTrue(k.deal() && k.table().x() == Items.BREAD && k.table().buyer().equals(hungry), "and buys its bread: " + k.why());
+        TradeTalks.Table tb = k.table();
+        boolean bread = tb != null && (tb.x() == Items.BREAD && tb.buyer().equals(hungry) || tb.y() == Items.BREAD && tb.seller().equals(hungry));
+        helper.assertTrue(k.deal() && bread, "and gets bread by it: " + k.end() + " " + k.why() + " " + tb);
         Market.hungryForTests(hungry, false);
         helper.succeed();
     }
