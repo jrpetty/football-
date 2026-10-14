@@ -10629,3 +10629,52 @@ The game tests `RedstoneGameTests` (rs01 to rs10) check that:
   furnaces burning, counted to the trade;
 * every part comes from its real recipe out of the stores, and no observer is made without quartz;
 * left to its own day, the engineer plans a street lamp the stores can run to, walks out to it and builds it.
+
+## The town's look as data, and renovation [styles]
+
+**Themes.** What a town's buildings are made of is data, not code: a *theme*
+(`data/mc_assistant/themes/<id>.json`, which a datapack may override or add to). The
+folk's own look is the `medieval` theme, and it chooses block for block what the code
+chose before (StylesGameTests st01 holds it to the old code, frozen, over a million
+choices). A theme says, for every kind of block a design asks for (the wall, the floor,
+the roof stair, the post...), which blocks a builder reaches for first, given the town's
+land and its building style; what each age makes of the town's buildings; how each
+building style dresses its houses; the lamp posts, benches and street lights; the land's
+own walling; and the palettes a storey is put up in. A theme may also draw its own
+version of any design (`blueprints/<theme>/<design>.txt`), built in place of the usual
+one. Every town builds in the config's theme (`villageTheme`, "medieval"); an operator
+gives one town another with `/village theme set <id>`, and `/village theme` shows the
+town's theme, the themes on offer and its renovation list. How to write a theme (the
+alien one is meant to be only this): THEMES.md.
+
+**Materials.** Never, at any age, a block of the theme's forbidden list as building
+material: no diamond, emerald, gold, iron or lapis blocks, nothing of the Nether's or the
+End's (netherrack, nether brick, blackstone, basalt, quartz, obsidian, end stone,
+purpur), unless the theme names that block itself (the Nether Age's quartz footings).
+From the Iron Age no earth, gravel, sand or wool in a wall, a floor or a roof: a builder
+short of the town's own block goes down the theme's stand-ins for its age (stone bricks,
+cobblestone, stone, bricks, planks...) and, past them, waits for the stores. A young
+town still builds with whatever proper block it has. The earth of a flower box is earth.
+The builders, the rebuilders after a fire and the renovation all keep to this.
+
+**Renovation.** Every building is stamped when it goes up with what it was built to:
+its design's version (a changed drawing is a new version), the theme, the age and the
+style. Once a day (a slice of the town a turn) the town goes over its buildings; one whose
+design or theme is not the current one, or that has earth or a precious block in its
+walls, goes on the renovation list, the most out of date and the oldest first. Two at a
+time, a turn every half a minute by day, a hand rebuilds it in place from the stores, a
+few blocks a turn from the bottom up: the new design's walls, floors and roof; the old
+design's leftovers taken down into the stores; doors, windows and ladders put in. Its
+furniture is moved, never lost: a chest with everything in it, a furnace, a lectern, a
+sign; its beds are all moved in one moment, by day, so the household is never a bed
+short at night. The household stays: it is the same house on the same ground. One only
+an age or a style behind is the ages' make-over's and the style's dressers', as before.
+A building with no stamp (an older save) is looked over for its design only; its
+materials are left as they are. The chronicle says when a building is renovated.
+
+| Test | What it proves |
+|---|---|
+| st01 | the medieval theme is the old code, choice for choice (looks, parts, ages, styles, streets, palettes, whole dressings) |
+| st02 | the materials, age by age: no junk, no precious or Nether blocks, the stand-ins in order, a young town unblocked |
+| st03 | a second theme, pure data, end to end: its blocks, its design, its ages; a medieval house renovated into it |
+| st04 | an old design renovated turn by turn from the stores: household and beds kept, the chest moved whole, gold and earth out |

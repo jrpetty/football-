@@ -79,10 +79,16 @@ public final class Renovation {
 
     /** The ledger's key for a building's stamp, by its anchor. */
     static final String PREFIX = "reno/";
-    /** Buildings renovated at once in a town. */
+    /** Buildings renovated at once in a town: a few, so the town is never all scaffolding. */
     static final int AT_ONCE = 2;
-    /** Blocks a turn. */
-    static final int STEP = 12;
+    /** Blocks a turn: about what a hand lays in the half minute between turns. */
+    public static final int STEP = 12;
+    /** Ticks between turns (half a minute), and the turn's place in that, clear of the other town works' turns. */
+    static final int TURN_TICKS = 600, TURN_PHASE = 457;
+    /** Buildings gone over a turn by the day's survey, so a big town's survey is spread over a few turns. */
+    static final int SURVEY_BATCH = 24;
+    /** The most turns renovateNow takes (the stage, the tests), and the blocks it lays a turn. */
+    static final int NOW_TURNS = 200, NOW_STEP = 64;
 
     /** What a building was built to: its design's version and name, the theme, the age, the style; and when. */
     public record Stamp(long version, String drawing, String theme, String age, String style, long day) {
@@ -116,6 +122,7 @@ public final class Renovation {
     public static void resetForTests() {
         QUEUE.clear();
         SURVEYED.clear();
+        SURVEYS.clear();
         WAITS.clear();
         DONE.clear();
     }
@@ -149,6 +156,11 @@ public final class Renovation {
         }
     }
 
+    /** The stage: a building stamped as built to this (an older design's version, another theme...). */
+    public static void stampAs(UUID village, BlockPos anchor, Stamp s) {
+        stampForTests(village, anchor, s);
+    }
+
     /** Tests: a building stamped as built to this (an older design's version, another theme...). */
     public static void stampForTests(UUID village, BlockPos anchor, Stamp s) {
         Ledger.note(village, PREFIX + anchor.asLong(), s.encode());
@@ -173,7 +185,9 @@ public final class Renovation {
     public record Work(Kind kind, BlockPos pos, @Nullable BuildGoal.Placement cell, @Nullable BlockPos from) {}
 
     public enum Kind {
-        /** A bed, a chest, a furnace... moved whole from {@code from} to its place in the design. */
+        /** The house's beds that are not where the design lays them, all moved there at once (never a bed short). */
+        BEDS,
+        /** A chest, a furnace, a lectern... moved whole from {@code from} to its place in the design. */
         MOVE,
         /** Something taken down into the stores (the old design's, or what stands where the new one wants another). */
         CLEAR,
@@ -187,6 +201,14 @@ public final class Renovation {
 
     // ------------------------------------------------------------------ the day's survey
 
+    /**
+     * Was the building built in another theme than the town's now? One with no stamp (an older save's, before themes)
+     * was built in the town's own: its materials are left as they are, only its design is looked over.
+     */
+    static boolean themeChanged(@Nullable Stamp was, Stamp now) {
+        return was != null && !was.theme().equals(now.theme());
+    }
+
     /** How far behind a building is: 0 for current; more for a changed design or theme, or unfit blocks in it. */
     static int behind(ServerLevel level, Villages.Village v, Ledger.Building b) {
         UUID id = v.id();
@@ -194,7 +216,7 @@ public final class Renovation {
         Stamp now = current(id, b, 0);
         int score = 0;
         if (s == null || s.version() != now.version() || !s.drawing().equals(now.drawing())) score += 4;
-        if (s == null || !s.theme().equals(now.theme())) score += 4;
+        if (themeChanged(s, now)) score += 4;
         if (score == 0 && unfitIn(level, v, b, now.drawing()) > 0) score += 2;
         return score;
     }
@@ -219,37 +241,71 @@ public final class Renovation {
         return !Grow.raisingNow(village, b.anchor());
     }
 
+    /** A day's survey of a town, part done: the buildings gone over so far and how far behind each is. */
+    private static final class Survey {
+        final long day;
+        int next;
+        final List<long[]> rank = new ArrayList<>();
+
+        Survey(long day) {
+            this.day = day;
+        }
+    }
+
+    /** Each town's survey under way. */
+    private static final Map<UUID, Survey> SURVEYS = new ConcurrentHashMap<>();
+
     /**
-     * Go over the town's buildings: the out-of-date ones listed for renovation (the most behind first, then the
-     * oldest); the ones only an age or a style behind stamped current once the make-over and the dressers are done.
+     * Go over so many more of the town's buildings (all of them for {@code most} 0 or less): the out-of-date ones ranked
+     * for renovation (the most behind first, then the oldest, then the first built); the ones only an age or a style
+     * behind stamped current once the make-over and the dressers are done with them. When the last is gone over, the
+     * list is the town's. True when the survey is done.
      */
-    static void survey(ServerLevel level, Villages.Village v, long day) {
+    static boolean survey(ServerLevel level, Villages.Village v, long day, int most) {
         UUID id = v.id();
-        List<long[]> rank = new ArrayList<>();
-        int order = 0;
-        for (Ledger.Building b : Ledger.buildings(id)) {
-            order++;
+        Survey sv = SURVEYS.get(id);
+        if (sv == null || sv.day != day) {
+            sv = new Survey(day);
+            SURVEYS.put(id, sv);
+        }
+        List<Ledger.Building> all = Ledger.buildings(id);
+        int stop = most <= 0 ? all.size() : Math.min(all.size(), sv.next + most);
+        for (; sv.next < stop; sv.next++) {
+            Ledger.Building b = all.get(sv.next);
             if (!ours(id, b) || !Land.areaLoaded(level, b.anchor(), 9)) continue;
             Stamp s = stamp(id, b.anchor());
             int score = behind(level, v, b);
             if (score > 0) {
-                rank.add(new long[]{ b.anchor().asLong(), score, s == null ? -1 : s.day(), order });
+                sv.rank.add(new long[]{ b.anchor().asLong(), score, s == null ? -1 : s.day(), sv.next });
                 continue;
             }
-            // Only an age or a style behind: the make-over's and the dressers'; stamped up to date when they are done.
-            Stamp now = current(id, b, s == null ? day : s.day());
-            if (s != null && (!s.age().equals(now.age()) || !s.style().equals(now.style()))) {
-                boolean aged = Ages.AS_BUILT.contains(b.structure()) || Ages.fullyDone(level, v, b, Villages.ageOf(id));
-                Architecture.Style st = Architecture.of(id);
-                boolean dressed = !Architecture.HOMES.contains(b.structure()) || st == null || Architecture.dressedFor(id, b, st);
-                if (aged && dressed) Ledger.note(id, PREFIX + b.anchor().asLong(), now.encode());
-            }
+            catchUp(level, v, b, s, day);
         }
-        rank.sort(Comparator.<long[]>comparingLong(r -> -r[1]).thenComparingLong(r -> r[2]).thenComparingLong(r -> r[3]));
+        if (sv.next < all.size()) return false;
+        sv.rank.sort(Comparator.<long[]>comparingLong(r -> -r[1]).thenComparingLong(r -> r[2]).thenComparingLong(r -> r[3]));
         List<Long> q = new ArrayList<>();
-        for (long[] r : rank) q.add(r[0]);
+        for (long[] r : sv.rank) q.add(r[0]);
         QUEUE.put(id, q);
         SURVEYED.put(id, day);
+        SURVEYS.remove(id);
+        return true;
+    }
+
+    /** A building only an age or a style behind: stamped up to date once the make-over and the dressers are done with it. */
+    private static void catchUp(ServerLevel level, Villages.Village v, Ledger.Building b, @Nullable Stamp s, long day) {
+        UUID id = v.id();
+        Stamp now = current(id, b, s == null ? day : s.day());
+        if (s != null && s.age().equals(now.age()) && s.style().equals(now.style())) return;
+        boolean aged = Ages.AS_BUILT.contains(b.structure()) || Ages.fullyDone(level, v, b, Villages.ageOf(id));
+        Architecture.Style st = Architecture.of(id);
+        boolean dressed = !Architecture.HOMES.contains(b.structure()) || st == null || Architecture.dressedFor(id, b, st);
+        if (aged && dressed) Ledger.note(id, PREFIX + b.anchor().asLong(), now.encode());
+    }
+
+    /** Survey the town afresh at its next turn (its theme changed). */
+    public static void resurvey(UUID village) {
+        SURVEYED.remove(village);
+        SURVEYS.remove(village);
     }
 
     /** The town's renovation list, as last surveyed (anchors, first first). */
@@ -264,7 +320,7 @@ public final class Renovation {
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
         int tick = event.getServer().getTickCount();
-        if (tick % 600 != 457) return;
+        if (tick % TURN_TICKS != TURN_PHASE) return;
         com.jrpetty.mcassistant.Guard.run("the renovation", () -> {
             for (ServerLevel level : event.getServer().getAllLevels()) {
                 for (Villages.Village v : Villages.every()) {
@@ -285,18 +341,38 @@ public final class Renovation {
         long day = level.getDayTime() / 24000L, founded = FoundingDay.founded(id);
         if (founded < 0 || day - founded < 1) return 0;
         Long last = SURVEYED.get(id);
-        if (last == null || last != day) survey(level, v, day);
+        if (last == null || last != day) survey(level, v, day, SURVEY_BATCH);          // a slice a turn till it is done
         List<Long> q = QUEUE.getOrDefault(id, List.of());
         if (q.isEmpty()) return 0;
         // A few at a time: the first two, turn about.
-        int pick = (int) ((level.getGameTime() / 600L) % Math.min(AT_ONCE, q.size()));
-        Ledger.Building b = building(id, BlockPos.of(q.get(pick)));
+        int pick = (int) ((level.getGameTime() / TURN_TICKS) % Math.min(AT_ONCE, q.size()));
+        long anchor = q.get(pick);
+        Ledger.Building b = building(id, BlockPos.of(anchor));
         if (b == null || !ours(id, b)) {
-            remove(id, q.get(pick));
+            remove(id, anchor);
             return 0;
         }
+        // Not while its ground is unloaded, or the fire brigade is putting it back after a fire (Rebuilding).
+        if (!Land.areaLoaded(level, b.anchor(), 9) || rebuilding(id, b.anchor())) return 0;
         int n = renovate(level, v, b, STEP, false);
+        // Waiting on the stores: to the back of the list, so the next building is not held up behind it.
+        if (n == 0 && !waits(b.anchor()).isEmpty()) toBack(id, anchor);
         return Math.max(0, n);
+    }
+
+    /** Is the fire brigade putting this building back after a fire? */
+    private static boolean rebuilding(UUID village, BlockPos anchor) {
+        for (Disasters.Rebuild r : Disasters.town(village).rebuilds) if (r.anchor.equals(anchor)) return true;
+        return false;
+    }
+
+    private static void toBack(UUID village, long anchor) {
+        List<Long> q = QUEUE.get(village);
+        if (q == null || q.size() <= AT_ONCE) return;
+        List<Long> moved = new ArrayList<>(q);
+        moved.remove(anchor);
+        moved.add(anchor);
+        QUEUE.put(village, moved);
     }
 
     @Nullable
@@ -322,8 +398,7 @@ public final class Renovation {
         UUID id = v.id();
         Stamp s = stamp(id, b.anchor());
         Stamp now = current(id, b, level.getDayTime() / 24000L);
-        boolean themeChanged = s == null || !s.theme().equals(now.theme());
-        List<Work> work = engine.diff(level, v, b, now.drawing(), themeChanged);
+        List<Work> work = engine.diff(level, v, b, now.drawing(), themeChanged(s, now));
         if (work.isEmpty()) {
             finish(level, v, b, s, now);
             return 0;
@@ -357,8 +432,8 @@ public final class Renovation {
     /** Tests and the stage: the whole of a building renovated now, for nothing. How many blocks. */
     public static int renovateNow(ServerLevel level, Villages.Village v, Ledger.Building b) {
         int all = 0;
-        for (int i = 0; i < 200; i++) {
-            int n = renovate(level, v, b, 64, true);
+        for (int i = 0; i < NOW_TURNS; i++) {
+            int n = renovate(level, v, b, NOW_STEP, true);
             if (n <= 0) break;
             all += n;
         }
@@ -380,7 +455,7 @@ public final class Renovation {
         UUID id = v.id();
         List<String> out = new ArrayList<>();
         long day = level.getDayTime() / 24000L;
-        if (!SURVEYED.containsKey(id)) survey(level, v, day);
+        if (!SURVEYED.containsKey(id)) survey(level, v, day, 0);
         List<BlockPos> q = queue(id);
         out.add("Theme: " + Themes.of(id).name() + " (" + Themes.idOf(id) + "). " + q.size() + (q.size() == 1 ? " building" : " buildings")
             + " to renovate; " + doneCount(id) + " renovated.");
@@ -484,6 +559,8 @@ public final class Renovation {
             boolean turned = b.facing().getAxis() == Direction.Axis.X;
             int wx = turned ? half[1] : half[0], wz = turned ? half[0] : half[1];
             Map<BuildGoal.Part, List<BlockPos>> orphans = new EnumMap<>(BuildGoal.Part.class);
+            List<BlockPos> bedsOut = new ArrayList<>();
+            int bedPlaces = 0;
             Set<Long> inside = new HashSet<>();
             for (int dx = -wx; dx <= wx; dx++) {
                 for (int dz = -wz; dz <= wz; dz++) {
@@ -494,7 +571,12 @@ public final class Renovation {
                         BlockState s = level.getBlockState(q);
                         BuildGoal.Part part = partOf(s);
                         if (part == null) continue;
-                        if (s.getBlock() instanceof BedBlock && s.getValue(BedBlock.PART) == BedPart.HEAD) continue;   // its foot speaks for it
+                        if (s.getBlock() instanceof BedBlock) {
+                            if (s.getValue(BedBlock.PART) == BedPart.HEAD) continue;   // its foot speaks for it
+                            BuildGoal.Placement there = at.get(q.asLong());
+                            if (there == null || !bedRight(there, s, b.facing())) bedsOut.add(q.immutable());
+                            continue;
+                        }
                         BuildGoal.Placement there = at.get(q.asLong());
                         if (there != null && there.part() == part) continue;
                         orphans.computeIfAbsent(part, k -> new ArrayList<>()).add(q.immutable());
@@ -512,9 +594,17 @@ public final class Renovation {
                     if (halves.contains(p.pos().asLong()) && (s.getBlock() instanceof BedBlock || s.getBlock() instanceof DoorBlock)) continue;
                     if (open) { rest.add(new Work(Kind.BLOCK, p.pos(), p, null)); continue; }
                     if (partOf(s) != null) continue;                    // furniture in the way: moved first (orphans), then laid
-                    if (!structural(s) || Materials.unfit(id, p.style(), s) || themeChanged && !ofTheme(id, p.style(), s)) {
+                    boolean glazed = Architecture.pane(s) || s.is(Blocks.GLASS) || s.is(BlockTags.IMPERMEABLE);   // a window where a wall goes
+                    if (!structural(s) || glazed || Materials.unfit(id, p.style(), s) || themeChanged && !ofTheme(id, p.style(), s)) {
                         rest.add(new Work(Kind.BLOCK, p.pos(), p, null));
                     }
+                    continue;
+                }
+                if (p.part() == BuildGoal.Part.BED) {
+                    if (bedRight(p, s, b.facing())) continue;
+                    bedPlaces++;
+                    if (!bedsOut.isEmpty()) continue;                  // the beds there are moved in (BEDS)
+                    rest.add(new Work(Kind.PART, p.pos(), p, null));
                     continue;
                 }
                 if (answers(p.part(), s)) continue;
@@ -550,9 +640,26 @@ public final class Renovation {
             }
             // Moves first (a chest out of the way of a wall), then from the bottom up, what is taken down before what is laid.
             rest.sort(Comparator.comparingInt((Work w) -> w.pos().getY()).thenComparingInt(w -> w.kind() == Kind.CLEAR ? 0 : 1));
-            List<Work> out = new ArrayList<>(moves);
+            List<Work> out = new ArrayList<>();
+            // The beds first, all at once: to their places in the design, if it has places they are not in; or off the
+            // places where the new design wants a wall.
+            boolean bedInTheWay = false;
+            for (BlockPos f : bedsOut) {
+                BuildGoal.Placement there = at.get(f.asLong());
+                BlockState fs = level.getBlockState(f);
+                BuildGoal.Placement atHead = fs.getBlock() instanceof BedBlock ? at.get(f.relative(fs.getValue(BedBlock.FACING)).asLong()) : null;
+                if (there != null && there.part() != BuildGoal.Part.BED || atHead != null && atHead.part() != BuildGoal.Part.BED) bedInTheWay = true;
+            }
+            if (!bedsOut.isEmpty() && (bedPlaces > 0 || bedInTheWay)) out.add(new Work(Kind.BEDS, b.anchor(), null, null));
+            out.addAll(moves);
             out.addAll(rest);
             return out;
+        }
+
+        /** Is this the bed the design lays at this place: a bed's foot, lying the design's way? */
+        static boolean bedRight(BuildGoal.Placement p, BlockState s, Direction facing) {
+            return p.part() == BuildGoal.Part.BED && s.getBlock() instanceof BedBlock && s.getValue(BedBlock.PART) == BedPart.FOOT
+                && s.getValue(BedBlock.FACING) == lie(p, facing);
         }
 
         private static Direction lie(BuildGoal.Placement p, Direction facing) {
@@ -587,6 +694,10 @@ public final class Renovation {
                 if (n >= budget) break;
                 BlockState now = level.getBlockState(w.pos());
                 switch (w.kind()) {
+                    case BEDS -> {
+                        if (night) { waits[0] = "the morning, to move the beds"; continue; }
+                        n += beds(level, v, b, free);
+                    }
                     case MOVE -> {
                         BlockState thing = level.getBlockState(w.from());
                         if (thing.getBlock() instanceof BedBlock && night) { waits[0] = "the morning, to move the beds"; continue; }
@@ -721,33 +832,127 @@ public final class Renovation {
         }
 
         /**
+         * The house's beds moved, all in one moment, so nobody is a bed short: every bed that is not where the design lays
+         * one is lifted, and each set down at one of the design's bed places that has none (its colour kept); a bed left
+         * over goes back where it stood if its place is still clear, else to a free spot on the floor, else, whole, into
+         * the stores. The house's own list of the beds it has beyond its design ("homebeds") is written afresh, so every
+         * bed in it counts for its household (Homes). How many beds were set down.
+         */
+        static int beds(ServerLevel level, Villages.Village v, Ledger.Building b, boolean free) {
+            String drawing = Ages.drawing(v.id(), b);
+            List<BuildGoal.Placement> plan = BuildGoal.plan(drawing, b.anchor(), b.facing(), 13);
+            Map<Long, BuildGoal.Placement> at = new HashMap<>();
+            int top = 0;
+            for (BuildGoal.Placement p : plan) {
+                if (p.part() == BuildGoal.Part.CLEAR) continue;
+                at.putIfAbsent(p.pos().asLong(), p);
+                top = Math.max(top, p.pos().getY() - b.anchor().getY());
+            }
+            int[] half = Blueprints.groundHalf(drawing);
+            boolean turned = b.facing().getAxis() == Direction.Axis.X;
+            int wx = turned ? half[1] : half[0], wz = turned ? half[0] : half[1];
+            Set<Long> inside = new HashSet<>();
+            List<BlockPos> feet = new ArrayList<>();
+            for (int dx = -wx; dx <= wx; dx++) {
+                for (int dz = -wz; dz <= wz; dz++) {
+                    for (int dy = 0; dy <= top; dy++) {
+                        BlockPos q = b.anchor().offset(dx, dy, dz);
+                        inside.add(q.asLong());
+                        BlockState s = level.getBlockState(q);
+                        if (!(s.getBlock() instanceof BedBlock) || s.getValue(BedBlock.PART) != BedPart.FOOT) continue;
+                        BuildGoal.Placement there = at.get(q.asLong());
+                        if (there == null || !bedRight(there, s, b.facing())) feet.add(q.immutable());
+                    }
+                }
+            }
+            if (feet.isEmpty()) return 0;
+            // Lift them all.
+            List<BlockState> lifted = new ArrayList<>();
+            List<BlockPos> wasFoot = new ArrayList<>();
+            for (BlockPos f : feet) {
+                BlockState s = level.getBlockState(f);
+                BlockPos head = f.relative(s.getValue(BedBlock.FACING));
+                lifted.add(s);
+                wasFoot.add(f);
+                level.setBlock(head, Blocks.AIR.defaultBlockState(), 2 | 16 | 32);
+                level.setBlock(f, Blocks.AIR.defaultBlockState(), 2 | 16 | 32);
+            }
+            // Set them down where the design lays beds.
+            int n = 0;
+            List<BlockState> left = new ArrayList<>();
+            List<BlockPos> leftFrom = new ArrayList<>();
+            List<BuildGoal.Placement> places = new ArrayList<>();
+            for (BuildGoal.Placement p : plan) if (p.part() == BuildGoal.Part.BED && !bedRight(p, level.getBlockState(p.pos()), b.facing())) places.add(p);
+            int k = 0;
+            for (int i = 0; i < lifted.size(); i++) {
+                boolean down = false;
+                while (k < places.size() && !down) {
+                    BuildGoal.Placement p = places.get(k++);
+                    Direction lie = lie(p, b.facing());
+                    BlockPos head = p.pos().relative(lie);
+                    if (!clearForBed(level, v, p.pos(), free) || !clearForBed(level, v, head, free)) continue;
+                    lay(level, lifted.get(i), p.pos(), lie);
+                    down = true;
+                    n++;
+                }
+                if (!down) { left.add(lifted.get(i)); leftFrom.add(wasFoot.get(i)); }
+            }
+            // The ones over: back where they stood, else on the floor, else into the stores.
+            for (int i = 0; i < left.size(); i++) {
+                BlockState s = left.get(i);
+                Direction lie = s.getValue(BedBlock.FACING);
+                BlockPos f = leftFrom.get(i);
+                BuildGoal.Placement there = at.get(f.asLong()), thereHead = at.get(f.relative(lie).asLong());
+                boolean back = (there == null || there.part() == BuildGoal.Part.BED) && (thereHead == null || thereHead.part() == BuildGoal.Part.BED)
+                    && level.getBlockState(f).isAir() && level.getBlockState(f.relative(lie)).isAir();
+                if (back) { lay(level, s, f, lie); continue; }
+                BlockPos spot = null;
+                for (long q : inside) {
+                    BlockPos c = BlockPos.of(q), h = c.relative(lie);
+                    if (at.containsKey(q) || at.containsKey(h.asLong()) || !inside.contains(h.asLong())) continue;
+                    if (!level.getBlockState(c).isAir() || !level.getBlockState(h).isAir()) continue;
+                    if (!level.getBlockState(c.below()).isFaceSturdy(level, c.below(), Direction.UP)
+                        || !level.getBlockState(h.below()).isFaceSturdy(level, h.below(), Direction.UP)) continue;
+                    if (spot == null || c.distSqr(f) < spot.distSqr(f)) spot = c;
+                }
+                if (spot != null) lay(level, s, spot, lie);
+                else Crafts.store(level, v, new ItemStack(s.getBlock().asItem()));
+            }
+            // The house's own beds beyond its design, written afresh.
+            Set<Long> designHeads = new HashSet<>();
+            for (BuildGoal.Placement p : plan) if (p.part() == BuildGoal.Part.BED) designHeads.add(p.pos().relative(lie(p, b.facing())).asLong());
+            List<String> extra = new ArrayList<>();
+            for (long q : inside) {
+                BlockState s = level.getBlockState(BlockPos.of(q));
+                if (s.getBlock() instanceof BedBlock && s.getValue(BedBlock.PART) == BedPart.HEAD && !designHeads.contains(q)) extra.add(Long.toString(q));
+            }
+            String key = "homebeds/" + b.anchor().asLong();
+            if (extra.isEmpty()) Ledger.forget(v.id(), key);
+            else Ledger.note(v.id(), key, String.join(",", extra));
+            return n;
+        }
+
+        /** Clear a cell for a bed: air already, or what is there taken down into the stores (never furniture). */
+        private static boolean clearForBed(ServerLevel level, Villages.Village v, BlockPos pos, boolean free) {
+            BlockState s = level.getBlockState(pos);
+            if (s.isAir() || s.canBeReplaced()) return true;
+            return clear(level, v, pos, free);
+        }
+
+        private static void lay(ServerLevel level, BlockState bed, BlockPos foot, Direction lie) {
+            BlockState s = bed.getBlock().defaultBlockState().setValue(BedBlock.FACING, lie);
+            level.setBlock(foot, s.setValue(BedBlock.PART, BedPart.FOOT), 2 | 16);
+            level.setBlock(foot.relative(lie), s.setValue(BedBlock.PART, BedPart.HEAD), 3);
+        }
+
+        /**
          * Move a piece of furniture whole: what is in it (a chest's goods, a furnace's fire, a lectern's book, a sign's
-         * words) with it, in the same moment; a bed both halves, its colour kept, turned the way the design lays it.
+         * words) with it, in the same moment, turned the way the design has it.
          */
         static boolean move(ServerLevel level, Villages.Village v, Ledger.Building b, BlockPos from, BlockPos to, @Nullable BuildGoal.Placement cell) {
             BlockState s = level.getBlockState(from);
             if (s.isAir()) return false;
-            if (s.getBlock() instanceof BedBlock) {
-                BlockPos foot = s.getValue(BedBlock.PART) == BedPart.FOOT ? from : from.relative(BedBlock.getConnectedDirection(s));
-                BlockPos head = foot.relative(s.getValue(BedBlock.FACING));
-                Direction lie = cell != null ? lie(cell, b.facing()) : s.getValue(BedBlock.FACING);
-                BlockPos newHead = to.relative(lie);
-                BlockState there = level.getBlockState(newHead);
-                if (!(there.isAir() || there.canBeReplaced() || newHead.equals(foot) || newHead.equals(head))) return false;
-                // Both at once: the old bed up and the new down, so the house is never a bed short.
-                level.setBlock(head, Blocks.AIR.defaultBlockState(), 2 | 16 | 32);
-                level.setBlock(foot, Blocks.AIR.defaultBlockState(), 2 | 16 | 32);
-                BlockState bed = s.getBlock().defaultBlockState().setValue(BedBlock.FACING, lie);
-                level.setBlock(to, bed.setValue(BedBlock.PART, BedPart.FOOT), 2 | 16);
-                level.setBlock(newHead, bed.setValue(BedBlock.PART, BedPart.HEAD), 3);
-                // A bed bought for the house and kept on its list: its new head on the list in the old one's place.
-                String key = "homebeds/" + b.anchor().asLong();
-                String extra = Ledger.note(v.id(), key);
-                if (extra != null && extra.contains(Long.toString(head.asLong()))) {
-                    Ledger.note(v.id(), key, extra.replace(Long.toString(head.asLong()), Long.toString(newHead.asLong())));
-                }
-                return true;
-            }
+            if (s.getBlock() instanceof BedBlock) return false;                    // beds go all at once (beds())
             BlockEntity be = level.getBlockEntity(from);
             CompoundTag data = be == null ? null : be.saveWithoutMetadata(level.registryAccess());
             if (be instanceof Container c) c.clearContent();                  // nothing spilt on the floor as it is lifted
@@ -780,19 +985,15 @@ public final class Renovation {
         Stamp s = stamp(v.id(), b.anchor());
         Stamp now = current(v.id(), b, 0);
         Map<Kind, Integer> out = new LinkedHashMap<>();
-        for (Work w : engine.diff(level, v, b, now.drawing(), s == null || !s.theme().equals(now.theme()))) out.merge(w.kind(), 1, Integer::sum);
+        for (Work w : engine.diff(level, v, b, now.drawing(), themeChanged(s, now))) out.merge(w.kind(), 1, Integer::sum);
         return out;
     }
 
     /** Tests: a town's survey made now. */
     public static List<BlockPos> surveyForTests(ServerLevel level, Villages.Village v) {
-        survey(level, v, level.getDayTime() / 24000L);
+        SURVEYS.remove(v.id());
+        survey(level, v, level.getDayTime() / 24000L, 0);
         return queue(v.id());
     }
 
-    /** The theme's name, for the stage and the board. */
-    static String themeName(UUID village) {
-        ThemeData t = Themes.of(village);
-        return t.name();
-    }
 }

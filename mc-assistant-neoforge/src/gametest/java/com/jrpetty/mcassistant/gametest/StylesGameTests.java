@@ -7,6 +7,8 @@ import com.jrpetty.mcassistant.entity.Architecture;
 import com.jrpetty.mcassistant.entity.Homeland;
 import com.jrpetty.mcassistant.entity.Materials;
 import com.jrpetty.mcassistant.entity.Palettes;
+import com.jrpetty.mcassistant.entity.Renovation;
+import com.jrpetty.mcassistant.entity.Homes;
 import com.jrpetty.mcassistant.entity.StylesLegacy;
 import com.jrpetty.mcassistant.entity.Themes;
 import com.jrpetty.mcassistant.entity.VillageFolkEntity;
@@ -54,6 +56,10 @@ import java.util.UUID;
  *     Age no earth, gravel or sand in a wall, a floor or a roof, the builder going down the theme's stand-ins (stone
  *     bricks, cobblestone, stone, planks...) and else waiting; a young town still builds with what it has; the earth of a
  *     flower box is earth; the theme's own quartz footings are not held against it.</li>
+ * <li><b>st03</b>: a second theme, pure data (the test theme), end to end: not offered; given to a town, its blocks
+ *     first, its own house design, its own ages; a medieval house of the town's renovated into it.</li>
+ * <li><b>st04</b>: an old house renovated to today's design, out of the stores, turn by turn: the household kept and
+ *     never a bed short, the chest moved with all it held, the old partition down, earth and gold out of the walls.</li>
  * </ul>
  *
  * <p>Each runs on its own ground in the band x 1,680,000 to 1,699,999, z 66,000, calling the town's logic directly and
@@ -394,6 +400,233 @@ public class StylesGameTests {
             helper.assertTrue(dirtIron && !dirtWood && gold, "earth unfit from the Iron Age, gold always");
             helper.assertTrue(!quartz && !soilBox, "the theme's own quartz footings and a flower box's earth are fit");
             Kit.log("st02 " + seen);
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ st03: a second theme, end to end
+
+    private static java.util.Map<Block, Integer> blocks(ServerLevel level, BlockPos anchor) {
+        java.util.Map<Block, Integer> out = new java.util.HashMap<>();
+        for (BlockPos p : BlockPos.betweenClosed(anchor.offset(-6, -1, -6), anchor.offset(6, 11, 6))) {
+            BlockState st = level.getBlockState(p);
+            if (!st.isAir()) out.merge(st.getBlock(), 1, Integer::sum);
+        }
+        return out;
+    }
+
+    private static int count(java.util.Map<Block, Integer> m, Block b) {
+        return m.getOrDefault(b, 0);
+    }
+
+    /**
+     * A second theme, pure data (the test theme: end stone and purpur, its own house with whole-glass front windows,
+     * its own Iron Age rule, its own street lamp): not offered to the towns; given to one, its builders reach for its
+     * blocks over the medieval ones they also carry, build its own design of the house, and its older medieval house is
+     * renovated into it.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "st03_theme")
+    public static void st03_second_theme(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        start(level, 2000L);
+        Renovation.resetForTests();
+        Town t = town(helper, level, 1682000, 2, Homeland.Land.PLAINS);
+        helper.runAtTickTime(10, () -> {
+            Villages.Village v = village(helper, t.id());
+            UUID id = t.id();
+            Villages.ageForTests(id, Villages.Age.IRON);
+            ThemeData test = Themes.get("styles_test");
+            helper.assertTrue(test != null, "the test theme is read");
+            boolean offered = false;
+            for (ThemeData o : Themes.offered()) offered |= o.id.equals("styles_test");
+            helper.assertTrue(!offered, "the test theme is not offered to a town");
+            // A house of the town's medieval days.
+            BlockPos old = t.heart().offset(-10, 0, -16);
+            BuildGoal.stamp(level, "house", old, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
+            Ledger.built(id, "house", old, Direction.NORTH);
+            Renovation.Stamp was = Renovation.stamp(id, old);
+            helper.assertTrue(was != null && was.theme().equals("medieval"), "stamped medieval as it went up: " + was);
+            // The theme given.
+            helper.assertTrue(Themes.set(id, "styles_test"), "the theme given to the town");
+            List<Item> walls = Palettes.ranked(id, Blueprints.Style.WALL), roof = Palettes.ranked(id, Blueprints.Style.ROOF_STAIR);
+            helper.assertTrue(!walls.isEmpty() && walls.get(0) == Items.END_STONE_BRICKS && roof.get(0) == Items.PURPUR_STAIRS,
+                "its builders reach for its blocks first: " + walls + " / " + roof);
+            String drawing = Themes.design(id, "house");
+            helper.assertTrue(drawing.equals("styles_test/house") && Themes.design(id, "smithy").equals("smithy"),
+                "its own house design, the usual one for the rest: " + drawing);
+            // A new house, each block what a builder carrying both looks' blocks lays (BuildGoal's own order).
+            List<ItemStack> pack = held(Items.OAK_PLANKS, Items.SPRUCE_PLANKS, Items.DARK_OAK_STAIRS, Items.DARK_OAK_SLAB, Items.DARK_OAK_PLANKS,
+                Items.SPRUCE_LOG, Items.COBBLESTONE, Items.STONE_BRICKS, Items.END_STONE_BRICKS, Items.PURPUR_BLOCK, Items.PURPUR_STAIRS,
+                Items.PURPUR_SLAB, Items.PURPUR_PILLAR, Items.END_STONE);
+            java.util.function.Function<BuildGoal.Placement, BlockState> oak = Showcase.painter(Showcase.OAK);
+            BlockPos at = t.heart().offset(10, 0, -16);
+            BuildGoal.stamp(level, drawing, at, Direction.NORTH, 13, p -> {
+                if (p.part() != BuildGoal.Part.BLOCK) return oak.apply(p);
+                Item it = BuildGoal.choose(id, p.style(), pack);
+                return it instanceof net.minecraft.world.item.BlockItem bi ? bi.getBlock().defaultBlockState() : null;
+            });
+            Ledger.built(id, "house", at, Direction.NORTH);
+            java.util.Map<Block, Integer> m = blocks(level, at);
+            Kit.log("st03 the test theme's house: " + m);
+            helper.assertTrue(count(m, Blocks.END_STONE_BRICKS) >= 20 && count(m, Blocks.PURPUR_STAIRS) >= 10 && count(m, Blocks.PURPUR_PILLAR) >= 4,
+                "end stone walls, a purpur roof and pillars: " + m);
+            helper.assertTrue(count(m, Blocks.OAK_PLANKS) == 0 && count(m, Blocks.DARK_OAK_STAIRS) == 0, "nothing of the medieval look in it");
+            helper.assertTrue(count(m, Blocks.GLASS) >= 2, "its own design's whole-glass front windows: " + count(m, Blocks.GLASS));
+            // Its ages are its own: its Iron Age rule, and none of the medieval ones.
+            BlockState ironRoof = Themes.ageLook(Themes.of(id), Villages.Age.IRON, "house", Blueprints.Style.ROOF_BLOCK,
+                Blocks.PURPUR_BLOCK.defaultBlockState(), at, null);
+            BlockState ironWall = Themes.ageLook(Themes.of(id), Villages.Age.IRON, "smithy", Blueprints.Style.WALL,
+                Blocks.OAK_PLANKS.defaultBlockState(), at, null);
+            helper.assertTrue(ironRoof != null && ironRoof.is(Blocks.PRISMARINE_BRICKS) && ironWall == null,
+                "its own Iron Age (prismarine over purpur), not the medieval one's stone walls: " + ironRoof + ", " + ironWall);
+            // The materials let it have the end stone it names.
+            helper.assertTrue(!Materials.unfit(id, Blueprints.Style.WALL, Blocks.END_STONE_BRICKS.defaultBlockState())
+                && Materials.unfit(id, Blueprints.Style.WALL, Blocks.NETHER_BRICKS.defaultBlockState()), "its own end stone fit, the Nether's not");
+            // The medieval house renovated into the theme.
+            List<BlockPos> q = Renovation.surveyForTests(level, v);
+            helper.assertTrue(q.contains(old), "the medieval house is on the list: " + q);
+            int n = Renovation.renovateNow(level, v, new Ledger.Building("house", old, Direction.NORTH));
+            java.util.Map<Block, Integer> r = blocks(level, old);
+            Renovation.Stamp now = Renovation.stamp(id, old);
+            Kit.log("st03 the old house renovated (" + n + " blocks): " + r + "; stamp " + now);
+            helper.assertTrue(count(r, Blocks.END_STONE_BRICKS) >= 20 && count(r, Blocks.PURPUR_STAIRS) >= 10, "renovated into end stone and purpur: " + r);
+            helper.assertTrue(count(r, Blocks.OAK_PLANKS) == 0 && count(r, Blocks.SPRUCE_PLANKS) == 0 && count(r, Blocks.DARK_OAK_STAIRS) == 0,
+                "no medieval timber left: " + r);
+            helper.assertTrue(count(r, Blocks.GLASS) >= 2, "its windows to the theme's own design");
+            helper.assertTrue(now != null && now.theme().equals("styles_test") && now.version() == Blueprints.version("styles_test/house"),
+                "stamped as the theme's: " + now);
+            helper.assertTrue(Renovation.workForTests(level, v, new Ledger.Building("house", old, Direction.NORTH)).isEmpty(), "nothing left to do");
+            helper.succeed();
+        });
+    }
+
+    // ============================================================ st04: an old house renovated to the new design
+
+    /**
+     * A house built to an older design (its beds and chest elsewhere, a partition by the door, a side window walled, and
+     * earth and a block of gold in its walls) is renovated in place to today's, turn by turn, out of the stores: its
+     * household stays, every one with a bed, never a bed short between turns; its chest moves whole with everything in
+     * it; the old partition comes down; the earth and the gold go back into the stores.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "st04_renovation")
+    public static void st04_renovation(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        start(level, 2000L);
+        Renovation.resetForTests();
+        Town t = town(helper, level, 1683000, 4, Homeland.Land.PLAINS);
+        helper.runAtTickTime(10, () -> {
+            Villages.Village v = village(helper, t.id());
+            UUID id = t.id();
+            Villages.ageForTests(id, Villages.Age.IRON);
+            BlockPos at = t.heart().offset(0, 0, -16);
+            Ledger.Building b = new Ledger.Building("house", at, Direction.NORTH);
+            long oldV = Blueprints.version("styles_old/house"), newV = Blueprints.version("house");
+            helper.assertTrue(oldV != newV, "two versions of the design");
+            BuildGoal.stamp(level, "styles_old/house", at, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
+            Ledger.built(id, "house", at, Direction.NORTH);
+            long day = level.getDayTime() / 24000L;
+            Renovation.stampForTests(id, at, new Renovation.Stamp(oldV, "styles_old/house", "medieval", "STONE", "-", day - 20));
+            // Earth and a block of gold in its walls (an older town's makeshift).
+            List<BlockPos> wallCells = new ArrayList<>();
+            for (BuildGoal.Placement p : BuildGoal.plan("house", at, Direction.NORTH, 13)) {
+                if (p.part() == BuildGoal.Part.BLOCK && p.style() == Blueprints.Style.WALL && p.pos().getY() == at.getY() + 2) wallCells.add(p.pos());
+            }
+            level.setBlock(wallCells.get(0), Blocks.DIRT.defaultBlockState(), 3);
+            level.setBlock(wallCells.get(1), Blocks.GOLD_BLOCK.defaultBlockState(), 3);
+            // Its beds counted for the house, and its household moved in.
+            List<String> heads = new ArrayList<>();
+            BlockPos chestAt = null;
+            for (BlockPos p : BlockPos.betweenClosed(at.offset(-5, 0, -5), at.offset(5, 6, 5))) {
+                BlockState st = level.getBlockState(p);
+                if (st.getBlock() instanceof net.minecraft.world.level.block.BedBlock
+                        && st.getValue(net.minecraft.world.level.block.BedBlock.PART) == net.minecraft.world.level.block.state.properties.BedPart.HEAD) {
+                    heads.add(Long.toString(p.asLong()));
+                }
+                if (st.is(Blocks.CHEST)) chestAt = p.immutable();
+            }
+            helper.assertTrue(heads.size() == 4 && chestAt != null, "the old house's four beds and its chest: " + heads.size() + ", " + chestAt);
+            Ledger.note(id, "homebeds/" + at.asLong(), String.join(",", heads));
+            for (int i = 0; i < 6 && Homes.membersForTests(id, at).isEmpty(); i++) Homes.tickForTests(level, v);
+            List<UUID> members = Homes.membersForTests(id, at);
+            helper.assertTrue(!members.isEmpty(), "a household lives in it");
+            // What the household keeps in its chest.
+            net.minecraft.world.Container box = (net.minecraft.world.Container) level.getBlockEntity(chestAt);
+            box.setItem(0, new ItemStack(Items.BREAD, 20));
+            box.setItem(5, new ItemStack(Items.DIAMOND, 3));
+            ItemStack keepsake = new ItemStack(Items.WRITABLE_BOOK);
+            keepsake.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("Grandmother's recipes"));
+            box.setItem(9, keepsake);
+            box.setChanged();
+            // The stores.
+            BlockPos storeAt = t.heart().offset(4, 0, 4);
+            level.setBlock(storeAt, Blocks.CHEST.defaultBlockState(), 3);
+            com.jrpetty.mcassistant.entity.ZoneChests.mark(level, storeAt);
+            net.minecraft.world.Container stores = (net.minecraft.world.Container) level.getBlockEntity(storeAt);
+            Item[] goods = { Items.OAK_PLANKS, Items.OAK_PLANKS, Items.COBBLESTONE, Items.STONE_BRICKS, Items.GLASS_PANE, Items.SPRUCE_LOG,
+                Items.DARK_OAK_STAIRS, Items.DARK_OAK_SLAB, Items.OAK_DOOR, Items.LADDER };
+            for (int i = 0; i < goods.length; i++) stores.setItem(i, new ItemStack(goods[i], goods[i] == Items.OAK_DOOR ? 2 : 64));
+            stores.setChanged();
+            Villages.forgetStock();
+            int goldBefore = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.GOLD_BLOCK));
+            // On the list, and what it will take.
+            List<BlockPos> q = Renovation.surveyForTests(level, v);
+            java.util.Map<Renovation.Kind, Integer> work = Renovation.workForTests(level, v, b);
+            Kit.log("st04 the list " + q + "; the work " + work);
+            helper.assertTrue(q.contains(at), "the old house is on the renovation list");
+            helper.assertTrue(work.getOrDefault(Renovation.Kind.BEDS, 0) == 1 && work.getOrDefault(Renovation.Kind.MOVE, 0) >= 1
+                && work.getOrDefault(Renovation.Kind.CLEAR, 0) >= 2 && work.getOrDefault(Renovation.Kind.BLOCK, 0) >= 2
+                && work.getOrDefault(Renovation.Kind.PART, 0) >= 1, "beds and the chest to move, the partition down, the walls mended, a window: " + work);
+            // Turn by turn, out of the stores, the beds counted after every turn.
+            int fewest = Integer.MAX_VALUE, turns = 0, laid = 0;
+            while (turns < 100) {
+                int n = Renovation.renovate(level, v, b, 12, false);
+                turns++;
+                fewest = Math.min(fewest, Homes.bedsForTests(level, id, at).size());
+                if (n <= 0) break;
+                laid += n;
+            }
+            java.util.Map<Renovation.Kind, Integer> left = Renovation.workForTests(level, v, b);
+            Renovation.Stamp now = Renovation.stamp(id, at);
+            Kit.log("st04 renovated in " + turns + " turns, " + laid + " blocks; left " + left + "; fewest beds " + fewest + "; stamp " + now
+                + "; waits '" + Renovation.waits(at) + "'");
+            helper.assertTrue(left.isEmpty(), "nothing left to do: " + left);
+            helper.assertTrue(now != null && now.version() == newV && now.drawing().equals("house"), "stamped to today's design: " + now);
+            // The design, block for block: its walls, floors and roof whole and fit, its beds where it lays them.
+            int wrong = 0;
+            for (BuildGoal.Placement p : BuildGoal.plan("house", at, Direction.NORTH, 13)) {
+                BlockState st = level.getBlockState(p.pos());
+                if (p.part() == BuildGoal.Part.BLOCK && (st.isAir() || Materials.unfit(id, p.style(), st))) wrong++;
+                if (p.part() == BuildGoal.Part.BED && !(st.getBlock() instanceof net.minecraft.world.level.block.BedBlock)) wrong++;
+                if (p.part() == BuildGoal.Part.CHEST && !st.is(Blocks.CHEST)) wrong++;
+            }
+            helper.assertTrue(wrong == 0, "the house is today's design: " + wrong + " places wrong");
+            // The chest, moved whole.
+            BlockPos newChest = null;
+            for (BuildGoal.Placement p : BuildGoal.plan("house", at, Direction.NORTH, 13)) if (p.part() == BuildGoal.Part.CHEST) newChest = p.pos();
+            net.minecraft.world.Container moved = (net.minecraft.world.Container) level.getBlockEntity(newChest);
+            int bread = 0, diamonds = 0;
+            boolean book = false;
+            for (int i = 0; moved != null && i < moved.getContainerSize(); i++) {
+                ItemStack st = moved.getItem(i);
+                if (st.is(Items.BREAD)) bread += st.getCount();
+                if (st.is(Items.DIAMOND)) diamonds += st.getCount();
+                if (st.is(Items.WRITABLE_BOOK) && st.getHoverName().getString().equals("Grandmother's recipes")) book = true;
+            }
+            helper.assertTrue(!newChest.equals(chestAt) && bread == 20 && diamonds == 3 && book, "the chest moved with all it held: " + bread + " bread, "
+                + diamonds + " diamonds, the book " + book);
+            // The household: the same folk, each with a bed, never a bed short.
+            List<UUID> after = Homes.membersForTests(id, at);
+            int beds = Homes.bedsForTests(level, id, at).size();
+            helper.assertTrue(after.containsAll(members) && members.containsAll(after), "the same household: " + members + " / " + after);
+            helper.assertTrue(beds >= members.size() && fewest >= members.size(), "a bed each, after and all through: " + beds + ", fewest " + fewest);
+            for (VillageFolkEntity f : t.folk()) {
+                if (members.contains(f.getUUID())) helper.assertTrue(Homes.bedFor(level, f) != null, "a bed for " + f.getName().getString());
+            }
+            // The earth and the gold out of the walls, back into the stores.
+            int goldAfter = com.jrpetty.mcassistant.entity.Market.stock(level, id, st -> st.is(Items.GOLD_BLOCK));
+            helper.assertTrue(!level.getBlockState(wallCells.get(0)).is(Blocks.DIRT) && !level.getBlockState(wallCells.get(1)).is(Blocks.GOLD_BLOCK),
+                "no earth or gold in the walls");
+            helper.assertTrue(goldAfter == goldBefore + 1, "the gold back into the stores: " + goldBefore + " -> " + goldAfter);
             helper.succeed();
         });
     }

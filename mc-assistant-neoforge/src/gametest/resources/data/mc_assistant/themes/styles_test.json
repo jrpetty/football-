@@ -1,0 +1,41 @@
+// [styles] A tiny second theme, for the tests only (StylesGameTests st03): not offered to a town. Everything it does not
+// say is the medieval theme's (its parent); what it says is its own, and the folk build it without a line of new code.
+// It builds in end stone and purpur on purpose: blocks the materials forbid unless a theme names them, as this one does.
+{
+  "parent": "medieval",
+  "name": "Test Spire",
+  "about": "end stone and purpur, for the tests",
+  "selectable": false,
+  "thatch": false,
+  "parts": {
+    "WALL":           ["end_stone_bricks"],
+    "FLOOR":          ["purpur_block"],
+    "ROOF_BLOCK":     ["purpur_block"],
+    "ROOF_STAIR":     ["purpur_stairs"],
+    "ROOF_STAIR_TOP": ["purpur_stairs"],
+    "ROOF_SLAB":      ["purpur_slab"],
+    "ROOF_SLAB_TOP":  ["purpur_slab"],
+    "POST":           ["purpur_pillar"],
+    "BEAM_ACROSS":    ["purpur_pillar"],
+    "BEAM_ALONG":     ["purpur_pillar"],
+    "FOUNDATION":     ["end_stone"],
+    "WALL_LOW":       ["end_stone"],
+    "MASONRY":        ["end_stone_bricks"]
+  },
+  "ages": {
+    "WALL": [], "FOUNDATION": [], "WALL_LOW": [], "ROOF_STAIR": [], "ROOF_STAIR_TOP": [], "ROOF_SLAB": [], "ROOF_SLAB_TOP": [],
+    "ROOF_BLOCK": [
+      {"age_min": "IRON", "now": ["purpur_block"], "to": "prismarine_bricks"}
+    ]
+  },
+  "land_stone": {"DESERT": {}, "BADLANDS": {}, "MOUNTAIN": {}, "JUNGLE": {}, "SWAMP": {}, "SNOW": {}},
+  "styles": {
+    "TIMBERED": {"look": {}}, "HILL_FORT": {"look": {}}, "COASTAL": {"look": {}}, "DESERT_COURT": {"look": {}},
+    "FOREST_LODGE": {"look": {}}, "GRAND_CIVIC": {"look": {}}
+  },
+  "street": {"lamp_post": "end_rod", "light": "sea_lantern"},
+  "palettes": {
+    "civic": {"walls": "end_stone_bricks", "frame": "purpur_pillar", "roof_stair": "purpur_stairs", "roof_slab": "purpur_slab",
+              "roof_block": "purpur_block", "floor": "purpur_block"}
+  }
+}

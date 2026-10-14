@@ -188,6 +188,8 @@ public final class Blueprints {
      * known for what it is.
      */
     public static long version(String name) {
+        Long got = VERSIONS.get(name);
+        if (got != null) return got;
         long h = 1125899906842597L;
         for (Cell c : cells(name)) {
             h = 31 * h + c.dx();
@@ -197,8 +199,11 @@ public final class Blueprints {
             h = 31 * h + c.key().style().name().hashCode();
             h = 31 * h + c.key().way().name().hashCode();
         }
+        VERSIONS.put(name, h);
         return h;
     }
+
+    private static final Map<String, Long> VERSIONS = new ConcurrentHashMap<>();
 
     /** The mark of a building with a second storey on it. */
     public static final String TALL = "_tall";

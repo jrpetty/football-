@@ -200,6 +200,7 @@ public final class Themes {
         if (get(id) == null) return false;
         Ledger.note(village, NOTE, id);
         Palettes.forget(village);
+        Renovation.resurvey(village);
         return true;
     }
 
