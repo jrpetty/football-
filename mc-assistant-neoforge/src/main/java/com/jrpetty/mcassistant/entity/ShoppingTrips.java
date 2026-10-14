@@ -228,8 +228,16 @@ public final class ShoppingTrips {
             if (HomeStores.box(level, v.id(), h, kind) != null) continue;
             Decor.Room room = Decor.room(v.id(), b);
             BlockPos near = f.bedPos() != null ? f.bedPos() : h.anchor;
-            Decor.Spot spot = Decor.floorSpot(level, room, near, Decor.reserved(level, v.id(), b));
-            if (spot == null || !mayPlace(level, v, spot.at())) continue;
+            // The best free floor against a wall the town's gate allows (a cell by the door or on the way in it refuses).
+            java.util.Set<BlockPos> taken = new java.util.HashSet<>(Decor.reserved(level, v.id(), b));
+            Decor.Spot spot = null;
+            for (int tries = 0; tries < 8; tries++) {
+                Decor.Spot cand = Decor.floorSpot(level, room, near, taken);
+                if (cand == null) break;
+                if (mayPlace(level, v, cand.at())) { spot = cand; break; }
+                taken.add(cand.at());
+            }
+            if (spot == null) continue;
             var state = s.is(Items.BARREL)
                 ? Blocks.BARREL.defaultBlockState().setValue(net.minecraft.world.level.block.BarrelBlock.FACING, net.minecraft.core.Direction.UP)
                 : Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, spot.facing());

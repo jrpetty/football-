@@ -61,6 +61,12 @@ import java.util.function.Predicate;
 @PrefixGameTestTemplate(false)
 public class FamilyGameTests {
 
+    /** [shops-homes] What a household keeps at home is its own (Homes.Source): bought, here. */
+    private static ItemStack owned(ItemStack s, com.jrpetty.mcassistant.entity.VillageFolkEntity owner) {
+        com.jrpetty.mcassistant.entity.Homes.keepsake(s, owner, com.jrpetty.mcassistant.entity.Homes.Source.BOUGHT);
+        return s;
+    }
+
     private static final String EMPTY = "empty";
     private static final long DAY = 24000L * 4;
 
@@ -183,7 +189,7 @@ public class FamilyGameTests {
             BlockPos chest = Families.homeChestForTests(level, mother);
             helper.assertTrue(chest != null && level.getBlockEntity(chest) instanceof Container, "the household's chest");
             Container c = (Container) level.getBlockEntity(chest);
-            c.setItem(0, new ItemStack(Items.BONE, 40));
+            c.setItem(0, owned(new ItemStack(Items.BONE, 40), mother));     // [shops-homes] the household's own, bought
             c.setChanged();
             wolves[0] = wolf(level, home.offset(10, 0, 0));
             wolves[1] = wolf(level, home.offset(12, 0, 5));
@@ -436,7 +442,7 @@ public class FamilyGameTests {
             VillageFolkEntity child = (VillageFolkEntity) fam[0][1];
             chest[0] = (Container) level.getBlockEntity(Families.homeChestForTests(level, mother));
             for (int i = 0; i < chest[0].getContainerSize(); i++) chest[0].setItem(i, ItemStack.EMPTY);
-            chest[0].setItem(0, new ItemStack(Items.BREAD, 6));
+            chest[0].setItem(0, owned(new ItemStack(Items.BREAD, 6), mother));   // [shops-homes] the household's own
             chest[0].setChanged();
             for (VillageFolkEntity f : List.of(mother, father, child)) {
                 f.removeMatching(s -> s.get(DataComponents.FOOD) != null, 9999);
@@ -487,7 +493,7 @@ public class FamilyGameTests {
                         f.clearQueue();
                     }
                     for (int i = 0; i < chest[0].getContainerSize(); i++) chest[0].setItem(i, ItemStack.EMPTY);
-                    chest[0].setItem(0, new ItemStack(Items.BREAD, 6));
+                    chest[0].setItem(0, owned(new ItemStack(Items.BREAD, 6), mother));   // [shops-homes] the household's own
                     chest[0].setChanged();
                     level.setDayTime(supper - 11200L + 12600L);
                     level.updateSkyBrightness();
