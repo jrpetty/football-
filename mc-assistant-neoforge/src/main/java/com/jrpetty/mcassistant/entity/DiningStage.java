@@ -1,7 +1,10 @@
 package com.jrpetty.mcassistant.entity;
 
 import com.jrpetty.mcassistant.Showcase;
+import com.jrpetty.mcassistant.block.PlaceSettingBlock;
+import com.jrpetty.mcassistant.block.PlaceSettingBlockEntity;
 import com.jrpetty.mcassistant.entity.goal.BuildGoal;
+import com.jrpetty.mcassistant.item.DiningItems;
 import com.jrpetty.mcassistant.village.Ledger;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -19,8 +22,11 @@ import java.util.List;
  * restaurant (built beside here, to its drawing, if it has none), its staff taken on out of its folk, the evening's diners
  * sat at its tables ordering what the stores hold (a few roasts' makings and bottles of cider put in for the camera, said
  * so), the kitchen set to work. Says where to look from (VIEW name x y z ax ay az: the eyes' feet and what they look at):
- * the dining room from its door, a table close up, the kitchen from the pass. "menu" opens the order screen at a free
- * table for the player; "done" lets everyone go home.
+ * the dining room from its door, a table close up, the kitchen from the pass. The close-up's table is the first diner's,
+ * its place laid at once with a roast and a cider for the camera (the evening's own plates come as the kitchen gets to
+ * them, later than the picture can wait). "menu" opens the order screen at a free table for the player, the staff
+ * called back to their posts first (a host at the counter: the screen is open, not "no host"); "done" lets everyone go
+ * home.
  */
 public final class DiningStage {
 
@@ -45,6 +51,7 @@ public final class DiningStage {
         DiningPlaces.Place p = restaurant(level, v, at, out);
         if (p == null) return out;
         if (which.equals("menu")) {
+            staff(level, v, p, out);                                   // on duty for the shot: the town may have moved them on
             DiningPlaces.Table t = Diners.freeTable(level, p, null);
             if (t != null) player.teleportTo(level, t.seat().getX() + 0.5, t.seat().getY() + 0.5, t.seat().getZ() + 0.5,
                 t.looks().toYRot(), 20.0F);
@@ -58,6 +65,8 @@ public final class DiningStage {
         Crafts.store(level, v, Cafe.drink(Cafe.DRINKS.get(0)).copyWithCount(4));
         out.add("For the camera: six raw beef, three cod and four bottles of cider into the stores");
         int seated = 0;
+        DiningPlaces.Table close = null;
+        VillageFolkEntity closeDiner = null;
         for (AssistantEntity a : Villages.folkOf(v.id())) {
             if (seated >= DINERS) break;
             if (!(a instanceof VillageFolkEntity f) || f.isBaby() || f.stationTask() == AssistantEntity.StationTask.COOK || Diners.dining(f)) continue;
@@ -66,15 +75,21 @@ public final class DiningStage {
             DiningPlaces.Table t = p.table(Diners.DINERS.get(f.getUUID()).table);
             f.teleportTo(t.seat().getX() + 0.5, t.seat().getY() + 0.5, t.seat().getZ() + 0.5);
             out.add("DINER " + f.displayNameCap() + " at table " + t.number());
+            if (close == null) {
+                close = t;
+                closeDiner = f;
+            }
             seated++;
         }
+        if (close == null && !p.tables.isEmpty()) close = p.tables.get(0);
+        if (close != null && cameraPlate(level, p, close, closeDiner)) out.add("For the camera: a roast and a cider laid at table " + close.number());
         BlockPos door = p.door != null ? p.door : p.centre();
         Direction out0 = StoreFloor.front(p.centre(), door);
         BlockPos eye = door.relative(out0.getOpposite(), 1).above();
         BlockPos back = p.centre().relative(out0.getOpposite(), 4);
         out.add(view("dining-room", eye.getX(), eye.getY() + 1, eye.getZ(), back.getX(), back.getY(), back.getZ()));
-        if (!p.tables.isEmpty()) {
-            BlockPos c = p.tables.get(0).cell();
+        if (close != null) {
+            BlockPos c = close.cell();
             out.add(view("plate", c.getX() + 1, c.getY() + 1, c.getZ() + 1, c.getX(), c.getY(), c.getZ()));
         }
         BlockPos stove = p.station(DiningPlaces.Station.SMOKER);
@@ -108,9 +123,40 @@ public final class DiningStage {
         return null;
     }
 
-    /** The head cook, a waiter and a pot washer: the town's own, else taken on out of its folk; put in the restaurant. */
+    /**
+     * For the camera: a table's place laid with a roast on its plate and a cider in its cup, the diner's there (it eats
+     * them as it would its own order). False if the table cannot take a setting.
+     */
+    private static boolean cameraPlate(ServerLevel level, DiningPlaces.Place p, DiningPlaces.Table t, @javax.annotation.Nullable VillageFolkEntity diner) {
+        BlockPos cell = t.cell();
+        net.minecraft.world.level.block.state.BlockState here = level.getBlockState(cell);
+        net.minecraft.world.level.block.state.BlockState laid;
+        if (here.getBlock() instanceof PlaceSettingBlock) {
+            laid = here.setValue(PlaceSettingBlock.HOUSE, true).setValue(PlaceSettingBlock.DISH, PlaceSettingBlock.Dish.EMPTY)
+                .setValue(PlaceSettingBlock.CUP, PlaceSettingBlock.Cup.FULL);
+        } else {
+            boolean cloth = PlaceSettingBlock.isCloth(here);
+            if (!cloth && !here.isAir() || !PlaceSettingBlock.onATable(level, cell)) return false;
+            laid = DiningItems.PLACE_SETTING.get().defaultBlockState().setValue(PlaceSettingBlock.CLOTH, cloth).setValue(PlaceSettingBlock.HOUSE, true)
+                .setValue(PlaceSettingBlock.DISH, PlaceSettingBlock.Dish.EMPTY).setValue(PlaceSettingBlock.CUP, PlaceSettingBlock.Cup.FULL);
+        }
+        level.setBlock(cell, laid, 3);
+        if (!(level.getBlockEntity(cell) instanceof PlaceSettingBlockEntity be)) return false;
+        if (!(here.getBlock() instanceof PlaceSettingBlock)) be.layOn(here);
+        ItemStack roast = new ItemStack(Items.COOKED_BEEF);
+        java.util.UUID who = diner == null ? null : diner.getUUID();
+        String name = diner == null ? "" : diner.displayNameCap();
+        be.serveFood(roast, PlaceSettingBlock.bitesFor(roast), p.village, who, name, 0, 1);
+        be.serveDrink(Cafe.drink(Cafe.DRINKS.get(0)), PlaceSettingBlock.SIPS, p.village, who, name, 0);
+        PlaceSettingBlock.refresh(level, cell);
+        return true;
+    }
+
+    /** The host, the head cook, a waiter and a pot washer: the town's own, else taken on out of its folk; put in the
+     *  restaurant (the host at its counter). */
     private static void staff(ServerLevel level, Villages.Village v, DiningPlaces.Place p, List<String> out) {
-        Hospitality.Role[] want = { Hospitality.Role.HEAD_COOK, Hospitality.Role.WAITER, Hospitality.Role.POT_WASHER };
+        Hospitality.Role[] want = { Hospitality.Role.HOST, Hospitality.Role.HEAD_COOK, Hospitality.Role.WAITER, Hospitality.Role.POT_WASHER };
+        ServicePoints.Point counter = ServicePoints.nearest(level, v.id(), ServiceRole.RESTAURANT, p.centre());
         for (Hospitality.Role r : want) {
             VillageFolkEntity f = Hospitality.first(v.id(), r);
             if (f == null) {
@@ -120,8 +166,11 @@ public final class DiningStage {
                 }
                 if (f == null) continue;
                 Hospitality.appointForTests(level, v, f, r);
+            } else if (f.stationTask() != AssistantEntity.StationTask.COOK) {
+                Hospitality.appointForTests(level, v, f, r);                      // moved on to other work meanwhile: back
             }
-            f.teleportTo(p.centre().getX() + 0.5, p.centre().getY(), p.centre().getZ() + 0.5);
+            BlockPos at = r == Hospitality.Role.HOST && counter != null && counter.stand() != null ? counter.stand() : p.centre();
+            f.teleportTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
             out.add("STAFF " + r.title + " " + f.displayNameCap());
         }
     }

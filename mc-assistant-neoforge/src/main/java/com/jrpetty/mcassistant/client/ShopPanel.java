@@ -70,6 +70,8 @@ final class ShopPanel implements ServiceScreen.Panel {
     private final Scroll listScroll = new Scroll(), basketScroll = new Scroll();
     private int subtotal, total;
     private boolean buys, haggles, selling, first = true;
+    /** The tab the server last opened the screen on. */
+    private String lastTab = "";
     private String cat = ALL;
     private int selected = -1;
     /** The last basket sent: until the server has answered it, its own basket is not read back over ours. */
@@ -145,8 +147,14 @@ final class ShopPanel implements ServiceScreen.Panel {
         receipts.clear();
         ListTag rl = body.getList("receipts", Tag.TAG_STRING);
         for (int i = 0; i < rl.size(); i++) receipts.add(rl.getString(i));
-        if (first) selling = data.getString("tab").equals("sell") || data.getString("tab").equals("work");   // opened on its Sell or Work tab
-        if (first) working = data.getString("tab").equals("work");
+        // Opened on its Sell or Work tab, or opened again on another while it stands open (a command, a talk option):
+        // the server's tab is followed whenever it changes; the player's own clicks between are kept.
+        String tab = data.getString("tab");
+        if (first || !tab.equals(lastTab)) {
+            selling = tab.equals("sell") || tab.equals("work");
+            working = tab.equals("work");
+        }
+        lastTab = tab;
         first = false;
         buys = body.getBoolean("buys");
         haggles = body.getBoolean("haggles");

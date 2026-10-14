@@ -72,19 +72,63 @@ public final class ServiceStage {
             if (door != null) out.add(shot("shop-interior", door.relative(front.getOpposite()), p.pos().relative(front.getOpposite(), 2).above()));
             out.add("COUNTER " + p.pos().getX() + " " + p.pos().getY() + " " + p.pos().getZ());
         }
-        // Two houses side by side: a poor household's and a well-off one's.
-        BlockPos poor = Store.flatGround(level, shop.anchor().offset(-26, 0, 18));
-        BlockPos rich = poor.offset(12, 0, 0);
+        // Two houses side by side: a poor household's and a well-off one's, on open ground with the camera before them.
+        BlockPos poor = homesSite(level, v, shop.anchor().offset(-26, 0, 18));
+        if (poor == null) {
+            out.add("HOMES no open, flat ground near the shop for the two houses and the camera");
+            return out;
+        }
+        BlockPos rich = poor.offset(HOUSE_APART, 0, 0);
         for (BlockPos h : List.of(poor, rich)) {
             Store.clearSite(level, h);
             BuildGoal.stamp(level, "house", h, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
         }
         furnish(level, poor, false);
         furnish(level, rich, true);
-        out.add(shot("homes-side-by-side", poor.offset(6, 4, -14), poor.offset(6, 2, 0)));
+        out.add(shot("homes-side-by-side", poor.offset(HOUSE_APART / 2, 4, SITE_Z0 + 2), poor.offset(HOUSE_APART / 2, 2, 0)));
         out.add(shot("home-rich-inside", rich.offset(0, 1, 2), rich.offset(0, 1, -3)));
         out.add(shot("home-poor-inside", poor.offset(0, 1, 2), poor.offset(0, 1, -3)));
         return out;
+    }
+
+    /** How far apart the two houses stand (their middles), how far round the shop their ground is looked for, the step
+     *  between the spots tried, and the block a spot's ground may rise or fall over the whole of it. */
+    private static final int HOUSE_APART = 12, HOMES_REACH = 48, HOMES_STEP = 4, HOMES_LEVEL = 1;
+    /** The ground the houses and the camera need, from the poor house's middle: x across both houses, z from the
+     *  camera's spot (out in front, north) to the houses' backs. */
+    private static final int SITE_X0 = -7, SITE_X1 = HOUSE_APART + 7, SITE_Z0 = -16, SITE_Z1 = 11;
+
+    /**
+     * Ground for the two houses side by side and the camera before them: flat, dry, nobody's building or work on any of
+     * it. (The first flat spot near the shop was taken as it came; in a grown town it was often another building's
+     * ground, the houses went up inside it and the camera's picture was its dark room.) Null if there is none in reach.
+     */
+    @javax.annotation.Nullable
+    private static BlockPos homesSite(ServerLevel level, Villages.Village v, BlockPos near) {
+        for (int ring = 0; ring <= HOMES_REACH; ring += HOMES_STEP) {
+            for (int dx = -ring; dx <= ring; dx += HOMES_STEP) {
+                for (int dz = -ring; dz <= ring; dz += HOMES_STEP) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != ring) continue;
+                    int x = near.getX() + dx, z = near.getZ() + dz;
+                    BlockPos at = new BlockPos(x, BuildGoal.groundTop(level, x, z), z);
+                    if (openSite(level, v, at)) return at;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static boolean openSite(ServerLevel level, Villages.Village v, BlockPos at) {
+        for (int x = SITE_X0; x <= SITE_X1; x += 2) {
+            for (int z = SITE_Z0; z <= SITE_Z1; z += 3) {
+                int qx = at.getX() + x, qz = at.getZ() + z;
+                if (!level.isLoaded(new BlockPos(qx, at.getY(), qz))) return false;
+                BlockPos q = new BlockPos(qx, BuildGoal.groundTop(level, qx, qz), qz);
+                if (Math.abs(q.getY() - at.getY()) > HOMES_LEVEL || !level.getFluidState(q.below()).isEmpty()) return false;
+                if (TownBlocks.buildingAt(level, v, q) != null || PlayerBlocks.placed(level, q.below())) return false;
+            }
+        }
+        return true;
     }
 
     private static String shot(String name, BlockPos eye, BlockPos at) {

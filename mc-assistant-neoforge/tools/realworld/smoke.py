@@ -54,7 +54,7 @@ def clear_camera(r, x, y, z, tx, ty, tz):
         r.cmd("tp %s %.2f %.2f %.2f" % (USER, x, y, z))
         time.sleep(3)
         cx, cy, cz, how = ask()
-    if how not in ("clear", "unknown", "unloaded"):
+    if how != "clear":                                  # moved, blocked, or not checked (unloaded, no answer): said
         say("camera at %.1f %.1f %.1f %s: now %.1f %.1f %.1f" % (x, y, z, how, cx, cy, cz))
     return cx, cy, cz
 
