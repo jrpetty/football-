@@ -156,6 +156,7 @@ public final class TownAudit {
         register(new Roads());
         register(new HalfBuilt());
         WayAudit.register();                 // [paths] the doors reached, the lots apart, the square clear, nobody stuck
+        TidyAudit.registerChecks();                     // [tidy] grass inside the buildings, the eyesores, the looks
     }
 
     /** Run every check on the town. */
@@ -187,12 +188,19 @@ public final class TownAudit {
 
         @Override
         public void run(ServerLevel level, Villages.Village v, Report r) {
-            int cellsAll = 0, servingAll = 0, broken = 0, missing = 0, shape = 0, foreign = 0, whole = 0, counted = 0;
+            int cellsAll = 0, servingAll = 0, broken = 0, missing = 0, shape = 0, foreign = 0, whole = 0, counted = 0, raising = 0;
             double worst = 1.0;
             long day = level.getDayTime() / 24000L;
             for (Ledger.Building b : Ledger.buildings(v.id())) {
                 if (b.structure().equals("fortify")) continue;                  // the wall follows the ground: no drawing to hold it to
                 if (!Land.areaLoaded(level, b.anchor(), 8)) continue;
+                if (Grow.raisingNow(v.id(), b.anchor())) {
+                    // A storey going up: its roof is off on purpose. Held to account only if it stops going up.
+                    raising++;
+                    String to = b.structure().equals("house") ? "house2" : b.structure() + com.jrpetty.mcassistant.entity.goal.Blueprints.TALL;
+                    stalled(level, v, r, new Ledger.Building(to, b.anchor(), b.facing()), "a second storey on the " + b.structure());
+                    continue;
+                }
                 String design = TownBlocks.designOf(v.id(), b);
                 List<BuildGoal.Placement> plan = BuildGoal.plan(design, b.anchor(), b.facing(), 13);
                 int cells = 0;
@@ -225,6 +233,7 @@ public final class TownAudit {
                 r.buildings.add(new BuildingReport(b, design, cells, serving, fixes, Restore.status(v.id(), b.anchor(), day)));
             }
             r.measure("buildings", counted);
+            r.measure("raising", raising);
             r.measure("buildings_whole", whole);
             r.measure("fidelity", cellsAll == 0 ? 1.0 : servingAll / (double) cellsAll);
             r.measure("fidelity_worst", worst);
@@ -295,6 +304,22 @@ public final class TownAudit {
 
     /** Each site going up: {blocks laid when last counted, the tick it last changed}. */
     private static final Map<String, long[]> GOING = new java.util.concurrent.ConcurrentHashMap<>();
+    /** How long work going up may stand without a block more before it counts as left half built: two days. */
+    static final long STALL = 48000L;
+    /** The findings' name for it (counted with the half built). */
+    public static final String STALLED = HALF_BUILT;
+
+    /** Something going up (a building, a storey) that has gained no block in STALL ticks: a finding. */
+    private static void stalled(ServerLevel level, Villages.Village v, Report r, Ledger.Building b, String what) {
+        int laid = Restore.laid(level, v, b).size();
+        String key = v.id() + "/" + b.structure() + "/" + b.anchor().asLong();
+        long[] was = GOING.get(key);
+        if (was == null || was[0] != laid) {
+            GOING.put(key, new long[]{ laid, level.getGameTime() });
+        } else if (laid > 0 && level.getGameTime() - was[1] > STALL) {
+            r.find(STALLED, b.anchor(), what + " going up has stood at " + laid + " blocks since tick " + was[1]);
+        }
+    }
 
     /** Buildings left half built: a site given up with blocks on it, or a building of the register far short of
      *  its drawing. */
@@ -320,17 +345,9 @@ public final class TownAudit {
                 if (e.getKey().equals("fortify") || !BuildGoal.STRUCTURES.contains(e.getKey())) continue;
                 // A building going up that has not gained a block in two days has stalled: half built, and left so.
                 Ledger.Building b = new Ledger.Building(e.getKey(), e.getValue().anchor(), e.getValue().facing());
-                int laid = Restore.laid(level, v, b).size();
-                String key = v.id() + "/" + e.getKey() + "/" + b.anchor().asLong();
-                long[] was = GOING.get(key);
-                if (was == null || was[0] != laid) {
-                    GOING.put(key, new long[]{ laid, level.getGameTime() });
-                } else if (laid > 0 && level.getGameTime() - was[1] > 48000L) {
-                    n++;
-                    r.find(HALF_BUILT, b.anchor(), "the " + b.structure() + " going up has stood at " + laid + " blocks since tick " + was[1]);
-                }
+                stalled(level, v, r, b, "the " + b.structure());
             }
-            r.measure("half_built", n);
+            r.measure("half_built", r.count(HALF_BUILT));
         }
     }
 

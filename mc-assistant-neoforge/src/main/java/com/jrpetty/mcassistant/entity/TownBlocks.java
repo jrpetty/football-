@@ -97,10 +97,11 @@ public final class TownBlocks {
         CIVIC(Zone.OPEN, Zone.SQUARE),
         /** A lamp post or a street light (at a road's edge, never in the middle of it). */
         LAMP(Zone.OPEN, Zone.ROAD, Zone.SQUARE),
-        /** A sign or a signpost (at a road's edge), a house's name board on its front. */
-        SIGN(Zone.OPEN, Zone.ROAD, Zone.SQUARE, Zone.EAVES),
-        /** A window box, a sill, a planter on a building's face: under its eaves, never its doorway or way in. */
-        WINDOW_BOX(Zone.OPEN, Zone.EAVES),
+        /** A sign or a signpost (at a road's edge), a house's name board on its front: never into its walls or doorway. */
+        SIGN(Zone.OPEN, Zone.ROAD, Zone.SQUARE, Zone.EAVES, Zone.BUILDING),
+        /** A window box, a sill, a planter on a building's face (on its porch, under its eaves): never into its walls,
+         *  its doorway or the way in. */
+        WINDOW_BOX(Zone.OPEN, Zone.EAVES, Zone.BUILDING),
         /** The town's dressing out of doors: benches, planters, washing lines, scarecrows, banners. */
         DECOR(Zone.OPEN),
         /** Gardens round a house: fences, gates, flower beds. */
@@ -111,8 +112,9 @@ public final class TownBlocks {
         TERRAFORM(Zone.OPEN, Zone.ROAD, Zone.SQUARE),
         /** A levee, a sea wall, flood works. */
         LEVEE(Zone.OPEN),
-        /** Ropes, pit props, ladders down a shaft, mine stairs. */
-        MINE(Zone.OPEN),
+        /** Ropes, pit props, ladders down a shaft, mine stairs, and the fence round a stair head (which may stand in a
+         *  road where the stairs come up in one: a fence is better than an open hole). */
+        MINE(Zone.OPEN, Zone.ROAD),
         /** Trees planted or felled, grass and flowers. */
         NATURE(Zone.OPEN),
         /** Anything else a town's works set down. */
@@ -270,19 +272,33 @@ public final class TownBlocks {
      *  other building raised a storey its "_tall" drawing. */
     public static String designOf(UUID village, Ledger.Building b) {
         String s = b.structure();
-        if (s.equals("house") && Ledger.grown(village, b.anchor())) return "house2";
-        if (!s.endsWith(Blueprints.TALL) && Grow.tall(village, b.anchor()) && Blueprints.has(s + Blueprints.TALL)) return s + Blueprints.TALL;
-        return s;
+        if (s.equals("house") && Ledger.grown(village, b.anchor())) return Themes.design(village, "house2");   // [styles] the theme's own
+        if (!s.endsWith(Blueprints.TALL) && Grow.tall(village, b.anchor()) && Blueprints.has(s + Blueprints.TALL)) {
+            return Themes.design(village, s + Blueprints.TALL);                                               // [styles]
+        }
+        return Themes.design(village, s);                                                                     // [styles]
     }
 
     // ------------------------------------------------------------------ the rules
+
+    /**
+     * [defence] The castle wall's ring is kept for the wall: no building, furnishing, dressing, garden, field or works
+     * set down on it. Streets, lamps, tidying, the ground's levelling, nature and the mine's fences may still touch it.
+     */
+    private static boolean onWallRing(Villages.Village v, BlockPos pos, Why why) {
+        switch (why) {
+            case ROAD, DOORWAY, TIDY, TERRAFORM, MINE, NATURE -> { return false; }
+            case LAMP, SIGN -> { return CastleWall.onWall(v.id(), v.centre(), pos); }   // [defence] never on the wall itself (its walkway, its towers)
+            default -> { return CastleWall.reserved(v.id(), v.centre(), pos); }
+        }
+    }
 
     private static boolean allowed(Level level, Villages.Village v, BlockPos pos, Why why, Here h, @Nullable BlockPos ownAnchor) {
         // A building's own work, on its own building: any of its cells, its doorways and stairs included.
         if (why.own() && ownAnchor != null && h.owner != null && h.owner.building.anchor().equals(ownAnchor)) return true;
         Zone z = h.zone;
         switch (z) {
-            case OPEN -> { return true; }
+            case OPEN -> { return !onWallRing(v, pos, why); }
             case FITTING -> { return false; }
             case BUILDING -> {
                 if (!why.touches(Zone.BUILDING)) return false;
@@ -346,6 +362,8 @@ public final class TownBlocks {
         /** Doorways, ways in and stairs, by BlockPos.asLong. */
         final Map<Long, Zone> special = new HashMap<>();
         final Map<Long, Integer> specialOwner = new HashMap<>();
+        /** The game tick it was last checked against the register. */
+        long checked = Long.MIN_VALUE;
 
         Index(long made, int signature) {
             this.made = made;
@@ -415,9 +433,14 @@ public final class TownBlocks {
 
     static Index index(Level level, Villages.Village v) {
         long now = level.getGameTime();
-        int sig = signature(v.id());
         Index ix = INDEX.get(v.id());
-        if (ix != null && ix.signature == sig && now - ix.made < KEEP && now >= ix.made) return ix;
+        // Asked many times in a tick (a festival's patch, a column of ground work): checked against the register once.
+        if (ix != null && ix.checked == now) return ix;
+        int sig = signature(v.id());
+        if (ix != null && ix.signature == sig && now - ix.made < KEEP && now >= ix.made) {
+            ix.checked = now;
+            return ix;
+        }
         ix = build(v, now, sig);
         INDEX.put(v.id(), ix);
         return ix;

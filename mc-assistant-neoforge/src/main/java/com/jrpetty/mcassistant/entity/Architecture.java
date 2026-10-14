@@ -4,6 +4,7 @@ import com.jrpetty.mcassistant.entity.goal.Blueprints;
 import com.jrpetty.mcassistant.entity.goal.BuildGoal;
 import com.jrpetty.mcassistant.village.Chronicle;
 import com.jrpetty.mcassistant.village.Ledger;
+import com.jrpetty.mcassistant.village.ThemeData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -215,14 +216,7 @@ public final class Architecture {
     public static Palettes.Look look(UUID village, Palettes.Look base) {
         Style st = of(village);
         if (st == null) return base;
-        return switch (st) {
-            case TIMBERED -> new Palettes.Look("birch", "spruce", base.floor(), "dark_oak", base.footing(), base.dressed());
-            case HILL_FORT -> new Palettes.Look(base.walls(), "dark_oak", base.floor(), "spruce", base.footing(), base.dressed());
-            case COASTAL -> new Palettes.Look("birch", "spruce", base.floor(), "birch", base.footing(), base.dressed());
-            case DESERT_COURT -> new Palettes.Look("birch", base.roof(), base.floor(), "acacia", base.footing(), base.dressed());
-            case FOREST_LODGE -> new Palettes.Look("spruce", "dark_oak", base.floor(), "spruce", base.footing(), base.dressed());
-            case GRAND_CIVIC -> new Palettes.Look("oak", "dark_oak", base.floor(), "dark_oak", base.footing(), base.dressed());
-        };
+        return Palettes.Look.of(Themes.of(village).styled(st.name(), base.theme()));   // [styles] the theme's styles' woods
     }
 
     // ------------------------------------------------------------------ the dressing
@@ -323,7 +317,6 @@ public final class Architecture {
         Map<Long, Cell> byPos = new HashMap<>();
         for (Cell c : cells) if (c.p().part() != BuildGoal.Part.CLEAR) byPos.put(c.p().pos().asLong(), c);
         Direction back = b.facing(), front = back.getOpposite(), right = back.getClockWise();
-        boolean stone = age >= Villages.Age.STONE.ordinal(), iron = age >= Villages.Age.IRON.ordinal();
         int frontDz = Integer.MAX_VALUE, eavesH = Integer.MAX_VALUE, minDz = Integer.MAX_VALUE, maxDz = Integer.MIN_VALUE;
         int wallBack = Integer.MIN_VALUE;
         Cell chimneyTop = null;
@@ -338,115 +331,73 @@ public final class Architecture {
             if (c.p().part() == BuildGoal.Part.BLOCK && (c.p().style() == Blueprints.Style.MASONRY || c.p().style() == Blueprints.Style.BRICK)
                     && (chimneyTop == null || c.h() > chimneyTop.h())) chimneyTop = c;
         }
-        // The walls, the posts, the roof, the chimney and the windows, cell by cell.
+        // The walls, the posts, the roof, the chimney and the windows, cell by cell. [styles] What each becomes is the
+        // theme's (its styles' "dress" rules); what may be changed at all (a wall that is a wall) is asked here.
+        ThemeData theme = Themes.of(village);
+        Villages.Age ageNow = Villages.Age.values()[Math.max(0, Math.min(age, Villages.Age.values().length - 1))];
+        String trim = trim(village).getName();
+        ThemeData.Look look = lookFor(village).theme();
         for (Cell c : cells) {
             BuildGoal.Placement p = c.p();
             BlockPos pos = p.pos();
             BlockState now = level.getBlockState(pos);
-            BlockState want = null;
-            String what = "";
+            String kind = null;
+            boolean band = false, side = false;
+            Direction.Axis run = Direction.Axis.Y;
             if (p.part() == BuildGoal.Part.BLOCK) {
                 switch (p.style()) {
                     case WALL -> {
                         if (!wallish(now)) break;
                         Cell above = byPos.get(pos.above().asLong());
-                        boolean band = above == null || !(above.p().part() == BuildGoal.Part.BLOCK && above.p().style() == Blueprints.Style.WALL
+                        band = above == null || !(above.p().part() == BuildGoal.Part.BLOCK && above.p().style() == Blueprints.Style.WALL
                             || above.p().part() == BuildGoal.Part.WINDOW);
-                        Direction.Axis run = runOf(c, byPos, back);
-                        want = switch (st) {
-                            case TIMBERED -> band ? log("dark_oak", false, run) : null;
-                            case HILL_FORT -> !stone ? null : (iron ? Blocks.DEEPSLATE_BRICKS : Blocks.COBBLESTONE).defaultBlockState();
-                            case COASTAL -> stone ? Blocks.POLISHED_DIORITE.defaultBlockState() : Blocks.BIRCH_PLANKS.defaultBlockState();
-                            case DESERT_COURT -> stone ? Blocks.CUT_SANDSTONE.defaultBlockState() : null;
-                            case FOREST_LODGE -> log(woodOf(village), false, run);
-                            case GRAND_CIVIC -> stone ? Blocks.POLISHED_ANDESITE.defaultBlockState() : null;
-                        };
-                        what = st == Style.TIMBERED ? "the timber band" : "the walls";
+                        run = runOf(c, byPos, back);
+                        kind = "WALL";
                     }
-                    case POST -> {
-                        if (!wallish(now)) break;
-                        want = switch (st) {
-                            case TIMBERED -> log("dark_oak", false, Direction.Axis.Y);
-                            case HILL_FORT -> stone ? Blocks.STONE_BRICKS.defaultBlockState() : null;
-                            case COASTAL -> log("birch", true, Direction.Axis.Y);
-                            case DESERT_COURT -> stone ? Blocks.SMOOTH_SANDSTONE.defaultBlockState() : null;
-                            case FOREST_LODGE -> log(woodOf(village), true, Direction.Axis.Y);
-                            case GRAND_CIVIC -> stone ? Blocks.CHISELED_STONE_BRICKS.defaultBlockState() : null;
-                        };
-                        what = "the corner posts";
-                    }
-                    case ROOF_STAIR, ROOF_STAIR_TOP -> {
-                        if (!roofish(now) || !(now.getBlock() instanceof StairBlock)) break;
-                        Block to = switch (st) {
-                            case HILL_FORT -> iron ? Blocks.DEEPSLATE_TILE_STAIRS : stone ? Blocks.COBBLESTONE_STAIRS : null;
-                            case DESERT_COURT -> stone ? Blocks.SANDSTONE_STAIRS : null;
-                            case TIMBERED -> now.is(BlockTags.WOODEN_STAIRS) ? null : Blocks.SPRUCE_STAIRS;
-                            case FOREST_LODGE -> now.is(BlockTags.WOODEN_STAIRS) ? null : Blocks.DARK_OAK_STAIRS;
-                            default -> null;
-                        };
-                        if (to != null) want = Ages.like(now, to);
-                        what = "the roof";
-                    }
-                    case ROOF_SLAB, ROOF_SLAB_TOP -> {
-                        if (!roofish(now) || !now.is(BlockTags.SLABS)) break;
-                        Block to = switch (st) {
-                            case HILL_FORT -> iron ? Blocks.DEEPSLATE_TILE_SLAB : stone ? Blocks.COBBLESTONE_SLAB : null;
-                            case DESERT_COURT -> stone ? Blocks.SANDSTONE_SLAB : null;
-                            case FOREST_LODGE -> Blocks.MOSSY_COBBLESTONE_SLAB;
-                            case TIMBERED -> now.is(BlockTags.WOODEN_SLABS) ? null : Blocks.SPRUCE_SLAB;
-                            default -> null;
-                        };
-                        if (to != null) want = Ages.like(now, to);
-                        what = st == Style.FOREST_LODGE ? "the mossy ridge" : "the roof";
-                    }
-                    case MASONRY, BRICK -> {
-                        if (!wallish(now)) break;
-                        Block to = switch (st) {
-                            case TIMBERED -> stone ? Blocks.BRICKS : null;
-                            case HILL_FORT -> Blocks.COBBLESTONE;
-                            case COASTAL -> stone ? Blocks.POLISHED_DIORITE : null;
-                            case DESERT_COURT -> Blocks.SANDSTONE;
-                            case FOREST_LODGE -> Blocks.MOSSY_COBBLESTONE;
-                            case GRAND_CIVIC -> stone ? Blocks.STONE_BRICKS : null;
-                        };
-                        if (to != null) want = to.defaultBlockState();
-                        what = "the chimney";
-                    }
+                    case POST -> kind = wallish(now) ? "POST" : null;
+                    case ROOF_STAIR, ROOF_STAIR_TOP -> kind = roofish(now) && now.getBlock() instanceof StairBlock ? "ROOF_STAIR" : null;
+                    case ROOF_SLAB, ROOF_SLAB_TOP -> kind = roofish(now) && now.is(BlockTags.SLABS) ? "ROOF_SLAB" : null;
+                    case MASONRY, BRICK -> kind = wallish(now) ? "MASONRY" : null;
                     default -> { }
                 }
             } else if (p.part() == BuildGoal.Part.WINDOW && pane(now)) {
-                boolean side = c.dz() != frontDz && c.dz() != wallBack && c.h() <= 2;
-                if (st == Style.COASTAL) {
-                    Block tinted = block(trim(village).getName() + "_stained_glass_pane");
-                    if (!now.is(tinted)) want = tinted.withPropertiesOf(now);
-                    what = "the windows' glass";
-                } else if (st == Style.HILL_FORT && side && stone) {
-                    want = Blocks.COBBLESTONE.defaultBlockState();
-                    what = "the side windows walled up small";
-                }
+                side = c.dz() != frontDz && c.dz() != wallBack && c.h() <= 2;
+                kind = "WINDOW";
             }
+            if (kind == null) continue;
+            Themes.Result r = Themes.dress(theme, st, kind, new Themes.Ctx(ageNow, b.structure(), false, now, pos, null,
+                band, side, look, trim), run);
+            BlockState want = r == null ? null : r.want();
+            String what = r == null ? "" : r.what();
             if (want != null && !now.equals(want) && !(want.getBlock() == now.getBlock() && sameButAxis(now, want))) {
                 out.add(new Change(pos, want, false, what));
             }
         }
         // What the style adds, in front of the house and on its roof: only into the air.
+        Map<String, Object> orn = Themes.style(theme, st);
+        orn = orn.get("ornaments") instanceof Map<?, ?> m ? cast(m) : Map.of();
+        Block shutterBlock = orn.get("shutters") instanceof String sid ? Themes.block(sid) : Blocks.AIR;
+        boolean banners = Boolean.TRUE.equals(orn.get("banners"));
+        Map<String, Object> bat = orn.get("battlements") instanceof Map<?, ?> m ? cast(m) : Map.of();
+        Block battlement = bat.get("block") instanceof String bid ? Themes.block(bid) : Blocks.AIR;
+        boolean battlements = battlement != Blocks.AIR && (!(bat.get("age_min") instanceof String am) || ageAtLeast(ageNow, am));
         if (frontDz != Integer.MAX_VALUE) {
             for (Cell c : cells) {
                 BuildGoal.Placement p = c.p();
                 // Shutters either side of each front window.
-                if ((st == Style.TIMBERED || st == Style.FOREST_LODGE) && p.part() == BuildGoal.Part.WINDOW && c.dz() == frontDz) {
+                if (shutterBlock instanceof TrapDoorBlock && p.part() == BuildGoal.Part.WINDOW && c.dz() == frontDz) {
                     for (Direction side : new Direction[]{ right, right.getOpposite() }) {
                         BlockPos wall = p.pos().relative(side), at = wall.relative(front);
                         Cell wc = byPos.get(wall.asLong());
                         if (wc == null || wc.p().part() != BuildGoal.Part.BLOCK) continue;
                         if (!level.getBlockState(at).isAir()) continue;
-                        BlockState shutter = Blocks.SPRUCE_TRAPDOOR.defaultBlockState().setValue(TrapDoorBlock.FACING, front)
+                        BlockState shutter = shutterBlock.defaultBlockState().setValue(TrapDoorBlock.FACING, front)
                             .setValue(TrapDoorBlock.OPEN, true).setValue(TrapDoorBlock.HALF, Half.TOP);
                         out.add(new Change(at, shutter, true, "shutters"));
                     }
                 }
                 // The town's colours on banners at the front corners.
-                if ((st == Style.COASTAL || st == Style.GRAND_CIVIC || st == Style.HILL_FORT) && p.part() == BuildGoal.Part.BLOCK
+                if (banners && p.part() == BuildGoal.Part.BLOCK
                         && p.style() == Blueprints.Style.POST && c.dz() == frontDz && c.h() == 2) {
                     BlockPos at = p.pos().relative(front);
                     if (level.getBlockState(at).isAir() && level.getBlockState(at.below()).isAir()) {
@@ -456,12 +407,12 @@ public final class Architecture {
                     }
                 }
                 // Battlements along the eaves.
-                if (st == Style.HILL_FORT && stone && p.part() == BuildGoal.Part.BLOCK && BuildGoal.isRoof(p.style())
+                if (battlements && p.part() == BuildGoal.Part.BLOCK && BuildGoal.isRoof(p.style())
                         && p.style() != Blueprints.Style.ROOF_BLOCK && c.h() == eavesH && (c.dz() == minDz || c.dz() == maxDz)
                         && Math.floorMod(c.dx(), 2) == 0) {
                     BlockPos at = p.pos().above();
                     if (level.getBlockState(at).isAir() && !byPos.containsKey(at.asLong())) {
-                        out.add(new Change(at, Blocks.COBBLESTONE_WALL.defaultBlockState(), true, "the battlements"));
+                        out.add(new Change(at, battlement.defaultBlockState(), true, "the battlements"));
                     }
                 }
             }
@@ -470,22 +421,27 @@ public final class Architecture {
             if (door != null) {
                 BlockPos step = door.relative(front);
                 BlockPos left = step.relative(right.getOpposite(), 2), rightOf = step.relative(right, 2);
-                switch (st) {
-                    case COASTAL -> {
-                        if (placeable(level, rightOf)) out.add(new Change(rightOf, Blocks.BARREL.defaultBlockState()
-                            .setValue(net.minecraft.world.level.block.BarrelBlock.FACING, Direction.UP), true, "a barrel by the door"));
+                Map<String, Object> by = orn.get("by_door") instanceof Map<?, ?> m ? cast(m) : Map.of();
+                Block thing = by.get("block") instanceof String tid ? Themes.block(tid) : Blocks.AIR;
+                String words = by.get("what") instanceof String w ? w : "a thing by the door";
+                switch (by.get("kind") instanceof String k ? k : "") {
+                    case "barrel" -> {
+                        BlockState bs = thing.defaultBlockState();
+                        if (bs.hasProperty(net.minecraft.world.level.block.BarrelBlock.FACING)) bs = bs.setValue(net.minecraft.world.level.block.BarrelBlock.FACING, Direction.UP);
+                        if (thing != Blocks.AIR && placeable(level, rightOf)) out.add(new Change(rightOf, bs, true, words));
                     }
-                    case DESERT_COURT -> {
-                        if (placeable(level, left)) out.add(new Change(left, Blocks.DECORATED_POT.defaultBlockState()
-                            .setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, front), true,
-                            "a fired pot by the door"));
+                    case "pot" -> {
+                        BlockState bs = thing.defaultBlockState();
+                        if (bs.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING)) {
+                            bs = bs.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HORIZONTAL_FACING, front);
+                        }
+                        if (thing != Blocks.AIR && placeable(level, left)) out.add(new Change(left, bs, true, words));
                     }
-                    case FOREST_LODGE -> {
+                    case "sign" -> {
                         // The household's names carved on a board over the door.
                         BlockPos board = door.above(2).relative(front);
-                        if (level.getBlockState(board).isAir() && level.getBlockState(board.relative(back)).isSolid()) {
-                            out.add(new Change(board, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, front),
-                                true, "a carved board by the door"));
+                        if (thing instanceof WallSignBlock && level.getBlockState(board).isAir() && level.getBlockState(board.relative(back)).isSolid()) {
+                            out.add(new Change(board, thing.defaultBlockState().setValue(WallSignBlock.FACING, front), true, words));
                         }
                     }
                     default -> { }
@@ -493,13 +449,36 @@ public final class Architecture {
             }
         }
         // Smoke from the chimney pot.
-        if ((st == Style.TIMBERED || st == Style.FOREST_LODGE) && chimneyTop != null) {
+        Block fire = orn.get("chimney_fire") instanceof String fid ? Themes.block(fid) : Blocks.AIR;
+        if (fire != Blocks.AIR && chimneyTop != null) {
             BlockPos at = chimneyTop.p().pos().above();
             if (level.getBlockState(at).isAir() && level.getBlockState(chimneyTop.p().pos()).isSolid()) {
-                out.add(new Change(at, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, true), true, "a fire in the chimney pot"));
+                BlockState lit = fire.defaultBlockState();
+                if (lit.hasProperty(CampfireBlock.LIT)) lit = lit.setValue(CampfireBlock.LIT, true);
+                out.add(new Change(at, lit, true, "a fire in the chimney pot"));
             }
         }
         return out;
+    }
+
+    /** [styles] The town's look for its dressing: its woods, a lodge's logs of its frame's wood (spruce for bamboo). */
+    private static Palettes.Look lookFor(UUID village) {
+        Palettes.Look l = Palettes.of(village);
+        return l.frame().equals("bamboo") ? new Palettes.Look(l.walls(), l.roof(), l.floor(), "spruce", l.footing(), l.dressed()) : l;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> cast(Map<?, ?> m) {
+        return (Map<String, Object>) m;
+    }
+
+    /** [styles] Has the town come to this age (a Villages.Age's name)? */
+    private static boolean ageAtLeast(Villages.Age age, String name) {
+        try {
+            return age.ordinal() >= Villages.Age.valueOf(name).ordinal();
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     /** Somewhere on the ground to set a thing down: air, firm ground under it, and not a way in. */
@@ -516,20 +495,6 @@ public final class Architecture {
     /** The same block already, only lying another way (a log the builders laid upright): left as it is. */
     private static boolean sameButAxis(BlockState now, BlockState want) {
         return now.hasProperty(RotatedPillarBlock.AXIS);
-    }
-
-    /** A log of this wood (stripped, or not), lying this way. */
-    private static BlockState log(String wood, boolean stripped, Direction.Axis axis) {
-        Block b = block((stripped ? "stripped_" : "") + wood + "_log");
-        if (b == Blocks.AIR) b = stripped ? Blocks.STRIPPED_SPRUCE_LOG : Blocks.SPRUCE_LOG;
-        BlockState s = b.defaultBlockState();
-        return s.hasProperty(RotatedPillarBlock.AXIS) ? s.setValue(RotatedPillarBlock.AXIS, axis) : s;
-    }
-
-    /** The wood a lodge town's logs are of: its look's frame. */
-    private static String woodOf(UUID village) {
-        String w = Palettes.of(village).frame();
-        return w.equals("bamboo") ? "spruce" : w;
     }
 
     // ------------------------------------------------------------------ paying for it
@@ -675,12 +640,23 @@ public final class Architecture {
         });
     }
 
-    private static void markDressed(UUID village, Ledger.Building b, Style st) {
+    /** [styles] A building to be dressed again (renovated to a new design: Renovation). */
+    static void forgetDressed(UUID village, BlockPos anchor) {
         Map<Long, String> m = dressed(village);
-        m.put(b.anchor().asLong(), st.name() + "|" + age(village));
+        if (m.remove(anchor.asLong()) == null) return;
+        saveDressed(village, m);
+    }
+
+    private static void saveDressed(UUID village, Map<Long, String> m) {
         List<String[]> rows = new ArrayList<>();
         for (Map.Entry<Long, String> e : m.entrySet()) rows.add(new String[]{ Long.toString(e.getKey()), e.getValue() });
         Culture.rows(village, TownWays.PREFIX + "dressed", rows);
+    }
+
+    private static void markDressed(UUID village, Ledger.Building b, Style st) {
+        Map<Long, String> m = dressed(village);
+        m.put(b.anchor().asLong(), st.name() + "|" + age(village));
+        saveDressed(village, m);
     }
 
     /**
@@ -786,7 +762,8 @@ public final class Architecture {
      */
     public static boolean ageMayChange(@Nullable UUID village, Ledger.Building b, Blueprints.Style part) {
         Style st = of(village);
-        if (st != Style.TIMBERED && st != Style.FOREST_LODGE || !HOMES.contains(b.structure())) return true;
+        boolean keep = Boolean.TRUE.equals(Themes.style(Themes.of(village), st).get("keep_roof"));   // [styles] the theme's styles
+        if (!keep || !HOMES.contains(b.structure())) return true;
         return !BuildGoal.isRoof(part);
     }
 
@@ -809,16 +786,7 @@ public final class Architecture {
      */
     @Nullable
     public static Post lampPost(ServerLevel level, Villages.Village v) {
-        Style st = of(v.id());
-        if (st == null) return null;
-        Post p = switch (st) {
-            case TIMBERED -> new Post(Blocks.DARK_OAK_FENCE, s -> s.is(Items.DARK_OAK_LOG) || s.is(Items.DARK_OAK_FENCE), 2);
-            case HILL_FORT -> new Post(Blocks.COBBLESTONE_WALL, s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLESTONE_WALL), 2);
-            case COASTAL -> new Post(Blocks.BIRCH_FENCE, s -> s.is(Items.BIRCH_LOG) || s.is(Items.BIRCH_FENCE), 2);
-            case DESERT_COURT -> new Post(Blocks.SANDSTONE_WALL, s -> s.is(Items.SANDSTONE) || s.is(Items.SANDSTONE_WALL), 2);
-            case FOREST_LODGE -> null;
-            case GRAND_CIVIC -> new Post(Blocks.STONE_BRICK_WALL, s -> s.is(Items.STONE_BRICKS) || s.is(Items.STONE_BRICK_WALL), 2);
-        };
+        Post p = postFor(v.id());
         return p != null && Crafts.stock(level, v, p.pay()) >= p.cost() ? p : null;
     }
 
@@ -828,18 +796,46 @@ public final class Architecture {
      */
     @Nullable
     public static Block benchStair(ServerLevel level, Villages.Village v) {
-        Style st = of(v.id());
-        if (st == Style.DESERT_COURT && Crafts.take(level, v, s -> s.is(Items.SANDSTONE) || s.is(Items.SANDSTONE_STAIRS), 1)) return Blocks.SANDSTONE_STAIRS;
-        if (st == Style.HILL_FORT || st == Style.GRAND_CIVIC) {
-            if (Crafts.take(level, v, s -> s.is(Items.STONE_BRICKS) || s.is(Items.STONE_BRICK_STAIRS), 1)) return Blocks.STONE_BRICK_STAIRS;
-            if (Crafts.take(level, v, s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLESTONE_STAIRS), 1)) return Blocks.COBBLESTONE_STAIRS;
-        }
+        for (Post b : benchesFor(v.id())) if (Crafts.take(level, v, b.pay(), 1)) return b.block();
         return null;
+    }
+
+    /** [styles] The town's style's lamp post in its theme ("lamp_post"), whatever the stores hold; null for the usual. */
+    @Nullable
+    static Post postFor(UUID village) {
+        Style st = of(village);
+        if (st == null) return null;
+        Map<String, Object> m = Themes.style(Themes.of(village), st);
+        if (!(m.get("lamp_post") instanceof Map<?, ?> lp) || !(cast(lp).get("block") instanceof String id) || Themes.block(id) == Blocks.AIR) return null;
+        int cost = cast(lp).get("cost") instanceof Number n ? n.intValue() : 2;
+        return new Post(Themes.block(id), payOf(cast(lp).get("pay")), cost);
+    }
+
+    /** [styles] The town's style's benches in its theme ("bench"), in the order they are tried; none for wooden ones. */
+    static List<Post> benchesFor(UUID village) {
+        List<Post> out = new ArrayList<>();
+        if (!(Themes.style(Themes.of(village), of(village)).get("bench") instanceof List<?> choices)) return out;
+        for (Object o : choices) {
+            if (!(o instanceof Map<?, ?> c) || !(cast(c).get("block") instanceof String id)) continue;
+            Block b = Themes.block(id);
+            if (b != Blocks.AIR) out.add(new Post(b, payOf(cast(c).get("pay")), 1));
+        }
+        return out;
+    }
+
+    /** [styles] What pays for a theme's thing: any of its "pay" list (ids, tags). */
+    private static Predicate<ItemStack> payOf(Object pay) {
+        List<Predicate<ItemStack>> any = new ArrayList<>();
+        if (pay instanceof List<?> xs) for (Object x : xs) if (x instanceof String w) any.add(Themes.items(w));
+        return s -> {
+            for (Predicate<ItemStack> p : any) if (p.test(s)) return true;
+            return false;
+        };
     }
 
     /** A Timbered Lowland town boxes flowers under every house's windows, not only the well-off ones' (StreetFurniture). */
     public static boolean boxesEverywhere(@Nullable UUID village) {
-        return of(village) == Style.TIMBERED;
+        return Boolean.TRUE.equals(Themes.style(Themes.of(village), of(village)).get("boxes_everywhere"));   // [styles]
     }
 
     // ------------------------------------------------------------------ words

@@ -153,6 +153,26 @@ public final class Restore {
         return out;
     }
 
+    /**
+     * [styles] What it takes to rebuild a building from one drawing to another in place: every cell of the new drawing
+     * that does not hold what it wants (diff), and every cell of the old drawing the new one leaves empty that still
+     * holds the old building's block, to come out (FOREIGN, nothing wanted). Enqueue the result with Reason.RENOVATE.
+     */
+    public static List<Fix> diffRenovation(Level level, Ledger.Building b, String fromDesign, String toDesign) {
+        List<Fix> out = diff(level, b, toDesign);
+        java.util.Set<Long> keep = new java.util.HashSet<>();
+        for (BuildGoal.Placement p : BuildGoal.plan(toDesign, b.anchor(), b.facing(), 13)) keep.add(p.pos().asLong());
+        java.util.Set<Long> listed = new java.util.HashSet<>();
+        for (Fix f : out) listed.add(f.pos().asLong());
+        for (BuildGoal.Placement p : BuildGoal.plan(fromDesign, b.anchor(), b.facing(), 13)) {
+            if (p.part() == BuildGoal.Part.CLEAR || keep.contains(p.pos().asLong()) || !level.isLoaded(p.pos())) continue;
+            BlockState st = level.getBlockState(p.pos());
+            if (empty(st) || natural(st) || !listed.add(p.pos().asLong())) continue;
+            out.add(new Fix(p.pos().immutable(), null, Kind.FOREIGN, st));
+        }
+        return out;
+    }
+
     private static Direction bedHead(BuildGoal.Placement p, Direction facing) {
         return p.way() == Blueprints.Way.UP ? facing : Blueprints.world(p.way(), facing);
     }
@@ -191,6 +211,11 @@ public final class Restore {
         if (earthy(st)) return Kind.WRONG;                                  // earth where a wall, a floor or a footing goes
         if (p.part() == BuildGoal.Part.BLOCK && solidish(st)) return Kind.SHAPE;
         return Kind.WRONG;
+    }
+
+    /** An item of earth, sand or gravel (what a builder's load is not to be made of). */
+    public static boolean earthyItem(ItemStack s) {
+        return s.getItem() instanceof BlockItem bi && earthy(bi.getBlock().defaultBlockState());
     }
 
     /** Earth, sand and gravel: the ground's, never a wall's or a floor's (a footing laid where the ground stood was
@@ -386,22 +411,56 @@ public final class Restore {
     public record Scaffold(Ledger.Building building, int placed, long since) {}
 
     private static final Map<UUID, Map<Long, Scaffold>> SCAFFOLDS = new ConcurrentHashMap<>();
+    /** The Ledger note the scaffolds are kept under, so a restart does not forget a frame left standing:
+     *  "structure,x,y,z,facing,since;..." */
+    private static final String SCAFFOLD_NOTE = "integrity/scaffolds";
 
     /** A building was given up on its ground (Villages.rejectSite): what was laid of it is to come down. */
     public static void abandoned(UUID village, Ledger.Building b, long now) {
-        SCAFFOLDS.computeIfAbsent(village, k -> new ConcurrentHashMap<>()).putIfAbsent(b.anchor().asLong(), new Scaffold(b, -1, now));
+        if (of(village).putIfAbsent(b.anchor().asLong(), new Scaffold(b, -1, now)) == null) save(village);
     }
 
     /** The town has taken a building up again on this ground: it is not scaffolding to clear. */
     public static void resumed(UUID village, BlockPos anchor) {
-        Map<Long, Scaffold> m = SCAFFOLDS.get(village);
-        if (m != null) m.remove(anchor.asLong());
+        if (of(village).remove(anchor.asLong()) != null) save(village);
     }
 
     /** What is standing given up, half built. */
     public static List<Scaffold> scaffolds(UUID village) {
-        Map<Long, Scaffold> m = SCAFFOLDS.get(village);
-        return m == null ? List.of() : new ArrayList<>(m.values());
+        return new ArrayList<>(of(village).values());
+    }
+
+    /** A town's scaffolds, read back from its Ledger note the first time they are asked for. */
+    private static Map<Long, Scaffold> of(UUID village) {
+        return SCAFFOLDS.computeIfAbsent(village, k -> {
+            Map<Long, Scaffold> m = new ConcurrentHashMap<>();
+            String note = Ledger.note(village, SCAFFOLD_NOTE);
+            if (note == null || note.isEmpty()) return m;
+            for (String one : note.split(";")) {
+                String[] f = one.split(",");
+                if (f.length != 6) continue;
+                try {
+                    Direction d = Direction.byName(f[4]);
+                    if (d == null) continue;
+                    BlockPos a = new BlockPos(Integer.parseInt(f[1]), Integer.parseInt(f[2]), Integer.parseInt(f[3]));
+                    m.put(a.asLong(), new Scaffold(new Ledger.Building(f[0], a, d), -1, Long.parseLong(f[5])));
+                } catch (NumberFormatException ignored) {
+                    // an unreadable entry from an older or damaged save: dropped
+                }
+            }
+            return m;
+        });
+    }
+
+    private static void save(UUID village) {
+        StringBuilder sb = new StringBuilder();
+        for (Scaffold s : of(village).values()) {
+            BlockPos a = s.building().anchor();
+            if (sb.length() > 0) sb.append(';');
+            sb.append(s.building().structure()).append(',').append(a.getX()).append(',').append(a.getY()).append(',').append(a.getZ())
+                .append(',').append(s.building().facing().getName()).append(',').append(s.since());
+        }
+        Ledger.note(village, SCAFFOLD_NOTE, sb.toString());
     }
 
     /** The cells of a given-up building that still hold something it laid (its drawing's cells, not the world's
@@ -421,8 +480,8 @@ public final class Restore {
 
     /** Take down up to so many blocks of what was given up, top first, into the stores. Returns how many. */
     static int clearScaffolds(ServerLevel level, Villages.Village v, int budget) {
-        Map<Long, Scaffold> m = SCAFFOLDS.get(v.id());
-        if (m == null || m.isEmpty()) return 0;
+        Map<Long, Scaffold> m = of(v.id());
+        if (m.isEmpty()) return 0;
         int done = 0;
         for (Scaffold s : new ArrayList<>(m.values())) {
             if (done >= budget) break;
@@ -432,13 +491,24 @@ public final class Restore {
             boolean standing = false;
             for (Ledger.Building o : Ledger.buildings(v.id())) if (o.anchor().equals(b.anchor()) && o.structure().equals(b.structure())) standing = true;
             Villages.Site again = Villages.sitesOf(v.id()).get(b.structure());
-            if (standing || (again != null && again.anchor().equals(b.anchor()))) { m.remove(b.anchor().asLong()); continue; }
+            if (standing || (again != null && again.anchor().equals(b.anchor()))) { m.remove(b.anchor().asLong()); save(v.id()); continue; }
             List<BlockPos> left = laid(level, v, b);
             if (s.placed() < 0) m.put(b.anchor().asLong(), new Scaffold(b, left.size(), s.since()));
-            if (left.isEmpty()) { m.remove(b.anchor().asLong()); continue; }
+            // Gone once nothing of it stands above the ground (its footing filled back as the stores' earth allows).
+            boolean standsUp = false;
+            for (BlockPos p : left) if (p.getY() >= b.anchor().getY()) { standsUp = true; break; }
+            if (left.isEmpty() || !standsUp && Market.stock(level, v.id(), it -> it.is(Items.DIRT)) == 0) {
+                m.remove(b.anchor().asLong());
+                save(v.id());
+                continue;
+            }
             left.sort(Comparator.comparingInt((BlockPos p) -> -p.getY()));
             for (BlockPos p : left) {
                 if (done >= budget) break;
+                // The footing, in the ground: earth back in its place out of the stores (grass on top), or the
+                // footing left as a pad of stone; never a pit where a house was begun.
+                boolean ground = p.getY() < b.anchor().getY();
+                if (ground && !Crafts.take(level, v, it -> it.is(Items.DIRT), 1)) continue;
                 if (!TownJobs.atWork(level, v, "repairs", p, "taking down a building given up")) return done;
                 BlockState st = level.getBlockState(p);
                 if (level.getBlockEntity(p) instanceof net.minecraft.world.Container c) {
@@ -448,7 +518,9 @@ public final class Restore {
                     }
                 }
                 for (ItemStack drop : Block.getDrops(st, level, p, level.getBlockEntity(p))) Crafts.store(level, v, drop);
-                level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
+                BlockState back = !ground ? Blocks.AIR.defaultBlockState()
+                    : level.getBlockState(p.above()).isAir() ? Blocks.GRASS_BLOCK.defaultBlockState() : Blocks.DIRT.defaultBlockState();
+                level.setBlock(p, back, 3);
                 TownBlocks.traced(v, p, TownBlocks.Why.TIDY);
                 done++;
             }
@@ -472,6 +544,9 @@ public final class Restore {
     private static final int LOOK = 3;
     /** Blocks put right in one visit. */
     private static final int BUDGET = 12;
+    /** Buildings on the list looked at in one visit (the worst first): a long list waiting on the stores is not
+     *  walked end to end every quarter minute. */
+    private static final int JOBS_A_VISIT = 3;
 
     /** One visit (TownWork.tick): a few buildings looked over, a few blocks put right. */
     public static void tick(ServerLevel level, Villages.Village v) {
@@ -524,6 +599,7 @@ public final class Restore {
         if (b.structure().equals("fortify")) return true;
         if (Grow.raisingNow(village, b.anchor())) return true;
         if (HousingMarket.isPrivate(village, b.anchor())) return true;
+        if (Renovation.renovating(village, b.anchor())) return true;   // [styles] being renovated: its furniture moved, not mended round
         return Beliefs.untouchable(village, b);
     }
 
@@ -531,8 +607,9 @@ public final class Restore {
     public static int work(ServerLevel level, Villages.Village v, int budget) {
         int done = 0;
         long day = level.getDayTime() / 24000L;
+        int jobs = 0;
         for (Job j : queue(v.id())) {
-            if (done >= budget) break;
+            if (done >= budget || jobs++ >= JOBS_A_VISIT) break;
             if (!Land.areaLoaded(level, j.building.anchor(), 10)) continue;
             if (j.reason == Reason.REPAIR && skip(v.id(), j.building)) {
                 enqueue(v.id(), j.building, j.design, List.of(), j.reason, 0);
@@ -542,7 +619,7 @@ public final class Restore {
                 .thenComparingInt(f -> f.pos().getY()));
             List<Fix> left = new ArrayList<>();
             boolean waited = false;
-            Map<String, Block> look = lookOf(level, j);
+            Map<String, Block> look = new HashMap<>();        // the building's own look, worked out when first wanted
             for (Fix f : j.fixes) {
                 if (done >= budget || waited) { left.add(f); continue; }
                 // Still wrong? (Something else may have put it right, or a hand mended it meanwhile.)
@@ -587,6 +664,7 @@ public final class Restore {
         // What to put in, before anything comes out: a wall is not opened up for want of the block to close it.
         BlockState put = null;
         if (want != null) {
+            if (look.isEmpty()) look.putAll(lookOf(level, j));
             put = fromStores(level, v, want, look, j.building.facing(), at);
             if (put == null) return 0;
         }
@@ -682,16 +760,24 @@ public final class Restore {
     @Nullable
     private static BlockState fromStores(ServerLevel level, Villages.Village v, BuildGoal.Placement want, Map<String, Block> look,
                                          Direction facing, BlockPos at) {
-        Block own = look.get(want.part() + "/" + want.style());
+        Block seen = look.get(want.part() + "/" + want.style());
+        // [styles] Never the earth or the gold an older town patched a wall with: that is no look to match (Materials).
+        Block own = seen != null && want.part() == BuildGoal.Part.BLOCK && Materials.unfit(v.id(), want.style(), seen.defaultBlockState()) ? null : seen;
         if (own != null && own.asItem() != Items.AIR) {
             ItemStack one = Crafts.takeOne(level, v, s -> s.is(own.asItem()));
             if (!one.isEmpty()) return own.defaultBlockState();
         }
         if (want.part() == BuildGoal.Part.BLOCK) {
-            java.util.function.Predicate<ItemStack> styled = BuildGoal.preferred(want.style());
-            ItemStack one = Crafts.takeOne(level, v, s -> styled.test(s) && s.getItem() instanceof BlockItem && !Palettes.precious(s));
-            if (one.isEmpty() && fullStyle(want.style())) {
-                one = Crafts.takeOne(level, v, s -> BuildGoal.isBuildingBlock(s) && !Palettes.precious(s));
+            // [styles] The town's own block, then the theme's stand-ins for its age, as a builder would (Materials).
+            BlockState got = Materials.take(level, v, want.style());
+            if (got != null) return got;
+            ItemStack one = ItemStack.EMPTY;
+            // A roof's stair or slab cut there of the stores' planks: six make four stairs, three make six slabs.
+            if (one.isEmpty() && (want.style() == Blueprints.Style.ROOF_STAIR || want.style() == Blueprints.Style.ROOF_STAIR_TOP)) {
+                return make(level, v, 6, Blocks.OAK_STAIRS, Items.OAK_STAIRS, 3);
+            }
+            if (one.isEmpty() && (want.style() == Blueprints.Style.ROOF_SLAB || want.style() == Blueprints.Style.ROOF_SLAB_TOP)) {
+                return make(level, v, 3, Blocks.OAK_SLAB, Items.OAK_SLAB, 5);
             }
             if (one.isEmpty() || !(one.getItem() instanceof BlockItem bi)) return null;
             return bi.getBlock().defaultBlockState();
@@ -701,8 +787,37 @@ public final class Restore {
         }
         java.util.function.Predicate<ItemStack> part = BuildGoal.itemForPart(want.part());
         ItemStack one = Crafts.takeOne(level, v, s -> part.test(s) && s.getItem() instanceof BlockItem);
-        if (one.isEmpty() || !(one.getItem() instanceof BlockItem bi)) return null;
+        if (one.isEmpty() || !(one.getItem() instanceof BlockItem bi)) return made(level, v, want);
         return bi.getBlock().defaultBlockState();
+    }
+
+    /**
+     * A wooden part made there and then of the stores' planks, as a hand would at a bench, when the stores have none
+     * made: a door (six planks make three, two go back), a chest, a crafting table, a ladder's rungs, a fence, a gate,
+     * a barrel, a roof stair (six planks make four) or a roof slab (three make six); a cauldron of seven iron. A house left with no door for want
+     * of a door was a house nobody could get into. Null if the planks are not there either.
+     */
+    @Nullable
+    private static BlockState made(ServerLevel level, Villages.Village v, BuildGoal.Placement want) {
+        return switch (want.part()) {
+            case DOOR -> make(level, v, 6, Blocks.OAK_DOOR, Items.OAK_DOOR, 2);
+            case CHEST -> make(level, v, 8, Blocks.CHEST, Items.CHEST, 0);
+            case CRAFTING_TABLE -> make(level, v, 4, Blocks.CRAFTING_TABLE, Items.CRAFTING_TABLE, 0);
+            case LADDER -> make(level, v, 4, Blocks.LADDER, Items.LADDER, 2);
+            case FENCE -> make(level, v, 4, Blocks.OAK_FENCE, Items.OAK_FENCE, 2);
+            case GATE -> make(level, v, 4, Blocks.OAK_FENCE_GATE, Items.OAK_FENCE_GATE, 0);
+            case BARREL -> make(level, v, 7, Blocks.BARREL, Items.BARREL, 0);
+            case CAULDRON -> Crafts.take(level, v, s -> s.is(Items.IRON_INGOT), 7) ? Blocks.CAULDRON.defaultBlockState() : null;
+            default -> null;
+        };
+    }
+
+    /** Planks made into a thing: so many planks out of the stores, one of it set, the rest of the batch back in. */
+    @Nullable
+    private static BlockState make(ServerLevel level, Villages.Village v, int planks, Block block, net.minecraft.world.item.Item item, int spare) {
+        if (!Crafts.usePlanks(level, v, planks)) return null;
+        if (spare > 0) Crafts.store(level, v, new ItemStack(item, spare));
+        return block.defaultBlockState();
     }
 
     private static BlockState giveBucket(ServerLevel level, Villages.Village v) {

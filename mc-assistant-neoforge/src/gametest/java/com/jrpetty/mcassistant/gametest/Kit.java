@@ -77,6 +77,7 @@ final class Kit {
         com.jrpetty.mcassistant.entity.TownJobs.instantForTests(true);
         // [police] The watch stood down to its old round for the other features' tests; PoliceGameTests stand it up.
         com.jrpetty.mcassistant.entity.Police.standDownForTests(true);
+        com.jrpetty.mcassistant.entity.CastleWall.standDownForTests(true);   // [defence] the town wall, for the defence tests only
     }
 
     /**

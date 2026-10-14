@@ -1,14 +1,21 @@
 package com.jrpetty.mcassistant.client;
 
+import com.jrpetty.mcassistant.client.TalkMenu.Category;
+import com.jrpetty.mcassistant.client.TalkMenu.Context;
+import com.jrpetty.mcassistant.client.TalkMenu.Entry;
+import com.jrpetty.mcassistant.client.TalkMenu.Kind;
+import com.jrpetty.mcassistant.client.TalkMenu.Page;
+import com.jrpetty.mcassistant.client.UiStyle.State;
 import com.jrpetty.mcassistant.entity.TalkTopic;
 import com.jrpetty.mcassistant.net.FolkReplyPayload;
 import com.jrpetty.mcassistant.net.FolkTalkPayload;
+import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.Entity;
@@ -20,295 +27,462 @@ import org.lwjgl.glfw.GLFW;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+
+import static com.jrpetty.mcassistant.client.UiStyle.*;
 
 /**
  * Face to face with a folk.
  *
- * <p>Along the top: its likeness, who it is, how it feels, what it thinks of you, and what
- * it is doing this minute. Then the tabs — <b>Talk</b> (how it is, its family, its news,
- * a joke, a kind word), <b>Ask</b> (help, favours, what it is good at, what it earns, the
- * way somewhere, the stores, the elder's orders, the quest board, the ledger, the history),
- * <b>Village</b> (who lives here, the council, the neighbours, your standing, citizenship,
- * the board), <b>Deal</b> (gifts, errands, trade, hiring, a house, a walk together) and
- * <b>About</b> (its card: trade and levels, how its nature suits its work, what it is
- * worth, its home, family, friends, hopes, needs and latest memory) and <b>Skills</b> (the
- * knacks it chose for itself: its trades' levels and how near its next knack point is, the
- * points earned, spent and free, each knack it chose as a card with what it does, why it
- * chose it and when, and its tree of knacks, the ones still open to it greyed) — and its Pack
- * and its Work record a click away. The conversation runs down the middle and is kept while you
- * are in the world, so you can pick up where you left off; anything can be typed at the foot.
+ * <p>The header: its likeness, its name, trade and nature, what it is doing, its mood and what it thinks of you as
+ * small bars, the town and your standing there; and four links (its profile card, its skills, its work record, its
+ * pack). Down the left, six categories (TalkMenu: Chat, About, Ask, Trade, Town, World). In the middle, the chosen
+ * category's few options, the rest a level down in groups, with a Suggested section over them when something is worth
+ * doing now (a quest's step, its request of you, a fine, its birthday). On the right, the conversation in speech
+ * bubbles, the latest at the foot, kept while you are in the world so you can pick up where you left off; and at the
+ * foot a box to say anything at all.
+ *
+ * <p>Keys: 1-9 pick an option, Up/Down and Enter too; Tab and Shift+Tab change category; Esc or Backspace go up a level
+ * (out of a group, off a page) and then close; T or Enter go to the box. Everything fits at every GUI scale: the
+ * columns narrow, the tabs drop their words, the lists scroll, and every text that would run over is cut with an
+ * ellipsis and shown whole in its tooltip.
+ *
+ * <p>Nothing is worked out per frame that can be worked out once: the rows, their clipped labels and the
+ * conversation's wrapped bubbles are laid out when something changes (a reply, a category, the window, what you hold).
  */
 public class TalkScreen extends Screen {
 
-    private static final int PAD = 8, HEADER = 56, TAB_H = 16, ROW = 16, LINE = 10;
+    // ------------------------------------------------------------------ layout constants
 
-    private static final int BG = 0xF0181B22, BAND = 0xFF20242E, EDGE = 0xFF8A7A50, SOFT = 0xFF3A3F4C,
-        GOLD = 0xFFE8C46A, INK = 0xFFEDEDED, MUTED = 0xFF9AA3B2, YOU = 0xFF9EC3EA, LOG = 0x80000000,
-        TAB = 0xFF2A2F3A, TAB_ON = 0xFF51441F, NAV = 0xFF22303A, ERRAND = 0xFFFFC857, PINK = 0xFFF0A0B8;
+    /** The panel's largest size: wide enough for three comfortable columns, short enough to leave the world in view. */
+    private static final int MAX_W = 448, MAX_H = 280;
+    /** Below this the screen goes compact: a short header and the tabs as icons alone. */
+    private static final int COMPACT_W = 380, COMPACT_H = 216;
+    /** The header's height, full and compact. */
+    private static final int HEADER_FULL = 52, HEADER_COMPACT = 30;
+    /** The category tabs' column, with words and as icons alone. */
+    private static final int TABS_FULL = 72, TABS_COMPACT = 24;
+    /** The options column: its share of the room right of the tabs, and its limits. */
+    private static final float OPTIONS_SHARE = 0.44F;
+    private static final int OPTIONS_MIN = 104, OPTIONS_MAX = 168;
+    /** The box and its two buttons at the foot. */
+    private static final int BOX_H = 18, BUTTON_W = 44, BUTTON_W_COMPACT = 34;
+    /** The header's link tiles. */
+    private static final int LINK = 20, LINK_COMPACT = 18;
+    /** A section heading's line in the options list, and the gap under a row. */
+    private static final int HEAD_H = 13, ROW_GAP = 2;
+    /** Speech bubbles: padding inside, the gap between, and the most of the column one may take. */
+    private static final int BUBBLE_PAD = 4, BUBBLE_GAP = 4, BUBBLE_TURN_GAP = 7;
+    private static final float BUBBLE_SHARE = 0.86F;
 
-    private enum Tab {
-        TALK("Talk"), ASK("Ask"), VILLAGE("Village"), DEAL("Deal"), MONEY("Money"), ABOUT("About"), SKILLS("Skills");
-        final String label;
-        Tab(String label) { this.label = label; }
-    }
+    /** Motion: the panel rising in as it opens, a list sliding in, the newest bubble rising, the flash of a choice. */
+    private static final int OPEN_MS = 140, LIST_MS = 110, BUBBLE_MS = 130, FLASH_MS = 260;
+    private static final int OPEN_RISE = 8, LIST_SLIDE = 6, BUBBLE_RISE = 6;
+    /** How long a disabled option's reason stays up after you click it, and how long a "…" waits for an answer. */
+    private static final int NOTICE_MS = 2600, WAIT_MS = 4000;
+    /** How many lines a conversation keeps, and how many folk's conversations. */
+    private static final int HISTORY_LINES = 80, HISTORY_FOLK = 64;
+    /** A pixel scroll a notch of the wheel. */
+    private static final int WHEEL_STEP = 20;
+
+    /** Where a mood turns from fair to good, and from poor to fair. */
+    private static final int MOOD_GOOD = 70, MOOD_FAIR = 40;
+    /** What it thinks of you, as a bar: a warm rose. */
+    private static final int AFFINITY_FILL = 0xFFD06A8A;
+    /** The portrait's frame, a step darker than a well so the figure stands out; and how big the figure is drawn in it. */
+    private static final int PORTRAIT = 0xFF8F8F8F;
+    private static final float PORTRAIT_SCALE = 0.8F;
+    /** A hairline between a profile's facts. */
+    private static final int RULE = 0x1E000000;
+    /** A disabled option's icon, greyed: a veil drawn above an item's depth (GuiGraphics.renderItem draws at 150 and up). */
+    private static final int GREY_OUT = 0xA0B7B7B7, ICON_DEPTH = 250;
+    /** The waiting dots' beat. */
+    private static final int DOT_MS = 300;
+
+    // ------------------------------------------------------------------ the conversation, kept
 
     /** One thing said, by you or by it. */
     private record Line(boolean you, String text) {}
 
     /** What has been said with each folk this session, so a conversation picks up again. */
     private static final Map<Integer, List<Line>> HISTORY = new HashMap<>();
-    private static Tab lastTab = Tab.TALK;
+    /** Bumped whenever any conversation grows, so a laid-out transcript knows it is stale. */
+    private static int historyVersion;
+    private static Category lastCategory = Category.CHAT;
+
+    // ------------------------------------------------------------------ state
 
     private FolkReplyPayload last;
-    private Tab tab = lastTab;
+    private Context ctx = Context.NONE;
+    private Category category = lastCategory;
+    /** The group open in the options column, or null for the category's own list. */
+    private Entry group;
+    /** Choosing a place to be walked to (Guide). */
     private boolean places;
-    private int scroll, aboutScroll, skillsScroll, skillsMax;
+    private Page page = Page.TALK;
+
     private EditBox say;
     private String draft = "";
-    private Button gift, deliver;
     private boolean saidBye;
-    private int w, h, left, top;
-    private final List<int[]> tabRects = new ArrayList<>();     // x, y, w, h, tab index, or PACK / WORK
-    /** The pack and the work record's places in tabRects: well clear of the tabs' own numbers. (They were
-     *  5 and 6, which the About tab became when the Money tab came in: clicking About opened the pack.) */
-    private static final int PACK = 100, WORK = 101;
     /** [teleport] Its name, for a creative player not beside it: Teleport to it (FolkLinks). */
     private final FolkLinks links = new FolkLinks(true);
+
+    private final long openedAt = Util.getMillis();
+    private long listAt, bubbleAt, flashAt, noticeAt, waitingSince;
+    private String flashFull = "", notice = "";
+    private List<FormattedCharSequence> noticeLines = List.of(), emptyLines = List.of();
+    private int emptyWidth = -1;
+    private Entry flashEntry;
+    /** The number keys' caps, worked out once. */
+    private static final String[] KEYS = { "", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+    /** The waiting bubble's dots, one to three. */
+    private static final String[] DOTS = { "•", "• •", "• • •" };
+    private int focus = -1;
+    /** What is held, as it was when the rows were laid out ("Give Bread"). */
+    private String heldKey = "";
+
+    // ------------------------------------------------------------------ layout, worked out in init()
+
+    private int px, py, pw, ph, headerH, bodyY, bodyB, footY;
+    private boolean compact;
+    private int tabX, tabW, tabH, optX, optW, convX, convW, linkX, linkSize, buttonW;
+
+    // ------------------------------------------------------------------ the options column, laid out on a change
+
+    private enum RowType { HEAD, BACK, ITEM, NOTE }
+
+    /** A row of the options list: its kind, its entry, its words (clipped to fit, and whole), its state, its key. */
+    private record Row(RowType type, Entry entry, String shown, String full, String tip, boolean enabled, String why,
+                       boolean suggested, int key, int y, int h, ItemStack icon) {
+        boolean focusable() { return type == RowType.ITEM || type == RowType.BACK; }
+    }
+
+    private final List<Row> rows = new ArrayList<>();
+    private final UiStyle.Scroll optScroll = new UiStyle.Scroll();
+
+    // ------------------------------------------------------------------ the transcript, laid out on a change
+
+    private record Bubble(boolean you, List<FormattedCharSequence> lines, int w, int h, int y) {}
+
+    private final List<Bubble> bubbles = new ArrayList<>();
+    private int bubblesVersion = -1, bubblesWidth = -1, bubblesHeight;
+    /** How far the transcript is scrolled up from its foot, in pixels. */
+    private final UiStyle.Scroll talkScroll = new UiStyle.Scroll();
+    private List<FormattedCharSequence> requestLines = List.of();
+    private final UiStyle.Scroll pageScroll = new UiStyle.Scroll();
+
+    // ------------------------------------------------------------------ words and icons, worked out once (init, a reply)
+
+    private ItemStack[] tabIcons = new ItemStack[0], linkIcons = new ItemStack[0];
+    private String[] tabLabels = new String[0], tabTips = new String[0], linkTips = new String[0];
+    private String sSay = "", sBye = "", sSayTip = "", sSayEmpty = "", sByeTip = "", sBackTip = "", sEmpty = "";
+    private String sProfileEmpty = "", sSkillsEmpty = "", sPageBar = "";
+    private Page pageBarFor;
+    /** The header's lines, clipped to fit, and the tooltip with them whole. */
+    private String nameShown = "", aboutShown = "", doingShown = "", whereShown = "", headerTip = "", moodShown = "", standingShown = "";
+    private boolean headerCut;
+    private int moodInk, moodFill, affInk, affFill, nameW;
+    private float moodFrac, affFrac;
+    /** The profile card laid out: a label (or "") and a wrapped line (or null, a gap between facts). */
+    private final List<String> profileLabels = new ArrayList<>();
+    private final List<FormattedCharSequence> profileLines = new ArrayList<>();
+    private String profileFor;
+    private int profileWidth = -1, profileHeight;
 
     public TalkScreen(FolkReplyPayload first) {
         super(Component.literal(first.name()));
         this.last = first;
+        this.ctx = contextOf(first);
         remember(first);
-        toSkillsIfAsked(first);
-    }
-
-    /**
-     * Asked about its skills or its knacks: the Skills page, where they are laid out. Asked anything
-     * else with the About or Skills page open (which have no conversation on them): back to the talk,
-     * where the answer is — "my account" said to the banker came back to a Skills page last left open.
-     */
-    private void toSkillsIfAsked(FolkReplyPayload reply) {
-        String asked = reply.asked() == null ? "" : reply.asked().toLowerCase(java.util.Locale.ROOT);
-        if (asked.contains("skill") || asked.contains("knack")) tab = lastTab = Tab.SKILLS;
-        else if (asked.contains("your wage")) tab = lastTab = Tab.ABOUT;      // [econ-wages] its card: its wage and why
-        else if (asked.contains("who you are")) tab = lastTab = Tab.ABOUT;    // [individual] its card: its looks, its life
-        else if (!reply.open() && !asked.isBlank() && (tab == Tab.ABOUT || tab == Tab.SKILLS)) tab = lastTab = Tab.TALK;
+        follow(first);
     }
 
     public int entityId() { return last.entityId(); }
 
+    /** A new reply from the folk: what it said goes in, and the screen follows it (a page asked for, a category shown). */
     public void update(FolkReplyPayload reply) {
         this.last = reply;
+        this.ctx = contextOf(reply);
         remember(reply);
-        toSkillsIfAsked(reply);
-        this.scroll = 0;
-        if (say != null) draft = say.getValue();
-        rebuildWidgets();
+        follow(reply);
+        talkScroll.reset();
+        waitingSince = 0;
+        bubbleAt = Util.getMillis();
+        layoutHeader();
+        layoutRows();
+        layoutRequest();
     }
 
-    private void remember(FolkReplyPayload r) {
+    private static Context contextOf(FolkReplyPayload r) {
+        return Context.of(r.context(), r.affinity(), r.following(), !r.errand().isEmpty(), r.canDeliver());
+    }
+
+    private static void remember(FolkReplyPayload r) {
         List<Line> log = HISTORY.computeIfAbsent(r.entityId(), k -> new ArrayList<>());
         if (!r.asked().isEmpty()) log.add(new Line(true, r.asked()));
         if (!r.said().isEmpty()) log.add(new Line(false, r.said()));
-        while (log.size() > 80) log.remove(0);
-        if (HISTORY.size() > 64) HISTORY.keySet().removeIf(id -> id != r.entityId() && HISTORY.size() > 48);
+        while (log.size() > HISTORY_LINES) log.remove(0);
+        if (HISTORY.size() > HISTORY_FOLK) HISTORY.keySet().removeIf(id -> id != r.entityId() && HISTORY.size() > HISTORY_FOLK * 3 / 4);
+        historyVersion++;
     }
 
-    private record Choice(String label, TalkTopic topic, String text, String tip) {
-        static Choice of(String label, TalkTopic topic) { return new Choice(label, topic, "", topic.line); }
-        static Choice of(String label, TalkTopic topic, String tip) { return new Choice(label, topic, "", tip); }
+    /**
+     * Where the screen goes with this reply. Asked about its skills or its knacks: the Skills page; its wage or who it is:
+     * its profile. Asked anything else with a page open: back to the talk, where the answer is. And an operator's
+     * {@code show=} (the pictures): that category or page.
+     */
+    private void follow(FolkReplyPayload reply) {
+        String asked = reply.asked() == null ? "" : reply.asked().toLowerCase(Locale.ROOT);
+        if (asked.contains("skill") || asked.contains("knack")) page = Page.SKILLS;
+        else if (asked.contains("your wage") || asked.contains("who you are")) page = Page.PROFILE;
+        else if (!reply.open() && !asked.isBlank()) page = Page.TALK;
+        String show = ctx.value("show");
+        if (!show.isEmpty()) {
+            Category c = Category.of(show);
+            if (c != null) {
+                category = lastCategory = c;
+                group = null;
+                places = false;
+                page = Page.TALK;
+            } else if (show.equals("profile")) {
+                page = Page.PROFILE;
+            } else if (show.equals("skills")) {
+                page = Page.SKILLS;
+            }
+        }
+        pageScroll.reset();
     }
 
     // ------------------------------------------------------------------ layout
 
     @Override
     protected void init() {
-        w = Math.min(384, width - 12);
-        h = Math.min(280, height - 8);
-        left = (width - w) / 2;
-        top = (height - h) / 2;
-        tabRects.clear();
-        gift = null;
-        deliver = null;
+        pw = Math.min(MAX_W, width - 2 * S2);
+        ph = Math.min(MAX_H, height - 2 * S2);
+        if (pw < 160) pw = Math.max(1, width - 2);
+        if (ph < 120) ph = Math.max(1, height - 2);
+        px = (width - pw) / 2;
+        py = (height - ph) / 2;
+        compact = pw < COMPACT_W || ph < COMPACT_H;
+        headerH = compact ? HEADER_COMPACT : HEADER_FULL;
+        linkSize = compact ? LINK_COMPACT : LINK;
+        linkX = px + pw - S2 - TalkMenu.LINKS.size() * (linkSize + 2) + 2;
+        buttonW = compact ? BUTTON_W_COMPACT : BUTTON_W;
+        footY = py + ph - S1 - BOX_H - 1;
+        bodyY = py + headerH + S1 + 2;
+        bodyB = footY - S1;
+        tabX = px + S1;
+        tabW = compact ? TABS_COMPACT : TABS_FULL;
+        tabH = Math.max(14, Math.min(TAB, (bodyB - bodyY) / Category.values().length));
+        optX = tabX + tabW + S2;
+        int room = px + pw - S2 - optX;
+        optW = Math.max(Math.min(OPTIONS_MIN, room / 2), Math.min(OPTIONS_MAX, Math.round((room - S2) * OPTIONS_SHARE)));
+        convX = optX + optW + S2;
+        convW = Math.max(40, px + pw - S2 - convX);
 
-        int inputY = top + h - PAD - 18;
-        say = new EditBox(font, left + PAD, inputY, w - 2 * PAD - 2 * 46 - 6, 18, Component.literal("Say something"));
+        say = new EditBox(font, px + S2, footY, pw - 2 * S2 - 2 * buttonW - 2 * S1, BOX_H, Component.literal(t("ui.say")));
         say.setMaxLength(FolkTalkPayload.MAX_TEXT);
-        say.setHint(Component.literal("Say anything… (\"show me the café\", \"8 bread, please?\")"));
+        say.setHint(Component.literal(t(compact ? "ui.hint_short" : "ui.hint")));
         say.setValue(draft);
-        addRenderableWidget(say);
-        addRenderableWidget(Button.builder(Component.literal("Say"), b -> sayTyped())
-            .bounds(left + w - PAD - 2 * 46 - 3, inputY, 46, 18).build());
-        addRenderableWidget(Button.builder(Component.literal("Bye"), b -> onClose())
-            .bounds(left + w - PAD - 46, inputY, 46, 18).build());
+        say.setResponder(v -> draft = v);
+        addWidget(say);                      // drawn by render() itself, inside the opening motion
+        layoutWords();
+        layoutHeader();
+        layoutRows();
+        layoutRequest();
+        bubblesWidth = -1;
+    }
 
-        if (tab == Tab.ABOUT || tab == Tab.SKILLS) return;
-        List<Choice> choices = places ? placeChoices() : choices(tab);
-        int cols = w >= 340 ? 4 : 3;
-        int bw = (w - 2 * PAD - (cols - 1) * 3) / cols;
-        int rows = (choices.size() + cols - 1) / cols;
-        int y0 = inputY - 6 - rows * ROW;
-        for (int i = 0; i < choices.size(); i++) {
-            Choice c = choices.get(i);
-            int x = left + PAD + (i % cols) * (bw + 3), y = y0 + (i / cols) * ROW;
-            Button b = Button.builder(Component.literal(c.label()), btn -> choose(c)).bounds(x, y, bw, ROW - 2).build();
-            if (!c.tip().isEmpty()) b.setTooltip(Tooltip.create(Component.literal(c.tip())));
-            addRenderableWidget(b);
-            if (c.topic() == TalkTopic.GIFT) gift = b;
-            if (c.topic() == TalkTopic.DELIVER) deliver = b;
+    /** The tabs', links' and buttons' words and icons, from the language file. */
+    private void layoutWords() {
+        Category[] cats = Category.values();
+        tabIcons = new ItemStack[cats.length];
+        tabLabels = new String[cats.length];
+        tabTips = new String[cats.length];
+        for (int i = 0; i < cats.length; i++) {
+            tabIcons[i] = new ItemStack(cats[i].icon);
+            String name = t("cat." + cats[i].id);
+            tabLabels[i] = UiStyle.clip(font, name, tabW - ICON - S2 - 2);
+            tabTips[i] = name + "\n" + t("cat." + cats[i].id + ".tip");
         }
-    }
-
-    private int logBottom() {
-        int inputY = top + h - PAD - 18;
-        if (tab == Tab.ABOUT || tab == Tab.SKILLS) return inputY - 6;
-        int cols = w >= 340 ? 4 : 3;
-        int n = places ? placeChoices().size() : choices(tab).size();
-        int rows = (n + cols - 1) / cols;
-        return inputY - 10 - rows * ROW;
-    }
-
-    private int bodyTop() {
-        return top + HEADER + 4 + TAB_H + 4;
-    }
-
-    private List<Choice> choices(Tab t) {
-        List<Choice> out = new ArrayList<>(questChoices());     // [quests] take it on, not now, a choice, hand it over: on every tab
-        switch (t) {
-            case TALK -> {
-                out.add(Choice.of("How are you?", TalkTopic.HOW));
-                out.add(Choice.of("Your work?", TalkTopic.DOING));
-                out.add(Choice.of("About you", TalkTopic.ABOUT));
-                out.add(Choice.of("Family?", TalkTopic.PEOPLE));
-                out.add(Choice.of("Your pet?", TalkTopic.PET, "Its household's dog or cat: how it is, what it gets up to; a pup or a kitten looking for a home"));   // [pets]
-                out.add(Choice.of("Your home?", TalkTopic.HOUSE, "Where it lives, who with, and whether the house is its own"));
-                out.add(Choice.of("Any news?", TalkTopic.VILLAGE));
-                out.add(Choice.of("Your hopes?", TalkTopic.DREAMS));
-                out.add(Choice.of("Memories?", TalkTopic.MEMORY));
-                out.add(Choice.of("Pastimes?", TalkTopic.HOBBY));
-                out.add(Choice.of("Gossip?", TalkTopic.GOSSIP));
-                out.add(Choice.of("A joke!", TalkTopic.JOKE));
-                out.add(Choice.of("Well done!", TalkTopic.PRAISE, "Tell it it's doing a fine job — it will warm to you"));
-                out.add(new Choice("I'm sorry", TalkTopic.SAY, "I'm sorry", "Apologise for whatever you did"));
-            }
-            case ASK -> {
-                out.add(Choice.of("Any work?", TalkTopic.JOBS, "Ask if it has a quest for you: a favour of its own, the town's work, the war's, the caves', a story"));   // [quests]
-                out.add(Choice.of("Can I help?", TalkTopic.HELP, "Ask if there's an errand you could run for it"));
-                out.add(Choice.of("A favour?", TalkTopic.FAVOUR));
-                out.add(Choice.of("What's short?", TalkTopic.SHORT, "What the village is short of, and how you could help"));
-                out.add(Choice.of("Your trade?", TalkTopic.WORKINGS, "How its work goes: tools, where it works, what it needs, where its work goes"));
-                out.add(Choice.of("Good at?", TalkTopic.KNACK, "Its level in every trade it has worked, how its nature suits its work, and the knacks it chose (its Skills page)"));
-                out.add(Choice.of("Money?", TalkTopic.WORTH, "What it earns and what it is worth"));
-                out.add(new Choice("Show me…", TalkTopic.GUIDE, "", "Ask it to walk you somewhere: the stores, the board, the elder, any building"));
-                out.add(new Choice("Ask the stores", TalkTopic.STORES, "", "Ask the storekeeper for something: type what and how many"));
-                out.add(Choice.of("Elder's orders", TalkTopic.ORDERS, "What the elder wants the village to put its back into"));
-                out.add(Choice.of("Quest board", TalkTopic.QUESTS, "What the village wants done, and what it pays"));
-                out.add(Choice.of("Town ledger", TalkTopic.LEDGER, "A book of the village's affairs"));
-                out.add(Choice.of("Town map", TalkTopic.TOWN_MAP, "A map of the town, centred on its heart: for citizens and honoured guests, from the storekeeper or the elder, one a day"));
-                out.add(Choice.of("Lost & found", TalkTopic.LOST, "Anything of yours the sweeper found lying in the streets, kept for you in the Lost and Found by the storehouse"));
-                out.add(Choice.of("History", TalkTopic.CHRONICLE, "Ask for a copy of the village's chronicle"));
-            }
-            case VILLAGE -> {
-                out.add(new Choice("Town's ways", TalkTopic.SAY, "What's this town like?", "Its character, who rules it, its laws, what it is famous for and what history has made of it — in this folk's own words"));   // [identity]
-                out.add(Choice.of("Residents", TalkTopic.CENSUS));
-                out.add(Choice.of("The council", TalkTopic.COUNCIL, "Who sits on the council, and what it voted. Say \"you should build a tavern\" to put it to the vote"));
-                out.add(Choice.of("Neighbours", TalkTopic.RIVALS, "What this village thinks of the villages round about, who leads them, and who trades with whom"));
-                out.add(Choice.of("Carry a letter", TalkTopic.LETTER, "Take a letter from the elder to the nearest neighbour's: both villages will think the better of you, and of each other"));
-                out.add(Choice.of("Out there", TalkTopic.ATLAS, "What the village's scouts have found: towns, ruins, peaks, ore — and which way"));
-                out.add(Choice.of("Underground", TalkTopic.CAVES, "What the town's cave dwellers have found: caves, ore, mineshafts, spawners, old chests — and where"));   // [caves]
-                out.add(Choice.of("Fashion", TalkTopic.FASHION, "What the town is wearing this season, who set it, and what this folk thinks of it"));   // [fashion]
-                // [nether] The Nether runners: their report, an ask, going through with them, their chart (NetherGuests).
-                out.add(Choice.of("The Nether", TalkTopic.NETHER, "What the town's Nether runners have found through the gateway: the outpost, the fortress, the hauls"));
-                out.add(new Choice("Ask the runners", TalkTopic.NETHER, "ask", "Ask the Nether runners to bring something on their next run: type it (\"bring us blaze rods\")"));
-                out.add(new Choice("Go through", TalkTopic.SAY, "Can I come through with you?", "Go through the gateway with the Nether runners: they wait for you there in the morning. Say \"for a share\" to take a share of the haul"));
-                out.add(new Choice("Runners' chart", TalkTopic.SAY, "Could I buy a copy of your chart?", "A copy of the runners' chart of the Nether round their outpost, their finds marked: a few coins, from one of the runners"));
-                // [caves] The cave team: ask it a way or an ore, go along with it, buy its map (CaveGuests, Lodge).
-                out.add(new Choice("Ask the delvers", TalkTopic.CAVES, "ask", "Ask the cave team to look a way or find something on its next trip: type it (\"look east\", \"find us diamonds\")"));
-                out.add(new Choice("Go caving", TalkTopic.SAY, "Can I come along with the cave team?", "Go down the caves with the cave team: it waits for you at its lodge at first light. Say \"for a share\" to take a share of the haul"));
-                out.add(new Choice("Cave map", TalkTopic.SAY, "Could I buy a copy of the cave map?", "A copy of the cave team's map, every cave it has found marked: a few coins, from one of the team at its lodge"));
-                // [fireworks] The fireworks maker's rockets: the next display, and rockets for an elytra (FireworksMaker).
-                out.add(new Choice("Fireworks", TalkTopic.SAY, "When are the next fireworks?", "The town's next display, and the rockets it has ready"));
-                out.add(new Choice("Elytra rockets", TalkTopic.SAY, "Could I buy some rockets for my elytra?", "Rockets to fly with, of the stores' paper and gunpowder: eight to a lot, from the fireworks maker at its powder hut or the shop. Say \"flight two\" or \"flight three\" for the longer ones"));
-                out.add(Choice.of("My standing", TalkTopic.REPUTE));
-                out.add(Choice.of("Live here?", TalkTopic.CITIZEN, "Ask to become a citizen: a vote on the council and a house of your own"));
-                out.add(Choice.of("Pay a fine", TalkTopic.FINE, "Pay what you owe the village"));
-                out.add(Choice.of("Seen anything?", TalkTopic.WATCH, "A theft or a vandal: ask what it saw (a friend tells you what it would not "
-                    + "tell the watch). To a guard: the case it is on; hold what was dropped at the scene to hand it in, or type \"I saw Fen take it\""));   // [crime]
-                // [police] The watch as the town's police: a crime reported, the day's roster, sworn in as a special constable.
-                out.add(new Choice("Report a crime", TalkTopic.SAY, "I want to report a crime",
-                    "Tell a guard (or the desk at the watch house) what you saw: it goes on the books and the watch goes at a run"));
-                out.add(new Choice("The roster", TalkTopic.SAY, "Who's on the roster today?", "Who of the watch is on the walls, the beat, the desk and the cases today, and who drew it"));
-                out.add(new Choice("Swear me in", TalkTopic.SAY, "Swear me in as a special constable",
-                    "A citizen or a friend of the town with a clean record can be sworn in: a Constable's Badge, an arrest by right-clicking a culprit with it, the beat with the watch, and a wage for every case closed"));
-                out.add(new Choice("The board", TalkTopic.OPEN, "", "Read the village board: what it is doing, how it is getting on, what it is working towards"));
-                out.add(new Choice("Suggest a build", TalkTopic.BUILD, "", "Type what you think the village should build next"));
-                // [player-civic] Standing for leader, the campaign, and the Leader's page.
-                out.add(new Choice("Stand for leader", TalkTopic.SAY, "I'd like to stand for election",
-                    "Put your name forward at the next election (a citizen the town counts a friend, at the board or the hall)"));
-                out.add(new Choice("Vote for me?", TalkTopic.SAY, "Will you vote for me?", "Canvass: it weighs what you stand for against what it cares for"));
-                out.add(new Choice("Leader's page", TalkTopic.SAY, "Show me the leader's page", "Your promises and powers, or the hustings if you don't lead"));
-                // [interviews] The town's interviews: who stands for what, when; then a good word put in ("I'd recommend Ada for the post").
-                out.add(new Choice("Interviews?", TalkTopic.SAY, "Any interviews coming up?",
-                    "Who stands for which post at the town's interviews, and when. Then type \"I'd recommend <name> for the post\" to put in a good word"));
-            }
-            case DEAL -> {
-                out.add(new Choice("Give…", TalkTopic.GIFT, "", "Give it what you are holding"));
-                out.add(new Choice("Hand over", TalkTopic.DELIVER, "", "Give it what it asked you for, or pay for what it offered"));
-                out.add(Choice.of("Trade?", TalkTopic.TRADE));
-                out.add(Choice.of("For sale?", TalkTopic.FOR_SALE, "What the village can spare, and at what price: it sees to itself first"));
-                out.add(Choice.of("Hire you?", TalkTopic.HIRE, "Four coins a day: it goes with you, fights for you, carries for you"));
-                out.add(Choice.of("Build my house", TalkTopic.COMMISSION, "Bring 64 planks, 32 cobblestone and 8 glass, and the builders put up a house for you"));
-                out.add(last.following() ? Choice.of("Go home", TalkTopic.STAY) : Choice.of("Come along", TalkTopic.FOLLOW));
-                out.add(new Choice("Show me…", TalkTopic.GUIDE, "", "Ask it to walk you somewhere"));
-                out.add(Choice.of("Eat together", TalkTopic.MEAL, "Share the food in your hand: it eats with you, and likes you the better"));
-                out.add(Choice.of("Dice?", TalkTopic.DICE, "A game of dice for three coins, out of each other's purses (type \"dice for 10\" to raise it)"));
-                out.add(Choice.of("A lesson", TalkTopic.TEACH, "Show it a trick of its trade with the tool of it in your hand: once a day, it learns"));
-                out.add(Choice.of("Godparent", TalkTopic.GODPARENT, "Ask a child if you may be its godparent (a friend of the village only)"));
-                out.add(Choice.of("Keepsake?", TalkTopic.KEEPSAKE, "A close friend gives you something of its own to remember it by"));
-                out.add(Choice.of("Feast on me", TalkTopic.SPONSOR, "Pay for a feast for the whole village tonight: ten coins and one for every mouth"));
-                // [player-civic] An apprenticeship with a master of its trade.
-                out.add(new Choice("Apprentice me", TalkTopic.SAY, "Will you take me as your apprentice?",
-                    "Learn its trade (a master of level 25 or more): lessons that open recipes, bonuses and titles"));
-                out.add(new Choice("My lesson", TalkTopic.SAY, "What's my next lesson?", "Your master's next lesson; hand over what it asked for"));
-            }
-            case MONEY -> {
-                out.add(new Choice("Order goods…", TalkTopic.BULK, "", "Order a quantity of anything at a tenth off: type what and how many"));
-                out.add(Choice.of("Contract?", TalkTopic.CONTRACT, "Bring the village what it is short of every week, at a third over its worth (say \"I'll sign\")"));
-                out.add(Choice.of("Rent a stall", TalkTopic.STALL, "A stall of your own on the square, a week at a time: stock it, set your prices, and the folk buy from it with their own coin. Ask again for how it's doing, \"take the till\" or \"pay the rent\""));
-                out.add(Choice.of("The bank", TalkTopic.BANK, "Your account: at the town's bank once it has one (see the banker: \"deposit 20\", \"withdraw 10\", "
-                    + "\"a mortgage on this house\" standing in an empty one), else at the treasury; \"borrow 30\", \"repay\" for the treasury's small loans"));
-                out.add(new Choice("Invest…", TalkTopic.INVEST, "", "Put coin into the village's works: two weeks' share of what it takes each day"));
-                out.add(Choice.of("Auction", TalkTopic.AUCTION, "Market day's auction: the lots, the bids, your own goods put up (\"I bid 30\", \"put it up\")"));   // [fleet]
-                out.add(Choice.of("Escort", TalkTopic.ESCORT, "Guard the next caravan: walk with it and be paid at the other end"));
-                out.add(Choice.of("Charter route", TalkTopic.CHARTER, "Fifty coins for a trade route to the nearest neighbour: a tenth of every load sold on it is yours"));
-                out.add(Choice.of("Buy a house", TalkTopic.HOUSING, "The village's empty houses and their prices. Say \"buy this house\" standing in one, \"let my house for 3\", or \"my rent\""));
-                out.add(Choice.of("Prices", TalkTopic.PRICES, "Where things are dear and where cheap, round about: buy cheap, sell dear"));
-                out.add(Choice.of("Haggle", TalkTopic.HAGGLE, "Ask the storekeeper or the shopkeeper to do it cheaper: a discount for the day, if they like you"));
-                out.add(new Choice("Make me…", TalkTopic.ORDER, "", "Ask a smith or a tailor to make you something: from your makings and the village's spare, for a fee"));
-                out.add(Choice.of("Mend this", TalkTopic.REPAIR, "The smith (or, with no smith, a smelter at its forge) mends the worn thing in your hand: its metal from the stores at the market's price, a unit a quarter of the wear, and a fee"));
-                // [cartographer] The cartographer's maps (Cartographers): what it has and their prices, the explorer maps, a copy of
-                // the hall's map, and a map made to order.
-                out.add(Choice.of("Maps", TalkTopic.MAPS, "The cartographer's maps and their prices: explorer maps, a copy of the hall's map, a map to any place the town knows of"));
-                out.add(new Choice("Ocean map", TalkTopic.SAY, "I'd like an ocean explorer map", "A real ocean explorer map to the nearest monument the town's land reaches: priced by how far"));
-                out.add(new Choice("Woodland map", TalkTopic.SAY, "I'd like a woodland explorer map", "A real woodland explorer map to a mansion, if the town's scouts have been that far"));
-                out.add(new Choice("Treasure map", TalkTopic.SAY, "I'd like a treasure map", "A buried treasure map: one the town brought home from a wreck, or treasure it found itself"));
-                out.add(new Choice("Town map copy", TalkTopic.SAY, "A copy of the town's map, please", "Every sheet of the hall's map of the town, copied for you: hang them as they hang in the hall"));
-                out.add(new Choice("Commission…", TalkTopic.MAPS, "commission", "Have the cartographer walk and draw the land any way you like, ready by nightfall: type \"map me the land to the east\""));
-            }
-            default -> { }
+        int n = TalkMenu.LINKS.size();
+        linkIcons = new ItemStack[n];
+        linkTips = new String[n];
+        for (int i = 0; i < n; i++) {
+            Entry e = TalkMenu.LINKS.get(i);
+            linkIcons[i] = new ItemStack(e.icon());
+            linkTips[i] = label(e) + "\n" + tip(e);
         }
-        return out;
+        sSay = UiStyle.clip(font, t("ui.say"), buttonW - S1);
+        sBye = UiStyle.clip(font, t("ui.bye"), buttonW - S1);
+        sSayTip = t("ui.say_tip");
+        sSayEmpty = t("ui.say_empty");
+        sByeTip = t("ui.bye_tip");
+        sBackTip = t("ui.back_tip");
+        sEmpty = t("ui.empty");
+        sProfileEmpty = t("ui.profile_empty");
+        sSkillsEmpty = t("ui.skills_empty");
+        pageBarFor = null;
+        emptyWidth = -1;
+    }
+
+    /** The header's words, clipped to their room, and its mood and standing as inks and fractions. */
+    private void layoutHeader() {
+        int box = headerH - 2 * S1 - (compact ? 0 : 2);
+        int tx = px + S1 + 2 + box + S2;
+        int textW = Math.max(10, linkX - S2 - tx);
+        nameShown = UiStyle.clip(font, last.name(), textW);
+        nameW = titleWidth(font, nameShown);
+        aboutShown = UiStyle.clip(font, last.about(), textW);
+        String doing = last.doing().isEmpty() ? "" : I18n.get("talk.mc_assistant.ui.now", last.doing());
+        // The town, right, on the doing line's row under the links: the doing line gives way to it.
+        int whereRoom = Math.max(0, px + pw - S2 - (linkX - 40));
+        whereShown = UiStyle.clip(font, last.village(), whereRoom);
+        int doingRoom = px + pw - S2 - font.width(whereShown) - S3 - tx;
+        doingShown = UiStyle.clip(font, doing, Math.max(10, Math.min(textW, doingRoom)));
+        headerCut = compact || !aboutShown.equals(last.about()) || !doingShown.equals(doing) || !whereShown.equals(last.village())
+            || !nameShown.equals(last.name());
+        headerTip = last.name() + "\n" + last.about() + "\n" + hearts(last.affinity()) + " " + last.standing() + (doing.isEmpty() ? "" : "\n" + doing)
+            + (last.village().isEmpty() ? "" : "\n" + last.village());
+        int mood = Math.max(0, Math.min(100, last.mood()));
+        moodInk = mood >= MOOD_GOOD ? SUCCESS : mood >= MOOD_FAIR ? WARNING : DANGER;
+        moodFill = mood >= MOOD_GOOD ? SUCCESS_FILL : mood >= MOOD_FAIR ? WARNING_FILL : DANGER_FILL;
+        moodFrac = mood / 100F;
+        int aff = last.affinity();
+        affInk = aff < -10 ? DANGER : aff >= 30 ? SUCCESS : TEXT_MUTED;
+        affFill = aff < -10 ? DANGER_FILL : AFFINITY_FILL;
+        affFrac = (aff + 100) / 200F;
+        int half = textW / 2, barW = statusBarW();
+        moodShown = UiStyle.clip(font, face(mood) + " " + last.moodWord(), Math.max(10, half - barW - S1 - 2));
+        // Compact, the hearts alone say it (the word is in the header's tooltip).
+        standingShown = UiStyle.clip(font, compact ? hearts(aff) : hearts(aff) + " " + last.standing(), Math.max(10, textW - half - barW - S1));
+    }
+
+    private int statusBarW() {
+        return compact ? 24 : 36;
+    }
+
+    /** The options column's rows: Suggested (at the top level), then the category's options or the open group's. */
+    private void layoutRows() {
+        rows.clear();
+        ItemStack held = held();
+        heldKey = held.isEmpty() ? "" : held.getHoverName().getString();
+        int y = 0, key = 1;
+        int w = optW - 5;                                        // room left for the scroll bar
+        if (places) {
+            y = addBack(y, t("ui.places"));
+            List<Entry> where = placeEntries();
+            if (where.isEmpty()) y = addNote(y, t("ui.places_empty"));
+            for (Entry e : where) {
+                rows.add(row(e, y, w, key++, false));
+                y += ROW + ROW_GAP;
+            }
+        } else if (group != null) {
+            y = addBack(y, label(group));
+            for (Entry e : TalkMenu.visible(group.children(), ctx)) {
+                rows.add(row(e, y, w, key++, false));
+                y += ROW + ROW_GAP;
+            }
+        } else {
+            List<Entry> sugg = new ArrayList<>(questEntries());
+            for (Entry e : TalkMenu.suggested(ctx)) if (!sugg.contains(e)) sugg.add(e);
+            if (!sugg.isEmpty()) {
+                rows.add(new Row(RowType.HEAD, null, t("ui.suggested").toUpperCase(Locale.ROOT), "", "", true, "", false, 0, y, HEAD_H, ItemStack.EMPTY));
+                y += HEAD_H;
+                for (Entry e : sugg) {
+                    rows.add(row(e, y, w, key > 9 ? 0 : key, true));
+                    key++;
+                    y += ROW + ROW_GAP;
+                }
+                y += S1;
+            }
+            rows.add(new Row(RowType.HEAD, null, t("cat." + category.id).toUpperCase(Locale.ROOT), "", "", true, "", false, 0, y, HEAD_H, ItemStack.EMPTY));
+            y += HEAD_H;
+            List<Entry> list = TalkMenu.visible(category.entries(), ctx);
+            if (list.isEmpty()) y = addNote(y, t("ui.empty_category"));
+            for (Entry e : list) {
+                if (sugg.contains(e)) continue;                  // already at the top, under Suggested
+                rows.add(row(e, y, w, key > 9 ? 0 : key, false));
+                key++;
+                y += ROW + ROW_GAP;
+            }
+        }
+        optScroll.fit(y, bodyB - bodyY);
+        if (focus >= rows.size() || focus >= 0 && !rows.get(focus).focusable()) focus = -1;
+    }
+
+    private int addBack(int y, String title) {
+        rows.add(new Row(RowType.BACK, null, UiStyle.clip(font, "‹ " + title, optW - 5 - S2 - 18), title, t("ui.back_tip"), true, "",
+            false, 0, y, ROW, ItemStack.EMPTY));
+        return y + ROW + ROW_GAP + 2;
+    }
+
+    private int addNote(int y, String text) {
+        List<FormattedCharSequence> lines = TextCache.splitPlain(font, text, optW - 5 - S2);
+        rows.add(new Row(RowType.NOTE, null, text, text, "", true, "", false, 0, y, lines.size() * LINE + S1, ItemStack.EMPTY));
+        return y + lines.size() * LINE + S2;
+    }
+
+    /** One option's row: its words cut to fit beside its icon and its key, and whether it can be picked, and why not. */
+    private Row row(Entry e, int y, int w, int key, boolean suggested) {
+        String full = label(e);
+        String tip = tip(e);
+        String why = whyNot(e);
+        int right = (e.isGroup() ? 8 : 0) + (key > 0 && !compact ? 10 : 0) + S1;
+        String shown = UiStyle.clip(font, full, w - ICON - 6 - right);
+        return new Row(RowType.ITEM, e, shown, full, tip, why.isEmpty(), why, suggested, key, y, ROW, icon(e));
+    }
+
+    private String label(Entry e) {
+        if (e.label() != null) return e.label();
+        if ((e == TalkMenu.GIFT) && !heldKey.isEmpty()) return I18n.get("talk.mc_assistant.ui.give_held", heldKey);
+        return t(e.labelKey().substring("talk.mc_assistant.".length()));
+    }
+
+    private String tip(Entry e) {
+        if (e.tip() != null) return e.tip();
+        String k = e.tipKey();
+        return I18n.exists(k) ? I18n.get(k) : "";
+    }
+
+    private ItemStack icon(Entry e) {
+        if ((e == TalkMenu.GIFT || e.id().equals("birthday")) && minecraft != null && minecraft.player != null
+                && !minecraft.player.getMainHandItem().isEmpty()) {
+            return minecraft.player.getMainHandItem().copyWithCount(1);
+        }
+        return new ItemStack(e.icon());
+    }
+
+    /** Why this option cannot be picked just now ("" when it can). */
+    private String whyNot(Entry e) {
+        if (ctx.shunned() && e.topic() != TalkTopic.GIFT && e.topic() != TalkTopic.FINE
+                && (e.kind() == Kind.ASK || e.kind() == Kind.SAY || e.kind() == Kind.PLACES)) return t("ui.why.shunned");
+        ItemStack held = held();
+        if (e.topic() == TalkTopic.GIFT && e.kind() == Kind.ASK && held.isEmpty()) return t("ui.why.gift");
+        if (e.topic() == TalkTopic.DELIVER && !ctx.canDeliver()) return t("ui.why.deliver");
+        if (e.topic() == TalkTopic.MEAL && held.get(DataComponents.FOOD) == null) return t("ui.why.meal");
+        if (e.topic() == TalkTopic.REPAIR && !(held.isDamageableItem() && held.isDamaged())) return t("ui.why.repair");
+        if (e.topic() == TalkTopic.TEACH && held.isEmpty()) return t("ui.why.teach");
+        return "";
+    }
+
+    private ItemStack held() {
+        return minecraft == null || minecraft.player == null ? ItemStack.EMPTY : minecraft.player.getMainHandItem();
     }
 
     /** [quests] The quest buttons the folk sent with its last answer (QuestClient): "label|TOPIC|text|tip" a line. */
-    private List<Choice> questChoices() {
-        List<Choice> out = new ArrayList<>();
-        for (String line : QuestClient.choicesFor(last.entityId()).split("\n")) {
+    private List<Entry> questEntries() {
+        String raw = QuestClient.choicesFor(last.entityId());
+        if (raw.isEmpty()) return List.of();
+        List<Entry> out = new ArrayList<>();
+        for (String line : raw.split("\n")) {
             String[] f = line.split("\\|", -1);
             if (f.length < 4) continue;
             try {
-                out.add(new Choice(f[0], TalkTopic.valueOf(f[1]), f[2], f[3]));
+                TalkTopic topic = TalkTopic.valueOf(f[1]);
+                out.add(new Entry("quest", net.minecraft.world.item.Items.WRITABLE_BOOK, topic == TalkTopic.SAY ? Kind.SAY : Kind.ASK,
+                    topic, f[2], c -> true, List.of(), f[0], f[3]));
             } catch (IllegalArgumentException ignored) {
                 // a topic from a newer server
             }
@@ -316,85 +490,147 @@ public class TalkScreen extends Screen {
         return out;
     }
 
-    private List<Choice> placeChoices() {
-        List<Choice> out = new ArrayList<>();
-        out.add(new Choice("‹ Back", TalkTopic.BYE, "back", ""));
-        if (!last.places().isEmpty()) {
-            for (String pair : last.places().split(";")) {
-                int eq = pair.indexOf('=');
-                if (eq <= 0) continue;
-                out.add(new Choice(pair.substring(eq + 1), TalkTopic.GUIDE, pair.substring(0, eq), "Walk there together"));
-            }
+    /** The places it can walk you to ("key=Label;…"), as options. */
+    private List<Entry> placeEntries() {
+        List<Entry> out = new ArrayList<>();
+        if (last.places().isEmpty()) return out;
+        String tip = t("ui.place_tip");
+        for (String pair : last.places().split(";")) {
+            int eq = pair.indexOf('=');
+            if (eq <= 0) continue;
+            out.add(new Entry("place", net.minecraft.world.item.Items.COMPASS, Kind.ASK, TalkTopic.GUIDE, pair.substring(0, eq),
+                c -> true, List.of(), pair.substring(eq + 1), tip));
         }
         return out;
     }
 
-    // ------------------------------------------------------------------ doing
-
-    private void choose(Choice c) {
-        if (c.topic() == TalkTopic.BYE && "back".equals(c.text())) {
-            places = false;
-            rebuildWidgets();
-            return;
-        }
-        if (c.topic() == TalkTopic.GUIDE && c.text().isEmpty()) {
-            places = true;
-            rebuildWidgets();
-            return;
-        }
-        if (c.topic() == TalkTopic.STORES) {                  // a question you finish yourself
-            say.setValue("Could I have 8 bread?");
-            setFocused(say);
-            return;
-        }
-        if (c.topic() == TalkTopic.BULK || c.topic() == TalkTopic.INVEST || c.topic() == TalkTopic.ORDER) {
-            say.setValue(c.topic() == TalkTopic.BULK ? "I'd like to order 64 " : c.topic() == TalkTopic.INVEST ? "I'd like to invest 50 coins"
-                : "Make me an iron sword");
-            setFocused(say);
-            return;
-        }
-        if (c.topic() == TalkTopic.MAPS && "commission".equals(c.text())) {    // [cartographer] a commission, the way typed yourself
-            say.setValue("Map me the land to the east");
-            setFocused(say);
-            return;
-        }
-        if (c.topic() == TalkTopic.NETHER && "ask".equals(c.text())) {         // [nether] an ask of the runners, finished yourself
-            say.setValue("Runners, bring us blaze rods");
-            setFocused(say);
-            return;
-        }
-        if (c.topic() == TalkTopic.CAVES && "ask".equals(c.text())) {          // [caves] an ask of the cave team, finished yourself
-            say.setValue("Cave team, look east");
-            setFocused(say);
-            return;
-        }
-        if (c.topic() == TalkTopic.BUILD) {
-            say.setValue("You should build a ");
-            setFocused(say);
-            return;
-        }
-        if (tab == Tab.VILLAGE && c.topic() == TalkTopic.OPEN) {     // the board: the village journal
-            PacketDistributor.sendToServer(new com.jrpetty.mcassistant.net.VillageAskPayload(1));
-            return;
-        }
-        if (c.topic() == TalkTopic.GUIDE) {
-            places = false;
-            ask(TalkTopic.GUIDE, c.text(), "Could you show me the way to " + c.label().toLowerCase(java.util.Locale.ROOT) + "?");
-            return;
-        }
-        ask(c.topic(), c.text(), c.topic() == TalkTopic.SAY ? c.text() : c.topic().line);
+    /** What it asked of you, wrapped for the top of the conversation. */
+    private void layoutRequest() {
+        requestLines = last.errand().isEmpty() ? List.of()
+            : TextCache.splitPlain(font, last.errand(), Math.max(20, convW - 2 * S2 - 10));
+        if (requestLines.size() > 2) requestLines = requestLines.subList(0, 2);
     }
 
-    private void ask(TalkTopic topic, String text, String shown) {
+    /** The conversation as bubbles, laid out for a column {@code width} wide. */
+    private void layoutBubbles(int width) {
+        bubbles.clear();
+        int max = Math.max(30, Math.round(width * BUBBLE_SHARE)) - 2 * BUBBLE_PAD;
+        int y = 0;
+        Boolean prev = null;
+        for (Line l : HISTORY.getOrDefault(last.entityId(), List.of())) {
+            List<FormattedCharSequence> lines = TextCache.splitPlain(font, l.text(), max);
+            int w = 0;
+            for (FormattedCharSequence s : lines) w = Math.max(w, font.width(s));
+            if (prev != null) y += prev == l.you() ? BUBBLE_GAP : BUBBLE_TURN_GAP;
+            int h = lines.size() * LINE + 2 * BUBBLE_PAD - 1;
+            bubbles.add(new Bubble(l.you(), lines, w + 2 * BUBBLE_PAD, h, y));
+            y += h;
+            prev = l.you();
+        }
+        bubblesHeight = y;
+        bubblesVersion = historyVersion;
+        bubblesWidth = width;
+    }
+
+    // ------------------------------------------------------------------ doing
+
+    private void setCategory(Category c) {
+        if (c == category && group == null && !places && page == Page.TALK) return;
+        category = lastCategory = c;
+        group = null;
+        places = false;
+        page = Page.TALK;
+        focus = -1;
+        optScroll.reset();
+        listAt = Util.getMillis();
+        layoutRows();
+    }
+
+    /** Up a level: off a page, out of a group or the places; false at the top (the caller then closes). */
+    private boolean up() {
+        if (page != Page.TALK) {
+            page = Page.TALK;
+        } else if (group != null || places) {
+            group = null;
+            places = false;
+            focus = -1;
+            optScroll.reset();
+            listAt = Util.getMillis();
+            layoutRows();
+        } else {
+            return false;
+        }
+        UiStyle.click();
+        return true;
+    }
+
+    private void activate(Row r) {
+        if (r.type() == RowType.BACK) {
+            up();
+            return;
+        }
+        if (r.type() != RowType.ITEM) return;
+        Entry e = r.entry();
+        if (!r.enabled()) {
+            notice = r.why();
+            noticeLines = TextCache.splitPlain(font, notice, convW - 16);
+            noticeAt = Util.getMillis();
+            return;
+        }
+        UiStyle.click();
+        flashEntry = e;
+        flashFull = r.full();
+        flashAt = Util.getMillis();
+        switch (e.kind()) {
+            case GROUP -> {
+                group = e;
+                places = false;
+                focus = -1;
+                optScroll.reset();
+                listAt = Util.getMillis();
+                layoutRows();
+            }
+            case PLACES -> {
+                places = true;
+                group = null;
+                focus = -1;
+                optScroll.reset();
+                listAt = Util.getMillis();
+                layoutRows();
+            }
+            case PROMPT -> {
+                say.setValue(e.text());
+                setFocused(say);
+                say.setFocused(true);
+                say.moveCursorToEnd(false);
+            }
+            case PAGE -> page = e == TalkMenu.SKILLS ? (page == Page.SKILLS ? Page.TALK : Page.SKILLS)
+                : (page == Page.PROFILE ? Page.TALK : Page.PROFILE);
+            case RECORD -> openWork();
+            case PACK -> openPack();
+            case BOARD -> PacketDistributor.sendToServer(new com.jrpetty.mcassistant.net.VillageAskPayload(1));
+            default -> {
+                if (e.topic() == TalkTopic.GUIDE) {
+                    places = false;
+                    layoutRows();
+                }
+                send(e.topic(), e.text());
+            }
+        }
+    }
+
+    private void send(TalkTopic topic, String text) {
+        waitingSince = Util.getMillis();
         PacketDistributor.sendToServer(new FolkTalkPayload(last.entityId(), topic.ordinal(), text));
     }
 
     private void sayTyped() {
         String text = say.getValue().trim();
         if (text.isEmpty()) return;
+        UiStyle.click();
         say.setValue("");
         draft = "";
-        ask(TalkTopic.SAY, text, text);
+        send(TalkTopic.SAY, text);
     }
 
     private void openPack() {
@@ -404,54 +640,141 @@ public class TalkScreen extends Screen {
 
     private void openWork() {
         if (minecraft == null || minecraft.level == null) return;
+        // [folk-ui] A village folk's record is its full profile now (FolkProfileScreen); a crew hand's, its record screen.
+        if (minecraft.level.getEntity(last.entityId()) instanceof com.jrpetty.mcassistant.entity.VillageFolkEntity) {
+            saidBye = true;
+            FolkProfileScreen.openEntity(last.entityId(), null, this);
+            return;
+        }
         if (minecraft.level.getEntity(last.entityId()) instanceof com.jrpetty.mcassistant.entity.AssistantEntity a) {
             saidBye = true;
             minecraft.setScreen(new RecordScreen(a));
         }
     }
 
+    // ------------------------------------------------------------------ input
+
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (links.click(mx, my, button)) return true;                    // [teleport] its name, or its button
-        for (int[] r : tabRects) {
-            if (mx >= r[0] && mx < r[0] + r[2] && my >= r[1] && my < r[1] + r[3]) {
-                if (r[4] == PACK) { openPack(); return true; }
-                if (r[4] == WORK) { openWork(); return true; }
-                Tab t = Tab.values()[r[4]];
-                if (t != tab || places) {
-                    tab = t;
-                    lastTab = t;
-                    places = false;
-                    if (say != null) draft = say.getValue();
-                    rebuildWidgets();
-                }
+        if (button != 0) return super.mouseClicked(mx, my, button);
+        // The header's links.
+        for (int i = 0; i < TalkMenu.LINKS.size(); i++) {
+            int lx = linkX + i * (linkSize + 2), ly = linkY();
+            if (in(mx, my, lx, ly, linkSize, linkSize)) {
+                activate(new Row(RowType.ITEM, TalkMenu.LINKS.get(i), "", "", "", true, "", false, 0, 0, 0, ItemStack.EMPTY));
+                return true;
+            }
+        }
+        // The tabs.
+        Category[] cats = Category.values();
+        for (int i = 0; i < cats.length; i++) {
+            if (in(mx, my, tabX, bodyY + i * tabH, tabW, tabH - 1)) {
+                if (cats[i] != category || group != null || places || page != Page.TALK) UiStyle.click();
+                setCategory(cats[i]);
+                return true;
+            }
+        }
+        // The footer's buttons.
+        if (in(mx, my, sayX(), footY, buttonW, BOX_H)) { sayTyped(); return true; }
+        if (in(mx, my, byeX(), footY, buttonW, BOX_H)) { UiStyle.click(); onClose(); return true; }
+        // A page's back bar.
+        if (page != Page.TALK && in(mx, my, optX, bodyY, px + pw - S2 - optX, ROW)) { up(); return true; }
+        // The options.
+        if (page == Page.TALK) {
+            Row r = rowAt(mx, my);
+            if (r != null) {
+                if (say.isFocused() && say.getValue().isBlank()) say.setFocused(false);
+                activate(r);
                 return true;
             }
         }
         return super.mouseClicked(mx, my, button);
     }
 
+    private Row rowAt(double mx, double my) {
+        if (mx < optX || mx >= optX + optW - 5 || my < bodyY || my >= bodyB) return null;
+        int cy = (int) my - bodyY + optScroll.offset();
+        for (Row r : rows) if (r.focusable() && cy >= r.y() && cy < r.y() + r.h()) return r;
+        return null;
+    }
+
     @Override
     public boolean keyPressed(int key, int scan, int mods) {
-        if (say != null && say.isFocused() && (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER)) {
-            sayTyped();
+        boolean typing = say != null && say.isFocused();
+        if (key == GLFW.GLFW_KEY_ESCAPE) {
+            if (typing && !say.getValue().isEmpty()) { say.setFocused(false); setFocused(null); return true; }
+            if (up()) return true;
+            onClose();
             return true;
         }
-        if (say != null && !say.isFocused() && key == GLFW.GLFW_KEY_TAB) {
-            tab = Tab.values()[(tab.ordinal() + 1) % Tab.values().length];
-            lastTab = tab;
-            places = false;
-            rebuildWidgets();
+        if (key == GLFW.GLFW_KEY_TAB) {
+            Category[] cats = Category.values();
+            int step = (mods & GLFW.GLFW_MOD_SHIFT) != 0 ? cats.length - 1 : 1;
+            UiStyle.click();
+            setCategory(cats[(category.ordinal() + step) % cats.length]);
+            return true;
+        }
+        if (typing) {
+            if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) { sayTyped(); return true; }
+            return super.keyPressed(key, scan, mods);
+        }
+        if (key == GLFW.GLFW_KEY_BACKSPACE || key == GLFW.GLFW_KEY_LEFT) return up() || true;
+        if (page == Page.TALK) {
+            int n = key >= GLFW.GLFW_KEY_1 && key <= GLFW.GLFW_KEY_9 ? key - GLFW.GLFW_KEY_0
+                : key >= GLFW.GLFW_KEY_KP_1 && key <= GLFW.GLFW_KEY_KP_9 ? key - GLFW.GLFW_KEY_KP_0 : 0;
+            if (n > 0) {
+                for (Row r : rows) if (r.type() == RowType.ITEM && r.key() == n) { activate(r); return true; }
+                return true;
+            }
+            if (key == GLFW.GLFW_KEY_DOWN || key == GLFW.GLFW_KEY_UP) { moveFocus(key == GLFW.GLFW_KEY_DOWN ? 1 : -1); return true; }
+            if ((key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER || key == GLFW.GLFW_KEY_SPACE
+                    || key == GLFW.GLFW_KEY_RIGHT) && focus >= 0) {
+                activate(rows.get(focus));
+                return true;
+            }
+        }
+        boolean chat = minecraft != null && minecraft.options.keyChat.matches(key, scan);
+        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER || chat) {
+            setFocused(say);
+            say.setFocused(true);
+            swallowChar = chat;                // the T that brought the box up is not the first letter in it
             return true;
         }
         return super.keyPressed(key, scan, mods);
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (tab == Tab.ABOUT) aboutScroll = Math.max(0, aboutScroll - (int) Math.signum(scrollY));
-        else if (tab == Tab.SKILLS) skillsScroll = Math.max(0, Math.min(skillsMax, skillsScroll - 12 * (int) Math.signum(scrollY)));
-        else scroll = Math.max(0, scroll + (int) Math.signum(scrollY));
+    public boolean charTyped(char c, int mods) {
+        if (swallowChar) {
+            swallowChar = false;
+            return true;
+        }
+        return say != null && say.isFocused() && super.charTyped(c, mods);
+    }
+
+    private boolean swallowChar;
+
+    private void moveFocus(int dir) {
+        int n = rows.size();
+        if (n == 0) return;
+        int i = focus;
+        for (int k = 0; k < n; k++) {
+            i = i < 0 ? (dir > 0 ? 0 : n - 1) : Math.floorMod(i + dir, n);
+            if (rows.get(i).focusable()) {
+                focus = i;
+                Row r = rows.get(i);
+                optScroll.reveal(r.y(), r.h(), bodyB - bodyY);
+                return;
+            }
+        }
+    }
+
+    @Override
+    public boolean mouseScrolled(double mx, double my, double scrollX, double scrollY) {
+        if (page != Page.TALK && mx >= optX) pageScroll.wheel(scrollY, WHEEL_STEP);
+        else if (mx >= convX) talkScroll.wheel(-scrollY, WHEEL_STEP);       // up the wheel is back in time
+        else if (mx >= optX) optScroll.wheel(scrollY, WHEEL_STEP);
         return true;
     }
 
@@ -473,183 +796,391 @@ public class TalkScreen extends Screen {
             onClose();
             return;
         }
-        if (gift != null) {
-            ItemStack held = minecraft.player.getMainHandItem();
-            gift.active = !held.isEmpty();
-            gift.setMessage(Component.literal(held.isEmpty() ? "Give…" : "Give " + held.getHoverName().getString()));
+        ItemStack held = minecraft.player.getMainHandItem();
+        String now = held.isEmpty() ? "" : held.getHoverName().getString();
+        if (!now.equals(heldKey) || held.isDamaged() != heldDamaged) {   // what you hold changes "Give …" and what can be done
+            heldDamaged = held.isDamaged();
+            layoutRows();
         }
-        if (deliver != null) deliver.active = last.canDeliver();
+    }
+
+    private boolean heldDamaged;
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 
     // ------------------------------------------------------------------ painting
 
     @Override
-    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.renderBackground(g, mouseX, mouseY, partialTick);
-        g.fill(left, top, left + w, top + h, BG);
-        g.fill(left, top, left + w, top + HEADER, BAND);
-        g.fill(left, top, left + w, top + 1, EDGE);
-        g.fill(left, top + h - 1, left + w, top + h, EDGE);
-        g.fill(left, top, left + 1, top + h, EDGE);
-        g.fill(left + w - 1, top, left + w, top + h, EDGE);
-        g.fill(left + 1, top + HEADER, left + w - 1, top + HEADER + 1, SOFT);
-    }
-
-    @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        super.render(g, mouseX, mouseY, partialTick);
+        renderBackground(g, mouseX, mouseY, partialTick);
+        float open = easeOut(progress(openedAt, OPEN_MS));
+        g.pose().pushPose();
+        g.pose().translate(0, Math.round((1F - open) * OPEN_RISE), 0);
+        shadow(g, px, py, pw, ph);
+        panel(g, px, py, pw, ph);
+        headerBand(g, px, py, pw, headerH);
         links.begin(mouseX, mouseY);                                      // [teleport]
-        header(g, mouseX, mouseY);
-        tabs(g, mouseX, mouseY);
-        if (tab == Tab.ABOUT) about(g);
-        else if (tab == Tab.SKILLS) skills(g, mouseX, mouseY);
-        else conversation(g);
-        links.draw(g, font);                                              // [teleport] its name's button, over everything
-    }
-
-    private void header(GuiGraphics g, int mouseX, int mouseY) {
-        int px = left + PAD, py = top + 4;
-        g.fill(px - 1, py - 1, px + 45, py + HEADER - 7, SOFT);
-        g.fill(px, py, px + 44, py + HEADER - 8, 0xFF141821);
-        if (minecraft != null && minecraft.level != null
-                && minecraft.level.getEntity(last.entityId()) instanceof LivingEntity folk) {
-            InventoryScreen.renderEntityInInventoryFollowsMouse(g, px, py, px + 44, py + HEADER - 8, 20, 0.0625F,
-                mouseX, mouseY, folk);
-        }
-        int tx = px + 52, tw = left + w - PAD - tx;
-        g.drawString(font, last.name(), tx, top + 6, GOLD, true);
-        links.addCard(g, last.entityId(), last.name(), tx, top + 6, font.width(last.name()), 8, GOLD);   // [teleport]
-        String where = Ui.clip(font, last.village(), Math.max(40, tw - font.width(last.name()) - 10));
-        g.drawString(font, where, left + w - PAD - font.width(where), top + 6, MUTED, false);
-        g.drawString(font, Ui.clip(font, last.about(), tw), tx, top + 17, MUTED, false);
-        // Mood, as a word and a bar; what it thinks of you, as hearts.
-        String mood = face(last.mood()) + " " + last.moodWord();
-        g.drawString(font, mood, tx, top + 28, moodColour(last.mood()), false);
-        int bx = tx + font.width(mood) + 6;
-        g.fill(bx, top + 31, bx + 40, top + 34, 0x40FFFFFF);
-        g.fill(bx, top + 31, bx + Math.max(1, 40 * Math.max(0, Math.min(100, last.mood())) / 100), top + 34, moodColour(last.mood()));
-        String heart = hearts(last.affinity()) + " " + last.standing();
-        g.drawString(font, Ui.clip(font, heart, Math.max(30, left + w - PAD - (bx + 48))), bx + 48, top + 28,
-            last.affinity() < -10 ? 0xFFE07070 : PINK, false);
-        String now = last.doing().isEmpty() ? "" : "Now: " + last.doing();
-        g.drawString(font, Ui.clip(font, now, tw), tx, top + 40, INK, false);
-    }
-
-    private void tabs(GuiGraphics g, int mouseX, int mouseY) {
-        tabRects.clear();
-        int y = top + HEADER + 4;
-        int x = left + PAD;
-        // Seven tabs and the two links on the right fill a narrow window: when they would run into
-        // each other the tabs pad less, and then the links shorten.
-        String[] nav = { "Work done ›", "Pack ›" };
-        int pad = 14, navPad = 12;
-        if (tabsWidth(pad, nav, navPad) > w - 2 * PAD) { pad = 8; navPad = 8; }
-        if (tabsWidth(pad, nav, navPad) > w - 2 * PAD) nav = new String[]{ "Work ›", "Pack ›" };
-        for (Tab t : Tab.values()) {
-            int tw = font.width(t.label) + pad;
-            boolean on = t == tab && !places;
-            boolean hover = mouseX >= x && mouseX < x + tw && mouseY >= y && mouseY < y + TAB_H;
-            g.fill(x, y, x + tw, y + TAB_H, on ? TAB_ON : hover ? 0xFF353B48 : TAB);
-            if (on) g.fill(x, y + TAB_H - 2, x + tw, y + TAB_H, GOLD);
-            g.drawString(font, t.label, x + pad / 2, y + 4, on ? GOLD : INK, false);
-            tabRects.add(new int[]{ x, y, tw, TAB_H, t.ordinal() });
-            x += tw + 2;
-        }
-        // The pack and the work record, on the right.
-        int rx = left + w - PAD;
-        for (int i = 0; i < nav.length; i++) {
-            int tw = font.width(nav[i]) + navPad;
-            rx -= tw;
-            boolean hover = mouseX >= rx && mouseX < rx + tw && mouseY >= y && mouseY < y + TAB_H;
-            g.fill(rx, y, rx + tw, y + TAB_H, hover ? 0xFF2F4350 : NAV);
-            g.drawString(font, nav[i], rx + navPad / 2, y + 4, MUTED, false);
-            tabRects.add(new int[]{ rx, y, tw, TAB_H, i == 0 ? WORK : PACK });
-            rx -= 2;
-        }
-    }
-
-    /** How wide the tabs and the links on the right come to, with this much padding. */
-    private int tabsWidth(int pad, String[] nav, int navPad) {
-        int n = 0;
-        for (Tab t : Tab.values()) n += font.width(t.label) + pad + 2;
-        for (String s : nav) n += font.width(s) + navPad + 2;
-        return n + 6;
-    }
-
-    private void conversation(GuiGraphics g) {
-        int x = left + PAD, top0 = bodyTop(), bottom = logBottom();
-        g.fill(x, top0, left + w - PAD, bottom, LOG);
-        int y = top0 + 4;
-        if (!last.errand().isEmpty()) {
-            String e = Ui.clip(font, "★ " + last.errand(), w - 2 * PAD - 8);
-            g.drawString(font, e, x + 4, y, ERRAND, false);
-            y += LINE + 2;
-        }
-        if (places) {
-            g.drawString(font, "Where would you like to go? It will walk you there.", x + 4, y, MUTED, false);
-            y += LINE + 2;
-        }
-        // The conversation, newest at the bottom.
-        List<FormattedCharSequence> lines = new ArrayList<>();
-        List<Integer> colours = new ArrayList<>();
-        int width = w - 2 * PAD - 10;
-        for (Line l : HISTORY.getOrDefault(last.entityId(), List.of())) {
-            String text = l.you() ? "You: " + l.text() : l.text();
-            for (FormattedCharSequence s : TextCache.splitPlain(font, text, width)) {
-                lines.add(s);
-                colours.add(l.you() ? YOU : INK);
+        String hoverTip = header(g, mouseX, mouseY);
+        String t = tabs(g, mouseX, mouseY);
+        if (t != null) hoverTip = t;
+        if (page == Page.TALK) {
+            t = options(g, mouseX, mouseY);
+            if (t != null) hoverTip = t;
+            conversation(g);
+        } else {
+            t = pageBar(g, mouseX, mouseY);
+            if (t != null) hoverTip = t;
+            if (page == Page.PROFILE) profile(g);
+            else {
+                String s = skills(g, mouseX, mouseY);
+                if (s != null) hoverTip = s;
             }
         }
-        int room = Math.max(1, (bottom - y - 3) / LINE);
-        int maxScroll = Math.max(0, lines.size() - room);
-        if (scroll > maxScroll) scroll = maxScroll;
-        int start = Math.max(0, lines.size() - room - scroll);
-        for (int i = 0; i < room && start + i < lines.size(); i++) {
-            g.drawString(font, lines.get(start + i), x + 5, y + i * LINE, colours.get(start + i), false);
-        }
-        if (maxScroll > 0) {
-            g.drawString(font, scroll < maxScroll ? "▲" : " ", left + w - PAD - 9, top0 + 2, MUTED, false);
-            g.drawString(font, scroll > 0 ? "▼" : " ", left + w - PAD - 9, bottom - 10, MUTED, false);
-        }
+        t = footer(g, mouseX, mouseY, partialTick);
+        if (t != null) hoverTip = t;
+        links.draw(g, font);                                              // [teleport] its name's button, over everything
+        g.pose().popPose();
+        if (hoverTip != null && !hoverTip.isEmpty()) UiStyle.tooltip(g, font, hoverTip, mouseX, mouseY, 220);
     }
 
-    private void about(GuiGraphics g) {
-        int x = left + PAD, top0 = bodyTop(), bottom = logBottom();
-        g.fill(x, top0, left + w - PAD, bottom, LOG);
-        int labelW = 66;
-        int width = w - 2 * PAD - labelW - 12;
-        List<String[]> rows = new ArrayList<>();
+    private int linkY() {
+        return compact ? py + (headerH - linkSize) / 2 + 1 : py + S1 + 1;
+    }
+
+    /** The header: likeness, name, trade, doing, mood and standing; the town; the links. Returns a tooltip, if hovered. */
+    private String header(GuiGraphics g, int mouseX, int mouseY) {
+        String tip = null;
+        int box = headerH - 2 * S1 - (compact ? 0 : 2);
+        int bx = px + S1 + 2, by = py + S1;
+        well(g, bx, by, box, box, PORTRAIT);
+        if (minecraft != null && minecraft.level != null
+                && minecraft.level.getEntity(last.entityId()) instanceof LivingEntity folk) {
+            // A bust: drawn big enough that the head and shoulders fill the frame, the rest cut off below it.
+            int scale = Math.round(box * PORTRAIT_SCALE);
+            int centre = by + 3 + Math.round(scale * folk.getBbHeight() / 2F);
+            g.enableScissor(bx + 1, by + 1, bx + box - 1, by + box - 1);
+            InventoryScreen.renderEntityInInventoryFollowsMouse(g, bx, by + 1, bx + box, 2 * centre - by - 1,
+                scale, 0.0625F, mouseX, mouseY, folk);
+            g.disableScissor();
+        }
+        int tx = bx + box + S2;
+        // The links, right.
+        for (int i = 0; i < linkIcons.length; i++) {
+            Entry e = TalkMenu.LINKS.get(i);
+            int lx = linkX + i * (linkSize + 2), ly = linkY();
+            boolean on = e == TalkMenu.PROFILE && page == Page.PROFILE || e == TalkMenu.SKILLS && page == Page.SKILLS;
+            boolean hover = in(mouseX, mouseY, lx, ly, linkSize, linkSize);
+            tile(g, lx, ly, linkSize, linkSize, State.of(true, on, hover));
+            int o = (linkSize - ICON) / 2;
+            g.renderItem(linkIcons[i], lx + o, ly + o);
+            if (hover) tip = linkTips[i];
+        }
+        // Name, bold: the one focal line.
+        int ny = py + (compact ? 5 : 7);
+        title(g, font, nameShown, tx, ny);
+        links.addCard(g, last.entityId(), last.name(), tx, ny, nameW, 9, TEXT);   // [teleport]
+        if (compact) {
+            statusRow(g, tx, py + 17);
+        } else {
+            g.drawString(font, aboutShown, tx, py + 19, TEXT_MUTED, false);
+            g.drawString(font, doingShown, tx, py + 29, TEXT_FAINT, false);
+            statusRow(g, tx, py + 40);
+            // The town and your standing there, right, under the links.
+            g.drawString(font, whereShown, px + pw - S2 - font.width(whereShown), py + 29, TEXT_FAINT, false);
+        }
+        if (tip == null && headerCut && in(mouseX, mouseY, tx, py + 4, linkX - S2 - tx, headerH - 8)) tip = headerTip;
+        return tip;
+    }
+
+    /** Its mood as a face, a word and a bar; what it thinks of you as hearts, a word and a bar. */
+    private void statusRow(GuiGraphics g, int x, int y) {
+        int barW = statusBarW();
+        g.drawString(font, moodShown, x, y, moodInk, false);
+        bar(g, x + font.width(moodShown) + S1, y + 3, barW, 4, moodFrac, moodFill);
+        int textW = linkX - S2 - x;
+        int sx = x + textW / 2;
+        g.drawString(font, standingShown, sx, y, affInk, false);
+        bar(g, sx + font.width(standingShown) + S1, y + 3, barW, 4, affFrac, affFill);
+    }
+
+    /** The category tabs down the left. Returns the hovered tab's tooltip. */
+    private String tabs(GuiGraphics g, int mouseX, int mouseY) {
+        String tip = null;
+        Category[] cats = Category.values();
+        g.fill(tabX + tabW, bodyY, tabX + tabW + 1, bodyB, EDGE_SOFT);
+        for (int i = 0; i < cats.length; i++) {
+            int y = bodyY + i * tabH;
+            boolean hover = in(mouseX, mouseY, tabX, y, tabW, tabH - 1);
+            boolean on = cats[i] == category && page == Page.TALK;
+            sideTab(g, tabX, y, tabW, tabH - 1, State.of(true, on, hover));
+            int iy = y + (tabH - 1 - ICON) / 2;
+            if (compact) {
+                g.renderItem(tabIcons[i], tabX + (tabW - ICON) / 2 + 1, iy);
+            } else {
+                g.renderItem(tabIcons[i], tabX + S1 + 1, iy);
+                g.drawString(font, tabLabels[i], tabX + S1 + ICON + 4, y + (tabH - 1 - GLYPH) / 2 + 1, on ? ACCENT : TEXT, false);
+            }
+            if (hover) tip = tabTips[i];
+        }
+        return tip;
+    }
+
+    /** The options column. Returns the hovered option's tooltip (its whole label when cut, what it does, why not). */
+    private String options(GuiGraphics g, int mouseX, int mouseY) {
+        String tip = null;
+        int top = bodyY, room = bodyB - bodyY;
+        float slide = 1F - easeOut(progress(listAt, LIST_MS));
+        int dx = Math.round(slide * LIST_SLIDE);
+        g.enableScissor(optX, top, optX + optW, top + room);
+        Row hovered = page == Page.TALK ? rowAt(mouseX, mouseY) : null;
+        long now = Util.getMillis();
+        for (int i = 0; i < rows.size(); i++) {
+            Row r = rows.get(i);
+            int y = top + r.y() - optScroll.offset();
+            if (y + r.h() < top || y > top + room) continue;
+            int x = optX + dx, w = optW - 5;
+            switch (r.type()) {
+                case HEAD -> heading(g, font, r.shown(), x + 1, y + 2, w - 2);
+                case NOTE -> {
+                    int ly = y + 2;
+                    for (FormattedCharSequence l : TextCache.splitPlain(font, r.shown(), w - S2)) {
+                        g.drawString(font, l, x + S1, ly, TEXT_FAINT, false);
+                        ly += LINE;
+                    }
+                }
+                case BACK -> {
+                    boolean hover = r == hovered || focus == i;
+                    tile(g, x, y, w, r.h(), State.of(true, false, hover));
+                    g.drawString(font, r.shown(), x + S1 + 1, y + 5, TEXT, false);
+                    if (!compact) keyCap(g, font, "Esc", x + w - font.width("Esc") - 4 - S1, y + 4);
+                    if (hover) tip = r.tip();
+                }
+                case ITEM -> {
+                    boolean hover = r == hovered || focus == i;
+                    boolean flash = r.entry() == flashEntry && r.full().equals(flashFull) && now - flashAt < FLASH_MS;
+                    State s = State.of(r.enabled(), flash, hover);
+                    if (r.suggested() && s != State.DISABLED && s != State.SELECTED) {
+                        g.fill(x, y, x + w, y + r.h(), EDGE_SOFT);
+                        g.fill(x + 1, y + 1, x + w - 1, y + r.h() - 1, hover ? HIGHLIGHT_HOVER : HIGHLIGHT);
+                        g.fill(x + 1, y + 1, x + 3, y + r.h() - 1, HIGHLIGHT_SPINE);
+                        if (hover) g.renderOutline(x, y, w, r.h(), EDGE);
+                    } else {
+                        tile(g, x, y, w, r.h(), s);
+                    }
+                    g.renderItem(r.icon(), x + 3, y + 1);
+                    if (!r.enabled()) {                                   // the icon greyed too: over it, so above its depth
+                        g.pose().pushPose();
+                        g.pose().translate(0, 0, ICON_DEPTH);
+                        g.fill(x + 3, y + 1, x + 3 + ICON, y + 1 + ICON, GREY_OUT);
+                        g.pose().popPose();
+                    }
+                    g.drawString(font, r.shown(), x + ICON + 7, y + 5, s.ink(), false);
+                    int rx = x + w - S1;
+                    if (r.entry().isGroup()) {
+                        rx -= font.width("›");
+                        g.drawString(font, "›", rx, y + 5, TEXT_FAINT, false);
+                        rx -= 3;
+                    }
+                    if (r.key() > 0 && !compact) keyCap(g, font, KEYS[r.key()], rx - font.width(KEYS[r.key()]) - 4, y + 4);
+                    if (hover) {
+                        StringBuilder sb = new StringBuilder();
+                        if (!r.shown().equals(r.full()) || r.tip().isEmpty()) sb.append(r.full());
+                        if (!r.tip().isEmpty()) sb.append(sb.length() > 0 ? "\n" : "").append(r.tip());
+                        if (!r.enabled()) sb.append("\n").append(I18n.get("talk.mc_assistant.ui.unavailable", r.why()));
+                        tip = sb.toString();
+                    }
+                }
+            }
+        }
+        g.disableScissor();
+        scrollBar(g, optX + optW - 3, top, room, optScroll.offset(), optScroll.max(), room);
+        return tip;
+    }
+
+    /** The conversation: its request pinned at the top, then the bubbles, the latest at the foot. */
+    private void conversation(GuiGraphics g) {
+        int x = convX, y0 = bodyY, h = bodyB - bodyY;
+        well(g, x, y0, convW, h);
+        int top = y0 + 2;
+        // What it asked of you, pinned.
+        if (!requestLines.isEmpty()) {
+            int rh = requestLines.size() * LINE + 6;
+            g.fill(x + 2, top, x + convW - 2, top + rh, HIGHLIGHT);
+            g.fill(x + 2, top, x + 4, top + rh, HIGHLIGHT_SPINE);
+            g.fill(x + 2, top + rh, x + convW - 2, top + rh + 1, EDGE_SOFT);
+            g.drawString(font, "★", x + 7, top + 3, WARNING, false);
+            int ly = top + 3;
+            for (FormattedCharSequence l : requestLines) {
+                g.drawString(font, l, x + 17, ly, TEXT, false);
+                ly += LINE;
+            }
+            top += rh + 2;
+        }
+        // Why an option could not be picked, a moment.
+        if (!notice.isEmpty() && Util.getMillis() - noticeAt < NOTICE_MS) {
+            List<FormattedCharSequence> nl = noticeLines;
+            int nh = Math.min(2, nl.size()) * LINE + 6;
+            g.fill(x + 2, top, x + convW - 2, top + nh, DANGER_SOFT);
+            g.fill(x + 2, top, x + 4, top + nh, DANGER_FILL);
+            for (int i = 0; i < Math.min(2, nl.size()); i++) g.drawString(font, nl.get(i), x + 8, top + 3 + i * LINE, DANGER, false);
+            top += nh + 2;
+        }
+        int bottom = y0 + h - 3;
+        int inner = convW - 2 * S1 - 4;
+        if (bubblesVersion != historyVersion || bubblesWidth != inner) layoutBubbles(inner);
+        boolean waiting = waitingSince > 0 && Util.getMillis() - waitingSince < WAIT_MS;
+        int waitH = waiting ? LINE + 2 * BUBBLE_PAD + BUBBLE_TURN_GAP : 0;
+        int view = Math.max(1, bottom - top - S1);
+        talkScroll.fit(bubblesHeight + waitH, view);
+        if (bubbles.isEmpty() && !waiting) {
+            int ty = top + (bottom - top) / 2 - LINE;
+            if (emptyWidth != inner) {
+                emptyLines = TextCache.splitPlain(font, sEmpty, inner - S2);
+                emptyWidth = inner;
+            }
+            for (FormattedCharSequence l : emptyLines) {
+                g.drawString(font, l, x + (convW - font.width(l)) / 2, ty, TEXT_MUTED, false);
+                ty += LINE;
+            }
+            return;
+        }
+        int contentTop = bottom - Math.max(view, bubblesHeight + waitH) + talkScroll.offset();
+        if (bubblesHeight + waitH < view) contentTop = bottom - bubblesHeight - waitH;
+        g.enableScissor(x + 1, top, x + convW - 1, bottom);
+        float rise = 1F - easeOut(progress(bubbleAt, BUBBLE_MS));
+        int lastIndex = bubbles.size() - 1;
+        for (int i = 0; i <= lastIndex; i++) {
+            Bubble b = bubbles.get(i);
+            int by = contentTop + b.y() + (i == lastIndex ? Math.round(rise * BUBBLE_RISE) : 0);
+            if (by + b.h() < top || by > bottom) continue;
+            boolean latest = i >= lastIndex - 1;
+            int bx = b.you() ? x + convW - S1 - 2 - b.w() : x + S1 + 2;
+            bubble(g, bx, by, b.w(), b.h(), b.you());
+            int ink = latest || b.you() ? TEXT : TEXT_MUTED;
+            int ly = by + BUBBLE_PAD;
+            for (FormattedCharSequence l : b.lines()) {
+                g.drawString(font, l, bx + BUBBLE_PAD, ly, ink, false);
+                ly += LINE;
+            }
+        }
+        if (waiting) {
+            int by = contentTop + bubblesHeight + BUBBLE_TURN_GAP;
+            int dots = (int) ((Util.getMillis() / DOT_MS) % DOTS.length);
+            int bw = font.width(DOTS[DOTS.length - 1]) + 2 * BUBBLE_PAD;
+            bubble(g, x + S1 + 2, by, bw, LINE + 2 * BUBBLE_PAD - 1, false);
+            g.drawString(font, DOTS[dots], x + S1 + 2 + BUBBLE_PAD, by + BUBBLE_PAD, TEXT_FAINT, false);
+        }
+        g.disableScissor();
+        // The scroll bar runs the other way: its foot is the newest.
+        scrollBar(g, x + convW - 5, top, bottom - top, talkScroll.max() - talkScroll.offset(), talkScroll.max(), view);
+    }
+
+    /** A speech bubble: a pale body with a soft edge and a little tail at its speaker's side. */
+    private void bubble(GuiGraphics g, int x, int y, int w, int h, boolean you) {
+        int fill = you ? BUBBLE_YOU : BUBBLE_THEM;
+        g.fill(x + 1, y, x + w - 1, y + h, EDGE_SOFT);
+        g.fill(x, y + 1, x + w, y + h - 1, EDGE_SOFT);
+        g.fill(x + 1, y + 1, x + w - 1, y + h - 1, fill);
+        int tx = you ? x + w - 4 : x + 2;
+        g.fill(tx, y + h - 1, tx + 2, y + h + 2, EDGE_SOFT);
+        g.fill(tx + (you ? 0 : 0), y + h - 1, tx + 2, y + h + 1, fill);
+    }
+
+    /** A page's bar along its top: Back, and the page's name. Returns its tooltip when hovered. */
+    private String pageBar(GuiGraphics g, int mouseX, int mouseY) {
+        int x = optX, w = px + pw - S2 - optX;
+        if (pageBarFor != page) {
+            pageBarFor = page;
+            String name = page == Page.PROFILE ? label(TalkMenu.PROFILE) : label(TalkMenu.SKILLS);
+            sPageBar = UiStyle.clip(font, "‹ " + t("ui.back") + "  ·  " + name, w - 40);
+        }
+        boolean hover = in(mouseX, mouseY, x, bodyY, w, ROW);
+        tile(g, x, bodyY, w, ROW, State.of(true, false, hover));
+        g.drawString(font, sPageBar, x + S1 + 1, bodyY + 5, TEXT, false);
+        if (!compact) keyCap(g, font, "Esc", x + w - font.width("Esc") - 4 - S1, bodyY + 4);
+        return hover ? sBackTip : null;
+    }
+
+    private int pageTop() { return bodyY + ROW + S1; }
+
+    /** The profile card: one fact a line ("Label|what"), the label on the left, the fact wrapped beside it. */
+    private void profile(GuiGraphics g) {
+        int x = optX, w = px + pw - S2 - optX, top = pageTop(), bottom = bodyB;
+        well(g, x, top, w, bottom - top, PAGE);
+        int labelW = compact ? 56 : 72;
+        if (!last.card().equals(profileFor) || profileWidth != w) layoutProfile(w - labelW - 2 * S2 - 6, labelW - S1);
+        if (profileLines.isEmpty()) {
+            g.drawString(font, sProfileEmpty, x + S2, top + S2, TEXT_FAINT, false);
+            return;
+        }
+        pageScroll.fit(profileHeight + S2, bottom - top - 4);
+        g.enableScissor(x + 1, top + 1, x + w - 1, bottom - 1);
+        int y = top + S1 + 1 - pageScroll.offset();
+        for (int i = 0; i < profileLines.size(); i++) {
+            FormattedCharSequence line = profileLines.get(i);
+            if (line == null) {
+                if (y > top && y < bottom) g.fill(x + S2, y + 1, x + w - S2, y + 2, RULE);
+                y += 4;
+                continue;
+            }
+            if (y > top - LINE && y < bottom) {
+                String label = profileLabels.get(i);
+                if (!label.isEmpty()) g.drawString(font, label, x + S2, y, ACCENT, false);
+                g.drawString(font, line, x + S2 + labelW, y, TEXT, false);
+            }
+            y += LINE;
+        }
+        g.disableScissor();
+        scrollBar(g, x + w - 5, top + 2, bottom - top - 4, pageScroll.offset(), pageScroll.max(), bottom - top);
+    }
+
+    /** The profile card's lines, wrapped to {@code width} beside labels cut to {@code labelW}. */
+    private void layoutProfile(int width, int labelW) {
+        profileLabels.clear();
+        profileLines.clear();
+        profileHeight = 0;
         for (String l : last.card().split("\n")) {
             int bar = l.indexOf('|');
             if (bar <= 0) continue;
-            rows.add(new String[]{ l.substring(0, bar), l.substring(bar + 1) });
+            List<FormattedCharSequence> wrapped = TextCache.splitPlain(font, l.substring(bar + 1), Math.max(20, width));
+            for (int i = 0; i < wrapped.size(); i++) {
+                profileLabels.add(i == 0 ? UiStyle.clip(font, l.substring(0, bar), labelW) : "");
+                profileLines.add(wrapped.get(i));
+                profileHeight += LINE;
+            }
+            profileLabels.add("");
+            profileLines.add(null);
+            profileHeight += 4;
         }
-        // Lay it out, then scroll it.
-        List<Object[]> out = new ArrayList<>();
-        for (String[] r : rows) {
-            List<FormattedCharSequence> wrapped = TextCache.splitPlain(font, r[1], width);
-            for (int i = 0; i < wrapped.size(); i++) out.add(new Object[]{ i == 0 ? r[0] : "", wrapped.get(i) });
-            out.add(new Object[]{ "", null });
-        }
-        int room = Math.max(1, (bottom - top0 - 6) / LINE);
-        aboutScroll = Math.min(aboutScroll, Math.max(0, out.size() - room));
-        int y = top0 + 4;
-        for (int i = 0; i < room && aboutScroll + i < out.size(); i++) {
-            Object[] o = out.get(aboutScroll + i);
-            String label = (String) o[0];
-            if (!label.isEmpty()) g.drawString(font, label, x + 5, y, GOLD, false);
-            if (o[1] != null) g.drawString(font, (FormattedCharSequence) o[1], x + 5 + labelW, y, INK, false);
-            y += o[1] == null ? 3 : LINE;
-        }
-        if (rows.isEmpty()) g.drawString(font, "It has not said much about itself yet.", x + 5, top0 + 4, MUTED, false);
+        profileFor = last.card();
+        profileWidth = px + pw - S2 - optX;
     }
+
+    /** The box to say anything, and its Say and Bye buttons. */
+    private String footer(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        say.render(g, mouseX, mouseY, partialTick);
+        boolean canSay = !say.getValue().isBlank();
+        boolean hs = in(mouseX, mouseY, sayX(), footY, buttonW, BOX_H), hb = in(mouseX, mouseY, byeX(), footY, buttonW, BOX_H);
+        button(g, font, sSay, sayX(), footY, buttonW, BOX_H, State.of(canSay, canSay && !hs, hs));
+        button(g, font, sBye, byeX(), footY, buttonW, BOX_H, State.of(true, false, hb));
+        if (hs) return canSay ? sSayTip : sSayEmpty;
+        if (hb) return sByeTip;
+        return null;
+    }
+
+    private int sayX() { return px + pw - S2 - 2 * buttonW - S1; }
+
+    private int byeX() { return px + pw - S2 - buttonW; }
 
     // ------------------------------------------------------------------ the Skills page
 
-    /** The knacks' colours, by family: a trade's amber, a nature's green, a purse's blue; and the greys of what is still open. */
-    private static final int TRADE_INK = 0xFFD9A441, NATURE_INK = 0xFF86C98A, PURSE_INK = 0xFF7FB2E5,
-        OPEN_EDGE = 0xFF3C424E, OPEN_NAME = 0xFFA4ABB8, OPEN_DIM = 0xFF7A808C, OPEN_TEXT = 0xFF6E7480,
-        TRACK = 0x40FFFFFF, FILL = 0xFFB8963A, CARD = 0x26FFFFFF;
+    /** The knacks' colours, by family (a trade's amber, a nature's green, a purse's blue), and the greys of what is open. */
+    private static final int TRADE_INK = 0xFF7A4A00, NATURE_INK = 0xFF2A6420, PURSE_INK = 0xFF1D4A86,
+        OPEN_EDGE = 0xFF9A9A9A, OPEN_NAME = 0xFF333333, OPEN_DIM = 0xFF5A5A5A, OPEN_TEXT = 0xFF505050,
+        TRACK = 0xFFA8A8A8, FILL = 0xFFC08A1E, PIP = 0xFFC08A1E, NODE_CHOSEN = 0xFFF1E6CB, NODE_OPEN = 0xFFDADADA;
 
     /** What the folk sent for its Skills page (FolkSkills.encode), read once a reply. */
     private record Points(int earned, int spent, int free, int nextAt, int pct, String best, int bestLevel, boolean child) {}
@@ -715,68 +1246,66 @@ public class TalkScreen extends Screen {
     }
 
     /**
-     * The folk's knacks, drawn: along the top its knack points (a pip each: gold for one spent, a
-     * gold ring for one to spend, grey for one still to earn) and a bar to its next point; its
-     * trades as rulers marked at every fifth level, where the points come; a card for each knack
-     * it chose (what it does, why it chose it, the day, and whether it works in the trade it has
-     * now); and its tree, three branches (its trade, its nature, its purse) with what it chose in
-     * gold and what is still open to it greyed, the mouse over any of them for the whole of it.
-     * Scrolls with the wheel.
+     * The folk's knacks, drawn: along the top its knack points (a pip each: filled for one spent, a ring for one to
+     * spend, grey for one still to earn) and a bar to its next point; its trades as rulers marked at every fifth level,
+     * where the points come; a card for each knack it chose (what it does, why it chose it, the day, and whether it
+     * works in the trade it has now); and its tree, three branches (its trade, its nature, its purse) with what it chose
+     * lit and what is still open to it greyed, the mouse over any of them for the whole of it. Scrolls with the wheel.
+     * Returns the tooltip of what the mouse is over.
      */
-    private void skills(GuiGraphics g, int mouseX, int mouseY) {
-        int x0 = left + PAD, x1 = left + w - PAD, top0 = bodyTop(), bottom = logBottom();
-        g.fill(x0, top0, x1, bottom, LOG);
+    private String skills(GuiGraphics g, int mouseX, int mouseY) {
+        int x0 = optX, x1 = px + pw - S2, top0 = pageTop(), bottom = bodyB;
+        well(g, x0, top0, x1 - x0, bottom - top0, PAGE);
         SkillsPage page = skillsPage();
         if (page == null) {
-            g.drawString(font, "It has said nothing yet of what it is good at.", x0 + 5, top0 + 4, MUTED, false);
-            return;
+            g.drawString(font, sSkillsEmpty, x0 + S2, top0 + S2, TEXT_FAINT, false);
+            return null;
         }
         Points pt = page.points();
-        int cx = x0 + 6, inner = x1 - x0 - 12;
+        int cx = x0 + S2, inner = x1 - x0 - 2 * S2 - 4;
         boolean hovering = mouseX >= x0 && mouseX < x1 && mouseY >= top0 && mouseY < bottom;
-        List<FormattedCharSequence> tip = null;
-        g.enableScissor(x0, top0, x1, bottom);
-        int y = top0 + 5 - skillsScroll;
+        String tip = null;
+        g.enableScissor(x0 + 1, top0 + 1, x1 - 1, bottom - 1);
+        int y = top0 + 6 - pageScroll.offset();
 
         // ---- the points: six pips, and what they come to
-        g.drawString(font, "Knack points", cx, y, GOLD, false);
-        int px = cx + font.width("Knack points") + 6;
+        g.drawString(font, "Knack points", cx, y, TEXT, false);
+        int ppx = cx + font.width("Knack points") + 6;
         for (int i = 0; i < 6; i++) {
-            int bx = px + i * 10;
+            int bx = ppx + i * 10;
             if (i < pt.spent()) {
-                g.fill(bx, y, bx + 7, y + 7, GOLD);
+                g.fill(bx, y, bx + 7, y + 7, PIP);
             } else if (i < pt.earned()) {
-                g.fill(bx, y, bx + 7, y + 7, GOLD);
-                g.fill(bx + 1, y + 1, bx + 6, y + 6, 0xFF141821);
+                g.fill(bx, y, bx + 7, y + 7, PIP);
+                g.fill(bx + 1, y + 1, bx + 6, y + 6, PAGE);
             } else {
-                g.fill(bx, y, bx + 7, y + 7, SOFT);
-                g.fill(bx + 1, y + 1, bx + 6, y + 6, 0xFF1E222B);
+                g.fill(bx, y, bx + 7, y + 7, EDGE_SOFT);
+                g.fill(bx + 1, y + 1, bx + 6, y + 6, 0xFFB8B8B8);
             }
         }
         String tally = pt.child() ? "none yet: a child" : pt.earned() + " earned · " + pt.spent() + " chosen · " + pt.free() + " to choose";
-        g.drawString(font, Ui.clip(font, tally, Math.max(20, x1 - 6 - (px + 64))), px + 64, y, pt.free() > 0 ? INK : MUTED, false);
+        g.drawString(font, UiStyle.clip(font, tally, Math.max(20, x1 - 6 - (ppx + 64))), ppx + 64, y, pt.free() > 0 ? TEXT : TEXT_MUTED, false);
         y += 12;
 
         // ---- how near the next point is
         if (pt.child()) {
             y = wrapped(g, "Its knacks come with a trade: a point at every fifth level of the trade it is best at, six in all.",
-                cx, y, inner, MUTED);
+                cx, y, inner, TEXT_MUTED);
         } else if (pt.nextAt() <= 0) {
-            g.drawString(font, "All six points earned" + (pt.best().isEmpty() ? "" : " — " + pt.best().toLowerCase(java.util.Locale.ROOT)
-                + " " + pt.bestLevel()), cx, y, MUTED, false);
+            g.drawString(font, UiStyle.clip(font, "All six points earned" + (pt.best().isEmpty() ? "" : " — " + pt.best().toLowerCase(Locale.ROOT)
+                + " " + pt.bestLevel()), inner), cx, y, TEXT_MUTED, false);
             y += LINE + 2;
         } else {
             String label = (pt.best().isEmpty() ? "No trade" : pt.best()) + " " + pt.bestLevel();
             String after = "next point at level " + pt.nextAt();
             int lw = font.width(label) + 6, aw = font.width(after) + 6;
             int bx = cx + lw, bw = Math.max(20, inner - lw - aw);
-            g.drawString(font, label, cx, y, INK, false);
-            g.fill(bx, y + 2, bx + bw, y + 7, TRACK);
-            g.fill(bx, y + 2, bx + Math.max(1, bw * Math.max(0, Math.min(100, pt.pct())) / 100), y + 7, FILL);
-            g.drawString(font, after, bx + bw + 6, y, MUTED, false);
+            g.drawString(font, label, cx, y, TEXT, false);
+            bar(g, bx, y + 2, bw, 5, Math.max(0, Math.min(100, pt.pct())) / 100F, FILL);
+            g.drawString(font, after, bx + bw + 6, y, TEXT_MUTED, false);
             if (hovering && mouseX >= bx && mouseX < bx + bw && mouseY >= y && mouseY < y + 9) {
-                tip = TextCache.splitPlain(font, pt.pct() + "% of the way from level " + (pt.nextAt() - 5) + " to level " + pt.nextAt()
-                    + ", by its experience at its best trade.", 200);
+                tip = pt.pct() + "% of the way from level " + (pt.nextAt() - 5) + " to level " + pt.nextAt()
+                    + ", by its experience at its best trade.";
             }
             y += LINE + 2;
         }
@@ -784,30 +1313,30 @@ public class TalkScreen extends Screen {
         // ---- its trades, each a ruler to level thirty marked where the points come
         if (!page.trades().isEmpty()) {
             int nameW = 0;
-            for (TradeRow t : page.trades()) nameW = Math.max(nameW, font.width(t.title()));
-            nameW += 6;
+            for (TradeRow tr : page.trades()) nameW = Math.max(nameW, font.width(tr.title()));
+            nameW = Math.min(nameW, inner / 3) + 6;
             int tx = cx + nameW, tw = Math.max(30, inner - nameW - 30);
-            for (TradeRow t : page.trades()) {
-                g.drawString(font, t.title(), cx, y, t.now() ? GOLD : INK, false);
+            for (TradeRow tr : page.trades()) {
+                g.drawString(font, UiStyle.clip(font, tr.title(), nameW - 6), cx, y, tr.now() ? TRADE_INK : TEXT, false);
                 g.fill(tx, y + 3, tx + tw, y + 6, TRACK);
-                int lv = Math.min(30, t.level());
-                g.fill(tx, y + 3, tx + tw * lv / 30, y + 6, t.now() ? FILL : 0xFF7D6A3A);
+                int lv = Math.min(30, tr.level());
+                g.fill(tx, y + 3, tx + tw * lv / 30, y + 6, tr.now() ? FILL : 0xFFB59A5A);
                 for (int n = 5; n <= 30; n += 5) {
                     int nx = tx + tw * n / 30 - 1;
-                    g.fill(nx, y + 1, nx + 1, y + 8, t.level() >= n ? GOLD : SOFT);
+                    g.fill(nx, y + 1, nx + 1, y + 8, tr.level() >= n ? TRADE_INK : EDGE_SOFT);
                 }
-                g.drawString(font, "lv " + t.level(), tx + tw + 5, y, t.now() ? INK : MUTED, false);
+                g.drawString(font, "lv " + tr.level(), tx + tw + 5, y, tr.now() ? TEXT : TEXT_MUTED, false);
                 y += LINE;
             }
             y += 4;
         }
 
         // ---- what it chose: a card each
-        y = heading(g, "Chosen", cx, y, inner);
+        y = skillHeading(g, "Chosen", cx, y, inner);
         if (page.chosen().isEmpty()) {
             y = wrapped(g, pt.child() ? "Nothing yet." : pt.free() > 0
                 ? "Nothing yet. It has a point to spend, and chooses for itself at a quiet moment: its break, or the evening."
-                : "Nothing yet. Its first point comes at level 5 of its best trade.", cx, y, inner, MUTED);
+                : "Nothing yet. Its first point comes at level 5 of its best trade.", cx, y, inner, TEXT_MUTED);
         }
         for (KnackRow k : page.chosen()) {
             List<FormattedCharSequence> effect = TextCache.splitPlain(font, k.effect(), inner - 12);
@@ -817,13 +1346,13 @@ public class TalkScreen extends Screen {
             g.fill(cx, y, cx + inner, y + h, CARD);
             g.fill(cx, y, cx + 2, y + h, ink);
             int ty = y + 4;
-            g.drawString(font, k.title(), cx + 7, ty, GOLD, false);
             String when = familyName(k.family()) + " · day " + k.day();
+            g.drawString(font, UiStyle.clip(font, k.title(), inner - font.width(when) - 16), cx + 7, ty, TEXT, false);
             g.drawString(font, when, cx + inner - 4 - font.width(when), ty, ink, false);
             ty += LINE;
-            for (FormattedCharSequence l : effect) { g.drawString(font, l, cx + 7, ty, INK, false); ty += LINE; }
-            for (FormattedCharSequence l : why) { g.drawString(font, l, cx + 7, ty, MUTED, false); ty += LINE; }
-            if (!k.active()) g.drawString(font, "Resting: it works another trade now", cx + 7, ty, 0xFFB0A080, false);
+            for (FormattedCharSequence l : effect) { g.drawString(font, l, cx + 7, ty, TEXT, false); ty += LINE; }
+            for (FormattedCharSequence l : why) { g.drawString(font, l, cx + 7, ty, TEXT_MUTED, false); ty += LINE; }
+            if (!k.active()) g.drawString(font, "Resting: it works another trade now", cx + 7, ty, WARNING, false);
             y += h + 4;
         }
         if (page.nest() != null) {
@@ -832,24 +1361,23 @@ public class TalkScreen extends Screen {
         }
         y += 2;
 
-        // ---- the tree: three branches, what it chose in gold, what is open to it in grey
-        y = heading(g, "Its knacks", cx, y, inner);
+        // ---- the tree: three branches, what it chose lit, what is open to it in grey
+        y = skillHeading(g, "Its knacks", cx, y, inner);
         String[] families = { "TRADE", "NATURE", "PURSE" };
         int gap = 6, cw = (inner - 2 * gap) / 3;
-        // The root and its three branches.
         int rootX = cx + inner / 2;
-        g.fill(rootX, y, rootX + 1, y + 4, SOFT);
-        g.fill(cx + cw / 2, y + 4, cx + 2 * (cw + gap) + cw / 2 + 1, y + 5, SOFT);
+        g.fill(rootX, y, rootX + 1, y + 4, EDGE_SOFT);
+        g.fill(cx + cw / 2, y + 4, cx + 2 * (cw + gap) + cw / 2 + 1, y + 5, EDGE_SOFT);
         y += 5;
         int colTop = y, deepest = y;
         for (int c = 0; c < 3; c++) {
             String fam = families[c];
             int colX = cx + c * (cw + gap), ink = familyInk(fam);
             int yy = colTop;
-            g.fill(colX + cw / 2, yy, colX + cw / 2 + 1, yy + 3, SOFT);
+            g.fill(colX + cw / 2, yy, colX + cw / 2 + 1, yy + 3, EDGE_SOFT);
             yy += 3;
-            String head = familyName(fam);
-            g.fill(colX, yy, colX + cw, yy + 12, 0xFF262B35);
+            String head = UiStyle.clip(font, familyName(fam), cw - 4);
+            g.fill(colX, yy, colX + cw, yy + 12, PANEL_HEADER);
             g.fill(colX, yy + 11, colX + cw, yy + 12, ink);
             g.drawString(font, head, colX + (cw - font.width(head)) / 2, yy + 2, ink, false);
             yy += 15;
@@ -858,7 +1386,7 @@ public class TalkScreen extends Screen {
             for (KnackRow k : page.chosen()) if (k.family().equals(fam)) nodes.add(new Object[]{ k.title(), k.effect(), true, k });
             for (OpenRow o : page.open()) if (o.family().equals(fam)) nodes.add(new Object[]{ o.title(), o.effect(), false, o });
             if (nodes.isEmpty()) {
-                g.drawString(font, Ui.clip(font, "nothing open", cw - 10), colX + 9, yy, OPEN_DIM, false);
+                g.drawString(font, UiStyle.clip(font, "nothing open", cw - 10), colX + 9, yy, OPEN_DIM, false);
                 yy += LINE + 2;
             }
             int lastMid = yy;
@@ -866,62 +1394,48 @@ public class TalkScreen extends Screen {
                 boolean chosen = (Boolean) n[2];
                 String title = (String) n[0];
                 List<FormattedCharSequence> body = chosen
-                    ? TextCache.splitPlain(font, "✓ day " + ((KnackRow) n[3]).day(), cw - 14)
-                    : TextCache.splitPlain(font, (String) n[1], cw - 14);
+                    ? TextCache.splitPlain(font, "✓ day " + ((KnackRow) n[3]).day(), Math.max(10, cw - 14))
+                    : TextCache.splitPlain(font, (String) n[1], Math.max(10, cw - 14));
                 int nh = 3 + LINE + body.size() * 9 + 2;
                 int nx = colX + 9;
                 lastMid = yy + 6;
-                g.fill(stem, lastMid, nx, lastMid + 1, SOFT);           // the twig to the stem
-                if (chosen) {
-                    g.fill(nx, yy, colX + cw, yy + nh, GOLD);
-                    g.fill(nx + 1, yy + 1, colX + cw - 1, yy + nh - 1, 0xFF3A3220);
-                } else {
-                    g.fill(nx, yy, colX + cw, yy + nh, OPEN_EDGE);
-                    g.fill(nx + 1, yy + 1, colX + cw - 1, yy + nh - 1, 0xFF1A1E26);
-                }
+                g.fill(stem, lastMid, nx, lastMid + 1, EDGE_SOFT);           // the twig to the stem
+                g.fill(nx, yy, colX + cw, yy + nh, chosen ? FILL : OPEN_EDGE);
+                g.fill(nx + 1, yy + 1, colX + cw - 1, yy + nh - 1, chosen ? NODE_CHOSEN : NODE_OPEN);
                 int fit = chosen ? 2 : ((OpenRow) n[3]).fit();
-                String name = Ui.clip(font, title, cw - 16);
-                g.drawString(font, name, nx + 3, yy + 3, chosen ? GOLD : fit >= 1 ? OPEN_NAME : OPEN_DIM, false);
+                String name = UiStyle.clip(font, title, cw - 16);
+                g.drawString(font, name, nx + 3, yy + 3, chosen ? TEXT : fit >= 1 ? OPEN_NAME : OPEN_DIM, false);
                 if (!chosen && fit >= 2) g.drawString(font, "•", colX + cw - 7, yy + 3, ink, false);   // it leans this way
                 int by = yy + 3 + LINE;
-                for (FormattedCharSequence l : body) { g.drawString(font, l, nx + 3, by, chosen ? MUTED : OPEN_TEXT, false); by += 9; }
+                for (FormattedCharSequence l : body) { g.drawString(font, l, nx + 3, by, chosen ? TEXT_MUTED : OPEN_TEXT, false); by += 9; }
                 if (hovering && mouseX >= nx && mouseX < colX + cw && mouseY >= yy && mouseY < yy + nh) {
-                    StringBuilder t = new StringBuilder(title).append(" — ").append((String) n[1]).append('.');
+                    StringBuilder sb = new StringBuilder(title).append(" — ").append((String) n[1]).append('.');
                     if (chosen) {
                         KnackRow k = (KnackRow) n[3];
-                        t.append(" Chosen on day ").append(k.day()).append(": ").append(k.why()).append('.');
-                        if (!k.active()) t.append(" Resting while it works another trade.");
+                        sb.append(" Chosen on day ").append(k.day()).append(": ").append(k.why()).append('.');
+                        if (!k.active()) sb.append(" Resting while it works another trade.");
                     } else {
-                        t.append(fit >= 2 ? " Open to it, and it leans this way." : fit == 1 ? " Open to it." : " Open to it, though it hardly wants it.");
+                        sb.append(fit >= 2 ? " Open to it, and it leans this way." : fit == 1 ? " Open to it." : " Open to it, though it hardly wants it.");
                     }
-                    tip = TextCache.splitPlain(font, t.toString(), 220);
+                    tip = sb.toString();
                 }
                 yy += nh + 3;
             }
-            g.fill(stem, stemTop - 3, stem + 1, lastMid + 1, SOFT);     // the branch's stem
+            g.fill(stem, stemTop - 3, stem + 1, lastMid + 1, EDGE_SOFT);     // the branch's stem
             deepest = Math.max(deepest, yy);
         }
         y = deepest + 4;
         y = wrapped(g, "It chooses for itself when a point is free, by its trade, its nature and what it cares about. "
-            + "A trade's knacks work only in that trade; the rest go with it everywhere.", cx, y, inner, MUTED);
+            + "A trade's knacks work only in that trade; the rest go with it everywhere.", cx, y, inner, TEXT_MUTED);
         g.disableScissor();
-
-        // Scrolling: how far the page runs past the bottom.
-        int content = y + skillsScroll - top0 + 2;
-        skillsMax = Math.max(0, content - (bottom - top0));
-        if (skillsScroll > skillsMax) skillsScroll = skillsMax;
-        if (skillsMax > 0) {
-            g.drawString(font, skillsScroll > 0 ? "▲" : " ", x1 - 9, top0 + 2, MUTED, false);
-            g.drawString(font, skillsScroll < skillsMax ? "▼" : " ", x1 - 9, bottom - 10, MUTED, false);
-        }
-        if (tip != null) g.renderTooltip(font, tip, mouseX, mouseY);
+        pageScroll.fit(y + pageScroll.offset() - top0 + 2, bottom - top0);
+        scrollBar(g, x1 - 5, top0 + 2, bottom - top0 - 4, pageScroll.offset(), pageScroll.max(), bottom - top0);
+        return tip;
     }
 
     /** A section heading with a rule after it; returns where the section starts. */
-    private int heading(GuiGraphics g, String text, int x, int y, int width) {
-        g.drawString(font, text, x, y, GOLD, false);
-        int rx = x + font.width(text) + 6;
-        g.fill(rx, y + 4, x + width, y + 5, SOFT);
+    private int skillHeading(GuiGraphics g, String text, int x, int y, int width) {
+        heading(g, font, text, x, y, width);
         return y + LINE + 3;
     }
 
@@ -934,17 +1448,20 @@ public class TalkScreen extends Screen {
         return y + 2;
     }
 
-    @Override
-    public boolean isPauseScreen() {
-        return false;
+    // ------------------------------------------------------------------ small helpers
+
+    private static boolean in(double mx, double my, int x, int y, int w, int h) {
+        return mx >= x && mx < x + w && my >= y && my < y + h;
+    }
+
+    /** A string of this screen's from the language file ("ui.say" is talk.mc_assistant.ui.say). */
+    private static String t(String key) {
+        String k = "talk.mc_assistant." + key;
+        return I18n.exists(k) ? I18n.get(k) : key;
     }
 
     private static String face(int mood) {
-        return mood >= 70 ? "☺" : mood >= 40 ? "•" : "☹";
-    }
-
-    private static int moodColour(int mood) {
-        return mood >= 70 ? 0xFF8BE08B : mood >= 40 ? 0xFFE0D68B : 0xFFE08B8B;
+        return mood >= MOOD_GOOD ? "☺" : mood >= MOOD_FAIR ? "•" : "☹";
     }
 
     private static String hearts(int affinity) {

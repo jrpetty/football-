@@ -1,7 +1,9 @@
-# The shop: a timber shopfront with a wide window either side of the door, a
-# counter of casks across the room with the day's goods laid out on it, shelves
-# of barrels and chests behind it, a crafting table in the back room behind the counter
-# for the shop's hands (Workshop), and a lantern over the door.
+# The shop: a timber-framed shop with its gable to the street, a wide window either
+# side of the door and a lantern hung from a beam end over it, a window in the gable. Inside, a rug
+# from the door to the counter of casks across the room (the day's goods laid out on it, a gap in the
+# middle to get behind), a cask either side of the door with more goods on it, and behind the counter
+# the shelves: a cask on a cask, a chest either side of the hands' bench (Workshop) with a lamp on it.
+# Every chest can be opened and every cask got at. Lanterns hung from the loft over the floor.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name shop
 layer -1
@@ -17,17 +19,17 @@ layer -1
 layer 0
 .........
 .LwwwwwL.
-.wCQCQ.w.
-.wT....w.
+.wQCTC.w.
+.w.....w.
 .wQQ.QQw.
-.w.....w.
-.w.....w.
+.w..X..w.
+.wQ.X.Qw.
 .LwwDwwL.
 .........
 layer 1
 .........
-.LWWWWWL.
-.WQQQQ.W.
+.LWWGWWL.
+.WQ.l..W.
 .G.....G.
 .W.....W.
 .G.....G.
@@ -38,59 +40,59 @@ layer 2
 .........
 .LWWWWWL.
 .W.....W.
-.Wj....W.
-.W....jW.
+.W..j..W.
 .W.....W.
+.Wj...jW.
 .W.....W.
 .LWWWWWL.
 ....j....
 layer 3
-vvvvvvvvv
-.L-----L.
-.|fffff|.
-.|fffff|.
-.|fffff|.
-.|fffff|.
-.|fffff|.
-.L-----L.
-^^^^^^^^^
+>.......<
+>L-----L<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>L-----L<
+>...|...<
 layer 4
-.........
-vvvvvvvvv
-.W.....W.
-.W.....W.
-.W.....W.
-.W.....W.
-.W.....W.
-^^^^^^^^^
-.........
+.>.....<.
+.>WWWWW<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>WWGWW<.
+.>.....<.
 layer 5
-.........
-.........
-vvvvvvvvv
-.W.....W.
-.W.....W.
-.W.....W.
-^^^^^^^^^
-.........
-.........
+..>...<..
+..>WWW<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>WWW<..
+..>...<..
 layer 6
-.........
-.........
-.........
-vvvvvvvvv
-.W.....W.
-^^^^^^^^^
-.........
-.........
-.........
+...>.<...
+...>W<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>W<...
+...>.<...
 layer 7
-.........
-.........
-.........
-.........
-_________
-.........
-.........
-.........
-.........
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....

@@ -410,4 +410,57 @@ public class IntegrityGameTests {
             }
         });
     }
+
+    /** A town's builder raises a well where a torch stands in one of its curb's cells and the ground is grass under
+     *  its footing: the torch comes out and the curb's stone goes in, the footing is laid of stone, not left as grass. */
+    @GameTest(template = "empty", timeoutTicks = 6000, batch = "ti05_builder_to_the_drawing")
+    public static void ti05_builder_to_the_drawing(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        level.setDayTime(1000);
+        int x = 1628000;
+        Kit.hold(level, x, Z, 48);
+        Kit.prepare(level, x, Z, 48);
+        BlockPos heart = Kit.surface(level, x, Z);
+        com.jrpetty.mcassistant.entity.VillageFolkEntity builder = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, heart, 0.0F);
+        helper.assertTrue(builder != null, "a village");
+        UUID id = builder.ownerId();
+        BlockPos at = Kit.surface(level, x - 30, Z + 30);
+        java.util.List<com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement> plan =
+            com.jrpetty.mcassistant.entity.goal.BuildGoal.plan("well", at, net.minecraft.core.Direction.NORTH, 13);
+        BlockPos curb = null;
+        for (com.jrpetty.mcassistant.entity.goal.BuildGoal.Placement p : plan) {
+            if (p.style() == com.jrpetty.mcassistant.entity.goal.Blueprints.Style.MASONRY && p.pos().getY() == at.getY()) { curb = p.pos(); break; }
+        }
+        helper.assertTrue(curb != null, "the well has a curb");
+        level.setBlock(curb, net.minecraft.world.level.block.Blocks.TORCH.defaultBlockState(), 3);
+        for (int i = 0; i < 4; i++) builder.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.COBBLESTONE, 64));
+        builder.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE_BRICKS, 32));
+        builder.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_PLANKS, 32));
+        builder.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_LOG, 16));
+        builder.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_STAIRS, 32));
+        builder.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.OAK_FENCE, 8));
+        builder.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.LANTERN, 2));
+        builder.insertItem(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.WATER_BUCKET, 1));
+        builder.enqueue(com.jrpetty.mcassistant.entity.Job.buildAt("well", at, net.minecraft.core.Direction.NORTH, 0));
+        final BlockPos torchAt = curb;
+        helper.onEachTick(() -> {
+            long t = helper.getTick();
+            if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);
+            if (!Villages.builtList(id).contains("well")) {
+                if (t >= 5900) helper.fail("the well was not built: " + builder.debugLine());
+                return;
+            }
+            Ledger.Building b = new Ledger.Building("well", at, net.minecraft.core.Direction.NORTH);
+            java.util.List<Restore.Fix> fixes = Restore.diff(level, b, "well");
+            Kit.log("ti05 the well stands at tick " + t + ": " + fixes);
+            Kit.Expect e = new Kit.Expect();
+            e.that(!level.getBlockState(torchAt).is(net.minecraft.world.level.block.Blocks.TORCH), "the torch in the curb came out: " + level.getBlockState(torchAt));
+            int wrong = 0;
+            for (Restore.Fix f : fixes) if (f.kind() == Restore.Kind.WRONG) wrong++;
+            e.that(wrong == 0, "nothing of another kind left in its cells (the footing's grass included): " + wrong);
+            if (!e.clean()) { helper.fail(e.summary()); return; }
+            helper.succeed();
+        });
+    }
 }

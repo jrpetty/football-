@@ -499,7 +499,10 @@ public class BuildGoal extends Goal {
         BlockPos base = centered ? anchor
             : ("fortify".equals(structure) && assistant.getHome() != null
                 ? assistant.getHome() : assistant.feetPos());
-        layout(structure, base, facing, centered, perimeterRadius, plan);
+        // [styles] A town's builder builds its theme's own design of it, where the theme has one (Themes.design).
+        String drawing = centered && assistant.isSettler() && assistant.ownerId() != null
+            ? com.jrpetty.mcassistant.entity.Themes.design(assistant.ownerId(), structure) : structure;
+        layout(drawing, base, facing, centered, perimeterRadius, plan);
         // A village with its storehouse standing (raised on an earlier run of this building, or
         // anywhere on its square) lays no second one: the cube's cells are left be.
         if (assistant.isSettler() && assistant.ownerId() != null
@@ -509,7 +512,7 @@ public class BuildGoal extends Goal {
         // A settlement's builders level and clear the ground they build on; a hired
         // assistant building beside a player's own trees and terraces does not.
         if (centered && assistant.isSettler()) {
-            if ("fortify".equals(structure)) followTheGround(base); else addTerrainWork(base, structure);
+            if ("fortify".equals(structure)) followTheGround(base); else addTerrainWork(base, drawing);
         }
         // What is in the way comes down first; then bottom-up, so nothing floats while we work;
         // and the lanterns, flowers and rugs last, when what they hang from or stand on is there.
@@ -577,8 +580,9 @@ public class BuildGoal extends Goal {
         int[] all = Blueprints.has(structure) ? Blueprints.fullHalf(structure) : new int[]{ g[0], g[1] };
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         for (Placement p : plan) taken.add(p.pos());
+        // [integrity] The fill under the floor is earth where earth will do (it is never seen), its stone footing above it.
         for (BlockPos c : fillCells(assistant.level(), base, facing, g[0], g[1])) {
-            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, Blueprints.Style.FOUNDATION, Blueprints.Way.UP));
+            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, Blueprints.Style.SOIL, Blueprints.Way.UP));
         }
         Direction right = facing.getClockWise();
         int top = Blueprints.has(structure) ? 12 : 5;
@@ -672,6 +676,22 @@ public class BuildGoal extends Goal {
      */
     public static boolean soft(BlockState st) {
         return st.canBeReplaced() || st.is(net.minecraft.tags.BlockTags.SMALL_FLOWERS);
+    }
+
+    /**
+     * [tidy] Bare ground the world made (grass, dirt, podzol, mycelium, moss, a worn path) where the drawing wants a
+     * block laid: no floor of a building (Floors, the tidy crew's round; the builder takes it out and lays the drawing's
+     * block in its place: [integrity] wrongHere). A grass block is no soft cell, so it used to count as built: every
+     * house on a meadow kept its grass for a floor, and the tall grass and flowers came up through it again.
+     */
+    public static boolean earthUnderfoot(Placement p, BlockState st) {
+        return p.part() == Part.BLOCK && p.style() != Blueprints.Style.SOIL && bareEarth(st);
+    }
+
+    /** [tidy] Ground grass grows on, or will: no floor of a building. */
+    public static boolean bareEarth(BlockState st) {
+        return st.is(Blocks.GRASS_BLOCK) || st.is(Blocks.DIRT) || st.is(Blocks.COARSE_DIRT) || st.is(Blocks.PODZOL)
+            || st.is(Blocks.MYCELIUM) || st.is(Blocks.ROOTED_DIRT) || st.is(Blocks.MOSS_BLOCK) || st.is(Blocks.DIRT_PATH);
     }
 
     /** May the wall stand on this column: open ground the world made, not a floor, a
@@ -1287,21 +1307,68 @@ public class BuildGoal extends Goal {
 
     @Nullable
     private BlockState takeStyled(Blueprints.Style style) {
-        // Whatever a roof falls back on, it is never iron or anything else precious: a roof of the
-        // village's iron is its tools and armour gone (Masonry.fitForARoof). No wall of it either.
-        Predicate<ItemStack> fit = isRoof(style) ? com.jrpetty.mcassistant.entity.Masonry::fitForARoof
-            : s -> !com.jrpetty.mcassistant.entity.Palettes.precious(s);
-        // The village's own look first (Palettes): its wood and its stone for this part, best first.
-        for (net.minecraft.world.item.Item it : com.jrpetty.mcassistant.entity.Palettes.ranked(assistant.ownerId(), style)) {
-            BlockState st = takeBlockMatching(s -> s.is(it) && fit.test(s));
+        // [styles] Down the tiers (tiers()): the town's own look, the builder's own order, the theme's stand-ins for the
+        // town's age, and (a young town) any proper block; never a forbidden one, nor rough fill once the town is past it.
+        for (Predicate<ItemStack> tier : tiers(assistant.ownerId(), style)) {
+            BlockState st = tier == null ? takeSpoil() : takeBlockMatching(tier);
             if (st != null) return st;
         }
-        BlockState st = takeBlockMatching(preferred(style).and(fit));
-        if (st == null) st = takeBlockMatching(secondBest(style).and(fit));
-        if (st == null && style == Blueprints.Style.SOIL) st = takeSpoil();
-        if (st == null && style != Blueprints.Style.SOIL) st = takeBlockMatching(s -> isBuildingBlock(s) && !isSoil(s) && fit.test(s));
-        if (st == null) st = takeBlockMatching(s -> isBuildingBlock(s) && fit.test(s));
-        return st;
+        return null;
+    }
+
+    /**
+     * [styles] The tiers a builder goes down for a block of this kind, in order, each taken cheapest first: the
+     * village's own look first (Palettes: its wood and its stone for this part, best first); what the drawing wants of
+     * any make (preferred); the next best thing (secondBest); the theme's stand-ins for the town's age (Materials); and,
+     * in a young town (or for a part no list governs), any building block that is not earth, then any at all (null:
+     * the builder's own spoil, for earth). Whatever a roof falls back on, it is never iron or anything else precious: a
+     * roof of the village's iron is its tools and armour gone (Masonry.fitForARoof). No wall of it either, nor of the
+     * Nether's or the End's stone, nor (from the Iron Age) of earth, gravel or sand (Materials).
+     */
+    public static List<Predicate<ItemStack>> tiers(@Nullable java.util.UUID town, Blueprints.Style style) {
+        Predicate<ItemStack> fit = isRoof(style) ? com.jrpetty.mcassistant.entity.Masonry::fitForARoof
+            : s -> !com.jrpetty.mcassistant.entity.Palettes.precious(s);
+        List<Predicate<ItemStack>> out = new ArrayList<>();
+        for (net.minecraft.world.item.Item it : com.jrpetty.mcassistant.entity.Palettes.ranked(town, style)) {
+            out.add(s -> s.is(it) && fit.test(s));
+        }
+        Predicate<ItemStack> ok = fit.and(s -> com.jrpetty.mcassistant.entity.Materials.suitable(town, style, s));
+        out.add(preferred(style).and(ok));
+        out.add(secondBest(style).and(ok));
+        for (Predicate<ItemStack> p : com.jrpetty.mcassistant.entity.Materials.fallback(town, style)) {
+            out.add(p.and(ok));
+        }
+        if (com.jrpetty.mcassistant.entity.Materials.anyGoes(town, style)) {
+            if (style == Blueprints.Style.SOIL) out.add(null);
+            else out.add(s -> isBuildingBlock(s) && !isSoil(s) && ok.test(s));
+            // [integrity] Earth only where earth goes (a flower box, a fill under the floor): short of anything else the
+            // builder runs out, and the next load brings the right thing.
+            if (earthWill(style)) out.add(s -> isBuildingBlock(s) && ok.test(s));
+        }
+        return out;
+    }
+
+    /** [styles] Tests: what a builder of this town carrying these would lay in a block of this kind (null: nothing, it waits). */
+    @Nullable
+    public static net.minecraft.world.item.Item choose(@Nullable java.util.UUID town, Blueprints.Style style, List<ItemStack> held) {
+        for (Predicate<ItemStack> tier : tiers(town, style)) {
+            if (tier == null) continue;
+            ItemStack best = null;
+            int bestCost = Integer.MAX_VALUE;
+            for (ItemStack s : held) {
+                if (s.isEmpty() || !tier.test(s) || !(s.getItem() instanceof BlockItem)) continue;
+                int cost = blockCost(s);
+                if (cost < bestCost) { best = s; bestCost = cost; }
+                if (cost == 0) break;
+            }
+            if (best != null) return best.getItem();
+        }
+        return null;
+    }
+
+    /** [integrity] May this style of cell be laid in earth: a flower box's soil, a fill under the floor, a hired hand's plain block. */
+    private static boolean earthWill(Blueprints.Style style) {
+        return style == Blueprints.Style.SOIL || style == Blueprints.Style.GENERIC;
     }
 
     /** Set a block the way the drawing has it: stairs facing and the right way up, logs lying the

@@ -162,7 +162,7 @@ public final class Riding {
     public static boolean taken(UUID animal) {
         for (Ride r : RIDES.values()) if (r.horse.equals(animal)) return true;
         for (Pack p : PACKS.values()) if (p.donkey.equals(animal)) return true;
-        return false;
+        return Wagons.harnessed(animal);                                   // [wagons] in a wagon's shafts
     }
 
     /** A free saddled horse in the stable, the quickest: tamed, the village's, grown, well, and worth riding. */
@@ -876,6 +876,7 @@ public final class Riding {
      * stores). The carrier fetches it before it sets off.
      */
     public static void packFor(ServerLevel level, Villages.Village v, VillageFolkEntity carrier) {
+        if (Wagons.hitch(level, v, carrier)) return;                       // [wagons] the town's wagon carries it instead
         if (PACKS.containsKey(carrier.getUUID()) || RIDES.containsKey(carrier.getUUID())) return;
         Stables.Stable st = Stables.stable(v.id());
         BlockPos home = st != null ? st.anchor() : Stables.home(v.id());

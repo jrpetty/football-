@@ -39,6 +39,10 @@ import java.util.function.Predicate;
  */
 public final class FolkTalk {
 
+    /** [market] Asked about the town's trade with its neighbours (TradeDeals.talk), not about a folk's own trade. */
+    static final String[] TRADE_WORDS = { "trade with", "we trade", "town trade", "our deals", "trade deal", "trading with",
+        "export", "import", "caravans", "what do we sell", "what do we buy" };
+
     private FolkTalk() {}
 
     // ------------------------------------------------------------------ entry
@@ -198,7 +202,8 @@ public final class FolkTalk {
             case GUIDE -> Guide.ask(f, p, text);
             case PRAISE -> praise(f, p, op, day);
             // and its savings and its mortgage at the bank; [econ-prices] or, asked about prices, how they stand (Purchases)
-            case WORTH -> has(text.toLowerCase(java.util.Locale.ROOT), "price", "dear", "cost of living", "the slate")
+            case WORTH -> has(text.toLowerCase(java.util.Locale.ROOT), TRADE_WORDS) ? TradeDeals.talk(f)          // [market] the town's trade
+                : has(text.toLowerCase(java.util.Locale.ROOT), "price", "dear", "cost of living", "the slate")
                 ? Purchases.talk(f) : Wealth.talk(f, text) + Bank.talkLine(f);
             case KNACK -> knack(f);
             case ATLAS -> Scouts.tell(f);
@@ -295,7 +300,48 @@ public final class FolkTalk {
         handle(f, p, TalkTopic.OPEN, "");
     }
 
+    /**
+     * [talk-ui] An operator's look at the talk screen, for the pictures (/village talkview): it opens on this folk at
+     * {@code category} (chat, about, ask, trade, town, world, profile or skills), the GUI at {@code guiScale} when it is
+     * 1 or more (0 leaves it as it is), the window at {@code window} ("640x480") when it is set. Nothing is said, and
+     * nothing changes between the two.
+     */
+    public static void show(VillageFolkEntity f, ServerPlayer p, String category, int guiScale, String window) {
+        String size = window == null ? "" : window.toLowerCase(Locale.ROOT).replaceAll("[^0-9x]", "");
+        String extra = "show=" + category.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "")
+            + (guiScale > 0 ? " guiscale=" + Math.min(6, guiScale) : "")
+            + (size.matches("\\d{3,4}x\\d{3,4}") ? " window=" + size : "");
+        send(f, p, true, "", "", extra);
+    }
+
+    /**
+     * [talk-ui] What the talk screen needs to offer only what applies (FolkReplyPayload.context): space-separated
+     * flags. Worked out once a reply, never a tick.
+     */
+    public static String talkContext(VillageFolkEntity f, ServerPlayer p) {
+        StringBuilder sb = new StringBuilder("v1 trade=").append(f.isBaby() ? "CHILD" : f.stationTask().name());
+        if (f.isBaby()) sb.append(" child");
+        if (f.isElder()) sb.append(" elder");
+        if (!f.isBaby() && f.tradeLevel(f.stationTask()) >= Lessons.MASTER) sb.append(" master");
+        UUID village = f.ownerId();
+        if (village != null) {
+            Standing.View v = Standing.of(village, p.getUUID(), f.level().getGameTime());
+            sb.append(" standing=").append(v.title().name());
+            if (Citizens.is(village, p.getUUID())) sb.append(" citizen");
+            if (PlayerLeader.leads(village, p.getUUID())) sb.append(" leader");
+            if (Laws.owes(village, p.getUUID()) > 0) sb.append(" fine");
+        }
+        if (Birthdays.today(f)) sb.append(" birthday");
+        if (!f.isBaby() && Interviews.shortlisted(f)) sb.append(" interview");
+        if (PlayerCivic.isApprenticeOf(f, p)) sb.append(" apprentice");
+        return sb.toString();
+    }
+
     private static void send(VillageFolkEntity f, ServerPlayer p, boolean open, String said, String asked) {
+        send(f, p, open, said, asked, "");
+    }
+
+    private static void send(VillageFolkEntity f, ServerPlayer p, boolean open, String said, String asked, String extra) {
         Persona me = f.persona();
         int aff = me.affinity(p.getUUID());
         String about = (f.isElder() ? "Elder · " : "") + School.title(f) + (f.isBaby() ? "Child" : f.stationTask().title) + " · "
@@ -315,7 +361,8 @@ public final class FolkTalk {
             me.mood(), Persona.moodWord(me.mood()), aff, Persona.standing(aff), f.isFollowing(p), asked,
             where, errand, Errands.canDeliver(f, p) || Trade.canPay(f, p),
             clip(nowDoing(f), 200), clip(card(f), 1800), clip(Guide.encode(Guide.places(f, p)), 900),
-            clip(FolkSkills.encode(f), FolkReplyPayload.MAX_SKILLS - 100)));
+            clip(FolkSkills.encode(f), FolkReplyPayload.MAX_SKILLS - 100),
+            clip(talkContext(f, p) + (extra.isEmpty() ? "" : " " + extra), FolkReplyPayload.MAX_CONTEXT - 16)));
     }
 
     private static String clip(String s, int most) {
@@ -347,7 +394,12 @@ public final class FolkTalk {
         // On horseback, or about the horses (Stables, Riding): "Riding Bay to the north mine".
         String horses = Stables.doing(f);
         if (horses != null) return horses;
-        if (f.offWorkNow()) return park != null ? "Off work: " + park.substring(0, 1).toLowerCase(Locale.ROOT) + park.substring(1) : "Off work";
+        if (f.offWorkNow()) {
+            // [folk-ui] Off work, and why: its break, the day of rest, or the day's work done (it said "Off work" for each).
+            String why = f.offWorkWhy();
+            String head = why.equals("on a break") ? "On its break" : why.equals("the day of rest") ? "The day of rest" : "Off work";
+            return park != null ? head + ": " + park.substring(0, 1).toLowerCase(Locale.ROOT) + park.substring(1) : head;
+        }
         String delivery = StoreDeliveries.doing(f);            // [econ-store] a delivery for the shop
         if (delivery != null) return delivery;
         String run = Couriers.doing(f);
@@ -660,8 +712,12 @@ public final class FolkTalk {
 
     /** A reason for a mood, as the folk would put it. */
     static String reason(VillageFolkEntity f, String why) {
+        return reason(f, why, f.getRandom());
+    }
+
+    /** As above, its words picked with this randomness ([folk-ui] FolkThought's, steady for the day). */
+    static String reason(VillageFolkEntity f, String why, RandomSource r) {
         Persona me = f.persona();
-        RandomSource r = f.getRandom();
         return switch (why) {
             case "slept" -> pick(r, "I slept in my own bed last night.", "A good night's sleep does wonders.");
             case "rough" -> pick(r, "I didn't get a proper bed last night.", "Slept rough. My back knows it.");
@@ -1381,6 +1437,7 @@ public final class FolkTalk {
                 "your worth", "you worth", "how much are you", "get paid", "your pay", "best paid", "highest paid", "paid the most",
                 "richest", "most money",
                 "prices", "how dear", "cost of living", "the slate")) return TalkTopic.WORTH;    // [econ-prices] prices, too
+        if (has(t, TRADE_WORDS)) return TalkTopic.WORTH;                                  // [market] and the town's trade
         if (has(t, "good at", "your skill", "talent", "best at", "your level", "what level", "how skilled", "your knack")) return TalkTopic.KNACK;
         if (has(t, "cave", "underground", "mineshaft", "spawner", "dungeon", "ravine")) return TalkTopic.CAVES;     // [caves]
         if (has(t, "fashion", "in style", "the rage", "trend", "what are you wearing", "your coat", "your hat", "your scarf",

@@ -49,9 +49,10 @@ import java.util.function.Predicate;
  * <li><b>What sits.</b> Food with more than four days' cover, and a ware nobody has bought for four days, goes
  *     back to the stores, all but what the shelves keep.</li>
  * <li><b>The prices</b> it sets with the keeper: a margin over what a thing costs in the town (PriceIndex),
- *     starting at a quarter, raised a twentieth when a ware sold out, lowered a twentieth when it sits unsold
- *     three days (to a twentieth over at the least, three fifths at the most, food never more than seven
- *     twentieths over), drifting back to a quarter otherwise. The slow-seller markdown (Stockroom) stays.</li>
+ *     starting at a tenth (the town's one spread: Worth.SELL), raised three in the hundred when a ware sold out,
+ *     lowered as much when it sits unsold three days (to a twentieth over at the least, a quarter at the most, food
+ *     never more than a fifth over), drifting back to a tenth otherwise. The same margin for folk and players at
+ *     every counter (Market.askLot). The slow-seller markdown (Stockroom) stays.</li>
  * <li><b>With no stock keeper</b> the keeper notices only what has run out at its counter: a lot of each, from the
  *     storehouse, four wares a day at most. No food first, no orders to the crafters, no chasing, nothing sent
  *     back, the prices left as they are.</li>
@@ -67,7 +68,9 @@ public final class StockKeeper {
     static final String ORDERED_BY = "the stock keeper";
     static final int WEEK = 7;
     /** The margin over what a thing costs in the town. */
-    static final double BASE_MARKUP = 1.25, LEAST_MARKUP = 1.05, MOST_MARKUP = 1.60, FOOD_MOST_MARKUP = 1.35, STEP = 0.05;
+    static final double BASE_MARKUP = com.jrpetty.mcassistant.village.Worth.SELL, LEAST_MARKUP = com.jrpetty.mcassistant.village.Worth.LEAST_MARGIN,
+        MOST_MARKUP = com.jrpetty.mcassistant.village.Worth.MOST_MARGIN, FOOD_MOST_MARKUP = com.jrpetty.mcassistant.village.Worth.FOOD_MOST_MARGIN,
+        STEP = 0.03;                                       // [market] the town's one spread (Worth), the keeper's nudge within it
     /** Days between counts, and a little over (the order-up-to level is this much past the reorder point). */
     static final double REVIEW_DAYS = 2.0;
     /** A ware nobody has bought for this many days goes back to the stores; food with this much cover. */

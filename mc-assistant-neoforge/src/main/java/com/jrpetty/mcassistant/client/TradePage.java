@@ -52,6 +52,10 @@ public final class TradePage {
         List<CompoundTag> deals = compounds(m, "deals");
         if (deals.isEmpty()) lines.add(new Line('M', null, "None standing. An envoy and the other town's leader strike them before the board."));
         for (CompoundTag c : deals) lines.add(new Line('D', c, ""));
+        List<String> transit = strings(m, "transit");                                  // [market] the loads on the road
+        lines.add(new Line('H', null, "Under way"));
+        if (transit.isEmpty()) lines.add(new Line('M', null, "Nothing on the road just now."));
+        for (String t : transit) lines.add(new Line('N', null, t));
         lines.add(new Line('H', null, "The talks"));
         List<String> talks = strings(m, "talks");
         if (talks.isEmpty()) lines.add(new Line('M', null, "No talks yet."));
@@ -138,6 +142,7 @@ public final class TradePage {
                     if (over) {
                         tip = new ArrayList<>();
                         tip.add(Component.literal("With " + c.getString("partner") + ": " + c.getString("terms")));
+                        if (!c.getString("why").isEmpty()) tip.add(Component.literal("Why: " + c.getString("why")));   // [market]
                         tip.add(Component.literal(made + "; short " + c.getInt("shortUs") + " ourselves, " + c.getInt("shortThem") + " by them"));
                         tip.add(Component.literal((gained >= 0 ? "+" : "") + gained + " coin gained by our own prices so far ("
                             + (c.getInt("expected") >= 0 ? "+" : "") + c.getInt("expected") + " a delivery when it was struck)"));
