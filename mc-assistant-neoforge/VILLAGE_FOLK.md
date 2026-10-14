@@ -1344,7 +1344,7 @@ with plain blocks, so a building is never held up.
 | Well | 5×5 | Stone curb round water, four posts, a little roof with a hanging lantern |
 | Smeltery | 9×9 | Stone forge open to the street, three furnaces under a brick chimney, anvil, bench and chests |
 | Workshop | 9×9 | Timber workroom with a wide door, a bench and the tailor's loom, furnace, barrels and a hayloft up a ladder |
-| Granary | 7×7 | Squat store on a stone base, a stack of hay to the rafters between two chests of grain, hay by the door, a lantern under the eaves, hipped roof |
+| Granary | 7×7 | Squat store on a stone base, three chests of grain along the back, hay stacked to the rafters either side of the door, a lantern under the eaves, hipped roof |
 | Market | 11×11 | Open hall on log posts under a broad hipped roof, stalls of hay and barrels, a fountain, lanterns hung from the eaves over the stalls |
 | Meeting hall | 11×19 | Long timber hall: tall windows, a pair of doors up steps between lamp posts, a long table, lanterns hung from the rafters down both sides, the elder's seat |
 | Chapel | 9×21 | Stone nave with tall windows, a bell tower over the door (a ladder up to its bell), pews, an altar and lights hung from tie beams |

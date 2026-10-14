@@ -1,5 +1,5 @@
 # The granary: a squat round-shouldered store on a stone base, hay stacked to
-# the rafters, three chests of grain and a conical roof.
+# the rafters either side of the door, three chests of grain along the back and a conical roof.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name granary
 layer -1
@@ -13,7 +13,7 @@ FFFFFFF
 layer 0
 .......
 .LwwwL.
-.wCyCw.
+.wCCCw.
 .w...w.
 .wy.yw.
 .LwDwL.
@@ -21,17 +21,17 @@ layer 0
 layer 1
 .......
 .LwwwL.
-.w.y.w.
 .w...w.
 .w...w.
+.wy.yw.
 .Lw.wL.
 .......
 layer 2
 .......
 .LWGWL.
-.W.y.W.
 .W...W.
 .W...W.
+.Wy.yW.
 .LWWWL.
 .......
 layer 3

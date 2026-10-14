@@ -674,7 +674,7 @@ between two stone pillars with lanterns, steps up to it front and back.""")
 
 def granary():
     b = B("granary", 3, 3, """The granary: a squat round-shouldered store on a stone base, hay stacked to
-the rafters, three chests of grain and a conical roof.""")
+the rafters either side of the door, three chests of grain along the back and a conical roof.""")
     b.fill(-2, 2, -1, -2, 2, "F")
     b.set(-3, -1, 0, "F")
     b.set(3, -1, 0, "F")
@@ -687,13 +687,13 @@ the rafters, three chests of grain and a conical roof.""")
     b.set(0, 0, -2, "D")
     b.set(0, 1, -2, ".")
     b.set(0, 2, 2, "G")
-    # [blueprints] The chests of grain either side of a stack of hay to the rafters: nothing on a chest's lid.
-    b.set(-1, 0, 1, "C")
-    b.set(1, 0, 1, "C")
-    for h in (0, 1, 2):
-        b.set(0, h, 1, "y")
-    b.set(-1, 0, -1, "y")
-    b.set(1, 0, -1, "y")
+    # [blueprints] The three chests of grain along the back, nothing on their lids; the hay stacked to the
+    # rafters either side of the door.
+    for x in (-1, 0, 1):
+        b.set(x, 0, 1, "C")
+    for x in (-1, 1):
+        for h in (0, 1, 2):
+            b.set(x, h, -1, "y")
     hip(b, -3, 3, -3, 3, 4)
     b.set(0, 3, -3, "j")                                    # [blueprints] the door lit, a lantern under the eaves
     b.write()
