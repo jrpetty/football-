@@ -268,6 +268,7 @@ public final class WindowBoxes {
     /** A box set under a window, its back to the wall, its flower the one it was made with. */
     static boolean put(ServerLevel level, BlockPos at, Direction out, ItemStack box) {
         if (!level.getBlockState(at).isAir()) return false;
+        if (!TownBlocks.mayPlace(level, at, TownBlocks.Why.WINDOW_BOX)) return false;          // [integrity] never on a step or a way in
         BlockState s = WorkItems.WINDOW_BOX.get().defaultBlockState().setValue(WindowBoxBlock.FACING, out)
             .setValue(WindowBoxBlock.FLOWER, WindowBoxItem.flower(box))
             .setValue(WindowBoxBlock.BLOOM, inFlowerSeason(level, at));

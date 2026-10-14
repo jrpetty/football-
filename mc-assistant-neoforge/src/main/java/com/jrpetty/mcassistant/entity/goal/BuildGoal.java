@@ -176,6 +176,9 @@ public class BuildGoal extends Goal {
     private boolean lastLook;
     private int myGen;
     private int perimeterRadius = 5; // fortify ring radius (overridable for a big compound)
+    /** [integrity] The anchor of the town's building this is (an anchored settler's build): the gate (TownBlocks)
+     *  lets it set its own building's cells and nobody else's. Null for a hired hand's build. */
+    @Nullable private BlockPos ownAnchor;
 
     public BuildGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -462,6 +465,7 @@ public class BuildGoal extends Goal {
         this.skipped = 0;
         this.perimeterRadius = 5;
         this.plan.clear();
+        this.ownAnchor = null;
 
         // arg is "structure" or, for the anchored homestead builds, an encoded
         // "structure|x,y,z,facing[,radius]" so the compound is placed on a fixed
@@ -487,6 +491,7 @@ public class BuildGoal extends Goal {
             return;
         }
         boolean centered = anchor != null;
+        if (centered && assistant.isSettler()) this.ownAnchor = anchor.immutable();      // [integrity]
         this.facing = centered && anchorFacing != null ? anchorFacing
             : Direction.fromYRot(assistant.getYRot());
         // Anchored: build centered on the given spot. Otherwise fortify rings the
@@ -527,7 +532,8 @@ public class BuildGoal extends Goal {
             // Clearing takes nothing out of the pack. A plant to be cleared stands in a soft cell, and counted
             // here it asked for "7 nothing" that no stores could ever hold: no house was built for sixty days.
             if (p.part() == Part.CLEAR) continue;
-            if (soft(assistant.level().getBlockState(p.pos()))) {
+            BlockState there = assistant.level().getBlockState(p.pos());
+            if (soft(there) || wrongHere(there, p)) {                        // [integrity] a foreign block in its cell is work too
                 pending.merge(p.part(), 1, Integer::sum);
             }
         }
@@ -817,6 +823,12 @@ public class BuildGoal extends Goal {
                 if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st) || isWildPlant(st)) { target = p; break; }   // [econ-store] a plant
                 // [districts] Earth above a park's lawn, still to be dug away (entity/ParkGround).
                 if (com.jrpetty.mcassistant.entity.ParkGround.dig(p, st)) { target = p; break; }
+            } else if (wrongHere(st, p) && mayHere(p.pos())) {
+                // [integrity] Something that is no part of the building in one of its cells (a block of earth where its
+                // wall goes, a fence post, a lantern): it comes out, and the drawing's block goes in. Passed over as
+                // "filled", it stood there for good, and the building was never what it was drawn to be.
+                target = p;
+                break;
             } else if (soft(st)) {
                 if (!assistant.getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p.pos()))) {
                     target = p;
@@ -929,6 +941,12 @@ public class BuildGoal extends Goal {
             return;
         }
 
+        // [integrity] The gate: this building's own cells and open ground, never another's, nor a doorway or a road.
+        if (!mayHere(pos)) {
+            cursor++;
+            return;
+        }
+
         // A block about every third of a second: quicker for a practised builder and in a happy
         // village, slower in a sad one. Counted in hundredths of a tick (buildPaceHundredths), and
         // what is over carried to the next block, so a pace of 5.4 lays five blocks in 27 ticks:
@@ -942,6 +960,10 @@ public class BuildGoal extends Goal {
 
         BlockState state;
         Part part = target.part();
+        // [integrity] A foreign block in the cell comes out first, into the pack (what a chest held with it).
+        if (part != Part.CLEAR && wrongHere(assistant.level().getBlockState(pos), target)) {
+            takeOut(pos);
+        }
         if (part == Part.CLEAR) {
             // Taken down like anybody would: what it gives goes in the pack (a tree's
             // trunk is wood the village wants), not on the floor to rot.
@@ -1068,6 +1090,44 @@ public class BuildGoal extends Goal {
         nearest = Double.MAX_VALUE;
         assistant.noteBuildProgress();
         cursor++;
+    }
+
+    /** [integrity] May this builder set this cell (TownBlocks)? A hired hand's build is not the town's to gate. */
+    private boolean mayHere(BlockPos pos) {
+        if (ownAnchor == null || !assistant.isSettler()) return true;
+        com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.get(assistant.ownerId());
+        if (v == null) return true;
+        return com.jrpetty.mcassistant.entity.TownBlocks.mayBuild(assistant.level(), v, pos, ownAnchor,
+            com.jrpetty.mcassistant.entity.TownBlocks.Why.BUILD);
+    }
+
+    /**
+     * [integrity] Is what stands in this cell of a town's building something that must come out for the drawing's
+     * block to go in: a thing of another kind altogether (a fence, a lantern, a sign, a field's crop, earth where
+     * a wall or a floor goes), not merely the right part in another shape or wood? Only for the town's own
+     * anchored builds; never a block with something kept in it, and never a door or a bed half (two-block parts
+     * are put right by the survey, Restore).
+     */
+    private boolean wrongHere(BlockState st, Placement p) {
+        if (ownAnchor == null || !assistant.isSettler() || p.part() == Part.CLEAR || p.part() == Part.STOREHOUSE) return false;
+        if (soft(st) || st.hasBlockEntity()) return false;
+        if (st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock
+                || st.getBlock() instanceof net.minecraft.world.level.block.BedBlock) return false;
+        if (com.jrpetty.mcassistant.entity.ParkGround.digging(p)) return false;
+        if (com.jrpetty.mcassistant.entity.TownBlocks.fitting(st)) return false;
+        return com.jrpetty.mcassistant.entity.Restore.judge(st, p) == com.jrpetty.mcassistant.entity.Restore.Kind.WRONG;
+    }
+
+    /** [integrity] Take what stands in a cell out, like anybody would: what it gives into the pack, the rest dropped. */
+    private void takeOut(BlockPos pos) {
+        BlockState there = assistant.level().getBlockState(pos);
+        if (assistant.level() instanceof net.minecraft.server.level.ServerLevel server) {
+            for (ItemStack drop : net.minecraft.world.level.block.Block.getDrops(there, server, pos, null, assistant, assistant.getMainHandItem())) {
+                ItemStack left = assistant.insertItem(drop);
+                if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(server, pos, left);
+            }
+        }
+        assistant.level().setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
     }
 
     /** Lay a bed foot-first into the room, head against the wall behind it.

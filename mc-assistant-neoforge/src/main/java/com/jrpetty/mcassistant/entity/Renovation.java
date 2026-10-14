@@ -67,8 +67,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * the new design is left where it stands and counted among the house's beds. The residents stay: the house is the same
  * house, on the same ground. When nothing is left to do it is stamped as current.
  *
- * <p>This is written against Renovation.Engine, the small survey-and-repair interface the integrity work (Restore.diff
- * and Restore.enqueue) also answers; the engine here is this class's own (LocalEngine) until that one is in.
+ * <p>It runs on Renovation.Engine, the survey and the repair of one building. The engine is this class's own
+ * (LocalEngine) rather than the repairs' (Restore.diff and Restore.enqueue, Reason.RENOVATE): a repair puts back what
+ * a building lacks, while a renovation also moves its household's furniture and beds whole, which Restore does not.
+ * The repairs leave a building on this list alone (Restore.skip asks renovating()), so the two never work one
+ * building at once.
  */
 @EventBusSubscriber(modid = McAssistantMod.MODID)
 public final class Renovation {
@@ -302,6 +305,12 @@ public final class Renovation {
         if (aged && dressed) Ledger.note(id, PREFIX + b.anchor().asLong(), now.encode());
     }
 
+    /** Is this building on the town's renovation list (the repairs leave it to the renovation)? */
+    public static boolean renovating(UUID village, BlockPos anchor) {
+        List<Long> q = QUEUE.get(village);
+        return q != null && q.contains(anchor.asLong());
+    }
+
     /** Survey the town afresh at its next turn (its theme changed). */
     public static void resurvey(UUID village) {
         SURVEYED.remove(village);
@@ -518,15 +527,16 @@ public final class Renovation {
             };
         }
 
-        /** A wall, floor or roof block of any make (what a builder lays in a BLOCK place). */
-        static boolean structural(BlockState s) {
+        /**
+         * A wall, floor or roof block of any make, what a builder lays in a BLOCK place: any building block (BuildGoal),
+         * a stair, a slab, a pane, or a block the town's theme names (a purpur pillar).
+         */
+        static boolean structural(UUID village, BlockState s) {
             if (s.isAir() || s.hasBlockEntity()) return false;
-            if (s.is(BlockTags.PLANKS) || s.is(BlockTags.LOGS) || s.is(BlockTags.STAIRS) || s.is(BlockTags.SLABS)
-                    || s.is(BlockTags.TERRACOTTA) || s.is(Blocks.BRICKS) || Architecture.pane(s) || s.is(Blocks.GLASS)) return true;
+            if (s.is(BlockTags.STAIRS) || s.is(BlockTags.SLABS) || s.is(BlockTags.LOGS) || Architecture.pane(s)) return true;
+            if (Materials.named(Themes.of(village), s.getBlock())) return true;
             Item it = s.getBlock().asItem();
-            if (it == Items.AIR) return false;
-            ItemStack st = new ItemStack(it);
-            return BuildGoal.isStoneLike(st) || BuildGoal.isDressed(st) && BuildGoal.isBuildingBlock(st);
+            return it != Items.AIR && BuildGoal.isBuildingBlock(new ItemStack(it));
         }
 
         /** Is this block of the town's theme for a place of this kind (its ranked list, or anything the theme names)? */
@@ -595,7 +605,7 @@ public final class Renovation {
                     if (open) { rest.add(new Work(Kind.BLOCK, p.pos(), p, null)); continue; }
                     if (partOf(s) != null) continue;                    // furniture in the way: moved first (orphans), then laid
                     boolean glazed = Architecture.pane(s) || s.is(Blocks.GLASS) || s.is(BlockTags.IMPERMEABLE);   // a window where a wall goes
-                    if (!structural(s) || glazed || Materials.unfit(id, p.style(), s) || themeChanged && !ofTheme(id, p.style(), s)) {
+                    if (!structural(id, s) || glazed || Materials.unfit(id, p.style(), s) || themeChanged && !ofTheme(id, p.style(), s)) {
                         rest.add(new Work(Kind.BLOCK, p.pos(), p, null));
                     }
                     continue;
@@ -611,7 +621,7 @@ public final class Renovation {
                 if (halves.contains(p.pos().asLong()) && (s.getBlock() instanceof DoorBlock || s.getBlock() instanceof BedBlock)) continue;
                 if (furniture(p.part())) {
                     List<BlockPos> got = orphans.get(p.part());
-                    if (got != null && !got.isEmpty() && (s.isAir() || structural(s) || BuildGoal.soft(s))) {
+                    if (got != null && !got.isEmpty() && (s.isAir() || structural(id, s) || BuildGoal.soft(s))) {
                         BlockPos from = nearest(got, p.pos());
                         got.remove(from);
                         moves.add(new Work(Kind.MOVE, p.pos(), p, from));
@@ -636,7 +646,7 @@ public final class Renovation {
                 BlockPos p = BlockPos.of(q);
                 if (p.getY() < b.anchor().getY()) continue;
                 BlockState s = level.getBlockState(p);
-                if (structural(s)) rest.add(new Work(Kind.CLEAR, p, null, null));
+                if (structural(id, s)) rest.add(new Work(Kind.CLEAR, p, null, null));
             }
             // Moves first (a chest out of the way of a wall), then from the bottom up, what is taken down before what is laid.
             rest.sort(Comparator.comparingInt((Work w) -> w.pos().getY()).thenComparingInt(w -> w.kind() == Kind.CLEAR ? 0 : 1));
@@ -721,6 +731,10 @@ public final class Renovation {
                             laid = Materials.take(level, v, p.style());
                         }
                         if (laid == null) { waits[0] = "building blocks fit for it"; continue; }
+                        if (now.is(laid.getBlock())) {                     // what it would lay is there already: nothing to do
+                            if (!free) Crafts.giveBack(level, v, laid.getBlock().asItem(), 1);
+                            continue;
+                        }
                         if (!now.isAir() && !BuildGoal.soft(now)) {
                             if (!clear(level, v, w.pos(), free)) { if (!free) Crafts.giveBack(level, v, laid.getBlock().asItem(), 1); continue; }
                         }

@@ -1124,6 +1124,8 @@ public final class Annals {
             c.putString("dir", compass(dx, dz));
             c.putInt("storeys", Ledger.grown(id, b.anchor()) || Grow.tall(id, b.anchor()) ? 2 : 1);
             c.putBoolean("raising", Grow.raisingNow(id, b.anchor()));
+            String repair = Restore.status(id, b.anchor(), level.getDayTime() / 24000L);   // [integrity] "needs repair", "repaired"
+            if (!repair.isEmpty()) c.putString("repair", repair);
             int[] fur = Interiors.progress(level, id, b);
             c.putInt("furnished", fur[0]);
             c.putInt("furnish_of", fur[1]);

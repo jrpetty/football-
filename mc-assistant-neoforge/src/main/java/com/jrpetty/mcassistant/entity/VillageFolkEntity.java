@@ -3432,6 +3432,7 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         BlockPos spot = nextInTheRow(bank);
         if (spot == null) { brain("no room in the row for another furnace"); return; }
+        if (!TownBlocks.mayPlace(level(), spot, TownBlocks.Why.FURNISH)) { brain("no room in the row for another furnace"); return; }   // [integrity]
         net.minecraft.world.level.block.state.BlockState first = level().getBlockState(bank.get(0));
         net.minecraft.core.Direction faces = first.hasProperty(net.minecraft.world.level.block.AbstractFurnaceBlock.FACING)
             ? first.getValue(net.minecraft.world.level.block.AbstractFurnaceBlock.FACING) : net.minecraft.core.Direction.NORTH;
@@ -3544,6 +3545,7 @@ public class VillageFolkEntity extends AssistantEntity {
                         if (!level().getBlockState(p).canBeReplaced() || !level().getFluidState(p).isEmpty()) continue;
                         if (!level().getBlockState(p.below()).isFaceSturdy(level(), p.below(), net.minecraft.core.Direction.UP)) continue;
                         if (getBoundingBox().intersects(new net.minecraft.world.phys.AABB(p))) continue;
+                        if (!TownBlocks.mayPlace(level(), p, TownBlocks.Why.CIVIC)) continue;            // [integrity]
                         if (removeMatching(st -> st.is(net.minecraft.world.item.Items.CHEST), 1) < 1) return;
                         level().setBlockAndUpdate(p, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
                         ZoneChests.mark(level(), p);
@@ -6243,6 +6245,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // Nowhere on its own level by the edge towards the town (a bank under a cliff): by the middle of the plot.
         if (spot == null) spot = chestSpot(level, c.getX() + 1, c.getZ() + 1, c.getY());
         if (spot == null) return null;
+        if (!TownBlocks.mayPlace(level, spot, TownBlocks.Why.FIELD)) return null;            // [integrity] not on a road or a way in
         if (countCarried(s -> s.is(net.minecraft.world.item.Items.CHEST)) == 0) {
             drawFrom(villageCentre, s -> s.is(net.minecraft.world.item.Items.CHEST), 1, buildStoresRadius());
         }

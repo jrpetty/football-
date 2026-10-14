@@ -3581,6 +3581,35 @@ def redstone_stage(r, look, cx, cz):
     say("alive after the redstone works: %s" % client_alive())
 
 
+def integrity_stage(r, look, cx, cz):
+    """[integrity] The town's buildings held to their drawings (entity/TownBlocks, Restore, TownAudit). In a grown town:
+    /village integrity survey has every building looked over now and listed for repair; /village integrity views says
+    where to look at the four buildings furthest from their drawings (and their fidelity and status). Pictures: each
+    of them from in front of its door, a little up, so a hole in a wall, a roof stair short, a lamp post on the step
+    or a half-built frame shows; then the same again a game hour later, mended. Then the audit in words."""
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    say("integrity survey: " + r.cmd("execute positioned %d %d %d run village integrity survey" % (cx, hy + 1, cz))[:400])
+    out = r.cmd("execute positioned %d %d %d run village integrity views" % (cx, hy + 1, cz))
+    say("integrity views: " + out[:1400])
+    views = re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out)
+    if not views:
+        say("no buildings to look at; nothing to photograph")
+        return
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look("44-integrity-%d-%s-before" % (i + 1, name), int(x) + 0.5, int(y), int(z) + 0.5,
+             int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=8)
+    r.cmd("time add 1000")                             # an hour of the town's rounds: the hands at the repair list
+    time.sleep(20)
+    for i, (name, x, y, z, ax, ay, az) in enumerate(views):
+        look("44-integrity-%d-%s-after" % (i + 1, name), int(x) + 0.5, int(y), int(z) + 0.5,
+             int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=6)
+    say("integrity: " + r.cmd("execute positioned %d %d %d run village integrity" % (cx, hy + 1, cz))[:1400])
+    say("alive after the integrity look: %s" % client_alive())
+
+
 def styles_stage(r, look, cx, cz):
     """[styles] The renovation (entity/Renovation, /village theme stage). Run from well out to the west of the town,
     /village theme stage lays out one of the town's houses as an older town left it: earth and a block of gold patched

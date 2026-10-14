@@ -441,6 +441,7 @@ public final class Woods {
             ItemStack s = saplingFor(f, level, p);
             if (s == null) break;
             BlockState sapling = ((BlockItem) s.getItem()).getBlock().defaultBlockState();
+            if (!TownBlocks.mayPlace(level, p, TownBlocks.Why.NATURE)) continue;   // [integrity] no tree in a doorway or a road
             if (!(level.getBlockState(p).isAir())) level.removeBlock(p, false);   // the grass in the way
             level.setBlockAndUpdate(p, sapling);
             f.placeSound(p);
