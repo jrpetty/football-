@@ -319,11 +319,19 @@ public class VillageFolkEntity extends AssistantEntity {
         }
     }
 
-    /** [scale] Standing still out of everybody's sight, the game's movement is skipped for the tick (FolkLod). */
+    /** [scale] Asleep in its bed, or standing still out of everybody's sight, the game's movement is skipped for the
+     *  tick (FolkLod). */
     @Override
     public void travel(net.minecraft.world.phys.Vec3 input) {
-        if (!level().isClientSide && FolkLod.restsUnseen(this, input)) return;
+        if (!level().isClientSide && FolkLod.rests(this, input)) return;
         super.travel(input);
+    }
+
+    /** [scale] Out of everybody's sight, the shoving between folk worked out every other tick (FolkLod). */
+    @Override
+    protected void pushEntities() {
+        if (!level().isClientSide && FolkLod.shovesLess(this)) return;
+        super.pushEntities();
     }
 
     @Override
@@ -2876,8 +2884,11 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!Villages.mayBake(village, now)) return false;
         int held = countCarried(st -> st.is(net.minecraft.world.item.Items.WHEAT));
         int radius = Math.min(112, Math.max(32, Villages.storesRadius(village)));
-        int inStores = storesHold(heart, radius,
+        // [scale] The stores' wheat as a neighbour counted it a moment ago, rather than every chest searched again.
+        Integer known = FolkLod.recentCount(level(), village, "wheat");
+        int inStores = known != null ? known : storesHold(heart, radius,
             st -> st.is(net.minecraft.world.item.Items.WHEAT));
+        if (known == null) FolkLod.counted(level(), village, "wheat", inStores);
         if (held + inStores < 9) return false;
         Villages.noteBake(village, now);
         int take = Math.min(24, inStores);

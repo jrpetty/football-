@@ -128,6 +128,8 @@ public class FolkNavigation extends GroundPathNavigation {
     /** Where a travelled walk ends, and the game tick it gets there (-1: not yet reckoned, the speed not yet set). */
     @Nullable private BlockPos travelTo;
     @Nullable private Path travelPath;
+    /** Where the walk is going, when the travel is only its part out of sight (then walked on from the edge of it). */
+    @Nullable private net.minecraft.world.phys.Vec3 travelGoal;
     private long arriveAt = -1;
     /** Walks travelled all told (the perf probes read it). */
     private static long travelledInAll;
@@ -155,30 +157,52 @@ public class FolkNavigation extends GroundPathNavigation {
 
     /**
      * A walk out of everybody's sight, taken as travel: a village folk on its own business (not hired, fighting, riding
-     * or on a lead), going further than {@link #TRAVEL_FROM} and no further than a search would reach, both ends out of
-     * sight, and somewhere it can stand at the end (the target or a block beside it) in loaded ground. True if so.
+     * or on a lead), going further than {@link #TRAVEL_FROM} and no further than a search would reach, from out of
+     * sight. Going somewhere out of sight too, it travels all the way (to the target or a block beside it it can stand
+     * on); going into sight, it travels as far as the edge of sight and walks the rest from there. True if so.
      */
     private boolean travel(double x, double y, double z, double speed) {
         if (!(this.mob instanceof VillageFolkEntity f) || f.ownerId() == null || f.isHired() || f.getTarget() != null
                 || f.isPassenger() || f.isLeashed() || f.isInWaterOrBubble() || !f.onGround()) return false;
-        // Asked again for where it is already travelling (a goal re-issues its walk every tick): the travel goes on.
-        if (travelling() && this.travelTo.distToCenterSqr(x, y, z) <= 3.0) {
+        // Asked again for where it is already going (a goal re-issues its walk every tick): the travel goes on.
+        if (travelling() && (this.travelGoal != null ? this.travelGoal.distanceToSqr(x, y, z) : this.travelTo.distToCenterSqr(x, y, z)) <= 3.0) {
             this.speedModifier = speed;
             return true;
         }
         double d2 = f.distanceToSqr(x, y, z);
-        if (d2 < TRAVEL_FROM * TRAVEL_FROM || d2 > REACH * REACH) return false;
-        if (!FolkLod.unseen(f) || !FolkLod.unseenAt(this.level, x, y, z)) return false;
-        BlockPos to = FolkLod.standAt(this.level, BlockPos.containing(x, y, z), f.position());
-        if (to == null) return false;
+        if (d2 < TRAVEL_FROM * TRAVEL_FROM || d2 > REACH * REACH || !FolkLod.unseen(f)) return false;
+        net.minecraft.world.phys.Vec3 goal = new net.minecraft.world.phys.Vec3(x, y, z);
+        if (FolkLod.unseenAt(this.level, x, y, z)) {
+            BlockPos to = FolkLod.standAt(this.level, BlockPos.containing(x, y, z), f.position());
+            return to != null && travelTo(to, null, speed);
+        }
+        BlockPos edge = FolkLod.edgeOfSight(this.level, f.position(), goal);
+        return edge != null && edge.distToCenterSqr(f.position()) >= TRAVEL_FROM * TRAVEL_FROM && travelTo(edge, goal, speed);
+    }
+
+    /** Travel to this block, and (goal not null) walk on from it to the goal. */
+    private boolean travelTo(BlockPos to, @Nullable net.minecraft.world.phys.Vec3 goal, double speed) {
         net.minecraft.world.level.pathfinder.Node end = new net.minecraft.world.level.pathfinder.Node(to.getX(), to.getY(), to.getZ());
         Path travel = new Path(java.util.List.of(end), to, true);
         if (!super.moveTo(travel, speed)) return false;
         this.travelTo = to;
         this.travelPath = this.path;
+        this.travelGoal = goal;
         this.arriveAt = -1;
         travelledInAll++;
         return true;
+    }
+
+    /**
+     * A walk under way that has gone out of everybody's sight and is going somewhere out of sight: the rest of it is
+     * travelled. Looked at once a second.
+     */
+    private void travelTheRest() {
+        if ((this.level.getGameTime() + this.mob.getId()) % LOOK_EVERY != 0) return;
+        BlockPos target = getTargetPos();
+        if (target == null || this.path == null || this.path.isDone() || !this.path.canReach()) return;
+        if (!FolkLod.unseenAt(this.level, target.getX() + 0.5, target.getY(), target.getZ() + 0.5)) return;
+        travel(target.getX() + 0.5, target.getY(), target.getZ() + 0.5, this.speedModifier);
     }
 
     /** A travelled walk counts its time, and at its end the folk is there; one a player comes to see is walked on. */
@@ -192,6 +216,8 @@ public class FolkNavigation extends GroundPathNavigation {
                 return;
             }
         }
+        if (!this.level.isClientSide && FolkLod.scaling(this.level)) travelTheRest();
+        if (travelling()) return;
         super.tick();
     }
 
@@ -205,10 +231,18 @@ public class FolkNavigation extends GroundPathNavigation {
         }
         if (now >= this.arriveAt) {
             this.travelTo = null;
+            net.minecraft.world.phys.Vec3 goal = this.travelGoal;
+            this.travelGoal = null;
             if (FolkLod.standable(this.level, to)) {
                 this.mob.teleportTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5);
                 this.mob.setDeltaMovement(net.minecraft.world.phys.Vec3.ZERO);
                 this.path.setNextNodeIndex(this.path.getNodeCount());
+                // Come to the edge of sight: the rest of the way is walked.
+                if (goal != null) {
+                    double sp = this.speedModifier;
+                    this.path = null;
+                    super.moveTo(goal.x, goal.y, goal.z, sp);
+                }
             } else {
                 // The ground changed while it was on its way: it walks from where it is.
                 double sp = this.speedModifier;
@@ -219,16 +253,19 @@ public class FolkNavigation extends GroundPathNavigation {
         }
         // Somebody has come into sight of it: the rest of the way is walked, seen.
         if ((now + this.mob.getId()) % LOOK_EVERY == 0 && !FolkLod.unseen(this.mob)) {
+            net.minecraft.world.phys.Vec3 goal = this.travelGoal != null ? this.travelGoal : net.minecraft.world.phys.Vec3.atBottomCenterOf(to);
             this.travelTo = null;
+            this.travelGoal = null;
             double sp = this.speedModifier;
             this.path = null;
-            super.moveTo(to.getX() + 0.5, to.getY(), to.getZ() + 0.5, sp);
+            super.moveTo(goal.x, goal.y, goal.z, sp);
         }
     }
 
     @Override
     public void stop() {
         this.travelTo = null;
+        this.travelGoal = null;
         super.stop();
     }
 

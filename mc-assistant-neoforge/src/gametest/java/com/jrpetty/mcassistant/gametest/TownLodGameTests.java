@@ -246,19 +246,50 @@ public class TownLodGameTests {
 
     /** The stores as kinds of goods (food, timber, stone...), and the treasury and roll. */
     private static Map<String, Integer> picture(ServerLevel level, UUID id) {
+        // Through the stores' own count (Market.stock), which a sleeping town answers from what it keeps: the same
+        // reading awake and asleep. Plain goods only (what a sleeping town keeps): nothing named, enchanted or worn.
         Map<String, Integer> m = new HashMap<>();
-        for (BlockPos p : Villages.storeChests(level, id)) {
-            if (!(level.getBlockEntity(p) instanceof Container c)) continue;
-            for (int i = 0; i < c.getContainerSize(); i++) {
-                ItemStack s = c.getItem(i);
-                if (s.isEmpty()) continue;
-                Economy.Kind k = Economy.kindOf(s);
-                m.merge(k == null ? "other" : k.name().toLowerCase(), s.getCount(), Integer::sum);
-            }
+        for (String kind : KINDS) {
+            int n = Market.stock(level, id, s -> s.isComponentsPatchEmpty() && kind.equals(kindOf(s)));
+            if (n != 0) m.put(kind, n);
         }
         m.put("coin", Ledger.coins(id));
         m.put("folk", Villages.recordedPopulation(id));
         return m;
+    }
+
+    private static final java.util.List<String> KINDS = kinds();
+
+    private static java.util.List<String> kinds() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (Economy.Kind k : Economy.Kind.values()) out.add(k.name().toLowerCase());
+        out.add("other");
+        return out;
+    }
+
+    private static String kindOf(ItemStack s) {
+        Economy.Kind k = Economy.kindOf(s);
+        return k == null ? "other" : k.name().toLowerCase();
+    }
+
+    /** The day-by-day trend of each reading over a stretch (least squares), times the stretch: what it gained, with a
+     *  day's noise at either end (a chest emptied for a build the evening before the count) not taken for a trend. */
+    private static Map<String, Double> trend(java.util.List<Map<String, Integer>> days) {
+        java.util.Set<String> keys = new java.util.TreeSet<>();
+        for (Map<String, Integer> d : days) keys.addAll(d.keySet());
+        Map<String, Double> out = new HashMap<>();
+        int n = days.size();
+        double mx = (n - 1) / 2.0, sxx = 0;
+        for (int i = 0; i < n; i++) sxx += (i - mx) * (i - mx);
+        for (String k : keys) {
+            double my = 0;
+            for (Map<String, Integer> d : days) my += d.getOrDefault(k, 0);
+            my /= n;
+            double sxy = 0;
+            for (int i = 0; i < n; i++) sxy += (i - mx) * (days.get(i).getOrDefault(k, 0) - my);
+            out.put(k, sxx == 0 ? 0 : sxy / sxx * (n - 1));
+        }
+        return out;
     }
 
     /**
@@ -273,6 +304,8 @@ public class TownLodGameTests {
         final int[] phase = { 0 };
         final long[] at = { 0 };
         final Map<String, Integer>[] pic = new Map[3];
+        // The readings at the start and at each day's end, watched and asleep.
+        final java.util.List<Map<String, Integer>> watched = new java.util.ArrayList<>(), asleep = new java.util.ArrayList<>();
         found(helper, 1850000, 20, true, v -> {
             UUID id = v.id();
             level.getServer().tickRateManager().setTickRate(10000.0F);
@@ -280,11 +313,17 @@ public class TownLodGameTests {
                 long t = helper.getTick();
                 if (at[0] == 0) at[0] = t;
                 long ran = t - at[0];
-                if (ran % 24000 == 0) Kit.log("lod02 phase " + phase[0] + " day " + ran / 24000 + ": " + picture(level, id));
+                if (ran % 24000 == 0) {
+                    Map<String, Integer> now = picture(level, id);
+                    Kit.log("lod02 phase " + phase[0] + " day " + ran / 24000 + ": " + now);
+                    if (phase[0] == 1 && ran <= span) watched.add(now);
+                    if (phase[0] == 2 && ran <= span) asleep.add(now);
+                }
                 switch (phase[0]) {
                     case 0 -> {                                 // days to settle in (stores spent down, fields up)
                         if (ran < WARM * 24000L) return false;
                         pic[0] = picture(level, id);
+                        watched.add(pic[0]);
                         phase[0] = 1;
                         at[0] = t;
                     }
@@ -293,6 +332,7 @@ public class TownLodGameTests {
                         pic[1] = picture(level, id);
                         Kit.log("lod02 rates learned: " + TownLod.ratesFor(id));
                         TownLod.forceForTests(level.getServer(), TownLod.Lod.AWAY);
+                        asleep.add(picture(level, id));
                         phase[0] = 2;
                         at[0] = t;
                     }
@@ -309,7 +349,7 @@ public class TownLodGameTests {
                         }
                         pic[2] = picture(level, id);
                         level.getServer().tickRateManager().setTickRate(20.0F);
-                        compare(helper, pic);
+                        compare(helper, pic, trend(watched), trend(asleep), asleep.get(asleep.size() - 1));
                         TownLod.forceForTests(level.getServer(), null);
                         pass(helper);
                         return true;
@@ -320,20 +360,33 @@ public class TownLodGameTests {
         });
     }
 
-    private static void compare(GameTestHelper helper, Map<String, Integer>[] pic) {
-        java.util.Set<String> kinds = new java.util.TreeSet<>(pic[0].keySet());
-        kinds.addAll(pic[1].keySet());
-        kinds.addAll(pic[2].keySet());
+    /**
+     * Kind by kind, the trend watched against the trend asleep; the roll by what it ended at (children asleep are born
+     * on waking); and the goods the sleeping town ended with are in its real chests once it has woken (within a few,
+     * for what its folk used in the moments since).
+     */
+    private static void compare(GameTestHelper helper, Map<String, Integer>[] pic, Map<String, Double> watched,
+                                Map<String, Double> asleep, Map<String, Integer> kept) {
+        java.util.Set<String> kinds = new java.util.TreeSet<>(watched.keySet());
+        kinds.addAll(asleep.keySet());
         StringBuilder report = new StringBuilder();
         StringBuilder wrong = new StringBuilder();
         for (String k : kinds) {
-            int full = pic[1].getOrDefault(k, 0) - pic[0].getOrDefault(k, 0);
-            int away = pic[2].getOrDefault(k, 0) - pic[1].getOrDefault(k, 0);
+            boolean folk = "folk".equals(k);
+            int full = folk ? pic[1].getOrDefault(k, 0) - pic[0].getOrDefault(k, 0) : (int) Math.round(watched.getOrDefault(k, 0.0));
+            int away = folk ? pic[2].getOrDefault(k, 0) - pic[1].getOrDefault(k, 0) : (int) Math.round(asleep.getOrDefault(k, 0.0));
             report.append(k).append(" full ").append(full).append(" away ").append(away).append("; ");
             double allowed = Math.max(TOLERANCE * Math.abs(full), "folk".equals(k) ? 2 : FEW);
             if (Math.abs(away - full) > allowed) wrong.append(k).append(' ');
         }
-        Kit.log("lod02 " + DAYS + " days, full vs away: " + report);
+        Kit.log("lod02 " + DAYS + " days, the trend watched vs asleep: " + report);
+        StringBuilder lost = new StringBuilder();
+        for (String k : KINDS) {
+            int was = kept.getOrDefault(k, 0), now = pic[2].getOrDefault(k, 0);
+            if (Math.abs(now - was) > Math.max(FEW, TOLERANCE * was)) lost.append(k).append(' ').append(was).append(" -> ").append(now).append("; ");
+        }
+        Kit.log("lod02 kept asleep " + kept + ", in the chests awake " + pic[2]);
+        helper.assertTrue(lost.isEmpty(), "what the sleeping town kept is in its chests when it wakes: " + lost);
         helper.assertTrue(wrong.isEmpty(), "asleep the town changes as it did watched (within a fifth); not so for: "
             + wrong + "| " + report);
     }

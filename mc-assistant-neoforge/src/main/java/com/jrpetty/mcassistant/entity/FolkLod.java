@@ -17,7 +17,8 @@ import net.minecraft.world.phys.Vec3;
  *     A player coming into sight of it on the way has it walk the rest.</li>
  * <li>A folk standing still out of sight on firm ground skips the game's movement for the tick (no collisions worked
  *     out for a body that does not move), all but one tick in {@link #SETTLE_EVERY}, so a block taken from under it
- *     still lets it fall.</li>
+ *     still lets it fall; one asleep in its bed skips it, seen or not (it is laid there). Out of sight, the shoving
+ *     between folk is worked out every other tick.</li>
  * </ul>
  * In sight, nothing changes. On the game tests' server none of it is in force unless a test asks ({@link #liveForTests}):
  * nobody is ever in sight there, and the other features' tests watch their folk walk.
@@ -46,11 +47,45 @@ public final class FolkLod {
 
     /** Is this spot further than {@link #SIGHT} from every player in its level? */
     public static boolean unseenAt(Level level, double x, double y, double z) {
+        return unseenAt(level, x, y, z, 0);
+    }
+
+    /** Is this spot further than {@link #SIGHT} and a margin from every player in its level? */
+    static boolean unseenAt(Level level, double x, double y, double z, double margin) {
+        double r = SIGHT + margin;
         for (var p : level.players()) {
             if (p.isSpectator()) continue;
-            if (p.distanceToSqr(x, y, z) < SIGHT * SIGHT) return false;
+            if (p.distanceToSqr(x, y, z) < r * r) return false;
         }
         return true;
+    }
+
+    /** Beyond sight by this much is where a travelled walk into sight hands over to walking. */
+    static final double EDGE_MARGIN = 8.0;
+    /** How far along a walk the edge of sight is looked for at a time. */
+    private static final double EDGE_STEP = 4.0;
+
+    /**
+     * Where a walk from out of sight into it crosses into sight, a little short: the last place on the straight way
+     * from {@code from} to {@code to} still {@link #EDGE_MARGIN} out of sight, on ground a folk can stand on (a few
+     * blocks up or down from the straight way), or null if there is none.
+     */
+    static BlockPos edgeOfSight(Level level, Vec3 from, Vec3 to) {
+        Vec3 way = from.subtract(to);
+        double length = way.length();
+        if (length < EDGE_STEP) return null;
+        Vec3 step = way.scale(EDGE_STEP / length);
+        for (double d = EDGE_STEP; d < length; d += EDGE_STEP) {
+            Vec3 at = to.add(step.scale(d / EDGE_STEP));
+            if (!unseenAt(level, at.x, at.y, at.z, EDGE_MARGIN)) continue;
+            BlockPos column = BlockPos.containing(at);
+            for (int dy = 0; dy <= 4; dy++) {
+                if (standable(level, column.above(dy))) return column.above(dy);
+                if (dy > 0 && standable(level, column.below(dy))) return column.below(dy);
+            }
+            return null;
+        }
+        return null;
     }
 
     /** Is this folk out of every player's sight (and the savings in force)? */
@@ -59,11 +94,21 @@ public final class FolkLod {
     }
 
     /**
-     * May this folk skip the game's movement this tick? Out of sight, on firm ground and dry, not riding or ridden,
-     * asked to go nowhere (no input, no walk under way but a travelled one) and not drifting; and not on its tick of
-     * the {@link #SETTLE_EVERY}.
+     * May this folk skip the game's movement this tick? Asleep in its bed (it is laid there and moves nowhere, seen or
+     * not); or out of sight, on firm ground and dry, not riding or ridden, asked to go nowhere (no input, no walk under
+     * way but a travelled one) and not drifting; and not on its tick of the {@link #SETTLE_EVERY}.
      */
-    static boolean restsUnseen(VillageFolkEntity f, Vec3 input) {
+    static boolean rests(VillageFolkEntity f, Vec3 input) {
+        if (f.isSleeping() && scaling(f.level()) && !f.isPassenger()) return true;
+        return restsUnseen(f, input);
+    }
+
+    /** Out of sight, the shoving between folk is worked out on every other tick only (nobody sees a crowd settle). */
+    static boolean shovesLess(VillageFolkEntity f) {
+        return (f.tickCount + f.getId()) % 2 == 0 && unseen(f);
+    }
+
+    private static boolean restsUnseen(VillageFolkEntity f, Vec3 input) {
         if ((f.tickCount + f.getId()) % SETTLE_EVERY == 0) return false;
         if (!f.onGround() || f.isInWaterOrBubble() || f.isInLava() || f.isPassenger() || f.isVehicle()) return false;
         if (input.lengthSqr() > 1.0E-6) return false;
@@ -71,6 +116,27 @@ public final class FolkLod {
         if (v.x * v.x + v.z * v.z > 1.0E-4) return false;
         if (!(f.getNavigation().isDone() || f.getNavigation() instanceof FolkNavigation n && n.travelling())) return false;
         return unseen(f);
+    }
+
+    /** A town's stores counted for something are not counted for it again by every idle folk for this long. */
+    private static final long COUNT_FOR = 100L;
+    private static final java.util.Map<String, long[]> COUNTED = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * How many of this the town's stores held when one of its folk last counted them, if that was in the last five
+     * seconds; null to count again. A town of five hundred with no wheat had every chest of it searched for wheat at
+     * every idle folk's beat. Only where the savings are in force (null otherwise).
+     */
+    static Integer recentCount(Level level, java.util.UUID village, String what) {
+        if (!scaling(level)) return null;
+        long[] c = COUNTED.get(village + what);
+        long now = level.getGameTime();
+        return c != null && now >= c[0] && now - c[0] < COUNT_FOR ? (int) c[1] : null;
+    }
+
+    /** The town's stores were just counted for this. */
+    static void counted(Level level, java.util.UUID village, String what, int n) {
+        if (scaling(level)) COUNTED.put(village + what, new long[]{ level.getGameTime(), n });
     }
 
     /** Is this block a place a folk can stand: room for its body, dry, and something firm under its feet? */
