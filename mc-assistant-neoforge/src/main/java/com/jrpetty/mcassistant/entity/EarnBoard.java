@@ -166,6 +166,12 @@ public final class EarnBoard {
             w.putString("id", c.id());
             out.add(w);
         }
+        UUID side = Armies.sideOf(p);
+        if (side != null) {
+            out.add(way("war", "Fighting for " + Villages.name(side), Earnings.MERCENARY_FEE + "c a battle",
+                "A sellsword's fee for every battle you are on the field for, and a share of the spoils when your side holds it.",
+                p, null, "", "", ""));
+        }
         prices(level, p, v, out);
         int rent = BankCounter.rentDue(id, p.getUUID());
         if (rent > 0) {

@@ -74,6 +74,8 @@ import java.util.function.Predicate;
  *     unpaid when they are.</li>
  * <li><b>er12</b>: a hauler's shift: the load from the storehouse (a deposit held) into a workshop chest short of it,
  *     the deposit back and the task paid.</li>
+ * <li><b>er13</b>: a farm hand's shift: a ripe plot marked, broken (its harvest into the stores, the seed to hand),
+ *     planted back, the task paid.</li>
  * </ul>
  *
  * <p>Each on its own ground, x 1,880,000 to 1,899,999 at z 66,000.
@@ -631,6 +633,40 @@ public class EarningGameTests {
             helper.assertTrue(order && counter, "the order and the open counter shift are listed");
             helper.assertTrue(!orderAfter, "the filled order is gone");
             helper.assertTrue(unpaid, "with no coin in the treasury, its shifts say they are unpaid");
+            helper.succeed();
+        });
+    }
+
+    @GameTest(template = EMPTY, timeoutTicks = 300, batch = "er13_farm_shift")
+    public static void er13_farm_shift(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Town t = town(helper, 1899000, Z, 0, 2000L, true);
+        helper.runAtTickTime(5, () -> {
+            BlockPos farm = t.heart().east(14).south(14);
+            Ledger.built(t.id(), "farm", farm, Direction.NORTH);
+            BlockPos plot = Kit.surface(level, farm.getX() + 2, farm.getZ() + 2);
+            level.setBlock(plot.below(), Blocks.FARMLAND.defaultBlockState(), 3);
+            level.setBlock(plot, ((net.minecraft.world.level.block.CropBlock) Blocks.WHEAT).getStateForAge(7), 3);
+            ServerPlayer pl = player(helper, plot.north(2), 0);
+            pl.setGameMode(net.minecraft.world.level.GameType.SURVIVAL);
+            String took = Shifts.take(pl, t.id(), ShiftRole.FARM.id, false);
+            Shifts.secondForTests(level, pl);
+            String task = Shifts.taskForTests(pl);
+            int stores0 = Market.stock(level, t.id(), s -> s.is(Items.WHEAT));
+            pl.gameMode.destroyBlock(plot);
+            int seeds = carried(pl, s -> s.is(Items.WHEAT_SEEDS)), stores1 = Market.stock(level, t.id(), s -> s.is(Items.WHEAT));
+            String replant = Shifts.taskForTests(pl);
+            level.setBlock(plot, Blocks.WHEAT.defaultBlockState(), 3);
+            com.jrpetty.mcassistant.entity.ShiftTasks.onPlace(new net.neoforged.neoforge.event.level.BlockEvent.EntityPlaceEvent(
+                net.neoforged.neoforge.common.util.BlockSnapshot.create(level.dimension(), level, plot), level.getBlockState(plot.below()), pl));
+            int[] st = Shifts.stateForTests(pl);
+            Kit.log("er13 took '" + took + "'; task '" + task + "'; broken: seeds in hand " + seeds + ", wheat in the stores " + stores0 + " -> " + stores1
+                + "; then '" + replant + "'; state " + java.util.Arrays.toString(st) + "; " + Shifts.lastForTests(pl));
+            Kit.noLeftoverPlayers(level);
+            helper.assertTrue(took.isEmpty() && task != null && task.startsWith("Harvest"), "a ripe plot to harvest: " + task);
+            helper.assertTrue(stores1 > stores0 && seeds == 1, "the harvest into the stores, one seed to hand to plant again");
+            helper.assertTrue(replant != null && replant.contains("plant"), "then told to plant it again: " + replant);
+            helper.assertTrue(st != null && st[0] == 1 && st[2] >= 4, "planted back: the task done, well");
             helper.succeed();
         });
     }

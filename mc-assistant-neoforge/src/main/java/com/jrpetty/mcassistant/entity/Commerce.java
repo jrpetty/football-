@@ -234,6 +234,7 @@ public final class Commerce {
             Ledger.takeCoins(village, paid);
             Economy.spent(village, paid);
             Dealings.giveCoins(p, paid);
+            Earnings.record(p, village, Earnings.Source.CONTRACT, paid, Villages.name(village), "for the supply contract");   // [earning]
             done++;
             Ledger.note(village, key, c[0] + "|" + s.count() + "|" + price + "|" + c[3] + "|" + day + "|" + done + "|0");
             for (AssistantEntity a : Villages.folkOf(village)) {
@@ -554,6 +555,7 @@ public final class Commerce {
             int pay = Math.min(ESCORT_PAY, Ledger.coins(from));
             Ledger.takeCoins(from, pay);
             Dealings.giveCoins(p, pay);
+            Earnings.record(p, from, Earnings.Source.CONTRACT, pay, Villages.name(from), "for guarding the caravan");          // [earning]
             String name = p.getName().getString();
             for (UUID v : new UUID[]{ from, to }) {
                 for (AssistantEntity a : Villages.folkOf(v)) {

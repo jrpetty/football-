@@ -2127,6 +2127,7 @@ public final class Homes {
         Ledger.note(v.id(), key, "0");
         ItemStack coins = new ItemStack(com.jrpetty.mcassistant.McAssistantMod.VILLAGE_COIN.get(), due);
         if (!p.getInventory().add(coins)) p.drop(coins, false);
+        Earnings.record(p, v.id(), Earnings.Source.PROPERTY, due, "your tenants in " + Villages.name(v.id()), "in rent");   // [earning]
         return "Your rent: " + due + coins(due) + ".";
     }
 

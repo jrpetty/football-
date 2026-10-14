@@ -593,7 +593,7 @@ public final class ShiftTasks {
                 }
             }
             case FARM -> {
-                if (t.leg == 1 && now - t.readyAt > REPLANT && t.target != null) {
+                if (t.leg == 1 && now - t.since > REPLANT && t.target != null) {
                     Shifts.done(level, p, s, t, 2, 1, "harvesting a plot, not replanted", null);
                 } else if (t.leg == 0 && t.target != null && !(level.getBlockState(t.target).getBlock() instanceof CropBlock)) {
                     s.task = null;                                                  // somebody else harvested it: no fault
@@ -863,7 +863,7 @@ public final class ShiftTasks {
         if (!(st.getBlock() instanceof CropBlock cb)) return;
         if (t.leg == 0 && e.getPos().equals(t.target)) {
             t.leg = 1;
-            t.readyAt = level.getGameTime();
+            t.since = level.getGameTime();
             t.item = st.getBlock().asItem();
             t.text = "Now plant the " + Goods.name(new ItemStack(t.item)).toLowerCase(Locale.ROOT) + " back on the same plot.";
         } else if (!cb.isMaxAge(st) && PlayerServices.townAt(level, e.getPos()) != null) {
@@ -924,13 +924,13 @@ public final class ShiftTasks {
         FORGET.add(new Object[]{ level, e.getPos().immutable() });
         t.marks.remove(i);
         t.plan.remove(i);
-        t.readyAt++;                                                          // the count of blocks laid
+        t.laid++;
         if (t.marks.isEmpty()) finishBuild(level, p, s, t);
     }
 
     /** The blocks laid: the deposit back (less any unlaid block kept), paid by the block. */
     private static void finishBuild(ServerLevel level, ServerPlayer p, Shift s, Task t) {
-        int laid = (int) t.readyAt;
+        int laid = t.laid;
         int returned = 0;
         for (int i = 0; i < p.getInventory().getContainerSize(); i++) {
             ItemStack st = p.getInventory().getItem(i);

@@ -88,7 +88,9 @@ public final class Shifts {
         long par;
         int mistakes, leg;
         // What it is about (each role uses its own).
-        int order = -1, line = -1, table = -1, count, deposit;
+        int order = -1, line = -1, table = -1, count, deposit, laid;
+        /** When a farm hand broke the plot (the replanting's clock starts). */
+        long since;
         long placeAnchor, readyAt, burnAt;
         @Nullable UUID folk;
         @Nullable BlockPos to;
@@ -290,8 +292,8 @@ public final class Shifts {
             return "Nobody in " + Villages.name(v.id()) + " will give you work.";
         }
         if (standing) {
-            long letGo = Earnings.data(p).getLong("letgo/" + r.id);
-            if (letGo > 0 && day - letGo < LET_GO_DAYS) return "You were let go from that job lately. Take it shift by shift for now.";
+            CompoundTag root = Earnings.data(p);
+            if (root.contains("letgo/" + r.id) && day - root.getLong("letgo/" + r.id) < LET_GO_DAYS) return "You were let go from that job lately. Take it shift by shift for now.";
         }
         Offer o = null;
         for (Offer x : offers(level, v, p)) if (x.role() == r) o = x;
@@ -785,6 +787,8 @@ public final class Shifts {
         b.marks.addAll(a.marks);
         b.mistakes = a.mistakes;
         b.leg = a.leg;
+        b.laid = a.laid;
+        b.since = a.since;
         b.order = a.order;
         b.line = a.line;
         b.table = a.table;

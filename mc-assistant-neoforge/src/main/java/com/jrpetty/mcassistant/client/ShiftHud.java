@@ -83,7 +83,8 @@ public final class ShiftHud {
         long now = EarnClient.serverNow();
         boolean cooking = h.contains("readyAt");
         int lines = taskLines.size();
-        int height = PAD + 10 + 4 + lines * 10 + 4 + 8 + 6 + 10 + 10 + 6 + (last.isEmpty() ? 0 : 10) + PAD;
+        // The rows as drawn below: the header, the task, the bar, the state, the stats, the skill, the last task.
+        int height = PAD + 14 + lines * 10 + 2 + 8 + 12 + 10 + 12 + (last.isEmpty() ? 0 : 10) + PAD - 2;
         g.fill(x, y, x + W, y + height, GROUND);
         g.fill(x, y, x + 2, y + height, ACCENT_FILL);
         int cy = y + PAD;

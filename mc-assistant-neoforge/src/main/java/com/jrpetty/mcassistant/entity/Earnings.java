@@ -175,6 +175,26 @@ public final class Earnings {
         return n;
     }
 
+    // ------------------------------------------------------------------ war
+
+    /** A sellsword's fee a battle, and its share of the spoils when its side holds the field; within so far of it. */
+    static final int MERCENARY_FEE = 6, SPOILS = 6, FIELD_REACH = 160;
+
+    /**
+     * A battle written up: each player who joined a side (Armies) and was on the field is paid its fee by the town it
+     * fought for, and on a win its share of the spoils out of the beaten town's treasury. As far as each treasury runs.
+     */
+    public static void battleFought(ServerLevel level, UUID a, UUID b, int winner, net.minecraft.core.BlockPos centre) {
+        for (ServerPlayer p : level.players()) {
+            UUID side = Armies.sideOf(p);
+            if (side == null || (!side.equals(a) && !side.equals(b)) || p.blockPosition().distSqr(centre) > FIELD_REACH * FIELD_REACH) continue;
+            UUID foe = side.equals(a) ? b : a;
+            fromTreasury(p, side, MERCENARY_FEE, Source.WAR, Villages.name(side), "for fighting at its side");
+            boolean won = winner >= 0 && (winner == 0 ? a : b).equals(side);
+            if (won) fromTreasury(p, foe, SPOILS, Source.WAR, Villages.name(foe), "as your share of the spoils");
+        }
+    }
+
     // ------------------------------------------------------------------ a payer's day
 
     /** What this payer of this town has paid players today. */

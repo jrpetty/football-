@@ -69,6 +69,7 @@ public final class QuestRewards {
             q.flags.put("paid", Integer.toString(paid));
             if (paid > 0) {
                 Dealings.giveCoins(p, paid);
+                Earnings.record(p, q.village, Earnings.Source.QUEST, paid, Villages.name(q.village), "for \"" + q.title + "\"");   // [earning] booked
                 parts.add(paid + (paid == 1 ? " coin" : " coins") + (paid < q.coins ? " (all that could be found)" : ""));
             }
         }

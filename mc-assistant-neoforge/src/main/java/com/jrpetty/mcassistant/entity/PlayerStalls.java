@@ -945,6 +945,7 @@ public final class PlayerStalls {
         int n = st.till;
         st.till = 0;
         for (int left = n; left > 0; left -= 64) Dealings.giveCoins(p, Math.min(64, left));
+        Earnings.record(p, village, Earnings.Source.STALL, n, "your stall's till", "of takings");   // [earning] booked and told
         if (st.at == null) forget(village, p.getUUID());
         else save(village, st);
         return n;
@@ -976,6 +977,7 @@ public final class PlayerStalls {
         int till = st.till;
         st.till = 0;
         for (int left = till; left > 0; left -= 64) Dealings.giveCoins(p, Math.min(64, left));
+        Earnings.record(p, id, Earnings.Source.STALL, till, "your stall's till", "of takings");     // [earning]
         st.at = null;
         forget(id, p.getUUID());
         if (b != null) sign(level, id, b, null);

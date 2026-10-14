@@ -1484,6 +1484,7 @@ public final class Battles {
             WarAndPeace.weariness(us, Math.max(0, Math.min(100, weary + (w < 0 ? 4 : w == i ? -3 : 10 + Math.min(10, b.down[i] * 2)))));
         }
         if (w >= 0) Campaigns.bump(b.side[w].town, b.side[1 - w].town, 1);
+        Earnings.battleFought(level, b.side[0].town, b.side[1].town, w, b.centre);        // [earning] the sellswords paid
         // Each side has seen the other's army for itself: its reckoning of them is what it saw, not rumour.
         for (int i = 0; i < 2; i++) Intel.truth(level, b.side[i].town, b.side[1 - i].town, day, "seen on the field at " + c.name);
         veterans(level, c, b, day);

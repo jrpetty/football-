@@ -503,7 +503,8 @@ public final class ServicePoints {
     private static boolean readOnly(String action) {
         return action.equals("statement") || action.equals("look") || action.equals("basket") || action.equals("use")
             || action.equals("add") || action.equals("remove") || action.equals("clear") || action.equals("mode")    // [dining] the basket, and
-            || action.equals("payNow") || action.equals("pay");                                                     // the bill, after hours too
+            || action.equals("payNow") || action.equals("pay")                                                      // the bill, after hours too
+            || action.equals("quitShift");                                                                           // [earning] clocking off
     }
 
     /** Every second, the open screens brought up to date if what they show has changed (only those, and cheaply). */
