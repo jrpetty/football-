@@ -26,14 +26,17 @@ import java.util.UUID;
  *     choosing waits on it, and then takes the panel's choice): the schoolteacher (School), the librarian (Library),
  *     the ferryman (Ferries), the bank's clerk (Bank), the steward of a player who leads (PlayerLeader), a place on
  *     the cave team (CaveDwellers), the fletcher's place (Fletchers), the golem keeper's (Golems), [cartographer] the
- *     cartographer's (Cartographers), [diver] the diver's (Divers) and [nether] a place on the Nether runners
- *     (NetherRunners).</li>
+ *     cartographer's (Cartographers), [diver] the diver's (Divers), [nether] a place on the Nether runners
+ *     (NetherRunners), and [roles-a] a healer's place (Healers), the museum's curator (Museum) and the fireworks maker
+ *     (FireworksMaker).</li>
  * <li><b>The posts the town reckons each day</b> from who is best, which the panel's choice then keeps while it is fit
  *     for them: the constable of the watch (Inquiry), the leader of the cave team (CaveDwellers), the auctioneer once
  *     the auction house stands (Auctions), and the master of a trade that takes apprentices (PlayerTrades), when the old
- *     master retires or dies and two of level twenty-five are left at it.</li>
+ *     master retires or dies and two of level twenty-five are left at it; and [roles-a] the sexton of a town with a
+ *     chapel (Sexton).</li>
  * </ul>
- * There is no captain of the watch in the town's books: its constable stands at the head of it.
+ * The constable stands at the head of the watch: the watch's roster (Roster) calls it its captain, and in a war the field
+ * captain is the same folk; there is no other captain in the town's books.
  */
 final class InterviewPosts {
 
@@ -43,7 +46,8 @@ final class InterviewPosts {
         GOLEM_KEEPER, CARTOGRAPHER,
         TRADER, DIVER,                                                         // [emerald] the emerald trader's place; [diver] the diver's
         RUNNER,                                                                // [nether] a place on the Nether runners
-        ENGINEER }                                                             // [redstone] the redstone engineer's post
+        ENGINEER,                                                              // [redstone] the redstone engineer's post
+        HEALER, SEXTON, CURATOR, FIREWORKS }                                   // [roles-a] the infirmary, the chapel, the museum, the powder hut
 
     /** A post: its kind, its key in the books, the trade it is of (for the questions and the master), a notice's number. */
     record Post(Kind kind, String key, @Nullable StationTask trade, int opening) {
@@ -80,6 +84,10 @@ final class InterviewPosts {
                 case Divers.POST -> new Post(Kind.DIVER, key, StationTask.DIVER, -1);                        // [diver]
                 case NetherRunners.POST -> new Post(Kind.RUNNER, key, StationTask.NETHER, -1);               // [nether]
                 case Engineers.POST -> new Post(Kind.ENGINEER, key, StationTask.REDSTONE, -1);               // [redstone]
+                case Healers.POST -> new Post(Kind.HEALER, key, StationTask.HEAL, -1);                       // [roles-a]
+                case Sexton.POST -> new Post(Kind.SEXTON, key, null, -1);                                    // [roles-a]
+                case Museum.CURATOR_POST -> new Post(Kind.CURATOR, key, null, -1);                           // [roles-a]
+                case FireworksMaker.POST -> new Post(Kind.FIREWORKS, key, StationTask.FIREWORKS, -1);        // [roles-a]
                 default -> null;
             };
         }
@@ -115,6 +123,10 @@ final class InterviewPosts {
                 case DIVER -> "diver";                                      // [diver]
                 case RUNNER -> "Nether runner";                             // [nether]
                 case ENGINEER -> "redstone engineer";                       // [redstone]
+                case HEALER -> "healer";                                    // [roles-a]
+                case SEXTON -> "sexton";
+                case CURATOR -> "museum curator";
+                case FIREWORKS -> "fireworks maker";
                 case MASTER -> "master " + (trade == null ? "hand" : JobMarket.noun(trade));
             };
         }
@@ -138,7 +150,8 @@ final class InterviewPosts {
         boolean meetsFolk() {
             return kind == Kind.TEACHER || kind == Kind.LIBRARIAN || kind == Kind.STEWARD || kind == Kind.AUCTIONEER
                 || kind == Kind.FERRYMAN || kind == Kind.BANKER || trade == StationTask.SHOP || trade == StationTask.COOK
-                || kind == Kind.TRADER;                                 // [emerald] a stranger at every stall
+                || kind == Kind.TRADER                                  // [emerald] a stranger at every stall
+                || kind == Kind.HEALER || kind == Kind.SEXTON || kind == Kind.CURATOR;   // [roles-a] the sick, the mourners, the visitors
         }
 
         /** What a folk who cares for it would see in the post. */
@@ -155,6 +168,9 @@ final class InterviewPosts {
                 case TRADER -> Values.Value.WEALTH;                     // [emerald]
                 case RUNNER -> Values.Value.PROGRESS;                       // [nether] what only the Nether has
                 case ENGINEER -> Values.Value.PROGRESS;                     // [redstone] machines that work by themselves
+                case HEALER -> Values.Value.SAFETY;                         // [roles-a] folk kept well
+                case SEXTON, CURATOR -> Values.Value.TRADITION;             // [roles-a] the old ways, the town's past
+                case FIREWORKS -> Values.Value.LEISURE;                     // [roles-a] the town's nights
                 default -> {
                     Values.Value v = trade == null ? null : Values.taughtBy(trade);
                     yield v == null ? Values.Value.WEALTH : v;
@@ -180,6 +196,10 @@ final class InterviewPosts {
                 case DIVER -> "the kelp beds";                              // [diver]
                 case RUNNER -> "the gateway";                               // [nether]
                 case ENGINEER -> "the redstone workshop";                   // [redstone]
+                case HEALER -> "the infirmary";                             // [roles-a]
+                case SEXTON -> "the chapel";
+                case CURATOR -> "the museum";
+                case FIREWORKS -> "the powder hut";
                 default -> trade == null ? "the town" : JobMarket.workWords(trade);
             };
         }
@@ -224,6 +244,10 @@ final class InterviewPosts {
             case DIVER -> t != StationTask.DIVER && Divers.fitness(f, village) != Integer.MIN_VALUE;   // [diver] the same
             case RUNNER -> NetherRunners.candidate(f, village) != Integer.MIN_VALUE;                  // [nether] a veteran, unafraid
             case ENGINEER -> Engineers.eligible(f, village);                                         // [redstone] a hand to spare
+            case HEALER -> Healers.eligible(f, village);                                             // [roles-a] a hand to spare
+            case SEXTON -> Sexton.fit(f, village);                                                   // [roles-a] steady, at home
+            case CURATOR -> Museum.curatorFit(f);                                                    // [roles-a]
+            case FIREWORKS -> FireworksMaker.eligible(f, village);                                   // [roles-a] as its appointing has it
             case OPENING -> {
                 StationTask want = p.tradeFor(village);
                 // One of the town's own for a new workplace: not its elder, not a hand its own trade cannot spare.
@@ -364,6 +388,31 @@ final class InterviewPosts {
                 if (f.life().has(Social.Trait.CURIOUS)) good.add("has to know how a thing works");
                 return Math.max(0, Engineers.fitness(f) / 10);
             }
+            case HEALER -> {
+                // [roles-a] As the town's own choosing weighs them (Healers.fitness): potions, a kind nature, an older head.
+                int lv = f.tradeLevel(StationTask.HEAL), brew = f.tradeLevel(StationTask.BREW);
+                if (lv > 0) good.add("level " + lv + " at healing");
+                if (brew > 0) good.add("knows its potions (level " + brew + " at the brewery)");
+                if (f.life().has(Social.Trait.CHEERFUL)) good.add("a bright face at a bedside");
+                if (f.life().has(Social.Trait.EASYGOING)) good.add("patient with the patients");
+                return Math.max(0, Healers.fitness(f) / 10);
+            }
+            case SEXTON -> {
+                if (f.ageYears() >= 40) good.add("an older, steady head");
+                if (f.life().has(Social.Trait.SHY)) good.add("quiet, as the chapel wants");
+                return Math.max(0, Sexton.score(f));
+            }
+            case CURATOR -> {
+                if (f.life().rolled() && f.life().has(Social.Trait.CURIOUS)) good.add("curious about everything");
+                if (f.persona().rolled() && f.persona().hobby() == Persona.Hobby.READING) good.add("a great reader");
+                return (int) Math.max(0, Math.round(Museum.curatorScore(f)));
+            }
+            case FIREWORKS -> {
+                int lv = f.tradeLevel(StationTask.FIREWORKS);
+                if (lv > 0) good.add("level " + lv + " at the powder hut");
+                if (f.persona().rolled() && f.persona().hobby() == Persona.Hobby.STARGAZING) good.add("loves the night sky");
+                return Math.max(0, FireworksMaker.suits(f));
+            }
             case OPENING -> {
                 int lv = t == null ? 0 : f.tradeLevel(t), kn = JobMarket.knacks(f, t);
                 if (lv > 0) good.add("level " + lv + " at " + t.label);
@@ -454,6 +503,10 @@ final class InterviewPosts {
             case DIVER -> Divers.divers(id).size() < Divers.wanted(id);                                // [diver] the water waits
             case RUNNER -> NetherRunners.runners(id).size() < NetherRunners.wanted(id);                // [nether] the gateway waits
             case ENGINEER -> Engineers.engineers(id).size() < Engineers.wanted(id);                    // [redstone] the works wait
+            case HEALER -> Healers.healers(id).size() < Healers.wanted(id);                          // [roles-a] the infirmary waits
+            case SEXTON -> Sexton.stands(id);                                                        // [roles-a] a chapel, eight folk
+            case CURATOR -> Museum.building(id) != null;                                             // [roles-a]
+            case FIREWORKS -> FireworksMaker.ready(id) && FireworksMaker.maker(id) == null;          // [roles-a] the hut waits
             case OPENING -> {
                 JobMarket.Opening o = JobMarket.opening(id, p.opening());
                 yield o != null && o.state() == JobMarket.State.OPEN;
@@ -483,7 +536,10 @@ final class InterviewPosts {
             case MASTER -> p.trade() == null ? null : PlayerTrades.masterOf(id, p.trade());
             case GOLEM_KEEPER -> Golems.keeper(id);
             case CARTOGRAPHER -> Cartographers.cartographer(id);            // [cartographer]
-            case CAVE_PLACE, FLETCHER, TRADER, DIVER, RUNNER, ENGINEER, OPENING -> null;
+            case SEXTON -> Sexton.holder(id);                               // [roles-a]
+            case CURATOR -> Museum.curatorNow(id);
+            case FIREWORKS -> FireworksMaker.maker(id);
+            case CAVE_PLACE, FLETCHER, TRADER, DIVER, RUNNER, ENGINEER, HEALER, OPENING -> null;
         };
     }
 
@@ -590,6 +646,24 @@ final class InterviewPosts {
                 VillageFolkEntity got = Engineers.appoint(level, v);
                 return got == winner ? "is the town's redstone engineer, its machines to build" : "is to be the town's redstone engineer";
             }
+            case HEALER -> {
+                // [roles-a] The town's own appointing, which takes the panel's choice first (Healers.candidates).
+                VillageFolkEntity got = Healers.appoint(level, v);
+                return got == winner ? "is a healer at the infirmary" : "is to be a healer at the infirmary";
+            }
+            case SEXTON -> {
+                Sexton.forget(id);                                          // the town's sexton looked up afresh
+                return "keeps the chapel as its sexton";
+            }
+            case CURATOR -> {
+                VillageFolkEntity was = Museum.curatorNow(id);
+                Museum.appointCurator(level, v, winner);
+                return was == winner ? "keeps the museum still" : "keeps the museum as its curator";
+            }
+            case FIREWORKS -> {
+                FireworksMaker.appoint(level, v, day);
+                return FireworksMaker.maker(id) == winner ? "took up the fireworks, at the powder hut" : "is to take up the fireworks";
+            }
             case CONSTABLE -> { return "leads the watch as its constable"; }
             case CAVE_LEADER -> { return "leads the cave team"; }
             case AUCTIONEER -> { return "calls the auctions"; }
@@ -610,7 +684,8 @@ final class InterviewPosts {
     /** "teacher", "librarian"… and every trade's word, for the operator's stage. */
     static List<String> keys() {
         List<String> out = new ArrayList<>(List.of("teacher", "librarian", "constable", "caveleader", "caveplace", "ferryman",
-            "auctioneer", "banker", "steward", "golemkeeper", EmeraldTrader.POST_KEY));
+            "auctioneer", "banker", "steward", "golemkeeper", EmeraldTrader.POST_KEY,
+            Healers.POST, Sexton.POST, Museum.CURATOR_POST, FireworksMaker.POST));             // [roles-a]
         for (StationTask t : StationTask.values()) {
             if (t == StationTask.NONE) continue;
             out.add(t.name().toLowerCase(Locale.ROOT));

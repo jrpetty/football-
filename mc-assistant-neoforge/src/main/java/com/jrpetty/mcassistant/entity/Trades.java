@@ -242,6 +242,13 @@ public final class Trades {
                 "blaze rods and wart for the brewer, quartz and glowstone for the builders, pearls and obsidian from the piglins");
             // [redstone] The redstone engineer (Engineers): parts made at the bench from the stores' redstone, quartz,
             // iron and stone, and the machines built of them, which then work by themselves.
+            // [roles-a] The healer (Healers, Health): the round of the laid-up with the stores' remedies, the births, a player's hurts.
+            case HEAL -> new Trade("I see to the town's sick and hurt: a round of the infirmary's beds and of anybody laid up at"
+                    + " home, with honey for a cold, a bandage or the brewer's potion for a wound, and company when the stores have"
+                    + " nothing. I'm at the births too, and I'll see to you for a coin if you come in hurt",
+                List.of(),
+                List.of(need("remedies", Health::isRemedy, 4, "the beekeeper, the brewer and the kitchen")),
+                "the patients' health back, and their colds over sooner");
             case REDSTONE -> new Trade("I build the town's machines in real redstone: the cane and melon farms that harvest"
                     + " themselves, the lamps that light at dusk, the sorter by the storehouse, the furnaces that feed themselves"
                     + " and the gate the guards shut at night. I make every part at my bench and mend what breaks",

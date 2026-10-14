@@ -192,6 +192,7 @@ public final class TradeBooks {
             case NETHER -> new String[]{ "nether", "gateway", "the runners", "piglin", "blaze", "ghast" };   // [nether]
             case BEEKEEP -> new String[]{ "hive", "bee" };
             case REDSTONE -> new String[]{ "redstone", "engineer", "machine", "piston" };   // [redstone]
+            case HEAL -> new String[]{ "healer", "infirmary", "a cold", "remedy", "birth" };   // [roles-a]
             default -> new String[]{};
         };
     }
@@ -514,6 +515,7 @@ public final class TradeBooks {
             // [diver] The beds, the fuel they kept (FuelBook), the clay, the turtles, the rescues, and the breath (Divers.notes).
             case DIVER -> out.addAll(Divers.notes(c.level, id));
             case REDSTONE -> out.addAll(Engineers.bookNotes(id));      // [redstone] its machines, its parts, what it has learned
+            case HEAL -> out.addAll(Healers.bookNotes(c.level, id));   // [roles-a] its patients, its remedies, the births
             case COOK -> {
                 if (Villages.hasBuilt(id, "cafe")) out.add("The café is where folk spend their coins on their break. Keep its counter stocked.");
                 if (Villages.hasBuilt(id, "bakery")) out.add("The bakery's oven bakes for the whole town. Keep it fed.");

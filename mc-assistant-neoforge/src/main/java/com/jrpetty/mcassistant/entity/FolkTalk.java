@@ -869,6 +869,7 @@ public final class FolkTalk {
             case DIVER -> Divers.doing(f, r);             // [diver] on the bed of the water, at the shed, or watching it
             case NETHER -> NetherRunners.doing(f, r);     // [nether] through the gateway, or resting from the last run
             case REDSTONE -> Engineers.doing(f, r);       // [redstone] at the bench, or at a machine
+            case HEAL -> Healers.doing(f, r);             // [roles-a] at a bedside, or at the infirmary
         };
         if (!f.missingEssentials().isEmpty()) work += " Or I would be, if I had " + f.missingEssentials().get(0) + ".";
         if (f.life().has(Social.Trait.HARDWORKING) && r.nextBoolean()) work += " Can't stop long.";

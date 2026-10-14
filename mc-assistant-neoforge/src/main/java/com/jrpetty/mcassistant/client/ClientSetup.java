@@ -177,6 +177,7 @@ public final class ClientSetup {
                 case DIVER -> Items.KELP;                  // [diver]
                 case NETHER -> Items.BLAZE_ROD;            // [nether]
                 case REDSTONE -> Items.REPEATER;           // [redstone]
+                case HEAL -> Items.GLISTERING_MELON_SLICE; // [roles-a]
                 case NONE -> Items.AIR;
             });
         }

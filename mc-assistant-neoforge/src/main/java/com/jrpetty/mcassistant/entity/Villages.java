@@ -132,7 +132,10 @@ public final class Villages {
         new Slot(AssistantEntity.StationTask.NETHER, 1, NetherRunners.FROM, Age.NETHER, NetherRunners.MOST),
         // [redstone] The redstone engineer: one from sixteen in the Diamond Age once the stores hold redstone and quartz,
         // two at a hundred (Engineers.wanted), chosen by the town from the hands it can spare (Engineers.appoint).
-        new Slot(AssistantEntity.StationTask.REDSTONE, 1, Engineers.FROM, Age.DIAMOND, 2));
+        new Slot(AssistantEntity.StationTask.REDSTONE, 1, Engineers.FROM, Age.DIAMOND, 2),
+        // [roles-a] The healer: from the Stone Age once the infirmary stands, one to every forty folk, three at most
+        // (Healers.wanted), chosen by the town from the hands it can spare, at interview (Healers.appoint).
+        new Slot(AssistantEntity.StationTask.HEAL, 1, Infirmary.FROM_FOLK, Age.STONE, Healers.MOST));
 
     /** Forget every settlement. For tests, which share one JVM and would
      *  otherwise inherit each other's villages. */
@@ -456,6 +459,10 @@ public final class Villages {
         EmeraldTrader.resetForTests();      // [emerald] the trader, the villagers' villages, the two peoples' sweep
         Divers.resetForTests();             // [diver]
         Engineers.resetForTests();          // [redstone]
+        Healers.resetForTests();            // [roles-a]
+        Sexton.resetForTests();             // [roles-a]
+        Offices.resetForTests();            // [roles-a]
+        Lamplighter.resetForTests();        // [roles-a]
         Fashion.resetForTests();            // [fashion] the season's looks, the tailor's book, the shows
         Quests.resetForTests();
         Services.resetForTests();
@@ -744,6 +751,7 @@ public final class Villages {
             if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             if (slot.trade() == AssistantEntity.StationTask.REDSTONE) continue;   // [redstone] the engineer is chosen (Engineers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.HEAL) continue;       // [roles-a] the healer is chosen (Healers.appoint)
             double target = target(villageId, slot, total) * fit;
             double deficit = target - have.getOrDefault(slot.trade(), 0);
             // The first hand of a craft the village has grown into comes before one more of a trade
@@ -809,6 +817,7 @@ public final class Villages {
             if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             if (slot.trade() == AssistantEntity.StationTask.REDSTONE) continue;   // [redstone] the engineer is chosen (Engineers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.HEAL) continue;       // [roles-a] the healer is chosen (Healers.appoint)
             if (have.getOrDefault(slot.trade(), 0) > 0) continue;
             if (craftReady(villageId, slot.trade())) return slot.trade();
         }
@@ -825,6 +834,7 @@ public final class Villages {
             if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             if (slot.trade() == AssistantEntity.StationTask.REDSTONE) continue;   // [redstone] the engineer is chosen (Engineers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.HEAL) continue;       // [roles-a] the healer is chosen (Healers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > worst) { worst = short_; most = slot.trade(); }
@@ -858,6 +868,7 @@ public final class Villages {
             if (slot.trade() == AssistantEntity.StationTask.DIVER) continue;          // [diver] appointed (Divers.appoint)
             if (slot.trade() == AssistantEntity.StationTask.NETHER) continue;   // [nether] the runners are picked (NetherRunners.appoint)
             if (slot.trade() == AssistantEntity.StationTask.REDSTONE) continue;   // [redstone] the engineer is chosen (Engineers.appoint)
+            if (slot.trade() == AssistantEntity.StationTask.HEAL) continue;       // [roles-a] the healer is chosen (Healers.appoint)
             if (!craftReady(villageId, slot.trade())) continue;
             double short_ = target(villageId, slot, total) * fit - have.getOrDefault(slot.trade(), 0);
             if (short_ > 1.5) { by.put(slot.trade(), short_); out.add(slot.trade()); }
@@ -911,6 +922,7 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.EMERALD) return EmeraldTrader.wanted(villageId);   // [emerald] villagers to trade with, goods to spare
         if (trade == AssistantEntity.StationTask.DIVER) return Divers.ready(villageId);        // [diver] water near enough to dive in
         if (trade == AssistantEntity.StationTask.REDSTONE) return Engineers.ready(villageId);  // [redstone] redstone and quartz in the stores
+        if (trade == AssistantEntity.StationTask.HEAL) return Healers.ready(villageId);        // [roles-a] the infirmary standing
         if (trade == AssistantEntity.StationTask.STORE || trade == AssistantEntity.StationTask.HAUL) {
             return villageId != null && (Storehouses.stands(villageId) || hasBuilt(villageId, "storage")
                 || builtAt(villageId, "storage") != null);
@@ -992,6 +1004,7 @@ public final class Villages {
         if (slot.trade() == AssistantEntity.StationTask.EMERALD) t = EmeraldTrader.traders(villageId);     // [emerald] one, two with several villages
         if (slot.trade() == AssistantEntity.StationTask.DIVER) t = Divers.team(villageId);      // [diver] one, two at fifty
         if (slot.trade() == AssistantEntity.StationTask.REDSTONE) t = Engineers.wanted(villageId);          // [redstone] one, two at a hundred
+        if (slot.trade() == AssistantEntity.StationTask.HEAL) t = Healers.wanted(villageId);                // [roles-a] one to every forty
         // A courier for every five workers out on plots of their own (their production chests).
         if (slot.trade() == AssistantEntity.StationTask.HAUL && villageId != null) {
             int producers = 0;
@@ -1043,6 +1056,7 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.CAVE) return have - CaveDwellers.wanted(villageId);   // [caves] the team, whole
         if (trade == AssistantEntity.StationTask.NETHER) return have - NetherRunners.wanted(villageId);   // [nether] the team, whole
         if (trade == AssistantEntity.StationTask.REDSTONE) return have - Engineers.wanted(villageId);  // [redstone] the engineers, whole
+        if (trade == AssistantEntity.StationTask.HEAL) return have - Healers.wanted(villageId);        // [roles-a] the healers, whole
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;
             if (!wantedHere(slot, villageId, total, at) || !craftReady(villageId, trade)) return 0.0;
@@ -1068,6 +1082,7 @@ public final class Villages {
         if (trade == AssistantEntity.StationTask.CAVE) return have > CaveDwellers.wanted(villageId);   // [caves] the team, whole
         if (trade == AssistantEntity.StationTask.NETHER) return have > NetherRunners.wanted(villageId);   // [nether] the team, whole
         if (trade == AssistantEntity.StationTask.REDSTONE) return have > Engineers.wanted(villageId);  // [redstone] the engineers, whole
+        if (trade == AssistantEntity.StationTask.HEAL) return have > Healers.wanted(villageId);        // [roles-a] the healers, whole
         Age at = villageId == null ? Age.WOOD : ageOf(villageId);
         for (Slot slot : SLOTS) {
             if (slot.trade() != trade) continue;

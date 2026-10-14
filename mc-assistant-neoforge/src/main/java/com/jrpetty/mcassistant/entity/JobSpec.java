@@ -67,6 +67,8 @@ public final class JobSpec {
             case NETHER -> List.of("armour, a sword and a bow (the town's)", "a piece of gold to wear", "fire resistance (the brewer's)");
             // [redstone] The workshop and the stores (Engineers): nothing of its own to set up.
             case REDSTONE -> List.of("the redstone workshop", "redstone and quartz in the stores");
+            // [roles-a] The infirmary and the stores' remedies (Healers, Health): nothing of its own to set up.
+            case HEAL -> List.of("the infirmary", "remedies in the stores: honey, bandages, golden carrots, potions");
         };
     }
 

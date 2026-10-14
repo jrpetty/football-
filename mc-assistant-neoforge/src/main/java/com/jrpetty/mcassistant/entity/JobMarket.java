@@ -409,6 +409,7 @@ public final class JobMarket {
             case MINE, WOOD -> new int[]{ 18, 60 };
             case EMERALD -> new int[]{ 18, 65 };                          // [emerald] a day's walk there and back
             case REDSTONE -> new int[]{ 20, 200 };                         // [redstone] a learned trade, not a youngster's
+            case HEAL -> new int[]{ 20, 200 };                             // [roles-a] the healer's: learned, and steady
             default -> new int[]{ 0, 200 };
         };
     }
@@ -426,6 +427,7 @@ public final class JobMarket {
             case NETHER -> "a seasoned hand, fit to fight through the Nether";   // [nether]
             case MINE, WOOD -> "strong enough for the work";
             case REDSTONE -> "old enough to have learned a trade first";      // [redstone]
+            case HEAL -> "old enough to have nursed a few through a winter";  // [roles-a]
             default -> "";
         };
     }
@@ -434,7 +436,8 @@ public final class JobMarket {
     static boolean wise(@Nullable StationTask t) {
         return t != null && (t.name().contains("TEACH") || t == StationTask.ENCHANT || t == StationTask.STORE || t == StationTask.BREW
             || t == StationTask.CARTOGRAPHER                                                         // [cartographer] a learned trade
-            || t == StationTask.REDSTONE);                                          // [redstone]
+            || t == StationTask.REDSTONE                                            // [redstone]
+            || t == StationTask.HEAL);                                              // [roles-a] the healer's lore
     }
 
     /** Heavy work, for younger backs. */
@@ -727,6 +730,7 @@ public final class JobMarket {
         if (t == StationTask.DIVER) return 0.0;             // [diver] the diver is chosen from the town's own (Divers.appoint)
         if (t == StationTask.NETHER) return 0.0;            // [nether] the runners are picked from its veterans (NetherRunners.appoint)
         if (t == StationTask.REDSTONE) return 0.0;          // [redstone] the engineer is chosen from the town's own (Engineers.appoint)
+        if (t == StationTask.HEAL) return 0.0;              // [roles-a] the healer is chosen from the town's own (Healers.appoint)
         return -Villages.share(town, t);
     }
 

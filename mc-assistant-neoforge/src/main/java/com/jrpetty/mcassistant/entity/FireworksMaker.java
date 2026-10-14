@@ -551,7 +551,25 @@ public final class FireworksMaker {
             }
         }
         if (best == null) return;
+        // [roles-a] The maker's place is one the town gives its own at interview (InterviewPosts, kind FIREWORKS): with two
+        // or more who could take it, held open a day for it, and given after it to the panel's choice (preferred here).
+        VillageFolkEntity chosen = Interviews.holder(id, POST);
+        if (chosen != null && chosen.isAlive() && eligible(chosen, id)) best = chosen;
+        else if (Interviews.vacancy(level, id, POST, best)) return;
         take(level, v, best, b, day);
+    }
+
+    /** [roles-a] The maker's post in the interviews' books (InterviewPosts). */
+    static final String POST = "fireworks";
+
+    /** [roles-a] May this folk stand for the powder hut (as appoint would weigh it): grown, at home, from a trade with a hand
+     *  to spare, never the watch, the storekeeper, the banker, the cave team, the ferry, the scouts or the runners. */
+    static boolean eligible(VillageFolkEntity f, UUID id) {
+        if (f.isBaby() || f.isShowcase() || f.isHired() || !f.isAlive() || f.trip() != null || f.expedition() != null) return false;
+        StationTask t = f.stationTask();
+        if (t == StationTask.GUARD || t == StationTask.STORE || t == StationTask.BANK || t == StationTask.CAVE
+            || t == StationTask.FERRY || t == StationTask.SCOUT || t == StationTask.NETHER || t == TRADE) return false;
+        return t == StationTask.NONE || Villages.overStaffed(id, t) || !t.isCraft() && hands(id, t) >= 2;
     }
 
     /** It takes up the trade at the hut: its station at the bench, the hut its ground. */

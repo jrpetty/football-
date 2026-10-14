@@ -677,8 +677,9 @@ public final class Health {
     }
 
     /**
-     * The healer's round: the neediest patient not seen to in the last minute, by the town's care (TownJobs
-     * "care": the brewer before anybody), at its bedside. Returns who was seen to, or null.
+     * The healer's round: the neediest patient not seen to in the last minute, by the town's healer at its bedside
+     * ([roles-a] Healers), else the town's care (TownJobs "care": the brewer before anybody). Returns who was seen
+     * to, or null.
      */
     @Nullable
     static VillageFolkEntity care(ServerLevel level, Villages.Village v, long now, long day) {
@@ -687,6 +688,14 @@ public final class Health {
             if (now - s.tended < CARE_EVERY && now >= s.tended) continue;
             String what = s.infirmary ? "tending " + p.displayNameCap() + " at the infirmary"
                 : "visiting " + p.displayNameCap() + ", laid up at home";
+            // [roles-a] The town's healer first (Healers): sent to the bedside, and it sees to the patient when it gets there.
+            VillageFolkEntity healer = Healers.forPatient(v, p);
+            if (healer != null) {
+                if (!Healers.atBedside(healer, p)) return null;
+                tend(level, v, p, healer, day, now);
+                Healers.seen(healer, p);
+                return p;
+            }
             if (!TownJobs.atWork(level, v, "care", p.blockPosition(), what, StationTask.BREW)) return null;
             tend(level, v, p, carer(level, v, p, what), day, now);
             return p;
@@ -707,6 +716,12 @@ public final class Health {
             if (d < best) { best = d; near = c; }
         }
         return near;
+    }
+
+    /** [roles-a] Is this one of the remedies the healer gives (honey, a golden carrot, berries, a healing potion, the
+     *  kitchen's bandage and tea)? For the trade's card (Trades) and the stores' books. */
+    public static boolean isRemedy(ItemStack s) {
+        return HONEY.what().test(s) || CARROT.what().test(s) || BERRIES.what().test(s) || POTION.what().test(s) || Kitchen.BANDAGE.test(s);
     }
 
     /** What the healer gives, out of the stores. */
@@ -733,6 +748,7 @@ public final class Health {
         RandomSource r = p.getRandom();
         Book b = book(v.id(), day);
         int eased = used == null ? COMFORT : used.eases();
+        if (carer != null && FolkSkills.active(carer, FolkSkills.Knack.BEDSIDE_MANNER)) eased += eased / 4;   // [roles-a] its knack
         if (used == null) {
             p.heal(1.0F);
             b.comforted++;
@@ -833,6 +849,10 @@ public final class Health {
         out.putInt("week", caughtThisWeek(id, day));
         Ledger.Building b = Infirmary.of(id);
         out.putBoolean("infirmary", b != null);
+        List<String> hs = new ArrayList<>();                                   // [roles-a] the town's healers (Healers)
+        for (VillageFolkEntity h : Healers.healers(id)) hs.add(h.displayNameCap());
+        out.putString("healers", String.join(", ", hs));
+        out.putInt("healers_wanted", Healers.wanted(id));
         if (b != null) {
             List<BlockPos> beds = Infirmary.beds(level, b);
             int taken = 0;
@@ -867,6 +887,10 @@ public final class Health {
             String c = cardLine(f);
             if (!c.isEmpty()) out.add("  " + f.displayNameCap() + ": " + c);
         }
+        List<String> hs = new ArrayList<>();                                   // [roles-a] the town's healers (Healers)
+        for (VillageFolkEntity h : Healers.healers(id)) hs.add(h.displayNameCap() + " (level " + h.tradeLevel(StationTask.HEAL) + ")");
+        out.add("  Healers: " + (hs.isEmpty() ? "none" + (Healers.wanted(id) > 0 ? " yet (the town wants " + Healers.wanted(id) + ")"
+            : "; the town's care crew sees to the sick") : String.join(", ", hs)));
         Book k = book(id, day);
         out.add("  Today: " + k.caught + " caught, " + k.recovered + " got over it, " + k.tended + " seen to (" + k.remedies
             + " with a remedy, " + k.comforted + " with company), " + k.mended + " half-hearts mended in the infirmary's beds"

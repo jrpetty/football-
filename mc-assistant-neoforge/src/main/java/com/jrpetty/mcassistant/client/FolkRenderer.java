@@ -430,6 +430,7 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             case DIVER -> Items.KELP;                      // [diver] a fistful of kelp
             case NETHER -> Items.BLAZE_ROD;                // [nether] what the runners bring home through the gateway
             case REDSTONE -> Items.REDSTONE_TORCH;         // [redstone] the engineer's torch, for trying a line
+            case HEAL -> Items.GLISTERING_MELON_SLICE;     // [roles-a] the healer's: a glistering slice for a potion
             case NONE -> Items.AIR;
         });
     }

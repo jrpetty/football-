@@ -40,6 +40,7 @@ public final class Asks {
         for (String w : new String[]{ "cook", "baker" }) TRADES.put(w, StationTask.COOK);
         for (String w : new String[]{ "shopkeeper" }) TRADES.put(w, StationTask.SHOP);
         for (String w : new String[]{ "engineer" }) TRADES.put(w, StationTask.REDSTONE);   // [redstone]
+        for (String w : new String[]{ "healer", "doctor", "nurse", "midwife" }) TRADES.put(w, StationTask.HEAL);   // [roles-a]
     }
 
     /** The buildings the elder may be asked for (the crafts' amenities are the council's). */

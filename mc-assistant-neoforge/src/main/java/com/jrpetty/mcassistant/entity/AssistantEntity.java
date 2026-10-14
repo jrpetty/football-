@@ -167,7 +167,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         NETHER("the Nether runs", "Nether runner"),
         // [redstone] A late-game town's redstone engineer builds its machines (Engineers, Machines): the cane and melon
         // farms, the lamps that light at dusk, the sorter, the piston gate and the auto-smelter, and keeps them going.
-        REDSTONE("redstone engineering", "Redstone engineer");
+        REDSTONE("redstone engineering", "Redstone engineer"),
+        // [roles-a] A Stone Age town with its infirmary keeps a healer, chosen at interview, one to every forty folk: the
+        // rounds of the laid-up with the stores' remedies, a herb shelf at the infirmary, the births, and the player's
+        // hurts for a coin (Healers, Health).
+        HEAL("healing", "Healer");
 
         /** The trades of a grown village, which work out of a building of their own. */
         public boolean isCraft() {
@@ -177,7 +181,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 && this != EMERALD                                                                    // [emerald]
                 && this != DIVER                                                                      // [diver]
                 && this != NETHER                                                                     // [nether]
-                && this != REDSTONE;                                                                  // [redstone] its day is out at its machines
+                && this != REDSTONE                                                                   // [redstone] its day is out at its machines
+                && this != HEAL;                                                                      // [roles-a] its day is on its rounds
         }
 
         public final String label;   // lower-case, for sentences
@@ -1530,6 +1535,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case DIVER -> null;                   // [diver] its kit is drawn at the stores on its rounds (KelpBeds.atStores)
             case NETHER -> null;                  // [nether] kitted by the town before each run (NetherRunners.kitUp)
             case REDSTONE -> null;                // [redstone] its parts come out of the stores as it builds (Engineers)
+            case HEAL -> null;                    // [roles-a] its remedies come out of the stores at the bedside (Health.tend)
         };
         // ONE restock, one pace. This used to be three separate paced scoops in
         // a row, and only the first of them could ever run: the food scoop took
@@ -1851,6 +1857,9 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
     protected boolean netherWork() { return false; }
     /** [redstone] A redstone engineer's day at the town's machines (Engineers): VillageFolkEntity does it. */
     protected boolean redstoneWork() { return false; }
+
+    /** [roles-a] The healer's day: its round of the laid-up, and the infirmary between them (VillageFolkEntity: Healers). */
+    protected boolean healerWork() { return false; }
 
     /** Is this animal one of its village's own herd (penned, led, brought home), not game? (VillageFolkEntity) */
     public boolean spareTheHerd(net.minecraft.world.entity.animal.Animal a) { return false; }
@@ -2775,6 +2784,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case DIVER -> false;                  // [diver] its kit is drawn at the stores on its rounds (KelpBeds.atStores)
             case NETHER -> false;                 // [nether] kitted by the town before each run (NetherRunners.kitUp)
             case REDSTONE -> false;               // [redstone] its parts come out of the stores as it builds (Engineers)
+            case HEAL -> false;                   // [roles-a] its remedies come out of the stores at the bedside (Health.tend)
         };
     }
 
@@ -4460,6 +4470,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 : s.is(Items.TURTLE_SCUTE) ? 5 : (s.get(DataComponents.FOOD) != null ? 8 : 0);
             case NETHER -> NetherRunners.keeps(s);                       // [nether] the run's kit; the haul goes home
             case REDSTONE -> s.get(DataComponents.FOOD) != null ? 8 : 0;   // [redstone] a bite on its rounds; the parts stay in the stores
+            case HEAL -> s.get(DataComponents.FOOD) != null ? 8 : 0;       // [roles-a] a bite on its rounds; the remedies stay in the stores
             case NONE -> 0;
         };
     }
@@ -4643,7 +4654,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         ANIMALS_SHEARED("sheep sheared"), FISH_CAUGHT("fish caught"),
         ITEMS_SMELTED("items smelted"), MOBS_KILLED("hostiles killed"),
         LOADS_HAULED("loads delivered"), CHESTS_SORTED("chests tidied"),
-        ITEMS_STASHED("items stashed"), THINGS_MADE("things made"), BLOCKS_BUILT("blocks built");
+        ITEMS_STASHED("items stashed"), THINGS_MADE("things made"), BLOCKS_BUILT("blocks built"),
+        FOLK_HEALED("patients seen to");                          // [roles-a] the healer's (Healers); saved by name
 
         public final String label;
         Deed(String label) { this.label = label; }
@@ -4704,6 +4716,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case ITEMS_STASHED -> 5;
             case THINGS_MADE -> 400;
             case BLOCKS_BUILT -> 20;
+            case FOLK_HEALED -> 800;                // [roles-a] a patient seen to
         };
     }
 
@@ -5765,6 +5778,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 case DIVER -> new Branch[]{ PORTER, PROSPECTOR };      // [diver]
                 case NETHER -> new Branch[]{ SENTINEL, PROSPECTOR };   // [nether]
                 case REDSTONE -> new Branch[]{ PORTER, PROSPECTOR };   // [redstone]
+                case HEAL -> new Branch[]{ HUSBANDRY, PORTER };        // [roles-a] gentle hands; the remedies carried round
                 case NONE -> new Branch[]{};
             };
         }
@@ -7432,6 +7446,10 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
                 // [redstone] Building the town's machines, or round them, mending and minding (Engineers).
                 if (redstoneWork()) return true;
             }
+            case HEAL -> {
+                // [roles-a] At a bedside on its round, or minding the infirmary between patients (Healers).
+                if (healerWork()) return true;
+            }
             case NONE -> { }
         }
         // Nothing to do right where it's stood. On a zone bigger than its own
@@ -7987,6 +8005,7 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
             case DIVER -> 0;                      // [diver] it banks its own at the stores on its rounds (KelpBeds.atStores)
             case NETHER -> 0;                     // [nether] its haul goes into the storehouse when it is home (NetherRuns)
             case REDSTONE -> 0;                   // [redstone] its machines' output goes into their chests (Engineers)
+            case HEAL -> 0;                       // [roles-a] it makes nothing to stash: its work is the patients
         };
         // Never more than a stash would actually move. The trade's own sums kept back less
         // than the stash keeps back (a village miner keeps 32 cobble, the sum kept 16), so

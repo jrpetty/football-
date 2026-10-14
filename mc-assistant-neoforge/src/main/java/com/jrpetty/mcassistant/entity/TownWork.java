@@ -106,6 +106,7 @@ public final class TownWork {
         boolean ironAge = age.ordinal() >= Villages.Age.IRON.ordinal();
         // A lamp post along the avenues and round the ring street.
         if (ironAge && avenue && lampSpot(dx, dz) && above.isAir() && ground.isSolid()
+                && !ground.is(net.minecraft.tags.BlockTags.FENCES)                       // [roles-a] never a lamp on a lamp's post
                 && !level.getBlockState(top.above(2)).isSolid()) {
             // The light first: no light, no post (and no logs spent on one). A lantern if the smith has
             // made one (or left the nuggets for one), a torch if not (Masonry).
@@ -135,6 +136,7 @@ public final class TownWork {
         // of the town ("clear 3 zombies from the fields" was on every board). A torch is made
         // here from the stores' coal and a stick's worth of wood if there is none put by.
         if (!ironAge && avenue && lampSpot(dx, dz) && above.isAir() && ground.isSolid()
+                && !ground.is(net.minecraft.tags.BlockTags.FENCES)                       // [roles-a] a post doused for the day (Lamplighter)
                 && !level.getBlockState(top.above(2)).isSolid()) {
             if (Market.stock(level, v.id(), s -> s.is(Items.TORCH) || s.is(Items.COAL) || s.is(Items.CHARCOAL)) == 0) return 0;
             if (!TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, top.above(), top.above(2))) return 0;              // [integrity]
