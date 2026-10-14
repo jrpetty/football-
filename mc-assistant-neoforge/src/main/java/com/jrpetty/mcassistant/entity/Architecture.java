@@ -640,12 +640,23 @@ public final class Architecture {
         });
     }
 
-    private static void markDressed(UUID village, Ledger.Building b, Style st) {
+    /** [styles] A building to be dressed again (renovated to a new design: Renovation). */
+    static void forgetDressed(UUID village, BlockPos anchor) {
         Map<Long, String> m = dressed(village);
-        m.put(b.anchor().asLong(), st.name() + "|" + age(village));
+        if (m.remove(anchor.asLong()) == null) return;
+        saveDressed(village, m);
+    }
+
+    private static void saveDressed(UUID village, Map<Long, String> m) {
         List<String[]> rows = new ArrayList<>();
         for (Map.Entry<Long, String> e : m.entrySet()) rows.add(new String[]{ Long.toString(e.getKey()), e.getValue() });
         Culture.rows(village, TownWays.PREFIX + "dressed", rows);
+    }
+
+    private static void markDressed(UUID village, Ledger.Building b, Style st) {
+        Map<Long, String> m = dressed(village);
+        m.put(b.anchor().asLong(), st.name() + "|" + age(village));
+        saveDressed(village, m);
     }
 
     /**

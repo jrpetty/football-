@@ -73,6 +73,11 @@ public final class Ages {
         DONE.clear();
     }
 
+    /** [styles] A building's make-over to be looked at again (renovated to a new design: Renovation). */
+    static void forget(BlockPos anchor) {
+        DONE.remove(anchor.asLong());
+    }
+
     /** The drawing standing at this building now (a grown house is a house2). */
     static String drawing(UUID village, Ledger.Building b) {
         // [styles] The town's theme's own drawing of it, if its theme has one (Themes.design).

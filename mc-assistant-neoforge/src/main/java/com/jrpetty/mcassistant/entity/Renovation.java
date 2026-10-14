@@ -431,6 +431,9 @@ public final class Renovation {
         Ledger.note(id, PREFIX + b.anchor().asLong(), kept.encode());
         remove(id, b.anchor().asLong());
         WAITS.remove(b.anchor().asLong());
+        // Its new walls and roof are the age's make-over's and the style's dressers' to come round to again.
+        Ages.forget(b.anchor());
+        Architecture.forgetDressed(id, b.anchor());
         DONE.merge(id, 1, Integer::sum);
         if (was != null && (was.version() != now.version() || !was.theme().equals(now.theme()))) {
             Villages.tell(id, level.getDayTime() / 24000L, Villages.spoken(Themes.structure(now.drawing())) + " was renovated to the town's "
@@ -504,13 +507,14 @@ public final class Renovation {
             return null;
         }
 
-        /** Does what stands here answer the design's part (a door for a door, glass for a window...)? */
-        static boolean answers(BuildGoal.Part part, BlockState s) {
+        /** Does what stands here answer the design's place (a door for a door, a pane for a pane, whole glass for glass)? */
+        static boolean answers(BuildGoal.Placement p, BlockState s) {
             if (s.isAir()) return false;
+            BuildGoal.Part part = p.part();
             return switch (part) {
                 case DOOR -> s.getBlock() instanceof DoorBlock;
                 case BED -> s.getBlock() instanceof BedBlock;
-                case WINDOW -> Architecture.pane(s) || s.is(net.minecraft.tags.BlockTags.IMPERMEABLE) || s.getBlock() instanceof net.minecraft.world.level.block.TransparentBlock;
+                case WINDOW -> p.style() == Blueprints.Style.GLASS ? !Architecture.pane(s) && wholeGlass(s) : Architecture.pane(s);
                 case TORCH -> s.is(Blocks.TORCH) || s.is(Blocks.WALL_TORCH) || s.is(Blocks.LANTERN) || s.is(Blocks.SOUL_LANTERN);
                 case LANTERN -> s.getBlock() instanceof net.minecraft.world.level.block.LanternBlock || s.is(Blocks.TORCH) || s.is(Blocks.WALL_TORCH);
                 case WATER -> !s.getFluidState().isEmpty();
@@ -525,6 +529,21 @@ public final class Renovation {
                     yield it != Items.AIR && BuildGoal.itemForPart(part).test(new ItemStack(it));
                 }
             };
+        }
+
+        /** A window the town's building style dresses so (the Hill Fort's side windows walled up small): left so. */
+        static boolean styledWindow(UUID village, BlockState s) {
+            Architecture.Style st = Architecture.of(village);
+            if (st == null) return false;
+            for (Map<String, Object> r : Themes.cachedRules(Themes.of(village), "dress", "WINDOW", st.name())) {
+                if (r.get("to") instanceof String to && to.indexOf('{') < 0 && Themes.block(to.replace("like:", "")) == s.getBlock()) return true;
+            }
+            return false;
+        }
+
+        /** A whole block of glass, clear, stained or tinted. */
+        static boolean wholeGlass(BlockState s) {
+            return s.is(BlockTags.IMPERMEABLE) || s.getBlock() instanceof net.minecraft.world.level.block.TransparentBlock;
         }
 
         /**
@@ -617,7 +636,7 @@ public final class Renovation {
                     rest.add(new Work(Kind.PART, p.pos(), p, null));
                     continue;
                 }
-                if (answers(p.part(), s)) continue;
+                if (answers(p, s) || p.part() == BuildGoal.Part.WINDOW && styledWindow(id, s)) continue;
                 if (halves.contains(p.pos().asLong()) && (s.getBlock() instanceof DoorBlock || s.getBlock() instanceof BedBlock)) continue;
                 if (furniture(p.part())) {
                     List<BlockPos> got = orphans.get(p.part());
@@ -785,7 +804,8 @@ public final class Renovation {
             if (free) {
                 st = freePart(part, p);
             } else {
-                ItemStack got = part == BuildGoal.Part.WINDOW ? Crafts.takeOne(level, v, s -> s.is(Items.GLASS_PANE) || s.is(Items.GLASS))
+                boolean whole = p.style() == Blueprints.Style.GLASS;
+                ItemStack got = part == BuildGoal.Part.WINDOW ? Crafts.takeOne(level, v, s -> s.is(whole ? Items.GLASS : Items.GLASS_PANE))
                     : Crafts.takeOne(level, v, s -> s.getItem() instanceof BlockItem && BuildGoal.itemForPart(part).test(s));
                 if (got.isEmpty() && part == BuildGoal.Part.DOOR && Crafts.usePlanks(level, v, 6)) got = new ItemStack(Items.OAK_DOOR);
                 if (got.isEmpty()) return -1;
