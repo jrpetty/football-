@@ -133,4 +133,32 @@ class BattleModelTest {
         assertTrue(offeredHopeless > TRIALS / 2, "hopeless and timid, most yield: " + offeredHopeless);
         assertTrue(taken > takenVengeful * 3, "a kindly victor takes a surrender far oftener than a vengeful, ambitious one: " + taken + " / " + takenVengeful);
     }
+
+    @Test
+    @DisplayName("[war-polish] every formation draws its line in even ranks and files: no two marks closer than its spacing or a rank's depth, no gap in a rank")
+    void formationsDrawEvenRanks() {
+        for (BattleModel.Formation f : BattleModel.Formation.values()) {
+            for (int n : new int[]{ 5, 12, 20, 33 }) {
+                double[][] s = new double[n][];
+                for (int k = 0; k < n; k++) s[k] = f.slot(k, n);
+                for (int i = 0; i < n; i++) {
+                    double best = Double.MAX_VALUE;
+                    for (int j = 0; j < n; j++) {
+                        if (i == j) continue;
+                        best = Math.min(best, Math.hypot(s[i][0] - s[j][0], s[i][1] - s[j][1]));
+                    }
+                    assertTrue(best >= Math.min(f.spacing, BattleModel.RANK_GAP) - 1.0E-9, f + " of " + n + ": mark " + i + " crowded (" + best + ")");
+                    if (f.bend == BattleModel.Formation.Bend.STRAIGHT || f.bend == BattleModel.Formation.Bend.WEDGE) {
+                        assertTrue(best <= Math.max(f.spacing, BattleModel.RANK_GAP) + 1.0E-9, f + " of " + n + ": mark " + i + " off on its own (" + best + ")");
+                    }
+                }
+                if (f.bend == BattleModel.Formation.Bend.STRAIGHT) {
+                    int ranks = f.ranksFor(n), per = (n + ranks - 1) / ranks;
+                    for (int k = per; k < n; k++) {
+                        assertEquals(s[0][1] - BattleModel.RANK_GAP * (k / per), s[k][1], 1.0E-9, f + ": rank " + k / per + " a rank's depth behind");
+                    }
+                }
+            }
+        }
+    }
 }

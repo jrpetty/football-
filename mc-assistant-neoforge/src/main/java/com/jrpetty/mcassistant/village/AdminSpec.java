@@ -119,8 +119,8 @@ public final class AdminSpec {
 
     public static final List<String> AGES = List.of("wood", "stone", "iron", "diamond", "nether");
     public static final List<String> TIERS = List.of("leather", "chain", "iron", "diamond", "netherite");
-    public static final List<String> PHASES = List.of("muster", "march", "lineup", "parley", "volley", "clash", "rout", "aftermath",
-        "surrender", "peace");
+    public static final List<String> PHASES = List.of("muster", "march", "lineup", "parley", "horn", "volley", "charge", "clash", "rout", "aftermath",
+        "surrender", "peace");                                                  // [war-polish] the horn and the charge too
     public static final List<String> SCENARIOS = List.of("battle", "market", "restaurant", "raid", "big-city", "earning");
     public static final List<String> EVENTS = List.of("festival", "wedding", "birth", "funeral", "election", "fire", "flood", "drought",
         "illness", "envoy", "feud", "caravan", "visitor", "refugees");

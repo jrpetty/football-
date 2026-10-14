@@ -104,7 +104,7 @@ public final class DefenceCommands {
             + (at == null ? "; no place on the square" : " | at " + at.toShortString()));
         if (at != null) {
             out.add(view("muster-1-over-the-square", at.getX() - 9, at.getY() + 14, at.getZ() + 9, at.getX(), at.getY(), at.getZ()));
-            out.add(view("muster-2-the-ring", at.getX() + 12, at.getY() + 5, at.getZ() + 3, at.getX(), at.getY() + 1, at.getZ()));
+            out.add(view("muster-2-the-ring", at.getX() + 12, at.getY() + 9, at.getZ() + 6, at.getX(), at.getY(), at.getZ()));   // [war-polish] high enough to see the ring as a ring
         }
         ctx.getSource().sendSuccess(() -> Component.literal(String.join(" | ", out)), false);
         return 1;

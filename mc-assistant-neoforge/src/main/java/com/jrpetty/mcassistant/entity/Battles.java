@@ -77,6 +77,8 @@ public final class Battles {
     static final int EVERY = 10;
     /** The longest a battle is fought before the side with the less heart in it draws off. */
     static final long LONGEST = 6000L;
+    /** [war-polish] How far off the field a battle's outcome is told (blocks). */
+    static final int ANNOUNCE = 400;
     /** How long the lines take to form, at most; the parley; the speeches; the champions; between volleys. */
     static final long FORM = 600L, PARLEY = 400L, SPEECH = 200L, CHAMPIONS = 800L, VOLLEY = 60L, PURSUIT = 200L, AFTERMATH = 600L;
     /** Volleys in the archers' duel before the lines come on. */
@@ -85,6 +87,15 @@ public final class Battles {
     static final int CAPTIVES_MOST = 8;
     /** Bursts of the clash's sparks a beat, at most. */
     static final int SPARKS = 6;
+    /** [war-polish] Drawn up before the horn: the most a mark strays off its slot (blocks), and the share of a fighter's own step forward or back. */
+    static final double STILL_JITTER = 0.12, STILL_STEP = 0.4;
+    /** [war-polish] Before the horn a fighter glances aside now and then: for a beat of so many ticks in every so many, so far (degrees). */
+    static final long IDLE_BEAT = 60L, IDLE_EVERY = 5L;
+    static final float IDLE_TURN = 15.0F;
+    /** [war-polish] Back from the line: the archers at least, the Captain and the standard at least, and the gap between each group (blocks). */
+    static final double ARCHERS_BACK = 4.0, COMMAND_BACK = 10.0, GROUP_GAP = 3.0;
+    /** [war-polish] The charge staged for the pictures: the lines this far apart, running in so far a beat till this close. */
+    static final double CHARGE_GAP = 14.0, CHARGE_STEP = 1.0, CHARGE_STOP = 4.0, CHARGE_SPEED = 1.25;
 
     /** Tests: the chance of a death, whatever the config says (null: as it says). */
     @Nullable static Integer deathsForTests;
@@ -142,6 +153,8 @@ public final class Battles {
         double ragged = 0.6;
         /** Settled without a blow (a surrender taken at the parley), or one side gone behind its walls rather than fight. */
         boolean settled, withdrew;
+        /** [war-polish] Staged at the charge: the lines run in till they all but meet, and are held there. */
+        boolean charging;
 
         Battle(Campaigns.Campaign c, BlockPos centre, double ax, double az, boolean assault, boolean detailed) {
             this.c = c;
@@ -207,7 +220,7 @@ public final class Battles {
                 case AFTERMATH -> aftermath(level, in);
                 default -> { }
             }
-            if (!over && phase.ordinal() < BattleModel.Phase.PURSUIT.ordinal() && now - began > (Campaigns.hurried() ? LONGEST / 2 : LONGEST)) {
+            if (!over && hold == null && phase.ordinal() < BattleModel.Phase.PURSUIT.ordinal() && now - began > (Campaigns.hurried() ? LONGEST / 2 : LONGEST)) {
                 // Neither side has given way by evening: the one with less heart in it draws off.
                 int loser = side[0].morale < side[1].morale ? 0 : side[1].morale < side[0].morale ? 1 : -1;
                 if (loser < 0) {
@@ -228,17 +241,44 @@ public final class Battles {
         /** Staged for the pictures (Campaigns.stage): the battle stays at this phase till it is let go. */
         @Nullable BattleModel.Phase hold;
 
+        /** [war-polish] Held at its phase for the pictures: what would move it on (and say so) waits. */
+        boolean held() {
+            return hold != null && phase == hold;
+        }
+
+        /** [war-polish] Drawn up and waiting for the horn: the ranks stand true and still. */
+        boolean still() {
+            return phase.ordinal() < BattleModel.Phase.VOLLEYS.ordinal();
+        }
+
         /**
          * Pictures: the battle set straight at a phase and held there: the lines formed (lineup), the Captains in the
          * middle (parley), the volleys (volley), the lines locked (clash), one side running (rout), the medics and the
          * captives (aftermath). The fighters' places worked out at once, for the stage to set them down in.
          */
         void stagePhase(ServerLevel level, String what) {
+            hold = null;                                           // [war-polish] staged on from wherever it was held
+            charging = false;
             switch (what) {
                 case "parley" -> stageAt(level, BattleModel.Phase.PARLEY);
+                case "horn" -> {                                   // [war-polish] the beat of silence over: the horn and the battle cry
+                    stageAt(level, BattleModel.Phase.SPEECH);
+                    sound(level);
+                }
                 case "volley" -> {
                     stageAt(level, BattleModel.Phase.VOLLEYS);
                     shields(true);
+                }
+                case "charge" -> {                                 // [war-polish] the lines coming on at a run
+                    forward[0] = forward[1] = (Battlefields.GAP - CHARGE_GAP) / 2.0;
+                    stageAt(level, BattleModel.Phase.ADVANCE);
+                    charging = true;
+                    shields(false);
+                    for (int i = 0; i < 2; i++) {
+                        order(level, i, "Charge!");
+                        WarHorn.signal(level, side[i], at(origin(i)), WarHorn.Signal.CHARGE);
+                        Armies.cry(level, at(origin(i)), false);
+                    }
                 }
                 case "clash" -> {
                     forward[0] = forward[1] = (Battlefields.GAP - 3) / 2.0;
@@ -248,15 +288,16 @@ public final class Battles {
                     forward[0] = forward[1] = (Battlefields.GAP - 3) / 2.0;
                     phase = BattleModel.Phase.CLASH;
                     for (int i = 0; i < 2; i++) array(level, side[i], origin(i), 0, this, i);
-                    breakSide(level, 1, BattleModel.Outcome.ROUT);
+                    breakSide(level, 1, BattleModel.Outcome.ROUT);     // once: a battle staged on keeps the outcome it had
                     hold = BattleModel.Phase.PURSUIT;
                 }
                 case "aftermath" -> {
                     forward[0] = forward[1] = (Battlefields.GAP - 3) / 2.0;
+                    if (outcome == null) breakSide(level, 1, BattleModel.Outcome.RETREAT);   // [war-polish] its one outcome
                     for (int i = 0; i < 2; i++) {
                         int n = 0;
                         for (Armies.Fighter f : side[i].fighters) {
-                            if (n >= (i == 0 ? 2 : 4) || f.rank != Armies.Rank.NONE || f.role == BattleModel.Role.MEDIC) continue;
+                            if (n >= (i == winner ? 2 : 4) || f.rank != Armies.Rank.NONE || f.role == BattleModel.Role.MEDIC) continue;
                             if (level.getEntity(f.id) instanceof VillageFolkEntity e) Armies.yieldNow(e, f, null);
                             f.placed = true;
                             double[] o = origin(i);
@@ -264,13 +305,11 @@ public final class Battles {
                             n++;
                         }
                     }
-                    winner = 0;
-                    outcome = BattleModel.Outcome.RETREAT;
                     stageAt(level, BattleModel.Phase.AFTERMATH);
                 }
                 default -> stageAt(level, BattleModel.Phase.FORM);
             }
-            for (int i = 0; i < 2; i++) array(level, side[i], phase == BattleModel.Phase.AFTERMATH && i == 1 ? origin(1) : origin(i), 0, this, i);
+            for (int i = 0; i < 2; i++) array(level, side[i], origin(i), 0, this, i);
             if (phase == BattleModel.Phase.PARLEY) parley(level, soon(PARLEY) / 4);
         }
 
@@ -448,7 +487,7 @@ public final class Battles {
                 story.add("The Captains met between the lines; " + name(1) + " would not hear " + name(0) + "'s terms.");
             }
             if (in == half + 4 * EVERY) {
-                int outcome = parleyTerms(level);
+                int outcome = hold == null ? parleyTerms(level) : 0;     // [war-polish] staged: no surrender on a stage
                 if (outcome == 0) say(level, caps[1], refusal());
                 if (settled || withdrew) return;
             }
@@ -460,17 +499,21 @@ public final class Battles {
             if (in == EVERY) for (int i = 0; i < 2; i++) say(level, side[i].officer(Armies.Rank.CAPTAIN), rousing(i));
             if (in == Math.min(80, soon(SPEECH) - 2 * EVERY)) for (int i = 0; i < 2; i++) say(level, side[i].officer(Armies.Rank.CAPTAIN), FolkTalk.pick(level.getRandom(),
                 "Mind your sergeants. Keep your places. Follow the banner!", "Shields together. Nobody runs. Nobody!", "For " + name(i) + "!"));
-            if (in >= soon(SPEECH)) {
-                // The beat of silence, then the horn and the battle cry.
-                for (int i = 0; i < 2; i++) {
-                    WarHorn.signal(level, side[i], at(origin(i)), WarHorn.Signal.BEGIN);
-                    Armies.cry(level, at(origin(i)), false);
-                    cheer(level, i, false);
-                }
+            if (in >= soon(SPEECH) && !held()) {
+                sound(level);                                      // the beat of silence, then the horn and the battle cry
                 story.add(name(0) + " " + side[0].tactic.words + "; " + name(1) + " " + side[1].tactic.words + ".");
                 Raids.tellNear(level, centre, 240, Component.literal("[War] " + capital(c.name) + " is joined: " + story.get(story.size() - 1))
                     .withStyle(ChatFormatting.GOLD), false);
                 to(level, assault ? BattleModel.Phase.ADVANCE : offerChampions(level) ? BattleModel.Phase.CHAMPIONS : BattleModel.Phase.VOLLEYS);
+            }
+        }
+
+        /** The horn and each side's battle cry. */
+        void sound(ServerLevel level) {
+            for (int i = 0; i < 2; i++) {
+                WarHorn.signal(level, side[i], at(origin(i)), WarHorn.Signal.BEGIN);
+                Armies.cry(level, at(origin(i)), false);
+                cheer(level, i, false);
             }
         }
 
@@ -529,7 +572,7 @@ public final class Battles {
                     if (volleys[i] < VOLLEYS) volley(level, i, false);
                 }
             }
-            if (!any || volleys[0] >= VOLLEYS && volleys[1] >= VOLLEYS || in > VOLLEY * (VOLLEYS + 2)) {
+            if (!held() && (!any || volleys[0] >= VOLLEYS && volleys[1] >= VOLLEYS || in > VOLLEY * (VOLLEYS + 2))) {
                 to(level, BattleModel.Phase.ADVANCE);
                 for (int i = 0; i < 2; i++) if (!side[i].tactic.holds() || bothHold()) order(level, i, "Shields up! Advance!");
             }
@@ -546,6 +589,11 @@ public final class Battles {
         }
 
         void advance(ServerLevel level, long in) {
+            if (charging) {                                        // [war-polish] staged: running in, held as they all but meet
+                if (gap() > CHARGE_STOP) for (int i = 0; i < 2; i++) forward[i] += CHARGE_STEP / 2;
+                for (int i = 0; i < 2; i++) array(level, side[i], origin(i), 0, this, i);
+                return;
+            }
             shields(true);
             for (int i = 0; i < 2; i++) if (comesOn(i)) forward[i] += 0.5;     // a steady walk, a block a second
             // A feigned retreat: as they come on, the line gives ground, then turns on them.
@@ -560,7 +608,7 @@ public final class Battles {
             if (in % 60 == 0 && side[0].count(BattleModel.Role.ARCHER) + side[1].count(BattleModel.Role.ARCHER) > 0) {
                 for (int i = 0; i < 2; i++) volley(level, i, false);
             }
-            if (gap() <= 5 || in > 900) {
+            if (!held() && (gap() <= 5 || in > 900)) {
                 for (int i = 0; i < 2; i++) {
                     if (fellBack[i]) {
                         order(level, i, "Now! Turn and at them!");
@@ -605,6 +653,7 @@ public final class Battles {
             }
             for (int i = 0; i < 2; i++) tend(level, i, 10.0);        // the medic pulls back those down near its own lines
             sparks(level);
+            if (held()) return;                                    // [war-polish] staged: the lines stay locked; nobody breaks on a stage
             for (int i = 0; i < 2; i++) {
                 BattleModel.Outcome o = BattleModel.breaks(model(i), model(1 - i));
                 if (o != null) {
@@ -680,6 +729,7 @@ public final class Battles {
 
         /** A side breaks: in good order, in a rout, or on its knees; the other cheers; the pursuit. */
         void breakSide(ServerLevel level, int loser, BattleModel.Outcome o) {
+            if (outcome != null) return;                           // [war-polish] one battle, one outcome
             winner = 1 - loser;
             outcome = o;
             Armies.Army l = side[loser];
@@ -719,7 +769,7 @@ public final class Battles {
             WarHorn.signal(level, side[winner], at(origin(winner)), WarHorn.Signal.VICTORY);
             WarHorn.signal(level, side[loser], at(origin(loser)), WarHorn.Signal.RETREAT);
             story.add(name(loser) + " " + o.words + "; " + name(winner) + " held the field.");
-            Raids.tellNear(level, centre, 240, Component.literal("[War] " + capital(c.name) + ": " + story.get(story.size() - 1)).withStyle(ChatFormatting.GOLD), false);
+            Raids.tellNear(level, centre, ANNOUNCE, Component.literal("[War] " + capital(c.name) + ": " + story.get(story.size() - 1)).withStyle(ChatFormatting.GOLD), false);
             to(level, BattleModel.Phase.PURSUIT);
         }
 
@@ -734,7 +784,7 @@ public final class Battles {
                 }
                 return;
             }
-            if (in < PURSUIT) return;
+            if (in < PURSUIT || held()) return;
             order(level, winner, "Hold! Let them go! Back to the banner!");
             for (Armies.Fighter f : side[winner].fighters) if (f.order == Armies.Order.ENGAGE) { f.order = Armies.Order.PLACE; f.foe = null; }
             to(level, BattleModel.Phase.AFTERMATH);
@@ -745,7 +795,7 @@ public final class Battles {
             for (int i = 0; i < 2; i++) if (i == winner || winner < 0) array(level, side[i], origin(i), 0, this, i);
             for (int i = 0; i < 2; i++) tend(level, i, 40.0);
             if (in == EVERY) takeCaptives(level);
-            if (in < soon(AFTERMATH)) return;
+            if (in < soon(AFTERMATH) || held()) return;             // [war-polish] staged: the field stays as it is
             for (int i = 0; i < 2; i++) bannerHome(level, i);
             over = true;
             close();
@@ -863,7 +913,9 @@ public final class Battles {
             for (int i = 0; i < 2; i++) {
                 Armies.Army a = side[i];
                 if (bars[i] == null) {
-                    bars[i] = new ServerBossEvent(Component.empty(), colour(a.town, i == 1 ? bars[0] : null), BossEvent.BossBarOverlay.NOTCHED_10);
+                    WarDress.Tint[] t = WarDress.tints(c);             // [war-polish] the bar in the army's own colour
+                    bars[i] = new ServerBossEvent(Component.empty(), WarDress.bar(t[i], i == 1 && bars[0] != null ? bars[0].getColor() : null),
+                        BossEvent.BossBarOverlay.NOTCHED_10);
                 }
                 bars[i].setName(Component.literal(name(i) + " — " + (a.standing() + a.behind) + " standing, " + Campaigns.spirit(a)
                     + (captainDown[i] ? ", Captain down" : "") + (bannerLost[i] ? ", banner lost" : "")));
@@ -1140,6 +1192,24 @@ public final class Battles {
         return b;
     }
 
+    /** [war-polish] Tests: side i of the campaign's battle drawn up in this formation, its marks set now. */
+    public static void formForTests(ServerLevel level, Campaigns.Campaign c, int i, BattleModel.Formation f) {
+        Battle b = c.battle;
+        if (b == null || b.side[i] == null) return;
+        b.side[i].formation = f;
+        array(level, b.side[i], b.origin(i), 0, b, i);
+    }
+
+    /** [war-polish] Tests: where side i's line draws up and the way it faces, {x, z, fx, fz}. */
+    public static double[] originForTests(Campaigns.Campaign c, int i) {
+        return c.battle == null ? new double[]{ 0, 0, 1, 0 } : c.battle.origin(i);
+    }
+
+    /** [war-polish] Tests: the war's course as written in this town's books, every entry (not the deduplicated reading). */
+    public static List<String> courseWrittenForTests(UUID us, UUID them) {
+        return WarBooks.list(us, "wp.course/" + them);
+    }
+
     /** Wait so long, or less for the tests. */
     static long soon(long t) {
         return Campaigns.soonBattle(t);
@@ -1175,43 +1245,37 @@ public final class Battles {
 
     /**
      * Every fighter of the army its place in its lines, at {@code origin} {x, z, fx, fz} (where the front rank's
-     * middle stands, and the way it faces): the line in one rank (two past a dozen) a block and a half apart, the
-     * sergeants at its ends; the archers four behind (on the rise for a rise's archers); the reserve eight behind
-     * (out on the flank behind its cover for a hidden one); the Captain and the banner ten behind; the medic
-     * thirteen. Those engaged, down, routed or taken keep to what they are doing.
+     * middle stands, and the way it faces). [war-polish] Ranks and files, front to back: the line in its formation (on
+     * parade one rank, two past a dozen, a block and a half apart, the sergeants at its ends; in the field the shields
+     * in the front rank, the rest behind them); the archers behind it (four at least; on the wings, in front, inside
+     * the ring or on the rise as the formation and the tactic have it); the Captain with the standard behind the
+     * centre (ten at least); the reserve behind them (out on the flank behind its cover for a hidden one); the medic
+     * last. Those engaged, down, routed or taken keep to what they are doing.
      */
     static void array(ServerLevel level, Armies.Army a, double[] origin, double forward, @Nullable Battle b, int side) {
         double fx = origin[2], fz = origin[3], rx = -fz, rz = fx;
         double ox = origin[0] + fx * forward, oz = origin[1] + fz * forward;
         float yaw = Armies.yawTo(fx, fz);
         List<Armies.Fighter> line = new ArrayList<>(), archers = new ArrayList<>(), reserve = new ArrayList<>(), riders = new ArrayList<>();
+        Armies.Fighter captain = null, bearer = null, medic = null;
         for (Armies.Fighter f : a.fighters) {
             if (f.down() || f.order == Armies.Order.ENGAGE || f.order == Armies.Order.ROUT) continue;
-            if (f.rank == Armies.Rank.CAPTAIN) {
-                if (b == null || b.phase != BattleModel.Phase.PARLEY) f.place(level, ox - fx * 10, oz - fz * 10, yaw);
-                continue;
-            }
-            if (f.rank == Armies.Rank.BEARER) { f.place(level, ox - fx * 10 + rx * 1.5, oz - fz * 10 + rz * 1.5, yaw); continue; }
+            if (f.rank == Armies.Rank.CAPTAIN) { captain = f; continue; }
+            if (f.rank == Armies.Rank.BEARER) { bearer = f; continue; }
             switch (f.role) {
-                case MEDIC -> { if (b == null || b.phase.ordinal() < BattleModel.Phase.CLASH.ordinal()) f.place(level, ox - fx * 13, oz - fz * 13, yaw); }
+                case MEDIC -> medic = f;
                 case ARCHER -> archers.add(f);
                 case RESERVE -> reserve.add(f);
                 case RIDER -> riders.add(f);
                 default -> line.add(f);
             }
-            f.speed = b != null && b.phase == BattleModel.Phase.ADVANCE ? 0.55 : 0.75;
+            f.speed = b != null && b.phase == BattleModel.Phase.ADVANCE ? (b.charging ? CHARGE_SPEED : 0.55) : 0.75;
         }
-        // The sergeants at the ends of the line, the rest between.
-        line.sort(Comparator.comparingInt(f -> f.rank == Armies.Rank.SERGEANT ? 0 : 1));
-        List<Armies.Fighter> ordered = new ArrayList<>();
-        for (int k = 0; k < line.size(); k++) {
-            if (k % 2 == 0) ordered.add(line.get(k));
-            else ordered.add(0, line.get(k));
-        }
-        if (b == null) rank(level, ordered, ox, oz, fx, fz, 0, 1.5, 12, yaw);    // on parade: straight ranks
-        else shape(level, ordered, a.formation, ox, oz, fx, fz, yaw, b, side);
+        double back = b == null ? rank(level, paradeOrder(line), ox, oz, fx, fz, 0, 1.5, 12, yaw)     // on parade: straight ranks
+            : shape(level, lineOrder(level, line, a.formation), a.formation, ox, oz, fx, fz, yaw, b, side);
         BlockPos rise = b == null || a.tactic != BattleModel.Tactic.HILL_ARCHERS ? null : side == 0 ? b.c.ground.riseA() : b.c.ground.riseB();
-        double half = Math.max(2, (Math.min(ordered.size(), 14) - 1) * a.formation.spacing / 2);
+        int ranks = a.formation.ranksFor(line.size()), per = (line.size() + ranks - 1) / Math.max(1, ranks);
+        double half = Math.max(2, (per - 1) * a.formation.spacing / 2);
         BattleModel.Formation.Archers where = b == null ? BattleModel.Formation.Archers.BEHIND : a.formation.archers;
         if (where == BattleModel.Formation.Archers.SCREEN && b.phase.ordinal() >= BattleModel.Phase.ADVANCE.ordinal()) where = BattleModel.Formation.Archers.BEHIND;
         if (rise != null) rank(level, archers, rise.getX() + 0.5, rise.getZ() + 0.5, fx, fz, 0, 1.5, 10, yaw);
@@ -1225,7 +1289,11 @@ public final class Battles {
             }
         } else if (where == BattleModel.Formation.Archers.SCREEN) rank(level, archers, ox, oz, fx, fz, 6, 3.0, 14, yaw);
         else if (where == BattleModel.Formation.Archers.INSIDE) rank(level, archers, ox - fx * 3, oz - fz * 3, fx, fz, 0, 1.2, 4, yaw);
-        else rank(level, archers, ox, oz, fx, fz, -4, 2.0, 14, yaw);
+        else back = rank(level, archers, ox, oz, fx, fz, Math.min(-ARCHERS_BACK, back - GROUP_GAP), 2.0, 14, yaw);
+        // The Captain and the standard behind the centre, the reserve behind them, the medic last.
+        double command = Math.min(-COMMAND_BACK, back - GROUP_GAP);
+        if (captain != null && (b == null || b.phase != BattleModel.Phase.PARLEY)) captain.place(level, ox + fx * command, oz + fz * command, yaw);
+        if (bearer != null) bearer.place(level, ox + fx * command + rx * 1.5, oz + fz * command + rz * 1.5, yaw);
         boolean sent = b != null && b.reserveSent[side];
         // The riders on the right wing, a little back; sent, round the far end of their line.
         double wingR = Math.max(8, line.size() * 0.75 + 5);
@@ -1234,6 +1302,7 @@ public final class Battles {
             rank(level, riders, them[0] + rx * wingR, them[1] + rz * wingR, -rx, -rz, 0, 2.5, 6, Armies.yawTo(-rx, -rz));
             for (Armies.Fighter f : riders) f.speed = 1.3;
         } else rank(level, riders, ox + rx * wingR, oz + rz * wingR, fx, fz, -2, 2.5, 6, yaw);
+        double last = command;
         if (sent && b.phase == BattleModel.Phase.CLASH) {
             // Round the flank: out past the end of their line, then in at it.
             double[] them = b.origin(1 - side);
@@ -1245,74 +1314,113 @@ public final class Battles {
             double wing = Math.max(10, line.size() * 0.75 + 8);
             if (cover != null) rank(level, reserve, cover.getX() + 0.5, cover.getZ() + 0.5, fx, fz, 0, 1.5, 8, yaw);
             else rank(level, reserve, ox + rx * wing, oz + rz * wing, fx, fz, -6, 1.5, 8, yaw);
-        } else rank(level, reserve, ox, oz, fx, fz, -8, 1.6, 12, yaw);
+        } else if (!reserve.isEmpty()) last = rank(level, reserve, ox, oz, fx, fz, command - GROUP_GAP, 1.6, 12, yaw);
+        if (medic != null && (b == null || b.phase.ordinal() < BattleModel.Phase.CLASH.ordinal())) {
+            medic.place(level, ox + fx * (last - GROUP_GAP), oz + fz * (last - GROUP_GAP), yaw);
+        }
+    }
+
+    /** On parade: the sergeants at the ends of the line, the rest between. */
+    static List<Armies.Fighter> paradeOrder(List<Armies.Fighter> line) {
+        List<Armies.Fighter> sorted = new ArrayList<>(line);
+        sorted.sort(Comparator.comparingInt(f -> f.rank == Armies.Rank.SERGEANT ? 0 : 1));
+        List<Armies.Fighter> ordered = new ArrayList<>();
+        for (int k = 0; k < sorted.size(); k++) {
+            if (k % 2 == 0) ordered.add(sorted.get(k));
+            else ordered.add(0, sorted.get(k));
+        }
+        return ordered;
     }
 
     /**
-     * The line drawn up in its formation's shape (BattleModel.Formation): ranks so deep and so far apart, bent into a
-     * wedge, a ring, a crescent or an echelon. Not a grid: each keeps a little way off its mark (less for a veteran,
-     * and less again just after its sergeant has dressed the line), the brave a step forward and the green a step
-     * back, the ends of the line a moment behind the middle on the advance, and one with the nerves gone a step back
-     * till it is pulled into line.
+     * [war-polish] The line in the order its formation fills it: the front rank first, the shields in it and a sergeant
+     * at each end, the rest behind; a wedge's best at its point; a ring as it stands.
      */
-    static void shape(ServerLevel level, List<Armies.Fighter> fs, BattleModel.Formation f, double ox, double oz, double fx, double fz, float yaw,
-                      Battle b, int side) {
+    static List<Armies.Fighter> lineOrder(ServerLevel level, List<Armies.Fighter> line, BattleModel.Formation f) {
+        List<Armies.Fighter> out = new ArrayList<>(line);
+        if (f.bend == BattleModel.Formation.Bend.WEDGE) {
+            out.sort((x, y) -> Integer.compare(y.power, x.power));
+            return out;
+        }
+        if (f.bend == BattleModel.Formation.Bend.RING || out.isEmpty()) return out;
+        out.sort(Comparator.comparingInt(x -> shielded(level, x) ? 0 : 1));
+        int ranks = f.ranksFor(out.size()), per = Math.min(out.size(), (out.size() + ranks - 1) / ranks);
+        List<Armies.Fighter> front = new ArrayList<>(out.subList(0, per)), ends = new ArrayList<>();
+        for (Armies.Fighter x : front) if (x.rank == Armies.Rank.SERGEANT && ends.size() < 2) ends.add(x);
+        front.removeAll(ends);
+        if (!ends.isEmpty()) front.add(0, ends.get(0));
+        if (ends.size() > 1) front.add(ends.get(1));
+        front.addAll(out.subList(per, out.size()));
+        return front;
+    }
+
+    static boolean shielded(ServerLevel level, Armies.Fighter x) {
+        return level.getEntity(x.id) instanceof LivingEntity e && e.getOffhandItem().getItem() instanceof ShieldItem;
+    }
+
+    /**
+     * The line drawn up in its formation's shape (BattleModel.Formation.slot): ranks so deep and so far apart, bent
+     * into a wedge, a ring, a crescent or an echelon. Not a grid: each keeps a little way off its mark (less for a
+     * veteran, and less again just after its sergeant has dressed the line), the brave a step forward and the green a
+     * step back, the ends of the line a moment behind the middle on the advance, and one with the nerves gone a step
+     * back till it is pulled into line. [war-polish] Before the horn the ranks stand true and still (a tenth of a
+     * block off at most), each now and then glancing aside. How far back its rearmost slot lies (blocks, negative).
+     */
+    static double shape(ServerLevel level, List<Armies.Fighter> fs, BattleModel.Formation f, double ox, double oz, double fx, double fz, float yaw,
+                        Battle b, int side) {
         int n = fs.size();
-        if (n == 0) return;
-        double rx = -fz, rz = fx;
-        int ranks = Math.max(f.ranks, (int) Math.ceil(n / 14.0));
-        int per = (n + ranks - 1) / ranks;
-        double half = Math.max(1, (per - 1) * f.spacing / 2);
-        double radius = Math.max(2.5, n * f.spacing / (2 * Math.PI));
+        if (n == 0) return 0;
+        double rx = -fz, rz = fx, radius = f.ringRadius(n), back = 0;
+        boolean still = b.still();
+        long now = level.getGameTime();
         for (int k = 0; k < n; k++) {
             Armies.Fighter x = fs.get(k);
-            double across, depth;
+            double[] slot = f.slot(k, n);
+            double across = slot[0], depth = slot[1];
             float face = yaw;
-            switch (f.bend) {
-                case WEDGE -> {
-                    int r = (int) Math.floor(Math.sqrt(k));
-                    across = (k - r * r - r) * f.spacing;
-                    depth = 1.5 - r * 1.3;
-                }
-                case RING -> {
-                    double ang = 2 * Math.PI * k / n;
-                    double cx = Math.cos(ang), cz = Math.sin(ang);
-                    across = cx * radius;
-                    depth = cz * radius - radius;
-                    face = Armies.yawTo(fx * cz + rx * cx, fz * cz + rz * cx);
-                }
-                default -> {
-                    int row = k / per, inRow = Math.min(per, n - row * per), col = k % per;
-                    across = (col - (inRow - 1) / 2.0) * f.spacing + (row % 2) * f.spacing / 2;
-                    depth = -row * 1.4;
-                    if (f.bend == BattleModel.Formation.Bend.CRESCENT) depth += Math.pow(across / half, 2) * 3.0;
-                    if (f.bend == BattleModel.Formation.Bend.ECHELON) depth -= (across + half) / (2 * half) * 4.0;
-                }
+            if (f.bend == BattleModel.Formation.Bend.RING) {
+                double cx = across / radius, cz = (depth + radius) / radius;
+                face = Armies.yawTo(fx * cz + rx * cx, fz * cz + rz * cx);
             }
+            back = Math.min(back, depth);
             depth += human(x, b, side, across);
             double rag = b.ragged * (x.veteran ? 0.12 : 0.4);
+            if (still) {
+                rag = Math.min(rag, STILL_JITTER);
+                face += idle(x, now);
+            }
             double jx = ((x.id.getLeastSignificantBits() & 15) / 15.0 - 0.5) * 2 * rag, jz = (((x.id.getLeastSignificantBits() >> 4) & 15) / 15.0 - 0.5) * 2 * rag;
             x.place(level, ox + fx * depth + rx * across + jx, oz + fz * depth + rz * across + jz, face);
         }
+        return back;
     }
 
     /** A fighter's own step off its formation's mark, forward or back: brave or green, its nerves, the order reaching it late. */
     static double human(Armies.Fighter x, Battle b, int side, double across) {
         double d = x.veteran || x.power >= 12 ? 0.35 : x.power <= 7 ? -0.35 : 0.0;
+        if (b.still()) d *= STILL_STEP;                            // [war-polish] drawn up: the ranks stand true
         if (x.nerves > 0) d -= 1.8;
         if (b.phase == BattleModel.Phase.ADVANCE) d -= Math.min(b.forward[side], Math.abs(across) * 0.07);
         return d;
     }
 
-    /** A rank (two past {@code per}) {@code spacing} apart across, {@code depth} in front of (or behind) the origin. */
-    static void rank(ServerLevel level, List<Armies.Fighter> fs, double ox, double oz, double fx, double fz, double depth, double spacing, int per, float yaw) {
-        double rx = -fz, rz = fx;
+    /** [war-polish] Before the horn, now and then (a beat in every few), a fighter glances aside, so a still line is not a statue. */
+    static float idle(Armies.Fighter x, long now) {
+        if ((now / IDLE_BEAT + x.stagger) % IDLE_EVERY != 0) return 0.0F;
+        return x.stagger % 2 == 0 ? IDLE_TURN : -IDLE_TURN;
+    }
+
+    /** A rank (two past {@code per}) {@code spacing} apart across, {@code depth} in front of (or behind) the origin; where its last row stands. */
+    static double rank(ServerLevel level, List<Armies.Fighter> fs, double ox, double oz, double fx, double fz, double depth, double spacing, int per, float yaw) {
+        double rx = -fz, rz = fx, last = depth;
         for (int k = 0; k < fs.size(); k++) {
             int row = k / per, inRow = Math.min(per, fs.size() - row * per), col = k % per;
             double across = (col - (inRow - 1) / 2.0) * spacing + (row % 2) * spacing / 2;
             double d = depth - row * 1.6;
             fs.get(k).place(level, ox + fx * d + rx * across, oz + fz * d + rz * across, yaw);
+            last = d;
         }
+        return last;                                               // [war-polish] where its last rank stands, for those behind it
     }
 
     static BlockPos at(double[] origin) {
@@ -1492,8 +1600,10 @@ public final class Battles {
             if (wv != null) Battlefields.cairn(level, wv, c.ground, new String[]{ "The Battle of", c.ground.name(), "day " + day, names[0] + " v " + names[1] });
             if (b.detailed) Battlefields.trample(level, b.side[w].town, c.ground, day, new Random(Campaigns.seed(b.side[w].town, day)));
         }
-        Raids.tellNear(level, b.centre, 400, Component.literal("[War] " + capital(c.name) + ": " + (w < 0 ? "drawn" : names[w] + " held the field; "
-            + names[1 - w] + " " + b.outcome.words) + ".").withStyle(ChatFormatting.GOLD), false);
+        if (!b.detailed || w < 0) {                            // [war-polish] a battle fought in full told its outcome as it broke: once
+            Raids.tellNear(level, b.centre, ANNOUNCE, Component.literal("[War] " + capital(c.name) + ": " + (w < 0 ? "drawn" : names[w] + " held the field; "
+                + names[1 - w] + " " + b.outcome.words) + ".").withStyle(ChatFormatting.GOLD), false);
+        }
         LOG.info("[MCA-WAR] {} ({}): {}", c.name, b.detailed ? "in full" : "on paper", summary);
     }
 
@@ -1589,14 +1699,5 @@ public final class Battles {
 
     static String capital(String s) {
         return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
-    }
-
-    /** The bar's colour for a town: its colours, never the same as the other side's. */
-    static BossEvent.BossBarColor colour(UUID town, @Nullable ServerBossEvent other) {
-        BossEvent.BossBarColor[] by = { BossEvent.BossBarColor.BLUE, BossEvent.BossBarColor.RED, BossEvent.BossBarColor.GREEN, BossEvent.BossBarColor.PURPLE,
-            BossEvent.BossBarColor.WHITE, BossEvent.BossBarColor.PINK, BossEvent.BossBarColor.YELLOW };
-        BossEvent.BossBarColor col = by[Math.floorMod(town.hashCode(), 64) % by.length];
-        if (other != null && other.getColor() == col) col = by[(java.util.Arrays.asList(by).indexOf(col) + 1) % by.length];
-        return col;
     }
 }

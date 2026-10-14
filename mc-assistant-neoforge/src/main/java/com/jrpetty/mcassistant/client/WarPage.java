@@ -60,7 +60,7 @@ public final class WarPage {
                 lines.add(new Line(score >= 0 ? 'G' : 'W', "Battles: " + fought.size() + ", the war's score " + (score > 0 ? "+" : "") + score));
                 for (String b : fought) lines.add(new Line('C', b));
             }
-            for (String c : strings(war, "course")) lines.add(new Line('C', c));
+            for (String c : new java.util.LinkedHashSet<>(strings(war, "course"))) lines.add(new Line('C', c));   // [war-polish] each line once
         }
         List<String> last = strings(m, "last_course");
         if (wars.isEmpty() && !last.isEmpty()) {

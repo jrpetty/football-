@@ -18,7 +18,12 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.ModelBakery;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.entity.layers.CustomHeadLayer;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.BannerItem;
 import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
 
@@ -26,7 +31,7 @@ import net.minecraft.world.level.block.entity.BannerPatternLayers;
  * [war] A fighter in the field (entity/Armies, sent as VillageFolkEntity.clientWar and clientSurcoat): a surcoat of
  * its town's arms over its armour, front and back, so a line reads as one army from a hill; the Captain's long
  * cloak of the arms down its back and a small crest of them on its helm; a sergeant's sash in the arms' field colour and
- * its group's pennant over its shoulder; the medic's white sash. Nothing is
+ * its group's pennant over its shoulder; the medic's white sash; [war-polish] a company's standard worn on the helm. Nothing is
  * made a frame: the cloth is the surcoat stack the server sent, read as it is.
  */
 public class ArmyLayer extends RenderLayer<VillageFolkEntity, FolkModel> {
@@ -44,18 +49,30 @@ public class ArmyLayer extends RenderLayer<VillageFolkEntity, FolkModel> {
 
     private final ModelPart flag;
     private final WatchModel kit;
+    private final ItemInHandRenderer hands;
 
-    public ArmyLayer(RenderLayerParent<VillageFolkEntity, FolkModel> parent, EntityModelSet models, WatchModel kit) {
+    public ArmyLayer(RenderLayerParent<VillageFolkEntity, FolkModel> parent, EntityModelSet models, WatchModel kit, ItemInHandRenderer hands) {
         super(parent);
         this.flag = models.bakeLayer(ModelLayers.BANNER).getChild("flag");
         this.kit = kit;
+        this.hands = hands;
     }
 
     @Override
     public void render(PoseStack pose, MultiBufferSource buffers, int light, VillageFolkEntity folk, float limbSwing, float limbSwingAmount,
                        float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
+        if (folk.isInvisible() || folk.isBaby()) return;
+        ItemStack helm = folk.getItemBySlot(EquipmentSlot.HEAD);
+        if (helm.getItem() instanceof BannerItem) {
+            // [war-polish] A company's standard worn high on the helm (entity/WarDress), as a raid captain wears its banner.
+            pose.pushPose();
+            getParentModel().getHead().translateAndRotate(pose);
+            CustomHeadLayer.translateToHead(pose, false);
+            hands.renderItem(folk, helm, ItemDisplayContext.HEAD, false, pose, buffers, light);
+            pose.popPose();
+        }
         int war = folk.clientWar();
-        if (war == 0 || folk.isInvisible() || folk.isBaby()) return;
+        if (war == 0) return;
         ItemStack coat = folk.clientSurcoat();
         DyeColor field = coat.getOrDefault(DataComponents.BASE_COLOR, DyeColor.WHITE);
         BannerPatternLayers arms = coat.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);

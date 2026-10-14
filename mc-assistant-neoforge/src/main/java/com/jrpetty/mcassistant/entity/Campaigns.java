@@ -132,6 +132,8 @@ public final class Campaigns {
         final UUID ticketOwner;
         final List<long[]> pulls = new ArrayList<>();
         final int stagger;
+        /** [war-polish] Staged for the pictures: the furthest of PHASES it has been set at (it waits there); -1 a campaign of its own. */
+        int staged = -1;
 
         Campaign(UUID a, UUID b) {
             this.a = a;
@@ -207,6 +209,11 @@ public final class Campaigns {
     }
 
     /** A battle's phase so long, or less for the tests. */
+    /** [war-polish] Have the campaigns been read from the books yet (the first tick)? */
+    static boolean loaded() {
+        return loaded;
+    }
+
     static long soonBattle(long ticks) {
         return hurryBattle ? Math.min(ticks, 60L) : ticks;
     }
@@ -379,6 +386,7 @@ public final class Campaigns {
             ChunkLoad.setLoaded(level, c.ticketOwner, BlockPos.of(p[0]), 0, false);
             it.remove();
         }
+        if (c.staged >= 0) return;                                             // [war-polish] staged: it waits where it was set
         if (c.stage != Stage.DONE && c.stage != Stage.HOME && !Wars.atWar(c.a, c.b)) {
             // Peace made while the armies were out (a white flag, a player's word): everybody home.
             if (c.battle != null) c.battle.abandon(level);
@@ -436,7 +444,7 @@ public final class Campaigns {
                 + "; " + Villages.name(v.id()) + " draws up in " + army.formation.words + " (" + army.formation.how + ") and " + army.tactic.words);
             WarBooks.course(v.id(), i == 0 ? c.b : c.a, day, "our army mustered, " + army.size() + " strong" + (cap != null ? " under " + cap.what() : ""));
         }
-        if (c.armies[0] != null && c.armies[1] != null) Armies.contrast(c.armies[0], c.armies[1]);
+        WarDress.dress(level, c);                                          // [war-polish] each side in a colour of its own, once
         if (c.armies[0] == null) {
             Villages.tell(c.a, day, "the muster came to nothing: nobody to march");
             stage(c, Stage.DONE, now, now);
@@ -689,6 +697,7 @@ public final class Campaigns {
                 Raids.alarm(level, v, "the army of " + Villages.name(c.a) + " is at the gate", c.gateOut);
                 standDown(level, c, 1);                                            // the beaten field army home, then all who can fight at the gate
                 c.armies[1] = defenders(level, c, v);
+                WarDress.dress(level, c);                                      // [war-polish] both sides in their colours for the assault
             }
             Armies.Army at = c.armies[0];
             c.ram = c.gate == null ? null : Battlefields.ram(level, at, c.gate, c.gateOut);
@@ -872,6 +881,7 @@ public final class Campaigns {
             if (a != null && !b.settled) Ledger.note(a.enemy, "war.formation/" + a.town, a.formation.name());   // how it drew up, seen
         }
         c.battle = null;
+        WarDress.undress(level, c);                                            // [war-polish] the battle dress off, once
         Battles.record(level, c, b);
         stage(c, Stage.AFTER, level.getGameTime(), level.getGameTime() + soon(400L));
     }
@@ -1256,7 +1266,7 @@ public final class Campaigns {
     // ------------------------------------------------------------------ the stage (pictures)
 
     /** The phases a battle can be staged at for the pictures (/village battle stage). */
-    public static final List<String> PHASES = List.of("muster", "march", "lineup", "parley", "volley", "clash", "rout", "aftermath");
+    public static final List<String> PHASES = List.of("muster", "march", "lineup", "parley", "horn", "volley", "charge", "clash", "rout", "aftermath");
 
     /** Fighters a side on the stage. */
     static final int STAGED = 12;
@@ -1269,10 +1279,18 @@ public final class Campaigns {
      * phase and held there: drawn up on their squares (muster); in column on the road (march); the lines formed in
      * their formations (lineup); the Captains and their standards met in the middle (parley); the archers' duel
      * (volley); the lines locked (clash); one side broken and running (rout); the medics at work and the captives led
-     * off (aftermath). Every fighter set down in its place at once. What to look at, "VIEW name x y z ax ay az" lines.
+     * off (aftermath); [war-polish] the horn and the battle cry (horn); the lines running in (charge). Every fighter
+     * set down in its place at once. What to look at, "VIEW name x y z ax ay az" lines. [war-polish] A battle staged
+     * here already is staged on to a later phase (the same armies, one muster, one outcome); an earlier phase starts
+     * it afresh.
      */
     public static List<String> stage(ServerLevel level, Villages.Village v, BlockPos at, String phase) {
         List<String> out = new ArrayList<>();
+        Campaign going = ofTown(v.id());
+        if (going != null && going.staged >= 0 && PHASES.indexOf(phase) >= going.staged && going.armies[0] != null && going.armies[1] != null) {
+            restage(level, going, phase);
+            return staged(level, going, phase, out);
+        }
         Villages.Village o = null;
         double best = 400.0 * 400.0;
         for (Villages.Village n : Villages.every()) {
@@ -1317,6 +1335,13 @@ public final class Campaigns {
             out.add("NO-STAGE an army could not be raised");
             return out;
         }
+        c.staged = 0;
+        restage(level, c, phase);
+        return staged(level, c, phase, out);
+    }
+
+    /** [war-polish] The staged campaign brought on to this phase: drawn up on the squares, the columns on the road, or its one battle set at it. */
+    static void restage(ServerLevel level, Campaign c, String phase) {
         switch (phase) {
             case "muster" -> { }
             case "march" -> {
@@ -1325,14 +1350,21 @@ public final class Campaigns {
                 for (int i = 0; i < 2; i++) column(level, c, i);
             }
             default -> {
-                for (int i = 0; i < 2; i++) c.ways.set(i, new ArrayList<>(List.of(campSpot(c, i))));
-                c.battle = Battles.openStaged(level, c, c.ground.centre(), c.ground.ax(), c.ground.az());
-                stage(c, Stage.BATTLE, level.getGameTime(), level.getGameTime());
+                if (c.battle == null) {
+                    for (int i = 0; i < 2; i++) c.ways.set(i, new ArrayList<>(List.of(campSpot(c, i))));
+                    c.battle = Battles.openStaged(level, c, c.ground.centre(), c.ground.ax(), c.ground.az());
+                    stage(c, Stage.BATTLE, level.getGameTime(), level.getGameTime());
+                }
                 c.battle.stagePhase(level, phase);
             }
         }
+        c.staged = Math.max(c.staged, PHASES.indexOf(phase));
+    }
+
+    /** The staged campaign's fighters set down in their places at once, and what to look at. */
+    static List<String> staged(ServerLevel level, Campaign c, String phase, List<String> out) {
         for (int i = 0; i < 2; i++) snap(level, c.armies[i]);
-        out.add("STAGED " + phase + " " + Villages.name(v.id()) + " against " + Villages.name(o.id()) + " on " + c.ground.name() + " ("
+        out.add("STAGED " + phase + " " + Villages.name(c.a) + " against " + Villages.name(c.b) + " on " + c.ground.name() + " ("
             + c.armies[0].formation.words + " against " + c.armies[1].formation.words + ")");
         out.addAll(views(level, c));
         return out;
@@ -1383,6 +1415,7 @@ public final class Campaigns {
         if (c == null) return "No battle staged here.";
         if (c.battle != null) c.battle.abandon(level);
         c.battle = null;
+        c.staged = -1;                                                         // [war-polish] its own again, to go home
         goHome(level, c, "the stage struck");
         return "The staged battle is over; the armies go home.";
     }
@@ -1436,7 +1469,14 @@ public final class Campaigns {
                 Battles.Battle b = c.battle;
                 BlockPos m = b == null ? c.ground.centre() : b.centre;
                 double ax = b == null ? c.ground.ax() : b.ax, az = b == null ? c.ground.az() : b.az;
-                view(level, out, "side", m.getX() - az * 34, m.getZ() + ax * 34, 9, m.getX(), m.getZ());
+                view(level, out, "side", m.getX() - az * 30, m.getZ() + ax * 30, 10, m.getX(), m.getZ());
+                if (b != null) {
+                    // [war-polish] From a raised point behind each army: over its ranks, to the enemy's.
+                    for (int i = 0; i < 2; i++) {
+                        double[] o = b.origin(i);
+                        view(level, out, "behind" + i, o[0] - o[2] * 24, o[1] - o[3] * 24, 9, o[0] + o[2] * 6, o[1] + o[3] * 6);
+                    }
+                }
                 BlockPos hill = c.ground.view();
                 if (hill != null) view(level, out, "hill", hill.getX(), hill.getZ(), 4, m.getX(), m.getZ());
                 else view(level, out, "high", m.getX() - az * 40 - ax * 30, m.getZ() + ax * 40 - az * 30, 26, m.getX(), m.getZ());
@@ -1446,7 +1486,7 @@ public final class Campaigns {
                     view(level, out, "captain", e.getX() + fx * 4 + fz * 1.5, e.getZ() + fz * 4 - fx * 1.5, 1.6, e.getX(), e.getZ());
                 }
                 view(level, out, "clash", m.getX() - az * 16 + ax * 6, m.getZ() + ax * 16 + az * 6, 4, m.getX(), m.getZ());
-                view(level, out, "parley", m.getX() - az * 9, m.getZ() + ax * 9, 2.5, m.getX(), m.getZ());   // the envoys in the middle
+                view(level, out, "parley", m.getX() - az * 6, m.getZ() + ax * 6, 1.5, m.getX(), m.getZ());   // [war-polish] the envoys close to
                 if (c.stage == Stage.ASSAULT && c.gate != null) gateView(level, c, out);
             }
             default -> { }

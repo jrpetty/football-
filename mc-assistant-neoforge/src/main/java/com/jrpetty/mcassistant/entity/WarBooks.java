@@ -133,18 +133,21 @@ final class WarBooks {
         Ledger.forget(us, "wp.course/" + them);
     }
 
-    /** How the war went, a line a day something happened: "day|what". */
+    /** How the war went, a line a day something happened: "day|what". [war-polish] Each once: the same thing the same day is not written twice. */
     static void course(UUID us, UUID them, long day, String what) {
-        push(us, "wp.course/" + them, day + FIELD + clean(what), 14);
+        String entry = day + FIELD + clean(what);
+        if (list(us, "wp.course/" + them).contains(entry)) return;
+        push(us, "wp.course/" + them, entry, 14);
     }
 
+    /** The war's course as the books read it, each line once (an older book may hold the same line again). */
     static List<String> course(UUID us, UUID them) {
-        List<String> out = new ArrayList<>();
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
         for (String e : list(us, "wp.course/" + them)) {
             String[] p = e.split("\\|", 2);
             out.add(p.length < 2 ? e : "day " + p[0] + ": " + p[1]);
         }
-        return out;
+        return new ArrayList<>(out);
     }
 
     // ------------------------------------------------------------------ grievances
