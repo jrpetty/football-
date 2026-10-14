@@ -180,7 +180,9 @@ public final class WorkStock {
             String key = deliveryKey(chest, k);
             int coming = StoreDeliveries.inFlight(v.id(), key, false);
             if (have + coming >= k.keep() * LOW) continue;
-            int spare = Math.min(Market.stock(level, v.id(), k.is()), Budget.spare(level, v.id(), new ItemStack(k.sample())));
+            // A move within the town, not a sale: never more than half of what the stores hold of it, so the larder's wheat
+            // and the builders' sticks are not all carried off to one workshop.
+            int spare = Market.stock(level, v.id(), k.is()) / 2;
             int n = Math.min(k.keep() - have - coming, spare);
             if (n <= 0) continue;
             StoreDeliveries.queueTo(level, v.id(), key, k.is(), new ItemStack(k.sample()), n, chest, destName);

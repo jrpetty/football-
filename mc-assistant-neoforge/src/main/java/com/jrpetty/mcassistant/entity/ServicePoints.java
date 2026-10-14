@@ -98,7 +98,7 @@ public final class ServicePoints {
                         Ledger.Building building) {
 
         /** The i-th place in its queue (0 at the counter): straight out in front, then to the side. */
-        BlockPos queueSpot(ServerLevel level, int i) {
+        public BlockPos queueSpot(ServerLevel level, int i) {
             BlockPos ahead = pos.relative(front, 1 + i);
             if (i == 0 || StoreFloor.standable(level, ahead)) return ahead;
             BlockPos side = pos.relative(front).relative(front.getClockWise(), i);
@@ -334,7 +334,7 @@ public final class ServicePoints {
         Visit visit = visit(p, s);
         if (visit == null) {
             SESSIONS.remove(p.getUUID());
-            PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.ServiceScreenPayload(closedTag()));
+            deliver(p, closedTag());
             return;
         }
         Desk desk = s.role.desk();
@@ -343,7 +343,19 @@ public final class ServicePoints {
         if (!force && print == s.lastPrint && now - s.lastSent < RESEND) return;
         s.lastPrint = print;
         s.lastSent = now;
-        PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.ServiceScreenPayload(screen(visit, s)));
+        deliver(p, screen(visit, s));
+    }
+
+    /** To the player's screen: a connection that cannot take it (a test's stand-in player) is told once, not crashed. */
+    private static void deliver(ServerPlayer p, CompoundTag screen) {
+        try {
+            PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.ServiceScreenPayload(screen));
+        } catch (RuntimeException e) {
+            LOG_ONCE.computeIfAbsent("send", k -> {
+                com.mojang.logging.LogUtils.getLogger().info("[shops-homes] a service screen could not be sent: {}", e.toString());
+                return Boolean.TRUE;
+            });
+        }
     }
 
     private static int statusPrint(Visit v) {
@@ -573,17 +585,29 @@ public final class ServicePoints {
         return false;
     }
 
-    /** The cask a building's service counter goes in place of: its counter nearest the door. */
+    /**
+     * The cask a building's service counter goes in place of: one of the counter proper, beside the gap the keeper gets
+     * behind by (a counter cask with open floor to one side and behind it), else the counter nearest the door.
+     */
     @Nullable
-    static BlockPos counterSpot(Ledger.Building b) {
+    static BlockPos counterSpot(ServerLevel level, Ledger.Building b) {
         List<BlockPos> counters = b.structure().equals(Store.STRUCTURE) ? Store.layout(b).counters() : Cafe.counters(b);
-        return counters.isEmpty() ? null : counters.get(0);
+        if (counters.isEmpty()) return null;
+        BlockPos door = TownLife.fittings(b).door();
+        for (BlockPos c : counters) {
+            Direction front = StoreFloor.front(c, door);
+            boolean behind = StoreFloor.standable(level, c.relative(front.getOpposite()));
+            boolean byTheGap = StoreFloor.standable(level, c.relative(front.getClockWise())) || StoreFloor.standable(level, c.relative(front.getCounterClockWise()));
+            boolean inRow = counters.contains(c.relative(front.getClockWise())) || counters.contains(c.relative(front.getCounterClockWise()));
+            if (behind && byTheGap && inRow) return c;
+        }
+        return counters.get(0);
     }
 
     private static boolean fit(ServerLevel level, Villages.Village v, Ledger.Building b) {
-        BlockPos at = counterSpot(b);
+        BlockPos at = counterSpot(level, b);
         if (at == null || !level.getBlockState(at).is(Blocks.BARREL)) return false;
-        if (!mayPlace(level, v, at)) return false;
+        if (!mayPlace(level, v, at, b)) return false;
         if (!Crafts.usePlanks(level, v, 4)) return false;                      // the slabs and the sides
         // What was in the cask: back into the shop's own stock, else the stores.
         if (level.getBlockEntity(at) instanceof Container c) {
@@ -605,8 +629,8 @@ public final class ServicePoints {
 
     /** The town's one gate for a block it places ([integrity] TownBlocks): a counter only ever goes where the
      *  building's own cask stood, one of its drawing's own cells (as a renovation of it). */
-    private static boolean mayPlace(ServerLevel level, Villages.Village v, BlockPos at) {
-        return level.isLoaded(at) && TownBlocks.mayPlace(level, v, at, TownBlocks.Why.RENOVATE);
+    private static boolean mayPlace(ServerLevel level, Villages.Village v, BlockPos at, Ledger.Building b) {
+        return level.isLoaded(at) && TownBlocks.mayBuild(level, v, at, b.anchor(), TownBlocks.Why.RENOVATE);
     }
 
     /** Is this block one of the shop's counters (a cask, or the service counter that took a cask's place)? */

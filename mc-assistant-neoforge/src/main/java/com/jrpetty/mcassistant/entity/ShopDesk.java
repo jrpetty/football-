@@ -572,6 +572,11 @@ public final class ShopDesk implements ServicePoints.Desk {
         return out;
     }
 
+    /** Tests: how many the town buys at once of this. */
+    public static int sellLotForTests(ItemStack one) {
+        return sellLot(one);
+    }
+
     /** Tests: a line's id for a thing. */
     public static String idForTests(ItemStack s) {
         return Goods.lineId(s);

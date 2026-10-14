@@ -124,8 +124,17 @@ public final class ShoppingTrips {
             WAIT.put(f.getUUID(), level.getGameTime() + RETRY);
             return false;
         }
+        List<String> got = buyAll(level, v, f, t.wants, day);
+        if (got.isEmpty()) return giveUp(f, day, "none of it in");
+        t.bought = true;
+        t.walked = -1000;
+        return true;
+    }
+
+    /** At the counter, served: everything on the trip's list bought out of its own purse, made its own, and said. */
+    private static List<String> buyAll(ServerLevel level, Villages.Village v, VillageFolkEntity f, List<Needs.Want> wants, long day) {
         List<String> got = new ArrayList<>();
-        for (Needs.Want w : t.wants) {
+        for (Needs.Want w : wants) {
             ItemStack bought = ShopDesk.folkBuy(level, v, f, w.sample(), w.count());
             if (bought == null) continue;
             ownIt(f, w.sample(), bought.getCount());
@@ -134,16 +143,14 @@ public final class ShoppingTrips {
         Needs.bought(f, got, day);
         if (got.isEmpty()) {
             FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "None of what I wanted. I'll try again tomorrow.", "Sold out! Tomorrow, then."));
-            return giveUp(f, day, "none of it in");
+            return got;
         }
         f.swing(InteractionHand.MAIN_HAND);
         FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "That's " + String.join(" and ", got) + ". Home with it.",
             "Got what I came for: " + String.join(" and ", got) + ".", "Thank you! " + cap(got.get(0)) + " — just the thing."));
         f.persona().remember(day, "I bought " + String.join(" and ", got) + " at the shop", 1);
         f.brain("bought " + String.join(" and ", got) + " at the shop, for its home");
-        t.bought = true;
-        t.walked = -1000;
-        return true;
+        return got;
     }
 
     /**
@@ -186,12 +193,17 @@ public final class ShoppingTrips {
             return true;
         }
         f.getNavigation().stop();
-        f.swing(InteractionHand.MAIN_HAND);
-        setDownFurniture(level, v, h, f);
-        putAwayOwn(level, v.id(), h, f);
+        arriveHome(level, v, h, f);
         DONE.put(f.getUUID(), day);
         TRIPS.remove(f.getUUID());
         return true;
+    }
+
+    /** Home with its shopping: a new larder or wardrobe set down, and everything of its own put away. */
+    private static void arriveHome(ServerLevel level, Villages.Village v, Homes.Home h, VillageFolkEntity f) {
+        f.swing(InteractionHand.MAIN_HAND);
+        setDownFurniture(level, v, h, f);
+        putAwayOwn(level, v.id(), h, f);
     }
 
     /** Everything of its own it carries that it does not keep about it, put away in its home. */
@@ -259,6 +271,33 @@ public final class ShoppingTrips {
 
     private static String cap(String s) {
         return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+    }
+
+    /**
+     * Tests: a whole trip now, the walking left out (put at the counter, then home): what it bought, or empty if it
+     * would not go today (nothing wanted, nothing it can pay for, the shop shut).
+     */
+    public static List<String> tripNowForTests(ServerLevel level, VillageFolkEntity f) {
+        againForTests(f);
+        Villages.Village v = Villages.get(f.ownerId());
+        if (v == null) return List.of();
+        long day = level.getDayTime() / 24000L;
+        Trip t = plan(level, v, f, day);
+        if (t == null) return List.of();
+        ServicePoints.Point point = ServicePoints.nearest(level, v.id(), ServiceRole.SHOP, f.blockPosition());
+        if (point != null) {
+            BlockPos at = point.queueSpot(level, 0);
+            f.teleportTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5);
+        }
+        List<String> got = buyAll(level, v, f, t.wants, day);
+        Homes.Home h = Homes.homeOf(v.id(), f.getUUID());
+        BlockPos chest = h == null ? null : Homes.chestOf(level, v.id(), h);
+        if (chest != null) {
+            f.teleportTo(chest.getX() + 0.5, chest.getY() + 1, chest.getZ() + 0.5);
+            arriveHome(level, v, h, f);
+        }
+        DONE.put(f.getUUID(), day);
+        return got;
     }
 
     /** Tests: is it on a trip now, and has it bought yet ("none", "shop", "home"). */
