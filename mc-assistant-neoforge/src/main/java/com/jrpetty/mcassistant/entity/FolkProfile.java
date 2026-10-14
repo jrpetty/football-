@@ -367,7 +367,7 @@ public final class FolkProfile {
      * kept. Until then, nothing: the tab shows the comforts of its home in words (Decor.cardLine) instead.
      */
     static ListTag homeThings(VillageFolkEntity f) {
-        return new ListTag();
+        return Belongings.profileItems(f);                // [shops-homes] the home's chest, larder, wardrobe and toy box
     }
 
     private static CompoundTag item(ItemStack s) {

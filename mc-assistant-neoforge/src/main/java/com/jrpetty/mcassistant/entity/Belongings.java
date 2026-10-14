@@ -139,6 +139,35 @@ public final class Belongings {
         return "At home: " + s + "." + (setOut == null || setOut.isEmpty() ? "" : " Set out: " + setOut);
     }
 
+    /**
+     * The folk profile's Belongings tab (FolkProfile.homeThings): what its household keeps at home, a row a kind of thing a
+     * box, as {id, n, name, worth, where, whose, cat, keepsake}, the larder and the chest first. Empty with no home.
+     */
+    public static ListTag profileItems(VillageFolkEntity f) {
+        ListTag out = new ListTag();
+        if (!(f.level() instanceof ServerLevel level) || f.ownerId() == null) return out;
+        Homes.Home h = Homes.homeOf(f.ownerId(), f.getUUID());
+        if (h == null) return out;
+        Map<String, CompoundTag> rows = new java.util.LinkedHashMap<>();
+        for (Thing t : ofHome(level, f.ownerId(), h).things()) {
+            String id = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(t.stack().getItem()).toString();
+            CompoundTag c = rows.computeIfAbsent(id + "|" + t.where() + "|" + t.whose(), k -> {
+                CompoundTag n = new CompoundTag();
+                n.putString("id", id);
+                n.putString("name", t.stack().getHoverName().getString());
+                n.putString("where", t.where());
+                n.putString("whose", t.whose());
+                n.putString("cat", t.category().name());
+                if (Homes.isKeepsake(t.stack())) n.putBoolean("keepsake", true);
+                return n;
+            });
+            c.putInt("n", c.getInt("n") + t.stack().getCount());
+            c.putInt("worth", c.getInt("worth") + (int) Math.round(Wealth.value(t.stack())));
+        }
+        for (CompoundTag c : rows.values()) out.add(c);
+        return out;
+    }
+
     /** A view for a screen: {home:{x,y,z}, summary, worth, counts:{FOOD:n...}, things:[{item, cat, where, whose}]}. */
     public static CompoundTag toTag(View v, HolderLookup.Provider reg) {
         CompoundTag t = new CompoundTag();
