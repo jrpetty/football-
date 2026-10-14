@@ -71,6 +71,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue TOWN_LOD_AWAY_SECONDS;
     public static final ModConfigSpec.IntValue TOWN_LOD_STEP_SECONDS;
     public static final ModConfigSpec.IntValue PATH_BUDGET_MS;
+    public static final ModConfigSpec.IntValue TOWN_TICK_BUDGET_MS;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -318,6 +319,10 @@ public final class AssistantConfig {
                 "How many milliseconds of each tick the folk may spend finding their way, all told. Past it a",
                 "folk's search waits a tick (never one near a player, never two ticks running). 0: no limit.")
             .defineInRange("pathBudgetMs", 10, 0, 50);
+        TOWN_TICK_BUDGET_MS = b.comment(
+                "How many milliseconds of each tick the towns' own rounds (their elections, homes, streets,",
+                "assemblies...) may take, all towns together. Past it the next town waits a tick or more.")
+            .defineInRange("townTickBudgetMs", 5, 1, 50);
         b.pop();
 
         SPEC = b.build();
@@ -379,6 +384,7 @@ public final class AssistantConfig {
     public static int townLodAwaySeconds() { return read(TOWN_LOD_AWAY_SECONDS, 60); }
     public static int townLodStepSeconds() { return read(TOWN_LOD_STEP_SECONDS, 5); }
     public static int pathBudgetMs() { return read(PATH_BUDGET_MS, 10); }
+    public static int townTickBudgetMs() { return read(TOWN_TICK_BUDGET_MS, 5); }
 
     /** Config values throw if read before the file is loaded (early world gen,
      *  datagen, a dedicated server still booting) — fall back rather than crash. */

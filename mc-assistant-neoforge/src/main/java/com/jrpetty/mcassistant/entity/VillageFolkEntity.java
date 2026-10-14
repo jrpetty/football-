@@ -579,7 +579,9 @@ public class VillageFolkEntity extends AssistantEntity {
             Villages.chooseElder(ownerId(), level().getDayTime() / 24000L);
             if (level() instanceof net.minecraft.server.level.ServerLevel polls) {
                 Villages.Village home = Villages.get(ownerId());
-                if (home != null) {
+                // [scale] The town's rounds, at its beat and within the tick's budget (TownScheduler).
+                if (home != null && TownScheduler.due(polls, home.id(), TownScheduler.Job.ROUNDS)) {
+                    long started = TownScheduler.start();
                     Elections.tick(polls, home);
                     Homes.tick(polls, home);
                     Families.tick(polls, home);          // pets, gardens, graves visited, anniversaries (Families)
@@ -593,6 +595,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Cartographers.tick(polls, home);     // [cartographer] the town chooses its cartographer once its map room stands
                     Divers.tick(polls, home);            // [diver] a town by the water finds it, and takes up its diver
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
+                    TownScheduler.done(started);
                 }
             }
             if (level() instanceof net.minecraft.server.level.ServerLevel orders) Orders.consider(orders, ownerId(), level().getDayTime() / 24000L);
@@ -600,13 +603,15 @@ public class VillageFolkEntity extends AssistantEntity {
         // The town's streets, worn and paved and lit a little at a time (TownWork).
         if (ownerId() != null && level() instanceof net.minecraft.server.level.ServerLevel townLevel) {
             Villages.Village home = Villages.get(ownerId());
-            if (home != null) {
+            if (home != null && TownScheduler.due(townLevel, home.id(), TownScheduler.Job.STREETS)) {
+                long started = TownScheduler.start();
                 TownWork.tick(townLevel, home);
                 TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
                 Museum.tick(townLevel, home);           // the museum's finds and its archive
                 Library.tick(townLevel, home);          // [library] its books written, shelved, lent and read
                 Assemblies.tick(townLevel, home);       // the morning assembly, openings, feasts, the council, elections
                 Contentment.daily(townLevel, home);     // how it is doing; at its worst, folk leave
+                TownScheduler.done(started);
             }
         }
         if (withAPlayer) return;
