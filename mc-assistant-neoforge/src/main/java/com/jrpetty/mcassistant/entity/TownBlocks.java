@@ -97,10 +97,11 @@ public final class TownBlocks {
         CIVIC(Zone.OPEN, Zone.SQUARE),
         /** A lamp post or a street light (at a road's edge, never in the middle of it). */
         LAMP(Zone.OPEN, Zone.ROAD, Zone.SQUARE),
-        /** A sign or a signpost (at a road's edge), a house's name board on its front. */
-        SIGN(Zone.OPEN, Zone.ROAD, Zone.SQUARE, Zone.EAVES),
-        /** A window box, a sill, a planter on a building's face: under its eaves, never its doorway or way in. */
-        WINDOW_BOX(Zone.OPEN, Zone.EAVES),
+        /** A sign or a signpost (at a road's edge), a house's name board on its front: never into its walls or doorway. */
+        SIGN(Zone.OPEN, Zone.ROAD, Zone.SQUARE, Zone.EAVES, Zone.BUILDING),
+        /** A window box, a sill, a planter on a building's face (on its porch, under its eaves): never into its walls,
+         *  its doorway or the way in. */
+        WINDOW_BOX(Zone.OPEN, Zone.EAVES, Zone.BUILDING),
         /** The town's dressing out of doors: benches, planters, washing lines, scarecrows, banners. */
         DECOR(Zone.OPEN),
         /** Gardens round a house: fences, gates, flower beds. */

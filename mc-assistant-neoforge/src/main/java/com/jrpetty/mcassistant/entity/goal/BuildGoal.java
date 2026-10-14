@@ -577,8 +577,9 @@ public class BuildGoal extends Goal {
         int[] all = Blueprints.has(structure) ? Blueprints.fullHalf(structure) : new int[]{ g[0], g[1] };
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         for (Placement p : plan) taken.add(p.pos());
+        // [integrity] The fill under the floor is earth where earth will do (it is never seen), its stone footing above it.
         for (BlockPos c : fillCells(assistant.level(), base, facing, g[0], g[1])) {
-            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, Blueprints.Style.FOUNDATION, Blueprints.Way.UP));
+            if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, Blueprints.Style.SOIL, Blueprints.Way.UP));
         }
         Direction right = facing.getClockWise();
         int top = Blueprints.has(structure) ? 12 : 5;
@@ -1300,8 +1301,16 @@ public class BuildGoal extends Goal {
         if (st == null) st = takeBlockMatching(secondBest(style).and(fit));
         if (st == null && style == Blueprints.Style.SOIL) st = takeSpoil();
         if (st == null && style != Blueprints.Style.SOIL) st = takeBlockMatching(s -> isBuildingBlock(s) && !isSoil(s) && fit.test(s));
-        if (st == null) st = takeBlockMatching(s -> isBuildingBlock(s) && fit.test(s));
+        // [integrity] Earth only where earth goes (a flower box, a fill under the floor): a wall, a beam or a floor of
+        // dirt was the commonest thing wrong with a town's houses. Short of anything else the builder runs out, and the
+        // next load brings the right thing.
+        if (st == null && earthWill(style)) st = takeBlockMatching(s -> isBuildingBlock(s) && fit.test(s));
         return st;
+    }
+
+    /** [integrity] May this style of cell be laid in earth: a flower box's soil, a fill under the floor, a hired hand's plain block. */
+    private static boolean earthWill(Blueprints.Style style) {
+        return style == Blueprints.Style.SOIL || style == Blueprints.Style.GENERIC;
     }
 
     /** Set a block the way the drawing has it: stairs facing and the right way up, logs lying the

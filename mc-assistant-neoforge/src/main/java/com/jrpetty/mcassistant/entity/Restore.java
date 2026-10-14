@@ -193,6 +193,11 @@ public final class Restore {
         return Kind.WRONG;
     }
 
+    /** An item of earth, sand or gravel (what a builder's load is not to be made of). */
+    public static boolean earthyItem(ItemStack s) {
+        return s.getItem() instanceof BlockItem bi && earthy(bi.getBlock().defaultBlockState());
+    }
+
     /** Earth, sand and gravel: the ground's, never a wall's or a floor's (a footing laid where the ground stood was
      *  passed over as filled, and the shop stood on a floor of grass). */
     public static boolean earthy(BlockState st) {

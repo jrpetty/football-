@@ -6994,12 +6994,12 @@ public class VillageFolkEntity extends AssistantEntity {
         BlockPos heart = villageCentre;
         if (heart == null) return false;
         int blocks = blocksToLay(project, site, stillToLay(project, site));
-        int carried = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
+        int carried = countCarried(BUILT_OF) + roofPiecesCarried();
         // Three parts in four is enough to begin: the rest is dug while the walls go up, and
         // a build that waited for every last block stood in front of its list for days.
         int least = blocks * 3 / 4;
         return carried >= least
-            || carried + storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock) >= least;
+            || carried + storesHold(heart, buildStoresRadius(), BUILT_OF) >= least;
     }
 
     /**
@@ -7101,9 +7101,9 @@ public class VillageFolkEntity extends AssistantEntity {
 
         // Timber and stone: only worth a trip if the village has enough. (The roof's stairs and
         // slabs in the pack count: they are laid in place of blocks.)
-        int carried = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
+        int carried = countCarried(BUILT_OF) + roofPiecesCarried();
         if (carried < least) {
-            int inStores = storesHold(heart, buildStoresRadius(), BuildGoal::isBuildingBlock);
+            int inStores = storesHold(heart, buildStoresRadius(), BUILT_OF);
             if (carried + inStores < least) { buildNote("build: stores hold " + inStores + ", need " + (least - carried)); return false; }      // not yet
         }
 
@@ -7200,13 +7200,14 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // Then the bulk of it, timber and stone, into whatever room the pack has left once the
         // fixtures and the finishing are in it (see above).
-        int carriedNow = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
+        int carriedNow = countCarried(BUILT_OF) + roofPiecesCarried();
         if (carriedNow < blocks) {
             // The cheapest first: stone before planks, planks before logs.
             int got = 0;
             for (int tier = 0; tier <= 2 && got < blocks - carriedNow; tier++) {
                 final int cost = tier;
-                got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost,
+                got += drawFrom(heart, st -> BuildGoal.isBuildingBlock(st) && BuildGoal.blockCost(st) == cost
+                        && !Restore.earthyItem(st),                                    // [integrity] no wall of earth
                     blocks - carriedNow - got, buildStoresRadius());
             }
             if (got > 0) { Villages.leadProgress(village, getUUID(), now); drewForBuild = true; }
@@ -7214,7 +7215,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // The roof's stairs and slabs count: they are cut from the planks and laid in place of
         // blocks. Counted without them, a builder that had cut its roof out of the founding planks
         // was always "carrying 128 of 216", never began, and a village of twelve built nothing.
-        int blocksNow = countCarried(BuildGoal::isBuildingBlock) + roofPiecesCarried();
+        int blocksNow = countCarried(BUILT_OF) + roofPiecesCarried();
         // A full pack is a load to begin on. Three parts in four of a building bigger than one pack
         // can hold never fit in it: the meeting hall's drawing alone (five hundred and forty-odd
         // blocks, its roof stairs, planks, beams and footing each a stack or three of their own, its
@@ -7227,6 +7228,10 @@ public class VillageFolkEntity extends AssistantEntity {
         if (blocksNow < least && !fullLoad) buildNote("build: carrying " + blocksNow + " of " + blocks + " blocks");
         return blocksNow >= least || fullLoad;
     }
+
+    /** [integrity] What a building's load is counted in: building blocks, not earth (a pack of dirt is no load). */
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> BUILT_OF =
+        st -> BuildGoal.isBuildingBlock(st) && !Restore.earthyItem(st);
 
     /** The least of timber and stone a full pack must hold to count as a load to begin on (six
      *  stacks): a pack full of its trade's own goods with a handful of planks in it is no load. */
