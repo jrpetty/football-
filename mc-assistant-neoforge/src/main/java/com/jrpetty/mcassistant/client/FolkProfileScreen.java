@@ -633,7 +633,21 @@ public class FolkProfileScreen extends Screen {
         }
         if (stacks.isEmpty()) p.note("Its pack is empty.");
         else p.add(new Items(font, "", stacks, tips, p.w));
-        if (t.getInt("comforts") > 0) p.fact("Comforts at home", t.getInt("comforts") + " (worth " + t.getInt("comforts_worth") + "c)");
+        p.heading("In its home");
+        ListTag home = t.getList("home", Tag.TAG_COMPOUND);
+        if (!home.isEmpty()) {
+            List<ItemStack> homeStacks = new ArrayList<>();
+            List<String> homeTips = new ArrayList<>();
+            for (int i = 0; i < home.size(); i++) {
+                CompoundTag c = home.getCompound(i);
+                homeStacks.add(stack(c.getString("id"), c.getInt("n")));
+                homeTips.add(c.getString("name") + " \u00D7" + c.getInt("n") + " \u00B7 worth " + c.getInt("worth") + "c");
+            }
+            p.add(new Items(font, "", homeStacks, homeTips, p.w));
+        }
+        if (t.getInt("comforts") > 0) p.fact("Comforts", t.getInt("comforts") + " (worth " + t.getInt("comforts_worth") + "c)");
+        p.fact("Furnished", capital(t.getString("home_words")));
+        if (home.isEmpty() && t.getInt("comforts") == 0 && t.getString("home_words").isEmpty()) p.note("Nothing of its own at home yet.");
     }
 
     private static final java.util.Map<String, String> SLOT_WORDS = java.util.Map.of("head", "on its head", "chest", "on its back",

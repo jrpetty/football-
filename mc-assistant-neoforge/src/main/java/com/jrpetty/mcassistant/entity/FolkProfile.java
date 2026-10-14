@@ -62,7 +62,7 @@ public final class FolkProfile {
         Map.entry("Comforts", "things"));
 
     /** The labels already drawn as widgets of their own: not repeated as card lines. */
-    private static final Set<String> SHOWN = Set.of("Trade", "Friends", "Family", "Feeling", "Loves", "Remembers", "Needs");
+    private static final Set<String> SHOWN = Set.of("Trade", "Friends", "Family", "Feeling", "Loves", "Remembers", "Needs", "Comforts");
 
     /** The most memories sent (newest first), and the most things carried listed. */
     private static final int MEMORIES = 12, ITEMS = 36;
@@ -345,6 +345,8 @@ public final class FolkProfile {
             if (!s.isEmpty()) worn.put(slot.getName(), item(s));
         }
         t.put("worn", worn);
+        t.put("home", homeThings(f));
+        t.putString("home_words", Decor.cardLine(f));
         t.putInt("purse", f.purse());
         if (!f.isBaby()) {
             t.putInt("house_fund", Homes.savedShare(f));
@@ -357,6 +359,15 @@ public final class FolkProfile {
             t.putString("tier", Wealth.tier(f).label);
         }
         return t;
+    }
+
+    /**
+     * What it keeps at home, as items (id, count, name, worth), for the Belongings tab: the one place the profile reads a
+     * home's possessions, to be pointed at the homes' own possessions (chests, larder, wardrobe, shelves) when they are
+     * kept. Until then, nothing: the tab shows the comforts of its home in words (Decor.cardLine) instead.
+     */
+    static ListTag homeThings(VillageFolkEntity f) {
+        return new ListTag();
     }
 
     private static CompoundTag item(ItemStack s) {
