@@ -165,6 +165,12 @@ public class PerfGameTests {
             long ran = t - began;
             if (ns > 150_000_000L) Kit.log(String.format("[PERF] slow tick %.0f ms (phase %d, day %.3f)", ns / 1e6, phase, ran / 24000.0));
             window.add(ns, cpu);
+            // The stand-in player's connection keeps every packet sent it (nothing reads them): let them go, as a
+            // client would have taken them.
+            if (player != null && t % 20 == 0
+                    && player.connection.getConnection().channel() instanceof io.netty.channel.embedded.EmbeddedChannel ec) {
+                ec.releaseOutbound();
+            }
             int want = ALT <= 0 ? 0 : (int) ((ran / ALT) % 2);
             if (want != mode) {
                 mode = want;
@@ -241,10 +247,14 @@ public class PerfGameTests {
             for (var ignored : level.getAllEntities()) entities++;
             Runtime rt = Runtime.getRuntime();
             long heapMb = (rt.totalMemory() - rt.freeMemory()) >> 20;
+            long liveMb = -1;                          // the old generation as its last collection left it
+            for (var pool : ManagementFactory.getMemoryPoolMXBeans()) {
+                if (pool.getName().contains("Old Gen") && pool.getCollectionUsage() != null) liveMb = pool.getCollectionUsage().getUsed() >> 20;
+            }
             double tps = window.ticks * 1e9 / Math.max(1, System.nanoTime() - windowWall);
             Kit.log(String.format("[PERF] phase %d %s day %.2f %s tps %.0f | forced %d loaded %d | folk entities %d all %d"
-                    + " | heads %s| heap %d MB | paths put off %d, walks travelled %d", phase, MODE[Math.max(0, mode)], ran / 24000.0, window.line(), tps, ChunkLoad.forcedCount(),
-                level.getChunkSource().getLoadedChunksCount(), folk, entities, heads, heapMb,
+                    + " | heads %s| heap %d MB (old gen after GC %d MB) | paths put off %d, walks travelled %d", phase, MODE[Math.max(0, mode)], ran / 24000.0, window.line(), tps, ChunkLoad.forcedCount(),
+                level.getChunkSource().getLoadedChunksCount(), folk, entities, heads, heapMb, liveMb,
                 com.jrpetty.mcassistant.entity.FolkNavigation.deferredInAll(),
                 com.jrpetty.mcassistant.entity.FolkNavigation.travelledInAll()));
             window.clear();
