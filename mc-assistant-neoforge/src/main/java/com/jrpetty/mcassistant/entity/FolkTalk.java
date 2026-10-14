@@ -295,7 +295,48 @@ public final class FolkTalk {
         handle(f, p, TalkTopic.OPEN, "");
     }
 
+    /**
+     * [talk-ui] An operator's look at the talk screen, for the pictures (/village talkview): it opens on this folk at
+     * {@code category} (chat, about, ask, trade, town, world, profile or skills), the GUI at {@code guiScale} when it is
+     * 1 or more (0 leaves it as it is), the window at {@code window} ("640x480") when it is set. Nothing is said, and
+     * nothing changes between the two.
+     */
+    public static void show(VillageFolkEntity f, ServerPlayer p, String category, int guiScale, String window) {
+        String size = window == null ? "" : window.toLowerCase(Locale.ROOT).replaceAll("[^0-9x]", "");
+        String extra = "show=" + category.toLowerCase(Locale.ROOT).replaceAll("[^a-z]", "")
+            + (guiScale > 0 ? " guiscale=" + Math.min(6, guiScale) : "")
+            + (size.matches("\\d{3,4}x\\d{3,4}") ? " window=" + size : "");
+        send(f, p, true, "", "", extra);
+    }
+
+    /**
+     * [talk-ui] What the talk screen needs to offer only what applies (FolkReplyPayload.context): space-separated
+     * flags. Worked out once a reply, never a tick.
+     */
+    public static String talkContext(VillageFolkEntity f, ServerPlayer p) {
+        StringBuilder sb = new StringBuilder("v1 trade=").append(f.isBaby() ? "CHILD" : f.stationTask().name());
+        if (f.isBaby()) sb.append(" child");
+        if (f.isElder()) sb.append(" elder");
+        if (!f.isBaby() && f.tradeLevel(f.stationTask()) >= Lessons.MASTER) sb.append(" master");
+        UUID village = f.ownerId();
+        if (village != null) {
+            Standing.View v = Standing.of(village, p.getUUID(), f.level().getGameTime());
+            sb.append(" standing=").append(v.title().name());
+            if (Citizens.is(village, p.getUUID())) sb.append(" citizen");
+            if (PlayerLeader.leads(village, p.getUUID())) sb.append(" leader");
+            if (Laws.owes(village, p.getUUID()) > 0) sb.append(" fine");
+        }
+        if (Birthdays.today(f)) sb.append(" birthday");
+        if (!f.isBaby() && Interviews.shortlisted(f)) sb.append(" interview");
+        if (PlayerCivic.isApprenticeOf(f, p)) sb.append(" apprentice");
+        return sb.toString();
+    }
+
     private static void send(VillageFolkEntity f, ServerPlayer p, boolean open, String said, String asked) {
+        send(f, p, open, said, asked, "");
+    }
+
+    private static void send(VillageFolkEntity f, ServerPlayer p, boolean open, String said, String asked, String extra) {
         Persona me = f.persona();
         int aff = me.affinity(p.getUUID());
         String about = (f.isElder() ? "Elder · " : "") + School.title(f) + (f.isBaby() ? "Child" : f.stationTask().title) + " · "
@@ -315,7 +356,8 @@ public final class FolkTalk {
             me.mood(), Persona.moodWord(me.mood()), aff, Persona.standing(aff), f.isFollowing(p), asked,
             where, errand, Errands.canDeliver(f, p) || Trade.canPay(f, p),
             clip(nowDoing(f), 200), clip(card(f), 1800), clip(Guide.encode(Guide.places(f, p)), 900),
-            clip(FolkSkills.encode(f), FolkReplyPayload.MAX_SKILLS - 100)));
+            clip(FolkSkills.encode(f), FolkReplyPayload.MAX_SKILLS - 100),
+            clip(talkContext(f, p) + (extra.isEmpty() ? "" : " " + extra), FolkReplyPayload.MAX_CONTEXT - 16)));
     }
 
     private static String clip(String s, int most) {

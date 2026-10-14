@@ -357,6 +357,18 @@ public final class VillageCommands {
                 .executes(ctx -> talk(ctx, ""))
                 .then(Commands.argument("words", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
                     .executes(ctx -> talk(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "words")))))
+            // [talk-ui] The talk screen on the nearest folk at a category, the GUI at a scale and the window at a size
+            // (for the pictures): /village talkview trade 3, /village talkview ask 2 640x480. A scale of 0 leaves it.
+            .then(Commands.literal("talkview").requires(src -> src.hasPermission(2))
+                .then(Commands.argument("category", com.mojang.brigadier.arguments.StringArgumentType.word())
+                    .executes(ctx -> talkView(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "category"), 0, ""))
+                    .then(Commands.argument("scale", com.mojang.brigadier.arguments.IntegerArgumentType.integer(0, 6))
+                        .executes(ctx -> talkView(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "category"),
+                            com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "scale"), ""))
+                        .then(Commands.argument("window", com.mojang.brigadier.arguments.StringArgumentType.word())
+                            .executes(ctx -> talkView(ctx, com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "category"),
+                                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "scale"),
+                                com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "window")))))))
             // Have the nearest folk say something out loud, in its bubble (for scripts and tests).
             .then(Commands.literal("say").requires(src -> src.hasPermission(2))
                 .then(Commands.argument("words", com.mojang.brigadier.arguments.StringArgumentType.greedyString())
@@ -452,6 +464,22 @@ public final class VillageCommands {
         if (words.isBlank()) com.jrpetty.mcassistant.entity.FolkTalk.open(near.get(0), player);
         else com.jrpetty.mcassistant.entity.FolkTalk.handle(near.get(0), player,
             com.jrpetty.mcassistant.entity.TalkTopic.SAY, words);
+        return 1;
+    }
+
+    private static int talkView(CommandContext<CommandSourceStack> ctx, String category, int scale, String window)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        java.util.List<VillageFolkEntity> near = player.level().getEntitiesOfClass(VillageFolkEntity.class,
+            player.getBoundingBox().inflate(8.0), VillageFolkEntity::isAlive);
+        near.sort(java.util.Comparator.comparingDouble(f -> f.distanceToSqr(player)));
+        if (near.isEmpty()) {
+            ctx.getSource().sendFailure(Component.literal("Nobody within eight blocks to talk to."));
+            return 0;
+        }
+        com.jrpetty.mcassistant.entity.FolkTalk.show(near.get(0), player, category, scale, window);
+        ctx.getSource().sendSuccess(() -> Component.literal("The talk screen on " + near.get(0).displayNameCap() + ", at " + category
+            + (scale > 0 ? ", GUI scale " + scale : "") + (window.isEmpty() ? "" : ", window " + window) + "."), false);
         return 1;
     }
 
