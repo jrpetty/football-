@@ -16,6 +16,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * it, and are served one at a time, a few seconds each, by the keeper behind it, a word on each side; then they buy
  * through the trade's desk as anybody does (ShopDesk). No ticking of its own: each folk's errand asks for its turn
  * (turn), so a queue costs nothing with nobody in it, and a folk that walks off (or is unloaded) drops out of it.
+ *
+ * <p>Each line is its own counter's: a town with two shops has two lines, and a folk keeps to the line it joined (it does
+ * not change lines as it walks past the other counter). Whoever keeps the counter is never in its line. And a folk at the
+ * head of the line that does not come up to the counter (held up on the way, or turned back) is let fall behind the
+ * next, so the line goes on being served.
  */
 public final class ServiceQueue {
 
@@ -24,6 +29,8 @@ public final class ServiceQueue {
     /** How long a folk is served (ticks: three seconds), how long it waits at most before it gives up, and how long it
      *  may go without asking before it is taken out of the line. */
     static final long SERVE = 60L, GIVE_UP = 2400L, FORGOTTEN = 200L;
+    /** How long the head of the line may be on its way up to the counter before the next is served ahead of it. */
+    static final long HEAD_ON_ITS_WAY = 200L;
     /** How many stand in the line; the rest wait about by the last place. */
     static final int LINE = 5;
 
@@ -43,6 +50,8 @@ public final class ServiceQueue {
         final UUID folk;
         final long joined;
         long serving = -1, lastAsked;
+        /** When it came to the head of the line (-1: not there yet). */
+        long headSince = -1;
         /** [earning] What it asks for, and the player on a counter shift who served it (null: not yet). */
         String wants = "";
         @Nullable String byHand;
@@ -73,7 +82,7 @@ public final class ServiceQueue {
     public static Turn turn(VillageFolkEntity f, ServerLevel level, ServiceRole role, String wants) {
         UUID village = f.ownerId();
         if (village == null) return Turn.NONE;
-        ServicePoints.Point point = ServicePoints.nearest(level, village, role, f.blockPosition());
+        ServicePoints.Point point = pointFor(f, level, role);
         if (point == null) return Turn.NONE;
         ServicePoints.Status st = ServicePoints.status(level, village, role, point);
         long now = level.getGameTime();
@@ -81,6 +90,10 @@ public final class ServiceQueue {
         if (!st.open()) {
             leave(f.getUUID());
             return Turn.CLOSED;
+        }
+        if (st.keeper() == f || role == ServiceRole.SHOP && ShopRoles.role(f) != ShopRoles.Role.NONE) {
+            leave(f.getUUID());                                                    // its own counter: served over it, no line
+            return Turn.GO;
         }
         List<Place> line = LINES.computeIfAbsent(key, k -> new java.util.concurrent.CopyOnWriteArrayList<>());
         Long was = IN.get(f.getUUID());
@@ -100,6 +113,7 @@ public final class ServiceQueue {
             return Turn.GO;
         }
         line.removeIf(p -> now - p.lastAsked > FORGOTTEN || gone(level, p.folk));
+        letThroughPastAStalledHead(line, me, now);
         if (now - me.joined > GIVE_UP) {
             leave(f.getUUID());
             FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "I can't wait all day. I'll come back tomorrow.", "What a queue! Another time."));
@@ -110,6 +124,7 @@ public final class ServiceQueue {
         f.hobbyNow = i == 0 ? "being served at the " + role.title.toLowerCase(java.util.Locale.ROOT) : "queuing at the " + role.title.toLowerCase(java.util.Locale.ROOT)
             + (i > 0 ? " (" + ordinal(i + 1) + " in line)" : "");
         f.lastLeisureTick = f.tickCount;
+        if (i == 0 && me.headSince < 0) me.headSince = now;
         double reach = i == 0 ? 1.3 : 2.0;
         if (f.distanceToSqr(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5) > reach * reach) {
             if (f.getNavigation().isDone() || f.tickCount % 40 == 0) f.walkTo(spot, 0.8D);
@@ -149,6 +164,32 @@ public final class ServiceQueue {
         }
         leave(f.getUUID());
         return Turn.GO;
+    }
+
+    /**
+     * The counter this folk queues at for this trade: the one whose line it is in, while that counter still stands;
+     * else the nearest. Null if the trade has none.
+     */
+    @Nullable
+    public static ServicePoints.Point pointFor(VillageFolkEntity f, ServerLevel level, ServiceRole role) {
+        UUID village = f.ownerId();
+        if (village == null) return null;
+        Long in = IN.get(f.getUUID());
+        if (in != null) {
+            for (ServicePoints.Point p : ServicePoints.of(level, village, role)) if (p.pos().asLong() == in) return p;
+        }
+        return ServicePoints.nearest(level, village, role, f.blockPosition());
+    }
+
+    /** The head of the line on its way up to the counter too long (held up, or turned back): behind the next one, who
+     *  is served meanwhile. Only ever asked by a folk behind it, so a head alone in the line keeps its place. */
+    private static void letThroughPastAStalledHead(List<Place> line, Place me, long now) {
+        if (line.size() < 2) return;
+        Place head = line.get(0);
+        if (head == me || head.serving >= 0 || head.headSince < 0 || now - head.headSince <= HEAD_ON_ITS_WAY) return;
+        line.remove(head);
+        line.add(Math.min(1, line.size()), head);
+        head.headSince = -1;
     }
 
     /** Out of whatever line it is in. */

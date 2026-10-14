@@ -106,7 +106,7 @@ public final class ShoppingTrips {
 
     /** To the shop, in line, served, and paid. */
     private static boolean shop(ServerLevel level, Villages.Village v, VillageFolkEntity f, Trip t, long day) {
-        ServicePoints.Point point = ServicePoints.nearest(level, v.id(), ServiceRole.SHOP, f.blockPosition());
+        ServicePoints.Point point = ServiceQueue.pointFor(f, level, ServiceRole.SHOP);       // the line it is in, else the nearest
         BlockPos to = point != null ? point.queueSpot(level, 0) : Villages.builtAt(v.id(), Store.buildingForShop(v.id()));
         if (to == null) return giveUp(f, day, "there's no shop");
         if (point == null && f.blockPosition().distSqr(to) > 4 * 4 || point != null && f.blockPosition().distSqr(to) > 10 * 10) {
