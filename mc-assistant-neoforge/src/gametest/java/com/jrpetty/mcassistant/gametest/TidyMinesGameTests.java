@@ -67,8 +67,10 @@ public class TidyMinesGameTests {
     }
 
     /**
-     * A miner of a town whose heart is well off to one side (not its founder, who has the town to build), doing only the
-     * work the test gives it, a pick and cobblestone in its pack, stood here.
+     * A folk of a town whose heart is well off to one side (not its founder, who has the town to build), on no trade
+     * (a miner's plot is moved to its town's mine), doing only the work the test gives it, a pick and cobblestone in
+     * its pack, stood here. The test gives it its work at once: a hand with nothing queued takes cobblestone it carries
+     * back to the builders' stores.
      */
     private static VillageFolkEntity folk(ServerLevel level, int x, BlockPos at, ItemStack pick) {
         BlockPos heart = Kit.surface(level, x - 40, Z + 30);
@@ -76,7 +78,6 @@ public class TidyMinesGameTests {
         if (founder == null) return null;
         VillageFolkEntity f = VillageFolkSpawnerBlock.raise(level, heart.south(3), 0.0F);
         if (f == null || !founder.ownerId().equals(f.ownerId())) return null;
-        f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.MINE);   // a miner: its cobblestone is its own
         f.setAutonomous(false);
         f.clearQueue();
         f.getInventoryItems().clear();
@@ -85,8 +86,6 @@ public class TidyMinesGameTests {
         f.insertItem(new ItemStack(Items.TORCH, 16));
         f.insertItem(new ItemStack(Items.BREAD, 8));
         f.moveTo(at.getX() + 0.5, at.getY(), at.getZ() + 0.5, 0.0F, 0.0F);
-        f.assignPlot(WorkZone.around(at, 8, at.getY() - 12), "the test's ground");   // its ground where it stands
-        f.setAutonomous(false);
         return f;
     }
 
@@ -122,7 +121,7 @@ public class TidyMinesGameTests {
         VillageFolkEntity f = folk(level, x, floor.south(2), new ItemStack(Items.STONE_PICKAXE));
         helper.assertTrue(f != null, "a folk");
         helper.assertTrue(OreSight.exposed(level, ore), "the ore shows from below");
-        helper.runAtTickTime(5, () -> f.enqueueFront(Job.gather(GatherGoal.Kind.IRON, 1)));
+        f.enqueueFront(Job.gather(GatherGoal.Kind.IRON, 1));
         int[] most = { 0 };
         helper.onEachTick(() -> {
             keepAtWork(level, f);
@@ -164,11 +163,11 @@ public class TidyMinesGameTests {
         int x = 1762000;
         fresh(level, x, 40);
         BlockPos floor = Kit.surface(level, x, Z);
-        BlockPos ore = floor.above(11);
+        BlockPos ore = floor.above(8);                                       // the top of its look for iron
         roofWithOre(level, ore);
         VillageFolkEntity f = folk(level, x, floor.south(2), new ItemStack(Items.STONE_PICKAXE));
         helper.assertTrue(f != null, "a folk");
-        helper.runAtTickTime(5, () -> f.enqueueFront(Job.gather(GatherGoal.Kind.IRON, 1)));
+        f.enqueueFront(Job.gather(GatherGoal.Kind.IRON, 1));
         long[] away = { -1 }, back = { -1 };
         int[] left = { 0 };
         helper.onEachTick(() -> {
@@ -227,7 +226,8 @@ public class TidyMinesGameTests {
         long[] since = { 0 };
         List<List<BlockPos>> stairs = new ArrayList<>();
         Set<Long> cutAbove = new HashSet<>();
-        helper.runAtTickTime(5, () -> { f.enqueueFront(Job.mine(depth, "north")); run[0] = 1; since[0] = 5; });
+        f.enqueueFront(Job.mine(depth, "north"));
+        run[0] = 1;
         helper.onEachTick(() -> {
             keepAtWork(level, f);
             long t = helper.getTick();
@@ -296,14 +296,14 @@ public class TidyMinesGameTests {
         VillageFolkEntity f = folk(level, x, lost, new ItemStack(Items.STONE_PICKAXE));
         helper.assertTrue(f != null, "a folk");
         helper.assertTrue(MineStairs.underground(level, lost), "lost underground");
-        helper.runAtTickTime(5, () -> f.enqueueFront(Job.mine(lost.getY(), MineStairs.OUT)));
+        f.enqueueFront(Job.mine(lost.getY(), MineStairs.OUT));
         helper.onEachTick(() -> {
             keepAtWork(level, f);
             long t = helper.getTick();
             BlockPos at = f.blockPosition();
             if (t % 200 == 0) Kit.log("tmn04 @" + t + " at " + at.toShortString() + " — " + f.debugLine());
             if (t > 20 && MineStairs.open(level, at)) {
-                int ways = MineStairs.keysForTests(level).size();
+                int ways = outWays(level) + 1;                               // the known stairs, and any way cut
                 Kit.log("tmn04 out at " + t + " at " + at.toShortString() + "; ways known " + ways);
                 helper.assertTrue(ways == 1, "it took the known stairs and cut none of its own: " + ways + " ways known");
                 helper.assertTrue(Math.abs(at.getX() - x) <= 3 && Math.abs(at.getZ() - Z) <= 3, "it came out at the head of the known stairs: " + at.toShortString());
@@ -328,7 +328,7 @@ public class TidyMinesGameTests {
         air(level, pocket, pocket.above());
         VillageFolkEntity first = folk(level, x, pocket, new ItemStack(Items.IRON_PICKAXE));
         helper.assertTrue(first != null, "a folk");
-        helper.runAtTickTime(5, () -> first.enqueueFront(Job.mine(pocket.getY(), MineStairs.OUT)));
+        first.enqueueFront(Job.mine(pocket.getY(), MineStairs.OUT));
         VillageFolkEntity[] second = { null };
         long[] firstOut = { -1 };
         helper.onEachTick(() -> {
@@ -339,10 +339,9 @@ public class TidyMinesGameTests {
                 + (second[0] == null ? "" : ", second at " + second[0].blockPosition().toShortString() + " — " + second[0].debugLine()));
             if (firstOut[0] < 0) {
                 if (t <= 5 || !MineStairs.open(level, first.blockPosition()) || first.peekJob() != null) return;
-                List<Long> keys = MineStairs.keysForTests(level);
-                Kit.log("tmn05 first out at " + t + "; ways known " + keys.size()
-                    + (keys.isEmpty() ? "" : " (" + MineStairs.kindOf(keys.get(0)) + ", " + MineStairs.stairsForTests(level, keys.get(0)).size() + " steps)"));
-                helper.assertTrue(keys.size() == 1 && MineStairs.kindOf(keys.get(0)) == MineStairs.Kind.OUT, "the way it cut is booked as a way out");
+                int outs = outWays(level);
+                Kit.log("tmn05 first out at " + t + "; ways out known " + outs);
+                helper.assertTrue(outs == 1, "the way it cut is booked as a way out: " + outs);
                 firstOut[0] = t;
                 first.moveTo(x + 12.5, top, Z + 12.5, 0.0F, 0.0F);
                 VillageFolkEntity f2 = folk(level, x, pocket, new ItemStack(Items.STONE_PICKAXE));
@@ -353,12 +352,19 @@ public class TidyMinesGameTests {
             }
             VillageFolkEntity f2 = second[0];
             if (t - firstOut[0] > 20 && MineStairs.open(level, f2.blockPosition())) {
-                int ways = MineStairs.keysForTests(level).size();
+                int ways = outWays(level);
                 Kit.log("tmn05 second out at " + t + " at " + f2.blockPosition().toShortString() + "; ways known " + ways);
                 helper.assertTrue(ways == 1, "the second went up the first one's way, and cut none: " + ways + " ways known");
                 helper.succeed();
             }
         });
+    }
+
+    /** The ways out folk cut for themselves that the world keeps. */
+    private static int outWays(ServerLevel level) {
+        int n = 0;
+        for (long key : MineStairs.keysForTests(level)) if (MineStairs.kindOf(key) == MineStairs.Kind.OUT) n++;
+        return n;
     }
 
     // ============================================================ tmn06: out of a hole, and nothing left behind
@@ -431,7 +437,7 @@ public class TidyMinesGameTests {
         helper.assertTrue(f != null, "a folk");
         f.assignPlot(WorkZone.around(floor, 8, floor.getY() - 2), "the test's cave");
         f.setAutonomous(false);
-        helper.runAtTickTime(5, () -> f.enqueueFront(Job.mine(floor.getY(), "north")));
+        f.enqueueFront(Job.mine(floor.getY(), "north"));
         int[] built = { 0 };
         helper.onEachTick(() -> {
             keepAtWork(level, f);

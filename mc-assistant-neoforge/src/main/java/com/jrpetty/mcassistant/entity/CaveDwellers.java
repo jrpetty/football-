@@ -115,8 +115,8 @@ import java.util.function.Predicate;
  * while cuts itself a step.
  *
  * <p><b>Every vein.</b> [mines] In the cave each of them looks round as it goes, the way a player would (lookRound,
- * OreSight): every ore that shows (a face open to the cave) and that it has a clear line to from its eyes, within five
- * blocks, goes on the cave's list (kept with the town: ore, place, size, and how it stands), called out by the nearest
+ * OreSight): every ore that shows (a face open to the cave) and that it has a clear line to from its eyes across the
+ * cave it is lighting (ten blocks), goes on the cave's list (kept with the town: ore, place, size, and how it stands), called out by the nearest
  * of them ("Iron here!"). Nobody looks through the rock: the rest of a vein comes out as each block taken lays the next
  * bare. The leader takes the veins one at a time, the town's most wanted ore first (what the age asks for:
  * Villages.needs), then the nearest, and every one on the list in the end, whatever it was sent for; every member digs
@@ -419,7 +419,7 @@ public final class CaveDwellers {
         @Nullable UUID foe;
         int foeTick, ateTick = -1000, torchTick = -1000, spokeTick = -1000, followTick = -1000, climbs;
         /** [mines] Its look round for ore that shows (OreSight), and where it last began one. */
-        final OreSight.Look look = new OreSight.Look();
+        final OreSight.Look look = new OreSight.Look(OreSight.CAVE_SIGHT);
         @Nullable BlockPos lookedFrom;
         boolean lookAgain = true;
         /** Its crafting table set down (CaveCraft), when, and what it is making; when it last looked at its tools. */

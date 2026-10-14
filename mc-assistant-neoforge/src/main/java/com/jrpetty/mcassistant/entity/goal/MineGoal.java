@@ -1496,6 +1496,7 @@ public class MineGoal extends Goal {
 
     /** An ore seen and left (out of reach, the way up, the run over): on the books for whoever next works near it. */
     private void noteForLater(BlockPos p) {
+        com.jrpetty.mcassistant.entity.OreSight.note(assistant, "left the ore at " + p.toShortString() + " for later");
         if (assistant.level() instanceof net.minecraft.server.level.ServerLevel sl && mayDig(p)) com.jrpetty.mcassistant.entity.OreNotes.noted(sl, p);
     }
 
@@ -1536,6 +1537,7 @@ public class MineGoal extends Goal {
             reachTicks = 0;
             look.stop();
             assistant.sayRoutine("Ore up there — going after it.");
+            com.jrpetty.mcassistant.entity.OreSight.note(assistant, "after the ore at " + ore.toShortString() + " from " + c.toShortString());
             return true;
         }
         return false;

@@ -34,6 +34,8 @@ public final class OreSight {
     /** How far a folk notices ore from its eyes: a little over a player's reach, so ore in a roof just out of reach
      *  is seen (and built up to), and no further (a look round reads (2 * SIGHT + 1) cubed blocks). */
     public static final int SIGHT = 6;
+    /** How far the cave team, lighting a cave as it goes, sees ore across it (still only in a clear line). */
+    public static final int CAVE_SIGHT = 10;
     /** Blocks of the look round read in one tick. */
     static final int CELLS_PER_TICK = 512;
     /** Rays cast in one tick, at most. */
@@ -50,6 +52,11 @@ public final class OreSight {
     public static boolean isOre(BlockState s) {
         for (TagKey<Block> tag : ORE_TAGS) if (s.is(tag)) return true;
         return s.is(net.neoforged.neoforge.common.Tags.Blocks.ORES);
+    }
+
+    /** A line in the folk's own working notes (its debug line): what it is after in the rock, or left. */
+    public static void note(AssistantEntity a, String line) {
+        a.brain(line);
     }
 
     /** Has it a tool that takes this block with its drops (a pick of the tier the ore asks for), in hand or in its pack? */
@@ -103,34 +110,46 @@ public final class OreSight {
      * Kept by the goal doing the work (no allocation while idle).
      */
     public static final class Look {
-        private static final int SIDE = 2 * SIGHT + 1;
-        private static final int CELLS = SIDE * SIDE * SIDE;
+        private final int sight, side, cells;
+
+        /** A look as far as a folk notices ore at its work (SIGHT). */
+        public Look() {
+            this(SIGHT);
+        }
+
+        /** A look this far round (a cave team lighting a cave looks across it: CAVE_SIGHT). */
+        public Look(int sight) {
+            this.sight = sight;
+            this.side = 2 * sight + 1;
+            this.cells = side * side * side;
+            this.index = cells;
+        }
 
         private final ArrayDeque<BlockPos> showing = new ArrayDeque<>();
         private final BlockPos.MutableBlockPos cell = new BlockPos.MutableBlockPos();
         private Vec3 eye = Vec3.ZERO;
         private int ox, oy, oz;
-        private int index = CELLS;
+        private int index;
 
         /** Nothing left of the last look to do. */
         public boolean idle() {
-            return index >= CELLS && showing.isEmpty();
+            return index >= cells && showing.isEmpty();
         }
 
         /** A fresh look from where it stands now (anything left of the last one dropped). */
         public void begin(AssistantEntity a) {
             eye = a.getEyePosition();
             BlockPos e = BlockPos.containing(eye);
-            ox = e.getX() - SIGHT;
-            oy = e.getY() - SIGHT;
-            oz = e.getZ() - SIGHT;
+            ox = e.getX() - sight;
+            oy = e.getY() - sight;
+            oz = e.getZ() - sight;
             index = 0;
             showing.clear();
         }
 
         /** Drop whatever is left of the look. */
         public void stop() {
-            index = CELLS;
+            index = cells;
             showing.clear();
         }
 
@@ -138,9 +157,9 @@ public final class OreSight {
         public void step(AssistantEntity a, Consumer<BlockPos> seen) {
             if (idle()) return;
             Level level = a.level();
-            double most = (SIGHT + 0.5) * (SIGHT + 0.5);
-            for (int read = 0; read < CELLS_PER_TICK && index < CELLS; read++, index++) {
-                int x = index % SIDE, y = (index / SIDE) % SIDE, z = index / (SIDE * SIDE);
+            double most = (sight + 0.5) * (sight + 0.5);
+            for (int read = 0; read < CELLS_PER_TICK && index < cells; read++, index++) {
+                int x = index % side, y = (index / side) % side, z = index / (side * side);
                 cell.set(ox + x, oy + y, oz + z);
                 double dx = cell.getX() + 0.5 - eye.x, dy = cell.getY() + 0.5 - eye.y, dz = cell.getZ() + 0.5 - eye.z;
                 if (dx * dx + dy * dy + dz * dz > most) continue;
