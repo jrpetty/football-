@@ -69,6 +69,7 @@ public final class Crafts {
         UUID village = f.ownerId();
         Villages.Village v = village == null ? null : Villages.get(village);
         if (v == null) return false;
+        if (WorkStock.fetchOwn(f, level)) return true;                // [shops-homes] its chest's makings, when no courier came
         int last = LAST.getOrDefault(f.getUUID(), -100000);
         // Quicker for a practised hand (a percent a level at its craft, to thirty), a cheerful one, a
         // happy village and the town's research; slower without the craft's own building and its
@@ -87,6 +88,7 @@ public final class Crafts {
     public static boolean now(VillageFolkEntity f, ServerLevel level, Villages.Village v) {
         // What goes in and out of the stores while it works is its making, item by item (Economy).
         Economy.openCraft(v.id(), f.stationTask());
+        WorkStock.begin(level, v, f);                                  // [shops-homes] its own workshop chest first
         String made;
         try {
             made = Luxuries.craft(level, v, f, true);                 // a turn at what the houses wait on (Luxuries)
@@ -110,6 +112,7 @@ public final class Crafts {
             };
             if (made == null) made = Luxuries.craft(level, v, f, false);   // its own work done: the houses' wants
         } finally {
+            WorkStock.end();
             Economy.closeCraft();
         }
         if (made == null) return false;

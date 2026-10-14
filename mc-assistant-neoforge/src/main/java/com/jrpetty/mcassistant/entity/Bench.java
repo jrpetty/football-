@@ -238,6 +238,7 @@ public final class Bench {
     /** What the stores hold, plain stacks only, by item. */
     static Map<Item, Integer> held(ServerLevel level, UUID village) {
         Map<Item, Integer> held = new HashMap<>();
+        WorkStock.addHeld(held);                                        // [shops-homes] a maker at work: its own chest
         for (BlockPos p : Villages.storeChests(level, village)) {
             if (!(level.getBlockEntity(p) instanceof Container c)) continue;
             for (int i = 0; i < c.getContainerSize(); i++) {

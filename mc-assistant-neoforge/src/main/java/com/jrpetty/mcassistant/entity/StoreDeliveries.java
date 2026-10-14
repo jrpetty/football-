@@ -66,6 +66,9 @@ public final class StoreDeliveries {
         int carried, delivered;
         long taken, progress;
         double best = Double.MAX_VALUE;
+        /** [shops-homes] A workshop's chest it goes to instead of the shop's stockroom (WorkStock), and its name. */
+        @Nullable BlockPos dest;
+        String destName = "";
 
         Delivery(int id, String key, Predicate<ItemStack> what, ItemStack sample, int count, boolean back, long queued) {
             this.id = id;
@@ -80,6 +83,7 @@ public final class StoreDeliveries {
         /** "16 bread from the storehouse to the store". */
         String words(String place) {
             String n = Bench.words(sample.getItem(), count);
+            if (dest != null) return n + " from the storehouse to the " + destName.toLowerCase(java.util.Locale.ROOT);
             return back ? n + " back from " + place + " to the stores" : n + " from the storehouse to " + place;
         }
     }
@@ -99,6 +103,15 @@ public final class StoreDeliveries {
     static Delivery queue(ServerLevel level, UUID village, String key, Predicate<ItemStack> what, ItemStack sample, int count, boolean back) {
         Delivery d = new Delivery(nextId++, key, what, sample.copyWithCount(1), Math.max(1, Math.min(MOST, count)), back, level.getGameTime());
         of(village).add(d);
+        return d;
+    }
+
+    /** [shops-homes] A delivery from the storehouse to a workshop's chest (WorkStock), for the couriers. */
+    static Delivery queueTo(ServerLevel level, UUID village, String key, Predicate<ItemStack> what, ItemStack sample, int count,
+                            BlockPos dest, String destName) {
+        Delivery d = queue(level, village, key, what, sample, count, false);
+        d.dest = dest.immutable();
+        d.destName = destName;
         return d;
     }
 
@@ -131,10 +144,17 @@ public final class StoreDeliveries {
     /** The oldest delivery waiting at least this long, or null. */
     @Nullable
     private static Delivery waiting(ServerLevel level, UUID village, long atLeast) {
+        return waiting(level, village, atLeast, true, true);
+    }
+
+    /** As waiting, of the shop's deliveries, the workshops', or both. */
+    @Nullable
+    private static Delivery waiting(ServerLevel level, UUID village, long atLeast, boolean shop, boolean work) {
         long now = level.getGameTime();
         Delivery best = null;
         for (Delivery d : of(village)) {
             if (d.stage != Stage.WAITING || d.carrier != null) continue;
+            if (d.dest == null ? !shop : !work) continue;
             if (now - d.queued < atLeast && now >= d.queued) continue;
             if (best == null || d.queued < best.queued) best = d;
         }
@@ -152,7 +172,9 @@ public final class StoreDeliveries {
         c.brain((courier ? "courier run for " : "fetching for ") + place(c.ownerId()) + ": " + d.words(place(c.ownerId())));
         if (level.getRandom().nextInt(2) == 0) {
             FolkTalk.speak(c, FolkTalk.pick(level.getRandom(), "Right — " + d.words(place(c.ownerId())) + ".",
-                d.back ? "These have sat long enough. Back to the stores with them." : "The stock keeper wants " + Bench.words(d.sample.getItem(), d.count) + ". On my way."));
+                d.back ? "These have sat long enough. Back to the stores with them."
+                    : d.dest != null ? "The " + d.destName.toLowerCase(java.util.Locale.ROOT) + " are running low. On my way."
+                    : "The stock keeper wants " + Bench.words(d.sample.getItem(), d.count) + ". On my way."));
         }
     }
 
@@ -169,8 +191,8 @@ public final class StoreDeliveries {
         Delivery d = carriedBy(c);
         if (d != null) return step(c, level, d);
         // A new one only with an empty pack, and never the street sweeper's (Sweepers: it sweeps first).
-        if (!ShopStock.open(v) || c.stashable() > 0 || Sweepers.appointed(c)) return false;
-        d = waiting(level, v, runListEmpty ? 0L : COURIER_WAIT);
+        if (c.stashable() > 0 || Sweepers.appointed(c)) return false;
+        d = waiting(level, v, runListEmpty ? 0L : COURIER_WAIT, ShopStock.open(v), true);   // [shops-homes] the workshops' too
         if (d == null) return false;
         take(c, level, d, true);
         return step(c, level, d);
@@ -183,10 +205,27 @@ public final class StoreDeliveries {
         if (v == null) return false;
         Delivery d = carriedBy(f);
         if (d != null) return step(f, level, d);
-        d = waiting(level, v, waited);
+        d = waiting(level, v, waited, true, false);                      // [shops-homes] the shop's own, not the workshops'
         if (d == null) return false;
         take(f, level, d, false);
         return step(f, level, d);
+    }
+
+    /** [shops-homes] A maker fetches its own workshop's delivery that no courier has taken after a while (a town with
+     *  none, or all busy): carry on with the one it has, or take one for its own chest. */
+    static boolean fetchOwn(VillageFolkEntity f, ServerLevel level, BlockPos chest) {
+        UUID v = f.ownerId();
+        if (v == null) return false;
+        Delivery d = carriedBy(f);
+        if (d != null) return step(f, level, d);
+        long now = level.getGameTime();
+        for (Delivery w : of(v)) {
+            if (w.stage != Stage.WAITING || w.carrier != null || !chest.equals(w.dest)) continue;
+            if (now - w.queued < KEEPER_WAIT && now >= w.queued) continue;
+            take(f, level, w, false);
+            return step(f, level, w);
+        }
+        return false;
     }
 
     /** Is there a courier at work in the town (one of the storehouse's), to carry the shop's deliveries? */
@@ -235,7 +274,7 @@ public final class StoreDeliveries {
                 return true;
             }
             case OUT -> {
-                BlockPos to = d.back ? Couriers.base(level, v) : Store.stockroomSpot(level, v);
+                BlockPos to = d.back ? Couriers.base(level, v) : d.dest != null ? d.dest : Store.stockroomSpot(level, v);
                 if (to == null) { d.stage = Stage.UNLOADING; return true; }
                 if (!near(c, to)) return walk(c, level, vill, d, to);
                 d.stage = Stage.UNLOADING;
@@ -253,6 +292,9 @@ public final class StoreDeliveries {
                     if (d.back) {
                         TownWork.give(level, vill, lot);                     // into the stores (give leaves what would not fit)
                         put = k - lot.getCount();
+                    } else if (d.dest != null) {                             // [shops-homes] a workshop's chest
+                        ItemStack left = level.getBlockEntity(d.dest) instanceof net.minecraft.world.Container box ? Stacking.insert(box, lot) : lot;
+                        put = k - left.getCount();
                     } else {
                         ItemStack left = Store.put(level, v, lot);
                         put = k - left.getCount();
@@ -319,8 +361,8 @@ public final class StoreDeliveries {
     private static void finish(ServerLevel level, Villages.Village v, VillageFolkEntity c, Delivery d, int moved) {
         d.delivered = moved;
         d.stage = Stage.DONE;
-        String place = place(v.id());
-        StockKeeper.delivered(level, v.id(), d, moved);
+        String place = d.dest != null ? "the " + d.destName.toLowerCase(java.util.Locale.ROOT) : place(v.id());
+        if (d.dest == null) StockKeeper.delivered(level, v.id(), d, moved);
         if (d.courier) {
             int[] day = Couriers.office(level, v.id()).staff.computeIfAbsent(c.getUUID(), k -> new int[2]);
             day[0]++;
@@ -359,7 +401,7 @@ public final class StoreDeliveries {
             }
         }
         d.stage = Stage.DONE;
-        StockKeeper.deliveryFailed(level, v.id(), d, why);
+        if (d.dest == null) StockKeeper.deliveryFailed(level, v.id(), d, why);
         c.brain("gave up a delivery for " + place(v.id()) + ": " + why);
     }
 
@@ -376,7 +418,7 @@ public final class StoreDeliveries {
                 // A day waiting and nobody to carry it: off the list, and the morning's count orders afresh.
                 if (now - d.queued > STALE || now < d.queued) {
                     d.stage = Stage.DONE;
-                    StockKeeper.deliveryFailed(level, v.id(), d, "nobody came to carry it");
+                    if (d.dest == null) StockKeeper.deliveryFailed(level, v.id(), d, "nobody came to carry it");
                     list.remove(d);
                 }
                 continue;
@@ -391,7 +433,7 @@ public final class StoreDeliveries {
                 } else {
                     // The carrier is gone with whatever it had (to its grave, or another town): nothing to put back.
                     d.stage = Stage.DONE;
-                    StockKeeper.deliveryFailed(level, v.id(), d, "its carrier never came back");
+                    if (d.dest == null) StockKeeper.deliveryFailed(level, v.id(), d, "its carrier never came back");
                 }
                 list.remove(d);
             }
@@ -412,7 +454,7 @@ public final class StoreDeliveries {
     // ------------------------------------------------------------------ the smoke and the tests
 
     /** Every delivery waiting, carried over at once as a carrier would (the stage for the smoke). */
-    static void deliverAllNow(ServerLevel level, Villages.Village v) {
+    public static void deliverAllNow(ServerLevel level, Villages.Village v) {
         for (Delivery d : of(v.id())) {
             if (d.stage != Stage.WAITING) continue;
             List<ItemStack> lots = d.back ? Store.take(level, v.id(), d.what, d.count, false) : Store.fromStores(level, v.id(), d.what, d.count);
@@ -423,6 +465,10 @@ public final class StoreDeliveries {
                     TownWork.give(level, v, rest);
                     moved += lot.getCount() - rest.getCount();
                     if (!rest.isEmpty()) Store.put(level, v.id(), rest);
+                } else if (d.dest != null) {                                // [shops-homes] a workshop's chest
+                    ItemStack left = level.getBlockEntity(d.dest) instanceof net.minecraft.world.Container box ? Stacking.insert(box, lot) : lot;
+                    moved += lot.getCount() - left.getCount();
+                    if (!left.isEmpty()) TownWork.give(level, v, left);
                 } else {
                     ItemStack left = Store.put(level, v.id(), lot);
                     moved += lot.getCount() - left.getCount();
@@ -433,7 +479,7 @@ public final class StoreDeliveries {
             d.carried = moved;
             d.delivered = moved;
             d.stage = Stage.DONE;
-            StockKeeper.delivered(level, v.id(), d, moved);
+            if (d.dest == null) StockKeeper.delivered(level, v.id(), d, moved);
         }
     }
 

@@ -475,10 +475,13 @@ public final class Fletchers {
     public static String work(VillageFolkEntity f, ServerLevel level, Villages.Village v) {
         UUID id = v.id();
         String made;
+        if (WorkStock.fetchOwn(f, level)) return "fetched its makings";   // [shops-homes] its chest's, when no courier came
         Economy.openCraft(id, StationTask.FLETCHER);
+        WorkStock.begin(level, v, f);                                  // [shops-homes] its own workshop chest first
         try {
             made = piece(level, v, f);
         } finally {
+            WorkStock.end();
             Economy.closeCraft();
         }
         int handed = fillQuivers(level, v);

@@ -219,7 +219,7 @@ public final class ShoppingTrips {
             Decor.Room room = Decor.room(v.id(), b);
             BlockPos near = f.bedPos() != null ? f.bedPos() : h.anchor;
             Decor.Spot spot = Decor.floorSpot(level, room, near, Decor.reserved(level, v.id(), b));
-            if (spot == null || !mayPlace(level, spot.at())) continue;
+            if (spot == null || !mayPlace(level, v, spot.at())) continue;
             var state = s.is(Items.BARREL)
                 ? Blocks.BARREL.defaultBlockState().setValue(net.minecraft.world.level.block.BarrelBlock.FACING, net.minecraft.core.Direction.UP)
                 : Blocks.CHEST.defaultBlockState().setValue(ChestBlock.FACING, spot.facing());
@@ -237,10 +237,10 @@ public final class ShoppingTrips {
         }
     }
 
-    /** [integrity] The town's one gate for a block it places: route through TownBlocks.mayPlace once it is merged. A
-     *  larder or a wardrobe goes only on a free floor cell against a wall inside the home (Decor.floorSpot). */
-    private static boolean mayPlace(ServerLevel level, BlockPos at) {
-        return level.isLoaded(at) && level.getBlockState(at).isAir();
+    /** The town's one gate for a block it places ([integrity] TownBlocks): a larder or a wardrobe is furniture, on a
+     *  free floor cell against a wall inside the home (Decor.floorSpot), never a doorway, a way in or a stair. */
+    private static boolean mayPlace(ServerLevel level, Villages.Village v, BlockPos at) {
+        return level.isLoaded(at) && level.getBlockState(at).isAir() && TownBlocks.mayPlace(level, v, at, TownBlocks.Why.FURNISH);
     }
 
     private static boolean giveUp(VillageFolkEntity f, long day, String why) {

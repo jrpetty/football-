@@ -307,7 +307,7 @@ public final class Market {
 
     /** How much of what matches the stores hold. */
     public static int stock(ServerLevel level, UUID village, Predicate<ItemStack> what) {
-        int n = 0;
+        int n = WorkStock.own(what);                                    // [shops-homes] a maker at work counts its own chest
         for (BlockPos p : Villages.storeChests(level, village)) {
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
             for (int i = 0; i < c.getContainerSize(); i++) {

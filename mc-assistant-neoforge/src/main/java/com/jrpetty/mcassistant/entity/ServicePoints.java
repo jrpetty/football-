@@ -603,10 +603,10 @@ public final class ServicePoints {
         return true;
     }
 
-    /** [integrity] The town's one gate for a block it places: route through TownBlocks.mayPlace once it is merged. A
-     *  counter only ever goes where the building's own cask stood, inside its walls. */
+    /** The town's one gate for a block it places ([integrity] TownBlocks): a counter only ever goes where the
+     *  building's own cask stood, one of its drawing's own cells (as a renovation of it). */
     private static boolean mayPlace(ServerLevel level, Villages.Village v, BlockPos at) {
-        return level.isLoaded(at);
+        return level.isLoaded(at) && TownBlocks.mayPlace(level, v, at, TownBlocks.Why.RENOVATE);
     }
 
     /** Is this block one of the shop's counters (a cask, or the service counter that took a cask's place)? */
