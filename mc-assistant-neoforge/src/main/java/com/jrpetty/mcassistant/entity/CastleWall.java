@@ -56,8 +56,27 @@ import java.util.function.Predicate;
  * flanking towers, its doors shut by the watch at dusk and when the bell rings (folk open them to pass, monsters
  * can't). Where a paved cross street runs out through it, a postern with doors under an arch. A flight of steps up
  * to the walkway from inside each side of each gate. The ground is followed: the walkway never steps more than a
- * block at a time, and nothing is built over water, a field, a road or anything somebody put up (the wall leaves a
- * gap there rather).
+ * block at a time.
+ *
+ * <h2>A full ring</h2>
+ * The wall is one closed ring: the gates and the posterns (their doors shut at dusk and on the alarm) are its only
+ * ways through. Where its line crosses water it stands on piers with arches between them, a grate of iron bars (a
+ * fence in the Wood Age) under each arch from the bed to over the water: the water flows, nobody walks or swims
+ * through. An avenue over water crosses on a causeway to its gate. A field on the line is harvested into the stores and
+ * the wall stands on its ground (the farmers keep to what is left either side, off the ring); a pen's fence on the
+ * line goes back to the stores and the wall takes its place, so the pen stays closed. Somebody's building on the line
+ * is built round: the wall is laid in every cell of the line the town's placement gate allows (TownBlocks, Why.WALL),
+ * and the building's own walls stand as that part of the ring. A ravine or a cliff is built down into, to its floor; a
+ * gulf too deep to reach is bridged.
+ *
+ * <h2>The gates</h2>
+ * Each avenue's gatehouse: an arched passage between its two flanking towers, a pair of doors on the outer face; from
+ * the Iron Age a portcullis of iron bars over the passage as well, dropped when the bell rings and raised at the
+ * all-clear. Over the arch outside, the town's name on a sign, its banner (hung by the town's banner works, Heraldry)
+ * and a lantern hung either side from a stone bracket. A guard of the watch keeps each gate by day (and by night between the
+ * bells): greeting travellers and traders, challenging strangers after dark. The town's wagons and caravans go out by
+ * the gates (the gate opened for a wagon and shut behind it after dark). Paved cross streets go out through posterns:
+ * a smaller arched way with doors.
  *
  * <h2>By age</h2>
  * A log palisade with plank walks in the Wood Age; cobblestone in the Stone Age (mossy here and there); stone bricks
@@ -81,7 +100,7 @@ public final class CastleWall {
 
     private CastleWall() {}
 
-    static final String SIDES = "castle.sides", OLD = "castle.old", FIT = "castle.fit/", BEGUN = "castle.begun";
+    static final String SIDES = "castle.sides", OLD = "castle.old", FIT = "castle.fit2/", BEGUN = "castle.begun";
     /** How often the works on the wall are seen to (ticks), and the whole wall looked over. */
     static final long EVERY = 100L, SURVEY = 2400L;
     /** Blocks a hand lays at a time; what of each stone the stores keep back for the builders. */
@@ -94,7 +113,19 @@ public final class CastleWall {
     // ------------------------------------------------------------------ the blocks, by age
 
     /** What a block of the wall is. */
-    enum Role { BODY, ACCENT, CAP, MERLON, STAIR, ARCH, LADDER, LANTERN, TORCH, DOOR, AIR }
+    enum Role { BODY, ACCENT, CAP, MERLON, STAIR, ARCH, LADDER, LANTERN, TORCH, DOOR, AIR, GRATE, SIGN }
+
+    /** From this age (the Iron Age) a gate has a portcullis of iron bars over its passage as well as its doors. */
+    static final int PORTCULLIS = 2;
+    /** How far down a column is looked for ground to stand the wall on; past this it is bridged. */
+    static final int DEEP = 48;
+    /** A bridge's depth under the walkway, past the wall's height. */
+    static final int BRIDGE = 3;
+    /** Every this many columns over water a pier; arches with a grate under them between. */
+    static final int PIER_EVERY = 4;
+    /** A want's flag: laid round somebody's work (a column of theirs on the line): it fills what is empty there and
+     *  keeps whatever stands (their planks are not the palisade's, to be refaced). */
+    static final int ROUND = 8;
 
     /**
      * One age's stone for the wall: its body; its accent (the base course along the foot, and a weathered stone here
@@ -145,7 +176,8 @@ public final class CastleWall {
 
     /** The wall's fittings: what it hangs and sets on itself besides stone. */
     static boolean fitting(BlockState st) {
-        return st.is(Blocks.LADDER) || st.is(Blocks.LANTERN) || st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH)
+        return st.is(Blocks.LADDER) || st.is(Blocks.LANTERN) || st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH) || st.is(Blocks.IRON_BARS)
+            || st.is(Blocks.OAK_WALL_SIGN)
             || st.getBlock() instanceof DoorBlock && st.is(BlockTags.WOODEN_DOORS) || stepsTier(st) >= 0;
     }
 
@@ -192,7 +224,7 @@ public final class CastleWall {
         }
         for (BlockPos p : at) {
             int dx = p.getX() - v.centre().getX(), dz = p.getZ() - v.centre().getZ();
-            if (Math.max(Math.abs(dx), Math.abs(dz)) > TownPlan.reach()) continue;     // out past the plan: not the town proper
+            if (Math.max(Math.abs(dx), Math.abs(dz)) > FURTHEST) continue;     // far out past the plan: not the town proper
             int[] box = null;
             for (TownPlan.Lot l : TownPlan.lots()) {
                 int[] b = box(l);
@@ -201,6 +233,24 @@ public final class CastleWall {
             out.add(box != null ? box : new int[]{ dx, dz, 3, 3 });
         }
         return out;
+    }
+
+    /** How far out a building may stand and still be the town's own, for the wall to take in: as far as its outermost
+     *  line keeps inside (past the plan's last ring of lots, for the houses that spill over it). */
+    static final int FURTHEST = WallPlan.line(WallPlan.maxRing()) - TownPlan.STREET - 1;
+
+    /** How many of the town's buildings the wall takes in: {inside, of all} (its fields, pens and the like apart). */
+    public static int[] enclosed(UUID id) {
+        Villages.Village v = Villages.get(id);
+        if (v == null) return new int[2];
+        WallPlan.Sides s = sides(id);
+        int in = 0, all = 0;
+        for (Ledger.Building b : Ledger.buildings(id)) {
+            if (NOT_IN_TOWN.contains(b.structure())) continue;
+            all++;
+            if (WallPlan.inside(s, b.anchor().getX() - v.centre().getX(), b.anchor().getZ() - v.centre().getZ())) in++;
+        }
+        return new int[]{ in, all };
     }
 
     static int[] box(TownPlan.Lot l) {
@@ -286,10 +336,13 @@ public final class CastleWall {
 
     // ------------------------------------------------------------------ fitting it to the ground
 
-    static final int WALL = 0, LEFT_OUT = 1, OPENING = 2;
+    /** What a column of a side is: the wall; (in fits made before the ring was closed) left out; an opening for a road
+     *  (a gate on an avenue, a postern on a paved cross street); over water (piers and grated arches); round somebody's
+     *  work (laid where the placement gate allows, their own walls standing as that part of the ring). */
+    static final int WALL = 0, LEFT_OUT = 1, OPENING = 2, WATER = 3, BUILT = 4;
 
     /** A side fitted to the ground: for each column along it, the ground its walkway is measured from (smoothed),
-     *  what it is (wall, left out, an opening for a road), and an opening's floor. */
+     *  what it is, and its floor (an opening's road, the water's top under an arch). */
     record Fit(int lo, int[] ground, int[] kind, int[] floor, Set<Long> skip) {
         int ground(int a) { int i = a - lo; return i < 0 || i >= ground.length ? Integer.MIN_VALUE : ground[i]; }
         int kind(int a) { int i = a - lo; return i < 0 || i >= kind.length ? LEFT_OUT : kind[i]; }
@@ -359,64 +412,50 @@ public final class CastleWall {
         List<WallPlan.Tower> wasTowers = was == null ? List.of() : WallPlan.towers(was);
         for (int i = 0; i < n; i++) {
             int a = lo + i;
-            int most = Integer.MIN_VALUE, mid = Integer.MIN_VALUE;
-            boolean out = false, road = false;
+            int most = Integer.MIN_VALUE, mid = Integer.MIN_VALUE, surface = Integer.MIN_VALUE;
+            boolean wet = false, road = false, theirs = false;
             for (int u = 0; u < WallPlan.THICK; u++) {
                 int[] o = WallPlan.offset(side, line + u, a);
                 int x = c.getX() + o[0], z = c.getZ() + o[1];
                 if (!level.hasChunk(x >> 4, z >> 4)) return null;
                 boolean stood = stood(s, was, wasTowers, o[0], o[1]);
                 int y = ground(level, x, z, c.getY(), stood);
-                if (y == Integer.MIN_VALUE) { out = true; continue; }
+                if (y == Integer.MIN_VALUE) {
+                    int top = waterTop(level, x, z, c.getY());
+                    if (top != Integer.MIN_VALUE) { wet = true; surface = Math.max(surface, top); }
+                    continue;                                            // else a hole too deep to stand in: bridged
+                }
                 BlockState under = level.getBlockState(new BlockPos(x, y - 1, z));
                 if (road(under)) road = true;
-                if (under.is(Blocks.FARMLAND) || Math.abs(y - c.getY()) > 24 || foreignOver(level, x, y, z, y + up, stood)) out = true;
-                if (!road(under) && !natural(under) && !(stood && mine(under))) out = true;
+                if (foreignOver(level, x, y, z, y + up, stood) || !footing(under) && !(stood && mine(under))) theirs = true;
                 most = Math.max(most, y);
                 if (u == 1) mid = y;
             }
-            boolean avenue = Math.abs(a) <= WallPlan.GATE;
-            if (avenue || road && WallPlan.onCrossStreet(a)) {
-                k[i] = most == Integer.MIN_VALUE ? LEFT_OUT : OPENING;
-            } else {
-                k[i] = out ? LEFT_OUT : WALL;
-            }
-            g[i] = most == Integer.MIN_VALUE ? c.getY() : most;
-            f[i] = mid == Integer.MIN_VALUE ? g[i] : mid;
+            int level0 = most != Integer.MIN_VALUE ? Math.max(most, surface) : surface;
+            if (Math.abs(a) <= WallPlan.GATE || road && WallPlan.onCrossStreet(a)) k[i] = OPENING;   // a causeway over water
+            else if (most == Integer.MIN_VALUE && wet) k[i] = WATER;
+            else if (theirs) k[i] = BUILT;
+            else k[i] = WALL;
+            // Somebody's work is no measure of the wall's height: its level comes from its neighbours.
+            g[i] = k[i] == BUILT ? Integer.MIN_VALUE : level0;
+            f[i] = k[i] == WATER ? surface : mid != Integer.MIN_VALUE ? mid : level0 != Integer.MIN_VALUE ? level0 : c.getY();
         }
-        // A column left out (somebody's lamp post, a pond) is not built: its height is no measure of the wall's, and
-        // must not raise the walkway (or a tower) round it. Its level comes from its neighbours.
         boolean any = false;
-        for (int i = 0; i < n; i++) {
-            if (k[i] == LEFT_OUT) g[i] = Integer.MIN_VALUE;
-            else any = true;
-        }
+        for (int i = 0; i < n; i++) if (g[i] != Integer.MIN_VALUE) any = true;
         if (!any) java.util.Arrays.fill(g, c.getY());
-        // The walkway never steps more than a block at a time: raised where the ground falls away.
+        // The walkway never steps more than a block at a time: raised where the ground falls away. A column with no
+        // level of its own (MIN_VALUE) takes it from its neighbours, and is never one to measure from (MIN_VALUE - 1
+        // would wrap round to the top of the world, and with it the whole side).
         for (int pass = 0; pass < 2; pass++) {
-            for (int i = 1; i < n; i++) if (g[i] < g[i - 1] - 1) g[i] = g[i - 1] - 1;
-            for (int i = n - 2; i >= 0; i--) if (g[i] < g[i + 1] - 1) g[i] = g[i + 1] - 1;
+            for (int i = 1; i < n; i++) if (g[i - 1] != Integer.MIN_VALUE && g[i] < g[i - 1] - 1) g[i] = g[i - 1] - 1;
+            for (int i = n - 2; i >= 0; i--) if (g[i + 1] != Integer.MIN_VALUE && g[i] < g[i + 1] - 1) g[i] = g[i + 1] - 1;
         }
-        for (int i = 0; i < n; i++) if (g[i] == Integer.MIN_VALUE || g[i] < c.getY() - 64) g[i] = c.getY();
-        // The towers of this side (and the corner each side has as its own): a column of one over water, a field
-        // or somebody's work is left out of it.
-        Set<Long> skip = new HashSet<>();
-        for (WallPlan.Tower t : WallPlan.towers(s)) {
-            if (t.side() != side) continue;
-            for (int x = t.x0(); x <= t.x1(); x++) {
-                for (int z = t.z0(); z <= t.z1(); z++) {
-                    int wx = c.getX() + x, wz = c.getZ() + z;
-                    if (!level.hasChunk(wx >> 4, wz >> 4)) return null;
-                    boolean stood = stood(s, was, wasTowers, x, z);
-                    int y = ground(level, wx, wz, c.getY(), stood);
-                    BlockState under = y == Integer.MIN_VALUE ? null : level.getBlockState(new BlockPos(wx, y - 1, wz));
-                    if (under == null || under.is(Blocks.FARMLAND) || Math.abs(y - c.getY()) > 24
-                        || !natural(under) && !road(under) && !(stood && mine(under))
-                        || foreignOver(level, wx, y, wz, y + up + 4, stood)) skip.add(TownPlan.cellKey(x, z));
-                }
-            }
+        for (int i = 0; i < n; i++) {
+            if (g[i] == Integer.MIN_VALUE || g[i] < c.getY() - 64) g[i] = c.getY();
+            if (k[i] == BUILT && f[i] == c.getY()) f[i] = g[i];
         }
-        return new Fit(lo, g, k, f, skip);
+        // The towers stand whatever is under them (built down into water, round somebody's work): none is left out.
+        return new Fit(lo, g, k, f, new HashSet<>());
     }
 
     /** Did the wall stand here already (its old line, or the wall as it is drawn now, with a column of it up)? The
@@ -441,9 +480,39 @@ public final class CastleWall {
         return Integer.MIN_VALUE;
     }
 
-    /** What grows or lies on the world's own ground, which the wall clears out of its way: plants, snow, a tree. */
+    /** The water's top at a column: the first air over it (MIN_VALUE where the column is dry, or a hole). */
+    static int waterTop(ServerLevel level, int x, int z, int aroundY) {
+        int y = Math.min(level.getMaxBuildHeight() - 1, Math.max(aroundY + 40,
+            level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z)));
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (; y > aroundY - 40; y--) {
+            BlockState st = level.getBlockState(p.set(x, y, z));
+            if (!st.getFluidState().isEmpty() && !st.is(Blocks.LADDER)) return y + 1;
+            if (!wild(level, p, st)) return Integer.MIN_VALUE;
+        }
+        return Integer.MIN_VALUE;
+    }
+
+    /** Water (or lava) the wall is laid into: the liquid itself and what only grows in it. */
+    static boolean wet(BlockState st) {
+        if (st.getFluidState().isEmpty()) return false;
+        return st.getBlock() instanceof net.minecraft.world.level.block.LiquidBlock || st.canBeReplaced() || st.is(Blocks.KELP)
+            || st.is(Blocks.KELP_PLANT) || st.is(Blocks.BUBBLE_COLUMN);
+    }
+
+    /** What the wall may stand on: the world's own ground, a road's paving, a field's earth. */
+    static boolean footing(BlockState st) {
+        return natural(st) || road(st) || st.is(Blocks.FARMLAND);
+    }
+
+    /** What grows or lies on the world's own ground, which the wall clears out of its way: plants, snow, a tree; a
+     *  field's crop on the line (harvested into the stores) and a pen's fence there (back to the stores: the wall is
+     *  that side of the pen now). */
     static boolean wild(ServerLevel level, BlockPos p, BlockState st) {
         if (st.isAir() || st.canBeReplaced() && st.getFluidState().isEmpty()) return true;
+        if (st.is(BlockTags.CROPS) || st.getBlock() instanceof net.minecraft.world.level.block.StemBlock
+            || st.getBlock() instanceof net.minecraft.world.level.block.AttachedStemBlock) return true;
+        if ((st.is(BlockTags.FENCES) || st.is(BlockTags.FENCE_GATES)) && st.getFluidState().isEmpty()) return true;
         if (st.is(BlockTags.LEAVES)) {
             return !(st.hasProperty(net.minecraft.world.level.block.LeavesBlock.PERSISTENT)
                 && st.getValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT));
@@ -498,6 +567,7 @@ public final class CastleWall {
 
     /** The wall worked out for this sweep: its plan, its fit, its height and what it is built of. */
     static final class Wall {
+        final Villages.Village village;
         final WallPlan.Sides sides;
         final List<WallPlan.Tower> towers;
         final Fit[] fits = new Fit[4];
@@ -506,7 +576,8 @@ public final class CastleWall {
         final int[] cornerGround = new int[4];
         final List<int[]> stairs;
 
-        Wall(WallPlan.Sides sides, BlockPos heart, Villages.Age age) {
+        Wall(Villages.Village village, WallPlan.Sides sides, BlockPos heart, Villages.Age age) {
+            this.village = village;
             this.sides = sides;
             this.towers = WallPlan.towers(sides);
             this.heart = heart;
@@ -562,7 +633,7 @@ public final class CastleWall {
 
     @Nullable
     static Wall wall(ServerLevel level, Villages.Village v, WallPlan.Sides s) {
-        Wall w = new Wall(s, v.centre(), Villages.ageOf(v.id()));
+        Wall w = new Wall(v, s, v.centre(), Villages.ageOf(v.id()));
         for (int side = 0; side < 4; side++) {
             w.fits[side] = fit(level, v, s, side);
             if (w.fits[side] == null) return null;
@@ -596,14 +667,14 @@ public final class CastleWall {
         return side == TownPlan.EAST || side == TownPlan.WEST ? Direction.SOUTH : Direction.EAST;
     }
 
-    /** The lowest block of a column the wall stands on: down from here through anything it clears away to the
-     *  world's own ground. MIN_VALUE over water. */
+    /** The lowest block of a column the wall stands on: down from here through anything it clears away, water, and
+     *  somebody's work it is built round, to the world's own ground (or a road's paving, a field's earth): the bed
+     *  under water, a ravine's floor. MIN_VALUE if there is none within DEEP (the wall is bridged across). */
     static int foot(ServerLevel level, int x, int z, int from) {
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
-        for (int y = from; y > from - 40; y--) {
+        for (int y = from; y > from - DEEP; y--) {
             BlockState st = level.getBlockState(p.set(x, y, z));
-            if (!st.getFluidState().isEmpty() && !st.is(Blocks.LADDER)) return Integer.MIN_VALUE;
-            if (clearable(level, p, st)) continue;
+            if (wet(st) || clearable(level, p, st) || !footing(st)) continue;
             return y + 1;
         }
         return Integer.MIN_VALUE;
@@ -627,32 +698,51 @@ public final class CastleWall {
         if (kind == LEFT_OUT) return out;
         int top = w.top(c.side(), a);
         int foot = foot(level, x, z, top - 1);
-        if (foot == Integer.MIN_VALUE || top - foot > w.height + 14) return out;
+        if (foot == Integer.MIN_VALUE || top - foot > DEEP + w.height) foot = top - w.height - BRIDGE;   // nothing to stand on within reach: bridged
         boolean merlon = Math.floorMod(a, 2) == 0;
         if (kind == OPENING) {
             int floor = f.floor(a);
             foot = Math.min(foot, floor);
             boolean gate = Math.abs(a) <= WallPlan.GATE;
-            for (int y = foot; y < floor; y++) out.add(new Want(new BlockPos(x, y, z), Role.BODY, outD, 0));
+            boolean low = gate ? a == -WallPlan.GATE : f.kind(a - 1) != OPENING;
+            boolean high = gate ? a == WallPlan.GATE : f.kind(a + 1) != OPENING;
+            for (int y = foot; y < floor; y++) out.add(new Want(new BlockPos(x, y, z), Role.BODY, outD, 0));   // a causeway's, a dip's
             if (layer < 2) {
-                for (int y = floor; y <= floor + 2; y++) out.add(new Want(new BlockPos(x, y, z), Role.AIR, outD, 0));
-                // The arch's shoulders, either side of the opening.
-                int edge = gate ? WallPlan.GATE : -1;
-                if (gate && Math.abs(a) == edge) {
-                    out.set(out.size() - 1, new Want(new BlockPos(x, floor + 2, z), Role.ARCH, a < 0 ? along.getOpposite() : along, 1));
-                }
+                out.add(new Want(new BlockPos(x, floor, z), Role.AIR, outD, 0));
+                out.add(new Want(new BlockPos(x, floor + 1, z), Role.AIR, outD, 0));
+                // The arch's shoulders at either side of the way through; over a gate's passage its portcullis, raised.
+                if (low || high) out.add(new Want(new BlockPos(x, floor + 2, z), Role.ARCH, low ? along.getOpposite() : along, 1));
+                else if (gate && layer == 1 && w.tier >= PORTCULLIS) out.add(new Want(new BlockPos(x, floor + 2, z), Role.GRATE, outD, 0));
+                else out.add(new Want(new BlockPos(x, floor + 2, z), Role.AIR, outD, 0));
             } else {
-                Direction hingeSide = a < 0 ? along.getOpposite() : along;
-                out.add(new Want(new BlockPos(x, floor, z), Role.DOOR, outD, a <= 0 ? 0 : 2));
-                out.add(new Want(new BlockPos(x, floor + 1, z), Role.DOOR, outD, a <= 0 ? 1 : 3));
-                out.add(new Want(new BlockPos(x, floor + 2, z), Role.BODY, hingeSide, 0));
+                out.add(new Want(new BlockPos(x, floor, z), Role.DOOR, outD, a <= 0 && gate || low && !gate ? 0 : 2));
+                out.add(new Want(new BlockPos(x, floor + 1, z), Role.DOOR, outD, a <= 0 && gate || low && !gate ? 1 : 3));
+                out.add(new Want(new BlockPos(x, floor + 2, z), Role.BODY, outD, 0));
+                if (gate) dress(w, a, x, z, floor, top, outD, in, out);
             }
             for (int y = floor + 3; y <= top - 2; y++) out.add(new Want(new BlockPos(x, y, z), Role.BODY, outD, 0));
+        } else if (kind == WATER) {
+            // Over water: a pier every few columns; between them an arch over the water, a grate under it to the bed.
+            int surface = f.floor(a);
+            foot = Math.min(foot, surface - 1);
+            if (Math.floorMod(a, PIER_EVERY) == 0) {
+                for (int y = foot; y <= top - 2; y++) {
+                    boolean face = layer != 1 && weathered(x, y, z);
+                    out.add(new Want(new BlockPos(x, y, z), face ? Role.ACCENT : Role.BODY, outD, 0));
+                }
+            } else {
+                if (layer == 1) {
+                    for (int y = foot; y <= surface; y++) out.add(new Want(new BlockPos(x, y, z), Role.GRATE, outD, 0));
+                } else {
+                    out.add(new Want(new BlockPos(x, surface, z), Role.ARCH, layer == 0 ? in : outD, 1));
+                }
+                for (int y = surface + 1; y <= top - 2; y++) out.add(new Want(new BlockPos(x, y, z), Role.BODY, outD, 0));
+            }
         } else {
             // A flight of steps up from inside, cut into the inner face.
             int step = -1;
             int[] flight = null;
-            if (layer == 0) {
+            if (layer == 0 && kind == WALL) {
                 for (int[] fl : w.stairs) {
                     if (fl[0] != c.side()) continue;
                     int k = WallPlan.stepAt(fl, w.height, a);
@@ -689,7 +779,26 @@ public final class CastleWall {
             BlockPos t = new BlockPos(x, w.fits[c.side()].ground(a) + 3, z).relative(in);
             if (t.getY() < top - 1) out.add(new Want(t, Role.TORCH, in, 0));
         }
+        if (kind == BUILT) {
+            for (int i = 0; i < out.size(); i++) {
+                Want o = out.get(i);
+                if (o.role() == Role.BODY || o.role() == Role.ACCENT || o.role() == Role.CAP || o.role() == Role.MERLON || o.role() == Role.AIR) {
+                    out.set(i, new Want(o.pos(), o.role(), o.facing(), o.extra() | ROUND));
+                }
+            }
+        }
         return out;
+    }
+
+    /** Over a gate's arch, outside: the town's name on a sign in the middle and a lantern hung from a bracket either side
+     *  (the town's banner over the sign is hung by its banner works: bannerPlaces). */
+    static void dress(Wall w, int a, int x, int z, int floor, int top, Direction outD, Direction in, List<Want> out) {
+        BlockPos face = new BlockPos(x, floor, z).relative(outD);
+        if (a == 0) out.add(new Want(face.above(2), Role.SIGN, outD, 0));
+        else if (Math.abs(a) == WallPlan.GATE && floor + 3 <= top - 1) {
+            out.add(new Want(face.above(3), Role.BODY, outD, 0));             // a stone bracket out from the face
+            out.add(new Want(face.above(2), Role.LANTERN, outD, 1));
+        }
     }
 
     /** A tower's column: solid to the walkway, the walkway through it, solid three more, crenels round its top;
@@ -699,7 +808,7 @@ public final class CastleWall {
         int top = w.towerGround(t) + w.height;
         int foot = foot(level, x, z, top - 1);
         int dx = x - w.heart.getX(), dz = z - w.heart.getZ();
-        if (foot == Integer.MIN_VALUE || top - foot > w.height + 16 || w.skipped(dx, dz)) return;
+        if (foot == Integer.MIN_VALUE || top - foot > DEEP + w.height + 3) foot = top - w.height - BRIDGE;   // over a gulf: hung from the walkway's level
         int i = c.across() - (t.centre() - 3), layer = c.layer();
         Direction outD = outward(t.side()), in = outD.getOpposite();
         boolean corner = t.kind() == WallPlan.TowerKind.CORNER;
@@ -726,8 +835,9 @@ public final class CastleWall {
             upperFacing = in;
         }
         boolean rim = i == 0 || i == 6 || layer == 0 || layer == 6;
+        int street = w.fits[t.side()].floor(c.across());                        // the ladder from the street (or the water's top)
         for (int y = foot; y <= top - 1; y++) {
-            if (shaft) out.add(new Want(new BlockPos(x, y, z), Role.LADDER, in, 0));
+            if (shaft && y >= Math.min(street, top - 1)) out.add(new Want(new BlockPos(x, y, z), Role.LADDER, in, 0));
             else {
                 boolean face = rim && (y < foot + PLINTH || weathered(x, y, z));
                 out.add(new Want(new BlockPos(x, y, z), face ? Role.ACCENT : Role.BODY, outD, 0));
@@ -828,6 +938,143 @@ public final class CastleWall {
         final Set<String> finished = new HashSet<>();
         Boolean shut;
         boolean takingDown;
+        /** The ways through it (gates and posterns) as the wall is drawn now. */
+        List<Opening> openings = List.of();
+        /** Is the portcullis down (the bell)? */
+        Boolean lowered;
+        /** A gate opened for a wagon after dark: shut again after this tick. */
+        long heldOpen;
+    }
+
+    /**
+     * A way through the wall: a gate on an avenue or a postern on a cross street. Its side and its middle along it, the
+     * floor of its passage, its doors (the lower halves), its portcullis's dropped cells (a gate from the Iron Age),
+     * a spot just inside it in the street and one out past its towers.
+     */
+    record Opening(int side, int across, boolean gate, int floor, List<BlockPos> doors, List<BlockPos> portcullis,
+                   BlockPos inside, BlockPos outside) {}
+
+    /** The passages through every town's wall: a column's key to its floor (TradeWagon.ground: a wheel under an arch). */
+    private static final Map<Long, Integer> PASSAGE = new ConcurrentHashMap<>();
+    private static final Map<UUID, List<Long>> PASSAGES_OF = new ConcurrentHashMap<>();
+
+    private static long colKey(int x, int z) {
+        return ((long) x << 32) ^ (z & 0xffffffffL);
+    }
+
+    /** The wall's ways through, worked out from its fit: each run of opening columns along a side. */
+    static List<Opening> openings(Wall w) {
+        List<Opening> out = new ArrayList<>();
+        BlockPos c = w.heart;
+        for (int side = 0; side < 4; side++) {
+            Fit f = w.fits[side];
+            int line = w.sides.of(side), lo = WallPlan.lo(w.sides, side), hi = WallPlan.hi(w.sides, side);
+            for (int a = lo; a <= hi; a++) {
+                if (f.kind(a) != OPENING) continue;
+                int a0 = a;
+                while (a + 1 <= hi && f.kind(a + 1) == OPENING) a++;
+                int mid = (a0 + a) / 2, floor = f.floor(mid);
+                boolean gate = Math.abs(mid) <= WallPlan.GATE;
+                List<BlockPos> doors = new ArrayList<>(), drop = new ArrayList<>();
+                for (int k = a0; k <= a; k++) {
+                    int[] o = WallPlan.offset(side, line + WallPlan.THICK - 1, k), q = WallPlan.offset(side, line + 1, k);
+                    doors.add(new BlockPos(c.getX() + o[0], f.floor(k), c.getZ() + o[1]));
+                    if (gate && w.tier >= PORTCULLIS) {
+                        for (int y = 0; y < 2; y++) drop.add(new BlockPos(c.getX() + q[0], f.floor(k) + y, c.getZ() + q[1]));
+                    }
+                }
+                int[] in = WallPlan.offset(side, line - 2, mid), outside = WallPlan.offset(side, line + WallPlan.BAND + 2, mid);
+                out.add(new Opening(side, mid, gate, floor, doors, drop, new BlockPos(c.getX() + in[0], floor, c.getZ() + in[1]),
+                    new BlockPos(c.getX() + outside[0], floor, c.getZ() + outside[1])));
+            }
+        }
+        return out;
+    }
+
+    /** The town's passages put where the wagons look for them. */
+    private static void passages(UUID id, Wall w, List<Opening> ops) {
+        List<Long> was = PASSAGES_OF.remove(id);
+        if (was != null) for (long k : was) PASSAGE.remove(k);
+        List<Long> keys = new ArrayList<>();
+        BlockPos c = w.heart;
+        for (Opening o : ops) {
+            int line = w.sides.of(o.side());
+            Fit f = w.fits[o.side()];
+            for (int a = o.across() - WallPlan.GATE - 1; a <= o.across() + WallPlan.GATE + 1; a++) {
+                if (f.kind(a) != OPENING) continue;
+                for (int u = 0; u < WallPlan.THICK; u++) {
+                    int[] q = WallPlan.offset(o.side(), line + u, a);
+                    long k = colKey(c.getX() + q[0], c.getZ() + q[1]);
+                    PASSAGE.put(k, f.floor(a));
+                    keys.add(k);
+                }
+            }
+        }
+        PASSAGES_OF.put(id, keys);
+    }
+
+    /** [defence] Under an arch of a town wall: the passage's floor at this column (a wagon's wheels), or MIN_VALUE. */
+    public static int underArch(int x, int z) {
+        if (PASSAGE.isEmpty()) return Integer.MIN_VALUE;
+        Integer f = PASSAGE.get(colKey(x, z));
+        return f == null ? Integer.MIN_VALUE : f;
+    }
+
+    /**
+     * [defence] A wagon on the road here (TradeWagon.place): a gate of its own town's wall it is coming up to is opened
+     * for it, if shut, and shut again behind it after dark.
+     */
+    public static void wagonAt(ServerLevel level, @Nullable UUID town, double x, double z) {
+        if (town == null || PASSAGE.isEmpty()) return;
+        State st = STATES.get(town);
+        if (st == null || st.openings.isEmpty()) return;
+        for (Opening o : st.openings) {
+            BlockPos d = o.doors().get(o.doors().size() / 2);
+            if (Math.abs(d.getX() + 0.5 - x) > 9 || Math.abs(d.getZ() + 0.5 - z) > 9) continue;
+            boolean opened = false;
+            for (BlockPos p : o.doors()) {
+                if (!level.isLoaded(p)) continue;
+                BlockState bs = level.getBlockState(p);
+                if (bs.getBlock() instanceof DoorBlock door && !bs.getValue(DoorBlock.OPEN)) {
+                    door.setOpen(null, level, bs, p, true);
+                    opened = true;
+                }
+            }
+            if (opened || Boolean.TRUE.equals(st.shut)) st.heldOpen = level.getGameTime() + 60L;
+            return;
+        }
+    }
+
+    /**
+     * [defence] Where a road out of the town leaves it (Caravans.way): out along the same avenue past the wall's
+     * gatehouse once the wall is going up, so wagons and caravans go out (and come in) by the gate.
+     */
+    public static BlockPos pastTheGate(Villages.Village v, BlockPos exit) {
+        if (!live() || Ledger.note(v.id(), BEGUN) == null) return exit;
+        int dx = exit.getX() - v.centre().getX(), dz = exit.getZ() - v.centre().getZ();
+        int side = Math.abs(dx) >= Math.abs(dz) ? (dx >= 0 ? TownPlan.EAST : TownPlan.WEST) : (dz >= 0 ? TownPlan.SOUTH : TownPlan.NORTH);
+        int out = sides(v.id()).of(side) + WallPlan.BAND + 3;
+        if (Math.max(Math.abs(dx), Math.abs(dz)) >= out) return exit;
+        int[] o = WallPlan.offset(side, out, 0);
+        return new BlockPos(v.centre().getX() + o[0], exit.getY(), v.centre().getZ() + o[1]);
+    }
+
+    /** [defence] Where the town's banner hangs on its wall (Heraldry.places): over each gate's arch, outside. */
+    static List<Heraldry.Place> bannerPlaces(ServerLevel level, UUID village) {
+        List<Heraldry.Place> out = new ArrayList<>();
+        State st = STATES.get(village);
+        if (st == null || st.wall == null || !live()) return out;
+        String[] names = { "north", "east", "south", "west" };
+        for (Opening o : st.openings) {
+            if (!o.gate() || o.doors().isEmpty()) continue;
+            BlockPos d = o.doors().get(o.doors().size() / 2);
+            if (!(level.isLoaded(d) && level.getBlockState(d).getBlock() instanceof DoorBlock)) continue;    // once the gate is hung
+            Direction outD = outward(o.side());
+            BlockPos at = d.above(4).relative(outD);
+            if (!level.getBlockState(at.relative(outD.getOpposite())).isFaceSturdy(level, at.relative(outD.getOpposite()), outD)) continue;
+            out.add(new Heraldry.Place(new Culture.Spot(at, outD), "the " + names[o.side()] + " gate"));
+        }
+        return out;
     }
 
     private static final Map<UUID, State> STATES = new ConcurrentHashMap<>();
@@ -848,6 +1095,10 @@ public final class CastleWall {
 
     public static void resetForTests() {
         STATES.clear();
+        PASSAGE.clear();
+        PASSAGES_OF.clear();
+        KEEPERS.clear();
+        HAILED.clear();
         readyForTests = false;
     }
 
@@ -867,7 +1118,7 @@ public final class CastleWall {
     /** Does the wall stand (most of it laid)? */
     public static boolean stands(UUID id) {
         State st = STATES.get(id);
-        return st != null && st.total > 0 && st.laid * 10 >= st.total * 9;
+        return st != null && st.total > 0 && (st.laid + st.blocked) * 10 >= st.total * 9;
     }
 
     /**
@@ -885,14 +1136,27 @@ public final class CastleWall {
         long now = level.getGameTime();
         // The gates: only on the change, so a folk opening a door to go through isn't fought by the watch.
         long t = level.getDayTime() % 24000L;
-        boolean shut = (t >= Ethos.gatesShut(id) && t < Ethos.gatesOpen(id)) || Raids.underAlarm(id);
+        boolean alarm = Raids.underAlarm(id);
+        boolean shut = (t >= Ethos.gatesShut(id) && t < Ethos.gatesOpen(id)) || alarm;
         if (st.shut == null || st.shut != shut) {
             if (!st.doors.isEmpty() || st.shut != null) shutGates(level, st, shut);
             st.shut = shut;
+        } else if (shut && st.heldOpen != 0 && now > st.heldOpen) {
+            st.heldOpen = 0;
+            shutGates(level, st, true);                                  // shut again behind the wagon
+        }
+        // The portcullis: dropped when the bell rings, raised at the all-clear.
+        if (st.lowered == null ? alarm : st.lowered != alarm) {
+            portcullis(level, st, alarm);
+            st.lowered = alarm;
         }
         if (now - st.lastWork < EVERY && now >= st.lastWork) return;
         st.lastWork = now;
-        if (!ready(id)) return;
+        if (!ready(id)) {
+            // A wall already begun is known (its gates for the wagons, the watch and the banners) though no work goes on.
+            if (st.wall == null && Ledger.note(id, BEGUN) != null) work(level, v, st, FREE, 0);
+            return;
+        }
         work(level, v, st, HAND, BATCH);
     }
 
@@ -913,6 +1177,8 @@ public final class CastleWall {
             if (!s.equals(st.sides) || st.wall == null || st.wall.height != w.height || st.wall.tier != w.tier) st.counts.clear();
             st.sides = s;
             st.wall = w;
+            st.openings = openings(w);
+            passages(id, w, st.openings);
             st.sections = sections(w);
             st.names = new ArrayList<>(st.sections.keySet());
             st.at = 0;
@@ -1021,15 +1287,28 @@ public final class CastleWall {
      *  BLOCKED (somebody's work in the way). */
     static int doing(ServerLevel level, Wall w, Want want, int[] best) {
         BlockState st = level.getBlockState(want.pos());
+        if (theirs(level, w, want.pos())) return BLOCKED;                       // somebody's building: it stands as the wall here
+        boolean wet = wet(st);
+        if ((want.extra() & ROUND) != 0 && !st.isAir() && !wet && !wild(level, want.pos(), st)) {
+            return want.role() != Role.AIR && tierOf(st) >= w.tier ? 0 : BLOCKED;   // theirs kept; the wall's own, laid
+        }
         switch (want.role()) {
             case AIR -> {
-                if (st.isAir()) return 0;
+                if (st.isAir() || wet) return 0;                                 // the water under an arch is left to flow
                 if (clearable(level, want.pos(), st) || natural(st)) return st.getFluidState().isEmpty() || st.canBeReplaced() ? CLEAR : BLOCKED;
                 return BLOCKED;
             }
             case LADDER -> {
                 if (st.is(Blocks.LADDER) && st.getValue(LadderBlock.FACING) == want.facing()) return 0;
-                return clearable(level, want.pos(), st) ? PLACE : BLOCKED;
+                return wet || clearable(level, want.pos(), st) ? PLACE : BLOCKED;
+            }
+            case GRATE -> {
+                if (st.is(Blocks.IRON_BARS) || st.is(BlockTags.FENCES)) return 0;
+                return wet || clearable(level, want.pos(), st) ? PLACE : BLOCKED;
+            }
+            case SIGN -> {
+                if (st.getBlock() instanceof net.minecraft.world.level.block.SignBlock) return 0;
+                return st.isAir() || st.canBeReplaced() && st.getFluidState().isEmpty() ? PLACE : BLOCKED;
             }
             case LANTERN, TORCH -> {
                 if (st.is(Blocks.LANTERN) || st.is(Blocks.TORCH) || st.is(Blocks.WALL_TORCH)) return 0;
@@ -1037,7 +1316,7 @@ public final class CastleWall {
             }
             case DOOR -> {
                 if (st.getBlock() instanceof DoorBlock) return 0;
-                return clearable(level, want.pos(), st) ? PLACE : BLOCKED;
+                return wet || clearable(level, want.pos(), st) || natural(st) ? PLACE : BLOCKED;   // a gate cut into a bank
             }
             case STAIR, ARCH -> {
                 int have = stepsTier(st);
@@ -1045,7 +1324,7 @@ public final class CastleWall {
                 if (have >= 0 && st.getValue(StairBlock.FACING) == want.facing()) {
                     return have >= w.tier || can <= have ? 0 : UPGRADE;
                 }
-                if (!clearable(level, want.pos(), st)) return natural(st) ? (can >= 0 ? UPGRADE : WAIT) : BLOCKED;
+                if (!wet && !clearable(level, want.pos(), st)) return natural(st) ? (can >= 0 ? UPGRADE : WAIT) : BLOCKED;
                 return can >= 0 ? PLACE : WAIT;
             }
             default -> {
@@ -1057,10 +1336,31 @@ public final class CastleWall {
                     return have >= w.tier || can <= have ? 0 : UPGRADE;
                 }
                 if (natural(st)) return 0;                              // the world's own ground does for a footing
-                if (!clearable(level, want.pos(), st)) return BLOCKED;
+                if (!wet && !clearable(level, want.pos(), st)) return BLOCKED;
                 return can >= 0 ? PLACE : WAIT;
             }
         }
+    }
+
+    /**
+     * Is this cell somebody's building (its walls, its rooms, its doorway, its porch, the town's board or store)? The
+     * wall is laid round it, never into it: its own walls stand as that part of the ring. A pen is the exception: its
+     * fence on the line goes back to the stores and the wall is that side of the pen.
+     */
+    static boolean theirs(ServerLevel level, Wall w, BlockPos p) {
+        TownBlocks.Zone z = TownBlocks.zone(level, w.village, p);
+        if (z == TownBlocks.Zone.OPEN || z == TownBlocks.Zone.ROAD || z == TownBlocks.Zone.SQUARE) return false;
+        return !pen(level, w, p);
+    }
+
+    private static boolean pen(ServerLevel level, Wall w, BlockPos p) {
+        Ledger.Building b = TownBlocks.buildingAt(level, w.village, p);
+        return b != null && "pen".equals(b.structure());
+    }
+
+    /** May the wall set this cell (the town's placement gate, Why.WALL; a pen's line is the wall's)? */
+    static boolean may(ServerLevel level, Wall w, BlockPos p) {
+        return pen(level, w, p) || TownBlocks.mayPlace(level, w.village, p, TownBlocks.Why.WALL);
     }
 
     /** Work one section: a batch of its blocks. Returns blocks set, 0 if it has nothing left that can be done, -1
@@ -1104,8 +1404,9 @@ public final class CastleWall {
     static boolean lay(ServerLevel level, Villages.Village v, Wall w, Want want, int how, int[] best, boolean free) {
         BlockPos p = want.pos();
         BlockState old = level.getBlockState(p);
+        if (!may(level, w, p)) return false;
         if (how == CLEAR) {
-            if (!old.isAir() && !old.canBeReplaced()) give(level, v, old, free);
+            if (!old.isAir() && !old.canBeReplaced()) give(level, v, p, old, free);
             level.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
             return true;
         }
@@ -1117,9 +1418,31 @@ public final class CastleWall {
                 if (!put.canSurvive(level, p)) return false;
             }
             case LANTERN -> {
+                boolean hung = want.extra() == 1;                       // hung from a bracket over a gate
+                BlockState lamp = Blocks.LANTERN.defaultBlockState().setValue(net.minecraft.world.level.block.LanternBlock.HANGING, hung);
+                if (!lamp.canSurvive(level, p)) return false;           // its bracket first
                 boolean lantern = free || TownWork.take(level, v, s -> s.is(Items.LANTERN), 1);
-                if (!lantern && !TownWork.take(level, v, s -> s.is(Items.TORCH), 1)) return false;
-                put = lantern ? Blocks.LANTERN.defaultBlockState() : Blocks.TORCH.defaultBlockState();
+                if (!lantern && (hung || !TownWork.take(level, v, s -> s.is(Items.TORCH), 1))) return false;
+                put = lantern ? lamp : Blocks.TORCH.defaultBlockState();
+            }
+            case GRATE -> {
+                boolean bars = w.tier > WOOD && (free || TownWork.take(level, v, s -> s.is(Items.IRON_BARS), 1));
+                if (!bars && !free && !TownWork.take(level, v, s -> s.is(ItemTags.WOODEN_FENCES), 1)
+                        && !TownWork.take(level, v, s -> s.is(ItemTags.PLANKS), 1)) return false;
+                put = bars ? Blocks.IRON_BARS.defaultBlockState() : Blocks.OAK_FENCE.defaultBlockState();
+                if (old.getFluidState().is(net.minecraft.world.level.material.Fluids.WATER) && old.getFluidState().isSource()) {
+                    put = put.setValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.WATERLOGGED, true);
+                }
+            }
+            case SIGN -> {
+                put = Blocks.OAK_WALL_SIGN.defaultBlockState().setValue(net.minecraft.world.level.block.WallSignBlock.FACING, want.facing());
+                if (!put.canSurvive(level, p)) return false;            // the wall over the doors first
+                if (!free && !Crafts.sign(level, v)) return false;
+                level.setBlock(p, put, 3);
+                if (level.getBlockEntity(p) instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign) {
+                    TownLife.write(sign, new String[]{ "", Villages.name(v.id()), "", "" });
+                }
+                return true;
             }
             case TORCH -> {
                 if (!free && !TownWork.take(level, v, s -> s.is(Items.TORCH), 1)) return false;
@@ -1134,8 +1457,9 @@ public final class CastleWall {
                 BlockState door = Blocks.SPRUCE_DOOR.defaultBlockState().setValue(DoorBlock.FACING, want.facing())
                     .setValue(DoorBlock.HINGE, right ? DoorHingeSide.RIGHT : DoorHingeSide.LEFT)
                     .setValue(DoorBlock.OPEN, !(STATES.containsKey(v.id()) && Boolean.TRUE.equals(STATES.get(v.id()).shut)));
-                give(level, v, level.getBlockState(p.above()), free);
-                give(level, v, old, free);
+                if (!may(level, w, p.above())) return false;
+                give(level, v, p.above(), level.getBlockState(p.above()), free);
+                give(level, v, p, old, free);
                 level.setBlock(p, door.setValue(DoorBlock.HALF, DoubleBlockHalf.LOWER), 2 | 16);
                 level.setBlock(p.above(), door.setValue(DoorBlock.HALF, DoubleBlockHalf.UPPER), 3);
                 return true;
@@ -1156,15 +1480,24 @@ public final class CastleWall {
                 put = made(t, want.role(), paid, want.facing(), want.role() == Role.ARCH);
             }
         }
-        if (!old.isAir() && !old.canBeReplaced()) give(level, v, old, free);
+        if (!old.isAir() && !old.canBeReplaced()) give(level, v, p, old, free);
         level.setBlock(p, put, 3);
         return true;
     }
 
     /** What came out of the wall's way back into the stores: its old stone, a felled tree's logs. Leaves and earth
      *  are not kept. */
-    static void give(ServerLevel level, Villages.Village v, BlockState old, boolean free) {
+    static void give(ServerLevel level, Villages.Village v, BlockPos p, BlockState old, boolean free) {
         if (free || old.isAir() || old.is(BlockTags.LEAVES) || old.canBeReplaced()) return;
+        // A crop on the line: harvested, what it gives into the stores. A pen's fence: back to the stores.
+        if (old.is(BlockTags.CROPS) || old.getBlock() instanceof net.minecraft.world.level.block.StemBlock) {
+            for (ItemStack d : Block.getDrops(old, level, p, null)) TownWork.give(level, v, d);
+            return;
+        }
+        if (old.is(BlockTags.FENCES) || old.is(BlockTags.FENCE_GATES)) {
+            TownWork.give(level, v, new ItemStack(old.getBlock().asItem()));
+            return;
+        }
         if (old.getBlock() instanceof DoorBlock) {
             if (old.getValue(DoorBlock.HALF) == DoubleBlockHalf.LOWER) TownWork.give(level, v, new ItemStack(old.getBlock().asItem()));
             return;
@@ -1188,6 +1521,102 @@ public final class CastleWall {
         return moved;
     }
 
+    /** Drop (or raise) the portcullis of every gate: its bars into the passage's two cells under the raised grate.
+     *  The grate is the portcullis itself: it comes down and goes back up, nothing taken from the stores. */
+    static int portcullis(ServerLevel level, State st, boolean down) {
+        int moved = 0;
+        for (Opening o : st.openings) {
+            if (o.portcullis().isEmpty()) continue;
+            boolean hung = false;
+            for (BlockPos p : o.portcullis()) if (level.isLoaded(p) && level.getBlockState(p.above(2)).is(Blocks.IRON_BARS)) hung = true;
+            if (!hung) continue;                                                // not hung yet
+            for (BlockPos p : o.portcullis()) {
+                BlockState bs = level.getBlockState(p);
+                if (down && bs.isAir()) { level.setBlock(p, Blocks.IRON_BARS.defaultBlockState(), 3); moved++; }
+                else if (!down && bs.is(Blocks.IRON_BARS)) { level.setBlock(p, Blocks.AIR.defaultBlockState(), 3); moved++; }
+            }
+        }
+        return moved;
+    }
+
+    // ------------------------------------------------------------------ the gates' keepers
+
+    /** Which guard keeps which gate, worked out once a second a town: {its gates' index by guard}. */
+    private record Keepers(long at, Map<UUID, Integer> gate) {}
+    private static final Map<UUID, Keepers> KEEPERS = new ConcurrentHashMap<>();
+    /** When a keeper last spoke to each traveller (so it is one word a passing, not one a second). */
+    private static final Map<UUID, Long> HAILED = new ConcurrentHashMap<>();
+
+    /** The town's gates that are hung (their doors up), in the order the watch is given them. */
+    static List<Opening> hungGates(ServerLevel level, State st) {
+        List<Opening> out = new ArrayList<>();
+        for (Opening o : st.openings) {
+            if (!o.gate() || o.doors().isEmpty()) continue;
+            BlockPos d = o.doors().get(o.doors().size() / 2);
+            if (level.isLoaded(d) && level.getBlockState(d).getBlock() instanceof DoorBlock) out.add(o);
+        }
+        return out;
+    }
+
+    /**
+     * [defence] A guard's part between the bells (Raids.guardDuty): the first of the watch keep the town's gates, one
+     * a gate (half the watch at most, the rest to their rounds), by day and by night. At its post just inside the gate
+     * beside the passage, looking out: a word for a traveller or a trader's wagon coming through by day, a challenge
+     * for a stranger after dark. False if this guard keeps no gate (or none is hung).
+     */
+    public static boolean warden(VillageFolkEntity g) {
+        UUID id = g.ownerId();
+        if (id == null || !live() || !(g.level() instanceof ServerLevel level)) return false;
+        State st = STATES.get(id);
+        if (st == null || st.openings.isEmpty()) return false;
+        long now = level.getGameTime();
+        Keepers ks = KEEPERS.get(id);
+        if (ks == null || now - ks.at() >= 20L || now < ks.at()) {
+            List<Opening> gates = hungGates(level, st);
+            List<VillageFolkEntity> watch = Patrols.watch(id);
+            Map<UUID, Integer> by = new HashMap<>();
+            int n = Math.min(gates.size(), Math.max(1, watch.size() / 2));
+            for (int i = 0; i < n && i < watch.size(); i++) by.put(watch.get(i).getUUID(), st.openings.indexOf(gates.get(i)));
+            ks = new Keepers(now, by);
+            KEEPERS.put(id, ks);
+        }
+        Integer gi = ks.gate().get(g.getUUID());
+        if (gi == null || gi < 0 || gi >= st.openings.size()) return false;
+        Opening o = st.openings.get(gi);
+        Direction outD = outward(o.side());
+        BlockPos spot = o.inside().relative(alongward(o.side()), WallPlan.GATE + 1);   // beside the passage's mouth, out of the way
+        double dx = g.getX() - (spot.getX() + 0.5), dz = g.getZ() - (spot.getZ() + 0.5);
+        if (dx * dx + dz * dz > 2.25) {
+            if (g.getNavigation().isDone() || g.tickCount % 20 == 0) g.getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1.0D);
+            return true;
+        }
+        g.getNavigation().stop();
+        g.getLookControl().setLookAt(spot.getX() + 0.5 + outD.getStepX() * 8, g.getEyeY(), spot.getZ() + 0.5 + outD.getStepZ() * 8);
+        if (g.tickCount % 20 != 0) return true;
+        // Who comes through: a traveller, a stranger, a trader's wagon.
+        long t = level.getDayTime() % 24000L;
+        boolean night = t >= 13000L && t < 23000L;
+        String town = Villages.name(id);
+        for (net.minecraft.world.entity.Entity e : level.getEntities(g, g.getBoundingBox().inflate(7.0, 3.0, 7.0))) {
+            boolean stranger = e instanceof net.minecraft.world.entity.player.Player
+                || e instanceof VillageFolkEntity f && !id.equals(f.ownerId());
+            boolean wagon = e instanceof TradeWagon;
+            if (!stranger && !wagon) continue;
+            Long last = HAILED.get(e.getUUID());
+            if (last != null && now - last < 1200L && now >= last) continue;
+            HAILED.put(e.getUUID(), now);
+            if (HAILED.size() > 512) HAILED.clear();
+            var r = g.getRandom();
+            String line = wagon ? FolkTalk.pick(r, "Make way — a wagon coming through!", "Mind the arch, driver!", "Safe road, and back soon!")
+                : night ? FolkTalk.pick(r, "Halt! Who goes there?", "State your business at " + town + ", stranger.", "The gate's shut till morning — who are you?")
+                : FolkTalk.pick(r, "Welcome to " + town + ", traveller!", "Good day! The market's up the avenue.", "Come in, come in — and mind the cart.");
+            FolkTalk.speak(g, line);
+            g.getLookControl().setLookAt(e, 30.0F, 30.0F);
+            break;
+        }
+        return true;
+    }
+
     // ------------------------------------------------------------------ the old line
 
     /** The old line taken down where the wall has moved out, a batch at a time: its stone into the stores, its
@@ -1200,7 +1629,13 @@ public final class CastleWall {
         List<WallPlan.Tower> oldTowers = WallPlan.towers(o);
         List<BlockPos> todo = new ArrayList<>();
         int high = st.wall.height + 4;
-        for (int[] col : WallPlan.columns(o, oldTowers)) {
+        List<int[]> cols = new ArrayList<>(WallPlan.columns(o, oldTowers));
+        // Its gates' dressing out in front of the arch (the sign, the lanterns and their brackets), where a side moved.
+        for (int side = 0; side < 4; side++) {
+            if (o.of(side) == now.of(side)) continue;
+            for (int a = -WallPlan.GATE; a <= WallPlan.GATE; a++) cols.add(WallPlan.offset(side, o.of(side) + WallPlan.THICK, a));
+        }
+        for (int[] col : cols) {
             if (WallPlan.cell(now, st.wall.towers, col[0], col[1]) != null) continue;   // still the wall's
             int x = v.centre().getX() + col[0], z = v.centre().getZ() + col[1];
             if (!level.hasChunk(x >> 4, z >> 4)) return 0;
@@ -1221,7 +1656,7 @@ public final class CastleWall {
             if (n >= batch) break;
             if (mode == HAND && p.distManhattan(first) > 12) continue;
             BlockState bs = level.getBlockState(p);
-            give(level, v, bs, mode == FREE);
+            give(level, v, p, bs, mode == FREE);
             level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
             n++;
         }
@@ -1323,7 +1758,7 @@ public final class CastleWall {
             + st.wall.height + " high, in " + Villages.ageOf(id).label + "'s stone"));
         if (st.wall != null) {
             int pct = st.total == 0 ? 0 : (int) (100L * st.laid / st.total);
-            out.add("Laid " + st.laid + " of " + st.total + " blocks (" + pct + "%)" + (st.blocked > 0 ? ", " + st.blocked + " left out where something stands in the way" : "")
+            out.add("Laid " + st.laid + " of " + st.total + " blocks (" + pct + "%)" + (st.blocked > 0 ? ", built round " + st.blocked + " of somebody's work on its line" : "")
                 + "; " + (ready(id) ? "the hands are at it" : "it waits on the town's homes, food and stores"));
             if (!st.wanted.isEmpty()) {
                 List<String> w = new ArrayList<>();
@@ -1331,8 +1766,14 @@ public final class CastleWall {
                 out.add("Still wants: " + String.join(", ", w));
             }
             if (st.at < st.names.size()) out.add("Now at " + st.names.get(st.at) + " (" + (st.at + 1) + " of " + st.names.size() + " sections)");
-            out.add("Gates: " + st.doors.size() / 5 + "+ (" + st.doors.size() + " doors), " + (Boolean.TRUE.equals(st.shut) ? "shut" : "open"));
+            int gates = 0, posterns = 0, water = 0;
+            for (Opening o : st.openings) { if (o.gate()) gates++; else posterns++; }
+            for (Fit f : st.wall.fits) for (int k : f.kind()) if (k == WATER) water++;
+            out.add("Gates: " + gates + ", posterns: " + posterns + " (" + st.doors.size() + " doors), " + (Boolean.TRUE.equals(st.shut) ? "shut" : "open")
+                + (water > 0 ? "; " + water + " columns over water on piers and grated arches" : ""));
         }
+        int[] in = enclosed(id);
+        if (in[1] > 0) out.add("Inside it: " + in[0] + " of the town's " + in[1] + " buildings (" + (100 * in[0] / in[1]) + "%)");
         if (old(id) != null) out.add("The old line, " + old(id).encode() + ", to come down once the new wall stands");
         return out;
     }
@@ -1358,6 +1799,132 @@ public final class CastleWall {
         st.surveyed = -100000L;
         work(level, v, st, FREE, 0);                                  // counted again
         return total;
+    }
+
+    /** The smoke stage's view of the whole ring: high in clear air over the town's south side, looking down on the
+     *  heart, above the highest thing within the wall (a tower, a wonder) so the camera is never inside one. */
+    public static int[] airView(ServerLevel level, Villages.Village v) {
+        WallPlan.Sides s = sides(v.id());
+        BlockPos c = v.centre();
+        int far = Math.max(Math.max(s.n(), s.e()), Math.max(s.s(), s.w())) + WallPlan.BAND;
+        int high = c.getY();
+        for (int dx = -far; dx <= far; dx += 8) {
+            for (int dz = -far; dz <= far; dz += 8) {
+                int x = c.getX() + dx, z = c.getZ() + dz;
+                if (level.hasChunk(x >> 4, z >> 4)) high = Math.max(high, level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z));
+            }
+        }
+        int y = Math.min(level.getMaxBuildHeight() - 4, Math.max(high + 24, c.getY() + far));
+        return new int[]{ c.getX(), y, c.getZ() + far / 2, c.getX(), c.getY(), c.getZ() - far / 6 };
+    }
+
+    /**
+     * The smoke stage at a gate (/village wall gate day|night|wagon): the town's gate (the south one if it is hung)
+     * close up from outside: by day with its doors open; at night shut, its lanterns lit; a covered wagon of the
+     * town's in its passage with the doors open for it (let go with /village wagon stage done). Lines: VIEW and what.
+     */
+    public static List<String> gateStage(ServerLevel level, Villages.Village v, String what) {
+        List<String> out = new ArrayList<>();
+        State st = STATES.computeIfAbsent(v.id(), k -> new State());
+        if (st.wall == null) work(level, v, st, FREE, 0);
+        List<Opening> gates = st.wall == null ? List.of() : hungGates(level, st);
+        if (gates.isEmpty()) { out.add("GATE none hung"); return out; }
+        Opening o = gates.get(0);
+        for (Opening g : gates) if (g.side() == TownPlan.SOUTH) o = g;
+        Direction outD = outward(o.side()), along = alongward(o.side());
+        BlockPos d = o.doors().get(o.doors().size() / 2);
+        switch (what) {
+            case "night" -> {
+                shutGates(level, st, true);
+                st.shut = true;
+                BlockPos eye = d.relative(outD, 10).relative(along, -4).above(2);
+                out.add(view("gate-2-at-night", eye, d.above(2)));
+            }
+            case "wagon" -> {
+                shutGates(level, st, false);
+                st.shut = false;
+                st.heldOpen = level.getGameTime() + 2400L;
+                String did = wagonInGate(level, v, o);
+                out.add("GATE " + did);
+                BlockPos eye = d.relative(outD, 9).relative(along, 5).above(3);
+                out.add(view("gate-3-wagon-through", eye, d.above(1)));
+            }
+            default -> {
+                shutGates(level, st, false);
+                st.shut = false;
+                BlockPos eye = d.relative(outD, 12).relative(along, 5).above(3);
+                out.add(view("gate-1-by-day", eye, d.above(2)));
+            }
+        }
+        out.add("GATE the " + new String[]{ "north", "east", "south", "west" }[o.side()] + " gate of " + Villages.name(v.id()) + " at "
+            + d.toShortString() + (o.portcullis().isEmpty() ? ", doors" : ", doors and a portcullis"));
+        return out;
+    }
+
+    private static String view(String name, BlockPos eye, BlockPos at) {
+        return "VIEW " + name + " " + eye.getX() + " " + eye.getY() + " " + eye.getZ() + " " + at.getX() + " " + at.getY() + " " + at.getZ();
+    }
+
+    /** A covered wagon of the town's set in the gate's passage, half through, its animal in the shafts and its driver up. */
+    private static String wagonInGate(ServerLevel level, Villages.Village v, Opening o) {
+        TradeWagon w = Wagons.wagonOf(level, v.id());
+        if (w == null) w = Wagons.giveForTests(level, v.id(), WagonKind.COVERED);
+        if (w == null) return "no wagon";
+        int line = st(v.id()) == null ? sides(v.id()).of(o.side()) : st(v.id()).sides.of(o.side());
+        int[] from = WallPlan.offset(o.side(), line - 10, o.across()), to = WallPlan.offset(o.side(), line + WallPlan.BAND + 10, o.across());
+        BlockPos c = v.centre();
+        w.held = true;
+        w.route = new com.jrpetty.mcassistant.village.WagonRoute(new double[]{ c.getX() + from[0] + 0.5, c.getX() + to[0] + 0.5 },
+            new double[]{ c.getZ() + from[1] + 0.5, c.getZ() + to[1] + 0.5 }, new int[]{ -1, -1 });
+        w.s = 12.5;
+        w.lane = 0;
+        w.setPhase(TradeWagon.Phase.ROAD);
+        w.place(level);
+        w.place(level);
+        net.minecraft.world.entity.animal.horse.AbstractHorse h = Wagons.draught(level, v, w);
+        if (h != null) {
+            w.animal = h.getUUID();
+            Wagons.HARNESSED.put(h.getUUID(), w.getUUID());
+            net.minecraft.world.phys.Vec3 hitch = w.spot(level, TradeWagon.HITCH, 0);
+            h.moveTo(hitch.x, hitch.y, hitch.z, w.getYRot(), 0.0F);
+        }
+        VillageFolkEntity driver = Caravans.choose(v);
+        if (driver != null) {
+            w.driver = driver.getUUID();
+            Wagons.DRIVING.put(driver.getUUID(), w.getUUID());
+            driver.stopRiding();
+            driver.startRiding(w, true);
+        }
+        return "a wagon in the passage at " + w.blockPosition().toShortString() + (h == null ? "" : ", its animal in the shafts")
+            + (driver == null ? "" : ", " + driver.displayNameCap() + " driving");
+    }
+
+    @Nullable
+    private static State st(UUID id) {
+        State st = STATES.get(id);
+        return st == null || st.wall == null ? null : st;
+    }
+
+    /** Tests: the wall's ways through, {side, across, gate 1/0, floor} each. */
+    public static List<int[]> openingsForTests(UUID id) {
+        State st = STATES.get(id);
+        List<int[]> out = new ArrayList<>();
+        if (st != null) for (Opening o : st.openings) out.add(new int[]{ o.side(), o.across(), o.gate() ? 1 : 0, o.floor() });
+        return out;
+    }
+
+    /** Tests: shut (or open) the gates now, as at dusk (or in the morning). */
+    public static void shutForTests(ServerLevel level, UUID id, boolean shut) {
+        State st = STATES.get(id);
+        if (st == null) return;
+        shutGates(level, st, shut);
+        st.shut = shut;
+    }
+
+    /** Tests: a column's kind as the wall is fitted ({WALL 0, OPENING 2, WATER 3, BUILT 4}), -1 if not known. */
+    public static int kindForTests(UUID id, int side, int across) {
+        State st = STATES.get(id);
+        return st == null || st.wall == null ? -1 : st.wall.fits[side].kind(across);
     }
 
     /** Tests: the wall as worked out now (null while its ground is not loaded). */

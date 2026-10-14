@@ -324,8 +324,8 @@ public final class Caravans {
     /** The way from heart to heart: out along the avenue, down the road, in along the other avenue. */
     static List<BlockPos> way(Villages.Village from, Villages.Village to) {
         List<BlockPos> out = new ArrayList<>();
-        BlockPos a = Roads.exit(from.centre(), to.centre());
-        BlockPos b = Roads.exit(to.centre(), from.centre());
+        BlockPos a = CastleWall.pastTheGate(from, Roads.exit(from.centre(), to.centre()));   // [defence] out by the gate
+        BlockPos b = CastleWall.pastTheGate(to, Roads.exit(to.centre(), from.centre()));     // [defence] in by the gate
         straight(out, from.centre(), a);
         List<int[]> road = Roads.bresenham(a.getX(), a.getZ(), b.getX(), b.getZ());
         for (int i = 10; i < road.size(); i += 10) out.add(new BlockPos(road.get(i)[0], from.centre().getY(), road.get(i)[1]));

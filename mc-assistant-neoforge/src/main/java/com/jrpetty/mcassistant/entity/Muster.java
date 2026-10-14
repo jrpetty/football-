@@ -158,14 +158,13 @@ public final class Muster {
         // The ring stands round the crowd: its whole circle wants level ground clear of the heart's stall and the
         // board, or a guard's mark falls on a block it cannot stand on and the ring stands lopsided.
         double ringR = inner + 2.5;
-        int ringOut = (int) Math.ceil(ringR + 1);
         BlockPos best = null;
         int bestScore = Integer.MIN_VALUE;
-        for (int dx = -8; dx <= 8; dx += 2) {
-            for (int dz = -8; dz <= 8; dz += 2) {
+        for (int dx = -8; dx <= 8; dx++) {
+            for (int dz = -8; dz <= 8; dz++) {
                 BlockPos col = want.offset(dx, 0, dz);
-                // On the square: inside its wall's line.
-                if (Math.max(Math.abs(col.getX() - heart.getX()), Math.abs(col.getZ() - heart.getZ())) > com.jrpetty.mcassistant.village.TownPlan.PLAZA - ringOut - 1) continue;
+                // The crowd on the square, inside its wall's line (the ring round it may stand out on the street).
+                if (Math.max(Math.abs(col.getX() - heart.getX()), Math.abs(col.getZ() - heart.getZ())) > com.jrpetty.mcassistant.village.TownPlan.PLAZA - reach - 1) continue;
                 BlockPos c = Assemblies.standable(level, col, heart.getY());
                 if (c == null) continue;
                 int room = 0, all = 0;

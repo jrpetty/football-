@@ -496,7 +496,7 @@ public final class Raids {
         if (a == null) {
             if (g.post() != null && !Beats.onTheWall(g)) leavePost(g);   // [police] the roster's night watch keeps its post
             SENT.remove(g.getUUID());
-            return Militia.yard(g);                       // [war-prep] between the bells, a turn at the training yard
+            return Militia.yard(g) || CastleWall.warden(g);   // [war-prep] between the bells, a turn at the training yard; [defence] or a gate kept
         }
         if (!(g.level() instanceof ServerLevel level)) return false;
         Villages.Village v = Villages.get(id);

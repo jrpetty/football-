@@ -11111,8 +11111,9 @@ round it.
 
 **The plan.** The wall is drawn with the town plan: a rectangle round the town proper, each side on the plan's own line
 past the last ring of lots the town has taken that way, with that ring's outer street clear inside it (the first wall's
-inner face is 42 blocks out, so the street at 39 to 41 runs all round inside it). Every building on the plan is inside;
-the fields, pens, mines and woods may lie outside. The wall keeps a ring seven deep for itself (the wall and its towers,
+inner face is 42 blocks out, so the street at 39 to 41 runs all round inside it). Every building on the plan is inside,
+and the houses that spill a little past the plan's last ring too (the wall goes out one ring further for them); the
+fields, pens, mines and woods may lie outside. `/village wall` says how many of the town's buildings are inside. The wall keeps a ring seven deep for itself (the wall and its towers,
 which stand out from it, never into the street): no lot on it is offered, and the first row of fields keeps off it. A
 town in an old save has its wall drawn round what it has built the first time it is looked at.
 
@@ -11124,8 +11125,25 @@ street), three higher than the walkway, its parapet on a course of corbels, cren
 runs through it, a ladder goes up inside it from the street and another on to its top. On each avenue a gatehouse: a
 gate as wide as the avenue, five doors under an arch between two flanking towers, the walkway carried over it. Where a
 paved cross street runs out through the wall, a postern with doors under an arch. A flight of steps up from inside on
-each side of each gate. The walkway never steps more than a block at a time; the wall leaves a gap rather than go over
-water, a field, a road or anything somebody built.
+each side of each gate. The walkway never steps more than a block at a time.
+
+**A full ring.** The wall is one closed ring: its gates and posterns are its only ways through, their doors shut at dusk
+and on the alarm. Over a river, a lake or the sea's edge it stands on piers, one every four blocks, with arches between
+them and a grate of iron bars (a fence in the Wood Age) under each arch from the bed to over the water: the water flows
+under it, nobody walks or swims through. An avenue over water crosses on a causeway to its gate. A field on its line is
+harvested into the stores and the wall stands on its earth; the farmers keep to what is left either side, off the ring.
+A pen's fence on the line goes back to the stores and the wall takes its place, so the pen stays closed. Somebody's
+building on the line is built round: the wall is laid in every cell of the line the town's placement gate allows, and the
+building's own walls stand as that part of the ring (the wall is never laid into a building of the town's). A ravine or
+a cliff is built down into, to its floor; a gulf too deep to reach is bridged.
+
+**The gatehouses.** An arched passage through the wall between the two flanking towers, a pair of doors (five leaves)
+on its outer face, and from the Iron Age a portcullis of iron bars hung over the passage: dropped when the bell rings,
+raised at the all-clear. Over the arch outside, the town's name on a sign, its banner (hung by the town's banner works)
+and a lantern hung either side from a stone bracket. A guard of the watch keeps each gate (the first of the watch, one a gate, half the
+watch at most), standing just inside beside the passage: a word for travellers and traders by day, a challenge for
+strangers after dark. The town's wagons and caravans go out and come in by the gates, the gate opened for a wagon and
+shut again behind it after dark.
 
 **By age.** A log palisade with plank walks (Wood); cobblestone, a little mossy (Stone); stone bricks with mossy and
 cracked ones and smooth stone coping (Iron); deepslate bricks and polished deepslate (Diamond); deepslate tiles and
@@ -11144,7 +11162,8 @@ new section goes up, and once the new wall stands the old line comes down, its s
 given back to the lots.
 
 **The gates.** Shut at dusk (or the town's own hour) and whenever the bell rings, opened in the morning; folk open the
-doors to pass, monsters can't. A raiding band gathers out past the wall where it stands.
+doors to pass, monsters can't. A raiding band gathers out past the wall where it stands. `/village wall gate day`,
+`night` and `wagon` (ops) stage a gate close up for the pictures.
 
 **The muster.** When the bell rings (a raid, a raiding party sighted, monsters inside the wall, an enemy on the
 approach), every folk not of the watch drops what it is doing (out of bed, if it was asleep) and runs to the square:
