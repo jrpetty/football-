@@ -1126,7 +1126,7 @@ public final class Campaigns {
     @Nullable
     static Campaign decode(UUID a, String s) {
         String[] p = s.split(";", -1);
-        if (p.length < 15) return null;
+        if (p.length < 14) return null;
         Campaign c = new Campaign(a, UUID.fromString(p[0]));
         c.stage = Stage.values()[Integer.parseInt(p[1])];
         c.holdWalls = "1".equals(p[2]);

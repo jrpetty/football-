@@ -61,15 +61,16 @@ public class FolkFightGoal extends Goal {
         // Its shield up as the other winds up to strike: read from the other's rhythm (a practised eye sees its blow
         // coming), else from the swing itself; a moment's reaction, quicker for the practised.
         int coming = FolkCombat.readyIn(t, now);
-        boolean windUp = coming <= 2 + (int) Math.round(skill * 3) || coming == Integer.MAX_VALUE && (t.swinging || t instanceof Mob m && m.isAggressive() && d2 < 6);
-        if (!ready && d2 < 12 && windUp && a.getRandom().nextDouble() < 0.25 + skill * 0.7) FolkCombat.raiseNow(a, 6);
+        boolean windUp = coming <= 4 + (int) Math.round(skill * 5) || coming == Integer.MAX_VALUE && (t.swinging || t instanceof Mob m && m.isAggressive() && d2 < 6);
+        // (a shield takes a quarter of a second to come up: it must be raised before the blow, not as it lands)
+        if (!(ready && reach) && d2 < 12 && windUp && a.getRandom().nextDouble() < 0.25 + skill * 0.7) FolkCombat.raiseNow(a, 10);
         if (ready) {
             if (reach) {
                 if (FolkCombat.critComing(a, now)) {
                     if (!a.onGround() && a.getDeltaMovement().y < 0) FolkCombat.strike(a, t);
                     return;
                 }
-                if (d2 < 3.0 && a.tickCount - jumpedAt > 30 && a.getRandom().nextDouble() < skill * 0.5 && FolkCombat.jumpNow(a, now)) {
+                if (d2 < 6.25 && a.tickCount - jumpedAt > 30 && a.getRandom().nextDouble() < skill * 0.6 && FolkCombat.jumpNow(a, now)) {
                     jumpedAt = a.tickCount;
                     return;
                 }
