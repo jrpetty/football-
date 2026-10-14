@@ -48,8 +48,8 @@ public class WagonGameTests {
 
     private static final String EMPTY = "empty";
     private static final int Z = 66000;
-    /** Two towns this far apart: well clear of each other (Villages.VILLAGE_RANGE), a short road between. */
-    private static final int APART = 160;
+    /** Two towns this far apart: two towns, not one (as TownTradeGameTests has them), a real road between. */
+    private static final int APART = 300;
 
     private record Pair(Villages.Village a, Villages.Village b) {}
 
@@ -142,7 +142,7 @@ public class WagonGameTests {
 
     // ------------------------------------------------------------------ wg01: there and back, nothing gained or lost
 
-    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "wg01_shipment_round_trip")
+    @GameTest(template = EMPTY, timeoutTicks = 12000, batch = "wg01_shipment_round_trip")
     public static void wg01_shipment_round_trip(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 1800000;
@@ -290,7 +290,7 @@ public class WagonGameTests {
 
     // ------------------------------------------------------------------ wg05: out of sight
 
-    @GameTest(template = EMPTY, timeoutTicks = 6000, batch = "wg05_quiet_road")
+    @GameTest(template = EMPTY, timeoutTicks = 8000, batch = "wg05_quiet_road")
     public static void wg05_quiet_road(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 1812000;
@@ -394,7 +394,7 @@ public class WagonGameTests {
 
     // ------------------------------------------------------------------ wg06: a caravan's goods by handcart
 
-    @GameTest(template = EMPTY, timeoutTicks = 9000, batch = "wg06_caravan_by_wagon")
+    @GameTest(template = EMPTY, timeoutTicks = 14000, batch = "wg06_caravan_by_wagon")
     public static void wg06_caravan_by_wagon(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 1815000;
