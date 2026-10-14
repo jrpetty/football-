@@ -265,8 +265,8 @@ public final class Homes {
 
     /** The plan of the house as it stands: grown houses have their second storey. */
     static String drawing(UUID village, Home h) {
-        if (h.structure.equals("house")) return Ledger.grown(village, h.anchor) ? "house2" : "house";
-        return h.structure;
+        if (h.structure.equals("house")) return Themes.design(village, Ledger.grown(village, h.anchor) ? "house2" : "house");   // [styles]
+        return Themes.design(village, h.structure);                                                                              // [styles] its theme's design
     }
 
     // ------------------------------------------------------------------ beds

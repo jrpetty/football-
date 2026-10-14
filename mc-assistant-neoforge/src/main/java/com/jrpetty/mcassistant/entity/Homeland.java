@@ -265,17 +265,7 @@ public final class Homeland {
     public static Stone walls(@Nullable UUID village) {
         Land l = known(village);
         if (l == null) return null;
-        return switch (l) {
-            case DESERT -> new Stone(Blocks.CUT_SANDSTONE, s -> s.is(Items.SANDSTONE) || s.is(Items.CUT_SANDSTONE), 1);
-            case BADLANDS -> new Stone(Blocks.TERRACOTTA, s -> s.is(Items.TERRACOTTA) || s.is(Items.ORANGE_TERRACOTTA)
-                || s.is(Items.RED_TERRACOTTA) || s.is(Items.BROWN_TERRACOTTA) || s.is(Items.YELLOW_TERRACOTTA), 1);
-            case MOUNTAIN -> new Stone(Blocks.POLISHED_ANDESITE, s -> s.is(Items.ANDESITE) || s.is(Items.POLISHED_ANDESITE), 1);
-            // Mossy stone bricks only of the masons' mossy bricks (stone bricks and the woodcutters' vines,
-            // Masonry): moss is a nicety, and without it the walls go up in plain stone like anybody's.
-            case JUNGLE, SWAMP -> new Stone(Blocks.MOSSY_STONE_BRICKS, s -> s.is(Items.MOSSY_STONE_BRICKS), 1);
-            case SNOW -> new Stone(Blocks.STONE_BRICKS, s -> s.is(Items.STONE_BRICKS), 1);
-            default -> null;
-        };
+        return Themes.landStone(Themes.of(village), l);           // [styles] the theme's "land_stone"
     }
 
     // ------------------------------------------------------------------ the name

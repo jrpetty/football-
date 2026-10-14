@@ -162,9 +162,51 @@ public final class Blueprints {
         List<Cell> got = DRAWINGS.get(name);
         if (got != null) return got;
         got = name.endsWith(TALL) ? raised(name.substring(0, name.length() - TALL.length())) : read(name);
+        // [styles] A theme's own drawing ("alien/house", blueprints/alien/house.txt), or the usual one where it has none.
+        int slash = name.indexOf('/');
+        if (got.isEmpty() && slash > 0) got = cells(name.substring(slash + 1));
         DRAWINGS.put(name, got);
         return got;
     }
+
+    /** [styles] Is there a drawing of this very name (a theme's own "alien/house"), not counting the usual one? */
+    public static boolean drawn(String name) {
+        Boolean got = OWN.get(name);
+        if (got != null) return got;
+        boolean there;
+        try (InputStream in = Blueprints.class.getResourceAsStream("/data/mc_assistant/blueprints/" + name + ".txt")) {
+            there = in != null;
+        } catch (Exception e) {
+            there = false;
+        }
+        OWN.put(name, there);
+        return there;
+    }
+
+    private static final Map<String, Boolean> OWN = new ConcurrentHashMap<>();
+
+    /**
+     * [styles] What a drawing is, as a number that changes whenever the drawing does (its cells and their legend): the
+     * design version a building is stamped with when it goes up (Renovation), so one put up to an older drawing is
+     * known for what it is.
+     */
+    public static long version(String name) {
+        Long got = VERSIONS.get(name);
+        if (got != null) return got;
+        long h = 1125899906842597L;
+        for (Cell c : cells(name)) {
+            h = 31 * h + c.dx();
+            h = 31 * h + c.h();
+            h = 31 * h + c.dz();
+            h = 31 * h + c.key().part().name().hashCode();
+            h = 31 * h + c.key().style().name().hashCode();
+            h = 31 * h + c.key().way().name().hashCode();
+        }
+        VERSIONS.put(name, h);
+        return h;
+    }
+
+    private static final Map<String, Long> VERSIONS = new ConcurrentHashMap<>();
 
     /** The mark of a building with a second storey on it. */
     public static final String TALL = "_tall";

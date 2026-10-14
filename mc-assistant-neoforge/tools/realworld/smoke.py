@@ -3844,6 +3844,46 @@ def defence_stage(r, look, cx, cz):
     say("alive after the defence stage: %s" % client_alive())
 
 
+
+def styles_stage(r, look, cx, cz):
+    """[styles] The renovation (entity/Renovation, /village theme stage). Run from well out to the west of the town,
+    /village theme stage lays out one of the town's houses as an older town left it: earth and a block of gold patched
+    into its walls, a gap in its roof, a cobble pillar left standing inside; stamped as built to an older design.
+    Pictures: the old house from the street and inside; then /village theme stage renovate, and the same two views of
+    the house as the builders leave it (its walls whole and of proper stuff, its roof closed, the pillar gone). Then
+    /village theme, the town's theme and its renovation list, in words."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx - 140, cz + 40                         # out past the town to the west, on ground of its own
+    r.cmd("tp %s %d %d %d" % (USER, sx - 20, hy + 20, sz - 20))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village theme stage" % (sx, sz))
+    say("styles stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the renovation; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("34-styles-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("house", "1-old-house", 10)
+    shoot("inside", "2-old-inside", 6)
+    say("renovate: " + r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village theme stage renovate" % (sx, sz)))
+    time.sleep(2)
+    shoot("house", "3-renovated", 8)
+    shoot("inside", "4-renovated-inside", 6)
+    say("theme: " + r.cmd("execute positioned %d 0 %d run village theme" % (cx, cz))[:900])
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

@@ -599,6 +599,7 @@ public final class Restore {
         if (b.structure().equals("fortify")) return true;
         if (Grow.raisingNow(village, b.anchor())) return true;
         if (HousingMarket.isPrivate(village, b.anchor())) return true;
+        if (Renovation.renovating(village, b.anchor())) return true;   // [styles] being renovated: its furniture moved, not mended round
         return Beliefs.untouchable(village, b);
     }
 
@@ -759,17 +760,18 @@ public final class Restore {
     @Nullable
     private static BlockState fromStores(ServerLevel level, Villages.Village v, BuildGoal.Placement want, Map<String, Block> look,
                                          Direction facing, BlockPos at) {
-        Block own = look.get(want.part() + "/" + want.style());
+        Block seen = look.get(want.part() + "/" + want.style());
+        // [styles] Never the earth or the gold an older town patched a wall with: that is no look to match (Materials).
+        Block own = seen != null && want.part() == BuildGoal.Part.BLOCK && Materials.unfit(v.id(), want.style(), seen.defaultBlockState()) ? null : seen;
         if (own != null && own.asItem() != Items.AIR) {
             ItemStack one = Crafts.takeOne(level, v, s -> s.is(own.asItem()));
             if (!one.isEmpty()) return own.defaultBlockState();
         }
         if (want.part() == BuildGoal.Part.BLOCK) {
-            java.util.function.Predicate<ItemStack> styled = BuildGoal.preferred(want.style());
-            ItemStack one = Crafts.takeOne(level, v, s -> styled.test(s) && s.getItem() instanceof BlockItem && !Palettes.precious(s));
-            if (one.isEmpty() && fullStyle(want.style())) {
-                one = Crafts.takeOne(level, v, s -> BuildGoal.isBuildingBlock(s) && !Palettes.precious(s));
-            }
+            // [styles] The town's own block, then the theme's stand-ins for its age, as a builder would (Materials).
+            BlockState got = Materials.take(level, v, want.style());
+            if (got != null) return got;
+            ItemStack one = ItemStack.EMPTY;
             // A roof's stair or slab cut there of the stores' planks: six make four stairs, three make six slabs.
             if (one.isEmpty() && (want.style() == Blueprints.Style.ROOF_STAIR || want.style() == Blueprints.Style.ROOF_STAIR_TOP)) {
                 return make(level, v, 6, Blocks.OAK_STAIRS, Items.OAK_STAIRS, 3);

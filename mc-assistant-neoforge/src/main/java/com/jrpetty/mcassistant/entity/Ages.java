@@ -73,80 +73,31 @@ public final class Ages {
         DONE.clear();
     }
 
+    /** [styles] A building's make-over to be looked at again (renovated to a new design: Renovation). */
+    static void forget(BlockPos anchor) {
+        DONE.remove(anchor.asLong());
+    }
+
     /** The drawing standing at this building now (a grown house is a house2). */
     static String drawing(UUID village, Ledger.Building b) {
-        if (b.structure().equals("house") && Ledger.grown(village, b.anchor())) return "house2";
-        if (Grow.tall(village, b.anchor())) return b.structure() + Blueprints.TALL;
-        return b.structure();
+        // [styles] The town's theme's own drawing of it, if its theme has one (Themes.design).
+        if (b.structure().equals("house") && Ledger.grown(village, b.anchor())) return Themes.design(village, "house2");
+        if (Grow.tall(village, b.anchor())) return Themes.design(village, b.structure() + Blueprints.TALL);
+        return Themes.design(village, b.structure());
     }
 
     // ------------------------------------------------------------------ the looks of the ages
 
-    /** What a block of this style should be in this age, given what stands there now; null to leave it. */
+    /**
+     * What a block of this style should be in this age, given what stands there now; null to leave it. [styles] The
+     * theme's "ages" rules (the medieval theme's: stone walls in the Stone Age, slate roofs and dressed footings in the
+     * Iron Age, copper on the great roofs and moss in the old footings in the Diamond Age, quartz under the great ones
+     * in the Nether Age), the thatch re-roofed first.
+     */
     @Nullable
-    static BlockState look(Villages.Age age, String drawing, Blueprints.Style style, BlockState now, BlockPos pos,
+    static BlockState look(@Nullable UUID village, Villages.Age age, String drawing, Blueprints.Style style, BlockState now, BlockPos pos,
                            @Nullable Block landStone) {
-        // A building with a storey put on is still the same building.
-        String structure = drawing.endsWith(Blueprints.TALL) ? drawing.substring(0, drawing.length() - Blueprints.TALL.length()) : drawing;
-        boolean home = structure.equals("house") || structure.equals("house2");
-        boolean stone = age.ordinal() >= Villages.Age.STONE.ordinal();
-        boolean iron = age.ordinal() >= Villages.Age.IRON.ordinal();
-        boolean diamond = age.ordinal() >= Villages.Age.DIAMOND.ordinal();
-        boolean great = GREAT.contains(structure);
-        BlockState thatch = Thatch.reroof(age, style, now);           // [workitems] a thatched roof re-roofed in tiles, then slate
-        if (thatch != null) return thatch;
-        switch (style) {
-            case WALL -> {
-                // A manor is brick from the Iron Age it is built in.
-                if (structure.equals("manor") && iron && now.is(BlockTags.PLANKS)) return Blocks.BRICKS.defaultBlockState();
-                // The houses are Grow's: stone, then brick. Timber, or the rough cobble a storey went up
-                // in for want of dressed stone (Masonry.buildIn), is dressed.
-                if (home || !stone || !(now.is(BlockTags.PLANKS) || now.is(Blocks.COBBLESTONE))) return null;
-                return (landStone != null ? landStone : Blocks.STONE_BRICKS).defaultBlockState();
-            }
-            case FOUNDATION, WALL_LOW -> {
-                // [nether] The Nether Age's great buildings stand on quartz brick, of the runners' quartz (affordable: it
-                // waits till the stores have it).
-                if (age == Villages.Age.NETHER && great && (now.is(Blocks.STONE_BRICKS) || now.is(Blocks.MOSSY_STONE_BRICKS)
-                        || now.is(Blocks.COBBLESTONE) || now.is(Blocks.MOSSY_COBBLESTONE))) {
-                    return Blocks.QUARTZ_BRICKS.defaultBlockState();
-                }
-                // Moss in the old footings: only where the stores have the vines for it (affordable).
-                if (diamond && Math.floorMod(pos.hashCode(), 3) == 0) {
-                    if (now.is(Blocks.STONE_BRICKS)) return Blocks.MOSSY_STONE_BRICKS.defaultBlockState();
-                    if (now.is(Blocks.COBBLESTONE)) return Blocks.MOSSY_COBBLESTONE.defaultBlockState();
-                }
-                if (iron && now.is(Blocks.COBBLESTONE)) return Blocks.STONE_BRICKS.defaultBlockState();
-                return null;
-            }
-            case ROOF_STAIR, ROOF_STAIR_TOP -> {
-                if (diamond && great && (now.is(BlockTags.WOODEN_STAIRS) || now.is(Blocks.DEEPSLATE_TILE_STAIRS)
-                        || now.is(Blocks.STONE_BRICK_STAIRS))) {
-                    return like(now, Blocks.CUT_COPPER_STAIRS);
-                }
-                if (iron && now.is(BlockTags.WOODEN_STAIRS)) return like(now, Blocks.DEEPSLATE_TILE_STAIRS);
-                return null;
-            }
-            case ROOF_SLAB, ROOF_SLAB_TOP -> {
-                if (diamond && great && (now.is(BlockTags.WOODEN_SLABS) || now.is(Blocks.DEEPSLATE_TILE_SLAB)
-                        || now.is(Blocks.STONE_BRICK_SLAB))) {
-                    return like(now, Blocks.CUT_COPPER_SLAB);
-                }
-                if (iron && now.is(BlockTags.WOODEN_SLABS)) return like(now, Blocks.DEEPSLATE_TILE_SLAB);
-                return null;
-            }
-            case ROOF_BLOCK -> {
-                if (diamond && great && (now.is(BlockTags.PLANKS) || now.is(Blocks.DEEPSLATE_TILES)
-                        || now.is(Blocks.STONE_BRICKS))) {
-                    return Blocks.CUT_COPPER.defaultBlockState();
-                }
-                if (iron && now.is(BlockTags.PLANKS)) return Blocks.DEEPSLATE_TILES.defaultBlockState();
-                return null;
-            }
-            default -> {
-                return null;
-            }
-        }
+        return Themes.ageLook(Themes.of(village), age, drawing, style, now, pos, landStone);
     }
 
     /** {@code to}, set the way {@code from} is set (a stair's facing and half, a slab's type). */
@@ -240,7 +191,7 @@ public final class Ages {
             for (Ledger.Building b : Ledger.buildings(id)) {
                 if (!TALL.contains(b.structure()) || Grow.tall(id, b.anchor()) || !Land.areaLoaded(level, b.anchor(), 9)) continue;
                 if (!Blueprints.has(b.structure() + Blueprints.TALL)) continue;
-                done += Grow.raise(level, v, b, b.structure(), b.structure() + Blueprints.TALL, budget, CIVIC, false);
+                done += Grow.raise(level, v, b, b.structure(), b.structure() + Blueprints.TALL, budget, Themes.palette(id, "civic", CIVIC), false);   // [styles]
                 if (Grow.raisingNow(id, b.anchor()) || done >= budget) return done;
                 // Not begun: the stores could not pay for it yet. The make-overs go on meanwhile.
                 break;
@@ -273,7 +224,7 @@ public final class Ages {
         Block land = local != null && Masonry.canLand(level, v, local, 16) ? local.block() : null;
         for (BuildGoal.Placement p : BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
             if (p.part() != BuildGoal.Part.BLOCK) continue;
-            BlockState want = look(age, plan, p.style(), level.getBlockState(p.pos()), p.pos(), land);
+            BlockState want = look(v.id(), age, plan, p.style(), level.getBlockState(p.pos()), p.pos(), land);
             if (want != null && !Architecture.ageMayChange(v.id(), b, p.style(), level.getBlockState(p.pos()))) want = null;   // [culture2] a shingle roof kept
             // Moss is a nicety: a footing waiting on vines that never come is not work left undone.
             if (want != null && !want.is(Blocks.MOSSY_COBBLESTONE) && !want.is(Blocks.MOSSY_STONE_BRICKS)) return false;
@@ -297,7 +248,7 @@ public final class Ages {
         for (BuildGoal.Placement p : BuildGoal.plan(plan, b.anchor(), b.facing(), 13)) {
             if (p.part() != BuildGoal.Part.BLOCK) continue;
             BlockState now = level.getBlockState(p.pos());
-            BlockState want = look(age, plan, p.style(), now, p.pos(), land);
+            BlockState want = look(v == null ? null : v.id(), age, plan, p.style(), now, p.pos(), land);
             if (want != null && v != null && !Architecture.ageMayChange(v.id(), b, p.style(), now)) want = null;   // [culture2] a shingle roof kept
             // Only what the stores can pay for: a builder is not called out to stand by a wall
             // waiting on stone that is not there.
@@ -311,7 +262,7 @@ public final class Ages {
             for (BuildGoal.Placement p : todo) {
                 if (n >= budget) break;
                 BlockState now = level.getBlockState(p.pos());
-                BlockState want = look(age, plan, p.style(), now, p.pos(), land);
+                BlockState want = look(v == null ? null : v.id(), age, plan, p.style(), now, p.pos(), land);
                 if (want == null) continue;
                 if (!free) {
                     want = affordable(level, v, want, now, local, known);
@@ -334,7 +285,7 @@ public final class Ages {
     }
 
     private static String workWords(Villages.Age age, String drawing) {
-        String plan = drawing.endsWith(Blueprints.TALL) ? drawing.substring(0, drawing.length() - Blueprints.TALL.length()) : drawing;
+        String plan = Themes.structure(drawing);                                   // [styles] without its theme or storey
         String what = Villages.spoken(plan);
         if (age.ordinal() >= Villages.Age.DIAMOND.ordinal() && GREAT.contains(plan)) return "roofing " + what + " in copper";
         if (age.ordinal() >= Villages.Age.IRON.ordinal()) return "slating the roof of " + what;
@@ -383,7 +334,7 @@ public final class Ages {
                     || com.jrpetty.mcassistant.village.TownPlan.isSquare(dx, dz)) continue;
             }
             if (v != null && !TownBlocks.mayAll(level, v, TownBlocks.Why.LAMP, s, s.above())) continue;   // [integrity] nobody's porch or way in
-            Block light = Blocks.LANTERN;
+            Block light = Themes.streetLight(v == null ? null : v.id());   // [styles] the theme's light
             if (!free) {
                 if (!TownJobs.atWork(level, v, "walls", s, "putting up lamp posts")) return n;
                 if (!Masonry.canLight(level, v)) return n;
@@ -394,7 +345,7 @@ public final class Ages {
                     return n;
                 }
             }
-            level.setBlock(s, Blocks.SPRUCE_FENCE.defaultBlockState(), 3);
+            level.setBlock(s, Themes.streetPost(v == null ? null : v.id()).defaultBlockState(), 3);   // [styles] the theme's post
             level.setBlock(s.above(), light.defaultBlockState(), 3);
             n += 2;
         }

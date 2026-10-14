@@ -272,9 +272,11 @@ public final class TownBlocks {
      *  other building raised a storey its "_tall" drawing. */
     public static String designOf(UUID village, Ledger.Building b) {
         String s = b.structure();
-        if (s.equals("house") && Ledger.grown(village, b.anchor())) return "house2";
-        if (!s.endsWith(Blueprints.TALL) && Grow.tall(village, b.anchor()) && Blueprints.has(s + Blueprints.TALL)) return s + Blueprints.TALL;
-        return s;
+        if (s.equals("house") && Ledger.grown(village, b.anchor())) return Themes.design(village, "house2");   // [styles] the theme's own
+        if (!s.endsWith(Blueprints.TALL) && Grow.tall(village, b.anchor()) && Blueprints.has(s + Blueprints.TALL)) {
+            return Themes.design(village, s + Blueprints.TALL);                                               // [styles]
+        }
+        return Themes.design(village, s);                                                                     // [styles]
     }
 
     // ------------------------------------------------------------------ the rules
