@@ -2936,6 +2936,7 @@ public final class Villages {
                         && overlaps(court, v.centre().getX() + lot.x(), v.centre().getZ() + lot.z(), lot.halfAcross(), lot.halfDeep())) continue;
                 // The farmland and the pastures are kept off: the town grows round them.
                 if (lotKeptOff(villageId, v.centre(), lot)) continue;
+                if (CastleWall.keptOff(villageId, lot)) continue;      // [defence] the town wall's ring
                 int x = v.centre().getX() + lot.x();
                 int z = v.centre().getZ() + lot.z();
                 // [emerald] Never on a village of villagers' ground, nor within its margin (VanillaVillages).

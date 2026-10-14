@@ -10629,3 +10629,68 @@ The game tests `RedstoneGameTests` (rs01 to rs10) check that:
   furnaces burning, counted to the trade;
 * every part comes from its real recipe out of the stores, and no observer is made without quartz;
 * left to its own day, the engineer plans a street lamp the stores can run to, walks out to it and builds it.
+
+## The town wall and the muster at the square
+
+<!-- [defence] entity/CastleWall, village/WallPlan, entity/Muster, DefenceCommands -->
+
+A castle's curtain wall round the whole town, and, when the bell rings, the town gathered on its square with the watch
+round it.
+
+**The plan.** The wall is drawn with the town plan: a rectangle round the town proper, each side on the plan's own line
+past the last ring of lots the town has taken that way, with that ring's outer street clear inside it (the first wall's
+inner face is 42 blocks out, so the street at 39 to 41 runs all round inside it). Every building on the plan is inside;
+the fields, pens, mines and woods may lie outside. The wall keeps a ring seven deep for itself (the wall and its towers,
+which stand out from it, never into the street): no lot on it is offered, and the first row of fields keeps off it. A
+town in an old save has its wall drawn round what it has built the first time it is looked at.
+
+**The wall.** Three thick; five high in the Wood and Stone Ages, six in the Iron Age, seven after. A walkway two wide
+along its top, crenellated battlements on the outer face over a coping line, a lantern on every fourth merlon and a
+torch on the inner face every eight blocks, a base course of the age's weathered stone along its foot and a weathered
+stone here and there in its faces. A tower seven square at each corner and every 30 blocks or so (never on a cross
+street), three higher than the walkway, its parapet on a course of corbels, crenellated, a lantern on top; the walkway
+runs through it, a ladder goes up inside it from the street and another on to its top. On each avenue a gatehouse: a
+gate as wide as the avenue, five doors under an arch between two flanking towers, the walkway carried over it. Where a
+paved cross street runs out through the wall, a postern with doors under an arch. A flight of steps up from inside on
+each side of each gate. The walkway never steps more than a block at a time; the wall leaves a gap rather than go over
+water, a field, a road or anything somebody built.
+
+**By age.** A log palisade with plank walks (Wood); cobblestone, a little mossy (Stone); stone bricks with mossy and
+cracked ones and smooth stone coping (Iron); deepslate bricks and polished deepslate (Diamond); deepslate tiles and
+chiselled deepslate (Nether). Every block out of the stores. Short of the age's stone it goes up in the last age's and is
+refaced when the stone comes, the old stone back into the stores; coming of age, it is raised a block.
+
+**Built.** Once the town has the essentials (eight grown folk or more, the storehouse up, no hunger, the beds made), a
+hand the town can spare walks out to it by day and lays a dozen blocks every five seconds (never in an alarm, never more
+hands than the town's works may take), the stores keeping 48 of each stone back for the builders. A section at a time:
+the four gatehouses, the corner towers, the towers between, then the curtain in runs, the ones by the gates first. The
+chronicle says as each section is finished. It is looked over a section at a time all the while, so whatever a creeper
+or a siege knocks out is put back.
+
+**Moved out.** When the town takes a lot past its wall, that side's line moves out a ring (the chronicle says so); the
+new section goes up, and once the new wall stands the old line comes down, its stone into the stores, and its ground is
+given back to the lots.
+
+**The gates.** Shut at dusk (or the town's own hour) and whenever the bell rings, opened in the morning; folk open the
+doors to pass, monsters can't. A raiding band gathers out past the wall where it stands.
+
+**The muster.** When the bell rings (a raid, a raiding party sighted, monsters inside the wall, an enemy on the
+approach), every folk not of the watch drops what it is doing (out of bed, if it was asleep) and runs to the square:
+the open ground before the board, or by the heart. The children and the frail take the middle, the rest close round
+them, and they wait there till the bell stops. Folk far out come in through the gates, or shelter where they are if
+something is between them and the square or there is no way there. Nobody works.
+
+The watch rings them round: as many guards as the ring wants (one every four blocks of it, three to twelve) stand evenly
+round the crowd facing out, the captain (the constable, or the most seasoned guard) on the side the trouble comes from,
+calling out. A monster that comes at the square is met by the nearest guard of the ring, which steps out to it and back
+to its place once it is down. Guards past what the ring wants go up on the walls with bows as before (the square's wall
+posts and the town wall's gatehouse towers), and the town's iron golems take places in the ring between the guards. At
+the all-clear the folk go back to what they were doing (or to bed), and the history has the muster with the night.
+
+The old way (everybody indoors, every guard to the walls) is kept behind the config switch `raidMusterAtSquare`; the
+wall behind `castleWalls`.
+
+**Commands.** `/village wall` (the wall: its lines, how much is laid, what it still wants, its gates); `/village wall now`
+(ops: a batch of its works now); `/village wall build` (ops: all of it at once, out of nothing, for the pictures);
+`/village wall stage` (ops: the same, and the views to photograph it); `/village muster` (ops: the bell rung for a
+drill, a minute long, and the views over the square).

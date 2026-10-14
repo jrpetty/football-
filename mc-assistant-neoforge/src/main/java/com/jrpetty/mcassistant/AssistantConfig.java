@@ -40,6 +40,7 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_MAX_FOLK;
     public static final ModConfigSpec.BooleanValue VILLAGE_BREEDING;
     public static final ModConfigSpec.BooleanValue VILLAGE_RAIDS;
+    public static final ModConfigSpec.BooleanValue RAID_MUSTER, CASTLE_WALLS;      // [defence]
     public static final ModConfigSpec.IntValue VILLAGE_GROWTH_CAP;
     public static final ModConfigSpec.IntValue VILLAGE_FOUNDING_MOST;
     public static final ModConfigSpec.IntValue VILLAGE_CHARTER_FOLK;
@@ -140,6 +141,14 @@ public final class AssistantConfig {
                 "Raiders come at walled villages with a watch, about one night in five:",
                 "the bell rings, the guards take the walls, everybody else goes indoors.")
             .define("villageRaids", true);
+        RAID_MUSTER = b.comment(                                                       // [defence]
+                "When the bell rings, everybody but the watch runs to the village square and the guards ring them",
+                "round there (entity/Muster). Off: the old way, the guards on the walls and everybody else indoors.")
+            .define("raidMusterAtSquare", true);
+        CASTLE_WALLS = b.comment(                                                      // [defence]
+                "Towns plan a castle wall round the whole town and build it out of their stores, upgrading it as",
+                "they come of age and moving it out as they grow (entity/CastleWall).")
+            .define("castleWalls", true);
         VILLAGE_BREEDING = b.comment(
                 "Let settlements grow their own people. Two folk who are fed and in work",
                 "have a chance of raising a child, which costs them the food it takes.",
@@ -312,6 +321,8 @@ public final class AssistantConfig {
     public static int villageMaxFolk() { return read(VILLAGE_MAX_FOLK, 12); }
     public static boolean villageBreeding() { return read(VILLAGE_BREEDING, true); }
     public static boolean villageRaids() { return read(VILLAGE_RAIDS, true); }
+    public static boolean raidMuster() { return read(RAID_MUSTER, true); }           // [defence]
+    public static boolean castleWalls() { return read(CASTLE_WALLS, true); }         // [defence]
     public static int villageGrowthCap() { return read(VILLAGE_GROWTH_CAP, 100); }
     public static int villageFoundingMost() { return read(VILLAGE_FOUNDING_MOST, 500); }
     public static int villageCharterFolk() { return read(VILLAGE_CHARTER_FOLK, 70); }

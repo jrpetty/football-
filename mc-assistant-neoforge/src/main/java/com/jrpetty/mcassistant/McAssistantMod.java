@@ -388,6 +388,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(VillagerTakeover.class);
         NeoForge.EVENT_BUS.register(VillageCommands.class);
         NeoForge.EVENT_BUS.register(WarFootingCommands.class);        // [war-prep] /village war footing
+        NeoForge.EVENT_BUS.register(DefenceCommands.class);           // [defence] /village wall, /village muster
         NeoForge.EVENT_BUS.register(IndividualCommands.class);        // [individual] /village individual
         NeoForge.EVENT_BUS.register(SessionReset.class);
         NeoForge.EVENT_BUS.register(ChunkLoad.class);
