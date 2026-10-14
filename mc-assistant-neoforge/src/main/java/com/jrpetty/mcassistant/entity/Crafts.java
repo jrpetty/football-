@@ -875,6 +875,7 @@ public final class Crafts {
                 Block b = Block.byItem(one.getItem());
                 BlockPos at = grassSpot(level, near);
                 if (at == null || b == Blocks.AIR) { store(level, v, one); break; }
+                if (!TownBlocks.mayPlace(level, v, at, TownBlocks.Why.NATURE)) { store(level, v, one); break; }   // [integrity]
                 level.setBlock(at, b.defaultBlockState(), 3);           // over any grass there
                 put++;
             }

@@ -553,6 +553,7 @@ public final class HousingMarket {
                 if (Math.abs(s.anchor().getX() - x) <= TownPlan.LOT && Math.abs(s.anchor().getZ() - z) <= TownPlan.LOT) { taken = true; break; }
             }
             if (taken) continue;
+            if (Footways.crowds(id, d.siteKey(), x, z, Villages.direction(lot.back()))) continue;   // [paths] never wall to wall
             Direction back = Villages.direction(lot.back());
             boolean turned = back.getAxis() == Direction.Axis.X;
             int hx = turned ? half[1] : half[0], hz = turned ? half[0] : half[1];

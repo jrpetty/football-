@@ -265,6 +265,17 @@ public final class CastleWall {
         return onRing(id, p.getX() - heart.getX(), p.getZ() - heart.getZ(), 0, 0);
     }
 
+    /** Is this column the wall itself (or its old line still standing): its curtain, a gate or a tower? A lamp or a
+     *  sign may stand on the ring by the street, never on the wall. */
+    public static boolean onWall(UUID id, BlockPos heart, BlockPos p) {
+        if (!live()) return false;
+        int dx = p.getX() - heart.getX(), dz = p.getZ() - heart.getZ();
+        WallPlan.Sides s = sides(id);
+        if (WallPlan.cell(s, WallPlan.towers(s), dx, dz) != null) return true;
+        WallPlan.Sides o = old(id);
+        return o != null && WallPlan.cell(o, WallPlan.towers(o), dx, dz) != null;
+    }
+
     /**
      * [defence] How big a field square may grow at this offset (its middle) and still keep off the wall's ring, from
      * the most it would: the first row of fields stands just past the town's first block, where the wall goes.
@@ -373,11 +384,20 @@ public final class CastleWall {
             g[i] = most == Integer.MIN_VALUE ? c.getY() : most;
             f[i] = mid == Integer.MIN_VALUE ? g[i] : mid;
         }
+        // A column left out (somebody's lamp post, a pond) is not built: its height is no measure of the wall's, and
+        // must not raise the walkway (or a tower) round it. Its level comes from its neighbours.
+        boolean any = false;
+        for (int i = 0; i < n; i++) {
+            if (k[i] == LEFT_OUT) g[i] = Integer.MIN_VALUE;
+            else any = true;
+        }
+        if (!any) java.util.Arrays.fill(g, c.getY());
         // The walkway never steps more than a block at a time: raised where the ground falls away.
         for (int pass = 0; pass < 2; pass++) {
             for (int i = 1; i < n; i++) if (g[i] < g[i - 1] - 1) g[i] = g[i - 1] - 1;
             for (int i = n - 2; i >= 0; i--) if (g[i] < g[i + 1] - 1) g[i] = g[i + 1] - 1;
         }
+        for (int i = 0; i < n; i++) if (g[i] == Integer.MIN_VALUE || g[i] < c.getY() - 64) g[i] = c.getY();
         // The towers of this side (and the corner each side has as its own): a column of one over water, a field
         // or somebody's work is left out of it.
         Set<Long> skip = new HashSet<>();
@@ -1192,12 +1212,7 @@ public final class CastleWall {
                 if (mine(bs) && !wild(level, p, bs)) todo.add(p);
             }
         }
-        if (todo.isEmpty()) {
-            Ledger.forget(id, OLD);
-            STATES.remove(id);
-            Villages.tell(id, level.getDayTime() / 24000L, "the old wall was taken down where the town grew past it, and its line given back to the lots");
-            return 0;
-        }
+        if (todo.isEmpty()) return oldLineDown(level, v);
         todo.sort(Comparator.comparingInt((BlockPos p) -> -p.getY()));
         BlockPos first = todo.get(0);
         if (mode == HAND && !TownJobs.atWork(level, v, "the town wall", first, "taking down the old wall")) return 0;
@@ -1210,7 +1225,16 @@ public final class CastleWall {
             level.setBlock(p, Blocks.AIR.defaultBlockState(), 2 | 16);
             n++;
         }
+        if (n == todo.size()) oldLineDown(level, v);                     // the last of it: its line given back now
         return n;
+    }
+
+    /** The old line is all down: forgotten, its ring off the lots, and the town told. */
+    private static int oldLineDown(ServerLevel level, Villages.Village v) {
+        Ledger.forget(v.id(), OLD);
+        STATES.remove(v.id());
+        Villages.tell(v.id(), level.getDayTime() / 24000L, "the old wall was taken down where the town grew past it, and its line given back to the lots");
+        return 0;
     }
 
     // ------------------------------------------------------------------ the watch on it

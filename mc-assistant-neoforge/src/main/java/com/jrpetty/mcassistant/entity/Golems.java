@@ -588,6 +588,7 @@ public final class Golems {
     @Nullable
     static IronGolem raise(ServerLevel level, Villages.Village v, BlockPos base, Direction across, Direction face, @Nullable VillageFolkEntity by) {
         if (!tFits(level, base, across)) return null;
+        if (!TownBlocks.mayAll(level, v, TownBlocks.Why.CIVIC, tCells(base, across))) return null;            // [integrity]
         if (Crafts.stock(level, v, s -> s.is(Items.IRON_BLOCK)) < BLOCKS || !pumpkin(level, v)) return null;
         if (!Crafts.take(level, v, s -> s.is(Items.IRON_BLOCK), BLOCKS)) return null;
         for (BlockPos p : tCells(base, across)) if (!level.getBlockState(p).isAir()) level.removeBlock(p, false);   // the grass cut back

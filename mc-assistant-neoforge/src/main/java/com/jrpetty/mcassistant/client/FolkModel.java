@@ -501,6 +501,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         int job = folk.clientJobOrdinal();
         if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
         if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
+        if (job == AssistantEntity.StationTask.BANK.ordinal()) return 16;           // the banker in the shopkeeper's clothes (its number wrapped round to the blank "none")
         if (job == AssistantEntity.StationTask.FLETCHER.ordinal()) return FLETCHER_OUTFIT;   // [fletcher] apron, quiver, feathered cap
         if (job == AssistantEntity.StationTask.GOLEMS.ordinal()) return GOLEMS_OUTFIT;       // [golems] riveted apron, orange scarf
         if (job == AssistantEntity.StationTask.FIREWORKS.ordinal()) return FIREWORKS_OUTFIT;   // [fireworks] "fireworks"
@@ -587,6 +588,14 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         if (!folk.getOffhandItem().isEmpty()) {
             ModelPart arm = rightMain ? leftArm : rightArm;
             arm.xRot = arm.xRot * 0.5F - Mth.PI / 10.0F;
+        }
+
+        // [wagons] A crate carried to or from a wagon: both arms out under it.
+        if (com.jrpetty.mcassistant.client.WagonClientHooks.isCarrying(folk.getId())) {
+            rightArm.xRot = -1.15F;
+            leftArm.xRot = -1.15F;
+            rightArm.zRot = 0.12F;
+            leftArm.zRot = -0.12F;
         }
 
         // Breathing: the arms never hang dead still.

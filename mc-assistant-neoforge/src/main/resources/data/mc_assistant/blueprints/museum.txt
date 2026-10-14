@@ -55,7 +55,7 @@ layer 3
 .S........S.
 .G........G.
 .SSSGOOGSSS.
-............
+.....j......
 .S.S....S.S.
 layer 4
 .SSSSSSSSSS.
@@ -67,7 +67,7 @@ layer 4
 .S........S.
 .G........G.
 .SSSSSSSSSS.
-............
+.....|......
 .S.S....S.S.
 layer 5
 .SSSSSSSSSS.

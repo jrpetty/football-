@@ -47,6 +47,14 @@ public class StocksBlock extends Block {
         return defaultBlockState().setValue(FACING, ctx.getHorizontalDirection().getOpposite());
     }
 
+    /** [paths] Not a way through: the stocks stands near full height on less than a full block, and the game took its cell
+     *  for open ground, planned paths through it, and folk walked into it and stood there. */
+    @Override
+    protected boolean isPathfindable(net.minecraft.world.level.block.state.BlockState state,
+                                     net.minecraft.world.level.pathfinder.PathComputationType type) {
+        return false;
+    }
+
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return switch (state.getValue(FACING)) {

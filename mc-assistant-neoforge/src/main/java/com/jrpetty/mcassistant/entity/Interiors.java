@@ -95,6 +95,7 @@ public final class Interiors {
                     // A plain rug that wants its border colour now (a piece swapped, not added).
                     if (!(p.kind() == Kind.BORDER && now.is(BlockTags.WOOL_CARPETS))) continue;
                 }
+                if (!TownBlocks.mayPlace(level, v, p.pos(), TownBlocks.Why.FURNISH)) continue;   // [integrity] never a doorway or a stair
                 BlockState put = take(level, v, p, now);
                 if (put == null) { left++; continue; }
                 // Put in by a hand of the village, there in the room.

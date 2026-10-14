@@ -407,13 +407,16 @@ public final class Dealings {
         if (!missing.isEmpty()) {
             return "I'd need " + String.join(", ", missing) + " for that, and we can't spare it. Bring the makings and I'll set to.";
         }
-        double storesWorth = 0;
-        for (Map.Entry<Item, Integer> e : fromStores.entrySet()) storesWorth += Prices.each(e.getKey()) * e.getValue();
+        // [market] The stores' makings at the town's price today (PriceIndex) and its margin, as the counter would sell them.
+        double storesLocal = 0;
+        for (Map.Entry<Item, Integer> e : fromStores.entrySet()) storesLocal += PriceIndex.each(level, village, e.getKey()) * e.getValue();
+        double storesWorth = storesLocal * Budget.PLAYER_MARKUP;
         // The makings, and the work: a master's work dearer than a beginner's.
         double work = Prices.each(want) * 0.2 * Craftsmanship.grade(skill).worth;
-        int price = (int) Math.max(1, Math.round(storesWorth * Budget.PLAYER_MARKUP + work));
+        int price = (int) Math.max(1, Math.round(storesWorth + work));
         price = haggled(village, p.getUUID(), d, price);
         price = PlayerTrades.orderPrice(p, f.stationTask(), price);    // [player-civic] cheaper to one who learned the trade
+        price = Math.max(price, (int) Math.ceil(storesLocal * com.jrpetty.mcassistant.village.Worth.FLOOR - 1e-9));   // [market] never under the least
         if (Market.coinsHeld(p) < price) return "That'd be " + coins(price) + ", makings and work. You've " + Market.coinsHeld(p) + ".";
         // Take it all.
         for (Map.Entry<Integer, Integer> e : fromPlayer.entrySet()) p.getInventory().getItem(e.getKey()).shrink(e.getValue());

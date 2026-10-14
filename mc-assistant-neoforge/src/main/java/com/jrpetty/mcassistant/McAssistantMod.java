@@ -372,6 +372,7 @@ public final class McAssistantMod {
         com.jrpetty.mcassistant.entity.TownWays.joinIdentity();        // [culture2] its sections of the Identity page
         com.jrpetty.mcassistant.entity.Perks.joinIdentity();           // [perks] its section of the Identity page, and the ethos's lean
         com.jrpetty.mcassistant.item.IndividualItems.register(modBus); // [individual] spectacles
+        com.jrpetty.mcassistant.entity.WagonRegistry.register(modBus);   // [wagons] the trade wagon
         com.jrpetty.mcassistant.item.LeisureItems.register(modBus);    // [leisure] the quilt, the lute, draughts, kites, the football, lanterns, slates
         com.jrpetty.mcassistant.item.NetherItems.register(modBus);     // [nether] the runners' gold charm and satchel
         com.jrpetty.mcassistant.item.WarItems.register(modBus);        // [war] the War Horn
@@ -398,6 +399,7 @@ public final class McAssistantMod {
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Market.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Roads.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Caravans.class);
+        NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Wagons.class);     // [wagons] quiet wagons moved on, the wheelwright
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Raids.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Tavern.class);
         NeoForge.EVENT_BUS.register(com.jrpetty.mcassistant.entity.Citizens.class);

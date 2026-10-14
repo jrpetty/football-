@@ -867,7 +867,9 @@ public final class FishMarket {
         int lot = Math.min(LOT, inBarrels(level, m, s -> s.is(fish)));
         ItemStack one = new ItemStack(fish);
         double each = priceEach(level, v, one, null);
-        int price = Math.max(1, (int) Math.round(each * lot));
+        // [market] A big catch's cheap fish, never under the least the town lets a lot go for: a glut's cod bought off the
+        // quay sold straight back at the stall for more.
+        int price = Math.max(Market.leastLot(level, id, one, lot), (int) Math.round(each * lot));
         String name = lot + " " + (fish == Items.COD ? "cod" : "salmon");
         if (p.isShiftKeyDown()) return name + ": " + price + (price == 1 ? " coin" : " coins") + " (" + money(each) + " apiece). Right-click to buy.";
         int coins = Market.coinsHeld(p);
