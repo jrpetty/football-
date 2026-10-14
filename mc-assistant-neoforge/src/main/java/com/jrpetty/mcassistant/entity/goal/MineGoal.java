@@ -140,6 +140,8 @@ public class MineGoal extends Goal {
     private static final int REACH_TICKS = 600, REACH_BACK_TICKS = 300;
     /** Where it may stand to get at an ore: within this many blocks of it across, and how many places it path-checks. */
     private static final int REACH_ACROSS = 1, REACH_TRIES = 3;
+    /** A place this few blocks off across the floor is simply walked to (the walk has its own time limit). */
+    private static final int NEAR_STEPS = 5;
     private int sinceTorch;
     private int veinMined;
     private int oresMined;
@@ -1542,7 +1544,10 @@ public class MineGoal extends Goal {
                 || com.jrpetty.mcassistant.entity.Footholds.canClimbTo(assistant, c, ore);
             if (!reaches) continue;
             tried++;
-            if (!c.equals(feet)) {
+            // A few steps across the same floor is walked without asking the path-finder (which answers nothing at
+            // all while it is not on the ground); further, only where a path says it can get there.
+            boolean aFewSteps = c.distManhattan(feet) <= NEAR_STEPS && Math.abs(c.getY() - feet.getY()) <= 1;
+            if (!aFewSteps) {
                 net.minecraft.world.level.pathfinder.Path way = assistant.getNavigation().createPath(c, 0);
                 if (way == null || !way.canReach()) continue;
             }
