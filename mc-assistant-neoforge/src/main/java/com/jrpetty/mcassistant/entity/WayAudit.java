@@ -36,7 +36,7 @@ public final class WayAudit {
     /** What the look found. Each list says where, so a failing test says what to go and see. */
     public record Report(int doors, int reached, List<String> unreached, int offStreet, List<String> offStreets,
                          int overlaps, int touching, List<String> crowding, int blockedDoors, List<String> blocked,
-                         int clutter, List<String> clutterAt, int stuckSpots, List<String> longStuck, int buildings) {
+                         int clutter, List<String> clutterAt, int campBeds, int stuckSpots, List<String> longStuck, int buildings) {
 
         /** Every door reached, no two buildings overlapping or touching, no door against a wall, the square clear. */
         public boolean clean() {
@@ -50,9 +50,10 @@ public final class WayAudit {
         public List<String> lines() {
             List<String> out = new ArrayList<>();
             out.add(String.format("ways: %d buildings, doors reached from the heart %d/%d (%.0f%%), off a street %d, lots overlapping %d,"
-                    + " touching %d, doors against a wall %d, things on the square %d, spots folk gave up at %d, stuck over 30s %d",
-                buildings, reached, doors, 100 * reachedShare(), offStreet, overlaps, touching, blockedDoors, clutter, stuckSpots,
-                longStuck.size()));
+                    + " touching %d, doors against a wall %d, things on the square %d (and the founders' camp beds %d), spots folk gave up at %d,"
+                    + " stuck over 30s %d",
+                buildings, reached, doors, 100 * reachedShare(), offStreet, overlaps, touching, blockedDoors, clutter, campBeds,
+                stuckSpots, longStuck.size()));
             for (String s : unreached) out.add("  door not reached: " + s);
             for (String s : offStreets) out.add("  door off the streets: " + s);
             for (String s : crowding) out.add("  crowded: " + s);
@@ -66,7 +67,7 @@ public final class WayAudit {
     /** The town's audit's name for these checks, and its measures. */
     public static final String WAYS = "ways";
     public static final String DOORS = "doors", DOORS_REACHED = "doors_reached", LOT_OVERLAPS = "lot_overlaps",
-        LOT_TOUCHING = "lot_touching", DOORS_BLOCKED = "doors_blocked", SQUARE_CLUTTER = "square_clutter", STUCK_LONG = "stuck_long";
+        LOT_TOUCHING = "lot_touching", DOORS_BLOCKED = "doors_blocked", SQUARE_CLUTTER = "square_clutter", STUCK_LONG = "stuck_long", CAMP_BEDS = "camp_beds";
 
     /** These checks, added to the town's audit (TownAudit) under {@link #WAYS}: its measures, and a finding for each fault. */
     static void register() {
@@ -78,6 +79,7 @@ public final class WayAudit {
             r.measure(LOT_TOUCHING, w.touching());
             r.measure(DOORS_BLOCKED, w.blockedDoors());
             r.measure(SQUARE_CLUTTER, w.clutter());
+            r.measure(CAMP_BEDS, w.campBeds());
             r.measure(STUCK_LONG, w.longStuck().size());
             for (String s : w.unreached()) r.find(WAYS, v.centre(), "door not reached from the heart: " + s);
             for (String s : w.crowding()) r.find(WAYS, v.centre(), "buildings crowded: " + s);
@@ -131,7 +133,7 @@ public final class WayAudit {
         // The square.
         Map<String, Integer> kinds = new TreeMap<>();
         List<String> clutterAt = new ArrayList<>();
-        int clutter = 0;
+        int clutter = 0, campBeds = 0;
         BlockPos c = v.centre();
         for (int dx = -TownPlan.PLAZA + 1; dx < TownPlan.PLAZA; dx++) {
             for (int dz = -TownPlan.PLAZA + 1; dz < TownPlan.PLAZA; dz++) {
@@ -141,6 +143,8 @@ public final class WayAudit {
                     BlockPos p = new BlockPos(x, y, z);
                     BlockState st = level.getBlockState(p);
                     if (!litter(level, p, st, y == c.getY())) continue;
+                    // The founders' beds about the heart are their camp until there are homes ([tidy] takes them up).
+                    if (st.is(BlockTags.BEDS)) { campBeds++; continue; }
                     clutter++;
                     String name = net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(st.getBlock()).getPath();
                     if (kinds.merge(name, 1, Integer::sum) <= 3) clutterAt.add(name + " " + p.toShortString());
@@ -150,7 +154,7 @@ public final class WayAudit {
         if (!kinds.isEmpty()) clutterAt.add(0, "kinds " + kinds);
         List<String> stuck = StuckSpots.longStuck(v.id());
         return new Report(doors, reached, unreached, offStreet, offStreets, overlaps, touching, crowding, blockedDoors, blocked,
-            clutter, clutterAt, StuckSpots.spots(v.id()).size(), stuck, all.size());
+            clutter, clutterAt, campBeds, StuckSpots.spots(v.id()).size(), stuck, all.size());
     }
 
     /** Reached at this place, a block up or a block down (a step to or from a doorway). */
