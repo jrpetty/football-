@@ -106,10 +106,11 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
         this.addLayer(new Glow(this));
         this.addLayer(new Armour(this,                // [guard-kit] armour cut to a folk (FolkArmourModel)
             new HumanoidModel<>(context.bakeLayer(FolkArmourModel.INNER)),
-            new HumanoidModel<>(context.bakeLayer(FolkArmourModel.OUTER))));
+            new HumanoidModel<>(context.bakeLayer(FolkArmourModel.OUTER)),
+            context.getModelManager().getAtlas(net.minecraft.client.renderer.Sheets.ARMOR_TRIMS_SHEET)));   // [war-polish] and its trims
         this.addLayer(new TabardLayer(this, context.getModelSet()));      // [arms] a festival tabard of the town's arms
         this.addLayer(new WatchLayer(this, new WatchModel(context.bakeLayer(WatchModel.LAYER))));   // [police] the sash, the coat, the badge
-        this.addLayer(new ArmyLayer(this, context.getModelSet(), new WatchModel(context.bakeLayer(WatchModel.LAYER))));   // [war] the army's surcoat, cloak, sash
+        this.addLayer(new ArmyLayer(this, context.getModelSet(), new WatchModel(context.bakeLayer(WatchModel.LAYER)), context.getItemInHandRenderer()));   // [war] the army's surcoat, cloak, sash
         this.addLayer(new NetherClient.CharmLayer(this, context.getItemInHandRenderer()));   // [nether] the gold charm on the brow
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
         this.addLayer(new WagonClient.CrateLayer(this, context.getBlockRenderDispatcher()));   // [wagons] a crate to the wagon
@@ -232,11 +233,15 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
     private static class Armour extends RenderLayer<VillageFolkEntity, FolkModel> {
         private final HumanoidModel<VillageFolkEntity> inner;
         private final HumanoidModel<VillageFolkEntity> outer;
+        /** [war-polish] The armour trims' sheet: an army's colours on its armour. */
+        private final net.minecraft.client.renderer.texture.TextureAtlas trims;
 
-        Armour(FolkRenderer parent, HumanoidModel<VillageFolkEntity> inner, HumanoidModel<VillageFolkEntity> outer) {
+        Armour(FolkRenderer parent, HumanoidModel<VillageFolkEntity> inner, HumanoidModel<VillageFolkEntity> outer,
+               net.minecraft.client.renderer.texture.TextureAtlas trims) {
             super(parent);
             this.inner = inner;
             this.outer = outer;
+            this.trims = trims;
         }
 
         @Override
@@ -277,6 +282,13 @@ public class FolkRenderer extends MobRenderer<VillageFolkEntity, FolkModel> {
             for (ArmorMaterial.Layer layer : armour.getMaterial().value().layers()) {
                 model.renderToBuffer(pose, buffer.getBuffer(RenderType.armorCutoutNoCull(layer.texture(legs))),
                     light, OverlayTexture.NO_OVERLAY, layer.dyeable() ? dye : -1);
+            }
+            net.minecraft.world.item.armortrim.ArmorTrim trim = worn.get(net.minecraft.core.component.DataComponents.TRIM);   // [war-polish] as vanilla draws it
+            if (trim != null) {
+                net.minecraft.client.renderer.texture.TextureAtlasSprite sprite = trims.getSprite(legs ? trim.innerTexture(armour.getMaterial())
+                    : trim.outerTexture(armour.getMaterial()));
+                model.renderToBuffer(pose, sprite.wrap(buffer.getBuffer(net.minecraft.client.renderer.Sheets.armorTrimsSheet(trim.pattern().value().decal()))),
+                    light, OverlayTexture.NO_OVERLAY);
             }
         }
 

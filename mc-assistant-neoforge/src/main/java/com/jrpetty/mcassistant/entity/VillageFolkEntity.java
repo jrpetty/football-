@@ -1631,6 +1631,7 @@ public class VillageFolkEntity extends AssistantEntity {
     /** A death in the village is news, and the ones who loved it remember. */
     @Override
     public void die(net.minecraft.world.damagesource.DamageSource cause) {
+        if (!level().isClientSide && WarDress.dressed(this)) WarDress.undress(this);   // [war-polish] the battle dress back before anything falls
         if (!level().isClientSide) WarAndPeace.died(this, cause, level().getDayTime() / 24000L);   // [war-peace] lost to the war (before its errand is let go)
         if (!level().isClientSide) NetherRuns.fell(this, cause);         // [nether] lost on a Nether run: the team and the town know where
         if (!level().isClientSide) Fashion.died(this);                   // [fashion] what it wore falls where it fell, with its pack

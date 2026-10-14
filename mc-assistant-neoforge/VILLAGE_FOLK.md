@@ -6516,6 +6516,48 @@ outcomes.
   them. A campaign is kept in the town's books, so a restart in the middle of a march carries on, and one
   in the middle of a battle has the battle reckoned on paper.
 
+## Battles that read at a glance [war-polish]
+
+**Battle colours** (entity/WarDress). At the muster each army is dressed in a colour of its own, taken from its
+town's arms (the field first, then the charges); if the two armies' colours are too alike to tell apart from a
+hill (blue against cyan, red against orange, the same) the second takes the first of its own colours that is not,
+else a strong contrasting one (red, blue, gold, white, green, black). The colour shows the Minecraft way:
+
+- **armour trims** on every piece, in the nearest trim material (lapis, diamond, redstone, copper, emerald, gold,
+  amethyst, quartz, netherite), drawn on the folk's own armour model;
+- a **dyed leather tunic** for anybody with nothing on its chest (leather already worn is dyed);
+- the **shield** painted with the town's banner on the army's colour;
+- **company standards**: the army's standard-bearer carries the town's banner in hand, and past the first company
+  of ten one of every company (a sergeant first) wears the banner high on its helm, as a raid captain does;
+- **name tags** in the colour (a scoreboard team per army, `mcawar` and the town's id), and the boss bar too.
+
+Nothing is minted: all of it is cosmetic for the battle. Each touched piece remembers what it was (a mark of its
+own in the item's data) and is put back exactly so after the battle; the tunic and the helm standard are lent
+and taken back (the helmet under a standard returns to the head). It is put on once at the muster (and for an
+assault at the gate) and taken off once when the battle ends, on any discharge (peace, the stage struck), when a
+fighter dies (before anything drops), and for anybody who comes into the world still dressed with no army in the
+field (a restart, an unloaded chunk). Nothing runs a tick.
+
+**Ranks and files** (BattleModel.Formation.slot, Battles.array). Drawn up before the horn, each formation stands
+in even ranks of aligned files: the shields in the front rank with a sergeant at each end, the rest behind; the
+archers behind the line (or on the wings, in front as a screen, inside the ring, on the rise); the Captain with the
+standard behind the centre; the reserve behind them; the medic last. A wedge has its best at the point and its
+short last row centred; a ring is shoulder to shoulder. Before the horn the marks stray a tenth of a block at most
+and the brave and the green step only a little out; now and then a fighter glances aside. After the horn the lines
+drift and are dressed as before.
+
+**One battle, one outcome.** A side breaks once: a battle that has an outcome keeps it. A battle staged for the
+pictures stays where it is set (no break at the clash, no surrender at the parley, no end to the aftermath) and is
+staged on to later phases with the same armies (`/village battle stage` and `/village admin army phase`, now with
+`horn` and `charge`); an earlier phase starts it afresh. A battle fought in full tells its outcome as it breaks,
+and the war's books are not told it a second time.
+
+**The war's course** is written once per event (the same line on the same day is not written again) and read once.
+
+**The pictures' camera** (`/village camera x y z tx ty tz`, ops): where a camera should stand to see its mark from
+open air, stepping back or up from inside the ground or behind a hill, or along its line for a view underground.
+Every smoke shot asks first.
+
 ## Vassal towns
 
 A town beaten in a war fought for lordship over it, or whose gate was taken by a great and hard town, becomes

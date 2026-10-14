@@ -95,7 +95,50 @@ public final class BattleModel {
             this.archers = archers;
             this.bend = bend;
         }
+
+        /** [war-polish] How many ranks deep it draws up {@code n} in the line: its own depth, and another past every RANK_MOST. */
+        public int ranksFor(int n) {
+            return Math.max(ranks, (n + RANK_MOST - 1) / RANK_MOST);
+        }
+
+        /** [war-polish] A ring's radius for {@code n}: shoulder to shoulder round it (its spacing between neighbours), never tighter than RING_LEAST. */
+        public double ringRadius(int n) {
+            return Math.max(RING_LEAST, spacing / (2 * Math.sin(Math.PI / Math.max(3, n))));
+        }
+
+        /**
+         * [war-polish] The mark of the {@code k}-th of {@code n} in the line, {across its front (to its right), depth
+         * (forward is +)}, as drawn up before the horn: ranks of even files (the front rank filled first, the rear ones
+         * centred behind it), bent into the shape's wedge (the first at its point), ring, crescent or echelon.
+         */
+        public double[] slot(int k, int n) {
+            switch (bend) {
+                case WEDGE -> {
+                    int r = (int) Math.floor(Math.sqrt(k)), inRow = Math.min(2 * r + 1, n - r * r);   // a short last row centred behind
+                    return new double[]{ (k - r * r - (inRow - 1) / 2.0) * spacing, WEDGE_POINT - r * RANK_GAP };
+                }
+                case RING -> {
+                    double radius = ringRadius(n), ang = 2 * Math.PI * k / Math.max(1, n);
+                    return new double[]{ Math.cos(ang) * radius, Math.sin(ang) * radius - radius };
+                }
+                default -> {
+                    int ranks = ranksFor(n), per = (n + ranks - 1) / ranks;
+                    int row = k / per, inRow = Math.min(per, n - row * per), col = k % per;
+                    double across = (col - (inRow - 1) / 2.0) * spacing, depth = -row * RANK_GAP;
+                    double half = Math.max(1, (per - 1) * spacing / 2);
+                    if (bend == Bend.CRESCENT) depth += Math.pow(across / half, 2) * HORNS;
+                    if (bend == Bend.ECHELON) depth -= (across + half) / (2 * half) * REFUSED;
+                    return new double[]{ across, depth };
+                }
+            }
+        }
     }
+
+    /** [war-polish] The line's drawing: blocks between ranks; most in a rank before another forms; the tightest ring. */
+    public static final double RANK_GAP = 1.4, RING_LEAST = 2.5;
+    public static final int RANK_MOST = 14;
+    /** [war-polish] A wedge's point ahead of the line's mark; a crescent's horns forward; an echelon's refused end back. */
+    public static final double WEDGE_POINT = 1.5, HORNS = 3.0, REFUSED = 4.0;
 
     /**
      * What this shape is worth against that one in the clash, as a share of its bite: a wedge breaks a winged
