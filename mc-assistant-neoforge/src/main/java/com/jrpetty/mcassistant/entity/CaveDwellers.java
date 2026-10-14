@@ -114,14 +114,16 @@ import java.util.function.Predicate;
  * work on, and they all join in against a group; a creeper sends them back. Never stuck: one that has got nowhere for a
  * while cuts itself a step.
  *
- * <p><b>Every vein.</b> In the cave the leader looks through the walls, the floor and the roof round it (scan): every
- * ore showing, and every vein up to three blocks of rock behind the cave's face, goes on the cave's list (kept with the
- * town: ore, place, size, how far behind, and how it stands), called out by the nearest of them ("Iron here!"). The
- * leader takes the veins one at a time, the town's most wanted ore first (what the age asks for: Villages.needs), then
- * the nearest; the way in to a hidden vein is cut as a short tunnel of rock the world made, and every member digs a
- * block of it, never the same block (claims), each with its own pick, never the ground under its feet, never into lava
- * or water, never in the town. A vein none of the team's picks will take (obsidian without diamond) waits on the list
- * for a better pick; a cave whose veins are all taken is worked out, and the team moves on to the next, and comes back
+ * <p><b>Every vein.</b> [mines] In the cave each of them looks round as it goes, the way a player would (lookRound,
+ * OreSight): every ore that shows (a face open to the cave) and that it has a clear line to from its eyes, within five
+ * blocks, goes on the cave's list (kept with the town: ore, place, size, and how it stands), called out by the nearest
+ * of them ("Iron here!"). Nobody looks through the rock: the rest of a vein comes out as each block taken lays the next
+ * bare. The leader takes the veins one at a time, the town's most wanted ore first (what the age asks for:
+ * Villages.needs), then the nearest, and every one on the list in the end, whatever it was sent for; every member digs
+ * a block of it, never the same block (claims), each with its own pick, never the ground under its feet, never into
+ * lava or water, never in the town. Ore up in the roof out of reach is built up to on steps of its own cobblestone and
+ * the steps taken down after (Footholds). A vein none of the team's picks will take (obsidian without diamond) waits on
+ * the list for a better pick; a cave whose veins are all taken is worked out, and the team moves on to the next, and comes back
  * to the waiting ones when the town has the pick for them.
  *
  * <p><b>Light, and the dangers.</b> The torches cost the town, so they go where they count (light): one every fifteen
@@ -183,10 +185,8 @@ public final class CaveDwellers {
     static final int SPACING = 15, STRAIGHT = 20, BEND = 9;
     /** How many things the report keeps; how many veins a cave's list. */
     static final int KEEP = 160, VEINS_KEPT = 64;
-    /** The most of one vein it goes after. */
-    static final int VEIN_MOST = 32;
-    /** How far behind a wall or a roof a vein is gone after (blocks of rock between it and the cave); a floor's, one. */
-    static final int BEHIND = 3, BEHIND_FLOOR = 1;
+    /** The most of one vein it goes after. [mines] Sixty-four: a big iron vein is taken to the end of it. */
+    static final int VEIN_MOST = 64;
     /** How far round the leader the walls are looked through for veins. */
     static final int SCAN = 10;
     /** The others keep within this of the leader; the leader waits for anybody further than WAIT. */
@@ -307,8 +307,6 @@ public final class CaveDwellers {
         @Nullable BlockPos veinAt;
         final List<BlockPos> work = new ArrayList<>();
         final Map<Long, UUID> claims = new HashMap<>();
-        /** The floor's blocks cut to get at a vein under it, to be filled again once it is out. */
-        final Set<Long> floorCuts = new HashSet<>();
         int veinDug;
         long workTick, surveyTick, lookTick, failTick = -1000, targetTick, chestTick, veinWalkTick, waitSince = -1;
         @Nullable UUID waitingFor;
@@ -355,7 +353,7 @@ public final class CaveDwellers {
         /** The spawners it lit (and the one it is making for); veins cut in to; lava and water walled off; holes patched. */
         final Set<Long> spawnersLit = new HashSet<>();
         @Nullable BlockPos spawnerToLight;
-        int lit, hidden, walled, patched;
+        int lit, walled, patched;
         long spawnerTick;
         boolean greeted;
         /** The torches it brought back unused (into the storehouse). */
@@ -420,6 +418,10 @@ public final class CaveDwellers {
         double reachBest = Double.MAX_VALUE;
         @Nullable UUID foe;
         int foeTick, ateTick = -1000, torchTick = -1000, spokeTick = -1000, followTick = -1000, climbs;
+        /** [mines] Its look round for ore that shows (OreSight), and where it last began one. */
+        final OreSight.Look look = new OreSight.Look();
+        @Nullable BlockPos lookedFrom;
+        boolean lookAgain = true;
         /** Its crafting table set down (CaveCraft), when, and what it is making; when it last looked at its tools. */
         @Nullable BlockPos table;
         int tableTick, toolTick = -1000;
@@ -1482,6 +1484,7 @@ public final class CaveDwellers {
         } else if (d.table != null) {
             CaveCraft.pickUpTable(level, f, d);
         }
+        lookRound(level, f, d, p);                                     // [mines] its own eyes on the walls, floor and roof
         if (leading && p.phase != Party.Phase.CAMP && now - p.surveyTick >= 40) {
             p.surveyTick = now;
             survey(level, f, e, p);
@@ -1997,6 +2000,7 @@ public final class CaveDwellers {
             return true;
         }
         if (p.veinOf != null) finishVein(level, p, null);
+        if (Footholds.comeDown(f)) return true;                        // [mines] down its steps before it moves on
         if (waiting(level, f, p)) return true;
         Vein v = nextVein(level, f, p);
         if (v != null) return toVein(level, f, e, p, v);
@@ -2011,6 +2015,7 @@ public final class CaveDwellers {
             if (b != null) return dig(level, f, e, d, p, b);
         }
         release(f, p);
+        if (Footholds.comeDown(f)) return true;                        // [mines] down its steps before it follows on
         return follow(level, f, d, lead);
     }
 
@@ -2444,33 +2449,9 @@ public final class CaveDwellers {
     }
 
     /**
-     * How a block of ore can be got at from the cave: the fewest blocks out to the cave's open air (one: it shows; two
-     * to four: one to three of rock behind the wall or the roof; a floor's ore one block under at most, so the pit is no
-     * deeper than a step), every block between rock the world made and dry. {steps, the way out as a Direction's
-     * ordinal}, or null for none.
-     */
-    @Nullable
-    static int[] access(ServerLevel level, BlockPos b) {
-        int[] best = null;
-        for (Direction dir : Direction.values()) {
-            int most = (dir == Direction.UP ? BEHIND_FLOOR : BEHIND) + 1;
-            for (int k = 1; k <= most; k++) {
-                BlockPos q = b.relative(dir, k);
-                BlockState s = level.getBlockState(q);
-                if (s.isAir() || s.is(Blocks.TORCH) || s.is(Blocks.WALL_TORCH)) {
-                    if (!level.canSeeSky(q) && (best == null || k < best[0])) best = new int[]{ k, dir.ordinal() };
-                    break;
-                }
-                if (!MineStairs.ground(s) || wetBeside(level, q)) break;
-            }
-        }
-        return best;
-    }
-
-    /**
-     * The leader's look through the walls, the floor and the roof round it: every vein showing, or up to three blocks
-     * behind the cave's face, onto the cave's list (new ones "todo", or "waiting" when none of the team's picks will
-     * take it; a waiting one the team now has the pick for back to "todo"), and into the report.
+     * The cave's list looked over against the team's picks: a waiting vein the team now has the pick for back to "todo",
+     * a "todo" one none of them will take now to "waiting". [mines] What goes on the list comes from each member's own
+     * eyes (lookRound, sighted): it no longer looks through the rock.
      */
     static void scan(ServerLevel level, VillageFolkEntity f, Party p) {
         BlockPos key = p.caveKey;
@@ -2485,45 +2466,71 @@ public final class CaveDwellers {
             if ("waiting".equals(v.state()) && st != null && takes(picks, st)) { list.set(i, v.as("todo")); changed = true; }
             else if ("todo".equals(v.state()) && st != null && !takes(picks, st)) { list.set(i, v.as("waiting")); changed = true; }
         }
-        Set<Long> seen = new HashSet<>();
-        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
-        for (int dy = -5; dy <= 6; dy++) {
-            for (int dx = -SCAN; dx <= SCAN; dx++) {
-                for (int dz = -SCAN; dz <= SCAN; dz++) {
-                    m.set(at.getX() + dx, at.getY() + dy, at.getZ() + dz);
-                    if (seen.contains(m.asLong())) continue;
-                    BlockState st = level.getBlockState(m);
-                    String ore = oreOf(st);
-                    if (ore == null) continue;
-                    BlockPos b0 = m.immutable();
-                    List<BlockPos> blocks = flood(level, b0, ore);
-                    for (BlockPos q : blocks) seen.add(q.asLong());
-                    int[] best = null;
-                    BlockPos via = null;
-                    for (BlockPos q : blocks) {
-                        int[] a = access(level, q);
-                        if (a != null && (best == null || a[0] < best[0])) { best = a; via = q; }
+        if (changed) saveVeins(p.village, key, list);
+    }
+
+    /** [mines] How far a member walks before it looks round afresh. */
+    static final int LOOK_MOVED = 3;
+
+    /**
+     * [mines] Each member's own look round, a slice a tick while the team is in the cave: begun afresh where it has moved
+     * a few blocks, or after a block of ore came out (lays the next bare); every ore it sees goes on the cave's list.
+     */
+    static void lookRound(ServerLevel level, VillageFolkEntity f, Delve d, Party p) {
+        if (p.caveKey == null || p.phase != Party.Phase.IN || p.homeward) return;
+        BlockPos feet = f.blockPosition();
+        if (d.look.idle() && (d.lookAgain || d.lookedFrom == null || d.lookedFrom.distSqr(feet) >= LOOK_MOVED * LOOK_MOVED)) {
+            d.look.begin(f);
+            d.lookedFrom = feet;
+            d.lookAgain = false;
+        }
+        d.look.step(f, ore -> sighted(level, f, p, ore));
+    }
+
+    /**
+     * [mines] An ore a member sees: its vein on the cave's list (once), called out. The vein is the ore and what of the
+     * same joins it; the blocks of it still in the rock come out as each one taken lays the next bare.
+     */
+    static void sighted(ServerLevel level, VillageFolkEntity f, Party p, BlockPos at) {
+        if (p.caveKey == null || inTown(p.village, at)) return;
+        BlockState st = level.getBlockState(at);
+        String ore = oreOf(st);
+        if (ore == null) return;
+        List<Vein> list = veins(p.village, p.caveKey);
+        for (Vein v : list) {
+            if (!v.ore().equals(ore)) continue;
+            if (v.at().equals(at) || "todo".equals(v.state()) && v.at().distSqr(at) <= 4) return;
+        }
+        List<BlockPos> blocks = flood(level, at, ore);
+        String state = takes(picks(level, p), st) ? "todo" : "waiting";
+        list.add(new Vein(ore, at, blocks.size(), 0, state));
+        saveVeins(p.village, p.caveKey, list);
+        note(f, p, new Find(Kind.VEIN, ore, at, p.day, f.displayNameCap(), blocks.size(), 0), null);
+        callOut(level, p, f, at, ore, 0);
+        if ("waiting".equals(state) && p.left.add(ore)) {
+            FolkTalk.speak(f, capital(ore) + " — but none of our picks will take it. It goes on the list for when we've a better one.");
+        }
+    }
+
+    /** [mines] A place right under (or beside and under) a block it cannot reach, to build up to it from; null for none. */
+    @Nullable
+    static BlockPos underIt(ServerLevel level, VillageFolkEntity f, BlockPos b) {
+        BlockPos best = null;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                for (int y = b.getY() - 1; y >= b.getY() - Footholds.MOST_HIGH - Footholds.REACH_ABOVE_FEET; y--) {
+                    BlockPos q = new BlockPos(b.getX() + dx, y, b.getZ() + dz);
+                    if (!level.isLoaded(q)) break;
+                    if (!standable(level, q)) {
+                        if (!level.getBlockState(q).canBeReplaced()) break;     // rock: no column under it here
+                        continue;
                     }
-                    if (best == null) continue;                                   // nothing of it within reach of the cave
-                    Vein known = null;
-                    for (Vein v : list) {
-                        if (!v.ore().equals(ore)) continue;
-                        for (BlockPos q : blocks) if (q.distSqr(v.at()) <= 4) { known = v; break; }
-                        if (known != null) break;
-                    }
-                    if (known != null) continue;
-                    String state = takes(picks, st) ? "todo" : "waiting";
-                    list.add(new Vein(ore, via, blocks.size(), best[0] - 1, state));
-                    changed = true;
-                    note(f, p, new Find(Kind.VEIN, ore, via, p.day, f.displayNameCap(), blocks.size(), 0), null);
-                    callOut(level, p, f, via, ore, best[0] - 1);
-                    if ("waiting".equals(state) && p.left.add(ore)) {
-                        FolkTalk.speak(f, capital(ore) + " — but none of our picks will take it. It goes on the list for when we've a better one.");
-                    }
+                    if (Footholds.canClimbTo(f, q, b) && (best == null || q.distSqr(f.blockPosition()) < best.distSqr(f.blockPosition()))) best = q;
+                    break;
                 }
             }
         }
-        if (changed) saveVeins(p.village, key, list);
+        return best;
     }
 
     /** A vein called out by whichever of the team is nearest it ("Iron here!"; "Diamonds! There, in the rock!"), a call
@@ -2692,18 +2699,8 @@ public final class CaveDwellers {
         p.work.clear();
         p.claims.clear();
         p.workTick = level.getGameTime();
-        int[] a = access(level, v.at());
-        if (a != null && a[0] > 1) {
-            Direction dir = Direction.values()[a[1]];
-            for (int j = a[0] - 1; j >= 1; j--) {
-                BlockPos cut = v.at().relative(dir, j);
-                p.work.add(cut);
-                if (dir == Direction.UP) p.floorCuts.add(cut.asLong());
-            }
-        }
         p.work.add(v.at());
         for (BlockPos b : flood(level, v.at(), v.ore())) if (!b.equals(v.at()) && exposed(level, b)) p.work.add(b);
-        if (a != null && a[0] > 1) p.hidden++;
         p.spareWanted = v.size() >= 8;                         // a long dig: a spare pick first, if its own is half worn
     }
 
@@ -2764,7 +2761,21 @@ public final class CaveDwellers {
             d.digNeeded = 0;
             d.reachBest = Double.MAX_VALUE;
         }
+        // [mines] Its steps under it and the next block lower down: down them first, a block at a time.
+        if (b.getY() <= feet.getY() && Footholds.isOwn(f, feet.below()) && Footholds.comeDown(f)) return true;
         if (reach > 4.3 * 4.3) {
+            // [mines] Over its head, out of reach from the cave floor: up to it on steps of its own, from right under it.
+            BlockPos under = standBy(level, f, b) == null ? underIt(level, f, b) : null;
+            if (under != null && feet.getX() == under.getX() && feet.getZ() == under.getZ() && feet.getY() >= under.getY()
+                    && Footholds.rise(f, Footholds.Purpose.CLIMB)) {
+                d.digTick = f.tickCount;
+                f.hobbyNow = "building up to the " + (ore == null ? "rock" : ore);
+                return true;
+            }
+            if (under != null && (f.getNavigation().isDone() || f.tickCount - e.walkTick > 60)) {
+                f.getNavigation().moveTo(under.getX() + 0.5, under.getY(), under.getZ() + 0.5, 1.0D);
+                e.walkTick = f.tickCount;
+            }
             if (reach < d.reachBest - 0.5) {
                 d.reachBest = reach;
                 d.digTick = f.tickCount;
@@ -2790,6 +2801,7 @@ public final class CaveDwellers {
             return true;
         }
         f.getNavigation().stop();
+        Footholds.stillUp(f);                                          // [mines] at work up its steps: they stay under it
         if (d.digNeeded <= 0) {
             equipPick(f);
             d.digNeeded = quick ? 10 : Math.max(10, f.workTicksFor(st));
@@ -2804,6 +2816,7 @@ public final class CaveDwellers {
         if (d.dug < d.digNeeded) return true;
         if (cut) breakRock(level, f, b, st);
         else breakOre(level, f, p, b, st, ore);
+        d.lookAgain = true;                                            // [mines] what the break laid bare
         drop(p, b);
         d.digging = null;
         d.digNeeded = 0;
@@ -2814,12 +2827,6 @@ public final class CaveDwellers {
                 BlockPos n = b.relative(dir);
                 if (p.work.contains(n) || p.passed.contains(n.asLong()) || p.veinDug >= VEIN_MOST) continue;
                 if (ore.equals(oreOf(level.getBlockState(n)))) p.work.add(n);
-            }
-            // A vein under the floor: the pit filled again to a step, out of its pack's cobble.
-            if (p.floorCuts.contains(b.above().asLong()) && level.getBlockState(b).isAir()
-                    && f.removeMatching(s -> s.is(Items.COBBLESTONE) || s.is(Items.COBBLED_DEEPSLATE), 1) == 1) {
-                level.setBlockAndUpdate(b, Blocks.COBBLESTONE.defaultBlockState());
-                f.placeSound(b);
             }
         }
         return true;
@@ -3709,7 +3716,6 @@ public final class CaveDwellers {
         List<String> did = new ArrayList<>();
         if (listed > 0) did.add("listed " + listed + (listed == 1 ? " vein" : " veins"));
         if (p.mined > 0) did.add("mined " + p.mined + " ore");
-        if (p.hidden > 0) did.add("cut in to " + (p.hidden == 1 ? "a vein" : p.hidden + " veins") + " hidden in the rock");
         if (p.slain > 0) did.add("fought off " + p.slain + (p.slain == 1 ? " monster" : " monsters"));
         if (p.lit > 0) did.add("lit " + (p.lit == 1 ? "a spawner" : p.lit + " spawners") + " up");
         if (p.opened > 0) did.add("opened " + (p.opened == 1 ? "an old chest" : p.opened + " old chests"));

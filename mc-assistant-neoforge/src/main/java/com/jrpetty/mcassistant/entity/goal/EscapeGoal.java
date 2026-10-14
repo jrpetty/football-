@@ -1,12 +1,12 @@
 package com.jrpetty.mcassistant.entity.goal;
 
 import com.jrpetty.mcassistant.entity.AssistantEntity;
+import com.jrpetty.mcassistant.entity.Footholds;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
@@ -30,7 +30,6 @@ public class EscapeGoal extends Goal {
 
     private final AssistantEntity a;
     private int work;
-    @Nullable private BlockPos jumpFrom;
     @Nullable private Direction escapeDir; // direction we were trying to travel when we got stuck
 
     public EscapeGoal(AssistantEntity a) {
@@ -61,6 +60,7 @@ public class EscapeGoal extends Goal {
         // trapped has to be survivable.
         if (a.tickCount - startedAt > 200) return false;
         if (suffocating() || boxedIn()) return true;
+        if (onItsOwnStep()) return true;               // [mines] free, on top of its steps: off them, so they can come down
         return escapeDir != null && blockedAhead(escapeDir);
     }
 
@@ -88,7 +88,7 @@ public class EscapeGoal extends Goal {
     public void start() {
         this.startedAt = a.tickCount;
         this.work = 0;
-        this.jumpFrom = null;
+        this.stepOffTries = 0;
         this.escapeDir = travelDir();
         a.getNavigation().stop();
         a.say("I'm stuck — digging my way out.");
@@ -96,7 +96,6 @@ public class EscapeGoal extends Goal {
 
     @Override
     public void stop() {
-        this.jumpFrom = null;
         this.escapeDir = null;
         // Back off before trying again, or it re-triggers on the same wall the
         // very next tick with nothing changed — which is how a bot ends up
@@ -124,18 +123,8 @@ public class EscapeGoal extends Goal {
             a.getLookControl().setLookAt(feet.getX() + 0.5, feet.getY() + 3.0, feet.getZ() + 0.5);
             if (solid(head)) { breakBlock(head); return; }
             if (solid(aboveHead)) { breakBlock(aboveHead); return; }
-            // Pillar up if we have a block, else carve a foothold and hop up.
-            if (a.countMatching(NightShelterGoal.SHELTER_BLOCK) > 0) {
-                if (a.onGround()) {
-                    jumpFrom = feet;
-                    a.tryHop();
-                } else if (jumpFrom != null && a.getY() - jumpFrom.getY() > 0.45
-                        && a.level().getBlockState(jumpFrom).canBeReplaced()) {
-                    placeAt(jumpFrom);
-                    jumpFrom = null;
-                }
-                return;
-            }
+            // Pillar up if we have a block (booked, to come down once it is free: Footholds), else carve a foothold.
+            if (Footholds.rise(a, Footholds.Purpose.ESCAPE)) return;
             for (Direction d : Direction.Plane.HORIZONTAL) {
                 if (solid(head.relative(d)) || solid(aboveHead.relative(d))) {
                     breakBlock(aboveHead.relative(d));
@@ -144,6 +133,16 @@ public class EscapeGoal extends Goal {
                     return;
                 }
             }
+            return;
+        }
+
+        // [mines] Free, standing on the steps it built to get out: off them onto the ground beside, and the steps
+        // are taken up from there as it goes (Footholds.passBy).
+        if (onItsOwnStep()) {
+            BlockPos off = groundBeside(feet);
+            if (off != null) a.getNavigation().moveTo(off.getX() + 0.5, off.getY(), off.getZ() + 0.5, 1.0D);
+            else stepOffTries = STEP_OFF_TRIES;
+            stepOffTries++;
             return;
         }
 
@@ -158,6 +157,29 @@ public class EscapeGoal extends Goal {
         // and the normal follow/travel navigation takes back over.
         a.getNavigation().moveTo(
             feetAhead.getX() + 0.5, feetAhead.getY(), feetAhead.getZ() + 0.5, 1.0D);
+    }
+
+    /** [mines] Tries at stepping off its own steps before it lets them be (a pillar in the open with no ground beside). */
+    private static final int STEP_OFF_TRIES = 40;
+    private int stepOffTries;
+
+    /** [mines] Standing on a block it laid to get out, and not yet given up stepping off it. */
+    private boolean onItsOwnStep() {
+        return stepOffTries < STEP_OFF_TRIES && a.onGround() && Footholds.isOwn(a, a.feetPos().below());
+    }
+
+    /** [mines] Ground beside its steps it can step onto: level with it or a step down, firm, two blocks of room. */
+    @Nullable
+    private BlockPos groundBeside(BlockPos feet) {
+        for (Direction d : Direction.Plane.HORIZONTAL) {
+            for (int dy = 0; dy >= -1; dy--) {
+                BlockPos c = feet.relative(d).above(dy);
+                BlockPos floor = c.below();
+                if (Footholds.isOwn(a, floor)) continue;
+                if (!solid(c) && !solid(c.above()) && a.level().getBlockState(floor).isFaceSturdy(a.level(), floor, Direction.UP)) return c;
+            }
+        }
+        return null;
     }
 
     private boolean solid(BlockPos p) {
@@ -183,20 +205,6 @@ public class EscapeGoal extends Goal {
                 else drop.setItem(left);
             }
             a.swing(InteractionHand.MAIN_HAND);
-        }
-    }
-
-    private void placeAt(BlockPos p) {
-        var inv = a.getInventoryItems();
-        for (int i = 0; i < inv.size(); i++) {
-            ItemStack st = inv.get(i);
-            if (st.isEmpty() || !NightShelterGoal.SHELTER_BLOCK.test(st)) continue;
-            if (!(st.getItem() instanceof BlockItem bi)) continue;
-            a.level().setBlockAndUpdate(p, bi.getBlock().defaultBlockState());
-            st.shrink(1);
-            if (st.isEmpty()) inv.set(i, ItemStack.EMPTY);
-            a.swing(InteractionHand.MAIN_HAND);
-            return;
         }
     }
 }
