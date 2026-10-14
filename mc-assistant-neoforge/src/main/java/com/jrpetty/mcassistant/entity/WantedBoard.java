@@ -116,7 +116,7 @@ public final class WantedBoard {
         } catch (RuntimeException e) {
             com.mojang.logging.LogUtils.getLogger().debug("[earning] the forecast could not be read: {}", e.toString());
         }
-        if (!DiningPlaces.of(level, v.id()).isEmpty()) {
+        if (eatsOut(v.id())) {
             for (WorkStock.Making m : Dining.PANTRY) {
                 if (Market.stock(level, v.id(), m.is()) < m.keep()) want.add(new Object[]{ m.sample(), Math.max(LEAST, m.keep() * 2), "for the kitchen" });
             }
@@ -137,6 +137,15 @@ public final class WantedBoard {
             kept.add(new Order(day + "-" + (n++), it, Math.max(LEAST, (int) w[1]), 0, each, day + DAYS, (String) w[2]));
         }
         write(v.id(), kept);
+    }
+
+    /** Has the town a café, tavern or restaurant? (By its books: the dining rooms' layouts are not read for this.) */
+    private static boolean eatsOut(UUID village) {
+        for (Ledger.Building b : Ledger.buildings(village)) {
+            String st = b.structure();
+            if (st.equals("cafe") || st.equals("tavern") || st.equals(DiningPlaces.RESTAURANT)) return true;
+        }
+        return false;
     }
 
     /** A piece's price on the board (hundredths): over the paying price, under what the town sells it for. */

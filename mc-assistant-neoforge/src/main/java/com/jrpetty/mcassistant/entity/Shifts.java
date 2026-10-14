@@ -257,25 +257,31 @@ public final class Shifts {
     /** The shifts this town has open now for this player: the workplace found, the hours, the pay, or why not. */
     public static List<Offer> offers(ServerLevel level, Villages.Village v, @Nullable Player p) {
         List<Offer> out = new ArrayList<>();
-        long time = level.getDayTime() % 24000L, day = level.getDayTime() / 24000L;
         double payLevel = payLevel(v.id());
         for (ShiftRole r : ShiftRole.values()) {
-            ShiftTasks.Post post = ShiftTasks.post(level, v, r, p == null ? v.centre() : p.blockPosition());
-            if (post == null) continue;
-            ServiceHours hours = r.hours(post.served());
-            int lv = p == null ? 0 : level(p, r);
-            boolean senior = lv >= EarnMath.SENIOR_LEVEL;
-            double perTask = EarnMath.taskPay(r.wage * payLevel, 4, lv, senior);
-            int left = budget(v.id(), r) - Earnings.spentToday(v.id(), payer(r), day);
-            String why = "";
-            if (Ledger.coins(v.id()) < Math.max(3, Math.ceil(perTask * 3))) why = "Unpaid: the treasury can't pay wages just now.";
-            else if (left < Math.ceil(perTask)) why = "The day's wages for this job are spent. Come back tomorrow.";
-            else if (!hours.isOpen(time)) why = hours.nextOpening(time) + ".";
-            else if (!post.ready()) why = post.why();
-            out.add(new Offer(r, senior ? r.senior : r.title, v.id(), post.pos(), hours.words(), perTask,
-                (int) Math.round(perTask * 12), r.needs, why, senior));
+            Offer o = offer(level, v, p, r, payLevel);
+            if (o != null) out.add(o);
         }
         return out;
+    }
+
+    /** One job's offer in this town (null if the town has nowhere to work it). */
+    @Nullable
+    static Offer offer(ServerLevel level, Villages.Village v, @Nullable Player p, ShiftRole r, double payLevel) {
+        long time = level.getDayTime() % 24000L, day = level.getDayTime() / 24000L;
+        ShiftTasks.Post post = ShiftTasks.post(level, v, r, p == null ? v.centre() : p.blockPosition());
+        if (post == null) return null;
+        ServiceHours hours = r.hours(post.served());
+        int lv = p == null ? 0 : level(p, r);
+        boolean senior = lv >= EarnMath.SENIOR_LEVEL;
+        double perTask = EarnMath.taskPay(r.wage * payLevel, 4, lv, senior);
+        int left = budget(v.id(), r) - Earnings.spentToday(v.id(), payer(r), day);
+        String why = "";
+        if (Ledger.coins(v.id()) < Math.max(3, Math.ceil(perTask * 3))) why = "Unpaid: the treasury can't pay wages just now.";
+        else if (left < Math.ceil(perTask)) why = "The day's wages for this job are spent. Come back tomorrow.";
+        else if (!hours.isOpen(time)) why = hours.nextOpening(time) + ".";
+        else if (!post.ready()) why = post.why();
+        return new Offer(r, senior ? r.senior : r.title, v.id(), post.pos(), hours.words(), perTask, (int) Math.round(perTask * 12), r.needs, why, senior);
     }
 
     // ------------------------------------------------------------------ taking and quitting
@@ -295,8 +301,7 @@ public final class Shifts {
             CompoundTag root = Earnings.data(p);
             if (root.contains("letgo/" + r.id) && day - root.getLong("letgo/" + r.id) < LET_GO_DAYS) return "You were let go from that job lately. Take it shift by shift for now.";
         }
-        Offer o = null;
-        for (Offer x : offers(level, v, p)) if (x.role() == r) o = x;
+        Offer o = offer(level, v, p, r, payLevel(v.id()));
         if (o == null) return Villages.name(v.id()) + " has no " + r.title.toLowerCase(Locale.ROOT) + " work: it needs " + r.needs + ".";
         if (standing) {
             setStanding(p, v.id(), r);
@@ -551,6 +556,7 @@ public final class Shifts {
 
     /** A standing job's day: when its hours open and the player is in the town, its shift starts. */
     static void standingDue(ServerLevel level, ServerPlayer p) {
+        if (level.getGameTime() % 100 >= 20) return;                         // looked at every five seconds
         String[] job = standing(p);
         if (job == null) return;
         long day = level.getDayTime() / 24000L;
@@ -560,8 +566,8 @@ public final class Shifts {
         if (v == null || r == null) { setStanding(p, null, null); return; }
         Villages.Village here = PlayerServices.townAt(level, p.blockPosition());
         if (here == null || !here.id().equals(v.id())) return;
-        for (Offer o : offers(level, v, p)) {
-            if (o.role() != r || !o.whyNot().isEmpty()) continue;
+        Offer o = offer(level, v, p, r, payLevel(v.id()));
+        if (o != null && o.whyNot().isEmpty()) {
             p.sendSystemMessage(Component.literal("Your standing job: your shift as " + o.title().toLowerCase(Locale.ROOT) + " starts now.")
                 .withStyle(ChatFormatting.GREEN));
             start(level, p, v, r, true, o);

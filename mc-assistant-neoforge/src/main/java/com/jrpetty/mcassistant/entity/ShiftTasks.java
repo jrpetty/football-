@@ -1087,8 +1087,8 @@ public final class ShiftTasks {
             return t;
         }
         Villages.Village v = visit.village();
-        for (Shifts.Offer o : Shifts.offers(level, v, p)) {
-            if (o.role() != ShiftRole.COUNTER) continue;
+        Shifts.Offer o = Shifts.offer(level, v, p, ShiftRole.COUNTER, Shifts.payLevel(v.id()));
+        if (o != null) {
             t.putString("title", o.title());
             t.putString("hours", o.hours());
             t.putString("pay", String.format(Locale.ROOT, "about %.1f coin a task, %d a day", o.perTask(), o.perDay()));
