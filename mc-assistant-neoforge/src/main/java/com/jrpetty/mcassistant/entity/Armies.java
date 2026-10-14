@@ -1009,7 +1009,7 @@ public final class Armies {
         if (x == null || x.down() || sideOfBlow(e.getSource()) == null) return;
         float left = f.getHealth() - e.getNewDamage();
         if (left > YIELD_HEALTH) return;
-        if (f.getRandom().nextInt(100) < Campaigns.deathPercent()) return;      // the rare blow that kills
+        if (f.getRandom().nextInt(100) < Campaigns.deathPercent() && !Battles.staged(x)) return;      // the rare blow that kills
         e.setNewDamage(Math.max(0.0F, f.getHealth() - YIELD_HEALTH));
         Entity by = e.getSource().getEntity();
         Fighter striker = by == null ? null : FIGHTERS.get(by.getUUID());

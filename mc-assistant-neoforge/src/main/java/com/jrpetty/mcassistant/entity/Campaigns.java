@@ -1253,6 +1253,149 @@ public final class Campaigns {
         return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
+    // ------------------------------------------------------------------ the stage (pictures)
+
+    /** The phases a battle can be staged at for the pictures (/village battle stage). */
+    public static final List<String> PHASES = List.of("muster", "march", "lineup", "parley", "volley", "clash", "rout", "aftermath");
+
+    /** Fighters a side on the stage. */
+    static final int STAGED = 12;
+
+    /**
+     * Pictures: a battle staged between the nearest town and its neighbour (a neighbour raised 180 blocks east with
+     * none near), twelve a side armed for nothing as a showcase, at war, with the field at {@code at}, and set at this
+     * phase and held there: drawn up on their squares (muster); in column on the road (march); the lines formed in
+     * their formations (lineup); the Captains and their standards met in the middle (parley); the archers' duel
+     * (volley); the lines locked (clash); one side broken and running (rout); the medics at work and the captives led
+     * off (aftermath). Every fighter set down in its place at once. What to look at, "VIEW name x y z ax ay az" lines.
+     */
+    public static List<String> stage(ServerLevel level, Villages.Village v, BlockPos at, String phase) {
+        List<String> out = new ArrayList<>();
+        Villages.Village o = null;
+        double best = 400.0 * 400.0;
+        for (Villages.Village n : Villages.every()) {
+            if (n.id().equals(v.id()) || !n.dim().equals(v.dim())) continue;
+            double d = n.centre().distSqr(v.centre());
+            if (d < best) { best = d; o = n; }
+        }
+        if (o == null) {
+            BlockPos there = Battlefields.surface(level, v.centre().offset(180, 0, 0));
+            com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raiseParty(level, there, 0.0F, STAGED + 2);
+            o = Villages.nearest(level, there, Villages.VILLAGE_RANGE);
+            if (o == null) {
+                out.add("NO-STAGE no neighbour could be raised");
+                return out;
+            }
+        }
+        for (Villages.Village t : new Villages.Village[]{ v, o }) {
+            Heraldry.chooseForTests(level, t);
+            showcaseArmy(level, t);
+        }
+        long day = level.getDayTime() / 24000L;
+        if (!Wars.atWar(v.id(), o.id())) WarAndPeace.declare(level, v.id(), o.id(), day, WarAndPeace.Goal.TRIBUTE, 20, "twenty coins in tribute");
+        Campaign old = of(v.id(), o.id());
+        if (old != null) {
+            if (old.battle != null) old.battle.abandon(level);
+            for (int i = 0; i < 2; i++) if (old.armies[i] != null) Armies.discharge(level, old.armies[i]);
+            ACTIVE.remove(Ledger.pair(old.a, old.b));
+        }
+        hurryForPictures();
+        Campaign c = begin(level, v, o, day, false, false);
+        if (c == null) {
+            out.add("NO-STAGE no campaign");
+            return out;
+        }
+        double dx = o.centre().getX() - v.centre().getX(), dz = o.centre().getZ() - v.centre().getZ(), n = Math.max(1, Math.sqrt(dx * dx + dz * dz));
+        c.ground = Battlefields.groundAt(level, at, dx / n, dz / n, Villages.name(v.id()) + " Field");
+        c.name = "the Battle of " + c.ground.name();
+        muster(level, c);
+        if (c.armies[0] == null || c.armies[1] == null) {
+            out.add("NO-STAGE an army could not be raised");
+            return out;
+        }
+        switch (phase) {
+            case "muster" -> { }
+            case "march" -> {
+                march(level, c);
+                for (int i = 0; i < 2; i++) c.along[i] = length(c.ways.get(i)) * 0.45;
+                for (int i = 0; i < 2; i++) column(level, c, i);
+            }
+            default -> {
+                for (int i = 0; i < 2; i++) c.ways.set(i, new ArrayList<>(List.of(campSpot(c, i))));
+                c.battle = Battles.openStaged(level, c, c.ground.centre(), c.ground.ax(), c.ground.az());
+                stage(c, Stage.BATTLE, level.getGameTime(), level.getGameTime());
+                c.battle.stagePhase(level, phase);
+            }
+        }
+        for (int i = 0; i < 2; i++) snap(level, c.armies[i]);
+        out.add("STAGED " + phase + " " + Villages.name(v.id()) + " against " + Villages.name(o.id()) + " on " + c.ground.name() + " ("
+            + c.armies[0].formation.words + " against " + c.armies[1].formation.words + ")");
+        out.addAll(views(level, c));
+        return out;
+    }
+
+    /** Fifteen of the town's grown folk to the watch (twelve march; the rest are its home guard), armed in iron for nothing (a showcase), one in four with a bow; folk raised to make them up. */
+    static void showcaseArmy(ServerLevel level, Villages.Village t) {
+        List<VillageFolkEntity> grown = new ArrayList<>();
+        UUID elder = Villages.elder(t.id());
+        for (AssistantEntity e : Villages.folkOf(t.id())) {
+            if (e instanceof VillageFolkEntity f && !f.isBaby() && f.isAlive() && !f.getUUID().equals(elder) && !f.isShowcase()) grown.add(f);
+        }
+        int armed = STAGED + STAGED / 4;                                   // a fifth stays home as the home guard
+        for (int k = grown.size(); k < armed + 1; k++) {
+            VillageFolkEntity f = com.jrpetty.mcassistant.block.VillageFolkSpawnerBlock.raise(level, t.centre(), 0.0F);
+            if (f != null) grown.add(f);
+        }
+        int n = 0;
+        for (VillageFolkEntity f : grown) {
+            if (n >= armed) break;
+            f.setJob(AssistantEntity.StationTask.GUARD);
+            f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.HEAD, new ItemStack(net.minecraft.world.item.Items.IRON_HELMET));
+            f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.CHEST, new ItemStack(net.minecraft.world.item.Items.IRON_CHESTPLATE));
+            f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.LEGS, new ItemStack(net.minecraft.world.item.Items.IRON_LEGGINGS));
+            f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.FEET, new ItemStack(net.minecraft.world.item.Items.IRON_BOOTS));
+            f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(net.minecraft.world.item.Items.IRON_SWORD));
+            if (n % 4 == 3) {
+                f.insertGiven(new ItemStack(net.minecraft.world.item.Items.BOW));
+                f.insertGiven(new ItemStack(net.minecraft.world.item.Items.ARROW, 32));
+            } else {
+                ItemStack shield = new ItemStack(net.minecraft.world.item.Items.SHIELD);
+                Heraldry.Design d = Heraldry.design(t.id());
+                if (d != null) Arms.emblazon(shield, Heraldry.item(level, t.id(), d));
+                f.setItemSlot(net.minecraft.world.entity.EquipmentSlot.OFFHAND, shield);
+            }
+            f.setHealth(f.getMaxHealth());
+            n++;
+        }
+        Heraldry.Design d = Heraldry.design(t.id());
+        if (d != null) TownWork.give(level, t, Heraldry.item(level, t.id(), d));        // the standard for its bearer
+        TownWork.give(level, t, new ItemStack(net.minecraft.world.item.Items.GOAT_HORN));
+        TownWork.give(level, t, new ItemStack(net.minecraft.world.item.Items.LEATHER));
+    }
+
+    /** Pictures: the staged battle let go, the armies home. */
+    public static String unstage(ServerLevel level, UUID town) {
+        Campaign c = ofTown(town);
+        if (c == null) return "No battle staged here.";
+        if (c.battle != null) c.battle.abandon(level);
+        c.battle = null;
+        goHome(level, c, "the stage struck");
+        return "The staged battle is over; the armies go home.";
+    }
+
+    /** Every fighter of the army set down in its place now, facing the way it is told (the pictures don't wait). */
+    static void snap(ServerLevel level, @Nullable Armies.Army a) {
+        if (a == null) return;
+        for (Armies.Fighter f : a.fighters) {
+            if (!f.placed || !(level.getEntity(f.id) instanceof VillageFolkEntity e)) continue;
+            BlockPos to = BlockPos.containing(f.tx, f.ty, f.tz);
+            if (!level.isLoaded(to)) continue;
+            e.getNavigation().stop();
+            Riding.carry(e, f.tx, f.ty, f.tz);
+            Armies.face(e, f.yaw);
+        }
+    }
+
     // ------------------------------------------------------------------ tests and pictures
 
     /**

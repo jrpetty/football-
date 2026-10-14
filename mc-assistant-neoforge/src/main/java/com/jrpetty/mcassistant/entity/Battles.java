@@ -220,8 +220,66 @@ public final class Battles {
         }
 
         void to(ServerLevel level, BattleModel.Phase p) {
+            if (hold != null && phase == hold) return;                 // staged for the pictures: it stays here
             phase = p;
             phaseAt = level.getGameTime();
+        }
+
+        /** Staged for the pictures (Campaigns.stage): the battle stays at this phase till it is let go. */
+        @Nullable BattleModel.Phase hold;
+
+        /**
+         * Pictures: the battle set straight at a phase and held there: the lines formed (lineup), the Captains in the
+         * middle (parley), the volleys (volley), the lines locked (clash), one side running (rout), the medics and the
+         * captives (aftermath). The fighters' places worked out at once, for the stage to set them down in.
+         */
+        void stagePhase(ServerLevel level, String what) {
+            switch (what) {
+                case "parley" -> stageAt(level, BattleModel.Phase.PARLEY);
+                case "volley" -> {
+                    stageAt(level, BattleModel.Phase.VOLLEYS);
+                    shields(true);
+                }
+                case "clash" -> {
+                    forward[0] = forward[1] = (Battlefields.GAP - 3) / 2.0;
+                    stageAt(level, BattleModel.Phase.CLASH);
+                }
+                case "rout" -> {
+                    forward[0] = forward[1] = (Battlefields.GAP - 3) / 2.0;
+                    phase = BattleModel.Phase.CLASH;
+                    for (int i = 0; i < 2; i++) array(level, side[i], origin(i), 0, this, i);
+                    breakSide(level, 1, BattleModel.Outcome.ROUT);
+                    hold = BattleModel.Phase.PURSUIT;
+                }
+                case "aftermath" -> {
+                    forward[0] = forward[1] = (Battlefields.GAP - 3) / 2.0;
+                    for (int i = 0; i < 2; i++) {
+                        int n = 0;
+                        for (Armies.Fighter f : side[i].fighters) {
+                            if (n >= (i == 0 ? 2 : 4) || f.rank != Armies.Rank.NONE || f.role == BattleModel.Role.MEDIC) continue;
+                            if (level.getEntity(f.id) instanceof VillageFolkEntity e) Armies.yieldNow(e, f, null);
+                            f.placed = true;
+                            double[] o = origin(i);
+                            f.place(level, o[0] + o[2] * 2 + -o[3] * (n * 2 - 3), o[1] + o[3] * 2 + o[2] * (n * 2 - 3), Armies.yawTo(o[2], o[3]));
+                            n++;
+                        }
+                    }
+                    winner = 0;
+                    outcome = BattleModel.Outcome.RETREAT;
+                    stageAt(level, BattleModel.Phase.AFTERMATH);
+                }
+                default -> stageAt(level, BattleModel.Phase.FORM);
+            }
+            for (int i = 0; i < 2; i++) array(level, side[i], phase == BattleModel.Phase.AFTERMATH && i == 1 ? origin(1) : origin(i), 0, this, i);
+            if (phase == BattleModel.Phase.PARLEY) parley(level, soon(PARLEY) / 4);
+        }
+
+        /** Set straight to this phase (the pictures), and held there. */
+        void stageAt(ServerLevel level, BattleModel.Phase p) {
+            hold = null;
+            phase = p;
+            phaseAt = level.getGameTime() - EVERY;
+            hold = p;
         }
 
         // -------------------------------------------------------------- a player's horn
@@ -382,7 +440,7 @@ public final class Battles {
                 Armies.Fighter cap = caps[i];
                 if (cap == null || cap.down()) continue;
                 double s = i == 0 ? -2.0 : 2.0;
-                if (in < soon(PARLEY) - 120) cap.place(level, centre.getX() + 0.5 + ax * s, centre.getZ() + 0.5 + az * s, Armies.yawTo(-ax * Math.signum(s), -az * Math.signum(s)));
+                if (in < soon(PARLEY) - 120 || hold == BattleModel.Phase.PARLEY) cap.place(level, centre.getX() + 0.5 + ax * s, centre.getZ() + 0.5 + az * s, Armies.yawTo(-ax * Math.signum(s), -az * Math.signum(s)));
             }
             long half = soon(PARLEY) / 2 / EVERY * EVERY;
             if (in == half) {
@@ -466,7 +524,10 @@ public final class Battles {
             boolean any = side[0].count(BattleModel.Role.ARCHER) + side[1].count(BattleModel.Role.ARCHER) > 0;
             if (any && now - lastVolley >= VOLLEY) {
                 lastVolley = now;
-                for (int i = 0; i < 2; i++) if (volleys[i] < VOLLEYS) volley(level, i, false);
+                for (int i = 0; i < 2; i++) {
+                    if (hold == BattleModel.Phase.VOLLEYS && volleys[i] >= VOLLEYS) volleys[i] = 0;   // staged: the volleys keep coming
+                    if (volleys[i] < VOLLEYS) volley(level, i, false);
+                }
             }
             if (!any || volleys[0] >= VOLLEYS && volleys[1] >= VOLLEYS || in > VOLLEY * (VOLLEYS + 2)) {
                 to(level, BattleModel.Phase.ADVANCE);
@@ -1066,6 +1127,19 @@ public final class Battles {
         return sum / a.fighters.size();
     }
 
+    /**
+     * Pictures: a battle opened in full whoever is watching (Campaigns.stage), its fighters armed for the field.
+     */
+    static Battle openStaged(ServerLevel level, Campaigns.Campaign c, BlockPos centre, double ax, double az) {
+        Battle b = new Battle(c, centre, ax, az, false, true);
+        b.began = b.phaseAt = level.getGameTime();
+        b.ragged = 0.35;
+        for (int i = 0; i < 2; i++) {
+            for (Armies.Fighter f : c.armies[i].fighters) if (level.getEntity(f.id) instanceof VillageFolkEntity e) Armies.arm(e, f);
+        }
+        return b;
+    }
+
     /** Wait so long, or less for the tests. */
     static long soon(long t) {
         return Campaigns.soonBattle(t);
@@ -1314,6 +1388,12 @@ public final class Battles {
             b.story.add(name(x) + "'s banner went down.");
             b.order(level, i, "The banner! The banner's down!");
         }
+    }
+
+    /** Is this fighter in a battle staged for the pictures (nobody dies on a stage)? */
+    static boolean staged(Armies.Fighter x) {
+        Battle b = battleOf(x);
+        return b != null && b.hold != null;
     }
 
     @Nullable

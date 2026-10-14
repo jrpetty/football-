@@ -530,4 +530,35 @@ public class BattleGameTests {
             helper.succeed();
         });
     }
+
+    // ------------------------------------------------------------------ bt07
+
+    /**
+     * The stage for the pictures (/village battle stage): a town with no neighbour gets one raised, twelve a side are
+     * armed, and the battle is set at every phase in turn, each with something to look at.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "bt07_stage")
+    public static void bt07_stage(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        start(level);
+        int x = 1838000;
+        Villages.Village a = town(level, x, 6);
+        helper.assertTrue(a != null, "a town");
+        helper.runAtTickTime(20, () -> {
+            Kit.hold(level, x + 180, Z, 64);
+            Kit.prepare(level, x + 180, Z, 64);
+            Kit.hold(level, x + 90, Z, 48);
+            Kit.prepare(level, x + 90, Z, 48);
+            for (String phase : Campaigns.PHASES) {
+                List<String> out = Campaigns.stage(level, a, Kit.surface(level, x + 90, Z), phase);
+                Kit.log("bt07 " + phase + ": " + String.join(" | ", out));
+                helper.assertTrue(!out.isEmpty() && out.get(0).startsWith("STAGED " + phase), "staged at " + phase + ": " + out);
+                helper.assertTrue(out.size() > 1, "something to look at, at " + phase);
+            }
+            Campaigns.Campaign c = Campaigns.ofTown(a.id());
+            helper.assertTrue(c != null && c.army(0) != null && c.army(0).fighters().size() >= 12 && c.army(1).fighters().size() >= 12,
+                "twelve a side and more");
+            helper.succeed();
+        });
+    }
 }

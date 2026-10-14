@@ -138,6 +138,13 @@ public final class Battlefields {
         return (hi - lo) * 2.0 + bad * 3.0;
     }
 
+    /** The pictures: the field here, its way from the first town's side to the second's given, what is round it looked over. */
+    static Ground groundAt(ServerLevel level, BlockPos at, double ax, double az, String name) {
+        BlockPos centre = surface(level, at);
+        return new Ground(centre, ax, az, rise(level, centre, ax, az, -1), rise(level, centre, ax, az, 1), cover(level, centre, ax, az, -1),
+            cover(level, centre, ax, az, 1), view(level, centre, ax, az), name, true);
+    }
+
     static BlockPos surface(ServerLevel level, BlockPos p) {
         if (!level.hasChunk(p.getX() >> 4, p.getZ() >> 4)) return p;
         return new BlockPos(p.getX(), level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p.getX(), p.getZ()), p.getZ());

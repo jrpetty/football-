@@ -3611,74 +3611,61 @@ def defence_stage(r, look, cx, cz):
 
 
 def war_stage(r, look, cx, cz):
-    """[war] Organised battles (entity/Campaigns, Armies, Battles, Battlefields), in a grown town with a neighbour. /village
-    war battle stage puts the nearest town at war with its neighbour (declared now if it is not) and begins a campaign at
-    once, its waits short; /village war battle next moves it on a stage at a time (a march brought to its end) and
-    /village war battle view says where to look from for what it is doing (VIEW name eye target). The camera stays near
-    the armies all the way, so everything is fought in full. Pictures: the army drawn up on the square in its surcoats
-    before it marches; the column on the road behind its banner; the camps on the field; both armies drawn up facing
-    each other from the side and from the hill; the Captain with the banner close to at the parley and the speeches;
-    the clash; then a siege: the ram at the gate. Then /village war battle and the town's war page. Not wired in."""
+    """[war] Organised battles, phase by phase (entity/Campaigns, Armies, Battles, Battlefields). /village battle stage
+    <phase>, run on open ground east of the town, stages a battle between the town and its neighbour (one raised 180
+    blocks east when there is none near), twelve a side armed for nothing, the field at that spot, and holds it at
+    that phase; it says where to look from (VIEW name eye target). Cinematic pictures, from the hill and close to:
+    each army drawn up on its square in its surcoats before it marches; the column on the road behind its banner;
+    both lines drawn up facing each other in their formations and colours (from the side and from the hill); the
+    Captain with the banner; the envoys meeting in the middle at the parley; the arrow volleys arcing over; the lines
+    locked in the clash; the rout; the medics and the captives after. Then /village battle stage end, /village war
+    battle, and the town's war page."""
     pattern = r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)"
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
-    r.cmd("time set 1000")
+    midday(r)
     r.cmd("weather clear")
     hy = ground_height(r, cx, cz)
-    r.cmd("tp %s %d %d %d" % (USER, cx + 10, hy + 20, cz + 10))
-    time.sleep(8)
-    out = r.cmd("execute positioned %d %d %d run village war battle stage" % (cx, hy + 1, cz))
-    say("battle stage: " + out[:600])
-    field = re.search(r"FIELD (-?\d+) (-?\d+) (-?\d+)", out)
-    if not field:
-        say("no campaign staged; nothing to photograph")
-        return
-    fx, fy, fz = int(field.group(1)), int(field.group(2)), int(field.group(3))
+    fx, fz = cx + 90, cz                               # the field: open ground east of the town, towards the neighbour
+    r.cmd("tp %s %d %d %d" % (USER, fx, hy + 30, fz + 30))
+    time.sleep(10)                                     # the field's ground arrives
 
-    def step(cmd, wait):
-        o = r.cmd("execute positioned %d %d %d run village war battle %s" % (cx, hy + 1, cz, cmd))
-        say("battle %s: %s" % (cmd, o[:500]))
-        time.sleep(wait)
-        return o
+    def stage(phase, settle):
+        out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village battle stage %s" % (fx, fz, phase))
+        say("battle stage %s: %s" % (phase, out[:700]))
+        time.sleep(settle)
+        return {name: (int(x), int(y), int(z), int(ax), int(ay), int(az)) for name, x, y, z, ax, ay, az in re.findall(pattern, out)}
 
-    def shoot(prefix, names, wait):
-        o = step("view", 0)
-        for name, x, y, z, ax, ay, az in re.findall(pattern, o):
-            if name in names:
-                look("50-war-" + prefix + "-" + name, int(x) + 0.5, int(y), int(z) + 0.5, int(ax) + 0.5, int(ay) + 0.5, int(az) + 0.5, wait=wait)
+    def shoot(views, prefix, names, wait):
+        for name in names:
+            if name in views:
+                x, y, z, ax, ay, az = views[name]
+                look("50-war-" + prefix + "-" + name, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
 
-    step("next", 20)                                   # the muster: the army walks to its ranks on the square
-    shoot("1", ["muster"], 4)
-    step("next", 10)                                   # the march: out of the square in column behind the banner
-    shoot("2", ["column"], 4)
-    r.cmd("tp %s %d %d %d" % (USER, fx, fy + 24, fz))  # the field watched: the camps pitched, the battle fought in full
-    time.sleep(6)
-    step("next", 12)
-    shoot("3", ["camp0", "camp1"], 4)
-    step("next", 22)                                   # the battle: the lines form to the drums, the stand-off
-    shoot("4", ["side", "hill", "high"], 3)            # both armies drawn up in their colours, facing each other
-    shoot("4b", ["parley"], 2)                         # the envoys meeting in the middle under their banners
-    time.sleep(12)
-    shoot("5", ["captain"], 2)                         # the Captain's speech, the banner beside it
-    time.sleep(20)
-    shoot("6", ["hill", "high", "clash"], 3)           # the volleys, the advance, the clash
-    time.sleep(25)
-    shoot("7", ["clash", "side"], 3)
+    views = stage("muster", 6)                         # drawn up on the square in surcoats, the banner, the Captain's cloak
+    shoot(views, "1", ["muster"], 6)
+    views = stage("march", 6)                          # in column on the road, two or three abreast behind the banner
+    shoot(views, "2", ["column"], 6)
+    views = stage("lineup", 8)                         # both armies across the field in their formations and colours
+    shoot(views, "3", ["hill", "high", "side", "captain"], 5)
+    views = stage("parley", 8)                         # the Captains and their standards met in the middle
+    shoot(views, "4", ["parley", "side"], 4)
+    views = stage("volley", 4)                         # "Archers, loose!": the arrows arcing over onto raised shields
+    shoot(views, "5", ["side", "hill", "high"], 2)
+    views = stage("clash", 6)                          # the lines locked: sparks, dust, the din
+    shoot(views, "6", ["clash", "hill", "high", "captain"], 3)
+    views = stage("rout", 4)                           # one side broken and running, the other cheering
+    shoot(views, "7", ["hill", "high", "side"], 3)
+    views = stage("aftermath", 8)                      # the medics binding the wounded, the captives led off
+    shoot(views, "8", ["clash", "side"], 4)
     say("battle: " + r.cmd("execute positioned %d %d %d run village war battle" % (cx, hy + 1, cz))[:900])
-    for _ in range(4):                                 # home, and the campaign done
-        step("next", 3)
-    out = step("siege", 2)                             # a siege: the neighbour holds its walls
-    for _ in range(3):
-        step("next", 6)
-    shoot("8", ["gate", "camp0"], 4)
-    step("next", 25)                                   # the assault: the ram at the gate
-    shoot("9", ["gate", "clash"], 3)
+    say("end: " + r.cmd("execute positioned %d %d %d run village battle stage end" % (cx, hy + 1, cz)))
     r.cmd("gamemode creative %s" % USER)
     r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
     time.sleep(3)
     say("books: " + r.cmd("execute as %s at @s run village war books" % USER))
     time.sleep(4)
-    shot("50-war-10-page")
+    shot("50-war-9-page")
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the war stage: %s" % client_alive())
@@ -4125,6 +4112,10 @@ def main():
         flats_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("flats failed: %s" % e)
+    try:
+        war_stage(r, look, cx, cz)                     # [war] the battle, phase by phase
+    except Exception as e:  # noqa: BLE001
+        say("war stage failed: %s" % e)
     alive = client_alive()
     say("alive at the end: %s" % alive)
     say("PASS the client drew the village and kept running" if alive else "FAIL the client died while drawing the village")

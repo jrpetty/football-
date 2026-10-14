@@ -33,6 +33,11 @@ import java.util.List;
  *   /village war battle siege   (ops) as stage, the neighbour holding its walls
  *   /village war battle next    (ops) the campaign's next stage now (a march brought to its end first); prints
  *                               "STAGE name" and what to look at now
+ *   /village battle stage &lt;phase&gt;  (ops) for the pictures: a battle staged between the nearest town and its neighbour
+ *                               (one raised 180 blocks east with none near), twelve a side armed for nothing, the field
+ *                               here, set at muster, march, lineup, parley, volley, clash, rout or aftermath and held
+ *                               there; prints "STAGED ..." and "VIEW name x y z ax ay az" for each scene to look at
+ *   /village battle stage end   (ops) the staged battle let go: the armies home
  *   /village war battle view    (ops) where to look from now: "VIEW name x y z ax ay az" for each scene (the muster,
  *                               the column, the camp, the lines from the side and the hill, the Captain, the clash,
  *                               the gate)
@@ -48,6 +53,12 @@ public final class BattleCommands {
     @SubscribeEvent
     public static void onRegisterCommands(RegisterCommandsEvent event) {
         event.getDispatcher().register(Commands.literal("village")
+            .then(Commands.literal("battle")
+                .then(Commands.literal("stage").requires(src -> src.hasPermission(2))
+                    .then(Commands.argument("phase", com.mojang.brigadier.arguments.StringArgumentType.word())
+                        .suggests((ctx, b) -> net.minecraft.commands.SharedSuggestionProvider.suggest(
+                            java.util.stream.Stream.concat(Campaigns.PHASES.stream(), java.util.stream.Stream.of("end")), b))
+                        .executes(BattleCommands::stagePhase))))
             .then(Commands.literal("war")
                 .then(Commands.literal("join").executes(BattleCommands::join))
                 .then(Commands.literal("battle").executes(BattleCommands::status)
@@ -121,6 +132,25 @@ public final class BattleCommands {
             + " VIEW " + (view == null ? "none" : view.getX() + " " + view.getY() + " " + view.getZ());
         ctx.getSource().sendSuccess(() -> Component.literal(out), false);
         return 1;
+    }
+
+    private static int stagePhase(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = near(ctx);
+        if (v == null) return 0;
+        ServerLevel level = ctx.getSource().getLevel();
+        String phase = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "phase");
+        if (phase.equals("end")) {
+            String done = Campaigns.unstage(level, v.id());
+            ctx.getSource().sendSuccess(() -> Component.literal(done), false);
+            return 1;
+        }
+        if (!Campaigns.PHASES.contains(phase)) {
+            ctx.getSource().sendFailure(Component.literal("A phase: " + String.join(", ", Campaigns.PHASES) + ", or end."));
+            return 0;
+        }
+        List<String> out = Campaigns.stage(level, v, BlockPos.containing(ctx.getSource().getPosition()), phase);
+        ctx.getSource().sendSuccess(() -> Component.literal(String.join("\n", out)), false);
+        return out.isEmpty() || out.get(0).startsWith("NO-") ? 0 : 1;
     }
 
     private static int next(CommandContext<CommandSourceStack> ctx) {
