@@ -686,6 +686,7 @@ public final class Health {
         for (VillageFolkEntity p : patients(v.id())) {
             State s = p.health();
             if (now - s.tended < CARE_EVERY && now >= s.tended) continue;
+            if (ShiftTasks.patientTaken(p.getUUID())) continue;               // [roles-a] a player on its shift is going to it
             String what = s.infirmary ? "tending " + p.displayNameCap() + " at the infirmary"
                 : "visiting " + p.displayNameCap() + ", laid up at home";
             // [roles-a] The town's healer first (Healers): sent to the bedside, and it sees to the patient when it gets there.
@@ -701,6 +702,28 @@ public final class Health {
             return p;
         }
         return null;
+    }
+
+    /** [roles-a] The patients due for care now (not seen to within the minute), the neediest first: the healer's round's
+     *  and a player's shift's (ShiftTasks). */
+    public static List<VillageFolkEntity> dueForCare(UUID village, long now) {
+        List<VillageFolkEntity> out = new ArrayList<>();
+        for (VillageFolkEntity p : patients(village)) {
+            long tended = p.health().tended;
+            if (now - tended >= CARE_EVERY || now < tended) out.add(p);
+        }
+        return out;
+    }
+
+    /** [roles-a] A player on its shift as the healer's assistant at the bedside: the patient seen to as the healer would
+     *  (the stores' remedies), in the player's name. Says what with. */
+    public static String tendByHand(ServerLevel level, Villages.Village v, VillageFolkEntity p, net.minecraft.world.entity.player.Player by) {
+        long now = level.getGameTime(), day = level.getDayTime() / 24000L;
+        String name = by.getName().getString();
+        tend(level, v, p, null, name, day, now);
+        p.persona().feelFor(by.getUUID(), name, 2);
+        p.sayLater(FolkTalk.pick(p.getRandom(), "Thank you, " + name + ".", "*cough* That's kind of you.", "Bless you, " + name + "."), 30);
+        return p.health().tendedWith;
     }
 
     /** Who is at the bedside: the town's care, else (the works done at once, as in the tests) the nearest well folk. */
@@ -734,6 +757,12 @@ public final class Health {
 
     /** At the bedside: a remedy out of the stores, or company alone. */
     static void tend(ServerLevel level, Villages.Village v, VillageFolkEntity p, @Nullable VillageFolkEntity carer, long day, long now) {
+        tend(level, v, p, carer, null, day, now);
+    }
+
+    /** At the bedside, by a folk, or by a player ([roles-a] {@code byName}: the healer's assistant on its shift). */
+    static void tend(ServerLevel level, Villages.Village v, VillageFolkEntity p, @Nullable VillageFolkEntity carer, @Nullable String byName,
+                     long day, long now) {
         State s = p.health();
         List<Remedy> order = s.wounded && s.cold <= 0 ? List.of(POTION, CARROT, HONEY, BERRIES) : List.of(HONEY, CARROT, BERRIES, POTION);
         Remedy kitchen = Kitchen.remedy(level, v, p, s.wounded && s.cold <= 0);      // [kitchen] a bandage for a wound, the healer's tea for a cold
@@ -744,7 +773,7 @@ public final class Health {
             got = Crafts.takeOne(level, v, r.what());
             if (!got.isEmpty()) { used = r; break; }
         }
-        String who = carer == null ? "the town's healer" : carer.displayNameCap();
+        String who = carer != null ? carer.displayNameCap() : byName != null ? byName : "the town's healer";
         RandomSource r = p.getRandom();
         Book b = book(v.id(), day);
         int eased = used == null ? COMFORT : used.eases();

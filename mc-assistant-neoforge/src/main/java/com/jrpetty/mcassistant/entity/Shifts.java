@@ -524,7 +524,8 @@ public final class Shifts {
         if (v == null || !p.isAlive()) { end(level, p, s, "The town is gone."); return; }
         if (now >= s.ends) { end(level, p, s, "The shift's hours are up."); return; }
         if (Raids.underAlarm(s.village) && s.role != ShiftRole.WATCH) { end(level, p, s, "The bell rang: everybody to safety."); return; }
-        boolean roams = s.role == ShiftRole.HAUL || s.role == ShiftRole.SMELT || s.role == ShiftRole.FARM || s.role == ShiftRole.WATCH;
+        boolean roams = s.role == ShiftRole.HAUL || s.role == ShiftRole.SMELT || s.role == ShiftRole.FARM || s.role == ShiftRole.WATCH
+            || s.role == ShiftRole.HEALER;                                   // [roles-a] the laid-up at home as well as the ward
         double reach = roams ? Villages.townReach(s.village) + ROAM : NEAR_POST;
         BlockPos from = roams ? v.centre() : s.post;
         boolean away = p.level() != level || Math.sqrt(p.blockPosition().distSqr(from)) > reach && !(s.role == ShiftRole.SMELT && s.task != null);

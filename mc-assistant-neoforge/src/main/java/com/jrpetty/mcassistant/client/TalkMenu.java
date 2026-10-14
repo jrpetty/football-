@@ -217,6 +217,7 @@ public final class TalkMenu {
     static final Entry HAGGLE = ask("haggle", Items.COPPER_INGOT, TalkTopic.HAGGLE, trade("STORE", "SHOP", "COOK"));
     static final Entry MEAL = ask("meal", Items.BREAD, TalkTopic.MEAL);
     static final Entry LESSON = say("lesson", Items.WRITTEN_BOOK, "What's my next lesson?");
+    static final Entry SEE_TO = ask("see_to", Items.GLISTERING_MELON_SLICE, TalkTopic.SEE_TO);   // [roles-a] the healer
 
     /** The profile and skills pages, the work record and the pack: the header's links. */
     public static final Entry PROFILE = special("profile", Items.PAPER, Kind.PAGE);
@@ -300,7 +301,8 @@ public final class TalkMenu {
                 ask("commission", Items.OAK_PLANKS, TalkTopic.COMMISSION),
                 ask("sponsor", Items.PUMPKIN_PIE, TalkTopic.SPONSOR),
                 ask("escort", Items.SHIELD, TalkTopic.ESCORT),
-                ask("charter", Items.MINECART, TalkTopic.CHARTER))),
+                ask("charter", Items.MINECART, TalkTopic.CHARTER),
+                SEE_TO)),                                                    // [roles-a] the healer sees to you
         // Town: its ways, its people, its government, its law, its records.
         List.of(
             say("ways", Items.WHITE_BANNER, "What's this town like?"),
@@ -376,6 +378,7 @@ public final class TalkMenu {
             case "GUARD" -> WATCH;
             case "SHOP" -> FOR_SALE;
             case "COOK" -> MEAL;
+            case "HEAL" -> SEE_TO;                                           // [roles-a]
             default -> null;
         };
     }

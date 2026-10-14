@@ -239,6 +239,12 @@ public final class Healers {
         h.note(AssistantEntity.Deed.FOLK_HEALED, 1);                // its experience at the trade, by the deed
     }
 
+    /** Is a healer of the town on its way to this patient? */
+    static boolean claimed(UUID village, UUID patient) {
+        for (VillageFolkEntity h : healers(village)) if (patient.equals(ROUND.get(h.getUUID())) && free(h)) return true;
+        return false;
+    }
+
     /** Who the healer is going to just now, if anybody (tests, the card). */
     @Nullable
     public static UUID goingTo(VillageFolkEntity h) {

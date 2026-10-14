@@ -119,6 +119,11 @@ public final class Wardens {
         return who.isEmpty() ? "no quarter has folk enough living in it for a warden" : String.join(", ", who);
     }
 
+    /** [roles-a] Is this warden out on its round just now? */
+    static boolean walking(VillageFolkEntity f) {
+        return WALKS.containsKey(f.getUUID());
+    }
+
     /** The quarter this folk is warden of, or null. */
     @Nullable
     static Districts.District quarterOf(VillageFolkEntity f) {
@@ -200,6 +205,7 @@ public final class Wardens {
             end(level, f, w, v, false);
             return null;
         }
+        Offices.lantern(f, level, v, level.isNight());                 // [roles-a] a lantern from the stores after dark
         if (w.quarrel != null) return talkRound(f, level, w);
         if (w.at >= w.stops.size()) {
             // Home by the square, with whatever it picked up, into the stores.
@@ -380,6 +386,7 @@ public final class Wardens {
      */
     static void end(ServerLevel level, VillageFolkEntity f, Walk w, @Nullable Villages.Village v, boolean home) {
         WALKS.remove(f.getUUID());
+        Offices.lantern(f, level, v, false);                            // [roles-a] the lantern back to the stores
         for (ItemStack s : w.sack) {
             if (home && v != null) TownWork.give(level, v, s);
             ItemStack left = s.isEmpty() ? ItemStack.EMPTY : f.insertItem(s);

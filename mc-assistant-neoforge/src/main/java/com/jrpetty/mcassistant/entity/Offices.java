@@ -8,6 +8,8 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -69,6 +71,7 @@ public final class Offices {
 
     public static void resetForTests() {
         BOOKS.clear();
+        LANTERNS.clear();
     }
 
     /** The offices this folk holds (none for a child or a folk of no town). */
@@ -151,6 +154,36 @@ public final class Offices {
         StringBuilder sb = new StringBuilder();
         for (Office o : paid(f)) sb.append(", +").append(allowance(o, dayUnit)).append(" as ").append(o.words);
         return sb.toString();
+    }
+
+    // ------------------------------------------------------------------ the warden's lantern
+
+    /** Wardens holding a lantern out of the stores on their night round. */
+    private static final Set<UUID> LANTERNS = ConcurrentHashMap.newKeySet();
+
+    /**
+     * [Wardens.hold, end] A warden's lantern on its round after dark: one out of the stores into its other hand (none in
+     * the stores, none carried), and back into them when the round is done. A real lantern: it is never made from nothing.
+     */
+    static void lantern(VillageFolkEntity f, ServerLevel level, @Nullable Villages.Village v, boolean on) {
+        net.minecraft.world.entity.EquipmentSlot hand = net.minecraft.world.entity.EquipmentSlot.OFFHAND;
+        ItemStack off = f.getItemBySlot(hand);
+        if (on) {
+            if (LANTERNS.contains(f.getUUID()) || v == null || !off.isEmpty()) return;
+            ItemStack l = Crafts.takeOne(level, v, s -> s.is(Items.LANTERN));
+            if (l.isEmpty()) return;
+            f.setItemSlot(hand, l.copyWithCount(1));
+            LANTERNS.add(f.getUUID());
+            return;
+        }
+        if (!LANTERNS.remove(f.getUUID()) || !off.is(Items.LANTERN)) return;
+        f.setItemSlot(hand, ItemStack.EMPTY);
+        if (v != null) {
+            Crafts.store(level, v, off);
+        } else {
+            ItemStack left = f.insertItem(off);
+            if (!left.isEmpty()) f.spawnAtLocation(left);
+        }
     }
 
     // ------------------------------------------------------------------ the books

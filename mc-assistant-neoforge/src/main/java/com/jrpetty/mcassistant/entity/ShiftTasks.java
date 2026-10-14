@@ -163,6 +163,13 @@ public final class ShiftTasks {
                 if (store == null || gaps.isEmpty()) return null;
                 return new Post(store, null, true, "");
             }
+            case HEALER -> {
+                // [roles-a] The infirmary, with somebody laid up who has not been seen to lately.
+                com.jrpetty.mcassistant.village.Ledger.Building ward = Infirmary.of(id);
+                if (ward == null) return null;
+                boolean due = !Health.dueForCare(id, level.getGameTime()).isEmpty();
+                return new Post(ward.anchor(), null, due, "Nobody is laid up just now.");
+            }
         }
         return null;
     }
@@ -201,6 +208,7 @@ public final class ShiftTasks {
             case SMELT -> smeltTask(level, p, s, now);
             case WATCH -> watchTask(level, p, s, v, now);
             case BUILD -> buildTask(level, p, s, v, now);
+            case HEALER -> healerTask(level, p, s, v, now);              // [roles-a]
         };
         if (t != null) {
             s.task = t;
@@ -220,6 +228,7 @@ public final class ShiftTasks {
             case SMELT -> "No ore to smelt just now.";
             case WATCH -> "On to the next post.";
             case BUILD -> "Nothing to lay just now.";
+            case HEALER -> "Nobody needs seeing to just now. Wait at the infirmary.";   // [roles-a]
         };
     }
 
@@ -503,6 +512,31 @@ public final class ShiftTasks {
         return t;
     }
 
+    // ---- [roles-a] the healer's assistant
+
+    /** The neediest patient due for care that nobody else is going to: to its bedside. */
+    @Nullable
+    private static Task healerTask(ServerLevel level, ServerPlayer p, Shift s, Villages.Village v, long now) {
+        for (VillageFolkEntity pt : Health.dueForCare(v.id(), now)) {
+            if (Healers.claimed(v.id(), pt.getUUID()) || patientTaken(pt.getUUID())) continue;
+            BlockPos at = pt.blockPosition();
+            Task t = new Task("saw to a patient", "See to " + pt.displayNameCap() + ", laid up " + (pt.health().infirmary ? "at the infirmary" : "at home")
+                + " (marked): stand by the bedside.", at, now, walk(p.blockPosition(), at) + 160);
+            t.folk = pt.getUUID();
+            t.who = pt.displayNameCap();
+            t.marks.add(at);
+            return t;
+        }
+        return null;
+    }
+
+    /** Is a player's shift on its way to this patient? (The healer's round leaves it to them: Health.care.) */
+    public static boolean patientTaken(UUID patient) {
+        if (Shifts.ON.isEmpty()) return false;
+        for (Shift s : Shifts.ON.values()) if (s.role == ShiftRole.HEALER && s.task != null && patient.equals(s.task.folk)) return true;
+        return false;
+    }
+
     // ---- the builder's hand
 
     /** A missing block of a town building: where, its drawing's cell, the building's facing, and what to lay. */
@@ -603,6 +637,23 @@ public final class ShiftTasks {
                 if (t.target != null && p.blockPosition().distManhattan(new net.minecraft.core.Vec3i(t.target.getX(), p.getBlockY(), t.target.getZ())) <= 4) {
                     s.round++;
                     Shifts.done(level, p, s, t, 0, 1, "the " + POST_NAMES[Math.floorMod(s.round - 1, 4)] + " post", null);
+                }
+            }
+            case HEALER -> {
+                // [roles-a] At the bedside: the best remedy the stores have, or company; a patient up and about is no fault.
+                VillageFolkEntity pt = t.folk != null && level.getEntity(t.folk) instanceof VillageFolkEntity e && e.isAlive() ? e : null;
+                if (pt == null || !pt.health().lying || !Health.laidUp(pt)) {
+                    s.task = null;
+                } else if (p.distanceToSqr(pt) <= 3.0 * 3.0) {
+                    Villages.Village v = Villages.get(s.village);
+                    if (v != null) {
+                        String with = Health.tendByHand(level, v, pt, p);
+                        Shifts.done(level, p, s, t, 0, 1, "seeing to " + t.who + " (" + with + ")", pt);
+                    }
+                } else if (t.target != null && pt.blockPosition().distManhattan(t.target) > 2) {
+                    t.target = pt.blockPosition();                                     // carried off to the infirmary meanwhile
+                    t.marks.clear();
+                    t.marks.add(t.target);
                 }
             }
             case BUILD -> {
