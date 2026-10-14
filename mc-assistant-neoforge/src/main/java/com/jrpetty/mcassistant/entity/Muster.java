@@ -50,6 +50,10 @@ public final class Muster {
     static final int LIFT_AFTER = 20;
     /** How many points round the ring are looked at for level ground when the place is chosen. */
     static final int RING_LOOKS = 24;
+    /** How many looks (a second each) a guard of the ring comes no nearer its mark before it is let through to it, and
+     *  how near it must be by then (blocks). */
+    static final int STUCK_LOOKS = 4;
+    static final double LET_THROUGH = 7.0;
     /** How near its mark a guard of the ring stands (blocks). */
     static final double PLACED = 0.3;
 
@@ -68,6 +72,12 @@ public final class Muster {
         long lastCall = -100000L;
         /** The middle places still kept for the children and the frail on their way. */
         int kept;
+        /** The ring's turn for so many guards (and the way trouble comes): so every mark falls where a guard can stand. */
+        final Map<Integer, Double> turn = new HashMap<>();
+        /** Each guard's mark, worked out once a bell (by its place in the ring, of so many, the way trouble comes). */
+        final Map<Long, BlockPos> marks = new HashMap<>();
+        /** Each guard of the ring on its way: the nearest it has come to its mark, and the looks since it came nearer. */
+        final Map<UUID, double[]> progress = new HashMap<>();
 
         Gathering(BlockPos at, double inner, double ring, long since) {
             this.at = at;
@@ -300,6 +310,20 @@ public final class Muster {
         return Math.max(RING_LEAST, Math.min(RING_MOST, (int) Math.round(2 * Math.PI * g.ring / PER_GUARD)));
     }
 
+    /**
+     * Once a second while the town musters (Raids.tick): each guard of the ring kept to its part, as its own brain
+     * does when it looks (which a guard can go some while between, backed off from a job, or set on something else).
+     */
+    public static void tick(ServerLevel level, Villages.Village v) {
+        if (!called(v.id())) return;
+        Gathering g = NOW.get(v.id());
+        if (g == null) return;
+        Direction from = Raids.alarmFrom(v.id());
+        for (VillageFolkEntity guard : ringGuards(v.id(), g)) {
+            if (guard.isAlive() && guard.level() == level && !WatchClears.hunting(guard)) guard(level, v, guard, from);
+        }
+    }
+
     /** Is this guard one of the ring round the square now (and so not for the walls)? */
     public static boolean inRing(VillageFolkEntity guard) {
         UUID id = guard.ownerId();
@@ -338,13 +362,39 @@ public final class Muster {
         }
         BlockPos spot = ringSpot(level, g, k, ring.size(), from);
         // Its exact place on the ring (not the middle of the block it falls in), so the ring stands evenly spaced.
-        double[] at = ringPoint(g, k, ring.size(), from);
+        double[] at = ringPoint(level, g, k, ring.size(), from);
         double tx = BlockPos.containing(at[0], spot.getY(), at[1]).equals(spot) ? at[0] : spot.getX() + 0.5;
         double tz = BlockPos.containing(at[0], spot.getY(), at[1]).equals(spot) ? at[1] : spot.getZ() + 0.5;
         double dx = guard.getX() - tx, dz = guard.getZ() - tz, d2 = dx * dx + dz * dz;
         if (d2 > 2.25) {
             if (guard.getNavigation().isDone() || guard.tickCount % 20 == 0) {
-                guard.getNavigation().moveTo(tx, spot.getY(), tz, 1.3D);
+                // Round the crowd to its mark, never through it (wedged among the folk it would stand there all bell):
+                // out of the crowd first, then along the ring a step at a time while its mark is well round.
+                double cx = g.at.getX() + 0.5, cz = g.at.getZ() + 0.5, gx = guard.getX() - cx, gz = guard.getZ() - cz;
+                double phi = Math.atan2(gz, gx), theta = Math.atan2(tz - cz, tx - cx);
+                double turnBy = Math.atan2(Math.sin(theta - phi), Math.cos(theta - phi));
+                double nx = tx, nz = tz;
+                if (gx * gx + gz * gz < (g.ring - 1.0) * (g.ring - 1.0)) {
+                    nx = cx + (g.ring + 0.5) * Math.cos(phi);
+                    nz = cz + (g.ring + 0.5) * Math.sin(phi);
+                } else if (Math.abs(turnBy) > 0.6) {
+                    double b = phi + Math.signum(turnBy) * 0.6;
+                    nx = cx + (g.ring + 0.5) * Math.cos(b);
+                    nz = cz + (g.ring + 0.5) * Math.sin(b);
+                }
+                guard.getNavigation().moveTo(nx, spot.getY(), nz, 1.3D);
+                // Coming no nearer its mark for a few looks, a short way off (hemmed in by the crowd, or the founders'
+                // camp between): it is let through, as the child is to the middle, and takes its place.
+                double[] pr = g.progress.computeIfAbsent(guard.getUUID(), u -> new double[]{ Double.MAX_VALUE, 0, -1000 });
+                if (level.getGameTime() - pr[2] >= 20) {                          // a look a second, whenever the brain calls
+                    pr[2] = level.getGameTime();
+                    if (d2 < pr[0] - 0.25) { pr[0] = d2; pr[1] = 0; }
+                    else if (++pr[1] >= STUCK_LOOKS && d2 <= LET_THROUGH * LET_THROUGH) {
+                        g.progress.remove(guard.getUUID());
+                        guard.getNavigation().stop();
+                        guard.teleportTo(tx, spot.getY(), tz);
+                    }
+                }
             }
         } else if (d2 > PLACED * PLACED) {
             guard.getNavigation().stop();
@@ -366,24 +416,76 @@ public final class Muster {
     }
 
     /** Where on the ring the k-th of so many guards stands: evenly round it, the first (the captain) toward the
-     *  trouble. {x, z}. */
-    static double[] ringPoint(Gathering g, int k, int of, @Nullable Direction from) {
-        double ang = angle(k, of, from);
+     *  trouble (the whole ring turned a little, if need be, so every mark falls on ground to stand on). {x, z}. */
+    static double[] ringPoint(ServerLevel level, Gathering g, int k, int of, @Nullable Direction from) {
+        double ang = angle(level, g, k, of, from);
         return new double[]{ g.at.getX() + 0.5 + g.ring * Math.cos(ang), g.at.getZ() + 0.5 + g.ring * Math.sin(ang) };
     }
 
-    private static double angle(int k, int of, @Nullable Direction from) {
-        double base = from == null ? 0.0 : Math.atan2(from.getStepZ(), from.getStepX());
-        return base + 2 * Math.PI * k / Math.max(1, of);
+    private static int fromKey(int of, @Nullable Direction from) {
+        return of * 8 + (from == null ? 7 : from.ordinal());
     }
 
-    /** A guard's place in the ring as a block to stand in: its point's, or the nearest along its line that will do. */
+    private static double angle(ServerLevel level, Gathering g, int k, int of, @Nullable Direction from) {
+        double base = from == null ? 0.0 : Math.atan2(from.getStepZ(), from.getStepX());
+        return base + turn(level, g, of, from) + 2 * Math.PI * k / Math.max(1, of);
+    }
+
+    /** How far the ring is turned from facing the trouble square on: the least turn (within half a guard's share
+     *  either way) that puts the most marks on ground a guard can stand on. Worked out once a bell. */
+    static double turn(ServerLevel level, Gathering g, int of, @Nullable Direction from) {
+        int key = fromKey(of, from);
+        Double have = g.turn.get(key);
+        if (have != null) return have;
+        double base = from == null ? 0.0 : Math.atan2(from.getStepZ(), from.getStepX());
+        double span = Math.PI / Math.max(1, of), best = 0.0;
+        int bestN = -1;
+        search:
+        for (double d = 0.0; d <= span; d += 0.04) {
+            for (double sgn : d == 0.0 ? new double[]{ 1 } : new double[]{ 1, -1 }) {
+                int n = 0;
+                for (int k = 0; k < of; k++) {
+                    double ang = base + sgn * d + 2 * Math.PI * k / Math.max(1, of);
+                    BlockPos col = BlockPos.containing(g.at.getX() + 0.5 + g.ring * Math.cos(ang), g.at.getY(), g.at.getZ() + 0.5 + g.ring * Math.sin(ang));
+                    BlockPos p = Assemblies.standable(level, col, g.at.getY());
+                    if (p != null && p.getY() == g.at.getY()) n++;
+                }
+                if (n > bestN) { bestN = n; best = sgn * d; }
+                if (n == of) break search;
+            }
+        }
+        g.turn.put(key, best);
+        return best;
+    }
+
+    /** A guard's place in the ring as a block to stand in: its point's, or the nearest along its line that will do,
+     *  or a little way along the ring. Kept for the bell. */
     static BlockPos ringSpot(ServerLevel level, Gathering g, int k, int of, @Nullable Direction from) {
-        double ang = angle(k, of, from);
+        long key = ((long) fromKey(of, from) << 8) | k;
+        BlockPos have = g.marks.get(key);
+        if (have != null) return have;
+        BlockPos p = ringSpotNow(level, g, k, of, from);
+        g.marks.put(key, p);
+        return p;
+    }
+
+    private static BlockPos ringSpotNow(ServerLevel level, Gathering g, int k, int of, @Nullable Direction from) {
+        double ang = angle(level, g, k, of, from);
         for (double r : new double[]{ g.ring, g.ring + 1, g.ring - 1, g.ring + 2 }) {
             BlockPos col = BlockPos.containing(g.at.getX() + 0.5 + r * Math.cos(ang), g.at.getY(), g.at.getZ() + 0.5 + r * Math.sin(ang));
             BlockPos p = Assemblies.standable(level, col, g.at.getY());
-            if (p != null) return p;
+            if (p != null && p.getY() == g.at.getY()) return p;
+        }
+        // Still nowhere to stand on its own line out (a stall, a well, the founders' camp): the nearest place along the
+        // ring either way, within a quarter of the way to the next guard's, so the ring keeps its order and stays even.
+        double most = Math.PI / Math.max(1, of) * 0.48;
+        for (double step = 0.06; step <= most; step += 0.06) {
+            for (double sgn : new double[]{ 1, -1 }) {
+                double b = ang + sgn * step;
+                BlockPos col = BlockPos.containing(g.at.getX() + 0.5 + g.ring * Math.cos(b), g.at.getY(), g.at.getZ() + 0.5 + g.ring * Math.sin(b));
+                BlockPos p = Assemblies.standable(level, col, g.at.getY());
+                if (p != null && p.getY() == g.at.getY()) return p;
+            }
         }
         return BlockPos.containing(g.at.getX() + 0.5 + g.ring * Math.cos(ang), g.at.getY(), g.at.getZ() + 0.5 + g.ring * Math.sin(ang));
     }
@@ -472,6 +574,24 @@ public final class Muster {
     public static double[] sizeForTests(UUID village) {
         Gathering g = NOW.get(village);
         return g == null ? new double[3] : new double[]{ g.inner, g.ring, wanted(g) };
+    }
+
+    /** Tests: is this guard of the ring stood on its own mark (within a block of it)? */
+    public static boolean onMarkForTests(ServerLevel level, Villages.Village v, VillageFolkEntity guard) {
+        BlockPos spot = markForTests(level, v, guard);
+        if (spot == null) return false;
+        double dx = guard.getX() - (spot.getX() + 0.5), dz = guard.getZ() - (spot.getZ() + 0.5);
+        return dx * dx + dz * dz <= 1.0;
+    }
+
+    /** Tests: this guard's mark in the ring (null if it is not of the ring). */
+    @Nullable
+    public static BlockPos markForTests(ServerLevel level, Villages.Village v, VillageFolkEntity guard) {
+        Gathering g = gathering(level, v);
+        if (g == null) return null;
+        List<VillageFolkEntity> ring = ringGuards(v.id(), g);
+        int k = ring.indexOf(guard);
+        return k < 0 ? null : ringSpot(level, g, k, ring.size(), Raids.alarmFrom(v.id()));
     }
 
     /** Tests: the guards of the ring now. */

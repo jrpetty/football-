@@ -100,7 +100,7 @@ public final class CastleWall {
 
     private CastleWall() {}
 
-    static final String SIDES = "castle.sides", OLD = "castle.old", FIT = "castle.fit2/", BEGUN = "castle.begun";
+    static final String SIDES = "castle.sides", OLD = "castle.old", FIT = "castle.fit3/", BEGUN = "castle.begun";
     /** How often the works on the wall are seen to (ticks), and the whole wall looked over. */
     static final long EVERY = 100L, SURVEY = 2400L;
     /** Blocks a hand lays at a time; what of each stone the stores keep back for the builders. */
@@ -342,8 +342,9 @@ public final class CastleWall {
     static final int WALL = 0, LEFT_OUT = 1, OPENING = 2, WATER = 3, BUILT = 4;
 
     /** A side fitted to the ground: for each column along it, the ground its walkway is measured from (smoothed),
-     *  what it is, and its floor (an opening's road, the water's top under an arch). */
-    record Fit(int lo, int[] ground, int[] kind, int[] floor, Set<Long> skip) {
+     *  what it is, and its floor (an opening's road, the water's top under an arch); and where it goes round a build
+     *  that is not the town's (jogs: see JOG). */
+    record Fit(int lo, int[] ground, int[] kind, int[] floor, List<int[]> jogs) {
         int ground(int a) { int i = a - lo; return i < 0 || i >= ground.length ? Integer.MIN_VALUE : ground[i]; }
         int kind(int a) { int i = a - lo; return i < 0 || i >= kind.length ? LEFT_OUT : kind[i]; }
         int floor(int a) { int i = a - lo; return i < 0 || i >= floor.length ? ground(a) : floor[i]; }
@@ -352,11 +353,10 @@ public final class CastleWall {
             StringBuilder sb = new StringBuilder().append(lo);
             for (int i = 0; i < ground.length; i++) sb.append(',').append(ground[i]).append(':').append(kind[i]).append(':').append(floor[i]);
             sb.append(';');
-            boolean first = true;
-            for (long k : skip) {
-                if (!first) sb.append(',');
-                sb.append(k);
-                first = false;
+            for (int j = 0; j < jogs.size(); j++) {
+                if (j > 0) sb.append(',');
+                int[] g = jogs.get(j);
+                for (int k = 0; k < g.length; k++) sb.append(k == 0 ? "" : ":").append(g[k]);
             }
             return sb.toString();
         }
@@ -366,8 +366,17 @@ public final class CastleWall {
             if (s == null || s.isEmpty()) return null;
             try {
                 String[] halves = s.split(";", -1);
-                Set<Long> skip = new HashSet<>();
-                if (halves.length > 1) for (String k : halves[1].split(",")) if (!k.isEmpty()) skip.add(Long.parseLong(k));
+                List<int[]> jogs = new ArrayList<>();
+                if (halves.length > 1) {
+                    for (String j : halves[1].split(",")) {
+                        if (j.isEmpty()) continue;
+                        String[] q = j.split(":");
+                        if (q.length != JOG_LEN) return null;
+                        int[] g = new int[JOG_LEN];
+                        for (int k = 0; k < JOG_LEN; k++) g[k] = Integer.parseInt(q[k]);
+                        jogs.add(g);
+                    }
+                }
                 String[] p = halves[0].split(",");
                 int n = p.length - 1;
                 int[] g = new int[n], k = new int[n], f = new int[n];
@@ -377,12 +386,27 @@ public final class CastleWall {
                     k[i] = Integer.parseInt(q[1]);
                     f[i] = Integer.parseInt(q[2]);
                 }
-                return new Fit(Integer.parseInt(p[0]), g, k, f, skip);
+                return new Fit(Integer.parseInt(p[0]), g, k, f, jogs);
             } catch (RuntimeException e) {
                 return null;
             }
         }
     }
+
+    /**
+     * A build on the line that is not the town's (a player's, or nobody's the town knows: anything solid that is not
+     * the world's own ground, the wall's own stone or one of the town's registered buildings, and every cell inside
+     * and next to it) is never touched. The wall goes round it: a jog, {R0, R1, D, GROUND, MODE, A0, A1, PLAYER}: the
+     * build spans A0..A1 along the side; the wall's line is left between R0 + 3 and R1 - 3, and runs instead D out from
+     * its line (outward, or inward if D is less than nought) from R0 to R1, with a return wall at each end (three
+     * thick, R0..R0 + 2 and R1 - 2..R1) back to the line; GROUND its level. MODE JOGGED; or STOOD_IN where there is no
+     * way round (a gate or a corner in the way): the line is left over A0..A1 and the build's own walls stand as the
+     * ring there. PLAYER 1 if a player's blocks were seen in it.
+     */
+    static final int R0 = 0, R1 = 1, D = 2, GROUND = 3, MODE = 4, A0 = 5, A1 = 6, PLAYER = 7, JOG_LEN = 8;
+    static final int JOGGED = 1, STOOD_IN = 2;
+    /** The most a jog stands out from (or in from) the wall's line. */
+    static final int JOG_MOST = 24;
 
     static String fitKey(WallPlan.Sides s, int side) {
         return FIT + side + "/" + s.of(side) + "/" + WallPlan.lo(s, side) + "/" + WallPlan.hi(s, side);
@@ -410,6 +434,8 @@ public final class CastleWall {
         int up = WallPlan.height(Villages.Age.NETHER.ordinal()) + 4;
         WallPlan.Sides was = old(v.id());
         List<WallPlan.Tower> wasTowers = was == null ? List.of() : WallPlan.towers(was);
+        // Fitted again over a wall already begun (round a player's build): its own stone on the line is no ground.
+        boolean begun = Ledger.note(v.id(), BEGUN) != null;
         for (int i = 0; i < n; i++) {
             int a = lo + i;
             int most = Integer.MIN_VALUE, mid = Integer.MIN_VALUE, surface = Integer.MIN_VALUE;
@@ -418,16 +444,20 @@ public final class CastleWall {
                 int[] o = WallPlan.offset(side, line + u, a);
                 int x = c.getX() + o[0], z = c.getZ() + o[1];
                 if (!level.hasChunk(x >> 4, z >> 4)) return null;
-                boolean stood = stood(s, was, wasTowers, o[0], o[1]);
+                boolean stood = begun || stood(s, was, wasTowers, o[0], o[1]);
                 int y = ground(level, x, z, c.getY(), stood);
                 if (y == Integer.MIN_VALUE) {
-                    int top = waterTop(level, x, z, c.getY());
+                    int top = waterTop(level, x, z, c.getY(), stood);
                     if (top != Integer.MIN_VALUE) { wet = true; surface = Math.max(surface, top); }
                     continue;                                            // else a hole too deep to stand in: bridged
                 }
                 BlockState under = level.getBlockState(new BlockPos(x, y - 1, z));
+                while ((under.is(BlockTags.FENCES) || under.is(BlockTags.FENCE_GATES)) && y > c.getY() - 40) {
+                    under = level.getBlockState(new BlockPos(x, --y - 1, z));                  // down through a pen's fence
+                }
                 if (road(under)) road = true;
-                if (foreignOver(level, x, y, z, y + up, stood) || !footing(under) && !(stood && mine(under))) theirs = true;
+                // One of the town's own buildings on the line: laid round (builds not the town's are gone round: jogs).
+                if (townBuilt(level, v, new BlockPos(x, y, z)) || townBuilt(level, v, new BlockPos(x, y + 2, z))) theirs = true;
                 most = Math.max(most, y);
                 if (u == 1) mid = y;
             }
@@ -455,7 +485,176 @@ public final class CastleWall {
             if (k[i] == BUILT && f[i] == c.getY()) f[i] = g[i];
         }
         // The towers stand whatever is under them (built down into water, round somebody's work): none is left out.
-        return new Fit(lo, g, k, f, new HashSet<>());
+        List<int[]> jogs = jogs(level, v, s, side, g, lo);
+        if (jogs == null) return null;
+        return new Fit(lo, g, k, f, jogs);
+    }
+
+    /** Is this cell (or a cell of this column, from the sky down to the world's own ground) something not of the
+     *  town's: a player's block; a chest, a bed or another block entity the town does not own; anything solid that is
+     *  not the world's own ground, the wall's own stone ({@code ours}: the wall is begun, or stood here), what grows
+     *  wild, or one of the town's registered buildings? */
+    static boolean foreignAt(ServerLevel level, Villages.Village v, int x, int z, boolean ours) {
+        BlockPos c = v.centre();
+        int top = Math.min(level.getMaxBuildHeight() - 1, Math.max(c.getY() + 40,
+            level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z)));
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int y = top; y > c.getY() - 40; y--) {
+            BlockState st = level.getBlockState(p.set(x, y, z));
+            if (st.isAir()) continue;
+            if (PlayerBlocks.placed(level, p)) return true;
+            if (wet(st)) continue;
+            if (natural(st) || st.is(Blocks.FARMLAND)) return false;                // down to the world's own ground
+            if (road(st) && natural(level.getBlockState(p.below()))) return false;   // a road's paving on it
+            if (level.getBlockEntity(p) != null) {
+                if (ours && fitting(st) || townBuilt(level, v, p) || Villages.storeChests(level, v.id()).contains(p)) continue;
+                return true;
+            }
+            if (wild(level, p, st) || ours && mine(st) || townBuilt(level, v, p)) continue;
+            return true;
+        }
+        return false;
+    }
+
+    /** One of the town's own registered buildings here (its walls, rooms, doorways; not a pen)? */
+    static boolean townBuilt(ServerLevel level, Villages.Village v, BlockPos p) {
+        TownBlocks.Zone z = TownBlocks.zone(level, v, p);
+        if (z == TownBlocks.Zone.OPEN || z == TownBlocks.Zone.ROAD || z == TownBlocks.Zone.SQUARE) return false;
+        Ledger.Building b = TownBlocks.buildingAt(level, v, p);
+        return b == null || !"pen".equals(b.structure());
+    }
+
+    /**
+     * The builds not of the town's on a side's line, and the way round each: found from the line's columns (and the
+     * towers' ground), each followed out cell by cell to its whole extent, and given a jog clear of it by a block,
+     * outward if that is clear, else inward, else stood in. Null while the ground is not all loaded.
+     */
+    @Nullable
+    static List<int[]> jogs(ServerLevel level, Villages.Village v, WallPlan.Sides s, int side, int[] g, int lo) {
+        BlockPos c = v.centre();
+        int line = s.of(side);
+        boolean ours = Ledger.note(v.id(), BEGUN) != null || old(v.id()) != null;
+        List<WallPlan.Tower> towers = WallPlan.towers(s);
+        int alo = WallPlan.lo(s, side), ahi = WallPlan.hi(s, side);
+        Map<Long, Boolean> seen = new HashMap<>();
+        java.util.function.BiFunction<Integer, Integer, Boolean> foreign = (a, o) -> seen.computeIfAbsent(((long) a << 32) ^ (o & 0xffffffffL), k -> {
+            int[] q = WallPlan.offset(side, o, a);
+            int x = c.getX() + q[0], z = c.getZ() + q[1];
+            return level.hasChunk(x >> 4, z >> 4) && foreignAt(level, v, x, z, ours);
+        });
+        // The line's cells, and the towers' ground out past it.
+        List<int[]> starts = new ArrayList<>();
+        for (int a = alo - WallPlan.TOWER; a <= ahi + WallPlan.TOWER; a++) {
+            boolean towerHere = a < alo || a > ahi;
+            for (WallPlan.Tower t : towers) if (t.side() == side && Math.abs(a - t.centre()) <= WallPlan.TOWER / 2) towerHere = true;
+            for (int o = line; o < line + (towerHere ? WallPlan.TOWER : WallPlan.THICK); o++) {
+                int[] q = WallPlan.offset(side, o, a);
+                if (!level.hasChunk((c.getX() + q[0]) >> 4, (c.getZ() + q[1]) >> 4)) return null;
+                if (foreign.apply(a, o)) starts.add(new int[]{ a, o });
+            }
+        }
+        List<int[]> out = new ArrayList<>();
+        Set<Long> done = new HashSet<>();
+        for (int[] st : starts) {
+            if (done.contains(((long) st[0] << 32) ^ (st[1] & 0xffffffffL))) continue;
+            // The whole build: its cells followed out from the line, eight ways.
+            int bA0 = st[0], bA1 = st[0], bO0 = st[1], bO1 = st[1], visits = 0;
+            boolean player = false;
+            java.util.ArrayDeque<int[]> q = new java.util.ArrayDeque<>();
+            q.add(st);
+            done.add(((long) st[0] << 32) ^ (st[1] & 0xffffffffL));
+            while (!q.isEmpty() && visits++ < 2500) {
+                int[] cur = q.poll();
+                bA0 = Math.min(bA0, cur[0]); bA1 = Math.max(bA1, cur[0]);
+                bO0 = Math.min(bO0, cur[1]); bO1 = Math.max(bO1, cur[1]);
+                int[] w = WallPlan.offset(side, cur[1], cur[0]);
+                if (!player && playerColumn(level, c.getX() + w[0], c.getZ() + w[1], c.getY())) player = true;
+                for (int da = -1; da <= 1; da++) {
+                    for (int dob = -1; dob <= 1; dob++) {
+                        int na = cur[0] + da, no = cur[1] + dob;
+                        long key = ((long) na << 32) ^ (no & 0xffffffffL);
+                        if (done.contains(key) || Math.abs(no - line) > JOG_MOST + 8) continue;
+                        if (!foreign.apply(na, no)) continue;
+                        done.add(key);
+                        q.add(new int[]{ na, no });
+                    }
+                }
+            }
+            int[] jog = route(level, v, s, side, g, lo, towers, foreign, bA0, bA1, bO0, bO1, true);
+            if (jog == null) jog = route(level, v, s, side, g, lo, towers, foreign, bA0, bA1, bO0, bO1, false);
+            if (jog == null) jog = new int[]{ bA0 - 3, bA1 + 3, 0, 0, STOOD_IN, bA0, bA1, 0 };
+            jog[PLAYER] = player ? 1 : 0;
+            // Two builds near together: one way round both.
+            boolean merged = false;
+            for (int i = 0; i < out.size() && !merged; i++) {
+                int[] o = out.get(i);
+                if (jog[R0] <= o[R1] && jog[R1] >= o[R0]) {
+                    int[] both = route(level, v, s, side, g, lo, towers, foreign, Math.min(o[A0], bA0), Math.max(o[A1], bA1),
+                        Math.min(bO0, line), Math.max(bO1, line + 2), true);
+                    out.set(i, both != null ? both : new int[]{ Math.min(o[R0], jog[R0]), Math.max(o[R1], jog[R1]), 0, 0, STOOD_IN,
+                        Math.min(o[A0], bA0), Math.max(o[A1], bA1), 0 });
+                    out.get(i)[PLAYER] = o[PLAYER] | jog[PLAYER];
+                    merged = true;
+                }
+            }
+            if (!merged) out.add(jog);
+        }
+        return out;
+    }
+
+    /** Any block of this column a player put there (for the book: whose build it is)? */
+    private static boolean playerColumn(ServerLevel level, int x, int z, int aroundY) {
+        BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
+        for (int y = aroundY - 8; y <= aroundY + 24; y++) if (PlayerBlocks.placed(level, p.set(x, y, z))) return true;
+        return false;
+    }
+
+    /**
+     * A way round a build spanning bA0..bA1 along the side and bO0..bO1 out: the jog outward (or inward), clear of it by
+     * a block, past any tower between (that tower left out of the line and the jog run on past it), clear of the
+     * gates and the corners, every cell of it clear ground; null if there is none.
+     */
+    @Nullable
+    private static int[] route(ServerLevel level, Villages.Village v, WallPlan.Sides s, int side, int[] g, int lo, List<WallPlan.Tower> towers,
+                               java.util.function.BiFunction<Integer, Integer, Boolean> foreign, int bA0, int bA1, int bO0, int bO1, boolean outward) {
+        int line = s.of(side);
+        int r0 = bA0 - 4, r1 = bA1 + 4;
+        for (boolean grew = true; grew; ) {
+            grew = false;
+            for (WallPlan.Tower t : towers) {
+                if (t.side() != side) continue;
+                int t0 = t.centre() - WallPlan.TOWER / 2, t1 = t.centre() + WallPlan.TOWER / 2;
+                if (t1 < r0 || t0 > r1) continue;
+                if (t.kind() != WallPlan.TowerKind.MID) return null;                     // a gatehouse is never gone round
+                if (t0 - 4 < r0) { r0 = t0 - 4; grew = true; }
+                if (t1 + 4 > r1) { r1 = t1 + 4; grew = true; }
+            }
+        }
+        if (r0 < WallPlan.lo(s, side) || r1 > WallPlan.hi(s, side) || r0 <= WallPlan.GATE && r1 >= -WallPlan.GATE) return null;
+        int d = outward ? Math.max(WallPlan.THICK, bO1 + 2 - line) : Math.min(-WallPlan.THICK, bO0 - 4 - line);
+        if (Math.abs(d) > JOG_MOST) return null;
+        BlockPos c = v.centre();
+        int most = Integer.MIN_VALUE;
+        for (int a = r0; a <= r1; a++) most = Math.max(most, g[Math.max(0, Math.min(g.length - 1, a - lo))]);
+        List<int[]> cells = new ArrayList<>();
+        for (int a = r0; a <= r1; a++) for (int u = 0; u < WallPlan.THICK; u++) cells.add(new int[]{ a, line + d + u });
+        int o0 = outward ? line + WallPlan.THICK : line + d + WallPlan.THICK, o1 = outward ? line + d - 1 : line - 1;
+        for (int o = o0; o <= o1; o++) {
+            for (int k = 0; k < WallPlan.THICK; k++) { cells.add(new int[]{ r0 + k, o }); cells.add(new int[]{ r1 - k, o }); }
+        }
+        for (int[] cell : cells) {
+            // Clear of the build by a block all round, on clear ground, no building of the town's.
+            for (int da = -1; da <= 1; da++) for (int dob = -1; dob <= 1; dob++) if (foreign.apply(cell[0] + da, cell[1] + dob)) return null;
+            int[] q = WallPlan.offset(side, cell[1], cell[0]);
+            int x = c.getX() + q[0], z = c.getZ() + q[1];
+            int y = ground(level, x, z, c.getY(), true);                                // (through the wall's own stone)
+            if (y == Integer.MIN_VALUE) y = waterTop(level, x, z, c.getY(), true);
+            if (y != Integer.MIN_VALUE) {
+                if (townBuilt(level, v, new BlockPos(x, y, z))) return null;
+                most = Math.max(most, y);
+            }
+        }
+        return new int[]{ r0, r1, d, most, JOGGED, bA0, bA1, 0 };
     }
 
     /** Did the wall stand here already (its old line, or the wall as it is drawn now, with a column of it up)? The
@@ -481,14 +680,14 @@ public final class CastleWall {
     }
 
     /** The water's top at a column: the first air over it (MIN_VALUE where the column is dry, or a hole). */
-    static int waterTop(ServerLevel level, int x, int z, int aroundY) {
+    static int waterTop(ServerLevel level, int x, int z, int aroundY, boolean inPlan) {
         int y = Math.min(level.getMaxBuildHeight() - 1, Math.max(aroundY + 40,
             level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z)));
         BlockPos.MutableBlockPos p = new BlockPos.MutableBlockPos();
         for (; y > aroundY - 40; y--) {
             BlockState st = level.getBlockState(p.set(x, y, z));
-            if (!st.getFluidState().isEmpty() && !st.is(Blocks.LADDER)) return y + 1;
-            if (!wild(level, p, st)) return Integer.MIN_VALUE;
+            if (!st.getFluidState().isEmpty() && !st.is(Blocks.LADDER) && !(inPlan && mine(st))) return y + 1;
+            if (!wild(level, p, st) && !(inPlan && mine(st))) return Integer.MIN_VALUE;
         }
         return Integer.MIN_VALUE;
     }
@@ -506,18 +705,19 @@ public final class CastleWall {
     }
 
     /** What grows or lies on the world's own ground, which the wall clears out of its way: plants, snow, a tree; a
-     *  field's crop on the line (harvested into the stores) and a pen's fence there (back to the stores: the wall is
-     *  that side of the pen now). */
+     *  field's crop on the line (harvested into the stores). */
     static boolean wild(ServerLevel level, BlockPos p, BlockState st) {
         if (st.isAir() || st.canBeReplaced() && st.getFluidState().isEmpty()) return true;
         if (st.is(BlockTags.CROPS) || st.getBlock() instanceof net.minecraft.world.level.block.StemBlock
             || st.getBlock() instanceof net.minecraft.world.level.block.AttachedStemBlock) return true;
-        if ((st.is(BlockTags.FENCES) || st.is(BlockTags.FENCE_GATES)) && st.getFluidState().isEmpty()) return true;
         if (st.is(BlockTags.LEAVES)) {
             return !(st.hasProperty(net.minecraft.world.level.block.LeavesBlock.PERSISTENT)
                 && st.getValue(net.minecraft.world.level.block.LeavesBlock.PERSISTENT));
         }
         if (st.is(BlockTags.LOGS)) return com.jrpetty.mcassistant.entity.goal.BuildGoal.isTreeLog(level, p);
+        if (st.is(BlockTags.REPLACEABLE_BY_TREES) || st.is(Blocks.LILY_PAD) || st.is(Blocks.AZALEA) || st.is(Blocks.FLOWERING_AZALEA)
+            || st.is(Blocks.MOSS_CARPET) || st.is(Blocks.BIG_DRIPLEAF) || st.is(Blocks.BIG_DRIPLEAF_STEM) || st.is(Blocks.SMALL_DRIPLEAF)
+            || st.is(Blocks.COBWEB) || st.is(Blocks.BEE_NEST) || st.is(Blocks.MANGROVE_ROOTS) || st.is(Blocks.POINTED_DRIPSTONE)) return true;
         return st.is(BlockTags.FLOWERS) || st.is(Blocks.SNOW) || st.is(Blocks.BAMBOO) || st.is(Blocks.SWEET_BERRY_BUSH)
             || st.is(Blocks.CACTUS) || st.is(Blocks.SUGAR_CANE) || st.is(Blocks.VINE) || st.is(Blocks.BROWN_MUSHROOM)
             || st.is(Blocks.RED_MUSHROOM) || st.is(Blocks.PUMPKIN) || st.is(Blocks.MELON);
@@ -538,7 +738,11 @@ public final class CastleWall {
         return st.is(BlockTags.DIRT) || st.is(Blocks.GRASS_BLOCK) || st.is(BlockTags.BASE_STONE_OVERWORLD) || st.is(BlockTags.SAND)
             || st.is(Blocks.GRAVEL) || st.is(Blocks.CLAY) || st.is(Blocks.SNOW_BLOCK) || st.is(BlockTags.TERRACOTTA)
             || st.is(Blocks.SANDSTONE) || st.is(Blocks.RED_SANDSTONE) || st.is(Blocks.PACKED_ICE) || st.is(Blocks.ICE)
-            || st.is(Blocks.DIRT_PATH) || st.is(BlockTags.ICE) || st.is(Blocks.CALCITE) || st.is(Blocks.MUD);
+            || st.is(Blocks.DIRT_PATH) || st.is(BlockTags.ICE) || st.is(Blocks.CALCITE) || st.is(Blocks.MUD)
+            || st.is(BlockTags.COAL_ORES) || st.is(BlockTags.IRON_ORES) || st.is(BlockTags.COPPER_ORES) || st.is(BlockTags.GOLD_ORES)
+            || st.is(BlockTags.REDSTONE_ORES) || st.is(BlockTags.LAPIS_ORES) || st.is(BlockTags.DIAMOND_ORES) || st.is(BlockTags.EMERALD_ORES)
+            || st.is(Blocks.DRIPSTONE_BLOCK) || st.is(Blocks.SMOOTH_BASALT) || st.is(Blocks.POWDER_SNOW) || st.is(Blocks.MAGMA_BLOCK)
+            || st.is(Blocks.BEDROCK);
     }
 
     /** A road's paving: a worn path or a laid one. */
@@ -595,11 +799,46 @@ public final class CastleWall {
             return most;
         }
 
-        /** Is this tower column left out (over water, a field or somebody's work)? */
-        boolean skipped(int dx, int dz) {
-            long key = TownPlan.cellKey(dx, dz);
-            for (Fit f : fits) if (f != null && f.skip().contains(key)) return true;
-            return false;
+        /** The cells of the jogs round builds not of the town's: {side, layer (2 the outer face), the jog's level, its
+         *  first across}, by TownPlan.cellKey. */
+        final Map<Long, int[]> jogCells = new HashMap<>();
+        /** The line's cells left where it goes round (or a build stands in): nothing of the wall is laid there. */
+        final Set<Long> cut = new HashSet<>();
+        /** A player's block met where the wall still wants to lay: the line is fitted again, round it. */
+        volatile boolean replan;
+
+        /** Work out the jogs' cells and the line they leave, from the fits. */
+        void jogs() {
+            for (int side = 0; side < 4; side++) {
+                int line = sides.of(side);
+                for (int[] j : fits[side].jogs()) {
+                    int c0 = j[MODE] == JOGGED ? j[R0] + WallPlan.THICK : j[A0], c1 = j[MODE] == JOGGED ? j[R1] - WallPlan.THICK : j[A1];
+                    for (int a = c0; a <= c1; a++) {
+                        for (int o = line; o < line + WallPlan.TOWER; o++) {
+                            int[] q = WallPlan.offset(side, o, a);
+                            cut.add(TownPlan.cellKey(q[0], q[1]));
+                        }
+                    }
+                    if (j[MODE] != JOGGED) continue;
+                    int d = j[D];
+                    boolean outward = d > 0;
+                    for (int a = j[R0]; a <= j[R1]; a++) {
+                        for (int u = 0; u < WallPlan.THICK; u++) {
+                            int[] q = WallPlan.offset(side, line + d + u, a);
+                            jogCells.put(TownPlan.cellKey(q[0], q[1]), new int[]{ side, u, j[GROUND], j[R0] });
+                        }
+                    }
+                    int o0 = outward ? line + WallPlan.THICK : line + d + WallPlan.THICK, o1 = outward ? line + d - 1 : line - 1;
+                    for (int o = o0; o <= o1; o++) {
+                        for (int k = 0; k < WallPlan.THICK; k++) {
+                            // The returns' outer faces: away from the pocket the jog makes (toward it, going inward).
+                            int[] lowQ = WallPlan.offset(side, o, j[R0] + k), highQ = WallPlan.offset(side, o, j[R1] - k);
+                            jogCells.put(TownPlan.cellKey(lowQ[0], lowQ[1]), new int[]{ side, outward ? 2 - k : k, j[GROUND], j[R0] });
+                            jogCells.put(TownPlan.cellKey(highQ[0], highQ[1]), new int[]{ side, outward ? 2 - k : k, j[GROUND], j[R0] });
+                        }
+                    }
+                }
+            }
         }
 
         /** The walkway's level (where one stands on it) at this column of a side: its ground and the wall's height,
@@ -638,6 +877,7 @@ public final class CastleWall {
             w.fits[side] = fit(level, v, s, side);
             if (w.fits[side] == null) return null;
         }
+        w.jogs();
         // The corners: the higher of the two sides' ground under them.
         int[][] ends = ENDS;
         for (int i = 0; i < 4; i++) {
@@ -683,9 +923,16 @@ public final class CastleWall {
     /** Everything the wall wants at one column (dx, dz from the heart). */
     static List<Want> wants(ServerLevel level, Wall w, int dx, int dz) {
         List<Want> out = new ArrayList<>();
+        int x = w.heart.getX() + dx, z = w.heart.getZ() + dz;
+        long key = TownPlan.cellKey(dx, dz);
+        int[] jog = w.jogCells.get(key);
+        if (jog != null) {
+            if (level.hasChunk(x >> 4, z >> 4)) jogWants(level, w, jog, x, z, out);
+            return out;
+        }
+        if (w.cut.contains(key)) return out;                                   // gone round, or a build stands in here
         WallPlan.Cell c = WallPlan.cell(w.sides, w.towers, dx, dz);
         if (c == null) return out;
-        int x = w.heart.getX() + dx, z = w.heart.getZ() + dz;
         if (!level.hasChunk(x >> 4, z >> 4)) return out;                     // never a chunk loaded for the wall's sake
         Direction outD = outward(c.side()), along = alongward(c.side()), in = outD.getOpposite();
         if (c.kind() == WallPlan.Kind.TOWER) {
@@ -788,6 +1035,25 @@ public final class CastleWall {
             }
         }
         return out;
+    }
+
+    /** A column of a jog round a build: the curtain as anywhere, at the jog's own level, battlements on its outer face. */
+    static void jogWants(ServerLevel level, Wall w, int[] jog, int x, int z, List<Want> out) {
+        int top = jog[2] + w.height, layer = jog[1];
+        int foot = foot(level, x, z, top - 1);
+        if (foot == Integer.MIN_VALUE || top - foot > DEEP + w.height) foot = top - w.height - BRIDGE;
+        Direction outD = outward(jog[0]);
+        for (int y = foot; y <= top - 2; y++) {
+            boolean face = layer == 2 && y < foot + PLINTH || layer != 1 && weathered(x, y, z);
+            out.add(new Want(new BlockPos(x, y, z), face ? Role.ACCENT : Role.BODY, outD, 0));
+        }
+        out.add(new Want(new BlockPos(x, top - 1, z), Role.CAP, alongward(jog[0]), 0));
+        if (layer == 2 && Math.floorMod(x + z, 2) == 0) {
+            out.add(new Want(new BlockPos(x, top, z), Role.MERLON, outD, 0));
+        } else {
+            out.add(new Want(new BlockPos(x, top, z), Role.AIR, outD, 0));
+            if (layer < 2) out.add(new Want(new BlockPos(x, top + 1, z), Role.AIR, outD, 0));
+        }
     }
 
     /** Over a gate's arch, outside: the town's name on a sign in the middle and a lantern hung from a bracket either side
@@ -904,6 +1170,13 @@ public final class CastleWall {
             }
             by.computeIfAbsent(key, k -> new ArrayList<>()).add(col);
         }
+        // The jogs round builds not of the town's, each a section of its own.
+        for (Map.Entry<Long, int[]> e : w.jogCells.entrySet()) {
+            int[] j = e.getValue();
+            long k = e.getKey();
+            int dx = (int) (k >> 32), dz = (int) k;
+            by.computeIfAbsent("the " + names[j[0]] + " wall, round a build (" + j[3] + ")", n -> new ArrayList<>()).add(new int[]{ dx, dz });
+        }
         // The curtain's runs: the ones by the gates first.
         List<Map.Entry<String, List<int[]>>> rest = new ArrayList<>();
         Map<String, List<int[]>> sorted = new LinkedHashMap<>();
@@ -944,6 +1217,8 @@ public final class CastleWall {
         Boolean lowered;
         /** A gate opened for a wagon after dark: shut again after this tick. */
         long heldOpen;
+        /** When the line was last fitted again round a player's build. */
+        long replanned = -100000L;
     }
 
     /**
@@ -1204,6 +1479,14 @@ public final class CastleWall {
         }
         // All of it up: the old line, if it was moved out, comes down.
         if (st.at >= st.names.size() && old(id) != null) set += takeDown(level, v, st, mode, batch - set);
+        // A player built on the line since it was fitted: fitted again (round it), at most once a survey.
+        if (st.wall != null && st.wall.replan && (now - st.replanned >= SURVEY || now < st.replanned || mode != HAND)) {
+            st.replanned = now;
+            for (int side = 0; side < 4; side++) Ledger.forget(id, fitKey(st.sides, side));
+            st.wall = null;
+            st.counts.clear();
+            st.surveyed = -100000L;
+        }
         return set;
     }
 
@@ -1287,8 +1570,16 @@ public final class CastleWall {
      *  BLOCKED (somebody's work in the way). */
     static int doing(ServerLevel level, Wall w, Want want, int[] best) {
         BlockState st = level.getBlockState(want.pos());
+        // A player's block, or a chest or the like not the town's: never touched. Met where the wall still wants to
+        // lay, on its line, the line is fitted again round it.
+        if (!st.isAir() && (PlayerBlocks.placed(level, want.pos()) || level.getBlockEntity(want.pos()) != null && !fitting(st)
+                && !Villages.storeChests(level, w.village.id()).contains(want.pos()))) {
+            int dx = want.pos().getX() - w.heart.getX(), dz = want.pos().getZ() - w.heart.getZ();
+            if (want.role() != Role.AIR && (WallPlan.cell(w.sides, w.towers, dx, dz) != null || w.jogCells.containsKey(TownPlan.cellKey(dx, dz)))) w.replan = true;
+            return BLOCKED;
+        }
         if (theirs(level, w, want.pos())) return BLOCKED;                       // somebody's building: it stands as the wall here
-        boolean wet = wet(st);
+        boolean wet = wet(st) || (st.is(BlockTags.FENCES) || st.is(BlockTags.FENCE_GATES)) && pen(level, w, want.pos());   // a town pen's fence: the wall is that side of it
         if ((want.extra() & ROUND) != 0 && !st.isAir() && !wet && !wild(level, want.pos(), st)) {
             return want.role() != Role.AIR && tierOf(st) >= w.tier ? 0 : BLOCKED;   // theirs kept; the wall's own, laid
         }
@@ -1360,6 +1651,7 @@ public final class CastleWall {
 
     /** May the wall set this cell (the town's placement gate, Why.WALL; a pen's line is the wall's)? */
     static boolean may(ServerLevel level, Wall w, BlockPos p) {
+        if (PlayerBlocks.placed(level, p)) return false;                                   // a player's: never
         return pen(level, w, p) || TownBlocks.mayPlace(level, w.village, p, TownBlocks.Why.WALL);
     }
 
@@ -1772,6 +2064,17 @@ public final class CastleWall {
             out.add("Gates: " + gates + ", posterns: " + posterns + " (" + st.doors.size() + " doors), " + (Boolean.TRUE.equals(st.shut) ? "shut" : "open")
                 + (water > 0 ? "; " + water + " columns over water on piers and grated arches" : ""));
         }
+        if (st.wall != null) {
+            String[] names = { "north", "east", "south", "west" };
+            for (int side = 0; side < 4; side++) {
+                for (int[] j : st.wall.fits[side].jogs()) {
+                    String whose = j[PLAYER] == 1 ? "a player's" : "an unknown";
+                    out.add(j[MODE] == JOGGED
+                        ? "The " + names[side] + " wall goes " + (j[D] > 0 ? "out" : "in") + " round " + whose + " build (" + j[A0] + " to " + j[A1] + " along it), never touching it"
+                        : "The " + names[side] + " wall is closed by " + whose + " build (" + j[A0] + " to " + j[A1] + " along it): no way round, its own walls stand as the ring there");
+                }
+            }
+        }
         int[] in = enclosed(id);
         if (in[1] > 0) out.add("Inside it: " + in[0] + " of the town's " + in[1] + " buildings (" + (100 * in[0] / in[1]) + "%)");
         if (old(id) != null) out.add("The old line, " + old(id).encode() + ", to come down once the new wall stands");
@@ -1789,11 +2092,11 @@ public final class CastleWall {
     public static int buildNow(ServerLevel level, Villages.Village v, boolean free) {
         State st = STATES.computeIfAbsent(v.id(), k -> new State());
         st.wall = null;
-        int total = 0;
+        int total = 0, unfitted = 0;
         for (int round = 0; round < 400; round++) {
             int n = work(level, v, st, free ? FREE : NOW, 100000);
             total += n;
-            if (n == 0) break;
+            if (n == 0 && (st.wall != null || ++unfitted > 2)) break;  // (a wall fitted again round a build goes on)
             st.at = 0;
         }
         st.surveyed = -100000L;
@@ -1903,6 +2206,67 @@ public final class CastleWall {
     private static State st(UUID id) {
         State st = STATES.get(id);
         return st == null || st.wall == null ? null : st;
+    }
+
+    /**
+     * Tests: the ring as the wall runs, a cross-section at a time: {x0, z0, x1, z1, x2, z2, walkway}, the three cells
+     * across the wall's thickness (one of them must stand at every level from the walkway down to the ground), along
+     * every side, round every jog; not where a build stands in for it.
+     */
+    public static List<int[]> ringForTests(UUID id) {
+        State st = STATES.get(id);
+        List<int[]> out = new ArrayList<>();
+        if (st == null || st.wall == null) return out;
+        Wall w = st.wall;
+        BlockPos c = w.heart;
+        for (int side = 0; side < 4; side++) {
+            int line = w.sides.of(side);
+            List<int[]> jogs = w.fits[side].jogs();
+            for (int a = WallPlan.lo(w.sides, side) - WallPlan.TOWER; a <= WallPlan.hi(w.sides, side) + WallPlan.TOWER; a++) {
+                boolean left = false;
+                for (int[] j : jogs) {
+                    int c0 = j[MODE] == JOGGED ? j[R0] + WallPlan.THICK : j[A0], c1 = j[MODE] == JOGGED ? j[R1] - WallPlan.THICK : j[A1];
+                    if (a >= c0 && a <= c1) left = true;
+                }
+                if (left) continue;
+                int[] e = new int[7];
+                for (int u = 0; u < WallPlan.THICK; u++) {
+                    int[] q = WallPlan.offset(side, line + u, a);
+                    e[2 * u] = c.getX() + q[0];
+                    e[2 * u + 1] = c.getZ() + q[1];
+                }
+                e[6] = w.top(side, a);
+                out.add(e);
+            }
+            for (int[] j : jogs) {
+                if (j[MODE] != JOGGED) continue;
+                int top = j[GROUND] + w.height, d = j[D];
+                for (int a = j[R0]; a <= j[R1]; a++) {
+                    int[] e = new int[7];
+                    for (int u = 0; u < WallPlan.THICK; u++) {
+                        int[] q = WallPlan.offset(side, line + d + u, a);
+                        e[2 * u] = c.getX() + q[0];
+                        e[2 * u + 1] = c.getZ() + q[1];
+                    }
+                    e[6] = top;
+                    out.add(e);
+                }
+                int o0 = d > 0 ? line + WallPlan.THICK : line + d + WallPlan.THICK, o1 = d > 0 ? line + d - 1 : line - 1;
+                for (int o = o0; o <= o1; o++) {
+                    for (int end : new int[]{ j[R0], j[R1] - WallPlan.THICK + 1 }) {
+                        int[] e = new int[7];
+                        for (int k = 0; k < WallPlan.THICK; k++) {
+                            int[] q = WallPlan.offset(side, o, end + k);
+                            e[2 * k] = c.getX() + q[0];
+                            e[2 * k + 1] = c.getZ() + q[1];
+                        }
+                        e[6] = top;
+                        out.add(e);
+                    }
+                }
+            }
+        }
+        return out;
     }
 
     /** Tests: the wall's ways through, {side, across, gate 1/0, floor} each. */

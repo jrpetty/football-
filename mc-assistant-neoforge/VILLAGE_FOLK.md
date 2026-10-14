@@ -11132,10 +11132,19 @@ and on the alarm. Over a river, a lake or the sea's edge it stands on piers, one
 them and a grate of iron bars (a fence in the Wood Age) under each arch from the bed to over the water: the water flows
 under it, nobody walks or swims through. An avenue over water crosses on a causeway to its gate. A field on its line is
 harvested into the stores and the wall stands on its earth; the farmers keep to what is left either side, off the ring.
-A pen's fence on the line goes back to the stores and the wall takes its place, so the pen stays closed. Somebody's
-building on the line is built round: the wall is laid in every cell of the line the town's placement gate allows, and the
-building's own walls stand as that part of the ring (the wall is never laid into a building of the town's). A ravine or
-a cliff is built down into, to its floor; a gulf too deep to reach is bridged.
+A town pen's fence on the line goes back to the stores and the wall takes its place, so the pen stays closed. One of the
+town's own buildings on the line is built round: the wall is laid in every cell of the line the town's placement gate
+allows, and the building's own walls stand as that part of the ring. A ravine or a cliff is built down into, to its
+floor; a gulf too deep to reach is bridged.
+
+**Never a player's build.** Anything on the line the town did not build (a player's blocks, which the town keeps a note
+of; a chest, a bed or the like not the town's; anything solid that is not the world's own ground, the wall's own stone or
+one of the town's registered buildings) is never touched, nor any cell in it or next to it. The wall goes round it: out
+past it (or, failing that, in), clear of it by a block, with a return wall at each end back to the line, past a tower
+between if need be. Only where there is no way round at all (a gatehouse or a corner in the way) is the line left there,
+and the build's own walls stand as that stretch of the ring, nothing filled in it; `/village wall` says so ("closed by a
+player's build"). A block a player sets on the line after the wall is planned is never taken up either: that stretch is
+fitted again and gone round.
 
 **The gatehouses.** An arched passage through the wall between the two flanking towers, a pair of doors (five leaves)
 on its outer face, and from the Iron Age a portcullis of iron bars hung over the passage: dropped when the bell rings,
