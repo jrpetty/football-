@@ -68,9 +68,14 @@ public final class TownLod {
     private static final int AREA_MARGIN_CHUNKS = 2;
     /** A town is measured over at least this many ticks of being watched before the rates are taken. */
     private static final long LEARN_EVERY = 24000L;
-    /** The rates learned are a running mean over about this many days, a week (an older day counts for less): long
-     *  enough that a day's noise (a chest emptied for a build the day before the count) does not set the rate. */
+    /** The rates learned are a running mean over about this many days, a week (an older day counts for less): what
+     *  the rest of the world does to a sleeping town (learnOthers). */
     private static final double LEARN_SPAN_DAYS = 7.0;
+    /** A watched town's daily counts kept: ten days' worth (eleven counts): long enough that the trend is the
+     *  town's pace and not its week's building. */
+    private static final int COUNTS_KEPT = 11;
+    /** A trend over fewer days than this does not replace the rates a town has (just woken, or new). */
+    private static final double MIN_TREND_DAYS = 3.0;
     /** Learned over less than this, a town is simulated at the server's mean rates instead of its own. */
     private static final double MIN_OWN_DAYS = 0.5;
     /** How many lots of a woken town's goods go into (or out of) its stores in one tick. */
@@ -90,10 +95,8 @@ public final class TownLod {
         @Nullable Lod lod;
         long lastNear;
         long lastStep;
-        // Learning, while watched: the stores, treasury and roll at the start of the measured stretch.
-        @Nullable Map<String, Integer> base;
-        int baseCoins, basePop;
-        long baseTime;
+        // Learning, while watched: its daily counts, the last week of them.
+        final java.util.ArrayDeque<Count> counts = new java.util.ArrayDeque<>();
         // Asleep: the stores as they stood, what came and went since, the coin and children due, the chunks let go.
         final Map<String, Integer> held = new HashMap<>();
         final Map<String, Double> pending = new HashMap<>();
@@ -111,6 +114,9 @@ public final class TownLod {
         long othersFrom;
         int coinsFrom, coinsByStep;
     }
+
+    /** A watched town's daily count: when, its stores item by item, its treasury and its roll. */
+    record Count(long time, Map<String, Integer> items, int coins, int pop) {}
 
     /** A chunk request of a town's let go while it sleeps, to be made again when it wakes. */
     public record Parked(UUID owner, long chunk) {}
@@ -305,7 +311,7 @@ public final class TownLod {
     private static void sleep(ServerLevel level, Villages.Village v, Town t) {
         t.lod = Lod.AWAY;
         asleep++;
-        t.base = null;
+        t.counts.clear();
         t.held.clear();
         t.pending.clear();
         t.coinDue = 0;
@@ -340,7 +346,7 @@ public final class TownLod {
         t.held.clear();
         t.applying = true;
         t.wokeAt = level.getGameTime();
-        t.base = null;
+        t.counts.clear();
         Ledger.forget(v.id(), AWAY_NOTE);
         Ledger.forget(v.id(), PARKED_NOTE);
         LOG.info("[MCA-LOD] {} wakes after {} days: {} chunks asked for again, {} kinds of goods and {} children to settle",
@@ -592,30 +598,64 @@ public final class TownLod {
 
     // ------------------------------------------------------------------ learning (watched)
 
-    /** A watched town's stores, treasury and roll counted at the start of a stretch, and its rates taken at the end. */
+    /**
+     * A watched town is counted once a game day (its stores item by item, its treasury, its roll), the last ten days'
+     * counts kept, and its rates are the trend through them (least squares, per head): a day's noise at either end
+     * (the stone drawn for a building the evening before a count) is not taken for the town's pace. Counted
+     * over less than {@link #MIN_TREND_DAYS} (just woken, or new), the rates it had stand. A gap in the counting (asleep,
+     * its stores unloaded, settling the goods of its sleep) starts the counts again.
+     */
     private static void learn(ServerLevel level, Villages.Village v, Town t, long time) {
         if (t.applying || !level.isLoaded(v.centre())) {
-            t.base = null;
+            t.counts.clear();
             return;
         }
-        if (t.base != null && time - t.baseTime < LEARN_EVERY) return;
-        Map<String, Integer> now = storesNow(level, v.id());
-        int coins = Ledger.coins(v.id()), pop = Villages.recordedPopulation(v.id());
-        if (t.base != null) {
-            double days = (time - t.baseTime) / 24000.0;
-            double heads = Math.max(1, (t.basePop + pop) / 2.0);
-            Map<String, Double> items = new HashMap<>();
-            for (String k : now.keySet()) items.put(k, (now.get(k) - t.base.getOrDefault(k, 0)) / days / heads);
-            for (String k : t.base.keySet()) if (!now.containsKey(k)) items.put(k, -t.base.get(k) / days / heads);
-            Rates measured = new Rates(items, (coins - t.baseCoins) / days / heads, (pop - t.basePop) / days / heads, days);
-            Rates merged = merge(rates(v.id(), t), measured);
-            t.rates = merged;
-            Ledger.note(v.id(), RATES_NOTE, write(merged));
+        Count last = t.counts.peekLast();
+        if (last != null && time - last.time() < LEARN_EVERY && time >= last.time()) return;
+        if (last != null && (time - last.time() > 2 * LEARN_EVERY || time < last.time())) t.counts.clear();
+        t.counts.addLast(new Count(time, storesNow(level, v.id()), Ledger.coins(v.id()), Villages.recordedPopulation(v.id())));
+        while (t.counts.size() > COUNTS_KEPT) t.counts.removeFirst();
+        if (t.counts.size() < 2) return;
+        Rates measured = trend(t.counts);
+        if (measured.days() < MIN_TREND_DAYS && rates(v.id(), t).days() > 0) return;
+        t.rates = measured;
+        Ledger.note(v.id(), RATES_NOTE, write(measured));
+    }
+
+    /** The least-squares trend through the counts, per head and per day. */
+    static Rates trend(java.util.Collection<Count> counts) {
+        int n = counts.size();
+        double mt = 0, heads = 0;
+        java.util.Set<String> keys = new java.util.HashSet<>();
+        for (Count c : counts) {
+            mt += c.time() / 24000.0;
+            heads += c.pop();
+            keys.addAll(c.items().keySet());
         }
-        t.base = now;
-        t.baseCoins = coins;
-        t.basePop = pop;
-        t.baseTime = time;
+        mt /= n;
+        heads = Math.max(1, heads / n);
+        double stt = 0;
+        for (Count c : counts) stt += (c.time() / 24000.0 - mt) * (c.time() / 24000.0 - mt);
+        if (stt <= 0) return Rates.NONE;
+        Map<String, Double> items = new HashMap<>();
+        for (String k : keys) {
+            double slope = slope(counts, mt, stt, c -> c.items().getOrDefault(k, 0));
+            if (Math.abs(slope) > 1e-9) items.put(k, slope / heads);
+        }
+        Count first = counts.iterator().next(), lastCount = null;
+        for (Count c : counts) lastCount = c;
+        double days = (lastCount.time() - first.time()) / 24000.0;
+        return new Rates(items, slope(counts, mt, stt, Count::coins) / heads, slope(counts, mt, stt, Count::pop) / heads, days);
+    }
+
+    private static double slope(java.util.Collection<Count> counts, double mt, double stt,
+                                java.util.function.ToIntFunction<Count> value) {
+        double my = 0;
+        for (Count c : counts) my += value.applyAsInt(c);
+        my /= counts.size();
+        double sty = 0;
+        for (Count c : counts) sty += (c.time() / 24000.0 - mt) * (value.applyAsInt(c) - my);
+        return sty / stt;
     }
 
     /** The running mean: what was known, and a new stretch weighed by its length (an older day counts for less). */

@@ -1404,8 +1404,8 @@ whether anybody is there or not. So the server simulates each town as closely as
 * **A town nobody is near** for `townLodAwaySeconds` (a minute) *sleeps*: the chunks it kept
   loaded for its work are let go, its folk are saved with their chunks, and every few seconds a
   step moves its stores, its treasury and its roll at the rates it was measured to work at while
-  somebody was there (over the last week of it; a town never watched goes at the mean of the
-  towns that were). What the rest of the world still does to it while it sleeps (a shipment in, a
+  somebody was there (the trend of its stores, treasury and roll over its last ten days watched; a
+  town never watched goes at the mean of the towns that were). What the rest of the world still does to it while it sleeps (a shipment in, a
   tax, the war's cost) happens as ever and is not counted twice. It trades as before: its stores
   answer from what they held when it slept and what has come and gone since. When you come near
   it wakes: its ground is loaded again, and what it made and used while it slept goes into and
