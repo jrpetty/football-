@@ -123,8 +123,8 @@ public class WarPolishGameTests {
      * colour, the name tags in its team's colour), and after the battle every bit of it is gone: the kit exactly as it
      * was, no tunic or standard left anywhere, the teams struck. Two towns of the same colour get contrasting ones.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "wp01_colours")
-    public static void wp01_colours(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "wpo01_colours")
+    public static void wpo01_colours(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         start(level);
         int x = 1920000;
@@ -172,7 +172,7 @@ public class WarPolishGameTests {
                     }
                 }
             }
-            Kit.log("wp01 dressed: " + t[0] + " against " + t[1] + "; " + trimmed + " pieces trimmed, " + tunics + " tunics, " + shields + " shields, "
+            Kit.log("wpo01 dressed: " + t[0] + " against " + t[1] + "; " + trimmed + " pieces trimmed, " + tunics + " tunics, " + shields + " shields, "
                 + standards + " helm standards (" + line + " in army 0's line)");
             helper.assertTrue(trimmed > 0 && tunics > 0 && shields > 0, "trims, tunics and shields all in the colours");
             helper.assertTrue(line <= WarDress.COMPANY || standards > 0, "a company standard on a helm past the first company");
@@ -205,7 +205,7 @@ public class WarPolishGameTests {
                 UUID town = i == 0 ? a.id() : b.id();
                 helper.assertTrue(level.getScoreboard().getPlayerTeam(WarDress.teamForTests(town)) == null, "the army's team struck");
             }
-            Kit.log("wp01 after the battle (" + c.stage() + "): " + left + " still dressed, " + lent + " lent pieces left");
+            Kit.log("wpo01 after the battle (" + c.stage() + "): " + left + " still dressed, " + lent + " lent pieces left");
             helper.assertTrue(left == 0, "nobody left in battle dress: " + left);
             helper.assertTrue(lent == 0, "no tunic or standard kept: " + lent);
             helper.succeed();
@@ -218,8 +218,8 @@ public class WarPolishGameTests {
      * The line-up: in every formation the line stands in even ranks and files, each a little off its slot at most (no
      * clumps, no gaps), and the Captain with the standard behind the centre, behind the line.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "wp02_lineup")
-    public static void wp02_lineup(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "wpo02_lineup")
+    public static void wpo02_lineup(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         start(level);
         int x = 1924000;
@@ -250,7 +250,7 @@ public class WarPolishGameTests {
                 int n = line.size();
                 helper.assertTrue(n >= 3, "a line to draw up: " + n);
                 double[] ideal = nearestRange(form, n), actual = nearest(line);
-                Kit.log("wp02 " + form + " of " + n + ": nearest neighbour " + fmt(actual) + " (slots " + fmt(ideal) + "); Captain " + capDepth
+                Kit.log("wpo02 " + form + " of " + n + ": nearest neighbour " + fmt(actual) + " (slots " + fmt(ideal) + "); Captain " + capDepth
                     + ", the line's back " + lineBack);
                 helper.assertTrue(actual[0] >= ideal[0] - SLACK && actual[1] <= ideal[1] + SLACK,
                     form + ": even ranks and files, " + fmt(actual) + " against " + fmt(ideal));
@@ -292,8 +292,8 @@ public class WarPolishGameTests {
     // ------------------------------------------------------------------ wp03
 
     /** The war's course: a battle staged on and staged again from its start writes each thing once in both towns' books. */
-    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "wp03_log")
-    public static void wp03_log(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "wpo03_log")
+    public static void wpo03_log(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         start(level);
         int x = 1928000;
@@ -308,7 +308,7 @@ public class WarPolishGameTests {
             for (UUID[] p : new UUID[][]{ { c.attacker(), c.defender() }, { c.defender(), c.attacker() } }) {
                 List<String> written = Battles.courseWrittenForTests(p[0], p[1]);
                 Set<String> once = new HashSet<>(written);
-                Kit.log("wp03 " + Villages.name(p[0]) + "'s course: " + written);
+                Kit.log("wpo03 " + Villages.name(p[0]) + "'s course: " + written);
                 helper.assertTrue(!written.isEmpty(), "the war's course written");
                 helper.assertTrue(once.size() == written.size(), "each event written once: " + written);
                 helper.assertTrue(new HashSet<>(WarAndPeace.courseForTests(p[0], p[1])).size() == WarAndPeace.courseForTests(p[0], p[1]).size(),
@@ -324,8 +324,8 @@ public class WarPolishGameTests {
      * One battle, one outcome: staged at the clash it stays locked (nobody breaks on a stage, however long); staged on
      * to the rout, one side breaks, once; on to the aftermath, the same outcome, and the field held as it is.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "wp04_outcome")
-    public static void wp04_outcome(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 900, batch = "wpo04_outcome")
+    public static void wpo04_outcome(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         start(level);
         int x = 1932000;
@@ -351,7 +351,7 @@ public class WarPolishGameTests {
             Campaigns.Campaign c = Campaigns.ofTown(a.id());
             Battles.Battle b = c.battle();
             helper.assertTrue(b != null && !b.over(), "the aftermath held for the pictures, not written up");
-            Kit.log("wp04 the story: " + b.story());
+            Kit.log("wpo04 the story: " + b.story());
             helper.assertTrue(b.outcome() == BattleModel.Outcome.ROUT && b.winner() == 0 && outcomes(b) == 1, "still the one outcome: " + b.story());
             helper.succeed();
         });
@@ -367,8 +367,8 @@ public class WarPolishGameTests {
     // ------------------------------------------------------------------ wp05
 
     /** The pictures' camera: one set inside a block of stone steps out of it to where it sees its mark; one in open air stays. */
-    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "wp05_camera")
-    public static void wp05_camera(GameTestHelper helper) {
+    @GameTest(template = EMPTY, timeoutTicks = 200, batch = "wpo05_camera")
+    public static void wpo05_camera(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         int x = 1936000;
         Kit.hold(level, x, Z, 32);
@@ -378,7 +378,7 @@ public class WarPolishGameTests {
         Vec3 target = new Vec3(x + 14.5, g.getY() + 1, Z + 0.5);
         CameraCommands.Spot in = CameraCommands.clearSpot(level, new Vec3(x + 0.5, g.getY() + 1, Z + 0.5), target);
         CameraCommands.Spot open = CameraCommands.clearSpot(level, new Vec3(x + 24.5, g.getY() + 3, Z + 0.5), target);
-        Kit.log("wp05 inside the stone: " + in + "; in the open: " + open);
+        Kit.log("wpo05 inside the stone: " + in + "; in the open: " + open);
         helper.assertTrue(in.how().equals("moved") && CameraCommands.sees(level, in.feet(), target), "out of the stone to a clear view: " + in);
         helper.assertTrue(open.how().equals("clear"), "a clear view kept: " + open);
         helper.succeed();
