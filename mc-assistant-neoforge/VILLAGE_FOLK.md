@@ -1231,6 +1231,8 @@ hands back to their own work the same morning.
   whole of it: a field grown twenty-seven across, a wood, hunting grounds forty across. A
   folk out past the village's loaded ground (a walk to a far field, a fetch across the map)
   carries a window of loaded chunks with it, so nobody stops dead in a chunk nobody is near.
+  A town nobody is near at all goes to sleep and works on at its own pace without its
+  chunks (see *Many towns, and big ones* below).
 * **Nobody stands about.** A folk whose trade has nothing for it, and that can fetch
   nothing the village is short of or help the builder, finds something anyway, whatever
   its trade (except a courier, whose place between runs is the storehouse door). It clears out an old chest into the storehouse, takes what it carries to the
@@ -1384,6 +1386,36 @@ actually carry.
 `/village showcase buildings` (an operator command) sets every building out on a
 stage to be looked at. `/village showcase town` lays out a whole grown town to the
 plan.
+
+### Many towns, and big ones
+
+A world can hold many towns of up to five hundred. What costs a server is every folk being a
+creature that thinks and walks every tick, and every town keeping its ground loaded for its work
+whether anybody is there or not. So the server simulates each town as closely as anybody can see it:
+
+* **A town you are in** (within `townLodFullRange`, 128 blocks, of its ground) runs in full. Its
+  folk out of every player's sight (further than about seventy blocks, past where the game draws
+  them) do the same work more cheaply: a walk with both ends out of sight is *travelled* (the folk
+  is where it was going after as long as the walk takes, with no path searched and no step
+  taken; anybody coming into sight has it walk the rest), and a folk standing still out of sight
+  does not have its body moved. Nothing you can see changes.
+* **A town you are near** (within view distance) runs as well, its town-wide rounds (elections,
+  homes, the streets, assemblies) at a slower beat.
+* **A town nobody is near** for `townLodAwaySeconds` (a minute) *sleeps*: the chunks it kept
+  loaded for its work are let go, its folk are saved with their chunks, and every few seconds a
+  step moves its stores, its treasury and its roll at the rates it was measured to work at while
+  somebody was there (over the last week of it; a town never watched goes at the mean of the
+  towns that were). What the rest of the world still does to it while it sleeps (a shipment in, a
+  tax, the war's cost) happens as ever and is not counted twice. It trades as before: its stores
+  answer from what they held when it slept and what has come and gone since. When you come near
+  it wakes: its ground is loaded again, and what it made and used while it slept goes into and
+  out of its chests, and the children due are born.
+
+The server also keeps a budget per tick for the folk's path searches (`pathBudgetMs`: past it a
+search out of every player's close sight waits a tick, never two running) and for the towns'
+rounds (`townTickBudgetMs`). All of it is under `[performance]` in the config; `townLod = false`
+puts every town back to running in full everywhere. With it on, `villageWorldCap` defaults to
+2500 folk: only the towns a player is near cost their folk's ticks.
 
 ## The Village Storehouse
 
