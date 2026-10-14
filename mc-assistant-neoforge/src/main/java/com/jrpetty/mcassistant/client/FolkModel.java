@@ -501,6 +501,7 @@ public class FolkModel extends HierarchicalModel<VillageFolkEntity> implements A
         int job = folk.clientJobOrdinal();
         if (job == AssistantEntity.StationTask.CAVE.ordinal()) return CAVE_OUTFIT;  // "cavedweller"
         if (job == AssistantEntity.StationTask.FERRY.ordinal()) return 7;           // [transport] "fisher": a waterman's clothes
+        if (job == AssistantEntity.StationTask.BANK.ordinal()) return 16;           // the banker in the shopkeeper's clothes (its number wrapped round to the blank "none")
         if (job == AssistantEntity.StationTask.FLETCHER.ordinal()) return FLETCHER_OUTFIT;   // [fletcher] apron, quiver, feathered cap
         if (job == AssistantEntity.StationTask.GOLEMS.ordinal()) return GOLEMS_OUTFIT;       // [golems] riveted apron, orange scarf
         if (job == AssistantEntity.StationTask.FIREWORKS.ordinal()) return FIREWORKS_OUTFIT;   // [fireworks] "fireworks"

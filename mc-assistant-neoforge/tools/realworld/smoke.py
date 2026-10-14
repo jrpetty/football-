@@ -3888,6 +3888,83 @@ def shops_homes_stage(r, look, cx, cz):
     say("stage done: " + r.cmd("execute positioned %d 100 %d run village service stage done" % (cx - 30, cz + 30))[:200])
     r.cmd("gamemode creative %s" % USER)
     say("alive after the shops and homes: %s" % client_alive())
+def styles_stage(r, look, cx, cz):
+    """[styles] The renovation (entity/Renovation, /village theme stage). Run from well out to the west of the town,
+    /village theme stage lays out one of the town's houses as an older town left it: earth and a block of gold patched
+    into its walls, a gap in its roof, a cobble pillar left standing inside; stamped as built to an older design.
+    Pictures: the old house from the street and inside; then /village theme stage renovate, and the same two views of
+    the house as the builders leave it (its walls whole and of proper stuff, its roof closed, the pillar gone). Then
+    /village theme, the town's theme and its renovation list, in words."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    sx, sz = cx - 140, cz + 40                         # out past the town to the west, on ground of its own
+    r.cmd("tp %s %d %d %d" % (USER, sx - 20, hy + 20, sz - 20))
+    time.sleep(8)                                      # the ground arrives at the server and the client
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village theme stage" % (sx, sz))
+    say("styles stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the renovation; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("34-styles-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("house", "1-old-house", 10)
+    shoot("inside", "2-old-inside", 6)
+    say("renovate: " + r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village theme stage renovate" % (sx, sz)))
+    time.sleep(2)
+    shoot("house", "3-renovated", 8)
+    shoot("inside", "4-renovated-inside", 6)
+    say("theme: " + r.cmd("execute positioned %d 0 %d run village theme" % (cx, cz))[:900])
+
+
+def paths_stage(r, look, cx, cz):
+    """[paths] The town's ways in a grown town (entity/Footways, DoorWays, StuckSpots, HouseSigns, WayAudit). The homes'
+    signs are seen to and the doors' paths laid on the spot (/village paths signs, /village paths now), then the
+    pictures: a street of homes with their household's names and trades by the doors, four homes' doors close to (the
+    sign, the paved path out to the street and its lamp), and the same street at night with its lamps lit. Then
+    /village paths: the doors reached from the heart, the lots, the square and the stuck spots, in words."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    here = "execute positioned %d %d %d run " % (cx, hy + 1, cz)
+    say("paths signs: " + r.cmd(here + "village paths signs")[:300])
+    say("paths now: " + r.cmd(here + "village paths now")[:300])
+    out = r.cmd(here + "village paths views")
+    say("paths views: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("no homes with doors to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            return
+        x, y, z, ax, ay, az = views[name]
+        look("34-paths-" + picture, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("street", "1-street-of-signs", 10)
+    for i in range(1, 5):
+        shoot("home-%d" % i, "%d-home-%d-sign-and-path" % (i + 1, i), 8)
+    r.cmd("time set 18000")
+    time.sleep(4)
+    shoot("street", "6-street-at-night", 8)
+    r.cmd("time set 6000")
+    say("paths: " + r.cmd(here + "village paths")[:1500])
+    say("alive after the town's ways: %s" % client_alive())
 
 
 def main():
@@ -4321,6 +4398,34 @@ def main():
         wagons_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("wagons stage failed: %s" % e)
+    try:
+        town_blueprints_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("town blueprints stage failed: %s" % e)
+    try:
+        market_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("market stage failed: %s" % e)
+    try:
+        integrity_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("integrity stage failed: %s" % e)
+    try:
+        tidy_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("tidy stage failed: %s" % e)
+    try:
+        defence_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("defence stage failed: %s" % e)
+    try:
+        styles_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("styles stage failed: %s" % e)
+    try:
+        paths_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("paths stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:

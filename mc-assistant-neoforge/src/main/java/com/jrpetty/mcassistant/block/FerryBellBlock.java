@@ -59,6 +59,14 @@ public class FerryBellBlock extends HorizontalDirectionalBlock {
         return defaultBlockState().setValue(FACING, ctx.getHorizontalDirection().getClockWise());
     }
 
+    /** [paths] Not a way through: the ferry bell on its frame stands near full height on less than a full block, and the game took its cell
+     *  for open ground, planned paths through it, and folk walked into it and stood there. */
+    @Override
+    protected boolean isPathfindable(net.minecraft.world.level.block.state.BlockState state,
+                                     net.minecraft.world.level.pathfinder.PathComputationType type) {
+        return false;
+    }
+
     @Override
     protected VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext ctx) {
         // The model is drawn facing north, its frame across the way it faces (along x): turned a quarter for east and west.

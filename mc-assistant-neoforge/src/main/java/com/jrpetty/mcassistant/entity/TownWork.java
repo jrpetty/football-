@@ -235,7 +235,7 @@ public final class TownWork {
     }
 
     /** Ground feet wear into a path: grass and bare earth. */
-    private static boolean earth(BlockState st) {
+    static boolean earth(BlockState st) {
         return st.is(Blocks.GRASS_BLOCK) || st.is(Blocks.DIRT) || st.is(Blocks.COARSE_DIRT) || st.is(Blocks.PODZOL)
             || st.is(Blocks.MYCELIUM) || st.is(Blocks.ROOTED_DIRT);
     }

@@ -10796,6 +10796,55 @@ One worth for everything, one price for everybody, and coin that holds its value
 * **Seeing it.** The Prices page (and `/village prices`) has each good's price, its arrow and why, the coin in
   the treasury and the purses, the upkeep, the spread and the leans; the price signs show the arrow; a folk
   asked about prices tells you what has moved.
+## The town's look as data, and renovation [styles]
+
+**Themes.** What a town's buildings are made of is data, not code: a *theme*
+(`data/mc_assistant/themes/<id>.json`, which a datapack may override or add to). The
+folk's own look is the `medieval` theme, and it chooses block for block what the code
+chose before (StylesGameTests st01 holds it to the old code, frozen, over a million
+choices). A theme says, for every kind of block a design asks for (the wall, the floor,
+the roof stair, the post...), which blocks a builder reaches for first, given the town's
+land and its building style; what each age makes of the town's buildings; how each
+building style dresses its houses; the lamp posts, benches and street lights; the land's
+own walling; and the palettes a storey is put up in. A theme may also draw its own
+version of any design (`blueprints/<theme>/<design>.txt`), built in place of the usual
+one. Every town builds in the config's theme (`villageTheme`, "medieval"); an operator
+gives one town another with `/village theme set <id>`, and `/village theme` shows the
+town's theme, the themes on offer and its renovation list. How to write a theme (the
+alien one is meant to be only this): THEMES.md.
+
+**Materials.** Never, at any age, a block of the theme's forbidden list as building
+material: no diamond, emerald, gold, iron or lapis blocks, nothing of the Nether's or the
+End's (netherrack, nether brick, blackstone, basalt, quartz, obsidian, end stone,
+purpur), unless the theme names that block itself (the Nether Age's quartz footings).
+From the Iron Age no earth, gravel, sand or wool in a wall, a floor or a roof: a builder
+short of the town's own block goes down the theme's stand-ins for its age (stone bricks,
+cobblestone, stone, bricks, planks...) and, past them, waits for the stores. A young
+town still builds with whatever proper block it has. The earth of a flower box is earth.
+The builders, the rebuilders after a fire and the renovation all keep to this.
+
+**Renovation.** Every building is stamped when it goes up with what it was built to:
+its design's version (a changed drawing is a new version), the theme, the age and the
+style. Once a day (a slice of the town a turn) the town goes over its buildings; one whose
+design or theme is not the current one, or that has earth or a precious block in its
+walls, goes on the renovation list, the most out of date and the oldest first. Two at a
+time, a turn every half a minute by day, a hand rebuilds it in place from the stores, a
+few blocks a turn from the bottom up: the new design's walls, floors and roof; the old
+design's leftovers taken down into the stores; doors, windows and ladders put in. Its
+furniture is moved, never lost: a chest with everything in it, a furnace, a lectern, a
+sign; its beds are all moved in one moment, by day, so the household is never a bed
+short at night. The household stays: it is the same house on the same ground. One only
+an age or a style behind is the ages' make-over's and the style's dressers', as before.
+A building with no stamp (an older save) is looked over for its design only; its
+materials are left as they are. The chronicle says when a building is renovated.
+
+| Test | What it proves |
+|---|---|
+| st01 | the medieval theme is the old code, choice for choice (looks, parts, ages, styles, streets, palettes, whole dressings) |
+| st02 | the materials, age by age: no junk, no precious or Nether blocks, the stand-ins in order, a young town unblocked |
+| st03 | a second theme, pure data, end to end: its blocks, its design, its ages; a medieval house renovated into it |
+| st04 | an old design renovated turn by turn from the stores: household and beds kept, the chest moved whole, gold and earth out |
+
 ## Buildings kept whole: the placement gate, the upkeep and the audit
 
 [integrity] A town is a dozen kinds of work all putting blocks into the same few acres: the builders, the lamp posts,
@@ -10995,3 +11044,63 @@ wall behind `castleWalls`.
 (ops: a batch of its works now); `/village wall build` (ops: all of it at once, out of nothing, for the pictures);
 `/village wall stage` (ops: the same, and the views to photograph it); `/village muster` (ops: the bell rung for a
 drill, a minute long, and the views over the square).
+
+
+## The town's ways: doors, paths, lots and names by the doors
+
+[paths] A town is walked as well as looked at. Its folk must get in at every door, never stand stuck against something
+for good, and its buildings must stand on their lots with a way round each.
+
+**A way to every door.** On its rounds of the streets (TownWork, every fifteen seconds for one town, six buildings a
+visit) the town first makes each door's way in walkable (DoorWays: the doorway dug out, a doorstep and steps cut into a
+bank or built up out of a hollow, their tops in cobblestone), then lays the path from the door straight out to its street:
+worn into the earth, or laid in what the street itself is laid in (cobbles, stone bricks) out of the stores; the grass and
+flowers taken off it, and loose earth, gravel, sand, a scaffold left standing or rubble off any building's ground taken
+out of the two places before the door. Where the path is dark at night (block light under 8 at its doorstep or its street
+end), a lamp goes up beside it on the lot's own ground, never on the street or the path: a post of the town's wood with a
+lantern from the Iron Age, a torch on a post before. All by hand (TownJobs) and through the town's gate (TownBlocks:
+DOORWAY, LAMP).
+
+**Nobody stuck for good.** When a folk's stuck detector gives its path up, the spot is looked at (StuckSpots): what stood
+toward the next step of its path: a missing step (a bank two high), a block in the way, a low block overhead, a wall, a
+fence, a drop, water, somebody in the way. On the town's own open ground (a street, the square, a lot's open ground; never
+in a building, a field or a pen) its own fault is mended there and then by the folk that met it: the bank's top block cut
+out into a step, a stray block dug out (into the stores), a hole in a street filled from the stores. A spot mended six
+times is left and only written down. The count of give-ups, of mends and of folk going nowhere for more than half a minute
+is kept in the town's books (the ledger's notes, so a restart keeps it); the spots themselves are kept in memory. The
+village board's panels, a rain barrel, the stocks and the ferry bell no longer let the game's path finder plan a way
+through them (they are a plank thick or near full height on less than a block): the board was where a new town's folk
+were stuck most, two hundred and seventy times in a day and a half.
+
+**Lots kept apart.** A building is never sited where its ground, eaves and all, would overlap or touch a building
+standing or going up (Footways.crowds, in Villages.siteFor and a household's own lot in HousingMarket): most buildings
+leave a block of their eleven-block lot, so neighbours back to back keep a way of two between them; the few that fill
+their lots (a villa, a block of flats, the museum) go to another lot rather than stand wall to wall with another such.
+
+**Whose house it is.** Every home (a house, a two-storey house, a manor, a villa) has a sign by its front door, beside it
+at head height on the wall, never on a window, in the town's own wood: the head of the household's name (with "& family"
+for more than one), their trade (or the two trades of a couple, "Farmer & Miner"), the house's number and its street. An
+empty house says "To let"; a player's house the player's name. The town's rounds keep it right: a household that moves in
+or out, buys the house or lets it has its sign seen to on the next round (ten seconds), any other change (a new trade, a
+death) on the town's round of its buildings; a sign knocked down is put back. Old towns' houses get theirs on their next
+round. A long name is cut with an ellipsis.
+
+**Looking it over.** `/village paths` gives the town's ways in words: every door, whether a folk can walk to it from the
+heart and through it (Footways.reach: a block up, three down, through wooden doors and gates, up ladders), doors with no
+street straight out of them, doors with a wall or another building in the two places before them, buildings overlapping or
+touching, anything left on the square's open ground (the founders' camp beds counted apart), the spots folk gave up at,
+and anybody stuck over half a minute. The same checks are in the town's audit (TownAudit, under "ways"). For operators,
+`/village paths signs` sees to every home's sign now, `/village paths now` does a few rounds of the doors' ways and paths
+on the spot, and `/village paths views` says where to stand for the pictures (the smoke's paths stage).
+
+The game tests `PathsGameTests` check that:
+* a house a farmer rents has the farmer's name and "Farmer" by its door, with its number, on a sign of the town's wood
+  beside the door, not on a window; knocked down, it is put back; the farmer moves out and it says "To let", the number kept;
+* a dark door's way to its street is worn into a path all the way, a lamp goes up beside it off the street and the path,
+  the way is lit, and the door is reached from the heart;
+* a folk stopped below a bank two high with no step gives up, the spot is written down as a missing step, and a step is
+  cut into the bank there, all on the town's books;
+* a villa is never sited wall to wall with the villa on the lot behind it, a house is; the audit sees two touching;
+* a folk walks into a box through a wooden door, not through an iron one;
+* (not required, minutes long) pa10: a town of forty founded and grown for eight days with every feature live and its
+  stores kept stocked, its ways looked over every half day; pa11 the same town with the paths work switched off, to compare.

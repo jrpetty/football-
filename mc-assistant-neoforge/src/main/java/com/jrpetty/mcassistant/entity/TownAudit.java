@@ -155,6 +155,7 @@ public final class TownAudit {
         register(new Fidelity());
         register(new Roads());
         register(new HalfBuilt());
+        WayAudit.register();                 // [paths] the doors reached, the lots apart, the square clear, nobody stuck
         TidyAudit.registerChecks();                     // [tidy] grass inside the buildings, the eyesores, the looks
     }
 

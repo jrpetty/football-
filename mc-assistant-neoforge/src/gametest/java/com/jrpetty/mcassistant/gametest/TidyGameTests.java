@@ -405,7 +405,8 @@ public class TidyGameTests {
         f.setJob(com.jrpetty.mcassistant.entity.AssistantEntity.StationTask.HAUL);     // no ground of its own staked over the eyesores
         UUID village = f.ownerId();
         Villages.Village v = Villages.get(village);
-        stores(level, heart, 2, new ItemStack(Items.DIRT, 32), new ItemStack(Items.OAK_SAPLING, 2));
+        // (Boards for the fence post the dropped torch is set on: with none, the post is made of one of the trunk's logs.)
+        stores(level, heart, 2, new ItemStack(Items.DIRT, 32), new ItemStack(Items.OAK_SAPLING, 2), new ItemStack(Items.OAK_PLANKS, 8));
         java.util.function.ToIntFunction<java.util.function.Predicate<ItemStack>> stock =
             what -> com.jrpetty.mcassistant.entity.Market.stock(level, village, what);
         int cobbleBefore = stock.applyAsInt(it -> it.is(Items.COBBLESTONE));
