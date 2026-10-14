@@ -997,7 +997,7 @@ public final class Battles {
 
     /** Wait so long, or less for the tests. */
     static long soon(long t) {
-        return Campaigns.soon(t);
+        return Campaigns.soonBattle(t);
     }
 
     // ------------------------------------------------------------------ formation

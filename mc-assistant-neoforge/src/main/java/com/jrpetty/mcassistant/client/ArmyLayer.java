@@ -25,7 +25,8 @@ import net.minecraft.world.level.block.entity.BannerPatternLayers;
 /**
  * [war] A fighter in the field (entity/Armies, sent as VillageFolkEntity.clientWar and clientSurcoat): a surcoat of
  * its town's arms over its armour, front and back, so a line reads as one army from a hill; the Captain's long
- * cloak of the arms down its back; a sergeant's sash in the arms' field colour; the medic's white sash. Nothing is
+ * cloak of the arms down its back and a small crest of them on its helm; a sergeant's sash in the arms' field colour and
+ * its group's pennant over its shoulder; the medic's white sash. Nothing is
  * made a frame: the cloth is the surcoat stack the server sent, read as it is.
  */
 public class ArmyLayer extends RenderLayer<VillageFolkEntity, FolkModel> {
@@ -35,6 +36,8 @@ public class ArmyLayer extends RenderLayer<VillageFolkEntity, FolkModel> {
     private static final float CLOTH = 0.29F, OUT = 3.3F;
     /** The Captain's cloak: wider and longer, hung from the shoulders down the back. */
     private static final float CLOAK = 0.42F;
+    /** A sergeant's pennant and the Captain's crest, against a banner's size. */
+    private static final float PENNANT = 0.16F, CREST = 0.09F;
     /** The bits of VillageFolkEntity.clientWar (Armies.flags): role + 1, rank, down. */
     private static final int ROLE = 7, RANK_SHIFT = 3, RANK = 3, DOWN = 1 << 5;
     private static final int MEDIC = 5, SERGEANT = 1, CAPTAIN = 3;
@@ -83,7 +86,23 @@ public class ArmyLayer extends RenderLayer<VillageFolkEntity, FolkModel> {
             BannerRenderer.renderPatterns(pose, buffers, light, OverlayTexture.NO_OVERLAY, flag, ModelBakery.BANNER_BASE, true, field, arms);
             pose.popPose();
         }
-        if (rank == SERGEANT) sash(pose, buffers, light, folk, 0xFF000000 | field.getTextureDiffuseColor());
+        if (rank == SERGEANT) {
+            sash(pose, buffers, light, folk, 0xFF000000 | field.getTextureDiffuseColor());
+            // The sergeant's pennant on a short staff over its shoulder, its group's mark across the field.
+            flagAt(pose, buffers, light, field, arms, -0.22F, -0.55F, 0.18F, PENNANT);
+        }
+        if (rank == CAPTAIN && (war & DOWN) == 0) flagAt(pose, buffers, light, field, arms, 0.0F, -0.62F, 0.0F, CREST);   // the crest on its helm
+    }
+
+    /** A small flag of the arms on the body's frame at (x, y, z) in blocks, so big. */
+    private void flagAt(PoseStack pose, MultiBufferSource buffers, int light, DyeColor field, BannerPatternLayers arms, float x, float y, float z, float size) {
+        pose.pushPose();
+        getParentModel().body().translateAndRotate(pose);
+        pose.translate(x, y, z);
+        pose.mulPose(Axis.YP.rotationDegrees(90.0F));
+        pose.scale(size, size, size);
+        BannerRenderer.renderPatterns(pose, buffers, light, OverlayTexture.NO_OVERLAY, flag, ModelBakery.BANNER_BASE, true, field, arms);
+        pose.popPose();
     }
 
     private void sash(PoseStack pose, MultiBufferSource buffers, int light, VillageFolkEntity folk, int colour) {

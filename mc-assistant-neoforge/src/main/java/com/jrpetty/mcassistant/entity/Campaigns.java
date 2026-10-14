@@ -164,13 +164,14 @@ public final class Campaigns {
     @Nullable private static Boolean watchForTests;
     /** Do the armies take the field at all (the diplomacy's own tests keep them home)? */
     private static volatile boolean field = true;
-    private static volatile boolean hurry;
+    private static volatile boolean hurry, hurryBattle;
 
     public static void resetForTests() {
         ACTIVE.clear();
         loaded = true;
         watchForTests = null;
         hurry = false;
+        hurryBattle = false;
         field = true;
         Armies.resetForTests();
         Battles.resetForTests();
@@ -196,11 +197,23 @@ public final class Campaigns {
     /** Tests: the waits cut short (the notice, the muster, the camp, the siege) and the march four times the pace. */
     public static void hurryForTests(boolean on) {
         hurry = on;
+        hurryBattle = on;
+    }
+
+    /** Pictures: the campaign's waits cut short, but its battle fought at its own pace, to be photographed. */
+    public static void hurryForPictures() {
+        hurry = true;
+        hurryBattle = false;
+    }
+
+    /** A battle's phase so long, or less for the tests. */
+    static long soonBattle(long ticks) {
+        return hurryBattle ? Math.min(ticks, 60L) : ticks;
     }
 
     /** Are the waits cut short (the tests, the pictures)? */
     static boolean hurried() {
-        return hurry;
+        return hurryBattle;
     }
 
     static long soon(long ticks) {
@@ -423,6 +436,7 @@ public final class Campaigns {
                 + "; " + Villages.name(v.id()) + " draws up in " + army.formation.words + " (" + army.formation.how + ") and " + army.tactic.words);
             WarBooks.course(v.id(), i == 0 ? c.b : c.a, day, "our army mustered, " + army.size() + " strong" + (cap != null ? " under " + cap.what() : ""));
         }
+        if (c.armies[0] != null && c.armies[1] != null) Armies.contrast(c.armies[0], c.armies[1]);
         if (c.armies[0] == null) {
             Villages.tell(c.a, day, "the muster came to nothing: nobody to march");
             stage(c, Stage.DONE, now, now);
@@ -1284,6 +1298,7 @@ public final class Campaigns {
                     view(level, out, "captain", e.getX() + fx * 4 + fz * 1.5, e.getZ() + fz * 4 - fx * 1.5, 1.6, e.getX(), e.getZ());
                 }
                 view(level, out, "clash", m.getX() - az * 16 + ax * 6, m.getZ() + ax * 16 + az * 6, 4, m.getX(), m.getZ());
+                view(level, out, "parley", m.getX() - az * 9, m.getZ() + ax * 9, 2.5, m.getX(), m.getZ());   // the envoys in the middle
                 if (c.stage == Stage.ASSAULT && c.gate != null) gateView(level, c, out);
             }
             default -> { }

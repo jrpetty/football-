@@ -3655,10 +3655,11 @@ def war_stage(r, look, cx, cz):
     time.sleep(6)
     step("next", 12)
     shoot("3", ["camp0", "camp1"], 4)
-    step("next", 14)                                   # the battle: the lines form to the drums
-    shoot("4", ["side", "hill", "high"], 4)
-    time.sleep(6)
-    shoot("5", ["captain"], 2)                         # the parley and the Captain's speech, the banner beside it
+    step("next", 22)                                   # the battle: the lines form to the drums, the stand-off
+    shoot("4", ["side", "hill", "high"], 3)            # both armies drawn up in their colours, facing each other
+    shoot("4b", ["parley"], 2)                         # the envoys meeting in the middle under their banners
+    time.sleep(12)
+    shoot("5", ["captain"], 2)                         # the Captain's speech, the banner beside it
     time.sleep(20)
     shoot("6", ["hill", "high", "clash"], 3)           # the volleys, the advance, the clash
     time.sleep(25)

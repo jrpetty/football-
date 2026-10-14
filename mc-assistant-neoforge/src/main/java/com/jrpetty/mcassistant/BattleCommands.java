@@ -109,7 +109,7 @@ public final class BattleCommands {
         }
         long day = level.getDayTime() / 24000L;
         if (!Wars.atWar(v.id(), o.id())) WarAndPeace.declare(level, v.id(), o.id(), day, WarAndPeace.Goal.TRIBUTE, 20, "tribute of twenty coins");
-        Campaigns.hurryForTests(true);
+        Campaigns.hurryForPictures();
         Campaigns.Campaign c = Campaigns.beginForTests(level, v, o, siege, true);
         if (c == null) {
             ctx.getSource().sendFailure(Component.literal("No campaign could begin."));

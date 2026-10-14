@@ -623,6 +623,36 @@ public final class Armies {
         return coat;
     }
 
+    /**
+     * Two armies in colours too alike to tell apart from a hill (the same, or the same family: the blues, the reds,
+     * the greens, the dark ones): the second takes a field colour of its own for the battle, its arms as they are.
+     */
+    static void contrast(Army first, Army second) {
+        DyeColor a = first.surcoat.getOrDefault(net.minecraft.core.component.DataComponents.BASE_COLOR, DyeColor.WHITE);
+        DyeColor b = second.surcoat.getOrDefault(net.minecraft.core.component.DataComponents.BASE_COLOR, DyeColor.WHITE);
+        if (family(a) != family(b)) return;
+        for (DyeColor c : new DyeColor[]{ DyeColor.RED, DyeColor.BLUE, DyeColor.YELLOW, DyeColor.WHITE, DyeColor.GREEN, DyeColor.BLACK }) {
+            if (family(c) != family(a)) {
+                second.surcoat = second.surcoat.copy();
+                second.surcoat.set(net.minecraft.core.component.DataComponents.BASE_COLOR, c);
+                return;
+            }
+        }
+    }
+
+    /** A colour's family, as an eye tells them apart at a distance. */
+    static int family(DyeColor c) {
+        return switch (c) {
+            case BLUE, LIGHT_BLUE, CYAN -> 0;
+            case RED, PINK, MAGENTA, ORANGE -> 1;
+            case GREEN, LIME -> 2;
+            case BLACK, GRAY, BROWN -> 3;
+            case WHITE, LIGHT_GRAY -> 4;
+            case YELLOW -> 5;
+            case PURPLE -> 6;
+        };
+    }
+
     /** The towns' colours with no arms of their own, as their watch wears them (FolkRenderer's banners). */
     private static final DyeColor[] COLOURS = { DyeColor.BLUE, DyeColor.RED, DyeColor.GREEN, DyeColor.PURPLE, DyeColor.BLACK, DyeColor.CYAN, DyeColor.ORANGE };
 
