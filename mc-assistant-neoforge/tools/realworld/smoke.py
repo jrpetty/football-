@@ -4464,6 +4464,10 @@ def main():
         paths_stage(r, look, cx, cz)
     except Exception as e:  # noqa: BLE001
         say("paths stage failed: %s" % e)
+    try:
+        mines_stage(r, look, cx, cz)
+    except Exception as e:  # noqa: BLE001
+        say("mines stage failed: %s" % e)
     r.cmd("gamemode spectator %s" % USER)
     say("alive after the founding: %s" % client_alive())
     try:
