@@ -11665,6 +11665,8 @@ pays for it.
   crew (TownJobs "care", the brewer first) does the round as before, so nobody goes untended.
 - **Births.** The healer attends every birth it can. The chronicle says who saw the child into the world, and the
   parents are happier for two days.
+- **War.** The healer is the army's medic first (else the cook, else the brewer). While it is away with the army, the
+  town's care crew does the rounds at home.
 - **The player.** "I'm hurt. Could you see to me?" (the healer's suggested talk option, or typed "I'm hurt" or "heal
   me"). If you hold a bandage, the healer binds it for a small fee. Otherwise it gives the best remedy in the stores
   at the market's price plus the fee, or a rest and a kind word for a coin when the stores are bare. It also cures

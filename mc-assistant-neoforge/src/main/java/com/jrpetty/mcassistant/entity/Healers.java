@@ -201,6 +201,7 @@ public final class Healers {
         if (!h.isAlive() || h.isBaby()) return "gone";
         if (h.isSleeping()) return "asleep";
         if (h.health().cold > 0 || Health.laidUp(h)) return "ill itself";
+        if (Armies.fighter(h.getUUID()) != null) return "with the army, as its medic";   // [war] the town's care crew sees to home
         if (!TownJobs.fit(h, "care")) return "busy elsewhere";
         return "";
     }
@@ -273,7 +274,7 @@ public final class Healers {
      */
     public static boolean work(VillageFolkEntity f, ServerLevel level) {
         UUID id = f.ownerId();
-        if (id == null || f.isSleeping() || f.isBaby()) return false;
+        if (id == null || f.isSleeping() || f.isBaby() || Armies.fighter(f.getUUID()) != null) return false;   // away as the army's medic
         long t = level.getDayTime() % 24000L;
         if (t < 900L || t > 12300L) return false;
         long now = level.getGameTime();

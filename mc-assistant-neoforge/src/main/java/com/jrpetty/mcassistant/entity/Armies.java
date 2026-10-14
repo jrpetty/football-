@@ -59,8 +59,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * colours. Each has its place by its kit: a bow and arrows to the archers, the rest to the shield line, the
  * weakest of them to the reserve. Its <b>Captain</b> is the constable, else the watch's captain, else the most
  * seasoned of the guards; a <b>sergeant</b> for every six, the best of the rest; a <b>standard-bearer</b>
- * carrying the town's banner out of the stores (or woven for it there and then); and a <b>medic</b>, the cook
- * (else the brewer), with bandages out of the stores. The line is given shields out of the armoury where it has
+ * carrying the town's banner out of the stores (or woven for it there and then); and a <b>medic</b>, [roles-a] the
+ * town's healer (else the cook, else the brewer), with bandages out of the stores. The line is given shields out of the armoury where it has
  * them, the archers arrows out of the stores; leads for captives, wool and fences for the tents, a campfire,
  * and logs for a ram when it means to take a town, go with it as its supply. Nothing out of nothing: a town
  * without the cloth sleeps by the fire; without logs it cannot build a ram. At home again, all of it goes back.
@@ -622,7 +622,8 @@ public final class Armies {
         for (AssistantEntity e : Villages.folkOf(v.id())) {
             if (!(e instanceof VillageFolkEntity f) || f.isBaby() || !f.isAlive() || fighters.contains(f) || f.trip() != null || f.isShowcase()) continue;
             if (f.getUUID().equals(Villages.elder(v.id())) || FIGHTERS.containsKey(f.getUUID())) continue;
-            int score = f.stationTask() == AssistantEntity.StationTask.COOK ? 3 : f.stationTask() == AssistantEntity.StationTask.BREW ? 2
+            int score = f.stationTask() == AssistantEntity.StationTask.HEAL ? 4                       // [roles-a] the healer first
+                : f.stationTask() == AssistantEntity.StationTask.COOK ? 3 : f.stationTask() == AssistantEntity.StationTask.BREW ? 2
                 : f.countMatching(Kitchen.BANDAGE) > 0 ? 1 : 0;
             if (score > bestScore) {
                 bestScore = score;

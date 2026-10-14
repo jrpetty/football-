@@ -53,7 +53,8 @@ import java.util.function.Predicate;
  * <li><b>The hurt.</b> Once the town has its infirmary, a folk down to three fifths of its health and out of
  *     any fight walks there and lies in one of its beds, mending half a heart more every eight seconds than
  *     it would on its own (twice the pace), until it is nine tenths whole.</li>
- * <li><b>The healer.</b> The town's care is a works of its own (TownJobs "care", the brewer before anybody,
+ * <li><b>The healer.</b> [roles-a] A town with its healer (Healers, StationTask.HEAL) sends it to each bedside;
+ *     without one free, the town's care is a works of its own (TownJobs "care", the brewer before anybody,
  *     else a hand the town can spare): one folk goes round the infirmary's patients, and visits the bedridden
  *     at home, about a minute apart, with a honey bottle, a golden carrot, the brewer's healing potion or a
  *     handful of sweet berries out of the stores (the potion first for a wound, the honey first for a cold);
