@@ -660,8 +660,12 @@ public final class FolkTalk {
 
     /** A reason for a mood, as the folk would put it. */
     static String reason(VillageFolkEntity f, String why) {
+        return reason(f, why, f.getRandom());
+    }
+
+    /** As above, its words picked with this randomness ([folk-ui] FolkThought's, steady for the day). */
+    static String reason(VillageFolkEntity f, String why, RandomSource r) {
         Persona me = f.persona();
-        RandomSource r = f.getRandom();
         return switch (why) {
             case "slept" -> pick(r, "I slept in my own bed last night.", "A good night's sleep does wonders.");
             case "rough" -> pick(r, "I didn't get a proper bed last night.", "Slept rough. My back knows it.");
