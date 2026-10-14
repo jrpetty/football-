@@ -133,6 +133,11 @@ public class FolkNavigation extends GroundPathNavigation {
     /** Where and when the travel set out: a travel sent somewhere else on the way keeps its time on the road. */
     @Nullable private net.minecraft.world.phys.Vec3 travelFrom;
     private long travelStart;
+    /** A travel stopped (a goal that stops its walk and asks again): where it was going, and when it stopped. */
+    @Nullable private BlockPos stoppedTo;
+    private long stoppedAt;
+    /** Asked again for the same place this soon after stopping, the travel picks up where it was. */
+    private static final long RESUME_TICKS = 20L;
     private long arriveAt = -1;
     /** Walks travelled all told (the perf probes read it). */
     private static long travelledInAll;
@@ -195,11 +200,16 @@ public class FolkNavigation extends GroundPathNavigation {
         this.arriveAt = -1;
         // Sent somewhere else on the way (a goal that picks a fresh spot each time it asks): the time already on the
         // road counts, as the steps already taken would have.
-        if (!onTheWay) {
+        // Or stopped a moment ago on its way to the same place (a goal that stops and asks again each tick): the same.
+        long now = this.level.getGameTime();
+        boolean resumed = !onTheWay && this.stoppedTo != null && now - this.stoppedAt <= RESUME_TICKS
+            && this.stoppedTo.distSqr(to) <= 9 && this.travelFrom != null;
+        if (!onTheWay && !resumed) {
             this.travelFrom = this.mob.position();
-            this.travelStart = this.level.getGameTime();
+            this.travelStart = now;
             travelledInAll++;
         }
+        this.stoppedTo = null;
         return true;
     }
 
@@ -276,6 +286,10 @@ public class FolkNavigation extends GroundPathNavigation {
 
     @Override
     public void stop() {
+        if (travelling()) {
+            this.stoppedTo = this.travelTo;
+            this.stoppedAt = this.level.getGameTime();
+        }
         this.travelTo = null;
         this.travelGoal = null;
         super.stop();
