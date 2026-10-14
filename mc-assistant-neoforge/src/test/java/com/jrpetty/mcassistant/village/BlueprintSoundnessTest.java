@@ -695,6 +695,11 @@ class BlueprintSoundnessTest {
         "powderhut 3 4 3 4 front",
         "range 5 5 5 5 none",
         "redstoneworks 3 3 4 4 front",
+        "apiary 5 5 5 5 front",                 // [roles-b]
+        "enchanter 4 5 5 5 front",              // [roles-b]
+        "huntlodge 2 3 3 3 front",              // [roles-d]
+        "barn 3 3 4 4 front",                   // [roles-d]
+        "wheelwright 4 3 5 4 none",             // [roles-e] the open cart bay, no door
         "school 3 5 4 5 front",
         "shelter 2 2 3 3 none",
         "shop 3 3 4 4 front",

@@ -1,7 +1,7 @@
 # [roles-b] The apiary: the beekeeper's bee garden, fenced, out at the edge of the town by the meadows (entity/Apiary).
 # At the back, the honey house: a timber lean-to on a stone course under a gabled roof, its door to the garden and a
 # window either side of it. Inside, the candle bench (the crafting table) where the spare comb is dipped into candles,
-# the makings chest (string, bottles, flowers) and a barrel. The garden in front is left open: the beekeeper sets its
+# and the makings chest (string, bottles, flowers). The garden in front is left open: the beekeeper sets its
 # hives at the four corners round the middle, and keeps flowers along the fences for the bees. A gate in the front
 # with a lantern on a post either side.
 # Rows run from the back of the lot (top) to the front (bottom, the gate).
@@ -20,7 +20,7 @@ layer -1
 ...........
 layer 0
 PPLwwwwwLPP
-P.wT..CQw.P
+P.wT..C.w.P
 P.LwwDwwL.P
 P.........P
 P*.......*P
