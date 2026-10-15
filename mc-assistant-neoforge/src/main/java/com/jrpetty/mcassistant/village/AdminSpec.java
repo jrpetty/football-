@@ -195,6 +195,9 @@ public final class AdminSpec {
         add("people.births", Area.PEOPLE, "people births", T, "A child born to each of so many couples.", "people births 2", Param.num("births", 1, 50, 1));
         add("people.leader", Area.PEOPLE, "people leader", F, "Make a folk the town's leader.", "people leader folk:Ada");
         add("people.election", Area.PEOPLE, "people election", T, "Call an election, the vote today.", "people election");
+        // [trade-world] Folk on the move: those with most reason to go set out now, on foot, with their households.
+        danger("people.migrate", Area.PEOPLE, "people migrate", T, "Make N folk (with their households) leave now for the best town they know, on foot.",
+            "people migrate 2", Param.num("count", 1, 20, 1));
         // ---- army and war
         add("army.kit", Area.ARMY, "army kit", T, "Arm the watch at a tier: from the stores first, a decree supply for the rest.",
             "army kit iron", Param.of("tier", Kind.TIER), Param.words("source", "stores", "decree").opt());
@@ -235,9 +238,15 @@ public final class AdminSpec {
         add("build.unstick", Area.BUILD, "build unstick", T, "Send stuck builders back to the square and reset their crews.", "build unstick");
         add("build.place", Area.BUILD, "build place", T, "Put a building up where you are looking (it joins the town's register).",
             "build place house", Param.of("structure", Kind.STRUCTURE));
+        // [trade-world] The town's roads made a grade better now (path, gravel, stone), out of its stores as far as they go.
+        add("build.roads", Area.BUILD, "build roads", T, "Make each of the town's roads a grade better now (out of the stores, as far as they go).",
+            "build roads");
         // ---- events
         add("events.now", Area.EVENTS, "events now", T, "Bring an event about now.", "events now festival", Param.of("event", Kind.EVENT),
             Param.of("detail", Kind.WORD).opt());
+        // [trade-world] A merchant ship from over the sea sighted off the town's harbour now.
+        add("events.ship", Area.EVENTS, "events ship", T, "A merchant ship from over the sea sighted off the town's harbour now.",
+            "events ship qadira", Param.words("land", "next", "qadira", "vellmark", "orrisand", "teshwan").opt());
         // ---- time and world
         big("world.skip", Area.WORLD, "world skip", W, "Skip N days: every town's morning round run for each day, a day a second.",
             "world skip 5", Param.num("days", 1, MOST_DAYS, 1));

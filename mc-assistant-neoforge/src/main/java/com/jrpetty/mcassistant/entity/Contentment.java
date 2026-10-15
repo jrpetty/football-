@@ -207,6 +207,11 @@ public final class Contentment {
         String name = who.displayNameCap();
         String why = view.bad().isEmpty() ? "there was no living to be had" : view.bad().get(0);
         Villages.Village to = happiest(v);
+        if (to != null && Migration.leaveInMisery(level, who, to, why)) {
+            // [trade-world] On foot, with its household, by the road (Migration): the chronicles tell it as it goes.
+            LEFT.put(id, day);
+            return name;
+        }
         if (to != null) {
             who.leaveFor(level, to);
             Villages.tell(id, day, name + " left for " + Villages.name(to.id()) + ", because " + why);

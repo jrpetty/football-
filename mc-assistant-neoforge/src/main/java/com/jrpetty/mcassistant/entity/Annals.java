@@ -597,6 +597,8 @@ public final class Annals {
         out.getCompound("prices").putString("fleet", FishMarket.pricesLine(level, id));   // [fleet] the fish market, on the Prices page
         out.put("library", Library.report(level, v));            // [library] the catalogue, the authors, the loans: the Library page
         out.put("transport", Transport.report(level, v));        // [transport] the lines, the carts, the ferry, the bridge
+        out.put("harbour", Harbours.report(level, v));           // [trade-world] the harbour, its light and its ships
+        out.put("roads", RoadWorks.report(level, v));            // [trade-world] the roads, their inns, and folk on the move
         out.put("perks", Perks.report(level, v));                // [perks] the wonders, the leader's skills and legacies, the folk's quirks and knacks
         out.put("interviews", Interviews.report(level, id));      // [interviews] the interviews coming and held: the Interviews page
         out.put("identity", Identity.report(level, v));          // [identity] the town's ethos, government, laws, traits, fame: the Identity page

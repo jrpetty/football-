@@ -237,6 +237,7 @@ public final class TownPlan {
             case "enchanter" -> "civic";              // [roles-b] the enchanter's tower, among the trades (CraftScale)
             case "huntlodge", "barn" -> "edge";       // [roles-d] the hunter's lodge toward the wild, the barn out by the pen
             case "wheelwright" -> "civic";            // [roles-e] the wheelwright's shed, among the trades by the yard
+            case "harbour", "seamark" -> "edge";      // [trade-world] on the bank where the shore was found (Harbours.site)
             default -> "home";
         };
     }

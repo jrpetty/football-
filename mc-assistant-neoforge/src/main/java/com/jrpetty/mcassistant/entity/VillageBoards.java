@@ -482,6 +482,8 @@ public final class VillageBoards {
         String fish = FishMarket.boardLine(level, id);
         if (fish != null) out.add("RN|" + fish);
         out.addAll(Auctions.board(level, id));                     // [fleet] the auction on the square: today's lots, or the last sale
+        String harbour = TradeWorld.boardLine(level, id);          // [trade-world] the ship in harbour or due; folk thinking of leaving
+        if (harbour != null) out.add("RN|" + harbour);
         int content = Contentment.score(id);
         out.add((content >= 60 ? "RG" : content >= 35 ? "RN" : "RW") + "|Contentment: " + Contentment.line(level, id) + ".");
         String looks = TownLooks.boardLine(level, id);             // [tidy] the town's looks, what spoils them, clean-up day

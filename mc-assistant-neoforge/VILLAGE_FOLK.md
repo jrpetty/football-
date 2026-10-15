@@ -11994,3 +11994,117 @@ holders are looked up at most every five seconds a town. A stint is a map look-u
 drawn once a day with the roster. The carter's whip is looked at once a second only while a wagon is being driven.
 
 Smoke: `roles_e_stage` in tools/realworld/smoke.py (`/village roads stage`). Tests: RoadsRanksGameTests (re01 to re07).
+
+## Harbours, roads and migration
+
+Towns by the sea build harbours and trade with ships from lands over the water; the roads between towns are made
+better as they are used, with milestones, signposts and inns along them; and folk leave unhappy towns for better ones,
+on foot, unless somebody talks them round.
+
+### The harbour (Harbours)
+- **Finding the shore.** A Stone Age town of ten or more looks round its edge every couple of days for where it meets
+  water wide and deep enough for a ship: a low bank, room for a pier fourteen blocks out, a lane of open water fifty
+  blocks long out to sea (two deep down its middle), wide water all about it (a sea or a great lake, not a pond or a
+  stream), and dry level ground on the bank for an office and a lighthouse. A town with no such shore is told why on
+  its Harbour page, and looks again later.
+- **The harbour office** (a small stone house on the bank, its door to the water, with the harbour's casks, its chest of
+  manifests, the harbour book on a lectern and a ship's bell) is wanted in a town of twelve and built by the builders like
+  any building, but on the bank where the shore was found.
+- **The pier.** Then a hand at the town's works lays a stone pier straight out from the office's door: posts down to the
+  bottom every third block, a deck three wide (stone bricks, else cobblestone, else planks), stone bollards along the side
+  the ships tie up at, lamp posts at its end and casks on the bank, all out of the stores. A pier you break is mended.
+- **The lighthouse** (a banded stone tower with a railed gallery and a glass lamp room) goes up beside the office once the
+  pier is out and the town is sixteen strong. Its beacon is a fire the harbourmaster lights at dusk with a coal or charcoal
+  from the stores (two logs if there is none) and puts out at dawn. With nothing to burn it stands dark, and the chronicle
+  says so. A lit harbour sees ships oftener.
+- **The harbourmaster** is a post, not a trade: the town's best fisher, else a steady hand. It keeps its own trade, sees
+  the ships in, keeps the light, and takes a quarter of the harbour dues. Ask it "When's the next ship due?".
+
+### Merchant ships (ShipCalls, Seafarers, ShipTrade)
+- **From over the sea.** Ships come from four far lands: Qadira on the Spice Coast (cocoa, sugar, dyes, acacia), Vellmark
+  of the Glass Isles (glass of every sort, amethyst, a spyglass), Orrisand of the Northern Reaches (books, paper, dark oak,
+  sea charts) and Teshwan of the Jade Isles (bamboo, cherry and jungle wood, bright dyes). Now and then a ship carries a
+  rarity: a music disc, a smith's pattern for armour, or a written treatise on some art from its land.
+- **When.** The first a day after the pier is finished, then about one a week: two days sooner while the lighthouse burns,
+  and sooner again as the lands come to think well of the town (every visit that trades leaves its land the warmer). A ship
+  due in a thunderstorm is held in port a day; one due with ice over the harbour waits for the thaw; no merchant sails into
+  a town at war; and a land whose people were killed in the town's harbour sends no ship for a long while.
+- **Coming in.** You see the sail far out down the lane; the ship (a hull eleven long with a mast, a square sail and its
+  land's colour at the masthead) comes in a block at a time and ties up alongside the pier, its gangplank down, the
+  office's bell ringing. If something is in its way it waits, then comes alongside if it can, or anchors off the pier.
+- **In harbour** for a day or two. It pays harbour dues into the treasury. Its captain and a sailor come ashore in their
+  land's colours: visitors of no village. The town's hands buy what the town needs off the ship (glass for its windows,
+  timber, dyes for its rugs, books for its library, cocoa for its café, food when the larder is low), out of the treasury
+  and never out of the wages, and load the town's surplus aboard for the ship's coin.
+- **You can trade too.** Ask the captain "Trade?" and the game's trading table opens: the hold's lots for village coins,
+  and what the ship will buy from you (what its land wants at home) for coin out of the ship's purse. Prices are the
+  town's own, far-off goods at a markup. Every lot is counted: when the hold is empty, it is empty.
+- **Away.** On the morning it sails its people go aboard, the gangplank comes up, it turns about and sails out down the
+  lane, and the sea is put back where it lay. The chronicle tells each ship's coming, its trade and its going.
+- A ship's cargo and purse come from abroad, as the game's wandering trader's do: the one thing in a harbour town that
+  is not out of somebody's pack, chest or stores. Kill one of its people and its land will not forget it.
+
+### The roads (RoadWorks)
+- **Every pair of neighbouring towns has a road** on the line their caravans walk, and each town keeps its own half, out
+  of its own stores, with its own road gang.
+- **Grades.** A track at first; an earth path once a couple of caravans or travellers have come along it; gravel from the
+  Stone Age, once it carries some traffic and the town has twenty coins for the works; cobbled stone with stone-slab kerbs
+  from the Iron Age, once it is a busy road and the town has sixty. A colony's road is a path already. A bridge is planks
+  with rails, and on a stone road it is decked in stone with stone posts. No town works on a road to an enemy.
+- **The road gang** is a hand at the town's works at the head of the stretch, a few steps a visit: the gravel or the
+  stone out of the stores a block at a time, the earth or the old gravel back into them, a coin from the treasury for
+  every sixteen steps. When the stores run out it waits, and the Roads page says what for.
+- **Along it.** A gravel or stone road gets a milestone every hundred blocks (a league) and at its ends, lettered with
+  both towns and how far; a signpost where it meets another road, the towns each way in leagues; and on an Iron Age stone
+  road a lamp post every twelve blocks for the last fifty into town.
+- **What it brings.** Folk on the move walk faster on a made road: a tenth on a path, a fifth on gravel, three tenths on
+  stone. A caravan between two towns joined by a gravel road carries a lot more, by a stone road two more.
+
+### Roadside inns (Roadside)
+- Halfway along a long road (three hundred blocks or more, a path at least, the towns at peace), the richer of the two
+  towns puts up an inn by the road, set back with its door to it. Its timber and stone are paid for at once out of that
+  town's stores; its road crew lays it a dozen blocks a visit; its beds and casks go in last. Both chronicles tell it.
+- An innkeeper (a visitor of no village) takes the lease and keeps the bar. The larder (the inn's chest) is stocked from
+  the building town's stores, and kept stocked by its road crew. Half of what the keeper takes is the town's rent, handed
+  to the town's next caravan to stop there and carried home.
+- Caravan drivers, envoys and households on the move near the inn after dusk take a room out of their purses and go on
+  in the morning.
+- **You:** right-click the sign by the door for a room, three coins: the bed is yours tonight, and it is where you wake
+  after. Sneak and right-click for a meal out of the larder, two coins. While the two towns are at war the inn is shut.
+
+### Folk on the move (Migration)
+- **Why folk leave.** Each morning a town looks at how its people are: hunger, no bed of one's own, wages paid short, a
+  war on or lately lost, a low-spirited town, and each folk's own mood. What holds a folk is its friends, its years in
+  the town, a homebody's nature, and being the town's only hand at its trade. When the push is greater than the ties and
+  there is a better town at peace that it knows of, with room, it starts to **think of leaving**.
+- **Thinking of it.** For a day it talks about it, and its friends tell it not to go. Its card says where and why. You
+  can talk it round: ask **"Won't you stay?"** With five coins on you that is a raise, out of your purse into its own, and
+  it keeps most folk; without, your words count for as much as it likes you. A gift counts too. A master of its trade (or
+  the town's only hand at one it needs) may be paid to stay by the elder, out of the treasury, if the treasury can spare it.
+- **Going.** The next morning, if it still means to go, it packs its own things, says its goodbyes on the square and walks
+  the road with its partner and children: off the old town's roll, onto the new one's. A town is never left below eight
+  folk, and no more leave in a week than it can spare. At the other end it is found a home (or a bed at the camp) and
+  takes up the work the town is short of.
+- **Turning back.** Halfway along the road it may turn back: homesick, if it has ties at home; because word comes that
+  the town it was making for has gone to war; or because the road is not safe. It walks home and takes up its old trade.
+- **Towns compete for hands.** A notice on the job market now says when a house goes with the place, and a folk with no
+  home of its own counts that. Its ties make it harder to tempt away. A master taken on by another town may be kept by a
+  counter-offer from its own elder. A town that is miserable for days now loses its folk on foot down the road, with their
+  families, instead of in the blink of an eye.
+- Both chronicles tell every leaving, turning back, coming and staying.
+
+### Where you see it
+- **The town's books:** the **Harbour** page (in Economy): the shore, the office and pier, the lighthouse, the
+  harbourmaster, the ship in harbour with its hold, purse and what it has bought, the next ship due, the ships gone, the
+  harbour dues, and what each far land thinks of the town. The **Roads** page (in Town): each road's grade (each half),
+  its traffic, its next grade and what it costs, how far the gang has got and what it waits on, the inn halfway; then
+  **Comings and goings**: who has come and gone of their own accord, turned back or been talked round, and who is
+  thinking of leaving now.
+- **Talk:** "When's the next ship due?", "How are the roads?" and "Won't you stay?" (offered only to a folk thinking of
+  leaving). A ship's captain trades at the trading table; a roadside innkeeper lets rooms and serves meals.
+- **Commands:** `/village harbour` (and `books`; operators: `survey`, `ship [land]`, `stage`), `/village highways` (and
+  `books`; operators: `now`, `stage`), `/village migration` (operators: `now [n]`, `think`, `stage`).
+- **Admin:** `/village admin people migrate <n>`, `/village admin events ship [land]`, `/village admin build roads`.
+
+Smoke: `trade_world_stage` in tools/realworld/smoke.py (`/village harbour stage`, `/village highways stage`,
+`/village migration stage`). Tests: TradeWorldGameTests (tw01 to tw09).

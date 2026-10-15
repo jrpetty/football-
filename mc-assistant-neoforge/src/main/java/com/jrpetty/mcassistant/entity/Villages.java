@@ -389,6 +389,8 @@ public final class Villages {
             case "huntlodge" -> "the hunter's lodge";             // [roles-d]
             case "barn" -> "the barn";                            // [roles-d]
             case "wheelwright" -> "the wheelwright's shed";       // [roles-e]
+            case "harbour" -> "the harbour office";               // [trade-world]
+            case "seamark" -> "the lighthouse";                   // [trade-world]
             default -> "the " + structure;
         };
     }
@@ -1905,6 +1907,8 @@ public final class Villages {
         if (OutdoorBases.barnWanted(villageId)) extras.add(OutdoorBases.BARN);
         // [roles-e] The wheelwright's shed, once a town of ten has a wagon (or one on the bench).
         if (Wheelwrights.shedWanted(villageId)) extras.add(Wheelwrights.SHED);
+        // [trade-world] The harbour office on the bank, and the lighthouse after the pier is out (Harbours).
+        Harbours.wanted(villageId, folk, extras);
         if (at == Age.STONE) { homesAndAmenities(villageId, folk, out, extras); return out; }
 
         if (built(villageId, "workshop") < 1) out.add("workshop");
@@ -2325,6 +2329,7 @@ public final class Villages {
             case "redstoneworks" -> Engineers.why(villageId);      // [redstone]
             case "huntlodge", "barn" -> OutdoorBases.why(project);   // [roles-d]
             case "wheelwright" -> Wheelwrights.why();                // [roles-e]
+            case "harbour", "seamark" -> Harbours.why(villageId, project);   // [trade-world]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]
@@ -2959,6 +2964,9 @@ public final class Villages {
         } else if (project.equals(Divers.SHED)) {
             // [diver] The diver's shed goes on the bank of its water, its door to it (Divers.shedPlace): no lot in the plan.
             site = Divers.shedSite(level, villageId);
+        } else if (project.equals(Harbours.OFFICE) || project.equals(Harbours.LIGHT)) {
+            // [trade-world] The harbour office and its light go on the bank where the shore was found (Harbours.survey).
+            site = Harbours.site(villageId, project);
         } else {
             java.util.Set<Long> bad = BAD_LOTS.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());
             java.util.Set<Long> taken = LOT_TAKEN.computeIfAbsent(villageId, k -> ConcurrentHashMap.newKeySet());

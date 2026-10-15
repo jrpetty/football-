@@ -286,6 +286,7 @@ public final class Caravans {
         }
         List<ItemStack> out = new ArrayList<>();
         int lots = 4 + Perks.caravanLots(from.id());                       // [perks] Open Borders, the Grand Bazaar, a Quartermaster
+        lots += RoadWorks.extraLots(from.id(), to);                         // [trade-world] a good road carries more
         for (Market.Good g : order) {
             if (out.size() >= lots) break;
             if (brought.contains(g)) continue;
@@ -380,7 +381,7 @@ public final class Caravans {
         }
         if (d < t.best - 1.0) { t.best = d; t.gainedTick = f.tickCount; }
         if (f.getNavigation().isDone() || f.tickCount - t.walkTick > 100) {
-            f.walkTo(onGround, 0.75D);
+            f.walkTo(onGround, 0.75D * RoadWorks.pace(f));                   // [trade-world] quicker on a made road
             t.walkTick = f.tickCount;
         }
         // No nearer for half a minute (a river with no bridge yet, a cliff): set down at the next step.
@@ -423,6 +424,7 @@ public final class Caravans {
         Villages.Village here = Villages.get(t.destination());
         Villages.Village other = Villages.get(t.back ? t.to : t.from);
         long day = level.getDayTime() / 24000L;
+        RoadWorks.travelled(t.from, t.to);                                  // [trade-world] the road's traffic, a leg at a time
         Riding.unpack(f, level);                                 // the load out of the donkey's chest, to be sold (Riding)
         Wagons.unpack(f, level);                                 // [wagons] or out of the wagon's bed
         Crates.unpackCaravan(level, f, t);                       // [workitems] its crates unpacked onto its back (home: the crates into the stores)

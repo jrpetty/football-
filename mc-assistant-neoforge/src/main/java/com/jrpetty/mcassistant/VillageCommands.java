@@ -247,6 +247,9 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.OutdoorStage.command())        // [roles-d] the lodge, the barn, the parties; the stage
             .then(com.jrpetty.mcassistant.entity.HospitalityStage.command())    // [roles-c] the kitchens, the bar, the inn, the bakery; the stage
             .then(com.jrpetty.mcassistant.entity.RoadPosts.command())           // [roles-e] the wheelwright, the carter, the planner, the ranks
+            .then(com.jrpetty.mcassistant.entity.TradeWorld.harbourCommand())   // [trade-world] the harbour, its light and its ships
+            .then(com.jrpetty.mcassistant.entity.TradeWorld.highwaysCommand())  // [trade-world] the roads between towns and their inns
+            .then(com.jrpetty.mcassistant.entity.TradeWorld.migrationCommand()) // [trade-world] folk thinking of leaving; the comings and goings
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
             .then(com.jrpetty.mcassistant.entity.Perks.command())           // [perks] /village perks: wonders, the leader, quirks
             .then(com.jrpetty.mcassistant.entity.Referendums.command())     // [civic] /village referendum: the town's vote, the great works
