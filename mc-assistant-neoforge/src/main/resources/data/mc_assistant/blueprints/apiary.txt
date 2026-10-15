@@ -20,7 +20,7 @@ layer -1
 ...........
 layer 0
 PPLwwwwwLPP
-P.wT..C.w.P
+P.wT...(w.P
 P.LwwDwwL.P
 P.........P
 P*.......*P

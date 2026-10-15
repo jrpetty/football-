@@ -28,11 +28,11 @@ FSSSSSSSSSF
 FFFFFFFFFFF
 layer 0
 SSSS...SSSS
-.CQ.....QQ.
+.(Q.....QQ.
 SQT.....TQS
 ...........
 S.........S
-.CQ.....QQ.
+.(Q.....QQ.
 SQN.....NQS
 ...........
 S.........S
@@ -40,11 +40,11 @@ S.........S
 S....H....S
 ...........
 S.........S
-.CQ.....QQ.
+.(Q.....QQ.
 SQN.....NQS
 ...........
 S.........S
-.CQ.....QQ.
+.(Q.....QQ.
 SQT.....TQS
 ...........
 SSSS...SSSS
@@ -93,7 +93,7 @@ S.........S
 ...........
 SSGS...SGSS
 layer 3
-SSSS}.{SSSS
+SSSS{.}SSSS
 u==.....==u
 S==.....==S
 u.........u
@@ -113,7 +113,7 @@ S.........S
 u==.....==u
 S==.....==S
 u.........u
-SSSS}.{SSSS
+SSSS{.}SSSS
 layer 4
 SSSSSSSSSSS
 SXX.....XXS

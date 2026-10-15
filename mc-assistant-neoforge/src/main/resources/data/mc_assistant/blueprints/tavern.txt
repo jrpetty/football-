@@ -21,10 +21,10 @@ layer 0
 .LwwShSwwL.
 .wQ.k.kmmw.
 .wCQ.....w.
-.w.Q..>P<w.
+.w.Q..<P>w.
 .w.Q.....w.
 .w.Q.....w.
-.w....>P<w.
+.w....<P>w.
 .w.......w.
 .LwwwDwwwL.
 ...........

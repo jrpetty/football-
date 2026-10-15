@@ -50,10 +50,12 @@ LEGEND = {
     "O": ("glass", "cube", None),
     "D": ("door", "door", "B"),
     "Y": ("door", "door", "R"),           # a door in a front-to-back wall (the flats' landings)
+    "7": ("door", "door", "L"),           # [build-audit] the same, opening to the left
     "P": ("plank", "fence", None),
     "g": ("plank", "gate", None),
     "T": ("table", "cube", None),
     "U": ("furnace", "cube", "F"),
+    "1": ("furnace", "cube", "B"), "2": ("furnace", "cube", "L"), "3": ("furnace", "cube", "R"),   # [build-audit]
     "C": ("chest", "chest", "F"), "c": ("chest", "chest", "B"),
     "(": ("chest", "chest", "L"), ")": ("chest", "chest", "R"),
     "B": ("bed", "bed", "B"), "b": ("bed", "bed", "F"),
@@ -76,6 +78,7 @@ LEGEND = {
     "K": ("bookshelf", "cube", None),
     "E": ("enchanting", "cube", None),
     "r": ("lectern", "cube", "F"),
+    "4": ("lectern", "cube", "B"), "5": ("lectern", "cube", "L"), "6": ("lectern", "cube", "R"),   # [build-audit]
     "I": ("brewing", "torch", None),
     "M": ("furnace", "cube", "F"),
     "N": ("loom", "cube", "F"),

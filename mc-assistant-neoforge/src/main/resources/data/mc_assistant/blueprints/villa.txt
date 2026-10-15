@@ -23,9 +23,9 @@ layer 0
 .LwwwwwwwL.
 .w.C.H.Q.w.
 .w.......w.
-.w..XXX..wS
+.w..XXX.2wS
 .w..XXX..w.
-.wT.....Uw.
+.wT......w.
 .LwwwDwwwL.
 ...........
 ..L.....L..
@@ -69,11 +69,11 @@ layer 3
 layer 4
 ...........
 .LWWWWWWWL.
-.W...H...W.
+.W..CHC..W.
 .WBB...BBW.
 .W.......WS
 .Wb.....bW.
-.W..C.X..W.
+.W..c.X(.W.
 .LWWWWWWWL.
 ...........
 ...........

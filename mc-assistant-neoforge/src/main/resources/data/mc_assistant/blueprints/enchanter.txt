@@ -3,7 +3,7 @@
 # middle of a ring of fifteen bookshelves, one block clear of it all round as the game wants them (the strongest work
 # needs all fifteen), with a gap in the ring at the front to walk in by. A walk runs round between the shelves and the
 # walls: the makings chest (lapis, books, paper) in the back left corner, a lectern in the back right. Windows on three
-# floors, a lantern hung over the table from the ceiling. Another table, as the town grows, goes against a wall of the
+# floors, a lantern hung over the table from the ceiling and one standing on each corner of the ring of shelves. Another table, as the town grows, goes against a wall of the
 # walk (CraftScale.freeSpot).
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name enchanter
@@ -35,11 +35,11 @@ layer 1
 ...........
 .LSSSGSSSL.
 .S.......S.
-.S.......S.
+.S.l...l.S.
 .G.......G.
 .S.......S.
 .G.......G.
-.S.......S.
+.S.l...l.S.
 .S.......S.
 .LSSS.SSSL.
 ....l.l....
