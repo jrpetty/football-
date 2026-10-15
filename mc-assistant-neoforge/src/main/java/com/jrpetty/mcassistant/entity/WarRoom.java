@@ -361,6 +361,7 @@ public final class WarRoom {
         out.put("ruins", ruins(level, k));
         out.put("markers", markers(level, k, table));
         out.put("news", news(us, k));
+        WarRoomRealm.add(level, k, out);                                   // [realm-polish] harbours, roads by grade, inns, knights, wonders
         return out;
     }
 
@@ -403,6 +404,7 @@ public final class WarRoom {
         t.put("wars", wars);
         t.put("trade", trade);
         if (Vassals.isVassal(id)) t.putString("vassal", Villages.name(Vassals.overlord(id)));
+        WarRoomRealm.card(v, us, t);                                       // [realm-polish] prisoners held, wonders, knights
         // Its strength as the viewer's town reckons it (WarAndPeace): its own counted, another's from report or rumour.
         if (us != null) {
             Object[] r = reckoned(level, us, id, day);
@@ -550,6 +552,7 @@ public final class WarRoom {
                 if (ms.size() >= 120) break;
             }
         }
+        WarRoomRealm.ships(level, k, ms);                                  // [realm-polish] the merchant ships from over the sea
         // The trade wagons on the road.
         for (TradeWagon w : level.getEntities(WagonRegistry.TRADE_WAGON.get(), x -> x.isAlive())) {
             if (ms.size() >= 160) break;
@@ -585,7 +588,8 @@ public final class WarRoom {
                 t.putInt("z", head.getZ());
                 t.putInt("colour", Villages.colour(side));
                 t.putString("town", Villages.name(side));
-                t.putString("stage", c.stage.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' '));
+                String inn = ArmyInns.atInn(c, i);                             // [realm-polish] resting at a roadside inn
+                t.putString("stage", inn.isEmpty() ? c.stage.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ') : inn.substring(2));
                 t.putInt("size", army.fighters.size() + army.behind);
                 if (!way.isEmpty()) {
                     int step = Math.max(1, way.size() / 16);

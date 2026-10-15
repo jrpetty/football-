@@ -386,6 +386,7 @@ public final class TradeWorld {
             BlockPos lv = s.at(6, -14, 8);
             out.add("VIEW light " + lv.getX() + " " + lv.getY() + " " + lv.getZ() + " " + s.light().getX() + " " + (s.light().getY() + 10) + " " + s.light().getZ());
         }
+        out.addAll(PierFleet.stage(level, v));                                   // [realm-polish] the fishing fleet at the pier
         out.add("harbour staged: " + String.join(" / ", Harbours.lines(level, v)));
         return out;
     }

@@ -173,6 +173,7 @@ public final class Fleet {
         weatherForTests = null;
         fromForTests = -1;
         FishMarket.resetForTests();
+        PierFleet.resetForTests();                                         // [realm-polish]
     }
 
     /** Tests: the weather the fleet reads ("rain", "storm", "clear"), or the world's own (null). */
@@ -221,7 +222,7 @@ public final class Fleet {
     // ------------------------------------------------------------------ the quay
 
     @Nullable
-    private static Waterfront.Dock quayNote(UUID village) {
+    static Waterfront.Dock quayNote(UUID village) {                    // [realm-polish] package: PierFleet reads the old quay
         String s = Ledger.note(village, "fleet.quay");
         if (s == null || s.isEmpty()) return null;
         String[] p = s.split(",");
@@ -235,7 +236,7 @@ public final class Fleet {
         }
     }
 
-    private static void keepQuay(UUID village, Waterfront.Dock d) {
+    static void keepQuay(UUID village, Waterfront.Dock d) {             // [realm-polish] package: PierFleet keeps the pier
         Ledger.note(village, "fleet.quay", d.start().getX() + "," + d.start().getY() + "," + d.start().getZ() + "," + d.out().getName() + "," + d.length());
     }
 
@@ -243,6 +244,8 @@ public final class Fleet {
      *  the town meets the water. Null for a town with no water it can sail on. */
     @Nullable
     static Waterfront.Dock quay(ServerLevel level, Villages.Village v, Town t) {
+        Waterfront.Dock pier = PierFleet.quay(level, v, t);                // [realm-polish] the harbour's finished pier first
+        if (pier != null) return pier;
         if (t.quay != null) return t.quay;
         Waterfront.Dock kept = quayNote(v.id());
         if (kept != null) return t.quay = kept;
@@ -308,6 +311,8 @@ public final class Fleet {
 
     /** Where a hand stands on the quay to step into the boat at this berth: the plank beside it. */
     static BlockPos standFor(Waterfront.Dock q, BlockPos berth) {
+        BlockPos onPier = PierFleet.standFor(q, berth);                    // [realm-polish] on the pier's deck, beside the berth
+        if (onPier != null) return onPier;
         BlockPos best = q.start();
         for (int k = 0; k < q.length(); k++) {
             BlockPos p = q.start().relative(q.out(), k);
@@ -1233,6 +1238,7 @@ public final class Fleet {
         }
         f.getNavigation().stop();
         int landed = FishMarket.land(level, v, f, h.haul);
+        PierFleet.landed(level, v, f, t.quay, landed);                      // [realm-polish] the harbourmaster counts it
         h.haul.clear();
         if (h.net) {
             ItemStack net = netIn(f);

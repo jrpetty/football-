@@ -486,14 +486,24 @@ public final class Harbours {
                 if (level.hasChunk(p.pos().getX() >> 4, p.pos().getZ() >> 4) && missing(level, s, p) && p.kind() != Kind.CASK) { any = true; break; }
             }
             if (!any && !pierDone(id)) {
+                String was = Ledger.note(id, PIER_NOTE);
+                boolean mended = was != null && was.startsWith("mending");          // [realm-polish] a mended pier is not finished anew
                 Ledger.note(id, PIER_NOTE, "done");
                 long day = level.getDayTime() / 24000L;
-                Villages.tell(id, day, "the harbour's pier was finished: " + PIER + " blocks out into deep water, where the ships can tie up");
-                LOG.info("[MCA-HARBOUR] {}: the pier is finished", Villages.name(id));
-                ShipCalls.harbourOpened(level, v);
+                if (mended) {
+                    Villages.tell(id, day, "the harbour's pier was mended where it had been broken");
+                    LOG.info("[MCA-HARBOUR] {}: the pier is mended", Villages.name(id));
+                } else {
+                    Villages.tell(id, day, "the harbour's pier was finished: " + PIER + " blocks out into deep water, where the ships can tie up");
+                    LOG.info("[MCA-HARBOUR] {}: the pier is finished", Villages.name(id));
+                    ShipCalls.harbourOpened(level, v);
+                }
             }
         }
-        if (waiting) Ledger.note(id, PIER_NOTE, "waiting on stone");
+        if (waiting) {
+            String was = Ledger.note(id, PIER_NOTE);                            // [realm-polish] mending, it stays mending while it waits
+            Ledger.note(id, PIER_NOTE, was != null && was.startsWith("mending") ? "mending, waiting on stone" : "waiting on stone");
+        }
         return laid;
     }
 
@@ -791,7 +801,7 @@ public final class Harbours {
         } else {
             int[] pc = pierCount(level, s);
             String state = pierDone(id) ? "out into deep water" : "being laid, " + pc[0] + " of " + pc[1] + " pieces"
-                + ("waiting on stone".equals(Ledger.note(id, PIER_NOTE)) ? " (waiting on stone in the stores)" : "");
+                + (String.valueOf(Ledger.note(id, PIER_NOTE)).endsWith("waiting on stone") ? " (waiting on stone in the stores)" : "");
             out.add("L|The office stands; the pier is " + state + ".");
         }
         Ledger.Building light = Villages.builtStructure(id, LIGHT);
@@ -806,6 +816,7 @@ public final class Harbours {
         }
         VillageFolkEntity m = holder(level, id);
         if (m != null) out.add("L|Harbourmaster: " + m.displayNameCap() + " (" + m.stationTask().label + ").");
+        out.addAll(PierFleet.lines(level, v));                                   // [realm-polish] the fishing fleet at the pier
         out.addAll(ShipCalls.lines(level, v, s));
         return out;
     }

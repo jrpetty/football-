@@ -37,7 +37,10 @@ import java.util.Map;
  * in their colours (contested ground striped gold). Over that, drawn each frame: the roads (brown) and trade routes
  * (dotted gold), armies on the march (their road in their colour, an arrow at the head), their camps, battles (crossed
  * swords), sieges (a ring round the town), caravans, envoys, heralds, wagons and scouts, the disputes (a flag), the ruins,
- * the border markers (zoomed in), every town known (its colour, its size, its name) and you.
+ * the border markers (zoomed in), every town known (its colour, its size, its name) and you. [realm-polish] And the realm's
+ * newer works: the roads between towns coloured by how far they are made (a dotted track, an earth path, grey gravel, dark
+ * stone), the inns along them, the harbours with their piers and lighthouses (lit or dark), the merchant ships from over the
+ * sea, the knights' lands and manors, and the wonders (hollow while rising); a town's card counts the prisoners it holds.
  *
  * <p>Drag to pan, scroll (or + and -) to zoom, click a town for its card. The side panel has three faces: the town (its
  * folk, age, lands, how we stand with it, its strength as our town reckons it, its wars and trade), the legend, and
@@ -506,6 +509,7 @@ public class WarRoomScreen extends Screen {
             line(g, sx(l[0]), sy(l[1]), sx(ex), sy(ez), 0xFF8B5A2B, 1, 0);
             if (done < 1) line(g, sx(ex), sy(ez), sx(l[2]), sy(l[3]), 0x808B5A2B, 1, 3);
         }
+        tip = realm(g, mx, my, tip);                                      // [realm-polish] roads by grade, harbours, inns, knights, wonders
         for (CompoundTag r : list("routes")) {
             int[] l = r.getIntArray("line");
             if (l.length < 4) continue;
@@ -579,6 +583,7 @@ public class WarRoomScreen extends Screen {
             int[] to = m.getIntArray("to");
             if (to.length == 2 && ppb >= 0.25) line(g, x, y, sx(to[0]), sy(to[1]), c & 0x50FFFFFF, 1, 3);
             if (kind.equals("wagon")) g.fill(x - 2, y - 2, x + 3, y + 2, c);
+            else if (kind.equals("ship")) ship(g, x, y, 0xFF000000 | m.getInt("colour"));   // [realm-polish] a merchant ship
             else {
                 g.fill(x - 2, y - 2, x + 2, y + 2, 0xFF000000);
                 g.fill(x - 1, y - 1, x + 1, y + 1, c);
@@ -703,6 +708,14 @@ public class WarRoomScreen extends Screen {
                 + (t.getBoolean("us") ? "" : " — " + t.getString("basis") + (t.getBoolean("guessed") ? ", a guess" : "")));
         }
         ListTag wars = t.getList("wars", Tag.TAG_STRING), trade = t.getList("trade", Tag.TAG_STRING);
+        // [realm-polish] Its prisoners, its wonders, its knights.
+        if (t.contains("prisoners")) lines.add("Holds " + t.getInt("prisoners") + (t.getInt("prisoners") == 1 ? " prisoner" : " prisoners") + " of war"
+            + (t.contains("oursHeld") && !t.getBoolean("us") ? ", " + t.getInt("oursHeld") + " of them ours" : "") + ".");
+        else if (t.contains("oursHeld") && !t.getBoolean("us")) lines.add("Holds " + t.getInt("oursHeld") + " of ours prisoner.");
+        if (t.getBoolean("us") && t.contains("oursHeld")) lines.add(t.getInt("oursHeld") + " of our folk held prisoner elsewhere.");
+        if (t.contains("wonders") || t.getBoolean("rising")) lines.add((t.contains("wonders") ? t.getInt("wonders") + (t.getInt("wonders") == 1 ? " wonder" : " wonders") + " standing" : "")
+            + (t.getBoolean("rising") ? (t.contains("wonders") ? "; " : "") + "a wonder rising" : "") + ".");
+        if (t.contains("knights")) lines.add(t.getInt("knights") + (t.getInt("knights") == 1 ? " knight" : " knights") + " with lands there.");
         if (!wars.isEmpty()) lines.add("At war with: " + join(wars));
         if (!trade.isEmpty()) lines.add("Trades with: " + join(trade));
         for (String s : lines) {
@@ -721,7 +734,11 @@ public class WarRoomScreen extends Screen {
             { "army", "an army on the march, its road" }, { "camp", "an army's camp" }, { "battle", "a battle being fought" },
             { "siege", "a town under siege" }, { "caravan", "a caravan" }, { "envoy", "an envoy (a herald in red)" },
             { "scout", "a scout or spy of ours" }, { "wagon", "a trade wagon" }, { "flag", "a land dispute" }, { "ruin", "a ruin" },
+            { "track", "a road: a track, an earth path" }, { "gravel", "a gravel road" }, { "stone", "a stone road" }, { "inn", "a roadside inn" },
+            { "harbour", "a harbour and its pier" }, { "light", "a lighthouse (lit)" }, { "ship", "a merchant ship from over the sea" },
+            { "manor", "a knight's land, its manor" }, { "wonder", "a wonder (hollow: rising)" },
             { "you", "you" } };
+        int step = Math.max(8, Math.min(10, (mapH - 34) / rows.length));    // [realm-polish] the longer legend fits a short window
         for (String[] r : rows) {
             int gx = x + 4, gy = cy + 3;
             switch (r[0]) {
@@ -742,10 +759,19 @@ public class WarRoomScreen extends Screen {
                 case "flag" -> { g.fill(gx - 2, gy - 4, gx - 1, gy + 4, 0xFF3A2A1A); g.fill(gx - 1, gy - 4, gx + 4, gy, 0xFFE0A000); }
                 case "ruin" -> g.fill(gx - 3, gy - 3, gx + 3, gy + 3, 0xFF6E6E6E);
                 case "you" -> arrow(g, gx, gy, -Math.PI / 2, 0xFFFFFFFF);
+                case "track" -> { line(g, gx - 4, gy - 1, gx + 5, gy - 1, ROAD_COLOURS[0], 1, 2); line(g, gx - 4, gy + 2, gx + 5, gy + 2, ROAD_COLOURS[1], 1, 0); }
+                case "gravel" -> line(g, gx - 4, gy, gx + 5, gy, ROAD_COLOURS[2], 2, 0);
+                case "stone" -> line(g, gx - 4, gy, gx + 5, gy, ROAD_COLOURS[3], 2, 0);
+                case "inn" -> inn(g, gx, gy, true);
+                case "harbour" -> { line(g, gx - 4, gy + 2, gx + 4, gy - 2, PIER, 2, 0); g.fill(gx - 5, gy + 1, gx - 2, gy + 4, 0xFF324C9C); }
+                case "light" -> lighthouse(g, gx, gy, true);
+                case "ship" -> ship(g, gx, gy, 0xFFD9822B);
+                case "manor" -> manor(g, gx, gy, 0xFF9C2A2E, true);
+                case "wonder" -> wonder(g, gx, gy, 100);
                 default -> { }
             }
             small(g, Ui.clip(font, r[1], (int) ((sw - 16) / 0.75F)), x + 14, cy, MUTED);
-            cy += 10;
+            cy += step;
         }
         cy += 4;
         wrap(g, data.getBoolean("all") ? "You see the whole world." : "The table shows only what its town knows: its own country, where its scouts have been, and the towns it has met.",
@@ -839,6 +865,112 @@ public class WarRoomScreen extends Screen {
         line(g, lx, ly, tx, ty, colour, 1, 0);
         line(g, rx, ry, tx, ty, colour, 1, 0);
         g.fill(x - 1, y - 1, x + 2, y + 2, colour);
+    }
+
+    // ------------------------------------------------------------------ [realm-polish] the new realm
+
+    /** The roads' colours by grade: a track, an earth path, gravel, stone. */
+    private static final int[] ROAD_COLOURS = { 0xC09C8460, 0xFF8B5A2B, 0xFF8E8E86, 0xFF4E525C };
+    private static final int PIER = 0xFF5C4630;
+    private static final String[] GRADE_WORDS = { "a track", "an earth path", "gravel", "stone" };
+
+    /** The roads between towns by grade, the harbours, the inns, the knights' lands and the wonders; the tooltip of what is under the mouse. */
+    @Nullable
+    private List<Component> realm(GuiGraphics g, int mx, int my, @Nullable List<Component> tip) {
+        for (CompoundTag r : list("highways")) {
+            int[] l = r.getIntArray("line");
+            int[] gr = r.getIntArray("grade");
+            if (l.length < 6 || gr.length < 2) continue;
+            for (int half = 0; half < 2; half++) {
+                int grade = Math.max(0, Math.min(3, gr[half]));
+                int x0 = sx(l[half * 2]), y0 = sy(l[half * 2 + 1]), x1 = sx(l[half * 2 + 2]), y1 = sy(l[half * 2 + 3]);
+                if (grade >= 2) line(g, x0, y0, x1, y1, 0xFF2B2418, 3, 0);                 // a made road edged dark
+                line(g, x0, y0, x1, y1, ROAD_COLOURS[grade], grade >= 2 ? 2 : 1, grade == 0 ? 2 : 0);
+            }
+            if (near(mx, my, sx(l[2]), sy(l[3]), 5) || near(mx, my, (sx(l[0]) + sx(l[2])) / 2, (sy(l[1]) + sy(l[3])) / 2, 4)
+                    || near(mx, my, (sx(l[2]) + sx(l[4])) / 2, (sy(l[3]) + sy(l[5])) / 2, 4)) {
+                tip = List.of(Component.literal(r.getString("label")), Component.literal("Made " + GRADE_WORDS[Math.max(0, Math.min(3, gr[0]))]
+                    + " to the middle, " + GRADE_WORDS[Math.max(0, Math.min(3, gr[1]))] + " beyond"));
+            }
+        }
+        for (CompoundTag h : list("harbours")) {
+            int[] p = h.getIntArray("pier");
+            if (p.length < 4) continue;
+            int x0 = sx(p[0]), y0 = sy(p[1]), x1 = sx(p[2]), y1 = sy(p[3]);
+            line(g, x0, y0, x1, y1, h.getBoolean("done") ? PIER : 0x905C4630, 2, h.getBoolean("done") ? 0 : 1);
+            g.fill(x0 - 3, y0 - 3, x0 + 2, y0 + 2, 0xFF000000);
+            g.fill(x0 - 2, y0 - 2, x0 + 1, y0 + 1, 0xFF000000 | h.getInt("colour"));
+            List<Component> here = List.of(Component.literal(h.getString("label")));
+            if (near(mx, my, x0, y0, 4) || near(mx, my, x1, y1, 4)) tip = here;
+            int[] lt = h.getIntArray("light");
+            if (lt.length == 2) {
+                int lx = sx(lt[0]), ly = sy(lt[1]);
+                lighthouse(g, lx, ly, h.getBoolean("lit"));
+                if (near(mx, my, lx, ly, 5)) tip = here;
+            }
+        }
+        for (CompoundTag n : list("inns")) {
+            int x = sx(n.getInt("x")), y = sy(n.getInt("z"));
+            inn(g, x, y, n.getBoolean("open"));
+            if (near(mx, my, x, y, 5)) tip = List.of(Component.literal(n.getString("label")));
+        }
+        for (CompoundTag m : list("manors")) {
+            int x = sx(m.getInt("x")), y = sy(m.getInt("z"));
+            manor(g, x, y, 0xFF000000 | m.getInt("colour"), m.getBoolean("built"));
+            if (near(mx, my, x, y, 5)) tip = List.of(Component.literal(m.getString("label")));
+        }
+        for (CompoundTag w : list("wonders")) {
+            int x = sx(w.getInt("x")), y = sy(w.getInt("z"));
+            wonder(g, x, y, w.getInt("pct"));
+            if (near(mx, my, x, y, 6)) tip = List.of(Component.literal(w.getString("label")));
+        }
+        return tip;
+    }
+
+    /** A little inn: a brown house under a dark roof, its window lit while it is open. */
+    private static void inn(GuiGraphics g, int x, int y, boolean open) {
+        g.fill(x - 3, y - 1, x + 4, y + 4, 0xFF000000);
+        g.fill(x - 2, y, x + 3, y + 3, 0xFF9C6B3C);
+        for (int i = 0; i < 4; i++) g.fill(x - i, y - 4 + i, x + i + 1, y - 3 + i, 0xFF4A2E1A);
+        g.fill(x, y + 1, x + 1, y + 2, open ? 0xFFFFD34D : 0xFF505050);
+    }
+
+    /** A lighthouse: a white tower, its lamp burning yellow (and flickering) or dark. */
+    private void lighthouse(GuiGraphics g, int x, int y, boolean lit) {
+        g.fill(x - 2, y - 4, x + 2, y + 4, 0xFF000000);
+        g.fill(x - 1, y - 3, x + 1, y + 3, 0xFFF2F2F2);
+        g.fill(x - 1, y - 1, x + 1, y, 0xFFB83227);
+        int lamp = lit ? ((ticks / 8) % 2 == 0 ? 0xFFFFE066 : 0xFFFFB000) : 0xFF404040;
+        g.fill(x - 1, y - 5, x + 1, y - 3, lamp);
+        if (lit) { g.fill(x - 3, y - 5, x - 2, y - 4, 0x80FFE066); g.fill(x + 2, y - 5, x + 3, y - 4, 0x80FFE066); }
+    }
+
+    /** A merchant ship: a dark hull, a white sail, its land's colour at the masthead. */
+    private static void ship(GuiGraphics g, int x, int y, int colour) {
+        g.fill(x - 4, y + 1, x + 5, y + 3, 0xFF000000);
+        g.fill(x - 3, y + 1, x + 4, y + 2, 0xFF5A3A20);
+        g.fill(x, y - 5, x + 1, y + 1, 0xFF3A2A1A);
+        for (int i = 0; i < 4; i++) g.fill(x + 1, y - 4 + i, x + 2 + i, y - 3 + i, 0xFFF4F0E4);
+        g.fill(x - 2, y - 5, x, y - 4, colour);
+    }
+
+    /** A knight's land: a little keep in its town's colour (hollow while the manor is not yet built). */
+    private static void manor(GuiGraphics g, int x, int y, int colour, boolean built) {
+        g.fill(x - 3, y - 2, x + 4, y + 4, 0xFF000000);
+        g.fill(x - 2, y - 1, x + 3, y + 3, built ? colour : 0xFFE4D6B0);
+        for (int i = -3; i <= 3; i += 2) g.fill(x + i, y - 4, x + i + 1, y - 2, 0xFF000000);
+    }
+
+    /** A wonder: a gold star, hollow while it is rising. */
+    private static void wonder(GuiGraphics g, int x, int y, int pct) {
+        int c = 0xFFC9A227;
+        boolean done = pct >= 100;
+        line(g, x - 5, y, x + 5, y, 0xFF000000, 1, 0);
+        line(g, x, y - 5, x, y + 5, 0xFF000000, 1, 0);
+        line(g, x - 3, y - 3, x + 3, y + 3, done ? c : 0xFF8A6A10, 1, 0);
+        line(g, x - 3, y + 3, x + 3, y - 3, done ? c : 0xFF8A6A10, 1, 0);
+        if (done) g.fill(x - 1, y - 1, x + 2, y + 2, c);
+        else g.renderOutline(x - 2, y - 2, 5, 5, c);
     }
 
     /** For the pictures and tests on the client: how many tiles are held. */

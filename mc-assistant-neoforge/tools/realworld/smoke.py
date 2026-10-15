@@ -4807,7 +4807,8 @@ def trade_world_stage(r, look, cx, cz):
       4. 57-trade-world-4-road: the road, path to gravel to stone, its kerbs and lamp posts;
       5. 57-trade-world-5-milestone: the milestone by the stone road;
       6. 57-trade-world-6-inn: the roadside inn, its sign by the door;
-      7. 57-trade-world-7-folk: a folk thinking of leaving.
+      7. 57-trade-world-7-folk: a folk thinking of leaving;
+      8. 57-trade-world-8-fleet: [realm-polish] the fishing fleet's boats moored along the pier's landward side.
     Then /village harbour, /village highways and /village migration in words. Not wired into main()."""
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     r.cmd("gamemode spectator %s" % USER)
@@ -4848,6 +4849,7 @@ def trade_world_stage(r, look, cx, cz):
     shoot("milestone", "5-milestone", 6)
     shoot("inn", "6-inn", 8)
     shoot("folk", "7-folk", 6)
+    shoot("fleet", "8-fleet", 8)                       # [realm-polish] the boats at the pier
     hy = ground_height(r, cx, cz) + 1
     say("harbour: " + r.cmd("execute positioned %d %d %d run village harbour" % (cx, hy, cz))[:1200])
     say("roads: " + r.cmd("execute positioned %d %d %d run village highways" % (cx, hy, cz))[:1200])

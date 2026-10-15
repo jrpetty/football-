@@ -503,6 +503,8 @@ public final class FishMarket {
     /** Where a hand from the boats brings its catch: behind the counter, or the foot of the quay with no stall yet. */
     static BlockPos landingSpot(UUID village, Waterfront.Dock q) {
         Mart m = mart(village);
+        BlockPos pier = m.stall == null ? PierFleet.landing(q) : null;     // [realm-polish] a pier's foot, by the harbour office
+        if (pier != null) return pier;
         return m.stall != null ? m.stall.stand() : q.start().relative(q.out().getOpposite()).above();
     }
 

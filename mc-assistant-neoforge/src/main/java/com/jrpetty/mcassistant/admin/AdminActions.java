@@ -381,6 +381,10 @@ public final class AdminActions {
                 String name = com.jrpetty.mcassistant.entity.ShipCalls.sightNow(level, v, land.equals("next") ? null : land);
                 yield name == null ? Done.no(Villages.name(v.id()) + " has no harbour.") : Done.ok(name + " sighted off the harbour", "a ship was sighted");
             }
+            case "events.fleet" -> {                                            // [realm-polish]
+                String said = com.jrpetty.mcassistant.entity.PierFleet.moveNow(level, v);
+                yield said.startsWith("The fishing fleet moors") ? Done.ok(said, "the fishing fleet moved to the pier") : Done.no(said);
+            }
             // ---- events
             case "events.now" -> AdminTools.event(level, v, a.word(0, "festival").toLowerCase(Locale.ROOT), a.word(1, ""), RNG);
             // ---- world

@@ -180,6 +180,7 @@ public final class Campaigns {
         field = true;
         Armies.resetForTests();
         Battles.resetForTests();
+        ArmyInns.resetForTests();                                            // [realm-polish]
     }
 
     /** A new world (or the same one opened again): the campaigns read again from its books at the first tick. */
@@ -187,6 +188,7 @@ public final class Campaigns {
         ACTIVE.clear();
         loaded = false;
         Armies.resetForTests();
+        ArmyInns.resetForTests();                                            // [realm-polish]
     }
 
     /** Tests: every field taken as watched (true: in full), or as unwatched (false: on paper); null for the players as they are. */
@@ -675,6 +677,7 @@ public final class Campaigns {
         way.add(to);
         c.ways.set(i, way);
         c.along[i] = 0;
+        ArmyInns.plan(c, i);                                              // [realm-polish] an inn on a long march's way
     }
 
     static double length(List<BlockPos> way) {
@@ -727,6 +730,7 @@ public final class Campaigns {
         for (int i = 0; i < 2; i++) {
             Armies.Army a = c.armies[i];
             if (a == null || c.ways.get(i).isEmpty()) continue;
+            if (ArmyInns.halted(level, c, i)) { all = false; continue; }   // [realm-polish] resting at a roadside inn
             double len = length(c.ways.get(i));
             if (c.along[i] < len) {
                 all = false;
@@ -1046,6 +1050,7 @@ public final class Campaigns {
         way.add(home);
         c.ways.set(i, way);
         c.along[i] = 0;
+        ArmyInns.plan(c, i);                                              // [realm-polish] an inn on the way home
     }
 
     /** A second of the march home; once home (or past the time), the army stood down. */
@@ -1055,6 +1060,7 @@ public final class Campaigns {
         for (int i = 0; i < 2; i++) {
             Armies.Army a = c.armies[i];
             if (a == null || c.ways.get(i).isEmpty()) continue;
+            if (ArmyInns.halted(level, c, i)) { home = false; continue; }  // [realm-polish] resting at a roadside inn
             double len = length(c.ways.get(i));
             if (c.along[i] < len) {
                 home = false;
@@ -1091,6 +1097,7 @@ public final class Campaigns {
     static void standDown(ServerLevel level, Campaign c, int i) {
         Armies.Army a = c.armies[i];
         if (a == null) return;
+        ArmyInns.home(level, c, i);                                          // [realm-polish] the inn's rent it carried, its halts
         Battles.homecoming(level, c, a);
         Ruins.unload(level, a);                                               // [war-after] what the victors carried off, into their stores
         Armies.unload(level, a);
@@ -1296,7 +1303,7 @@ public final class Campaigns {
             BlockPos h = c.ways.get(i).isEmpty() ? null : c.head(i);
             out.add(Villages.name(a.town) + "'s army: " + a.standing() + " of " + a.size() + " standing, spirit " + spirit(a)
                 + (cap != null ? ", " + cap.what() : "") + ", " + a.tactic.name().toLowerCase(Locale.ROOT).replace('_', ' ')
-                + (h != null ? " at " + h.getX() + ", " + h.getZ() : ""));
+                + (h != null ? " at " + h.getX() + ", " + h.getZ() : "") + ArmyInns.atInn(c, i));   // [realm-polish] resting at an inn
         }
         return out;
     }

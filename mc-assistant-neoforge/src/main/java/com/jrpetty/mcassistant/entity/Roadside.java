@@ -405,6 +405,7 @@ public final class Roadside {
             h.keeperGone = -1;
             save(h);
         }
+        if (k != null) ArmyInns.till(h, k);                            // [realm-polish] what an army left on the bar for it
         sign(level, h);
         if (open(h) && larder(level, h) < LARDER_LOW) {
             if (TownJobs.atWork(level, v, "road/inn/" + h.other, h.anchor, "taking food out to the roadside inn", AssistantEntity.StationTask.HAUL)) {
@@ -546,6 +547,7 @@ public final class Roadside {
             sb.append("\nTakings|").append(h.takings).append(" coins from ").append(h.guests).append(" guests and ").append(h.meals)
                 .append(" meals; ").append(h.rent).append(" sent home as rent");
             if (Wars.atWar(h.owner, h.other)) sb.append("\nShut|while the two towns are at war");
+            for (String a : ArmyInns.bookLines(h)) sb.append("\nArmy|").append(a);       // [realm-polish] the armies it has had
         }
         if (f.persona().rolled()) sb.append("\nNature|").append(f.life().traitsLabel());
         return sb.toString();
@@ -622,10 +624,19 @@ public final class Roadside {
             boolean taken = false;
             for (Booking b : BOOKED.values()) if (b.bed().equals(head) && dt < b.until()) taken = true;
             for (Lodger l : LODGERS.values()) if (l.bed().equals(head)) taken = true;
-            if (taken || level.getBlockState(head).getValue(BedBlock.OCCUPIED)) continue;
+            if (taken || level.getBlockState(head).getValue(BedBlock.OCCUPIED) || ArmyInns.roomTaken(head)) continue;   // [realm-polish] an officer's
             return head;
         }
         return null;
+    }
+
+    /** [realm-polish] Is this bed of an inn free tonight: no player's room, no traveller's, no officer's, nobody in it? */
+    static boolean bedFree(ServerLevel level, BlockPos head) {
+        long dt = level.getDayTime();
+        for (Booking b : BOOKED.values()) if (b.bed().equals(head) && dt < b.until()) return false;
+        for (Lodger l : LODGERS.values()) if (l.bed().equals(head)) return false;
+        return level.getBlockState(head).getBlock() instanceof BedBlock && !level.getBlockState(head).getValue(BedBlock.OCCUPIED)
+            && !ArmyInns.roomTaken(head);
     }
 
     /** The inn whose sign (or bed) this is, or null. */
@@ -769,7 +780,7 @@ public final class Roadside {
             case "building" -> "The inn halfway: being put up by " + Villages.name(h.owner) + "'s road crew.";
             default -> "The inn halfway (" + Villages.name(h.owner) + "'s): " + (open(h) ? "open" : Wars.atWar(h.owner, h.other)
                 ? "shut while the war lasts" : "shut, no keeper") + "; " + h.guests + " travellers, " + h.rooms + " rooms let to players, "
-                + h.meals + " meals, " + h.takings + " coins taken, " + h.rent + " sent home as rent.";
+                + h.meals + " meals, " + h.takings + " coins taken, " + h.rent + " sent home as rent." + ArmyInns.booksLine(h);   // [realm-polish]
         };
     }
 

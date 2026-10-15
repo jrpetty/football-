@@ -12058,6 +12058,14 @@ Smoke: `roles_e_stage` in tools/realworld/smoke.py (`/village roads stage`). Tes
 - **Fog of war**: a town's table shows only what that town knows: its own country, the bearings its scouts have walked,
   every place in its atlas, the towns it has met and the roads to them. A table you set down yourself shows what your
   town knows (if you are a citizen), else the land it stands in. Admins in creative see everything.
+- **The realm on the map**: the **roads between towns** coloured by how far each half is made (a dotted track, a brown
+  earth path, grey gravel, dark stone; hover for the grades), the **roadside inns** (their window lit while they are open),
+  the **harbours** with their piers and **lighthouses** (the lamp flickering while it burns), the **merchant ships** from
+  over the sea in harbour, sailing in or sailing away (the land's colour at the masthead), the **knights' lands** (a little
+  keep in the town's colour, hollow till the manor is built), and the **wonders** (a gold star, hollow while it rises). A
+  town's card says how many **prisoners of war** it holds (and how many of them are ours), its wonders and its knights; an
+  army resting at an inn says so. All under the same fog: another town's harbour, wonders and knights only once it is met
+  and its ground is known, a road only between two towns the table knows.
 
 ### The books, the board and the commands
 - The town's books have a **Lands** page (under Civic): a little map of whose each chunk is round the town, how much land
@@ -12074,7 +12082,8 @@ The map's terrain is read off each chunk's height map once as it loads (sixteen 
 the world, sixteen bytes a chunk. Nothing is drawn for a map table until somebody opens one; while it is open its client
 asks for a few kilobytes a second and a half, and terrain tiles only when they are missing or stale.
 
-Smoke: `borders_map_stage` in tools/realworld/smoke.py. Tests: BordersMapGameTests (bm01 to bm04).
+Smoke: `borders_map_stage` in tools/realworld/smoke.py. Tests: BordersMapGameTests (bm01 to bm04); the realm on the map,
+RealmPolishGameTests (rp05, rp06).
 ## Taxes, knights and manors
 
 ### Taxes set by the council (TaxBook)
@@ -12420,6 +12429,13 @@ on foot, unless somebody talks them round.
   says so. A lit harbour sees ships oftener.
 - **The harbourmaster** is a post, not a trade: the town's best fisher, else a steady hand. It keeps its own trade, sees
   the ships in, keeps the light, and takes a quarter of the harbour dues. Ask it "When's the next ship due?".
+- **The fishing fleet moves to the pier.** Once the pier is finished, a town's fishing fleet moors there instead of at its
+  old jetty, the next time its boats are all in: the boats left at the old moorings are hauled up into the stores and put
+  in again along the pier's landward side (the ships tie up on the other side, by the bollards), and the fish stall by the
+  old jetty is taken down into the stores and put up again by the pier's foot. The fishers walk out along the deck to
+  board, come home to the pier, and land the catch there. The harbourmaster counts it as it comes ashore: the Harbour page
+  shows the boats at the pier and the fish landed today, this week and in all. A town with no harbour, or whose pier is not
+  finished, keeps its fleet as it was.
 
 ### Merchant ships (ShipCalls, Seafarers, ShipTrade)
 - **From over the sea.** Ships come from four far lands: Qadira on the Spice Coast (cocoa, sugar, dyes, acacia), Vellmark
@@ -12472,6 +12488,20 @@ on foot, unless somebody talks them round.
   in the morning.
 - **You:** right-click the sign by the door for a room, three coins: the bed is yours tonight, and it is where you wake
   after. Sneak and right-click for a meal out of the larder, two coins. While the two towns are at war the inn is shut.
+- **Armies on the march.** An army on a long march whose road passes an inn turns in at its door. By day it halts half a
+  minute for a hot meal; after dusk it stops for the night and marches on at dawn. The men sit in rows along the road
+  before the door and eat a dish each out of the larder; the officers (the Captain, the standard-bearer, the sergeants)
+  take the inn's rooms and sleep in its beds. The town's treasury pays the keeper at the inn's prices (two coins a meal,
+  three a room), real coin into the keeper's till, half of it the inn's town's rent: an army of the town that built the inn
+  carries that home itself and pays it into the treasury. A fed army is in better heart and its wounded a little mended.
+- **Never with a war on.** An army whose town is at war with either of the inn's towns is not served. An enemy of the
+  town that built it **plunders the larder** instead: its men eat, the rest goes on its carts and home into its stores,
+  not a coin paid. The keeper shouts at it, the inn's town hears of it and holds it against them, and the keeper bars its
+  door to that town's armies for a fortnight. A halt never moves a battle into the night: the field is fought once both
+  armies are at their camps, by the usual clock; an army that gets to its ground while the other rests the night at an inn
+  makes camp round its fire and waits; one home while the other is still on the road is stood down.
+- **The inn's books** keep who stayed: the Roads page and the keeper's card list the armies it has had, what they ate and
+  paid, or that they plundered it. Both towns' chronicles and war books tell each stop.
 
 ### Folk on the move (Migration)
 - **Why folk leave.** Each morning a town looks at how its people are: hunger, no bed of one's own, wages paid short, a
@@ -12505,7 +12535,9 @@ on foot, unless somebody talks them round.
   leaving). A ship's captain trades at the trading table; a roadside innkeeper lets rooms and serves meals.
 - **Commands:** `/village harbour` (and `books`; operators: `survey`, `ship [land]`, `stage`), `/village highways` (and
   `books`; operators: `now`, `stage`), `/village migration` (operators: `now [n]`, `think`, `stage`).
-- **Admin:** `/village admin people migrate <n>`, `/village admin events ship [land]`, `/village admin build roads`.
+- **Admin:** `/village admin people migrate <n>`, `/village admin events ship [land]`, `/village admin build roads`,
+  `/village admin events fleet` (the fishing fleet moved to the town's finished pier now).
 
 Smoke: `trade_world_stage` in tools/realworld/smoke.py (`/village harbour stage`, `/village highways stage`,
-`/village migration stage`). Tests: TradeWorldGameTests (tw01 to tw09).
+`/village migration stage`). Tests: TradeWorldGameTests (tw01 to tw09); armies at the inns and the fleet at the pier,
+RealmPolishGameTests (rp01 to rp05).

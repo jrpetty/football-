@@ -1033,6 +1033,7 @@ public final class Armies {
                 walk(f, x, level);
             }
             default -> {
+                if (ArmyInns.abed(f, x)) return;                     // [realm-polish] an officer asleep in a room at an inn
                 // In its place: nothing drawn out of the line by a stray arrow (the monsters of a night in camp aside).
                 LivingEntity t = f.getTarget();
                 if (t != null && !(t instanceof net.minecraft.world.entity.monster.Enemy && f.distanceToSqr(t) < 64.0)) f.setTarget(null);
@@ -1125,6 +1126,8 @@ public final class Armies {
 
     /** What it is doing, for its card. */
     static String doing(Fighter x) {
+        String inn = x.order == Order.PLACE ? ArmyInns.doing(x) : null;  // [realm-polish] halted at a roadside inn
+        if (inn != null) return inn;
         String enemy = x.army == null ? "the enemy" : Villages.name(x.army.enemy);
         return switch (x.order) {
             case YIELDED -> "wounded, out of the fight";

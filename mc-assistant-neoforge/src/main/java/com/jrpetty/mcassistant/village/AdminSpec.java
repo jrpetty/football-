@@ -292,6 +292,8 @@ public final class AdminSpec {
         // [trade-world] A merchant ship from over the sea sighted off the town's harbour now.
         add("events.ship", Area.EVENTS, "events ship", T, "A merchant ship from over the sea sighted off the town's harbour now.",
             "events ship qadira", Param.words("land", "next", "qadira", "vellmark", "orrisand", "teshwan").opt());
+        // [realm-polish] The fishing fleet moved to the harbour's finished pier now (its boats in from the old moorings).
+        add("events.fleet", Area.EVENTS, "events fleet", T, "Move the town's fishing fleet to its harbour's finished pier now.", "events fleet");
         // ---- time and world
         big("world.skip", Area.WORLD, "world skip", W, "Skip N days: every town's morning round run for each day, a day a second.",
             "world skip 5", Param.num("days", 1, MOST_DAYS, 1));
