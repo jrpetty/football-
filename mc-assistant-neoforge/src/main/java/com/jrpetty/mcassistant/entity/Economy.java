@@ -238,6 +238,7 @@ public final class Economy {
         UUID v = CRAFT_VILLAGE;
         CRAFT_VILLAGE = null;
         if (v == null) return;
+        Businesses.crafted(v, CRAFT_TRADE, CRAFT_NET, CRAFT_KIND);   // [business-books] the maker's business: its ingredients' cost into what it made
         for (Map.Entry<String, Integer> e : CRAFT_NET.entrySet()) {
             ItemStack kind = CRAFT_KIND.get(e.getKey());
             if (kind == null || e.getValue() == 0) continue;

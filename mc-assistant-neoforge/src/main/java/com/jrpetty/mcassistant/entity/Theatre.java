@@ -773,6 +773,8 @@ public final class Theatre {
         for (VillageFolkEntity f : actors) f.earn(share);
         int house = s.takings - share * actors.size();
         if (house > 0) Ledger.addCoins(id, house);
+        Businesses.service(level, id, Business.Type.THEATRE, net.minecraft.world.item.ItemStack.EMPTY, Math.max(1, s.takings / Math.max(1, TICKET)),
+            house * 100L, true);                                                                        // [business-books] the house's share, its till
         s.review = Playbill.review(level, v, s, actors);
         for (VillageFolkEntity f : actors) Troupe.applaud(id, f.getUUID(), f.displayNameCap(), 1 + s.review.stars());
         String[] lost = Troupe.lost(id);

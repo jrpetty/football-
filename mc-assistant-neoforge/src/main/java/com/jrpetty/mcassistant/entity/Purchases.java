@@ -199,6 +199,7 @@ public final class Purchases {
      */
     static int charge(ServerLevel level, VillageFolkEntity f, UUID village, double coins, boolean slate, ItemStack what, int n) {
         long cents = Math.max(0, Math.round(coins * 100));
+        Businesses.charged(level, village, what, cents);               // [business-books] the sale's own pennies, for the seller's books
         Account a = account(village, f);
         long owed = a.balance + cents;
         if (!slate && owed > f.purse() * 100L) return -1;
@@ -300,9 +301,10 @@ public final class Purchases {
     /** Stockroom.asked, to the hundredth: a slow ware a seller makes marked down, never under what it cost. */
     static double asked(ServerLevel level, UUID village, ItemStack one, double each) {
         Stockroom.Found found = Stockroom.find(one);
-        if (found == null || !found.ware().made()) return each;
+        double least = Businesses.priceEach(level, village, one, each);    // [business-books] the seller's own least: cost and markup
+        if (found == null || !found.ware().made()) return least;
         int off = Stockroom.markdown(level, village, found.maker(), found.ware());
-        double p = each * (100 - off) / 100.0;
+        double p = off > 0 ? each * (100 - off) / 100.0 : least;
         double cost = Stockroom.costEach(level, village, found.maker(), found.ware());
         return Math.max(cost > 0 ? cost : 0.01, p);
     }

@@ -125,6 +125,8 @@ public final class FolkTalk {
         // [roles-c] Asked of the hospitality posts: a room, a pint, a round, the bottles back, bread, the mill's wheat, meat.
         String hospitality = typed ? HospitalityTalk.talk(f, p, text) : null;
         if (hospitality != null) return manner(f, hospitality);
+        String business = typed ? BusinessBooks.talk(f, p, text) : null;   // [business-books] "How's business?", "Could I see your books?"
+        if (business != null) return manner(f, business);
         // [roles-d] Asked of an outdoor trade's own work: produce, timber, fish, the boat, a hunt, hides, wool, a horse, the
         // crossing, a golem, a lamp (OutdoorTalk).
         String outdoor = typed ? OutdoorTalk.talk(f, p, text) : null;
@@ -508,6 +510,7 @@ public final class FolkTalk {
         line(sb, "Meals", Meals.line(f));
         line(sb, "At the counter", Purchases.cardLine(f));  // [econ-prices] its slate, its change, what it bought and refused
         line(sb, "Bank", Bank.cardLine(f));                 // its savings at the bank, its mortgage, how careful it is
+        line(sb, "Business", BusinessBooks.cardLine(f));    // [business-books] the business it owns and draws on; its employer and pay
         line(sb, "War", WarFooting.cardLine(f));            // [war-prep] the watch for the war, the militia, danger money
         line(sb, "Kit", WatchKit.cardLine(f));              // [guard-kit] a guard's kit, issued by the town
         line(sb, "Caves", CaveDwellers.cardLine(f));        // [caves] where it went today, what it found, its kit

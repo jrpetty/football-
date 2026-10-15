@@ -263,6 +263,11 @@ public final class AdminSpec {
         add("economy.wagon", Area.ECONOMY, "economy wagon", T, "A trade shipment of the town's surplus sent to its nearest neighbour now.", "economy wagon");
         add("economy.market", Area.ECONOMY, "economy market", T, "Make today market day (the traders come, the bell rings).", "economy market");
         add("economy.till", Area.ECONOMY, "economy till", T, "Reset the shops' tills and restock their shelves from the stores.", "economy till");
+        // [business-books] a business's books, and the town's coin counted to the penny
+        add("economy.books", Area.ECONOMY, "economy books", T, "A business's books in full: owners, staff and pay, takings, costs, profit, stock, orders.",
+            "economy books cafe", Param.of("business", Kind.WORD).opt().or("cafe"));
+        add("economy.audit", Area.ECONOMY, "economy audit", T, "Count the town's coin to the penny, holder by holder, against the day's booked flows.",
+            "economy audit");
         // [civic-land] the council's taxes
         add("economy.tax", Area.ECONOMY, "economy tax", T, "Set a tax: the head tax, the share of wages (the tithe), the market toll or the war levy, 0 to 3.",
             "economy tax head 2", Param.words("lever", "head", "wage", "toll", "levy"), Param.num("rate", 0, 3, 1));

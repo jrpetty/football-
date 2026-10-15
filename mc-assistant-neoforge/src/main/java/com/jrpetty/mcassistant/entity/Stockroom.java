@@ -409,6 +409,7 @@ public final class Stockroom {
     /** Sold: so many of this, for so much coin in all. */
     public static void sold(ServerLevel level, UUID village, Seller s, ItemStack what, int count, int coin) {
         if (what.isEmpty() || count <= 0) return;
+        Businesses.sold(level, village, s, what, count, coin);          // [business-books] the seller's books, and its till
         if (s == Seller.SHOP) ShopBusiness.took(village, level.getDayTime() / 24000L, coin);   // [shops-homes] into its till
         Book b = book(level, village, s);
         Line l = line(b, key(what));
@@ -515,9 +516,13 @@ public final class Stockroom {
      *  slow, and never under what it cost. Anything else, the market's price as it is. */
     public static int asked(ServerLevel level, UUID village, ItemStack shown, int price, int lot) {
         Found f = find(shown);
-        if (f == null || !f.ware().made()) return price;
+        int n = Math.max(1, lot);
+        // [business-books] A business's own least: its full cost a piece and its markup (Businesses.priceEach); a slow line
+        // marked down to clear it is let go under that, never under what it cost.
+        int least = (int) Math.round(Businesses.priceEach(level, village, shown, price / (double) n) * n);
+        if (f == null || !f.ware().made()) return Math.max(price, least);
         int off = markdown(level, village, f.maker(), f.ware());
-        int p = off > 0 ? (int) Math.round(price * (100 - off) / 100.0) : price;
+        int p = off > 0 ? (int) Math.round(price * (100 - off) / 100.0) : Math.max(price, least);
         double cost = costEach(level, village, f.maker(), f.ware());
         int floor = cost > 0 ? (int) Math.ceil(cost * Math.max(1, lot) - 1e-6) : 1;
         return Math.max(1, Math.max(floor, p));

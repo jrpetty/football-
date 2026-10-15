@@ -65,7 +65,9 @@ public final class BoardPages {
         // [tech-tree] The town's inventions: the scholars' tree, the work in hand, the scholars (InventionsPage).
         "Inventions",
         // [trade-world] The harbour and its ships; the roads, their inns and the folk on the move (TradeWorldPage).
-        "Harbour", "Roads" };
+        "Harbour", "Roads",
+        // [business-books] Every business in the town and its books (BusinessesPage), after them.
+        "Businesses" };
 
     /** One of the board's sections: its name, its icon, what it holds, and its pages by name. */
     public record Section(String name, Item icon, String tip, String... pages) {}
@@ -76,7 +78,8 @@ public final class BoardPages {
         new Section("People", Items.PLAYER_HEAD, "Every folk, how they live together, their homes and schooling",
             "Folk", "Society", "Growth", "Homes", "School", "Interviews"),
         new Section("Economy", Items.EMERALD, "Money, what is made and sold, the prices, the jobs and the stores",
-            "Money", "Production", "Prices", "Shops", "Jobs", "Stock", "Stores", "Trade", "Auction", "Trading Post", "Earnings", "Harbour"),
+            "Money", "Production", "Prices", "Shops", "Jobs", "Stock", "Stores", "Trade", "Auction", "Trading Post", "Earnings", "Harbour",
+            "Businesses"),                                                                                     // [business-books]
         new Section("Town", Items.BRICKS, "Its buildings, the roads and rails, the maps, the caves and the watch",
             "Buildings", "Transport", "Roads", "Maps", "Caves", "Nether", "Watch", "Cases"),
         new Section("Civic", Items.BELL, "Who leads, what the town studies, what it stands for, and its wars",

@@ -364,6 +364,12 @@ public final class FishMarket {
         return true;
     }
 
+    /** [business-books] Has the town a fish market standing on its quay (a business of its own: Businesses.ensure)? */
+    static boolean standsForBooks(ServerLevel level, UUID village) {
+        Stall s = stallNote(village);
+        return s != null && level.isLoaded(s.barrels().get(0)) && stands(level, s);
+    }
+
     /** Is the stall still standing (its counter's barrels)? */
     static boolean stands(ServerLevel level, Stall s) {
         for (BlockPos p : s.barrels()) if (!level.getBlockState(p).is(Blocks.BARREL)) return false;
@@ -810,6 +816,7 @@ public final class FishMarket {
             return null;
         }
         PriceIndex.bought(v.id(), one, got);
+        Businesses.service(level, v.id(), Business.Type.FISHMARKET, one, got, Math.round(each * got * 100), true);   // [business-books] the stall's till
         m.sold += got;
         m.cents += Math.round(each * got * 100);
         saveDay(m);
@@ -880,6 +887,8 @@ public final class FishMarket {
         if (got <= 0) return "All sold!";
         Market.payOut(p, price);
         Ledger.addCoins(id, price);
+        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_IN, price);                                          // [business-books]
+        Businesses.service(level, id, Business.Type.FISHMARKET, one, got, price * 100L, true);          // [business-books] the stall's till
         Economy.sold(id, price);
         PriceIndex.bought(id, one, got);
         m.sold += got;

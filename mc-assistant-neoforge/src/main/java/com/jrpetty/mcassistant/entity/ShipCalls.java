@@ -567,6 +567,7 @@ public final class ShipCalls {
         int share = master == null ? 0 : dues / 4;
         if (master != null && share > 0) master.earn(share);
         Ledger.addCoins(id, dues - share);
+        CoinCensus.flow(id, CoinCensus.Flow.VISITOR_IN, dues);          // [business-books] the ship's coin into the town
         Economy.sold(id, dues - share);
         Ledger.note(id, DUES, Long.toString(Math.max(0, Harbours.parse(Ledger.note(id, DUES))) + dues));
         List<String> goods = new ArrayList<>();
@@ -760,6 +761,8 @@ public final class ShipCalls {
                 ship.lotsSold++;
                 ship.buys++;
                 Economy.spent(id, paid);
+                CoinCensus.flow(id, CoinCensus.Flow.VISITOR_OUT, paid);     // [business-books] away with the ship
+                Businesses.storesIn(id, lot, lot.getCount(), paid * 100L);   // [business-books] the stores' cost: what was paid
                 Crafts.store(level, v, lot);
                 Villages.tell(id, day, "the town bought " + l.words + " (" + lot.getCount() + ") off " + ship.name + " for "
                     + Visitors.coins(paid) + ": " + why);
@@ -794,6 +797,8 @@ public final class ShipCalls {
                 if (price > 0) {
                     Ledger.addCoins(id, price);
                     Economy.sold(id, price);
+                    CoinCensus.flow(id, CoinCensus.Flow.VISITOR_IN, price);  // [business-books] the ship's coin
+                    Businesses.service(level, id, Business.Type.HARBOUR, new ItemStack(o.item(), got), got, price * 100L, true);   // [business-books] the stores' sale, booked
                 }
                 Villages.tell(id, day, "sold " + got + " " + words(o.item()) + " to " + ship.name + " for " + Visitors.coins(price)
                     + (wanted ? " (" + (land == null ? "they" : "the " + land.people()) + " want it at home)" : ""));
