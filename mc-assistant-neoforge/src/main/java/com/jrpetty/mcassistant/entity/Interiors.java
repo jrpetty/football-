@@ -50,7 +50,9 @@ public final class Interiors {
 
     /** The buildings that are furnished: homes and the rooms folk gather in, not the works. */
     static final Set<String> FURNISHED = Set.of("house", "manor", "townhall", "hall", "tavern", "cafe", "shop", "library",
-        "chapel", "guesthouse", "barracks", "school");
+        "chapel", "guesthouse", "barracks", "school",
+        // [build-world] and the town's other rooms, which had only what their drawings gave them: a rug, a shelf, a lamp
+        "academy", "postoffice", "maproom", "harbour", "auction", "infirmary");
 
     /** What goes where: a cell of a room and what is put in it. */
     enum Kind { RUG, BORDER, BARREL, POT, SHELF, LAMP, CANDLE }
@@ -119,7 +121,7 @@ public final class Interiors {
         return switch (p.kind()) {
             case RUG -> carpet(level, v, false, now);
             case BORDER -> carpet(level, v, true, now);
-            case BARREL -> one(level, v, s -> s.is(Items.BARREL), Blocks.BARREL.defaultBlockState());
+            case BARREL -> one(level, v, s -> s.is(Items.BARREL), standing(Blocks.BARREL.defaultBlockState()));
             case SHELF -> one(level, v, s -> s.is(Items.BOOKSHELF), Blocks.BOOKSHELF.defaultBlockState());
             case LAMP -> one(level, v, s -> s.is(Items.LANTERN), Blocks.LANTERN.defaultBlockState());
             case CANDLE -> {
@@ -129,6 +131,13 @@ public final class Interiors {
             }
             case POT -> pot(level, v);
         };
+    }
+
+    /** [build-world] A barrel stood on its end, its lid up, as the builders stand theirs: as it came out of the stores it
+     *  lay on its side with its lid to the north, into the wall behind it as often as not. */
+    static BlockState standing(BlockState barrel) {
+        return barrel.hasProperty(net.minecraft.world.level.block.BarrelBlock.FACING)
+            ? barrel.setValue(net.minecraft.world.level.block.BarrelBlock.FACING, Direction.UP) : barrel;
     }
 
     @Nullable
@@ -222,12 +231,24 @@ public final class Interiors {
         String key = b.anchor().asLong() + ":" + tier + ":" + Ages.drawing(village, b);
         List<Piece> got = PLANS.get(key);
         if (got != null) return got;
-        String drawing = Ages.drawing(village, b);
+        List<Piece> fixed = planFor(level, b, Ages.drawing(village, b), tier, Villages.get(village));
+        PLANS.put(key, fixed);
+        return fixed;
+    }
+
+    /** The furnishing of a building standing to this drawing, for an age (plan, not kept). */
+    private static List<Piece> planFor(ServerLevel level, Ledger.Building b, String drawing, int tier, @Nullable Villages.Village v) {
         List<BuildGoal.Placement> placements = BuildGoal.plan(drawing, b.anchor(), b.facing(), 13);
         Map<BlockPos, BuildGoal.Placement> at = new HashMap<>();
         for (BuildGoal.Placement p : placements) if (p.part() != BuildGoal.Part.CLEAR) at.put(p.pos(), p);
         Set<BlockPos> keepClear = new HashSet<>();
         Set<BlockPos> heads = new HashSet<>();
+        Set<BlockPos> bedHeads = new HashSet<>();                       // [build-world] every bed's head, for the way into each
+        for (BuildGoal.Placement p : placements) {
+            if (p.part() != BuildGoal.Part.BED) continue;
+            bedHeads.add(p.pos().relative(p.way() == com.jrpetty.mcassistant.entity.goal.Blueprints.Way.UP ? b.facing()
+                : com.jrpetty.mcassistant.entity.goal.Blueprints.world(p.way(), b.facing())));
+        }
         BlockPos door = null;
         for (BuildGoal.Placement p : placements) {
             switch (p.part()) {
@@ -236,11 +257,20 @@ public final class Interiors {
                     for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) keepClear.add(p.pos().offset(dx, 0, dz));
                 }
                 // A bed's head lies a cell beyond its foot (the drawing has the foot): that cell is the bed's.
+                // [build-world] And a cell of floor kept clear to get into it by (at its foot, else beside it): a barrel
+                // set at the foot of a bed between a wall and the next bed left it to be climbed into over the end.
                 case BED -> {
                     Direction lie = p.way() == com.jrpetty.mcassistant.entity.goal.Blueprints.Way.UP ? b.facing()
                         : com.jrpetty.mcassistant.entity.goal.Blueprints.world(p.way(), b.facing());
                     keepClear.add(p.pos().relative(lie));
                     heads.add(p.pos().relative(lie));
+                    for (BlockPos c : new BlockPos[]{ p.pos().relative(lie.getOpposite()), p.pos().relative(lie.getClockWise()),
+                            p.pos().relative(lie.getCounterClockWise()), p.pos().relative(lie).relative(lie.getClockWise()),
+                            p.pos().relative(lie).relative(lie.getCounterClockWise()) }) {
+                        if (at.containsKey(c) || bedHeads.contains(c)) continue;
+                        keepClear.add(c);
+                        break;
+                    }
                 }
                 // Room to get at a ladder, a chest, a stand or a table of the crafts (a bed is got into from
                 // anywhere, a bench or an oven from the side).
@@ -248,6 +278,10 @@ public final class Interiors {
                     for (Direction d : Direction.Plane.HORIZONTAL) keepClear.add(p.pos().relative(d));
                     keepClear.add(p.pos());
                 }
+                // [build-world] An oven's mouth: a rug's barrel set down there shut the stove.
+                case FURNACE, SMOKER -> keepClear.add(p.pos().relative(p.way() == com.jrpetty.mcassistant.entity.goal.Blueprints.Way.UP
+                    || p.way() == com.jrpetty.mcassistant.entity.goal.Blueprints.Way.FRONT ? b.facing().getOpposite()
+                    : com.jrpetty.mcassistant.entity.goal.Blueprints.world(p.way(), b.facing())));
                 default -> { }
             }
         }
@@ -275,9 +309,18 @@ public final class Interiors {
             // one of the furnishing's own pieces: a building looked at again after a restart keeps its plan.
             BlockState there = level.getBlockState(cell);
             if (!there.isAir() && !ours(there)) continue;
+            // [build-world] Nor where the town's gate will not have furniture (the headroom over a stair or a ladder, a
+            // way in): planned there, the piece was never put in and the room stood a piece short for good.
+            if (v != null && !TownBlocks.allows(level, v, cell, TownBlocks.Why.FURNISH)) continue;
             floor.add(cell);
         }
-        floor.sort(Comparator.<BlockPos>comparingInt(BlockPos::getY).thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ));
+        // [build-world] In the building's own terms (across it, then toward its back), not the world's: the same house
+        // was furnished one way with its back to the north and another with its back to the east, its lamp in another
+        // room. Now it is furnished alike whichever way its lot faces.
+        Direction across = b.facing().getClockWise(), deep = b.facing();
+        java.util.function.ToIntFunction<BlockPos> ax = c -> (c.getX() - b.anchor().getX()) * across.getStepX() + (c.getZ() - b.anchor().getZ()) * across.getStepZ();
+        java.util.function.ToIntFunction<BlockPos> az = c -> (c.getX() - b.anchor().getX()) * deep.getStepX() + (c.getZ() - b.anchor().getZ()) * deep.getStepZ();
+        floor.sort(Comparator.<BlockPos>comparingInt(BlockPos::getY).thenComparingInt(ax).thenComparingInt(az));
         // By the walls and in the open, floor by floor.
         Map<Integer, List<BlockPos>> walls = new HashMap<>(), open = new HashMap<>();
         for (BlockPos c : floor) {
@@ -306,9 +349,10 @@ public final class Interiors {
             List<BlockPos> cells = new ArrayList<>(e.getValue());
             if (cells.isEmpty()) continue;
             // The furniture along the walls, spread out: from the corners in, each a few cells from the last.
-            cells.sort(Comparator.<BlockPos>comparingInt(c -> -corner(at, c)).thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ));
+            cells.sort(Comparator.<BlockPos>comparingInt(c -> -corner(at, c)).thenComparingInt(ax).thenComparingInt(az));
             List<BlockPos> picked = new ArrayList<>();
             for (BlockPos c : cells) {
+                if (passage(at, c)) continue;                       // [build-world] never across a passage
                 boolean near = false;
                 for (BlockPos o : picked) if (o.distManhattan(c) < 2) { near = true; break; }
                 if (!near) picked.add(c);
@@ -328,9 +372,7 @@ public final class Interiors {
             if (tier >= 2 && barrel != null && !at.containsKey(barrel.above())) out.add(new Piece(barrel.above(), Kind.LAMP));
             if (tier >= 3 && shelf != null && !at.containsKey(shelf.above())) out.add(new Piece(shelf.above(), Kind.CANDLE));
         }
-        List<Piece> fixed = List.copyOf(out);
-        PLANS.put(key, fixed);
-        return fixed;
+        return List.copyOf(out);
     }
 
     /**
@@ -362,6 +404,40 @@ public final class Interiors {
         return "walls " + STATS.getOrDefault(b.anchor().asLong() + ":walls", 0) + ", open " + STATS.getOrDefault(b.anchor().asLong() + ":open", 0);
     }
 
+    private static final int[][] RING = { { 0, -1 }, { 1, -1 }, { 1, 0 }, { 1, 1 }, { 0, 1 }, { -1, 1 }, { -1, 0 }, { -1, -1 } };
+
+    /**
+     * [build-world] Is this floor cell a way through, so a barrel set down in it would shut the passage: are the open
+     * cells round it (as the drawing leaves them) in two or more runs that each reach one of its sides, so that it is
+     * what joins them? A hall a cell wide between a stair and a wall would have its shelf across it, and the room
+     * beyond could not be got into; a nook at the end of a row of desks is no way through (Decor.cutsTheWay, on the
+     * drawing).
+     */
+    private static boolean passage(Map<BlockPos, BuildGoal.Placement> at, BlockPos c) {
+        boolean[] w = new boolean[8];
+        int shut = -1;
+        for (int i = 0; i < 8; i++) {
+            BuildGoal.Placement n = at.get(c.offset(RING[i][0], 0, RING[i][1]));
+            w[i] = n == null || n.part() == BuildGoal.Part.CARPET || n.part() == BuildGoal.Part.DOOR;
+            if (!w[i] && shut < 0) shut = i;
+        }
+        if (shut < 0) return false;
+        int runs = 0;
+        boolean in = false, side = false;
+        for (int k = 1; k <= 8; k++) {
+            int i = (shut + k) % 8;
+            if (w[i]) {
+                if (!in) { in = true; side = false; }
+                if (i % 2 == 0) side = true;
+            } else if (in) {
+                if (side) runs++;
+                in = false;
+            }
+        }
+        if (in && side) runs++;
+        return runs >= 2;
+    }
+
     /** How cornered a cell is: how many of its sides the drawing has walled. */
     private static int corner(Map<BlockPos, BuildGoal.Placement> at, BlockPos c) {
         int n = 0;
@@ -381,12 +457,29 @@ public final class Interiors {
                 BuildGoal.Placement n = at.get(c.relative(d, k));
                 if (n == null) continue;
                 if (wallish(n)) hit = true;
-                else if (n.part() == BuildGoal.Part.BLOCK) break;                    // a roof slope or a beam first: not a room
+                else if (n.part() == BuildGoal.Part.BLOCK && !onTheFloor(at, n)) break;   // a roof slope or a beam first: not a room
             }
             if (!hit) return false;
         }
         for (int k = 2; k <= 10; k++) if (at.containsKey(c.above(k))) return true;     // under a roof
         return false;
+    }
+
+    /**
+     * [build-world] A slab or a stair standing on the boards (a desk, a bench, a counter): the room's furniture, looked
+     * past for its walls. A roof's slope stands on the beams and the wall tops; the schoolroom's desks (a top slab, a
+     * stair for a bench) were taken for the roof coming down, no cell of it counted a room, and it was never furnished.
+     */
+    static boolean onTheFloor(Map<BlockPos, BuildGoal.Placement> at, BuildGoal.Placement n) {
+        BuildGoal.Placement under = at.get(n.pos().below());
+        if (under == null || under.part() != BuildGoal.Part.BLOCK) return false;
+        return switch (n.style()) {
+            case ROOF_SLAB, ROOF_SLAB_TOP, ROOF_STAIR, ROOF_STAIR_TOP, STONE_SLAB, STONE_STAIR -> switch (under.style()) {
+                case FLOOR, FOUNDATION, MASONRY, GENERIC -> true;
+                default -> false;
+            };
+            default -> false;
+        };
     }
 
     private static boolean wallish(BuildGoal.Placement p) {
@@ -399,6 +492,53 @@ public final class Interiors {
     }
 
     // ------------------------------------------------------------------ tests
+
+    /**
+     * [build-world] Tests: a building standing to this drawing furnished for an age now, every piece put in as the
+     * stores would give it (a white rug, a light blue border, a barrel stood up, a shelf, a lantern, a candle, a potted
+     * poppy) where the plan has it and the cell is clear. The cells furnished.
+     */
+    public static List<BlockPos> furnishForTests(ServerLevel level, Ledger.Building b, String drawing, int tier) {
+        List<BlockPos> out = new ArrayList<>();
+        for (Piece p : planFor(level, b, drawing, tier, null)) {
+            BlockState now = level.getBlockState(p.pos());
+            if (!now.isAir() && !(p.kind() == Kind.BORDER && now.is(BlockTags.WOOL_CARPETS))) continue;
+            BlockState put = switch (p.kind()) {
+                case RUG -> Blocks.WHITE_CARPET.defaultBlockState();
+                case BORDER -> Blocks.LIGHT_BLUE_CARPET.defaultBlockState();
+                case BARREL -> standing(Blocks.BARREL.defaultBlockState());
+                case SHELF -> Blocks.BOOKSHELF.defaultBlockState();
+                case LAMP -> Blocks.LANTERN.defaultBlockState();
+                case CANDLE -> Blocks.CANDLE.defaultBlockState();
+                case POT -> Blocks.POTTED_POPPY.defaultBlockState();
+            };
+            level.setBlock(p.pos(), put, 3);
+            out.add(p.pos());
+        }
+        return out;
+    }
+
+    /**
+     * [build-world] Tests: each piece of a building's furnishing for an age and how it stands: "in", or what keeps it
+     * out (the cell taken, the town's gate, the stores).
+     */
+    public static List<String> auditForTests(ServerLevel level, Villages.Village v, Ledger.Building b, int tier) {
+        List<String> out = new ArrayList<>();
+        for (Piece p : plan(level, v.id(), b, tier)) {
+            BlockState now = level.getBlockState(p.pos());
+            String w = p.kind() + "@" + p.pos().subtract(b.anchor()).toShortString() + " ";
+            if (ours(now) && !(p.kind() == Kind.BORDER && !now.is(BlockTags.WOOL_CARPETS))) out.add(w + "in " + now.getBlock());
+            else if (!now.isAir()) out.add(w + "taken by " + now);
+            else if (!TownBlocks.mayPlace(level, v, p.pos(), TownBlocks.Why.FURNISH)) out.add(w + "refused by the gate");
+            else out.add(w + "not in (the stores?)");
+        }
+        return out;
+    }
+
+    /** [build-world] Tests: is this building one the town furnishes? */
+    public static boolean furnishedForTests(String structure) {
+        return FURNISHED.contains(structure);
+    }
 
     /** Tests: the pieces a building is furnished with for an age (by kind). */
     public static Map<String, Integer> planForTests(ServerLevel level, UUID village, Ledger.Building b, int tier) {

@@ -100,6 +100,15 @@ public final class Masonry {
         // The land's own stone, dressed.
         way(Items.POLISHED_ANDESITE, 4, Items.ANDESITE, 4);
         way(Items.CUT_SANDSTONE, 4, Items.SANDSTONE, 4);
+        // [build-world] The other lands' roofs and walls (Ages, the theme's town picks): a desert's sandstone roof, the
+        // badlands' red sandstone, a whitewashed infirmary of polished diorite.
+        way(Items.SANDSTONE_STAIRS, 4, Items.SANDSTONE, 6);
+        way(Items.SANDSTONE_SLAB, 6, Items.SANDSTONE, 3);
+        way(Items.CUT_RED_SANDSTONE, 4, Items.RED_SANDSTONE, 4);
+        way(Items.RED_SANDSTONE_STAIRS, 4, Items.RED_SANDSTONE, 6);
+        way(Items.RED_SANDSTONE_SLAB, 6, Items.RED_SANDSTONE, 3);
+        way(Items.POLISHED_DIORITE, 4, Items.DIORITE, 4);
+        way(Items.POLISHED_GRANITE, 4, Items.GRANITE, 4);
         // A lantern, of the smith's nuggets and a torch (the nuggets are only ever made of spare iron).
         way(Items.LANTERN, 1, Items.IRON_NUGGET, 8, Items.TORCH, 1);
         // The finishing of a storey: panes of the smelter's glass, a furnace of cobblestone, rugs of wool.

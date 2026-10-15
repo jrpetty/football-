@@ -254,8 +254,12 @@ public final class StylesLegacy {
                     case WALL -> {
                         if (!Architecture.wallish(now)) break;
                         Architecture.Cell above = byPos.get(pos.above().asLong());
-                        boolean band = above == null || !(above.p().part() == BuildGoal.Part.BLOCK && above.p().style() == Blueprints.Style.WALL
-                            || above.p().part() == BuildGoal.Part.WINDOW);
+                        // [build-world] The one deliberate change to the record: the band is the course under the eaves or a
+                        // storey's beams, no longer the stepped top of every gable too (Architecture.plan).
+                        boolean band = above != null && above.p().part() == BuildGoal.Part.BLOCK && switch (above.p().style()) {
+                            case BEAM_ACROSS, BEAM_ALONG, FLOOR, POST -> true;
+                            default -> false;
+                        };
                         Direction.Axis run = Architecture.runOf(c, byPos, back);
                         want = switch (st) {
                             case TIMBERED -> band ? log("dark_oak", false, run) : null;

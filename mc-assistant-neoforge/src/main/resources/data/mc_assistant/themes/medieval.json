@@ -85,6 +85,9 @@
   "ages": {
     "WALL": [
       {"structures": ["manor"], "age_min": "IRON", "now": ["#planks"], "to": "bricks"},
+      {"home": false, "age_min": "STONE", "town_mod": [2, 0], "structures": ["infirmary", "chapel", "school", "bakery", "postoffice", "cafe"], "now": ["#planks", "cobblestone"], "to": "polished_diorite"},
+      {"home": false, "age_min": "STONE", "town_mod": [3, 0], "lands": ["PLAINS", "RIVER", "MEADOW", "FOREST", "TAIGA", "COAST"], "not_structures": "@great", "now": ["#planks"]},
+      {"home": false, "age_min": "STONE", "town_mod": [3, 1], "lands": ["PLAINS", "RIVER", "SAVANNA", "SWAMP", "MEADOW", "COAST"], "not_structures": "@great", "now": ["#planks", "cobblestone"], "to": "bricks"},
       {"home": false, "age_min": "STONE", "now": ["#planks", "cobblestone"], "to": "$land_stone|stone_bricks"}
     ],
     "FOUNDATION": [
@@ -101,22 +104,47 @@
     ],
     "ROOF_STAIR": [
       {"age_min": "DIAMOND", "structures": "@great", "now": ["#wooden_stairs", "deepslate_tile_stairs", "stone_brick_stairs"], "to": "like:cut_copper_stairs"},
+      {"age_min": "DIAMOND", "structures": "@great", "town_mod": [1, 0], "now": ["brick_stairs", "sandstone_stairs", "red_sandstone_stairs"], "to": "like:cut_copper_stairs"},
+      {"age_min": "IRON", "lands": ["FOREST", "TAIGA", "JUNGLE", "MEADOW"], "not_structures": "@great", "now": ["#wooden_stairs"]},
+      {"age_min": "IRON", "lands": ["DESERT"], "now": ["#wooden_stairs"], "to": "like:sandstone_stairs"},
+      {"age_min": "IRON", "lands": ["BADLANDS"], "now": ["#wooden_stairs"], "to": "like:red_sandstone_stairs"},
+      {"age_min": "IRON", "lands": ["PLAINS", "RIVER", "SWAMP", "SAVANNA", "COAST"], "town_mod": [2, 0], "not_structures": "@great", "now": ["#wooden_stairs"], "to": "like:brick_stairs"},
       {"age_min": "IRON", "now": ["#wooden_stairs"], "to": "like:deepslate_tile_stairs"}
     ],
     "ROOF_STAIR_TOP": [
       {"age_min": "DIAMOND", "structures": "@great", "now": ["#wooden_stairs", "deepslate_tile_stairs", "stone_brick_stairs"], "to": "like:cut_copper_stairs"},
+      {"age_min": "DIAMOND", "structures": "@great", "town_mod": [1, 0], "now": ["brick_stairs", "sandstone_stairs", "red_sandstone_stairs"], "to": "like:cut_copper_stairs"},
+      {"age_min": "IRON", "lands": ["FOREST", "TAIGA", "JUNGLE", "MEADOW"], "not_structures": "@great", "now": ["#wooden_stairs"]},
+      {"age_min": "IRON", "lands": ["DESERT"], "now": ["#wooden_stairs"], "to": "like:sandstone_stairs"},
+      {"age_min": "IRON", "lands": ["BADLANDS"], "now": ["#wooden_stairs"], "to": "like:red_sandstone_stairs"},
+      {"age_min": "IRON", "lands": ["PLAINS", "RIVER", "SWAMP", "SAVANNA", "COAST"], "town_mod": [2, 0], "not_structures": "@great", "now": ["#wooden_stairs"], "to": "like:brick_stairs"},
       {"age_min": "IRON", "now": ["#wooden_stairs"], "to": "like:deepslate_tile_stairs"}
     ],
     "ROOF_SLAB": [
       {"age_min": "DIAMOND", "structures": "@great", "now": ["#wooden_slabs", "deepslate_tile_slab", "stone_brick_slab"], "to": "like:cut_copper_slab"},
+      {"age_min": "DIAMOND", "structures": "@great", "town_mod": [1, 0], "now": ["brick_slab", "sandstone_slab", "red_sandstone_slab"], "to": "like:cut_copper_slab"},
+      {"age_min": "IRON", "lands": ["FOREST", "TAIGA", "JUNGLE", "MEADOW"], "not_structures": "@great", "now": ["#wooden_slabs"]},
+      {"age_min": "IRON", "lands": ["DESERT"], "now": ["#wooden_slabs"], "to": "like:sandstone_slab"},
+      {"age_min": "IRON", "lands": ["BADLANDS"], "now": ["#wooden_slabs"], "to": "like:red_sandstone_slab"},
+      {"age_min": "IRON", "lands": ["PLAINS", "RIVER", "SWAMP", "SAVANNA", "COAST"], "town_mod": [2, 0], "not_structures": "@great", "now": ["#wooden_slabs"], "to": "like:brick_slab"},
       {"age_min": "IRON", "now": ["#wooden_slabs"], "to": "like:deepslate_tile_slab"}
     ],
     "ROOF_SLAB_TOP": [
       {"age_min": "DIAMOND", "structures": "@great", "now": ["#wooden_slabs", "deepslate_tile_slab", "stone_brick_slab"], "to": "like:cut_copper_slab"},
+      {"age_min": "DIAMOND", "structures": "@great", "town_mod": [1, 0], "now": ["brick_slab", "sandstone_slab", "red_sandstone_slab"], "to": "like:cut_copper_slab"},
+      {"age_min": "IRON", "lands": ["FOREST", "TAIGA", "JUNGLE", "MEADOW"], "not_structures": "@great", "now": ["#wooden_slabs"]},
+      {"age_min": "IRON", "lands": ["DESERT"], "now": ["#wooden_slabs"], "to": "like:sandstone_slab"},
+      {"age_min": "IRON", "lands": ["BADLANDS"], "now": ["#wooden_slabs"], "to": "like:red_sandstone_slab"},
+      {"age_min": "IRON", "lands": ["PLAINS", "RIVER", "SWAMP", "SAVANNA", "COAST"], "town_mod": [2, 0], "not_structures": "@great", "now": ["#wooden_slabs"], "to": "like:brick_slab"},
       {"age_min": "IRON", "now": ["#wooden_slabs"], "to": "like:deepslate_tile_slab"}
     ],
     "ROOF_BLOCK": [
       {"age_min": "DIAMOND", "structures": "@great", "now": ["#planks", "deepslate_tiles", "stone_bricks"], "to": "cut_copper"},
+      {"age_min": "DIAMOND", "structures": "@great", "town_mod": [1, 0], "now": ["bricks", "cut_sandstone", "cut_red_sandstone"], "to": "cut_copper"},
+      {"age_min": "IRON", "lands": ["FOREST", "TAIGA", "JUNGLE", "MEADOW"], "not_structures": "@great", "now": ["#planks"]},
+      {"age_min": "IRON", "lands": ["DESERT"], "now": ["#planks"], "to": "cut_sandstone"},
+      {"age_min": "IRON", "lands": ["BADLANDS"], "now": ["#planks"], "to": "cut_red_sandstone"},
+      {"age_min": "IRON", "lands": ["PLAINS", "RIVER", "SWAMP", "SAVANNA", "COAST"], "town_mod": [2, 0], "not_structures": "@great", "now": ["#planks"], "to": "bricks"},
       {"age_min": "IRON", "now": ["#planks"], "to": "deepslate_tiles"}
     ]
   },

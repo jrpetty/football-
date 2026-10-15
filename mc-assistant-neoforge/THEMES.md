@@ -89,6 +89,8 @@ which must hold:
 | `home` | the building is (`true`) or is not (`false`) one of the set `homes` |
 | `now`, `now_not` | the block standing there is (not) one of these (ids, `#tags`) |
 | `chance` | one place in N, fixed by its position (moss in a few footings) |
+| `lands` | the town's land is one of these (`PLAINS`, `FOREST`, `DESERT`...); an age's rule only, and only for a real town |
+| `town_mod` | `[n, k...]`: the town is one of these picks out of n, the same for every block of the town (so one lowland town roofs in red tile and its neighbour in slate); an age's rule only, and only for a real town |
 
 and what it becomes, `to`: an id; `like:id` (set the way the block standing there is set:
 a stair's facing, a slab's half); `axis_run:id`, `axis_y:id` (a log along the wall, or

@@ -211,6 +211,7 @@ public final class WarWorks {
             if (r == 1 || r == -1) break;              // at it, or a hand on its way: the rest wait (done, or short of stone: the next)
         }
         if (WarFooting.ready(id)) fill(level, v);
+        hangArms(level, v);                                                // [build-world] a blade and a bow on the walls
     }
 
     /**
@@ -562,7 +563,84 @@ public final class WarWorks {
                 return one;
             }
         }
+        // [build-world] Off the walls, when the racks are bare: a blade on show is a blade to hand.
+        for (net.minecraft.world.entity.decoration.ItemFrame f : onTheWalls(level, v.id())) {
+            if (f.getItem().isEmpty() || !what.test(f.getItem())) continue;
+            ItemStack one = f.getItem().copy();
+            f.setItem(ItemStack.EMPTY, false);
+            return one;
+        }
         return Crafts.takeOne(level, v, what);
+    }
+
+    /** [build-world] The frames on the armoury's side walls, a cell in from each and a step up, by the anvil's row. */
+    static final int[][] FRAMES = { { -2, 1, -1 }, { 2, 1, -1 } };
+    /** [build-world] What hangs on the armoury's walls is the armoury's: the frames are known by this. */
+    static final String FRAME_TAG = "mca_armoury_arms";
+
+    /** [build-world] The armoury's frames that hang now. */
+    static List<net.minecraft.world.entity.decoration.ItemFrame> onTheWalls(ServerLevel level, UUID village) {
+        Ledger.Building b = armoury(village);
+        if (b == null || !level.isLoaded(b.anchor())) return List.of();
+        return level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class,
+            new net.minecraft.world.phys.AABB(b.anchor()).inflate(4, 3, 4), f -> f.getTags().contains(FRAME_TAG));
+    }
+
+    /**
+     * [build-world] The town's arms on the armoury's walls: a sword on one side wall and a bow (or a shield) on the other,
+     * in frames, when the racks hold more of them than the militia's want (the spare ones, shown, still the armoury's and
+     * taken down first when the racks run bare: takeArms). A frame is the stores' (or a leather and eight sticks of
+     * theirs). The armoury was a room of chests, and nothing in it said what it was for. One frame a visit.
+     */
+    static boolean hangArms(ServerLevel level, Villages.Village v) {
+        Ledger.Building b = armoury(v.id());
+        if (b == null || !level.isLoaded(b.anchor()) || racks(level, v.id()).isEmpty()) return false;
+        List<net.minecraft.world.entity.decoration.ItemFrame> up = onTheWalls(level, v.id());
+        Direction right = b.facing().getClockWise();
+        for (int i = 0; i < FRAMES.length; i++) {
+            BlockPos at = TownLook.cell(b, FRAMES[i][0], FRAMES[i][1], FRAMES[i][2]);
+            boolean hung = false;
+            for (net.minecraft.world.entity.decoration.ItemFrame f : up) if (f.getPos().equals(at)) hung = true;
+            if (hung || !level.getBlockState(at).isAir()) continue;
+            Predicate<ItemStack> kind = i == 0 ? s -> s.getItem() instanceof SwordItem
+                : s -> s.is(Items.BOW) || s.is(Items.CROSSBOW) || s.getItem() instanceof net.minecraft.world.item.ShieldItem;
+            int keep = 0;
+            for (Want w : wants(v.id())) if (w.what().equals(i == 0 ? "blades" : "bows")) keep = w.keep();
+            if (inArmoury(level, v.id(), kind) <= keep) continue;                 // none to spare for show
+            Direction out = i == 0 ? right : right.getOpposite();
+            net.minecraft.world.entity.decoration.ItemFrame frame = new net.minecraft.world.entity.decoration.ItemFrame(level, at, out);
+            if (!frame.survives()) continue;
+            boolean paid = Crafts.take(level, v, s -> s.is(Items.ITEM_FRAME), 1);
+            if (!paid && Crafts.stock(level, v, s -> s.is(Items.LEATHER)) >= 1 && Crafts.stock(level, v, s -> s.is(Items.STICK)) >= 8) {
+                paid = Crafts.take(level, v, s -> s.is(Items.LEATHER), 1) && Crafts.take(level, v, s -> s.is(Items.STICK), 8);
+            }
+            if (!paid) return false;
+            if (!TownJobs.atWork(level, v, "armoury", at, "hanging arms on the armoury's walls")) {
+                Crafts.store(level, v, new ItemStack(Items.ITEM_FRAME));
+                return false;
+            }
+            ItemStack arm = ItemStack.EMPTY;
+            for (Container c : racks(level, v.id())) {
+                for (int k = 0; k < c.getContainerSize() && arm.isEmpty(); k++) {
+                    ItemStack s = c.getItem(k);
+                    if (s.isEmpty() || !kind.test(s)) continue;
+                    arm = s.split(1);
+                    c.setChanged();
+                }
+            }
+            frame.setItem(arm, false);
+            frame.addTag(FRAME_TAG);
+            level.addFreshEntity(frame);
+            frame.playPlacementSound();
+            return true;
+        }
+        return false;
+    }
+
+    /** [build-world] Tests: the armoury's walls seen to now (a hand there at once). How many frames hang. */
+    public static int hangArmsForTests(ServerLevel level, Villages.Village v) {
+        for (int i = 0; i < FRAMES.length; i++) hangArms(level, v);
+        return onTheWalls(level, v.id()).size();
     }
 
     /** Arms handed back: into the armoury's racks, or the stores if it has none (or no room). */

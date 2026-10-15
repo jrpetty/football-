@@ -180,7 +180,8 @@ public final class TownLife {
     /** Buildings with a hearth in them: their chimney tops smoke. */
     private static final Set<String> HEARTHS = Set.of("house", "guesthouse", "smeltery", "workshop", "hall",
         "barracks", "granary", "shelter", "storage", "market", "chapel", "smithy", "brewery", "cafe",
-        "flats");                                                   // [flats] a grate in every flat, two stacks
+        "flats",                                                    // [flats] a grate in every flat, two stacks
+        "divershed");                                               // [build-world] the stack over the drying fire
 
     public static Fittings fittings(Ledger.Building b) {
         return FITTINGS.computeIfAbsent(b, k -> {

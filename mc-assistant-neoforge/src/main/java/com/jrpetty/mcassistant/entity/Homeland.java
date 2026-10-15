@@ -128,7 +128,7 @@ public final class Homeland {
     static Land read(ServerLevel level, BlockPos centre) {
         int seen = 0, sea = 0, river = 0, water = 0, snow = 0, mountain = 0, desert = 0, badlands = 0, savanna = 0,
             jungle = 0, swamp = 0, taiga = 0, forest = 0, cherry = 0;
-        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
+        java.util.List<Integer> grounds = new java.util.ArrayList<>();      // [build-world] the land's own heights
         for (int dx = -48; dx <= 48; dx += 12) {
             for (int dz = -48; dz <= 48; dz += 12) {
                 int x = centre.getX() + dx, z = centre.getZ() + dz;
@@ -138,9 +138,7 @@ public final class Homeland {
                 seen++;
                 if (!level.getFluidState(at).isEmpty()) water++;
                 else {
-                    int ground = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-                    lo = Math.min(lo, ground);
-                    hi = Math.max(hi, ground);
+                    grounds.add(naturalGround(level, x, z));
                 }
                 Holder<Biome> b = level.getBiome(at);
                 String key = b.unwrapKey().map(k -> k.location().getPath()).orElse("");
@@ -161,7 +159,7 @@ public final class Homeland {
         if (seen < 20) return null;
         double n = seen;
         if (sea / n >= 0.2) return Land.COAST;
-        if (mountain / n >= 0.3 || hi != Integer.MIN_VALUE && hi - lo >= 32) return Land.MOUNTAIN;
+        if (mountain / n >= 0.3 || spread(grounds) >= 28) return Land.MOUNTAIN;
         if (badlands / n >= 0.3) return Land.BADLANDS;
         if (desert / n >= 0.3) return Land.DESERT;
         if (snow / n >= 0.4) return Land.SNOW;
@@ -173,6 +171,33 @@ public final class Homeland {
         if (forest / n >= 0.35) return Land.FOREST;
         if (river / n >= 0.1 || water / n >= 0.12) return Land.RIVER;
         return Land.PLAINS;
+    }
+
+    /**
+     * [build-world] How the land rises and falls round a town: the spread between its low ground and its high ground,
+     * leaving out the lowest and the highest tenth of what was seen (a cliff, a ravine or a sea shelf at the edge of the
+     * square, a tower or a platform somebody built). Read as the highest minus the lowest, a plains town with one
+     * ravine in its square was a mountain town, and built itself of deepslate under slate.
+     */
+    public static int spread(java.util.List<Integer> grounds) {
+        if (grounds.size() < 10) return 0;
+        java.util.List<Integer> g = new java.util.ArrayList<>(grounds);
+        java.util.Collections.sort(g);
+        int cut = g.size() / 10;
+        return g.get(g.size() - 1 - cut) - g.get(cut);
+    }
+
+    /** [build-world] The top of the ground the world made at a column: anything built on it (a floor, a platform, a
+     *  wall) and any tree's trunk looked through, down to the earth, rock or water under it. */
+    public static int naturalGround(ServerLevel level, int x, int z) {
+        int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+        int floor = Math.max(level.getMinBuildHeight() + 1, y - 48);
+        while (y > floor) {
+            net.minecraft.world.level.block.state.BlockState below = level.getBlockState(new BlockPos(x, y - 1, z));
+            if (Terraform.earth(below) || !below.getFluidState().isEmpty()) break;    // earth, rock, sand, snow, water
+            y--;                                                                     // a floor, a trunk, air under a deck
+        }
+        return y;
     }
 
     // ------------------------------------------------------------------ the trades

@@ -349,8 +349,13 @@ public final class Architecture {
                     case WALL -> {
                         if (!wallish(now)) break;
                         Cell above = byPos.get(pos.above().asLong());
-                        band = above == null || !(above.p().part() == BuildGoal.Part.BLOCK && above.p().style() == Blueprints.Style.WALL
-                            || above.p().part() == BuildGoal.Part.WINDOW);
+                        // [build-world] The course under the eaves or under a storey's beams, and not every cell at the top
+                        // of a gable as well: on a steep roof the gables' stepped tops took thirty of a house's forty-seven
+                        // wall cells to dark timber, and the house read as a log cabin, not as boards banded in timber.
+                        band = above != null && above.p().part() == BuildGoal.Part.BLOCK && switch (above.p().style()) {
+                            case BEAM_ACROSS, BEAM_ALONG, FLOOR, POST -> true;
+                            default -> false;
+                        };
                         run = runOf(c, byPos, back);
                         kind = "WALL";
                     }

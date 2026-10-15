@@ -163,6 +163,7 @@ public final class Allotments {
         String today = "/" + level.getDayTime() / 24000L;
         TONIGHT.keySet().removeIf(k -> !k.endsWith(today));               // last night's turns forgotten
         if (let(v.id())) return true;
+        if (dugOver(level, v)) return true;                                // [build-world] new allotments made ready
         for (Ledger.Building b : allotments(v.id())) {
             if (!level.isLoaded(b.anchor())) continue;
             for (int[] c : CHANNEL) {
@@ -177,6 +178,58 @@ public final class Allotments {
             }
         }
         return false;
+    }
+
+    /**
+     * [build-world] New allotments made ready by the town, a plot a visit: the beds dug over (a hoe of the stores'
+     * borrowed and put back) and the front row of each sown (seed out of the stores, never the farmers' last twelve),
+     * so the allotments read as allotments from the day they are built and not as a lawn with a puddle. Only a plot
+     * nobody has been let, and only once: a household's plot is the household's to work. True if a plot was done.
+     */
+    static boolean dugOver(ServerLevel level, Villages.Village v) {
+        for (Ledger.Building b : allotments(v.id())) {
+            if (!level.isLoaded(b.anchor())) continue;
+            for (int plot = 0; plot < PLOTS.length; plot++) {
+                String done = "allotready/" + b.anchor().asLong() + "/" + plot;
+                if (holder(v.id(), b, plot) >= 0 || "1".equals(Ledger.note(v.id(), done))) continue;
+                List<BlockPos> soil = soil(b, plot);
+                boolean any = false;
+                for (BlockPos p : soil) any |= untilled(level, p);
+                if (!any) { Ledger.note(v.id(), done, "1"); continue; }
+                if (Market.stock(level, v.id(), s -> s.getItem() instanceof HoeItem) < 1) return false;
+                if (!TownJobs.atWork(level, v, "allotments", stand(b, plot), "digging over the allotments")) return false;
+                ItemStack hoe = Crafts.takeOne(level, v, s -> s.getItem() instanceof HoeItem);
+                if (hoe.isEmpty()) return false;
+                for (BlockPos p : soil) {
+                    if (!untilled(level, p)) continue;
+                    if (!level.getBlockState(p.above()).isAir()) level.destroyBlock(p.above(), false);
+                    level.setBlock(p, Blocks.FARMLAND.defaultBlockState(), 3);
+                    wear(hoe);
+                }
+                if (!hoe.isEmpty()) Crafts.store(level, v, hoe);
+                // The front row sown (the three cells nearest the path), a row of one crop.
+                for (int i = 6; i < 9 && i < soil.size(); i++) {
+                    BlockPos p = soil.get(i);
+                    if (!bare(level, p)) continue;
+                    ItemStack seed = seed(level, v, null, i);
+                    if (seed.isEmpty()) break;
+                    Block grows = Block.byItem(seed.getItem());
+                    if (!(grows instanceof CropBlock)) { Crafts.store(level, v, seed); break; }
+                    level.setBlock(p.above(), grows.defaultBlockState(), 3);
+                }
+                level.playSound(null, stand(b, plot), SoundEvents.HOE_TILL, SoundSource.BLOCKS, 0.8F, 1.0F);
+                Ledger.note(v.id(), done, "1");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** [build-world] Tests: new allotments dug over and sown now (a hand there at once). How many plots were done. */
+    public static int dugOverForTests(ServerLevel level, Villages.Village v) {
+        int n = 0;
+        while (n < 16 && dugOver(level, v)) n++;
+        return n;
     }
 
     // ------------------------------------------------------------------ the plot's cells
