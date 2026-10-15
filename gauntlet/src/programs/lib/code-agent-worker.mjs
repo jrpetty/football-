@@ -3,8 +3,17 @@
 // Runs a small in-memory CommonJS project against its test files. Started by
 // src/programs/lib/code-agent-sandbox.ts in a separate Node process with the
 // permission model (read access to this file only; no file writes, no child
-// processes, no workers, no addons), code generation from strings disabled,
-// a small heap and an empty environment.
+// processes, no addons; worker threads allowed), code generation from strings
+// disabled, a small heap and an empty environment.
+//
+// The project runs in a WORKER THREAD of that process with an explicit stack
+// (STACK_MB) and heap (HEAP_MB). A main thread's stack is fixed by the OS
+// (1 MB on Windows, 8 MB on Linux) and raising V8's limit above it crashes the
+// process instead of throwing; on a worker thread deep recursion is the same
+// catchable RangeError ("Maximum call stack size exceeded") on every OS. A
+// worker that runs out of memory is terminated on its own: the main thread
+// reports a crash and exits, and the host fails the test that was running and
+// starts a fresh process at the next test (see code-agent-sandbox.ts).
 //
 // Every test file runs in a fresh VM context with its own module registry.
 // Project code can only `require` other project files plus two shims
@@ -15,16 +24,54 @@
 // before any project code runs, so project code cannot make a failing test
 // pass by patching Object.is, Promise.prototype.then or the assert module.
 //
-// Input (stdin, JSON): { files: {path: source}, run: [testPath], perTestTimeoutMs, maxLogChars }
-// Output (stdout, JSON): { results: [{ file, loadError, tests: [{ name, ok, error, ms }] }], log }
+// Input (stdin, JSON): { files: {path: source}, run: [testPath], perTestTimeoutMs, maxLogChars, start?: { file, test } }
+//   start: resume after a crash at test `test` of run[file] (earlier tests of that file are not run again).
+// Output (stdout): one JSON line per event:
+//   {"t":"start"}                                   the process is up
+//   {"t":"ready"}                                   the worker thread is up
+//   {"t":"file","fi":n,"loadError":string|null,"names":[...]}   a test file was loaded
+//   {"t":"test","fi":n,"ti":k,"ok":bool,"error":string|null,"ms":x}
+//   {"t":"log","s":"..."}                           console output from the project
+//   {"t":"crash","reason":"..."}                    the worker died (out of memory, …)
+//   {"t":"done"}
 import vm from 'node:vm';
+import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
 
-const input = await new Promise((resolve) => {
-  let data = '';
-  process.stdin.setEncoding('utf8');
-  process.stdin.on('data', (c) => (data += c));
-  process.stdin.on('end', () => resolve(JSON.parse(data)));
-});
+/** Stack of the thread that runs project code, in MB (identical on every OS). */
+const STACK_MB = 4;
+/** Heap of that thread, in MB. */
+const HEAP_MB = 256;
+
+let input = {};
+if (isMainThread) {
+  input = await new Promise((resolve) => {
+    let data = '';
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (c) => (data += c));
+    process.stdin.on('end', () => resolve(JSON.parse(data)));
+  });
+  const emit = (m) => process.stdout.write(JSON.stringify(m) + '\n');
+  emit({ t: 'start' });
+  const worker = new Worker(new URL(import.meta.url), { workerData: input, resourceLimits: { stackSizeMb: STACK_MB, maxOldGenerationSizeMb: HEAP_MB }, stdout: true, stderr: true });
+  let done = false;
+  let crash = '';
+  worker.on('message', (m) => {
+    if (m && m.t === 'done') done = true;
+    emit(m);
+  });
+  worker.on('error', (e) => {
+    crash = String((e && (e.code ? `${e.code}: ${e.message}` : e.message)) || e).slice(0, 300);
+  });
+  worker.on('exit', () => {
+    if (!done) emit({ t: 'crash', reason: /memory/i.test(crash) ? `out of memory (${HEAP_MB} MB heap)` : crash || 'the sandbox thread stopped' });
+    // exitCode, not exit(): pending output is flushed first.
+    process.exitCode = done ? 0 : 70;
+  });
+} else {
+  input = workerData;
+}
+
+const post = (m) => parentPort.postMessage(m);
 
 process.on('unhandledRejection', () => {});
 process.on('uncaughtException', (e) => appendLog(`[uncaught] ${String(e && e.message ? e.message : e).slice(0, 300)}`));
@@ -32,11 +79,13 @@ process.on('uncaughtException', (e) => appendLog(`[uncaught] ${String(e && e.mes
 const files = input.files || {};
 const perTestTimeoutMs = Math.max(50, Math.min(10000, Number(input.perTestTimeoutMs) || 1500));
 const maxLogChars = Math.max(0, Number(input.maxLogChars) || 3000);
-let log = '';
+let logged = 0;
 function appendLog(s) {
-  if (log.length >= maxLogChars) return;
-  log += s + '\n';
-  if (log.length > maxLogChars) log = log.slice(0, maxLogChars) + '…';
+  if (isMainThread || logged >= maxLogChars) return;
+  let line = s + '\n';
+  if (logged + line.length > maxLogChars) line = line.slice(0, maxLogChars - logged) + '…';
+  logged += line.length;
+  post({ t: 'log', s: line });
 }
 
 // The bootstrap runs inside each fresh context before any project code.
@@ -499,8 +548,8 @@ class TimerQueue {
   }
 }
 
-async function runTestFile(file) {
-  const out = { file, loadError: null, tests: [] };
+async function runTestFile(file, fi, firstTest) {
+  const out = { file, loadError: null };
   // afterEvaluate: the context's promise jobs drain at the end of each evaluation, inside its timeout,
   // so an endless loop after an `await` is caught like a synchronous one.
   const context = vm.createContext({}, { codeGeneration: { strings: false, wasm: false }, microtaskMode: 'afterEvaluate' });
@@ -556,11 +605,16 @@ async function runTestFile(file) {
   } catch (e) {
     out.loadError = /timed out/i.test(String(e?.message)) ? 'Loading the file timed out (infinite loop at module top level?)' : String(e?.message ?? e).slice(0, 400);
   }
-  if (out.loadError) return out;
+  if (out.loadError) {
+    post({ t: 'file', fi, loadError: out.loadError, names: [] });
+    return;
+  }
   const count = Number(runIn(`${KEY}.count()`, 1000)) || 0;
+  const names = [];
+  for (let i = 0; i < count; i++) names.push(String(runIn(`${KEY}.name(${i})`, 1000)));
+  post({ t: 'file', fi, loadError: null, names });
   const endlessLoop = `Timed out after ${perTestTimeoutMs} ms (endless loop?)`;
-  for (let i = 0; i < count; i++) {
-    const name = String(runIn(`${KEY}.name(${i})`, 1000));
+  for (let i = firstTest; i < count; i++) {
     const started = process.hrtime.bigint();
     const startClock = clock;
     let result = null;
@@ -601,11 +655,16 @@ async function runTestFile(file) {
     }
     doneCb = null;
     const ms = Number(process.hrtime.bigint() - started) / 1e6;
-    out.tests.push({ name, ok: result.ok, error: result.ok ? null : result.error || 'failed', ms: Math.round(ms * 10) / 10 });
+    post({ t: 'test', fi, ti: i, ok: result.ok, error: result.ok ? null : result.error || 'failed', ms: Math.round(ms * 10) / 10 });
   }
-  return out;
 }
 
-const results = [];
-for (const file of input.run || []) results.push(await runTestFile(String(file)));
-process.stdout.write(JSON.stringify({ results, log }), () => process.exit(0));
+if (!isMainThread) {
+  post({ t: 'ready' });
+  const run = (input.run || []).map(String);
+  const start = input.start || { file: 0, test: 0 };
+  for (let fi = Math.max(0, Number(start.file) || 0); fi < run.length; fi++) {
+    await runTestFile(run[fi], fi, fi === Number(start.file) ? Math.max(0, Number(start.test) || 0) : 0);
+  }
+  post({ t: 'done' });
+}

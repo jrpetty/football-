@@ -273,7 +273,9 @@ export async function runSandboxWorker(
 ): Promise<{ stdout: string; stderr: string; exitCode: number | null; killed: boolean }> {
   const child = spawn(
     process.execPath,
-    ['--permission', `--allow-fs-read=${workerFile}`, '--disallow-code-generation-from-strings', '--max-old-space-size=256', '--stack-size=4000', workerFile],
+    // No --stack-size: project code runs in a worker thread with an explicit stack (see code-agent-worker.mjs); raising
+    // V8's main-thread limit above the OS stack (1 MB on Windows) crashes the process instead of throwing.
+    ['--permission', `--allow-fs-read=${workerFile}`, '--allow-worker', '--disallow-code-generation-from-strings', '--max-old-space-size=256', workerFile],
     { stdio: ['pipe', 'pipe', 'pipe'], env: {}, windowsHide: true },
   );
   let stdout = '';
