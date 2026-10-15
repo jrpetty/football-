@@ -76,8 +76,8 @@ public final class Battlefields {
     static final int LOOK_STEP = 2;
     /** A fit field: its ground within so many blocks of height over the whole of it, and no hole or drop deeper than so many under its own level. */
     static final int MAX_RANGE = 3, MAX_DROP = 2;
-    /** The least bad, when no fit field is to be found after the wide search: rougher, a tree or two and a puddle allowed, still no chasm. */
-    static final int LOOSE_RANGE = 6, LOOSE_DROP = 3, LOOSE_TREES = 6, LOOSE_WET = 4;
+    /** The least bad, when no fit field is to be found after the wide search: rougher, a tree or two allowed, still no chasm and never water. */
+    static final int LOOSE_RANGE = 6, LOOSE_DROP = 3, LOOSE_TREES = 6, LOOSE_WET = 0;
     /** Past the larger town's own reach, so far again to the edge of its fields (the last resort: flat ground the town made). */
     static final int FIELDS_OUT = 28;
     /** A field's corner from its middle (blocks): a town's reach plus this is too near the town to fight in. */
@@ -139,13 +139,16 @@ public final class Battlefields {
     /**
      * The battlefield between these towns, chosen by its Captains from the ground they can see (its chunks to hand):
      * the flattest open field near the road's middle, else wider off it; failing any fit field, the least bad; failing
-     * even that, the edge of the larger town's fields. With none of it to look at, the road's middle, unknown.
+     * even that, the driest ground beside either town's fields. With none of it to look at, the road's middle, unknown.
+     * Null when every piece of ground round both towns was looked at and all of it is water: no battle is fought there.
      */
+    @Nullable
     static Ground choose(ServerLevel level, Villages.Village a, Villages.Village b) {
         return choose(level, a, b, false);
     }
 
     /** As {@link #choose(ServerLevel, Villages.Village, Villages.Village)}; {@code load}: ground not yet made is made to look at (an admin's scenario, never a tick). */
+    @Nullable
     static Ground choose(ServerLevel level, Villages.Village a, Villages.Village b, boolean load) {
         BlockPos ea = Roads.exit(a.centre(), b.centre()), eb = Roads.exit(b.centre(), a.centre());
         double[] axis = axis(ea, eb);
@@ -156,14 +159,29 @@ public final class Battlefields {
             centre = surface(level, BlockPos.containing(pick.x(), 0, pick.z()));
         } else if (looked[0] > 0) {
             Villages.Village big = Villages.headcount(a.id()) >= Villages.headcount(b.id()) ? a : b, other = big == a ? b : a;
-            centre = surface(level, driestBeside(level, big, other, load));
+            int[] blind = { 0 };
+            BlockPos dry = driestBeside(level, big, other, load, blind);
+            if (dry == null && blind[0] == 0) {
+                LOG.info("[MCA-WAR] no dry ground anywhere between {} and {} ({} fields looked at): no battle on water",
+                    Villages.name(a.id()), Villages.name(b.id()), looked[0]);
+                return null;
+            }
+            if (dry == null) return blind(a, b);                            // some of it asleep: looked for again later
+            centre = surface(level, dry);
             LOG.info("[MCA-WAR] no field fit to fight on between {} and {} ({} looked at): the driest, levellest ground beside {}'s fields at {}",
                 Villages.name(a.id()), Villages.name(b.id()), looked[0], Villages.name(big.id()), centre.toShortString());
         } else {
-            BlockPos mid = BlockPos.containing((ea.getX() + eb.getX()) / 2.0, a.centre().getY(), (ea.getZ() + eb.getZ()) / 2.0);
-            return new Ground(mid, axis[0], axis[1], null, null, null, null, null, nearerName(mid, a, b), false);
+            return blind(a, b);
         }
         return ground(level, centre, axis[0], axis[1], nearerName(centre, a, b));
+    }
+
+    /** The road's middle between these towns, unknown: a field nobody has looked at yet (looked for again later). */
+    static Ground blind(Villages.Village a, Villages.Village b) {
+        BlockPos ea = Roads.exit(a.centre(), b.centre()), eb = Roads.exit(b.centre(), a.centre());
+        double[] axis = axis(ea, eb);
+        BlockPos mid = BlockPos.containing((ea.getX() + eb.getX()) / 2.0, a.centre().getY(), (ea.getZ() + eb.getZ()) / 2.0);
+        return new Ground(mid, axis[0], axis[1], null, null, null, null, null, nearerName(mid, a, b), false);
     }
 
     /** Tests: the field the Captains would choose between these two ends of a road (the ground made if need be), or null if none will do. */
@@ -265,9 +283,11 @@ public final class Battlefields {
     /**
      * The last resort, looked over rather than taken blind: just past the edge of either town's fields (the larger
      * first), on sixteen bearings from the side towards the other, the driest and then the levellest ground found; the
-     * edge towards the other if none of it can be looked at. (A town across a lake from its foe must not fight in it.)
+     * ground with water on it never taken. Null if none of it is dry; {@code blind[0]}: how many of the bearings could
+     * not be looked at (their ground asleep). (A town across a lake from its foe must not fight in it.)
      */
-    static BlockPos driestBeside(ServerLevel level, Villages.Village big, Villages.Village other, boolean load) {
+    @Nullable
+    static BlockPos driestBeside(ServerLevel level, Villages.Village big, Villages.Village other, boolean load, int[] blind) {
         BlockPos best = null;
         long bestScore = Long.MAX_VALUE;
         for (Villages.Village v : List.of(big, other)) {
@@ -281,6 +301,8 @@ public final class Battlefields {
                 double cx = v.centre().getX() + 0.5 + ax * out, cz = v.centre().getZ() + 0.5 + az * out;
                 if (nearTown(level, cx, cz)) continue;                          // on some town's own ground
                 long score = dryScore(level, cx, cz, ax, az, load);
+                if (score == Long.MAX_VALUE) blind[0]++;
+                if (score >= WET && score != Long.MAX_VALUE) continue;          // water on it: never
                 if (score < bestScore) {
                     bestScore = score;
                     best = BlockPos.containing(cx, v.centre().getY(), cz);
@@ -288,8 +310,11 @@ public final class Battlefields {
                 if (score == 0) return best;
             }
         }
-        return best != null ? best : edgeOfFields(big, other);
+        return best;
     }
+
+    /** A dryScore at or past this has water on it. */
+    static final long WET = 1_000_000L;
 
     /** How bad this ground is to fight on, worst first: its wet columns, then its height's spread, then its trees (0 is
      *  dry, level and clear); Long.MAX_VALUE if it cannot be looked at. Every fourth column of the field looked at. */
@@ -310,12 +335,39 @@ public final class Battlefields {
                 hi = Math.max(hi, y);
             }
         }
-        return wet * 1_000_000L + Math.max(0, hi - lo - MAX_RANGE) * 1_000L + trees;
+        return wet * WET + Math.max(0, hi - lo - MAX_RANGE) * 1_000L + trees;
     }
 
     /** Tests: the last resort's ground between these two towns (their ground made if need be). */
+    @Nullable
     public static BlockPos driestForTests(ServerLevel level, Villages.Village big, Villages.Village other) {
-        return surface(level, driestBeside(level, big, other, true));
+        BlockPos p = driestBeside(level, big, other, true, new int[1]);
+        return p == null ? null : surface(level, p);
+    }
+
+    /** Tests: the Captains' whole choice between these towns (their ground made to look at); null if it is all water. */
+    @Nullable
+    public static Ground chooseTownsForTests(ServerLevel level, Villages.Village a, Villages.Village b) {
+        return choose(level, a, b, true);
+    }
+
+    /**
+     * Is there water on this field (any column of it, the lines' ground, that is to hand)? The last check before a
+     * battle is opened on it: nobody fights in a lake or the sea. A field nobody can look at counts as dry here (it
+     * is fought on paper, if at all).
+     */
+    public static boolean wet(ServerLevel level, Ground g) {
+        BlockPos c = g.centre();
+        for (int i = -HALF_LONG; i <= HALF_LONG; i += LOOK_STEP) {
+            for (int j = -HALF_WIDE; j <= HALF_WIDE; j += LOOK_STEP) {
+                int x = Mth.floor(c.getX() + 0.5 + g.ax() * i - g.az() * j), z = Mth.floor(c.getZ() + 0.5 + g.az() * i + g.ax() * j);
+                if (!level.hasChunk(x >> 4, z >> 4)) continue;
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                BlockState top = level.getBlockState(new BlockPos(x, y - 1, z));
+                if (!top.getFluidState().isEmpty() || top.is(BlockTags.ICE)) return true;
+            }
+        }
+        return false;
     }
 
     /** The edge of the larger town's fields, on the side towards the other, unlooked at (nothing of the ground to hand). */

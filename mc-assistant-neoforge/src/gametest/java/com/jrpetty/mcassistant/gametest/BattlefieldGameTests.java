@@ -137,10 +137,46 @@ public class BattlefieldGameTests {
             }
         }
         BlockPos at = Battlefields.driestForTests(level, a, b);
+        helper.assertTrue(at != null, "dry ground found beside a town's fields");
         boolean wet = !level.getBlockState(at.below()).getFluidState().isEmpty();
         Kit.log("bf03 the last resort: " + at.toShortString() + " on " + level.getBlockState(at.below()) + "; town " + a.centre().toShortString());
         helper.assertTrue(!wet, "the armies meet on dry ground, not in the lake: " + at.toShortString());
         helper.assertTrue(at.getX() < x + reach || at.getX() > x + apart - reach, "beside a town's fields, out of the lake: " + at.toShortString());
+        helper.succeed();
+    }
+
+    // ------------------------------------------------------------------ bf04
+
+    /**
+     * Two towns on two islands in one sea: every field round both and between them is water. The Captains find no
+     * dry ground, so no field is chosen and no battle is staged or fought (never a battle on water).
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "bf04_no_battle_on_water")
+    public static void bf04_no_battle_on_water(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int x = 2058000, apart = 200, out = 170;
+        Villages.Village a = town(level, x), b = town(level, x + apart);
+        helper.assertTrue(a != null && b != null && !a.id().equals(b.id()), "two towns");
+        int ra = Villages.townReach(a.id()) + 4, rb = Villages.townReach(b.id()) + 4;
+        Kit.hold(level, x + apart / 2, Z, 300);
+        Kit.prepare(level, x + apart / 2, Z, 300);
+        for (int xx = x - out; xx <= x + apart + out; xx++) {
+            for (int z = Z - out; z <= Z + out; z++) {
+                long da = (long) (xx - x) * (xx - x) + (long) (z - Z) * (z - Z), db = (long) (xx - x - apart) * (xx - x - apart) + (long) (z - Z) * (z - Z);
+                if (da <= (long) ra * ra || db <= (long) rb * rb) continue;   // the towns' own ground: their islands
+                level.setBlock(Kit.surface(level, xx, z).below(), Blocks.WATER.defaultBlockState(), 2);
+            }
+        }
+        Battlefields.Ground g = Battlefields.chooseTownsForTests(level, a, b);
+        Kit.log("bf04 the field: " + (g == null ? "none (all water)" : g.centre().toShortString() + " known " + g.known()));
+        helper.assertTrue(g == null, "no field chosen on the water: " + (g == null ? "" : g.centre().toShortString()));
+        helper.assertTrue(AdminTools.war(level, a, b).ok(), "at war");
+        AdminTools.Done d = AdminTools.phase(level, a, "lineup");
+        Kit.log("bf04 staged: " + d.text().replace("\n", " | "));
+        helper.assertTrue(!d.ok(), "no battle staged on the water: " + d.text());
+        Campaigns.Campaign c = Campaigns.ofTown(a.id());
+        helper.assertTrue(c == null || c.battle() == null, "no battle opened");
         helper.succeed();
     }
 

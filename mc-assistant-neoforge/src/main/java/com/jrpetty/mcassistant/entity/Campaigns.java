@@ -315,7 +315,12 @@ public final class Campaigns {
         c.day = day;
         c.holdWalls = holdWalls;
         c.siegeAim = siegeAim || holdWalls;
-        c.ground = Battlefields.choose(level, x, y);
+        Battlefields.Ground g = Battlefields.choose(level, x, y);
+        if (g == null && !holdWalls) {                                         // all water between them: no battle on it
+            noDryGround(x.id(), y.id(), day);
+            return null;
+        }
+        c.ground = g != null ? g : Battlefields.blind(x, y);                   // a siege is fought at the gate, not on a field
         c.name = "the Battle of " + c.ground.name();
         long now = level.getGameTime(), tod = level.getDayTime() % 24000L;
         c.stage = Stage.NOTICE;
@@ -434,7 +439,10 @@ public final class Campaigns {
     /** As {@link #muster(ServerLevel, Campaign)}, at most {@code detail} a side drawn in full. */
     static void muster(ServerLevel level, Campaign c, int detail) {
         long now = level.getGameTime(), day = level.getDayTime() / 24000L;
-        lookAgain(level, c);
+        if (!lookAgain(level, c)) {
+            noField(level, c);
+            return;
+        }
         int raised = 0;
         for (int i = 0; i < 2; i++) {
             Villages.Village v = c.town(i);
@@ -476,14 +484,44 @@ public final class Campaigns {
      * [field] A field chosen blind (its ground asleep when the war's council sat) looked for again at the muster, from
      * whatever ground is to hand now (players about), with the same chooser.
      */
-    static void lookAgain(ServerLevel level, Campaign c) {
+    static boolean lookAgain(ServerLevel level, Campaign c) {
         Villages.Village x = c.town(0), y = c.town(1);
-        if (c.ground.known() || c.holdWalls || x == null || y == null) return;
+        if (c.ground.known() || c.holdWalls || x == null || y == null) return true;
         Battlefields.Ground g = Battlefields.choose(level, x, y);
-        if (!g.known()) return;
+        if (g == null) return false;                                           // nothing but water between them
+        if (!g.known()) return true;
         c.ground = g;
         c.name = "the Battle of " + g.name();
         LOG.info("[MCA-WAR] {}: the field looked for again at the muster, {} at {}", Villages.name(c.a), g.name(), g.centre().toShortString());
+        return true;
+    }
+
+    /**
+     * No dry ground to fight on between these towns (every field round both is lake, river or sea): the Captains will
+     * not take the field, so no battle is fought. Word of it in both towns' chronicles and war books, once in five days.
+     */
+    static void noDryGround(UUID x, UUID y, long day) {
+        String key = "war.nodry/" + y;
+        if (day - WarBooks.num(Ledger.note(x, key), -100) < 5) return;
+        Ledger.note(x, key, Long.toString(day));
+        String xn = Villages.name(x), yn = Villages.name(y);
+        Villages.tell(x, day, "our Captains found no dry ground between us and " + yn + " to fight on, only water: the army stays home");
+        Villages.tell(y, day, xn + " would take the field against us, but there is only water between us: no battle");
+        WarBooks.course(x, y, day, "we found no dry ground to meet " + yn + " on, only water, and kept the army home");
+        WarBooks.course(y, x, day, xn + " found no dry ground to meet us on and kept its army home");
+        LOG.info("[MCA-WAR] {} against {}: no dry ground to fight on, only water: no battle", xn, yn);
+    }
+
+    /** A campaign called off before a blow is struck: no dry ground (the field turned out to be water). Everybody home. */
+    static void noField(ServerLevel level, Campaign c) {
+        long day = level.getDayTime() / 24000L;
+        noDryGround(c.a, c.b, day);
+        announce(level, c, "There is no dry ground between " + Villages.name(c.a) + " and " + Villages.name(c.b) + " to fight on, only water: the armies go home.", false);
+        if (c.battle != null) c.battle.abandon(level);
+        c.battle = null;
+        boolean out = c.armies[0] != null || c.armies[1] != null;
+        if (out) goHome(level, c, "no dry ground");
+        else stage(c, Stage.DONE, level.getGameTime(), level.getGameTime());
     }
 
     /** The Captain's choice of tactics for army i, by the ground on its side, the odds, its temper and its kit. */
@@ -816,6 +854,10 @@ public final class Campaigns {
         if (c.armies[1] == null) {                                             // nobody came out to meet it
             c.won = 0;
             onTo(level, c);
+            return;
+        }
+        if (!lookAgain(level, c) || Battlefields.wet(level, c.ground)) {      // the last look before a blow: never on water
+            noField(level, c);
             return;
         }
         c.battle = Battles.open(level, c, c.ground.centre(), c.ground.ax(), c.ground.az(), false);
@@ -1347,15 +1389,20 @@ public final class Campaigns {
             for (int i = 0; i < 2; i++) if (old.armies[i] != null) Armies.discharge(level, old.armies[i]);
             ACTIVE.remove(Ledger.pair(old.a, old.b));
         }
+        double dx = o.centre().getX() - v.centre().getX(), dz = o.centre().getZ() - v.centre().getZ(), n = Math.max(1, Math.sqrt(dx * dx + dz * dz));
+        Battlefields.Ground g = at != null ? Battlefields.groundAt(level, at, dx / n, dz / n, Villages.name(v.id()) + " Field")
+            : Battlefields.choose(level, v, o, true);                      // [field] the Captains' own choice, its ground made to look at
+        if (g == null || Battlefields.wet(level, g)) {                     // never a battle on water, staged or not
+            out.add("NO-STAGE no dry ground to fight on between " + Villages.name(v.id()) + " and " + Villages.name(o.id()) + ": only water");
+            return out;
+        }
         hurryForPictures();
         Campaign c = begin(level, v, o, day, false, false);
         if (c == null) {
             out.add("NO-STAGE no campaign");
             return out;
         }
-        double dx = o.centre().getX() - v.centre().getX(), dz = o.centre().getZ() - v.centre().getZ(), n = Math.max(1, Math.sqrt(dx * dx + dz * dz));
-        c.ground = at != null ? Battlefields.groundAt(level, at, dx / n, dz / n, Villages.name(v.id()) + " Field")
-            : Battlefields.choose(level, v, o, true);                      // [field] the Captains' own choice, its ground made to look at
+        c.ground = g;
         c.name = "the Battle of " + c.ground.name();
         muster(level, c, Math.max(cap(), STAGED_DETAIL));
         if (c.armies[0] == null || c.armies[1] == null) {
