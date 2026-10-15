@@ -867,6 +867,11 @@ public final class Police extends SavedData {
         out.put("crimes", new IntArrayTag(crimes));
         out.put("arrests", new IntArrayTag(arrests));
         out.put("fines", new IntArrayTag(fines));
+        ListTag outlaws = new ListTag(), pows = new ListTag();                      // [war-after] the players on the books; the prisoners of war
+        for (String s : Outlaws.report(id)) outlaws.add(StringTag.valueOf(s));
+        for (String s : Prisoners.report(id, day)) pows.add(StringTag.valueOf(s));
+        out.put("outlaws", outlaws);
+        out.put("pows", pows);
         return out;
     }
 

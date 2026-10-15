@@ -1001,6 +1001,8 @@ public final class Campaigns {
             && (t2 == Envoys.Temper.PRICKLY || t2 == Envoys.Temper.SHREWD)) Vassals.make(level, c.a, c.b, day, "its gate taken");
         Villages.Village v = c.town(1);
         if (v != null) Raids.allClear(level, v);
+        String sacked = Ruins.sack(level, c);                                // [war-after] the town sacked; too few left, a ruin
+        if (!sacked.isEmpty()) WarBooks.course(c.a, c.b, day, "we sacked " + Villages.name(c.b) + ": " + sacked);
         goHome(level, c, "the town was taken");
     }
 
@@ -1089,6 +1091,7 @@ public final class Campaigns {
         Armies.Army a = c.armies[i];
         if (a == null) return;
         Battles.homecoming(level, c, a);
+        Ruins.unload(level, a);                                               // [war-after] what the victors carried off, into their stores
         Armies.unload(level, a);
         Armies.discharge(level, a);
         c.armies[i] = null;

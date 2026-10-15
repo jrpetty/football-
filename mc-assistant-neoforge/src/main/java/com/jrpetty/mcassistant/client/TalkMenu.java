@@ -266,6 +266,10 @@ public final class TalkMenu {
     static final Entry CARTER_ROAD = say("carter_road", Items.LEAD, "Where's the wagon bound?", flag("carter"));
     static final Entry PLANNER_NEXT = say("planner_next", Items.STONE_BRICKS, "What's being built next?", flag("planner"));
     static final Entry ATLAS = ask("atlas", Items.SPYGLASS, TalkTopic.ATLAS);                     // the scout's own, by name
+    // [war-after] A prisoner of war set free; an outlaw's ways back.
+    static final Entry FREE_PRISONER = say("free_prisoner", Items.SHEARS, "I'm getting you out of here", flag("prisoner"));
+    static final Entry GIVE_UP = say("give_up", Items.IRON_BARS, "I give myself up", flag("outlaw"));
+    static final Entry PARDON = say("pardon", Items.WHITE_BANNER, "I ask for a pardon", c -> !c.known() || c.has("outlaw") && c.has("elder"));
     static final Entry LETTER = ask("letter", Items.FEATHER, TalkTopic.LETTER);                  // the courier's (the post) own
     static final Entry TAX_PAY = say("tax_pay", Items.GOLD_INGOT, "I'd like to pay my taxes", flag("taxowed"));   // [civic-land]
 
@@ -387,7 +391,16 @@ public final class TalkMenu {
                 say("report", Items.REDSTONE_TORCH, "I want to report a crime"),
                 say("roster", Items.WRITABLE_BOOK, "Who's on the roster today?"),
                 say("swear", Items.IRON_HELMET, "Swear me in as a special constable"),
-                FINE),
+                FINE,
+                // [war-after] Prisoners of war, outlaws and bounties.
+                say("prisoners", Items.CHAIN, "Who are your prisoners of war?", flag("prisoners")),
+                prompt("ransom", Items.GOLD_INGOT, TalkTopic.SAY, "I'll pay for the release of ", flag("prisoners")),
+                FREE_PRISONER,
+                say("outlaws", Items.PAPER, "Any outlaws wanted?"),
+                say("claim_bounty", Items.GOLD_NUGGET, "I've come to claim a bounty"),
+                say("wanted_poster", Items.MAP, "Have you a wanted poster?"),
+                GIVE_UP,
+                PARDON),
             group("records", Items.CHISELED_BOOKSHELF,
                 special("board", Items.OAK_HANGING_SIGN, Kind.BOARD),
                 ask("ledger", Items.WRITABLE_BOOK, TalkTopic.LEDGER),
@@ -505,6 +518,8 @@ public final class TalkMenu {
         if (c.known()) {
             if (c.has("fine")) out.add(FINE);
             if (c.has("taxowed")) out.add(TAX_PAY);              // [civic-land] taxes owed
+            if (c.has("prisoner")) out.add(FREE_PRISONER);              // [war-after] a prisoner of war: set it free
+            if (c.has("outlaw")) out.add(c.has("elder") ? PARDON : GIVE_UP);   // [war-after] an outlaw here: the way back
             if (c.shunned()) out.add(GIFT);                     // shunned, only a gift or a fine paid is heard (FolkTalk.answer)
             else if (c.inDisgrace()) out.add(SORRY);
             if (c.has("birthday")) out.add(BIRTHDAY);

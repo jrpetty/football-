@@ -115,6 +115,8 @@ public final class Colonies {
 
     /** Somewhere a couple of hundred blocks out with no village near it yet, or null. */
     static BlockPos spot(ServerLevel level, Villages.Village v) {
+        BlockPos ruin = com.jrpetty.mcassistant.entity.Ruins.colonySite(level, v);   // [war-after] a ruin within reach first: it rises again
+        if (ruin != null) return ruin;
         int tried = TRIED.getOrDefault(v.id(), 0);
         for (int i = 0; i < 8; i++) {
             double angle = (tried + i) * 2.399963229728653 + (v.id().getLeastSignificantBits() & 7);
@@ -153,7 +155,7 @@ public final class Colonies {
         }
         PENDING.remove(id);
         BlockPos ground = VillageSpawner.groundAt(level, at.getX(), at.getZ());
-        BlockPos flat = ground == null ? null : com.jrpetty.mcassistant.entity.Land.flattest(level, ground, 24);
+        BlockPos flat = ground == null || com.jrpetty.mcassistant.entity.Ruins.isSite(at) ? null : com.jrpetty.mcassistant.entity.Land.flattest(level, ground, 24);   // [war-after] a ruin's own heart
         if (flat != null) ground = flat;
         if (ground == null || !VillageSpawner.liveable(level, ground)
                 || Villages.nearest(level, ground, Villages.VILLAGE_RANGE * 2) != null

@@ -558,5 +558,22 @@
   "item.mc_assistant.war_hammer": "War Hammer",
   "item.mc_assistant.longbow": "Longbow",
   "item.mc_assistant.arbalest": "Arbalest",
-  "item.mc_assistant.working_model": "Working Model"
+  "item.mc_assistant.working_model": "Working Model",
+  "item.mc_assistant.wanted_poster": "Wanted Poster",
+  "talk.mc_assistant.prisoners": "Prisoners of war",
+  "talk.mc_assistant.prisoners.tip": "Who the town holds from its wars: whose they are, their rank, and what the watch would take for each one's release",
+  "talk.mc_assistant.ransom": "Buy a release",
+  "talk.mc_assistant.ransom.tip": "Pay the watch for a prisoner of war's release (its ransom and half as much again): it walks home, and its own town remembers who paid",
+  "talk.mc_assistant.free_prisoner": "Get them out",
+  "talk.mc_assistant.free_prisoner.tip": "Break this prisoner out. Seen by anybody of the town, it is a crime there, and a big step towards being made its outlaw",
+  "talk.mc_assistant.outlaws": "Outlaws wanted",
+  "talk.mc_assistant.outlaws.tip": "The players on the town's wanted poster, what for, and the bounty on each",
+  "talk.mc_assistant.claim_bounty": "Claim a bounty",
+  "talk.mc_assistant.claim_bounty.tip": "Brought down an outlaw of this town? A guard pays you the bounty on its head",
+  "talk.mc_assistant.wanted_poster": "A wanted poster",
+  "talk.mc_assistant.wanted_poster.tip": "A guard writes one up for you out of the stores' paper: the outlaw, the crime, the bounty",
+  "talk.mc_assistant.give_up": "Give yourself up",
+  "talk.mc_assistant.give_up.tip": "An outlaw here? Serve your time in the cells and the matter is settled",
+  "talk.mc_assistant.pardon": "Ask for a pardon",
+  "talk.mc_assistant.pardon.tip": "The leader may pardon an outlaw: freely, a friend of the town; else for a gift of coin"
 }

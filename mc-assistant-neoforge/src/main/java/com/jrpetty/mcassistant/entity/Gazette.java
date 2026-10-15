@@ -292,6 +292,8 @@ public final class Gazette {
         if (crime != null) entries.add(crime);
         String police = Police.gazette(level, id, day);            // [police] the chase, the arrests, the cells, the curfew
         if (police != null) entries.add(police);
+        String afterWar = AfterWar.gazette(level, id, day);        // [war-after] prisoners of war, the outlaws, the ruins round about
+        if (afterWar != null) entries.add(afterWar);
         String disasters = Disasters.gazette(level, v, day);        // [disasters] the weather's danger, yesterday's fire or flood
         if (disasters != null) entries.add(disasters);
         String word = PlayerLeader.gazette(level, id, day);         // [player-civic] the leader's promises, kept and broken

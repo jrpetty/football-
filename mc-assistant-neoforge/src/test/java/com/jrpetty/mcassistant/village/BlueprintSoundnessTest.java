@@ -715,6 +715,7 @@ class BlueprintSoundnessTest {
         "stable 4 4 5 5 none",
         "station 2 4 2 4 none",
         "statue 2 2 2 2 none",
+        "stockade 4 4 4 4 none",                    // [war-after] the pen for prisoners of war
         "storage 2 3 3 4 front",
         "store 5 9 6 9 front",
         "storehouse 1 1 1 1 none",

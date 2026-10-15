@@ -730,6 +730,7 @@ public final class Scouts {
         } catch (RuntimeException ex) {
             LOG.debug("[MCA-SCOUT] structure look failed: {}", ex.toString());
         }
+        Ruins.scout(f, e, here, day, by);                        // [war-after] the ruins of a town that is gone
         if ((f.tickCount / 40) % 2 == 0) land(level, f, e, here, day, by);
         else rock(level, f, e, here, day, by);
     }

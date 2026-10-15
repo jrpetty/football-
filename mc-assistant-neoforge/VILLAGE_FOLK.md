@@ -12327,3 +12327,72 @@ foundry's smoke are looked at twice a second, only in towns that know them.
 
 Smoke: `tech_tree_stage` in tools/realworld/smoke.py (`/village inventions stage`). Tests: InventionsGameTests (iv01 to
 iv05), InventionTreeTest.
+## After the war: prisoners, ruins and outlaws
+
+### Prisoners of war (Prisoners)
+- **Taken.** When a battle ends, the winner leads off the loser's wounded left on the field, and, if the loser broke and
+  ran, those of the routed it had surrounded (eight at most). Each goes on the captor's books with its rank and what it
+  is worth in ransom: the Captain forty coins, the standard-bearer twenty, a sergeant sixteen, one of the line eight, a
+  townsman five. Its own town's chronicle says who was taken, and its partner, best friend, parents and children remember it.
+- **Held.** In a cell of the captor's watch house when one is free (the door shut on it, its bed at night); with more
+  prisoners than cells, the town puts up a **stockade** (a fenced pen with a lean-to over two beds, from the Wood Age);
+  with neither, it waits in the yard by the barracks or the hall, on its word.
+- **Its day.** Dinner at noon out of the captor's stores (bread, else whatever food there is: a real cost, counted on the
+  books). By day, one held in the stockade or the yard is set to a stint of light work in the captor's fields: ripe crops
+  cut, sown again, the harvest into the captor's stores. At night, now and then, a break for it (rarely from an iron cell,
+  more often from the stockade or the yard, twice as likely if it went hungry); a guard close by catches it at it.
+- **Grief.** A prisoner's spirits sink, and so do its kin's at home: they say so when you ask how they are.
+- **The peace.** The treaty exchanges prisoners head for head, the most valued first. The side holding more asks a
+  ransom for the rest, paid out of the envoy's purse as far as it runs; the rest are held for ransom, and their town sends
+  an envoy with the coin when it has it. Released prisoners walk home. Never ransomed (twelve days past the peace, or
+  twenty-four in all, or its town gone), a prisoner is offered a place in the town that holds it, and most take it.
+- **You.** Talk to a prisoner to hear its story. Ask a guard of the town that holds it "Who are your prisoners of war?",
+  and "I'll pay for the release of Fen" to buy one out (its ransom and half as much again, into the captor's treasury: its
+  own town thinks the world of you for it). Or tell the prisoner "I'm getting you out of here": seen by anybody of the
+  town, that is a crime there, and a big one (see Outlaws).
+- **Seen**: the folk's card ("prisoner of Bramley since day 40, a sergeant, ransom 16 coins; held in the cells"), the
+  board (prisoners held, ours held), the War page (the prisoners we hold, ours held elsewhere) and the Watch page.
+
+### Ruins (Ruins)
+- **How a town falls.** Its last folk dead, given up after a raid with too few left, empty three days with nobody on its
+  roll, or taken at its gate and **sacked** with six or fewer grown folk left. A sacked town loses a third of its stores to
+  the victors, carried home in their packs; its folk go to a neighbour that will take them in, or are carried off by the
+  victors and offered a place there.
+- **The ruin.** It keeps its old name ("the ruins of Ashford"). Nothing points at it any more: a war with it ends, its
+  vassals are free, pacts with it are torn up, the prisoners it held walk home. Every town that knew it hears of its fall
+  and puts it in its atlas; scouts that pass it put it in theirs; folk round about tell stories of it.
+- **Decay.** From the day after it fell, while you are near: stone cracks and mosses over, rotten timber and loose brick
+  fall out, the glass, the doors and the lamps go, the roof comes in (its pieces lying on the floor below), vines climb
+  the walls and cobwebs hang under what is left of the roof. Only the town's own building blocks; never chests.
+- **Loot.** Its store chests are left with what the town really had in them, free to whoever finds them; each day some of
+  the food spoils (meat and fish to rotten flesh). Its board reads "The ruins of Ashford", how it fell and what is left.
+- **Rising again.** A growing town's colonists choose a ruin within reach before open ground, and a Village Folk Spawner
+  set down among the ruins founds a town there too: either way it takes the old name ("Ashford rises again"), and the old
+  buildings go onto its register for its builders to put right.
+
+### Outlaws and bounty hunters (Outlaws)
+- **Wanted.** Every crime you are seen to do in a town makes you more wanted there: taking from its stores, a house or a
+  shop (12), breaking what it built (10), poaching (8), striking its folk (15), killing one (60), breaking a prisoner out
+  (45), striking its watch (20), coming back in while barred or banished (4 a minute). It eases by three a day.
+- **Outlawed** at fifty: a WANTED poster on the town's board (and its allies'), its guards take you on sight, its shops,
+  inn and services turn you away, its folk are afraid of you and call the watch, and a bounty is set out of its treasury.
+- **The hunters.** Come within 160 blocks and a party of up to three of its guards (and one of a close ally's) sets out
+  after you, on the stable's horses if it has them. A blow that would take you below two hearts catches you instead: the
+  hunters share the bounty, and you pay your fine (15 and half your wanted level) or go to the cells. Log off and they
+  let you be till you come back.
+- **The way back**: pay your fine and the bounty to a guard ("I'll pay my fine"); give yourself up ("I give myself up")
+  and serve your time; ask the leader for a pardon (free to a friend of the town, else for a gift of coin: "I'll pay for
+  a pardon"); or keep away and let it ease.
+- **Bounty hunting.** Bring down another player who is an outlaw of a town and its bounty is yours: claim it of any of
+  its guards ("I've come to claim a bounty"); it shows on your Earnings page. A guard will write you a **Wanted Poster**
+  out of the stores' paper ("Have you a wanted poster?"), or craft a blank one (paper, an ink sac and red dye) and use it in a town
+  to copy its most wanted off the board.
+- **Seen**: your standing on the talk card ("OUTLAW (bounty 25)" or "wanted 30/100"), the board's posters, and the Watch
+  page's "Outlaws and bounties".
+
+### Commands
+`/village afterwar` (the town's prisoners, ours held, the players on its books, the ruins it knows); for operators
+`prisoners <n>`, `release`, `ruin`, `decay <days>`, `outlaw <player>`, `pardon <player>`, `hunt <player>` and `stage
+[player]`. The admin toolkit: `army prisoners`, `army release`, `army ruin`, `army outlaw`.
+
+Smoke: `war_after_stage` in tools/realworld/smoke.py (`/village afterwar stage`). Tests: WarAfterGameTests (wa01 to wa10).

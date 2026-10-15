@@ -1383,6 +1383,7 @@ public final class JobMarket {
         Ledger.forget(id, "jm.raid");
         if (!Villages.folkOf(id).isEmpty() || Villages.recordedPopulation(id) > 0) return;    // somebody is still on the roll
         com.jrpetty.mcassistant.ChunkLoad.setLoaded(level, id, v.centre(), com.jrpetty.mcassistant.VillageSpawner.MAX_LOADED_RADIUS, false);
+        Ruins.why(id, "was given up after a raid, too few left to keep it", null);      // [war-after]
         Villages.forget(id);
         LOG.info("[MCA-JOBS] {} was given up after the raid", Villages.name(id));
     }

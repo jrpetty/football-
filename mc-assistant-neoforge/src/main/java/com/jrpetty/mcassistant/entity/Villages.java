@@ -384,6 +384,7 @@ public final class Villages {
             case "fletcher" -> "the fletcher's hut";              // [fletcher]
             case "golemyard" -> "the golem yard";                 // [golems]
             case "watchhouse" -> "the watch house";               // [police]
+            case "stockade" -> "the stockade";                    // [war-after]
             case "powderhut" -> "the powder hut";                // [fireworks]
             case "maproom" -> "the map room";                     // [cartographer]
             case "tradingpost" -> "the Trading Post";             // [emerald]
@@ -516,6 +517,7 @@ public final class Villages {
         Civics.resetForTests();             // [batchF] the post, petitions, the meeting, wardens, the fund, searches, favours
         Crime.resetForTests();              // [crime] the cases, the folk's records, the plans, the court
         Police.resetForTests();             // [police] the watch's incidents, chases, beats, cells and players in hand
+        AfterWar.resetForTests();           // [war-after] the prisoners, the ruins and the outlaws; the decay and the hunts stood down
         Weave.resetForTests();              // [weave] the homeless waiting to go, the day's looks; the round off again
         CivicLand.resetForTests();          // [civic-land] the taxes, the unrest, the knights and their manors
         Roads.reset();
@@ -597,6 +599,7 @@ public final class Villages {
         // getting on, and what it is working towards (VillageBoards).
         if (level instanceof net.minecraft.server.level.ServerLevel server) {
             com.jrpetty.mcassistant.Guard.run("village board", () -> VillageBoards.raiseFor(server, v));
+            com.jrpetty.mcassistant.Guard.run("a ruin taken up", () -> Ruins.founded(server, v));   // [war-after] Ashford rises again
         }
         return v;
     }
@@ -604,6 +607,7 @@ public final class Villages {
     /** The settlement is gone. Drops its register entry and everything hung
      *  off it, so nothing keeps pointing at a village nobody lives in. */
     public static void forget(UUID villageId) {
+        Ruins.fall(villageId);              // [war-after] its ruin written while its register still stands; nothing left pointing at it
         com.jrpetty.mcassistant.Guard.run("borders release", () -> Borders.release(villageId));   // [borders-map] its lands let go
         POP.remove(villageId);
         LAST_BIRTH.remove(villageId);
@@ -1848,6 +1852,8 @@ public final class Villages {
         boolean house = folk >= housing(villageId) - spare || built(villageId, "house") < 1 || HOUSE_WANTED.getOrDefault(villageId, false);
         if (house) out.add("house");
         if (built(villageId, "well") < 1) out.add("well");
+        // [war-after] Prisoners of war the cells will not take (or no cells at all): a stockade, from the Wood Age (Prisoners).
+        if (Prisoners.stockadeWanted(villageId)) out.add(Prisoners.STOCKADE);
         // A house for the player the village has taken to its heart.
         if (com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId) != null
                 && built(villageId, "storage") > 0) out.add("guesthouse");
@@ -2339,6 +2345,7 @@ public final class Villages {
             case "fletcher" -> Fletchers.why(villageId);           // [fletcher]
             case "golemyard" -> Golems.why(villageId);             // [golems]
             case "watchhouse" -> WatchHouse.why(villageId);        // [police]
+            case "stockade" -> Prisoners.stockadeWhy(villageId);   // [war-after]
             case "powderhut" -> FireworksMaker.why(villageId);     // [fireworks]
             case "maproom" -> Cartographers.why(villageId);        // [cartographer]
             case "tradingpost" -> EmeraldTrader.why(villageId);    // [emerald]

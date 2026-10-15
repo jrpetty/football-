@@ -121,6 +121,8 @@ public final class WatchPage {
         List<String[]> body = new ArrayList<>();
         list(body, "In the cells", m.getList("cells", Tag.TAG_STRING), "Nobody held.");
         list(body, "Wanted", m.getList("wanted", Tag.TAG_STRING), "Nobody wanted.");
+        list(body, "Outlaws and bounties", m.getList("outlaws", Tag.TAG_STRING), "No player on the town's books.");   // [war-after]
+        list(body, "Prisoners of war", m.getList("pows", Tag.TAG_STRING), "None held.");                             // [war-after]
         list(body, "The beats", m.getList("beats", Tag.TAG_STRING), "No beat walked today.");
         list(body, "Incidents this week", m.getList("incidents", Tag.TAG_STRING), "A quiet week.");
         list(body, "Special constables", m.getList("constables", Tag.TAG_STRING), "None sworn in.");
