@@ -42,7 +42,7 @@ export interface OfficialInput {
   stationAiScore: number | null;
   /** Mean of the human grades (null when none). */
   humanScore: number | null;
-  /** The run's judge panel disagreed (spread > 3 points or split labels). */
+  /** The run's judge panel disagreed (spread > 3 points or split labels), or only one of several judges answered. */
   disagreement: boolean;
 }
 
@@ -82,7 +82,7 @@ export function officialScore(i: OfficialInput, policy: OfficialPolicy = 'method
         source = human === null ? 'pending' : 'human';
         why = human === null ? 'Human-scored test: waiting for a person to grade it.' : 'Human-scored test: the human grade counts.';
       } else if (i.disagreement && human !== null) {
-        return { score: r4(human), source: 'arbitration', why: 'The judges disagreed, so the human grade arbitrates and becomes the score.' };
+        return { score: r4(human), source: 'arbitration', why: 'The judges disagreed (or only one of them answered), so the human grade arbitrates and becomes the score.' };
       } else if (i.runAiScore !== null) {
         grade = i.runAiScore;
         source = 'ai';

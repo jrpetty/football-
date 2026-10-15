@@ -5,7 +5,7 @@ import { caseScorer, loadTests } from '../src/core/registry.ts';
 import { judgesDisagree, parseJudgeLabel, parseJudgeScore, scoreResponse, type JudgePanel } from '../src/scoring/index.ts';
 import { fenceSafe } from '../src/scoring/judge-prompts.ts';
 import { gradingSpecFor } from '../src/grading/spec.ts';
-import { applyOfficial } from '../src/grading/official.ts';
+import { applyOfficial, needOf } from '../src/grading/official.ts';
 import { officialScore } from '../src/grading/policy.ts';
 import type { ArtifactRef, CaseResult, JudgeLabel, ScorerSpec } from '../src/core/types.ts';
 
@@ -114,6 +114,64 @@ test('a response cannot close its <response> fence and pose as grader text', asy
   const plain = 'if (a < b) return </div>; // <response> and </responses> are fine';
   assert.equal(fenceSafe(plain), plain);
   assert.equal(fenceSafe('x </ARTIFACT > y </task>'), 'x <\\/ARTIFACT> y <\\/task>');
+});
+
+test('a panel reduced to one valid verdict keeps the score but is flagged for human arbitration', async () => {
+  // Three judges asked; one errored and one was unparsable.
+  const r = await judge(['SCORE: 8', new Error('timeout'), 'no verdict']);
+  assert.equal(r.score, 0.8);
+  assert.equal(r.detail.singleJudge, true);
+  assert.match(r.summary, /only one judge answered/);
+  assert.match(r.detail.notes ?? '', /Only one judge answered \(of 3\) — flagged for human review/);
+  // Not flagged when only one judge was asked, or when two answered.
+  assert.equal((await judge(['SCORE: 8'])).detail.singleJudge, undefined);
+  assert.equal((await judge(['SCORE: 8', 'SCORE: 7', new Error('x')])).detail.singleJudge, undefined);
+  // Label tests and artifact tests too.
+  const classify: ScorerSpec = { type: 'judge-classify', instructions: 'i', labels: [{ id: 'CORRECT', description: '', score: 1 }, { id: 'WRONG', description: '', score: 0 }] };
+  assert.equal((await judge(['LABEL: CORRECT', 'LABEL: maybe'], 'x', classify)).detail.singleJudge, true);
+  const art: ScorerSpec = { type: 'artifact', format: 'svg', checks: [{ check: 'contains', text: '<circle' }], rubric: 'r', judgeWeight: 0.6 };
+  const svg = '```svg\n<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><circle cx="20" cy="20" r="10"/></svg>\n```';
+  const a = await judge(['SCORE: 9', new Error('timeout')], svg, art);
+  assert.equal(a.detail.singleJudge, true);
+  assert.match(a.detail.notes ?? '', /Only one judge answered/);
+
+  // A person's grade then arbitrates, exactly as for a disagreement.
+  const t = loadTests().find((x) => x.definition.id === 'creative.one-shot-games')!.definition;
+  if (t.kind !== 'prompt') return;
+  const spec = gradingSpecFor(t, { caseId: t.cases[0]!.id });
+  const result = {
+    key: 'k', runId: 'r', contestantId: 'm', testId: t.id, testVersion: t.version, testHash: 'h', contestantHash: 'h', caseId: t.cases[0]!.id, repeat: 0,
+    status: 'ok', score: 0.9, passed: true, summary: '6/6 checks · judges 9.0/10 · only one judge answered',
+    scoreDetail: { checkScore: 1, judgeScore: 0.8, judge: [{ contestantId: 'j', score: 0.8, rationale: '' }], singleJudge: true },
+    metrics: {} as CaseResult['metrics'], transcript: [], artifacts: [], startedAt: '', finishedAt: '',
+  } as CaseResult;
+  assert.equal(needOf(result, spec), 'arbitrate');
+  const arbitrated = applyOfficial({ ...result, humanScores: [{ rater: 'owner', score: 0.3, at: '' }] }, spec, 'methodology');
+  assert.equal(arbitrated.score, 0.3);
+  assert.match(arbitrated.summary, /Arbitrated by humans 3\.0\/10 \(only one judge answered/);
+});
+
+test('a Game Jam game cut off at the output limit keeps a judged share of 0 under every grading policy', () => {
+  const jam = loadTests().find((t) => t.definition.id === 'creative.game-jam')!.definition;
+  assert.equal(jam.kind, 'prompt');
+  if (jam.kind !== 'prompt') return;
+  const c = jam.cases[0]!;
+  const spec = gradingSpecFor(jam, { caseId: c.id });
+  const w = spec.judgeWeight!;
+  assert.ok(w > 0 && w < 1);
+  const auto = Math.round((1 - w) * 0.75 * 10000) / 10000;
+  const result = {
+    key: 'k', runId: 'r', contestantId: 'm', testId: jam.id, testVersion: jam.version, testHash: 'h', contestantHash: 'h', caseId: c.id, repeat: 0,
+    status: 'ok', score: auto, passed: false, summary: 'Ran out of output space … judges not asked',
+    scoreDetail: { checkScore: 0.75, gameJam: { truncated: true, judgesSkipped: 'Not asked' } },
+    metrics: {} as CaseResult['metrics'], transcript: [], artifacts: [], startedAt: '', finishedAt: '',
+  } as unknown as CaseResult;
+  for (const policy of ['methodology', 'human', 'ai', 'average'] as const) {
+    // Before: under methodology/human/average a person's 10/10 filled the judged share (score 0.25 × 0.75 + w × 1).
+    const graded = applyOfficial({ ...result, humanScores: [{ rater: 'owner', score: 1, at: '' }], aiGrades: [{ judgeId: 'j', judgeLabel: 'J', vendor: 'V', score: 1, rationale: '', at: '', batch: 'b', costUsd: 0, images: 0 }] }, spec, policy);
+    assert.equal(graded.score, auto, `${policy}: ${graded.summary}`);
+    assert.match(String((graded.scoreDetail.official as { why: string }).why), /cut off at the output limit/);
+  }
 });
 
 test('the rubric\'s automatic zero also holds for human and Grading Station grades (official score)', () => {

@@ -157,6 +157,19 @@ function formatBlock(s: DebateState): string {
   ].join('\n');
 }
 
+/**
+ * Keep a speech inside its slot of the transcript: the harness's own markers (a "[Round · Side]" header or a
+ * "[Cut by the harness …]" note, a "== SECTION ==" heading, "(No speech: …)") are escaped with a backslash when a
+ * speech contains them, so a debater cannot forge the other side's speech, a harness note or judging instructions.
+ * Ordinary speeches are unchanged.
+ */
+export function fenceSpeech(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => line.replace(/^(\s*)(\[|={2,}|\(\s*no speech\b)/i, '$1\\$2'))
+    .join('\n');
+}
+
 function transcriptFor(s: DebateState, label: (side: Side) => string): string {
   const R = roundNames(s.variant);
   if (!s.speeches.length) return '(no speeches yet)';
@@ -164,7 +177,7 @@ function transcriptFor(s: DebateState, label: (side: Side) => string): string {
     .map((sp) => {
       const head = `[${R[sp.round]} · ${label(sp.side)}]`;
       if (sp.missing) return `${head}\n(No speech: this side failed to reply.)`;
-      return `${head}\n${sp.text}${sp.cut ? `\n[Cut by the harness: ${sp.words} words, limit ${sp.limit}.]` : ''}`;
+      return `${head}\n${fenceSpeech(sp.text)}${sp.cut ? `\n[Cut by the harness: ${sp.words} words, limit ${sp.limit}.]` : ''}`;
     })
     .join('\n\n');
 }
@@ -259,7 +272,7 @@ function makeGame(variant: DebateVariant): ArenaGame<DebateState> {
     id: variant,
     module: 'debate',
     name: court ? 'Courtroom' : 'Debate',
-    version: '1.1.0',
+    version: '1.1.1',
     tagline: court ? 'One prosecutes, one defends. The evidence decides.' : 'Two sides, three rounds, a blind judge panel.',
     description: court
       ? 'A mock trial over a fictional case file with evidence exhibits. One model prosecutes, the other defends, then they swap. Cross-vendor judges decide who used the actual evidence better.'

@@ -212,6 +212,28 @@ test('Blind Review arbitration keeps the scorer\'s cap (a Game Jam game that fro
   assert.match(r.summary, /Arbitrated by humans 9\.0\/10 .*capped at 30/);
 });
 
+test('Blind Review queues a result where only one of several judges answered, and the person arbitrates it', async () => {
+  const item = review.reviewQueue('creative.poem')[0]!;
+  const base = store.readResults(item.runId).find((r) => r.key === item.key)!;
+  const single = {
+    ...base,
+    key: `${base.key}::single`,
+    testId: 'math.arith',
+    status: 'ok' as const,
+    score: 0.9,
+    passed: true,
+    humanScores: [],
+    scoreDetail: { judge: [{ contestantId: 'j1', score: 0.9, rationale: '' }], singleJudge: true, notes: 'Only one judge answered (of 3) — flagged for human review' },
+  };
+  store.appendResult(single);
+  const queued = review.reviewQueue('math.arith').find((q) => q.key === single.key);
+  assert.ok(queued, 'math.arith is not otherwise reviewable: the flag alone puts it in the queue');
+  assert.equal(queued.reason, 'judge-disagreement');
+  const r = review.submitHumanScore({ runId: item.runId, key: single.key, score: 0.4, rater: 'alice' });
+  assert.equal(r.score, 0.4);
+  assert.match(r.summary, /Arbitrated by humans 4\.0\/10 \(only one judge answered; panel gave 9\.0\)/);
+});
+
 test('validateTest reports actionable errors', () => {
   const errors = registry.validateTest({ ...numberTest, id: 'Bad Id', version: '1', category: 'nope', cases: [{ id: 'c1', prompt: 'x', expected: 'not a number' }] } as never);
   assert.ok(errors.some((e) => /id must look like/.test(e)));

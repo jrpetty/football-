@@ -3,7 +3,7 @@ import type { CaseResult, CaseResultLite } from '../core/types.ts';
 import { appendResult, listRunIds, readManifest, readResults, toLite } from './store.ts';
 import { loadTests } from '../core/registry.ts';
 import { applyGalleryHumanScores, isGalleryResult } from './gallery-review.ts';
-import { withScorerCap } from '../grading/official.ts';
+import { needsArbitration, withScorerCap } from '../grading/official.ts';
 
 export interface ReviewItem {
   runId: string;
@@ -33,7 +33,8 @@ export function reviewQueue(testId?: string): ReviewItem[] {
   const out: ReviewItem[] = [];
   for (const runId of listRunIds()) {
     for (const r of readResults(runId)) {
-      const disagreement = Boolean(r.scoreDetail.judgeDisagreement);
+      // A disagreement, or only one of several judges answered: a person arbitrates.
+      const disagreement = needsArbitration(r.scoreDetail);
       // Gallery paintings are always open to the owner's artistry rating.
       if ((!reviewable.has(r.testId) && !disagreement && !isGalleryResult(r)) || (testId && r.testId !== testId)) continue;
       if (r.status === 'error' || r.status === 'cancelled') continue;
@@ -60,14 +61,14 @@ export function submitHumanScore(input: { runId: string; key: string; score: num
     appendResult(g);
     return toLite(g);
   }
-  if (current.scoreDetail.judgeDisagreement) {
+  if (needsArbitration(current.scoreDetail)) {
     // Judges disagreed: the human panel arbitrates and its mean becomes the score. The judges' verdicts stay on record.
     const automated = (current.scoreDetail.automatedScore as number | undefined) ?? current.score;
     // The scorer's cap (a Game Jam game that froze or stayed blank) still holds, exactly as in the Grading Station.
     const arbitrated = withScorerCap(Math.round(humanMean * 10000) / 10000, current.scoreDetail);
     updated.score = arbitrated;
     updated.passed = arbitrated >= 0.7;
-    updated.summary = `Arbitrated by humans ${(humanMean * 10).toFixed(1)}/10 (judges disagreed; panel gave ${automated === null ? '—' : (automated * 10).toFixed(1)})${arbitrated < humanMean - 1e-9 ? ` · capped at ${Math.round(arbitrated * 100)}` : ''}`;
+    updated.summary = `Arbitrated by humans ${(humanMean * 10).toFixed(1)}/10 (${current.scoreDetail.judgeDisagreement ? 'judges disagreed' : 'only one judge answered'}; panel gave ${automated === null ? '—' : (automated * 10).toFixed(1)})${arbitrated < humanMean - 1e-9 ? ` · capped at ${Math.round(arbitrated * 100)}` : ''}`;
     updated.scoreDetail = { ...updated.scoreDetail, automatedScore: automated, arbitrated: true };
   } else if (current.status === 'pending-human' || (current.scoreDetail as { humanScored?: boolean }).humanScored) {
     // Human-scored tests: the human panel mean *is* the score.

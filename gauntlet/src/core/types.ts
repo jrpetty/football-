@@ -721,6 +721,8 @@ export interface ScoreDetail {
   formatOk?: boolean;
   items?: ScoreBreakdownItem[];
   judge?: Array<{ contestantId: string; score: number; label?: string; rationale: string }>;
+  /** Several judges were asked but only one gave a usable verdict: kept, but flagged for human review like a disagreement. */
+  singleJudge?: boolean;
   notes?: string;
   [key: string]: unknown;
 }

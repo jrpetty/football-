@@ -180,14 +180,42 @@ export interface ReasonCheck {
 }
 
 /**
+ * Most distinct times, rooms, evidence files and other suspects a reason may name and still earn that part's
+ * credit. A real reason names the theft time (perhaps as a range: two times), the claimed room and where the thief
+ * really was (perhaps one more: three rooms), and one or two sources. A reason that lists every time, room or source
+ * is keyword stuffing, not a reason, and earns nothing for that part.
+ */
+export const REASON_LIMITS = { times: 2, rooms: 3, evidence: 2, otherSuspects: 2 } as const;
+
+const EVIDENCE_PATTERNS: Array<(text: string, w: LtWorld) => boolean> = [
+  (t) => /door|keypad|\blog\b/.test(t),
+  (t) => SOURCE_PATTERNS.CCTV!.test(t),
+  (t) => SOURCE_PATTERNS.RECEIPT!.test(t),
+  (t, w) => /witness|statement/.test(t) || t.includes(w.staff.title.replace(/^the /, '')) || t.includes(w.staff.name.toLowerCase()),
+];
+
+/** How many different times, rooms, evidence files and suspects (other than the accused) a text names. */
+export function reasonMentions(text: string, w: LtWorld, accused = w.culprit): { times: number; rooms: number; evidence: number; otherSuspects: number } {
+  const t = text.toLowerCase();
+  const times = SLOTS.map((_, i) => i).filter((i) => mentionsSlot(t, i)).length;
+  const rooms = Object.values(ROOM_KEYWORDS).filter((k) => new RegExp(`\\b${k}\\b`, 'i').test(t)).length;
+  const evidence = EVIDENCE_PATTERNS.filter((p) => p(t, w)).length;
+  const otherSuspects = w.suspects.filter((s) => s.name !== accused && new RegExp(`\\b${s.name.toLowerCase()}\\b`).test(t)).length;
+  return { times, rooms, evidence, otherSuspects };
+}
+
+/**
  * A reason earns a third each for citing the theft time, the room the thief
- * claimed, and a source that contradicts that claim.
+ * claimed, and a source that contradicts that claim. A part only counts when the
+ * reason does not also name a string of alternatives (REASON_LIMITS): listing
+ * every time, room or source is a hedge, not a reason.
  */
 export function checkReason(reason: string, w: LtWorld): ReasonCheck {
   const text = reason.toLowerCase();
-  const time = mentionsSlot(text, w.theftSlot);
-  const place = new RegExp(`\\b${ROOM_KEYWORDS[w.claimedRoom]}\\b`, 'i').test(text);
-  const source = w.contradiction.sources.some((src) => {
+  const n = reasonMentions(text, w);
+  const time = mentionsSlot(text, w.theftSlot) && n.times <= REASON_LIMITS.times;
+  const place = new RegExp(`\\b${ROOM_KEYWORDS[w.claimedRoom]}\\b`, 'i').test(text) && n.rooms <= REASON_LIMITS.rooms;
+  const sourceNamed = w.contradiction.sources.some((src) => {
     if (src === 'WITNESS') {
       const staffWord = w.staff.title.replace(/^the /, '');
       return /witness|statement/.test(text) || text.includes(staffWord) || text.includes(w.staff.name.toLowerCase());
@@ -196,6 +224,7 @@ export function checkReason(reason: string, w: LtWorld): ReasonCheck {
     if (re) return re.test(text);
     return new RegExp(`\\b${src.toLowerCase()}\\b`).test(text);
   });
+  const source = sourceNamed && n.evidence <= REASON_LIMITS.evidence && n.otherSuspects <= REASON_LIMITS.otherSuspects;
   const score = ((time ? 1 : 0) + (place ? 1 : 0) + (source ? 1 : 0)) / 3;
   return { time, place, source, score };
 }
