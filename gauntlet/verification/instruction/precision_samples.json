@@ -87,7 +87,7 @@
   "expected": [
    {
     "check": "regex",
-    "pattern": "^(?=[\\s\\S]*fish)(?![\\s\\S]*e)[\\s\\S]*\\.\\s*$",
+    "pattern": "^(?=[\\s\\S]*fish)(?![\\s\\S]*e)(?![\\s\\S]*[!?](?=[\"'\u201d\u2019)\\]]*(?:\\s|$)))[\\s\\S]*\\.\\s*$",
     "flags": "i"
    },
    {
@@ -111,7 +111,8 @@
     "At dawn a crowd walks along a row of fish stalls. Fishing folk shout loud calls and hold up shiny cod. A small boy runs past with a pail of crabs. Gulls wait high up for scraps of fish."
    ],
    "fail": [
-    "The market opens at dawn. Traders shout. Gulls circle overhead while buyers haggle over fresh fish."
+    "The market opens at dawn. Traders shout. Gulls circle overhead while buyers haggle over fresh fish.",
+    "At dawn a crowd walks along a row of fish stalls! Fishing folk shout loud calls and hold up shiny cod. A small boy runs past with a pail of crabs. Gulls wait high up for scraps of fish."
    ]
   }
  },
@@ -189,14 +190,21 @@
    {
     "check": "regex",
     "pattern": "^\\s*\\{(?=[\\s\\S]*\"title\")[\\s\\S]*\\}\\s*$"
+   },
+   {
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*\"title\")(?![\\s\\S]*(?<!\\\\)\"(?!(?:title|year|tags|rating)\")(?:[^\"\\\\\\n]|\\\\.)*(?<!\\\\)\"\\s*:)",
+    "flags": ""
    }
   ],
   "samples": {
    "pass": [
-    "{\"title\": \"The Lantern Keeper\", \"year\": 1996, \"tags\": [\"drama\", \"coastal\", \"family\"], \"rating\": 7.8}"
+    "{\"title\": \"The Lantern Keeper\", \"year\": 1996, \"tags\": [\"drama\", \"coastal\", \"family\"], \"rating\": 7.8}",
+    "{\"title\": \"Night: The \\\"Long\\\" Watch\", \"year\": 1993, \"tags\": [\"noir\", \"rain\", \"harbour\"], \"rating\": 6.0}"
    ],
    "fail": [
-    "```json\n{\"title\": \"X\", \"year\": \"1996\", \"tags\": [\"Drama\", \"sea\"], \"rating\": 8}\n```"
+    "```json\n{\"title\": \"X\", \"year\": \"1996\", \"tags\": [\"Drama\", \"sea\"], \"rating\": 8}\n```",
+    "{\"title\": \"The Lantern Keeper\", \"year\": 1996, \"tags\": [\"drama\", \"coastal\", \"family\"], \"rating\": 7.8, \"director\": \"Ana Ruiz\"}"
    ]
   }
  },
@@ -516,7 +524,7 @@
    },
    {
     "check": "regex",
-    "pattern": "\"population\"\\s*:\\s*[1-9]\\d*\\s*[,}\\n]"
+    "pattern": "\"cities\"\\s*:\\s*\\[\\s*\\{\\s*(?:\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"\\s*,\\s*\"population\"\\s*:\\s*[1-9]\\d*|\"population\"\\s*:\\s*[1-9]\\d*\\s*,\\s*\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\")\\s*\\}\\s*,\\s*\\{\\s*(?:\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"\\s*,\\s*\"population\"\\s*:\\s*[1-9]\\d*|\"population\"\\s*:\\s*[1-9]\\d*\\s*,\\s*\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\")\\s*\\}\\s*,\\s*\\{\\s*(?:\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"\\s*,\\s*\"population\"\\s*:\\s*[1-9]\\d*|\"population\"\\s*:\\s*[1-9]\\d*\\s*,\\s*\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\")\\s*\\}\\s*,\\s*\\{\\s*(?:\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"\\s*,\\s*\"population\"\\s*:\\s*[1-9]\\d*|\"population\"\\s*:\\s*[1-9]\\d*\\s*,\\s*\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\")\\s*\\}\\s*\\]"
    },
    {
     "check": "regex",
@@ -529,14 +537,22 @@
    {
     "check": "regex",
     "pattern": "^\\s*\\{(?=[\\s\\S]*\"cities\")[\\s\\S]*\\}\\s*$"
+   },
+   {
+    "check": "regex",
+    "pattern": "^(?=[\\s\\S]*\"cities\")(?![\\s\\S]*(?<!\\\\)\"(?!(?:cities|count|source|name|population)\")(?:[^\"\\\\\\n]|\\\\.)*(?<!\\\\)\"\\s*:)",
+    "flags": ""
    }
   ],
   "samples": {
    "pass": [
-    "{\"cities\": [{\"name\": \"Varrowmere\", \"population\": 48210}, {\"name\": \"Quellstone\", \"population\": 1203}, {\"name\": \"Ostrava Nuova\", \"population\": 350000}, {\"name\": \"Lindqvist Harbour\", \"population\": 7755}], \"count\": 4, \"source\": null}"
+    "{\"cities\": [{\"name\": \"Varrowmere\", \"population\": 48210}, {\"name\": \"Quellstone\", \"population\": 1203}, {\"name\": \"Ostrava Nuova\", \"population\": 350000}, {\"name\": \"Lindqvist Harbour\", \"population\": 7755}], \"count\": 4, \"source\": null}",
+    "{\n  \"cities\": [\n    {\"population\": 48210, \"name\": \"Varrowmere\"},\n    {\"name\": \"Port: Quell\", \"population\": 1203},\n    {\"name\": \"Ostrava Nuova\", \"population\": 350000},\n    {\"name\": \"Lindqvist Harbour\", \"population\": 7755}\n  ],\n  \"count\": 4,\n  \"source\": null\n}"
    ],
    "fail": [
-    "Here you go:\n{\"cities\": [{\"name\": \"A\", \"population\": \"100\"}], \"count\": \"4\", \"source\": \"none\"}"
+    "Here you go:\n{\"cities\": [{\"name\": \"A\", \"population\": \"100\"}], \"count\": \"4\", \"source\": \"none\"}",
+    "{\"cities\": [{\"name\": \"Varrowmere\", \"population\": 48210}, {\"name\": \"Quellstone\", \"population\": \"1203\"}, {\"name\": \"Ostrava Nuova\", \"population\": 350000}, {\"name\": \"Lindqvist Harbour\", \"population\": 7755}], \"count\": 4, \"source\": null}",
+    "{\"cities\": [{\"name\": \"Varrowmere\", \"population\": 48210}, {\"name\": \"Quellstone\", \"population\": 1203}, {\"name\": \"Ostrava Nuova\", \"population\": 350000}, {\"name\": \"Lindqvist Harbour\", \"population\": 7755}], \"count\": 4, \"source\": null, \"region\": \"north\"}"
    ]
   }
  },

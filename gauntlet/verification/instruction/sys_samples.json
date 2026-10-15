@@ -255,6 +255,12 @@
     "max": 0
    },
    {
+    "check": "regex",
+    "pattern": "(?:^(?=[^\\n]*(?:\\$\\s?\\d|\\b\\d+(?:\\.\\d\\d)?\\s*(?:dollars|USD)\\b))(?:(?![^\\n]*[.!?][\"'”’)\\]]*[ \\t\\r]*$)|(?=[^\\n]*(?:[:|\\t–—=]|\\s-|\\.\\.)\\s*\\$\\s?\\d))[^\\n]*$[\\s\\S]*?){2}",
+    "flags": "mi",
+    "shouldMatch": false
+   },
+   {
     "check": "include",
     "text": "49"
    },
@@ -269,10 +275,14 @@
   ],
   "samples": {
    "pass": [
-    "Happy to help! Our Aurora desk lamp costs $49, the Nimbus floor lamp costs $129, and a 4-pack of Ember bulbs costs $18. Standard shipping is free on orders over $60 and $7 otherwise.\nPip | Lumen & Loom"
+    "Happy to help! Our Aurora desk lamp costs $49, the Nimbus floor lamp costs $129, and a 4-pack of Ember bulbs costs $18. Standard shipping is free on orders over $60 and $7 otherwise.\nPip | Lumen & Loom",
+    "I keep things in plain sentences rather than lists. Our Aurora desk lamp costs $49 and the Nimbus floor lamp costs $129.\n\nA 4-pack of Ember bulbs costs $18, and standard shipping is free on orders over $60.\nPip | Lumen & Loom"
    ],
    "fail": [
-    "1. Aurora desk lamp - $49\n2. Nimbus floor lamp - $129\n3. Ember bulbs - $18\nPip | Lumen & Loom"
+    "1. Aurora desk lamp - $49\n2. Nimbus floor lamp - $129\n3. Ember bulbs - $18\nPip | Lumen & Loom",
+    "Aurora desk lamp - $49\nNimbus floor lamp - $129\nEmber bulbs (4-pack) - $18\nPip | Lumen & Loom",
+    "Here is our menu.\nAurora desk lamp: $49.\nNimbus floor lamp: $129.\nEmber bulbs, 4-pack: $18.\nPip | Lumen & Loom",
+    "| Product | Price |\n|---|---|\n| Aurora desk lamp | $49 |\n| Nimbus floor lamp | $129 |\n| Ember bulbs | $18 |\nPip | Lumen & Loom"
    ]
   }
  },

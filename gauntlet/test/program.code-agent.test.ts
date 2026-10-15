@@ -213,6 +213,42 @@ describe('code-agent: timing never depends on the machine (virtual clock)', () =
   });
 });
 
+describe('code-agent: crashes and deep recursion (worker thread with its own stack and heap)', () => {
+  const header = "const test = require('node:test');\nconst assert = require('node:assert/strict');\nconst m = require('../src');\n";
+  const src = [
+    'function depth(n) { return n === 0 ? 0 : 1 + depth(n - 1); }',
+    'function forever(n) { return forever(n + 1) + 1; }',
+    'module.exports = { depth, forever, hog() { const keep = []; for (;;) keep.push(new Array(1e6).fill(keep.length)); } };',
+  ].join('\n');
+  const run = (body: string) => runProjectTests({ 'src/index.js': src, 'tests/a.test.js': header + body, 'tests/b.test.js': `${header}test('other file', () => { assert.equal(m.depth(3), 3); });\n` }, ['tests/a.test.js', 'tests/b.test.js']);
+
+  it('deep recursion uses the same 4 MB stack on every OS: a deep legal call passes, endless recursion fails and the run goes on', async () => {
+    // 20,000 frames need more than the 1 MB main-thread stack Windows gives (where --stack-size=4000 crashed the process).
+    const r = await run("test('deep', () => { assert.equal(m.depth(20000), 20000); });\ntest('endless', () => { m.forever(0); });\ntest('after', () => { assert.equal(m.depth(5), 5); });\n");
+    assert.equal(r.crashed, null);
+    assert.deepEqual(r.tests.map((t) => [t.name, t.ok]), [['deep', true], ['endless', false], ['after', true], ['other file', true]]);
+    assert.match(r.tests[1]!.error ?? '', /call stack/i);
+  });
+
+  it('running out of memory fails only the running test: earlier results stand, later tests still run, never a pass', async () => {
+    const r = await run("test('before', () => { assert.equal(m.depth(2), 2); });\ntest('hog', () => { m.hog(); });\ntest('after', () => { assert.equal(m.depth(4), 4); });\ntest('after but wrong', () => { assert.equal(m.depth(4), 5); });\n");
+    assert.equal(r.crashed, null);
+    assert.deepEqual(r.tests.map((t) => [t.name, t.ok]), [['before', true], ['hog', false], ['after', true], ['after but wrong', false], ['other file', true]]);
+    assert.match(r.tests[1]!.error ?? '', /crashed: out of memory/);
+    assert.equal(r.loadErrors.length, 0);
+  });
+
+  it('running out of memory while loading a file fails that file only', async () => {
+    const r = await runProjectTests(
+      { 'src/index.js': src, 'tests/a.test.js': `${header}m.hog();\ntest('never', () => {});\n`, 'tests/b.test.js': `${header}test('other file', () => { assert.equal(m.depth(3), 3); });\n` },
+      ['tests/a.test.js', 'tests/b.test.js'],
+    );
+    assert.equal(r.crashed, null);
+    assert.deepEqual(r.tests.map((t) => [t.file, t.ok]), [['tests/b.test.js', true]]);
+    assert.match(r.loadErrors[0]?.error ?? '', /out of memory/);
+  });
+});
+
 describe('code-agent: sandbox isolation', () => {
   const base = {
     'src/index.js': "module.exports = { answer: () => 42 };\n",
