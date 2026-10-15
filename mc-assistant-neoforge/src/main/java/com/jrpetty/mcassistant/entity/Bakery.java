@@ -191,6 +191,7 @@ public final class Bakery {
         if (!plan.ok()) return null;
         ItemStack made = Bench.make(level, v, plan, f, hand);
         if (made.isEmpty()) return null;
+        Businesses.benchMade(level, v.id(), Business.Type.BAKERY, plan, made);   // [business-books] the batch costed in the bakery's books
         booked(level, v, b, made);
         if (f != null && f.getRandom().nextInt(3) == 0) {
             FolkTalk.speak(f, FolkTalk.pick(f.getRandom(), "Fresh out of the oven!", "Mind, that's hot.",

@@ -7,19 +7,19 @@ name graveyard
 layer -1
 ddddddddd
 ddddFdddd
-ddddddddd
-ddddddddd
-ddddddddd
-ddddddddd
-ddddddddd
-ddddddddd
+ddddFdddd
+ddddFdddd
+ddddFdddd
+ddddFdddd
+ddddFdddd
+ddddFdddd
 ddddddddd
 layer 0
 PPPPPPPPP
-P...S...P
+P.**S**.P
 P.......P
 P.......P
-P.......P
+P*.*.*.*P
 P.......P
 P.......P
 P.......P

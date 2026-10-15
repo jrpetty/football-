@@ -10,9 +10,12 @@ The server also says where to stand for each: outside, three-quarters on from th
 whole of it with its roof, the front door in sight; and inside, a step or two in from the door looking into the
 room, both with the camera's eyes in open air. Then at noon the player goes round as a camera and takes the two.
 
-    gallery.py [age]   (the server and the client are already starting; age is stone, iron (the default) or
-                       diamond) the pictures, gallery-<name>-out.png and gallery-<name>-in.png, and gallery.txt,
-                       the index: a line a building, where it stood, how each picture was taken
+    gallery.py [age] [land]
+                       (the server and the client are already starting; age is stone, iron (the default) or
+                       diamond; land is the town's, plains (the default), desert, taiga, coast, mountain, ...: its
+                       woods, its stones and its style) the pictures, gallery-<name>-out.png and
+                       gallery-<name>-in.png, and gallery.txt, the index: a line a building, where it stood, how each
+                       picture was taken
     gallery.py sheets  a contact sheet a row of twelve (gallery-sheet-<n>.png) of the pictures already taken,
                        each building's outside and inside side by side under its name; listed in gallery.txt
 
@@ -58,7 +61,7 @@ def take(r, label, feet, aim, check, wait):
     return False
 
 
-def photograph(age):
+def photograph(age, land="plains"):
     r = Rcon()
     say("connected; waiting for the client to join")
     if not wait_for_join(r):
@@ -81,8 +84,9 @@ def photograph(age):
     say("the stage at %d %d %d" % (x0, STAGE_Y, z0))
     r.cmd("tp %s %d %d %d" % (USER, middle[0], middle[1], middle[2]))
     time.sleep(25)                                               # the country round the stage arrives at the client
-    index = ["# The building gallery: every drawing put up as a town of the %s Age puts it up (its woods, its age's"
-             " make-over, its furnishing), at noon. Taken %s." % (age.capitalize(), time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())),
+    index = ["# The building gallery: every drawing put up as a town of the %s Age on the %s puts it up (its woods, its"
+             " age's make-over, its furnishing), at noon. Taken %s." % (age.capitalize(), land,
+                                                                     time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())),
              "# outside: seen = the front door in sight, hidden = it could not be got in sight, nodoor = it has none.",
              "# inside: door = a step or two in from the front door; cramped = as near as the room lets; open = from"
              " its open front; above = looking down into it (no way in on foot).",
@@ -93,7 +97,7 @@ def photograph(age):
         r.cmd("tp %s %d %d %d" % (USER, middle[0], middle[1], middle[2]))
         time.sleep(2)
         t = time.time()
-        out = r.cmd("execute positioned %d %d %d run village showcase gallery %d %s" % (x0, STAGE_Y, z0, row, age))
+        out = r.cmd("execute positioned %d %d %d run village showcase gallery %d %s %s" % (x0, STAGE_Y, z0, row, age, land))
         shots = BUILDING.findall(out)
         say("row %d of %d: %d buildings up in %.1f s (%s)" % (row + 1, rows, len(shots), time.time() - t,
                                                                ", ".join(s[0] for s in shots)))
@@ -199,7 +203,7 @@ if __name__ == "__main__":
     try:
         if len(sys.argv) > 1 and sys.argv[1] == "sheets":
             sys.exit(sheets())
-        sys.exit(photograph(sys.argv[1] if len(sys.argv) > 1 else "iron"))
+        sys.exit(photograph(sys.argv[1] if len(sys.argv) > 1 else "iron", sys.argv[2] if len(sys.argv) > 2 else "plains"))
     except (EOFError, OSError) as e:
         say("DIED: the server went away (%s)" % e)
         sys.exit(3)

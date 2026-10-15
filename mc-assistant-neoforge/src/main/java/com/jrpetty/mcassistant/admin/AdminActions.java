@@ -317,6 +317,14 @@ public final class AdminActions {
             }
             case "economy.wagon" -> AdminTools.wagon(level, v);
             case "economy.market" -> AdminTools.marketDay(level, v);
+            // ---- [business-books] a business's books; the coin audit
+            case "economy.books" -> {
+                com.jrpetty.mcassistant.entity.Businesses.ensure(level, v.id());
+                com.jrpetty.mcassistant.entity.Business b = com.jrpetty.mcassistant.entity.Businesses.of(v.id(), a.word(0, "cafe"));
+                yield b == null ? Done.no("No business called " + a.word(0, "cafe") + " in " + Villages.name(v.id()) + " (/village business lists them).")
+                    : Done.said(com.jrpetty.mcassistant.entity.BusinessBooks.words(level, v.id(), b));
+            }
+            case "economy.audit" -> Done.said(com.jrpetty.mcassistant.entity.CoinCensus.page(v.id()));
             // ---- [civic-land] the taxes, the unrest, the knights
             case "economy.tax" -> {
                 com.jrpetty.mcassistant.entity.TaxBook.Lever l = com.jrpetty.mcassistant.entity.TaxBook.Lever.named(a.word(0, ""));

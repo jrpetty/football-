@@ -213,6 +213,7 @@ public final class Inn {
     /** The coin into the till: the treasury, the day's books, and the inn's own count. */
     static void till(UUID village, int coins, boolean player) {
         Ledger.addCoins(village, coins);
+        Businesses.service(village, Business.Type.INN, "a room for the night", coins * 100L);   // [business-books] into the inn's own till
         Economy.sold(village, coins);
         Ledger.note(village, "inn.takings", Integer.toString(count(village, "inn.takings") + coins));
         Ledger.note(village, "inn.guests", Integer.toString(count(village, "inn.guests") + 1));

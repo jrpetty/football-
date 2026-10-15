@@ -1689,6 +1689,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Gatherings.mourn(village, displayNameCap(), day);
             Homes.left(village, getUUID());
             Bank.left(village, this, true);              // its savings at the bank to its partner, a child, or the village
+            Businesses.left(village, this, true);        // [business-books] its purse and its stake in a business to its heir
             Annals.died(village, how);
             // The leader gone: an election to choose another (Elections).
             if (getUUID().equals(Villages.elder(village)) && level() instanceof net.minecraft.server.level.ServerLevel lost) {
@@ -5463,6 +5464,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Villages.recordDeath(from);
             Homes.left(from, getUUID());
             Bank.left(from, this, false);                // its savings at the bank go with it
+            Businesses.left(from, this, false);          // [business-books] its stake in a business sold back to the town
         }
         Annals.moved(from, to.id());
         joinVillage(to.id(), to.centre());

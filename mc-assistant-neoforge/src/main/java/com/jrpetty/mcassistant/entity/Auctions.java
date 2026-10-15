@@ -1105,6 +1105,7 @@ public final class Auctions {
             case TOWN -> {
                 Ledger.addCoins(v.id(), price);
                 Economy.sold(v.id(), price);
+                Businesses.service(level, v.id(), Business.Type.AUCTION, item, item.getCount(), price * 100L, true);   // [business-books] the town's sale, its books
             }
             case PLAYER -> {
                 if (lot.ownerId != null) give(level, v.id(), lot.ownerId, price - TaxBook.toll(v.id(), price), ItemStack.EMPTY,   // [civic-land] the toll

@@ -358,6 +358,11 @@ public class CityScreen extends Screen {
                         (a, b, c, d, act) -> zones.add(new Zone(a, b, c, d, act)));
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
+                case "Businesses" -> {                                                 // [business-books] every business and its books
+                    List<Component> tip = BusinessesPage.draw(g, font, data.getCompound("business"), x, y, cw, ch, scroll, mouseX, mouseY,
+                        (a, b, c, d, act) -> zones.add(new Zone(a, b, c, d, act)));
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
                 case "Taxes" -> {                                                      // [civic-land] the council's taxes, the unrest (TaxesPage)
                     List<Component> tip = TaxesPage.draw(g, font, data.getCompound("realm"), x, y, cw, ch, scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }

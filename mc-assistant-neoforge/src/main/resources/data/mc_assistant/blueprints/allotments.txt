@@ -2,6 +2,8 @@
 # their own. Four beds of earth, three by three, a path up the middle from the gate and across, and a
 # channel of water down the back half that keeps every bed watered. Who works which bed, and what grows
 # in it, is the households' own business (entity/Allotments).
+# [build-looks] The paths flagged in stone, the water butt (a cauldron) and a cask of tools at either end of the
+# cross path.
 # Rows run from the back of the lot (top) to the front (bottom, the gate).
 name allotments
 layer -1
@@ -9,17 +11,17 @@ layer -1
 .ddd~ddd.
 .ddd~ddd.
 .ddd~ddd.
-.........
-.ddd.ddd.
-.ddd.ddd.
-.ddd.ddd.
+.FFFFFFF.
+.dddFddd.
+.dddFddd.
+.dddFddd.
 .........
 layer 0
 PPPPPPPPP
 P.......P
 P.......P
 P.......P
-P.......P
+P&.....QP
 P.......P
 P.......P
 P.......P

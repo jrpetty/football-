@@ -13,7 +13,7 @@ name: Building gallery
 #   gallery.txt                                     the index: where each stood, how each picture was taken
 #   gallery-run.txt                                 the run's own report, and what the client and server said
 #
-# Started by hand (Actions -> Building gallery -> Run workflow, the town's age to choose), by touching
+# Started by hand (Actions -> Building gallery -> Run workflow, the town's age and land to choose), by touching
 # tools/realworld/gallery.trigger, or by a push that changes the drawings, the building or furnishing code,
 # the towns' looks, or the gallery itself.
 
@@ -25,6 +25,11 @@ on:
         type: choice
         options: [iron, stone, diamond]
         default: iron
+      land:
+        description: "The town's land: its woods, its stones and its building style (plains is a typical town's)"
+        type: choice
+        options: [plains, desert, taiga, coast, mountain, savanna, swamp, badlands, snow]
+        default: plains
   push:
     branches:
       - claude/minecraft-ai-assistant-44hj4f
@@ -142,11 +147,12 @@ jobs:
         working-directory: mc-assistant-neoforge
         env:
           AGE: ${{ inputs.age || 'iron' }}
+          LAND: ${{ inputs.land || 'plains' }}
         run: |
           export DISPLAY=:99
-          echo "[REAL] ==== the building gallery, $(git rev-parse --short HEAD), the $AGE age ====" > gallery-run.txt
+          echo "[REAL] ==== the building gallery, $(git rev-parse --short HEAD), the $AGE age on the $LAND ====" > gallery-run.txt
           set +e
-          python3 tools/realworld/gallery.py "$AGE" | tee -a gallery-run.txt
+          python3 tools/realworld/gallery.py "$AGE" "$LAND" | tee -a gallery-run.txt
           echo "gallery exit: ${PIPESTATUS[0]}"
           set -e
           ls gallery-*.png 2>/dev/null | wc -l

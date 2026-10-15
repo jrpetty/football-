@@ -359,7 +359,8 @@ public final class TalkMenu {
                 ask("contract", Items.INK_SAC, TalkTopic.CONTRACT),
                 ask("stall", Items.OAK_FENCE, TalkTopic.STALL),
                 ask("auction", Items.NOTE_BLOCK, TalkTopic.AUCTION),
-                ask("prices", Items.COMPARATOR, TalkTopic.PRICES)),
+                ask("prices", Items.COMPARATOR, TalkTopic.PRICES),
+                say("business_books", Items.WRITABLE_BOOK, "Could I see your books?")),   // [business-books] its business's books
             group("services", Items.SCAFFOLDING,
                 ask("housing", Items.BRICKS, TalkTopic.HOUSING),
                 ask("commission", Items.OAK_PLANKS, TalkTopic.COMMISSION),

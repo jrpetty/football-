@@ -6,6 +6,8 @@
 # gate and the grille are bars, and the coin can be seen and not touched. The two hanging
 # lanterns hang flush under the ceiling, one over the counter and one over the strongboxes:
 # never over a walkway, never at head height.
+# [build-looks] Its front stands a row back behind a portico of four stone columns under the stone gable, the lamp
+# hung from the lintel over the door: the bank is known by it. The ledger's lectern is turned to the room.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name bank
 layer -1
@@ -28,9 +30,9 @@ layer 0
 .SSS.SSS.
 .S.....S.
 .S.SSSSS.
-.S....rS.
-.S.....S.
+.S....5S.
 .SSSDSSS.
+.S.S.S.S.
 .........
 layer 1
 .........
@@ -41,8 +43,8 @@ layer 1
 .G.....G.
 .S....lS.
 .G.....G.
-.S.....S.
 .SGG.GGS.
+.S.S.S.S.
 .........
 layer 2
 .........
@@ -53,9 +55,9 @@ layer 2
 .S.....S.
 .S..j..S.
 .S.....S.
-.S.....S.
 .SSSSSSS.
-....j....
+.S.SjS.S.
+.........
 layer 3
 >.......<
 >L-----L<
@@ -67,7 +69,7 @@ layer 3
 >|fffff|<
 >|fffff|<
 >L-----L<
->...|...<
+>.......<
 layer 4
 .>.....<.
 .>SSSSS<.

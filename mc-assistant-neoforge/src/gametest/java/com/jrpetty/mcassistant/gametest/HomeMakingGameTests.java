@@ -184,11 +184,10 @@ public class HomeMakingGameTests {
         f.insertItem(s);
     }
 
-    /** The coin there is: the treasury and every purse. */
-    private static int money(UUID village) {
-        int n = Ledger.coins(village);
-        for (AssistantEntity a : Villages.folkOf(village)) if (a instanceof VillageFolkEntity f) n += f.purse();
-        return n;
+    /** The coin there is, to the penny, wherever it is (CoinCensus: the treasury, the purses, the business tills, the poor
+     *  box...): a sale moves it from a purse to a till; none is made or lost. */
+    private static long money(UUID village) {
+        return com.jrpetty.mcassistant.entity.CoinCensus.count(village);
     }
 
     private static int stock(ServerLevel level, UUID village, Predicate<ItemStack> what) {
@@ -321,7 +320,8 @@ public class HomeMakingGameTests {
             rich.earn(200);
             helper.assertTrue(Wealth.tier(poor) == Wealth.Tier.POOR, "the woodcutter is poor: " + Wealth.tier(poor) + " worth " + Wealth.worth(poor));
             helper.assertTrue(Wealth.tier(rich).ordinal() >= Wealth.Tier.WELL_OFF.ordinal(), "the smith is well off: " + Wealth.tier(rich));
-            int coin = money(id), purse = rich.purse();
+            long coin = money(id);
+            int purse = rich.purse();
             int fences = stock(level, id, s -> s.is(Items.OAK_FENCE)), barrels = stock(level, id, s -> s.is(Items.BARREL));
             int planks = poor.countCarried(s -> s.is(Items.OAK_PLANKS));
             days(level, t, 3);
@@ -372,7 +372,8 @@ public class HomeMakingGameTests {
             BlockPos home = house(level, id, t.heart(), -16, 20);
             Homes.tickForTests(level, t.v());
             helper.assertTrue(home.equals(Homes.homeOf(f)), "it has the house");
-            int coin = money(id), fences = Market.stock(level, id, s -> s.is(Items.OAK_FENCE)), barrels = Market.stock(level, id, s -> s.is(Items.BARREL));
+            long coin = money(id);
+            int fences = Market.stock(level, id, s -> s.is(Items.OAK_FENCE)), barrels = Market.stock(level, id, s -> s.is(Items.BARREL));
             days(level, t, 2);
             List<String> plan = HomeMaking.planForTests(id, home);
             int[] parish = HomeMaking.parishForTests(id);
@@ -526,7 +527,7 @@ public class HomeMakingGameTests {
             ItemStack loaf = new ItemStack(Items.BREAD, 3);
             Homes.keepsake(loaf, f, Homes.Source.BOUGHT);
             put(chest, loaf);
-            int coin = money(id);
+            long coin = money(id);
             // The list: a bucket for the water (it has none).
             List<String> list = Needs.listForTests(level, f);
             Kit.log("hm31 its list: " + list);
