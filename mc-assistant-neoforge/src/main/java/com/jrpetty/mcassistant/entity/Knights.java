@@ -422,6 +422,15 @@ public final class Knights {
      * Stripped of the title (crimes, treachery, a muster shirked, the fee unpaid; the outlaws' reckoning calls it too):
      * the retinue sent home, the vote gone, the manor forfeit to the town, into the chronicle. What is said.
      */
+    /** Made an outlaw of a town it is a knight of (Outlaws.listen, from the mod's start): the title goes with it. */
+    public static void onOutlawed(UUID town, UUID player) {
+        net.minecraft.server.MinecraftServer server = net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer();
+        Villages.Village v = Villages.get(town);
+        if (server == null || v == null || !isKnight(town, player)) return;
+        ServerLevel level = server.getLevel(v.dim());
+        if (level != null) strip(level, town, player, "for outlawry");
+    }
+
     public static String strip(ServerLevel level, UUID town, UUID player, String why) {
         CompoundTag k = knight(town, player);
         if (k == null) return "They are no knight of " + Villages.name(town) + ".";

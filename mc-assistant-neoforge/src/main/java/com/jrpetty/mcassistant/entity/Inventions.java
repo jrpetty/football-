@@ -819,6 +819,20 @@ public final class Inventions extends SavedData {
         return Villages.name(village) + " knows " + i.title + " now.";
     }
 
+    /**
+     * A town taken by storm (Campaigns.taken): the victors carry off its scholars' papers, and with them one thing it
+     * knew that they did not and are ready for (its age come, its needs known). Null if there was nothing to take.
+     */
+    @Nullable
+    public static String spoils(ServerLevel level, UUID victor, UUID taken, long day) {
+        for (Invention i : Invention.values()) {
+            if (!known(taken, i) || !open(victor, i)) continue;
+            complete(level, victor, i, day, "carried off from " + Villages.name(taken) + "'s scholars");
+            return i.title;
+        }
+        return null;
+    }
+
     /** By command: the one in hand finished now (its makings waived). What was said. */
     public static String finishNow(ServerLevel level, UUID village) {
         Invention i = current(village);

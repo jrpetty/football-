@@ -994,6 +994,7 @@ public final class Campaigns {
         Villages.tell(c.b, day, Villages.name(c.a) + " took the town, " + how + ", and the elder made peace on its terms");
         Villages.tell(c.a, day, "our army took " + Villages.name(c.b) + ", " + how);
         TownWonders.sacked(level, c.b, c.a, day);                // [culture-wonders] its wonder pulled about, its fund gone on the peace
+        Inventions.spoils(level, c.a, c.b, day);                 // [tech-tree] the scholars' papers carried off
         WarAndPeace.makePeace(level, c.a, c.b, day, whole, "with " + Villages.name(c.b) + " taken, " + how, null);
         // A great town, prickly or shrewd, takes a town whose gate it broke for its vassal, whatever it went to war for.
         Envoys.Temper t2 = Envoys.temper(c.a);
