@@ -283,6 +283,7 @@ public final class Orders {
         // An order that wants a trade the village has no use for yet is no order at all: a watch
         // for a village too small for guards, a market for one with no shop or café to man.
         Ethos.orders(village, score);                       // [identity] a martial town mans its walls, a mercantile one fills its stalls
+        if (TownWonders.wantsStone(level, village)) score.merge(Order.DIG, 4, Integer::sum);   // [culture-wonders] stone for the wonder
         for (Order o : Order.values()) if (!possible(village, o)) score.put(o, -100);
         if (!fisher) score.put(Order.RIVER, -100);
         boolean hungry = hungry(level, village);

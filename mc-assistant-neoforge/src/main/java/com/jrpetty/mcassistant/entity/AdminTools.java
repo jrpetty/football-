@@ -998,6 +998,20 @@ public final class AdminTools {
                 return party == null ? Done.no("No party could come.") : Done.ok("A party of " + n + " household(s) is on its way to " + name + " (" + party + ")",
                     "refugees were sent to the town");
             }
+            // [culture-wonders] A play now at the town's theatre; the town's wonder started (a kind named, or the council's
+            // choice), a stage laid ("stage"), or finished ("finish"), for nothing.
+            case "play" -> {
+                String title = Theatre.beginForTests(level, v);
+                return title == null ? Done.no(name + " has no theatre, or not two players free to put a play on.")
+                    : Done.ok("The players put on “" + title + "” now in " + name, "a play was put on at the theatre");
+            }
+            case "wonder" -> {
+                String d = detail.toLowerCase(Locale.ROOT);
+                String said = d.equals("stage") ? TownWonders.stageNow(level, v, true) : d.equals("finish") ? TownWonders.finishNow(level, v, true)
+                    : TownWonders.startNow(level, v, d.isEmpty() ? null : d);
+                boolean ok = !said.startsWith("no ") && !said.startsWith("a wonder is under way");
+                return ok ? Done.ok(said, "the town's wonder: " + said) : Done.no(said);
+            }
             default -> { return Done.no("No event called " + what + "."); }
         }
     }

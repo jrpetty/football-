@@ -78,6 +78,8 @@ public class BuildGoal extends Goal {
         "pitch", "range",
         // [batchD] the open-air stage where the town's players put on its stories (Theatre)
         "theatre",
+        // [culture-wonders] the theatre under a roof (Theatre); the town's own wonders, raised in stages (TownWonders)
+        "playhouse", "minster", "belfry", "amphitheatre",
         // [batchE] the town's look: the windmill, the bakery, the inn, the orchard and the allotments (TownLook)
         "windmill", "bakery", "inn", "orchard", "allotments",
         // [batchF] the post office (Post), and the statue the town's own fund pays for (PublicFund)

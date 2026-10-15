@@ -36,6 +36,7 @@ public final class Showcase {
         "market", "watchtower", "lighthouse", "monument", "gateway", "hall", "chapel", "barracks",
         "smithy", "brewery", "library", "cafe", "shop", "tavern", "graveyard", "house2", "fountain", "manor", "belltower",
         "school", "museum", "stable", "theatre",                   // [batchD] the theatre
+        "playhouse",                                               // [culture-wonders] the theatre under a roof (its wonders are grander than the hall: /village wonder picture)
         "windmill", "bakery", "inn", "orchard", "allotments",                         // [batchE] the town's look
         "villa",                                                                      // [econ-housing] a house of its own
         "firestation");                                                               // [disasters] the fire station

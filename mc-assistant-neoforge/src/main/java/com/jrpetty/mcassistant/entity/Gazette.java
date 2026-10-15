@@ -304,6 +304,10 @@ public final class Gazette {
         if (ways != null) entries.add(ways);
         String play = Pastimes.gazette(level, id, day);              // [leisure] the football and its goals, draughts, kites, lanterns
         if (play != null) entries.add(play);
+        String theatre = Playbill.gazette(id, day);                  // [culture-wonders] last night's play, reviewed
+        if (theatre != null) entries.add(theatre);
+        String wonder = TownWonders.gazette(level, id);              // [culture-wonders] the town's wonder rising
+        if (wonder != null) entries.add(wonder);
         if (!other.isEmpty()) entries.add(section("Also", other, ""));
         entries = Weave.frontPage(entries);                         // [weave] the biggest story leads
         front += Weave.headline(entries);                           // [weave] and has the front page's headline

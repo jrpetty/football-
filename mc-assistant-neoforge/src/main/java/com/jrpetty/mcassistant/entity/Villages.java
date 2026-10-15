@@ -389,6 +389,7 @@ public final class Villages {
             case "huntlodge" -> "the hunter's lodge";             // [roles-d]
             case "barn" -> "the barn";                            // [roles-d]
             case "wheelwright" -> "the wheelwright's shed";       // [roles-e]
+            case "minster", "belfry", "amphitheatre" -> TownWonders.Kind.of(structure).name;   // [culture-wonders]
             default -> "the " + structure;
         };
     }
@@ -400,6 +401,7 @@ public final class Villages {
         Perks.resetForTests();                                     // [perks] quiet between the tests; the wonders forgotten
         Bank.resetForTests();
         Culture.resetForTests();                                   // [batchD] the banner's works, the customs, the theatre, the band
+        TownWonders.resetForTests();                               // [culture-wonders] the town's own wonders
         Identity.resetForTests();                                  // [identity] every town plain again till a test asks for it live
         Museum.resetForTests();
         Library.resetForTests();                                   // [library] the writing, the readers, the seats
@@ -1216,7 +1218,7 @@ public final class Villages {
         int stone = stock(level, v.centre(), Task.STONE, radius);
         stone -= TradeDeals.spokenFor(villageId, Task.STONE);            // [econ-trade]
         int stoneMark = Math.max(384, com.jrpetty.mcassistant.village.VillageMath.stoneWanted(folk));
-        cut.put(AssistantEntity.StationTask.MINE, deepShort ? 1.0 : stone > 4 * stoneMark ? 0.6 : 1.0);
+        cut.put(AssistantEntity.StationTask.MINE, deepShort || TownWonders.underWay(villageId) ? 1.0 : stone > 4 * stoneMark ? 0.6 : 1.0);   // [culture-wonders] the wonder's stone
         GLUT.put(villageId, cut);
     }
 
@@ -1929,6 +1931,7 @@ public final class Villages {
         if (folk >= Museum.FROM_FOLK && built(villageId, "museum") < 1 && Museum.worthAMuseum(villageId)) extras.add("museum");
         // [batchD] A theatre, once the town has players enough to fill its stage (Theatre).
         if (Theatre.wanted(villageId, folk) && built(villageId, Theatre.STRUCTURE) < 1) extras.add(Theatre.STRUCTURE);
+        if (Theatre.playhouseWanted(villageId)) extras.add(Theatre.PLAYHOUSE);   // [culture-wonders] the theatre under a roof
         // The Iron Age's best homes: a manor house on a long lot by the square, one for every
         // thirty folk past twenty — six beds each.
         if (folk >= 20 && built(villageId, "manor") < 1 + (folk - 20) / 30 || Homes.wantsAManor(villageId)) extras.add("manor");
@@ -2122,7 +2125,8 @@ public final class Villages {
     public static int renown(UUID villageId) {
         return Museum.GREAT_WORK_RENOWN * greatWorks(villageId) + Museum.renown(villageId)
             + Fame.renown(villageId)                                   // [identity] its deeds, its fame, its masters, its traits
-            + Perks.renown(villageId);                              // [perks] its wonders of the world, its legacies of glory
+            + Perks.renown(villageId)                               // [perks] its wonders of the world, its legacies of glory
+            + TownWonders.renown(villageId);                        // [culture-wonders] its own wonders
     }
 
     /** How many great works this village has raised. */
@@ -2326,6 +2330,8 @@ public final class Villages {
             case "huntlodge", "barn" -> OutdoorBases.why(project);   // [roles-d]
             case "wheelwright" -> Wheelwrights.why();                // [roles-e]
             case "theatre" -> Theatre.why(villageId);             // [batchD]
+            case "playhouse" -> Theatre.playhouseWhy(villageId);  // [culture-wonders]
+            case "minster", "belfry", "amphitheatre" -> TownWonders.Kind.of(project).name + ", the town's own wonder";   // [culture-wonders]
             case "windmill", "bakery", "inn", "orchard", "allotments" -> TownLook.why(villageId, project);   // [batchE]
             case "postoffice" -> Post.why(villageId);                     // [batchF]
             case "statue" -> PublicFund.why(villageId);                   // [batchF]

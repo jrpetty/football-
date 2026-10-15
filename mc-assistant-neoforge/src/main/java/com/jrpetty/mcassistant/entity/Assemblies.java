@@ -922,6 +922,7 @@ public final class Assemblies {
                     "Have a good day, everybody."), '!', null));
             }
             case OPENING -> {
+                if (TownWonders.openingScript(level, a, s, r)) break;    // [culture-wonders] a town's own wonder opened, with fireworks
                 String what = Villages.spoken(a.subject);
                 String builder = BUILDERS.remove(id + "/opening/" + a.subject);
                 s.add(new Line(null, "Friends! " + capital(what) + " is finished.", '!', null));

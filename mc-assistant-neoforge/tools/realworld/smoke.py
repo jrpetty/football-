@@ -4529,6 +4529,59 @@ def roles_e_stage(r, look, cx, cz):
     say("alive after the roads' posts: %s" % client_alive())
 
 
+def culture_wonders_stage(r, look, cx, cz):
+    """[culture-wonders] The theatre and the town's wonders (entity/Theatre, Playwright, Troupe, Playbill, TownWonders).
+    Out past the town to the south-west, /village theatre stage battle sets out the open-air theatre with the town's
+    banners and stand-in players in the middle of the town's latest battle (or the pictures' own Battle of Ashby Field):
+    the Captain and the enemy sword to sword in their costumes (a helmet and a tunic in the town's colour, wooden swords),
+    the young soldier fallen at their feet, an audience on the benches. Then, beside it, /village wonder picture minster 65
+    sets out the Great Minster two-thirds raised in its stages, its scaffold of fences up round it and the hands at the
+    hoist. Pictures:
+      1. 57-cw-1-battle: over the benches to the stage, the fight at its height;
+      2. 57-cw-2-stage: from the side of the stage along the players;
+      3. 57-cw-3-wonder: the Minster rising, from the front, the tower half up and the scaffold;
+      4. 57-cw-4-wonder-side: the nave from the side, its roof going on.
+    Each camera is kept in open air (clear_camera). Then /village theatre and /village wonder, the town's own in words.
+    Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    sx, sz = cx - 120, cz + 120                        # out past the town (within the command's 200 blocks of it)
+    hy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 30, sz + 20))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village theatre stage battle" % (sx, sz))
+    say("theatre stage: " + out[:600])
+    wx = sx + 40
+    out2 = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village wonder picture minster 65" % (wx, sz))
+    say("wonder picture: " + out2[:600])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out + " " + out2):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the theatre or the wonder; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view %s" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        x, y, z = clear_camera(r, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5)
+        look("57-cw-" + picture, x, y, z, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("theatre-house", "1-battle", 10)
+    shoot("theatre-stage", "2-stage", 6)
+    shoot("wonder-front", "3-wonder", 8)
+    shoot("wonder-side", "4-wonder-side", 6)
+    r.cmd("kill @e[tag=folk_lineup,type=!player]")
+    gy = ground_height(r, cx, cz) + 1
+    say("theatre: " + r.cmd("execute positioned %d %d %d run village theatre" % (cx, gy, cz))[:1200])
+    say("wonder: " + r.cmd("execute positioned %d %d %d run village wonder" % (cx, gy, cz))[:1200])
+    say("alive after the theatre and the wonder: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

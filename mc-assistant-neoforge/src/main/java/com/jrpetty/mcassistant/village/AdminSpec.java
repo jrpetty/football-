@@ -123,7 +123,8 @@ public final class AdminSpec {
         "surrender", "peace");                                                  // [war-polish] the horn and the charge too
     public static final List<String> SCENARIOS = List.of("battle", "market", "restaurant", "raid", "big-city", "earning");
     public static final List<String> EVENTS = List.of("festival", "wedding", "birth", "funeral", "election", "fire", "flood", "drought",
-        "illness", "envoy", "feud", "caravan", "visitor", "refugees");
+        "illness", "envoy", "feud", "caravan", "visitor", "refugees",
+        "play", "wonder");                                                      // [culture-wonders] a play now; a wonder started, a stage laid, finished
     public static final List<String> OVERLAYS = List.of("lots", "wall", "stuck", "ore", "chests", "wanted", "off");
 
     private static final Map<String, Action> BY_ID = new LinkedHashMap<>();

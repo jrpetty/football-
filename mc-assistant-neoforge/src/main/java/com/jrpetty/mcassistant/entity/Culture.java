@@ -88,6 +88,8 @@ public final class Culture {
         Heraldry.resetForTests();
         Traditions.resetForTests();
         Theatre.resetForTests();
+        Stagecraft.resetForTests();                                      // [culture-wonders]
+        Playbill.resetForTests();                                        // [culture-wonders]
         Music.resetForTests();
         Paintings.resetForTests();
         Plaques.resetForTests();
@@ -117,6 +119,7 @@ public final class Culture {
         Heraldry.tick(level, v);
         Traditions.tick(level, v);
         Theatre.tick(level, v);
+        Playbill.tick(level, v);                                         // [culture-wonders] the playbill before the theatre
         Music.tick(level, v);
         Paintings.tick(level, v);
         Plaques.tick(level, v);
@@ -385,6 +388,8 @@ public final class Culture {
         if (customs != null) out.add("FN|" + customs);
         String stage = Theatre.boardLine(level, village);
         if (stage != null) out.add("FG|" + stage);
+        String review = Playbill.boardLine(level, village);              // [culture-wonders] last night's review
+        if (review != null) out.add("FN|" + review);
         String ways = TownWays.boardLine(village);                       // [culture2] its style, its dish, its feast, its faith
         if (ways != null) out.add(ways);
         return out;
@@ -396,6 +401,7 @@ public final class Culture {
         out.put("banner", Heraldry.report(level, v));
         out.put("customs", Traditions.report(level, v));
         out.put("theatre", Theatre.report(level, v));
+        out.put("wonder", TownWonders.report(level, v));                 // [culture-wonders] the town's own wonder
         out.put("music", Music.report(level, v));
         out.put("paintings", Paintings.report(level, v));
         out.put("plaques", Plaques.report(level, v));
@@ -417,6 +423,7 @@ public final class Culture {
         out.add("Motto: " + banner.getString("motto") + (banner.getBoolean("carved") ? " (carved over the hall's door)" : ""));
         for (String s : strings(r.getCompound("customs"), "lines")) out.add("Custom: " + s);
         for (String s : strings(r.getCompound("theatre"), "lines")) out.add("Theatre: " + s);
+        for (String s : strings(r.getCompound("wonder"), "lines")) out.add("Wonder: " + s);              // [culture-wonders]
         for (String s : strings(r.getCompound("music"), "lines")) out.add("Music: " + s);
         for (String s : strings(r.getCompound("paintings"), "lines")) out.add("Paintings: " + s);
         for (String s : strings(r.getCompound("plaques"), "lines")) out.add("Plaque: " + s);

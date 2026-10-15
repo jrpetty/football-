@@ -89,6 +89,7 @@ public final class CulturePage {
         section(lines, font, "Customs: the town's great days, kept every year", c.getCompound("customs"), width,
             "None yet: the founding, a raid beaten off, a great storm or the first diamond each become one.");
         section(lines, font, "The theatre", c.getCompound("theatre"), width, "");
+        section(lines, font, "The town's wonder", c.getCompound("wonder"), width, "");                   // [culture-wonders]
         section(lines, font, "The band and the choir", c.getCompound("music"), width, "");
         section(lines, font, "Paintings", c.getCompound("paintings"), width, "");
         section(lines, font, "Plaques", c.getCompound("plaques"), width, "");
@@ -137,7 +138,8 @@ public final class CulturePage {
         List<String> body = strings(t, "lines");
         if (body.isEmpty() && !none.isEmpty()) add(lines, font, 'M', none, width);
         for (String s : body) {
-            char kind = s.contains("today!") || s.startsWith("on now") || s.startsWith("the theatre stands") ? 'G'
+            char kind = s.contains("today!") || s.startsWith("on now") || s.startsWith("the theatre stands")
+                || s.startsWith("rising:") || s.startsWith("standing:") ? 'G'                                     // [culture-wonders]
                 : s.startsWith("waiting on") || s.startsWith("the band waits") ? 'W' : 'N';
             add(lines, font, kind, "• " + Character.toUpperCase(s.charAt(0)) + s.substring(1), width);
         }

@@ -11994,3 +11994,81 @@ holders are looked up at most every five seconds a town. A stint is a map look-u
 drawn once a day with the roster. The carter's whip is looked at once a second only while a wagon is being driven.
 
 Smoke: `roles_e_stage` in tools/realworld/smoke.py (`/village roads stage`). Tests: RoadsRanksGameTests (re01 to re07).
+
+## The theatre and the wonders
+
+### The theatre's company and its plays
+- **Plays out of the town's own history.** The players (folk who love reading, music or whittling) now play the town's
+  real chronicle, written up by its playwright: *The Battle of Ashby Field, a tragedy in three acts* with the Captain the
+  muster put in command, the town's own dead falling on the stage by name and the real counts of the day; a battle won is
+  a history, a town taken a siege, and there are plays of fires, floods, colds going round, elections, weddings, births,
+  the raiders at the gate, a death remembered and how the town began. A part that is a real, living folk is said so on
+  its card afterwards, and that folk, watching, tells the house what it thinks ("That's me up there!", or, of a defeat it
+  fought in, that it would sooner forget it).
+- **On the stage.** The players walk to their marks, say their lines in turn, fight with wooden swords, die on the boards
+  and get up again for the bows. They are dressed for their parts out of the company's **wardrobe**, made once out of the
+  stores (two planks and a stick for a sword, leather for helmets and tunics, dyed in the town's colour when there is a
+  dye, a flower for a bride, a book for the teller); the costumes come off after the bows and are never dropped.
+- **When.** The evening of the day of rest, as before; also the evening after a great event (a battle, a siege, a
+  wedding) and on a festival's evening. **Rain** puts an open-air play off to the next fine evening ("the play the rain
+  put off"). Rained off twice, or grown to forty folk, or in the Diamond Age, the town builds a **playhouse**, the
+  theatre under a roof, where the play goes on in any weather.
+- **The house.** A seat costs a coin from those with coin to spare (half to the treasury, half shared by the players);
+  the rest stand at the back for nothing. The audience cheers, murmurs, **boos the enemy** and weeps at a death.
+- **The company.** Twice a week, on evenings that are not the day of rest, the cast **rehearses** the coming play on the
+  stage with nobody watching. Each night on the stage makes an actor's name (its card says "a player of name", or "the
+  town's favourite player"). If an actor is ill, away or dies, another of the players **stands in**; the next play is
+  given in the lost player's memory; with nobody left to play a part, the play is stopped and the town told.
+- **The review.** The next day the town's critic (its keenest reader) gives the play its stars: more for a rehearsed cast
+  and a full house, fewer for a part stood in for or an empty one. It is on the board, in the gazette ("At the
+  theatre"), on the Culture page and on the next programme.
+
+### The playbill (for players)
+A sign goes up before the theatre: **PLAYBILL**, the coming play and its price. Right-click it:
+- with an empty hand to read the bill;
+- with **village coin** to buy a seat: the coin goes to the treasury and you get the **programme**, a written book with
+  the play's title, its cast (who plays whom), its acts, the line of the chronicle it is made from and the last reviews.
+  Come to the play and the players thank you from the stage;
+- with a **book and quill** to ask for **a play of your own deeds**: the company searches the chronicle for every line
+  with your name in it and puts on *The Ballad of (you)* next.
+
+`/village theatre` shows it all; `/village theatre ticket` and `/village theatre ask` do the same as the sign.
+
+### The town's own wonder
+- **What.** Besides the wonders of the world (one each in the world, from the research), a town can raise a wonder of
+  its own: **the Great Minster** (a stone nave with a tower and spire), **the Great Belfry** (a tower of twenty-two
+  courses with a gilded clock and the town's great bell) or **the Grand Amphitheatre** (an open-air house of stone tiers,
+  where the players play once it stands). A town holding the world's Cathedral or Arena does not raise the like again.
+- **The vote.** A thriving town in the Iron Age or later (thirty folk, or twenty in the Diamond Age), at peace, with 150
+  coins in the treasury and no great work under way, puts it to its council on the council's day each week. Carried, a
+  quarter of the treasury goes into the **wonder fund** and a big flat lot is marked out; lost, it waits a fortnight.
+- **Built in stages, over many days.** The footings, the walls, the roof, the tower or spire, then the glazing, gilding
+  and furnishing. Each stage begins on a morning when the fund holds its wages, and on that first morning everybody
+  lends a hand till noon; after that the town's crews (one to three, three hands each) work it in their own time from
+  the ground round the site, hoisting the stone up, so nobody falls off the **scaffolding** that rises round it (fences
+  from the stores, given back at the end). So many courses a day and no more, so it takes a couple of weeks. Every block
+  comes out of the stores: the stone the stores hold most of, a second stone for the roof and posts, logs, glass,
+  lanterns, gold for the gilding. Short of stone, it waits, and the elder orders the town to dig (the miners are never
+  stood down for a glut while it rises); after three days it goes on in another stone the stores hold. Short of glass,
+  lamps or gold for a couple of days, it goes on without them (the gilding in stone) and the town puts them in later.
+- **Stops.** Nobody works high up in the rain, nobody at all in a thunderstorm, at night, under the alarm or in a war;
+  and the work stops while the town is short of food or of beds: homes and food come first.
+- **Giving.** The fund is fed by a levy from the treasury each morning, by the folk's gifts of an evening, and by you:
+  right-click the **WONDER FUND** plaque before the site with coin (crouch to give the whole stack) or with stone, glass,
+  gold or lanterns it still wants, or use `/village wonder give <coins>`. Givers are named on the plaque.
+- **Seeing it.** The board, the gazette and the Culture page show the stage, the percent, the day of the work, what is
+  still wanted and what the stores hold of it, the fund and the givers. `/village wonder` says it all.
+- **Opened.** The last block laid, the scaffold comes down and the town gathers that evening: the givers and the best
+  hand are thanked, the stores' rockets go up and it is declared open. After that: twenty renown (more tourists), the
+  town's pride in it (and more for those who built it), its neighbours a little warmer each day, envy among its rivals,
+  and its own gift: the Minster a better day of rest, the Belfry its great bell at dawn and dusk, the Amphitheatre the
+  players' best house in fine weather. A town taken in war has its wonder pulled about (a rising one loses its last
+  courses and half its fund; a standing one its top, which the town mends).
+
+### Admin
+`/village admin events now play` puts a play on now; `/village admin events now wonder [minster|belfry|amphitheatre]`
+starts a wonder by decree, `... wonder stage` lays the stage under way and `... wonder finish` finishes it (both free).
+For operators: `/village theatre play|rehearse|stage [battle]`, `/village wonder start [kind]`, `/village wonder stage
+[paid]`, `/village wonder finish`, `/village wonder picture <kind> <percent>`.
+
+Smoke: `culture_wonders_stage` in tools/realworld/smoke.py. Tests: CultureWondersGameTests (cw01 to cw07).

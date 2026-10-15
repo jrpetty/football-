@@ -544,6 +544,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // [civic] The town's great work, built together (BigWorks): everybody on the works day, and anybody free after it.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel greatWork
                 && (tickCount % 4 == 1 ? BigWorks.hold(this, greatWork) : BigWorks.busy(this))) return;
+        // [culture-wonders] The town's own wonder, raised in stages by its crews (TownWonders).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel wonder
+                && (tickCount % 4 == 2 ? TownWonders.hold(this, wonder) : TownWonders.busy(this))) return;
         // [cartographer] Out walking the town (or the country) with its sheets, a round a second (MapSurveys).
         if (!withAPlayer && stationTask() == StationTask.CARTOGRAPHER && level() instanceof net.minecraft.server.level.ServerLevel mapping
                 && Cartographers.hold(this, mapping)) return;
@@ -1324,6 +1327,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = TownWays.mood(this, day, m, why);           // [culture2] its town's dish, its own festival, a rite's blessing
         m = Pastimes.mood(this, day, m, why);           // [leisure] a night under a quilt, a game won, a kite, a kickabout, the lanterns
         m = Perks.mood(this, day, m, why);              // [perks] Vespers, Remembrance, the almshouse, the Cathedral, its quirks
+        m = Stagecraft.mood(this, day, m, why);         // [culture-wonders] a night at the play, played on the stage, the town's wonder
         why.sort((a, b) -> Integer.compare((Integer) b[1], (Integer) a[1]));
         java.util.List<String> keys = new java.util.ArrayList<>();
         for (Object[] w : why) keys.add((String) w[0]);

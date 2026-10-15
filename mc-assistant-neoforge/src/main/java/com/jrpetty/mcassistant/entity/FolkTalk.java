@@ -563,6 +563,7 @@ public final class FolkTalk {
         line(sb, "Birthday", Birthdays.cardLine(f));        // its birthday, its age and the next (Birthdays)
         line(sb, "The bell", TownBell.cardLine(f));         // when it answered today's bells (TownBell)
         line(sb, "Culture", Culture.cardLine(f));           // [batchD] the band, the choir, the stage, its pictures
+        line(sb, "The wonder", TownWonders.cardLine(f));    // [culture-wonders] its crew at the town's wonder, its blocks of it
         line(sb, "Town ways", TownWays.cardLine(f));        // [culture2] its nickname, its town's soul, its faith, its dish
         line(sb, "Its town", Identity.cardLine(f));         // [identity] a true Seafarer; of the ruling house; chafes at the curfew
         return sb.toString();
@@ -802,6 +803,7 @@ public final class FolkTalk {
             case "dined", "tipped" -> Dining.moodWords(f, why);                        // [dining]
             case "homecooking", "delicacy", "townfeast", "ownfeast", "blessed" -> TownWays.moodWords(f, why);   // [culture2]
             case "quilt", "warmquilt", "draughts", "kite", "kickabout", "lanterns" -> Pastimes.moodWords(f, why);   // [leisure]
+            case "play", "portrayed", "portrayedsore", "wonder", "wonderbuilt", "wonderopened", "minster" -> Stagecraft.words(f, why);   // [culture-wonders]
             default -> "";
         };
     }

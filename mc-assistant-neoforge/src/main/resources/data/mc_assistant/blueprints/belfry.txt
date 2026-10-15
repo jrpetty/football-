@@ -1,0 +1,308 @@
+# The Great Belfry [culture-wonders], a town's own wonder (entity/TownWonders): a square tower of dressed
+# stone twenty-two courses high, posts up its corners, slit windows up every face and a gilded clock front
+# and back. A ladder climbs the back wall to the bell chamber, open on every side under arches with a rail
+# across them, the town's great bell in the middle of its floor and a lantern hung over it. Over the chamber
+# a stone spire with a gilded ball, a cross and a lamp at the tip, a lamp on each corner's pinnacle, and a
+# lamp either side of the door.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name belfry
+layer -1
+.......
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+FFFFFFF
+.......
+layer 0
+.......
+LSSSSSL
+Sl.H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSDSSL
+.l...l.
+layer 1
+.......
+LSSSSSL
+S..H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSS.SSL
+.......
+layer 2
+.......
+LSSSSSL
+S..H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 3
+.......
+LSSSSSL
+S..H..S
+S.....S
+G.....G
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 4
+.......
+LSSSSSL
+S..H..S
+S.....S
+G.....G
+S.....S
+S.....S
+LSSGSSL
+.......
+layer 5
+.......
+LSSSSSL
+S..H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 6
+.......
+LSSSSSL
+S..H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 7
+.......
+LSSSSSL
+S..H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 8
+.......
+LSSSSSL
+S..H..S
+S.....S
+G.....G
+S.....S
+S.....S
+LSSGSSL
+.......
+layer 9
+.......
+LSSSSSL
+S..H..S
+S.....S
+G.....G
+S.....S
+S.....S
+LSSGSSL
+.......
+layer 10
+.......
+LSSSSSL
+S..H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 11
+.......
+LSSZSSL
+S..H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSZSSL
+.......
+layer 12
+.......
+LSSSSSL
+S..H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 13
+.......
+LSSSSSL
+S..H..S
+S.....S
+G.....G
+S.....S
+S.....S
+LSSGSSL
+.......
+layer 14
+.......
+LSSSSSL
+S..H..S
+S.....S
+G.....G
+S.....S
+S.....S
+LSSGSSL
+.......
+layer 15
+.......
+LSSSSSL
+S..H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 16
+.......
+LSSSSSL
+S..H..S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 17
+.......
+LSSSSSL
+SSSHSSS
+SSSSSSS
+SSSSSSS
+SSSSSSS
+SSSSSSS
+LSSSSSL
+.......
+layer 18
+.......
+LSPPPSL
+S.....S
+P.....P
+P..e..P
+P.....P
+S.....S
+LSPPPSL
+.......
+layer 19
+.......
+LS...SL
+S.....S
+.......
+.......
+.......
+S.....S
+LS...SL
+.......
+layer 20
+.......
+LSSSSSL
+S.....S
+S.....S
+S.....S
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 21
+.......
+LSSSSSL
+S.....S
+S.....S
+S..j..S
+S.....S
+S.....S
+LSSSSSL
+.......
+layer 22
+.......
+SSSSSSS
+SSSSSSS
+SSSSSSS
+SSSSSSS
+SSSSSSS
+SSSSSSS
+SSSSSSS
+.......
+layer 23
+.......
+P.....P
+.vvvvv.
+.>...<.
+.>...<.
+.>...<.
+.^^^^^.
+P.....P
+.......
+layer 24
+.......
+l.....l
+.......
+..vvv..
+..>S<..
+..^^^..
+.......
+l.....l
+.......
+layer 25
+.......
+.......
+.......
+.......
+...S...
+.......
+.......
+.......
+.......
+layer 26
+.......
+.......
+.......
+.......
+...Z...
+.......
+.......
+.......
+.......
+layer 27
+.......
+.......
+.......
+.......
+...P...
+.......
+.......
+.......
+.......
+layer 28
+.......
+.......
+.......
+.......
+...l...
+.......
+.......
+.......
+.......

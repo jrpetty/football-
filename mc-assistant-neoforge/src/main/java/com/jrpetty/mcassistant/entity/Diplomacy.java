@@ -146,6 +146,7 @@ public final class Diplomacy {
         // Kin, and the caravans between them.
         if (kin(x, y)) delta += 2;
         delta += Ethos.relationLean(x, y);                  // [identity] two peaceable towns, a closed one, a town of renown, Peacemakers
+        delta += TownWonders.relationLean(x, y);            // [culture-wonders] a neighbour's wonder admired, or envied by a rival
         // The ground between them.
         boolean crowded = apart(a, b) < CROWDED;
         boolean truce = Bonds.truce(x, y, day);
