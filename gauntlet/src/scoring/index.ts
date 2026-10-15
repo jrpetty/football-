@@ -1,5 +1,5 @@
-import type { ArtifactCheck, ArtifactKind, ArtifactRef, ChatImage, JudgeLabel, ScoreBreakdownItem, ScoreDetail, ScorerSpec, StopReason } from '../core/types.ts';
-import { extractCodeBlock, extractCodeBlocks, extractFinalAnswer, extractTagged, normalize, parseAnswerNumber, parseJsonLoose, parseNumber, stripReasoning } from '../core/extract.ts';
+import type { ArtifactCheck, ArtifactKind, ArtifactRef, ChatImage, JudgeLabel, NormalizeMode, ScoreBreakdownItem, ScoreDetail, ScorerSpec, StopReason } from '../core/types.ts';
+import { extractCodeBlock, extractCodeBlocks, extractFinalAnswer, extractTagged, normalize, parseAnswerNumber, parseJsonLoose, stripReasoning } from '../core/extract.ts';
 import { checkConstraints } from './constraints.ts';
 import { compareJson } from './json-compare.ts';
 import { promptExampleArgs, runCodeTests, trivialSolutionReason, type CodeTest } from './code-sandbox.ts';
@@ -179,13 +179,13 @@ export function readChoice(answer: string, taskText: string): { letter: string; 
     const others = new Set((a.slice(lead[0].length).match(/\b[A-H]\b/g) ?? []).filter((x) => valid.has(x) && x !== letter));
     return { letter, hedged: others.size > 0 };
   }
+  for (const [letter, text] of options) if (alnum(text) && alnum(a) === alnum(text)) return { letter, hedged: false };
   const letters = [...new Set((a.match(/\b[A-H]\b/g) ?? []).filter((x) => valid.has(x)))];
   if (letters.length === 1) return { letter: letters[0]!, hedged: false };
   if (letters.length > 1) return { letter: letters[0]!, hedged: true };
   const lower = [...new Set((a.match(/\b[b-h]\b/g) ?? []).map((x) => x.toUpperCase()).filter((x) => valid.has(x)))];
   if (lower.length === 1) return { letter: lower[0]!, hedged: false };
   if (lower.length > 1) return { letter: lower[0]!, hedged: true };
-  for (const [letter, text] of options) if (alnum(text) && alnum(a) === alnum(text)) return { letter, hedged: false };
   return { letter: '', hedged: false };
 }
 
@@ -206,6 +206,29 @@ export function solutionBlock(response: string, functionName: string): { code: s
   return js[js.length - 1] ?? blocks[blocks.length - 1]!;
 }
 
+/**
+ * Whether an extracted answer equals one accepted answer of an `exact` test. Besides the plain normalised
+ * comparison, three cosmetic differences are forgiven, none of which can turn a wrong answer into a right one:
+ *  - list answers (keys with "," or ";"): a closing "and" ("Diego and Tobias") and leading articles on items
+ *    ("an atlas" = "atlas"), on both sides;
+ *  - value-shaped keys (a time, date, year or number such as "11:00" or "2027-11-23"): words around the one
+ *    value ("11:00 local time"), as long as the answer contains no second value.
+ */
+export function exactMatches(answer: string, accepted: string, mode: NormalizeMode): boolean {
+  if (normalize(answer, mode) === normalize(accepted, mode)) return true;
+  if (/[,;]/.test(accepted)) {
+    const noArticles = (s: string) => s.replace(/(^|[,;:]\s*)(?:a|an|the)\s+/gi, '$1');
+    const a = /\sand\s/i.test(accepted) ? answer : joinListAnd(answer);
+    if (normalize(noArticles(a), mode) === normalize(noArticles(accepted), mode)) return true;
+  }
+  const key = accepted.trim();
+  if (/^\d[\d:\-./]*$/.test(key)) {
+    const values = answer.match(/\d[\d:\-./]*\d|\d/g) ?? [];
+    if (values.length === 1 && !isHedged(answer, 'text') && !/\bp\.?\s?m\b/i.test(answer) && normalize(values[0]!, 'alnum') === normalize(key, 'alnum')) return true;
+  }
+  return false;
+}
+
 /** "Maeve, Hana, Diego and Tobias" → "Maeve, Hana, Diego, Tobias": a list's closing "and" is not part of the answer. */
 function joinListAnd(answer: string): string {
   return answer.replace(/,?\s+and\s+(?=[^,]*$)/i, ', ');
@@ -221,8 +244,7 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
       const { answer, formatOk } = extractFinalAnswer(response);
       const accepted = (Array.isArray(expected) ? expected : [expected]) as string[];
       const mode = scorer.normalize ?? 'lower';
-      const listAnd = (e: string) => e.includes(',') && !/\sand\s/i.test(e) && normalize(joinListAnd(answer), mode) === normalize(e, mode);
-      const ok = accepted.some((e) => normalize(answer, mode) === normalize(e, mode) || listAnd(e));
+      const ok = accepted.some((e) => exactMatches(answer, e, mode));
       if (!ok && isHedged(answer, 'text') && accepted.some((e) => normalize(answer, 'lower').includes(normalize(e, 'lower')))) {
         return { score: 0, passed: false, summary: `Hedged answer ${quote(answer)} (multiple answers are marked wrong)`, detail: { extracted: answer, expected, formatOk, hedged: true } };
       }
