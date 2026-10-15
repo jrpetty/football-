@@ -89,17 +89,17 @@ vvvvvvvvvvvvv
 ^^^^^^^^^^^^^
 layer 5
 .............
-.LWGWGWGWGWL.
-.W.........W.
-.GBB.....BBG.
+.LWWWGWGWWWL.
+.W..C...C..W.
+.WBB.....BBW.
 .W.........W.
 .G.........G.
 .W...XXX...W.
 .G.........G.
-.WBB.......W.
-.G.......Q.G.
 .W.........W.
-.LGWGWGWGWGL.
+.Wbb.....Q.G.
+.W..c......W.
+.LWWGWGWGWGL.
 .............
 layer 6
 .............

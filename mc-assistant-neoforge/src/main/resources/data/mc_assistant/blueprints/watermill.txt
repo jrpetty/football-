@@ -18,8 +18,8 @@ layer 0
 .......S...
 ......S~S..
 .SSSSSS~S..
-.SV.CSS~S..
-.Sy..SS~S..
+.SyVCSS~S..
+.S...SS~S..
 .SQ..SS~S..
 .SSDSSS~S..
 ......S~S..

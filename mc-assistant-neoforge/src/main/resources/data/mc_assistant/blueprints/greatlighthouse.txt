@@ -200,7 +200,7 @@ layer 18
 .PZZZZZP.
 .PZ.H.ZP.
 .PZ...ZP.
-.PZ...ZP.
+.PZ..lZP.
 .PZZ.ZZP.
 .PPPPPPP.
 .........
@@ -270,7 +270,7 @@ layer 25
 ..LOSOL..
 ..O.H.O..
 ..O.h.O..
-..Ol.lO..
+..O.l.O..
 ..LOOOL..
 .........
 .........

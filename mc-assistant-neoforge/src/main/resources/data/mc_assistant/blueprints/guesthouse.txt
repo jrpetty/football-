@@ -22,8 +22,8 @@ layer 0
 .wC...Cw.
 .w..B..w.
 .w..X..w.
-.w.XXX.w.
-.wT...Uw.
+.w.XXX2w.
+.wT....w.
 .LwwDwwL.
 .........
 .Pdd.ddP.

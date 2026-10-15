@@ -28,7 +28,7 @@ layer 0
 .SB..S..BS.
 .SPDPSPDPS.
 .S.......S.
-.SK....r.S.
+.SK....4.S.
 .SK...QQ.S.
 .S.......S.
 .ZSSSDSSSZ.

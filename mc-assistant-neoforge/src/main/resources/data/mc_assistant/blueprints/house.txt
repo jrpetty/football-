@@ -19,8 +19,8 @@ layer 0
 .w..C..w.
 .wBB.BBw.
 .w.....w.
-.w.....wS
-.wT...Uw.
+.w....2wS
+.wT....w.
 .LwwDwwL.
 .........
 layer 1

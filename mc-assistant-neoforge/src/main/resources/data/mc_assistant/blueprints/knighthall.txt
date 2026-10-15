@@ -20,7 +20,7 @@ layer -1
 layer 0
 .............
 .LwwwwwwwwwL.
-.wC...H...Cw.
+.w)...H...(w.
 .wK.......Kw.
 .wT.......Uw.
 .w.........w.
@@ -90,8 +90,8 @@ vvvvvvvvvvvvv
 layer 5
 .............
 .LWGWGWGWGWL.
-.W.........W.
-.GB.......BG.
+.W.C.....C.W.
+.WB.......BW.
 .W.........W.
 .G.........G.
 .W...XXX...W.

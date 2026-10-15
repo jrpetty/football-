@@ -72,8 +72,8 @@ for c in range(4, 9): put(0, 3, c, 'S')          # the dais
 for c in range(4, 9): put(0, 4, c, 'S')
 for c in (5, 6, 7): put(0, 5, c, 'k')            # steps up to it
 put(1, 3, 6, '^')                                # the leader's seat, facing the hall
-put(1, 3, 5, 'l'); put(1, 3, 7, 'l')             # lamps either side of it
-put(1, 4, 4, 'r'); put(1, 4, 8, 'r')             # the clerks' lecterns
+put(1, 3, 4, 'l'); put(1, 3, 8, 'l')             # lamps in the corners of the dais [build-audit]
+put(1, 4, 4, '6'); put(1, 4, 8, '5')             # the clerks' lecterns, turned in to the seat
 for h in (0, 1, 2):
     for c in (2, 3, 9): put(h, 3, c, 'K')        # walls of books
 put(0, 3, 10, 'H'); put(1, 3, 10, 'H'); put(2, 3, 10, 'H'); put(3, 3, 10, 'H')   # the stair (ladder) up
@@ -82,7 +82,7 @@ for r in (17, 18, 19): put(0, r, 6, 'X')
 put(0, 16, 6, 'X')
 for r in (7, 9, 11, 13):                         # benches facing the dais
     for c in (3, 4, 5, 7, 8, 9): put(0, r, c, 'v')
-put(0, 15, 2, 'C'); put(0, 15, 10, 'C')          # the village's papers
+put(0, 15, 2, ')'); put(0, 15, 10, '(')          # the village's papers, the chests opening onto the floor
 put(0, 14, 2, 'Q'); put(0, 14, 10, 'Q')
 for r, c in ((6, 6), (10, 6), (14, 6), (8, 3), (8, 9), (12, 3), (12, 9)):
     put(3, r, c, 'j')                            # lanterns hung from the beams
@@ -123,7 +123,10 @@ for h in range(5, 8):
         put(h, r, c, ch)
 # the leader's rooms at the back: a bed for two, the children's beds across the room
 put(5, 4, 5, 'B'); put(5, 4, 6, 'B')
+put(5, 2, 5, 'W'); put(5, 2, 6, 'W')             # [build-audit] the wall whole at the bed's head, the window over it
+put(5, 9, 1, 'W')                                # and beside the children's beds
 put(5, 3, 4, 'l'); put(5, 3, 7, 'l')
+put(5, 4, 7, 'C')                                # [build-audit] a chest at the bed's side
 put(5, 3, 2, 'C')
 for h in (5, 6): put(h, 3, 8, 'K'); put(h, 3, 9, 'K')
 put(5, 3, 10, 'H'); put(6, 3, 10, 'H')
@@ -137,12 +140,12 @@ for c in range(2, 11):                           # a partition, with a door in i
 # the council chamber: a long table, the leader at its head
 for r in (12, 13, 14):
     put(5, r, 6, 'P'); put(6, r, 6, 'X')
-    put(5, r, 5, '>'); put(5, r, 7, '<')
+    put(5, r, 5, '<'); put(5, r, 7, '>')         # [build-audit] the chairs facing the table
 put(5, 11, 6, '^')
 put(6, 12, 6, 'l'); put(6, 14, 6, 'l')
 put(5, 15, 2, 'K'); put(5, 15, 10, 'K'); put(5, 11, 2, 'C'); put(5, 11, 10, 'K')
 # the study in the tower: the leader's desk
-put(5, 19, 6, 'r'); put(5, 17, 7, 'K'); put(5, 19, 5, 'l')
+put(5, 19, 6, '4'); put(5, 17, 7, 'K'); put(5, 19, 5, 'l')
 
 # ---- the main roof (layers 8..14): steep, the length of the hall
 for r in range(1, 18):
@@ -176,6 +179,7 @@ for h in range(8, 20):
     for r, c in inside(TOWER):
         put(h, r, c, 'f' if h in (8, 12, 16) else 'S' if h == 19 else '.')
 put(18, 18, 6, 'j')                              # the great lantern, seen from all round
+put(11, 18, 6, 'j'); put(15, 18, 6, 'j')         # [build-audit] and one hung in each of the tower's rooms on the way up
 for h in range(5, 17):                           # a ladder from the study up the tower's back wall, through
     put(h, 17, 5, 'H')                           # each floor, to the lantern-room
 for (r, c) in ((16, 4), (16, 8), (20, 4), (20, 8)):

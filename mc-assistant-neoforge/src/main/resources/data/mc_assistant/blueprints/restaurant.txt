@@ -24,10 +24,10 @@ layer 0
 .wCMU.TI&w.
 .w.......w.
 .wQQQ.QQQw.
-.w>P...P<w.
-.w>P...P<w.
+.w<P...P>w.
+.w<P...P>w.
 .w.......w.
-.w>P...P<w.
+.w<P...P>w.
 .LwwwDwwwL.
 ..*.....*..
 layer 1

@@ -144,7 +144,7 @@ door, and four beds: a family sleeps under one roof.""")
         b.set(x, 0, 1, "B")
     b.set(0, 0, 2, "C")
     b.set(-2, 0, -2, "T")
-    b.set(2, 0, -2, "U")
+    b.set(2, 0, -1, "2")                                    # [build-audit] the stove on the chimney wall, its mouth to the room
     b.set(-2, 1, -2, "t")
     # the top plate: beams, and a boarded ceiling
     b.ring(-3, 3, 3, -3, 3, "-", corner="L")
@@ -186,7 +186,7 @@ and one bed: theirs. Nobody in the village will sleep in it.""")
     b.set(-2, 0, 2, "C")
     b.set(2, 0, 2, "C")
     b.set(-2, 0, -2, "T")
-    b.set(2, 0, -2, "U")
+    b.set(2, 0, -1, "2")                                    # [build-audit] the stove against the side wall, facing in
     b.fill(-1, 1, 0, -1, -1, "X")
     b.set(0, 0, 0, "X")
     b.set(-2, 1, -2, "t")
@@ -398,6 +398,7 @@ bench and the tailor's loom, a furnace, the stores of the trade, barrels and a h
     b.set(2, 4, 2, "y")
     gable_x(b, -4, 4, -4, 4, 3, gable_x0=-3, gable_x1=3)
     b.set(0, 2, 2, "j")                                     # over the furnace and the work, not the floor
+    b.set(0, 6, 0, "j")                                     # [build-audit] and in the hayloft, hung from the ridge
     b.set(-2, 2, -4, "j")
     b.set(2, 2, -4, "j")
     b.write()
@@ -444,14 +445,14 @@ chests and a bench, lanterns overhead, and steps up to a double door.""")
     # inside: a long table of planks on posts, benches either side, the elder's seat
     for z in range(-3, 4):
         b.set(0, 0, z, "P")
-        b.set(-1, 0, z, ">")
-        b.set(1, 0, z, "<")
+        b.set(-1, 0, z, "<")                                # [build-audit] the benches' backs away from the table
+        b.set(1, 0, z, ">")
     for z in range(-3, 4):
-        b.set(0, 1, z, "X")
+        b.set(0, 1, z, "l" if z in (-3, 0, 3) else "X")     # [build-audit] lamps down the table among its cloths
     b.set(0, 0, 5, "^")
-    b.set(-3, 0, 6, "C")
-    b.set(3, 0, 6, "C")
-    b.set(-3, 0, 5, "T")
+    b.set(-3, 0, 4, "C")                                    # [build-audit] the chest before the bench, its lid to the floor,
+    b.set(3, 0, 6, "C")                                     # and the back corner clear for the ladder of a hall raised a
+    b.set(-3, 0, 5, "T")                                    # storey (Blueprints.raised), against the wall, not a window
     b.ring(-W_, W_, 4, -D_, D_, "|", corner="L")
     for x in range(-W_ + 1, W_):
         b.set(x, 4, -D_, "-")
@@ -487,8 +488,8 @@ from the beams.""")
     for z in (-3, -2, -1, 1, 2, 3):
         b.set(-3, 0, z, "Q" if z % 2 else "y")
         b.set(3, 0, z, "Q" if z % 2 == 0 else "y")
-    b.set(-3, 0, 2, "C")
-    b.set(3, 0, -2, "C")
+    b.set(-3, 0, 2, ")")                                    # [build-audit] the traders' chests open to the hall,
+    b.set(3, 0, -2, "(")                                    # not onto the stall beside them
     b.set(-3, 0, -2, "T")
     b.set(3, 0, 2, "T")
     b.set(0, 0, 3, "U")
@@ -626,13 +627,15 @@ steep roof, pews in rows facing the altar, and candles of light either side.""")
     hip(b, -2, 2, -D_ - 2, -D_ + 2, 12)
     b.set(0, 14, -D_, "P")
     b.set(0, 15, -D_, "P")
-    # inside: pews facing the altar, the altar, lights
+    b.set(0, 13, -D_, "j")                                  # [build-audit] a lamp hung in the spire over the bell
+    # inside: pews facing the altar (a stair is sat on facing away from its back: 'v', its back to the door
+    # [build-audit]), the altar, lights
     for z in range(-D_ + 3, 3):
         if z % 2 == 0:
-            b.set(-2, 0, z, "^")
-            b.set(-1, 0, z, "^")
-            b.set(1, 0, z, "^")
-            b.set(2, 0, z, "^")
+            b.set(-2, 0, z, "v")
+            b.set(-1, 0, z, "v")
+            b.set(1, 0, z, "v")
+            b.set(2, 0, z, "v")
     b.fill(-1, 1, 0, 5, 6, "X")
     b.set(0, 0, 6, "T")
     b.set(-2, 0, 6, "l")
@@ -718,13 +721,17 @@ battlemented roof walk at the front.""")
         b.set(W_, 1, z, "G")
     for z in (-3, -1, 1, 3, 5):
         pass
-    for z in (-4, 0, 4):
-        b.set(-2, 0, z, "]")
-        b.set(2, 0, z, "[")
-    b.set(-2, 0, 5, "C")
-    b.set(2, 0, 5, "C")
+    for z in (-4, 0, 4):                                   # [build-audit] the bunks' heads to the walls, feet to the aisle
+        b.set(-1, 0, z, "[")
+        b.set(1, 0, z, "]")
+    b.set(-2, 0, 5, ")")                                   # the chests open onto the floor by the bench
+    b.set(2, 0, 5, "(")
     b.set(0, 0, 5, "T")
-    b.set(-2, 0, -5, "a")
+    b.set(-2, 0, -2, "a")                                  # the anvil out from the wall, room to work it both sides
+    b.set(-2, 0, 2, ")")                                   # and a chest by every pair of bunks for their kit
+    b.set(2, 0, 2, "(")
+    b.set(2, 0, -2, "(")
+    b.set(-2, 0, -5, ")")
     b.set(-2, 2, 0, "j")                                    # by the walls over the middle bunks, off the aisle
     b.set(2, 2, 0, "j")
     b.ring(-W_, W_, 3, -D_, D_, "|", corner="L")
@@ -788,7 +795,7 @@ tub, the smith's bench and its chests of finished tools.""")
     # The bench and its chest along the left wall, the back corner and the way to it kept clear (where
     # the ladder goes up when the smithy is given a second storey: Blueprints.raised); the bench's
     # candle on the bench, a torch not standing on a chest's lid.
-    b.set(-2, 0, 0, "C")
+    b.set(-2, 0, 0, ")")                                    # [build-audit] its lid to the floor, not the bench
     b.set(-2, 0, -1, "T")
     b.set(-2, 1, -1, "t")
     b.ring(-3, 3, 3, -3, 3, "-", corner="L")
@@ -925,8 +932,8 @@ lanterns overhead.""")
     for x in (-2, 2):
         b.set(x, 0, -2, "P")                                # a table in each window with its cloth
         b.set(x, 1, -2, "X")
-    b.set(-1, 0, -2, "<")                                   # and its chair
-    b.set(1, 0, -2, ">")
+    b.set(-1, 0, -2, ">")                                   # and its chair, facing it [build-audit]
+    b.set(1, 0, -2, "<")
     b.ring(-3, 3, 3, -3, 3, "-", corner="L")
     for z in range(-2, 3):
         b.set(-3, 3, z, "|")
@@ -1037,8 +1044,8 @@ its note blocks, lanterns hung low, and a lamp either side of the door.""")
     for z in (-2, 1):
         b.set(2, 0, z, "P")
         b.set(2, 1, z, "X")
-        b.set(1, 0, z, ">")
-        b.set(3, 0, z, "<")
+        b.set(1, 0, z, "<")                                 # [build-audit] facing the table
+        b.set(3, 0, z, ">")
     # the music: two note blocks by the hearth
     b.set(2, 0, 3, "m")
     b.set(3, 0, 3, "m")
@@ -1098,7 +1105,9 @@ windows all round both floors, and the chimney carried up past the new roof.""")
     for x in (-2, -1, 1, 2):
         b.set(x, 0, 1, "B")
     b.set(-2, 0, -2, "T")
-    b.set(2, 0, -2, "U")
+    b.set(2, 0, -1, "2")                                    # [build-audit] the stove on the chimney wall, facing in
+    b.set(-2, 0, -1, ")")                                   # and a chest either side for the beds' things
+    b.set(2, 0, -2, "(")
     b.set(-2, 1, -2, "t")
     # the floor between the storeys, with the ladder's hole
     b.ring(-3, 3, 3, -3, 3, "-", corner="L")
@@ -1120,9 +1129,11 @@ windows all round both floors, and the chimney carried up past the new roof.""")
     b.set(1, 5, 3, "G")
     b.set(-2, 4, 1, "B")
     b.set(2, 4, 1, "B")
-    b.set(-1, 4, -2, "C")
+    b.set(-1, 4, -2, "c")                                   # [build-audit] the chest's lid to the room, not the wall
     b.set(1, 4, -2, "X")
+    b.set(2, 4, -1, "(")                                    # [build-audit] a chest for the other bed too
     b.set(2, 6, 2, "j")                                     # over a bed head by the back wall, off the walkway
+    b.set(-2, 6, -2, "j")                                   # [build-audit] and over the chest, the front of the room lit
     b.set(2, 2, 2, "j")
     # The cottage's old eaves left on front and back, a skirt of roof between the storeys (as a
     # building raised in the Iron Age keeps them: Blueprints.raised), the door's lanterns hung from it.

@@ -93,7 +93,7 @@ Svv.....vvS
 .SvS...SvS.
 ..GS...SG..
 layer 3
-..SS}.{SS..
+..SS{.}SS..
 .S.S...S.S.
 S.........S
 S.........S
@@ -113,7 +113,7 @@ S.........S
 S.........S
 S.........S
 .S.S...S.S.
-..SS}.{SS..
+..SS{.}SS..
 layer 4
 ..SSSSSSS..
 .S.SSSSS.S.

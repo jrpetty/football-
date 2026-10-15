@@ -21,7 +21,7 @@ layer -1
 layer 0
 ...........
 .LwwwwwwwL.
-.wC..H..Cw.
+.w)..H..(w.
 .wK.....Kw.
 .wT.....Uw.
 .w..XXX..w.
@@ -81,8 +81,8 @@ vvvvvvvvvvv
 layer 5
 ...........
 .LWGWWWGWL.
-.W.......W.
-.GB.....BG.
+.W.C...C.W.
+.WB.....BW.
 .W.......W.
 .G.......G.
 .W..XXX..W.
