@@ -1145,6 +1145,7 @@ public final class Campaigns {
             Villages.tell(v.id(), day, p.getName().getString() + " volunteered to fight for the town against " + Villages.name(enemy));
         }
         Armies.volunteer(p, v.id());
+        Knights.battle(level, v.id(), p, citizen);                   // [civic-land] a campaign fought for the town; a knight's muster answered
         WarBooks.course(v.id(), enemy, day, p.getName().getString() + (citizen ? " volunteered for our army" : " fought for us for hire"));
         String issued = Armies.issueTo(level, v, p);                          // [war-bows] a bow or a crossbow from the armoury
         String kit = issued == null ? "" : " The armoury gives you " + issued + ".";

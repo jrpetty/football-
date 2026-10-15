@@ -288,6 +288,7 @@ public final class Elections {
         double total = cares + needs + people + nature + skill + record + mind;
         total += WarAndPeace.electionLean(level, voter, c);           // [war-peace] the war: weary for peace, or a war going well
         total += Hustings.lean(level, voter, c);                       // [player-civic] the campaign; a player's liking and record
+        total += TaxUnrest.electionLean(level, voter, c);              // [civic-land] the taxes: the one who led answers for them
         double presence = Perks.hustings(village, cf, c.id());          // [perks] a Born Leader's presence, an Orator standing again
         total += presence;
         // The reason it gives: whichever weighed most.

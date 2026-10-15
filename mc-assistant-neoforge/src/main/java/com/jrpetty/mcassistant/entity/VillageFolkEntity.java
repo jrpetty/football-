@@ -577,6 +577,8 @@ public class VillageFolkEntity extends AssistantEntity {
         // [batchF] The town's affairs (Civics): out with a search party, the post, a warden's round, a petition, a good turn.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel civic
                 && (tickCount % 4 == 3 ? Civics.hold(this, civic) : Civics.busy(this))) return;
+        // [civic-land] Tax day's collector on its round, and the watch walking it in a revolt (TaxBook).
+        if (!withAPlayer && tickCount % 2 == 1 && level() instanceof net.minecraft.server.level.ServerLevel realm && CivicLand.hold(this, realm)) return;
         // [individual] Its own life: home before dark, off at the sight of a monster; its habits at their hours (Individual).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel own
                 && (tickCount % 2 == 0 ? Individual.hold(this, own) : Individual.busy(this))) return;
@@ -767,6 +769,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (village == null || villageCentre == null || purse < 1 || isBaby()) return false;
         long day = level().getDayTime() / 24000L;
         if (shoppedDay == day || !Market.marketDay(village, day)) return false;
+        if (TaxBook.holdsBack(this)) { shoppedDay = day; return false; }   // [civic-land] heavy taxes: the coin kept, not spent
         if (Villages.ageOf(village).ordinal() < Villages.Age.STONE.ordinal()) return false;
         Villages.Village v = Villages.get(village);
         if (v == null) return false;
@@ -905,6 +908,7 @@ public class VillageFolkEntity extends AssistantEntity {
         if (village == null || purse < 2 || isBaby() || Dreams.saving(this)) return false;   // [individual] saving for its dream
         long day = level().getDayTime() / 24000L;
         if (cafeDay == day) return false;
+        if (TaxBook.holdsBack(this)) { cafeDay = day; return false; }      // [civic-land] heavy taxes: the coin kept, not spent
         if (Math.floorMod(getUUID().hashCode() + day, 3L) != 0) { cafeDay = day; return false; }
         BlockPos cafe = Villages.builtAt(village, "cafe");
         if (cafe == null || !Cafe.open(village, "cafe")) return false;
@@ -1313,6 +1317,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
         m = Healers.mood(this, day, m, why);            // [roles-a] a safe birth, the healer at it
         m = Civics.mood(this, day, m, why);             // [batchF] a letter, the town meeting, a good turn, found and home
+        m = TaxUnrest.mood(this, day, m, why);          // [civic-land] the taxes cut, or the bite of them and of arrears
         m = Crime.mood(this, day, m, why);              // [crime] robbed, paid back, shamed, wrongly accused and cleared
         m = Police.mood(this, day, m, why);             // [police] a night in the cells, a fine, helped by the watch
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
@@ -2866,6 +2871,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // The bell: every guard turns out, whichever watch it keeps; nobody else works.
         UUID alarmed = ownerId();
         if (alarmed != null && Raids.underAlarm(alarmed)) return stationTask() == StationTask.GUARD;
+        if (TaxUnrest.striking(this)) return false;          // [civic-land] on strike against the taxes: the picket, not the work
         if (OutdoorWeather.keepsIn(this)) return false;     // [roles-d] the woodcutter and the hunter in out of the rain
         Boolean serving = Hospitality.shift(this);            // [dining] the bar's, the floor's and the baker's own hours
         if (serving != null) return serving;
@@ -5416,6 +5422,7 @@ public class VillageFolkEntity extends AssistantEntity {
     @Override
     protected boolean bedtime() {
         if (Muster.gather(this)) return true;               // [defence] the bell: to the square, not to bed
+        if (!Raids.underAlarm(ownerId()) && TaxUnrest.picket(this)) return true;   // [civic-land] a striker's day before the hall
         if (Raids.underAlarm(ownerId()) && (bedPos() == null && !isBaby() || WatchClears.bedFar(this))) return Raids.shelter(this);
         // The day of rest, by day: the service, the games, walking out — not bed at noon.
         if (!Raids.underAlarm(ownerId()) && RestDay.now(ownerId(), level().getDayTime()) != null) {

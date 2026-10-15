@@ -152,6 +152,7 @@ public final class Contentment {
         int score = Math.max(0, Math.min(100, foodPts + homesPts + moodPts + safety + amenities + wages + rest + feasts));
         score = Math.max(0, Math.min(100, score + WarAndPeace.contentment(id, good, bad)));   // [war-peace] war-weariness
         score = Math.max(0, Math.min(100, score + Identity.contentment(id, day, good, bad)));   // [identity] its ways, laws, rulers, traits
+        score = Math.max(0, Math.min(100, score + TaxUnrest.contentment(id, good, bad)));      // [civic-land] heavy taxes, a revolt; light ones
         return new View(score, word(score), foodPts, homesPts, moodPts, safety, amenities, wages, good, bad);
     }
 
@@ -176,6 +177,8 @@ public final class Contentment {
             case "not everyone has a bed" -> FolkTalk.pick(r, "Another night on the ground. My back!", "We need more houses, and soon.");
             case "folk are low" -> FolkTalk.pick(r, "Nobody smiles round here any more.", "What's the point of it all?");
             case "we lost somebody" -> FolkTalk.pick(r, "I can't stop thinking about who we lost.", "It's not the same without them.");
+            case "the taxes are heavy", "a tax revolt" -> FolkTalk.pick(r, "These taxes will be the ruin of us.",   // [civic-land]
+                "The council's got its hand in every purse.");
             case "the town's a mess", "the town's untidy" -> FolkTalk.pick(r, "The square's a mess. Does nobody sweep round here?",   // [tidy]
                 "Look at the state of this town.");
             default -> "Things aren't right in this village.";

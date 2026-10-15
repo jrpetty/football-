@@ -547,7 +547,7 @@ public final class PlayerStalls {
         }
         long day = today(level);
         roll(st, day);
-        st.till += best.price();
+        st.till += best.price() - TaxBook.toll(id, best.price());   // [civic-land] the market toll, to the treasury
         st.soldAll += got.getCount();
         st.takenAll += best.price();
         st.weekCount[0] += got.getCount();

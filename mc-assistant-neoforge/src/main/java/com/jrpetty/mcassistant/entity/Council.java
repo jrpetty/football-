@@ -114,6 +114,7 @@ public final class Council {
             if (theirs != null && tally.containsKey(theirs)) tally.merge(theirs, 1, Integer::sum);
         }
         Hustings.seatVotes(village, proposals, tally);          // [player-civic] a player given a seat votes as a councillor too
+        Knights.councilVotes(village, proposals, tally);         // [civic-land] and a knight of the town
         String chosen = null;
         int most = -1, second = 0;
         for (Map.Entry<String, Integer> e : tally.entrySet()) {

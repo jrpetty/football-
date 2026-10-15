@@ -11994,3 +11994,93 @@ holders are looked up at most every five seconds a town. A stint is a map look-u
 drawn once a day with the roster. The carter's whip is looked at once a second only while a wagon is being driven.
 
 Smoke: `roles_e_stage` in tools/realworld/smoke.py (`/village roads stage`). Tests: RoadsRanksGameTests (re01 to re07).
+
+## Taxes, knights and manors
+
+### Taxes set by the council (TaxBook)
+- **What a town levies.** Four taxes, each at one of four rates: **the head tax** (nothing to three coins from every
+  grown hand at work each tax day), **the share of wages** (the law's tithe, kept back on payday: one coin in twenty to
+  one in five), **the market toll** (nothing to fifteen in a hundred of what a folk or a player takes for its own goods at
+  the auction or a player's stall) and **the war levy** (nothing to four coins a head each tax day, collected only while
+  the town is at war). A new town levies only the share of wages.
+- **The council's vote.** Once a week, at the council's meeting, the taxes are taken up (or quietly in the hall after
+  dark if the meeting missed them). What is put to the vote follows the treasury: wages paid short, a near-empty purse,
+  a war or coin wanted for something to buy ask for a rise; a full treasury, a levy with no war or an angry town ask for
+  a cut. Each councillor votes by what it cares for (the Merchant and the Free Spirit against, the Visionary, the
+  Homemaker and at war the Guardian for), by what the town needs, by how the town is taking it, and by the players it
+  likes who urged it. A lord's word counts three times; the town's knights, a player given a council seat and a player
+  who leads cast their own votes. The motion, the count and who voted how go into the chronicle and the books.
+- **Tax day.** Once a week a folk is given the job for the day: the collector (a shopkeeper, a storekeeper or the banker
+  if it can). It walks round the town to every hand at its work and takes the head tax and the levy into the treasury.
+  A poor folk is let off while the treasury can bear it, otherwise it pays what it can and owes the rest (arrears, taken
+  first next time). Whoever it could not find pays at the hall at the end of the day.
+- **Players.** A citizen owes the head tax and the levy as the folk do, and is told in chat. Pay any folk ("I'd like to
+  pay my taxes", in the talk menu under Town, Council) or use `/village taxes pay`. Three weeks unpaid and the town
+  thinks the less of you. You can urge the council too: "The taxes should be lower" (or higher) sways the councillors
+  who like you at their next sitting.
+
+### How the town takes them (TaxUnrest)
+- **Unrest**, nought to a hundred, follows what the taxes take of a wage, the folk in arrears, wages paid short (an empty
+  treasury angers the town too) and a levy with no war. Past forty, folk grumble in the street and on their cards, keep
+  their coin rather than spend it at the market, the shop or the café, and the town is less content.
+- **A protest**, past sixty: the angriest gather before the meeting hall (or the board) in the late afternoon. They hold
+  signs out of the stores (made from the stores' planks and a stick if there are none, and put back after) and chant,
+  and their ringleader speaks. The leader comes out and the council answers there and then by its vote: it gives way
+  (the most hated tax comes down a step) or it does not.
+- **A tax revolt**: if the protest is refused and the anger is still past seventy-five two mornings on, the angry refuse
+  to pay and the boldest chase the collector off. They strike for a day (no work, a picket before the hall), and again
+  each week the revolt lasts. A stern leader sends the watch to walk the collector's round, and then they pay, with bad
+  grace. Three days in, the leader is challenged: an early election, or a vote of no confidence in a lordship. At the
+  polls the one who led is judged for it. The revolt ends when the council gives way, a new leader cuts the taxes, or
+  the anger cools.
+- **The Taxes page** (town books, Civic): the four rates with pips, the next tax day and sitting, three weeks of the
+  take as a bar chart, the town's temper on a bar marked at 40/60/75 with its reasons, the revolt, the last protest and
+  its answer, who owes back taxes, and the council's votes with who voted how.
+
+### Knighthood (Knights)
+- **Service.** What you do for a town counts toward a knighthood. Each quest done for it is worth 12, each campaign in
+  its army 20 (8 as a sword for hire), a gift its folk were glad of 1 or 2 (three a day), each day as a citizen in good
+  standing 1 (2 as an honoured guest), and taxes paid in full 2. Each offence takes 25 off, a muster missed 30. The
+  Knights page shows your total on a bar to 100, and what it is made of.
+- **The knighting.** A citizen the town counts a friend, its fines paid, who reaches 100 is chosen by the council. You
+  are told in chat to come to the hall at dusk. The bell rings, the town gathers, the leader reads what you have done,
+  bids you kneel (sneak) and dubs you, with cheers and the town's rockets. Miss three evenings (away, or not on) and you
+  are knighted in your absence and told when you next come on.
+- **The title.** Sir, Dame or Knight, as you choose ("Call me Dame", or `/village knight style dame`). It is shown before
+  your name in chat and the player list, and folk greet you by it.
+- **What comes with it.** You get a banner: the town's arms with a gold border, woven out of the stores and kept for you
+  if you are away. You get land at the town's edge and a manor on it. You get a retinue from the watch and a seat on the
+  council.
+- **The seat.** Your vote counts in the council's vote on the taxes and on what is built next. Cast it with "My vote on
+  the taxes: lower", the buttons on the Knights page, or `/village knight vote lower|keep|raise`.
+- **Duties.** In war the town calls its knights to muster: join its army (`/village war join`). Two musters missed and
+  the title goes. A knight's fee of two coins comes due each tax day; four weeks unpaid and the title goes. Found
+  guilty, banished or barred by the watch, a knight is stripped. A town that dies takes its knighthoods with it.
+
+### Land and the manor (KnightManors)
+- **The grant**: dry, level ground out past the town's last buildings (and its wall), clear of other knights' land, its
+  door to the town. The chronicle names the side it lies on.
+- **The manor** is raised by the town's builders as a public work out of the stores, after the town's own needs (and
+  first, once it has waited four days). It is two storeys on a stone footing. Below is a great room with a long carpet,
+  a stove, a table, bookshelves, chests and casks; up the ladder is the knight's chamber with a bed for you and one for
+  a guest. Before it is begun you can pay sixty coins for a grander **knight's hall** instead ("I'll pay for a grander
+  manor", or `/village knight manor grand`). When it stands, the town opens it, your banner is hung by the door, and
+  the next folk you talk to hands you the key. Nobody of the town sleeps in it or takes from its chests.
+
+### The retinue (Retinue)
+- Two of the town's watch are named to you if the watch can spare them (it keeps two at home), and you can take on two
+  more at your own cost (`/village knight retinue hire`).
+- "Retinue, to me!" (to any folk, or the Knights page): they leave their posts and ride with you, day and night, and
+  fight whatever comes at you. The town pays your first two two coins a day each; the others are paid from your purse.
+- "Retinue, stand down" sends them back to their posts, and they go back on their own when you leave the world.
+- A man who dies is dead: the chronicle says where he fell, and the town names another three days on.
+
+### Commands and the admin panel
+- `/village taxes` (and `pay`, `book`, `urge lower|raise`; for the player who leads or ops, `set <head|wage|toll|levy> <0-3>`).
+- `/village knight` (and `book`, `style`, `vote`, `retinue call|dismiss|hire|release`, `manor [grand]`). The two `book`
+  commands open the town's books at the Taxes and the Knights pages.
+- Ops: `/village taxes collect|sit|protest|revolt|calm` and `/village knight dub|strip|grant|build <player>`.
+- Admin panel: `economy tax`, `economy taxday`, `economy taxvote`, `people protest|revolt|calm`,
+  `people knight|unknight|grant`, `build manor`.
+
+Smoke: `civic_land_stage` in tools/realworld/smoke.py (`/village realm stage`). Tests: CivicLandGameTests (cl01 to cl10).

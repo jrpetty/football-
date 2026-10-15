@@ -57,7 +57,9 @@ public final class BoardPages {
         // [police] The watch as the town's police: the roster, the beats, the incidents, the cells, the crime rate (WatchPage).
         "Watch",
         // [earning] The player's own earnings: the purse, the week by source, the job skills, the ways to earn here (EarningsPage).
-        "Earnings" };
+        "Earnings",
+        // [civic-land] The taxes the council sets and how the town takes them; the town's knights and your service (TaxesPage, KnightsPage).
+        "Taxes", "Knights" };
 
     /** One of the board's sections: its name, its icon, what it holds, and its pages by name. */
     public record Section(String name, Item icon, String tip, String... pages) {}
@@ -72,7 +74,7 @@ public final class BoardPages {
         new Section("Town", Items.BRICKS, "Its buildings, the roads and rails, the maps, the caves and the watch",
             "Buildings", "Transport", "Maps", "Caves", "Nether", "Watch", "Cases"),
         new Section("Civic", Items.BELL, "Who leads, what the town studies, what it stands for, and its wars",
-            "Leader", "Research", "Identity", "War", "War map"),
+            "Leader", "Research", "Identity", "War", "War map", "Taxes", "Knights"),   // [civic-land]
         new Section("Culture", Items.PAINTING, "Its banner and customs, what it wears, its library, museum and wonders",
             "Culture", "Fashion", "Library", "Museum", "Perks"),
         new Section("Records", Items.WRITABLE_BOOK, "Its bests and totals, and how it is trending",

@@ -53,7 +53,8 @@ public class CityScreen extends Screen {
         "Nether",                                                                                     // [nether]
         "Perks",                                                                                       // [perks]
         "Watch",                                                                                      // [police]
-        "Earnings");                                                                                  // [earning]
+        "Earnings",                                                                                   // [earning]
+        "Taxes", "Knights");                                                                          // [civic-land]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -343,6 +344,15 @@ public class CityScreen extends Screen {
                 }
                 case "Earnings" -> {                                                   // [earning] the player's purse and the work going
                     List<Component> tip = EarningsPage.draw(g, font, x, y, cw, ch, scroll, mouseX, mouseY,
+                        (a, b, c, d, act) -> zones.add(new Zone(a, b, c, d, act)));
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Taxes" -> {                                                      // [civic-land] the council's taxes, the unrest (TaxesPage)
+                    List<Component> tip = TaxesPage.draw(g, font, data.getCompound("realm"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Knights" -> {                                                    // [civic-land] the town's knights, your service (KnightsPage)
+                    List<Component> tip = KnightsPage.draw(g, font, data.getCompound("realm"), x, y, cw, ch, scroll, mouseX, mouseY,
                         (a, b, c, d, act) -> zones.add(new Zone(a, b, c, d, act)));
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }

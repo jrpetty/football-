@@ -281,6 +281,7 @@ public final class LawBook {
         for (Law l : REVIEW) {
             int i = l.ordinal();
             if (want[i] == r.laws[i] || r.lawRefused.getOrDefault(i, -1L) > day) continue;
+            if (l == Law.TITHE && CivicLand.live()) continue;          // [civic-land] the council's tax sitting keeps the tithe now (TaxBook)
             propose(level, v, r, l, want[i], day);
             return;
         }

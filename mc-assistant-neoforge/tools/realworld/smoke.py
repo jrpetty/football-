@@ -4529,6 +4529,59 @@ def roles_e_stage(r, look, cx, cz):
     say("alive after the roads' posts: %s" % client_alive())
 
 
+def civic_land_stage(r, look, cx, cz):
+    """[civic-land] Taxes, knights and manors (entity/TaxBook, TaxUnrest, Knights, KnightManors, Retinue). As the player,
+    /village realm stage has the town knight it now (the makings of its banner put in the stores by decree), grant it land
+    at the town's edge and raise its manor there at once with its banner by the door; then the head tax goes to its
+    heaviest and the angry gather before the meeting hall (or the board) with signs in their hands. Each scene says
+    where to look from (VIEW name eye target). Pictures:
+      1. 57-civic-land-1-manor: the knight's manor at the town's edge, its banner beside the door;
+      2. 57-civic-land-2-protest: the protest before the hall, the signs, the ringleader and the leader answering;
+      3. 57-civic-land-3-taxes: the town's books open at the Taxes page (the rates, the take, the temper, the votes);
+      4. 57-civic-land-4-knights: the Knights page (your service, your knighthood, the town's knights).
+    Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 9200")                             # the late afternoon: when a protest gathers
+    r.cmd("weather clear")
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx + 10, hy + 20, cz + 10))
+    time.sleep(8)                                      # the town's chunks arrive
+    out = r.cmd("execute as %s positioned %d %d %d run village realm stage" % (USER, cx, hy + 1, cz))
+    say("realm stage: " + out[:1400])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the taxes and the knights; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view %s" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        x, y, z = clear_camera(r, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5)
+        look("57-civic-land-" + picture, x, y, z, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("manor", "1-manor", 10)
+    time.sleep(20)                                     # the angry walk to the hall and take their places
+    shoot("protest", "2-protest", 6)
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("taxes: " + r.cmd("execute as %s at @s run village taxes" % USER)[:900])
+    say("books: " + r.cmd("execute as %s at @s run village taxes book" % USER))
+    time.sleep(4)
+    shot("57-civic-land-3-taxes")
+    say("books: " + r.cmd("execute as %s at @s run village knight book" % USER))
+    time.sleep(4)
+    shot("57-civic-land-4-knights")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("knight: " + r.cmd("execute as %s at @s run village knight" % USER)[:900])
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the taxes and the knights: %s" % client_alive())
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

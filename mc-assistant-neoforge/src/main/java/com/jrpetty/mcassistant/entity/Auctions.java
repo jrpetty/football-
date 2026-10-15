@@ -1105,10 +1105,11 @@ public final class Auctions {
                 Economy.sold(v.id(), price);
             }
             case PLAYER -> {
-                if (lot.ownerId != null) give(level, v.id(), lot.ownerId, price, ItemStack.EMPTY, "your " + lot.name() + " sold at auction for " + price);
+                if (lot.ownerId != null) give(level, v.id(), lot.ownerId, price - TaxBook.toll(v.id(), price), ItemStack.EMPTY,   // [civic-land] the toll
+                    "your " + lot.name() + " sold at auction for " + price);
             }
             case MERCHANT -> {
-                if (lot.ownerId != null && level.getEntity(lot.ownerId) instanceof VillageFolkEntity m) m.earn(price);
+                if (lot.ownerId != null && level.getEntity(lot.ownerId) instanceof VillageFolkEntity m) m.earn(price - TaxBook.toll(v.id(), price));   // [civic-land]
             }
         }
         // The thing to the winner.

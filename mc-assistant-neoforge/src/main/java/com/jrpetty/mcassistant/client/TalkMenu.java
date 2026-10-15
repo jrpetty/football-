@@ -267,6 +267,7 @@ public final class TalkMenu {
     static final Entry PLANNER_NEXT = say("planner_next", Items.STONE_BRICKS, "What's being built next?", flag("planner"));
     static final Entry ATLAS = ask("atlas", Items.SPYGLASS, TalkTopic.ATLAS);                     // the scout's own, by name
     static final Entry LETTER = ask("letter", Items.FEATHER, TalkTopic.LETTER);                  // the courier's (the post) own
+    static final Entry TAX_PAY = say("tax_pay", Items.GOLD_INGOT, "I'd like to pay my taxes", flag("taxowed"));   // [civic-land]
 
     /** The profile and skills pages, the work record and the pack: the header's links. */
     public static final Entry PROFILE = special("profile", Items.PAPER, Kind.PAGE);
@@ -372,7 +373,15 @@ public final class TalkMenu {
                 say("stand", Items.TARGET, "I'd like to stand for election"),
                 say("vote", Items.PAPER, "Will you vote for me?"),
                 LEADER,
-                PLANNER_NEXT),                                               // [roles-e] the town planner's plans
+                PLANNER_NEXT,                                                // [roles-e] the town planner's plans
+                // [civic-land] The taxes (any folk), and a knight's own: its service, its vote, its retinue.
+                say("taxes", Items.GOLD_NUGGET, "What are the taxes here?"),
+                TAX_PAY,
+                say("tax_lower", Items.FEATHER, "The taxes should be lower"),
+                say("knight_service", Items.IRON_SWORD, "What's my standing in the town's service?"),
+                prompt("knight_vote", Items.WRITABLE_BOOK, TalkTopic.SAY, "My vote on the taxes: lower", flag("knight")),
+                say("retinue_call", Items.SHIELD, "Retinue, to me!", flag("knight")),
+                say("retinue_stand", Items.OAK_DOOR, "Retinue, stand down", flag("knight"))),
             group("law", Items.IRON_BARS,
                 WATCH,
                 say("report", Items.REDSTONE_TORCH, "I want to report a crime"),
@@ -495,6 +504,7 @@ public final class TalkMenu {
         if (c.following()) out.add(STAY);
         if (c.known()) {
             if (c.has("fine")) out.add(FINE);
+            if (c.has("taxowed")) out.add(TAX_PAY);              // [civic-land] taxes owed
             if (c.shunned()) out.add(GIFT);                     // shunned, only a gift or a fine paid is heard (FolkTalk.answer)
             else if (c.inDisgrace()) out.add(SORRY);
             if (c.has("birthday")) out.add(BIRTHDAY);
