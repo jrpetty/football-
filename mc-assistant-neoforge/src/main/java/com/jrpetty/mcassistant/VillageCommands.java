@@ -143,7 +143,7 @@ public final class VillageCommands {
                     net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(p, new com.jrpetty.mcassistant.net.CityStatsPayload(shut));
                     return 1;
                 }))
-                .then(Commands.argument("page", IntegerArgumentType.integer(0, 40))
+                .then(Commands.argument("page", IntegerArgumentType.integer(0, 99))
                     .executes(ctx -> stats(ctx, IntegerArgumentType.getInteger(ctx, "page")))))
             // The city's research (CityTree): the tree and what the leader has the town studying; and,
             // for ops and tests, a civic set to study now (pick) or done at once (grant), each only
