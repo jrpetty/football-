@@ -285,17 +285,31 @@ public final class CivicLand extends SavedData {
             KnightManors.hangForTests(level, v, p.getUUID());
             net.minecraft.core.BlockPos plot = net.minecraft.core.BlockPos.of(k.getLong("plot"));
             net.minecraft.core.Direction back = net.minecraft.core.Direction.byName(k.getString("facing"));
-            net.minecraft.core.Direction front = back == null ? net.minecraft.core.Direction.SOUTH : back.getOpposite();
-            net.minecraft.core.BlockPos eye = plot.relative(front, 16).relative(front.getClockWise(), 6).above(6);
-            out.add("VIEW manor " + eye.getX() + " " + eye.getY() + " " + eye.getZ() + " " + plot.getX() + " " + (plot.getY() + 4) + " " + plot.getZ());
+            // [pics-fix] The manor whole from before its door (its middle was the mark, and the camera ended up inside).
+            String kind = k.getString("kind").isEmpty() ? KnightManors.STRUCTURE : k.getString("kind");
+            out.add(StageViews.front(level, "manor", kind, plot, back == null ? net.minecraft.core.Direction.NORTH : back, 0.35));
         }
         TaxBook.set(level, v, TaxBook.Lever.HEAD, 3, "by decree");
         out.add(TaxUnrest.protestNow(level, v));
         Spot at = beforeTheHall(level, v);
         net.minecraft.core.BlockPos eye = at.focus().relative(at.audience(), 14).relative(at.audience().getClockWise(), 4).above(7);
-        out.add("VIEW protest " + eye.getX() + " " + eye.getY() + " " + eye.getZ() + " " + at.focus().getX() + " " + (at.focus().getY() + 1) + " "
-            + at.focus().getZ());
+        out.add(StageViews.view(level, "protest", eye, at.focus().above()));     // [pics-fix] kept out of a hill or a crown
         return String.join("\n", out);
+    }
+
+    /**
+     * [pics-fix] The protest's crowd just now, for the pictures (smoke.py waits on it before it shoots): "CROWD n of m
+     * at the hall; phase", n the protesters within fourteen blocks of where it gathers, m those called to it.
+     */
+    public static String crowd(ServerLevel level, Villages.Village v) {
+        Assemblies.Assembly a = Assemblies.underWay(v.id());
+        if (a == null || a.kind != Assemblies.Kind.PROTEST) return "CROWD 0 of 0: no protest under way (" + Assemblies.debug(v.id()) + ")";
+        int near = 0, all = a.invited == null ? 0 : a.invited.size();
+        if (a.invited != null) for (UUID u : a.invited) {
+            VillageFolkEntity f = find(level, u);
+            if (f != null && f.blockPosition().distSqr(a.focus) <= 14 * 14) near++;
+        }
+        return "CROWD " + near + " of " + all + " at the hall; " + Assemblies.debug(v.id());
     }
 
     // ------------------------------------------------------------------ the town gone

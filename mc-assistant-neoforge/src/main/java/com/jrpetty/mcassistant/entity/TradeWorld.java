@@ -317,6 +317,11 @@ public final class TradeWorld {
      * light lit, and a ship of Qadira brought in and moored with its people ashore. Views: the harbour from over the water,
      * the ship at the pier, the light. Returns "VIEW name x y z lookx looky lookz" lines and what was done.
      */
+    /** [pics-fix] Tests: the harbour's stage, set out here. */
+    public static List<String> harbourStageForTests(ServerLevel level, Villages.Village v, BlockPos at) {
+        return harbourStage(level, v, at);
+    }
+
     static List<String> harbourStage(ServerLevel level, Villages.Village v, BlockPos at) {
         List<String> out = new ArrayList<>();
         int y = Visitors.surface(level, at).getY();
@@ -379,12 +384,14 @@ public final class TradeWorld {
         }
         BlockPos quay = s.onDeck(1, 0), mid = s.at(ShipHull.BERTH + 5, ShipHull.MIDDLE, 4);
         BlockPos over = s.at(28, -14, 12);
-        out.add("VIEW harbour " + over.getX() + " " + over.getY() + " " + over.getZ() + " " + quay.getX() + " " + quay.getY() + " " + quay.getZ());
+        // [pics-fix] Each camera out from under the bank's trees (the harbour was shot from under an acacia's crown).
+        out.add(StageViews.view(level, "harbour", over, quay));
         BlockPos near = s.at(1, -5, 3);
-        out.add("VIEW ship " + near.getX() + " " + near.getY() + " " + near.getZ() + " " + mid.getX() + " " + mid.getY() + " " + mid.getZ());
+        out.add(StageViews.view(level, "ship", near, mid));
         if (s.light() != null) {
-            BlockPos lv = s.at(6, -14, 8);
-            out.add("VIEW light " + lv.getX() + " " + lv.getY() + " " + lv.getZ() + " " + s.light().getX() + " " + (s.light().getY() + 10) + " " + s.light().getZ());
+            // [pics-fix] The tower whole from over the water before it, its lamp room high in the picture. (The mark was
+            // the beacon inside the lamp room, behind the gallery's rail: the camera walked in to it, into the walls.)
+            out.add(StageViews.front(level, "light", Harbours.LIGHT, s.light(), s.lightBack, 0.35));
         }
         out.addAll(PierFleet.stage(level, v));                                   // [realm-polish] the fishing fleet at the pier
         out.add("harbour staged: " + String.join(" / ", Harbours.lines(level, v)));
@@ -396,6 +403,11 @@ public final class TradeWorld {
      * made over the years (a path, then gravel, then stone with kerbs and lamp posts), a milestone lettered for the town, a
      * signpost, and the roadside inn by it, all set down for nothing. Views: along the road, the milestone, the inn.
      */
+    /** [pics-fix] Tests: the roads' stage, set out here. */
+    public static List<String> roadStageForTests(ServerLevel level, Villages.Village v, BlockPos at) {
+        return roadStage(level, v, at);
+    }
+
     static List<String> roadStage(ServerLevel level, Villages.Village v, BlockPos at) {
         List<String> out = new ArrayList<>();
         int y = Visitors.surface(level, at).getY() - 1;
@@ -443,9 +455,12 @@ public final class TradeWorld {
             TownLife.write(se, new String[]{ "Roadside Inn", Villages.name(v.id()).length() > 15 ? Villages.name(v.id()).substring(0, 15) : Villages.name(v.id()),
                 "Room " + Roadside.ROOM + "c", "Sneak: meal " + Roadside.MEAL + "c" });
         }
-        out.add("VIEW road " + (x0 - 6) + " " + (y + 5) + " " + (z0 + 4) + " " + (x0 + 30) + " " + y + " " + z0);
-        out.add("VIEW milestone " + (stone.getX() - 3) + " " + (y + 3) + " " + (stone.getZ() + 4) + " " + stone.getX() + " " + stone.getY() + " " + stone.getZ());
-        out.add("VIEW inn " + (inn.getX() + 4) + " " + (y + 6) + " " + (z0 + 6) + " " + inn.getX() + " " + (y + 2) + " " + inn.getZ());
+        // [pics-fix] Along the road from its path end, inside the levelled ground (the camera stood out in the hillside and
+        // was lifted over it); the milestone a step off, over the kerb; the inn whole from the road before its door (its
+        // middle was the mark, and the camera went in to the beds).
+        out.add(StageViews.view(level, "road", new BlockPos(x0 - 1, y + 4, z0 + 4), new BlockPos(x0 + 28, y, z0)));
+        out.add(StageViews.view(level, "milestone", new BlockPos(stone.getX() - 2, y + 2, stone.getZ() + 3), stone));
+        out.add(StageViews.front(level, "inn", Roadside.DRAWING, inn, Direction.NORTH, 0.3));
         out.add("roads staged: " + String.join(" / ", RoadWorks.lines(level, v)));
         return out;
     }

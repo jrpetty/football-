@@ -47,6 +47,7 @@ import java.util.UUID;
  *   /village knight dub|strip|grant &lt;player&gt;  (ops) knight now, strip, grant the land now
  *   /village knight build &lt;player&gt; [free]   (ops) the manor raised now, out of the stores (or free)
  *   /village realm stage                    (ops, as a player) the smoke stage: a knight, its manor, a protest
+ *   /village realm crowd                    (ops) [pics-fix] how many of the protest are at the hall ("CROWD n of m")
  * </pre>
  */
 @EventBusSubscriber(modid = McAssistantMod.MODID)
@@ -94,7 +95,8 @@ public final class RealmCommands {
                 .then(Commands.literal("build").requires(s -> s.hasPermission(2)).then(Commands.argument("player", EntityArgument.player())
                     .executes(ctx -> admin(ctx, "build", EntityArgument.getPlayer(ctx, "player"), false))
                     .then(Commands.literal("free").executes(ctx -> admin(ctx, "build", EntityArgument.getPlayer(ctx, "player"), true))))))
-            .then(Commands.literal("realm").then(Commands.literal("stage").requires(s -> s.hasPermission(2)).executes(RealmCommands::stage))));
+            .then(Commands.literal("realm").then(Commands.literal("stage").requires(s -> s.hasPermission(2)).executes(RealmCommands::stage))
+                .then(Commands.literal("crowd").requires(s -> s.hasPermission(2)).executes(RealmCommands::crowd))));   // [pics-fix]
     }
 
     // ------------------------------------------------------------------ which town
@@ -278,6 +280,13 @@ public final class RealmCommands {
                 : name + " is no knight of " + Villages.name(v.id()) + ".";
             default -> KnightManors.buildNow(level, v, target.getUUID(), !free);
         });
+    }
+
+    /** [pics-fix] How many of the protest have come to the hall (the pictures wait for them). */
+    static int crowd(CommandContext<CommandSourceStack> ctx) {
+        Villages.Village v = here(ctx);
+        if (v == null) return 0;
+        return say(ctx, CivicLand.crowd(ctx.getSource().getLevel(), v));
     }
 
     /**

@@ -340,7 +340,7 @@ jobs:
     runs-on: ubuntu-latest
     # The look round now has some thirty stages (the town's life, the economy, the wars); it ran 38 minutes
     # before the economy's and the wars' were added.
-    timeout-minutes: 150   # 0.292.0 took 85 minutes with every stage
+    timeout-minutes: 200   # 0.292.0 took 85 minutes with every stage; 0.309.0 close to two hours, so the last stages (war_after, borders_map, admin) were cut off
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
