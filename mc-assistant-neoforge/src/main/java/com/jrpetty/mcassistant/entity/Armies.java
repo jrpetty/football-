@@ -384,8 +384,10 @@ public final class Armies {
 
     /** Its blade's worth to the model: none, wood or stone, iron, diamond or better. */
     static int blade(VillageFolkEntity f) {
+        // By the tier's bite: wood and gold 0, stone 1, iron 2, steel 2.5, diamond 3, netherite 4. (It was once read as
+        // a sword's whole damage, and iron and diamond alike counted as poor on paper.)
         float best = Militia.bestBlade(f);
-        return best <= 0 ? BattleModel.NO_BLADE : best < 6 ? BattleModel.POOR_BLADE : best < 7 ? BattleModel.IRON_BLADE : BattleModel.FINE_BLADE;
+        return best < 0 ? BattleModel.NO_BLADE : best < 2 ? BattleModel.POOR_BLADE : best < 2.5F ? BattleModel.IRON_BLADE : BattleModel.FINE_BLADE;
     }
 
     static int armour(VillageFolkEntity f) {
