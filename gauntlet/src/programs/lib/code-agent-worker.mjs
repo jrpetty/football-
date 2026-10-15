@@ -49,6 +49,7 @@ const BOOTSTRAP = String.raw`(function (host, KEY) {
   const dateGetTime = D.prototype.getTime, dateToISO = D.prototype.toISOString, rxTest = RX.prototype.test, mapGet = M.prototype.get, mapSet = M.prototype.set, mapHas = M.prototype.has;
   const mapEntries = M.prototype.entries, setValues = SetC.prototype.values, mapSize = O.getOwnPropertyDescriptor(M.prototype, 'size').get, setSize = O.getOwnPropertyDescriptor(SetC.prototype, 'size').get;
   const hostCompile = host.compile, hostExists = host.exists, hostSource = host.source, hostLog = host.log, hostSetTimer = host.setTimer, hostClearTimer = host.clearTimer, hostDone = host.done;
+  const imul = Math.imul;
   const strSlice = S.prototype.slice, strStarts = S.prototype.startsWith, strSplit = S.prototype.split, strIndexOf = S.prototype.indexOf, strEnds = S.prototype.endsWith;
   const call = (fn, self, ...args) => apply(fn, self, args);
   const own = (o, k) => call(hasOwn, o, k);
@@ -275,6 +276,31 @@ const BOOTSTRAP = String.raw`(function (host, KEY) {
   function clearTimeout_(id) {
     if (call(mapHas, timers, id)) { timers.delete(id); hostClearTimer(N(id)); }
   }
+  // ── virtual clock: Date follows the sandbox's simulated time, so results never depend on machine speed ──
+  const hostNow = host.now;
+  const dateNow = function now() { return hostNow(); };
+  const VDate = function Date() {
+    if (new.target === undefined) return call(D.prototype.toString, R.construct(D, [hostNow()]));
+    const args = [];
+    for (let i = 0; i < arguments.length; i++) args[args.length] = arguments[i];
+    return R.construct(D, args.length === 0 ? [hostNow()] : args, new.target);
+  };
+  defineProp(VDate, 'prototype', { value: D.prototype, writable: false, enumerable: false, configurable: false });
+  defineProp(VDate, 'length', { value: 7 });
+  VDate.now = dateNow;
+  VDate.UTC = D.UTC;
+  VDate.parse = D.parse;
+  defineProp(D.prototype, 'constructor', { value: VDate, writable: true, enumerable: false, configurable: true });
+  globalThis.Date = VDate;
+  // ── seeded Math.random (mulberry32): the same code draws the same numbers on every run ──
+  let rngState = 0x6d2b79f5;
+  Math.random = function random() {
+    rngState = (rngState + 0x6d2b79f5) | 0;
+    let t = rngState;
+    t = imul(t ^ (t >>> 15), t | 1);
+    t ^= t + imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
   globalThis.setTimeout = setTimeout_;
   globalThis.clearTimeout = clearTimeout_;
   globalThis.setImmediate = function setImmediate(fn) { return setTimeout_.apply(undefined, [fn, 0].concat(A.prototype.slice.call(arguments, 1))); };
@@ -407,13 +433,80 @@ function randomKey() {
   return '__gauntlet_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
+// Timers run on a VIRTUAL clock. setTimeout never waits for real time: when the
+// test is waiting, the worker jumps the clock straight to the earliest pending
+// timer and fires it (ties fire in the order they were set). Date follows the
+// same clock. So the order in which callbacks run, and whether a test finishes
+// within its time limit, depend only on the code, never on how fast or busy
+// the machine is. A test fails as "timed out" when it would have to wait more
+// than perTestTimeoutMs of simulated time, when nothing is left to wait for
+// (a promise that never settles), or when its synchronous code runs longer
+// than perTestTimeoutMs of real time (an endless loop).
+const VIRTUAL_EPOCH_MS = Date.UTC(2026, 0, 1);
+/** Timer callbacks one test may fire before it is stopped (an endless chain of timers). */
+const MAX_TIMER_FIRES = 20000;
+
+class TimerQueue {
+  constructor() {
+    this.heap = [];
+    this.live = new Set();
+    this.seq = 0;
+  }
+  static less(a, b) {
+    return a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
+  }
+  add(id, due) {
+    this.live.add(id);
+    const h = this.heap;
+    h.push([due, this.seq++, id]);
+    let i = h.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (!TimerQueue.less(h[i], h[p])) break;
+      [h[i], h[p]] = [h[p], h[i]];
+      i = p;
+    }
+  }
+  delete(id) {
+    this.live.delete(id);
+  }
+  /** The earliest live timer ({ due, id }), without removing it. */
+  peek() {
+    const h = this.heap;
+    while (h.length && !this.live.has(h[0][2])) this.pop();
+    return h.length ? { due: h[0][0], id: h[0][2] } : null;
+  }
+  pop() {
+    const h = this.heap;
+    const top = h[0];
+    const last = h.pop();
+    if (h.length) {
+      h[0] = last;
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1;
+        const r = l + 1;
+        let m = i;
+        if (l < h.length && TimerQueue.less(h[l], h[m])) m = l;
+        if (r < h.length && TimerQueue.less(h[r], h[m])) m = r;
+        if (m === i) break;
+        [h[i], h[m]] = [h[m], h[i]];
+        i = m;
+      }
+    }
+    if (top) this.live.delete(top[2]);
+    return top;
+  }
+}
+
 async function runTestFile(file) {
   const out = { file, loadError: null, tests: [] };
   // afterEvaluate: the context's promise jobs drain at the end of each evaluation, inside its timeout,
   // so an endless loop after an `await` is caught like a synchronous one.
   const context = vm.createContext({}, { codeGeneration: { strings: false, wasm: false }, microtaskMode: 'afterEvaluate' });
   const KEY = randomKey();
-  const timers = new Map();
+  const queue = new TimerQueue();
+  let clock = 0; // simulated ms since this file started
   let nextTimer = 1;
   let doneCb = null;
   const runIn = (code, timeout = perTestTimeoutMs) => new vm.Script(code).runInContext(context, { timeout });
@@ -435,23 +528,19 @@ async function runTestFile(file) {
     log(s) {
       appendLog(String(s).slice(0, 500));
     },
+    now() {
+      return VIRTUAL_EPOCH_MS + clock;
+    },
     setTimer(ms) {
       const id = nextTimer++;
-      const handle = setTimeout(() => {
-        timers.delete(id);
-        try {
-          runIn(`${KEY}.fire(${id})`, 1000);
-        } catch (e) {
-          appendLog(`[timer] ${String(e && e.message ? e.message : e).slice(0, 200)}`);
-        }
-      }, Math.max(0, Math.min(5000, Number(ms) || 0)));
-      timers.set(id, handle);
+      // Node semantics: a delay below 1 ms (or not a number) means 1 ms.
+      const n = Math.floor(Number(ms));
+      const delay = Number.isFinite(n) && n >= 1 ? Math.min(n, 2 ** 31 - 1) : 1;
+      queue.add(id, clock + delay);
       return id;
     },
     clearTimer(id) {
-      const h = timers.get(Number(id));
-      if (h) clearTimeout(h);
-      timers.delete(Number(id));
+      queue.delete(Number(id));
     },
     done(i, ok, err) {
       if (doneCb) doneCb(Number(i), ok === true, String(err ?? ''));
@@ -467,38 +556,53 @@ async function runTestFile(file) {
   } catch (e) {
     out.loadError = /timed out/i.test(String(e?.message)) ? 'Loading the file timed out (infinite loop at module top level?)' : String(e?.message ?? e).slice(0, 400);
   }
-  if (out.loadError) {
-    for (const h of timers.values()) clearTimeout(h);
-    return out;
-  }
+  if (out.loadError) return out;
   const count = Number(runIn(`${KEY}.count()`, 1000)) || 0;
+  const endlessLoop = `Timed out after ${perTestTimeoutMs} ms (endless loop?)`;
   for (let i = 0; i < count; i++) {
     const name = String(runIn(`${KEY}.name(${i})`, 1000));
     const started = process.hrtime.bigint();
-    const result = await new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        doneCb = null;
-        resolve({ ok: false, error: `Timed out after ${perTestTimeoutMs} ms (a promise that never settles, or an endless loop)` });
-      }, perTestTimeoutMs + 50);
-      doneCb = (idx, ok, error) => {
-        if (idx !== i) return;
-        clearTimeout(timer);
-        doneCb = null;
-        resolve({ ok, error });
-      };
-      try {
-        runIn(`${KEY}.run(${i})`);
-      } catch (e) {
-        clearTimeout(timer);
-        doneCb = null;
-        const msg = String(e?.message ?? e);
-        resolve({ ok: false, error: /timed out/i.test(msg) ? `Timed out after ${perTestTimeoutMs} ms (endless loop?)` : msg.slice(0, 400) });
+    const startClock = clock;
+    let result = null;
+    doneCb = (idx, ok, error) => {
+      if (idx === i && !result) result = { ok, error };
+    };
+    try {
+      runIn(`${KEY}.run(${i})`);
+    } catch (e) {
+      const msg = String(e?.message ?? e);
+      if (!result) result = { ok: false, error: /timed out/i.test(msg) ? endlessLoop : msg.slice(0, 400) };
+    }
+    // Drive the virtual clock until the test settles.
+    let fires = 0;
+    while (!result) {
+      const next = queue.peek();
+      if (!next) {
+        result = { ok: false, error: 'The test never finished: it waits for a promise that never settles (no timer is left to wait for).' };
+        break;
       }
-    });
+      if (next.due - startClock > perTestTimeoutMs) {
+        result = { ok: false, error: `Timed out after ${perTestTimeoutMs} ms (simulated time): the test was still waiting.` };
+        break;
+      }
+      if (++fires > MAX_TIMER_FIRES) {
+        result = { ok: false, error: `Stopped after ${MAX_TIMER_FIRES} timer callbacks (an endless chain of timers?)` };
+        break;
+      }
+      queue.pop();
+      clock = next.due;
+      try {
+        runIn(`${KEY}.fire(${next.id})`, 1000);
+      } catch (e) {
+        const msg = String(e && e.message ? e.message : e);
+        appendLog(`[timer] ${msg.slice(0, 200)}`);
+        if (/timed out/i.test(msg) && !result) result = { ok: false, error: endlessLoop };
+      }
+    }
+    doneCb = null;
     const ms = Number(process.hrtime.bigint() - started) / 1e6;
     out.tests.push({ name, ok: result.ok, error: result.ok ? null : result.error || 'failed', ms: Math.round(ms * 10) / 10 });
   }
-  for (const h of timers.values()) clearTimeout(h);
   return out;
 }
 
