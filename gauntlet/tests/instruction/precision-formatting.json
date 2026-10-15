@@ -102,7 +102,7 @@
       "expected": [
         {
           "check": "regex",
-          "pattern": "^(?=[\\s\\S]*fish)(?![\\s\\S]*e)[\\s\\S]*\\.\\s*$",
+          "pattern": "^(?=[\\s\\S]*fish)(?![\\s\\S]*e)(?![\\s\\S]*[!?](?=[\"'”’)\\]]*(?:\\s|$)))[\\s\\S]*\\.\\s*$",
           "flags": "i"
         },
         {
@@ -192,6 +192,11 @@
         {
           "check": "regex",
           "pattern": "^\\s*\\{(?=[\\s\\S]*\"title\")[\\s\\S]*\\}\\s*$"
+        },
+        {
+          "check": "regex",
+          "pattern": "^(?=[\\s\\S]*\"title\")(?![\\s\\S]*(?<!\\\\)\"(?!(?:title|year|tags|rating)\")(?:[^\"\\\\\\n]|\\\\.)*(?<!\\\\)\"\\s*:)",
+          "flags": ""
         }
       ],
       "notes": "[medium] Strict JSON shape via json_keys + regexes (number types, array length, decimal format). The 'nothing but one object' check is gated on the \"title\" key so an empty object scores nothing. Satisfiability: this passing example was checked against src/scoring/constraints.ts (all constraints pass) and a typical flawed answer was checked to fail: <<<{\"title\": \"The Lantern Keeper\", \"year\": 1996, \"tags\": [\"drama\", \"coastal\", \"family\"], \"rating\": 7.8}>>>"
@@ -471,7 +476,7 @@
         },
         {
           "check": "regex",
-          "pattern": "\"population\"\\s*:\\s*[1-9]\\d*\\s*[,}\\n]"
+          "pattern": "\"cities\"\\s*:\\s*\\[\\s*\\{\\s*(?:\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"\\s*,\\s*\"population\"\\s*:\\s*[1-9]\\d*|\"population\"\\s*:\\s*[1-9]\\d*\\s*,\\s*\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\")\\s*\\}\\s*,\\s*\\{\\s*(?:\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"\\s*,\\s*\"population\"\\s*:\\s*[1-9]\\d*|\"population\"\\s*:\\s*[1-9]\\d*\\s*,\\s*\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\")\\s*\\}\\s*,\\s*\\{\\s*(?:\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"\\s*,\\s*\"population\"\\s*:\\s*[1-9]\\d*|\"population\"\\s*:\\s*[1-9]\\d*\\s*,\\s*\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\")\\s*\\}\\s*,\\s*\\{\\s*(?:\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\"\\s*,\\s*\"population\"\\s*:\\s*[1-9]\\d*|\"population\"\\s*:\\s*[1-9]\\d*\\s*,\\s*\"name\"\\s*:\\s*\"(?:[^\"\\\\]|\\\\.)*\")\\s*\\}\\s*\\]"
         },
         {
           "check": "regex",
@@ -484,6 +489,11 @@
         {
           "check": "regex",
           "pattern": "^\\s*\\{(?=[\\s\\S]*\"cities\")[\\s\\S]*\\}\\s*$"
+        },
+        {
+          "check": "regex",
+          "pattern": "^(?=[\\s\\S]*\"cities\")(?![\\s\\S]*(?<!\\\\)\"(?!(?:cities|count|source|name|population)\")(?:[^\"\\\\\\n]|\\\\.)*(?<!\\\\)\"\\s*:)",
+          "flags": ""
         }
       ],
       "notes": "[hard] Nested JSON shape verified with json_keys plus raw-text occurrence counts and type regexes; the one-object check is gated on the \"cities\" key. Satisfiability: this passing example was checked against src/scoring/constraints.ts (all constraints pass) and a typical flawed answer was checked to fail: <<<{\"cities\": [{\"name\": \"Varrowmere\", \"population\": 48210}, {\"name\": \"Quellstone\", \"population\": 1203}, {\"name\": \"Ostrava Nuova\", \"population\": 350000}, {\"name\": \"Lindqvist Harbour\", \"population\": 7755}], \"count\": 4, \"source\": null}>>>"

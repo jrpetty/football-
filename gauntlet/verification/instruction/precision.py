@@ -25,6 +25,21 @@ def gate(anchor, negs=(), tail='', flags='i'):
 # so a poem with blank lines between its lines got full marks. A blank line BETWEEN two lines of text now fails the
 # case's gated check (leading/trailing blank lines are harmless). It is bundled into the gate so filler cannot score on it.
 BLANK = '\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S'
+# A sentence that ends with '!' or '?' (same sentence-end rule as the checker), for "each sentence ends with a period".
+NOT_PERIOD_END = '[!?](?=["\'”’)\\]]*(?:\\s|$))'
+
+
+def other_key(allowed):
+    """Matches a JSON key (an unescaped quoted string followed by ':') that is not in `allowed`; used to enforce
+    'no other keys'. String values, including ones that contain colons or escaped quotes, are not mistaken for keys."""
+    return '(?<!\\\\)"(?!(?:' + '|'.join(allowed) + ')")(?:[^"\\\\\\n]|\\\\.)*(?<!\\\\)"\\s*:'
+
+
+# f13: the "cities" array must be exactly 4 objects, each with exactly "name" (a string) and "population" (a positive
+# integer), in either order.
+_CITY = ('\\{\\s*(?:"name"\\s*:\\s*"(?:[^"\\\\]|\\\\.)*"\\s*,\\s*"population"\\s*:\\s*[1-9]\\d*'
+         '|"population"\\s*:\\s*[1-9]\\d*\\s*,\\s*"name"\\s*:\\s*"(?:[^"\\\\]|\\\\.)*")\\s*\\}')
+CITIES = '"cities"\\s*:\\s*\\[\\s*' + '\\s*,\\s*'.join([_CITY] * 4) + '\\s*\\]'
 
 case('f01', 'easy', """
 Write a three-line poem about rain.
@@ -72,12 +87,13 @@ Rules:
 4. The whole answer must be between 28 and 39 words long.
 5. The answer must end with a period.
 """, [
-    gate('fish', ['e'], tail='\\.\\s*$'),
+    gate('fish', ['e', NOT_PERIOD_END], tail='\\.\\s*$'),  # v1.1.1: also "each sentence ends with a period"
     {'check': 'sentence_count', 'min': 4, 'max': 4},
     {'check': 'include', 'text': 'fish', 'min': 2},
     {'check': 'word_count', 'min': 28, 'max': 39},
 ], ["At dawn a crowd walks along a row of fish stalls. Fishing folk shout loud calls and hold up shiny cod. A small boy runs past with a pail of crabs. Gulls wait high up for scraps of fish."],
-   ["The market opens at dawn. Traders shout. Gulls circle overhead while buyers haggle over fresh fish."], "Lipogram (no letter e) is hard for tokenised models; combined with exact sentence count. The no-'e' and final-period rules form one check gated on the required word 'fish'.")
+   ["The market opens at dawn. Traders shout. Gulls circle overhead while buyers haggle over fresh fish.",
+    "At dawn a crowd walks along a row of fish stalls! Fishing folk shout loud calls and hold up shiny cod. A small boy runs past with a pail of crabs. Gulls wait high up for scraps of fish."], "Lipogram (no letter e) is hard for tokenised models; combined with exact sentence count. The no-'e' and final-period rules form one check gated on the required word 'fish'.")
 
 case('f04', 'medium', """
 Write an 8-line poem about a sports arena.
@@ -110,8 +126,11 @@ Rules:
     {'check': 'regex', 'pattern': '"tags"\\s*:\\s*\\[\\s*"[a-z]+"\\s*,\\s*"[a-z]+"\\s*,\\s*"[a-z]+"\\s*\\]'},
     {'check': 'regex', 'pattern': '"rating"\\s*:\\s*(10\\.0|\\d\\.\\d)\\s*[,}\\n]'},
     {'check': 'regex', 'pattern': '^\\s*\\{(?=[\\s\\S]*"title")[\\s\\S]*\\}\\s*$'},
-], ['{"title": "The Lantern Keeper", "year": 1996, "tags": ["drama", "coastal", "family"], "rating": 7.8}'],
-   ['```json\n{"title": "X", "year": "1996", "tags": ["Drama", "sea"], "rating": 8}\n```'], "Strict JSON shape via json_keys + regexes (number types, array length, decimal format). The 'nothing but one object' check is gated on the \"title\" key so an empty object scores nothing.")
+    gate('"title"', [other_key(['title', 'year', 'tags', 'rating'])], flags=''),  # v1.1.1: "Do not include any other keys"
+], ['{"title": "The Lantern Keeper", "year": 1996, "tags": ["drama", "coastal", "family"], "rating": 7.8}',
+    '{"title": "Night: The \\"Long\\" Watch", "year": 1993, "tags": ["noir", "rain", "harbour"], "rating": 6.0}'],
+   ['```json\n{"title": "X", "year": "1996", "tags": ["Drama", "sea"], "rating": 8}\n```',
+    '{"title": "The Lantern Keeper", "year": 1996, "tags": ["drama", "coastal", "family"], "rating": 7.8, "director": "Ana Ruiz"}'], "Strict JSON shape via json_keys + regexes (number types, array length, decimal format). The 'nothing but one object' check is gated on the \"title\" key so an empty object scores nothing.")
 
 case('f06', 'medium', """
 Write a short piece about a lost umbrella.
@@ -256,12 +275,17 @@ Rules:
     {'check': 'json_keys', 'keys': ['cities', 'count', 'source']},
     {'check': 'include', 'text': '"name"', 'min': 4, 'max': 4},
     {'check': 'include', 'text': '"population"', 'min': 4, 'max': 4},
-    {'check': 'regex', 'pattern': '"population"\\s*:\\s*[1-9]\\d*\\s*[,}\\n]'},
+    # v1.1.1: every one of the 4 cities is checked (was: any one population), and no other keys anywhere.
+    {'check': 'regex', 'pattern': CITIES},
     {'check': 'regex', 'pattern': '"count"\\s*:\\s*4\\s*[,}\\n]'},
     {'check': 'regex', 'pattern': '"source"\\s*:\\s*null\\s*[,}\\n]'},
     {'check': 'regex', 'pattern': '^\\s*\\{(?=[\\s\\S]*"cities")[\\s\\S]*\\}\\s*$'},
-], ['{"cities": [{"name": "Varrowmere", "population": 48210}, {"name": "Quellstone", "population": 1203}, {"name": "Ostrava Nuova", "population": 350000}, {"name": "Lindqvist Harbour", "population": 7755}], "count": 4, "source": null}'],
-   ['Here you go:\n{"cities": [{"name": "A", "population": "100"}], "count": "4", "source": "none"}'], "Nested JSON shape verified with json_keys plus raw-text occurrence counts and type regexes; the one-object check is gated on the \"cities\" key.")
+    gate('"cities"', [other_key(['cities', 'count', 'source', 'name', 'population'])], flags=''),
+], ['{"cities": [{"name": "Varrowmere", "population": 48210}, {"name": "Quellstone", "population": 1203}, {"name": "Ostrava Nuova", "population": 350000}, {"name": "Lindqvist Harbour", "population": 7755}], "count": 4, "source": null}',
+    '{\n  "cities": [\n    {"population": 48210, "name": "Varrowmere"},\n    {"name": "Port: Quell", "population": 1203},\n    {"name": "Ostrava Nuova", "population": 350000},\n    {"name": "Lindqvist Harbour", "population": 7755}\n  ],\n  "count": 4,\n  "source": null\n}'],
+   ['Here you go:\n{"cities": [{"name": "A", "population": "100"}], "count": "4", "source": "none"}',
+    '{"cities": [{"name": "Varrowmere", "population": 48210}, {"name": "Quellstone", "population": "1203"}, {"name": "Ostrava Nuova", "population": 350000}, {"name": "Lindqvist Harbour", "population": 7755}], "count": 4, "source": null}',
+    '{"cities": [{"name": "Varrowmere", "population": 48210}, {"name": "Quellstone", "population": 1203}, {"name": "Ostrava Nuova", "population": 350000}, {"name": "Lindqvist Harbour", "population": 7755}], "count": 4, "source": null, "region": "north"}'], "Nested JSON shape verified with json_keys plus raw-text occurrence counts and type regexes; the one-object check is gated on the \"cities\" key.")
 
 case('f14', 'medium', """
 Write a short dialogue between two friends, ANA and BEN, planning a picnic.

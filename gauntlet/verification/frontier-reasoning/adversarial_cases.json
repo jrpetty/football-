@@ -354,12 +354,12 @@
    },
    {
     "check": "regex",
-    "pattern": "[àâçèêëîïôûùÿœÀÂÇÈÊËÎÏÔÛÙŸŒ]",
+    "pattern": "(?:[\\s\\S]*?[àâçèêëîïôûùÿœÀÂÇÈÊËÎÏÔÛÙŸŒ]){3}",
     "shouldMatch": false
    },
    {
     "check": "regex",
-    "pattern": "\\b(le|la|les|est|une|avec|merci|bonjour|voleur|horloge|porte|et|dans|sourit)\\b",
+    "pattern": "\\b(?:une|avec|merci|bonjour|voleur|horloge|dans|sourit|nous|vous|elle|mais)\\b|\\b(?:une|avec|merci|bonjour|voleur|horloge|dans|sourit|nous|vous|elle|mais|le|la|les|est|et|des|du|il|pour|qui|que|au|porte)\\b(?:[^\\w\\n]+[\\w'’]+){0,1}?[^\\w\\n]+(?:une|avec|merci|bonjour|voleur|horloge|dans|sourit|nous|vous|elle|mais|le|la|les|est|et|des|du|il|pour|qui|que|au|porte)\\b",
     "flags": "i",
     "shouldMatch": false
    }
@@ -607,12 +607,12 @@
    },
    {
     "check": "regex",
-    "pattern": "[ñáíóú¿¡ÑÁÍÓÚ]",
+    "pattern": "(?:[\\s\\S]*?[ñáíóú¿¡ÑÁÍÓÚ]){3}",
     "shouldMatch": false
    },
    {
     "check": "regex",
-    "pattern": "\\b(el|los|las|una|muy|gracias|visita|reloj|con|para|resumen)\\b",
+    "pattern": "\\b(?:muy|gracias|visita|reloj|resumen|pero|también|nuestro|nuestra)\\b|\\b(?:muy|gracias|visita|reloj|resumen|pero|también|nuestro|nuestra|el|los|las|una|con|para|del|que|por|es)\\b(?:[^\\w\\n]+[\\w'’]+){0,1}?[^\\w\\n]+(?:muy|gracias|visita|reloj|resumen|pero|también|nuestro|nuestra|el|los|las|una|con|para|del|que|por|es)\\b",
     "flags": "i",
     "shouldMatch": false
    },
@@ -1017,12 +1017,12 @@
    },
    {
     "check": "regex",
-    "pattern": "[äöüßÄÖÜ]",
+    "pattern": "(?:[\\s\\S]*?[äöüßÄÖÜ]){3}",
     "shouldMatch": false
    },
    {
     "check": "regex",
-    "pattern": "\\b(und|ist|das|der|nicht|uhr|bitte|geschlossen|schließt|erwachsene)\\b",
+    "pattern": "\\b(?:und|nicht|bitte|geschlossen|schließt|erwachsene|ich|wir|sie|auch|haben|wird)\\b|\\b(?:und|nicht|bitte|geschlossen|schließt|erwachsene|ich|wir|sie|auch|haben|wird|ist|das|der|den|uhr|ein|eine|zu)\\b(?:[^\\w\\n]+[\\w'’]+){0,1}?[^\\w\\n]+(?:und|nicht|bitte|geschlossen|schließt|erwachsene|ich|wir|sie|auch|haben|wird|ist|das|der|den|uhr|ein|eine|zu)\\b",
     "flags": "i",
     "shouldMatch": false
    },
