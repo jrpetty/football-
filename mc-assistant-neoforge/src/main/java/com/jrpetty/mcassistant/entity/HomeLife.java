@@ -68,6 +68,7 @@ public final class HomeLife {
 
     /** Its own time (VillageFolkEntity.socialise): a chore its household wants doing, else the next piece for its home. */
     public static boolean ownTime(VillageFolkEntity f, ServerLevel level) {
+        if (ShoppingTrips.underWay(f)) return false;               // a shopping trip under way is seen through first
         if (Housekeeping.chores(f, level)) return true;
         return HomeMaking.errand(f, level);
     }

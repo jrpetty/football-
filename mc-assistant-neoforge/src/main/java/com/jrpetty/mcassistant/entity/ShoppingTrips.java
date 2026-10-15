@@ -309,6 +309,11 @@ public final class ShoppingTrips {
         return got;
     }
 
+    /** [home-making] Is it on a shopping trip now (to the shop or home with it)? Its other errands wait for it. */
+    static boolean underWay(VillageFolkEntity f) {
+        return TRIPS.containsKey(f.getUUID());
+    }
+
     /** Tests: is it on a trip now, and has it bought yet ("none", "shop", "home"). */
     public static String stageForTests(VillageFolkEntity f) {
         Trip t = TRIPS.get(f.getUUID());
