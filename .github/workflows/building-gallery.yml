@@ -1,0 +1,240 @@
+name: Building gallery
+
+# A photograph of every building the mod can raise, outside and in, so each can be looked over by eye as the
+# world has it. A real dedicated server and a real client (software OpenGL on a virtual display), as the client
+# job of build-neoforge-mod.yml has them; every drawing (data/mc_assistant/blueprints/*.txt) is put up on a
+# stage in the sky, twelve to a row, as a town puts it up: in the town's own woods and stones, made over for
+# its age, furnished out of its stores and dressed (/village showcase gallery, Gallery.java). At noon the
+# player goes round as a camera (tools/realworld/gallery.py) and takes each from three-quarters on with its
+# door and its roof, and from just inside its door. Published to the "building-gallery-latest" release
+# (the pictures of the run before taken off first):
+#   gallery-<name>-out.png, gallery-<name>-in.png   each building outside and in
+#   gallery-sheet-<n>.png                           a contact sheet a row of twelve
+#   gallery.txt                                     the index: where each stood, how each picture was taken
+#   gallery-run.txt                                 the run's own report, and what the client and server said
+#
+# Started by hand (Actions -> Building gallery -> Run workflow, the town's age to choose), by touching
+# tools/realworld/gallery.trigger, or by a push that changes the drawings, the building or furnishing code,
+# the towns' looks, or the gallery itself.
+
+on:
+  workflow_dispatch:
+    inputs:
+      age:
+        description: "The town's age the buildings are put up and furnished for"
+        type: choice
+        options: [iron, stone, diamond]
+        default: iron
+  push:
+    branches:
+      - claude/minecraft-ai-assistant-44hj4f
+      - main
+    paths:
+      - "mc-assistant-neoforge/src/main/resources/data/mc_assistant/blueprints/**"
+      - "mc-assistant-neoforge/src/main/resources/data/mc_assistant/themes/**"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/entity/goal/BuildGoal.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/entity/goal/Blueprints.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/entity/Interiors.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/entity/Palettes.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/entity/Ages.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/entity/Themes.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/entity/Materials.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/entity/Thatch.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/entity/Architecture.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/entity/TownLife.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/Gallery.java"
+      - "mc-assistant-neoforge/src/main/java/com/jrpetty/mcassistant/Showcase.java"
+      - "mc-assistant-neoforge/tools/realworld/gallery.py"
+      - "mc-assistant-neoforge/tools/realworld/gallery.trigger"
+      - ".github/workflows/building-gallery.yml"
+
+permissions:
+  contents: write
+
+# A newer push has newer buildings: the run before is not worth finishing.
+concurrency:
+  group: building-gallery
+  cancel-in-progress: true
+
+jobs:
+  gallery:
+    runs-on: ubuntu-latest
+    # Some forty minutes: ten to build and start the server and the client, two pictures a building at about
+    # twelve seconds a building for ninety-five, the rows' building and the upload.
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Install a virtual display, software OpenGL and Pillow
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb mesa-utils libgl1-mesa-dri libglx-mesa0 libxrandr2 libxxf86vm1 libxi6 libxcursor1 libxinerama1 imagemagick netcat-openbsd python3-pil jq
+
+      - name: Prepare a server directory and a client directory
+        working-directory: mc-assistant-neoforge
+        run: |
+          mkdir -p run/config run-client
+          echo "eula=true" > run/eula.txt
+          cat > run/server.properties <<'EOF'
+          level-seed=7331
+          level-type=minecraft:normal
+          generate-structures=true
+          online-mode=false
+          spawn-protection=0
+          max-tick-time=-1
+          view-distance=12
+          simulation-distance=6
+          sync-chunk-writes=false
+          enable-rcon=true
+          rcon.port=25575
+          rcon.password=soak
+          broadcast-rcon-to-ops=false
+          motd=gallery
+          EOF
+          cat > run/config/mc_assistant-common.toml <<'EOF'
+          [villages]
+          naturalVillages = false
+          EOF
+          # No hand, hotbar or crosshair in the pictures (hideGui), no clouds across the tall ones.
+          cat > run-client/options.txt <<'EOF'
+          onboardAccessibility:false
+          tutorialStep:none
+          pauseOnLostFocus:false
+          narrator:0
+          fancyGraphics:true
+          renderDistance:12
+          simulationDistance:6
+          renderClouds:"false"
+          maxFps:30
+          guiScale:2
+          hideGui:true
+          joinedFirstServer:true
+          skipMultiplayerWarning:true
+          EOF
+
+      - name: Start the server
+        working-directory: mc-assistant-neoforge
+        run: |
+          chmod +x gradlew
+          nohup ./gradlew --no-daemon runServer > server-gradle.log 2>&1 &
+
+      - name: Start the client on a virtual display
+        working-directory: mc-assistant-neoforge
+        run: |
+          nohup Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset > xvfb.log 2>&1 &
+          sleep 3
+          export DISPLAY=:99
+          export LIBGL_ALWAYS_SOFTWARE=1
+          glxinfo -B > glxinfo.txt 2>&1 || true
+          head -12 glxinfo.txt
+          # The server has to be listening before the client is told to join it.
+          for i in $(seq 1 300); do nc -z localhost 25565 && break; sleep 5; done
+          nc -z localhost 25565 && echo "the server is listening"
+          nohup ./gradlew --no-daemon -Psmoke=true runSmoke > client-gradle.log 2>&1 &
+
+      - name: Photograph every building
+        working-directory: mc-assistant-neoforge
+        env:
+          AGE: ${{ inputs.age || 'iron' }}
+        run: |
+          export DISPLAY=:99
+          echo "[REAL] ==== the building gallery, $(git rev-parse --short HEAD), the $AGE age ====" > gallery-run.txt
+          set +e
+          python3 tools/realworld/gallery.py "$AGE" | tee -a gallery-run.txt
+          echo "gallery exit: ${PIPESTATUS[0]}"
+          set -e
+          ls gallery-*.png 2>/dev/null | wc -l
+
+      - name: Make the contact sheets
+        if: always()
+        working-directory: mc-assistant-neoforge
+        run: |
+          python3 tools/realworld/gallery.py sheets | tee -a gallery-run.txt || true
+          ls -la gallery-sheet-*.png || true
+
+      - name: Collect the logs
+        if: always()
+        working-directory: mc-assistant-neoforge
+        run: |
+          echo "[REAL] ---- the client's log: anything it complained about ----" >> gallery-run.txt
+          grep -aE "Exception|Caused by|ERROR|FATAL|mc_assistant|GLFW|OpenGL|Crash" run-client/logs/latest.log 2>/dev/null | grep -av "Ambiguity\|^    at " | tail -80 >> gallery-run.txt || true
+          ls run-client/crash-reports 2>/dev/null >> gallery-run.txt || true
+          head -60 run-client/crash-reports/*.txt 2>/dev/null >> gallery-run.txt || true
+          echo "[REAL] ---- the last of the client's gradle output ----" >> gallery-run.txt
+          tail -30 client-gradle.log >> gallery-run.txt 2>/dev/null || true
+          echo "[REAL] ---- the server's log: anything from the mod ----" >> gallery-run.txt
+          grep -aE "Exception|Caused by|ERROR|mc_assistant|com\.jrpetty" run/logs/latest.log 2>/dev/null | grep -av "Ambiguity\|^    at " | tail -80 >> gallery-run.txt || true
+          tail -30 server-gradle.log >> gallery-run.txt 2>/dev/null || true
+
+      - name: Stop everything
+        if: always()
+        run: pkill -f "net.minecraft" || true; pkill -f "runServer" || true; pkill -f "runSmoke" || true; pkill Xvfb || true
+
+      # The whole set as a run artifact as well (one zip, for looking through offline).
+      - name: Keep the pictures with the run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: building-gallery
+          path: |
+            mc-assistant-neoforge/gallery-*.png
+            mc-assistant-neoforge/gallery.txt
+            mc-assistant-neoforge/gallery-run.txt
+          if-no-files-found: warn
+
+      - name: Make sure the release is there
+        if: always()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: building-gallery-latest
+          name: "Building gallery (latest)"
+          prerelease: true
+          make_latest: "false"
+          body: |
+            Every building the mod can raise, photographed outside and in, as a town puts it up (its woods and
+            stones, its age's make-over, its furnishing), from the run of ${{ github.sha }} on ${{ github.ref_name }}.
+            Start with gallery.txt (the index) and gallery-sheet-*.png (a contact sheet a row of twelve);
+            gallery-<name>-out.png and gallery-<name>-in.png are each building outside and inside.
+            Made by .github/workflows/building-gallery.yml. Not a mod build.
+
+      # The run before's pictures off first (a building renamed or gone leaves nothing behind), then this run's
+      # up one at a time with a few tries each: two hundred at once meet GitHub's secondary rate limit.
+      - name: Publish the pictures
+        if: always()
+        continue-on-error: true
+        working-directory: mc-assistant-neoforge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          api="https://api.github.com/repos/$REPO"
+          auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json")
+          rid=$(curl -sS "${auth[@]}" "$api/releases/tags/building-gallery-latest" | jq -r '.id // empty')
+          if [ -z "$rid" ]; then echo "no building-gallery-latest release"; exit 1; fi
+          [ -s gallery-run.txt ] || { echo "nothing to publish"; exit 0; }
+          for round in $(seq 1 10); do                 # a hundred at a time, till none are left
+            ids=$(curl -sS "${auth[@]}" "$api/releases/$rid/assets?per_page=100" | jq -r '.[]?.id')
+            [ -n "$ids" ] || break
+            for aid in $ids; do curl -sS -X DELETE "${auth[@]}" "$api/releases/assets/$aid" > /dev/null; done
+          done
+          up=0; failed=0
+          for f in gallery.txt gallery-run.txt gallery-sheet-*.png gallery-*-out.png gallery-*-in.png; do
+            [ -s "$f" ] || continue
+            case "$f" in *.png) type=image/png ;; *) type=text/plain ;; esac
+            ok=0
+            for try in 1 2 3 4; do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: $type" \
+                --data-binary @"$f" "https://uploads.github.com/repos/$REPO/releases/$rid/assets?name=$(basename "$f")")
+              if [ "$code" = "201" ]; then ok=1; break; fi
+              echo "$f: $code (try $try)"; sleep $((try * 10))
+            done
+            if [ $ok = 1 ]; then up=$((up + 1)); else failed=$((failed + 1)); fi
+            sleep 0.5
+          done
+          echo "published $up files, $failed refused"
