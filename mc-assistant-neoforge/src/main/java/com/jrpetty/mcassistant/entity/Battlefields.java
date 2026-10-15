@@ -156,9 +156,9 @@ public final class Battlefields {
             centre = surface(level, BlockPos.containing(pick.x(), 0, pick.z()));
         } else if (looked[0] > 0) {
             Villages.Village big = Villages.headcount(a.id()) >= Villages.headcount(b.id()) ? a : b, other = big == a ? b : a;
-            centre = surface(level, edgeOfFields(big, other));
-            LOG.info("[MCA-WAR] no field fit to fight on between {} and {} ({} looked at): the edge of {}'s fields", Villages.name(a.id()),
-                Villages.name(b.id()), looked[0], Villages.name(big.id()));
+            centre = surface(level, driestBeside(level, big, other, load));
+            LOG.info("[MCA-WAR] no field fit to fight on between {} and {} ({} looked at): the driest, levellest ground beside {}'s fields at {}",
+                Villages.name(a.id()), Villages.name(b.id()), looked[0], Villages.name(big.id()), centre.toShortString());
         } else {
             BlockPos mid = BlockPos.containing((ea.getX() + eb.getX()) / 2.0, a.centre().getY(), (ea.getZ() + eb.getZ()) / 2.0);
             return new Ground(mid, axis[0], axis[1], null, null, null, null, null, nearerName(mid, a, b), false);
@@ -262,7 +262,63 @@ public final class Battlefields {
         return false;
     }
 
-    /** The last resort: just past the edge of the larger town's fields, on the side towards the other (ground the town made flat). */
+    /**
+     * The last resort, looked over rather than taken blind: just past the edge of either town's fields (the larger
+     * first), on sixteen bearings from the side towards the other, the driest and then the levellest ground found; the
+     * edge towards the other if none of it can be looked at. (A town across a lake from its foe must not fight in it.)
+     */
+    static BlockPos driestBeside(ServerLevel level, Villages.Village big, Villages.Village other, boolean load) {
+        BlockPos best = null;
+        long bestScore = Long.MAX_VALUE;
+        for (Villages.Village v : List.of(big, other)) {
+            Villages.Village foe = v == big ? other : big;
+            double[] toward = axis(v.centre(), foe.centre());
+            double out = Villages.townReach(v.id()) + FIELDS_OUT + HALF_LONG;
+            for (int k = 0; k < 16; k++) {
+                int turn = (k + 1) / 2 * (k % 2 == 0 ? 1 : -1);                 // 0, -1, 1, -2, 2...: towards the foe first
+                double ang = Math.atan2(toward[1], toward[0]) + Math.PI * 2 * turn / 16;
+                double ax = Math.cos(ang), az = Math.sin(ang);
+                double cx = v.centre().getX() + 0.5 + ax * out, cz = v.centre().getZ() + 0.5 + az * out;
+                if (nearTown(level, cx, cz)) continue;                          // on some town's own ground
+                long score = dryScore(level, cx, cz, ax, az, load);
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = BlockPos.containing(cx, v.centre().getY(), cz);
+                }
+                if (score == 0) return best;
+            }
+        }
+        return best != null ? best : edgeOfFields(big, other);
+    }
+
+    /** How bad this ground is to fight on, worst first: its wet columns, then its height's spread, then its trees (0 is
+     *  dry, level and clear); Long.MAX_VALUE if it cannot be looked at. Every fourth column of the field looked at. */
+    static long dryScore(ServerLevel level, double cx, double cz, double ax, double az, boolean load) {
+        int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE, wet = 0, trees = 0;
+        for (int i = -HALF_LONG; i <= HALF_LONG; i += LOOK_STEP * 2) {
+            for (int j = -HALF_WIDE; j <= HALF_WIDE; j += LOOK_STEP * 2) {
+                int x = Mth.floor(cx + ax * i - az * j), z = Mth.floor(cz + az * i + ax * j);
+                if (!level.hasChunk(x >> 4, z >> 4)) {
+                    if (!load) return Long.MAX_VALUE;
+                    level.getChunk(x >> 4, z >> 4);
+                }
+                int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
+                BlockState top = level.getBlockState(new BlockPos(x, y - 1, z));
+                if (!top.getFluidState().isEmpty() || top.is(BlockTags.ICE)) wet++;
+                else if (top.is(BlockTags.LOGS) || level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z) > y) trees++;
+                lo = Math.min(lo, y);
+                hi = Math.max(hi, y);
+            }
+        }
+        return wet * 1_000_000L + Math.max(0, hi - lo - MAX_RANGE) * 1_000L + trees;
+    }
+
+    /** Tests: the last resort's ground between these two towns (their ground made if need be). */
+    public static BlockPos driestForTests(ServerLevel level, Villages.Village big, Villages.Village other) {
+        return surface(level, driestBeside(level, big, other, true));
+    }
+
+    /** The edge of the larger town's fields, on the side towards the other, unlooked at (nothing of the ground to hand). */
     static BlockPos edgeOfFields(Villages.Village big, Villages.Village other) {
         double[] axis = axis(big.centre(), other.centre());
         double out = Villages.townReach(big.id()) + FIELDS_OUT + HALF_LONG;

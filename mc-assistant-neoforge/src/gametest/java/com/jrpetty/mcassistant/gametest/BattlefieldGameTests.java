@@ -112,6 +112,38 @@ public class BattlefieldGameTests {
         });
     }
 
+    // ------------------------------------------------------------------ bf03
+
+    /**
+     * Two towns with a lake between them, nothing fit to fight on: the last resort is no longer taken blind at the
+     * edge of the larger town's fields towards the other (in the lake) but is the driest, levellest ground round
+     * either town's fields: on dry land, never in the water.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 400, batch = "bf03_not_in_the_lake")
+    public static void bf03_not_in_the_lake(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int x = 2056000, apart = 300;
+        Villages.Village a = town(level, x), b = town(level, x + apart);
+        helper.assertTrue(a != null && b != null && !a.id().equals(b.id()), "two towns");
+        // The lake: everything between the two towns' own ground, the surface turned to water.
+        int reach = Villages.townReach(a.id()) + 4;
+        Kit.hold(level, x + apart / 2, Z, 160);
+        Kit.prepare(level, x + apart / 2, Z, 160);
+        for (int xx = x + reach; xx <= x + apart - reach; xx++) {
+            for (int z = Z - 120; z <= Z + 120; z++) {
+                BlockPos g = Kit.surface(level, xx, z).below();
+                level.setBlock(g, Blocks.WATER.defaultBlockState(), 2);
+            }
+        }
+        BlockPos at = Battlefields.driestForTests(level, a, b);
+        boolean wet = !level.getBlockState(at.below()).getFluidState().isEmpty();
+        Kit.log("bf03 the last resort: " + at.toShortString() + " on " + level.getBlockState(at.below()) + "; town " + a.centre().toShortString());
+        helper.assertTrue(!wet, "the armies meet on dry ground, not in the lake: " + at.toShortString());
+        helper.assertTrue(at.getX() < x + reach || at.getX() > x + apart - reach, "beside a town's fields, out of the lake: " + at.toShortString());
+        helper.succeed();
+    }
+
     private static Villages.Village town(ServerLevel level, int x) {
         Kit.hold(level, x, Z, 48);
         Kit.prepare(level, x, Z, 48);
