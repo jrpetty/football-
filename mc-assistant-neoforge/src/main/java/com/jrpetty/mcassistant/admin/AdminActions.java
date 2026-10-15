@@ -270,6 +270,37 @@ public final class AdminActions {
             }
             case "economy.wagon" -> AdminTools.wagon(level, v);
             case "economy.market" -> AdminTools.marketDay(level, v);
+            // ---- [civic-land] the taxes, the unrest, the knights
+            case "economy.tax" -> {
+                com.jrpetty.mcassistant.entity.TaxBook.Lever l = com.jrpetty.mcassistant.entity.TaxBook.Lever.named(a.word(0, ""));
+                if (l == null) yield Done.no("Which tax? head, wage, toll or levy.");
+                int now = com.jrpetty.mcassistant.entity.TaxBook.set(level, v, l, a.num(1, 1), "by decree");
+                yield Done.ok(Villages.name(v.id()) + "'s " + l.words + " is " + com.jrpetty.mcassistant.entity.TaxBook.words(l, now),
+                    l.words + " was set by decree");
+            }
+            case "economy.taxday" -> {
+                com.jrpetty.mcassistant.entity.TaxBook.collectNowForTests(level, v);
+                int[] r = com.jrpetty.mcassistant.entity.TaxBook.roundForTests(v.id());
+                yield Done.ok("Tax day in " + Villages.name(v.id()) + ": " + r[1] + " coins from " + r[0] + " folk", "tax day was held by decree");
+            }
+            case "economy.taxvote" -> Done.said(com.jrpetty.mcassistant.entity.TaxBook.sit(level, v, level.getDayTime() / 24000L,
+                "the council, sitting by decree,"));
+            case "people.protest" -> Done.said(com.jrpetty.mcassistant.entity.TaxUnrest.protestNow(level, v));
+            case "people.revolt" -> Done.ok(com.jrpetty.mcassistant.entity.TaxUnrest.revoltNow(level, v), "the town was set against its taxes");
+            case "people.calm" -> Done.ok(com.jrpetty.mcassistant.entity.TaxUnrest.calmNow(level, v), "the town's tax unrest was ended");
+            case "people.knight", "people.unknight", "people.grant", "build.manor" -> {
+                ServerPlayer p = c.server().getPlayerList().getPlayerByName(a.word(0, ""));
+                if (p == null) yield Done.no("No player called " + a.word(0, "") + " is online.");
+                yield switch (c.action().id()) {
+                    case "people.knight" -> Done.ok(com.jrpetty.mcassistant.entity.Knights.dubNow(level, v, p), p.getGameProfile().getName() + " was knighted");
+                    case "people.unknight" -> Done.ok(com.jrpetty.mcassistant.entity.Knights.strip(level, v.id(), p.getUUID(), "by decree"),
+                        p.getGameProfile().getName() + " was stripped of their knighthood");
+                    case "people.grant" -> Done.ok(com.jrpetty.mcassistant.entity.KnightManors.grantNow(level, v, p.getUUID()),
+                        p.getGameProfile().getName() + " was granted land");
+                    default -> Done.ok(com.jrpetty.mcassistant.entity.KnightManors.buildNow(level, v, p.getUUID(), a.word(1, "free").equals("paid")),
+                        p.getGameProfile().getName() + "'s manor was raised");
+                };
+            }
             case "economy.till" -> AdminTools.restock(level, v);
             // ---- build
             case "build.finish" -> {

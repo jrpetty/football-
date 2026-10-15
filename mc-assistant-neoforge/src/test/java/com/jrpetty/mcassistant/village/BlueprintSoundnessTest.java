@@ -678,6 +678,8 @@ class BlueprintSoundnessTest {
         "house 4 4 4 4 front",
         "house2 4 4 4 4 front",
         "infirmary 3 5 4 5 front",
+        "knighthall 5 6 6 6 front",             // [civic-land] the grander manor a knight pays for (the manor's frame)
+        "knightmanor 4 5 5 5 front",            // [civic-land] a knight's manor at the town's edge
         "inn 4 4 4 5 front",
         "library 3 5 4 5 front",
         "lighthouse 3 3 3 3 front",

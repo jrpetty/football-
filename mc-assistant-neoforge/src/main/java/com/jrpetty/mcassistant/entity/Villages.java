@@ -213,7 +213,7 @@ public final class Villages {
             if (!g.built) continue;
             if (Math.abs(pos.getX() - g.x) <= 6 && Math.abs(pos.getZ() - g.z) <= 6 && Math.abs(pos.getY() - g.y) <= 4) return true;
         }
-        return false;
+        return KnightManors.inAManor(villageId, pos);                   // [civic-land] a knight's manor is the knight's own
     }
 
     // ------------------------------ the village elder -------------------------
@@ -365,6 +365,8 @@ public final class Villages {
             case "court" -> "the courtyard before the board";
             case "pen" -> "the animal pen";
             case "guesthouse" -> "a house for the village's honoured guest";
+            case "knightmanor" -> "a knight's manor";                    // [civic-land]
+            case "knighthall" -> "a knight's hall";                      // [civic-land]
             case "fountain" -> "the fountain on the square";
             case "manor" -> "a manor house";
             case "belltower" -> "the bell tower";
@@ -511,6 +513,7 @@ public final class Villages {
         Crime.resetForTests();              // [crime] the cases, the folk's records, the plans, the court
         Police.resetForTests();             // [police] the watch's incidents, chases, beats, cells and players in hand
         Weave.resetForTests();              // [weave] the homeless waiting to go, the day's looks; the round off again
+        CivicLand.resetForTests();          // [civic-land] the taxes, the unrest, the knights and their manors
         Roads.reset();
         LAST_PROJECT.clear();
         POP.clear();
@@ -614,6 +617,7 @@ public final class Villages {
         BUILT_AT.remove(villageId);
         com.jrpetty.mcassistant.village.Ledger.forget(villageId);
         LAST_PROJECT.remove(villageId);
+        CivicLand.townGone(villageId);      // [civic-land] its knighthoods lapse, its books shut
     }
 
     /** Restore a settlement from what one of its folk remembers. Village
@@ -1643,6 +1647,9 @@ public final class Villages {
             Assemblies.opening(villageId, structure, raised.anchor(), raised.facing(), gameTime);
         }
         Perks.raised(villageId, structure, gameTime);               // [perks] a wonder claimed for the world (where it stands); a deed of the reign
+        if (KnightManors.STRUCTURE.equals(structure) || KnightManors.GRAND.equals(structure)) {
+            KnightManors.raised(villageId, structure, raised == null ? null : raised.anchor(), gameTime);   // [civic-land] the knight's own now
+        }
         if ("guesthouse".equals(structure)) {
             com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId);
             Site site = pending == null ? null : pending.get(structure);
@@ -1786,7 +1793,8 @@ public final class Villages {
         // [war-prep] and on a war footing, the defences at the head of the list (WarWorks)
         // [perks] and a wonder whose dues are laid by, before the next great work (Wonders.wanted)
         return requestedFirst(villageId, WarWorks.wanted(villageId,
-            Civics.wanted(villageId, Wonders.wanted(villageId, Flats.wanted(villageId, ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId)))))));
+            KnightManors.wanted(villageId, Civics.wanted(villageId, Wonders.wanted(villageId, Flats.wanted(villageId,   // [civic-land] a knight's manor
+                ageBeforeTheHouse(villageId, projectsWantedInOrder(villageId))))))));
     }
 
     /** The buildings an age asks for before the next (Villages.needs): the wall, the smeltery and the hall;
@@ -2271,6 +2279,7 @@ public final class Villages {
                 com.jrpetty.mcassistant.village.Chronicle.Guest g = com.jrpetty.mcassistant.village.Chronicle.awaitingAHouse(villageId);
                 yield "a house for " + (g == null ? "an honoured guest" : g.name) + ", the village's honoured guest";
             }
+            case "knightmanor", "knighthall" -> KnightManors.why(villageId, project);   // [civic-land] the land it granted a knight
             case "storage" -> "a storehouse, so what is gathered has somewhere to go";
             case "storehouse" -> "the Village Storehouse in the storehouse shed, so the whole village keeps its goods in one place";
             case "shelter" -> "a shelter, somewhere to wait out the first nights";
@@ -2957,6 +2966,9 @@ public final class Villages {
         } else if (project.equals("court")) {
             // The courtyard lies before the board, its back along the board's foot: no lot of its own.
             site = courtSite(level, villageId);
+        } else if (KnightManors.STRUCTURE.equals(project) || KnightManors.GRAND.equals(project)) {
+            // [civic-land] A knight's manor goes on the land the town granted it, at its edge: no lot in the plan.
+            site = KnightManors.site(level, villageId, project);
         } else if (project.equals(Divers.SHED)) {
             // [diver] The diver's shed goes on the bank of its water, its door to it (Divers.shedPlace): no lot in the plan.
             site = Divers.shedSite(level, villageId);

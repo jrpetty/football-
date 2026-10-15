@@ -144,12 +144,15 @@ public final class FolkTalk {
         if (topic == TalkTopic.PET) return manner(f, Pets.talk(f, p, text), true);    // [pets] its household's pet, a child's above all
         if (f.isBaby() && topic != TalkTopic.GIFT) return child(f, p, topic, op);
         String kept = topic == TalkTopic.OPEN ? Welcome.handOver(f, p) : "";
+        if (kept.isEmpty() && topic == TalkTopic.OPEN) kept = (Knights.handOver(f, p) + " " + KnightManors.handOver(f, p)).trim();   // [civic-land] a knight's banner, its key
         if (!kept.isEmpty()) return manner(f, kept.trim());
         // [batchG] A visitor from afar answers for itself: its own story, the bard's news, the merchant's wares.
         String visitor = Visitors.talk(f, p, topic, text);
         if (visitor != null) return manner(f, visitor);
         String civic = PlayerCivic.talk(f, p, topic, text);          // [player-civic] standing for leader; an apprenticeship
         if (civic != null) return manner(f, civic);
+        String realm = typed ? CivicLand.talk(f, p, text) : null;    // [civic-land] the taxes; a knight's title, retinue, vote, manor
+        if (realm != null) return manner(f, realm);
         // [civic] A newcomer at the town's edge answers for itself; and "I vote aye" is a citizen's vote (Referendums).
         String newcomer = Newcomers.talk(f, p, topic, text);
         if (newcomer != null) return manner(f, newcomer);
@@ -347,6 +350,7 @@ public final class FolkTalk {
             if (Citizens.is(village, p.getUUID())) sb.append(" citizen");
             if (PlayerLeader.leads(village, p.getUUID())) sb.append(" leader");
             if (Laws.owes(village, p.getUUID()) > 0) sb.append(" fine");
+            sb.append(CivicLand.contextFlags(village, p));           // [civic-land] " knight", " taxowed"
         }
         if (Birthdays.today(f)) sb.append(" birthday");
         if (!f.isBaby() && Interviews.shortlisted(f)) sb.append(" interview");
@@ -376,6 +380,7 @@ public final class FolkTalk {
                 + Standing.titleIn(f.ownerId(), v.title());
             String earned = QuestRewards.titleLine(f.ownerId(), p.getUUID());   // [quests] "Thief-taker, the town's Medal"
             if (!earned.isEmpty()) where += ", " + earned;
+            if (Knights.isKnight(f.ownerId(), p.getUUID())) where += ", Knight of " + Villages.name(f.ownerId());   // [civic-land]
         }
         String errand = Errands.live(f, p.getUUID()) ? "Asked you to " + Errands.describe(me)
             : Trade.live(f, p) ? "Offers you " + Trade.describe(f) : "";
@@ -791,6 +796,7 @@ public final class FolkTalk {
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
             case "proud" -> Museum.prideWords(f);
             case "letter", "meeting", "favour", "found" -> Civics.moodWords(f, why);   // [batchF]
+            case "taxcut", "taxed", "arrears" -> TaxUnrest.moodWords(f, why);         // [civic-land]
             case "robbed", "repaid", "shamed", "cleared" -> Crime.moodWords(f, why);  // [crime]
             case "cells", "fined", "helped" -> Police.moodWords(f, why);               // [police]
             case "builtit", "grateful", "clash" -> Referendums.moodWords(f, why);      // [civic]
@@ -1301,6 +1307,7 @@ public final class FolkTalk {
         op.giftsToday++;
         me.feelFor(p.getUUID(), you, delta);
         me.gotAGift(day, you);
+        Knights.gift(f, p, delta);                            // [civic-land] a gift the town was glad of, toward the player's service
         if (delta >= 12) me.remember(day, you + " gave me " + what.toLowerCase(Locale.ROOT), 6);
         if (f.level() instanceof ServerLevel server) {
             server.sendParticles(delta >= 12 ? net.minecraft.core.particles.ParticleTypes.HEART

@@ -511,6 +511,7 @@ public final class VillageBoards {
         out.addAll(PlayerLeader.board(level, id, day));      // [player-civic] a player who leads: approval, promises, a recall
         out.addAll(Civics.board(level, id));                  // [batchF] the post, petitions, the fund, the meeting, a search
         out.addAll(Referendums.board(level, id));             // [civic] the town's vote, the great work, newcomers asking to settle
+        out.addAll(CivicLand.board(level, id));               // [civic-land] the taxes and tax day, the town's temper, its knights
 
         // ---- what we're working towards
         out.add("FH|What we're working towards");

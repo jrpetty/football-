@@ -52,7 +52,9 @@ public final class Assemblies {
         WATCH("the changing of the watch"), FOUNDING("Founding Day"),
         REFERENDUM("the town's vote"),                          // [civic] a count at the board, or a great work opened (Referendums)
         FESTIVAL("a festival"),                                 // [batchB] the May dance, the bonfire, the fair, the harvest (Festivals)
-        MEETING("the town meeting");                         // [batchF] once a week (TownMeeting)
+        MEETING("the town meeting"),                         // [batchF] once a week (TownMeeting)
+        PROTEST("a protest"),                                // [civic-land] the angry at the hall about the taxes (TaxUnrest)
+        KNIGHTING("a knighting");                            // [civic-land] a player dubbed before the hall (Knights)
 
         public final String label;
         Kind(String label) { this.label = label; }
@@ -278,6 +280,7 @@ public final class Assemblies {
                 if (a.line >= a.script.size()) {
                     FireworkShows.afterSpeech(level, a);          // [fireworks] the vows said, the year read: the display, if it has one
                     a.phase = a.kind == Kind.FEAST || a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING
+                        || a.kind == Kind.KNIGHTING                               // [civic-land] the cheers and the rockets
                         || a.kind == Kind.FESTIVAL && Festivals.mingles(a)        // [batchB] the dance, the song, the meal
                         ? Phase.MINGLE : Phase.CLOSE;
                     a.phaseAt = now;
@@ -301,7 +304,7 @@ public final class Assemblies {
                 a.nextLineAt = now + Math.max(60, 40 + text.length() * 2);
             }
             case MINGLE -> {
-                if (a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING) {
+                if (a.kind == Kind.CELEBRATION || a.kind == Kind.HONOUR || a.kind == Kind.FOUNDING || a.kind == Kind.KNIGHTING) {   // [civic-land]
                     // [fireworks] The display is the fireworks maker's, of the stores' own rockets, begun as the speeches
                     // ended (FireworkShows.afterSpeech); with none put by, a bonfire glow will do.
                     a.fired = Math.max(a.fired, FireworkShows.fired(a.village, level.getDayTime() / 24000L));
@@ -401,6 +404,8 @@ public final class Assemblies {
         if (a.kind == Kind.FOUNDING) FoundingDay.kept(level, a);
         if (a.kind == Kind.FESTIVAL) Festivals.closed(level, a);                          // [batchB] kept, and into the chronicle
         if (a.kind == Kind.MEETING) TownMeeting.held(level, a);      // [batchF] into the chronicle, and the books
+        if (a.kind == Kind.PROTEST) TaxUnrest.closed(level, a);      // [civic-land] the signs back, into the chronicle
+        if (a.kind == Kind.KNIGHTING) Knights.closed(level, a);      // [civic-land] remembered by all who saw it
     }
 
     // ------------------------------------------------------------------ being there
@@ -648,6 +653,7 @@ public final class Assemblies {
             if (senior != null) a.host = senior.getUUID();
         }
         if (a.kind == Kind.FOUNDING && a.host == null) a.host = FoundingDay.eldest(a.village);   // nobody leads: the eldest reads
+        if (a.kind == Kind.PROTEST) TaxUnrest.prepare(level, a);     // [civic-land] the ringleader speaks; the leader called out
         if (a.kind == Kind.COMING_OF_AGE || a.kind == Kind.OPENING || a.host == null) {
             if (a.host == null) a.host = oldest(level, a.village);
         }
@@ -988,6 +994,8 @@ public final class Assemblies {
             case FESTIVAL -> Festivals.script(level, a, s, r);                             // [batchB]
             case REFERENDUM -> Referendums.script(level, a, s, r);    // [civic] the count, or the ribbon cut
             case MEETING -> TownMeeting.script(level, a, s, r);       // [batchF] the week, and the folk's say
+            case PROTEST -> TaxUnrest.script(level, a, s, r);         // [civic-land] the chants, the case, the council's answer
+            case KNIGHTING -> Knights.script(level, a, s, r);         // [civic-land] the deeds read, the dubbing
             case COMING_OF_AGE -> {
                 String[] parts = a.subject.split("\\|", -1);
                 String who = parts[0];
@@ -1012,6 +1020,7 @@ public final class Assemblies {
                 }));
             }
             Petitions.council(level, id, s);                     // [batchF] the petitions with names enough, onto the works
+            TaxBook.council(level, id, s);                       // [civic-land] the taxes taken up, and voted on
             s.add(new Line(null, "To the vote: what do we build next?", '?', () -> Council.revote(id)));
             s.add(new Line(null, DECISION, '!', null));          // read out once the vote is in (step)
             s.add(new Line(null, "So it is decided. Thank you, all.", ' ', null));
@@ -1031,8 +1040,20 @@ public final class Assemblies {
             case FESTIVAL -> Festivals.describe(a.subject);                                // [batchB] "the May dance"
             case REFERENDUM -> Referendums.describe(a);                                  // [civic] "the count", "the opening of the bridge"
             case COUNCIL -> a.subject.startsWith("war|") ? "the council of war" : a.kind.label;   // [war-peace]
+            case KNIGHTING -> "the knighting of " + (a.subject.contains("|") ? a.subject.split("\\|", 2)[1] : "a friend of the town");   // [civic-land]
+            case PROTEST -> "the protest at the taxes";                                          // [civic-land]
             default -> a.kind.label;
         };
+    }
+
+    /** [civic-land] Begin this one now (a protest, a knighting), if nothing else is under way. Whether it began. */
+    static boolean beginNow(ServerLevel level, Assembly a) {
+        if (NOW.containsKey(a.village)) return false;
+        HELD.put(a.village + "/" + a.kind + "/" + a.day + "/" + a.subject, a.day);
+        a.phaseAt = level.getGameTime();
+        NOW.put(a.village, a);
+        step(level, a, level.getGameTime());
+        return NOW.get(a.village) == a;
     }
 
     /** [batchD] What is under way (its kind, phase, focus, the way the crowd faces), for the band (Music); null if nothing. */

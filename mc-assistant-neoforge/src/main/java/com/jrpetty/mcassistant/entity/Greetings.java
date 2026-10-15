@@ -91,6 +91,8 @@ public final class Greetings {
         RandomSource r = f.getRandom();
         String you = p.getName().getString();
         String when = timeOfDay(f);
+        String knightly = Knights.hello(f, p, r);                   // [civic-land] a knight greeted by its title
+        if (knightly != null) return knightly;
         if (f.isBaby()) {
             return aff >= LIKES ? FolkTalk.pick(r, you + "! " + you + "! Wait for me!", "Hi, " + you + "! Where are you going?",
                 "It's " + you + "! Can I come too?") : FolkTalk.pick(r, "Hello, " + you + "!", "Hi, " + you + ".");

@@ -57,6 +57,8 @@ public class BuildGoal extends Goal {
         "townhall", "court",
         // the schoolhouse, once there are children to fill it (School)
         "school",
+        // [civic-land] a knight's manor on the land the town granted it, or the grander hall it paid for (KnightManors)
+        "knightmanor", "knighthall",
         // the bank: a counter, a vault behind bars, the ledger on a lectern (entity/Bank)
         "bank",
         // the park among the homes, with its fountain and benches (entity/Park)

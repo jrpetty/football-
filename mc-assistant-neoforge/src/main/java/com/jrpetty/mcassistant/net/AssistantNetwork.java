@@ -101,8 +101,9 @@ public final class AssistantNetwork {
     /** The town's books, sent to a player for the analytics screen. */
     public static void sendCityStats(ServerPlayer player, net.minecraft.server.level.ServerLevel level,
                                      com.jrpetty.mcassistant.entity.Villages.Village v) {
-        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player,
-            new CityStatsPayload(com.jrpetty.mcassistant.entity.Annals.snapshot(level, v)));
+        net.minecraft.nbt.CompoundTag books = com.jrpetty.mcassistant.entity.Annals.snapshot(level, v);
+        com.jrpetty.mcassistant.entity.CivicLand.viewer(books, level, v, player);   // [civic-land] the viewer's service, knighthood, taxes owed
+        net.neoforged.neoforge.network.PacketDistributor.sendToPlayer(player, new CityStatsPayload(books));
     }
 
     /** Clientbound: the class behind this call only loads on the client. */

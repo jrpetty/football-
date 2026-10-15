@@ -331,6 +331,7 @@ public final class FireworkShows {
         Occasion o = switch (a.kind) {
             case CELEBRATION -> Occasion.CELEBRATION;
             case HONOUR -> Occasion.HONOUR;
+            case KNIGHTING -> Occasion.HONOUR;                    // [civic-land] a knight made: the honour's display
             case FOUNDING -> Occasion.FOUNDING;
             case FESTIVAL -> Occasion.FESTIVAL;
             case WEDDING -> Occasion.WEDDING;

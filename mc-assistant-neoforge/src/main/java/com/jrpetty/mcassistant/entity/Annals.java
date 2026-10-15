@@ -603,6 +603,7 @@ public final class Annals {
         out.put("maps", Cartographers.report(level, v));         // [cartographer] the Maps page: the region drawn, the finds, the archive
         out.put("emerald", EmeraldTrader.report(level, v));      // [emerald] the Trading Post page: the account, the villagers' villages
         out.put("lands", Borders.report(level, v));              // [borders-map] the Lands page: area, neighbours, disputes, markers
+        out.put("realm", CivicLand.report(level, v));            // [civic-land] the Taxes and the Knights pages
         List<String> queue = new ArrayList<>();
         for (String p : Villages.projectsWanted(id)) queue.add(Villages.spoken(p));
         out.put("queue", strings(queue));

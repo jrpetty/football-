@@ -865,6 +865,8 @@ public final class TownLife {
             case "hall" -> "The Meeting Hall";
             case "townhall" -> "The Leader's Hall";
             case "guesthouse" -> "The Guest House";
+            case "knightmanor" -> "The Knight's Manor";        // [civic-land] (KnightManors)
+            case "knighthall" -> "The Knight's Hall";          // [civic-land]
             case "watchtower" -> "The Watchtower";
             case "lighthouse" -> "The Lighthouse";
             case "postoffice" -> "The Post Office";            // [batchF] (Post)

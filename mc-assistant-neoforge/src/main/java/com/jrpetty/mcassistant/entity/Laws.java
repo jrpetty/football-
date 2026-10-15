@@ -198,6 +198,7 @@ public final class Laws {
         if (Villages.storeChests(level, v.id()).contains(pos)) return "the village's stores";
         for (Ledger.Building b : Ledger.buildings(v.id())) {
             if (b.structure().equals("guesthouse")) continue;           // a guest's house is the guest's own
+            if (KnightManors.inAManor(v.id(), b.anchor())) continue;     // [civic-land] and a knight's manor the knight's
             int[] half = com.jrpetty.mcassistant.entity.goal.BuildGoal.footprint(b.structure());
             int r = b.structure().equals("fortify") ? Watch.R : Math.max(half[0], half[1]);
             int dx = Math.abs(pos.getX() - b.anchor().getX()), dz = Math.abs(pos.getZ() - b.anchor().getZ());
@@ -256,6 +257,7 @@ public final class Laws {
         }
         seen.persona().remember(day, "I caught " + name + " " + what, 6);
         Standing.stir(id, p.getUUID());
+        Knights.offence(level, id, p, sting >= 10, what);           // [civic-land] service lost; a knight found guilty or banished, stripped
         p.sendSystemMessage(Component.literal(verdict).withStyle(ChatFormatting.RED));
     }
 

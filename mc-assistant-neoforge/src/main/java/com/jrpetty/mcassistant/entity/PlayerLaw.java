@@ -236,6 +236,7 @@ public final class PlayerLaw {
         }
         seen.persona().remember(day, "I saw " + name + " " + what, 5);
         Standing.stir(id, p.getUUID());
+        Knights.offence(level, id, p, r.getBoolean("barred"), what);   // [civic-land] service lost; a knight barred, stripped
         p.sendSystemMessage(Component.literal(chat).withStyle(colour));
         Police.log(id, now, "player", name + " (a player) was seen " + what + (r.getBoolean("barred") ? "; barred" : ""), null, 0);
         // The watch comes to the player at a run with the town's answer; with no guard to hand, the witness says it.

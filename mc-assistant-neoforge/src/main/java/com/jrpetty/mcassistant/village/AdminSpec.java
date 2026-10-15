@@ -195,6 +195,18 @@ public final class AdminSpec {
         add("people.births", Area.PEOPLE, "people births", T, "A child born to each of so many couples.", "people births 2", Param.num("births", 1, 50, 1));
         add("people.leader", Area.PEOPLE, "people leader", F, "Make a folk the town's leader.", "people leader folk:Ada");
         add("people.election", Area.PEOPLE, "people election", T, "Call an election, the vote today.", "people election");
+        // [civic-land] the taxes' temper, and the town's knights
+        add("people.protest", Area.PEOPLE, "people protest", T, "The angry gather before the hall now to protest the taxes; the council answers.",
+            "people protest");
+        add("people.revolt", Area.PEOPLE, "people revolt", T, "The town rises against its taxes now: refusals, a strike tomorrow, the leader challenged.",
+            "people revolt");
+        add("people.calm", Area.PEOPLE, "people calm", T, "End the town's tax unrest and any revolt.", "people calm");
+        add("people.knight", Area.PEOPLE, "people knight", T, "Knight a player now (at the hall, the town gathered, if they stand by it).",
+            "people knight Steve", Param.of("player", Kind.PLAYER));
+        danger("people.unknight", Area.PEOPLE, "people unknight", T, "Strip a player of their knighthood of the town (retinue home, manor forfeit).",
+            "people unknight Steve", Param.of("player", Kind.PLAYER));
+        add("people.grant", Area.PEOPLE, "people grant", T, "Grant a knight its land at the town's edge now (looked for afresh).",
+            "people grant Steve", Param.of("player", Kind.PLAYER));
         // ---- army and war
         add("army.kit", Area.ARMY, "army kit", T, "Arm the watch at a tier: from the stores first, a decree supply for the rest.",
             "army kit iron", Param.of("tier", Kind.TIER), Param.words("source", "stores", "decree").opt());
@@ -232,6 +244,13 @@ public final class AdminSpec {
         add("economy.wagon", Area.ECONOMY, "economy wagon", T, "A trade shipment of the town's surplus sent to its nearest neighbour now.", "economy wagon");
         add("economy.market", Area.ECONOMY, "economy market", T, "Make today market day (the traders come, the bell rings).", "economy market");
         add("economy.till", Area.ECONOMY, "economy till", T, "Reset the shops' tills and restock their shelves from the stores.", "economy till");
+        // [civic-land] the council's taxes
+        add("economy.tax", Area.ECONOMY, "economy tax", T, "Set a tax: the head tax, the share of wages (the tithe), the market toll or the war levy, 0 to 3.",
+            "economy tax head 2", Param.words("lever", "head", "wage", "toll", "levy"), Param.num("rate", 0, 3, 1));
+        add("economy.taxday", Area.ECONOMY, "economy taxday", T, "Hold tax day now: the head tax and the levy taken, the poor let off or owing.",
+            "economy taxday");
+        add("economy.taxvote", Area.ECONOMY, "economy taxvote", T, "The council sits on the taxes now and votes on what the treasury needs.",
+            "economy taxvote");
         // ---- build
         add("build.finish", Area.BUILD, "build finish", T, "Finish the buildings under way now.", "build finish", Param.words("cost", "free", "paid").opt());
         big("build.all", Area.BUILD, "build all", T, "Build everything the town wants, one after another.", "build all",
@@ -243,6 +262,8 @@ public final class AdminSpec {
         add("build.unstick", Area.BUILD, "build unstick", T, "Send stuck builders back to the square and reset their crews.", "build unstick");
         add("build.place", Area.BUILD, "build place", T, "Put a building up where you are looking (it joins the town's register).",
             "build place house", Param.of("structure", Kind.STRUCTURE));
+        add("build.manor", Area.BUILD, "build manor", T, "Raise a knight's manor on its land now ([civic-land]).", "build manor Steve",
+            Param.of("player", Kind.PLAYER), Param.words("cost", "free", "paid").opt());
         // ---- events
         add("events.now", Area.EVENTS, "events now", T, "Bring an event about now.", "events now festival", Param.of("event", Kind.EVENT),
             Param.of("detail", Kind.WORD).opt());

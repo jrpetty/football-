@@ -575,6 +575,7 @@ public final class QuestRun {
         if (q.outcome.isEmpty()) q.outcome = "done";
         if (!ending.isEmpty() && q.ending.isEmpty()) q.ending = ending;
         String paid = QuestRewards.pay(level, q, p);
+        Knights.quest(level, q.village, p);                          // [civic-land] a quest done, toward a knighthood
         QuestBook.tally(q.player, q.village);
         QuestRewards.honours(level, q, p);
         script(q).ended(level, q);
