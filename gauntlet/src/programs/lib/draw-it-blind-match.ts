@@ -5,7 +5,7 @@
  *   0.30 · shape type + 0.30 · colour + 0.25 · position + 0.15 · size.
  * The best one-to-one assignment (maximum total similarity) is found exactly
  * with a DP over subsets of targets (≤ 10 targets, any number of drawn shapes).
- * Unmatched targets score 0; each unmatched drawn shape costs a small penalty.
+ * Unmatched targets score 0; each unmatched drawn shape costs 0.03 (no cap, so hedging with extra shapes never pays).
  */
 import { CANVAS } from './draw-it-blind-scene.ts';
 import type { SceneShape, ShapeType } from './draw-it-blind-scene.ts';
@@ -17,7 +17,12 @@ export const MIN_PAIR = 0.25;
 /** A pair at or above this similarity counts as "rebuilt". */
 export const REBUILT = 0.75;
 export const EXTRA_PENALTY = 0.03;
-export const EXTRA_CAP = 0.15;
+/**
+ * No real cap: every extra shape costs EXTRA_PENALTY. A cap (0.15 until test versions 1.1.3 / 1.1.2) made hedging pay:
+ * a drawing of every shape type in every colour, carrying no information about the scene, matched each target in
+ * type and colour and scored about 0.6 on the standard tier ("passed") and 0.4 on the hard tier.
+ */
+export const EXTRA_CAP = 1;
 /** Centre distance (px) at which the position score reaches 0. */
 export const POSITION_FALLOFF = 160;
 const MAX_DRAWN = 60;
