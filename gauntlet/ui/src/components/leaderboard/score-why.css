@@ -316,3 +316,226 @@ html[data-broadcast='on'] .why-test-facts,
 html[data-broadcast='on'] .why-points {
   font-size: 1rem;
 }
+
+/* How a score is built: 4 steps */
+.why-ladder {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.why-ladder li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: 0.88rem;
+  color: var(--text-2);
+  position: relative;
+}
+.why-ladder li + li::before {
+  content: '→';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-3);
+  font-weight: 700;
+}
+.why-ladder b {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent-strong, var(--accent));
+  font-size: 0.78rem;
+}
+.why-ladder strong {
+  color: var(--text-1);
+}
+
+/* Test rows: opening a test */
+.why-about {
+  font-size: 0.8rem;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+.why-about:hover {
+  color: var(--accent);
+}
+.why-test.open {
+  outline: 1px solid color-mix(in srgb, var(--cat) 45%, transparent);
+}
+.why-q-toggle {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--text-1);
+}
+.why-q-toggle:hover,
+.why-q-toggle:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+.why-chev.up {
+  transform: rotate(180deg);
+}
+.why-loading {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+/* Question by question */
+.why-qs {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+.why-q-strip {
+  display: flex;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+.why-q-strip i {
+  flex: 1 1 10px;
+  max-width: 36px;
+  min-width: 8px;
+  height: 14px;
+  border-radius: 3px;
+}
+.v-right {
+  --v: var(--good);
+  --v-soft: var(--good-soft);
+  --v-text: var(--good-text);
+}
+.v-partly {
+  --v: var(--warn);
+  --v-soft: var(--warn-soft);
+  --v-text: var(--warn-text);
+}
+.v-wrong {
+  --v: var(--bad);
+  --v-soft: var(--bad-soft);
+  --v-text: var(--bad-text);
+}
+.v-out {
+  --v: var(--text-3);
+  --v-soft: var(--surface-3);
+  --v-text: var(--text-2);
+}
+.why-q-strip i {
+  background: var(--v);
+}
+.why-q-strip i.v-out {
+  background: repeating-linear-gradient(45deg, var(--surface-3) 0 3px, transparent 3px 6px);
+  outline: 1px solid var(--border-strong);
+}
+.why-q-filter .toggle-chip b {
+  color: var(--v-text, inherit);
+}
+.why-q-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.why-q {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface-1);
+  border-left: 3px solid var(--v);
+}
+.why-q-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--v-soft);
+  color: var(--v-text);
+  font-weight: 800;
+}
+.why-q-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.why-q-head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.why-q-name {
+  font-weight: 700;
+}
+.why-q-verdict {
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--v-text);
+}
+.why-q-score {
+  margin-left: auto;
+  font-weight: 800;
+}
+.why-q-tries {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-3);
+}
+.why-q-try {
+  display: flex;
+  gap: 4px 14px;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.why-q-try p {
+  margin: 0;
+  flex: 1 1 32ch;
+  color: var(--text-2);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.why-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.84rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .why-ladder {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .why-ladder li + li::before {
+    display: none;
+  }
+}
+html[data-broadcast='on'] .why-q-try p {
+  font-size: 1rem;
+}

@@ -110,6 +110,29 @@ test('a full run completes, persists a reproducible manifest and scores every jo
   assert.ok(board.rows[0]!.index !== null);
 });
 
+test('"Why these scores?" drill-down: every answer behind a cell averages to exactly the leaderboard score', async () => {
+  const { questionBreakdown } = await import('../src/core/score-explain.ts');
+  const runId = store.listRunIds().find((id) => store.readManifest(id)?.name === 'engine test')!;
+  for (const [scope, board] of [[`run:${runId}`, boards.runLeaderboard(runId)!], ['suite:all', boards.combinedLeaderboard('all')]] as const) {
+    for (const row of board.rows) {
+      for (const [testId, agg] of Object.entries(row.tests)) {
+        const answers = boards.scoreAnswers(scope, row.contestantId, testId);
+        assert.ok(answers.length > 0, `${scope} ${testId}: answers found`);
+        assert.ok(answers.every((a) => a.runId && a.key && !('transcript' in a)), 'answers carry run and key, trimmed');
+        const b = questionBreakdown(answers);
+        if (agg.score === null) assert.equal(b.score, null);
+        else assert.ok(Math.abs(b.score! - agg.score * 100) < 0.01, `${scope} ${testId}: ${b.score} vs ${agg.score * 100}`);
+      }
+    }
+  }
+  const arith = questionBreakdown(boards.scoreAnswers(`run:${runId}`, 'random-baseline', 'math.arith'));
+  assert.equal(arith.questions.length, 6);
+  assert.equal(arith.questions[0]!.tries.length, 2, 'two repeats per question');
+  assert.match(arith.questions[0]!.triesSum!, /^Asked 2 times: /);
+  assert.ok(arith.questions.every((q) => q.tries.every((t) => /^Answered “\d+”; the correct answer is “\d+”/.test(t.why))), 'number answers show what was said and the key');
+  assert.throws(() => boards.scoreAnswers('nope:x', 'random-baseline', 'math.arith'), /Unknown scope/);
+});
+
 test('same fingerprint for the same tests; changing a prompt changes the hash and marks old results stale', async () => {
   const before = registry.fingerprint(registry.resolveTests({ suiteId: 'all' }));
   assert.equal(before, registry.fingerprint(registry.resolveTests({ suiteId: 'all' })));

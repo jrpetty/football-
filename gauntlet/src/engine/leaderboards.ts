@@ -2,6 +2,7 @@ import { contestantConfigHash, loadCategories, loadContestants, loadProviders } 
 import { fingerprint, getSuite, loadTests, resolveTests } from '../core/registry.ts';
 import type { CaseResult, Contestant, Leaderboard } from '../core/types.ts';
 import { buildLeaderboard, type AggregateTest } from './aggregate.ts';
+import { toScoreAnswer, type ScoreAnswer } from '../core/score-explain.ts';
 import { listRunIds, readManifest, readResults } from './store.ts';
 
 function markManual(board: Leaderboard, contestants: Contestant[]): Leaderboard {
@@ -47,6 +48,21 @@ export function routedRowId(contestantId: string): string {
  * incomparable numbers.
  */
 export function combinedLeaderboard(suiteId: string): Leaderboard {
+  const { tests, suite, aggTests, board, results, stale } = combinedPool(suiteId);
+  return markManual(buildLeaderboard({
+    scope: { kind: 'combined', suiteId },
+    fingerprint: fingerprint(tests),
+    categories: loadCategories(),
+    categoryWeights: suite?.categoryWeights,
+    tests: aggTests,
+    contestants: board,
+    results,
+    staleExcluded: stale,
+  }), board);
+}
+
+/** The results a combined leaderboard counts (same filters), so drill-downs can never disagree with the scores. */
+function combinedPool(suiteId: string) {
   const all = loadTests();
   const tests = resolveTests({ suiteId }, all);
   const suite = getSuite(suiteId);
@@ -93,14 +109,17 @@ export function combinedLeaderboard(suiteId: string): Leaderboard {
   }));
   const withResults = new Set(results.map((r) => r.contestantId));
   const board: Contestant[] = [...contestants.filter((c) => withResults.has(c.id)), ...routedRows.values()];
-  return markManual(buildLeaderboard({
-    scope: { kind: 'combined', suiteId },
-    fingerprint: fingerprint(tests),
-    categories: loadCategories(),
-    categoryWeights: suite?.categoryWeights,
-    tests: aggTests,
-    contestants: board,
-    results,
-    staleExcluded: stale,
-  }), board);
+  return { tests, suite, aggTests, board, results, stale };
+}
+
+/**
+ * Every answer behind one leaderboard cell (one model on one test), for "Why these scores?".
+ * `scope` is `run:<id>` or `suite:<id>`. Each answer keeps the run it came from, so it can be opened.
+ */
+export function scoreAnswers(scope: string, contestantId: string, testId: string): ScoreAnswer[] {
+  let pool: CaseResult[];
+  if (scope.startsWith('run:')) pool = readResults(scope.slice(4));
+  else if (scope.startsWith('suite:')) pool = combinedPool(scope.slice(6)).results;
+  else throw new Error(`Unknown scope: ${scope}`);
+  return pool.filter((r) => r.contestantId === contestantId && r.testId === testId && !r.reassignedTo).map((r) => toScoreAnswer(r));
 }

@@ -54,6 +54,7 @@ import {
 } from './fixtures.ts';
 import type { MockRun, RunSpec } from './fixtures.ts';
 import { mockTurnImages } from './vision.ts';
+import { toScoreAnswer } from '../../../src/core/score-explain.ts';
 import { mockExport, mockOverlay, mockPolish, mockPolishEstimate, mockStudio } from './studioMock.ts';
 import { finalizeLive, liveAnswerText, thinkTicks } from './liveMock.ts';
 import { answerGalleryRequest, galleryManualRequests } from './galleryMock.ts';
@@ -919,6 +920,11 @@ export async function handle(method: string, fullPath: string, body: unknown): P
       specs.delete(b);
       runs.delete(b);
       return { ok: true };
+    }
+    case 'GET score-answers': {
+      const scope = q.get('scope') ?? '';
+      const run = getRun(scope.startsWith('run:') ? scope.slice(4) : 'run-2026-09-21-core');
+      return run.results.filter((r) => r.contestantId === q.get('contestant') && r.testId === q.get('test')).map((r) => toScoreAnswer(detailFor(r)));
     }
     case 'GET leaderboard': {
       const suiteId = q.get('suite') ?? 'core';

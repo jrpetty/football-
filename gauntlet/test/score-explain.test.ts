@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildLeaderboard } from '../src/engine/aggregate.ts';
-import { averageFormula, explainScore, RANDOM_BASELINE_EXPLAINER } from '../src/core/score-explain.ts';
+import { averageFormula, explainScore, questionBreakdown, RANDOM_BASELINE_EXPLAINER, toScoreAnswer, type ScoreAnswer } from '../src/core/score-explain.ts';
 import type { CaseResult, CategoryInfo, Contestant } from '../src/core/types.ts';
 
 function result(contestantId: string, testId: string, caseId: string, score: number | null, status: CaseResult['status'] = 'ok', summary = ''): CaseResult {
@@ -119,4 +119,61 @@ test('weighted sums show the weights; unknown models return null', () => {
   assert.equal(averageFormula([{ value: 42.25, weight: 1 }], 42.25), '42.3 (the only one, so it is the score)');
   assert.equal(averageFormula([], 0), null);
   assert.equal(explainScore(lb, 'nobody'), null);
+});
+
+const ans = (caseId: string, score: number | null, extra: Partial<ScoreAnswer> = {}): ScoreAnswer => ({
+  key: `m::t::${caseId}::r${extra.repeat ?? 0}`,
+  runId: 'run-1',
+  contestantId: 'm',
+  caseId,
+  repeat: 0,
+  status: 'ok',
+  score,
+  passed: score === 1,
+  summary: '',
+  ...extra,
+});
+
+test('question by question: marks, reasons and the sum that makes the test score', () => {
+  const b = questionBreakdown([
+    ans('c10', 0, { modelSaid: '7', correct: '12' }),
+    ans('c2', 1, { modelSaid: '42', correct: '42', summary: 'Correct' }),
+    ans('c1', 0.5, { checks: { passed: 2, total: 4 }, summary: 'Half the hidden tests passed' }),
+    ans('c3', null, { status: 'error', error: 'HTTP 529 overloaded' }),
+    ans('c4', null, { status: 'pending-human' }),
+    ans('c5', 0, { status: 'refusal' }),
+  ]);
+  assert.deepEqual(b.questions.map((q) => q.caseId), ['c1', 'c2', 'c3', 'c4', 'c5', 'c10'], 'natural order');
+  assert.equal(b.score, (50 + 100 + 0 + 0) / 4);
+  assert.equal(b.formula, '(50 + 100 + 0 + 0) ÷ 4 = 37.5');
+  assert.deepEqual([b.right, b.partly, b.wrong, b.leftOut, b.counted], [1, 1, 2, 2, 4]);
+  const why = (id: string) => b.questions.find((q) => q.caseId === id)!.tries[0]!.why;
+  assert.equal(why('c2'), 'Answered “42”; the correct answer is “42” — right.');
+  assert.equal(why('c10'), 'Answered “7”; the correct answer is “12” — wrong.');
+  assert.equal(why('c1'), 'Passed 2 of 4 checks. Half the hidden tests passed.');
+  assert.match(why('c3'), /^Failed with an error \(HTTP 529 overloaded\).*not counted as 0\.$/);
+  assert.match(why('c4'), /Waiting for your grade/);
+  assert.match(why('c5'), /refused to answer, which scores 0/);
+  assert.equal(b.questions.find((q) => q.caseId === 'c3')!.verdict, 'out');
+});
+
+test('repeats are averaged inside a question first, and long tests show a short sum', () => {
+  const b = questionBreakdown([ans('c1', 1), ans('c1', 0, { repeat: 1, key: 'k2' }), ans('c1', null, { repeat: 2, key: 'k3', status: 'error' }), ans('c2', 1)]);
+  assert.equal(b.questions[0]!.score, 50);
+  assert.equal(b.questions[0]!.triesSum, 'Asked 3 times: 100, 0, left out → average 50');
+  assert.equal(b.score, 75);
+  const many = questionBreakdown(Array.from({ length: 20 }, (_, i) => ans(`c${i + 1}`, i < 15 ? 1 : 0)));
+  assert.equal(many.formula, '1500 (all 20 question scores added up) ÷ 20 = 75');
+  assert.equal(questionBreakdown([]).score, null);
+});
+
+test('recorded results are trimmed: short answers and answer keys kept, long ones dropped', () => {
+  const r = results[0]!;
+  const a = toScoreAnswer({ ...r, scoreDetail: { extracted: ' 42 ', expected: 42, items: [{ label: 'x', passed: true }, { label: 'y', passed: false }] } });
+  assert.equal(a.modelSaid, '42');
+  assert.equal(a.correct, '42');
+  assert.deepEqual(a.checks, { passed: 1, total: 2 });
+  const long = toScoreAnswer({ ...r, scoreDetail: { extracted: 'x'.repeat(500), expected: { deep: 1 } } });
+  assert.equal(long.modelSaid, undefined);
+  assert.equal(long.correct, undefined);
 });

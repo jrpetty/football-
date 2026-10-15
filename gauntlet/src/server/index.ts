@@ -34,7 +34,7 @@ import {
 } from '../core/registry.ts';
 import type { CaseResult, RunEvent, RunRequest, TestDefinition } from '../core/types.ts';
 import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
-import { combinedLeaderboard, runLeaderboard } from '../engine/leaderboards.ts';
+import { combinedLeaderboard, runLeaderboard, scoreAnswers } from '../engine/leaderboards.ts';
 import { activeProgress, cancelRun, estimateRun, isActive, recoverInterruptedRuns, resumeRun, startRun, subscribe } from '../engine/runner.ts';
 import { reviewQueue, submitHumanScore } from '../engine/review.ts';
 import { artifactPath, deleteRun, listRunIds, listRuns, readManifest, readResults, toLite } from '../engine/store.ts';
@@ -542,6 +542,16 @@ route('GET', '/api/costs', async ({ query }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 route('GET', '/api/leaderboard', ({ query }) => combinedLeaderboard(query.get('suite') || 'core'));
+
+// "Why these scores?": every answer behind one leaderboard cell (read-only).
+route('GET', '/api/score-answers', ({ query }) => {
+  const scope = query.get('scope') ?? '';
+  const contestant = query.get('contestant') ?? '';
+  const test = query.get('test') ?? '';
+  if (!/^(run|suite):[\w~-][\w.~-]*$/.test(scope) || scope.includes('..') || !contestant || !test) throw new HttpError(400, 'Need scope (run:<id> or suite:<id>), contestant and test');
+  if (scope.startsWith('run:')) requireRun(scope.slice(4));
+  return scoreAnswers(scope, contestant, test);
+});
 
 route('GET', '/api/review/queue', ({ query }) => reviewQueue(query.get('testId') || undefined));
 

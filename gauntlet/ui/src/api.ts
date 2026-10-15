@@ -33,6 +33,7 @@ import type {
 import type { CardSpec, CardStyle, ExportResult, OverlayData, PolishEstimate, PolishResult, RenderResult, StudioPayload } from './types.ts';
 import type { TestExplainer, TestSample } from './types.ts';
 import { mockArtifactUrls } from './mock/registry.ts';
+import type { ScoreAnswer } from '../../src/core/score-explain.ts';
 
 export class ApiError extends Error {
   status: number;
@@ -135,6 +136,8 @@ export const api = {
 
   // Leaderboard
   leaderboard: (suiteId: string) => request<Leaderboard>('GET', `/api/leaderboard?suite=${enc(suiteId)}`),
+  /** Every answer behind one leaderboard cell; scope is `run:<id>` or `suite:<id>`. */
+  scoreAnswers: (scope: string, contestantId: string, testId: string) => request<ScoreAnswer[]>('GET', `/api/score-answers?scope=${enc(scope)}&contestant=${enc(contestantId)}&test=${enc(testId)}`),
 
   // Manual (copy & paste) contestants
   manualQueue: (runId?: string) => request<ManualRequest[]>('GET', `/api/manual${runId ? `?runId=${enc(runId)}` : ''}`),

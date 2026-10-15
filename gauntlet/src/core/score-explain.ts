@@ -12,7 +12,7 @@
  * Errors, skipped picture questions and answers still waiting for a human
  * grade are left out (never counted as 0); tests that were not run don't count.
  */
-import type { Leaderboard, LeaderboardRow } from './types.ts';
+import type { CaseResult, Leaderboard, LeaderboardRow, ResultStatus } from './types.ts';
 
 export type TestStatus = 'scored' | 'not-run' | 'no-score';
 
@@ -257,3 +257,177 @@ export const RANDOM_BASELINE_EXPLAINER = {
     'It is never shown as the leader and never costs anything.',
   ],
 } as const;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Question by question: every answer behind one test score
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** One recorded answer, trimmed to what the drill-down shows (served by GET /api/score-answers). */
+export interface ScoreAnswer {
+  key: string;
+  runId: string;
+  contestantId: string;
+  caseId: string;
+  repeat: number;
+  status: ResultStatus;
+  /** 0..1 */
+  score: number | null;
+  passed: boolean | null;
+  summary: string;
+  error?: string;
+  /** The model's extracted final answer, when short enough to show. */
+  modelSaid?: string;
+  /** The answer key, when short enough to show. */
+  correct?: string;
+  /** Machine checks passed, e.g. hidden unit tests or brief items. */
+  checks?: { passed: number; total: number };
+  /** Marked (or re-marked) by a person. */
+  humanGraded?: boolean;
+}
+
+const SHOWABLE = 140;
+function short(v: unknown): string | undefined {
+  if (v === null || v === undefined) return undefined;
+  const t = typeof v === 'string' ? v : typeof v === 'number' || typeof v === 'boolean' ? String(v) : Array.isArray(v) && v.every((x) => typeof x !== 'object') ? v.join(', ') : undefined;
+  if (t === undefined) return undefined;
+  const one = t.replace(/\s+/g, ' ').trim();
+  if (!one || one.length > SHOWABLE) return undefined;
+  return one;
+}
+
+export function toScoreAnswer(r: Pick<CaseResult, 'key' | 'runId' | 'contestantId' | 'caseId' | 'repeat' | 'status' | 'score' | 'passed' | 'summary' | 'error' | 'scoreDetail' | 'humanScores'>): ScoreAnswer {
+  const d = r.scoreDetail ?? {};
+  const items = Array.isArray(d.items) ? d.items : [];
+  const modelSaid = short(d.extracted);
+  const correct = short(d.expected);
+  return {
+    key: r.key,
+    runId: r.runId,
+    contestantId: r.contestantId,
+    caseId: r.caseId,
+    repeat: r.repeat,
+    status: r.status,
+    score: r.score,
+    passed: r.passed,
+    summary: r.summary ?? '',
+    ...(r.error ? { error: r.error.slice(0, 200) } : {}),
+    ...(modelSaid !== undefined ? { modelSaid } : {}),
+    ...(correct !== undefined ? { correct } : {}),
+    ...(items.length ? { checks: { passed: items.filter((i) => i.passed).length, total: items.length } } : {}),
+    ...(r.humanScores?.length ? { humanGraded: true } : {}),
+  };
+}
+
+/** Same rule as the leaderboard (src/engine/aggregate.ts isScored). */
+export function answerCounts(a: Pick<ScoreAnswer, 'score' | 'status'>): boolean {
+  return a.score !== null && a.status !== 'error' && a.status !== 'cancelled' && a.status !== 'pending-human';
+}
+
+export type Verdict = 'right' | 'partly' | 'wrong' | 'out';
+
+export interface TryLine extends ScoreAnswer {
+  counted: boolean;
+  /** 0–100, or null. */
+  score100: number | null;
+  verdict: Verdict;
+  /** Plain-English reason for this answer's mark. */
+  why: string;
+}
+
+export interface QuestionLine {
+  caseId: string;
+  /** 0–100 average over the tries that count, or null. */
+  score: number | null;
+  verdict: Verdict;
+  tries: TryLine[];
+  /** e.g. "Asked 3 times: 100, 100, 0 → 66.7" (only with more than one try). */
+  triesSum: string | null;
+}
+
+export interface QuestionBreakdown {
+  questions: QuestionLine[];
+  /** 0–100: the test score, the average of the question scores. */
+  score: number | null;
+  formula: string | null;
+  counted: number;
+  leftOut: number;
+  right: number;
+  partly: number;
+  wrong: number;
+}
+
+/** Same cut-offs as the score bands everywhere else (80+ mostly right, 40–79 partly, under 40 mostly wrong). */
+export function verdictOf(score100: number | null): Verdict {
+  if (score100 === null) return 'out';
+  if (score100 >= 80) return 'right';
+  if (score100 >= 40) return 'partly';
+  return 'wrong';
+}
+
+function whyFor(a: ScoreAnswer, counted: boolean, score100: number | null): string {
+  if (a.status === 'pending-human') return 'Waiting for your grade — not counted until you mark it.';
+  if (a.status === 'error') return `Failed with an error${a.error ? ` (${a.error.replace(/\s+/g, ' ').slice(0, 120)})` : ''}, so it could not be marked. Left out — not counted as 0.`;
+  if (a.status === 'cancelled') return 'Cancelled before it finished. Left out — not counted as 0.';
+  if (a.status === 'skipped') return a.summary || 'Skipped: this model can’t take this kind of question. Left out — not counted as 0.';
+  if (!counted) return 'No mark recorded. Left out — not counted as 0.';
+  const pts = fmt(score100!);
+  const parts: string[] = [];
+  if (a.status === 'refusal') parts.push(`The model refused to answer, which scores ${pts}.`);
+  else if (a.status === 'timeout') parts.push(`Ran out of time, which scores ${pts}.`);
+  if (a.modelSaid !== undefined && a.correct !== undefined) {
+    const same = a.modelSaid.trim().toLowerCase() === a.correct.trim().toLowerCase();
+    const tail = score100! >= 99.95 ? ' — right' : score100! <= 0.05 ? ' — wrong' : same ? ' — right answer, but marks were lost (for example on the answer format)' : ' — part marks';
+    parts.push(`Answered “${a.modelSaid}”; the correct answer is “${a.correct}”${tail}.`);
+  } else if (a.correct !== undefined && a.status === 'ok' && a.modelSaid === undefined) {
+    parts.push(`No final answer could be found in the reply; the correct answer is “${a.correct}”.`);
+  }
+  if (a.checks) parts.push(`Passed ${a.checks.passed} of ${a.checks.total} checks.`);
+  const bareVerdict = /^(correct|incorrect|right|wrong|pass(ed)?|fail(ed)?)\.?$/i.test(a.summary.trim());
+  if (a.summary && !(bareVerdict && parts.length > 0) && !parts.some((p) => p.includes(a.summary))) parts.push(a.summary.endsWith('.') ? a.summary : `${a.summary}.`);
+  if (a.humanGraded) parts.push('Marked by a person.');
+  if (parts.length === 0) parts.push(`Marked ${pts} out of 100.`);
+  return parts.join(' ');
+}
+
+const natural = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
+
+/** Group a test's answers by question, mark each in plain English, and show the sum that makes the test score. */
+export function questionBreakdown(answers: ScoreAnswer[]): QuestionBreakdown {
+  const byCase = new Map<string, ScoreAnswer[]>();
+  for (const a of answers) byCase.set(a.caseId, [...(byCase.get(a.caseId) ?? []), a]);
+  const questions: QuestionLine[] = [...byCase.entries()]
+    .sort(([x], [y]) => natural.compare(x, y))
+    .map(([caseId, list]) => {
+      const tries: TryLine[] = list
+        .slice()
+        .sort((x, y) => x.repeat - y.repeat)
+        .map((a) => {
+          const counted = answerCounts(a);
+          const score100 = counted ? a.score! * 100 : null;
+          return { ...a, counted, score100, verdict: verdictOf(score100), why: whyFor(a, counted, score100) };
+        });
+      const used = tries.filter((t) => t.counted);
+      const score = used.length ? used.reduce((s, t) => s + t.score100!, 0) / used.length : null;
+      const triesSum = tries.length > 1 ? `Asked ${tries.length} times: ${tries.map((t) => (t.counted ? fmt(t.score100!) : 'left out')).join(', ')}${score === null ? '' : ` → average ${fmt(score)}`}` : null;
+      return { caseId, score, verdict: verdictOf(score), tries, triesSum };
+    });
+  const scored = questions.filter((q) => q.score !== null);
+  const score = scored.length ? scored.reduce((s, q) => s + q.score!, 0) / scored.length : null;
+  let formula: string | null = null;
+  if (score !== null) {
+    formula =
+      scored.length <= 12
+        ? averageFormula(scored.map((q) => ({ value: q.score!, weight: 1 })), score)
+        : `${fmt(scored.reduce((s, q) => s + q.score!, 0))} (all ${scored.length} question scores added up) ÷ ${scored.length} = ${fmt(score)}`;
+  }
+  return {
+    questions,
+    score,
+    formula,
+    counted: scored.length,
+    leftOut: questions.length - scored.length,
+    right: scored.filter((q) => q.verdict === 'right').length,
+    partly: scored.filter((q) => q.verdict === 'partly').length,
+    wrong: scored.filter((q) => q.verdict === 'wrong').length,
+  };
+}
