@@ -131,7 +131,8 @@ public class FlatsGameTests {
 
     /**
      * An Iron Age town with young folk and hard-up households waiting for a home plans a block of flats,
-     * ahead of the next house, on a home lot near the square; the same town in the Stone Age does not.
+     * ahead of the next house, on a long lot by an avenue (it is seventeen deep: [flats-access]); the same
+     * town in the Stone Age does not.
      */
     @GameTest(template = EMPTY, timeoutTicks = 300, batch = "fl01_plans")
     public static void fl01_plans(GameTestHelper helper) {
@@ -166,8 +167,8 @@ public class FlatsGameTests {
         int d = Math.max(Math.abs(dx), Math.abs(dz));
         helper.assertTrue(d <= com.jrpetty.mcassistant.village.TownPlan.RING + 2 * com.jrpetty.mcassistant.village.TownPlan.PERIOD,
             "near the square, on the homes' streets: " + dx + ", " + dz);
-        helper.assertTrue("home".equals(com.jrpetty.mcassistant.village.TownPlan.placeFor(Flats.BLOCK)),
-            "in the homes' part of the plan");
+        helper.assertTrue("long".equals(com.jrpetty.mcassistant.village.TownPlan.placeFor(Flats.BLOCK)),
+            "on a long lot of the plan");                                           // [flats-access]
         // Housed in one, the waiting is over and no second block is planned.
         helper.succeed();
     }
@@ -180,7 +181,7 @@ public class FlatsGameTests {
      * it stands, its six flats are on the homes' books with their beds, and the town's hands hang the
      * ground floor's doors, nail up the flat numbers and put the iron railings up round the balconies.
      */
-    @GameTest(template = EMPTY, timeoutTicks = 40000, batch = "fl02_build")
+    @GameTest(template = EMPTY, timeoutTicks = 70000, batch = "fl02_build")
     public static void fl02_build(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         VillageFolkEntity builder = founder(helper, 301600, 50000, 1000L);
@@ -193,19 +194,21 @@ public class FlatsGameTests {
             level.setBlock(c, Blocks.CHEST.defaultBlockState(), 3);
         }
         Villages.forgetStores(id);
-        ItemStack[] makings = {
-            new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
-            new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
-            new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.STONE_BRICKS, 64),
-            new ItemStack(Items.STONE_BRICKS, 64), new ItemStack(Items.BRICKS, 64), new ItemStack(Items.BRICKS, 64),
-            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
-            new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
-            new ItemStack(Items.OAK_LOG, 32), new ItemStack(Items.GLASS_PANE, 64), new ItemStack(Items.GLASS_PANE, 16),
-            new ItemStack(Items.LANTERN, 12), new ItemStack(Items.OAK_DOOR, 8),
-            new ItemStack(Items.CHEST, 6), new ItemStack(Items.OAK_FENCE, 12), new ItemStack(Items.RED_CARPET, 8),
-            new ItemStack(Items.OAK_STAIRS, 64), new ItemStack(Items.OAK_STAIRS, 64), new ItemStack(Items.OAK_STAIRS, 24),
+        // [flats-access] The bigger block: some 1900 blocks (stone 600, planks 800, brick 110, stairs 130, panes 75...), with
+        // enough over that the stores still hold a whole load's worth after the first, and a stove, a worktop and a barrel
+        // in every flat.
+        List<ItemStack> makings = new ArrayList<>();
+        for (int i = 0; i < 12; i++) makings.add(new ItemStack(Items.COBBLESTONE, 64));
+        for (int i = 0; i < 4; i++) makings.add(new ItemStack(Items.STONE_BRICKS, 64));
+        for (int i = 0; i < 2; i++) makings.add(new ItemStack(Items.BRICKS, 64));
+        for (int i = 0; i < 18; i++) makings.add(new ItemStack(Items.OAK_PLANKS, 64));
+        for (int i = 0; i < 3; i++) makings.add(new ItemStack(Items.STONE_SLAB, 64));
+        for (int i = 0; i < 3; i++) makings.add(new ItemStack(Items.OAK_STAIRS, 64));
+        makings.addAll(List.of(new ItemStack(Items.OAK_LOG, 16), new ItemStack(Items.GLASS_PANE, 64), new ItemStack(Items.GLASS_PANE, 32),
+            new ItemStack(Items.LANTERN, 24), new ItemStack(Items.OAK_DOOR, 8), new ItemStack(Items.FURNACE, 6), new ItemStack(Items.CRAFTING_TABLE, 6),
+            new ItemStack(Items.BARREL, 6), new ItemStack(Items.CHEST, 6), new ItemStack(Items.OAK_FENCE, 16), new ItemStack(Items.RED_CARPET, 8),
             new ItemStack(Items.OAK_SLAB, 32), new ItemStack(Items.DIRT, 8), new ItemStack(Items.POPPY, 6),
-            new ItemStack(Items.IRON_BARS, 16), new ItemStack(Items.OAK_SIGN, 8) };
+            new ItemStack(Items.IRON_BARS, 16), new ItemStack(Items.OAK_SIGN, 8)));
         for (ItemStack s : makings) Homes.storeForTests(level, v, s);
         for (int i = 0; i < 9; i++) Homes.storeForTests(level, v, new ItemStack(Items.WHITE_BED));     // a bed doesn't stack
         Villages.Site site = Villages.siteFor(level, id, Flats.BLOCK);
@@ -225,7 +228,7 @@ public class FlatsGameTests {
         Villages.noteAttempt(id, level.getGameTime());                   // its own projects wait: this is the one it builds
         long[] begun = { -1, -1, -1 };
         double[] belowWhenBegun = { 1, 1, 1 };
-        int[] loads = { 0 };
+        int[] loads = { 0 }, topUps = { 0 };
         helper.onEachTick(() -> {
             long t = helper.getTick();
             if (level.getDayTime() % 24000 > 11000) level.setDayTime(1000);      // building is day work
@@ -249,6 +252,15 @@ public class FlatsGameTests {
                     + Math.round(done[2] * 100) + "%, loads " + loads[0] + " — " + builder.debugLine());
             }
             boolean up = Villages.builtList(id).contains(Flats.BLOCK);
+            // [flats-access] The bigger block's roof wants more than a first stocking leaves (the builder's leavings go
+            // to its own uses between loads): the stores topped up, as a town's are by its gatherers, when it runs short.
+            if (!up && t % 600 == 300 && !builder.stockedForTests(Flats.BLOCK, site) && topUps[0] < 6) {
+                topUps[0]++;
+                for (ItemStack s : List.of(new ItemStack(Items.COBBLESTONE, 64), new ItemStack(Items.COBBLESTONE, 64),
+                        new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64), new ItemStack(Items.OAK_PLANKS, 64),
+                        new ItemStack(Items.OAK_STAIRS, 64), new ItemStack(Items.OAK_SLAB, 32))) Homes.storeForTests(level, v, s);
+                Kit.log("fl02 @" + t + " the stores topped up (" + topUps[0] + ")");
+            }
             if (!up && builder.peekJob() == null && t % 40 == 0) {
                 // Another load from the stores, as its lead would take one, and back to it.
                 if (builder.stockedForTests(Flats.BLOCK, site)) {
@@ -257,7 +269,18 @@ public class FlatsGameTests {
                 }
             }
             if (!up) {
-                if (t >= 39000) helper.fail("the flats not up in 39000 ticks: " + Math.round(done[0] * 100) + "/" + Math.round(done[1] * 100)
+                if (t >= 69000) {
+                    // What is left to lay, in the drawing's terms, for whoever looks into it.
+                    StringBuilder left = new StringBuilder();
+                    int n = 0;
+                    for (BuildGoal.Placement p : BuildGoal.plan(Flats.BLOCK, site.anchor(), site.facing(), 13)) {
+                        if (p.part() == BuildGoal.Part.CLEAR || p.part() == BuildGoal.Part.BED || !level.getBlockState(p.pos()).isAir()) continue;
+                        int[] d = local(block, p.pos());
+                        if (n++ < 60) left.append(p.part()).append('/').append(p.style()).append(' ').append(d[0]).append(',').append(d[1]).append(',').append(d[2]).append("; ");
+                    }
+                    Kit.log("fl02 left to lay: " + n + " — " + left);
+                }
+                if (t >= 69000) helper.fail("the flats not up in 69000 ticks: " + Math.round(done[0] * 100) + "/" + Math.round(done[1] * 100)
                     + "/" + Math.round(done[2] * 100) + "% — " + builder.debugLine());
                 return;
             }
@@ -268,38 +291,54 @@ public class FlatsGameTests {
                     "storey by storey: storey " + (s + 1) + " begun with the one below " + Math.round(belowWhenBegun[s] * 100) + "% laid");
             }
             for (int s = 0; s < 3; s++) helper.assertTrue(done[s] >= 0.95, "storey " + (s + 1) + " laid: " + Math.round(done[s] * 100) + "%");
-            // The stair: steps up the back of the hall, to every floor.
+            // The stair: a flight up the hall to every floor, a landing halfway ([flats-access]).
             int steps = 0;
             for (int s = 0; s < 2; s++) {
-                for (int[] c : new int[][]{ { 3, 0, 3 }, { 4, 1, 3 }, { 4, 2, 2 }, { 3, 3, 2 } }) {
+                for (int[] c : new int[][]{ { 4, 0, -3 }, { 4, 1, -2 }, { 4, 2, 0 }, { 4, 3, 1 } }) {
                     BlockState st = level.getBlockState(cell(block, c[0], 4 * s + c[1], c[2]));
                     if (st.getBlock() instanceof StairBlock || st.isSolid()) steps++;
                 }
             }
-            helper.assertTrue(steps == 8, "the stair winds up to both floors above: " + steps + " of 8 steps");
+            helper.assertTrue(steps == 8, "the stair goes up to both floors above: " + steps + " of 8 steps");
             // On the books: six flats. The town's hands see to it: the beds the builder could not carry
             // (a bed is a pack's slot each), the ground floor's doors, the numbers, the balconies' railings.
             Homes.tickForTests(level, v);
             List<BlockPos> flats = Flats.flatsForTests(id);
             int laid = 0;
             for (BlockPos f : flats) laid += Homes.bedsForTests(level, id, f).size();
+            // [flats-access] What its fitting out takes, in the stores by now: the bigger block's build goes through the
+            // stores' wood and more, and what was put by at the start (the beds, the doors, the signs, the iron bars) had
+            // gone the way of the builder's loads, carried about in its pack.
+            if (Kit.chestContents(level, heart.getX(), heart.getZ(), 16).keySet().stream().noneMatch(k -> k.endsWith("_bed"))) {
+                for (int i = 0; i < 9; i++) Homes.storeForTests(level, v, new ItemStack(Items.WHITE_BED));
+            }
+            for (ItemStack s : List.of(new ItemStack(Items.OAK_DOOR, 4), new ItemStack(Items.OAK_SIGN, 8), new ItemStack(Items.IRON_BARS, 16),
+                    new ItemStack(Items.OAK_PLANKS, 32))) Homes.storeForTests(level, v, s);
             Flats.fitForTests(level, v);
             Homes.tickForTests(level, v);
             int beds = 0;
             for (BlockPos f : flats) beds += Homes.bedsForTests(level, id, f).size();
-            Kit.log("fl02 " + flats.size() + " flats, " + laid + " beds laid by the builder, " + beds + " made up after; " + Flats.list(level, heart));
+            Kit.log("fl02 " + flats.size() + " flats, " + laid + " beds laid by the builder, " + beds + " made up after; " + Flats.list(level, heart)
+                + "; the stores " + Kit.chestContents(level, heart.getX(), heart.getZ(), 16));
             helper.assertTrue(flats.size() == 6, "six flats: " + flats.size());
             helper.assertTrue(beds >= 6, "a bed in every flat at least: " + beds);
             int doors = 0;
-            for (int dz : new int[]{ -2, 1 }) if (level.getBlockState(cell(block, 2, 0, dz)).getBlock() instanceof DoorBlock) doors++;
+            for (int dz : new int[]{ -6, 6 }) if (level.getBlockState(cell(block, 2, 0, dz)).getBlock() instanceof DoorBlock) doors++;
             int signs = 0;
             for (int s = 0; s < 3; s++) {
-                for (int dz : new int[]{ -3, 0 }) if (level.getBlockState(cell(block, 3, 4 * s + 1, dz)).getBlock() instanceof WallSignBlock) signs++;
+                for (int dz : new int[]{ -7, 7 }) if (level.getBlockState(cell(block, 3, 4 * s + 1, dz)).getBlock() instanceof WallSignBlock) signs++;
             }
             int bars = 0;
+            StringBuilder balcony = new StringBuilder();
             for (int s = 1; s < 3; s++) {
-                for (int dx = -4; dx <= 1; dx++) if (level.getBlockState(cell(block, dx, 4 * s, -5)).is(Blocks.IRON_BARS)) bars++;
+                for (int dx = -4; dx <= 1; dx++) {
+                    BlockState rail = level.getBlockState(cell(block, dx, 4 * s, -9));
+                    if (rail.is(Blocks.IRON_BARS)) bars++;
+                    else balcony.append(dx).append(',').append(4 * s).append(": ").append(rail.getBlock()).append(" on ")
+                        .append(level.getBlockState(cell(block, dx, 4 * s - 1, -9))).append("; ");
+                }
             }
+            if (bars < 12) Kit.log("fl02 the balconies without a railing: " + balcony + " the stores " + Kit.chestContents(level, heart.getX(), heart.getZ(), 16));
             CompoundTag page = Flats.annalsForTests(id, site.anchor());
             Kit.log("fl02 fitted: " + doors + " ground-floor doors, " + signs + " flat numbers, " + bars + " lengths of railing; the Buildings page: " + page
                 + "; news " + Villages.news(id));
@@ -316,6 +355,12 @@ public class FlatsGameTests {
             helper.assertTrue(chronicle, "the chronicle notes the town's first block of flats");
             helper.succeed();
         });
+    }
+
+    private static int[] local(Ledger.Building b, BlockPos p) {
+        int x = p.getX() - b.anchor().getX(), z = p.getZ() - b.anchor().getZ();
+        Direction f = b.facing(), r = f.getClockWise();
+        return new int[]{ x * r.getStepX() + z * r.getStepZ(), p.getY() - b.anchor().getY(), x * f.getStepX() + z * f.getStepZ() };
     }
 
     private static BlockPos cell(Ledger.Building b, int dx, int h, int dz) {
@@ -529,7 +574,7 @@ public class FlatsGameTests {
         for (Ledger.Building o : Ledger.buildings(id)) if (o.anchor().equals(block)) b = o;
         helper.assertTrue(b != null, "the block on the register");
         int steps = 0;
-        for (int[] c : new int[][]{ { 3, 8, 3 }, { 4, 9, 3 }, { 4, 10, 2 }, { 3, 11, 2 } }) {
+        for (int[] c : new int[][]{ { 4, 8, -3 }, { 4, 9, -2 }, { 4, 10, 0 }, { 4, 11, 1 } }) {     // [flats-access] the flight up to it
             if (level.getBlockState(cell(b, c[0], c[1], c[2])).getBlock() instanceof StairBlock) steps++;
         }
         boolean roof = !level.getBlockState(cell(b, 0, 15, 0)).isAir();

@@ -32,16 +32,21 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Blocks of flats. A town in the Iron Age that is short of homes, with its young folk and its
  * hard-up households waiting for a roof and little ground left near its square, builds up instead
- * of out: three storeys of small flats on one house's lot, two to a landing, off a stair that winds
- * up the back of the hall (village blueprint {@code flats}). The builders raise it like anything
- * else, out of the stores, a load and a storey at a time, and it is built to look like a town house:
- * a slate plinth, stone walls with brick quoins at the corners, windows in three bays with window
- * boxes under the ground floor's, a balcony on brackets across each upper flat's front, the front
- * door under a fanlight and a little pediment with a lantern hung at either end of it, a bracketed
- * cornice, a pitched slate roof with a dormer, and a brick chimney stack out of each stone gable.
+ * of out: three storeys of flats on a long lot (two lots end to end beside an avenue), two to a
+ * landing, off a stair hall up the right-hand side whose stair goes up a flight to each floor with
+ * a landing halfway (village blueprint {@code flats}). The builders raise it like anything else, out
+ * of the stores, a load and a storey at a time, and it is built to look like a town house: a slate
+ * plinth, stone walls with brick quoins at the corners, windows in three bays with window boxes
+ * under the ground floor's, a balcony on brackets across each upper flat's front, the front door
+ * under a fanlight and a little pediment with a lantern hung at either end of it, a bracketed
+ * cornice, a mansard roof of slate with a dormer, and a brick chimney stack up each stone side wall.
  *
- * <p>Every flat is a home on the village's books (Homes), its own: a room with a bed (two in a
- * couple's flat), a chest, a table and a lantern, and its number on the landing ("Flat 2B"). The
+ * <p>Every flat is a home on the village's books (Homes), its own: a living room and kitchen by its
+ * door (a stove, a worktop, a barrel, a table and two chairs) and through a doorway its bedroom (a
+ * bed, two in a couple's flat, and a chest), a lamp in each, and its number on the landing ("Flat
+ * 2B"). [flats-access] The first blocks were smaller, a room to each flat on one house's lot: a town
+ * that built one keeps it as it stands, on the register as {@code flats_old} (and {@code flats4_old}
+ * with its fourth storey), every flat where it was (Layout.FIRST). The
  * village lets them, never sells them, at half a house's rent: a house's day's rent every other
  * day. Who gets one first:
  * <ul>
@@ -70,8 +75,10 @@ public final class Flats {
 
     /** The block's drawing and its name in the town's register. */
     public static final String BLOCK = "flats";
-    /** The block with its fourth storey (the Diamond Age). */
+    /** The block with its fourth storey (the Diamond Age): its name in the register once the storey is on. */
     public static final String TALLER = "flats4";
+    /** [flats-access] A block built to the first, smaller drawing, and the same with its fourth storey: kept as they stand. */
+    public static final String OLD = "flats_old", OLD_TALLER = "flats4_old";
     /** A flat's name on the homes' books. */
     public static final String FLAT = "flat";
 
@@ -79,10 +86,32 @@ public final class Flats {
     static final int STOREY = 4;
     /** The flats' rooms run from dx -4 to dx 1 across the drawing; the hall is dx 3 and 4. */
     private static final int ROOM_LEFT = -4, ROOM_RIGHT = 1;
-    /** Each flat's door, in the wall between it and the stair hall (dx 2). */
-    private static final int HALL_WALL = 2, FRONT_DOOR = -2, BACK_DOOR = 1;
-    /** The row in front of the front wall, where the balconies stand out from it. */
-    private static final int BALCONY = -5;
+    /** The wall between the flats and the stair hall. */
+    private static final int HALL_WALL = 2;
+
+    /**
+     * [flats-access] Where a block's flats are in its drawing: the drawing and its taller one; each flat's door in the hall
+     * wall (A's at the front, B's at the back); the flat's number on the hall wall beside it; its anchor on the homes' books;
+     * how deep a flat runs from the party wall (dz 0); its bedroom's rows; the row its balconies stand out on in front.
+     * The flats of both are dx -4 to 1, the hall wall dx 2.
+     */
+    record Layout(String drawing, String taller, int frontDoor, int backDoor, int frontSign, int backSign,
+                  int anchorDx, int anchorDz, int deep, int bedNear, int bedFar, int balcony) {}
+
+    /** The flats as they are now: two rooms each, seven deep, the door into the living room (tools/flats_design.py). */
+    static final Layout WIDE = new Layout(BLOCK, TALLER, -6, 6, -7, 7, 0, 6, 7, 1, 3, -9);
+    /** The first blocks: a room each, three deep, two to a landing off the spiral in the back of the hall. */
+    static final Layout FIRST = new Layout(OLD, OLD_TALLER, -2, 1, -3, 0, -1, 2, 3, 1, 3, -5);
+
+    /** A block's layout, by its name in the register. */
+    static Layout layout(Ledger.Building b) {
+        return OLD.equals(b.structure()) || OLD_TALLER.equals(b.structure()) ? FIRST : WIDE;
+    }
+
+    /** Is this a block of flats in the register (either drawing, with its fourth storey or without)? */
+    public static boolean isBlock(String structure) {
+        return BLOCK.equals(structure) || TALLER.equals(structure) || OLD.equals(structure) || OLD_TALLER.equals(structure);
+    }
     /** How far out from the heart "near the square" is: TownPlan's first ring of homes, sixteen lots. */
     static final int NEAR = TownPlan.RING + TownPlan.PERIOD;
     /** Home lots free near the square at or under which the ground counts as running short. */
@@ -97,6 +126,8 @@ public final class Flats {
     private static final String RAISING = "flats/raising/";
     private static final String STRIPPED = "flats/stripped/";
     private static final String LOOK = "flats/look/";
+    /** [flats-access] A block put up to the drawing of now (Ledger.built): one in the register as "flats" without it is a first block. */
+    private static final String DRAWN = "flats/wide/";
 
     /** One flat: its block, its storey (0, the ground floor), front or back, its anchor on the homes' books, and its number. */
     record Spot(Ledger.Building block, int storey, boolean back, BlockPos anchor, String number) {}
@@ -128,13 +159,46 @@ public final class Flats {
     /** The village's blocks of flats, in the order they went up. */
     static List<Ledger.Building> blocks(UUID village) {
         List<Ledger.Building> out = new ArrayList<>();
-        for (Ledger.Building b : Ledger.buildings(village)) if (BLOCK.equals(b.structure())) out.add(b);
+        for (Ledger.Building b : Ledger.buildings(village)) {
+            if (BLOCK.equals(b.structure()) && Ledger.note(village, DRAWN + b.anchor().asLong()) == null) b = keepAsItStands(village, b);
+            if (isBlock(b.structure())) out.add(b);
+        }
         return out;
     }
 
+    /**
+     * [flats-access] Ledger.built: a block of flats going on the register is put up to the drawing of now (it is marked so,
+     * and the first blocks, never marked, are known for what they are).
+     */
+    public static void built(UUID village, String structure, BlockPos anchor) {
+        if (BLOCK.equals(structure)) Ledger.note(village, DRAWN + anchor.asLong(), "1");
+    }
+
+    /**
+     * [flats-access] A block on the register from before the flats were made bigger: it stands to the first drawing, so it
+     * is called by that drawing's name from now on ("flats_old", or "flats4_old" with its fourth storey), and everything
+     * that goes by the register's name (its repairs, its make-overs, its renovation, its lamps and chimneys) keeps to the
+     * building that is there; its flats and their households stay where they were. Its renovation stamp is carried over
+     * to the name (the same design, so not out of date), and a fourth storey going up on it goes on going up.
+     */
+    private static Ledger.Building keepAsItStands(UUID village, Ledger.Building b) {
+        long key = b.anchor().asLong();
+        String to = "1".equals(Ledger.note(village, TALL + key)) ? OLD_TALLER : OLD;
+        Ledger.rename(village, b.anchor(), b.structure(), to);
+        Renovation.Stamp was = Renovation.stamp(village, b.anchor());
+        if (was != null) {
+            Renovation.stampAs(village, b.anchor(), new Renovation.Stamp(was.version(), to, was.theme(), was.age(), was.style(), was.day()));
+        }
+        if ("1".equals(Ledger.note(village, RAISING + key))) Ledger.raising(village, b.anchor(), true);
+        LOGGER.info("[MCA-FLATS] {} at {}: a first block of flats, kept as it stands ({})", Villages.name(village), b.anchor(), to);
+        return new Ledger.Building(to, b.anchor(), b.facing());
+    }
+
+    private static final org.slf4j.Logger LOGGER = com.mojang.logging.LogUtils.getLogger();
+
     /** Has this block its fourth storey? */
     static boolean tall(UUID village, Ledger.Building b) {
-        return "1".equals(Ledger.note(village, TALL + b.anchor().asLong()));
+        return TALLER.equals(b.structure()) || OLD_TALLER.equals(b.structure()) || "1".equals(Ledger.note(village, TALL + b.anchor().asLong()));
     }
 
     /** Is a fourth storey going up on it now (begun, its roof coming off)? */
@@ -148,7 +212,8 @@ public final class Flats {
 
     /** The drawing standing there now. */
     static String drawing(UUID village, Ledger.Building b) {
-        return tall(village, b) ? TALLER : BLOCK;
+        Layout l = layout(b);
+        return tall(village, b) ? l.taller() : l.drawing();
     }
 
     /** A cell of the block's drawing, in the world: across (right is +), up, and toward the back. */
@@ -174,9 +239,10 @@ public final class Flats {
     static List<Spot> spots(UUID village, Ledger.Building b) {
         List<Spot> out = new ArrayList<>();
         int n = storeys(village, b);
+        Layout l = layout(b);
         for (int s = 0; s < n; s++) {
             for (boolean back : new boolean[]{ false, true }) {
-                out.add(new Spot(b, s, back, cell(b, -1, STOREY * s, back ? 2 : -2), (s + 1) + (back ? "B" : "A")));
+                out.add(new Spot(b, s, back, cell(b, l.anchorDx(), STOREY * s, back ? l.anchorDz() : -l.anchorDz()), (s + 1) + (back ? "B" : "A")));
             }
         }
         return out;
@@ -186,7 +252,7 @@ public final class Flats {
     @Nullable
     static Spot spotAt(UUID village, BlockPos anchor) {
         for (Ledger.Building b : blocks(village)) {
-            if (Math.abs(anchor.getX() - b.anchor().getX()) > 6 || Math.abs(anchor.getZ() - b.anchor().getZ()) > 6) continue;
+            if (Math.abs(anchor.getX() - b.anchor().getX()) > 10 || Math.abs(anchor.getZ() - b.anchor().getZ()) > 10) continue;
             for (Spot s : spots(village, b)) if (s.anchor().equals(anchor)) return s;
         }
         return null;
@@ -209,21 +275,22 @@ public final class Flats {
         }
     }
 
-    /** Is this spot in the flat: its room, from the floor to the ceiling, or its doorway? */
+    /** Is this spot in the flat: its rooms, from the floor to the ceiling, or its doorway? */
     static boolean inside(Spot s, BlockPos p) {
         int[] d = local(s.block(), p);
+        Layout l = layout(s.block());
         int base = STOREY * s.storey();
         if (d[1] < base - 1 || d[1] > base + 2) return false;
-        if (d[0] == HALL_WALL && d[2] == (s.back() ? BACK_DOOR : FRONT_DOOR)) return true;
+        if (d[0] == HALL_WALL && d[2] == (s.back() ? l.backDoor() : l.frontDoor())) return true;
         if (d[0] < ROOM_LEFT || d[0] > ROOM_RIGHT) return false;
-        return s.back() ? d[2] >= 1 && d[2] <= 3 : d[2] >= -3 && d[2] <= -1;
+        return s.back() ? d[2] >= 1 && d[2] <= l.deep() : d[2] >= -l.deep() && d[2] <= -1;
     }
 
     /** Homes.homeAt: is this spot in this flat? */
     static boolean inside(UUID village, Homes.Home h, BlockPos p) {
         // Nowhere near it (asked of every chest and bed in the village, so asked cheaply first).
         int dy = p.getY() - h.anchor.getY();
-        if (Math.abs(p.getX() - h.anchor.getX()) > 4 || Math.abs(p.getZ() - h.anchor.getZ()) > 4 || dy < -1 || dy > 2) return false;
+        if (Math.abs(p.getX() - h.anchor.getX()) > 7 || Math.abs(p.getZ() - h.anchor.getZ()) > 7 || dy < -1 || dy > 2) return false;
         Spot s = spotAt(village, h.anchor);
         return s != null && inside(s, p);
     }
@@ -279,7 +346,7 @@ public final class Flats {
         return null;
     }
 
-    /** Where a child's bed goes in a flat: two clear cells on its floor, as far from the grown-ups' as the room allows. */
+    /** Where a child's bed goes in a flat: two clear cells on its bedroom's floor, as far from the grown-ups' as the room allows. */
     @Nullable
     static BlockPos bedSpot(ServerLevel level, UUID village, Homes.Home h, List<BlockPos> beds) {
         Spot s = spotAt(village, h.anchor);
@@ -295,8 +362,9 @@ public final class Flats {
         BlockPos best = null;
         double far = -1;
         int base = STOREY * s.storey();
+        Layout l = layout(s.block());
         for (int dx = ROOM_LEFT; dx <= ROOM_RIGHT; dx++) {
-            for (int dz = s.back() ? 1 : -3; dz <= (s.back() ? 3 : -1); dz++) {
+            for (int dz = s.back() ? l.bedNear() : -l.bedFar(); dz <= (s.back() ? l.bedFar() : -l.bedNear()); dz++) {
                 BlockPos p = cell(s.block(), dx, base, dz);
                 Direction lie = Homes.spotLie(level, p);
                 BlockPos head = p.relative(lie);
@@ -719,7 +787,7 @@ public final class Flats {
     /** Villages.whyBuild: why a block of flats. */
     public static String why(UUID village) {
         String w = WANT.get(village);
-        return "a block of flats, six homes on one lot near the square for the young and the hard-up"
+        return "a block of flats, six homes of two rooms each on one long lot, for the young and the hard-up"
             + (w == null ? "" : ": " + w);
     }
 
@@ -746,7 +814,7 @@ public final class Flats {
         return Math.abs(dx) <= TownPlan.LOT / 2 && Math.abs(dz) <= TownPlan.LOT / 2;
     }
 
-    /** The beds the village's blocks hold (Villages.bedsPlanned: nine a block, twelve with its fourth storey). */
+    /** The beds the village's blocks hold (Villages.bedsPlanned: nine a block, twelve with its fourth storey, either drawing). */
     public static int bedsPlanned(UUID village) {
         int n = 0;
         for (Ledger.Building b : blocks(village)) n += bedsDrawn(drawing(village, b));
@@ -782,7 +850,7 @@ public final class Flats {
 
     /** The Buildings page (Annals): a block's name, its storeys, and its flats let and free. */
     static void annals(UUID village, Ledger.Building b, CompoundTag c) {
-        if (!BLOCK.equals(b.structure())) return;
+        if (!isBlock(b.structure())) return;
         Map<Long, Homes.Home> homes = Homes.homes(village);
         int n = 0, let = 0, living = 0;
         for (Spot s : spots(village, b)) {
@@ -946,7 +1014,7 @@ public final class Flats {
     static int doors(ServerLevel level, @Nullable Villages.Village v, Ledger.Building b, boolean free) {
         int n = 0;
         Direction way = b.facing().getClockWise();
-        for (int dz : new int[]{ FRONT_DOOR, BACK_DOOR }) {
+        for (int dz : new int[]{ layout(b).frontDoor(), layout(b).backDoor() }) {
             BlockPos at = cell(b, HALL_WALL, 0, dz);
             if (!level.getBlockState(at).isAir() || !level.getBlockState(at.above()).isAir()) continue;
             if (!level.getBlockState(at.below()).isSolid()) continue;
@@ -983,9 +1051,10 @@ public final class Flats {
         Direction face = b.facing().getClockWise();
         int n = 0;
         int storeys = id == null ? 3 : storeys(id, b);
+        Layout l = layout(b);
         for (int s = 0; s < storeys; s++) {
             for (boolean back : new boolean[]{ false, true }) {
-                BlockPos at = cell(b, HALL_WALL + 1, STOREY * s + 1, back ? 0 : -3);
+                BlockPos at = cell(b, HALL_WALL + 1, STOREY * s + 1, back ? l.backSign() : l.frontSign());
                 BlockPos wall = at.relative(face.getOpposite());
                 BlockState there = level.getBlockState(at);
                 if (!(there.getBlock() instanceof WallSignBlock)) {
@@ -1000,7 +1069,7 @@ public final class Flats {
                 if (!(level.getBlockEntity(at) instanceof SignBlockEntity sign)) continue;
                 String number = "Flat " + (s + 1) + (back ? "B" : "A");
                 String who = "To let";
-                Homes.Home h = homes.get(cell(b, -1, STOREY * s, back ? 2 : -2).asLong());
+                Homes.Home h = homes.get(cell(b, l.anchorDx(), STOREY * s, back ? l.anchorDz() : -l.anchorDz()).asLong());
                 if (h != null && !h.members.isEmpty() && id != null) {
                     List<VillageFolkEntity> m = Homes.grown(Homes.loadedMembers(id, h));
                     if (!m.isEmpty()) who = m.get(0).displayNameCap() + (m.size() > 1 ? " & " + m.get(1).displayNameCap() : "");
@@ -1024,15 +1093,17 @@ public final class Flats {
         int storeys = v == null ? 3 : storeys(v.id(), b);
         for (int s = 1; s < storeys; s++) {
             for (int dx = ROOM_LEFT; dx <= ROOM_RIGHT; dx++) {
-                BlockPos at = cell(b, dx, STOREY * s, BALCONY);
-                if (!level.getBlockState(at).isAir() || !level.getBlockState(at.below()).isFaceSturdy(level, at.below(), Direction.UP)) continue;
+                BlockPos at = cell(b, dx, STOREY * s, layout(b).balcony());
+                // On the balcony's slab (or whatever the builder had to lay there instead: a step will carry a railing too).
+                BlockState floor = level.getBlockState(at.below());
+                if (!level.getBlockState(at).isAir() || floor.isAir() || floor.canBeReplaced()) continue;
                 run.add(at);
             }
         }
         if (run.isEmpty()) return 0;
         if (!free) {
             // Worked from the street below the first floor's balcony (the hand's reach goes no higher).
-            BlockPos under = cell(b, ROOM_LEFT, STOREY, BALCONY);
+            BlockPos under = cell(b, ROOM_LEFT, STOREY, layout(b).balcony());
             if (v == null || !TownJobs.atWork(level, v, "flats", under, "putting up the balconies' railings at " + name(v.id(), b))) return 0;
         }
         for (BlockPos at : run) {
@@ -1070,12 +1141,15 @@ public final class Flats {
     static int storey(ServerLevel level, Villages.Village v, Ledger.Building b, int budget, boolean free) {
         UUID id = v.id();
         long key = b.anchor().asLong();
-        List<BuildGoal.Placement> was = plan(BLOCK, b), will = plan(TALLER, b);
+        Layout l = layout(b);
+        List<BuildGoal.Placement> was = plan(l.drawing(), b), will = plan(l.taller(), b);
         if (will.isEmpty() || tall(id, b)) return 0;
         String name = name(id, b);
         if (!raising(id, b)) {
             if (!free && !payForStorey(level, v, b, was, will)) return 0;
             Ledger.note(id, RAISING + key, "1");
+            // [flats-access] Its roof coming off: the repairs, the renovation and the furnishers leave it be (as a house going up a storey).
+            Ledger.raising(id, b.anchor(), true);
             Villages.tell(id, level.getDayTime() / 24000L, "the builders began a fourth storey on " + name);
         }
         if (!free && !TownJobs.atWork(level, v, "storeys", b.anchor(), "putting a fourth storey on " + name)) return 0;
@@ -1140,6 +1214,11 @@ public final class Flats {
             Ledger.forget(id, STRIPPED + key);
             Ledger.forget(id, LOOK + key);
             FURNISHED.remove(key);
+            // [flats-access] On the register as what it is now, so its repairs, make-overs and renovation go by the four storeys
+            // and not the three (they read the register's name), and stamped as built to it.
+            Ledger.raising(id, b.anchor(), false);
+            Ledger.rename(id, b.anchor(), b.structure(), l.taller());
+            Renovation.built(id, l.taller(), b.anchor(), b.facing());
             Villages.tell(id, level.getDayTime() / 24000L, name + " got its fourth storey: two more flats to let");
             return 0;
         }
@@ -1147,7 +1226,7 @@ public final class Flats {
         TRIED.merge(key + ":" + layer, 1, Integer::sum);
         Set<BlockPos> now = new HashSet<>();
         for (BlockPos p : missing) if (p.getY() == layer && now.size() < Math.max(budget, 12)) now.add(p);
-        return BuildGoal.stampOnly(level, TALLER, b.anchor(), b.facing(), 13, paint, p -> now.contains(p.pos()));
+        return BuildGoal.stampOnly(level, l.taller(), b.anchor(), b.facing(), 13, paint, p -> now.contains(p.pos()));
     }
 
     /** What the storey is laid in: what was paid for (kept in the ledger), else the Iron Age's look. */
@@ -1185,7 +1264,7 @@ public final class Flats {
      * is to the south.
      */
     public static String stage(ServerLevel level, BlockPos at) {
-        com.jrpetty.mcassistant.Showcase.stage(level, at.getX() - 9, at.getX() + 9, at.getZ() - 9, at.getZ() + 9, at.getY());
+        com.jrpetty.mcassistant.Showcase.stage(level, at.getX() - 11, at.getX() + 11, at.getZ() - 14, at.getZ() + 14, at.getY());
         BuildGoal.stamp(level, BLOCK, at, Direction.NORTH, 13, com.jrpetty.mcassistant.Showcase.painter(Ages.CIVIC));
         Ledger.Building b = new Ledger.Building(BLOCK, at, Direction.NORTH);
         doors(level, null, b, true);
@@ -1199,7 +1278,7 @@ public final class Flats {
 
     /** The sign by the front door, as the town's (TownLife.addressSign) would read: on the wall to the right of it. */
     private static void nameplate(ServerLevel level, Ledger.Building b, String[] lines) {
-        BlockPos spot = cell(b, 4, 1, BALCONY);
+        BlockPos spot = cell(b, 4, 1, layout(b).balcony());
         if (!level.getBlockState(spot).isAir()) return;
         level.setBlock(spot, Blocks.SPRUCE_WALL_SIGN.defaultBlockState().setValue(WallSignBlock.FACING, b.facing().getOpposite()), 3);
         if (level.getBlockEntity(spot) instanceof SignBlockEntity sign) TownLife.write(sign, lines);
@@ -1247,6 +1326,27 @@ public final class Flats {
             numbers(level, v, b, false);
             railings(level, v, b, false);
         }
+    }
+
+    /** [flats-access] Tests: every block's ground-floor doors, flat numbers and balcony railings put up at once, for nothing. */
+    public static void fitFreeForTests(ServerLevel level, Villages.Village v) {
+        for (Ledger.Building b : blocks(v.id())) {
+            doors(level, v, b, true);
+            numbers(level, v, b, true);
+            railings(level, v, b, true);
+        }
+    }
+
+    /** [flats-access] Tests: the block at this anchor as one put up before the flats were made bigger (no mark of the drawing of now). */
+    public static void firstBlockForTests(UUID village, BlockPos anchor) {
+        Ledger.forget(village, DRAWN + anchor.asLong());
+    }
+
+    /** [flats-access] Tests: the register's name for the block at this anchor ("flats", "flats_old"...), or null. */
+    @Nullable
+    public static String structureForTests(UUID village, BlockPos anchor) {
+        for (Ledger.Building b : blocks(village)) if (b.anchor().equals(anchor)) return b.structure();
+        return null;
     }
 
     /** Tests: the fourth storey put on this block all at once, for nothing. */

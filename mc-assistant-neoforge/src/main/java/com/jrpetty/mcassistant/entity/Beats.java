@@ -152,7 +152,7 @@ final class Beats {
             List<Ledger.Building> houses = new ArrayList<>();
             for (Ledger.Building b : Ledger.buildings(id)) {
                 String s = b.structure();
-                if (s.equals("house") || s.equals("house2") || s.equals("manor") || s.equals("villa") || s.equals("flats")) houses.add(b);
+                if (s.equals("house") || s.equals("house2") || s.equals("manor") || s.equals("villa") || Flats.isBlock(s)) houses.add(b);   // [flats-access] either drawing
             }
             boolean[] taken = new boolean[8];
             for (Ledger.Building b : houses) {

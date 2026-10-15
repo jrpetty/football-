@@ -1370,7 +1370,7 @@ with plain blocks, so a building is never held up.
 | Library | 9×9 | Stone hall with tall windows, walls lined with bookshelves, an enchanting table on a carpet between lecterns |
 | School | 9×11 | Timber schoolroom under a steep roof, tall windows down both sides: two rows of desks (a top slab, a stair for a bench) either side of the aisle, the teacher's lectern, and at the back a blackboard over a cupboard of barrels, a bookshelf either side with a lamp on it; a lamp hung under the ceiling over the desks by each wall, none in the aisle |
 | Bank | 9×11 | Stone house of business: a counter across the room with a lantern on its far end, the ledger on a lectern before it, and a vault at the back, its strongboxes behind a gate and grille of iron bars the banker sets; its two lanterns hang flush under the ceiling, over the counter and over the strongboxes |
-| Block of flats | 11×11 | A stone town house three storeys high (four in the Diamond Age) with brick quoins, balconies, window boxes, a pedimented front door between lanterns, a slate roof with a dormer and two chimney stacks: six small flats off a winding stair (see Blocks of flats) |
+| Block of flats | 11×19 | A stone town house three storeys high (four in the Diamond Age) with brick quoins, balconies, window boxes, a pedimented front door between lanterns, a mansard roof of slate with a dormer and two chimney stacks: six two-room flats off a stair hall (see Blocks of flats) |
 | Park | 11×11 | A green: a stone fountain with a spring spilling from its pillar, sixteen wooden benches round it, lamp posts at the four ways in, flowers along its edges; then a tree in each corner, paths and lanterns (see *The town's quarters, and the park*) |
 
 Every drawing is sound as built: a hanging lantern hangs from a beam, a ceiling, the rafters, an eave or
@@ -3521,28 +3521,33 @@ the vault, the deposits and the loans, the week's interest, every mortgage and t
 ### Blocks of flats
 
 From the Iron Age a town that is short of homes builds **up** instead of out: a block of flats,
-three storeys of small homes on one house's lot.
+three storeys of two-room homes on one long lot.
 
 * **When.** Households are waiting for a home, some of them the flats' sort (a grown folk on its
   own, a couple with no children yet, a household that couldn't afford a house's rent), and the
   ground near the square is running short (three home lots or fewer free in the first ring of
   streets) or the queue is long (three households or more). One block for every thirty folk, the
   first at once; never while a block has more than one flat standing empty. It goes on the
-  builders' list ahead of the next house, on a home lot as near the square as there is, and the
+  builders' list ahead of the next house, on a long lot (two lots end to end beside an avenue,
+  out past the first ring of streets), and the
   status line says why ("a block of flats ...: 4 households wait for a home (3 of them young or
   hard up) and 2 lots stand free near the square").
-* **The building.** Eleven blocks wide and built to look like a town house: a slate plinth, stone
+* **The building.** Eleven blocks wide and seventeen deep, built to look like a town house: a slate plinth, stone
   walls with toothed brick quoins at the corners, tall windows in three even bays front and back,
   window boxes of flowers under the ground floor's windows, a balcony on two brackets across each
   upper flat's front, slate sills under the rest, a bracketed cornice under the eaves, and a
-  pitched slate roof with a dormer over the middle bay, between stone gables each with a brick
-  chimney stack rising out of it (and smoking: a grate in every flat). The front door, on a stone
-  doorstep, has a fanlight over it and a little slate pediment over that, a lantern hung at either end
-  of it, and the block's name on a sign beside it. Inside, a stair hall up one side with a stair
-  that winds up the back of it to every landing (real steps, a rail at the well's edge, a lantern
-  on every landing), and two flats to a landing: six in all, three for couples (two beds) and three
-  for singles (one bed). Each flat is a room with its bed or beds, a chest, a little table (a post
-  with a cloth on it), a lantern over the bed and windows on two sides. The builders raise it like
+  mansard roof of slate (four courses up to a flat top) with a dormer over the middle bay, its
+  stone side walls each with a brick chimney stack up the middle (smoking: a stove in every flat).
+  The front door, on a stone doorstep, has a fanlight over it and a little slate pediment over
+  that, a lantern hung at either end of it, and the block's name on a sign beside it. Inside, a
+  stair hall runs the length of one side, its stair a straight flight up to every floor with a
+  landing halfway (real steps rising the right way, three blocks of headroom over every one, a
+  rail at the top landing's edge, three lanterns on every landing), and two flats to a landing:
+  six in all, three for couples (two beds) and three for singles (one bed). Each flat is two
+  rooms: by its door a living room and kitchen (a stove in the corner by the window, a worktop
+  and a barrel beside it, a table with a chair either side, a lamp over the table, the front
+  flats' with the balcony outside), and through a doorway its bedroom (the bed or beds, heads to
+  the outside wall, a chest between them under the window, a lamp). The builders raise it like
   anything else, out of the stores, a load at a time and storey by storey from the footing up; its
   roof, plinth, sills, balconies and brackets go up in the stores' wood and the Iron Age's
   make-over slates them like the rest of the town's roofs, and lamp posts go up by its front door.
@@ -3575,6 +3580,10 @@ three storeys of small homes on one house's lot.
   couple's flat when one is free (or to a house, if they can afford one).
 * **Every bed counts.** The flats' beds are the town's beds: counted in the room it has, in the
   houses it plans (nine a block), and in "with a bed" on the books.
+* **The first blocks.** A town that built a block before the flats were made bigger (eleven by
+  nine on a house's lot, a room to each flat off a winding stair) keeps it just as it stands: its
+  flats, households, beds and rent go on as before, its repairs keep to the drawing it was built
+  to, and it can still have its fourth storey. New blocks go up to the bigger drawing.
 * **The Diamond Age.** A block whose flats are all let while folk still wait gets a fourth storey:
   paid for out of the stores before its roof comes off, raised a layer at a time, the stair carried
   up, a balcony more, the roof, gables and chimneys put back on top, and two more flats (twelve
@@ -12541,3 +12550,21 @@ on foot, unless somebody talks them round.
 Smoke: `trade_world_stage` in tools/realworld/smoke.py (`/village harbour stage`, `/village highways stage`,
 `/village migration stage`). Tests: TradeWorldGameTests (tw01 to tw09); armies at the inns and the fleet at the pier,
 RealmPolishGameTests (rp01 to rp05).
+
+## Bigger flats, and the way in to every room
+
+- **Bigger flats.** A new block of flats is a town house eleven wide and seventeen deep, on a long lot by an avenue:
+  each of its six flats (eight with a fourth storey) is two rooms now, a living room and kitchen by the door with a
+  stove, a worktop, a barrel, a table and two chairs and a lamp, and through a doorway a bedroom with the bed or beds,
+  a chest and a lamp. Still two to a landing; still nine beds a block (twelve with the fourth storey). Blocks a town
+  built before stay as they are.
+- **A proper stair.** The stair hall's stair goes up a straight flight to each floor with a landing halfway, its steps
+  rising the right way, three blocks of headroom over every step, lit, with a rail where the top landing looks down
+  the well. Every flat's door opens off a landing, and the folk walk it: in at the front door, up the stairs, into
+  their flat and to bed, and out again.
+- **The way in to every room.** Every building the towns put up has been walked through by the folk's own way-finding,
+  turned two ways on its lot: every room on every floor, a place beside every bed, a place at every chest, barrel,
+  stove and bench, and the way back out. The places they could not get to are being put right building by building.
+
+Tests: FlatsAccessGameTests (fa21 the flats walked at all four turns, fa22 every building's rooms, fa23 the first
+blocks kept); FlatsGameTests (fl01 to fl05).

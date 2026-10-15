@@ -678,8 +678,10 @@ class BlueprintSoundnessTest {
         "court 5 3 5 3 none",
         "divershed 2 2 3 3 front",
         "firestation 3 4 3 4 front",
-        "flats 5 5 5 5 front",
-        "flats4 5 5 5 5 front",
+        "flats 5 9 5 9 front",                  // [flats-access] the bigger flats, on a long lot (TownPlan)
+        "flats4 5 9 5 9 front",
+        "flats_old 5 5 5 5 front",              // [flats-access] the first, smaller blocks, kept for those standing
+        "flats4_old 5 5 5 5 front",
         "fletcher 2 2 3 3 front",
         "fountain 3 3 3 3 none",
         "foundry 3 3 4 4 none",                // [tech-tree] the foundry, open to the street as the smithy is
