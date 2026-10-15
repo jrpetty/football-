@@ -54,6 +54,19 @@ export function withScorerCap(score: number, detail: CaseResult['scoreDetail'] |
   return cap === undefined ? score : Math.min(score, Number(cap) / 100);
 }
 
+/** The judges disagreed, or only one of several judges answered: a person should arbitrate (Blind Review, Grading Station). */
+export function needsArbitration(detail: CaseResult['scoreDetail'] | undefined): boolean {
+  return Boolean(detail?.judgeDisagreement || detail?.singleJudge);
+}
+
+/**
+ * The Game Jam's own rule: a game cut off at the output limit is an unfinished file, so its judged share scores 0
+ * (the judges are not asked). A human or Grading Station grade can't give it back, under any policy.
+ */
+export function jamTruncated(detail: CaseResult['scoreDetail'] | undefined): boolean {
+  return (detail?.gameJam as { truncated?: boolean } | undefined)?.truncated === true;
+}
+
 /** Recompute the official score of a result from its stored grades under a policy. Returns a new object. */
 export function applyOfficial(r: CaseResult, spec: GradingSpec, policy: OfficialPolicy): CaseResult {
   const d = { ...(r.scoreDetail ?? {}) };
@@ -66,7 +79,7 @@ export function applyOfficial(r: CaseResult, spec: GradingSpec, policy: Official
   const human = humanMean(r);
   const ai = stationAiScore(r);
   const run = runAiScore(r, spec);
-  const off: OfficialResult = officialScore(
+  let off: OfficialResult = officialScore(
     {
       humanRole: spec.humanRole,
       aiRole: spec.aiRole,
@@ -78,10 +91,15 @@ export function applyOfficial(r: CaseResult, spec: GradingSpec, policy: Official
       runAiScore: run,
       stationAiScore: ai,
       humanScore: human,
-      disagreement: Boolean(d.judgeDisagreement),
+      disagreement: needsArbitration(d),
     },
     policy,
   );
+  if (spec.kind === 'artifact' && jamTruncated(d) && off.score !== null) {
+    const checks = typeof d.checkScore === 'number' ? d.checkScore : null;
+    const score = checks === null ? autoScore : r4((1 - (spec.judgeWeight ?? 0)) * checks);
+    off = { score, source: score === null ? 'pending' : 'auto', why: 'The game was cut off at the output limit, so its judged part scores 0 (the Game Jam rule); grades are shown as opinions only.' };
+  }
   const out: CaseResult = { ...r, scoreDetail: d };
   if (human !== null) d.humanScore = r4(human);
   d.official = { source: off.source, policy, why: off.why };
@@ -97,17 +115,17 @@ export function applyOfficial(r: CaseResult, spec: GradingSpec, policy: Official
   if (spec.kind === 'human' && (off.source === 'human' || off.source === 'average')) d.humanScored = true;
   d.arbitrated = off.source === 'arbitration' || undefined;
   if (off.source === 'arbitration') d.automatedScore = autoScore;
-  out.summary = officialSummary(off.source, { human, ai, run, raters: r.humanScores?.length ?? 0, auto: autoScore, autoSummary: (d.autoSummary as string | undefined) ?? r.summary, spec, score: off.score });
+  out.summary = officialSummary(off.source, { human, ai, run, raters: r.humanScores?.length ?? 0, auto: autoScore, autoSummary: (d.autoSummary as string | undefined) ?? r.summary, spec, score: off.score, single: Boolean(d.singleJudge) && !d.judgeDisagreement });
   return out;
 }
 
-function officialSummary(source: OfficialSource, x: { human: number | null; ai: number | null; run: number | null; raters: number; auto: number | null; autoSummary: string; spec: GradingSpec; score: number }): string {
+function officialSummary(source: OfficialSource, x: { human: number | null; ai: number | null; run: number | null; raters: number; auto: number | null; autoSummary: string; spec: GradingSpec; score: number; single?: boolean }): string {
   const raters = `${x.raters} rater${x.raters === 1 ? '' : 's'}`;
   const pre = x.spec.kind === 'artifact' && x.spec.judgeWeight ? `${Math.round(x.score * 100)}/100 · ` : '';
   const ai = x.run ?? x.ai;
   switch (source) {
     case 'arbitration':
-      return `Arbitrated by humans ${tenths(x.human)}/10 (judges disagreed; panel gave ${tenths(x.auto)})`;
+      return `Arbitrated by humans ${tenths(x.human)}/10 (${x.single ? 'only one judge answered' : 'judges disagreed'}; panel gave ${tenths(x.auto)})`;
     case 'human':
       return `${pre}Human grade ${tenths(x.human)}/10 (${raters})${ai !== null ? ` · AI ${tenths(ai)}/10` : ''}`;
     case 'average':
@@ -124,7 +142,7 @@ export function needOf(r: CaseResult, spec: GradingSpec): GradingNeed {
   if (spec.humanRole === 'dispute') return 'review';
   if (r.status === 'pending-human') return 'grade';
   if (judgeFailed(r)) return 'judge-failed';
-  if (r.scoreDetail?.judgeDisagreement) return 'arbitrate';
+  if (needsArbitration(r.scoreDetail)) return 'arbitrate';
   // The Gallery: the owner's artistry rating always counts (it replaces the judges' artistry).
   if (spec.scorerType.startsWith('program:gallery')) return 'owner-rating';
   return 'second-opinion';

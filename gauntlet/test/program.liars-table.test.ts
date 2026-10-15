@@ -286,6 +286,29 @@ test('liars-table: reason check needs time, claimed room and a contradicting sou
   assert.equal(checkReason('gut feeling', w).score, 0);
 });
 
+test('liars-table: a genuine reason keeps full credit; keyword stuffing earns no reason credit', () => {
+  for (const seed of [101, 202, 303, 404, 505]) {
+    const w = worldFor(seed, { variant: 'cctv' });
+    const t = SLOTS[w.theftSlot]!;
+    const others = w.suspects.map((s) => s.name).filter((n) => n !== w.culprit);
+    // Realistic reasons in the prompt's own wording (times as on the evidence files, a door-log time in the same slot,
+    // the claimed room, where the camera really put the people, two other guests named).
+    const genuine = [
+      `At ${t} pm ${w.culprit} claimed to be in the ${w.claimedRoom}, but the ${w.claimedRoom} camera shows only ${others[0]} and ${others[1]} there at ${t}, so ${w.culprit} lied.`,
+      `${w.culprit} said they were in the ${w.claimedRoom} at ${t}; the CCTV footage contradicts that, and the door keypad log shows the ${w.objectRoom} opened during that half hour.`,
+    ];
+    for (const g of genuine) assert.deepEqual(checkReason(g, w), { time: true, place: true, source: true, score: 1 }, `seed ${seed}: ${g}`);
+    // Stuffed: every time, every room, every evidence file and every guest. Before, this earned the full 15%.
+    const rooms = ['Library', 'Conservatory', 'Billiard Room', 'Gallery', 'Music Room', 'Terrace', 'Drawing Room', 'Kitchen', 'Wine Cellar', 'Orangery'];
+    const stuffed = `At 8:30, 9:00, 9:30 or 10:00 they were in the ${rooms.join(', ')}, according to the CCTV, the receipts, the witness statement and the door log, and ${others.join(', ')} saw it.`;
+    assert.deepEqual(checkReason(stuffed, w), { time: false, place: false, source: false, score: 0 }, `seed ${seed}`);
+    // Each limit on its own.
+    assert.equal(checkReason(`At 8:30, 9:00, 9:30 and 10:00 they claimed the ${w.claimedRoom} but the camera disagrees`, w).time, false);
+    assert.equal(checkReason(`At ${t} they claimed the ${w.claimedRoom}, ${rooms.filter((r) => r !== w.claimedRoom).slice(0, 3).join(', ')}; the camera disagrees`, w).place, false);
+    assert.equal(checkReason(`At ${t} they claimed the ${w.claimedRoom}; the camera, the receipts and the door log disagree`, w).source, false);
+  }
+});
+
 // ─── hard tier ──────────────────────────────────────────────────────────────
 
 const HARD = {

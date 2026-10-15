@@ -1,5 +1,5 @@
 import type { ChatImage, ScoreBreakdownItem, ScoreDetail, ScorerSpec } from '../core/types.ts';
-import { extractArtifact, judgesDisagree, type JudgeCall, type ScoringInput, type ScoringOutcome } from './index.ts';
+import { extractArtifact, judgesDisagree, singleJudge, singleJudgeNote, type JudgeCall, type ScoringInput, type ScoringOutcome } from './index.ts';
 import { JUDGE_SYSTEM, fill } from './judge-prompts.ts';
 import { GENRES, MOTION_SIZE, runPlaytest, type PlaytestResult } from './playtest.ts';
 import { GAME_JAM_PROTOCOL, JAM_CRITERIA, JAM_WEIGHTS, VISION_JUDGE_VISUAL_WEIGHT, criteriaOf, jamCaseSpec, numberedRequirements, validateGameJamCase, type GameJamDetail, type JamCaseSpec, type JamCriterion, type JamGenre, type JamJudgeCard, type JamRequirement, type RequirementVerdict } from './game-jam-shared.ts';
@@ -385,6 +385,10 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
     if (judgesDisagree(judgeCards.map((j) => j.total))) {
       detailBase.judgeDisagreement = true;
       notes = `Judges disagree (spread ${(spread * 10).toFixed(1)} points) — flagged for human review`;
+    }
+    if (singleJudge(calls.length, cards.length)) {
+      detailBase.singleJudge = true;
+      notes = [notes, singleJudgeNote(calls.length)].filter(Boolean).join(' · ');
     }
     if (errors.length) notes = [notes, `Judge issues: ${errors.join('; ')}`].filter(Boolean).join(' · ');
   }

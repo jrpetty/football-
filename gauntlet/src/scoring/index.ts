@@ -124,6 +124,18 @@ export function judgesDisagree(scores: readonly number[]): boolean {
 }
 
 /**
+ * Several judges were asked but only one gave a usable verdict (the others failed or were unparsable). Its grade is
+ * kept, but nothing checked it, so the result is flagged for human review exactly like a disagreement.
+ */
+export function singleJudge(asked: number, valid: number): boolean {
+  return asked >= 2 && valid === 1;
+}
+
+export function singleJudgeNote(asked: number): string {
+  return `Only one judge answered (of ${asked}) — flagged for human review`;
+}
+
+/**
  * Anti-hedging: an answer that offers alternatives ("42 or 43", "A/B",
  * "either X or Y") is wrong, even if one alternative is right. Every prompt
  * with a single expected answer states this rule.
@@ -290,7 +302,7 @@ function referenceText(expected: unknown): string {
   return typeof expected === 'string' ? expected : JSON.stringify(expected, null, 2);
 }
 
-async function runRubricPanel(input: ScoringInput, user: string, label: string): Promise<{ score: number | null; judge: NonNullable<ScoreDetail['judge']>; errors: string[] }> {
+async function runRubricPanel(input: ScoringInput, user: string, label: string): Promise<{ score: number | null; judge: NonNullable<ScoreDetail['judge']>; errors: string[]; asked: number }> {
   const calls = await input.judges.ask(JUDGE_SYSTEM, user, label);
   const judge: NonNullable<ScoreDetail['judge']> = [];
   const errors: string[] = [];
@@ -307,21 +319,28 @@ async function runRubricPanel(input: ScoringInput, user: string, label: string):
     judge.push({ contestantId: c.judgeId, score: n / 10, rationale: c.text.replace(/SCORE\s*:.*$/im, '').trim().slice(0, 1200) });
   }
   const score = judge.length ? judge.reduce((s, j) => s + j.score, 0) / judge.length : null;
-  return { score, judge, errors };
+  return { score, judge, errors, asked: calls.length };
 }
 
 async function judgeRubric(input: ScoringInput, rubric: string, passThreshold: number): Promise<ScoringOutcome> {
   if (!input.response.trim()) return { score: 0, passed: false, summary: 'Empty response', detail: {} };
   const user = fill(JUDGE_RUBRIC_TEMPLATE, { task: clip(input.taskText, 30_000), reference: referenceText(input.expected), rubric, response: clip(input.response) });
-  const { score, judge, errors } = await runRubricPanel(input, user, 'judge');
+  const { score, judge, errors, asked } = await runRubricPanel(input, user, 'judge');
   if (score === null) throw new Error(`All judges failed: ${errors.join('; ') || 'no judges configured'}`);
   const spread = judge.length > 1 ? Math.max(...judge.map((j) => j.score)) - Math.min(...judge.map((j) => j.score)) : 0;
   const disagree = judgesDisagree(judge.map((j) => j.score));
+  const single = singleJudge(asked, judge.length);
   return {
     score: round(score),
     passed: score >= passThreshold,
-    summary: `Judge panel ${(score * 10).toFixed(1)}/10${disagree ? ' · judges disagree' : ''}`,
-    detail: { judge, judgeSpread: round(spread), judgeDisagreement: disagree || undefined, notes: errors.length ? `Judge issues: ${errors.join('; ')}` : undefined },
+    summary: `Judge panel ${(score * 10).toFixed(1)}/10${disagree ? ' · judges disagree' : ''}${single ? ' · only one judge answered' : ''}`,
+    detail: {
+      judge,
+      judgeSpread: round(spread),
+      judgeDisagreement: disagree || undefined,
+      singleJudge: single || undefined,
+      notes: [single ? singleJudgeNote(asked) : '', errors.length ? `Judge issues: ${errors.join('; ')}` : ''].filter(Boolean).join(' · ') || undefined,
+    },
   };
 }
 
@@ -359,11 +378,18 @@ async function judgeClassify(input: ScoringInput, instructions: string, labels: 
   for (const j of judge) counts.set(j.label!, (counts.get(j.label!) ?? 0) + 1);
   const majority = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]![0];
   const unanimous = counts.size === 1;
+  const single = singleJudge(calls.length, judge.length);
   return {
     score: round(score),
     passed: score >= 0.99,
-    summary: `${majority.replace(/_/g, ' ').toLowerCase()} (${judge.map((j) => j.label).join(' / ')})${unanimous ? '' : ' · judges disagree'}`,
-    detail: { judge, label: majority, judgeDisagreement: unanimous ? undefined : true, notes: errors.length ? `Judge issues: ${errors.join('; ')}` : undefined },
+    summary: `${majority.replace(/_/g, ' ').toLowerCase()} (${judge.map((j) => j.label).join(' / ')})${unanimous ? '' : ' · judges disagree'}${single ? ' · only one judge answered' : ''}`,
+    detail: {
+      judge,
+      label: majority,
+      judgeDisagreement: unanimous ? undefined : true,
+      singleJudge: single || undefined,
+      notes: [single ? singleJudgeNote(calls.length) : '', errors.length ? `Judge issues: ${errors.join('; ')}` : ''].filter(Boolean).join(' · ') || undefined,
+    },
   };
 }
 
@@ -447,6 +473,7 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
   let judgeDetail: ScoreDetail['judge'];
   let judgeNotes: string | undefined;
   let judgeDisagreement = false;
+  let single = false;
   if (rubric && judgeWeight > 0) {
     const user = fill(JUDGE_ARTIFACT_TEMPLATE, {
       task: clip(input.taskText, 20_000),
@@ -463,6 +490,8 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
       judgeDisagreement = true;
       judgeNotes = `Judges disagree (spread ${(spread * 10).toFixed(1)} points) — flagged for human review`;
     }
+    single = singleJudge(r.asked, r.judge.length);
+    if (single) judgeNotes = [judgeNotes, singleJudgeNote(r.asked)].filter(Boolean).join(' · ');
     // A judge that failed must not hide the disagreement of the others (it decides human arbitration).
     if (r.errors.length) judgeNotes = [judgeNotes, `Judge issues: ${r.errors.join('; ')}`].filter(Boolean).join(' · ');
     if (judgeScore === null) throw new Error(`All judges failed: ${r.errors.join('; ') || 'no judges configured'}`);
@@ -486,6 +515,7 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
       zeroedByJudges: gated || undefined,
       consoleErrors: probe?.consoleErrors.slice(0, 5),
       judgeDisagreement: judgeDisagreement || undefined,
+      singleJudge: single || undefined,
       notes: judgeNotes,
     },
   };
