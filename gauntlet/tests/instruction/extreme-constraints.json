@@ -1,7 +1,7 @@
 {
   "kind": "prompt",
   "id": "instruction.extreme-constraints",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "Extreme Constraints",
   "category": "instruction",
   "description": "Twelve writing tasks that each stack 6-10 interacting, machine-checked constraints that must ALL hold at once: exact word and sentence counts together with lipograms (no e, no a, both, no t, no o, no s), long acrostics behind line prefixes, fixed words per line or per sentence, forbidden letter sequences that hide inside common words ('the', 'and', 'no', 'very'), title case, word-length caps and strict JSON layouts with palindrome, increasing-digit and all-different checks. Scoring is all-or-nothing per task, and every counting rule is restated exactly as the checker applies it, so a miss is a genuine self-monitoring failure.",
@@ -172,6 +172,10 @@
           "check": "line_count",
           "min": 8,
           "max": 8
+        },
+        {
+          "check": "paragraph_count",
+          "max": 1
         },
         {
           "check": "each_line_starts_with",
@@ -516,6 +520,12 @@
           "check": "include",
           "text": "Zyloq",
           "caseSensitive": true,
+          "min": 3,
+          "max": 3
+        },
+        {
+          "check": "include",
+          "text": "zyloq",
           "min": 3,
           "max": 3
         },

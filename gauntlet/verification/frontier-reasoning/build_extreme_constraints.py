@@ -127,6 +127,7 @@ case("x04", "hard", "Write 8 headlines for a fictional newspaper covering the op
     "Do not use any commas or digits.",
 ], [TITLE, WORDLEN], [
     {"check": "line_count", "min": 8, "max": 8},
+    {"check": "paragraph_count", "max": 1},  # rule 1 "with no blank lines" (added in 1.0.1; line_count ignores blank lines)
     {"check": "each_line_starts_with", "text": ">> "},
     {"check": "title_case_lines"},
     {"check": "no_letter", "letter": "s"},
@@ -300,6 +301,7 @@ case("x11", "hard", "Write a product description for a fictional smart kettle ca
     {"check": "regex", "pattern": "^\\s*[^\\n.!?]+[.!?] [^\\n.!?]+[.!?][ \\t]*\\n[ \\t]*\\n[ \\t]*[^\\n.!?]+[.!?] [^\\n.!?]+[.!?][ \\t]*\\n[ \\t]*\\n[ \\t]*[^\\n.!?]+[.!?] [^\\n.!?]+[.!?]\\s*$"},
     {"check": "word_count", "min": 75, "max": 75},
     {"check": "include", "text": "Zyloq", "caseSensitive": True, "min": 3, "max": 3},
+    {"check": "include", "text": "zyloq", "min": 3, "max": 3},  # "always with a capital Z": no other spelling (added in 1.0.1)
     {"check": "exclude", "text": "very"},
     {"check": "exclude", "text": "really"},
     {"check": "regex", "pattern": "\\d", "shouldMatch": False},
@@ -349,7 +351,7 @@ def main(root, outdir):
     test = {
         "kind": "prompt",
         "id": "instruction.extreme-constraints",
-        "version": "1.0.0",
+        "version": "1.0.1",
         "name": "Extreme Constraints",
         "category": "instruction",
         "description": "Twelve writing tasks that each stack 6-10 interacting, machine-checked constraints that must ALL hold at once: exact word and sentence counts together with lipograms (no e, no a, both, no t, no o, no s), long acrostics behind line prefixes, fixed words per line or per sentence, forbidden letter sequences that hide inside common words ('the', 'and', 'no', 'very'), title case, word-length caps and strict JSON layouts with palindrome, increasing-digit and all-different checks. Scoring is all-or-nothing per task, and every counting rule is restated exactly as the checker applies it, so a miss is a genuine self-monitoring failure.",
