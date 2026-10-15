@@ -219,6 +219,39 @@ test('the jam has an explainer and sits in the games suite', () => {
   assert.ok(loadTests().some((t) => t.definition.id === 'creative.one-shot-games'), 'the one-shot games test is untouched and still loads');
 });
 
+test('real playtest: a slow but working game is not called frozen (the fake clock advances in short steps)', { timeout: 300_000 }, async (t) => {
+  if (!(await browserAvailable())) return t.skip('no headless Chromium on this machine');
+  // Calibrate a busy loop to ~200 ms of real time per frame on this machine.
+  let n = 2e6;
+  for (;;) {
+    const t0 = performance.now();
+    let acc = 0;
+    for (let i = 0; i < n; i++) acc = (acc + i * 7) % 1000003;
+    if (acc < 0) n++;
+    const ms = performance.now() - t0;
+    if (ms > 50) {
+      n = Math.round((n * 200) / ms);
+      break;
+    }
+    n *= 2;
+  }
+  // Slow only in the untouched copy (no Enter pressed) between 14 s and 15 s of game time: about sixty frames of
+  // ~200 ms. Before, that copy's clock jumped from 14 s to 19 s in one step with a 10 s real-time budget, so this
+  // working game was reported as "stopped responding" and capped at 30.
+  const game = `<!doctype html><body style="margin:0"><canvas id=c width=1280 height=720></canvas><script>
+    const x=c.getContext('2d');let started=false;addEventListener('keydown',e=>{if(e.code==='Enter')started=true});
+    function f(t){if(!started&&t>14000&&t<15000){let acc=0;for(let i=0;i<${n};i++)acc=(acc+i*7)%1000003;window.acc=acc}
+    x.fillStyle='#124';x.fillRect(0,0,1280,720);x.fillStyle='#fc0';x.fillRect((t/10)%1280,300,60,60);requestAnimationFrame(f)}requestAnimationFrame(f)</script>`;
+  try {
+    const r = await runPlaytest(game, 'flappy');
+    assert.ok(r);
+    assert.equal(r.summary.hung, null, JSON.stringify(r.summary.hung));
+    assert.equal(r.summary.stillRunning.passed, true);
+  } finally {
+    await closeBrowser();
+  }
+});
+
 test('real playtest: repeatable, and it tells a moving game from a frozen one', { timeout: 300_000 }, async (t) => {
   if (!(await browserAvailable())) return t.skip('no headless Chromium on this machine');
   const game = `<!doctype html><body style="margin:0"><canvas id=c width=1280 height=720></canvas><script>
