@@ -312,7 +312,7 @@ public final class AdminActions {
                 BlockPos at = c.pos();
                 if (a.word(2, "here").equals("open")) {                            // [field] the nearest open grassland or savanna
                     BlockPos open = AdminTools.openSite(c.level(), at, 0, OPEN_SEARCH);
-                    if (open == null) yield Done.no("No open grassland or savanna clear of other towns within " + OPEN_SEARCH + " blocks.");
+                    if (open == null) yield Done.no("No open, level land clear of other towns within " + OPEN_SEARCH + " blocks.");
                     at = surface(c.level(), open);
                 }
                 yield found(c, at, a.num(0, 20), AdminTools.age(a.word(1, "wood")), null);
@@ -538,7 +538,7 @@ public final class AdminActions {
     }
 
     /** [field] How far an open site is looked for: round the admin for a new town, past the distance asked for a rival. */
-    static final int OPEN_SEARCH = 640, RIVAL_SLACK = 96;
+    static final int OPEN_SEARCH = 1024, RIVAL_SLACK = 96;
 
     private static BlockPos surface(ServerLevel level, BlockPos p) {
         level.getChunk(p.getX() >> 4, p.getZ() >> 4);

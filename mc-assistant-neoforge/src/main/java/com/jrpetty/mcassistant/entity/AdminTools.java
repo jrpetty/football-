@@ -651,6 +651,28 @@ public final class AdminTools {
             if (checks++ >= SITE_CHECKS) break;
             if (level(level, p)) return p;
         }
+        // No grassland or savanna free near enough: any land that is not sea, river, forest, jungle or mountain, still
+        // clear of every town and level enough for a heart (a scenario must not fail because the world is wooded).
+        List<BlockPos> land = new ArrayList<>();
+        for (int r = nearest; r <= farthest; r += SITE_RING) {
+            for (int k = 0; k < SITE_BEARINGS; k++) {
+                if (r == 0 && k > 0) break;
+                int turn = (k + 1) / 2 * (k % 2 == 0 ? 1 : -1);
+                double ang = Math.PI * 2 * turn / SITE_BEARINGS;
+                BlockPos p = BlockPos.containing(from.getX() + Math.cos(ang) * r, from.getY(), from.getZ() + Math.sin(ang) * r);
+                var biome = level.getBiome(p);
+                if (biome.is(net.minecraft.tags.BiomeTags.IS_OCEAN) || biome.is(net.minecraft.tags.BiomeTags.IS_RIVER)
+                    || biome.is(net.minecraft.tags.BiomeTags.IS_FOREST) || biome.is(net.minecraft.tags.BiomeTags.IS_JUNGLE)
+                    || biome.is(net.minecraft.tags.BiomeTags.IS_MOUNTAIN) || biome.is(net.minecraft.tags.BiomeTags.IS_BEACH)) continue;
+                if (open.contains(p) || Villages.nearest(level, p, Villages.VILLAGE_RANGE * 2) != null) continue;
+                land.add(p);
+            }
+        }
+        checks = 0;
+        for (BlockPos p : land) {
+            if (checks++ >= SITE_CHECKS) break;
+            if (level(level, p)) return p;
+        }
         return null;
     }
 
