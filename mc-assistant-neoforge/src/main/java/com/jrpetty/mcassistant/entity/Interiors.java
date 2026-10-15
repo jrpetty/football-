@@ -50,7 +50,9 @@ public final class Interiors {
 
     /** The buildings that are furnished: homes and the rooms folk gather in, not the works. */
     static final Set<String> FURNISHED = Set.of("house", "manor", "townhall", "hall", "tavern", "cafe", "shop", "library",
-        "chapel", "guesthouse", "barracks", "school");
+        "chapel", "guesthouse", "barracks", "school",
+        // [build-world] and the town's other rooms, which had only what their drawings gave them: a rug, a shelf, a lamp
+        "academy", "postoffice", "maproom", "harbour", "auction", "infirmary");
 
     /** What goes where: a cell of a room and what is put in it. */
     enum Kind { RUG, BORDER, BARREL, POT, SHELF, LAMP, CANDLE }

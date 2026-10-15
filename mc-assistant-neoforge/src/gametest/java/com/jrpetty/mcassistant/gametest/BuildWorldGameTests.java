@@ -27,6 +27,7 @@ import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.LadderBlock;
 import net.minecraft.world.level.block.LeavesBlock;
@@ -221,15 +222,15 @@ public class BuildWorldGameTests {
         Kit.reset(level);
         Interiors.resetForTests();
         int x0 = X + 4000;
-        Kit.hold(level, x0 + 120, Z, 200);
-        Kit.prepare(level, x0 + 120, Z, 200);
+        Kit.hold(level, x0 + 160, Z + 25, 220);
+        Kit.prepare(level, x0 + 160, Z + 25, 220);
         int y0 = Math.max(80, Kit.surface(level, x0, Z).getY() + 2);
         BlockPos heart = new BlockPos(x0 - 60, y0, Z);
         flatLot(level, heart, "house");
         Villages.Village v = Villages.found(level, heart);
         com.jrpetty.mcassistant.VillageSpawner.supplyChest(level, heart.east(2));
         List<String> rooms = new ArrayList<>(List.of("house", "manor", "townhall", "hall", "tavern", "cafe", "shop", "library",
-            "chapel", "guesthouse", "barracks", "school"));
+            "chapel", "guesthouse", "barracks", "school", "academy", "postoffice", "maproom", "harbour", "auction", "infirmary"));
         rooms.removeIf(n -> !Interiors.furnishedForTests(n) || !Blueprints.has(n));
         List<String> faults = new ArrayList<>();
         StringBuilder seen = new StringBuilder();
@@ -242,7 +243,7 @@ public class BuildWorldGameTests {
                 List<Ledger.Building> built = new ArrayList<>();
                 for (int i = 0; i < rooms.size(); i++) {
                     String name = rooms.get(i);
-                    BlockPos anchor = new BlockPos(x0 + 40 * i, y0, Z + 60 * t);
+                    BlockPos anchor = new BlockPos(x0 + 40 * (i % 9), y0, Z + 50 * (i / 9));   // the lots cleared after each turn
                     flatLot(level, anchor, name);
                     BuildGoal.stamp(level, name, anchor, TURNS[t], 13, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
                     Ledger.built(v.id(), name, anchor, TURNS[t]);
@@ -284,6 +285,115 @@ public class BuildWorldGameTests {
         }
         Kit.log("bw03 furnished " + seen + " faults " + faults.size() + " " + faults.subList(0, Math.min(40, faults.size())));
         helper.assertTrue(faults.isEmpty(), "every room furnished as planned: " + faults.subList(0, Math.min(10, faults.size())));
+        helper.succeed();
+    }
+
+    /**
+     * A town's look, of a piece and its own: in the Iron Age a lowland town roofs its trades' houses in red tile or in
+     * slate (the same for every roof of it, and not the same for every town), a forest town keeps its shingles, a
+     * desert town roofs in sandstone, a mountain town in slate, and the great buildings slate everywhere. The land read
+     * from the ground the world made (a platform, a tree, one ravine in the square do not make a plain a mountain). The
+     * armoury's spare arms on its walls; new allotments dug over and sown.
+     */
+    @GameTest(template = EMPTY, timeoutTicks = 600, batch = "bw04_a_town_of_its_own")
+    public static void bw04_a_town_of_its_own(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Kit.reset(level);
+        int x0 = X + 6000;
+        Kit.hold(level, x0, Z, 80);
+        Kit.prepare(level, x0, Z, 80);
+        int y0 = Math.max(80, Kit.surface(level, x0, Z).getY() + 2);
+        List<String> faults = new ArrayList<>();
+        var med = com.jrpetty.mcassistant.entity.Themes.medieval();
+        BlockState shingle = Blocks.SPRUCE_STAIRS.defaultBlockState();
+        BlockPos spot = new BlockPos(x0, y0, Z);
+        Map<String, Integer> plains = new java.util.TreeMap<>();
+        for (int i = 0; i < 24; i++) {
+            java.util.UUID id = java.util.UUID.nameUUIDFromBytes(("bw04|" + i).getBytes());
+            com.jrpetty.mcassistant.entity.Homeland.setForTests(id, com.jrpetty.mcassistant.entity.Homeland.Land.PLAINS);
+            BlockState shop = com.jrpetty.mcassistant.entity.Themes.ageLook(id, med, Villages.Age.IRON, "shop", Blueprints.Style.ROOF_STAIR, shingle, spot, null);
+            BlockState smithy = com.jrpetty.mcassistant.entity.Themes.ageLook(id, med, Villages.Age.IRON, "smithy", Blueprints.Style.ROOF_STAIR, shingle, spot, null);
+            BlockState hall = com.jrpetty.mcassistant.entity.Themes.ageLook(id, med, Villages.Age.IRON, "hall", Blueprints.Style.ROOF_STAIR, shingle, spot, null);
+            plains.merge(shop == null ? "kept" : shop.getBlock().getDescriptionId().replace("block.minecraft.", ""), 1, Integer::sum);
+            if (!java.util.Objects.equals(shop, smithy)) faults.add("a town's roofs not of a piece: " + shop + " / " + smithy);
+            if (hall == null || !hall.is(Blocks.DEEPSLATE_TILE_STAIRS)) faults.add("a great building not slated: " + hall);
+            if (shop != null && shop.getValue(StairBlock.FACING) != shingle.getValue(StairBlock.FACING)) faults.add("the roof turned: " + shop);
+        }
+        if (plains.size() < 2) faults.add("every plains town roofed alike: " + plains);
+        Map<com.jrpetty.mcassistant.entity.Homeland.Land, String> byLand = new EnumMap<>(com.jrpetty.mcassistant.entity.Homeland.Land.class);
+        for (com.jrpetty.mcassistant.entity.Homeland.Land land : com.jrpetty.mcassistant.entity.Homeland.Land.values()) {
+            java.util.UUID id = java.util.UUID.nameUUIDFromBytes(("bw04|land|" + land).getBytes());
+            com.jrpetty.mcassistant.entity.Homeland.setForTests(id, land);
+            BlockState got = com.jrpetty.mcassistant.entity.Themes.ageLook(id, med, Villages.Age.IRON, "shop", Blueprints.Style.ROOF_STAIR, shingle, spot, null);
+            byLand.put(land, got == null ? "kept" : got.getBlock().getDescriptionId().replace("block.minecraft.", ""));
+        }
+        if (!"kept".equals(byLand.get(com.jrpetty.mcassistant.entity.Homeland.Land.FOREST))) faults.add("a forest town slated: " + byLand);
+        if (!"sandstone_stairs".equals(byLand.get(com.jrpetty.mcassistant.entity.Homeland.Land.DESERT))) faults.add("a desert town not in sandstone: " + byLand);
+        if (!"deepslate_tile_stairs".equals(byLand.get(com.jrpetty.mcassistant.entity.Homeland.Land.MOUNTAIN))) faults.add("a mountain town not slated: " + byLand);
+        // Without a town, the theme as it always was (StylesGameTests st01 holds it so).
+        BlockState plain = com.jrpetty.mcassistant.entity.Themes.ageLook(med, Villages.Age.IRON, "shop", Blueprints.Style.ROOF_STAIR, shingle, spot, null);
+        if (plain == null || !plain.is(Blocks.DEEPSLATE_TILE_STAIRS)) faults.add("the theme without a town changed: " + plain);
+
+        // The land read from the ground the world made: one cliff in eighty-one is no mountain; a platform, a trunk looked through.
+        List<Integer> heights = new ArrayList<>();
+        for (int i = 0; i < 81; i++) heights.add(64 + (i % 3));
+        heights.set(5, 110);
+        heights.set(40, 30);
+        int spread = com.jrpetty.mcassistant.entity.Homeland.spread(heights);
+        if (spread >= 28) faults.add("a ravine and a crag made a mountain: spread " + spread);
+        flatLot(level, spot, "house");
+        BlockPos col = spot.offset(4, 0, 4);
+        for (int h = 0; h < 6; h++) level.setBlock(col.above(h), Blocks.OAK_LOG.defaultBlockState(), 2 | 16);
+        BlockPos deck = spot.offset(-4, 0, -4);
+        for (int h = 0; h < 4; h++) level.setBlock(deck.above(h), Blocks.OAK_PLANKS.defaultBlockState(), 2 | 16);
+        int g1 = com.jrpetty.mcassistant.entity.Homeland.naturalGround(level, col.getX(), col.getZ());
+        int g2 = com.jrpetty.mcassistant.entity.Homeland.naturalGround(level, deck.getX(), deck.getZ());
+        if (g1 != spot.getY() || g2 != spot.getY()) faults.add("the ground read through a trunk and a deck: " + g1 + ", " + g2 + " for " + spot.getY());
+        clearLot(level, spot, "house");
+
+        // A town: its armoury's spare arms on its walls, its new allotments dug over.
+        BlockPos heart = new BlockPos(x0 - 40, y0, Z);
+        flatLot(level, heart, "house");
+        Villages.Village v = Villages.found(level, heart);
+        com.jrpetty.mcassistant.VillageSpawner.supplyChest(level, heart.east(2));
+        BlockPos arm = new BlockPos(x0 + 20, y0, Z - 20), allot = new BlockPos(x0 + 20, y0, Z + 20);
+        flatLot(level, arm, "armoury");
+        flatLot(level, allot, "allotments");
+        var paint = com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK);
+        BuildGoal.stamp(level, "armoury", arm, Direction.EAST, 13, paint);
+        BuildGoal.stamp(level, "allotments", allot, Direction.SOUTH, 13, paint);
+        Ledger.built(v.id(), "armoury", arm, Direction.EAST);
+        Ledger.built(v.id(), "allotments", allot, Direction.SOUTH);
+        for (BlockPos p : BlockPos.betweenClosed(arm.offset(-4, 0, -4), arm.offset(4, 2, 4))) {
+            if (level.getBlockEntity(p) instanceof ChestBlockEntity c) {
+                c.setItem(0, new ItemStack(Items.IRON_SWORD));
+                c.setItem(1, new ItemStack(Items.IRON_SWORD));
+                c.setItem(2, new ItemStack(Items.BOW));
+                break;
+            }
+        }
+        for (ItemStack s : new ItemStack[]{ new ItemStack(Items.ITEM_FRAME, 4), new ItemStack(Items.IRON_HOE), new ItemStack(Items.CARROT, 32),
+                new ItemStack(Items.POTATO, 32), new ItemStack(Items.WHEAT_SEEDS, 32) }) {
+            com.jrpetty.mcassistant.entity.Market.intoStoresForTests(level, v.id(), s);
+        }
+        int frames = com.jrpetty.mcassistant.entity.WarWorks.hangArmsForTests(level, v);
+        int shown = 0;
+        for (net.minecraft.world.entity.decoration.ItemFrame f : level.getEntitiesOfClass(net.minecraft.world.entity.decoration.ItemFrame.class,
+                new AABB(arm).inflate(5))) {
+            if (!f.survives()) faults.add("an armoury frame hangs on nothing at " + f.blockPosition().subtract(arm).toShortString());
+            if (!f.getItem().isEmpty()) shown++;
+        }
+        if (frames < 1 || shown < 1) faults.add("no arms on the armoury's walls: " + frames + " frames, " + shown + " with arms");
+        int plots = com.jrpetty.mcassistant.entity.Allotments.dugOverForTests(level, v);
+        int farmland = 0, sown = 0;
+        for (BlockPos p : BlockPos.betweenClosed(allot.offset(-5, -1, -5), allot.offset(5, -1, 5))) {
+            if (level.getBlockState(p).is(Blocks.FARMLAND)) farmland++;
+            if (level.getBlockState(p.above()).getBlock() instanceof net.minecraft.world.level.block.CropBlock) sown++;
+        }
+        if (farmland < 12 || sown < 4) faults.add("the allotments not dug over and sown: " + plots + " plots, " + farmland + " furrows, " + sown + " sown");
+        Kit.log("bw04 plains roofs " + plains + "; by land " + byLand + "; spread " + spread + "; armoury frames " + frames + " (" + shown
+            + " with arms); allotments " + plots + " plots, " + farmland + " furrows, " + sown + " sown; faults " + faults);
+        helper.assertTrue(faults.isEmpty(), "a town of its own: " + faults);
         helper.succeed();
     }
 

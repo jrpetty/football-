@@ -98,7 +98,7 @@ public final class Ages {
     @Nullable
     static BlockState look(@Nullable UUID village, Villages.Age age, String drawing, Blueprints.Style style, BlockState now, BlockPos pos,
                            @Nullable Block landStone) {
-        return Themes.ageLook(Themes.of(village), age, drawing, style, now, pos, landStone);
+        return Themes.ageLook(village, Themes.of(village), age, drawing, style, now, pos, landStone);   // [build-world] the town's own
     }
 
     /** {@code to}, set the way {@code from} is set (a stair's facing and half, a slab's type). */
@@ -151,7 +151,7 @@ public final class Ages {
             BlockState dressed = Blocks.STONE_BRICKS.defaultBlockState();
             return now.is(Blocks.COBBLESTONE) && canPay(level, v, dressed, local, known) ? dressed : null;
         }
-        if (b == Blocks.BRICKS) {
+        if (b == Blocks.BRICKS || b == Blocks.POLISHED_DIORITE) {          // [build-world] a whitewash short of diorite too
             BlockState dressed = Blocks.STONE_BRICKS.defaultBlockState();
             return !now.is(Blocks.STONE_BRICKS) && canPay(level, v, dressed, local, known) ? dressed : null;
         }

@@ -349,6 +349,19 @@ public final class Themes {
                     if (Math.floorMod(c.pos().hashCode(), n) != 0) return false;
                 }
                 case "now" -> { if (!anyMatch(v, c)) return false; }
+                // [build-world] The town's land, and a pick among towns (ageLook with a town): never without one.
+                case "lands" -> {
+                    UUID town = TOWN.get();
+                    if (town == null || !names(t, v).contains(Homeland.of(town).name())) return false;
+                }
+                case "town_mod" -> {
+                    UUID town = TOWN.get();
+                    if (town == null || !(v instanceof List<?> xs) || xs.isEmpty() || !(xs.get(0) instanceof Number n)) return false;
+                    int m = Math.floorMod(Long.hashCode(town.getMostSignificantBits() ^ (town.getLeastSignificantBits() * (2L * n.intValue() + 1))), Math.max(1, n.intValue()));
+                    boolean any = false;
+                    for (int i = 1; i < xs.size(); i++) if (xs.get(i) instanceof Number k && k.intValue() == m) any = true;
+                    if (!any) return false;
+                }
                 case "now_not" -> { if (anyMatch(v, c)) return false; }
                 default -> { }
             }
@@ -445,6 +458,28 @@ public final class Themes {
         String s = bare(drawing);
         return s.endsWith(Blueprints.TALL) ? s.substring(0, s.length() - Blueprints.TALL.length()) : s;
     }
+
+    /**
+     * [build-world] As below, for a town: the rules that ask after the town's land ("lands") or pick among towns
+     * ("town_mod": [n, k...], the same for every block of the town, so a town is all of a piece and the next one may be
+     * of another) hold only when the town is known. A real town of the Iron Age went grey stone brick under black slate
+     * from one end to the other, and so did every other town; now a lowland town may roof in red tile and build its
+     * trades' houses of brick, a forest town keep its shingles and its timber, a desert town roof in sandstone.
+     */
+    @Nullable
+    public static BlockState ageLook(@Nullable UUID town, ThemeData t, Villages.Age age, String drawing, Blueprints.Style style,
+                                     BlockState now, BlockPos pos, @Nullable Block landStone) {
+        UUID was = TOWN.get();
+        TOWN.set(town);
+        try {
+            return ageLook(t, age, drawing, style, now, pos, landStone);
+        } finally {
+            TOWN.set(was);
+        }
+    }
+
+    /** [build-world] The town an age's rule is being asked for (ageLook), or null. */
+    private static final ThreadLocal<UUID> TOWN = new ThreadLocal<>();
 
     /**
      * What a block of this kind should be in this age, given what stands there now (Ages.look); null to leave it. The
