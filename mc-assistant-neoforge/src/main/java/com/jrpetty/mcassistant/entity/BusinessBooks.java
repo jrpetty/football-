@@ -307,6 +307,12 @@ public final class BusinessBooks {
     }
 
     /** The folk's card: a proprietor's business and what it draws; a hand's employer and its pay. Empty if neither. */
+    /** [econ-1a] A business by name in a sentence: "the café", but "Wren's Farm" as it is. */
+    static String called(Business b) {
+        String n = b.name.toLowerCase(Locale.ROOT);
+        return b.name.contains("'") ? b.name : n.startsWith("the ") ? n : "the " + n;
+    }
+
     public static String cardLine(VillageFolkEntity f) {
         UUID village = f.ownerId();
         if (village == null || f.isBaby()) return "";
@@ -315,13 +321,14 @@ public final class BusinessBooks {
             if (!b.ownedBy(f.getUUID())) continue;
             int pct = 0;
             for (Business.Stake s : b.owners) if (f.getUUID().equals(s.who())) pct += s.parts() * 100 / Business.WHOLE;
-            parts.add("owns " + (pct >= 100 ? "" : pct + "% of ") + "the " + b.name.toLowerCase(Locale.ROOT) + " (drew " + Businesses.pence(b.allTime.drawings * pct / 100)
+            parts.add("owns " + (pct >= 100 ? "" : pct + "% of ") + called(b) + " (drew " + Businesses.pence(b.allTime.drawings * pct / 100)
                 + " so far)");
         }
         Business works = Businesses.employer(village, f);
         if (works != null) {
-            parts.add(works.town() ? "works at " + works.name.toLowerCase(Locale.ROOT) + ", paid by the town"
-                : "works at the " + works.name.toLowerCase(Locale.ROOT) + ", paid out of its till by " + works.ownersWords()
+            parts.add(works.town() ? "works at " + called(works) + ", paid by the town"
+                : works.ownedBy(f.getUUID()) && works.owners.size() == 1 ? "works it itself, paid out of its till"
+                : "works at " + called(works) + ", paid out of its till by " + works.ownersWords()
                 + (works.shortTime.contains(f.getUUID()) ? " (on short time)" : ""));
         }
         return parts.isEmpty() ? "" : capital(String.join("; ", parts)) + ".";

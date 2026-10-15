@@ -1476,7 +1476,9 @@ public final class HousingMarket {
             for (Map.Entry<Block, List<Integer>> e : byBlock.entrySet()) {
                 Map<Block, Integer> want = new LinkedHashMap<>();
                 want.put(e.getKey(), e.getValue().size());
-                if (!takeBlocks(level, v, want)) {
+                boolean had;
+                try (Accounts.Scope paid = courseScope(c)) { had = takeBlocks(level, v, want); }   // [econ-1a]
+                if (!had) {
                     if (shortOf.isEmpty()) shortOf = shortOf(level, v, want);
                     continue;
                 }
@@ -1502,7 +1504,8 @@ public final class HousingMarket {
         } else {
             for (int i : course) {
                 BuildGoal.Placement p = all.get(i);
-                BlockState st = takeThing(level, v, p, c.design);
+                BlockState st;
+                try (Accounts.Scope paid = courseScope(c)) { st = takeThing(level, v, p, c.design); }   // [econ-1a]
                 if (st == null) {
                     if (done.isEmpty()) return note(id, c, "waiting on the stores for " + thingWord(p.part()));
                     break;
@@ -1593,6 +1596,12 @@ public final class HousingMarket {
      * share of the labour for each block laid, into the purse of the hand that laid them. At the end the last of
      * each, to the coin agreed.
      */
+    /** [econ-1a] A course's blocks: the household's bill pays the market for them (pay), so nothing is charged at the
+     *  stores; a foreclosed house is the council's own build, on its works account. */
+    static Accounts.Scope courseScope(Commission c) {
+        return c.foreclosed ? Accounts.as(Accounts.Dept.WORKS, Accounts.Purpose.BUILD) : Accounts.free("a household's house, paid by the course");
+    }
+
     static void pay(ServerLevel level, Villages.Village v, Commission c, @Nullable VillageFolkEntity hand, boolean last) {
         UUID id = v.id();
         int blocksDue = last ? Math.min(c.blocks, (int) Math.round(c.blocksDue)) : Math.min(c.blocks, (int) Math.floor(c.blocksDue + 1e-9));
@@ -1623,7 +1632,8 @@ public final class HousingMarket {
         int k = Math.min(toTreasury, c.escrow);
         if (k > 0) {
             c.escrow -= k;
-            Ledger.addCoins(id, k);
+            if (MarketMaker.live(id)) MarketMaker.cashIn(id, k * 100L);   // [econ-1a] the blocks were the market's: the household pays it
+            else Ledger.addCoins(id, k);
             Economy.spentInTown(id, k);
             int b = Math.min(k, Math.max(0, blocksDue - c.blocksPaid));
             c.blocksPaid += b;

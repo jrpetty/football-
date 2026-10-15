@@ -854,6 +854,7 @@ public final class Workshop {
 
     /** One of what was found, out of the stores and booked out of the storehouse if it came out of it. */
     static ItemStack takeOut(ServerLevel level, UUID village, Found f, String to) {
+        MarketMaker.taken(level, village, f.box().getItem(f.slot()), 1);   // [econ-1a] the watch's (or the cave's) kit, bought of the market
         ItemStack got = f.box().getItem(f.slot()).split(1);
         if (f.box().getItem(f.slot()).isEmpty()) f.box().setItem(f.slot(), ItemStack.EMPTY);
         f.box().setChanged();

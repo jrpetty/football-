@@ -572,6 +572,7 @@ public final class Leader {
         lots = Math.min(lots, can);
         if (lots <= 0) return 0;
         int paid = Ledger.takeCoins(id, lots * price);
+        CoinCensus.flow(id, CoinCensus.Flow.IMPORT, paid);               // [econ-1a] the traders' bread: coin out of town
         Economy.spent(id, paid);
         Market.intoStores(level, id, new ItemStack(Items.BREAD, lots * g.bundle()));
         Villages.tell(id, day, "bought " + lots * g.bundle() + " bread from the traders for " + paid + " coin, against the famine");

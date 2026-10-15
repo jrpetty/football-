@@ -591,6 +591,7 @@ public final class Stables {
         int spare = Ledger.coins(v.id()) - Market.saved(v.id(), level.getGameTime());
         if (spare < SADDLE_PRICE + 20) return;                               // the wages come first
         int paid = Ledger.takeCoins(v.id(), SADDLE_PRICE);
+        CoinCensus.flow(v.id(), CoinCensus.Flow.IMPORT, paid);          // [econ-1a] the traders' saddle: coin out of town
         Economy.spent(v.id(), paid);
         ItemStack left = Market.intoStores(level, v.id(), new ItemStack(Items.SADDLE));
         if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, v.centre().above(), left);

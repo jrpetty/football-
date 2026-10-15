@@ -198,6 +198,14 @@ public final class TownWonders extends SavedData {
         book().setDirty();
     }
 
+    /** [econ-1a] The coin held for the wonder under way (its fund and the stage's wages set by), for the coin census. */
+    public static int heldFor(UUID village) {
+        CompoundTag t = town(village);
+        if (!t.contains("work", Tag.TAG_COMPOUND)) return 0;
+        CompoundTag w = t.getCompound("work");
+        return Math.max(0, w.getInt("fund")) + Math.max(0, w.getInt("purse"));
+    }
+
     /** A town's page: its wonder under way ("work"), its wonders raised ("done"), its votes. */
     static CompoundTag town(UUID village) {
         CompoundTag all = book().towns;

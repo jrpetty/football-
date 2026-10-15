@@ -562,7 +562,10 @@ public final class WarWorks {
                 return one;
             }
         }
-        return Crafts.takeOne(level, v, what);
+        // [econ-1a] Out of the stores, not its own armoury: bought of the market on the army's account.
+        try (Accounts.Scope army = Accounts.as(Accounts.Dept.ARMY, Accounts.Purpose.KIT)) {
+            return Crafts.takeOne(level, v, what);
+        }
     }
 
     /** Arms handed back: into the armoury's racks, or the stores if it has none (or no room). */

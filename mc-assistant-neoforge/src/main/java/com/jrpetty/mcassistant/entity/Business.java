@@ -54,7 +54,16 @@ public final class Business {
         AUCTION("Auction house", Size.LARGE, Keeping.TOWN, "auction"),
         // Kept by their own books elsewhere (the bank's vault, a roadside keeper's till, a player's stall): mirrored here.
         BANK("Bank", Size.MEDIUM, Keeping.MIRROR, "bank"),
-        STALL("Market stall", Size.SMALL, Keeping.MIRROR);
+        STALL("Market stall", Size.SMALL, Keeping.MIRROR),
+        // [econ-1a] The producers: a folk's field, holt, claim, boat, pens, hunting or furnace, one business a hand (its
+        // owner-operator's, or the town's until it is sold to its hand: Privatisation). No building of their own to rent.
+        FARM("Farm", Size.YARD, Keeping.OWN),
+        WOODLOT("Woodlot", Size.YARD, Keeping.OWN),
+        MINE("Mine", Size.YARD, Keeping.OWN),
+        FISHERY("Fishery", Size.YARD, Keeping.OWN),
+        RANCH("Ranch", Size.YARD, Keeping.OWN),
+        HUNTING("Hunting", Size.YARD, Keeping.OWN),
+        FOUNDRY("Foundry", Size.YARD, Keeping.OWN);
 
         public final String title;
         public final Size size;
@@ -81,7 +90,9 @@ public final class Business {
 
     /** A building's size, for its rent: a day's rent in a hamlet, in pennies (a village pays half as much again...). */
     public enum Size {
-        SMALL(60), MEDIUM(120), LARGE(200);
+        SMALL(60), MEDIUM(120), LARGE(200),
+        // [econ-1a] A producer's field, holt or boat: titled to it, no rent (Privatisation's lease is its price).
+        YARD(0);
 
         public final int rentPence;
 

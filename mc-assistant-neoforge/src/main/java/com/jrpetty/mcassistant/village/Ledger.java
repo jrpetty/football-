@@ -188,6 +188,7 @@ public final class Ledger extends SavedData {
         if (l == null || n <= 0) return 0;
         int have = l.treasury.getOrDefault(village, 0);
         int took = Math.min(have, n);
+        if (took > 0 && com.jrpetty.mcassistant.entity.CoinCensus.probing()) com.jrpetty.mcassistant.entity.CoinCensus.treasuryTook(village, took);   // [econ-1a] the drift hunt (tests)
         if (took > 0) {
             l.treasury.put(village, have - took);
             l.setDirty();
