@@ -1,6 +1,8 @@
 package com.jrpetty.mcassistant;
 
 import com.jrpetty.mcassistant.entity.Ages;
+import com.jrpetty.mcassistant.entity.Architecture;
+import com.jrpetty.mcassistant.entity.Homeland;
 import com.jrpetty.mcassistant.entity.Interiors;
 import com.jrpetty.mcassistant.entity.Market;
 import com.jrpetty.mcassistant.entity.Palettes;
@@ -55,15 +57,17 @@ import java.util.function.Function;
  * photographed one by one (tools/realworld/gallery.py, .github/workflows/building-gallery.yml):
  * <pre>
  *   /village showcase gallery list             (ops) "GALLERY n drawings in r rows of 12 | name name ..."
- *   /village showcase gallery &lt;row&gt; [age]      (ops) that row of twelve, built where the command stands, a line a
+ *   /village showcase gallery &lt;row&gt; [age] [land] (ops) that row of twelve, built where the command stands, a line a
  *                                              building: where it is, its door, and where to stand to take it from
- *                                              outside and from just inside its door
+ *                                              outside and from just inside its door; the town of that land (plains
+ *                                              unless asked: desert, taiga, coast, mountain...) and its style
  * </pre>
  * The showcase (/village showcase buildings) stamps a building out of a palette of its own and leaves it bare; this
  * builds each the way the folk of a town would have it. A town is founded behind the stage (no folk: nothing of it
  * moves or builds while the pictures are taken) and given an age (the Iron Age unless asked), and every building is
  * set down in that town's own woods and stones (Palettes, as its builders choose them), made over for its age (Ages:
- * the stone walls, the slate roofs, the lamps by the door), furnished out of its stores by the town's own furnishing
+ * the stone walls, the slate roofs, the lamps by the door), its houses dressed in its style (Architecture), furnished
+ * out of its stores by the town's own furnishing
  * (Interiors: the rugs, the barrels, the shelves and the lamps, the stores filled first so nothing is short), and
  * dressed as a town dresses its buildings (TownLife: the chimneys, the house signs, the café's and the shop's
  * counters, the tavern's board). Nothing here decides where a block goes: that is the drawing's and those classes'.
@@ -121,9 +125,11 @@ public final class Gallery {
         return Commands.literal("gallery")
             .then(Commands.literal("list").executes(Gallery::list))
             .then(Commands.argument("row", IntegerArgumentType.integer(0))
-                .executes(ctx -> row(ctx, "iron"))
+                .executes(ctx -> row(ctx, "iron", "plains"))
                 .then(Commands.argument("age", StringArgumentType.word())
-                    .executes(ctx -> row(ctx, StringArgumentType.getString(ctx, "age")))));
+                    .executes(ctx -> row(ctx, StringArgumentType.getString(ctx, "age"), "plains"))
+                    .then(Commands.argument("land", StringArgumentType.word())
+                        .executes(ctx -> row(ctx, StringArgumentType.getString(ctx, "age"), StringArgumentType.getString(ctx, "land"))))));
     }
 
     private static int list(CommandContext<CommandSourceStack> ctx) {
@@ -134,12 +140,13 @@ public final class Gallery {
         return names.size();
     }
 
-    private static int row(CommandContext<CommandSourceStack> ctx, String ageWord) {
+    private static int row(CommandContext<CommandSourceStack> ctx, String ageWord, String landWord) {
         ServerLevel level = ctx.getSource().getLevel();
         BlockPos at = BlockPos.containing(ctx.getSource().getPosition());
         Villages.Age age = age(ageWord);
+        Homeland.Land land = land(landWord);
         int k = IntegerArgumentType.getInteger(ctx, "row");
-        List<Shot> shots = row(level, at, k, age);
+        List<Shot> shots = row(level, at, k, age, land);
         if (shots.isEmpty()) {
             ctx.getSource().sendFailure(Component.literal("No row " + k + " in the gallery (see /village showcase gallery list)."));
             return 0;
@@ -147,7 +154,7 @@ public final class Gallery {
         List<String> lines = new ArrayList<>();
         for (Shot s : shots) lines.add(s.line());
         ctx.getSource().sendSuccess(() -> Component.literal("ROW " + k + " " + Villages.name(town) + " in " + age.name().toLowerCase(Locale.ROOT)
-            + " | " + String.join(" | ", lines)), false);
+            + " " + land.name().toLowerCase(Locale.ROOT) + " | " + String.join(" | ", lines)), false);
         return shots.size();
     }
 
@@ -157,6 +164,23 @@ public final class Gallery {
             if (a.name().equalsIgnoreCase(word) && a != Villages.Age.WOOD) return a;
         }
         return Villages.Age.IRON;
+    }
+
+    /** A land by its word ("plains", "desert", ...): the plains for anything else. */
+    static Homeland.Land land(String word) {
+        for (Homeland.Land l : Homeland.Land.values()) if (l.name().equalsIgnoreCase(word)) return l;
+        return Homeland.Land.PLAINS;
+    }
+
+    /** The style a town on this land builds in, as its founders would most likely choose it (Architecture.scores). */
+    static Architecture.Style style(Homeland.Land land) {
+        return switch (land) {
+            case PLAINS, MEADOW -> Architecture.Style.TIMBERED;
+            case RIVER, COAST -> Architecture.Style.COASTAL;
+            case MOUNTAIN, SNOW -> Architecture.Style.HILL_FORT;
+            case DESERT, SAVANNA, BADLANDS -> Architecture.Style.DESERT_COURT;
+            case FOREST, TAIGA, JUNGLE, SWAMP -> Architecture.Style.FOREST_LODGE;
+        };
     }
 
     // ------------------------------------------------------------------ the drawings
@@ -191,6 +215,11 @@ public final class Gallery {
      * level), the row before cleared off it; returns a shot a building, or nothing for a row there is not.
      */
     public static List<Shot> row(ServerLevel level, BlockPos start, int k, Villages.Age age) {
+        return row(level, start, k, age, Homeland.Land.PLAINS);
+    }
+
+    /** The same, the gallery's town a town of this land. */
+    public static List<Shot> row(ServerLevel level, BlockPos start, int k, Villages.Age age, Homeland.Land land) {
         List<List<String>> rows = rows(drawings(level.getServer()));
         if (k < 0 || k >= rows.size()) return List.of();
         // The stage is the same for every row: long enough for the longest, deep and high enough for the biggest.
@@ -213,7 +242,7 @@ public final class Gallery {
 
         // The town behind the stage: founded once, its buildings forgotten each row, the age it is asked to be.
         BlockPos heart = new BlockPos((x0 + x1) / 2, y, start.getZ() - deepest - 32);
-        Villages.Village v = town(level, heart);
+        Villages.Village v = town(level, heart, land);
         Villages.ageForTests(v.id(), age);
         Ledger.forget(v.id());
         Function<BuildGoal.Placement, BlockState> painter = painter(v.id());
@@ -232,6 +261,8 @@ public final class Gallery {
         // Made over for the town's age, as the town's own masons would (free here: it is the look that is wanted).
         for (Ledger.Building b : built) {
             if (!AS_BUILT.contains(b.structure())) Ages.now(level, v, b, age);
+            // [build-looks] The homes dressed in the town's style, as its dressers come round to them (Architecture).
+            if (HOMES.contains(b.structure())) Architecture.dressForTests(level, v, b);
         }
         int[] pieces = new int[built.size()];
         for (int i = 0; i < built.size(); i++) pieces[i] = -furniture(level, built.get(i));
@@ -255,14 +286,34 @@ public final class Gallery {
     static final Set<String> AS_BUILT = Set.of("well", "gateway", "monument", "graveyard", "fortify", "pen", "platform",
         "wall", "column", "room", "fountain", "court", "park", "pitch", "range");
 
-    /** The gallery's town: the one founded before, or a new one at {@code heart}, with its founding stores. */
-    static Villages.Village town(ServerLevel level, BlockPos heart) {
+    /** Architecture.HOMES, as Architecture has it: the buildings a town dresses in its style. */
+    static final Set<String> HOMES = Set.of("house", "manor", "villa");
+
+    /**
+     * The gallery's town: the one founded before, or a new one at {@code heart}, with its founding stores; a town of
+     * this land, building in the style its founders would choose there.
+     *
+     * <p>[build-looks] Its land is set, not surveyed. Looked over, a stage up in the sky reads as the mountains (its
+     * green a hundred blocks over the country round it: Homeland.read's thirty-two-block rise), and the first gallery
+     * came out a mountain town's from end to end: footings of cobbled deepslate, deepslate brick dressings, a hill
+     * fort's style, every building near black under its slates. A typical town is a plains town; any other is asked
+     * for. The land's own walling (sandstone in the desert, andesite in the hills) is put in its stores, as a town of
+     * that land has it, so its masons can wall its buildings in it (Ages: Masonry.canLand).
+     */
+    static Villages.Village town(ServerLevel level, BlockPos heart, Homeland.Land land) {
         Villages.Village v = town == null ? null : Villages.get(town);
-        if (v != null && v.dim().equals(level.dimension())) return v;
-        ground(level, heart.getX() - 12, heart.getX() + 12, heart.getZ() - 12, heart.getZ() + 12, heart.getY());
-        v = Villages.found(level, heart);
-        VillageSpawner.supplyChest(level, heart.relative(Direction.EAST, 2));
-        town = v.id();
+        if (v == null || !v.dim().equals(level.dimension())) {
+            ground(level, heart.getX() - 12, heart.getX() + 12, heart.getZ() - 12, heart.getZ() + 12, heart.getY());
+            v = Villages.found(level, heart);
+            VillageSpawner.supplyChest(level, heart.relative(Direction.EAST, 2));
+            town = v.id();
+        }
+        if (Homeland.known(v.id()) != land || Architecture.of(v.id()) != style(land)) {
+            Homeland.setForTests(v.id(), land);
+            Architecture.setForTests(v.id(), style(land));               // forgets its look (Palettes) with it
+            Homeland.Stone own = Homeland.walls(v.id());
+            if (own != null) Market.intoStoresForTests(level, v.id(), new ItemStack(own.block().asItem(), 64));
+        }
         return v;
     }
 
@@ -448,6 +499,9 @@ public final class Gallery {
                     BlockPos cell = door.relative(in, step).relative(side, off);
                     Vec3 eye = new Vec3(cell.getX() + 0.5, door.getY() + CameraCommands.EYES, cell.getZ() + 0.5);
                     if (!openEyes(level, eye)) continue;
+                    // [build-looks] Not right under a lamp hung at head height: from an inch below it a lantern fills
+                    // the top of the picture, a dark box with a glowing rim (the fletcher's, the harbour office's).
+                    if (underLamp(level, cell.atY(door.getY()))) continue;
                     for (double swing : new double[]{ 0, -30, 30 }) {
                         Vec3 look = turn(Vec3.atLowerCornerOf(in.getNormal()), swing);
                         Vec3 far = eye.add(look.scale(Math.max(d, w) + 2)).add(0, -0.8, 0);
@@ -492,6 +546,15 @@ public final class Gallery {
         }
         return new Shot(b.structure(), row, b.anchor(), door, outFeet, centre, outCheck, seen,
             inEye.subtract(0, CameraCommands.EYES, 0), inAim, inCheck, how, pieces);
+    }
+
+    /** A lantern hung (or standing) just over a camera standing here: in the two blocks over its head. */
+    static boolean underLamp(ServerLevel level, BlockPos feet) {
+        for (int up = 2; up <= 3; up++) {
+            BlockState s = level.getBlockState(feet.above(up));
+            if (s.is(Blocks.LANTERN) || s.is(Blocks.SOUL_LANTERN)) return true;
+        }
+        return false;
     }
 
     /** The middle of a door's outer face, halfway up its two halves. */

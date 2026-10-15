@@ -4,6 +4,7 @@
 # letters wait for the round or for a carrier going their way. A lantern stands at each end of the
 # counter and one hangs over the room. Its name goes on the sign by the door (TownLife), and a
 # player posts a letter there (Post).
+# [build-looks] The letter cask by the door, where the post is left, and a tall post lamp at the corner.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name postoffice
 layer -1
@@ -25,7 +26,7 @@ layer 0
 .w.....w.
 .w.....w.
 .LwwDwwL.
-.........
+.P....Q..
 layer 1
 .........
 .LWWWWWL.
@@ -35,7 +36,7 @@ layer 1
 .G.....G.
 .W.....W.
 .LGW.WGL.
-.........
+.P.......
 layer 2
 .........
 .LWWWWWL.
@@ -45,7 +46,7 @@ layer 2
 .W..j..W.
 .W.....W.
 .LWWWWWL.
-....j....
+.P..j....
 layer 3
 >.......<
 >L-----L<
@@ -55,7 +56,7 @@ layer 3
 >|fffff|<
 >|fffff|<
 >L-----L<
->...|...<
+>l..|...<
 layer 4
 .>.....<.
 .>WWWWW<.

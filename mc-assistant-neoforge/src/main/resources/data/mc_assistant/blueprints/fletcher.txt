@@ -4,6 +4,7 @@
 # the fletcher makes its own table, of two flint and four planks out of the stores, and sets it there. A lantern hangs
 # from the ceiling over the table. Outside, to the right of the door, the ground is left bare for the sifting floor,
 # where the gravel is set down and broken for its flint.
+# [build-looks] A straw butt hung on the gable over the door: the fletcher's sign, known from down the street.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name fletcher
 layer -1
@@ -53,7 +54,7 @@ layer 4
 .>...<.
 .>...<.
 .>WWW<.
-.>...<.
+.>.y.<.
 layer 5
 ..>.<..
 ..>W<..

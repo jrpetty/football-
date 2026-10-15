@@ -2,6 +2,8 @@
 # where the hunter smokes its game and keeps its gear (entity/OutdoorBases). Along the back wall the smoker that is its
 # smoking rack, the chest for its makings (arrows, string, the smoker's coal) and the barrel the hides are kept in; a
 # hide rug on the floor and a lantern hung over it. Outside, to the right of the door, the drying fire.
+# [build-looks] The gable's overhang carried on two log posts and a beam: an open porch before the door, the
+# drying fire under it to the right of the way in.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name huntlodge
 layer -1
@@ -11,7 +13,7 @@ layer -1
 .FfffF.
 .FfffF.
 .FFFFF.
-.......
+.F...F.
 layer 0
 .......
 .LwwwL.
@@ -19,7 +21,7 @@ layer 0
 .w...w.
 .wX..w.
 .LwDwL.
-.....h.
+.L..h..
 layer 1
 .......
 .LWGWL.
@@ -27,7 +29,7 @@ layer 1
 .G...G.
 .W...W.
 .LW.WL.
-.......
+.L...L.
 layer 2
 .......
 .LWWWL.
@@ -35,7 +37,7 @@ layer 2
 .W.j.W.
 .W...W.
 .LWWWL.
-...j...
+.L.j.L.
 layer 3
 >.....<
 >L---L<
@@ -43,7 +45,7 @@ layer 3
 >|fff|<
 >|fff|<
 >L---L<
->..|..<
+>-----<
 layer 4
 .>...<.
 .>WWW<.

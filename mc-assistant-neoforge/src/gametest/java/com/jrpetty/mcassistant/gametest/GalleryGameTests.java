@@ -86,6 +86,13 @@ public class GalleryGameTests {
         Item wall = null;
         for (Item it : Palettes.ranked(town, Blueprints.Style.WALL)) if (it instanceof BlockItem) { wall = it; break; }
         Kit.log("gl01 the town's walls: " + wall + ", its look: " + Palettes.line(town));
+        // [build-looks] A plains town building in the timbered way, as a typical town does: not a stage in the sky
+        // surveyed as the mountains (deepslate footings and dressings, a hill fort's style, every building near black).
+        com.jrpetty.mcassistant.entity.Homeland.Land land = com.jrpetty.mcassistant.entity.Homeland.known(town);
+        com.jrpetty.mcassistant.entity.Architecture.Style style = com.jrpetty.mcassistant.entity.Architecture.of(town);
+        Kit.log("gl01 the town's land: " + land + ", its style: " + style);
+        if (land != com.jrpetty.mcassistant.entity.Homeland.Land.PLAINS) faults.add("the gallery's town is a town of the " + land + ", not the plains");
+        if (Palettes.line(town).contains("deepslate")) faults.add("the gallery's town builds in deepslate: " + Palettes.line(town));
         for (String f : faults) Kit.log("gl01 FAULT " + f);
         helper.assertTrue(faults.isEmpty(), faults.size() + " faults, first: " + (faults.isEmpty() ? "" : faults.get(0)));
         for (int cx = (X - 40) >> 4; cx <= (X + longest + 40) >> 4; cx++) {
@@ -109,10 +116,21 @@ public class GalleryGameTests {
                 if (!st.isAir()) blocks++;
                 if (p.part() == BuildGoal.Part.BLOCK && p.style() == Blueprints.Style.WALL) {
                     walls++;
-                    if (wall != null && st.is(wall)) wallsOfTheTown++;
+                    // [build-looks] Or its style's timbers: the house is dressed in the town's style (a timbered
+                    // town's bands of dark logs across its boards).
+                    if (wall != null && (st.is(wall) || st.is(BlockTags.LOGS))) wallsOfTheTown++;
                 }
             }
             if (blocks == 0) FAULTS.add(n + ": nothing built");
+            if (n.equals("house")) {
+                java.util.Map<String, Integer> made = new java.util.TreeMap<>();
+                for (BuildGoal.Placement p : BuildGoal.plan(n, s.anchor(), Gallery.BACK, 13)) {
+                    if (p.part() == BuildGoal.Part.BLOCK && p.style() == Blueprints.Style.WALL) {
+                        made.merge(level.getBlockState(p.pos()).getBlock().getDescriptionId(), 1, Integer::sum);
+                    }
+                }
+                Kit.log("gl01 house walls: " + made);
+            }
             if (n.equals("house") && walls > 0 && wallsOfTheTown * 2 < walls) {
                 FAULTS.add("house: " + wallsOfTheTown + " of " + walls + " walls of the town's " + wall);
             }
