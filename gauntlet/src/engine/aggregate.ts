@@ -177,6 +177,8 @@ export function buildLeaderboard(opts: {
         wallMs: mine.reduce((s, r) => s + r.metrics.wallMs, 0),
         ...(mine.some((r) => r.status === 'skipped') ? { skipped: mine.filter((r) => r.status === 'skipped').length } : {}),
         ...(mine.some((r) => r.status === 'skipped' && isImageOutputSkip(r.summary)) ? { skippedImageOutput: mine.filter((r) => r.status === 'skipped' && isImageOutputSkip(r.summary)).length } : {}),
+        ...(mine.some((r) => r.scoreDetail?.integrity?.verdict === 'cheating') ? { fairPlayViolations: mine.filter((r) => r.scoreDetail?.integrity?.verdict === 'cheating').length } : {}),
+        ...(mine.some((r) => r.scoreDetail?.integrity?.verdict === 'flagged') ? { fairPlayFlagged: mine.filter((r) => r.scoreDetail?.integrity?.verdict === 'flagged').length } : {}),
       },
       speed: {
         medianTtftMs: median(scored.map((r) => r.metrics.ttftMs).filter((v): v is number => v !== null)),

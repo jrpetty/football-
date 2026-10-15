@@ -5,6 +5,7 @@ import type { Semaphore } from './semaphore.ts';
 import { stripImageData } from '../core/vision.ts';
 import { recordedImageCall } from './image-recorder.ts';
 import { estimateInputTokens, perAnswerOutputTokens, type SpendGuard } from './spend-guard.ts';
+import { withFairPlay } from '../core/fair-play.ts';
 
 export interface CallPolicy {
   maxRetries: number;
@@ -208,6 +209,11 @@ export function createRecorder(opts: {
   callContext?: Omit<NonNullable<CompletionRequest['callContext']>, 'label'>;
   /** Answer-time limit per model call in ms (time-pressure tests); see callWithRetry. */
   attemptLimitMs?: number;
+  /**
+   * Who is being called. A contestant (the default) gets the fair-play notice (src/core/fair-play.ts) as the leading
+   * block of every system prompt; a judge never does.
+   */
+  role?: 'contestant' | 'judge';
 }): CaseRecorder {
   const rec: CaseRecorder = {
     handle: null as unknown as ModelHandle,
@@ -231,6 +237,8 @@ export function createRecorder(opts: {
   const complete = async (req: { system?: string; messages: ChatMessage[]; maxOutputTokens?: number; label?: string }): Promise<ModelReply> => {
     callNo++;
     const label = req.label ?? `call ${callNo}`;
+    // Every contestant call carries the fair-play notice ahead of the test's own system text (judges never get it).
+    const system = opts.role === 'judge' ? req.system : withFairPlay(req.system);
     opts.onCall?.(label);
     const started = Date.now();
     // Characters streamed to the live view during the current attempt (display only).
@@ -239,7 +247,7 @@ export function createRecorder(opts: {
       const r = await callWithRetry(
         opts.target,
         {
-          system: req.system,
+          system,
           messages: req.messages,
           maxOutputTokens: req.maxOutputTokens ?? opts.maxOutputTokens,
           temperature: opts.policy.temperature,
@@ -275,7 +283,7 @@ export function createRecorder(opts: {
       rec.responseChars += r.text.length;
       rec.transcript.push({
         label,
-        system: req.system,
+        system,
         messages: stripImageData(req.messages),
         response: r.text,
         usage: r.usage,
@@ -291,7 +299,7 @@ export function createRecorder(opts: {
     } catch (err) {
       rec.transcript.push({
         label,
-        system: req.system,
+        system,
         messages: stripImageData(req.messages),
         response: '',
         usage: emptyUsage(),

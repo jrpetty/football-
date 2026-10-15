@@ -14,15 +14,21 @@ export interface ReviewItem {
   status: CaseResult['status'];
   score: number | null;
   humanScores: NonNullable<CaseResult['humanScores']>;
-  /** Why it is in the queue: human-scored test, judge panel disagreement (human arbitrates), or optional second opinion. */
-  reason: 'human-scored' | 'judge-disagreement' | 'second-opinion';
+  /**
+   * Why it is in the queue: human-scored test, judge panel disagreement (human arbitrates), optional second opinion,
+   * or a copy & paste reply that shows signs of outside help (fair-play check; the score stands, a person looks).
+   */
+  reason: 'human-scored' | 'judge-disagreement' | 'second-opinion' | 'outside-help';
+  /** For 'outside-help': what the fair-play check saw. */
+  fairPlay?: { rule: string; excerpt: string };
 }
 
 /**
  * Results that humans can rate:
  *  - `human` scorer tests (required before they count),
  *  - any judge-scored result where the judge panel disagreed (a human arbitrates; their score becomes final),
- *  - artifact tests (optional second opinion, stored alongside the automated score).
+ *  - artifact tests (optional second opinion, stored alongside the automated score),
+ *  - any reply the fair-play check flagged as possible outside help (src/scoring/integrity.ts).
  */
 export function reviewQueue(testId?: string): ReviewItem[] {
   const reviewable = new Set(
@@ -35,11 +41,14 @@ export function reviewQueue(testId?: string): ReviewItem[] {
     for (const r of readResults(runId)) {
       // A disagreement, or only one of several judges answered: a person arbitrates.
       const disagreement = needsArbitration(r.scoreDetail);
+      const outsideHelp = r.scoreDetail.integrity?.verdict === 'flagged' ? r.scoreDetail.integrity : undefined;
       // Gallery paintings are always open to the owner's artistry rating.
-      if ((!reviewable.has(r.testId) && !disagreement && !isGalleryResult(r)) || (testId && r.testId !== testId)) continue;
+      if ((!reviewable.has(r.testId) && !disagreement && !outsideHelp && !isGalleryResult(r)) || (testId && r.testId !== testId)) continue;
       if (r.status === 'error' || r.status === 'cancelled') continue;
-      const reason: ReviewItem['reason'] = r.status === 'pending-human' || r.scoreDetail.humanScored ? 'human-scored' : disagreement ? 'judge-disagreement' : 'second-opinion';
-      out.push({ runId, key: r.key, testId: r.testId, caseId: r.caseId, contestantId: r.contestantId, status: r.status, score: r.score, humanScores: r.humanScores ?? [], reason });
+      // A fair-play violation is already 0 and no rating can change it.
+      if (r.scoreDetail.integrity?.verdict === 'cheating') continue;
+      const reason: ReviewItem['reason'] = r.status === 'pending-human' || r.scoreDetail.humanScored ? 'human-scored' : disagreement ? 'judge-disagreement' : outsideHelp ? 'outside-help' : 'second-opinion';
+      out.push({ runId, key: r.key, testId: r.testId, caseId: r.caseId, contestantId: r.contestantId, status: r.status, score: r.score, humanScores: r.humanScores ?? [], reason, ...(outsideHelp ? { fairPlay: { rule: outsideHelp.rule, excerpt: outsideHelp.excerpt } } : {}) });
     }
   }
   return out;

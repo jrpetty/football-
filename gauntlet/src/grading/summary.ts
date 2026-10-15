@@ -123,6 +123,7 @@ function looksLikePattern(v: unknown): boolean {
 /** One short clause saying why this result lost points (grounded in its stored detail). */
 export function missReason(r: SummaryResult): string {
   const d = r.scoreDetail ?? {};
+  if (d.integrity?.verdict === 'cheating') return `broke the fair-play rules (${d.integrity.rule})`;
   if (r.status === 'timeout') return 'ran out of time';
   if (r.status === 'refusal') return 'refused to answer';
   if (r.status === 'error') return 'hit an error';
@@ -271,6 +272,17 @@ export function templateSummary(input: SummaryInput): string {
   // Assemble within the word limit, most important first.
   const parts: string[] = [head];
   const fits = (s: string) => countWords([...parts, s].join(' ')) <= SUMMARY_WORD_LIMIT;
+  // Fair play comes straight after the headline: a 0 for cheating, or answers flagged for possible outside help.
+  const cheated = scored.filter((r) => r.scoreDetail?.integrity?.verdict === 'cheating').length;
+  const flagged = scored.filter((r) => r.scoreDetail?.integrity?.verdict === 'flagged').length;
+  if (cheated) {
+    const s = `${plural(cheated, 'answer')} broke the fair-play rules and scored 0.`;
+    if (fits(s)) parts.push(s);
+  }
+  if (flagged) {
+    const s = `${plural(flagged, 'answer')} flagged for possible outside help.`;
+    if (fits(s)) parts.push(s);
+  }
   const primary = why[0];
   if (primary) {
     if (fits(primary)) parts.push(primary);

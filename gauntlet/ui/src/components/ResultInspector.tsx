@@ -258,6 +258,15 @@ function ResultDetail({ runId, lite, names, target }: { runId: string; lite: Cas
           </div>
         </div>
       )}
+      {res.scoreDetail?.integrity && (
+        <div className={cx('callout', res.scoreDetail.integrity.verdict === 'cheating' ? 'bad' : 'warn')} role="alert">
+          <Icon.Alert />
+          <div>
+            <strong>{res.scoreDetail.integrity.verdict === 'cheating' ? 'Fair-play violation — scored 0' : 'Possible outside help — flagged for review'}:</strong> the reply {res.scoreDetail.integrity.rule}.{' '}
+            <span className="mono">“{res.scoreDetail.integrity.excerpt}”</span>
+          </div>
+        </div>
+      )}
       <Tabs
         value={tab}
         onChange={setTab}

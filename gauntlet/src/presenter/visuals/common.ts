@@ -8,6 +8,7 @@
  * case's auditor notes. Parsers return null when anything is unexpected, so
  * the UI falls back to the plain view instead of guessing.
  */
+import { withoutFairPlay } from '../../core/fair-play.ts';
 import type { ScoreDetail, ResultStatus } from '../../core/types.ts';
 import { extractFinalAnswer } from '../../core/extract.ts';
 
@@ -77,7 +78,8 @@ export function buildCaseInput(r: ResultLike, rendered?: RenderedLike | null, ex
     caseId: r.caseId,
     scorerType: extra?.scorerType,
     category: extra?.category,
-    system: last?.system ?? (sameCase ? rendered?.system : undefined),
+    // The test's own system text: the fair-play notice that leads every recorded contestant prompt is not part of the case.
+    system: (last ? withoutFairPlay(last.system) : undefined) ?? (sameCase ? rendered?.system : undefined),
     turns,
     replies,
     expected: detail.expected !== undefined ? detail.expected : sameCase ? rendered?.expected : undefined,

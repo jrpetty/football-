@@ -97,6 +97,22 @@ export function LeaderboardView({ lb, podium = true }: { lb: Leaderboard; podium
           </div>
         );
       })()}
+      {lb.rows.some((r) => (r.totals.fairPlayViolations ?? 0) > 0 || (r.totals.fairPlayFlagged ?? 0) > 0) && (
+        <div className="no-broadcast">
+          <Callout tone="bad" icon={<Icon.Alert />}>
+            <strong>Fair play:</strong>{' '}
+            {lb.rows
+              .filter((r) => (r.totals.fairPlayViolations ?? 0) > 0 || (r.totals.fairPlayFlagged ?? 0) > 0)
+              .map((r) => {
+                const v = r.totals.fairPlayViolations ?? 0;
+                const f = r.totals.fairPlayFlagged ?? 0;
+                return `${r.label}: ${[v ? `${v} violation${v === 1 ? '' : 's'} (scored 0)` : '', f ? `${f} flagged for possible outside help` : ''].filter(Boolean).join(', ')}`;
+              })
+              .join(' · ')}
+            . Every model is told the fair-play rules at the start of every prompt; open a result to see the offending text.
+          </Callout>
+        </div>
+      )}
       {baseline && <BaselineExplainer score={baseline.index} />}
       <section className="card lb-card">
         <LeaderboardTable lb={lb} onExplain={(contestantId, categoryId) => setFocus((f) => ({ contestantId, categoryId, nonce: (f?.nonce ?? 0) + 1 }))} />

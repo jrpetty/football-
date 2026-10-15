@@ -19,6 +19,7 @@ import { hiddenRunFiles, listRepoIds, loadRepo, testFilesOf, type FixtureRepo } 
 import { passedOf, runProjectTests, testKey, type ProjectRun } from './lib/code-agent-sandbox.ts';
 import { diffRows, unifiedDiff } from './lib/code-agent-diff.ts';
 import { computeScore } from './lib/code-agent-score.ts';
+import { checkAgentTarget, checkCode, fairPlaySummary, type IntegrityFinding } from '../scoring/integrity.ts';
 
 export const CODE_AGENT_DEFAULTS = {
   /** Every action counts, valid or not, including SUBMIT. */
@@ -95,6 +96,26 @@ ACTION: SUBMIT                      finish; your code is graded by the hidden te
 PATCH RULES: copy the SEARCH lines from the file exactly (without the line-number prefix that READ shows); whitespace differences at the start or end of a line are tolerated. The SEARCH text must match exactly one place, so include a few surrounding lines. Several blocks can follow one PATCH; they are applied in order, and if any block fails nothing is changed. Prefer PATCH for small changes; WRITE replaces the whole file.
 
 REPLY FORMAT: think as much as you like, then write the ACTION line last (followed only by the WRITE code block or the PATCH blocks). If a reply contains several ACTION lines, only the last one counts.`;
+}
+
+/**
+ * Fair play in Fix the Bug: reading or searching for the hidden tests, or writing code that escapes the sandbox,
+ * reaches for the file system or processes, or patches the assertions or test runner, is cheating (the case scores 0).
+ * `original` is the untouched repository: a pattern that was already there is not the model's doing.
+ */
+export function agentActionIntegrity(action: Action, original: Record<string, string>): IntegrityFinding | null {
+  switch (action.kind) {
+    case 'READ':
+      return checkAgentTarget(action.path);
+    case 'SEARCH':
+      return checkAgentTarget(action.text);
+    case 'WRITE':
+      return checkAgentTarget(action.path) ?? checkCode(action.content, Object.values(original).join('\n'));
+    case 'PATCH':
+      return checkAgentTarget(action.path) ?? checkCode(action.blocks.map((b) => b.replace).join('\n'), Object.values(original).join('\n'));
+    default:
+      return null;
+  }
 }
 
 /** 150000 → "150,000" without locale data (identical bytes on every platform). */
@@ -220,6 +241,7 @@ export const program: ProgramDefinition = {
     let testRuns = 0;
     let submittedBy: 'model' | 'actions' | 'tokens' = 'actions';
     let lastTests: TestSnapshot = snapshotOf(origVisible, visibleRef);
+    let violation: IntegrityFinding | null = null;
 
     const frame = (code: Omit<CodeReplayFrame, 'files' | 'actions' | 'tokens' | 'tests'> & { tests?: CodeReplayFrame['tests'] }, f: Omit<ReplayFrame, 'step' | 'code'>): void => {
       const full: CodeReplayFrame = {
@@ -261,6 +283,13 @@ export const program: ProgramDefinition = {
         brief = shorten(result, 160);
         actionLog.push({ n, action: summary, ok: false, note: parsed.error ?? undefined });
         frame({ kind: 'invalid' }, { label: `Action ${n}`, action: shorten(parsed.line || '(no action)', 90), outcome: shorten(parsed.error ?? 'Invalid action', 200), tone: 'bad' });
+      } else if ((violation = agentActionIntegrity(parsed.action, repo.files))) {
+        // Cheating ends the case: the action is not carried out and the case scores 0.
+        summary = summarize(parsed.action);
+        actionLog.push({ n, action: summary, ok: false, note: `fair-play violation: ${violation.rule}` });
+        frame({ kind: 'rejected' }, { label: `Action ${n}`, action: summary, outcome: fairPlaySummary(violation), tone: 'bad' });
+        history.push({ reply: text, summary, result: fairPlaySummary(violation), brief: fairPlaySummary(violation) });
+        break;
       } else {
         const a = parsed.action;
         summary = summarize(a);
@@ -391,15 +420,18 @@ export const program: ProgramDefinition = {
     const diffText = changed.map((p) => unifiedDiff(p, p in ws.original ? ws.original[p]! : null, ws.files[p]!)).filter(Boolean).join('\n');
     if (diffText) ctx.artifact('changes.diff', 'text', diffText);
 
-    const summary = s.passed
+    const summary = violation
+      ? fairPlaySummary(violation)
+      : s.passed
       ? `Fixed it: all ${hiddenRef.length} hidden tests pass · ${actions} actions (par ${repo.meta.par})`
       : `Hidden tests ${hiddenNow}/${hiddenRef.length} (was ${hiddenBefore}) · visible ${visibleNow}/${visibleRef.length} · ${actions} actions${tamperAttempts ? ` · ${tamperAttempts} test-edit attempt${tamperAttempts === 1 ? '' : 's'}` : ''}`;
 
     return {
-      score: s.score,
-      passed: s.passed,
+      score: violation ? 0 : s.score,
+      passed: violation ? false : s.passed,
       summary,
       detail: {
+        ...(violation ? { integrity: violation, notes: `Scored 0 for a fair-play violation: ${violation.rule}. Offending text: ${violation.excerpt}` } : {}),
         items: [
           { label: 'Hidden tests fixed (75%)', passed: s.hidden === 1, score: s.hidden, detail: `${hiddenNow}/${hiddenRef.length} pass (${hiddenBefore} passed before)` },
           { label: 'Visible tests fixed (15%)', passed: s.visible === 1, score: s.visible, detail: `${visibleNow}/${visibleRef.length} pass (${visibleBefore} passed before)` },

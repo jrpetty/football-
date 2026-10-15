@@ -94,6 +94,7 @@ const boards = await import('../src/engine/leaderboards.ts');
 const manual = await import('../src/providers/manual.ts');
 const { createAdapter } = await import('../src/providers/index.ts');
 const { scoreResponse } = await import('../src/scoring/index.ts');
+const { FAIR_PLAY_FINGERPRINT } = await import('../src/core/registry.ts');
 const { createMockAdapter } = await import('../src/providers/mock.ts');
 
 const image = () => vision.loadTestImage(visionDir, 'images/sum.png');
@@ -102,10 +103,10 @@ const image = () => vision.loadTestImage(visionDir, 'images/sum.png');
 // Hashing, validation, rendering
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('text-only tests hash exactly as before; vision tests hash their image bytes', () => {
-  assert.equal(registry.computeTestHash(textTest as never, join(sandbox, 'tests', 'math')), contentHash(textTest), 'no images: the old hash is unchanged');
+test('text-only tests hash their definition (and the fair-play notice); vision tests also hash their image bytes', () => {
+  assert.equal(registry.computeTestHash(textTest as never, join(sandbox, 'tests', 'math')), contentHash({ def: textTest, fairPlay: FAIR_PLAY_FINGERPRINT }), 'no images: definition + fair-play notice only');
   const before = registry.computeTestHash(visionTest as never, visionDir);
-  assert.notEqual(before, contentHash(visionTest), 'image digests are part of the hash');
+  assert.notEqual(before, contentHash({ def: visionTest, fairPlay: FAIR_PLAY_FINGERPRINT }), 'image digests are part of the hash');
   writeFileSync(join(visionDir, 'images', 'sum.png'), PNG_B);
   const changed = registry.computeTestHash(visionTest as never, visionDir);
   writeFileSync(join(visionDir, 'images', 'sum.png'), PNG_A);

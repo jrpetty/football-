@@ -723,6 +723,11 @@ export interface ScoreDetail {
   judge?: Array<{ contestantId: string; score: number; label?: string; rationale: string }>;
   /** Several judges were asked but only one gave a usable verdict: kept, but flagged for human review like a disagreement. */
   singleJudge?: boolean;
+  /**
+   * Fair-play check (src/scoring/integrity.ts): 'cheating' = the case scored 0; 'flagged' = score kept, sent to
+   * Blind Review as "possible outside help".
+   */
+  integrity?: { verdict: 'cheating' | 'flagged'; rule: string; excerpt: string };
   notes?: string;
   [key: string]: unknown;
 }
@@ -983,6 +988,10 @@ export interface LeaderboardRow {
     skipped?: number;
     /** Of `skipped`: cases skipped because the model can't make pictures (image-output tests), or is picture-only. */
     skippedImageOutput?: number;
+    /** Answers that broke the fair-play rules (scored 0; src/scoring/integrity.ts). */
+    fairPlayViolations?: number;
+    /** Copy & paste answers flagged for possible outside help (score kept, listed in Blind Review). */
+    fairPlayFlagged?: number;
   };
   speed: {
     medianTtftMs: number | null;

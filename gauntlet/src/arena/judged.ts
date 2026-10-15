@@ -7,12 +7,17 @@
  * speeches are cut by the game. When the speeches are done the tournament's
  * judge step runs (src/arena/judge.ts); without judges the game is returned as
  * "awaiting human judging".
+ *
+ * Fair play: every speech is checked (src/scoring/integrity.ts, speech mode: addressing the judges is rhetoric, but
+ * asking for a score, "ignore your instructions" and forged judge lines or tags are not). A violation ends the game at
+ * once: the speech is not shown to anyone and the other side wins without judging.
  */
 import { createRng } from '../core/rng.ts';
 import { judgingFrom } from './judge.ts';
 import type { PlayGameOptions } from './match.ts';
 import { retryBlock, type PlayedGameExt } from './turns.ts';
 import type { ArenaJudging, ArenaMove, MoveAttempt, Side } from './types.ts';
+import { checkReply, fairPlaySummary, type IntegrityFinding } from '../scoring/integrity.ts';
 
 const KEEP_CHARS = 6000;
 
@@ -27,6 +32,43 @@ export interface JudgedGameOptions extends PlayGameOptions {
 
 function abortIfNeeded(signal?: AbortSignal): void {
   if (signal?.aborted) throw Object.assign(new Error('Aborted'), { name: 'AbortError' });
+}
+
+/** A speech broke the fair-play rules: the game ends at once and the other side wins without judging. */
+function fairPlayLoss(
+  side: Side,
+  foul: IntegrityFinding,
+  g: {
+    game: JudgedGameOptions['game'];
+    state: unknown;
+    moves: ArenaMove[];
+    initial: unknown;
+    strikes: [number, number];
+    illegal: [number, number];
+    started: number;
+    before: { costUsd: number; inputTokens: number; outputTokens: number };
+    after: { costUsd: number; inputTokens: number; outputTokens: number };
+    onMove?: JudgedGameOptions['onMove'];
+    attempts: MoveAttempt[];
+  },
+): PlayedGameExt {
+  const record: ArenaMove = {
+    ply: g.moves.length + 1,
+    side,
+    move: '',
+    label: `${g.game.sides[side].name}: ${fairPlaySummary(foul)}`,
+    attempts: g.attempts,
+    forfeit: true,
+    ms: Date.now() - g.started,
+    costUsd: Math.round((g.after.costUsd - g.before.costUsd) * 1e8) / 1e8,
+    inputTokens: g.after.inputTokens - g.before.inputTokens,
+    outputTokens: g.after.outputTokens - g.before.outputTokens,
+    snapshot: { ...(g.game.snapshot(g.state as never) as object), fairPlay: { side, ...foul } },
+  };
+  g.moves.push(record);
+  g.onMove?.(record, [g.strikes[0], g.strikes[1]]);
+  const winner = (1 - side) as Side;
+  return { winner, reason: `${g.game.sides[side].name} broke the fair-play rules (${foul.rule}), so ${g.game.sides[winner].name} wins without judging`, moves: g.moves, initial: g.initial, strikes: g.strikes, illegal: g.illegal };
 }
 
 /** A light copy of the judging for the final snapshot (no transcripts). */
@@ -69,6 +111,11 @@ export async function playJudgedGame(o: JudgedGameOptions): Promise<PlayedGameEx
       const ms = Date.now() - t0;
       let error: string | undefined;
       const parsed = game.parseMove(state, reply.text);
+      const foul = parsed.ok ? checkReply(reply.text, { taskText: prompt, speech: true }) : null;
+      if (foul?.verdict === 'cheating') {
+        attempts.push({ text: reply.text.length > KEEP_CHARS ? `${reply.text.slice(0, KEEP_CHARS)}…` : reply.text, extracted: null, error: fairPlaySummary(foul), ms: Date.now() - t0 });
+        return fairPlayLoss(side, foul, { game, state, moves, initial, strikes, illegal, started, before: before, after: seat.meter?.() ?? zero, onMove: o.onMove, attempts });
+      }
       if (parsed.ok) accepted = parsed.move;
       else error = reply.stopReason === 'refusal' ? 'The reply was a refusal. The motion is a standard debating topic; argue your assigned side.' : reply.stopReason === 'max_tokens' && !reply.text.trim() ? 'The reply was cut off before any speech text. Think more briefly.' : parsed.error;
       attempts.push({ text: reply.text.length > KEEP_CHARS ? `${reply.text.slice(0, KEEP_CHARS)}…` : reply.text, extracted: null, error, ms });
