@@ -341,7 +341,11 @@ public final class Decor {
             if (!enclosed(at, cell, 2 * r + 2)) continue;
             floor.add(cell);
         }
-        floor.sort(Comparator.<BlockPos>comparingInt(BlockPos::getY).thenComparingInt(BlockPos::getX).thenComparingInt(BlockPos::getZ));
+        // [build-world] In the building's own terms, so a house is done up alike whichever way its lot faces (Interiors.plan).
+        Direction across = b.facing().getClockWise(), deep = b.facing();
+        floor.sort(Comparator.<BlockPos>comparingInt(BlockPos::getY)
+            .thenComparingInt(c -> (c.getX() - b.anchor().getX()) * across.getStepX() + (c.getZ() - b.anchor().getZ()) * across.getStepZ())
+            .thenComparingInt(c -> (c.getX() - b.anchor().getX()) * deep.getStepX() + (c.getZ() - b.anchor().getZ()) * deep.getStepZ()));
         Map<BlockPos, List<Direction>> walls = new HashMap<>();
         for (BlockPos c : floor) {
             List<Direction> ds = new ArrayList<>();
@@ -390,7 +394,7 @@ public final class Decor {
                 BuildGoal.Placement n = at.get(c.relative(d, k));
                 if (n == null) continue;
                 if (wallish(n)) hit = true;
-                else if (n.part() == BuildGoal.Part.BLOCK) break;
+                else if (n.part() == BuildGoal.Part.BLOCK && !Interiors.onTheFloor(at, n)) break;   // [build-world] a desk is no roof
             }
             if (!hit) return false;
         }

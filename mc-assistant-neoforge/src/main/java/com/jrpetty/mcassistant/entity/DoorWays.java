@@ -172,6 +172,13 @@ public final class DoorWays {
                 // Met: the ground here is a step from the last one at most, with room to stand on it.
                 if (Math.abs(ground - walk) <= 1 && (ground <= walk || passable(level, prev.atY(walk + 2)))) return null;
                 want = ground > walk ? walk + 1 : walk - 1;
+                // [build-world] No headroom to step up from the last step (a lamp hung over the doorstep, a porch's eaves):
+                // the bank is cut down level instead, a way into it. Stepped up, the way was "something built" and never
+                // made, and the inn's door opened onto a bank of earth two high.
+                if (want > walk) {
+                    BlockPos over = prev.atY(walk + 2);
+                    if (!passable(level, over) && !diggable(level, over, level.getBlockState(over))) want = walk;
+                }
             }
             BlockPos feet = col.atY(want);
             boolean roofed = roofed(level, col, want);
@@ -180,9 +187,11 @@ public final class DoorWays {
                 Fix f = clear(level, prev.atY(walk + 2), roofed(level, prev, walk));
                 if (f != null) return f;
             }
-            // Room to stand on it: two blocks clear, top down.
+            // Room to stand on it: two blocks clear, top down. [build-world] The doorstep's own earth is dug out even
+            // under the eaves: it is the lot's ground at the door, no porch's floor, and left there it shut the door of
+            // every building whose roof overhangs its step on a hummock.
             for (BlockPos cell : new BlockPos[] { feet.above(), feet }) {
-                Fix f = clear(level, cell, roofed);
+                Fix f = clear(level, cell, roofed && k > 1);
                 if (f != null) return f;
             }
             // Something under it to stand on: a hollow built up from its bottom.
@@ -218,9 +227,18 @@ public final class DoorWays {
         for (int y = walk + 2; y <= walk + 9; y++) {
             BlockPos p = col.atY(y);
             BlockState st = level.getBlockState(p);
-            if (!st.getCollisionShape(level, p).isEmpty() && !diggable(level, p, st)) return true;
+            if (!spans(st.getCollisionShape(level, p)) || diggable(level, p, st)) continue;
+            return true;
         }
         return false;
+    }
+
+    /** [build-world] Does this shape cover its cell from side to side, as a roof does (a block, a slab, a stair)? A lamp
+     *  hung over a doorstep is no roof, and the earth in the doorway under it was left there for good. */
+    private static boolean spans(net.minecraft.world.phys.shapes.VoxelShape shape) {
+        if (shape.isEmpty()) return false;
+        var box = shape.bounds();
+        return box.getXsize() >= 0.99 && box.getZsize() >= 0.99;
     }
 
     /** What is in this cell that must come out for a folk to walk through it: null when it is clear;
@@ -404,6 +422,20 @@ public final class DoorWays {
     @Nullable
     public static List<BlockPos> pathToForTests(Villages.Village v, Door d) {
         return pathTo(v, d);
+    }
+
+    /** [build-world] Tests: the way in at a door made now, as mend makes it, of cobblestone and earth from nowhere
+     *  (no town, no stores, no hand). How many cells it took; -1 if the way runs into something built. */
+    public static int mendForTests(Level level, Door d) {
+        for (int n = 0; n < 64; n++) {
+            Fix fix = next(level, d);
+            if (fix == null) return n;
+            if (fix.pos() == null) return -1;
+            if (fix.dig()) level.destroyBlock(fix.pos(), false);
+            else level.setBlockAndUpdate(fix.pos(), (fix.pos().getY() == d.pos().getY() - 1 || fix.top()
+                ? Blocks.COBBLESTONE : Blocks.DIRT).defaultBlockState());
+        }
+        return 64;
     }
 
     /** Tests: is this bare earth, not a path? */

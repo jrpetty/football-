@@ -304,11 +304,80 @@ public final class Blueprints {
         try (InputStream in = Blueprints.class.getResourceAsStream(path)) {
             if (in == null) return List.of();
             BufferedReader r = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
-            return parse(name, r.lines().toList());
+            return aim(parse(name, r.lines().toList()));
         } catch (Exception e) {
             LOG.error("[MCA-BLUEPRINT] could not read {}: {}", path, e.toString());
             return List.of();
         }
+    }
+
+    /** [build-world] The furniture that has a front to be used from: an oven's mouth, a chest's lid, a desk's slope. */
+    private static boolean fronted(BuildGoal.Part p) {
+        return p == BuildGoal.Part.FURNACE || p == BuildGoal.Part.CHEST || p == BuildGoal.Part.SMOKER
+            || p == BuildGoal.Part.LECTERN || p == BuildGoal.Part.LOOM;
+    }
+
+    /** [build-world] Does this cell of a drawing stand solid before a front: a wall, a window, a post, a piece of furniture? */
+    private static boolean shuts(Key k) {
+        if (k == null) return false;
+        return switch (k.part()) {
+            case CARPET, DOOR, TORCH, LANTERN, FLOWER, WATER, FENCE, GATE, LADDER, CLEAR -> false;
+            case BLOCK -> switch (k.style()) {
+                case ROOF_SLAB, ROOF_SLAB_TOP, STONE_SLAB, ROOF_STAIR, ROOF_STAIR_TOP, STONE_STAIR -> false;
+                default -> true;
+            };
+            default -> true;
+        };
+    }
+
+    private static int[] step(Way w) {
+        return switch (w) {
+            case BACK -> new int[]{ 0, 1 };
+            case FRONT -> new int[]{ 0, -1 };
+            case LEFT -> new int[]{ -1, 0 };
+            case RIGHT -> new int[]{ 1, 0 };
+            case UP -> new int[]{ 0, 0 };
+        };
+    }
+
+    /**
+     * [build-world] Every oven, chest, desk and loom turned to face its room. The legend has an oven only facing the
+     * front ('U'), a desk only facing the front ('r'), and a drawing set one with its back to the room as often as not: a
+     * house's stove stood with its mouth to the front wall, two of the great forge's furnaces in each row breathed into
+     * the next one's back, the knights' chests opened against their bookshelves. One whose front the drawing has shut
+     * (a wall, a window, another piece of furniture there) is turned to face the open floor: the other way first, then
+     * to either side; one shut in all round is left as drawn.
+     */
+    static List<Cell> aim(List<Cell> cells) {
+        Map<Long, Key> at = new HashMap<>();
+        for (Cell c : cells) at.put(cellKey(c.dx(), c.h(), c.dz()), c.key());
+        List<Cell> out = new ArrayList<>(cells.size());
+        for (Cell c : cells) {
+            Key k = c.key();
+            if (!fronted(k.part())) { out.add(c); continue; }
+            Way way = k.way() == Way.UP ? Way.FRONT : k.way();
+            int[] f = step(way);
+            if (!shuts(at.get(cellKey(c.dx() + f[0], c.h(), c.dz() + f[1])))) { out.add(c); continue; }
+            Way[] tries = switch (way) {
+                case FRONT -> new Way[]{ Way.BACK, Way.LEFT, Way.RIGHT };
+                case BACK -> new Way[]{ Way.FRONT, Way.RIGHT, Way.LEFT };
+                case LEFT -> new Way[]{ Way.RIGHT, Way.FRONT, Way.BACK };
+                default -> new Way[]{ Way.LEFT, Way.BACK, Way.FRONT };
+            };
+            Key turned = k;
+            for (Way w : tries) {
+                int[] t = step(w);
+                if (shuts(at.get(cellKey(c.dx() + t[0], c.h(), c.dz() + t[1])))) continue;
+                turned = new Key(k.part(), k.style(), w);
+                break;
+            }
+            out.add(turned == k ? c : new Cell(c.dx(), c.h(), c.dz(), turned));
+        }
+        return List.copyOf(out);
+    }
+
+    private static long cellKey(int dx, int h, int dz) {
+        return ((long) (dx & 0xfffff) << 40) | ((long) (h & 0xfffff) << 20) | (dz & 0xfffff);
     }
 
     /** Read a drawing's lines into cells. Public for the tests. */

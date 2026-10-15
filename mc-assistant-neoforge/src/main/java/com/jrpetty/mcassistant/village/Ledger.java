@@ -91,6 +91,7 @@ public final class Ledger extends SavedData {
         all.add(new Building(structure, anchor.immutable(), facing));
         l.setDirty();
         com.jrpetty.mcassistant.entity.Renovation.built(village, structure, anchor.immutable(), facing);   // [styles] what it was built to
+        com.jrpetty.mcassistant.entity.TownBlocks.ledgerChanged(village);   // [build-world] the gate knows it at once
     }
 
     /** Everything this village has built, in the order it went up. */
@@ -106,6 +107,7 @@ public final class Ledger extends SavedData {
         Ledger l = of();
         if (l == null) return;
         boolean any = l.buildings.remove(village) != null;
+        com.jrpetty.mcassistant.entity.TownBlocks.ledgerChanged(village);   // [build-world]
         any |= l.treasury.remove(village) != null;
         any |= l.paid.remove(village) != null;
         any |= l.mother.remove(village) != null;

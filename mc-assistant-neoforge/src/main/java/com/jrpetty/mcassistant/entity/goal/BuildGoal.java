@@ -197,6 +197,36 @@ public class BuildGoal extends Goal {
     /** [integrity] The anchor of the town's building this is (an anchored settler's build): the gate (TownBlocks)
      *  lets it set its own building's cells and nobody else's. Null for a hired hand's build. */
     @Nullable private BlockPos ownAnchor;
+    /** What the builder said as it stopped (buildNowForTests reports it). */
+    @Nullable private String lastWords;
+    /** [build-world] Tests: every cell within the builder's reach and no pace kept (buildNowForTests). */
+    private static boolean handsForTests;
+    /** [build-world] Tests: what the builder is handed for the cell it comes to (buildNowForTests). */
+    @Nullable private static java.util.function.BiConsumer<AssistantEntity, Placement> stockForTests;
+
+    /**
+     * [build-world] Tests: a building put up now by this builder through its own goal, as a town's builder puts one up
+     * (its plan, its ground work, its order, each block out of its pack and laid as tick lays it), with every cell
+     * within its reach and no pace kept. {@code stock} fills its pack: once with null before it starts, and then with
+     * the cell it is about to lay. What it said as it stopped.
+     */
+    public static String buildNowForTests(AssistantEntity builder, String structure, BlockPos anchor, Direction facing,
+                                          java.util.function.BiConsumer<AssistantEntity, Placement> stock) {
+        builder.clearQueue();
+        builder.enqueue(com.jrpetty.mcassistant.entity.Job.buildAt(structure, anchor, facing, 0));
+        stock.accept(builder, null);
+        BuildGoal g = new BuildGoal(builder);
+        handsForTests = true;
+        stockForTests = stock;
+        try {
+            g.start();
+            for (int guard = 0; g.job != null && guard < 400000; guard++) g.tick();
+        } finally {
+            handsForTests = false;
+            stockForTests = null;
+        }
+        return g.lastWords == null ? "" : g.lastWords;
+    }
 
     public BuildGoal(AssistantEntity assistant) {
         this.assistant = assistant;
@@ -288,6 +318,12 @@ public class BuildGoal extends Goal {
         return n;
     }
 
+    /** [build-world] The world's own ground standing where a building's room is to be (a bank, a hummock, a drift of
+     *  snow packed hard): what its builder digs out, as a park's is dug (ParkGround.cuts). */
+    private static boolean groundInside(BlockState st) {
+        return com.jrpetty.mcassistant.entity.Terraform.earth(st) && !st.is(Blocks.BEDROCK);
+    }
+
     /** [econ-store] Something growing wild that a building's floor is no place for: grass, ferns, a flower, a dead bush. */
     public static boolean isWildPlant(BlockState st) {
         return st.is(Blocks.SHORT_GRASS) || st.is(Blocks.TALL_GRASS) || st.is(Blocks.FERN) || st.is(Blocks.LARGE_FERN)
@@ -299,7 +335,8 @@ public class BuildGoal extends Goal {
     public static int stampOnly(net.minecraft.server.level.ServerLevel level, String structure, BlockPos anchor, Direction facing,
                                 int radius, java.util.function.Function<Placement, BlockState> palette,
                                 java.util.function.Predicate<Placement> only) {
-        List<Placement> cells = new java.util.ArrayList<>(plan(structure, anchor, facing, radius));
+        List<Placement> whole = plan(structure, anchor, facing, radius);
+        List<Placement> cells = new java.util.ArrayList<>(whole);
         cells.removeIf(only.negate());
         cells.sort(java.util.Comparator.comparingInt((Placement p) -> finishing(p) ? 1 : 0)
             .thenComparingInt(p -> p.pos().getY()));
@@ -338,6 +375,9 @@ public class BuildGoal extends Goal {
             BlockState joined = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(st, level, p.pos());
             if (joined != st) level.setBlock(p.pos(), joined, 2 | 16);
         }
+        // [build-world] And the ones they stand beside, laid in an earlier batch; the roof's corners turned, the doors
+        // hung from their walls (settle).
+        settle(level, cells, whole);
         return n;
     }
 
@@ -374,10 +414,12 @@ public class BuildGoal extends Goal {
             || part == Part.BELL || isFurniture(part);
     }
 
-    /** Things that hang from, stand on or lie on something else go in last, when it is there. */
+    /** Things that hang from, stand on or lie on something else go in last, when it is there. [build-world] A ladder
+     *  too: laid before the wall it leans on, it came down the moment the earth in that wall's cell was dug out (the
+     *  wall's turn came after it, row by row, at two of the four turns of a lot), and the loft had no way up. */
     private static boolean finishing(Placement p) {
         return p.part() == Part.LANTERN || p.part() == Part.TORCH || p.part() == Part.FLOWER
-            || p.part() == Part.CARPET || p.part() == Part.WATER || p.part() == Part.BELL;
+            || p.part() == Part.CARPET || p.part() == Part.WATER || p.part() == Part.BELL || p.part() == Part.LADDER;
     }
 
     private static Predicate<ItemStack> itemFor(Part part) {
@@ -604,6 +646,7 @@ public class BuildGoal extends Goal {
         }
         Direction right = facing.getClockWise();
         int top = Blueprints.has(structure) ? 12 : 5;
+        for (Placement p : plan) top = Math.max(top, p.pos().getY() - base.getY());   // [build-world] a tower's full height
         for (int dx = -all[0] - 1; dx <= all[0] + 1; dx++) {
             for (int dz = -all[1] - 1; dz <= all[1] + 1; dz++) {
                 for (int dy = 0; dy <= top; dy++) {
@@ -618,7 +661,12 @@ public class BuildGoal extends Goal {
             for (int dz = -g[1]; dz <= g[1]; dz++) {
                 for (int dy = 0; dy <= top; dy++) {
                     BlockPos c = cell(base, right, facing, dx, dz).above(dy);
-                    if (!taken.contains(c) && isWildPlant(assistant.level().getBlockState(c))) plan.add(new Placement(c, Part.CLEAR));
+                    if (taken.contains(c)) continue;
+                    BlockState there = assistant.level().getBlockState(c);
+                    if (isWildPlant(there) || there.is(Blocks.SNOW)) plan.add(new Placement(c, Part.CLEAR));
+                    // [build-world] And the ground itself where it rises above the floor inside the walls (a bank, a
+                    // hummock, a drift of snow): dug out, or the room was built round it, earth on its floor.
+                    else if (groundInside(there)) plan.add(new Placement(c, Part.CLEAR, Blueprints.Style.SOIL, Blueprints.Way.UP));
                 }
             }
         }
@@ -831,6 +879,7 @@ public class BuildGoal extends Goal {
     private static final org.slf4j.Logger LOG = com.mojang.logging.LogUtils.getLogger();
 
     private void finish(String message) {
+        this.lastWords = message;
         if (assistant.isSettler()) {
             LOG.info("[MCA-BUILD] tick {}: the {} (builder at {}, {} placed): {}", assistant.level().getGameTime(),
                 building, assistant.blockPosition().toShortString(), placed, message);
@@ -856,6 +905,7 @@ public class BuildGoal extends Goal {
             // so it is only asked whether there is still a trunk or a leaf there.)
             if (p.part() == Part.CLEAR) {
                 if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st) || isWildPlant(st)) { target = p; break; }   // [econ-store] a plant
+                if (st.is(Blocks.SNOW) && p.style() == Blueprints.Style.GENERIC) { target = p; break; }   // [build-world] a drift on its floor
                 // [districts] Earth above a park's lawn, still to be dug away (entity/ParkGround).
                 if (com.jrpetty.mcassistant.entity.ParkGround.dig(p, st)) { target = p; break; }
             } else if (wrongHere(st, p) && mayHere(p)) {
@@ -915,6 +965,10 @@ public class BuildGoal extends Goal {
             return;
         }
         if (target == null) {
+            // [build-world] Its blocks made to fit one another now it is all down: the corners of its roof, the joins of
+            // its panes and fences, its doors hung from their walls (laid as the builder came to them, the last of each
+            // knew nothing of the neighbours laid after it).
+            if (placed > 0) settle(assistant.level(), plan);
             // Only a building that actually has parts in the ground goes on the
             // village's list. A run that could not reach a single cell used to
             // walk off the end of its plan and report "Done" all the same.
@@ -925,12 +979,13 @@ public class BuildGoal extends Goal {
             return;
         }
 
+        if (stockForTests != null) stockForTests.accept(assistant, target);    // [build-world] tests: the cell's makings to hand
         BlockPos pos = target.pos();
         double distSq = assistant.getEyePosition().distanceToSqr(
             pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         assistant.getLookControl().setLookAt(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
         double reach2 = AssistantEntity.BLOCK_REACH * AssistantEntity.BLOCK_REACH;
-        boolean inReach = distSq <= reach2;
+        boolean inReach = handsForTests || distSq <= reach2;                    // [build-world] tests: every cell to hand
         if (!inReach && assistant.isSettler()) {
             // A village's builder works off its scaffolding: a roof or a tower top within arm's
             // length across is within its reach, however high. Walking for every block of a roof
@@ -988,6 +1043,7 @@ public class BuildGoal extends Goal {
         // in whole ticks most of a builder's levels changed nothing at all.
         workTicks += 100;
         int pace = assistant.buildPaceHundredths();
+        if (handsForTests) workTicks = pace;                                    // [build-world] tests: no pace kept
         if (workTicks < pace) {
             return;
         }
@@ -1405,12 +1461,24 @@ public class BuildGoal extends Goal {
                                     net.minecraft.world.level.LevelAccessor level, BlockPos pos) {
         Blueprints.Style style = p.style();
         Direction way = Blueprints.world(p.way(), facing);
+        // [build-world] A furnace's mouth, a chest's lid and a ladder's rungs to the front (or the way the drawing says),
+        // here as well as where the builder lays them: the repairs, a renovation's and a player's hand on a marked cell
+        // laid them through here, and a chest mended into a house at a turn of the lot opened onto its wall.
+        if ((p.part() == Part.FURNACE || p.part() == Part.CHEST || p.part() == Part.LADDER)
+                && st.hasProperty(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING)) {
+            st = st.setValue(net.minecraft.world.level.block.HorizontalDirectionalBlock.FACING,
+                p.way() == Blueprints.Way.UP || p.way() == Blueprints.Way.FRONT ? facing.getOpposite() : way);
+        }
         if (st.hasProperty(net.minecraft.world.level.block.StairBlock.FACING) && st.getBlock() instanceof net.minecraft.world.level.block.StairBlock) {
             Direction d = way.getAxis().isHorizontal() ? way : facing;
             st = st.setValue(net.minecraft.world.level.block.StairBlock.FACING, d)
                 .setValue(net.minecraft.world.level.block.StairBlock.HALF,
                     style == Blueprints.Style.ROOF_STAIR_TOP ? net.minecraft.world.level.block.state.properties.Half.TOP
                         : net.minecraft.world.level.block.state.properties.Half.BOTTOM);
+            // [build-world] Its corner worked out from the stairs beside it, as the game does for a stair a player sets:
+            // laid as it came out of the pack, the last stair of every hip and every corner of the eaves stood straight,
+            // a notch in the roof at each corner. (The stairs laid after it turn their neighbours as they go down.)
+            st = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(st, level, pos);
         }
         if (st.getBlock() instanceof net.minecraft.world.level.block.SlabBlock) {
             st = st.setValue(net.minecraft.world.level.block.SlabBlock.TYPE,
@@ -1451,7 +1519,11 @@ public class BuildGoal extends Goal {
         }
         if (st.getBlock() instanceof net.minecraft.world.level.block.BellBlock) {
             Direction d = way.getAxis().isHorizontal() ? way : facing;
-            st = st.setValue(net.minecraft.world.level.block.BellBlock.FACING, d);
+            st = hangBell(st.setValue(net.minecraft.world.level.block.BellBlock.FACING, d), level, pos, d);
+        }
+        if (st.getBlock() instanceof net.minecraft.world.level.block.CampfireBlock && st.hasProperty(net.minecraft.world.level.block.CampfireBlock.FACING)) {
+            // [build-world] Its logs laid across the way in, whichever way the lot faces (it was always north).
+            st = st.setValue(net.minecraft.world.level.block.CampfireBlock.FACING, way.getAxis().isHorizontal() ? way : facing.getOpposite());
         }
         if (st.getBlock() instanceof net.minecraft.world.level.block.IronBarsBlock
                 || st.getBlock() instanceof net.minecraft.world.level.block.FenceBlock
@@ -1461,6 +1533,114 @@ public class BuildGoal extends Goal {
         return st;
     }
 
+    /**
+     * [build-world] A bell stood on the floor if there is one under it, else hung from the beam over it, else between
+     * the posts either side of it, else from the one post beside it: a bell set standing in a belfry's open frame
+     * came down at the first knock it was given.
+     */
+    static BlockState hangBell(BlockState st, net.minecraft.world.level.LevelAccessor level, BlockPos pos, Direction d) {
+        var BELL = net.minecraft.world.level.block.BellBlock.ATTACHMENT;
+        var FACING = net.minecraft.world.level.block.BellBlock.FACING;
+        BlockPos under = pos.below();
+        if (level.getBlockState(under).isFaceSturdy(level, under, Direction.UP)) {
+            return st.setValue(BELL, net.minecraft.world.level.block.state.properties.BellAttachType.FLOOR);
+        }
+        if (net.minecraft.world.level.block.Block.canSupportCenter(level, pos.above(), Direction.DOWN)) {
+            return st.setValue(BELL, net.minecraft.world.level.block.state.properties.BellAttachType.CEILING);
+        }
+        for (Direction a : new Direction[]{ d.getClockWise(), d }) {
+            boolean one = sturdyFace(level, pos.relative(a), a.getOpposite()), other = sturdyFace(level, pos.relative(a.getOpposite()), a);
+            if (one && other) return st.setValue(FACING, a).setValue(BELL, net.minecraft.world.level.block.state.properties.BellAttachType.DOUBLE_WALL);
+        }
+        for (Direction a : Direction.Plane.HORIZONTAL) {
+            if (sturdyFace(level, pos.relative(a), a.getOpposite())) {
+                return st.setValue(FACING, a).setValue(BELL, net.minecraft.world.level.block.state.properties.BellAttachType.SINGLE_WALL);
+            }
+        }
+        return st;
+    }
+
+    private static boolean sturdyFace(net.minecraft.world.level.LevelAccessor level, BlockPos at, Direction face) {
+        return level.getBlockState(at).isFaceSturdy(level, at, face);
+    }
+
+    /**
+     * [build-world] The side a door hangs from, as the game hangs one a player sets: the side with the wall beside it;
+     * beside another door, its far side, so the two open as a pair. Every door the builders hung was hinged on its
+     * left whatever stood there, and a pair of doors hung from the same side opened into one another.
+     */
+    public static net.minecraft.world.level.block.state.properties.DoorHingeSide hinge(
+            net.minecraft.world.level.BlockGetter level, BlockPos lower, Direction facing) {
+        Direction left = facing.getCounterClockWise(), right = facing.getClockWise();
+        boolean leftDoor = lowerDoor(level.getBlockState(lower.relative(left)));
+        boolean rightDoor = lowerDoor(level.getBlockState(lower.relative(right)));
+        if (leftDoor != rightDoor) {
+            return leftDoor ? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
+                : net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
+        }
+        int lean = (full(level, lower.relative(right)) ? 1 : 0) + (full(level, lower.above().relative(right)) ? 1 : 0)
+            - (full(level, lower.relative(left)) ? 1 : 0) - (full(level, lower.above().relative(left)) ? 1 : 0);
+        return lean > 0 ? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
+            : net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
+    }
+
+    private static boolean lowerDoor(BlockState s) {
+        return s.getBlock() instanceof net.minecraft.world.level.block.DoorBlock
+            && s.getValue(net.minecraft.world.level.block.DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER;
+    }
+
+    private static boolean full(net.minecraft.world.level.BlockGetter level, BlockPos at) {
+        return level.getBlockState(at).isCollisionShapeFullBlock(level, at);
+    }
+
+    /**
+     * [build-world] A building's blocks made to fit one another once it is all down, as the game fits a block a player
+     * sets: every stair's corner, every pane's, fence's, wall's and bar's joins worked out afresh from the neighbours it
+     * has now (and theirs), and every door hung from the side its wall is on. Laid a storey or a batch at a time, without
+     * the neighbours told, the panes laid first stood unjoined to the ones laid after and the hips of a roof stood
+     * straight; and a door hung before the wall beside it was up could only guess its side.
+     */
+    public static void settle(net.minecraft.world.level.Level level, java.util.Collection<Placement> cells) {
+        settle(level, cells, cells);
+    }
+
+    /** As settle, the doors of the whole building beside these cells hung afresh too (one laid in an earlier batch, its
+     *  pair in this one: hung before its pair was there, it hung from the side the pair came to). */
+    public static void settle(net.minecraft.world.level.Level level, java.util.Collection<Placement> cells,
+                              java.util.Collection<Placement> whole) {
+        java.util.Set<BlockPos> look = new java.util.HashSet<>();
+        for (Placement p : cells) {
+            look.add(p.pos());
+            for (Direction d : Direction.values()) look.add(p.pos().relative(d));
+        }
+        for (BlockPos at : look) {
+            if (!level.isLoaded(at)) continue;
+            BlockState st = level.getBlockState(at);
+            if (!fitsNeighbours(st)) continue;
+            BlockState joined = net.minecraft.world.level.block.Block.updateFromNeighbourShapes(st, level, at);
+            if (joined != st && !joined.isAir()) level.setBlock(at, joined, 2 | 16);
+        }
+        for (Placement p : whole) {
+            if (p.part() != Part.DOOR || !look.contains(p.pos()) || !level.isLoaded(p.pos())) continue;
+            BlockState st = level.getBlockState(p.pos());
+            if (!lowerDoor(st)) continue;
+            var side = hinge(level, p.pos(), st.getValue(net.minecraft.world.level.block.DoorBlock.FACING));
+            if (st.getValue(net.minecraft.world.level.block.DoorBlock.HINGE) == side) continue;
+            level.setBlock(p.pos(), st.setValue(net.minecraft.world.level.block.DoorBlock.HINGE, side), 2 | 16);
+            BlockState up = level.getBlockState(p.pos().above());
+            if (up.getBlock() instanceof net.minecraft.world.level.block.DoorBlock) {
+                level.setBlock(p.pos().above(), up.setValue(net.minecraft.world.level.block.DoorBlock.HINGE, side), 2 | 16);
+            }
+        }
+    }
+
+    /** [build-world] A block whose shape is its neighbours' business: a stair's corner, a pane's or a fence's joins. */
+    public static boolean fitsNeighbours(BlockState st) {
+        net.minecraft.world.level.block.Block b = st.getBlock();
+        return b instanceof net.minecraft.world.level.block.StairBlock || b instanceof net.minecraft.world.level.block.CrossCollisionBlock
+            || b instanceof net.minecraft.world.level.block.WallBlock || b instanceof net.minecraft.world.level.block.FenceGateBlock;
+    }
+
     /** A door is two blocks: the lower half here, the upper above it. */
     public static boolean hangDoor(net.minecraft.world.level.Level level, BlockPos lower, BlockState st) {
         if (!(st.getBlock() instanceof net.minecraft.world.level.block.DoorBlock)) {
@@ -1468,6 +1648,8 @@ public class BuildGoal extends Goal {
             return true;
         }
         if (!level.getBlockState(lower.above()).canBeReplaced()) return false;
+        // [build-world] Hung from the side its wall is on (and settle looks again once the wall beside it is all up).
+        st = st.setValue(net.minecraft.world.level.block.DoorBlock.HINGE, hinge(level, lower, st.getValue(net.minecraft.world.level.block.DoorBlock.FACING)));
         level.setBlock(lower, st.setValue(net.minecraft.world.level.block.DoorBlock.HALF,
             net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER), 2 | 16);
         level.setBlock(lower.above(), st.setValue(net.minecraft.world.level.block.DoorBlock.HALF,

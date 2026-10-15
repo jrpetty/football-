@@ -430,8 +430,20 @@ public final class TownBlocks {
             || st.getBlock() instanceof com.jrpetty.mcassistant.block.StorehouseBlock;
     }
 
+    /**
+     * [build-world] The register has changed (a building put on it, a town forgotten): what the gate knows is worked out
+     * afresh at the next question, not at the next tick. Asked once a tick and kept, a town whose buildings went up and
+     * were furnished in the one tick had its furniture refused as falling in the cells of buildings no longer there.
+     */
+    public static void ledgerChanged(UUID village) {
+        INDEX.remove(village);
+    }
+
     private static int signature(UUID id) {
         int s = Ledger.buildings(id).size() * 31 + Ledger.grownCount(id);
+        // [build-world] Where they stand and what they are, not only how many: one building taken off and another put
+        // on (a renovation to another design, a lot built over) kept the old one's cells for a minute.
+        for (Ledger.Building b : Ledger.buildings(id)) s = s * 31 + b.anchor().hashCode() + b.structure().hashCode();
         for (Map.Entry<String, Villages.Site> e : Villages.sitesOf(id).entrySet()) {
             s = s * 17 + e.getKey().hashCode() + e.getValue().anchor().hashCode();
         }

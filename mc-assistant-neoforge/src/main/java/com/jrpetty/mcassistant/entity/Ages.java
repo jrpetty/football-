@@ -374,7 +374,9 @@ public final class Ages {
                     return n;
                 }
             }
-            level.setBlock(s, Themes.streetPost(v == null ? null : v.id()).defaultBlockState(), 3);   // [styles] the theme's post
+            BlockState post = Themes.streetPost(v == null ? null : v.id()).defaultBlockState();
+            // [build-world] Joined to what stands beside it, as a post a player sets is (a fence post by a wall stood apart from it).
+            level.setBlock(s, Block.updateFromNeighbourShapes(post, level, s), 3);   // [styles] the theme's post
             level.setBlock(s.above(), light.defaultBlockState(), 3);
             n += 2;
         }
