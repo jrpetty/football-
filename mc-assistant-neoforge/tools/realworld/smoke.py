@@ -4529,6 +4529,52 @@ def roles_e_stage(r, look, cx, cz):
     say("alive after the roads' posts: %s" % client_alive())
 
 
+def war_after_stage(r, look, cx, cz):
+    """[war-after] After the war (entity/Prisoners, Ruins, Outlaws, AfterWarStage). Out past the town to the south-east,
+    /village afterwar stage sets up from the game's own pieces: the town's watch house with two prisoners of war in its
+    cells and a stockade with two more in its pen (real folk of a small town founded 220 blocks off, taken prisoner the
+    admin's way); a third little town, 220 blocks the other way, given up and five days gone to ruin (moss, cracks, holes,
+    the roof fallen in, vines, cobwebs, its stores left open); and the player made an outlaw of the town, its WANTED poster
+    on the board. Pictures:
+      1. 57-war-after-1-cells: inside the watch house, the two cells with a prisoner in each;
+      2. 57-war-after-2-stockade: the stockade from the front, the prisoners in its pen;
+      3. 57-war-after-3-ruin: the ruins, gone to decay;
+      4. 57-war-after-4-board: the town's board with the outlaw's poster.
+    Each camera is kept in open air (clear_camera). Then /village afterwar in words, and the player pardoned again.
+    Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    sx, sz = cx + 160, cz + 130                        # out past the town, on ground of its own
+    hy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 30, sz + 20))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village afterwar stage %s" % (sx, sz, USER))
+    say("after the war, stage: " + out[:900])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged after the war; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view %s" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        x, y, z = clear_camera(r, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5)
+        look("57-war-after-" + picture, x, y, z, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("cells", "1-cells", 10)
+    shoot("stockade", "2-stockade", 8)
+    shoot("ruin", "3-ruin", 8)
+    shoot("board", "4-board", 10)
+    say("after the war: " + r.cmd("execute positioned %d %d %d run village afterwar" % (cx, ground_height(r, cx, cz) + 1, cz))[:1200])
+    say("pardon: " + r.cmd("execute positioned %d %d %d run village afterwar pardon %s" % (cx, ground_height(r, cx, cz) + 1, cz, USER))[:300])
+    say("alive after the war's aftermath: %s" % client_alive())
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

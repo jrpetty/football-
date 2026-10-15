@@ -148,6 +148,7 @@ final class WatchHouse {
         for (Cell c : cells(b)) {
             if (occupied(village, c.index())) continue;
             if (PlayerLaw.cellTaken(village, c.index())) continue;
+            if (Prisoners.cellTaken(village, c.index())) continue;          // [war-after] a prisoner of war's
             return c;
         }
         return null;

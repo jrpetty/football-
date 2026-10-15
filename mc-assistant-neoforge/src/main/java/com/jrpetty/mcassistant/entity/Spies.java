@@ -311,6 +311,7 @@ public final class Spies {
     static boolean hold(VillageFolkEntity f, ServerLevel level, boolean think) {
         Captive c = HELD.get(f.getUUID());
         if (c == null) return false;
+        if (Prisoners.hold(f, level, think)) return true;               // [war-after] a prisoner of war: the cells, the stockade, its day
         if (!think) return true;
         Villages.Village v = Villages.get(c.holder());
         if (v == null) return false;                      // (its keepers' town not known just now: its own day meanwhile)
@@ -329,6 +330,7 @@ public final class Spies {
     /** Captives whose towns are at peace with their holders again: let go, every one. */
     static void letGoAtPeace(ServerLevel level, Villages.Village v) {
         for (Captive c : captives(v.id())) {
+            if (Prisoners.isPow(c.who())) continue;                    // [war-after] prisoners of war: exchanged or ransomed (Prisoners)
             if (!Spying.hostile(v.id(), c.home())) release(level, c.who(), "now there is peace");
         }
     }
@@ -356,11 +358,20 @@ public final class Spies {
         return true;
     }
 
+    /** [war-after] Off the captives' roll without a word (Prisoners says its own): the captive, or null. */
+    @Nullable
+    static Captive forget(UUID who) {
+        load();
+        Captive c = HELD.remove(who);
+        if (c != null) Ledger.forget(c.holder(), "captive/" + who);
+        return c;
+    }
+
     /** The peace talks' exchange: each town's captives of the other's let go home. Returns how many went. */
     public static int exchange(ServerLevel level, UUID a, UUID b) {
         int n = 0;
-        for (Captive c : captives(a)) if (c.home().equals(b) && release(level, c.who(), "in an exchange of captives")) n++;
-        for (Captive c : captives(b)) if (c.home().equals(a) && release(level, c.who(), "in an exchange of captives")) n++;
+        for (Captive c : captives(a)) if (c.home().equals(b) && !Prisoners.isPow(c.who()) && release(level, c.who(), "in an exchange of captives")) n++;   // [war-after]
+        for (Captive c : captives(b)) if (c.home().equals(a) && !Prisoners.isPow(c.who()) && release(level, c.who(), "in an exchange of captives")) n++;
         return n;
     }
 

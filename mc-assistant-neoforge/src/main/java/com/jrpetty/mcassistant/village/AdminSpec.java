@@ -209,6 +209,13 @@ public final class AdminSpec {
         add("army.free", Area.ARMY, "army free", T, "Free a vassal town.", "army free");
         add("army.raid", Area.ARMY, "army raid", T, "A raiding band of N at the gate now.", "army raid 8", Param.num("size", 1, MOST_RAID, 6));
         add("army.peace", Area.ARMY, "army peace", T, "End all fighting: peace with every enemy, the raid called off, the battle struck.", "army peace");
+        // [war-after] prisoners of war, ruins, outlaws
+        add("army.prisoners", Area.ARMY, "army prisoners", T, "Take so many of another town's folk prisoner now (its Captain and guards first), held here.",
+            "army prisoners 3 Ashby", Param.num("count", 1, 8, 3), Param.of("from", Kind.TOWN).opt());
+        add("army.release", Area.ARMY, "army release", T, "Let every prisoner of war the town holds go home.", "army release");
+        danger("army.ruin", Area.ARMY, "army ruin", T, "Give the town up now: its folk go to neighbours that will take them, and it falls to ruin.", "army ruin");
+        add("army.outlaw", Area.ARMY, "army outlaw", T, "Declare a player an outlaw of the town (or pardon one).", "army outlaw Steve",
+            Param.of("player", Kind.PLAYER), Param.words("do", "declare", "pardon").opt());
         // ---- economy
         add("economy.coin", Area.ECONOMY, "economy coin", T, "Add (or with a minus, take) treasury coin.", "economy coin 500",
             Param.num("amount", -MOST_COIN, MOST_COIN, 100));

@@ -494,6 +494,8 @@ public class VillageFolkEntity extends AssistantEntity {
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel fieldLevel && FieldTools.hold(this, fieldLevel)) return;
         // [police] The watch's own business before the law's: a prisoner in the cells or on the lead, a folk running to the
         // watch or from it, in a fight or walked home; a guard on an incident, a prisoner in hand, or posted at a gathering (Police).
+        // [war-after] A bounty hunter after an outlaw, or riding home from the hunt (Outlaws).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel huntLevel && Outlaws.hunting(this, huntLevel)) return;
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel policeLevel
                 && (tickCount % 4 == 1 ? Police.hold(this, policeLevel) : Police.busy(this))) return;
         // [crime] The law first: in the stocks or at its community work, called to a trial, a guard on a case; or a folk up
@@ -1309,6 +1311,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Birthdays.mood(this, day, m, why);          // its birthday (Birthdays)
         m = Families.mood(this, day, m, why);           // its wedding anniversary (Families)
         m = WarAndPeace.mood(this, day, m, why);        // [war-peace] weary of the war (or a Guardian's pride in it)
+        m = AfterWar.mood(this, m, why);                // [war-after] held prisoner of war, or its kin held
         m = Visitors.mood(this, day, m, why);           // [batchG] a night of the bard's songs, a day with a friend from away
         m = Health.mood(this, day, m, why);             // [batchA] a cold (Health)
         m = Healers.mood(this, day, m, why);            // [roles-a] a safe birth, the healer at it

@@ -237,6 +237,7 @@ public final class PlayerLaw {
         seen.persona().remember(day, "I saw " + name + " " + what, 5);
         Standing.stir(id, p.getUUID());
         p.sendSystemMessage(Component.literal(chat).withStyle(colour));
+        Outlaws.crime(level, v, p, Outlaws.deedOf(kind), what);                  // [war-after] the more wanted for it; past the line, an outlaw
         Police.log(id, now, "player", name + " (a player) was seen " + what + (r.getBoolean("barred") ? "; barred" : ""), null, 0);
         // The watch comes to the player at a run with the town's answer; with no guard to hand, the witness says it.
         VillageFolkEntity g = WatchHouse.nearestGuard(level, v, p.blockPosition(), 64.0, null);
@@ -546,7 +547,7 @@ public final class PlayerLaw {
     static void atTheGate(ServerLevel level, Villages.Village v, VillageFolkEntity g, Watch.Gate gate) {
         Player near = null;
         for (Player p : level.players()) {
-            if (!barred(v.id(), p.getUUID()) || Laws.exempt(p)) continue;
+            if (!barred(v.id(), p.getUUID()) && !Outlaws.isOutlaw(v.id(), p.getUUID()) || Laws.exempt(p)) continue;   // [war-after] an outlaw too
             if (p.blockPosition().distSqr(gate.inside()) > 14 * 14 || Watch.inside(v.id(), v.centre(), p.blockPosition())) continue;
             near = p;
             break;

@@ -236,6 +236,29 @@ public final class AdminActions {
             case "army.free" -> AdminTools.free(level, v);
             case "army.raid" -> AdminTools.raid(level, v, a.num(0, 6));
             case "army.peace" -> AdminTools.peace(level, v);
+            // [war-after] prisoners of war, ruins, outlaws
+            case "army.prisoners" -> {
+                Villages.Village from = a.word(1, "").isEmpty() ? AdminTools.foeOf(v) : AdminRunner.town(a.word(1, ""));
+                if (from == null || from.id().equals(v.id())) yield Done.no("No other town to take prisoners from.");
+                int n = com.jrpetty.mcassistant.entity.Prisoners.takeNow(level, v, from, a.num(0, 3));
+                yield n == 0 ? Done.no(Villages.name(from.id()) + " has nobody to take.") : Done.ok(n + " of " + Villages.name(from.id()) + "'s folk taken prisoner",
+                    n + " of " + Villages.name(from.id()) + "'s folk were taken prisoner");
+            }
+            case "army.release" -> {
+                int n = com.jrpetty.mcassistant.entity.Prisoners.releaseAll(level, v.id(), "by decree");
+                yield n == 0 ? Done.no(Villages.name(v.id()) + " holds no prisoners of war.") : Done.ok(n + " prisoner(s) let go home", n + " prisoners of war were let go home");
+            }
+            case "army.ruin" -> {
+                String said = com.jrpetty.mcassistant.entity.Ruins.ruinNow(level, v);
+                yield Done.ok(said, "the town was given up, and fell to ruin");
+            }
+            case "army.outlaw" -> {
+                net.minecraft.server.level.ServerPlayer p = level.getServer().getPlayerList().getPlayerByName(a.word(0, ""));
+                if (p == null) yield Done.no("No player called " + a.word(0, "") + ".");
+                boolean pardon = a.word(1, "declare").equalsIgnoreCase("pardon");
+                String said = pardon ? com.jrpetty.mcassistant.entity.AfterWar.pardonNow(level, v, p) : com.jrpetty.mcassistant.entity.AfterWar.outlawNow(level, v, p);
+                yield Done.ok(said, p.getName().getString() + (pardon ? " was pardoned" : " was declared an outlaw"));
+            }
             // ---- economy
             case "economy.coin" -> {
                 int n = a.num(0, 0);

@@ -1014,6 +1014,8 @@ public final class WarAndPeace {
     /** The herald, the call to arms or the white flag: what the envoy says on arriving (Envoys.asks), or null if it is none of these. */
     @Nullable
     static String asks(UUID from, UUID host, Envoys.Errand errand, Caravans.Trip t) {
+        String ransom = Prisoners.asks(from, host, errand, t);             // [war-after] the ransom of our folk they hold
+        if (ransom != null) return ransom;
         String fn = name(from), elder = Villages.elderName(from);
         String sender = elder.isEmpty() ? "The folk of " + fn : "Elder " + elder + " of " + fn;
         if (errand == Envoys.Errand.WAR) {
@@ -1036,6 +1038,8 @@ public final class WarAndPeace {
     @Nullable
     static Envoys.Answer answer(ServerLevel level, UUID host, UUID from, Envoys.Errand errand, VillageFolkEntity envoy, Caravans.Trip t) {
         long day = level.getDayTime() / 24000L;
+        Envoys.Answer ransom = Prisoners.received(level, host, from, errand, envoy, t);      // [war-after] a ransom come in
+        if (ransom != null) return ransom;
         Envoys.Answer tribute = Vassals.received(level, host, from, errand, envoy, t);       // [war] a vassal's tribute come in
         if (tribute != null) return tribute;
         if (errand == Envoys.Errand.WAR) {
@@ -1730,10 +1734,11 @@ public final class WarAndPeace {
         int tribute = Vassals.purse(from, to, errand, level.getDayTime() / 24000L);                           // [war] a vassal's week's tribute, in coin
         if (tribute > 0) return tribute;
         if (errand != Envoys.Errand.PEACE || !Wars.atWar(from, to)) return 0;
+        int ransom = Prisoners.peacePurse(from, to);                       // [war-after] the ransom its side will owe at the peace
         Terms t = terms(level, from, to);
-        if (t.coins() > 0 && t.defender().equals(from)) return Ledger.takeCoins(from, t.coins());
-        if (t.reparations() > 0 && t.aggressor().equals(from)) return Ledger.takeCoins(from, t.reparations());
-        return 0;
+        if (t.coins() > 0 && t.defender().equals(from)) return ransom + Ledger.takeCoins(from, t.coins());
+        if (t.reparations() > 0 && t.aggressor().equals(from)) return ransom + Ledger.takeCoins(from, t.reparations());
+        return ransom;
     }
 
     /**
@@ -1811,11 +1816,13 @@ public final class WarAndPeace {
         int repaid = terms.reparations() > 0 ? pay(a, d, terms.reparations(), t) : 0;
         // The spies each holds of the other's, sent home (Spies).
         int freed = Spies.exchange(level, a, d);
+        String pows = Prisoners.atPeace(level, a, d, t, day);              // [war-after] prisoners of war exchanged, ransomed or held for ransom
         String text = terms.share() >= 2 ? name(d) + " concedes " + given
             : terms.share() == 1 ? name(d) + " concedes part: " + given
             : repaid > 0 ? "no gain to " + name(a) + ", which withdraws its demands and pays " + repaid + " coins in reparations"
             : "no gain to either; " + name(a) + " withdraws its demands";
         if (freed > 0) text += "; " + freed + (freed == 1 ? " captive" : " captives") + " sent home";
+        if (!pows.isEmpty()) text += "; " + pows;                                                    // [war-after]
         text += "; peace until day " + (day + TREATY_DAYS);
         Wars.end(a, d);
         Arms.peace(level, terms.share() >= 1 ? a : repaid > 0 ? d : null, terms.share() >= 1 ? d : a);   // [arms] a charge for the war won
@@ -2776,6 +2783,9 @@ public final class WarAndPeace {
         long feast = feastDay(id);
         if (feast >= day) election.add("a feast for the peace on day " + (feast + 1));
         out.put("election", strings(election));
+        out.put("prisoners", strings(Prisoners.report(id, day)));                     // [war-after] prisoners of war we hold
+        out.put("held_away", strings(Prisoners.oursHeld(id)));                        // [war-after] ours held by others
+        out.put("ruins", strings(Ruins.reportLines(level, id)));                      // [war-after] the ruins we know of
         return out;
     }
 

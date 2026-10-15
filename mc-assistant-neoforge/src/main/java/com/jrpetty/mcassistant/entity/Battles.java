@@ -896,6 +896,8 @@ public final class Battles {
                 capture(level, f, by, w, day);
                 n++;
             }
+            // [war-after] A rout: those of the routed the winner has surrounded, none of their own about them, taken too.
+            if (outcome == BattleModel.Outcome.ROUT) Prisoners.caughtInRout(level, w, l, n, CAPTIVES_MOST, day);
         }
 
         /** The fallen banner: back in its bearer's hand if its side held the field, else carried off by the winner as a trophy. */
@@ -1742,6 +1744,7 @@ public final class Battles {
         Spies.takeInBattle(w.town, f.id, f.name, f.town, day);
         Battle b = battleOf(f);
         if (b != null) b.captives.add(f.name);
+        Prisoners.takenInBattle(level, f, w.town, b == null || b.c == null ? null : b.c.name, day);   // [war-after] a prisoner of war: rank, ransom, kin
         if (level.getEntity(f.id) instanceof VillageFolkEntity e) {
             e.setPose(Pose.STANDING);
             if (by != null && level.getEntity(by.id) instanceof VillageFolkEntity captor && w.use(Items.LEAD, 1)) e.setLeashedTo(captor, true);

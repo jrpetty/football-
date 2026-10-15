@@ -173,6 +173,9 @@ public final class Makers {
         declare("constable_badge", "the smith (the shop's workshop with no smith)",
             "for the town's constable when it has none, and for each player the watch swears in as a special constable",
             "Police.smith / Police.badges");
+        // [war-after] The Wanted Poster: a guard writes one up, of the stores' paper, ink and red dye, for a player who asks (Outlaws.poster).
+        declare("wanted_poster", "the watch (a guard writes it up at the town's bench)",
+            "when a player asks a guard for a poster of the town's outlaws", "Outlaws.poster");
         // [roles-e] The carter's driving whip, of the stores' stick, string and leather (Carters.make).
         declare("driving_whip", "the town, at its bench, for its carter", "once for the carter of a town with a wagon, when it first takes the bench",
             "Carters.whip");

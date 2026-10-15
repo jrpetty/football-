@@ -73,6 +73,9 @@ public final class WarPage {
         section(lines, "Allies", strings(m, "allies"), 'G', "No sworn allies.");
         section(lines, "Held against our neighbours (the last month)", strings(m, "grievances"), 'N', "Nothing.");
         section(lines, "Treaties", strings(m, "treaties"), 'G', "None signed.");
+        section(lines, "Prisoners of war we hold", strings(m, "prisoners"), 'N', "None.");          // [war-after]
+        section(lines, "Ours held prisoner", strings(m, "held_away"), 'W', "None.");                // [war-after]
+        section(lines, "Ruins round about", strings(m, "ruins"), 'M', "None known.");               // [war-after]
         section(lines, "Wars before", strings(m, "past"), 'M', "None.");
         List<String> fallen = strings(m, "fallen");
         String rem = m.getString("remembrance");

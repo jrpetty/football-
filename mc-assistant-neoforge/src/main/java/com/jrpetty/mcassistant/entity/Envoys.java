@@ -307,6 +307,7 @@ public final class Envoys {
             if (errand == Errand.PEACE) t.purse = Ledger.takeCoins(from.id(), Math.min(8, Ledger.coins(from.id()) / 4));
         }
         t.purse += WarAndPeace.peacePurse(level, from.id(), to.id(), errand);   // [war-peace] what a white flag will concede, in coin
+        t.purse += Prisoners.ransomPurse(from.id(), to.id(), errand, day);       // [war-after] the ransom of our folk they hold
         envoy.trip(t);
         Ledger.note(from.id(), "envoyed/" + to.id(), Long.toString(day));
         String fromName = Villages.name(from.id()), toName = Villages.name(to.id());

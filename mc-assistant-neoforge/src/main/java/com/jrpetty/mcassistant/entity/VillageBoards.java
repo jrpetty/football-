@@ -333,6 +333,8 @@ public final class VillageBoards {
         List<String> out = new ArrayList<>();
         Villages.Village v = id == null ? null : Villages.get(id);
         if (v == null) {
+            List<String> ruin = Ruins.board(level, id);                 // [war-after] the board of a town that is gone: its ruin
+            if (ruin != null) return ruin;
             out.add("TH|The Village Board");
             out.add("SM|No village keeps this board. Put it up in a village and it will tell you all about it.");
             return out;
@@ -490,6 +492,7 @@ public final class VillageBoards {
         out.add(alarm != null ? "RB|THE BELL IS RINGING: " + alarm + "!" : "RM|The watch: all quiet.");
         out.addAll(Crime.board(level, id));                 // [crime] a theft reported, a trial, the stocks, the month's crime
         out.addAll(Police.board(level, id));                // [police] today's roster and its captain, the cells, the wanted, the curfew
+        out.addAll(AfterWar.board(id));                     // [war-after] prisoners of war held, ours held; the outlaws' posters
         out.addAll(Disasters.board(level, id));              // [disasters] a fire now, the flood, the drought, the rebuilding
         String kit = WatchKit.boardLine(id);                // [guard-kit] the watch, and what the town has it in
         if (kit != null) out.add("RN|" + kit);

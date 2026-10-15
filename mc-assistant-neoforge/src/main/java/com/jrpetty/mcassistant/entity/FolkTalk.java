@@ -104,6 +104,9 @@ public final class FolkTalk {
             return bye(f, p);
         }
         f.startTalking(p);
+        // [war-after] A prisoner of war; the watch on its prisoners and bounties; an outlaw's dealings, and the folk afraid of it.
+        String afterWar = AfterWar.talk(f, p, topic, text);
+        if (afterWar != null) return manner(f, afterWar);
         // A village that has turned against you closes ranks.
         UUID village = f.ownerId();
         if (village != null && me.affinity(p.getUUID()) < 0 && topic != TalkTopic.GIFT && topic != TalkTopic.FINE
@@ -357,6 +360,7 @@ public final class FolkTalk {
         if (village != null && !f.isBaby() && Inn.inn(village) != null && Inn.keeper(village) == f) sb.append(" inn");
         if (Windmill.isMiller(f)) sb.append(" miller");
         if (!f.isBaby()) sb.append(RoadPosts.contextFlags(f));                // [roles-e] wheelwright, carter, planner
+        sb.append(AfterWar.contextFlags(f, p));                               // [war-after] a prisoner, a town holding prisoners, an outlaw
         return sb.toString();
     }
 
@@ -374,6 +378,7 @@ public final class FolkTalk {
             Standing.View v = Standing.of(f.ownerId(), p.getUUID(), f.level().getGameTime());
             where = Villages.name(f.ownerId()) + " · " + Villages.ageOf(f.ownerId()).label + " · you: "
                 + Standing.titleIn(f.ownerId(), v.title());
+            where += Outlaws.talkWord(f.ownerId(), p.getUUID());                   // [war-after] OUTLAW, or how wanted
             String earned = QuestRewards.titleLine(f.ownerId(), p.getUUID());   // [quests] "Thief-taker, the town's Medal"
             if (!earned.isEmpty()) where += ", " + earned;
         }
@@ -530,6 +535,7 @@ public final class FolkTalk {
         line(sb, "In the museum", Museum.cardLine(f));      // its finds on show there
         line(sb, "Library", Library.cardLine(f));           // [library] the librarian, what it wrote, its trade's book read
         line(sb, "The war", WarAndPeace.cardLine(f));        // [war-peace] its town's war, its vote in the council of war
+        line(sb, "Prisoner", Prisoners.cardLine(f));         // [war-after] a prisoner of war: whose, since when, its ransom, where held
         String family = life.partnerName().isEmpty() ? "" : "partner " + life.partnerName();
         if (life.children() > 0) family += (family.isEmpty() ? "" : "; ") + life.children() + (life.children() == 1 ? " child" : " children");
         if (!life.parents().isEmpty()) family += (family.isEmpty() ? "" : "; ") + "child of " + life.parents();
@@ -786,6 +792,7 @@ public final class FolkTalk {
             case "anniversary" -> Families.moodWords(f);
             case "warweary", "warproud" -> WarAndPeace.moodWords(f, why);     // [war-peace]
             case "vassal" -> Vassals.moodWords(f);                            // [war] a vassal's folk resent it
+            case "captive", "kinheld" -> AfterWar.moodWords(f, why);          // [war-after] held prisoner, or its kin held
             case "bard", "visit" -> Visitors.moodWords(f, why);        // [batchG] the bard's songs, a friend from away
             case "cold" -> Health.moodWords(f);                                     // [batchA]
             case "smoke", "noise", "parkside", "park" -> Quarters.words(f, why);      // where it lives (Quarters, Park)
@@ -1677,6 +1684,7 @@ public final class FolkTalk {
         if (!n.isEmpty()) said.add("Did you hear? " + cap(n.get(0).text()) + ".");
         said.addAll(Crime.gossip(f));                   // [crime] a thief about, who was had up, who sat in the stocks
         said.addAll(Police.gossip(f));                  // [police] the chase, the arrest, a fight in the street, the curfew
+        said.addAll(AfterWar.gossip(f));                // [war-after] the ruins round about, the outlaws on the poster
         said.addAll(QuestTalk.gossip(f, p));                  // [quests] who did what for whom, and the story going on
         said.addAll(TownSpeech.gossip(f));                    // [culture2] who the town calls what now, and why
         said.addAll(Individual.gossip(f));                    // [individual] who's afraid of what, who's always where

@@ -229,6 +229,7 @@ public final class TownPlan {
             case "armoury" -> "civic";                // [war-prep] the armoury faces the square with the trades
             case "firestation" -> "civic";            // [disasters] the fire station, among the trades it guards
             case "watchhouse" -> "civic";             // [police] the watch house, on the square with the trades it keeps the peace among
+            case "stockade" -> "civic";               // [war-after] the stockade, by the watch that keeps it
             case "trainingyard" -> "corner";          // [war-prep] the training yard by the watchtower, at a corner
             case "lighthouse", "pen", "gateway", "graveyard" -> "edge";
             case "powderhut" -> "edge";               // [fireworks] the powder hut, away from the houses (FireworksMaker)

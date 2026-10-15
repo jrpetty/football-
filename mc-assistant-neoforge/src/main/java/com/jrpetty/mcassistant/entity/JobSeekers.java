@@ -795,6 +795,11 @@ public final class JobSeekers {
 
     /** Refugees: the household goes to the town that will take it in. */
     static void refuge(ServerLevel level, List<VillageFolkEntity> household, Villages.Village from, Villages.Village to) {
+        refuge(level, household, from, to, "homeless after the raid");
+    }
+
+    /** [war-after] The same, homeless for another reason: after the sack of the town, when it was given up. */
+    static void refuge(ServerLevel level, List<VillageFolkEntity> household, Villages.Village from, Villages.Village to, String because) {
         if (household.isEmpty()) return;
         VillageFolkEntity head = household.get(0);
         for (VillageFolkEntity m : household) if (!m.isBaby()) { head = m; break; }
@@ -807,7 +812,7 @@ public final class JobSeekers {
         FolkTalk.speak(head, FolkTalk.pick(level.getRandom(), "There's nowhere left to sleep here... " + Villages.name(to.id()) + " will take us in.",
             "We've lost everything. " + Villages.name(to.id()) + " has room for us, they say.", "Come on. " + Villages.name(to.id()) + " will have us."));
         for (VillageFolkEntity m : household) {
-            leave(level, m, from, to, StationTask.NONE, "homeless after the raid", true, head.getUUID(), m == head, names, going);
+            leave(level, m, from, to, StationTask.NONE, because, true, head.getUUID(), m == head, names, going);
         }
     }
 

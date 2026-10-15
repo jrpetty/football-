@@ -52,7 +52,7 @@ public final class Laws {
     public static final int BANISHED_DAYS = 7;
 
     /** What a player had in a store chest when it opened it: village, where, and how many of each. */
-    private record Look(UUID village, List<BlockPos> chests, Map<Item, Integer> had, Map<Item, Integer> carried) {}
+    private record Look(UUID village, List<BlockPos> chests, Map<Item, Integer> had, Map<Item, Integer> carried, String place) {}
 
     private static final Map<UUID, Look> LOOKING = new ConcurrentHashMap<>();
 
@@ -69,7 +69,8 @@ public final class Laws {
 
     /** Is the player banished from the village today? (Or barred by its watch till it pays its fine: PlayerLaw.) */
     public static boolean banished(@Nullable UUID village, UUID player, long day) {
-        return village != null && (Ledger.record(village, player)[2] > day || PlayerLaw.barred(village, player));   // [police] barred
+        return village != null && (Ledger.record(village, player)[2] > day || PlayerLaw.barred(village, player)   // [police] barred
+            || Outlaws.isOutlaw(village, player));                                                               // [war-after] an outlaw
     }
 
     // ------------------------------------------------------------------ seeing it done
@@ -102,15 +103,17 @@ public final class Laws {
         Villages.Village v = Villages.nearest(level, pos, Villages.VILLAGE_RANGE);
         if (v == null || Citizens.is(v.id(), e.getEntity().getUUID())) return;
         List<BlockPos> stores = Villages.storeChests(level, v.id());
-        if (!stores.contains(pos)) return;
+        // [war-after] A chest in one of its homes or its shops and workshops is the town's folk's: taking from it is theft too.
+        String place = stores.contains(pos) ? "the stores" : Homes.inAHome(v.id(), pos) ? "a house" : builtBy(level, v, pos);
+        if (place == null || place.equals("the village's stores")) return;
         List<BlockPos> chests = new ArrayList<>();
         chests.add(pos.immutable());
         // A double chest: the other half too.
         for (net.minecraft.core.Direction d : net.minecraft.core.Direction.Plane.HORIZONTAL) {
             BlockPos n = pos.relative(d);
-            if (stores.contains(n) && level.getBlockState(n).getBlock() instanceof ChestBlock) chests.add(n.immutable());
+            if ((stores.contains(n) || !place.equals("the stores")) && level.getBlockState(n).getBlock() instanceof ChestBlock) chests.add(n.immutable());
         }
-        LOOKING.put(e.getEntity().getUUID(), new Look(v.id(), chests, count(level, chests), carried(e.getEntity())));
+        LOOKING.put(e.getEntity().getUUID(), new Look(v.id(), chests, count(level, chests), carried(e.getEntity()), place));
     }
 
     @SubscribeEvent
@@ -141,7 +144,7 @@ public final class Laws {
         Villages.Village v = Villages.get(look.village());
         if (v == null) return;
         PlayerLaw.taken(p, gones);                                   // [police]
-        offence(level, v, p, "taking " + taken + " " + what + (taken > 1 && !what.endsWith("s") ? "s" : "") + " from the stores",
+        offence(level, v, p, "taking " + taken + " " + what + (taken > 1 && !what.endsWith("s") ? "s" : "") + " from " + look.place(),   // [war-after] or a house, a shop
             Math.max(2, (int) Math.round(worth * 2)));
     }
 
@@ -217,6 +220,7 @@ public final class Laws {
         if (PlayerLaw.offence(level, v, p, what, fine)) return;     // [police] the watch's way: warned, fined, barred (PlayerLaw)
         VillageFolkEntity seen = witness(level, v.id(), p);
         if (seen == null) return;                                    // nobody saw
+        Outlaws.crime(level, v, p, Outlaws.deedOf(what), what);      // [war-after] the more wanted for it
         UUID id = v.id();
         long day = level.getDayTime() / 24000L;
         String name = p.getName().getString();
@@ -301,6 +305,7 @@ public final class Laws {
         // [police] Banished by the council; or, barred by the watch, it struck back at the guards driving it out (PlayerLaw).
         // Barred alone is not fought: the gates are shut to it and the shops refuse it, till it pays.
         return e instanceof Player p && !exempt(p) && village != null
-            && (Ledger.record(village, p.getUUID())[2] > p.level().getDayTime() / 24000L || PlayerLaw.resisting(village, p.getUUID()));
+            && (Ledger.record(village, p.getUUID())[2] > p.level().getDayTime() / 24000L || PlayerLaw.resisting(village, p.getUUID())
+                || Outlaws.isOutlaw(village, p.getUUID()));                  // [war-after] an outlaw: taken on sight
     }
 }
