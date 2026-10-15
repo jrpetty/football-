@@ -5347,7 +5347,7 @@ def main():
             stage(r, look, cx, cz)
         except Exception as e:  # noqa: BLE001
             say("%s stage failed: %s" % (name, e))
-    for name, stage in (("taxes and knights", civic_land_stage), ("theatre and wonders", culture_wonders_stage), ("inventions", tech_tree_stage)):
+    for name, stage in (("taxes and knights", civic_land_stage), ("theatre and wonders", culture_wonders_stage), ("inventions", tech_tree_stage), ("harbours, roads and migration", trade_world_stage)):
         try:
             stage(r, look, cx, cz)                     # [realm] the 0.309 round
         except Exception as e:  # noqa: BLE001

@@ -287,10 +287,11 @@ public final class ShipCalls {
         return n;
     }
 
-    /** The days to the next ship: a week, two days sooner with the light burning, sooner again with a good name. */
+    /** The days to the next ship: a week, two days sooner with the light burning, sooner again with navigation and a good name. */
     static int gap(UUID village, long day, RandomSource r) {
         int g = USUAL_GAP;
         if (Harbours.litLately(village, day)) g -= 2;
+        if (InventionWorks.openSea(village)) g--;                                // [realm] navigation known: the open-sea traders come too
         int rep = reputation(village);
         if (rep >= 6) g--;
         if (rep >= 15) g--;
