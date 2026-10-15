@@ -406,6 +406,9 @@ public final class VillageCommands {
                 .then(Commands.literal("buildings").executes(ctx -> showcase(ctx, false)))
                 .then(Commands.literal("town").executes(ctx -> showcase(ctx, true)))
                 .then(Commands.literal("ages").executes(VillageCommands::showcaseAges))
+                // [gallery] Every drawing built as a town builds it, a row of twelve at a time, with where to stand
+                // to photograph each from outside and from inside its door (Gallery, tools/realworld/gallery.py).
+                .then(Gallery.command())
                 // A raid on the staged town at night: the watch on the wall, a band at the gate.
                 .then(Commands.literal("raid").executes(VillageCommands::showcaseRaid))
                 // The staged town's windows lit, as they are after dark, or put out.
