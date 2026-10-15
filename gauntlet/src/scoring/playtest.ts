@@ -35,6 +35,12 @@ export const REACT_THRESHOLD = 0.005;
 export const BLANK_THRESHOLD = 0.003;
 /** Real-time budget for one step of the page (a longer wait means an endless loop froze it). */
 const STEP_TIMEOUT_MS = 10_000;
+/**
+ * The fake clock is advanced at most this much game time per step, so the real-time budget covers about fifteen
+ * frames, not a whole gap between screenshots (up to 6 s ≈ 360 frames in the untouched copy). A game is called
+ * frozen only if it needs more than half a second of real time per frame, never because the machine is slow or busy.
+ */
+export const MAX_STEP_GAME_MS = 250;
 const LOAD_TIMEOUT_MS = 12_000;
 /** The fake clock's start (a fixed date, so games that read the time of day behave the same on every run). */
 const CLOCK_START = Date.UTC(2026, 0, 1, 12, 0, 0);
@@ -348,15 +354,16 @@ async function session(html: string, steps: Step[] | null, liveKey?: string): Pr
           now = to;
           return;
         }
+        const target = Math.min(to, now + MAX_STEP_GAME_MS);
         try {
-          await within(page.clock.runFor(to - now), STEP_TIMEOUT_MS, now, phase);
-          now = to;
+          await within(page.clock.runFor(target - now), STEP_TIMEOUT_MS, now, phase);
+          now = target;
         } catch (e) {
           if (e instanceof Hung) throw e;
           callbackErrors++;
           note((e as Error).message.replace(/^clock\.runFor:\s*/, '').split('\n')[0]!);
           const at = (await within(page.evaluate('Date.now()') as Promise<number>, STEP_TIMEOUT_MS, now, phase)) - CLOCK_START;
-          now = Math.min(to, Math.max(now + 1, at));
+          now = Math.min(target, Math.max(now + 1, at));
         }
       }
     };

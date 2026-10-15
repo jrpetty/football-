@@ -137,6 +137,35 @@ test('draw-it-blind: a plausible word-level redraw scores in between', async () 
   assert.ok(result.score > 0.7 && result.score < 0.97, `score ${result.score}`);
 });
 
+test('draw-it-blind: hedging with extra shapes never pays (a no-information "every type in every colour" drawing scored ~0.6)', async () => {
+  const shotgun = (palette: readonly string[]) => {
+    const parts: string[] = [];
+    for (const c of palette) {
+      const fill = paletteHex(c as never);
+      parts.push(
+        `<circle cx="200" cy="200" r="35" fill="${fill}"/>`,
+        `<rect x="165" y="165" width="70" height="70" fill="${fill}"/>`,
+        `<rect x="160" y="180" width="80" height="40" fill="${fill}"/>`,
+        `<polygon points="200,165 235,235 165,235" fill="${fill}"/>`,
+        `<polygon points="200,165 208,190 235,190 213,205 221,232 200,216 179,232 187,205 165,190 192,190" fill="${fill}"/>`,
+      );
+    }
+    return svgOf(parts.join(''));
+  };
+  for (const seed of [101, 202, 303]) {
+    const { result } = await play(seed, (_s, u) => (isDescribe(u) ? WORDS_ONLY : shotgun(PALETTE.map((p) => p.name))));
+    assert.equal(result.score, 0, `standard seed ${seed}: ${result.summary}`);
+    const hard = await play(seed, (_s, u) => (isDescribe(u) ? WORDS_ONLY : shotgun(EXTENDED_PALETTE.map((p) => p.name))), HARD);
+    assert.equal(hard.result.score, 0, `hard seed ${seed}: ${hard.result.summary}`);
+  }
+  // Drawing each shape in a second, wrong colour as well (a colour hedge) scores below the plain drawing.
+  const scene = sceneFor(101);
+  const plain = await play(101, oraclePolicy(scene));
+  const hedgedSvg = renderSceneSvg(scene).replace(/<\/svg>\s*$/, '') + scene.shapes.map((s) => `<circle cx="${s.cx}" cy="${s.cy}" r="${s.w / 2}" fill="${paletteHex(PALETTE.find((p) => p.name !== s.color)!.name)}"/>`).join('') + '</svg>';
+  const hedged = await play(101, (_s, u) => (isDescribe(u) ? WORDS_ONLY : svgOf(hedgedSvg.replace(/^<svg[^>]*>|<\/svg>$/g, ''))));
+  assert.ok(hedged.result.score < plain.result.score - 0.1, `${hedged.result.score} vs ${plain.result.score}`);
+});
+
 test('draw-it-blind: garbage, empty, refusal and random-backtick policies score 0 without crashing', async () => {
   for (const r of [constantResponder('lorem ipsum dolor sit amet'), randomBacktickResponder(11), constantResponder('<svg><circle r="x"/><rect width=></svg>')]) {
     const { result } = await play(303, r);

@@ -58,6 +58,19 @@ test('plan rungs are replayed: minimum = 1, longer but valid ≤ 0.25, illegal o
   assert.equal(scoreLadder('plan', PUZZLE, 'FINAL ANSWER: [5]').score, 1, 'decoration around the numbers is ignored');
 });
 
+test('a stated move count next to a plan is not read as a tile (a correct plan used to score 0)', () => {
+  const real = byId('horizon.sliding-ladder').cases[0]!.expected as PlanKey;
+  const plan = real.plan!.join(' ');
+  const n = real.plan!.length;
+  for (const answer of [`${plan} (${n} moves)`, `${n} moves: ${plan}`, `${plan} — ${n} moves`, `${plan}, total ${n} moves.`, `${plan} [${n} moves, optimal]`, `in ${n} moves: ${plan}`]) {
+    assert.equal(scoreLadder('plan', real, `FINAL ANSWER: ${answer}`).score, 1, answer);
+  }
+  // Tiles described in words keep their numbers; content is still strict.
+  assert.equal(scoreLadder('plan', PUZZLE, 'FINAL ANSWER: tile 5 moves left').score, 1);
+  assert.equal(scoreLadder('plan', PUZZLE, 'FINAL ANSWER: 5 5 5 (3 moves)').score, 0.0833);
+  assert.equal(scoreLadder('plan', PUZZLE, 'FINAL ANSWER: 2 (1 move)').score, 0);
+});
+
 test('grid rungs need the whole grid, on lines or separated by slashes', () => {
   const key = ['#.#', '###', '..#'];
   assert.equal(scoreLadder('grid', key, 'Reasoning...\nFINAL ANSWER:\n#.#\n###\n..#').score, 1);

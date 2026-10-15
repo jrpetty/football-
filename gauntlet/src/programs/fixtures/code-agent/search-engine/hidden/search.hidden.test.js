@@ -81,8 +81,9 @@ test('ties are ordered by id on every page', () => {
 
 test('ties do not depend on indexing order', async () => {
   const engine = createEngine();
-  await Promise.all(['b', 'e', 'a', 'd', 'c'].map((id) => engine.addAsync({ id, title: 'Status', body: 'service outage' })));
-  assert.deepEqual(engine.search('outage').hits.map((h) => h.id), ['a', 'b', 'c', 'd', 'e']);
+  // Simulated latencies e:8 g:1 c:6 f:0 d:7 ms, so the documents arrive as f, g, c, d, e.
+  await Promise.all(['e', 'g', 'c', 'f', 'd'].map((id) => engine.addAsync({ id, title: 'Status', body: 'service outage' })));
+  assert.deepEqual(engine.search('outage').hits.map((h) => h.id), ['c', 'd', 'e', 'f', 'g']);
 });
 
 test('phrases count stop words and apostrophe words', () => {

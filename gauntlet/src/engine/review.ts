@@ -3,6 +3,7 @@ import type { CaseResult, CaseResultLite } from '../core/types.ts';
 import { appendResult, listRunIds, readManifest, readResults, toLite } from './store.ts';
 import { loadTests } from '../core/registry.ts';
 import { applyGalleryHumanScores, isGalleryResult } from './gallery-review.ts';
+import { withScorerCap } from '../grading/official.ts';
 
 export interface ReviewItem {
   runId: string;
@@ -62,9 +63,11 @@ export function submitHumanScore(input: { runId: string; key: string; score: num
   if (current.scoreDetail.judgeDisagreement) {
     // Judges disagreed: the human panel arbitrates and its mean becomes the score. The judges' verdicts stay on record.
     const automated = (current.scoreDetail.automatedScore as number | undefined) ?? current.score;
-    updated.score = Math.round(humanMean * 10000) / 10000;
-    updated.passed = humanMean >= 0.7;
-    updated.summary = `Arbitrated by humans ${(humanMean * 10).toFixed(1)}/10 (judges disagreed; panel gave ${automated === null ? '—' : (automated * 10).toFixed(1)})`;
+    // The scorer's cap (a Game Jam game that froze or stayed blank) still holds, exactly as in the Grading Station.
+    const arbitrated = withScorerCap(Math.round(humanMean * 10000) / 10000, current.scoreDetail);
+    updated.score = arbitrated;
+    updated.passed = arbitrated >= 0.7;
+    updated.summary = `Arbitrated by humans ${(humanMean * 10).toFixed(1)}/10 (judges disagreed; panel gave ${automated === null ? '—' : (automated * 10).toFixed(1)})${arbitrated < humanMean - 1e-9 ? ` · capped at ${Math.round(arbitrated * 100)}` : ''}`;
     updated.scoreDetail = { ...updated.scoreDetail, automatedScore: automated, arbitrated: true };
   } else if (current.status === 'pending-human' || (current.scoreDetail as { humanScored?: boolean }).humanScored) {
     // Human-scored tests: the human panel mean *is* the score.

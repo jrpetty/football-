@@ -193,6 +193,25 @@ test('human review turns a pending result into a scored one', async () => {
   assert.equal(replaced.score, 0.9, 'a rater re-scoring replaces their previous score');
 });
 
+test('Blind Review arbitration keeps the scorer\'s cap (a Game Jam game that froze stays capped at 30)', async () => {
+  const item = review.reviewQueue('creative.poem')[0]!;
+  const base = store.readResults(item.runId).find((r) => r.key === item.key)!;
+  // A judged result whose judges disagreed and whose scorer capped it (the game froze during the playtest).
+  const capped = {
+    ...base,
+    key: `${base.key}::capped`,
+    status: 'ok' as const,
+    score: 0.3,
+    passed: false,
+    humanScores: [],
+    scoreDetail: { judgeDisagreement: true, gameJam: { cap: 'The game froze during the playtest, so its score is capped at 30.' } },
+  };
+  store.appendResult(capped);
+  const r = review.submitHumanScore({ runId: item.runId, key: capped.key, score: 0.9, rater: 'alice' });
+  assert.equal(r.score, 0.3, 'before the fix the human 9/10 replaced the capped score with 0.9');
+  assert.match(r.summary, /Arbitrated by humans 9\.0\/10 .*capped at 30/);
+});
+
 test('validateTest reports actionable errors', () => {
   const errors = registry.validateTest({ ...numberTest, id: 'Bad Id', version: '1', category: 'nope', cases: [{ id: 'c1', prompt: 'x', expected: 'not a number' }] } as never);
   assert.ok(errors.some((e) => /id must look like/.test(e)));
@@ -269,6 +288,18 @@ test('judges never grade their own vendor when another judge is available', () =
   assert.deepEqual(runner.selectJudges(panel, contestant, true).map((x) => x.id), ['o1', 'g1']);
   assert.deepEqual(runner.selectJudges([j('a1', 'Anthropic')], contestant, true).map((x) => x.id), ['a1'], 'falls back rather than having no judge');
   assert.deepEqual(runner.selectJudges(panel, j('a1', 'Anthropic'), false).map((x) => x.id), ['o1', 'g1'], 'a model never judges itself');
+});
+
+test('a model never judges itself, even when it is the only judge or is served by another provider', () => {
+  const j = (id: string, vendor: string, model = id, provider = 'p') => ({ id, label: id, vendor, provider, model, color: '#000000', enabled: true, pricing: { inputPerM: 1, outputPerM: 1 }, configHash: 'x' });
+  // Before the fix the contestant fell back to judging itself when no other judge was left.
+  assert.deepEqual(runner.selectJudges([j('a1', 'Anthropic')], j('a1', 'Anthropic'), true), []);
+  assert.deepEqual(runner.selectJudges([j('a1', 'Anthropic')], j('a1', 'Anthropic'), false), []);
+  // The same model through a router ("anthropic/claude-x" on OpenRouter) is still the same model.
+  const viaRouter = j('or-claude', 'Anthropic', 'anthropic/claude-x', 'openrouter');
+  assert.deepEqual(runner.selectJudges([viaRouter, j('g1', 'Google')], j('claude', 'Anthropic', 'claude-x'), false).map((x) => x.id), ['g1']);
+  assert.equal(runner.isSameModel({ model: 'anthropic/claude-x:free' }, { model: 'Claude-X' }), true);
+  assert.equal(runner.isSameModel({ model: 'claude-x' }, { model: 'claude-y' }), false);
 });
 
 test('an API model runs end to end and calibrates cost estimates (baseline/manual results never do)', async () => {
