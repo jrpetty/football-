@@ -63,6 +63,7 @@ export function applyOfficial(r: CaseResult, spec: GradingSpec, policy: Official
       aiRole: spec.aiRole,
       humanScored: spec.kind === 'human',
       judgeWeight: spec.kind === 'artifact' ? (spec.judgeWeight ?? 0) : null,
+      zeroIfGradedZero: spec.kind === 'artifact' && spec.zeroIfGradedZero === true,
       autoScore,
       checkScore: typeof d.checkScore === 'number' ? d.checkScore : null,
       runAiScore: run,

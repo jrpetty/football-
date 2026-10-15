@@ -55,9 +55,18 @@ export function parseBigInteger(answer: string): string | null {
   return runs[0]!.replace(/^0+(?=\d)/, '');
 }
 
-/** Tile numbers of a plan: every integer in the answer line, in order. Anything else in the line is ignored. */
+/** A stated move count, which is not a tile: "(20 moves)" anywhere, "20 moves:" before the plan, ", 20 moves" after it. */
+const MOVE_COUNT = [
+  /[([]\s*(?:in\s+|total\s*[:=]?\s*)?\d+\s*(?:moves?|steps?)\b[^)\]]*[)\]]/gi,
+  /^\s*(?:in\s+)?\d+\s*(?:moves?|steps?)\s*[:：-]\s*/i,
+  /[\s,;:–—-]+(?:in\s+|total\s*[:=]?\s*)?\d+\s*(?:moves?|steps?)\s*[.!]?\s*$/i,
+];
+
+/** Tile numbers of a plan: every integer in the answer line, in order. Anything else in the line is ignored, including a stated move count. */
 export function parsePlan(answer: string): number[] {
-  return (answer.match(/\d+/g) ?? []).map(Number);
+  let tiles = answer;
+  for (const re of MOVE_COUNT) tiles = tiles.replace(re, ' ');
+  return (tiles.match(/\d+/g) ?? []).map(Number);
 }
 
 /** Replays a plan. Returns the index of the first illegal move (or -1) and whether the goal is reached. */

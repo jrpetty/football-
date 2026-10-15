@@ -1,5 +1,5 @@
 import type { ChatImage, ScoreBreakdownItem, ScoreDetail, ScorerSpec } from '../core/types.ts';
-import { extractArtifact, type JudgeCall, type ScoringInput, type ScoringOutcome } from './index.ts';
+import { extractArtifact, judgesDisagree, type JudgeCall, type ScoringInput, type ScoringOutcome } from './index.ts';
 import { JUDGE_SYSTEM, fill } from './judge-prompts.ts';
 import { GENRES, MOTION_SIZE, runPlaytest, type PlaytestResult } from './playtest.ts';
 import { GAME_JAM_PROTOCOL, JAM_CRITERIA, JAM_WEIGHTS, VISION_JUDGE_VISUAL_WEIGHT, criteriaOf, jamCaseSpec, numberedRequirements, validateGameJamCase, type GameJamDetail, type JamCaseSpec, type JamCriterion, type JamGenre, type JamJudgeCard, type JamRequirement, type RequirementVerdict } from './game-jam-shared.ts';
@@ -382,7 +382,7 @@ export async function scoreGameJam(input: ScoringInput, scorer: Extract<ScorerSp
     detailBase.judge = judgeCards.map((j) => ({ contestantId: j.judgeId, score: j.total, rationale: [j.verdict, `Visuals ${ten(j.criteria.visual)}/10${j.sawImages ? '' : ' (code only)'} · creativity ${ten(j.criteria.creativity)} · plays ${ten(j.criteria.plays)} · feel ${ten(j.criteria.feel)} · ambition ${ten(j.criteria.ambition)} · checklist ${Math.round((j.criteria.fidelity ?? 0) * 100)}%`].filter(Boolean).join(' ') }));
     detailBase.judgeScore = round(judgeScore);
     detailBase.judgeSpread = round(spread);
-    if (spread > 0.3) {
+    if (judgesDisagree(judgeCards.map((j) => j.total))) {
       detailBase.judgeDisagreement = true;
       notes = `Judges disagree (spread ${(spread * 10).toFixed(1)} points) — flagged for human review`;
     }

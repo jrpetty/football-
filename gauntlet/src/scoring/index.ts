@@ -71,6 +71,53 @@ function round(n: number): number {
   return Math.round(n * 10000) / 10000;
 }
 
+// ─────────────────────────────── Judge verdict parsing ───────────────────────────────
+
+/**
+ * The grade on a judge's `SCORE:` line (0–10), or null when the line is not one clear grade on a 0–10 scale.
+ * Accepts "7", "7.5", "**7**", "<7>", "7/10", "7 / 10", "7 out of 10", "7 (out of 10)" and trailing words
+ * ("7 — solid"). Rejects other scales ("4/5"), ranges and choices ("7-8", "7 or 8"), negative or
+ * out-of-range numbers and "N/A". A rejected verdict is left out of the panel (never read as 0 or 10).
+ */
+export function parseJudgeScore(raw: string | null): number | null {
+  if (raw === null) return null;
+  const t = raw.replace(/[*_`"“”]/g, '').replace(/[−–—]/g, '-').trim().replace(/^[<[(]\s*/, '');
+  const m = /^(\d+(?:\.\d+)?)(?![\d.])(.*)$/s.exec(t);
+  if (!m) return null;
+  const n = Number(m[1]);
+  const rest = m[2]!.trim().replace(/^[>\])]\s*/, '').replace(/^\(\s*/, '');
+  const scale = /^(?:\/|out\s+of\b|of\b)\s*(\d+(?:\.\d+)?)/i.exec(rest);
+  if (scale) {
+    if (Number(scale[1]) !== 10) return null;
+  } else if (/^(?:-|to\b|or\b|\/|,)\s*\d/i.test(rest)) return null;
+  return Number.isFinite(n) && n >= 0 && n <= 10 ? n : null;
+}
+
+/**
+ * The label on a judge's `LABEL:` line, or null unless exactly one of the test's labels is named.
+ * Case, spaces, hyphens and decoration are ignored ("**Caught trap**" = CAUGHT_TRAP). A line naming two
+ * labels ("PARTIAL or CORRECT", "CORRECT (not WRONG)") is a hedge and is left out of the panel.
+ */
+export function parseJudgeLabel(raw: string | null, labels: readonly JudgeLabel[]): JudgeLabel | null {
+  if (raw === null) return null;
+  const key = (s: string) => `_${s.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')}_`;
+  const line = key(raw);
+  const hits = labels.filter((l) => line.includes(key(l.id)));
+  // A label whose id is part of a longer named label (e.g. CORRECT inside PARTLY_CORRECT) is not a second label.
+  const named = hits.filter((h) => !hits.some((o) => o !== h && key(o.id).length > key(h.id).length && key(o.id).includes(key(h.id))));
+  return named.length === 1 ? named[0]! : null;
+}
+
+/**
+ * Whether a panel's grades (0..1 each) disagree: the spread is MORE than 3 points out of 10 (docs/METHODOLOGY.md).
+ * Compared in whole points, so floating-point noise (0.8 − 0.5 = 0.30000000000000004) never flags a spread of exactly 3.
+ */
+export function judgesDisagree(scores: readonly number[]): boolean {
+  if (scores.length < 2) return false;
+  const spreadPoints = Math.round((Math.max(...scores) - Math.min(...scores)) * 10 * 1e6) / 1e6;
+  return spreadPoints > 3;
+}
+
 /**
  * Anti-hedging: an answer that offers alternatives ("42 or 43", "A/B",
  * "either X or Y") is wrong, even if one alternative is right. Every prompt
@@ -247,9 +294,8 @@ async function runRubricPanel(input: ScoringInput, user: string, label: string):
       errors.push(`${c.judgeId}: ${c.error}`);
       continue;
     }
-    const raw = extractTagged(c.text, 'SCORE');
-    const n = raw === null ? null : parseNumber(raw);
-    if (n === null || n < 0 || n > 10) {
+    const n = parseJudgeScore(extractTagged(c.text, 'SCORE'));
+    if (n === null) {
       errors.push(`${c.judgeId}: unparsable verdict`);
       continue;
     }
@@ -265,11 +311,12 @@ async function judgeRubric(input: ScoringInput, rubric: string, passThreshold: n
   const { score, judge, errors } = await runRubricPanel(input, user, 'judge');
   if (score === null) throw new Error(`All judges failed: ${errors.join('; ') || 'no judges configured'}`);
   const spread = judge.length > 1 ? Math.max(...judge.map((j) => j.score)) - Math.min(...judge.map((j) => j.score)) : 0;
+  const disagree = judgesDisagree(judge.map((j) => j.score));
   return {
     score: round(score),
     passed: score >= passThreshold,
-    summary: `Judge panel ${(score * 10).toFixed(1)}/10${spread > 0.3 ? ' · judges disagree' : ''}`,
-    detail: { judge, judgeSpread: round(spread), judgeDisagreement: spread > 0.3 || undefined, notes: errors.length ? `Judge issues: ${errors.join('; ')}` : undefined },
+    summary: `Judge panel ${(score * 10).toFixed(1)}/10${disagree ? ' · judges disagree' : ''}`,
+    detail: { judge, judgeSpread: round(spread), judgeDisagreement: disagree || undefined, notes: errors.length ? `Judge issues: ${errors.join('; ')}` : undefined },
   };
 }
 
@@ -292,10 +339,10 @@ async function judgeClassify(input: ScoringInput, instructions: string, labels: 
       errors.push(`${c.judgeId}: ${c.error}`);
       continue;
     }
-    const raw = (extractTagged(c.text, 'LABEL') ?? '').toUpperCase().replace(/[^A-Z0-9_]/g, '');
-    const label = labels.find((l) => l.id === raw) ?? labels.find((l) => raw.startsWith(l.id));
+    const raw = extractTagged(c.text, 'LABEL');
+    const label = parseJudgeLabel(raw, labels);
     if (!label) {
-      errors.push(`${c.judgeId}: unparsable label "${raw}"`);
+      errors.push(`${c.judgeId}: unparsable label "${(raw ?? '').slice(0, 60)}"`);
       continue;
     }
     judge.push({ contestantId: c.judgeId, score: label.score, label: label.id, rationale: c.text.replace(/LABEL\s*:.*$/im, '').trim().slice(0, 1200) });
@@ -394,6 +441,7 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
   let judgeScore: number | null = null;
   let judgeDetail: ScoreDetail['judge'];
   let judgeNotes: string | undefined;
+  let judgeDisagreement = false;
   if (rubric && judgeWeight > 0) {
     const user = fill(JUDGE_ARTIFACT_TEMPLATE, {
       task: clip(input.taskText, 20_000),
@@ -405,11 +453,13 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
     const r = await runRubricPanel(input, user, 'judge');
     judgeScore = r.score;
     judgeDetail = r.judge;
-    if (r.judge.length > 1) {
+    if (judgesDisagree(r.judge.map((j) => j.score))) {
       const spread = Math.max(...r.judge.map((j) => j.score)) - Math.min(...r.judge.map((j) => j.score));
-      if (spread > 0.3) judgeNotes = `Judges disagree (spread ${(spread * 10).toFixed(1)} points) — flagged for human review`;
+      judgeDisagreement = true;
+      judgeNotes = `Judges disagree (spread ${(spread * 10).toFixed(1)} points) — flagged for human review`;
     }
-    if (r.errors.length) judgeNotes = `Judge issues: ${r.errors.join('; ')}`;
+    // A judge that failed must not hide the disagreement of the others (it decides human arbitration).
+    if (r.errors.length) judgeNotes = [judgeNotes, `Judge issues: ${r.errors.join('; ')}`].filter(Boolean).join(' · ');
     if (judgeScore === null) throw new Error(`All judges failed: ${r.errors.join('; ') || 'no judges configured'}`);
   }
   // A 0/10 from the judges is the rubric's "automatic zero" (not the thing asked for, or unusable): the hygiene checks
@@ -430,7 +480,7 @@ async function scoreArtifact(input: ScoringInput, format: 'html' | 'svg', checks
       skippedChecks: skipped.length ? skipped : undefined,
       zeroedByJudges: gated || undefined,
       consoleErrors: probe?.consoleErrors.slice(0, 5),
-      judgeDisagreement: judgeNotes?.startsWith('Judges disagree') || undefined,
+      judgeDisagreement: judgeDisagreement || undefined,
       notes: judgeNotes,
     },
   };

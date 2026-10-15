@@ -22,7 +22,7 @@ import { mean } from '../core/stats.ts';
 import { caseScorer, loadTests, renderCase, type LoadedTest, type RenderedCase } from '../core/registry.ts';
 import { estimateImageTokens, imageInfo, loadTestImage, stripImageData, supportsVision, testBaseDir } from '../core/vision.ts';
 import { explainerForDefinition, type TestExplainer } from '../core/explainers.ts';
-import { extractTagged, parseNumber } from '../core/extract.ts';
+import { extractTagged } from '../core/extract.ts';
 import type { AiGrade, CaseResult, CaseResultLite, ChatImage, Contestant, ContestantSnapshot, HumanScore, ProgramContext, PromptTestCase, RunManifest, TestDefinition, TranscriptEntry } from '../core/types.ts';
 import { formatMoney, normalizeCurrency } from '../core/currency.ts';
 import { MIN_BUDGET_LEFT_USD, BudgetBlockedError, budgetLine } from '../budget/budget.ts';
@@ -38,7 +38,7 @@ import { callWithRetry, type CallTarget } from '../engine/recorder.ts';
 import { Semaphore } from '../engine/semaphore.ts';
 import { createAdapter } from '../providers/index.ts';
 import { PROGRAMS } from '../programs/index.ts';
-import { scoreResponse, type JudgePanel } from '../scoring/index.ts';
+import { parseJudgeScore, scoreResponse, type JudgePanel } from '../scoring/index.ts';
 import { JUDGE_RUBRIC_TEMPLATE, JUDGE_SYSTEM, fill } from '../scoring/judge-prompts.ts';
 import { GALLERY_PROGRAMS, gradingSpecFor, requirementPoints, scoreFromGrade, type GradingSpec } from './spec.ts';
 import { OFFICIAL_POLICIES, agreement, type OfficialPolicy, type OfficialSource } from './policy.ts';
@@ -611,9 +611,8 @@ async function aiGradeOne(runId: string, key: string, targetFor: (j: Contestant)
       const calls = await panel.ask(JUDGE_SYSTEM, user, 'judge');
       for (const call of calls) {
         if (call.error) continue;
-        const raw = extractTagged(call.text, 'SCORE');
-        const n = raw === null ? null : parseNumber(raw);
-        if (n === null || n < 0 || n > 10) continue;
+        const n = parseJudgeScore(extractTagged(call.text, 'SCORE'));
+        if (n === null) continue;
         verdicts.push({ contestantId: call.judgeId, score: n / 10, rationale: call.text.replace(/SCORE\s*:.*$/im, '').trim().slice(0, 1200) });
       }
       if (!verdicts.length) throw new Error('All judges failed to give a readable verdict.');

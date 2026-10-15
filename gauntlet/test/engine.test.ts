@@ -271,6 +271,18 @@ test('judges never grade their own vendor when another judge is available', () =
   assert.deepEqual(runner.selectJudges(panel, j('a1', 'Anthropic'), false).map((x) => x.id), ['o1', 'g1'], 'a model never judges itself');
 });
 
+test('a model never judges itself, even when it is the only judge or is served by another provider', () => {
+  const j = (id: string, vendor: string, model = id, provider = 'p') => ({ id, label: id, vendor, provider, model, color: '#000000', enabled: true, pricing: { inputPerM: 1, outputPerM: 1 }, configHash: 'x' });
+  // Before the fix the contestant fell back to judging itself when no other judge was left.
+  assert.deepEqual(runner.selectJudges([j('a1', 'Anthropic')], j('a1', 'Anthropic'), true), []);
+  assert.deepEqual(runner.selectJudges([j('a1', 'Anthropic')], j('a1', 'Anthropic'), false), []);
+  // The same model through a router ("anthropic/claude-x" on OpenRouter) is still the same model.
+  const viaRouter = j('or-claude', 'Anthropic', 'anthropic/claude-x', 'openrouter');
+  assert.deepEqual(runner.selectJudges([viaRouter, j('g1', 'Google')], j('claude', 'Anthropic', 'claude-x'), false).map((x) => x.id), ['g1']);
+  assert.equal(runner.isSameModel({ model: 'anthropic/claude-x:free' }, { model: 'Claude-X' }), true);
+  assert.equal(runner.isSameModel({ model: 'claude-x' }, { model: 'claude-y' }), false);
+});
+
 test('an API model runs end to end and calibrates cost estimates (baseline/manual results never do)', async () => {
   const before = await runner.estimateRun({ contestantIds: ['fake-api'], testIds: ['math.arith'], repeats: 1 });
   assert.equal(before.perTest[0]!.basis, 'definition', 'random-baseline and manual results are ignored');
