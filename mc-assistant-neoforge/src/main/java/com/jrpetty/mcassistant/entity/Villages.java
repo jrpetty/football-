@@ -408,6 +408,7 @@ public final class Villages {
         Perks.resetForTests();                                     // [perks] quiet between the tests; the wonders forgotten
         Bank.resetForTests();
         Businesses.resetForTests();                       // [business-books] every town's businesses and the coin census
+        Accounts.resetForTests(); MarketMaker.resetForTests();   // [econ-1a] the accounts, the market's books, the scope stack
         Culture.resetForTests();                                   // [batchD] the banner's works, the customs, the theatre, the band
         TownWonders.resetForTests();                               // [culture-wonders] the town's own wonders
         Identity.resetForTests();                                  // [identity] every town plain again till a test asks for it live

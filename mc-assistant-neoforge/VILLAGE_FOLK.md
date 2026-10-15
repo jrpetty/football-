@@ -8695,9 +8695,9 @@ This is the whole list in one place. The thirty new things (the kitchen's, the f
 things) follow the same rule, each in its own section above, and the game test ia01 holds every one of them to it.
 
 **What the audit changed.**
-* **The village coin has a recipe.** Fire a gold ingot in a furnace and nine coins come out, the mint's own rate. The
-  town mints the same way: from the Iron Age, while its treasury runs low, it melts bars of the stores' gold into its
-  coin, nine a bar (the mint, on the morning's business). The coin you are paid is always the treasury's, and a coin is
+* **The village coin is struck at the town's mint** (it had a furnace recipe once; since the market, see "The market"
+  at the end, coin is made nowhere else). The town mints from the Iron Age, while its treasury runs low, bars of gold it
+  buys of its own market, nine coins a bar (the mint, on the morning's business). The coin you are paid is always the treasury's, and a coin is
   worth a coin, whatever minting it took.
 * **The memory core** has no recipe, and never will. It forms only when a companion falls, and holds everything that
   companion was; a core made at a bench would hold nobody. It is worth nothing on the price list: a friend is not for
@@ -8790,7 +8790,7 @@ name, for a thing that has no recipe, no age, no worth, no maker, or makings the
 `ItemAuditGameTests` (ia01 to ia11) check that:
 * every item of the mod's has a recipe, its age, a worth and a maker, and the stores of a grown town run to every one of
   them at the bench, the whole way from logs, wool and ore; and the pets' things are on the market's board;
-* a gold ingot fired makes nine coins, a coin is worth one, and an Iron Age town mints three bars of its stores' gold
+* a gold ingot struck at the mint makes nine coins, a coin is worth one, and an Iron Age town mints three bars of its stores' gold
   into twenty-seven coin; and the memory core has no recipe, the reason given, and no worth;
 * the tailor knots a net of five of the stores' string for each of the fleet's two boats and no third, a net hauls two
   to four fish to a line's one or two, and a player's cast over a pond brings fish up and wears the net (and nothing
@@ -12698,3 +12698,60 @@ Tests: HomeMakingGameTests (hm21 to hm25 the furnishing; hm31 to hm34 the stocks
 
 Tests: FlatsAccessGameTests (fa21 the flats walked at all four turns, fa22 every building's rooms, fa23 the first
 blocks kept); FlatsGameTests (fl01 to fl05).
+
+## The market: the storehouse, the firms and the mint
+
+Nothing in a town is free for the taking any more. The storehouse is the town's **market**: it buys whatever every
+producer brings in and sells to everybody who wants it, at a price, and every trade in the town is a business that lives
+by what it sells.
+
+- **The founders' commons, then Market Opening Day.** A new town's first days are a commons: everything in the stores is
+  everybody's, free (but counted). From the fourth day, the first morning the storehouse stands with its keeper (and by the
+  tenth in any case), the chronicle has **Market Opening Day**: the commons' stock becomes the market's, the treasury puts
+  up the market's float, and every founder who farms, fells, mines, fishes, keeps animals, hunts or smelts is given the
+  title to its homestead, its own business ("Wren's Farm"), with six coins for its household and four in its till.
+  Founders bring more coin with them now: a dozen a head.
+- **Bid and ask.** The market pays a producer its **bid** for what it brings in (the farmer's wheat, the miner's ore, the
+  smelter's ingots, the moment it banks them, or hands them to the courier at a far field) and charges everybody else its
+  **ask** for what they take out: the smith for its iron and coal, the builder for its stone, a household for its supper.
+  Both sit round the town's going price (the Prices page, by what is short and what is plenty), scaled to what the place
+  is (a town's hands earn twice a hamlet's, and its goods fetch twice as much). The spread between them pays the market's
+  staff (the storekeepers and couriers are paid out of the market's own cash) and narrows as its trade grows (four to
+  fifteen in the hundred). Short of coin it bids less, but it never turns a producer away: the treasury lends it its float,
+  and past that it owes the producer store credit, paid first when coin comes in. Staple food, timber and stone always
+  fetch at least seven tenths of their usual worth. Its glut the passing traders buy: the town's exports, into the
+  market's cash. Once a week what it holds over its float goes to the treasury.
+- **Who pays.** Whoever's account it is: a hand at its trade, its business's till; a folk's own food, clothes and things
+  for the home, its household's purse (the odd pennies kept as change); a child's, its parents'; a builder raising one of
+  the town's buildings, the town's **works**; the watch, the army, the mint, poor relief, each the treasury's, in its own
+  book. Nobody is ever refused for want of money: a folk short of it owes the market and pays out of its next wage; a poor
+  folk's food and fuel are paid by the poor box, then the treasury; a department with an empty treasury writes the
+  market an IOU, paid first out of the next taxes (and set against the market's weekly surplus: both are the town's).
+- **Who still takes free.** The founders before Market Opening Day; anything already paid for at a counter (the shop, the
+  café, the households' shopping: never charged twice); a business's own stock and its makers' own bench (the smithy pays
+  for its iron in its own books); a household's own house going up (its bill pays the market for the blocks); the market's
+  own staff about their work; gifts and theft.
+- **Every trade a business.** The makers, shops, café and inn already were. In a town that had its market from of old, its
+  trades start as the town's own and the council sells them off over a fortnight, one or two a day, the smallest first
+  (fields, boats and holts, then claims and furnaces, then makers and shops nobody had taken on): each first to its own hand
+  **on a lease** (a coin and a half in the hundred of its worth a week; its own after fifty-two payments, or sooner if it
+  can pay the rest), else **at auction** to the folk with the means, else kept and offered again in a month. The chronicle
+  has each sale. A business that loses money for a fortnight with its credit gone is wound up and offered again.
+- **The mint.** Coin is struck only at the town's mint: the furnace recipe is gone. Bring gold ingots to a market stall's
+  counter from the Stone Age on and the mint strikes them, **eight coins to the ingot** (it keeps the ninth). The town's own
+  minting buys its gold of the market. The old upkeep that burnt a fat treasury's coin is retired, and the town no longer
+  turns its output into coin out of nothing: output earns money only when the market buys it.
+- **Where you see it.** The town's books, **Market** page (in Economy): where the market stands (the commons or open, its
+  spread, its cash), the bid and ask for the goods most traded today with its stock and what it bought and sold of each,
+  its week, its store credit, what it is owed, and the privatisation's progress; the town's coin counted to the penny at
+  the foot. The **Businesses** page lists the producers' firms with the rest; each business's books show what it bought of
+  the storehouse ("the storehouse (market)") and what it sold to it. A folk's card says "Owns Wren's Farm" or "works at
+  the smithy, paid out of its till". Commands: `/village market` (and `market page`; operators `market open`),
+  `/village accounts stragglers` (any take nobody's account answered for, and the town's own systems that ran on its works
+  account), `/village accounts <folk|business|department>`, `/village accounts ious`, `/village money audit`.
+
+Tests: EconomyFoundationGameTests (acc01 the smith's makings and sale to the penny; acc02 a farmer's wheat bought at the
+bid; acc03 meals, a child's, the poor's relief; acc04 the commons and Market Opening Day; acc05 never charged twice;
+acc06 a whole day of a town of twenty with no straggler; acc07 every producing trade pays its wage at the market's prices;
+acc08 the coin census at nought drift; acc09 the town's works pay for their stone; acc10 an IOU in an emergency, paid
+first out of the tax; acc11 ten days of a new town under the market).

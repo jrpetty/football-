@@ -458,7 +458,7 @@ public final class Trades {
             return false;
         }
         Market.bought(village, key);
-        Ledger.takeCoins(village, price);
+        CoinCensus.flow(village, CoinCensus.Flow.IMPORT, Ledger.takeCoins(village, price));   // [econ-1a] the pedlar's coin leaves town
         Economy.spent(village, price);
         Ledger.note(village, key, Long.toString(level.getGameTime() / 24000L));
         for (int i = 0; i < BUCKETS; i++) {
@@ -535,7 +535,7 @@ public final class Trades {
         GIVEN.computeIfAbsent(village, k -> new ConcurrentHashMap<>()).put(t.name(), today);
         Ledger.note(village, "kit." + t.name(), Long.toString(today));
         if (kit.isEmpty()) return false;
-        Ledger.takeCoins(village, price);
+        CoinCensus.flow(village, CoinCensus.Flow.IMPORT, Ledger.takeCoins(village, price));   // [econ-1a] the pedlar's coin leaves town
         Economy.spent(village, price);
         List<String> words = new ArrayList<>();
         for (ItemStack s : kit) {

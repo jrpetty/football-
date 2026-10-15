@@ -159,6 +159,7 @@ public final class Economy {
         int fresh = s.getCount() - spendGiven(f, s);
         if (fresh <= 0) return;
         if (fresh < s.getCount()) s = s.copyWithCount(fresh);
+        MarketMaker.output(f, trade, s);                                        // [econ-1a] bought of the producer, at the market's bid
         if (k == Kind.FOOD || s.is(Items.WHEAT)) Leader.foodIn(village, s);     // the leader's food books
         if (k == Kind.FOOD || s.is(Items.WHEAT)) Larder.broughtIn(village, trade, s);   // [economy] and by where it came from
         if (k == Kind.FOOD || s.is(Items.WHEAT)) Festivals.broughtIn(f, trade, s);      // [batchB] the year's harvest, farmer by farmer

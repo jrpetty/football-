@@ -94,6 +94,12 @@ public final class Crafts {
         Economy.openCraft(v.id(), f.stationTask());
         WorkStock.begin(level, v, f);                                  // [shops-homes] its own workshop chest first
         String made;
+        // [econ-1a] Whose craft: a maker with a business of its own books its making itself (Businesses.crafted: its makings
+        // bought at the market's ask, its work sold to the market), so nothing is charged again at the stores; a maker of
+        // the town's own (no business yet) works on the town's works account, its makings bought and its work sold there.
+        Business craftFirm = Businesses.makerFor(v.id(), f.stationTask());
+        Accounts.Scope craftScope = craftFirm != null ? Accounts.free("made at its own business's bench")
+            : Accounts.as(Accounts.Dept.WORKS, Accounts.Purpose.WORK);
         try {
             made = CraftScale.tend(level, v, f);                      // [roles-b] another bench as the town grows; the table to the tower
             if (made == null) made = Luxuries.craft(level, v, f, true);   // a turn at what the houses wait on (Luxuries)
@@ -117,6 +123,7 @@ public final class Crafts {
             };
             if (made == null) made = Luxuries.craft(level, v, f, false);   // its own work done: the houses' wants
         } finally {
+            craftScope.close();                                        // [econ-1a]
             WorkStock.end();
             Economy.closeCraft();
         }
@@ -948,6 +955,7 @@ public final class Crafts {
                 ItemStack s = c.getItem(i);
                 if (s.isEmpty() || !what.test(s)) continue;
                 Economy.storesOut(v.id(), s, 1);
+                MarketMaker.taken(level, v.id(), s, 1);                     // [econ-1a] bought of the market
                 ItemStack one = s.split(1);
                 c.setChanged();
                 return one;

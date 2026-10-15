@@ -355,6 +355,9 @@ public final class VillageCommands {
             // (/village larder; [econ-prices] it was /village economy, and hid the economy page).
             .then(EconomyCommands.build())
             .then(com.jrpetty.mcassistant.entity.BusinessBooks.command())   // [business-books] the businesses' books, orders, the coin audit
+            .then(com.jrpetty.mcassistant.entity.MarketCommands.market())   // [econ-1a] the storehouse as the town's market
+            .then(com.jrpetty.mcassistant.entity.MarketCommands.accounts()) // [econ-1a] whose account, the stragglers, the IOUs
+            .then(com.jrpetty.mcassistant.entity.MarketCommands.money())    // [econ-1a] the town's coin, audited
             // [econ-trade] Trade between towns: the trade book, the deals, the talks (TradeCommands).
             .then(TradeCommands.build())
             .then(WagonCommands.build())                       // [wagons] the trade wagons

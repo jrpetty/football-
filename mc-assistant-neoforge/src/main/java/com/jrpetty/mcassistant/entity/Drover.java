@@ -281,7 +281,7 @@ public final class Drover {
             return false;
         }
         Market.bought(village, "drover");
-        Ledger.takeCoins(village, DROVER_PRICE);
+        CoinCensus.flow(village, CoinCensus.Flow.IMPORT, Ledger.takeCoins(village, DROVER_PRICE));   // [econ-1a] the drover's coin leaves town
         Economy.spent(village, DROVER_PRICE);
         Ledger.note(village, "kit.drove", Long.toString(today));
         int put = 0;

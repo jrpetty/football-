@@ -264,6 +264,12 @@ public final class PublicFund {
 
     // ------------------------------------------------------------------ the tests
 
+    /** [econ-1a] The coin given to the statue fund and not yet paid into the treasury, for the coin census. */
+    public static int held(UUID village) {
+        CompoundTag f = fund(village);
+        return f.getLong("funded") > 0 ? 0 : Math.max(0, f.getInt("raised"));
+    }
+
     /** Tests: {raised, needed, givers, funded (0/1)}. */
     public static int[] stateForTests(UUID village) {
         CompoundTag f = fund(village);

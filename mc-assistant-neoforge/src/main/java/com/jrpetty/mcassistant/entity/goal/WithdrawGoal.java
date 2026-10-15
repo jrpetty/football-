@@ -236,6 +236,13 @@ public class WithdrawGoal extends Goal {
             if (!leftover.isEmpty()) break; // backpack is full
         }
         container.setChanged();
+        // [econ-1a] Out of the town's stores: bought of its market, by whoever's account it is (its own chest is its own).
+        if (!took.isEmpty() && assistant.isSettler() && assistant.ownerId() != null
+                && assistant.level() instanceof net.minecraft.server.level.ServerLevel market
+                && (container instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity
+                    || com.jrpetty.mcassistant.entity.Villages.storeChests(market, assistant.ownerId()).contains(chestPos))) {
+            for (ItemStack t : took) com.jrpetty.mcassistant.entity.MarketMaker.taken(market, assistant.ownerId(), t, t.getCount());
+        }
         if (store && !took.isEmpty()) {
             com.jrpetty.mcassistant.entity.Storekeeping.withdrew((com.jrpetty.mcassistant.entity.VillageFolkEntity) assistant, keeper, took);
         }

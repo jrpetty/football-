@@ -76,12 +76,22 @@ public final class Market {
      * hamlet of eight, and for a charter's seventy a single morning's wages paid short from the first day.
      */
     public static int foundingPurse(int folk) {
+        // [econ-1a] Where the town's goods change hands at a price, its founders bring the coin a town needs to trade with:
+        // a dozen a head (the homesteads' grants among it), not the four of a town that paid out of nothing.
+        if (MarketMaker.enabled()) return Math.max(FOUNDING_PURSE, FOUNDING_PURSE_TRADING * folk);
         return Math.max(FOUNDING_PURSE, FOUNDING_PURSE_A_HEAD * folk);
     }
 
+    /** [econ-1a] What each founder brings where the market is at work. */
+    public static final int FOUNDING_PURSE_TRADING = 12;
+
     /** Open a new village's treasury with its founders' savings (once: an open treasury is left alone). */
     public static void openTreasury(UUID village, int folk) {
-        if (!Ledger.hasTreasury(village)) Ledger.addCoins(village, foundingPurse(folk));
+        if (!Ledger.hasTreasury(village)) {
+            int purse = foundingPurse(folk);
+            Ledger.addCoins(village, purse);
+            CoinCensus.flow(village, CoinCensus.Flow.FOUNDERS, purse);   // [econ-1a] the founders' own coin, brought with them
+        }
     }
     /** Coins minted from one gold ingot. */
     public static final int COINS_PER_GOLD = 9;
@@ -514,18 +524,36 @@ public final class Market {
         HUNGRY.put(id, Villages.steadyStock(level, v, Villages.Task.FOOD, day) * 2
             < Villages.larderForBirth(id));
         Economy.closeTheDay(level, v, day);              // yesterday's output, and what the village is worth
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after Economy.closeTheDay");   // [econ-1a] the drift hunt (tests)
         PriceIndex.morning(level, v, day);               // [econ-prices] the day's prices, by yesterday's supply and demand
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after PriceIndex.morning");   // [econ-1a] the drift hunt (tests)
         Annals.record(level, v, day);                    // and the morning written into the town's books
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after Annals.record");   // [econ-1a] the drift hunt (tests)
         Leader.morning(level, v, day);                   // the leader's books, the plan and the day's pay
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after Leader.morning");   // [econ-1a] the drift hunt (tests)
         WarFooting.morning(level, v, day);               // [war-prep] the town on a war footing: the watch, the militia, the defences
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after WarFooting.morning");   // [econ-1a] the drift hunt (tests)
         CityTree.morning(level, v, day);                 // the day's research points, and the leader's next civic
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after CityTree.morning");   // [econ-1a] the drift hunt (tests)
         Inventions.morning(level, v, day);               // [tech-tree] the scholars' day's learning, and the next invention
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after Inventions.morning");   // [econ-1a] the drift hunt (tests)
         Identity.morning(level, v, day);                 // [identity] the town's character, government, laws, traits and fame looked at
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after Identity.morning");   // [econ-1a] the drift hunt (tests)
         JobWorth.morning(level, v, day);                 // [econ-wages] the day's pay scale: what every job is worth
-        mint(level, v);
-        int sold = trade(level, v);
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after JobWorth.morning");   // [econ-1a] the drift hunt (tests)
+        // [econ-1a] Each of the morning's jobs on the account of the department it is: the mint's gold, the market's trade
+        // and its wool, the town's works for the rest of the morning.
+        try (Accounts.Scope mint = Accounts.as(Accounts.Dept.MINT, Accounts.Purpose.WORK)) { mint(level, v); }
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after mint");   // [econ-1a] the drift hunt (tests)
+        int sold;
+        try (Accounts.Scope market = Accounts.as(Accounts.Dept.MARKET, Accounts.Purpose.WORK)) { sold = trade(level, v); }
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after trade");   // [econ-1a] the drift hunt (tests)
         takings(level, v, sold);                         // what the village made yesterday is its revenue
-        buyWool(level, v, day);                          // the beds, out of half of it at most
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after takings");   // [econ-1a] the drift hunt (tests)
+        try (Accounts.Scope market = Accounts.as(Accounts.Dept.MARKET, Accounts.Purpose.WORK)) { buyWool(level, v, day); }   // the beds, out of half of it at most
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after buyWool");   // [econ-1a] the drift hunt (tests)
+        MarketMaker.morning(level, v, day);              // [econ-1a] the market's morning: Market Opening Day, store credit, its surplus, the privatisation
+        if (CoinCensus.probing()) CoinCensus.probe("the morning, after MarketMaker.morning");   // [econ-1a] the drift hunt (tests)
         Businesses.morning(level, v, day);              // [business-books] every business's morning: its stock, rent, credit, drawings, orders
         payWages(level, v);
         Bank.beforeRent(level, v, day);                  // the bank: a saver short of the rent draws it out first (Bank)
@@ -537,7 +565,7 @@ public final class Market {
         Villages.checkRank(level, v, day);
         News.morning(level, v, day);
         if (marketDay(id, day)) {
-            sellSurplus(level, v, day);
+            try (Accounts.Scope market = Accounts.as(Accounts.Dept.MARKET, Accounts.Purpose.WORK)) { sellSurplus(level, v, day); }   // [econ-1a] the market's glut
             level.playSound(null, v.centre(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 3.0F, 1.0F);
             for (ServerPlayer p : level.players()) {
                 if (p.blockPosition().closerThan(v.centre(), 96)) {
@@ -575,14 +603,16 @@ public final class Market {
             if (g.need() == Villages.Task.FOOD) n = Math.min(n, foodStock - foodKeep);
             if (n < 32) continue;
             int paid = (int) Math.floor(n * PriceIndex.each(level, id, g) * 0.5 * CityTree.takingsPercent(id) / 100.0   // the Market Charter
-                * Fame.traderPremium(id, g));                         // [identity] a quarter more for what the town is famous for
+                * Fame.traderPremium(id, g)                           // [identity] a quarter more for what the town is famous for
+                * (MarketMaker.live(id) ? MarketMaker.priceLevel(id) : 1.0));   // [econ-1a] at the town's price level, as its market buys
             if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
             if (g.need() == Villages.Task.FOOD) foodStock -= n;
             coins += paid;
             sold.add(n + " " + g.name().toLowerCase());
         }
         if (coins <= 0) return 0;
-        Ledger.addCoins(id, coins);
+        if (MarketMaker.live(id)) MarketMaker.exported(id, coins);   // [econ-1a] the market's glut, its exports: its coin
+        else Ledger.addCoins(id, coins);
         CoinCensus.flow(id, CoinCensus.Flow.EXPORT, coins);            // [business-books] coin into the town from the traders
         Economy.sold(id, coins);
         Villages.tell(id, day, "Traders came for market day and bought " + String.join(", ", sold) + " for " + coins + " coin");
@@ -605,6 +635,9 @@ public final class Market {
      */
     public static int upkeep(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
+        // [econ-1a] Retired where the market is open: coin no longer comes out of nothing (takings), so none need go out of
+        // the town for nothing either; a fat treasury is the council's to spend or to cut taxes with.
+        if (MarketMaker.live(id)) return 0;
         int keep = UPKEEP_OVER_DAYS * Math.max(1, wageBill(id)) + saved(id, level.getGameTime());
         int over = Ledger.coins(id) - keep;
         if (over <= 0) return 0;
@@ -650,7 +683,11 @@ public final class Market {
         if (have >= want) return 0;
         int bars = Math.min(3, (want - have + COINS_PER_GOLD - 1) / COINS_PER_GOLD);
         int took = 0;
-        while (took < bars && TownWork.take(level, v, s -> s.is(Items.GOLD_INGOT), 1)) took++;
+        // [econ-1a] Once the market is open the mint buys its gold of it at the ask (paid out of the treasury), as anybody would.
+        try (Accounts.Scope bought = MarketMaker.live(id) ? Accounts.free("the mint's gold, bought below") : Accounts.as(Accounts.Dept.MINT, Accounts.Purpose.WORK)) {
+            while (took < bars && TownWork.take(level, v, s -> s.is(Items.GOLD_INGOT), 1)) took++;
+        }
+        MarketMaker.mintBuys(level, id, took);
         if (took > 0) Ledger.addCoins(id, took * COINS_PER_GOLD);
         CoinCensus.flow(id, CoinCensus.Flow.MINT, took * COINS_PER_GOLD);   // [business-books]
         return took * COINS_PER_GOLD;
@@ -706,13 +743,15 @@ public final class Market {
             if (food) lots = Math.min(lots, foodSpare / g.bundle());
             if (lots <= 0) continue;
             int n = lots * g.bundle();
-            int paid = (int) Math.floor(n * PriceIndex.each(level, id, g) * 0.8 * Fame.traderPremium(id, g));   // [identity] fame, rank
+            int paid = (int) Math.floor(n * PriceIndex.each(level, id, g) * 0.8 * Fame.traderPremium(id, g)   // [identity] fame, rank
+                * (MarketMaker.live(id) ? MarketMaker.priceLevel(id) : 1.0));   // [econ-1a] at the town's price level, as its market buys
             if (paid < 1 || !TownWork.take(level, v, g.what(), n)) continue;
             in += paid;
             sold.add(n + " " + g.name().toLowerCase());
         }
         if (in <= 0) return 0;
-        Ledger.addCoins(id, in);
+        if (MarketMaker.live(id)) MarketMaker.exported(id, in);       // [econ-1a] the market's goods, its exports: its coin
+        else Ledger.addCoins(id, in);
         CoinCensus.flow(id, CoinCensus.Flow.EXPORT, in);               // [business-books] the passing traders' coin
         Economy.sold(id, in);
         Villages.tell(id, level.getDayTime() / 24000L, "passing traders bought " + String.join(", ", sold) + " for " + in + " coin");
@@ -728,6 +767,9 @@ public final class Market {
      */
     public static int takings(ServerLevel level, Villages.Village v, int sold) {
         UUID id = v.id();
+        // [econ-1a] Once the market is open, output earns money only when the market buys it (MarketMaker.output): no more
+        // coin out of nothing for what the town made.
+        if (MarketMaker.live(id)) return 0;
         // At the place's standing, as its wages are: a town's work fetches more than a hamlet's
         // (bigger markets for it), so what comes in and what is paid out grow together.
         // And a twentieth more under the town's Market Charter (CityTree).
@@ -808,7 +850,8 @@ public final class Market {
             if (w <= 0) continue;
             // At the rate the leader set today (Leader.payRate): over the odds, or part held back.
             w = JobWorth.atLeadersRate(id, w);         // [econ-wages] never under the living wage
-            int own = Businesses.paysHand(level, v, f, w);   // [business-books] a business's hand is paid out of its till
+            int own = MarketMaker.paysHand(level, v, f, w); // [econ-1a] the market's staff (storekeepers, couriers) out of its cash
+            if (own < 0) own = Businesses.paysHand(level, v, f, w);   // [business-books] a business's hand is paid out of its till
             if (own >= 0) { PAID.put(f.getUUID(), new long[]{ level.getDayTime() / 24000L, own }); continue; }
             hands.add(f);
             wages.add(w);
@@ -845,6 +888,7 @@ public final class Market {
             if (net > 0 && got <= 0) break;
             hands.get(i).paid(got);
             Purchases.payday(level, hands.get(i));     // [econ-prices] its slate at the counter paid back first
+            Accounts.payday(level, hands.get(i));      // [econ-1a] and what it owes the market
             PAID.put(hands.get(i).getUUID(), new long[]{ day, got });
             paid += got;
             taxed += tax;
@@ -852,6 +896,7 @@ public final class Market {
         // The town's Counting House (CityTree): a twentieth of it back into the treasury; the folk keep every coin.
         int back = CityTree.countingHouse(id, paid);
         if (back > 0) Ledger.addCoins(id, back);
+        Accounts.taxIn(id, taxed * 100L);                // [econ-1a] the town's IOUs to its market paid first out of the tax
         // In the books: the wages as earned (what the folk were paid and the tax on it), and the tax as money in.
         Economy.wages(id, paid + taxed - back);
         Economy.tax(id, taxed);
@@ -1183,6 +1228,8 @@ public final class Market {
         if (title == Standing.Title.OUTCAST) return "Nobody here will trade with you.";
         boolean md = marketDay(id, level.getDayTime() / 24000L);
         ItemStack hand = p.getMainHandItem();
+        // [econ-1a] Gold at the counter is struck into coin at the town's mint (free coinage): coin is made nowhere else.
+        if (hand.is(Items.GOLD_INGOT) && MarketMaker.enabled() && p instanceof net.minecraft.server.level.ServerPlayer sp) return MarketMaker.mintForPlayer(level, v, sp);
         if (!hand.isEmpty() && !isCoin(hand)) {
             Good g = goodFor(hand);
             if (g == null) return "The village doesn't buy " + hand.getHoverName().getString() + ".";
@@ -1340,6 +1387,7 @@ public final class Market {
                 left = Stacking.insert(c, left);
             }
         }
+        if (stack.getCount() > left.getCount()) MarketMaker.given(level, village, stack, stack.getCount() - left.getCount());   // [econ-1a]
         return left;
     }
 

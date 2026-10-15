@@ -4923,6 +4923,32 @@ def business_books_stage(r, look, cx, cz):
     say("alive after the business books: %s" % client_alive())
 
 
+def econ_market_stage(r, look, cx, cz):
+    """[econ-1a] The storehouse as the town's market (entity/MarketMaker, Accounts, Privatisation). As an operator,
+    /village market open holds the nearest town's Market Opening Day now if it has not had it; the town's books open at
+    the Market page (bid and ask for the goods most traded, the stock, today's trades, the privatisation's progress).
+    Pictures:
+      1. 71-market-1-page: the Market page of the town's books.
+    Not wired into main(): call it after business_books_stage."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(6)
+    say("market open: " + r.cmd("execute as %s at @s run village market open" % USER)[:400])
+    say("market: " + r.cmd("execute as %s at @s run village market" % USER)[:1500])
+    say("stragglers: " + r.cmd("execute as %s at @s run village accounts stragglers" % USER)[:800])
+    say("page: " + r.cmd("execute as %s at @s run village market page" % USER))
+    time.sleep(3)
+    park_mouse()
+    time.sleep(1)
+    shot("71-market-1-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("audit: " + r.cmd("execute as %s at @s run village money audit" % USER)[:900])
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the market: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

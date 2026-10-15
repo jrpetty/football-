@@ -311,6 +311,8 @@ public class VillageFolkEntity extends AssistantEntity {
      */
     @Override
     public void tick() {
+        int accounts = level().isClientSide ? -1 : Accounts.enter(this);   // [econ-1a] whose account its takes are, while it ticks
+        long[] coinBefore = accounts >= 0 && CoinCensus.probingFolk() && ownerId() != null ? CoinCensus.quick(ownerId(), this) : null;
         try {
             super.tick();
         } catch (VirtualMachineError | ThreadDeath fatal) {
@@ -318,6 +320,9 @@ public class VillageFolkEntity extends AssistantEntity {
         } catch (Throwable t) {
             com.jrpetty.mcassistant.Guard.struck("a village folk's tick",
                 getName().getString() + " at " + blockPosition().toShortString(), t);
+        } finally {
+            if (accounts >= 0) Accounts.leave(accounts);                 // [econ-1a]
+            if (coinBefore != null && ownerId() != null) CoinCensus.quickAfter(ownerId(), this, coinBefore, stationTask() + ", " + brainNoteForBooks());
         }
     }
 
@@ -612,6 +617,9 @@ public class VillageFolkEntity extends AssistantEntity {
                 // [scale] The town's rounds, at its beat and within the tick's budget (TownScheduler).
                 if (home != null && TownScheduler.due(polls, home.id(), TownScheduler.Job.ROUNDS)) {
                     long started = TownScheduler.start();
+                    // [econ-1a] The town's rounds are the town's: what they take, its works pays for (each department's own
+                    // scope inside them, where they open one, wins).
+                    try (Accounts.Scope townsAccount = Accounts.as(Accounts.Dept.WORKS, Accounts.Purpose.WORK)) {
                     Elections.tick(polls, home);
                     Homes.tick(polls, home);
                     Families.tick(polls, home);          // pets, gardens, graves visited, anniversaries (Families)
@@ -625,6 +633,7 @@ public class VillageFolkEntity extends AssistantEntity {
                     Cartographers.tick(polls, home);     // [cartographer] the town chooses its cartographer once its map room stands
                     Divers.tick(polls, home);            // [diver] a town by the water finds it, and takes up its diver
                     PlayerCivic.tick(polls, home);       // [player-civic] the campaign, a player leader's morning, young apprentices' journals
+                    }
                     TownScheduler.done(started);
                 }
             }
@@ -635,6 +644,7 @@ public class VillageFolkEntity extends AssistantEntity {
             Villages.Village home = Villages.get(ownerId());
             if (home != null && TownScheduler.due(townLevel, home.id(), TownScheduler.Job.STREETS)) {
                 long started = TownScheduler.start();
+                try (Accounts.Scope townsAccount = Accounts.as(Accounts.Dept.WORKS, Accounts.Purpose.WORK)) {   // [econ-1a] the town's own
                 TownWork.tick(townLevel, home);
                 Tidy.tick(townLevel, home);             // [tidy] the tidy crew: floors in the buildings, the eyesores, the town's looks
                 TownLife.tick(townLevel, home);         // lit windows, chimney smoke, washing, stalls, signs
@@ -642,6 +652,7 @@ public class VillageFolkEntity extends AssistantEntity {
                 Library.tick(townLevel, home);          // [library] its books written, shelved, lent and read
                 Assemblies.tick(townLevel, home);       // the morning assembly, openings, feasts, the council, elections
                 Contentment.daily(townLevel, home);     // how it is doing; at its worst, folk leave
+                }
                 TownScheduler.done(started);
             }
         }
@@ -766,6 +777,7 @@ public class VillageFolkEntity extends AssistantEntity {
 
     public boolean spend(int coins) {
         if (coins <= 0 || purse < coins) return false;
+        if (CoinCensus.probingFolk()) CoinCensus.spent(this, coins);    // [econ-1a] the drift hunt (tests): where it went
         purse -= coins;
         return true;
     }
@@ -6037,6 +6049,7 @@ public class VillageFolkEntity extends AssistantEntity {
             net.minecraft.world.item.ItemStack left = insertItem(lot);
             int taken = move - left.getCount();
             if (taken <= 0) break;                                  // its own pack is full
+            MarketMaker.deposited(worker, s, taken);                // [econ-1a] what it took and brings back, refunded
             Economy.produced(worker, s.copyWithCount(taken));       // the worker's output, handed over here
             s.shrink(taken);
             moved += taken;

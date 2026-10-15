@@ -570,7 +570,10 @@ public final class WarWorks {
             f.setItem(ItemStack.EMPTY, false);
             return one;
         }
-        return Crafts.takeOne(level, v, what);
+        // [econ-1a] Out of the stores, not its own armoury: bought of the market on the army's account.
+        try (Accounts.Scope army = Accounts.as(Accounts.Dept.ARMY, Accounts.Purpose.KIT)) {
+            return Crafts.takeOne(level, v, what);
+        }
     }
 
     /** [build-world] The frames on the armoury's side walls, a cell in from each and a step up, by the anvil's row. */

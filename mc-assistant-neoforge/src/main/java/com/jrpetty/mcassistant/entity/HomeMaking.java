@@ -1478,7 +1478,7 @@ public final class HomeMaking {
             }
             case PARISH -> {
                 boolean parish = ShopStock.open(id) || destitute(Homes.loadedMembers(id, h));
-                if (need == null || !Parish.give(level, v, h, f, need, d.n(), parish)) return "the parish had none to give";
+                if (need == null || !Parish.giveOnRelief(level, v, h, f, need, d.n(), parish)) return "the parish had none to give";   // [econ-1a]
                 q.how = parish ? How.PARISH : How.ISSUED;
                 return null;
             }
@@ -2149,6 +2149,13 @@ public final class HomeMaking {
             if (Market.stock(level, v.id(), need.what()) >= n) return true;
             Bench.Plan bp = Bench.plan(level, v, need.sample(), n, Bench.handOf(level, v, null, null));
             return bp.ok();
+        }
+
+        /** [econ-1a] The parish's gift on the poor relief's account: what it takes of the market, the treasury pays. */
+        static boolean giveOnRelief(ServerLevel level, Villages.Village v, Homes.Home h, VillageFolkEntity f, Need need, int n, boolean parish) {
+            try (Accounts.Scope relief = Accounts.as(Accounts.Dept.RELIEF, Accounts.Purpose.RELIEF)) {
+                return give(level, v, h, f, need, n, parish);
+            }
         }
 
         static boolean give(ServerLevel level, Villages.Village v, Homes.Home h, VillageFolkEntity f, Need need, int n, boolean parish) {

@@ -433,7 +433,7 @@ public final class Businesses {
         };
         if (type != null && t.biz.containsKey(type.id())) return t.biz.get(type.id());
         Type byTrade = Business.forTrade(f.stationTask());
-        if (byTrade == null) return null;
+        if (byTrade == null) return Privatisation.firmOf(village, f);       // [econ-1a] a producer's own business (its field, holt, boat...)
         if (byTrade == Type.CAFE) {
             for (Type k : new Type[]{ Type.CAFE, Type.RESTAURANT, Type.TAVERN, Type.BAKERY, Type.INN }) {
                 if (t.biz.containsKey(k.id())) return t.biz.get(k.id());
@@ -471,8 +471,10 @@ public final class Businesses {
         int taxed = Math.min(tax, paid);
         int net = paid - taxed;
         if (taxed > 0) toTreasury(v.id(), taxed * 100L);
+        if (taxed > 0) Accounts.taxIn(v.id(), taxed * 100L);           // [econ-1a] the town's IOUs to its market paid first out of its taxes
         f.paid(net);
         Purchases.payday(level, f);
+        Accounts.payday(level, f);                                      // [econ-1a] what it owes the market, out of its wage
         Day d = b.today(day);
         d.wages += paid * 100L;
         b.allTime.wages += paid * 100L;
@@ -627,6 +629,8 @@ public final class Businesses {
         long cogs;
         if (b.town()) {
             cogs = storesTake(level, village, key, what, n);
+            // [econ-1a] The storehouse is the town's market: what it sells over its counter is its own takings, not the treasury's.
+            if (inTreasury && b.id.equals("storehouse") && MarketMaker.live(village)) MarketMaker.cashIn(village, fromTreasury(village, p));
         } else {
             if (inTreasury && !b.mirror()) {
                 long got = fromTreasury(village, p);
@@ -718,7 +722,7 @@ public final class Businesses {
         String key = Stockroom.key(one);
         Double forced = PRICE_FOR_TESTS.get(key);
         if (forced != null) return forced;
-        double each = PriceIndex.each(level, village, one.copyWithCount(1));
+        double each = MarketMaker.live(village) ? MarketMaker.ask(level, village, one) : PriceIndex.each(level, village, one.copyWithCount(1));   // [econ-1a]
         Lot l = town(village).stores.get(key);
         if (l != null && l.qty > 0) each = Math.max(each, l.each() / 100.0);
         return Math.max(0.01, each);
@@ -765,7 +769,7 @@ public final class Businesses {
             return new OrderResult(false, 0, cost[0], cost[1], n + " " + nameOf(key).toLowerCase(Locale.ROOT) + " at " + coins(each)
                 + " come to " + pence(cost[0]) + "; the till has " + pence(b.till) + (credit ? " and its credit " + pence(canPay - b.till) : "") + ".");
         }
-        payTown(level, village, b, cost[0], day);
+        MarketMaker.inOrTreasury(village, payOut(level, village, b, cost[0], day));   // [econ-1a] into the market's cash once it is open
         bought(level, village, b, key, one, n, cost[0], "the town stores", cost[2], cost[1], day);
         storesSold(level, village, key, one, n, cost[0], b.name);
         return new OrderResult(true, n, cost[0], cost[1], "Bought " + n + " " + nameOf(key).toLowerCase(Locale.ROOT) + " at "
@@ -816,7 +820,7 @@ public final class Businesses {
         }
         double each = storesEach(level, village, one);
         long[] cost = orderCost(each, n);
-        payTown(level, village, b, cost[0], day);
+        MarketMaker.inOrTreasury(village, payOut(level, village, b, cost[0], day));   // [econ-1a] into the market's cash once it is open
         bought(level, village, b, key, one, n, cost[0], "the town stores", cost[2], cost[1], day);
         storesSold(level, village, key, one, n, cost[0], b.name);
     }
@@ -993,9 +997,9 @@ public final class Businesses {
         if (lot == null || lot.qty <= 0 || one == null || one.isEmpty()) return;
         long k = Math.min(n, lot.qty);
         long cost = lot.take(k);
-        double bid = Market.bidEach(level, village, one.copyWithCount(1));
+        double bid = MarketMaker.live(village) ? MarketMaker.bid(level, village, one) : Market.bidEach(level, village, one.copyWithCount(1));   // [econ-1a]
         long price = Math.max(Math.round(bid * 100 * k), Math.round(cost * (1 + b.markup)));
-        long got = fromTreasury(village, price);
+        long got = MarketMaker.outOrTreasury(village, price);                // [econ-1a] the market pays, once it is open
         b.till += got;
         b.account += price - got;                                        // what the treasury could not pay now, it owes
         Day d = b.today(day);
@@ -1118,15 +1122,25 @@ public final class Businesses {
         long other = 0;
         Villages.Village v = Villages.get(village);
         // Its lights: a torch of an evening out of the stores, while they have plenty, at the stores' price.
-        if (v != null && Market.stock(level, village, s -> s.is(Items.TORCH)) > 32 && TownWork.take(level, v, s -> s.is(Items.TORCH), 1)) {
+        if (v != null && b.type.size != Business.Size.YARD && Market.stock(level, village, s -> s.is(Items.TORCH)) > 32
+            && takeLights(level, v)) {
             long torch = Math.round(storesEach(level, village, new ItemStack(Items.TORCH)) * 100);
-            other += torch;
+            MarketMaker.inOrTreasury(village, payOut(level, village, b, torch, day));   // [econ-1a] the torch is the market's to sell
+            d.other += torch;
+            b.allTime.other += torch;
         }
         // Its repairs: a tenth of its rent, to the town's builders.
         other += rent / 10;
         payTown(level, village, b, other, day);
         d.other += other;
         b.allTime.other += other;
+    }
+
+    /** [econ-1a] Its evening's torch out of the stores: paid for in its overheads, so not charged again at the take. */
+    static boolean takeLights(ServerLevel level, Villages.Village v) {
+        try (Accounts.Scope s = Accounts.free("a business's lights, paid in its overheads")) {
+            return TownWork.take(level, v, st -> st.is(Items.TORCH), 1);
+        }
     }
 
     /** A day's rent, in pennies: its size, at what the place is (a village half as much again as a hamlet...). */
@@ -1319,7 +1333,7 @@ public final class Businesses {
             stock += e.getValue().cost;
         }
         b.stock.clear();
-        b.till += fromTreasury(village, stock);
+        b.till += MarketMaker.outOrTreasury(village, stock);                // [econ-1a] the market buys it back, once it is open
         if (b.account < 0) {
             long pay = Math.min(-b.account, b.till);
             b.till -= pay;
@@ -1523,7 +1537,7 @@ public final class Businesses {
                     long k = Math.min(over, lot.qty);
                     long cost = lot.take(k);
                     long price = Math.round(cost * (1 + b.markup / 2));
-                    long got = fromTreasury(id, price);
+                    long got = MarketMaker.outOrTreasury(id, price);            // [econ-1a] the market pays, once it is open
                     b.till += got;
                     if (got < price) b.account += price - got;          // the town owes it the rest
                     Day d = b.today(day);
@@ -1571,6 +1585,7 @@ public final class Businesses {
      */
     static void producers(ServerLevel level, Villages.Village v, long day) {
         UUID id = v.id();
+        if (MarketMaker.live(id)) return;                                   // [econ-1a] the market bought it, at the bid, and booked it in
         Map<String, int[]> items = Economy.yesterdayItems(id);
         Map<String, Map<StationTask, Integer>> makers = Economy.yesterdayMakers(id);
         if (items.isEmpty()) return;
@@ -1799,10 +1814,14 @@ public final class Businesses {
         if (Market.coinsHeld(p) < coins) return n + " " + nameOf(key).toLowerCase(Locale.ROOT) + " come to " + pence(cost[0]) + " (" + coins
             + " coins). You have " + Market.coinsHeld(p) + ".";
         Villages.Village v = Villages.get(village);
-        if (v == null || !TownWork.take(level, v, Stockroom.matcher(key), (int) n)) return "The stores couldn't find that many after all.";
+        boolean had;
+        try (Accounts.Scope paid = Accounts.free("a player's order, paid below")) {   // [econ-1a] paid for here, not again at the stores
+            had = v != null && TownWork.take(level, v, Stockroom.matcher(key), (int) n);
+        }
+        if (!had) return "The stores couldn't find that many after all.";
         Market.payOut(p, coins);
         CoinCensus.flow(village, CoinCensus.Flow.PLAYER_IN, coins);
-        toTreasury(village, cost[0]);
+        MarketMaker.inOrTreasury(village, cost[0]);                        // [econ-1a] the market's sale, once it is open
         long change = coins * 100L - cost[0];
         if (change > 0) stall.ownersDue.merge(p.getUUID(), change, Long::sum);  // the odd pennies kept for it
         bought(level, village, stall, key, one, n, cost[0], "the town stores", cost[2], cost[1], day);
@@ -1872,6 +1891,11 @@ public final class Businesses {
         b.till += got;
         b.allTime.capital += got;
         dirty();
+    }
+
+    /** [econ-1a] Tests: so many pennies out of the treasury, to nowhere (an empty treasury). */
+    public static long fromTreasuryForTests(UUID village, long p) {
+        return fromTreasury(village, p);
     }
 
     /** Tests: a business's day's rent, pennies. */

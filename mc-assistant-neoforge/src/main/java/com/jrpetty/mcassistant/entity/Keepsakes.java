@@ -144,6 +144,7 @@ public final class Keepsakes {
             case DRAWING -> f.life().children() == 0 ? ItemStack.EMPTY : QuestItems.make(level, v, null, McAssistantMod.CHILDS_DRAWING.get());
         };
         if (got.isEmpty()) return;
+        if (s.keepsake == Kind.COIN) CoinCensus.flow(v.id(), CoinCensus.Flow.KEPT, 1);   // [econ-1a] a coin kept, out of the purse
         treasure(f, got.copyWithCount(1), s.keepsake, s.keepsakeStory);
         s.keepsakeDay = day;
         f.persona().remember(day, "I have " + s.keepsake.word + " of my own: " + s.keepsakeStory, 3);

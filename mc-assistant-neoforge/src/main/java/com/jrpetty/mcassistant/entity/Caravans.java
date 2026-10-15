@@ -178,9 +178,11 @@ public final class Caravans {
         }
         int loaves = Math.max(2, Math.min(8, far / 100 + 1));
         java.util.function.Predicate<ItemStack> food = s -> s.get(net.minecraft.core.component.DataComponents.FOOD) != null;
-        for (ItemStack s : takeOut(level, from, food, loaves)) {
-            ItemStack left = carrier.insertGiven(s);
-            if (!left.isEmpty()) Market.intoStores(level, from.id(), left);
+        try (Accounts.Scope trade = Accounts.as(Accounts.Dept.TRADE, Accounts.Purpose.WORK)) {   // [econ-1a] the town's trade's provisions
+            for (ItemStack s : takeOut(level, from, food, loaves)) {
+                ItemStack left = carrier.insertGiven(s);
+                if (!left.isEmpty()) Market.intoStores(level, from.id(), left);
+            }
         }
         return coins;
     }
@@ -298,7 +300,9 @@ public final class Caravans {
                 out.add(ItemStack.EMPTY);
                 continue;
             }
-            out.addAll(takeOut(level, from, g.what(), spare));
+            try (Accounts.Scope trade = Accounts.as(Accounts.Dept.TRADE, Accounts.Purpose.WORK)) {   // [econ-1a] the town's aid to its colony
+                out.addAll(takeOut(level, from, g.what(), spare));
+            }
         }
         return out;
     }
@@ -306,6 +310,8 @@ public final class Caravans {
     /** Take so many of a thing out of a village's stores, as stacks. */
     static List<ItemStack> takeOut(ServerLevel level, Villages.Village v, java.util.function.Predicate<ItemStack> what, int n) {
         List<ItemStack> out = new ArrayList<>();
+        // [econ-1a] Bought of the market by whoever's account it is (the town's trade for a caravan's load: TradeDeals,
+        // Caravans' own provisioning open its scope; a roadside keeper's or the trading post's their own).
         for (BlockPos p : Villages.storeChests(level, v.id())) {
             if (n <= 0) break;
             if (!(level.getBlockEntity(p) instanceof net.minecraft.world.Container c)) continue;
@@ -314,6 +320,7 @@ public final class Caravans {
                 if (s.isEmpty() || !what.test(s)) continue;
                 int k = Math.min(n, s.getCount());
                 out.add(s.copyWithCount(k));
+                MarketMaker.taken(level, v.id(), s, k);                     // [econ-1a]
                 s.shrink(k);
                 if (s.isEmpty()) c.setItem(i, ItemStack.EMPTY);
                 n -= k;

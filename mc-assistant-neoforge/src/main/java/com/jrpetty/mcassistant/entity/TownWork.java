@@ -270,6 +270,7 @@ public final class TownWork {
         int[] took = new int[boxes.size()];
         ItemStack left = Stacking.insert(boxes, stack, took);
         if (store != null && took[0] > 0) Storekeeping.bookIn(level, v.id(), null, stack, took[0], false);
+        if (stack.getCount() > left.getCount()) MarketMaker.given(level, v.id(), stack, stack.getCount() - left.getCount());   // [econ-1a] into the market's stock
         stack.setCount(left.getCount());
     }
 
@@ -280,8 +281,14 @@ public final class TownWork {
         List<ItemStack> own = WorkStock.takeOwn(what, n);
         int got = 0;
         for (ItemStack s : own) got += s.getCount();
-        if (got >= n) return true;
-        if (takeFromStores(level, v, what, n - got)) return true;
+        if (got >= n) {
+            MarketMaker.fromWorkshop(level, v.id(), own);                       // [econ-1a] a town's workshop's delivered stock
+            return true;
+        }
+        if (takeFromStores(level, v, what, n - got)) {
+            MarketMaker.fromWorkshop(level, v.id(), own);                       // [econ-1a]
+            return true;
+        }
         WorkStock.putBackOwn(own);
         return false;
     }
@@ -312,6 +319,7 @@ public final class TownWork {
                     if (st.isEmpty() || !what.test(st)) continue;
                     int k = Math.min(left, st.getCount());
                     Economy.storesOut(v.id(), st, k);                           // a maker's work, item by item
+                    MarketMaker.taken(level, v.id(), st, k);                    // [econ-1a] bought of the market, by whoever's account it is
                     if (f.blockEntity() instanceof com.jrpetty.mcassistant.block.StorehouseBlockEntity) {
                         Storekeeping.bookOut(level, v.id(), null, st, k, null);   // the town's works, in its books
                     }

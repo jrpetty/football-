@@ -291,6 +291,7 @@ public final class Visitors {
         f.life().roll(r, null, null);
         f.persona().roll(r, f.life(), AssistantEntity.StationTask.NONE, day, origin);
         if (purse > 0) f.earn(purse);
+        if (purse > 0) CoinCensus.flow(v.id(), CoinCensus.Flow.VISITOR_IN, purse);   // [econ-1a] coin from outside, into the census
         for (ItemStack s : kit) f.insertGiven(s.copy());
         Visit vis = new Visit();
         vis.kind = kind;
@@ -463,6 +464,7 @@ public final class Visitors {
         rise(level, f, v);
         LOG.info("[MCA-VISIT] {} ({}) has left {}; it spent {} coins there", v.name, v.kind.words, Villages.name(v.town),
             Math.max(0, v.purse0 - f.purse()));
+        CoinCensus.flow(v.town, CoinCensus.Flow.VISITOR_OUT, f.purse());   // [econ-1a] what it did not spend goes with it
         VISITS.remove(f.getUUID());
         f.discard();
     }
