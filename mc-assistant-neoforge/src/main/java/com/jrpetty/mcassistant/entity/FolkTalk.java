@@ -540,6 +540,7 @@ public final class FolkTalk {
         line(sb, "Kitchen", Kitchen.cardLine(f));            // [kitchen] its packed lunch, its bandages, a slice of cake, a drink
         line(sb, "Neighbours", Neighbourly.cardLine(f));     // [batchA] looked in on, a welcome, a housewarming (Neighbourly)
         line(sb, "About town", TownLook.cardLine(f));       // [batchE] its allotment, the bakery, the inn (TownLook)
+        line(sb, "Scholar", Scholars.cardLine(f));          // [tech-tree] its desk, its head for it, the invention in hand
         line(sb, "Town life", Civics.cardLine(f));          // [batchF] its letters, its quarter as warden, its good turns (Civics)
         line(sb, "The law", Crime.cardLine(f));             // [crime] its case, its record, robbed, cleared, a new leaf (Crime)
         line(sb, "The watch", Police.cardLine(f));          // [police] today's duty and its record; the cells, the curfew, a bounty

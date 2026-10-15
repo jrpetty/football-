@@ -86,6 +86,9 @@ public final class AdminActions {
             case "build.renovate" -> "renovate " + Ledger.buildings(v.id()).size() + " buildings of " + town;
             case "restore" -> "put back " + town + "'s saved data from " + a.word(0, "?") + " (age, treasury, notes; not blocks or folk)";
             case "world.skip" -> "skip " + a.num(0, 1) + " day(s): every town's morning round run for each";
+            case "inventions.all" -> town + ": every invention up to " + Villages.ageOf(v.id()).label + " made known ("
+                + com.jrpetty.mcassistant.entity.Inventions.knownIds(v.id()).size() + " known now)";   // [tech-tree]
+            case "inventions.reset" -> "forget " + town + "'s " + com.jrpetty.mcassistant.entity.Inventions.knownIds(v.id()).size() + " inventions";
             default -> c.action().path() + " on " + town + (a.positional().isEmpty() ? "" : " with " + String.join(" ", a.positional()));
         };
     }
@@ -153,6 +156,27 @@ public final class AdminActions {
                 }
                 yield n == 0 ? Done.said("Nothing left " + Villages.name(v.id()) + " can study.")
                     : Done.ok(n + " civics completed in " + Villages.name(v.id()), n + " civics were completed");
+            }
+            // [tech-tree] the inventions
+            case "inventions.show" -> Done.said(String.join("\n", com.jrpetty.mcassistant.entity.Inventions.lines(level, v.id())));
+            case "inventions.unlock" -> {
+                var inv = com.jrpetty.mcassistant.village.InventionTree.byId(a.word(0, ""));
+                if (inv == null) yield Done.no("No invention called " + a.word(0, "") + ". One of " + String.join(", ", com.jrpetty.mcassistant.entity.Inventions.allIds()));
+                String said = com.jrpetty.mcassistant.entity.Inventions.grant(level, v.id(), inv);
+                yield Done.ok(said, inv.title + " was made known");
+            }
+            case "inventions.now" -> {
+                String said = com.jrpetty.mcassistant.entity.Inventions.finishNow(level, v.id());
+                yield Done.ok(said, "the scholars' work in hand was finished");
+            }
+            case "inventions.all" -> {
+                int n = com.jrpetty.mcassistant.entity.Inventions.grantAll(level, v.id(), Villages.ageOf(v.id()).ordinal());
+                yield n == 0 ? Done.said("Nothing more " + Villages.name(v.id()) + " can know in its age.")
+                    : Done.ok(n + " inventions made known in " + Villages.name(v.id()), n + " inventions were made known");
+            }
+            case "inventions.reset" -> {
+                com.jrpetty.mcassistant.entity.Inventions.reset(v.id());
+                yield Done.ok(Villages.name(v.id()) + "'s inventions forgotten", "its inventions were forgotten");
             }
             case "research.knacks" -> forFolk(c, v, "knacks", f -> {
                 int n = 0;
@@ -367,6 +391,9 @@ public final class AdminActions {
         } else if (renovate.equals("queued")) {
             more.add("the builders renovate to the age as their work allows");
         }
+        // [tech-tree] What the town's scholars would have worked out in the ages it has jumped: the earlier ages' inventions.
+        int learnt = com.jrpetty.mcassistant.entity.Inventions.grantAll(level, v.id(), to.ordinal() - 1);
+        if (learnt > 0) more.add(learnt + " inventions of the earlier ages known");
         if (fill && Villages.headcount(v.id()) < AGE_FOLK[to.ordinal()]) {
             more.add(addFolk(c, v, AGE_FOLK[to.ordinal()] - Villages.headcount(v.id()), Mix.SPREAD, null).text());
         }

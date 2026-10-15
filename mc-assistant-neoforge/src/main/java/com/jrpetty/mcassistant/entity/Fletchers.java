@@ -532,6 +532,8 @@ public final class Fletchers {
         if (done != null) return done;
         done = crossbow(level, v, t);
         if (done != null) return done;
+        done = InventionArms.fletch(level, v, f);                       // [tech-tree] longbows, arbalests, once the town knows them
+        if (done != null) return done;
         done = target(level, v, t);
         if (done != null) return done;
         done = lamp(level, v, f, t);

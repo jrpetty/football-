@@ -173,5 +173,6 @@ public final class BaseWorth {
         // [itemaudit] The town's coin is worth a coin, whatever its minting took (a ninth of a bar of gold and the fire);
         // and a companion's memory core is nobody's to buy or sell: it is a friend, and nothing makes another.
         "mc_assistant:village_coin 1.0 C", "mc_assistant:memory_core 0 C",
+        "mc_assistant:working_model 3.0 C",                          // [tech-tree] the scholars' model: a few makings, and the work
     };
 }

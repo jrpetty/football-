@@ -358,6 +358,8 @@ public final class BattleModel {
         public int power;
         public int archers;
         public boolean captainDown, bannerLost, flanked;
+        /** [tech-tree] Its new arms (pikes, hammers, longbows...), as the town's inventions gave it them (ArmsEdge). */
+        public ArmsEdge.Kit kit = new ArmsEdge.Kit();
 
         public Side(String name, int size, int power, int archers, int morale, Tactic tactic) {
             this.name = name;
@@ -470,16 +472,19 @@ public final class BattleModel {
                 if (!clash) {
                     // The archers' duel: the bows alone, the more on a rise; a shield wall takes it on its shields.
                     bite = us.archers * 0.9 * (us.tactic == Tactic.HILL_ARCHERS ? 1.3 : 1.0) * (them.tactic == Tactic.SHIELD_WALL ? 0.75 : 1.0)
-                        * (us.formation == Formation.SKIRMISH || us.formation == Formation.WINGED_LINE ? 1.2 : 1.0);
+                        * (us.formation == Formation.SKIRMISH || us.formation == Formation.WINGED_LINE ? 1.2 : 1.0)
+                        * ArmsEdge.volley(us.kit, us.archers);                            // [tech-tree] longbows, arbalests
                 } else {
                     double per = us.power / (double) Math.max(1, us.size);
-                    bite = us.standing() * per * 0.2 * edge(us.formation, them.formation);
+                    bite = us.standing() * per * 0.2 * edge(us.formation, them.formation)
+                        * ArmsEdge.clash(us.kit, us.standing(), them.kit, them.tactic == Tactic.CAVALRY);   // [tech-tree] pikes, hammers
                     if (them.tactic.holds() && round < 5) bite *= 0.85;                  // they come on into a wall that waits for them
                     if (us.tactic == Tactic.FEIGNED_RETREAT && round == 5) bite *= 1.6; // turned on them, drawn on and out of order
                     if (us.tactic.flanks() && round >= 6 && !flankDone[i]) {
                         flankDone[i] = true;
                         them.flanked = true;
-                        them.shake((int) Math.round(FLANKED * flankShock(them.formation)));
+                        them.shake((int) Math.round(FLANKED * flankShock(them.formation)
+                            * ArmsEdge.braced(them.kit, them.standing(), us.tactic == Tactic.CAVALRY)));   // [tech-tree] the pikes braced
                         story.add(us.name + " " + (us.tactic == Tactic.CAVALRY ? "rode round" : "came out on") + " " + them.name + "'s flank.");
                     }
                 }

@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "mc_assistant:steel_sword",
+    "mc_assistant:pike",
+    "mc_assistant:halberd",
+    "mc_assistant:war_hammer"
+  ]
+}

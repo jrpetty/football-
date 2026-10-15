@@ -11994,3 +11994,90 @@ holders are looked up at most every five seconds a town. A stint is a map look-u
 drawn once a day with the roster. The carter's whip is looked at once a second only while a wagon is being driven.
 
 Smoke: `roles_e_stage` in tools/realworld/smoke.py (`/village roads stage`). Tests: RoadsRanksGameTests (re01 to re07).
+
+## Inventions: the research tree
+
+Beside the town's civics (the Research page: ways of running a town, paid for by its headcount), a town now has
+**inventions**: real machines, buildings and arms, worked out over days by a few of its folk, its **scholars**, at their
+desks. Twenty-two of them in four branches, each waiting for its age and for what it needs first.
+
+| Branch | Inventions (the age each waits for) |
+|---|---|
+| Agriculture | The Heavy Plough (Wood), The Windmill's Millstones, The Horse Collar (Stone), The Watermill (Iron), The Seed Drill (Diamond) |
+| Engineering | The Treadwheel Crane, Tempered Tools (Stone), The Clocktower, The Aqueduct (Iron), Movable Type (Diamond), Black Powder (Nether) |
+| Military | The Longbow, The Pike (Stone), The War Hammer, Steel, The Arbalest, The Halberd (Iron), Siege Engines (Diamond) |
+| Learning | Double-Entry Ledgers, Physic (Iron), Lenses, Navigation (Diamond) |
+
+### The scholars
+- A town of six keeps one scholar, one more for every fifteen folk, four at most: its best heads (a curious nature, a
+  reader or a stargazer, years at its trade, the teacher, the museum's curator, a folk who hopes to write a book). Never
+  the leader, never the watch. A scholar keeps its own trade; of an evening (and the afternoon long on the day of rest)
+  it goes to its desk: a lectern in the **academy** once the town has built one, else the town library's, the library's,
+  the school's or the hall's. You see it there, its eyes on its notes, a page turning, a wisp of smoke off the bench.
+- Each scholar's own reading, and its evenings at the desk, are the town's **learning**: half again at the academy's
+  desks, a tenth more with a library, a fifth with Movable Type, a quarter with Lenses; less at war or in a famine, and
+  under a lord. A scholar's first evening of the day writes a page of notes on a sheet of the stores' paper: no paper,
+  and its evening counts for half.
+- One that dies, leaves, joins the watch or comes to lead the town is replaced by the next best head the next morning.
+  A town with nobody to spare is down to its elder's own tinkering, half a point a day, and the chronicle says so.
+
+### How an invention is worked out
+- When nothing is in hand, the leader chooses, by its heart: a Guardian (or a grumpy one, or a town at war) takes up the
+  arms, a Provider the plough and the mills, a Visionary the crane and the clock, a Merchant the ledgers; a hungry town
+  leans to the fields; the cheaper first, and the road to what it wants most. A player's suggestion is weighed too.
+- Each costs **learning** (18 to 160 points) and takes **days** at least (two to six). A quarter of the way in, the
+  scholars build its **working model** at the academy's bench out of the stores (paper, ink, books and real makings: the
+  windmill's is planks, wool and sticks; the clocktower's four gold and a redstone). Without them the work stops at half
+  way, and the chronicle says what it waits on.
+- Now and then a **eureka** (a quarter of the way at a stroke, a chime, the scholar beside itself), and at the harder
+  ones a **failed experiment** (a tenth lost; a bang and a cloud of smoke at the academy, nobody hurt).
+- **Word along the road**: a town trading with one that knows it learns it a little quicker each day. **A stolen idea**:
+  our spy home from a rival that knows it brings its sketches, two fifths of it at once. **A vassal's scholars** are
+  made to teach their overlord what they know, one thing every three days.
+- Done, it is **known**: in the chronicle (so the crier calls it and the gazette prints it), at the morning assembly,
+  by the leader, with the bell and a fanfare for anyone in the town. The first town in the world to know it is told to
+  every player. Its working model goes into the stores, and the museum shows the first in a case.
+
+### What they do
+- **Buildings**: the **academy** (once the town keeps a scholar), the **watermill** (it grinds for the bakery, three
+  times its batch, and drives the smith's and smelter's trip-hammer, 8% quicker), the **aqueduct** (clean water: the
+  town 3 more content, the hurt mend faster, and one crop in ten gives one more), the **clocktower** (every trade 3%
+  quicker while it stands, and its bell strikes the hours from six in the morning to nine at night) and the **foundry**
+  (where the smith blasts its steel). The Windmill's Millstones has a farming town build its windmill from eight folk,
+  not sixteen, and with a mill the bakery bakes three times its batch, not two. Each is wanted only once known.
+- **Arms**: steel ingots (an iron ingot and a coal); the **steel sword** and **steel armour** (between iron and diamond);
+  the **pike** (a block and a half more reach, half again as hard on a rider or its horse), the **halberd** (reach, a
+  steel edge, a third again on a rider, and its spike finds gaps in armour), the **war hammer** (slow, but a quarter of the
+  armour's points again in harm), the **longbow** (its arrow a fifth faster and a quarter harder) and the **arbalest**
+  (three quarters as long again to span, its bolt half again as hard). You can craft them all yourself; the town's
+  smith and fletcher make them out of its stores once it knows how, and its guards are kitted with the steel.
+- **In battle**: at the muster the town's pikes and halberds go to the line (half of it if the enemy keeps horses), its
+  hammers to a quarter of it if the enemy goes armoured, each fighter's own blade kept in its pack and the polearms back
+  in the armoury after. In front of you every blow is the weapon's own; on paper the pikes brace against a charge, the
+  hammers go through plate and the longbows and arbalests win the archers' duel. Siege Engines break a gate in six blows,
+  not ten (Black Powder in three), and the defenders take less heart from their walls.
+- **The rest**: the Heavy Plough (one crop in eight gives one more; the Seed Drill one in five, and farmers 8%), the Horse
+  Collar (farmers 6%, ranchers 4%), the Treadwheel Crane (building 12%), Tempered Tools (every trade 2%, one tool use in
+  six spared), Black Powder (miners 10%), Double-Entry Ledgers (takings 4%), Physic (faster mending, a tenth longer
+  life), Lenses (the scouts a fifth further) and Navigation (the fishing fleet sails in the rain, a boat more).
+
+### Where you see it, and what you can do
+- **The town's books**, Civic section, the **Inventions** page: the tree, a column a branch, each invention green
+  (known), gold with its bar (in hand), white (open) or grey (locked; the mouse says why); the work in hand, its days
+  left and why it was chosen; the day's learning and what it comes from; the scholars. The board's foot has a line too,
+  and a scholar's card says what it is at.
+- `/village inventions`: the tree in lines, and the world's firsts. `suggest <invention>` puts one to the scholars.
+  `sponsor <coins>` gives coin to the treasury for the work in hand (five coins a point, half the cost at most from
+  players). `give` (or right-click one of the academy's lecterns) hands over the books, paper or ink in your hand: into the
+  stores, and a book is two points of learning, a written one four, an enchanted one six. A player who leads the town
+  chooses with `pick <invention>`.
+- **Admin**: `/village admin inventions show|unlock <invention>|now|all|reset`; an age jumped (`ages set`) brings the
+  earlier ages' inventions with it. Operators also have `/village inventions grant|now|all|reset|morning|stage`.
+
+### Kept, and its cost
+Everything is kept with the world (what each town knows and when, the work in hand, its scholars, the firsts). Once a
+morning per town for the learning; a scholar's desk is a map look-up in its own tick; the clocktower's bell and the
+foundry's smoke are looked at twice a second, only in towns that know them.
+
+Smoke: `tech_tree_stage` in tools/realworld/smoke.py (`/village inventions stage`). Tests: InventionsGameTests (iv01 to
+iv05), InventionTreeTest.

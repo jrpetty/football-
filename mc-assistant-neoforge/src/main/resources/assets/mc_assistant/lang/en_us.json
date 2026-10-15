@@ -531,5 +531,17 @@
   "talk.mc_assistant.mine_ore": "Coal and ore",
   "talk.mc_assistant.mine_ore.tip": "Coal or raw iron, copper and gold up from the mine, out of the stores at the town's price",
   "talk.mc_assistant.fletcher_arrows": "Buy arrows",
-  "talk.mc_assistant.fletcher_arrows.tip": "Arrows of the fletcher's making, out of the stores at the town's price: what the town can spare"
+  "talk.mc_assistant.fletcher_arrows.tip": "Arrows of the fletcher's making, out of the stores at the town's price: what the town can spare",
+  "item.mc_assistant.steel_ingot": "Steel Ingot",
+  "item.mc_assistant.steel_sword": "Steel Sword",
+  "item.mc_assistant.steel_helmet": "Steel Helmet",
+  "item.mc_assistant.steel_chestplate": "Steel Chestplate",
+  "item.mc_assistant.steel_leggings": "Steel Leggings",
+  "item.mc_assistant.steel_boots": "Steel Boots",
+  "item.mc_assistant.pike": "Pike",
+  "item.mc_assistant.halberd": "Halberd",
+  "item.mc_assistant.war_hammer": "War Hammer",
+  "item.mc_assistant.longbow": "Longbow",
+  "item.mc_assistant.arbalest": "Arbalest",
+  "item.mc_assistant.working_model": "Working Model"
 }

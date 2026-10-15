@@ -237,6 +237,8 @@ public final class TownPlan {
             case "enchanter" -> "civic";              // [roles-b] the enchanter's tower, among the trades (CraftScale)
             case "huntlodge", "barn" -> "edge";       // [roles-d] the hunter's lodge toward the wild, the barn out by the pen
             case "wheelwright" -> "civic";            // [roles-e] the wheelwright's shed, among the trades by the yard
+            case "academy", "foundry", "clocktower" -> "civic";   // [tech-tree] the academy, the foundry, the clocktower among the trades
+            case "watermill", "aqueduct" -> "edge";   // [tech-tree] the watermill on its race, the aqueduct's arches, out at the edge
             default -> "home";
         };
     }

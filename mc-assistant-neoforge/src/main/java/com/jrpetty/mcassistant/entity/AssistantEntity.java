@@ -5283,6 +5283,8 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
 
     private static int weaponScore(ItemStack s) {
         if (s.isEmpty()) return 0;
+        int invented = InventionArms.weaponScore(s);                   // [tech-tree] steel, the halberd, the hammer, the pike
+        if (invented > 0) return invented;
         String path = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(s.getItem()).getPath();
         int material = path.contains("netherite") ? 60 : path.contains("diamond") ? 50
             : path.contains("iron") ? 40 : path.contains("stone") ? 30

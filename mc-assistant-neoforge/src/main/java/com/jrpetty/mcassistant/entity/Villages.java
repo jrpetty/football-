@@ -355,6 +355,8 @@ public final class Villages {
     public static String spoken(String structure) {
         Wonders.Wonder wonder = Wonders.byStructure(structure);    // [perks] "the Great Forge"
         if (wonder != null) return wonder.name;
+        String invented = InventionWorks.spoken(structure);       // [tech-tree] "the academy", "the watermill"
+        if (invented != null) return invented;
         return switch (structure) {
             case "fortify" -> "the wall";
             case "storage" -> "the storehouse";
@@ -1883,6 +1885,9 @@ public final class Villages {
         if (com.jrpetty.mcassistant.village.Ledger.graves(villageId).size() > Graves.room(villageId)) extras.add(0, "graveyard");
         // [batchE] The town's look: the windmill, the bakery, the orchard, the allotments and (Iron Age, or thirty folk) the inn.
         TownLook.wanted(villageId, folk, at, extras, s -> built(villageId, s) < 1);
+        // [tech-tree] The academy once the town keeps a scholar; the watermill, the foundry, the clocktower and the aqueduct
+        // once its scholars have worked them out (InventionWorks).
+        InventionWorks.wanted(villageId, folk, at, extras, s -> built(villageId, s) < 1);
         // [fireworks] The powder hut, out at the edge of the town, once the town takes up fireworks (FireworksMaker): from the
         // Stone Age on, so it is asked for wherever the list stops.
         if (FireworksMaker.hutWanted(villageId)) extras.add(FireworksMaker.STRUCTURE);
@@ -2264,6 +2269,8 @@ public final class Villages {
         if (war != null) return war;
         String wonder = Wonders.why(project);                      // [perks] a wonder of the world
         if (wonder != null) return wonder;
+        String invented = InventionWorks.why(villageId, project);  // [tech-tree] the academy, and what the scholars worked out
+        if (invented != null) return invented;
         int folk = headcount(villageId);
         return switch (project) {
             case "guesthouse" -> {

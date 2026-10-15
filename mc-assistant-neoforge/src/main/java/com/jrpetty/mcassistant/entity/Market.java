@@ -519,6 +519,7 @@ public final class Market {
         Leader.morning(level, v, day);                   // the leader's books, the plan and the day's pay
         WarFooting.morning(level, v, day);               // [war-prep] the town on a war footing: the watch, the militia, the defences
         CityTree.morning(level, v, day);                 // the day's research points, and the leader's next civic
+        Inventions.morning(level, v, day);               // [tech-tree] the scholars' day's learning, and the next invention
         Identity.morning(level, v, day);                 // [identity] the town's character, government, laws, traits and fame looked at
         JobWorth.morning(level, v, day);                 // [econ-wages] the day's pay scale: what every job is worth
         mint(level, v);

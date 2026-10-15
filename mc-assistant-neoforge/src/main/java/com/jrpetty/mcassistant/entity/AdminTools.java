@@ -1081,6 +1081,8 @@ public final class AdminTools {
             + Villages.stock(level, v.centre(), Villages.Task.STONE, Villages.storesRadius(id)) + ", iron "
             + Villages.stock(level, v.centre(), Villages.Task.IRON, Villages.storesRadius(id)) + "; " + Villages.storeChests(level, id).size() + " store chest(s)");
         out.add("TREASURY " + Ledger.coins(id) + " coin" + (Market.marketDay(id, day(level)) ? "; market day today" : ""));
+        String invented = Inventions.line(level, id);                     // [tech-tree] the scholars' work, what is known
+        out.add("INVENTIONS " + (invented.isEmpty() ? "none yet, and no scholars" : invented.replace("Inventing: ", "")));
         List<String> wars = new ArrayList<>();
         for (UUID e : Wars.enemies(id)) wars.add(Villages.name(e));
         List<String> vass = new ArrayList<>();

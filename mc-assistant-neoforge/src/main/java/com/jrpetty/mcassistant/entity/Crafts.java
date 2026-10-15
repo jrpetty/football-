@@ -337,6 +337,8 @@ public final class Crafts {
         // [nether] A gold charm for each Nether runner with no gold to wear; the leader's flint and steel (NetherRunners).
         String nether = NetherRunners.smith(level, v, f);
         if (nether != null) return nether;
+        String invented = InventionArms.smith(level, v, f);            // [tech-tree] steel at the foundry; the new arms the town knows
+        if (invented != null) return invented;
         String forged = forge(level, v, f, wants);
         if (forged != null) return forged;
         // [guard-kit] Its forging seen to: the watch's diamond (the blade first) once the age, the diamonds and the

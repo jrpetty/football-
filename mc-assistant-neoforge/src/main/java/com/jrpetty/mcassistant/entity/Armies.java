@@ -346,6 +346,7 @@ public final class Armies {
     /** Take this army's fighters out of the field: their own lives again, their clothes back as they were. */
     static void discharge(ServerLevel level, Army a) {
         WarDress.undress(level, a);                                    // [war-polish] its battle dress off, whatever ended it
+        InventionArms.returnKit(level, a);                             // [tech-tree] the lent polearms back to the armoury
         for (Fighter f : a.fighters) {
             if (FIGHTERS.get(f.id) == f) FIGHTERS.remove(f.id);
             if (level.getEntity(f.id) instanceof VillageFolkEntity e) release(e);
@@ -405,7 +406,7 @@ public final class Armies {
 
     /** What it is worth in the line, as it is armed now. */
     static int power(VillageFolkEntity f, boolean veteran) {
-        return BattleModel.power(blade(f), armour(f), shield(f), bow(f), veteran);
+        return BattleModel.power(blade(f), armour(f), shield(f), bow(f), veteran) + InventionArms.power(f);   // [tech-tree] steel, the polearms
     }
 
     /** Has it fought a battle before (its books: Ledger "war.vet/")? */
@@ -486,6 +487,9 @@ public final class Armies {
             if (f.role == BattleModel.Role.LINE && !shield(g)) shieldUp(level, v, g);
             f.power = power(g, f.veteran);
         }
+        // [tech-tree] The town's pikes, halberds and war hammers to the line (InventionArms), and each fighter's arms noted.
+        InventionArms.kitForField(level, v, a, byId);
+        for (Fighter f : a.fighters) if (byId.get(f.id) != null) { f.power = power(byId.get(f.id), f.veteran); InventionArms.note(byId.get(f.id), f.id); }
         int file = 0;
         for (Fighter f : a.fighters) if (f.crossbow()) f.file = file++ % 2;      // the crossbow company in two ranks
         if (captain != null) {
@@ -771,7 +775,7 @@ public final class Armies {
     /** [war-bows] How long this one takes to make ready another shot (ticks): its crossbow's span, or a bow's draw. */
     public static int reloadTicks(LivingEntity e, ItemStack weapon) {
         if (!crossbowItem(weapon)) return BOW_DRAW;
-        return Math.max(BOW_DRAW, CROSSBOW_RELOAD * CrossbowItem.getChargeDuration(weapon, e) / PLAIN_CHARGE);
+        return InventionArms.reload(weapon, Math.max(BOW_DRAW, CROSSBOW_RELOAD * CrossbowItem.getChargeDuration(weapon, e) / PLAIN_CHARGE));   // [tech-tree] the arbalest's windlass
     }
 
     /** [war-bows] A crossbowman sets to spanning its crossbow: down on one knee, the crossbow's own loading pose and sounds. */

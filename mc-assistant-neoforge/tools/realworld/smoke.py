@@ -4529,6 +4529,64 @@ def roles_e_stage(r, look, cx, cz):
     say("alive after the roads' posts: %s" % client_alive())
 
 
+def tech_tree_stage(r, look, cx, cz):
+    """[tech-tree] The town's inventions (entity/Inventions, Scholars, InventionWorks, InventionArms, InventionCommands).
+    Out past the town to the north-east, /village inventions stage levels a strip and raises in a row, from palettes (as
+    the showcase's are): the academy, the clocktower, the watermill on its race, the foundry and the aqueduct; gives the
+    nearest town the inventions behind them (by decree, quietly), sets a scholar at the academy's lectern with the work in
+    hand half done, and stands two armour stands in steel with a halberd, a pike and a longbow before the foundry.
+    Pictures:
+      1. 57-tech-1-academy .. 57-tech-5-aqueduct: each building from the street;
+      2. 57-tech-6-arms: the steel armour, the halberd, the pike and the longbow on their stands;
+      3. 57-tech-7-scholar: inside the academy, the scholar at its desk;
+      4. 57-tech-page-inventions: the town's books open at the Inventions page (the tree, the work in hand, the scholars).
+    Then /village inventions in words. Not wired into main(): call it after the other stages, as
+    tech_tree_stage(r, look, cx, cz)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    r.cmd("weather clear")
+    sx, sz = cx + 120, cz - 120                        # out past the town, within its reach (the nearest town's)
+    hy = ground_height(r, sx, sz)
+    r.cmd("tp %s %d %d %d" % (USER, sx, hy + 30, sz + 30))
+    time.sleep(10)                                     # the stage's chunks arrive
+    out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village inventions stage" % (sx, sz))
+    say("inventions stage: " + out[:1200])
+    views = {}
+    for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+        views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+    if not views:
+        say("nothing staged for the inventions; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view %s" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        x, y, z = clear_camera(r, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5)
+        look("57-tech-" + picture, x, y, z, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    for name in sorted(n for n in views if n.startswith("tech-")):
+        shoot(name, name[len("tech-"):], 8)
+    say("inventions: " + r.cmd("execute positioned %d %d %d run village inventions" % (cx, ground_height(r, cx, cz) + 1, cz))[:1500])
+    # The books, at the Inventions page (found by name in the books' own tabs, so the number follows the pages before it).
+    page = books_page("Inventions")
+    if page >= 0:
+        r.cmd("gamemode creative %s" % USER)
+        r.cmd("tp %s %d %d %d" % (USER, cx, ground_height(r, cx, cz) + 1, cz))
+        time.sleep(3)
+        say("stats inventions: " + r.cmd("execute as %s at @s run village stats %d" % (USER, page)))
+        time.sleep(4)
+        shot("57-tech-page-inventions")
+        say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+        r.cmd("gamemode spectator %s" % USER)
+    else:
+        say("no Inventions page in the books' tabs")
+    r.cmd("kill @e[type=armor_stand,x=%d,y=%d,z=%d,distance=..40]" % (sx, hy, sz))
+    say("alive after the inventions: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")
