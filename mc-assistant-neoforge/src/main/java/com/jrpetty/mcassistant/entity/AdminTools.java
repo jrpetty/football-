@@ -602,10 +602,11 @@ public final class AdminTools {
         net.minecraft.world.level.biome.Biomes.PLAINS, net.minecraft.world.level.biome.Biomes.SUNFLOWER_PLAINS, net.minecraft.world.level.biome.Biomes.MEADOW);
     /** How far apart the rings and bearings an open site is looked for on stand (blocks, and sixteen bearings). */
     static final int SITE_RING = 32, SITE_BEARINGS = 16;
-    /** At most so many spots in open country have their ground made and looked over (each a few chunks). */
-    static final int SITE_CHECKS = 8;
-    /** A town's heart wants ground this level: its height within so many blocks over 32 by 32. */
-    static final int SITE_ROUGH = 4;
+    /** At most so many spots have their ground made and looked over (each a few chunks): grassland first, then land. */
+    static final int SITE_CHECKS = 24;
+    /** A town's heart wants ground this level: its height within so many blocks over 32 by 32 (the founding levels the
+     *  rest); the levellest spot looked at is taken. */
+    static final int SITE_ROUGH = 12;
 
     /** The rival an admin founded for this town, if it still stands in the same world. */
     @Nullable
@@ -646,13 +647,8 @@ public final class AdminTools {
                 open.add(p);
             }
         }
-        int checks = 0;
-        for (BlockPos p : open) {
-            if (checks++ >= SITE_CHECKS) break;
-            if (level(level, p)) return p;
-        }
-        // No grassland or savanna free near enough: any land that is not sea, river, forest, jungle or mountain, still
-        // clear of every town and level enough for a heart (a scenario must not fail because the world is wooded).
+        // No grassland near enough, or not enough of it: any land that is not sea, river, beach, forest, jungle or
+        // mountain, still clear of every town (a scenario must not fail because the world is wooded).
         List<BlockPos> land = new ArrayList<>();
         for (int r = nearest; r <= farthest; r += SITE_RING) {
             for (int k = 0; k < SITE_BEARINGS; k++) {
@@ -668,28 +664,37 @@ public final class AdminTools {
                 land.add(p);
             }
         }
-        checks = 0;
-        for (BlockPos p : land) {
-            if (checks++ >= SITE_CHECKS) break;
-            if (level(level, p)) return p;
+        // The levellest of the spots looked at (grassland before other land at the same roughness), if level enough.
+        BlockPos best = null;
+        int bestRough = Integer.MAX_VALUE, checks = 0;
+        for (List<BlockPos> list : List.of(open, land)) {
+            for (BlockPos p : list) {
+                if (checks++ >= SITE_CHECKS) break;
+                int rough = rough(level, p);
+                if (rough >= 0 && rough < bestRough) {
+                    best = p;
+                    bestRough = rough;
+                }
+            }
         }
-        return null;
+        return best != null && bestRough <= SITE_ROUGH ? best : null;
     }
 
-    /** Is the ground round this spot level enough for a town's heart (its chunks made to look)? Water at the heart will not do. */
-    private static boolean level(ServerLevel level, BlockPos p) {
+    /** How uneven the ground round this spot is (its height's spread over 32 by 32, its chunks made to look), or -1
+     *  for water at the heart. */
+    private static int rough(ServerLevel level, BlockPos p) {
         int lo = Integer.MAX_VALUE, hi = Integer.MIN_VALUE;
         for (int dx = -16; dx <= 16; dx += 8) {
             for (int dz = -16; dz <= 16; dz += 8) {
                 int x = p.getX() + dx, z = p.getZ() + dz;
                 level.getChunk(x >> 4, z >> 4);
                 int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
-                if (!level.getBlockState(new BlockPos(x, y - 1, z)).getFluidState().isEmpty()) return false;
+                if (Math.abs(dx) <= 8 && Math.abs(dz) <= 8 && !level.getBlockState(new BlockPos(x, y - 1, z)).getFluidState().isEmpty()) return -1;
                 lo = Math.min(lo, y);
                 hi = Math.max(hi, y);
             }
         }
-        return hi - lo <= SITE_ROUGH;
+        return hi - lo;
     }
 
     /** Declare war between the two, a quarrel over the land first (as the war's own pictures do). */
