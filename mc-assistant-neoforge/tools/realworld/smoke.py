@@ -65,6 +65,16 @@ def clear_camera(r, x, y, z, tx, ty, tz):
     return cx, cy, cz
 
 
+def park_mouse():
+    """[pics-fix] The pointer put in the window's bottom-left corner, off the page, before a picture of a screen: a book
+    opens with the pointer in the middle of the window, and on the Taxes page that is over the chart (its tooltip
+    covered the council's votes)."""
+    try:
+        subprocess.run(["xdotool", "mousemove", "4", "716"], capture_output=True, text=True, timeout=10)
+    except Exception as e:  # noqa: BLE001
+        say("mouse not moved: %s" % e)
+
+
 def client_alive():
     out = subprocess.run(["pgrep", "-f", "runSmoke"], capture_output=True, text=True)
     return bool(out.stdout.strip())
@@ -4612,18 +4622,36 @@ def civic_land_stage(r, look, cx, cz):
         x, y, z = clear_camera(r, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5)
         look("57-civic-land-" + picture, x, y, z, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
 
-    shoot("manor", "1-manor", 10)
-    time.sleep(20)                                     # the angry walk to the hall and take their places
+    # [pics-fix] The protest first, the camera waiting by the hall while the angry walk to it from their work. (The
+    # manor was shot first, out at the town's edge some hundred blocks off: past the server's simulation distance of
+    # six chunks, so the folk about the hall stood frozen while the camera was there, and with six seconds by the hall
+    # the picture showed the ringleader alone before its door.) The picture waits till the crowd has come.
+    if "protest" in views:
+        x, y, z = views["protest"][:3]
+        r.cmd("tp %s %d.5 %d %d.5" % (USER, x, y, z))
+    crowd = ""
+    for _ in range(30):
+        crowd = r.cmd("execute positioned %d %d %d run village realm crowd" % (cx, hy + 1, cz))
+        m = re.search(r"CROWD (\d+) of (\d+)", crowd)
+        if not m or int(m.group(2)) == 0 or int(m.group(1)) >= min(int(m.group(2)), 6):
+            break
+        time.sleep(3)
+    say("the protest: " + crowd[:300])
     shoot("protest", "2-protest", 6)
+    shoot("manor", "1-manor", 10)
     r.cmd("gamemode creative %s" % USER)
     r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
     time.sleep(3)
     say("taxes: " + r.cmd("execute as %s at @s run village taxes" % USER)[:900])
     say("books: " + r.cmd("execute as %s at @s run village taxes book" % USER))
-    time.sleep(4)
+    time.sleep(3)
+    park_mouse()
+    time.sleep(1)
     shot("57-civic-land-3-taxes")
     say("books: " + r.cmd("execute as %s at @s run village knight book" % USER))
-    time.sleep(4)
+    time.sleep(3)
+    park_mouse()
+    time.sleep(1)
     shot("57-civic-land-4-knights")
     say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
     say("knight: " + r.cmd("execute as %s at @s run village knight" % USER)[:900])
@@ -4726,6 +4754,9 @@ def tech_tree_stage(r, look, cx, cz):
 
     for name in sorted(n for n in views if n.startswith("tech-")):
         shoot(name, name[len("tech-"):], 8)
+    # [pics-fix] The scholar was held at its desk for its picture: about its business again.
+    r.cmd("execute as @e[tag=mca_held_for_pictures] run data merge entity @s {NoAI:0b}")
+    r.cmd("tag @e[tag=mca_held_for_pictures] remove mca_held_for_pictures")
     say("inventions: " + r.cmd("execute positioned %d %d %d run village inventions" % (cx, ground_height(r, cx, cz) + 1, cz))[:1500])
     # The books, at the Inventions page (found by name in the books' own tabs, so the number follows the pages before it).
     page = books_page("Inventions")
@@ -4956,6 +4987,7 @@ def main():
         pitch = -math.degrees(math.atan2(ty - (y + 1.62), math.hypot(dx, dz)))
         r.cmd("tp %s %.2f %.2f %.2f %.1f %.1f" % (USER, x, y, z, yaw, pitch))
         time.sleep(wait)
+        r.cmd("title %s clear" % USER)                 # [pics-fix] no "Entering the lands of ..." across the picture
         shot(label)
 
     r.cmd("gamemode spectator %s" % USER)

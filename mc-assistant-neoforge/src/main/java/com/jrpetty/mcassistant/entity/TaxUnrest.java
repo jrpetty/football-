@@ -676,6 +676,8 @@ public final class TaxUnrest {
         out.putInt("angry", CivicLand.list(tag, "angry").size());
         out.putInt("refusals", tag.getInt("refusals"));
         out.putInt("protests", tag.getInt("protests"));
+        Assemblies.Assembly now = Assemblies.underWay(id);                  // [pics-fix] one before the hall as the books are read
+        out.putBoolean("protestNow", now != null && now.kind == Assemblies.Kind.PROTEST);
         out.putLong("challenged", tag.getLong("challenged") - 1);
         return out;
     }

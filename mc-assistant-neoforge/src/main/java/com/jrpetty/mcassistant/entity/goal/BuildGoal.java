@@ -637,7 +637,6 @@ public class BuildGoal extends Goal {
      */
     private void addTerrainWork(BlockPos base, String structure) {
         int[] g = footprint(structure);
-        int[] all = Blueprints.has(structure) ? Blueprints.fullHalf(structure) : new int[]{ g[0], g[1] };
         java.util.Set<BlockPos> taken = new java.util.HashSet<>();
         for (Placement p : plan) taken.add(p.pos());
         // [integrity] The fill under the floor is earth where earth will do (it is never seen), its stone footing above it.
@@ -645,16 +644,8 @@ public class BuildGoal extends Goal {
             if (taken.add(c)) plan.add(new Placement(c, Part.BLOCK, Blueprints.Style.SOIL, Blueprints.Way.UP));
         }
         Direction right = facing.getClockWise();
-        int top = Blueprints.has(structure) ? 12 : 5;
-        for (Placement p : plan) top = Math.max(top, p.pos().getY() - base.getY());   // [build-world] a tower's full height
-        for (int dx = -all[0] - 1; dx <= all[0] + 1; dx++) {
-            for (int dz = -all[1] - 1; dz <= all[1] + 1; dz++) {
-                for (int dy = 0; dy <= top; dy++) {
-                    BlockPos c = cell(base, right, facing, dx, dz).above(dy);
-                    if (isInTheWay(assistant.level(), c, assistant.level().getBlockState(c))) plan.add(new Placement(c, Part.CLEAR));
-                }
-            }
-        }
+        int top = lotTop(structure);
+        for (BlockPos c : treeOnLot(assistant.level(), structure, base, facing)) plan.add(new Placement(c, Part.CLEAR));
         // [econ-store] And what grows wild inside its walls, in the cells the drawing leaves empty: grass and ferns
         // stood on the floor of every building put up over a meadow (a part's own cell is laid over them anyway).
         for (int dx = -g[0]; dx <= g[0]; dx++) {
@@ -800,6 +791,41 @@ public class BuildGoal extends Goal {
             }
         }
         return false;
+    }
+
+    /**
+     * [pics-fix] How high over its floor a building's lot is cleared of a tree: the whole of its drawing and two over
+     * it. (It was twelve for every drawing, so a manor's ridge at thirteen, or a lighthouse's lamp room, could go up
+     * into a crown that was left standing.)
+     */
+    public static int lotTop(String structure) {
+        if (!Blueprints.has(structure)) return 5;
+        int h = 0;
+        for (Blueprints.Cell c : Blueprints.cells(structure)) h = Math.max(h, c.h());
+        return Math.max(12, h + 2);
+    }
+
+    /**
+     * [pics-fix] What of a tree stands on a building's lot, to come down before it goes up: its own leaves and its trunk,
+     * over the whole drawing and a block round it, from the floor up (lotTop). The builders' ground work
+     * (addTerrainWork) takes these down one by one; a building raised at once (AdminTools.raise) takes them all down
+     * first. Bottom first.
+     */
+    public static List<BlockPos> treeOnLot(net.minecraft.world.level.Level level, String structure, BlockPos base, Direction facing) {
+        int[] g = footprint(structure);
+        int[] all = Blueprints.has(structure) ? Blueprints.fullHalf(structure) : new int[]{ g[0], g[1] };
+        Direction right = facing.getClockWise();
+        int top = lotTop(structure);
+        List<BlockPos> out = new ArrayList<>();
+        for (int dy = 0; dy <= top; dy++) {
+            for (int dx = -all[0] - 1; dx <= all[0] + 1; dx++) {
+                for (int dz = -all[1] - 1; dz <= all[1] + 1; dz++) {
+                    BlockPos c = cell(base, right, facing, dx, dz).above(dy);
+                    if (level.isLoaded(c) && isInTheWay(level, c, level.getBlockState(c))) out.add(c);
+                }
+            }
+        }
+        return out;
     }
 
     /** Is this something the ground work takes down: a tree's leaves or trunk? */

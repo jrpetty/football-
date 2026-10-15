@@ -4,6 +4,7 @@
 # side, bookshelves and chests along the back, casks by the door. A ladder at the back up to the knight's
 # chamber: a bed for the knight and one for a guest, a carpet, a bookshelf and a cask, lanterns hung from the
 # beams. Nobody of the town sleeps in it or takes from its chests (KnightManors).
+# [build-looks] A porch of two log posts under the front eaves, before the door.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name knightmanor
 layer -1
@@ -17,7 +18,7 @@ layer -1
 .FfffffffF.
 .FfffffffF.
 .FFFFFFFFF.
-.....k.....
+...F.k.F...
 layer 0
 ...........
 .LwwwwwwwL.
@@ -29,7 +30,7 @@ layer 0
 .wQ.....Qw.
 .w.......w.
 .LwwwDwwwL.
-...........
+...L...L...
 layer 1
 ...........
 .LWGWWWGWL.
@@ -41,7 +42,7 @@ layer 1
 .G.......G.
 .W.......W.
 .LWGW.WGWL.
-...........
+...L...L...
 layer 2
 ...........
 .LWGWWWGWL.
@@ -53,7 +54,7 @@ layer 2
 .G.......G.
 .W.......W.
 .LWGWWWGWL.
-.....j.....
+...L.j.L...
 layer 3
 ...........
 .LWWWWWWWL.
@@ -65,7 +66,7 @@ layer 3
 .W.j...j.W.
 .W.......W.
 .LWWWWWWWL.
-.....|.....
+...L.|.L...
 layer 4
 vvvvvvvvvvv
 .L-------L.

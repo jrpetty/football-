@@ -610,7 +610,9 @@ steep roof, pews in rows facing the altar, and candles of light either side.""")
         for x in (-1, 0, 1):
             b.set(x, h, -D_, ".")                           # the porch clear through: no end wall of the nave in it
     for h in range(0, 3):
-        b.set(0, h, -D_ + 2, ".")                           # an arch from the porch into the nave
+        for x in (-1, 0, 1):
+            b.set(x, h, -D_ + 2, ".")                       # an arch from the porch into the nave, the nave's width
+                                                            # of it seen from the door [build-looks]
     b.set(0, 0, -D_ - 2, "D")
     b.set(0, 1, -D_ - 2, ".")
     b.set(0, 2, -D_ - 2, "G")                               # a fanlight over the door
@@ -620,7 +622,8 @@ steep roof, pews in rows facing the altar, and candles of light either side.""")
             b.set(x, h, z, ".")
     b.fill(-1, 1, 8, -D_ - 1, -D_ + 1, "f")
     for h in range(0, 9):
-        b.set(1, h, -D_ + 1, "H")                           # a ladder up the back of the porch to the belfry
+        b.set(1, h, -D_ - 1, "i")                           # a ladder up the porch's side wall to the belfry, beside
+                                                            # the door and out of the way into the nave [build-looks]
     b.set(0, 9, -D_, "e")
     b.set(0, 5, -D_ - 2, "G")
     b.set(0, 6, -D_ - 2, "G")
@@ -699,6 +702,16 @@ the rafters either side of the door, three chests of grain along the back and a 
             b.set(x, h, -1, "y")
     hip(b, -3, 3, -3, 3, 4)
     b.set(0, 3, -3, "j")                                    # [blueprints] the door lit, a lantern under the eaves
+    # [build-looks] Known from the street for what it is: the harvest stacked against its sides under the eaves
+    # (bales up the left, casks and a bale on the right), and a post standing up from the top of its roof.
+    for z in (-1, 0, 1):
+        b.set(-3, 0, z, "y")
+    b.set(-3, 1, 0, "y")
+    b.set(3, 0, -1, "Q")
+    b.set(3, 0, 0, "y")
+    b.set(3, 0, 1, "Q")
+    b.set(0, 7, 0, "R")
+    b.set(0, 8, 0, "P")
     b.write()
 
 
@@ -1080,6 +1093,14 @@ and the years they lived.""")
     b.set(-1, 2, 3, "S")
     b.set(1, 2, 3, "S")
     b.set(0, -1, 3, "F")
+    # [build-looks] The path up the middle flagged in stone from the gate to the cross, flowers left at the cross's
+    # foot and along the walk between the two rows of graves (Graves.PLOTS: the graves keep their plots clear).
+    for z in range(-3, 3):
+        b.set(0, -1, z, "F")
+    for x in (-2, -1, 1, 2):
+        b.set(x, 0, 3, "*")
+    for x in (-3, -1, 1, 3):
+        b.set(x, 0, 0, "*")
     b.write()
 
 

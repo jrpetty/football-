@@ -109,7 +109,10 @@ public final class TaxesPage {
             if (u.getLong("challenged") >= 0) body.add(new String[]{ "R", "The leader was challenged on day " + u.getLong("challenged") + "." });
         }
         body.add(new String[]{ "H", "Protests" });
-        if (u.getLong("protestDay") < 0) body.add(new String[]{ "M", u.getLong("protestDue") >= 0 ? "One is called for this afternoon." : "None yet." });
+        // [pics-fix] One under way as the books are read ("the last on day 0 (0 in all)" while the crowd stood at the hall).
+        if (u.getBoolean("protestNow")) body.add(new String[]{ "R", "The angry are before the hall now"
+            + (u.getInt("protests") > 0 ? " (" + u.getInt("protests") + " before this)." : ", the first time.") });
+        else if (u.getLong("protestDay") < 0) body.add(new String[]{ "M", u.getLong("protestDue") >= 0 ? "One is called for this afternoon." : "None yet." });
         else body.add(new String[]{ "L", "The last on day " + u.getLong("protestDay") + (u.getString("answer").isEmpty() ? "" : ": " + u.getString("answer"))
             + " (" + u.getInt("protests") + " in all)." });
         body.add(new String[]{ "H", "Back taxes: " + m.getInt("arrearsFolk") + " owe " + m.getInt("arrearsCoins") + " coins" });

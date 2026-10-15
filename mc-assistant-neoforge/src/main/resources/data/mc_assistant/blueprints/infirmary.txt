@@ -3,6 +3,8 @@
 # Four beds, two down each side with their heads to the wall and the aisle clear between them; at the
 # back a cauldron and the brewer's brewing stand between two barrels, a lantern standing on each barrel.
 # Two lanterns hang under the ceiling over the beds' heads, one on each side (entity/Infirmary, Health).
+# [build-looks] A veranda across the front on posts under a slab roof, a bench either side of the door for those
+# waiting to be seen.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name infirmary
 layer -1
@@ -16,7 +18,7 @@ layer -1
 .FfffffF.
 .FfffffF.
 .FFFFFFF.
-....k....
+.FFFkFFF.
 layer 0
 .........
 .LwwwwwL.
@@ -28,7 +30,7 @@ layer 0
 .w.....w.
 .w.....w.
 .LwwDwwL.
-.........
+.P^...^P.
 layer 1
 .........
 .LWWWWWL.
@@ -40,7 +42,7 @@ layer 1
 .W.....W.
 .G.....G.
 .LGW.WGL.
-.........
+.P.....P.
 layer 2
 .........
 .LWWWWWL.
@@ -52,7 +54,7 @@ layer 2
 .W.....W.
 .G.....G.
 .LWWWWWL.
-....j....
+.P..j..P.
 layer 3
 .........
 .LWWWWWL.
@@ -64,7 +66,7 @@ layer 3
 .W.....W.
 .W.....W.
 .LWWWWWL.
-....|....
+.P..|..P.
 layer 4
 >.......<
 >L-----L<
@@ -76,7 +78,7 @@ layer 4
 >|fffff|<
 >|fffff|<
 >L-----L<
->.......<
+>_______<
 layer 5
 .>.....<.
 .>WWWWW<.

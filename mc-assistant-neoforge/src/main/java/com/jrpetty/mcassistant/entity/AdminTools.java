@@ -856,6 +856,7 @@ public final class AdminTools {
     /** A building on the register at this spot, laid out now; how many blocks. */
     static int raise(ServerLevel level, Villages.Village v, String structure, BlockPos anchor, Direction facing, boolean paid) {
         int radius = Math.max(4, Math.min(16, com.jrpetty.mcassistant.entity.goal.Blueprints.has(structure) ? BuildGoal.footprint(structure)[0] + 2 : 8));
+        fellTheLot(level, v, structure, anchor, facing);                   // [pics-fix]
         BuildGoal.clearWildPlants(level, structure, anchor, facing, radius);
         Ledger.built(v.id(), structure, anchor, facing);
         Ledger.Building b = null;
@@ -879,6 +880,24 @@ public final class AdminTools {
         }
         if (n == 0 && !paid) n = BuildGoal.stamp(level, structure, anchor, facing, radius, com.jrpetty.mcassistant.Showcase.painter(com.jrpetty.mcassistant.Showcase.OAK));
         return n;
+    }
+
+    /**
+     * [pics-fix] A tree on the lot taken down before a building is raised at once, as the builders take it down before
+     * they lay a block (BuildGoal.treeOnLot): raised round an acacia, a knight's manor had its crown filling the great
+     * room. What the tree gives (its wood, a sapling or two) goes into the town's stores. How many blocks came down.
+     */
+    static int fellTheLot(ServerLevel level, Villages.Village v, String structure, BlockPos anchor, Direction facing) {
+        java.util.List<BlockPos> tree = BuildGoal.treeOnLot(level, structure, anchor, facing);
+        for (BlockPos p : tree) {
+            net.minecraft.world.level.block.state.BlockState there = level.getBlockState(p);
+            for (ItemStack drop : net.minecraft.world.level.block.Block.getDrops(there, level, p, null)) {
+                ItemStack left = Market.intoStores(level, v.id(), drop);
+                if (!left.isEmpty()) net.minecraft.world.level.block.Block.popResource(level, p, left);
+            }
+            level.setBlock(p, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), net.minecraft.world.level.block.Block.UPDATE_ALL);
+        }
+        return tree.size();
     }
 
     /** The projects under way now (their sites chosen, not yet standing). */

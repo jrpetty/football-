@@ -58,6 +58,9 @@ public final class InventionCommands {
 
     private InventionCommands() {}
 
+    /** [pics-fix] The tag on a folk held still for the pictures (the scholar at its desk); smoke.py lets it go after. */
+    public static final String HELD = "mca_held_for_pictures";
+
     static final SuggestionProvider<CommandSourceStack> IDS = (ctx, b) -> SharedSuggestionProvider.suggest(Inventions.allIds(), b);
 
     public static LiteralArgumentBuilder<CommandSourceStack> command() {
@@ -203,7 +206,8 @@ public final class InventionCommands {
             BuildGoal.stamp(level, row[k], p, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
             Ledger.built(id, row[k], p, Direction.NORTH);
             if (k == 0) academy = p;
-            out.add("VIEW tech-" + (k + 1) + "-" + row[k] + " " + (p.getX() + 5) + " " + (y + 3) + " " + (p.getZ() + 12) + " " + p.getX() + " " + (y + 3) + " " + p.getZ());
+            // [pics-fix] From the street, the whole of it (its middle was the mark: the camera ended up inside).
+            out.add(StageViews.front(level, "tech-" + (k + 1) + "-" + row[k], row[k], p, Direction.NORTH, 0.35));
         }
         // A scholar at the academy's lectern, the work in hand half done.
         Scholars.appoint(level, v, day);
@@ -221,6 +225,9 @@ public final class InventionCommands {
             BlockPos d = desks.get(0).south();
             f.moveTo(d.getX() + 0.5, d.getY(), d.getZ() + 0.5, 180.0F, 0.0F);
             f.getNavigation().stop();
+            // [pics-fix] Held at the desk for the camera (it had wandered off before the picture), let go by smoke.py.
+            f.setNoAi(true);
+            f.addTag(HELD);
             out.add("SCHOLAR " + f.displayNameCap() + " at " + d.getX() + " " + d.getY() + " " + d.getZ());
             break;
         }
@@ -231,10 +238,16 @@ public final class InventionCommands {
         stand(level, stands.east(2), InventionItems.LONGBOW.get().getDefaultInstance(), false);
         out.add("VIEW tech-6-arms " + stands.getX() + " " + (y + 2) + " " + (stands.getZ() + 5) + " " + stands.getX() + " " + (y + 1) + " " + stands.getZ());
         if (academy != null) {
-            out.add("VIEW tech-7-scholar " + (academy.getX() + 1) + " " + (y + 2) + " " + (academy.getZ() + 2) + " " + academy.getX() + " " + (y + 1) + " " + (academy.getZ() - 2));
+            // [pics-fix] From beside the next desk, the scholar at its lectern face on (it was shot from behind).
+            out.add("VIEW tech-7-scholar " + (academy.getX() + 1) + " " + (y + 1) + " " + (academy.getZ() - 2) + " " + (academy.getX() - 2) + " " + (y + 1) + " " + academy.getZ());
         }
         out.add("TECH " + x + " " + y + " " + z + " " + (now == null ? "nothing in hand" : now.title + " half done"));
         return out;
+    }
+
+    /** [pics-fix] Tests: the pictures' stage, set out here beside this town. */
+    public static List<String> stageForTests(ServerLevel level, Villages.Village v, BlockPos at) {
+        return stage(level, v, at);
     }
 
     /** An armour stand with a weapon, in steel if {@code steel}. */
