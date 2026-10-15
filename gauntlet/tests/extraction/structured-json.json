@@ -1,7 +1,7 @@
 {
   "kind": "prompt",
   "id": "extraction.structured-json",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "name": "Messy Text to Exact JSON",
   "category": "extraction",
   "description": "Invoices, email threads, triage notes, cargo manifests, meeting notes, job ads, receipts and leases with the traps real documents contain: corrections, reschedules, retracted facts, DD/MM dates, unit conversions and relative dates. Each leaf field is scored, so careless readers lose points on exactly the details that matter in production.",
@@ -23,7 +23,7 @@
   "createdAt": "2026-09-24",
   "scorer": {
     "type": "json",
-    "numberTolerance": 0.005
+    "numberTolerance": 0.000001
   },
   "cases": [
     {

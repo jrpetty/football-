@@ -23,12 +23,19 @@ function sanitize(src) {
     .replace(/^\s*import\s+[^;\n]*;?\s*$/gm, '');
 }
 
-const sandbox = {
-  console: { log() {}, error() {}, warn() {}, info() {}, debug() {} },
-  module: { exports: {} },
-};
-sandbox.exports = sandbox.module.exports;
-const context = vm.createContext(sandbox, { codeGeneration: { strings: false, wasm: false } });
+// Everything the solution can touch is created inside the context: no host-realm object or function is
+// handed in (a host function's .constructor is the host's Function, a classic way out of a vm context).
+// The process also runs with --disallow-code-generation-from-strings, so even a host Function found some
+// other way cannot compile code.
+const context = vm.createContext(Object.create(null), { codeGeneration: { strings: false, wasm: false } });
+new vm.Script(
+  'globalThis.console = { log() {}, error() {}, warn() {}, info() {}, debug() {} };\n' +
+    'globalThis.module = { exports: {} };\n' +
+    'globalThis.exports = globalThis.module.exports;\n' +
+    // Results are serialised with markers for values JSON would silently turn into null (Infinity, NaN,
+    // undefined in an array), so they can never match an expected null.
+    "globalThis.__serialize = (v) => JSON.stringify(v, function (k, x) { if (typeof x === 'number' && !Number.isFinite(x)) return { __gauntletNonFinite__: String(x) }; if (x === undefined && Array.isArray(this)) return { __gauntletUndefined__: true }; return x; });",
+).runInContext(context);
 
 const results = [];
 let loadError = null;
@@ -45,7 +52,7 @@ try {
   loadError = `Code failed to load: ${String(e && e.message ? e.message : e).slice(0, 300)}`;
 }
 
-const call = new vm.Script('JSON.stringify(__fn(...JSON.parse(__args)))');
+const call = new vm.Script('__serialize(__fn(...JSON.parse(__args)))');
 for (const t of tests) {
   if (loadError) {
     results.push({ ok: false, error: loadError });
@@ -56,7 +63,7 @@ for (const t of tests) {
   try {
     const out = call.runInContext(context, { timeout: perTestTimeoutMs });
     const ms = Number(process.hrtime.bigint() - started) / 1e6;
-    results.push({ ok: true, output: out === undefined ? '__undefined__' : out, ms });
+    results.push({ ok: true, output: typeof out === 'string' ? out : out === undefined ? '__undefined__' : '__invalid__', ms });
   } catch (e) {
     const ms = Number(process.hrtime.bigint() - started) / 1e6;
     const msg = String(e && e.message ? e.message : e);

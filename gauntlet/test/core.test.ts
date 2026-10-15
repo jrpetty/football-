@@ -98,8 +98,9 @@ test('json compare: field-level partial credit, lenient numerics, unordered arra
   assert.equal(u.score, 1);
 });
 
-test('jsonEqual tolerance', () => {
-  assert.ok(jsonEqual(0.1 + 0.2, 0.3));
+test('jsonEqual: exact by default, optional relative tolerance', () => {
+  assert.ok(!jsonEqual(0.1 + 0.2, 0.3));
+  assert.ok(jsonEqual(0.1 + 0.2, 0.3, 1e-6));
   assert.ok(jsonEqual({ a: [1, { b: 2 }] }, { a: [1, { b: 2 }] }));
   assert.ok(!jsonEqual([1, 2], [2, 1]));
 });
