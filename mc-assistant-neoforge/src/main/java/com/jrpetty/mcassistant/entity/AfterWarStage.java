@@ -63,15 +63,20 @@ public final class AfterWarStage {
             }
         }
         Ledger.Building wh = new Ledger.Building(WatchHouse.STRUCTURE, house, Direction.NORTH);
-        BlockPos inside = WatchHouse.at(wh, 0, 1, -3), cells = WatchHouse.at(wh, 0, 1, 2);
-        out.add("VIEW cells " + inside.getX() + " " + (inside.getY() + 1) + " " + inside.getZ() + " " + cells.getX() + " " + cells.getY() + " " + cells.getZ());
+        // The camera stands on the front room's floor (its eyes at a folk's height, under the two-high ceiling) and looks
+        // at the wall between the two cells, so both barred fronts and the prisoners behind them are in the picture.
+        BlockPos inside = WatchHouse.at(wh, WatchHouse.INSIDE), cells = WatchHouse.at(wh, 0, 1, 1);
+        out.add("VIEW cells " + inside.getX() + " " + inside.getY() + " " + inside.getZ() + " " + cells.getX() + " " + cells.getY() + " " + cells.getZ());
         out.add("VIEW stockade " + pen.getX() + " " + (y + 6) + " " + (pen.getZ() + 12) + " " + pen.getX() + " " + (y + 1) + " " + pen.getZ());
         // 3. A third town, as far off again, gone to ruin: its watch house, its stores, five days of decay.
-        int rx = x + 220, rz = z, ry = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, rx, rz);
+        //    On ground no town reaches: a party set down within reach of one joins it instead of founding its own (and a
+        //    world with a few towns in it already, the smoke's, has one 220 blocks east as often as not).
+        int[] site = freeGround(level, x, z);
+        int rx = site[0], rz = site[1], ry = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, rx, rz);
         Showcase.stage(level, rx - 10, rx + 10, rz - 10, rz + 12, ry);
         BlockPos rheart = new BlockPos(rx, ry, rz + 8);
         VillageFolkSpawnerBlock.raiseParty(level, rheart, 0.0F, 3);
-        Villages.Village dying = Villages.nearest(level, rheart, 48);
+        Villages.Village dying = Villages.nearest(level, rheart, 64);   // its camp may stand a little off, on better ground
         if (dying != null && !dying.id().equals(v.id()) && (from == null || !dying.id().equals(from.id()))) {
             BlockPos ruinHouse = new BlockPos(rx, ry, rz - 2);
             BuildGoal.stamp(level, WatchHouse.STRUCTURE, ruinHouse, Direction.NORTH, 13, Showcase.painter(Showcase.OAK));
@@ -85,6 +90,8 @@ public final class AfterWarStage {
             out.add("ruin: " + Ruins.ruinNow(level, dying));
             out.add("decay: " + Ruins.decayNow(level, dying.id(), 5) + " blocks");
             out.add("VIEW ruin " + (rx + 9) + " " + (ry + 7) + " " + (rz + 12) + " " + rx + " " + (ry + 2) + " " + (rz - 2));
+        } else {
+            out.add("ruin: no town of its own stood up at " + rx + " " + rz);
         }
         // 4. The board, with an outlaw's poster on it.
         if (outlaw != null) out.add(AfterWar.outlawNow(level, v, outlaw));
@@ -95,5 +102,18 @@ public final class AfterWarStage {
             out.add("VIEW board " + eye.getX() + " " + eye.getY() + " " + eye.getZ() + " " + face.getX() + " " + face.getY() + " " + face.getZ());
         }
         return out;
+    }
+
+    /** Where to found the town that will fall to ruin: 220 blocks off (then further), first east, west, north, south,
+     *  on the first spot no town reaches (a founding party joins any town within twice its range). */
+    static int[] freeGround(ServerLevel level, int x, int z) {
+        int reach = Villages.VILLAGE_RANGE * 2 + 8;
+        for (int far : new int[]{ 220, 330, 440 }) {
+            for (int[] d : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, -1 }, { 0, 1 }, { 1, -1 }, { -1, -1 }, { 1, 1 }, { -1, 1 } }) {
+                int px = x + d[0] * far, pz = z + d[1] * far;
+                if (Villages.nearest(level, new BlockPos(px, level.getSeaLevel(), pz), reach) == null) return new int[]{ px, pz };
+            }
+        }
+        return new int[]{ x + 220, z };
     }
 }
