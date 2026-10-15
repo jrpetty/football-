@@ -372,7 +372,7 @@ public final class Villages {
             case "fountain" -> "the fountain on the square";
             case "manor" -> "a manor house";
             case "belltower" -> "the bell tower";
-            case "flats" -> "a block of flats";                   // [flats]
+            case "flats", "flats4", "flats_old", "flats4_old" -> "a block of flats";   // [flats]
             case "pitch" -> "the football pitch";                 // [batchC]
             case "range" -> "the archery range";                  // [batchC]
             case "postoffice" -> "the post office";               // [batchF]

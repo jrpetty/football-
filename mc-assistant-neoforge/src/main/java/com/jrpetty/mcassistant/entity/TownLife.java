@@ -180,7 +180,7 @@ public final class TownLife {
     /** Buildings with a hearth in them: their chimney tops smoke. */
     private static final Set<String> HEARTHS = Set.of("house", "guesthouse", "smeltery", "workshop", "hall",
         "barracks", "granary", "shelter", "storage", "market", "chapel", "smithy", "brewery", "cafe",
-        "flats",                                                    // [flats] a grate in every flat, two stacks
+        "flats", "flats4", "flats_old", "flats4_old",               // [flats] a grate in every flat, two stacks (either drawing)
         "divershed");                                               // [build-world] the stack over the drying fire
 
     public static Fittings fittings(Ledger.Building b) {
@@ -825,7 +825,7 @@ public final class TownLife {
             lines[2] = who.isEmpty() ? "" : who.get(0);
             lines[3] = who.size() > 2 ? "& family" : who.size() == 2 ? "& " + who.get(1) : "";
         } else {
-            lines[0] = Flats.BLOCK.equals(b.structure()) ? Flats.signName(village, b) : title(b.structure());   // [flats] "Elm Row Flats"
+            lines[0] = Flats.isBlock(b.structure()) ? Flats.signName(village, b) : title(b.structure());   // [flats] "Elm Row Flats"
             lines[1] = where != null ? where[0] : "";
             lines[2] = where != null ? where[1] : "";
             lines[3] = "";

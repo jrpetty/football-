@@ -88,10 +88,29 @@ public final class Ledger extends SavedData {
         for (Building b : all) {
             if (b.anchor().equals(anchor) && b.structure().equals(structure)) return;
         }
+        com.jrpetty.mcassistant.entity.Flats.built(village, structure, anchor);   // [flats-access] a block of flats to the drawing of now
         all.add(new Building(structure, anchor.immutable(), facing));
         l.setDirty();
         com.jrpetty.mcassistant.entity.Renovation.built(village, structure, anchor.immutable(), facing);   // [styles] what it was built to
         com.jrpetty.mcassistant.entity.TownBlocks.ledgerChanged(village);   // [build-world] the gate knows it at once
+    }
+
+    /**
+     * [flats-access] A building's entry under another name, where it stands, in its place in the order: a block of flats
+     * given its fourth storey is "flats4" from then on, one built to the first, smaller drawing "flats_old" (entity/Flats),
+     * so that whatever goes by the name in the register goes by the building that stands there.
+     */
+    public static void rename(UUID village, BlockPos anchor, String from, String to) {
+        Ledger l = of();
+        if (l == null || from.equals(to)) return;
+        List<Building> all = l.buildings.get(village);
+        if (all == null) return;
+        for (int i = 0; i < all.size(); i++) {
+            Building b = all.get(i);
+            if (!b.anchor().equals(anchor) || !b.structure().equals(from)) continue;
+            all.set(i, new Building(to, b.anchor(), b.facing()));
+            l.setDirty();
+        }
     }
 
     /** Everything this village has built, in the order it went up. */

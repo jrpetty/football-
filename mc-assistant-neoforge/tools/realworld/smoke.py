@@ -199,26 +199,28 @@ def decor_stage(r, look, cx, cz):
 def flats_stage(r, look, cx, cz):
     """A block of flats, furnished, on a stage of its own (/village flats stage): from across the street,
     the whole town house (three storeys of stone with brick quoins, the balconies and their railings, the
-    slate roof with its dormer and the two chimneys smoking), the stair hall from just inside the front
-    door (the flats' doors and numbers, the stair winding up the back), a couple's flat on the first floor
-    from its door (two beds, the chest, the table, the lantern), and the front door close to (the pediment
-    and its lanterns, the fanlight, the name by the door, the window boxes, the lamp posts)."""
+    mansard roof of slate with its dormer and the two chimneys smoking), the stair hall from just inside the
+    front door (the flats' doors and numbers, the flight up with its landing), a couple's flat on the first
+    floor from its door (the stove, the worktop and barrel, the table and chairs), its bedroom (two beds,
+    the chest between them), and the front door close to (the pediment and its lanterns, the fanlight, the
+    name by the door, the window boxes, the lamp posts)."""
     bx, by, bz = cx + 140, 150, cz - 60
     r.cmd("time set 6000")
     r.cmd("gamemode spectator %s" % USER)
-    r.cmd("tp %s %d %d %d" % (USER, bx, by + 12, bz + 30))
+    r.cmd("tp %s %d %d %d" % (USER, bx, by + 12, bz + 34))
     time.sleep(10)                                    # the stage's chunks arrive
     out = r.cmd("execute positioned %d %d %d run village flats stage" % (bx, by, bz))
     say("flats stage: " + out[:200])
     m = re.search(r"FLATSTAGE (-?\d+) (-?\d+) (-?\d+)", out)
     if m:
         bx, by, bz = int(m.group(1)), int(m.group(2)), int(m.group(3))
-    # Its back is to the north: the front door at x+3, z+4, the street to the south. A block (dx, h, dz)
-    # of its drawing is at x + dx, y + h, z - dz; it stands nineteen high to its chimney tops.
-    look("flats-1-front", bx - 13.5, by + 5, bz + 24.5, bx + 0.5, by + 8, bz + 0.5, wait=8)
-    look("flats-2-hall", bx + 3.5, by, bz + 3.5, bx + 3.5, by + 2.5, bz - 2.5, wait=6)
-    look("flats-3-flat", bx + 1.5, by + 4, bz - 1.5, bx - 3.5, by + 4.2, bz - 2.5, wait=6)
-    look("flats-4-door", bx - 1.5, by + 2, bz + 12.5, bx + 2.5, by + 3, bz + 5, wait=6)
+    # Its back is to the north: the front door at x+3, z+8, the street to the south. A block (dx, h, dz)
+    # of its drawing is at x + dx, y + h, z - dz; it stands eighteen high to its chimney tops.
+    look("flats-1-front", bx - 15.5, by + 6, bz + 30.5, bx + 0.5, by + 8, bz + 0.5, wait=8)
+    look("flats-2-hall", bx + 3.5, by, bz + 7.5, bx + 3.5, by + 2.5, bz - 2.5, wait=6)
+    look("flats-3-flat", bx + 1.5, by + 4, bz - 5.5, bx - 3.5, by + 4.2, bz - 6.5, wait=6)
+    look("flats-5-bedroom", bx + 1.5, by + 4, bz - 3.5, bx - 3.5, by + 4.0, bz - 1.5, wait=6)
+    look("flats-4-door", bx - 1.5, by + 2, bz + 16.5, bx + 2.5, by + 3, bz + 9, wait=6)
     say("alive after the flats: %s" % client_alive())
 
 

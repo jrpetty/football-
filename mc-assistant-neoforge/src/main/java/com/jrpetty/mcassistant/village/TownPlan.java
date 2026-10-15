@@ -208,6 +208,7 @@ public final class TownPlan {
             case "postoffice" -> "civic";                             // [batchF] facing the square (Post)
             case "hall", "chapel", "barracks", "manor", "townhall", "store" -> "great";   // [econ-store] the store on a long lot
             case "court" -> "court";
+            case "flats" -> "long";                                   // [flats-access] a block of flats, seventeen deep: a long lot
             case "minster", "belfry", "amphitheatre" -> "great";          // [culture-wonders] the town's own wonders (TownWonders)
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern", "school", "bank", "museum", "stable",
@@ -272,6 +273,10 @@ public final class TownPlan {
             }
             case "corner" -> {
                 for (Lot l : all) if (l.use().equals("corner")) out.add(l);
+            }
+            case "long" -> {
+                // [flats-access] The long lots out along the avenues (the great ones by the square are the great buildings').
+                for (Lot l : all) if (l.use().equals("long")) out.add(l);
             }
             case "field" -> {
                 // [batchC] The football pitch: the long lots out along the avenues, then the great lots by the square.

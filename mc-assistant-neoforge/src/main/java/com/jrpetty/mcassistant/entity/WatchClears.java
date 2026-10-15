@@ -582,7 +582,7 @@ public final class WatchClears {
      *  market's open stalls, a well, a field, a tower or a monument. */
     public static boolean shelters(String s) {
         return switch (s) {
-            case "house", "house2", "flats", "flats4", "hall", "townhall", "tavern", "inn", "guesthouse", "storage",
+            case "house", "house2", "flats", "flats4", "flats_old", "flats4_old", "hall",   // [flats-access] either drawing "townhall", "tavern", "inn", "guesthouse", "storage",
                  "storehouse", "store", "shop", "cafe", "bakery", "bank", "barracks", "granary", "chapel", "school",
                  "library", "museum", "infirmary", "manor", "villa", "postoffice", "theatre", "workshop", "smithy",
                  "brewery", "armoury", "shelter",
