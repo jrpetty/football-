@@ -1,5 +1,5 @@
 /** Full leaderboard composition, shared by the Leaderboard page and Run detail. */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Leaderboard } from '../../types.ts';
 import { fmtCost, fmtDateTime, fmtIndex, fmtInt } from '../../format.ts';
 import { Callout, HashTag } from '../ui.tsx';
@@ -8,6 +8,7 @@ import { LeaderboardTable } from './LeaderboardTable.tsx';
 import { CategoryPanel, MedalTable, Podium, ScatterPanel, SpeedPanel } from './Panels.tsx';
 import { isBaseline } from './util.ts';
 import { ImageGlyph } from '../VisionImage.tsx';
+import { BaselineExplainer, ScoreWhyPanel, type ScoreFocus } from './ScoreWhy.tsx';
 
 export function LeaderboardSummary({ lb }: { lb: Leaderboard }) {
   const stats = useMemo(() => {
@@ -56,6 +57,8 @@ export function LeaderboardSummary({ lb }: { lb: Leaderboard }) {
 }
 
 export function LeaderboardView({ lb, podium = true }: { lb: Leaderboard; podium?: boolean }) {
+  const [focus, setFocus] = useState<ScoreFocus | null>(null);
+  const baseline = lb.rows.find(isBaseline);
   return (
     <div className="lb-view">
       {podium && (
@@ -94,9 +97,11 @@ export function LeaderboardView({ lb, podium = true }: { lb: Leaderboard; podium
           </div>
         );
       })()}
+      {baseline && <BaselineExplainer score={baseline.index} />}
       <section className="card lb-card">
-        <LeaderboardTable lb={lb} />
+        <LeaderboardTable lb={lb} onExplain={(contestantId, categoryId) => setFocus((f) => ({ contestantId, categoryId, nonce: (f?.nonce ?? 0) + 1 }))} />
       </section>
+      <ScoreWhyPanel lb={lb} focus={focus} />
       <div className="grid split-7-5 lb-charts">
         <ScatterPanel lb={lb} />
         <MedalTable lb={lb} />

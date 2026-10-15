@@ -131,7 +131,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'index',
     term: 'Gauntlet Index',
-    say: 'The overall score out of 100: the average of a model’s category scores. Categories are averaged, so one category with lots of tests can’t dominate.',
+    say: 'The overall score out of 100. Each test score is the average of its questions; each category score (Logic, Coding, …) is the average of its tests; the Index is the average of the categories, so one category with lots of tests can’t dominate. Click any score on the leaderboard to see the sum.',
     art: (
       <Art>
         <rect x="8" y="40" width="10" height="30" rx="2" fill={S4} />
@@ -146,7 +146,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   {
     id: 'baseline',
     term: 'Random baseline',
-    say: 'A pretend contestant that answers completely at random. It shows what pure guessing scores — any real AI should beat it clearly.',
+    say: 'Not an AI: a built-in pretend contestant that answers completely at random (random letters, random numbers, random game moves, empty code). It is free and never ranked. It shows what pure guessing scores — the dashed line on score bars — and any real AI should beat it clearly.',
     art: (
       <Art>
         <rect x="14" y="20" width="30" height="30" rx="6" fill="none" stroke={T1} strokeWidth="3" transform="rotate(-12 29 35)" />

@@ -48,6 +48,9 @@ function sortValue(row: LeaderboardRow, key: SortKey): number | string | null {
 
 const DEFAULT_DIR: Record<string, 1 | -1> = { rank: 1, label: 1, cost: 1, cpp: 1, latency: 1, ttft: 1, reliability: 1 };
 
+/** Opens the "Why these scores?" panel on this model (and category). */
+export type ExplainHandler = (contestantId: string, categoryId: string | null) => void;
+
 function IndexCell({ row, maxCi }: { row: LeaderboardRow; maxCi: number }) {
   const v = row.index;
   const ci = row.indexCi95;
@@ -82,6 +85,7 @@ const Row = memo(function Row({
   best,
   onSelect,
   selected,
+  onExplain,
 }: {
   row: LeaderboardRow;
   cats: CategoryInfo[];
@@ -90,6 +94,7 @@ const Row = memo(function Row({
   best: Record<string, number>;
   onSelect?: (id: string) => void;
   selected?: boolean;
+  onExplain?: ExplainHandler;
 }) {
   const baseline = isBaseline(row);
   const err = errorRate(row);
@@ -102,7 +107,7 @@ const Row = memo(function Row({
         <ModelCell
           baseline={baseline}
           label={row.label}
-          vendor={baseline ? 'Reference · random answers' : row.vendor}
+          vendor={baseline ? 'Not an AI · pure guessing, for reference' : row.vendor}
           color={row.color}
           tag={
             row.manual ? (
@@ -117,17 +122,46 @@ const Row = memo(function Row({
         />
       </td>
       <td className="c-index">
-        <IndexCell row={row} maxCi={maxCi} />
+        {onExplain ? (
+          <button
+            type="button"
+            className="why-cell"
+            title={`Why ${fmtIndex(row.index)}? See how ${row.label}'s Gauntlet Index was worked out`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onExplain(row.contestantId, null);
+            }}
+          >
+            <IndexCell row={row} maxCi={maxCi} />
+          </button>
+        ) : (
+          <IndexCell row={row} maxCi={maxCi} />
+        )}
       </td>
       {show.categories &&
         cats.map((c) => {
           const v = row.categoryScores?.[c.id];
           const isBest = typeof v === 'number' && !baseline && best[c.id] === v;
           return (
-            <td key={c.id} className="c-heat num" title={`${c.name}: ${typeof v === 'number' ? fmtPct(v, 1) : 'no score'}`}>
-              <span className={cx('heat', isBest && 'best')} style={heatStyle(v, c)}>
-                {fmtScore100(v)}
-              </span>
+            <td key={c.id} className="c-heat num" title={`${c.name}: ${typeof v === 'number' ? fmtPct(v, 1) : 'no score'}${onExplain ? ' — click to see why' : ''}`}>
+              {onExplain ? (
+                <button
+                  type="button"
+                  className={cx('heat', 'why-cell', isBest && 'best')}
+                  style={heatStyle(v, c)}
+                  aria-label={`Why did ${row.label} score ${fmtScore100(v)} in ${c.name}?`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onExplain(row.contestantId, c.id);
+                  }}
+                >
+                  {fmtScore100(v)}
+                </button>
+              ) : (
+                <span className={cx('heat', isBest && 'best')} style={heatStyle(v, c)}>
+                  {fmtScore100(v)}
+                </span>
+              )}
             </td>
           );
         })}
@@ -184,11 +218,13 @@ export function LeaderboardTable({
   compact,
   onSelect,
   selectedId,
+  onExplain,
 }: {
   lb: Leaderboard;
   compact?: boolean;
   onSelect?: (id: string) => void;
   selectedId?: string | null;
+  onExplain?: ExplainHandler;
 }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'rank', dir: 1 });
   const [show, setShow] = useState<Record<Group, boolean>>({ categories: true, economics: true, speed: true, reliability: true });
@@ -256,7 +292,7 @@ export function LeaderboardTable({
         </div>
         <span className="spacer" />
         <span className="muted" style={{ fontSize: '0.8rem' }}>
-          Category cells: mean score ×100 · tinted by category · <span className="best-key">outlined</span> = category leader
+          Category cells: average test score out of 100 · <span className="best-key">outlined</span> = category leader{onExplain ? ' · click any score to see why' : ''}
         </span>
       </div>
       <ScoreScale className="lb-scale" what="full marks on every test in every category" baseline={lb.rows.find(isBaseline)?.index} />
@@ -301,7 +337,7 @@ export function LeaderboardTable({
           </thead>
           <tbody>
             {rows.map((r) => (
-              <Row key={r.contestantId} row={r} cats={cats} show={show} maxCi={maxCi} best={best} onSelect={onSelect} selected={selectedId === r.contestantId} />
+              <Row key={r.contestantId} row={r} cats={cats} show={show} maxCi={maxCi} best={best} onSelect={onSelect} selected={selectedId === r.contestantId} onExplain={onExplain} />
             ))}
           </tbody>
         </table>
