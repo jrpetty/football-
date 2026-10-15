@@ -705,6 +705,7 @@ public final class TaxBook {
 
     /** Has the town the plans of a wonder it has not yet laid the dues by for (Wonders): a great work to pay for? */
     static boolean wonderPlanned(UUID village) {
+        if (TownWonders.underWay(village)) return true;                        // the town's own great work rising, its fund to feed
         for (Wonders.Wonder w : Wonders.Wonder.values()) {
             if (CityTree.has(village, w.civic) && !Wonders.paid(village, w) && Wonders.claim(w) == null) return true;
         }
