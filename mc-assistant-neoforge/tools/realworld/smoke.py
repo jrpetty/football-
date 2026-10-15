@@ -3929,10 +3929,14 @@ def war_stage(r, look, cx, cz):
     time.sleep(12)
     hy = ground_height(r, sx, sz)
     say("scenario at %d, %d: %s" % (sx, sz, r.cmd("execute positioned %d %d %d run village admin scenario battle" % (sx, hy + 1, sz))[:400]))
-    for _ in range(90):                                # the founders of both towns arrive; the armies raised and kitted
+    # The scenario runs as a job, a line at a time over some minutes (both towns founded, their founders arrived, the
+    # armies raised and kitted): wait for its own "ran N lines" in the admin log, not for the job list, which it is not on.
+    for _ in range(150):
         time.sleep(4)
-        if "No admin jobs running" in r.cmd("village admin jobs"):
+        if "scenario battle: ran" in r.cmd("village admin log 6"):
             break
+    say("scenario done: %s" % r.cmd("village admin log 2")[:300])
+    time.sleep(10)
     place = {}
 
     def stage(phase, settle):
