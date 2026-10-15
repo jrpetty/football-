@@ -227,7 +227,7 @@ public class GuardKitGameTests {
         helper.assertTrue(guard.purse() == purse0 && Purchases.spentTodayForTests(guard) == 0 && Purchases.balanceForTests(guard) == 0,
             "the guard paid nothing: purse " + purse0 + " -> " + guard.purse());
         helper.assertTrue(cost[1] >= 4 && cost[0] > 0, "the town's books have the kit's cost: " + cost[0] + " coins, " + cost[1] + " pieces");
-        helper.assertTrue(card != null && card.contains("leather tunic") && card.contains("issued by the town"), "its card says so: " + card);
+        helper.assertTrue(card != null && card.contains("leather chestplate") && card.contains("issued by the town"), "its card says so: " + card);
         helper.assertTrue("The watch: 1 guard, 1 in leather.".equals(WatchKit.boardLine(village)), "the board: " + WatchKit.boardLine(village));
         helper.succeed();
     }

@@ -155,6 +155,11 @@ public final class TownBlocks {
         return ok;
     }
 
+    /** Would the gate let this be set here, asked while looking for a spot (no refusal booked: nothing was tried)? */
+    public static boolean allows(Level level, @Nullable Villages.Village v, BlockPos pos, Why why) {
+        return v == null || level.isClientSide() || allowed(level, v, pos, why, here(level, v, pos), null);
+    }
+
     /** May every one of these cells be set, for this reason (a thing of several blocks goes up whole or not at all)? */
     public static boolean mayAll(Level level, @Nullable Villages.Village v, Why why, BlockPos... cells) {
         for (BlockPos p : cells) if (!mayPlace(level, v, p, why)) return false;

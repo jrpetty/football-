@@ -1384,8 +1384,11 @@ public class AssistantEntity extends PathfinderMob implements RangedAttackMob {
         if (workZone == null || ownerId == null) return;
         if (countItems() == 0 && jobs.isEmpty()) return;
         if (tickCount - handoverTick < 600) return;
+        // [war-bows] An army in the field keeps no shifts: a guard in its ranks whose watch at home ended handed its
+        // arrows to another archer of the same watch beside it, who then loosed three quivers' worth off one.
+        if (Armies.inLine(this)) return;
         for (AssistantEntity relief : allFor(ownerId)) {
-            if (relief == this || !relief.isAlive()) continue;
+            if (relief == this || !relief.isAlive() || Armies.inLine(relief)) continue;
             if (!workZone.equals(relief.workZone())) continue;
             if (!relief.onShift() || relief.stationTask() == StationTask.NONE) continue;
             if (relief.distanceToSqr(this) > 24.0 * 24.0) continue;

@@ -223,9 +223,11 @@ public class ShopsHomesGameTests {
     }
 
     /** A house of its own for this folk: houses stamped beside here until the town has moved it into one (the first
-     *  may go to another household). Its anchor. */
+     *  ones may go to other households). Its anchor. */
     private static BlockPos ownHome(ServerLevel level, Town t, VillageFolkEntity f, BlockPos near) {
-        for (int i = 0; i < 3 && Homes.homeOf(f) == null; i++) {
+        // The town houses its households in its own order, one to each house as it stands: with the keeper and the
+        // others waiting too, this one may be the last of them, so a house for every household there is, at most.
+        for (int i = 0; i < t.folk().size() + 1 && Homes.homeOf(f) == null; i++) {
             house(level, t.id(), Kit.surface(level, near.getX() + 12 * i, near.getZ()));
             Homes.tickForTests(level, t.v());
         }

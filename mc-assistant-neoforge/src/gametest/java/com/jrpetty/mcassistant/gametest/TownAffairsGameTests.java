@@ -384,8 +384,6 @@ public class TownAffairsGameTests {
         level.setDayTime(day * 24000L + 3000L);
         List<VillageFolkEntity> folk = raise(helper, level, heart, 6);
         UUID id = folk.get(0).ownerId();
-        Ledger.takeCoins(id, Ledger.coins(id));
-        Ledger.addCoins(id, 25);
         Villages.tell(id, day - 1, "the well went up");
         Villages.tell(id, day - 2, "Ada and Bert had a child, Cora");
         Villages.tell(id, day - 3, "Old Tom died, aged 80, of old age");
@@ -403,6 +401,10 @@ public class TownAffairsGameTests {
                 for (long d = day; d < day + 7; d++) due |= TownMeeting.dueForTests(id, d);
                 helper.assertTrue(due, "a meeting is due on one evening of the week");
                 for (VillageFolkEntity f : folk) f.ensurePersona();
+                // Twenty-five coins in the treasury as the elder reads the books: set now, after the town's morning (its
+                // upkeep takes a twentieth of what a treasury holds over a fortnight's wages, and took a coin of them).
+                Ledger.takeCoins(id, Ledger.coins(id));
+                Ledger.addCoins(id, 25);
                 List<String> lines = TownMeeting.scriptForTests(level, v);
                 Kit.log("tg03 the script: " + String.join(" / ", lines));
                 String all = String.join("\n", lines);

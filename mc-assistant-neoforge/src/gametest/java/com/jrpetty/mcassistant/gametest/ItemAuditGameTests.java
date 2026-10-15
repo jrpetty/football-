@@ -297,7 +297,8 @@ public class ItemAuditGameTests {
             // [workitems] A milestone's five cobblestone over the builders' sixty-four the stores keep back.
             many(Items.COBBLESTONE, 64),
             many(Items.CACTUS, 8), many(Items.COCOA_BEANS, 8),   // [leisure] the green and brown dyes for the lanterns
-            many(Items.MAGMA_CREAM, 2)));   // [nether] the runner's satchel is waxed with it
+            many(Items.MAGMA_CREAM, 2),     // [nether] the runner's satchel is waxed with it
+            many(Items.BONE, 4)));          // [war] the war horn, of bone and copper where there is no goat horn
         // A master's hands, with every bench and fire to hand: what is asked is whether the stores run to it.
         Bench.Hand hand = new Bench.Hand(40, "", true, true, true, true, true);
         List<String> wanting = new ArrayList<>();

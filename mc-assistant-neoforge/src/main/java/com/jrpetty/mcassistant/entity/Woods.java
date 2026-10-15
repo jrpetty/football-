@@ -366,6 +366,9 @@ public final class Woods {
     @Nullable
     private static BlockPos plantSpot(ServerLevel level, VillageFolkEntity f, WorkZone z, Ground g, int saplings) {
         BlockPos me = f.blockPosition();
+        // The gate's say first (plant asks it too: no tree in a road or a doorway): a spot it would refuse, chosen
+        // here, had the woodcutter walk to the same street cell of its wood every look and plant nothing at all.
+        Villages.Village town = f.ownerId() == null ? null : Villages.get(f.ownerId());
         Set<Long> stumps = STUMPS.get(f.getUUID());
         if (stumps != null) {
             BlockPos best = null;
@@ -375,6 +378,10 @@ public final class Woods {
                 if (!z.containsColumn(s) || !plantable(level, s, true)) {
                     // A sapling on it already (its own, at the felling), a tree grown back, or no room: done with.
                     if (!level.getBlockState(s).isAir() || !z.containsColumn(s)) stumps.remove(l);
+                    continue;
+                }
+                if (!TownBlocks.allows(level, town, s, TownBlocks.Why.NATURE)) {
+                    stumps.remove(l);                                // a tree that stood in the street: not put back there
                     continue;
                 }
                 if (best == null || s.distSqr(me) < best.distSqr(me)) best = s;
@@ -394,7 +401,7 @@ public final class Woods {
         for (BlockPos p : open) {
             if (++looked > 400) break;
             if (Math.abs(p.getY() - me.getY()) > 8 || townGround(f, p)) continue;
-            if (plantable(level, p, false)) return p;
+            if (plantable(level, p, false) && TownBlocks.allows(level, town, p, TownBlocks.Why.NATURE)) return p;
         }
         return null;
     }

@@ -332,11 +332,15 @@ public class OutdoorTradesGameTests {
             }
         }
         Ferries.weatherForTests(false);
+        // The river's ground live before the boat is put on it: set down on a chunk the game has not finished making
+        // round, a boat is in the world and in nobody's sight (Kit.live), and the crossing ran with no boat to find.
+        helper.assertTrue(Kit.live(level, x0 + 5, Z, 24), "test setup: the ground is live");
         Ferries.Crossing c = Ferries.setForTests(id, new BlockPos(x0 - 1, y - 1, Z), new BlockPos(x0 + 10, y - 1, Z), Direction.EAST, y - 1, "the far bank");
         Ferries.appointForTests(level, Villages.get(id), man);
         Ferries.buildFreeForStage(level, Villages.get(id), c);
         Boat boat = Ferries.boatForTests(level, id);
-        helper.assertTrue(c.state() == Ferries.State.RUNNING && boat != null && man.stationTask() == StationTask.FERRY, "the ferry running: " + c.state());
+        helper.assertTrue(c.state() == Ferries.State.RUNNING && boat != null && man.stationTask() == StationTask.FERRY, "the ferry running: " + c.state()
+            + ", its boat " + (boat == null ? "missing" : boat.blockPosition().toShortString()) + ", its ferryman " + man.stationTask());
         BlockPos stand = c.bankA().relative(c.way(), 3).above();
         man.moveTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5, 0.0F, 0.0F);
         ServerPlayer pl = player(helper, stand.west(), 5);

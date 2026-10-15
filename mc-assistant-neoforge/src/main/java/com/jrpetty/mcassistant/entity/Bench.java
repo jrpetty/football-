@@ -748,6 +748,11 @@ public final class Bench {
     static String words(Item it, int n) {
         String name = new ItemStack(it).getHoverName().getString().toLowerCase(java.util.Locale.ROOT);
         if (it == Items.BREAD) return n == 1 ? "a loaf of bread" : n + " loaves of bread";
+        return counted(name, n);
+    }
+
+    /** So many of a thing by this name: "an iron helmet", "3 shields", "16 wheat". */
+    static String counted(String name, int n) {
         if (n != 1) return n + " " + plural(name);
         if (plural(name).equals(name)) return "1 " + name;                     // counted by the heap: "1 string"
         return (name.matches("^[aeiou].*") ? "an " : "a ") + name;

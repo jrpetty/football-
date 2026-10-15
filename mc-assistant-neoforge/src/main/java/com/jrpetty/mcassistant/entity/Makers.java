@@ -220,6 +220,22 @@ public final class Makers {
             "NetherRunners.smith / Workshop.demand");
         declare("runners_satchel", "the tailor (else the shop's workshop)", "for each Nether runner without a satchel to carry the haul in",
             "NetherRunners.tailor / Workshop.demand");
+        // [shops-homes] The service counter: the shop's, the café's or the tavern's own cask made over with four of the
+        // stores' planks, where it stood, when the building is fitted out (ServicePoints.fit).
+        declare("service_counter", "the town's hands, at the building's own cask",
+            "when a shop, a store, a café or a tavern is fitted out with its counter", "ServicePoints.fit");
+        // [dining] The crockery: the dining house's kitchen makes it of the stores' bricks or clay, onto its shelf.
+        for (String c : List.of("plate", "cup")) {
+            declare(c, "the dining house's kitchen (its head cook at the bench)",
+                "while its tables are short of clean " + c + "s: two to a table", "Dining.keepCrockery");
+        }
+        // [war] The Captain's horn: a goat horn and a leather, or two bones, a copper ingot and a leather.
+        declare("war_horn", "the town, for its Captain", "when its army takes the field and the Captain has no horn",
+            "WarHorn.arm");
+        // [borders-map] The war room's map table, at the town's bench.
+        declare("map_table", "the town's hands, at the bench",
+            "once the town wants a war room (a Stone Age town of twelve, a scout's atlas, an enemy or a land dispute): one, under the hall's roof",
+            "WarRoom.keepTable");
         unmade("memory_core", "it forms only when a companion falls, holding all it was; a made one would hold nobody");
     }
 }
