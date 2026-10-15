@@ -53,7 +53,8 @@ public class CityScreen extends Screen {
         "Nether",                                                                                     // [nether]
         "Perks",                                                                                       // [perks]
         "Watch",                                                                                      // [police]
-        "Earnings");                                                                                  // [earning]
+        "Earnings",                                                                                   // [earning]
+        "Lands");                                                                                     // [borders-map]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -328,6 +329,10 @@ public class CityScreen extends Screen {
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "War map" -> warMap(g, x, y, cw, ch, mouseX, mouseY);   // [war-scouting]
+                case "Lands" -> {                                                      // [borders-map] the town's lands (LandsPage)
+                    List<Component> tip = LandsPage.draw(g, font, data.getCompound("lands"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
                 case "War" -> WarPage.draw(g, font, data.getCompound("war"), x, y, cw, ch, scroll);   // [war-peace]
                 case "Nether" -> {                                                     // [nether] the runners' report (NetherPage)
                     List<Component> tip = NetherPage.draw(g, font, data.getCompound("nether"), x, y, cw, ch, scroll, mouseX, mouseY);

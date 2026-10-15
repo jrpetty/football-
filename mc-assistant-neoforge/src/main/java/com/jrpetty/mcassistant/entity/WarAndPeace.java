@@ -644,7 +644,8 @@ public final class WarAndPeace {
             }
         }
         WarBooks.Grievance worst = worst(x, y, day);
-        if (worst != null && worst.kind() == Wrong.LAND && Diplomacy.apart(us, them) < Diplomacy.CROWDED && !Bonds.border(x, y)) {
+        if (worst != null && worst.kind() == Wrong.LAND && (Diplomacy.apart(us, them) < Diplomacy.CROWDED && !Bonds.border(x, y)
+                || Borders.disputed(x, y))) {                                   // [borders-map] a land dispute between them
             return new Pick(Goal.BORDER, 0, "a border where we say it runs, with stones to mark it");
         }
         Envoys.Temper t = Envoys.temper(x);
@@ -1816,6 +1817,8 @@ public final class WarAndPeace {
             : repaid > 0 ? "no gain to " + name(a) + ", which withdraws its demands and pays " + repaid + " coins in reparations"
             : "no gain to either; " + name(a) + " withdraws its demands";
         if (freed > 0) text += "; " + freed + (freed == 1 ? " captive" : " captives") + " sent home";
+        String land = Borders.afterWar(level, a, d, ab == null ? null : ab.goal, terms.share(), day);   // [borders-map] the land won
+        if (!land.isEmpty()) text += "; " + land;
         text += "; peace until day " + (day + TREATY_DAYS);
         Wars.end(a, d);
         Arms.peace(level, terms.share() >= 1 ? a : repaid > 0 ? d : null, terms.share() >= 1 ? d : a);   // [arms] a charge for the war won

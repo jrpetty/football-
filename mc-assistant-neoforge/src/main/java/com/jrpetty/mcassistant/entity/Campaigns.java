@@ -1726,6 +1726,11 @@ public final class Campaigns {
         return decode(c.a, Ledger.note(c.a, "war.campaign"));
     }
 
+    /** [borders-map] The campaigns under way, for the war room's map table (WarRoom). */
+    public static List<Campaign> active() {
+        return new ArrayList<>(ACTIVE.values());
+    }
+
     /** Tests: the campaigns under way. */
     public static List<Campaign> activeForTests() {
         return new ArrayList<>(ACTIVE.values());

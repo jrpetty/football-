@@ -597,6 +597,7 @@ public final class Villages {
     /** The settlement is gone. Drops its register entry and everything hung
      *  off it, so nothing keeps pointing at a village nobody lives in. */
     public static void forget(UUID villageId) {
+        com.jrpetty.mcassistant.Guard.run("borders release", () -> Borders.release(villageId));   // [borders-map] its lands let go
         POP.remove(villageId);
         LAST_BIRTH.remove(villageId);
         SITES.remove(villageId);

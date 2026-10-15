@@ -4529,6 +4529,53 @@ def roles_e_stage(r, look, cx, cz):
     say("alive after the roads' posts: %s" % client_alive())
 
 
+def borders_map_stage(r, look, cx, cz):
+    """[borders-map] The towns' lands and the war room's map table (entity/Borders, BorderDisputes, BorderMarkers, WarRoom).
+    A second town a little way off so the two towns' lands meet; the lands drawn (/village borders draw), the first town's
+    border banners and road stones set (/village borders markers: a decree, so the picture need not wait on the walk), and a
+    dispute begun with the neighbour over the ground between them. Pictures: a border banner on its post at the edge of the
+    town's lands, the neighbour's country beyond; the map table opened (/village maptable view: the region drawn in the
+    map's colours, both towns' lands ruled in their colours, the contested ground striped, the dispute's flag); the town's
+    books at the Lands page (the little map of whose each chunk is, the neighbours, the dispute, the markers)."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    midday(r)
+    tx, tz = other_town(r, cx + 220, cz + 30, "neighbouring town")
+    hy = ground_height(r, cx, cz)
+    here = "execute positioned %d %d %d run " % (cx, hy + 1, cz)
+    say("lands: " + r.cmd(here + "village borders draw")[:800])
+    out = r.cmd(here + "village borders markers")
+    say("markers: " + out[:600])
+    there = r.cmd("execute positioned %d %d %d run village borders here" % (tx, hy + 1, tz))
+    found = re.search(r"the lands of ([^,\n]+)", there)
+    near_name = found.group(1).strip() if found else None
+    if near_name:
+        say("dispute: " + r.cmd(here + "village borders dispute " + near_name)[:300])
+    spots = re.findall(r"MARKER (-?\d+) (-?\d+) (-?\d+)", out)
+    if spots:
+        # The banner farthest toward the neighbour, from inside the town's lands looking out.
+        bx, by, bz = max(((int(a), int(b), int(c)) for a, b, c in spots), key=lambda p: -math.hypot(p[0] - tx, p[2] - tz))
+        dx, dz = bx - cx, bz - cz
+        d = max(1.0, math.hypot(dx, dz))
+        ex, ez = bx - dx / d * 7, bz - dz / d * 7
+        look("60-borders-1-banner", ex, by + 2, ez, bx + 0.5, by + 0.5, bz + 0.5, wait=8)
+    r.cmd("gamemode creative %s" % USER)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(3)
+    say("map table: " + r.cmd("execute as %s at @s run village maptable view" % USER)[:300])
+    time.sleep(8)                                      # the tiles come in, a dozen at a time
+    shot("60-borders-2-maptable")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    time.sleep(2)
+    say("lands page: " + r.cmd("execute as %s at @s run village borders books" % USER)[:200])
+    time.sleep(4)
+    shot("60-borders-3-lands")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("disputes: " + r.cmd("village borders disputes")[:600])
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the borders: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

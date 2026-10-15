@@ -236,6 +236,8 @@ public final class AdminActions {
             case "army.free" -> AdminTools.free(level, v);
             case "army.raid" -> AdminTools.raid(level, v, a.num(0, 6));
             case "army.peace" -> AdminTools.peace(level, v);
+            case "army.dispute", "army.settle", "world.borders", "world.maptable" -> com.jrpetty.mcassistant.entity.BordersAdmin.act(c.level(), c.src(), v,
+                c.action().id(), a.word(0, ""), AdminRunner.town(a.word(0, "")));            // [borders-map]
             // ---- economy
             case "economy.coin" -> {
                 int n = a.num(0, 0);

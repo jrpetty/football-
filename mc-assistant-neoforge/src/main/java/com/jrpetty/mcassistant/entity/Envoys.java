@@ -485,6 +485,8 @@ public final class Envoys {
     static String asks(UUID from, UUID host, Errand errand, VillageFolkEntity envoy, Caravans.Trip t) {
         String war = WarAndPeace.asks(from, host, errand, t);             // [war-peace] the ultimatum, the call to arms, the white flag
         if (war != null) return war;
+        String land = BorderDisputes.asks(from, host, errand, t);         // [borders-map] a land dispute argued
+        if (land != null) return land;
         String fn = Villages.name(from), elder = Villages.elderName(from);
         String sender = elder.isEmpty() ? "The folk of " + fn : "Elder " + elder + " of " + fn;
         return switch (errand) {
@@ -505,6 +507,8 @@ public final class Envoys {
         if (war != null) return war;
         Answer ruled = PlayerLeader.ruling(level, host, from, errand, envoy, t); // [player-civic] the answer a player who leads gave
         if (ruled != null) return ruled;
+        Answer land = BorderDisputes.answer(level, host, from, errand, envoy, t);   // [borders-map] a land dispute: treaty, sale, arbiter, no
+        if (land != null) return land;
         Temper ht = temper(host);
         int r = Ledger.relation(host, from);
         int chem = chemistry(host, from);

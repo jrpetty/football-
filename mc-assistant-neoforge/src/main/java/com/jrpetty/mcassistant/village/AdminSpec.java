@@ -209,6 +209,14 @@ public final class AdminSpec {
         add("army.free", Area.ARMY, "army free", T, "Free a vassal town.", "army free");
         add("army.raid", Area.ARMY, "army raid", T, "A raiding band of N at the gate now.", "army raid 8", Param.num("size", 1, MOST_RAID, 6));
         add("army.peace", Area.ARMY, "army peace", T, "End all fighting: peace with every enemy, the raid called off, the battle struck.", "army peace");
+        // [borders-map] The towns' lands: a dispute begun or settled, the borders drawn, the markers set, a map table.
+        add("army.dispute", Area.ARMY, "army dispute", T, "Begin a land dispute with another town over the ground between them.",
+            "army dispute Ashby", Param.of("with", Kind.TOWN));
+        add("army.settle", Area.ARMY, "army settle", T, "Settle the town's land disputes now, by treaty: the line agreed.", "army settle");
+        add("world.borders", Area.WORLD, "world borders", T, "The lands: drawn again now, the town's border markers set (a decree), or its "
+            + "lands let go as a ruin's are.", "world borders draw", Param.words("what", "draw", "markers", "release").opt().or("draw"));
+        add("world.maptable", Area.WORLD, "world maptable", T, "The war room's map table: set in the town's hall now, given to you, or "
+            + "every table showing you the whole world for an hour.", "world maptable place", Param.words("how", "place", "give", "reveal").opt().or("place"));
         // ---- economy
         add("economy.coin", Area.ECONOMY, "economy coin", T, "Add (or with a minus, take) treasury coin.", "economy coin 500",
             Param.num("amount", -MOST_COIN, MOST_COIN, 100));

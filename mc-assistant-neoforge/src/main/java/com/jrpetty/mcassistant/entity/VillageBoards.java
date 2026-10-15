@@ -544,6 +544,8 @@ public final class VillageBoards {
         if (golems != null) out.add("FN|" + golems);
         String maps = Cartographers.boardLine(id);              // [cartographer] the hall's map, the country's, the latest find
         if (maps != null) out.add("FN|" + maps);
+        String lands = Borders.boardLine(id);                   // [borders-map] the town's lands, and a dispute over them
+        if (!lands.isEmpty()) out.add("FN|" + lands + ".");
         String water = Divers.boardLine(level, id);             // [diver] the kelp beds, the coal they kept, the rescues
         if (water != null) out.add("FN|" + water);
         String nether = NetherRunners.boardLine(id);            // [nether] the run under way, or the runs' tally and the last haul

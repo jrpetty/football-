@@ -147,7 +147,7 @@ public final class Diplomacy {
         if (kin(x, y)) delta += 2;
         delta += Ethos.relationLean(x, y);                  // [identity] two peaceable towns, a closed one, a town of renown, Peacemakers
         // The ground between them.
-        boolean crowded = apart(a, b) < CROWDED;
+        boolean crowded = apart(a, b) < CROWDED || Borders.contested(x, y);   // [borders-map] or their claims overlap
         boolean truce = Bonds.truce(x, y, day);
         // A border agreed (Bonds) ends the quarrel over the ground.
         if (crowded && !Bonds.border(x, y)) {
@@ -428,6 +428,7 @@ public final class Diplomacy {
                     case FEUD -> "We're in a feud with " + where + ", and I won't forgive them. ";
                 });
                 if (apart(v, o) < CROWDED && r < FRIENDLY && !Bonds.border(village, o.id())) sb.append("They're too close — that's half the trouble. ");
+                sb.append(Borders.about(village, o.id()));                // [borders-map] a quarrel over the land
                 sb.append(Bonds.about(village, o, f.level().getDayTime() / 24000L));
             }
             told++;

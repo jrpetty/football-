@@ -352,6 +352,9 @@ public final class VillageCommands {
             .then(DiningCommands.build())                      // [dining] the cafés, taverns and restaurants, and their staff
             // [war-scouting] The war map, the reports on the enemy, the pickets (ScoutingCommands).
             .then(ScoutingCommands.build())
+            // [borders-map] The towns' lands, their disputes and markers; the war room's map table (BordersCommands).
+            .then(BordersCommands.borders())
+            .then(BordersCommands.mapTable())
             // What every village you have met thinks of you.
             .then(Commands.literal("standing").executes(VillageCommands::standing))
             // How the villages stand with each other: allies, feuds, tribute.

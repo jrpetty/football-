@@ -122,6 +122,7 @@ public final class Bonds {
         Villages.tell(a, day, line);
         Villages.tell(b, day, line);
         remember(a, b, day, 6, "we agreed a border");
+        Borders.lineAgreed(a, b, day);                                   // [borders-map] the line fixed where it runs
     }
 
     /**
@@ -133,6 +134,7 @@ public final class Bonds {
         if (village == null) return false;
         Villages.Village v = Villages.get(village);
         if (v == null) return false;
+        if (Borders.theirs(village, spot)) return true;                 // [borders-map] another town's land outright
         double own = Math.sqrt(spot.distSqr(heart));
         for (Villages.Village o : Villages.every()) {
             if (o.id().equals(village) || !o.dim().equals(v.dim())) continue;

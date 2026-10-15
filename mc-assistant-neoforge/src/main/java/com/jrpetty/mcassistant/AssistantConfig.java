@@ -45,6 +45,8 @@ public final class AssistantConfig {
     public static final ModConfigSpec.IntValue VILLAGE_FOUNDING_MOST;
     public static final ModConfigSpec.IntValue VILLAGE_CHARTER_FOLK;
     public static final ModConfigSpec.BooleanValue VILLAGE_WARS;
+    public static final ModConfigSpec.BooleanValue TOWN_BORDERS;          // [borders-map]
+    public static final ModConfigSpec.IntValue TOWN_BORDER_REACH;         // [borders-map]
     public static final ModConfigSpec.IntValue BATTLE_DETAIL;      // [war]
     public static final ModConfigSpec.IntValue BATTLE_DEATHS;      // [war]
     public static final ModConfigSpec.IntValue BATTLE_VIEW;        // [war]
@@ -191,6 +193,16 @@ public final class AssistantConfig {
                 "the enemy, the town on a war footing, war bands, raids, sieges and peace talks. Off, a feud",
                 "stays a feud and nobody marches.")
             .define("villageWars", true);
+        TOWN_BORDERS = b.comment(                                           // [borders-map]
+                "Towns claim the land round them, more as they grow: their folk plant banners at the border and",
+                "set stones where the roads cross it, players are told when they cross one, and where two towns'",
+                "claims meet they dispute the ground (envoys, treaties, arbiters, payment, a feud, a war). Off, no",
+                "town claims anything and the map table draws no borders.")
+            .define("townBorders", true);
+        TOWN_BORDER_REACH = b.comment(                                      // [borders-map]
+                "How far a town's lands run for its size, in percent: 100 is the usual; lower it for a crowded",
+                "map of many towns close together, raise it for a wide one.")
+            .defineInRange("townBorderReach", 100, 25, 300);
         BATTLE_DETAIL = b.comment(
                 "[war] How many of each army's fighters are drawn in full on a battlefield a player is watching; the",
                 "rest of a bigger army fight on paper alongside them. Lower it on a busy server.")
@@ -388,6 +400,8 @@ public final class AssistantConfig {
     public static int villageFoundingMost() { return read(VILLAGE_FOUNDING_MOST, 500); }
     public static int villageCharterFolk() { return read(VILLAGE_CHARTER_FOLK, 70); }
     public static boolean villageWars() { return read(VILLAGE_WARS, true); }
+    public static boolean townBorders() { return read(TOWN_BORDERS, true); }                 // [borders-map]
+    public static int townBorderReach() { return read(TOWN_BORDER_REACH, 100); }             // [borders-map]
     public static int battleDetail() { return read(BATTLE_DETAIL, 24); }
     public static int battleDeaths() { return read(BATTLE_DEATHS, 5); }
     public static double battleView() { return read(BATTLE_VIEW, 112); }

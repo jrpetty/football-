@@ -11994,3 +11994,84 @@ holders are looked up at most every five seconds a town. A stint is a map look-u
 drawn once a day with the roster. The carter's whip is looked at once a second only while a wagon is being driven.
 
 Smoke: `roles_e_stage` in tools/realworld/smoke.py (`/village roads stage`). Tests: RoadsRanksGameTests (re01 to re07).
+
+## Borders and the war room map
+
+### A town's lands (Borders)
+- **Every town holds the land round it**, more as it grows. A new camp holds a long stone's throw round its fire; a town
+  of a hundred, old, built up and in the Iron Age, holds three hundred blocks and more. Every grown folk, every age,
+  every building and every year counts. Its fields, its mine, its woodcutters' plots and every building it has put up
+  are its own too, and pull its lands out to them.
+- **The ground shapes it.** Open grass is easy to hold, a wood a little less so, bare rock and snow harder and water
+  hardest of all: a town's lands run along a valley and stop at a lake's shore, and a mountain range or the sea makes a
+  natural border.
+- **Where two towns meet**, each chunk goes to the town that holds it more easily for its size, and the line runs between
+  them. Where both hold it about as well the ground is **contested** until their elders agree the line (then it stays
+  put however either grows) or a dispute settles it.
+- **Crossing a border** puts its name on your screen: "Entering the lands of Ashford", with its motto under it; "Disputed
+  ground" where two towns claim it. `/village borders notices title|bar|off` puts it in the middle of the screen, above
+  your hotbar, or nowhere.
+- **The folk keep to their own land**: a town does not stake a new field, plot or mine on ground another town holds
+  outright (work already going on is left as it is).
+- A town that falls to ruin, or dies out, lets its lands go; its banners stand where they were, nobody's any more.
+
+### Border markers (BorderMarkers)
+- A hand at the town's works walks out and **plants the town's banner on a post at the border**: every few chunks along
+  the line with a neighbour, and one at each point of the compass where its lands give onto the wilds. The banner is the
+  town's own (its arms, woven by the tailor out of the stores' wool and dye; a plain banner in its colour before it has
+  arms), the post a log from the stores.
+- **A stone by the road** where a road to a colony leaves the town's lands, with a sign: "The lands of / ASHFORD / begin here".
+- A banner knocked down is planted again, out of the stores. **Pull one up yourself** and the town thinks the less of
+  you; if you are a citizen of a neighbour, it is a cause of dispute between the two towns. **Plant one town's banner on
+  another's land** and the land's town pulls it up and complains of the other.
+- When the border moves (a treaty, a war), the old banners come down into their town's stores and new ones go up.
+
+### Land disputes (BorderDisputes)
+- **How one starts**: two towns' claims overlap and nobody has agreed the line, worse where something worth having lies
+  on it (an ore vein the scouts or miners found, a wood, a lake, good farmland); a neighbour's mine, fields or woodcutters
+  over the line; a border banner pulled up or planted. It goes into both chronicles, and both towns remember it as a
+  quarrel over the land.
+- **The envoy argues it.** The town that complains sends an envoy (a shrewd or open-handed elder sends an offer of coin
+  with it). The other's elder answers before its board: **a treaty** (the line agreed, each keeping what lies nearer home,
+  stones to mark it), **a sale** (it takes the coin and gives up its claim), **a buy-off** (it keeps the ground and pays
+  the other to drop its claim), **an arbiter** (a third town both get on with decides), or **a refusal**. Refused twice,
+  or between towns already on bad terms, the quarrel **sours into bad blood**, a step nearer a feud every day it stands.
+- **A war over it**: a feud over land is a cause of war, and its goal is "a border where we say it runs". A war won takes
+  the disputed land: the border moves, the loser's banners there come down and the winner's go up.
+- With nobody free to walk over, the word goes by mouth, answered the same way but with no coin (nothing passes between
+  towns that nobody carries).
+
+### The war room's map table (WarRoom)
+- **The Map Table**: two paper, a compass, two planks, a cartography table and two sticks (paper, compass, paper across
+  the top; plank, cartography table, plank; a stick under each corner). A Stone Age town of a dozen folk (or any town
+  with scouts out, a dispute or a war) makes its own out of its stores and sets it in its hall's council room, or beside
+  its board if it has no hall. If it is broken, the town makes another.
+- **Right-click it** for a live map of the region, drawn from the real ground in a map's colours (four blocks a pixel),
+  with every town known (its colour, its size, its name), their **lands** ruled in their colours and the contested ground
+  striped gold, the **roads**, the **trade routes**, **armies on the march** (their road and an arrow at the head), their
+  **camps**, **battles** (crossed swords) and **sieges**, **caravans, envoys, heralds, wagons and scouts**, the
+  **disputes** (a flag), the **ruins**, and **you**.
+- **Drag** to move about, **scroll** (or + and -) to zoom, **click a town** for its card: its folk, age and lands, how we
+  stand with it, its wars and trade, and its strength as our town reckons it (from the scouts' last report, or a guess).
+  The **Legend** and **What's new** are a click away; ⌂ brings you home. On a small window the side panel folds away
+  behind a button. It updates every second and a half while it is open.
+- **Fog of war**: a town's table shows only what that town knows: its own country, the bearings its scouts have walked,
+  every place in its atlas, the towns it has met and the roads to them. A table you set down yourself shows what your
+  town knows (if you are a citizen), else the land it stands in. Admins in creative see everything.
+
+### The books, the board and the commands
+- The town's books have a **Lands** page (under Civic): a little map of whose each chunk is round the town, how much land
+  it holds and why that much, the neighbours along the border and how it stands with each, its disputes, its border
+  markers, its map table, and what has changed. The board gives a line on the town's lands and any dispute.
+- `/village borders` (every town's lands), `here`, `disputes`, `books`, `notices`; for ops `draw`, `dispute <town>`,
+  `settle`, `markers`, `release`. `/village maptable give|place|view|reveal` (ops). Admin: Army & War "army dispute",
+  "army settle"; World "world borders draw|markers|release", "world maptable place|give|reveal".
+- Config: `townBorders` (on), `townBorderReach` (100 percent; lower it for a crowded map).
+
+### Cost
+The lands are drawn every two minutes a dimension (a walk over the chunk grid for each town: a few thousand steps each).
+The map's terrain is read off each chunk's height map once as it loads (sixteen columns, a few microseconds) and kept with
+the world, sixteen bytes a chunk. Nothing is drawn for a map table until somebody opens one; while it is open its client
+asks for a few kilobytes a second and a half, and terrain tiles only when they are missing or stale.
+
+Smoke: `borders_map_stage` in tools/realworld/smoke.py. Tests: BordersMapGameTests (bm01 to bm04).
