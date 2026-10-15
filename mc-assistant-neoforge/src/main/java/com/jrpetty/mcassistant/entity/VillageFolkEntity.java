@@ -2481,6 +2481,9 @@ public class VillageFolkEntity extends AssistantEntity {
             if (away != null) { walkTo(away, 0.9D); socialWalkTick = tickCount; }
             return;
         }
+        // A shopping trip once begun is seen through: the favourite spot or a friend would otherwise turn it round
+        // halfway, every tick, till the trip ran out of time with nothing bought and the larder at home still bare.
+        if (ShoppingTrips.underWay(this) && ShoppingTrips.errand(this, server)) return;
         // [folk-ui] Its needs first (FolkNeeds): lonely, it goes looking for company before anything it would do on its
         // own; short of comfort, its savings go on its home before its favourite spot.
         if (FolkNeeds.low(this, FolkNeeds.SOCIAL) && keepCompany(server)) return;
