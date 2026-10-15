@@ -706,6 +706,8 @@ class BlueprintSoundnessTest {
         "huntlodge 2 3 3 3 front",              // [roles-d]
         "barn 3 3 4 4 front",                   // [roles-d]
         "wheelwright 4 3 5 4 none",             // [roles-e] the open cart bay, no door
+        "harbour 3 4 4 4 front",                // [trade-world] the harbour office on the bank
+        "seamark 3 3 3 3 front",                // [trade-world] the harbour light
         "school 3 5 4 5 front",
         "shelter 2 2 3 3 none",
         "shop 3 3 4 4 front",

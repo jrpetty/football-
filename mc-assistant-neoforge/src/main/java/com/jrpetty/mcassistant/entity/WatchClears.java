@@ -590,6 +590,7 @@ public final class WatchClears {
                  "fletcher",                                                      // [fletcher] the fletcher's hut
                  "maproom",                                                      // [cartographer] the map room
                  "divershed",                                                     // [diver] the diver's shed
+                 "harbour",                                                       // [trade-world] the harbour office
                  "huntlodge", "barn" -> true;                                     // [roles-d] the hunter's lodge, the barn
             default -> false;
         };

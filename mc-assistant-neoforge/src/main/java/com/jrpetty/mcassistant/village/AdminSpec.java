@@ -216,6 +216,9 @@ public final class AdminSpec {
             "people unknight Steve", Param.of("player", Kind.PLAYER));
         add("people.grant", Area.PEOPLE, "people grant", T, "Grant a knight its land at the town's edge now (looked for afresh).",
             "people grant Steve", Param.of("player", Kind.PLAYER));
+        // [trade-world] Folk on the move: those with most reason to go set out now, on foot, with their households.
+        danger("people.migrate", Area.PEOPLE, "people migrate", T, "Make N folk (with their households) leave now for the best town they know, on foot.",
+            "people migrate 2", Param.num("count", 1, 20, 1));
         // ---- army and war
         add("army.kit", Area.ARMY, "army kit", T, "Arm the watch at a tier: from the stores first, a decree supply for the rest.",
             "army kit iron", Param.of("tier", Kind.TIER), Param.words("source", "stores", "decree").opt());
@@ -280,9 +283,15 @@ public final class AdminSpec {
             "build place house", Param.of("structure", Kind.STRUCTURE));
         add("build.manor", Area.BUILD, "build manor", T, "Raise a knight's manor on its land now ([civic-land]).", "build manor Steve",
             Param.of("player", Kind.PLAYER), Param.words("cost", "free", "paid").opt());
+        // [trade-world] The town's roads made a grade better now (path, gravel, stone), out of its stores as far as they go.
+        add("build.roads", Area.BUILD, "build roads", T, "Make each of the town's roads a grade better now (out of the stores, as far as they go).",
+            "build roads");
         // ---- events
         add("events.now", Area.EVENTS, "events now", T, "Bring an event about now.", "events now festival", Param.of("event", Kind.EVENT),
             Param.of("detail", Kind.WORD).opt());
+        // [trade-world] A merchant ship from over the sea sighted off the town's harbour now.
+        add("events.ship", Area.EVENTS, "events ship", T, "A merchant ship from over the sea sighted off the town's harbour now.",
+            "events ship qadira", Param.words("land", "next", "qadira", "vellmark", "orrisand", "teshwan").opt());
         // ---- time and world
         big("world.skip", Area.WORLD, "world skip", W, "Skip N days: every town's morning round run for each day, a day a second.",
             "world skip 5", Param.num("days", 1, MOST_DAYS, 1));

@@ -249,7 +249,8 @@ public final class CastleWall {
 
     // ------------------------------------------------------------------ the plan, kept with the world
 
-    private static final Set<String> NOT_IN_TOWN = Set.of("fortify", "colony", "pen", "lighthouse", Divers.SHED, "court");
+    private static final Set<String> NOT_IN_TOWN = Set.of("fortify", "colony", "pen", "lighthouse", Divers.SHED, "court",
+        Harbours.OFFICE, Harbours.LIGHT);                                  // [trade-world] on the bank, by the water
 
     /** The town's buildings as boxes on the plan ({x, z, halfX, halfZ} from the heart): what the wall must enclose. */
     static List<int[]> boxes(UUID id) {

@@ -242,6 +242,7 @@ public final class TownPlan {
             case "wheelwright" -> "civic";            // [roles-e] the wheelwright's shed, among the trades by the yard
             case "academy", "foundry", "clocktower" -> "civic";   // [tech-tree] the academy, the foundry, the clocktower among the trades
             case "watermill", "aqueduct" -> "edge";   // [tech-tree] the watermill on its race, the aqueduct's arches, out at the edge
+            case "harbour", "seamark" -> "edge";      // [trade-world] on the bank where the shore was found (Harbours.site)
             default -> "home";
         };
     }

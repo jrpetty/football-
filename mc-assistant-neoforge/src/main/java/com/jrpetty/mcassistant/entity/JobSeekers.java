@@ -78,7 +78,9 @@ public final class JobSeekers {
         FAMILY("family there", "to be near its family", 3),
         START("young, wanting a start", "for a start in life", 1),
         // [war-peace] Worn out by a long war at home (WarAndPeace.weariness).
-        WAR_WEARY("sick of the war at home", "to get away from the war", 2);
+        WAR_WEARY("sick of the war at home", "to get away from the war", 2),
+        // [trade-world] No home of its own at home, and a house to be had there (Migration.houseOffered).
+        HOUSE("no home of its own", "for a house of its own", 2);
 
         public final String words, because;
         public final int weight;
@@ -356,6 +358,7 @@ public final class JobSeekers {
         if (kin != null) why.add(Why.FAMILY);
         if (f.ageYears() <= 24 && FolkSkills.bestLevel(f) < 5) why.add(Why.START);
         if (WarAndPeace.wearyOfWar(home)) why.add(Why.WAR_WEARY);           // [war-peace]
+        if (Homes.homeOf(home, f.getUUID()) == null && Migration.houseOffered(town)) why.add(Why.HOUSE);   // [trade-world]
         if (why.isEmpty()) return Reasons.NONE;
         int strength = 0;
         for (Why w : why) strength += w.weight;
@@ -377,7 +380,7 @@ public final class JobSeekers {
 
     /** How strong its reasons must be to go to this town: more for a rival, more if its own town needs it. */
     static int needed(VillageFolkEntity f, JobMarket.Link link) {
-        return link.need + (JobMarket.neededAtHome(f) ? 2 : 0);
+        return link.need + (JobMarket.neededAtHome(f) ? 2 : 0) + Migration.tiesForNotices(f);   // [trade-world] its friends, its years
     }
 
     /** Does the notice suit it, as it reads it: its years near enough, its level near enough what is asked? */
@@ -627,7 +630,8 @@ public final class JobSeekers {
     /** "Wanted, a miner in Oakhollow, five a day — level two or better..." */
     static String notice(UUID town, JobMarket.Opening o) {
         return "Wanted, " + JobMarket.a(o.title()) + " in " + Villages.name(town) + ", " + JobMarket.words(o.wage()) + " a day"
-            + (o.minLevel() > 0 ? ", some years at it" : "") + (o.ageWords().isEmpty() ? "" : ", " + o.ageWords()) + "...";
+            + (o.minLevel() > 0 ? ", some years at it" : "") + (o.ageWords().isEmpty() ? "" : ", " + o.ageWords())
+            + (Migration.houseOffered(town) ? ", and a house" : "") + "...";                    // [trade-world] the house that goes with it
     }
 
     private static void lookAtTheBoard(VillageFolkEntity f, @Nullable UUID home) {
@@ -651,6 +655,19 @@ public final class JobSeekers {
         FolkTalk.speak(f, FolkTalk.pick(level.getRandom(), Villages.name(town) + " will have me! I'm to be their " + o.title() + ".",
             "I've been taken on in " + Villages.name(town) + " as " + t + "!"));
         TOLD.remove(folk);
+    }
+
+    /**
+     * [trade-world] Moving of its own accord (Migration): its goodbyes on the square, and off with its household, as one
+     * taken on elsewhere goes, but with no notice behind it and no road money from the other end.
+     */
+    static void emigrate(ServerLevel level, VillageFolkEntity f, UUID town, @Nullable StationTask trade, String because) {
+        if (f.ownerId() == null) return;
+        LEAVING.put(f.getUUID(), new Leaving(f.ownerId(), town, Migration.OPENING, trade, because, f.tickCount));
+        VISITS.remove(f.getUUID());
+        f.clearQueue();
+        FolkTalk.speak(f, FolkTalk.pick(level.getRandom(), "That's settled, then. I'm going to " + Villages.name(town) + ".",
+            "I've made up my mind: " + Villages.name(town) + " it is."));
     }
 
     /** A place offered while it was away: it goes now. */
@@ -699,6 +716,12 @@ public final class JobSeekers {
             return true;
         }
         f.getNavigation().stop();
+        // [trade-world] A master its own town cannot spare: the elder may pay it to stay (Migration.counterOffer).
+        if (!l.said && l.opening != Migration.OPENING && Migration.counterOffer(level, f, l.town)) {
+            LEAVING.remove(f.getUUID());
+            reopen(level, l, f, "its own town paid it to stay");
+            return false;
+        }
         if (!l.said) {
             l.said = true;
             l.walkTick = f.tickCount;
@@ -758,7 +781,7 @@ public final class JobSeekers {
         }
         // The road money: the new town pays its newcomer a coin a hundred blocks, if it has the coin.
         int blocks = (int) Math.sqrt(from.centre().distSqr(to.centre()));
-        int fare = Math.min(Ledger.coins(to.id()), Math.max(1, blocks / 100));
+        int fare = l.opening == Migration.OPENING ? 0 : Math.min(Ledger.coins(to.id()), Math.max(1, blocks / 100));   // [trade-world] unasked: none
         if (fare > 0) {
             int paid = Ledger.takeCoins(to.id(), fare);
             if (paid > 0) {
@@ -767,6 +790,7 @@ public final class JobSeekers {
             }
         }
         JobMarket.departed(level, from, to, names, l.trade, l.because, fare, day);
+        if (l.opening == Migration.OPENING) Migration.departed(from.id(), to.id(), household.size());   // [trade-world] the comings and goings
         LOG.info("[MCA-JOBS] {} leave {} for {} ({}; {} blocks)", JobMarket.join(names), Villages.name(from.id()), Villages.name(to.id()),
             l.because, blocks);
     }
@@ -912,6 +936,14 @@ public final class JobSeekers {
             arrive(level, f, j);
             return false;
         }
+        // [trade-world] Halfway: one moving of its own accord may turn back (homesick, war ahead, the road unsafe: Migration).
+        if (j.head && !j.refugee && j.at == j.way.size() / 2 && !j.because.startsWith(HOME_AGAIN)) {
+            String why = Migration.turnBack(level, f, j.from, j.to);
+            if (why != null) {
+                turnBack(level, f, j, why);
+                return true;
+            }
+        }
         BlockPos onGround = surface(level, j.way.get(j.at));
         double dx = f.getX() - (onGround.getX() + 0.5), dz = f.getZ() - (onGround.getZ() + 0.5);
         double d = dx * dx + dz * dz;
@@ -926,7 +958,7 @@ public final class JobSeekers {
             j.gainedTick = f.tickCount;
         }
         if (f.getNavigation().isDone() || f.tickCount - j.walkTick > 80) {
-            f.walkTo(onGround, 0.9D);
+            f.walkTo(onGround, 0.9D * RoadWorks.pace(f));                   // [trade-world] quicker on a made road
             j.walkTick = f.tickCount;
         }
         // No nearer for half a minute (a river with no bridge, a cliff): set down at the next step, as a caravan is.
@@ -943,6 +975,62 @@ public final class JobSeekers {
         }
         f.hobbyNow = "on the road to " + Villages.name(j.to);
         f.lastLeisureTick = f.tickCount;
+        return true;
+    }
+
+    /** [trade-world] What a journey home again after turning back says it is for (and how it is known for one). */
+    static final String HOME_AGAIN = "coming home";
+
+    /**
+     * [trade-world] Turned back halfway (Migration.turnBack): the whole household back on the old town's roll and onto the
+     * road home, from where they stand, each to take up its old trade there. Both chronicles say so.
+     */
+    private static void turnBack(ServerLevel level, VillageFolkEntity head, Journey j, String why) {
+        Villages.Village from = Villages.get(j.from), to = Villages.get(j.to);
+        if (from == null || to == null) return;
+        List<VillageFolkEntity> group = new ArrayList<>();
+        for (AssistantEntity a : Villages.folkOf(j.to)) {
+            if (a instanceof VillageFolkEntity o && sameGroup(o, j.group)) group.add(o);
+        }
+        if (!group.contains(head)) group.add(head);
+        List<String> names = new ArrayList<>();
+        for (VillageFolkEntity o : group) if (!o.isBaby()) names.add(o.displayNameCap());
+        long day = level.getDayTime() / 24000L;
+        for (VillageFolkEntity o : group) {
+            Journey oj = JOURNEYS.remove(o.getUUID());
+            if (oj != null) release(level, o, oj);
+            Ledger.forget(j.to, "jm.incoming/" + o.getUUID());
+            o.joinVillage(from.id(), from.centre());
+            Villages.recordDeath(to.id());
+            Villages.recordBirth(from.id());
+            Annals.moved(to.id(), from.id());
+            List<BlockPos> way = new ArrayList<>();
+            BlockPos a = o.blockPosition(), b = from.centre().offset(2, 0, 2);
+            int steps = Math.max(1, (int) Math.ceil(Math.sqrt(a.distSqr(b)) / 10.0));
+            for (int i = 1; i <= steps; i++) way.add(new BlockPos(a.getX() + (b.getX() - a.getX()) * i / steps, a.getY(), a.getZ() + (b.getZ() - a.getZ()) * i / steps));
+            StationTask old = o.isBaby() ? null : Migration.oldTrade(from.id(), o.getUUID());
+            Journey back = new Journey(to.id(), from.id(), j.group, Villages.name(to.id()), way, old, HOME_AGAIN + ": " + why, false, o == head);
+            if (o == head) back.party.addAll(names);
+            back.gainedTick = o.tickCount;
+            back.lastStep = level.getGameTime();
+            back.day = day;
+            JOURNEYS.put(o.getUUID(), back);
+            writeIncoming(back, o.getUUID(), null);
+            if (!o.isBaby()) o.persona().remember(day, "I turned back on the road to " + Villages.name(to.id()) + ", " + why, 6);
+        }
+        FolkTalk.speak(head, FolkTalk.pick(level.getRandom(), "No. I'm going home. " + FolkTalk.cap(why) + ".", "Turn round, all of us. We're going back."));
+        Migration.turnedBack(level, from.id(), to.id(), names, why);
+        LOG.info("[MCA-MIGRATE] {} turned back on the road to {} ({})", JobMarket.join(names), Villages.name(to.id()), why);
+    }
+
+    /** [trade-world] Tests: a folk on the road set down at its journey's halfway mark, as if it had walked there. */
+    public static boolean halfwayForTests(ServerLevel level, VillageFolkEntity f) {
+        Journey j = JOURNEYS.get(f.getUUID());
+        if (j == null) return false;
+        j.at = j.way.size() / 2;
+        BlockPos p = surface(level, j.way.get(j.at));
+        f.moveTo(p.getX() + 0.5, p.getY(), p.getZ() + 0.5, f.getYRot(), 0.0F);
+        j.gainedTick = f.tickCount;
         return true;
     }
 
@@ -970,11 +1058,18 @@ public final class JobSeekers {
         if (f.bedPos() == null && Homes.homeOf(to.id(), me) == null) f.claimBedNear(to.centre());
         // Its work.
         StationTask trade = f.isBaby() ? StationTask.NONE : j.refugee ? JobMarket.fitFor(f, to.id()) : j.trade == null ? StationTask.NONE : j.trade;
+        boolean homeAgain = j.because.startsWith(HOME_AGAIN);                   // [trade-world] turned back on the road: home again
+        Migration.arrived(to.id(), f, j.fromName, day, j.head);                // [trade-world] the comings and goings
+        RoadWorks.travelled(j.from, j.to);                                     // [trade-world] the road's traffic
         if (trade != StationTask.NONE) {
             f.setStation(f.blockPosition(), trade);
             f.setAutonomous(true);
         }
-        if (!f.isBaby()) {
+        if (!f.isBaby() && homeAgain) {
+            if (j.head) Villages.tell(to.id(), day, JobMarket.join(j.party) + " came home again, and took up " + (trade == StationTask.NONE
+                ? "the work of the town" : "work as " + JobMarket.a(JobMarket.noun(trade))) + " once more");
+            f.persona().remember(day, "I came home to " + Villages.name(to.id()) + " after all", 6);
+        } else if (!f.isBaby()) {
             JobMarket.arrived(level, to, f, j.from, j.fromName, trade, j.because, j.refugee, j.head ? j.party : List.of(), day);
             f.persona().remember(day, j.refugee ? Villages.name(to.id()) + " took us in after the raid" : "I came to " + Villages.name(to.id())
                 + (trade == StationTask.NONE ? "" : " to work as " + JobMarket.a(JobMarket.noun(trade))), 7);

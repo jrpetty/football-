@@ -131,6 +131,8 @@ public final class FolkTalk {
         if (outdoor != null) return manner(f, outdoor);
         String roads = typed ? RoadPosts.talk(f, p, text) : null;          // [roles-e] the wagon, its road, the town's plans
         if (roads != null) return manner(f, roads);
+        String tradeWorld = TradeWorld.talk(f, p, topic, text, typed);      // [trade-world] the ships, the roads, "won't you stay?"
+        if (tradeWorld != null) return manner(f, tradeWorld);
         String lower = text.toLowerCase(Locale.ROOT);
         if (!text.isEmpty() && (lower.contains("sorry") || lower.contains("apolog"))) {
             return manner(f, apology(f, p, op, day));
@@ -365,6 +367,7 @@ public final class FolkTalk {
         if (Windmill.isMiller(f)) sb.append(" miller");
         if (!f.isBaby()) sb.append(RoadPosts.contextFlags(f));                // [roles-e] wheelwright, carter, planner
         sb.append(AfterWar.contextFlags(f, p));                               // [war-after] a prisoner, a town holding prisoners, an outlaw
+        if (!f.isBaby()) sb.append(TradeWorld.contextFlags(f));               // [trade-world] leaving, harbourmaster, harbour
         return sb.toString();
     }
 
@@ -486,6 +489,8 @@ public final class FolkTalk {
         }
         line(sb, "Wage", JobWorth.cardLine(f));            // [econ-wages] what it is paid and why: its job's worth here
         line(sb, "Post", RoadPosts.cardLine(f));           // [roles-e] the wheelwright, the carter, the town planner
+        line(sb, "Harbour", TradeWorld.postLine(f));       // [trade-world] the harbourmaster
+        line(sb, "Thinking", Migration.cardLine(f));       // [trade-world] thinking of leaving, and for where
         // Its schooling (a child: what it is learning and how far; the teacher: its school).
         line(sb, f.isBaby() ? "School" : "Teaches", School.cardLine(f));
         String levels = f.tradeLevels();

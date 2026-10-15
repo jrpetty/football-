@@ -421,6 +421,8 @@ public class VillageFolkEntity extends AssistantEntity {
         }
         // [batchE] A traveller in a town with an inn after dusk: a room for the night, and on its way in the morning (Inn).
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel innLevel && Inn.lodging(this, innLevel)) return;
+        // [trade-world] Out on the road near a roadside inn after dusk: a room there for the night (Roadside).
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel roadLevel && Roadside.lodging(this, roadLevel)) return;
         // [wagons] Riding guard on the town's wagon: that is its work till the wagon is home (it gets down to fight).
         if (!withAPlayer && Wagons.guarding(this) && level() instanceof net.minecraft.server.level.ServerLevel wagonLevel
                 && (tickCount % 5 != 1 || Wagons.escort(this, wagonLevel))) return;

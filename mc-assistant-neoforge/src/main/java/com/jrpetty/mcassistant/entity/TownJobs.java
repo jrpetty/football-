@@ -163,6 +163,13 @@ public final class TownJobs {
         return false;
     }
 
+    /** [trade-world] The hand at these works just now (the road gang's, paid by the stretch: RoadWorks), or null. */
+    @Nullable
+    public static VillageFolkEntity handAt(ServerLevel level, UUID village, String works) {
+        Crew c = CREW.get(village + "/" + works);
+        return c == null ? null : live(level, c.folk);
+    }
+
     /** Is this folk on the town's work just now (its own trade waits)? */
     /**
      * [townlife] The works that wait for all the others: a hand at them is a hand to spare for anything

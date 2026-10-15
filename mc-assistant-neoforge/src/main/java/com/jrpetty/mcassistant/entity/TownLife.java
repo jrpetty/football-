@@ -123,6 +123,7 @@ public final class TownLife {
         // [batchG] Visitors (the bard, tourists, the merchant), friends' visits, the map room, the watch's dogs,
         // gifts kept on show, and its players' advancements (Visitors.tick).
         Visitors.tick(level, v);
+        TradeWorld.tick(level, v);                  // [trade-world] the harbour and its ships, the roads and their inns, folk on the move
         Fashion.tick(level, v);                     // [fashion] the season's look, its going round, the tailor's dyes
         // The café's and the shop's counters.
         if (turn % 6 == 3) {

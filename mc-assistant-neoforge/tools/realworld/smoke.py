@@ -4792,6 +4792,69 @@ def war_after_stage(r, look, cx, cz):
     say("alive after the war's aftermath: %s" % client_alive())
 
 
+
+def trade_world_stage(r, look, cx, cz):
+    """[trade-world] Harbours, roads and migration (entity/Harbours, ShipCalls, RoadWorks, Roadside, Migration, TradeWorld).
+    Out past the town to the south-east, /village harbour stage cuts a bay into the ground beside where it is run, finds the
+    town's harbour on its bank, sets down the harbour office and the lighthouse (its beacon lit) and the stone pier for
+    nothing, and brings a merchant ship of Qadira in alongside the pier with its captain and a sailor ashore in their
+    land's colours; /village highways stage sets out forty blocks of road with the grades side by side (an earth path,
+    gravel, cobbles with kerbs and lamp posts), a milestone lettered for the town and the roadside inn by it;
+    /village migration stage has the folk with most reason to go start to think of leaving (it says so). Pictures:
+      1. 57-trade-world-1-harbour: the harbour from over the water, the ship alongside the pier;
+      2. 57-trade-world-2-ship: the ship at the pier from the quay, its sail and its colours, its people on the pier;
+      3. 57-trade-world-3-light: the lighthouse on the shore, its beacon burning;
+      4. 57-trade-world-4-road: the road, path to gravel to stone, its kerbs and lamp posts;
+      5. 57-trade-world-5-milestone: the milestone by the stone road;
+      6. 57-trade-world-6-inn: the roadside inn, its sign by the door;
+      7. 57-trade-world-7-folk: a folk thinking of leaving.
+    Then /village harbour, /village highways and /village migration in words. Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode spectator %s" % USER)
+    r.cmd("time set 6000")
+    r.cmd("weather clear")
+    views = {}
+
+    def stage(command, sx, sz):
+        hy = ground_height(r, sx, sz)
+        r.cmd("tp %s %d %d %d" % (USER, sx, hy + 30, sz + 20))
+        time.sleep(10)                                     # the stage's chunks arrive
+        out = r.cmd("execute positioned %d 0 %d positioned over motion_blocking_no_leaves run village %s" % (sx, sz, command))
+        say(command + ": " + out[:900])
+        for name, x, y, z, ax, ay, az in re.findall(r"VIEW (\S+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+) (-?\d+)", out):
+            views[name] = (int(x), int(y), int(z), int(ax), int(ay), int(az))
+
+    stage("harbour stage", cx + 170, cz + 170)
+    stage("highways stage", cx + 170, cz - 150)
+    stage("migration stage", cx, cz)
+    if not views:
+        say("nothing staged for the harbours, roads and migration; nothing to photograph")
+        return
+
+    def shoot(name, picture, wait):
+        if name not in views:
+            say("no view %s" % name)
+            return
+        x, y, z, ax, ay, az = views[name]
+        x, y, z = clear_camera(r, x + 0.5, y, z + 0.5, ax + 0.5, ay + 0.5, az + 0.5)
+        look("57-trade-world-" + picture, x, y, z, ax + 0.5, ay + 0.5, az + 0.5, wait=wait)
+
+    shoot("harbour", "1-harbour", 12)
+    shoot("ship", "2-ship", 8)
+    r.cmd("time set 13500")                            # dusk: the beacon burning against the sky
+    shoot("light", "3-light", 8)
+    r.cmd("time set 6000")
+    shoot("road", "4-road", 10)
+    shoot("milestone", "5-milestone", 6)
+    shoot("inn", "6-inn", 8)
+    shoot("folk", "7-folk", 6)
+    hy = ground_height(r, cx, cz) + 1
+    say("harbour: " + r.cmd("execute positioned %d %d %d run village harbour" % (cx, hy, cz))[:1200])
+    say("roads: " + r.cmd("execute positioned %d %d %d run village highways" % (cx, hy, cz))[:1200])
+    say("migration: " + r.cmd("execute positioned %d %d %d run village migration" % (cx, hy, cz))[:1200])
+    say("alive after the harbours, roads and migration: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

@@ -56,7 +56,8 @@ public class CityScreen extends Screen {
         "Earnings",                                                                                   // [earning]
         "Lands",                                                                                      // [borders-map]
         "Taxes", "Knights",                                                                           // [civic-land]
-        "Inventions");                                                                                // [tech-tree]
+        "Inventions",                                                                                 // [tech-tree]
+        "Harbour", "Roads");                                                                          // [trade-world]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -384,6 +385,11 @@ public class CityScreen extends Screen {
                 }
                 case "Perks" -> {                                                      // [perks] wonders, ways, the leader, the folk (PerksPage)
                     List<Component> tip = PerksPage.draw(g, font, data.getCompound("perks"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
+                case "Harbour", "Roads" -> {                                           // [trade-world] the harbour; the roads (TradeWorldPage)
+                    List<Component> tip = TradeWorldPage.draw(g, font, data.getCompound(page().equals("Harbour") ? "harbour" : "roads"), x, y, cw, ch,
+                        scroll, mouseX, mouseY);
                     if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
                 }
                 case "Transport" -> {                                                  // [transport] the lines, the ferry (TransportPage)

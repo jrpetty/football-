@@ -366,6 +366,21 @@ public final class AdminActions {
             case "build.renovate" -> renovateAll(c, v);
             case "build.unstick" -> AdminTools.unstick(level, v);
             case "build.place" -> place(c, v, a.word(0, "house"));
+            case "build.roads" -> {                                             // [trade-world]
+                List<String> done = com.jrpetty.mcassistant.entity.RoadWorks.upgradeNow(level, v);
+                yield done.isEmpty() ? Done.no(Villages.name(v.id()) + " has no road to make better.")
+                    : Done.ok(String.join("; ", done), "the roads were made better");
+            }
+            case "people.migrate" -> {                                          // [trade-world]
+                List<String> gone = com.jrpetty.mcassistant.entity.Migration.migrateNow(level, v, a.num(0, 1));
+                yield gone.isEmpty() ? Done.no("Nobody in " + Villages.name(v.id()) + " is free to go.")
+                    : Done.ok(String.join("; ", gone), "folk set out for other towns");
+            }
+            case "events.ship" -> {                                             // [trade-world]
+                String land = a.word(0, "next").toLowerCase(Locale.ROOT);
+                String name = com.jrpetty.mcassistant.entity.ShipCalls.sightNow(level, v, land.equals("next") ? null : land);
+                yield name == null ? Done.no(Villages.name(v.id()) + " has no harbour.") : Done.ok(name + " sighted off the harbour", "a ship was sighted");
+            }
             // ---- events
             case "events.now" -> AdminTools.event(level, v, a.word(0, "festival").toLowerCase(Locale.ROOT), a.word(1, ""), RNG);
             // ---- world

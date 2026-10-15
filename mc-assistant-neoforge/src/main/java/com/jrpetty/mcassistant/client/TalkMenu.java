@@ -265,6 +265,10 @@ public final class TalkMenu {
     static final Entry WAGON_WORK = say("wagon_work", Items.STRIPPED_SPRUCE_LOG, "How's the wagon coming on?", flag("wheelwright"));
     static final Entry CARTER_ROAD = say("carter_road", Items.LEAD, "Where's the wagon bound?", flag("carter"));
     static final Entry PLANNER_NEXT = say("planner_next", Items.STONE_BRICKS, "What's being built next?", flag("planner"));
+    // [trade-world] A folk thinking of leaving talked round; the harbour's ships; the roads (TradeWorld hears the words).
+    static final Entry MIG_STAY = say("mig_stay", Items.CAKE, "Won't you stay?", flag("leaving"));
+    static final Entry SHIP_DUE = say("harbour_ship", Items.OAK_BOAT, "When's the next ship due?", flag("harbour"));
+    static final Entry ROADS_HOW = say("roads_how", Items.GRAVEL, "How are the roads?");
     static final Entry ATLAS = ask("atlas", Items.SPYGLASS, TalkTopic.ATLAS);                     // the scout's own, by name
     // [war-after] A prisoner of war set free; an outlaw's ways back.
     static final Entry FREE_PRISONER = say("free_prisoner", Items.SHEARS, "I'm getting you out of here", flag("prisoner"));
@@ -306,7 +310,8 @@ public final class TalkMenu {
                 ask("house", Items.RED_BED, TalkTopic.HOUSE),
                 ask("pet", Items.BONE, TalkTopic.PET),
                 ask("keepsake", Items.HEART_OF_THE_SEA, TalkTopic.KEEPSAKE),
-                GODPARENT),
+                GODPARENT,
+                MIG_STAY),                                                   // [trade-world] only to one thinking of leaving
             group("work", Items.IRON_PICKAXE,
                 ask("workings", Items.CRAFTING_TABLE, TalkTopic.WORKINGS),
                 ask("knack", Items.EXPERIENCE_BOTTLE, TalkTopic.KNACK),
@@ -405,7 +410,8 @@ public final class TalkMenu {
                 special("board", Items.OAK_HANGING_SIGN, Kind.BOARD),
                 ask("ledger", Items.WRITABLE_BOOK, TalkTopic.LEDGER),
                 ask("chronicle", Items.WRITTEN_BOOK, TalkTopic.CHRONICLE),
-                say("fireworks", Items.FIREWORK_STAR, "When are the next fireworks?"))),
+                say("fireworks", Items.FIREWORK_STAR, "When are the next fireworks?"),
+                SHIP_DUE)),                                                  // [trade-world] a harbour town's ships
         // World: the neighbours, the scouts, the caves, the Nether, maps.
         List.of(
             ask("rivals", Items.RED_BANNER, TalkTopic.RIVALS),
@@ -428,6 +434,7 @@ public final class TalkMenu {
                 say("map_woodland", Items.DARK_OAK_SAPLING, "I'd like a woodland explorer map", trade("CARTOGRAPHER")),
                 say("map_treasure", Items.SUSPICIOUS_SAND, "I'd like a treasure map", trade("CARTOGRAPHER")),
                 say("map_copy", Items.ITEM_FRAME, "A copy of the town's map, please", trade("CARTOGRAPHER")),
+                ROADS_HOW,                                                   // [trade-world] the roads between the towns
                 prompt("map_commission", Items.WRITABLE_BOOK, TalkTopic.MAPS, "Map me the land to the east", trade("CARTOGRAPHER"))))
     );
 
@@ -500,6 +507,7 @@ public final class TalkMenu {
         if (c.has("wheelwright")) return WAGON_WORK;
         if (c.has("carter")) return CARTER_ROAD;
         if (c.has("planner")) return PLANNER_NEXT;
+        if (c.has("harbourmaster")) return SHIP_DUE;                      // [trade-world] the harbourmaster's ships
         return null;
     }
 
@@ -515,6 +523,7 @@ public final class TalkMenu {
         List<Entry> out = new ArrayList<>(MAX_SUGGESTED);
         if (c.errand()) out.add(DELIVER);
         if (c.following()) out.add(STAY);
+        if (c.known() && c.has("leaving")) out.add(MIG_STAY);             // [trade-world] it means to leave: talk it round first
         if (c.known()) {
             if (c.has("fine")) out.add(FINE);
             if (c.has("taxowed")) out.add(TAX_PAY);              // [civic-land] taxes owed
