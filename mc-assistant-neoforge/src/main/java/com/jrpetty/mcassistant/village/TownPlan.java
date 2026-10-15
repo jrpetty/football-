@@ -208,6 +208,7 @@ public final class TownPlan {
             case "postoffice" -> "civic";                             // [batchF] facing the square (Post)
             case "hall", "chapel", "barracks", "manor", "townhall", "store" -> "great";   // [econ-store] the store on a long lot
             case "court" -> "court";
+            case "minster", "belfry", "amphitheatre" -> "great";          // [culture-wonders] the town's own wonders (TownWonders)
             case "storage", "storehouse", "market", "workshop", "smeltery", "granary", "cafe", "shop", "smithy", "brewery", "library",
                  "tavern", "school", "bank", "museum", "stable",
                  "auction",                                                    // [fleet] the auction house (entity/Auctions)
@@ -219,6 +220,7 @@ public final class TownPlan {
                  "tradingpost",                                                // [emerald] the emerald trader's stall
                  "redstoneworks",                                              // [redstone] the redstone workshop (entity/Engineers)
                  "theatre",                                                    // [batchD] the theatre
+                 "playhouse",                                                  // [culture-wonders] the theatre under a roof
                  "townlibrary",                                                // [library] the town library
                  "restaurant",                                                 // [dining] the restaurant, among the trades
                  "bakery", "inn" -> "civic";                                   // [batchE] the bakery and the inn

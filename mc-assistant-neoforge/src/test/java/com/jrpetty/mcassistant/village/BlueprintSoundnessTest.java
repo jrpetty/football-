@@ -726,7 +726,11 @@ class BlueprintSoundnessTest {
         "watchtower 2 2 3 3 front",
         "well 2 2 2 2 none",
         "windmill 2 2 4 3 front",
-        "workshop 3 3 4 4 none"
+        "workshop 3 3 4 4 none",
+        "playhouse 5 5 5 5 front",              // [culture-wonders] the theatre under a roof (Theatre)
+        "minster 5 10 5 10 front",              // [culture-wonders] the town's wonders (TownWonders)
+        "belfry 3 4 3 4 front",                 // [culture-wonders]
+        "amphitheatre 5 10 5 10 none"           // [culture-wonders]
     );
 
     @Test
