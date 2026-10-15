@@ -40,7 +40,12 @@ function fmt(v: unknown): string {
   return s === undefined ? 'missing' : s.length > 60 ? s.slice(0, 57) + '…' : s;
 }
 
-function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tally): void {
+/**
+ * `absent` marks a value whose enclosing object is missing from the answer (or is an object with none of
+ * the expected keys, such as `{}`). A missing key counts as null only inside an object the answer really
+ * gave; otherwise an empty `{}` or a left-out array item would earn the points of every expected null.
+ */
+function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tally, absent = false): void {
   if (Array.isArray(exp)) {
     const arr = Array.isArray(act) ? act : [];
     // Length is one checkable fact of its own.
@@ -68,10 +73,10 @@ function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tall
           out.matched += t.matched;
           out.total += t.total;
           out.items.push(...t.items);
-        } else compare(e, undefined, `${path}[${i}]`, opts, out);
+        } else compare(e, undefined, `${path}[${i}]`, opts, out, true);
       });
     } else {
-      exp.forEach((e, i) => compare(e, arr[i], `${path}[${i}]`, opts, out));
+      exp.forEach((e, i) => compare(e, arr[i], `${path}[${i}]`, opts, out, absent || i >= arr.length));
     }
     return;
   }
@@ -85,11 +90,12 @@ function compare(exp: unknown, act: unknown, path: string, opts: Opts, out: Tall
       out.items.push({ label: `${path || '$'} is {}`, passed: ok });
       return;
     }
-    for (const k of keys) compare((exp as Record<string, unknown>)[k], obj[k], path ? `${path}.${k}` : k, opts, out);
+    const present = !absent && keys.some((k) => Object.prototype.hasOwnProperty.call(obj, k));
+    for (const k of keys) compare((exp as Record<string, unknown>)[k], obj[k], path ? `${path}.${k}` : k, opts, out, !present);
     return;
   }
   out.total++;
-  const ok = leafEqual(exp, act, opts.numberTolerance, opts.aliases);
+  const ok = !(absent && act === undefined) && leafEqual(exp, act, opts.numberTolerance, opts.aliases);
   if (ok) out.matched++;
   out.items.push({ label: path || '$', passed: ok, detail: ok ? undefined : `expected ${fmt(exp)}, got ${fmt(act)}` });
 }

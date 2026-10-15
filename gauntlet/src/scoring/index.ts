@@ -1,8 +1,8 @@
 import type { ArtifactCheck, ArtifactKind, ArtifactRef, ChatImage, JudgeLabel, ScoreBreakdownItem, ScoreDetail, ScorerSpec, StopReason } from '../core/types.ts';
-import { extractCodeBlock, extractFinalAnswer, extractTagged, normalize, parseJsonLoose, parseNumber } from '../core/extract.ts';
+import { extractCodeBlock, extractCodeBlocks, extractFinalAnswer, extractTagged, normalize, parseAnswerNumber, parseJsonLoose, parseNumber, stripReasoning } from '../core/extract.ts';
 import { checkConstraints } from './constraints.ts';
 import { compareJson } from './json-compare.ts';
-import { runCodeTests, type CodeTest } from './code-sandbox.ts';
+import { promptExampleArgs, runCodeTests, trivialSolutionReason, type CodeTest } from './code-sandbox.ts';
 import { probeHtml, renderSvg } from './browser.ts';
 import { scoreLadder } from './ladder.ts';
 import { scoreGameJam } from './game-jam.ts';
@@ -83,20 +83,94 @@ export function isHedged(answer: string, kind: 'number' | 'choice' | 'text'): bo
     return letters.size > 1;
   }
   if (kind === 'number') {
-    const numbers = a.replace(/(\d),(\d{3})/g, '$1$2').match(/-?\d+(?:\.\d+)?/g) ?? [];
-    return numbers.length >= 2 && /\b(or|either|maybe|possibly|between)\b|±|\+\/-/i.test(a);
+    const plain = a.replace(/(?<=\d),(?=\d{3}(?!\d))/g, '');
+    const numbers = plain.match(/-?\d+(?:\.\d+)?/g) ?? [];
+    if (numbers.length < 2) return false;
+    if (/\b(or|either|maybe|possibly|between)\b|±|\+\/-/i.test(a)) return true;
+    // A bare list of different numbers ("21, 22", "21; 22", "21 and 22") is several answers.
+    const list = /^\s*[-−+]?\d+(?:\.\d+)?\s*%?(?:\s*(?:[,;&]|\band\b)\s*[-−+]?\d+(?:\.\d+)?\s*%?)+\s*$/i.test(plain);
+    return list && new Set(numbers.map(Number)).size > 1;
   }
   return /\b(either)\b/i.test(a) || /\s(or|and\/or)\s/i.test(a);
 }
 
+/** The options of a multiple-choice prompt ("(A) text", "A) text" or "A. text" lines), by letter. */
+export function choiceOptions(taskText: string): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const m of taskText.matchAll(/^[ \t]*\(?([A-H])[).:][ \t]+(\S.*)$/gm)) out.set(m[1]!, m[2]!.trim());
+  // Only a real option list counts: it starts at A and has at least two options.
+  return out.has('A') && out.size >= 2 ? out : new Map();
+}
+
+const alnum = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/**
+ * Read the chosen letter from a multiple-choice FINAL ANSWER. Accepts "B", "(B)", "**B**", "Option B",
+ * "\boxed{B}", "B) H, H, T" (the letter followed by its own option text, even when that text contains other
+ * capital letters) and the exact text of one option. Offering two options ("A or C", "B/C", "A, B, C"), or
+ * a letter followed by the text of a different option, is a hedge.
+ */
+export function readChoice(answer: string, taskText: string): { letter: string; hedged: boolean } {
+  const options = choiceOptions(taskText);
+  const valid = options.size ? new Set(options.keys()) : new Set('ABCDEFGH'.split(''));
+  const a = answer.replace(/^\s*(?:the\s+)?(?:correct\s+|final\s+)?(?:answer|option|choice)(?:\s+is)?\s*[:\-–—]?\s*/i, '').trim();
+  const lead = /^[[(]?([A-Za-z])(?:[\])]|(?=$|[\s.:,;\-–—]))[.:,;\-–—]?\s*/.exec(a);
+  if (lead && valid.has(lead[1]!.toUpperCase()) && (lead[1] === lead[1]!.toUpperCase() || /^[[(]?[a-z](?:[\])]|[.:]|$)/.test(a))) {
+    const letter = lead[1]!.toUpperCase();
+    const rest = alnum(a.slice(lead[0].length));
+    if (!rest) return { letter, hedged: false };
+    if (options.size) {
+      const own = alnum(options.get(letter)!);
+      if (own && (rest === own || own.includes(rest) || rest.includes(own))) return { letter, hedged: false };
+      for (const [other, text] of options) if (other !== letter && alnum(text) && rest.includes(alnum(text))) return { letter, hedged: true };
+    }
+    const others = new Set((a.slice(lead[0].length).match(/\b[A-H]\b/g) ?? []).filter((x) => valid.has(x) && x !== letter));
+    return { letter, hedged: others.size > 0 };
+  }
+  const letters = [...new Set((a.match(/\b[A-H]\b/g) ?? []).filter((x) => valid.has(x)))];
+  if (letters.length === 1) return { letter: letters[0]!, hedged: false };
+  if (letters.length > 1) return { letter: letters[0]!, hedged: true };
+  const lower = [...new Set((a.match(/\b[b-h]\b/g) ?? []).map((x) => x.toUpperCase()).filter((x) => valid.has(x)))];
+  if (lower.length === 1) return { letter: lower[0]!, hedged: false };
+  if (lower.length > 1) return { letter: lower[0]!, hedged: true };
+  for (const [letter, text] of options) if (alnum(text) && alnum(a) === alnum(text)) return { letter, hedged: false };
+  return { letter: '', hedged: false };
+}
+
+const JS_LANGS = ['javascript', 'js', 'mjs', 'cjs', 'jsx', 'node', 'typescript', 'ts', ''];
+
+/**
+ * The code block to run for a coding test: the last JavaScript (or unlabelled) block that defines the
+ * function, so a usage example or test snippet written after the solution is not run instead of it.
+ * Falls back to the last such block, then to the last block of any language.
+ */
+export function solutionBlock(response: string, functionName: string): { code: string; lang: string } | null {
+  const blocks = extractCodeBlocks(response);
+  if (!blocks.length) return null;
+  const js = blocks.filter((b) => JS_LANGS.includes(b.lang));
+  const name = functionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const defines = new RegExp(`\\bfunction\\s*\\*?\\s*${name}\\s*\\(|\\b(?:const|let|var)\\s+${name}\\s*=|\\bclass\\s+${name}\\b|exports\\.${name}\\s*=|module\\.exports\\s*=`);
+  for (let i = js.length - 1; i >= 0; i--) if (defines.test(js[i]!.code)) return js[i]!;
+  return js[js.length - 1] ?? blocks[blocks.length - 1]!;
+}
+
+/** "Maeve, Hana, Diego and Tobias" → "Maeve, Hana, Diego, Tobias": a list's closing "and" is not part of the answer. */
+function joinListAnd(answer: string): string {
+  return answer.replace(/,?\s+and\s+(?=[^,]*$)/i, ', ');
+}
+
 export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome> {
-  const { scorer, expected, response } = input;
+  const { scorer, expected } = input;
+  // A reasoning block printed into the reply (<think>…</think>) is not part of the answer.
+  const response = stripReasoning(input.response);
+  if (response !== input.response) input = { ...input, response };
   switch (scorer.type) {
     case 'exact': {
       const { answer, formatOk } = extractFinalAnswer(response);
       const accepted = (Array.isArray(expected) ? expected : [expected]) as string[];
       const mode = scorer.normalize ?? 'lower';
-      const ok = accepted.some((e) => normalize(answer, mode) === normalize(e, mode));
+      const listAnd = (e: string) => e.includes(',') && !/\sand\s/i.test(e) && normalize(joinListAnd(answer), mode) === normalize(e, mode);
+      const ok = accepted.some((e) => normalize(answer, mode) === normalize(e, mode) || listAnd(e));
       if (!ok && isHedged(answer, 'text') && accepted.some((e) => normalize(answer, 'lower').includes(normalize(e, 'lower')))) {
         return { score: 0, passed: false, summary: `Hedged answer ${quote(answer)} (multiple answers are marked wrong)`, detail: { extracted: answer, expected, formatOk, hedged: true } };
       }
@@ -113,7 +187,7 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
       if (isHedged(answer, 'number')) {
         return { score: 0, passed: false, summary: `Hedged answer ${quote(answer)} (multiple answers are marked wrong)`, detail: { extracted: answer, expected: exp, formatOk, hedged: true } };
       }
-      const value = parseNumber(answer);
+      const value = parseAnswerNumber(answer);
       const tol = scorer.tolerance ?? 1e-6;
       const ok = value !== null && (scorer.relative ? Math.abs(value - exp) <= tol * Math.max(1e-12, Math.abs(exp)) : Math.abs(value - exp) <= tol);
       return {
@@ -125,10 +199,10 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
     }
     case 'choice': {
       const { answer, formatOk } = extractFinalAnswer(response);
-      if (isHedged(answer, 'choice')) {
+      const { letter, hedged } = readChoice(answer, input.taskText);
+      if (hedged) {
         return { score: 0, passed: false, summary: `Hedged answer ${quote(answer)} (multiple answers are marked wrong)`, detail: { extracted: answer, expected, formatOk, hedged: true } };
       }
-      const letter = answer.match(/\b([A-Z])\b/i)?.[1]?.toUpperCase() ?? answer.trim().charAt(0).toUpperCase();
       const ok = letter === String(expected).toUpperCase();
       return {
         score: ok ? 1 : 0,
@@ -190,7 +264,7 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
       };
     }
     case 'json': {
-      const parsed = parseJsonLoose(response);
+      const parsed = parseJsonLoose(response, expected);
       if (parsed === undefined) return { score: 0, passed: false, summary: 'No valid JSON found', detail: { formatOk: false, expected } };
       const r = compareJson(expected, parsed, { unorderedArrays: scorer.unorderedArrays, numberTolerance: scorer.numberTolerance, aliases: scorer.aliases });
       const all = r.matched === r.total;
@@ -203,16 +277,17 @@ export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome
     }
     case 'code-js': {
       const e = expected as { functionName: string; tests: CodeTest[] };
-      const block = extractCodeBlock(response, ['javascript', 'js', 'mjs', 'jsx', 'typescript', 'ts', '']);
+      const block = solutionBlock(response, e.functionName);
       if (!block) return { score: 0, passed: false, summary: 'No code block in response', detail: { formatOk: false } };
       input.saveArtifact('solution.js', 'text', block.code);
       const r = await runCodeTests(block.code, e.functionName, e.tests, scorer.timeoutMs ?? 2000, input.signal);
-      const score = r.total ? r.passed / r.total : 0;
+      const trivial = trivialSolutionReason(e.tests, r, promptExampleArgs(input.taskText, e.functionName));
+      const score = trivial ? 0 : r.total ? r.passed / r.total : 0;
       return {
         score: round(score),
-        passed: r.passed === r.total,
-        summary: r.loadError ? `Code failed: ${r.loadError.slice(0, 80)}` : `${r.passed}/${r.total} unit tests passed`,
-        detail: { formatOk: true, items: r.items, loadError: r.loadError ?? undefined, extracted: block.code.slice(0, 20000) },
+        passed: !trivial && r.passed === r.total,
+        summary: r.loadError ? `Code failed: ${r.loadError.slice(0, 80)}` : trivial ? `${r.passed}/${r.total} unit tests passed, but the code ${trivial}, so 0` : `${r.passed}/${r.total} unit tests passed`,
+        detail: { formatOk: true, items: r.items, loadError: r.loadError ?? undefined, extracted: block.code.slice(0, 20000), notes: trivial ? `Scored 0: the code ${trivial}.` : undefined },
       };
     }
     case 'judge':
