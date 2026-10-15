@@ -355,6 +355,8 @@ function outsideHelp(prose: string, codeClaims: boolean): IntegrityFinding | nul
  */
 export function checkReply(reply: string, opts: IntegrityOptions = {}): IntegrityFinding | null {
   if (!reply) return null;
+  // The notice itself is not part of the task (it mentions "the grader or judges"): callers may pass either form.
+  if (opts.taskText?.includes(FAIR_PLAY_NOTICE)) opts = { ...opts, taskText: opts.taskText.split(FAIR_PLAY_NOTICE).join('') };
   const r = regions(maskNotice(reply));
   const cheat = graderManipulation(reply, r, opts);
   if (cheat) return cheat;
