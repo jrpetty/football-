@@ -6,7 +6,7 @@ export const HARNESS_VERSION = '1.0.0';
  * model sees or how it is scored changes globally (answer instruction, judge
  * prompts, extraction rules). It is part of every run fingerprint.
  */
-export const PROTOCOL_VERSION = '2026.09';
+export const PROTOCOL_VERSION = '2026.10';
 
 /**
  * Canary string (BIG-bench convention). It is printed in every exported prompt

@@ -38,6 +38,7 @@ import { combinedLeaderboard, runLeaderboard, scoreAnswers } from '../engine/lea
 import { activeProgress, cancelRun, estimateRun, isActive, recoverInterruptedRuns, resumeRun, startRun, subscribe } from '../engine/runner.ts';
 import { reviewQueue, submitHumanScore } from '../engine/review.ts';
 import { artifactPath, deleteRun, listRunIds, listRuns, readManifest, readResults, toLite } from '../engine/store.ts';
+import { remarkAllRuns, remarkSummaryLine } from '../engine/remark.ts';
 import { PROGRAMS } from '../programs/index.ts';
 import { failManual, listManualRequests, submitManual } from '../providers/manual.ts';
 import { gradePasted } from '../engine/grade.ts';
@@ -625,9 +626,20 @@ registerManualModelRoutes({ route, httpError: (status, message) => new HttpError
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function startServer(opts: { port: number; host: string }): Promise<{ url: string; close: () => Promise<void> }> {
+export function startServer(opts: { port: number; host: string; remark?: boolean }): Promise<{ url: string; close: () => Promise<void> }> {
   recoverInterruptedRuns(listRunIds());
   recoverInterruptedTournaments();
+  // Answers stored under older marking rules are marked again from their stored replies (no model is called).
+  // Runs already re-marked under the current rules are skipped at once, so this is instant after the first start.
+  if (opts.remark ?? !process.env.NODE_TEST_CONTEXT) {
+    setImmediate(() => {
+      remarkAllRuns({ isActive })
+        .then((s) => {
+          if (s.runs > 0) console.log(`[gauntlet] ${remarkSummaryLine(s)}`);
+        })
+        .catch((e) => console.warn(`[gauntlet] Re-marking stopped: ${(e as Error).message} (it continues on the next start)`));
+    });
+  }
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     const method = req.method ?? 'GET';

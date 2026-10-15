@@ -164,47 +164,85 @@ function releaseSandboxSlot(): void {
   else sandboxesRunning--;
 }
 
-async function runCodeTestsNow(code: string, functionName: string, tests: CodeTest[], perTestTimeoutMs: number, signal?: AbortSignal): Promise<CodeRunResult> {
-  const hardLimitMs = 10_000 + tests.length * (perTestTimeoutMs + 250);
+type TestLine = { i: number; ok: boolean; output?: string; error?: string; ms?: number };
+
+/** One sandbox process, running tests `from`..end. Returns the lines it produced and how it ended. */
+async function runSandboxProcess(code: string, functionName: string, tests: CodeTest[], from: number, perTestTimeoutMs: number, signal?: AbortSignal): Promise<{ loadError: string | null | undefined; lines: TestLine[]; exitCode: number | null; stderr: string; crash: string }> {
+  const hardLimitMs = 10_000 + (tests.length - from) * (perTestTimeoutMs + 250);
+  // The solution runs in a worker thread with an explicit 4 MB stack (see sandbox-worker.mjs), so no --stack-size
+  // here: raising V8's main-thread limit above the OS stack (1 MB on Windows) crashes instead of throwing.
   const child = spawn(
     process.execPath,
-    ['--permission', `--allow-fs-read=${WORKER}`, '--disallow-code-generation-from-strings', '--max-old-space-size=256', '--stack-size=4000', WORKER],
+    ['--permission', `--allow-fs-read=${WORKER}`, '--allow-worker', '--disallow-code-generation-from-strings', '--max-old-space-size=256', WORKER],
     { stdio: ['pipe', 'pipe', 'pipe'], env: {}, windowsHide: true },
   );
-  let stdout = '';
+  let buffer = '';
   let stderr = '';
-  child.stdout.setEncoding('utf8').on('data', (d: string) => (stdout += d));
-  child.stderr.setEncoding('utf8').on('data', (d: string) => (stderr += d.slice(0, 4000)));
+  let loadError: string | null | undefined;
+  let crash = '';
+  const lines: TestLine[] = [];
+  const take = (line: string) => {
+    if (!line.trim()) return;
+    try {
+      const m = JSON.parse(line) as TestLine & { loadError?: string | null; crash?: string };
+      if ('loadError' in m) loadError = m.loadError ?? null;
+      else if (typeof m.crash === 'string') crash = m.crash;
+      else if (typeof m.i === 'number') lines.push(m);
+    } catch {
+      /* a line torn by a crash */
+    }
+  };
+  child.stdout.setEncoding('utf8').on('data', (d: string) => {
+    buffer += d;
+    let nl: number;
+    while ((nl = buffer.indexOf('\n')) >= 0) {
+      take(buffer.slice(0, nl));
+      buffer = buffer.slice(nl + 1);
+    }
+  });
+  child.stderr.setEncoding('utf8').on('data', (d: string) => {
+    if (stderr.length < 4000) stderr += d.slice(0, 4000);
+  });
   const killer = setTimeout(() => child.kill('SIGKILL'), hardLimitMs);
   const onAbort = () => child.kill('SIGKILL');
   signal?.addEventListener('abort', onAbort, { once: true });
   child.stdin.on('error', () => {});
-  child.stdin.end(JSON.stringify({ code, functionName, tests: tests.map((t) => ({ args: t.args })), perTestTimeoutMs }));
+  child.stdin.end(JSON.stringify({ code, functionName, tests: tests.map((t) => ({ args: t.args })), perTestTimeoutMs, from }));
   const exitCode: number | null = await new Promise((resolve) => child.on('close', resolve));
   clearTimeout(killer);
   signal?.removeEventListener('abort', onAbort);
+  take(buffer);
+  return { loadError, lines, exitCode, stderr, crash };
+}
 
-  let parsed: { loadError: string | null; results: Array<{ ok: boolean; output?: string; error?: string; ms?: number }> } | null = null;
-  try {
-    parsed = JSON.parse(stdout);
-  } catch {
-    parsed = null;
-  }
-  if (!parsed) {
-    const reason = exitCode === null ? 'killed (time or memory limit)' : `crashed (exit ${exitCode}) ${stderr.split('\n').find((l) => /Error/.test(l)) ?? ''}`;
-    return {
-      passed: 0,
-      total: tests.length,
-      loadError: `Sandbox ${reason}`.trim(),
-      items: tests.map((_, i) => ({ label: `test ${i + 1}`, passed: false, detail: `sandbox ${reason}` })),
-      outputs: tests.map(() => null),
-    };
+/**
+ * Run every test, one sandbox process at a time. If the process dies (crash, out of memory, hard time limit),
+ * the results it already reported stand, the test it was running fails, and a fresh process continues with the
+ * next test: a crash never takes down the tests around it, and never counts as a pass.
+ */
+async function runCodeTestsNow(code: string, functionName: string, tests: CodeTest[], perTestTimeoutMs: number, signal?: AbortSignal): Promise<CodeRunResult> {
+  const got: Array<TestLine | undefined> = new Array(tests.length);
+  let loadError: string | null = null;
+  let from = 0;
+  while (from < tests.length) {
+    if (signal?.aborted) break;
+    const r = await runSandboxProcess(code, functionName, tests, from, perTestTimeoutMs, signal);
+    if (from === 0 && typeof r.loadError === 'string') loadError = r.loadError;
+    for (const line of r.lines) if (line.i >= from && line.i < tests.length) got[line.i] = line;
+    let next = from;
+    while (next < tests.length && got[next]) next++;
+    if (next >= tests.length) break;
+    // The process ended without reporting test `next`: that test caused (or was cut off by) the crash.
+    const reason = r.exitCode === null ? 'the sandbox was stopped (time or memory limit)' : `the sandbox crashed${r.crash ? `: ${r.crash}` : ` (exit ${r.exitCode})`}${!r.crash && /out of memory|heap/i.test(r.stderr) ? ': out of memory' : ''}`;
+    got[next] = { i: next, ok: false, error: reason };
+    if (r.loadError === undefined && from === 0 && next === 0) loadError = `Sandbox: ${reason}`;
+    from = next + 1;
   }
 
   let passed = 0;
   const outputs: Array<string | null> = [];
   const items: ScoreBreakdownItem[] = tests.map((t, i) => {
-    const r = parsed!.results?.[i];
+    const r = got[i];
     const label = `test ${i + 1}: ${functionName}(${preview(t.args).replace(/^\[|\]$/g, '')})`;
     outputs.push(r?.ok && typeof r.output === 'string' ? r.output : null);
     if (!r || !r.ok) return { label, passed: false, detail: r?.error ?? 'no result' };
@@ -218,7 +256,7 @@ async function runCodeTestsNow(code: string, functionName: string, tests: CodeTe
     if (ok) passed++;
     return { label, passed: ok, detail: ok ? `${(r.ms ?? 0).toFixed(1)} ms` : `expected ${preview(t.expected)}, got ${preview(actual)}` };
   });
-  return { passed, total: tests.length, items, loadError: parsed.loadError ?? null, outputs };
+  return { passed, total: tests.length, items, loadError, outputs };
 }
 
 /**
