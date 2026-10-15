@@ -823,8 +823,8 @@ public final class CityTree {
     public static int workPercent(@Nullable UUID village, StationTask trade) {
         if (village == null || trade == null || trade == StationTask.NONE) return 0;
         Map<Civic, Long> d = done(village);
-        if (d.isEmpty()) return 0;
-        int p = 0;
+        if (d.isEmpty()) return InventionWorks.workPercent(village, trade);   // [tech-tree] the inventions' paces, civics or none
+        int p = InventionWorks.workPercent(village, trade);                   // [tech-tree]
         if (d.containsKey(Civic.COMMON_TOOLS)) p += TOOLS_PACE;
         if (d.containsKey(Civic.GUILD_CHARTERS) && crafts(trade)) p += TRADE_PACE;
         if (d.containsKey(Civic.CROP_ROTATION) && trade == StationTask.FARM) p += TRADE_PACE;
@@ -867,7 +867,7 @@ public final class CityTree {
 
     /** Builders' Guild: what it adds to the pace a builder lays its blocks at, in percent (AssistantEntity.buildPaceTicks). */
     public static int buildPercent(@Nullable UUID village) {
-        return has(village, Civic.BUILDERS_GUILD) ? BUILD_PACE : 0;
+        return (has(village, Civic.BUILDERS_GUILD) ? BUILD_PACE : 0) + InventionWorks.buildPercent(village);   // [tech-tree] the crane
     }
 
     /**
@@ -900,6 +900,7 @@ public final class CityTree {
      */
     public static boolean sparesTool(@Nullable UUID village, RandomSource random) {
         if (village == null) return false;
+        if (InventionWorks.sparesTool(village, random)) return true;          // [tech-tree] Tempered Tools
         Map<Civic, Long> d = done(village);
         if (d.containsKey(Civic.MASTER_WORKSHOPS) && random.nextInt(SPARED_ONE_IN) == 0) return true;
         if (d.containsKey(Civic.GUILD_MONOPOLIES) && random.nextInt(MONOPOLY_SPARED) == 0) return true;
@@ -917,6 +918,7 @@ public final class CityTree {
         int more = 0;
         if (has(v, Civic.SEED_EXCHANGE) && a.getRandom().nextInt(SEED_ONE_IN) == 0) more++;
         if (has(v, Civic.SKY_GARDEN) && wonderOf(v, Civic.SKY_GARDEN) && a.getRandom().nextInt(GARDEN_ONE_IN) == 0) more++;
+        more += InventionWorks.moreHarvest(v, a.getRandom());                 // [tech-tree] the plough, the drill, the aqueduct
         if (more == 0) return;
         Item produce = produceOf(crop);
         if (produce == null) return;
@@ -993,8 +995,8 @@ public final class CityTree {
     static int contentment(@Nullable UUID village, List<String> good, List<String> bad) {
         if (village == null) return 0;
         Map<Civic, Long> d = done(village);
-        if (d.isEmpty()) return 0;
-        int c = 0;
+        int c = InventionWorks.contentment(village, good);                    // [tech-tree] the aqueduct's clean water
+        if (d.isEmpty()) return c;
         if (d.containsKey(Civic.OPEN_GRANARY)) { c += GRANARY_CONTENT; good.add("the granary open to all"); }
         if (d.containsKey(Civic.PATRONAGE)) { c += PATRON_CONTENT; good.add("the arts well kept"); }
         if (d.containsKey(Civic.PLAIN_LIVING)) { c += PLAIN_CONTENT; bad.add("plain living"); }
@@ -1036,7 +1038,7 @@ public final class CityTree {
     public static int lifespan(@Nullable UUID village, int years) {
         int y = has(village, Civic.HEALERS) ? years + years / 10 : years;
         if (has(village, Civic.CATHEDRAL) && wonderOf(village, Civic.CATHEDRAL)) y += years / 10;
-        return y;
+        return InventionWorks.lifespan(village, y, years);                    // [tech-tree] Physic, a tenth more
     }
 
     /** Rest Day Charter: a break's length, in percent of what it would be (Leader.restScale). [perks] Plain Living a twentieth off. */
@@ -1058,6 +1060,7 @@ public final class CityTree {
         if (d.containsKey(Civic.OPEN_BORDERS)) p = p * BORDERS_TAKINGS / 100;
         if (d.containsKey(Civic.TARIFFS)) p = p * TARIFF_TAKINGS / 100;
         if (d.containsKey(Civic.GRAND_BAZAAR) && wonderOf(village, Civic.GRAND_BAZAAR)) p = p * BAZAAR_TAKINGS / 100;
+        p = p * InventionWorks.takingsPercent(village) / 100;                 // [tech-tree] Double-Entry Ledgers
         return p * Perks.takingsPercent(village) / 100;
     }
 
@@ -1195,7 +1198,7 @@ public final class CityTree {
 
     /** The Surveyors' Office: the scouts' range, in percent more (Scouts). */
     public static int scoutPercent(@Nullable UUID village) {
-        return has(village, Civic.SURVEYORS_OFFICE) ? SURVEY_RANGE : 0;
+        return (has(village, Civic.SURVEYORS_OFFICE) ? SURVEY_RANGE : 0) + InventionWorks.scoutPercent(village);   // [tech-tree] Lenses
     }
 
     /** The Printing Press: is each new library book printed once more (Library.finish, through Perks)? */
@@ -1210,12 +1213,13 @@ public final class CityTree {
 
     /** The Navigator's Guild and the Great Lighthouse: does the fleet sail in the rain (Fleet.keptIn)? */
     public static boolean sailsInRain(@Nullable UUID village) {
-        return has(village, Civic.NAVIGATORS_GUILD) || has(village, Civic.GREAT_LIGHTHOUSE) && wonderOf(village, Civic.GREAT_LIGHTHOUSE);
+        return has(village, Civic.NAVIGATORS_GUILD) || has(village, Civic.GREAT_LIGHTHOUSE) && wonderOf(village, Civic.GREAT_LIGHTHOUSE)
+            || InventionWorks.sailsInRain(village);                            // [tech-tree] Navigation
     }
 
     /** Shipwrights: boats more in the fleet (Fleet.boatsWanted). */
     public static int extraBoats(@Nullable UUID village) {
-        return has(village, Civic.SHIPWRIGHTS) ? 1 : 0;
+        return (has(village, Civic.SHIPWRIGHTS) ? 1 : 0) + InventionWorks.extraBoats(village);   // [tech-tree] Navigation
     }
 
     /** The Great Lighthouse: does this haul land a fish more (one in three; Fleet.catchOne, through Perks)? */
@@ -1297,6 +1301,7 @@ public final class CityTree {
                 && f.tickCount - f.getLastHurtByMobTimestamp() > 100) {
             f.heal(1.0F);
         }
+        InventionWorks.tend(f);                                                // [tech-tree] Physic, and the aqueduct's clean water
         Perks.tend(f);
     }
 
@@ -1806,11 +1811,11 @@ public final class CityTree {
     public static String talk(VillageFolkEntity f) {
         UUID village = f.ownerId();
         Civic now = current(village);
-        if (now == null) return "";
+        if (now == null) return Inventions.talkLine(f);                       // [tech-tree] and what the scholars are at
         String why = Ledger.note(village, WHY);
         int days = daysLeft(village, now);
         return " We're studying " + now.title + (why == null || why.isEmpty() || why.equals("set by command") ? "" : " — " + why)
-            + (days > 0 ? ", " + plural(days, "day") + " to go." : ", nearly done.");
+            + (days > 0 ? ", " + plural(days, "day") + " to go." : ", nearly done.") + Inventions.talkLine(f);   // [tech-tree]
     }
 
     /** /village research: the state of the tree, a line at a time: a head, and a line a branch. */

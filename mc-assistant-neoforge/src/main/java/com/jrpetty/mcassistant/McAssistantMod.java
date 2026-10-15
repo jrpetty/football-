@@ -393,6 +393,7 @@ public final class McAssistantMod {
         com.jrpetty.mcassistant.item.NetherItems.register(modBus);     // [nether] the runners' gold charm and satchel
         com.jrpetty.mcassistant.item.WarItems.register(modBus);        // [war] the War Horn
         com.jrpetty.mcassistant.item.BorderItems.register(modBus);     // [borders-map] the war room's map table
+        com.jrpetty.mcassistant.item.InventionItems.register(modBus);  // [tech-tree] steel, the polearms, the longbow, the arbalest, the models
         modBus.addListener(this::onEntityAttributes);
         modBus.addListener(this::onBuildCreativeTabs);
         modBus.addListener(ChunkLoad::onRegisterControllers);

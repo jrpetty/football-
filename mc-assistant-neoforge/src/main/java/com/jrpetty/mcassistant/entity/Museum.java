@@ -146,7 +146,10 @@ public final class Museum {
         MAP("Old Map", "a map of a scout's find", 2, Show.FRAME, s -> s.is(Items.FILLED_MAP), s -> false, false),
         /** The first iron of the Iron Age: an ingot out of the stores, the label the miner's who dug the first ore. */
         IRON("First Iron", "the first iron of the Iron Age", 1, Show.FRAME, s -> s.is(Items.IRON_INGOT),
-            s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE), false);
+            s -> s.is(Items.RAW_IRON) || s.is(Items.IRON_ORE) || s.is(Items.DEEPSLATE_IRON_ORE), false),
+        /** [tech-tree] The scholars' first working model of an invention, built at the academy (Inventions): in a case. */
+        MODEL("Working Model", "the town's first working model of an invention", 1, Show.CASE,
+            s -> s.is(com.jrpetty.mcassistant.item.InventionItems.WORKING_MODEL.get()), null, false);
 
         public final String label, words;
         public final int renown;

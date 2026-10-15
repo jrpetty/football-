@@ -249,6 +249,7 @@ public final class VillageCommands {
             .then(com.jrpetty.mcassistant.entity.RoadPosts.command())           // [roles-e] the wheelwright, the carter, the planner, the ranks
             .then(com.jrpetty.mcassistant.entity.Civics.command())          // [batchF] the town's affairs
             .then(com.jrpetty.mcassistant.entity.Perks.command())           // [perks] /village perks: wonders, the leader, quirks
+            .then(com.jrpetty.mcassistant.entity.InventionCommands.command())   // [tech-tree] /village inventions: the tree, suggest, sponsor, give
             .then(com.jrpetty.mcassistant.entity.Referendums.command())     // [civic] /village referendum: the town's vote, the great works
             .then(com.jrpetty.mcassistant.entity.Newcomers.command())       // [civic] /village newcomers: refugees and newcomers
             .then(com.jrpetty.mcassistant.entity.WatchKit.command())        // [guard-kit] the watch's kit, on order, and its cost

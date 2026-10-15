@@ -1,0 +1,128 @@
+# The academy [tech-tree]: the scholars' house of learning (entity/Scholars, Inventions). A timber hall on a stone
+# footing under a steep roof, tall windows down both sides, as the schoolhouse is built; but its room is the
+# scholars'. At the back the experiment: a brewing stand between two casks of makings, a bookshelf either side;
+# two lecterns, a desk by each wall, where the scholars stand of an evening over their notes; the model bench
+# (a crafting table) and a cauldron for the tests that need water; and two more bookshelves by the door. Its lamps:
+# one standing on each back bookshelf, two hung under the ceiling, and one over the door.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name academy
+layer -1
+.........
+.FFFFFFF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+....k....
+layer 0
+.........
+.LwwwwwL.
+.wKQIQKw.
+.wK...Kw.
+.wr...rw.
+.w.....w.
+.wT...&w.
+.w.....w.
+.wK...Kw.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.Wl...lW.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.LGW.WGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.G.....G.
+.LWWWWWL.
+....j....
+layer 3
+.........
+.LWWWWWL.
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+.Wj...jW.
+.W.....W.
+.W.....W.
+.LWWWWWL.
+....|....
+layer 4
+>.......<
+>L-----L<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>|fffff|<
+>L-----L<
+>.......<
+layer 5
+.>.....<.
+.>WWWWW<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>.....<.
+.>WWWWW<.
+.>.....<.
+layer 6
+..>...<..
+..>WWW<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>...<..
+..>WWW<..
+..>...<..
+layer 7
+...>.<...
+...>W<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>.<...
+...>W<...
+...>.<...
+layer 8
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....
+...._....

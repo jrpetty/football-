@@ -55,7 +55,8 @@ public class CityScreen extends Screen {
         "Watch",                                                                                      // [police]
         "Earnings",                                                                                   // [earning]
         "Lands",                                                                                      // [borders-map]
-        "Taxes", "Knights");                                                                          // [civic-land]
+        "Taxes", "Knights",                                                                           // [civic-land]
+        "Inventions");                                                                                // [tech-tree]
     private static final int[] RANGES = { 7, 30, 100, 0 };
     private static final String[] RANGE_NAMES = { "7d", "30d", "100d", "All" };
 
@@ -318,6 +319,10 @@ public class CityScreen extends Screen {
                 case "Records" -> records(g, x, y, cw, ch);
                 case "News" -> news(g, x, y, cw, ch);
                 case "Research" -> research(g, x, y, cw, ch, mouseX, mouseY);
+                case "Inventions" -> {                                                 // [tech-tree] the scholars' tree (InventionsPage)
+                    List<Component> tip = InventionsPage.draw(g, font, data.getCompound("inventions"), x, y, cw, ch, scroll, mouseX, mouseY);
+                    if (tip != null) { hover = tip; hoverX = mouseX; hoverY = mouseY; }
+                }
                 case "School" -> school(g, x, y, cw, ch, mouseX, mouseY);
                 case "Museum" -> museum(g, x, y, cw, ch);
                 case "Culture" -> {                                                       // [batchD] (CulturePage)

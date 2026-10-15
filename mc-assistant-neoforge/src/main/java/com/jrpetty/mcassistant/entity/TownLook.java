@@ -90,7 +90,7 @@ public final class TownLook {
      */
     public static void wanted(UUID village, int folk, Villages.Age at, List<String> extras, Predicate<String> notBuilt) {
         boolean farming = farmers(village) > 0;
-        if (farming && folk >= Windmill.FROM && notBuilt.test(WINDMILL)) extras.add(WINDMILL);
+        if (farming && folk >= InventionWorks.millFrom(village, Windmill.FROM) && notBuilt.test(WINDMILL)) extras.add(WINDMILL);   // [tech-tree] the millstones known, from eight
         if (farming && folk >= Bakery.FROM && notBuilt.test(BAKERY)) extras.add(BAKERY);
         if (farming && folk >= Orchard.FROM && notBuilt.test(ORCHARD)) extras.add(ORCHARD);
         if (folk >= Allotments.FROM && Allotments.wanted(village) && notBuilt.test(ALLOTMENTS)) extras.add(ALLOTMENTS);

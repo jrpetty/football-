@@ -139,7 +139,7 @@ public final class Bakery {
     static Object[] next(ServerLevel level, Villages.Village v, @Nullable VillageFolkEntity f, boolean milled) {
         Bench.Hand hand = Bench.handOf(level, v, f, TownLook.BAKERY);
         for (Bake b : shortest(level, v.id())) {
-            int n = b.batch() * (milled && b.what() != Items.CAKE ? 2 : 1);
+            int n = b.batch() * (b.what() != Items.CAKE ? InventionWorks.batchTimes(v.id(), milled) : 1);   // [tech-tree] dressed stones, the watermill
             Bench.Plan plan = Bench.plan(level, v, b.what(), n, hand);
             if (plan.ok() && plan.made > 0) return new Object[]{ b, plan, hand };
         }
@@ -173,7 +173,7 @@ public final class Bakery {
     /** A batch baked at the bakery, into the stores. Returns what came out of the oven, or null. */
     @Nullable
     static ItemStack bake(ServerLevel level, Villages.Village v, Ledger.Building b) {
-        boolean milled = Windmill.mill(v.id()) != null;
+        boolean milled = InventionWorks.milled(v.id());                 // [tech-tree] the windmill, or the watermill
         VillageFolkEntity f = baker(v.id());
         Object[] next = next(level, v, f, milled);
         if (next == null) return null;
@@ -187,7 +187,7 @@ public final class Bakery {
     static ItemStack bakeWith(ServerLevel level, Villages.Village v, Ledger.Building b, Bake bake, @Nullable VillageFolkEntity f,
                               boolean milled) {
         Bench.Hand hand = Bench.handOf(level, v, f, TownLook.BAKERY);
-        Bench.Plan plan = Bench.plan(level, v, bake.what(), bake.batch() * (milled && bake.what() != Items.CAKE ? 2 : 1), hand);
+        Bench.Plan plan = Bench.plan(level, v, bake.what(), bake.batch() * (bake.what() != Items.CAKE ? InventionWorks.batchTimes(v.id(), milled) : 1), hand);   // [tech-tree]
         if (!plan.ok()) return null;
         ItemStack made = Bench.make(level, v, plan, f, hand);
         if (made.isEmpty()) return null;
@@ -305,7 +305,7 @@ public final class Bakery {
             if (f.tickCount % 40 == 0) f.swing(net.minecraft.world.InteractionHand.MAIN_HAND);   // the dough worked, the oven watched
             return true;
         }
-        boolean milled = Windmill.mill(v.id()) != null;
+        boolean milled = InventionWorks.milled(v.id());                 // [tech-tree] the windmill, or the watermill
         Object[] next = next(level, v, f, milled);
         ItemStack made = next == null ? null : bakeWith(level, v, b, (Bake) next[0], f, milled);
         if (made != null) {

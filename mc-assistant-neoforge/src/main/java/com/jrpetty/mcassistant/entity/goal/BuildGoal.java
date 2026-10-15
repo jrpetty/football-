@@ -120,7 +120,9 @@ public class BuildGoal extends Goal {
         // [roles-d] the hunter's lodge (its smoker, hides and makings) and the rancher's barn by the pen (entity/OutdoorBases)
         "huntlodge", "barn",
         // [roles-e] the wheelwright's shed: its bench, grindstone and anvil, where the wagons are built (entity/Wheelwrights)
-        "wheelwright");
+        "wheelwright",
+        // [tech-tree] the scholars' academy, and what the inventions let a town raise (entity/InventionWorks)
+        "academy", "watermill", "aqueduct", "clocktower", "foundry");
 
     /** Half the width of a structure's footprint: the meeting hall, the market, the
      *  barracks, the chapel's length and the gateway's step are seven across, the rest

@@ -478,7 +478,7 @@ public final class Battles {
                 if (f.role == BattleModel.Role.LINE && f.rank == Armies.Rank.NONE && level.getEntity(f.id) instanceof VillageFolkEntity e
                     && e.distanceToSqr(g.getX(), g.getY(), g.getZ()) < 64) e.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
             }
-            if (gateHits >= 10 || c.ram == null && gateHits >= 4) {
+            if (gateHits >= InventionArms.gateBlows(side[0].town, 10) || c.ram == null && gateHits >= 4) {   // [tech-tree] the iron-shod ram, the powder
                 breakGate(level, c);
                 gateDown = true;
                 story.add("The ram broke in " + name(1) + "'s gate.");
@@ -931,6 +931,7 @@ public final class Battles {
             s.yielded = a.size() - a.standing() - a.behind;
             s.captainDown = captainDown[i];
             s.formation = a.formation;
+            InventionArms.tally(a, s, null);                                   // [tech-tree] its pikes, hammers, longbows, arbalests
             return s;
         }
 
@@ -1202,7 +1203,7 @@ public final class Battles {
             Random rng = new Random(Campaigns.seed(side[0].town, c.day * 31 + level.getGameTime()));
             BattleModel.Side x = model(0), y = model(1);
             int was0 = x.yielded, was1 = y.yielded;
-            if (assault) y.morale = Math.min(100, y.morale + 10);                 // behind its own gate
+            if (assault) y.morale = Math.min(100, y.morale + InventionArms.gateHeart(side[0].town, 10));   // behind its own gate; [tech-tree] less against engines
             BattleModel.Result r = BattleModel.resolve(x, y, side[0].boldness, side[1].boldness, best(0), best(1), Campaigns.deathPercent(), rng);
             paper = r;
             winner = r.winner();

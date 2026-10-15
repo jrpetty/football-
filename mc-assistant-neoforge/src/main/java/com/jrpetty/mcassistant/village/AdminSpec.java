@@ -172,6 +172,14 @@ public final class AdminSpec {
         add("research.unlock", Area.AGES, "research unlock", T, "Complete one civic now.", "research unlock common_tools", Param.of("civic", Kind.CIVIC));
         big("research.all", Area.AGES, "research all", T, "Complete every civic the town can (rivals stay closed).", "research all");
         big("research.knacks", Area.AGES, "research knacks", F, "Give folk every knack open to them.", "research knacks folk:@all");
+        // [tech-tree] The inventions: the scholars' tree, beside the civics.
+        add("inventions.show", Area.AGES, "inventions show", T, "The town's inventions: what it knows, what its scholars are at, the rate, the scholars.",
+            "inventions show");
+        add("inventions.unlock", Area.AGES, "inventions unlock", T, "Make one invention known now (its needs waived).", "inventions unlock steel",
+            Param.of("invention", Kind.WORD));
+        add("inventions.now", Area.AGES, "inventions now", T, "Finish the invention the scholars are at now (its makings waived).", "inventions now");
+        big("inventions.all", Area.AGES, "inventions all", T, "Make known every invention of the town's age and before.", "inventions all");
+        danger("inventions.reset", Area.AGES, "inventions reset", T, "Forget every invention the town knows (its scholars kept).", "inventions reset");
         // ---- people
         big("people.add", Area.PEOPLE, "people add", T, "Add folk: a spread of trades and ages, couples, beds found, houses queued.",
             "people add 50", Param.num("count", 1, MOST_FOLK, 10));

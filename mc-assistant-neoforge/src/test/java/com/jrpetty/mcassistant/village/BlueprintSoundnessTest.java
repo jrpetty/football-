@@ -644,7 +644,9 @@ class BlueprintSoundnessTest {
      * the town plan. "name groundW groundD fullW fullD doorSide".
      */
     static final List<String> FOOTPRINTS = List.of(
+        "academy 3 5 4 5 front",               // [tech-tree] the scholars' academy
         "allotments 4 4 4 4 none",
+        "aqueduct 2 5 2 5 none",               // [tech-tree] the aqueduct: its piers, channel and basin
         "arena 5 10 5 10 none",
         "armoury 3 3 4 4 front",
         "auction 3 5 4 5 front",
@@ -657,6 +659,7 @@ class BlueprintSoundnessTest {
         "cathedral 5 10 6 11 front",
         "chapel 3 10 4 10 front",
         "clockworkgate 5 4 6 4 right",
+        "clocktower 2 3 3 3 front",            // [tech-tree] the clocktower
         "colossus 4 4 4 4 none",
         "court 5 3 5 3 none",
         "divershed 2 2 3 3 front",
@@ -665,6 +668,7 @@ class BlueprintSoundnessTest {
         "flats4 5 5 5 5 front",
         "fletcher 2 2 3 3 front",
         "fountain 3 3 3 3 none",
+        "foundry 3 3 4 4 none",                // [tech-tree] the foundry, open to the street as the smithy is
         "gateway 4 2 4 2 none",
         "golemyard 2 2 3 3 none",
         "granary 3 3 3 3 front",
@@ -724,6 +728,7 @@ class BlueprintSoundnessTest {
         "villa 5 5 5 5 front",
         "watchhouse 4 5 4 5 front",
         "watchtower 2 2 3 3 front",
+        "watermill 4 4 5 4 front",             // [tech-tree] the watermill and its race
         "well 2 2 2 2 none",
         "windmill 2 2 4 3 front",
         "workshop 3 3 4 4 none",

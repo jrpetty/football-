@@ -530,6 +530,7 @@ public final class VillageBoards {
         // The city's research (CityTree): what the leader has the town studying, how far on, why, and what is done.
         // In the foot, which the board always has room for, a line or two the width of the board.
         out.addAll(CityTree.board(id));
+        out.addAll(Inventions.board(level, id));                 // [tech-tree] the scholars' work in hand, and what the town knows
         out.add("FM|Growing: " + Villages.growthNote(level, id) + ".");
         out.add("FN|The purse: " + Budget.line(level, id) + ".");
         String neighbours = Envoys.boardLine(id);

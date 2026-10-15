@@ -567,6 +567,9 @@ public class VillageFolkEntity extends AssistantEntity {
         // The museum's curator on its errand (Museum): a find fetched out of the stores and set out, a year bound.
         if (!withAPlayer && tickCount % 4 == 0 && level() instanceof net.minecraft.server.level.ServerLevel museum
                 && Museum.hold(this, museum)) return;
+        // [tech-tree] A scholar at its desk of an evening (Scholars): the town's next invention worked at, its notes written up.
+        if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel study
+                && (tickCount % 4 == 1 ? Scholars.hold(this, study) : Scholars.busy(this))) return;
         // [library] The library (Library): a writer at its desk with its book and quill, a reader in one of its chairs.
         if (!withAPlayer && level() instanceof net.minecraft.server.level.ServerLevel library
                 && (tickCount % 4 == 2 ? Library.hold(this, library) : Library.busy(this))) return;
