@@ -22,7 +22,7 @@ layer 0
 .w.....w.
 .wQQ.QQw.
 .w.....w.
-.wP<.>Pw.
+.wP>.<Pw.
 .LwwDwwL.
 ..*...*..
 layer 1

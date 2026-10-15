@@ -2,7 +2,7 @@
 # the whole town out of its stores. A long nave of dressed stone between stone buttress-posts, tall windows
 # down both sides, a steep roof on tie beams with lanterns hung from them, a rose window in the back gable.
 # Inside, pews either side of a runner up the aisle to the altar, gilded cross and candles on it and the great
-# lectern before it. Over the door a tower of nineteen courses, its porch lit either side inside the door, a
+# lectern before it, and lamps on posts down both walls between the pews. Over the door a tower of nineteen courses, its porch lit either side inside the door, a
 # gilded clock over the belfry's open arches, and a spire with a cross and a lamp at its tip.
 # Rows run from the back of the building (top) to the front (bottom, the door).
 name minster
@@ -32,18 +32,18 @@ layer 0
 LSSSSSSSSSL
 S...SSS...S
 S.sssssss.S
-S....X....S
+S....r....S
 L....X....L
+SP...X...PS
+Svvv.X.vvvS
 S....X....S
-Skkk.X.kkkS
+Lvvv.X.vvvL
+SP...X...PS
+Svvv.X.vvvS
 S....X....S
-Lkkk.X.kkkL
-S....X....S
-Skkk.X.kkkS
-S....X....S
-Lkkk.X.kkkL
-S....X....S
-Skkk.X.kkkS
+Lvvv.X.vvvL
+SP...X...PS
+Svvv.X.vvvS
 S....X....S
 LSSS...SSSL
 ...S...S...
@@ -54,17 +54,17 @@ layer 1
 LSSSSSSSSSL
 S...lZl...S
 S.........S
-S....r....S
-L.........L
-S.........S
-S.........S
 S.........S
 L.........L
-S.........S
+Sl.......lS
 S.........S
 S.........S
 L.........L
+Sl.......lS
 S.........S
+S.........S
+L.........L
+Sl.......lS
 S.........S
 S.........S
 LSSS...SSSL

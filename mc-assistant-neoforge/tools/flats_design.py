@@ -124,7 +124,7 @@ def draw(storeys):
             put(base, -4, -2, 'B'); put(base, -3, -2, 'B')
         else:
             put(base, -4, -2, 'B')
-        put(base, -4, -3, 'c')
+        put(base, -4, -3, ')')             # [build-audit] the chest at the bed's foot, its lid to the room
         put(base, 0, -3, 'P'); put(base + 1, 0, -3, 'X')
         put(base + 2, -4, -1, 'j')
         if back == 2:

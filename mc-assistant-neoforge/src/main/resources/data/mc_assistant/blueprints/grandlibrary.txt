@@ -32,7 +32,7 @@ layer -1
 layer 0
 .............
 .SSSSSSSSSSS.
-.FKH.K.K.HKF.
+.FKH.KKK.HKF.
 .FK...r...KF.
 .FK.......KF.
 .F.........F.
@@ -64,7 +64,7 @@ layer 1
 .ZK.......KZ.
 .G.........G.
 .ZK.......KZ.
-.SK.......KS.
+.SK..l.l..KS.
 .ZK.......KZ.
 .G.........G.
 .ZK.......KZ.
@@ -141,8 +141,8 @@ layer 4
 .G.P.....P.G.
 .Z.P.....P.Z.
 .S.P.....P.S.
-.GrP.....P.G.
-.ZKP.....PrZ.
+.G4P.....P.G.
+.ZKP.....P4Z.
 .SSSGSSSGSSS.
 .............
 .............
@@ -154,17 +154,17 @@ layer 5
 .SSSSGGGSSSS.
 .Z.........Z.
 .S.........S.
-.Z.........Z.
+.Z.l.....l.Z.
 .G.........G.
 .S.........S.
 .Z.........Z.
 .G.........G.
 .Z.........Z.
-.S.........S.
+.S.l.....l.S.
 .Z.........Z.
 .G.........G.
 .Z.........Z.
-.S.........S.
+.S.l.....l.S.
 .G.........G.
 .ZK........Z.
 .SSSGSSSGSSS.
@@ -222,7 +222,7 @@ layer 7
 .nnnnnnnnnnn.
 .............
 layer 8
-}...........{
+}uuuuuuuuuuu{
 }SSSSSSSSSSS{
 }Z.........Z{
 }S.........S{

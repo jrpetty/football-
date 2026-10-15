@@ -19,7 +19,7 @@ layer 0
 .........
 .LSSSSSL.
 .SKKrKKS.
-.SQ...CS.
+.SQ...(S.
 .ST...QS.
 .SC...CS.
 .S.....S.

@@ -20,8 +20,8 @@ layer 0
 .w..H..w.
 .wBB.BBw.
 .w.....w.
-.w.....wS
-.wT...Uw.
+.w)...2wS
+.wT...(w.
 .LwwDwwL.
 .........
 layer 1
@@ -60,8 +60,8 @@ layer 4
 .W..H..W.
 .WB...BW.
 .W.....W.
-.W.....WS
-.W.C.X.W.
+.W....(WS
+.W.c.X.W.
 .LWWWWWL.
 .........
 layer 5
@@ -81,7 +81,7 @@ layer 6
 .W.....W.
 .W.....W.
 .W.....WS
-.W.....W.
+.Wj....W.
 .LWWWWWL.
 .........
 layer 7

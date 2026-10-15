@@ -146,6 +146,17 @@ public final class Blueprints {
         key('m', BuildGoal.Part.NOTE_BLOCK, Style.NONE, Way.UP);
         key('$', BuildGoal.Part.STOREHOUSE, Style.NONE, Way.FRONT);
         key('A', BuildGoal.Part.CARTOGRAPHY, Style.NONE, Way.UP);               // [cartographer] the map room's table
+        // [build-audit] The furnace, the lectern and the door turned the other ways, so each is drawn with its front to the
+        // floor it is used from: a stove on the chimney wall facing into the kitchen, a lectern read from behind the desk,
+        // a tower's door opening into the tower. Furnaces '1' back, '2' left, '3' right; lecterns '4' back, '5' left,
+        // '6' right; '7' a door in a front-to-back wall opening to the left (Y's other hand).
+        key('1', BuildGoal.Part.FURNACE, Style.NONE, Way.BACK);
+        key('2', BuildGoal.Part.FURNACE, Style.NONE, Way.LEFT);
+        key('3', BuildGoal.Part.FURNACE, Style.NONE, Way.RIGHT);
+        key('4', BuildGoal.Part.LECTERN, Style.NONE, Way.BACK);
+        key('5', BuildGoal.Part.LECTERN, Style.NONE, Way.LEFT);
+        key('6', BuildGoal.Part.LECTERN, Style.NONE, Way.RIGHT);
+        key('7', BuildGoal.Part.DOOR, Style.NONE, Way.LEFT);
     }
 
     private static final Map<String, List<Cell>> DRAWINGS = new ConcurrentHashMap<>();

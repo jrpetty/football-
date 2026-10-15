@@ -1,5 +1,5 @@
 # The inn: a long timber house by the road into town, for whoever is passing through. Two rooms at
-# the back with a partition between them, two beds in each; at the front the common room, a bar of
+# the back with a partition between them, two beds in each and a chest between them; at the front the common room, a bar of
 # casks along one wall and the guest book on its lectern by the other. Its sign goes up by the door
 # once there is an innkeeper to let the rooms (entity/Inn), and a lantern hangs over the way in.
 # Rows run from the back of the building (top) to the front (bottom, the door).
@@ -19,7 +19,7 @@ FFFFFFFFF
 layer 0
 .........
 LwwwwwwwL
-w...w...w
+w.C.w.C.w
 wB.BwB.Bw
 w...w...w
 w.......w

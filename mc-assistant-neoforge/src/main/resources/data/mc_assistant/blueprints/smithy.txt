@@ -18,7 +18,7 @@ layer 0
 .LSSSSSL.
 .S.UZU.S.
 .S....&S.
-.SC.a..S.
+.S).a..S.
 .ST...VS.
 .S.....S.
 .L.....L.

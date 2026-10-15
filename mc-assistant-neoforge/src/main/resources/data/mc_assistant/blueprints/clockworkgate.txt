@@ -19,7 +19,7 @@ layer 0
 .SSS.....SSS.
 .SHS.....S.S.
 .S.S.....S.S.
-.S.Y.....S.S.
+.S.7.....S.S.
 .S.S.....S.S.
 .S.S.....S.S.
 .SSS.....SSS.
@@ -56,13 +56,13 @@ layer 3
 .............
 layer 4
 .............
-.SSS}...{SSS.
+.SSS{...}SSS.
 .SHS..j..S.S.
 .S.S.....S.S.
 .S.S..j..S.S.
 .S.S.....S.S.
 .S.S..j..S.S.
-.SSS}...{SSS.
+.SSS{...}SSS.
 .............
 layer 5
 .............
@@ -81,7 +81,7 @@ layer 6
 .S.Sm...mS.S.
 .S....e.mS.S.
 .S.Sm...mS.S.
-.S.S.....S.S.
+.SlS.....S.S.
 .SSSZZZZZSSS.
 .............
 layer 7

@@ -23,7 +23,7 @@ layer 0
 .w.....w.
 .wC...Cw.
 .w.....w.
-.wr...Qw.
+.w4...Qw.
 .LwwDwwL.
 .........
 layer 1

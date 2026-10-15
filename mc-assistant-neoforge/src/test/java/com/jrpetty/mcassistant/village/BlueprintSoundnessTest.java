@@ -39,6 +39,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * for their price tags and their customers; and every drawing keeps the footprint and the door side the town
  * plan's lots are sized by.
  *
+ * <p>[build-audit] And everything the right way round and lived in: a roof's stairs down its slope, an eave's corbels
+ * set into the wall; chairs facing their tables and pews the altar; chests, furnaces, lecterns and benches with their
+ * fronts to the floor; beds with their heads to a wall, clear of the doors and windows; a door hung from a wall and
+ * opening in; beams lying along their run; slabs the right half; no earth or water in a room but what is built to hold
+ * it; rugs on floors; furniture standing on the floor; every room lit, furnished for what it is, and walked round.
+ *
  * <p>A cell outside a drawing is open air above the ground (layer 0 and up) and the ground itself
  * below it (layer -1 and down): the builder levels a lot before it lays a footing. Each check lists
  * every fault it finds, the drawing, the layer and the place in it, before it fails.
@@ -146,6 +152,8 @@ class BlueprintSoundnessTest {
         final List<String> unknown = new ArrayList<>();
         /** For a raised building with a floor upstairs: did the raising find a place for its ladder up? */
         boolean wayUp = true;
+        /** [build-audit] Its beds' heads, worked out once (bedHeads). */
+        Set<Long> heads;
         int minX = Integer.MAX_VALUE, maxX = Integer.MIN_VALUE, minZ = Integer.MAX_VALUE, maxZ = Integer.MIN_VALUE;
         int minH = Integer.MAX_VALUE, maxH = Integer.MIN_VALUE;
 
@@ -476,18 +484,24 @@ class BlueprintSoundnessTest {
         report("things that stand", faults);
     }
 
+    /** [build-audit] What is fixed to the face of the block behind it: a ladder, and whatever is drawn on a wall after it
+     *  (a wall torch, a sign, a banner, a frame, a shutter, a button, a lever), each by the part the legend gives it. */
+    static final Set<String> WALL_MOUNTED = Set.of("LADDER", "WALL_TORCH", "WALL_SIGN", "WALL_BANNER", "ITEM_FRAME", "TRAPDOOR",
+        "BUTTON", "LEVER");
+
     @Test
-    @DisplayName("a ladder has a whole block at its back")
+    @DisplayName("a ladder (and anything hung on a wall) has a whole block at its back")
     void laddersLeanOnAWall() throws IOException {
         List<String> faults = new ArrayList<>();
         for (Drawing d : drawings()) {
             for (Cell c : cells(d)) {
-                if (!"LADDER".equals(c.key().part())) continue;
+                if (!WALL_MOUNTED.contains(c.key().part())) continue;
                 // A ladder faces its way (toward the door, by default) and is fixed to the block behind it.
                 int[] s = step(c.key().way());
                 if (s[0] == 0 && s[1] == 0) s = step("FRONT");
                 Shape back = d.shapeAt(c.dx() - s[0], c.h(), c.dz() - s[1]);
-                if (back != Shape.FULL) faults.add(d.where(c.dx(), c.h(), c.dz()) + ": a ladder with no wall at its back (" + back.name().toLowerCase() + ")");
+                if (back != Shape.FULL) faults.add(d.where(c.dx(), c.h(), c.dz()) + ": " + c.key().part().toLowerCase().replace('_', ' ')
+                    + " with no wall at its back (" + back.name().toLowerCase() + ")");
             }
         }
         report("ladders", faults);
@@ -1185,6 +1199,670 @@ class BlueprintSoundnessTest {
             }
         }
         report("counters", faults);
+    }
+
+    // ------------------------------------------------------------------ [build-audit] the right way round, and lived in
+
+    /** The place a step from here: {x, z}. */
+    private static int[] plus(int x, int z, int[] s, int n) {
+        return new int[]{ x + n * s[0], z + n * s[1] };
+    }
+
+    /** The way to the left of a way, looking along it (a door's hinge side, DoorHingeSide.LEFT): back's left is left. */
+    static int[] leftOf(int[] s) {
+        return new int[]{ -s[1], s[0] };
+    }
+
+    /** A low stair, the right way up: a roof's course, a step, a seat. */
+    static boolean lowStair(Key k) {
+        return k != null && "BLOCK".equals(k.part()) && ("ROOF_STAIR".equals(k.style()) || "STONE_STAIR".equals(k.style()));
+    }
+
+    /** A table: a fence post (a cloth on it or not, but not a lamp: that is a lamp post), or a slab set high. */
+    static boolean table(Drawing d, int x, int h, int z) {
+        Key k = d.key(x, h, z), on = d.key(x, h + 1, z);
+        if (k == null) return false;
+        if ("FENCE".equals(k.part())) return on == null || !"LANTERN".equals(on.part());
+        return "BLOCK".equals(k.part()) && "ROOF_SLAB_TOP".equals(k.style());
+    }
+
+    /** Inside the building: within its walls' outline, walled in at head height every way, a roof or a ceiling over it. */
+    static boolean indoors(Drawing d, Set<Long> ring, int x, int h, int z) {
+        return within(ring, x, z) && covered(d, x, h, z) && enclosed(d, x, h, z);
+    }
+
+    @Test
+    @DisplayName("[build-audit] a roof's stairs face down its slope, backs to the ridge; an upside-down stair's heel is set into the wall")
+    void roofStairsFaceDownTheSlope() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            for (Cell c : cells(d)) {
+                Key k = c.key();
+                if (!"BLOCK".equals(k.part())) continue;
+                String here = d.where(c.dx(), c.h(), c.dz());
+                if ("ROOF_STAIR".equals(k.style()) && c.h() >= 1) {
+                    int[] s = step(k.way());
+                    // The course above steps in toward the ridge: behind the stair, never in front of it.
+                    Key frontUp = d.key(c.dx() - s[0], c.h() + 1, c.dz() - s[1]), backUp = d.key(c.dx() + s[0], c.h() + 1, c.dz() + s[1]);
+                    if (frontUp != null && roofish(frontUp) && (backUp == null || !roofish(backUp))) {
+                        faults.add(here + ": faces up the slope, the roof climbing on over its low side to "
+                            + d.where(c.dx() - s[0], c.h() + 1, c.dz() - s[1]));
+                    }
+                    // Two stairs front to front make a gutter along the roof, not a ridge.
+                    Key front = d.key(c.dx() - s[0], c.h(), c.dz() - s[1]);
+                    if (front != null && "ROOF_STAIR".equals(front.style())) {
+                        int[] t = step(front.way());
+                        if (t[0] == -s[0] && t[1] == -s[1]) faults.add(here + ": front to front with " + d.where(c.dx() - s[0], c.h(), c.dz() - s[1]) + ", a gutter in the roof");
+                    }
+                }
+                if ("ROOF_STAIR_TOP".equals(k.style())) {
+                    // Upside down under an eave, in an arch or a cornice, it is a corbel: its lower half (its back) is set
+                    // into the wall or the course it springs from. Turned the other way it juts its heel out into the air.
+                    int[] s = step(k.way());
+                    if (d.shapeAt(c.dx() + s[0], c.h(), c.dz() + s[1]) == Shape.AIR) {
+                        faults.add(here + ": an upside-down stair with its heel out in the air at " + d.where(c.dx() + s[0], c.h(), c.dz() + s[1])
+                            + " (turn it to the wall)");
+                    }
+                }
+            }
+        }
+        report("roof stairs", faults);
+    }
+
+    @Test
+    @DisplayName("[build-audit] a chair at a table faces it: the stair's back is away from the table")
+    void chairsFaceTheirTables() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            for (Cell c : cells(d)) {
+                Key k = c.key();
+                if (!lowStair(k)) continue;
+                if (!floor(d.shapeAt(c.dx(), c.h() - 1, c.dz())) || !passable(d.shapeAt(c.dx(), c.h() + 1, c.dz()))) continue;
+                // A stair sat on faces away from its back (its tall half): the table wants to be before it.
+                int[] s = step(k.way());
+                int[] back = plus(c.dx(), c.dz(), s, 1);
+                int[] fore = plus(c.dx(), c.dz(), s, -1);
+                // (A bench in a row of desks has the next row's desk at its back, and its own before it.)
+                if (table(d, back[0], c.h(), back[1]) && !table(d, fore[0], c.h(), fore[1])) {
+                    faults.add(d.where(c.dx(), c.h(), c.dz()) + ": a seat with its back to the table at " + d.where(back[0], c.h(), back[1])
+                        + " (turn it round)");
+                }
+            }
+        }
+        report("chairs", faults);
+    }
+
+    @Test
+    @DisplayName("[build-audit] pews and benches in rows face away from the door, to the altar, the dais, the stage or the board")
+    void pewsFaceTheFront() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> outside = walk(d, false);
+            List<Cell> street = streetDoors(d, outside);
+            if (street.isEmpty()) continue;
+            Set<Long> ring = ring(d);
+            int[][] oi = outIn(street.get(0), outside);
+            int inX = Integer.signum(oi[1][0] - oi[0][0]), inZ = Integer.signum(oi[1][2] - oi[0][2]);
+            for (Cell c : cells(d)) {
+                Key k = c.key();
+                if (!lowStair(k) || !floor(d.shapeAt(c.dx(), c.h() - 1, c.dz())) || !passable(d.shapeAt(c.dx(), c.h() + 1, c.dz()))) continue;
+                if (!within(ring, c.dx(), c.dz()) || !covered(d, c.dx(), c.h(), c.dz())) continue;
+                int[] s = step(k.way());
+                // A step up to something (a dais, a hearth) has it at its back; a seat has the room.
+                if (d.shapeAt(c.dx() + s[0], c.h(), c.dz() + s[1]) == Shape.FULL) continue;
+                boolean atTable = false, inRow = false;
+                for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                    Key by = d.key(c.dx() + n[0], c.h(), c.dz() + n[1]);
+                    if (table(d, c.dx() + n[0], c.h(), c.dz() + n[1])) atTable = true;
+                    if (by != null && by.equals(k) && n[0] * s[0] + n[1] * s[1] == 0) inRow = true;
+                }
+                if (atTable || !inRow) continue;
+                // Sat on, a stair faces away from its back: the sitter looks the opposite way to its way.
+                if (-s[0] * inX - s[1] * inZ < 0) {
+                    faults.add(d.where(c.dx(), c.h(), c.dz()) + ": a pew facing back toward the door (turn the row round)");
+                }
+            }
+        }
+        report("pews", faults);
+    }
+
+    /** Furniture that stands on the floor: everything but what hangs, leans or lies flat. */
+    static final Set<String> STANDS = Set.of("CHEST", "FURNACE", "SMOKER", "LECTERN", "LOOM", "GRINDSTONE", "ANVIL", "CRAFTING_TABLE",
+        "CARTOGRAPHY", "ENCHANTING", "BREWING", "CAULDRON", "BARREL", "BOOKSHELF", "NOTE_BLOCK", "CAMPFIRE");     // (a bale on a post is a dummy)
+
+    @Test
+    @DisplayName("[build-audit] furniture stands on the floor (or on furniture that is a whole block), not on a rug or in the air")
+    void furnitureStandsOnTheFloor() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            for (Cell c : cells(d)) {
+                if (!STANDS.contains(c.key().part())) continue;
+                Shape below = d.shapeAt(c.dx(), c.h() - 1, c.dz());
+                if (!floor(below)) {
+                    faults.add(d.where(c.dx(), c.h(), c.dz()) + ": stands on " + (d.key(c.dx(), c.h() - 1, c.dz()) == null ? below.name().toLowerCase()
+                        : d.where(c.dx(), c.h() - 1, c.dz())));
+                }
+            }
+        }
+        report("furniture on the floor", faults);
+    }
+
+    /**
+     * What is used from its front, and so wants its front onto open floor where a folk stands to use it: a chest's lid, a
+     * furnace's or a smoker's mouth, a lectern's book, a loom's warp. (The game's placing turns each its drawing's way:
+     * BuildGoal.stamp and stateFor; FRONT, toward the door, unless the mark says otherwise.)
+     */
+    static final Set<String> FRONTED = Set.of("CHEST", "FURNACE", "SMOKER", "LECTERN", "LOOM");
+
+    /** Used from either of two opposite sides: a grindstone's wheel and a bell (front or back), an anvil (its long sides). */
+    static final Set<String> SIDED = Set.of("GRINDSTONE", "BELL", "ANVIL");
+
+    /** Used from any side, so long as one is open: a bench, a table of the crafts, a cauldron, a hearth fire. */
+    static final Set<String> ANY_SIDE = Set.of("CRAFTING_TABLE", "CARTOGRAPHY", "ENCHANTING", "BREWING", "CAULDRON", "CAMPFIRE",
+        "NOTE_BLOCK");
+
+    /** Room for a folk to stand at a thing: open at its level and the one over it (and not the head of a bed). */
+    static boolean openFloor(Drawing d, int x, int h, int z) {
+        return passable(d.shapeAt(x, h, z)) && passable(d.shapeAt(x, h + 1, z)) && d.shapeAt(x, h, z) != Shape.LADDER
+            && !bedHeads(d).contains(Drawing.at(x, h, z));
+    }
+
+    /** Where the beds' heads lie: a bed is drawn by its foot, and its head takes the place one along its way. */
+    static Set<Long> bedHeads(Drawing d) {
+        if (d.heads != null) return d.heads;
+        Set<Long> out = new HashSet<>();
+        for (Cell c : cells(d)) {
+            if (!"BED".equals(c.key().part())) continue;
+            int[] s = step(c.key().way());
+            out.add(Drawing.at(c.dx() + s[0], c.h(), c.dz() + s[1]));
+        }
+        d.heads = out;
+        return out;
+    }
+
+    @Test
+    @DisplayName("[build-audit] chests, furnaces, smokers, lecterns, looms, anvils, grindstones, bells and benches face open floor, not a wall")
+    void facingThingsFaceTheFloor() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            for (Cell c : cells(d)) {
+                String part = c.key().part();
+                String here = d.where(c.dx(), c.h(), c.dz());
+                int[] s = step(c.key().way());
+                if (s[0] == 0 && s[1] == 0) s = step("FRONT");
+                if (FRONTED.contains(part)) {
+                    int[] f = plus(c.dx(), c.dz(), s, 1);
+                    if (!openFloor(d, f[0], c.h(), f[1])) {
+                        faults.add(here + ": its front is shut against " + d.where(f[0], c.h(), f[1]) + " (" + d.shapeAt(f[0], c.h(), f[1]).name().toLowerCase()
+                            + "); turn it to the floor");
+                    }
+                } else if (SIDED.contains(part)) {
+                    // An anvil is worked from its long sides, across its way; a grindstone and a bell from before or behind.
+                    int[] a = part.equals("ANVIL") ? leftOf(s) : s;
+                    int[] f = plus(c.dx(), c.dz(), a, 1), b = plus(c.dx(), c.dz(), a, -1);
+                    if (!openFloor(d, f[0], c.h(), f[1]) && !openFloor(d, b[0], c.h(), b[1])) {
+                        faults.add(here + ": both its working sides are shut (" + d.where(f[0], c.h(), f[1]) + ", " + d.where(b[0], c.h(), b[1]) + ")");
+                    }
+                } else if (ANY_SIDE.contains(part)) {
+                    boolean open = false;
+                    for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                        if (openFloor(d, c.dx() + n[0], c.h(), c.dz() + n[1])) open = true;
+                    }
+                    // A fire in a chimney's top or a beacon's cage is not cooked at: it wants the sky over it for its smoke.
+                    if (part.equals("CAMPFIRE") && d.shapeAt(c.dx(), c.h() + 1, c.dz()) == Shape.AIR && !covered(d, c.dx(), c.h() - 1, c.dz())) open = true;
+                    if (!open) faults.add(here + ": shut in on every side");
+                }
+            }
+        }
+        report("things that face the floor", faults);
+    }
+
+    @Test
+    @DisplayName("[build-audit] a bed's head is against a wall, and no bed lies across a door or before a window")
+    void bedsHeadToAWall() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            for (Cell c : cells(d)) {
+                if (!"BED".equals(c.key().part())) continue;
+                int[] s = step(c.key().way());
+                int[] head = plus(c.dx(), c.dz(), s, 1), beyond = plus(c.dx(), c.dz(), s, 2);
+                String here = d.where(c.dx(), c.h(), c.dz());
+                Key wall = d.key(beyond[0], c.h(), beyond[1]);
+                if (d.shapeAt(beyond[0], c.h(), beyond[1]) != Shape.FULL || wall != null && "WINDOW".equals(wall.part())) {
+                    faults.add(here + ": its head is not against a wall (" + d.where(beyond[0], c.h(), beyond[1]) + " is behind it)");
+                }
+                for (int[] p : new int[][]{ { c.dx(), c.dz() }, head }) {
+                    for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                        if (p == head && n[0] == s[0] && n[1] == s[1]) continue;                      // the wall at its head, above
+                        Key by = d.key(p[0] + n[0], c.h(), p[1] + n[1]);
+                        if (by == null) continue;
+                        if (isDoor(by) || "GATE".equals(by.part())) faults.add(here + ": lies across the doorway at " + d.where(p[0] + n[0], c.h(), p[1] + n[1]));
+                        if ("WINDOW".equals(by.part())) faults.add(here + ": lies up against the window at " + d.where(p[0] + n[0], c.h(), p[1] + n[1]));
+                    }
+                }
+            }
+        }
+        report("beds against the wall", faults);
+    }
+
+    @Test
+    @DisplayName("[build-audit] a door hangs from a wall (or a post, or its pair) beside it, and the street door opens in")
+    void doorsHangRight() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> outside = walk(d, false);
+            for (Cell c : doors(d)) {
+                // Its hinge goes on the side with the wall (BuildGoal.hinge); one of a pair, on the side away from the other.
+                int[] s = step(c.key().way());
+                boolean hung = false;
+                for (int side : new int[]{ 1, -1 }) {
+                    int[] by = plus(c.dx(), c.dz(), leftOf(s), side), far = plus(c.dx(), c.dz(), leftOf(s), -side);
+                    if (hangsOn(d, by[0], c.h(), by[1])) hung = true;
+                    if (isDoor(d.key(by[0], c.h(), by[1])) && hangsOn(d, far[0], c.h(), far[1])) hung = true;
+                }
+                if (!hung) {
+                    int[] l = plus(c.dx(), c.dz(), leftOf(s), 1), r = plus(c.dx(), c.dz(), leftOf(s), -1);
+                    faults.add(d.where(c.dx(), c.h(), c.dz()) + ": nothing either side to hang it from (" + d.where(l[0], c.h(), l[1]) + ", "
+                        + d.where(r[0], c.h(), r[1]) + ")");
+                }
+            }
+            for (Cell c : streetDoors(d, outside)) {
+                // A door swings toward its way: the street on the side before it, and it opens into the room.
+                int[] out = outIn(c, outside)[0], before = sides(c)[0];
+                if (out[0] != before[0] || out[2] != before[2]) {
+                    faults.add(d.where(c.dx(), c.h(), c.dz()) + ": opens out onto the street, not into the room");
+                }
+            }
+        }
+        report("doors hung", faults);
+    }
+
+    @Test
+    @DisplayName("[build-audit] logs lie the way they run: posts upright, beams along their length")
+    void logsLieTheWayTheyRun() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            for (Cell c : cells(d)) {
+                Key k = c.key();
+                if (!"BLOCK".equals(k.part())) continue;
+                String style = k.style();
+                String here = d.where(c.dx(), c.h(), c.dz());
+                if ("BEAM_ACROSS".equals(style) || "BEAM_ALONG".equals(style)) {
+                    // A beam lies along its run: logs of the same beam beside it along its length, none across it.
+                    boolean across = "BEAM_ACROSS".equals(style);
+                    int along = 0, athwart = 0;
+                    for (int n : new int[]{ -1, 1 }) {
+                        if (style.equals(styleAt(d, c.dx() + (across ? n : 0), c.h(), c.dz() + (across ? 0 : n)))) along++;
+                        if (style.equals(styleAt(d, c.dx() + (across ? 0 : n), c.h(), c.dz() + (across ? n : 0)))) athwart++;
+                    }
+                    if (athwart > 0 && along == 0) {
+                        faults.add(here + ": a beam lying " + (across ? "across" : "along") + " the building in a run going "
+                            + (across ? "along" : "across") + " it ('" + (across ? '|' : '-') + "' is the beam for that)");
+                    }
+                }
+                if ("POST".equals(style)) {
+                    // A post stands: one in a row of three or more lying level, nothing of it above or below, is a beam drawn as posts.
+                    boolean upright = "POST".equals(styleAt(d, c.dx(), c.h() + 1, c.dz())) || "POST".equals(styleAt(d, c.dx(), c.h() - 1, c.dz()));
+                    if (upright) continue;
+                    for (int[] n : new int[][]{ { 1, 0 }, { 0, 1 } }) {
+                        if ("POST".equals(styleAt(d, c.dx() + n[0], c.h(), c.dz() + n[1])) && "POST".equals(styleAt(d, c.dx() - n[0], c.h(), c.dz() - n[1]))
+                                && !"POST".equals(styleAt(d, c.dx() + n[0], c.h() + 1, c.dz() + n[1]))
+                                && !"POST".equals(styleAt(d, c.dx() + n[0], c.h() - 1, c.dz() + n[1]))) {
+                            faults.add(here + ": an upright log in a level run of them: a beam, drawn as posts ('" + (n[0] != 0 ? '-' : '|') + "')");
+                        }
+                    }
+                }
+            }
+        }
+        report("logs", faults);
+    }
+
+    /** A door's jamb: a whole block, a post or a pane, at both its halves' heights. */
+    static boolean hangsOn(Drawing d, int x, int h, int z) {
+        for (int y = h; y <= h + 1; y++) {
+            Shape s = d.shapeAt(x, y, z);
+            if (s != Shape.FULL && s != Shape.POST) return false;
+        }
+        return true;
+    }
+
+    static String styleAt(Drawing d, int x, int h, int z) {
+        Key k = d.key(x, h, z);
+        return k == null || !"BLOCK".equals(k.part()) ? "" : k.style();
+    }
+
+    @Test
+    @DisplayName("[build-audit] slabs sit the right half: no low slab dipping in a boarded floor, no low slab for a room's ceiling")
+    void slabsSitTheRightHalf() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> ring = ring(d), reach = walk(d);
+            for (Cell c : cells(d)) {
+                Key k = c.key();
+                if (!"BLOCK".equals(k.part()) || !"ROOF_SLAB".equals(k.style()) && !"STONE_SLAB".equals(k.style())) continue;
+                String here = d.where(c.dx(), c.h(), c.dz());
+                // In a floor: boards level with it either side and somebody walking on it, a half-block hole to trip in.
+                if (reach.contains(Drawing.at(c.dx(), c.h() + 1, c.dz())) && within(ring, c.dx(), c.dz())) {
+                    for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                        if (!"FLOOR".equals(styleAt(d, c.dx() + n[0], c.h(), c.dz() + n[1]))) continue;
+                        if (!"FLOOR".equals(styleAt(d, c.dx() - n[0], c.h(), c.dz() - n[1]))) continue;
+                        faults.add(here + ": a low slab in a boarded floor, a half-block dip in it");
+                        break;
+                    }
+                }
+                // Over a room: the room's ceiling, which a low slab leaves a half block short of the walls' top.
+                int y = c.h() - 1;
+                while (y > d.minH && d.shapeAt(c.dx(), y, c.dz()) == Shape.AIR) y--;
+                if ("ROOF_SLAB".equals(k.style()) && y < c.h() - 2 && stand(d, c.dx(), y + 1, c.dz()) && indoors(d, ring, c.dx(), y + 1, c.dz())) {
+                    // A flat ceiling, closed all round by walls, boards or more of it; a roof's ridge (open either side of
+                    // it) is a cap, not a ceiling.
+                    boolean flat = true;
+                    for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                        if (d.key(c.dx() + n[0], c.h(), c.dz() + n[1]) == null) flat = false;
+                    }
+                    if (flat) faults.add(here + ": a low slab for the ceiling of the room under it, a half block short of the wall top ('=')");
+                }
+            }
+        }
+        report("slabs", faults);
+    }
+
+    /**
+     * [build-audit] Water inside under a roof on purpose, "name dx h dz why": each a thing built to hold it, named here
+     * one by one rather than let off by the check.
+     */
+    static final Set<String> NATURAL_INDOORS = Set.of(
+        "market 0 0 0 the well in its stone curb in the middle of the market hall",
+        "skygarden 0 0 3 the fountain in the grotto under the first terrace",
+        "stable -3 -1 -3 the horses' trough, sunk in the floor by the door");
+
+    @Test
+    @DisplayName("[build-audit] nothing of the outdoors left in a room: no earth, no water inside under the roof")
+    void nothingNaturalIndoors() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> ring = ring(d);
+            for (Cell c : cells(d)) {
+                Key k = c.key();
+                boolean earth = "BLOCK".equals(k.part()) && "SOIL".equals(k.style());
+                if (!earth && !"WATER".equals(k.part())) continue;
+                // Earth is underfoot or in a box; it is in the room when the place over it is.
+                int h = earth ? c.h() + 1 : c.h();
+                if (!indoors(d, ring, c.dx(), h, c.dz())) continue;
+                String id = d.name.replace("_tall", "") + " " + c.dx() + " " + c.h() + " " + c.dz();
+                if (NATURAL_INDOORS.stream().anyMatch(a -> a.startsWith(id + " "))) continue;
+                faults.add(d.where(c.dx(), c.h(), c.dz()) + ": " + (earth ? "earth" : "water") + " inside the building, under its roof");
+            }
+        }
+        report("the outdoors indoors", faults);
+    }
+
+    @Test
+    @DisplayName("[build-audit] a rug lies on a floor (or a table, its cloth), never on furniture or a lamp")
+    void rugsLieOnFloors() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            for (Cell c : cells(d)) {
+                if (!"CARPET".equals(c.key().part())) continue;
+                Key under = d.key(c.dx(), c.h() - 1, c.dz());
+                Shape below = d.shapeAt(c.dx(), c.h() - 1, c.dz());
+                if (floor(below) && (under == null || "BLOCK".equals(under.part()) || "WINDOW".equals(under.part()))) continue;
+                if (under != null && "FENCE".equals(under.part())) continue;                  // a cloth on a table
+                faults.add(d.where(c.dx(), c.h(), c.dz()) + ": a rug on " + (under == null ? below.name().toLowerCase() : d.where(c.dx(), c.h() - 1, c.dz())));
+            }
+        }
+        report("rugs", faults);
+    }
+
+    /**
+     * [build-audit] What each building is furnished with for what it is for, "name PART PART|PART ...": every part named
+     * is in its drawing (a part or another, where a bar is between them). A home has its beds, a chest, a bench and a
+     * stove; a kitchen a stove and a bench; a shop its counter of casks; a library its shelves and its lectern; a forge
+     * its furnaces and its anvil. (The rugs, pots, shelves and lamps of Interiors come on top of these.)
+     */
+    static final List<String> USES = List.of(
+        "academy LECTERN BOOKSHELF",
+        "apiary CRAFTING_TABLE CHEST",
+        "armoury CHEST ANVIL GRINDSTONE",
+        "auction LECTERN BARREL",
+        "bakery FURNACE CRAFTING_TABLE BARREL CHEST",
+        "bank LECTERN BARREL",
+        "barn HAY CHEST",
+        "barracks BED CHEST CRAFTING_TABLE ANVIL",
+        "brewery BREWING CAULDRON BARREL CHEST",
+        "cafe SMOKER CRAFTING_TABLE BARREL CHEST",
+        "divershed SMOKER CRAFTING_TABLE BARREL",
+        "enchanter ENCHANTING BOOKSHELF CHEST",
+        "firestation CAULDRON CHEST BELL",
+        "flats BED CHEST",
+        "flats4 BED CHEST",
+        "fletcher CHEST BARREL",
+        "foundry FURNACE ANVIL GRINDSTONE CAULDRON",
+        "golemyard CRAFTING_TABLE CHEST ANVIL",
+        "granary HAY CHEST",
+        "grandlibrary BOOKSHELF LECTERN",
+        "greatforge FURNACE ANVIL GRINDSTONE CAULDRON CHEST",
+        "guesthouse BED CHEST FURNACE CRAFTING_TABLE",
+        "hall CHEST CRAFTING_TABLE",
+        "harbour LECTERN BARREL CHEST",
+        "house BED CHEST FURNACE CRAFTING_TABLE",
+        "house2 BED CHEST FURNACE CRAFTING_TABLE",
+        "huntlodge SMOKER CHEST BARREL",
+        "infirmary BED CAULDRON BREWING",
+        "inn BED CHEST BARREL",
+        "knighthall BED CHEST FURNACE CRAFTING_TABLE BOOKSHELF",
+        "knightmanor BED CHEST FURNACE CRAFTING_TABLE BOOKSHELF",
+        "library BOOKSHELF LECTERN ENCHANTING",
+        "lodge BED CHEST CRAFTING_TABLE",
+        "manor BED CHEST FURNACE CRAFTING_TABLE",
+        "maproom CARTOGRAPHY CHEST",
+        "market BARREL CHEST CRAFTING_TABLE FURNACE",
+        "observatory LECTERN BOOKSHELF",
+        "postoffice LECTERN BARREL",
+        "powderhut CRAFTING_TABLE CHEST",
+        "redstoneworks LECTERN CRAFTING_TABLE CHEST",
+        "restaurant SMOKER FURNACE CRAFTING_TABLE BARREL",
+        "school LECTERN BOOKSHELF",
+        "shelter CRAFTING_TABLE CHEST",
+        "shop BARREL CHEST CRAFTING_TABLE",
+        "smeltery FURNACE ANVIL CHEST",
+        "smithy FURNACE ANVIL GRINDSTONE CRAFTING_TABLE",
+        "stable HAY CAULDRON",
+        "storage STOREHOUSE",
+        "store BARREL CHEST",
+        "tavern CAMPFIRE BARREL CHEST",
+        "townhall BED LECTERN CHEST",
+        "townlibrary BOOKSHELF LECTERN",
+        "tradingpost LECTERN BARREL CHEST",
+        "villa BED CHEST FURNACE CRAFTING_TABLE",
+        "watchhouse BED LECTERN",
+        "watermill GRINDSTONE CHEST",
+        "wheelwright CRAFTING_TABLE ANVIL GRINDSTONE",
+        "windmill CHEST HAY",
+        "workshop LOOM CRAFTING_TABLE FURNACE CHEST");
+
+    /** The homes and lodgings, where every bed has a chest or a cask by it for the things of whoever sleeps in it. */
+    static final Set<String> HOMES = Set.of("house", "house2", "guesthouse", "manor", "villa", "knightmanor", "knighthall",
+        "flats", "flats4", "inn", "barracks", "lodge", "townhall");
+
+    @Test
+    @DisplayName("[build-audit] every room furnished for what it is for, and a chest by every bed in a home")
+    void furnishedForItsUse() throws IOException {
+        List<String> faults = new ArrayList<>();
+        Map<String, Drawing> byName = new HashMap<>();
+        for (Drawing d : drawings()) byName.put(d.name, d);
+        for (String use : USES) {
+            String[] w = use.split(" ");
+            Drawing d = byName.get(w[0]);
+            if (d == null) { faults.add(w[0] + ": in USES, but there is no such drawing"); continue; }
+            Set<String> has = new HashSet<>();
+            for (Cell c : cells(d)) has.add(c.key().part());
+            for (int i = 1; i < w.length; i++) {
+                boolean got = false;
+                for (String part : w[i].split("\\|")) if (has.contains(part)) got = true;
+                if (!got) faults.add(d.name + ": has no " + w[i].toLowerCase().replace('|', ' ').replace('_', ' ') + ", and it wants one for what it is");
+            }
+        }
+        for (Drawing d : drawings()) {
+            if (!HOMES.contains(d.name.replace("_tall", ""))) continue;
+            List<Cell> keep = new ArrayList<>();
+            for (Cell c : cells(d)) if ("CHEST".equals(c.key().part()) || "BARREL".equals(c.key().part())) keep.add(c);
+            for (Cell c : cells(d)) {
+                if (!"BED".equals(c.key().part())) continue;
+                int[] s = step(c.key().way());
+                boolean by = false;
+                for (Cell k : keep) {
+                    if (k.h() != c.h()) continue;
+                    int far = Math.min(Math.abs(k.dx() - c.dx()) + Math.abs(k.dz() - c.dz()), Math.abs(k.dx() - c.dx() - s[0]) + Math.abs(k.dz() - c.dz() - s[1]));
+                    if (far <= 4) by = true;
+                }
+                if (!by) faults.add(d.where(c.dx(), c.h(), c.dz()) + ": a bed with no chest or cask within four steps of it, on its own floor");
+            }
+        }
+        report("furnished for its use", faults);
+    }
+
+    /** How bright each place is from the drawing's own lamps (block light, as the game spreads it: one less a step). */
+    static Map<Long, Integer> light(Drawing d) {
+        Map<Long, Integer> lit = new HashMap<>();
+        ArrayDeque<int[]> todo = new ArrayDeque<>();
+        for (Cell c : cells(d)) {
+            int l = switch (c.key().part()) {
+                case "LANTERN", "CAMPFIRE" -> 15;
+                case "TORCH" -> 14;
+                default -> 0;
+            };
+            if (l == 0) continue;
+            lit.put(Drawing.at(c.dx(), c.h(), c.dz()), l);
+            todo.add(new int[]{ c.dx(), c.h(), c.dz(), l });
+        }
+        while (!todo.isEmpty()) {
+            int[] p = todo.poll();
+            if (p[3] <= 1) continue;
+            for (int[] n : new int[][]{ { 1, 0, 0 }, { -1, 0, 0 }, { 0, 1, 0 }, { 0, -1, 0 }, { 0, 0, 1 }, { 0, 0, -1 } }) {
+                int x = p[0] + n[0], h = p[1] + n[1], z = p[2] + n[2];
+                if (x < d.minX - 3 || x > d.maxX + 3 || z < d.minZ - 3 || z > d.maxZ + 3 || h < d.minH - 1 || h > d.maxH + 3) continue;
+                if (!letsLightThrough(d, x, h, z)) continue;
+                long k = Drawing.at(x, h, z);
+                if (lit.getOrDefault(k, 0) >= p[3] - 1) continue;
+                lit.put(k, p[3] - 1);
+                todo.add(new int[]{ x, h, z, p[3] - 1 });
+            }
+        }
+        return lit;
+    }
+
+    /** Light passes through air, glass, a door, a fence, a ladder, a bed or a chest; not a whole block, a stair or a slab. */
+    static boolean letsLightThrough(Drawing d, int x, int h, int z) {
+        Key k = d.key(x, h, z);
+        if (k == null) return h >= 0;
+        if ("WINDOW".equals(k.part())) return true;
+        Shape s = shape(k);
+        return s != Shape.FULL && s != Shape.LOW_STAIR && s != Shape.HIGH_STAIR && s != Shape.LOW_SLAB && s != Shape.HIGH_SLAB;
+    }
+
+    /** The light a room wants everywhere a folk walks in it: a lamp's worth within half a dozen steps. */
+    static final int ROOM_LIGHT = 8;
+
+    @Test
+    @DisplayName("[build-audit] every room is lit: everywhere a folk walks indoors has a lamp near enough to see by")
+    void everyRoomIsLit() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> ring = ring(d);
+            if (ring.isEmpty()) continue;
+            Map<Long, Integer> lit = light(d);
+            Set<Long> dark = new HashSet<>();
+            for (long k : walk(d)) {
+                int x = signed((k >> 40) & 0xfffff), h = signed((k >> 20) & 0xfffff), z = signed(k & 0xfffff);
+                // A room is where folk stand on a floor; the rungs of a ladder up a shaft are a way between rooms.
+                // (Nor is the top of a cask or a table, or the place a bed's head lies in.)
+                Key under = d.key(x, h - 1, z);
+                if (!indoors(d, ring, x, h, z) || !floor(d.shapeAt(x, h - 1, z)) || d.shapeAt(x, h, z) == Shape.LADDER) continue;
+                if (under != null && !"BLOCK".equals(under.part()) || bedHeads(d).contains(k)) continue;
+                int l = Math.max(lit.getOrDefault(k, 0), lit.getOrDefault(Drawing.at(x, h + 1, z), 0));
+                if (l < ROOM_LIGHT) dark.add(k);
+            }
+            for (List<int[]> patch : patches(dark)) {
+                int[] p = patch.get(0);
+                faults.add(d.where(p[0], p[1], p[2]) + ": dark (" + patch.size() + " places with less than " + ROOM_LIGHT + " light)");
+            }
+        }
+        report("dark rooms", faults);
+    }
+
+    /** Places gathered into patches that touch (across, or a step up or down). */
+    static List<List<int[]>> patches(Set<Long> places) {
+        List<List<int[]>> out = new ArrayList<>();
+        Set<Long> done = new HashSet<>();
+        List<Long> sorted = new ArrayList<>(places);
+        sorted.sort(null);
+        for (long k : sorted) {
+            if (!done.add(k)) continue;
+            List<int[]> patch = new ArrayList<>();
+            ArrayDeque<Long> todo = new ArrayDeque<>(List.of(k));
+            while (!todo.isEmpty()) {
+                long q = todo.poll();
+                int x = signed((q >> 40) & 0xfffff), h = signed((q >> 20) & 0xfffff), z = signed(q & 0xfffff);
+                patch.add(new int[]{ x, h, z });
+                for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 }, { 0, 0 } }) {
+                    for (int dh = -1; dh <= 1; dh++) {
+                        long m = Drawing.at(x + n[0], h + dh, z + n[1]);
+                        if (places.contains(m) && done.add(m)) todo.add(m);
+                    }
+                }
+            }
+            patch.sort((a, b) -> a[1] != b[1] ? Integer.compare(a[1], b[1]) : a[2] != b[2] ? Integer.compare(b[2], a[2]) : Integer.compare(a[0], b[0]));
+            out.add(patch);
+        }
+        return out;
+    }
+
+    @Test
+    @DisplayName("[build-audit] room to walk round the furniture: no corner of a room boxed off from the rest by it")
+    void roomToWalkRound() throws IOException {
+        List<String> faults = new ArrayList<>();
+        for (Drawing d : drawings()) {
+            Set<Long> ring = ring(d);
+            if (ring.isEmpty()) continue;
+            Set<Long> reach = walk(d);
+            Set<Integer> storeys = new HashSet<>();
+            for (long k : reach) {
+                int x = signed((k >> 40) & 0xfffff), h = signed((k >> 20) & 0xfffff), z = signed(k & 0xfffff);
+                if (indoors(d, ring, x, h, z)) storeys.add(h);
+            }
+            Set<Long> boxed = new HashSet<>(), heads = bedHeads(d);
+            for (int h : storeys) {
+                for (int x = d.minX; x <= d.maxX; x++) {
+                    for (int z = d.minZ; z <= d.maxZ; z++) {
+                        long k = Drawing.at(x, h, z);
+                        if (!stand(d, x, h, z) || reach.contains(k) || heads.contains(k) || !indoors(d, ring, x, h, z)) continue;
+                        boxed.add(k);
+                    }
+                }
+            }
+            for (List<int[]> patch : patches(boxed)) {
+                // Shut off by the furniture, not the walls: a piece beside it stands between it and the floor walked on.
+                String by = null;
+                for (int[] p : patch) {
+                    for (int[] n : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                        int fx = p[0] + n[0], fz = p[2] + n[1];
+                        Key f = d.key(fx, p[1], fz);
+                        boolean piece = f != null ? furnishing(f) && !isDoor(f) && !"GATE".equals(f.part()) && !"LADDER".equals(f.part())
+                            : heads.contains(Drawing.at(fx, p[1], fz));
+                        if (!piece) continue;
+                        for (int[] m : new int[][]{ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) {
+                            if (reach.contains(Drawing.at(fx + m[0], p[1], fz + m[1]))) by = d.where(fx, p[1], fz);
+                        }
+                    }
+                }
+                if (by == null) continue;
+                int[] p = patch.get(0);
+                faults.add(d.where(p[0], p[1], p[2]) + ": " + patch.size() + (patch.size() == 1 ? " place" : " places")
+                    + " of floor shut off from the room by " + by);
+            }
+        }
+        report("room to walk round", faults);
     }
 
     /**
