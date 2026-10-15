@@ -240,6 +240,12 @@ public final class Interiors {
         for (BuildGoal.Placement p : placements) if (p.part() != BuildGoal.Part.CLEAR) at.put(p.pos(), p);
         Set<BlockPos> keepClear = new HashSet<>();
         Set<BlockPos> heads = new HashSet<>();
+        Set<BlockPos> bedHeads = new HashSet<>();                       // [build-world] every bed's head, for the way into each
+        for (BuildGoal.Placement p : placements) {
+            if (p.part() != BuildGoal.Part.BED) continue;
+            bedHeads.add(p.pos().relative(p.way() == com.jrpetty.mcassistant.entity.goal.Blueprints.Way.UP ? b.facing()
+                : com.jrpetty.mcassistant.entity.goal.Blueprints.world(p.way(), b.facing())));
+        }
         BlockPos door = null;
         for (BuildGoal.Placement p : placements) {
             switch (p.part()) {
@@ -248,16 +254,19 @@ public final class Interiors {
                     for (int dx = -1; dx <= 1; dx++) for (int dz = -1; dz <= 1; dz++) keepClear.add(p.pos().offset(dx, 0, dz));
                 }
                 // A bed's head lies a cell beyond its foot (the drawing has the foot): that cell is the bed's.
-                // [build-world] And the floor beside it kept clear, to get into it by: a barrel and a pot either side of a
-                // bed against the wall left it to be climbed into over the foot.
+                // [build-world] And a cell of floor kept clear to get into it by (at its foot, else beside it): a barrel
+                // set at the foot of a bed between a wall and the next bed left it to be climbed into over the end.
                 case BED -> {
                     Direction lie = p.way() == com.jrpetty.mcassistant.entity.goal.Blueprints.Way.UP ? b.facing()
                         : com.jrpetty.mcassistant.entity.goal.Blueprints.world(p.way(), b.facing());
                     keepClear.add(p.pos().relative(lie));
                     heads.add(p.pos().relative(lie));
-                    for (Direction d : Direction.Plane.HORIZONTAL) {
-                        keepClear.add(p.pos().relative(d));
-                        keepClear.add(p.pos().relative(lie).relative(d));
+                    for (BlockPos c : new BlockPos[]{ p.pos().relative(lie.getOpposite()), p.pos().relative(lie.getClockWise()),
+                            p.pos().relative(lie.getCounterClockWise()), p.pos().relative(lie).relative(lie.getClockWise()),
+                            p.pos().relative(lie).relative(lie.getCounterClockWise()) }) {
+                        if (at.containsKey(c) || bedHeads.contains(c)) continue;
+                        keepClear.add(c);
+                        break;
                     }
                 }
                 // Room to get at a ladder, a chest, a stand or a table of the crafts (a bed is got into from

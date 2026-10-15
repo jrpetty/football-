@@ -72,7 +72,7 @@ import java.util.TreeSet;
  * puts things (a stove facing a wall, a dark corner, a lamp with nothing to hang from) is the drawing's: it is logged,
  * "bw01 drawing ...", for the drawings' own test (BlueprintSoundnessTest) to take up.
  *
- * <p>On ground of its own: x 2360000 to 2360400, z 70000.
+ * <p>On ground of its own, z 70000: bw01 from x 2360000, bw02 from 2362000, bw03 from 2364000 (each some 400 along).
  */
 @GameTestHolder("mc_assistant")
 @PrefixGameTestTemplate(false)
@@ -254,6 +254,24 @@ public class BuildWorldGameTests {
                     new ItemStack(Items.POPPY, 24), new ItemStack(Items.DANDELION, 24) };
                 for (ItemStack s : stock) com.jrpetty.mcassistant.entity.Market.intoStoresForTests(level, v.id(), s);
                 for (int i = 0; i < 12; i++) if (Interiors.work(level, v, 4000) == 0) break;
+                // Dressed as a town dresses them (chimneys, the signs by the doors, the café's and shop's things out):
+                // every sign, banner, torch and frame on something that holds it.
+                com.jrpetty.mcassistant.entity.TownLife.dressNow(level, v.id(), heart, built, List.of(Items.BREAD, Items.APPLE, Items.CARROT));
+                for (Ledger.Building b : built) {
+                    int r = reachOf(b.structure());
+                    for (BlockPos q : BlockPos.betweenClosed(b.anchor().offset(-r, -1, -r), b.anchor().offset(r, topOf(b.structure()) + 2, r))) {
+                        BlockState st = level.getBlockState(q);
+                        if (st.isAir() || !st.getFluidState().isEmpty() || st.canSurvive(level, q)) continue;
+                        faults.add(b.structure() + " " + age + " " + TURNS[t] + ": " + Look.s(st) + " cannot stand at "
+                            + q.subtract(b.anchor()).toShortString());
+                    }
+                    AABB box = new AABB(b.anchor()).inflate(r, topOf(b.structure()) + 2, r);
+                    for (net.minecraft.world.entity.decoration.HangingEntity h : level.getEntitiesOfClass(
+                            net.minecraft.world.entity.decoration.HangingEntity.class, box)) {
+                        if (!h.survives()) faults.add(b.structure() + " " + age + " " + TURNS[t] + ": " + h.getType().toShortString()
+                            + " hangs on nothing at " + h.blockPosition().subtract(b.anchor()).toShortString());
+                    }
+                }
                 for (Ledger.Building b : built) {
                     List<String> audit = Interiors.auditForTests(level, v, b, tier);
                     long in = audit.stream().filter(a -> a.contains(" in ")).count();
