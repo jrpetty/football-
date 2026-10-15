@@ -146,6 +146,73 @@ describe('code-agent: fixture repos', () => {
   });
 });
 
+describe('code-agent: timing never depends on the machine (virtual clock)', () => {
+  const header = "const test = require('node:test');\nconst assert = require('node:assert/strict');\nconst m = require('../src');\n";
+  const runOne = (src: string, body: string, perTestTimeoutMs = 2000) =>
+    runProjectTests({ 'src/index.js': src, 'tests/a.test.js': header + body }, ['tests/a.test.js'], { perTestTimeoutMs });
+
+  it('timers fire in simulated-time order even when the CPU stalls between setTimeout calls', async () => {
+    // A 5 ms timer, then ~40 ms of busy work, then a 4 ms timer. On a real clock the 5 ms timer fires
+    // first (it was due long before the second was set); on the virtual clock busy work takes no time,
+    // so the 4 ms timer always fires first. Either way the answer must never depend on machine speed.
+    const src = 'module.exports = { busy() { let x = 0; for (let i = 0; i < 4e7; i++) x += i; return x; } };\n';
+    const body =
+      "test('order', async () => {\n  const seen = [];\n  const a = new Promise((r) => setTimeout(() => { seen.push('five'); r(); }, 5));\n  m.busy();\n  const b = new Promise((r) => setTimeout(() => { seen.push('four'); r(); }, 4));\n  await Promise.all([a, b]);\n  assert.deepEqual(seen, ['four', 'five']);\n});\n";
+    for (let i = 0; i < 3; i++) {
+      const r = await runOne(src, body);
+      assert.equal(r.passed, 1, JSON.stringify(r.tests));
+    }
+  });
+
+  it('long simulated waits cost no real time; the limit is in simulated milliseconds', async () => {
+    const body =
+      "const sleep = (ms) => new Promise((r) => setTimeout(r, ms));\n" +
+      "test('waits 1.9 s', async () => { for (let i = 0; i < 19; i++) await sleep(100); });\n" +
+      "test('never settles', async () => { await new Promise(() => {}); });\n" +
+      "test('waits 2.1 s', async () => { await sleep(2100); });\n";
+    const t0 = Date.now();
+    const r = await runOne('module.exports = {};\n', body);
+    assert.ok(Date.now() - t0 < 1900, 'no real waiting');
+    assert.deepEqual(r.tests.map((t) => t.ok), [true, false, false]);
+    assert.match(r.tests[1]!.error ?? '', /never settles/);
+    assert.match(r.tests[2]!.error ?? '', /Timed out after 2000 ms \(simulated time\)/);
+  });
+
+  it('Date follows the simulated clock; Math.random is seeded', async () => {
+    const body =
+      "const sleep = (ms) => new Promise((r) => setTimeout(r, ms));\n" +
+      "test('clock', async () => {\n  const t0 = Date.now();\n  const d0 = new Date();\n  await sleep(250);\n  assert.equal(Date.now() - t0, 250);\n  assert.equal(new Date().getTime() - d0.getTime(), 250);\n  assert.ok(d0 instanceof Date);\n  assert.equal(new Date(Date.UTC(2024, 1, 29)).toISOString(), '2024-02-29T00:00:00.000Z');\n  assert.equal(new Date('2024-03-01').getUTCDate(), 1);\n  assert.equal(typeof Date(), 'string');\n  class Stamp extends Date {}\n  assert.ok(new Stamp(0) instanceof Date);\n  console.log('random', Math.random(), Math.random());\n});\n";
+    const a = await runOne('module.exports = {};\n', body);
+    const b = await runOne('module.exports = {};\n', body);
+    assert.equal(a.passed, 1, JSON.stringify(a.tests));
+    assert.match(a.log, /random 0\.\d+ 0\.\d+/);
+    assert.equal(a.log, b.log);
+  });
+
+  it('every fixture repo gives identical per-test results under heavy parallel load', async () => {
+    // Run each repo's visible + hidden suites 4 times at once (CPU contention), on the original code.
+    for (const id of listRepoIds()) {
+      const repo = loadRepo(id);
+      const h = hiddenRunFiles(repo.files, repo);
+      const once = async () => {
+        const [v, hid] = await Promise.all([runProjectTests(repo.files, testFilesOf(repo.files)), runProjectTests(h.files, h.tests)]);
+        return JSON.stringify([...v.tests, ...hid.tests].map((t) => [t.file, t.name, t.ok, t.error]));
+      };
+      const runs = await Promise.all([once(), once(), once(), once()]);
+      for (const r of runs) assert.equal(r, runs[0], `${id}: results differ between runs`);
+    }
+  });
+
+  it('search-engine: the tie-break hidden test fails on the original code (documents arrive out of id order)', async () => {
+    const repo = loadRepo('search-engine');
+    const orig = await hiddenResult(repo.files, 'search-engine');
+    const fixed = await hiddenResult({ ...repo.files, ...repo.fix }, 'search-engine');
+    const tie = (r: typeof orig) => r.tests.find((t) => t.name === 'ties do not depend on indexing order')!.ok;
+    assert.equal(tie(orig), false);
+    assert.equal(tie(fixed), true);
+  });
+});
+
 describe('code-agent: sandbox isolation', () => {
   const base = {
     'src/index.js': "module.exports = { answer: () => 42 };\n",

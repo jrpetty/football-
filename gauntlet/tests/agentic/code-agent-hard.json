@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "agentic.code-agent-hard",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "program": "code-agent",
   "name": "Fix the Bug (Hard)",
   "category": "agentic",

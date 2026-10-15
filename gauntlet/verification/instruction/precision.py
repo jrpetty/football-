@@ -21,6 +21,11 @@ def gate(anchor, negs=(), tail='', flags='i'):
     pat = '^(?=[\\s\\S]*' + anchor + ')' + ''.join('(?![\\s\\S]*' + n + ')' for n in negs) + ('[\\s\\S]*' + tail if tail else '')
     return {'check': 'regex', 'pattern': pat, 'flags': flags}
 
+# v1.1.1 (accuracy audit): rules that say "with no blank lines" were not checked (line_count ignores blank lines),
+# so a poem with blank lines between its lines got full marks. A blank line BETWEEN two lines of text now fails the
+# case's gated check (leading/trailing blank lines are harmless). It is bundled into the gate so filler cannot score on it.
+BLANK = '\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S'
+
 case('f01', 'easy', """
 Write a three-line poem about rain.
 Rules:
@@ -35,9 +40,10 @@ Rules:
     {'check': 'include', 'text': 'umbrella', 'min': 1, 'max': 1},
     {'check': 'include', 'text': 'rain', 'min': 1},
     {'check': 'word_count', 'min': 9, 'max': 24},
-    gate('rain', ['[,\\uFF0C]', '[\\p{Lu}\\p{Lt}]'], flags='u'),
+    gate('rain', ['[,\\uFF0C]', '[\\p{Lu}\\p{Lt}]', BLANK], flags='u'),
 ], ["soft rain taps the tin roof\nmy red umbrella waits beside the door\nthe street drinks the grey sky slowly"],
-   ["Soft rain, soft rain\nmy umbrella and your umbrella\nthe end"], "Warm-up: lowercase + no commas + exact occurrence count. The lowercase and comma rules are checked together with the required word 'rain' (one gated check) so filler text cannot score on them.")
+   ["Soft rain, soft rain\nmy umbrella and your umbrella\nthe end",
+    "soft rain taps the tin roof\n\nmy red umbrella waits beside the door\n\nthe street drinks the grey sky slowly"], "Warm-up: lowercase + no commas + exact occurrence count. The lowercase and comma rules are checked together with the required word 'rain' (one gated check) so filler text cannot score on them.")
 
 case('f02', 'easy', """
 Give five practical tips for saving money on groceries.
@@ -88,7 +94,7 @@ Rules:
     {'check': 'include', 'text': 'crowd', 'min': 1},
     {'check': 'include', 'text': 'whistle', 'min': 1},
     {'check': 'word_count', 'min': 24, 'max': 39},
-    gate('arena', ['[,\\uFF0C]']),
+    gate('arena', ['[,\\uFF0C]', BLANK]),
 ], ["Gates swing open wide\nAll the crowd pours in\nUnder bright arena lights\nNervous fans lean forward\nThe whistle breaks the hush\nLate goals decide it\nEvery tackle draws a roar\nThousands sing on"],
    ["Gates open,\nAll cheer\nUnder lights\nNow\nThe game\nEnds\nLate\nTonight"], "Acrostic + line count + comma ban (gated on 'arena') + required words + word range.")
 
@@ -141,7 +147,7 @@ Rules:
     {'check': 'each_line_starts_with', 'text': '> '},
     {'check': 'include', 'text': 'orbit', 'min': 2},
     {'check': 'include', 'text': 'satellite', 'min': 1},
-    gate('orbit', ['star', '[,\\uFF0C]']),
+    gate('orbit', ['star', '[,\\uFF0C]', BLANK]),
     {'check': 'word_count', 'min': 24, 'max': 39},
 ], ["> A small satellite hums above the clouds\n> It keeps a steady orbit\n> Its wings catch the sunrise\n> Oceans turn from black to blue\n> Its orbit crosses the map again\n> It sends home pictures"],
    ["> The satellite starts its orbit, slowly.\n> It is a star in the sky.\n> Orbit."], "Per-line prefix + forbidden substring trap ('start') + counts. The 'star' ban and comma ban are one check gated on the required 'orbit'.")
@@ -176,7 +182,7 @@ Rules:
     {'check': 'all_uppercase'},
     {'check': 'line_count', 'min': 4, 'max': 4},
     {'check': 'regex', 'pattern': '^(?!.*STOP\\s*$).*\\S.*$', 'flags': 'm', 'shouldMatch': False},
-    gate('STOP', ['\\d'], flags=''),
+    gate('STOP', ['\\d', BLANK], flags=''),
     {'check': 'include', 'text': 'ARRIVE', 'caseSensitive': True, 'min': 1},
     {'check': 'word_count', 'min': 16, 'max': 32},
 ], ["TRAIN DELAYED BY SNOW NEAR THE BORDER STOP\nWILL ARRIVE TOMORROW AT NOON STOP\nPLEASE TELL AUNT MARGIT STOP\nKEEP THE SOUP WARM STOP"],
@@ -214,7 +220,7 @@ Rules:
     {'check': 'line_count', 'min': 5, 'max': 5},
     {'check': 'include', 'text': 'sky', 'min': 1},
     {'check': 'word_count', 'min': 20, 'max': 39},
-    gate('sky', ['[eE]', '[,\\uFF0C]', '[\\p{Lu}\\p{Lt}]'], flags='u'),
+    gate('sky', ['[eE]', '[,\\uFF0C]', '[\\p{Lu}\\p{Lt}]', BLANK], flags='u'),
 ], ["calm sky brings a soft gray mist\nlow drifts roll by\nour kids point at its forms\nuntil a warm wind blows\ndays turn bright"],
    ["Clouds are here\nLovely\nOver\nUp\nDrifting, gently"], "Acrostic + lipogram + lowercase at once; the three bans are one check gated on the required word 'sky'.")
 

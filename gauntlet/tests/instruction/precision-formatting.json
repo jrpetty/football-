@@ -1,7 +1,7 @@
 {
   "kind": "prompt",
   "id": "instruction.precision-formatting",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "name": "Precision Formatting",
   "category": "instruction",
   "description": "Fifteen writing tasks, each with 4-8 interacting, machine-checked constraints: exact word and sentence counts, lipograms, acrostics, forbidden substrings hidden inside common words, per-line prefixes and suffixes, title case, strict JSON shapes and alternating dialogue. Every rule is stated with its counting method, so failures reflect genuine lapses in self-monitoring rather than ambiguity.",
@@ -53,7 +53,7 @@
         },
         {
           "check": "regex",
-          "pattern": "^(?=[\\s\\S]*rain)(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*[\\p{Lu}\\p{Lt}])",
+          "pattern": "^(?=[\\s\\S]*rain)(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*[\\p{Lu}\\p{Lt}])(?![\\s\\S]*\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S)",
           "flags": "u"
         }
       ],
@@ -158,7 +158,7 @@
         },
         {
           "check": "regex",
-          "pattern": "^(?=[\\s\\S]*arena)(?![\\s\\S]*[,\\uFF0C])",
+          "pattern": "^(?=[\\s\\S]*arena)(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S)",
           "flags": "i"
         }
       ],
@@ -258,7 +258,7 @@
         },
         {
           "check": "regex",
-          "pattern": "^(?=[\\s\\S]*orbit)(?![\\s\\S]*star)(?![\\s\\S]*[,\\uFF0C])",
+          "pattern": "^(?=[\\s\\S]*orbit)(?![\\s\\S]*star)(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S)",
           "flags": "i"
         },
         {
@@ -325,7 +325,7 @@
         },
         {
           "check": "regex",
-          "pattern": "^(?=[\\s\\S]*STOP)(?![\\s\\S]*\\d)",
+          "pattern": "^(?=[\\s\\S]*STOP)(?![\\s\\S]*\\d)(?![\\s\\S]*\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S)",
           "flags": ""
         },
         {
@@ -401,7 +401,7 @@
         },
         {
           "check": "regex",
-          "pattern": "^(?=[\\s\\S]*sky)(?![\\s\\S]*[eE])(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*[\\p{Lu}\\p{Lt}])",
+          "pattern": "^(?=[\\s\\S]*sky)(?![\\s\\S]*[eE])(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*[\\p{Lu}\\p{Lt}])(?![\\s\\S]*\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S)",
           "flags": "u"
         }
       ],

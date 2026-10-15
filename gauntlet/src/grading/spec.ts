@@ -113,6 +113,8 @@ export interface GradingSpec {
   checklist: ChecklistItem[];
   /** Artifact tests: share of the score from the judges (the rest is the automated checks). */
   judgeWeight?: number;
+  /** Artifact tests: a 0/10 grade is the rubric's "automatic zero" and zeroes the whole score (scorer `zeroIfJudgedZero`). */
+  zeroIfGradedZero?: boolean;
   /** Score (0..1) needed to count as passed. */
   passThreshold: number;
   /** Automatic caps / automatic zero / rounding rules from the rubric. */
@@ -643,6 +645,7 @@ export function gradingSpecFor(def: TestDefinition, opts: SpecOptions = {}): Gra
     criteria,
     scaleMax: criteria.reduce((s, x) => s + x.max - x.min, 0),
     judgeWeight: w,
+    ...(sc.zeroIfJudgedZero && w > 0 ? { zeroIfGradedZero: true } : {}),
     passThreshold: 0.7,
     rules: parsed.rules,
     rubricText: sc.rubric,

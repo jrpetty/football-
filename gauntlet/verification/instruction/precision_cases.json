@@ -27,7 +27,7 @@
    },
    {
     "check": "regex",
-    "pattern": "^(?=[\\s\\S]*rain)(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*[\\p{Lu}\\p{Lt}])",
+    "pattern": "^(?=[\\s\\S]*rain)(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*[\\p{Lu}\\p{Lt}])(?![\\s\\S]*\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S)",
     "flags": "u"
    }
   ],
@@ -36,7 +36,8 @@
     "soft rain taps the tin roof\nmy red umbrella waits beside the door\nthe street drinks the grey sky slowly"
    ],
    "fail": [
-    "Soft rain, soft rain\nmy umbrella and your umbrella\nthe end"
+    "Soft rain, soft rain\nmy umbrella and your umbrella\nthe end",
+    "soft rain taps the tin roof\n\nmy red umbrella waits beside the door\n\nthe street drinks the grey sky slowly"
    ]
   },
   "why": "Warm-up: lowercase + no commas + exact occurrence count. The lowercase and comma rules are checked together with the required word 'rain' (one gated check) so filler text cannot score on them."
@@ -159,7 +160,7 @@
    },
    {
     "check": "regex",
-    "pattern": "^(?=[\\s\\S]*arena)(?![\\s\\S]*[,\\uFF0C])",
+    "pattern": "^(?=[\\s\\S]*arena)(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S)",
     "flags": "i"
    }
   ],
@@ -286,7 +287,7 @@
    },
    {
     "check": "regex",
-    "pattern": "^(?=[\\s\\S]*orbit)(?![\\s\\S]*star)(?![\\s\\S]*[,\\uFF0C])",
+    "pattern": "^(?=[\\s\\S]*orbit)(?![\\s\\S]*star)(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S)",
     "flags": "i"
    },
    {
@@ -371,7 +372,7 @@
    },
    {
     "check": "regex",
-    "pattern": "^(?=[\\s\\S]*STOP)(?![\\s\\S]*\\d)",
+    "pattern": "^(?=[\\s\\S]*STOP)(?![\\s\\S]*\\d)(?![\\s\\S]*\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S)",
     "flags": ""
    },
    {
@@ -465,7 +466,7 @@
    },
    {
     "check": "regex",
-    "pattern": "^(?=[\\s\\S]*sky)(?![\\s\\S]*[eE])(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*[\\p{Lu}\\p{Lt}])",
+    "pattern": "^(?=[\\s\\S]*sky)(?![\\s\\S]*[eE])(?![\\s\\S]*[,\\uFF0C])(?![\\s\\S]*[\\p{Lu}\\p{Lt}])(?![\\s\\S]*\\S[^\\S\\n]*\\n[^\\S\\n]*\\n\\s*\\S)",
     "flags": "u"
    }
   ],

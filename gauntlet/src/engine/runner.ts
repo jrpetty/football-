@@ -169,7 +169,7 @@ function imageOutputSkip(t: LoadedTest, c: Contestant, providerType: ProviderTyp
  */
 export function programJudgePool(judges: ContestantSnapshot[], contestant: Contestant, rules: NonNullable<ProgramDefinition['judges']>, providerTypeOf: (c: Contestant) => ProviderType | undefined, excludeSameVendor = true): ContestantSnapshot[] {
   const pool = judges.filter((j) => !rules.vision || supportsVision(j, providerTypeOf(j)));
-  if (rules.strictVendor) return pool.filter((j) => j.vendor.toLowerCase() !== contestant.vendor.toLowerCase() && !(j.model === contestant.model && j.provider === contestant.provider));
+  if (rules.strictVendor) return pool.filter((j) => j.vendor.toLowerCase() !== contestant.vendor.toLowerCase() && !isSameModel(j, contestant));
   return selectJudges(pool, contestant, excludeSameVendor);
 }
 
@@ -1122,9 +1122,23 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
  * from its own vendor (self-preference bias) as long as another judge is
  * available; a model never grades itself.
  */
+/** Model id without a router prefix ("anthropic/…") or variant suffix (":free"), lower-cased. */
+function modelKey(model: string): string {
+  return model.trim().toLowerCase().split('/').pop()!.replace(/:.*$/, '');
+}
+
+/** The same model, whichever provider (direct API or a router) serves it. */
+export function isSameModel(a: Pick<Contestant, 'model'>, b: Pick<Contestant, 'model'>): boolean {
+  return modelKey(a.model) === modelKey(b.model);
+}
+
+/**
+ * The judges for one contestant. A model NEVER grades itself (not even through another provider), even when that
+ * leaves no judge: the case then fails with "no judges configured" and can be graded in the Grading Station.
+ * Same-vendor judges are left out whenever a judge from another vendor is available.
+ */
 export function selectJudges(judges: ContestantSnapshot[], contestant: Contestant, excludeSameVendor: boolean): ContestantSnapshot[] {
-  const notSelf = judges.filter((j) => j.model !== contestant.model || j.provider !== contestant.provider);
-  const pool = notSelf.length ? notSelf : judges;
+  const pool = judges.filter((j) => !isSameModel(j, contestant));
   if (!excludeSameVendor) return pool;
   const otherVendors = pool.filter((j) => j.vendor.toLowerCase() !== contestant.vendor.toLowerCase());
   return otherVendors.length ? otherVendors : pool;

@@ -1,7 +1,7 @@
 {
   "kind": "program",
   "id": "agentic.code-agent",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "program": "code-agent",
   "name": "Fix the Bug",
   "category": "agentic",

@@ -12,7 +12,8 @@
  *  - ai: the AI judges count whenever they graded; people count only where no AI grade exists.
  *  - average: the mean of the human and the AI grade (whichever exist).
  * For artifact tests the grade is only the judged share: score = (1 − w) × checks + w × grade
- * (except methodology arbitration, where the human mean replaces the whole score).
+ * (except methodology arbitration, where the human mean replaces the whole score). When the rubric has an
+ * automatic zero (`zeroIfJudgedZero`), a grade of 0/10 zeroes the whole score, exactly as in the run.
  */
 import type { AiRole, HumanRole } from './spec.ts';
 
@@ -29,6 +30,8 @@ export interface OfficialInput {
   humanScored: boolean;
   /** Artifact tests: share of the score from grading; null for everything else. */
   judgeWeight: number | null;
+  /** Artifact tests whose rubric has an "automatic zero": a grade of 0/10 zeroes the whole score, checks included. */
+  zeroIfGradedZero?: boolean;
   /** The automated score recorded by the run (null when pending or when judging failed). */
   autoScore: number | null;
   /** Artifact tests: the automated-checks part (0..1). */
@@ -49,6 +52,9 @@ export interface OfficialResult {
   /** One plain sentence explaining the choice. */
   why: string;
 }
+
+/** A grade at or below this (0..1) is a 0/10: the same threshold the artifact scorer uses for its automatic zero. */
+const ZERO_GRADE = 0.05;
 
 function r4(n: number): number {
   return Math.round(n * 10000) / 10000;
@@ -104,6 +110,9 @@ export function officialScore(i: OfficialInput, policy: OfficialPolicy = 'method
       break;
   }
   if (grade === null) return { score: i.autoScore, source: i.autoScore === null ? 'pending' : 'auto', why: why || 'No grade yet.' };
+  if (i.judgeWeight !== null && i.judgeWeight > 0 && i.zeroIfGradedZero && grade <= ZERO_GRADE) {
+    return { score: 0, source, why: `${why} A grade of 0/10 is the rubric's automatic zero, so the automated checks earn nothing either.` };
+  }
   if (i.judgeWeight !== null && i.judgeWeight > 0 && i.checkScore !== null) {
     return { score: r4((1 - i.judgeWeight) * i.checkScore + i.judgeWeight * grade), source, why: `${why} Automated checks keep their ${Math.round((1 - i.judgeWeight) * 100)}% share.` };
   }
