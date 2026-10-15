@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": { "tag": "minecraft:planks" },
+    "L": { "tag": "minecraft:logs" }
+  },
+  "pattern": [
+    "PPP",
+    "L L"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:stocks"
+  }
+}

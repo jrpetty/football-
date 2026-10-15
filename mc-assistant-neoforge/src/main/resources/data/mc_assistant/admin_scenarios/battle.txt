@@ -1,0 +1,16 @@
+# [admin] Two Iron Age towns of seventy, at war, drawn up for battle between them.
+# Founds a town on the nearest open grassland or savanna clear of other towns, a rival about 260 blocks off on open
+# ground too, puts forty-five of each on the watch in iron, declares war and stages the line-up on the field the
+# Captains choose between them (flat and open). Takes a minute or two while the founders arrive.
+say Founding two Iron Age towns of seventy on open ground; the founders take a minute or two to arrive.
+village admin world found 70 iron open
+waitfor 60 town:newest
+village admin ages set iron none town:newest
+village admin army raise 45 iron town:newest
+village admin world rival 260 70 town:newest
+waitfor 60 town:newest
+village admin ages set iron none town:newest
+village admin army raise 45 iron town:newest
+village admin army war rival town:newest
+village admin army phase lineup town:newest
+say Ready: the two armies are lined up on open ground between the towns. /village admin army phase clash town:newest to go on.

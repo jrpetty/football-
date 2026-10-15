@@ -1,0 +1,331 @@
+{
+ "variants": {
+  "formed=false": {
+   "model": "mc_assistant:block/storehouse/unit"
+  },
+  "facing=north,formed=true,px=0,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_0"
+  },
+  "facing=north,formed=true,px=0,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_1"
+  },
+  "facing=north,formed=true,px=0,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_2"
+  },
+  "facing=north,formed=true,px=0,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_3"
+  },
+  "facing=north,formed=true,px=0,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_4"
+  },
+  "facing=north,formed=true,px=0,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_5"
+  },
+  "facing=north,formed=true,px=0,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_6"
+  },
+  "facing=north,formed=true,px=0,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_7"
+  },
+  "facing=north,formed=true,px=0,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_8"
+  },
+  "facing=north,formed=true,px=1,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_9"
+  },
+  "facing=north,formed=true,px=1,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_10"
+  },
+  "facing=north,formed=true,px=1,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_11"
+  },
+  "facing=north,formed=true,px=1,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_12"
+  },
+  "facing=north,formed=true,px=1,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_10"
+  },
+  "facing=north,formed=true,px=1,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_13"
+  },
+  "facing=north,formed=true,px=1,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_14"
+  },
+  "facing=north,formed=true,px=1,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_15"
+  },
+  "facing=north,formed=true,px=1,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_16"
+  },
+  "facing=north,formed=true,px=2,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_17"
+  },
+  "facing=north,formed=true,px=2,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_18"
+  },
+  "facing=north,formed=true,px=2,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_19"
+  },
+  "facing=north,formed=true,px=2,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_20"
+  },
+  "facing=north,formed=true,px=2,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_21"
+  },
+  "facing=north,formed=true,px=2,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_22"
+  },
+  "facing=north,formed=true,px=2,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_23"
+  },
+  "facing=north,formed=true,px=2,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_24"
+  },
+  "facing=north,formed=true,px=2,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_25"
+  },
+  "facing=south,formed=true,px=0,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_26"
+  },
+  "facing=south,formed=true,px=0,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_1"
+  },
+  "facing=south,formed=true,px=0,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_27"
+  },
+  "facing=south,formed=true,px=0,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_28"
+  },
+  "facing=south,formed=true,px=0,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_4"
+  },
+  "facing=south,formed=true,px=0,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_29"
+  },
+  "facing=south,formed=true,px=0,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_30"
+  },
+  "facing=south,formed=true,px=0,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_7"
+  },
+  "facing=south,formed=true,px=0,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_31"
+  },
+  "facing=south,formed=true,px=1,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_32"
+  },
+  "facing=south,formed=true,px=1,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_10"
+  },
+  "facing=south,formed=true,px=1,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_33"
+  },
+  "facing=south,formed=true,px=1,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_34"
+  },
+  "facing=south,formed=true,px=1,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_10"
+  },
+  "facing=south,formed=true,px=1,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_35"
+  },
+  "facing=south,formed=true,px=1,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_36"
+  },
+  "facing=south,formed=true,px=1,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_15"
+  },
+  "facing=south,formed=true,px=1,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_37"
+  },
+  "facing=south,formed=true,px=2,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_38"
+  },
+  "facing=south,formed=true,px=2,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_18"
+  },
+  "facing=south,formed=true,px=2,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_39"
+  },
+  "facing=south,formed=true,px=2,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_40"
+  },
+  "facing=south,formed=true,px=2,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_21"
+  },
+  "facing=south,formed=true,px=2,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_41"
+  },
+  "facing=south,formed=true,px=2,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_42"
+  },
+  "facing=south,formed=true,px=2,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_24"
+  },
+  "facing=south,formed=true,px=2,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_43"
+  },
+  "facing=west,formed=true,px=0,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_44"
+  },
+  "facing=west,formed=true,px=0,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_45"
+  },
+  "facing=west,formed=true,px=0,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_46"
+  },
+  "facing=west,formed=true,px=0,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_47"
+  },
+  "facing=west,formed=true,px=0,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_48"
+  },
+  "facing=west,formed=true,px=0,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_49"
+  },
+  "facing=west,formed=true,px=0,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_50"
+  },
+  "facing=west,formed=true,px=0,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_51"
+  },
+  "facing=west,formed=true,px=0,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_52"
+  },
+  "facing=west,formed=true,px=1,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_32"
+  },
+  "facing=west,formed=true,px=1,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_10"
+  },
+  "facing=west,formed=true,px=1,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_11"
+  },
+  "facing=west,formed=true,px=1,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_34"
+  },
+  "facing=west,formed=true,px=1,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_10"
+  },
+  "facing=west,formed=true,px=1,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_13"
+  },
+  "facing=west,formed=true,px=1,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_36"
+  },
+  "facing=west,formed=true,px=1,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_15"
+  },
+  "facing=west,formed=true,px=1,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_16"
+  },
+  "facing=west,formed=true,px=2,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_38"
+  },
+  "facing=west,formed=true,px=2,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_18"
+  },
+  "facing=west,formed=true,px=2,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_19"
+  },
+  "facing=west,formed=true,px=2,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_40"
+  },
+  "facing=west,formed=true,px=2,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_21"
+  },
+  "facing=west,formed=true,px=2,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_22"
+  },
+  "facing=west,formed=true,px=2,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_42"
+  },
+  "facing=west,formed=true,px=2,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_24"
+  },
+  "facing=west,formed=true,px=2,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_25"
+  },
+  "facing=east,formed=true,px=0,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_26"
+  },
+  "facing=east,formed=true,px=0,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_1"
+  },
+  "facing=east,formed=true,px=0,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_2"
+  },
+  "facing=east,formed=true,px=0,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_28"
+  },
+  "facing=east,formed=true,px=0,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_4"
+  },
+  "facing=east,formed=true,px=0,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_5"
+  },
+  "facing=east,formed=true,px=0,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_30"
+  },
+  "facing=east,formed=true,px=0,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_7"
+  },
+  "facing=east,formed=true,px=0,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_8"
+  },
+  "facing=east,formed=true,px=1,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_32"
+  },
+  "facing=east,formed=true,px=1,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_10"
+  },
+  "facing=east,formed=true,px=1,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_11"
+  },
+  "facing=east,formed=true,px=1,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_34"
+  },
+  "facing=east,formed=true,px=1,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_10"
+  },
+  "facing=east,formed=true,px=1,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_13"
+  },
+  "facing=east,formed=true,px=1,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_36"
+  },
+  "facing=east,formed=true,px=1,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_15"
+  },
+  "facing=east,formed=true,px=1,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_16"
+  },
+  "facing=east,formed=true,px=2,py=0,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_53"
+  },
+  "facing=east,formed=true,px=2,py=0,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_54"
+  },
+  "facing=east,formed=true,px=2,py=0,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_55"
+  },
+  "facing=east,formed=true,px=2,py=1,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_56"
+  },
+  "facing=east,formed=true,px=2,py=1,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_57"
+  },
+  "facing=east,formed=true,px=2,py=1,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_58"
+  },
+  "facing=east,formed=true,px=2,py=2,pz=0": {
+   "model": "mc_assistant:block/storehouse/joined_59"
+  },
+  "facing=east,formed=true,px=2,py=2,pz=1": {
+   "model": "mc_assistant:block/storehouse/joined_60"
+  },
+  "facing=east,formed=true,px=2,py=2,pz=2": {
+   "model": "mc_assistant:block/storehouse/joined_61"
+  }
+ }
+}

@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "axis=x": { "model": "mc_assistant:block/opening_ribbon" },
+    "axis=z": { "model": "mc_assistant:block/opening_ribbon", "y": 90 }
+  }
+}

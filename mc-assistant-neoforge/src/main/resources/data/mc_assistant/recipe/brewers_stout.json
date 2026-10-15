@@ -1,0 +1,18 @@
+{
+  "type": "mc_assistant:trained",
+  "trade": "brew",
+  "category": "misc",
+  "key": {
+    "W": { "item": "minecraft:wheat" },
+    "S": { "item": "minecraft:sugar" },
+    "B": { "item": "minecraft:glass_bottle" }
+  },
+  "pattern": [
+    "WSW",
+    " B "
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:brewers_stout"
+  }
+}

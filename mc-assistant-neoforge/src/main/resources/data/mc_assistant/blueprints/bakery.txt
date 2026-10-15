@@ -1,0 +1,97 @@
+# The bakery: a timber bakehouse on a stone footing, its brick chimney up the outside of the wall.
+# At the back, two ovens (furnaces), the baker's table, a barrel of flour and a chest; across the
+# middle a counter of casks with a gap to come through; at the front the shop, big windows on the
+# street, lanterns overhead and one over the door. What it bakes, and from what, is the baker's
+# business (entity/Bakery): bread, cookies, pumpkin pie and cake, by the game's own recipes.
+# Rows run from the back of the building (top) to the front (bottom, the door).
+name bakery
+layer -1
+.........
+.FFFFFFF.
+.FfffffFF
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FfffffF.
+.FFFFFFF.
+.........
+layer 0
+.........
+.LwwwwwL.
+.wUUTQCwZ
+.w.....w.
+.wQQ.QQw.
+.w.....w.
+.w.....w.
+.LwwDwwL.
+.........
+layer 1
+.........
+.LWWWWWL.
+.W.....WZ
+.G.....G.
+.W.....W.
+.G.....G.
+.W.....W.
+.LGG.GGL.
+.........
+layer 2
+.........
+.LWWWWWL.
+.W.....WZ
+.W..j..W.
+.W.....W.
+.W.j.j.W.
+.W.....W.
+.LWWWWWL.
+....j....
+layer 3
+vvvvvvvvv
+.L-----L.
+.|fffff|Z
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.|fffff|.
+.L-----L.
+^^^^^^^^^
+layer 4
+.........
+vvvvvvvvv
+.W.....WZ
+.W.....W.
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+layer 5
+.........
+.........
+vvvvvvvvZ
+.W.....W.
+.W.....W.
+.W.....W.
+^^^^^^^^^
+.........
+.........
+layer 6
+.........
+.........
+........Z
+vvvvvvvvv
+.W.....W.
+^^^^^^^^^
+.........
+.........
+.........
+layer 7
+.........
+.........
+........Z
+.........
+_________
+.........
+.........
+.........
+.........

@@ -1,0 +1,550 @@
+package com.jrpetty.mcassistant.village;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+/**
+ * [war] The numbers of a battle between two towns' armies, the same whether it is fought blow by blow in front
+ * of a player (entity/Battles) or reckoned on paper with nobody near (entity/Campaigns): what a fighter is worth
+ * by its kit, how a side's spirit (its morale) starts and what shakes it, when it breaks and how (an ordered
+ * retreat, a rout, a surrender), the tactics a Captain chooses by the ground, the odds and its own temper, and
+ * the battle reckoned round by round.
+ *
+ * <p>Plain Java, no game classes: the unit tests run it as it stands.
+ */
+public final class BattleModel {
+
+    private BattleModel() {}
+
+    // ------------------------------------------------------------------ who stands where
+
+    /** A fighter's place in the army. */
+    public enum Role {
+        /** The shield line at the front. */
+        LINE,
+        /** The bows, behind the line. */
+        ARCHER,
+        /** Held back, to plug a gap or go round a flank. */
+        RESERVE,
+        /** On the town's horses, for the flank. */
+        RIDER,
+        /** The healer with the bandages, at the back. */
+        MEDIC
+    }
+
+    /** What a Captain does with the ground and the army it has. */
+    public enum Tactic {
+        STRAIGHT("drew up in two lines and came straight on"),
+        SHIELD_WALL("locked shields and stood to receive them"),
+        HILL_ARCHERS("put its archers on the rise"),
+        FEIGNED_RETREAT("gave ground to draw them on"),
+        HIDDEN_RESERVE("kept its reserve out of sight for the flank"),
+        CAVALRY("sent its riders round the flank");
+
+        public final String words;
+
+        Tactic(String words) { this.words = words; }
+
+        /** Does the line stand where it is drawn up and let the enemy come? */
+        public boolean holds() { return this == SHIELD_WALL || this == HILL_ARCHERS; }
+
+        /** Is there a move round the flank once the lines meet? */
+        public boolean flanks() { return this == HIDDEN_RESERVE || this == CAVALRY; }
+    }
+
+    /**
+     * How an army draws up: a shape out of history, with a reason to choose it and what beats it. The shapes are
+     * data: how many ranks deep, how far apart, where the archers stand, how the line is bent (Battles draws them).
+     * Every shape keeps a reserve, a guard on the camp and the Captain's place by the banner.
+     */
+    public enum Formation {
+        SHIELD_WALL("a shield wall", "two deep with shields locked, as the old kings fought", "it holds against a charge",
+            "archers and a flank", 2, 1.1, Archers.BEHIND, Bend.STRAIGHT),
+        WINGED_LINE("a line with its archers on the wings", "men-at-arms in the middle and the bows angled in on either flank, as at Agincourt",
+            "it shoots an enemy to pieces as it comes on", "a wedge that reaches it quickly", 2, 1.5, Archers.WINGS, Bend.STRAIGHT),
+        WEDGE("a wedge", "the boar's snout: the best at its point, the rest spreading behind", "it breaks a thin line",
+            "a crescent that closes round it", 1, 1.4, Archers.BEHIND, Bend.WEDGE),
+        SCHILTRON("a schiltron", "a tight ring, every face outward", "nothing rides into it",
+            "archers, who cannot miss a target that will not move", 1, 1.2, Archers.INSIDE, Bend.RING),
+        CRESCENT("a crescent", "the horns thrown forward to fold round them", "it envelops an enemy that comes at its middle",
+            "a refused flank, or a wedge at a horn", 1, 1.5, Archers.BEHIND, Bend.CRESCENT),
+        ECHELON("an echelon", "the line stepped back from one end, its weak flank refused", "the outnumbered keep their flank",
+            "a straight push at its forward end", 1, 1.5, Archers.BEHIND, Bend.ECHELON),
+        SKIRMISH("a line behind a screen of skirmishers", "the bows loose out in front, to fall back through the line", "it bleeds an enemy before the lines meet",
+            "a quick charge that catches the screen", 1, 1.5, Archers.SCREEN, Bend.STRAIGHT);
+
+        /** Where the archers stand. */
+        public enum Archers { BEHIND, WINGS, INSIDE, SCREEN }
+        /** The line's shape. */
+        public enum Bend { STRAIGHT, WEDGE, RING, CRESCENT, ECHELON }
+
+        public final String words, how, why, beatenBy;
+        public final int ranks;
+        public final double spacing;
+        public final Archers archers;
+        public final Bend bend;
+
+        Formation(String words, String how, String why, String beatenBy, int ranks, double spacing, Archers archers, Bend bend) {
+            this.words = words;
+            this.how = how;
+            this.why = why;
+            this.beatenBy = beatenBy;
+            this.ranks = ranks;
+            this.spacing = spacing;
+            this.archers = archers;
+            this.bend = bend;
+        }
+
+        /** [war-polish] How many ranks deep it draws up {@code n} in the line: its own depth, and another past every RANK_MOST. */
+        public int ranksFor(int n) {
+            return Math.max(ranks, (n + RANK_MOST - 1) / RANK_MOST);
+        }
+
+        /** [war-polish] A ring's radius for {@code n}: shoulder to shoulder round it (its spacing between neighbours), never tighter than RING_LEAST. */
+        public double ringRadius(int n) {
+            return Math.max(RING_LEAST, spacing / (2 * Math.sin(Math.PI / Math.max(3, n))));
+        }
+
+        /**
+         * [war-polish] The mark of the {@code k}-th of {@code n} in the line, {across its front (to its right), depth
+         * (forward is +)}, as drawn up before the horn: ranks of even files (the front rank filled first, the rear ones
+         * centred behind it), bent into the shape's wedge (the first at its point), ring, crescent or echelon.
+         */
+        public double[] slot(int k, int n) {
+            switch (bend) {
+                case WEDGE -> {
+                    int r = (int) Math.floor(Math.sqrt(k)), inRow = Math.min(2 * r + 1, n - r * r);   // a short last row centred behind
+                    return new double[]{ (k - r * r - (inRow - 1) / 2.0) * spacing, WEDGE_POINT - r * RANK_GAP };
+                }
+                case RING -> {
+                    double radius = ringRadius(n), ang = 2 * Math.PI * k / Math.max(1, n);
+                    return new double[]{ Math.cos(ang) * radius, Math.sin(ang) * radius - radius };
+                }
+                default -> {
+                    int ranks = ranksFor(n), per = (n + ranks - 1) / ranks;
+                    int row = k / per, inRow = Math.min(per, n - row * per), col = k % per;
+                    double across = (col - (inRow - 1) / 2.0) * spacing, depth = -row * RANK_GAP;
+                    double half = Math.max(1, (per - 1) * spacing / 2);
+                    if (bend == Bend.CRESCENT) depth += Math.pow(across / half, 2) * HORNS;
+                    if (bend == Bend.ECHELON) depth -= (across + half) / (2 * half) * REFUSED;
+                    return new double[]{ across, depth };
+                }
+            }
+        }
+    }
+
+    /** [war-polish] The line's drawing: blocks between ranks; most in a rank before another forms; the tightest ring. */
+    public static final double RANK_GAP = 1.4, RING_LEAST = 2.5;
+    public static final int RANK_MOST = 14;
+    /** [war-polish] A wedge's point ahead of the line's mark; a crescent's horns forward; an echelon's refused end back. */
+    public static final double WEDGE_POINT = 1.5, HORNS = 3.0, REFUSED = 4.0;
+
+    /**
+     * What this shape is worth against that one in the clash, as a share of its bite: a wedge breaks a winged
+     * line, a crescent folds round a wedge, a schiltron stands against riders, archers ruin a schiltron and a shield
+     * wall, a shield wall blunts a charge. 1.0 for no edge either way.
+     */
+    public static double edge(Formation us, Formation them) {
+        return switch (us) {
+            case WEDGE -> them == Formation.WINGED_LINE || them == Formation.SKIRMISH ? 1.25 : them == Formation.CRESCENT ? 0.8 : 1.0;
+            case CRESCENT -> them == Formation.WEDGE ? 1.25 : them == Formation.ECHELON ? 0.85 : 1.0;
+            case WINGED_LINE -> them == Formation.SCHILTRON || them == Formation.SHIELD_WALL ? 1.2 : them == Formation.WEDGE ? 0.85 : 1.0;
+            case SKIRMISH -> them == Formation.SCHILTRON || them == Formation.SHIELD_WALL ? 1.15 : 1.0;
+            case SHIELD_WALL -> them == Formation.WEDGE ? 1.1 : 1.0;
+            case ECHELON -> them == Formation.CRESCENT ? 1.15 : 1.0;
+            case SCHILTRON -> 1.0;
+        };
+    }
+
+    /** What a shape is worth when the other side's riders come round its flank (a schiltron has no flank). */
+    public static double flankShock(Formation f) {
+        return f == Formation.SCHILTRON ? 0.2 : f == Formation.CRESCENT || f == Formation.ECHELON ? 0.6 : 1.0;
+    }
+
+    /**
+     * The Captain's own way of drawing up, by its heart and its temper ({@code guardian}: it cares most for safe
+     * streets; {@code boldness} -2 to 2; {@code cunning}), what it has (archers, riders), its battles behind it, and
+     * the day: the odds, a rise for the bows, and the enemy's shape if the scouts have seen how it draws up (then it
+     * draws up to beat it, if it knows how).
+     */
+    public static Formation prefer(boolean guardian, int boldness, boolean cunning, int battles, double odds, int archers, int riders, int size,
+                                   boolean rise, Formation enemy) {
+        if (enemy != null && battles >= 1) {
+            for (Formation f : Formation.values()) if (edge(f, enemy) > 1.1 && fits(f, archers, size)) return f;
+        }
+        if (riders == 0 && enemy == null && odds < 0.7) return Formation.ECHELON;
+        if (odds < 0.6) return guardian ? Formation.SHIELD_WALL : Formation.ECHELON;
+        if (cunning && archers * 3 >= size && archers >= 3) return rise ? Formation.WINGED_LINE : Formation.SKIRMISH;
+        if (cunning && size >= 10) return Formation.CRESCENT;
+        if (boldness >= 2 || boldness >= 1 && odds >= 1.2) return Formation.WEDGE;
+        if (guardian || boldness < 0) return Formation.SHIELD_WALL;
+        return archers * 4 >= size && archers >= 2 ? Formation.WINGED_LINE : Formation.SHIELD_WALL;
+    }
+
+    static boolean fits(Formation f, int archers, int size) {
+        return switch (f) {
+            case WINGED_LINE, SKIRMISH -> archers >= 2 && archers * 4 >= size;
+            case CRESCENT -> size >= 8;
+            default -> true;
+        };
+    }
+
+    // ------------------------------------------------------------------ the parley
+
+    /** Under this strength against theirs (allies counted), and only then, a side thinks of yielding at the parley. */
+    public static final double HOPELESS = 1.0 / 2.5;
+
+    /**
+     * Does the weaker side offer to yield at the parley? Only when it is heavily outnumbered (under {@link
+     * #HOPELESS}); then the more hopeless, the likelier, less for a bold Captain or a proud town.
+     */
+    public static boolean offersSurrender(double odds, int boldness, boolean proud, Random rng) {
+        if (odds >= HOPELESS) return false;
+        double p = Math.min(0.9, (HOPELESS - odds) / HOPELESS + 0.35) - boldness * 0.12 - (proud ? 0.2 : 0.0);
+        return rng.nextDouble() < p;
+    }
+
+    /**
+     * Does the stronger side take a surrender offered? A vengeful leader (blood spilt, a treaty broken) or an
+     * ambitious one after the town itself wants the battle; a kindly one takes it.
+     */
+    public static boolean acceptsSurrender(int boldness, boolean kindly, boolean vengeful, boolean ambitious, Random rng) {
+        double p = 0.65 + (kindly ? 0.25 : 0.0) - (vengeful ? 0.45 : 0.0) - (ambitious ? 0.25 : 0.0) - Math.max(0, boldness) * 0.08;
+        return rng.nextDouble() < p;
+    }
+
+    /** How a battle went for the side that lost it (the winner's is always HELD). */
+    public enum Outcome {
+        HELD("held the field"),
+        RETREAT("fell back in good order"),
+        ROUT("broke and ran"),
+        SURRENDER("laid down its arms"),
+        DRAWN("drew off at nightfall, neither side the winner");
+
+        public final String words;
+
+        Outcome(String words) { this.words = words; }
+    }
+
+    /** A detailed battle's phases, in order. */
+    public enum Phase { FORM, PARLEY, SPEECH, CHAMPIONS, VOLLEYS, ADVANCE, CLASH, PURSUIT, AFTERMATH, DONE }
+
+    // ------------------------------------------------------------------ [war-bows] the missile arm
+
+    /**
+     * [war-bows] What a commander favours for its missile arm: longbows (quick to draw, a light arrow in a high arc),
+     * crossbows (slow to span, a heavy bolt flat and hard), or both. Set by decree (Ledger "war.ranged"), else the
+     * Captain's own liking.
+     */
+    public enum Ranged {
+        BOWS("bows"), CROSSBOWS("crossbows"), MIX("a mix of bows and crossbows");
+
+        public final String words;
+
+        Ranged(String words) { this.words = words; }
+
+        /** "bows", "crossbows" or "mix" (any case); null for anything else. */
+        public static Ranged parse(String s) {
+            if (s == null) return null;
+            for (Ranged r : values()) if (r.name().equalsIgnoreCase(s.trim())) return r;
+            return null;
+        }
+
+        /** A commander's own liking, by a number fixed for it (its id's hash): one in three favours each. */
+        public static Ranged liking(int nature) {
+            return values()[Math.floorMod(nature, values().length)];
+        }
+
+        /** For the k-th missile man (from 0) who could carry either: a crossbow? A mix gives every other one. */
+        public boolean crossbowFor(int k) {
+            return this == CROSSBOWS || this == MIX && k % 2 == 1;
+        }
+    }
+
+    /** [war-bows] Of the arrows loosed on a field, the share the side that holds it gathers again: one in three (the rest broken, lost or trodden in). */
+    public static final int RECOVER_ONE_IN = 3;
+
+    /** [war-bows] The arrows gathered off a field where so many were loosed, both sides together. */
+    public static int recovered(int loosed) {
+        return Math.max(0, loosed) / RECOVER_ONE_IN;
+    }
+
+    /** [war-bows] An army's missile arm in words: "12 bows, 8 crossbows", "4 bows", "no bows". */
+    public static String missileWords(int bows, int crossbows) {
+        if (bows <= 0 && crossbows <= 0) return "no bows";
+        String b = bows + (bows == 1 ? " bow" : " bows"), c = crossbows + (crossbows == 1 ? " crossbow" : " crossbows");
+        return crossbows <= 0 ? b : bows <= 0 ? c : b + ", " + c;
+    }
+
+    // ------------------------------------------------------------------ a fighter's worth
+
+    /** What a blade is worth: none, wood or stone, iron, diamond or better. */
+    public static final int NO_BLADE = 0, POOR_BLADE = 1, IRON_BLADE = 2, FINE_BLADE = 3;
+
+    /**
+     * One fighter's worth in the line: a little for its two hands, more for its blade and its armour (by the armour's
+     * points: a full suit of iron is fifteen), a shield, a bow, and a veteran's steadiness.
+     */
+    public static int power(int blade, int armour, boolean shield, boolean bow, boolean veteran) {
+        return 2 + Math.max(0, Math.min(FINE_BLADE, blade)) * 2 + Math.max(0, armour) / 3 + (shield ? 2 : 0) + (bow ? 1 : 0) + (veteran ? 1 : 0);
+    }
+
+    // ------------------------------------------------------------------ spirit
+
+    /** Below this a side wavers: its Captain rallies it, its banner dips. */
+    public static final int WAVER = 35;
+    /** Below this it breaks. */
+    public static final int BREAK = 20;
+    /** Below this (or with its Captain down) a break is a rout, not a retreat. */
+    public static final int ROUT = 8;
+    /** The Captain down. */
+    public static final int CAPTAIN_DOWN = 20;
+    /** The banner lost (its bearer down). */
+    public static final int BANNER_LOST = 15;
+    /** Taken in the flank. */
+    public static final int FLANKED = 12;
+    /** The champion beaten (and its winner's side heartened by half as much again). */
+    public static final int CHAMPION_LOST = 10, CHAMPION_WON = 8;
+    /** A feigned retreat turned on its pursuers: they were drawn on, out of order. */
+    public static final int DRAWN_ON = 8;
+    /** The Captain's "Hold the line!": once in a while, while it stands. */
+    public static final int RALLY = 6;
+    /** What the whole side's yielding is worth: a quarter of the army down costs a quarter of this. */
+    public static final int LOSSES = 90;
+
+    /**
+     * A side's spirit at the start, 30 to 95: a steady sixty, a bold Captain's more and a timid one's less, more
+     * for fighting for its own home, for the veterans in the ranks and allies at its side.
+     */
+    public static int startMorale(int boldness, boolean atHome, int veterans, boolean allies) {
+        return clamp(60 + boldness * 4 + (atHome ? 5 : 0) + Math.min(10, veterans * 2) + (allies ? 5 : 0), 30, 95);
+    }
+
+    /** What so many of a side yielding (of the size it started) costs it in spirit. */
+    public static int lossShock(int yielded, int size) {
+        if (yielded <= 0) return 0;
+        return Math.max(1, Math.round(yielded * (float) LOSSES / Math.max(1, size)));
+    }
+
+    /** Spirit lost a second for being outnumbered: one point a second at worse than two to three. */
+    public static int outnumbered(int ours, int theirs) {
+        return theirs > 0 && ours * 3 < theirs * 2 ? 1 : 0;
+    }
+
+    /**
+     * How a side breaks: with its Captain on its feet and its spirit not gone, in good order; with its Captain
+     * down or its spirit gone, a rout; caught with three in four of it down and the enemy three to one, it gives
+     * up. Null while it has not broken.
+     */
+    public static Outcome breaks(Side s, Side enemy) {
+        if (s.morale >= BREAK && s.standing() > 0) return null;
+        if (s.standing() * 4 <= s.size && enemy.standing() >= Math.max(1, s.standing()) * 3) return Outcome.SURRENDER;
+        if (s.captainDown || s.morale < ROUT) return Outcome.ROUT;
+        return Outcome.RETREAT;
+    }
+
+    // ------------------------------------------------------------------ a side
+
+    /** One side of a battle as it stands: its size, who of it has yielded, its spirit, its power, what has befallen it. */
+    public static final class Side {
+        public final String name;
+        public final int size;
+        public final Tactic tactic;
+        /** How it draws up (the clash's edge: edge()). */
+        public Formation formation = Formation.SHIELD_WALL;
+        public int yielded, dead, morale;
+        /** The sum of its standing fighters' worth (and, in the field, of those not drawn in detail). */
+        public int power;
+        public int archers;
+        public boolean captainDown, bannerLost, flanked;
+        /** [tech-tree] Its new arms (pikes, hammers, longbows...), as the town's inventions gave it them (ArmsEdge). */
+        public ArmsEdge.Kit kit = new ArmsEdge.Kit();
+
+        public Side(String name, int size, int power, int archers, int morale, Tactic tactic) {
+            this.name = name;
+            this.size = Math.max(0, size);
+            this.power = Math.max(0, power);
+            this.archers = Math.max(0, archers);
+            this.morale = morale;
+            this.tactic = tactic;
+        }
+
+        public int standing() {
+            return Math.max(0, size - yielded);
+        }
+
+        /** Spirit lost (or, negative, won), never below nothing nor over a hundred. */
+        public void shake(int by) {
+            morale = clamp(morale - by, 0, 100);
+        }
+
+        /** In words, for the books and the bar: "steady", "wavering"... */
+        public String spirit() {
+            return morale >= 70 ? "eager" : morale >= 50 ? "steady" : morale >= WAVER ? "shaken" : morale >= BREAK ? "wavering" : "broken";
+        }
+    }
+
+    // ------------------------------------------------------------------ tactics
+
+    /**
+     * The Captain's choice, by the ground, the odds and its temper ({@code boldness} -2 timid to 2 bold, a
+     * {@code cunning} one fond of a trick): riders if the town has horses and the odds are fair; the archers on a
+     * rise if there is one and archers enough; the shield wall when it is the weaker; a hidden reserve where there
+     * is cover; a cunning one's feigned retreat; else straight at them.
+     */
+    public static Tactic choose(int boldness, boolean cunning, double odds, boolean rise, boolean cover, int riders, int archers, int size,
+                                Random rng) {
+        if (riders >= 2 && odds >= 0.8 && boldness >= 0) return Tactic.CAVALRY;
+        if (rise && archers * 4 >= size && archers >= 2) return Tactic.HILL_ARCHERS;
+        if (odds < 0.8 || boldness <= -2) return Tactic.SHIELD_WALL;
+        if (cover && size >= 8 && (cunning || rng.nextBoolean())) return Tactic.HIDDEN_RESERVE;
+        if (cunning && odds < 1.3 && size >= 6) return Tactic.FEIGNED_RETREAT;
+        return boldness < 0 ? Tactic.SHIELD_WALL : Tactic.STRAIGHT;
+    }
+
+    /** Will this Captain offer single combat before the battle (a bold one, or a proud one now and then)? */
+    public static boolean offersChampion(int boldness, Random rng) {
+        return boldness >= 2 || boldness == 1 && rng.nextInt(3) == 0;
+    }
+
+    /** And will the other take it up (anyone not timid)? */
+    public static boolean acceptsChampion(int boldness) {
+        return boldness >= 0;
+    }
+
+    /** A duel of champions, by their worth: the chance the first wins. */
+    public static double duelOdds(int a, int b) {
+        return (a + 1.0) / (a + b + 2.0);
+    }
+
+    // ------------------------------------------------------------------ the battle reckoned on paper
+
+    /** What a battle came to. {@code winner} 0 or 1, or -1 drawn. */
+    public record Result(int winner, Outcome outcome, int rounds, int yieldedA, int yieldedB, int deadA, int deadB,
+                         boolean championFought, int championWinner, List<String> story) {
+
+        /** The loser's side, 0 or 1 (-1 drawn). */
+        public int loser() {
+            return winner < 0 ? -1 : 1 - winner;
+        }
+    }
+
+    /** At most this many rounds (a round a quarter of a minute of fighting); unbroken by then, it is drawn. */
+    public static final int ROUNDS = 40;
+
+    /**
+     * The battle reckoned round by round, for a field nobody watches: the champions first if one is offered and
+     * taken up, the archers' duel, the lines coming together (the shield wall and the archers on the rise waiting
+     * for them), the clash, the move round the flank, each side's spirit shaken by its losses, its Captain or its
+     * banner going down, until one side breaks. {@code deathPercent}: the chance in a hundred that one who goes
+     * down does not get up. The sides are changed in place; the story is in plain words.
+     */
+    public static Result resolve(Side a, Side b, int boldA, int boldB, int champA, int champB, int deathPercent, Random rng) {
+        List<String> story = new ArrayList<>();
+        Side[] s = { a, b };
+        story.add(a.name + " " + a.tactic.words + "; " + b.name + " " + b.tactic.words + ".");
+        boolean champ = false;
+        int champWon = -1;
+        if (champA > 0 && champB > 0) {
+            int offer = offersChampion(boldA, rng) ? 0 : offersChampion(boldB, rng) ? 1 : -1;
+            if (offer >= 0 && acceptsChampion(offer == 0 ? boldB : boldA)) {
+                champ = true;
+                champWon = rng.nextDouble() < duelOdds(champA, champB) ? 0 : 1;
+                Side w = s[champWon], l = s[1 - champWon];
+                l.yielded++;
+                l.shake(CHAMPION_LOST);
+                w.shake(-CHAMPION_WON);
+                story.add("Their champions met between the lines, and " + w.name + "'s won.");
+            }
+        }
+        int round = 0;
+        Outcome out = null;
+        int loser = -1;
+        boolean[] flankDone = { false, false };
+        for (; round < ROUNDS && out == null; round++) {
+            boolean clash = round >= 3;
+            int[] hits = new int[2];
+            for (int i = 0; i < 2; i++) {
+                Side us = s[i], them = s[1 - i];
+                if (us.standing() <= 0 || them.standing() <= 0) continue;
+                double bite;
+                if (!clash) {
+                    // The archers' duel: the bows alone, the more on a rise; a shield wall takes it on its shields.
+                    bite = us.archers * 0.9 * (us.tactic == Tactic.HILL_ARCHERS ? 1.3 : 1.0) * (them.tactic == Tactic.SHIELD_WALL ? 0.75 : 1.0)
+                        * (us.formation == Formation.SKIRMISH || us.formation == Formation.WINGED_LINE ? 1.2 : 1.0)
+                        * ArmsEdge.volley(us.kit, us.archers);                            // [tech-tree] longbows, arbalests
+                } else {
+                    double per = us.power / (double) Math.max(1, us.size);
+                    bite = us.standing() * per * 0.2 * edge(us.formation, them.formation)
+                        * ArmsEdge.clash(us.kit, us.standing(), them.kit, them.tactic == Tactic.CAVALRY);   // [tech-tree] pikes, hammers
+                    if (them.tactic.holds() && round < 5) bite *= 0.85;                  // they come on into a wall that waits for them
+                    if (us.tactic == Tactic.FEIGNED_RETREAT && round == 5) bite *= 1.6; // turned on them, drawn on and out of order
+                    if (us.tactic.flanks() && round >= 6 && !flankDone[i]) {
+                        flankDone[i] = true;
+                        them.flanked = true;
+                        them.shake((int) Math.round(FLANKED * flankShock(them.formation)
+                            * ArmsEdge.braced(them.kit, them.standing(), us.tactic == Tactic.CAVALRY)));   // [tech-tree] the pikes braced
+                        story.add(us.name + " " + (us.tactic == Tactic.CAVALRY ? "rode round" : "came out on") + " " + them.name + "'s flank.");
+                    }
+                }
+                double toughness = 9.0 + (them.power / (double) Math.max(1, them.size));
+                double expect = bite / toughness;
+                int n = (int) expect + (rng.nextDouble() < expect - (int) expect ? 1 : 0);
+                hits[1 - i] = Math.min(them.standing(), n);
+            }
+            for (int i = 0; i < 2; i++) {
+                Side us = s[i];
+                int n = hits[i];
+                if (n <= 0) continue;
+                int before = us.standing();
+                us.yielded += n;
+                for (int k = 0; k < n; k++) if (rng.nextInt(100) < deathPercent) us.dead++;
+                us.power = Math.max(0, us.power - n * Math.max(1, us.power / Math.max(1, before)));
+                us.shake(lossShock(n, us.size));
+                // Its banner and its Captain stand at the back: struck at last as the line gives way.
+                if (clash && !us.bannerLost && us.standing() * 2 < us.size && rng.nextInt(4) == 0) {
+                    us.bannerLost = true;
+                    us.shake(BANNER_LOST);
+                    story.add(us.name + "'s banner went down.");
+                }
+                if (clash && !us.captainDown && us.standing() * 3 < us.size && rng.nextInt(5) == 0) {
+                    us.captainDown = true;
+                    us.shake(CAPTAIN_DOWN);
+                    story.add(us.name + "'s Captain was struck down.");
+                }
+            }
+            for (int i = 0; i < 2; i++) {
+                s[i].shake(outnumbered(s[i].standing(), s[1 - i].standing()) + rng.nextInt(7) - 3);   // and the fortunes of the day
+                // A Captain on its feet holds a wavering line together, now and then.
+                if (!s[i].captainDown && s[i].morale < WAVER && s[i].morale >= BREAK && round % 4 == 0) s[i].shake(-RALLY / 2);
+            }
+            Outcome oa = breaks(a, b), ob = breaks(b, a);
+            if (oa != null && (ob == null || a.morale < b.morale || a.morale == b.morale && rng.nextBoolean())) { out = oa; loser = 0; }
+            else if (ob != null) { out = ob; loser = 1; }
+        }
+        int winner = loser < 0 ? -1 : 1 - loser;
+        Outcome outcome = out == null ? Outcome.DRAWN : out;
+        story.add(winner < 0 ? "Neither side would give way, and at nightfall both drew off."
+            : s[loser].name + " " + outcome.words + "; " + s[winner].name + " held the field.");
+        return new Result(winner, outcome, round, a.yielded, b.yielded, a.dead, b.dead, champ, champWon, story);
+    }
+
+    // ------------------------------------------------------------------ the siege reckoned on paper
+
+    /**
+     * Does the gate fall? The besiegers' power against the defenders' behind their wall (each sword on the wall
+     * worth half as much again), a ram making it a fight at the gate rather than at the wall. Without a ram, the
+     * town holds unless its food runs out before the besiegers' patience ({@code patienceDays}).
+     */
+    public static boolean gateFalls(int besiegers, int defenders, boolean walls, boolean ram, int foodDays, int patienceDays, Random rng) {
+        if (!ram) return walls && foodDays < patienceDays || !walls && besiegers > defenders;
+        double wall = walls ? 1.5 : 1.0;
+        double odds = besiegers / (besiegers + defenders * wall + 1.0);
+        return rng.nextDouble() < odds;
+    }
+
+    static int clamp(int v, int lo, int hi) {
+        return Math.max(lo, Math.min(hi, v));
+    }
+}

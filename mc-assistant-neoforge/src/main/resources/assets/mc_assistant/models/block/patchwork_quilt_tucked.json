@@ -1,0 +1,244 @@
+{
+  "__comment": "[leisure] The quilt tucked up over somebody asleep: drawn up to the shoulders, over the body's hump, its binding under the chin; the head and shoulders out on the pillow.",
+  "ambientocclusion": false,
+  "textures": {
+    "top": "mc_assistant:block/patchwork_quilt",
+    "edge": "mc_assistant:block/patchwork_quilt_edge",
+    "particle": "mc_assistant:block/patchwork_quilt"
+  },
+  "elements": [
+    {
+      "from": [
+        -0.5,
+        -7,
+        -6.5
+      ],
+      "to": [
+        16.5,
+        -4,
+        16.5
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#top"
+        },
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            3
+          ],
+          "texture": "#edge"
+        },
+        "west": {
+          "uv": [
+            0,
+            7,
+            16,
+            10
+          ],
+          "texture": "#edge"
+        },
+        "east": {
+          "uv": [
+            0,
+            7,
+            16,
+            10
+          ],
+          "texture": "#edge"
+        },
+        "south": {
+          "uv": [
+            0,
+            7,
+            16,
+            10
+          ],
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        -4,
+        -6
+      ],
+      "to": [
+        15,
+        -1,
+        14
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            1,
+            0,
+            15,
+            16
+          ],
+          "texture": "#top"
+        },
+        "north": {
+          "uv": [
+            1,
+            0,
+            15,
+            3
+          ],
+          "texture": "#edge"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            3
+          ],
+          "texture": "#top"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            3
+          ],
+          "texture": "#top"
+        },
+        "south": {
+          "uv": [
+            1,
+            4,
+            15,
+            7
+          ],
+          "texture": "#top"
+        }
+      }
+    },
+    {
+      "from": [
+        -0.5,
+        -12,
+        0
+      ],
+      "to": [
+        -0.5,
+        -6,
+        16.5
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            0,
+            10,
+            16,
+            16
+          ],
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        -0.5,
+        -12,
+        -6.5
+      ],
+      "to": [
+        -0.5,
+        -6,
+        0
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            9.5,
+            10,
+            16,
+            16
+          ],
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        16.5,
+        -12,
+        0
+      ],
+      "to": [
+        16.5,
+        -6,
+        16.5
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            10,
+            16,
+            16
+          ],
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        16.5,
+        -12,
+        -6.5
+      ],
+      "to": [
+        16.5,
+        -6,
+        0
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            0,
+            10,
+            6.5,
+            16
+          ],
+          "texture": "#edge"
+        }
+      }
+    },
+    {
+      "from": [
+        -0.5,
+        -12,
+        16.5
+      ],
+      "to": [
+        16.5,
+        -6,
+        16.5
+      ],
+      "faces": {
+        "south": {
+          "uv": [
+            0,
+            10,
+            16,
+            16
+          ],
+          "texture": "#edge"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "S": { "tag": "minecraft:wooden_slabs" },
+    "P": { "tag": "minecraft:planks" },
+    "B": { "item": "minecraft:barrel" }
+  },
+  "pattern": [
+    "SSS",
+    "PBP"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mc_assistant:service_counter"
+  }
+}

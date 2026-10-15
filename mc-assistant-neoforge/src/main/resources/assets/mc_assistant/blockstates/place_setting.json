@@ -1,0 +1,650 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cloth"
+      }
+    },
+    {
+      "when": {
+        "dish": "empty|stew|pie|roast|fish|bread|cake|salad|sweets|other",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/plate"
+      }
+    },
+    {
+      "when": {
+        "dish": "stew|pie|roast|fish|bread|cake|salad|sweets|other",
+        "bites": "0",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/crumbs"
+      }
+    },
+    {
+      "when": {
+        "dish": "stew",
+        "bites": "1",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/stew_1"
+      }
+    },
+    {
+      "when": {
+        "dish": "stew",
+        "bites": "2",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/stew_2"
+      }
+    },
+    {
+      "when": {
+        "dish": "stew",
+        "bites": "3",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/stew_3"
+      }
+    },
+    {
+      "when": {
+        "dish": "pie",
+        "bites": "1",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/pie_1"
+      }
+    },
+    {
+      "when": {
+        "dish": "pie",
+        "bites": "2",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/pie_2"
+      }
+    },
+    {
+      "when": {
+        "dish": "pie",
+        "bites": "3",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/pie_3"
+      }
+    },
+    {
+      "when": {
+        "dish": "roast",
+        "bites": "1",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/roast_1"
+      }
+    },
+    {
+      "when": {
+        "dish": "roast",
+        "bites": "2",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/roast_2"
+      }
+    },
+    {
+      "when": {
+        "dish": "roast",
+        "bites": "3",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/roast_3"
+      }
+    },
+    {
+      "when": {
+        "dish": "fish",
+        "bites": "1",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/fish_1"
+      }
+    },
+    {
+      "when": {
+        "dish": "fish",
+        "bites": "2",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/fish_2"
+      }
+    },
+    {
+      "when": {
+        "dish": "fish",
+        "bites": "3",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/fish_3"
+      }
+    },
+    {
+      "when": {
+        "dish": "bread",
+        "bites": "1",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/bread_1"
+      }
+    },
+    {
+      "when": {
+        "dish": "bread",
+        "bites": "2",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/bread_2"
+      }
+    },
+    {
+      "when": {
+        "dish": "bread",
+        "bites": "3",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/bread_3"
+      }
+    },
+    {
+      "when": {
+        "dish": "cake",
+        "bites": "1",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cake_1"
+      }
+    },
+    {
+      "when": {
+        "dish": "cake",
+        "bites": "2",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cake_2"
+      }
+    },
+    {
+      "when": {
+        "dish": "cake",
+        "bites": "3",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cake_3"
+      }
+    },
+    {
+      "when": {
+        "dish": "salad",
+        "bites": "1",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/salad_1"
+      }
+    },
+    {
+      "when": {
+        "dish": "salad",
+        "bites": "2",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/salad_2"
+      }
+    },
+    {
+      "when": {
+        "dish": "salad",
+        "bites": "3",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/salad_3"
+      }
+    },
+    {
+      "when": {
+        "dish": "sweets",
+        "bites": "1",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/sweets_1"
+      }
+    },
+    {
+      "when": {
+        "dish": "sweets",
+        "bites": "2",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/sweets_2"
+      }
+    },
+    {
+      "when": {
+        "dish": "sweets",
+        "bites": "3",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/sweets_3"
+      }
+    },
+    {
+      "when": {
+        "cup": "empty|half|full",
+        "dish": "none",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cup_center"
+      }
+    },
+    {
+      "when": {
+        "cup": "half",
+        "dish": "none",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/drink_half_center"
+      }
+    },
+    {
+      "when": {
+        "cup": "full",
+        "dish": "none",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/drink_full_center"
+      }
+    },
+    {
+      "when": {
+        "cup": "empty|half|full",
+        "dish": "empty|stew|pie|roast|fish|bread|cake|salad|sweets|other",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cup_corner"
+      }
+    },
+    {
+      "when": {
+        "cup": "half",
+        "dish": "empty|stew|pie|roast|fish|bread|cake|salad|sweets|other",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/drink_half_corner"
+      }
+    },
+    {
+      "when": {
+        "cup": "full",
+        "dish": "empty|stew|pie|roast|fish|bread|cake|salad|sweets|other",
+        "cloth": "false"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/drink_full_corner"
+      }
+    },
+    {
+      "when": {
+        "dish": "empty|stew|pie|roast|fish|bread|cake|salad|sweets|other",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/plate_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "stew|pie|roast|fish|bread|cake|salad|sweets|other",
+        "bites": "0",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/crumbs_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "stew",
+        "bites": "1",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/stew_1_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "stew",
+        "bites": "2",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/stew_2_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "stew",
+        "bites": "3",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/stew_3_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "pie",
+        "bites": "1",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/pie_1_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "pie",
+        "bites": "2",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/pie_2_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "pie",
+        "bites": "3",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/pie_3_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "roast",
+        "bites": "1",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/roast_1_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "roast",
+        "bites": "2",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/roast_2_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "roast",
+        "bites": "3",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/roast_3_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "fish",
+        "bites": "1",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/fish_1_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "fish",
+        "bites": "2",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/fish_2_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "fish",
+        "bites": "3",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/fish_3_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "bread",
+        "bites": "1",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/bread_1_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "bread",
+        "bites": "2",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/bread_2_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "bread",
+        "bites": "3",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/bread_3_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "cake",
+        "bites": "1",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cake_1_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "cake",
+        "bites": "2",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cake_2_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "cake",
+        "bites": "3",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cake_3_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "salad",
+        "bites": "1",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/salad_1_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "salad",
+        "bites": "2",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/salad_2_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "salad",
+        "bites": "3",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/salad_3_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "sweets",
+        "bites": "1",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/sweets_1_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "sweets",
+        "bites": "2",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/sweets_2_c"
+      }
+    },
+    {
+      "when": {
+        "dish": "sweets",
+        "bites": "3",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/sweets_3_c"
+      }
+    },
+    {
+      "when": {
+        "cup": "empty|half|full",
+        "dish": "none",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cup_center_c"
+      }
+    },
+    {
+      "when": {
+        "cup": "half",
+        "dish": "none",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/drink_half_center_c"
+      }
+    },
+    {
+      "when": {
+        "cup": "full",
+        "dish": "none",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/drink_full_center_c"
+      }
+    },
+    {
+      "when": {
+        "cup": "empty|half|full",
+        "dish": "empty|stew|pie|roast|fish|bread|cake|salad|sweets|other",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/cup_corner_c"
+      }
+    },
+    {
+      "when": {
+        "cup": "half",
+        "dish": "empty|stew|pie|roast|fish|bread|cake|salad|sweets|other",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/drink_half_corner_c"
+      }
+    },
+    {
+      "when": {
+        "cup": "full",
+        "dish": "empty|stew|pie|roast|fish|bread|cake|salad|sweets|other",
+        "cloth": "true"
+      },
+      "apply": {
+        "model": "mc_assistant:block/dining/drink_full_corner_c"
+      }
+    }
+  ]
+}

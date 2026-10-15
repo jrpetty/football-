@@ -1,0 +1,19 @@
+{
+  "type": "mc_assistant:trained",
+  "trade": "cook",
+  "category": "misc",
+  "key": {
+    "W": { "item": "minecraft:wheat" },
+    "P": { "item": "minecraft:pumpkin" },
+    "E": { "item": "minecraft:egg" },
+    "C": { "item": "minecraft:carrot" }
+  },
+  "pattern": [
+    "WWW",
+    "PEC"
+  ],
+  "result": {
+    "count": 2,
+    "id": "mc_assistant:farmhouse_pie"
+  }
+}
