@@ -45,6 +45,15 @@ export function humanMean(r: Pick<CaseResult, 'humanScores'>): number | null {
 
 // ───────────────────────────── Official score ─────────────────────────────
 
+/**
+ * A cap the scorer applied to a result (a Game Jam game that froze, stayed blank or loads files from the internet is
+ * capped at 30) also holds for any grade that replaces the score: Grading Station, Blind Review arbitration.
+ */
+export function withScorerCap(score: number, detail: CaseResult['scoreDetail'] | undefined): number {
+  const cap = /capped at (\d+)/.exec(String((detail?.gameJam as { cap?: string } | undefined)?.cap ?? ''))?.[1];
+  return cap === undefined ? score : Math.min(score, Number(cap) / 100);
+}
+
 /** Recompute the official score of a result from its stored grades under a policy. Returns a new object. */
 export function applyOfficial(r: CaseResult, spec: GradingSpec, policy: OfficialPolicy): CaseResult {
   const d = { ...(r.scoreDetail ?? {}) };
@@ -78,8 +87,7 @@ export function applyOfficial(r: CaseResult, spec: GradingSpec, policy: Official
   d.official = { source: off.source, policy, why: off.why };
   if (off.score === null) return out;
   // A cap the scorer applied (a Game Jam game that froze, stayed blank or loads from the internet) still holds.
-  const cap = /capped at (\d+)/.exec(String((d.gameJam as { cap?: string } | undefined)?.cap ?? ''))?.[1];
-  if (cap !== undefined) off.score = Math.min(off.score, Number(cap) / 100);
+  off.score = withScorerCap(off.score, d);
   out.score = off.score;
   out.passed = off.score >= spec.passThreshold;
   if (r.status === 'pending-human' || judgeFailed(r)) {

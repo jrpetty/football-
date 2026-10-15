@@ -41,6 +41,9 @@ test('judge SCORE lines written as "7/10" or "10/10" are read on the 0-10 scale 
   assert.equal(parseJudgeScore('7.5'), 7.5);
   assert.equal(parseJudgeScore('7 — solid but misses one case'), 7);
   assert.equal(parseJudgeScore('0'), 0);
+  assert.equal(parseJudgeScore('6.'), 6);
+  assert.equal(parseJudgeScore('8,5'), 8.5);
+  assert.equal(parseJudgeScore('`5`'), 5);
   const r = await judge(['Good.\nSCORE: 7/10', 'Fine.\nSCORE: 10/10']);
   assert.equal(r.score, 0.85, r.summary);
 });

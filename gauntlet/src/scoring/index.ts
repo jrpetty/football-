@@ -81,8 +81,13 @@ function round(n: number): number {
  */
 export function parseJudgeScore(raw: string | null): number | null {
   if (raw === null) return null;
-  const t = raw.replace(/[*_`"“”]/g, '').replace(/[−–—]/g, '-').trim().replace(/^[<[(]\s*/, '');
-  const m = /^(\d+(?:\.\d+)?)(?![\d.])(.*)$/s.exec(t);
+  const t = raw
+    .replace(/[*_`"“”]/g, '')
+    .replace(/[−–—]/g, '-')
+    .trim()
+    .replace(/^[<[(]\s*/, '')
+    .replace(/^(\d+),(\d)(?![\d,])/, '$1.$2'); // decimal comma: "8,5"
+  const m = /^(\d+(?:\.\d+)?)(?!\d|\.\d)(.*)$/s.exec(t);
   if (!m) return null;
   const n = Number(m[1]);
   const rest = m[2]!.trim().replace(/^[>\])]\s*/, '').replace(/^\(\s*/, '');

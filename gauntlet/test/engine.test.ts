@@ -193,6 +193,25 @@ test('human review turns a pending result into a scored one', async () => {
   assert.equal(replaced.score, 0.9, 'a rater re-scoring replaces their previous score');
 });
 
+test('Blind Review arbitration keeps the scorer\'s cap (a Game Jam game that froze stays capped at 30)', async () => {
+  const item = review.reviewQueue('creative.poem')[0]!;
+  const base = store.readResults(item.runId).find((r) => r.key === item.key)!;
+  // A judged result whose judges disagreed and whose scorer capped it (the game froze during the playtest).
+  const capped = {
+    ...base,
+    key: `${base.key}::capped`,
+    status: 'ok' as const,
+    score: 0.3,
+    passed: false,
+    humanScores: [],
+    scoreDetail: { judgeDisagreement: true, gameJam: { cap: 'The game froze during the playtest, so its score is capped at 30.' } },
+  };
+  store.appendResult(capped);
+  const r = review.submitHumanScore({ runId: item.runId, key: capped.key, score: 0.9, rater: 'alice' });
+  assert.equal(r.score, 0.3, 'before the fix the human 9/10 replaced the capped score with 0.9');
+  assert.match(r.summary, /Arbitrated by humans 9\.0\/10 .*capped at 30/);
+});
+
 test('validateTest reports actionable errors', () => {
   const errors = registry.validateTest({ ...numberTest, id: 'Bad Id', version: '1', category: 'nope', cases: [{ id: 'c1', prompt: 'x', expected: 'not a number' }] } as never);
   assert.ok(errors.some((e) => /id must look like/.test(e)));
