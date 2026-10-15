@@ -269,7 +269,10 @@ public class WarBowsGameTests {
                 if (f.role() != BattleModel.Role.ARCHER || !(level.getEntity(f.id()) instanceof VillageFolkEntity e)) continue;
                 e.removeMatching(s -> s.is(Items.ARROW), 999);
                 e.insertGiven(new ItemStack(Items.ARROW, 2));
-                given.put(f.id(), 2 + (CrossbowItem.isCharged(e.getMainHandItem()) ? 1 : 0));
+                // A crossbow spanned already holds its bolt, in the hand or put by in the pack with a blade drawn instead.
+                int spanned = CrossbowItem.isCharged(e.getMainHandItem()) ? 1 : 0;
+                for (ItemStack s : e.getInventoryItems()) if (s.getItem() instanceof CrossbowItem && CrossbowItem.isCharged(s)) spanned++;
+                given.put(f.id(), 2 + spanned);
                 before.put(f.id(), f.loosed());                       // what it loosed at the volleys before its quiver was emptied
             }
         });

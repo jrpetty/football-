@@ -206,11 +206,11 @@ public final class Petitions {
             String by = house == null ? "near " + f.displayNameCap() + "'s bed" : "by " + where(id, v.centre(), house);
             BlockPos from = door != null ? door : home;
             if (!seatNear(level, from)) {
-                BlockPos spot = benchSpot(level, house, from);
+                BlockPos spot = benchSpot(level, v, house, from);
                 if (spot != null) return new Object[]{ Kind.BENCH, spot, by };
             }
             if (dark(level, from, house == null ? Direction.SOUTH : house.facing().getOpposite())) {
-                BlockPos spot = lampSpot(level, house, from);
+                BlockPos spot = lampSpot(level, v, house, from);
                 if (spot != null) return new Object[]{ Kind.LIGHT, spot, by };
             }
             Districts.District d = Quarters.districtOf(id, v.centre(), home);
@@ -314,13 +314,15 @@ public final class Petitions {
 
     /** Before the house, off to one side of its door (never in the way in): where the bench goes. */
     @Nullable
-    static BlockPos benchSpot(ServerLevel level, @Nullable Ledger.Building house, BlockPos from) {
+    static BlockPos benchSpot(ServerLevel level, Villages.Village v, @Nullable Ledger.Building house, BlockPos from) {
         Direction out = house == null ? Direction.SOUTH : house.facing().getOpposite();
         Direction side = out.getClockWise();
         for (int along : new int[]{ 2, 3 }) {
             for (int across : new int[]{ 2, -2, 3, -3 }) {
                 BlockPos p = from.relative(out, along).relative(side, across);
-                if (clear(level, p) && clear(level, p.relative(out))) return p.immutable();
+                // Off the street and the square (the gate keeps a bench to open ground): a spot the works could never
+                // use would only have the petition signed, approved and then let go.
+                if (clear(level, p) && clear(level, p.relative(out)) && TownBlocks.allows(level, v, p, TownBlocks.Why.DECOR)) return p.immutable();
             }
         }
         return null;
@@ -328,13 +330,14 @@ public final class Petitions {
 
     /** By the door, on the other side from where a bench would go: where the street light goes. */
     @Nullable
-    static BlockPos lampSpot(ServerLevel level, @Nullable Ledger.Building house, BlockPos from) {
+    static BlockPos lampSpot(ServerLevel level, Villages.Village v, @Nullable Ledger.Building house, BlockPos from) {
         Direction out = house == null ? Direction.SOUTH : house.facing().getOpposite();
         Direction side = out.getCounterClockWise();
         for (int along : new int[]{ 2, 1, 3 }) {
             for (int across : new int[]{ 2, 3, -3 }) {
                 BlockPos p = from.relative(out, along).relative(side, across);
-                if (clear(level, p) && level.getBlockState(p.above(2)).canBeReplaced()) return p.immutable();
+                if (clear(level, p) && level.getBlockState(p.above(2)).canBeReplaced()
+                    && TownBlocks.allows(level, v, p, TownBlocks.Why.LAMP) && TownBlocks.allows(level, v, p.above(), TownBlocks.Why.LAMP)) return p.immutable();
             }
         }
         return null;
@@ -369,6 +372,7 @@ public final class Petitions {
                 BlockState g = level.getBlockState(p.below());
                 if (!(g.is(Blocks.GRASS_BLOCK) || g.is(Blocks.DIRT) || g.is(Blocks.COARSE_DIRT) || g.is(Blocks.PODZOL))) return false;
                 if (!clear(level, p) || !level.getBlockState(p.above(2)).canBeReplaced()) return false;
+                if (!TownBlocks.allows(level, v, dx == 0 && dz == 0 ? p.below() : p, TownBlocks.Why.CIVIC)) return false;   // as well() asks
             }
         }
         return true;

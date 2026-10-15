@@ -99,8 +99,11 @@ public final class KeptGifts {
         return d == null ? "" : d.copyTag().getString(MARK);
     }
 
+    /** A gift in words: by the name a player gave it at the anvil, else its id ("music disc cat"), which reads the same
+     *  on any server (one with no language loaded called a diamond "item.minecraft.diamond"). */
     static String name(ItemStack s) {
-        return s.getHoverName().getString().toLowerCase(Locale.ROOT);
+        return s.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME) ? s.getHoverName().getString().toLowerCase(Locale.ROOT)
+            : RecipeBook.words(s.getItem());
     }
 
     // ------------------------------------------------------------------ on show

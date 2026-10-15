@@ -718,7 +718,7 @@ public final class WatchKit {
         for (ItemStack s : given) {
             worth += PriceIndex.each(level, id, s) * s.getCount();
             if (!s.is(Items.ARROW)) pieces++;
-            words.add(Bench.words(s.getItem(), s.getCount()));
+            words.add(Bench.counted(name(s), s.getCount()));
         }
         book(id, day, worth, pieces);
         String said = String.join(", ", words);
@@ -892,8 +892,11 @@ public final class WatchKit {
         return String.join(", ", out);
     }
 
+    /** A piece of kit in words: its id ("iron chestplate"), which reads the same on any server (a server with no language
+     *  loaded named it "item.minecraft.iron_chestplate"); a piece a player named at the anvil by that name. */
     private static String name(ItemStack s) {
-        return s.getItem().getDescription().getString().toLowerCase(Locale.ROOT);
+        return s.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME) ? s.getHoverName().getString().toLowerCase(Locale.ROOT)
+            : RecipeBook.words(s.getItem());
     }
 
     /** The guard's card: "iron helmet, iron chestplate, ... diamond sword: issued by the town". Null for anybody else. */

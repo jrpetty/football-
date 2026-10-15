@@ -858,7 +858,7 @@ public class BuildGoal extends Goal {
                 if (st.is(net.minecraft.tags.BlockTags.LOGS) || isNaturalLeaves(st) || isWildPlant(st)) { target = p; break; }   // [econ-store] a plant
                 // [districts] Earth above a park's lawn, still to be dug away (entity/ParkGround).
                 if (com.jrpetty.mcassistant.entity.ParkGround.dig(p, st)) { target = p; break; }
-            } else if (wrongHere(st, p) && mayHere(p.pos())) {
+            } else if (wrongHere(st, p) && mayHere(p)) {
                 // [integrity] Something that is no part of the building in one of its cells (a block of earth where its
                 // wall goes, a fence post, a lantern): it comes out, and the drawing's block goes in. Passed over as
                 // "filled", it stood there for good, and the building was never what it was drawn to be.
@@ -977,7 +977,7 @@ public class BuildGoal extends Goal {
         }
 
         // [integrity] The gate: this building's own cells and open ground, never another's, nor a doorway or a road.
-        if (!mayHere(pos)) {
+        if (!mayHere(target)) {
             cursor++;
             return;
         }
@@ -1128,10 +1128,16 @@ public class BuildGoal extends Goal {
     }
 
     /** [integrity] May this builder set this cell (TownBlocks)? A hired hand's build is not the town's to gate. */
-    private boolean mayHere(BlockPos pos) {
+    private boolean mayHere(Placement p) {
+        BlockPos pos = p.pos();
         if (ownAnchor == null || !assistant.isSettler()) return true;
         com.jrpetty.mcassistant.entity.Villages.Village v = com.jrpetty.mcassistant.entity.Villages.get(assistant.ownerId());
         if (v == null) return true;
+        // A park's ground work is the ground cut level (the gate's TERRAFORM), which may take a bank of earth off the
+        // street beside it as well as its own lot: asked as a building's own work, the high side was left standing
+        // three blocks over the lawn wherever a street ran past the park.
+        if (com.jrpetty.mcassistant.entity.ParkGround.digging(p) && com.jrpetty.mcassistant.entity.TownBlocks.allows(assistant.level(), v, pos,
+                com.jrpetty.mcassistant.entity.TownBlocks.Why.TERRAFORM)) return true;
         return com.jrpetty.mcassistant.entity.TownBlocks.mayBuild(assistant.level(), v, pos, ownAnchor,
             com.jrpetty.mcassistant.entity.TownBlocks.Why.BUILD);
     }
