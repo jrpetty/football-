@@ -16,6 +16,7 @@ import { HowScoredStrip } from './viz/HowScoredStrip.tsx';
 import { ScoreScale, type ScoreMarker } from './viz/ScoreScale.tsx';
 import { DifficultyMeter, difficultyFromScores, type Difficulty } from './viz/DifficultyMeter.tsx';
 import { SampleQuestion, useTestSample } from './viz/SampleQuestion.tsx';
+import { DepthToggle } from './viz/DepthPanel.tsx';
 import '../styles/explain.css';
 
 /** Recorded reference points for a test from the first leaderboard (suite) that includes it. */
@@ -93,6 +94,7 @@ export function ExplainerCard({ testId, explainer }: { testId: string; explainer
             {rec && rec.markers.length > 0 && <div className="xc-basis">Recorded on the {rec.suiteName} leaderboard.</div>}
           </div>
           {rec?.difficulty && <DifficultyMeter d={rec.difficulty} basis={`on the ${rec.suiteName} leaderboard`} />}
+          <DepthToggle testId={testId} />
           {explainer.generated && <p className="xc-gen muted no-broadcast">Built from the test’s own description. Write a proper explainer in src/core/explainers.ts (see docs/ADDING_TESTS.md).</p>}
         </div>
         <div className="xc-right">
@@ -185,6 +187,7 @@ export function AboutTestPanel({
               goodScore={x.goodScore}
             />
           )}
+          <DepthToggle testId={testId} />
         </div>
       )}
     </div>
