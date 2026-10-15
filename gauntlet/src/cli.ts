@@ -97,6 +97,8 @@ Usage: node src/cli.ts <command> [options]
   show <testId>                              Print the exact prompts of a test
   prompts [--suite core] [--answers]         Print the whole prompt book (Markdown) for publishing
   validate                                   Validate every test, suite and model config
+  remark [--run <runId>] [--force]           Mark stored answers again under the current marking rules
+                                             (from the stored replies; no model is called, nothing is spent)
   ping <modelId>                             Send a one-word request to check a model works
   discover <providerId>                      List model ids available to your API key
 
@@ -452,6 +454,17 @@ async function main(): Promise<void> {
         const leaked = r.text.replace(/\s+/g, '').includes(secret.replace(/\s+/g, '').slice(0, 16));
         console.log(`${leaked ? c.red('⚠ CONTAMINATED') : c.green('✓ clean')}  ${m.label}${leaked ? ' — completed the canary; it has likely trained on Gauntlet data' : ''}`);
       }
+      return;
+    }
+
+    case 'remark': {
+      const { remarkAllRuns, remarkSummaryLine } = await import('./engine/remark.ts');
+      const s = await remarkAllRuns({ runIds: typeof flags.run === 'string' ? [flags.run] : undefined, force: Boolean(flags.force) });
+      console.log(remarkSummaryLine(s));
+      for (const ch of s.changes.slice(0, 50)) console.log(c.dim(`  ${ch.runId}  ${ch.key}  ${ch.from ?? '—'} → ${ch.to ?? '—'}`));
+      if (s.changes.length > 50) console.log(c.dim(`  … and ${s.changes.length - 50} more`));
+      for (const k of s.kept.slice(0, 20)) console.log(c.dim(`  kept: ${k.runId}  ${k.key}  (${k.reason})`));
+      if (s.kept.length > 20) console.log(c.dim(`  … and ${s.kept.length - 20} more kept`));
       return;
     }
 

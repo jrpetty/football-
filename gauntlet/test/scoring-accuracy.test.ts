@@ -151,6 +151,38 @@ test('code sandbox: host-realm Function is unreachable (no escape to process, ne
   assert.equal(fake.passed, 0);
 });
 
+test('code sandbox: deep recursion overflows the same 4 MB stack on every OS and fails only that test; a crash fails only the test that crashed', { timeout: 120_000 }, async () => {
+  // A recursive solution: 20,000 frames fit, 50,000-deep expressions do not (the coding prompts warn about it).
+  const deep = await runCodeTests('function depth(n) { return n === 0 ? 0 : 1 + depth(n - 1); }', 'depth', [
+    { args: [10], expected: 10 },
+    { args: [1_000_000], expected: 1_000_000 },
+    { args: [20_000], expected: 20_000 },
+  ]);
+  assert.deepEqual(deep.items.map((i) => i.passed), [true, false, true]);
+  assert.match(deep.items[1]!.detail ?? '', /Stack overflow \(4 MB stack\)/);
+  // A recursive-descent evaluator on 50,000 nested parentheses (hard h1's trap) is a failed test, not a crashed run.
+  const evalCode = 'function evaluate(s) { let i = 0; function e() { if (s[i] === "(") { i++; const v = e(); i++; return v; } return Number(s[i++]); } return e(); }';
+  const nested = '('.repeat(50_000) + '7' + ')'.repeat(50_000);
+  const rec = await runCodeTests(evalCode, 'evaluate', [{ args: ['(7)'], expected: 7 }, { args: [nested], expected: 7 }, { args: ['((3))'], expected: 3 }]);
+  assert.deepEqual(rec.items.map((i) => i.passed), [true, false, true]);
+  // Running out of memory kills the sandbox thread: that test fails, the next ones still run.
+  const oom = await runCodeTests('function f(n) { if (n === 2) { const a = []; for (;;) a.push(new Array(1e6).fill(n)); } return n; }', 'f', [
+    { args: [1], expected: 1 },
+    { args: [2], expected: 2 },
+    { args: [3], expected: 3 },
+  ]);
+  assert.deepEqual(oom.items.map((i) => i.passed), [true, false, true]);
+  assert.match(oom.items[1]!.detail ?? '', /crashed/);
+  assert.equal(oom.loadError, null);
+});
+
+test('code sandbox: the hard h1 reference still passes every hidden test', { timeout: 120_000 }, async () => {
+  const h1 = JSON.parse(readFileSync(new URL('../tests/coding/hard.json', import.meta.url), 'utf8')).cases.find((c: { id: string }) => c.id === 'h1');
+  const ref = readFileSync(new URL('../verification/coding/hard/h1/ref.js', import.meta.url), 'utf8');
+  const r = await runCodeTests(ref, 'evaluate', h1.expected.tests, 2000);
+  assert.equal(r.passed, r.total);
+});
+
 test('code-js: a usage example after the solution does not replace it', () => {
   const reply = 'Solution:\n```javascript\nfunction add(a, b) { return a + b; }\n```\n\nExample usage:\n```javascript\nconsole.log(add(1, 2));\n```';
   assert.match(solutionBlock(reply, 'add')!.code, /return a \+ b/);
