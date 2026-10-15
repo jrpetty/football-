@@ -262,7 +262,7 @@ public class WarBowsGameTests {
         int x = 1972000;
         Villages.Village a = town(level, x, 8);
         helper.assertTrue(a != null, "a town");
-        Map<UUID, Integer> given = new HashMap<>();
+        Map<UUID, Integer> given = new HashMap<>(), before = new HashMap<>();
         helper.runAtTickTime(20, () -> {
             helper.assertTrue(volleys(level, a, x) != null, "a battle staged at the volleys");
             for (Armies.Fighter f : campaign(a).army(0).fighters()) {
@@ -270,6 +270,7 @@ public class WarBowsGameTests {
                 e.removeMatching(s -> s.is(Items.ARROW), 999);
                 e.insertGiven(new ItemStack(Items.ARROW, 2));
                 given.put(f.id(), 2 + (CrossbowItem.isCharged(e.getMainHandItem()) ? 1 : 0));
+                before.put(f.id(), f.loosed());                       // what it loosed at the volleys before its quiver was emptied
             }
         });
         helper.runAtTickTime(620, () -> {
@@ -278,9 +279,10 @@ public class WarBowsGameTests {
             for (Armies.Fighter f : c.army(0).fighters()) {
                 Integer had = given.get(f.id());
                 if (had == null || !(level.getEntity(f.id()) instanceof VillageFolkEntity e)) continue;
-                shots += f.loosed();
+                int since = f.loosed() - before.getOrDefault(f.id(), 0);
+                shots += since;
                 most += had;
-                helper.assertTrue(f.loosed() <= had, e.displayNameCap() + " loosed no more than it had: " + f.loosed() + " of " + had);
+                helper.assertTrue(since <= had, e.displayNameCap() + " loosed no more than it had: " + since + " of " + had);
                 if (f.role() == BattleModel.Role.RESERVE) {
                     out++;
                     helper.assertTrue(e.getMainHandItem().getItem() instanceof SwordItem || e.getMainHandItem().getItem() instanceof AxeItem,

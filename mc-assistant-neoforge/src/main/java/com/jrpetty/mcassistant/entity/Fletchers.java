@@ -855,7 +855,7 @@ public final class Fletchers {
         int handed = 0;
         List<String> empty = new ArrayList<>();
         for (VillageFolkEntity g : WatchKit.watch(id)) {
-            if (g.countCarried(AssistantEntity.RANGED_WEAPON) == 0) continue;
+            if (g.countCarried(AssistantEntity.RANGED_WEAPON) == 0 || Armies.inLine(g)) continue;   // one in the field shoots what it took
             int have = g.countCarried(s -> s.is(Items.ARROW));
             if (have >= low) continue;
             int n = Math.min(full - have, Crafts.stock(level, v, s -> s.is(Items.ARROW)));

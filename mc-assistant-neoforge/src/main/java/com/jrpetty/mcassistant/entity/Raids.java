@@ -526,6 +526,7 @@ public final class Raids {
 
     /** Bow and arrows out of the village's stores, if the guard has none of its own. */
     static void arm(ServerLevel level, Villages.Village v, VillageFolkEntity g) {
+        if (Armies.inLine(g)) return;                                          // out in the field with an army, not on the walls
         // [war-bows] From the Iron Age, a crossbow for the wall where the stores have one (flat and hard from the parapet), else a bow.
         if (g.countCarried(s -> s.is(Items.BOW) || s.is(Items.CROSSBOW)) == 0) {
             boolean iron = Villages.ageOf(v.id()).ordinal() >= Villages.Age.IRON.ordinal();

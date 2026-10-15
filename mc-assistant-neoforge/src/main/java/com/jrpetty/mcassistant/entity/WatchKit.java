@@ -555,6 +555,7 @@ public final class WatchKit {
         // [nether] The Nether runners too, with the watch's bow and arrows (the blazes, the ghasts).
         boolean watch = g.stationTask() == StationTask.GUARD || g.stationTask() == StationTask.NETHER;
         if (!watch && g.stationTask() != StationTask.CAVE || g.isBaby() || !g.isAlive() || g.isShowcase()) return given;
+        if (Armies.inLine(g)) return given;                                // out in the field with an army: it fights with what it carried out
         UUID id = v.id();
         String who = g.displayNameCap();
         for (Kind k : SUIT) {

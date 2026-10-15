@@ -136,7 +136,9 @@ public final class Auctions {
         }
 
         String name() {
-            return lower(item.getHoverName().getString());
+            // A lot named by a player (an anvil's name) goes under it; else its id in words, which reads the same on any
+            // server (a hover name read where no language is loaded comes out as "item.minecraft.diamond").
+            return item.has(net.minecraft.core.component.DataComponents.CUSTOM_NAME) ? lower(item.getHoverName().getString()) : RecipeBook.words(item.getItem());
         }
     }
 
