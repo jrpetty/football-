@@ -12541,3 +12541,51 @@ on foot, unless somebody talks them round.
 Smoke: `trade_world_stage` in tools/realworld/smoke.py (`/village harbour stage`, `/village highways stage`,
 `/village migration stage`). Tests: TradeWorldGameTests (tw01 to tw09); armies at the inns and the fleet at the pier,
 RealmPolishGameTests (rp01 to rp05).
+
+## Every folk furnishes its own home
+
+A household that moves in (a new house or flat, a manor bought, newly-weds, a grown child's first place, a family come
+from away) now sets its home up itself, with its own hands and its own coin. The town's own furnishing keeps to the
+halls, the shops and the homes standing empty for their next tenants.
+
+- **A plan for the home.** Each household makes one when it moves in, and keeps it (over a restart too): what the rooms
+  will take and what this household wants of them. **The basics first, for everybody however poor:** a table (a fence
+  post with a board on it) and a seat at it for each of them (stairs turned to face it), a chest, a larder barrel, a light
+  and a stove where the house has a hearth. Whatever the builders already put in (the drawing's chest, its stove, the
+  torch on the bench) counts as there. **Then its own things, as its means run to it:** a water butt (a cauldron), the
+  things of each grown member's trade (the smith's anvil, the farmer's composter, a pick on the miner's wall), a rug in
+  its colour and a banner in the partner's, and what it loves: a reader's bookshelf, a musician's note block, a
+  gardener's pot of flowers. The comforts after that (carpets, paintings, glass, candles) a comfortable folk goes on
+  buying with its savings, as before.
+- **Got honestly.** Each piece the cheapest honest way to hand: brought from the old home, taken out of the household's
+  chest, **made at a bench** by one of them with the skill (a woodcutter's household makes its own table and stools of
+  its planks, or of planks it buys when that is cheaper), **bought at the shop** out of its own purse (through the shop's
+  own counter, into the shop's books), a present, or, for a household with nothing and nobody to make it, **the parish's
+  handout** out of the town's stores: nobody sleeps in a bare room. A town with no shop yet fits out its households'
+  basics from its stores, as it kits out its hands.
+- **Set out by hand.** In its own time (after work, on its break, on the rest day) you see a folk walk to the shop or its
+  bench and come home with the piece, and set it where it goes, the right way round: the seat facing the table, a chest's
+  and a stove's front to the room, the barrel on its end; never in a doorway, across the way through, in front of a stove
+  or a chest, or in the way of a bed. "There. That's the table sorted."
+- **Moving, dying, burning.** A household that moves takes what its new home wants and sets it out again; what it does
+  not want stays with the old house for whoever comes next. The things of one who dies pass to its family. A piece burnt
+  or broken is made good by the household on its next round.
+- **Its stocks at home.** Each household keeps food in the larder (two days a head, four in the autumn, three in the
+  winter, a day more when the town is short; fresh meat and fish go off in three days, bread in six), **water** in its
+  water butt or in buckets (fetched from the well, a pond or the river with its own bucket; drunk, cooked and washed
+  with every evening), **fuel** for the stove (a good stack by winter; a winter evening with none is a cold house, and
+  its folk are miserable and catch cold), a change of clothes each (winter boots out of the wardrobe in the cold
+  months), each member's trade tool (home at night, out to work in the morning), candles, a remedy in the cupboard (given
+  to a sick member at home), and seed for a gardener. Breakfast and supper are eaten at home out of the larder, and the
+  raw food is cooked on the home's own stove over its own fuel.
+- **Running short.** What it is short of goes on its shopping list and is bought at the shop; a woodcutter fells its own
+  firewood with its own axe outside the town; a household with a bare larder borrows of family or friends (and pays it
+  back when its larder is full), and the poor box sees to the rest.
+- **Where you see it.** The folk's card: **Making home** (what it is doing for its home, how far along the basics and its
+  own things are, what it still wants and why) and **At home** (its stocks, what is short, a cold house, food owed, and
+  its coin in its purse and at the bank). The town's books, **Homes** page: hover a household for how its home is set up
+  (how many pieces, by whom), what it still wants, its stocks and what it is short of. The chronicle notes a household
+  setting about its home, having it set up, and the parish's help. Hand a folk a piece of furniture (a barrel, a fence, a
+  stair, a chest...) and it says what it is for and sets it out at home.
+
+Tests: HomeMakingGameTests (hm21 to hm25 the furnishing; hm31 to hm34 the stocks).

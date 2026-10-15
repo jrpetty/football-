@@ -120,10 +120,10 @@ public class DecorGameTests {
     // ============================================================ the smith's anvil
 
     /**
-     * A smith of a Stone Age village, moved into a house, and an anvil in the stores: when the village
-     * furnishes its houses, the anvil comes out of the stores and stands in the smith's house, inside its
-     * walls on a sound floor and against a wall, with the way in from the door left clear; the stores hold
-     * none afterwards. Its colours, which the stores have not got, are waited on (wants on the stores).
+     * A smith of a Stone Age village, moved into a house, and an anvil in the stores. [home-making] A home with a
+     * household in it is its household's to furnish now (HomeMaking): when the village furnishes its houses, it leaves
+     * the smith's alone, and the anvil stays in the stores for the smith to buy or be given; the smith's own plan for its
+     * home has the anvil among its own things, after the basics. The way in from the door is left clear.
      */
     @GameTest(template = EMPTY, timeoutTicks = 300, batch = "dc01_smith_house_anvil")
     public static void dc01_smith_house_anvil(GameTestHelper helper) {
@@ -155,29 +155,19 @@ public class DecorGameTests {
             for (int i = 0; i < 3; i++) done += Decor.work(level, v, 40);
             int after = stock(level, village, s -> s.is(ItemTags.ANVIL));
             List<BlockPos> anvils = find(level, home, st -> st.is(BlockTags.ANVIL));
-            String card = Decor.cardLine(smith);
-            List<String> wants = new ArrayList<>();
-            for (Decor.Want w : Decor.wants(village)) wants.add(w.item() + " for " + w.forWhat());
-            Kit.log("dc01 the smith's house: " + done + " set out; anvils in the stores " + before + " -> " + after + ", in the house "
-                + anvilsBefore + " -> " + anvils + "; the card: " + card + "; the houses wait on " + wants + "; " + Decor.lines(level, v));
-            helper.assertTrue(before == 1 && after == 0, "the anvil came out of the stores: " + before + " -> " + after);
-            helper.assertTrue(anvilsBefore.isEmpty() && anvils.size() == 1, "and stands in the smith's house: " + anvils);
-            BlockPos a = anvils.get(0);
-            helper.assertTrue(Math.abs(a.getX() - home.getX()) <= 3 && Math.abs(a.getZ() - home.getZ()) <= 3,
-                "inside its walls: " + a + " in the house at " + home);
-            helper.assertTrue(level.getBlockState(a.below()).isFaceSturdy(level, a.below(), Direction.UP), "on a sound floor");
-            boolean byWall = false;
-            for (Direction d : Direction.Plane.HORIZONTAL) {
-                BlockPos w = a.relative(d);
-                if (level.getBlockState(w).isFaceSturdy(level, w, d.getOpposite())) byWall = true;
-            }
-            helper.assertTrue(byWall, "against a wall: " + a);
+            com.jrpetty.mcassistant.entity.HomeMaking.dayForTests(level, v);
+            List<String> plan = com.jrpetty.mcassistant.entity.HomeMaking.planForTests(village, home);
+            String card = com.jrpetty.mcassistant.entity.HomeMaking.cardLine(smith);
+            Kit.log("dc01 the smith's house: " + done + " set out by the town; anvils in the stores " + before + " -> " + after + ", in the house "
+                + anvilsBefore + " -> " + anvils + "; its own plan " + plan + "; the card: " + card);
+            helper.assertTrue(done == 0 && before == 1 && after == 1, "the town leaves a lived-in home to its household: " + done + ", " + before + " -> " + after);
+            helper.assertTrue(anvils.isEmpty(), "no anvil set out for it by the town: " + anvils);
+            helper.assertTrue(plan.stream().anyMatch(line -> line.startsWith("trade.smith.anvil")), "the smith's own plan has its anvil: " + plan);
             BlockPos door = null;
             for (BuildGoal.Placement p : BuildGoal.plan("house", home, Direction.NORTH, 13)) if (p.part() == BuildGoal.Part.DOOR) door = p.pos();
             helper.assertTrue(door != null && level.getBlockState(door.relative(Direction.NORTH)).isAir()
                 && level.getBlockState(door.relative(Direction.NORTH, 2)).isAir(), "and the way in from the door is clear");
-            helper.assertTrue(card.contains("anvil"), "its card says so: " + card);
-            helper.assertTrue(!wants.isEmpty(), "its colours, not in the stores, are waited on: " + wants);
+            helper.assertTrue(card.contains("basics"), "its card says how its home is coming on: " + card);
             helper.succeed();
         });
     }

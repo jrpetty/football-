@@ -680,6 +680,7 @@ public final class Decor {
         long now = level.getGameTime();
         for (Homes.Home h : List.copyOf(Homes.homes(id).values())) {
             if (h.members.isEmpty()) continue;
+            if (HomeMaking.householdsOwn(id, h.anchor)) continue;    // [home-making] its household sets out its own things (HomeMaking)
             Long next = LOOKED.get(h.anchor.asLong());
             if (next != null && now < next && now >= next - 1200L) continue;
             Ledger.Building b = Homes.building(id, h.anchor);
@@ -1063,7 +1064,7 @@ public final class Decor {
     }
 
     static Furnished count(ServerLevel level, UUID village, Homes.Home h, Ledger.Building b, Map<String, Long> book) {
-        int[] age = Interiors.progress(level, village, b);
+        int[] age = HomeMaking.progress(level, village, h, Interiors.progress(level, village, b));   // [home-making] its own basics
         int furnishing = age[1] > 0 && age[0] >= age[1] ? 2 : age[0] > 0 ? 1 : 0;
         List<String> trades = new ArrayList<>();
         Map<String, Integer> colours = new LinkedHashMap<>();

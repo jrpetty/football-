@@ -1334,6 +1334,7 @@ public class VillageFolkEntity extends AssistantEntity {
         m = Referendums.mood(this, day, m, why);        // [civic] proud of the work it built; a newcomer's gratitude
         m = Individual.mood(this, day, m, why);         // [individual] a dream come true, a habit kept, its season, a fright
         m = WindowBoxes.mood(this, day, m, why);        // [workitems] its household's window boxes in flower
+        m = HomeLife.mood(this, day, m, why);           // [home-making] a home set up by its own hands, a cold house, no water
         m = Interviews.mood(this, day, m, why);          // [interviews] a post won at interview, or missed
         m = Kitchen.mood(this, day, m, why);            // [kitchen] a slice of honey cake at the wedding, a mead at the tavern
         m = Dining.mood(this, day, m, why);             // [dining] a dinner out tonight; a waiter's tip
@@ -2483,6 +2484,7 @@ public class VillageFolkEntity extends AssistantEntity {
         // own; short of comfort, its savings go on its home before its favourite spot.
         if (FolkNeeds.low(this, FolkNeeds.SOCIAL) && keepCompany(server)) return;
         if (FolkNeeds.low(this, FolkNeeds.COMFORT) && homeComfort(server)) return;
+        if (HomeLife.ownTime(this, server)) return;   // [home-making] a chore for its household, the next piece for its home
         if (Habits.favouritePlace(this, server)) return;   // [individual] its favourite spot in town
         if (ShoppingTrips.errand(this, server)) return;   // [shops-homes] its shopping list: to the shop, served, home with it
         if (homeComfort(server)) return;              // its savings, spent on its home

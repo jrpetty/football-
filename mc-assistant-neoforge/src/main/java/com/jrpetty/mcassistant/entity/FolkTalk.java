@@ -531,6 +531,8 @@ public final class FolkTalk {
             : "A bed of its own" + (f.comforts() > 0 ? ", and " + f.comforts() + (f.comforts() == 1 ? " comfort" : " comforts") + " it bought" : "") + "."));
         line(sb, "Own house", HousingMarket.cardLine(f));   // [econ-housing] its own house going up, built, or saved for
         line(sb, "Comforts", Decor.cardLine(f));            // its home's things, its trade's and its colour (Decor)
+        line(sb, "Making home", HomeMaking.cardLine(f));    // [home-making] what it is doing for its home, what it still wants
+        line(sb, "At home", Housekeeping.cardLine(f));      // [home-making] its home's stocks, what is short
         line(sb, "Shopping", Needs.cardLine(f));            // [shops-homes] what it wants from the shop, and last bought
         line(sb, "Business", ShopBusiness.cardLine(f));     // [shops-homes] the keeper: what sells, what it's short of, the till
         line(sb, "Style", Fashion.cardLine(f));             // [fashion] what it wears, its colours, the season's look
@@ -817,6 +819,7 @@ public final class FolkTalk {
             case "faith", "remembrance", "alms", "larders", "reign", "cathedral",
                  "homesick", "athome", "wander", "fearless", "tune" -> Perks.moodWords(f, why);   // [perks]
             case "windowbox" -> WindowBoxes.moodWords(f);                            // [workitems]
+            case "ownhands", "barehome", "chillyhome", "nowater", "stocked" -> HomeLife.moodWords(f, why, r);   // [home-making]
             case "interviewed", "passedover" -> Interviews.moodWords(f, why);          // [interviews]
             case "cake", "drink" -> Kitchen.moodWords(f, why);                         // [kitchen]
             case "dined", "tipped" -> Dining.moodWords(f, why);                        // [dining]
@@ -1314,6 +1317,8 @@ public final class FolkTalk {
             said = pick(r, "Oh. Er — thank you, I suppose.", "A " + what + ". Well. That's… something.");
         }
         ItemStack one = held.split(1);
+        String forHome = HomeMaking.gifted(f, one, you);      // [home-making] a piece for its home, to be set out there
+        if (forHome != null) said = forHome;
         KeptGifts.received(f, one, you, day);                 // [batchG] a precious gift is its own, to keep on show at home
         // A loved thing that isn't eaten is kept: its own, not the stores', and it moves house with it (Homes).
         if (kind != null && kind == me.loves() && one.get(DataComponents.FOOD) == null) Homes.keepsake(one, f);

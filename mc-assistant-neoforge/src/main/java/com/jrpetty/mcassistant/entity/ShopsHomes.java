@@ -15,6 +15,7 @@ public final class ShopsHomes {
     /** One round for this town. */
     public static void tick(ServerLevel level, Villages.Village v) {
         ServicePoints.fitOut(level, v);
+        HomeLife.tick(level, v);                     // [home-making] the households' plans, evenings and mornings at home
         WorkStock.tick(level, v);
         if (ShopStock.open(v.id())) ShopBusiness.review(level, v);
         long day = level.getDayTime() / 24000L, t = level.getDayTime() % 24000L;
@@ -44,5 +45,6 @@ public final class ShopsHomes {
         Belongings.resetForTests();
         WorkStock.resetForTests();
         ShopBusiness.resetForTests();
+        HomeLife.resetForTests();                    // [home-making]
     }
 }

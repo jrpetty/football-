@@ -2153,6 +2153,14 @@ public class CityScreen extends Screen {
                     if (!dh.getString("waiting").isEmpty()) tip.add(Component.literal("Waiting on the stores for " + dh.getString("waiting")));
                     if (!dh.getString("colours").isEmpty()) tip.add(Component.literal("Favourite colours: " + dh.getString("colours")));
                 }
+                CompoundTag mk = homeMakingOf(r.getLong("anchor"));        // [home-making] set up by its own household; its stocks
+                if (mk != null) {
+                    tip.add(Component.literal("Set up " + mk.getInt("in") + " of " + mk.getInt("of") + (mk.getBoolean("settled") ? ", the basics all in" : "")
+                        + (mk.getString("by").isEmpty() ? "" : " — by " + mk.getString("by"))).withColor(0xFF9CC79C));
+                    if (!mk.getString("wants").isEmpty()) tip.add(Component.literal("Still wants " + mk.getString("wants")));
+                    if (!mk.getString("stocks").isEmpty()) tip.add(Component.literal("Keeps " + mk.getString("stocks")));
+                    if (!mk.getString("short").isEmpty()) tip.add(Component.literal("Short of " + mk.getString("short")).withColor(0xFFE0A070));
+                }
                 hover = tip;
                 hoverX = mx;
                 hoverY = my;
@@ -2252,6 +2260,13 @@ public class CityScreen extends Screen {
             hoverY = my;
         }
         return y2 + 10;
+    }
+
+    /** [home-making] A home's own setting-up and stocks from the books (HomeMaking.report), by its anchor; null if none. */
+    private CompoundTag homeMakingOf(long anchor) {
+        ListTag l = data.getCompound("homemaking").getList("houses", Tag.TAG_COMPOUND);
+        for (int i = 0; i < l.size(); i++) if (l.getCompound(i).getLong("anchor") == anchor) return l.getCompound(i);
+        return null;
     }
 
     /** A house's furnishing from the books (Decor), by its anchor; null if not counted. */

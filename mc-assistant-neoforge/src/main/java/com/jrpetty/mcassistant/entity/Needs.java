@@ -202,6 +202,7 @@ public final class Needs {
                 // A rule that cannot read what it needs today (a home half-loaded) is left off the list, not the day.
             }
         }
+        out.addAll(Housekeeping.wants(c, floor));        // [home-making] the household's stocks at home: water, fuel, the winter's larder
         out.sort(Comparator.comparingInt(Want::priority).reversed());
         return List.copyOf(out);
     }

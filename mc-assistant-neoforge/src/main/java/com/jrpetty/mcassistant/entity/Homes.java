@@ -877,6 +877,7 @@ public final class Homes {
         for (VillageFolkEntity f : who) {
             Home was = homeOf(id, f.getUUID());
             if (was == h) continue;
+            HomeMaking.leaving(id, was, h, f);           // [home-making] its things to be brought over from the old home
             if (was != null) { was.members.remove(f.getUUID()); save(id, was); }
             h.members.add(f.getUUID());
             f.forgetBed();

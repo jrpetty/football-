@@ -552,6 +552,7 @@ public final class Annals {
         out.put("leader", leader(level, id, folk, today));
         out.put("homes", homes(level, id, folk));
         out.put("decor", Decor.report(level, id));                // how each home is furnished, and its luxuries (Decor)
+        out.put("homemaking", HomeMaking.report(level, id));      // [home-making] each home set up by its own household, its stocks
         out.put("bank", Bank.report(level, id));                 // the bank: the Money page, and the Homes page's mortgages
         out.put("care", Health.report(level, v));                // [batchA] who is ill, the infirmary, the poor box (Health, PoorBox)
         out.put("now", now(level, v, folk));
