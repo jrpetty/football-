@@ -168,6 +168,10 @@
     "max": 8
    },
    {
+    "check": "paragraph_count",
+    "max": 1
+   },
+   {
     "check": "each_line_starts_with",
     "text": ">> "
    },
@@ -566,6 +570,12 @@
     "check": "include",
     "text": "Zyloq",
     "caseSensitive": true,
+    "min": 3,
+    "max": 3
+   },
+   {
+    "check": "include",
+    "text": "zyloq",
     "min": 3,
     "max": 3
    },
