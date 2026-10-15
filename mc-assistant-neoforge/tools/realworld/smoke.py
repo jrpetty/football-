@@ -5284,10 +5284,20 @@ def main():
             stage(r, look, cx, cz)
         except Exception as e:  # noqa: BLE001
             say("%s stage failed: %s" % (name, e))
+    for name, stage in (("taxes and knights", civic_land_stage), ("theatre and wonders", culture_wonders_stage), ("inventions", tech_tree_stage)):
+        try:
+            stage(r, look, cx, cz)                     # [realm] the 0.309 round
+        except Exception as e:  # noqa: BLE001
+            say("%s stage failed: %s" % (name, e))
     try:
         war_stage(r, look, cx, cz)                     # [war] the battle, phase by phase
     except Exception as e:  # noqa: BLE001
         say("war stage failed: %s" % e)
+    for name, stage in (("after the war", war_after_stage), ("borders and the map", borders_map_stage)):
+        try:
+            stage(r, look, cx, cz)                     # [realm] prisoners, ruins and outlaws; then the lands and the map table
+        except Exception as e:  # noqa: BLE001
+            say("%s stage failed: %s" % (name, e))
     try:
         admin_stage(r, look, cx, cz)                   # [admin] last: it jumps the town's age
     except Exception as e:  # noqa: BLE001
