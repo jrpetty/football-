@@ -14,6 +14,7 @@ import type { ContestantView, ManualReply, ManualRequest, RunListItem } from '..
 import { VisionBadge, VisionImage } from '../components/VisionImage.tsx';
 import { manualImageUrl } from '../vision.ts';
 import { GAMES } from '../../../src/arena/games/index.ts';
+import { MANUAL_FAIR_PLAY_REMINDER } from '../../../src/core/fair-play.ts';
 import { ImageReplyUpload } from '../gallery/ImageReplyUpload.tsx';
 import { ReplyFiles, fileToReplyText } from '../grading/ReplyFiles.tsx';
 import { BatchChooser, InboxHeadChip, InboxModelBar, ReassignPanel, choiceKey, isUnspecified } from '../manual-models/InboxModelBar.tsx';
@@ -193,6 +194,11 @@ function RequestCard({
                     {fmtInt(prompt.length)} chars
                   </span>
                 </div>
+                {!picture && (
+                  <div className="inbox-fairplay" role="note">
+                    <Icon.Lock /> <strong>{MANUAL_FAIR_PLAY_REMINDER}</strong>
+                  </div>
+                )}
                 <div className="prompt-box">
                   <pre>{prompt}</pre>
                   <button
@@ -441,7 +447,7 @@ export default function InboxPage() {
       />
 
       <Callout tone="warn" icon={<Icon.Lock />}>
-        <strong>Fair-play rules:</strong> each prompt must be pasted <strong>exactly as shown</strong>. Don’t add instructions, don’t regenerate, don’t edit the reply. Use a fresh chat unless the card says to continue the same one, and turn off tools such as web search or code execution.
+        <strong>Fair-play rules:</strong> each prompt must be pasted <strong>exactly as shown</strong>. It already starts with the fair-play rules every model gets, so the chat model is told not to use tools or outside help. Don’t add instructions, don’t regenerate, don’t edit the reply. Use a fresh chat unless the card says to continue the same one, with web search, code tools and memory turned off. A pasted reply that says it searched the web or ran code is flagged for you to check in Blind Review.
       </Callout>
 
       {error && !list ? (

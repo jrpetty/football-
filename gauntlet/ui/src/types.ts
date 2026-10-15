@@ -164,10 +164,12 @@ export interface PingResult {
   error?: string;
 }
 
-export type ReviewReason = 'human-scored' | 'judge-disagreement' | 'second-opinion';
+export type ReviewReason = 'human-scored' | 'judge-disagreement' | 'second-opinion' | 'outside-help';
 
 export interface ReviewItem {
   reason?: ReviewReason;
+  /** For 'outside-help': what the fair-play check saw. */
+  fairPlay?: { rule: string; excerpt: string };
   runId: string;
   key: string;
   testId: string;

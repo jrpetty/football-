@@ -7,6 +7,7 @@ import { probeHtml, renderSvg } from './browser.ts';
 import { scoreLadder } from './ladder.ts';
 import { scoreGameJam } from './game-jam.ts';
 import { JUDGE_ARTIFACT_TEMPLATE, JUDGE_CLASSIFY_TEMPLATE, JUDGE_RUBRIC_TEMPLATE, JUDGE_SYSTEM, fill } from './judge-prompts.ts';
+import { checkReply, fairPlaySummary } from './integrity.ts';
 
 export interface JudgeCall {
   judgeId: string;
@@ -41,6 +42,8 @@ export interface ScoringInput {
   outputLimitBy?: 'spend-limit' | 'per-answer';
   /** The task as the model saw it (for judges). */
   taskText: string;
+  /** A copy & paste contestant: its reply is also checked for signs of outside help (web search, running code). */
+  manual?: boolean;
   judges: JudgePanel;
   saveArtifact(name: string, kind: ArtifactKind, content: string | Buffer): ArtifactRef;
   signal: AbortSignal;
@@ -246,7 +249,27 @@ function joinListAnd(answer: string): string {
   return answer.replace(/,?\s+and\s+(?=[^,]*$)/i, ', ');
 }
 
+/**
+ * Score one reply. The fair-play check (src/scoring/integrity.ts) runs first: a reply that tries to influence its
+ * marking or tamper with the sandbox scores 0 before any judge or sandbox sees it; a copy & paste reply that shows
+ * signs of outside help keeps its score and is flagged for human review.
+ */
 export async function scoreResponse(input: ScoringInput): Promise<ScoringOutcome> {
+  const response = stripReasoning(input.response);
+  const code = input.scorer.type === 'code-js' ? extractCodeBlocks(response).map((b) => b.code) : undefined;
+  const integrity = checkReply(response, { taskText: input.taskText, manual: input.manual, code });
+  if (integrity?.verdict === 'cheating') {
+    return { score: 0, passed: false, summary: fairPlaySummary(integrity), detail: { integrity, notes: `Scored 0 for a fair-play violation: ${integrity.rule}. Offending text: ${integrity.excerpt}` } };
+  }
+  const outcome = await scoreReply(input);
+  if (integrity) {
+    outcome.detail = { ...outcome.detail, integrity };
+    outcome.summary = `${outcome.summary} · ${integrity.rule} (flagged for review)`;
+  }
+  return outcome;
+}
+
+async function scoreReply(input: ScoringInput): Promise<ScoringOutcome> {
   const { scorer, expected } = input;
   // A reasoning block printed into the reply (<think>…</think>) is not part of the answer.
   const response = stripReasoning(input.response);

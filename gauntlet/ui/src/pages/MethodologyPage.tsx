@@ -4,6 +4,7 @@ import { Link } from '../router.tsx';
 import { Icon } from '../components/icons.tsx';
 import { PageHead, Skeleton } from '../components/ui.tsx';
 import { Jargon } from '../components/clarity/Jargon.tsx';
+import { FAIR_PLAY_NOTICE, FAIR_PLAY_VERSION } from '../../../src/core/fair-play.ts';
 
 function Principle({ n, icon, title, children }: { n: number; icon: ReactNode; title: string; children: ReactNode }) {
   return (
@@ -93,7 +94,7 @@ export default function MethodologyPage() {
           identical fingerprints mean identical conditions.
         </Principle>
         <Principle n={2} icon={<Icon.Copy />} title="Identical bytes to every model">
-          No per-model prompt tuning, no “system prompt tricks”. The same rendered text goes to every provider; adapters only translate the wire format.
+          No per-model prompt tuning, no “system prompt tricks”. The same rendered text goes to every provider; adapters only translate the wire format. The harness adds exactly one thing: the fixed fair-play notice at the start of every model’s system prompt (below). Judges never get it.
         </Principle>
         <Principle n={3} icon={<Icon.Shuffle />} title="Seeds for simulations">
           Survival Island, the Liar’s Table and the other simulations are driven by seeded random generators. Each seed is one case, and a given seed produces exactly the same world, weather and suspects for every model.
@@ -131,6 +132,17 @@ export default function MethodologyPage() {
         </div>
         <div className="card-body">
           <ul className="rule-list">
+            <li>
+              <b>Every model is told the rules.</b> Each prompt’s system text starts with the same fixed notice (version {FAIR_PLAY_VERSION}), for API and copy &amp; paste models alike, in every test, simulation and Arena game:
+              <pre className="code" style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{FAIR_PLAY_NOTICE}</pre>
+              The notice is part of every test hash, so results recorded without it no longer count. Picture-making models (The Gallery) take no system prompt and don’t get it.
+            </li>
+            <li>
+              <b>Cheating scores 0.</b> Every reply is checked before it is marked. Text aimed at the grader (notes to the judges, asking for a score, “ignore your instructions”, forged judge verdict lines), escaping the code sandbox, patching the test runner or reading the hidden tests scores 0 and is shown as a red “Fair-play violation” on the result and the leaderboard.
+            </li>
+            <li>
+              <b>Possible outside help is flagged.</b> A pasted reply that says it searched the web or ran code, or carries a chat app’s search citations, keeps its score but goes to <Link to="/review">Blind Review</Link> for a person to check. Tool use inside a chat app can be discouraged and flagged, not proven.
+            </li>
             <li>
               <b>Fresh, stateless conversation per case.</b> No memory carries over between cases, repeats or models. Multi-turn tests replay only their own earlier turns.
             </li>

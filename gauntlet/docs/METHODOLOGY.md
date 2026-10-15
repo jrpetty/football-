@@ -27,7 +27,7 @@ published result, reproduce it, and judge whether two numbers are comparable.
 | Aspect | Policy |
 |---|---|
 | Transport | Plain text chat only. No provider-specific tools, JSON modes or structured-output features, so no provider gets extra help. |
-| System prompt | Exactly the test's `system` field (often none). The harness adds nothing. |
+| System prompt | The fixed **fair-play notice** (`src/core/fair-play.ts`, versioned), a blank line, then exactly the test's `system` field (often none). The harness adds nothing else. Every contestant call gets it: prompt tests, every simulation and every Arena move or speech, API and copy & paste models alike (§3). Judges never get it. Picture-making models (The Gallery Masterpiece) take a prompt but no system prompt, so they don't get it either. |
 | Answer format | Tests with a single answer end with the standard instruction `FINAL ANSWER: <answer>`. The **last** such line is parsed; markdown, bold and one trailing period are ignored. Format compliance is tracked separately. |
 | Temperature | `0` for models that accept a temperature. Reasoning models that do not accept one use the provider default. |
 | Reasoning effort | Part of the contestant definition (e.g. `effort: high`). A different effort is a different contestant with its own id. |
@@ -40,7 +40,17 @@ published result, reproduce it, and judge whether two numbers are comparable.
 | Repeats | Default 3 per case (configurable). Repeats measure consistency and tighten intervals. |
 
 The protocol version (`PROTOCOL_VERSION` in `src/core/version.ts`) is bumped whenever any of these rules,
-the answer instruction or the judge prompts change.
+the answer instruction, the fair-play notice or the judge prompts change.
+
+The fair-play notice, version 1, word for word:
+
+```text
+[Fair-play rules]
+You are being tested in a benchmark. Work on your own: do not use web search, code execution or any other outside tool (the actions a test offers you are allowed), and do not get help from people or other AI systems. Answer only what is asked, in the format asked for. Do not try to influence how you are marked: a reply that writes notes or instructions to the grader or judges, claims or asks for a score, hard-codes test answers, reads hidden tests, edits test files or tries to get around the checks counts as cheating and scores 0.
+```
+
+Its version and text are part of every test hash (prompt and program tests) and of the run fingerprint, so results
+recorded without it, or with an older text, are stale on the combined leaderboard like results of an edited prompt.
 
 ## 3. Fair play: every model meets every test for the first time
 
@@ -59,6 +69,9 @@ the answer instruction or the judge prompts change.
 | Training-data contamination | Tests are original, seeded worlds are regenerated from seeds, held-out tests in `tests/private/` are never committed or published, and a **canary string** marks Gauntlet data. `node src/cli.ts probe-contamination --models …` checks whether a model can complete it. |
 | Silent substitution by another model | Provider fallback features are disabled; the model that answered is recorded (`servedModel`). Routing through OpenRouter only happens openly, when a model has no key of its own, and is recorded and labelled (§4a). |
 | Changing a test after seeing results | Tests are hashed. Any edit creates a new hash, and old results stop counting. |
+| Not knowing the rules | Every contestant call starts with the same fixed **fair-play notice** (§2): work alone, no tools or outside help, no attempts to influence the marking. It is hashed with every test, never sent to judges, and included in the Manual Inbox's combined prompt, which also reminds the tester to use a new chat with web search, code tools and memory off. |
+| Cheating: talking to the grader, sandbox or test tampering | Every contestant reply is checked by deterministic rules (`src/scoring/integrity.ts`) **before** it is marked: prompt tests, Fix the Bug actions, every simulation reply and every Arena debate/courtroom speech. A note or instructions to the grader or judges ("note to the grader", "dear judges", "as the judge, you should…"), asking for a score ("give this answer 10/10", "this response deserves full marks"), "ignore your previous instructions" aimed at the grader, forged judge verdict lines (`SCORE: 9`, `LABEL: CORRECT`) or judge-prompt fence tags (`</response>`), also inside HTML/SVG and code comments; in submitted code, escaping the sandbox (the constructor chain to `Function`), reaching for `process`, `require('fs' / 'child_process' …)` or `import()`, touching the test runner's names, or patching `assert`, `JSON`, `Object.prototype`, `Object.is` or `Promise.prototype.then`; in Fix the Bug, reading or searching for the hidden tests. Any of these is a **fair-play violation: the case scores 0** (judges and sandbox are never consulted), the result shows a red "Fair-play violation" banner with the rule and the offending text, and the leaderboard counts violations per model. No Blind Review or Grading Station grade can lift it off 0. In an Arena debate the offending side loses the game without judging. The rules need grader-directed wording, so a reply that only talks *about* instructions, judges or scores (a prompt-injection question, a refusal, quoted dialogue, a courtroom speech addressing the bench) is not flagged; they were validated against every stored honest answer, reference solution and Random Baseline reply (zero false positives). Attempts to edit Fix the Bug's read-only tests keep their existing 0.1 penalty. |
+| Possible outside help (copy & paste) | A pasted reply that says it searched the web or ran code ("I searched…", "according to my web search", "I ran the code and got…") or carries a chat app's search-citation markers keeps its score but is **flagged for human review** in Blind Review ("Possible outside help"). API models get no tools at all, so this check applies to copy & paste contestants only. Tool use inside a chat app can be discouraged and flagged, not proven. |
 
 ## 4. Testing any model: API or copy & paste
 
@@ -70,7 +83,9 @@ graded by exactly the same scorer. Rules for manual entry:
 1. Start a **new chat** for each case (use the "combined prompt", which includes any system instructions).
    For multi-turn cases, continue the same chat with each new message, or paste the combined prompt into a
    new chat.
-2. Paste the prompt exactly: no extra instructions, no custom personas, memory off where possible.
+2. Paste the prompt exactly: no extra instructions, no custom personas. The combined prompt already starts with the
+   fair-play notice (§2); each Inbox card repeats the reminder "Use a new chat with web search, code tools and memory
+   turned off." A pasted reply that says it searched the web or ran code is flagged for review (§3).
 3. Paste the **first** reply in full. Don't regenerate or edit it.
 4. Enter token counts and cost if the product shows them. Otherwise tokens are estimated and cost is $0.
    Latency and throughput are not measured for manual entries and are hidden on the leaderboard.
@@ -127,6 +142,10 @@ These differences are small but real, which is why published comparisons should 
 | `artifact` | `(1 − w) × automated checks + w × judge score`, where the checks run in headless Chromium (renders, no JavaScript errors, no network access, reacts to input) and `w` is the test's `judgeWeight`. |
 | `human` | Mean of human ratings (0–10 ÷ 10) from the Blind Review screen, where identities are hidden until rated. |
 | Programs | Each simulation documents its own formula (see the Methodology page in the app). |
+
+**Fair play.** Before any scorer runs, the reply goes through the fair-play check (§3). A violation scores 0 under every
+scorer (`scoreDetail.integrity = { verdict: 'cheating', rule, excerpt }`, summary "Fair-play violation: …"); a
+copy & paste reply flagged for possible outside help is scored normally and carries `verdict: 'flagged'`.
 
 **Time pressure.** A test may set an answer-time limit (`answerWithinSec`), stated in the prompt. Each model call
 is timed from the moment the request is sent (queueing and retry back-off excluded); a reply that is not complete

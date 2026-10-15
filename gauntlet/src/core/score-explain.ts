@@ -283,6 +283,8 @@ export interface ScoreAnswer {
   checks?: { passed: number; total: number };
   /** Marked (or re-marked) by a person. */
   humanGraded?: boolean;
+  /** Fair-play check: 'cheating' scored 0; 'flagged' kept its score and waits for a person to look. */
+  fairPlay?: { verdict: 'cheating' | 'flagged'; rule: string; excerpt: string };
 }
 
 const SHOWABLE = 140;
@@ -315,6 +317,7 @@ export function toScoreAnswer(r: Pick<CaseResult, 'key' | 'runId' | 'contestantI
     ...(correct !== undefined ? { correct } : {}),
     ...(items.length ? { checks: { passed: items.filter((i) => i.passed).length, total: items.length } } : {}),
     ...(r.humanScores?.length ? { humanGraded: true } : {}),
+    ...(d.integrity ? { fairPlay: d.integrity } : {}),
   };
 }
 
@@ -370,6 +373,9 @@ function whyFor(a: ScoreAnswer, counted: boolean, score100: number | null): stri
   if (a.status === 'cancelled') return 'Cancelled before it finished. Left out — not counted as 0.';
   if (a.status === 'skipped') return a.summary || 'Skipped: this model can’t take this kind of question. Left out — not counted as 0.';
   if (!counted) return 'No mark recorded. Left out — not counted as 0.';
+  if (a.fairPlay?.verdict === 'cheating') {
+    return `Scored 0 for breaking the fair-play rules: the reply ${a.fairPlay.rule} (“${a.fairPlay.excerpt}”). Every model is told these rules at the start of every prompt.`;
+  }
   const pts = fmt(score100!);
   const parts: string[] = [];
   if (a.status === 'refusal') parts.push(`The model refused to answer, which scores ${pts}.`);
@@ -385,6 +391,7 @@ function whyFor(a: ScoreAnswer, counted: boolean, score100: number | null): stri
   const bareVerdict = /^(correct|incorrect|right|wrong|pass(ed)?|fail(ed)?)\.?$/i.test(a.summary.trim());
   if (a.summary && !(bareVerdict && parts.length > 0) && !parts.some((p) => p.includes(a.summary))) parts.push(a.summary.endsWith('.') ? a.summary : `${a.summary}.`);
   if (a.humanGraded) parts.push('Marked by a person.');
+  if (a.fairPlay?.verdict === 'flagged') parts.push(`Flagged: ${a.fairPlay.rule} (“${a.fairPlay.excerpt}”). The mark stands; the answer is listed in Blind Review for a person to check.`);
   if (parts.length === 0) parts.push(`Marked ${pts} out of 100.`);
   return parts.join(' ');
 }

@@ -18,6 +18,7 @@ import { ROOT } from '../core/paths.ts';
 import { createRng, hashString } from '../core/rng.ts';
 import type { Contestant, ManualRequest, ProviderConfig } from '../core/types.ts';
 import { HARNESS_VERSION, PROTOCOL_VERSION } from '../core/version.ts';
+import { FAIR_PLAY_FINGERPRINT } from '../core/registry.ts';
 import { combinedLeaderboard } from '../engine/leaderboards.ts';
 import { createRecorder, type CallPolicy, type CallTarget, type CaseRecorder } from '../engine/recorder.ts';
 import { SpendGuard, isSpendLimitError } from '../engine/spend-guard.ts';
@@ -152,6 +153,7 @@ export function arenaFingerprint(gameHash: string, settings: ArenaSettings, seed
   return contentHash({
     gameHash,
     prompt: ARENA_PROMPT_VERSION,
+    fairPlay: FAIR_PLAY_FINGERPRINT,
     protocol: settings.protocolVersion,
     format: settings.format,
     gamesPerMatch: settings.gamesPerMatch,
@@ -613,6 +615,7 @@ function launch(manifest: TournamentManifest): void {
           policy: { ...policy, temperature: 0 },
           signal: ctrl.signal,
           maxOutputTokens: 16000,
+          role: 'judge',
           callContext: { runId: manifest.id, key: `${slot.key}-judge-${j.id}`, testId: `arena.${game.id}`, testName: `${game.name} · ${slot.matchId} game ${slot.gameNo} · judge`, caseId: slot.key },
           onRetry: (attempt, wait, err) => log('warn', `Judge ${j.label} · ${slot.key}: retry ${attempt} in ${(wait / 1000).toFixed(1)}s (${err.message.slice(0, 160)})`),
         });

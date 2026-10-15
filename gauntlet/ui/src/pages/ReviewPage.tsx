@@ -13,8 +13,9 @@ const REASONS: Record<ReviewReason, { label: string; long: string; tone: string 
   'judge-disagreement': { label: 'Judges disagreed', long: 'Judges disagreed — your rating becomes the final score', tone: 'warn' },
   'human-scored': { label: 'Human-scored', long: 'Human-scored test — only people grade this one', tone: 'info' },
   'second-opinion': { label: 'Second opinion', long: 'Second opinion on an automatically judged build', tone: 'accent' },
+  'outside-help': { label: 'Possible outside help', long: 'Possible outside help: the pasted reply says it searched the web or ran code. Check it; the score stands', tone: 'warn' },
 };
-const PRIORITY: Record<string, number> = { 'judge-disagreement': 0, 'human-scored': 1, 'second-opinion': 2 };
+const PRIORITY: Record<string, number> = { 'judge-disagreement': 0, 'outside-help': 1, 'human-scored': 2, 'second-opinion': 3 };
 const reasonOf = (i: ReviewItem): ReviewReason => i.reason ?? 'human-scored';
 
 interface Side {
@@ -190,7 +191,7 @@ export default function ReviewPage() {
       </div>
       <div className="filter-bar">
         <div className="seg" role="group" aria-label="Filter by reason">
-          {(['all', 'judge-disagreement', 'human-scored', 'second-opinion'] as const).map((r) => (
+          {(['all', 'judge-disagreement', 'outside-help', 'human-scored', 'second-opinion'] as const).map((r) => (
             <button key={r} type="button" aria-pressed={reasonF === r} onClick={() => setQuery({ reason: r === 'all' ? null : r })}>
               {r === 'all' ? 'All' : REASONS[r].label}
               <span className="count-pill">{counts[r] ?? 0}</span>

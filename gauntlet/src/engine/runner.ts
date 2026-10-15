@@ -31,6 +31,8 @@ import { effectiveContestant, ensureFreshCatalog } from '../core/openrouter.ts';
 import { manualEvents } from '../providers/manual.ts';
 import { PROGRAMS } from '../programs/index.ts';
 import { scoreResponse, type JudgePanel, type JudgeAskOptions } from '../scoring/index.ts';
+import { checkReply, fairPlaySummary } from '../scoring/integrity.ts';
+import { withoutFairPlay } from '../core/fair-play.ts';
 import { browserAvailable } from '../scoring/browser.ts';
 import { Semaphore } from './semaphore.ts';
 import { SpendGuard, checkedLimits, isSpendLimitError, outputAllowance } from './spend-guard.ts';
@@ -987,6 +989,7 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
           stopReason: reply!.stopReason,
           ...(reply!.outputLimitBy ? { outputLimitBy: reply!.outputLimitBy } : {}),
           taskText,
+          manual,
           judges,
           saveArtifact: save,
           signal: controller.signal,
@@ -1044,6 +1047,18 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
       summary = out.summary;
       detail = { ...out.detail };
       replay = out.replay;
+      // Fair play: every reply the model wrote in the program is checked (a program may have found something already).
+      const found = (detail.integrity as ScoreDetail['integrity']) ?? programIntegrity(rec.transcript, manual);
+      if (found?.verdict === 'cheating') {
+        score = 0;
+        passed = false;
+        if (status === 'pending-human') status = 'ok';
+        summary = fairPlaySummary(found);
+        detail = { ...detail, integrity: found, notes: `Scored 0 for a fair-play violation: ${found.rule}. Offending text: ${found.excerpt}` };
+      } else if (found) {
+        detail = { ...detail, integrity: found };
+        summary = `${summary} · ${found.rule} (flagged for review)`;
+      }
     }
   } catch (err) {
     if (isSpendLimitError(err) && !env.signal.aborted) {
@@ -1115,6 +1130,25 @@ async function executeJob(job: Job, env: JobEnv): Promise<CaseResult> {
     startedAt: startedAt.toISOString(),
     finishedAt: now(),
   };
+}
+
+/**
+ * The fair-play check over every reply a model wrote during a program (simulation) case. The task text is everything
+ * the model was sent in the case (system texts without the fair-play notice, and all user messages).
+ */
+export function programIntegrity(transcript: readonly TranscriptEntry[], manual: boolean): ScoreDetail['integrity'] {
+  const calls = transcript.filter((t) => !t.judge && t.response);
+  if (!calls.length) return undefined;
+  const task = [...new Set(calls.flatMap((t) => [withoutFairPlay(t.system) ?? '', ...t.messages.filter((m) => m.role === 'user').map((m) => m.content)]))].join('\n\n');
+  for (const t of calls) {
+    const f = checkReply(t.response, { taskText: task, manual, codeClaims: false });
+    if (f?.verdict === 'cheating') return f;
+  }
+  for (const t of calls) {
+    const f = checkReply(t.response, { taskText: task, manual, codeClaims: false });
+    if (f) return f;
+  }
+  return undefined;
 }
 
 /**

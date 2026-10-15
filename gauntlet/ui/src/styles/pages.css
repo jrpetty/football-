@@ -2567,6 +2567,19 @@ html[data-broadcast='on'] .ticker .score-pill .ico {
   display: grid;
   gap: 16px;
 }
+/* Fair-play reminder on each Manual Inbox card. */
+.inbox-fairplay {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--warn-text);
+}
+.inbox-fairplay svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
 .inbox-steps {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

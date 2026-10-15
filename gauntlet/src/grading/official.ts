@@ -50,6 +50,8 @@ export function humanMean(r: Pick<CaseResult, 'humanScores'>): number | null {
  * capped at 30) also holds for any grade that replaces the score: Grading Station, Blind Review arbitration.
  */
 export function withScorerCap(score: number, detail: CaseResult['scoreDetail'] | undefined): number {
+  // A fair-play violation scored 0 (src/scoring/integrity.ts); no grade can give it back.
+  if (detail?.integrity?.verdict === 'cheating') return 0;
   const cap = /capped at (\d+)/.exec(String((detail?.gameJam as { cap?: string } | undefined)?.cap ?? ''))?.[1];
   return cap === undefined ? score : Math.min(score, Number(cap) / 100);
 }
@@ -102,6 +104,11 @@ export function applyOfficial(r: CaseResult, spec: GradingSpec, policy: Official
   }
   const out: CaseResult = { ...r, scoreDetail: d };
   if (human !== null) d.humanScore = r4(human);
+  if (d.integrity?.verdict === 'cheating') {
+    // A fair-play violation stays at 0 under every policy; station and human grades are kept as opinions only.
+    d.official = { source: 'auto', policy, why: `Fair-play violation (${d.integrity.rule}): the reply scored 0, and no grade can change that.` };
+    return out;
+  }
   d.official = { source: off.source, policy, why: off.why };
   if (off.score === null) return out;
   // A cap the scorer applied (a Game Jam game that froze, stayed blank or loads from the internet) still holds.

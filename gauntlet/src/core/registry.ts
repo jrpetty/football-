@@ -4,6 +4,7 @@ import { CUSTOM_TESTS_DIR, PRIVATE_TESTS_DIR, PROGRAMS_DIR, ROOT, SUITES_DIR, TE
 import { contentHash, sha256 } from './hash.ts';
 import { FINAL_ANSWER_INSTRUCTION } from './extract.ts';
 import { PROTOCOL_VERSION } from './version.ts';
+import { FAIR_PLAY_NOTICE, FAIR_PLAY_VERSION } from './fair-play.ts';
 import { writeJsonAtomic, loadCategories } from './config.ts';
 import { JUDGE_PROMPT_FINGERPRINT } from '../scoring/judge-prompts.ts';
 import { PROGRAMS } from '../programs/index.ts';
@@ -96,6 +97,12 @@ export function programSourceHash(programId: string): string {
   return hash;
 }
 
+/** The fair-play notice's hash: part of every test hash and run fingerprint, so results recorded under another notice (or none) stop counting. */
+export const FAIR_PLAY_FINGERPRINT = contentHash({ version: FAIR_PLAY_VERSION, text: FAIR_PLAY_NOTICE });
+
+/** Programs whose contestants are picture models only (image generation takes a prompt but no system prompt). */
+const PICTURE_ONLY_PROGRAMS = new Set(['gallery-masterpiece']);
+
 /**
  * Content hash of a test: definition + (for programs) program source code + (for vision tests) the bytes of every
  * image. `baseDir` is the folder of the test file (image paths are relative to it; default: tests/custom).
@@ -106,9 +113,14 @@ export function computeTestHash(def: TestDefinition, baseDir?: string): string {
     const { publishPrompts: _publish, ...rest } = def;
     def = rest as TestDefinition;
   }
-  if (def.kind === 'program') return contentHash({ def, program: programSourceHash(def.program) });
-  if (testHasImages(def)) return contentHash({ def, images: testImageDigests(def, baseDir ?? testBaseDir()) });
-  return contentHash(def);
+  // The fair-play notice leads every contestant's system prompt, so it is part of what every test hashes.
+  if (def.kind === 'program') {
+    // Picture models take no system prompt, so the notice is not part of what they see (and not of the hash).
+    if (PICTURE_ONLY_PROGRAMS.has(def.program)) return contentHash({ def, program: programSourceHash(def.program) });
+    return contentHash({ def, program: programSourceHash(def.program), fairPlay: FAIR_PLAY_FINGERPRINT });
+  }
+  if (testHasImages(def)) return contentHash({ def, images: testImageDigests(def, baseDir ?? testBaseDir()), fairPlay: FAIR_PLAY_FINGERPRINT });
+  return contentHash({ def, fairPlay: FAIR_PLAY_FINGERPRINT });
 }
 
 export function loadTests(): LoadedTest[] {
@@ -475,6 +487,7 @@ export function resolveTests(opts: { suiteId?: string; testIds?: string[] }, all
 export function fingerprint(tests: Array<{ definition: TestDefinition; hash: string; weight?: number; caseFilter?: string[] }>): string {
   return contentHash({
     protocol: PROTOCOL_VERSION,
+    fairPlay: FAIR_PLAY_FINGERPRINT,
     judge: JUDGE_PROMPT_FINGERPRINT,
     tests: tests.map((t) => (t.caseFilter ? [t.definition.id, t.hash, t.weight ?? 1, [...t.caseFilter].sort()] : [t.definition.id, t.hash, t.weight ?? 1])).sort(),
   });
