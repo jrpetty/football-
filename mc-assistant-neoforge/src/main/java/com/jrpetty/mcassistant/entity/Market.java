@@ -526,6 +526,7 @@ public final class Market {
         int sold = trade(level, v);
         takings(level, v, sold);                         // what the village made yesterday is its revenue
         buyWool(level, v, day);                          // the beds, out of half of it at most
+        Businesses.morning(level, v, day);              // [business-books] every business's morning: its stock, rent, credit, drawings, orders
         payWages(level, v);
         Bank.beforeRent(level, v, day);                  // the bank: a saver short of the rent draws it out first (Bank)
         Homes.payday(level, v, day);                     // the rent in, and what the households put by to buy their houses
@@ -582,6 +583,7 @@ public final class Market {
         }
         if (coins <= 0) return 0;
         Ledger.addCoins(id, coins);
+        CoinCensus.flow(id, CoinCensus.Flow.EXPORT, coins);            // [business-books] coin into the town from the traders
         Economy.sold(id, coins);
         Villages.tell(id, day, "Traders came for market day and bought " + String.join(", ", sold) + " for " + coins + " coin");
         return coins;
@@ -607,6 +609,7 @@ public final class Market {
         int over = Ledger.coins(id) - keep;
         if (over <= 0) return 0;
         int took = Ledger.takeCoins(id, (over + UPKEEP_ONE_IN - 1) / UPKEEP_ONE_IN);
+        CoinCensus.flow(id, CoinCensus.Flow.UPKEEP, took);             // [business-books] coin out of town for good
         if (took > 0) {
             Economy.spent(id, took);
             UPKEEP.put(id, new long[]{ day, took });
@@ -649,6 +652,7 @@ public final class Market {
         int took = 0;
         while (took < bars && TownWork.take(level, v, s -> s.is(Items.GOLD_INGOT), 1)) took++;
         if (took > 0) Ledger.addCoins(id, took * COINS_PER_GOLD);
+        CoinCensus.flow(id, CoinCensus.Flow.MINT, took * COINS_PER_GOLD);   // [business-books]
         return took * COINS_PER_GOLD;
     }
 
@@ -709,6 +713,7 @@ public final class Market {
         }
         if (in <= 0) return 0;
         Ledger.addCoins(id, in);
+        CoinCensus.flow(id, CoinCensus.Flow.EXPORT, in);               // [business-books] the passing traders' coin
         Economy.sold(id, in);
         Villages.tell(id, level.getDayTime() / 24000L, "passing traders bought " + String.join(", ", sold) + " for " + in + " coin");
         return in;
@@ -730,6 +735,7 @@ public final class Market {
         int in = Math.max(0, worth - Math.max(0, sold));
         if (in <= 0) return 0;
         Ledger.addCoins(id, in);
+        CoinCensus.flow(id, CoinCensus.Flow.OUTPUT, in);               // [business-books] the world's pay for the town's work
         Economy.takings(id, in);
         return in;
     }
@@ -802,6 +808,8 @@ public final class Market {
             if (w <= 0) continue;
             // At the rate the leader set today (Leader.payRate): over the odds, or part held back.
             w = JobWorth.atLeadersRate(id, w);         // [econ-wages] never under the living wage
+            int own = Businesses.paysHand(level, v, f, w);   // [business-books] a business's hand is paid out of its till
+            if (own >= 0) { PAID.put(f.getUUID(), new long[]{ level.getDayTime() / 24000L, own }); continue; }
             hands.add(f);
             wages.add(w);
             bill += w;
@@ -1072,6 +1080,8 @@ public final class Market {
         lots = Math.min(lots, can);
         if (lots <= 0) return 0;
         int paid = Ledger.takeCoins(id, lots * price);
+        CoinCensus.flow(id, CoinCensus.Flow.IMPORT, paid);             // [business-books] the wool's coin to the traders
+        Businesses.storesIn(id, new ItemStack(Items.WHITE_WOOL), (long) lots * g.bundle(), paid * 100L);   // [business-books] at what it cost
         Economy.spent(id, paid);
         if (lots * g.bundle() >= short_) bought(id, "wool");
         ItemStack left = intoStores(level, id, new ItemStack(Items.WHITE_WOOL, lots * g.bundle()));
@@ -1220,6 +1230,7 @@ public final class Market {
         if (!TownWork.take(level, v, same, g.bundle())) return "They've not got that to spare just now.";
         payOut(p, price);
         Ledger.addCoins(id, price);
+        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_IN, price);         // [business-books]
         Economy.sold(id, price);
         Budget.forget(id);
         Stockroom.sold(level, id, seller, shown, g.bundle(), price);
@@ -1287,6 +1298,8 @@ public final class Market {
         }
         hand.shrink(g.bundle());
         int paid = Ledger.takeCoins(id, price);
+        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_OUT, paid);         // [business-books]
+        Businesses.storesIn(id, lot, g.bundle(), paid * 100L);         // [business-books] the stores' cost: what they paid for it
         Economy.spent(id, paid);
         ItemStack coins = new ItemStack(McAssistantMod.VILLAGE_COIN.get(), paid);
         if (!p.getInventory().add(coins)) p.drop(coins, false);

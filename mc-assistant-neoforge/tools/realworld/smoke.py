@@ -4888,6 +4888,39 @@ def trade_world_stage(r, look, cx, cz):
     say("alive after the harbours, roads and migration: %s" % client_alive())
 
 
+
+def business_books_stage(r, look, cx, cz):
+    """[business-books] Every business and its books (entity/Businesses, BusinessBooks, CostBook, CoinCensus). As an
+    operator, /village business stage makes the nearest town's café a business if none stands (at the camera's spot) and
+    puts a day's trade through its books (a bulk order of wheat from the stores, bread baked of it, loaves sold over the
+    counter from the folk's own purses). Pictures:
+      1. 70-business-1-cafe-books: the café's books (owners, staff and pay, today/week/all time, the 14-day chart);
+      2. 70-business-2-town-page: the town's books at the Businesses page (every business, its owner, week and till).
+    Not wired into main()."""
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    r.cmd("gamemode creative %s" % USER)
+    hy = ground_height(r, cx, cz)
+    r.cmd("tp %s %d %d %d" % (USER, cx, hy + 1, cz))
+    time.sleep(6)
+    say("business stage: " + r.cmd("execute as %s at @s run village business stage" % USER)[:600])
+    say("cafe books: " + r.cmd("execute as %s at @s run village business text cafe" % USER)[:1200])
+    say("open: " + r.cmd("execute as %s at @s run village business books cafe" % USER))
+    time.sleep(3)
+    park_mouse()
+    time.sleep(1)
+    shot("70-business-1-cafe-books")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("page: " + r.cmd("execute as %s at @s run village business page" % USER))
+    time.sleep(3)
+    park_mouse()
+    time.sleep(1)
+    shot("70-business-2-town-page")
+    say("books shut: " + r.cmd("execute as %s run village stats close" % USER))
+    say("audit: " + r.cmd("execute as %s at @s run village business audit" % USER)[:900])
+    r.cmd("gamemode spectator %s" % USER)
+    say("alive after the business books: %s" % client_alive())
+
+
 def main():
     r = Rcon()
     say("connected; waiting for the client to join")

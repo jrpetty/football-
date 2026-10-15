@@ -307,6 +307,8 @@ public final class Playbill {
         if (!Theatre.anyHouse(id)) return Villages.name(id) + " has no theatre yet.";
         if (!Civics.takeCoins(p, Theatre.TICKET)) return "A seat is " + Theatre.TICKET + " coin; you've none of the town's coin on you.";
         Ledger.addCoins(id, Theatre.TICKET);
+        CoinCensus.flow(id, CoinCensus.Flow.PLAYER_IN, Theatre.TICKET);                                 // [business-books]
+        Businesses.service(level, id, Business.Type.THEATRE, net.minecraft.world.item.ItemStack.EMPTY, 1, Theatre.TICKET * 100L, true);   // [business-books]
         long day = level.getDayTime() / 24000L;
         long night = day;
         if (Theatre.occasion(id, day) == null) for (long d = day; d < day + 8; d++) if (RestDay.today(id, d)) { night = d; break; }

@@ -407,6 +407,7 @@ public final class Villages {
         Wheelwrights.resetForTests(); Carters.resetForTests(); TownPlanner.resetForTests(); PostStints.resetForTests();   // [roles-e]
         Perks.resetForTests();                                     // [perks] quiet between the tests; the wonders forgotten
         Bank.resetForTests();
+        Businesses.resetForTests();                       // [business-books] every town's businesses and the coin census
         Culture.resetForTests();                                   // [batchD] the banner's works, the customs, the theatre, the band
         TownWonders.resetForTests();                               // [culture-wonders] the town's own wonders
         Identity.resetForTests();                                  // [identity] every town plain again till a test asks for it live

@@ -334,6 +334,8 @@
   "talk.mc_assistant.rockets.tip": "Rockets to fly with, eight to a lot, from the fireworks maker at its powder hut or the shop. Say \"flight two\" or \"flight three\" for the longer ones",
   "talk.mc_assistant.money": "Money",
   "talk.mc_assistant.money.tip": "The bank, investing, a supply contract, a stall, the auction, prices",
+  "talk.mc_assistant.business_books": "The books",
+  "talk.mc_assistant.business_books.tip": "Ask a proprietor or a hand to see its business's books: who owns it, the takings, what everything cost, the wages and the profit",
   "talk.mc_assistant.bank": "The bank",
   "talk.mc_assistant.bank.tip": "Your account: \"deposit 20\", \"withdraw 10\", \"a mortgage on this house\" standing in an empty one; \"borrow 30\", \"repay\" for the treasury's small loans",
   "talk.mc_assistant.invest": "Invest…",

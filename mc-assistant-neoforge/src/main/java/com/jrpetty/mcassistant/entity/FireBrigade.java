@@ -391,6 +391,7 @@ public final class FireBrigade {
         }
         if (!b.chain.isEmpty()) line += ", " + b.chain;
         Annals.fire(v.id(), day, line);
+        Businesses.fire(level, v.id(), b.first, line);                    // [business-books] a business's premises burnt: its loss
         Villages.tell(v.id(), day, line);
         // [disasters] What burned put back from the stores, and the town takes care after it.
         Rebuilding.afterFire(level, v, b.stood, b.where.replaceFirst("^(at|on|in) ", ""), b.cause);

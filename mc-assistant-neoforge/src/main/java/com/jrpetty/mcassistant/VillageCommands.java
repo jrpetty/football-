@@ -354,6 +354,7 @@ public final class VillageCommands {
             // [economy] The larder against the mouths, the coal floor and charcoal, the builders' stock carried about
             // (/village larder; [econ-prices] it was /village economy, and hid the economy page).
             .then(EconomyCommands.build())
+            .then(com.jrpetty.mcassistant.entity.BusinessBooks.command())   // [business-books] the businesses' books, orders, the coin audit
             // [econ-trade] Trade between towns: the trade book, the deals, the talks (TradeCommands).
             .then(TradeCommands.build())
             .then(WagonCommands.build())                       // [wagons] the trade wagons

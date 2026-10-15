@@ -368,6 +368,28 @@ public final class Bank {
         return Math.max(0, s.cash - reserve(s));
     }
 
+    /** [business-books] A working loan to a business (Businesses: its owners short, its trade credit gone): out of what the
+     *  vault may lend, whole coins. Returns the coins lent. The business keeps the loan on its books and pays it back here. */
+    public static int lendToFirm(UUID village, int coins) {
+        if (!open(village) || coins <= 0) return 0;
+        State s = state(village);
+        int k = Math.min(coins, lendable(s));
+        if (k <= 0) return 0;
+        s.cash -= k;
+        s.week.lent += k;
+        saveHead(village, s);
+        return k;
+    }
+
+    /** [business-books] A business paid so many coins of its loan back (its interest among them): into the vault. */
+    public static void firmRepaid(UUID village, int coins) {
+        if (coins <= 0 || building(village) == null) return;
+        State s = state(village);
+        s.cash += coins;
+        s.week.repaid += coins;
+        saveHead(village, s);
+    }
+
     /** What the bank is worth to itself: the vault and what it is owed, less what it owes its savers. */
     static int equity(State s) {
         return s.cash + loansOut(s) - deposits(s);

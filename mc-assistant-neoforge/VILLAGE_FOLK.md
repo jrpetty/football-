@@ -12541,3 +12541,86 @@ on foot, unless somebody talks them round.
 Smoke: `trade_world_stage` in tools/realworld/smoke.py (`/village harbour stage`, `/village highways stage`,
 `/village migration stage`). Tests: TradeWorldGameTests (tw01 to tw09); armies at the inns and the fleet at the pier,
 RealmPolishGameTests (rp01 to rp05).
+
+## Businesses and their books
+
+Every place in a town that buys and sells is now a business with its own books: the café, the restaurant, the tavern, the
+inn, the bakery, the shop (and the store and grand bazaar it grows into), the brewery, the smithy, the tailor's workshop,
+the fletcher's, the apiary, the enchanter's tower, the powder hut, the map room, the hunter's lodge, the mill, the fish
+market, the theatre and the stables. A player's market stall keeps the same books. The town keeps only what belongs to
+everybody: its **stores** (the public warehouse every business buys from), the market square, the harbour office, the
+trading post and the auction house; their books are kept the same way and their coin is the treasury's. The bank keeps its
+own books and shows on the list.
+
+- **Owners.** When a place opens, someone takes it on. That is usually its own head hand, or a folk with a head for
+  business (a Merchant at heart, a Haggler or a Thrifty one) and the savings to back it. It puts up the start-up money
+  (a week's rent and a float) out of its savings, and its partner can put in alongside it. Each owns what they put in:
+  owners are shares that always add up to the whole. If they are short, the bank lends the rest. An owner who dies leaves
+  their share to their partner or a grown child, and a dead folk's purse now goes to its heir too (it used to vanish).
+  An owner who leaves town sells their share back to the town. A business the town is holding is bought by the next folk
+  who can afford it.
+- **The till.** Every coin a business takes over the counter goes into its own till: the café's teas, the shop's tools,
+  the tavern's pints, the inn's rooms, the fish at the quay, the theatre's seats. Out of the till it pays for everything:
+  - its stock;
+  - its staff, each morning, their wage by worth (the town takes its wage tax as before and no longer pays them itself);
+  - its rent to the town, which owns the building;
+  - a torch for its evening lights, and its repairs;
+  - the market toll on its takings;
+  - the interest on what it owes.
+- **Pennies.** The books count in pennies, a hundred to the coin, so nothing rounds away. A carrot at half a coin is
+  0.50c, and thirty of them cost 15.00c exactly.
+- **Real costs.** A business buys its stock from the town's stores at the stores' unit price (the going price, never
+  below what the goods cost the town). It can also buy from another business that has the goods: the shop buys the
+  smith's picks from the smithy. It buys as much as its till allows: a handful, a normal order or a bulk order, with
+  3% off 64 or more, 6% off 256 or more and 10% off 1,024 or more. Each lot goes into its stock at what was paid. When its
+  hands make something, it costs exactly the ingredients they used, fuel included: three wheat bought at 0.05c make a
+  loaf that cost 0.15c. Every sale records the takings, the cost of what was sold and the margin, item by item.
+- **Prices.** A business asks the town's going price, but never less than a piece's full cost (including its share of
+  the week's wages, rent and running costs) plus its markup. It never asks more than three fifths over the going price, or
+  folk would shop elsewhere. A week at a loss raises the markup; a good week lowers it to compete. Every change is written
+  in its books with the reason.
+- **Profit and loss.** Net profit is takings minus cost of goods, wages, rent, running costs, taxes, stale stock and
+  interest. Once a week the owners draw what the week made above a float, shared by their stakes. A loss is covered in
+  this order: from the till, then the owners' savings, then the stores' trade credit (two days' takings, interest after a
+  week), then the bank. A business that keeps losing money responds in steps:
+  - after three days it raises its prices;
+  - after a week it puts a hand on short time (half pay);
+  - after ten days it stops ordering its worst line;
+  - after a fortnight with its credit gone, it is wound up. Its stock is sold to the stores at cost, its debts are paid
+    from what that brings, and the town holds the premises until someone buys them.
+- **Every item has a cost.** Every item in the game is costed the whole way back:
+  - Gathered things cost the hand's time at its trade's wage, the wear on its tools and the yard's share.
+  - Made things (crafted, smelted, cut, smithed, brewed, enchanted) cost their parts at their own cost, by the game's own
+    recipes, plus the fuel's share and the maker's time.
+  - The town's stores cost what the producers' wages came to, item by item.
+
+### Where you see it
+- **A business's books:** ask its proprietor or one of its hands "Could I see your books?" (Trade, then Money, then
+  The books) or "How's business?", or use `/village business books <id>`. The screen shows:
+  - who owns it, its staff and what each is paid;
+  - today, the week and all time: takings, cost of goods, margin, wages, rent, running costs, taxes, losses, interest,
+    net profit and what the owners drew;
+  - the till, what it owes, its stock and its worth, and a chart of the last 14 days;
+  - each ware: units sold, takings, cost, margin, cost per piece and asking price. Hover over a ware to see how one is
+    made: its last batch's ingredients and their cost, and the standard cost with its labour;
+  - its stock at cost, what it bought from whom at what price, and why its prices moved.
+  Anybody can see the summary. The full books are for the owners, the town's citizens and its friends, and admins.
+- **The town's books:** the **Businesses** page (under Economy) lists every business with its owner, staff, the week's
+  takings and net, and its till. Click one to open its books. Under the list is the town's coin, counted to the penny.
+- **A folk's card:** a proprietor's card shows the business it owns and what it has drawn; a hand's card shows its
+  employer and who pays it.
+- **You in the economy:** a citizen or friend of the town can buy a business (`/village business buy <id>`): the town's
+  at its worth, a folk's at a quarter over. You can buy a share of one (`/village business invest <id> <coins>`) and take
+  your drawings (`/village business draw <id>`). An owner, or a player with a stall, can order from the stores in any
+  quantity (`/village business order <id|stall> <item> <qty>`, or the order box on the books' Stock tab). A stall's order
+  is paid for out of your pack and handed to you to carry.
+- **The coin audit:** each morning the town's coin is counted to the penny wherever it is: the treasury, purses, house
+  savings, the bank's vault, the tills, the stall tills, the poor box and drawings not yet taken. The count is checked
+  against yesterday's and against the flows that bring coin in or take it out (the mint, the world's pay for the town's
+  work, traders, players, the upkeep). Anything left over is shown as drift.
+- **Commands:** `/village business` (the list), `books <id>`, `text <id>`, `page`, `order`, `buy`, `invest`, `draw`.
+  Operators also have `audit`, `morning` and `stage`.
+- **Admin:** `/village admin economy books <id>` and `/village admin economy audit`.
+
+Smoke: `business_books_stage` in tools/realworld/smoke.py (`/village business stage`). Tests: BusinessBooksGameTests
+(bb01 to bb06).
