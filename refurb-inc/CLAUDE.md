@@ -350,7 +350,10 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
   - Output is `assets/models/{laptops,desktops,servers}/<name>/` at 40–75k tris LOD0 with Godot LODs and 2K JPEG PBR textures, 41 MB in total. The raw files were 700 MB.
   - Raw sources are NOT in git. They live in Jon's `Desktop/Refurb INC/assets` folder.
 - Laptop tiers → data: rugged = Kestrel Swift 14; office = Prospect 5420/7390, Folio 840, Meridian T14; ultralight = Meridian X13, Aura 13; mainstream = Vantage 3510, Folio 650, Edge E15.
-  - Gaming has no model in `hardware_models.json` yet.
+  - Gaming = Northstar Vanguard G17 (2022, 17.3in, Vortex V7-12700H / Arcturo A9, 16–32GB, 512GB–1TB NVMe, Arcturo Prism P70M GPU).
+    - A-grade £640; sold by the new seller Pixelmoor Studios (games developer, min rep 10).
+    - It brought new parts: a 90Wh battery, a 1TB NVMe drive and a 17.3in 144Hz panel.
+    - Models may set an optional `gpu`, which is shown in the spec line.
 - LaptopView reads the scene metadata, so one mesh serves several models:
   - `footprint` scales the mesh to the JSON width and sets the real depth/height for collision and stacking;
   - `lid_open_deg` is the model's own open angle (110–115°);

@@ -1,5 +1,5 @@
 {
-  "_comment": "Every sellable hardware model. visual.scene is the wrapper scene; visual.* are placeholder hints and material tints. ref_* is the reference spec that refurb_value_a is quoted for.",
+  "_comment": "Every sellable hardware model. visual.scene is the wrapper scene; visual.* are placeholder hints and material tints. ref_* is the reference spec that refurb_value_a is quoted for. Optional gpu (discrete graphics) is shown in the spec line.",
   "models": [
     {
       "id": "corvex_prospect_5420", "type": "laptop", "maker": "corvex", "name": "Prospect 5420", "release_year": 2022, "screen_in": 14.0,
@@ -90,6 +90,16 @@
       "battery_part": "bat_kestrel_swift", "keycap_part": "keys_kestrel",
       "refurb_value_a": 230, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.45,
       "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_rugged/laptop_rugged.tscn", "w": 0.322, "d": 0.212, "h": 0.018, "body": "#4b5560", "deck": "#3a424b", "accent": "#e2a33b", "logo": "KESTREL"}
+    },
+    {
+      "id": "northstar_vanguard_g17", "type": "laptop", "maker": "northstar", "name": "Vanguard G17", "release_year": 2022, "screen_in": 17.3,
+      "gpu": "Arcturo Prism P70M 8GB",
+      "cpu_options": ["vortex_v7_12700h", "vortex_v7_12700h", "arcturo_a9_6900hs"], "ref_cpu": "vortex_v7_12700h",
+      "ram_options": [16, 16, 32], "ram_slots": 2, "ram_type": "ddr4_sodimm",
+      "storage_options": [512, 1000, 1000], "storage_type": "nvme_m2",
+      "battery_part": "bat_northstar_vanguard", "keycap_part": "keys_northstar",
+      "refurb_value_a": 640, "ref_ram": 16, "ref_storage": 512, "weight_kg": 2.7,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_gaming/laptop_gaming.tscn", "w": 0.395, "d": 0.282, "h": 0.027, "body": "#141518", "deck": "#101113", "accent": "#d63a2f", "logo": "NORTHSTAR"}
     }
   ]
 }

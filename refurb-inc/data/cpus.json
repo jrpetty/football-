@@ -12,6 +12,7 @@
     {"id": "vortex_v5_1245u", "maker": "Vortex", "name": "Vortex V5-1245U", "segment": "mobile", "gen": 12, "cores": 10, "threads": 12, "ghz": 1.6, "tier": 6, "value_adj": 60},
     {"id": "vortex_v7_1265u", "maker": "Vortex", "name": "Vortex V7-1265U", "segment": "mobile", "gen": 12, "cores": 10, "threads": 12, "ghz": 1.8, "tier": 7, "value_adj": 85},
     {"id": "vortex_v7_1370p", "maker": "Vortex", "name": "Vortex V7-1370P", "segment": "mobile", "gen": 13, "cores": 14, "threads": 20, "ghz": 1.9, "tier": 8, "value_adj": 130},
+    {"id": "vortex_v7_12700h", "maker": "Vortex", "name": "Vortex V7-12700H", "segment": "mobile", "gen": 12, "cores": 14, "threads": 20, "ghz": 2.3, "tier": 8, "value_adj": 120},
     {"id": "arcturo_a5_4500u", "maker": "Arcturo", "name": "Arcturo A5 4500U", "segment": "mobile", "gen": 4, "cores": 6, "threads": 6, "ghz": 2.3, "tier": 4, "value_adj": 10},
     {"id": "arcturo_a7_4750u", "maker": "Arcturo", "name": "Arcturo A7 Pro 4750U", "segment": "mobile", "gen": 4, "cores": 8, "threads": 16, "ghz": 1.7, "tier": 6, "value_adj": 45},
     {"id": "arcturo_a5_5650u", "maker": "Arcturo", "name": "Arcturo A5 Pro 5650U", "segment": "mobile", "gen": 5, "cores": 6, "threads": 12, "ghz": 2.3, "tier": 6, "value_adj": 50},

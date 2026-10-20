@@ -92,7 +92,9 @@ static func repair_part_for(u: UnitData, fault: Dictionary) -> String:
 				return "lcd_133_fhd"
 			elif size < 15.0:
 				return "lcd_14_fhd"
-			return "lcd_156_fhd"
+			elif size < 16.5:
+				return "lcd_156_fhd"
+			return "lcd_173_fhd_144"
 	return key
 
 

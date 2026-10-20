@@ -57,7 +57,9 @@ func cpu_name() -> String:
 func spec_line() -> String:
 	var storage := ("%dGB" % storage_gb) if storage_gb < 1000 else ("%dTB" % int(storage_gb / 1000.0))
 	var st_type := "NVMe" if model().get("storage_type", "") == "nvme_m2" else "SSD"
-	return "%s · %dGB RAM · %s %s" % [cpu_name(), ram_gb, storage, st_type]
+	var line := "%s · %dGB RAM · %s %s" % [cpu_name(), ram_gb, storage, st_type]
+	var gpu: String = model().get("gpu", "")
+	return line + (" · " + gpu if gpu != "" else "")
 
 
 func open_faults() -> Array:

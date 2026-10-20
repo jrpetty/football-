@@ -31,3 +31,17 @@ func test_every_model_fault_has_a_resolvable_part() -> void:
 				continue
 			var pid := Valuation.repair_part_for(u, {"id": f.id})
 			check(Content.parts.has(pid), "%s / %s -> missing part '%s'" % [m.id, f.id, pid])
+
+
+func test_gaming_laptop_is_premium_and_specced() -> void:
+	var g := Valuation.guide_price("northstar_vanguard_g17", "B")
+	check(g > Valuation.guide_price("northstar_meridian_x13", "B"), "gaming laptop should out-value the X13 (got £%d)" % g)
+	var u := UnitData.new()
+	u.model_id = "northstar_vanguard_g17"
+	u.cpu_id = "vortex_v7_12700h"
+	u.ram_gb = 32
+	u.storage_gb = 1000
+	check("Prism" in u.spec_line() and "1TB" in u.spec_line(), u.spec_line())
+	eq(Valuation.repair_part_for(u, {"id": "screen_cracked"}), "lcd_173_fhd_144")
+	eq(Valuation.repair_part_for(u, {"id": "storage_dead"}), "ssd_nvme_1000")
+	print("    Vanguard G17 guide: A £%d · B £%d · C £%d" % [Valuation.guide_price(u.model_id, "A"), g, Valuation.guide_price(u.model_id, "C")])

@@ -50,7 +50,7 @@ Leave it `""` to use the procedural laptop.
 Optional root metadata (the pipeline below writes it): `footprint` (closed W×H×D; LaptopView scales the scene so its width
 matches the JSON `w` and takes depth/height from the model), `lid_open_deg`, `sticker_pos` (grade sticker, in Lid space).
 
-Ten models are defined. They share five meshes (one per tier):
+Eleven models are defined. They share five meshes (one per tier):
 
 | Mesh (`assets/models/laptops/…`) | Tier | Used by |
 |---|---|---|
@@ -58,7 +58,7 @@ Ten models are defined. They share five meshes (one per tier):
 | `laptop_office` | 2: 14in business | Corvex Prospect 5420 / 7390, Halden Folio 840 G7, Northstar Meridian T14 |
 | `laptop_ultralight` | 3: premium 13in ultralight | Northstar Meridian X13, Brightline Aura 13 |
 | `laptop_mainstream` | 4: 15.6in with numpad | Corvex Vantage 3510, Halden Folio 650 G5, Northstar Edge E15 |
-| `laptop_gaming` | 6: 17in gaming (RGB) | nothing yet: ready for a gaming model |
+| `laptop_gaming` | 6: 17in gaming (RGB) | Northstar Vanguard G17 |
 
 ### Desktops and servers (ready for Milestone 3)
 Wrapper scenes exist but nothing spawns them yet. Each is one `Model` MeshInstance3D, front +Z, origin bottom-centre, with `footprint` metadata.

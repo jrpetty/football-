@@ -12,6 +12,7 @@
     {"id": "thornbury_council",  "name": "Thornbury Borough Council",      "sector": "Council",     "refresh_years": 3, "refresh_day_offset": 0,  "lot_size": [12, 20], "min_rep": 15, "quality_bias": 0.0,  "model_pool": ["corvex_prospect_5420", "halden_folio_840", "corvex_vantage_3510"]},
     {"id": "kingsgate_uni",      "name": "Kingsgate University",           "sector": "Education",   "refresh_years": 2, "refresh_day_offset": 5,  "lot_size": [10, 20], "min_rep": 20, "quality_bias": -0.04, "model_pool": ["northstar_meridian_t14", "kestrel_swift_14", "northstar_edge_e15"]},
     {"id": "meridian_housing",   "name": "Meridian Housing Association",   "sector": "Housing",     "refresh_years": 3, "refresh_day_offset": 2,  "lot_size": [5, 12],  "min_rep": 5,  "quality_bias": 0.02, "model_pool": ["corvex_prospect_7390", "halden_folio_840", "halden_folio_650"]},
+    {"id": "pixelmoor_studios",  "name": "Pixelmoor Studios (games developer)", "sector": "Games studio", "refresh_years": 2, "refresh_day_offset": 7, "lot_size": [3, 8], "min_rep": 10, "quality_bias": -0.05, "model_pool": ["northstar_vanguard_g17", "northstar_vanguard_g17", "brightline_aura_13"]},
     {"id": "fenwick_accountants","name": "Fenwick & Daughters Accountants","sector": "Finance",     "refresh_years": 3, "refresh_day_offset": 4,  "lot_size": [4, 7],   "min_rep": 0,  "quality_bias": 0.15, "model_pool": ["northstar_meridian_x13", "brightline_aura_13", "corvex_prospect_5420"]}
   ],
   "notes": [
