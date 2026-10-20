@@ -1,6 +1,6 @@
 /**
- * Mock Arena API (`?mock=1`): a finished 8-model chess knockout, a Connect Four
- * knockout that plays live in the browser, a finished poker knockout, a judged
+ * Mock Arena API (`?mock=1`): a finished 8-model chess knockout (Classic), a speed
+ * chess knockout (4+0, one game lost on time), a Connect Four bullet (1+0) knockout that plays live in the browser, a finished poker knockout, a judged
  * debate knockout, a courtroom match that plays live, a debate waiting for
  * human judging, and any tournament you create on the New Tournament page.
  * Games are real (see arenaSim.ts and arenaFormatsSim.ts); spending caps stop
@@ -36,13 +36,33 @@ function ensureFixtures(): void {
     t0: Date.parse('2026-09-22T19:00:00.000Z'),
     fast: false,
     maxCostUsd: 150,
+    // Classic (no clock): this field includes a copy & paste model, which speed games refuse.
+    timeControl: null,
   });
   sims.set(chess.manifest.id, chess);
+  const speedChess = buildSimTournament({
+    id: 'arena-demo-speed-chess',
+    name: 'Speed Chess Blitz · 4+0',
+    gameId: 'chess',
+    entrants: pick('meridian-atlas-4-ultra', 'kestrel-kite-reasoner', 'helios-nova-3-pro', 'obsidian-sable-large'),
+    format: 'knockout',
+    gamesPerMatch: 2,
+    createdAt: '2026-09-24T19:00:00.000Z',
+    t0: Date.parse('2026-09-24T19:00:00.000Z'),
+    fast: false,
+    maxCostUsd: 60,
+    timeControl: { minutes: 4, incrementSec: 0 },
+    // This demo model ignores its time allowance, so it can lose on time.
+    slow: ['obsidian-sable-large'],
+  });
+  sims.set(speedChess.manifest.id, speedChess);
   const c4 = buildSimTournament({
     id: 'arena-demo-connect4',
-    name: 'Connect Four Cup · live',
+    name: 'Connect Four Bullet Cup · 1+0 · live',
     gameId: 'connect4',
-    entrants: BY_STRENGTH,
+    // Speed games are for API models only: the copy & paste model sits this one out.
+    entrants: BY_STRENGTH.filter((c) => c.providerType !== 'manual'),
+    timeControl: { minutes: 1, incrementSec: 0 },
     format: 'knockout',
     gamesPerMatch: 2,
     createdAt: new Date(LOADED - 60_000).toISOString(),
@@ -238,6 +258,7 @@ function estimate(req: ArenaRequest): ArenaEstimate {
   }
   const warnings: string[] = [];
   const manual = entrants.filter((c) => c.providerType === 'manual');
+  if (req.timeControl !== null && manual.length) throw new ApiError(`Speed games need API models; switch to Classic to include copy & paste models (${manual.map((c) => c.label).join(', ')})`, 400);
   if (manual.length) warnings.push(`${manual.map((c) => c.label).join(', ')}: manual contestant — every move waits in the Manual Inbox for you to paste the model's reply`);
   const noKey = entrants.filter((c) => !c.hasKey && c.providerType !== 'manual');
   for (const c of noKey) warnings.push(`${c.label}: API key is not set — its games will error`);
@@ -309,6 +330,7 @@ export async function handleArena(method: string, parts: string[], body: unknown
         seeding: req.seeding,
         options: req.options,
         judgePool: JUDGE_POOL,
+        timeControl: req.timeControl === undefined ? { minutes: 4, incrementSec: 0 } : req.timeControl,
       });
       sims.set(newId, s);
       return { tournamentId: newId };

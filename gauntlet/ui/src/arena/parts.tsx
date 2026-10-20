@@ -8,6 +8,7 @@ import { useNow } from '../hooks.ts';
 import { SideToken } from './boards.tsx';
 import type { ArenaEntrant, ArenaMove, SideMetrics } from './types.ts';
 import type { TablePlayer } from './poker.tsx';
+import { ClockFace, shownMs, useClockNow, type ClockPair } from './ArenaClock.tsx';
 
 /** Compact per-move time: 0.8s, 7.2s, 42s, 3m05s. */
 export function secs(ms: number | null | undefined): string {
@@ -90,11 +91,14 @@ export interface VersusProps {
   finished?: boolean;
   center?: ReactNode;
   big?: boolean;
+  /** Speed games: both chess clocks (null / absent = Classic, no clock). */
+  clocks?: ClockPair | null;
 }
 
 export function Versus(p: VersusProps) {
   const sides = sidesOf(p.gameId);
   const now = useNow(p.toMove !== null && p.toMove !== undefined && !p.finished ? 250 : null);
+  const clockNow = useClockNow(p.clocks && !p.finished ? p.clocks : null);
   const side = (i: 0 | 1) => {
     const e = p.entrants.get(p.players[i]);
     const m = p.metrics?.[i];
@@ -102,8 +106,9 @@ export function Versus(p: VersusProps) {
     const turnMs = active && p.turnStartedAt ? Math.max(0, now - new Date(p.turnStartedAt).getTime()) : null;
     const won = p.finished && p.winner === i;
     const lost = p.finished && p.winner !== null && p.winner !== undefined && p.winner !== i;
+    const flagged = Boolean(p.clocks?.flagged[i]);
     return (
-      <div className={cx('vs-side', i === 1 && 'right', active && 'active', won && 'won', lost && 'lost')} style={{ ['--c' as string]: e?.color ?? 'var(--text-3)' } as CSSProperties}>
+      <div className={cx('vs-side', i === 1 && 'right', active && 'active', won && 'won', lost && 'lost', flagged && 'flag-fell')} style={{ ['--c' as string]: e?.color ?? 'var(--text-3)' } as CSSProperties}>
         <div className="vs-name-row">
           <SideToken gameId={p.gameId} side={i} color={sides[i]!.color} />
           <span className="vs-bar" aria-hidden="true" />
@@ -115,6 +120,7 @@ export function Versus(p: VersusProps) {
             </span>
           </div>
           {won && <span className="vs-flag win">WINNER</span>}
+          {p.clocks && <ClockFace ms={shownMs(p.clocks, i, clockNow)} flagged={flagged} running={p.clocks.running === i && !p.finished} big={p.big} label={`${e?.label ?? p.players[i]} clock`} />}
         </div>
         <div className="vs-stats">
           {active ? (
@@ -177,13 +183,32 @@ export function MoveList({ gameId, moves, current, onSelect, live }: { gameId: s
           );
         }
         return (
-          <li key={m.ply} className={cx('mv', i === current && 'on', m.forfeit && 'forfeit', m.opening && 'opening', m.side === 1 && 'second')}>
-            <button type="button" onClick={() => onSelect?.(i)} disabled={!onSelect} title={m.opening ? 'Random opening move played by the harness (sudden-death game)' : m.forfeit ? 'Both attempts failed: a random legal move was played and a strike given' : rejected ? `${rejected} rejected attempt(s) before this move` : undefined}>
+          <li key={m.ply} className={cx('mv', i === current && 'on', m.forfeit && 'forfeit', m.opening && 'opening', m.side === 1 && 'second', (m.flag || m.auto) && 'flagged')}>
+            <button
+              type="button"
+              onClick={() => onSelect?.(i)}
+              disabled={!onSelect}
+              title={
+                m.flag
+                  ? 'The clock reached 0:00 during this move'
+                  : m.auto
+                    ? 'Played for the player after its clock ran out (no model call)'
+                    : m.opening
+                      ? 'Random opening move played by the harness (sudden-death game)'
+                      : m.forfeit
+                        ? 'Both attempts failed: a random legal move was played and a strike given'
+                        : rejected
+                          ? `${rejected} rejected attempt(s) before this move`
+                          : undefined
+              }
+            >
               {(gameId !== 'chess' || m.side === 0) && <span className="mv-n tnum">{gameId === 'chess' ? `${Math.ceil(m.ply / 2)}.` : `${m.ply}.`}</span>}
               <span className="mv-dot" style={{ background: sides[m.side]!.color }} aria-hidden="true" />
-              <span className="mv-l">{m.move ? m.label : '✕ strike'}</span>
+              <span className="mv-l">{m.flag && !m.move ? '⚑ out of time' : m.move ? m.label : '✕ strike'}</span>
+              {m.flag && <span className="mv-tag bad">flag</span>}
+              {m.auto && <span className="mv-tag">auto</span>}
               {m.forfeit && (m.move || engineOf(gameId) !== 'board') && <span className="mv-tag bad">{engineOf(gameId) === 'board' ? 'random' : 'strike'}</span>}
-              {!m.forfeit && rejected > 0 && <span className="mv-tag warn">retry</span>}
+              {!m.forfeit && !m.flag && rejected > 0 && <span className="mv-tag warn">retry</span>}
               {m.opening && <span className="mv-tag">opening</span>}
               <span className="mv-t tnum">{m.opening ? '' : secs(m.ms)}</span>
             </button>
@@ -198,6 +223,7 @@ export function MoveList({ gameId, moves, current, onSelect, live }: { gameId: s
 export function MoveReasoning({ move, label }: { move: ArenaMove; label: string }) {
   if (move.kind === 'verdict') return <div className="mv-reason muted">The judges’ decision is shown on the stage: each judge’s scorecard, pick and reasons. Judges saw a blinded transcript (Side A / Side B, no model names).</div>;
   if (move.opening) return <div className="mv-reason muted">Random opening move played by the harness so the sudden-death game does not replay game 1. Both models face the same opening.</div>;
+  if (move.auto) return <div className="mv-reason muted">This player&apos;s clock had already run out, so this was played for it with no model call ({/^H\d+ /.test(move.label) ? 'check when free, otherwise fold' : 'no speech: out of time'}).</div>;
   return (
     <div className="mv-reason">
       {move.note && (
@@ -221,6 +247,16 @@ export function MoveReasoning({ move, label }: { move: ArenaMove; label: string 
           )}
         </div>
       ))}
+      {move.flag && (
+        <div className="mv-err">
+          <b>Flag fall:</b>{' '}
+          {/^H\d+ /.test(move.label)
+            ? 'the clock reached 0:00 during this decision. This and every later decision were made for the player (check when free, otherwise fold).'
+            : /no speech \(out of time\)/.test(move.label)
+              ? 'the clock reached 0:00 during this speech. This and every later speech of this side are missing; the judges were told.'
+              : 'the clock reached 0:00 during this move. The game ended on time.'}
+        </div>
+      )}
       {move.forfeit && (
         <div className="mv-err">
           {/^H\d+ /.test(move.label)

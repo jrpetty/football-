@@ -46,11 +46,47 @@ export interface ArenaOptionSpec {
   default: string;
 }
 
+/** Chess-clock time control per player per game (null / absent = Classic, no clock). */
+export interface TimeControl {
+  minutes: number;
+  /** Seconds added to a player's clock after each of its completed moves. */
+  incrementSec: number;
+}
+
+/**
+ * How a game plays under a clock (see src/arena/clock.ts). The words make the clock section read naturally
+ * ("decision", "speech"); `turnsLeft` sizes each turn's allowance.
+ */
+export interface ArenaClockSpec<S = unknown> {
+  /** One turn: 'move', 'decision' or 'speech'. */
+  unit: 'move' | 'decision' | 'speech';
+  /** Plural of `unit`. */
+  units: string;
+  /** "give your move", "give your ACTION line", "write your speech". */
+  finish: string;
+  /** "A good move in time beats a perfect move too late." */
+  closing: string;
+  /** What happens at 0:00, in one or two plain sentences (shown in every clocked prompt). */
+  flagRule: string;
+  /** End of the time-trouble line: "you lose on time". */
+  troubleLoss: string;
+  /** Smallest useful reply in tokens (the allowance never goes below it). */
+  minTokens: number;
+  /** Expected and most turns left for `side`, this one included (`made` = its completed turns this game). */
+  turnsLeft(state: S, side: Side, made: number, config: GameConfig): { expected: number; max: number };
+  /** Board games: the result when `side`'s flag falls (default: the other side wins on time). */
+  onFlag?(state: S, side: Side): GameOutcome;
+  /** Games that go on after a flag fall (poker, debate): what is played for the flagged seat, with no model call. */
+  flagMove?(state: S): string;
+}
+
 /** Context the 'turns' engine passes to `ArenaGame.prompt`. */
 export interface TurnPromptContext {
   config: GameConfig;
   strikes: [number, number];
   maxStrikes: number;
+  /** Speed games: the clock as this seat sees it (absent in Classic, so Classic prompts are unchanged). */
+  clock?: import('./clock.ts').ClockView;
 }
 
 /** A judged game's rubric criterion (scored 1–10 per side by every judge). */
@@ -170,6 +206,8 @@ export interface ArenaGame<S = unknown> {
   unit?: string;
   /** Judged games: the judge step (debate engine). */
   judge?: JudgeSpec<S>;
+  /** How the game plays under a clock (speed games). */
+  clock?: ArenaClockSpec<S>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -210,6 +248,14 @@ export interface ArenaMove {
   note?: string;
   /** 'verdict' = the judges' decision (judged games), not a player move. */
   kind?: 'verdict';
+  /** Speed games: model time charged to the mover's clock for this move (every attempt, retries included). */
+  chargedMs?: number;
+  /** Speed games: both clocks (ms) after this move, increment included. */
+  clockMs?: [number, number];
+  /** Speed games: the mover's flag fell during this move. */
+  flag?: boolean;
+  /** Speed games: played for the mover after its flag fell (no model call): poker auto-fold / check, debate "no speech". */
+  auto?: 'out-of-time';
 }
 
 export interface SideMetrics {
@@ -298,6 +344,18 @@ export interface ArenaGameRecord {
   judging?: ArenaJudging;
   /** This line re-states an earlier record of the same game (a human verdict was added); its cost was already counted. */
   amends?: boolean;
+  /** Speed games: the clocks (absent in Classic). */
+  clock?: GameClockRecord;
+  /** Speed games: 1 for the seat whose flag fell (like `illegal`, counted per entrant). */
+  flags?: [number, number];
+}
+
+export interface GameClockRecord {
+  initialMs: number;
+  incrementMs: number;
+  /** Both clocks at the end of the game. */
+  final: [number, number];
+  flagged: [boolean, boolean];
 }
 
 /** Record without transcripts and board snapshots, for lists. */
@@ -333,6 +391,8 @@ export interface ArenaRequest {
   notes?: string;
   /** Game-specific options (see `ArenaGame.options`), e.g. { hands: '20' } or { motion: 'random' }. */
   options?: Record<string, string>;
+  /** Chess-clock per player per game. Omitted = Speed 4+0 (the default); null = Classic (no clock). */
+  timeControl?: TimeControl | null;
 }
 
 export type MatchSource = { entrant: string } | { winnerOf: string } | { bye: true };
@@ -369,6 +429,8 @@ export interface ArenaSettings {
   budgetNote?: string;
   game: GameConfig;
   protocolVersion: string;
+  /** Speed games: the time control; null or absent = Classic (no clock). */
+  timeControl?: TimeControl | null;
 }
 
 export interface TournamentManifest {
@@ -416,6 +478,8 @@ export interface MatchState {
   /** Game points (win 1, draw ½). */
   score: [number, number];
   illegal: [number, number];
+  /** Speed games: games lost (or drawn) on the clock, per player. */
+  flags?: [number, number];
   cost: [number, number];
   winner: string | null;
   decidedBy?: MatchDecision;
@@ -439,6 +503,8 @@ export interface StandingRow {
   losses: number;
   points: number;
   illegal: number;
+  /** Speed games: flag falls (ran out of time). */
+  flags?: number;
   costUsd: number;
   rank: number;
   /** 'margin' games: total margin (e.g. chips won); `points` then holds the same number. */
@@ -500,6 +566,11 @@ export interface LiveGame {
   turnStartedAt: string;
   /** e.g. 'judging' while the judges deliberate (judged games). */
   phase?: string;
+  /** Speed games: both clocks as last settled (the side to move ticks down from `clockSince`). */
+  clockMs?: [number, number];
+  /** When the side to move's clock started running from `clockMs`. */
+  clockSince?: string;
+  flagged?: [boolean, boolean];
 }
 
 export interface ArenaEstimate {
@@ -527,7 +598,7 @@ export type ArenaEvent =
   | { type: 'tournament.progress'; tournamentId: string; gamesDone: number; gamesTotal: number; costUsd: number; at: string }
   | { type: 'game.started'; tournamentId: string; game: LiveGame; at: string }
   | { type: 'game.thinking'; tournamentId: string; key: string; side: Side; text: string; attempt: number }
-  | { type: 'game.turn'; tournamentId: string; key: string; side: Side; at: string }
+  | { type: 'game.turn'; tournamentId: string; key: string; side: Side; at: string; clockMs?: [number, number] }
   | { type: 'game.phase'; tournamentId: string; key: string; phase: string; at: string }
   | { type: 'game.move'; tournamentId: string; key: string; move: ArenaMove; strikes: [number, number]; metrics: [SideMetrics, SideMetrics]; at: string }
   | { type: 'game.finished'; tournamentId: string; game: ArenaGameLite; at: string }

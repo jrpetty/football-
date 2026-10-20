@@ -11,7 +11,8 @@
 import { createRng } from '../core/rng.ts';
 import type { ModelHandle } from '../core/types.ts';
 import { buildMovePrompt, extractMove } from './prompt.ts';
-import type { ArenaGame, ArenaMove, GameConfig, GameOutcome, MoveAttempt, Side } from './types.ts';
+import { GameClock, timedComplete, type ClockOptions } from './clock.ts';
+import type { ArenaClockSpec, ArenaGame, ArenaMove, GameClockRecord, GameConfig, GameOutcome, MoveAttempt, Side } from './types.ts';
 
 export interface Meter {
   costUsd: number;
@@ -42,8 +43,10 @@ export interface PlayGameOptions {
   signal?: AbortSignal;
   /** Called before every model call; throw to stop the game (e.g. spending cap reached). */
   beforeCall?: (side: Side) => void;
-  /** A seat starts thinking about a move (attempt 1 or 2). */
-  onTurn?: (side: Side, ply: number, attempt: number) => void;
+  /** Speed games: the chess clock (absent = Classic, no clock). */
+  clock?: ClockOptions;
+  /** A seat starts thinking about a move (attempt 1 or 2); `clockMs` = both clocks now (speed games). */
+  onTurn?: (side: Side, ply: number, attempt: number, clockMs?: [number, number]) => void;
   onMove?: (move: ArenaMove, strikes: [number, number]) => void;
 }
 
@@ -52,7 +55,20 @@ export interface PlayedGame extends GameOutcome {
   initial: unknown;
   strikes: [number, number];
   illegal: [number, number];
+  /** Speed games: the clocks at the end. */
+  clock?: GameClockRecord;
 }
+
+/** The game's clock rules, or an error when a clock is requested for a game without them. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function clockSpecOf(game: ArenaGame<any>, o: PlayGameOptions): { clock: GameClock | null; spec: ArenaClockSpec<any> | null } {
+  if (!o.clock) return { clock: null, spec: null };
+  if (!game.clock) throw new Error(`${game.name} cannot be played with a clock`);
+  return { clock: new GameClock(o.clock), spec: game.clock };
+}
+
+/** The message on an attempt stopped by the clock. */
+export const OUT_OF_TIME_ERROR = 'Out of time: the clock reached 0:00 during this reply.';
 
 const KEEP_CHARS = 1500;
 
@@ -75,6 +91,8 @@ export async function playGame(o: PlayGameOptions): Promise<PlayedGame> {
   const strikes: [number, number] = [0, 0];
   const illegal: [number, number] = [0, 0];
   const zero: Meter = { costUsd: 0, inputTokens: 0, outputTokens: 0 };
+  const { clock, spec } = clockSpecOf(game, o);
+  const end = (r: GameOutcome): PlayedGame => ({ ...r, moves, initial, strikes, illegal, ...(clock ? { clock: clock.record() } : {}) });
 
   const opening = rng.fork('opening');
   for (let i = 0; i < (o.openingPlies ?? 0) && !game.outcome(state); i++) {
@@ -83,15 +101,15 @@ export async function playGame(o: PlayGameOptions): Promise<PlayedGame> {
     const label = game.label(state, move);
     state = game.play(state, move);
     labels.push(label);
-    const record: ArenaMove = { ply: moves.length + 1, side, move, label, attempts: [], forfeit: false, opening: true, ms: 0, costUsd: 0, inputTokens: 0, outputTokens: 0, snapshot: game.snapshot(state) };
+    const record: ArenaMove = { ply: moves.length + 1, side, move, label, attempts: [], forfeit: false, opening: true, ms: 0, costUsd: 0, inputTokens: 0, outputTokens: 0, snapshot: game.snapshot(state), ...(clock ? { chargedMs: 0, clockMs: clock.snapshot() } : {}) };
     moves.push(record);
     o.onMove?.(record, [0, 0]);
   }
 
   for (;;) {
     const done = game.outcome(state);
-    if (done) return { ...done, moves, initial, strikes, illegal };
-    if (moves.length >= config.maxPlies) return { ...game.adjudicate(state), moves, initial, strikes, illegal };
+    if (done) return end(done);
+    if (moves.length >= config.maxPlies) return end(game.adjudicate(state));
 
     const side = game.toMove(state);
     const legal = game.legalMoves(state);
@@ -101,12 +119,16 @@ export async function playGame(o: PlayGameOptions): Promise<PlayedGame> {
     const started = Date.now();
     const attempts: MoveAttempt[] = [];
     let accepted: string | null = null;
+    let charged = 0;
+    let flagged = false;
 
     for (let attempt = 1; attempt <= 2 && accepted === null; attempt++) {
       abortIfNeeded(o.signal);
       o.beforeCall?.(side);
-      o.onTurn?.(side, moves.length + 1, attempt);
+      o.onTurn?.(side, moves.length + 1, attempt, clock?.snapshot());
       const prev = attempts[attempts.length - 1];
+      // Speed games: this move's allowance from the clock (the Random Baseline answers instantly and has none).
+      const plan = clock && spec && !clock.isInstant(side) ? clock.plan(side, spec.turnsLeft(state, side, clock.made[side], config), spec.minTokens) : null;
       const prompt = buildMovePrompt({
         game,
         state,
@@ -116,14 +138,30 @@ export async function playGame(o: PlayGameOptions): Promise<PlayedGame> {
         strikes,
         maxStrikes: o.maxStrikes,
         retry: prev ? { reply: prev.text, extracted: prev.extracted, error: prev.error ?? '' } : undefined,
+        ...(plan ? { clock: clock!.view(side, plan, spec!) } : {}),
       });
       const t0 = Date.now();
-      const reply = await seat.handle.complete({
-        messages: [{ role: 'user', content: prompt }],
-        maxOutputTokens: o.maxOutputTokens,
-        label: `${game.sides[side].name} · move ${moves.length + 1}${attempt > 1 ? ' · retry' : ''}`,
-      });
+      const timed = await timedComplete(
+        clock,
+        side,
+        plan,
+        (lim) =>
+          seat.handle.complete({
+            messages: [{ role: 'user', content: prompt }],
+            maxOutputTokens: lim.maxOutputTokens,
+            label: `${game.sides[side].name} · move ${moves.length + 1}${attempt > 1 ? ' · retry' : ''}`,
+            ...(lim.timeLimitMs ? { timeLimitMs: lim.timeLimitMs } : {}),
+          }),
+        o.maxOutputTokens,
+      );
       const ms = Date.now() - t0;
+      charged += timed.chargedMs;
+      if (timed.flagged) {
+        attempts.push({ text: keepTail(timed.reply?.text ?? ''), extracted: null, error: OUT_OF_TIME_ERROR, ms });
+        flagged = true;
+        break;
+      }
+      const reply = timed.reply!;
       const extracted = extractMove(reply.text);
       let error: string | undefined;
       if (extracted === null) {
@@ -139,6 +177,32 @@ export async function playGame(o: PlayGameOptions): Promise<PlayedGame> {
       if (accepted === null) illegal[side]++;
     }
 
+    if (flagged && clock) {
+      // Flag fall: the game ends on time at once (chess: a draw when the opponent cannot checkmate).
+      const after = seat.meter?.() ?? zero;
+      const record: ArenaMove = {
+        ply: moves.length + 1,
+        side,
+        move: '',
+        label: 'out of time',
+        attempts,
+        forfeit: false,
+        flag: true,
+        ms: Date.now() - started,
+        costUsd: Math.round((after.costUsd - before.costUsd) * 1e8) / 1e8,
+        inputTokens: after.inputTokens - before.inputTokens,
+        outputTokens: after.outputTokens - before.outputTokens,
+        snapshot: game.snapshot(state),
+        chargedMs: charged,
+        clockMs: clock.snapshot(),
+      };
+      moves.push(record);
+      o.onMove?.(record, [strikes[0], strikes[1]]);
+      return end(spec?.onFlag?.(state, side) ?? { winner: (1 - side) as Side, reason: `${game.sides[side].name} lost on time` });
+    }
+    clock?.moveDone(side);
+    const clocked = clock ? { chargedMs: charged, clockMs: clock.snapshot() } : {};
+
     const forfeit = accepted === null;
     if (forfeit) strikes[side]++;
     const after = seat.meter?.() ?? zero;
@@ -151,6 +215,7 @@ export async function playGame(o: PlayGameOptions): Promise<PlayedGame> {
       costUsd: Math.round((after.costUsd - before.costUsd) * 1e8) / 1e8,
       inputTokens: after.inputTokens - before.inputTokens,
       outputTokens: after.outputTokens - before.outputTokens,
+      ...clocked,
     };
 
     if (forfeit && strikes[side] >= o.maxStrikes) {
@@ -159,7 +224,7 @@ export async function playGame(o: PlayGameOptions): Promise<PlayedGame> {
       moves.push(record);
       o.onMove?.(record, [strikes[0], strikes[1]]);
       const loser = game.sides[side].name;
-      return { winner: (1 - side) as Side, reason: `${loser} made ${o.maxStrikes} illegal moves`, moves, initial, strikes, illegal };
+      return end({ winner: (1 - side) as Side, reason: `${loser} made ${o.maxStrikes} illegal moves` });
     }
 
     const move = accepted ?? fallback.pick(legal);

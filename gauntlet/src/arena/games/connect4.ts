@@ -128,6 +128,19 @@ export const connect4: ArenaGame<C4State> = {
   adjudicate() {
     return { winner: null, reason: 'Move cap reached' };
   },
+  clock: {
+    unit: 'move',
+    units: 'moves',
+    finish: 'give your move',
+    closing: 'A good move in time beats a perfect move too late.',
+    flagRule: 'If your clock reaches 0:00 you lose the game on time at once.',
+    troubleLoss: 'you lose on time',
+    minTokens: 12,
+    turnsLeft(s, _side, made, config) {
+      const cap = Math.min(COLS * ROWS, config.maxPlies);
+      return { expected: Math.max(8, 21 - made), max: Math.max(1, Math.ceil((cap - s.plies) / 2)) };
+    },
+  },
   label: (_s, move) => move,
   formatHistory(labels) {
     if (!labels.length) return '(no moves yet)';

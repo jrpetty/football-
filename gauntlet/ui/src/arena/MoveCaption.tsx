@@ -20,8 +20,9 @@ export function MoveCaption({ gameId, move, prev, names, color, idle }: { gameId
     );
   }
   const h = moveHeadline(gameId, move, prev, names);
-  const rejected = move.attempts.filter((a) => a.error);
-  const showWhy = move.kind !== 'verdict' && !move.opening && gameId !== 'debate' && gameId !== 'courtroom';
+  // An attempt stopped by the clock is not an illegal move: the headline already says the flag fell.
+  const rejected = move.flag ? [] : move.attempts.filter((a) => a.error);
+  const showWhy = move.kind !== 'verdict' && !move.opening && !move.flag && !move.auto && gameId !== 'debate' && gameId !== 'courtroom';
   return (
     <div className={cx('mcap', h.tone)} role="status" aria-live="polite" style={{ ['--c' as string]: color ?? 'var(--accent)' } as CSSProperties} key={`${move.ply}-${move.kind ?? ''}`}>
       <span className="mcap-h">

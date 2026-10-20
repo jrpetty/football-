@@ -32,6 +32,7 @@ import { playJudgedGame, verdictSnapshot } from './judged.ts';
 import { playGame } from './match.ts';
 import { playTurnGame, type PlayedGameExt } from './turns.ts';
 import { ARENA_PROMPT_VERSION } from './prompt.ts';
+import { CLOCK_PROMPT_VERSION, SpeedMeter, resolveTimeControl, timeControlLabel } from './clock.ts';
 import { gateResume, gateStart, tournamentSpentUsd } from '../budget/spend.ts';
 import { isBudgetBlockedError } from '../budget/budget.ts';
 import { appendGame, createTournamentFolder, listTournamentIds, newTournamentId, readGames, readTournament, spentUsd, toGameLite, writeTournament } from './store.ts';
@@ -164,8 +165,16 @@ export function arenaFingerprint(gameHash: string, settings: ArenaSettings, seed
     maxOutputTokens: settings.maxOutputTokens,
     game: settings.game,
     seed,
+    // Speed games only (Classic fingerprints are unchanged): the time control and the clock prompt version.
+    ...(settings.timeControl ? { timeControl: settings.timeControl, clockPrompt: CLOCK_PROMPT_VERSION } : {}),
   });
 }
+
+/** Most output tokens per second the cost estimate assumes a model can produce (bounds a speed game's output). */
+export const ESTIMATE_MAX_TOKENS_PER_SEC = 250;
+
+/** Refusal for copy & paste contestants in a speed game (they cannot be timed fairly). */
+export const SPEED_MANUAL_ERROR = 'Speed games need API models; switch to Classic to include copy & paste models';
 
 export function planTournament(req: ArenaRequest): ArenaPlan {
   const game = getGame(req.game);
@@ -213,6 +222,10 @@ export function planTournament(req: ArenaRequest): ArenaPlan {
     gameCfg.maxPlies = Math.floor(req.maxPlies);
   }
   if (req.listLegalMoves !== undefined) gameCfg.listLegalMoves = Boolean(req.listLegalMoves);
+  // Speed 4+0 unless the request says otherwise (null = Classic, no clock).
+  const timeControl = resolveTimeControl(req.timeControl);
+  if (timeControl && !game.clock) throw new Error(`${game.name} cannot be played with a clock: choose Classic`);
+  if (timeControl && entrants.some((e) => e.manual)) throw new Error(`${SPEED_MANUAL_ERROR} (${entrants.filter((e) => e.manual).map((e) => e.label).join(', ')})`);
   const arenaSettings: ArenaSettings = {
     format,
     seeding,
@@ -225,6 +238,7 @@ export function planTournament(req: ArenaRequest): ArenaPlan {
     maxCostUsd: req.maxCostUsd ?? undefined,
     game: gameCfg,
     protocolVersion: PROTOCOL_VERSION,
+    timeControl,
   };
   const seed = Number.isFinite(req.seed) ? Math.floor(req.seed!) >>> 0 : 1;
   const matches = format === 'knockout' ? buildKnockout(entrants.map((e) => e.id)) : buildRoundRobin(entrants.map((e) => e.id));
@@ -300,11 +314,15 @@ export function estimateTournament(req: ArenaRequest): ArenaEstimate {
   const base = game.estimateFor?.(plan.settings.game) ?? game.estimate;
   const plies = Math.min(base.pliesPerGame, plan.settings.game.maxPlies);
   const per = new Map<string, { move: number; basis: 'measured' | 'definition'; manual: boolean }>();
+  // Speed games: a player cannot write more than its clock allows, so its output per game is capped at
+  // (clock + increments) × ESTIMATE_MAX_TOKENS_PER_SEC (each call's allowance is sized from the clock).
+  const tc = plan.settings.timeControl;
+  const clockOutCap = tc ? (tc.minutes * 60 + tc.incrementSec * (plies / 2)) * ESTIMATE_MAX_TOKENS_PER_SEC : Infinity;
   const perContestant = plan.entrants.map((e) => {
     const m = measured.get(e.configHash);
     const basis: 'measured' | 'definition' = m && m.n >= 10 ? 'measured' : 'definition';
     const input = basis === 'measured' ? m!.input / m!.n : base.inputTokensPerMove;
-    const output = basis === 'measured' ? m!.output / m!.n : base.outputTokensPerMove;
+    const output = Math.min(basis === 'measured' ? m!.output / m!.n : base.outputTokensPerMove, clockOutCap / Math.max(1, plies / 2));
     const free = Boolean(e.manual);
     // +5% for retries after rejected moves.
     const move = free ? 0 : ((input * e.pricing.inputPerM + output * e.pricing.outputPerM) / 1e6) * 1.05;
@@ -369,6 +387,8 @@ export function estimateTournament(req: ArenaRequest): ArenaEstimate {
   const anyDefinition = perContestant.some((p) => p.basis === 'definition' && p.perMoveUsd > 0);
   high *= anyDefinition ? 1.6 : 1.2;
   const warnings = plan.warnings.slice();
+  if (tc && Number.isFinite(clockOutCap) && base.outputTokensPerMove * (plies / 2) > clockOutCap)
+    warnings.push(`${timeControlLabel(tc)}: each player's output is limited by its clock (at most about ${Math.round(clockOutCap / 1000)}k tokens per game at ${ESTIMATE_MAX_TOKENS_PER_SEC} tokens/s), which lowers the estimate`);
   if (plan.settings.maxCostUsd !== undefined && central > plan.settings.maxCostUsd) warnings.push(`Estimated cost ${central.toFixed(2)} USD exceeds your cap of ${plan.settings.maxCostUsd.toFixed(2)} USD: the tournament will stop when the cap is reached`);
   return {
     games,
@@ -562,6 +582,19 @@ function launch(manifest: TournamentManifest): void {
   const liveSpend = () => [...inFlightRecorders].reduce((s, r) => s + r.costUsd, 0);
   t.liveSpend = liveSpend;
   let budgetHit = false;
+  // Speed games: each player's measured speed in this tournament (seeded from games already played, on resume).
+  const timeControl = manifest.settings.timeControl ?? null;
+  const speeds = new Map<string, SpeedMeter>();
+  const speedOf = (id: string): SpeedMeter => {
+    let m = speeds.get(id);
+    if (!m) speeds.set(id, (m = new SpeedMeter()));
+    return m;
+  };
+  if (timeControl) {
+    for (const g of readGames(manifest.id))
+      for (const seat of [0, 1] as const)
+        for (const e of g.transcripts?.[seat] ?? []) if (!e.error && !e.judge) speedOf(g.players[seat]).observe({ outputTokens: e.usage.outputTokens, totalMs: e.totalMs, ttftMs: e.ttftMs });
+  }
 
   // Streaming text, throttled to ~7 events/s per game.
   const thinking = new Map<string, { side: 0 | 1; text: string; attempt: number }>();
@@ -577,7 +610,9 @@ function launch(manifest: TournamentManifest): void {
     const startedAt = now();
     const [p0, p1] = slot.players;
     // A hung API call must not stall the bracket: each move gets the per-case time limit (humans pasting replies get a week).
-    const moveLimitMs = slot.players.some((p) => entrant.get(p)?.manual) ? 7 * 24 * 3600 * 1000 : settings.defaultTimeLimitSec * 1000;
+    // Speed games stop each call at the player's clock anyway; this outer limit only catches a hung connection.
+    const moveLimitMs = slot.players.some((p) => entrant.get(p)?.manual) ? 7 * 24 * 3600 * 1000 : Math.max(settings.defaultTimeLimitSec * 1000, timeControl ? timeControl.minutes * 60_000 + 120_000 : 0);
+    const initialClock = timeControl ? Math.round(timeControl.minutes * 60_000) : 0;
     let moveTimer: ReturnType<typeof setTimeout> | undefined;
     let timedOut = false;
     const liveGame: LiveGame = {
@@ -593,6 +628,7 @@ function launch(manifest: TournamentManifest): void {
       metrics: [emptyMetrics(), emptyMetrics()],
       startedAt,
       turnStartedAt: startedAt,
+      ...(timeControl ? { clockMs: [initialClock, initialClock] as [number, number], clockSince: startedAt, flagged: [false, false] as [boolean, boolean] } : {}),
     };
     live.set(slot.key, liveGame);
     emit({ type: 'game.started', tournamentId: manifest.id, game: liveGame, at: startedAt });
@@ -699,7 +735,18 @@ function launch(manifest: TournamentManifest): void {
         openingPlies: slot.suddenDeath ? SUDDEN_DEATH_OPENING_PLIES : 0,
         signal: ctrl.signal,
         beforeCall: checkBudget,
-        onTurn: (side, _ply, attempt) => {
+        ...(timeControl
+          ? {
+              clock: {
+                timeControl,
+                speed: [speedOf(p0), speedOf(p1)] as [SpeedMeter, SpeedMeter],
+                // The Random Baseline answers instantly: its clock never runs.
+                instant: [Boolean(entrant.get(p0)?.baseline), Boolean(entrant.get(p1)?.baseline)] as [boolean, boolean],
+                maxOutputTokens: manifest.settings.maxOutputTokens,
+              },
+            }
+          : {}),
+        onTurn: (side, _ply, attempt, clockMs) => {
           clearTimeout(moveTimer);
           moveTimer = setTimeout(() => {
             timedOut = true;
@@ -712,12 +759,21 @@ function launch(manifest: TournamentManifest): void {
           liveGame.phase = undefined;
           liveGame.thinking = '';
           liveGame.turnStartedAt = now();
-          emit({ type: 'game.turn', tournamentId: manifest.id, key: slot.key, side, at: liveGame.turnStartedAt });
+          if (clockMs) {
+            liveGame.clockMs = clockMs;
+            liveGame.clockSince = liveGame.turnStartedAt;
+          }
+          emit({ type: 'game.turn', tournamentId: manifest.id, key: slot.key, side, at: liveGame.turnStartedAt, ...(clockMs ? { clockMs } : {}) });
           if (attempt > 1) log('info', `${entrant.get(slot.players[side])?.label ?? slot.players[side]} gets a retry on ${slot.key} (previous move rejected)`);
         },
         onMove: (move, strikes) => {
           liveGame.moves.push(move);
           liveGame.strikes = strikes;
+          if (move.clockMs) {
+            liveGame.clockMs = move.clockMs;
+            liveGame.clockSince = now();
+            if (move.flag) liveGame.flagged = [liveGame.flagged?.[0] || move.side === 0, liveGame.flagged?.[1] || move.side === 1];
+          }
           liveGame.metrics = [metricsOf(recorders[0]!), metricsOf(recorders[1]!)];
           emit({ type: 'game.move', tournamentId: manifest.id, key: slot.key, move, strikes, metrics: liveGame.metrics, at: now() });
         },
@@ -742,7 +798,9 @@ function launch(manifest: TournamentManifest): void {
         finishedAt: now(),
         ...(played.margin ? { margin: played.margin } : {}),
         ...(played.judging ? { judging: played.judging } : {}),
+        ...(played.clock ? { clock: played.clock, flags: [played.clock.flagged[0] ? 1 : 0, played.clock.flagged[1] ? 1 : 0] as [number, number] } : {}),
       };
+      if (played.clock?.flagged.some(Boolean)) log('info', `${slot.key}: ${played.reason}`);
       if (record.status === 'awaiting-judges') log('warn', `${slot.key}: ${played.judging?.note ?? 'awaiting human judging'}`);
     } catch (err) {
       const outOfMoney = err instanceof BudgetReached || isSpendLimitError(err);

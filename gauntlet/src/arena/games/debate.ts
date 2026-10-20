@@ -10,6 +10,7 @@
  */
 import type { ArenaGame, GameConfig, JudgeSpec, ParsedMove, RubricItem, Side, TurnPromptContext } from '../types.ts';
 import { CASES, MOTIONS, caseById, motionById, type CaseFile, type Motion } from './debate-bank.ts';
+import { withClock } from '../clock.ts';
 
 export type DebateVariant = 'debate' | 'courtroom';
 
@@ -44,6 +45,8 @@ export interface Speech {
   cut: number;
   /** The model gave no usable speech (two empty replies). */
   missing?: boolean;
+  /** Speed games: the speaker's clock had run out, so there is no speech. */
+  outOfTime?: boolean;
 }
 
 export interface DebateState {
@@ -176,6 +179,7 @@ function transcriptFor(s: DebateState, label: (side: Side) => string): string {
   return s.speeches
     .map((sp) => {
       const head = `[${R[sp.round]} · ${label(sp.side)}]`;
+      if (sp.outOfTime) return `${head}\n(No speech: out of time.)`;
       if (sp.missing) return `${head}\n(No speech: this side failed to reply.)`;
       return `${head}\n${fenceSpeech(sp.text)}${sp.cut ? `\n[Cut by the harness: ${sp.words} words, limit ${sp.limit}.]` : ''}`;
     })
@@ -187,7 +191,10 @@ export function taskLine(roundName: string, round: number, limit: number): strin
   return `Now give your speech: ${roundName} (round ${round + 1} of 3), at most ${limit} words.`;
 }
 
-export function speechPrompt(s: DebateState, side: Side): string {
+/** The move the debate engine plays for a speaker whose clock has run out. */
+export const OUT_OF_TIME_SPEECH = '(no speech: out of time)';
+
+export function speechPrompt(s: DebateState, side: Side, clock?: TurnPromptContext['clock']): string {
   const [p, o] = sideNames(s.variant);
   const names: [string, string] = [p, o];
   const turn = s.speeches.length;
@@ -207,14 +214,16 @@ export function speechPrompt(s: DebateState, side: Side): string {
       : side === 0
         ? `You are the ${p}: you argue FOR the motion.`
         : `You are the ${o}: you argue AGAINST the motion.`;
-  return [
+  const parts = [
     intro,
     topic,
     `== FORMAT ==\n${formatBlock(s)}`,
     `== YOUR SIDE ==\n${you}`,
     `== TRANSCRIPT SO FAR ==\n${transcriptFor(s, (x) => (x === side ? `${names[x]} (you)` : names[x]!))}`,
     `== YOUR TASK ==\n${taskLine(R[round]!, round, s.limits[round]!)} Address the judges (there is no jury). Reply with the speech only: no title, no word count, no notes to the judges.`,
-  ].join('\n\n');
+  ];
+  // Speed games only: the clock section after the intro and a reminder before the task (Classic is unchanged).
+  return withClock(parts, clock).join('\n\n');
 }
 
 function judgeMaterial(s: DebateState, sideA: Side): string {
@@ -235,7 +244,15 @@ function judgeMaterial(s: DebateState, sideA: Side): string {
     topic,
     `== SIDES ==\n${who}\nThe ${p} spoke first in every round. Word limits: ${roundNames(s.variant).map((r, i) => `${r.toLowerCase()} ${s.limits[i]}`).join(', ')} words. The harness cut any speech over its limit; cuts are marked and count against rule-following.`,
     `== TRANSCRIPT ==\n${transcriptFor(s, (x) => `${letter(x)} — ${role(x)}`)}`,
+    ...outOfTimeNote(s, letter),
   ].join('\n\n');
+}
+
+/** Speed games: tell the judges which side ran out of time (its later speeches are missing); judge what exists. */
+function outOfTimeNote(s: DebateState, letter: (x: Side) => string): string[] {
+  const out = ([0, 1] as Side[]).filter((x) => s.speeches.some((sp) => sp.side === x && sp.outOfTime));
+  if (!out.length) return [];
+  return [`== CLOCK ==\nThis was a speed game with a clock per side. ${out.map((x) => letter(x)).join(' and ')} ran out of time, so ${out.length > 1 ? 'their' : 'its'} remaining speeches are missing ("No speech: out of time"). Judge what was said; a missing speech cannot score.`];
 }
 
 function judgeSpec(variant: DebateVariant): JudgeSpec<DebateState> {
@@ -329,9 +346,12 @@ function makeGame(variant: DebateVariant): ArenaGame<DebateState> {
       const limit = s.limits[round] ?? DEFAULT_LIMITS[round]!;
       const text = move.trim();
       const words = countWords(text);
-      const speech: Speech = text
-        ? { side, round, text: words > limit ? cutWords(text, limit) : text, words, limit, cut: Math.max(0, words - limit) }
-        : { side, round, text: '', words: 0, limit, cut: 0, missing: true };
+      const speech: Speech =
+        move === OUT_OF_TIME_SPEECH
+          ? { side, round, text: '', words: 0, limit, cut: 0, missing: true, outOfTime: true }
+          : text
+            ? { side, round, text: words > limit ? cutWords(text, limit) : text, words, limit, cut: Math.max(0, words - limit) }
+            : { side, round, text: '', words: 0, limit, cut: 0, missing: true };
       return { ...s, speeches: [...s.speeches, speech] };
     },
     outcome: (s) => (s.speeches.length >= ORDER.length ? { winner: null, reason: 'Speeches finished: awaiting the judges' } : null),
@@ -342,6 +362,7 @@ function makeGame(variant: DebateVariant): ArenaGame<DebateState> {
     },
     label(s, move) {
       const [side, round] = ORDER[s.speeches.length] ?? [0, 0];
+      if (move === OUT_OF_TIME_SPEECH) return `${R[round]} · ${side === 0 ? p : o} · no speech (out of time)`;
       const words = countWords(move);
       return `${R[round]} · ${side === 0 ? p : o}${move ? ` · ${words} words` : ' · no speech'}`;
     },
@@ -352,8 +373,22 @@ function makeGame(variant: DebateVariant): ArenaGame<DebateState> {
       const next = s.speeches.length < ORDER.length ? { side: ORDER[s.speeches.length]![0], round: ORDER[s.speeches.length]![1] } : null;
       return { kind: 'debate', variant, topicId: s.topicId, title: t.title, sides: [p, o], roundNames: R, limits: s.limits, speeches: s.speeches, next };
     },
-    prompt: (s, side: Side, _ctx: TurnPromptContext) => speechPrompt(s, side),
+    prompt: (s, side: Side, ctx: TurnPromptContext) => speechPrompt(s, side, ctx.clock),
     fallbackMove: () => '',
+    clock: {
+      unit: 'speech',
+      units: 'speeches',
+      finish: 'write your speech',
+      closing: 'A solid speech in time beats a perfect one too late.',
+      flagRule: 'If your clock reaches 0:00, each of your remaining speeches is replaced by "(No speech: out of time)" and the judges are told that you ran out of time.',
+      troubleLoss: 'your remaining speeches are lost',
+      minTokens: 260,
+      turnsLeft(s, side) {
+        const left = ORDER.slice(s.speeches.length).filter(([x]) => x === side).length;
+        return { expected: Math.max(1, left), max: Math.max(1, left) };
+      },
+      flagMove: () => OUT_OF_TIME_SPEECH,
+    },
   };
 }
 

@@ -29,6 +29,9 @@ import type { PokerState } from '../../../src/arena/games/poker.ts';
 import { countWords, type DebateState } from '../../../src/arena/games/debate.ts';
 import { verdictSnapshot } from '../../../src/arena/judged.ts';
 import { pokerChoice, simulateJudging, speechFor } from './arenaFormatsSim.ts';
+import { planMove, type ClockView, type SpeedEstimate } from '../../../src/arena/clock.ts';
+import { OUT_OF_TIME_ERROR } from '../../../src/arena/match.ts';
+import type { TimeControl } from '../arena/types.ts';
 
 /** How strong each demo model plays (0 = random). */
 export const STRENGTH: Record<string, number> = {
@@ -121,6 +124,53 @@ function chessPolicy(game: ArenaGame<ChessState>, s: ChessState, strength: numbe
   return { move: best, why: bestWhy };
 }
 
+// ─────────────────────────────── Clocks (speed games) ───────────────────────────────
+
+/** A typical measured speed for the demo models. */
+const SIM_SPEED: SpeedEstimate = { tokensPerSec: 90, firstTokenMs: 700, throughputPerSec: 80, measured: true };
+
+/**
+ * The two clocks of a simulated speed game. A model that follows its allowance takes at most 80% of its
+ * per-move budget; a "slow" demo model ignores it (its full thinking time, plus 60%) and can lose on time.
+ */
+class SimClock {
+  readonly initialMs: number;
+  readonly incrementMs: number;
+  readonly ms: [number, number];
+  readonly made: [number, number] = [0, 0];
+  readonly flagged: [boolean, boolean] = [false, false];
+  constructor(tc: TimeControl) {
+    this.initialMs = Math.round(tc.minutes * 60_000);
+    this.incrementMs = Math.round(tc.incrementSec * 1000);
+    this.ms = [this.initialMs, this.initialMs];
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  charge(game: ArenaGame<any>, state: unknown, config: ArenaSettings['game'], side: Side, rawMs: number, slow: boolean, instant: boolean): { charged: number; flagged: boolean } {
+    if (instant) return { charged: 0, flagged: false };
+    const spec = game.clock!;
+    const plan = planMove({ remainingMs: this.ms[side], turns: spec.turnsLeft(state, side, this.made[side], config), speed: SIM_SPEED, maxOutputTokens: 16000, minTokens: spec.minTokens });
+    const charged = Math.round(slow ? rawMs * 1.6 : Math.min(rawMs, plan.budgetMs * 0.8));
+    if (charged >= this.ms[side]) {
+      const left = this.ms[side];
+      this.ms[side] = 0;
+      this.flagged[side] = true;
+      return { charged: left, flagged: true };
+    }
+    this.ms[side] -= charged;
+    return { charged, flagged: false };
+  }
+  done(side: Side): void {
+    this.made[side]++;
+    if (!this.flagged[side]) this.ms[side] += this.incrementMs;
+  }
+  snap(): [number, number] {
+    return [this.ms[0], this.ms[1]];
+  }
+  record(): NonNullable<ArenaGameRecord['clock']> {
+    return { initialMs: this.initialMs, incrementMs: this.incrementMs, final: this.snap(), flagged: [this.flagged[0], this.flagged[1]] };
+  }
+}
+
 // ─────────────────────────────── One game ───────────────────────────────
 
 export interface SimGame {
@@ -146,9 +196,13 @@ export function simulateGame(opts: {
   /** Judge pool for judged games (debate, courtroom). */
   judgePool?: ContestantView[];
   noJudges?: boolean;
+  /** Speed games: demo models that ignore their allowance (and can lose on time). */
+  slow?: string[];
 }): SimGame {
   const { game, settings, slot } = opts;
   if ((game.engine ?? 'board') !== 'board') return simulateFormatGame(opts);
+  const clock = settings.timeControl && game.clock ? new SimClock(settings.timeControl) : null;
+  let flagOutcome: { winner: Side | null; reason: string } | null = null;
   const rng = createRng(hashString(`${opts.tournamentId}|${slot.key}`));
   let state = game.setup(createRng(slot.seed).fork('setup'), settings.game);
   const initial = game.snapshot(state);
@@ -168,7 +222,7 @@ export function simulateGame(opts: {
       const label = game.label(state, move);
       state = game.play(state, move);
       labels.push(label);
-      moves.push({ ply: moves.length + 1, side, move, label, attempts: [], forfeit: false, opening: true, ms: 0, costUsd: 0, inputTokens: 0, outputTokens: 0, snapshot: game.snapshot(state) });
+      moves.push({ ply: moves.length + 1, side, move, label, attempts: [], forfeit: false, opening: true, ms: 0, costUsd: 0, inputTokens: 0, outputTokens: 0, snapshot: game.snapshot(state), ...(clock ? { chargedMs: 0, clockMs: clock.snap() } : {}) });
       pace.push(900);
       outcome = game.outcome(state);
     }
@@ -231,11 +285,45 @@ export function simulateGame(opts: {
     const manual = c?.providerType === 'manual';
     const cost = manual ? 0 : (calls * inTok * price.inputPerM + calls * outTok * price.outputPerM) / 1e6;
     if (opts.budget) opts.budget.spent += cost;
-    const totalMs = attempts.reduce((sum, a) => sum + a.ms, 0);
+    let totalMs = attempts.reduce((sum, a) => sum + a.ms, 0);
+    let displayMs = opts.fast ? 1100 + Math.round(rng.next() * 1300) : totalMs;
+    const tick = clock?.charge(game, state, settings.game, side, displayMs, Boolean(opts.slow?.includes(who)), strength === 0);
+    if (clock && tick) {
+      // The live view ticks in real time, so the shown pace follows the clock; the thinking times match it.
+      displayMs = opts.fast ? Math.max(500, tick.charged) : tick.charged;
+      if (!opts.fast && totalMs > 0 && strength > 0) {
+        const f = tick.charged / totalMs;
+        for (const a of attempts) a.ms = Math.round(a.ms * f);
+        totalMs = tick.charged;
+      }
+      if (tick.flagged) {
+        const cut = attempts[attempts.length - 1]!.text.split(String.fromCharCode(10)).slice(0, 2).join(String.fromCharCode(10));
+        moves.push({
+          ply: moves.length + 1,
+          side,
+          move: '',
+          label: 'out of time',
+          attempts: [{ text: `${cut} …`, extracted: null, error: OUT_OF_TIME_ERROR, ms: tick.charged }],
+          forfeit: false,
+          flag: true,
+          ms: tick.charged,
+          costUsd: Math.round(cost * 1e8) / 1e8,
+          inputTokens: inTok * calls,
+          outputTokens: outTok * calls,
+          snapshot: game.snapshot(state),
+          chargedMs: tick.charged,
+          clockMs: clock.snap(),
+        });
+        pace.push(displayMs);
+        metrics[side].ms += tick.charged;
+        flagOutcome = game.clock!.onFlag?.(state, side) ?? { winner: (1 - side) as Side, reason: `${game.sides[side].name} lost on time` };
+        break;
+      }
+      clock.done(side);
+    }
     state = game.play(state, choice.move);
     labels.push(label);
-    const displayMs = opts.fast ? 1100 + Math.round(rng.next() * 1300) : totalMs;
-    moves.push({ ply: moves.length + 1, side, move: choice.move, label, attempts, forfeit: false, ms: opts.fast ? displayMs : totalMs, costUsd: Math.round(cost * 1e8) / 1e8, inputTokens: inTok * calls, outputTokens: outTok * calls, snapshot: game.snapshot(state) });
+    moves.push({ ply: moves.length + 1, side, move: choice.move, label, attempts, forfeit: false, ms: opts.fast ? displayMs : totalMs, costUsd: Math.round(cost * 1e8) / 1e8, inputTokens: inTok * calls, outputTokens: outTok * calls, snapshot: game.snapshot(state), ...(clock && tick ? { chargedMs: tick.charged, clockMs: clock.snap() } : {}) });
     pace.push(displayMs);
     const m = metrics[side];
     m.costUsd += cost;
@@ -255,8 +343,8 @@ export function simulateGame(opts: {
     seed: slot.seed,
     players: slot.players,
     status: stopped ? 'cancelled' : 'ok',
-    winner: stopped ? null : outcome!.winner,
-    reason: stopped ? 'Stopped: budget cap reached' : outcome!.reason,
+    winner: stopped ? null : (flagOutcome ?? outcome!).winner,
+    reason: stopped ? 'Stopped: budget cap reached' : (flagOutcome ?? outcome!).reason,
     moves,
     initial,
     strikes,
@@ -265,6 +353,7 @@ export function simulateGame(opts: {
     transcripts: [[], []],
     startedAt: '',
     finishedAt: '',
+    ...(clock ? { clock: clock.record(), flags: [clock.flagged[0] ? 1 : 0, clock.flagged[1] ? 1 : 0] as [number, number] } : {}),
   };
   return { record, pace };
 }
@@ -281,6 +370,7 @@ function simulateFormatGame(opts: Parameters<typeof simulateGame>[0]): SimGame {
   const strikes: [number, number] = [0, 0];
   const illegal: [number, number] = [0, 0];
   const metrics: [SideMetrics, SideMetrics] = [emptyMetrics(), emptyMetrics()];
+  const clock = settings.timeControl && game.clock ? new SimClock(settings.timeControl) : null;
   let stopped = false;
   while (!game.outcome(state) && moves.length < settings.game.maxPlies) {
     if (opts.budget && opts.budget.spent >= opts.budget.cap) {
@@ -330,9 +420,14 @@ function simulateFormatGame(opts: Parameters<typeof simulateGame>[0]): SimGame {
     const cost = c?.providerType === 'manual' ? 0 : (calls * inTok * price.inputPerM + calls * outTok * price.outputPerM) / 1e6;
     if (opts.budget) opts.budget.spent += cost;
     const label = game.label(state, move);
-    state = game.play(state, move);
     const totalMs = attempts.reduce((a, x) => a + x.ms, 0);
-    moves.push({ ply: moves.length + 1, side, move, label, attempts, forfeit: false, ms: opts.fast ? display : totalMs, costUsd: Math.round(cost * 1e8) / 1e8, inputTokens: inTok * calls, outputTokens: outTok * calls, snapshot: game.snapshot(state), ...(note ? { note } : {}) });
+    const tick = clock?.charge(game, state, settings.game, side, opts.fast ? display : totalMs, false, strength === 0);
+    if (clock && tick) {
+      if (opts.fast) display = Math.max(500, tick.charged);
+      clock.done(side);
+    }
+    state = game.play(state, move);
+    moves.push({ ply: moves.length + 1, side, move, label, attempts, forfeit: false, ms: opts.fast ? display : totalMs, costUsd: Math.round(cost * 1e8) / 1e8, inputTokens: inTok * calls, outputTokens: outTok * calls, snapshot: game.snapshot(state), ...(note ? { note } : {}), ...(clock && tick ? { chargedMs: tick.charged, clockMs: clock.snap() } : {}) });
     pace.push(display);
     const m = metrics[side];
     m.costUsd += cost;
@@ -393,8 +488,20 @@ function simulateFormatGame(opts: Parameters<typeof simulateGame>[0]): SimGame {
     finishedAt: '',
     ...(!stopped && game.margin ? { margin: game.margin(state) } : {}),
     ...(judging ? { judging } : {}),
+    ...(clock ? { clock: clock.record(), flags: [0, 0] as [number, number] } : {}),
   };
   return { record, pace };
+}
+
+/** The clock as the mover saw it before a simulated move (speed games), for the rebuilt prompt. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function clockViewAt(record: ArenaGameRecord, mv: ArenaMove, game: ArenaGame<any>, state: unknown, settings: ArenaSettings): ClockView | undefined {
+  if (!record.clock || !game.clock || !mv.clockMs) return undefined;
+  const i = record.moves.indexOf(mv);
+  const before = [...record.moves.slice(0, i)].reverse().find((m) => m.clockMs)?.clockMs ?? [record.clock.initialMs, record.clock.initialMs];
+  const made = record.moves.slice(0, i).filter((m) => m.side === mv.side && !m.opening).length;
+  const plan = planMove({ remainingMs: before[mv.side], turns: game.clock.turnsLeft(state, mv.side, made, settings.game), speed: SIM_SPEED, maxOutputTokens: 16000, minTokens: game.clock.minTokens });
+  return { initialMs: record.clock.initialMs, incrementMs: record.clock.incrementMs, remainingMs: before[mv.side], opponentMs: before[1 - mv.side]!, made, suggestedMs: plan.suggestedMs, maxOutputTokens: plan.maxOutputTokens, words: game.clock };
 }
 
 /** Rebuild the per-move prompts for a simulated game (the transcript tab). */
@@ -407,9 +514,10 @@ export function transcriptsFor(record: ArenaGameRecord, gameId: string, settings
     if (!mv.opening) {
       mv.attempts.forEach((a, i) => {
         const prev = mv.attempts[i - 1];
+        const cv = clockViewAt(record, mv, game, state, settings);
         const prompt = game.prompt
-          ? game.prompt(state, mv.side, { config: settings.game, strikes: [0, 0], maxStrikes: settings.maxStrikes })
-          : buildMovePrompt({ game, state, side: mv.side, config: settings.game, labels, strikes: [0, 0], maxStrikes: settings.maxStrikes, retry: prev ? { reply: prev.text, extracted: prev.extracted, error: prev.error ?? '' } : undefined });
+          ? game.prompt(state, mv.side, { config: settings.game, strikes: [0, 0], maxStrikes: settings.maxStrikes, ...(cv ? { clock: cv } : {}) })
+          : buildMovePrompt({ game, state, side: mv.side, config: settings.game, labels, strikes: [0, 0], maxStrikes: settings.maxStrikes, retry: prev ? { reply: prev.text, extracted: prev.extracted, error: prev.error ?? '' } : undefined, ...(cv ? { clock: cv } : {}) });
         const c = contestants.get(record.players[mv.side]);
         const n = mv.attempts.length;
         out[mv.side].push({
@@ -426,7 +534,7 @@ export function transcriptsFor(record: ArenaGameRecord, gameId: string, settings
         });
       });
     }
-    if (mv.kind !== 'verdict' && (mv.move || game.engine === 'debate')) {
+    if (mv.kind !== 'verdict' && !mv.flag && (mv.move || game.engine === 'debate')) {
       state = game.play(state, mv.move);
       labels.push(mv.label);
     }
@@ -472,6 +580,10 @@ export function buildSimTournament(opts: {
   options?: Record<string, string>;
   judgePool?: ContestantView[];
   noJudges?: boolean;
+  /** Time control (default Speed 4+0; null = Classic). */
+  timeControl?: TimeControl | null;
+  /** Speed games: demo models that ignore their allowance. */
+  slow?: string[];
 }): SimTournament {
   const game = GAMES[opts.gameId]!;
   let gameCfg = { ...game.defaults };
@@ -489,6 +601,7 @@ export function buildSimTournament(opts: {
     maxCostUsd: opts.maxCostUsd,
     game: gameCfg,
     protocolVersion: '2026.09',
+    timeControl: opts.timeControl === undefined ? { minutes: 4, incrementSec: 0 } : opts.timeControl,
   };
   const matches = opts.format === 'knockout' ? buildKnockout(entrants.map((e) => e.id)) : buildRoundRobin(entrants.map((e) => e.id));
   const manifest: TournamentManifest = {
@@ -523,7 +636,7 @@ export function buildSimTournament(opts: {
     }
     const next = playableSlots(state, new Set(), { pairsInOrder: game.sequentialPairs })[0];
     if (!next) break;
-    const g = simulateGame({ game, settings, tournamentId: opts.id, slot: next, contestants, fast: opts.fast, budget, judgePool: opts.judgePool, noJudges: opts.noJudges });
+    const g = simulateGame({ game, settings, tournamentId: opts.id, slot: next, contestants, fast: opts.fast, budget, judgePool: opts.judgePool, noJudges: opts.noJudges, slow: opts.slow });
     games.push(g);
     if (g.record.status === 'cancelled') {
       budgetStopped = true;
@@ -603,6 +716,13 @@ export function viewAt(sim: SimTournament, now: number): SimView {
         startedAt: new Date(sim.t0 + tl.start).toISOString(),
         turnStartedAt: new Date(sim.t0 + tl.start + turnStart).toISOString(),
         ...(nextMove?.kind === 'verdict' ? { phase: 'judging' } : {}),
+        ...(g.record.clock
+          ? {
+              clockMs: [...moves].reverse().find((m) => m.clockMs)?.clockMs ?? [g.record.clock.initialMs, g.record.clock.initialMs],
+              clockSince: new Date(sim.t0 + tl.start + turnStart).toISOString(),
+              flagged: [moves.some((m) => m.flag && m.side === 0), moves.some((m) => m.flag && m.side === 1)],
+            }
+          : {}),
       };
     }
   });

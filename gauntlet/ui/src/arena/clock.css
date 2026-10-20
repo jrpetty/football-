@@ -1,0 +1,154 @@
+/* ───────────────────────────── Chess clocks (speed games) ───────────────────────────── */
+
+.ar-clock {
+  --clk: var(--text-1);
+  --clk-bg: var(--surface-2);
+  --clk-border: var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--clk-border);
+  background: var(--clk-bg);
+  color: var(--clk);
+  font-size: 0.95rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.ar-clock b {
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.ar-clock.big {
+  font-size: 1.35rem;
+  padding: 4px 12px;
+}
+.ar-clock-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.ar-clock.running .ar-clock-dot {
+  background: var(--clk);
+}
+.ar-clock.running {
+  box-shadow: 0 0 0 1px var(--clk-border);
+}
+.ar-clock.st-low {
+  --clk: var(--warn-text);
+  --clk-bg: var(--warn-soft);
+  --clk-border: color-mix(in srgb, var(--warn) 60%, transparent);
+}
+.ar-clock.st-critical,
+.ar-clock.st-trouble,
+.ar-clock.st-flagged {
+  --clk: var(--bad-text);
+  --clk-bg: var(--bad-soft);
+  --clk-border: color-mix(in srgb, var(--bad) 65%, transparent);
+}
+.ar-clock.running.st-low {
+  animation: ar-clock-pulse 1.6s ease-in-out infinite;
+}
+.ar-clock.running.st-critical,
+.ar-clock.running.st-trouble {
+  animation: ar-clock-pulse 0.8s ease-in-out infinite;
+}
+.ar-clock-badge {
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--bad);
+  color: #fff;
+}
+@keyframes ar-clock-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px var(--clk-border);
+  }
+  50% {
+    box-shadow: 0 0 0 3px var(--clk-border), 0 0 18px -2px var(--clk-border);
+  }
+}
+.vs-name-row .ar-clock {
+  margin-left: auto;
+}
+.vs-name-row .vs-flag + .ar-clock {
+  margin-left: 8px;
+}
+.vs-side.right .vs-name-row .ar-clock {
+  margin-left: 0;
+  margin-right: auto;
+}
+.vs-side.right .vs-name-row .vs-flag + .ar-clock {
+  margin-right: 8px;
+}
+.vs-side.flag-fell {
+  border-color: color-mix(in srgb, var(--bad) 60%, transparent);
+  animation: ar-flag-flash 0.9s ease-out 1;
+}
+@keyframes ar-flag-flash {
+  0% {
+    background: color-mix(in srgb, var(--bad) 30%, var(--surface-1));
+  }
+  100% {
+    background: var(--surface-1);
+  }
+}
+.ar-clock-alert {
+  margin: -6px 0 14px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-weight: 750;
+  text-align: center;
+  background: var(--warn-soft);
+  color: var(--warn-text);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+}
+.ar-clock-alert.st-critical,
+.ar-clock-alert.st-trouble,
+.ar-clock-alert.st-flagged {
+  background: var(--bad-soft);
+  color: var(--bad-text);
+  border-color: color-mix(in srgb, var(--bad) 50%, transparent);
+}
+.ar-tc-chip {
+  margin-top: 4px;
+  font-size: 0.72rem;
+}
+.mv.flagged .mv-l {
+  color: var(--bad-text);
+}
+.ar-game-clocks {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.ar-game-clocks .ar-clock {
+  font-size: 0.8rem;
+  padding: 2px 7px;
+}
+@media (max-width: 640px) {
+  .ar-clock.big {
+    font-size: 1.05rem;
+    padding: 3px 8px;
+  }
+  .vs-name-row .ar-clock-badge {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ar-clock.running.st-low,
+  .ar-clock.running.st-critical,
+  .ar-clock.running.st-trouble,
+  .vs-side.flag-fell {
+    animation: none;
+  }
+}

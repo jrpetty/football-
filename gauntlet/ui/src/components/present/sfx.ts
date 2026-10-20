@@ -4,6 +4,7 @@
  * remembered in localStorage (inside try/catch: private windows may block it).
  *
  *   tick      soft click for a reveal step
+ *   clockTick very soft tick for the last 10 s on an Arena clock
  *   ding      correct answer / new leader
  *   buzz      wrong answer
  *   whoosh    slide change
@@ -139,6 +140,13 @@ export const sfx = {
     const a = audio();
     if (!a) return;
     tone(a, { freq: 1900, to: 1400, type: 'triangle', at, dur: 0.06, gain: 0.35 });
+  },
+  /** Very soft clock tick (Arena speed games: the last 10 seconds on a clock). */
+  clockTick(at = 0) {
+    const a = audio();
+    if (!a) return;
+    tone(a, { freq: 2600, to: 2200, type: 'sine', at, dur: 0.03, gain: 0.14 });
+    hiss(a, { at, dur: 0.025, gain: 0.05, type: 'highpass', freq: 4000, q: 0.7, attack: 0.002 });
   },
   /** Bright two-note "correct" chime. */
   ding(at = 0) {

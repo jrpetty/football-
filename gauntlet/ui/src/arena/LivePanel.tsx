@@ -5,6 +5,10 @@ import { MoveCaption } from './MoveCaption.tsx';
 import { MoveList, Thinking, Versus, engineOf, fmtScore, playsWord, seatPlayers, secs, sidesOf } from './parts.tsx';
 import type { C4Snapshot, LiveGame, MatchState, TournamentDetail } from './types.ts';
 import { entrantMap } from './useTournament.ts';
+import { usePrefs } from '../context.tsx';
+import { clockLine, liveClocks, shownMs, useClockNow, useClockTicks } from './ArenaClock.tsx';
+import { clockDisplayState } from '../../../src/arena/clock.ts';
+import { cx } from '../components/ui.tsx';
 
 /** "Game 1 of 2", "Sudden death", or the format-specific line for poker and debates. */
 export function gameLine(gameId: string, gameNo: number, planned: number): string {
@@ -27,6 +31,19 @@ export function LivePanel({ d, game, match }: { d: TournamentDetail; game: LiveG
   const players = seatPlayers(ents, game.players);
   const words = playsWord(gameId);
   const flip = match?.players[0] === game.players[0] ? 0 : 1;
+  const { broadcast } = usePrefs();
+  // Speed games: both clocks, the side to move ticking down; a soft tick in the last 10 s on the broadcast view.
+  const clocks = liveClocks(game, d.manifest.settings.timeControl);
+  const now = useClockNow(clocks);
+  const runningMs = clocks && clocks.running !== null ? shownMs(clocks, clocks.running, now) : null;
+  useClockTicks(runningMs, broadcast);
+  const alert = clockLine(clocks, [players[0].label, players[1].label], now);
+  const alertState = clocks && clocks.running !== null ? clockDisplayState(shownMs(clocks, clocks.running, now), clocks.flagged[clocks.running]) : 'normal';
+  const clockAlert = alert ? (
+    <div className={cx('ar-clock-alert', `st-${alertState}`)} role="status" aria-live="polite">
+      ⏱ {alert}
+    </div>
+  ) : null;
   const versus = (
     <Versus
       gameId={gameId}
@@ -37,6 +54,7 @@ export function LivePanel({ d, game, match }: { d: TournamentDetail; game: LiveG
       maxStrikes={d.manifest.settings.maxStrikes}
       toMove={game.phase === 'judging' ? null : game.toMove}
       turnStartedAt={game.turnStartedAt}
+      clocks={clocks}
       big
       center={
         <div className="vs-mid">
@@ -57,6 +75,7 @@ export function LivePanel({ d, game, match }: { d: TournamentDetail; game: LiveG
     return (
       <div className="ar-live ar-live-debate">
         {versus}
+        {clockAlert}
         <GameBoard gameId={gameId} snap={snap} colors={[sides[0]!.color, sides[1]!.color]} players={players} live={{ toMove: game.toMove, thinking: game.thinking, phase: game.phase }} judgeHref={pathOf('arena', d.manifest.id, 'judge')} className="big" />
       </div>
     );
@@ -65,6 +84,7 @@ export function LivePanel({ d, game, match }: { d: TournamentDetail; game: LiveG
   return (
     <div className="ar-live">
       {versus}
+      {clockAlert}
       <div className="ar-live-grid">
         <div className="ar-stage">
           <MoveCaption

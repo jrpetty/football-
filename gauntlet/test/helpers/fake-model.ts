@@ -44,6 +44,8 @@ export interface FakeCall {
   /** Every message sent with this call, ending with the latest user message. */
   messages: ChatMessage[];
   maxOutputTokens?: number;
+  /** Per-call answer-time limit (Arena speed games: the remaining clock). */
+  timeLimitMs?: number;
   reply: ModelReply;
 }
 
@@ -66,20 +68,21 @@ export function createFakeModel(responder: Responder): FakeModel {
     messages: ChatMessage[],
     maxOutputTokens: number | undefined,
     label: string | undefined,
+    timeLimitMs?: number,
   ): Promise<ModelReply> {
     const last = messages[messages.length - 1];
     const userText = last && last.role === 'user' ? last.content : '';
     const history = messages.slice(0, -1);
     const index = calls.length;
     const reply = toReply(await responder(system, userText, history, { index, label, kind }));
-    calls.push({ index, kind, label, system, messages: messages.map((m) => ({ ...m })), maxOutputTokens, reply });
+    calls.push({ index, kind, label, system, messages: messages.map((m) => ({ ...m })), maxOutputTokens, ...(timeLimitMs ? { timeLimitMs } : {}), reply });
     return reply;
   }
 
   return {
     calls,
     complete(req) {
-      return invoke('complete', req.system, req.messages, req.maxOutputTokens, req.label);
+      return invoke('complete', req.system, req.messages, req.maxOutputTokens, req.label, req.timeLimitMs);
     },
     chat(system?: string): ChatSession {
       const history: ChatMessage[] = [];

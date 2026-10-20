@@ -6,6 +6,7 @@
  *   arena new --game connect4 --models a,b,c,d [--format knockout|round-robin] [--games 2|4|6]
  *             [--seeding index|manual] [--max-cost 5] [--concurrency 2] [--max-plies 120]
  *             [--sudden-death 2] [--strikes 3] [--seed 1] [--name "..."] [--yes]
+ *             [--time 4+0 | --classic]   (speed games: minutes+increment per player per game; default 4+0)
  *   arena list
  *   arena show <id>
  *   arena resume <id> [--max-cost 10]
@@ -51,6 +52,16 @@ function gameOptions(flags: Flags): Record<string, string> | undefined {
   return Object.keys(out).length ? out : undefined;
 }
 
+/** --time 3+2 → { minutes: 3, incrementSec: 2 }; --classic → null (no clock); neither → the default (Speed 4+0). */
+function timeControl(flags: Flags): ArenaRequest['timeControl'] {
+  if (flags.classic) return null;
+  const t = str(flags.time);
+  if (!t) return undefined;
+  const m = /^(\d+(?:\.\d+)?)(?:\+(\d+))?$/.exec(t.trim());
+  if (!m) throw new Error('--time must look like 4+0 or 3+2 (minutes per player + seconds added per move), or use --classic');
+  return { minutes: Number(m[1]), incrementSec: Number(m[2] ?? 0) };
+}
+
 function request(flags: Flags): ArenaRequest {
   const models = str(flags.models)?.split(',').map((s) => s.trim()).filter(Boolean);
   if (!models?.length) throw new Error('--models is required (comma-separated model ids; see `node src/cli.ts models`)');
@@ -71,6 +82,7 @@ function request(flags: Flags): ArenaRequest {
     listLegalMoves: flags['no-legal-moves'] ? false : undefined,
     name: str(flags.name),
     options: gameOptions(flags),
+    timeControl: timeControl(flags),
   };
 }
 
@@ -170,7 +182,7 @@ function printDetail(d: TournamentDetail): void {
   }
   console.log(c.bold('\nStandings'));
   for (const s of d.state.standings)
-    console.log(`  ${String(s.rank).padStart(2)}. ${L(s.contestantId).padEnd(28)} ${String(s.points).padStart(4)} pts  W${s.wins} D${s.draws} L${s.losses}  illegal ${s.illegal}  ${fmtUsd(s.costUsd)}`);
+    console.log(`  ${String(s.rank).padStart(2)}. ${L(s.contestantId).padEnd(28)} ${String(s.points).padStart(4)} pts  W${s.wins} D${s.draws} L${s.losses}  illegal ${s.illegal}${s.flags ? `  out of time ${s.flags}` : ''}  ${fmtUsd(s.costUsd)}`);
   if (d.state.champion) console.log(c.green(`\nChampion: ${L(d.state.champion)}`));
 }
 

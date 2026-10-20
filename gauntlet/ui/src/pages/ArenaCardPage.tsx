@@ -14,6 +14,7 @@ import { Icon } from '../components/icons.tsx';
 import { cx } from '../components/ui.tsx';
 import { fmtCost } from '../format.ts';
 import { GameBoard } from '../arena/boards.tsx';
+import { GameClocks } from '../arena/ArenaClock.tsx';
 import { Bracket, RoundRobin } from '../arena/Bracket.tsx';
 import { TieBreakNote } from '../arena/debate.tsx';
 import { TrophySvg } from '../components/viz/TrophySvg.tsx';
@@ -65,7 +66,7 @@ function MatchCard({ d, m }: { d: TournamentDetail; m: MatchState }) {
   const games = m.games.filter((s) => s.game);
   const engine = engineOf(d.manifest.game.id);
   const bad = engine === 'debate' ? 'rejected replies' : `illegal ${playsWord(d.manifest.game.id).moves}`;
-  const statLine = (i: 0 | 1) => `${m.illegal[i]} ${bad} · ${fmtCost(m.cost[i])} spent`;
+  const statLine = (i: 0 | 1) => `${m.illegal[i]} ${bad}${m.flags?.[i] ? ` · ${m.flags[i]} out of time` : ''} · ${fmtCost(m.cost[i])} spent`;
   return (
     <div className={cx('mc', engine !== 'board' && `mc-${engine}`)}>
       <div className="mc-head">
@@ -113,6 +114,7 @@ function MatchCard({ d, m }: { d: TournamentDetail; m: MatchState }) {
                 <span className="mc-g-r">
                   {g.reason} · {g.plies} {playsWord(d.manifest.game.id).moves}
                 </span>
+                <GameClocks clock={g.clock} names={[ents.get(g.players[0])?.label ?? '', ents.get(g.players[1])?.label ?? '']} />
               </div>
             </div>
           );

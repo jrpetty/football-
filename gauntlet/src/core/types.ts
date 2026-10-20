@@ -534,7 +534,18 @@ export interface ChatSession {
 
 export interface ModelHandle {
   /** Stateless call with an explicit conversation. Usage/timing/transcript are recorded automatically. */
-  complete(req: { system?: string; messages: ChatMessage[]; maxOutputTokens?: number; label?: string }): Promise<ModelReply>;
+  complete(req: {
+    system?: string;
+    messages: ChatMessage[];
+    maxOutputTokens?: number;
+    label?: string;
+    /**
+     * Answer-time limit for this call in ms (Arena speed games: the player's remaining clock). The clock starts
+     * when the request is sent (queueing and retry back-off never count); a slower call is aborted and rejects
+     * with an error named 'OutOfTimeError'. The aborted call is still recorded and its cost counted.
+     */
+    timeLimitMs?: number;
+  }): Promise<ModelReply>;
   /** Stateful chat with a fixed system prompt. */
   chat(system?: string): ChatSession;
   /** Image generation (only for contestants with image output; see ProgramDefinition.requiresImageOutput). */
@@ -701,6 +712,10 @@ export interface TranscriptEntry {
   /** A spend limit lowered this call's output limit (to maxOutputTokens). */
   outputLimitBy?: 'spend-limit' | 'per-answer';
   maxOutputTokens?: number;
+  /** The call's answer-time limit (Arena speed games: the player's clock when the call was sent). */
+  timeLimitMs?: number;
+  /** Usage and cost are an upper-bound estimate (the call was stopped at its time limit before the provider reported usage). */
+  costEstimated?: boolean;
 }
 
 /** `skipped`: the case needs image input and the model has none; not scored, excluded from means. */

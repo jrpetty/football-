@@ -513,8 +513,60 @@ The same fair-play rules apply.
   on games is decided on the judges' total rubric points over both games, then on the number of judges' picks,
   and only then by a sudden-death debate (shown as "Level on games, decided on judges' points"). Judges are called one at a time, each after a spending-cap
   check, so judged games keep the cap's guarantee (see below).
+* **Time control (speed games, the default).** New tournaments play **Speed 4+0**: each player has one clock per
+  game with 4:00 for all of its moves, decisions or speeches, and no increment. Other presets: 1+0, 2+1, 3+2, 5+0,
+  10+0, and **Classic (no clock)**, which behaves exactly as before (Classic prompts are byte-identical to the
+  pre-clock prompts and the Classic fingerprint hashes the same settings). The time control is stored in the
+  manifest and is part of the fingerprint (with the clock prompt version), so Speed and Classic results are never
+  mixed. An increment is added after each completed move.
+* **What the clock charges.** Only the player's own model time: for each call, the attempt that produced the reply,
+  from the moment the request is sent until the reply is complete (the recorder starts the clock at send time).
+  Waiting for a free provider slot and transport retries (rate limits, 5xx, network errors, with their back-off)
+  are never charged. Network latency is part of a model's time, as in online chess. A rejected (illegal or
+  unreadable) move and its retry ARE charged: the clock keeps running. Each call is sent with the player's
+  remaining clock as its time limit and is aborted the moment the flag falls; the aborted call is still recorded in
+  the transcript, and its cost is counted at its worst case (the prompt plus the whole output limit) unless the
+  provider reported real usage. The Random Baseline answers instantly: its clock never runs.
+* **Flag fall, per game.** Chess: the player whose clock reaches 0:00 loses on time ("Black lost on time"), but it
+  is a draw if the opponent cannot checkmate: a lone king, or king and one bishop or one knight (FIDE 6.9, using
+  the standard practical test; "Draw: Black's flag fell but White cannot checkmate"). Connect Four: loses on time.
+  Poker (a session of hands): from the flag on, every remaining decision of that player is made at once with no
+  model call, checking when that is free and folding otherwise (as online poker does when a time bank runs out);
+  chip-margin scoring is unchanged and the record says so ("Seat 1 ran out of time (hand 7 of 10, flop): every
+  later decision was made for it ..."). Debate and Courtroom: every remaining speech of that side becomes "(No
+  speech: out of time)", and the judges are told which side ran out of time and judge what exists. A flag is not an
+  illegal move and not a strike. Every move records the model time charged and both clocks after it; each game
+  records its clocks, and flags are counted per entrant in the standings (like illegal moves). Tie-breaks are
+  unchanged.
+* **The models know, and are held to it.** Every clocked prompt has a "== CLOCK (SPEED GAME) ==" section right after
+  its opening line (the total time, the flag rule for that game, both players' time left, turns made, a suggested
+  time and the reply's token allowance) and a one-line reminder right before the turn line. The wording gets firmer
+  as the clock runs down: under half the starting time ("Your clock is running down"), under 60 seconds a "== TIME
+  PRESSURE ==" line at the very top and bottom, under 20 seconds "== TIME TROUBLE: 0:14 LEFT ==" ("Move NOW. Do not
+  analyse."); when the opponent is lower on time the prompt says so. Times are m:ss, rounded down.
+* **The allowance (why a compliant model does not flag).** Each call's output-token limit is sized from the clock:
+  E = the game's expected turns left (chess max(10, 40 − moves made), Connect Four max(8, 21 − moves made), poker
+  about 2.5 decisions per hand left, debate the speeches left) and M = the most turns that could still be needed
+  (chess and Connect Four up to the move cap, poker 3.5 per hand left, debate the speeches left). A reserve of
+  (M − 1) minimal answers (first-token delay + a minimal reply, with margins) is kept back so a player can always
+  answer up to the cap; the rest is the pool. Suggested time = pool / E; the turn's budget = 2 × suggested (for the
+  last few speeches of a debate the factor shrinks towards 1) and at most 70% of the pool. Tokens = measured
+  speed × (budget − first-token delay), never more than the measured whole-call throughput × budget, never below an
+  equal share of the time left over the most turns possible, between a small floor (12 tokens for board games, 40
+  for poker, 260 for a speech) and the normal output maximum. Speed is measured from that player's earlier calls in
+  this tournament (before any measurement: 40 tokens/s and a 2 s first-token delay; a first-token delay longer than
+  half the call is treated as hidden reasoning). Each turn then spends at most about 2/E of the free pool, so the
+  clock decays geometrically. A unit test plays simulated players at 20–200 tokens/s with 0.3–3 s first-token
+  delays and ±20% speed jitter, each using its FULL allowance every turn, through chess games to the move cap, full
+  poker sessions and debates: none flags at 4+0 (nor at 3+2, 5+0 or 10+0); a simulated model that ignores its
+  allowance loses on time. At 1+0, and at 2+1 with a 3 s first-token delay, a 60-move chess game cannot be finished by
+  any model that slow to start (the first-token delays alone exceed the clock).
+* **Copy & paste contestants are excluded from speed games.** A pasted reply cannot be timed fairly; planning
+  refuses them ("Speed games need API models; switch to Classic to include copy & paste models").
 * **Spending limit.** Enforced per call exactly as in §9: every move and judge call reserves its worst case first,
-  so a tournament does not go over its limit.
+  so a tournament does not go over its limit. In speed games the reservation is the clock-sized allowance, and the
+  cost estimate caps each player's output per game at (clock + increments) × 250 tokens/s, which lowers the worst
+  case for long games such as chess.
 
 ## 10. Publishing checklist
 

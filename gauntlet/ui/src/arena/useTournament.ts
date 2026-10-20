@@ -56,7 +56,7 @@ export function useTournament(id: string): TournamentLive {
           setLive((m) => new Map(m).set(e.game.key, e.game));
           break;
         case 'game.turn':
-          patch(e.key, (g) => ({ ...g, toMove: e.side, thinking: '', turnStartedAt: e.at, phase: undefined }));
+          patch(e.key, (g) => ({ ...g, toMove: e.side, thinking: '', turnStartedAt: e.at, phase: undefined, ...(e.clockMs ? { clockMs: e.clockMs, clockSince: e.at } : {}) }));
           break;
         case 'game.phase':
           patch(e.key, (g) => ({ ...g, phase: e.phase }));
@@ -65,7 +65,18 @@ export function useTournament(id: string): TournamentLive {
           patch(e.key, (g) => ({ ...g, thinking: (g.thinking + e.text).slice(-THINK_MAX) }));
           break;
         case 'game.move':
-          patch(e.key, (g) => (g.moves.some((m) => m.ply === e.move.ply) ? g : { ...g, moves: [...g.moves, e.move], strikes: e.strikes, metrics: e.metrics }));
+          patch(e.key, (g) => {
+            if (g.moves.some((m) => m.ply === e.move.ply)) return g;
+            // Speed games: every recorded move settles both clocks (the client only ticks between moves).
+            const clocked = e.move.clockMs
+              ? {
+                  clockMs: e.move.clockMs,
+                  clockSince: e.at,
+                  flagged: [Boolean(g.flagged?.[0] || (e.move.flag && e.move.side === 0)), Boolean(g.flagged?.[1] || (e.move.flag && e.move.side === 1))] as [boolean, boolean],
+                }
+              : {};
+            return { ...g, moves: [...g.moves, e.move], strikes: e.strikes, metrics: e.metrics, ...clocked };
+          });
           break;
         case 'game.finished':
           setLive((m) => {

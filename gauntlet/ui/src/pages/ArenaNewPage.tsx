@@ -11,6 +11,7 @@ import { Icon } from '../components/icons.tsx';
 import { fmtCost, fmtInt, fmtPricePerM } from '../format.ts';
 import { arenaApi } from '../arena/client.ts';
 import type { ArenaEstimate, ArenaFormat, ArenaRequest, ArenaSeeding } from '../arena/types.ts';
+import { TIME_CONTROL_PRESETS } from '../../../src/arena/clock.ts';
 import { GameGlyph } from '../arena/ArenaIcon.tsx';
 import { useBudget } from '../budget/budgetApi.ts';
 import { BudgetRunLine } from '../budget/BudgetParts.tsx';
@@ -33,6 +34,9 @@ export default function ArenaNewPage() {
   const [legal, setLegal] = useState(true);
   const [maxPlies, setMaxPlies] = useState<number | null>(null);
   const [opts, setOpts] = useState<Record<string, string>>({});
+  // Speed 4+0 by default: every player has 4 minutes for all of its moves in a game.
+  const [tcId, setTcId] = useState('4+0');
+  const tcPreset = TIME_CONTROL_PRESETS.find((p) => p.id === tcId) ?? TIME_CONTROL_PRESETS[0]!;
   const [est, setEst] = useState<ArenaEstimate | null>(null);
   const [estErr, setEstErr] = useState<string | null>(null);
   const [estLoading, setEstLoading] = useState(false);
@@ -74,6 +78,7 @@ export default function ArenaNewPage() {
         maxCostUsd: cap ?? undefined,
         name: name.trim() || undefined,
         concurrency,
+        timeControl: tcPreset.timeControl,
         ...(engine === 'board' ? { listLegalMoves: legal, maxPlies: maxPlies ?? undefined } : {}),
         ...(gameOpts.length ? { options: optionValues } : {}),
       }
@@ -275,6 +280,28 @@ export default function ArenaNewPage() {
                 >
                   <Seg label="Format" value={format} onChange={setFormat} options={[{ value: 'knockout', label: 'Knockout' }, { value: 'round-robin', label: 'Round-robin' }]} />
                 </Field>
+                <Field
+                  label="Time control"
+                  hint={`${tcPreset.hint} ${tcPreset.timeControl ? 'Each player has its own clock per game, running only while that model is answering. Each reply is sized to fit the clock.' : ''}`.trim()}
+                  className="span-2"
+                  htmlFor="ar-tc"
+                >
+                  <select id="ar-tc" className="select" value={tcId} onChange={(e) => setTcId(e.target.value)}>
+                    {TIME_CONTROL_PRESETS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label}
+                        {p.recommended ? ' (default, recommended)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                {tcPreset.timeControl && picked.some((id) => enabled.find((c) => c.id === id)?.providerType === 'manual') && (
+                  <div className="span-2">
+                    <Callout tone="warn" icon={<Icon.Alert />}>
+                      <b>Speed games need API models; switch to Classic to include copy &amp; paste models.</b> A pasted reply cannot be timed fairly.
+                    </Callout>
+                  </div>
+                )}
                 {gpmChoices.length > 1 ? (
                   <Field label="Games per pairing" hint="Sides swap every game.">
                     <Seg label="Games per pairing" value={gpm} onChange={setGpm} options={gpmChoices.map((v) => ({ value: String(v), label: String(v) }))} />
