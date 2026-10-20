@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/peripherals/monitor_ultrawide/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/peripherals/monitor_ultrawide/material.tres" id="2"]
+
+
+[node name="MonitorUltrawide" type="Node3D"]
+metadata/footprint = Vector3(0.82000, 0.39876, 0.24260)
+metadata/source_tier = "34in curved ultrawide"
+metadata/surfaces = [[0.130, 0.90, -0.406, 0.407, -0.111, 0.049]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

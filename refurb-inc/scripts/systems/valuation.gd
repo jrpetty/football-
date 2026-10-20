@@ -18,7 +18,7 @@ static func market_value(u: UnitData, grade: String = "") -> int:
 	var g := grade if grade != "" else u.grade
 	if g == "":
 		g = predicted_grade(u)
-	return int(round(a_grade_value(u) * Content.grade_mult(g)))
+	return int(round(a_grade_value(u) * Content.grade_mult(g) * (1.02 if u.data_cert else 1.0)))
 
 
 static func guide_price(model_id: String, grade: String = "B") -> int:

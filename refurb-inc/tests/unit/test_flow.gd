@@ -72,7 +72,7 @@ func test_full_loop() -> void:
 	_cmd(sim, "place", {"slot": "bench_1:usb"})
 	check(not s.stations.bench_1.job.is_empty(), "test should auto-start")
 	check(not target.unit.tested)
-	sim.advance_minutes(35)
+	sim.advance_minutes(_job_minutes(sim, "bench_1") + 2.0)
 	check(target.unit.tested, "test complete after 30 min")
 	check(target.unit.test_report.has("faults"))
 
@@ -105,7 +105,7 @@ func test_full_loop() -> void:
 	_cmd(sim, "pick_up", {"item": usb_i.id})
 	_cmd(sim, "place", {"slot": "bench_1:usb"})
 	check(not s.stations.bench_1.job.is_empty(), "imaging should auto-start")
-	sim.advance_minutes(50)
+	sim.advance_minutes(_job_minutes(sim, "bench_1") + 2.0)
 	check(target.unit.imaged, "imaged")
 
 	_cmd(sim, "pick_up", {"item": target.id})
@@ -165,13 +165,45 @@ func test_carry_rules() -> void:
 		it.unit = sim.lots.roll_unit("kestrel_swift_14", 0.5)
 		s.set_loc(it, {"t": "loose", "p": [0, 0, 0], "r": [0, 0, 0, 1]})
 		ids.append(it.id)
-	for i in 3:
+	for i in 2:
 		_cmd(sim, "pick_up", {"item": ids[i]})
-	var r := sim.execute(P, "pick_up", {"item": ids[3]})
-	check(not r.ok, "capacity 3 at hauling level 0")
-	eq(s.held_by(P).size(), 3)
-	_cmd(sim, "drop", {"p": [1, 0, 1]})
+	var r := sim.execute(P, "pick_up", {"item": ids[2]})
+	check(not r.ok, "a new starter (Hauling 1) carries 2")
 	eq(s.held_by(P).size(), 2)
+	_cmd(sim, "drop", {"p": [1, 0, 1]})
+	eq(s.held_by(P).size(), 1)
+	# Hauling XP raises the stack: level 3 carries 3, level 5 carries 4.
+	s.add_xp("p1", "hauling", 400)
+	eq(sim.carry_capacity(P), 3, "Hauling 3 carries 3")
+	s.add_xp("p1", "hauling", 1000)
+	eq(sim.carry_capacity(P), 4, "Hauling 5 carries 4")
+
+
+func test_skills_speed_up_and_unlock_perks() -> void:
+	var sim := fresh_sim(9)
+	var s := sim.state
+	eq(s.skill_level("p1", "testing"), 1, "everyone starts at level 1")
+	check(s.skill_speed("p1", "testing") < 0.7, "new starters are slow")
+	check(not s.has_perk("p1", "pre_check"))
+	s.add_xp("p1", "testing", 12000)
+	eq(s.skill_level("p1", "testing"), 10)
+	check(s.skill_speed("p1", "testing") > 1.5, "experts are quick")
+	check(s.has_perk("p1", "pre_check") and s.has_perk("p1", "auto_chain"))
+	# Repair tiers: board-level faults need Repair 7.
+	var u := sim.lots.roll_unit("corvex_prospect_5420", 0.5)
+	u.faults = [{"id": "board_no_post", "detail": {}, "fixed": false}]
+	u.tested = true
+	var it := s.new_item(Item.KIND_UNIT)
+	it.unit = u
+	s.parts["mobo_laptop_generic"] = 1
+	var pv := sim.repair_preview(P, it)
+	check(not pv.can and "Repair skill 7" in str(pv.why), str(pv))
+	s.add_xp("p1", "repair", 3600)
+	check(sim.repair_preview(P, it).can, "Repair 7 can fix boards")
+	# Purchasing: level 1 = no discount, each level after = 1%.
+	eq(sim.purchase_discount(P, {"count": 5}), 0.0)
+	s.add_xp("p1", "purchasing", 1400)
+	check(absf(sim.purchase_discount(P, {"count": 5}) - 0.04) < 0.001, "Purchasing 5 = 4%")
 
 
 func test_rent_and_day_cycle() -> void:
@@ -265,3 +297,11 @@ func test_graded_units_list_and_sell_promptly() -> void:
 			sold += 1
 		s.remove_item(x.id)
 	check(sold >= 20, "at least half of guide-priced listings sell within 8 working hours (%d/40)" % sold)
+
+
+func _job_minutes(sim: Sim, sid: String) -> float:
+	## Minutes left on a station job (job times now depend on skill level).
+	var job: Dictionary = sim.state.stations.get(sid, {}).get("job", {})
+	if job.is_empty():
+		return 1.0
+	return float(job.start) + float(job.dur) - sim.state.minute

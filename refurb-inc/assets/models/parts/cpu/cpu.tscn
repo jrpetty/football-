@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/parts/cpu/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/parts/cpu/material.tres" id="2"]
+
+
+[node name="Cpu" type="Node3D"]
+metadata/footprint = Vector3(0.07600, 0.00741, 0.05603)
+metadata/source_tier = "Server CPU"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

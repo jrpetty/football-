@@ -7,6 +7,7 @@
 [node name="DesktopTower" type="Node3D"]
 metadata/footprint = Vector3(0.21179, 0.42000, 0.43704)
 metadata/source_tier = "Desktop: office mid-tower"
+metadata/surfaces = []
 
 
 [node name="Model" type="MeshInstance3D" parent="."]

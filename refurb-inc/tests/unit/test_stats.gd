@@ -25,7 +25,7 @@ func _sell_one(sim: Sim) -> Item:
 	var usb_t := s.item_in_slot("desk:usb_a")
 	_cmd(sim, "pick_up", {"item": usb_t.id})
 	_cmd(sim, "place", {"slot": "bench_1:usb"})
-	sim.advance_minutes(35)
+	sim.advance_minutes(_job_minutes(sim, "bench_1") + 2.0)
 	if target.unit.has_open_faults():
 		_cmd(sim, "pick_up", {"item": target.id})
 		_cmd(sim, "place", {"slot": "repair_1:unit"})
@@ -43,7 +43,7 @@ func _sell_one(sim: Sim) -> Item:
 	var usb_i := s.item_in_slot("desk:usb_b")
 	_cmd(sim, "pick_up", {"item": usb_i.id})
 	_cmd(sim, "place", {"slot": "bench_1:usb"})
-	sim.advance_minutes(50)
+	sim.advance_minutes(_job_minutes(sim, "bench_1") + 2.0)
 	_cmd(sim, "pick_up", {"item": target.id})
 	_cmd(sim, "place", {"slot": "grade_1:unit"})
 	_cmd(sim, "grade", {"station": "grade_1"})
@@ -160,3 +160,11 @@ func test_report_reconciles_after_weeks_of_trading() -> void:
 	eq(q_tested, int(r.operations.tests), "reliability covers every test")
 	check(int(r.customers.unique) > 0, "customers recorded")
 	check(r.people.awards.size() > 0, "awards handed out")
+
+
+func _job_minutes(sim: Sim, sid: String) -> float:
+	## Minutes left on a station job (job times now depend on skill level).
+	var job: Dictionary = sim.state.stations.get(sid, {}).get("job", {})
+	if job.is_empty():
+		return 1.0
+	return float(job.start) + float(job.dur) - sim.state.minute

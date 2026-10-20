@@ -7,6 +7,7 @@
 [node name="DesktopMini" type="Node3D"]
 metadata/footprint = Vector3(0.19000, 0.06640, 0.18997)
 metadata/source_tier = "Desktop: ultra-compact mini PC"
+metadata/surfaces = []
 
 
 [node name="Model" type="MeshInstance3D" parent="."]

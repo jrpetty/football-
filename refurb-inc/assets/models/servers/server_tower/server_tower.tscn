@@ -7,6 +7,7 @@
 [node name="ServerTower" type="Node3D"]
 metadata/footprint = Vector3(0.18251, 0.44000, 0.56002)
 metadata/source_tier = "Server: entry tower server"
+metadata/surfaces = []
 
 
 [node name="Model" type="MeshInstance3D" parent="."]

@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/vehicles/hatchback/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/vehicles/hatchback/material.tres" id="2"]
+
+
+[node name="Hatchback" type="Node3D"]
+metadata/footprint = Vector3(2.04802, 1.71701, 4.10000)
+metadata/source_tier = "Hatchback car"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

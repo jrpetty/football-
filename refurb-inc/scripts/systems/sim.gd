@@ -105,8 +105,10 @@ func c_pick_up(peer: int, a: Dictionary) -> Dictionary:
 
 
 func carry_capacity(peer: int) -> int:
-	## Hauling skill lets you carry bigger stacks (3 → 5).
-	return CARRY_CAPACITY + mini(state.skill_level(player_key(peer), "hauling") / 2, 2)
+	## Hauling skill sets how many carry slots you have (2 at level 1 → 5 at level 8+; see skills.json).
+	if peer == 0:
+		return CARRY_CAPACITY
+	return int(Content.skill_table("carry", state.skill_level(player_key(peer), "hauling"), CARRY_CAPACITY))
 
 
 func c_place(peer: int, a: Dictionary) -> Dictionary:
@@ -249,8 +251,12 @@ func try_start_bench(station_id: String, peer: int = 0) -> void:
 
 func _skill_speed(peer: int, skill: String) -> float:
 	if peer == 0:
-		return 1.0
-	return 1.0 + 0.08 * (state.skill_level(player_key(peer), skill))
+		return 1.0     # machines / staff run at standard speed
+	var key := player_key(peer)
+	var sp := state.skill_speed(key, skill)
+	if (skill == "testing" and state.has_perk(key, "bench_whisper")) or (skill == "imaging" and state.has_perk(key, "fast_wipe")):
+		sp *= 1.15
+	return sp
 
 
 func _process_jobs() -> void:
@@ -271,8 +277,12 @@ func _process_jobs() -> void:
 		if kind == "test":
 			_complete_test(it, by)
 			st.msg = "PASS" if not it.unit.has_open_faults() else "FAULTS FOUND"
+			if by != 0 and not it.unit.has_open_faults() and state.has_perk(player_key(by), "auto_chain"):
+				_auto_chain(sid, by)
 		elif kind == "image":
 			it.unit.imaged = true
+			if by != 0 and state.has_perk(player_key(by), "data_cert"):
+				it.unit.data_cert = true
 			it.unit.log_event(state.minute, "Wiped (%s) and imaged with %s" % [Content.os_info.get("wipe_standard", ""), Content.os_info.get("name", "PaneOS")])
 			state.bump_stat("imaged")
 			BusinessStats.on_image(state, it.unit, by)
@@ -282,6 +292,21 @@ func _process_jobs() -> void:
 			state.say("%s imaged — ready to grade." % it.unit.display_name(), "good")
 		state.mark("item", it.id)
 		state.mark("station", sid)
+
+
+func _auto_chain(sid: String, by: int) -> void:
+	## Testing perk: swap the bench's USB for a parked PaneOS stick and start imaging straight away.
+	var usb := state.station_slot_item(sid, "usb")
+	for park in ["park_a", "park_b"]:
+		var parked := state.station_slot_item(sid, park)
+		if parked and parked.kind == Item.KIND_USB_IMAGE:
+			if usb:
+				state.set_loc(usb, {"t": "slot", "slot": "%s:%s" % [sid, park]})
+				state.set_loc(parked, {"t": "slot", "slot": "%s:usb" % sid})
+			else:
+				state.set_loc(parked, {"t": "slot", "slot": "%s:usb" % sid})
+			try_start_bench(sid, by)
+			return
 
 
 func _complete_test(it: Item, by: int) -> void:
@@ -320,22 +345,26 @@ func repair_preview(peer: int, it: Item) -> Dictionary:
 	if open.is_empty():
 		return {"can": false, "why": "No faults to repair.", "done": true}
 	var level := state.skill_level(player_key(peer), "repair")
+	var tiers: Dictionary = Content.skills_data.get("repair_tiers", {"1": 1, "2": 4, "3": 7})
 	var blocked_reason := ""
 	for f in open:
 		var fdef := Content.fault(f.id)
-		var need := int(fdef.get("repair_level", 1))
+		var tier := int(fdef.get("repair_level", 1))
+		var need := int(tiers.get(str(tier), tier))
 		var part_id := Valuation.repair_part_for(u, f)
 		var pdef := Content.part(part_id)
 		if level < need:
 			if blocked_reason == "":
-				blocked_reason = "%s needs Repair level %d (you're %d)." % [LotGenerator.fault_text(f), need, level]
+				blocked_reason = "%s is a level %d repair: needs Repair skill %d (you're %d)." % [LotGenerator.fault_text(f), tier, need, level]
 			continue
 		var have := int(state.parts.get(part_id, 0))
 		if have <= 0:
 			if blocked_reason == "":
 				blocked_reason = "Need part: %s (0 in bins)." % pdef.get("name", part_id)
 			continue
-		var secs := float(pdef.get("repair_secs", 4.0)) / (1.0 + 0.15 * (level - need))
+		var secs := float(pdef.get("repair_secs", 4.0)) / _skill_speed(peer, "repair")
+		if tier == 3 and state.has_perk(player_key(peer), "board_hands"):
+			secs *= 0.5
 		return {"can": true, "fault": f.id, "part": part_id, "part_name": pdef.get("name", part_id),
 			"have": have, "secs": secs, "text": LotGenerator.fault_text(f)}
 	return {"can": false, "why": blocked_reason}
@@ -355,7 +384,10 @@ func c_repair(peer: int, a: Dictionary) -> Dictionary:
 			f.fixed = true
 			var pdef := Content.part(pv.part)
 			BusinessStats.on_repair(state, u, f.id, pv.part, 0 if pdef.get("reusable", false) else int(pdef.get("price", 0)), peer)
-			if not pdef.get("reusable", false):
+			var salvaged := state.has_perk(player_key(peer), "salvage") and state.rng.randf() < 0.25
+			if salvaged:
+				state.say("Salvage: careful work — the %s wasn't used up." % pv.part_name, "good", peer)
+			if not pdef.get("reusable", false) and not salvaged:
 				state.parts[pv.part] = int(state.parts.get(pv.part, 0)) - 1
 				if state.parts[pv.part] <= 0:
 					state.parts.erase(pv.part)
@@ -393,8 +425,20 @@ func c_grade(peer: int, a: Dictionary) -> Dictionary:
 		return _fail("Test it before grading.")
 	if not u.has_open_faults() and not u.imaged:
 		return _fail("Wipe & image it first.")
+	var gkey := player_key(peer)
+	if state.has_perk(gkey, "touch_up"):
+		# Light refurb before grading: wipe off the cosmetic stuff a cloth and a bit of IPA can fix.
+		var cleaned := 0
+		for c in ["light_scuffs_lid", "sticker_residue", "asset_tag", "dusty_intake", "shiny_keys"]:
+			if c in u.cosmetic:
+				u.cosmetic.erase(c)
+				cleaned += 1
+		if cleaned > 0:
+			u.log_event(state.minute, "Touched up: %d light cosmetic issue(s) cleaned" % cleaned)
+	if state.has_perk(gkey, "photo_pro"):
+		u.list_quality = 1.05
 	u.grade = Valuation.grade_for(u)
-	u.list_price = Valuation.market_value(u, u.grade)
+	u.list_price = int(round(Valuation.market_value(u, u.grade) * u.list_quality))
 	BusinessStats.on_grade(state, u, peer)
 	u.log_event(state.minute, "Graded %s — suggested price £%d" % [UnitData.grade_label(u.grade), u.list_price])
 	state.bump_stat("graded")
@@ -455,7 +499,10 @@ static func sale_chance_per_hour(st: GameState, u: UnitData) -> float:
 	## Chance a Flogit buyer orders this listing in the next working hour: reputation-driven traffic,
 	## scaled hard by price vs guide (cheaper sells faster, pricier slower).
 	var base := float(Content.econ("flogit_base_rate_per_hour", 0.09)) + st.reputation * float(Content.econ("flogit_rep_rate_bonus", 0.003))
-	var market := float(Valuation.market_value(u, u.grade))
+	base *= 1.0 + float(Content.skills_data.get("sales_traffic_per_level", 0.04)) * (st.best_skill_level("sales") - 1)
+	if st.team_has_perk("repeat_buyers"):
+		base *= 1.1
+	var market := float(Valuation.market_value(u, u.grade)) * u.list_quality
 	var ratio := market / maxf(float(u.list_price), 1.0)
 	var p := base * clampf(pow(ratio, float(Content.econ("flogit_price_elasticity", 3.0))), 0.05, 4.0)
 	if u.grade == "S":
@@ -475,8 +522,17 @@ func flogit_hourly() -> void:
 				_create_order(it, "flogit")
 				return
 	for it: Item in listed:
+		if it.unit.order_id != 0:
+			continue
 		if state.rng.randf() < sale_chance_per_hour(state, it.unit):
-			_create_order(it, "flogit")
+			var order := _create_order(it, "flogit")
+			if state.team_has_perk("trade_buyers") and state.rng.randf() < 0.2:
+				# A trade buyer takes a second of the same model if one is listed.
+				for other: Item in listed:
+					if other != it and other.unit.order_id == 0 and other.unit.model_id == it.unit.model_id:
+						var o2 := _create_order(other, "flogit")
+						o2.buyer = order.buyer
+						break
 
 
 func _create_order(it: Item, channel: String) -> Dictionary:
@@ -559,7 +615,7 @@ func c_pack(peer: int, a: Dictionary) -> Dictionary:
 	var slot_id: String = it.loc.slot
 	state.set_loc(it, {"t": "in", "item": 0})
 	var pkg := state.new_item(Item.KIND_PACKAGE)
-	pkg.data = {"order_id": order.id, "unit": it.id, "buyer": order.buyer, "model": order.model}
+	pkg.data = {"order_id": order.id, "unit": it.id, "buyer": order.buyer, "model": order.model, "packer": peer}
 	if u.is_large():
 		# Box sized to the kit: unit footprint + foam corner blocks.
 		var vis: Dictionary = u.model().get("visual", {})
@@ -613,7 +669,13 @@ func _ship_package(pkg: Item) -> void:
 		var on_time := state.minute <= float(order.due)
 		order.status = "shipped" if on_time else "shipped_late"
 		order["shipped"] = state.minute
-		state.add_reputation(float(Content.econ("rep_on_time", 1.0)) if on_time else 0.0)
+		var rep_gain := float(Content.econ("rep_on_time", 1.0)) if on_time else 0.0
+		var packer := int(pkg.data.get("packer", 0))
+		if on_time and packer != 0 and state.has_perk(player_key(packer), "careful_packer"):
+			rep_gain *= 1.5
+		state.add_reputation(rep_gain)
+		if packer != 0:
+			state.add_xp(player_key(packer), "sales", int(Content.econ("xp", {}).get("ship", 5)))
 		state.mark("order", oid)
 		state.totals["units_sold"] = int(state.totals.get("units_sold", 0)) + 1
 		state.totals["revenue"] = int(state.totals.get("revenue", 0)) + price
@@ -659,7 +721,7 @@ func c_buy_lot(peer: int, a: Dictionary) -> Dictionary:
 	var lot: Dictionary = state.lots.get(int(a.get("lot", 0)), {})
 	if lot.is_empty() or lot.status != "open":
 		return _fail("That lot is no longer available.")
-	var discount := 0.01 * state.skill_level(player_key(peer), "purchasing")
+	var discount := purchase_discount(peer, lot)
 	var total := int(round(int(lot.total_price) * (1.0 - discount)))
 	if state.cash - total < int(Content.econ("overdraft_warning", -500)):
 		return _fail("The bank won't extend that far. You need %s." % GameState.format_money(total))
@@ -678,6 +740,14 @@ func c_buy_lot(peer: int, a: Dictionary) -> Dictionary:
 	state.mark("lot", lot.id)
 	state.say("Bought %s — %d units for %s. Lorry due %s." % [lot.seller_name, lot.count, GameState.format_money(total), GameState.format_minute(arrive)], "good")
 	return _ok()
+
+
+func purchase_discount(peer: int, lot: Dictionary) -> float:
+	var key := player_key(peer)
+	var d := float(Content.skills_data.get("purchase_discount_per_level", 0.01)) * (state.skill_level(key, "purchasing") - 1)
+	if int(lot.get("count", 0)) >= 15 and state.has_perk(key, "bulk_deal"):
+		d += 0.05
+	return d
 
 
 func _next_lorry_slot() -> float:
@@ -823,6 +893,8 @@ func c_shop_buy(peer: int, a: Dictionary) -> Dictionary:
 	var price := shop_price(id) * qty
 	if price <= 0:
 		return _fail("Unknown product.")
+	if Content.shop_items.get(id, {}).get("kind", "") == "consumable" and state.has_perk(player_key(peer), "bulk_supplies"):
+		price = int(round(price * 0.75))
 	if state.cash - price < int(Content.econ("overdraft_warning", -500)):
 		return _fail("Not enough funds.")
 	var parcel_contents := {"parts": {}, "items": [], "consumables": {}}

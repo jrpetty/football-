@@ -23,6 +23,8 @@ var diag_info: Dictionary = {}
 var buildings: Dictionary = {}     # id -> Dictionary
 var building_order: Array = []     # ids by tier
 var fixtures: Dictionary = {}      # id -> Dictionary
+var skills_data: Dictionary = {}   # data/skills.json (levels, speed curve, perks)
+var perks: Dictionary = {}         # perk id -> Dictionary
 
 var errors: PackedStringArray = []
 
@@ -57,6 +59,8 @@ func reload() -> void:
 	building_order = buildings.keys()
 	building_order.sort_custom(func(a, b): return int(buildings[a].tier) < int(buildings[b].tier))
 	fixtures = _index(_load("fixtures.json").get("fixtures", []))
+	skills_data = _load("skills.json")
+	perks = _index(skills_data.get("perks", []))
 	_validate()
 	for e in errors:
 		push_error("[Content] " + e)
@@ -179,6 +183,22 @@ func grade_mult(grade: String) -> float:
 
 func building(id: String) -> Dictionary:
 	return buildings.get(id, {})
+
+
+func skill_defs() -> Array:
+	return skills_data.get("skills", [])
+
+
+func skill_table(key: String, level: int, default: float = 1.0) -> float:
+	## Per-level value from skills.json (speed / carry …); level is 1-based.
+	var arr: Array = skills_data.get(key, [])
+	if arr.is_empty():
+		return default
+	return float(arr[clampi(level - 1, 0, arr.size() - 1)])
+
+
+func perks_for(skill: String) -> Array:
+	return perks.values().filter(func(pk): return pk.skill == skill)
 
 
 func fixture(id: String) -> Dictionary:

@@ -7,6 +7,7 @@
 [node name="ServerMicro" type="Node3D"]
 metadata/footprint = Vector3(0.34944, 0.26000, 0.36178)
 metadata/source_tier = "Server: 4-bay microserver"
+metadata/surfaces = []
 
 
 [node name="Model" type="MeshInstance3D" parent="."]

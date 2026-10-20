@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/peripherals/monitor_crt/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/peripherals/monitor_crt/material.tres" id="2"]
+
+
+[node name="MonitorCrt" type="Node3D"]
+metadata/footprint = Vector3(0.38000, 0.33443, 0.29565)
+metadata/source_tier = "Old CRT monitor (prop)"
+metadata/surfaces = [[0.060, 1.00, -0.189, 0.189, -0.142, 0.147], [0.190, 0.18, -0.190, 0.166, -0.137, 0.095]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

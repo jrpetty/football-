@@ -36,8 +36,8 @@
   "courier_parcel_drop_minute": 720,
   "test_minutes": 30,
   "image_minutes": 45,
-  "grade_secs": 1.5,
-  "pack_secs": 4.0,
+  "grade_secs": 4.0,
+  "pack_secs": 5.0,
   "flogit_fee_pct": 0.1,
   "flogit_postage": 9,
   "flogit_postage_large": 26,
@@ -70,7 +70,8 @@
     "grade": 3,
     "pack": 6,
     "haul": 1,
-    "buy_unit": 2
+    "buy_unit": 2,
+    "ship": 5
   },
   "start_items": [
     {

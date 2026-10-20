@@ -367,9 +367,9 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
 - [x] Use the 13 Meshy models (laptops/desktops/servers): optimised, scaled, tiered, in game.
 - [x] Gaming laptop in the data (Northstar Vanguard G17).
 - [x] Desktops + servers as stock; heavy-duty racking for big kit; bigger OUTGOING shelf with floor bays.
-- [x] Moving premises much dearer (£10k lock-up … £1M mega plant).
+- [x] Moving premises much dearer, scaled geometrically: £10k, £25k, £63k, £160k, £400k, £1M.
 - [x] Things must actually sell (auto-list on grade, higher early demand, first sale within the hour, ETA in Flogit).
-- [~] Never fall through the map: site fence + guaranteed ground + respawn safety net (verify in all 7 levels).
+- [x] Never fall through the map: site fence + guaranteed ground + respawn safety net (premises test: 0 holes on all 7 sites).
 - [ ] Use ALL 45 further models (the "Unconfirmed *.crdownload" files are complete GLBs): stations, shelving, racking,
       pallet, lorry, car, forklift, pallet truck, robot arm, conveyors (straight + 90° curve — fix the curve's looks),
       boxes, USB stick, label printers, barcode scanner, bins, parts, monitors, switch, Wi-Fi AP, dock, phone, tablet…
@@ -378,9 +378,20 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
 - [ ] Better delivery: pallet truck (and forklift later) to move pallets; arms unloading onto conveyors.
 - [ ] Empty pallets you can buy and stack servers/laptops on; manual pallet truck to move loaded pallets.
 - [ ] Skill system that matters: low level = noticeably slow, speeds up with XP; unlock abilities/perks over time.
+- [ ] Co-op designed in: shared goals, roles, office PCs for several players; later buildings get a sales &
+      purchasing office (multiple desks/PCs) — build on it where it improves the game.
+- [ ] New stock types that add value: monitors, Linkwell switches + Wi-Fi APs, docks, tablets, phones (models exist).
+- [ ] Immersion + interaction polish; a grind long enough to commit to (balance the premises ladder vs earnings).
+- [ ] END GOAL: reach the highest tier (mega plant) AND £20,000,000 lifetime revenue. Run timer in in-game days.
+- [ ] Challenge + leaderboard: fastest (in days) to each premises tier and milestone, and to the end goal;
+      local records now, Steam leaderboards when GodotSteam lands (M2).
+- [ ] Every new office-PC app follows the PaneOS/Insights style (sidebar, cards, coloured tiles, taskbar icon).
+- [ ] Test-bench screens for laptops, desktops AND servers (BMC/RAID screens) polished to the same or higher standard.
+- [ ] Player avatars + AI staff look good; character menu where a player uploads a photo that becomes their
+      avatar's face (comedic), synced in co-op.
 - [ ] Tea/coffee: proper first-person drinking animation (see yourself drink), looks and performs great.
 - [ ] Insights app performance (redraw only on change, update in place, send guests only diffs).
-- [ ] Merge the cloud session's fixes (look-to-pick, E-press, shelf pick, build stamp) — done in B5; keep one branch.
+- [x] Merge the cloud session's fixes (look-to-pick, E-press, shelf pick, build stamp) — B5; one branch, pushed.
 - [ ] Written breakdown: what to add to make the game amazing and smooth (Jon asked for it after the build work).
 - [ ] Add own features; test everything (unit tests, playtests, renders of every process from arrival to dispatch).
 

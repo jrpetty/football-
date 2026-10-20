@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/vehicles/box_lorry/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/vehicles/box_lorry/material.tres" id="2"]
+
+
+[node name="BoxLorry" type="Node3D"]
+metadata/footprint = Vector3(3.34341, 3.36119, 7.40000)
+metadata/source_tier = "7.5t box lorry"
+metadata/surfaces = [[0.190, 1.00, -1.318, 1.656, -3.698, 3.690]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

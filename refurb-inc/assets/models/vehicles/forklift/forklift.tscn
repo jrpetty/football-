@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/vehicles/forklift/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/vehicles/forklift/material.tres" id="2"]
+
+
+[node name="Forklift" type="Node3D"]
+metadata/footprint = Vector3(0.99530, 1.90176, 3.10000)
+metadata/source_tier = "Counterbalance forklift"
+metadata/surfaces = [[0.150, 1.00, -0.488, 0.496, -1.502, 1.548], [0.650, 0.18, -0.460, 0.461, -1.061, 0.682], [1.820, 0.21, -0.453, 0.451, -1.023, 0.562]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

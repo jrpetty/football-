@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/props/box_heavy/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/props/box_heavy/material.tres" id="2"]
+
+
+[node name="BoxHeavy" type="Node3D"]
+metadata/footprint = Vector3(0.35047, 0.50000, 0.33423)
+metadata/source_tier = "Heavy-item carton"
+metadata/surfaces = [[0.500, 1.00, -0.175, 0.174, -0.165, 0.164]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

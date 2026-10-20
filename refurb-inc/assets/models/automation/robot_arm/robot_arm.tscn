@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/automation/robot_arm/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/automation/robot_arm/material.tres" id="2"]
+
+
+[node name="RobotArm" type="Node3D"]
+metadata/footprint = Vector3(1.87299, 1.90000, 0.84692)
+metadata/source_tier = "Six-axis pick-and-place robot arm"
+metadata/surfaces = [[0.300, 0.33, 0.254, 0.798, -0.307, 0.296], [0.660, 0.56, -0.924, 0.809, -0.253, 0.319]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

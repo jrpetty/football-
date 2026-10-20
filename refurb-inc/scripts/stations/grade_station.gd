@@ -10,7 +10,7 @@ func _station_ready() -> void:
 
 func _secs(player: Node) -> float:
 	var peer: int = player.peer_id if player and "peer_id" in player else Net.local_peer()
-	return float(Content.econ("grade_secs", 1.5)) / (1.0 + 0.1 * Game.state.skill_level(Sim.player_key(peer), "grading"))
+	return float(Content.econ("grade_secs", 4.0)) / Game.state.skill_speed(Sim.player_key(peer), "grading")
 
 
 func hold_action(player: Node, it: Item) -> Dictionary:

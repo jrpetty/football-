@@ -242,6 +242,15 @@ func hover_info(player: Node) -> Dictionary:
 			info.lines.append(u.stage_text())
 			if u.tested:
 				info.lines.append(u.spec_line())
+			var me := Game.local_player_key()
+			if not u.tested and Game.state.has_perk(me, "pre_check"):
+				var dead := u.faults.any(func(f): return f.id == "board_no_post")
+				var pc := "Pre-check: %s" % ("no power — likely board fault" if dead else "powers on")
+				if u.is_laptop() and not dead:
+					pc += " · battery reads ~%d%%" % (int(round(u.battery_pct / 5.0)) * 5)
+				info.lines.append(pc)
+			if u.imaged and u.grade == "" and Game.state.has_perk(me, "keen_eye"):
+				info.lines.append("Keen eye: will grade %s" % UnitData.grade_label(Valuation.predicted_grade(u)))
 			info["subtitle"] = u.serial
 		Item.KIND_PALLET:
 			var n := 0

@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/props/weee_bin/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/props/weee_bin/material.tres" id="2"]
+
+
+[node name="WeeeBin" type="Node3D"]
+metadata/footprint = Vector3(0.72834, 1.05000, 0.70480)
+metadata/source_tier = "E-waste wheelie bin"
+metadata/surfaces = [[0.910, 0.30, -0.349, 0.364, -0.344, 0.343], [0.960, 0.16, -0.361, 0.351, -0.332, 0.332]]
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

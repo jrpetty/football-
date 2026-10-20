@@ -14,7 +14,7 @@ func build() -> void:
 		refresh())
 	tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(tb)
-	var disc := 0.01 * Game.state.skill_level(Game.local_player_key(), "purchasing")
+	var disc := float(Content.skills_data.get("purchase_discount_per_level", 0.01)) * (Game.state.skill_level(Game.local_player_key(), "purchasing") - 1)
 	head.add_child(l("Your purchasing discount: %d%%" % int(disc * 100), 17, SUB))
 	var sl := scroll_list()
 	add_child(sl[0])
@@ -58,7 +58,15 @@ func _lot_card(lot: Dictionary) -> Control:
 	title.add_child(pill(lot.sector, Color(0.9, 0.92, 0.95), SUB))
 	if lot.get("refresh", false):
 		title.add_child(pill("SCHEDULED REFRESH", AMBER))
-	left.add_child(l("%d laptops · %s · ~%d years old" % [int(lot.count), lot.summary, int(lot.age_years)], 18, INK))
+	left.add_child(l("%d units · %s · ~%d years old" % [int(lot.count), lot.summary, int(lot.age_years)], 18, INK))
+	if Game.state.has_perk(Game.local_player_key(), "insider"):
+		var band: String = lot.get("quality_band", "")
+		if band == "" and lot.has("quality"):
+			var q := float(lot.quality)
+			band = "bargain gamble" if q < 0.38 else ("fair" if q < 0.68 else "premium")
+		if band != "":
+			var bc := RED if band == "bargain gamble" else (GREEN if band == "premium" else AMBER)
+			left.add_child(pill(" Insider: %s kit " % band, bc, Color.WHITE, 15))
 	left.add_child(para("“%s”" % lot.note, 18, SUB, 600))
 	var guides: PackedStringArray = []
 	for mid in lot.models:
@@ -70,7 +78,7 @@ func _lot_card(lot: Dictionary) -> Control:
 	right.alignment = BoxContainer.ALIGNMENT_CENTER
 	h.add_child(right)
 	right.add_child(l("£%d / unit" % int(lot.unit_price), 28, INK))
-	var disc := 0.01 * Game.state.skill_level(Game.local_player_key(), "purchasing")
+	var disc := float(Content.skills_data.get("purchase_discount_per_level", 0.01)) * (Game.state.skill_level(Game.local_player_key(), "purchasing") - 1)
 	var total := int(round(int(lot.total_price) * (1.0 - disc)))
 	right.add_child(l("Total %s" % GameState.format_money(total), 20, SUB))
 	var afford := Game.state.cash - total >= int(Content.econ("overdraft_warning", -500))

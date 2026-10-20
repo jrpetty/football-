@@ -252,17 +252,45 @@ func add_xp(key: String, skill: String, amount: int) -> void:
 	if after > before:
 		BusinessStats.on_level_up(self, key, skill, after)
 		say("%s reached %s level %d!" % [p.name, skill.capitalize(), after], "good")
+		for pk: Dictionary in Content.perks_for(skill):
+			if int(pk.level) > before and int(pk.level) <= after:
+				say("New perk unlocked — %s: %s" % [pk.name, pk.desc], "good")
 
 
 func skill_level(key: String, skill: String) -> int:
+	## 1 (new starter) … 10. Thresholds come from data/skills.json.
 	var xp := int(players.get(key, {}).get("xp", {}).get(skill, 0))
-	var table: Array = Content.econ("xp_per_level", [0, 200, 650, 1500])
-	var lvl := 0
+	var table: Array = Content.skills_data.get("xp_levels", [0, 150, 400, 800, 1400, 2300, 3600, 5400, 8000, 12000])
+	var lvl := 1
 	for i in table.size():
 		if xp >= int(table[i]):
 			lvl = i + 1
-	# Everyone can do Level 1 repairs from the start.
-	return maxi(lvl, 1) if skill == "repair" else lvl
+	return clampi(lvl, 1, int(Content.skills_data.get("max_level", 10)))
+
+
+func skill_speed(key: String, skill: String) -> float:
+	## Work-speed multiplier: timers and hold times divide by this. Slow at level 1, quick at 10.
+	return Content.skill_table("speed", skill_level(key, skill), 1.0)
+
+
+func has_perk(key: String, perk_id: String) -> bool:
+	var pk: Dictionary = Content.perks.get(perk_id, {})
+	return not pk.is_empty() and skill_level(key, pk.skill) >= int(pk.level)
+
+
+func best_skill_level(skill: String) -> int:
+	## Company-wide effects (sales traffic) use whoever on the team is best at it.
+	var best := 1
+	for k in players:
+		best = maxi(best, skill_level(k, skill))
+	return best
+
+
+func team_has_perk(perk_id: String) -> bool:
+	for k in players:
+		if has_perk(k, perk_id):
+			return true
+	return false
 
 
 # ================================================================= serialisation
@@ -441,6 +469,9 @@ func _public_lot(id: int) -> Variant:
 		return null
 	var l: Dictionary = lots[id].duplicate(true)
 	l.erase("units")
+	# Only a coarse band leaves the host (shown to players with the Insider perk).
+	var q := float(l.get("quality", 0.5))
+	l["quality_band"] = "bargain gamble" if q < 0.38 else ("fair" if q < 0.68 else "premium")
 	l.erase("quality")
 	return l
 

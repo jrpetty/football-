@@ -71,9 +71,19 @@ func process(path: String, e: Dictionary) -> void:
 	_write_material(src_mat, e, out_dir, out_rel)
 
 	# Simplify first (on the raw normalised mesh, which is closed so no open edges get chewed), then drop
-	# unused vertices and move it into game space.
-	arrays = _compact(arrays, _simplify(arrays, int(e.get("tris", 40000))))
+	# unused vertices and move it into game space. Flat/boxy meshes can stall the simplifier's error limit,
+	# so run it again on its own output (up to 4 rounds) until the budget is met.
+	var budget := int(e.get("tris", 40000))
+	for round_i in 4:
+		var before := (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
+		# Later rounds let more normals merge: hard-edged boxy props tolerate it and it unblocks the simplifier.
+		arrays = _compact(arrays, _simplify(arrays, budget, [25.0, 45.0, 70.0, 89.0][round_i]))
+		var after := (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
+		if after <= budget * 1.3:
+			break
 	_transform(arrays, e)
+	if e.has("bend"):
+		_bend(arrays, e["bend"], e)
 	var tris := (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
 	if e.get("kind", "") == "laptop":
 		_build_laptop(arrays, e, out_dir, out_rel, mat_res)
@@ -94,13 +104,13 @@ func _first_mesh(n: Node) -> MeshInstance3D:
 
 # ------------------------------------------------------------------ geometry
 
-func _simplify(arrays: Array, target: int) -> PackedInt32Array:
+func _simplify(arrays: Array, target: int, merge_angle: float = 25.0) -> PackedInt32Array:
 	var src: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
 	if src.size() / 3 <= target:
 		return src
 	var im := ImporterMesh.new()
 	im.add_surface(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	im.generate_lods(25.0, 60.0, [])
+	im.generate_lods(merge_angle, 60.0, [])
 	# Smallest LOD that still has at least ~85% of the budget; else the closest one.
 	var best := src
 	var best_n := src.size() / 3
@@ -198,6 +208,48 @@ func _transform(arrays: Array, e: Dictionary) -> void:
 	arrays[Mesh.ARRAY_NORMAL] = n
 	if tg.size() > 0:
 		arrays[Mesh.ARRAY_TANGENT] = tg
+
+
+func _bend(arrays: Array, b: Dictionary, e: Dictionary) -> void:
+	## Wrap a straight piece (running along Z, already scaled so its length = the arc's centreline length)
+	## round a vertical axis: it enters at -Z heading +Z and leaves heading +X (a right-hand turn).
+	## Used to make the 90-degree conveyor curve from the straight conveyor so both match exactly.
+	var deg := float(b.get("deg", 90.0))
+	var r := float(b.get("radius", 1.0))
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var n: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	var tg: PackedFloat32Array = arrays[Mesh.ARRAY_TANGENT] if arrays[Mesh.ARRAY_TANGENT] != null else PackedFloat32Array()
+	var box := _aabb(v)
+	var length := box.size.z
+	var z0 := box.position.z
+	var turn := deg_to_rad(deg)
+	for i in v.size():
+		var p := v[i]
+		var th := (p.z - z0) / length * turn
+		var right := Vector3(cos(th), 0, -sin(th))
+		var fwd := Vector3(sin(th), 0, cos(th))
+		var rad := r - p.x
+		v[i] = Vector3(r - rad * cos(th), p.y, rad * sin(th))
+		if n.size() > i:
+			var q := n[i]
+			n[i] = (right * q.x + Vector3.UP * q.y + fwd * q.z).normalized()
+		if tg.size() > i * 4:
+			var t := right * tg[i * 4] + Vector3.UP * tg[i * 4 + 1] + fwd * tg[i * 4 + 2]
+			tg[i * 4] = t.x
+			tg[i * 4 + 1] = t.y
+			tg[i * 4 + 2] = t.z
+	# Re-centre on the footprint (bottom-centre origin) and record where belts join.
+	var nb := _aabb(v)
+	var shift := Vector3(-nb.get_center().x, -nb.position.y, -nb.get_center().z)
+	for i in v.size():
+		v[i] += shift
+	arrays[Mesh.ARRAY_VERTEX] = v
+	arrays[Mesh.ARRAY_NORMAL] = n
+	if tg.size() > 0:
+		arrays[Mesh.ARRAY_TANGENT] = tg
+	var entry := Vector3(0, 0, 0) + shift
+	var exit := Vector3(r - r * cos(turn), 0, r * sin(turn)) + shift
+	e["_ports"] = "[[%s, Vector3(0, 0, 1)], [%s, Vector3(%.4f, 0, %.4f)]]" % [_v3(entry), _v3(exit), sin(turn), cos(turn)]
 
 
 func _aabb(v: PackedVector3Array) -> AABB:
@@ -419,7 +471,10 @@ func _build_prop(arrays: Array, e: Dictionary, out_dir: String, out_rel: String,
 	_save_mesh(arrays, out_dir.path_join("mesh.res"))
 	var box := _aabb(arrays[Mesh.ARRAY_VERTEX])
 	var scn := _scene_header(e, 2, box.size)
-	scn += "metadata/surfaces = %s\n\n" % _surfaces(arrays)
+	scn += "metadata/surfaces = %s\n" % _surfaces(arrays)
+	if e.has("_ports"):
+		scn += "metadata/ports = %s\n" % e["_ports"]
+	scn += "\n"
 	scn = scn.replace("[ext_resources]", _ext("ArrayMesh", "res://%s/mesh.res" % out_rel, "1") + _ext("Material", mat_res, "2")).replace("[sub_resources]", "")
 	scn += _node("Model", "MeshInstance3D", ".", "", 'mesh = ExtResource("1")\nsurface_material_override/0 = ExtResource("2")\n')
 	_write(out_dir.path_join(e["name"] + ".tscn"), scn)
@@ -486,18 +541,18 @@ func _write_material(src: Material, e: Dictionary, out_dir: String, out_rel: Str
 	var n := 0
 	if sm and sm.albedo_texture:
 		n += 1
-		_save_tex(sm.albedo_texture, out_dir.path_join("albedo.jpg"))
+		_save_tex(sm.albedo_texture, out_dir.path_join("albedo.jpg"), int(e.get("tex", TEX_SIZE)))
 		exts += _ext("Texture2D", "res://%s/albedo.jpg" % out_rel, str(n))
 		props += 'albedo_texture = ExtResource("%d")\n' % n
 		if sm.metallic_texture or sm.roughness_texture:
 			n += 1
-			_save_tex(sm.roughness_texture if sm.roughness_texture else sm.metallic_texture, out_dir.path_join("orm.jpg"))
+			_save_tex(sm.roughness_texture if sm.roughness_texture else sm.metallic_texture, out_dir.path_join("orm.jpg"), int(e.get("tex", TEX_SIZE)))
 			exts += _ext("Texture2D", "res://%s/orm.jpg" % out_rel, str(n))
 			# glTF packs roughness in G and metallic in B.
 			props += 'metallic = %.3f\nmetallic_texture = ExtResource("%d")\nmetallic_texture_channel = 2\nroughness = %.3f\nroughness_texture = ExtResource("%d")\nroughness_texture_channel = 1\n' % [sm.metallic, n, sm.roughness, n]
 		if sm.normal_texture:
 			n += 1
-			_save_tex(sm.normal_texture, out_dir.path_join("normal.jpg"))
+			_save_tex(sm.normal_texture, out_dir.path_join("normal.jpg"), int(e.get("tex", TEX_SIZE)))
 			exts += _ext("Texture2D", "res://%s/normal.jpg" % out_rel, str(n))
 			props += 'normal_enabled = true\nnormal_texture = ExtResource("%d")\n' % n
 	else:
@@ -508,12 +563,12 @@ func _write_material(src: Material, e: Dictionary, out_dir: String, out_rel: Str
 	_write(out_dir.path_join("material.tres"), txt)
 
 
-func _save_tex(tex: Texture2D, path: String) -> void:
+func _save_tex(tex: Texture2D, path: String, size: int = TEX_SIZE) -> void:
 	var img := tex.get_image()
 	if img.is_compressed():
 		img.decompress()
-	if maxi(img.get_width(), img.get_height()) > TEX_SIZE:
-		img.resize(TEX_SIZE, TEX_SIZE, Image.INTERPOLATE_LANCZOS)
+	if maxi(img.get_width(), img.get_height()) > size:
+		img.resize(size, size, Image.INTERPOLATE_LANCZOS)
 	img.convert(Image.FORMAT_RGB8)
 	img.save_jpg(path, 0.92)
 

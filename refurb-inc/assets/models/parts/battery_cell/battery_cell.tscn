@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/parts/battery_cell/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/parts/battery_cell/material.tres" id="2"]
+
+
+[node name="BatteryCell" type="Node3D"]
+metadata/footprint = Vector3(0.06778, 0.12000, 0.00733)
+metadata/source_tier = "Battery pouch cell"
+metadata/surfaces = []
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

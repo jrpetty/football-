@@ -85,7 +85,7 @@ func _ready() -> void:
 	Game.request("pick_up", {"item": usb.id})
 	Game.request("place", {"slot": "bench_1:usb"})
 	_check(not s.stations.bench_1.job.is_empty(), "test started on bench")
-	sim.advance_minutes(35)
+	sim.advance_minutes(_job_minutes(sim, "bench_1") + 2.0)
 	await _frames(3)
 	_check(it.unit.tested, "unit tested")
 
@@ -121,7 +121,7 @@ func _ready() -> void:
 	var img := s.item_in_slot("bench_1:park_b")
 	Game.request("pick_up", {"item": img.id})
 	Game.request("place", {"slot": "bench_1:usb"})
-	sim.advance_minutes(50)
+	sim.advance_minutes(_job_minutes(sim, "bench_1") + 2.0)
 	_check(it.unit.imaged, "imaged")
 	Game.request("pick_up", {"item": it.id})
 	Game.request("place", {"slot": "grade_1:unit"})
@@ -240,3 +240,11 @@ func _aim_and_pick_check() -> void:
 func _frames(n: int) -> void:
 	for i in n:
 		await get_tree().process_frame
+
+
+func _job_minutes(sim: Sim, sid: String) -> float:
+	## Minutes left on a station job (job times now depend on skill level).
+	var job: Dictionary = sim.state.stations.get(sid, {}).get("job", {})
+	if job.is_empty():
+		return 1.0
+	return float(job.start) + float(job.dur) - sim.state.minute

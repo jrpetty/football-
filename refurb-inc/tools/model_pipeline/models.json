@@ -1,33 +1,809 @@
 {
-  "_comment": "Source models -> game-ready assets. match = substring of the source .glb file name. rot_y turns the model so its front faces +Z. size: give one axis for a uniform scale (metres), or x/y/z for an exact box (rack servers). kind 'laptop' splits off a hinged Lid + Screen. colour = flat PBR colour for untextured sources. tris = triangle budget for LOD0 (Godot builds smaller LODs from it).",
-  "models": [
-    {"match": "laptop_tier1_student", "category": "laptops", "name": "laptop_rugged", "kind": "laptop", "rot_y": 0, "size": {"x": 0.31}, "tris": 45000,
-     "screen": [0.84, 0.13, 0.93], "tier": "Tier 1: rugged student/education laptop"},
-    {"match": "laptop_tier2_office", "category": "laptops", "name": "laptop_office", "kind": "laptop", "rot_y": 0, "size": {"x": 0.322}, "tris": 45000,
-     "screen": [0.95, 0.06, 0.96], "tier": "Tier 2: 14in business/office laptop"},
-    {"match": "laptop_tier3_ultralig", "category": "laptops", "name": "laptop_ultralight", "kind": "laptop", "rot_y": 0, "size": {"x": 0.300}, "tris": 45000,
-     "screen": [0.96, 0.05, 0.97], "tier": "Tier 3: premium 13in ultralight"},
-    {"match": "laptop_tier4_mainstre", "category": "laptops", "name": "laptop_mainstream", "kind": "laptop", "rot_y": 0, "size": {"x": 0.360}, "tris": 45000,
-     "screen": [0.95, 0.06, 0.96], "tier": "Tier 4: 15.6in mainstream laptop with numpad"},
-    {"match": "laptop_tier6_gaming", "category": "laptops", "name": "laptop_gaming", "kind": "laptop", "rot_y": 0, "size": {"x": 0.395}, "tris": 50000,
-     "screen": [0.92, 0.08, 0.95], "tier": "Tier 6: 17in gaming laptop (no hardware model uses it yet)"},
-
-    {"match": "custom_mini_pc", "category": "desktops", "name": "desktop_mini", "kind": "prop", "rot_y": 0, "size": {"x": 0.19}, "tris": 30000,
-     "colour": "#26282c", "roughness": 0.5, "metallic": 0.2, "tier": "Desktop: ultra-compact mini PC"},
-    {"match": "custom_sff_desktop", "category": "desktops", "name": "desktop_sff", "kind": "prop", "rot_y": -90, "size": {"y": 0.30}, "tris": 40000,
-     "tier": "Desktop: slim small-form-factor (stands on its feet)"},
-    {"match": "custom_mid_tower_pc", "category": "desktops", "name": "desktop_tower", "kind": "prop", "rot_y": 0, "size": {"y": 0.42}, "tris": 40000,
-     "colour": "#1e2023", "roughness": 0.45, "metallic": 0.35, "tier": "Desktop: office mid-tower"},
-
-    {"match": "unbranded_mid_tower_s", "category": "servers", "name": "server_tower", "kind": "prop", "rot_y": 0, "size": {"y": 0.44}, "tris": 45000,
-     "tier": "Server: entry tower server"},
-    {"match": "unbranded_microserver", "category": "servers", "name": "server_micro", "kind": "prop", "rot_y": -90, "size": {"y": 0.26}, "tris": 45000,
-     "tier": "Server: 4-bay microserver"},
-    {"match": "server_1u_compute", "category": "servers", "name": "server_1u", "kind": "prop", "rot_y": -90, "size": {"x": 0.482, "y": 0.0445, "z": 0.72}, "tris": 45000,
-     "tier": "Server: 1U rack compute node"},
-    {"match": "realistic_server_unit", "category": "servers", "name": "server_2u", "kind": "prop", "rot_y": 0, "size": {"x": 0.482, "y": 0.0875, "z": 0.72}, "tris": 50000,
-     "tier": "Server: 2U general-purpose rack server"},
-    {"match": "server_3u_storage", "category": "servers", "name": "server_3u_storage", "kind": "prop", "rot_y": 0, "size": {"x": 0.482, "y": 0.131, "z": 0.72}, "tris": 50000,
-     "tier": "Server: 3U storage server (16 bays)"}
-  ]
+ "_comment": "Source models -> game-ready assets. match = substring of the source .glb file name. rot_y turns the model so its front faces +Z. size: give one axis for a uniform scale (metres), or x/y/z for an exact box (rack servers). kind 'laptop' splits off a hinged Lid + Screen. colour = flat PBR colour for untextured sources. tris = triangle budget for LOD0 (Godot builds smaller LODs from it). tex = texture size (px). match may also be the number of an 'Unconfirmed NNNN.crdownload' file. bend {deg, radius}: wrap a straight piece round a vertical axis (the conveyor curve is made from the straight).",
+ "models": [
+  {
+   "match": "laptop_tier1_student",
+   "category": "laptops",
+   "name": "laptop_rugged",
+   "kind": "laptop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.31
+   },
+   "tris": 45000,
+   "screen": [
+    0.84,
+    0.13,
+    0.93
+   ],
+   "tier": "Tier 1: rugged student/education laptop"
+  },
+  {
+   "match": "laptop_tier2_office",
+   "category": "laptops",
+   "name": "laptop_office",
+   "kind": "laptop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.322
+   },
+   "tris": 45000,
+   "screen": [
+    0.95,
+    0.06,
+    0.96
+   ],
+   "tier": "Tier 2: 14in business/office laptop"
+  },
+  {
+   "match": "laptop_tier3_ultralig",
+   "category": "laptops",
+   "name": "laptop_ultralight",
+   "kind": "laptop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.3
+   },
+   "tris": 45000,
+   "screen": [
+    0.96,
+    0.05,
+    0.97
+   ],
+   "tier": "Tier 3: premium 13in ultralight"
+  },
+  {
+   "match": "laptop_tier4_mainstre",
+   "category": "laptops",
+   "name": "laptop_mainstream",
+   "kind": "laptop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.36
+   },
+   "tris": 45000,
+   "screen": [
+    0.95,
+    0.06,
+    0.96
+   ],
+   "tier": "Tier 4: 15.6in mainstream laptop with numpad"
+  },
+  {
+   "match": "laptop_tier6_gaming",
+   "category": "laptops",
+   "name": "laptop_gaming",
+   "kind": "laptop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.395
+   },
+   "tris": 50000,
+   "screen": [
+    0.92,
+    0.08,
+    0.95
+   ],
+   "tier": "Tier 6: 17in gaming laptop (no hardware model uses it yet)"
+  },
+  {
+   "match": "custom_mini_pc",
+   "category": "desktops",
+   "name": "desktop_mini",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.19
+   },
+   "tris": 30000,
+   "colour": "#26282c",
+   "roughness": 0.5,
+   "metallic": 0.2,
+   "tier": "Desktop: ultra-compact mini PC"
+  },
+  {
+   "match": "custom_sff_desktop",
+   "category": "desktops",
+   "name": "desktop_sff",
+   "kind": "prop",
+   "rot_y": -90,
+   "size": {
+    "y": 0.3
+   },
+   "tris": 40000,
+   "tier": "Desktop: slim small-form-factor (stands on its feet)"
+  },
+  {
+   "match": "custom_mid_tower_pc",
+   "category": "desktops",
+   "name": "desktop_tower",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "y": 0.42
+   },
+   "tris": 40000,
+   "colour": "#1e2023",
+   "roughness": 0.45,
+   "metallic": 0.35,
+   "tier": "Desktop: office mid-tower"
+  },
+  {
+   "match": "unbranded_mid_tower_s",
+   "category": "servers",
+   "name": "server_tower",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "y": 0.44
+   },
+   "tris": 45000,
+   "tier": "Server: entry tower server"
+  },
+  {
+   "match": "unbranded_microserver",
+   "category": "servers",
+   "name": "server_micro",
+   "kind": "prop",
+   "rot_y": -90,
+   "size": {
+    "y": 0.26
+   },
+   "tris": 45000,
+   "tier": "Server: 4-bay microserver"
+  },
+  {
+   "match": "server_1u_compute",
+   "category": "servers",
+   "name": "server_1u",
+   "kind": "prop",
+   "rot_y": -90,
+   "size": {
+    "x": 0.482,
+    "y": 0.0445,
+    "z": 0.72
+   },
+   "tris": 45000,
+   "tier": "Server: 1U rack compute node"
+  },
+  {
+   "match": "realistic_server_unit",
+   "category": "servers",
+   "name": "server_2u",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.482,
+    "y": 0.0875,
+    "z": 0.72
+   },
+   "tris": 50000,
+   "tier": "Server: 2U general-purpose rack server"
+  },
+  {
+   "match": "server_3u_storage",
+   "category": "servers",
+   "name": "server_3u_storage",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.482,
+    "y": 0.131,
+    "z": 0.72
+   },
+   "tris": 50000,
+   "tier": "Server: 3U storage server (16 bays)"
+  },
+  {
+   "match": "Unconfirmed 9169",
+   "category": "stations",
+   "name": "test_bench_esd",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 1.45,
+    "y": 1.8,
+    "z": 0.83
+   },
+   "tris": 60000,
+   "tex": 2048,
+   "tier": "ESD test bench with monitor arm"
+  },
+  {
+   "match": "Unconfirmed 702283",
+   "category": "stations",
+   "name": "repair_bench",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 1.6,
+    "y": 1.64,
+    "z": 0.914
+   },
+   "tris": 60000,
+   "tex": 2048,
+   "tier": "Repair bench with pegboard and bins"
+  },
+  {
+   "match": "Unconfirmed 518683",
+   "category": "stations",
+   "name": "office_desk",
+   "kind": "prop",
+   "rot_y": 180,
+   "size": {
+    "x": 1.4,
+    "y": 1.105,
+    "z": 1.39
+   },
+   "tris": 50000,
+   "tex": 2048,
+   "tier": "Office desk with chair"
+  },
+  {
+   "match": "Unconfirmed 734182",
+   "category": "stations",
+   "name": "metal_shelf",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 1.2,
+    "y": 1.9,
+    "z": 0.45
+   },
+   "tris": 30000,
+   "tex": 1024,
+   "tier": "Boltless stock shelving"
+  },
+  {
+   "match": "Unconfirmed 993106",
+   "category": "stations",
+   "name": "heavy_rack",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 2.0,
+    "y": 1.8,
+    "z": 0.9
+   },
+   "tris": 40000,
+   "tex": 1024,
+   "tier": "Heavy-duty pallet racking"
+  },
+  {
+   "match": "Unconfirmed 889695",
+   "category": "automation",
+   "name": "conveyor_straight",
+   "kind": "prop",
+   "rot_y": 90,
+   "size": {
+    "x": 0.7,
+    "y": 0.9,
+    "z": 2.0
+   },
+   "tris": 40000,
+   "tex": 1024,
+   "tier": "Powered roller conveyor, straight"
+  },
+  {
+   "match": "Unconfirmed 889695",
+   "category": "automation",
+   "name": "conveyor_curve",
+   "kind": "prop",
+   "rot_y": 90,
+   "size": {
+    "x": 0.7,
+    "y": 0.9,
+    "z": 1.5708
+   },
+   "tris": 40000,
+   "tex": 1024,
+   "tier": "Roller conveyor, 90-degree curve (the straight conveyor bent round a 1 m radius)",
+   "bend": {
+    "deg": 90,
+    "radius": 1.0
+   }
+  },
+  {
+   "match": "Unconfirmed 274869",
+   "category": "automation",
+   "name": "robot_arm",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "y": 1.9
+   },
+   "tris": 50000,
+   "tex": 2048,
+   "tier": "Six-axis pick-and-place robot arm"
+  },
+  {
+   "match": "Unconfirmed 18857",
+   "category": "vehicles",
+   "name": "box_lorry",
+   "kind": "prop",
+   "rot_y": 90,
+   "size": {
+    "max": 7.4
+   },
+   "tris": 50000,
+   "tex": 2048,
+   "tier": "7.5t box lorry"
+  },
+  {
+   "match": "Unconfirmed 766007",
+   "category": "vehicles",
+   "name": "hatchback",
+   "kind": "prop",
+   "rot_y": 90,
+   "size": {
+    "max": 4.1
+   },
+   "tris": 40000,
+   "tex": 1024,
+   "tier": "Hatchback car"
+  },
+  {
+   "match": "Unconfirmed 237080",
+   "category": "vehicles",
+   "name": "forklift",
+   "kind": "prop",
+   "rot_y": 90,
+   "size": {
+    "max": 3.1
+   },
+   "tris": 40000,
+   "tex": 2048,
+   "tier": "Counterbalance forklift"
+  },
+  {
+   "match": "Unconfirmed 771477",
+   "category": "vehicles",
+   "name": "pallet_truck",
+   "kind": "prop",
+   "rot_y": 90,
+   "size": {
+    "max": 1.55
+   },
+   "tris": 20000,
+   "tex": 1024,
+   "tier": "Manual pallet truck"
+  },
+  {
+   "match": "Unconfirmed 303040",
+   "category": "props",
+   "name": "pallet",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 1.2,
+    "y": 0.144,
+    "z": 0.8
+   },
+   "tris": 12000,
+   "tex": 1024,
+   "tier": "EUR pallet"
+  },
+  {
+   "match": "Unconfirmed 428028",
+   "category": "props",
+   "name": "box_parcel",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.42,
+    "y": 0.26,
+    "z": 0.32
+   },
+   "tris": 3000,
+   "tex": 512,
+   "tier": "Supplies parcel"
+  },
+  {
+   "match": "Unconfirmed 603634",
+   "category": "props",
+   "name": "box_laptop",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.44,
+    "y": 0.12,
+    "z": 0.34
+   },
+   "tris": 3000,
+   "tex": 512,
+   "tier": "Laptop shipping box"
+  },
+  {
+   "match": "Unconfirmed 675140",
+   "category": "props",
+   "name": "box_heavy",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "y": 0.5
+   },
+   "tris": 3000,
+   "tex": 512,
+   "tier": "Heavy-item carton"
+  },
+  {
+   "match": "Unconfirmed 766593",
+   "category": "props",
+   "name": "paper_roll_stand",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.62
+   },
+   "tris": 15000,
+   "tex": 1024,
+   "tier": "Packing paper dispenser"
+  },
+  {
+   "match": "Unconfirmed 656750",
+   "category": "props",
+   "name": "parts_bin",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.22,
+    "y": 0.14,
+    "z": 0.32
+   },
+   "tris": 4000,
+   "tex": 512,
+   "tier": "Louvred parts bin"
+  },
+  {
+   "match": "Unconfirmed 76818",
+   "category": "props",
+   "name": "weee_bin",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "y": 1.05
+   },
+   "tris": 15000,
+   "tex": 1024,
+   "tier": "E-waste wheelie bin"
+  },
+  {
+   "match": "Unconfirmed 272274",
+   "category": "props",
+   "name": "label_printer",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.2
+   },
+   "tris": 12000,
+   "tex": 1024,
+   "tier": "Thermal label printer"
+  },
+  {
+   "match": "Unconfirmed 759549",
+   "category": "props",
+   "name": "label_printer_compact",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.19
+   },
+   "tris": 12000,
+   "tex": 1024,
+   "tier": "Compact label printer"
+  },
+  {
+   "match": "Unconfirmed 733045",
+   "category": "props",
+   "name": "barcode_scanner",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "max": 0.2
+   },
+   "tris": 10000,
+   "tex": 1024,
+   "tier": "Rugged handheld barcode scanner"
+  },
+  {
+   "match": "Unconfirmed 207111",
+   "category": "props",
+   "name": "screwdriver_kit",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "max": 0.22
+   },
+   "tris": 6000,
+   "tex": 512,
+   "tier": "Precision screwdriver kit"
+  },
+  {
+   "match": "Unconfirmed 514326",
+   "category": "items",
+   "name": "usb_stick",
+   "kind": "prop",
+   "rot_y": 90,
+   "size": {
+    "max": 0.06
+   },
+   "tris": 4000,
+   "tex": 512,
+   "tier": "Rugged USB stick"
+  },
+  {
+   "match": "Unconfirmed 270689",
+   "category": "peripherals",
+   "name": "monitor_24",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.54
+   },
+   "tris": 15000,
+   "tex": 1024,
+   "tier": "24in monitor"
+  },
+  {
+   "match": "Unconfirmed 651608",
+   "category": "peripherals",
+   "name": "monitor_27",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.62
+   },
+   "tris": 15000,
+   "tex": 1024,
+   "tier": "27in monitor"
+  },
+  {
+   "match": "Unconfirmed 985165",
+   "category": "peripherals",
+   "name": "monitor_ultrawide",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.82
+   },
+   "tris": 15000,
+   "tex": 1024,
+   "tier": "34in curved ultrawide"
+  },
+  {
+   "match": "Unconfirmed 613576",
+   "category": "peripherals",
+   "name": "monitor_crt",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.38
+   },
+   "tris": 12000,
+   "tex": 1024,
+   "tier": "Old CRT monitor (prop)"
+  },
+  {
+   "match": "Unconfirmed 85349",
+   "category": "peripherals",
+   "name": "keyboard",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.44
+   },
+   "tris": 10000,
+   "tex": 1024,
+   "tier": "Desktop keyboard"
+  },
+  {
+   "match": "Unconfirmed 8227",
+   "category": "peripherals",
+   "name": "usb_dock",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.2
+   },
+   "tris": 8000,
+   "tex": 1024,
+   "tier": "USB-C docking station"
+  },
+  {
+   "match": "Unconfirmed 536039",
+   "category": "network",
+   "name": "switch_24",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.44
+   },
+   "tris": 20000,
+   "tex": 1024,
+   "tier": "24-port network switch"
+  },
+  {
+   "match": "Unconfirmed 236660",
+   "category": "network",
+   "name": "wifi_ap",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.2
+   },
+   "tris": 6000,
+   "tex": 512,
+   "tier": "Ceiling Wi-Fi access point"
+  },
+  {
+   "match": "Unconfirmed 429706",
+   "category": "mobile",
+   "name": "tablet",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "max": 0.25
+   },
+   "tris": 8000,
+   "tex": 1024,
+   "tier": "Tablet"
+  },
+  {
+   "match": "Unconfirmed 986799",
+   "category": "mobile",
+   "name": "phone",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "max": 0.15
+   },
+   "tris": 8000,
+   "tex": 1024,
+   "tier": "Smartphone"
+  },
+  {
+   "match": "Unconfirmed 127878",
+   "category": "parts",
+   "name": "cpu",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.076
+   },
+   "tris": 3000,
+   "tex": 512,
+   "tier": "Server CPU"
+  },
+  {
+   "match": "Unconfirmed 191687",
+   "category": "parts",
+   "name": "ram_stick",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.133
+   },
+   "tris": 4000,
+   "tex": 512,
+   "tier": "Memory module"
+  },
+  {
+   "match": "Unconfirmed 173191",
+   "category": "parts",
+   "name": "laptop_battery",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.27
+   },
+   "tris": 4000,
+   "tex": 512,
+   "tier": "Laptop battery"
+  },
+  {
+   "match": "Unconfirmed 195581",
+   "category": "parts",
+   "name": "battery_cell",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "max": 0.12
+   },
+   "tris": 3000,
+   "tex": 512,
+   "tier": "Battery pouch cell"
+  },
+  {
+   "match": "Unconfirmed 450604",
+   "category": "parts",
+   "name": "nvme_ssd",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.08
+   },
+   "tris": 3000,
+   "tex": 512,
+   "tier": "M.2 NVMe SSD"
+  },
+  {
+   "match": "Unconfirmed 832531",
+   "category": "parts",
+   "name": "sata_ssd",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "max": 0.1
+   },
+   "tris": 3000,
+   "tex": 512,
+   "tier": "2.5in SATA SSD"
+  },
+  {
+   "match": "Unconfirmed 37118",
+   "category": "parts",
+   "name": "drive_caddy",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "max": 0.21
+   },
+   "tris": 5000,
+   "tex": 512,
+   "tier": "Drive in hot-swap caddy"
+  },
+  {
+   "match": "Unconfirmed 859210",
+   "category": "parts",
+   "name": "server_psu",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "max": 0.2
+   },
+   "tris": 5000,
+   "tex": 512,
+   "tier": "Hot-plug server PSU"
+  },
+  {
+   "match": "Unconfirmed 532519",
+   "category": "parts",
+   "name": "laptop_keyboard",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.3
+   },
+   "tris": 5000,
+   "tex": 512,
+   "tier": "Laptop keyboard"
+  },
+  {
+   "match": "Unconfirmed 574538",
+   "category": "parts",
+   "name": "lcd_panel",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "x": 0.32
+   },
+   "tris": 3000,
+   "tex": 512,
+   "tier": "Laptop LCD panel"
+  },
+  {
+   "match": "Unconfirmed 529227",
+   "category": "parts",
+   "name": "phone_screen",
+   "kind": "prop",
+   "rot_y": 0,
+   "size": {
+    "max": 0.16
+   },
+   "tris": 3000,
+   "tex": 512,
+   "tier": "Phone screen assembly"
+  }
+ ]
 }

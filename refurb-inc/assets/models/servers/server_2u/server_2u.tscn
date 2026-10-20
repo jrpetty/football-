@@ -7,6 +7,7 @@
 [node name="Server2u" type="Node3D"]
 metadata/footprint = Vector3(0.48200, 0.08750, 0.72000)
 metadata/source_tier = "Server: 2U general-purpose rack server"
+metadata/surfaces = []
 
 
 [node name="Model" type="MeshInstance3D" parent="."]

@@ -19,7 +19,7 @@ func hold_action(player: Node, it: Item) -> Dictionary:
 			return {"blocked": "Out of %s — order more in the Shop." % ("large boxes" if need == "big_boxes" else need)}
 	var o: Dictionary = Game.state.orders.get(u.order_id, {})
 	var peer: int = player.peer_id if player and "peer_id" in player else Net.local_peer()
-	var secs := float(Content.econ("pack_secs", 4.0)) / (1.0 + 0.1 * Game.state.skill_level(Sim.player_key(peer), "packing"))
+	var secs := float(Content.econ("pack_secs", 5.0)) / Game.state.skill_speed(Sim.player_key(peer), "packing")
 	return {"label": "Pack order #%d" % u.order_id, "secs": secs, "action": "pack",
 		"sub": "For %s · due %s" % [o.get("buyer", "?"), GameState.format_minute(float(o.get("due", 0)))]}
 
