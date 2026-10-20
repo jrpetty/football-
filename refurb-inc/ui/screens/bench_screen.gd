@@ -1,0 +1,149 @@
+class_name BenchScreen
+extends Control
+## What the laptop on a test bench (and the bench's status monitor) displays. Drawn procedurally so it is
+## cheap to render into a small SubViewport. Reads the station + unit state every frame it is visible.
+
+var station_id := ""
+var _font: Font
+var _blink := 0.0
+
+
+func _ready() -> void:
+	_font = ThemeDB.fallback_font
+	set_anchors_preset(Control.PRESET_FULL_RECT)
+
+
+func _process(delta: float) -> void:
+	_blink += delta
+	queue_redraw()
+
+
+func _draw() -> void:
+	var st: Dictionary = Game.state.stations.get(station_id, {})
+	var unit_it := Game.state.station_slot_item(station_id, "unit")
+	var usb_it := Game.state.station_slot_item(station_id, "usb")
+	if unit_it == null or unit_it.unit == null:
+		_bg(Color(0.02, 0.02, 0.025))
+		return
+	var u := unit_it.unit
+	var job: Dictionary = st.get("job", {})
+	if not job.is_empty():
+		var p := clampf((Game.state.minute - float(job.start)) / maxf(float(job.dur), 0.01), 0.0, 1.0)
+		if job.kind == "test":
+			_draw_diag(u, p)
+		else:
+			_draw_image(u, p)
+		return
+	if usb_it == null:
+		_bg(Color(0.0, 0.0, 0.0))
+		_t(Vector2(20, 40), "%s BIOS" % Content.maker_name(u.model().get("maker", "")).to_upper(), 18, Color(0.7, 0.7, 0.7))
+		_t(Vector2(20, 80), "No bootable device found.", 22, Color(0.85, 0.85, 0.85))
+		if fmod(_blink, 1.0) < 0.5:
+			_t(Vector2(20, 112), "_", 22, Color(0.85, 0.85, 0.85))
+		return
+	var msg: String = st.get("msg", "")
+	if u.tested and not u.test_report.is_empty() and not u.imaged and (msg in ["PASS", "FAULTS FOUND"] or usb_it.kind == Item.KIND_USB_TEST):
+		_draw_report(u)
+		return
+	if u.imaged:
+		_draw_os_ready(u)
+		return
+	_bg(Color(0.12, 0.1, 0.02))
+	_t(Vector2(20, 60), msg if msg != "" else "Waiting…", 20, Color(1.0, 0.85, 0.3))
+
+
+func _bg(c: Color) -> void:
+	draw_rect(get_rect(), c)
+
+
+func _t(pos: Vector2, s: String, size: int, col: Color) -> void:
+	draw_string(_font, pos, s, HORIZONTAL_ALIGNMENT_LEFT, maxf(get_rect().size.x - pos.x - 10, 10), size, col)
+
+
+func _bar(pos: Vector2, w: float, h: float, p: float, col: Color) -> void:
+	draw_rect(Rect2(pos, Vector2(w, h)), Color(1, 1, 1, 0.12))
+	draw_rect(Rect2(pos, Vector2(w * p, h)), col)
+
+
+func _draw_diag(u: UnitData, p: float) -> void:
+	var w := get_rect().size.x
+	_bg(Color(0.04, 0.07, 0.13))
+	draw_rect(Rect2(0, 0, w, 44), Color(0.07, 0.24, 0.48))
+	_t(Vector2(14, 30), "%s %s" % [Content.diag_info.get("name", "Diag"), Content.diag_info.get("version", "")], 20, Color.WHITE)
+	_t(Vector2(w - 170, 30), u.serial, 16, Color(0.75, 0.85, 1.0))
+	var stages: Array = Content.diag_info.get("stages", [])
+	var cur := int(p * stages.size())
+	var y := 74.0
+	for i in stages.size():
+		var done := i < cur
+		var active := i == cur
+		var mark := "✔" if done else ("›" if active else "·")
+		var col := Color(0.4, 0.95, 0.55) if done else (Color(1, 1, 1) if active else Color(0.45, 0.5, 0.6))
+		_t(Vector2(18, y), "%s  %s" % [mark, stages[i]], 16, col)
+		y += 24
+	# Hardware inventory appears as it is detected
+	var x2 := w * 0.56
+	_t(Vector2(x2, 74), "Hardware inventory", 15, Color(0.6, 0.75, 1.0))
+	if p > 0.12:
+		_t(Vector2(x2, 98), u.cpu_name(), 14, Color.WHITE)
+	if p > 0.25:
+		_t(Vector2(x2, 120), "%d GB DDR4" % u.ram_gb, 14, Color.WHITE)
+	if p > 0.4:
+		_t(Vector2(x2, 142), ("%d GB " % u.storage_gb) + ("NVMe" if u.model().get("storage_type") == "nvme_m2" else "SATA SSD"), 14, Color.WHITE)
+	if p > 0.55:
+		_t(Vector2(x2, 164), "Battery: %d%% design capacity" % u.battery_pct, 14, Color.WHITE)
+	_bar(Vector2(18, get_rect().size.y - 34), w - 36, 14, p, Color(0.25, 0.6, 1.0))
+	_t(Vector2(18, get_rect().size.y - 42), "%d%%" % int(p * 100), 14, Color(0.8, 0.85, 0.95))
+
+
+func _draw_image(u: UnitData, p: float) -> void:
+	var r := get_rect().size
+	draw_rect(Rect2(Vector2.ZERO, r), Color(0.09, 0.05, 0.16))
+	draw_rect(Rect2(0, r.y * 0.55, r.x, r.y * 0.45), Color(0.05, 0.18, 0.2, 0.6))
+	# PaneOS logo: four panes
+	var cx := r.x / 2
+	for i in 4:
+		var ox := (i % 2) * 26 - 26
+		var oy := (i / 2) * 26 - 60
+		draw_rect(Rect2(cx + ox, r.y * 0.3 + oy, 22, 22), Color(0.35, 0.85, 0.9) if i != 3 else Color(0.95, 0.55, 0.25))
+	_t(Vector2(cx - 60, r.y * 0.3 + 18), Content.os_info.get("name", "PaneOS") + " Deploy", 20, Color.WHITE)
+	var lines: Array = Content.os_info.get("boot_text", [])
+	var idx := clampi(int(p * lines.size()), 0, lines.size() - 1)
+	var line: String = lines[idx] if not lines.is_empty() else ""
+	line = line.replace("{p}", str(clampi(int(p * 3 / 0.6) + 1, 1, 3)))
+	_t(Vector2(30, r.y * 0.62), line, 16, Color(0.85, 0.9, 1.0))
+	_bar(Vector2(30, r.y * 0.7), r.x - 60, 10, p, Color(0.35, 0.85, 0.9))
+	_t(Vector2(30, r.y * 0.82), "%s · %s" % [u.serial, Content.os_info.get("wipe_standard", "")], 13, Color(0.6, 0.65, 0.8))
+
+
+func _draw_report(u: UnitData) -> void:
+	var r := get_rect().size
+	var rep := u.test_report
+	var ok: bool = rep.get("pass", false)
+	_bg(Color(0.04, 0.07, 0.13))
+	draw_rect(Rect2(0, 0, r.x, 54), Color(0.1, 0.55, 0.25) if ok else Color(0.7, 0.15, 0.12))
+	_t(Vector2(16, 38), "PASS — all tests completed" if ok else "FAULTS FOUND", 24, Color.WHITE)
+	var y := 82.0
+	_t(Vector2(16, y), "%s  ·  %s" % [rep.get("model", ""), rep.get("serial", "")], 15, Color(0.75, 0.85, 1.0))
+	y += 26
+	_t(Vector2(16, y), "%s · %d GB · %d GB · Battery %d%%" % [rep.get("cpu", ""), int(rep.get("ram_gb", 0)), int(rep.get("storage_gb", 0)), int(rep.get("battery_pct", 0))], 14, Color(0.8, 0.8, 0.85))
+	y += 30
+	if ok:
+		_t(Vector2(16, y), "Swap to the PaneOS USB to wipe & image.", 16, Color(0.6, 1.0, 0.7))
+	else:
+		for f in rep.get("faults", []):
+			var fixed := false
+			for uf in u.faults:
+				if LotGenerator.fault_text(uf) == f and uf.fixed:
+					fixed = true
+			_t(Vector2(16, y), ("✔ " if fixed else "✖ ") + str(f), 16, Color(0.6, 1.0, 0.7) if fixed else Color(1.0, 0.55, 0.5))
+			y += 24
+
+
+func _draw_os_ready(u: UnitData) -> void:
+	var r := get_rect().size
+	draw_rect(Rect2(Vector2.ZERO, r), Color(0.12, 0.32, 0.45))
+	draw_rect(Rect2(0, r.y * 0.6, r.x, r.y * 0.4), Color(0.18, 0.45, 0.55))
+	_t(Vector2(r.x / 2 - 110, r.y * 0.42), "Hello.", 40, Color.WHITE)
+	_t(Vector2(r.x / 2 - 110, r.y * 0.42 + 34), "%s is ready for its new owner." % Content.os_info.get("name", "PaneOS"), 15, Color(0.9, 0.95, 1.0))
+	_t(Vector2(16, r.y - 16), u.serial, 12, Color(1, 1, 1, 0.6))

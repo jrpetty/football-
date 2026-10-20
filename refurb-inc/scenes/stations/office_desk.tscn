@@ -1,0 +1,23 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="1_q3axw"]
+[ext_resource type="Script" path="res://scripts/stations/office_pc.gd" id="2_0n5ul"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_nkfn4"]
+size = Vector3(1.4, 0.75, 0.7)
+
+[node name="OfficeDesk" type="Node3D" unique_id=75946549]
+
+[node name="Model" type="Node3D" parent="." unique_id=1948835226]
+script = ExtResource("1_q3axw")
+placeholder = "office_desk"
+
+[node name="Body" type="StaticBody3D" parent="." unique_id=1040161167]
+
+[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=19329378]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.375, 0)
+shape = SubResource("BoxShape3D_nkfn4")
+
+[node name="OfficePC" type="Node3D" parent="." unique_id=373838234]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.74, -0.14)
+script = ExtResource("2_0n5ul")

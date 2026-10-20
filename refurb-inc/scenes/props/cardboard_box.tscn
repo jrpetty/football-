@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/prop.gd" id="1_lwgo1"]
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_qfrsd"]
+
+[node name="CardboardBox" type="Node3D" unique_id=150034952]
+script = ExtResource("1_lwgo1")
+
+[node name="Model" type="Node3D" parent="." unique_id=1447853563]
+script = ExtResource("2_qfrsd")
+placeholder = "cardboard_box"
+placeholder_params = {
+"size": Vector3(0.45, 0.3, 0.35)
+}

@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/stations/repair_station.gd" id="1_1o434"]
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_am8td"]
+[ext_resource type="Script" path="res://scripts/interaction/snap_slot.gd" id="3_cmnr4"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_yfs3f"]
+size = Vector3(1.6, 0.94, 0.75)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_oymhd"]
+size = Vector3(1.6, 0.9, 0.06)
+
+[node name="RepairBench" type="Node3D" unique_id=1951173300]
+script = ExtResource("1_1o434")
+station_type = "repair"
+display_name = "Repair bench"
+description = "Hold E on a faulty unit to repair it. Parts come from the bins."
+
+[node name="Model" type="Node3D" parent="." unique_id=864983200]
+script = ExtResource("2_am8td")
+placeholder = "repair_bench"
+placeholder_params = {
+"w": 1.6
+}
+
+[node name="Body" type="StaticBody3D" parent="." unique_id=1336801048]
+collision_layer = 9
+
+[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=1699925182]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.47, 0)
+shape = SubResource("BoxShape3D_yfs3f")
+
+[node name="PegboardBody" type="StaticBody3D" parent="." unique_id=1546842046]
+collision_layer = 9
+
+[node name="Shape" type="CollisionShape3D" parent="PegboardBody" unique_id=1932305502]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -0.35)
+shape = SubResource("BoxShape3D_oymhd")
+
+[node name="UnitSlot" type="Marker3D" parent="." unique_id=138646464]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.924, 0.06)
+script = ExtResource("3_cmnr4")
+slot_name = "unit"
+accepts = PackedStringArray("unit")
+location_label = "Repair bench"
+hint_size = Vector3(0.38, 0.01, 0.27)

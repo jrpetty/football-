@@ -26,11 +26,16 @@ func new_game(seed_value: int = 0) -> void:
 	state.reputation = float(Content.econ("start_reputation", 8))
 	state.consumables = Content.start_consumables.duplicate()
 	state.parts = {}
+	for pid in Content.econ("start_parts", {}):
+		state.parts[pid] = int(Content.econ("start_parts", {})[pid])
 	state.minute = state.day_start_minute(0)
 	state.day_running = true
 	state.last_flogit_hour = int(state.minute / 60.0)
 	state.day_stats = _blank_day_stats()
 	state.add_money(0, "opening", "Opening balance")
+	for si in Content.econ("start_items", []):
+		var it := state.new_item(si.kind)
+		state.set_loc(it, {"t": "slot", "slot": si.slot})
 	_init_seller_cycles()
 	refresh_lot_board(true)
 	state.say("Day 1. The garage is yours. Check the office PC for lots.", "info")

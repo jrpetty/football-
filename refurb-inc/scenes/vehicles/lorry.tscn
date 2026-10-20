@@ -1,0 +1,12 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="1_be3qg"]
+
+[node name="Lorry" type="Node3D" unique_id=1924712468]
+
+[node name="Model" type="Node3D" parent="." unique_id=1586228239]
+script = ExtResource("1_be3qg")
+placeholder = "lorry"
+placeholder_params = {
+"brand": "PENNINE FREIGHT"
+}

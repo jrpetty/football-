@@ -1,0 +1,40 @@
+class_name PackStation
+extends StationBase
+## Packing table: put a SOLD unit here, hold E — box, foam, tape, label. Uses consumables.
+
+
+func _station_ready() -> void:
+	if station_type == "":
+		station_type = "pack"
+
+
+func hold_action(_player: Node, it: Item) -> Dictionary:
+	if it.kind != Item.KIND_UNIT:
+		return {}
+	var u := it.unit
+	if u.order_id == 0:
+		return {"blocked": "Not sold — nothing to pack."}
+	for need in ["boxes", "labels", "tape"]:
+		if int(Game.state.consumables.get(need, 0)) <= 0:
+			return {"blocked": "Out of %s — order more in the Shop." % need}
+	var o: Dictionary = Game.state.orders.get(u.order_id, {})
+	return {"label": "Pack order #%d" % u.order_id, "secs": float(Content.econ("pack_secs", 4.0)), "action": "pack",
+		"sub": "For %s · due %s" % [o.get("buyer", "?"), GameState.format_minute(float(o.get("due", 0)))]}
+
+
+func hold_progress(active: bool) -> void:
+	if active:
+		Sfx.play_at("tape_gun", global_position + Vector3(0.4, 1.0, 0.2), -4.0, 0.15)
+
+
+func hold_complete(_player: Node, action: String) -> void:
+	if action == "pack":
+		Game.request("pack", {"station": station_id})
+		Sfx.play_at("label_print", global_position + Vector3(-0.6, 1.0, -0.2))
+
+
+func hover_info(player: Node) -> Dictionary:
+	var info := super.hover_info(player)
+	info.lines = ["Boxes %d · Labels %d · Tape %d" % [int(Game.state.consumables.get("boxes", 0)), int(Game.state.consumables.get("labels", 0)), int(Game.state.consumables.get("tape", 0))],
+		"Place a SOLD unit here, then hold [E] to pack it."]
+	return info

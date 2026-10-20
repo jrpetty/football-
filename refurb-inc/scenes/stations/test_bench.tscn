@@ -1,0 +1,70 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/stations/bench_station.gd" id="1_ylqti"]
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_tk3i3"]
+[ext_resource type="Script" path="res://scripts/interaction/snap_slot.gd" id="3_7dq5y"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ch4o3"]
+size = Vector3(1.4, 0.92, 0.75)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_c7e8g"]
+size = Vector3(1.4, 0.4, 0.06)
+
+[node name="TestBench" type="Node3D" unique_id=1264649297]
+script = ExtResource("1_ylqti")
+station_type = "bench"
+display_name = "Test bench"
+description = "Unit + DiagnostiKit USB = full test. Unit + PaneOS USB = wipe & image."
+
+[node name="Model" type="Node3D" parent="." unique_id=1103249897]
+script = ExtResource("2_tk3i3")
+placeholder = "test_bench"
+placeholder_params = {
+"w": 1.4
+}
+
+[node name="Body" type="StaticBody3D" parent="." unique_id=1361669045]
+collision_layer = 9
+
+[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=1871240402]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46, 0)
+shape = SubResource("BoxShape3D_ch4o3")
+
+[node name="RiserBody" type="StaticBody3D" parent="." unique_id=1161896549]
+collision_layer = 9
+
+[node name="Shape" type="CollisionShape3D" parent="RiserBody" unique_id=483958441]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -0.35)
+shape = SubResource("BoxShape3D_c7e8g")
+
+[node name="UnitSlot" type="Marker3D" parent="." unique_id=278516796]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.904, 0.06)
+script = ExtResource("3_7dq5y")
+slot_name = "unit"
+accepts = PackedStringArray("unit")
+location_label = "Test bench"
+hint_size = Vector3(0.38, 0.01, 0.27)
+
+[node name="UsbPort" type="Marker3D" parent="." unique_id=200708426]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 0.926, 0.18)
+script = ExtResource("3_7dq5y")
+slot_name = "usb"
+accepts = PackedStringArray("usb_test", "usb_image")
+location_label = "Test bench USB"
+hint_size = Vector3(0.05, 0.01, 0.08)
+
+[node name="UsbParkA" type="Marker3D" parent="." unique_id=1283200314]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.38, 0.904, 0.28)
+script = ExtResource("3_7dq5y")
+slot_name = "park_a"
+accepts = PackedStringArray("usb_test", "usb_image")
+location_label = "Test bench"
+hint_size = Vector3(0.05, 0.01, 0.08)
+
+[node name="UsbParkB" type="Marker3D" parent="." unique_id=1702747427]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.904, 0.28)
+script = ExtResource("3_7dq5y")
+slot_name = "park_b"
+accepts = PackedStringArray("usb_test", "usb_image")
+location_label = "Test bench"
+hint_size = Vector3(0.05, 0.01, 0.08)

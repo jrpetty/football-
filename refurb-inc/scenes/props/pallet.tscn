@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/world/prop.gd" id="1_m45wn"]
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_43se8"]
+
+[node name="Pallet" type="Node3D" unique_id=221765834]
+script = ExtResource("1_m45wn")
+
+[node name="Model" type="Node3D" parent="." unique_id=927140830]
+script = ExtResource("2_43se8")
+placeholder = "pallet"
