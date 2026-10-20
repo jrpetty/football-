@@ -195,6 +195,13 @@ func _physics_process(delta: float) -> void:
 		if freeze:
 			global_transform = global_transform.interpolate_with(_target_xf, clampf(delta * 12.0, 0.0, 1.0))
 		return
+	if global_position.y < -12.0 and LevelRoot.current:
+		# Safety net: anything that leaves the world comes back to goods-in.
+		global_position = LevelRoot.current.safe_drop_point() + Vector3(0, 0.5, 0)
+		linear_velocity = Vector3.ZERO
+		angular_velocity = Vector3.ZERO
+		_settle_reported = false
+		return
 	# Host: report when a loose item comes to rest so saves / late joiners see the right spot.
 	if not freeze and sleeping and not _settle_reported:
 		_settle_reported = true

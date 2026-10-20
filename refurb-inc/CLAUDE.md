@@ -317,7 +317,7 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
 - **Vehicles** follow per-level routes; lorries reverse into tail-lift spots or level docks (dock door opens, pallet lands inside).
 - **Art pipeline:** BuildKit batches meshes per material (`assets/generated/<id>/*.res`), materials live in `assets/materials/*.tres` (MatLib), textures in `assets/textures/{surfaces,decals}`; Building-app thumbnails in `assets/textures/ui/buildings/`.
 - Decision: building tiers gate nothing — only money and floor space (as briefed). Seller site visits (M6) will reuse these scenes re-dressed.
-- Move fees (2026-10-20, Jon): lock-up £10k, industrial £40k, warehouse £120k, distribution £300k, facility £600k, mega plant £1M. Moving up is a long-term goal, not an early hop.
+- Move fees (2026-10-21, Jon): geometric £10k → £1M (~2.5x per tier): lock-up £10k, industrial £25k, warehouse £63k, distribution £160k, facility £400k, mega plant £1M. Moving up is a long-term goal, not an early hop.
 
 ## Business Insights (office PC app)
 - **Insights app** (`ui/office_os/apps/insights_app.gd`, widgets in `ui/office_os/insights_ui.gd`): 13 sidebar sections.
@@ -362,6 +362,27 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
 - Desktops/servers have wrapper scenes only. M3 adds the item types that use them.
 - Decision: hardware budget raised from <8k to ~40–75k tris (Jon: models must stay close to what he sent). Godot LODs keep piles cheap.
 - `tools/model_showcase.tscn` = visual QA renders for all models.
+
+## Jon's request tracker (2026-10-20/21) — keep every item until it is built AND verified
+- [x] Use the 13 Meshy models (laptops/desktops/servers): optimised, scaled, tiered, in game.
+- [x] Gaming laptop in the data (Northstar Vanguard G17).
+- [x] Desktops + servers as stock; heavy-duty racking for big kit; bigger OUTGOING shelf with floor bays.
+- [x] Moving premises much dearer (£10k lock-up … £1M mega plant).
+- [x] Things must actually sell (auto-list on grade, higher early demand, first sale within the hour, ETA in Flogit).
+- [~] Never fall through the map: site fence + guaranteed ground + respawn safety net (verify in all 7 levels).
+- [ ] Use ALL 45 further models (the "Unconfirmed *.crdownload" files are complete GLBs): stations, shelving, racking,
+      pallet, lorry, car, forklift, pallet truck, robot arm, conveyors (straight + 90° curve — fix the curve's looks),
+      boxes, USB stick, label printers, barcode scanner, bins, parts, monitors, switch, Wi-Fi AP, dock, phone, tablet…
+- [ ] Automation: conveyors, goods-in scanner (auto stock booking), robot arms, automation-ready test/imaging racks,
+      sorter, vision grader, repair + packing robots. Designed to make sense, look and perform great.
+- [ ] Better delivery: pallet truck (and forklift later) to move pallets; arms unloading onto conveyors.
+- [ ] Empty pallets you can buy and stack servers/laptops on; manual pallet truck to move loaded pallets.
+- [ ] Skill system that matters: low level = noticeably slow, speeds up with XP; unlock abilities/perks over time.
+- [ ] Tea/coffee: proper first-person drinking animation (see yourself drink), looks and performs great.
+- [ ] Insights app performance (redraw only on change, update in place, send guests only diffs).
+- [ ] Merge the cloud session's fixes (look-to-pick, E-press, shelf pick, build stamp) — done in B5; keep one branch.
+- [ ] Written breakdown: what to add to make the game amazing and smooth (Jon asked for it after the build work).
+- [ ] Add own features; test everything (unit tests, playtests, renders of every process from arrival to dispatch).
 
 ## Next up
 1. Lighting pass with real assets: bake LightmapGI in the editor, HDRI sky, decals (oil stains, scuffs), more clutter.

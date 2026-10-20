@@ -35,7 +35,8 @@ func _init() -> void:
 			continue
 		var found := ""
 		for f in files:
-			if f.ends_with(".glb") and entry["match"] in f:
+			# Chrome sometimes leaves finished downloads as "Unconfirmed NNNN.crdownload"; they're complete GLBs.
+			if (f.ends_with(".glb") or f.ends_with(".crdownload")) and entry["match"] in f:
 				found = src_dir.path_join(f)
 		if found == "":
 			print("MISSING source for ", entry["name"])
@@ -48,7 +49,12 @@ func process(path: String, e: Dictionary) -> void:
 	var t0 := Time.get_ticks_msec()
 	var doc := GLTFDocument.new()
 	var st := GLTFState.new()
-	if doc.append_from_file(path, st) != OK:
+	if path.ends_with(".crdownload"):
+		# GLTFDocument picks the parser by extension: read the bytes and parse them as GLB.
+		if doc.append_from_buffer(FileAccess.get_file_as_bytes(path), path.get_base_dir(), st) != OK:
+			print("FAIL load ", path)
+			return
+	elif doc.append_from_file(path, st) != OK:
 		print("FAIL load ", path)
 		return
 	var scene: Node = doc.generate_scene(st)
@@ -168,7 +174,10 @@ func _transform(arrays: Array, e: Dictionary) -> void:
 	var box := _aabb(v)
 	var want: Dictionary = e["size"]
 	var s := Vector3.ONE
-	if want.size() == 1:
+	if want.has("max"):
+		# Uniform scale so the longest side is this many metres.
+		s = Vector3.ONE * (float(want["max"]) / maxf(box.size.x, maxf(box.size.y, box.size.z)))
+	elif want.size() == 1:
 		var axis: String = want.keys()[0]
 		var cur: float = {"x": box.size.x, "y": box.size.y, "z": box.size.z}[axis]
 		s = Vector3.ONE * (float(want[axis]) / cur)
@@ -410,10 +419,62 @@ func _build_prop(arrays: Array, e: Dictionary, out_dir: String, out_rel: String,
 	_save_mesh(arrays, out_dir.path_join("mesh.res"))
 	var box := _aabb(arrays[Mesh.ARRAY_VERTEX])
 	var scn := _scene_header(e, 2, box.size)
-	scn += "\n"
+	scn += "metadata/surfaces = %s\n\n" % _surfaces(arrays)
 	scn = scn.replace("[ext_resources]", _ext("ArrayMesh", "res://%s/mesh.res" % out_rel, "1") + _ext("Material", mat_res, "2")).replace("[sub_resources]", "")
 	scn += _node("Model", "MeshInstance3D", ".", "", 'mesh = ExtResource("1")\nsurface_material_override/0 = ExtResource("2")\n')
 	_write(out_dir.path_join(e["name"] + ".tscn"), scn)
+
+
+func _surfaces(arrays: Array) -> String:
+	## Heights of the big upward-facing surfaces (bench tops, shelf decks, pallet deck…) so wrapper scenes can put
+	## their snap points exactly on the model: [[y, share_of_biggest, x_min, x_max, z_min, z_max], …] ascending by y.
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var bins := {}
+	for t in idx.size() / 3:
+		var a := v[idx[t * 3]]
+		var b := v[idx[t * 3 + 1]]
+		var c := v[idx[t * 3 + 2]]
+		var n := (b - a).cross(c - a)
+		var area := n.length() * 0.5
+		if area <= 0.0 or n.normalized().y < 0.92:
+			continue
+		var key := int(round((a.y + b.y + c.y) / 3.0 * 100.0))   # 1 cm bins
+		if not bins.has(key):
+			bins[key] = [0.0, INF, -INF, INF, -INF]
+		var bi: Array = bins[key]
+		bi[0] += area
+		for q in [a, b, c]:
+			bi[1] = minf(bi[1], q.x)
+			bi[2] = maxf(bi[2], q.x)
+			bi[3] = minf(bi[3], q.z)
+			bi[4] = maxf(bi[4], q.z)
+	# Merge neighbouring 1 cm bins; keep levels with at least 12% of the biggest level's area.
+	var keys := bins.keys()
+	keys.sort()
+	var levels: Array = []
+	for k in keys:
+		var bi: Array = bins[k]
+		if not levels.is_empty() and k - int(levels.back()[6]) <= 2:
+			var L: Array = levels.back()
+			if bi[0] > L[1]:
+				L[0] = k / 100.0
+			L[1] += bi[0]
+			L[2] = minf(L[2], bi[1])
+			L[3] = maxf(L[3], bi[2])
+			L[4] = minf(L[4], bi[3])
+			L[5] = maxf(L[5], bi[4])
+			L[6] = k
+		else:
+			levels.append([k / 100.0, bi[0], bi[1], bi[2], bi[3], bi[4], k])
+	var biggest := 0.0
+	for L in levels:
+		biggest = maxf(biggest, L[1])
+	var out: PackedStringArray = []
+	for L in levels:
+		if L[1] >= biggest * 0.12 and L[0] > 0.02:
+			out.append("[%.3f, %.2f, %.3f, %.3f, %.3f, %.3f]" % [L[0], L[1] / biggest, L[2], L[3], L[4], L[5]])
+	return "[" + ", ".join(out) + "]"
 
 
 # ------------------------------------------------------------------ materials / textures

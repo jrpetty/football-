@@ -128,6 +128,28 @@ func hover_info(_player: Node) -> Dictionary:
 	return {"title": display_name, "lines": lines, "prompt": "[F] Move"}
 
 
+func item_view_near(hit_pos: Vector3, max_dist: float = 0.5) -> ItemView:
+	## The item sitting in the slot closest to where the player is aiming (shelves enclose their stock in
+	## one collision box, so the ray lands on the shelf rather than the laptop inside it).
+	if LevelRoot.current == null:
+		return null
+	var best: ItemView = null
+	var best_d := max_dist
+	for s: SnapSlot in slots:
+		var it := Game.state.item_in_slot(s.full_id())
+		if it == null:
+			continue
+		var v: ItemView = LevelRoot.current.item_views.get(it.id)
+		if v == null or not v.visible:
+			continue
+		var centre := s.global_position + Vector3(0, v.visual_size.y * 0.5, 0)
+		var d := centre.distance_to(hit_pos)
+		if d < best_d:
+			best_d = d
+			best = v
+	return best
+
+
 func best_slot_for(kind: String, hit_pos: Vector3) -> SnapSlot:
 	return SlotHost.best_slot(slots, kind, hit_pos)
 

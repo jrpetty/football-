@@ -230,3 +230,38 @@ func test_late_orders_hurt_reputation() -> void:
 	var o: Dictionary = s.orders.values()[0]
 	eq(o.status, "cancelled")
 	eq(it.unit.order_id, 0, "unit returns to stock after cancellation")
+
+
+func test_graded_units_list_and_sell_promptly() -> void:
+	var sim := fresh_sim(77)
+	var s := sim.state
+	_setup_garage(sim)
+	var it := s.new_item(Item.KIND_UNIT)
+	it.unit = sim.lots.roll_unit("corvex_prospect_5420", 0.9)
+	it.unit.faults.clear()
+	it.unit.tested = true
+	it.unit.imaged = true
+	s.set_loc(it, {"t": "slot", "slot": "grade_1:unit"})
+	_cmd(sim, "grade", {"station": "grade_1"})
+	check(it.unit.listed, "grading puts it straight on Flogit")
+	check(Sim.sale_chance_per_hour(s, it.unit) >= 0.08, "a fairly priced listing gets real traffic at reputation 0")
+	sim.flogit_hourly()
+	check(it.unit.order_id != 0, "the first sensibly priced listing sells within the hour")
+	# Later listings sell on chance: at guide price, most go within a working day.
+	var sold := 0
+	for k in 40:
+		var x := s.new_item(Item.KIND_UNIT)
+		x.unit = sim.lots.roll_unit("corvex_prospect_5420", 0.9)
+		x.unit.grade = "B"
+		x.unit.list_price = Valuation.market_value(x.unit, "B")
+		x.unit.listed = true
+		s.set_loc(x, {"t": "slot", "slot": "shelf_1:0"})
+		var hours := 0
+		while x.unit.order_id == 0 and hours < 8:
+			hours += 1
+			if s.rng.randf() < Sim.sale_chance_per_hour(s, x.unit):
+				x.unit.order_id = -1
+		if x.unit.order_id != 0:
+			sold += 1
+		s.remove_item(x.id)
+	check(sold >= 20, "at least half of guide-priced listings sell within 8 working hours (%d/40)" % sold)

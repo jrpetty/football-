@@ -399,8 +399,16 @@ func c_grade(peer: int, a: Dictionary) -> Dictionary:
 	u.log_event(state.minute, "Graded %s — suggested price £%d" % [UnitData.grade_label(u.grade), u.list_price])
 	state.bump_stat("graded")
 	state.add_xp(player_key(peer), "grading", int(Content.econ("xp", {}).get("grade", 3)))
+	if Content.econ("flogit_auto_list_on_grade", true):
+		# Straight onto Flogit at the guide price; reprice or withdraw any time in the Flogit app.
+		BusinessStats.on_listed(state, u, peer)
+		u.listed = true
+		u.log_event(state.minute, "Listed on Flogit at £%d" % u.list_price)
 	state.mark("item", it.id)
-	state.say("Grade %s — %s. Suggested £%d." % [UnitData.grade_label(u.grade), u.display_name(), u.list_price], "good", peer)
+	if u.listed:
+		state.say("Grade %s — %s. Listed on Flogit at £%d (change it in the Flogit app)." % [UnitData.grade_label(u.grade), u.display_name(), u.list_price], "good", peer)
+	else:
+		state.say("Grade %s — %s. Suggested £%d." % [UnitData.grade_label(u.grade), u.display_name(), u.list_price], "good", peer)
 	return _ok()
 
 
@@ -443,19 +451,31 @@ func c_list_all(peer: int, _a: Dictionary) -> Dictionary:
 	return _ok()
 
 
+static func sale_chance_per_hour(st: GameState, u: UnitData) -> float:
+	## Chance a Flogit buyer orders this listing in the next working hour: reputation-driven traffic,
+	## scaled hard by price vs guide (cheaper sells faster, pricier slower).
+	var base := float(Content.econ("flogit_base_rate_per_hour", 0.09)) + st.reputation * float(Content.econ("flogit_rep_rate_bonus", 0.003))
+	var market := float(Valuation.market_value(u, u.grade))
+	var ratio := market / maxf(float(u.list_price), 1.0)
+	var p := base * clampf(pow(ratio, float(Content.econ("flogit_price_elasticity", 3.0))), 0.05, 4.0)
+	if u.grade == "S":
+		p *= float(Content.econ("flogit_spares_rate_mult", 1.5))
+	return clampf(p, 0.0, 0.95)
+
+
 func flogit_hourly() -> void:
-	var base := float(Content.econ("flogit_base_rate_per_hour", 0.035)) + state.reputation * float(Content.econ("flogit_rep_rate_bonus", 0.0025))
-	var elasticity := float(Content.econ("flogit_price_elasticity", 3.0))
-	for it: Item in state.units_in_stock():
-		var u := it.unit
-		if not u.listed or u.order_id != 0:
-			continue
-		var market := float(Valuation.market_value(u, u.grade))
-		var ratio := market / maxf(float(u.list_price), 1.0)
-		var p := base * clampf(pow(ratio, elasticity), 0.05, 4.0)
-		if u.grade == "S":
-			p *= float(Content.econ("flogit_spares_rate_mult", 1.5))
-		if state.rng.randf() < p:
+	var listed: Array = state.units_in_stock().filter(func(i): return i.unit.listed and i.unit.order_id == 0)
+	if listed.is_empty():
+		return
+	# Your very first sensibly priced listing always finds a buyer within the hour (teaches the loop).
+	if int(state.totals.get("units_sold", 0)) == 0 and state.orders.is_empty():
+		for it: Item in listed:
+			var ratio := float(it.unit.list_price) / maxf(float(Valuation.market_value(it.unit, it.unit.grade)), 1.0)
+			if ratio <= float(Content.econ("flogit_first_sale_max_ratio", 1.15)):
+				_create_order(it, "flogit")
+				return
+	for it: Item in listed:
+		if state.rng.randf() < sale_chance_per_hour(state, it.unit):
 			_create_order(it, "flogit")
 
 

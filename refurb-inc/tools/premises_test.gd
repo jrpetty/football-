@@ -8,6 +8,50 @@ var _fails: PackedStringArray = []
 var _level: LevelRoot
 
 
+func _check_site() -> void:
+	## Nobody falls through the map: solid ground everywhere inside the site fence, and the fence encloses
+	## the building, spawns, goods-in and docks while keeping players off the road.
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var site := _level.site
+	_check(site != null and site.bounds.size.x > 6.0 and site.bounds.size.y > 6.0, "site fence built (%s, %d bare cells filled with %d slabs)" % [str(site.bounds) if site else "-", site.filled_cells if site else 0, site.slabs if site else 0])
+	if site == null:
+		return
+	var inside := true
+	for fr: Rect2 in _level.floor_rects:
+		inside = inside and site.bounds.encloses(fr)
+	for n in [_level.goods_in, _level.lorry_drop, _level.safe_drop]:
+		if n:
+			inside = inside and site.contains(n.global_position)
+	_check(inside, "fence encloses the building floor and goods-in")
+	var space := _level.get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.new()
+	q.collision_mask = 1
+	var holes := 0
+	var step := 1.0
+	var b := site.bounds
+	var x := b.position.x + 0.3
+	while x < b.end.x - 0.3:
+		var z := b.position.y + 0.3
+		while z < b.end.y - 0.3:
+			q.from = Vector3(x, 0.6, z)
+			q.to = Vector3(x, -3.0, z)
+			if space.intersect_ray(q).is_empty():
+				holes += 1
+				if holes <= 3:
+					print("     no ground at ", Vector2(x, z))
+			z += step
+		x += step
+	_check(holes == 0, "ground under every metre of the site (%d holes)" % holes)
+	# Walk straight out of the front door: the fence stops you before the road.
+	var probe := PhysicsRayQueryParameters3D.new()
+	probe.collision_mask = 1
+	probe.from = Vector3(0, 1.0, b.end.y - 1.0)
+	probe.to = Vector3(0, 1.0, b.end.y + 5.0)
+	_check(not space.intersect_ray(probe).is_empty(), "site fence blocks walking into the road")
+
+
 func _check(c: bool, m: String) -> void:
 	print("  %s %s" % ["✔" if c else "✖", m])
 	if not c:
@@ -53,6 +97,7 @@ func _ready() -> void:
 		var pallets := s.items.values().filter(func(i): return i.kind == Item.KIND_PALLET)
 		var relocated := pallets.all(func(p): return not p.loc.get("relocate", false))
 		_check(relocated, "loose pallets placed in the goods-in area")
+		await _check_site()
 		var player: Node3D = _level.local_player()
 		_check(player != null and _level.floor_rects.any(func(r): return r.has_point(Vector2(player.global_position.x, player.global_position.z))), "player spawned on the floor")
 		# Lorry delivery to this building's dock

@@ -56,8 +56,8 @@ func _live() -> void:
 	var units := Game.state.units_in_stock().filter(func(i): return i.unit.listed)
 	if units.is_empty():
 		_list.add_child(para("No live listings.", 19))
-	var base := float(Content.econ("flogit_base_rate_per_hour", 0.035)) + Game.state.reputation * float(Content.econ("flogit_rep_rate_bonus", 0.0025))
-	_list.add_child(l("Buyer traffic: ~%.0f%% chance per listing per hour at guide price (grows with reputation)" % (base * 100), 15, SUB))
+	var base := float(Content.econ("flogit_base_rate_per_hour", 0.09)) + Game.state.reputation * float(Content.econ("flogit_rep_rate_bonus", 0.003))
+	_list.add_child(l("Buyer traffic: ~%.0f%% chance per listing per hour at guide price (grows with reputation). Price below guide to sell faster." % (base * 100), 15, SUB))
 	for it: Item in units:
 		_list.add_child(_unit_row(it, true))
 
@@ -77,7 +77,9 @@ func _unit_row(it: Item, live: bool) -> Control:
 	var guide := Valuation.market_value(u, u.grade)
 	var ratio := float(guide) / maxf(float(u.list_price), 1.0)
 	var speed := "Fast" if ratio > 1.1 else ("Normal" if ratio > 0.92 else ("Slow" if ratio > 0.75 else "Very slow"))
-	v.add_child(l("Guide £%d · expected sale speed: %s" % [guide, speed], 14, GREEN if ratio > 1.0 else (AMBER if ratio > 0.8 else RED)))
+	var p := Sim.sale_chance_per_hour(Game.state, u)
+	var eta := "likely to sell in ~%s" % ("%d min" % int(60.0 / maxf(p, 0.01)) if p >= 1.0 else ("%.0f working hours" % (1.0 / maxf(p, 0.01))))
+	v.add_child(l("Guide £%d · %s · %s" % [guide, speed, eta], 14, GREEN if ratio > 1.0 else (AMBER if ratio > 0.8 else RED)))
 	var price := SpinBox.new()
 	price.min_value = 1
 	price.max_value = 5000

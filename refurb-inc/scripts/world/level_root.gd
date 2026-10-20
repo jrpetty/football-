@@ -40,6 +40,7 @@ var players_root: Node3D
 var fixtures_root: Node3D
 var _xf_accum := 0.0
 var _model_cache: Dictionary = {}    # fixture type -> {placeholder, params, scene}
+var site: SiteBounds                 # invisible site fence + guaranteed ground (see site_bounds.gd)
 
 
 func _enter_tree() -> void:
@@ -69,6 +70,10 @@ func _ready() -> void:
 	Settings.settings_changed.connect(_apply_graphics)
 	_apply_graphics()
 	_start_ambience()
+	site = SiteBounds.new()
+	add_child(site)
+	site.build(self)
+	_fill_site_ground()
 	if menu_mode:
 		_preview_fixtures()
 		return
@@ -79,6 +84,20 @@ func _ready() -> void:
 			Game.state.building_id = building_id
 	else:
 		_on_state_reset()
+
+
+func _fill_site_ground() -> void:
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	if is_inside_tree():
+		site.fill_ground(get_world_3d().direct_space_state)
+
+
+func respawn_point(i: int = 0) -> Vector3:
+	## Where a player who somehow left the world is put back.
+	if not spawn_points.is_empty() and spawn_points[i % spawn_points.size()]:
+		return spawn_points[i % spawn_points.size()].global_position + Vector3(0, 0.1, 0)
+	return safe_drop_point()
 
 
 func _start_ambience() -> void:
