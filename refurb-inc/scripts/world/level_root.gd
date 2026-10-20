@@ -130,9 +130,25 @@ func _on_state_reset() -> void:
 	get_tree().call_group("slot_hosts", "register_slots")
 	if Game.is_host() and Game.sim:
 		_auto_layout()
+		_rehome_orphans()
 		_relocate_loose_items()
 	_rebuild_items()
 	_sync_players()
+
+
+func _rehome_orphans() -> void:
+	## Items in a slot that no longer exists (equipment resized, e.g. 15-bay shelving → 12 bays) go to goods-in.
+	var n := 0
+	for it: Item in Game.state.items.values():
+		if it.loc.get("t") != "slot":
+			continue
+		var sid: String = it.loc.get("slot", "")
+		if sid.begins_with("i") or Game.state.slot_defs.has(sid):
+			continue
+		Game.state.set_loc(it, {"t": "loose", "relocate": true, "p": [0, 1, 0], "r": [0, 0, 0, 1]})
+		n += 1
+	if n > 0:
+		Game.state.say("%d item(s) moved to goods-in: their shelf space changed." % n, "info")
 
 
 func _on_state_changed(kind: String, id: Variant) -> void:

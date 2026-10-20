@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/stations/shelf_unit.gd" id="1_ui3sr"]
+[ext_resource type="PackedScene" path="res://assets/models/stations/metal_shelf/metal_shelf.tscn" id="9_model"]
 [ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_6yvvy"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_m6g2v"]
@@ -8,11 +9,13 @@ size = Vector3(1.2, 1.9, 0.45)
 
 [node name="MetalShelf" type="Node3D" unique_id=162401616]
 script = ExtResource("1_ui3sr")
+level_heights = PackedFloat32Array(0.21, 0.77, 1.32, 1.89)
 accepts = PackedStringArray("unit")
 display_name = "Stock shelving"
 
 [node name="Model" type="Node3D" parent="." unique_id=1856833256]
 script = ExtResource("2_6yvvy")
+model_scene = ExtResource("9_model")
 placeholder = "metal_shelf"
 placeholder_params = {
 "d": 0.45,

@@ -84,6 +84,8 @@ func process(path: String, e: Dictionary) -> void:
 	_transform(arrays, e)
 	if e.has("bend"):
 		_bend(arrays, e["bend"], e)
+	if e.has("crop"):
+		arrays = _crop(arrays, e["crop"])
 	var tris := (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
 	if e.get("kind", "") == "laptop":
 		_build_laptop(arrays, e, out_dir, out_rel, mat_res)
@@ -250,6 +252,30 @@ func _bend(arrays: Array, b: Dictionary, e: Dictionary) -> void:
 	var entry := Vector3(0, 0, 0) + shift
 	var exit := Vector3(r - r * cos(turn), 0, r * sin(turn)) + shift
 	e["_ports"] = "[[%s, Vector3(0, 0, 1)], [%s, Vector3(%.4f, 0, %.4f)]]" % [_v3(entry), _v3(exit), sin(turn), cos(turn)]
+
+
+func _crop(arrays: Array, boxes: Array) -> Array:
+	## Remove triangles whose centre falls in any [xmin, ymin, zmin, xmax, ymax, zmax] box (game-space metres,
+	## after scaling), then re-centre the footprint. Used to cut stray AI geometry or panels we replace.
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var mask := PackedByteArray()
+	mask.resize(idx.size() / 3)
+	for t in mask.size():
+		var c := (v[idx[t * 3]] + v[idx[t * 3 + 1]] + v[idx[t * 3 + 2]]) / 3.0
+		for b in boxes:
+			if c.x >= b[0] and c.y >= b[1] and c.z >= b[2] and c.x <= b[3] and c.y <= b[4] and c.z <= b[5]:
+				mask[t] = 1
+				break
+	var out := _subset(arrays, mask, 0)
+	var ov: PackedVector3Array = out[Mesh.ARRAY_VERTEX]
+	var box := _aabb(ov)
+	var shift := Vector3(-box.get_center().x, -box.position.y, -box.get_center().z)
+	for i in ov.size():
+		ov[i] += shift
+	out[Mesh.ARRAY_VERTEX] = ov
+	print("  cropped; re-centred by ", shift)
+	return out
 
 
 func _aabb(v: PackedVector3Array) -> AABB:

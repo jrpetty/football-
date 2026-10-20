@@ -1,5 +1,5 @@
 {
- "_comment": "Source models -> game-ready assets. match = substring of the source .glb file name. rot_y turns the model so its front faces +Z. size: give one axis for a uniform scale (metres), or x/y/z for an exact box (rack servers). kind 'laptop' splits off a hinged Lid + Screen. colour = flat PBR colour for untextured sources. tris = triangle budget for LOD0 (Godot builds smaller LODs from it). tex = texture size (px). match may also be the number of an 'Unconfirmed NNNN.crdownload' file. bend {deg, radius}: wrap a straight piece round a vertical axis (the conveyor curve is made from the straight).",
+ "_comment": "Source models -> game-ready assets. match = substring of the source .glb file name. rot_y turns the model so its front faces +Z. size: give one axis for a uniform scale (metres), or x/y/z for an exact box (rack servers). kind 'laptop' splits off a hinged Lid + Screen. colour = flat PBR colour for untextured sources. tris = triangle budget for LOD0 (Godot builds smaller LODs from it). tex = texture size (px). match may also be the number of an 'Unconfirmed NNNN.crdownload' file. bend {deg, radius}: wrap a straight piece round a vertical axis (the conveyor curve is made from the straight). crop: list of [xmin,ymin,zmin,xmax,ymax,zmax] boxes (game metres) whose triangles are removed.",
  "models": [
   {
    "match": "laptop_tier1_student",
@@ -232,7 +232,7 @@
    "rot_y": 180,
    "size": {
     "x": 1.4,
-    "y": 1.105,
+    "y": 1.01,
     "z": 1.39
    },
    "tris": 50000,
@@ -327,7 +327,25 @@
    },
    "tris": 50000,
    "tex": 2048,
-   "tier": "7.5t box lorry"
+   "tier": "7.5t box lorry (stray side plate and rear doors cut; the game adds an animated shutter and tail lift)",
+   "crop": [
+    [
+     1.0,
+     -0.1,
+     -3.8,
+     1.8,
+     0.45,
+     -1.0
+    ],
+    [
+     -1.242,
+     1.08,
+     -3.75,
+     0.758,
+     3.27,
+     -3.42
+    ]
+   ]
   },
   {
    "match": "Unconfirmed 766007",

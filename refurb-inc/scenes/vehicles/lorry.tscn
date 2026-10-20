@@ -1,11 +1,13 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="1_be3qg"]
+[ext_resource type="PackedScene" path="res://scenes/vehicles/visuals/box_lorry_visual.tscn" id="2_vis"]
 
 [node name="Lorry" type="Node3D" unique_id=1752627772]
 
 [node name="Model" type="Node3D" parent="." unique_id=1543736498]
 script = ExtResource("1_be3qg")
+model_scene = ExtResource("2_vis")
 placeholder = "lorry"
 placeholder_params = {
 "brand": "PENNINE FREIGHT"

@@ -78,7 +78,7 @@
     },
     {
       "id": "metal_shelf",
-      "name": "Stock shelving (15 bays)",
+      "name": "Stock shelving (12 bays)",
       "scene": "res://scenes/stations/metal_shelf.tscn",
       "footprint": [
         1.25,
@@ -87,7 +87,7 @@
       "height": 1.9,
       "price": 160,
       "power_kw": 0.0,
-      "desc": "Boltless steel shelving. Five levels of three laptops or small desktops. Too shallow for servers and towers."
+      "desc": "Boltless steel shelving. Four decks of three laptops or small desktops. Too shallow for servers and towers."
     },
     {
       "id": "heavy_rack",

@@ -370,12 +370,16 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
 - [x] Moving premises much dearer, scaled geometrically: £10k, £25k, £63k, £160k, £400k, £1M.
 - [x] Things must actually sell (auto-list on grade, higher early demand, first sale within the hour, ETA in Flogit).
 - [x] Never fall through the map: site fence + guaranteed ground + respawn safety net (premises test: 0 holes on all 7 sites).
-- [ ] Use ALL 45 further models (the "Unconfirmed *.crdownload" files are complete GLBs): stations, shelving, racking,
+- [~] Use ALL 45 further models (done: processed; wired: ESD test bench, repair bench, desk + 27in PaneOS monitor, shelving,
+      heavy racking, pallet, boxes, USB sticks, box lorry, pallet truck. To wire: arm, conveyors, forklift, car, parts…).
+      (the "Unconfirmed *.crdownload" files are complete GLBs): stations, shelving, racking,
       pallet, lorry, car, forklift, pallet truck, robot arm, conveyors (straight + 90° curve — fix the curve's looks),
       boxes, USB stick, label printers, barcode scanner, bins, parts, monitors, switch, Wi-Fi AP, dock, phone, tablet…
+- [ ] ACCEPTANCE: a fully automated factory tested start to finish (lorry → shipped) — functions, smooth, satisfying.
 - [ ] Automation: conveyors, goods-in scanner (auto stock booking), robot arms, automation-ready test/imaging racks,
       sorter, vision grader, repair + packing robots. Designed to make sense, look and perform great.
-- [ ] Better delivery: pallet truck (and forklift later) to move pallets; arms unloading onto conveyors.
+- [~] Better delivery: lorry arrives loaded, shutter rolls up, a hi-vis driver pulls each pallet with the pallet truck
+      onto the tail lift and wheels it in (done); player pallet truck + forklift and arms → conveyors (to do).
 - [ ] Empty pallets you can buy and stack servers/laptops on; manual pallet truck to move loaded pallets.
 - [ ] Skill system that matters: low level = noticeably slow, speeds up with XP; unlock abilities/perks over time.
 - [ ] Co-op designed in: shared goals, roles, office PCs for several players; later buildings get a sales &
@@ -387,10 +391,14 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
       local records now, Steam leaderboards when GodotSteam lands (M2).
 - [ ] Every new office-PC app follows the PaneOS/Insights style (sidebar, cards, coloured tiles, taskbar icon).
 - [ ] Test-bench screens for laptops, desktops AND servers (BMC/RAID screens) polished to the same or higher standard.
+- [ ] AI staff (M4) built AND tested in every level: walking, using equipment, interacting with players — must look
+      and function great.
 - [ ] Player avatars + AI staff look good; character menu where a player uploads a photo that becomes their
       avatar's face (comedic), synced in co-op.
 - [ ] Tea/coffee: proper first-person drinking animation (see yourself drink), looks and performs great.
 - [ ] Insights app performance (redraw only on change, update in place, send guests only diffs).
+- [ ] Smoothness: no FPS spikes/dips. Benchmark every premises full of stock; optimise (screens, shadows, LOD/visibility
+      ranges, Insights redraws, physics) without hurting looks. [x] Always-on FPS overlay (F3) with 1% low.
 - [x] Merge the cloud session's fixes (look-to-pick, E-press, shelf pick, build stamp) — B5; one branch, pushed.
 - [ ] Written breakdown: what to add to make the game amazing and smooth (Jon asked for it after the build work).
 - [ ] Add own features; test everything (unit tests, playtests, renders of every process from arrival to dispatch).

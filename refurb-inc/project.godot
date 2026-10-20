@@ -20,6 +20,7 @@ Net="*res://scripts/autoload/net.gd"
 Game="*res://scripts/autoload/game.gd"
 Sfx="*res://scripts/autoload/sfx.gd"
 SaveManager="*res://scripts/autoload/save_manager.gd"
+PerfOverlay="*res://scripts/autoload/perf_overlay.gd"
 
 [display]
 

@@ -762,7 +762,7 @@ func _next_lorry_slot() -> float:
 	return t
 
 
-func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO) -> Array:
+func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO, step: Vector3 = Vector3(1.35, 0, 0)) -> Array:
 	## Spawns pallet(s) holding the lot's units. Called when the lorry tail-lift drops (or instantly in tests).
 	var lot: Dictionary = state.lots.get(lot_id, {})
 	if lot.is_empty():
@@ -788,7 +788,7 @@ func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO) -> Array:
 			batch.append(units[idx + batch.size()])
 		var pallet := state.new_item(Item.KIND_PALLET)
 		pallet.data = {"lot": lot_id, "seller_name": lot.seller_name, "cell": [first.cell[0], cell_h, first.cell[2]], "grid": first.grid}
-		var off := Vector3(pallets.size() * 1.35, 0, 0)
+		var off := step * pallets.size()
 		state.set_loc(pallet, {"t": "loose", "p": [drop_pos.x + off.x, drop_pos.y, drop_pos.z + off.z], "r": [0, 0, 0, 1]})
 		for k in batch.size():
 			var it := state.new_item(Item.KIND_UNIT)

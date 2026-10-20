@@ -5,6 +5,7 @@ extends Node3D
 ## screen plane and pushed into the viewport, so the UI is genuinely diegetic. Time keeps running.
 
 const VP_SIZE := Vector2i(1600, 900)
+const MONITOR_SCENE := "res://scenes/stations/visuals/monitor_visual.tscn"
 
 @export var monitor_width := 0.62
 
@@ -22,6 +23,9 @@ func _ready() -> void:
 	_model = ModelSlot.new()
 	_model.placeholder = "monitor"
 	_model.placeholder_params = {"w": monitor_width}
+	# Jon's 27in monitor with the PaneOS screen fitted to its panel (placeholder if the model is missing).
+	if ResourceLoader.exists(MONITOR_SCENE):
+		_model.model_scene = load(MONITOR_SCENE)
 	add_child(_model)
 	_vp = SubViewport.new()
 	_vp.size = VP_SIZE

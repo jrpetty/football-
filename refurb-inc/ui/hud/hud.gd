@@ -163,9 +163,7 @@ func _process(delta: float) -> void:
 	if _obj_t <= 0.0:
 		_obj_t = 0.5
 		objective_label.text = "▸ " + next_objective()
-	fps_label.visible = Settings.get_value("show_fps")
-	if fps_label.visible:
-		fps_label.text = "%d fps" % Engine.get_frames_per_second()
+	fps_label.visible = false     # the always-on PerfOverlay autoload shows FPS now
 	visible = not (_player and is_instance_valid(_player) and _player.ui_mode and not _keep_visible_in_ui)
 
 

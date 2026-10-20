@@ -29,7 +29,7 @@ func _station_ready() -> void:
 	_status.font_size = 64
 	_status.pixel_size = 0.0022
 	_status.outline_size = 12
-	_status.position = Vector3(0, 1.75, 0)
+	_status.position = Vector3(0, 2.05, 0)
 	_status.no_depth_test = false
 	_status.fixed_size = false
 	add_child(_status)

@@ -5,9 +5,9 @@
 
 
 [node name="OfficeDesk" type="Node3D"]
-metadata/footprint = Vector3(1.40000, 1.10500, 1.39000)
+metadata/footprint = Vector3(1.40000, 1.01000, 1.39000)
 metadata/source_tier = "Office desk with chair"
-metadata/surfaces = [[0.410, 0.24, -0.251, 0.263, 0.014, 0.620], [0.740, 1.00, -0.700, 0.699, -0.680, 0.561], [0.810, 0.98, -0.696, 0.696, -0.695, 0.655]]
+metadata/surfaces = [[0.670, 1.00, -0.700, 0.699, -0.680, 0.620], [0.740, 0.79, -0.696, 0.697, -0.695, 0.656]]
 
 
 [node name="Model" type="MeshInstance3D" parent="."]

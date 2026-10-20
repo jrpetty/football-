@@ -121,26 +121,34 @@ func _run_lorry() -> void:
 	var rear_door: Node3D = lorry_model.find_part("RearDoor") as Node3D
 	if rear_door:
 		var tw := create_tween()
-		tw.tween_property(rear_door, "position:y", rear_door.position.y + 2.2, 1.0)
+		if "open_frac" in rear_door:
+			tw.tween_property(rear_door, "open_frac", 1.0, 1.4).set_trans(Tween.TRANS_SINE)   # roller shutter
+		else:
+			tw.tween_property(rear_door, "position:y", rear_door.position.y + 2.2, 1.0)
 		await tw.finished
-	if lift and not is_dock:
-		Sfx.play_at("hydraulic", lift.global_position)
-		var tw2 := create_tween()
-		tw2.tween_property(lift, "position:y", 0.05, 2.2).set_trans(Tween.TRANS_SINE)
-		await tw2.finished
 	var drop_node: Node3D = dock.get_node_or_null("Drop")
 	var drop: Vector3 = drop_node.global_position if drop_node else (pallet_drop.global_position if pallet_drop else park.origin - fwd * 4.5)
+	# The host makes the pallets real (at their final spots); everyone then watches them come off the lorry.
+	var lot_id := int(job.get("lot", 0))
+	var rear_dir := -fwd
+	if not is_dock:
+		# Land clear of the lowered tail lift, then line further pallets up going away from the lorry.
+		var clear := absf(CARGO_REAR) + 1.45 + 0.55
+		var along := (drop - park.origin).dot(rear_dir)
+		if along < clear:
+			drop += rear_dir * (clear - along)
+	var pallets: Array = []
 	if Game.is_host() and Game.sim:
-		Game.sim.deliver_lot(int(job.get("lot", 0)), drop)
-	Sfx.play_at("pallet_drop", drop)
-	await get_tree().create_timer(1.6).timeout
-	if lift and not is_dock:
-		var tw3 := create_tween()
-		tw3.tween_property(lift, "position:y", 0.85, 2.0)
-		await tw3.finished
+		pallets = Game.sim.deliver_lot(lot_id, drop, Vector3(rear_dir.x, 0, rear_dir.z).normalized() * 0.95)
+	else:
+		pallets = await _wait_for_lot_pallets(lot_id)
+	await _unload(pallets, _lorry.global_transform, lift if not is_dock else null)
 	if rear_door:
 		var tw4 := create_tween()
-		tw4.tween_property(rear_door, "position:y", rear_door.position.y - 2.2, 0.8)
+		if "open_frac" in rear_door:
+			tw4.tween_property(rear_door, "open_frac", 0.0, 1.2).set_trans(Tween.TRANS_SINE)
+		else:
+			tw4.tween_property(rear_door, "position:y", rear_door.position.y - 2.2, 0.8)
 		await tw4.finished
 	await get_tree().create_timer(0.5).timeout
 	var out := _points("LorryOut")
@@ -154,6 +162,152 @@ func _run_lorry() -> void:
 	_lorry_engine.stop()
 	_lorry.visible = false
 	_run_lorry()
+
+
+# ================================================================= unloading (visual)
+
+const CARGO_FLOOR := 1.0      # lorry-local height of the cargo floor
+const CARGO_REAR := -3.66     # lorry-local z of the rear sill
+const LIFT_REST := 0.85
+var _driver: Node3D
+
+
+func _wait_for_lot_pallets(lot_id: int) -> Array:
+	## Clients: the host's pallets arrive by replication a moment after the doors open.
+	for i in 40:
+		var found: Array = Game.state.items.values().filter(func(it): return it.kind == Item.KIND_PALLET and int(it.data.get("lot", 0)) == lot_id)
+		if not found.is_empty():
+			return found
+		await get_tree().create_timer(0.1).timeout
+	return []
+
+
+func _make_driver() -> Node3D:
+	## The lorry driver with a hand pallet truck (Jon's model), pulling pallets out of the back.
+	var d := Node3D.new()
+	d.name = "UnloadDriver"
+	add_child(d)
+	var truck_path := "res://assets/models/vehicles/pallet_truck/pallet_truck.tscn"
+	if ResourceLoader.exists(truck_path):
+		var truck: Node3D = load(truck_path).instantiate()
+		truck.name = "PalletTruck"
+		truck.position = Vector3(0, 0, -0.22)        # forks under the pallet, handle sticking out the back
+		d.add_child(truck)
+	var person := CharacterRig.new()
+	person.name = "Driver"
+	person.shirt = Color(0.12, 0.2, 0.42)
+	person.trousers = Color(0.1, 0.1, 0.12)
+	person.hi_vis = true
+	person.cap = true
+	person.anim = "push"
+	person.position = Vector3(0, 0, -1.2)
+	d.add_child(person)
+	d.visible = false
+	return d
+
+
+func _cargo_xf(lorry_xf: Transform3D, k: int, n: int) -> Transform3D:
+	# Pallets sit nose to tail down the middle of the box, long side along the lorry.
+	var z := CARGO_REAR + 0.75 + float(n - 1 - k) * 1.28
+	return lorry_xf * Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0, CARGO_FLOOR, z))
+
+
+func _unload(pallets: Array, lorry_xf: Transform3D, lift: Node3D) -> void:
+	if pallets.is_empty():
+		return
+	if _driver == null:
+		_driver = _make_driver()
+	var lr := LevelRoot.current
+	var views: Array = []
+	for i in pallets.size():
+		var it: Item = pallets[i]
+		var v: ItemView = lr.item_views.get(it.id) if lr else null
+		if v == null:
+			await get_tree().process_frame
+			v = lr.item_views.get(it.id) if lr else null
+		views.append(v)
+		if v:
+			v.cinematic = true
+			v.global_transform = _cargo_xf(lorry_xf, i, pallets.size())
+	if lift:
+		Sfx.play_at("hydraulic", lift.global_position)
+		await _tween(lift, "position:y", CARGO_FLOOR - 0.03, 1.0)
+	_driver.visible = true
+	for i in pallets.size():
+		var v: ItemView = views[i]
+		var it: Item = pallets[i]
+		if v == null or not is_instance_valid(v):
+			continue
+		var final_xf := v.state_transform(it)
+		var sill := lorry_xf * Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0, CARGO_FLOOR, CARGO_REAR - 0.72))
+		if lift == null:
+			sill = lorry_xf * Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0, CARGO_FLOOR, CARGO_REAR - 0.6))
+		# Driver walks in, slides the pallet back onto the lift…
+		await _carry(v, v.global_transform, sill, lorry_xf, 1.1)
+		if lift:
+			Sfx.play_at("hydraulic", lift.global_position)
+			var start_y := lift.position.y
+			await _ride_lift(v, lift, start_y, 0.05, 1.8, lorry_xf)
+		# …and wheels it to its spot.
+		await _carry(v, v.global_transform, final_xf, lorry_xf, 1.0)
+		Sfx.play_at("pallet_drop", final_xf.origin, -6.0)
+		v.cinematic = false
+		v.apply_state(it)
+		if lift and i < pallets.size() - 1:
+			_tween(lift, "position:y", CARGO_FLOOR - 0.03, 1.2)
+	_driver.visible = false
+	if lift:
+		await _tween(lift, "position:y", LIFT_REST, 1.4)
+
+
+func _carry(v: ItemView, from: Transform3D, to: Transform3D, lorry_xf: Transform3D, speed: float) -> void:
+	## Move a pallet (and the driver pulling it) smoothly from one transform to another.
+	var dist := from.origin.distance_to(to.origin)
+	var dur := clampf(dist / speed, 0.6, 6.0)
+	var t := 0.0
+	var from_q := from.basis.get_rotation_quaternion()
+	var to_q := to.basis.get_rotation_quaternion()
+	while t < dur and is_instance_valid(v):
+		t += get_process_delta_time()
+		var f := smoothstep(0.0, 1.0, clampf(t / dur, 0.0, 1.0))
+		var xf := Transform3D(Basis(from_q.slerp(to_q, f)), from.origin.lerp(to.origin, f))
+		v.global_transform = xf
+		_place_driver(xf, (to.origin - from.origin), lorry_xf)
+		await get_tree().process_frame
+
+
+func _ride_lift(v: ItemView, lift: Node3D, from_y: float, to_y: float, dur: float, lorry_xf: Transform3D) -> void:
+	var t := 0.0
+	var base := v.global_transform
+	while t < dur and is_instance_valid(v):
+		t += get_process_delta_time()
+		var f := smoothstep(0.0, 1.0, clampf(t / dur, 0.0, 1.0))
+		lift.position.y = lerpf(from_y, to_y, f)
+		var xf := base
+		xf.origin.y = lift.global_position.y + 0.035
+		v.global_transform = xf
+		_place_driver(xf, Vector3.ZERO, lorry_xf)
+		await get_tree().process_frame
+
+
+func _place_driver(pallet_xf: Transform3D, travel: Vector3, lorry_xf: Transform3D) -> void:
+	# The driver stands behind the pallet (away from the lorry), feet on whatever the pallet is on.
+	var back := -lorry_xf.basis.z.normalized()
+	if travel.length() > 0.05:
+		back = Vector3(travel.x, 0, travel.z).normalized()
+	var basis := Basis.looking_at(back, Vector3.UP)     # driver's -Z side (handle end) points away from the pallet
+	var prev := _driver.global_position
+	_driver.global_transform = Transform3D(basis, pallet_xf.origin + back * 0.05)
+	var rig := _driver.get_node_or_null("Driver") as CharacterRig
+	if rig:
+		var dt := maxf(get_process_delta_time(), 0.001)
+		rig.move_speed = lerpf(rig.move_speed, prev.distance_to(_driver.global_position) / dt, 0.25)
+
+
+func _tween(n: Object, prop: String, to: Variant, dur: float) -> void:
+	var tw := create_tween()
+	tw.tween_property(n, prop, to, dur).set_trans(Tween.TRANS_SINE)
+	await tw.finished
 
 
 # ================================================================= courier van

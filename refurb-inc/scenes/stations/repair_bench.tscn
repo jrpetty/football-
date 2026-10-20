@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/stations/repair_station.gd" id="1_1o434"]
 [ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_am8td"]
 [ext_resource type="Script" path="res://scripts/interaction/snap_slot.gd" id="3_cmnr4"]
+[ext_resource type="PackedScene" path="res://assets/models/stations/repair_bench/repair_bench.tscn" id="4_rb"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_yfs3f"]
 size = Vector3(1.6, 0.94, 0.75)
@@ -18,6 +19,7 @@ description = "Hold E on a faulty unit to repair it. Parts come from the bins."
 
 [node name="Model" type="Node3D" parent="." unique_id=163391002]
 script = ExtResource("2_am8td")
+model_scene = ExtResource("4_rb")
 placeholder = "repair_bench"
 placeholder_params = {
 "w": 1.6
@@ -34,11 +36,11 @@ shape = SubResource("BoxShape3D_yfs3f")
 collision_layer = 9
 
 [node name="Shape" type="CollisionShape3D" parent="PegboardBody" unique_id=307667821]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -0.35)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, -0.38)
 shape = SubResource("BoxShape3D_oymhd")
 
 [node name="UnitSlot" type="Marker3D" parent="." unique_id=1555911352]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.924, 0.06)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05, 0.924, 0.1)
 script = ExtResource("3_cmnr4")
 slot_name = "unit"
 accepts = PackedStringArray("unit", "unit_large")

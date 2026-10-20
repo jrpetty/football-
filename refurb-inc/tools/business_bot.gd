@@ -43,7 +43,7 @@ func _register() -> void:
 		# Bays 0–1 are the floor bays for big boxes (as in courier_shelf.tscn).
 		s.register_slot("courier_1:%d" % k, ["package_large", "package"] if k < 2 else ["package"], "courier_1")
 	for shelf in ["shelf_a", "shelf_b"]:
-		for k in 15:
+		for k in 12:
 			s.register_slot("%s:%d" % [shelf, k], ["unit"], "")
 	for fid in s.fixtures:
 		if s.fixtures[fid].get("type", "") == "heavy_rack":
@@ -123,7 +123,7 @@ func _move(it: Item, slot: String) -> bool:
 func _free_shelf(large: bool = false) -> String:
 	if not large:
 		for shelf in ["shelf_a", "shelf_b"]:
-			for k in 15:
+			for k in 12:
 				var sid := "%s:%d" % [shelf, k]
 				if s.item_in_slot(sid) == null:
 					return sid

@@ -40,7 +40,8 @@ var values := {
 	"graphics_preset": "high",   # low | medium | high | ultra
 	"fullscreen": false,
 	"vsync": true,
-	"show_fps": false,
+	"show_fps": true,
+	"settings_version": 2,
 	"player_name": "",
 }
 
@@ -79,8 +80,13 @@ func load_settings() -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(PATH) != OK:
 		return
+	var saved_version := int(cfg.get_value("settings", "settings_version", 1))
 	for k in values.keys():
+		if k == "settings_version":
+			continue
 		values[k] = cfg.get_value("settings", k, values[k])
+	if saved_version < 2:
+		values.show_fps = true      # v2: the FPS readout is on by default (F3 toggles)
 	if str(values.player_name) != "":
 		Net.local_name = values.player_name
 

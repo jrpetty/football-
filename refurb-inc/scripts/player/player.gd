@@ -112,7 +112,10 @@ func _ready() -> void:
 		Game.command_result.connect(_on_command_result)
 	else:
 		hold_node.position = Vector3(0.0, -0.45, -0.45)
-		avatar = Placeholders.build("person", {"color": _peer_colour()})
+		var rig := CharacterRig.new()
+		rig.shirt = _peer_colour()
+		rig.hair = [Color(0.2, 0.14, 0.1), Color(0.55, 0.38, 0.2), Color(0.08, 0.07, 0.07), Color(0.7, 0.6, 0.45)][peer_id % 4]
+		avatar = rig
 		avatar.rotation_degrees.y = 180
 		add_child(avatar)
 		name_tag = Label3D.new()
@@ -478,7 +481,13 @@ func _rpc_pose(pos: Vector3, yaw: float, pitch: float, crouch: float) -> void:
 
 
 func _remote_update(delta: float) -> void:
+	var before := global_position
 	global_position = global_position.lerp(_net_pos, clampf(delta * 14.0, 0, 1))
+	if avatar is CharacterRig:
+		var rig := avatar as CharacterRig
+		var v := Vector2(global_position.x - before.x, global_position.z - before.z).length() / maxf(delta, 0.001)
+		rig.move_speed = lerpf(rig.move_speed, v, clampf(delta * 8.0, 0, 1))
+		rig.anim = "carry" if not Game.state.held_by(peer_id).is_empty() else "idle"
 	_yaw = lerp_angle(_yaw, _net_yaw, clampf(delta * 14.0, 0, 1))
 	_pitch = lerpf(_pitch, _net_pitch, clampf(delta * 14.0, 0, 1))
 	_apply_look()

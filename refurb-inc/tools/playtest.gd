@@ -29,7 +29,7 @@ func _ready() -> void:
 	var sim := Game.sim
 	_check(sim.visual_vehicles, "vehicle director active")
 	_check(_level.players.size() == 1, "local player spawned")
-	_check(s.slot_defs.has("bench_1:unit") and s.slot_defs.has("shelf_a:14") and s.slot_defs.has("courier_1:5"), "station slots registered")
+	_check(s.slot_defs.has("bench_1:unit") and s.slot_defs.has("shelf_a:11") and s.slot_defs.has("courier_1:5"), "station slots registered")
 	_check(s.item_in_slot("bench_1:park_a") != null, "starting test USB on bench")
 	_check(_level.item_views.size() >= 2, "item views created")
 
@@ -202,7 +202,7 @@ func _aim_and_pick_check() -> void:
 	var player: Player = _level.local_player()
 	for h: Item in s.held_by(player.peer_id):
 		Game.request("drop", {"p": [0, 0.5, 0], "r": [0, 0, 0, 1]})
-	var presses := {1: 0.05, 7: 0.35, 13: 0.6}     # a quick tap, a normal press, a slow press
+	var presses := {1: 0.05, 4: 0.35, 10: 0.6}     # a quick tap, a normal press, a slow press
 	for level_bay in presses:              # bottom, middle and top shelves
 		var slot_id := "shelf_a:%d" % level_bay
 		var it := s.new_item(Item.KIND_UNIT)

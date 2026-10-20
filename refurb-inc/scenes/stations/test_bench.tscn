@@ -3,12 +3,13 @@
 [ext_resource type="Script" path="res://scripts/stations/bench_station.gd" id="1_ylqti"]
 [ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_tk3i3"]
 [ext_resource type="Script" path="res://scripts/interaction/snap_slot.gd" id="3_7dq5y"]
+[ext_resource type="PackedScene" path="res://scenes/stations/visuals/test_bench_visual.tscn" id="4_vis"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_ch4o3"]
 size = Vector3(1.4, 0.92, 0.75)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_c7e8g"]
-size = Vector3(1.4, 0.4, 0.06)
+size = Vector3(1.45, 0.06, 0.46)
 
 [node name="TestBench" type="Node3D" unique_id=1823330845]
 script = ExtResource("1_ylqti")
@@ -18,6 +19,7 @@ description = "Unit + DiagnostiKit USB = full test. Unit + PaneOS USB = wipe & i
 
 [node name="Model" type="Node3D" parent="." unique_id=365646154]
 script = ExtResource("2_tk3i3")
+model_scene = ExtResource("4_vis")
 placeholder = "test_bench"
 placeholder_params = {
 "w": 1.4
@@ -34,11 +36,11 @@ shape = SubResource("BoxShape3D_ch4o3")
 collision_layer = 9
 
 [node name="Shape" type="CollisionShape3D" parent="RiserBody" unique_id=835361456]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -0.35)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.78, -0.18)
 shape = SubResource("BoxShape3D_c7e8g")
 
 [node name="UnitSlot" type="Marker3D" parent="." unique_id=228985626]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.904, 0.06)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0.904, 0.14)
 script = ExtResource("3_7dq5y")
 slot_name = "unit"
 accepts = PackedStringArray("unit", "unit_large")

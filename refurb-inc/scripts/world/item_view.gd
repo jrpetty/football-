@@ -4,12 +4,13 @@ extends RigidBody3D
 ## Host simulates loose physics; clients follow the host's transforms.
 
 const KIND_VISUAL := {
-	"pallet": {"placeholder": "pallet", "size": Vector3(1.2, 0.144, 0.8), "mass": 25.0},
-	"usb_test": {"placeholder": "usb_stick", "params": {"color": Color(0.1, 0.45, 0.9)}, "size": Vector3(0.05, 0.03, 0.08), "mass": 0.02, "label": "DIAG"},
-	"usb_image": {"placeholder": "usb_stick", "params": {"color": Color(0.95, 0.5, 0.1)}, "size": Vector3(0.05, 0.03, 0.08), "mass": 0.02, "label": "PANE"},
-	"parcel": {"placeholder": "cardboard_box", "params": {"size": Vector3(0.42, 0.26, 0.32)}, "size": Vector3(0.42, 0.26, 0.32), "mass": 2.0},
-	"package": {"placeholder": "cardboard_box", "params": {"size": Vector3(0.44, 0.12, 0.34), "label": true}, "size": Vector3(0.44, 0.12, 0.34), "mass": 2.2},
+	"pallet": {"placeholder": "pallet", "model": "res://assets/models/props/pallet/pallet.tscn", "size": Vector3(1.2, 0.144, 0.8), "mass": 25.0},
+	"usb_test": {"placeholder": "usb_stick", "params": {"color": Color(0.1, 0.45, 0.9)}, "model": "res://assets/models/items/usb_stick/usb_stick.tscn", "tint": Color(0.35, 0.6, 1.0), "size": Vector3(0.022, 0.012, 0.06), "mass": 0.02, "label": "DIAG"},
+	"usb_image": {"placeholder": "usb_stick", "params": {"color": Color(0.95, 0.5, 0.1)}, "model": "res://assets/models/items/usb_stick/usb_stick.tscn", "size": Vector3(0.022, 0.012, 0.06), "mass": 0.02, "label": "PANE"},
+	"parcel": {"placeholder": "cardboard_box", "params": {"size": Vector3(0.42, 0.26, 0.32)}, "model": "res://assets/models/props/box_parcel/box_parcel.tscn", "size": Vector3(0.42, 0.26, 0.32), "mass": 2.0},
+	"package": {"placeholder": "cardboard_box", "params": {"size": Vector3(0.44, 0.12, 0.34), "label": true}, "model": "res://assets/models/props/box_laptop/box_laptop.tscn", "size": Vector3(0.44, 0.12, 0.34), "mass": 2.2},
 }
+const LARGE_BOX_MODEL := "res://assets/models/props/box_heavy/box_heavy.tscn"
 
 var item_id: int = 0
 var kind: String = ""
@@ -23,6 +24,7 @@ var _follow_offset := Transform3D.IDENTITY
 var _shape: CollisionShape3D
 var _settle_reported := false
 var _screen_tex: Texture2D = null
+var cinematic := false                 # an animation (lorry unloading…) is driving this view; state wins after
 
 
 func setup(it: Item) -> void:
@@ -55,10 +57,28 @@ func setup(it: Item) -> void:
 		var ms := ModelSlot.new()
 		ms.placeholder = def.get("placeholder", "")
 		ms.placeholder_params = def.get("params", {})
+		var model_path: String = LARGE_BOX_MODEL if (kind == Item.KIND_PACKAGE and it.data.get("large", false)) else def.get("model", "")
+		var use_model := model_path != "" and ResourceLoader.exists(model_path)
+		if use_model:
+			# Jon's model, stretched to this item's exact size (boxes are sized per order).
+			var ps: PackedScene = load(model_path)
+			ms.model_scene = ps
+			var probe := ps.instantiate()
+			var fp: Vector3 = probe.get_meta("footprint", def.get("size", Vector3.ONE))
+			probe.free()
+			var want: Vector3 = def.get("size", fp)
+			ms.model_scale = Vector3(want.x / maxf(fp.x, 0.001), want.y / maxf(fp.y, 0.001), want.z / maxf(fp.z, 0.001))
 		add_child(ms)
+		if use_model and def.has("tint"):
+			for mi in ms.find_meshes():
+				var m: Material = mi.get_active_material(0)
+				if m is StandardMaterial3D:
+					var tinted := (m as StandardMaterial3D).duplicate() as StandardMaterial3D
+					tinted.albedo_color = def.tint
+					mi.material_override = tinted
 		visual_size = def.get("size", Vector3(0.3, 0.3, 0.3))
 		mass = def.get("mass", 1.0)
-		if def.has("label"):
+		if def.has("label") and not use_model:
 			Placeholders.text(self, def.label, Vector3(0, 0.0086, 0.008), 24, Color(0.1, 0.1, 0.1), Vector3(-90, 0, 0), 0.0006)
 		if kind == Item.KIND_PALLET:
 			_build_pallet_slots(it)
@@ -100,10 +120,21 @@ func _build_pallet_slots(it: Item) -> void:
 
 # ================================================================= state → visuals
 
+func state_transform(it: Item) -> Transform3D:
+	## Where the state says a loose item is (used to end animations exactly on it).
+	var p: Array = it.loc.get("p", [0, 0, 0])
+	var r: Array = it.loc.get("r", [0, 0, 0, 1])
+	return Transform3D(Basis(Quaternion(r[0], r[1], r[2], r[3]).normalized()), Vector3(p[0], p[1], p[2]))
+
+
 func apply_state(it: Item, initial: bool = false) -> void:
 	var loc := it.loc
 	var lr := LevelRoot.current
 	if lr == null or not is_inside_tree():
+		return
+	if cinematic and loc.get("t") == "loose":
+		visible = true
+		freeze = true
 		return
 	match loc.get("t"):
 		"slot":
@@ -177,6 +208,8 @@ func set_screen(tex: Texture2D) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if cinematic:
+		return
 	if _following and not is_instance_valid(_follow_node):
 		_following = false
 		visible = false

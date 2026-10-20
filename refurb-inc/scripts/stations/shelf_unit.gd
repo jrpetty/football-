@@ -11,6 +11,8 @@ extends StationBase
 @export var height: float = 1.9
 @export var accepts: PackedStringArray = PackedStringArray(["unit"])
 @export var short_label: String = "Shelf A"
+## Deck heights (m) when the model's shelves aren't evenly spaced (overrides `levels`).
+@export var level_heights: PackedFloat32Array = PackedFloat32Array()
 @export var floor_bays: int = 0
 @export var floor_accepts: PackedStringArray = PackedStringArray()
 
@@ -28,8 +30,12 @@ func _build_slots() -> void:
 			c.queue_free()
 			remove_child(c)
 	var k := 0
+	if not level_heights.is_empty():
+		levels = level_heights.size()
 	for l in levels:
 		var y := 0.08 + l * (height - 0.15) / maxf(levels - 1, 1) + 0.012
+		if not level_heights.is_empty():
+			y = level_heights[l] + 0.012
 		var floor_level := l == 0 and floor_bays > 0
 		var n := floor_bays if floor_level else per_level
 		for i in n:
