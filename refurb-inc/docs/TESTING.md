@@ -51,16 +51,36 @@ To skip straight into a level, open `scenes/levels/garage/garage.tscn` and press
 - **Quick tour from the editor:** open any `scenes/levels/<id>/<id>.tscn` and press **F6**. It starts a fresh game in that building.
 
 ## Business Insights (office PC → Insights, the yellow ▲)
-Every number about the business, live, in 8 tabs. Hover the charts for each day's figures; **Refresh** pulls the latest (it also refreshes itself every few seconds).
-- **Overview:** cash, net worth, all-time net profit, reputation, units bought/sold/in stock, sell-through, average sale and purchase price, average profit per unit, margin, on-time %, pass rate. Also "Where the money goes on an average sale" (purchase price, parts, Flogit fee, postage, packaging, profit), the daily revenue/profit chart, and today so far.
-- **Sales:** average and median sale price, average purchase price of what sold, markup, price vs guide, average days in stock and processing time. Breakdowns by grade, model, maker and channel, plus records and the last 30 sales with bought-for vs sold-for.
-- **Purchasing:** lots, units, spend, average unit cost and lot size, and the discount from your Purchasing skill. **Sellers/sectors** show how each seller's kit really turns out (pass rate, faults per unit, average grade, profit per unit). Also recent lots and deliveries due.
-- **Stock:** the pipeline by stage at cost and market value. **Listed units** show purchase price vs your price vs guide, with expected profit and days listed. Also slow movers, parts bins and packing supplies with days left.
-- **Operations:** tests, pass rate, faults by type, repairs, parts fitted and their cost, grade split, and average daily throughput.
-- **Orders & Service:** received, shipped, on-time %, late, cancelled, waiting, overdue, average and median dispatch time (working hours), average order value, and a reputation chart.
-- **Finance:** a full P&L (revenue → fees/postage → stock → parts → rent/utilities/wages/bank → equipment/moves → net), averages per day and week, fixed costs, break-even units per week, cash runway, peak and lowest cash, closing-cash chart, best and worst day, and every ledger category.
-- **People & Premises:** hours worked per player (counted while you're in the session during 09:00–17:00), days worked, average hours per shift, everything each person has done, XP, and revenue/profit per worker-hour. **Staff & wages** (headcount, wage bill, average weekly/hourly wage, labour cost per unit) reads £0 until hiring arrives. Premises shows rent per m², floor and power use, and equipment owned and its value.
-- To see it full of data straight away: `xvfb-run godot --path . res://tools/screenshot.tscn -- --insights` simulates 12 working days with the bot and saves every tab to `tools/out/insights_*.png`.
+Everything about the business, live, in 13 sections down the left. Hover the charts for each day's figures. **Refresh** pulls the latest; it also refreshes itself every few seconds.
+- **Highlights:**
+  - Plain-English findings spotted from your data: bottleneck, pricing sweet spot, best earner, lemon models, best and worst suppliers, whether bargain lots really pay, the value of repairs, what extra RAM is worth, the busiest order times, low supplies, overdue orders and cash runway.
+  - Goals with progress bars and ETAs: the next premises, sales milestones and the next seller unlock.
+  - Records: biggest and most profitable sale, fastest flip, best day, best lot, streaks and peak cash.
+- **Overview:** headline KPIs, where the money goes on an average sale, the daily revenue/profit chart, and today so far.
+- **Sales:** average and median sale price, average purchase price of what sold, markup, price vs guide, days in stock, and time to sell once listed. Broken down by grade, model, maker and channel, plus the last 30 sales.
+- **Pricing & demand:**
+  - Price bands against the market guide, showing how fast each band sells, its profit, and "£ per shelf-day".
+  - A weekday × hour heatmap of when orders arrive.
+  - What memory, storage and processor are worth.
+- **Customers:** unique and repeat buyers, share of orders from repeat buyers, average spend, and top customers with their orders, spend, profit, first/last order and late deliveries.
+- **Purchasing:**
+  - **Deal quality**: bargain, typical and premium lots by price index, showing pass rate, faults, grade, profit and ROI.
+  - **Lot returns**: per-lot money recovered, ROI so far and projected ROI.
+  - Sellers, sectors, recent lots and deliveries due.
+- **Products & quality:** model reliability (pass rate, faults per unit, most common fault, battery, average grade, profit), how kit arrives (cosmetic conditions) and battery health on arrival.
+- **Stock:** pipeline with average age, days of cover, stock turns, graded stock by grade, listed units (bought vs listed vs guide), slow movers, parts and packing supplies.
+- **Operations:**
+  - Where the time goes: hours per step from delivery to shipped, with the bottleneck flagged and units waiting now.
+  - The funnel from bought to shipped.
+  - Test-bench utilisation and capacity, throughput, grades, "Repairs pay?", faults and parts used.
+- **Orders & service:** on-time %, streaks, lateness, cancellations, dispatch times, reputation chart and shift-rating distribution.
+- **Finance:** full P&L, averages, 5- and 20-day cash forecasts, break-even, runway, week-by-week table, closing-cash chart, best and worst day, and ledger categories.
+- **People & premises:**
+  - Awards, staff and wages (£0 until hiring arrives).
+  - Hours and jobs per hour per player, and work done.
+  - Rent per m², floor and power use, and equipment.
+- **Timeline:** the company diary, covering lots bought, milestones, record days, skill level-ups, reputation marks, new sellers, moves and equipment.
+- **To see it full of data:** run `xvfb-run godot --path . res://tools/screenshot.tscn -- --insights`. It simulates 20 working days with the bot and saves every section to `tools/out/insights_*.png`.
 
 ## Co-op (LAN / same PC)
 - Title screen → **Host co-op**. On a second instance → **Join co-op…** → host's IP → **Join**.
@@ -70,12 +90,12 @@ Every number about the business, live, in 8 tabs. Hover the charts for each day'
 ## Automated checks
 Run everything from a terminal: `tools/run_all_checks.sh /path/to/godot`
 Or run individually in the editor:
-- `tests/run_tests.tscn` (F6) — 24 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats.
+- `tests/run_tests.tscn` (F6) — 25 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats.
 - `tools/playtest.tscn` (F6) — drives the real garage at 8× speed: lorry, bench, repair, image, grade, sell, pack, courier, parcel, save/load.
 - `tools/premises_test.tscn` (F6) — moves one company through all 7 buildings: layout, stock, loose pallets, lorry to docks, extra equipment.
 - `tools/net_test.tscn -- --role host` and `-- --role client` — two-process co-op check.
 - `tools/check_scripts.tscn` — compiles every script.
-- `tools/economy_sim.tscn -- --days 20 --seed 3` — a bot runs the business through the real commands for N days and prints the headline numbers (good for balancing).
+- `tools/economy_sim.tscn -- --days 20 --seed 3` — a bot runs the business through the real commands for N days and prints the headline numbers and the auto-insights (good for balancing).
 - `tools/screenshot.tscn` — renders QA shots into `tools/out/` (args: `--setup` for a busy scene, `--ui` for HUD/PC shots).
 
 ## Regenerating generated content

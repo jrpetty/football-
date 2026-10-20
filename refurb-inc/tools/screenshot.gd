@@ -48,7 +48,7 @@ func _ready() -> void:
 	if "--insights" in args:
 		# A few weeks of real trading so the Insights app has history to show.
 		var bot := BusinessBot.new(Game.sim, 4242)
-		bot.run_days(12)
+		bot.run_days(20)
 		bot.finish_for_level()
 		Game.sim.start_next_day()
 		Game.sim.advance_minutes(150)
@@ -166,8 +166,8 @@ func _insights_shots() -> void:
 	await get_tree().create_timer(1.2).timeout
 	pc._os.open_app("insights")
 	var app: Node = pc._os._current
-	for i in app.TABS.size():
-		app._tabbar.current_tab = i
+	for i in app.NAV.size():
+		app.select(i)
 		await get_tree().create_timer(0.5).timeout
 		await _save("insights_%d" % i)
 		# Second page of the longer tabs

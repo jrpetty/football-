@@ -250,6 +250,7 @@ func add_xp(key: String, skill: String, amount: int) -> void:
 	mark("player", key)
 	var after := skill_level(key, skill)
 	if after > before:
+		BusinessStats.on_level_up(self, key, skill, after)
 		say("%s reached %s level %d!" % [p.name, skill.capitalize(), after], "good")
 
 

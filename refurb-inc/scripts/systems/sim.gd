@@ -259,6 +259,7 @@ func _process_jobs() -> void:
 		var it := state.get_item(int(st.job.unit))
 		var by := int(st.job.get("by", 0))
 		var kind: String = st.job.kind
+		BusinessStats.on_job(state, sid, kind, float(st.job.dur))
 		st.job = {}
 		if it == null or it.unit == null:
 			state.mark("station", sid)
@@ -270,7 +271,7 @@ func _process_jobs() -> void:
 			it.unit.imaged = true
 			it.unit.log_event(state.minute, "Wiped (%s) and imaged with %s" % [Content.os_info.get("wipe_standard", ""), Content.os_info.get("name", "PaneOS")])
 			state.bump_stat("imaged")
-			BusinessStats.act(state, by, "imaged")
+			BusinessStats.on_image(state, it.unit, by)
 			if by != 0:
 				state.add_xp(player_key(by), "imaging", int(Content.econ("xp", {}).get("image", 4)))
 			st.msg = "IMAGED"
@@ -389,7 +390,6 @@ func c_grade(peer: int, a: Dictionary) -> Dictionary:
 		return _fail("Wipe & image it first.")
 	u.grade = Valuation.grade_for(u)
 	u.list_price = Valuation.market_value(u, u.grade)
-	u.graded_at = state.minute
 	BusinessStats.on_grade(state, u, peer)
 	u.log_event(state.minute, "Graded %s — suggested price £%d" % [UnitData.grade_label(u.grade), u.list_price])
 	state.bump_stat("graded")
@@ -421,9 +421,7 @@ func c_list(peer: int, a: Dictionary) -> Dictionary:
 	if u.order_id != 0:
 		return _fail("Already sold.")
 	if want and not u.listed:
-		if u.listed_at < 0.0:
-			u.listed_at = state.minute
-		BusinessStats.act(state, peer, "listed")
+		BusinessStats.on_listed(state, u, peer)
 	u.listed = want
 	u.log_event(state.minute, ("Listed on Flogit at £%d" % u.list_price) if want else "Listing withdrawn")
 	state.mark("item", it.id)
@@ -468,8 +466,7 @@ func _create_order(it: Item, channel: String) -> Dictionary:
 	state.orders[order.id] = order
 	u.listed = false
 	u.order_id = order.id
-	u.sold_at = state.minute
-	BusinessStats.on_order(state)
+	BusinessStats.on_order(state, u)
 	u.log_event(state.minute, "Sold on Flogit to %s for £%d" % [order.buyer, order.price])
 	state.bump_stat("sold")
 	state.mark("order", order.id)
@@ -869,7 +866,7 @@ func advance_minutes(mins: float) -> void:
 	while state.minute < target - 0.0001:
 		var step := minf(5.0, target - state.minute)
 		state.minute += step
-		BusinessStats.on_shift_minutes(state, active_peers, step)
+		BusinessStats.on_clock(state, active_peers, step)
 		_process_minute_events()
 	state.mark("clock")
 	if state.minute >= end - 0.0001:
@@ -1008,6 +1005,7 @@ func c_buy_fixture(peer: int, a: Dictionary) -> Dictionary:
 	var id := "%s_%d" % [type, n]
 	state.fixtures[id] = {"type": type, "label": fixture_label(state, type), "placed": false, "p": [0, 0, 0], "r": 0.0}
 	state.add_money(-price, "equipment", "Bought %s" % def.name)
+	BusinessStats.on_fixture_bought(state, id, def.name, price)
 	state.mark("fixture", id)
 	state.say("Bought %s — place it from the Building app (or it'll be set up for you)." % def.name, "good", peer)
 	return {"ok": true, "msg": "", "id": id}
@@ -1067,6 +1065,7 @@ func c_move_building(peer: int, a: Dictionary) -> Dictionary:
 		if it.loc.get("t") == "loose":
 			state.set_loc(it, {"t": "loose", "relocate": true, "p": [0, 1, 0], "r": [0, 0, 0, 1]})
 	state.mark("building")
+	BusinessStats.on_moved(state, b)
 	state.say("Moving day! Welcome to %s, %s." % [b.name, b.get("address", "")], "good")
 	return _ok()
 

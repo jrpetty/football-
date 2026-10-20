@@ -126,3 +126,37 @@ func test_working_time_skips_nights_and_weekends() -> void:
 	var mon_10am := 7 * GameState.MIN_PER_DAY + 10 * 60.0
 	eq(int(BusinessStats.working_minutes(fri_4pm, mon_10am)), 120, "Fri 16:00 → Mon 10:00 is two working hours")
 	check(absf(BusinessStats.working_days(0.0, 7 * GameState.MIN_PER_DAY) - 5.0) < 0.001, "a week is five working days")
+
+
+func test_report_reconciles_after_weeks_of_trading() -> void:
+	var sim := fresh_sim(31)
+	var bot := BusinessBot.new(sim, 31)
+	bot.run_days(15)
+	var s := sim.state
+	var r := BusinessStats.compute(s)
+	check(int(r.sales.count) > 20, "the bot sold plenty (%d)" % int(r.sales.count))
+	eq(int(r.operations.funnel[0].count), int(r.purchasing.units), "funnel starts at units bought")
+	var by_grade := 0
+	for g: Dictionary in r.sales.by_grade:
+		by_grade += int(g.count)
+	eq(by_grade, int(r.sales.count), "grade breakdown covers every sale")
+	var heat := 0
+	for row in r.pricing.heat:
+		for c in row:
+			heat += int(c)
+	eq(heat, int(r.orders.placed), "demand heatmap counts every order")
+	var deal_units := 0
+	for d: Dictionary in r.purchasing.deals:
+		deal_units += int(d.units)
+	eq(deal_units, int(r.purchasing.units), "every lot lands in a deal band")
+	check(r.timeline.any(func(e): return String(e.text).begins_with("First sale")), "first sale is on the timeline")
+	check(not r.insights.is_empty(), "insights generated")
+	check(not r.records.is_empty() and not r.goals.is_empty(), "records and goals")
+	check(r.operations.stages.any(func(x): return int(x.n) > 0), "pipeline timings recorded")
+	check(float(r.operations.bench_util_pct) > 0.0 and float(r.operations.bench_util_pct) <= 100.0, "bench utilisation in range")
+	var q_tested := 0
+	for m: Dictionary in r.quality.models:
+		q_tested += int(m.tested)
+	eq(q_tested, int(r.operations.tests), "reliability covers every test")
+	check(int(r.customers.unique) > 0, "customers recorded")
+	check(r.people.awards.size() > 0, "awards handed out")

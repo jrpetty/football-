@@ -21,6 +21,17 @@ static func market_value(u: UnitData, grade: String = "") -> int:
 	return int(round(a_grade_value(u) * Content.grade_mult(g)))
 
 
+static func guide_price(model_id: String, grade: String = "B") -> int:
+	## Public market guide for a model at its reference spec (what LotFinder shows).
+	var m := Content.model(model_id)
+	var u := UnitData.new()
+	u.model_id = model_id
+	u.cpu_id = m.get("ref_cpu", "")
+	u.ram_gb = int(m.get("ref_ram", 8))
+	u.storage_gb = int(m.get("ref_storage", 256))
+	return market_value(u, grade)
+
+
 static func trade_value(u: UnitData) -> float:
 	## What a refurbisher would expect to pay for this exact unit, untested, knowing its true state.
 	## Faults and wear reduce it; this is the "fair" anchor that lot prices swing around.

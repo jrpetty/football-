@@ -30,13 +30,7 @@ func refresh() -> void:
 
 
 static func guide_price(model_id: String, grade: String = "B") -> int:
-	var m := Content.model(model_id)
-	var u := UnitData.new()
-	u.model_id = model_id
-	u.cpu_id = m.get("ref_cpu", "")
-	u.ram_gb = int(m.get("ref_ram", 8))
-	u.storage_gb = int(m.get("ref_storage", 256))
-	return Valuation.market_value(u, grade)
+	return Valuation.guide_price(model_id, grade)
 
 
 func _lots() -> void:

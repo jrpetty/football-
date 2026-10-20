@@ -18,6 +18,9 @@ func _ready() -> void:
 	print("  avg buy %s · avg sale %s · avg profit/unit %s · margin %.0f%%" % [_m(o.avg_buy), _m(o.avg_sale), _m(o.avg_profit), o.margin_pct])
 	print("  pass rate %.0f%% · on time %.0f%% · avg days in stock %.1f · %.1f shipped/day" % [o.pass_pct, o.on_time_pct, r.sales.avg_days_in_stock, r.operations.throughput.shipped])
 	print("  hours worked %.1f · profit per worker-hour %s" % [r.people.hours, _m(r.people.profit_per_hour)])
+	print("  bottleneck: %s · bench use %.0f%% · lead time %.1f h" % [r.operations.bottleneck, r.operations.bench_util_pct, r.operations.lead_time_h])
+	for ins: Dictionary in r.insights:
+		print("  • [%s] %s" % [ins.tone, ins.title])
 	# Sanity: a competent player should trade profitably and the report should reconcile with the ledger.
 	var ok: bool = int(o.units_sold) > 0 and int(o.net_worth) > int(Content.econ("start_cash", 2500)) and int(r.overview.cash) == Game.state.cash
 	print("ECONOMY SIM %s" % ("PASSED" if ok else "FAILED"))
