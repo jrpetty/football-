@@ -94,9 +94,13 @@ func _validate() -> void:
 				errors.append("Model %s references unknown CPU %s" % [m.id, c])
 		if not cpus.has(m.get("ref_cpu", "")):
 			errors.append("Model %s has unknown ref_cpu" % m.id)
-		for p in [m.get("battery_part", ""), m.get("keycap_part", "")]:
+		var model_parts: Array = [m.get("psu_part", "")] if m.get("type") == "desktop" else [m.get("battery_part", ""), m.get("keycap_part", "")]
+		model_parts.append_array(m.get("part_overrides", {}).values())
+		for p in model_parts:
 			if not parts.has(p):
 				errors.append("Model %s references unknown part %s" % [m.id, p])
+		if not economy.get("forms", {}).has(m.get("form", "laptop")):
+			errors.append("Model %s has unknown form %s" % [m.id, m.get("form", "")])
 		if not makers.has(m.get("maker", "")):
 			errors.append("Model %s has unknown maker" % m.id)
 	for s: Dictionary in sellers.values():
@@ -108,7 +112,7 @@ func _validate() -> void:
 		if vc != "" and not conditions.has(vc):
 			errors.append("Fault %s links unknown condition %s" % [f.id, vc])
 		var p: String = f.get("part", "")
-		if not p in ["battery", "keys", "ram", "storage", "screen"] and not parts.has(p):
+		if not p in ["battery", "keys", "ram", "storage", "screen", "psu", "none"] and not parts.has(p):
 			errors.append("Fault %s references unknown part %s" % [f.id, p])
 
 
@@ -147,6 +151,22 @@ func model_display_name(model_id: String) -> String:
 	if m.is_empty():
 		return model_id
 	return "%s %s" % [maker_name(m.maker), m.name]
+
+
+func form(form_id: String) -> Dictionary:
+	## Packing/carrying rules for a hardware form (laptop, tower, sff, mini) from economy.json "forms".
+	var forms: Dictionary = economy.get("forms", {})
+	return forms.get(form_id, forms.get("laptop", {}))
+
+
+func model_form(model_id: String) -> String:
+	return String(model(model_id).get("form", "laptop"))
+
+
+func allowed_for(def: Dictionary, model_id: String) -> bool:
+	## Faults/conditions can be limited to hardware types ("types": ["laptop"]).
+	var types: Array = def.get("types", [])
+	return types.is_empty() or model(model_id).get("type", "laptop") in types
 
 
 func grade_mult(grade: String) -> float:

@@ -72,9 +72,9 @@ func _morning() -> void:
 				best = l
 		if not best.is_empty():
 			sim.execute(P, "buy_lot", {"lot": best.id})
-	for k in ["boxes", "labels", "tape"]:
-		if int(s.consumables.get(k, 0)) < 8 and not _supply_on_order(k):
-			sim.execute(P, "shop_buy", {"id": {"boxes": "boxes_laptop", "labels": "labels", "tape": "tape"}[k], "qty": 1})
+	for k in ["boxes", "boxes_large", "labels", "tape"]:
+		if int(s.consumables.get(k, 0)) < (4 if k == "boxes_large" else 8) and not _supply_on_order(k):
+			sim.execute(P, "shop_buy", {"id": {"boxes": "boxes_laptop", "boxes_large": "boxes_large", "labels": "labels", "tape": "tape"}[k], "qty": 1})
 
 
 func _work() -> void:

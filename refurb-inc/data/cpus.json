@@ -1,9 +1,9 @@
 {
   "_comment": "Fictional CPUs. tier 1 (budget) .. 10 (flagship). value_adj = £ added to A-grade refurb value vs the model's reference CPU.",
   "cpus": [
-    {"id": "vortex_v3_8130u", "maker": "Vortex", "name": "Vortex V3-8130U", "segment": "mobile", "gen": 8,  "cores": 2, "threads": 4,  "ghz": 2.2, "tier": 1, "value_adj": -40},
-    {"id": "vortex_v5_8350u", "maker": "Vortex", "name": "Vortex V5-8350U", "segment": "mobile", "gen": 8,  "cores": 4, "threads": 8,  "ghz": 1.7, "tier": 3, "value_adj": -15},
-    {"id": "vortex_v7_8650u", "maker": "Vortex", "name": "Vortex V7-8650U", "segment": "mobile", "gen": 8,  "cores": 4, "threads": 8,  "ghz": 1.9, "tier": 4, "value_adj": 0},
+    {"id": "vortex_v3_8130u", "maker": "Vortex", "name": "Vortex V3-8130U", "segment": "mobile", "gen": 8, "cores": 2, "threads": 4, "ghz": 2.2, "tier": 1, "value_adj": -40},
+    {"id": "vortex_v5_8350u", "maker": "Vortex", "name": "Vortex V5-8350U", "segment": "mobile", "gen": 8, "cores": 4, "threads": 8, "ghz": 1.7, "tier": 3, "value_adj": -15},
+    {"id": "vortex_v7_8650u", "maker": "Vortex", "name": "Vortex V7-8650U", "segment": "mobile", "gen": 8, "cores": 4, "threads": 8, "ghz": 1.9, "tier": 4, "value_adj": 0},
     {"id": "vortex_v5_10310u", "maker": "Vortex", "name": "Vortex V5-10310U", "segment": "mobile", "gen": 10, "cores": 4, "threads": 8, "ghz": 1.7, "tier": 4, "value_adj": 10},
     {"id": "vortex_v7_10610u", "maker": "Vortex", "name": "Vortex V7-10610U", "segment": "mobile", "gen": 10, "cores": 4, "threads": 8, "ghz": 1.8, "tier": 5, "value_adj": 25},
     {"id": "vortex_v3_1115g", "maker": "Vortex", "name": "Vortex V3-1115G4", "segment": "mobile", "gen": 11, "cores": 2, "threads": 4, "ghz": 3.0, "tier": 3, "value_adj": -5},
@@ -21,6 +21,17 @@
     {"id": "vortex_x9_6248", "maker": "Vortex", "name": "Vortex X9-6248", "segment": "server", "gen": 2, "cores": 20, "threads": 40, "ghz": 2.5, "tier": 8, "value_adj": 0},
     {"id": "vortex_x9_6338", "maker": "Vortex", "name": "Vortex X9-6338", "segment": "server", "gen": 3, "cores": 32, "threads": 64, "ghz": 2.0, "tier": 9, "value_adj": 0},
     {"id": "arcturo_a9_titan_7302", "maker": "Arcturo", "name": "Arcturo Titan 7302", "segment": "server", "gen": 2, "cores": 16, "threads": 32, "ghz": 3.0, "tier": 8, "value_adj": 0},
-    {"id": "arcturo_a9_titan_7543", "maker": "Arcturo", "name": "Arcturo Titan 7543", "segment": "server", "gen": 3, "cores": 32, "threads": 64, "ghz": 2.8, "tier": 10, "value_adj": 0}
+    {"id": "arcturo_a9_titan_7543", "maker": "Arcturo", "name": "Arcturo Titan 7543", "segment": "server", "gen": 3, "cores": 32, "threads": 64, "ghz": 2.8, "tier": 10, "value_adj": 0},
+    {"id": "vortex_v3_9100", "maker": "Vortex", "name": "Vortex V3-9100", "segment": "desktop", "gen": 9, "cores": 4, "threads": 4, "ghz": 3.6, "tier": 2, "value_adj": -35},
+    {"id": "vortex_v5_8500", "maker": "Vortex", "name": "Vortex V5-8500", "segment": "desktop", "gen": 8, "cores": 6, "threads": 6, "ghz": 3.0, "tier": 3, "value_adj": -20},
+    {"id": "vortex_v5_9500", "maker": "Vortex", "name": "Vortex V5-9500", "segment": "desktop", "gen": 9, "cores": 6, "threads": 6, "ghz": 3.0, "tier": 3, "value_adj": -10},
+    {"id": "vortex_v3_10100", "maker": "Vortex", "name": "Vortex V3-10100", "segment": "desktop", "gen": 10, "cores": 4, "threads": 8, "ghz": 3.6, "tier": 3, "value_adj": -30},
+    {"id": "vortex_v5_10500", "maker": "Vortex", "name": "Vortex V5-10500", "segment": "desktop", "gen": 10, "cores": 6, "threads": 12, "ghz": 3.1, "tier": 5, "value_adj": 0},
+    {"id": "vortex_v7_10700", "maker": "Vortex", "name": "Vortex V7-10700", "segment": "desktop", "gen": 10, "cores": 8, "threads": 16, "ghz": 2.9, "tier": 6, "value_adj": 45},
+    {"id": "vortex_v5_12500", "maker": "Vortex", "name": "Vortex V5-12500", "segment": "desktop", "gen": 12, "cores": 6, "threads": 12, "ghz": 3.0, "tier": 6, "value_adj": 55},
+    {"id": "vortex_v3_10100t", "maker": "Vortex", "name": "Vortex V3-10100T", "segment": "desktop", "gen": 10, "cores": 4, "threads": 8, "ghz": 3.0, "tier": 3, "value_adj": -30},
+    {"id": "vortex_v5_10500t", "maker": "Vortex", "name": "Vortex V5-10500T", "segment": "desktop", "gen": 10, "cores": 6, "threads": 12, "ghz": 2.3, "tier": 4, "value_adj": 0},
+    {"id": "arcturo_a5_5600ge", "maker": "Arcturo", "name": "Arcturo A5 Pro 5650GE", "segment": "desktop", "gen": 5, "cores": 6, "threads": 12, "ghz": 3.4, "tier": 5, "value_adj": 0},
+    {"id": "arcturo_a7_5700ge", "maker": "Arcturo", "name": "Arcturo A7 Pro 5750GE", "segment": "desktop", "gen": 5, "cores": 8, "threads": 16, "ghz": 3.2, "tier": 6, "value_adj": 40}
   ]
 }

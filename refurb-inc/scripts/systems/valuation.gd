@@ -57,7 +57,7 @@ static func grade_for(u: UnitData) -> String:
 	elif score >= int(th.get("C", 50)):
 		g = "C"
 	# A worn battery caps the grade — honest grading protects reputation.
-	if u.battery_pct < 80 and g == "A":
+	if u.is_laptop() and u.battery_pct < 80 and g == "A":
 		g = "B"
 	return g
 
@@ -75,7 +75,12 @@ static func repair_part_for(u: UnitData, fault: Dictionary) -> String:
 	var fdef := Content.fault(fault.get("id", ""))
 	var key: String = fdef.get("part", "")
 	var m := u.model()
+	var overrides: Dictionary = m.get("part_overrides", {})
+	if overrides.has(key):
+		return overrides[key]
 	match key:
+		"psu":
+			return m.get("psu_part", "")
 		"battery":
 			return m.get("battery_part", "")
 		"keys":

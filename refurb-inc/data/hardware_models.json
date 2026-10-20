@@ -2,94 +2,120 @@
   "_comment": "Every sellable hardware model. visual.scene is the wrapper scene; visual.* are placeholder hints and material tints. ref_* is the reference spec that refurb_value_a is quoted for.",
   "models": [
     {
-      "id": "corvex_prospect_5420", "type": "laptop", "maker": "corvex", "name": "Prospect 5420", "release_year": 2022, "screen_in": 14.0,
-      "cpu_options": ["vortex_v5_1145g", "vortex_v7_1185g", "vortex_v5_1245u"], "ref_cpu": "vortex_v5_1145g",
-      "ram_options": [8, 16, 16, 32], "ram_slots": 2, "ram_type": "ddr4_sodimm",
-      "storage_options": [256, 256, 512], "storage_type": "nvme_m2",
-      "battery_part": "bat_corvex_prospect", "keycap_part": "keys_corvex",
-      "refurb_value_a": 340, "ref_ram": 16, "ref_storage": 256, "weight_kg": 1.4,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.322, "d": 0.212, "h": 0.019, "body": "#2b2e33", "deck": "#1f2124", "accent": "#9aa3ad", "logo": "CORVEX"}
+      "id": "corvex_prospect_5420", "type": "laptop", "form": "laptop", "tier": "mainstream", "maker": "corvex", "name": "Prospect 5420",
+      "release_year": 2022, "screen_in": 14.0, "cpu_options": ["vortex_v5_1145g", "vortex_v7_1185g", "vortex_v5_1245u"], "ref_cpu": "vortex_v5_1145g",
+      "ram_options": [8, 16, 16, 32], "ram_slots": 2, "ram_type": "ddr4_sodimm", "storage_options": [256, 256, 512], "storage_type": "nvme_m2",
+      "battery_part": "bat_corvex_prospect", "keycap_part": "keys_corvex", "refurb_value_a": 340, "ref_ram": 16, "ref_storage": 256, "weight_kg": 1.4,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.322, "d": 0.212, "h": 0.019, "body": "#2b2e33", "deck": "#1f2124", "accent": "#9aa3ad", "logo": "CORVEX", "match": [["laptop", "tier4"], ["laptop", "mainstre"]], "model_rot": 0}
     },
     {
-      "id": "corvex_prospect_7390", "type": "laptop", "maker": "corvex", "name": "Prospect 7390", "release_year": 2019, "screen_in": 13.3,
-      "cpu_options": ["vortex_v5_8350u", "vortex_v7_8650u", "vortex_v5_10310u"], "ref_cpu": "vortex_v5_8350u",
-      "ram_options": [8, 8, 16], "ram_slots": 0, "ram_type": "soldered",
-      "storage_options": [128, 256, 256], "storage_type": "nvme_m2",
-      "battery_part": "bat_corvex_prospect", "keycap_part": "keys_corvex",
-      "refurb_value_a": 190, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.3,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.304, "d": 0.199, "h": 0.017, "body": "#3a3d42", "deck": "#25272a", "accent": "#b3b9c1", "logo": "CORVEX"}
+      "id": "corvex_prospect_7390", "type": "laptop", "form": "laptop", "tier": "ultralight", "maker": "corvex", "name": "Prospect 7390",
+      "release_year": 2019, "screen_in": 13.3, "cpu_options": ["vortex_v5_8350u", "vortex_v7_8650u", "vortex_v5_10310u"], "ref_cpu": "vortex_v5_8350u",
+      "ram_options": [8, 8, 16], "ram_slots": 0, "ram_type": "soldered", "storage_options": [128, 256, 256], "storage_type": "nvme_m2",
+      "battery_part": "bat_corvex_prospect", "keycap_part": "keys_corvex", "refurb_value_a": 190, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.3,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.304, "d": 0.199, "h": 0.017, "body": "#3a3d42", "deck": "#25272a", "accent": "#b3b9c1", "logo": "CORVEX", "match": [["laptop", "tier3"], ["laptop", "ultralig"]], "model_rot": 0}
     },
     {
-      "id": "corvex_vantage_3510", "type": "laptop", "maker": "corvex", "name": "Vantage 3510", "release_year": 2021, "screen_in": 15.6,
-      "cpu_options": ["vortex_v3_1115g", "vortex_v5_1145g"], "ref_cpu": "vortex_v3_1115g",
-      "ram_options": [4, 8, 8, 16], "ram_slots": 2, "ram_type": "ddr4_sodimm",
-      "storage_options": [256, 256, 512], "storage_type": "sata_ssd",
-      "battery_part": "bat_corvex_vantage", "keycap_part": "keys_corvex",
-      "refurb_value_a": 210, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.8,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.358, "d": 0.236, "h": 0.022, "body": "#1c1d20", "deck": "#1a1b1d", "accent": "#55595f", "logo": "CORVEX"}
+      "id": "corvex_vantage_3510", "type": "laptop", "form": "laptop", "tier": "office", "maker": "corvex", "name": "Vantage 3510", "release_year": 2021,
+      "screen_in": 15.6, "cpu_options": ["vortex_v3_1115g", "vortex_v5_1145g"], "ref_cpu": "vortex_v3_1115g", "ram_options": [4, 8, 8, 16], "ram_slots": 2,
+      "ram_type": "ddr4_sodimm", "storage_options": [256, 256, 512], "storage_type": "sata_ssd", "battery_part": "bat_corvex_vantage",
+      "keycap_part": "keys_corvex", "refurb_value_a": 210, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.8,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.358, "d": 0.236, "h": 0.022, "body": "#1c1d20", "deck": "#1a1b1d", "accent": "#55595f", "logo": "CORVEX", "match": [["laptop", "tier2"], ["laptop", "office"]], "model_rot": 0}
     },
     {
-      "id": "halden_folio_840", "type": "laptop", "maker": "halden", "name": "Folio 840 G7", "release_year": 2020, "screen_in": 14.0,
-      "cpu_options": ["vortex_v5_10310u", "vortex_v7_10610u"], "ref_cpu": "vortex_v5_10310u",
-      "ram_options": [8, 16, 16], "ram_slots": 2, "ram_type": "ddr4_sodimm",
-      "storage_options": [256, 256, 512], "storage_type": "nvme_m2",
-      "battery_part": "bat_halden_folio", "keycap_part": "keys_halden",
-      "refurb_value_a": 260, "ref_ram": 16, "ref_storage": 256, "weight_kg": 1.35,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.323, "d": 0.214, "h": 0.018, "body": "#b9bdc2", "deck": "#a9adb2", "accent": "#e6e8ea", "logo": "HALDEN"}
+      "id": "halden_folio_840", "type": "laptop", "form": "laptop", "tier": "mainstream", "maker": "halden", "name": "Folio 840 G7", "release_year": 2020,
+      "screen_in": 14.0, "cpu_options": ["vortex_v5_10310u", "vortex_v7_10610u"], "ref_cpu": "vortex_v5_10310u", "ram_options": [8, 16, 16], "ram_slots": 2,
+      "ram_type": "ddr4_sodimm", "storage_options": [256, 256, 512], "storage_type": "nvme_m2", "battery_part": "bat_halden_folio",
+      "keycap_part": "keys_halden", "refurb_value_a": 260, "ref_ram": 16, "ref_storage": 256, "weight_kg": 1.35,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.323, "d": 0.214, "h": 0.018, "body": "#b9bdc2", "deck": "#a9adb2", "accent": "#e6e8ea", "logo": "HALDEN", "match": [["laptop", "tier4"], ["laptop", "mainstre"]], "model_rot": 0}
     },
     {
-      "id": "halden_folio_650", "type": "laptop", "maker": "halden", "name": "Folio 650 G5", "release_year": 2019, "screen_in": 15.6,
-      "cpu_options": ["vortex_v3_8130u", "vortex_v5_8350u"], "ref_cpu": "vortex_v5_8350u",
-      "ram_options": [4, 8, 8], "ram_slots": 2, "ram_type": "ddr4_sodimm",
-      "storage_options": [128, 256, 500], "storage_type": "sata_ssd",
-      "battery_part": "bat_halden_folio", "keycap_part": "keys_halden",
-      "refurb_value_a": 150, "ref_ram": 8, "ref_storage": 256, "weight_kg": 2.0,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.375, "d": 0.257, "h": 0.024, "body": "#8d9196", "deck": "#2a2c2f", "accent": "#c7cacd", "logo": "HALDEN"}
+      "id": "halden_folio_650", "type": "laptop", "form": "laptop", "tier": "office", "maker": "halden", "name": "Folio 650 G5", "release_year": 2019,
+      "screen_in": 15.6, "cpu_options": ["vortex_v3_8130u", "vortex_v5_8350u"], "ref_cpu": "vortex_v5_8350u", "ram_options": [4, 8, 8], "ram_slots": 2,
+      "ram_type": "ddr4_sodimm", "storage_options": [128, 256, 500], "storage_type": "sata_ssd", "battery_part": "bat_halden_folio",
+      "keycap_part": "keys_halden", "refurb_value_a": 150, "ref_ram": 8, "ref_storage": 256, "weight_kg": 2.0,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.375, "d": 0.257, "h": 0.024, "body": "#8d9196", "deck": "#2a2c2f", "accent": "#c7cacd", "logo": "HALDEN", "match": [["laptop", "tier2"], ["laptop", "office"]], "model_rot": 0}
     },
     {
-      "id": "northstar_meridian_t14", "type": "laptop", "maker": "northstar", "name": "Meridian T14", "release_year": 2021, "screen_in": 14.0,
-      "cpu_options": ["vortex_v5_1145g", "arcturo_a5_5650u", "arcturo_a7_5850u"], "ref_cpu": "vortex_v5_1145g",
-      "ram_options": [8, 16, 16, 32], "ram_slots": 1, "ram_type": "ddr4_sodimm",
-      "storage_options": [256, 512, 512], "storage_type": "nvme_m2",
-      "battery_part": "bat_northstar_meridian", "keycap_part": "keys_northstar",
-      "refurb_value_a": 320, "ref_ram": 16, "ref_storage": 256, "weight_kg": 1.5,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.329, "d": 0.227, "h": 0.018, "body": "#161718", "deck": "#121314", "accent": "#d63a2f", "logo": "NORTHSTAR"}
+      "id": "northstar_meridian_t14", "type": "laptop", "form": "laptop", "tier": "mainstream", "maker": "northstar", "name": "Meridian T14",
+      "release_year": 2021, "screen_in": 14.0, "cpu_options": ["vortex_v5_1145g", "arcturo_a5_5650u", "arcturo_a7_5850u"], "ref_cpu": "vortex_v5_1145g",
+      "ram_options": [8, 16, 16, 32], "ram_slots": 1, "ram_type": "ddr4_sodimm", "storage_options": [256, 512, 512], "storage_type": "nvme_m2",
+      "battery_part": "bat_northstar_meridian", "keycap_part": "keys_northstar", "refurb_value_a": 320, "ref_ram": 16, "ref_storage": 256, "weight_kg": 1.5,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.329, "d": 0.227, "h": 0.018, "body": "#161718", "deck": "#121314", "accent": "#d63a2f", "logo": "NORTHSTAR", "match": [["laptop", "tier4"], ["laptop", "mainstre"]], "model_rot": 0}
     },
     {
-      "id": "northstar_meridian_x13", "type": "laptop", "maker": "northstar", "name": "Meridian X13", "release_year": 2022, "screen_in": 13.3,
-      "cpu_options": ["vortex_v5_1245u", "vortex_v7_1265u", "arcturo_a7_5850u"], "ref_cpu": "vortex_v5_1245u",
-      "ram_options": [16, 16, 32], "ram_slots": 0, "ram_type": "soldered",
-      "storage_options": [256, 512, 1024], "storage_type": "nvme_m2",
-      "battery_part": "bat_northstar_meridian", "keycap_part": "keys_northstar",
-      "refurb_value_a": 420, "ref_ram": 16, "ref_storage": 512, "weight_kg": 1.2,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.305, "d": 0.207, "h": 0.016, "body": "#1b1c1e", "deck": "#151617", "accent": "#d63a2f", "logo": "NORTHSTAR"}
+      "id": "northstar_meridian_x13", "type": "laptop", "form": "laptop", "tier": "ultralight", "maker": "northstar", "name": "Meridian X13",
+      "release_year": 2022, "screen_in": 13.3, "cpu_options": ["vortex_v5_1245u", "vortex_v7_1265u", "arcturo_a7_5850u"], "ref_cpu": "vortex_v5_1245u",
+      "ram_options": [16, 16, 32], "ram_slots": 0, "ram_type": "soldered", "storage_options": [256, 512, 1024], "storage_type": "nvme_m2",
+      "battery_part": "bat_northstar_meridian", "keycap_part": "keys_northstar", "refurb_value_a": 420, "ref_ram": 16, "ref_storage": 512, "weight_kg": 1.2,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.305, "d": 0.207, "h": 0.016, "body": "#1b1c1e", "deck": "#151617", "accent": "#d63a2f", "logo": "NORTHSTAR", "match": [["laptop", "tier3"], ["laptop", "ultralig"]], "model_rot": 0}
     },
     {
-      "id": "northstar_edge_e15", "type": "laptop", "maker": "northstar", "name": "Edge E15", "release_year": 2020, "screen_in": 15.6,
-      "cpu_options": ["vortex_v3_8130u", "vortex_v5_10310u", "arcturo_a5_4500u"], "ref_cpu": "vortex_v5_10310u",
-      "ram_options": [4, 8, 8, 16], "ram_slots": 2, "ram_type": "ddr4_sodimm",
-      "storage_options": [256, 256, 512], "storage_type": "sata_ssd",
-      "battery_part": "bat_northstar_edge", "keycap_part": "keys_northstar",
-      "refurb_value_a": 175, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.9,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.365, "d": 0.248, "h": 0.022, "body": "#46494e", "deck": "#2d2f32", "accent": "#8f949a", "logo": "NORTHSTAR"}
+      "id": "northstar_edge_e15", "type": "laptop", "form": "laptop", "tier": "student", "maker": "northstar", "name": "Edge E15", "release_year": 2020,
+      "screen_in": 15.6, "cpu_options": ["vortex_v3_8130u", "vortex_v5_10310u", "arcturo_a5_4500u"], "ref_cpu": "vortex_v5_10310u",
+      "ram_options": [4, 8, 8, 16], "ram_slots": 2, "ram_type": "ddr4_sodimm", "storage_options": [256, 256, 512], "storage_type": "sata_ssd",
+      "battery_part": "bat_northstar_edge", "keycap_part": "keys_northstar", "refurb_value_a": 175, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.9,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.365, "d": 0.248, "h": 0.022, "body": "#46494e", "deck": "#2d2f32", "accent": "#8f949a", "logo": "NORTHSTAR", "match": [["laptop", "tier1"], ["laptop", "student"]], "model_rot": 0}
     },
     {
-      "id": "brightline_aura_13", "type": "laptop", "maker": "brightline", "name": "Aura 13", "release_year": 2021, "screen_in": 13.3,
-      "cpu_options": ["vortex_v5_1145g", "vortex_v7_1185g"], "ref_cpu": "vortex_v5_1145g",
-      "ram_options": [8, 16, 16], "ram_slots": 0, "ram_type": "soldered",
-      "storage_options": [256, 512, 512], "storage_type": "nvme_m2",
-      "battery_part": "bat_brightline_aura", "keycap_part": "keys_brightline",
-      "refurb_value_a": 380, "ref_ram": 16, "ref_storage": 512, "weight_kg": 1.15,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.296, "d": 0.199, "h": 0.015, "body": "#cfd2d6", "deck": "#c2c5c9", "accent": "#5a7fa8", "logo": "BRIGHTLINE"}
+      "id": "brightline_aura_13", "type": "laptop", "form": "laptop", "tier": "ultralight", "maker": "brightline", "name": "Aura 13", "release_year": 2021,
+      "screen_in": 13.3, "cpu_options": ["vortex_v5_1145g", "vortex_v7_1185g"], "ref_cpu": "vortex_v5_1145g", "ram_options": [8, 16, 16], "ram_slots": 0,
+      "ram_type": "soldered", "storage_options": [256, 512, 512], "storage_type": "nvme_m2", "battery_part": "bat_brightline_aura",
+      "keycap_part": "keys_brightline", "refurb_value_a": 380, "ref_ram": 16, "ref_storage": 512, "weight_kg": 1.15,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.296, "d": 0.199, "h": 0.015, "body": "#cfd2d6", "deck": "#c2c5c9", "accent": "#5a7fa8", "logo": "BRIGHTLINE", "match": [["laptop", "tier3"], ["laptop", "ultralig"]], "model_rot": 0}
     },
     {
-      "id": "kestrel_swift_14", "type": "laptop", "maker": "kestrel", "name": "Swift 14", "release_year": 2022, "screen_in": 14.0,
-      "cpu_options": ["vortex_v3_1115g", "arcturo_a5_5650u"], "ref_cpu": "vortex_v3_1115g",
-      "ram_options": [8, 8, 16], "ram_slots": 1, "ram_type": "ddr4_sodimm",
-      "storage_options": [256, 256, 512], "storage_type": "nvme_m2",
-      "battery_part": "bat_kestrel_swift", "keycap_part": "keys_kestrel",
-      "refurb_value_a": 230, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.45,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.322, "d": 0.212, "h": 0.018, "body": "#4b5560", "deck": "#3a424b", "accent": "#e2a33b", "logo": "KESTREL"}
+      "id": "kestrel_swift_14", "type": "laptop", "form": "laptop", "tier": "student", "maker": "kestrel", "name": "Swift 14", "release_year": 2022,
+      "screen_in": 14.0, "cpu_options": ["vortex_v3_1115g", "arcturo_a5_5650u"], "ref_cpu": "vortex_v3_1115g", "ram_options": [8, 8, 16], "ram_slots": 1,
+      "ram_type": "ddr4_sodimm", "storage_options": [256, 256, 512], "storage_type": "nvme_m2", "battery_part": "bat_kestrel_swift",
+      "keycap_part": "keys_kestrel", "refurb_value_a": 230, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.45,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.322, "d": 0.212, "h": 0.018, "body": "#4b5560", "deck": "#3a424b", "accent": "#e2a33b", "logo": "KESTREL", "match": [["laptop", "tier1"], ["laptop", "student"]], "model_rot": 0}
+    },
+    {
+      "id": "kestrel_talon_16", "type": "laptop", "form": "laptop", "tier": "gaming", "maker": "kestrel", "name": "Talon 16", "release_year": 2022,
+      "screen_in": 16.0, "cpu_options": ["arcturo_a9_6900hs", "vortex_v7_1370p"], "ref_cpu": "arcturo_a9_6900hs", "gpu": "Arcturo Radiant 6700S",
+      "ram_options": [16, 16, 32], "ram_slots": 2, "ram_type": "ddr4_sodimm", "storage_options": [512, 512, 1000], "storage_type": "nvme_m2",
+      "battery_part": "bat_kestrel_talon", "keycap_part": "keys_kestrel", "refurb_value_a": 640, "ref_ram": 16, "ref_storage": 512, "weight_kg": 2.3,
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "", "w": 0.358, "d": 0.262, "h": 0.024, "body": "#1a1b1f", "deck": "#121316", "accent": "#e2483a", "logo": "KESTREL", "match": [["laptop", "tier6"], ["laptop", "gaming"]], "model_rot": 0}
+    },
+    {
+      "id": "northstar_bastion_t560", "type": "desktop", "form": "tower", "maker": "northstar", "name": "Bastion T560 Tower", "release_year": 2020,
+      "cpu_options": ["vortex_v3_10100", "vortex_v5_10500", "vortex_v7_10700"], "ref_cpu": "vortex_v5_10500", "ram_options": [8, 16, 16, 32], "ram_slots": 4,
+      "ram_type": "ddr4_dimm", "storage_options": [256, 512, 1000], "storage_type": "sata_ssd", "psu_part": "psu_atx_300",
+      "part_overrides": {"fan_laptop_generic": "fan_case_92", "mobo_laptop_generic": "mobo_desktop_generic"}, "refurb_value_a": 290, "ref_ram": 16,
+      "ref_storage": 256, "weight_kg": 7.4,
+      "visual": {"model": "", "w": 0.185, "d": 0.4, "h": 0.38, "body": "#202226", "deck": "#15161a", "accent": "#8fa2b8", "logo": "NORTHSTAR", "match": [["mid", "tower"], ["tower", "pc"]], "model_rot": 0}
+    },
+    {
+      "id": "corvex_compact_7090", "type": "desktop", "form": "sff", "maker": "corvex", "name": "Compact 7090 SFF", "release_year": 2021,
+      "cpu_options": ["vortex_v5_10500", "vortex_v7_10700", "vortex_v5_12500"], "ref_cpu": "vortex_v5_10500", "ram_options": [8, 16, 16], "ram_slots": 2,
+      "ram_type": "ddr4_dimm", "storage_options": [256, 256, 512], "storage_type": "nvme_m2", "psu_part": "psu_sff_200",
+      "part_overrides": {"fan_laptop_generic": "fan_case_92", "mobo_laptop_generic": "mobo_desktop_generic"}, "refurb_value_a": 250, "ref_ram": 16,
+      "ref_storage": 256, "weight_kg": 5.2,
+      "visual": {"model": "", "w": 0.095, "d": 0.3, "h": 0.29, "body": "#2a2c30", "deck": "#18191c", "accent": "#9aa3ad", "logo": "CORVEX", "match": [["sff"], ["small", "form"]], "model_rot": 0}
+    },
+    {
+      "id": "halden_slimline_600", "type": "desktop", "form": "sff", "maker": "halden", "name": "Slimline 600 G4 SFF", "release_year": 2018,
+      "cpu_options": ["vortex_v3_9100", "vortex_v5_8500", "vortex_v5_9500"], "ref_cpu": "vortex_v5_8500", "ram_options": [4, 8, 8, 16], "ram_slots": 2,
+      "ram_type": "ddr4_dimm", "storage_options": [500, 500, 1000], "storage_type": "sata_hdd", "psu_part": "psu_sff_200",
+      "part_overrides": {"fan_laptop_generic": "fan_case_92", "mobo_laptop_generic": "mobo_desktop_generic"}, "refurb_value_a": 150, "ref_ram": 8,
+      "ref_storage": 500, "weight_kg": 5.0,
+      "visual": {"model": "", "w": 0.1, "d": 0.31, "h": 0.3, "body": "#2d2f33", "deck": "#1b1c1f", "accent": "#c8ccd2", "logo": "HALDEN", "match": [["sff"], ["small", "form"]], "model_rot": 0}
+    },
+    {
+      "id": "kestrel_nano_q3", "type": "desktop", "form": "mini", "maker": "kestrel", "name": "Nano Q3 Mini PC", "release_year": 2021,
+      "cpu_options": ["vortex_v3_10100t", "vortex_v5_10500t"], "ref_cpu": "vortex_v5_10500t", "ram_options": [8, 8, 16], "ram_slots": 2,
+      "ram_type": "ddr4_sodimm", "storage_options": [256, 256, 512], "storage_type": "nvme_m2", "psu_part": "psu_brick_90",
+      "part_overrides": {"fan_laptop_generic": "fan_laptop_generic", "mobo_laptop_generic": "mobo_desktop_generic"}, "refurb_value_a": 200, "ref_ram": 8,
+      "ref_storage": 256, "weight_kg": 1.2,
+      "visual": {"model": "", "w": 0.18, "d": 0.18, "h": 0.036, "body": "#1f2023", "deck": "#151619", "accent": "#d0d4da", "logo": "KESTREL", "match": [["mini", "pc"]], "model_rot": 0}
+    },
+    {
+      "id": "brightline_cube_m1", "type": "desktop", "form": "mini", "maker": "brightline", "name": "Cube M1", "release_year": 2022,
+      "cpu_options": ["arcturo_a5_5600ge", "arcturo_a7_5700ge"], "ref_cpu": "arcturo_a5_5600ge", "ram_options": [16, 16, 32], "ram_slots": 0,
+      "ram_type": "soldered", "storage_options": [256, 512, 512], "storage_type": "nvme_m2", "psu_part": "psu_brick_90",
+      "part_overrides": {"mobo_laptop_generic": "mobo_desktop_generic"}, "refurb_value_a": 270, "ref_ram": 16, "ref_storage": 512, "weight_kg": 1.1,
+      "visual": {"model": "", "w": 0.17, "d": 0.17, "h": 0.045, "body": "#d9dbde", "deck": "#c2c5c9", "accent": "#3a3d42", "logo": "BRIGHTLINE", "match": [["mini", "pc"]], "model_rot": 0}
     }
   ]
 }

@@ -474,7 +474,7 @@ static func _stock(st: GameState, r: Dictionary) -> Dictionary:
 			by_grade[u.grade].value += u.list_price
 		if stage == UnitData.STAGE_LISTED:
 			var fee := float(u.list_price) * float(Content.econ("flogit_fee_pct", 0.1))
-			var net := float(u.list_price) - fee - float(Content.econ("flogit_postage", 9)) - BusinessStats.packaging_cost()
+			var net := float(u.list_price) - fee - float(Content.econ("flogit_postage", 9)) - BusinessStats.packaging_cost(u.form())
 			var guide := Valuation.market_value(u, u.grade)
 			listed.append({"model": u.display_name(), "grade": u.grade, "cost": u.cost + u.parts_cost,
 				"price": u.list_price, "guide": guide, "vs_guide": _pct(u.list_price, guide),

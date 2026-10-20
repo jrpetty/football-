@@ -13,7 +13,7 @@ const KIND_VISUAL := {
 
 var item_id: int = 0
 var kind: String = ""
-var laptop: LaptopView = null
+var laptop: UnitView = null
 var visual_size := Vector3(0.3, 0.02, 0.2)
 var pallet_slots: Array = []           # SnapSlots for pallet stacks
 var _target_xf: Transform3D
@@ -39,13 +39,18 @@ func setup(it: Item) -> void:
 	_shape = CollisionShape3D.new()
 	add_child(_shape)
 	if kind == Item.KIND_UNIT:
-		laptop = LaptopView.new()
+		laptop = UnitView.new()
 		add_child(laptop)
 		laptop.configure(it.unit)
 		visual_size = laptop.footprint()
 		mass = float(it.unit.model().get("weight_kg", 1.5))
 	else:
-		var def: Dictionary = KIND_VISUAL.get(kind, {})
+		var def: Dictionary = KIND_VISUAL.get(kind, {}).duplicate(true)
+		if kind == Item.KIND_PACKAGE:
+			# Shipping box sized for what's inside (laptop box, big tower box…).
+			var ps: Array = Content.form(String(it.data.get("form", "laptop"))).get("package", [0.44, 0.12, 0.34])
+			def.size = Vector3(float(ps[0]), float(ps[1]), float(ps[2]))
+			def.params = {"size": def.size, "label": true}
 		var ms := ModelSlot.new()
 		ms.placeholder = def.get("placeholder", "")
 		ms.placeholder_params = def.get("params", {})
@@ -55,7 +60,7 @@ func setup(it: Item) -> void:
 		if def.has("label"):
 			Placeholders.text(self, def.label, Vector3(0, 0.0086, 0.008), 24, Color(0.1, 0.1, 0.1), Vector3(-90, 0, 0), 0.0006)
 		if kind == Item.KIND_PALLET:
-			_build_pallet_slots()
+			_build_pallet_slots(String(it.data.get("form", "laptop")))
 		if kind == Item.KIND_PACKAGE:
 			var lbl := Placeholders.text(self, "#%d\n%s" % [int(it.data.get("order_id", 0)), str(it.data.get("buyer", ""))], Vector3(0.09, visual_size.y + 0.003, 0), 22, Color(0.05, 0.05, 0.05), Vector3(-90, 0, 0), 0.0012)
 			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -69,16 +74,25 @@ func setup(it: Item) -> void:
 	apply_state(it, true)
 
 
-func _build_pallet_slots() -> void:
-	# 3 x 2 footprint, up to 4 high (laptops lying flat). Slot k → column k % 6, layer k / 6.
-	for k in 24:
+func _build_pallet_slots(form: String) -> void:
+	# Grid from economy.json forms.<form>.pallet: laptops lie 3 x 2 x 4 high, towers stand 5 x 2 x 2, …
+	# Slot k → column k % cols, row (k / cols) % rows, layer k / (cols * rows).
+	var lay: Dictionary = Content.form(form).get("pallet", {})
+	var cols := int(lay.get("cols", 3))
+	var rows := int(lay.get("rows", 2))
+	var layers := int(lay.get("layers", 4))
+	var dx := float(lay.get("dx", 0.39))
+	var dz := float(lay.get("dz", 0.4))
+	var dy := float(lay.get("dy", 0.026))
+	for k in cols * rows * layers:
 		var s := SnapSlot.new()
 		s.slot_name = str(k)
 		s.accepts = PackedStringArray(["unit"])
-		var col := k % 6
-		var layer := k / 6
-		s.position = Vector3(-0.39 + (col % 3) * 0.39, 0.144 + layer * 0.026, -0.2 + (col / 3) * 0.4)
-		s.hint_size = Vector3(0.34, 0.01, 0.24)
+		var col := k % cols
+		var row := (k / cols) % rows
+		var layer := k / (cols * rows)
+		s.position = Vector3((col - (cols - 1) / 2.0) * dx, 0.144 + layer * dy, (row - (rows - 1) / 2.0) * dz)
+		s.hint_size = Vector3(dx - 0.04, 0.01, dz - 0.04)
 		add_child(s)
 		s.setup("i%d" % item_id, "")
 		pallet_slots.append(s)

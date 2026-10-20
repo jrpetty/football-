@@ -35,6 +35,18 @@ static func carry_weight(kind_name: String) -> int:
 			return 99   # pallets: need a pallet truck (later milestone)
 
 
+func weight() -> int:
+	## Carry slots this particular item uses: a tower takes both hands, laptops stack.
+	if kind == KIND_UNIT and unit:
+		return int(Content.form(unit.form()).get("carry", 1))
+	return carry_weight(kind)
+
+
+func stack_key() -> String:
+	## Items only stack in your arms with others of the same shape.
+	return "unit:" + unit.form() if kind == KIND_UNIT and unit else kind
+
+
 func is_carryable() -> bool:
 	return carry_weight(kind) < 99
 

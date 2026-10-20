@@ -1,5 +1,12 @@
 {
   "_comment": "Global tuning. Money in whole pounds (GBP). Times in game minutes unless noted.",
+  "forms": {
+    "_comment": "Per hardware form: carry = carry slots used (players carry 3, more with Hauling); box = packing consumable; pallet = how units pack on a 1.2 x 0.8 m pallet (cols x rows x layers, spacing in metres); package = shipping box size [w, h, d].",
+    "laptop": {"carry": 1, "box": "boxes", "pallet": {"cols": 3, "rows": 2, "layers": 4, "dx": 0.39, "dz": 0.40, "dy": 0.026, "per_pallet": 20}, "package": [0.44, 0.12, 0.34]},
+    "tower": {"carry": 3, "box": "boxes_large", "pallet": {"cols": 5, "rows": 2, "layers": 2, "dx": 0.215, "dz": 0.41, "dy": 0.39, "per_pallet": 16}, "package": [0.48, 0.27, 0.46]},
+    "sff": {"carry": 2, "box": "boxes_large", "pallet": {"cols": 7, "rows": 2, "layers": 2, "dx": 0.15, "dz": 0.36, "dy": 0.305, "per_pallet": 24}, "package": [0.42, 0.18, 0.38]},
+    "mini": {"carry": 1, "box": "boxes", "pallet": {"cols": 5, "rows": 4, "layers": 2, "dx": 0.22, "dz": 0.19, "dy": 0.05, "per_pallet": 30}, "package": [0.30, 0.12, 0.26]}
+  },
   "start_cash": 2500,
   "start_reputation": 8,
   "day_start_hour": 9,

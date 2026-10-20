@@ -1,31 +1,140 @@
 {
   "_comment": "Spare parts. 'fits' matches a model field: battery_part/keycap_part ids, ram_type, storage_type. repair_level = minimum player repair skill. repair_secs = hold time at the repair bench at skill level 1.",
   "parts": [
-    {"id": "bat_corvex_prospect",   "name": "Battery — Corvex Prospect (4-cell 63Wh)", "category": "battery", "price": 38, "repair_level": 1, "repair_secs": 4.0},
-    {"id": "bat_corvex_vantage",    "name": "Battery — Corvex Vantage (3-cell 41Wh)", "category": "battery", "price": 29, "repair_level": 1, "repair_secs": 4.0},
-    {"id": "bat_halden_folio",      "name": "Battery — Halden Folio (3-cell 53Wh)",   "category": "battery", "price": 34, "repair_level": 1, "repair_secs": 4.0},
-    {"id": "bat_northstar_meridian","name": "Battery — Northstar Meridian (57Wh)",    "category": "battery", "price": 41, "repair_level": 1, "repair_secs": 4.5},
-    {"id": "bat_northstar_edge",    "name": "Battery — Northstar Edge (45Wh)",        "category": "battery", "price": 27, "repair_level": 1, "repair_secs": 4.0},
-    {"id": "bat_brightline_aura",   "name": "Battery — Brightline Aura (52Wh)",       "category": "battery", "price": 45, "repair_level": 1, "repair_secs": 5.0},
-    {"id": "bat_kestrel_swift",     "name": "Battery — Kestrel Swift (48Wh)",         "category": "battery", "price": 25, "repair_level": 1, "repair_secs": 4.0},
-    {"id": "ram_ddr4_8",   "name": "8GB DDR4-3200 SODIMM",  "category": "ram", "fits_ram_type": "ddr4_sodimm", "size_gb": 8,  "price": 14, "repair_level": 1, "repair_secs": 2.5},
-    {"id": "ram_ddr4_16",  "name": "16GB DDR4-3200 SODIMM", "category": "ram", "fits_ram_type": "ddr4_sodimm", "size_gb": 16, "price": 26, "repair_level": 1, "repair_secs": 2.5},
-    {"id": "ssd_nvme_256", "name": "256GB NVMe M.2 SSD", "category": "storage", "fits_storage_type": "nvme_m2", "size_gb": 256, "price": 18, "repair_level": 1, "repair_secs": 3.0},
-    {"id": "ssd_nvme_512", "name": "512GB NVMe M.2 SSD", "category": "storage", "fits_storage_type": "nvme_m2", "size_gb": 512, "price": 29, "repair_level": 1, "repair_secs": 3.0},
-    {"id": "ssd_sata_256", "name": "256GB 2.5\" SATA SSD", "category": "storage", "fits_storage_type": "sata_ssd", "size_gb": 256, "price": 16, "repair_level": 1, "repair_secs": 3.5},
-    {"id": "ssd_sata_512", "name": "512GB 2.5\" SATA SSD", "category": "storage", "fits_storage_type": "sata_ssd", "size_gb": 512, "price": 26, "repair_level": 1, "repair_secs": 3.5},
-    {"id": "keys_corvex",     "name": "Keycap kit — Corvex (UK)",     "category": "keys", "price": 6, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "keys_halden",     "name": "Keycap kit — Halden (UK)",     "category": "keys", "price": 6, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "keys_northstar",  "name": "Keycap kit — Northstar (UK)",  "category": "keys", "price": 7, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "keys_brightline", "name": "Keycap kit — Brightline (UK)", "category": "keys", "price": 8, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "keys_kestrel",    "name": "Keycap kit — Kestrel (UK)",    "category": "keys", "price": 5, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "fan_laptop_generic", "name": "Laptop cooling fan (universal)", "category": "fan", "price": 9, "repair_level": 1, "repair_secs": 3.5},
-    {"id": "lcd_14_fhd",  "name": "14\" FHD IPS panel (30-pin)",   "category": "screen", "price": 48, "repair_level": 2, "repair_secs": 6.0},
-    {"id": "lcd_133_fhd", "name": "13.3\" FHD IPS panel (30-pin)", "category": "screen", "price": 52, "repair_level": 2, "repair_secs": 6.0},
-    {"id": "lcd_156_fhd", "name": "15.6\" FHD IPS panel (30-pin)", "category": "screen", "price": 44, "repair_level": 2, "repair_secs": 6.0},
-    {"id": "hinge_kit",   "name": "Hinge kit (L+R, universal fit)", "category": "hinge", "price": 12, "repair_level": 2, "repair_secs": 5.0},
-    {"id": "kbd_deck_generic", "name": "Keyboard deck / palmrest assembly", "category": "keyboard", "price": 35, "repair_level": 2, "repair_secs": 7.0},
-    {"id": "board_reflash_kit", "name": "BIOS programmer clip + reflash kit", "category": "board_tool", "price": 22, "reusable": true, "repair_level": 3, "repair_secs": 9.0},
-    {"id": "mobo_laptop_generic", "name": "Replacement system board (model-matched)", "category": "motherboard", "price": 95, "repair_level": 3, "repair_secs": 10.0}
+    {
+      "id": "bat_corvex_prospect", "name": "Battery — Corvex Prospect (4-cell 63Wh)", "category": "battery", "price": 38, "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "bat_corvex_vantage", "name": "Battery — Corvex Vantage (3-cell 41Wh)", "category": "battery", "price": 29, "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "bat_halden_folio", "name": "Battery — Halden Folio (3-cell 53Wh)", "category": "battery", "price": 34, "repair_level": 1, "repair_secs": 4.0
+    },
+    {
+      "id": "bat_northstar_meridian", "name": "Battery — Northstar Meridian (57Wh)", "category": "battery", "price": 41, "repair_level": 1,
+      "repair_secs": 4.5
+    },
+    {
+      "id": "bat_northstar_edge", "name": "Battery — Northstar Edge (45Wh)", "category": "battery", "price": 27, "repair_level": 1, "repair_secs": 4.0
+    },
+    {
+      "id": "bat_brightline_aura", "name": "Battery — Brightline Aura (52Wh)", "category": "battery", "price": 45, "repair_level": 1, "repair_secs": 5.0
+    },
+    {
+      "id": "bat_kestrel_swift", "name": "Battery — Kestrel Swift (48Wh)", "category": "battery", "price": 25, "repair_level": 1, "repair_secs": 4.0
+    },
+    {
+      "id": "ram_ddr4_8", "name": "8GB DDR4-3200 SODIMM", "category": "ram", "fits_ram_type": "ddr4_sodimm", "size_gb": 8, "price": 14, "repair_level": 1,
+      "repair_secs": 2.5
+    },
+    {
+      "id": "ram_ddr4_16", "name": "16GB DDR4-3200 SODIMM", "category": "ram", "fits_ram_type": "ddr4_sodimm", "size_gb": 16, "price": 26, "repair_level": 1,
+      "repair_secs": 2.5
+    },
+    {
+      "id": "ssd_nvme_256", "name": "256GB NVMe M.2 SSD", "category": "storage", "fits_storage_type": "nvme_m2", "size_gb": 256, "price": 18,
+      "repair_level": 1, "repair_secs": 3.0
+    },
+    {
+      "id": "ssd_nvme_512", "name": "512GB NVMe M.2 SSD", "category": "storage", "fits_storage_type": "nvme_m2", "size_gb": 512, "price": 29,
+      "repair_level": 1, "repair_secs": 3.0
+    },
+    {
+      "id": "ssd_sata_256", "name": "256GB 2.5\" SATA SSD", "category": "storage", "fits_storage_type": "sata_ssd", "size_gb": 256, "price": 16,
+      "repair_level": 1, "repair_secs": 3.5
+    },
+    {
+      "id": "ssd_sata_512", "name": "512GB 2.5\" SATA SSD", "category": "storage", "fits_storage_type": "sata_ssd", "size_gb": 512, "price": 26,
+      "repair_level": 1, "repair_secs": 3.5
+    },
+    {
+      "id": "keys_corvex", "name": "Keycap kit — Corvex (UK)", "category": "keys", "price": 6, "repair_level": 1, "repair_secs": 2.0
+    },
+    {
+      "id": "keys_halden", "name": "Keycap kit — Halden (UK)", "category": "keys", "price": 6, "repair_level": 1, "repair_secs": 2.0
+    },
+    {
+      "id": "keys_northstar", "name": "Keycap kit — Northstar (UK)", "category": "keys", "price": 7, "repair_level": 1, "repair_secs": 2.0
+    },
+    {
+      "id": "keys_brightline", "name": "Keycap kit — Brightline (UK)", "category": "keys", "price": 8, "repair_level": 1, "repair_secs": 2.0
+    },
+    {
+      "id": "keys_kestrel", "name": "Keycap kit — Kestrel (UK)", "category": "keys", "price": 5, "repair_level": 1, "repair_secs": 2.0
+    },
+    {
+      "id": "fan_laptop_generic", "name": "Laptop cooling fan (universal)", "category": "fan", "price": 9, "repair_level": 1, "repair_secs": 3.5
+    },
+    {
+      "id": "lcd_14_fhd", "name": "14\" FHD IPS panel (30-pin)", "category": "screen", "price": 48, "repair_level": 2, "repair_secs": 6.0
+    },
+    {
+      "id": "lcd_133_fhd", "name": "13.3\" FHD IPS panel (30-pin)", "category": "screen", "price": 52, "repair_level": 2, "repair_secs": 6.0
+    },
+    {
+      "id": "lcd_156_fhd", "name": "15.6\" FHD IPS panel (30-pin)", "category": "screen", "price": 44, "repair_level": 2, "repair_secs": 6.0
+    },
+    {
+      "id": "hinge_kit", "name": "Hinge kit (L+R, universal fit)", "category": "hinge", "price": 12, "repair_level": 2, "repair_secs": 5.0
+    },
+    {
+      "id": "kbd_deck_generic", "name": "Keyboard deck / palmrest assembly", "category": "keyboard", "price": 35, "repair_level": 2, "repair_secs": 7.0
+    },
+    {
+      "id": "board_reflash_kit", "name": "BIOS programmer clip + reflash kit", "category": "board_tool", "price": 22, "reusable": true, "repair_level": 3,
+      "repair_secs": 9.0
+    },
+    {
+      "id": "mobo_laptop_generic", "name": "Replacement system board (model-matched)", "category": "motherboard", "price": 95, "repair_level": 3,
+      "repair_secs": 10.0
+    },
+    {
+      "id": "bat_kestrel_talon", "name": "Battery — Kestrel Talon (80Wh)", "category": "battery", "price": 55, "repair_level": 1, "repair_secs": 5.0
+    },
+    {
+      "id": "ram_dimm_8", "name": "8GB DDR4-2666 DIMM", "category": "ram", "fits_ram_type": "ddr4_dimm", "size_gb": 8, "price": 12, "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "ram_dimm_16", "name": "16GB DDR4-3200 DIMM", "category": "ram", "fits_ram_type": "ddr4_dimm", "size_gb": 16, "price": 24, "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "hdd_sata_500", "name": "500GB 3.5\" SATA hard drive", "category": "storage", "fits_storage_type": "sata_hdd", "size_gb": 500, "price": 12,
+      "repair_level": 1, "repair_secs": 4.0
+    },
+    {
+      "id": "hdd_sata_1000", "name": "1TB 3.5\" SATA hard drive", "category": "storage", "fits_storage_type": "sata_hdd", "size_gb": 1000, "price": 19,
+      "repair_level": 1, "repair_secs": 4.0
+    },
+    {
+      "id": "ssd_sata_1000", "name": "1TB 2.5\" SATA SSD", "category": "storage", "fits_storage_type": "sata_ssd", "size_gb": 1000, "price": 45,
+      "repair_level": 1, "repair_secs": 3.5
+    },
+    {
+      "id": "ssd_nvme_1000", "name": "1TB NVMe M.2 SSD", "category": "storage", "fits_storage_type": "nvme_m2", "size_gb": 1000, "price": 48,
+      "repair_level": 1, "repair_secs": 3.0
+    },
+    {
+      "id": "psu_atx_300", "name": "300W ATX power supply", "category": "psu", "price": 24, "repair_level": 2, "repair_secs": 6.0
+    },
+    {
+      "id": "psu_sff_200", "name": "200W SFF power supply (proprietary fit)", "category": "psu", "price": 29, "repair_level": 2, "repair_secs": 6.5
+    },
+    {
+      "id": "psu_brick_90", "name": "90W external power brick", "category": "psu", "price": 15, "repair_level": 1, "repair_secs": 1.5
+    },
+    {
+      "id": "cmos_cr2032", "name": "CR2032 CMOS battery", "category": "cmos", "price": 1, "repair_level": 1, "repair_secs": 1.5
+    },
+    {
+      "id": "fan_case_92", "name": "92mm case / CPU cooler fan", "category": "fan", "price": 7, "repair_level": 1, "repair_secs": 3.0
+    },
+    {
+      "id": "mobo_desktop_generic", "name": "Replacement desktop system board (model-matched)", "category": "motherboard", "price": 85, "repair_level": 3,
+      "repair_secs": 12.0
+    }
   ]
 }

@@ -29,12 +29,13 @@ func eligible_sellers() -> Array:
 func create_lot(seller: Dictionary, refresh: bool = false) -> Dictionary:
 	var day := state.day_index()
 	var pool: Array = seller.get("model_pool", [])
-	var n_models := 1 if (pool.size() < 2 or rng.randf() < 0.55) else 2
-	var chosen: Array = []
 	var shuffled := pool.duplicate()
 	_shuffle(shuffled)
-	for i in n_models:
-		chosen.append(shuffled[i])
+	# A lot is one form (all laptops, or all towers…) so it packs onto pallets cleanly.
+	var chosen: Array = [shuffled[0]]
+	var same_form := shuffled.filter(func(m): return m != shuffled[0] and Content.model_form(m) == Content.model_form(shuffled[0]))
+	if not same_form.is_empty() and rng.randf() >= 0.55:
+		chosen.append(same_form[0])
 	var size_range: Array = seller.get("lot_size", [4, 10])
 	var count := rng.randi_range(int(size_range[0]), int(size_range[1]))
 	if refresh:
@@ -94,7 +95,7 @@ func roll_unit(model_id: String, q: float, seller: Dictionary = {}) -> UnitData:
 	# --- external condition
 	var lam := lerpf(float(Content.econ("cosmetic_issues_bad", 3.0)), float(Content.econ("cosmetic_issues_good", 0.6)), q)
 	var n_cos := _poisson(lam)
-	var cond_pool := Content.conditions.values()
+	var cond_pool := Content.conditions.values().filter(func(c): return Content.allowed_for(c, model_id))
 	for i in n_cos:
 		var c: Dictionary = _weighted(cond_pool, "weight")
 		if c.is_empty() or c.id in u.cosmetic:
@@ -112,7 +113,9 @@ func roll_unit(model_id: String, q: float, seller: Dictionary = {}) -> UnitData:
 			_add_internal_fault(u)
 
 	var worn := u.faults.any(func(f): return f.id == "battery_worn")
-	if worn:
+	if not u.is_laptop():
+		u.battery_pct = 100        # no battery to wear out (shown as n/a)
+	elif worn:
 		u.battery_pct = rng.randi_range(31, 64)
 		for f in u.faults:
 			if f.id == "battery_worn":
@@ -124,7 +127,7 @@ func roll_unit(model_id: String, q: float, seller: Dictionary = {}) -> UnitData:
 
 func _add_internal_fault(u: UnitData) -> void:
 	var pool := Content.faults.values().filter(func(f):
-		if int(f.get("weight", 0)) <= 0:
+		if int(f.get("weight", 0)) <= 0 or not Content.allowed_for(f, u.model_id):
 			return false
 		if f.get("requires_ram_slots", false) and int(u.model().get("ram_slots", 0)) <= 0:
 			return false
@@ -140,7 +143,7 @@ func _make_fault(fault_id: String, u: UnitData) -> Dictionary:
 	match fault_id:
 		"ram_faulty":
 			var slots := maxi(int(u.model().get("ram_slots", 1)), 1)
-			detail["slot"] = ["DIMM A", "DIMM B"][rng.randi() % slots]
+			detail["slot"] = ["DIMM A", "DIMM B", "DIMM C", "DIMM D"][rng.randi() % mini(slots, 4)]
 		"keycap_missing":
 			detail["key"] = KEYS[rng.randi() % KEYS.size()]
 		"keyboard_faulty":

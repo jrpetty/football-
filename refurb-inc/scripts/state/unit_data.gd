@@ -54,10 +54,21 @@ func cpu_name() -> String:
 	return Content.cpu(cpu_id).get("name", cpu_id)
 
 
+func form() -> String:
+	return String(model().get("form", "laptop"))
+
+
+func is_laptop() -> bool:
+	return model().get("type", "laptop") == "laptop"
+
+
 func spec_line() -> String:
 	var storage := ("%dGB" % storage_gb) if storage_gb < 1000 else ("%dTB" % int(storage_gb / 1000.0))
-	var st_type := "NVMe" if model().get("storage_type", "") == "nvme_m2" else "SSD"
-	return "%s · %dGB RAM · %s %s" % [cpu_name(), ram_gb, storage, st_type]
+	var st_type: String = {"nvme_m2": "NVMe", "sata_ssd": "SSD", "sata_hdd": "HDD"}.get(model().get("storage_type", ""), "SSD")
+	var line := "%s · %dGB RAM · %s %s" % [cpu_name(), ram_gb, storage, st_type]
+	if model().has("gpu"):
+		line += " · " + String(model().gpu)
+	return line
 
 
 func open_faults() -> Array:

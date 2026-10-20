@@ -202,7 +202,8 @@ static func on_repair(st: GameState, u: UnitData, fault_id: String, part_id: Str
 	if s.repairs.is_empty():
 		event(st, "first", "First repair: %s" % Content.fault(fault_id).get("name", fault_id))
 	s.repairs[fault_id] = int(s.repairs.get(fault_id, 0)) + 1
-	s.parts_used[part_id] = int(s.parts_used.get(part_id, 0)) + 1
+	if part_id != "none":
+		s.parts_used[part_id] = int(s.parts_used.get(part_id, 0)) + 1
 	s.parts_value = int(s.parts_value) + part_cost
 	u.parts_cost += part_cost
 	u.repaired_at = st.minute
@@ -229,11 +230,12 @@ static func on_listed(st: GameState, u: UnitData, peer: int) -> void:
 
 # ================================================================= sales
 
-static func packaging_cost() -> float:
+static func packaging_cost(form: String = "laptop") -> float:
 	## One box, one label and some tape per parcel, at Shop prices.
+	var box: String = Content.form(form).get("box", "boxes")
 	var total := 0.0
 	for s: Dictionary in Content.shop_items.values():
-		if s.get("kind") == "consumable" and s.get("consumable") in ["boxes", "labels", "tape"]:
+		if s.get("kind") == "consumable" and s.get("consumable") in [box, "labels", "tape"]:
 			total += float(s.price) / maxf(float(s.qty), 1.0)
 	return total
 
@@ -271,7 +273,7 @@ static func on_ship(st: GameState, order: Dictionary, u: UnitData, fee: int, pos
 	var price := int(order.price)
 	var cost := u.cost if u else 0
 	var parts := u.parts_cost if u else 0
-	var pack := int(round(packaging_cost()))
+	var pack := int(round(packaging_cost(u.form() if u else "laptop")))
 	var profit := price - fee - post - pack - cost - parts
 	var rec := {
 		"day": st.day_index(), "m": st.minute, "order": int(order.id), "channel": order.get("channel", "flogit"),

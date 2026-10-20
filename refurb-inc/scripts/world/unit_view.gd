@@ -1,10 +1,11 @@
-class_name LaptopView
+class_name UnitView
 extends Node3D
-## Visual for a laptop unit. Built from the model's data (size, colours, logo) — or, if the model JSON sets
-## visual.model to a .glb/.tscn, that scene is used instead. Model contract for final art:
-##   origin bottom-centre, front (touchpad) toward +Z, closed by default;
-##   a node named "Lid" pivoting at the hinge (rotates about local X, negative = opens);
-##   a MeshInstance3D named "Screen" whose surface shows the screen (material is replaced at runtime).
+## Visual for one hardware unit (laptop, tower, small-form-factor or mini PC).
+## Uses, in order: visual.model (explicit path) → a model file found in assets/ by visual.match keywords
+## (ModelLibrary, auto-fitted to the data size) → a procedural placeholder built from the data.
+## Model contract for final art: origin bottom-centre, front toward +Z. Laptops: closed by default, a node
+## named "Lid" pivoting at the hinge (rotates about local X, negative = opens) and a MeshInstance3D named
+## "Screen". Models without them still work: they just don't open or show the live screen.
 
 const OPEN_ANGLE := -108.0
 
@@ -19,6 +20,7 @@ var _tween: Tween
 var _grade_tag: Node3D
 var _crack: MeshInstance3D
 var _model_id := ""
+var imported_path := ""           # the model file in use, "" = procedural placeholder
 
 
 func configure(u: UnitData) -> void:
@@ -30,14 +32,23 @@ func configure(u: UnitData) -> void:
 		c.queue_free()
 	var vis: Dictionary = Content.model(u.model_id).get("visual", {})
 	size = Vector3(float(vis.get("w", 0.32)), float(vis.get("h", 0.019)), float(vis.get("d", 0.21)))
-	var scene_path: String = vis.get("model", "")
-	if scene_path != "" and ResourceLoader.exists(scene_path):
-		var inst: Node3D = load(scene_path).instantiate()
+	lid_pivot = null
+	screen = null
+	var form := u.form()
+	var path: String = vis.get("model", "")
+	if path == "" or not ResourceLoader.exists(path):
+		path = ModelLibrary.find(vis.get("match", []))
+	var inst := ModelLibrary.instantiate_fitted(path, size, "x" if form == "laptop" else "y", float(vis.get("model_rot", 0.0)))
+	if inst:
 		add_child(inst)
+		imported_path = path
+		size = inst.get_meta("fitted_size", size)
 		lid_pivot = inst.find_child("Lid", true, false)
-		screen = inst.find_child("Screen", true, false)
-	else:
+		screen = inst.find_child("Screen", true, false) as MeshInstance3D
+	elif form == "laptop":
 		_build_placeholder(vis)
+	else:
+		_build_desktop(vis, form)
 	_build_overlays()
 	set_lid_open(false, false)
 	refresh(u)
@@ -99,13 +110,74 @@ func _build_placeholder(vis: Dictionary) -> void:
 	lid_pivot.add_child(logo)
 
 
+func _build_desktop(vis: Dictionary, form: String) -> void:
+	## Procedural desktop: case, front bezel with power button, drive/USB details, vents and a badge.
+	var body := Color(vis.get("body", "#26282c"))
+	var bezel := Color(vis.get("deck", "#17181b"))
+	var accent := Color(vis.get("accent", "#9aa3ad"))
+	var shell := Mats.color(body, 0.5, 0.3)
+	var front := Mats.color(bezel, 0.4, 0.1)
+	var dark := Mats.color(Color(0.04, 0.04, 0.045), 0.6)
+	var metal := Mats.color(accent.darkened(0.2), 0.35, 0.8)
+	var w := size.x
+	var h := size.y
+	var d := size.z
+	var fz := d / 2
+	if form == "mini":
+		# Square slab: rounded-ish body, top badge, front ports and a vent strip at the back.
+		Placeholders.box(self, Vector3(w, h * 0.92, d), Vector3(0, h * 0.46, 0), shell)
+		Placeholders.box(self, Vector3(w - 0.01, h * 0.08, d - 0.01), Vector3(0, h * 0.96, 0), Mats.color(body.lightened(0.08), 0.35, 0.3))
+		Placeholders.box(self, Vector3(w * 0.9, h * 0.5, 0.002), Vector3(0, h * 0.45, fz + 0.001), front)
+		for i in 2:
+			Placeholders.box(self, Vector3(0.012, 0.0045, 0.002), Vector3(-w * 0.3 + i * 0.018, h * 0.45, fz + 0.002), dark)
+		Placeholders.box(self, Vector3(0.006, 0.006, 0.002), Vector3(w * 0.36, h * 0.45, fz + 0.002), Mats.color(Color(0.2, 0.55, 1.0), 0.3))
+		Placeholders.box(self, Vector3(w * 0.8, h * 0.4, 0.002), Vector3(0, h * 0.5, -fz - 0.001), dark)
+		_badge(vis, accent, Vector3(0, h + 0.0006, 0), Vector3(-90, 0, 0), 0.0005)
+		return
+	# Tower / SFF: upright case.
+	Placeholders.box(self, Vector3(w, h, d), Vector3(0, h / 2, 0), shell, Vector3.ZERO, "Case")
+	Placeholders.box(self, Vector3(w + 0.002, h, 0.012), Vector3(0, h / 2, fz + 0.005), front, Vector3.ZERO, "Bezel")
+	# Feet
+	for x in [-1, 1]:
+		for z in [-1, 1]:
+			Placeholders.box(self, Vector3(0.02, 0.008, 0.03), Vector3(x * (w / 2 - 0.015), -0.002, z * (d / 2 - 0.03)), dark)
+	# Optical / drive bay, power button, front USB, vent slots
+	if form == "tower":
+		Placeholders.box(self, Vector3(w * 0.78, 0.042, 0.003), Vector3(0, h * 0.86, fz + 0.012), Mats.color(bezel.lightened(0.05), 0.35))
+		Placeholders.box(self, Vector3(w * 0.5, 0.004, 0.002), Vector3(0, h * 0.86, fz + 0.0135), dark)
+	else:
+		Placeholders.box(self, Vector3(0.004, h * 0.32, 0.003), Vector3(-w * 0.25, h * 0.72, fz + 0.012), dark)
+	Placeholders.box(self, Vector3(0.016, 0.016, 0.004), Vector3(w * 0.2, h * 0.94, fz + 0.012), metal, Vector3.ZERO, "PowerButton")
+	Placeholders.box(self, Vector3(0.004, 0.004, 0.001), Vector3(w * 0.2, h * 0.905, fz + 0.0125), Mats.color(Color(0.3, 0.75, 1.0), 0.2))
+	for i in 2:
+		Placeholders.box(self, Vector3(0.013, 0.005, 0.002), Vector3(-w * 0.15, h * 0.62 - i * 0.012, fz + 0.012), dark)
+	for i in 6:
+		Placeholders.box(self, Vector3(w * 0.6, 0.003, 0.002), Vector3(0, h * 0.12 + i * 0.012, fz + 0.012), dark)
+	# Side vent and rear I/O
+	Placeholders.box(self, Vector3(0.002, h * 0.25, d * 0.3), Vector3(w / 2 + 0.001, h * 0.6, -d * 0.15), dark)
+	Placeholders.box(self, Vector3(w * 0.7, h * 0.35, 0.002), Vector3(0, h * 0.7, -fz - 0.001), dark)
+	_badge(vis, accent, Vector3(0, h * 0.42, fz + 0.012), Vector3.ZERO, 0.0004)
+
+
+func _badge(vis: Dictionary, col: Color, pos: Vector3, rot: Vector3, px: float) -> void:
+	var logo := Label3D.new()
+	logo.text = str(vis.get("logo", ""))
+	logo.font_size = 48
+	logo.pixel_size = px
+	logo.modulate = col
+	logo.shaded = true
+	logo.rotation_degrees = rot
+	logo.position = pos
+	add_child(logo)
+
+
 func _build_overlays() -> void:
 	# Grade sticker (top of lid, front-right corner)
 	_grade_tag = Node3D.new()
 	_grade_tag.name = "GradeSticker"
 	var parent: Node3D = lid_pivot if lid_pivot else self
 	parent.add_child(_grade_tag)
-	_grade_tag.position = Vector3(size.x * 0.38, size.y * 0.4 + 0.0006, size.z * 0.85) if lid_pivot else Vector3(0, size.y + 0.001, 0)
+	_grade_tag.position = Vector3(size.x * 0.38, size.y * 0.4 + 0.0006, size.z * 0.85) if lid_pivot else Vector3(size.x * 0.25, size.y + 0.001, size.z * 0.25)
 	_grade_tag.visible = false
 	# Crack overlay on the screen
 	if screen:

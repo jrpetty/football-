@@ -14,9 +14,9 @@ func hold_action(player: Node, it: Item) -> Dictionary:
 	var u := it.unit
 	if u.order_id == 0:
 		return {"blocked": "Not sold — nothing to pack."}
-	for need in ["boxes", "labels", "tape"]:
+	for need in [Content.form(u.form()).get("box", "boxes"), "labels", "tape"]:
 		if int(Game.state.consumables.get(need, 0)) <= 0:
-			return {"blocked": "Out of %s — order more in the Shop." % need}
+			return {"blocked": "Out of %s — order more in the Shop." % String(need).replace("_", " ")}
 	var o: Dictionary = Game.state.orders.get(u.order_id, {})
 	var peer: int = player.peer_id if player and "peer_id" in player else Net.local_peer()
 	var secs := float(Content.econ("pack_secs", 4.0)) / (1.0 + 0.1 * Game.state.skill_level(Sim.player_key(peer), "packing"))
@@ -37,6 +37,7 @@ func hold_complete(_player: Node, action: String) -> void:
 
 func hover_info(player: Node) -> Dictionary:
 	var info := super.hover_info(player)
-	info.lines = ["Boxes %d · Labels %d · Tape %d" % [int(Game.state.consumables.get("boxes", 0)), int(Game.state.consumables.get("labels", 0)), int(Game.state.consumables.get("tape", 0))],
+	var c := Game.state.consumables
+	info.lines = ["Boxes %d · Large boxes %d · Labels %d · Tape %d" % [int(c.get("boxes", 0)), int(c.get("boxes_large", 0)), int(c.get("labels", 0)), int(c.get("tape", 0))],
 		"Place a SOLD unit here, then hold [E] to pack it."]
 	return info

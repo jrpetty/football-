@@ -87,13 +87,13 @@ func c_pick_up(peer: int, a: Dictionary) -> Dictionary:
 	var held := state.held_by(peer)
 	if not held.is_empty():
 		# Stacks are one kind only (a pile of laptops), and small things (USBs) are carried alone.
-		if held[0].kind != it.kind or Item.carry_weight(it.kind) == 0:
+		if held[0].stack_key() != it.stack_key() or it.weight() == 0:
 			return _fail("Hands full — put that down first.")
 		var carried := 0
 		for h: Item in held:
-			carried += Item.carry_weight(h.kind)
-		if carried + Item.carry_weight(it.kind) > carry_capacity(peer):
-			return _fail("You can only carry %d at once." % carry_capacity(peer))
+			carried += h.weight()
+		if carried + it.weight() > carry_capacity(peer):
+			return _fail("You can only carry %d at once." % carry_capacity(peer) if it.weight() == 1 else "That's heavy — one at a time.")
 	_leave_slot_side_effects(it)
 	state.set_loc(it, {"t": "held", "peer": peer, "i": held.size()})
 	if it.kind == Item.KIND_UNIT:
@@ -325,13 +325,13 @@ func repair_preview(peer: int, it: Item) -> Dictionary:
 			if blocked_reason == "":
 				blocked_reason = "%s needs Repair level %d (you're %d)." % [LotGenerator.fault_text(f), need, level]
 			continue
-		var have := int(state.parts.get(part_id, 0))
+		var have := int(state.parts.get(part_id, 0)) if part_id != "none" else 1
 		if have <= 0:
 			if blocked_reason == "":
 				blocked_reason = "Need part: %s (0 in bins)." % pdef.get("name", part_id)
 			continue
 		var secs := float(pdef.get("repair_secs", 4.0)) / (1.0 + 0.15 * (level - need))
-		return {"can": true, "fault": f.id, "part": part_id, "part_name": pdef.get("name", part_id),
+		return {"can": true, "fault": f.id, "part": part_id, "part_name": pdef.get("name", "no part needed" if part_id == "none" else part_id),
 			"have": have, "secs": secs, "text": LotGenerator.fault_text(f)}
 	return {"can": false, "why": blocked_reason}
 
@@ -350,7 +350,7 @@ func c_repair(peer: int, a: Dictionary) -> Dictionary:
 			f.fixed = true
 			var pdef := Content.part(pv.part)
 			BusinessStats.on_repair(state, u, f.id, pv.part, 0 if pdef.get("reusable", false) else int(pdef.get("price", 0)), peer)
-			if not pdef.get("reusable", false):
+			if pv.part != "none" and not pdef.get("reusable", false):
 				state.parts[pv.part] = int(state.parts.get(pv.part, 0)) - 1
 				if state.parts[pv.part] <= 0:
 					state.parts.erase(pv.part)
@@ -523,17 +523,17 @@ func c_pack(peer: int, a: Dictionary) -> Dictionary:
 	var u := it.unit
 	if u.order_id == 0 or not state.orders.has(u.order_id):
 		return _fail("No order for this unit.")
-	for need in ["boxes", "labels", "tape"]:
+	var box: String = Content.form(u.form()).get("box", "boxes")
+	for need in [box, "labels", "tape"]:
 		if int(state.consumables.get(need, 0)) <= 0:
-			return _fail("Out of %s — order more from the Shop." % need)
-	state.consumables["boxes"] -= 1
-	state.consumables["labels"] -= 1
-	state.consumables["tape"] -= 1
+			return _fail("Out of %s — order more from the Shop." % need.replace("_", " "))
+	for need in [box, "labels", "tape"]:
+		state.consumables[need] = int(state.consumables[need]) - 1
 	var order: Dictionary = state.orders[u.order_id]
 	var slot_id: String = it.loc.slot
 	state.set_loc(it, {"t": "in", "item": 0})
 	var pkg := state.new_item(Item.KIND_PACKAGE)
-	pkg.data = {"order_id": order.id, "unit": it.id, "buyer": order.buyer, "model": order.model}
+	pkg.data = {"order_id": order.id, "unit": it.id, "buyer": order.buyer, "model": order.model, "form": u.form()}
 	it.loc = {"t": "in", "item": pkg.id}
 	state.mark("item", it.id)
 	state.set_loc(pkg, {"t": "slot", "slot": slot_id})
@@ -667,12 +667,13 @@ func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO) -> Array:
 		return []
 	var pallets: Array = []
 	var units: Array = lot.get("units", [])
-	var per_pallet := 20
+	var form := Content.model_form(String(units[0].get("model_id", ""))) if not units.is_empty() else "laptop"
+	var per_pallet := int(Content.form(form).get("pallet", {}).get("per_pallet", 20))
 	var unit_price := int(round(float(lot.get("paid", lot.total_price)) / maxf(float(lot.count), 1.0)))
 	var idx := 0
 	while idx < units.size():
 		var pallet := state.new_item(Item.KIND_PALLET)
-		pallet.data = {"lot": lot_id, "seller_name": lot.seller_name}
+		pallet.data = {"lot": lot_id, "seller_name": lot.seller_name, "form": form}
 		var off := Vector3(pallets.size() * 1.35, 0, 0)
 		state.set_loc(pallet, {"t": "loose", "p": [drop_pos.x + off.x, drop_pos.y, drop_pos.z + off.z], "r": [0, 0, 0, 1]})
 		for k in per_pallet:
