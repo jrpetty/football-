@@ -1,0 +1,33 @@
+{
+  "_comment": "Source models -> game-ready assets. match = substring of the source .glb file name. rot_y turns the model so its front faces +Z. size: give one axis for a uniform scale (metres), or x/y/z for an exact box (rack servers). kind 'laptop' splits off a hinged Lid + Screen. colour = flat PBR colour for untextured sources. tris = triangle budget for LOD0 (Godot builds smaller LODs from it).",
+  "models": [
+    {"match": "laptop_tier1_student", "category": "laptops", "name": "laptop_rugged", "kind": "laptop", "rot_y": 0, "size": {"x": 0.31}, "tris": 45000,
+     "screen": [0.84, 0.13, 0.93], "tier": "Tier 1: rugged student/education laptop"},
+    {"match": "laptop_tier2_office", "category": "laptops", "name": "laptop_office", "kind": "laptop", "rot_y": 0, "size": {"x": 0.322}, "tris": 45000,
+     "screen": [0.95, 0.06, 0.96], "tier": "Tier 2: 14in business/office laptop"},
+    {"match": "laptop_tier3_ultralig", "category": "laptops", "name": "laptop_ultralight", "kind": "laptop", "rot_y": 0, "size": {"x": 0.300}, "tris": 45000,
+     "screen": [0.96, 0.05, 0.97], "tier": "Tier 3: premium 13in ultralight"},
+    {"match": "laptop_tier4_mainstre", "category": "laptops", "name": "laptop_mainstream", "kind": "laptop", "rot_y": 0, "size": {"x": 0.360}, "tris": 45000,
+     "screen": [0.95, 0.06, 0.96], "tier": "Tier 4: 15.6in mainstream laptop with numpad"},
+    {"match": "laptop_tier6_gaming", "category": "laptops", "name": "laptop_gaming", "kind": "laptop", "rot_y": 0, "size": {"x": 0.395}, "tris": 50000,
+     "screen": [0.92, 0.08, 0.95], "tier": "Tier 6: 17in gaming laptop (no hardware model uses it yet)"},
+
+    {"match": "custom_mini_pc", "category": "desktops", "name": "desktop_mini", "kind": "prop", "rot_y": 0, "size": {"x": 0.19}, "tris": 30000,
+     "colour": "#26282c", "roughness": 0.5, "metallic": 0.2, "tier": "Desktop: ultra-compact mini PC"},
+    {"match": "custom_sff_desktop", "category": "desktops", "name": "desktop_sff", "kind": "prop", "rot_y": -90, "size": {"y": 0.30}, "tris": 40000,
+     "tier": "Desktop: slim small-form-factor (stands on its feet)"},
+    {"match": "custom_mid_tower_pc", "category": "desktops", "name": "desktop_tower", "kind": "prop", "rot_y": 0, "size": {"y": 0.42}, "tris": 40000,
+     "colour": "#1e2023", "roughness": 0.45, "metallic": 0.35, "tier": "Desktop: office mid-tower"},
+
+    {"match": "unbranded_mid_tower_s", "category": "servers", "name": "server_tower", "kind": "prop", "rot_y": 0, "size": {"y": 0.44}, "tris": 45000,
+     "tier": "Server: entry tower server"},
+    {"match": "unbranded_microserver", "category": "servers", "name": "server_micro", "kind": "prop", "rot_y": -90, "size": {"y": 0.26}, "tris": 45000,
+     "tier": "Server: 4-bay microserver"},
+    {"match": "server_1u_compute", "category": "servers", "name": "server_1u", "kind": "prop", "rot_y": -90, "size": {"x": 0.482, "y": 0.0445, "z": 0.72}, "tris": 45000,
+     "tier": "Server: 1U rack compute node"},
+    {"match": "realistic_server_unit", "category": "servers", "name": "server_2u", "kind": "prop", "rot_y": 0, "size": {"x": 0.482, "y": 0.0875, "z": 0.72}, "tris": 50000,
+     "tier": "Server: 2U general-purpose rack server"},
+    {"match": "server_3u_storage", "category": "servers", "name": "server_3u_storage", "kind": "prop", "rot_y": 0, "size": {"x": 0.482, "y": 0.131, "z": 0.72}, "tris": 50000,
+     "tier": "Server: 3U storage server (16 bays)"}
+  ]
+}

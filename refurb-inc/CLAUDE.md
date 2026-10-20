@@ -345,14 +345,27 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
   - The early bottleneck is waiting to be tested (one bench, about 6.4 units a day of capacity).
 - The PaneOS taskbar is icon-only (tooltips) so every app fits.
 
+## Hardware models (Jon's Meshy models, 2026-10-20)
+- 13 AI models (5 laptops, 3 desktops, 5 servers) went through `tools/model_pipeline/` (see `docs/MODEL_CONTRACT.md` → AI-generated models).
+  - Output is `assets/models/{laptops,desktops,servers}/<name>/` at 40–75k tris LOD0 with Godot LODs and 2K JPEG PBR textures, 41 MB in total. The raw files were 700 MB.
+  - Raw sources are NOT in git. They live in Jon's `Desktop/Refurb INC/assets` folder.
+- Laptop tiers → data: rugged = Kestrel Swift 14; office = Prospect 5420/7390, Folio 840, Meridian T14; ultralight = Meridian X13, Aura 13; mainstream = Vantage 3510, Folio 650, Edge E15.
+  - Gaming has no model in `hardware_models.json` yet.
+- LaptopView reads the scene metadata, so one mesh serves several models:
+  - `footprint` scales the mesh to the JSON width and sets the real depth/height for collision and stacking;
+  - `lid_open_deg` is the model's own open angle (110–115°);
+  - `sticker_pos` places the grade sticker.
+- Desktops/servers have wrapper scenes only. M3 adds the item types that use them.
+- Decision: hardware budget raised from <8k to ~40–75k tris (Jon: models must stay close to what he sent). Godot LODs keep piles cheap.
+- `tools/model_showcase.tscn` = visual QA renders for all models.
+
 ## Next up
-1. Jon sends his generated models → wire into ModelSlots/JSON, check scale/orientation via `tools/screenshot.tscn`, commit.
-2. Lighting pass with real assets: bake LightmapGI in the editor, HDRI sky, decals (oil stains, scuffs), more clutter.
-3. Juice: item outline highlight, pick-up/put-down animation curves, particles (dust in the door light, cardboard bits), screen glow light on benches, footstep surfaces, music.
-4. M2: GodotSteam.
-5. M3 content per roadmap (desktops/servers/switches, L2–3 repair, strip-down station + donor parts, custom server builds, business orders, website channel, reputation tiers, random events).
+1. Lighting pass with real assets: bake LightmapGI in the editor, HDRI sky, decals (oil stains, scuffs), more clutter.
+2. Juice: item outline highlight, pick-up/put-down animation curves, particles (dust in the door light, cardboard bits), screen glow light on benches, footstep surfaces, music.
+3. M2: GodotSteam.
+4. M3 content per roadmap (desktops/servers/switches, L2–3 repair, strip-down station + donor parts, custom server builds, business orders, website channel, reputation tiers, random events).
 
 ## Known limitations / notes
-- Placeholder art is procedural boxes with real PBR textures; it's the frame for Jon's models, not final.
+- Laptops (and the ready desktop/server scenes) use Jon's models; stations, props and vehicles are still procedural boxes with real PBR textures.
 - The office PC and bench screens use SubViewports (cheap at current counts; revisit when there are 40-slot racks).
 - No staff/mess/automation yet (M4–M5) — the station/command architecture is designed so AI workers issue the same commands as players.

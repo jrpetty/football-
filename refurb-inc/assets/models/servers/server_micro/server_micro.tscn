@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="ArrayMesh" path="res://assets/models/servers/server_micro/mesh.res" id="1"]
+[ext_resource type="Material" path="res://assets/models/servers/server_micro/material.tres" id="2"]
+
+
+[node name="ServerMicro" type="Node3D"]
+metadata/footprint = Vector3(0.34944, 0.26000, 0.36178)
+metadata/source_tier = "Server: 4-bay microserver"
+
+
+[node name="Model" type="MeshInstance3D" parent="."]
+mesh = ExtResource("1")
+surface_material_override/0 = ExtResource("2")

@@ -13,7 +13,7 @@ collisions, snap points, scripts and lights live on the parent scene, not on the
 | Facing | **Front faces +Z.** For a workbench, that's the side you stand at; for a vehicle, the cab end. This is glTF's default "forward", so most exports are already right. |
 | Format | `.glb` (glTF binary) preferred. One prop per file. |
 | Folder | `assets/models/<category>/<prop_name>/<prop_name>.glb` plus its textures |
-| Poly budget | Small props < 5k tris · laptops < 8k · benches/shelves < 15k · vehicles < 40k |
+| Poly budget | Small props < 5k tris · hardware (laptops/desktops/servers) 40–75k LOD0 with Godot auto-LODs · benches/shelves < 15k · vehicles < 40k |
 | Materials | PBR (albedo / normal / roughness, metallic where needed). 1–2 materials per prop is ideal. |
 | Branding | **Fictional brands only** (Corvex, Halden, Northstar, Brightline, Kestrel, Vortex, Arcturo, Linkwell, Flogit). No real logos. |
 
@@ -47,8 +47,36 @@ Leave it `""` to use the procedural laptop.
 | Footprint | Match the model's `w` / `d` / `h` in the JSON (or update them). They size the collision and the stacking. |
 | Optional | Separate keycap meshes are not needed. Missing keys/cracks are overlays. |
 
-Ten models are defined: Corvex Prospect 5420 / 7390 / Vantage 3510, Halden Folio 840 G7 / 650 G5, Northstar Meridian T14 / X13 / Edge E15, Brightline Aura 13, Kestrel Swift 14.
-A few good base meshes plus re-coloured materials will cover them.
+Optional root metadata (the pipeline below writes it): `footprint` (closed W×H×D; LaptopView scales the scene so its width
+matches the JSON `w` and takes depth/height from the model), `lid_open_deg`, `sticker_pos` (grade sticker, in Lid space).
+
+Ten models are defined. They share five meshes (one per tier):
+
+| Mesh (`assets/models/laptops/…`) | Tier | Used by |
+|---|---|---|
+| `laptop_rugged` | 1: rugged student/education | Kestrel Swift 14 |
+| `laptop_office` | 2: 14in business | Corvex Prospect 5420 / 7390, Halden Folio 840 G7, Northstar Meridian T14 |
+| `laptop_ultralight` | 3: premium 13in ultralight | Northstar Meridian X13, Brightline Aura 13 |
+| `laptop_mainstream` | 4: 15.6in with numpad | Corvex Vantage 3510, Halden Folio 650 G5, Northstar Edge E15 |
+| `laptop_gaming` | 6: 17in gaming (RGB) | nothing yet: ready for a gaming model |
+
+### Desktops and servers (ready for Milestone 3)
+Wrapper scenes exist but nothing spawns them yet. Each is one `Model` MeshInstance3D, front +Z, origin bottom-centre, with `footprint` metadata.
+Desktops: `desktop_mini` (ultra-compact), `desktop_sff` (slim tower on feet), `desktop_tower` (office mid-tower).
+Servers: `server_tower`, `server_micro` (4-bay), `server_1u`, `server_2u`, `server_3u_storage`. Rack units are scaled to an exact 19in box: 0.482 m wide with ears, 44.5 mm per U, 0.72 m deep.
+
+## AI-generated models (Meshy etc.): the pipeline
+Raw AI exports are far too heavy: 0.2–3.7M tris, 4K textures, 7–130 MB each, normalised to a 1.9 m box, and laptops arrive as one open mesh.
+`tools/model_pipeline/` converts them. It has its own tiny Godot runner project, so the main project doesn't need importing.
+
+    GODOT=<path to Godot 4.7 console exe> tools/model_pipeline/run.sh "<folder with the .glb files>" [name filter]
+
+- `models.json` lists each source: the filename substring, output category/name, the `rot_y` that turns its front to +Z, the real-world size (one axis = uniform scale, or x/y/z for rack servers), the triangle budget, and a flat colour for untextured sources.
+- Simplification uses Godot's own meshoptimizer path (ImporterMesh LODs), so the source normals and UVs are kept exactly. (Quadric decimation with rebuilt normals made surfaces look crumpled.)
+- Textures are written as 2048 px JPEG (albedo, glTF metallic-roughness as `orm`, normal) in a `material.tres`. Their `.import` files are set to VRAM-compressed, with normal-map mode on for `normal.jpg`.
+- Laptops: the pipeline finds the palm rest height, fits the open lid as a line and cuts the mesh exactly along a plane across the bottom of the lid (attributes interpolated, so the hinge edge is clean). It then closes the lid about the hinge into a `Lid` node, stretches the lid to the base's depth (AI lids come out short), adds the `Screen` quad and a dark `BottomCap` (AI shells are open underneath), and writes the metadata above. Per-model `screen` = [width fraction, start, end along the lid].
+- Check the result with `tools/model_showcase.tscn` (`godot --path . res://tools/model_showcase.tscn`). It renders every model to `tools/out/models_*.png`: laptops open with a test card (the red border should sit just inside the bezel, yellow bar at the top), closed, and from behind. Desktops and servers sit in a row.
+- Raw sources stay outside the repo (they'd blow the Git LFS quota). Keep them somewhere safe; the pipeline reads them from any folder.
 
 ### Stations and props (wrapper scenes)
 

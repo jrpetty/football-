@@ -5,6 +5,8 @@ extends Node3D
 ##   origin bottom-centre, front (touchpad) toward +Z, closed by default;
 ##   a node named "Lid" pivoting at the hinge (rotates about local X, negative = opens);
 ##   a MeshInstance3D named "Screen" whose surface shows the screen (material is replaced at runtime).
+## Optional root metadata (written by tools/model_pipeline): footprint (closed W×H×D, the model is scaled so its
+## width matches visual.w), lid_open_deg, sticker_pos (grade sticker, in Lid space).
 
 const OPEN_ANGLE := -108.0
 
@@ -19,6 +21,8 @@ var _tween: Tween
 var _grade_tag: Node3D
 var _crack: MeshInstance3D
 var _model_id := ""
+var _open_angle := OPEN_ANGLE
+var _sticker_pos = null
 
 
 func configure(u: UnitData) -> void:
@@ -28,6 +32,8 @@ func configure(u: UnitData) -> void:
 	_model_id = u.model_id
 	for c in get_children():
 		c.queue_free()
+	_open_angle = OPEN_ANGLE
+	_sticker_pos = null
 	var vis: Dictionary = Content.model(u.model_id).get("visual", {})
 	size = Vector3(float(vis.get("w", 0.32)), float(vis.get("h", 0.019)), float(vis.get("d", 0.21)))
 	var scene_path: String = vis.get("model", "")
@@ -36,6 +42,14 @@ func configure(u: UnitData) -> void:
 		add_child(inst)
 		lid_pivot = inst.find_child("Lid", true, false)
 		screen = inst.find_child("Screen", true, false)
+		var fp: Vector3 = inst.get_meta("footprint", Vector3.ZERO)
+		if fp.x > 0.0:
+			# One mesh can serve several models: scale it to this model's width and take its real depth/height.
+			var s := size.x / fp.x
+			inst.scale = Vector3.ONE * s
+			size = fp * s
+		_open_angle = float(inst.get_meta("lid_open_deg", OPEN_ANGLE))
+		_sticker_pos = inst.get_meta("sticker_pos", null)
 	else:
 		_build_placeholder(vis)
 	_build_overlays()
@@ -105,7 +119,10 @@ func _build_overlays() -> void:
 	_grade_tag.name = "GradeSticker"
 	var parent: Node3D = lid_pivot if lid_pivot else self
 	parent.add_child(_grade_tag)
-	_grade_tag.position = Vector3(size.x * 0.38, size.y * 0.4 + 0.0006, size.z * 0.85) if lid_pivot else Vector3(0, size.y + 0.001, 0)
+	if _sticker_pos != null and lid_pivot:
+		_grade_tag.position = _sticker_pos
+	else:
+		_grade_tag.position = Vector3(size.x * 0.38, size.y * 0.4 + 0.0006, size.z * 0.85) if lid_pivot else Vector3(0, size.y + 0.001, 0)
 	_grade_tag.visible = false
 	# Crack overlay on the screen
 	if screen:
@@ -160,7 +177,7 @@ func set_lid_open(open: bool, animate: bool = true) -> void:
 	if _tween:
 		_tween.kill()
 	_lid_open = open
-	var target := OPEN_ANGLE if open else 0.0
+	var target := _open_angle if open else 0.0
 	if animate and is_inside_tree():
 		_tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		_tween.tween_property(lid_pivot, "rotation_degrees:x", target, 0.45)
