@@ -18,6 +18,7 @@ const STAND_HEIGHT := 1.78
 const CROUCH_HEIGHT := 1.15
 const EYE_OFFSET := 0.12
 const REACH := 2.7
+const AIM_ASSIST_DEG := 9.0
 const TAP_TIME := 0.2
 const POSE_HZ := 20.0
 const TEA_MINUTES := 60.0
@@ -275,6 +276,12 @@ func _update_interaction(delta: float) -> void:
 		var near: ItemView = node.item_view_near(hit)
 		if near:
 			node = near
+	# Look-to-pick: with empty hands, anything carryable close to the crosshair is targeted, so you don't
+	# have to line up exactly on a laptop on a shelf or pallet (stations like the PC keep their focus).
+	if held.is_empty() and (node == null or node.has_method("item_view_near") or (node is ItemView and (node as ItemView).kind == Item.KIND_PALLET)):
+		var assist := _aim_assist_item(hit if ray.is_colliding() else Vector3.INF)
+		if assist:
+			node = assist
 	var info: Dictionary = {}
 	var place_slot: SnapSlot = null
 	if not held.is_empty():
@@ -361,6 +368,33 @@ func _set_place_slot(s: SnapSlot) -> void:
 	_place_slot = s
 	if s:
 		s.show_hint(true)
+
+
+func _aim_assist_item(ray_hit: Vector3) -> ItemView:
+	var lr := LevelRoot.current
+	if lr == null or camera == null:
+		return null
+	var origin := camera.global_position
+	var fwd := -camera.global_basis.z
+	var hit_d := origin.distance_to(ray_hit) if ray_hit != Vector3.INF else INF
+	var best: ItemView = null
+	var best_ang := deg_to_rad(AIM_ASSIST_DEG)
+	for v: ItemView in lr.item_views.values():
+		if not is_instance_valid(v) or not v.visible or v.kind == Item.KIND_PALLET:
+			continue
+		var it := Game.state.get_item(v.item_id)
+		if it == null or not it.is_carryable() or it.loc.get("t") == "held":
+			continue
+		var centre := v.global_position + Vector3(0, v.visual_size.y * 0.5, 0)
+		var to := centre - origin
+		var dist := to.length()
+		if dist > REACH + 0.3 or dist < 0.05 or hit_d < dist - 0.6:     # out of reach, or behind a wall
+			continue
+		var ang := fwd.angle_to(to / dist)
+		if ang < best_ang:
+			best_ang = ang
+			best = v
+	return best
 
 
 func _find_interactable(collider: Object) -> Node:

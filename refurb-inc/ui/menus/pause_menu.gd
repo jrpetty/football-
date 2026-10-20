@@ -34,6 +34,7 @@ func _ready() -> void:
 	_main.add_theme_constant_override("separation", 10)
 	panel.add_child(_main)
 	_main.add_child(UiStyle.label("Paused", 32, UiStyle.TEXT))
+	_main.add_child(UiStyle.label(BuildInfo.STAMP, 14, UiStyle.MUTED))
 	_btn("Resume", close)
 	_btn("Settings", _show_settings)
 	_btn("Save game", func():

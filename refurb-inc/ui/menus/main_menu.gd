@@ -69,7 +69,7 @@ func _ready() -> void:
 		_settings.visible = false
 		_panel.visible = true)
 	v.add_child(_settings)
-	var ver := UiStyle.label("v%s · early development build · Steam co-op coming in Milestone 2" % ProjectSettings.get_setting("application/config/version", "0.1"), 13, UiStyle.MUTED)
+	var ver := UiStyle.label("v%s · %s · early development build" % [ProjectSettings.get_setting("application/config/version", "0.1"), BuildInfo.STAMP], 15, UiStyle.MUTED)
 	ver.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	ver.position = Vector2(24, -36)
 	add_child(ver)
