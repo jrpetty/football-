@@ -11,7 +11,7 @@
 import { createRng } from '../core/rng.ts';
 import type { ModelHandle } from '../core/types.ts';
 import { buildMovePrompt, extractMove } from './prompt.ts';
-import { GameClock, timedComplete, type ClockOptions } from './clock.ts';
+import { GameClock, allowanceError, timedComplete, type ClockOptions } from './clock.ts';
 import type { ArenaClockSpec, ArenaGame, ArenaMove, GameClockRecord, GameConfig, GameOutcome, MoveAttempt, Side } from './types.ts';
 
 export interface Meter {
@@ -121,6 +121,7 @@ export async function playGame(o: PlayGameOptions): Promise<PlayedGame> {
     let accepted: string | null = null;
     let charged = 0;
     let flagged = false;
+    let allowanceCut = false;
 
     for (let attempt = 1; attempt <= 2 && accepted === null; attempt++) {
       abortIfNeeded(o.signal);
@@ -128,7 +129,8 @@ export async function playGame(o: PlayGameOptions): Promise<PlayedGame> {
       o.onTurn?.(side, moves.length + 1, attempt, clock?.snapshot());
       const prev = attempts[attempts.length - 1];
       // Speed games: this move's allowance from the clock (the Random Baseline answers instantly and has none).
-      const plan = clock && spec && !clock.isInstant(side) ? clock.plan(side, spec.turnsLeft(state, side, clock.made[side], config), spec.minTokens) : null;
+      // After a reply that used up its allowance before the answer line, the retry gets a small fixed allowance.
+      const plan = clock && spec && !clock.isInstant(side) ? (allowanceCut ? clock.retryPlan(side, spec) : clock.plan(side, spec.turnsLeft(state, side, clock.made[side], config), spec.minTokens)) : null;
       const prompt = buildMovePrompt({
         game,
         state,
@@ -164,7 +166,12 @@ export async function playGame(o: PlayGameOptions): Promise<PlayedGame> {
       const reply = timed.reply!;
       const extracted = extractMove(reply.text);
       let error: string | undefined;
-      if (extracted === null) {
+      allowanceCut = false;
+      if (extracted === null && plan && reply.stopReason === 'max_tokens') {
+        // Speed games: the reply ran out of its clock-sized allowance before the MOVE line.
+        error = allowanceError(spec!);
+        allowanceCut = true;
+      } else if (extracted === null) {
         if (!reply.text.trim()) error = reply.stopReason === 'refusal' ? 'The reply was a refusal with no move.' : 'The reply was empty.';
         else if (reply.stopReason === 'max_tokens') error = 'The reply was cut off at the output-token limit before the "MOVE:" line. Think more briefly.';
         else error = 'The reply did not contain a "MOVE: <move>" line.';

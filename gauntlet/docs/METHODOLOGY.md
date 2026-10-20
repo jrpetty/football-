@@ -547,20 +547,29 @@ The same fair-play rules apply.
 * **The allowance (why a compliant model does not flag).** Each call's output-token limit is sized from the clock:
   E = the game's expected turns left (chess max(10, 40 − moves made), Connect Four max(8, 21 − moves made), poker
   about 2.5 decisions per hand left, debate the speeches left) and M = the most turns that could still be needed
-  (chess and Connect Four up to the move cap, poker 3.5 per hand left, debate the speeches left). A reserve of
-  (M − 1) minimal answers (first-token delay + a minimal reply, with margins) is kept back so a player can always
-  answer up to the cap; the rest is the pool. Suggested time = pool / E; the turn's budget = 2 × suggested (for the
-  last few speeches of a debate the factor shrinks towards 1) and at most 70% of the pool. Tokens = measured
-  speed × (budget − first-token delay), never more than the measured whole-call throughput × budget, never below an
-  equal share of the time left over the most turns possible, between a small floor (12 tokens for board games, 40
-  for poker, 260 for a speech) and the normal output maximum. Speed is measured from that player's earlier calls in
-  this tournament (before any measurement: 40 tokens/s and a 2 s first-token delay; a first-token delay longer than
-  half the call is treated as hidden reasoning). Each turn then spends at most about 2/E of the free pool, so the
-  clock decays geometrically. A unit test plays simulated players at 20–200 tokens/s with 0.3–3 s first-token
-  delays and ±20% speed jitter, each using its FULL allowance every turn, through chess games to the move cap, full
-  poker sessions and debates: none flags at 4+0 (nor at 3+2, 5+0 or 10+0); a simulated model that ignores its
-  allowance loses on time. At 1+0, and at 2+1 with a 3 s first-token delay, a 60-move chess game cannot be finished by
-  any model that slow to start (the first-token delays alone exceed the clock).
+  (chess and Connect Four up to the move cap, poker 3.5 per hand left, debate the speeches left). A minimal answer
+  is the first-token delay plus a minimal reply (12 tokens for board games, 40 for poker, 260 for a speech), with
+  margins (+15% delay, +25% generation). The pool is the clock minus at most 12 minimal answers, so most of the
+  clock is usable from move 1. Hard limit: no turn may leave less than (M − 1) minimal answers, so a player can
+  always still answer every turn up to the move cap. A long game's turn may take up to 2.5 × pool / (E + M) (the
+  last few speeches of a debate share the pool instead), at most 70% of the pool; the suggested time is half of
+  what the turn may take. Tokens = measured speed × (that time − first-token delay), never more than the measured
+  whole-call throughput × that time. A useful floor of 400 tokens (a short reasoned move) applies whenever the clock
+  can afford it: at most 60% of the pool and 1.5 × an equal share of the generation time left over the most turns
+  possible. Everything is clamped to the normal output maximum. Speed comes from the player's own calls in this
+  tournament, else the same model configuration's earlier calls (earlier tournaments, then Gauntlet results; never
+  another model's numbers), else a conservative 40 tokens/s with a 2 s first-token delay; the delay is the median,
+  and a first-token delay longer than half the call is treated as hidden reasoning. Models that reason (effort or
+  thinking configured) are told plainly when the allowance is small ("Answer at once with very little reasoning:
+  you only have about N tokens."). A reply that runs out of its allowance before its answer line gets a retry with
+  "You ran out of your token allowance before giving a move — give your move immediately, no reasoning." and a
+  small fixed allowance just big enough for the answer line (48 tokens chess, 32 Connect Four, 64 poker, 320 a
+  speech). A unit test plays simulated players at 20–200 tokens/s with 0.3–3 s first-token delays and ±20% speed
+  jitter, each using its FULL allowance every turn, through chess games to the move cap, full poker sessions and
+  debates, with and without hidden reasoning and with and without an earlier measurement: none flags at 4+0 (nor
+  at 3+2, 5+0 or 10+0); a simulated model that ignores its allowance loses on time. At 1+0, and at 2+1 with a 3 s
+  first-token delay, a 60-move chess game cannot be finished by any model that slow to start (the first-token
+  delays alone exceed the clock).
 * **Copy & paste contestants are excluded from speed games.** A pasted reply cannot be timed fairly; planning
   refuses them ("Speed games need API models; switch to Classic to include copy & paste models").
 * **Spending limit.** Enforced per call exactly as in §9: every move and judge call reserves its worst case first,

@@ -19,7 +19,7 @@ import type { ModelReply } from '../core/types.ts';
 import type { ArenaClockSpec, Side, TimeControl } from './types.ts';
 
 /** Bump when the clock section, reminder or urgency text changes (part of every clocked fingerprint, never classic ones). */
-export const CLOCK_PROMPT_VERSION = '1';
+export const CLOCK_PROMPT_VERSION = '2';
 
 /** New tournaments play Speed 4+0 unless the owner picks something else. */
 export const DEFAULT_TIME_CONTROL: TimeControl = { minutes: 4, incrementSec: 0 };
@@ -159,19 +159,34 @@ export interface SpeedEstimate {
   measured: boolean;
 }
 
+/** A call's tokens are assumed to take at least this long to generate when splitting off its delay. */
+export const SPLIT_TOKENS_PER_SEC = 150;
+
 /** Highest generation speed the meter will believe (faster models are under-, never over-estimated). */
 export const MAX_PLAUSIBLE_TOKENS_PER_SEC = 1000;
 
 /**
  * One player's measured speed in this tournament (its most recent 30 calls). Each call is split into a delay
- * and a generation part: delay = the first-token time, but at most half the call. The cap keeps the estimate
- * safe for models whose reasoning is hidden (their first visible token arrives late although their output
- * tokens include the reasoning): such a call counts as half delay, half generation, so the speed is never
- * overstated more than the safety margins allow. Speed = total tokens / total generation time; delay = the
- * mean delay.
+ * and a generation part: delay = the first-token time, but at most half the call (unless its tokens could not
+ * have been generated faster than SPLIT_TOKENS_PER_SEC, as in a short reply that is mostly delay). The cap keeps
+ * the estimate safe for models whose reasoning is hidden (their first visible token arrives late although their
+ * output tokens include the reasoning). Speed = total tokens / total generation time; delay = the median delay.
+ * Until the player has made a call in this tournament, the same model configuration's earlier calls are used
+ * (earlier tournaments, then Gauntlet runs; never another model's), then the conservative default.
  */
 export class SpeedMeter {
   private samples: SpeedSample[] = [];
+  /** The same model configuration's earlier calls (earlier tournaments, then Gauntlet runs): used until it has its own. */
+  private readonly prior: SpeedSample[];
+
+  constructor(prior: SpeedSample[] = []) {
+    this.prior = prior.filter((s) => s.totalMs > 0 && s.outputTokens >= 0).slice(0, 30);
+  }
+
+  /** Where the estimate comes from: this tournament, earlier measurements of the same model, or the default. */
+  get source(): 'tournament' | 'earlier' | 'default' {
+    return this.samples.length ? 'tournament' : this.prior.length ? 'earlier' : 'default';
+  }
 
   observe(s: SpeedSample): void {
     if (!(s.totalMs > 0) || !(s.outputTokens >= 0)) return;
@@ -184,22 +199,24 @@ export class SpeedMeter {
   }
 
   estimate(): SpeedEstimate {
-    if (!this.samples.length) return { ...DEFAULT_SPEED, throughputPerSec: DEFAULT_SPEED.tokensPerSec, measured: false };
-    let delay = 0;
+    const samples = this.samples.length ? this.samples : this.prior;
+    if (!samples.length) return { ...DEFAULT_SPEED, throughputPerSec: DEFAULT_SPEED.tokensPerSec, measured: false };
+    const delays: number[] = [];
     let tokens = 0;
     let gen = 0;
     let total = 0;
-    for (const s of this.samples) {
+    for (const s of samples) {
       const ttft = s.ttftMs ?? Math.min(s.totalMs, DEFAULT_SPEED.firstTokenMs);
-      const d = Math.max(0, Math.min(ttft, s.totalMs / 2));
-      delay += d;
+      const d = Math.max(0, Math.min(ttft, Math.max(s.totalMs / 2, s.totalMs - (s.outputTokens / SPLIT_TOKENS_PER_SEC) * 1000)));
+      delays.push(d);
       if (s.outputTokens >= 8) {
         tokens += s.outputTokens;
         gen += Math.max(1, s.totalMs - d);
         total += s.totalMs;
       }
     }
-    const firstTokenMs = Math.max(50, delay / this.samples.length);
+    delays.sort((a, b) => a - b);
+    const firstTokenMs = Math.max(50, delays[Math.floor(delays.length / 2)]!);
     const tokensPerSec = tokens ? Math.max(1, Math.min(MAX_PLAUSIBLE_TOKENS_PER_SEC, (tokens / gen) * 1000)) : DEFAULT_SPEED.tokensPerSec;
     const throughputPerSec = tokens ? Math.max(1, Math.min(tokensPerSec, (tokens / total) * 1000)) : DEFAULT_SPEED.tokensPerSec;
     return { tokensPerSec, firstTokenMs, throughputPerSec, measured: true };
@@ -225,6 +242,13 @@ export interface MovePlan {
   /** Output-token allowance (including hidden reasoning). */
   maxOutputTokens: number;
 }
+
+/** Minimal answers the pool holds back (the full reserve to the move cap is a hard limit per turn instead). */
+export const RESERVE_TURNS = 12;
+/** A short reasoned move: the allowance never goes below this while the clock can afford it. */
+export const USEFUL_FLOOR_TOKENS = 400;
+/** A long game's turn may take up to this × pool / (expected + most turns left). */
+export const BUDGET_FACTOR = 2.5;
 
 /** Safety factors: speed can be ~20% slower than measured, latency ~15% longer. */
 const SPEED_MARGIN = 1.25;
@@ -255,16 +279,23 @@ export function planMove(p: { remainingMs: number; turns: TurnsLeft; speed: Spee
   const tp = (p.speed.throughputPerSec ?? p.speed.tokensPerSec) / 1000;
   const d = p.speed.firstTokenMs * DELAY_MARGIN;
   const tMin = d + (p.minTokens / v) * SPEED_MARGIN;
-  const reserve = (M - 1) * tMin;
-  const pool = Math.max(0, R - reserve);
-  const mult = E >= 8 ? 2 : 1 + E / 8;
-  const budgetMs = Math.min((mult * pool) / E, 0.7 * pool);
-  const suggestedMs = Math.min(pool / E, budgetMs);
-  const fromBudget = Math.floor(Math.min(v * Math.max(0, budgetMs - d), tp * budgetMs) / SPEED_MARGIN);
+  // Time to answer every later turn minimally (up to the move cap): no turn may eat into it.
+  const hardCap = Math.max(0, R - (M - 1) * tMin);
+  // The pool only holds back a few minimal answers, so most of the clock is usable early on.
+  const pool = Math.max(0, R - Math.min(M - 1, RESERVE_TURNS) * tMin);
+  // Long games spread the pool over the expected AND the most turns left; the last few speeches of a debate share it.
+  const budgetMs = Math.min(E >= 8 ? (BUDGET_FACTOR * pool) / (E + M) : ((1 + E / 8) * pool) / E, 0.7 * pool, hardCap);
+  const tokensFor = (ms: number) => Math.floor(Math.min(v * Math.max(0, ms - d), tp * ms) / SPEED_MARGIN);
+  const fromBudget = tokensFor(budgetMs);
+  // A useful floor (a short reasoned move) whenever the clock can afford it: at most 60% of the pool, and at most
+  // 1.5 times an equal share of the generation time left over the most turns possible.
+  const fromFloor = Math.min(USEFUL_FLOOR_TOKENS, tokensFor(Math.min(0.6 * pool, hardCap, d + 1.5 * Math.max(0, R / M - d))));
   // Equal share of everything left over the most turns possible (keeps a slow player answering to the cap).
   const share = R / (M + 1) / 1.3;
-  const fromShare = Math.min(256, Math.floor(Math.min(v * Math.max(0, share - d), tp * share) / SPEED_MARGIN));
-  const tokens = Math.max(p.minTokens, Math.min(p.maxOutputTokens, Math.max(fromBudget, fromShare)));
+  const fromShare = Math.min(256, tokensFor(share));
+  const tokens = Math.max(p.minTokens, Math.min(p.maxOutputTokens, Math.max(fromBudget, fromFloor, fromShare)));
+  // The suggestion: half of what this turn may take at most (the budget, or the allowance's own worst case).
+  const suggestedMs = Math.min(R, Math.max(budgetMs, d + (tokens / v) * SPEED_MARGIN) / 2);
   return { remainingMs: R, suggestedMs: Math.max(0, suggestedMs), budgetMs, maxOutputTokens: Math.floor(tokens) };
 }
 
@@ -278,6 +309,8 @@ export interface ClockOptions {
   instant?: [boolean, boolean];
   /** The normal output-token maximum (the allowance never exceeds it). */
   maxOutputTokens: number;
+  /** Per seat: the model reasons before answering (effort / thinking configured), possibly hidden. */
+  reasoning?: [boolean, boolean];
 }
 
 /** One game's two clocks. */
@@ -333,6 +366,19 @@ export class GameClock {
     return [Math.round(this.remaining[0]), Math.round(this.remaining[1])];
   }
 
+  /**
+   * The retry after a reply ran out of its allowance before giving a move: a small fixed allowance that is just
+   * enough for the answer line (never more than half of what the clock still allows).
+   */
+  retryPlan(side: Side, spec: Pick<ArenaClockSpec, 'retryTokens' | 'minTokens'>): MovePlan {
+    const sp = this.options.speed[side].estimate();
+    const R = this.remaining[side];
+    const affordable = Math.floor(((sp.throughputPerSec / 1000) * R * 0.5) / SPEED_MARGIN);
+    const tokens = Math.max(spec.minTokens, Math.min(spec.retryTokens, affordable, this.options.maxOutputTokens));
+    const time = sp.firstTokenMs * DELAY_MARGIN + (tokens / (sp.tokensPerSec / 1000)) * SPEED_MARGIN;
+    return { remainingMs: R, suggestedMs: Math.min(R, time / 2), budgetMs: time, maxOutputTokens: tokens };
+  }
+
   /** Per-call limit for the seat (none for an instant seat). */
   limitFor(side: Side): number | undefined {
     return this.isInstant(side) ? undefined : Math.max(1, Math.floor(this.remaining[side]));
@@ -350,6 +396,7 @@ export class GameClock {
       suggestedMs: plan.suggestedMs,
       maxOutputTokens: plan.maxOutputTokens,
       words,
+      ...(this.options.reasoning?.[side] ? { reasoning: true } : {}),
     };
   }
 
@@ -373,6 +420,8 @@ export interface ClockView {
   suggestedMs: number;
   maxOutputTokens: number;
   words: ClockWords;
+  /** The model reasons before answering (effort / thinking configured): small allowances are spelled out. */
+  reasoning?: boolean;
 }
 
 function banner(v: ClockView): string | null {
@@ -403,6 +452,7 @@ export function clockSection(v: ClockView): string {
     `Your time left: ${fmtClockText(v.remainingMs)}. Your opponent's time left: ${v.opponentFlagged ? '0:00 (out of time)' : fmtClockText(v.opponentMs)}. You have made ${v.made} ${v.made === 1 ? w.unit : w.units}.`,
     `Suggested time for this ${w.unit}: ${aboutTime(v.suggestedMs)}. Your reply this ${w.unit} is limited to about ${thousands(v.maxOutputTokens)} tokens, including any hidden reasoning, ${v.maxOutputTokens < 100 ? `so do not reason at length: ${w.finish} straight away` : `so think briefly and ${w.finish}`}. ${w.closing}`,
   ];
+  if (v.reasoning && v.maxOutputTokens <= USEFUL_FLOOR_TOKENS) lines.push(`Answer at once with very little reasoning: you only have about ${thousands(v.maxOutputTokens)} tokens.`);
   if (tier === 'low') lines.push(`Your clock is running down. Keep your ${w.units} quick.`);
   if (!v.opponentFlagged && v.opponentMs < v.remainingMs) {
     lines.push(urgencyTier(v.opponentMs, v.initialMs) === 'pressure' || urgencyTier(v.opponentMs, v.initialMs) === 'trouble' ? `Your opponent is in time trouble (${fmtClockText(v.opponentMs)} left) — keep the pressure on by ${GERUND[w.unit]} quickly.` : 'Your opponent has less time left than you.');
@@ -426,6 +476,12 @@ export function withClock(parts: string[], v: ClockView | undefined, afterIntro 
   const b = banner(v);
   if (b) out.unshift(b);
   return out;
+}
+
+/** The retry problem when a reply used up its token allowance before giving its answer line. */
+export function allowanceError(w: Pick<ArenaClockSpec, 'unit' | 'finish'>): string {
+  if (w.unit === 'move') return 'You ran out of your token allowance before giving a move — give your move immediately, no reasoning.';
+  return `You ran out of your token allowance before you could ${w.finish} — ${w.finish} immediately, no reasoning.`;
 }
 
 /** True for the recorder's OutOfTimeError (matched by name, so test doubles can throw it too). */

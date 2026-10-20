@@ -551,6 +551,7 @@ export const chess: ArenaGame<ChessState> = {
     flagRule: 'If your clock reaches 0:00 you lose the game on time at once (it is a draw instead only if your opponent has too little material left to checkmate: a lone king, or king and one bishop or knight).',
     troubleLoss: 'you lose on time',
     minTokens: 12,
+    retryTokens: 48,
     turnsLeft(s, _side, made, config) {
       // Up to the move cap: ceil(plies left / 2) moves for the side to move.
       const max = Math.max(1, Math.ceil((config.maxPlies - s.plies) / 2));

@@ -383,6 +383,7 @@ function makeGame(variant: DebateVariant): ArenaGame<DebateState> {
       flagRule: 'If your clock reaches 0:00, each of your remaining speeches is replaced by "(No speech: out of time)" and the judges are told that you ran out of time.',
       troubleLoss: 'your remaining speeches are lost',
       minTokens: 260,
+      retryTokens: 320,
       turnsLeft(s, side) {
         const left = ORDER.slice(s.speeches.length).filter(([x]) => x === side).length;
         return { expected: Math.max(1, left), max: Math.max(1, left) };

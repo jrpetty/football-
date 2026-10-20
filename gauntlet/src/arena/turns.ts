@@ -12,7 +12,7 @@
  */
 import { createRng } from '../core/rng.ts';
 import { OUT_OF_TIME_ERROR, clockSpecOf, type PlayGameOptions, type PlayedGame } from './match.ts';
-import { timedComplete } from './clock.ts';
+import { allowanceError, timedComplete } from './clock.ts';
 import type { ArenaJudging, ArenaMove, MoveAttempt, Side } from './types.ts';
 
 /** A played game plus the extension results ('margin' scoring, judge step). */
@@ -129,13 +129,15 @@ export async function playTurnGame(o: PlayGameOptions): Promise<PlayedGameExt> {
     }
     let charged = 0;
     let flagged = false;
+    let allowanceCut = false;
 
     for (let attempt = 1; attempt <= 2 && accepted === null; attempt++) {
       abortIfNeeded(o.signal);
       o.beforeCall?.(side);
       o.onTurn?.(side, moves.length + 1, attempt, clock?.snapshot());
       const prev = attempts[attempts.length - 1];
-      const plan = clock && spec && !clock.isInstant(side) ? clock.plan(side, spec.turnsLeft(state, side, clock.made[side], config), spec.minTokens) : null;
+      // After a reply that used up its allowance before the answer line, the retry gets a small fixed allowance.
+      const plan = clock && spec && !clock.isInstant(side) ? (allowanceCut ? clock.retryPlan(side, spec) : clock.plan(side, spec.turnsLeft(state, side, clock.made[side], config), spec.minTokens)) : null;
       let prompt = game.prompt(state, side, { config, strikes: [strikes[0], strikes[1]], maxStrikes: o.maxStrikes, ...(plan ? { clock: clock!.view(side, plan, spec!) } : {}) });
       if (prev) prompt += `\n\n${retryBlock(key, { reply: prev.text, extracted: prev.extracted, error: prev.error ?? '' })}`;
       const t0 = Date.now();
@@ -163,7 +165,12 @@ export async function playTurnGame(o: PlayGameOptions): Promise<PlayedGameExt> {
       const reply = timed.reply!;
       const extracted = extractAnswer(reply.text, key);
       let error: string | undefined;
-      if (extracted === null) {
+      allowanceCut = false;
+      if (extracted === null && plan && reply.stopReason === 'max_tokens') {
+        // Speed games: the reply ran out of its clock-sized allowance before the answer line.
+        error = allowanceError(spec!);
+        allowanceCut = true;
+      } else if (extracted === null) {
         if (!reply.text.trim()) error = reply.stopReason === 'refusal' ? `The reply was a refusal with no ${key} line.` : 'The reply was empty.';
         else if (reply.stopReason === 'max_tokens') error = `The reply was cut off at the output-token limit before the "${key}:" line. Think more briefly.`;
         else error = `The reply did not contain a "${key}: <…>" line.`;

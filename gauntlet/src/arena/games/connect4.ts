@@ -136,6 +136,7 @@ export const connect4: ArenaGame<C4State> = {
     flagRule: 'If your clock reaches 0:00 you lose the game on time at once.',
     troubleLoss: 'you lose on time',
     minTokens: 12,
+    retryTokens: 32,
     turnsLeft(s, _side, made, config) {
       const cap = Math.min(COLS * ROWS, config.maxPlies);
       return { expected: Math.max(8, 21 - made), max: Math.max(1, Math.ceil((cap - s.plies) / 2)) };

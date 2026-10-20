@@ -32,7 +32,8 @@ import { playJudgedGame, verdictSnapshot } from './judged.ts';
 import { playGame } from './match.ts';
 import { playTurnGame, type PlayedGameExt } from './turns.ts';
 import { ARENA_PROMPT_VERSION } from './prompt.ts';
-import { CLOCK_PROMPT_VERSION, SpeedMeter, resolveTimeControl, timeControlLabel } from './clock.ts';
+import { CLOCK_PROMPT_VERSION, SpeedMeter, resolveTimeControl, timeControlLabel, type SpeedSample } from './clock.ts';
+import { listRunIds, readResults } from '../engine/store.ts';
 import { gateResume, gateStart, tournamentSpentUsd } from '../budget/spend.ts';
 import { isBudgetBlockedError } from '../budget/budget.ts';
 import { appendGame, createTournamentFolder, listTournamentIds, newTournamentId, readGames, readTournament, spentUsd, toGameLite, writeTournament } from './store.ts';
@@ -172,6 +173,63 @@ export function arenaFingerprint(gameHash: string, settings: ArenaSettings, seed
 
 /** Most output tokens per second the cost estimate assumes a model can produce (bounds a speed game's output). */
 export const ESTIMATE_MAX_TOKENS_PER_SEC = 250;
+
+/** Gauntlet runs scanned (newest first) for a model's earlier speed. */
+const PRIOR_RUNS_SCANNED = 40;
+const PRIOR_SAMPLES = 30;
+
+/**
+ * Earlier measured calls of the same model configurations (by config hash, so never another model's numbers):
+ * earlier tournaments first (one sample per call), then Gauntlet runs (one per case: its output tokens over its
+ * generation time, and the first call's first-token time), newest first. Speed games use them for a player's
+ * first allowance, before it has made a call in this tournament.
+ */
+export function priorSpeedSamples(configHashes: string[], excludeTournament?: string): Map<string, SpeedSample[]> {
+  const want = new Set(configHashes);
+  const out = new Map<string, SpeedSample[]>([...want].map((h) => [h, []]));
+  const full = (h: string) => out.get(h)!.length >= PRIOR_SAMPLES;
+  const done = () => [...want].every(full);
+  try {
+    for (const id of listTournamentIds()) {
+      if (done()) break;
+      if (id === excludeTournament) continue;
+      const m = readTournament(id);
+      if (!m) continue;
+      const hashOf = new Map(m.entrants.filter((e) => want.has(e.configHash) && !e.manual && !e.baseline).map((e) => [e.id, e.configHash]));
+      if (!hashOf.size) continue;
+      for (const g of [...readGames(id)].reverse())
+        for (const seat of [0, 1] as const) {
+          const h = hashOf.get(g.players[seat]);
+          if (!h) continue;
+          for (const e of g.transcripts?.[seat] ?? []) {
+            if (full(h)) break;
+            if (!e.error && !e.judge && e.totalMs > 0) out.get(h)!.push({ outputTokens: e.usage.outputTokens, totalMs: e.totalMs, ttftMs: e.ttftMs });
+          }
+        }
+    }
+    // Gauntlet results only for models with too few Arena samples.
+    const fromRuns = [...want].filter((h) => out.get(h)!.length < 5);
+    if (fromRuns.length) {
+      for (const h of fromRuns) out.set(h, []);
+      for (const runId of listRunIds().slice(0, PRIOR_RUNS_SCANNED)) {
+        if (fromRuns.every(full)) break;
+        for (const r of readResults(runId)) {
+          const h = r.contestantHash;
+          if (!fromRuns.includes(h) || full(h)) continue;
+          const tps = r.metrics?.outputTokensPerSec;
+          if (r.status !== 'ok' || !tps || tps <= 0 || !(r.metrics.outputTokens >= 8)) continue;
+          out.get(h)!.push({ outputTokens: r.metrics.outputTokens, totalMs: (r.metrics.outputTokens / tps) * 1000, ttftMs: r.metrics.ttftMs });
+        }
+      }
+    }
+  } catch {
+    // Earlier data is a convenience: unreadable files simply leave the conservative default.
+  }
+  return out;
+}
+
+/** The model reasons before answering (effort / thinking configured), possibly without showing it. */
+const reasons = (e: ArenaEntrant | undefined) => Boolean(e?.options?.effort && e.options.effort !== 'none' && e.options.effort !== 'minimal');
 
 /** Refusal for copy & paste contestants in a speed game (they cannot be timed fairly). */
 export const SPEED_MANUAL_ERROR = 'Speed games need API models; switch to Classic to include copy & paste models';
@@ -585,9 +643,11 @@ function launch(manifest: TournamentManifest): void {
   // Speed games: each player's measured speed in this tournament (seeded from games already played, on resume).
   const timeControl = manifest.settings.timeControl ?? null;
   const speeds = new Map<string, SpeedMeter>();
+  // A player's first allowance uses its own earlier measurements (same model configuration), if there are any.
+  const priors = timeControl ? priorSpeedSamples(manifest.entrants.filter((e) => !e.manual && !e.baseline).map((e) => e.configHash), manifest.id) : new Map<string, SpeedSample[]>();
   const speedOf = (id: string): SpeedMeter => {
     let m = speeds.get(id);
-    if (!m) speeds.set(id, (m = new SpeedMeter()));
+    if (!m) speeds.set(id, (m = new SpeedMeter(priors.get(entrant.get(id)?.configHash ?? '') ?? [])));
     return m;
   };
   if (timeControl) {
@@ -742,6 +802,7 @@ function launch(manifest: TournamentManifest): void {
                 speed: [speedOf(p0), speedOf(p1)] as [SpeedMeter, SpeedMeter],
                 // The Random Baseline answers instantly: its clock never runs.
                 instant: [Boolean(entrant.get(p0)?.baseline), Boolean(entrant.get(p1)?.baseline)] as [boolean, boolean],
+                reasoning: [reasons(entrant.get(p0)), reasons(entrant.get(p1))] as [boolean, boolean],
                 maxOutputTokens: manifest.settings.maxOutputTokens,
               },
             }
