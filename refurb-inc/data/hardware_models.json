@@ -1,5 +1,5 @@
 {
-  "_comment": "Every sellable hardware model. visual.scene is the wrapper scene; visual.* are placeholder hints and material tints. ref_* is the reference spec that refurb_value_a is quoted for. Optional gpu (discrete graphics) is shown in the spec line.",
+  "_comment": "Every sellable hardware model. visual.scene is the wrapper scene; visual.* are placeholder hints and material tints. ref_* is the reference spec that refurb_value_a is quoted for. Optional gpu (discrete graphics) is shown in the spec line. type: laptop | desktop | server; tags add sub-kinds (rack) for faults/conditions. size: small (fits standard shelving) | large (needs heavy-duty racking). carry = hand slots used (3 = one at a time). cpu_count/drive_count describe multi-socket/multi-bay kit (storage_* totals across all drives). *_part fields resolve psu/fan/board/server_ear faults. test_mult scales test/image time. ram_step_gb/storage_step_gb set how much extra RAM/storage adds to value (default 8/256 per step).",
   "models": [
     {
       "id": "corvex_prospect_5420", "type": "laptop", "maker": "corvex", "name": "Prospect 5420", "release_year": 2022, "screen_in": 14.0,
@@ -8,7 +8,7 @@
       "storage_options": [256, 256, 512], "storage_type": "nvme_m2",
       "battery_part": "bat_corvex_prospect", "keycap_part": "keys_corvex",
       "refurb_value_a": 340, "ref_ram": 16, "ref_storage": 256, "weight_kg": 1.4,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_office/laptop_office.tscn", "w": 0.322, "d": 0.212, "h": 0.019, "body": "#2b2e33", "deck": "#1f2124", "accent": "#9aa3ad", "logo": "CORVEX"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_office/laptop_office.tscn", "w": 0.322, "d": 0.267, "h": 0.024, "body": "#2b2e33", "deck": "#1f2124", "accent": "#9aa3ad", "logo": "CORVEX"}
     },
     {
       "id": "corvex_prospect_7390", "type": "laptop", "maker": "corvex", "name": "Prospect 7390", "release_year": 2019, "screen_in": 13.3,
@@ -17,7 +17,7 @@
       "storage_options": [128, 256, 256], "storage_type": "nvme_m2",
       "battery_part": "bat_corvex_prospect", "keycap_part": "keys_corvex",
       "refurb_value_a": 190, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.3,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_office/laptop_office.tscn", "w": 0.304, "d": 0.199, "h": 0.017, "body": "#3a3d42", "deck": "#25272a", "accent": "#b3b9c1", "logo": "CORVEX"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_office/laptop_office.tscn", "w": 0.304, "d": 0.252, "h": 0.022, "body": "#3a3d42", "deck": "#25272a", "accent": "#b3b9c1", "logo": "CORVEX"}
     },
     {
       "id": "corvex_vantage_3510", "type": "laptop", "maker": "corvex", "name": "Vantage 3510", "release_year": 2021, "screen_in": 15.6,
@@ -26,7 +26,7 @@
       "storage_options": [256, 256, 512], "storage_type": "sata_ssd",
       "battery_part": "bat_corvex_vantage", "keycap_part": "keys_corvex",
       "refurb_value_a": 210, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.8,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_mainstream/laptop_mainstream.tscn", "w": 0.358, "d": 0.236, "h": 0.022, "body": "#1c1d20", "deck": "#1a1b1d", "accent": "#55595f", "logo": "CORVEX"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_mainstream/laptop_mainstream.tscn", "w": 0.358, "d": 0.276, "h": 0.026, "body": "#1c1d20", "deck": "#1a1b1d", "accent": "#55595f", "logo": "CORVEX"}
     },
     {
       "id": "halden_folio_840", "type": "laptop", "maker": "halden", "name": "Folio 840 G7", "release_year": 2020, "screen_in": 14.0,
@@ -35,7 +35,7 @@
       "storage_options": [256, 256, 512], "storage_type": "nvme_m2",
       "battery_part": "bat_halden_folio", "keycap_part": "keys_halden",
       "refurb_value_a": 260, "ref_ram": 16, "ref_storage": 256, "weight_kg": 1.35,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_office/laptop_office.tscn", "w": 0.323, "d": 0.214, "h": 0.018, "body": "#b9bdc2", "deck": "#a9adb2", "accent": "#e6e8ea", "logo": "HALDEN"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_office/laptop_office.tscn", "w": 0.323, "d": 0.268, "h": 0.024, "body": "#b9bdc2", "deck": "#a9adb2", "accent": "#e6e8ea", "logo": "HALDEN"}
     },
     {
       "id": "halden_folio_650", "type": "laptop", "maker": "halden", "name": "Folio 650 G5", "release_year": 2019, "screen_in": 15.6,
@@ -44,7 +44,7 @@
       "storage_options": [128, 256, 500], "storage_type": "sata_ssd",
       "battery_part": "bat_halden_folio", "keycap_part": "keys_halden",
       "refurb_value_a": 150, "ref_ram": 8, "ref_storage": 256, "weight_kg": 2.0,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_mainstream/laptop_mainstream.tscn", "w": 0.375, "d": 0.257, "h": 0.024, "body": "#8d9196", "deck": "#2a2c2f", "accent": "#c7cacd", "logo": "HALDEN"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_mainstream/laptop_mainstream.tscn", "w": 0.375, "d": 0.289, "h": 0.027, "body": "#8d9196", "deck": "#2a2c2f", "accent": "#c7cacd", "logo": "HALDEN"}
     },
     {
       "id": "northstar_meridian_t14", "type": "laptop", "maker": "northstar", "name": "Meridian T14", "release_year": 2021, "screen_in": 14.0,
@@ -53,7 +53,7 @@
       "storage_options": [256, 512, 512], "storage_type": "nvme_m2",
       "battery_part": "bat_northstar_meridian", "keycap_part": "keys_northstar",
       "refurb_value_a": 320, "ref_ram": 16, "ref_storage": 256, "weight_kg": 1.5,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_office/laptop_office.tscn", "w": 0.329, "d": 0.227, "h": 0.018, "body": "#161718", "deck": "#121314", "accent": "#d63a2f", "logo": "NORTHSTAR"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_office/laptop_office.tscn", "w": 0.329, "d": 0.273, "h": 0.024, "body": "#161718", "deck": "#121314", "accent": "#d63a2f", "logo": "NORTHSTAR"}
     },
     {
       "id": "northstar_meridian_x13", "type": "laptop", "maker": "northstar", "name": "Meridian X13", "release_year": 2022, "screen_in": 13.3,
@@ -62,7 +62,7 @@
       "storage_options": [256, 512, 1024], "storage_type": "nvme_m2",
       "battery_part": "bat_northstar_meridian", "keycap_part": "keys_northstar",
       "refurb_value_a": 420, "ref_ram": 16, "ref_storage": 512, "weight_kg": 1.2,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_ultralight/laptop_ultralight.tscn", "w": 0.305, "d": 0.207, "h": 0.016, "body": "#1b1c1e", "deck": "#151617", "accent": "#d63a2f", "logo": "NORTHSTAR"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_ultralight/laptop_ultralight.tscn", "w": 0.305, "d": 0.262, "h": 0.016, "body": "#1b1c1e", "deck": "#151617", "accent": "#d63a2f", "logo": "NORTHSTAR"}
     },
     {
       "id": "northstar_edge_e15", "type": "laptop", "maker": "northstar", "name": "Edge E15", "release_year": 2020, "screen_in": 15.6,
@@ -71,7 +71,7 @@
       "storage_options": [256, 256, 512], "storage_type": "sata_ssd",
       "battery_part": "bat_northstar_edge", "keycap_part": "keys_northstar",
       "refurb_value_a": 175, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.9,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_mainstream/laptop_mainstream.tscn", "w": 0.365, "d": 0.248, "h": 0.022, "body": "#46494e", "deck": "#2d2f32", "accent": "#8f949a", "logo": "NORTHSTAR"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_mainstream/laptop_mainstream.tscn", "w": 0.365, "d": 0.281, "h": 0.027, "body": "#46494e", "deck": "#2d2f32", "accent": "#8f949a", "logo": "NORTHSTAR"}
     },
     {
       "id": "brightline_aura_13", "type": "laptop", "maker": "brightline", "name": "Aura 13", "release_year": 2021, "screen_in": 13.3,
@@ -80,7 +80,7 @@
       "storage_options": [256, 512, 512], "storage_type": "nvme_m2",
       "battery_part": "bat_brightline_aura", "keycap_part": "keys_brightline",
       "refurb_value_a": 380, "ref_ram": 16, "ref_storage": 512, "weight_kg": 1.15,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_ultralight/laptop_ultralight.tscn", "w": 0.296, "d": 0.199, "h": 0.015, "body": "#cfd2d6", "deck": "#c2c5c9", "accent": "#5a7fa8", "logo": "BRIGHTLINE"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_ultralight/laptop_ultralight.tscn", "w": 0.296, "d": 0.255, "h": 0.015, "body": "#cfd2d6", "deck": "#c2c5c9", "accent": "#5a7fa8", "logo": "BRIGHTLINE"}
     },
     {
       "id": "kestrel_swift_14", "type": "laptop", "maker": "kestrel", "name": "Swift 14", "release_year": 2022, "screen_in": 14.0,
@@ -89,7 +89,7 @@
       "storage_options": [256, 256, 512], "storage_type": "nvme_m2",
       "battery_part": "bat_kestrel_swift", "keycap_part": "keys_kestrel",
       "refurb_value_a": 230, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.45,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_rugged/laptop_rugged.tscn", "w": 0.322, "d": 0.212, "h": 0.018, "body": "#4b5560", "deck": "#3a424b", "accent": "#e2a33b", "logo": "KESTREL"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_rugged/laptop_rugged.tscn", "w": 0.322, "d": 0.252, "h": 0.057, "body": "#4b5560", "deck": "#3a424b", "accent": "#e2a33b", "logo": "KESTREL"}
     },
     {
       "id": "northstar_vanguard_g17", "type": "laptop", "maker": "northstar", "name": "Vanguard G17", "release_year": 2022, "screen_in": 17.3,
@@ -99,7 +99,79 @@
       "storage_options": [512, 1000, 1000], "storage_type": "nvme_m2",
       "battery_part": "bat_northstar_vanguard", "keycap_part": "keys_northstar",
       "refurb_value_a": 640, "ref_ram": 16, "ref_storage": 512, "weight_kg": 2.7,
-      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_gaming/laptop_gaming.tscn", "w": 0.395, "d": 0.282, "h": 0.027, "body": "#141518", "deck": "#101113", "accent": "#d63a2f", "logo": "NORTHSTAR"}
+      "visual": {"scene": "res://scenes/hardware/laptop.tscn", "model": "res://assets/models/laptops/laptop_gaming/laptop_gaming.tscn", "w": 0.395, "d": 0.359, "h": 0.057, "body": "#141518", "deck": "#101113", "accent": "#d63a2f", "logo": "NORTHSTAR"}
+    },
+    {
+      "id": "corvex_fulcrum_5_micro", "type": "desktop", "maker": "corvex", "name": "Fulcrum 5 Micro", "release_year": 2021, "size": "small", "carry": 1,
+      "cpu_options": ["vortex_v5_10500t", "vortex_v5_10500t", "vortex_v5_12500"], "ref_cpu": "vortex_v5_10500t", "cpu_count": 1,
+      "ram_options": [8, 8, 16], "ram_slots": 2, "ram_type": "ddr4_sodimm", "ram_step_gb": 8,
+      "storage_options": [256, 256, 512], "storage_type": "nvme_m2", "drive_count": 1, "storage_step_gb": 256,
+      "battery_part": "", "keycap_part": "", "psu_part": "psu_brick_90w", "fan_part": "fan_laptop_generic", "board_part": "mobo_desktop_generic", "ear_part": "", "test_mult": 1.0,
+      "refurb_value_a": 175, "ref_ram": 8, "ref_storage": 256, "weight_kg": 1.2,
+      "visual": {"model": "res://assets/models/desktops/desktop_mini/desktop_mini.tscn", "w": 0.190, "d": 0.190, "h": 0.066, "logo": "CORVEX"}
+    },
+    {
+      "id": "halden_stratus_600_sff", "type": "desktop", "maker": "halden", "name": "Stratus 600 SFF", "release_year": 2020, "size": "small", "carry": 2,
+      "cpu_options": ["vortex_v5_10500", "vortex_v5_10500", "vortex_v7_10700", "arcturo_a5_5650g"], "ref_cpu": "vortex_v5_10500", "cpu_count": 1,
+      "ram_options": [8, 16, 16], "ram_slots": 4, "ram_type": "ddr4_dimm", "ram_step_gb": 8,
+      "storage_options": [256, 256, 512], "storage_type": "sata_ssd", "drive_count": 1, "storage_step_gb": 256,
+      "battery_part": "", "keycap_part": "", "psu_part": "psu_sff_180", "fan_part": "fan_desktop_92", "board_part": "mobo_desktop_generic", "ear_part": "", "test_mult": 1.0,
+      "refurb_value_a": 165, "ref_ram": 8, "ref_storage": 256, "weight_kg": 4.6,
+      "visual": {"model": "res://assets/models/desktops/desktop_sff/desktop_sff.tscn", "w": 0.079, "d": 0.300, "h": 0.300, "logo": "HALDEN"}
+    },
+    {
+      "id": "corvex_fulcrum_7_tower", "type": "desktop", "maker": "corvex", "name": "Fulcrum 7 Tower", "release_year": 2022, "size": "large", "carry": 3,
+      "cpu_options": ["vortex_v5_12500", "vortex_v7_12700", "vortex_v7_12700"], "ref_cpu": "vortex_v5_12500", "cpu_count": 1,
+      "ram_options": [16, 16, 32], "ram_slots": 4, "ram_type": "ddr4_dimm", "ram_step_gb": 8,
+      "storage_options": [512, 512, 1000], "storage_type": "nvme_m2", "drive_count": 1, "storage_step_gb": 256,
+      "battery_part": "", "keycap_part": "", "psu_part": "psu_atx_500", "fan_part": "fan_desktop_92", "board_part": "mobo_desktop_generic", "ear_part": "", "test_mult": 1.1,
+      "refurb_value_a": 270, "ref_ram": 16, "ref_storage": 512, "weight_kg": 8.4,
+      "visual": {"model": "res://assets/models/desktops/desktop_tower/desktop_tower.tscn", "w": 0.212, "d": 0.437, "h": 0.420, "logo": "CORVEX"}
+    },
+    {
+      "id": "halden_keystone_micro_4", "type": "server", "maker": "halden", "name": "Keystone Micro 4", "release_year": 2020, "tags": ["tower"], "size": "small", "carry": 2,
+      "cpu_options": ["vortex_x3_2234"], "ref_cpu": "vortex_x3_2234", "cpu_count": 1,
+      "ram_options": [16, 32, 32], "ram_slots": 2, "ram_type": "ddr4_dimm", "ram_step_gb": 8,
+      "storage_options": [4000, 8000, 8000], "storage_type": "sata_hdd", "drive_count": 4, "storage_step_gb": 4000,
+      "battery_part": "", "keycap_part": "", "psu_part": "psu_server_250", "fan_part": "fan_desktop_92", "board_part": "mobo_server_generic", "ear_part": "", "test_mult": 1.3,
+      "refurb_value_a": 290, "ref_ram": 32, "ref_storage": 8000, "weight_kg": 7.2,
+      "visual": {"model": "res://assets/models/servers/server_micro/server_micro.tscn", "w": 0.349, "d": 0.362, "h": 0.260, "logo": "HALDEN"}
+    },
+    {
+      "id": "northstar_bastion_t5", "type": "server", "maker": "northstar", "name": "Bastion T5", "release_year": 2020, "tags": ["tower"], "size": "large", "carry": 3,
+      "cpu_options": ["vortex_x7_4214", "vortex_x7_4214", "vortex_x9_6248"], "ref_cpu": "vortex_x7_4214", "cpu_count": 1,
+      "ram_options": [32, 64, 64], "ram_slots": 6, "ram_type": "ddr4_rdimm", "ram_step_gb": 32,
+      "storage_options": [2400, 4800, 4800], "storage_type": "sas_caddy", "drive_count": 4, "storage_step_gb": 1200,
+      "battery_part": "", "keycap_part": "", "psu_part": "psu_server_550", "fan_part": "fan_server_hotswap", "board_part": "mobo_server_generic", "ear_part": "", "test_mult": 1.5,
+      "refurb_value_a": 440, "ref_ram": 64, "ref_storage": 4800, "weight_kg": 18.0,
+      "visual": {"model": "res://assets/models/servers/server_tower/server_tower.tscn", "w": 0.182, "d": 0.560, "h": 0.440, "logo": "NORTHSTAR"}
+    },
+    {
+      "id": "corvex_rampart_1100", "type": "server", "maker": "corvex", "name": "Rampart 1100", "release_year": 2019, "tags": ["rack"], "size": "large", "carry": 3,
+      "cpu_options": ["vortex_x7_4214", "vortex_x9_6248", "arcturo_a9_titan_7302"], "ref_cpu": "vortex_x7_4214", "cpu_count": 2,
+      "ram_options": [64, 128, 128], "ram_slots": 8, "ram_type": "ddr4_rdimm", "ram_step_gb": 32,
+      "storage_options": [2400, 4800, 4800], "storage_type": "sas_caddy", "drive_count": 4, "storage_step_gb": 1200,
+      "battery_part": "", "keycap_part": "", "psu_part": "psu_server_750", "fan_part": "fan_server_hotswap", "board_part": "mobo_server_generic", "ear_part": "server_ear_kit", "test_mult": 1.6,
+      "refurb_value_a": 520, "ref_ram": 128, "ref_storage": 4800, "weight_kg": 16.0,
+      "visual": {"model": "res://assets/models/servers/server_1u/server_1u.tscn", "w": 0.482, "d": 0.720, "h": 0.044, "logo": "CORVEX"}
+    },
+    {
+      "id": "corvex_rampart_2200", "type": "server", "maker": "corvex", "name": "Rampart 2200", "release_year": 2020, "tags": ["rack"], "size": "large", "carry": 3,
+      "cpu_options": ["vortex_x9_6248", "vortex_x9_6248", "vortex_x9_6338", "arcturo_a9_titan_7543"], "ref_cpu": "vortex_x9_6248", "cpu_count": 2,
+      "ram_options": [128, 256, 256], "ram_slots": 8, "ram_type": "ddr4_rdimm", "ram_step_gb": 64,
+      "storage_options": [4800, 9600, 9600], "storage_type": "sas_caddy", "drive_count": 8, "storage_step_gb": 2400,
+      "battery_part": "", "keycap_part": "", "psu_part": "psu_server_750", "fan_part": "fan_server_hotswap", "board_part": "mobo_server_generic", "ear_part": "server_ear_kit", "test_mult": 1.8,
+      "refurb_value_a": 790, "ref_ram": 256, "ref_storage": 9600, "weight_kg": 24.0,
+      "visual": {"model": "res://assets/models/servers/server_2u/server_2u.tscn", "w": 0.482, "d": 0.720, "h": 0.087, "logo": "CORVEX"}
+    },
+    {
+      "id": "northstar_vault_s316", "type": "server", "maker": "northstar", "name": "Vault S316", "release_year": 2019, "tags": ["rack"], "size": "large", "carry": 3,
+      "cpu_options": ["vortex_x7_4214", "vortex_x9_6248"], "ref_cpu": "vortex_x7_4214", "cpu_count": 2,
+      "ram_options": [64, 128, 128], "ram_slots": 8, "ram_type": "ddr4_rdimm", "ram_step_gb": 64,
+      "storage_options": [32000, 64000, 64000], "storage_type": "sata_hdd", "drive_count": 16, "storage_step_gb": 16000,
+      "battery_part": "", "keycap_part": "", "psu_part": "psu_server_750", "fan_part": "fan_server_hotswap", "board_part": "mobo_server_generic", "ear_part": "server_ear_kit", "test_mult": 2.0,
+      "refurb_value_a": 960, "ref_ram": 128, "ref_storage": 64000, "weight_kg": 31.0,
+      "visual": {"model": "res://assets/models/servers/server_3u_storage/server_3u_storage.tscn", "w": 0.482, "d": 0.720, "h": 0.131, "logo": "NORTHSTAR"}
     }
   ]
 }

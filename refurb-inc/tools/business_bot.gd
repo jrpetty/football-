@@ -12,6 +12,8 @@ var sim: Sim
 var s: GameState
 var rng := RandomNumberGenerator.new()
 var price_mult := Vector2(0.88, 1.02)    # list at this fraction of guide
+var racks: Array = []                     # heavy-rack fixture ids (bought when big kit turns up)
+const COURIER_SLOTS := 8
 
 
 func _init(p_sim: Sim, seed_value: int = 7) -> void:
@@ -27,21 +29,32 @@ func _register() -> void:
 	## Mirror the slots the garage scene registers, so the bot can run without a scene tree.
 	s.register_station("bench_1", "bench")
 	for n in ["unit"]:
-		s.register_slot("bench_1:" + n, ["unit"], "bench_1")
+		s.register_slot("bench_1:" + n, ["unit", "unit_large"], "bench_1")
 	for n in ["usb", "park_a", "park_b"]:
 		s.register_slot("bench_1:" + n, ["usb_test", "usb_image"], "bench_1")
 	s.register_station("repair_1", "repair")
-	s.register_slot("repair_1:unit", ["unit"], "repair_1")
+	s.register_slot("repair_1:unit", ["unit", "unit_large"], "repair_1")
 	s.register_station("grade_1", "grade")
-	s.register_slot("grade_1:unit", ["unit"], "grade_1")
+	s.register_slot("grade_1:unit", ["unit", "unit_large"], "grade_1")
 	s.register_station("pack_1", "pack")
-	s.register_slot("pack_1:unit", ["unit", "package"], "pack_1")
+	s.register_slot("pack_1:unit", ["unit", "unit_large", "package", "package_large"], "pack_1")
 	s.register_station("courier_1", "courier")
-	for k in 6:
-		s.register_slot("courier_1:%d" % k, ["package"], "courier_1")
+	for k in COURIER_SLOTS:
+		# Bays 0–1 are the floor bays for big boxes (as in courier_shelf.tscn).
+		s.register_slot("courier_1:%d" % k, ["package_large", "package"] if k < 2 else ["package"], "courier_1")
 	for shelf in ["shelf_a", "shelf_b"]:
 		for k in 15:
 			s.register_slot("%s:%d" % [shelf, k], ["unit"], "")
+	for fid in s.fixtures:
+		if s.fixtures[fid].get("type", "") == "heavy_rack":
+			_register_rack(fid)
+
+
+func _register_rack(fid: String) -> void:
+	for k in 6:
+		s.register_slot("%s:%d" % [fid, k], ["unit_large", "unit"], "")
+	if not fid in racks:
+		racks.append(fid)
 
 
 func run_days(days: int) -> void:
@@ -72,9 +85,16 @@ func _morning() -> void:
 				best = l
 		if not best.is_empty():
 			sim.execute(P, "buy_lot", {"lot": best.id})
-	for k in ["boxes", "labels", "tape"]:
-		if int(s.consumables.get(k, 0)) < 8 and not _supply_on_order(k):
-			sim.execute(P, "shop_buy", {"id": {"boxes": "boxes_laptop", "labels": "labels", "tape": "tape"}[k], "qty": 1})
+	for k in ["boxes", "labels", "tape", "big_boxes"]:
+		var low := 2 if k == "big_boxes" else 8
+		if int(s.consumables.get(k, 0)) < low and not _supply_on_order(k):
+			sim.execute(P, "shop_buy", {"id": {"boxes": "boxes_laptop", "labels": "labels", "tape": "tape", "big_boxes": "boxes_large"}[k], "qty": 1})
+	# Big kit needs heavy-duty racking: buy one the first time towers/servers turn up.
+	if racks.is_empty() and s.cash > 1200 and s.units_in_stock().any(func(i): return i.is_large()):
+		if sim.execute(P, "buy_fixture", {"type": "heavy_rack"}).ok:
+			for fid in s.fixtures:
+				if s.fixtures[fid].get("type", "") == "heavy_rack":
+					_register_rack(fid)
 
 
 func _work() -> void:
@@ -100,17 +120,23 @@ func _move(it: Item, slot: String) -> bool:
 	return false
 
 
-func _free_shelf() -> String:
-	for shelf in ["shelf_a", "shelf_b"]:
-		for k in 15:
-			var sid := "%s:%d" % [shelf, k]
+func _free_shelf(large: bool = false) -> String:
+	if not large:
+		for shelf in ["shelf_a", "shelf_b"]:
+			for k in 15:
+				var sid := "%s:%d" % [shelf, k]
+				if s.item_in_slot(sid) == null:
+					return sid
+	for fid in racks:
+		for k in 6:
+			var sid := "%s:%d" % [fid, k]
 			if s.item_in_slot(sid) == null:
 				return sid
 	return ""
 
 
 func _shelve(it: Item) -> void:
-	var sid := _free_shelf()
+	var sid := _free_shelf(it.is_large())
 	if sid != "":
 		_move(it, sid)
 
@@ -230,7 +256,7 @@ func _ship() -> void:
 		var on := s.item_in_slot("pack_1:unit")
 		if on and on.kind == Item.KIND_PACKAGE:
 			var moved := false
-			for k in 6:
+			for k in COURIER_SLOTS:
 				if _move(on, "courier_1:%d" % k):
 					moved = true
 					break

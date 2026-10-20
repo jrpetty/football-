@@ -170,7 +170,7 @@ static func on_test(st: GameState, u: UnitData, by: int) -> void:
 	if u.cosmetic.is_empty():
 		s.cosmetic["_pristine"] = int(s.cosmetic.get("_pristine", 0)) + 1
 	for b in BATTERY_BANDS:
-		if u.battery_pct >= int(b[0]) and u.battery_pct < int(b[1]):
+		if u.is_laptop() and u.battery_pct >= int(b[0]) and u.battery_pct < int(b[1]):
 			s.battery[b[2]] = int(s.battery.get(b[2], 0)) + 1
 	var lot := _lot(st, u)
 	if not lot.is_empty():

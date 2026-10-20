@@ -52,10 +52,17 @@ func _ready() -> void:
 		bot.finish_for_level()
 		Game.sim.start_next_day()
 		Game.sim.advance_minutes(150)
+	if "--bigkit" in args:
+		Game.state.cash += 5000
+		Game.sim.execute(1, "buy_fixture", {"type": "heavy_rack"})
 	_level = load(load("res://scripts/game_root.gd").level_path(level_id)).instantiate()
 	add_child(_level)
 	if "--setup" in args:
 		_demo_setup()
+	if "--bigkit" in args:
+		await _bigkit_shots()
+		get_tree().quit()
+		return
 	await get_tree().create_timer(0.5).timeout
 	if "--insights" in args:
 		await _insights_shots()
@@ -110,6 +117,60 @@ func _demo_setup() -> void:
 		s.set_loc(usb, {"t": "slot", "slot": "bench_1:usb"})
 	sim.try_start_bench("bench_1", 1)
 	sim.advance_minutes(10)
+
+
+func _bigkit_shots() -> void:
+	## Desktops/servers in the garage: heavy rack stocked, a big box in the OUTGOING floor bay, a server pallet.
+	await get_tree().create_timer(0.3).timeout
+	var s := Game.state
+	var sim := Game.sim
+	var models := ["corvex_rampart_2200", "corvex_rampart_1100", "northstar_vault_s316", "northstar_bastion_t5", "corvex_fulcrum_7_tower", "halden_keystone_micro_4"]
+	for k in models.size():
+		var it := s.new_item(Item.KIND_UNIT)
+		it.unit = sim.lots.roll_unit(models[k], 0.7)
+		s.set_loc(it, {"t": "slot", "slot": "heavy_rack_1:%d" % k})
+	for k in 2:
+		var mid: String = ["halden_stratus_600_sff", "corvex_fulcrum_5_micro"][k]
+		var it := s.new_item(Item.KIND_UNIT)
+		it.unit = sim.lots.roll_unit(mid, 0.7)
+		s.set_loc(it, {"t": "slot", "slot": "shelf_a:%d" % (k + 1)})
+	var srv := s.new_item(Item.KIND_UNIT)
+	srv.unit = sim.lots.roll_unit("corvex_rampart_2200", 0.7)
+	s.set_loc(srv, {"t": "slot", "slot": "bench_1:unit"})
+	var pkg := s.new_item(Item.KIND_PACKAGE)
+	pkg.data = {"order_id": 77, "buyer": "J. Okafor", "model": "Corvex Fulcrum 7 Tower", "large": true, "carry": 3, "size": [0.31, 0.5, 0.54]}
+	s.set_loc(pkg, {"t": "slot", "slot": "courier_1:0"})
+	var lot := {"id": s.make_id(), "seller_name": "Brackenfield Data Centre", "count": 8, "total_price": 2400, "status": "bought", "units": []}
+	for i in 8:
+		lot.units.append(sim.lots.roll_unit(["corvex_rampart_1100", "corvex_rampart_2200"][i % 2], 0.6).to_dict())
+	s.lots[lot.id] = lot
+	sim.deliver_lot(lot.id, Vector3(0.2, 0.02, 1.4))
+	await get_tree().create_timer(0.6).timeout
+	_cam = Camera3D.new()
+	_cam.fov = 62
+	_level.add_child(_cam)
+	_cam.current = true
+	var rack: Node3D = LevelRoot.current.fixture_nodes.get("heavy_rack_1")
+	var shots := []
+	if rack:
+		var fwd := rack.global_transform.basis.z
+		shots.append(["bigkit_rack", rack.global_position + fwd * 2.3 + Vector3(0.4, 1.35, 0), rack.global_position + Vector3(0, 0.8, 0)])
+		print("heavy rack at ", rack.global_position)
+	var cour: Node3D = LevelRoot.current.fixture_nodes.get("courier_1")
+	if cour:
+		shots.append(["bigkit_outgoing", cour.global_position + cour.global_transform.basis.z * 1.7 + Vector3(0, 1.1, 0), cour.global_position + Vector3(0, 0.45, 0)])
+	shots.append(["bigkit_pallet", Vector3(1.6, 1.5, 3.1), Vector3(0.2, 0.4, 1.4)])
+	shots.append(["bigkit_bench", Vector3(-0.6, 1.5, -1.6), Vector3(-0.85, 0.95, -3.0)])
+	shots.append(["bigkit_overview", Vector3(2.4, 2.2, 3.2), Vector3(-0.8, 0.6, -1.0)])
+	DirAccess.make_dir_recursive_absolute("res://tools/out")
+	for sh in shots:
+		_cam.global_position = sh[1]
+		_cam.look_at(sh[2])
+		for i in 12:
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		get_viewport().get_texture().get_image().save_png("res://tools/out/%s.png" % sh[0])
+		print("saved ", sh[0])
 
 
 func _ui_shots() -> void:

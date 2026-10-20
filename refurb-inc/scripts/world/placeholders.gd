@@ -24,6 +24,7 @@ static func build(id: String, params: Dictionary = {}) -> Node3D:
 		"metal_shelf": _b_metal_shelf(root, params)
 		"parts_shelf": _b_parts_shelf(root, params)
 		"courier_shelf": _b_courier_shelf(root, params)
+		"heavy_rack": _b_heavy_rack(root, params)
 		"office_desk": _b_office_desk(root, params)
 		"monitor": _b_monitor(root, params)
 		"kettle_corner": _b_kettle_corner(root, params)
@@ -234,9 +235,52 @@ static func _b_parts_shelf(root: Node3D, p: Dictionary) -> void:
 
 
 static func _b_courier_shelf(root: Node3D, p: Dictionary) -> void:
-	_b_metal_shelf(root, {"w": p.get("w", 1.0), "d": 0.5, "h": 1.0, "levels": 3, "color": Color(0.15, 0.45, 0.25)})
-	var sign := box(root, Vector3(0.7, 0.16, 0.01), Vector3(0, 1.12, 0.0), Mats.color(Color(0.98, 0.8, 0.1), 0.5))
+	var w: float = p.get("w", 1.0)
+	var h: float = p.get("h", 1.0)
+	var d: float = p.get("d", 0.5)
+	_b_metal_shelf(root, {"w": w, "d": d, "h": h, "levels": 3, "color": Color(0.15, 0.45, 0.25)})
+	var sign := box(root, Vector3(0.7, 0.16, 0.01), Vector3(0, h + 0.12, -d / 2 + 0.03), Mats.color(Color(0.98, 0.8, 0.1), 0.5))
 	text(sign, "OUTGOING", Vector3(0, 0, 0.006), 72, Color(0.08, 0.08, 0.08))
+	if d > 0.6:
+		# Floor-bay marking for big boxes: yellow/black hazard edge on the bottom deck.
+		var hz := Mats.color(Color(0.95, 0.75, 0.1), 0.6)
+		box(root, Vector3(w - 0.08, 0.004, 0.05), Vector3(0, 0.093, d / 2 - 0.05), hz)
+		var tag := box(root, Vector3(0.36, 0.07, 0.005), Vector3(0, 0.05, d / 2 + 0.003), Mats.color(Color(0.97, 0.97, 0.95), 0.7))
+		text(tag, "LARGE BOXES", Vector3(0, 0, 0.004), 40, Color(0.1, 0.1, 0.1))
+
+
+static func _b_heavy_rack(root: Node3D, p: Dictionary) -> void:
+	## Pallet-racking style heavy-duty bays: blue upright frames with bracing, orange box beams, chipboard decks.
+	var w: float = p.get("w", 2.0)
+	var d: float = p.get("d", 0.9)
+	var h: float = p.get("h", 1.8)
+	var levels: int = p.get("levels", 3)
+	var upright := Mats.painted_metal(Color(0.13, 0.27, 0.55))
+	var beam := Mats.painted_metal(STEEL_ORANGE)
+	var deck := Mats.surface("plywood", 1.2, Color(0.86, 0.78, 0.62))
+	var bays := 2
+	for f in bays + 1:
+		var x := -w / 2 + 0.04 + f * (w - 0.08) / bays
+		for sz in [-1, 1]:
+			box(root, Vector3(0.07, h, 0.06), Vector3(x, h / 2, sz * (d / 2 - 0.03)), upright)
+			box(root, Vector3(0.09, 0.012, 0.1), Vector3(x, 0.006, sz * (d / 2 - 0.03)), upright)   # base plate
+		# Side bracing: horizontals + diagonals between front and back posts.
+		var span := d - 0.06
+		var n_br := 4
+		for i in n_br + 1:
+			var y := 0.15 + i * (h - 0.3) / n_br
+			box(root, Vector3(0.03, 0.03, span), Vector3(x, y, 0), upright)
+			if i < n_br:
+				var dy := (h - 0.3) / n_br
+				var ang := rad_to_deg(atan2(dy, span))
+				box(root, Vector3(0.025, 0.025, sqrt(dy * dy + span * span)), Vector3(x, y + dy / 2, 0), upright, Vector3(ang if i % 2 == 0 else -ang, 0, 0))
+	for i in levels:
+		var y := 0.08 + i * (h - 0.15) / maxf(levels - 1, 1)
+		for sz in [-1, 1]:
+			box(root, Vector3(w - 0.06, 0.09, 0.05), Vector3(0, y - 0.035, sz * (d / 2 - 0.03)), beam)
+		box(root, Vector3(w - 0.08, 0.018, d - 0.04), Vector3(0, y + 0.003, 0), deck)
+	var sign := box(root, Vector3(0.42, 0.14, 0.004), Vector3(0, 0.08 + (h - 0.15) / maxf(levels - 1, 1) - 0.06, d / 2 + 0.002), Mats.color(Color(0.98, 0.8, 0.1), 0.5))
+	text(sign, "MAX 300 kg / LEVEL", Vector3(0, 0, 0.003), 40, Color(0.08, 0.08, 0.08))
 
 
 static func _b_office_desk(root: Node3D, _p: Dictionary) -> void:

@@ -278,10 +278,12 @@ func _update_interaction(delta: float) -> void:
 		elif node and node.has_method("best_slot_for"):
 			host = node
 		if host:
-			place_slot = host.best_slot_for(top.kind, hit)
+			place_slot = host.best_slot_for(top.slot_kind(), hit)
 			var where: String = host.host_label() if host.has_method("host_label") else "here"
 			if place_slot:
 				info = {"title": top.display_name(), "lines": ["Carrying %d" % held.size()] if held.size() > 1 else [], "prompt": "[E] Place on %s" % where}
+			elif top.is_large() and host.best_slot_for(top.kind, hit) != null:
+				info = {"title": top.display_name(), "lines": ["Too big for %s — use heavy-duty racking (Shop → Equipment)." % where], "prompt": "[Q] Put down"}
 			else:
 				info = {"title": top.display_name(), "lines": ["No free space for that on %s." % where], "prompt": "[Q] Put down"}
 		else:

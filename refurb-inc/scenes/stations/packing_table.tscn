@@ -31,6 +31,6 @@ shape = SubResource("BoxShape3D_cx4j2")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0.924, 0.06)
 script = ExtResource("3_r34bj")
 slot_name = "unit"
-accepts = PackedStringArray("unit", "package")
+accepts = PackedStringArray("unit", "unit_large", "package", "package_large")
 location_label = "Packing table"
 hint_size = Vector3(0.44, 0.01, 0.34)

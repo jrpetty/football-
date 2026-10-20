@@ -50,16 +50,49 @@ func model() -> Dictionary:
 	return Content.model(model_id)
 
 
+func hw_type() -> String:
+	## laptop | desktop | server
+	return model().get("type", "laptop")
+
+
+func is_laptop() -> bool:
+	return hw_type() == "laptop"
+
+
+func is_large() -> bool:
+	return model().get("size", "small") == "large"
+
+
 func cpu_name() -> String:
 	return Content.cpu(cpu_id).get("name", cpu_id)
 
 
 func spec_line() -> String:
-	var storage := ("%dGB" % storage_gb) if storage_gb < 1000 else ("%dTB" % int(storage_gb / 1000.0))
-	var st_type := "NVMe" if model().get("storage_type", "") == "nvme_m2" else "SSD"
-	var line := "%s · %dGB RAM · %s %s" % [cpu_name(), ram_gb, storage, st_type]
-	var gpu: String = model().get("gpu", "")
+	var m := model()
+	var cpus := int(m.get("cpu_count", 1))
+	var drives := int(m.get("drive_count", 1))
+	var cpu := ("%d× %s" % [cpus, cpu_name()]) if cpus > 1 else cpu_name()
+	var storage := storage_text(storage_gb / maxi(drives, 1))
+	if drives > 1:
+		storage = "%d× %s" % [drives, storage]
+	var line := "%s · %dGB RAM · %s %s" % [cpu, ram_gb, storage, storage_label()]
+	var gpu: String = m.get("gpu", "")
 	return line + (" · " + gpu if gpu != "" else "")
+
+
+static func storage_text(gb: int) -> String:
+	if gb < 1000:
+		return "%dGB" % gb
+	var tb := gb / 1000.0
+	return ("%dTB" % int(tb)) if is_equal_approx(tb, round(tb)) else ("%.1fTB" % tb)
+
+
+func storage_label() -> String:
+	match model().get("storage_type", ""):
+		"nvme_m2": return "NVMe"
+		"sas_caddy": return "SAS"
+		"sata_hdd": return "HDD"
+	return "SSD"
 
 
 func open_faults() -> Array:

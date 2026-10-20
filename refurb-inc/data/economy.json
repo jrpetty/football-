@@ -40,6 +40,7 @@
   "pack_secs": 4.0,
   "flogit_fee_pct": 0.1,
   "flogit_postage": 9,
+  "flogit_postage_large": 26,
   "flogit_base_rate_per_hour": 0.035,
   "flogit_rep_rate_bonus": 0.0025,
   "flogit_price_elasticity": 3.0,

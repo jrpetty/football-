@@ -94,7 +94,7 @@ func roll_unit(model_id: String, q: float, seller: Dictionary = {}) -> UnitData:
 	# --- external condition
 	var lam := lerpf(float(Content.econ("cosmetic_issues_bad", 3.0)), float(Content.econ("cosmetic_issues_good", 0.6)), q)
 	var n_cos := _poisson(lam)
-	var cond_pool := Content.conditions.values()
+	var cond_pool := Content.conditions.values().filter(func(c): return Content.applies_to(c, m))
 	for i in n_cos:
 		var c: Dictionary = _weighted(cond_pool, "weight")
 		if c.is_empty() or c.id in u.cosmetic:
@@ -112,7 +112,9 @@ func roll_unit(model_id: String, q: float, seller: Dictionary = {}) -> UnitData:
 			_add_internal_fault(u)
 
 	var worn := u.faults.any(func(f): return f.id == "battery_worn")
-	if worn:
+	if not u.is_laptop():
+		u.battery_pct = 100      # no battery to wear out (desktops/servers)
+	elif worn:
 		u.battery_pct = rng.randi_range(31, 64)
 		for f in u.faults:
 			if f.id == "battery_worn":
@@ -128,6 +130,8 @@ func _add_internal_fault(u: UnitData) -> void:
 			return false
 		if f.get("requires_ram_slots", false) and int(u.model().get("ram_slots", 0)) <= 0:
 			return false
+		if not Content.applies_to(f, u.model()):
+			return false
 		return not u.faults.any(func(x): return x.id == f.id))
 	if pool.is_empty():
 		return
@@ -140,7 +144,15 @@ func _make_fault(fault_id: String, u: UnitData) -> Dictionary:
 	match fault_id:
 		"ram_faulty":
 			var slots := maxi(int(u.model().get("ram_slots", 1)), 1)
-			detail["slot"] = ["DIMM A", "DIMM B"][rng.randi() % slots]
+			var k := rng.randi() % slots
+			if int(u.model().get("cpu_count", 1)) > 1:
+				detail["slot"] = "CPU%d DIMM %s%d" % [k % 2 + 1, "ABCD"[(k / 2) % 4], k / 8 + 1]
+			else:
+				detail["slot"] = "DIMM %s" % "ABCDEFGH"[k % 8]
+		"drive_failed":
+			detail["bay"] = rng.randi() % maxi(int(u.model().get("drive_count", 1)), 1)
+		"psu_redundant":
+			detail["n"] = rng.randi_range(1, 2)
 		"keycap_missing":
 			detail["key"] = KEYS[rng.randi() % KEYS.size()]
 		"keyboard_faulty":

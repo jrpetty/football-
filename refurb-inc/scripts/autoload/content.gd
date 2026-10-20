@@ -94,9 +94,16 @@ func _validate() -> void:
 				errors.append("Model %s references unknown CPU %s" % [m.id, c])
 		if not cpus.has(m.get("ref_cpu", "")):
 			errors.append("Model %s has unknown ref_cpu" % m.id)
-		for p in [m.get("battery_part", ""), m.get("keycap_part", "")]:
-			if not parts.has(p):
-				errors.append("Model %s references unknown part %s" % [m.id, p])
+		var laptop: bool = m.get("type", "laptop") == "laptop"
+		for field in ["battery_part", "keycap_part", "psu_part", "fan_part", "board_part", "ear_part"]:
+			var p: String = m.get(field, "")
+			if (p == "" and laptop and field in ["battery_part", "keycap_part"]) or (p != "" and not parts.has(p)):
+				errors.append("Model %s references unknown part %s (%s)" % [m.id, p, field])
+		if not m.get("type", "laptop") in ["laptop", "desktop", "server"]:
+			errors.append("Model %s has unknown type %s" % [m.id, m.get("type")])
+		var vis_model: String = m.get("visual", {}).get("model", "")
+		if vis_model != "" and not ResourceLoader.exists(vis_model):
+			errors.append("Model %s visual.model missing: %s" % [m.id, vis_model])
 		if not makers.has(m.get("maker", "")):
 			errors.append("Model %s has unknown maker" % m.id)
 	for s: Dictionary in sellers.values():
@@ -108,7 +115,7 @@ func _validate() -> void:
 		if vc != "" and not conditions.has(vc):
 			errors.append("Fault %s links unknown condition %s" % [f.id, vc])
 		var p: String = f.get("part", "")
-		if not p in ["battery", "keys", "ram", "storage", "screen"] and not parts.has(p):
+		if not p in ["battery", "keys", "ram", "storage", "screen", "psu", "fan", "board", "server_ear"] and not parts.has(p):
 			errors.append("Fault %s references unknown part %s" % [f.id, p])
 
 
@@ -140,6 +147,23 @@ func condition(id: String) -> Dictionary:
 
 func maker_name(id: String) -> String:
 	return makers.get(id, {}).get("name", id.capitalize())
+
+
+static func applies_to(def: Dictionary, m: Dictionary) -> bool:
+	## Fault/condition `types` filter: matches the model's type (laptop/desktop/server) or any of its tags (rack…).
+	var types: Array = def.get("types", [])
+	if types.is_empty():
+		return true
+	if m.get("type", "laptop") in types:
+		return true
+	for t in m.get("tags", []):
+		if t in types:
+			return true
+	return false
+
+
+func diag_stages(hw_type: String) -> Array:
+	return diag_info.get("stages_" + hw_type, diag_info.get("stages", []))
 
 
 func model_display_name(model_id: String) -> String:

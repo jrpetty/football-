@@ -27,7 +27,9 @@
       "height": 1.4,
       "price": 380,
       "power_kw": 0.6,
-      "desc": "One unit + one USB at a time. Diagnostics or wipe & image."
+      "desc": "One unit + one USB at a time. Diagnostics or wipe & image.",
+      "back": 0.4,
+      "front": 1.1
     },
     {
       "id": "repair_bench",
@@ -40,7 +42,9 @@
       "height": 1.9,
       "price": 520,
       "power_kw": 0.3,
-      "desc": "ESD mat, tools and a lamp. Fix faults with parts from the bins."
+      "desc": "ESD mat, tools and a lamp. Fix faults with parts from the bins.",
+      "back": 0.4,
+      "front": 1.1
     },
     {
       "id": "grading_desk",
@@ -53,7 +57,9 @@
       "height": 1.1,
       "price": 300,
       "power_kw": 0.2,
-      "desc": "Light box and label printer for consistent grading."
+      "desc": "Light box and label printer for consistent grading.",
+      "back": 0.37,
+      "front": 1.07
     },
     {
       "id": "packing_table",
@@ -66,7 +72,9 @@
       "height": 1.6,
       "price": 340,
       "power_kw": 0.1,
-      "desc": "Boxes, foam, tape gun and label printer."
+      "desc": "Boxes, foam, tape gun and label printer.",
+      "back": 0.42,
+      "front": 1.12
     },
     {
       "id": "metal_shelf",
@@ -79,20 +87,33 @@
       "height": 1.9,
       "price": 160,
       "power_kw": 0.0,
-      "desc": "Boltless steel shelving. Five levels of three laptops."
+      "desc": "Boltless steel shelving. Five levels of three laptops or small desktops. Too shallow for servers and towers."
+    },
+    {
+      "id": "heavy_rack",
+      "name": "Heavy-duty racking (6 bays)",
+      "scene": "res://scenes/stations/heavy_rack.tscn",
+      "footprint": [
+        2.05,
+        1.0
+      ],
+      "height": 1.8,
+      "price": 280,
+      "power_kw": 0.0,
+      "desc": "Pallet-racking style bays for rack servers, tower servers and tower desktops (laptops fit too)."
     },
     {
       "id": "courier_shelf",
       "name": "OUTGOING shelf",
       "scene": "res://scenes/stations/courier_shelf.tscn",
       "footprint": [
-        1.05,
-        0.54
+        1.37,
+        0.9
       ],
-      "height": 1.2,
-      "price": 120,
+      "height": 1.4,
+      "price": 180,
       "power_kw": 0.0,
-      "desc": "The courier collects packed orders from here."
+      "desc": "The courier collects packed orders from here. Two floor bays take large boxes (towers, rack servers)."
     },
     {
       "id": "parts_shelf",

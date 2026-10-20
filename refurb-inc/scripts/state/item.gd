@@ -35,6 +35,29 @@ static func carry_weight(kind_name: String) -> int:
 			return 99   # pallets: need a pallet truck (later milestone)
 
 
+func weight() -> int:
+	## Carry slots this particular item uses: big hardware (and its boxes) fills your hands.
+	if kind == KIND_UNIT and unit:
+		return int(unit.model().get("carry", 1))
+	if kind == KIND_PACKAGE:
+		return int(data.get("carry", 1))
+	return carry_weight(kind)
+
+
+func is_large() -> bool:
+	if kind == KIND_UNIT and unit:
+		return unit.is_large()
+	return kind == KIND_PACKAGE and bool(data.get("large", false))
+
+
+func slot_kind() -> String:
+	## What slots match this item: big units/boxes only fit slots that list "unit_large"/"package_large"
+	## (heavy-duty racking, benches, the outgoing shelf's floor bay), never standard shelving.
+	if kind == KIND_UNIT or kind == KIND_PACKAGE:
+		return kind + "_large" if is_large() else kind
+	return kind
+
+
 func is_carryable() -> bool:
 	return carry_weight(kind) < 99
 

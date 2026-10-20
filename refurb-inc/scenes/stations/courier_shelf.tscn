@@ -4,31 +4,35 @@
 [ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_tx54j"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_1uamh"]
-size = Vector3(1, 1, 0.5)
+size = Vector3(1.32, 1.25, 0.85)
 
 [node name="CourierShelf" type="Node3D" unique_id=57596360]
 script = ExtResource("1_2rfxd")
 levels = 3
-per_level = 2
-width = 1.0
-depth = 0.5
-height = 1.0
+per_level = 3
+width = 1.32
+depth = 0.85
+height = 1.25
 accepts = PackedStringArray("package")
 short_label = "Outgoing"
+floor_bays = 2
+floor_accepts = PackedStringArray("package_large", "package")
 station_type = "courier"
 display_name = "OUTGOING shelf"
-description = "Packed orders go here. The courier collects them."
+description = "Packed orders go here. The courier collects them. Big boxes go in the floor bays."
 
 [node name="Model" type="Node3D" parent="." unique_id=1196314864]
 script = ExtResource("2_tx54j")
 placeholder = "courier_shelf"
 placeholder_params = {
-"w": 1.0
+"d": 0.85,
+"h": 1.25,
+"w": 1.32
 }
 
 [node name="Body" type="StaticBody3D" parent="." unique_id=504648701]
 collision_layer = 9
 
 [node name="Shape" type="CollisionShape3D" parent="Body" unique_id=173588273]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.625, 0)
 shape = SubResource("BoxShape3D_1uamh")

@@ -71,7 +71,7 @@ func _draw_diag(u: UnitData, p: float) -> void:
 	draw_rect(Rect2(0, 0, w, 44), Color(0.07, 0.24, 0.48))
 	_t(Vector2(14, 30), "%s %s" % [Content.diag_info.get("name", "Diag"), Content.diag_info.get("version", "")], 20, Color.WHITE)
 	_t(Vector2(w - 170, 30), u.serial, 16, Color(0.75, 0.85, 1.0))
-	var stages: Array = Content.diag_info.get("stages", [])
+	var stages: Array = Content.diag_stages(u.hw_type())
 	var cur := int(p * stages.size())
 	var y := 74.0
 	for i in stages.size():
@@ -84,14 +84,23 @@ func _draw_diag(u: UnitData, p: float) -> void:
 	# Hardware inventory appears as it is detected
 	var x2 := w * 0.56
 	_t(Vector2(x2, 74), "Hardware inventory", 15, Color(0.6, 0.75, 1.0))
+	var m := u.model()
+	var cpus := int(m.get("cpu_count", 1))
+	var drives := int(m.get("drive_count", 1))
 	if p > 0.12:
-		_t(Vector2(x2, 98), u.cpu_name(), 14, Color.WHITE)
+		_t(Vector2(x2, 98), ("%d× " % cpus if cpus > 1 else "") + u.cpu_name(), 14, Color.WHITE)
 	if p > 0.25:
-		_t(Vector2(x2, 120), "%d GB DDR4" % u.ram_gb, 14, Color.WHITE)
+		_t(Vector2(x2, 120), "%d GB DDR4%s" % [u.ram_gb, " ECC" if m.get("ram_type") == "ddr4_rdimm" else ""], 14, Color.WHITE)
 	if p > 0.4:
-		_t(Vector2(x2, 142), ("%d GB " % u.storage_gb) + ("NVMe" if u.model().get("storage_type") == "nvme_m2" else "SATA SSD"), 14, Color.WHITE)
+		var per := UnitData.storage_text(u.storage_gb / maxi(drives, 1))
+		_t(Vector2(x2, 142), ("%d× %s %s" % [drives, per, u.storage_label()]) if drives > 1 else ("%s %s" % [per, u.storage_label()]), 14, Color.WHITE)
 	if p > 0.55:
-		_t(Vector2(x2, 164), "Battery: %d%% design capacity" % u.battery_pct, 14, Color.WHITE)
+		var extra := "Battery: %d%% design capacity" % u.battery_pct
+		if u.hw_type() == "server":
+			extra = "BMC: online · PSUs: 2 detected" if "rack" in m.get("tags", []) else "BMC: online · PSU: 1 detected"
+		elif u.hw_type() == "desktop":
+			extra = "PSU: %s" % Content.part(m.get("psu_part", "")).get("name", "detected")
+		_t(Vector2(x2, 164), extra, 14, Color.WHITE)
 	_bar(Vector2(18, get_rect().size.y - 34), w - 36, 14, p, Color(0.25, 0.6, 1.0))
 	_t(Vector2(18, get_rect().size.y - 42), "%d%%" % int(p * 100), 14, Color(0.8, 0.85, 0.95))
 
@@ -126,7 +135,10 @@ func _draw_report(u: UnitData) -> void:
 	var y := 82.0
 	_t(Vector2(16, y), "%s  ·  %s" % [rep.get("model", ""), rep.get("serial", "")], 15, Color(0.75, 0.85, 1.0))
 	y += 26
-	_t(Vector2(16, y), "%s · %d GB · %d GB · Battery %d%%" % [rep.get("cpu", ""), int(rep.get("ram_gb", 0)), int(rep.get("storage_gb", 0)), int(rep.get("battery_pct", 0))], 14, Color(0.8, 0.8, 0.85))
+	var spec_text: String = rep.get("spec", "%s · %d GB · %d GB" % [rep.get("cpu", ""), int(rep.get("ram_gb", 0)), int(rep.get("storage_gb", 0))])
+	if int(rep.get("battery_pct", -1)) >= 0:
+		spec_text += " · Battery %d%%" % int(rep.battery_pct)
+	_t(Vector2(16, y), spec_text, 14, Color(0.8, 0.8, 0.85))
 	y += 30
 	if ok:
 		_t(Vector2(16, y), "Swap to the PaneOS USB to wipe & image.", 16, Color(0.6, 1.0, 0.7))

@@ -9,6 +9,8 @@
   "diag": {
     "name": "DiagnostiKit Pro",
     "version": "7.2",
-    "stages": ["POST", "Hardware inventory", "Memory test (2 passes)", "Storage SMART + surface scan", "Battery calibration", "Display + keyboard", "Thermal stress", "Generating report"]
+    "stages": ["POST", "Hardware inventory", "Memory test (2 passes)", "Storage SMART + surface scan", "Battery calibration", "Display + keyboard", "Thermal stress", "Generating report"],
+    "stages_desktop": ["POST", "Hardware inventory", "Memory test (2 passes)", "Storage SMART + surface scan", "PSU rails + fans", "Ports + USB", "Thermal stress", "Generating report"],
+    "stages_server": ["POST + BMC handshake", "Hardware inventory", "Memory test (ECC, 2 passes)", "RAID controller + drive SMART", "PSU redundancy", "Fan modules", "Thermal stress", "Generating report"]
   }
 }

@@ -86,13 +86,15 @@ func c_pick_up(peer: int, a: Dictionary) -> Dictionary:
 		return _fail("Too heavy to lift — you'll need a pallet truck.")
 	var held := state.held_by(peer)
 	if not held.is_empty():
-		# Stacks are one kind only (a pile of laptops), and small things (USBs) are carried alone.
-		if held[0].kind != it.kind or Item.carry_weight(it.kind) == 0:
+		# Stacks are one kind and size only (a pile of laptops), and small things (USBs) are carried alone.
+		if held[0].slot_kind() != it.slot_kind() or it.weight() == 0:
 			return _fail("Hands full — put that down first.")
 		var carried := 0
 		for h: Item in held:
-			carried += Item.carry_weight(h.kind)
-		if carried + Item.carry_weight(it.kind) > carry_capacity(peer):
+			carried += h.weight()
+		if carried + it.weight() > carry_capacity(peer):
+			if it.weight() > 1:
+				return _fail("That's a two-hander — put the other one down first.")
 			return _fail("You can only carry %d at once." % carry_capacity(peer))
 	_leave_slot_side_effects(it)
 	state.set_loc(it, {"t": "held", "peer": peer, "i": held.size()})
@@ -115,7 +117,9 @@ func c_place(peer: int, a: Dictionary) -> Dictionary:
 	var it: Item = held.back()
 	if state.item_in_slot(slot_id) != null:
 		return _fail("That spot is taken.")
-	if not state.slot_accepts(slot_id, it.kind):
+	if not state.slot_accepts(slot_id, it.slot_kind()):
+		if it.is_large() and state.slot_accepts(slot_id, it.kind):
+			return _fail("Too big for this shelf — big kit needs heavy-duty racking.")
 		return _fail("That doesn't go there.")
 	var station_id := state.slot_station(slot_id)
 	var check := _station_accepts(station_id, slot_id, it)
@@ -220,7 +224,7 @@ func try_start_bench(station_id: String, peer: int = 0) -> void:
 			state.mark("station", station_id)
 			return
 		job = "test"
-		dur = float(Content.econ("test_minutes", 30)) / speed
+		dur = float(Content.econ("test_minutes", 30)) * float(u.model().get("test_mult", 1.0)) / speed
 	elif usb_it.kind == Item.KIND_USB_IMAGE:
 		if not u.tested:
 			st.msg = "Untested unit — run DiagnostiKit first."
@@ -235,7 +239,7 @@ func try_start_bench(station_id: String, peer: int = 0) -> void:
 			state.mark("station", station_id)
 			return
 		job = "image"
-		dur = float(Content.econ("image_minutes", 45)) / _skill_speed(peer, "imaging")
+		dur = float(Content.econ("image_minutes", 45)) * float(u.model().get("test_mult", 1.0)) / _skill_speed(peer, "imaging")
 	if job == "":
 		return
 	st.job = {"kind": job, "unit": unit_it.id, "usb": usb_it.id, "start": state.minute, "dur": dur, "by": peer}
@@ -289,7 +293,8 @@ func _complete_test(it: Item, by: int) -> void:
 	u.test_report = {
 		"at": state.minute, "tool": "%s %s" % [Content.diag_info.get("name", ""), Content.diag_info.get("version", "")],
 		"serial": u.serial, "model": u.display_name(), "cpu": u.cpu_name(), "ram_gb": u.ram_gb,
-		"storage_gb": u.storage_gb, "battery_pct": u.battery_pct, "faults": lines, "pass": lines.is_empty(),
+		"storage_gb": u.storage_gb, "battery_pct": u.battery_pct if u.is_laptop() else -1, "faults": lines, "pass": lines.is_empty(),
+		"type": u.hw_type(), "spec": u.spec_line(),
 	}
 	u.log_event(state.minute, "Tested: " + ("PASS" if lines.is_empty() else "%d fault(s)" % lines.size()))
 	state.bump_stat("tested")
@@ -523,10 +528,11 @@ func c_pack(peer: int, a: Dictionary) -> Dictionary:
 	var u := it.unit
 	if u.order_id == 0 or not state.orders.has(u.order_id):
 		return _fail("No order for this unit.")
-	for need in ["boxes", "labels", "tape"]:
+	var box := "big_boxes" if u.is_large() else "boxes"
+	for need in [box, "labels", "tape"]:
 		if int(state.consumables.get(need, 0)) <= 0:
-			return _fail("Out of %s — order more from the Shop." % need)
-	state.consumables["boxes"] -= 1
+			return _fail("Out of %s — order more from the Shop." % ("large boxes" if need == "big_boxes" else need))
+	state.consumables[box] -= 1
 	state.consumables["labels"] -= 1
 	state.consumables["tape"] -= 1
 	var order: Dictionary = state.orders[u.order_id]
@@ -534,6 +540,12 @@ func c_pack(peer: int, a: Dictionary) -> Dictionary:
 	state.set_loc(it, {"t": "in", "item": 0})
 	var pkg := state.new_item(Item.KIND_PACKAGE)
 	pkg.data = {"order_id": order.id, "unit": it.id, "buyer": order.buyer, "model": order.model}
+	if u.is_large():
+		# Box sized to the kit: unit footprint + foam corner blocks.
+		var vis: Dictionary = u.model().get("visual", {})
+		pkg.data["large"] = true
+		pkg.data["carry"] = int(u.model().get("carry", 3))
+		pkg.data["size"] = [snappedf(float(vis.get("w", 0.5)) + 0.1, 0.01), snappedf(float(vis.get("h", 0.2)) + 0.08, 0.01), snappedf(float(vis.get("d", 0.7)) + 0.1, 0.01)]
 	it.loc = {"t": "in", "item": pkg.id}
 	state.mark("item", it.id)
 	state.set_loc(pkg, {"t": "slot", "slot": slot_id})
@@ -574,7 +586,7 @@ func _ship_package(pkg: Item) -> void:
 	if not order.is_empty():
 		var price := int(order.price)
 		var fee := int(round(price * float(Content.econ("flogit_fee_pct", 0.1))))
-		var post := int(Content.econ("flogit_postage", 9))
+		var post := int(Content.econ("flogit_postage_large" if pkg.data.get("large", false) else "flogit_postage", 9))
 		state.add_money(price, "sales", "Flogit order #%d — %s" % [oid, order.model])
 		state.add_money(-fee, "fees", "Flogit fee #%d" % oid)
 		state.add_money(-post, "postage", "Courier #%d" % oid)
@@ -666,18 +678,29 @@ func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO) -> Array:
 	if lot.is_empty():
 		return []
 	var pallets: Array = []
-	var units: Array = lot.get("units", [])
-	var per_pallet := 20
+	var units: Array = lot.get("units", []).duplicate()
+	# Same-size kit shares a pallet: sort biggest first so servers and towers get their own pallets.
+	units.sort_custom(func(a, b): return _unit_volume(a.model_id) > _unit_volume(b.model_id))
 	var unit_price := int(round(float(lot.get("paid", lot.total_price)) / maxf(float(lot.count), 1.0)))
 	var idx := 0
 	while idx < units.size():
+		# Fill a pallet with units that share a footprint grid; layer height = the tallest of them.
+		var first := pallet_layout(units[idx].model_id)
+		var batch: Array = []
+		var cell_h := 0.0
+		while idx + batch.size() < units.size():
+			var lay := pallet_layout(units[idx + batch.size()].model_id)
+			var h := maxf(cell_h, float(lay.cell[1]))
+			var cap := mini(int(first.grid[0]) * int(first.grid[1]) * clampi(int(1.1 / h), 1, 12), 20)
+			if lay.grid != first.grid or batch.size() >= cap:
+				break
+			cell_h = h
+			batch.append(units[idx + batch.size()])
 		var pallet := state.new_item(Item.KIND_PALLET)
-		pallet.data = {"lot": lot_id, "seller_name": lot.seller_name}
+		pallet.data = {"lot": lot_id, "seller_name": lot.seller_name, "cell": [first.cell[0], cell_h, first.cell[2]], "grid": first.grid}
 		var off := Vector3(pallets.size() * 1.35, 0, 0)
 		state.set_loc(pallet, {"t": "loose", "p": [drop_pos.x + off.x, drop_pos.y, drop_pos.z + off.z], "r": [0, 0, 0, 1]})
-		for k in per_pallet:
-			if idx >= units.size():
-				break
+		for k in batch.size():
 			var it := state.new_item(Item.KIND_UNIT)
 			it.unit = UnitData.from_dict(units[idx])
 			it.unit.lot_id = lot_id
@@ -692,6 +715,23 @@ func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO) -> Array:
 	state.mark("lot", lot_id)
 	state.say("Delivery from %s on the drive — %d units." % [lot.seller_name, units.size()], "info")
 	return pallets
+
+
+static func _unit_volume(model_id: String) -> float:
+	var v: Dictionary = Content.model(model_id).get("visual", {})
+	return snappedf(float(v.get("w", 0.32)) * float(v.get("h", 0.02)) * float(v.get("d", 0.22)), 0.00001)
+
+
+static func pallet_layout(model_id: String) -> Dictionary:
+	## How units of this model stack on a 1.2 × 0.8 m EUR pallet: a grid of cells, layers up to ~1.1 m.
+	var v: Dictionary = Content.model(model_id).get("visual", {})
+	var w := float(v.get("w", 0.32)) + 0.03
+	var d := float(v.get("d", 0.22)) + 0.03
+	var h := float(v.get("h", 0.02)) + 0.004
+	var cols := clampi(int(1.2 / w), 1, 6)
+	var rows := clampi(int(0.8 / d), 1, 4)
+	var layers := clampi(int(1.1 / h), 1, 12)
+	return {"cell": [snappedf(1.2 / cols, 0.001), snappedf(h, 0.001), snappedf(0.8 / rows, 0.001)], "grid": [cols, rows], "capacity": mini(cols * rows * layers, 20)}
 
 
 func refresh_lot_board(first_day: bool = false) -> void:

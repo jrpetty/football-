@@ -29,6 +29,8 @@ func test_every_model_fault_has_a_resolvable_part() -> void:
 		for f in Content.faults.values():
 			if f.get("requires_ram_slots", false) and int(m.get("ram_slots", 0)) == 0:
 				continue
+			if not Content.applies_to(f, m):
+				continue   # e.g. no battery faults on servers
 			var pid := Valuation.repair_part_for(u, {"id": f.id})
 			check(Content.parts.has(pid), "%s / %s -> missing part '%s'" % [m.id, f.id, pid])
 

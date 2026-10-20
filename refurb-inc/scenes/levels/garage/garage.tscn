@@ -805,7 +805,7 @@ transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.63
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.58, 0, 0.55)
 
 [node name="courier_shelf" type="Marker3D" parent="Layout" unique_id=66300898]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.73, 0, 2.6)
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 2.53, 0, 2.77)
 
 [node name="metal_shelf" type="Marker3D" parent="Layout" unique_id=495603124]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -2.75, 0, -0.85)

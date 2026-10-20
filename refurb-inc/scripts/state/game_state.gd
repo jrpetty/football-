@@ -174,7 +174,7 @@ func slot_accepts(slot_id: String, kind: String) -> bool:
 	if slot_id.begins_with("i"):      # dynamic slot on an item (e.g. pallet "i12:3")
 		var host_id := int(slot_id.substr(1).get_slice(":", 0))
 		var host: Item = items.get(host_id)
-		return host != null and host.kind == Item.KIND_PALLET and kind == Item.KIND_UNIT
+		return host != null and host.kind == Item.KIND_PALLET and kind in [Item.KIND_UNIT, "unit_large"]
 	var def: Dictionary = slot_defs.get(slot_id, {})
 	if def.is_empty():
 		return false

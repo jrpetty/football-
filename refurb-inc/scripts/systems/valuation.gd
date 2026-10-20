@@ -9,8 +9,8 @@ static func a_grade_value(u: UnitData) -> float:
 		return 0.0
 	var v := float(m.get("refurb_value_a", 100))
 	v += float(Content.cpu(u.cpu_id).get("value_adj", 0)) - float(Content.cpu(m.get("ref_cpu", "")).get("value_adj", 0))
-	v += (u.ram_gb - int(m.get("ref_ram", 8))) / 8.0 * 14.0
-	v += (u.storage_gb - int(m.get("ref_storage", 256))) / 256.0 * 12.0
+	v += (u.ram_gb - int(m.get("ref_ram", 8))) / float(m.get("ram_step_gb", 8)) * 14.0
+	v += (u.storage_gb - int(m.get("ref_storage", 256))) / float(m.get("storage_step_gb", 256)) * 12.0
 	return maxf(v, 25.0)
 
 
@@ -57,7 +57,7 @@ static func grade_for(u: UnitData) -> String:
 	elif score >= int(th.get("C", 50)):
 		g = "C"
 	# A worn battery caps the grade — honest grading protects reputation.
-	if u.battery_pct < 80 and g == "A":
+	if u.is_laptop() and u.battery_pct < 80 and g == "A":
 		g = "B"
 	return g
 
@@ -85,7 +85,13 @@ static func repair_part_for(u: UnitData, fault: Dictionary) -> String:
 			var dimm := maxi(u.ram_gb / slots, 8)
 			return _closest_part("ram", "fits_ram_type", m.get("ram_type", ""), dimm)
 		"storage":
-			return _closest_part("storage", "fits_storage_type", m.get("storage_type", ""), u.storage_gb)
+			var per_drive := u.storage_gb / maxi(int(m.get("drive_count", 1)), 1)
+			return _closest_part("storage", "fits_storage_type", m.get("storage_type", ""), per_drive)
+		"psu", "fan", "board", "server_ear":
+			var field: String = {"psu": "psu_part", "fan": "fan_part", "board": "board_part", "server_ear": "ear_part"}[key]
+			var fallback: String = {"psu": "psu_atx_500", "fan": "fan_laptop_generic", "board": "mobo_laptop_generic", "server_ear": "server_ear_kit"}[key]
+			var pid: String = m.get(field, "")
+			return pid if pid != "" else fallback
 		"screen":
 			var size := float(m.get("screen_in", 14.0))
 			if size < 13.8:

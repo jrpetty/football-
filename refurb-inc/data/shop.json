@@ -4,8 +4,9 @@
     {"id": "usb_test",  "name": "DiagnostiKit Pro USB (test licence)",   "kind": "item", "item_kind": "usb_test",  "price": 45, "desc": "Boots a unit into full hardware diagnostics. One unit at a time."},
     {"id": "usb_image", "name": "PaneOS Deploy USB (wipe + image)",      "kind": "item", "item_kind": "usb_image", "price": 35, "desc": "Certified 3-pass wipe and a fresh PaneOS install."},
     {"id": "boxes_laptop", "name": "Laptop shipping boxes + foam (×10)", "kind": "consumable", "consumable": "boxes", "qty": 10, "price": 18, "desc": "Double-wall boxes with foam end caps."},
+    {"id": "boxes_large", "name": "Large server/tower boxes + foam (x5)", "kind": "consumable", "consumable": "big_boxes", "qty": 5, "price": 32, "desc": "Triple-wall cartons with corner blocks for towers and rack servers."},
     {"id": "labels",       "name": "Thermal shipping labels (×250)",     "kind": "consumable", "consumable": "labels", "qty": 250, "price": 9, "desc": "For the label printer."},
     {"id": "tape",         "name": "Packing tape (×6 rolls)",            "kind": "consumable", "consumable": "tape", "qty": 60, "price": 8, "desc": "Each roll seals about ten boxes."}
   ],
-  "start_consumables": {"boxes": 12, "labels": 250, "tape": 30}
+  "start_consumables": {"boxes": 12, "big_boxes": 3, "labels": 250, "tape": 30}
 }

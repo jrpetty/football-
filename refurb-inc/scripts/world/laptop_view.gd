@@ -5,6 +5,7 @@ extends Node3D
 ##   origin bottom-centre, front (touchpad) toward +Z, closed by default;
 ##   a node named "Lid" pivoting at the hinge (rotates about local X, negative = opens);
 ##   a MeshInstance3D named "Screen" whose surface shows the screen (material is replaced at runtime).
+## Also used for desktops and servers: their scenes simply have no Lid/Screen (the grade sticker goes on top).
 ## Optional root metadata (written by tools/model_pipeline): footprint (closed W×H×D, the model is scaled so its
 ## width matches visual.w), lid_open_deg, sticker_pos (grade sticker, in Lid space).
 
@@ -49,7 +50,7 @@ func configure(u: UnitData) -> void:
 			inst.scale = Vector3.ONE * s
 			size = fp * s
 		_open_angle = float(inst.get_meta("lid_open_deg", OPEN_ANGLE))
-		_sticker_pos = inst.get_meta("sticker_pos", null)
+		_sticker_pos = inst.get_meta("sticker_pos") if inst.has_meta("sticker_pos") else null
 	else:
 		_build_placeholder(vis)
 	_build_overlays()

@@ -45,7 +45,13 @@ func setup(it: Item) -> void:
 		visual_size = laptop.footprint()
 		mass = float(it.unit.model().get("weight_kg", 1.5))
 	else:
-		var def: Dictionary = KIND_VISUAL.get(kind, {})
+		var def: Dictionary = KIND_VISUAL.get(kind, {}).duplicate(true)
+		if kind == Item.KIND_PACKAGE and it.data.has("size"):
+			# Big kit ships in a box sized to it.
+			var sz: Array = it.data.size
+			def.size = Vector3(float(sz[0]), float(sz[1]), float(sz[2]))
+			def.params = {"size": def.size, "label": true}
+			def.mass = float(it.data.get("carry", 3)) * 6.0
 		var ms := ModelSlot.new()
 		ms.placeholder = def.get("placeholder", "")
 		ms.placeholder_params = def.get("params", {})
@@ -55,7 +61,7 @@ func setup(it: Item) -> void:
 		if def.has("label"):
 			Placeholders.text(self, def.label, Vector3(0, 0.0086, 0.008), 24, Color(0.1, 0.1, 0.1), Vector3(-90, 0, 0), 0.0006)
 		if kind == Item.KIND_PALLET:
-			_build_pallet_slots()
+			_build_pallet_slots(it)
 		if kind == Item.KIND_PACKAGE:
 			var lbl := Placeholders.text(self, "#%d\n%s" % [int(it.data.get("order_id", 0)), str(it.data.get("buyer", ""))], Vector3(0.09, visual_size.y + 0.003, 0), 22, Color(0.05, 0.05, 0.05), Vector3(-90, 0, 0), 0.0012)
 			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -69,16 +75,24 @@ func setup(it: Item) -> void:
 	apply_state(it, true)
 
 
-func _build_pallet_slots() -> void:
-	# 3 x 2 footprint, up to 4 high (laptops lying flat). Slot k → column k % 6, layer k / 6.
-	for k in 24:
+func _build_pallet_slots(it: Item) -> void:
+	# Grid sized by the delivery (Sim.pallet_layout): cols × rows per layer, layers stacked by the tallest unit.
+	# Old saves without a layout get the original laptop grid (3 × 2, 26 mm layers).
+	var cell: Array = it.data.get("cell", [0.4, 0.026, 0.4])
+	var grid: Array = it.data.get("grid", [3, 2])
+	var cols := int(grid[0])
+	var rows := int(grid[1])
+	var per_layer := cols * rows
+	var n := maxi(24, per_layer * 2)
+	for k in n:
 		var s := SnapSlot.new()
 		s.slot_name = str(k)
-		s.accepts = PackedStringArray(["unit"])
-		var col := k % 6
-		var layer := k / 6
-		s.position = Vector3(-0.39 + (col % 3) * 0.39, 0.144 + layer * 0.026, -0.2 + (col / 3) * 0.4)
-		s.hint_size = Vector3(0.34, 0.01, 0.24)
+		s.accepts = PackedStringArray(["unit", "unit_large"])
+		var col := k % cols
+		var row := (k / cols) % rows
+		var layer := k / per_layer
+		s.position = Vector3(-0.6 + (col + 0.5) * float(cell[0]), 0.144 + layer * float(cell[1]), -0.4 + (row + 0.5) * float(cell[2]))
+		s.hint_size = Vector3(float(cell[0]) - 0.05, 0.01, float(cell[2]) - 0.05)
 		add_child(s)
 		s.setup("i%d" % item_id, "")
 		pallet_slots.append(s)

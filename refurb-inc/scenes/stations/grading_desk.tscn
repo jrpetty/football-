@@ -31,6 +31,6 @@ shape = SubResource("BoxShape3D_p7c7g")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0.922, 0.05)
 script = ExtResource("3_jinsd")
 slot_name = "unit"
-accepts = PackedStringArray("unit")
+accepts = PackedStringArray("unit", "unit_large")
 location_label = "Grading desk"
 hint_size = Vector3(0.38, 0.01, 0.27)

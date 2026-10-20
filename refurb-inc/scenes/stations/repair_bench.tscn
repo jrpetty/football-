@@ -41,6 +41,6 @@ shape = SubResource("BoxShape3D_oymhd")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.924, 0.06)
 script = ExtResource("3_cmnr4")
 slot_name = "unit"
-accepts = PackedStringArray("unit")
+accepts = PackedStringArray("unit", "unit_large")
 location_label = "Repair bench"
 hint_size = Vector3(0.38, 0.01, 0.27)

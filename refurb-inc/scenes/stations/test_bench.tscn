@@ -41,7 +41,7 @@ shape = SubResource("BoxShape3D_c7e8g")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.904, 0.06)
 script = ExtResource("3_7dq5y")
 slot_name = "unit"
-accepts = PackedStringArray("unit")
+accepts = PackedStringArray("unit", "unit_large")
 location_label = "Test bench"
 hint_size = Vector3(0.38, 0.01, 0.27)
 

@@ -168,7 +168,7 @@ static func build() -> void:
 		"parts_shelf": [Vector3(2.45, 0, -3.27), 0],
 		"grading_desk": [Vector3(2.63, 0, -1.25), -90],
 		"packing_table": [Vector3(2.58, 0, 0.55), -90],
-		"courier_shelf": [Vector3(2.73, 0, 2.6), -90],
+		"courier_shelf": [Vector3(2.53, 0, 2.77), -90],
 		"metal_shelf": [Vector3(-2.75, 0, -0.85), 90],
 		"metal_shelf_2": [Vector3(-2.75, 0, 0.55), 90],
 	})
