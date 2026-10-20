@@ -317,6 +317,7 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
 - **Vehicles** follow per-level routes; lorries reverse into tail-lift spots or level docks (dock door opens, pallet lands inside).
 - **Art pipeline:** BuildKit batches meshes per material (`assets/generated/<id>/*.res`), materials live in `assets/materials/*.tres` (MatLib), textures in `assets/textures/{surfaces,decals}`; Building-app thumbnails in `assets/textures/ui/buildings/`.
 - Decision: building tiers gate nothing — only money and floor space (as briefed). Seller site visits (M6) will reuse these scenes re-dressed.
+- Move fees (2026-10-20, Jon): lock-up £10k, industrial £40k, warehouse £120k, distribution £300k, facility £600k, mega plant £1M. Moving up is a long-term goal, not an early hop.
 
 ## Business Insights (office PC app)
 - **Insights app** (`ui/office_os/apps/insights_app.gd`, widgets in `ui/office_os/insights_ui.gd`): 13 sidebar sections.

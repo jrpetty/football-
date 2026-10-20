@@ -1,19 +1,19 @@
 {
-  "_comment": "Premises ladder. Nothing is locked by tier — only cost. move_fee is a one-off (removals + deposit). floor_m2/power_kw are soft limits shown in the Building app. scene = the playable level.",
+  "_comment": "Premises ladder. Nothing is locked by tier — only cost. move_fee is a one-off (removals, deposit, fit-out and legal) and climbs steeply: moving up is a long-term goal. floor_m2/power_kw are soft limits shown in the Building app. scene = the playable level.",
   "buildings": [
     {"id": "garage", "tier": 1, "name": "Home garage", "address": "14 Sycamore Close", "rent_weekly": 150, "utilities_weekly": 25, "move_fee": 0, "floor_m2": 42, "power_kw": 7, "loading_bays": 0, "doors": 1, "scene": "res://scenes/levels/garage/garage.tscn",
      "blurb": "Uncle's garage. Damp in the corner, oil on the floor, kettle that works. It's a start."},
-    {"id": "lockup", "tier": 2, "name": "Lock-up unit", "address": "Unit 7, Railway Arches Lock-ups", "rent_weekly": 320, "utilities_weekly": 45, "move_fee": 900, "floor_m2": 98, "power_kw": 15, "loading_bays": 0, "doors": 1, "scene": "res://scenes/levels/lockup/lockup.tscn",
+    {"id": "lockup", "tier": 2, "name": "Lock-up unit", "address": "Unit 7, Railway Arches Lock-ups", "rent_weekly": 320, "utilities_weekly": 45, "move_fee": 10000, "floor_m2": 98, "power_kw": 15, "loading_bays": 0, "doors": 1, "scene": "res://scenes/levels/lockup/lockup.tscn",
      "blurb": "Double-width lock-up in a gated court. Twice the floor space, a proper roller door and nobody's bike in the way."},
-    {"id": "industrial", "tier": 3, "name": "Small industrial unit", "address": "Unit 4, Brookfield Business Park", "rent_weekly": 680, "utilities_weekly": 90, "move_fee": 2800, "floor_m2": 240, "power_kw": 40, "loading_bays": 1, "doors": 1, "scene": "res://scenes/levels/industrial/industrial.tscn",
+    {"id": "industrial", "tier": 3, "name": "Small industrial unit", "address": "Unit 4, Brookfield Business Park", "rent_weekly": 680, "utilities_weekly": 90, "move_fee": 40000, "floor_m2": 240, "power_kw": 40, "loading_bays": 1, "doors": 1, "scene": "res://scenes/levels/industrial/industrial.tscn",
      "blurb": "Modern terraced unit on a tidy estate: 6 m eaves, roof lights, a front office and your name on the fascia."},
-    {"id": "warehouse", "tier": 4, "name": "Warehouse", "address": "Harbour Road Distribution Park", "rent_weekly": 1450, "utilities_weekly": 210, "move_fee": 7500, "floor_m2": 1440, "power_kw": 120, "loading_bays": 3, "doors": 4, "scene": "res://scenes/levels/warehouse/warehouse.tscn",
+    {"id": "warehouse", "tier": 4, "name": "Warehouse", "address": "Harbour Road Distribution Park", "rent_weekly": 1450, "utilities_weekly": 210, "move_fee": 120000, "floor_m2": 1440, "power_kw": 120, "loading_bays": 3, "doors": 4, "scene": "res://scenes/levels/warehouse/warehouse.tscn",
      "blurb": "Standalone 9 m warehouse with three dock levellers, a secure yard and a two-storey office."},
-    {"id": "distribution", "tier": 5, "name": "Distribution centre", "address": "M62 Gateway, Plot 3", "rent_weekly": 3400, "utilities_weekly": 520, "move_fee": 18000, "floor_m2": 5400, "power_kw": 400, "loading_bays": 8, "doors": 9, "scene": "res://scenes/levels/distribution/distribution.tscn",
+    {"id": "distribution", "tier": 5, "name": "Distribution centre", "address": "M62 Gateway, Plot 3", "rent_weekly": 3400, "utilities_weekly": 520, "move_fee": 300000, "floor_m2": 5400, "power_kw": 400, "loading_bays": 8, "doors": 9, "scene": "res://scenes/levels/distribution/distribution.tscn",
      "blurb": "Eight dock doors, HGV yard, gatehouse, sprinkler tank and a glass office block. Serious kit for a serious operation."},
-    {"id": "facility", "tier": 6, "name": "Refurb facility", "address": "Refurb Inc. HQ, Innovation Way", "rent_weekly": 7200, "utilities_weekly": 900, "move_fee": 45000, "floor_m2": 3500, "power_kw": 900, "loading_bays": 6, "doors": 7, "scene": "res://scenes/levels/facility/facility.tscn",
+    {"id": "facility", "tier": 6, "name": "Refurb facility", "address": "Refurb Inc. HQ, Innovation Way", "rent_weekly": 7200, "utilities_weekly": 900, "move_fee": 600000, "floor_m2": 3500, "power_kw": 900, "loading_bays": 6, "doors": 7, "scene": "res://scenes/levels/facility/facility.tscn",
      "blurb": "Purpose-built flagship: glazed atrium HQ, colour-zoned production floor, mezzanine, solar roof and a visitor plaza."},
-    {"id": "megaplant", "tier": 7, "name": "Mega plant", "address": "Refurb Inc. Campus, North Valley", "rent_weekly": 16500, "utilities_weekly": 2400, "move_fee": 120000, "floor_m2": 21600, "power_kw": 4000, "loading_bays": 16, "doors": 18, "scene": "res://scenes/levels/megaplant/megaplant.tscn",
+    {"id": "megaplant", "tier": 7, "name": "Mega plant", "address": "Refurb Inc. Campus, North Valley", "rent_weekly": 16500, "utilities_weekly": 2400, "move_fee": 1000000, "floor_m2": 21600, "power_kw": 4000, "loading_bays": 16, "doors": 18, "scene": "res://scenes/levels/megaplant/megaplant.tscn",
      "blurb": "A campus. Sawtooth-roofed super-hall, sixteen docks, HQ tower, solar car ports and its own wind turbine. Robots welcome."}
   ]
 }
