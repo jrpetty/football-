@@ -4,3 +4,12 @@ export_presets.cfg.bak
 /build/
 /tools/out/
 *.tmp
+
+# Unfinished browser downloads and stray files from other projects dropped into assets/
+*.crdownload
+*.part
+/assets/package.json
+/assets/package-lock.json
+/assets/tsconfig*.json
+/assets/README.md
+/assets/README
