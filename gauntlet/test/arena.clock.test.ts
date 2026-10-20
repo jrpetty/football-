@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { cpSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -30,7 +30,7 @@ cpSync(new URL('../config', import.meta.url), join(sandbox, 'config'), { recursi
 }
 
 const clockMod = await import('../src/arena/clock.ts');
-const { GameClock, SpeedMeter, planMove, clockSection, clockReminder, urgencyTier, clockDisplayState, clockCallout, tickingClock, fmtClockDisplay, fmtClockText, resolveTimeControl, DEFAULT_TIME_CONTROL, TIME_CONTROL_PRESETS } = clockMod;
+const { GameClock, SpeedMeter, planMove, allowanceError, RESERVE_TURNS, USEFUL_FLOOR_TOKENS, clockSection, clockReminder, urgencyTier, clockDisplayState, clockCallout, tickingClock, fmtClockDisplay, fmtClockText, resolveTimeControl, DEFAULT_TIME_CONTROL, TIME_CONTROL_PRESETS } = clockMod;
 const { chess, fromFen, START_FEN, cannotMate } = await import('../src/arena/games/chess.ts');
 const { connect4 } = await import('../src/arena/games/connect4.ts');
 const { poker } = await import('../src/arena/games/poker.ts');
@@ -150,9 +150,9 @@ const PURE: Record<string, { n: number; tl: TL; min: number }> = {
 };
 
 /** Plays `n` turns where the player always uses its FULL allowance at a jittered speed; returns whether it flagged. */
-function pureRun(g: (typeof PURE)[string], tps: number, ttft: number, seed: number, tc = TC4, hidden = false): { flagged: boolean; leftMs: number; tokens: number[] } {
+function pureRun(g: (typeof PURE)[string], tps: number, ttft: number, seed: number, tc = TC4, hidden = false, prior = false): { flagged: boolean; leftMs: number; tokens: number[] } {
   const rng = createRng(seed);
-  const meter = new SpeedMeter();
+  const meter = prior ? knownSpeed(tps, ttft) : new SpeedMeter();
   let R = tc.minutes * 60_000;
   const tokens: number[] = [];
   for (let k = 0; k < g.n; k++) {
@@ -173,13 +173,13 @@ test('allowance: compliant players (20–200 tok/s, 0.3–3 s first token, ±20%
     for (const tps of SPEEDS)
       for (const d of DELAYS)
         for (let seed = 1; seed <= 15; seed++) {
-          for (const hidden of [false, true]) {
-            const r = pureRun(g, tps, d, seed * 101 + tps + d, TC4, hidden);
-            assert.equal(r.flagged, false, `${name} at ${tps} tok/s, ${d} ms first token, seed ${seed}${hidden ? ', hidden reasoning' : ''} flagged`);
+          for (const [hidden, prior] of [[false, false], [true, false], [false, true]] as const) {
+            const r = pureRun(g, tps, d, seed * 101 + tps + d, TC4, hidden, prior);
+            assert.equal(r.flagged, false, `${name} at ${tps} tok/s, ${d} ms first token, seed ${seed}${hidden ? ', hidden reasoning' : ''}${prior ? ', speed known' : ''} flagged`);
             runs++;
           }
         }
-    assert.equal(runs, SPEEDS.length * DELAYS.length * 30);
+    assert.equal(runs, SPEEDS.length * DELAYS.length * 45);
   }
   // The longer presets hold too.
   for (const tc of [{ minutes: 3, incrementSec: 2 }, { minutes: 5, incrementSec: 0 }, { minutes: 10, incrementSec: 0 }])
@@ -209,6 +209,105 @@ test('allowance: a player that ignores it (a slow model) flags; bullet with a sl
   let k = 0;
   for (; R > 0 && k < 60; k++) R -= 1000 + (6000 / 40) * 1000;
   assert.ok(k <= 2, 'flags on the second move');
+});
+
+/** A meter that already knows the player's true speed (earlier calls of the same model). */
+const knownSpeed = (tps: number, ttftMs: number) => new SpeedMeter(Array.from({ length: 5 }, () => ({ outputTokens: 600, totalMs: ttftMs + (600 / tps) * 1000, ttftMs })));
+const quantile = (a: number[], p: number) => [...a].sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(p * a.length))]!;
+
+test('allowance: the reserve holds back at most 12 minimal answers, so move 1 is a useful move once the model is measured', () => {
+  assert.equal(RESERVE_TURNS, 12);
+  const chess1 = PURE.chess!.tl(0);
+  const known = planMove({ remainingMs: 240_000, turns: chess1, speed: knownSpeed(100, 500).estimate(), maxOutputTokens: 16000, minTokens: 12 });
+  assert.ok(known.maxOutputTokens >= USEFUL_FLOOR_TOKENS, `move 1 at 100 tok/s: ${known.maxOutputTokens} tokens`);
+  assert.ok(known.suggestedMs >= 2500, `suggested ${known.suggestedMs} ms`);
+  const unknown = planMove({ remainingMs: 240_000, turns: chess1, speed: new SpeedMeter().estimate(), maxOutputTokens: 16000, minTokens: 12 });
+  assert.ok(unknown.maxOutputTokens >= 80, `unmeasured move 1: ${unknown.maxOutputTokens} tokens (was 57)`);
+  // Through a whole 60-move game at 100 tok/s the allowance stays useful (it used to drop to a few dozen tokens).
+  const run = (meter: InstanceType<typeof SpeedMeter>) => {
+    let R = 240_000;
+    const toks: number[] = [];
+    for (let k = 0; k < 60; k++) {
+      const pl = planMove({ remainingMs: R, turns: PURE.chess!.tl(k), speed: meter.estimate(), maxOutputTokens: 16000, minTokens: 12 });
+      toks.push(pl.maxOutputTokens);
+      const t = 500 + (pl.maxOutputTokens / 100) * 1000;
+      meter.observe({ outputTokens: pl.maxOutputTokens, totalMs: t, ttftMs: 500 });
+      R -= t;
+      assert.ok(R > 0, `flagged at move ${k + 1}`);
+    }
+    return toks;
+  };
+  const toks = run(knownSpeed(100, 500));
+  assert.ok(quantile(toks, 0.5) >= 350, `median ${quantile(toks, 0.5)}`);
+  assert.ok(quantile(toks, 0.1) >= 200, `p10 ${quantile(toks, 0.1)}`);
+});
+
+test('speed meter: a player is sized from its own calls, else the same model’s earlier calls, else the default', () => {
+  const fresh = new SpeedMeter();
+  assert.equal(fresh.source, 'default');
+  assert.equal(fresh.estimate().measured, false);
+  const prior = knownSpeed(120, 400);
+  assert.equal(prior.source, 'earlier');
+  const e = prior.estimate();
+  assert.ok(e.measured && Math.abs(e.tokensPerSec - 120) < 1 && Math.abs(e.firstTokenMs - 400) < 1);
+  prior.observe({ outputTokens: 100, totalMs: 300 + 2000, ttftMs: 300 });
+  assert.equal(prior.source, 'tournament', 'its own calls in this tournament win');
+  assert.ok(Math.abs(prior.estimate().tokensPerSec - 50) < 1);
+  // The delay is the median: one slow outlier does not move it.
+  const m = new SpeedMeter();
+  for (const ttft of [400, 450, 500, 9000, 420]) m.observe({ outputTokens: 400, totalMs: ttft + 4000, ttftMs: ttft });
+  assert.equal(m.estimate().firstTokenMs, 450);
+});
+
+test('speed priors: earlier tournaments first, then Gauntlet results, matched by model configuration only', () => {
+  const data = join(sandbox, 'data');
+  const entrant = (id: string, configHash: string) => ({ id, label: id, configHash, seed: 1, index: null });
+  const tdir = join(data, 'arena', 'arena-prior-test');
+  mkdirSync(tdir, { recursive: true });
+  writeFileSync(join(tdir, 'manifest.json'), JSON.stringify({ id: 'arena-prior-test', entrants: [entrant('m-a', 'hash-a'), entrant('m-b', 'hash-b')], settings: {}, matches: [], game: { id: 'chess' } }));
+  const call = (out: number, total: number, ttft: number) => ({ usage: { outputTokens: out }, totalMs: total, ttftMs: ttft, messages: [], response: '' });
+  writeFileSync(join(tdir, 'games.jsonl'), JSON.stringify({ key: 'g1', players: ['m-a', 'm-b'], metrics: [{ costUsd: 0 }, { costUsd: 0 }], transcripts: [Array.from({ length: 6 }, () => call(500, 5500, 500)), [call(300, 9000, 6000)]] }) + '\n');
+  const rdir = join(data, 'runs', 'run-prior-test');
+  mkdirSync(rdir, { recursive: true });
+  writeFileSync(join(rdir, 'manifest.json'), JSON.stringify({ id: 'run-prior-test' }));
+  writeFileSync(join(rdir, 'results.jsonl'), [1, 2, 3].map((i) => JSON.stringify({ key: `k${i}`, contestantHash: 'hash-c', status: 'ok', metrics: { outputTokens: 800, outputTokensPerSec: 80, ttftMs: 700 } })).join('\n') + '\n');
+  const pri = tournament.priorSpeedSamples(['hash-a', 'hash-b', 'hash-c', 'hash-unknown']);
+  assert.equal(pri.get('hash-a')!.length, 6, 'from the earlier tournament');
+  assert.deepEqual(pri.get('hash-a')![0], { outputTokens: 500, totalMs: 5500, ttftMs: 500 });
+  assert.equal(pri.get('hash-b')!.length, 0, 'too few Arena calls: Gauntlet results are tried (there are none for this model)');
+  assert.equal(pri.get('hash-c')!.length, 3, 'from Gauntlet results');
+  assert.deepEqual(pri.get('hash-c')![0], { outputTokens: 800, totalMs: 10_000, ttftMs: 700 });
+  assert.equal(pri.get('hash-unknown')!.length, 0, 'never another model’s numbers');
+});
+
+test('prompt: a model that reasons is told plainly when its allowance is small', () => {
+  const v = { ...chessView(150_000, 150_000), maxOutputTokens: 300, reasoning: true };
+  assert.match(clockSection(v), /Answer at once with very little reasoning: you only have about 300 tokens\./);
+  assert.doesNotMatch(clockSection({ ...v, maxOutputTokens: 2000 }), /very little reasoning/);
+  assert.doesNotMatch(clockSection({ ...v, reasoning: false }), /very little reasoning/);
+});
+
+test('retry: a reply that ran out of its allowance before the move gets the problem explained and a small fixed allowance', async () => {
+  const calls: Array<{ max?: number; prompt: string }> = [];
+  const h: ModelHandle = {
+    async complete(req) {
+      calls.push({ max: req.maxOutputTokens, prompt: req.messages[0]!.content });
+      if (calls.length === 1) return { text: 'Let me think about the Sicilian…', stopReason: 'max_tokens', totalMs: 3000, ttftMs: 300, outputTokens: req.maxOutputTokens ?? 0 };
+      return { text: 'MOVE: e4', stopReason: 'end', totalMs: 400, ttftMs: 300, outputTokens: 6 };
+    },
+    chat: () => {
+      throw new Error('x');
+    },
+  };
+  const other = simPlayer({ tps: 100, ttftMs: 300, seed: 1, answer: pickTicked('MOVE') });
+  const g = await playGame({ game: chess, config: { ...chess.defaults, maxPlies: 1 }, seed: 1, seats: [{ handle: h }, { handle: other }], maxStrikes: 3, clock: clockOpts(), maxOutputTokens: 16000 });
+  assert.equal(g.moves[0]!.attempts[0]!.error, 'You ran out of your token allowance before giving a move — give your move immediately, no reasoning.');
+  assert.equal(allowanceError(chess.clock!), g.moves[0]!.attempts[0]!.error);
+  assert.equal(calls[1]!.max, chess.clock!.retryTokens, 'the retry gets the small fixed allowance');
+  assert.match(calls[1]!.prompt, /PREVIOUS ANSWER WAS REJECTED[\s\S]*ran out of your token allowance/);
+  assert.equal(g.moves[0]!.move, 'e2e4');
+  // Poker says so in its own words.
+  assert.match(allowanceError(poker.clock!), /before you could give your ACTION line — give your ACTION line immediately, no reasoning\./);
 });
 
 // ─────────────────────────────── Engines ───────────────────────────────

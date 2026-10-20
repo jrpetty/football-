@@ -584,6 +584,7 @@ export const poker: ArenaGame<PokerState> = {
     flagRule: 'If your clock reaches 0:00, every remaining decision of yours in this session is made for you at once, with no more replies from you: check when checking is free, otherwise fold.',
     troubleLoss: 'every decision you have left is folded for you',
     minTokens: 40,
+    retryTokens: 64,
     turnsLeft(s) {
       // About 2.25 decisions per player per hand; the reserve assumes up to 3.5.
       const handsLeft = Math.max(1, s.cfg.hands - s.results.length);

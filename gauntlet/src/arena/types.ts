@@ -72,6 +72,8 @@ export interface ArenaClockSpec<S = unknown> {
   troubleLoss: string;
   /** Smallest useful reply in tokens (the allowance never goes below it). */
   minTokens: number;
+  /** The fixed allowance of a retry after a reply ran out of tokens before its answer line (just enough for it). */
+  retryTokens: number;
   /** Expected and most turns left for `side`, this one included (`made` = its completed turns this game). */
   turnsLeft(state: S, side: Side, made: number, config: GameConfig): { expected: number; max: number };
   /** Board games: the result when `side`'s flag falls (default: the other side wins on time). */
