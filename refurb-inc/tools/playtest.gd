@@ -180,6 +180,9 @@ func _ready() -> void:
 		Game.request("unbox", {"item": parcels[0].id})
 		_check(int(s.parts.get("bat_corvex_prospect", 0)) >= 2, "parts in bins after unboxing")
 
+	# --- aim the real camera at stock on a shelf and press E (the ray must reach the laptop, not just the shelf)
+	await _aim_and_pick_check()
+
 	# --- save / load round trip through the real level
 	var err := SaveManager.save_game("playtest")
 	_check(err == OK, "saved")
@@ -192,6 +195,37 @@ func _ready() -> void:
 	print("\nPLAYTEST %s (%d failures)" % ["PASSED" if _fails.is_empty() else "FAILED", _fails.size()])
 	Engine.time_scale = 1.0
 	get_tree().quit(0 if _fails.is_empty() else 1)
+
+
+func _aim_and_pick_check() -> void:
+	var s := Game.state
+	var player: Player = _level.local_player()
+	for h: Item in s.held_by(player.peer_id):
+		Game.request("drop", {"p": [0, 0.5, 0], "r": [0, 0, 0, 1]})
+	for level_bay in [1, 7, 13]:          # bottom, middle and top shelves
+		var slot_id := "shelf_a:%d" % level_bay
+		var it := s.new_item(Item.KIND_UNIT)
+		it.unit = Game.sim.lots.roll_unit("kestrel_swift_14", 0.8)
+		s.set_loc(it, {"t": "slot", "slot": slot_id})
+		await _frames(4)
+		var view: ItemView = _level.item_views.get(it.id)
+		var shelf: Node3D = _level.fixture_nodes.get("shelf_a")
+		var front := shelf.global_basis.z.normalized()
+		player.global_position = shelf.global_position + front * 1.1
+		player.velocity = Vector3.ZERO
+		await _frames(2)
+		var target := view.global_position + Vector3(0, view.visual_size.y * 0.5, 0)
+		var dir := (target - player.camera.global_position).normalized()
+		player._yaw = atan2(-dir.x, -dir.z)
+		player._pitch = asin(clampf(dir.y, -1.0, 1.0))
+		player._apply_look()
+		await _frames(3)
+		player._update_interaction(0.0)
+		player._tap()
+		await _frames(4)
+		_check(it.loc.get("t") == "held", "aimed at a laptop on %s and picked it up by pressing E" % slot_id)
+		for h: Item in s.held_by(player.peer_id):
+			s.set_loc(h, {"t": "gone"})
 
 
 func _frames(n: int) -> void:

@@ -268,6 +268,11 @@ func _update_interaction(delta: float) -> void:
 		hit = ray.get_collision_point()
 		node = _find_interactable(ray.get_collider())
 	var held := Game.state.held_by(peer_id)
+	# Empty-handed and looking at a shelf/bench: target the item in the nearest space, not the furniture.
+	if held.is_empty() and node and node.has_method("item_view_near"):
+		var near: ItemView = node.item_view_near(hit)
+		if near:
+			node = near
 	var info: Dictionary = {}
 	var place_slot: SnapSlot = null
 	if not held.is_empty():
