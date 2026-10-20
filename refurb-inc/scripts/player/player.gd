@@ -160,7 +160,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_hold_progress = 0.0
 		_hold_target = _hover_node
 	elif event.is_action_released("interact"):
-		if _press_t >= 0.0 and _press_t < TAP_TIME and not _hold_consumed:
+		# A press counts as a tap unless a hold action actually got going — so a relaxed press of E
+		# still picks things up; only targets with a hold (repair, grade, pack…) need a quick tap.
+		if _press_t >= 0.0 and not _hold_consumed and (_press_t < TAP_TIME or _hold_progress <= 0.0):
 			_tap()
 		_cancel_hold()
 		_press_t = -1.0

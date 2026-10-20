@@ -202,7 +202,8 @@ func _aim_and_pick_check() -> void:
 	var player: Player = _level.local_player()
 	for h: Item in s.held_by(player.peer_id):
 		Game.request("drop", {"p": [0, 0.5, 0], "r": [0, 0, 0, 1]})
-	for level_bay in [1, 7, 13]:          # bottom, middle and top shelves
+	var presses := {1: 0.05, 7: 0.35, 13: 0.6}     # a quick tap, a normal press, a slow press
+	for level_bay in presses:              # bottom, middle and top shelves
 		var slot_id := "shelf_a:%d" % level_bay
 		var it := s.new_item(Item.KIND_UNIT)
 		it.unit = Game.sim.lots.roll_unit("kestrel_swift_14", 0.8)
@@ -220,10 +221,18 @@ func _aim_and_pick_check() -> void:
 		player._pitch = asin(clampf(dir.y, -1.0, 1.0))
 		player._apply_look()
 		await _frames(3)
-		player._update_interaction(0.0)
-		player._tap()
-		await _frames(4)
-		_check(it.loc.get("t") == "held", "aimed at a laptop on %s and picked it up by pressing E" % slot_id)
+		# Real key presses through the input system, held for different lengths of time.
+		var ev := InputEventAction.new()
+		ev.action = "interact"
+		ev.pressed = true
+		Input.parse_input_event(ev)
+		await get_tree().create_timer(float(presses[level_bay])).timeout
+		var up := InputEventAction.new()
+		up.action = "interact"
+		up.pressed = false
+		Input.parse_input_event(up)
+		await _frames(6)
+		_check(it.loc.get("t") == "held", "aimed at a laptop on %s, pressed E for %.2fs, picked it up" % [slot_id, float(presses[level_bay])])
 		for h: Item in s.held_by(player.peer_id):
 			s.set_loc(h, {"t": "gone"})
 
