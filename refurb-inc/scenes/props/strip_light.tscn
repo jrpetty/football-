@@ -3,11 +3,11 @@
 [ext_resource type="Script" path="res://scripts/world/prop.gd" id="1_ctd8v"]
 [ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_bw5do"]
 
-[node name="StripLight" type="Node3D" unique_id=74576305]
+[node name="StripLight" type="Node3D" unique_id=585285406]
 script = ExtResource("1_ctd8v")
 solid = false
 
-[node name="Model" type="Node3D" parent="." unique_id=1142668206]
+[node name="Model" type="Node3D" parent="." unique_id=565285136]
 script = ExtResource("2_bw5do")
 placeholder = "strip_light"
 placeholder_params = {

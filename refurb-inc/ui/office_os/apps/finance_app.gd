@@ -31,7 +31,8 @@ func refresh() -> void:
 	var due_day := int(Content.econ("rent_due_weekday", 4))
 	var days_to := (due_day - s.weekday() + 7) % 7
 	bv.add_child(l("Upcoming", 20))
-	bv.add_child(l("Rent (garage) £%d + electric & broadband £%d — due %s at close" % [int(Content.econ("rent_weekly", 150)), int(Content.econ("utilities_weekly", 25)), "today" if days_to == 0 else GameState.WEEKDAYS[due_day]], 17, AMBER if days_to <= 1 else INK))
+	var b := s.building()
+	bv.add_child(l("Rent (%s) £%d + utilities £%d — due %s at close" % [b.get("name", ""), int(b.get("rent_weekly", 150)), int(b.get("utilities_weekly", 25)), "today" if days_to == 0 else GameState.WEEKDAYS[due_day]], 17, AMBER if days_to <= 1 else INK))
 	bv.add_child(l("Staff wages: none yet (hire staff once the business can carry them)", 17, SUB))
 	if s.cash < 0:
 		bv.add_child(para("You are overdrawn. The bank charges £%d a week and it dents your reputation. Sell stock to recover." % int(Content.econ("overdraft_fee_weekly", 40)), 17, RED, 800))

@@ -3,10 +3,10 @@
 [ext_resource type="Script" path="res://scripts/world/prop.gd" id="1_lwgo1"]
 [ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_qfrsd"]
 
-[node name="CardboardBox" type="Node3D" unique_id=967570725]
+[node name="CardboardBox" type="Node3D" unique_id=1367942364]
 script = ExtResource("1_lwgo1")
 
-[node name="Model" type="Node3D" parent="." unique_id=141303152]
+[node name="Model" type="Node3D" parent="." unique_id=778638643]
 script = ExtResource("2_qfrsd")
 placeholder = "cardboard_box"
 placeholder_params = {

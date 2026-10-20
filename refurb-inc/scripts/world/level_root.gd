@@ -1,7 +1,7 @@
 class_name LevelRoot
 extends Node3D
-## Root of a playable location (garage now; bigger premises and seller sites later reuse this).
-## Keeps 3D in sync with GameState: one ItemView per world item, one Player per peer.
+## Root of a playable location (any of the 7 premises; seller sites later reuse these scenes re-dressed).
+## Keeps 3D in sync with GameState: equipment (fixtures), one ItemView per world item, one Player per peer.
 
 static var current: LevelRoot
 ## Title-screen backdrop: build the level but don't start a game or spawn players.
@@ -9,21 +9,37 @@ static var menu_mode := false
 
 const PLAYER_SCENE := "res://scenes/player/player.tscn"
 const XFORM_HZ := 15.0
+const FIT_TOLERANCE := 0.06
 
+@export var building_id: String = "garage"
 @export var spawn_points: Array[Node3D] = []
 @export var safe_drop: Node3D
 @export var lorry_drop: Node3D
 @export var parcel_drop: Node3D
+## Goods-in area where loose stock/pallets are dropped after a move (centre of a grid).
+@export var goods_in: Node3D
 @export var environment: WorldEnvironment
 @export var sun: DirectionalLight3D
+## Default equipment positions: Marker3D children named "<fixture_type>" / "<fixture_type>_2"…
+@export var layout: Node3D
+## Usable floor, as XZ rectangles in world space. Equipment must sit fully inside one of them.
+@export var floor_rects: Array[Rect2] = []
+## No-build zones (door aprons, walkways, dressing like the kettle corner).
+@export var keepout_rects: Array[Rect2] = []
+## Ambient emitter positions (street noise, light hum).
+@export var street_sound_pos := Vector3(0, 1.5, 8.0)
+@export var hum_sound_pos := Vector3(0, 2.5, -1.0)
 
 var slot_nodes: Dictionary = {}      # full slot id -> SnapSlot
 var item_views: Dictionary = {}      # item id -> ItemView
+var fixture_nodes: Dictionary = {}   # fixture id -> Node3D
 var players: Dictionary = {}         # peer id -> Player
 var pending_views: Dictionary = {}   # item ids waiting for their slot node to exist
 var items_root: Node3D
 var players_root: Node3D
+var fixtures_root: Node3D
 var _xf_accum := 0.0
+var _model_cache: Dictionary = {}    # fixture type -> {placeholder, params, scene}
 
 
 func _enter_tree() -> void:
@@ -33,9 +49,14 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	if current == self:
 		current = null
+	if Game.state.changed.is_connected(_on_state_changed):
+		Game.state.changed.disconnect(_on_state_changed)
 
 
 func _ready() -> void:
+	fixtures_root = Node3D.new()
+	fixtures_root.name = "Fixtures"
+	add_child(fixtures_root)
 	items_root = Node3D.new()
 	items_root.name = "Items"
 	add_child(items_root)
@@ -49,21 +70,24 @@ func _ready() -> void:
 	_apply_graphics()
 	_start_ambience()
 	if menu_mode:
+		_preview_fixtures()
 		return
 	if not Game.in_game:
-		# Running the level directly from the editor (F6): start a fresh solo game.
+		# Running this level directly from the editor (F6): start a fresh solo game here.
 		Game.new_game()
+		if Game.state.building_id != building_id:
+			Game.state.building_id = building_id
 	else:
 		_on_state_reset()
 
 
 func _start_ambience() -> void:
 	var street := Sfx.make_loop("street_ambience", self, -8.0, "Ambience")
-	street.position = Vector3(0, 1.5, 8.0)
+	street.position = street_sound_pos
 	street.unit_size = 10.0
-	street.max_distance = 60.0
+	street.max_distance = 80.0
 	var hum := Sfx.make_loop("fluorescent_hum", self, -20.0, "Ambience")
-	hum.position = Vector3(0, 2.5, -1.0)
+	hum.position = hum_sound_pos
 	if street.stream:
 		street.play()
 	if hum.stream:
@@ -76,15 +100,229 @@ func _apply_graphics() -> void:
 
 
 func _on_state_reset() -> void:
+	if not is_inside_tree():
+		return
 	if not Game.state.changed.is_connected(_on_state_changed):
 		Game.state.changed.connect(_on_state_changed)
-	# Stations/shelves (re)register their slots into the new state first.
-	get_tree().call_group("slot_hosts", "register_slots")
 	if Game.is_host() and Game.sim:
 		Game.sim.visual_vehicles = has_node("VehicleDirector")
+	_rebuild_fixtures()
+	# Static slot hosts that aren't fixtures (none in M1, but kept for dressing stations).
+	get_tree().call_group("slot_hosts", "register_slots")
+	if Game.is_host() and Game.sim:
+		_auto_layout()
+		_relocate_loose_items()
 	_rebuild_items()
 	_sync_players()
 
+
+func _on_state_changed(kind: String, id: Variant) -> void:
+	match kind:
+		"item":
+			_update_item(int(id))
+		"fixture":
+			_update_fixture(str(id))
+
+
+# ================================================================= equipment (fixtures)
+
+func _rebuild_fixtures() -> void:
+	for n in fixture_nodes.values():
+		n.queue_free()
+	fixture_nodes.clear()
+	for id in Game.state.fixtures:
+		_update_fixture(id)
+
+
+func _update_fixture(id: String) -> void:
+	var f: Dictionary = Game.state.fixtures.get(id, {})
+	var node: Node3D = fixture_nodes.get(id)
+	if f.is_empty() or not f.get("placed", false):
+		if node:
+			fixture_nodes.erase(id)
+			node.queue_free()
+			fixtures_root.remove_child(node)
+			# Whatever sat on it disappears until it is placed again.
+			for it in Game.state.fixture_items(id):
+				_update_item(it.id)
+		return
+	var xf := Transform3D(Basis(Vector3.UP, deg_to_rad(float(f.r))), Vector3(f.p[0], f.p[1], f.p[2]))
+	if node:
+		node.global_transform = xf
+		return
+	var def := Content.fixture(f.type)
+	if def.is_empty() or not ResourceLoader.exists(def.scene):
+		push_warning("Fixture %s has no scene" % id)
+		return
+	node = load(def.scene).instantiate()
+	node.name = "F_" + id
+	node.set_meta("fixture_id", id)
+	if "station_id" in node:
+		node.set("station_id", id)
+	if "display_name" in node and str(f.get("label", "")) != "":
+		node.set("display_name", f.label)
+	if "short_label" in node and str(f.get("label", "")) != "":
+		node.set("short_label", f.label)
+	fixtures_root.add_child(node)
+	node.global_transform = xf
+	fixture_nodes[id] = node
+	if not pending_views.is_empty():
+		_retry_pending.call_deferred()
+
+
+func fixture_at(n: Node) -> String:
+	while n:
+		if n.has_meta("fixture_id"):
+			return n.get_meta("fixture_id")
+		n = n.get_parent()
+	return ""
+
+
+func fixture_model_info(type: String) -> Dictionary:
+	## Placeholder/model of a fixture type without running its scripts (for placement ghosts).
+	if _model_cache.has(type):
+		return _model_cache[type]
+	var out := {}
+	var def := Content.fixture(type)
+	if not def.is_empty() and ResourceLoader.exists(def.scene):
+		var inst: Node = load(def.scene).instantiate()
+		var ms := inst.get_node_or_null("Model")
+		if ms:
+			out = {"placeholder": ms.get("placeholder"), "params": ms.get("placeholder_params"), "scene": ms.get("model_scene")}
+		inst.free()
+	_model_cache[type] = out
+	return out
+
+
+static func footprint_rect(type: String, pos: Vector3, rot_deg: float) -> Rect2:
+	## World XZ bounds of a fixture's footprint (rotations snap to 90° steps for the bounds).
+	var def := Content.fixture(type)
+	var fp: Array = def.get("footprint", [1.0, 1.0])
+	var w := float(fp[0])
+	var back := float(def.get("back", float(fp[1]) * 0.5))
+	var front := float(def.get("front", float(fp[1]) * 0.5))
+	var corners := [Vector3(-w / 2, 0, -back), Vector3(w / 2, 0, -back), Vector3(-w / 2, 0, front), Vector3(w / 2, 0, front)]
+	var b := Basis(Vector3.UP, deg_to_rad(rot_deg))
+	var r := Rect2()
+	for i in corners.size():
+		var c: Vector3 = b * corners[i] + pos
+		if i == 0:
+			r = Rect2(c.x, c.z, 0, 0)
+		else:
+			r = r.expand(Vector2(c.x, c.z))
+	return r
+
+
+func can_place(type: String, pos: Vector3, rot_deg: float, ignore_id: String = "") -> bool:
+	var r := footprint_rect(type, pos, rot_deg).grow(-FIT_TOLERANCE)
+	var inside := floor_rects.is_empty()
+	for fr in floor_rects:
+		if fr.encloses(r):
+			inside = true
+			break
+	if not inside:
+		return false
+	for k in keepout_rects:
+		if k.intersects(r):
+			return false
+	for id in Game.state.fixtures:
+		if id == ignore_id:
+			continue
+		var f: Dictionary = Game.state.fixtures[id]
+		if not f.get("placed", false):
+			continue
+		var o := footprint_rect(f.type, Vector3(f.p[0], f.p[1], f.p[2]), float(f.r)).grow(-FIT_TOLERANCE)
+		if o.intersects(r):
+			return false
+	return true
+
+
+func _auto_layout() -> void:
+	## Host: put any equipment that isn't placed (new game, just moved in, just bought) in a sensible spot.
+	var ids: Array = Game.state.fixtures.keys()
+	var used := {}
+	for id in ids:
+		var f: Dictionary = Game.state.fixtures[id]
+		if f.get("placed", false):
+			continue
+		var spot := _layout_spot(f.type, used)
+		if spot.is_empty():
+			spot = _free_spot(f.type)
+		if spot.is_empty():
+			Game.toast.emit("No room for %s — it's in storage (Building app)." % f.label, "warn")
+			continue
+		Game.sim.c_place_fixture(1, {"id": id, "p": spot.p, "r": spot.r})
+
+
+func _layout_spot(type: String, used: Dictionary) -> Dictionary:
+	if layout == null:
+		return {}
+	for m in layout.get_children():
+		if not (m is Node3D) or used.has(m.name):
+			continue
+		var n := String(m.name)
+		if n == type or n.begins_with(type + "_"):
+			var p: Vector3 = m.global_position
+			var r: float = rad_to_deg(m.global_rotation.y)
+			used[m.name] = true
+			if can_place(type, p, r):
+				return {"p": [p.x, p.y, p.z], "r": snappedf(r, 1.0)}
+	return {}
+
+
+func _free_spot(type: String) -> Dictionary:
+	for fr in floor_rects:
+		var y := 0.0
+		var z := fr.position.y + 0.5
+		while z < fr.end.y - 0.4:
+			var x := fr.position.x + 0.8
+			while x < fr.end.x - 0.6:
+				for r in [0.0, 90.0, 180.0, -90.0]:
+					if can_place(type, Vector3(x, y, z), r):
+						return {"p": [x, y, z], "r": r}
+				x += 0.5
+			z += 0.5
+	return {}
+
+
+func _relocate_loose_items() -> void:
+	var base := goods_in.global_position if goods_in else safe_drop_point()
+	var k := 0
+	var pk := 0
+	for it: Item in Game.state.items.values():
+		if it.loc.get("t") != "loose" or not it.loc.get("relocate", false):
+			continue
+		var p: Vector3
+		if it.kind == Item.KIND_PALLET:
+			p = base + Vector3((pk % 4) * 1.5 - 2.25, 0.02, -(pk / 4) * 1.2)
+			pk += 1
+		else:
+			p = base + Vector3((k % 6) * 0.5 - 1.25, 0.4 + (k / 24) * 0.3, 1.6 + ((k / 6) % 4) * 0.45)
+			k += 1
+		Game.state.set_loc(it, {"t": "loose", "p": [p.x, p.y, p.z], "r": [0, 0, 0, 1]})
+
+
+func _preview_fixtures() -> void:
+	## Title-screen backdrop: show the default layout's equipment as plain visuals.
+	if layout == null:
+		return
+	for m in layout.get_children():
+		var type := String(m.name).get_slice("_", 0)
+		for t in Content.fixtures:
+			if String(m.name) == t or String(m.name).begins_with(t + "_"):
+				type = t
+		var info := fixture_model_info(type)
+		if info.is_empty():
+			continue
+		var ms := ModelSlot.new()
+		ms.placeholder = str(info.get("placeholder", ""))
+		ms.placeholder_params = info.get("params", {})
+		ms.model_scene = info.get("scene")
+		fixtures_root.add_child(ms)
+		ms.global_transform = m.global_transform
+
+
+# ================================================================= items
 
 func _rebuild_items() -> void:
 	for v in item_views.values():
@@ -99,11 +337,6 @@ func _rebuild_items() -> void:
 		return ka and not kb)
 	for id in ids:
 		_update_item(id)
-
-
-func _on_state_changed(kind: String, id: Variant) -> void:
-	if kind == "item":
-		_update_item(int(id))
 
 
 func _update_item(id: int) -> void:
@@ -150,6 +383,9 @@ func safe_drop_point() -> Vector3:
 func slot_label(slot_id: String) -> String:
 	var s: SnapSlot = slot_nodes.get(slot_id)
 	if s == null:
+		var fid := slot_id.get_slice(":", 0)
+		if Game.state.fixtures.has(fid):
+			return "%s (in storage)" % Game.state.fixtures[fid].label
 		return "?"
 	if s.location_label != "":
 		return s.location_label

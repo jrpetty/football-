@@ -1,0 +1,111 @@
+{
+  "_comment": "Placeable equipment. footprint = [width_x, depth_z] metres when facing +Z (with clearance). price = Shop price for an extra one. station_type mirrors the wrapper scene's StationBase type.",
+  "fixtures": [
+    {
+      "id": "office_desk",
+      "name": "Office desk + PC",
+      "scene": "res://scenes/stations/office_desk.tscn",
+      "footprint": [
+        1.5,
+        1.5
+      ],
+      "height": 1.3,
+      "price": 450,
+      "power_kw": 0.4,
+      "desc": "Runs PaneOS: purchasing, sales, stock, finance. More PCs = more people buying and listing at once.",
+      "back": 0.36,
+      "front": 1.14
+    },
+    {
+      "id": "test_bench",
+      "name": "Test bench",
+      "scene": "res://scenes/stations/test_bench.tscn",
+      "footprint": [
+        1.45,
+        0.8
+      ],
+      "height": 1.4,
+      "price": 380,
+      "power_kw": 0.6,
+      "desc": "One unit + one USB at a time. Diagnostics or wipe & image."
+    },
+    {
+      "id": "repair_bench",
+      "name": "Repair bench",
+      "scene": "res://scenes/stations/repair_bench.tscn",
+      "footprint": [
+        1.65,
+        0.8
+      ],
+      "height": 1.9,
+      "price": 520,
+      "power_kw": 0.3,
+      "desc": "ESD mat, tools and a lamp. Fix faults with parts from the bins."
+    },
+    {
+      "id": "grading_desk",
+      "name": "Grading desk",
+      "scene": "res://scenes/stations/grading_desk.tscn",
+      "footprint": [
+        1.25,
+        0.74
+      ],
+      "height": 1.1,
+      "price": 300,
+      "power_kw": 0.2,
+      "desc": "Light box and label printer for consistent grading."
+    },
+    {
+      "id": "packing_table",
+      "name": "Packing table",
+      "scene": "res://scenes/stations/packing_table.tscn",
+      "footprint": [
+        1.65,
+        0.84
+      ],
+      "height": 1.6,
+      "price": 340,
+      "power_kw": 0.1,
+      "desc": "Boxes, foam, tape gun and label printer."
+    },
+    {
+      "id": "metal_shelf",
+      "name": "Stock shelving (15 bays)",
+      "scene": "res://scenes/stations/metal_shelf.tscn",
+      "footprint": [
+        1.25,
+        0.5
+      ],
+      "height": 1.9,
+      "price": 160,
+      "power_kw": 0.0,
+      "desc": "Boltless steel shelving. Five levels of three laptops."
+    },
+    {
+      "id": "courier_shelf",
+      "name": "OUTGOING shelf",
+      "scene": "res://scenes/stations/courier_shelf.tscn",
+      "footprint": [
+        1.05,
+        0.54
+      ],
+      "height": 1.2,
+      "price": 120,
+      "power_kw": 0.0,
+      "desc": "The courier collects packed orders from here."
+    },
+    {
+      "id": "parts_shelf",
+      "name": "Parts bins",
+      "scene": "res://scenes/stations/parts_shelf.tscn",
+      "footprint": [
+        1.05,
+        0.44
+      ],
+      "height": 1.6,
+      "price": 200,
+      "power_kw": 0.0,
+      "desc": "Spare parts storage. Repair benches draw from bins."
+    }
+  ]
+}

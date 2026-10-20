@@ -10,34 +10,34 @@ size = Vector3(1.6, 0.94, 0.75)
 [sub_resource type="BoxShape3D" id="BoxShape3D_oymhd"]
 size = Vector3(1.6, 0.9, 0.06)
 
-[node name="RepairBench" type="Node3D" unique_id=459087580]
+[node name="RepairBench" type="Node3D" unique_id=1954712163]
 script = ExtResource("1_1o434")
 station_type = "repair"
 display_name = "Repair bench"
 description = "Hold E on a faulty unit to repair it. Parts come from the bins."
 
-[node name="Model" type="Node3D" parent="." unique_id=161275266]
+[node name="Model" type="Node3D" parent="." unique_id=366923000]
 script = ExtResource("2_am8td")
 placeholder = "repair_bench"
 placeholder_params = {
 "w": 1.6
 }
 
-[node name="Body" type="StaticBody3D" parent="." unique_id=511635326]
+[node name="Body" type="StaticBody3D" parent="." unique_id=1927560433]
 collision_layer = 9
 
-[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=1539478630]
+[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=1922281308]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.47, 0)
 shape = SubResource("BoxShape3D_yfs3f")
 
-[node name="PegboardBody" type="StaticBody3D" parent="." unique_id=895132013]
+[node name="PegboardBody" type="StaticBody3D" parent="." unique_id=1764106413]
 collision_layer = 9
 
-[node name="Shape" type="CollisionShape3D" parent="PegboardBody" unique_id=338217925]
+[node name="Shape" type="CollisionShape3D" parent="PegboardBody" unique_id=337258249]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -0.35)
 shape = SubResource("BoxShape3D_oymhd")
 
-[node name="UnitSlot" type="Marker3D" parent="." unique_id=390138314]
+[node name="UnitSlot" type="Marker3D" parent="." unique_id=707474455]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.05, 0.924, 0.06)
 script = ExtResource("3_cmnr4")
 slot_name = "unit"

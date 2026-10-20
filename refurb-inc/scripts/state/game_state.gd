@@ -29,6 +29,10 @@ var parts: Dictionary = {}           # part_id -> count (in the parts bins)
 var consumables: Dictionary = {}     # boxes/labels/tape -> count
 var players: Dictionary = {}         # player key -> { "name": String, "xp": {skill: int} }
 
+# --- premises & equipment
+var building_id: String = "garage"
+var fixtures: Dictionary = {}        # fixture/station id -> { "type": String, "label": String, "placed": bool, "p": [x,y,z], "r": yaw_deg }
+
 # --- world
 var items: Dictionary = {}           # id -> Item
 var slots: Dictionary = {}           # slot_id -> item id (occupied slots only)
@@ -269,7 +273,7 @@ func to_dict() -> Dictionary:
 		"minute": minute, "day_running": day_running, "last_flogit_hour": last_flogit_hour,
 		"company_name": company_name, "cash": cash, "reputation": reputation, "ledger": ledger.duplicate(true),
 		"parts": parts.duplicate(), "consumables": consumables.duplicate(), "players": players.duplicate(true),
-		"items": it_out, "stations": stations.duplicate(true), "lots": _int_keyed_out(lots),
+		"items": it_out, "stations": stations.duplicate(true), "building_id": building_id, "fixtures": fixtures.duplicate(true), "lots": _int_keyed_out(lots),
 		"orders": _int_keyed_out(orders), "schedule": schedule.duplicate(true),
 		"seller_state": seller_state.duplicate(true), "day_stats": day_stats.duplicate(true), "totals": totals.duplicate(true),
 	}
@@ -299,6 +303,8 @@ func load_dict(d: Dictionary) -> void:
 		if it.loc.get("t") == "slot":
 			slots[it.loc["slot"]] = it.id
 	stations = d.get("stations", {}).duplicate(true)
+	building_id = d.get("building_id", "garage")
+	fixtures = d.get("fixtures", {}).duplicate(true)
 	lots = _int_keyed_in(d.get("lots", {}))
 	orders = _int_keyed_in(d.get("orders", {}))
 	schedule = d.get("schedule", []).duplicate(true)
@@ -353,6 +359,10 @@ func export_entity(kind: String, id: Variant) -> Variant:
 				"totals": totals.duplicate(true), "day_stats": day_stats.duplicate(true)}
 		"clock":
 			return {"minute": minute, "day_running": day_running}
+		"fixture":
+			return fixtures[str(id)].duplicate(true) if fixtures.has(str(id)) else null
+		"building":
+			return building_id
 		"schedule":
 			return schedule.duplicate(true)
 	return null
@@ -408,6 +418,13 @@ func import_entity(kind: String, id: Variant, v: Variant) -> void:
 		"clock":
 			minute = float(v.minute)
 			day_running = bool(v.day_running)
+		"fixture":
+			if v == null:
+				fixtures.erase(str(id))
+			else:
+				fixtures[str(id)] = v
+		"building":
+			building_id = str(v)
 		"schedule":
 			schedule = v
 	changed.emit(kind, id)
@@ -431,3 +448,19 @@ func snapshot() -> Dictionary:
 		pub_lots[str(id)] = _public_lot(id)
 	d["lots"] = pub_lots
 	return d
+
+
+func building() -> Dictionary:
+	return Content.building(building_id)
+
+
+func fixture_items(fixture_id: String) -> Array:
+	## Items sitting in any slot of this fixture.
+	var out: Array = []
+	var prefix := fixture_id + ":"
+	for sid in slots:
+		if String(sid).begins_with(prefix):
+			var it: Item = items.get(slots[sid])
+			if it:
+				out.append(it)
+	return out

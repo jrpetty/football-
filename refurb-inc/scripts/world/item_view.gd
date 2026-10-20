@@ -89,6 +89,8 @@ func _build_pallet_slots() -> void:
 func apply_state(it: Item, initial: bool = false) -> void:
 	var loc := it.loc
 	var lr := LevelRoot.current
+	if lr == null or not is_inside_tree():
+		return
 	match loc.get("t"):
 		"slot":
 			var slot: SnapSlot = lr.slot_nodes.get(loc.slot) if lr else null
@@ -111,6 +113,10 @@ func apply_state(it: Item, initial: bool = false) -> void:
 		"loose":
 			_following = false
 			_follow_node = null
+			if loc.get("relocate", false):
+				visible = false      # moving premises — the new level will place it
+				freeze = true
+				return
 			visible = true
 			collision_layer = 1 << 2
 			var p: Array = loc.get("p", [0, 0, 0])
@@ -157,6 +163,10 @@ func set_screen(tex: Texture2D) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _following and not is_instance_valid(_follow_node):
+		_following = false
+		visible = false
+		return
 	if _following and is_instance_valid(_follow_node):
 		var target := _follow_node.global_transform * _follow_offset
 		var held := not (_follow_node is SnapSlot)

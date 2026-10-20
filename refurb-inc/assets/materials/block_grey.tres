@@ -1,0 +1,19 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/blockwork_painted/albedo.png" id="1_wdyte"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/blockwork_painted/normal.png" id="2_3ohxm"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/blockwork_painted/roughness.png" id="3_3ehax"]
+
+[resource]
+resource_name = "block_grey"
+albedo_color = Color(0.72, 0.72, 0.71, 1)
+albedo_texture = ExtResource("1_wdyte")
+roughness_texture = ExtResource("3_3ehax")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_3ohxm")
+uv1_scale = Vector3(0.5555556, 0.5555556, 0.5555556)
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5

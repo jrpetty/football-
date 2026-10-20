@@ -1,0 +1,19 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/cladding_profiled/albedo.png" id="1_caqqd"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/cladding_profiled/normal.png" id="2_iq41p"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/cladding_profiled/roughness.png" id="3_7n2mo"]
+
+[resource]
+resource_name = "roof_sheet"
+albedo_color = Color(0.42, 0.44, 0.45, 1)
+albedo_texture = ExtResource("1_caqqd")
+metallic = 0.4
+roughness_texture = ExtResource("3_7n2mo")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_iq41p")
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5

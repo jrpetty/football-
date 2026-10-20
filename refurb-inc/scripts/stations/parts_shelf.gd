@@ -59,4 +59,4 @@ func hover_info(_player: Node) -> Dictionary:
 			lines.append("%d× %s" % [int(Game.state.parts[p]), Content.part(p).get("name", p)])
 	if lines.is_empty():
 		lines.append("Empty. Order parts in the office PC Shop — they arrive with the courier.")
-	return {"title": "Parts bins", "lines": lines, "prompt": ""}
+	return {"title": "Parts bins", "lines": lines, "prompt": "[F] Move"}

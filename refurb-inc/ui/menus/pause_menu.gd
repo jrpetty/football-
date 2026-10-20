@@ -103,5 +103,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			var p: Node = LevelRoot.current.local_player() if LevelRoot.current else null
 			if p and p.ui_mode:
 				return     # office PC handles its own Esc
+			if p and p.placing_id != "":
+				p.cancel_placement()
+				get_viewport().set_input_as_handled()
+				return
 			open()
 		get_viewport().set_input_as_handled()

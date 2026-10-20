@@ -20,6 +20,9 @@ var economy: Dictionary = {}
 var names: Dictionary = {}
 var os_info: Dictionary = {}
 var diag_info: Dictionary = {}
+var buildings: Dictionary = {}     # id -> Dictionary
+var building_order: Array = []     # ids by tier
+var fixtures: Dictionary = {}      # id -> Dictionary
 
 var errors: PackedStringArray = []
 
@@ -50,6 +53,10 @@ func reload() -> void:
 	var os_data := _load("os.json")
 	os_info = os_data.get("os", {})
 	diag_info = os_data.get("diag", {})
+	buildings = _index(_load("buildings.json").get("buildings", []))
+	building_order = buildings.keys()
+	building_order.sort_custom(func(a, b): return int(buildings[a].tier) < int(buildings[b].tier))
+	fixtures = _index(_load("fixtures.json").get("fixtures", []))
 	_validate()
 	for e in errors:
 		push_error("[Content] " + e)
@@ -76,6 +83,11 @@ func _index(arr: Array) -> Dictionary:
 
 
 func _validate() -> void:
+	for f in economy.get("start_fixtures", []):
+		if not fixtures.has(f.get("type", "")):
+			errors.append("start_fixtures references unknown fixture type %s" % f.get("type", ""))
+	if not buildings.has(economy.get("start_building", "garage")):
+		errors.append("Unknown start_building")
 	for m: Dictionary in models.values():
 		for c in m.get("cpu_options", []):
 			if not cpus.has(c):
@@ -139,3 +151,11 @@ func model_display_name(model_id: String) -> String:
 
 func grade_mult(grade: String) -> float:
 	return float(grade_value_mult.get(grade, 1.0))
+
+
+func building(id: String) -> Dictionary:
+	return buildings.get(id, {})
+
+
+func fixture(id: String) -> Dictionary:
+	return fixtures.get(id, {})

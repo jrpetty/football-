@@ -11,7 +11,7 @@ const APPS := [
 	{"id": "mail", "title": "Mail", "short": "Mail", "colour": Color(0.25, 0.7, 0.85), "glyph": "@", "script": "res://ui/office_os/apps/mail_app.gd"},
 	{"id": "skills", "title": "My Skills", "short": "Skills", "colour": Color(0.9, 0.4, 0.3), "glyph": "★", "script": "res://ui/office_os/apps/skills_app.gd"},
 	{"id": "staff", "title": "Staff", "short": "Staff", "colour": Color(0.5, 0.5, 0.55), "glyph": "☺", "script": ""},
-	{"id": "building", "title": "Building", "short": "Building", "colour": Color(0.5, 0.5, 0.55), "glyph": "⌂", "script": ""},
+	{"id": "building", "title": "Premises & Equipment", "short": "Building", "colour": Color(0.2, 0.6, 0.6), "glyph": "⌂", "script": "res://ui/office_os/apps/building_app.gd"},
 ]
 
 var pc: OfficePC

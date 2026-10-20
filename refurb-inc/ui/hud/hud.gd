@@ -150,8 +150,9 @@ func bind_player(p: Player) -> void:
 
 
 func _process(delta: float) -> void:
-	if _player == null and LevelRoot.current:
-		var lp: Node = LevelRoot.current.local_player()
+	if (_player == null or not is_instance_valid(_player)) and LevelRoot.current:
+		_player = null
+		var lp: Node = LevelRoot.current.local_player() if LevelRoot.current else null
 		if lp is Player:
 			bind_player(lp)
 	clock_label.text = Game.state.clock_text()
@@ -165,7 +166,7 @@ func _process(delta: float) -> void:
 	fps_label.visible = Settings.get_value("show_fps")
 	if fps_label.visible:
 		fps_label.text = "%d fps" % Engine.get_frames_per_second()
-	visible = not (_player and _player.ui_mode and not _keep_visible_in_ui)
+	visible = not (_player and is_instance_valid(_player) and _player.ui_mode and not _keep_visible_in_ui)
 
 
 var _keep_visible_in_ui := false

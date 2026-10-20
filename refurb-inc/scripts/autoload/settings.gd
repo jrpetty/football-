@@ -15,6 +15,8 @@ const DEFAULT_BINDINGS := {
 	"sprint": [KEY_SHIFT],
 	"crouch": [KEY_CTRL, KEY_C],
 	"interact": [KEY_E],
+	"move_fixture": [KEY_F],
+	"rotate": [KEY_R],
 	"drop": [KEY_Q],
 	"pause": [KEY_ESCAPE],
 	"toggle_hud": [KEY_F1],

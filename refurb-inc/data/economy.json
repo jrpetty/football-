@@ -5,8 +5,6 @@
   "day_start_hour": 9,
   "day_end_hour": 17,
   "real_seconds_per_day": 900,
-  "rent_weekly": 150,
-  "utilities_weekly": 25,
   "rent_due_weekday": 4,
   "overdraft_warning": -500,
   "overdraft_fee_weekly": 40,
@@ -85,5 +83,53 @@
     "ram_ddr4_8": 2,
     "ssd_nvme_256": 2,
     "ssd_sata_256": 1
-  }
+  },
+  "start_building": "garage",
+  "start_fixtures": [
+    {
+      "id": "office_1",
+      "type": "office_desk",
+      "label": "Office PC"
+    },
+    {
+      "id": "bench_1",
+      "type": "test_bench",
+      "label": "Test bench 1"
+    },
+    {
+      "id": "repair_1",
+      "type": "repair_bench",
+      "label": "Repair bench"
+    },
+    {
+      "id": "parts",
+      "type": "parts_shelf",
+      "label": "Parts bins"
+    },
+    {
+      "id": "grade_1",
+      "type": "grading_desk",
+      "label": "Grading desk"
+    },
+    {
+      "id": "pack_1",
+      "type": "packing_table",
+      "label": "Packing table"
+    },
+    {
+      "id": "courier_1",
+      "type": "courier_shelf",
+      "label": "OUTGOING"
+    },
+    {
+      "id": "shelf_a",
+      "type": "metal_shelf",
+      "label": "Shelf A"
+    },
+    {
+      "id": "shelf_b",
+      "type": "metal_shelf",
+      "label": "Shelf B"
+    }
+  ]
 }

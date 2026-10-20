@@ -125,7 +125,7 @@ func hover_info(_player: Node) -> Dictionary:
 	var lines: Array = []
 	if description != "":
 		lines.append(description)
-	return {"title": display_name, "lines": lines, "prompt": ""}
+	return {"title": display_name, "lines": lines, "prompt": "[F] Move"}
 
 
 func best_slot_for(kind: String, hit_pos: Vector3) -> SnapSlot:

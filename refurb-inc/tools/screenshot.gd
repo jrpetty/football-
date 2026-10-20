@@ -2,6 +2,17 @@ extends Node
 ## Renders the garage from a set of camera poses and saves PNGs to tools/out/ (for visual QA / Steam shots).
 ##   xvfb-run -s "-screen 0 1920x1080x24" godot --path . res://tools/screenshot.tscn -- [--poses name,name] [--setup demo]
 
+## Per-premises hero poses: [camera position, look-at target]
+const LEVEL_POSES := {
+	"garage": {"ext": [Vector3(1.8, 1.9, 14.6), Vector3(-0.6, 1.2, 2.0)], "int": [Vector3(0.6, 1.62, 3.0), Vector3(-0.6, 1.0, -3.0)], "aerial": [Vector3(18, 14, 26), Vector3(-2, 0, 0)]},
+	"lockup": {"ext": [Vector3(9.0, 2.4, 24.0), Vector3(0.0, 1.5, 6.0)], "int": [Vector3(1.0, 1.65, 6.2), Vector3(-0.5, 1.0, -6.0)], "aerial": [Vector3(30, 22, 40), Vector3(-4, 0, 0)]},
+	"industrial": {"ext": [Vector3(14.0, 2.4, 30.0), Vector3(0.0, 3.0, 9.0)], "int": [Vector3(3.0, 1.7, 8.5), Vector3(-2.0, 2.0, -8.0)], "aerial": [Vector3(40, 26, 52), Vector3(-4, 0, 0)]},
+	"warehouse": {"ext": [Vector3(-26.0, 3.2, 62.0), Vector3(-3.0, 3.0, 24.0)], "int": [Vector3(6.0, 1.7, 20.0), Vector3(-6.0, 3.0, -20.0)], "aerial": [Vector3(70, 45, 95), Vector3(0, 0, 10)]},
+	"distribution": {"ext": [Vector3(55.0, 4.0, 98.0), Vector3(0.0, 6.0, 40.0)], "int": [Vector3(10.0, 1.7, 40.0), Vector3(-10.0, 4.0, -40.0)], "aerial": [Vector3(130, 80, 170), Vector3(0, 0, 20)]},
+	"facility": {"ext": [Vector3(-26.0, 2.0, 80.0), Vector3(-7.0, 7.0, 44.0)], "int": [Vector3(8.0, 1.7, 26.0), Vector3(-6.0, 4.0, -30.0)], "aerial": [Vector3(100, 70, 140), Vector3(0, 0, 10)]},
+	"megaplant": {"ext": [Vector3(78.0, 5.0, 168.0), Vector3(25.0, 12.0, 100.0)], "int": [Vector3(10.0, 1.7, 84.0), Vector3(-10.0, 6.0, -60.0)], "aerial": [Vector3(250, 160, 330), Vector3(0, 0, 30)]},
+}
+
 const POSES := {
 	"door_in": [Vector3(0.6, 1.62, 3.0), Vector3(-0.6, 1.0, -3.0)],
 	"benches": [Vector3(0.2, 1.55, -0.9), Vector3(0.0, 0.95, -3.2)],
@@ -27,7 +38,14 @@ func _ready() -> void:
 	var h := 900
 	get_window().size = Vector2i(w, h)
 	Game.new_game(4242)
-	_level = load("res://scenes/levels/garage/garage.tscn").instantiate()
+	var level_id := "garage"
+	if args.find("--level") >= 0:
+		level_id = args[args.find("--level") + 1]
+		Game.state.building_id = level_id
+		var poses: Dictionary = LEVEL_POSES.get(level_id, {})
+		if idx < 0:
+			names = poses.keys()
+	_level = load(load("res://scripts/game_root.gd").level_path(level_id)).instantiate()
 	add_child(_level)
 	if "--setup" in args:
 		_demo_setup()
@@ -42,15 +60,17 @@ func _ready() -> void:
 	_level.add_child(_cam)
 	_cam.current = true
 	DirAccess.make_dir_recursive_absolute("res://tools/out")
+	var all_poses: Dictionary = POSES.duplicate()
+	all_poses.merge(LEVEL_POSES.get(level_id, {}), true)
 	for n in names:
-		var p: Array = POSES[n]
+		var p: Array = all_poses[n]
 		_cam.global_position = p[0]
 		_cam.look_at(p[1])
 		for i in 12:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		var img := get_viewport().get_texture().get_image()
-		img.save_png("res://tools/out/%s.png" % n)
+		img.save_png("res://tools/out/%s_%s.png" % [level_id, n] if args.find("--level") >= 0 else "res://tools/out/%s.png" % n)
 		print("saved ", n)
 	get_tree().quit()
 

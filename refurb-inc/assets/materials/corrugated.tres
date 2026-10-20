@@ -1,0 +1,18 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/corrugated/albedo.png" id="1_nr86i"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/corrugated/normal.png" id="2_80144"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/corrugated/roughness.png" id="3_xcdhm"]
+
+[resource]
+resource_name = "corrugated"
+albedo_texture = ExtResource("1_nr86i")
+roughness_texture = ExtResource("3_xcdhm")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_80144")
+uv1_scale = Vector3(0.8333333, 0.8333333, 0.8333333)
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5

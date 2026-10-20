@@ -1,7 +1,7 @@
 extends Node
 ## Top-level flow: title screen (with the garage as a live backdrop) → game (solo / host / join) → back.
 
-const LEVEL := "res://scenes/levels/garage/garage.tscn"
+const DEFAULT_LEVEL := "res://scenes/levels/garage/garage.tscn"
 
 var _menu: MainMenu
 var _level: LevelRoot
@@ -10,9 +10,26 @@ var _pause: PauseMenu
 var _summary: DaySummary
 var _menu_cam: Camera3D
 var _menu_t := 0.0
+var _fade: ColorRect
+var _switching := false
+
+
+static func level_path(building_id: String) -> String:
+	var p: String = Content.building(building_id).get("scene", DEFAULT_LEVEL)
+	return p if ResourceLoader.exists(p) else DEFAULT_LEVEL
 
 
 func _ready() -> void:
+	var fl := CanvasLayer.new()
+	fl.layer = 100
+	add_child(fl)
+	_fade = ColorRect.new()
+	_fade.color = Color.BLACK
+	_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade.modulate.a = 0.0
+	fl.add_child(_fade)
+	Game.state_reset.connect(_watch_state)
 	Net.connection_failed.connect(func(r):
 		if _menu:
 			_menu.set_status(r))
@@ -34,7 +51,7 @@ func _ready() -> void:
 func _show_menu() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	LevelRoot.menu_mode = true
-	_level = load(LEVEL).instantiate()
+	_level = load(DEFAULT_LEVEL).instantiate()
 	add_child(_level)
 	_menu_cam = Camera3D.new()
 	_menu_cam.fov = 58
@@ -103,8 +120,39 @@ func _start(mode: String, arg: String) -> void:
 			_enter_level()
 
 
+func _watch_state() -> void:
+	if not Game.state.changed.is_connected(_on_state_changed):
+		Game.state.changed.connect(_on_state_changed)
+
+
+func _on_state_changed(kind: String, _id: Variant) -> void:
+	if kind == "building" and _level and is_instance_valid(_level) and not LevelRoot.menu_mode:
+		if _level.building_id != Game.state.building_id and not _switching:
+			_switch_level()
+
+
+func _switch_level() -> void:
+	## Moving premises: fade out, swap the level scene, fade in. Time keeps ticking.
+	_switching = true
+	var tw := create_tween()
+	tw.tween_property(_fade, "modulate:a", 1.0, 0.6)
+	await tw.finished
+	var old := _level
+	remove_child(old)
+	old.queue_free()
+	await get_tree().process_frame
+	_level = load(level_path(Game.state.building_id)).instantiate()
+	add_child(_level)
+	move_child(_level, 0)
+	await get_tree().create_timer(0.4).timeout
+	var tw2 := create_tween()
+	tw2.tween_property(_fade, "modulate:a", 0.0, 0.9)
+	_switching = false
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
 func _enter_level() -> void:
-	_level = load(LEVEL).instantiate()
+	_level = load(level_path(Game.state.building_id)).instantiate()
 	add_child(_level)
 	_hud = Hud.new()
 	add_child(_hud)

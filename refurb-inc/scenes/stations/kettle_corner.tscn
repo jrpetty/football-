@@ -9,22 +9,22 @@ size = Vector3(1.4, 0.9, 0.58)
 [sub_resource type="BoxShape3D" id="BoxShape3D_t2527"]
 size = Vector3(0.22, 0.26, 0.26)
 
-[node name="KettleCorner" type="Node3D" unique_id=2004647394]
+[node name="KettleCorner" type="Node3D" unique_id=1270697213]
 
-[node name="Model" type="Node3D" parent="." unique_id=659056608]
+[node name="Model" type="Node3D" parent="." unique_id=167018809]
 script = ExtResource("1_uj2c0")
 placeholder = "kettle_corner"
 
-[node name="Body" type="StaticBody3D" parent="." unique_id=133866862]
+[node name="Body" type="StaticBody3D" parent="." unique_id=888971859]
 
-[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=1034726297]
+[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=1210126293]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, 0.45, 0)
 shape = SubResource("BoxShape3D_pajih")
 
-[node name="Kettle" type="StaticBody3D" parent="." unique_id=1527944187]
+[node name="Kettle" type="StaticBody3D" parent="." unique_id=1011878182]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 0.9, 0)
 script = ExtResource("2_84ccd")
 
-[node name="@CollisionShape3D@34" type="CollisionShape3D" parent="Kettle" unique_id=1731024448]
+[node name="@CollisionShape3D@34" type="CollisionShape3D" parent="Kettle" unique_id=1476845688]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.13, 0)
 shape = SubResource("BoxShape3D_t2527")

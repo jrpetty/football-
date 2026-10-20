@@ -1,0 +1,21 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/painted_metal/albedo.png" id="1_i7til"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/painted_metal/normal.png" id="2_y74pc"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/painted_metal/roughness.png" id="3_m4ukd"]
+
+[resource]
+resource_name = "steel_grey"
+albedo_color = Color(0.45, 0.47, 0.5, 1)
+albedo_texture = ExtResource("1_i7til")
+metallic = 0.4
+roughness = 0.9
+roughness_texture = ExtResource("3_m4ukd")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_y74pc")
+uv1_scale = Vector3(1.6666666, 1.6666666, 1.6666666)
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5

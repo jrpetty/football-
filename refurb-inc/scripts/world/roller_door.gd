@@ -54,6 +54,12 @@ func _rpc_request_toggle() -> void:
 		_set_open(not _open)
 
 
+func set_open(v: bool) -> void:
+	## Host-side programmatic open/close (e.g. a lorry docking).
+	if Game.is_host() and v != _open:
+		_set_open(v)
+
+
 func _set_open(v: bool) -> void:
 	_open = v
 	_apply(true)

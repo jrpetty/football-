@@ -209,7 +209,242 @@ def pegboard():
     save("pegboard", alb, h, rough, 2.0)
 
 
-SETS = {f.__name__: f for f in [concrete, blockwork, plywood, tarmac, brick, cardboard, antistatic, painted_metal, pegboard]}
+
+def cladding():
+    # Trapezoidal profiled steel sheet: 5 ribs per 1 m tile, near-white so it can be tinted any RAL colour.
+    y, x = np.mgrid[0:N, 0:N]
+    u = (x % (N // 5)) / (N / 5)
+    rib = np.clip(1 - np.abs(u - 0.5) * 6, 0, 1)
+    rib = np.where(rib > 0.55, 1.0, rib / 0.55)
+    v = fbm(N, 16, 3, 90)
+    streak = np.clip((fbm(N, 3, 4, 91) - 0.55) * 1.5, 0, 1) * (y / N)
+    alb = np.full((N, N, 3), 0.92) * (0.96 + 0.06 * v[..., None]) * (1 - 0.08 * streak[..., None])
+    h = rib * 0.8 + v * 0.05
+    rough = np.clip(0.5 + 0.1 * v + 0.1 * streak, 0, 1)
+    save("cladding_profiled", alb, h, rough, 9.0)
+
+
+def composite():
+    # Flat composite panels with horizontal joints every half tile (1 m panels at 2 m tile).
+    y, x = np.mgrid[0:N, 0:N]
+    joint = ((y % (N // 2)) < 4).astype(float)
+    micro = ((y % 24) < 2).astype(float) * 0.25
+    v = fbm(N, 8, 3, 95)
+    alb = np.full((N, N, 3), 0.93) * (0.97 + 0.04 * v[..., None]) * (1 - 0.35 * joint[..., None])
+    h = 1 - joint - micro * 0.2
+    rough = np.clip(0.35 + 0.08 * v + joint * 0.3, 0, 1)
+    save("composite_panel", alb, h, rough, 5.0)
+
+
+def corrugated():
+    y, x = np.mgrid[0:N, 0:N]
+    wave = np.sin(x / N * 2 * np.pi * 14) * 0.5 + 0.5
+    rust = np.clip((fbm(N, 6, 5, 100) - 0.6) * 4, 0, 1) * (0.4 + 0.6 * (y / N))
+    v = fbm(N, 32, 3, 101)
+    alb = np.full((N, N, 3), 0.75) * (0.9 + 0.15 * v[..., None])
+    alb = alb * (1 - rust[..., None]) + np.array([0.45, 0.25, 0.12])[None, None, :] * rust[..., None]
+    h = wave
+    rough = np.clip(0.55 + 0.3 * rust + 0.05 * v, 0, 1)
+    save("corrugated", alb, h, rough, 6.0)
+
+
+def epoxy():
+    v = fbm(N, 6, 4, 110)
+    speck = (rng.random((N, N)) > 0.992).astype(float)
+    scuff = np.clip((fbm(N, 24, 3, 111) - 0.62) * 3, 0, 1)
+    alb = np.full((N, N, 3), 0.9) * (0.97 + 0.04 * v[..., None]) - speck[..., None] * 0.08 - scuff[..., None] * 0.05
+    h = v * 0.05
+    rough = np.clip(0.18 + 0.08 * v + 0.35 * scuff, 0, 1)
+    save("epoxy_floor", alb, h, rough, 0.6)
+
+
+def polished_concrete():
+    v = 0.6 * fbm(N, 6, 5, 120) + 0.4 * fbm(N, 64, 2, 121)
+    agg = (fbm(N, 180, 1, 122) > 0.7).astype(float)
+    alb = tint([0.72, 0.71, 0.69], v, 0.08) * (1 - 0.06 * agg[..., None])
+    h = v * 0.08
+    rough = np.clip(0.22 + 0.12 * v, 0, 1)
+    save("polished_concrete", alb, h, rough, 0.8)
+
+
+def block_paving():
+    # Herringbone-ish stretcher pavers 200 x 100 mm (tile 1 m = 5 x 10 pavers)
+    y, x = np.mgrid[0:N, 0:N]
+    pw, ph = N // 5, N // 10
+    row = y // ph
+    xo = (x + (row % 2) * (pw // 2)) % N
+    gap = ((xo % pw) < 4) | ((y % ph) < 4)
+    pid = (row * 13 + xo // pw) % 17
+    r = np.random.default_rng(130).random(17)
+    per = r[pid]
+    v = fbm(N, 48, 3, 131)
+    base = np.stack([0.55 + 0.1 * per, 0.5 + 0.08 * per, 0.46 + 0.06 * per], -1)
+    alb = base * (0.9 + 0.2 * v[..., None])
+    alb[gap] = alb[gap] * 0.45
+    h = 0.8 - gap * 0.6 + v * 0.1
+    rough = np.clip(0.8 + 0.1 * v, 0, 1)
+    save("block_paving", np.clip(alb, 0, 1), h, rough, 4.0)
+
+
+def grass():
+    v = 0.5 * fbm(N, 8, 5, 140) + 0.5 * fbm(N, 128, 2, 141)
+    blades = rng.random((N, N))
+    alb = np.stack([0.18 + 0.1 * v, 0.34 + 0.14 * v, 0.11 + 0.05 * v], -1) * (0.85 + 0.3 * blades[..., None])
+    dry = np.clip((fbm(N, 5, 4, 142) - 0.6) * 3, 0, 1)
+    alb = alb * (1 - dry[..., None] * 0.5) + np.array([0.4, 0.38, 0.2])[None, None, :] * dry[..., None] * 0.5
+    h = blades * 0.6 + v * 0.4
+    rough = np.full((N, N), 0.95)
+    save("grass", np.clip(alb, 0, 1), h, rough, 3.0)
+
+
+def gravel():
+    v = fbm(N, 96, 2, 150)
+    stones = rng.random((N, N))
+    alb = tint([0.52, 0.5, 0.47], stones * 0.5 + v * 0.5, 0.3)
+    h = v
+    rough = np.full((N, N), 0.9)
+    save("gravel", alb, h, rough, 6.0)
+
+
+def timber():
+    # Vertical cedar boards, 6 per tile
+    y, x = np.mgrid[0:N, 0:N]
+    bw = N // 6
+    board = np.minimum(x // bw, 5)
+    gap = (x % bw) < 5
+    r = np.random.default_rng(160).random(6)
+    grain = np.sin((x / N * 3 + fbm(N, 4, 3, 161) * 2 + board * 0.3) * 40) * 0.5 + 0.5
+    v = fbm(N, 32, 3, 162)
+    base = np.stack([0.55 + 0.1 * r[board], 0.36 + 0.06 * r[board], 0.22 + 0.04 * r[board]], -1)
+    alb = base * (0.85 + 0.15 * grain[..., None] + 0.1 * v[..., None])
+    alb[gap] *= 0.35
+    h = 0.8 - gap * 0.7 + grain * 0.1
+    rough = np.clip(0.6 + 0.1 * v, 0, 1)
+    save("timber_cladding", np.clip(alb, 0, 1), h, rough, 3.0)
+
+
+def rubber():
+    v = fbm(N, 64, 3, 170)
+    y, x = np.mgrid[0:N, 0:N]
+    slits = ((x % (N // 8)) < 3).astype(float)
+    alb = np.full((N, N, 3), 0.07) * (0.9 + 0.3 * v[..., None])
+    h = 1 - slits
+    rough = np.full((N, N), 0.85)
+    save("rubber", alb, h, rough, 3.0)
+
+
+def grating():
+    y, x = np.mgrid[0:N, 0:N]
+    bars = ((x % 32) < 6) | ((y % 96) < 6)
+    v = fbm(N, 32, 2, 180)
+    alb = np.full((N, N, 3), 0.15)
+    alb[bars] = 0.55 + 0.1 * v[bars][..., None]
+    h = bars.astype(float)
+    rough = np.where(bars, 0.45, 0.9)
+    save("metal_grating", alb, h, rough, 4.0)
+
+
+# ----------------------------------------------------------------- decals (RGBA albedo + normal)
+
+def save_decal(name, rgba, height=None, nstrength=3.0):
+    d = os.path.join(ROOT, "..", "decals", name)
+    os.makedirs(d, exist_ok=True)
+    Image.fromarray(np.clip(rgba * 255, 0, 255).astype(np.uint8), "RGBA").save(os.path.join(d, "albedo.png"))
+    if height is not None:
+        Image.fromarray(normal_from_height(height, nstrength)).save(os.path.join(d, "normal.png"))
+    print("wrote decal", name)
+
+
+def radial(size, cx=0.5, cy=0.5):
+    y, x = np.mgrid[0:size, 0:size] / size
+    return np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+
+
+def decals():
+    M = 512
+    def noise(c, o, seed):
+        return fbm(M, c, o, seed)
+    # Oil stain: dark, irregular, slightly glossy centre
+    r = radial(M) + (noise(4, 4, 200) - 0.5) * 0.35
+    a = np.clip((0.42 - r) * 4.5, 0, 1) * (0.6 + 0.4 * noise(32, 3, 201))
+    rgba = np.zeros((M, M, 4))
+    rgba[..., :3] = np.array([0.05, 0.045, 0.04])
+    rgba[..., 3] = a * 0.85
+    save_decal("oil_stain", rgba)
+    # Damp patch on walls: brownish tide-mark at the edge
+    r = radial(M, 0.5, 0.7) + (noise(5, 4, 210) - 0.5) * 0.3
+    a = np.clip((0.45 - r) * 3, 0, 1)
+    edge = np.clip(1 - np.abs(r - 0.42) * 25, 0, 1)
+    rgba = np.zeros((M, M, 4))
+    rgba[..., :3] = np.array([0.32, 0.28, 0.2])
+    rgba[..., 3] = np.clip(a * 0.35 + edge * 0.5, 0, 1) * (0.6 + 0.4 * noise(40, 3, 211))
+    save_decal("damp_patch", rgba)
+    # Tyre marks: two arcs of rubber
+    y, x = np.mgrid[0:M, 0:M] / M
+    rgba = np.zeros((M, M, 4))
+    a = np.zeros((M, M))
+    for off in (0.32, 0.68):
+        curve = off + 0.12 * np.sin(y * 3.0)
+        a += np.clip(1 - np.abs(x - curve) * 22, 0, 1)
+    a *= (0.4 + 0.6 * noise(64, 3, 220)) * np.clip(np.sin(y * np.pi) * 1.5, 0, 1)
+    rgba[..., :3] = 0.04
+    rgba[..., 3] = np.clip(a, 0, 1) * 0.7
+    save_decal("tyre_marks", rgba)
+    # Scuffs: many short dark strokes
+    rgba = np.zeros((M, M, 4))
+    a = np.zeros((M, M))
+    rr = np.random.default_rng(230)
+    for _ in range(90):
+        y0, x0 = rr.integers(20, M - 20, 2)
+        ang = rr.random() * np.pi
+        ln = rr.integers(10, 60)
+        for t in range(ln):
+            yy = int(y0 + np.sin(ang) * t)
+            xx = int(x0 + np.cos(ang) * t)
+            if 0 <= yy < M and 0 <= xx < M:
+                a[yy, xx] = max(a[yy, xx], 0.6)
+    a *= np.clip((0.5 - radial(M)) * 3, 0, 1)
+    rgba[..., :3] = 0.08
+    rgba[..., 3] = a
+    save_decal("scuffs", rgba)
+    # Rust streak running down from the top edge
+    y, x = np.mgrid[0:M, 0:M] / M
+    w = np.clip(1 - np.abs(x - 0.5 - (noise(3, 3, 240) - 0.5) * 0.2) * 7, 0, 1)
+    a = w * np.clip(1 - y * 1.1, 0, 1) * (0.5 + 0.5 * noise(48, 3, 241))
+    rgba = np.zeros((M, M, 4))
+    rgba[..., :3] = np.array([0.42, 0.2, 0.08])
+    rgba[..., 3] = np.clip(a, 0, 1) * 0.8
+    save_decal("rust_streak", rgba)
+    # Puddle: dark wet patch (rendered glossy by the decal's material)
+    r = radial(M) + (noise(4, 5, 250) - 0.5) * 0.4
+    a = np.clip((0.4 - r) * 6, 0, 1)
+    rgba = np.zeros((M, M, 4))
+    rgba[..., :3] = np.array([0.1, 0.11, 0.12])
+    rgba[..., 3] = a * 0.75
+    save_decal("puddle", rgba, a * 0.2, 1.0)
+    # Painted safety hatching (yellow/black) for kerbs, columns, dock edges
+    y, x = np.mgrid[0:M, 0:M]
+    stripes = (((x + y) // 48) % 2).astype(float)
+    rgba = np.zeros((M, M, 4))
+    rgba[..., 0] = np.where(stripes > 0, 0.95, 0.05)
+    rgba[..., 1] = np.where(stripes > 0, 0.75, 0.05)
+    rgba[..., 2] = np.where(stripes > 0, 0.05, 0.05)
+    rgba[..., 3] = 0.95 * (0.85 + 0.15 * noise(64, 2, 260))
+    save_decal("hazard_stripes", rgba)
+    # Leaves / litter for the lock-up yard
+    rgba = np.zeros((M, M, 4))
+    rr = np.random.default_rng(270)
+    for _ in range(60):
+        cy, cx = rr.integers(10, M - 10, 2)
+        rad = rr.integers(4, 10)
+        col = rr.choice([[0.45, 0.3, 0.1], [0.55, 0.4, 0.12], [0.35, 0.25, 0.1]])
+        yy, xx = np.ogrid[-cy:M - cy, -cx:M - cx]
+        mask = (xx * xx) / (rad * rad) + (yy * yy) / ((rad * 0.5) ** 2) <= 1
+        rgba[mask, :3] = col
+        rgba[mask, 3] = 0.9
+    save_decal("leaves", rgba)
+
+SETS = {f.__name__: f for f in [concrete, blockwork, plywood, tarmac, brick, cardboard, antistatic, painted_metal, pegboard, cladding, composite, corrugated, epoxy, polished_concrete, block_paving, grass, gravel, timber, rubber, grating, decals]}
 
 if __name__ == "__main__":
     names = sys.argv[1:] or SETS.keys()

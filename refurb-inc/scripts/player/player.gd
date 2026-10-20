@@ -58,6 +58,14 @@ var _net_yaw := 0.0
 var _net_pitch := 0.0
 var _tea_until := -1.0
 
+# Placement mode (moving / installing equipment)
+var placing_id := ""
+var _ghost: Node3D
+var _ghost_mat: StandardMaterial3D
+var _ghost_rot := 0.0
+var _ghost_pos := Vector3.ZERO
+var _ghost_valid := false
+
 
 func _ready() -> void:
 	peer_id = get_multiplayer_authority()
@@ -137,6 +145,9 @@ func hold_point() -> Node3D:
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_local or ui_mode:
 		return
+	if placing_id != "":
+		_placement_input(event)
+		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var sens := float(Settings.get_value("mouse_sensitivity")) * 0.01
 		_yaw -= event.relative.x * sens
@@ -155,6 +166,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_press_t = -1.0
 	elif event.is_action_pressed("drop"):
 		_drop()
+	elif event.is_action_pressed("move_fixture") and _hover_node and LevelRoot.current:
+		var fid := LevelRoot.current.fixture_at(_hover_node)
+		if fid != "" and Game.state.held_by(peer_id).is_empty():
+			start_placement(fid)
 	elif event.is_action_pressed("jump") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
 
@@ -242,6 +257,9 @@ func _update_head(delta: float, hspeed: float, sprinting: bool, on_floor: bool) 
 
 func _update_interaction(delta: float) -> void:
 	if ui_mode:
+		return
+	if placing_id != "":
+		_update_placement()
 		return
 	var node: Node = null
 	var hit := Vector3.ZERO
@@ -420,3 +438,126 @@ func _remote_update(delta: float) -> void:
 	head.position.y = lerpf(STAND_HEIGHT, CROUCH_HEIGHT, _crouch) - EYE_OFFSET
 	if name_tag:
 		name_tag.text = Net.display_name(peer_id)
+
+
+# ================================================================= placement mode
+
+func start_placement(fixture_id: String) -> void:
+	var f: Dictionary = Game.state.fixtures.get(fixture_id, {})
+	if f.is_empty() or LevelRoot.current == null:
+		return
+	cancel_placement()
+	placing_id = fixture_id
+	_ghost_rot = float(f.get("r", 0.0)) if f.get("placed", false) else _yaw_deg_snapped()
+	_ghost = Node3D.new()
+	_ghost.name = "PlacementGhost"
+	var info := LevelRoot.current.fixture_model_info(f.type)
+	var ms := ModelSlot.new()
+	ms.placeholder = str(info.get("placeholder", ""))
+	ms.placeholder_params = info.get("params", {})
+	ms.model_scene = info.get("scene")
+	ms.cast_shadows = false
+	_ghost.add_child(ms)
+	# Footprint outline on the floor
+	var def := Content.fixture(f.type)
+	var fp: Array = def.get("footprint", [1, 1])
+	var back := float(def.get("back", float(fp[1]) * 0.5))
+	var front := float(def.get("front", float(fp[1]) * 0.5))
+	var pad := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(float(fp[0]), 0.01, back + front)
+	pad.mesh = bm
+	pad.position = Vector3(0, 0.006, (front - back) / 2.0)
+	pad.name = "Footprint"
+	_ghost.add_child(pad)
+	var arrow := MeshInstance3D.new()
+	var am := BoxMesh.new()
+	am.size = Vector3(0.12, 0.012, 0.35)
+	arrow.mesh = am
+	arrow.position = Vector3(0, 0.012, front + 0.25)
+	_ghost.add_child(arrow)
+	_ghost_mat = StandardMaterial3D.new()
+	_ghost_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_ghost_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_ghost_mat.albedo_color = Color(0.3, 0.95, 0.5, 0.35)
+	_ghost_mat.no_depth_test = false
+	LevelRoot.current.add_child(_ghost)
+	ms.rebuilt.connect(_tint_ghost)
+	_tint_ghost()
+	Sfx.play_ui("ui_click", -6.0)
+
+
+func _tint_ghost() -> void:
+	if _ghost == null:
+		return
+	var stack: Array = [_ghost]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is GeometryInstance3D:
+			(n as GeometryInstance3D).material_override = _ghost_mat
+			(n as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if n is Label3D:
+			(n as Label3D).modulate = _ghost_mat.albedo_color
+		stack.append_array(n.get_children())
+
+
+func cancel_placement() -> void:
+	if _ghost:
+		_ghost.queue_free()
+	_ghost = null
+	placing_id = ""
+	_set_hover(null, {})
+
+
+func _yaw_deg_snapped() -> float:
+	return snappedf(rad_to_deg(_yaw) + 180.0, 90.0)
+
+
+func _update_placement() -> void:
+	if not Game.state.fixtures.has(placing_id):
+		cancel_placement()
+		return
+	var f: Dictionary = Game.state.fixtures[placing_id]
+	var origin := camera.global_position
+	var dir := -camera.global_basis.z
+	var pos := global_position + Vector3(-sin(_yaw), 0, -cos(_yaw)) * 2.0
+	if dir.y < -0.05:
+		var t := -origin.y / dir.y
+		pos = origin + dir * minf(t, 9.0)
+	pos.y = 0.0
+	pos.x = snappedf(pos.x, 0.25)
+	pos.z = snappedf(pos.z, 0.25)
+	_ghost_pos = pos
+	_ghost.global_transform = Transform3D(Basis(Vector3.UP, deg_to_rad(_ghost_rot)), pos)
+	_ghost_valid = LevelRoot.current.can_place(f.type, pos, _ghost_rot, placing_id)
+	var c := Color(0.3, 0.95, 0.5, 0.35) if _ghost_valid else Color(1.0, 0.3, 0.25, 0.35)
+	if _ghost_mat.albedo_color != c:
+		_ghost_mat.albedo_color = c
+	var info := {"title": "Placing: %s" % f.get("label", f.type), "lines": [],
+		"prompt": "[E] Place  ·  [R] Rotate  ·  [Q] Cancel"}
+	if not _ghost_valid:
+		info.lines.append("✖ Doesn't fit here (walls, doorways or other equipment)")
+	if info.hash() != _hover_info.hash():
+		_set_hover(null, info)
+
+
+func _placement_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		var sens := float(Settings.get_value("mouse_sensitivity")) * 0.01
+		_yaw -= event.relative.x * sens
+		_pitch = clampf(_pitch - event.relative.y * sens, deg_to_rad(-88), deg_to_rad(88))
+		_apply_look()
+	elif event.is_action_pressed("rotate") or (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP):
+		_ghost_rot = fmod(_ghost_rot + 90.0, 360.0)
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		_ghost_rot = fmod(_ghost_rot + 270.0, 360.0)
+	elif event.is_action_pressed("interact"):
+		if _ghost_valid:
+			Game.request("place_fixture", {"id": placing_id, "p": [_ghost_pos.x, 0.0, _ghost_pos.z], "r": _ghost_rot})
+			Sfx.play_at("place", _ghost_pos, 0.0)
+			cancel_placement()
+		else:
+			Sfx.play_ui("error", -6.0)
+	elif event.is_action_pressed("drop") or event.is_action_pressed("pause"):
+		cancel_placement()
+		get_viewport().set_input_as_handled()

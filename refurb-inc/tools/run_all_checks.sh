@@ -8,6 +8,7 @@ echo "== compile all scripts";  $GODOT --headless --path . res://tools/check_scr
 echo "== unit tests";           $GODOT --headless --path . res://tests/run_tests.tscn 2>&1 | grep -E "FAIL|tests," || fail=1
 $GODOT --headless --path . res://tests/run_tests.tscn >/dev/null 2>&1 || fail=1
 echo "== in-engine playtest";   $GODOT --headless --path . res://tools/playtest.tscn 2>&1 | grep -E "✖|PLAYTEST" || fail=1
+echo "== premises (move through all 7 buildings)"; $GODOT --headless --path . res://tools/premises_test.tscn 2>&1 | grep -E "✖|PREMISES" || fail=1
 echo "== co-op (host+client)"
 $GODOT --headless --path . res://tools/net_test.tscn -- --role host > /tmp/refurb_host.log 2>&1 &
 HOST=$!

@@ -65,7 +65,7 @@ func _bind_screen() -> void:
 
 
 func hover_info(_player: Node) -> Dictionary:
-	return {"title": "Office PC", "lines": ["Purchasing · Shop · Stock · Flogit · Finance · Mail"], "prompt": "[E] Use computer"}
+	return {"title": "Office PC", "lines": ["Purchasing · Shop · Stock · Flogit · Finance · Mail"], "prompt": "[E] Use computer  ·  [F] Move desk"}
 
 
 func interact(player: Node) -> void:
@@ -85,6 +85,15 @@ func interact(player: Node) -> void:
 	_tween.tween_property(_cam, "fov", 40.0, 0.55)
 	_os.on_opened()
 	Sfx.play_ui("pc_open", -6.0)
+
+
+func leave_then(cb: Callable) -> void:
+	## Step away from the PC, then run cb(player) (e.g. start placing equipment).
+	var p := _user
+	leave()
+	if p:
+		await get_tree().create_timer(0.45).timeout
+		cb.call(p)
 
 
 func leave() -> void:

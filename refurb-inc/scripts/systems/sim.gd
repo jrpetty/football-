@@ -33,6 +33,10 @@ func new_game(seed_value: int = 0) -> void:
 	state.last_flogit_hour = int(state.minute / 60.0)
 	state.day_stats = _blank_day_stats()
 	state.add_money(0, "opening", "Opening balance")
+	state.building_id = String(Content.econ("start_building", "garage"))
+	for f in Content.econ("start_fixtures", []):
+		state.fixtures[f.id] = {"type": f.type, "label": f.get("label", ""), "placed": false, "p": [0, 0, 0], "r": 0.0}
+		state.mark("fixture", f.id)
 	for si in Content.econ("start_items", []):
 		var it := state.new_item(si.kind)
 		state.set_loc(it, {"t": "slot", "slot": si.slot})
@@ -901,9 +905,10 @@ func end_day() -> void:
 	summary["cash"] = state.cash
 	# Weekly rent & bills on the due weekday.
 	if state.weekday() == int(Content.econ("rent_due_weekday", 4)):
-		var rent := int(Content.econ("rent_weekly", 150))
-		var util := int(Content.econ("utilities_weekly", 25))
-		state.add_money(-rent, "rent", "Weekly rent — garage")
+		var b := state.building()
+		var rent := int(b.get("rent_weekly", 150))
+		var util := int(b.get("utilities_weekly", 25))
+		state.add_money(-rent, "rent", "Weekly rent — %s" % b.get("name", "premises"))
 		state.add_money(-util, "utilities", "Electric & broadband")
 		summary["rent_paid"] = rent + util
 		if state.cash < 0:
@@ -952,4 +957,93 @@ func start_next_day() -> void:
 
 func c_next_day(_peer: int, _a: Dictionary) -> Dictionary:
 	start_next_day()
+	return _ok()
+
+
+# ================================================================= equipment (fixtures) & premises
+
+static func fixture_label(st: GameState, type: String) -> String:
+	var n := 0
+	for f in st.fixtures.values():
+		if f.type == type:
+			n += 1
+	if type == "metal_shelf":
+		return "Shelf %s" % char(65 + n)
+	return "%s %d" % [Content.fixture(type).get("name", type), n + 1]
+
+
+func c_buy_fixture(peer: int, a: Dictionary) -> Dictionary:
+	var type: String = a.get("type", "")
+	var def := Content.fixture(type)
+	if def.is_empty():
+		return _fail("Unknown equipment.")
+	var price := int(def.get("price", 0))
+	if state.cash - price < int(Content.econ("overdraft_warning", -500)):
+		return _fail("Not enough funds for %s." % def.name)
+	var n := 1
+	while state.fixtures.has("%s_%d" % [type, n]):
+		n += 1
+	var id := "%s_%d" % [type, n]
+	state.fixtures[id] = {"type": type, "label": fixture_label(state, type), "placed": false, "p": [0, 0, 0], "r": 0.0}
+	state.add_money(-price, "equipment", "Bought %s" % def.name)
+	state.mark("fixture", id)
+	state.say("Bought %s — place it from the Building app (or it'll be set up for you)." % def.name, "good", peer)
+	return {"ok": true, "msg": "", "id": id}
+
+
+func c_place_fixture(_peer: int, a: Dictionary) -> Dictionary:
+	var id: String = a.get("id", "")
+	if not state.fixtures.has(id):
+		return _fail("Unknown equipment.")
+	var f: Dictionary = state.fixtures[id]
+	var p: Array = a.get("p", [0, 0, 0])
+	f.placed = true
+	f.p = [float(p[0]), float(p[1]), float(p[2])]
+	f.r = float(a.get("r", 0.0))
+	state.mark("fixture", id)
+	return _ok()
+
+
+func c_store_fixture(peer: int, a: Dictionary) -> Dictionary:
+	var id: String = a.get("id", "")
+	if not state.fixtures.has(id):
+		return _fail("")
+	if not state.fixture_items(id).is_empty():
+		return _fail("Empty it first — there are items on it.")
+	var st: Dictionary = state.stations.get(id, {})
+	if not st.get("job", {}).is_empty():
+		return _fail("A job is running on it.")
+	state.fixtures[id].placed = false
+	state.mark("fixture", id)
+	state.say("%s packed away into storage." % state.fixtures[id].label, "info", peer)
+	return _ok()
+
+
+func move_cost(building_id: String) -> int:
+	return int(Content.building(building_id).get("move_fee", 0))
+
+
+func c_move_building(peer: int, a: Dictionary) -> Dictionary:
+	var to: String = a.get("building", "")
+	var b := Content.building(to)
+	if b.is_empty():
+		return _fail("Unknown premises.")
+	if to == state.building_id:
+		return _fail("You're already here.")
+	var cost := move_cost(to)
+	if state.cash - cost < int(Content.econ("overdraft_warning", -500)):
+		return _fail("Moving to %s costs %s (removals + deposit)." % [b.name, GameState.format_money(cost)])
+	if cost > 0:
+		state.add_money(-cost, "premises", "Move to %s (removals + deposit)" % b.name)
+	state.building_id = to
+	# Equipment is re-laid out by the new level; whatever is on it travels with it.
+	for id in state.fixtures:
+		state.fixtures[id].placed = false
+		state.mark("fixture", id)
+	# Loose stock, pallets and parcels are dropped off in the new goods-in area.
+	for it: Item in state.items.values():
+		if it.loc.get("t") == "loose":
+			state.set_loc(it, {"t": "loose", "relocate": true, "p": [0, 1, 0], "r": [0, 0, 0, 1]})
+	state.mark("building")
+	state.say("Moving day! Welcome to %s, %s." % [b.name, b.get("address", "")], "good")
 	return _ok()

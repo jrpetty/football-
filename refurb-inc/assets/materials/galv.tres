@@ -1,0 +1,7 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[resource]
+resource_name = "galv"
+albedo_color = Color(0.68, 0.7, 0.72, 1)
+metallic = 0.75
+roughness = 0.45

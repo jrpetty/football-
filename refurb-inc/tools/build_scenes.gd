@@ -15,7 +15,7 @@ func _ready() -> void:
 	_build_stations()
 	_build_vehicles()
 	if not _only_props:
-		_build_garage()
+		_build_levels()
 	print("Scenes built.")
 	get_tree().quit()
 
@@ -268,7 +268,30 @@ func _build_vehicles() -> void:
 	_save(v, S + "vehicles/courier_van.tscn")
 
 
-# ================================================================= garage level
+# ================================================================= premises levels
+
+const LEVELS := ["garage", "lockup", "industrial", "warehouse", "distribution", "facility", "megaplant"]
+
+
+func _build_levels() -> void:
+	MatLib.save_all()
+	var args := OS.get_cmdline_user_args()
+	var only := ""
+	if args.find("--only") >= 0:
+		only = args[args.find("--only") + 1]
+	for id in LEVELS:
+		if only != "" and id != only:
+			continue
+		var path := "res://tools/buildings/%s.gd" % id
+		if not ResourceLoader.exists(path):
+			print("  (skip %s — no builder yet)" % id)
+			continue
+		var t := Time.get_ticks_msec()
+		load(path).build()
+		print("  built %s in %d ms" % [id, Time.get_ticks_msec() - t])
+
+
+# ================================================================= legacy garage level (superseded by tools/buildings/garage.gd)
 
 func _build_garage() -> void:
 	var root := Node3D.new()

@@ -1,0 +1,20 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/composite_panel/albedo.png" id="1_h6ce5"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/composite_panel/normal.png" id="2_v4jbf"]
+[ext_resource type="Texture2D" path="res://assets/textures/surfaces/composite_panel/roughness.png" id="3_4ekoy"]
+
+[resource]
+resource_name = "panel_silver"
+albedo_color = Color(0.78, 0.8, 0.82, 1)
+albedo_texture = ExtResource("1_h6ce5")
+metallic = 0.55
+roughness_texture = ExtResource("3_4ekoy")
+normal_enabled = true
+normal_scale = 0.8
+normal_texture = ExtResource("2_v4jbf")
+uv1_scale = Vector3(0.5, 0.5, 0.5)
+uv1_triplanar = true
+uv1_triplanar_sharpness = 4.0
+uv1_world_triplanar = true
+texture_filter = 5
