@@ -1,0 +1,67 @@
+; Engine configuration file.
+; Refurb Inc. — Godot 4.7
+
+config_version=5
+
+[application]
+
+config/name="Refurb Inc."
+config/description="Buy it. Fix it. Flip it. Scale it."
+config/version="0.1.0"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Content="*res://scripts/autoload/content.gd"
+Settings="*res://scripts/autoload/settings.gd"
+Net="*res://scripts/autoload/net.gd"
+Game="*res://scripts/autoload/game.gd"
+Sfx="*res://scripts/autoload/sfx.gd"
+SaveManager="*res://scripts/autoload/save_manager.gd"
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/mode=0
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/vsync/vsync_mode=1
+
+[gui]
+
+theme/custom="res://ui/theme/refurb_theme.tres"
+
+[layer_names]
+
+3d_physics/layer_1="world"
+3d_physics/layer_2="player"
+3d_physics/layer_3="items"
+3d_physics/layer_4="interact"
+3d_physics/layer_5="vehicles"
+3d_physics/layer_6="slots"
+
+[physics]
+
+common/physics_ticks_per_second=60
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+anti_aliasing/quality/msaa_3d=1
+anti_aliasing/quality/screen_space_aa=1
+lights_and_shadows/directional_shadow/size=4096
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=2
+lights_and_shadows/positional_shadow/soft_shadow_filter_quality=2
+environment/defaults/default_clear_color=Color(0.05, 0.05, 0.06, 1)
+textures/default_filters/anisotropic_filtering_level=3
+lights_and_shadows/use_physical_light_units=false
+mesh_lod/lod_change/threshold_pixels=1.0
+occlusion_culling/use_occlusion_culling=true
+
+[audio]
+
+buses/default_bus_layout="res://assets/audio/default_bus_layout.tres"

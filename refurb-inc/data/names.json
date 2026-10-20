@@ -1,0 +1,7 @@
+{
+  "first": ["Gareth", "Siobhan", "Priya", "Tom", "Callum", "Aisha", "Nathan", "Rhiannon", "Dev", "Ellie", "Mo", "Kirsty", "Joe", "Fatima", "Liam", "Bethan", "Ollie", "Hannah", "Kwame", "Zoe", "Ravi", "Megan", "Craig", "Niamh", "Sam", "Imogen", "Jamal", "Lucy", "Rob", "Grace"],
+  "last_initial": ["A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M", "N", "O", "P", "R", "S", "T", "W", "Y"],
+  "towns": ["Leeds", "Swansea", "Norwich", "Stoke", "Glasgow", "Exeter", "Hull", "Derby", "Belfast", "Bolton", "Reading", "Wrexham", "Ipswich", "Carlisle", "Luton", "Dundee", "Bath", "Sunderland", "Cardiff", "Preston"],
+  "flogit_handles": ["bargainhunter", "gadgetgaz", "techmum", "studentlife", "retrogamer", "{first}{n}", "{first}_{town}", "{town}deals", "{first}theplumber", "nan_on_the_net", "{first}_buys"],
+  "buyer_messages": ["For my daughter starting uni.", "Need it for work from home.", "Hope it's as described!", "Can you post quickly please?", "Replacing my old one that died.", "For the kids' homework.", "", "", "", "Cheers!"]
+}

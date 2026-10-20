@@ -1,0 +1,22 @@
+{
+  "_comment": "Fictional organisations that dispose of IT. refresh_years drives predictable cycles; refresh_day_offset staggers them. lot_size [min,max] for laptops. min_rep gates who will sell to you. quality_bias shifts hidden quality (+ = better kept kit). model_pool limits what they buy.",
+  "sellers": [
+    {"id": "northgate_bank",     "name": "Northgate Bank",                 "sector": "Banking",     "refresh_years": 3, "refresh_day_offset": 4,  "lot_size": [8, 20],  "min_rep": 0,  "quality_bias": 0.10, "model_pool": ["corvex_prospect_5420", "corvex_prospect_7390", "northstar_meridian_x13"]},
+    {"id": "ashby_council",      "name": "Ashby Parish Council",           "sector": "Council",     "refresh_years": 3, "refresh_day_offset": 1,  "lot_size": [4, 8],   "min_rep": 0,  "quality_bias": -0.02, "model_pool": ["halden_folio_650", "corvex_vantage_3510", "northstar_edge_e15"]},
+    {"id": "st_wilfrids",        "name": "St Wilfrid's Academy",           "sector": "Education",   "refresh_years": 2, "refresh_day_offset": 2,  "lot_size": [6, 16],  "min_rep": 0,  "quality_bias": -0.12, "model_pool": ["kestrel_swift_14", "northstar_edge_e15", "corvex_vantage_3510"]},
+    {"id": "harrow_lyle",        "name": "Harrow & Lyle Solicitors",       "sector": "Legal",       "refresh_years": 3, "refresh_day_offset": 3,  "lot_size": [4, 10],  "min_rep": 0,  "quality_bias": 0.12, "model_pool": ["brightline_aura_13", "halden_folio_840", "northstar_meridian_t14"]},
+    {"id": "pennine_mutual",     "name": "Pennine Mutual Insurance",       "sector": "Insurance",   "refresh_years": 3, "refresh_day_offset": 5,  "lot_size": [10, 20], "min_rep": 5,  "quality_bias": 0.05, "model_pool": ["halden_folio_840", "corvex_prospect_5420", "northstar_meridian_t14"]},
+    {"id": "calder_health",      "name": "Calder Valley Health Trust",     "sector": "Healthcare",  "refresh_years": 2, "refresh_day_offset": 6,  "lot_size": [10, 20], "min_rep": 10, "quality_bias": -0.06, "model_pool": ["corvex_vantage_3510", "halden_folio_650", "corvex_prospect_7390"]},
+    {"id": "quayside_logistics", "name": "Quayside Logistics",             "sector": "Logistics",   "refresh_years": 1, "refresh_day_offset": 0,  "lot_size": [6, 14],  "min_rep": 0,  "quality_bias": -0.15, "model_pool": ["northstar_edge_e15", "kestrel_swift_14", "halden_folio_650"]},
+    {"id": "loopwise",           "name": "Loopwise Ltd (tech startup)",    "sector": "Startup",     "refresh_years": 1, "refresh_day_offset": 3,  "lot_size": [4, 9],   "min_rep": 0,  "quality_bias": 0.0,  "model_pool": ["brightline_aura_13", "northstar_meridian_x13", "kestrel_swift_14"]},
+    {"id": "thornbury_council",  "name": "Thornbury Borough Council",      "sector": "Council",     "refresh_years": 3, "refresh_day_offset": 0,  "lot_size": [12, 20], "min_rep": 15, "quality_bias": 0.0,  "model_pool": ["corvex_prospect_5420", "halden_folio_840", "corvex_vantage_3510"]},
+    {"id": "kingsgate_uni",      "name": "Kingsgate University",           "sector": "Education",   "refresh_years": 2, "refresh_day_offset": 5,  "lot_size": [10, 20], "min_rep": 20, "quality_bias": -0.04, "model_pool": ["northstar_meridian_t14", "kestrel_swift_14", "northstar_edge_e15"]},
+    {"id": "meridian_housing",   "name": "Meridian Housing Association",   "sector": "Housing",     "refresh_years": 3, "refresh_day_offset": 2,  "lot_size": [5, 12],  "min_rep": 5,  "quality_bias": 0.02, "model_pool": ["corvex_prospect_7390", "halden_folio_840", "halden_folio_650"]},
+    {"id": "fenwick_accountants","name": "Fenwick & Daughters Accountants","sector": "Finance",     "refresh_years": 3, "refresh_day_offset": 4,  "lot_size": [4, 7],   "min_rep": 0,  "quality_bias": 0.15, "model_pool": ["northstar_meridian_x13", "brightline_aura_13", "corvex_prospect_5420"]}
+  ],
+  "notes": [
+    {"min_q": 0.00, "max_q": 0.30, "texts": ["Sold as seen, untested.", "Ex-loan pool. Untested. Some missing chargers.", "Pulled from storage cupboard. Condition unknown.", "Clearance — no returns."]},
+    {"min_q": 0.25, "max_q": 0.65, "texts": ["Mostly working, usual office wear.", "Working when last used. Drives may have been removed.", "Mixed condition. Asset tags still on.", "Standard end-of-lease return."]},
+    {"min_q": 0.60, "max_q": 1.01, "texts": ["All working when removed.", "Lightly used, well looked after.", "Executive floor refresh. Bagged and boxed.", "Data wiped in-house, all powered on before collection."]}
+  ]
+}

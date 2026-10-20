@@ -1,0 +1,18 @@
+{
+  "_comment": "External / cosmetic condition tags shown on hover. penalty reduces the cosmetic score (100 = pristine). fixable_by_fault: repairing that fault removes the tag.",
+  "conditions": [
+    {"id": "light_scuffs_lid", "text": "Light scuffs on lid",      "penalty": 7,  "weight": 30},
+    {"id": "scratches_lid",    "text": "Scratches on lid",         "penalty": 16, "weight": 14},
+    {"id": "worn_palmrest",    "text": "Worn palm rest",           "penalty": 9,  "weight": 18},
+    {"id": "shiny_keys",       "text": "Shiny keys",               "penalty": 5,  "weight": 18},
+    {"id": "sticker_residue",  "text": "Sticker residue",          "penalty": 4,  "weight": 14},
+    {"id": "asset_tag",        "text": "Asset tag on base",        "penalty": 2,  "weight": 26},
+    {"id": "dented_corner",    "text": "Dented corner",            "penalty": 24, "weight": 6},
+    {"id": "pressure_marks",   "text": "Screen pressure marks",    "penalty": 14, "weight": 7},
+    {"id": "missing_key",      "text": "Missing key",              "penalty": 18, "weight": 4, "fixable_by_fault": "keycap_missing"},
+    {"id": "cracked_screen",   "text": "Cracked screen",           "penalty": 40, "weight": 3, "fixable_by_fault": "screen_cracked"},
+    {"id": "broken_hinge",     "text": "Broken hinge",             "penalty": 30, "weight": 2, "fixable_by_fault": "hinge_broken"}
+  ],
+  "grade_thresholds": {"A": 90, "B": 74, "C": 50},
+  "grade_value_mult": {"A": 1.0, "B": 0.86, "C": 0.71, "D": 0.38, "S": 0.22}
+}

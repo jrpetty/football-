@@ -1,0 +1,13 @@
+# Normalise text
+* text=auto eol=lf
+# Binary assets (enable Git LFS on a dedicated repo: git lfs track these)
+*.glb binary
+*.gltf binary
+*.png binary
+*.jpg binary
+*.exr binary
+*.hdr binary
+*.wav binary
+*.ogg binary
+*.ttf binary
+*.otf binary

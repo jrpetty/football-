@@ -1,0 +1,14 @@
+{
+  "os": {
+    "name": "PaneOS",
+    "version": "12.4 Business",
+    "vendor": "Pane Systems",
+    "wipe_standard": "NIST 800-88 Purge (3 passes)",
+    "boot_text": ["PaneOS Deploy 12.4", "Loading drivers…", "Detecting storage…", "Secure erase: pass {p}/3", "Partitioning disk…", "Copying system image…", "Installing drivers…", "Applying OOBE profile…", "Done. Ready for first boot."]
+  },
+  "diag": {
+    "name": "DiagnostiKit Pro",
+    "version": "7.2",
+    "stages": ["POST", "Hardware inventory", "Memory test (2 passes)", "Storage SMART + surface scan", "Battery calibration", "Display + keyboard", "Thermal stress", "Generating report"]
+  }
+}
