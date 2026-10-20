@@ -10,6 +10,7 @@ var state: GameState
 var lots: LotGenerator
 var paused := false
 var visual_vehicles := false   # true when a level's VehicleDirector animates lorries/vans and calls deliver_* itself
+var active_peers: Array = []   # players currently in the session (Game sets this each frame) — counted as on shift
 
 
 func _init(s: GameState) -> void:
@@ -48,7 +49,7 @@ func new_game(seed_value: int = 0) -> void:
 
 func _blank_day_stats() -> Dictionary:
 	return {"tested": 0, "repaired": 0, "imaged": 0, "graded": 0, "sold": 0, "shipped": 0, "late": 0,
-		"missed": 0, "income": 0, "spend": 0, "bought": 0, "rep_start": state.reputation}
+		"missed": 0, "income": 0, "spend": 0, "revenue": 0, "bought": 0, "rep_start": state.reputation}
 
 
 # ================================================================= command dispatch
@@ -97,6 +98,7 @@ func c_pick_up(peer: int, a: Dictionary) -> Dictionary:
 	state.set_loc(it, {"t": "held", "peer": peer, "i": held.size()})
 	if it.kind == Item.KIND_UNIT:
 		state.add_xp(player_key(peer), "hauling", int(Content.econ("xp", {}).get("haul", 1)))
+		BusinessStats.act(state, peer, "hauled")
 	return _ok()
 
 
@@ -268,6 +270,7 @@ func _process_jobs() -> void:
 			it.unit.imaged = true
 			it.unit.log_event(state.minute, "Wiped (%s) and imaged with %s" % [Content.os_info.get("wipe_standard", ""), Content.os_info.get("name", "PaneOS")])
 			state.bump_stat("imaged")
+			BusinessStats.act(state, by, "imaged")
 			if by != 0:
 				state.add_xp(player_key(by), "imaging", int(Content.econ("xp", {}).get("image", 4)))
 			st.msg = "IMAGED"
@@ -289,6 +292,7 @@ func _complete_test(it: Item, by: int) -> void:
 	}
 	u.log_event(state.minute, "Tested: " + ("PASS" if lines.is_empty() else "%d fault(s)" % lines.size()))
 	state.bump_stat("tested")
+	BusinessStats.on_test(state, u, by)
 	if by != 0:
 		state.add_xp(player_key(by), "testing", int(Content.econ("xp", {}).get("test", 6)))
 	if lines.is_empty():
@@ -344,6 +348,7 @@ func c_repair(peer: int, a: Dictionary) -> Dictionary:
 		if f.id == pv.fault and not f.fixed:
 			f.fixed = true
 			var pdef := Content.part(pv.part)
+			BusinessStats.on_repair(state, u, f.id, pv.part, 0 if pdef.get("reusable", false) else int(pdef.get("price", 0)), peer)
 			if not pdef.get("reusable", false):
 				state.parts[pv.part] = int(state.parts.get(pv.part, 0)) - 1
 				if state.parts[pv.part] <= 0:
@@ -384,6 +389,8 @@ func c_grade(peer: int, a: Dictionary) -> Dictionary:
 		return _fail("Wipe & image it first.")
 	u.grade = Valuation.grade_for(u)
 	u.list_price = Valuation.market_value(u, u.grade)
+	u.graded_at = state.minute
+	BusinessStats.on_grade(state, u, peer)
 	u.log_event(state.minute, "Graded %s — suggested price £%d" % [UnitData.grade_label(u.grade), u.list_price])
 	state.bump_stat("graded")
 	state.add_xp(player_key(peer), "grading", int(Content.econ("xp", {}).get("grade", 3)))
@@ -403,7 +410,7 @@ func c_set_price(_peer: int, a: Dictionary) -> Dictionary:
 	return _ok()
 
 
-func c_list(_peer: int, a: Dictionary) -> Dictionary:
+func c_list(peer: int, a: Dictionary) -> Dictionary:
 	var it := state.get_item(int(a.get("item", 0)))
 	if it == null or it.unit == null:
 		return _fail("")
@@ -413,6 +420,10 @@ func c_list(_peer: int, a: Dictionary) -> Dictionary:
 		return _fail("Only graded units can be listed.")
 	if u.order_id != 0:
 		return _fail("Already sold.")
+	if want and not u.listed:
+		if u.listed_at < 0.0:
+			u.listed_at = state.minute
+		BusinessStats.act(state, peer, "listed")
 	u.listed = want
 	u.log_event(state.minute, ("Listed on Flogit at £%d" % u.list_price) if want else "Listing withdrawn")
 	state.mark("item", it.id)
@@ -457,6 +468,8 @@ func _create_order(it: Item, channel: String) -> Dictionary:
 	state.orders[order.id] = order
 	u.listed = false
 	u.order_id = order.id
+	u.sold_at = state.minute
+	BusinessStats.on_order(state)
 	u.log_event(state.minute, "Sold on Flogit to %s for £%d" % [order.buyer, order.price])
 	state.bump_stat("sold")
 	state.mark("order", order.id)
@@ -532,6 +545,7 @@ func c_pack(peer: int, a: Dictionary) -> Dictionary:
 	state.mark("order", order.id)
 	state.mark("company")
 	state.add_xp(player_key(peer), "packing", int(Content.econ("xp", {}).get("pack", 6)))
+	BusinessStats.act(state, peer, "packed")
 	state.say("Packed order #%d. Take it to the courier shelf." % order.id, "good", peer)
 	return _ok()
 
@@ -575,6 +589,8 @@ func _ship_package(pkg: Item) -> void:
 		state.totals["units_sold"] = int(state.totals.get("units_sold", 0)) + 1
 		state.totals["revenue"] = int(state.totals.get("revenue", 0)) + price
 		state.bump_stat("shipped")
+		state.bump_stat("revenue", price)
+		BusinessStats.on_ship(state, order, unit_it.unit if unit_it else null, fee, post, on_time)
 	if unit_it:
 		unit_it.unit.shipped = true
 		unit_it.unit.log_event(state.minute, "Shipped to customer")
@@ -598,6 +614,7 @@ func _check_deadlines() -> void:
 			o.status = "cancelled"
 			state.add_reputation(float(Content.econ("rep_missed", -6.0)))
 			state.bump_stat("missed")
+			BusinessStats.on_cancel(state)
 			var it := state.get_item(int(o.unit))
 			if it and it.unit:
 				it.unit.order_id = 0
@@ -624,6 +641,7 @@ func c_buy_lot(peer: int, a: Dictionary) -> Dictionary:
 	state.totals["units_bought"] = int(state.totals.get("units_bought", 0)) + int(lot.count)
 	state.totals["spent"] = int(state.totals.get("spent", 0)) + total
 	state.bump_stat("bought", int(lot.count))
+	BusinessStats.on_lot_bought(state, lot, total, peer)
 	state.add_xp(player_key(peer), "purchasing", int(Content.econ("xp", {}).get("buy_unit", 2)) * int(lot.count))
 	var arrive := _next_lorry_slot()
 	state.schedule.append({"at": arrive, "type": "lorry", "data": {"lot": lot.id}})
@@ -667,6 +685,7 @@ func deliver_lot(lot_id: int, drop_pos: Vector3 = Vector3.ZERO) -> Array:
 			it.unit = UnitData.from_dict(units[idx])
 			it.unit.lot_id = lot_id
 			it.unit.cost = unit_price
+			it.unit.received = state.minute
 			it.unit.log_event(state.minute, "Received from %s" % lot.seller_name)
 			state.set_loc(it, {"t": "slot", "slot": "i%d:%d" % [pallet.id, k]})
 			idx += 1
@@ -848,7 +867,9 @@ func advance_minutes(mins: float) -> void:
 	var target := minf(state.minute + mins, end)
 	# Step in ≤5-minute chunks so hourly/scheduled events fire in order even on big jumps.
 	while state.minute < target - 0.0001:
-		state.minute = minf(state.minute + 5.0, target)
+		var step := minf(5.0, target - state.minute)
+		state.minute += step
+		BusinessStats.on_shift_minutes(state, active_peers, step)
 		_process_minute_events()
 	state.mark("clock")
 	if state.minute >= end - 0.0001:
@@ -919,6 +940,7 @@ func end_day() -> void:
 			state.say("You're overdrawn. The bank has charged a fee — get selling!", "bad")
 		summary["cash"] = state.cash
 	summary["rating"] = shift_rating(summary)
+	BusinessStats.on_day_end(state, summary)
 	state.mark("clock")
 	state.mark("company")
 	state.day_ended.emit(summary)

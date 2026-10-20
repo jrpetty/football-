@@ -31,6 +31,12 @@ var cost: int = 0                 # what we paid per unit (for profit stats)
 var seller_name: String = ""
 var shipped: bool = false
 var history: Array = []           # short audit trail [[game_min, text], …] — feeds the Stock app
+# Timeline + costs for the Insights app (game minutes; -1 = not yet).
+var received: float = -1.0
+var graded_at: float = -1.0
+var listed_at: float = -1.0
+var sold_at: float = -1.0
+var parts_cost: int = 0           # value of parts fitted during repair
 
 
 func display_name() -> String:
@@ -124,6 +130,7 @@ func to_dict() -> Dictionary:
 		"tested": tested, "test_report": test_report.duplicate(true), "imaged": imaged, "grade": grade,
 		"list_price": list_price, "listed": listed, "order_id": order_id, "lot_id": lot_id, "cost": cost,
 		"seller_name": seller_name, "shipped": shipped, "history": history.duplicate(true),
+		"received": received, "graded_at": graded_at, "listed_at": listed_at, "sold_at": sold_at, "parts_cost": parts_cost,
 	}
 
 
@@ -149,4 +156,9 @@ static func from_dict(d: Dictionary) -> UnitData:
 	u.seller_name = d.get("seller_name", "")
 	u.shipped = bool(d.get("shipped", false))
 	u.history = d.get("history", []).duplicate(true)
+	u.received = float(d.get("received", -1.0))
+	u.graded_at = float(d.get("graded_at", -1.0))
+	u.listed_at = float(d.get("listed_at", -1.0))
+	u.sold_at = float(d.get("sold_at", -1.0))
+	u.parts_cost = int(d.get("parts_cost", 0))
 	return u

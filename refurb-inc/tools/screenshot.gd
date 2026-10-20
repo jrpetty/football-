@@ -45,11 +45,22 @@ func _ready() -> void:
 		var poses: Dictionary = LEVEL_POSES.get(level_id, {})
 		if idx < 0:
 			names = poses.keys()
+	if "--insights" in args:
+		# A few weeks of real trading so the Insights app has history to show.
+		var bot := BusinessBot.new(Game.sim, 4242)
+		bot.run_days(12)
+		bot.finish_for_level()
+		Game.sim.start_next_day()
+		Game.sim.advance_minutes(150)
 	_level = load(load("res://scripts/game_root.gd").level_path(level_id)).instantiate()
 	add_child(_level)
 	if "--setup" in args:
 		_demo_setup()
 	await get_tree().create_timer(0.5).timeout
+	if "--insights" in args:
+		await _insights_shots()
+		get_tree().quit()
+		return
 	if "--ui" in args:
 		await _ui_shots()
 		get_tree().quit()
@@ -143,6 +154,26 @@ func _ui_shots() -> void:
 	pc._os.open_app("building")
 	await get_tree().create_timer(0.8).timeout
 	await _save("pc_building")
+
+
+func _insights_shots() -> void:
+	DirAccess.make_dir_recursive_absolute("res://tools/out")
+	var player: Player = LevelRoot.current.local_player()
+	var pc: OfficePC = LevelRoot.current.find_child("OfficePC", true, false)
+	player.global_position = pc.global_position + pc.global_basis.z * 0.9
+	await get_tree().create_timer(0.3).timeout
+	pc.interact(player)
+	await get_tree().create_timer(1.2).timeout
+	pc._os.open_app("insights")
+	var app: Node = pc._os._current
+	for i in app.TABS.size():
+		app._tabbar.current_tab = i
+		await get_tree().create_timer(0.5).timeout
+		await _save("insights_%d" % i)
+		# Second page of the longer tabs
+		app._scroll.scroll_vertical = 640
+		await get_tree().create_timer(0.3).timeout
+		await _save("insights_%db" % i)
 
 
 func _save(n: String) -> void:

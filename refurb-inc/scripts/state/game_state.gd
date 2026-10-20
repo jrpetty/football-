@@ -46,6 +46,7 @@ var seller_state: Dictionary = {}    # seller_id -> { "next_refresh_day": int }
 # --- stats
 var day_stats: Dictionary = {}
 var totals: Dictionary = {"units_bought": 0, "units_sold": 0, "revenue": 0, "spent": 0}
+var stats: Dictionary = BusinessStats.blank()   # long-term business history for the Insights app (host; saved, not replicated)
 
 # --- replication bookkeeping (host)
 var dirty: Dictionary = {}           # "kind|id" -> [kind, id]
@@ -220,6 +221,7 @@ func add_money(amount: int, category: String, desc: String) -> void:
 		day_stats["income"] = int(day_stats.get("income", 0)) + amount
 	else:
 		day_stats["spend"] = int(day_stats.get("spend", 0)) - amount
+	BusinessStats.on_money(self, amount, category)
 	mark("company")
 
 
@@ -276,6 +278,7 @@ func to_dict() -> Dictionary:
 		"items": it_out, "stations": stations.duplicate(true), "building_id": building_id, "fixtures": fixtures.duplicate(true), "lots": _int_keyed_out(lots),
 		"orders": _int_keyed_out(orders), "schedule": schedule.duplicate(true),
 		"seller_state": seller_state.duplicate(true), "day_stats": day_stats.duplicate(true), "totals": totals.duplicate(true),
+		"stats": stats.duplicate(true),
 	}
 
 
@@ -311,6 +314,7 @@ func load_dict(d: Dictionary) -> void:
 	seller_state = d.get("seller_state", {}).duplicate(true)
 	day_stats = d.get("day_stats", {}).duplicate(true)
 	totals = d.get("totals", {}).duplicate(true)
+	stats = BusinessStats.migrate(d.get("stats", {}))
 	dirty.clear()
 
 
@@ -443,6 +447,7 @@ func _public_lot(id: int) -> Variant:
 func snapshot() -> Dictionary:
 	## Full public state for a joining client.
 	var d := to_dict()
+	d.erase("stats")              # the host computes Insights reports and sends them on request
 	var pub_lots := {}
 	for id in lots:
 		pub_lots[str(id)] = _public_lot(id)

@@ -12,6 +12,7 @@ signal toast(text: String, level: String)
 signal day_summary(summary: Dictionary)
 signal vehicle_event(kind: String, payload: Dictionary)
 signal command_result(cmd: String, result: Dictionary)
+signal report_ready(report: Dictionary)   # Insights app data (computed on the host)
 
 const REPLICATION_HZ := 20.0
 
@@ -106,12 +107,35 @@ func _rpc_result(cmd: String, res: Dictionary) -> void:
 	command_result.emit(cmd, res)
 
 
+# ================================================================= business insights
+
+func request_report() -> void:
+	## The full history lives on the host; it computes the report and sends it back. Arrives via report_ready.
+	if is_host():
+		if sim:
+			report_ready.emit(BusinessStats.compute(state))
+	else:
+		_rpc_report_request.rpc_id(1)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_report_request() -> void:
+	if is_host() and sim:
+		_rpc_report.rpc_id(multiplayer.get_remote_sender_id(), BusinessStats.compute(state))
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_report(report: Dictionary) -> void:
+	report_ready.emit(report)
+
+
 # ================================================================= simulation + replication
 
 func _process(delta: float) -> void:
 	if not in_game:
 		return
 	if is_host() and sim:
+		sim.active_peers = Net.all_peers()
 		sim.tick(delta)
 		_rep_accum += delta
 		if _rep_accum >= 1.0 / REPLICATION_HZ:

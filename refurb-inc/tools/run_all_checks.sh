@@ -9,6 +9,7 @@ echo "== unit tests";           $GODOT --headless --path . res://tests/run_tests
 $GODOT --headless --path . res://tests/run_tests.tscn >/dev/null 2>&1 || fail=1
 echo "== in-engine playtest";   $GODOT --headless --path . res://tools/playtest.tscn 2>&1 | grep -E "✖|PLAYTEST" || fail=1
 echo "== premises (move through all 7 buildings)"; $GODOT --headless --path . res://tools/premises_test.tscn 2>&1 | grep -E "✖|PREMISES" || fail=1
+echo "== economy sim (bot trades 20 days)"; $GODOT --headless --path . res://tools/economy_sim.tscn -- --days 20 2>&1 | grep -E "ECONOMY|After|cash" || fail=1
 echo "== co-op (host+client)"
 $GODOT --headless --path . res://tools/net_test.tscn -- --role host > /tmp/refurb_host.log 2>&1 &
 HOST=$!

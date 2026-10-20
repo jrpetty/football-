@@ -77,4 +77,10 @@ func _client() -> void:
 	var cash0 := Game.state.cash
 	_check(await _wait(func(): return Game.state.cash < cash0, 15.0), "host's purchase replicated (cash %d → %d)" % [cash0, Game.state.cash])
 	_check(await _wait(func(): return Game.state.schedule.any(func(e): return e.type == "lorry"), 5.0), "lorry schedule replicated")
+	# Insights: the history lives on the host; a client asks for the report and gets it back.
+	var rep := {"v": {}}
+	Game.report_ready.connect(func(r): rep.v = r)
+	Game.request_report()
+	_check(await _wait(func(): return not rep.v.is_empty(), 10.0), "Insights report received from host")
+	_check(not rep.v.is_empty() and int(rep.v.purchasing.lots) == 1 and rep.v.people.team.size() == 2, "report covers the host's lot and both players")
 	multiplayer.multiplayer_peer.close()

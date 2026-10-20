@@ -8,6 +8,7 @@ const APPS := [
 	{"id": "stock", "title": "Stock", "short": "Stock", "colour": Color(0.3, 0.75, 0.45), "glyph": "▤", "script": "res://ui/office_os/apps/stock_app.gd"},
 	{"id": "shop", "title": "PartsHub — Shop", "short": "Shop", "colour": Color(0.95, 0.6, 0.15), "glyph": "⚙", "script": "res://ui/office_os/apps/shop_app.gd"},
 	{"id": "finance", "title": "Wages & Finance", "short": "Finance", "colour": Color(0.55, 0.45, 0.9), "glyph": "%", "script": "res://ui/office_os/apps/finance_app.gd"},
+	{"id": "insights", "title": "Business Insights", "short": "Insights", "colour": Color(0.88, 0.68, 0.12), "glyph": "▲", "script": "res://ui/office_os/apps/insights_app.gd"},
 	{"id": "mail", "title": "Mail", "short": "Mail", "colour": Color(0.25, 0.7, 0.85), "glyph": "@", "script": "res://ui/office_os/apps/mail_app.gd"},
 	{"id": "skills", "title": "My Skills", "short": "Skills", "colour": Color(0.9, 0.4, 0.3), "glyph": "★", "script": "res://ui/office_os/apps/skills_app.gd"},
 	{"id": "staff", "title": "Staff", "short": "Staff", "colour": Color(0.5, 0.5, 0.55), "glyph": "☺", "script": ""},
@@ -90,9 +91,15 @@ func _ready() -> void:
 	for a in APPS:
 		if a.script == "":
 			continue
+		# Icon-only taskbar buttons (the name is in the tooltip and on the desktop), so every app fits.
 		var b := Button.new()
-		b.text = " %s  %s " % [a.glyph, a.short]
-		b.add_theme_font_size_override("font_size", 18)
+		b.text = a.glyph
+		b.tooltip_text = a.title
+		b.custom_minimum_size = Vector2(52, 44)
+		b.add_theme_font_size_override("font_size", 22)
+		for st in ["normal", "hover", "pressed"]:
+			var col: Color = a.colour.lightened(0.12 if st == "hover" else 0.0).darkened(0.15 if st == "pressed" else 0.0)
+			b.add_theme_stylebox_override(st, UiStyle.box(col, 10, 6))
 		b.pressed.connect(open_app.bind(a.id))
 		th.add_child(b)
 		_task_buttons[a.id] = b
@@ -183,7 +190,13 @@ func open_app(id: String) -> void:
 	tw.tween_property(_window, "modulate:a", 1.0, 0.12)
 	_current.build()
 	_current.refresh()
+	_mark_taskbar()
 	Sfx.play_ui("ui_click", -8.0)
+
+
+func _mark_taskbar() -> void:
+	for id in _task_buttons:
+		_task_buttons[id].modulate = Color.WHITE if id == _current_id or _current_id == "" else Color(1, 1, 1, 0.55)
 
 
 func _show_coming_soon(def: Dictionary) -> void:
@@ -206,6 +219,7 @@ func close_app() -> void:
 		_current = null
 	_window.visible = false
 	_current_id = ""
+	_mark_taskbar()
 
 
 func consume_escape() -> bool:

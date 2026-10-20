@@ -1,17 +1,17 @@
 {
   "_comment": "Internal faults hidden until tested. part: specific part id, or 'battery'/'keys' to resolve from the model, or 'ram'/'storage' to resolve by type. weight = relative frequency. visible_condition links a fault to an external cosmetic tag (so it shows on hover AND in the test report).",
   "faults": [
-    {"id": "battery_worn",    "report": "Battery health {pct}% – needs replacing", "part": "battery", "repair_level": 1, "weight": 34, "sellable_as_is": true},
-    {"id": "ram_faulty",      "report": "Faulty RAM DIMM in slot {slot}",          "part": "ram",     "repair_level": 1, "weight": 12, "requires_ram_slots": true},
-    {"id": "storage_dead",    "report": "Dead SSD – SMART failure, 0 bytes readable", "part": "storage", "repair_level": 1, "weight": 10},
-    {"id": "storage_missing", "report": "No boot device – drive removed by previous owner", "part": "storage", "repair_level": 1, "weight": 14},
-    {"id": "fan_noisy",       "report": "CPU fan bearing failing – 82 dB at load",  "part": "fan_laptop_generic", "repair_level": 1, "weight": 6},
-    {"id": "keycap_missing",  "report": "Keyboard: key {key} missing",              "part": "keys",    "repair_level": 1, "weight": 0, "visible_condition": "missing_key"},
-    {"id": "screen_cracked",  "report": "LCD panel cracked",                       "part": "screen",  "repair_level": 2, "weight": 0, "visible_condition": "cracked_screen"},
-    {"id": "hinge_broken",    "report": "Left hinge snapped – lid unstable",       "part": "hinge_kit", "repair_level": 2, "weight": 0, "visible_condition": "broken_hinge"},
-    {"id": "backlight_dead",  "report": "No backlight – panel dim/black",          "part": "screen",  "repair_level": 2, "weight": 5},
-    {"id": "keyboard_faulty", "report": "Keyboard matrix fault – {n} keys unresponsive", "part": "kbd_deck_generic", "repair_level": 2, "weight": 6},
-    {"id": "bios_locked",     "report": "BIOS supervisor password set – asset locked", "part": "board_reflash_kit", "repair_level": 3, "weight": 6},
-    {"id": "board_no_post",   "report": "No POST – board fault (3 long beeps)",    "part": "mobo_laptop_generic", "repair_level": 3, "weight": 7}
+    {"id": "battery_worn",    "name": "Worn battery", "report": "Battery health {pct}% – needs replacing", "part": "battery", "repair_level": 1, "weight": 34, "sellable_as_is": true},
+    {"id": "ram_faulty",      "name": "Faulty RAM", "report": "Faulty RAM DIMM in slot {slot}",          "part": "ram",     "repair_level": 1, "weight": 12, "requires_ram_slots": true},
+    {"id": "storage_dead",    "name": "Dead SSD", "report": "Dead SSD – SMART failure, 0 bytes readable", "part": "storage", "repair_level": 1, "weight": 10},
+    {"id": "storage_missing", "name": "Missing drive", "report": "No boot device – drive removed by previous owner", "part": "storage", "repair_level": 1, "weight": 14},
+    {"id": "fan_noisy",       "name": "Noisy fan", "report": "CPU fan bearing failing – 82 dB at load",  "part": "fan_laptop_generic", "repair_level": 1, "weight": 6},
+    {"id": "keycap_missing",  "name": "Missing keycap", "report": "Keyboard: key {key} missing",              "part": "keys",    "repair_level": 1, "weight": 0, "visible_condition": "missing_key"},
+    {"id": "screen_cracked",  "name": "Cracked screen", "report": "LCD panel cracked",                       "part": "screen",  "repair_level": 2, "weight": 0, "visible_condition": "cracked_screen"},
+    {"id": "hinge_broken",    "name": "Broken hinge", "report": "Left hinge snapped – lid unstable",       "part": "hinge_kit", "repair_level": 2, "weight": 0, "visible_condition": "broken_hinge"},
+    {"id": "backlight_dead",  "name": "Dead backlight", "report": "No backlight – panel dim/black",          "part": "screen",  "repair_level": 2, "weight": 5},
+    {"id": "keyboard_faulty", "name": "Faulty keyboard", "report": "Keyboard matrix fault – {n} keys unresponsive", "part": "kbd_deck_generic", "repair_level": 2, "weight": 6},
+    {"id": "bios_locked",     "name": "BIOS password lock", "report": "BIOS supervisor password set – asset locked", "part": "board_reflash_kit", "repair_level": 3, "weight": 6},
+    {"id": "board_no_post",   "name": "No POST (board)", "report": "No POST – board fault (3 long beeps)",    "part": "mobo_laptop_generic", "repair_level": 3, "weight": 7}
   ]
 }

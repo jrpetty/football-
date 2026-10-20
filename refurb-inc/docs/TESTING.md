@@ -50,6 +50,18 @@ To skip straight into a level, open `scenes/levels/garage/garage.tscn` and press
   - **Mega plant:** a sawtooth super-hall, 16 docks, an HQ tower with a skybridge, a wind turbine, a lake and a roundabout.
 - **Quick tour from the editor:** open any `scenes/levels/<id>/<id>.tscn` and press **F6**. It starts a fresh game in that building.
 
+## Business Insights (office PC → Insights, the yellow ▲)
+Every number about the business, live, in 8 tabs. Hover the charts for each day's figures; **Refresh** pulls the latest (it also refreshes itself every few seconds).
+- **Overview:** cash, net worth, all-time net profit, reputation, units bought/sold/in stock, sell-through, average sale and purchase price, average profit per unit, margin, on-time %, pass rate. Also "Where the money goes on an average sale" (purchase price, parts, Flogit fee, postage, packaging, profit), the daily revenue/profit chart, and today so far.
+- **Sales:** average and median sale price, average purchase price of what sold, markup, price vs guide, average days in stock and processing time. Breakdowns by grade, model, maker and channel, plus records and the last 30 sales with bought-for vs sold-for.
+- **Purchasing:** lots, units, spend, average unit cost and lot size, and the discount from your Purchasing skill. **Sellers/sectors** show how each seller's kit really turns out (pass rate, faults per unit, average grade, profit per unit). Also recent lots and deliveries due.
+- **Stock:** the pipeline by stage at cost and market value. **Listed units** show purchase price vs your price vs guide, with expected profit and days listed. Also slow movers, parts bins and packing supplies with days left.
+- **Operations:** tests, pass rate, faults by type, repairs, parts fitted and their cost, grade split, and average daily throughput.
+- **Orders & Service:** received, shipped, on-time %, late, cancelled, waiting, overdue, average and median dispatch time (working hours), average order value, and a reputation chart.
+- **Finance:** a full P&L (revenue → fees/postage → stock → parts → rent/utilities/wages/bank → equipment/moves → net), averages per day and week, fixed costs, break-even units per week, cash runway, peak and lowest cash, closing-cash chart, best and worst day, and every ledger category.
+- **People & Premises:** hours worked per player (counted while you're in the session during 09:00–17:00), days worked, average hours per shift, everything each person has done, XP, and revenue/profit per worker-hour. **Staff & wages** (headcount, wage bill, average weekly/hourly wage, labour cost per unit) reads £0 until hiring arrives. Premises shows rent per m², floor and power use, and equipment owned and its value.
+- To see it full of data straight away: `xvfb-run godot --path . res://tools/screenshot.tscn -- --insights` simulates 12 working days with the bot and saves every tab to `tools/out/insights_*.png`.
+
 ## Co-op (LAN / same PC)
 - Title screen → **Host co-op**. On a second instance → **Join co-op…** → host's IP → **Join**.
 - Same PC: Godot **Debug → Customize Run Instances… → 2 instances**, then press F5 twice-ish (one hosts, one joins `127.0.0.1`).
@@ -58,11 +70,12 @@ To skip straight into a level, open `scenes/levels/garage/garage.tscn` and press
 ## Automated checks
 Run everything from a terminal: `tools/run_all_checks.sh /path/to/godot`
 Or run individually in the editor:
-- `tests/run_tests.tscn` (F6) — 16 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication.
+- `tests/run_tests.tscn` (F6) — 24 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats.
 - `tools/playtest.tscn` (F6) — drives the real garage at 8× speed: lorry, bench, repair, image, grade, sell, pack, courier, parcel, save/load.
 - `tools/premises_test.tscn` (F6) — moves one company through all 7 buildings: layout, stock, loose pallets, lorry to docks, extra equipment.
 - `tools/net_test.tscn -- --role host` and `-- --role client` — two-process co-op check.
 - `tools/check_scripts.tscn` — compiles every script.
+- `tools/economy_sim.tscn -- --days 20 --seed 3` — a bot runs the business through the real commands for N days and prints the headline numbers (good for balancing).
 - `tools/screenshot.tscn` — renders QA shots into `tools/out/` (args: `--setup` for a busy scene, `--ui` for HUD/PC shots).
 
 ## Regenerating generated content
