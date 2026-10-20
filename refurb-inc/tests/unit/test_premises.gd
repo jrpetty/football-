@@ -21,13 +21,13 @@ func test_move_charges_fee_and_unplaces_equipment() -> void:
 	var s := sim.state
 	for id in s.fixtures:
 		s.fixtures[id].placed = true
-	s.cash = 100000
+	s.cash = 500000
 	var loose := s.new_item(Item.KIND_PARCEL)
 	s.set_loc(loose, {"t": "loose", "p": [1, 1, 1], "r": [0, 0, 0, 1]})
 	var r := sim.execute(1, "move_building", {"building": "warehouse"})
 	check(r.ok, r.msg)
 	eq(s.building_id, "warehouse")
-	eq(s.cash, 100000 - int(Content.building("warehouse").move_fee))
+	eq(s.cash, 500000 - int(Content.building("warehouse").move_fee))
 	check(s.fixtures.values().all(func(f): return not f.placed), "equipment waits for the new layout")
 	check(loose.loc.get("relocate", false), "loose stock flagged for relocation")
 	check(not sim.execute(1, "move_building", {"building": "warehouse"}).ok, "can't move to where you are")
