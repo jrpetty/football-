@@ -205,8 +205,8 @@ const HONESTY_STEPS = (judged: string, caught: string, fooled: string): ExplainS
 const ARENA_BOARD_STEPS: ExplainStep[] = [
   { icon: 'trophy', text: 'Win = 1 point · draw = ½ · loss = 0' },
   { icon: 'swap', text: 'Each pairing plays both colours' },
-  { icon: 'cross', text: 'Illegal move: one retry, then a random move + strike' },
-  { icon: 'zero', text: 'Too many strikes (3 by default) lose the game' },
+  { icon: 'cross', text: 'Illegal move: retry, then random move + strike; 3 lose' },
+  { icon: 'clock', text: 'Speed 4+0: 4 minutes each per game; out of time loses' },
 ];
 const DRAW_STEPS = (weights: string): ExplainStep[] => [
   { icon: 'pencil', text: 'Its redrawing is matched shape by shape' },
@@ -756,10 +756,10 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
     whatItTests: 'Board reading, legal-move discipline and tactics in a complete game of chess against another AI.',
     whyHard: 'The position arrives as text every move, and keeping track of every piece — and every rule — for dozens of moves is hard.',
     howScored: [
-      { icon: 'trophy', text: 'Win = 1 point · draw = ½ · loss = 0' },
+      { icon: 'trophy', text: 'Win 1 · draw ½ · at the move cap 3+ material ahead wins' },
       { icon: 'swap', text: 'Each pairing plays both colours' },
-      { icon: 'clock', text: 'At the move cap: 3+ points of material ahead wins' },
       { icon: 'cross', text: 'Illegal move: retry, then random move + strike' },
+      { icon: 'clock', text: 'Speed 4+0: 4 minutes each; out of time loses' },
     ],
     goodScore: 'More points than its opponents wins; checkmates count, and so does never making an illegal move.',
     icon: 'chess',
@@ -773,6 +773,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
       { icon: 'dollar', text: 'Ranked by total chips won' },
       { icon: 'swap', text: 'Every deal is played twice, seats swapped' },
       { icon: 'cross', text: 'Unreadable action: check if possible, else fold' },
+      { icon: 'clock', text: 'Speed 4+0: out of time = auto check/fold from then on' },
     ],
     goodScore: 'Chips above zero mean it outplayed its opponents on the very same cards.',
     icon: 'cards',
@@ -786,6 +787,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
       { icon: 'mic', text: '3 rounds: 180, 150 and 120 words' },
       { icon: 'swap', text: 'Sides swap for the second game' },
       { icon: 'scale', text: 'Blind judges from other companies pick a winner' },
+      { icon: 'clock', text: 'Speed 4+0: out of time loses the speeches left' },
     ],
     goodScore: 'Winning both games of a pairing means it out-argued its opponent from both sides of the motion.',
     icon: 'mic',
@@ -799,6 +801,7 @@ export const EXPLAINERS: Record<string, TestExplainer> = {
       { icon: 'gavel', text: 'Prosecution vs defence: 3 rounds of speeches' },
       { icon: 'swap', text: 'Sides swap for the second game' },
       { icon: 'scale', text: 'Blind judges pick who used the evidence better' },
+      { icon: 'clock', text: 'Speed 4+0: out of time loses the speeches left' },
     ],
     goodScore: 'Winning both games of a pairing means it argued the evidence better from both sides.',
     icon: 'gavel',

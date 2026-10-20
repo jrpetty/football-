@@ -8,6 +8,7 @@
  * fingerprint.
  */
 import type { ArenaGame, GameConfig, Side } from './types.ts';
+import { withClock, type ClockView } from './clock.ts';
 
 /** Bump when the prompt template changes in a way that alters what models see. */
 export const ARENA_PROMPT_VERSION = '1';
@@ -43,6 +44,8 @@ export interface PromptInput {
   maxStrikes: number;
   /** Set on the second attempt at the same move. */
   retry?: { reply: string; extracted: string | null; error: string };
+  /** Speed games: the clock as this seat sees it. Absent in Classic, whose prompts stay byte-identical. */
+  clock?: ClockView;
 }
 
 function lastLine(text: string): string {
@@ -62,7 +65,8 @@ export function buildMovePrompt(p: PromptInput): string {
   parts.push(
     [
       '== HOW TO ANSWER ==',
-      'Think as much as you like, then finish your reply with exactly one line in this format:',
+      // Classic keeps its original wording (byte-identical prompts); a speed game says the clock is running.
+      p.clock ? 'Think briefly (your clock is running), then finish your reply with exactly one line in this format:' : 'Think as much as you like, then finish your reply with exactly one line in this format:',
       'MOVE: <your move>',
       `where <your move> is ${game.moveHelp}.`,
       `If your move is illegal or cannot be read, you get one retry with the problem explained. If the retry also fails, a random legal move is played for you and you receive a strike. ${p.maxStrikes} strikes lose the game.`,
@@ -86,5 +90,6 @@ export function buildMovePrompt(p: PromptInput): string {
     );
   }
   parts.push(`It is your turn: ${me.name} to play, half-move ${ply}.`);
-  return parts.join('\n\n');
+  // Speed games: the clock section right after the intro, a reminder before the last line (clock.ts versions it).
+  return withClock(parts, p.clock).join('\n\n');
 }

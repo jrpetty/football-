@@ -121,6 +121,12 @@ export function moveHeadline(gameId: string, move: ArenaMove, prev: unknown, nam
   const opp = names[1 - move.side]!;
   if (move.kind === 'verdict') return { text: move.label, tone: 'neutral' };
   if (move.opening) return { text: `Random opening move ${move.label} (played by the harness, not a model)`, tone: 'neutral' };
+  // Speed games: the flag fell, or the move was played for a player already out of time.
+  if (move.flag) {
+    const what = gameId === 'poker' ? 'every decision it has left is folded for it (checked when free)' : gameId === 'debate' || gameId === 'courtroom' ? 'its remaining speeches are lost' : 'the game ends on time';
+    return { text: `${me}'s flag falls! The clock hit 0:00: ${what}`, tone: 'bad' };
+  }
+  if (move.auto) return { text: `${me} is out of time: ${move.label.replace(/^H\d+ [^:]+: /, '')} played automatically`, tone: 'bad' };
   if (gameId === 'connect4') {
     const snap = move.snapshot as C4Snapshot;
     const col = Number(move.move) - 1;

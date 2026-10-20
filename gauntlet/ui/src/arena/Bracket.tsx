@@ -143,6 +143,11 @@ export function RoundRobin({ d }: { d: TournamentDetail }) {
               <th className="num">L</th>
               <th className="num">{rows.some((r) => r.margin !== undefined) ? 'Chips' : 'Points'}</th>
               <th className="num">Illegal</th>
+              {d.manifest.settings.timeControl && (
+                <th className="num" title="Games in which this model's clock ran out">
+                  Flags
+                </th>
+              )}
               <th className="num">Cost</th>
               {rows.map((r) => (
                 <th key={r.contestantId} className="num rr-h" title={`vs ${ents.get(r.contestantId)?.label}`}>
@@ -171,6 +176,7 @@ export function RoundRobin({ d }: { d: TournamentDetail }) {
                     <b>{r.margin !== undefined ? fmtScore(r.margin, 'chips') : pts(r.points)}</b>
                   </td>
                   <td className="num tnum">{r.illegal}</td>
+                  {d.manifest.settings.timeControl && <td className="num tnum">{r.flags ?? 0}</td>}
                   <td className="num tnum">{fmtCost(r.costUsd)}</td>
                   {rows.map((o) => {
                     if (o.contestantId === r.contestantId) return <td key={o.contestantId} className="rr-x" />;

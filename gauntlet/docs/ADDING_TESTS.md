@@ -422,6 +422,14 @@ Rules of thumb:
   pool for the random move after two failed attempts.
 * The game's source file (and every arena module it imports) is part of the tournament fingerprint, so a code
   change starts a new comparable series and blocks resuming old tournaments.
+* **Give the game a `clock` spec** (`ArenaClockSpec` in `src/arena/types.ts`): tournaments are speed games by default
+  (Speed 4+0, see `src/arena/clock.ts`) and a game without one can only be played as Classic. It holds the words for
+  the clock section (`unit` "move" / "decision" / "speech", `finish`, `closing`, `flagRule`, `troubleLoss`), the
+  smallest useful reply (`minTokens`), `turnsLeft(state, side, made, config)` (expected and most turns left, which
+  size each call's token allowance) and either `onFlag(state, side)` (board games: the result when a flag falls;
+  default: the other side wins on time) or `flagMove(state)` (games that go on: what is played for a player whose
+  clock has run out). A `prompt` hook receives the clock as `ctx.clock`; add it with `withClock(parts, ctx.clock)`
+  so the Classic prompt stays unchanged.
 * Add tests to `test/arena.test.ts` (or a new `test/arena.<id>.test.ts`): win and draw detection, illegal-move
   errors, messy move text, and a full game between two scripted fake models (`test/helpers/fake-model.ts`).
 * The dashboard draws boards in `ui/src/arena/boards.tsx`: add a component for your `snapshot` shape and a case in

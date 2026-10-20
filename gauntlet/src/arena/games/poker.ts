@@ -12,6 +12,7 @@
  */
 import { createRng } from '../../core/rng.ts';
 import type { ArenaGame, GameConfig, GameOutcome, ParsedMove, Side, TurnPromptContext } from '../types.ts';
+import { withClock } from '../clock.ts';
 import { bestHand, compareScores, fullDeck, pretty } from './poker-eval.ts';
 
 export const STREETS = ['Pre-flop', 'Flop', 'Turn', 'River'] as const;
@@ -405,7 +406,7 @@ function seatView(s: PokerState, side: Side): string {
   ].join('\n');
 }
 
-export function pokerPrompt(s: PokerState, side: Side, ctx: Pick<TurnPromptContext, 'config'>): string {
+export function pokerPrompt(s: PokerState, side: Side, ctx: Pick<TurnPromptContext, 'config' | 'clock'>): string {
   const h = s.hand!;
   const { bb } = s.cfg;
   const owe = toCall(h, side);
@@ -416,7 +417,7 @@ export function pokerPrompt(s: PokerState, side: Side, ctx: Pick<TurnPromptConte
   for (const x of sizes) if (x !== hi) menu.push(`${verb} ${x}`);
   if (sizes.length) menu.push('all-in');
   const range = canRaise(h, side) && minRaiseTo(h, side, bb) < hi ? `\nAny ${verb === 'bet' ? 'bet' : 'raise to a total'} from ${minRaiseTo(h, side, bb)} to ${hi} is legal (${hi} = all-in); the sizes above are only examples.` : '';
-  return [
+  const parts = [
     `You are playing poker against another AI model in the Gauntlet Arena.`,
     `== RULES ==\n${RULES(cfgOf(ctx.config).hands, s.cfg)}`,
     [
@@ -429,7 +430,9 @@ export function pokerPrompt(s: PokerState, side: Side, ctx: Pick<TurnPromptConte
     `== YOUR SITUATION ==\n${seatView(s, side)}`,
     `== LEGAL ACTIONS ==\n${menu.map((m) => `\`ACTION: ${m}\``).join(' ')}${range}`,
     `It is your turn to act (${STREETS[h.street]!.toLowerCase()}).`,
-  ].join('\n\n');
+  ];
+  // Speed games only: the clock section after the intro and a reminder before the last line (Classic is unchanged).
+  return withClock(parts, ctx.clock).join('\n\n');
 }
 
 function snapshotOf(s: PokerState): PokerSnapshot {
@@ -573,4 +576,22 @@ export const poker: ArenaGame<PokerState> = {
     return toCall(h, h.toAct) > 0 ? 'fold' : 'check';
   },
   margin: (s) => [s.net[0], s.net[1]],
+  clock: {
+    unit: 'decision',
+    units: 'decisions',
+    finish: 'give your ACTION line',
+    closing: 'A sensible decision in time beats a perfect one too late.',
+    flagRule: 'If your clock reaches 0:00, every remaining decision of yours in this session is made for you at once, with no more replies from you: check when checking is free, otherwise fold.',
+    troubleLoss: 'every decision you have left is folded for you',
+    minTokens: 40,
+    turnsLeft(s) {
+      // About 2.25 decisions per player per hand; the reserve assumes up to 3.5.
+      const handsLeft = Math.max(1, s.cfg.hands - s.results.length);
+      return { expected: Math.max(4, Math.ceil(handsLeft * 2.5)), max: Math.ceil(handsLeft * 3.5) };
+    },
+    flagMove(s) {
+      const h = s.hand!;
+      return toCall(h, h.toAct) > 0 ? 'fold' : 'check';
+    },
+  },
 };

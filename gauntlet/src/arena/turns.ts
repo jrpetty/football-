@@ -11,7 +11,8 @@
  * (which hash it) stay valid.
  */
 import { createRng } from '../core/rng.ts';
-import type { PlayGameOptions, PlayedGame } from './match.ts';
+import { OUT_OF_TIME_ERROR, clockSpecOf, type PlayGameOptions, type PlayedGame } from './match.ts';
+import { timedComplete } from './clock.ts';
 import type { ArenaJudging, ArenaMove, MoveAttempt, Side } from './types.ts';
 
 /** A played game plus the extension results ('margin' scoring, judge step). */
@@ -84,7 +85,18 @@ export async function playTurnGame(o: PlayGameOptions): Promise<PlayedGameExt> {
   const strikes: [number, number] = [0, 0];
   const illegal: [number, number] = [0, 0];
   const zero = { costUsd: 0, inputTokens: 0, outputTokens: 0 };
-  const done = (r: { winner: Side | null; reason: string }): PlayedGameExt => ({ ...r, moves, initial, strikes, illegal, margin: game.margin?.(state) });
+  const { clock, spec } = clockSpecOf(game, o);
+  // Where each seat's flag fell ("hand 7 of 10, flop"), for the record's reason.
+  const flaggedAt: [string | null, string | null] = [null, null];
+  const flagNote = () =>
+    ([0, 1] as const)
+      .filter((x) => flaggedAt[x] !== null)
+      .map((x) => `${game.sides[x].name} ran out of time${flaggedAt[x] ? ` (${flaggedAt[x]})` : ''}: every later decision was made for it with no model call (check when free, otherwise fold)`)
+      .join('. ');
+  const done = (r: { winner: Side | null; reason: string }): PlayedGameExt => {
+    const note = flagNote();
+    return { ...r, reason: note ? `${r.reason}. ${note}` : r.reason, moves, initial, strikes, illegal, margin: game.margin?.(state), ...(clock ? { clock: clock.record() } : {}) };
+  };
 
   for (;;) {
     const over = game.outcome(state);
@@ -103,20 +115,52 @@ export async function playTurnGame(o: PlayGameOptions): Promise<PlayedGameExt> {
     decisions[side]++;
     const where = game.turnLabel?.(state);
 
+    // Speed games: once a seat's flag has fallen, every later decision is played for it with no model call.
+    if (clock && clock.flagged[side]) {
+      abortIfNeeded(o.signal);
+      const move = spec?.flagMove?.(state) ?? game.fallbackMove?.(state) ?? fallback.pick(legal);
+      const label = game.label(state, move);
+      state = game.play(state, move);
+      clock.moveDone(side);
+      const record: ArenaMove = { ply: moves.length + 1, side, move, label, attempts: [], forfeit: false, auto: 'out-of-time', ms: 0, costUsd: 0, inputTokens: 0, outputTokens: 0, snapshot: game.snapshot(state), chargedMs: 0, clockMs: clock.snapshot() };
+      moves.push(record);
+      o.onMove?.(record, [strikes[0], strikes[1]]);
+      continue;
+    }
+    let charged = 0;
+    let flagged = false;
+
     for (let attempt = 1; attempt <= 2 && accepted === null; attempt++) {
       abortIfNeeded(o.signal);
       o.beforeCall?.(side);
-      o.onTurn?.(side, moves.length + 1, attempt);
+      o.onTurn?.(side, moves.length + 1, attempt, clock?.snapshot());
       const prev = attempts[attempts.length - 1];
-      let prompt = game.prompt(state, side, { config, strikes: [strikes[0], strikes[1]], maxStrikes: o.maxStrikes });
+      const plan = clock && spec && !clock.isInstant(side) ? clock.plan(side, spec.turnsLeft(state, side, clock.made[side], config), spec.minTokens) : null;
+      let prompt = game.prompt(state, side, { config, strikes: [strikes[0], strikes[1]], maxStrikes: o.maxStrikes, ...(plan ? { clock: clock!.view(side, plan, spec!) } : {}) });
       if (prev) prompt += `\n\n${retryBlock(key, { reply: prev.text, extracted: prev.extracted, error: prev.error ?? '' })}`;
       const t0 = Date.now();
-      const reply = await seat.handle.complete({
-        messages: [{ role: 'user', content: prompt }],
-        maxOutputTokens: o.maxOutputTokens,
-        label: `${game.sides[side].name} · ${where ? `${where} · ` : ''}your decision ${decisions[side]}${attempt > 1 ? ' · retry' : ''}`,
-      });
+      const timed = await timedComplete(
+        clock,
+        side,
+        plan,
+        (lim) =>
+          seat.handle.complete({
+            messages: [{ role: 'user', content: prompt }],
+            maxOutputTokens: lim.maxOutputTokens,
+            label: `${game.sides[side].name} · ${where ? `${where} · ` : ''}your decision ${decisions[side]}${attempt > 1 ? ' · retry' : ''}`,
+            ...(lim.timeLimitMs ? { timeLimitMs: lim.timeLimitMs } : {}),
+          }),
+        o.maxOutputTokens,
+      );
       const ms = Date.now() - t0;
+      charged += timed.chargedMs;
+      if (timed.flagged) {
+        attempts.push({ text: keepTail(timed.reply?.text ?? ''), extracted: null, error: OUT_OF_TIME_ERROR, ms });
+        flagged = true;
+        flaggedAt[side] = where ?? '';
+        break;
+      }
+      const reply = timed.reply!;
       const extracted = extractAnswer(reply.text, key);
       let error: string | undefined;
       if (extracted === null) {
@@ -134,8 +178,11 @@ export async function playTurnGame(o: PlayGameOptions): Promise<PlayedGameExt> {
       if (accepted === null) illegal[side]++;
     }
 
+    // The decision during which the flag fell is also played for the seat (no strike: the clock is the penalty).
+    if (flagged) accepted = spec?.flagMove?.(state) ?? game.fallbackMove?.(state) ?? fallback.pick(legal);
     const forfeit = accepted === null;
     if (forfeit) strikes[side]++;
+    clock?.moveDone(side);
     const after = seat.meter?.() ?? zero;
     const base = {
       ply: moves.length + 1,
@@ -146,13 +193,15 @@ export async function playTurnGame(o: PlayGameOptions): Promise<PlayedGameExt> {
       costUsd: Math.round((after.costUsd - before.costUsd) * 1e8) / 1e8,
       inputTokens: after.inputTokens - before.inputTokens,
       outputTokens: after.outputTokens - before.outputTokens,
+      ...(clock ? { chargedMs: charged, clockMs: clock.snapshot() } : {}),
+      ...(flagged ? { flag: true } : {}),
     };
 
     if (forfeit && game.strikesLose !== false && strikes[side] >= o.maxStrikes) {
       const record: ArenaMove = { ...base, move: '', label: `strike ${strikes[side]}`, snapshot: game.snapshot(state) };
       moves.push(record);
       o.onMove?.(record, [strikes[0], strikes[1]]);
-      return { winner: (1 - side) as Side, reason: `${game.sides[side].name} made ${o.maxStrikes} illegal moves`, moves, initial, strikes, illegal, margin: game.margin?.(state) };
+      return done({ winner: (1 - side) as Side, reason: `${game.sides[side].name} made ${o.maxStrikes} illegal moves` });
     }
 
     const move = accepted ?? game.fallbackMove?.(state) ?? fallback.pick(legal);

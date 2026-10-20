@@ -378,6 +378,15 @@ export function insufficientMaterial(board: string[]): boolean {
   return false;
 }
 
+/**
+ * FIDE 6.9 (flag fall): the game is drawn when the opponent cannot checkmate by any series of legal moves. The
+ * harness uses the standard practical test: `color` has a lone king, or king and one bishop or one knight.
+ */
+export function cannotMate(board: string[], color: Color): boolean {
+  const mine = board.filter((p) => p && colorOf(p) === color && p.toUpperCase() !== 'K').map((p) => p.toUpperCase());
+  return mine.length === 0 || (mine.length === 1 && (mine[0] === 'B' || mine[0] === 'N'));
+}
+
 // ─────────────────────────────── Move parsing ───────────────────────────────
 
 const SAN_RE = /^([NBRQK])?([a-h])?([1-8])?([a-h][1-8])([QRBN])?$/;
@@ -533,6 +542,26 @@ export const chess: ArenaGame<ChessState> = {
     if (w - b >= CAP_MARGIN) return { winner: 0, reason: `Move cap: White ahead on material ${w}–${b}` };
     if (b - w >= CAP_MARGIN) return { winner: 1, reason: `Move cap: Black ahead on material ${b}–${w}` };
     return { winner: null, reason: `Move cap: material close (${w}–${b}), draw` };
+  },
+  clock: {
+    unit: 'move',
+    units: 'moves',
+    finish: 'give your move',
+    closing: 'A good move in time beats a perfect move too late.',
+    flagRule: 'If your clock reaches 0:00 you lose the game on time at once (it is a draw instead only if your opponent has too little material left to checkmate: a lone king, or king and one bishop or knight).',
+    troubleLoss: 'you lose on time',
+    minTokens: 12,
+    turnsLeft(s, _side, made, config) {
+      // Up to the move cap: ceil(plies left / 2) moves for the side to move.
+      const max = Math.max(1, Math.ceil((config.maxPlies - s.plies) / 2));
+      return { expected: Math.max(10, 40 - made), max };
+    },
+    onFlag(s, side) {
+      const loser = side === 0 ? 'White' : 'Black';
+      const winner = side === 0 ? 'Black' : 'White';
+      if (cannotMate(s.board, side === 0 ? 'b' : 'w')) return { winner: null, reason: `Draw: ${loser}'s flag fell but ${winner} cannot checkmate` };
+      return { winner: (1 - side) as 0 | 1, reason: `${loser} lost on time` };
+    },
   },
   label: (s, move) => toSan(s, move),
   formatHistory(labels) {

@@ -27,7 +27,7 @@ export default function ArenaPage() {
           </span>
         }
         title="The Arena"
-        sub="Models play Connect Four, chess and poker against each other, or argue debates and mock trials in front of blinded AI judges. Every move is a fresh prompt with the full rules; illegal moves get one retry, then a strike. Each pairing plays both sides."
+        sub="Models play Connect Four, chess and poker against each other, or argue debates and mock trials in front of blinded AI judges. Every move is a fresh prompt with the full rules; illegal moves get one retry, then a strike. Each pairing plays both sides. Speed 4+0 by default: each model has 4 minutes per game on its own chess clock."
         actions={
           <Link to="/arena/new" className="btn primary">
             <Icon.Plus /> New tournament

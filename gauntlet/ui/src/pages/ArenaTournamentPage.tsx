@@ -17,6 +17,8 @@ import { Bracket, RoundRobin } from '../arena/Bracket.tsx';
 import { Versus, engineOf, fmtScore, playsWord, seatPlayers, sidesOf } from '../arena/parts.tsx';
 import { gameLine } from '../arena/LivePanel.tsx';
 import { LivePanel } from '../arena/LivePanel.tsx';
+import { GameClocks, TimeControlChip } from '../arena/ArenaClock.tsx';
+import { timeControlLabel } from '../../../src/arena/clock.ts';
 import type { ArenaGameLite, TournamentDetail } from '../arena/types.ts';
 import { GAMES } from '../../../src/arena/games/index.ts';
 
@@ -92,6 +94,7 @@ function VerdictHold({ d, g }: { d: TournamentDetail; g: ArenaGameLite }) {
         winner={g.winner}
         finished
         toMove={null}
+        clocks={g.clock ? { ms: g.clock.final, flagged: g.clock.flagged, running: null, initialMs: g.clock.initialMs } : null}
         big
         center={
           <div className="vs-mid">
@@ -125,6 +128,7 @@ function GamesTable({ d, liveKeys }: { d: TournamentDetail; liveKeys: Set<string
               <th>Result</th>
               <th className="num">{words.moves[0]!.toUpperCase() + words.moves.slice(1)}</th>
               <th className="num">Illegal</th>
+              {d.manifest.settings.timeControl && <th>Clocks</th>}
               <th className="num">Cost</th>
               <th />
             </tr>
@@ -170,6 +174,7 @@ function GamesTable({ d, liveKeys }: { d: TournamentDetail; liveKeys: Set<string
                 </td>
                 <td className="num tnum">{g?.plies ?? ''}</td>
                 <td className="num tnum">{g ? `${g.illegal[0]} / ${g.illegal[1]}` : ''}</td>
+                {d.manifest.settings.timeControl && <td>{g && <GameClocks clock={g.clock} />}</td>}
                 <td className="num tnum" title={g?.judging?.costUsd ? `Includes ${fmtCost(g.judging.costUsd)} for the judges` : undefined}>
                   {g ? fmtCost(g.metrics[0].costUsd + g.metrics[1].costUsd + (g.judging?.costUsd ?? 0)) : ''}
                 </td>
@@ -219,7 +224,7 @@ export default function ArenaTournamentPage({ id }: { id: string }) {
               : engineOf(d.manifest.game.id) === 'debate'
                 ? 'Strict word limits; then judges from other AI companies read a blinded transcript (Side A / Side B) and pick the winner.'
                 : 'Each move is a fresh prompt with the full rules; an illegal move gets one retry, then a random move and a strike.'
-          }`
+          }${d.manifest.settings.timeControl ? ` ${timeControlLabel(d.manifest.settings.timeControl)}: each model has its own clock for the whole game, running only while it is answering.` : ''}`
         : view === 'bracket'
           ? `The ${d.manifest.game.name} ${d.manifest.settings.format === 'knockout' ? 'knockout bracket' : 'round-robin table'}: ${
               engineOf(d.manifest.game.id) === 'turns'
@@ -273,6 +278,7 @@ export default function ArenaTournamentPage({ id }: { id: string }) {
             <span className="tnum">
               {d.state.gamesDone}/{d.state.gamesTotal} games
             </span>
+            <TimeControlChip tc={m.settings.timeControl} />
             <span className="tnum">
               {fmtCost(d.state.costUsd)} spent{m.settings.maxCostUsd ? ` of ${fmtCost(m.settings.maxCostUsd)} cap` : ''}
             </span>

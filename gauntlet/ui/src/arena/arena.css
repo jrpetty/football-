@@ -559,6 +559,33 @@
   color: var(--gold);
 }
 
+/* Phone: the two players stack (with their clocks) instead of squeezing side by side. */
+@media (max-width: 640px) {
+  .versus {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .vs-center {
+    min-width: 0;
+  }
+  .vs-side.right .vs-name-row,
+  .vs-side.right .vs-stats {
+    flex-direction: row;
+    text-align: left;
+  }
+  .vs-side.right .vs-names {
+    align-items: flex-start;
+  }
+  .vs-side.right .vs-flag {
+    margin-left: auto;
+    margin-right: 0;
+  }
+  .vs-side.right .vs-name-row .ar-clock {
+    margin-left: auto;
+    margin-right: 0;
+  }
+}
+
 /* ───────────────────────────── Live & replay layout ───────────────────────────── */
 
 .ar-tabs {

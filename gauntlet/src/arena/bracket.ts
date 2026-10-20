@@ -170,6 +170,10 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
       for (const seat of [0, 1] as const) {
         const who = g.players[seat] === pa ? 0 : 1;
         st.illegal[who] += g.illegal[seat];
+        if (g.flags) {
+          st.flags ??= [0, 0];
+          st.flags[who] += g.flags[seat];
+        }
         st.cost[who] += g.metrics[seat].costUsd;
         if (byMargin) st.score[who] += g.margin?.[seat] ?? 0;
         else if (g.winner === null) st.score[who] += 0.5;
@@ -283,6 +287,7 @@ export function computeState(spec: BracketSpec, games: ArenaGameLite[], spentUsd
         if (!r) continue;
         r.played++;
         r.illegal += g.illegal[seat];
+        if (g.flags) r.flags = (r.flags ?? 0) + g.flags[seat];
         r.costUsd += g.metrics[seat].costUsd;
         // 'margin' games rank on the margin (e.g. chips); points = margin so every table sorts the same way.
         const pts = byMargin ? (g.margin?.[seat] ?? 0) : g.winner === null ? 0.5 : g.winner === seat ? 1 : 0;

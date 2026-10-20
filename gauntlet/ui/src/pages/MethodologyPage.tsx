@@ -179,6 +179,37 @@ export default function MethodologyPage() {
         <div className="card-head">
           <div className="t">
             <h2>
+              <Icon.Clock style={{ width: 18, height: 18, display: 'inline', verticalAlign: '-3px', marginRight: 8 }} />
+              Arena speed games (the chess clock)
+            </h2>
+            <div className="desc">Every Arena game is a speed game by default: Speed 4+0, like blitz chess.</div>
+          </div>
+        </div>
+        <div className="card-body">
+          <ul className="rule-list">
+            <li>
+              <b>One clock per player per game.</b> Each model has 4 minutes in total for all of its moves in a game (other presets: 1+0, 2+1, 3+2, 5+0, 10+0, or Classic with no clock). An increment, when there is one, is added after every completed move.
+            </li>
+            <li>
+              <b>Only the model’s own time counts.</b> The clock runs from the moment a request is sent until the reply is complete. Waiting for a free slot at the provider and retrying after a network or rate-limit error never count. A rejected (illegal) move and its retry do count: the clock keeps running. Network latency counts as part of a model’s time, as it does in online chess.
+            </li>
+            <li>
+              <b>Out of time.</b> Chess and Connect Four: the player loses on time (in chess it is a draw if the opponent has only a king, or a king and one bishop or knight, and so cannot checkmate). Poker: every remaining decision is played for it at once, checking when that is free and folding otherwise. Debate and Courtroom: its remaining speeches are missing and the judges are told it ran out of time.
+            </li>
+            <li>
+              <b>The models know, and cannot run over by following the rules.</b> Every prompt opens with a clock section (time left for both players, a suggested time and the reply’s token limit), repeats it right before the move, and gets firmer as the clock runs down. Each reply’s output-token limit is sized from the player’s remaining time and its measured speed, so a model that uses its whole allowance every move still does not run out of time.
+            </li>
+            <li>
+              <b>API models only.</b> A pasted reply cannot be timed fairly, so copy &amp; paste models can only play Classic tournaments. The Random Baseline answers instantly and its clock never runs.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <div className="t">
+            <h2>
               <Icon.Dollar style={{ width: 18, height: 18, display: 'inline', verticalAlign: '-3px', marginRight: 8 }} />
               Budget &amp; cost estimates
             </h2>
@@ -200,6 +231,9 @@ export default function MethodologyPage() {
             </li>
             <li>
               <b>Manual models cost $0</b> unless you enter the real cost shown by the chat app; tokens are estimated from text length when not provided.
+            </li>
+            <li>
+              <b>Speed games cost less at most.</b> A model cannot write more than its clock allows, so an Arena estimate caps each player’s output per game at its clock time × 250 tokens per second. A call stopped when the clock runs out is still counted, at its worst case.
             </li>
             <li>
               <b>Retries are bounded.</b> Transient provider errors are retried up to {s?.maxRetries ?? 3} times with back-off; every retry is billed and recorded.

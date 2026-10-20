@@ -21,6 +21,7 @@ import { MoveCaption } from '../arena/MoveCaption.tsx';
 import { chessMaterial } from '../arena/analysis.ts';
 import { TieBreakNote } from '../arena/debate.tsx';
 import { PokerPairChart } from '../arena/PokerPairChart.tsx';
+import { TimeControlChip, replayClocks } from '../arena/ArenaClock.tsx';
 import { BalanceTimeline } from '../components/viz/BalanceTimeline.tsx';
 import '../arena/arena.css';
 
@@ -120,11 +121,13 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
         winner={atEnd ? g.winner : null}
         finished={atEnd}
         toMove={null}
+        clocks={replayClocks(g.clock, g.moves, idx)}
         big
         center={
           <div className="vs-mid">
             <span className="vs-round">{match?.roundName ?? g.matchId}</span>
             <span className="vs-game">{gameLine(gameId, g.gameNo, planned)}</span>
+            <TimeControlChip tc={d.manifest.settings.timeControl} />
             {atEnd ? <span className="vs-result">{result}</span> : <span className="vs-series tnum">{engine === 'debate' ? 'Step' : engine === 'turns' ? 'Action' : 'Move'} {idx}/{n}</span>}
           </div>
         }
@@ -211,10 +214,11 @@ function Replay({ d, g }: { d: TournamentDetail; g: ArenaGameRecord }) {
           <div className="card ar-movecard">
             <div className="card-head" style={{ flexWrap: 'wrap', rowGap: 8 }}>
               <div className="t">
-                <h2>{move ? (move.kind === 'verdict' ? move.label : move.move ? `${moverName}: ${move.label}` : `${moverName}: ${engine === 'debate' ? move.label : 'strike'}`) : engine === 'debate' ? 'Before the first speech' : engine === 'turns' ? 'Hand 1 dealt' : 'Starting position'}</h2>
+                <h2>{move ? (move.kind === 'verdict' ? move.label : move.flag && !move.move ? `${moverName}: out of time` : move.move ? `${moverName}: ${move.label}` : `${moverName}: ${engine === 'debate' ? move.label : 'strike'}`) : engine === 'debate' ? 'Before the first speech' : engine === 'turns' ? 'Hand 1 dealt' : 'Starting position'}</h2>
                 {move && !move.opening && move.kind !== 'verdict' && (
                   <div className="desc tnum">
-                    {secs(move.ms)} · {fmtCost(move.costUsd)} · {fmtTokens(move.inputTokens)} in / {fmtTokens(move.outputTokens)} out
+                    {secs(move.ms)}
+                    {typeof move.chargedMs === 'number' ? ` (${secs(move.chargedMs)} on the clock)` : ''} · {fmtCost(move.costUsd)} · {fmtTokens(move.inputTokens)} in / {fmtTokens(move.outputTokens)} out
                   </div>
                 )}
               </div>

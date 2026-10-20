@@ -72,15 +72,21 @@ export function effectiveMaxOutputTokens(c: Pick<Contestant, 'options' | 'maxOut
   return n;
 }
 
-/** Thrown when a model call exceeds its answer-time limit (time-pressure tests). Never retried. */
+/** Thrown when a model call exceeds its answer-time limit (time-pressure tests, Arena clocks). Never retried. */
 export class OutOfTimeError extends Error {
   readonly limitMs: number;
   readonly elapsedMs: number;
-  constructor(limitMs: number, elapsedMs: number) {
-    super(`Out of time: no answer within ${Math.round(limitMs / 1000)} s`);
+  /**
+   * What the stopped call used: the provider's own figures when the reply arrived late, otherwise an upper-bound
+   * estimate (the prompt plus the whole output limit), so the money it may have cost is always counted.
+   */
+  readonly spent?: { usage: TokenUsage; costUsd: number; text: string; estimated: boolean; ttftMs: number | null };
+  constructor(limitMs: number, elapsedMs: number, spent?: OutOfTimeError['spent']) {
+    super(`Out of time: no answer within ${limitMs < 10_000 ? (limitMs / 1000).toFixed(1) : Math.round(limitMs / 1000)} s`);
     this.name = 'OutOfTimeError';
     this.limitMs = limitMs;
     this.elapsedMs = elapsedMs;
+    if (spent) this.spent = spent;
   }
 }
 
@@ -145,12 +151,17 @@ export async function callWithRetry(
     try {
       const r = await target.adapter.complete({ ...req, maxOutputTokens: sent, signal: limiter?.signal ?? signal });
       billed = r.costUsd ?? (pricing ? computeCost(r.usage, pricing) : 0);
-      // Adapters that cannot be interrupted still get judged on their measured time.
-      if (attemptLimitMs && (late || r.totalMs > attemptLimitMs)) throw new OutOfTimeError(attemptLimitMs, Math.max(r.totalMs, Date.now() - sentAt));
+      // Adapters that cannot be interrupted still get judged on their measured time (and their real cost is kept).
+      if (attemptLimitMs && (late || r.totalMs > attemptLimitMs)) throw new OutOfTimeError(attemptLimitMs, Math.max(r.totalMs, Date.now() - sentAt), { usage: r.usage, costUsd: billed, text: r.text, estimated: false, ttftMs: r.ttftMs });
       return { ...r, retries: attempt, ...(sentBy ? { outputLimitBy: sentBy } : {}), maxOutputTokensSent: sent };
     } catch (err) {
       if (err instanceof OutOfTimeError) throw err;
-      if (late && !signal.aborted) throw new OutOfTimeError(attemptLimitMs!, Date.now() - sentAt);
+      if (late && !signal.aborted) {
+        // Stopped mid-reply: the provider may bill what it generated, so count the worst case (prompt + the whole output limit).
+        const usage: TokenUsage = { ...emptyUsage(), inputTokens: inputTokens || estimateInputTokens(req.system, req.messages), outputTokens: sent };
+        billed = pricing ? computeCost(usage, pricing) : 0;
+        throw new OutOfTimeError(attemptLimitMs!, Date.now() - sentAt, { usage, costUsd: billed, text: '', estimated: true, ttftMs: null });
+      }
       if (signal.aborted) throw err;
       const retryable = err instanceof ProviderError ? err.retryable : false;
       if (!retryable || attempt >= policy.maxRetries) throw err;
@@ -234,7 +245,7 @@ export function createRecorder(opts: {
   };
 
   let callNo = 0;
-  const complete = async (req: { system?: string; messages: ChatMessage[]; maxOutputTokens?: number; label?: string }): Promise<ModelReply> => {
+  const complete = async (req: { system?: string; messages: ChatMessage[]; maxOutputTokens?: number; label?: string; timeLimitMs?: number }): Promise<ModelReply> => {
     callNo++;
     const label = req.label ?? `call ${callNo}`;
     // Every contestant call carries the fair-play notice ahead of the test's own system text (judges never get it).
@@ -243,6 +254,8 @@ export function createRecorder(opts: {
     const started = Date.now();
     // Characters streamed to the live view during the current attempt (display only).
     let streamed = 0;
+    // The tighter of the recorder's per-call limit and this call's own (an Arena player's remaining clock).
+    const limitMs = req.timeLimitMs && req.timeLimitMs > 0 ? Math.min(req.timeLimitMs, opts.attemptLimitMs ?? Infinity) : opts.attemptLimitMs;
     try {
       const r = await callWithRetry(
         opts.target,
@@ -269,7 +282,7 @@ export function createRecorder(opts: {
           }
           opts.onRetry?.(attempt, wait, err);
         },
-        opts.attemptLimitMs,
+        limitMs,
       );
       // A provider that could not stream still shows its answer live: all at once, when it arrives.
       if (opts.onDelta && streamed === 0 && r.text) opts.onDelta(r.text, label);
@@ -294,22 +307,34 @@ export function createRecorder(opts: {
         costUsd: cost,
         retries: r.retries,
         ...(r.outputLimitBy ? { outputLimitBy: r.outputLimitBy, maxOutputTokens: r.maxOutputTokensSent } : {}),
+        ...(req.timeLimitMs ? { timeLimitMs: req.timeLimitMs, maxOutputTokens: r.maxOutputTokensSent } : {}),
       });
       return { text: r.text, stopReason: r.stopReason, totalMs: r.totalMs, ttftMs: r.ttftMs, outputTokens: r.usage.outputTokens, ...(r.outputLimitBy ? { outputLimitBy: r.outputLimitBy } : {}) };
     } catch (err) {
+      // A call stopped at its time limit was still sent (and may be billed): it counts as a call with its cost.
+      const spent = err instanceof OutOfTimeError ? err.spent : undefined;
+      if (spent) {
+        rec.usage = addUsage(rec.usage, spent.usage);
+        rec.costUsd += spent.costUsd;
+        rec.apiCalls++;
+        rec.generationMs += Math.max(1, (err as OutOfTimeError).elapsedMs);
+        rec.lastStopReason = 'other';
+      }
       rec.transcript.push({
         label,
         system,
         messages: stripImageData(req.messages),
-        response: '',
-        usage: emptyUsage(),
-        ttftMs: null,
+        response: spent?.text ?? '',
+        usage: spent?.usage ?? emptyUsage(),
+        ttftMs: spent?.ttftMs ?? null,
         totalMs: err instanceof OutOfTimeError ? err.elapsedMs : Date.now() - started,
         stopReason: 'other',
         rawStopReason: err instanceof OutOfTimeError ? 'out_of_time' : 'error',
-        costUsd: 0,
+        costUsd: spent?.costUsd ?? 0,
         retries: 0,
         error: (err as Error).message,
+        ...(req.timeLimitMs ? { timeLimitMs: req.timeLimitMs } : {}),
+        ...(spent?.estimated ? { costEstimated: true } : {}),
       });
       throw err;
     }
