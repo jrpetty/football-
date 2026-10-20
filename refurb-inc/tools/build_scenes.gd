@@ -281,8 +281,8 @@ func _build_garage() -> void:
 	var env := Environment.new()
 	var sky := Sky.new()
 	var sm := ProceduralSkyMaterial.new()
-	sm.sky_top_color = Color(0.36, 0.5, 0.7)
-	sm.sky_horizon_color = Color(0.72, 0.76, 0.8)
+	sm.sky_top_color = Color(0.3, 0.47, 0.72)
+	sm.sky_horizon_color = Color(0.7, 0.76, 0.84)
 	sm.ground_horizon_color = Color(0.6, 0.62, 0.62)
 	sm.ground_bottom_color = Color(0.22, 0.22, 0.2)
 	sm.sun_angle_max = 20.0
@@ -291,31 +291,32 @@ func _build_garage() -> void:
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.55
+	env.ambient_light_energy = 0.3
+	env.ambient_light_sky_contribution = 0.85
 	env.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
 	env.tonemap_exposure = 1.0
 	env.tonemap_white = 6.0
 	env.ssao_enabled = true
 	env.ssao_radius = 1.2
-	env.ssao_intensity = 2.2
+	env.ssao_intensity = 2.8
 	env.ssao_power = 1.6
 	env.ssil_enabled = true
 	env.ssil_radius = 4.0
-	env.ssil_intensity = 1.2
+	env.ssil_intensity = 1.6
 	env.glow_enabled = true
 	env.glow_intensity = 0.35
 	env.glow_bloom = 0.04
 	env.glow_hdr_threshold = 1.2
 	env.volumetric_fog_enabled = true
-	env.volumetric_fog_density = 0.012
+	env.volumetric_fog_density = 0.0065
 	env.volumetric_fog_albedo = Color(0.95, 0.93, 0.9)
 	env.volumetric_fog_anisotropy = 0.55
-	env.volumetric_fog_length = 40.0
+	env.volumetric_fog_length = 24.0
 	env.volumetric_fog_ambient_inject = 0.0
 	env.adjustment_enabled = true
-	env.adjustment_contrast = 1.06
-	env.adjustment_saturation = 1.05
+	env.adjustment_contrast = 1.08
+	env.adjustment_saturation = 1.08
 	we.environment = env
 	root.add_child(we)
 	root.set("environment", we)
@@ -342,7 +343,7 @@ func _build_garage() -> void:
 	var H := 2.7
 	var T := 0.2
 	var conc := Mats.surface("concrete_floor", 2.0)
-	var block := Mats.surface("blockwork_painted", 1.8)
+	var block := Mats.surface("blockwork_painted", 1.8, Color(0.93, 0.9, 0.83))
 	var brick := Mats.surface("brick_red", 0.9)
 	_box(shell, "Floor", Vector3(W + 2 * T, 0.2, D + 2 * T), Vector3(0, -0.1, 0), conc)
 	_box(shell, "WallBack", Vector3(W + 2 * T, H + 0.25, T), Vector3(0, (H + 0.25) / 2, -D / 2 - T / 2), block)
@@ -360,11 +361,16 @@ func _build_garage() -> void:
 	# Ceiling boards + joists, flat felt roof
 	_box(shell, "Ceiling", Vector3(W, 0.02, D), Vector3(0, H + 0.01, 0), Mats.color(Color(0.86, 0.85, 0.82), 0.9), Vector3.ZERO, false)
 	for i in 6:
-		_box(shell, "Joist%d" % i, Vector3(W, 0.15, 0.05), Vector3(0, H - 0.075, -D / 2 + 0.6 + i * 1.15), Mats.surface("plywood", 1.0, Color(0.8, 0.75, 0.65)), Vector3.ZERO, false)
+		_box(shell, "Joist%d" % i, Vector3(W, 0.15, 0.05), Vector3(0, H - 0.075, -D / 2 + 0.6 + i * 1.15), Mats.surface("plywood", 0.45, Color(0.62, 0.52, 0.4)), Vector3.ZERO, false)
 	_box(shell, "Roof", Vector3(W + 2 * T + 0.3, 0.12, D + 2 * T + 0.3), Vector3(0, H + 0.31, 0.05), Mats.color(Color(0.12, 0.12, 0.13), 0.85))
 	_box(shell, "Fascia", Vector3(W + 2 * T + 0.3, 0.22, 0.03), Vector3(0, H + 0.26, D / 2 + T + 0.16), Mats.color(Color(0.95, 0.95, 0.95), 0.5), Vector3.ZERO, false)
 	_box(shell, "Threshold", Vector3(door_w, 0.02, 0.12), Vector3(0, 0.01, D / 2 + T / 2), Mats.color(Color(0.25, 0.25, 0.26), 0.4, 0.6), Vector3.ZERO, false)
-	# Skirting stain line and a consumer unit by the door
+	# Painted dado band (garages often have the bottom of the walls painted dark) + grime line
+	var dado := Mats.surface("painted_metal", 0.8, Color(0.36, 0.38, 0.4))
+	_box(shell, "DadoBack", Vector3(W, 0.32, 0.01), Vector3(0, 0.16, -D / 2 + 0.006), dado, Vector3.ZERO, false)
+	_box(shell, "DadoLeft", Vector3(0.01, 0.32, D), Vector3(-W / 2 + 0.006, 0.16, 0), dado, Vector3.ZERO, false)
+	_box(shell, "DadoRight", Vector3(0.01, 0.32, D), Vector3(W / 2 - 0.006, 0.16, 0), dado, Vector3.ZERO, false)
+	# Consumer unit by the door
 	_box(shell, "ConsumerUnit", Vector3(0.36, 0.3, 0.1), Vector3(-W / 2 + 0.06, 1.9, D / 2 - 0.5), Mats.color(Color(0.95, 0.95, 0.95), 0.4), Vector3(0, 90, 0), false)
 
 	var door := Node3D.new()
@@ -402,8 +408,8 @@ func _build_garage() -> void:
 		ol.name = "StripGlow%d" % i
 		ol.position = sp + Vector3(0, -0.15, 0)
 		ol.light_color = Color(0.93, 0.96, 1.0)
-		ol.light_energy = 1.25
-		ol.omni_range = 5.5
+		ol.light_energy = 1.45
+		ol.omni_range = 6.0
 		ol.omni_attenuation = 1.1
 		ol.shadow_enabled = i == 0
 		ol.light_volumetric_fog_energy = 0.15

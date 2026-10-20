@@ -35,11 +35,20 @@ func _default_name() -> String:
 	return n.capitalize() if n != "" else "Player"
 
 
+func _peer_active() -> bool:
+	var p := multiplayer.multiplayer_peer
+	return p != null and (p is OfflineMultiplayerPeer or p.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED)
+
+
 func is_host() -> bool:
+	if not _peer_active():
+		return false
 	return multiplayer.is_server()
 
 
 func local_peer() -> int:
+	if not _peer_active():
+		return 1
 	return multiplayer.get_unique_id()
 
 
@@ -49,7 +58,7 @@ func is_online() -> bool:
 
 func all_peers() -> Array:
 	var out: Array = [local_peer()]
-	if is_online():
+	if is_online() and _peer_active():
 		out.append_array(multiplayer.get_peers())
 	out.sort()
 	return out

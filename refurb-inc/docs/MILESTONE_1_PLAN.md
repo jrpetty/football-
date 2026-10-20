@@ -3,7 +3,7 @@
 **Goal:** One home garage that looks good enough for a Steam screenshot, with the full laptop loop playable solo:
 buy a lot → lorry delivers → haul in → USB test → Level 1 repair → USB image → grade → shelve → list on Flogit → order arrives → pack → courier collects → cash → rent.
 
-**Status:** Draft, awaiting Jon's go-ahead.
+**Status:** Built (placeholder art) — see CLAUDE.md progress log and docs/TESTING.md.
 
 ---
 
@@ -75,7 +75,7 @@ refurb-inc/
   tests/unit/
 ```
 
-Scale rule: 1 unit = 1 metre. Every prop wrapper scene has its origin at the floor contact point, faces −Z, and has a collision shape plus LODs (auto-generated on import).
+Scale rule: 1 unit = 1 metre. Every prop wrapper scene has its origin at the floor contact point, its front faces **+Z** (glTF default), and it has a collision shape plus LODs (auto-generated on import).
 
 ---
 

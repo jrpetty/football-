@@ -286,6 +286,38 @@ MVP scope reminder: garage + laptops + USB testing + Level 1 repairs + Flogit + 
 =====================================================================
 DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is Jon's original brief, verbatim)
 =====================================================================
-- 2026-10-20: Brief saved. Project lives in `refurb-inc/` inside the `jrpetty/football-` repo for now (that repo's root is an unrelated football predictor app). Move to a dedicated repo if/when Jon confirms.
-- 2026-10-20: Milestone 1 plan drafted in `docs/MILESTONE_1_PLAN.md`. Awaiting Jon's go-ahead before writing code.
-- Proposed (pending confirmation): fictional imaging OS = "Pane OS" (wordmark: PaneOS). Rival refurbishers TBD.
+
+## Where things are
+- Project root: `refurb-inc/` (Godot project). It sits inside the `jrpetty/football-` git repo only because that is the repo this cloud session is attached to — it is otherwise unrelated and self-contained. Branch: `claude/optimistic-albattani-c0fe64`.
+- Docs: `docs/MILESTONE_1_PLAN.md`, `docs/MODEL_CONTRACT.md` (how to drop in final art), `docs/TESTING.md` (how to run/test, what you should see).
+
+## Locked decisions
+- Engine: **Godot 4.7.2**, Forward+, Jolt physics, GDScript (typed). Verified headless + rendered (lavapipe) in the cloud container.
+- **Networking from day one:** every gameplay action is `Game.request(cmd, args)` → host `Sim.execute()` → mutates `GameState` → dirty entities replicated to clients (`Game._flush_replication`, 20 Hz). Solo = OfflineMultiplayerPeer acting as host (same code path). ENet host/join works now (LAN); Steam (GodotSteam) slots into `Net` in M2. Loose-item physics is host-simulated and streamed (`LevelRoot._rpc_xforms`). Lot hidden data (unit rolls, quality) never leaves the host.
+- **State vs views:** `GameState` (plain data: items, slots, stations, lots, orders, company, clock, schedule, players/XP) is the single source of truth, serialised for saves AND network. 3D nodes (`ItemView`, stations, HUD, PaneOS apps) only read it and listen to `state.changed`.
+- **Data-driven content:** `data/*.json` (CPUs, laptop models, makers, parts, faults, cosmetic conditions + grade thresholds, sellers + note bands, economy tuning, shop catalogue, names, OS/diag text, mail). `Content` autoload validates cross-references at load.
+- **One interaction pattern:** stations extend `StationBase` (hover_info / interact / best_slot_for → SnapSlot / hold_action + hold_complete). Items are `ItemView`s. Players target the HOST (bench/shelf/pallet) and it picks the nearest free SnapSlot.
+- **Swappable art:** every visual is a `ModelSlot` (placeholder id OR `model_scene`). Convention: 1 unit = 1 m, origin bottom-centre, **front faces +Z** (glTF default). Laptops: `Lid` pivot node + `Screen` mesh. See `docs/MODEL_CONTRACT.md`.
+- Imaging OS = **PaneOS** (Pane Systems). Diagnostics tool = **DiagnostiKit Pro**. Marketplace = **Flogit**. Lorry firm "Pennine Freight", courier "Zippd". Lot site = "LotFinder", parts shop = "PartsHub".
+- Time: 09:00–17:00 = 900 real s. Weekends skipped. Rent+utilities every Friday close. Jobs on benches continue overnight. Deadlines count working hours.
+- Purchasing: fixed price, NO haggling. Price = nominal trade value × swing (0.6–1.3, triangular); hidden quality correlates with swing + noise + seller bias. ~70–80% of units work. Passive discount = 1%/Purchasing level.
+- Repair levels gate faults (L1 keys/battery/RAM/drives/fans, L2 screens/hinges/decks, L3 BIOS lock/board). Unrepairable units can be graded "D – Spares/Repairs" and sold cheap.
+- Seller refresh cycles: 1 in-game "year" = 10 working days, visible in LotFinder's Refresh calendar.
+- Generated placeholders: `tools/gen_textures.py` (PBR sets), `tools/gen_audio.py` (all SFX), `tools/build_scenes.tscn` (wrapper scenes + garage level — DON'T re-run after hand-editing the garage; use `--only-props`).
+
+## Status
+- **Milestone 1 (solo garage vertical slice): functionally complete with placeholder art.** Full loop playable: LotFinder purchase → lorry (reverse beeps, tail lift) → pallet → haul (stack 3) → USB test bench (live on-screen diagnostics) → L1 repair with parts bins → PaneOS imaging → grading + sticker → shelving → Flogit listing/pricing → hourly orders → packing → OUTGOING shelf → courier van 12:00/16:30 → cash. Shop parcels by courier. Rent/bills, overdraft rules, end-of-shift rating card, autosave + manual save/continue, pause/settings (sens, FOV, head-bob, volumes, graphics presets), title screen with live garage backdrop, HUD (clock/cash/rep/next events/orders/toasts/next-step hints), Skills app (per-player XP), Mail onboarding, kettle buff, roller door.
+- **Milestone 2 groundwork done early:** ENet co-op works (verified host+client in two processes: snapshot join, command routing, replication). Remaining for M2: GodotSteam lobbies + `SteamMultiplayerPeer`, lobby UI, polish of remote-player avatars/animation, host migration/disconnect UX.
+- **Automated checks (all passing):** `tools/run_all_checks.sh` → compile all scripts, 16 unit tests, in-engine playtest of the whole loop in the real level, 2-process co-op test.
+
+## Next up
+1. Jon sends his generated models → wire into ModelSlots/JSON, check scale/orientation via `tools/screenshot.tscn`, commit.
+2. Lighting pass with real assets: bake LightmapGI in the editor, HDRI sky, decals (oil stains, scuffs), more clutter.
+3. Juice: item outline highlight, pick-up/put-down animation curves, particles (dust in the door light, cardboard bits), screen glow light on benches, footstep surfaces, music.
+4. M2: GodotSteam.
+5. M3 content per roadmap (desktops/servers/switches, L2–3 repair, strip-down station + donor parts, custom server builds, business orders, website channel, reputation tiers, random events).
+
+## Known limitations / notes
+- Placeholder art is procedural boxes with real PBR textures; it's the frame for Jon's models, not final.
+- The office PC and bench screens use SubViewports (cheap at current counts; revisit when there are 40-slot racks).
+- No staff/mess/automation yet (M4–M5) — the station/command architecture is designed so AI workers issue the same commands as players.

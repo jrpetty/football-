@@ -8,7 +8,7 @@ func _station_ready() -> void:
 		station_type = "pack"
 
 
-func hold_action(_player: Node, it: Item) -> Dictionary:
+func hold_action(player: Node, it: Item) -> Dictionary:
 	if it.kind != Item.KIND_UNIT:
 		return {}
 	var u := it.unit
@@ -18,7 +18,9 @@ func hold_action(_player: Node, it: Item) -> Dictionary:
 		if int(Game.state.consumables.get(need, 0)) <= 0:
 			return {"blocked": "Out of %s — order more in the Shop." % need}
 	var o: Dictionary = Game.state.orders.get(u.order_id, {})
-	return {"label": "Pack order #%d" % u.order_id, "secs": float(Content.econ("pack_secs", 4.0)), "action": "pack",
+	var peer: int = player.peer_id if player and "peer_id" in player else Net.local_peer()
+	var secs := float(Content.econ("pack_secs", 4.0)) / (1.0 + 0.1 * Game.state.skill_level(Sim.player_key(peer), "packing"))
+	return {"label": "Pack order #%d" % u.order_id, "secs": secs, "action": "pack",
 		"sub": "For %s · due %s" % [o.get("buyer", "?"), GameState.format_minute(float(o.get("due", 0)))]}
 
 

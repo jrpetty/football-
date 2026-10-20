@@ -9,6 +9,7 @@ const APPS := [
 	{"id": "shop", "title": "PartsHub — Shop", "short": "Shop", "colour": Color(0.95, 0.6, 0.15), "glyph": "⚙", "script": "res://ui/office_os/apps/shop_app.gd"},
 	{"id": "finance", "title": "Wages & Finance", "short": "Finance", "colour": Color(0.55, 0.45, 0.9), "glyph": "%", "script": "res://ui/office_os/apps/finance_app.gd"},
 	{"id": "mail", "title": "Mail", "short": "Mail", "colour": Color(0.25, 0.7, 0.85), "glyph": "@", "script": "res://ui/office_os/apps/mail_app.gd"},
+	{"id": "skills", "title": "My Skills", "short": "Skills", "colour": Color(0.9, 0.4, 0.3), "glyph": "★", "script": "res://ui/office_os/apps/skills_app.gd"},
 	{"id": "staff", "title": "Staff", "short": "Staff", "colour": Color(0.5, 0.5, 0.55), "glyph": "☺", "script": ""},
 	{"id": "building", "title": "Building", "short": "Building", "colour": Color(0.5, 0.5, 0.55), "glyph": "⌂", "script": ""},
 ]

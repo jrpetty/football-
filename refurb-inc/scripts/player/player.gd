@@ -89,7 +89,8 @@ func _ready() -> void:
 	rotation.y = 0.0
 	if is_local:
 		camera.current = true
-		hold_node.position = Vector3(0.0, -0.36, -0.55)
+		hold_node.position = Vector3(0.16, -0.4, -0.52)
+		hold_node.rotation_degrees = Vector3(8, -12, 0)
 		ray = RayCast3D.new()
 		ray.target_position = Vector3(0, 0, -REACH)
 		ray.collision_mask = 1 | (1 << 2) | (1 << 3)

@@ -132,7 +132,7 @@ def plywood():
 def tarmac():
     v = 0.5 * fbm(N, 8, 5, 30) + 0.5 * fbm(N, 200, 2, 31)
     stones = (rng.random((N, N)) > 0.93).astype(float)
-    alb = tint([0.23, 0.23, 0.24], v, 0.25) + stones[..., None] * 0.06
+    alb = tint([0.33, 0.32, 0.31], v, 0.22) + stones[..., None] * 0.07
     patches = np.clip((fbm(N, 5, 4, 32) - 0.58) * 5, 0, 1)
     alb *= (1 - 0.18 * patches[..., None])
     h = v + stones * 0.3

@@ -203,10 +203,11 @@ func test_shop_parcel_and_unbox() -> void:
 	var parcels := s.items.values().filter(func(i): return i.kind == Item.KIND_PARCEL)
 	eq(parcels.size(), 1)
 	var boxes_before := int(s.consumables.boxes)
+	var usb_before := s.items.values().filter(func(i): return i.kind == Item.KIND_USB_TEST).size()
 	_cmd(sim, "unbox", {"item": parcels[0].id})
-	eq(int(s.parts.get("ram_ddr4_8", 0)), 3)
+	eq(int(s.parts.get("ram_ddr4_8", 0)), 3 + int(Content.econ("start_parts", {}).get("ram_ddr4_8", 0)))
 	eq(int(s.consumables.boxes), boxes_before + 10)
-	eq(s.items.values().filter(func(i): return i.kind == Item.KIND_USB_TEST).size(), 1)
+	eq(s.items.values().filter(func(i): return i.kind == Item.KIND_USB_TEST).size(), usb_before + 1)
 
 
 func test_late_orders_hurt_reputation() -> void:

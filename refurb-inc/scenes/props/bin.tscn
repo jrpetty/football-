@@ -3,9 +3,9 @@
 [ext_resource type="Script" path="res://scripts/world/prop.gd" id="1_x1hbi"]
 [ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_ujhgh"]
 
-[node name="Bin" type="Node3D" unique_id=2046277659]
+[node name="Bin" type="Node3D" unique_id=921093328]
 script = ExtResource("1_x1hbi")
 
-[node name="Model" type="Node3D" parent="." unique_id=559706709]
+[node name="Model" type="Node3D" parent="." unique_id=1274786263]
 script = ExtResource("2_ujhgh")
 placeholder = "bin"

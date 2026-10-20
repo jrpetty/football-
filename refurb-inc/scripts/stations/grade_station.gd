@@ -8,7 +8,12 @@ func _station_ready() -> void:
 		station_type = "grade"
 
 
-func hold_action(_player: Node, it: Item) -> Dictionary:
+func _secs(player: Node) -> float:
+	var peer: int = player.peer_id if player and "peer_id" in player else Net.local_peer()
+	return float(Content.econ("grade_secs", 1.5)) / (1.0 + 0.1 * Game.state.skill_level(Sim.player_key(peer), "grading"))
+
+
+func hold_action(player: Node, it: Item) -> Dictionary:
 	if it.kind != Item.KIND_UNIT:
 		return {}
 	var u := it.unit
@@ -17,11 +22,11 @@ func hold_action(_player: Node, it: Item) -> Dictionary:
 	if not u.tested:
 		return {"blocked": "Test it first."}
 	if u.has_open_faults():
-		return {"label": "Grade as D — Spares/Repairs", "secs": float(Content.econ("grade_secs", 1.5)), "action": "grade",
+		return {"label": "Grade as D — Spares/Repairs", "secs": _secs(player), "action": "grade",
 			"sub": "Unrepaired faults: sells cheap, but sells."}
 	if not u.imaged:
 		return {"blocked": "Wipe & image it before grading."}
-	return {"label": "Grade unit", "secs": float(Content.econ("grade_secs", 1.5)), "action": "grade",
+	return {"label": "Grade unit", "secs": _secs(player), "action": "grade",
 		"sub": "Expected: %s · ~£%d" % [UnitData.grade_label(Valuation.grade_for(u)), Valuation.market_value(u, Valuation.grade_for(u))]}
 
 

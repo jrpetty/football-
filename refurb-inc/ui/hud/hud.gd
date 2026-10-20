@@ -18,6 +18,8 @@ var toasts: VBoxContainer
 var orders_box: VBoxContainer
 var hint_label: Label
 var fps_label: Label
+var objective_label: Label
+var _obj_t := 0.0
 
 var _hold_p := 0.0
 var _player: Player
@@ -89,6 +91,10 @@ func _ready() -> void:
 	next_label = UiStyle.label("", 14, UiStyle.MUTED)
 	next_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sv.add_child(next_label)
+	objective_label = UiStyle.label("", 15, UiStyle.INFO)
+	objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	objective_label.custom_minimum_size.x = 250
+	sv.add_child(objective_label)
 
 	# Orders strip under status
 	orders_box = VBoxContainer.new()
@@ -152,6 +158,10 @@ func _process(delta: float) -> void:
 	if _hint_t > 0:
 		_hint_t -= delta
 		hint_label.modulate.a = clampf(_hint_t / 2.0, 0.0, 1.0)
+	_obj_t -= delta
+	if _obj_t <= 0.0:
+		_obj_t = 0.5
+		objective_label.text = "▸ " + next_objective()
 	fps_label.visible = Settings.get_value("show_fps")
 	if fps_label.visible:
 		fps_label.text = "%d fps" % Engine.get_frames_per_second()
@@ -299,3 +309,39 @@ func show_toast(text: String, level: String = "info") -> void:
 		"good": Sfx.play_ui("notify_good", -8.0)
 		"bad": Sfx.play_ui("notify_bad", -6.0)
 		"warn": Sfx.play_ui("notify_warn", -10.0)
+
+
+static func next_objective() -> String:
+	## Contextual "what should I do next" hint, derived purely from game state.
+	var s := Game.state
+	var counts := {}
+	var on_pallet := 0
+	for it: Item in s.items.values():
+		if it.kind != Item.KIND_UNIT or it.unit == null:
+			continue
+		counts[it.unit.stage()] = int(counts.get(it.unit.stage(), 0)) + 1
+		if it.loc.get("t") == "slot" and String(it.loc.slot).begins_with("i"):
+			on_pallet += 1
+	var packed := s.orders.values().filter(func(o): return o.status == "packed").size()
+	var to_pack := s.orders.values().filter(func(o): return o.status == "to_pack").size()
+	if to_pack > 0:
+		return "Pack %d sold order%s at the packing table." % [to_pack, "" if to_pack == 1 else "s"]
+	if packed > 0:
+		return "Put packed orders on the OUTGOING shelf by the door before the courier comes."
+	if on_pallet > 0:
+		return "Carry the %d laptop%s in from the pallet on the drive." % [on_pallet, "" if on_pallet == 1 else "s"]
+	if int(counts.get(UnitData.STAGE_UNTESTED, 0)) > 0:
+		return "Test units: laptop on the test bench + DiagnostiKit USB."
+	if int(counts.get(UnitData.STAGE_FAULTY, 0)) > 0:
+		return "Fix faulty units at the repair bench (hold E). Order parts in the Shop."
+	if int(counts.get(UnitData.STAGE_TO_IMAGE, 0)) > 0:
+		return "Swap the bench USB to PaneOS to wipe & image passed units."
+	if int(counts.get(UnitData.STAGE_TO_GRADE, 0)) > 0:
+		return "Grade imaged units at the grading desk."
+	if int(counts.get(UnitData.STAGE_GRADED, 0)) > 0:
+		return "List graded stock on Flogit (office PC)."
+	if s.schedule.any(func(e): return e.type == "lorry"):
+		return "Delivery booked. Stock up on parts and boxes in the Shop meanwhile."
+	if int(counts.get(UnitData.STAGE_LISTED, 0)) > 0:
+		return "Listings live — buyers trickle in each hour. Buy your next lot?"
+	return "Buy a lot of laptops on the office PC (LotFinder)."

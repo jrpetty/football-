@@ -30,6 +30,8 @@ static func surface(set_name: String, tile_m: float = 1.0, tint: Color = Color.W
 	m.uv1_triplanar_sharpness = 4.0
 	m.uv1_scale = Vector3.ONE / maxf(tile_m, 0.01)
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+	if set_name in ["tarmac", "concrete_floor", "brick_red", "cardboard"]:
+		m.metallic_specular = 0.3   # rough mineral surfaces shouldn't mirror the blue sky
 	_cache[key] = m
 	return m
 
