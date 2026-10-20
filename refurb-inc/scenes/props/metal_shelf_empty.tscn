@@ -3,9 +3,9 @@
 [ext_resource type="Script" path="res://scripts/world/prop.gd" id="1_3r3aj"]
 [ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_0ov68"]
 
-[node name="MetalShelfEmpty" type="Node3D" unique_id=1390766515]
+[node name="MetalShelfEmpty" type="Node3D" unique_id=1580265022]
 script = ExtResource("1_3r3aj")
 
-[node name="Model" type="Node3D" parent="." unique_id=1604574370]
+[node name="Model" type="Node3D" parent="." unique_id=1423335678]
 script = ExtResource("2_0ov68")
 placeholder = "metal_shelf"

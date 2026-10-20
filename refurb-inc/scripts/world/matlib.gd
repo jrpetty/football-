@@ -9,7 +9,7 @@ const DEFS := {
 	# --- floors
 	"concrete_dirty": {"set": "concrete_floor", "tile": 2.0, "tint": Color(0.95, 0.94, 0.92)},
 	"concrete_yard": {"set": "polished_concrete", "tile": 4.0, "tint": Color(0.8, 0.8, 0.78), "rough": 1.7, "spec": 0.3},
-	"concrete_stained": {"set": "concrete_floor", "tile": 3.0, "tint": Color(0.86, 0.86, 0.84), "spec": 0.3},
+	"concrete_stained": {"set": "concrete_floor", "tile": 3.0, "tint": Color(0.68, 0.68, 0.67), "spec": 0.3},
 	"concrete_sealed": {"set": "polished_concrete", "tile": 2.5, "tint": Color(0.82, 0.82, 0.8), "rough": 1.4},
 	"polished": {"set": "polished_concrete", "tile": 3.0, "tint": Color(0.92, 0.92, 0.9), "rough": 0.9},
 	"epoxy_grey": {"set": "epoxy_floor", "tile": 3.0, "tint": Color(0.6, 0.6, 0.59), "rough": 1.3},

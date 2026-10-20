@@ -5,9 +5,9 @@ extends Node
 ## Per-premises hero poses: [camera position, look-at target]
 const LEVEL_POSES := {
 	"garage": {"ext": [Vector3(1.8, 1.9, 14.6), Vector3(-0.6, 1.2, 2.0)], "int": [Vector3(0.6, 1.62, 3.0), Vector3(-0.6, 1.0, -3.0)], "aerial": [Vector3(18, 14, 26), Vector3(-2, 0, 0)]},
-	"lockup": {"ext": [Vector3(9.0, 2.4, 24.0), Vector3(0.0, 1.5, 6.0)], "int": [Vector3(1.0, 1.65, 6.2), Vector3(-0.5, 1.0, -6.0)], "aerial": [Vector3(30, 22, 40), Vector3(-4, 0, 0)]},
+	"lockup": {"ext": [Vector3(7.5, 1.9, 19.5), Vector3(-1.0, 2.2, 6.0)], "int": [Vector3(1.0, 1.65, 6.2), Vector3(-0.5, 1.0, -6.0)], "aerial": [Vector3(30, 22, 40), Vector3(-4, 0, 0)]},
 	"industrial": {"ext": [Vector3(14.0, 2.4, 30.0), Vector3(0.0, 3.0, 9.0)], "int": [Vector3(3.0, 1.7, 8.5), Vector3(-2.0, 2.0, -8.0)], "aerial": [Vector3(40, 26, 52), Vector3(-4, 0, 0)]},
-	"warehouse": {"ext": [Vector3(-26.0, 3.2, 62.0), Vector3(-3.0, 3.0, 24.0)], "int": [Vector3(6.0, 1.7, 20.0), Vector3(-6.0, 3.0, -20.0)], "aerial": [Vector3(70, 45, 95), Vector3(0, 0, 10)]},
+	"warehouse": {"ext": [Vector3(7.0, 1.9, 58.0), Vector3(-4.0, 3.8, 24.0)], "int": [Vector3(6.0, 1.7, 20.0), Vector3(-6.0, 3.0, -20.0)], "aerial": [Vector3(70, 45, 95), Vector3(0, 0, 10)]},
 	"distribution": {"ext": [Vector3(55.0, 4.0, 98.0), Vector3(0.0, 6.0, 40.0)], "int": [Vector3(10.0, 1.7, 40.0), Vector3(-10.0, 4.0, -40.0)], "aerial": [Vector3(130, 80, 170), Vector3(0, 0, 20)]},
 	"facility": {"ext": [Vector3(-26.0, 2.0, 80.0), Vector3(-7.0, 7.0, 44.0)], "int": [Vector3(8.0, 1.7, 26.0), Vector3(-6.0, 4.0, -30.0)], "aerial": [Vector3(100, 70, 140), Vector3(0, 0, 10)]},
 	"megaplant": {"ext": [Vector3(78.0, 5.0, 168.0), Vector3(25.0, 12.0, 100.0)], "int": [Vector3(10.0, 1.7, 84.0), Vector3(-10.0, 6.0, -60.0)], "aerial": [Vector3(250, 160, 330), Vector3(0, 0, 30)]},
@@ -140,6 +140,9 @@ func _ui_shots() -> void:
 	pc._os.open_app("stock")
 	await get_tree().create_timer(0.6).timeout
 	await _save("pc_stock")
+	pc._os.open_app("building")
+	await get_tree().create_timer(0.8).timeout
+	await _save("pc_building")
 
 
 func _save(n: String) -> void:

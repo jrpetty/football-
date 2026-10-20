@@ -1047,3 +1047,12 @@ func c_move_building(peer: int, a: Dictionary) -> Dictionary:
 	state.mark("building")
 	state.say("Moving day! Welcome to %s, %s." % [b.name, b.get("address", "")], "good")
 	return _ok()
+
+
+func migrate_save() -> void:
+	## Older saves (before movable equipment / premises) get the starting kit; the level lays it out.
+	if state.fixtures.is_empty():
+		for f in Content.econ("start_fixtures", []):
+			state.fixtures[f.id] = {"type": f.type, "label": f.get("label", ""), "placed": false, "p": [0, 0, 0], "r": 0.0}
+	if not Content.buildings.has(state.building_id):
+		state.building_id = String(Content.econ("start_building", "garage"))

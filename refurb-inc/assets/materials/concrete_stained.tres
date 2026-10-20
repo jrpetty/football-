@@ -6,7 +6,7 @@
 
 [resource]
 resource_name = "concrete_stained"
-albedo_color = Color(0.86, 0.86, 0.84, 1)
+albedo_color = Color(0.68, 0.68, 0.67, 1)
 albedo_texture = ExtResource("1_a6c6s")
 metallic_specular = 0.3
 roughness_texture = ExtResource("3_pkonu")

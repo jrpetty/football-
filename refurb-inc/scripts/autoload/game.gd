@@ -43,6 +43,7 @@ func load_from_dict(d: Dictionary) -> void:
 	_install_state(GameState.new())
 	state.load_dict(d)
 	sim = Sim.new(state)
+	sim.migrate_save()
 	in_game = true
 	state_reset.emit()
 	if not state.day_running:

@@ -6,7 +6,7 @@ extends RefCounted
 const PRESETS := {
 	# sky top, horizon, sun colour, sun energy, sun rot (x, y), ambient, fog density, exposure, saturation
 	"suburb": {"top": Color(0.3, 0.47, 0.72), "hor": Color(0.7, 0.76, 0.84), "sun": Color(1.0, 0.9, 0.78), "sun_e": 1.6, "rot": Vector2(-24, 205), "amb": 0.3, "fog": 0.0065, "exp": 1.0, "sat": 1.06},
-	"overcast": {"top": Color(0.42, 0.5, 0.6), "hor": Color(0.72, 0.74, 0.76), "sun": Color(0.95, 0.94, 0.9), "sun_e": 1.15, "rot": Vector2(-38, 215), "amb": 0.42, "fog": 0.008, "exp": 1.05, "sat": 0.95},
+	"overcast": {"top": Color(0.38, 0.47, 0.58), "hor": Color(0.66, 0.69, 0.72), "sun": Color(0.98, 0.93, 0.85), "sun_e": 1.35, "rot": Vector2(-30, 160), "amb": 0.34, "fog": 0.007, "exp": 0.92, "sat": 0.98},
 	"morning": {"top": Color(0.28, 0.48, 0.78), "hor": Color(0.74, 0.8, 0.88), "sun": Color(1.0, 0.94, 0.85), "sun_e": 1.7, "rot": Vector2(-30, 145), "amb": 0.38, "fog": 0.005, "exp": 1.0, "sat": 1.08},
 	"clear": {"top": Color(0.22, 0.44, 0.8), "hor": Color(0.7, 0.8, 0.9), "sun": Color(1.0, 0.95, 0.88), "sun_e": 1.8, "rot": Vector2(-42, 200), "amb": 0.42, "fog": 0.004, "exp": 1.0, "sat": 1.1},
 	"golden": {"top": Color(0.25, 0.42, 0.75), "hor": Color(0.88, 0.78, 0.66), "sun": Color(1.0, 0.82, 0.6), "sun_e": 1.9, "rot": Vector2(-18, 215), "amb": 0.4, "fog": 0.004, "exp": 1.0, "sat": 1.14},

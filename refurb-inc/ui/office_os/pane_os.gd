@@ -38,8 +38,9 @@ func _ready() -> void:
 	add_child(glow)
 	# Desktop icons
 	var grid := GridContainer.new()
-	grid.columns = 1
-	grid.position = Vector2(36, 36)
+	grid.columns = 2
+	grid.position = Vector2(20, 30)
+	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 18)
 	add_child(grid)
 	for a in APPS:
@@ -47,8 +48,8 @@ func _ready() -> void:
 	# Window
 	_window = PanelContainer.new()
 	_window.add_theme_stylebox_override("panel", UiStyle.box(Color(0.96, 0.97, 0.98), 10, 0))
-	_window.position = Vector2(180, 40)
-	_window.size = Vector2(size.x - 220, size.y - 130)
+	_window.position = Vector2(270, 40)
+	_window.size = Vector2(size.x - 310, size.y - 130)
 	_window.visible = false
 	add_child(_window)
 	var wv := VBoxContainer.new()
@@ -139,7 +140,7 @@ func _process(_d: float) -> void:
 	_cash.text = GameState.format_money(Game.state.cash) + "   "
 	_cash.add_theme_color_override("font_color", UiStyle.money_colour(Game.state.cash))
 	if _window.visible:
-		_window.size = Vector2(size.x - 220, size.y - 130)
+		_window.size = Vector2(size.x - 310, size.y - 130)
 
 
 func on_opened() -> void:

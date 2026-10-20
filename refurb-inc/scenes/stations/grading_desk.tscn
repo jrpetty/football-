@@ -7,27 +7,27 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_p7c7g"]
 size = Vector3(1.2, 0.92, 0.7)
 
-[node name="GradingDesk" type="Node3D" unique_id=1125528340]
+[node name="GradingDesk" type="Node3D" unique_id=1157023982]
 script = ExtResource("1_ohhv8")
 station_type = "grade"
 display_name = "Grading desk"
 description = "Hold E to grade an imaged unit. Prints a grade sticker."
 
-[node name="Model" type="Node3D" parent="." unique_id=1819607885]
+[node name="Model" type="Node3D" parent="." unique_id=1574015276]
 script = ExtResource("2_vomnv")
 placeholder = "grading_desk"
 placeholder_params = {
 "w": 1.2
 }
 
-[node name="Body" type="StaticBody3D" parent="." unique_id=415170912]
+[node name="Body" type="StaticBody3D" parent="." unique_id=1934739722]
 collision_layer = 9
 
-[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=1533480223]
+[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=278228642]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46, 0)
 shape = SubResource("BoxShape3D_p7c7g")
 
-[node name="UnitSlot" type="Marker3D" parent="." unique_id=90779383]
+[node name="UnitSlot" type="Marker3D" parent="." unique_id=1601849141]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0.922, 0.05)
 script = ExtResource("3_jinsd")
 slot_name = "unit"

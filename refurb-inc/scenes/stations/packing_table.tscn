@@ -7,27 +7,27 @@
 [sub_resource type="BoxShape3D" id="BoxShape3D_cx4j2"]
 size = Vector3(1.6, 0.94, 0.8)
 
-[node name="PackingTable" type="Node3D" unique_id=1900574526]
+[node name="PackingTable" type="Node3D" unique_id=826392293]
 script = ExtResource("1_1jwnp")
 station_type = "pack"
 display_name = "Packing table"
 description = "Hold E to box a SOLD unit. Then put it on the OUTGOING shelf."
 
-[node name="Model" type="Node3D" parent="." unique_id=1180309228]
+[node name="Model" type="Node3D" parent="." unique_id=378862758]
 script = ExtResource("2_nbunv")
 placeholder = "packing_table"
 placeholder_params = {
 "w": 1.6
 }
 
-[node name="Body" type="StaticBody3D" parent="." unique_id=569604330]
+[node name="Body" type="StaticBody3D" parent="." unique_id=1357743297]
 collision_layer = 9
 
-[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=86629727]
+[node name="Shape" type="CollisionShape3D" parent="Body" unique_id=1241963684]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.47, 0)
 shape = SubResource("BoxShape3D_cx4j2")
 
-[node name="UnitSlot" type="Marker3D" parent="." unique_id=1871483687]
+[node name="UnitSlot" type="Marker3D" parent="." unique_id=1055869438]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0.924, 0.06)
 script = ExtResource("3_r34bj")
 slot_name = "unit"

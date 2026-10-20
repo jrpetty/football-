@@ -33,6 +33,23 @@ To skip straight into a level, open `scenes/levels/garage/garage.tscn` and press
 14. **Kettle** (front-left corner): hold E for a brew, which gives a short speed boost. The **roller door** has a switch by the door.
 15. **Esc → Save** at any time. The game also autosaves at the end of every day. Use **Continue** on the title screen to resume.
 
+## Premises and equipment
+- **Move equipment:** look at any bench, shelf or desk and press **F**. A green ghost follows your aim and snaps to a 0.25 m grid. **R** or the mouse wheel rotates it, **E** places it and **Q** cancels. The ghost turns red if it would hit a wall, a doorway or another piece of equipment. Whatever is on the equipment moves with it.
+- **Office PC → Building app:**
+  - **Premises** lists all 7 rungs with photos, rent, utilities, floor area, power, loading bays and move cost.
+  - **Move here → Confirm** charges the move fee, fades to black and drops you in the new building. Your equipment is laid out automatically and your stock comes with you. Loose pallets land in goods-in.
+  - **Equipment** lets you move, store or place what you own.
+  - **Buy equipment** buys extra benches, shelves, desks and so on, and goes straight into placement mode.
+- **What to look for in each building:**
+  - **Garage:** oil stains and damp, wheelie bins, a semi-detached street with a post box and a telegraph pole.
+  - **Lock-up:** a Victorian railway viaduct with businesses in the arches, a puddled court, a skip.
+  - **Industrial unit:** a business-park terrace with "Unit 4" on the fascia and the estate totem sign.
+  - **Warehouse:** three docks on a sunken apron, a two-storey office, a gatehouse and trailers.
+  - **Distribution centre:** eight docks, an amber brand band, a glass office with a rooftop sign, a sprinkler tank and a big car park.
+  - **Facility:** a glazed HQ with amber fins, a reflecting-pool plaza, solar car ports, colour-zoned floors, a mezzanine and canteen, and a branded wall.
+  - **Mega plant:** a sawtooth super-hall, 16 docks, an HQ tower with a skybridge, a wind turbine, a lake and a roundabout.
+- **Quick tour from the editor:** open any `scenes/levels/<id>/<id>.tscn` and press **F6**. It starts a fresh game in that building.
+
 ## Co-op (LAN / same PC)
 - Title screen → **Host co-op**. On a second instance → **Join co-op…** → host's IP → **Join**.
 - Same PC: Godot **Debug → Customize Run Instances… → 2 instances**, then press F5 twice-ish (one hosts, one joins `127.0.0.1`).
@@ -43,6 +60,7 @@ Run everything from a terminal: `tools/run_all_checks.sh /path/to/godot`
 Or run individually in the editor:
 - `tests/run_tests.tscn` (F6) — 16 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication.
 - `tools/playtest.tscn` (F6) — drives the real garage at 8× speed: lorry, bench, repair, image, grade, sell, pack, courier, parcel, save/load.
+- `tools/premises_test.tscn` (F6) — moves one company through all 7 buildings: layout, stock, loose pallets, lorry to docks, extra equipment.
 - `tools/net_test.tscn -- --role host` and `-- --role client` — two-process co-op check.
 - `tools/check_scripts.tscn` — compiles every script.
 - `tools/screenshot.tscn` — renders QA shots into `tools/out/` (args: `--setup` for a busy scene, `--ui` for HUD/PC shots).
@@ -50,4 +68,5 @@ Or run individually in the editor:
 ## Regenerating generated content
 - `python3 tools/gen_textures.py` — placeholder PBR texture sets
 - `python3 tools/gen_audio.py` — placeholder sound effects
-- `tools/build_scenes.tscn` (run it) — rebuilds station/prop/vehicle wrapper scenes **and the garage**. Don't re-run it after you hand-edit `garage.tscn`.
+- `tools/build_scenes.tscn` (run it; add `-- --only <level>` for one) — rebuilds wrapper scenes, the material library and the 7 premises levels. Don't regenerate a level you've hand-edited.
+- `tools/shoot.sh <level> [--poses ext,int,aerial]` — renders review shots of any premises (needs xvfb + Vulkan).
