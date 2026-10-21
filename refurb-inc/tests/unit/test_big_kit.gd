@@ -27,7 +27,7 @@ func _spawn(sim: Sim, model_id: String, slot: String) -> Item:
 
 func test_every_model_has_a_type_and_visual() -> void:
 	for m: Dictionary in Content.models.values():
-		check(m.get("type", "") in ["laptop", "desktop", "server"], "%s type" % m.id)
+		check(m.get("type", "") in Content.HW_TYPES, "%s type" % m.id)
 		check(ResourceLoader.exists(m.get("visual", {}).get("model", "")), "%s visual.model" % m.id)
 	var servers := Content.models.values().filter(func(m): return m.type == "server")
 	var desktops := Content.models.values().filter(func(m): return m.type == "desktop")

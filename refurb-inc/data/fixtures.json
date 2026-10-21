@@ -361,6 +361,195 @@
         "speed": 1.0
       },
       "idle_frac": 0.12
+    },
+    {
+      "id": "conveyor_bend",
+      "name": "Flexible conveyor bend",
+      "scene": "res://scenes/automation/conveyor_bend.tscn",
+      "footprint": [
+        1.5,
+        1.5
+      ],
+      "height": 0.95,
+      "price": 1100,
+      "power_kw": 0.3,
+      "idle_frac": 0.05,
+      "desc": "Bends to any angle from 15° to 180° (scroll while placing), tighter or wider (Shift+scroll), left or right (T). Up to 4 m of belt.",
+      "auto": {
+        "kind": "belt",
+        "path": "arc",
+        "origin": "in",
+        "angle": 90,
+        "radius": 1.0,
+        "turn": "right",
+        "speed": 0.6,
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "conveyor_merge",
+      "name": "Merger (side input right)",
+      "scene": "res://scenes/automation/conveyor_merge.tscn",
+      "footprint": [
+        1.56,
+        1.4
+      ],
+      "height": 0.95,
+      "price": 1800,
+      "power_kw": 0.35,
+      "idle_frac": 0.08,
+      "desc": "A side conveyor joins the line here; kit merges in when there's a gap.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.4,
+        "speed": 0.6,
+        "device": "merge",
+        "side": "left",
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "conveyor_merge_r",
+      "name": "Merger (side input left)",
+      "scene": "res://scenes/automation/conveyor_merge_r.tscn",
+      "footprint": [
+        1.56,
+        1.4
+      ],
+      "height": 0.95,
+      "price": 1800,
+      "power_kw": 0.35,
+      "idle_frac": 0.08,
+      "desc": "A side conveyor joins the line here; kit merges in when there's a gap.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.4,
+        "speed": 0.6,
+        "device": "merge",
+        "side": "right",
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "stock_tower",
+      "name": "Automated stock tower (24 trays)",
+      "scene": "res://scenes/automation/stock_tower.tscn",
+      "footprint": [
+        1.4,
+        1.1
+      ],
+      "height": 2.6,
+      "price": 21000,
+      "power_kw": 1.8,
+      "idle_frac": 0.1,
+      "desc": "Vertical lift store. Feed graded stock in by conveyor (front-left hatch); when it sells, it comes out on the right-hand hatch on its own. You can load and pick by hand too.",
+      "auto": {
+        "kind": "store"
+      }
+    },
+    {
+      "id": "recycle_cage",
+      "name": "WEEE recycling cage",
+      "scene": "res://scenes/automation/recycle_cage.tscn",
+      "footprint": [
+        1.0,
+        0.8
+      ],
+      "height": 1.3,
+      "price": 350,
+      "power_kw": 0.0,
+      "desc": "Kit that can never be fixed goes in here for licensed recycling — paid as scrap. Robot arms use it for units with locked accounts or dead boards beyond repair."
+    },
+    {
+      "id": "conveyor_splitter",
+      "name": "Splitter / balancer",
+      "scene": "res://scenes/automation/conveyor_splitter.tscn",
+      "footprint": [
+        1.56,
+        1.4
+      ],
+      "height": 1.3,
+      "price": 2600,
+      "power_kw": 0.4,
+      "idle_frac": 0.08,
+      "desc": "One line in, two out (left and right). Alternate shares kit between two lines; Overflow fills the left and only uses the right when the left backs up. Press E on it to switch.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.4,
+        "speed": 0.6,
+        "device": "splitter",
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "conveyor_gate",
+      "name": "Stop gate (1 m)",
+      "scene": "res://scenes/automation/conveyor_gate.tscn",
+      "footprint": [
+        1.1,
+        1.0
+      ],
+      "height": 1.5,
+      "price": 950,
+      "power_kw": 0.15,
+      "idle_frac": 0.05,
+      "desc": "A pneumatic gate across the belt. Press E to hold the line (kit waits behind it — safe to step in and sort things out) or open it again.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.0,
+        "speed": 0.6,
+        "device": "gate",
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "work_hatch",
+      "name": "People's hatch (take & send on)",
+      "scene": "res://scenes/automation/work_hatch.tscn",
+      "footprint": [
+        1.3,
+        1.6
+      ],
+      "height": 1.95,
+      "price": 1400,
+      "power_kw": 0.25,
+      "idle_frac": 0.05,
+      "desc": "Lets people join the line anywhere. Kit coming in stops at the pick face for a person to take; anything put on the far half rides on down the line. Chains like a 1.6 m conveyor.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.6,
+        "speed": 0.6,
+        "device": "hatch",
+        "height": 0.856,
+        "half_width": 0.51
+      }
+    },
+    {
+      "id": "line_monitor",
+      "name": "Line monitor",
+      "scene": "res://scenes/automation/line_monitor.tscn",
+      "footprint": [
+        1.0,
+        0.7
+      ],
+      "height": 2.6,
+      "price": 1200,
+      "power_kw": 0.18,
+      "idle_frac": 1.0,
+      "desc": "A big floor-standing screen that shows the line live: machine moves per hour, kit on the belts, what every machine is doing, and the bottleneck in red.",
+      "auto": {
+        "kind": "monitor"
+      }
     }
   ]
 }

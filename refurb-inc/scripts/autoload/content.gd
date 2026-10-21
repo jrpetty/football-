@@ -3,6 +3,8 @@ extends Node
 ## Nothing in the game hard-codes hardware, parts, faults, sellers or tuning: it all comes from here.
 
 const DATA_DIR := "res://data/"
+## Every sellable kind of kit (hardware_models.json `type`).
+const HW_TYPES := ["laptop", "desktop", "server", "monitor", "switch", "wifi_ap", "dock", "tablet", "phone"]
 
 var cpus: Dictionary = {}          # id -> Dictionary
 var models: Dictionary = {}        # id -> Dictionary
@@ -93,18 +95,23 @@ func _validate() -> void:
 	if not buildings.has(economy.get("start_building", "garage")):
 		errors.append("Unknown start_building")
 	for m: Dictionary in models.values():
-		for c in m.get("cpu_options", []):
-			if not cpus.has(c):
-				errors.append("Model %s references unknown CPU %s" % [m.id, c])
-		if not cpus.has(m.get("ref_cpu", "")):
-			errors.append("Model %s has unknown ref_cpu" % m.id)
+		if m.has("cpu_options") or m.has("ref_cpu"):
+			for c in m.get("cpu_options", []):
+				if not cpus.has(c):
+					errors.append("Model %s references unknown CPU %s" % [m.id, c])
+			if not cpus.has(m.get("ref_cpu", "")):
+				errors.append("Model %s has unknown ref_cpu" % m.id)
+		elif String(m.get("spec", "")) == "":
+			errors.append("Model %s has no CPU and no spec line" % m.id)   # peripherals/network/mobile use `spec`
 		var laptop: bool = m.get("type", "laptop") == "laptop"
-		for field in ["battery_part", "keycap_part", "psu_part", "fan_part", "board_part", "ear_part"]:
+		for field in ["battery_part", "keycap_part", "psu_part", "fan_part", "board_part", "ear_part", "screen_part", "stand_part"]:
 			var p: String = m.get(field, "")
 			if (p == "" and laptop and field in ["battery_part", "keycap_part"]) or (p != "" and not parts.has(p)):
 				errors.append("Model %s references unknown part %s (%s)" % [m.id, p, field])
-		if not m.get("type", "laptop") in ["laptop", "desktop", "server"]:
+		if not m.get("type", "laptop") in HW_TYPES:
 			errors.append("Model %s has unknown type %s" % [m.id, m.get("type")])
+		if m.has("storage_options") and not m.has("ref_storage"):
+			errors.append("Model %s rolls storage but has no ref_storage" % m.id)
 		var vis_model: String = m.get("visual", {}).get("model", "")
 		if vis_model != "" and not ResourceLoader.exists(vis_model):
 			errors.append("Model %s visual.model missing: %s" % [m.id, vis_model])
@@ -149,12 +156,18 @@ func condition(id: String) -> Dictionary:
 	return conditions.get(id, {})
 
 
+func condition_text(id: String) -> String:
+	## Hover text for a cosmetic condition (`text`, or `name` on newer entries).
+	var c := condition(id)
+	return String(c.get("text", c.get("name", id)))
+
+
 func maker_name(id: String) -> String:
 	return makers.get(id, {}).get("name", id.capitalize())
 
 
 static func applies_to(def: Dictionary, m: Dictionary) -> bool:
-	## Fault/condition `types` filter: matches the model's type (laptop/desktop/server) or any of its tags (rack…).
+	## Fault/condition `types` filter: matches the model's type (laptop, monitor, phone…) or any of its tags (rack…).
 	var types: Array = def.get("types", [])
 	if types.is_empty():
 		return true

@@ -157,7 +157,23 @@
   "electricity_per_kwh": 0.28,
   "lighting_w_per_m2": 5.0,
   "power_idle_frac": 0.15,
+  "belt_speed_tiers": [
+    {"id": "standard", "name": "Standard", "speed_mult": 1.0, "power_mult": 1.0, "cost": 0},
+    {"id": "fast", "name": "Fast", "speed_mult": 1.7, "power_mult": 1.4, "cost": 350},
+    {"id": "express", "name": "Express", "speed_mult": 2.5, "power_mult": 1.9, "cost": 800}
+  ],
   "kettle_kwh": 0.11,
   "kettle_boil_secs": 16.0,
-  "kettle_cold_secs": 300.0
+  "kettle_cold_secs": 300.0,
+  "scrap_value": {
+    "laptop": 14,
+    "desktop": 11,
+    "server": 30,
+    "monitor": 5,
+    "switch": 9,
+    "wifi_ap": 3,
+    "dock": 4,
+    "tablet": 8,
+    "phone": 7
+  }
 }

@@ -86,6 +86,7 @@ func _clear_menu() -> void:
 
 
 func _start(mode: String, arg: String) -> void:
+	Game.records_enabled = true      # real runs post milestone times to this PC's leaderboard
 	match mode:
 		"new":
 			Net.go_offline()
@@ -152,6 +153,7 @@ func _switch_level() -> void:
 
 
 func _enter_level() -> void:
+	Game.share_look()
 	_level = load(level_path(Game.state.building_id)).instantiate()
 	add_child(_level)
 	_hud = Hud.new()

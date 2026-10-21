@@ -1,24 +1,274 @@
 {
   "_comment": "External / cosmetic condition tags shown on hover. penalty reduces the cosmetic score (100 = pristine). fixable_by_fault: repairing that fault removes the tag. types = hardware it can appear on (model type or tag); omitted = all.",
   "conditions": [
-    {"id": "light_scuffs_lid", "types": ["laptop"], "text": "Light scuffs on lid",      "penalty": 7,  "weight": 30},
-    {"id": "scratches_lid", "types": ["laptop"],    "text": "Scratches on lid",         "penalty": 16, "weight": 14},
-    {"id": "worn_palmrest", "types": ["laptop"],    "text": "Worn palm rest",           "penalty": 9,  "weight": 18},
-    {"id": "shiny_keys", "types": ["laptop"],       "text": "Shiny keys",               "penalty": 5,  "weight": 18},
-    {"id": "sticker_residue",  "text": "Sticker residue",          "penalty": 4,  "weight": 14},
-    {"id": "asset_tag",        "text": "Asset tag still attached",        "penalty": 2,  "weight": 26},
-    {"id": "dented_corner",    "text": "Dented corner",            "penalty": 24, "weight": 6},
-    {"id": "pressure_marks", "types": ["laptop"],   "text": "Screen pressure marks",    "penalty": 14, "weight": 7},
-    {"id": "missing_key", "types": ["laptop"],      "text": "Missing key",              "penalty": 18, "weight": 4, "fixable_by_fault": "keycap_missing"},
-    {"id": "cracked_screen", "types": ["laptop"],   "text": "Cracked screen",           "penalty": 40, "weight": 3, "fixable_by_fault": "screen_cracked"},
-    {"id": "broken_hinge", "types": ["laptop"],     "text": "Broken hinge",             "penalty": 30, "weight": 2, "fixable_by_fault": "hinge_broken"},
-    {"id": "scuffed_case",    "types": ["desktop", "server"], "text": "Scuffed case panels", "penalty": 8, "weight": 28},
-    {"id": "dusty_intake",    "types": ["desktop", "server"], "text": "Dust caked in front intake", "penalty": 4, "weight": 24},
-    {"id": "yellowed_bezel",  "types": ["desktop"], "text": "Yellowed front bezel", "penalty": 12, "weight": 8},
-    {"id": "scratched_cover", "types": ["server"], "text": "Scratched top cover", "penalty": 10, "weight": 18},
-    {"id": "missing_blanks",  "types": ["server"], "text": "Missing drive blanks", "penalty": 6, "weight": 10},
-    {"id": "bent_rack_ear",   "types": ["rack"], "text": "Bent rack ear", "penalty": 20, "weight": 5, "fixable_by_fault": "server_ear_damaged"}
+    {
+      "id": "light_scuffs_lid",
+      "types": [
+        "laptop"
+      ],
+      "text": "Light scuffs on lid",
+      "penalty": 7,
+      "weight": 30
+    },
+    {
+      "id": "scratches_lid",
+      "types": [
+        "laptop"
+      ],
+      "text": "Scratches on lid",
+      "penalty": 16,
+      "weight": 14
+    },
+    {
+      "id": "worn_palmrest",
+      "types": [
+        "laptop"
+      ],
+      "text": "Worn palm rest",
+      "penalty": 9,
+      "weight": 18
+    },
+    {
+      "id": "shiny_keys",
+      "types": [
+        "laptop"
+      ],
+      "text": "Shiny keys",
+      "penalty": 5,
+      "weight": 18
+    },
+    {
+      "id": "sticker_residue",
+      "text": "Sticker residue",
+      "penalty": 4,
+      "weight": 14
+    },
+    {
+      "id": "asset_tag",
+      "text": "Asset tag still attached",
+      "penalty": 2,
+      "weight": 26
+    },
+    {
+      "id": "dented_corner",
+      "text": "Dented corner",
+      "penalty": 24,
+      "weight": 6,
+      "types": [
+        "laptop",
+        "desktop",
+        "server",
+        "switch",
+        "tablet",
+        "phone"
+      ]
+    },
+    {
+      "id": "pressure_marks",
+      "types": [
+        "laptop"
+      ],
+      "text": "Screen pressure marks",
+      "penalty": 14,
+      "weight": 7
+    },
+    {
+      "id": "missing_key",
+      "types": [
+        "laptop"
+      ],
+      "text": "Missing key",
+      "penalty": 18,
+      "weight": 4,
+      "fixable_by_fault": "keycap_missing"
+    },
+    {
+      "id": "cracked_screen",
+      "types": [
+        "laptop",
+        "tablet",
+        "phone"
+      ],
+      "text": "Cracked screen",
+      "penalty": 40,
+      "weight": 3,
+      "fixable_by_fault": "screen_cracked"
+    },
+    {
+      "id": "broken_hinge",
+      "types": [
+        "laptop"
+      ],
+      "text": "Broken hinge",
+      "penalty": 30,
+      "weight": 2,
+      "fixable_by_fault": "hinge_broken"
+    },
+    {
+      "id": "scuffed_case",
+      "types": [
+        "desktop",
+        "server",
+        "switch",
+        "dock"
+      ],
+      "text": "Scuffed case panels",
+      "penalty": 8,
+      "weight": 28
+    },
+    {
+      "id": "dusty_intake",
+      "types": [
+        "desktop",
+        "server"
+      ],
+      "text": "Dust caked in front intake",
+      "penalty": 4,
+      "weight": 24
+    },
+    {
+      "id": "yellowed_bezel",
+      "types": [
+        "desktop"
+      ],
+      "text": "Yellowed front bezel",
+      "penalty": 12,
+      "weight": 8
+    },
+    {
+      "id": "scratched_cover",
+      "types": [
+        "server"
+      ],
+      "text": "Scratched top cover",
+      "penalty": 10,
+      "weight": 18
+    },
+    {
+      "id": "missing_blanks",
+      "types": [
+        "server"
+      ],
+      "text": "Missing drive blanks",
+      "penalty": 6,
+      "weight": 10
+    },
+    {
+      "id": "bent_rack_ear",
+      "types": [
+        "rack"
+      ],
+      "text": "Bent rack ear",
+      "penalty": 20,
+      "weight": 5,
+      "fixable_by_fault": "server_ear_damaged"
+    },
+    {
+      "id": "dead_pixel",
+      "name": "Stuck/dead pixel",
+      "types": [
+        "monitor"
+      ],
+      "penalty": 22,
+      "weight": 8
+    },
+    {
+      "id": "backlight_bleed",
+      "name": "Backlight bleed in one corner",
+      "types": [
+        "monitor"
+      ],
+      "penalty": 10,
+      "weight": 10
+    },
+    {
+      "id": "scratched_bezel",
+      "name": "Scratched bezel",
+      "types": [
+        "monitor"
+      ],
+      "penalty": 7,
+      "weight": 22
+    },
+    {
+      "id": "screen_scratches",
+      "name": "Light scratches on the panel",
+      "types": [
+        "monitor"
+      ],
+      "penalty": 16,
+      "weight": 9
+    },
+    {
+      "id": "missing_stand",
+      "name": "No stand",
+      "types": [
+        "monitor"
+      ],
+      "penalty": 15,
+      "weight": 6,
+      "fixable_by_fault": "stand_missing"
+    },
+    {
+      "id": "ceiling_paint",
+      "name": "Paint specks from the ceiling",
+      "types": [
+        "wifi_ap"
+      ],
+      "penalty": 6,
+      "weight": 24
+    },
+    {
+      "id": "yellowed_plastic",
+      "name": "Yellowed plastic",
+      "types": [
+        "wifi_ap",
+        "dock"
+      ],
+      "penalty": 10,
+      "weight": 12
+    },
+    {
+      "id": "scratched_screen",
+      "name": "Scratches on the screen",
+      "types": [
+        "tablet",
+        "phone"
+      ],
+      "penalty": 12,
+      "weight": 24
+    },
+    {
+      "id": "scuffed_corners",
+      "name": "Scuffed corners",
+      "types": [
+        "tablet",
+        "phone"
+      ],
+      "penalty": 7,
+      "weight": 26
+    },
+    {
+      "id": "worn_case",
+      "name": "Worn rear case",
+      "types": [
+        "tablet",
+        "phone"
+      ],
+      "penalty": 9,
+      "weight": 16
+    }
   ],
-  "grade_thresholds": {"A": 90, "B": 74, "C": 50},
-  "grade_value_mult": {"A": 1.0, "B": 0.86, "C": 0.71, "D": 0.38, "S": 0.22}
+  "grade_thresholds": {
+    "A": 90,
+    "B": 74,
+    "C": 50
+  },
+  "grade_value_mult": {
+    "A": 1.0,
+    "B": 0.86,
+    "C": 0.71,
+    "D": 0.38,
+    "S": 0.22
+  }
 }

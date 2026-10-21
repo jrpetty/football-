@@ -9,8 +9,11 @@ static func a_grade_value(u: UnitData) -> float:
 		return 0.0
 	var v := float(m.get("refurb_value_a", 100))
 	v += float(Content.cpu(u.cpu_id).get("value_adj", 0)) - float(Content.cpu(m.get("ref_cpu", "")).get("value_adj", 0))
-	v += (u.ram_gb - int(m.get("ref_ram", 8))) / float(m.get("ram_step_gb", 8)) * 14.0
-	v += (u.storage_gb - int(m.get("ref_storage", 256))) / float(m.get("storage_step_gb", 256)) * 12.0
+	# Spec adjustments only for kit that has them (monitors/docks/network kit have no RAM; only tablets/phones roll storage).
+	if m.has("ref_ram"):
+		v += (u.ram_gb - int(m.ref_ram)) / float(m.get("ram_step_gb", 8)) * 14.0
+	if m.has("ref_storage"):
+		v += (u.storage_gb - int(m.ref_storage)) / float(m.get("storage_step_gb", 256)) * 12.0
 	return maxf(v, 25.0)
 
 
@@ -27,8 +30,8 @@ static func guide_price(model_id: String, grade: String = "B") -> int:
 	var u := UnitData.new()
 	u.model_id = model_id
 	u.cpu_id = m.get("ref_cpu", "")
-	u.ram_gb = int(m.get("ref_ram", 8))
-	u.storage_gb = int(m.get("ref_storage", 256))
+	u.ram_gb = int(m.get("ref_ram", 0))
+	u.storage_gb = int(m.get("ref_storage", 0))
 	return market_value(u, grade)
 
 
@@ -57,7 +60,7 @@ static func grade_for(u: UnitData) -> String:
 	elif score >= int(th.get("C", 50)):
 		g = "C"
 	# A worn battery caps the grade — honest grading protects reputation.
-	if u.is_laptop() and u.battery_pct < 80 and g == "A":
+	if u.has_battery() and u.battery_pct < 80 and g == "A":
 		g = "B"
 	return g
 
@@ -93,6 +96,8 @@ static func repair_part_for(u: UnitData, fault: Dictionary) -> String:
 			var pid: String = m.get(field, "")
 			return pid if pid != "" else fallback
 		"screen":
+			if String(m.get("screen_part", "")) != "":
+				return m.screen_part      # tablets/phones: their own digitiser + panel assembly
 			var size := float(m.get("screen_in", 14.0))
 			if size < 13.8:
 				return "lcd_133_fhd"

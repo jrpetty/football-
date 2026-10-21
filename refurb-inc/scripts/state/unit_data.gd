@@ -54,7 +54,7 @@ func model() -> Dictionary:
 
 
 func hw_type() -> String:
-	## laptop | desktop | server
+	## laptop | desktop | server | monitor | switch | wifi_ap | dock | tablet | phone
 	return model().get("type", "laptop")
 
 
@@ -62,16 +62,37 @@ func is_laptop() -> bool:
 	return hw_type() == "laptop"
 
 
+func has_battery() -> bool:
+	## Battery health is tested, caps the grade and can be replaced.
+	return hw_type() in ["laptop", "tablet", "phone"]
+
+
+func needs_wipe() -> bool:
+	## Monitors and docks hold no data: once tested (and repaired) they go straight to grading.
+	return not hw_type() in ["monitor", "dock"]
+
+
+func wipe_info() -> Dictionary:
+	## Phones, tablets and network kit get a secure wipe + reset ({title, lines} in os.json) instead of a PaneOS image.
+	return Content.os_info.get("wipe", {}).get(hw_type(), {})
+
+
 func is_large() -> bool:
 	return model().get("size", "small") == "large"
 
 
 func cpu_name() -> String:
+	if cpu_id == "":
+		return ""
 	return Content.cpu(cpu_id).get("name", cpu_id)
 
 
 func spec_line() -> String:
 	var m := model()
+	var fixed: String = m.get("spec", "")
+	if fixed != "":
+		# Peripherals, network and mobile kit: the spec line comes from data (+ the rolled storage on tablets/phones).
+		return fixed + (" · " + storage_text(storage_gb) if m.has("storage_options") else "")
 	var cpus := int(m.get("cpu_count", 1))
 	var drives := int(m.get("drive_count", 1))
 	var cpu := ("%d× %s" % [cpus, cpu_name()]) if cpus > 1 else cpu_name()
@@ -119,7 +140,7 @@ func cosmetic_text() -> String:
 		return "Pristine — no visible wear"
 	var parts: PackedStringArray = []
 	for c in cosmetic:
-		parts.append(Content.condition(c).get("text", c))
+		parts.append(Content.condition_text(c))
 	return ", ".join(parts)
 
 
@@ -145,8 +166,11 @@ func stage_text() -> String:
 	match stage():
 		STAGE_UNTESTED: return "Untested"
 		STAGE_FAULTY: return "Faulty — needs repair"
-		STAGE_TO_IMAGE: return "Passed — needs wipe & image"
-		STAGE_TO_GRADE: return "Imaged — ready to grade"
+		STAGE_TO_IMAGE: return "Passed — needs secure wipe & reset" if not wipe_info().is_empty() else "Passed — needs wipe & image"
+		STAGE_TO_GRADE:
+			if not needs_wipe():
+				return "Tested — ready to grade"
+			return "Wiped — ready to grade" if not wipe_info().is_empty() else "Imaged — ready to grade"
 		STAGE_GRADED: return "Grade %s — in stock" % grade_label(grade)
 		STAGE_LISTED: return "Grade %s — listed £%d" % [grade_label(grade), list_price]
 		STAGE_SOLD: return "SOLD — pack for order #%d" % order_id

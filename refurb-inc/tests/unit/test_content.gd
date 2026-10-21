@@ -23,9 +23,9 @@ func test_every_model_fault_has_a_resolvable_part() -> void:
 	for m in Content.models.values():
 		var u := UnitData.new()
 		u.model_id = m.id
-		u.cpu_id = m.ref_cpu
-		u.ram_gb = int(m.ref_ram)
-		u.storage_gb = int(m.ref_storage)
+		u.cpu_id = m.get("ref_cpu", "")
+		u.ram_gb = int(m.get("ref_ram", 0))
+		u.storage_gb = int(m.get("ref_storage", 0))
 		for f in Content.faults.values():
 			if f.get("requires_ram_slots", false) and int(m.get("ram_slots", 0)) == 0:
 				continue

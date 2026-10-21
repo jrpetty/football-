@@ -4,13 +4,140 @@
     "version": "12.4 Business",
     "vendor": "Pane Systems",
     "wipe_standard": "NIST 800-88 Purge (3 passes)",
-    "boot_text": ["PaneOS Deploy 12.4", "Loading drivers…", "Detecting storage…", "Secure erase: pass {p}/3", "Partitioning disk…", "Copying system image…", "Installing drivers…", "Applying OOBE profile…", "Done. Ready for first boot."]
+    "boot_text": [
+      "PaneOS Deploy 12.4",
+      "Loading drivers…",
+      "Detecting storage…",
+      "Secure erase: pass {p}/3",
+      "Partitioning disk…",
+      "Copying system image…",
+      "Installing drivers…",
+      "Applying OOBE profile…",
+      "Done. Ready for first boot."
+    ],
+    "wipe": {
+      "tablet": {
+        "title": "Secure wipe + factory reset",
+        "lines": [
+          "Erasing user data (crypto-erase)…",
+          "Removing accounts…",
+          "Reinstalling stock firmware…",
+          "Factory reset complete"
+        ]
+      },
+      "phone": {
+        "title": "Secure wipe + factory reset",
+        "lines": [
+          "Erasing user data (crypto-erase)…",
+          "Removing accounts…",
+          "Reinstalling stock firmware…",
+          "Factory reset complete"
+        ]
+      },
+      "switch": {
+        "title": "Config wipe + firmware update",
+        "lines": [
+          "Erasing startup config…",
+          "Clearing VLANs and users…",
+          "Flashing LWOS 6.6.0…",
+          "Factory defaults restored"
+        ]
+      },
+      "wifi_ap": {
+        "title": "Config wipe + firmware update",
+        "lines": [
+          "Leaving controller…",
+          "Erasing SSIDs and keys…",
+          "Flashing AIR 6.0…",
+          "Factory defaults restored"
+        ]
+      }
+    }
   },
   "diag": {
     "name": "DiagnostiKit Pro",
     "version": "7.2",
-    "stages": ["POST", "Hardware inventory", "Memory test (2 passes)", "Storage SMART + surface scan", "Battery calibration", "Display + keyboard", "Thermal stress", "Generating report"],
-    "stages_desktop": ["POST", "Hardware inventory", "Memory test (2 passes)", "Storage SMART + surface scan", "PSU rails + fans", "Ports + USB", "Thermal stress", "Generating report"],
-    "stages_server": ["POST + BMC handshake", "Hardware inventory", "Memory test (ECC, 2 passes)", "RAID controller + drive SMART", "PSU redundancy", "Fan modules", "Thermal stress", "Generating report"]
+    "stages": [
+      "POST",
+      "Hardware inventory",
+      "Memory test (2 passes)",
+      "Storage SMART + surface scan",
+      "Battery calibration",
+      "Display + keyboard",
+      "Thermal stress",
+      "Generating report"
+    ],
+    "stages_desktop": [
+      "POST",
+      "Hardware inventory",
+      "Memory test (2 passes)",
+      "Storage SMART + surface scan",
+      "PSU rails + fans",
+      "Ports + USB",
+      "Thermal stress",
+      "Generating report"
+    ],
+    "stages_server": [
+      "POST + BMC handshake",
+      "Hardware inventory",
+      "Memory test (ECC, 2 passes)",
+      "RAID controller + drive SMART",
+      "PSU redundancy",
+      "Fan modules",
+      "Thermal stress",
+      "Generating report"
+    ],
+    "stages_monitor": [
+      "Power + OSD",
+      "EDID + firmware",
+      "Panel: dead pixel sweep",
+      "Backlight uniformity",
+      "Inputs: HDMI / DP / USB-C",
+      "USB hub + speakers",
+      "Generating report"
+    ],
+    "stages_switch": [
+      "Boot + POST",
+      "Firmware + licence",
+      "Port loopback 1–24",
+      "PoE budget test",
+      "SFP+ uplinks",
+      "Fans + PSU",
+      "Generating report"
+    ],
+    "stages_wifi_ap": [
+      "PoE boot",
+      "Firmware",
+      "Radio 2.4 GHz",
+      "Radio 5 GHz",
+      "Throughput test",
+      "Generating report"
+    ],
+    "stages_dock": [
+      "Power delivery",
+      "Display outputs",
+      "USB ports",
+      "Ethernet",
+      "Audio jack",
+      "Generating report"
+    ],
+    "stages_tablet": [
+      "Boot + serial",
+      "Account lock check",
+      "Battery health",
+      "Touch grid",
+      "Cameras + sensors",
+      "Charging port",
+      "Generating report"
+    ],
+    "stages_phone": [
+      "Boot + IMEI",
+      "Account lock check",
+      "Battery health",
+      "Touch grid",
+      "Cameras + sensors",
+      "Charging port",
+      "Generating report"
+    ]
   }
 }

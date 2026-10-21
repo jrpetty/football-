@@ -16,7 +16,7 @@ func _station_ready() -> void:
 		station_type = "bench"
 	_vp = SubViewport.new()
 	_vp.size = Vector2i(640, 400)
-	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	_vp.transparent_bg = false
 	_vp.disable_3d = true
 	add_child(_vp)
@@ -40,6 +40,22 @@ func _station_ready() -> void:
 	_apply_monitor()
 
 
+var _redraw_t := 0.0
+
+
+func _screen_tick(delta: float) -> void:
+	## The screen is a 2D SubViewport: redraw it ~8×/s while it's running and near a camera, rarely otherwise.
+	_redraw_t -= delta
+	if _redraw_t > 0.0:
+		return
+	var cam := get_viewport().get_camera_3d()
+	var near := cam != null and cam.global_position.distance_to(global_position) < 14.0
+	var running: bool = not state().get("job", {}).is_empty()
+	_redraw_t = (0.12 if running else 0.6) if near else 2.0
+	if near or running:
+		_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+
+
 func _apply_monitor() -> void:
 	if model == null:
 		return
@@ -55,6 +71,7 @@ func _refresh() -> void:
 	var view := item_view(unit_it)
 	if view:
 		view.set_screen(_vp.get_texture())
+	_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	var running := not job.is_empty()
 	if running and not _was_running:
 		Sfx.play_at("post_beep", global_position + Vector3(0, 1, 0))
@@ -73,7 +90,8 @@ func _refresh() -> void:
 	super._refresh()
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	_screen_tick(delta)
 	if not state().get("job", {}).is_empty():
 		_update_status_label()
 

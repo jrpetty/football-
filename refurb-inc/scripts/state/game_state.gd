@@ -24,6 +24,9 @@ var last_flogit_hour: int = -1
 
 # --- company
 var company_name: String = "Refurb Inc."
+var staff: Dictionary = {}           # staff id -> {id, name, role, wage, look, hired, pos, yaw, spd, status} (AI workers)
+var candidates: Array = []           # this week's people you could hire
+signal goal_reached(goal_id: String, day: int)   # host: a campaign milestone was reached (for local records)
 var cash: int = 0
 var reputation: float = 0.0
 var ledger: Array = []               # [{ "m": minute, "amt": int, "cat": String, "desc": String }]
@@ -245,6 +248,16 @@ func add_reputation(delta: float) -> void:
 
 func bump_stat(key: String, amount: int = 1) -> void:
 	day_stats[key] = int(day_stats.get(key, 0)) + amount
+	# Lifetime counters (achievements, records) live in totals.lifetime, which is saved and replicated with the
+	# company entity; queue that for replication without firing a local `changed` signal on every bump.
+	var life: Dictionary = totals.get("lifetime", {})
+	life[key] = int(life.get(key, 0)) + amount
+	totals["lifetime"] = life
+	dirty["company|0"] = ["company", 0]
+
+
+func lifetime(key: String) -> int:
+	return int(totals.get("lifetime", {}).get(key, 0))
 
 
 # ================================================================= players / xp
@@ -321,6 +334,7 @@ func to_dict() -> Dictionary:
 		"orders": _int_keyed_out(orders), "schedule": schedule.duplicate(true),
 		"seller_state": seller_state.duplicate(true), "day_stats": day_stats.duplicate(true), "totals": totals.duplicate(true),
 		"stats": stats.duplicate(true),
+		"staff": _int_keyed_out(staff), "candidates": candidates.duplicate(true),
 	}
 
 
@@ -357,6 +371,10 @@ func load_dict(d: Dictionary) -> void:
 	seller_state = d.get("seller_state", {}).duplicate(true)
 	day_stats = d.get("day_stats", {}).duplicate(true)
 	totals = d.get("totals", {}).duplicate(true)
+	staff = {}
+	for k in d.get("staff", {}):
+		staff[int(k)] = d.staff[k].duplicate(true)
+	candidates = d.get("candidates", []).duplicate(true)
 	stats = BusinessStats.migrate(d.get("stats", {}))
 	dirty.clear()
 
@@ -412,6 +430,10 @@ func export_entity(kind: String, id: Variant) -> Variant:
 			return building_id
 		"schedule":
 			return schedule.duplicate(true)
+		"staff":
+			return staff[int(id)].duplicate(true) if staff.has(int(id)) else null
+		"candidates":
+			return candidates.duplicate(true)
 	return null
 
 
@@ -453,6 +475,13 @@ func import_entity(kind: String, id: Variant, v: Variant) -> void:
 		"player":
 			if v != null:
 				players[str(id)] = v
+		"staff":
+			if v == null:
+				staff.erase(int(id))
+			else:
+				staff[int(id)] = v
+		"candidates":
+			candidates = v
 		"company":
 			cash = int(v.cash)
 			reputation = float(v.reputation)

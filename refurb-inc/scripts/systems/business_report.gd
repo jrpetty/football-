@@ -29,7 +29,22 @@ static func compute(st: GameState) -> Dictionary:
 	r.goals = _goals(st, r)
 	r.timeline = _timeline(st)
 	r.insights = _insights(st, r)
+	var live := compute_live(st)
+	for k in LIVE_KEYS:
+		r[k] = live[k]
 	return r
+
+
+const LIVE_KEYS := ["automation", "energy", "staff", "lifetime"]
+const TYPE_NAMES := {"laptop": "Laptops", "desktop": "Desktops", "server": "Servers", "monitor": "Monitors",
+	"switch": "Switches", "wifi_ap": "Wi-Fi access points", "dock": "Docks", "tablet": "Tablets", "phone": "Phones"}
+
+
+static func compute_live(st: GameState) -> Dictionary:
+	## The fast-changing sections (machines, power, staff, counters): cheap enough to send every second or two
+	## while the Insights app is open on one of their pages.
+	return {"at": st.minute, "day": st.day_index(), "live": true,
+		"automation": _automation(st), "energy": _energy(st), "staff": _staff(st), "lifetime": _lifetime(st)}
 
 
 # ================================================================= maths helpers
@@ -133,6 +148,7 @@ static func _sales(st: GameState) -> Dictionary:
 	var by_model := {}
 	var by_channel := {}
 	var by_maker := {}
+	var by_type := {}
 	var hi: Dictionary = {}
 	var lo: Dictionary = {}
 	var best: Dictionary = {}
@@ -156,6 +172,7 @@ static func _sales(st: GameState) -> Dictionary:
 		_group(by_model, String(rec.model), rec)
 		_group(by_channel, String(rec.channel), rec)
 		_group(by_maker, String(rec.get("maker", "")), rec)
+		_group(by_type, _type_name(String(rec.get("type", Content.model(String(rec.get("model_id", ""))).get("type", "laptop")))), rec)
 	var out := {
 		"count": n, "revenue": int(t.price), "profit": int(t.profit),
 		"avg_price": _avg(t.price, n), "median_price": _median(prices), "avg_cost": _avg(t.cost, n),
@@ -167,10 +184,11 @@ static func _sales(st: GameState) -> Dictionary:
 		"avg_listed_days": _avg(_sum(listed_days), listed_days.size()),
 		"highest": _brief(hi), "lowest": _brief(lo), "best_profit": _brief(best),
 		"by_grade": _rows(by_grade), "by_model": _rows(by_model), "by_channel": _rows(by_channel), "by_maker": _rows(by_maker),
-		"recent": [], "per_day": _sold_per_day(st),
+		"by_type": _rows(by_type), "recent": [], "per_day": _sold_per_day(st),
 	}
 	out.by_model.sort_custom(func(a, b): return int(a.profit) > int(b.profit))
 	out.by_maker.sort_custom(func(a, b): return int(a.profit) > int(b.profit))
+	out.by_type.sort_custom(func(a, b): return int(a.revenue) > int(b.revenue))
 	out.by_grade.sort_custom(func(a, b): return GRADES.find(a.key) < GRADES.find(b.key))
 	for i in range(n - 1, maxi(n - 30, 0) - 1, -1):
 		out.recent.append(_brief(sales[i]))
@@ -188,9 +206,13 @@ static func _pricing(st: GameState) -> Dictionary:
 	var cpu := {}
 	for rec: Dictionary in st.stats.sales:
 		if rec.has("ram"):
-			BusinessReport._group(ram, "%dGB RAM" % int(rec.ram), rec)
-			BusinessReport._group(storage, ("%dGB" % int(rec.storage)) if int(rec.storage) < 1000 else ("%dTB" % int(int(rec.storage) / 1000.0)), rec)
-			BusinessReport._group(cpu, String(rec.cpu), rec)
+			# Monitors, docks and network kit have no RAM/CPU (and most no storage): leave them out of the spec tables.
+			if int(rec.ram) > 0:
+				BusinessReport._group(ram, "%dGB RAM" % int(rec.ram), rec)
+			if int(rec.storage) > 0:
+				BusinessReport._group(storage, ("%dGB" % int(rec.storage)) if int(rec.storage) < 1000 else ("%dTB" % int(int(rec.storage) / 1000.0)), rec)
+			if String(rec.cpu) != "":
+				BusinessReport._group(cpu, String(rec.cpu), rec)
 		var g := float(rec.get("guide", 0))
 		if g <= 0.0 or rec.get("grade", "") == "S":
 			continue
@@ -420,7 +442,7 @@ static func _quality(st: GameState) -> Dictionary:
 	models.sort_custom(func(a, b): return float(a.pass_pct) > float(b.pass_pct))
 	var cosmetic: Array = []
 	for c in s.cosmetic:
-		var name := "No visible wear" if c == "_pristine" else String(Content.condition(c).get("text", c))
+		var name := "No visible wear" if c == "_pristine" else Content.condition_text(c)
 		cosmetic.append({"key": name, "count": int(s.cosmetic[c]), "pct": _pct(int(s.cosmetic[c]), tested_total)})
 	cosmetic.sort_custom(func(a, b): return int(a.count) > int(b.count))
 	var battery: Array = []
@@ -446,6 +468,7 @@ static func _stock(st: GameState, r: Dictionary) -> Dictionary:
 	var ages: Array = []
 	var oldest: Array = []
 	var by_grade := {}
+	var by_type := {}
 	var total_cost := 0
 	var total_market := 0
 	for it: Item in st.units_in_stock():
@@ -454,6 +477,17 @@ static func _stock(st: GameState, r: Dictionary) -> Dictionary:
 		if not stages.has(stage):
 			continue
 		var market := Valuation.market_value(u)
+		if stage != UnitData.STAGE_SOLD:
+			var tn := _type_name(u.hw_type())
+			var tg: Dictionary = by_type.get(tn, {"key": tn, "count": 0, "cost": 0, "market": 0, "untested": 0, "ready": 0})
+			tg.count += 1
+			tg.cost += u.cost + u.parts_cost
+			tg.market += market
+			if stage == UnitData.STAGE_UNTESTED:
+				tg.untested += 1
+			elif stage in [UnitData.STAGE_GRADED, UnitData.STAGE_LISTED]:
+				tg.ready += 1
+			by_type[tn] = tg
 		var g: Dictionary = stages[stage]
 		var age := BusinessStats.working_days(u.received, st.minute) if u.received >= 0.0 else 0.0
 		g.count += 1
@@ -527,6 +561,7 @@ static func _stock(st: GameState, r: Dictionary) -> Dictionary:
 	return {
 		"units": units, "cost_value": total_cost, "market_value": total_market,
 		"potential_profit": total_market - total_cost, "stages": stage_rows, "by_grade": grade_rows,
+		"by_type": by_type.values(),
 		"avg_age_days": _avg(_sum(ages), ages.size()), "oldest": oldest.slice(0, 8),
 		"listed": listed.slice(0, 40), "listed_count": n_listed, "listed_avg_cost": _avg(l.cost, n_listed),
 		"listed_avg_price": _avg(l.price, n_listed), "listed_avg_guide": _avg(l.guide, n_listed),
@@ -819,6 +854,7 @@ static func _people(st: GameState, r: Dictionary) -> Dictionary:
 		var hrs := float(p.minutes) / 60.0
 		minutes += float(p.minutes)
 		var row := {"key": key, "name": p.name, "hours": hrs, "days": int(p.days_worked),
+			"staff": st.players.get(key, {}).get("staff", false),
 			"avg_hours_day": _avg(hrs, int(p.days_worked)), "xp": xp, "top_skill": String(top).capitalize()}
 		var work := 0
 		for a in BusinessStats.ACTS:
@@ -842,13 +878,18 @@ static func _people(st: GameState, r: Dictionary) -> Dictionary:
 		person_days += int(row.days)
 	var revenue := float(r.sales.revenue)
 	var net := float(r.finance.net)
+	var wage_bill := 0
+	for d in st.staff.values():
+		wage_bill += int(d.get("wage", 0))
 	return {
 		"team": rows, "team_size": rows.size(), "hours": hours, "awards": awards,
 		"avg_hours_person": _avg(hours, rows.size()), "avg_hours_day": _avg(hours, person_days),
 		"revenue_per_hour": revenue / hours if hours >= 1.0 else 0.0,
 		"profit_per_hour": net / hours if hours >= 1.0 else 0.0,
 		"units_per_hour": float(r.sales.count) / hours if hours >= 1.0 else 0.0,
-		"staff": 0, "wage_bill_weekly": 0, "avg_wage_weekly": 0.0, "avg_wage_hourly": 0.0, "labour_per_unit": 0.0,
+		"staff": st.staff.size(), "wage_bill_weekly": wage_bill, "avg_wage_weekly": _avg(wage_bill, st.staff.size()),
+		"avg_wage_hourly": _avg(wage_bill, st.staff.size()) / 40.0,
+		"labour_per_unit": float(r.finance.wages) / float(r.sales.count) if int(r.sales.count) > 0 else 0.0,
 		"wages_paid": int(r.finance.wages),
 	}
 
@@ -1087,3 +1128,230 @@ static func _insights(st: GameState, r: Dictionary) -> Array:
 
 static func _ins(tone: String, title: String, text: String) -> Dictionary:
 	return {"tone": tone, "title": title, "text": text}
+
+
+# ================================================================= live: automation, energy, staff, counters
+
+static func _type_name(t: String) -> String:
+	return TYPE_NAMES.get(t, t.capitalize())
+
+
+const AUTO_KIND_NAMES := {"belt_in": "Items put on belts", "scan": "Booked in by the scanner", "sort": "Routed by sorters",
+	"arm": "Moved by robot arms", "rack_test": "Tested on network racks", "rack_image": "Wiped on network racks",
+	"robot_repair": "Fixed by repair robots", "robot_pack": "Packed by robots", "tower_in": "Stored in stock towers",
+	"tower_out": "Dispatched from stock towers", "recycle": "Recycled", "grader": "Graded by the vision grader",
+	"split": "Split between belts", "merge": "Merged onto a line", "gate": "Held at a stop gate",
+	"hatch_in": "Stopped at a people's hatch", "hatch_send": "Sent on from a people's hatch"}
+
+
+static func _automation(st: GameState) -> Dictionary:
+	var a: Dictionary = st.stats.get("auto", {})
+	var kinds: Dictionary = a.get("kinds", {})
+	var today: Dictionary = a.get("today", {})
+	var per_fix: Dictionary = a.get("fixtures", {})
+	# Items on each belt and in each store right now (one pass over the items).
+	var on_belt := {}
+	var in_slot := {}
+	var moving := 0
+	var on_belts := 0
+	for it: Item in st.items.values():
+		var t := str(it.loc.get("t", ""))
+		if t == "belt":
+			var b := str(it.loc.get("belt", ""))
+			on_belt[b] = int(on_belt.get(b, 0)) + 1
+			on_belts += 1
+			if float(it.loc.get("v", 0.0)) > 0.0:
+				moving += 1
+		elif t == "slot":
+			var host := str(it.loc.get("slot", "")).get_slice(":", 0)
+			in_slot[host] = int(in_slot.get(host, 0)) + 1
+	var machines: Array = []
+	var by_type := {}
+	var belt_m := 0.0
+	var busy := 0
+	var total := 0
+	var queue_max := 0
+	var queue_at := ""
+	for fid in st.fixtures:
+		var f: Dictionary = st.fixtures[fid]
+		var auto := Automation.def_of(str(f.type))
+		if auto.is_empty():
+			continue
+		var def := Content.fixture(str(f.type))
+		var kind := str(auto.get("kind", ""))
+		var name := str(def.get("name", f.type))
+		var sd: Dictionary = st.stations.get(fid, {})
+		var status := ""
+		var working := false
+		match kind:
+			"belt":
+				var n := int(on_belt.get(fid, 0))
+				status = ("%d item%s" % [n, "" if n == 1 else "s"]) if n > 0 else "Empty"
+				working = n > 0
+				if f.get("placed", false):
+					belt_m += float(Automation.belt_local(Automation.auto_for(f)).get("length", 0.0))
+				if n > queue_max:
+					queue_max = n
+					queue_at = str(f.get("label", name))
+			"rack":
+				var bays := int(auto.get("bays", 6))
+				var jobs := int(sd.get("jobs", {}).size())
+				status = "%d of %d bays busy" % [jobs, bays]
+				working = jobs > 0
+			"store":
+				var stored := int(in_slot.get(fid, 0))
+				status = "%d of %d trays full" % [stored, Automation.TOWER_SLOTS]
+				working = stored > 0
+			_:
+				working = not sd.get("job", {}).is_empty() or not sd.get("jobs", {}).is_empty()
+				status = "Working" if working else "Waiting for work"
+		if not f.get("placed", false):
+			status = "In storage (not placed)"
+			working = false
+		var moves := 0
+		var top := ""
+		var top_n := 0
+		var fk: Dictionary = per_fix.get(fid, {})
+		for k in fk:
+			moves += int(fk[k])
+			if int(fk[k]) > top_n:
+				top_n = int(fk[k])
+				top = str(k)
+		machines.append({"id": fid, "name": str(f.get("label", name)), "type": name, "kind": kind, "status": status,
+			"working": working, "moves": moves, "top": AUTO_KIND_NAMES.get(top, top.capitalize()) if top != "" else "—",
+			"placed": f.get("placed", false)})
+		var tg: Dictionary = by_type.get(name, {"key": name, "count": 0, "working": 0, "moves": 0})
+		tg.count += 1
+		tg.working += 1 if working else 0
+		tg.moves += moves
+		by_type[name] = tg
+		if f.get("placed", false) and kind != "belt":
+			total += 1
+			busy += 1 if working else 0
+	machines.sort_custom(func(x, y): return int(x.moves) > int(y.moves))
+	var kind_rows: Array = []
+	for k in kinds:
+		kind_rows.append({"key": k, "name": AUTO_KIND_NAMES.get(k, str(k).capitalize()), "total": int(kinds[k]), "today": int(today.get(k, 0))})
+	kind_rows.sort_custom(func(x, y): return int(x.total) > int(y.total))
+	# Machine moves per working hour (the last 24 hours worked).
+	var hk: Array = a.get("hours", {}).keys()
+	hk.sort_custom(func(x, y): return BusinessStats._hour_key_num(x) < BusinessStats._hour_key_num(y))
+	hk = hk.slice(maxi(hk.size() - 24, 0))
+	var series: Array = []
+	var labels: Array = []
+	for k in hk:
+		series.append(int(a.hours[k]))
+		var parts := str(k).split("_")
+		labels.append("D%d %02d:00" % [int(parts[0]) + 1, int(parts[1])])
+	var all_moves := 0
+	var today_moves := 0
+	for k in kinds:
+		all_moves += int(kinds[k])
+	for k in today:
+		today_moves += int(today[k])
+	var hours_open := clampf((st.minute - st.day_start_minute(st.day_index())) / 60.0, 0.0, 8.0)
+	var by_type_rows: Array = by_type.values()
+	by_type_rows.sort_custom(func(x, y): return int(x.moves) > int(y.moves))
+	return {
+		"machines": machines, "by_type": by_type_rows, "kinds": kind_rows,
+		"series": series, "labels": labels, "moves_total": all_moves, "moves_today": today_moves,
+		"moves_per_hour_today": today_moves / hours_open if hours_open >= 0.25 else 0.0,
+		"on_belts": on_belts, "moving": moving, "queued": on_belts - moving, "belt_m": belt_m,
+		"machines_busy": busy, "machines_total": total, "longest_queue": queue_max, "longest_queue_at": queue_at,
+	}
+
+
+static func _energy(st: GameState) -> Dictionary:
+	var rate := float(Content.econ("electricity_per_kwh", 0.28))
+	var bd := Sim.power_breakdown(st)
+	var rows: Array = []
+	var kw := 0.0
+	for k in bd:
+		kw += float(bd[k].kw)
+	for k in bd:
+		rows.append({"name": k, "count": int(bd[k].count), "active": int(bd[k].active), "kw": float(bd[k].kw),
+			"share": _pct(float(bd[k].kw), kw), "cost_hour": float(bd[k].kw) * rate})
+	rows.sort_custom(func(x, y): return float(x.kw) > float(y.kw))
+	var kwh_today := float(st.day_stats.get("kwh", 0.0))
+	var en: Dictionary = st.stats.get("energy", {})
+	var days: Array = _recent_days(st, 14)
+	var series_kwh: Array = []
+	var series_cost: Array = []
+	var series_days: Array = []
+	for d: Dictionary in days:
+		series_kwh.append(float(d.get("kwh", 0.0)))
+		series_cost.append(int(d.get("power_cost", 0)))
+		series_days.append("D%d" % (int(d.day) + 1))
+	var shipped := int(st.totals.get("lifetime", {}).get("shipped", 0))
+	var all_kwh := float(st.totals.get("kwh", 0.0)) + kwh_today
+	var all_cost := int(en.get("cost", 0)) + int(round(kwh_today * rate))
+	var avg_day := _avg(_sum(series_kwh), series_kwh.size())
+	var floor_m2 := float(st.building().get("floor_m2", 40))
+	var cap := float(st.building().get("power_kw", 0.0))
+	return {
+		"kw_now": kw, "rows": rows, "rate": rate, "cost_hour": kw * rate, "cost_day_at_this_rate": kw * rate * 8.0,
+		"kwh_today": kwh_today, "cost_today": kwh_today * rate, "kwh_total": all_kwh, "cost_total": all_cost,
+		"avg_kwh_day": avg_day, "avg_cost_day": avg_day * rate, "series_kwh": series_kwh, "series_cost": series_cost,
+		"series_days": series_days, "per_unit": float(all_cost) / shipped if shipped > 0 else 0.0,
+		"w_per_m2": kw * 1000.0 / floor_m2, "capacity_kw": cap, "capacity_pct": _pct(kw, cap) if cap > 0.0 else 0.0,
+	}
+
+
+static func _staff(st: GameState) -> Dictionary:
+	var rows: Array = []
+	var wages := 0
+	var value := 0
+	for sid in st.staff:
+		var d: Dictionary = st.staff[sid]
+		var key := Sim.player_key(StaffView.peer_of(int(sid)))
+		var role := str(d.get("role", ""))
+		var main := Staff.main_skill(role)
+		var lvl := st.skill_level(key, main)
+		var levels := {}
+		for sk: Dictionary in Content.skill_defs():
+			levels[sk.id] = st.skill_level(key, sk.id)
+		var p: Dictionary = st.stats.get("people", {}).get(key, {})
+		var acts: Dictionary = p.get("acts", {})
+		var jobs := 0
+		for k in ["hauled", "tested", "repaired", "imaged", "graded", "listed", "packed"]:
+			jobs += int(acts.get(k, 0))
+		var xp := 0
+		for v in st.players.get(key, {}).get("xp", {}).values():
+			xp += int(v)
+		var val := Staff.value_per_week(role, lvl)
+		wages += int(d.get("wage", 0))
+		value += val
+		rows.append({"id": int(sid), "name": str(d.get("name", "")), "role": StaffView._role_name(role), "main": main.capitalize(),
+			"level": lvl, "speed": pow(st.skill_speed(key, main), 1.5), "status": str(d.get("status", "")),
+			"wage": int(d.get("wage", 0)), "value": val, "days": st.day_index() - int(d.get("hired", st.day_index())),
+			"jobs": jobs, "hours": float(p.get("minutes", 0.0)) / 60.0, "xp": xp, "levels": levels,
+			"acts": acts.duplicate(), "units_day": Staff.units_per_day(role, lvl)})
+	rows.sort_custom(func(x, y): return int(x.value) - int(x.wage) > int(y.value) - int(y.wage))
+	var working := rows.filter(func(x): return str(x.status).begins_with("Working")).size()
+	return {"rows": rows, "count": rows.size(), "wage_bill": wages, "value_week": value, "net_week": value - wages,
+		"working_now": working, "wages_paid": int(st.stats.get("money", {}).get("wages", 0)),
+		"candidates": st.candidates.size()}
+
+
+const COUNTER_NAMES := {"tested": "Units tested", "repaired": "Repairs done", "imaged": "Units wiped & imaged",
+	"graded": "Units graded", "sold": "Units sold", "shipped": "Parcels shipped", "bought": "Units bought",
+	"booked": "Units booked in", "stored": "Units put into stock", "recycled": "Units recycled", "late": "Late orders",
+	"missed": "Missed orders", "revenue": "Revenue (£)", "brews": "Cups of tea brewed", "dispensed": "Tea poured"}
+const TEA_WORDS := ["tea", "brew", "mug", "dispens", "cup", "kettle", "biscuit"]
+
+
+static func _lifetime(st: GameState) -> Dictionary:
+	var life: Dictionary = st.totals.get("lifetime", {})
+	var rows: Array = []
+	var tea: Array = []
+	for k in life:
+		var v: Variant = st.day_stats.get(k, 0)
+		var row := {"key": k, "name": COUNTER_NAMES.get(k, str(k).replace("_", " ").capitalize()), "total": int(life[k]),
+			"today": int(v) if (v is int or v is float) else 0}
+		rows.append(row)
+		if TEA_WORDS.any(func(w): return w in str(k)):
+			tea.append(row)
+	rows.sort_custom(func(x, y): return str(x.name) < str(y.name))
+	return {"rows": rows, "tea": tea, "days_worked": int(st.totals.get("days_worked", 0)),
+		"goals_reached": Campaign.reached(st).size(), "goals_total": Campaign.milestones().size() + 1,
+		"kwh": float(st.totals.get("kwh", 0.0))}

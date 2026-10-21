@@ -19,6 +19,7 @@ var orders_box: VBoxContainer
 var hint_label: Label
 var fps_label: Label
 var objective_label: Label
+var goal_label: Label
 var _obj_t := 0.0
 
 var _hold_p := 0.0
@@ -95,6 +96,10 @@ func _ready() -> void:
 	objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	objective_label.custom_minimum_size.x = 250
 	sv.add_child(objective_label)
+	goal_label = UiStyle.label("", 13, UiStyle.MUTED)
+	goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	goal_label.custom_minimum_size.x = 250
+	sv.add_child(goal_label)
 
 	# Orders strip under status
 	orders_box = VBoxContainer.new()
@@ -124,6 +129,8 @@ func _ready() -> void:
 
 	Game.toast.connect(show_toast)
 	Game.state_reset.connect(_on_reset)
+	_build_achievement_layer()
+	Game.achievement_unlocked.connect(show_achievement)
 	_on_reset()
 
 
@@ -163,6 +170,12 @@ func _process(delta: float) -> void:
 	if _obj_t <= 0.0:
 		_obj_t = 0.5
 		objective_label.text = "▸ " + next_objective()
+		var nm := Campaign.next_milestone(Game.state)
+		if not nm.is_empty():
+			var pr := Campaign.progress(Game.state, nm)
+			goal_label.text = "🏆 Next goal: %s (%d%%)" % [str(nm.name), int(clampf(float(pr[0]) / maxf(float(pr[1]), 0.001), 0.0, 1.0) * 100.0)]
+		else:
+			goal_label.text = "🏆 Every milestone reached"
 	fps_label.visible = false     # the always-on PerfOverlay autoload shows FPS now
 	visible = not (_player and is_instance_valid(_player) and _player.ui_mode and not _keep_visible_in_ui)
 
@@ -228,7 +241,7 @@ func _draw_crosshair() -> void:
 
 func _refresh_status() -> void:
 	var s := Game.state
-	day_label.text = "%s · Day %d" % [s.weekday_name().substr(0, 3), s.day_index() + 1]
+	day_label.text = "%s · Day %d" % [s.weekday_name().substr(0, 3), Campaign.day_number(s)]
 	cash_label.text = GameState.format_money(s.cash)
 	cash_label.add_theme_color_override("font_color", UiStyle.money_colour(s.cash))
 	if s.cash != _last_cash:
@@ -308,6 +321,170 @@ func show_toast(text: String, level: String = "info") -> void:
 		"good": Sfx.play_ui("notify_good", -8.0)
 		"bad": Sfx.play_ui("notify_bad", -6.0)
 		"warn": Sfx.play_ui("notify_warn", -10.0)
+
+
+# ================================================================= achievement unlocks
+
+const ACH_GOLD := Color(0.98, 0.78, 0.26)
+const ACH_HOLD_S := 5.2
+
+var _ach_root: Control
+var _ach_queue: Array = []
+var _ach_busy := false
+
+
+func _build_achievement_layer() -> void:
+	# Its own canvas layer above the day summary, pause menu and office PC: the HUD hides in UI mode, unlocks don't.
+	var layer := CanvasLayer.new()
+	layer.layer = 40
+	add_child(layer)
+	_ach_root = Control.new()
+	_ach_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_ach_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ach_root.theme = UiStyle.theme()
+	layer.add_child(_ach_root)
+
+
+func show_achievement(def: Dictionary) -> void:
+	_ach_queue.append(def)
+	if not _ach_busy:
+		_next_achievement()
+
+
+func _next_achievement() -> void:
+	if _ach_queue.is_empty() or not is_inside_tree():
+		_ach_busy = false
+		return
+	_ach_busy = true
+	var def: Dictionary = _ach_queue.pop_front()
+	var extra := 0
+	if _ach_queue.size() >= 3:
+		# A flood (an old save catching up): show this one and roll the rest into its footer.
+		extra = _ach_queue.size()
+		_ach_queue.clear()
+	var parts := _achievement_card(def, extra)
+	var card: PanelContainer = parts[0]
+	var medal: Control = parts[1]
+	var sparks: CPUParticles2D = parts[2]
+	var shine: _AchShine = parts[3]
+	_ach_root.add_child(card)
+	var sz := card.get_combined_minimum_size()
+	var vw := get_viewport().get_visible_rect().size.x
+	card.size = sz
+	card.position = Vector2((vw - sz.x) * 0.5, -sz.y - 40.0)
+	card.modulate.a = 0.0
+	medal.pivot_offset = medal.custom_minimum_size * 0.5
+	medal.scale = Vector2(0.2, 0.2)
+	Sfx.play_ui("achievement", -3.0)
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(card, "position:y", 30.0, 0.55).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(card, "modulate:a", 1.0, 0.25)
+	tw.tween_property(medal, "scale", Vector2.ONE, 0.9).set_delay(0.18).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	tw.tween_callback(func(): sparks.emitting = true).set_delay(0.3)
+	tw.tween_method(shine.set_t, 0.0, 1.0, 0.85).set_delay(0.5).set_trans(Tween.TRANS_SINE)
+	tw.tween_method(shine.set_t, 0.0, 1.0, 0.85).set_delay(2.6).set_trans(Tween.TRANS_SINE)
+	tw.chain().tween_interval(ACH_HOLD_S - 2.6)
+	tw.chain().tween_property(card, "position:y", -sz.y - 40.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(card, "modulate:a", 0.0, 0.4)
+	tw.chain().tween_callback(card.queue_free)
+	tw.chain().tween_interval(0.25)
+	tw.chain().tween_callback(_next_achievement)
+
+
+func _achievement_card(def: Dictionary, extra: int) -> Array:
+	## Gold-trimmed card: medallion with the glyph, "ACHIEVEMENT UNLOCKED", name, description, progress footer.
+	var card := PanelContainer.new()
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.1, 0.085, 0.05, 0.96)
+	sb.border_color = ACH_GOLD
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(16)
+	sb.shadow_color = Color(ACH_GOLD.r, ACH_GOLD.g, ACH_GOLD.b, 0.32)
+	sb.shadow_size = 18
+	sb.content_margin_left = 18
+	sb.content_margin_right = 26
+	sb.content_margin_top = 14
+	sb.content_margin_bottom = 14
+	sb.anti_aliasing = true
+	card.add_theme_stylebox_override("panel", sb)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 18)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(h)
+	var medal := PanelContainer.new()
+	var msb := StyleBoxFlat.new()
+	msb.bg_color = Color(0.32, 0.22, 0.05)
+	msb.border_color = ACH_GOLD
+	msb.set_border_width_all(3)
+	msb.set_corner_radius_all(40)
+	msb.anti_aliasing = true
+	medal.add_theme_stylebox_override("panel", msb)
+	medal.custom_minimum_size = Vector2(80, 80)
+	medal.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var glyph := UiStyle.label(str(def.get("icon", "★")), 40, Color.WHITE)
+	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	medal.add_child(glyph)
+	var sparks := CPUParticles2D.new()
+	sparks.position = Vector2(40, 40)
+	sparks.emitting = false
+	sparks.one_shot = true
+	sparks.amount = 34
+	sparks.lifetime = 0.9
+	sparks.explosiveness = 0.95
+	sparks.direction = Vector2(0, -1)
+	sparks.spread = 180.0
+	sparks.gravity = Vector2(0, 40)
+	sparks.initial_velocity_min = 55.0
+	sparks.initial_velocity_max = 125.0
+	sparks.damping_min = 40.0
+	sparks.damping_max = 80.0
+	sparks.scale_amount_min = 2.0
+	sparks.scale_amount_max = 4.0
+	var ramp := Gradient.new()
+	ramp.set_color(0, Color(1.0, 0.95, 0.7, 1.0))
+	ramp.set_color(1, Color(ACH_GOLD.r, ACH_GOLD.g, ACH_GOLD.b, 0.0))
+	sparks.color_ramp = ramp
+	medal.add_child(sparks)
+	h.add_child(medal)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 1)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(v)
+	var top := UiStyle.label("ACHIEVEMENT UNLOCKED", 13, ACH_GOLD)
+	top.add_theme_constant_override("outline_size", 0)
+	v.add_child(top)
+	v.add_child(UiStyle.label(str(def.get("name", "")), 27, Color.WHITE))
+	var desc := UiStyle.label(str(def.get("desc", "")), 15, UiStyle.MUTED)
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.custom_minimum_size.x = 400
+	v.add_child(desc)
+	var foot := "%s  ·  %d of %d unlocked" % [str(def.get("group", "")), Game.achievements.unlocked_count(), Achievements.defs().size()]
+	if extra > 0:
+		foot += "  ·  +%d more — see the Achievements app" % extra
+	v.add_child(UiStyle.label(foot, 13, ACH_GOLD.darkened(0.2)))
+	var shine := _AchShine.new()
+	shine.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	shine.clip_contents = true
+	card.add_child(shine)
+	return [card, medal, sparks, shine]
+
+
+class _AchShine extends Control:
+	## A light sweep across the card.
+	var t := -1.0
+
+	func set_t(v: float) -> void:
+		t = v
+		queue_redraw()
+
+	func _draw() -> void:
+		if t <= 0.0 or t >= 1.0:
+			return
+		var x := lerpf(-90.0, size.x + 90.0, t)
+		draw_colored_polygon(PackedVector2Array([Vector2(x, 0), Vector2(x + 44, 0), Vector2(x + 4, size.y), Vector2(x - 40, size.y)]),
+			Color(1.0, 0.95, 0.75, 0.13))
 
 
 static func next_objective() -> String:

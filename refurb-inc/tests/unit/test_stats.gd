@@ -168,3 +168,50 @@ func _job_minutes(sim: Sim, sid: String) -> float:
 	if job.is_empty():
 		return 1.0
 	return float(job.start) + float(job.dur) - sim.state.minute
+
+
+func test_live_sections_track_machines_power_staff_and_counters() -> void:
+	var sim := fresh_sim(57)
+	var s := sim.state
+	# A machine on site: an arm placed in the garage counts as automation and draws power.
+	s.cash += 50000
+	_cmd(sim, "buy_fixture", {"type": "robot_arm"})
+	var fid := ""
+	for k in s.fixtures:
+		if str(s.fixtures[k].type) == "robot_arm":
+			fid = k
+	s.fixtures[fid].placed = true
+	BusinessStats.on_auto(s, "arm", fid, 3)
+	BusinessStats.on_auto(s, "scan", "", 2)
+	var live := BusinessReport.compute_live(s)
+	check(live.live, "flagged as a live report")
+	for k in BusinessReport.LIVE_KEYS:
+		check(live.has(k), "live report has %s" % k)
+	var a: Dictionary = live.automation
+	eq(int(a.moves_today), 5, "today's machine moves")
+	eq(int(a.moves_total), 5, "all-time machine moves")
+	check(a.machines.any(func(m): return m.id == fid and int(m.moves) == 3), "the arm's own count")
+	check(not a.series.is_empty(), "per-hour series")
+	# Power: lighting plus the arm on standby.
+	var e: Dictionary = live.energy
+	check(float(e.kw_now) > 0.0 and e.rows.any(func(r): return str(r.name) == "Lighting"), "power breakdown has lighting")
+	check(e.rows.any(func(r): return int(r.count) == 1 and str(r.name) == str(Content.fixture("robot_arm").name)), "and the arm")
+	near(float(e.kw_now), sim.power_draw_kw(), 0.0001, "breakdown adds up to the meter")
+	# Staff and counters.
+	s.reputation = 100
+	var c: Dictionary = s.candidates[0]
+	_cmd(sim, "hire", {"candidate": int(c.id)})
+	s.bump_stat("brews", 2)
+	live = BusinessReport.compute_live(s)
+	eq(int(live.staff.count), 1, "staff on the live page")
+	eq(int(live.staff.wage_bill), int(c.wage), "their wage")
+	check(live.lifetime.tea.any(func(x): return x.key == "brews" and int(x.total) >= 2), "tea counted")
+	# Close of play: today's machine counts roll into the day record, energy into the all-time total.
+	sim.advance_minutes(GameState.MIN_PER_DAY)
+	var last: Dictionary = s.stats.days[-1]
+	eq(int(last.auto.get("arm", 0)), 3, "day record keeps the machine counts")
+	check(last.has("kwh") and float(last.kwh) > 0.0, "and the day's kWh")
+	eq(int(BusinessReport.compute_live(s).automation.moves_today), 0, "today resets")
+	# The full report carries the live sections too, plus kit-type breakdowns.
+	var full := BusinessStats.compute(s)
+	check(full.has("automation") and full.has("energy") and full.stock.has("by_type") and full.sales.has("by_type"))

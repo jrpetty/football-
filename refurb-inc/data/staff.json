@@ -1,0 +1,156 @@
+{
+  "_comment": "AI staff. Candidates refresh every Monday; each has 1–10 in every skill (skills.json ids) and a weekly wage that follows their best skills. Roles decide what they do; anyone can do any job, the right person in the right role is quick. Staff act through the same host commands as players (as virtual peers), so every rule, part and timer applies to them too. Pay = base + their best skills^1.75 (so a level-9 specialist costs several times a level-3 starter); it's reviewed every Friday as they level up by doing the work.",
+  "candidates_per_week": 6,
+  "wage_base": 180,
+  "wage_per_point": 6.0,
+  "hire_rep_min": {
+    "buyer": 10,
+    "salesperson": 15
+  },
+  "walk_speed": 1.25,
+  "roles": [
+    {
+      "id": "all_rounder",
+      "name": "All-rounder",
+      "desc": "Does whatever's most urgent: ships, packs, tests, repairs, grades, hauls.",
+      "skills": [
+        "hauling",
+        "testing",
+        "repair",
+        "grading",
+        "packing"
+      ]
+    },
+    {
+      "id": "hauler",
+      "name": "Hauler",
+      "desc": "Brings kit in off pallets, shelves it, unboxes parcels, takes parcels to OUTGOING.",
+      "skills": [
+        "hauling"
+      ]
+    },
+    {
+      "id": "tester",
+      "name": "Test technician",
+      "desc": "Runs the test benches: loads units, swaps USBs between diagnostics and imaging, clears finished units.",
+      "skills": [
+        "testing",
+        "imaging"
+      ]
+    },
+    {
+      "id": "repair_tech",
+      "name": "Repair technician",
+      "desc": "Works the repair bench within their repair level, using parts from the bins (orders missing parts).",
+      "skills": [
+        "repair"
+      ]
+    },
+    {
+      "id": "grader",
+      "name": "Grader & lister",
+      "desc": "Grades imaged units at the grading desk, prices them at the guide and lists them on Flogit.",
+      "skills": [
+        "grading"
+      ]
+    },
+    {
+      "id": "packer",
+      "name": "Packer",
+      "desc": "Packs sold orders at the packing table and puts parcels on the OUTGOING shelf.",
+      "skills": [
+        "packing"
+      ]
+    },
+    {
+      "id": "buyer",
+      "name": "Buyer (office)",
+      "desc": "Sits at the office PC and buys good-value lots when the pipeline runs low, within a budget.",
+      "skills": [
+        "purchasing"
+      ]
+    },
+    {
+      "id": "salesperson",
+      "name": "Salesperson (office)",
+      "desc": "Works the phones and listings: more Flogit buyers while they're in.",
+      "skills": [
+        "sales"
+      ]
+    }
+  ],
+  "first_names": [
+    "Aisha",
+    "Ben",
+    "Chloe",
+    "Dev",
+    "Ellie",
+    "Femi",
+    "Gemma",
+    "Harry",
+    "Imran",
+    "Jade",
+    "Kieran",
+    "Leah",
+    "Marcus",
+    "Niamh",
+    "Owen",
+    "Priya",
+    "Quinn",
+    "Rhys",
+    "Sophie",
+    "Tom",
+    "Usman",
+    "Vicky",
+    "Will",
+    "Yasmin",
+    "Zak",
+    "Callum",
+    "Dani",
+    "Ffion",
+    "Gareth",
+    "Hollie",
+    "Jas",
+    "Kev",
+    "Lauren",
+    "Mo",
+    "Nat",
+    "Ollie",
+    "Rach",
+    "Sam",
+    "Tasha",
+    "Wes"
+  ],
+  "last_names": [
+    "Ahmed",
+    "Brennan",
+    "Clarke",
+    "Davies",
+    "Evans",
+    "Fraser",
+    "Green",
+    "Hughes",
+    "Iqbal",
+    "Jones",
+    "Khan",
+    "Lewis",
+    "Morgan",
+    "Nash",
+    "O'Connor",
+    "Patel",
+    "Quinlan",
+    "Roberts",
+    "Singh",
+    "Taylor",
+    "Usher",
+    "Vaughan",
+    "Walsh",
+    "Young",
+    "Okafor",
+    "Kowalski",
+    "MacLeod",
+    "Pritchard",
+    "Osei",
+    "Hamid"
+  ]
+}

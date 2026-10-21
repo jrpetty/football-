@@ -6,6 +6,8 @@ signal start_requested(mode: String, arg: String)   # "new" | "continue" | "host
 
 var _panel: PanelContainer
 var _settings: SettingsPanel
+var _character: CharacterPanel
+var _achievements: AchievementsPanel
 var _join_box: HBoxContainer
 var _status: Label
 
@@ -57,6 +59,16 @@ func _ready() -> void:
 	go.text = "Join"
 	go.pressed.connect(func(): start_requested.emit("join", ip.text))
 	_join_box.add_child(go)
+	_btn(bv, "Character", func():
+		_panel.visible = false
+		_character.visible = true)
+	var have := Game.achievements.unlocked_count()
+	var ach_label := "Achievements"
+	if have > 0:
+		ach_label = "Achievements  (%d/%d)" % [have, Achievements.defs().size()]
+	_btn(bv, ach_label, func():
+		_panel.visible = false
+		_achievements.visible = true)
 	_btn(bv, "Settings", func():
 		_panel.visible = false
 		_settings.visible = true)
@@ -69,6 +81,18 @@ func _ready() -> void:
 		_settings.visible = false
 		_panel.visible = true)
 	v.add_child(_settings)
+	_character = CharacterPanel.new()
+	_character.visible = false
+	_character.closed.connect(func():
+		_character.visible = false
+		_panel.visible = true)
+	v.add_child(_character)
+	_achievements = AchievementsPanel.new()
+	_achievements.visible = false
+	_achievements.closed.connect(func():
+		_achievements.visible = false
+		_panel.visible = true)
+	v.add_child(_achievements)
 	var ver := UiStyle.label("v%s · %s · early development build" % [ProjectSettings.get_setting("application/config/version", "0.1"), BuildInfo.STAMP], 15, UiStyle.MUTED)
 	ver.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	ver.position = Vector2(24, -36)

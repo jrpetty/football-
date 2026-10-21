@@ -49,6 +49,10 @@ func new_game(seed_value: int = 0) -> void:
 			state.set_loc(it, {"t": "loose", "p": si.p, "r": si.get("r", [0, 0, 0, 1])})
 		else:
 			state.set_loc(it, {"t": "slot", "slot": si.slot})
+	state.totals["run_id"] = "%d-%d" % [state.seed_value, int(Time.get_unix_time_from_system())]
+	state.totals["goals"] = {}
+	state.totals["days_worked"] = 0
+	refresh_candidates()
 	_init_seller_cycles()
 	refresh_lot_board(true)
 	state.say("Day 1. The garage is yours. Check the office PC for lots.", "info")
@@ -299,6 +303,91 @@ func c_give_mug(peer: int, a: Dictionary) -> Dictionary:
 	return _ok()
 
 
+# ================================================================= staff
+
+func refresh_candidates() -> void:
+	var n := int(Staff.data().get("candidates_per_week", 6))
+	var next := int(state.totals.get("next_staff_id", 1))
+	state.candidates = []
+	for i in n:
+		state.candidates.append(Staff.make_candidate(state.rng, next + i))
+	state.totals["next_staff_id"] = next + n
+	state.mark("candidates", 0)
+
+
+func c_hire(_peer: int, a: Dictionary) -> Dictionary:
+	var cid := int(a.get("candidate", 0))
+	var pick := {}
+	for c in state.candidates:
+		if int(c.id) == cid:
+			pick = c
+	if pick.is_empty():
+		return _fail("They've taken another job.")
+	var need := int(Staff.data().get("hire_rep_min", {}).get(pick.role, 0))
+	if state.reputation < need:
+		return _fail("Office staff want a company with reputation %d+." % need)
+	state.candidates.erase(pick)
+	var d: Dictionary = pick.duplicate(true)
+	d["hired"] = state.day_index()
+	d["status"] = "Starting their shift"
+	state.staff[cid] = d
+	# Their skills go through the same system as players' (so they level up by doing the work).
+	var key := player_key(StaffView.peer_of(cid))
+	var p := state.player(key)
+	p["name"] = d.name
+	p["staff"] = true
+	var xp := {}
+	for sk in d.stats:
+		xp[sk] = Staff.xp_for_level(int(d.stats[sk]))
+	p["xp"] = xp
+	state.mark("player", key)
+	state.mark("staff", cid)
+	state.mark("candidates", 0)
+	state.say("%s starts today as %s. Wages £%d a week." % [d.name, StaffView._role_name(d.role).to_lower(), int(d.wage)], "good")
+	BusinessStats.event(state, "staff", "Hired %s (%s)" % [d.name, StaffView._role_name(d.role)])
+	return _ok()
+
+
+func c_fire(peer: int, a: Dictionary) -> Dictionary:
+	var sid := int(a.get("staff", 0))
+	if not state.staff.has(sid):
+		return _fail("")
+	var d: Dictionary = state.staff[sid]
+	var sp := StaffView.peer_of(sid)
+	c_drop_all_held(sp, {"p": d.get("pos", [0, 1, 0])})
+	state.staff.erase(sid)
+	state.mark("staff", sid)
+	state.say("%s has left the company." % d.name, "info", peer)
+	return _ok()
+
+
+func c_staff_role(_peer: int, a: Dictionary) -> Dictionary:
+	var sid := int(a.get("staff", 0))
+	var role := str(a.get("role", ""))
+	if not state.staff.has(sid) or not Staff.data().roles.any(func(r): return r.id == role):
+		return _fail("")
+	state.staff[sid]["role"] = role
+	state.mark("staff", sid)
+	return _ok()
+
+
+func weekly_wages() -> int:
+	## Friday pay review: staff who've levelled up by doing the work get a rise to match.
+	var total := 0
+	for d in state.staff.values():
+		var key := player_key(StaffView.peer_of(int(d.id)))
+		var levels := {}
+		for sk: Dictionary in Content.skill_defs():
+			levels[sk.id] = state.skill_level(key, sk.id)
+		var now := Staff.wage_for(levels)
+		if now > int(d.get("wage", 0)):
+			state.say("Pay rise: %s is better at the job now — £%d a week (was £%d)." % [d.name, now, int(d.wage)], "info")
+			d["wage"] = now
+			state.mark("staff", int(d.id))
+		total += int(d.get("wage", 0))
+	return total
+
+
 func carry_capacity(peer: int) -> int:
 	## Hauling skill sets how many carry slots you have (2 at level 1 → 5 at level 8+; see skills.json).
 	if peer == 0:
@@ -415,6 +504,14 @@ func _station_accepts(station_id: String, slot_id: String, it: Item) -> Dictiona
 
 func _on_entered_slot(it: Item, slot_id: String, peer: int) -> void:
 	var sid := state.slot_station(slot_id)
+	if sid != "" and state.stations.get(sid, {}).get("type", "") == "recycle":
+		var scrap := int(Content.econ("scrap_value", {}).get(it.unit.hw_type() if it.unit else "laptop", 5))
+		var name := it.display_name()
+		state.set_loc(it, {"t": "gone"})
+		state.add_money(scrap, "scrap", "Recycled: %s" % name)
+		state.bump_stat("recycled")
+		state.say("Recycled %s — £%d scrap." % [name, scrap], "info", peer)
+		return
 	if it.kind == Item.KIND_MUG and slot_id.ends_with(":sink"):
 		var poured := float(it.data.get("fill", 0.0)) > 0.05
 		state.set_loc(it, {"t": "gone"})
@@ -481,7 +578,7 @@ func _robot_fixable(sid: String, u: UnitData) -> Array:
 	var max_tier := int(Automation.def_of(state.fixtures.get(sid, {}).get("type", "")).get("max_tier", 1))
 	var out: Array = []
 	for f in u.open_faults():
-		if int(Content.fault(f.id).get("repair_level", 1)) > max_tier:
+		if Content.fault(f.id).get("unrepairable", false) or repair_tier(u, f) > max_tier:
 			continue
 		var pid := Valuation.repair_part_for(u, f)
 		if int(state.parts.get(pid, 0)) > 0 or Content.part(pid).get("reusable", false):
@@ -505,12 +602,15 @@ func _process_machines() -> void:
 			if it == null or it.unit == null:
 				continue
 			var u := it.unit
+			if job.kind != "pack":
+				BusinessStats.on_auto(state, {"test": "rack_test", "image": "rack_image", "repair": "robot_repair"}.get(job.kind, str(job.kind)), sid)
 			match job.kind:
 				"test":
 					_complete_test(it, 0)
 				"image":
 					u.imaged = true
-					u.log_event(state.minute, "Wiped and imaged on the network rack")
+					var wipe := u.wipe_info()
+					u.log_event(state.minute, ("%s on the network rack" % wipe.get("title", "Wiped")) if not wipe.is_empty() else "Wiped and imaged on the network rack")
 					state.bump_stat("imaged")
 					BusinessStats.on_image(state, u, 0)
 				"repair":
@@ -533,6 +633,8 @@ func _process_machines() -> void:
 					state.mark("company")
 				"pack":
 					_robot_pack(sid, it)
+					if it.loc.get("t") == "in":
+						BusinessStats.on_auto(state, "robot_pack", sid)
 			state.mark("item", it.id)
 			try_start_machine(sid, bay)
 
@@ -582,6 +684,38 @@ func c_set_sorter_rule(_peer: int, a: Dictionary) -> Dictionary:
 	return _ok()
 
 
+func c_set_belt_mode(_peer: int, a: Dictionary) -> Dictionary:
+	## Splitter: alternate / overflow. Stop gate: open / hold. (Set in-world with [E] on the piece.)
+	var fid: String = a.get("id", "")
+	var mode: String = a.get("mode", "")
+	var dev := str(Automation.def_of(str(state.fixtures.get(fid, {}).get("type", ""))).get("device", ""))
+	if not Automation.BELT_MODES.has(dev) or not mode in Automation.BELT_MODES[dev]:
+		return _fail("")
+	if not state.stations.has(fid):
+		state.register_station(fid, dev)
+	state.stations[fid]["mode"] = mode
+	state.mark("station", fid)
+	return _ok()
+
+
+func c_upgrade_belt(peer: int, a: Dictionary) -> Dictionary:
+	## Speed up a belt piece one tier (Standard → Fast → Express) — the whole run at that speed if affordable.
+	var plan := Automation.upgrade_plan(state, str(a.get("id", "")))
+	if plan.is_empty():
+		return _fail("Only conveyors can be sped up.")
+	if plan.get("max", false):
+		return _fail("Already at top speed (%s)." % plan.name)
+	if plan.short:
+		return _fail("Upgrading to %s costs %s a piece." % [plan.name, GameState.format_money(int(plan.step))])
+	for id in plan.ids:
+		state.fixtures[id]["tier"] = int(plan.to)
+		state.mark("fixture", id)
+	var n: int = plan.ids.size()
+	state.add_money(-int(plan.cost), "equipment", "Conveyor upgrade to %s (%d piece%s)" % [plan.name, n, "" if n == 1 else "s"])
+	state.say("%d conveyor piece%s upgraded to %s — %.1f m/s." % [n, "" if n == 1 else "s", plan.name, float(plan.speed)], "good", peer)
+	return {"ok": true, "msg": "", "ids": plan.ids}
+
+
 func try_start_bench(station_id: String, peer: int = 0) -> void:
 	var st: Dictionary = state.stations.get(station_id, {})
 	if st.get("type") != "bench" or not st.job.is_empty():
@@ -598,7 +732,7 @@ func try_start_bench(station_id: String, peer: int = 0) -> void:
 	var speed := _skill_speed(peer, "testing")
 	if usb_it.kind == Item.KIND_USB_TEST:
 		if u.tested:
-			st.msg = "Already tested. Swap to the PaneOS USB to wipe & image."
+			st.msg = "Already tested. Swap to the PaneOS USB to wipe & image." if u.needs_wipe() else "Already tested — nothing to wipe. Take it to grading."
 			state.mark("station", station_id)
 			return
 		job = "test"
@@ -613,7 +747,7 @@ func try_start_bench(station_id: String, peer: int = 0) -> void:
 			state.mark("station", station_id)
 			return
 		if u.imaged:
-			st.msg = "Already imaged. Take it to grading."
+			st.msg = "Already imaged. Take it to grading." if u.needs_wipe() else "No data to wipe on this. Take it to grading."
 			state.mark("station", station_id)
 			return
 		job = "image"
@@ -630,6 +764,9 @@ func _skill_speed(peer: int, skill: String) -> float:
 		return 1.0     # machines / staff run at standard speed
 	var key := player_key(peer)
 	var sp := state.skill_speed(key, skill)
+	if peer <= -1000:
+		# AI staff: skill matters even more (×0.41 at level 1 … ×2.3 at level 10).
+		sp = pow(sp, 1.5)
 	if (skill == "testing" and state.has_perk(key, "bench_whisper")) or (skill == "imaging" and state.has_perk(key, "fast_wipe")):
 		sp *= 1.15
 	return sp
@@ -653,19 +790,23 @@ func _process_jobs() -> void:
 		if kind == "test":
 			_complete_test(it, by)
 			st.msg = "PASS" if not it.unit.has_open_faults() else "FAULTS FOUND"
-			if by != 0 and not it.unit.has_open_faults() and state.has_perk(player_key(by), "auto_chain"):
+			if by != 0 and not it.unit.has_open_faults() and not it.unit.imaged and state.has_perk(player_key(by), "auto_chain"):
 				_auto_chain(sid, by)
 		elif kind == "image":
 			it.unit.imaged = true
 			if by != 0 and state.has_perk(player_key(by), "data_cert"):
 				it.unit.data_cert = true
-			it.unit.log_event(state.minute, "Wiped (%s) and imaged with %s" % [Content.os_info.get("wipe_standard", ""), Content.os_info.get("name", "PaneOS")])
+			var wipe := it.unit.wipe_info()
+			if wipe.is_empty():
+				it.unit.log_event(state.minute, "Wiped (%s) and imaged with %s" % [Content.os_info.get("wipe_standard", ""), Content.os_info.get("name", "PaneOS")])
+			else:
+				it.unit.log_event(state.minute, "%s (%s)" % [wipe.get("title", "Secure wipe"), Content.os_info.get("wipe_standard", "")])
 			state.bump_stat("imaged")
 			BusinessStats.on_image(state, it.unit, by)
 			if by != 0:
 				state.add_xp(player_key(by), "imaging", int(Content.econ("xp", {}).get("image", 4)))
 			st.msg = "IMAGED"
-			state.say("%s imaged — ready to grade." % it.unit.display_name(), "good")
+			state.say("%s %s — ready to grade." % [it.unit.display_name(), "imaged" if wipe.is_empty() else "wiped and reset"], "good")
 		state.mark("item", it.id)
 		state.mark("station", sid)
 
@@ -694,16 +835,20 @@ func _complete_test(it: Item, by: int) -> void:
 	u.test_report = {
 		"at": state.minute, "tool": "%s %s" % [Content.diag_info.get("name", ""), Content.diag_info.get("version", "")],
 		"serial": u.serial, "model": u.display_name(), "cpu": u.cpu_name(), "ram_gb": u.ram_gb,
-		"storage_gb": u.storage_gb, "battery_pct": u.battery_pct if u.is_laptop() else -1, "faults": lines, "pass": lines.is_empty(),
+		"storage_gb": u.storage_gb, "battery_pct": u.battery_pct if u.has_battery() else -1, "faults": lines, "pass": lines.is_empty(),
 		"type": u.hw_type(), "spec": u.spec_line(),
 	}
 	u.log_event(state.minute, "Tested: " + ("PASS" if lines.is_empty() else "%d fault(s)" % lines.size()))
+	if not u.needs_wipe() and not u.imaged:
+		# Monitors and docks hold no data: no wipe step, straight to grading once any faults are fixed.
+		u.imaged = true
+		u.log_event(state.minute, "No data to wipe")
 	state.bump_stat("tested")
 	BusinessStats.on_test(state, u, by)
 	if by != 0:
 		state.add_xp(player_key(by), "testing", int(Content.econ("xp", {}).get("test", 6)))
 	if lines.is_empty():
-		state.say("%s — PASS" % u.display_name(), "good")
+		state.say("%s — PASS%s" % [u.display_name(), "" if u.needs_wipe() else " (no data to wipe — ready to grade)"], "good")
 	else:
 		state.say("%s — %s" % [u.display_name(), lines[0]], "warn")
 
@@ -723,9 +868,14 @@ func repair_preview(peer: int, it: Item) -> Dictionary:
 	var level := state.skill_level(player_key(peer), "repair")
 	var tiers: Dictionary = Content.skills_data.get("repair_tiers", {"1": 1, "2": 4, "3": 7})
 	var blocked_reason := ""
+	var unfixable := ""
 	for f in open:
 		var fdef := Content.fault(f.id)
-		var tier := int(fdef.get("repair_level", 1))
+		if fdef.get("unrepairable", false):
+			# e.g. an activation lock: no part or skill clears it — the unit can only go as spares/repairs.
+			unfixable = "%s: can't be fixed — sell it as spares/repairs." % LotGenerator.fault_text(f)
+			continue
+		var tier := repair_tier(u, f)
 		var need := int(tiers.get(str(tier), tier))
 		var part_id := Valuation.repair_part_for(u, f)
 		var pdef := Content.part(part_id)
@@ -743,7 +893,13 @@ func repair_preview(peer: int, it: Item) -> Dictionary:
 			secs *= 0.5
 		return {"can": true, "fault": f.id, "part": part_id, "part_name": pdef.get("name", part_id),
 			"have": have, "secs": secs, "text": LotGenerator.fault_text(f)}
-	return {"can": false, "why": blocked_reason}
+	return {"can": false, "why": unfixable if unfixable != "" else blocked_reason, "unfixable": unfixable != ""}
+
+
+static func repair_tier(u: UnitData, f: Dictionary) -> int:
+	## Repair level a fault needs: the fault's own level, raised by a fiddlier part (glued-in tablet/phone batteries).
+	var tier := int(Content.fault(f.get("id", "")).get("repair_level", 1))
+	return maxi(tier, int(Content.part(Valuation.repair_part_for(u, f)).get("repair_level", 1)))
 
 
 func c_repair(peer: int, a: Dictionary) -> Dictionary:
@@ -878,6 +1034,10 @@ static func sale_chance_per_hour(st: GameState, u: UnitData) -> float:
 	base *= 1.0 + float(Content.skills_data.get("sales_traffic_per_level", 0.04)) * (st.best_skill_level("sales") - 1)
 	if st.team_has_perk("repeat_buyers"):
 		base *= 1.1
+	# Salespeople in the office bring more buyers in.
+	for d in st.staff.values():
+		if str(d.get("role", "")) == "salesperson":
+			base *= 1.0 + 0.012 * st.skill_level(player_key(StaffView.peer_of(int(d.id))), "sales")
 	var market := float(Valuation.market_value(u, u.grade)) * u.list_quality
 	var ratio := market / maxf(float(u.list_price), 1.0)
 	var p := base * clampf(pow(ratio, float(Content.econ("flogit_price_elasticity", 3.0))), 0.05, 4.0)
@@ -1420,8 +1580,21 @@ func advance_minutes(mins: float) -> void:
 		BusinessStats.on_clock(state, active_peers, step)
 		_process_minute_events()
 	state.mark("clock")
+	_check_goals()
 	if state.minute >= end - 0.0001:
 		end_day()
+
+
+func _check_goals() -> void:
+	for id in Campaign.check(state):
+		var day := int(Campaign.reached(state).get(id, Campaign.day_number(state)))
+		var end_id := str(Campaign.data().get("end_goal", {}).get("id", ""))
+		var text := "🏆 %s — reached on day %d" % [Campaign.name_of(id), day]
+		if id == end_id:
+			text = "🏆 REFURB EMPIRE COMPLETE — mega plant and £20M in %d working days!" % day
+		state.say(text, "good")
+		BusinessStats.event(state, "milestone", text)
+		state.goal_reached.emit(id, day)
 
 
 # ================================================================= electricity
@@ -1431,25 +1604,38 @@ var _power_kw := -1.0
 
 
 func power_draw_kw() -> float:
-	## What the premises is pulling right now: lighting by floor area, plus every powered fixture at its
-	## rating while it works (bench job, rack bays, arm move, belt running) and a standby fraction otherwise.
-	var kw := float(state.building().get("floor_m2", 40)) * float(Content.econ("lighting_w_per_m2", 5.0)) / 1000.0
+	var kw := 0.0
+	for k in power_breakdown(state).values():
+		kw += float(k.kw)
+	return kw
+
+
+static func power_breakdown(st: GameState) -> Dictionary:
+	## What the premises is pulling right now, by equipment name: lighting by floor area, plus every powered
+	## fixture at its rating while it works (bench job, rack bays, arm move, belt running) and a standby
+	## fraction otherwise. {name: {kw, count, active}}
+	var out := {"Lighting": {"kw": float(st.building().get("floor_m2", 40)) * float(Content.econ("lighting_w_per_m2", 5.0)) / 1000.0, "count": 1, "active": 1}}
 	var running_belts := {}
-	for it: Item in state.items.values():
+	for it: Item in st.items.values():
 		if it.loc.get("t") == "belt" and float(it.loc.get("v", 0.0)) > 0.0:
 			running_belts[str(it.loc.get("belt", ""))] = true
-	for fid in state.fixtures:
-		var f: Dictionary = state.fixtures[fid]
+	for fid in st.fixtures:
+		var f: Dictionary = st.fixtures[fid]
 		if not f.get("placed", false):
 			continue
 		var def := Content.fixture(f.type)
-		var rated := float(def.get("power_kw", 0.0))
+		var rated := float(def.get("power_kw", 0.0)) * Automation.power_mult(f)
 		if rated <= 0.0:
 			continue
-		var st: Dictionary = state.stations.get(fid, {})
-		var active: bool = not st.get("job", {}).is_empty() or not st.get("jobs", {}).is_empty() or running_belts.has(fid)
-		kw += rated * (1.0 if active else float(def.get("idle_frac", Content.econ("power_idle_frac", 0.15))))
-	return kw
+		var sd: Dictionary = st.stations.get(fid, {})
+		var active: bool = not sd.get("job", {}).is_empty() or not sd.get("jobs", {}).is_empty() or running_belts.has(fid)
+		var name := str(def.get("name", f.type))
+		var e: Dictionary = out.get(name, {"kw": 0.0, "count": 0, "active": 0})
+		e.kw = float(e.kw) + rated * (1.0 if active else float(def.get("idle_frac", Content.econ("power_idle_frac", 0.15))))
+		e.count = int(e.count) + 1
+		e.active = int(e.active) + (1 if active else 0)
+		out[name] = e
+	return out
 
 
 func _meter_power(step: float) -> void:
@@ -1541,6 +1727,10 @@ func end_day() -> void:
 		state.add_money(-rent, "rent", "Weekly rent — %s" % b.get("name", "premises"))
 		state.add_money(-util, "utilities", "Water, broadband & standing charges")
 		summary["rent_paid"] = rent + util
+		var wages := weekly_wages()
+		if wages > 0:
+			state.add_money(-wages, "wages", "Wages — %d staff" % state.staff.size())
+			summary["wages"] = wages
 		if state.cash < 0:
 			var fee := int(Content.econ("overdraft_fee_weekly", 40))
 			state.add_money(-fee, "bank", "Overdraft fee")
@@ -1548,6 +1738,8 @@ func end_day() -> void:
 			summary["overdraft_fee"] = fee
 			state.say("You're overdrawn. The bank has charged a fee — get selling!", "bad")
 		summary["cash"] = state.cash
+	summary["run_day"] = Campaign.day_number(state)
+	state.totals["days_worked"] = int(state.totals.get("days_worked", 0)) + 1
 	summary["rating"] = shift_rating(summary)
 	BusinessStats.on_day_end(state, summary)
 	state.mark("clock")
@@ -1581,6 +1773,8 @@ func start_next_day() -> void:
 	state.last_flogit_hour = int(state.minute / 60.0)
 	state.day_running = true
 	refresh_lot_board()
+	if state.weekday() == 0 or state.candidates.is_empty():
+		refresh_candidates()
 	state.mark("clock")
 	state.mark("company")
 	state.say("%s, day %d. Kettle's on." % [state.weekday_name(), state.day_index() + 1], "info")
@@ -1616,6 +1810,8 @@ func c_buy_fixture(peer: int, a: Dictionary) -> Dictionary:
 		n += 1
 	var id := "%s_%d" % [type, n]
 	state.fixtures[id] = {"type": type, "label": fixture_label(state, type), "placed": false, "p": [0, 0, 0], "r": 0.0}
+	if str(def.get("auto", {}).get("origin", "")) == "in":
+		state.fixtures[id]["bend"] = Automation.clamp_bend(def.auto)
 	state.add_money(-price, "equipment", "Bought %s" % def.name)
 	BusinessStats.on_fixture_bought(state, id, def.name, price)
 	state.mark("fixture", id)
@@ -1632,6 +1828,8 @@ func c_place_fixture(_peer: int, a: Dictionary) -> Dictionary:
 	f.placed = true
 	f.p = [float(p[0]), float(p[1]), float(p[2])]
 	f.r = float(a.get("r", 0.0))
+	if a.has("bend") and str(Automation.def_of(f.type).get("origin", "")) == "in":
+		f["bend"] = Automation.clamp_bend(a.bend)
 	state.mark("fixture", id)
 	return _ok()
 
@@ -1683,6 +1881,10 @@ func c_move_building(peer: int, a: Dictionary) -> Dictionary:
 
 
 func migrate_save() -> void:
+	if not state.totals.has("run_id"):
+		state.totals["run_id"] = "%d-save" % state.seed_value
+		state.totals["days_worked"] = int(state.day_index() * 5 / 7)
+		state.totals["goals"] = {}
 	## Older saves (before movable equipment / premises) get the starting kit; the level lays it out.
 	if state.fixtures.is_empty():
 		for f in Content.econ("start_fixtures", []):

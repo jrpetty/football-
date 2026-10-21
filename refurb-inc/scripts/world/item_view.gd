@@ -162,11 +162,34 @@ func state_transform(it: Item) -> Transform3D:
 	return Transform3D(Basis(Quaternion(r[0], r[1], r[2], r[3]).normalized()), Vector3(p[0], p[1], p[2]))
 
 
+const STORAGE_TYPES := ["metal_shelf", "heavy_rack", "courier_shelf", "parts_shelf", "stock_tower"]
+var _shadows_on := true
+
+
+func _update_shadows(it: Item) -> void:
+	## Stock sitting in storage (shelving, racking, pallets, stock towers) doesn't cast shadows: hundreds of detailed
+	## models in every light's shadow pass were most of the frame in a full building. Ambient occlusion still grounds
+	## them; anything loose, carried, on a bench or on a belt keeps its shadow.
+	var on := true
+	if it.loc.get("t") == "slot":
+		var host := str(it.loc.get("slot", "")).get_slice(":", 0)
+		var on_pallet := host.begins_with("i") and host.substr(1).is_valid_int()
+		on = not on_pallet and not str(Game.state.fixtures.get(host, {}).get("type", "")) in STORAGE_TYPES
+	if on == _shadows_on:
+		return
+	_shadows_on = on
+	for gi: GeometryInstance3D in find_children("*", "GeometryInstance3D", true, false):
+		if not gi.has_meta("cast0"):
+			gi.set_meta("cast0", gi.cast_shadow)
+		gi.cast_shadow = gi.get_meta("cast0") if on else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
 func apply_state(it: Item, initial: bool = false) -> void:
 	var loc := it.loc
 	var lr := LevelRoot.current
 	if lr == null or not is_inside_tree():
 		return
+	_update_shadows(it)
 	if cinematic and loc.get("t") == "loose":
 		visible = true
 		freeze = true

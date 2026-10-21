@@ -43,6 +43,17 @@ var values := {
 	"show_fps": true,
 	"settings_version": 2,
 	"player_name": "",
+	"char_shirt": "#3359a0",
+	"char_trousers": "#292b33",
+	"char_skin": "#dbb08f",
+	"char_hair": "#33241a",
+	"char_hivis": false,
+	"char_cap": false,
+	"char_height": 1.78,
+	"char_bighead": false,
+	"char_body": "m",
+	"char_hairstyle": "short",
+	"char_shoes": "#1a1a1c",
 }
 
 
@@ -130,6 +141,8 @@ func apply_graphics(env: Environment, sun: DirectionalLight3D = null) -> void:
 	vp.msaa_3d = Viewport.MSAA_DISABLED if p == "low" else (Viewport.MSAA_4X if p == "ultra" else Viewport.MSAA_2X)
 	vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if p != "ultra" else Viewport.SCREEN_SPACE_AA_DISABLED
 	vp.use_taa = p == "ultra"
+	# Detailed hardware models drop to their lighter LODs sooner on the lower presets (pixels of error allowed).
+	vp.mesh_lod_threshold = {"low": 4.0, "medium": 2.5, "high": 2.0, "ultra": 1.0}.get(p, 2.0)
 	if sun:
 		sun.shadow_enabled = true
 		sun.directional_shadow_max_distance = 40.0 if p == "low" else 80.0

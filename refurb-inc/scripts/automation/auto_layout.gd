@@ -14,7 +14,7 @@ static func _belt_fixtures(ignore_id: String = "") -> Array:
 		if fid == ignore_id:
 			continue
 		var f: Dictionary = Game.state.fixtures[fid]
-		if f.get("placed", false) and Automation.def_of(f.type).get("kind", "") == "belt":
+		if f.get("placed", false) and Automation.def_of(f.type).get("kind", "") in ["belt", "store"]:
 			out.append(fid)
 	return out
 
@@ -24,7 +24,7 @@ static func open_ports(ignore_id: String = "") -> Array:
 	var all: Array = []
 	for fid in _belt_fixtures(ignore_id):
 		var f: Dictionary = Game.state.fixtures[fid]
-		for prt in Automation.ports_of(f.type, Automation.fixture_xf(f)):
+		for prt in Automation.ports_of(f.type, Automation.fixture_xf(f), f.get("bend", {})):
 			prt["fid"] = fid
 			all.append(prt)
 	var out: Array = []
@@ -41,11 +41,14 @@ static func open_ports(ignore_id: String = "") -> Array:
 	return out
 
 
-static func snap(type: String, aim: Vector3, ignore_id: String = "") -> Dictionary:
+static func snap(type: String, aim: Vector3, ignore_id: String = "", settings: Dictionary = {}) -> Dictionary:
 	## Where to put a conveyor piece so it joins the open end nearest `aim` (and which way it must face).
 	var auto := Automation.def_of(type)
 	if auto.get("kind", "") != "belt":
 		return {}
+	if not settings.is_empty():
+		auto = auto.duplicate()
+		auto.merge(settings, true)
 	var lb := Automation.belt_local(auto)
 	var best := {}
 	var best_d := SNAP_RADIUS
@@ -61,7 +64,8 @@ static func snap(type: String, aim: Vector3, ignore_id: String = "") -> Dictiona
 			mine = lb.in[0]           # their exit feeds our start
 		var md: Vector3 = mine.d
 		var rot := rad_to_deg(atan2(d.x, d.z) - atan2(md.x, md.z))
-		rot = fposmod(snappedf(rot, 90.0), 360.0)
+		# 15° steps: flexible bends end at any multiple of 15°, and the next piece must follow them exactly.
+		rot = fposmod(snappedf(rot, 15.0), 360.0)
 		var b := Basis(Vector3.UP, deg_to_rad(rot))
 		var pos: Vector3 = (prt.p as Vector3) - b * (mine.p as Vector3)
 		pos.y = 0.0
@@ -96,7 +100,7 @@ static func arm_serves(arm_pos: Vector3, ignore_id: String = "") -> Array:
 		if not f.get("placed", false) or f.type == "robot_arm":
 			continue
 		var def := Content.fixture(f.type)
-		if def.get("auto", {}).get("kind", "") == "belt":
+		if def.get("auto", {}).get("kind", "") in ["belt", "monitor"]:
 			continue
 		var fp: Array = def.get("footprint", [1, 1])
 		var p := Automation.fixture_xf(f).origin

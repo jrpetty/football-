@@ -31,7 +31,7 @@ func _ready() -> void:
 	_vp.size = VP_SIZE
 	_vp.disable_3d = true
 	_vp.gui_embed_subwindows = true
-	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	add_child(_vp)
 	_os = PaneOS.new()
 	_os.size = Vector2(VP_SIZE)
@@ -114,6 +114,26 @@ func leave() -> void:
 		p.camera.current = true
 		p.set_ui_mode(false))
 	Sfx.play_ui("pc_close", -8.0)
+
+
+var _redraw_t := 0.0
+
+
+func _process(delta: float) -> void:
+	if in_use():
+		if _vp.render_target_update_mode != SubViewport.UPDATE_ALWAYS:
+			_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		return
+	if _vp.render_target_update_mode == SubViewport.UPDATE_ALWAYS:
+		_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	_redraw_t -= delta
+	if _redraw_t > 0.0:
+		return
+	var cam := get_viewport().get_camera_3d()
+	var near := cam != null and cam.global_position.distance_to(global_position) < 10.0
+	_redraw_t = 1.0 if near else 4.0
+	if near:
+		_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 
 
 func in_use() -> bool:

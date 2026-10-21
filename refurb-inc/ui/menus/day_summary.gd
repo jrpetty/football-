@@ -49,7 +49,7 @@ func show_summary(s: Dictionary) -> void:
 	_summary = s
 	for c in _body.get_children():
 		c.queue_free()
-	_body.add_child(UiStyle.label("End of shift — %s, day %d" % [s.get("weekday", ""), int(s.get("day", 0)) + 1], 28, UiStyle.TEXT))
+	_body.add_child(UiStyle.label("End of shift — %s, day %d" % [s.get("weekday", ""), int(s.get("run_day", int(s.get("day", 0)) + 1))], 28, UiStyle.TEXT))
 	var stars := int(s.get("rating", 3))
 	var st := UiStyle.label("★".repeat(stars) + "☆".repeat(5 - stars), 44, UiStyle.ACCENT)
 	_body.add_child(st)

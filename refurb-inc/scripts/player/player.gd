@@ -69,6 +69,8 @@ var _ghost_rot := 0.0
 var _ghost_pos := Vector3.ZERO
 var _ghost_valid := false
 var _guides: Node3D = null            # automation layout guides while placing (open ends, arm reach)
+var _bend := {}                       # flexible bend being placed: {angle, radius, turn}
+var _bend_vis: Node3D = null
 var _snapped := {}
 
 
@@ -122,6 +124,8 @@ func _ready() -> void:
 		avatar = rig
 		avatar.rotation_degrees.y = 180
 		add_child(avatar)
+		_apply_remote_look(peer_id)
+		Game.looks_changed.connect(_apply_remote_look)
 		name_tag = Label3D.new()
 		name_tag.text = Net.display_name(peer_id)
 		name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -595,6 +599,12 @@ func _on_command_result(cmd: String, res: Dictionary) -> void:
 var _give_to := 0
 
 
+func _apply_remote_look(peer: int) -> void:
+	if peer != peer_id or not (avatar is CharacterRig) or not Game.looks.has(peer):
+		return
+	Looks.apply(avatar as CharacterRig, Game.looks[peer].look, Game.looks[peer].face)
+
+
 func _give_target() -> Node3D:
 	## The colleague you're looking at (within arm's reach-ish), for handing over a brew.
 	var lr := LevelRoot.current
@@ -864,23 +874,29 @@ func start_placement(fixture_id: String) -> void:
 	_ghost.name = "PlacementGhost"
 	var info := LevelRoot.current.fixture_model_info(f.type)
 	var ms := ModelSlot.new()
-	ms.placeholder = str(info.get("placeholder", ""))
-	ms.placeholder_params = info.get("params", {})
-	ms.model_scene = info.get("scene")
-	ms.cast_shadows = false
-	_ghost.add_child(ms)
-	# Footprint outline on the floor
 	var def := Content.fixture(f.type)
-	var fp: Array = def.get("footprint", [1, 1])
-	var back := float(def.get("back", float(fp[1]) * 0.5))
-	var front := float(def.get("front", float(fp[1]) * 0.5))
+	_bend = {}
+	if str(def.get("auto", {}).get("origin", "")) == "in":
+		# Flexible bend: the ghost is the real bend, rebuilt as you change its angle/radius/side.
+		_bend = Automation.clamp_bend(f.get("bend", def.auto))
+	else:
+		ms.placeholder = str(info.get("placeholder", ""))
+		ms.placeholder_params = info.get("params", {})
+		ms.model_scene = info.get("scene")
+		LevelRoot.apply_model_info(ms, info)
+	ms.cast_shadows = false
+	if _bend.is_empty():
+		_ghost.add_child(ms)
+	# Footprint outline on the floor
+	var lr := Automation.local_rect(f.type, _bend)
 	var pad := MeshInstance3D.new()
 	var bm := BoxMesh.new()
-	bm.size = Vector3(float(fp[0]), 0.01, back + front)
+	bm.size = Vector3(lr.size.x, 0.01, lr.size.y)
 	pad.mesh = bm
-	pad.position = Vector3(0, 0.006, (front - back) / 2.0)
+	pad.position = Vector3(lr.get_center().x, 0.006, lr.get_center().y)
 	pad.name = "Footprint"
 	_ghost.add_child(pad)
+	var front := lr.end.y
 	var arrow := MeshInstance3D.new()
 	var am := BoxMesh.new()
 	am.size = Vector3(0.12, 0.012, 0.35)
@@ -894,6 +910,9 @@ func start_placement(fixture_id: String) -> void:
 	_ghost_mat.no_depth_test = false
 	LevelRoot.current.add_child(_ghost)
 	ms.rebuilt.connect(_tint_ghost)
+	if not _bend.is_empty():
+		arrow.visible = false
+		_rebuild_bend_ghost()
 	_tint_ghost()
 	if def.has("auto") or f.type == "courier_shelf" or f.type == "heavy_rack":
 		_guides = AutoLayout.build_guides(fixture_id)
@@ -924,6 +943,27 @@ func _tint_ghost() -> void:
 		stack.append_array(n.get_children())
 
 
+func _rebuild_bend_ghost() -> void:
+	if _ghost == null:
+		return
+	if _bend_vis:
+		_bend_vis.queue_free()
+	_bend_vis = Node3D.new()
+	_ghost.add_child(_bend_vis)
+	var f: Dictionary = Game.state.fixtures.get(placing_id, {})
+	var auto := Automation.def_of(str(f.get("type", "conveyor_bend"))).duplicate()
+	auto.merge(_bend, true)
+	var lb := Automation.belt_local(auto)
+	ConveyorBendMesh.build(lb, _bend_vis)
+	ConveyorBendMesh.chevrons(lb, _bend_vis)
+	var lr := Automation.local_rect(str(f.get("type", "")), _bend)
+	var pad: MeshInstance3D = _ghost.get_node_or_null("Footprint")
+	if pad:
+		(pad.mesh as BoxMesh).size = Vector3(lr.size.x, 0.01, lr.size.y)
+		pad.position = Vector3(lr.get_center().x, 0.006, lr.get_center().y)
+	_tint_ghost()
+
+
 func cancel_placement() -> void:
 	if _ghost:
 		_ghost.queue_free()
@@ -932,6 +972,8 @@ func cancel_placement() -> void:
 		_guides.queue_free()
 	_guides = null
 	_snapped = {}
+	_bend = {}
+	_bend_vis = null
 	placing_id = ""
 	_set_hover(null, {})
 
@@ -956,13 +998,13 @@ func _update_placement() -> void:
 	pos.x = snappedf(pos.x, 0.25)
 	pos.z = snappedf(pos.z, 0.25)
 	# Conveyors snap onto the nearest open end and turn to match — no fiddling with rotation.
-	_snapped = AutoLayout.snap(f.type, aim, placing_id)
+	_snapped = AutoLayout.snap(f.type, aim, placing_id, _bend)
 	if not _snapped.is_empty():
 		pos = _snapped.pos
 		_ghost_rot = float(_snapped.rot)
 	_ghost_pos = pos
 	_ghost.global_transform = Transform3D(Basis(Vector3.UP, deg_to_rad(_ghost_rot)), pos)
-	_ghost_valid = LevelRoot.current.can_place(f.type, pos, _ghost_rot, placing_id)
+	_ghost_valid = LevelRoot.current.can_place(f.type, pos, _ghost_rot, placing_id, _bend)
 	var c := Color(0.3, 0.95, 0.5, 0.35) if _ghost_valid else Color(1.0, 0.3, 0.25, 0.35)
 	if _ghost_mat.albedo_color != c:
 		_ghost_mat.albedo_color = c
@@ -976,6 +1018,9 @@ func _update_placement() -> void:
 		info.prompt = "[E] Place  ·  [Q] Cancel"
 	elif Automation.def_of(f.type).get("kind", "") == "belt":
 		info.lines.append("Aim near a green arrow to join on. Open ends wait for a robot arm.")
+	if not _bend.is_empty():
+		info.lines.push_front("Bend %d° %s · radius %.2f m · %.1f m of belt" % [int(_bend.angle), _bend.turn, float(_bend.radius), float(_bend.radius) * deg_to_rad(float(_bend.angle))])
+		info.lines.append("[Scroll] angle · [Shift+Scroll] radius · [T] left/right")
 	if f.type == "robot_arm":
 		var serves := AutoLayout.arm_serves(pos, placing_id)
 		info.lines.append("Reaches: " + (", ".join(serves) if not serves.is_empty() else "nothing yet — put racks, robots, shelves and conveyor ends inside the ring"))
@@ -995,13 +1040,29 @@ func _placement_input(event: InputEvent) -> void:
 		_yaw -= event.relative.x * sens
 		_pitch = clampf(_pitch - event.relative.y * sens, deg_to_rad(-88), deg_to_rad(88))
 		_apply_look()
+	elif not _bend.is_empty() and event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		var up: bool = event.button_index == MOUSE_BUTTON_WHEEL_UP
+		if event.shift_pressed:
+			_bend.radius = float(_bend.radius) + (0.25 if up else -0.25)
+		else:
+			_bend.angle = float(_bend.angle) + (15.0 if up else -15.0)
+		_bend = Automation.clamp_bend(_bend)
+		_rebuild_bend_ghost()
+		Sfx.play_ui("ui_click", -12.0)
+	elif not _bend.is_empty() and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_T:
+		_bend.turn = "left" if _bend.turn == "right" else "right"
+		_rebuild_bend_ghost()
+		Sfx.play_ui("ui_click", -12.0)
 	elif event.is_action_pressed("rotate") or (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_UP):
 		_ghost_rot = fmod(_ghost_rot + 90.0, 360.0)
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 		_ghost_rot = fmod(_ghost_rot + 270.0, 360.0)
 	elif event.is_action_pressed("interact"):
 		if _ghost_valid:
-			Game.request("place_fixture", {"id": placing_id, "p": [_ghost_pos.x, 0.0, _ghost_pos.z], "r": _ghost_rot})
+			var args := {"id": placing_id, "p": [_ghost_pos.x, 0.0, _ghost_pos.z], "r": _ghost_rot}
+			if not _bend.is_empty():
+				args["bend"] = _bend.duplicate()
+			Game.request("place_fixture", args)
 			Sfx.play_at("place", _ghost_pos, 0.0)
 			cancel_placement()
 		else:

@@ -13,12 +13,20 @@ signal day_summary(summary: Dictionary)
 signal vehicle_event(kind: String, payload: Dictionary)
 signal command_result(cmd: String, result: Dictionary)
 signal report_ready(report: Dictionary)   # Insights app data (computed on the host)
+signal achievement_unlocked(def: Dictionary)   # this PC unlocked an achievement (HUD toast; Steam later)
 
 const REPLICATION_HZ := 20.0
+
+## This PC's achievements (data/achievements.json → user://achievements.json). Evaluated on every machine,
+## host and guests, from the replicated state; only live during real play (see achievements_active()).
+var achievements := Achievements.new()
 
 var state: GameState = GameState.new()
 var sim: Sim = null                      # host only
 var in_game := false
+var records_enabled := false            # real play (started from the menu) posts milestone times to local records
+var looks := {}                          # peer id -> {"look": Dictionary, "face": PackedByteArray} (character menu)
+signal looks_changed(peer: int)
 var _rep_accum := 0.0
 
 
@@ -27,6 +35,12 @@ func _ready() -> void:
 	Net.peers_changed.connect(_on_peers_changed)
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	achievements.unlocked.connect(func(def: Dictionary): achievement_unlocked.emit(def))
+	day_summary.connect(_on_day_summary_achievements)     # fires on the host and on every guest
+
+
+func _exit_tree() -> void:
+	achievements.flush()
 
 
 # ================================================================= lifecycle
@@ -54,6 +68,8 @@ func load_from_dict(d: Dictionary) -> void:
 
 func leave_game() -> void:
 	in_game = false
+	achievements.active = false
+	achievements.flush()
 	sim = null
 	_install_state(GameState.new())
 	Net.go_offline()
@@ -62,8 +78,24 @@ func leave_game() -> void:
 func _install_state(s: GameState) -> void:
 	state = s
 	state.notify.connect(_on_state_notify)
+	state.goal_reached.connect(_on_goal_reached)
 	state.day_ended.connect(_on_day_ended)
 	state.vehicle.connect(_on_vehicle)
+	achievements.watch(state)
+
+
+func _on_goal_reached(goal_id: String, day: int) -> void:
+	if not records_enabled or not is_host():
+		return
+	var run_id := str(state.totals.get("run_id", ""))
+	var previous := Campaign.best(goal_id)
+	var place := Campaign.submit(goal_id, day, state.company_name, run_id)
+	if place == 1 and not previous.is_empty() and str(previous.get("run", "")) != run_id:
+		achievement_event("beat_record")
+	if place == 1:
+		toast.emit("New record! Fastest ever to %s: %d days." % [Campaign.name_of(goal_id), day], "good")
+	elif place > 1:
+		toast.emit("#%d on your leaderboard for %s." % [place, Campaign.name_of(goal_id)], "info")
 
 
 func is_host() -> bool:
@@ -72,6 +104,39 @@ func is_host() -> bool:
 
 func local_player_key() -> String:
 	return Sim.player_key(Net.local_peer())
+
+
+# ================================================================= achievements
+
+func achievements_active() -> bool:
+	## Only real play unlocks achievements: a run started from the menu, never headless tools or tests.
+	return in_game and records_enabled and DisplayServer.get_name() != "headless"
+
+
+func achievement_event(event_name: String, n: int = 1) -> void:
+	## Count an event-style achievement step on this PC (e.g. "beat_record").
+	if achievements_active():
+		achievements.active = true
+		achievements.record_event(event_name, n)
+
+
+func achievement_context() -> Dictionary:
+	## Things achievements can't read from GameState: who's here, and this player's character settings.
+	var me := Net.local_peer()
+	return {
+		"peers": Net.all_peers().size(),
+		"player_key": local_player_key(),
+		"flags": {
+			"big_head": bool(Settings.get_value("char_bighead")),
+			"photo_face": not (looks.get(me, {}).get("face", PackedByteArray()) as PackedByteArray).is_empty(),
+		},
+	}
+
+
+func _on_day_summary_achievements(summary: Dictionary) -> void:
+	if achievements_active():
+		achievements.active = true
+		achievements.on_day_end(state, summary, achievement_context())
 
 
 # ================================================================= commands
@@ -109,19 +174,20 @@ func _rpc_result(cmd: String, res: Dictionary) -> void:
 
 # ================================================================= business insights
 
-func request_report() -> void:
+func request_report(live_only: bool = false) -> void:
 	## The full history lives on the host; it computes the report and sends it back. Arrives via report_ready.
+	## live_only = just the fast-changing sections (machines, power, staff, counters) — cheap, for live pages.
 	if is_host():
 		if sim:
-			report_ready.emit(BusinessStats.compute(state))
+			report_ready.emit(BusinessReport.compute_live(state) if live_only else BusinessStats.compute(state))
 	else:
-		_rpc_report_request.rpc_id(1)
+		_rpc_report_request.rpc_id(1, live_only)
 
 
 @rpc("any_peer", "call_remote", "reliable")
-func _rpc_report_request() -> void:
+func _rpc_report_request(live_only: bool = false) -> void:
 	if is_host() and sim:
-		_rpc_report.rpc_id(multiplayer.get_remote_sender_id(), BusinessStats.compute(state))
+		_rpc_report.rpc_id(multiplayer.get_remote_sender_id(), BusinessReport.compute_live(state) if live_only else BusinessStats.compute(state))
 
 
 @rpc("authority", "call_remote", "reliable")
@@ -141,6 +207,8 @@ func _process(delta: float) -> void:
 		if _rep_accum >= 1.0 / REPLICATION_HZ:
 			_rep_accum = 0.0
 			_flush_replication()
+	achievements.active = achievements_active()
+	achievements.tick(delta, state, achievement_context)
 
 
 func _flush_replication() -> void:
@@ -170,6 +238,7 @@ func _rpc_snapshot(snap: Dictionary) -> void:
 	sim = null
 	in_game = true
 	state_reset.emit()
+	share_look()
 
 
 func _on_peer_connected(id: int) -> void:
@@ -177,6 +246,47 @@ func _on_peer_connected(id: int) -> void:
 		_flush_replication()
 		state.player(Sim.player_key(id))
 		_rpc_snapshot.rpc_id(id, state.snapshot())
+		# Everyone's look (and photo face) for the newcomer.
+		set_local_look()
+		for peer in looks:
+			_rpc_look.rpc_id(id, peer, looks[peer].look, looks[peer].face)
+
+
+# ================================================================= character looks (co-op)
+
+func set_local_look() -> void:
+	looks[Net.local_peer()] = {"look": Looks.local_look(), "face": Looks.face_png()}
+	looks_changed.emit(Net.local_peer())
+
+
+func share_look() -> void:
+	## Send my look + photo face to everyone (via the host).
+	set_local_look()
+	if not Net.is_online():
+		return
+	var mine: Dictionary = looks[Net.local_peer()]
+	if is_host():
+		_rpc_look.rpc(Net.local_peer(), mine.look, mine.face)
+	else:
+		_rpc_submit_look.rpc_id(1, mine.look, mine.face)
+
+
+@rpc("any_peer", "call_remote", "reliable")
+func _rpc_submit_look(look: Dictionary, face: PackedByteArray) -> void:
+	if not is_host():
+		return
+	var from := multiplayer.get_remote_sender_id()
+	if face.size() > 200000:
+		face = PackedByteArray()      # keep it sane: faces are ~30 KB
+	looks[from] = {"look": look, "face": face}
+	looks_changed.emit(from)
+	_rpc_look.rpc(from, look, face)
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_look(peer: int, look: Dictionary, face: PackedByteArray) -> void:
+	looks[peer] = {"look": look, "face": face}
+	looks_changed.emit(peer)
 
 
 func _on_peer_disconnected(_id: int) -> void:

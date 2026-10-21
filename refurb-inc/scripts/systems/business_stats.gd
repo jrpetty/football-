@@ -41,6 +41,8 @@ static func blank() -> Dictionary:
 		"streak": {"on_time": 0, "best_on_time": 0},
 		"flags": {},          # one-off event bookkeeping
 		"peak_cash": -2147483648, "low_cash": 2147483647,
+		"auto": {"kinds": {}, "fixtures": {}, "today": {}, "hours": {}},   # automation events (see on_auto)
+		"energy": {"kwh": 0.0, "cost": 0},   # all-time electricity (daily figures live in `days`)
 	}
 
 
@@ -170,7 +172,7 @@ static func on_test(st: GameState, u: UnitData, by: int) -> void:
 	if u.cosmetic.is_empty():
 		s.cosmetic["_pristine"] = int(s.cosmetic.get("_pristine", 0)) + 1
 	for b in BATTERY_BANDS:
-		if u.is_laptop() and u.battery_pct >= int(b[0]) and u.battery_pct < int(b[1]):
+		if u.has_battery() and u.battery_pct >= int(b[0]) and u.battery_pct < int(b[1]):
 			s.battery[b[2]] = int(s.battery.get(b[2], 0)) + 1
 	var lot := _lot(st, u)
 	if not lot.is_empty():
@@ -283,7 +285,7 @@ static func on_ship(st: GameState, order: Dictionary, u: UnitData, fee: int, pos
 	}
 	if u:
 		rec.merge({
-			"model_id": u.model_id, "maker": Content.maker_name(u.model().get("maker", "")),
+			"model_id": u.model_id, "type": u.hw_type(), "maker": Content.maker_name(u.model().get("maker", "")),
 			"guide": Valuation.market_value(u, u.grade), "spares_guide": Valuation.market_value(u, "S"),
 			"seller": u.seller_name, "lot": u.lot_id, "ram": u.ram_gb, "storage": u.storage_gb, "cpu": u.cpu_name(),
 			"battery": u.battery_pct, "faults": u.faults.size(),
@@ -318,6 +320,38 @@ static func on_ship(st: GameState, order: Dictionary, u: UnitData, fee: int, pos
 			event(st, "milestone", "%s in total sales" % GameState.format_money(mark))
 
 
+# ================================================================= automation
+
+## Automation calls this whenever a machine does something worth counting. `kind` is one of:
+## belt_in (item put on a belt), scan (goods-in booked), sort (sorter routed), arm (arm moved an item),
+## rack_test / rack_image (rack bay finished), robot_repair / robot_pack, tower_in / tower_out, recycle, grader,
+## or any new kind a machine reports. `fid` = the fixture that did it.
+static func on_auto(st: GameState, kind: String, fid: String = "", n: int = 1) -> void:
+	var a: Dictionary = st.stats.get("auto", {})
+	if a.is_empty():
+		a = {"kinds": {}, "fixtures": {}, "today": {}, "hours": {}}
+		st.stats["auto"] = a
+	a.kinds[kind] = int(a.kinds.get(kind, 0)) + n
+	a.today[kind] = int(a.today.get(kind, 0)) + n
+	if fid != "":
+		var f: Dictionary = a.fixtures.get(fid, {})
+		f[kind] = int(f.get(kind, 0)) + n
+		a.fixtures[fid] = f
+	# Machine moves per working hour, for the throughput chart (last ~2 weeks kept).
+	var hk := "%d_%d" % [st.day_index(), int(st.minute_of_day() / 60.0)]
+	a.hours[hk] = int(a.hours.get(hk, 0)) + n
+	if a.hours.size() > 160:
+		var keys: Array = a.hours.keys()
+		keys.sort_custom(func(x, y): return _hour_key_num(x) < _hour_key_num(y))
+		for i in keys.size() - 160:
+			a.hours.erase(keys[i])
+
+
+static func _hour_key_num(k: String) -> int:
+	var parts := k.split("_")
+	return int(parts[0]) * 100 + int(parts[1])
+
+
 # ================================================================= day end
 
 static func on_day_end(st: GameState, summary: Dictionary) -> void:
@@ -328,6 +362,17 @@ static func on_day_end(st: GameState, summary: Dictionary) -> void:
 			"sold", "shipped", "late", "missed", "bought", "rating", "cash"]:
 		rec[k] = summary.get(k, 0)
 	rec["rep"] = st.reputation
+	rec["kwh"] = snappedf(float(st.day_stats.get("kwh", 0.0)), 0.01)
+	rec["power_cost"] = int(summary.get("electric", 0))
+	rec["wages"] = int(summary.get("wages", 0))
+	var auto: Dictionary = s.get("auto", {})
+	rec["auto"] = auto.get("today", {}).duplicate()
+	if not auto.is_empty():
+		auto["today"] = {}
+	var en: Dictionary = s.get("energy", {"kwh": 0.0, "cost": 0})
+	en["kwh"] = float(en.get("kwh", 0.0)) + float(rec.kwh)
+	en["cost"] = int(en.get("cost", 0)) + int(rec.power_cost)
+	s["energy"] = en
 	# Records (only once there's a little history to beat).
 	if prev.size() >= 3:
 		var best_rev := 0

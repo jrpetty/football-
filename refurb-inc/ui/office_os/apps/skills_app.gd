@@ -14,7 +14,7 @@ func build() -> void:
 
 func refresh() -> void:
 	clear(_list)
-	var keys: Array = Game.state.players.keys()
+	var keys: Array = Game.state.players.keys().filter(func(k): return not Game.state.players[k].get("staff", false))
 	var me := Game.local_player_key()
 	keys.sort_custom(func(a, b): return a == me and b != me)
 	if keys.is_empty():

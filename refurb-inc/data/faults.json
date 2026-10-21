@@ -1,22 +1,315 @@
 {
   "_comment": "Internal faults hidden until tested. part: specific part id, or 'battery'/'keys' to resolve from the model, or 'ram'/'storage' to resolve by type, or 'psu'/'fan'/'board'/'server_ear' from the model's *_part fields. types = hardware it can affect (model type or tag); omitted = all. weight = relative frequency. visible_condition links a fault to an external cosmetic tag (so it shows on hover AND in the test report).",
   "faults": [
-    {"id": "battery_worn", "types": ["laptop"],    "name": "Worn battery", "report": "Battery health {pct}% – needs replacing", "part": "battery", "repair_level": 1, "weight": 34, "sellable_as_is": true},
-    {"id": "ram_faulty",      "name": "Faulty RAM", "report": "Faulty RAM DIMM in slot {slot}",          "part": "ram",     "repair_level": 1, "weight": 12, "requires_ram_slots": true},
-    {"id": "storage_dead", "types": ["laptop", "desktop"],    "name": "Dead SSD", "report": "Dead SSD – SMART failure, 0 bytes readable", "part": "storage", "repair_level": 1, "weight": 10},
-    {"id": "storage_missing", "name": "Missing drive", "report": "No boot device – drive removed by previous owner", "part": "storage", "repair_level": 1, "weight": 14},
-    {"id": "fan_noisy",       "name": "Noisy fan", "report": "CPU fan bearing failing – 82 dB at load",  "part": "fan", "repair_level": 1, "weight": 6},
-    {"id": "keycap_missing", "types": ["laptop"],  "name": "Missing keycap", "report": "Keyboard: key {key} missing",              "part": "keys",    "repair_level": 1, "weight": 0, "visible_condition": "missing_key"},
-    {"id": "screen_cracked", "types": ["laptop"],  "name": "Cracked screen", "report": "LCD panel cracked",                       "part": "screen",  "repair_level": 2, "weight": 0, "visible_condition": "cracked_screen"},
-    {"id": "hinge_broken", "types": ["laptop"],    "name": "Broken hinge", "report": "Left hinge snapped – lid unstable",       "part": "hinge_kit", "repair_level": 2, "weight": 0, "visible_condition": "broken_hinge"},
-    {"id": "backlight_dead", "types": ["laptop"],  "name": "Dead backlight", "report": "No backlight – panel dim/black",          "part": "screen",  "repair_level": 2, "weight": 5},
-    {"id": "keyboard_faulty", "types": ["laptop"], "name": "Faulty keyboard", "report": "Keyboard matrix fault – {n} keys unresponsive", "part": "kbd_deck_generic", "repair_level": 2, "weight": 6},
-    {"id": "bios_locked",     "name": "BIOS password lock", "report": "BIOS supervisor password set – asset locked", "part": "board_reflash_kit", "repair_level": 3, "weight": 6},
-    {"id": "board_no_post",   "name": "No POST (board)", "report": "No POST – board fault (3 long beeps)",    "part": "board", "repair_level": 3, "weight": 7},
-    {"id": "drive_failed",    "types": ["server"], "name": "Failed drive", "report": "Drive in bay {bay} failed – array degraded", "part": "storage", "repair_level": 1, "weight": 16},
-    {"id": "psu_dead",        "types": ["desktop"], "name": "Dead PSU", "report": "PSU dead – no standby power", "part": "psu", "repair_level": 2, "weight": 9},
-    {"id": "psu_redundant",   "types": ["server"], "name": "Failed PSU", "report": "PSU {n} failed – running on a single supply", "part": "psu", "repair_level": 2, "weight": 12},
-    {"id": "raid_battery",    "types": ["rack"], "name": "RAID cache battery", "report": "RAID cache battery failed – write-back disabled", "part": "raid_bbu", "repair_level": 1, "weight": 9},
-    {"id": "server_ear_damaged", "types": ["rack"], "name": "Damaged rack ear", "report": "Front-panel ear bent – power button stuck", "part": "server_ear", "repair_level": 2, "weight": 0, "visible_condition": "bent_rack_ear"}
+    {
+      "id": "battery_worn",
+      "types": [
+        "laptop",
+        "tablet",
+        "phone"
+      ],
+      "name": "Worn battery",
+      "report": "Battery health {pct}% – needs replacing",
+      "part": "battery",
+      "repair_level": 1,
+      "weight": 34,
+      "sellable_as_is": true
+    },
+    {
+      "id": "ram_faulty",
+      "name": "Faulty RAM",
+      "report": "Faulty RAM DIMM in slot {slot}",
+      "part": "ram",
+      "repair_level": 1,
+      "weight": 12,
+      "requires_ram_slots": true,
+      "types": [
+        "laptop",
+        "desktop",
+        "server"
+      ]
+    },
+    {
+      "id": "storage_dead",
+      "types": [
+        "laptop",
+        "desktop"
+      ],
+      "name": "Dead SSD",
+      "report": "Dead SSD – SMART failure, 0 bytes readable",
+      "part": "storage",
+      "repair_level": 1,
+      "weight": 10
+    },
+    {
+      "id": "storage_missing",
+      "name": "Missing drive",
+      "report": "No boot device – drive removed by previous owner",
+      "part": "storage",
+      "repair_level": 1,
+      "weight": 14,
+      "types": [
+        "laptop",
+        "desktop",
+        "server"
+      ]
+    },
+    {
+      "id": "fan_noisy",
+      "name": "Noisy fan",
+      "report": "CPU fan bearing failing – 82 dB at load",
+      "part": "fan",
+      "repair_level": 1,
+      "weight": 6,
+      "types": [
+        "laptop",
+        "desktop",
+        "server",
+        "switch"
+      ]
+    },
+    {
+      "id": "keycap_missing",
+      "types": [
+        "laptop"
+      ],
+      "name": "Missing keycap",
+      "report": "Keyboard: key {key} missing",
+      "part": "keys",
+      "repair_level": 1,
+      "weight": 0,
+      "visible_condition": "missing_key"
+    },
+    {
+      "id": "screen_cracked",
+      "types": [
+        "laptop",
+        "tablet",
+        "phone"
+      ],
+      "name": "Cracked screen",
+      "report": "LCD panel cracked",
+      "part": "screen",
+      "repair_level": 2,
+      "weight": 0,
+      "visible_condition": "cracked_screen"
+    },
+    {
+      "id": "hinge_broken",
+      "types": [
+        "laptop"
+      ],
+      "name": "Broken hinge",
+      "report": "Left hinge snapped – lid unstable",
+      "part": "hinge_kit",
+      "repair_level": 2,
+      "weight": 0,
+      "visible_condition": "broken_hinge"
+    },
+    {
+      "id": "backlight_dead",
+      "types": [
+        "laptop"
+      ],
+      "name": "Dead backlight",
+      "report": "No backlight – panel dim/black",
+      "part": "screen",
+      "repair_level": 2,
+      "weight": 5
+    },
+    {
+      "id": "keyboard_faulty",
+      "types": [
+        "laptop"
+      ],
+      "name": "Faulty keyboard",
+      "report": "Keyboard matrix fault – {n} keys unresponsive",
+      "part": "kbd_deck_generic",
+      "repair_level": 2,
+      "weight": 6
+    },
+    {
+      "id": "bios_locked",
+      "name": "BIOS password lock",
+      "report": "BIOS supervisor password set – asset locked",
+      "part": "board_reflash_kit",
+      "repair_level": 3,
+      "weight": 6,
+      "types": [
+        "laptop",
+        "desktop",
+        "server"
+      ]
+    },
+    {
+      "id": "board_no_post",
+      "name": "No POST (board)",
+      "report": "No POST – board fault (3 long beeps)",
+      "part": "board",
+      "repair_level": 3,
+      "weight": 7,
+      "types": [
+        "laptop",
+        "desktop",
+        "server",
+        "monitor",
+        "switch",
+        "wifi_ap",
+        "dock",
+        "tablet",
+        "phone"
+      ]
+    },
+    {
+      "id": "drive_failed",
+      "types": [
+        "server"
+      ],
+      "name": "Failed drive",
+      "report": "Drive in bay {bay} failed – array degraded",
+      "part": "storage",
+      "repair_level": 1,
+      "weight": 16
+    },
+    {
+      "id": "psu_dead",
+      "types": [
+        "desktop"
+      ],
+      "name": "Dead PSU",
+      "report": "PSU dead – no standby power",
+      "part": "psu",
+      "repair_level": 2,
+      "weight": 9
+    },
+    {
+      "id": "psu_redundant",
+      "types": [
+        "server"
+      ],
+      "name": "Failed PSU",
+      "report": "PSU {n} failed – running on a single supply",
+      "part": "psu",
+      "repair_level": 2,
+      "weight": 12
+    },
+    {
+      "id": "raid_battery",
+      "types": [
+        "rack"
+      ],
+      "name": "RAID cache battery",
+      "report": "RAID cache battery failed – write-back disabled",
+      "part": "raid_bbu",
+      "repair_level": 1,
+      "weight": 9
+    },
+    {
+      "id": "server_ear_damaged",
+      "types": [
+        "rack"
+      ],
+      "name": "Damaged rack ear",
+      "report": "Front-panel ear bent – power button stuck",
+      "part": "server_ear",
+      "repair_level": 2,
+      "weight": 0,
+      "visible_condition": "bent_rack_ear"
+    },
+    {
+      "id": "psu_board_dead",
+      "name": "No power — PSU board",
+      "types": [
+        "monitor"
+      ],
+      "part": "board",
+      "repair_level": 2,
+      "weight": 10
+    },
+    {
+      "id": "stand_missing",
+      "name": "Stand missing",
+      "types": [
+        "monitor"
+      ],
+      "part": "monitor_stand",
+      "repair_level": 1,
+      "weight": 0,
+      "visible_condition": "missing_stand"
+    },
+    {
+      "id": "switch_ports_dead",
+      "name": "Ports 13–16 dead",
+      "types": [
+        "switch"
+      ],
+      "part": "board",
+      "repair_level": 3,
+      "weight": 7
+    },
+    {
+      "id": "config_locked",
+      "name": "Admin password set — config locked",
+      "types": [
+        "switch",
+        "wifi_ap"
+      ],
+      "part": "console_cable",
+      "repair_level": 1,
+      "weight": 22
+    },
+    {
+      "id": "radio_fault",
+      "name": "5 GHz radio not detected",
+      "types": [
+        "wifi_ap"
+      ],
+      "part": "board",
+      "repair_level": 3,
+      "weight": 8
+    },
+    {
+      "id": "dock_brick_missing",
+      "name": "Power brick missing",
+      "types": [
+        "dock"
+      ],
+      "part": "psu",
+      "repair_level": 1,
+      "weight": 24
+    },
+    {
+      "id": "dock_no_display",
+      "name": "No display output",
+      "types": [
+        "dock"
+      ],
+      "part": "board",
+      "repair_level": 2,
+      "weight": 9
+    },
+    {
+      "id": "charge_port_worn",
+      "name": "Charge port loose — won't charge",
+      "types": [
+        "tablet",
+        "phone"
+      ],
+      "part": "charge_port_usbc",
+      "repair_level": 1,
+      "weight": 12
+    },
+    {
+      "id": "account_locked",
+      "name": "Activation lock — previous owner's account",
+      "types": [
+        "tablet",
+        "phone"
+      ],
+      "part": "board",
+      "repair_level": 3,
+      "weight": 6,
+      "unrepairable": true
+    }
   ]
 }

@@ -1,12 +1,20 @@
 extends InsightsUI
-## Insights: everything about the business, in 13 sections. Highlights turns the numbers into plain-English
-## findings, goals and records. Data comes from BusinessReport on the host (Game.request_report).
+## Insights: everything about the business, in 17 sections. Highlights turns the numbers into plain-English
+## findings, goals and records. Data comes from BusinessReport on the host (Game.request_report). The machine,
+## energy, staff and counter pages are live: they pull a small report every LIVE_S seconds. A page is only
+## rebuilt when its own numbers change, so leaving Insights open costs next to nothing.
 
 const NAV := [["highlights", "Highlights"], ["overview", "Overview"], ["sales", "Sales"], ["pricing", "Pricing & demand"],
 	["customers", "Customers"], ["purchasing", "Purchasing"], ["quality", "Products & quality"], ["stock", "Stock"],
-	["operations", "Operations"], ["orders", "Orders & service"], ["finance", "Finance"], ["people", "People & premises"],
+	["operations", "Operations"], ["automation", "Automation"], ["energy", "Energy"], ["orders", "Orders & service"],
+	["finance", "Finance"], ["people", "People & premises"], ["staff", "Staff"], ["lifetime", "Lifetime stats"],
 	["timeline", "Timeline"]]
+## Report sections each page reads (its redraw signature).
+const PAGE_DATA := {"highlights": ["insights", "goals", "records", "overview"], "overview": ["overview", "finance"],
+	"people": ["people", "premises"], "lifetime": ["lifetime"]}
+const LIVE_PAGES := ["automation", "energy", "staff", "lifetime"]
 const AUTO_REFRESH_S := 5.0
+const LIVE_S := 1.5
 
 var _page := 0
 var _report: Dictionary = {}
@@ -15,6 +23,8 @@ var _title: Label
 var _stamp: Label
 var _nav_buttons: Array = []
 var _last_request := -100.0
+var _last_live := -100.0
+var _page_sig := 0
 
 
 func build() -> void:
@@ -32,7 +42,7 @@ func build() -> void:
 		b.text = "  " + NAV[i][1]
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.add_theme_font_size_override("font_size", 17)
-		b.custom_minimum_size.y = 40
+		b.custom_minimum_size.y = 36
 		b.pressed.connect(func():
 			Sfx.play_ui("ui_click", -10.0)
 			select(i))
@@ -63,6 +73,7 @@ func build() -> void:
 
 func select(i: int) -> void:
 	_page = i
+	_page_sig = 0
 	_style_nav()
 	_render(false)
 
@@ -86,8 +97,14 @@ func refresh() -> void:
 
 
 func _process(_d: float) -> void:
-	if is_visible_in_tree() and _now() - _last_request > AUTO_REFRESH_S:
+	if not is_visible_in_tree():
+		return
+	var now := _now()
+	if now - _last_request > AUTO_REFRESH_S:
 		_request()
+	elif NAV[_page][0] in LIVE_PAGES and now - _last_live > LIVE_S:
+		_last_live = now
+		Game.request_report(true)
 
 
 func _now() -> float:
@@ -100,17 +117,38 @@ func _request() -> void:
 
 
 func _on_report(r: Dictionary) -> void:
-	_report = r
+	if r.get("live", false):
+		if _report.is_empty():
+			return
+		for k in BusinessReport.LIVE_KEYS:
+			_report[k] = r[k]
+		_report["at"] = r.at
+	else:
+		_report = r
 	_render(true)
+
+
+func _signature() -> int:
+	var id: String = NAV[_page][0]
+	var keys: Array = PAGE_DATA.get(id, [id])
+	var parts: Array = []
+	for k in keys:
+		parts.append(_report.get(k))
+	return hash(parts)
 
 
 func _render(keep_scroll: bool) -> void:
 	if _report.is_empty() or not is_instance_valid(_body):
 		return
+	_stamp.text = "Live · %s   " % GameState.format_minute(float(_report.at))
+	# Nothing on this page changed: keep the widgets (and the reader's place) exactly as they are.
+	var sig := _signature()
+	if keep_scroll and sig == _page_sig:
+		return
+	_page_sig = sig
 	var scroll := _scroll.scroll_vertical if keep_scroll else 0
 	clear(_body)
 	_title.text = NAV[_page][1]
-	_stamp.text = "Live · %s   " % GameState.format_minute(float(_report.at))
 	call("_page_" + NAV[_page][0])
 	(func(): _scroll.scroll_vertical = scroll).call_deferred()
 
@@ -204,6 +242,10 @@ func _page_sales() -> void:
 	_table(v, ["Model", "Sold", "Revenue", "Avg price", "Avg cost", "Avg profit", "Total profit", "Margin"],
 		s.by_model.map(func(g): return [g.key, str(g.count), _m(g.revenue), _m(g.avg_price), _m(g.avg_cost),
 			_mc(g.avg_profit), _mc(g.profit), _p(g.margin_pct)]))
+	if s.has("by_type") and not s.by_type.is_empty():
+		v = _section("By kind of kit", "Laptops, desktops, servers, monitors, network kit, docks, tablets and phones.")
+		_table(v, ["Kind", "Sold", "Revenue", "Avg price", "Avg profit", "Total profit", "Margin"],
+			s.by_type.map(func(g): return [g.key, str(g.count), _m(g.revenue), _m(g.avg_price), _mc(g.avg_profit), _mc(g.profit), _p(g.margin_pct)]))
 	v = _section("By maker")
 	_table(v, ["Maker", "Sold", "Revenue", "Avg price", "Avg profit", "Total profit"],
 		s.by_maker.map(func(g): return [g.key, str(g.count), _m(g.revenue), _m(g.avg_price), _mc(g.avg_profit), _mc(g.profit)]))
@@ -382,6 +424,10 @@ func _page_stock() -> void:
 		max_n = maxi(max_n, int(st.count))
 	for st: Dictionary in s.stages:
 		_meter_row(v, _stage_name(st.key), float(st.count) / max_n, "%d  ·  cost %s  ·  market %s  ·  avg age %s" % [st.count, _m(st.cost), _m(st.market), _days(st.avg_age)], BLUE)
+	if s.has("by_type") and not s.by_type.is_empty():
+		v = _section("Stock by kind of kit")
+		_table(v, ["Kind", "Units", "Untested", "Ready to sell", "Cost", "Market value"],
+			s.by_type.map(func(g): return [g.key, str(g.count), str(g.untested), str(g.ready), _m(g.cost), _m(g.market)]))
 	if not s.by_grade.is_empty():
 		v = _section("Graded stock by grade")
 		_table(v, ["Grade", "Units", "Cost", "Priced at"], s.by_grade.map(func(g): return [_grade_cell(g.key), str(g.count), _m(g.cost), _m(g.value)]))
@@ -584,7 +630,7 @@ func _page_people() -> void:
 	var p: Dictionary = _report.people
 	var pr: Dictionary = _report.premises
 	_kpis([
-		["Team", "%d %s" % [p.team_size, "person" if int(p.team_size) == 1 else "people"], "players on the books", INK],
+		["Team", "%d %s" % [p.team_size, "person" if int(p.team_size) == 1 else "people"], "players + staff on the books", INK],
 		["Hours worked", _hours(p.hours), "all players, on shift", INK],
 		["Avg hours per person", _hours(p.avg_hours_person), "", INK],
 		["Avg hours per shift", _hours(p.avg_hours_day), "per person per day", INK],
@@ -599,7 +645,8 @@ func _page_people() -> void:
 	var v := _section("Staff & wages", "Hired staff, their wages and labour cost per unit.")
 	_table(v, ["Staff employed", "Weekly wage bill", "Avg wage", "Avg hourly wage", "Labour cost per unit"],
 		[[str(p.staff), _m(p.wage_bill_weekly), _m(p.avg_wage_weekly) + "/wk", _m(p.avg_wage_hourly) + "/h", _m(p.labour_per_unit)]], false)
-	_note(v, "No staff yet: it's just the owners, unpaid. Hiring arrives with the Staff app; wages then land here, in Finance and in the Friday bills.")
+	if int(p.staff) == 0:
+		_note(v, "No staff yet: it's just the owners, unpaid. Hire in the Staff app; wages then land here, in Finance and in the Friday bills. The Staff page has the live view.")
 	v = _section("Hours", "Game hours on shift (09:00–17:00) while in the session. Jobs/hour counts tests, repairs, images, grades, listings and parcels.")
 	_table(v, ["Name", "Hours", "Days worked", "Avg hours/day", "Jobs/hour", "Total XP", "Best skill"],
 		p.team.map(func(x): return [x.name, _hours(x.hours), str(x.days), _hours(x.avg_hours_day), "%.1f" % float(x.jobs_per_hour), str(x.xp), x.top_skill]))
@@ -699,3 +746,122 @@ func _today(t: Dictionary) -> void:
 	_table(v, ["Tested", "Repaired", "Imaged", "Graded", "Sold", "Shipped", "Money in", "Money out"],
 		[[str(t.get("tested", 0)), str(t.get("repaired", 0)), str(t.get("imaged", 0)), str(t.get("graded", 0)),
 			str(t.get("sold", 0)), str(t.get("shipped", 0)), _m(t.get("income", 0)), _m(t.get("spend", 0))]], false)
+
+
+# ================================================================= Automation (live)
+
+func _page_automation() -> void:
+	var a: Dictionary = _report.automation
+	if a.machines.is_empty():
+		_empty("No automation yet. Conveyors, robot arms, network racks, robots and stock towers are in the Building app. Once they're running, every move a machine makes is counted here, live.")
+		return
+	_kpis([
+		["Machine moves today", str(a.moves_today), "%.0f an hour so far" % float(a.moves_per_hour_today), BLUE],
+		["Machine moves (all time)", str(a.moves_total), "", INK],
+		["On the belts now", str(a.on_belts), "%d moving · %d queued" % [a.moving, a.queued], INK],
+		["Machines busy", "%d of %d" % [a.machines_busy, a.machines_total], "arms, racks, robots, towers", GREEN if int(a.machines_busy) > 0 else INK],
+		["Conveyor laid", "%.1f m" % float(a.belt_m), "placed belts, bends and devices", INK],
+		["Longest queue", str(a.longest_queue), str(a.longest_queue_at) if int(a.longest_queue) > 0 else "nothing waiting", AMBER if int(a.longest_queue) >= 4 else INK],
+	], 3)
+	if int(a.longest_queue) >= 4:
+		_insight_card(_body, {"tone": "warn", "title": "Queue building on %s" % a.longest_queue_at,
+			"text": "%d items are waiting there. Whatever comes after it is the bottleneck: add another machine, a faster belt or a person at that step." % int(a.longest_queue)})
+	if not a.series.is_empty():
+		var v := _section("Machine moves per hour", "Every item a machine handled, by working hour (the last 24 hours worked).")
+		v.add_child(_chart(a.series, [], a.labels, BLUE, false))
+	var v2 := _section("Machines right now", "Every automated machine you own, busiest first. Updates as you watch.")
+	_table(v2, ["Machine", "Type", "Status", "Moves", "Mostly"], a.machines.map(func(m): return [m.name, m.type,
+		[m.status, GREEN if m.working else SUB], str(m.moves), m.top]), true, 0, [1, 2, 4])
+	if not a.kinds.is_empty():
+		var v3 := _section("What the machines did", "Today resets at close of play.")
+		_table(v3, ["Job", "Today", "All time"], a.kinds.map(func(k): return [k.name, str(k.today), str(k.total)]))
+	var v4 := _section("By machine type")
+	_table(v4, ["Type", "Owned", "Busy now", "Moves"], a.by_type.map(func(t): return [t.key, str(t.count), str(t.working), str(t.moves)]))
+
+
+# ================================================================= Energy (live)
+
+func _page_energy() -> void:
+	var e: Dictionary = _report.energy
+	_kpis([
+		["Drawing now", "%.2f kW" % float(e.kw_now), "%s an hour at %dp/kWh" % [_m2(e.cost_hour), int(round(float(e.rate) * 100.0))], AMBER],
+		["Used today", "%.1f kWh" % float(e.kwh_today), "≈ %s so far" % _m2(e.cost_today), INK],
+		["Average day", "%.1f kWh" % float(e.avg_kwh_day), "≈ %s a day (last 14 days)" % _m2(e.avg_cost_day), INK],
+		["All time", "%.0f kWh" % float(e.kwh_total), "%s billed" % _m(e.cost_total), INK],
+		["Per unit shipped", _m2(e.per_unit), "electricity per parcel", INK],
+		["A full day at this draw", _m2(e.cost_day_at_this_rate), "8 hours at the current load", INK],
+	], 3)
+	var v := _section("What's using power right now", "Machines draw their full rating while working and a standby trickle when idle. Lighting scales with floor area.")
+	if float(e.capacity_kw) > 0.0:
+		_meter_row(v, "Supply used", float(e.capacity_pct) / 100.0, "%.1f of %.0f kW" % [float(e.kw_now), float(e.capacity_kw)], RED if float(e.capacity_pct) > 90.0 else CASH_COL)
+	var top := 0.01
+	for r: Dictionary in e.rows:
+		top = maxf(top, float(r.kw))
+	for r: Dictionary in e.rows:
+		var label := str(r.name) + ((" ×%d" % int(r.count)) if int(r.count) > 1 else "")
+		_meter_row(v, label, float(r.kw) / top, "%.2f kW · %s an hour · %s" % [float(r.kw), _m2(r.cost_hour),
+			"%d of %d working" % [int(r.active), int(r.count)] if str(r.name) != "Lighting" else "always on"], AMBER, _p(r.share))
+	if not e.series_cost.is_empty():
+		var v2 := _section("Electricity by day", "Billed each evening; pennies carry over to the next bill.")
+		v2.add_child(_chart(e.series_cost, [], e.series_days, AMBER, true))
+		_table(v2, ["Day", "kWh", "Cost"], range(e.series_days.size()).map(func(i): return [e.series_days[i], "%.1f" % float(e.series_kwh[i]), _m(e.series_cost[i])]))
+	_note(v, "Tip: network racks, repair robots and arms are the hungry ones. Idle machines still sip standby power, so leave spares in storage until you need them.")
+
+
+# ================================================================= Staff (live)
+
+func _page_staff() -> void:
+	var s: Dictionary = _report.staff
+	_kpis([
+		["Staff", str(s.count), "%d working this minute" % int(s.working_now), BLUE],
+		["Weekly wage bill", _m(s.wage_bill), "paid on Friday with the rent", AMBER],
+		["Worth to the business", _m(s.value_week) + "/wk", "estimated from their skills", GREEN],
+		["Net value", _m(s.net_week) + "/wk", "worth minus wages", _sign(s.net_week)],
+		["Wages paid (all time)", _m(s.wages_paid), "", INK],
+		["Candidates this week", str(s.candidates), "hire in the Staff app", INK],
+	], 3)
+	if s.rows.is_empty():
+		_empty("No staff yet. The Staff app has this week's candidates: a tester or a packer takes a job off your hands. Skill decides speed — a level-1 hire is slow, a level-10 one flies, and pay follows.")
+		return
+	var v := _section("Team right now", "Speed is their pace at their main job against a standard worker (×1.00). Best value first.")
+	_table(v, ["Name", "Role", "Doing", "Main skill", "Speed", "Wage", "Worth", "Jobs", "Days"], s.rows.map(func(x): return [
+		x.name, x.role, [x.status, GREEN if str(x.status).begins_with("Working") else SUB], "%s %d" % [x.main, int(x.level)],
+		"×%.2f" % float(x.speed), _m(x.wage) + "/wk", [_m(x.value) + "/wk", GREEN if int(x.value) > int(x.wage) else AMBER],
+		str(x.jobs), str(x.days)]), true, 0, [1, 2, 3])
+	var v2 := _section("Work done", "Everything each member of staff has done since they started.")
+	_table(v2, ["Name", "Carried", "Tested", "Repaired", "Imaged", "Graded", "Listed", "Packed", "Hours"], s.rows.map(func(x): return [
+		x.name, str(x.acts.get("hauled", 0)), str(x.acts.get("tested", 0)), str(x.acts.get("repaired", 0)), str(x.acts.get("imaged", 0)),
+		str(x.acts.get("graded", 0)), str(x.acts.get("listed", 0)), str(x.acts.get("packed", 0)), _hours(x.hours)]))
+	var defs: Array = Content.skill_defs()
+	var v3 := _section("Skill levels", "They level up by doing the work; Friday's pay review follows their skills.")
+	var headers: Array = ["Name"]
+	headers.append_array(defs.map(func(d): return str(d.name)))
+	_table(v3, headers, s.rows.map(func(x):
+		var row: Array = [x.name]
+		for d: Dictionary in defs:
+			var lv := int(x.levels.get(d.id, 1))
+			row.append([str(lv), GREEN if lv >= 7 else (INK if lv >= 4 else SUB)])
+		return row))
+
+
+# ================================================================= Lifetime stats (live)
+
+func _page_lifetime() -> void:
+	var lf: Dictionary = _report.lifetime
+	_kpis([
+		["Working days", str(lf.days_worked), "this run", INK],
+		["Milestones", "%d of %d" % [int(lf.goals_reached), int(lf.goals_total)], "times and leaderboards in Goals", PROFIT_COL],
+		["Achievements", "%d of %d" % [Game.achievements.unlocked_count(), Achievements.defs().size()], "on this PC", AMBER],
+		["Electricity", "%.0f kWh" % float(lf.kwh), "all time", INK],
+	])
+	if not lf.tea.is_empty():
+		var t := _section("Tea room", "The most important statistics in the building.")
+		_table(t, ["", "Today", "All time"], lf.tea.map(func(x): return [x.name, str(x.today), str(x.total)]))
+	var v := _section("Every counter", "Everything the company has ever done, counted as it happens.")
+	if lf.rows.is_empty():
+		_note(v, "Nothing counted yet — the first lot will get things going.")
+	else:
+		_table(v, ["Counter", "Today", "All time"], lf.rows.map(func(x):
+			if x.key == "revenue":
+				return ["Revenue", _m(x.today), _m(x.total)]
+			return [x.name, str(x.today), str(x.total)]))

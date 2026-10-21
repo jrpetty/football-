@@ -11,7 +11,9 @@ const APPS := [
 	{"id": "insights", "title": "Business Insights", "short": "Insights", "colour": Color(0.88, 0.68, 0.12), "glyph": "▲", "script": "res://ui/office_os/apps/insights_app.gd"},
 	{"id": "mail", "title": "Mail", "short": "Mail", "colour": Color(0.25, 0.7, 0.85), "glyph": "@", "script": "res://ui/office_os/apps/mail_app.gd"},
 	{"id": "skills", "title": "My Skills", "short": "Skills", "colour": Color(0.9, 0.4, 0.3), "glyph": "★", "script": "res://ui/office_os/apps/skills_app.gd"},
-	{"id": "staff", "title": "Staff", "short": "Staff", "colour": Color(0.5, 0.5, 0.55), "glyph": "☺", "script": ""},
+	{"id": "goals", "title": "Goals & Records", "short": "Goals", "colour": Color(0.85, 0.65, 0.1), "glyph": "♛", "script": "res://ui/office_os/apps/goals_app.gd"},
+	{"id": "achievements", "title": "Achievements", "short": "Achievements", "colour": Color(0.78, 0.36, 0.16), "glyph": "✪", "script": "res://ui/office_os/apps/achievements_app.gd"},
+	{"id": "staff", "title": "Staff", "short": "Staff", "colour": Color(0.3, 0.62, 0.45), "glyph": "☺", "script": "res://ui/office_os/apps/staff_app.gd"},
 	{"id": "building", "title": "Premises & Equipment", "short": "Building", "colour": Color(0.2, 0.6, 0.6), "glyph": "⌂", "script": "res://ui/office_os/apps/building_app.gd"},
 ]
 

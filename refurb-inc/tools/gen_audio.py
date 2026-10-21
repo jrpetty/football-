@@ -336,6 +336,49 @@ def tea_round():
     write("sfx", "milk_pour", bandpass(noise(d), 300, 2200) * env(int(SR * d), 0.05, 0.4, 0.7, 0.15) * (0.7 + 0.3 * np.sin(2 * np.pi * 11 * t(d))), 0.35)
 
 
+def achievements():
+    # "Achievement unlocked": a quick rising brass arpeggio into a held major chord, bells on top, sparkle tail.
+    def brass(f, d, sustain=0.7, release=0.06):
+        tt = t(d)
+        ph = 2 * np.pi * f * tt + 0.12 * np.sin(2 * np.pi * 5.5 * tt) * np.clip(tt * 3, 0, 1)
+        tone = sum(np.sin(k * ph) / k ** 1.25 for k in range(1, 7))
+        return tone * env(len(tt), 0.012, d * 0.35, sustain, release)
+
+    def bell(f, d):
+        n = int(SR * d)
+        return (sine(f, d) * exp_decay(n, 0.35) + sine(f * 2.76, d) * 0.3 * exp_decay(n, 0.12)
+                + sine(f * 5.4, d) * 0.12 * exp_decay(n, 0.05))
+
+    total = 1.95
+    out = np.zeros(int(SR * total))
+
+    def add(x, at, gain=1.0):
+        s0 = int(at * SR)
+        e0 = min(len(out), s0 + len(x))
+        out[s0:e0] += x[: e0 - s0] * gain
+
+    # G4 C5 E5 G5 pick-up …
+    for i, f in enumerate([392.0, 523.25, 659.25, 783.99]):
+        at = i * 0.105
+        add(brass(f, 0.17, 0.6, 0.05), at, 0.32)
+        add(bell(f * 2, 0.5), at, 0.18)
+    # … into a held C major chord with a soft thump underneath.
+    chord_at = 0.44
+    for f in [523.25, 659.25, 783.99, 1046.5]:
+        add(brass(f, 1.35, 0.55, 0.65), chord_at, 0.2)
+    add(bell(1046.5, 1.2), chord_at, 0.28)
+    add(bell(1567.98, 1.0), chord_at + 0.05, 0.16)
+    n = int(SR * 0.35)
+    add(sine(130.81, 0.35) * exp_decay(n, 0.08), chord_at, 0.45)
+    # Sparkle: a scatter of tiny high pings fading out over the chord.
+    for k in range(20):
+        at = chord_at + 0.05 + rng.uniform(0, 1.15)
+        f = rng.uniform(2600, 6200)
+        add(sine(f, 0.12) * exp_decay(int(SR * 0.12), 0.025), at, 0.07 * (1.0 - (at - chord_at) / 1.4))
+    out *= np.concatenate([np.ones(len(out) - int(SR * 0.3)), np.linspace(1, 0, int(SR * 0.3))])
+    write("ui", "achievement", out, 0.6)
+
+
 if __name__ == "__main__":
     footsteps()
     handling()
@@ -347,4 +390,5 @@ if __name__ == "__main__":
     tea()
     automation()
     tea_round()
+    achievements()
     # "footstep" (no suffix) resolves to footstep_1..4 variants in Sfx.

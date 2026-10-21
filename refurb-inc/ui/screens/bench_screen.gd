@@ -85,6 +85,17 @@ func _draw_diag(u: UnitData, p: float) -> void:
 	var x2 := w * 0.56
 	_t(Vector2(x2, 74), "Hardware inventory", 15, Color(0.6, 0.75, 1.0))
 	var m := u.model()
+	if m.has("inventory"):
+		var inv: Array = m.inventory.duplicate()
+		if m.has("storage_options"):
+			inv.append("Storage: %s" % UnitData.storage_text(u.storage_gb))
+		if u.has_battery():
+			inv.append("Battery: %d%% design capacity" % u.battery_pct)
+		for i in inv.size():
+			if p > 0.1 + 0.6 * float(i) / inv.size():
+				_t(Vector2(x2, 98 + 22 * i), str(inv[i]), 14, Color.WHITE)
+		_footer_bar(p)
+		return
 	var cpus := int(m.get("cpu_count", 1))
 	var drives := int(m.get("drive_count", 1))
 	if p > 0.12:
@@ -101,12 +112,21 @@ func _draw_diag(u: UnitData, p: float) -> void:
 		elif u.hw_type() == "desktop":
 			extra = "PSU: %s" % Content.part(m.get("psu_part", "")).get("name", "detected")
 		_t(Vector2(x2, 164), extra, 14, Color.WHITE)
+	_footer_bar(p)
+
+
+func _footer_bar(p: float) -> void:
+	var w := get_rect().size.x
 	_bar(Vector2(18, get_rect().size.y - 34), w - 36, 14, p, Color(0.25, 0.6, 1.0))
 	_t(Vector2(18, get_rect().size.y - 42), "%d%%" % int(p * 100), 14, Color(0.8, 0.85, 0.95))
 
 
 func _draw_image(u: UnitData, p: float) -> void:
 	var r := get_rect().size
+	var wipe := u.wipe_info()
+	if not wipe.is_empty():
+		_draw_wipe(u, wipe, p)
+		return
 	draw_rect(Rect2(Vector2.ZERO, r), Color(0.09, 0.05, 0.16))
 	draw_rect(Rect2(0, r.y * 0.55, r.x, r.y * 0.45), Color(0.05, 0.18, 0.2, 0.6))
 	# PaneOS logo: four panes
@@ -125,6 +145,39 @@ func _draw_image(u: UnitData, p: float) -> void:
 	_t(Vector2(30, r.y * 0.82), "%s · %s" % [u.serial, Content.os_info.get("wipe_standard", "")], 13, Color(0.6, 0.65, 0.8))
 
 
+func _draw_wipe(u: UnitData, wipe: Dictionary, p: float) -> void:
+	var r := get_rect().size
+	var network := u.hw_type() in ["switch", "wifi_ap"]
+	_bg(Color(0.02, 0.03, 0.03) if network else Color(0.06, 0.06, 0.08))
+	var accent := Color(0.35, 1.0, 0.55) if network else Color(0.95, 0.6, 0.3)
+	draw_rect(Rect2(0, 0, r.x, 44), accent.darkened(0.65))
+	_t(Vector2(14, 30), str(wipe.get("title", "Secure wipe")), 20, Color.WHITE)
+	_t(Vector2(r.x - 170, 30), u.serial, 16, accent.lightened(0.3))
+	var lines: Array = wipe.get("lines", [])
+	var cur := int(p * lines.size())
+	var y := 80.0
+	for i in lines.size():
+		if i > cur:
+			break
+		var done := i < cur
+		_t(Vector2(18, y), ("%s %s" % ["[ OK ]" if done else "[ .. ]", lines[i]]), 16, accent if done else Color.WHITE)
+		y += 26
+	if fmod(_blink, 1.0) < 0.5 and cur < lines.size():
+		_t(Vector2(18, y), "_", 16, Color.WHITE)
+	_bar(Vector2(18, r.y - 34), r.x - 36, 14, p, accent)
+	_t(Vector2(18, r.y - 42), "%d%% · %s" % [int(p * 100), Content.os_info.get("wipe_standard", "")], 14, Color(0.8, 0.85, 0.9))
+
+
+func _next_step(u: UnitData) -> String:
+	if not u.needs_wipe():
+		return "No data to wipe — take it to grading."
+	if u.hw_type() in ["switch", "wifi_ap"]:
+		return "Swap to the PaneOS USB to wipe the config & update firmware."
+	if not u.wipe_info().is_empty():
+		return "Swap to the PaneOS USB for a secure wipe & factory reset."
+	return "Swap to the PaneOS USB to wipe & image."
+
+
 func _draw_report(u: UnitData) -> void:
 	var r := get_rect().size
 	var rep := u.test_report
@@ -141,7 +194,7 @@ func _draw_report(u: UnitData) -> void:
 	_t(Vector2(16, y), spec_text, 14, Color(0.8, 0.8, 0.85))
 	y += 30
 	if ok:
-		_t(Vector2(16, y), "Swap to the PaneOS USB to wipe & image.", 16, Color(0.6, 1.0, 0.7))
+		_t(Vector2(16, y), _next_step(u), 16, Color(0.6, 1.0, 0.7))
 	else:
 		for f in rep.get("faults", []):
 			var fixed := false
@@ -154,6 +207,31 @@ func _draw_report(u: UnitData) -> void:
 
 func _draw_os_ready(u: UnitData) -> void:
 	var r := get_rect().size
+	match u.hw_type():
+		"monitor", "dock":
+			if u.has_open_faults():
+				_draw_report(u)
+				return
+			_bg(Color(0.04, 0.07, 0.13))
+			draw_rect(Rect2(0, 0, r.x, 54), Color(0.1, 0.55, 0.25))
+			_t(Vector2(16, 38), "TESTED — ready to grade", 24, Color.WHITE)
+			_t(Vector2(16, 86), u.spec_line(), 14, Color(0.8, 0.85, 0.95))
+			_t(Vector2(16, 118), "No user data on this kit — nothing to wipe.", 15, Color(0.6, 1.0, 0.7))
+			return
+		"switch", "wifi_ap":
+			_bg(Color(0.02, 0.03, 0.03))
+			var g := Color(0.35, 1.0, 0.55)
+			_t(Vector2(16, 40), "%s login: _" % ("lwos" if u.hw_type() == "switch" else "air"), 18, g)
+			_t(Vector2(16, 72), "Factory defaults · config erased · firmware current", 15, g.darkened(0.2))
+			_t(Vector2(16, 98), u.spec_line(), 13, g.darkened(0.35))
+			_t(Vector2(16, r.y - 16), u.serial, 12, Color(1, 1, 1, 0.6))
+			return
+		"tablet", "phone":
+			draw_rect(Rect2(Vector2.ZERO, r), Color(0.08, 0.09, 0.12))
+			_t(Vector2(r.x / 2 - 60, r.y * 0.42), "Hello", 40, Color.WHITE)
+			_t(Vector2(r.x / 2 - 120, r.y * 0.42 + 34), "Factory reset — no accounts, ready to set up.", 14, Color(0.85, 0.9, 1.0))
+			_t(Vector2(16, r.y - 16), u.serial, 12, Color(1, 1, 1, 0.6))
+			return
 	draw_rect(Rect2(Vector2.ZERO, r), Color(0.12, 0.32, 0.45))
 	draw_rect(Rect2(0, r.y * 0.6, r.x, r.y * 0.4), Color(0.18, 0.45, 0.55))
 	_t(Vector2(r.x / 2 - 110, r.y * 0.42), "Hello.", 40, Color.WHITE)

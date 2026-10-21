@@ -1,56 +1,561 @@
 {
   "_comment": "Spare parts. 'fits' matches a model field: battery_part/keycap_part ids, ram_type, storage_type. repair_level = minimum player repair skill. repair_secs = hold time at the repair bench at skill level 1.",
   "parts": [
-    {"id": "bat_corvex_prospect",   "name": "Battery — Corvex Prospect (4-cell 63Wh)", "category": "battery", "price": 38, "repair_level": 1, "repair_secs": 4.0},
-    {"id": "bat_corvex_vantage",    "name": "Battery — Corvex Vantage (3-cell 41Wh)", "category": "battery", "price": 29, "repair_level": 1, "repair_secs": 4.0},
-    {"id": "bat_halden_folio",      "name": "Battery — Halden Folio (3-cell 53Wh)",   "category": "battery", "price": 34, "repair_level": 1, "repair_secs": 4.0},
-    {"id": "bat_northstar_meridian","name": "Battery — Northstar Meridian (57Wh)",    "category": "battery", "price": 41, "repair_level": 1, "repair_secs": 4.5},
-    {"id": "bat_northstar_edge",    "name": "Battery — Northstar Edge (45Wh)",        "category": "battery", "price": 27, "repair_level": 1, "repair_secs": 4.0},
-    {"id": "bat_brightline_aura",   "name": "Battery — Brightline Aura (52Wh)",       "category": "battery", "price": 45, "repair_level": 1, "repair_secs": 5.0},
-    {"id": "bat_kestrel_swift",     "name": "Battery — Kestrel Swift (48Wh)",         "category": "battery", "price": 25, "repair_level": 1, "repair_secs": 4.0},
-    {"id": "bat_northstar_vanguard","name": "Battery — Northstar Vanguard (6-cell 90Wh)", "category": "battery", "price": 58, "repair_level": 1, "repair_secs": 5.0},
-    {"id": "ram_ddr4_8",   "name": "8GB DDR4-3200 SODIMM",  "category": "ram", "fits_ram_type": "ddr4_sodimm", "size_gb": 8,  "price": 14, "repair_level": 1, "repair_secs": 2.5},
-    {"id": "ram_ddr4_16",  "name": "16GB DDR4-3200 SODIMM", "category": "ram", "fits_ram_type": "ddr4_sodimm", "size_gb": 16, "price": 26, "repair_level": 1, "repair_secs": 2.5},
-    {"id": "ssd_nvme_256", "name": "256GB NVMe M.2 SSD", "category": "storage", "fits_storage_type": "nvme_m2", "size_gb": 256, "price": 18, "repair_level": 1, "repair_secs": 3.0},
-    {"id": "ssd_nvme_512", "name": "512GB NVMe M.2 SSD", "category": "storage", "fits_storage_type": "nvme_m2", "size_gb": 512, "price": 29, "repair_level": 1, "repair_secs": 3.0},
-    {"id": "ssd_nvme_1000", "name": "1TB NVMe M.2 SSD", "category": "storage", "fits_storage_type": "nvme_m2", "size_gb": 1000, "price": 49, "repair_level": 1, "repair_secs": 3.0},
-    {"id": "ssd_sata_256", "name": "256GB 2.5\" SATA SSD", "category": "storage", "fits_storage_type": "sata_ssd", "size_gb": 256, "price": 16, "repair_level": 1, "repair_secs": 3.5},
-    {"id": "ssd_sata_512", "name": "512GB 2.5\" SATA SSD", "category": "storage", "fits_storage_type": "sata_ssd", "size_gb": 512, "price": 26, "repair_level": 1, "repair_secs": 3.5},
-    {"id": "keys_corvex",     "name": "Keycap kit — Corvex (UK)",     "category": "keys", "price": 6, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "keys_halden",     "name": "Keycap kit — Halden (UK)",     "category": "keys", "price": 6, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "keys_northstar",  "name": "Keycap kit — Northstar (UK)",  "category": "keys", "price": 7, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "keys_brightline", "name": "Keycap kit — Brightline (UK)", "category": "keys", "price": 8, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "keys_kestrel",    "name": "Keycap kit — Kestrel (UK)",    "category": "keys", "price": 5, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "fan_laptop_generic", "name": "Laptop cooling fan (universal)", "category": "fan", "price": 9, "repair_level": 1, "repair_secs": 3.5},
-    {"id": "lcd_14_fhd",  "name": "14\" FHD IPS panel (30-pin)",   "category": "screen", "price": 48, "repair_level": 2, "repair_secs": 6.0},
-    {"id": "lcd_133_fhd", "name": "13.3\" FHD IPS panel (30-pin)", "category": "screen", "price": 52, "repair_level": 2, "repair_secs": 6.0},
-    {"id": "lcd_156_fhd", "name": "15.6\" FHD IPS panel (30-pin)", "category": "screen", "price": 44, "repair_level": 2, "repair_secs": 6.0},
-    {"id": "lcd_173_fhd_144", "name": "17.3\" FHD 144Hz IPS panel (40-pin)", "category": "screen", "price": 79, "repair_level": 2, "repair_secs": 6.5},
-    {"id": "hinge_kit",   "name": "Hinge kit (L+R, universal fit)", "category": "hinge", "price": 12, "repair_level": 2, "repair_secs": 5.0},
-    {"id": "kbd_deck_generic", "name": "Keyboard deck / palmrest assembly", "category": "keyboard", "price": 35, "repair_level": 2, "repair_secs": 7.0},
-    {"id": "board_reflash_kit", "name": "BIOS programmer clip + reflash kit", "category": "board_tool", "price": 22, "reusable": true, "repair_level": 3, "repair_secs": 9.0},
-    {"id": "mobo_laptop_generic", "name": "Replacement system board (model-matched)", "category": "motherboard", "price": 95, "repair_level": 3, "repair_secs": 10.0},
-    {"id": "ram_dimm_8", "name": "8GB DDR4-3200 DIMM", "category": "ram", "fits_ram_type": "ddr4_dimm", "size_gb": 8, "price": 16, "repair_level": 1, "repair_secs": 2.5},
-    {"id": "ram_dimm_16", "name": "16GB DDR4-3200 DIMM", "category": "ram", "fits_ram_type": "ddr4_dimm", "size_gb": 16, "price": 28, "repair_level": 1, "repair_secs": 2.5},
-    {"id": "ram_rdimm_16", "name": "16GB DDR4 ECC RDIMM", "category": "ram", "fits_ram_type": "ddr4_rdimm", "size_gb": 16, "price": 22, "repair_level": 1, "repair_secs": 3.0},
-    {"id": "ram_rdimm_32", "name": "32GB DDR4 ECC RDIMM", "category": "ram", "fits_ram_type": "ddr4_rdimm", "size_gb": 32, "price": 38, "repair_level": 1, "repair_secs": 3.0},
-    {"id": "ram_rdimm_64", "name": "64GB DDR4 ECC RDIMM", "category": "ram", "fits_ram_type": "ddr4_rdimm", "size_gb": 64, "price": 72, "repair_level": 1, "repair_secs": 3.0},
-    {"id": "hdd_sas_600", "name": "600GB 10k SAS HDD (in caddy)", "category": "storage", "fits_storage_type": "sas_caddy", "size_gb": 600, "price": 18, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "hdd_sas_1200", "name": "1.2TB 10k SAS HDD (in caddy)", "category": "storage", "fits_storage_type": "sas_caddy", "size_gb": 1200, "price": 32, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "hdd_sata_1000", "name": "1TB 3.5in SATA HDD (in caddy)", "category": "storage", "fits_storage_type": "sata_hdd", "size_gb": 1000, "price": 22, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "hdd_sata_2000", "name": "2TB 3.5in SATA HDD (in caddy)", "category": "storage", "fits_storage_type": "sata_hdd", "size_gb": 2000, "price": 34, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "hdd_sata_4000", "name": "4TB 3.5in SATA HDD (in caddy)", "category": "storage", "fits_storage_type": "sata_hdd", "size_gb": 4000, "price": 58, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "psu_brick_90w", "name": "90W power brick (mini PC)", "category": "psu", "price": 19, "repair_level": 2, "repair_secs": 2.0},
-    {"id": "psu_sff_180", "name": "180W SFF power supply", "category": "psu", "price": 28, "repair_level": 2, "repair_secs": 6.0},
-    {"id": "psu_atx_500", "name": "500W ATX power supply", "category": "psu", "price": 39, "repair_level": 2, "repair_secs": 6.5},
-    {"id": "psu_server_250", "name": "250W microserver power supply", "category": "psu", "price": 35, "repair_level": 2, "repair_secs": 6.0},
-    {"id": "psu_server_550", "name": "550W server power supply", "category": "psu", "price": 52, "repair_level": 2, "repair_secs": 5.0},
-    {"id": "psu_server_750", "name": "750W hot-plug server PSU", "category": "psu", "price": 48, "repair_level": 2, "repair_secs": 3.0},
-    {"id": "server_ear_kit", "name": "Rack ear kit with front-panel board (L+R)", "category": "server_ear", "price": 16, "repair_level": 2, "repair_secs": 5.0},
-    {"id": "raid_bbu", "name": "RAID controller cache battery", "category": "battery", "price": 24, "repair_level": 1, "repair_secs": 3.5},
-    {"id": "fan_desktop_92", "name": "92mm case fan", "category": "fan", "price": 7, "repair_level": 1, "repair_secs": 3.0},
-    {"id": "fan_server_hotswap", "name": "Hot-swap system fan module", "category": "fan", "price": 19, "repair_level": 1, "repair_secs": 2.0},
-    {"id": "mobo_desktop_generic", "name": "Replacement desktop system board (model-matched)", "category": "motherboard", "price": 75, "repair_level": 3, "repair_secs": 11.0},
-    {"id": "mobo_server_generic", "name": "Replacement server system board (model-matched)", "category": "motherboard", "price": 185, "repair_level": 3, "repair_secs": 14.0}
+    {
+      "id": "bat_corvex_prospect",
+      "name": "Battery — Corvex Prospect (4-cell 63Wh)",
+      "category": "battery",
+      "price": 38,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "bat_corvex_vantage",
+      "name": "Battery — Corvex Vantage (3-cell 41Wh)",
+      "category": "battery",
+      "price": 29,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "bat_halden_folio",
+      "name": "Battery — Halden Folio (3-cell 53Wh)",
+      "category": "battery",
+      "price": 34,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "bat_northstar_meridian",
+      "name": "Battery — Northstar Meridian (57Wh)",
+      "category": "battery",
+      "price": 41,
+      "repair_level": 1,
+      "repair_secs": 4.5
+    },
+    {
+      "id": "bat_northstar_edge",
+      "name": "Battery — Northstar Edge (45Wh)",
+      "category": "battery",
+      "price": 27,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "bat_brightline_aura",
+      "name": "Battery — Brightline Aura (52Wh)",
+      "category": "battery",
+      "price": 45,
+      "repair_level": 1,
+      "repair_secs": 5.0
+    },
+    {
+      "id": "bat_kestrel_swift",
+      "name": "Battery — Kestrel Swift (48Wh)",
+      "category": "battery",
+      "price": 25,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "bat_northstar_vanguard",
+      "name": "Battery — Northstar Vanguard (6-cell 90Wh)",
+      "category": "battery",
+      "price": 58,
+      "repair_level": 1,
+      "repair_secs": 5.0
+    },
+    {
+      "id": "ram_ddr4_8",
+      "name": "8GB DDR4-3200 SODIMM",
+      "category": "ram",
+      "fits_ram_type": "ddr4_sodimm",
+      "size_gb": 8,
+      "price": 14,
+      "repair_level": 1,
+      "repair_secs": 2.5
+    },
+    {
+      "id": "ram_ddr4_16",
+      "name": "16GB DDR4-3200 SODIMM",
+      "category": "ram",
+      "fits_ram_type": "ddr4_sodimm",
+      "size_gb": 16,
+      "price": 26,
+      "repair_level": 1,
+      "repair_secs": 2.5
+    },
+    {
+      "id": "ssd_nvme_256",
+      "name": "256GB NVMe M.2 SSD",
+      "category": "storage",
+      "fits_storage_type": "nvme_m2",
+      "size_gb": 256,
+      "price": 18,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "ssd_nvme_512",
+      "name": "512GB NVMe M.2 SSD",
+      "category": "storage",
+      "fits_storage_type": "nvme_m2",
+      "size_gb": 512,
+      "price": 29,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "ssd_nvme_1000",
+      "name": "1TB NVMe M.2 SSD",
+      "category": "storage",
+      "fits_storage_type": "nvme_m2",
+      "size_gb": 1000,
+      "price": 49,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "ssd_sata_256",
+      "name": "256GB 2.5\" SATA SSD",
+      "category": "storage",
+      "fits_storage_type": "sata_ssd",
+      "size_gb": 256,
+      "price": 16,
+      "repair_level": 1,
+      "repair_secs": 3.5
+    },
+    {
+      "id": "ssd_sata_512",
+      "name": "512GB 2.5\" SATA SSD",
+      "category": "storage",
+      "fits_storage_type": "sata_ssd",
+      "size_gb": 512,
+      "price": 26,
+      "repair_level": 1,
+      "repair_secs": 3.5
+    },
+    {
+      "id": "keys_corvex",
+      "name": "Keycap kit — Corvex (UK)",
+      "category": "keys",
+      "price": 6,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "keys_halden",
+      "name": "Keycap kit — Halden (UK)",
+      "category": "keys",
+      "price": 6,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "keys_northstar",
+      "name": "Keycap kit — Northstar (UK)",
+      "category": "keys",
+      "price": 7,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "keys_brightline",
+      "name": "Keycap kit — Brightline (UK)",
+      "category": "keys",
+      "price": 8,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "keys_kestrel",
+      "name": "Keycap kit — Kestrel (UK)",
+      "category": "keys",
+      "price": 5,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "fan_laptop_generic",
+      "name": "Laptop cooling fan (universal)",
+      "category": "fan",
+      "price": 9,
+      "repair_level": 1,
+      "repair_secs": 3.5
+    },
+    {
+      "id": "lcd_14_fhd",
+      "name": "14\" FHD IPS panel (30-pin)",
+      "category": "screen",
+      "price": 48,
+      "repair_level": 2,
+      "repair_secs": 6.0
+    },
+    {
+      "id": "lcd_133_fhd",
+      "name": "13.3\" FHD IPS panel (30-pin)",
+      "category": "screen",
+      "price": 52,
+      "repair_level": 2,
+      "repair_secs": 6.0
+    },
+    {
+      "id": "lcd_156_fhd",
+      "name": "15.6\" FHD IPS panel (30-pin)",
+      "category": "screen",
+      "price": 44,
+      "repair_level": 2,
+      "repair_secs": 6.0
+    },
+    {
+      "id": "lcd_173_fhd_144",
+      "name": "17.3\" FHD 144Hz IPS panel (40-pin)",
+      "category": "screen",
+      "price": 79,
+      "repair_level": 2,
+      "repair_secs": 6.5
+    },
+    {
+      "id": "hinge_kit",
+      "name": "Hinge kit (L+R, universal fit)",
+      "category": "hinge",
+      "price": 12,
+      "repair_level": 2,
+      "repair_secs": 5.0
+    },
+    {
+      "id": "kbd_deck_generic",
+      "name": "Keyboard deck / palmrest assembly",
+      "category": "keyboard",
+      "price": 35,
+      "repair_level": 2,
+      "repair_secs": 7.0
+    },
+    {
+      "id": "board_reflash_kit",
+      "name": "BIOS programmer clip + reflash kit",
+      "category": "board_tool",
+      "price": 22,
+      "reusable": true,
+      "repair_level": 3,
+      "repair_secs": 9.0
+    },
+    {
+      "id": "mobo_laptop_generic",
+      "name": "Replacement system board (model-matched)",
+      "category": "motherboard",
+      "price": 95,
+      "repair_level": 3,
+      "repair_secs": 10.0
+    },
+    {
+      "id": "ram_dimm_8",
+      "name": "8GB DDR4-3200 DIMM",
+      "category": "ram",
+      "fits_ram_type": "ddr4_dimm",
+      "size_gb": 8,
+      "price": 16,
+      "repair_level": 1,
+      "repair_secs": 2.5
+    },
+    {
+      "id": "ram_dimm_16",
+      "name": "16GB DDR4-3200 DIMM",
+      "category": "ram",
+      "fits_ram_type": "ddr4_dimm",
+      "size_gb": 16,
+      "price": 28,
+      "repair_level": 1,
+      "repair_secs": 2.5
+    },
+    {
+      "id": "ram_rdimm_16",
+      "name": "16GB DDR4 ECC RDIMM",
+      "category": "ram",
+      "fits_ram_type": "ddr4_rdimm",
+      "size_gb": 16,
+      "price": 22,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "ram_rdimm_32",
+      "name": "32GB DDR4 ECC RDIMM",
+      "category": "ram",
+      "fits_ram_type": "ddr4_rdimm",
+      "size_gb": 32,
+      "price": 38,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "ram_rdimm_64",
+      "name": "64GB DDR4 ECC RDIMM",
+      "category": "ram",
+      "fits_ram_type": "ddr4_rdimm",
+      "size_gb": 64,
+      "price": 72,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "hdd_sas_600",
+      "name": "600GB 10k SAS HDD (in caddy)",
+      "category": "storage",
+      "fits_storage_type": "sas_caddy",
+      "size_gb": 600,
+      "price": 18,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "hdd_sas_1200",
+      "name": "1.2TB 10k SAS HDD (in caddy)",
+      "category": "storage",
+      "fits_storage_type": "sas_caddy",
+      "size_gb": 1200,
+      "price": 32,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "hdd_sata_1000",
+      "name": "1TB 3.5in SATA HDD (in caddy)",
+      "category": "storage",
+      "fits_storage_type": "sata_hdd",
+      "size_gb": 1000,
+      "price": 22,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "hdd_sata_2000",
+      "name": "2TB 3.5in SATA HDD (in caddy)",
+      "category": "storage",
+      "fits_storage_type": "sata_hdd",
+      "size_gb": 2000,
+      "price": 34,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "hdd_sata_4000",
+      "name": "4TB 3.5in SATA HDD (in caddy)",
+      "category": "storage",
+      "fits_storage_type": "sata_hdd",
+      "size_gb": 4000,
+      "price": 58,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "psu_brick_90w",
+      "name": "90W power brick (mini PC)",
+      "category": "psu",
+      "price": 19,
+      "repair_level": 2,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "psu_sff_180",
+      "name": "180W SFF power supply",
+      "category": "psu",
+      "price": 28,
+      "repair_level": 2,
+      "repair_secs": 6.0
+    },
+    {
+      "id": "psu_atx_500",
+      "name": "500W ATX power supply",
+      "category": "psu",
+      "price": 39,
+      "repair_level": 2,
+      "repair_secs": 6.5
+    },
+    {
+      "id": "psu_server_250",
+      "name": "250W microserver power supply",
+      "category": "psu",
+      "price": 35,
+      "repair_level": 2,
+      "repair_secs": 6.0
+    },
+    {
+      "id": "psu_server_550",
+      "name": "550W server power supply",
+      "category": "psu",
+      "price": 52,
+      "repair_level": 2,
+      "repair_secs": 5.0
+    },
+    {
+      "id": "psu_server_750",
+      "name": "750W hot-plug server PSU",
+      "category": "psu",
+      "price": 48,
+      "repair_level": 2,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "server_ear_kit",
+      "name": "Rack ear kit with front-panel board (L+R)",
+      "category": "server_ear",
+      "price": 16,
+      "repair_level": 2,
+      "repair_secs": 5.0
+    },
+    {
+      "id": "raid_bbu",
+      "name": "RAID controller cache battery",
+      "category": "battery",
+      "price": 24,
+      "repair_level": 1,
+      "repair_secs": 3.5
+    },
+    {
+      "id": "fan_desktop_92",
+      "name": "92mm case fan",
+      "category": "fan",
+      "price": 7,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "fan_server_hotswap",
+      "name": "Hot-swap system fan module",
+      "category": "fan",
+      "price": 19,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "mobo_desktop_generic",
+      "name": "Replacement desktop system board (model-matched)",
+      "category": "motherboard",
+      "price": 75,
+      "repair_level": 3,
+      "repair_secs": 11.0
+    },
+    {
+      "id": "mobo_server_generic",
+      "name": "Replacement server system board (model-matched)",
+      "category": "motherboard",
+      "price": 185,
+      "repair_level": 3,
+      "repair_secs": 14.0
+    },
+    {
+      "id": "monitor_stand",
+      "name": "Monitor stand (height-adjust)",
+      "category": "monitor",
+      "price": 18,
+      "repair_level": 1,
+      "repair_secs": 3.0
+    },
+    {
+      "id": "monitor_psu_board",
+      "name": "Monitor PSU / mainboard",
+      "category": "monitor",
+      "price": 24,
+      "repair_level": 2,
+      "repair_secs": 8.0
+    },
+    {
+      "id": "fan_switch_40",
+      "name": "Switch fan 40 mm",
+      "category": "fan",
+      "price": 9,
+      "repair_level": 1,
+      "repair_secs": 4.0
+    },
+    {
+      "id": "board_switch_ls24",
+      "name": "Linkwell LS-24 port board",
+      "category": "board",
+      "price": 60,
+      "repair_level": 3,
+      "repair_secs": 12.0
+    },
+    {
+      "id": "console_cable",
+      "name": "Serial console cable (reusable)",
+      "category": "tool",
+      "price": 12,
+      "repair_level": 1,
+      "repair_secs": 5.0,
+      "reusable": true
+    },
+    {
+      "id": "board_ap_ax",
+      "name": "Access point radio board",
+      "category": "board",
+      "price": 25,
+      "repair_level": 3,
+      "repair_secs": 9.0
+    },
+    {
+      "id": "dock_psu_130",
+      "name": "130 W dock power brick",
+      "category": "psu",
+      "price": 19,
+      "repair_level": 1,
+      "repair_secs": 2.0
+    },
+    {
+      "id": "board_dock_wd",
+      "name": "Dock WD-22 controller board",
+      "category": "board",
+      "price": 30,
+      "repair_level": 2,
+      "repair_secs": 8.0
+    },
+    {
+      "id": "bat_tablet_slate",
+      "name": "Battery — Brightline Slate 11",
+      "category": "battery",
+      "price": 28,
+      "repair_level": 2,
+      "repair_secs": 7.0
+    },
+    {
+      "id": "bat_phone_generic",
+      "name": "Phone battery (6.1in)",
+      "category": "battery",
+      "price": 14,
+      "repair_level": 2,
+      "repair_secs": 6.0
+    },
+    {
+      "id": "screen_tablet_11",
+      "name": "Tablet screen 11in (digitiser + LCD)",
+      "category": "screen",
+      "price": 65,
+      "repair_level": 2,
+      "repair_secs": 10.0
+    },
+    {
+      "id": "screen_phone_61",
+      "name": "Phone screen 6.1in OLED assembly",
+      "category": "screen",
+      "price": 38,
+      "repair_level": 2,
+      "repair_secs": 8.0
+    },
+    {
+      "id": "charge_port_usbc",
+      "name": "USB-C charge port flex",
+      "category": "mobile",
+      "price": 6,
+      "repair_level": 1,
+      "repair_secs": 5.0
+    },
+    {
+      "id": "board_mobile",
+      "name": "Phone/tablet logic board (donor)",
+      "category": "board",
+      "price": 45,
+      "repair_level": 3,
+      "repair_secs": 12.0
+    }
   ]
 }

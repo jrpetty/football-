@@ -33,6 +33,10 @@ const FIT_TOLERANCE := 0.06
 var slot_nodes: Dictionary = {}      # full slot id -> SnapSlot
 var item_views: Dictionary = {}      # item id -> ItemView
 var fixture_nodes: Dictionary = {}   # fixture id -> Node3D
+var staff_nav: StaffNav = null        # host: walkable grid for AI staff
+var staff_views: Dictionary = {}      # staff id -> StaffView
+var _nav_dirty := Rect2()
+var _nav_t := 0.0
 var players: Dictionary = {}         # peer id -> Player
 var pending_views: Dictionary = {}   # item ids waiting for their slot node to exist
 var items_root: Node3D
@@ -134,6 +138,63 @@ func _on_state_reset() -> void:
 		_relocate_loose_items()
 	_rebuild_items()
 	_sync_players()
+	_sync_staff()
+	if Game.is_host():
+		_build_staff_nav.call_deferred()
+
+
+func _build_staff_nav() -> void:
+	## Walkable grid over the building plus its yard (staff fetch pallets from goods-in).
+	if not is_inside_tree():
+		return
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var area := Rect2()
+	var first := true
+	for fr: Rect2 in floor_rects:
+		area = fr if first else area.merge(fr)
+		first = false
+	if first:
+		area = Rect2(-10, -10, 20, 20)
+	if goods_in:
+		var g := goods_in.global_position
+		area = area.expand(Vector2(g.x, g.z)).grow(2.0)
+	staff_nav = StaffNav.new()
+	staff_nav.build(get_world_3d(), area.grow(1.0))
+
+
+func _sync_staff() -> void:
+	## One StaffView per member of staff (on every machine), registered as a "player" for carrying.
+	for id in staff_views.keys():
+		if not Game.state.staff.has(id):
+			players.erase(StaffView.peer_of(id))
+			staff_views[id].queue_free()
+			staff_views.erase(id)
+	for id in Game.state.staff:
+		if staff_views.has(id):
+			continue
+		var v := StaffView.new()
+		players_root.add_child(v)
+		var d: Dictionary = Game.state.staff[id]
+		if (d.get("pos", []) as Array).is_empty():
+			var sp: Node3D = spawn_points[id % maxi(spawn_points.size(), 1)] if not spawn_points.is_empty() else null
+			v.global_position = (sp.global_position if sp else Vector3.ZERO) + Vector3(0.6, 0, 0.6)
+			d["pos"] = [v.global_position.x, 0.0, v.global_position.z]
+		v.setup(int(id))
+		staff_views[id] = v
+		players[v.peer] = v
+	for it: Item in Game.state.items.values():
+		if it.loc.get("t") == "held" and int(it.loc.get("peer", 0)) <= -1000:
+			_update_item(it.id)
+
+
+func _process(delta: float) -> void:
+	# Equipment moved: re-probe the staff grid around it (batched).
+	if staff_nav and _nav_dirty.size != Vector2.ZERO:
+		_nav_t -= delta
+		if _nav_t <= 0.0:
+			staff_nav.refresh(_nav_dirty.grow(1.0))
+			_nav_dirty = Rect2()
 
 
 func _rehome_orphans() -> void:
@@ -156,7 +217,17 @@ func _on_state_changed(kind: String, id: Variant) -> void:
 		"item":
 			_update_item(int(id))
 		"fixture":
+			var before: Node3D = fixture_nodes.get(str(id))
+			var old_r := Rect2(Vector2(before.global_position.x, before.global_position.z), Vector2.ZERO).grow(2.5) if before else Rect2()
 			_update_fixture(str(id))
+			if staff_nav:
+				var f: Dictionary = Game.state.fixtures.get(str(id), {})
+				var new_r := Rect2(Vector2(float(f.get("p", [0, 0, 0])[0]), float(f.get("p", [0, 0, 0])[2])), Vector2.ZERO).grow(2.5)
+				var r := new_r.merge(old_r) if old_r.size != Vector2.ZERO else new_r
+				_nav_dirty = r if _nav_dirty.size == Vector2.ZERO else _nav_dirty.merge(r)
+				_nav_t = 0.4
+		"staff":
+			_sync_staff()
 
 
 # ================================================================= equipment (fixtures)
@@ -182,6 +253,12 @@ func _update_fixture(id: String) -> void:
 				_update_item(it.id)
 		return
 	var xf := Transform3D(Basis(Vector3.UP, deg_to_rad(float(f.r))), Vector3(f.p[0], f.p[1], f.p[2]))
+	if node and f.has("bend") and str(node.get_meta("bend_sig", "")) != str(f.bend):
+		# A flexible bend was re-shaped: rebuild it.
+		fixture_nodes.erase(id)
+		node.queue_free()
+		fixtures_root.remove_child(node)
+		node = null
 	if node:
 		node.global_transform = xf
 		return
@@ -223,20 +300,28 @@ func fixture_model_info(type: String) -> Dictionary:
 		var inst: Node = load(def.scene).instantiate()
 		var ms := inst.get_node_or_null("Model")
 		if ms:
-			out = {"placeholder": ms.get("placeholder"), "params": ms.get("placeholder_params"), "scene": ms.get("model_scene")}
+			out = {"placeholder": ms.get("placeholder"), "params": ms.get("placeholder_params"), "scene": ms.get("model_scene"),
+				"offset": ms.get("model_offset"), "rot": ms.get("model_rotation_deg"), "scale": ms.get("model_scale")}
 		inst.free()
 	_model_cache[type] = out
 	return out
 
 
-static func footprint_rect(type: String, pos: Vector3, rot_deg: float) -> Rect2:
-	## World XZ bounds of a fixture's footprint (rotations snap to 90° steps for the bounds).
-	var def := Content.fixture(type)
-	var fp: Array = def.get("footprint", [1.0, 1.0])
-	var w := float(fp[0])
-	var back := float(def.get("back", float(fp[1]) * 0.5))
-	var front := float(def.get("front", float(fp[1]) * 0.5))
-	var corners := [Vector3(-w / 2, 0, -back), Vector3(w / 2, 0, -back), Vector3(-w / 2, 0, front), Vector3(w / 2, 0, front)]
+static func apply_model_info(ms: ModelSlot, info: Dictionary) -> void:
+	## Same offset/rotation/scale as the fixture's own scene (short devices reuse the 2 m conveyor model, scaled).
+	if info.get("offset") != null:
+		ms.model_offset = info.offset
+	if info.get("rot") != null:
+		ms.model_rotation_deg = info.rot
+	if info.get("scale") != null:
+		ms.model_scale = info.scale
+
+
+static func footprint_rect(type: String, pos: Vector3, rot_deg: float, settings: Dictionary = {}) -> Rect2:
+	## World XZ bounds of a fixture's footprint (flexible bends use their actual arc).
+	var lr := Automation.local_rect(type, settings)
+	var corners := [Vector3(lr.position.x, 0, lr.position.y), Vector3(lr.end.x, 0, lr.position.y),
+		Vector3(lr.position.x, 0, lr.end.y), Vector3(lr.end.x, 0, lr.end.y)]
 	var b := Basis(Vector3.UP, deg_to_rad(rot_deg))
 	var r := Rect2()
 	for i in corners.size():
@@ -248,8 +333,8 @@ static func footprint_rect(type: String, pos: Vector3, rot_deg: float) -> Rect2:
 	return r
 
 
-func can_place(type: String, pos: Vector3, rot_deg: float, ignore_id: String = "") -> bool:
-	var r := footprint_rect(type, pos, rot_deg).grow(-FIT_TOLERANCE)
+func can_place(type: String, pos: Vector3, rot_deg: float, ignore_id: String = "", settings: Dictionary = {}) -> bool:
+	var r := footprint_rect(type, pos, rot_deg, settings).grow(-FIT_TOLERANCE)
 	var inside := floor_rects.is_empty()
 	for fr in floor_rects:
 		if fr.encloses(r):
@@ -266,7 +351,7 @@ func can_place(type: String, pos: Vector3, rot_deg: float, ignore_id: String = "
 		var f: Dictionary = Game.state.fixtures[id]
 		if not f.get("placed", false):
 			continue
-		var o := footprint_rect(f.type, Vector3(f.p[0], f.p[1], f.p[2]), float(f.r)).grow(-FIT_TOLERANCE)
+		var o := footprint_rect(f.type, Vector3(f.p[0], f.p[1], f.p[2]), float(f.r), f.get("bend", {})).grow(-FIT_TOLERANCE)
 		if o.intersects(r):
 			return false
 	return true
@@ -353,6 +438,7 @@ func _preview_fixtures() -> void:
 		ms.placeholder = str(info.get("placeholder", ""))
 		ms.placeholder_params = info.get("params", {})
 		ms.model_scene = info.get("scene")
+		apply_model_info(ms, info)
 		fixtures_root.add_child(ms)
 		ms.global_transform = m.global_transform
 

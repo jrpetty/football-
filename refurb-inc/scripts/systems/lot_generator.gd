@@ -7,7 +7,7 @@ extends RefCounted
 const GAME_START_YEAR := 2025
 const DAYS_PER_YEAR := 120          # in-game calendar compression for refresh cycles / ageing
 const KEYS := ["Q", "W", "E", "R", "T", "A", "S", "D", "F", "Z", "X", "C", "N", "M", "Enter", "Space", "Shift", "Backspace", "@", "Tab"]
-const SERIAL_PREFIX := {"corvex": "CVX", "halden": "HLD", "northstar": "NST", "brightline": "BRL", "kestrel": "KST"}
+const SERIAL_PREFIX := {"corvex": "CVX", "halden": "HLD", "northstar": "NST", "brightline": "BRL", "kestrel": "KST", "linkwell": "LNK"}
 
 var state: GameState
 var rng: RandomNumberGenerator
@@ -86,9 +86,10 @@ func roll_unit(model_id: String, q: float, seller: Dictionary = {}) -> UnitData:
 	var u := UnitData.new()
 	u.model_id = model_id
 	u.serial = _serial(m.get("maker", ""))
+	# Monitors, docks and network kit have no CPU/RAM (and only tablets/phones roll storage): those stay ""/0.
 	u.cpu_id = _pick(m.get("cpu_options", [m.get("ref_cpu", "")]))
-	u.ram_gb = int(_pick(m.get("ram_options", [8])))
-	u.storage_gb = int(_pick(m.get("storage_options", [256])))
+	u.ram_gb = int(_pick(m.get("ram_options", [m.get("ref_ram", 0)])))
+	u.storage_gb = int(_pick(m.get("storage_options", [m.get("ref_storage", 0)])))
 	u.seller_name = seller.get("name", "")
 
 	# --- external condition
@@ -112,8 +113,8 @@ func roll_unit(model_id: String, q: float, seller: Dictionary = {}) -> UnitData:
 			_add_internal_fault(u)
 
 	var worn := u.faults.any(func(f): return f.id == "battery_worn")
-	if not u.is_laptop():
-		u.battery_pct = 100      # no battery to wear out (desktops/servers)
+	if not u.has_battery():
+		u.battery_pct = 100      # no battery to wear out (desktops, servers, monitors, network kit)
 	elif worn:
 		u.battery_pct = rng.randi_range(31, 64)
 		for f in u.faults:
@@ -163,7 +164,8 @@ func _make_fault(fault_id: String, u: UnitData) -> Dictionary:
 
 
 static func fault_text(f: Dictionary) -> String:
-	var text: String = Content.fault(f.get("id", "")).get("report", f.get("id", ""))
+	var fdef := Content.fault(f.get("id", ""))
+	var text: String = fdef.get("report", fdef.get("name", f.get("id", "")))
 	for k in f.get("detail", {}):
 		text = text.replace("{%s}" % k, str(f.detail[k]))
 	return text

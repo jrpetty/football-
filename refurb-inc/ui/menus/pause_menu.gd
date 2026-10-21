@@ -7,6 +7,7 @@ signal quit_to_menu
 var _root: Control
 var _main: VBoxContainer
 var _settings: SettingsPanel
+var _character: CharacterPanel
 var _open := false
 
 
@@ -37,6 +38,9 @@ func _ready() -> void:
 	_main.add_child(UiStyle.label(BuildInfo.STAMP, 14, UiStyle.MUTED))
 	_btn("Resume", close)
 	_btn("Settings", _show_settings)
+	_btn("Character", func():
+		panel.visible = false
+		_character.visible = true)
 	_btn("Save game", func():
 		var err := SaveManager.save_game("manual")
 		Game.toast.emit("Game saved." if err == OK else "Only the host can save.", "good" if err == OK else "warn"))
@@ -54,6 +58,12 @@ func _ready() -> void:
 		panel.visible = true)
 	stack.add_child(_settings)
 	_settings.set_meta("panel", panel)
+	_character = CharacterPanel.new()
+	_character.visible = false
+	_character.closed.connect(func():
+		_character.visible = false
+		panel.visible = true)
+	stack.add_child(_character)
 	_root.visible = false
 
 
