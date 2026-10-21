@@ -13,9 +13,14 @@ var visual_vehicles := false   # true when a level's VehicleDirector animates lo
 var active_peers: Array = []   # players currently in the session (Game sets this each frame) — counted as on shift
 
 
+var auto: Automation
+var _fixture_sig := 0
+
+
 func _init(s: GameState) -> void:
 	state = s
 	lots = LotGenerator.new(s)
+	auto = Automation.new(self)
 
 
 # ================================================================= new game
@@ -293,7 +298,162 @@ func _station_accepts(station_id: String, slot_id: String, it: Item) -> Dictiona
 func _on_entered_slot(it: Item, slot_id: String, peer: int) -> void:
 	var sid := state.slot_station(slot_id)
 	if sid != "" and state.stations.has(sid):
-		try_start_bench(sid, peer)
+		var t: String = state.stations[sid].get("type", "")
+		if t in ["rack_test", "rack_image", "robot_repair", "robot_pack"]:
+			try_start_machine(sid, slot_id.get_slice(":", 1))
+		else:
+			try_start_bench(sid, peer)
+
+
+# ================================================================= machines (racks + robots)
+
+func machine_minutes(sid: String, base: float, u: UnitData) -> float:
+	var auto_def := Automation.def_of(state.fixtures.get(sid, {}).get("type", ""))
+	return base * (float(u.model().get("test_mult", 1.0)) if u else 1.0) / float(auto_def.get("speed", 1.0))
+
+
+func try_start_machine(sid: String, bay: String) -> void:
+	## Network test/imaging racks and robots work on their own (no USB, no player): one job per bay.
+	var st: Dictionary = state.stations.get(sid, {})
+	var it := state.station_slot_item(sid, bay)
+	if it == null or st.is_empty():
+		return
+	if not st.has("jobs"):
+		st["jobs"] = {}
+	if st.jobs.has(bay):
+		return
+	var t: String = st.type
+	var u := it.unit
+	var job := ""
+	var dur := 0.0
+	match t:
+		"rack_test":
+			if u and not u.tested:
+				job = "test"
+				dur = machine_minutes(sid, float(Content.econ("test_minutes", 30)), u)
+		"rack_image":
+			if u and u.tested and not u.has_open_faults() and not u.imaged:
+				job = "image"
+				dur = machine_minutes(sid, float(Content.econ("image_minutes", 45)), u)
+		"robot_repair":
+			if u and u.tested and u.has_open_faults():
+				var n := _robot_fixable(sid, u).size()
+				if n > 0:
+					job = "repair"
+					dur = machine_minutes(sid, 6.0 * n, null)
+		"robot_pack":
+			if u and u.order_id != 0 and state.station_slot_item(sid, "out") == null:
+				job = "pack"
+				dur = machine_minutes(sid, 4.0, null)
+	if job == "":
+		return
+	st.jobs[bay] = {"kind": job, "unit": it.id, "start": state.minute, "dur": dur}
+	state.mark("station", sid)
+
+
+func _robot_fixable(sid: String, u: UnitData) -> Array:
+	var max_tier := int(Automation.def_of(state.fixtures.get(sid, {}).get("type", "")).get("max_tier", 1))
+	var out: Array = []
+	for f in u.open_faults():
+		if int(Content.fault(f.id).get("repair_level", 1)) > max_tier:
+			continue
+		var pid := Valuation.repair_part_for(u, f)
+		if int(state.parts.get(pid, 0)) > 0 or Content.part(pid).get("reusable", false):
+			out.append(f)
+	return out
+
+
+func _process_machines() -> void:
+	for sid in state.stations:
+		var st: Dictionary = state.stations[sid]
+		var jobs: Dictionary = st.get("jobs", {})
+		if jobs.is_empty():
+			continue
+		for bay in jobs.keys():
+			var job: Dictionary = jobs[bay]
+			if state.minute < float(job.start) + float(job.dur):
+				continue
+			jobs.erase(bay)
+			state.mark("station", sid)
+			var it := state.get_item(int(job.unit))
+			if it == null or it.unit == null:
+				continue
+			var u := it.unit
+			match job.kind:
+				"test":
+					_complete_test(it, 0)
+				"image":
+					u.imaged = true
+					u.log_event(state.minute, "Wiped and imaged on the network rack")
+					state.bump_stat("imaged")
+					BusinessStats.on_image(state, u, 0)
+				"repair":
+					for f in _robot_fixable(sid, u):
+						var pid := Valuation.repair_part_for(u, f)
+						f.fixed = true
+						var pdef := Content.part(pid)
+						if not pdef.get("reusable", false):
+							state.parts[pid] = int(state.parts.get(pid, 0)) - 1
+							if state.parts[pid] <= 0:
+								state.parts.erase(pid)
+						BusinessStats.on_repair(state, u, f.id, pid, 0 if pdef.get("reusable", false) else int(pdef.get("price", 0)), 0)
+						for c in u.cosmetic.duplicate():
+							if Content.condition(c).get("fixable_by_fault", "") == f.id:
+								u.cosmetic.erase(c)
+						if f.id == "battery_worn":
+							u.battery_pct = 100
+						u.log_event(state.minute, "Repaired by robot: %s" % LotGenerator.fault_text(f))
+						state.bump_stat("repaired")
+					state.mark("company")
+				"pack":
+					_robot_pack(sid, it)
+			state.mark("item", it.id)
+			try_start_machine(sid, bay)
+
+
+func _robot_pack(sid: String, it: Item) -> void:
+	var u := it.unit
+	if u.order_id == 0 or not state.orders.has(u.order_id) or state.station_slot_item(sid, "out") != null:
+		return
+	var box := "big_boxes" if u.is_large() else "boxes"
+	for need in [box, "labels", "tape"]:
+		if int(state.consumables.get(need, 0)) <= 0:
+			state.stations[sid].msg = "Out of %s" % need
+			return
+	for need in [box, "labels", "tape"]:
+		state.consumables[need] = int(state.consumables[need]) - 1
+	var order: Dictionary = state.orders[u.order_id]
+	state.set_loc(it, {"t": "in", "item": 0})
+	var pkg := state.new_item(Item.KIND_PACKAGE)
+	pkg.data = {"order_id": order.id, "unit": it.id, "buyer": order.buyer, "model": order.model, "packer": 0}
+	if u.is_large():
+		var vis: Dictionary = u.model().get("visual", {})
+		pkg.data["large"] = true
+		pkg.data["carry"] = int(u.model().get("carry", 3))
+		pkg.data["size"] = [snappedf(float(vis.get("w", 0.5)) + 0.1, 0.01), snappedf(float(vis.get("h", 0.2)) + 0.08, 0.01), snappedf(float(vis.get("d", 0.7)) + 0.1, 0.01)]
+	it.loc = {"t": "in", "item": pkg.id}
+	state.mark("item", it.id)
+	state.set_loc(pkg, {"t": "slot", "slot": "%s:out" % sid})
+	order.status = "packed"
+	order["package"] = pkg.id
+	state.mark("order", order.id)
+	state.mark("company")
+	BusinessStats.act(state, 0, "packed")
+
+
+func c_set_sorter_rule(_peer: int, a: Dictionary) -> Dictionary:
+	var fid: String = a.get("sorter", "")
+	var out: String = a.get("out", "")
+	var rule: String = a.get("rule", "")
+	if not state.fixtures.has(fid) or not out in ["left", "right", "out"] or not rule in Automation.SORTER_RULES:
+		return _fail("")
+	if not state.stations.has(fid):
+		state.register_station(fid, "sorter")
+	var rules: Dictionary = auto.sorter_rules(fid).duplicate()
+	rules[out] = rule
+	state.stations[fid]["rules"] = rules
+	state.mark("station", fid)
+	return _ok()
 
 
 func try_start_bench(station_id: String, peer: int = 0) -> void:
@@ -352,8 +512,8 @@ func _skill_speed(peer: int, skill: String) -> float:
 func _process_jobs() -> void:
 	for sid in state.stations:
 		var st: Dictionary = state.stations[sid]
-		if st.job.is_empty():
-			continue
+		if st.get("job", {}).is_empty() or st.get("type", "") == "arm":
+			continue      # robot arms run their own jobs on the automation clock
 		if state.minute < float(st.job.start) + float(st.job.dur):
 			continue
 		var it := state.get_item(int(st.job.unit))
@@ -1093,6 +1253,17 @@ func tick(real_delta: float) -> void:
 		return
 	var rate := (float(Content.econ("day_end_hour", 17)) - float(Content.econ("day_start_hour", 9))) * 60.0 / float(Content.econ("real_seconds_per_day", 900))
 	advance_minutes(real_delta * rate)
+	tick_automation(real_delta)
+
+
+func tick_automation(real_delta: float) -> void:
+	## Belts and arms run in real seconds; the layout is re-read whenever equipment is placed or moved.
+	var sig := state.fixtures.hash()
+	if sig != _fixture_sig:
+		_fixture_sig = sig
+		auto.dirty = true
+	auto.tick(real_delta)
+	state.mark("clock")
 
 
 func advance_minutes(mins: float) -> void:
@@ -1143,6 +1314,7 @@ func _process_minute_events() -> void:
 		state.last_flogit_hour = hour
 		flogit_hourly()
 	_process_jobs()
+	_process_machines()
 	_check_deadlines()
 
 

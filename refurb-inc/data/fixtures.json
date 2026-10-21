@@ -1,5 +1,5 @@
 {
-  "_comment": "Placeable equipment. footprint = [width_x, depth_z] metres when facing +Z (with clearance). price = Shop price for an extra one. station_type mirrors the wrapper scene's StationBase type.",
+  "_comment": "Placeable equipment. footprint = [width_x, depth_z] metres when facing +Z (with clearance). price = Shop price for an extra one. station_type mirrors the wrapper scene's StationBase type. auto = automation behaviour (belt/arm/rack/robot), read by Automation and Sim.",
   "fixtures": [
     {
       "id": "office_desk",
@@ -127,6 +127,218 @@
       "price": 200,
       "power_kw": 0.0,
       "desc": "Spare parts storage. Repair benches draw from bins."
+    },
+    {
+      "id": "conveyor",
+      "name": "Roller conveyor (2 m)",
+      "scene": "res://scenes/automation/conveyor.tscn",
+      "footprint": [
+        0.72,
+        2.0
+      ],
+      "height": 0.95,
+      "price": 650,
+      "power_kw": 0.25,
+      "desc": "Powered rollers carry kit along. Ends snap together; an open end is a pick-up point for robot arms.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 2.0,
+        "speed": 0.6,
+        "height": 0.84
+      }
+    },
+    {
+      "id": "conveyor_curve_r",
+      "name": "Conveyor curve (right)",
+      "scene": "res://scenes/automation/conveyor_curve_r.tscn",
+      "footprint": [
+        1.36,
+        1.36
+      ],
+      "height": 0.95,
+      "price": 900,
+      "power_kw": 0.25,
+      "desc": "90-degree turn to the right.",
+      "auto": {
+        "kind": "belt",
+        "path": "arc",
+        "radius": 1.0,
+        "turn": "right",
+        "speed": 0.6,
+        "height": 0.84
+      }
+    },
+    {
+      "id": "conveyor_curve_l",
+      "name": "Conveyor curve (left)",
+      "scene": "res://scenes/automation/conveyor_curve_l.tscn",
+      "footprint": [
+        1.36,
+        1.36
+      ],
+      "height": 0.95,
+      "price": 900,
+      "power_kw": 0.25,
+      "desc": "90-degree turn to the left.",
+      "auto": {
+        "kind": "belt",
+        "path": "arc",
+        "radius": 1.0,
+        "turn": "left",
+        "speed": 0.6,
+        "height": 0.84
+      }
+    },
+    {
+      "id": "conveyor_scanner",
+      "name": "Goods-in scanner",
+      "scene": "res://scenes/automation/conveyor_scanner.tscn",
+      "footprint": [
+        0.9,
+        1.0
+      ],
+      "height": 1.6,
+      "price": 2400,
+      "power_kw": 0.3,
+      "desc": "Barcode arch on a conveyor: every unit through it is booked into stock automatically.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.0,
+        "speed": 0.6,
+        "device": "scanner",
+        "height": 0.84
+      }
+    },
+    {
+      "id": "conveyor_sorter",
+      "name": "Diverter / sorter",
+      "scene": "res://scenes/automation/conveyor_sorter.tscn",
+      "footprint": [
+        1.3,
+        1.4
+      ],
+      "height": 1.2,
+      "price": 3200,
+      "power_kw": 0.5,
+      "desc": "Routes kit left, right or straight on by what it needs next. Look at an exit and press E to change its rule.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.4,
+        "speed": 0.6,
+        "device": "sorter",
+        "height": 0.84
+      }
+    },
+    {
+      "id": "conveyor_grader",
+      "name": "Vision grader",
+      "scene": "res://scenes/automation/conveyor_grader.tscn",
+      "footprint": [
+        0.95,
+        1.4
+      ],
+      "height": 1.8,
+      "price": 5200,
+      "power_kw": 0.8,
+      "desc": "Camera tunnel that grades imaged units as they pass and lists them on Flogit.",
+      "auto": {
+        "kind": "belt",
+        "path": "line",
+        "length": 1.4,
+        "speed": 0.6,
+        "device": "grader",
+        "height": 0.84
+      }
+    },
+    {
+      "id": "robot_arm",
+      "name": "Pick-and-place robot arm",
+      "scene": "res://scenes/automation/robot_arm.tscn",
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "height": 2.2,
+      "price": 18000,
+      "power_kw": 2.2,
+      "desc": "Picks kit up within 1.8 m and puts it where it needs to go next: racks, robots, conveyors, stock, OUTGOING.",
+      "auto": {
+        "kind": "arm",
+        "reach": 1.8,
+        "cycle": 3.6
+      }
+    },
+    {
+      "id": "rack_test",
+      "name": "Network test rack (6 bays)",
+      "scene": "res://scenes/automation/rack_test.tscn",
+      "footprint": [
+        2.05,
+        1.0
+      ],
+      "height": 1.9,
+      "price": 6500,
+      "power_kw": 1.2,
+      "desc": "Network-booted diagnostics for six units at once. No USB needed; robot arms can load it.",
+      "auto": {
+        "kind": "rack",
+        "speed": 1.6
+      }
+    },
+    {
+      "id": "rack_image",
+      "name": "Network imaging rack (6 bays)",
+      "scene": "res://scenes/automation/rack_image.tscn",
+      "footprint": [
+        2.05,
+        1.0
+      ],
+      "height": 1.9,
+      "price": 7200,
+      "power_kw": 1.2,
+      "desc": "Secure wipe and PaneOS deploy for six units at once over the network.",
+      "auto": {
+        "kind": "rack",
+        "speed": 2.0
+      }
+    },
+    {
+      "id": "robot_repair",
+      "name": "Repair robot cell",
+      "scene": "res://scenes/automation/robot_repair.tscn",
+      "footprint": [
+        1.6,
+        1.0
+      ],
+      "height": 2.0,
+      "price": 24000,
+      "power_kw": 2.5,
+      "desc": "Fixes level 1 faults (batteries, RAM, drives, keys, fans, PSUs) using parts from the bins.",
+      "auto": {
+        "kind": "robot",
+        "max_tier": 1,
+        "speed": 1.0
+      }
+    },
+    {
+      "id": "robot_pack",
+      "name": "Packing robot",
+      "scene": "res://scenes/automation/robot_pack.tscn",
+      "footprint": [
+        1.6,
+        1.0
+      ],
+      "height": 1.6,
+      "price": 16000,
+      "power_kw": 1.5,
+      "desc": "Boxes, tapes and labels sold units; the parcel comes out ready for the OUTGOING shelf.",
+      "auto": {
+        "kind": "robot",
+        "speed": 1.0
+      }
     }
   ]
 }

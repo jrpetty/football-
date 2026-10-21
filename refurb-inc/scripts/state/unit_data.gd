@@ -42,6 +42,7 @@ var sold_at: float = -1.0
 var parts_cost: int = 0           # value of parts fitted during repair
 var data_cert: bool = false       # imaged by someone with the Data certificates perk (+2% guide)
 var list_quality: float = 1.0     # Photo pro perk: buyers accept this × guide without slowing
+var booked: bool = false          # passed the goods-in scanner (booked into stock automatically)
 
 
 func display_name() -> String:
@@ -170,7 +171,7 @@ func to_dict() -> Dictionary:
 		"tested": tested, "test_report": test_report.duplicate(true), "imaged": imaged, "grade": grade,
 		"list_price": list_price, "listed": listed, "order_id": order_id, "lot_id": lot_id, "cost": cost,
 		"seller_name": seller_name, "shipped": shipped, "history": history.duplicate(true),
-		"received": received, "tested_at": tested_at, "repaired_at": repaired_at, "imaged_at": imaged_at, "graded_at": graded_at, "listed_at": listed_at, "sold_at": sold_at, "parts_cost": parts_cost, "data_cert": data_cert, "list_quality": list_quality,
+		"received": received, "tested_at": tested_at, "repaired_at": repaired_at, "imaged_at": imaged_at, "graded_at": graded_at, "listed_at": listed_at, "sold_at": sold_at, "parts_cost": parts_cost, "data_cert": data_cert, "list_quality": list_quality, "booked": booked,
 	}
 
 
@@ -206,4 +207,5 @@ static func from_dict(d: Dictionary) -> UnitData:
 	u.parts_cost = int(d.get("parts_cost", 0))
 	u.data_cert = bool(d.get("data_cert", false))
 	u.list_quality = float(d.get("list_quality", 1.0))
+	u.booked = bool(d.get("booked", false))
 	return u

@@ -17,6 +17,8 @@ var next_id: int = 1
 
 # --- time
 var minute: float = 0.0              # absolute game minutes since day 0 (a Monday) 00:00
+var belt_clock: float = 0.0          # real seconds the automation has run (belts/arms move on this clock)
+var _belt_clock_stamp := 0.0         # clients: local time the last belt_clock arrived (for smooth extrapolation)
 var day_running: bool = false        # false between "day over" and "start next day"
 var last_flogit_hour: int = -1
 
@@ -153,6 +155,13 @@ func remove_item(id: int) -> void:
 	set_loc(it, {"t": "gone"})
 	items.erase(id)
 	mark("item", id)
+
+
+func belt_now(is_host: bool) -> float:
+	## The automation clock for visuals: exact on the host, extrapolated between updates on clients.
+	if is_host or _belt_clock_stamp <= 0.0:
+		return belt_clock
+	return belt_clock + clampf(Time.get_ticks_msec() / 1000.0 - _belt_clock_stamp, 0.0, 0.5)
 
 
 func item_in_slot(slot_id: String) -> Item:
@@ -301,7 +310,7 @@ func to_dict() -> Dictionary:
 		it_out[str(id)] = items[id].to_dict()
 	return {
 		"version": 1, "seed": seed_value, "rng_state": rng.state, "next_id": next_id,
-		"minute": minute, "day_running": day_running, "last_flogit_hour": last_flogit_hour,
+		"minute": minute, "day_running": day_running, "last_flogit_hour": last_flogit_hour, "belt_clock": belt_clock,
 		"company_name": company_name, "cash": cash, "reputation": reputation, "ledger": ledger.duplicate(true),
 		"parts": parts.duplicate(), "consumables": consumables.duplicate(), "players": players.duplicate(true),
 		"items": it_out, "stations": stations.duplicate(true), "building_id": building_id, "fixtures": fixtures.duplicate(true), "lots": _int_keyed_out(lots),
@@ -318,6 +327,7 @@ func load_dict(d: Dictionary) -> void:
 		rng.state = int(d["rng_state"])
 	next_id = int(d.get("next_id", 1))
 	minute = float(d.get("minute", 0.0))
+	belt_clock = float(d.get("belt_clock", 0.0))
 	day_running = bool(d.get("day_running", false))
 	last_flogit_hour = int(d.get("last_flogit_hour", -1))
 	company_name = d.get("company_name", "Refurb Inc.")
@@ -391,7 +401,7 @@ func export_entity(kind: String, id: Variant) -> Variant:
 				"ledger_tail": ledger.slice(maxi(0, ledger.size() - 200)), "company_name": company_name,
 				"totals": totals.duplicate(true), "day_stats": day_stats.duplicate(true)}
 		"clock":
-			return {"minute": minute, "day_running": day_running}
+			return {"minute": minute, "day_running": day_running, "belt_clock": belt_clock}
 		"fixture":
 			return fixtures[str(id)].duplicate(true) if fixtures.has(str(id)) else null
 		"building":
@@ -451,6 +461,8 @@ func import_entity(kind: String, id: Variant, v: Variant) -> void:
 		"clock":
 			minute = float(v.minute)
 			day_running = bool(v.day_running)
+			belt_clock = float(v.get("belt_clock", belt_clock))
+			_belt_clock_stamp = Time.get_ticks_msec() / 1000.0
 		"fixture":
 			if v == null:
 				fixtures.erase(str(id))
