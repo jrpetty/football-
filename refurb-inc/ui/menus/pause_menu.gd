@@ -3,12 +3,17 @@ extends CanvasLayer
 ## Esc menu. In solo the simulation pauses; in co-op time keeps running (it's a shared business!).
 
 signal quit_to_menu
+signal open_to_friends
+signal join_invite
 
 var _root: Control
 var _main: VBoxContainer
 var _settings: SettingsPanel
 var _character: CharacterPanel
 var _open := false
+var _invite_btn: Button
+var _open_btn: Button
+var _join_btn: Button
 
 
 func _ready() -> void:
@@ -37,6 +42,15 @@ func _ready() -> void:
 	_main.add_child(UiStyle.label("Paused", 32, UiStyle.TEXT))
 	_main.add_child(UiStyle.label(BuildInfo.STAMP, 14, UiStyle.MUTED))
 	_btn("Resume", close)
+	_open_btn = _btn("Open to friends (Steam)", func():
+		close()
+		open_to_friends.emit())
+	_invite_btn = _btn("Invite friends", func():
+		if not Net.invite_friends():
+			Game.toast.emit("Steam's overlay isn't available. Friends can join from your Steam profile.", "warn"))
+	_join_btn = _btn("Join a friend's game", func():
+		close()
+		join_invite.emit())
 	_btn("Settings", _show_settings)
 	_btn("Character", func():
 		panel.visible = false
@@ -67,12 +81,13 @@ func _ready() -> void:
 	_root.visible = false
 
 
-func _btn(t: String, cb: Callable) -> void:
+func _btn(t: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = t
 	b.custom_minimum_size.y = 46
 	b.pressed.connect(cb)
 	_main.add_child(b)
+	return b
 
 
 func _show_settings() -> void:
@@ -87,6 +102,12 @@ func is_open() -> bool:
 func open() -> void:
 	_open = true
 	_root.visible = true
+	# Steam co-op buttons: open a solo game to friends, invite more, or take up a friend's invite.
+	_open_btn.visible = Net.steam.available and not Net.is_online()
+	_invite_btn.visible = Net.is_steam()
+	_join_btn.visible = not Net.pending_invite.is_empty()
+	if _join_btn.visible:
+		_join_btn.text = "Join %s's game (saves yours first)" % str(Net.pending_invite.get("from", "a friend"))
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if not Net.is_online() and Game.sim:
 		Game.sim.paused = true

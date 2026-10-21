@@ -1,14 +1,19 @@
 class_name MainMenu
 extends Control
-## Title screen: Continue / New game / Host co-op / Join co-op / Settings / Quit.
+## Title screen: Continue / New game / Host on Steam / Join a game / Character / Achievements / Settings / Quit.
 
-signal start_requested(mode: String, arg: String)   # "new" | "continue" | "host" | "join"
+## "new" | "continue" | "host" (LAN) | "join" (LAN, arg = address) | "host_steam" / "host_steam_public" (arg = business
+## name) | "join_steam" (arg = lobby id)
+signal start_requested(mode: String, arg: String)
 
 var _panel: PanelContainer
 var _settings: SettingsPanel
 var _character: CharacterPanel
 var _achievements: AchievementsPanel
-var _join_box: HBoxContainer
+var _join_panel: PanelContainer
+var _lobby_list: VBoxContainer
+var _lobby_status: Label
+var _public_cb: CheckBox
 var _name_box: PanelContainer
 var _name_edit: LineEdit
 var _name_mode := "new"
@@ -49,19 +54,11 @@ func _ready() -> void:
 	if SaveManager.has_save("manual") or SaveManager.has_save("autosave"):
 		_btn(bv, "Continue", func(): start_requested.emit("continue", ""))
 	_btn(bv, "New game", func(): _ask_name("new"))
-	_btn(bv, "Host co-op (LAN / direct IP)", func(): _ask_name("host"))
-	_btn(bv, "Join co-op…", func(): _join_box.visible = not _join_box.visible)
-	_join_box = HBoxContainer.new()
-	_join_box.visible = false
-	bv.add_child(_join_box)
-	var ip := LineEdit.new()
-	ip.text = "127.0.0.1"
-	ip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_join_box.add_child(ip)
-	var go := Button.new()
-	go.text = "Join"
-	go.pressed.connect(func(): start_requested.emit("join", ip.text))
-	_join_box.add_child(go)
+	var steam_btn := _btn(bv, "Host on Steam", func(): _ask_name("host_steam"))
+	if not Net.steam.available:
+		steam_btn.disabled = true
+		steam_btn.tooltip_text = Net.steam.status_text + " LAN co-op is under Join a game."
+	_btn(bv, "Join a game…", _open_join)
 	_btn(bv, "Character", func():
 		_panel.visible = false
 		_character.visible = true)
@@ -91,6 +88,7 @@ func _ready() -> void:
 		_panel.visible = true)
 	v.add_child(_character)
 	_build_name_box(v)
+	_build_join_panel(v)
 	_achievements = AchievementsPanel.new()
 	_achievements.visible = false
 	_achievements.closed.connect(func():
@@ -123,6 +121,10 @@ func _build_name_box(parent: Control) -> void:
 	_name_edit.text_submitted.connect(func(_t): _confirm_name())
 	v.add_child(_name_edit)
 	v.add_child(UiStyle.label("You can rename it any time on the office PC (Finance).", 15, UiStyle.MUTED))
+	_public_cb = CheckBox.new()
+	_public_cb.text = "Public game: anyone can find it in Join a game (friends can always join)"
+	_public_cb.add_theme_font_size_override("font_size", 16)
+	v.add_child(_public_cb)
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 10)
 	v.add_child(h)
@@ -148,6 +150,8 @@ func _build_name_box(parent: Control) -> void:
 
 func _ask_name(mode: String) -> void:
 	_name_mode = mode
+	_public_cb.visible = mode == "host_steam"
+	_public_cb.button_pressed = false
 	_name_edit.text = str(Settings.values.get("company_name", Sim.DEFAULT_COMPANY))
 	_panel.visible = false
 	_name_box.visible = true
@@ -160,14 +164,111 @@ func _confirm_name() -> void:
 	var name := Sim.clean_company_name(_name_edit.text)
 	Settings.values["company_name"] = name
 	Settings.save_settings()
-	start_requested.emit(_name_mode, name)
+	var mode := _name_mode
+	if mode == "host_steam" and _public_cb.button_pressed:
+		mode = "host_steam_public"
+	start_requested.emit(mode, name)
+
+
+func _build_join_panel(parent: Control) -> void:
+	## Public Steam games, how to join a friend, and LAN / direct IP.
+	_join_panel = PanelContainer.new()
+	_join_panel.add_theme_stylebox_override("panel", UiStyle.box(UiStyle.BG, 14, 22))
+	_join_panel.visible = false
+	parent.add_child(_join_panel)
+	var v := VBoxContainer.new()
+	v.custom_minimum_size.x = 560
+	v.add_theme_constant_override("separation", 10)
+	_join_panel.add_child(v)
+	v.add_child(UiStyle.label("Join a game", 28, Color.WHITE))
+	if Net.steam.available:
+		v.add_child(UiStyle.label("Friends' games: accept their invite in Steam, or right-click them in your friends list → Join game.", 16, UiStyle.MUTED))
+		var head := HBoxContainer.new()
+		v.add_child(head)
+		var t := UiStyle.label("Public games", 20, Color.WHITE)
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		head.add_child(t)
+		var refresh := Button.new()
+		refresh.text = "Refresh"
+		refresh.pressed.connect(_refresh_lobbies)
+		head.add_child(refresh)
+		_lobby_list = VBoxContainer.new()
+		_lobby_list.add_theme_constant_override("separation", 6)
+		v.add_child(_lobby_list)
+		_lobby_status = UiStyle.label("", 16, UiStyle.MUTED)
+		v.add_child(_lobby_status)
+		Net.steam.lobbies_found.connect(_show_lobbies)
+	else:
+		v.add_child(UiStyle.label(Net.steam.status_text + " Start Steam and restart the game to play with friends online.", 16, UiStyle.WARN))
+	v.add_child(UiStyle.label("LAN / direct IP", 20, Color.WHITE))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	v.add_child(row)
+	var ip := LineEdit.new()
+	ip.text = "127.0.0.1"
+	ip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(ip)
+	var go := Button.new()
+	go.text = "Join"
+	go.pressed.connect(func(): start_requested.emit("join", ip.text))
+	row.add_child(go)
+	var host := Button.new()
+	host.text = "Host on LAN"
+	host.pressed.connect(func():
+		_join_panel.visible = false
+		_ask_name("host"))
+	row.add_child(host)
+	var back := Button.new()
+	back.text = "Back"
+	back.custom_minimum_size.y = 44
+	back.pressed.connect(func():
+		_join_panel.visible = false
+		_panel.visible = true)
+	v.add_child(back)
+
+
+func _open_join() -> void:
+	_panel.visible = false
+	_join_panel.visible = true
+	_refresh_lobbies()
+
+
+func _refresh_lobbies() -> void:
+	if _lobby_list == null:
+		return
+	for c in _lobby_list.get_children():
+		c.queue_free()
+	_lobby_status.text = "Looking for games…"
+	Net.steam.find_lobbies()
+
+
+func _show_lobbies(lobbies: Array) -> void:
+	if _lobby_list == null:
+		return
+	for c in _lobby_list.get_children():
+		c.queue_free()
+	_lobby_status.text = "" if not lobbies.is_empty() else "No public games right now. Host one, or join a friend through Steam."
+	for l: Dictionary in lobbies:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		var lab := UiStyle.label("%s  ·  %s  ·  day %d  ·  %d/%d" % [str(l.name) if str(l.name) != "" else "Refurb business", l.host, maxi(int(l.day), 1), int(l.members), int(l.max)], 17, Color.WHITE)
+		lab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		lab.clip_text = true
+		row.add_child(lab)
+		var join := Button.new()
+		join.text = "Join"
+		join.disabled = int(l.members) >= int(l.max)
+		var id := int(l.id)
+		join.pressed.connect(func(): start_requested.emit("join_steam", str(id)))
+		row.add_child(join)
+		_lobby_list.add_child(row)
 
 
 func set_status(t: String) -> void:
 	_status.text = t
 
 
-func _btn(parent: Control, t: String, cb: Callable) -> void:
+func _btn(parent: Control, t: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = t
 	b.custom_minimum_size.y = 48
@@ -176,3 +277,4 @@ func _btn(parent: Control, t: String, cb: Callable) -> void:
 		Sfx.play_ui("ui_click", -6.0)
 		cb.call())
 	parent.add_child(b)
+	return b

@@ -83,6 +83,11 @@ static func check(state: GameState) -> Array:
 	return new_ids
 
 
+static func steam_board(id: String) -> String:
+	## Steam leaderboard for a milestone (ascending, working days). Register these in Steamworks: docs/STEAM.md.
+	return "DAYS_" + id.to_upper()
+
+
 static func name_of(id: String) -> String:
 	var end: Dictionary = data().get("end_goal", {})
 	if id == end.get("id", ""):

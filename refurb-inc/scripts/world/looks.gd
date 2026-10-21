@@ -21,6 +21,7 @@ static func local_look() -> Dictionary:
 		"hivis": bool(Settings.get_value("char_hivis")), "cap": bool(Settings.get_value("char_cap")),
 		"height": float(Settings.get_value("char_height")), "bighead": bool(Settings.get_value("char_bighead")),
 		"body": str(Settings.get_value("char_body")), "hairstyle": str(Settings.get_value("char_hairstyle")), "shoes": str(Settings.get_value("char_shoes")),
+		"steamface": bool(Settings.get_value("char_steamface")),
 	}
 
 
@@ -46,6 +47,15 @@ static func set_photo(path: String) -> String:
 	var img := Image.load_from_file(path)
 	if img == null or img.is_empty():
 		return "Couldn't read that picture."
+	img = mask_face(img)
+	if img.save_png(FACE_PATH) != OK:
+		return "Couldn't save the face."
+	return ""
+
+
+static func mask_face(src: Image) -> Image:
+	## Crop the middle square (slightly above centre for portraits), shrink, and cut a soft oval: a paper mask.
+	var img := src.duplicate() as Image
 	img.convert(Image.FORMAT_RGBA8)
 	var side := int(mini(img.get_width(), img.get_height()) * 0.86)
 	var x0 := (img.get_width() - side) / 2
@@ -60,9 +70,7 @@ static func set_photo(path: String) -> String:
 			var px := img.get_pixel(x, y)
 			px.a *= a
 			img.set_pixel(x, y, px)
-	if img.save_png(FACE_PATH) != OK:
-		return "Couldn't save the face."
-	return ""
+	return img
 
 
 static func clear_photo() -> void:

@@ -126,6 +126,10 @@ func _ready() -> void:
 		add_child(avatar)
 		_apply_remote_look(peer_id)
 		Game.looks_changed.connect(_apply_remote_look)
+		Net.avatar_changed.connect(_apply_remote_look)
+		Net.peers_changed.connect(func():
+			if is_instance_valid(name_tag):
+				name_tag.text = Net.display_name(peer_id))
 		name_tag = Label3D.new()
 		name_tag.text = Net.display_name(peer_id)
 		name_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -602,7 +606,11 @@ var _give_to := 0
 func _apply_remote_look(peer: int) -> void:
 	if peer != peer_id or not (avatar is CharacterRig) or not Game.looks.has(peer):
 		return
-	Looks.apply(avatar as CharacterRig, Game.looks[peer].look, Game.looks[peer].face)
+	var look: Dictionary = Game.looks[peer].look
+	var face: PackedByteArray = Game.looks[peer].face
+	if face.is_empty() and look.get("steamface", false):
+		face = Net.avatar_png(peer)        # they chose their Steam profile picture as their face
+	Looks.apply(avatar as CharacterRig, look, face)
 
 
 func _give_target() -> Node3D:

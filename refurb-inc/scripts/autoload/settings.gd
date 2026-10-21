@@ -55,6 +55,7 @@ var values := {
 	"char_body": "m",
 	"char_hairstyle": "short",
 	"char_shoes": "#1a1a1c",
+	"char_steamface": false,     # no photo uploaded → use my Steam profile picture as my face
 }
 
 

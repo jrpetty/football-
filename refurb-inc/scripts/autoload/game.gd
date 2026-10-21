@@ -35,7 +35,9 @@ func _ready() -> void:
 	Net.peers_changed.connect(_on_peers_changed)
 	multiplayer.peer_connected.connect(_on_peer_connected)
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
-	achievements.unlocked.connect(func(def: Dictionary): achievement_unlocked.emit(def))
+	achievements.unlocked.connect(func(def: Dictionary):
+		achievement_unlocked.emit(def)
+		Net.steam.unlock_achievement(Achievements.steam_name(str(def.id))))   # no-op without Steam
 	day_summary.connect(_on_day_summary_achievements)     # fires on the host and on every guest
 
 
@@ -90,6 +92,7 @@ func _on_goal_reached(goal_id: String, day: int) -> void:
 	var run_id := str(state.totals.get("run_id", ""))
 	var previous := Campaign.best(goal_id)
 	var place := Campaign.submit(goal_id, day, state.company_name, run_id)
+	Net.steam.submit_score(Campaign.steam_board(goal_id), day)    # fewest working days wins; no-op without Steam
 	if place == 1 and not previous.is_empty() and str(previous.get("run", "")) != run_id:
 		achievement_event("beat_record")
 	if place == 1:

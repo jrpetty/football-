@@ -43,6 +43,7 @@ func _ready() -> void:
 	_toggle(v, "Hi-vis vest", "char_hivis")
 	_toggle(v, "Cap", "char_cap")
 	_toggle(v, "Big head mode", "char_bighead")
+	_toggle(v, "Steam picture as my face (if no photo)", "char_steamface")
 	var hs := _row(v, "Height")
 	var s := HSlider.new()
 	s.min_value = 1.55

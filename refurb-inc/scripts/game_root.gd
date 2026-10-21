@@ -12,6 +12,7 @@ var _menu_cam: Camera3D
 var _menu_t := 0.0
 var _fade: ColorRect
 var _switching := false
+var _lobby_info := ""        # last name|day sent to the Steam lobby
 
 
 static func level_path(building_id: String) -> String:
@@ -38,7 +39,16 @@ func _ready() -> void:
 		if _menu:
 			_menu.set_status("The host closed the game."))
 	var args := OS.get_cmdline_user_args()
-	if "--autostart" in args:
+	# Steam (lobbies, invites, achievements) for real play only — never in headless tools and tests.
+	if DisplayServer.get_name() != "headless" and not "--no-steam" in args and Net.start_steam():
+		Net.invite_received.connect(_on_invite)
+		Game.day_summary.connect(func(_s): _update_lobby_info())
+	var launch_lobby := Net.steam.launch_lobby() if Net.steam.available else 0
+	if launch_lobby != 0:
+		# Steam started the game from a friend's invite.
+		_show_menu()
+		_start("join_steam", str(launch_lobby))
+	elif "--autostart" in args:
 		_start("new", "")
 	elif "--host" in args:
 		_start("host", "")
@@ -118,9 +128,91 @@ func _start(mode: String, arg: String) -> void:
 				if _menu:
 					_menu.set_status("Couldn't connect.")
 				return
-			await Game.state_reset
+			if not await _wait_for(Game.state_reset, 20.0):
+				Net.go_offline()
+				if _menu:
+					_menu.set_status("Couldn't reach a game at %s." % arg)
+				return
 			_clear_menu()
 			_enter_level()
+		"host_steam", "host_steam_public":
+			if _menu:
+				_menu.set_status("Opening your game on Steam…")
+			if Net.host_steam(mode == "host_steam") != OK or not await _wait_for(Net.hosting_ready, 20.0):
+				Net.go_offline()
+				if _menu:
+					_menu.set_status("Couldn't open a Steam game. Is Steam running and online?")
+				return
+			if _menu:
+				_menu.set_status("")
+			_clear_menu()
+			Game.new_game()
+			_name_company(arg)
+			_enter_level()
+			_update_lobby_info()
+			Game.toast.emit("Your game is open on Steam. Press Esc → Invite friends.", "good")
+		"join_steam":
+			if _menu:
+				_menu.set_status("Joining your friend's game…")
+			if Net.join_steam(int(arg)) != OK or not await _wait_for(Game.state_reset, 30.0):
+				Net.go_offline()
+				if _menu:
+					_menu.set_status("Couldn't join that game. It may have closed or be full.")
+				return
+			if _menu:
+				_menu.set_status("")
+			_clear_menu()
+			_enter_level()
+
+
+func _wait_for(sig: Signal, timeout: float) -> bool:
+	## Wait for `sig`; false if the connection fails first or it takes longer than `timeout` seconds.
+	var done := [false, false]
+	var ok := func(_a = null): done[0] = true; done[1] = true
+	var fail := func(_r = ""): done[0] = true
+	sig.connect(ok, CONNECT_ONE_SHOT)
+	Net.connection_failed.connect(fail, CONNECT_ONE_SHOT)
+	var t := 0.0
+	while not done[0] and t < timeout:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	if sig.is_connected(ok):
+		sig.disconnect(ok)
+	if Net.connection_failed.is_connected(fail):
+		Net.connection_failed.disconnect(fail)
+	return done[1]
+
+
+func _on_invite(lobby_id: int, from_name: String) -> void:
+	## A Steam invite accepted (or "Join game" pressed). At the title screen we just go; mid-game the pause menu
+	## offers it, so nobody gets yanked out of their own business.
+	if _menu and not Game.in_game:
+		_start("join_steam", str(lobby_id))
+	else:
+		Game.toast.emit("%s invited you to their game. Press Esc → Join %s's game." % [from_name, from_name], "info")
+
+
+func open_to_friends() -> void:
+	## Pause menu: turn the running solo game into a Steam game without restarting (solo already runs as host).
+	if Net.is_online() or not Net.steam.available:
+		return
+	if Net.host_steam(true) != OK or not await _wait_for(Net.hosting_ready, 20.0):
+		Net.go_offline()
+		Game.toast.emit("Couldn't open the game on Steam. Is Steam running and online?", "warn")
+		return
+	_lobby_info = ""
+	_update_lobby_info()
+	Net.invite_friends()
+	Game.toast.emit("Your game is open to friends. Invite them from the Steam overlay.", "good")
+
+
+func _update_lobby_info() -> void:
+	if not Net.is_steam() or not Game.is_host():
+		return
+	var key := "%s|%d" % [Game.state.company_name, Game.state.day_index() + 1]
+	if key != _lobby_info:
+		_lobby_info = key
+		Net.steam.set_lobby_info(Game.state.company_name, Game.state.day_index() + 1)
 
 
 func _name_company(name: String) -> void:
@@ -136,6 +228,8 @@ func _watch_state() -> void:
 
 
 func _on_state_changed(kind: String, _id: Variant) -> void:
+	if kind == "company" and Net.is_steam():
+		_update_lobby_info()
 	if kind == "building" and _level and is_instance_valid(_level) and not LevelRoot.menu_mode:
 		if _level.building_id != Game.state.building_id and not _switching:
 			_switch_level()
@@ -172,6 +266,14 @@ func _enter_level() -> void:
 	_pause = PauseMenu.new()
 	add_child(_pause)
 	_pause.quit_to_menu.connect(_back_to_menu)
+	_pause.open_to_friends.connect(open_to_friends)
+	_pause.join_invite.connect(func():
+		var inv: Dictionary = Net.pending_invite
+		if inv.is_empty():
+			return
+		SaveManager.save_game("manual")
+		await _back_to_menu()
+		_start("join_steam", str(int(inv.lobby_id))))
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
