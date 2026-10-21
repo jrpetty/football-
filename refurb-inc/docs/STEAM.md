@@ -62,7 +62,7 @@ When Refurb Inc. has its own Steamworks app:
 
 ## Steamworks registration lists
 
-### Achievements (79)
+### Achievements (86)
 
 | API name | Name | Description | Hidden |
 |---|---|---|---|
@@ -82,11 +82,14 @@ When Refurb Inc. has its own Steamworks app:
 | `ACH_FULL_HOUSE` | Full house | Test every kind of kit: laptops, desktops, servers, monitors, switches, Wi-Fi access points, docks, tablets and phones. |  |
 | `ACH_LORRY_LOAD` | Lorry-load | Buy a single lot of 20 or more units. |  |
 | `ACH_LEMON` | Lemon | Test a unit with three or more faults. Somebody loved that one to death. | yes |
+| `ACH_MADE_TO_ORDER` | Made to order | Ship a custom server build to a business buyer. |  |
+| `ACH_RACK_AND_ROLL` | Rack and roll | Ship 10 custom server builds. |  |
 | `ACH_BENCH_TECH` | Bench tech | Repair 50 faults. |  |
 | `ACH_STEADY_HANDS` | Steady hands | Complete a level 2 repair: a screen, hinge, keyboard deck or PSU. |  |
 | `ACH_BOARD_WIZARD` | Board-level wizard | Complete a level 3 repair: board faults, BIOS locks and dead ports. |  |
 | `ACH_SOLD_AS_SEEN` | Sold as seen | Grade a unit as spares or repairs. Someone will want the bits. |  |
 | `ACH_LAZARUS` | Lazarus | Bring a dead board back to life — fix a No POST fault. | yes |
+| `ACH_SOUPED_UP` | Souped up | Upgrade the memory or storage of 25 units before selling them. |  |
 | `ACH_CENTURY` | Century | Sell 100 units. |  |
 | `ACH_PUNCTUAL` | Punctual | Ship 100 orders on time. |  |
 | `ACH_BUSY_DAY` | Busy day | Ship 10 orders in a single day. |  |
@@ -97,6 +100,10 @@ When Refurb Inc. has its own Steamworks app:
 | `ACH_HIGH_ROLLER` | High roller | Ship a single order worth £750 or more. |  |
 | `ACH_BETTER_LATE` | Better late than never | Let an order go late. The buyer has left a strongly worded message. | yes |
 | `ACH_GOT_AWAY` | The one that got away | A buyer gave up waiting and cancelled. | yes |
+| `ACH_DOTTED_LINE` | Sign on the dotted line | Accept your first business contract. |  |
+| `ACH_BULK_BUYER` | Bulk buyer | Deliver a business order of 20 or more units on time. |  |
+| `ACH_TOP_RATED` | Top-rated seller | Collect 25 five-star Flogit reviews. |  |
+| `ACH_STRONGLY_WORDED` | Strongly worded | Get a one-star Flogit review. Ouch. | yes |
 | `ACH_OUT_OF_THE_GARAGE` | Out of the garage | Move into the lock-up. |  |
 | `ACH_BUSINESS_PARK` | Business park | Move into the small industrial unit. |  |
 | `ACH_BIG_SHED_ENERGY` | Big shed energy | Move into the warehouse. |  |
