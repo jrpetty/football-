@@ -261,8 +261,10 @@ func build_door_signs() -> void:
 
 
 func _place_signs() -> void:
-	await get_tree().physics_frame
-	await get_tree().physics_frame
+	for i in 2:
+		if not is_inside_tree():
+			return
+		await get_tree().physics_frame
 	if not is_inside_tree():
 		return
 	var accent := accent_colour(Game.state)

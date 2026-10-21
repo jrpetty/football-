@@ -581,8 +581,10 @@ func _queue_relocate() -> void:
 	if _relocate_queued:
 		return
 	_relocate_queued = true
-	await get_tree().physics_frame
-	await get_tree().physics_frame
+	for i in 2:
+		if not is_inside_tree():
+			return
+		await get_tree().physics_frame
 	_relocate_queued = false
 	if is_inside_tree() and Game.is_host() and Game.state.building_id == building_id:
 		_relocate_loose_items(true)

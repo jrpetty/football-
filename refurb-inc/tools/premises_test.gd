@@ -52,6 +52,34 @@ func _check_site() -> void:
 	_check(not space.intersect_ray(probe).is_empty(), "site fence blocks walking into the road")
 
 
+func _check_style_and_logistics(forklift: Item) -> void:
+	## The company's look is applied in this premises, and the forklift came along and found a parking spot.
+	for i in 6:
+		await get_tree().physics_frame
+	await _frames(2)
+	var st: PremisesStyle = _level.style
+	_check(st != null and not st.paint_targets().is_empty() and st.painted(), "walls painted (%d wall meshes)" % (st.paint_targets().size() if st else 0))
+	_check(st != null and st.line_count() > 0, "floor lines painted")
+	var doors := st.doors() if st else []
+	_check(doors.size() >= 1, "roller doors found for signage (%d)" % doors.size())
+	var logos := 0
+	for d: Node in doors:
+		if d.find_child("ShutterLogo", true, false):
+			logos += 1
+	_check(logos == doors.size(), "logo on every shutter (%d/%d)" % [logos, doors.size()])
+	var frames := Game.state.fixtures.values().filter(func(f): return f.type == "eotm_frame" and f.placed)
+	_check(frames.size() == 1, "Employee of the Month frame hung up")
+	var t := 0.0
+	while forklift.loc.get("relocate", false) and t < 3.0:
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	var fp: Array = forklift.loc.get("p", [0, -9, 0])
+	var g := _level.goods_in.global_position if _level.goods_in else Vector3.ZERO
+	_check(not forklift.loc.get("relocate", false) and absf(float(fp[1]) - g.y) < 0.35, "forklift parked near goods-in at %s" % str(fp))
+	var fv: ItemView = _level.item_views.get(forklift.id)
+	_check(fv != null and fv.visible and fv.forklift != null, "forklift visible")
+
+
 func _check(c: bool, m: String) -> void:
 	print("  %s %s" % ["✔" if c else "✖", m])
 	if not c:
@@ -72,6 +100,14 @@ func _ready() -> void:
 	await _frames(3)
 	var unit: Item = s.items.values().filter(func(i): return i.kind == Item.KIND_UNIT)[0]
 	s.set_loc(unit, {"t": "slot", "slot": "bench_1:unit"})
+	# Make the premises ours (it should follow us everywhere), and get a forklift delivered.
+	for kv in [["paint", "racing_green"], ["markings", "both"], ["accent", "teal"], ["logo", "ring"]]:
+		sim.execute(1, "set_premises", {"key": kv[0], "value": kv[1]})
+	sim.execute(1, "buy_fixture", {"type": "poster_motto"})
+	_level._auto_layout()            # hung on a wall for us
+	sim.deliver_parcel({"items": [Item.KIND_FORKLIFT], "parts": {}, "consumables": {}}, Vector3(0, 0.02, 5.6))
+	var forklift: Item = s.items.values().filter(func(i): return i.kind == Item.KIND_FORKLIFT)[0]
+	var racked: Item = null
 	# Extra equipment bought along the way should find space in bigger buildings.
 	for id in Content.building_order:
 		print("\n== %s" % id)
@@ -98,6 +134,31 @@ func _ready() -> void:
 		var relocated := pallets.all(func(p): return not p.loc.get("relocate", false))
 		_check(relocated, "loose pallets placed in the goods-in area")
 		await _check_site()
+		await _check_style_and_logistics(forklift)
+		if racked:
+			var rv: ItemView = _level.item_views.get(racked.id)
+			var slot: SnapSlot = _level.slot_nodes.get(str(racked.loc.get("slot", "")))
+			_check(rv != null and rv.visible and slot != null and rv.global_position.distance_to(slot.global_position) < 0.05, "racked pallet came along, still in its bay (%s)" % Logistics.pallet_location(s, racked))
+		if id == "industrial":
+			# Pallet racking finds room in an industrial unit; put a pallet of stock up on level 2.
+			sim.c_buy_fixture(1, {"type": "pallet_rack"})
+			_level._auto_layout()
+			await _frames(3)
+			var rid := ""
+			for fid in s.fixtures:
+				if s.fixtures[fid].type == "pallet_rack":
+					rid = fid
+			_check(rid != "" and s.fixtures[rid].placed, "pallet racking placed")
+			if rid != "":
+				racked = s.new_item(Item.KIND_PALLET)
+				var lay := Sim.pallet_layout("kestrel_swift_14")
+				racked.data = {"cell": lay.cell, "grid": lay.grid}
+				s.set_loc(racked, {"t": "slot", "slot": "%s:b0l1" % rid})
+				var u := s.new_item(Item.KIND_UNIT)
+				u.unit = sim.lots.roll_unit("kestrel_swift_14", 0.5)
+				s.set_loc(u, {"t": "slot", "slot": "i%d:0" % racked.id})
+				await _frames(3)
+				_check(Logistics.unit_location(s, u) == "%s · level 2 · bay 1" % s.fixtures[rid].label, "stock app: %s" % Logistics.unit_location(s, u))
 		var player: Node3D = _level.local_player()
 		_check(player != null and _level.floor_rects.any(func(r): return r.has_point(Vector2(player.global_position.x, player.global_position.z))), "player spawned on the floor")
 		# Lorry delivery to this building's dock
@@ -108,7 +169,7 @@ func _ready() -> void:
 				lot2 = l
 				break
 		sim.c_buy_lot(1, {"lot": lot2.id})
-		var before := pallets.size()
+		var before := s.items.values().filter(func(i): return i.kind == Item.KIND_PALLET).size()
 		sim.end_day()
 		sim.start_next_day()
 		sim.advance_minutes(65)

@@ -89,8 +89,10 @@ func _body_size() -> Vector3:
 
 func _hug_wall() -> void:
 	## Placed against the wall's floor line: find the actual wall surface behind and sit flush on it.
-	await get_tree().physics_frame
-	await get_tree().physics_frame
+	for i in 2:
+		if not is_inside_tree():
+			return
+		await get_tree().physics_frame
 	if not is_inside_tree():
 		return
 	var q := PhysicsRayQueryParameters3D.new()

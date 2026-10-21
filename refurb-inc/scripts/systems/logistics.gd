@@ -33,7 +33,7 @@ const FL_EYE := 1.86
 ## Body box for collisions (x half-width, z from back to the mast) — forks/pallet are checked separately.
 const FL_HALF_W := 0.56
 const FL_BACK_Z := -1.62
-const FL_FRONT_Z := 0.78
+const FL_FRONT_Z := 0.84          # = the backrest: a pallet you drive the forks into stops against it
 const FL_WHEELBASE := 1.25
 const FL_FRONT_AXLE_Z := 0.25 * FL_SCALE
 
@@ -259,6 +259,19 @@ static func within_reach_on_foot(st: GameState, it: Item) -> bool:
 			var fork := st.get_item(int(pallet.loc.get("fork", 0)))
 			return fork == null or float(fork.data.get("h", 0.0)) <= 1.2
 	return true
+
+
+static func load_height(st: GameState, pallet: Item) -> float:
+	## How tall a pallet and its stack are (m): the pallet plus every layer that has something on it.
+	var cell: Array = pallet.data.get("cell", [0.4, 0.026, 0.4])
+	var grid: Array = pallet.data.get("grid", [3, 2])
+	var per_layer := maxi(int(grid[0]) * int(grid[1]), 1)
+	var top := -1
+	var prefix := "i%d:" % pallet.id
+	for it: Item in st.items.values():
+		if it.loc.get("t") == "slot" and str(it.loc.get("slot", "")).begins_with(prefix):
+			top = maxi(top, int(str(it.loc.slot).get_slice(":", 1)) / per_layer)
+	return PALLET.y + (top + 1) * float(cell[1])
 
 
 static func units_on(st: GameState, pallet_id: int) -> Array:

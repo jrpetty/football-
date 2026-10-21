@@ -88,6 +88,7 @@ var _steer := 0.0
 var _look_yaw := 0.0                  # head turned relative to the truck
 var _fork_target := 0.0
 var _fork_wait := 0.0                 # waiting for the host to confirm a lift / set-down
+var _fork_held := false
 var _seat_blend := 0.0
 var _seat_from := Vector3.ZERO
 var _drive_hint := ""
@@ -1102,7 +1103,9 @@ func _drive_physics(delta: float) -> void:
 		var new_yaw := _yaw + yaw_rate * delta
 		var mb := Basis(Vector3.UP, new_yaw) * dxf.basis
 		var new_model := Transform3D(mb, axle - mb * axle_local)
-		if _forklift_blocked(new_model, load_it):
+		# Blocked unless we're already touching it (a pallet just set down can settle against the forks' face):
+		# then any move is allowed, so you can always back away.
+		if _forklift_blocked(new_model, load_it) and not _forklift_blocked(model, load_it):
 			if absf(_drive_v) > 1.2:
 				Sfx.play_at("impact_heavy", model.origin + Vector3(0, 0.6, 0), -4.0)
 			_drive_v = 0.0
@@ -1127,9 +1130,14 @@ func _drive_physics(delta: float) -> void:
 
 
 func _drive_forks(delta: float, lift_in: float, model: Transform3D, load_it: Item) -> void:
-	if lift_in != 0.0:
-		_fork_target = clampf(fork_h + lift_in * 0.35, 0.0, Logistics.FORK_MAX)
 	var rate := FL_LIFT_SPEED * (0.75 if load_it else 1.0)
+	if lift_in != 0.0:
+		# Held R/F: the forks move while it's held and stop the moment it's let go (the wheel nudges instead).
+		_fork_target = clampf(fork_h + lift_in * rate * delta * 1.01, 0.0, Logistics.FORK_MAX)
+		_fork_held = true
+	elif _fork_held:
+		_fork_held = false
+		_fork_target = fork_h
 	var new_h := move_toward(fork_h, _fork_target, rate * delta)
 	var lowering := _fork_target < fork_h - 0.0005
 	var raising := _fork_target > fork_h + 0.0005
@@ -1223,9 +1231,10 @@ func _forklift_blocked(model: Transform3D, load_it: Item) -> bool:
 	var body := BoxShape3D.new()
 	var zb := Logistics.FL_BACK_Z
 	var zf := Logistics.FL_FRONT_Z
-	body.size = Vector3(Logistics.FL_HALF_W * 2.0 - 0.04, 1.7, zf - zb - 0.04)
+	# From just above the floor (so a loaded pallet stops the truck at the backrest) to the overhead guard.
+	body.size = Vector3(Logistics.FL_HALF_W * 2.0 - 0.04, 1.9, zf - zb - 0.04)
 	q.shape = body
-	q.transform = model * Transform3D(Basis.IDENTITY, Vector3(0, 0.3 + 0.85, (zf + zb) * 0.5))
+	q.transform = model * Transform3D(Basis.IDENTITY, Vector3(0, 0.1 + 0.95, (zf + zb) * 0.5))
 	q.collision_mask = 1 | (1 << 2)
 	var ex: Array[RID] = [get_rid()]
 	var fv := _fork_view_node()
@@ -1236,13 +1245,25 @@ func _forklift_blocked(model: Transform3D, load_it: Item) -> bool:
 	q.exclude = ex
 	if not space.intersect_shape(q, 1).is_empty():
 		return true
-	if load_it:
+	if load_it == null:
+		# Bare forks: walls and steelwork stop them (pallets and stock don't — that's how you get under a pallet).
+		var fb := BoxShape3D.new()
+		fb.size = Vector3(0.62, 0.08, Logistics.FL_FORK_LEN - 0.04)
+		var fq := PhysicsShapeQueryParameters3D.new()
+		fq.shape = fb
+		fq.transform = model * Transform3D(Basis.IDENTITY, Vector3(Logistics.FL_FORK_X, fork_h + 0.07, Logistics.FL_HEEL_Z + Logistics.FL_FORK_LEN * 0.5 + 0.02))
+		fq.collision_mask = 1
+		fq.exclude = ex
+		if not space.intersect_shape(fq, 1).is_empty():
+			return true
+	else:
 		var pal := model * Logistics.pallet_on_forks(fork_h, float(load_it.loc.get("yaw", 0.0)))
 		var lb := BoxShape3D.new()
-		lb.size = Vector3(Logistics.PALLET.x - 0.1, 0.9, Logistics.PALLET.z - 0.1)
+		var load_h := maxf(Logistics.load_height(Game.state, load_it) - 0.08, 0.1)
+		lb.size = Vector3(Logistics.PALLET.x - 0.1, load_h, Logistics.PALLET.z - 0.1)
 		var lq := PhysicsShapeQueryParameters3D.new()
 		lq.shape = lb
-		lq.transform = pal * Transform3D(Basis.IDENTITY, Vector3(0, 0.06 + 0.45, 0))
+		lq.transform = pal * Transform3D(Basis.IDENTITY, Vector3(0, 0.06 + load_h * 0.5, 0))
 		lq.collision_mask = 1
 		lq.exclude = ex
 		if not space.intersect_shape(lq, 1).is_empty():
