@@ -72,8 +72,13 @@
     "haul": 1,
     "buy_unit": 2,
     "ship": 5,
-    "pallet_move": 3
+    "pallet_move": 3,
+    "build": 4,
+    "upgrade": 4
   },
+  "build_secs_mult": 0.8,
+  "grade_miss_base": 0.1,
+  "grade_miss_per_level": 0.012,
   "start_items": [
     {
       "kind": "usb_test",

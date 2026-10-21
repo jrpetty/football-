@@ -69,7 +69,7 @@ func _bind_screen() -> void:
 
 
 func hover_info(_player: Node) -> Dictionary:
-	return {"title": "Office PC", "lines": ["Purchasing · Shop · Stock · Flogit · Finance · Mail"], "prompt": "[E] Use computer  ·  [F] Move desk"}
+	return {"title": "Office PC", "lines": ["Purchasing · Flogit · Business · Shop · Stock · Finance · Mail"], "prompt": "[E] Use computer  ·  [F] Move desk"}
 
 
 func interact(player: Node) -> void:

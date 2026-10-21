@@ -124,6 +124,10 @@ func _busy(it: Item) -> bool:
 	var sl := str(it.loc.get("slot", ""))
 	var host := sl.get_slice(":", 0)
 	var st: Dictionary = s.stations.get(host, {})
+	if st.get("type", "") == "build" and it.unit:
+		# Someone's building (or upgrading) this one: hands off until the customer's spec is met.
+		var c: Dictionary = s.contracts.get(int(it.unit.contract), {})
+		return c.is_empty() or not ServerBuild.complete(it.unit, c.get("spec", {}))
 	return not st.get("job", {}).is_empty()
 
 
@@ -182,7 +186,7 @@ func _plan_bench() -> Array:
 					dest = _free_slot(r)
 					if dest != "":
 						break
-			elif u.imaged:
+			elif u.imaged and u.contract == 0:
 				for g in _hosts("grade"):
 					dest = _free_slot(g)
 					if dest != "":
@@ -288,7 +292,7 @@ func _plan_grade() -> Array:
 				return [["walk", _slot_pos(host + ":unit")], ["cmd", "list", {"item": on.id, "listed": true}]]
 			var shelf := _shelf_slot(on)
 			return _move(on, shelf) if shelf != "" else []
-		var ready := _units(func(u): return u.imaged and u.grade == "")
+		var ready := _units(func(u): return u.imaged and u.grade == "" and u.contract == 0)
 		ready = ready.filter(func(i): return not _on_type(i, "grade") and not _on_type(i, "bench"))
 		if not ready.is_empty():
 			StaffView.claim(ready[0].id, peer)

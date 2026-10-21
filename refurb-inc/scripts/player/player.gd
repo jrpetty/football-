@@ -180,6 +180,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		_press_t = -1.0
 	elif event.is_action_pressed("drop"):
 		_drop()
+	elif event.is_action_pressed("rotate") and _hover_node:
+		# [R] on a bench with choices (upgrade options): pick the next one; the hold prompt follows.
+		var host: Node = _station_for(_hover_node) if _hover_node is ItemView else _hover_node
+		if host and host.has_method("cycle_option"):
+			host.cycle_option()
 	elif event.is_action_pressed("move_fixture") and _hover_node and LevelRoot.current:
 		var fid := LevelRoot.current.fixture_at(_hover_node)
 		if fid != "" and Game.state.held_by(peer_id).is_empty():

@@ -2,9 +2,13 @@ class_name RepairStation
 extends StationBase
 ## Repair bench: hold E on the unit to fix its next fault. Needs the right part in the parts bins and the
 ## right Repair level. No mini-games — a progress bar fills while you hold.
+## Once a unit has no faults left, the same hold fits an upgrade from the bins (more RAM, a bigger SSD) — the prompt
+## shows the part's cost against what it adds to the value, and [R] picks between the options.
 
 var _lamp: SpotLight3D
 var _screwdriver_loop: AudioStreamPlayer3D
+var _opt := 0                 # this PC's chosen upgrade option
+var _upgrade_key := ""
 
 
 func _station_ready() -> void:
@@ -32,8 +36,17 @@ func hold_action(player: Node, it: Item) -> Dictionary:
 		return {"label": "Repair: %s" % pv.text, "secs": float(pv.secs), "action": "repair",
 			"sub": "Uses %s (%d in bins)" % [pv.part_name, int(pv.have)]}
 	if pv.get("done", false):
+		var up := Upgrades.hold(Game.state, peer, it.unit, _opt)
+		if not up.is_empty():
+			_upgrade_key = str(up.key)
+			return up
 		return {}
 	return {"label": "", "blocked": pv.get("why", "")}
+
+
+func cycle_option() -> void:
+	_opt += 1
+	Sfx.play_ui("ui_click", -10.0)
 
 
 func _client_preview(peer: int, it: Item) -> Dictionary:
@@ -45,7 +58,10 @@ func _client_preview(peer: int, it: Item) -> Dictionary:
 func extra_lines(it: Item) -> Array:
 	var out: Array = []
 	if it.unit and it.unit.tested and not it.unit.has_open_faults():
-		out.append("All faults fixed — take it to a test bench with the PaneOS USB.")
+		if not it.unit.imaged:
+			out.append("All faults fixed — take it to a test bench with the PaneOS USB.")
+		if Upgrades.blocked_reason(it.unit) == "" and Upgrades.options(Game.state, Net.local_peer(), it.unit).is_empty():
+			out.append("No upgrades possible with the parts in the bins.")
 	return out
 
 
@@ -60,12 +76,16 @@ func hold_complete(_player: Node, action: String) -> void:
 	if action == "repair":
 		Game.request("repair", {"station": station_id})
 		Sfx.play_at("repair_done", global_position + Vector3(0, 1, 0))
+	elif action == "upgrade":
+		Game.request("upgrade", {"station": station_id, "key": _upgrade_key})
+		Sfx.play_at("repair_done", global_position + Vector3(0, 1, 0))
 
 
 func hover_info(player: Node) -> Dictionary:
 	var info := super.hover_info(player)
 	var it := slot_item("unit")
-	info.lines = ["Place a tested, faulty unit here.", "Hold [E] on the unit to repair (parts come from the bins)."]
+	info.lines = ["Place a tested, faulty unit here.", "Hold [E] on the unit to repair (parts come from the bins).",
+		"Fault-free units can have RAM or SSD upgrades fitted here."]
 	if it:
 		info.lines = ["On bench: " + it.display_name()]
 	return info

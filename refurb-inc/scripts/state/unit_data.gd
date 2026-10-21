@@ -43,6 +43,12 @@ var parts_cost: int = 0           # value of parts fitted during repair
 var data_cert: bool = false       # imaged by someone with the Data certificates perk (+2% guide)
 var list_quality: float = 1.0     # Photo pro perk: buyers accept this × guide without slowing
 var booked: bool = false          # passed the goods-in scanner (booked into stock automatically)
+var hw: Dictionary = {}           # explicit hardware layout once anything is fitted or swapped (see layout())
+var contract: int = 0             # business contract this unit is reserved for (bulk allocation or a custom build)
+var missed_flaw: String = ""      # cosmetic flaw the grader overlooked, so the grade is better than the unit (buyers notice)
+var upgrades: int = 0             # RAM / storage upgrades fitted before sale
+
+const STANDARD_DIMMS := [2, 4, 8, 16, 32, 64, 128]
 
 
 func display_name() -> String:
@@ -93,15 +99,155 @@ func spec_line() -> String:
 	if fixed != "":
 		# Peripherals, network and mobile kit: the spec line comes from data (+ the rolled storage on tablets/phones).
 		return fixed + (" · " + storage_text(storage_gb) if m.has("storage_options") else "")
-	var cpus := int(m.get("cpu_count", 1))
-	var drives := int(m.get("drive_count", 1))
-	var cpu := ("%d× %s" % [cpus, cpu_name()]) if cpus > 1 else cpu_name()
-	var storage := storage_text(storage_gb / maxi(drives, 1))
-	if drives > 1:
-		storage = "%d× %s" % [drives, storage]
-	var line := "%s · %dGB RAM · %s %s" % [cpu, ram_gb, storage, storage_label()]
-	var gpu: String = m.get("gpu", "")
-	return line + (" · " + gpu if gpu != "" else "")
+	if hw.is_empty():
+		var cpus := int(m.get("cpu_count", 1))
+		var drives := int(m.get("drive_count", 1))
+		var cpu := ("%d× %s" % [cpus, cpu_name()]) if cpus > 1 else cpu_name()
+		var storage := storage_text(storage_gb / maxi(drives, 1))
+		if drives > 1:
+			storage = "%d× %s" % [drives, storage]
+		var line := "%s · %dGB RAM · %s %s" % [cpu, ram_gb, storage, storage_label()]
+		var gpu: String = m.get("gpu", "")
+		return line + (" · " + gpu if gpu != "" else "")
+	# Built or upgraded: describe what is actually fitted (mixed drives, empty sockets, missing PSUs…).
+	var l := layout()
+	var n_cpu := int(l.cpus)
+	var cpu_txt := "No CPU" if n_cpu == 0 or cpu_id == "" else (("%d× %s" % [n_cpu, cpu_name()]) if n_cpu > 1 else cpu_name())
+	var parts_txt: PackedStringArray = [cpu_txt, ("%dGB RAM" % ram_gb) if ram_gb > 0 else "no RAM"]
+	var drives_arr: Array = l.drives
+	if storage_swappable(m) or not drives_arr.is_empty():
+		parts_txt.append(drives_text(drives_arr) + " " + storage_label() if not drives_arr.is_empty() else "no drives")
+	else:
+		parts_txt.append("%s %s" % [storage_text(storage_gb), storage_label()])
+	if m.get("type", "") == "server":
+		var bays := int(m.get("psu_bays", 1))
+		if int(l.psus) < bays:
+			parts_txt.append("%d of %d PSUs" % [int(l.psus), bays])
+		if m.get("raid_slot", false) and not l.raid:
+			parts_txt.append("no RAID card")
+	var gpu2: String = m.get("gpu", "")
+	if gpu2 != "":
+		parts_txt.append(gpu2)
+	return " · ".join(parts_txt)
+
+
+static func drives_text(drives: Array) -> String:
+	## "8× 1.2TB", or "6× 1.2TB + 2× 600GB" when sizes are mixed (biggest first).
+	var counts := {}
+	for d in drives:
+		counts[int(d)] = int(counts.get(int(d), 0)) + 1
+	var sizes: Array = counts.keys()
+	sizes.sort()
+	sizes.reverse()
+	var out: PackedStringArray = []
+	for s in sizes:
+		out.append(("%d× %s" % [counts[s], storage_text(s)]) if int(counts[s]) > 1 or drives.size() > 1 else storage_text(s))
+	return " + ".join(out)
+
+
+# ================================================================= fitted hardware (builds + upgrades)
+
+static func ram_upgradable(m: Dictionary) -> bool:
+	return int(m.get("ram_slots", 0)) > 0 and not str(m.get("ram_type", "")) in ["", "soldered"]
+
+
+static func storage_swappable(m: Dictionary) -> bool:
+	return not str(m.get("storage_type", "")) in ["", "soldered"]
+
+
+static func part_sizes(category: String, fit_key: String, fit_val: String) -> Array:
+	## Sizes (GB) of every part that fits, smallest first.
+	var out: Array = []
+	for p: Dictionary in Content.parts.values():
+		if p.get("category") == category and str(p.get(fit_key, "")) == fit_val and not int(p.get("size_gb", 0)) in out:
+			out.append(int(p.get("size_gb", 0)))
+	out.sort()
+	return out
+
+
+static func default_dimms(m: Dictionary, ram: int) -> Array:
+	## How lot kit's memory is populated: as few standard DIMMs as the parts allow (so a laptop's 8GB is one stick
+	## and the second slot is free for an upgrade).
+	var slots := int(m.get("ram_slots", 0))
+	if slots <= 0 or ram <= 0 or not ram_upgradable(m):
+		return []
+	var sizes := part_sizes("ram", "fits_ram_type", str(m.get("ram_type", "")))
+	var biggest: int = sizes.max() if not sizes.is_empty() else ram
+	for n in range(1, slots + 1):
+		if ram % n == 0:
+			var each := ram / n
+			if each <= biggest and each in STANDARD_DIMMS:
+				var out: Array = []
+				for i in n:
+					out.append(each)
+				return out
+	return [ram]
+
+
+static func default_drives(m: Dictionary, storage: int) -> Array:
+	if storage <= 0 or not storage_swappable(m):
+		return []
+	var n := maxi(int(m.get("drive_count", 1)), 1)
+	var out: Array = []
+	for i in n:
+		out.append(storage / n)
+	return out
+
+
+func layout() -> Dictionary:
+	## What's fitted: {cpus, dimms: [GB…], drives: [GB…], psus, raid}. Lot kit is derived from its rolled spec;
+	## anything built or upgraded keeps an explicit copy in `hw`.
+	if not hw.is_empty():
+		return hw.duplicate(true)
+	var m := model()
+	return {
+		"cpus": int(m.get("cpu_count", 1)) if cpu_id != "" else 0,
+		"dimms": default_dimms(m, ram_gb),
+		"drives": default_drives(m, storage_gb),
+		"psus": int(m.get("psu_bays", 1)),
+		"raid": bool(m.get("raid_slot", false)),
+	}
+
+
+func set_layout(l: Dictionary) -> void:
+	## Make a layout explicit and keep the headline spec (RAM / storage totals) in step with it.
+	var m := model()
+	hw = {"cpus": int(l.get("cpus", 0)), "dimms": (l.get("dimms", []) as Array).duplicate(),
+		"drives": (l.get("drives", []) as Array).duplicate(), "psus": int(l.get("psus", 0)), "raid": bool(l.get("raid", false))}
+	if ram_upgradable(m):
+		var r := 0
+		for d in hw.dimms:
+			r += int(d)
+		ram_gb = r
+	if storage_swappable(m):
+		var t := 0
+		for d in hw.drives:
+			t += int(d)
+		storage_gb = t
+	if int(hw.cpus) == 0:
+		cpu_id = ""
+
+
+func ram_slots() -> int:
+	return int(model().get("ram_slots", 0))
+
+
+func ram_max() -> int:
+	## Most memory the board takes: the model's own cap, or every slot filled with the biggest DIMM that fits.
+	var m := model()
+	if m.has("ram_max_gb"):
+		return int(m.ram_max_gb)
+	var sizes := part_sizes("ram", "fits_ram_type", str(m.get("ram_type", "")))
+	var biggest: int = sizes.max() if not sizes.is_empty() else 0
+	var top := 0
+	for o in m.get("ram_options", []):
+		top = maxi(top, int(o))
+	return maxi(ram_slots() * biggest, top)
+
+
+func drive_bays() -> int:
+	var m := model()
+	return int(m.get("drive_bays", m.get("drive_count", 1 if storage_swappable(m) else 0)))
 
 
 static func storage_text(gb: int) -> String:
@@ -163,6 +309,13 @@ func stage() -> String:
 
 
 func stage_text() -> String:
+	if contract != 0 and order_id == 0 and not shipped:
+		# Reserved for a business customer's custom build: built at the build bench, then tested and imaged.
+		match stage():
+			STAGE_UNTESTED: return "Custom build — finish the build, then test it"
+			STAGE_FAULTY: return "Custom build — faulty, needs repair"
+			STAGE_TO_IMAGE: return "Custom build — passed, needs wipe & image"
+			_: return "Custom build — finish the build to release it for packing"
 	match stage():
 		STAGE_UNTESTED: return "Untested"
 		STAGE_FAULTY: return "Faulty — needs repair"
@@ -196,6 +349,7 @@ func to_dict() -> Dictionary:
 		"list_price": list_price, "listed": listed, "order_id": order_id, "lot_id": lot_id, "cost": cost,
 		"seller_name": seller_name, "shipped": shipped, "history": history.duplicate(true),
 		"received": received, "tested_at": tested_at, "repaired_at": repaired_at, "imaged_at": imaged_at, "graded_at": graded_at, "listed_at": listed_at, "sold_at": sold_at, "parts_cost": parts_cost, "data_cert": data_cert, "list_quality": list_quality, "booked": booked,
+		"hw": hw.duplicate(true), "contract": contract, "missed_flaw": missed_flaw, "upgrades": upgrades,
 	}
 
 
@@ -232,4 +386,11 @@ static func from_dict(d: Dictionary) -> UnitData:
 	u.data_cert = bool(d.get("data_cert", false))
 	u.list_quality = float(d.get("list_quality", 1.0))
 	u.booked = bool(d.get("booked", false))
+	var h: Variant = d.get("hw", {})
+	if h is Dictionary and not (h as Dictionary).is_empty():
+		u.hw = {"cpus": int(h.get("cpus", 0)), "dimms": (h.get("dimms", []) as Array).map(func(x): return int(x)),
+			"drives": (h.get("drives", []) as Array).map(func(x): return int(x)), "psus": int(h.get("psus", 0)), "raid": bool(h.get("raid", false))}
+	u.contract = int(d.get("contract", 0))
+	u.missed_flaw = str(d.get("missed_flaw", ""))
+	u.upgrades = int(d.get("upgrades", 0))
 	return u

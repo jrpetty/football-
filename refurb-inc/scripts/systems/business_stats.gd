@@ -43,6 +43,10 @@ static func blank() -> Dictionary:
 		"peak_cash": -2147483648, "low_cash": 2147483647,
 		"auto": {"kinds": {}, "fixtures": {}, "today": {}, "hours": {}},   # automation events (see on_auto)
 		"energy": {"kwh": 0.0, "cost": 0},   # all-time electricity (daily figures live in `days`)
+		"reviews": [],        # one record per Flogit review (see on_review)
+		"business": {"offers": 0, "accepted": 0, "declined": 0, "expired": 0, "complete": 0, "on_time": 0, "late": 0,
+			"cancelled": 0, "revenue": 0, "units": 0, "builds": 0, "build_parts": 0},
+		"upgrades": {"count": 0, "ram": 0, "storage": 0, "spent": 0, "gain": 0},
 	}
 
 
@@ -318,6 +322,70 @@ static func on_ship(st: GameState, order: Dictionary, u: UnitData, fee: int, pos
 	for mark in REVENUE_MARKS:
 		if revenue >= mark and revenue - price < mark:
 			event(st, "milestone", "%s in total sales" % GameState.format_money(mark))
+
+
+# ================================================================= reviews, business buyers, upgrades
+
+const MAX_REVIEWS := 1500
+
+
+static func on_review(st: GameState, order: Dictionary, r: Dictionary) -> void:
+	_push(st.stats.reviews, {"day": st.day_index(), "m": st.minute, "order": int(order.get("id", 0)), "stars": int(r.stars),
+		"reason": str(r.get("reason", "")), "buyer": str(r.get("buyer", "")), "model": str(r.get("model", "")),
+		"grade": str(r.get("grade", "")), "text": str(r.get("text", ""))}, MAX_REVIEWS)
+	var n: Array = st.stats.reviews
+	if n.size() == 1:
+		event(st, "first", "First Flogit review: %s \"%s\"" % [Reviews.stars_text(int(r.stars)), r.get("text", "")])
+
+
+static func business(st: GameState) -> Dictionary:
+	var b: Dictionary = st.stats.get("business", {})
+	if b.is_empty():
+		b = blank().business
+		st.stats["business"] = b
+	return b
+
+
+static func on_contract(st: GameState, c: Dictionary, what: String) -> void:
+	## what: offer, accepted, declined, expired, complete, late, cancelled
+	var b := business(st)
+	b[what] = int(b.get(what, 0)) + 1
+	var name := "%s — %s" % [c.get("buyer", ""), Business.title(c)]
+	match what:
+		"accepted":
+			if int(b.accepted) == 1:
+				event(st, "first", "First business contract: %s" % name)
+			else:
+				event(st, "business", "Accepted %s (%s)" % [name, GameState.format_money(Business.value(c))])
+		"complete":
+			b.on_time = int(b.get("on_time", 0)) + (0 if c.get("late", false) else 1)
+			b.revenue = int(b.get("revenue", 0)) + int(c.get("revenue", 0))
+			b.units = int(b.get("units", 0)) + int(c.get("shipped", 0))
+			if c.get("kind", "") == "build":
+				b.builds = int(b.get("builds", 0)) + 1
+			event(st, "business", "Delivered %s%s — %s" % [name, " (late)" if c.get("late", false) else "", GameState.format_money(int(c.get("revenue", 0)))])
+		"cancelled":
+			event(st, "warning", "%s cancelled their order (%s)" % [c.get("buyer", ""), Business.title(c)])
+
+
+static func on_build_part(st: GameState, u: UnitData, spent: int, back: int, peer: int) -> void:
+	var b := business(st)
+	b.build_parts = int(b.get("build_parts", 0)) + spent - back
+	u.parts_cost += spent - back
+	act(st, peer, "built")
+
+
+static func on_upgrade(st: GameState, u: UnitData, o: Dictionary, peer: int) -> void:
+	var up: Dictionary = st.stats.get("upgrades", {})
+	if up.is_empty():
+		up = blank().upgrades
+		st.stats["upgrades"] = up
+	up.count = int(up.get("count", 0)) + 1
+	up[str(o.kind)] = int(up.get(str(o.kind), 0)) + 1
+	up.spent = int(up.get("spent", 0)) + int(o.cost) - int(o.back)
+	up.gain = int(up.get("gain", 0)) + int(o.gain)
+	u.parts_cost += int(o.cost) - int(o.back)
+	act(st, peer, "upgraded")
 
 
 # ================================================================= automation
