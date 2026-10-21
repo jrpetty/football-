@@ -18,6 +18,9 @@ const DEFAULT_BINDINGS := {
 	"move_fixture": [KEY_F],
 	"rotate": [KEY_R],
 	"drop": [KEY_Q],
+	"fork_up": [KEY_R],          # forklift forks (R/F or the mouse wheel)
+	"fork_down": [KEY_F],
+	"horn": [KEY_H],
 	"pause": [KEY_ESCAPE],
 	"toggle_hud": [KEY_F1],
 	"screenshot": [KEY_F12],

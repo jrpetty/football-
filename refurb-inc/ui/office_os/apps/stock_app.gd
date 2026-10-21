@@ -70,7 +70,8 @@ func _location(it: Item) -> String:
 		"slot":
 			var sid: String = it.loc.slot
 			if sid.begins_with("i"):
-				return "Pallet (drive)"
+				# On a pallet: wherever the pallet is (racking bay, forklift, truck, floor).
+				return Logistics.unit_location(Game.state, it)
 			return LevelRoot.current.slot_label(sid) if LevelRoot.current else sid
 		"held":
 			return "Carried by " + Net.display_name(int(it.loc.peer))

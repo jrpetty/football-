@@ -108,19 +108,25 @@ func _equipment() -> void:
 
 func _shop() -> void:
 	_list.add_child(para("Equipment is delivered straight away and placed by you. Floor space is the only limit. Powered kit adds to the electricity bill (metered at %dp/kWh)." % int(round(float(Content.econ("electricity_per_kwh", 0.28)) * 100.0)), 17, SUB, 1000))
-	var groups := {"Workstations": [], "Storage": [], "Automation": []}
+	var groups := {"Workstations": [], "Storage": [], "Logistics": [], "Automation": [], "Decor": []}
 	for type in Content.fixtures:
 		var def: Dictionary = Content.fixture(type)
-		if def.has("auto"):
+		if groups.has(str(def.get("group", ""))):
+			groups[str(def.group)].append(type)
+		elif def.has("auto"):
 			groups.Automation.append(type)
 		elif float(def.get("power_kw", 0.0)) <= 0.0:
 			groups.Storage.append(type)
 		else:
 			groups.Workstations.append(type)
-	for g in ["Workstations", "Storage", "Automation"]:
+	for g in ["Workstations", "Storage", "Logistics", "Automation", "Decor"]:
 		_list.add_child(l(g, 24))
-		if g == "Automation":
+		if g == "Logistics":
+			_list.add_child(para("Whole pallets: racking keeps them off the floor (forklift for the upper levels — Shop → Equipment), and an unload bay next to a robot arm feeds them onto the line.", 15, SUB, 1000))
+		elif g == "Automation":
 			_list.add_child(para("Lay conveyors end to end (they snap together and turn to match). Robot arms move kit between anything inside their cyan ring: pallets, racks, robots, shelving, conveyor ends.", 15, SUB, 1000))
+		elif g == "Decor":
+			_list.add_child(para("Make it yours — paint, floor lines and signs are in the Fit-out app.", 15, SUB, 1000))
 		for type in groups[g]:
 			var def: Dictionary = Content.fixture(type)
 			var c := card()

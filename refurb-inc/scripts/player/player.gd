@@ -73,10 +73,32 @@ var _bend := {}                       # flexible bend being placed: {angle, radi
 var _bend_vis: Node3D = null
 var _snapped := {}
 
+# Forklift driving (scripts/player/player.gd § forklift): the player node IS the driver's seat while driving.
+const FL_MAX_FWD := 3.2
+const FL_MAX_REV := 2.2
+const FL_ACCEL := 2.4
+const FL_BRAKE := 4.5
+const FL_STEER_MAX := deg_to_rad(58.0)
+const FL_LIFT_SPEED := 0.5
+var fork_h := 0.0                     # fork height (m): live for the driver, smoothed from the network for others
+var _net_fork := -1.0
+var _drive_id := 0                    # forklift item id we're sat in (0 = on foot)
+var _drive_v := 0.0
+var _steer := 0.0
+var _look_yaw := 0.0                  # head turned relative to the truck
+var _fork_target := 0.0
+var _fork_wait := 0.0                 # waiting for the host to confirm a lift / set-down
+var _seat_blend := 0.0
+var _seat_from := Vector3.ZERO
+var _drive_hint := ""
+var _remote_fl_t := 0.0
+var _remote_fl := 0
+
 
 func _ready() -> void:
 	peer_id = get_multiplayer_authority()
 	is_local = peer_id == Net.local_peer()
+	process_physics_priority = -10        # move before the things that follow us (carried items, vehicles)
 	collision_layer = 1 << 1
 	collision_mask = 1 | (1 << 4)
 	floor_snap_length = 0.3
@@ -164,6 +186,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if placing_id != "":
 		_placement_input(event)
 		return
+	if _drive_id != 0:
+		_drive_input(event)
+		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var sens := float(Settings.get_value("mouse_sensitivity")) * 0.01
 		_yaw -= event.relative.x * sens
@@ -217,6 +242,10 @@ func _physics_process(delta: float) -> void:
 		# Safety net: never fall out of the world.
 		global_position = LevelRoot.current.respawn_point()
 		velocity = Vector3.ZERO
+	if _check_driving():
+		_drive_physics(delta)
+		_send_pose(delta)
+		return
 	var on_floor := is_on_floor()
 	if not on_floor:
 		velocity.y -= _gravity * delta
@@ -297,7 +326,15 @@ func _truck_target_pallet() -> ItemView:
 		if not is_instance_valid(v) or v.kind != Item.KIND_PALLET or not v.visible:
 			continue
 		var it := Game.state.get_item(v.item_id)
-		if it == null or it.loc.get("t") != "loose":
+		if it == null:
+			continue
+		if it.loc.get("t") == "slot":
+			# A pallet in the floor-level bay of racking / an unload bay: the truck reaches it.
+			var sid := str(it.loc.get("slot", ""))
+			var f: Dictionary = Game.state.fixtures.get(sid.get_slice(":", 0), {})
+			if Logistics.slot_world(Game.state, sid) == null or Logistics.level_height(str(f.get("type", "")), sid.get_slice(":", 1)) > Logistics.TRUCK_MAX_LEVEL:
+				continue
+		elif it.loc.get("t") != "loose":
 			continue
 		var pc := v.global_position
 		var d := Vector2(pc.x - fc.x, pc.z - fc.z).length()
@@ -344,6 +381,10 @@ func _update_head(delta: float, hspeed: float, sprinting: bool, on_floor: bool) 
 	else:
 		_bob_t = lerpf(_bob_t, roundf(_bob_t / PI) * PI, delta * 4.0)
 	head.position = Vector3(bob.x, eye + bob.y - _land_dip, 0)
+	if _seat_blend > 0.0:
+		# Just climbed out of a forklift: the view eases down from the seat.
+		_seat_blend = maxf(0.0, _seat_blend - delta / 0.45)
+		head.position = head.position.lerp(_seat_from, ease(_seat_blend, 2.0))
 	var target_fov := _fov_base + (6.0 if sprinting and hspeed > WALK_SPEED else 0.0)
 	camera.fov = lerpf(camera.fov, target_fov, delta * 6.0)
 
@@ -531,7 +572,13 @@ func _tap() -> void:
 			var v: ItemView = LevelRoot.current.item_views.get(load_it.id)
 			var xf := v.global_transform if v else global_transform
 			var q := xf.basis.get_rotation_quaternion()
-			Game.request("truck_lower", {"p": [xf.origin.x, maxf(xf.origin.y - 0.035, 0.0), xf.origin.z], "r": [q.x, q.y, q.z, q.w]})
+			var args := {"p": [xf.origin.x, maxf(xf.origin.y - 0.035, 0.0), xf.origin.z], "r": [q.x, q.y, q.z, q.w]}
+			# Wheeled into a floor-level bay (racking or an unload bay)? It drops into the bay.
+			var sd := Logistics.find_set_down(Game.state, xf.origin + Vector3(0, 0.05, 0))
+			if sd.has("slot") and float(sd.h) <= Logistics.TRUCK_MAX_LEVEL:
+				var so: Vector3 = (sd.xf as Transform3D).origin
+				args = {"slot": sd.slot, "p": [so.x, so.y, so.z]}
+			Game.request("truck_lower", args)
 			Sfx.play_at("hydraulic", xf.origin, -10.0)
 		else:
 			var target := _truck_target_pallet()
@@ -842,31 +889,391 @@ func _send_pose(delta: float) -> void:
 	if _pose_accum < 1.0 / POSE_HZ:
 		return
 	_pose_accum = 0.0
-	_rpc_pose.rpc(global_position, _yaw, _pitch, _crouch)
+	_rpc_pose.rpc(global_position, _yaw, _pitch, _crouch, fork_h if _drive_id != 0 else -1.0)
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
-func _rpc_pose(pos: Vector3, yaw: float, pitch: float, crouch: float) -> void:
+func _rpc_pose(pos: Vector3, yaw: float, pitch: float, crouch: float, fork: float = -1.0) -> void:
 	_net_pos = pos
 	_net_yaw = yaw
 	_net_pitch = pitch
 	_crouch = crouch
+	_net_fork = fork
 
 
 func _remote_update(delta: float) -> void:
 	var before := global_position
 	global_position = global_position.lerp(_net_pos, clampf(delta * 14.0, 0, 1))
+	# Which forklift (if any) this player is driving — looked up a few times a second, not every frame.
+	_remote_fl_t -= delta
+	if _remote_fl_t <= 0.0:
+		_remote_fl_t = 0.25
+		var fl := _driven_forklift()
+		_remote_fl = fl.id if fl else 0
+	if _remote_fl != 0 and _net_fork >= 0.0:
+		fork_h = lerpf(fork_h, _net_fork, clampf(delta * 12.0, 0, 1))
+		_push_fork_height()
 	if avatar is CharacterRig:
 		var rig := avatar as CharacterRig
 		var v := Vector2(global_position.x - before.x, global_position.z - before.z).length() / maxf(delta, 0.001)
 		rig.move_speed = lerpf(rig.move_speed, v, clampf(delta * 8.0, 0, 1))
 		rig.anim = "carry" if not Game.state.held_by(peer_id).is_empty() else "idle"
+		if _remote_fl != 0:
+			# Sat in the seat, hands on the wheel.
+			rig.anim = "sit"
+			rig.move_speed = 0.0
+			rig.position = Vector3(0, Logistics.FL_SEAT.y + 0.1 - rig.hip_height(), 0.08)
+		else:
+			rig.position = Vector3.ZERO
 	_yaw = lerp_angle(_yaw, _net_yaw, clampf(delta * 14.0, 0, 1))
 	_pitch = lerpf(_pitch, _net_pitch, clampf(delta * 14.0, 0, 1))
 	_apply_look()
 	head.position.y = lerpf(STAND_HEIGHT, CROUCH_HEIGHT, _crouch) - EYE_OFFSET
 	if name_tag:
 		name_tag.text = Net.display_name(peer_id)
+
+
+# ================================================================= forklift
+## Get in with [E] on a parked forklift. W/S drive, A/D steer (rear-wheel steering: the back swings out, it turns
+## tight), R/F or the mouse wheel raise and lower the forks, H for the horn, E to climb out. Drive the forks under
+## a pallet and raise them to pick it up; lower it onto the floor or into a pallet-racking bay it's lined up with.
+## The host decides who's driving and where pallets go (forklift_enter / fork_lift / fork_set / forklift_exit);
+## the truck moves with the driver like a player does, and everyone sees it through the driver's pose.
+
+var _drive_scan := 0.0
+var _exit_to := Vector3.INF
+
+
+func _driven_forklift() -> Item:
+	for it: Item in Game.state.items.values():
+		if it.kind == Item.KIND_FORKLIFT and it.loc.get("t") == "driven" and int(it.loc.get("peer", 0)) == peer_id:
+			return it
+	return null
+
+
+func is_driving() -> bool:
+	return _drive_id != 0
+
+
+func _fork_load() -> Item:
+	for it: Item in Game.state.items.values():
+		if it.kind == Item.KIND_PALLET and it.loc.get("t") == "on_forks" and int(it.loc.get("fork", 0)) == _drive_id:
+			return it
+	return null
+
+
+func _push_fork_height() -> void:
+	## Tell the forklift being driven how high its forks are (the rig moves them; pallets ride the fork point).
+	var id := _drive_id if is_local else _remote_fl
+	var lr := LevelRoot.current
+	var v: ItemView = lr.item_views.get(id) if lr and id != 0 else null
+	if v and v.forklift:
+		v.forklift.set_fork_height(fork_h)
+
+
+func _check_driving() -> bool:
+	## Notice getting in / out: the host decides, we follow the state.
+	if _drive_id != 0:
+		var it := Game.state.get_item(_drive_id)
+		if it == null or it.loc.get("t") != "driven" or int(it.loc.get("peer", 0)) != peer_id:
+			_leave_seat()
+			return false
+		return true
+	_drive_scan -= get_physics_process_delta_time()
+	if _drive_scan > 0.0:
+		return false
+	_drive_scan = 0.12
+	var fl := _driven_forklift()
+	if fl == null:
+		return false
+	_take_seat(fl)
+	return true
+
+
+func _take_seat(fl: Item) -> void:
+	_drive_id = fl.id
+	var p: Array = fl.loc.get("p", [global_position.x, global_position.y, global_position.z])
+	var r: Array = fl.loc.get("r", [0, 0, 0, 1])
+	var model := Transform3D(Basis(Quaternion(r[0], r[1], r[2], r[3]).normalized()), Vector3(p[0], p[1], p[2]))
+	var seat := model * Logistics.drive_xf().affine_inverse()
+	var cam_from := camera.global_position
+	global_position = seat.origin
+	_yaw = seat.basis.get_euler().y
+	rotation.y = _yaw
+	_look_yaw = 0.0
+	_pitch = clampf(_pitch, deg_to_rad(-50), deg_to_rad(25))
+	head.rotation = Vector3(_pitch, 0, 0)
+	fork_h = float(fl.data.get("h", 0.0))
+	_fork_target = fork_h
+	_drive_v = 0.0
+	_steer = 0.0
+	_fork_wait = 0.0
+	_exit_to = Vector3.INF
+	velocity = Vector3.ZERO
+	shape.disabled = true
+	_seat_from = to_local(cam_from)
+	_seat_blend = 1.0
+	_cancel_hold()
+	_set_place_slot(null)
+	Sfx.play_at("van_door", global_position + Vector3(0, 1.0, 0), -10.0)
+
+
+func _leave_seat() -> void:
+	var cam_from := camera.global_position
+	_drive_id = 0
+	shape.disabled = false
+	if _exit_to != Vector3.INF:
+		global_position = _exit_to
+	_yaw = rotation.y + _look_yaw
+	_look_yaw = 0.0
+	rotation.y = _yaw
+	head.rotation = Vector3(_pitch, 0, 0)
+	velocity = Vector3.ZERO
+	_seat_from = to_local(cam_from)
+	_seat_blend = 1.0
+	_exit_to = Vector3.INF
+	_set_hover(null, {})
+
+
+func _drive_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		var sens := float(Settings.get_value("mouse_sensitivity")) * 0.01
+		_look_yaw = clampf(_look_yaw - event.relative.x * sens, deg_to_rad(-140), deg_to_rad(140))
+		var inv := -1.0 if Settings.get_value("invert_y") else 1.0
+		_pitch = clampf(_pitch - event.relative.y * sens * inv, deg_to_rad(-75), deg_to_rad(60))
+		head.rotation = Vector3(_pitch, _look_yaw, 0)
+	elif event is InputEventKey and event.is_action_pressed("interact") and not event.echo:
+		_climb_out()
+	elif event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		_fork_target = clampf(_fork_target + (0.15 if event.button_index == MOUSE_BUTTON_WHEEL_UP else -0.15), 0.0, Logistics.FORK_MAX)
+	elif event.is_action_pressed("horn"):
+		Sfx.play_at("forklift_horn", global_position + Vector3(0, 1.2, 0), -2.0, 0.02)
+
+
+func _climb_out() -> void:
+	if _drive_v * _drive_v > 0.25:
+		Game.toast.emit("Stop first.", "warn")
+		return
+	var model := global_transform * Logistics.drive_xf()
+	var q := model.basis.get_rotation_quaternion()
+	_exit_to = _exit_spot()
+	Game.request("forklift_exit", {"p": [model.origin.x, model.origin.y, model.origin.z], "r": [q.x, q.y, q.z, q.w], "h": fork_h})
+	Sfx.play_at("van_door", global_position + Vector3(0, 1.0, 0), -10.0)
+
+
+func _exit_spot() -> Vector3:
+	## Step down on the left of the seat (or the right, or behind) wherever there's room to stand.
+	var space := get_world_3d().direct_space_state
+	var cap := CapsuleShape3D.new()
+	cap.radius = 0.3
+	cap.height = 1.6
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = cap
+	q.collision_mask = 1
+	for off in [Vector3(-1.0, 0, 0.1), Vector3(1.0, 0, 0.1), Vector3(0, 0, 2.0), Vector3(-1.2, 0, 1.2)]:
+		var p: Vector3 = global_transform * off
+		q.transform = Transform3D(Basis.IDENTITY, p + Vector3(0, 0.95, 0))
+		if space.intersect_shape(q, 1).is_empty():
+			return p
+	return global_transform * Vector3(-1.0, 0, 0.1)
+
+
+func _drive_physics(delta: float) -> void:
+	var throttle := 0.0
+	var steer_in := 0.0
+	var lift_in := 0.0
+	if not ui_mode:
+		throttle = Input.get_axis("move_back", "move_forward")
+		steer_in = Input.get_axis("move_right", "move_left")
+		lift_in = Input.get_axis("fork_down", "fork_up")
+	var load_it := _fork_load()
+	var top := FL_MAX_FWD * (0.8 if load_it else 1.0)
+	var target_v := throttle * (top if throttle >= 0.0 else FL_MAX_REV)
+	var speeding_up := absf(target_v) > absf(_drive_v) and (signf(target_v) == signf(_drive_v) or is_zero_approx(_drive_v))
+	_drive_v = move_toward(_drive_v, target_v, (FL_ACCEL if speeding_up else FL_BRAKE) * delta)
+	_steer = move_toward(_steer, steer_in, delta * 2.4)
+	var dxf := Logistics.drive_xf()
+	var model := global_transform * dxf
+	# Rear-wheel steering: the truck pivots about its front (drive) axle and the back swings out.
+	var yaw_rate := _drive_v * tan(_steer * FL_STEER_MAX) / Logistics.FL_WHEELBASE
+	if absf(_drive_v) > 0.0005 or absf(yaw_rate) > 0.00001:
+		var axle_local := Vector3(0, 0, Logistics.FL_FRONT_AXLE_Z)
+		var axle := model * axle_local + model.basis.z.normalized() * _drive_v * delta
+		var new_yaw := _yaw + yaw_rate * delta
+		var mb := Basis(Vector3.UP, new_yaw) * dxf.basis
+		var new_model := Transform3D(mb, axle - mb * axle_local)
+		if _forklift_blocked(new_model, load_it):
+			if absf(_drive_v) > 1.2:
+				Sfx.play_at("impact_heavy", model.origin + Vector3(0, 0.6, 0), -4.0)
+			_drive_v = 0.0
+		else:
+			var seat := new_model * dxf.affine_inverse()
+			var gy := _ground_y(new_model, seat.origin.y)
+			global_position = Vector3(seat.origin.x, lerpf(global_position.y, gy, clampf(delta * 10.0, 0.0, 1.0)), seat.origin.z)
+			_yaw = new_yaw
+			rotation.y = _yaw
+			model = global_transform * dxf
+	_drive_forks(delta, lift_in, model, load_it)
+	_push_fork_height()
+	# Camera: settle into the seat (or out of it) smoothly; a little bounce with the truck.
+	var eye := Vector3(0, Logistics.FL_EYE, 0)
+	if _seat_blend > 0.0:
+		_seat_blend = maxf(0.0, _seat_blend - delta / 0.45)
+		head.position = eye.lerp(_seat_from, ease(_seat_blend, 2.0))
+	else:
+		head.position = eye + Vector3(0, sin(Time.get_ticks_msec() * 0.018) * 0.004 * clampf(absf(_drive_v) / 3.0, 0.0, 1.0), 0)
+	camera.fov = lerpf(camera.fov, _fov_base, delta * 6.0)
+	_update_drive_hud(load_it)
+
+
+func _drive_forks(delta: float, lift_in: float, model: Transform3D, load_it: Item) -> void:
+	if lift_in != 0.0:
+		_fork_target = clampf(fork_h + lift_in * 0.35, 0.0, Logistics.FORK_MAX)
+	var rate := FL_LIFT_SPEED * (0.75 if load_it else 1.0)
+	var new_h := move_toward(fork_h, _fork_target, rate * delta)
+	var lowering := _fork_target < fork_h - 0.0005
+	var raising := _fork_target > fork_h + 0.0005
+	_fork_wait = maxf(0.0, _fork_wait - delta)
+	var ground := global_position.y
+	_drive_hint = ""
+	if load_it == null:
+		var tgt := _fork_target_pallet(model)
+		if not tgt.is_empty():
+			var base: float = float(tgt.base) - ground
+			_drive_hint = "Forks under the pallet — raise them to lift it"
+			if raising and new_h >= base + 0.02:
+				if _fork_wait <= 0.0:
+					var o: Vector3 = tgt.origin
+					Game.request("fork_lift", {"pallet": tgt.id, "at": [o.x, o.y, o.z], "yaw": tgt.yaw, "h": base})
+					Sfx.play_at("hydraulic", o + Vector3(0, 0.3, 0), -10.0)
+					_fork_wait = 0.8
+				new_h = minf(new_h, base + 0.03)        # until the host says it's on the forks
+	else:
+		var yaw := float(load_it.loc.get("yaw", 0.0))
+		var pal := model * Logistics.pallet_on_forks(new_h, yaw)
+		var sd := Logistics.find_set_down(Game.state, pal.origin + Vector3(0, ground - pal.origin.y + new_h, 0))
+		if sd.has("slot"):
+			var hs: float = float(sd.h) - ground
+			_drive_hint = "Lined up with %s — lower to set it down" % Logistics.slot_label(Game.state, str(sd.slot))
+			if new_h <= hs + 0.004:
+				new_h = maxf(new_h, hs)
+				if lowering and _fork_wait <= 0.0:
+					var so: Vector3 = (sd.xf as Transform3D).origin
+					Game.request("fork_set", {"slot": sd.slot, "p": [so.x, so.y, so.z], "h": hs})
+					Sfx.play_at("pallet_drop", so, -8.0)
+					_fork_wait = 0.8
+		elif sd.has("blocked"):
+			var hb: float = float(sd.blocked) - ground
+			if new_h < hb:
+				new_h = maxf(new_h, minf(hb, fork_h))
+				_drive_hint = str(sd.why)
+		elif new_h <= 0.004:
+			new_h = 0.0
+			if lowering and _fork_wait <= 0.0:
+				var q := pal.basis.get_rotation_quaternion()
+				Game.request("fork_set", {"p": [pal.origin.x, ground, pal.origin.z], "r": [q.x, q.y, q.z, q.w], "h": 0.0})
+				Sfx.play_at("pallet_drop", pal.origin, -8.0)
+				_fork_wait = 0.8
+		if _fork_wait > 0.0 and lowering:
+			new_h = maxf(new_h, fork_h - 0.001)     # hold it there until the host has taken it off the forks
+	fork_h = clampf(new_h, 0.0, Logistics.FORK_MAX)
+	if absf(fork_h - _fork_target) < 0.0005 and lift_in == 0.0:
+		_fork_target = fork_h
+
+
+func _fork_target_pallet(model: Transform3D) -> Dictionary:
+	## The pallet the forks are under right now (lined up, at the right height), if any.
+	var lr := LevelRoot.current
+	if lr == null:
+		return {}
+	var inv := model.affine_inverse()
+	var ground := global_position.y
+	var best := {}
+	var best_d := INF
+	var my_yaw := model.basis.get_euler().y
+	for v: ItemView in lr.item_views.values():
+		if not is_instance_valid(v) or v.kind != Item.KIND_PALLET or not v.visible:
+			continue
+		var it := Game.state.get_item(v.item_id)
+		if it == null:
+			continue
+		var t := str(it.loc.get("t", ""))
+		if t != "loose" and not (t == "slot" and Logistics.slot_world(Game.state, str(it.loc.get("slot", ""))) != null):
+			continue
+		var o := v.global_position
+		var lp := inv * o
+		if absf(lp.x - Logistics.FL_FORK_X) > 0.3 or lp.z < Logistics.FL_HEEL_Z + 0.2 or lp.z > Logistics.FL_HEEL_Z + Logistics.FL_FORK_LEN + 0.3:
+			continue
+		if absf(o.y - (ground + fork_h)) > 0.14:
+			continue
+		var rel := wrapf(v.global_basis.get_euler().y - my_yaw, -PI, PI)
+		if absf(rel - snappedf(rel, PI * 0.5)) > deg_to_rad(22.0):
+			continue
+		var d := absf(lp.x - Logistics.FL_FORK_X) + absf(lp.z - (Logistics.FL_HEEL_Z + 0.5))
+		if d < best_d:
+			best_d = d
+			best = {"id": it.id, "origin": o, "base": o.y, "yaw": snappedf(rad_to_deg(rel), 90.0)}
+	return best
+
+
+func _forklift_blocked(model: Transform3D, load_it: Item) -> bool:
+	## Would the truck (or the pallet on its forks) hit a wall, equipment, racking or stock there?
+	var space := get_world_3d().direct_space_state
+	var q := PhysicsShapeQueryParameters3D.new()
+	var body := BoxShape3D.new()
+	var zb := Logistics.FL_BACK_Z
+	var zf := Logistics.FL_FRONT_Z
+	body.size = Vector3(Logistics.FL_HALF_W * 2.0 - 0.04, 1.7, zf - zb - 0.04)
+	q.shape = body
+	q.transform = model * Transform3D(Basis.IDENTITY, Vector3(0, 0.3 + 0.85, (zf + zb) * 0.5))
+	q.collision_mask = 1 | (1 << 2)
+	var ex: Array[RID] = [get_rid()]
+	var fv := _fork_view_node()
+	if fv:
+		ex.append(fv.get_rid())
+	if load_it and LevelRoot.current and LevelRoot.current.item_views.has(load_it.id):
+		ex.append((LevelRoot.current.item_views[load_it.id] as ItemView).get_rid())
+	q.exclude = ex
+	if not space.intersect_shape(q, 1).is_empty():
+		return true
+	if load_it:
+		var pal := model * Logistics.pallet_on_forks(fork_h, float(load_it.loc.get("yaw", 0.0)))
+		var lb := BoxShape3D.new()
+		lb.size = Vector3(Logistics.PALLET.x - 0.1, 0.9, Logistics.PALLET.z - 0.1)
+		var lq := PhysicsShapeQueryParameters3D.new()
+		lq.shape = lb
+		lq.transform = pal * Transform3D(Basis.IDENTITY, Vector3(0, 0.06 + 0.45, 0))
+		lq.collision_mask = 1
+		lq.exclude = ex
+		if not space.intersect_shape(lq, 1).is_empty():
+			return true
+	return false
+
+
+func _fork_view_node() -> ItemView:
+	var lr := LevelRoot.current
+	return lr.item_views.get(_drive_id) if lr and _drive_id != 0 else null
+
+
+func _ground_y(model: Transform3D, fallback: float) -> float:
+	var q := PhysicsRayQueryParameters3D.new()
+	q.from = model * Vector3(0, 1.0, -0.4)
+	q.to = model * Vector3(0, -1.5, -0.4)
+	q.collision_mask = 1
+	q.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	return (hit.position as Vector3).y if not hit.is_empty() else fallback
+
+
+func _update_drive_hud(load_it: Item) -> void:
+	var lines: Array = ["Forks %.2f m · %.1f km/h" % [fork_h, absf(_drive_v) * 3.6]]
+	if load_it:
+		lines.append("Carrying %s (%d units)" % [load_it.display_name(), Logistics.units_on(Game.state, load_it.id).size()])
+	if _drive_hint != "":
+		lines.append(_drive_hint)
+	var info := {"title": "Forklift", "lines": lines, "prompt": "[W/S] Drive · [A/D] Steer · [R/F or wheel] Forks · [H] Horn · [E] Get out"}
+	if info.hash() != _hover_info.hash():
+		_set_hover(null, info)
 
 
 # ================================================================= placement mode

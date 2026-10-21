@@ -95,7 +95,7 @@ func _refs(id: String, c: Dictionary) -> void:
 
 func test_data_is_sane() -> void:
 	var defs := Achievements.defs()
-	check(defs.size() >= 50 and defs.size() <= 70, "50–70 achievements (got %d)" % defs.size())
+	check(defs.size() >= 50 and defs.size() <= 90, "50–90 achievements (got %d)" % defs.size())
 	var groups := Achievements.groups()
 	var ids := {}
 	var hidden := 0
@@ -366,6 +366,41 @@ func test_lot_and_pallet_truck_events() -> void:
 	eq(a.counter("pallet_lift"), 1, "pallet lifted")
 	var got := a.evaluate(s, _ctx())
 	check("lorry_load" in got and "pump_it_up" in got and "open_for_business" in got, "unlocked: %s" % str(got))
+
+
+func test_forklift_fitout_and_employee_events() -> void:
+	var sim := fresh_sim(908)
+	var s := sim.state
+	var a := _ach()
+	a.watch(s)
+	s.cash = 1000000
+	# Forklift: lift a pallet, put it away on the top level.
+	s.fixtures["rack_1"] = {"type": "pallet_rack", "label": "Racking R1", "placed": true, "p": [0, 0, 0], "r": 0.0}
+	for n in Logistics.slot_names("pallet_rack"):
+		s.register_slot("rack_1:%s" % n, [Item.KIND_PALLET], "")
+	var fl := s.new_item(Item.KIND_FORKLIFT, {"t": "loose", "p": [0, 0, 5], "r": [0, 0, 0, 1]})
+	var pallet := s.new_item(Item.KIND_PALLET, {"t": "loose", "p": [0, 0, 3], "r": [0, 0, 0, 1]})
+	check(sim.execute(1, "forklift_enter", {"item": fl.id}).ok)
+	check(sim.execute(1, "fork_lift", {"pallet": pallet.id, "at": [0, 0, 3]}).ok)
+	eq(a.counter("fork_lift"), 1, "lifted with a forklift")
+	var top: Transform3D = Logistics.slot_world(s, "rack_1:b0l2")
+	check(sim.execute(1, "fork_set", {"slot": "rack_1:b0l2", "p": [top.origin.x, top.origin.y, top.origin.z], "h": 2.9}).ok)
+	eq(a.counter("racked_top"), 1, "top level")
+	# Fit-out: paint + floor lines + three bits of decor.
+	sim.execute(1, "set_premises", {"key": "paint", "value": "dove_grey"})
+	sim.execute(1, "set_premises", {"key": "markings", "value": "walkways"})
+	eq(a.counter("painted"), 1)
+	eq(a.counter("marked_out"), 1)
+	for t in ["plant_tall", "rug", "poster_retro"]:
+		var r := sim.execute(1, "buy_fixture", {"type": t})
+		s.fixtures[r.id].placed = true
+	# Employee of the Month: me.
+	BusinessStats.act(s, 1, "tested", 20)
+	sim.employee_of_the_month()
+	eq(a.counter("eotm_me"), 1, "my name's on the wall")
+	var got := a.evaluate(s, _ctx())
+	for id in ["licence_to_lift", "top_shelf", "interior_designer", "employee_of_the_month"]:
+		check(id in got, "unlocked %s: %s" % [id, str(got)])
 
 
 func test_guests_earn_them_from_replicated_state() -> void:

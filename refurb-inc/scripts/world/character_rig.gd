@@ -445,6 +445,13 @@ func play_drink() -> void:
 	_drink_t = 0.0
 
 
+func hip_height() -> float:
+	## Height of the hip joint above the feet when standing (for sitting someone on a seat).
+	if not _rest.has("Hips"):
+		return 0.53 * height
+	return (_rest.Hips as Vector3).y * scale.y
+
+
 # ================================================================= animation
 
 func _rot(bone: String, q: Quaternion) -> void:
@@ -494,6 +501,15 @@ func _process(delta: float) -> void:
 	var sway := sin(_t * 0.7) * 0.006 * (1.0 - amp)
 	skeleton.set_bone_pose_position(_bone.Hips, (_rest.Hips as Vector3) + Vector3(sway + sin(ph) * 0.012 * amp, bob, 0))
 	_rot("Hips", _qy(sw * deg_to_rad(6.0) * amp) * _qz(sin(_t * 0.7) * 0.012 * (1.0 - amp)))
+	if anim == "sit":
+		# Seated (forklift): thighs forward and level, shins down, feet flat on the floor plate.
+		for s in ["L", "R"]:
+			var spread := 0.05 if s == "L" else -0.05
+			_rot("Thigh" + s, _qx(deg_to_rad(-84.0)) * _qz(spread))
+			_rot("Shin" + s, _qx(deg_to_rad(80.0)))
+			_rot("Foot" + s, _qx(deg_to_rad(4.0)))
+		skeleton.set_bone_pose_position(_bone.Hips, _rest.Hips)
+		_rot("Hips", Quaternion.IDENTITY)
 	# ---- torso: counter-twist, breathing, a slight lean when walking.
 	var breath := sin(_t * 1.7) * deg_to_rad(1.2)
 	_rot("Spine", _qx(deg_to_rad(3.0) * amp + breath * 0.4) * _qy(-sw * deg_to_rad(4.0) * amp))
@@ -548,6 +564,15 @@ func _process(delta: float) -> void:
 			r_out = deg_to_rad(-8.0)
 			l_el = deg_to_rad(-58.0) + sin(_t * 2.7) * 0.08
 			r_el = deg_to_rad(-62.0) + sin(_t * 3.4 + 0.5) * 0.12
+		"sit":
+			# Both hands on the steering wheel, a little turn of the wheel now and then.
+			var turn := sin(_t * 0.9) * 0.06
+			l_sw = deg_to_rad(-42.0) + turn
+			r_sw = deg_to_rad(-42.0) - turn
+			l_out = deg_to_rad(-12.0)
+			r_out = deg_to_rad(-12.0)
+			l_el = deg_to_rad(-48.0)
+			r_el = deg_to_rad(-48.0)
 		"wave":
 			r_sw = deg_to_rad(-15.0)
 			r_out = deg_to_rad(125.0)
