@@ -313,7 +313,7 @@ func _plan_haul() -> Array:
 			continue
 		var t := str(it.loc.get("t"))
 		var on_pallet := t == "slot" and str(it.loc.slot).begins_with("i")
-		if not (on_pallet or t == "loose"):
+		if not (on_pallet or t == "loose") or not Logistics.within_reach_on_foot(s, it):
 			continue
 		var shelf := _shelf_slot(it)
 		if shelf != "":

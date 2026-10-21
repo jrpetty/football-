@@ -40,6 +40,8 @@ static func build(id: String, params: Dictionary = {}) -> Node3D:
 		"person": _b_person(root, params)
 		"lorry": _b_lorry(root, params)
 		"van": _b_van(root, params)
+		"pallet_rack": PalletRack.build_visual(root, str(params.get("type", "pallet_rack")))
+		"decor": DecorProp.build_visual(root, str(params.get("kind", "plant_tall")))
 		_:
 			push_warning("No placeholder named '%s'" % id)
 			box(root, Vector3(0.5, 0.5, 0.5), Vector3(0, 0.25, 0), Mats.color(Color.MAGENTA))

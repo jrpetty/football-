@@ -4,6 +4,7 @@
     {"id": "usb_test",  "name": "DiagnostiKit Pro USB (test licence)",   "kind": "item", "item_kind": "usb_test",  "price": 45, "desc": "Boots a unit into full hardware diagnostics. One unit at a time."},
     {"id": "usb_image", "name": "PaneOS Deploy USB (wipe + image)",      "kind": "item", "item_kind": "usb_image", "price": 35, "desc": "Certified 3-pass wipe and a fresh PaneOS install."},
     {"id": "pallet_truck", "name": "Hand pallet truck (2.5 t)", "kind": "item", "item_kind": "pallet_truck", "price": 240, "desc": "Push it, jack a pallet up and move a whole delivery at once. Left by the door, no box."},
+    {"id": "forklift", "name": "Electric forklift (1.5 t, 4 m lift)", "kind": "item", "item_kind": "forklift", "price": 7800, "desc": "Ex-hire counterbalance truck. E to get in, W/S drive, A/D steer, R/F (or scroll) raise and lower the forks. Reaches every level of pallet racking. Driven to your door."},
     {"id": "empty_pallet", "name": "Empty EUR pallet", "kind": "item", "item_kind": "pallet", "price": 14, "desc": "Stack laptops or servers on it and move them in one go with a pallet truck."},
     {"id": "boxes_laptop", "name": "Laptop shipping boxes + foam (×10)", "kind": "consumable", "consumable": "boxes", "qty": 10, "price": 18, "desc": "Double-wall boxes with foam end caps."},
     {"id": "boxes_large", "name": "Large server/tower boxes + foam (x5)", "kind": "consumable", "consumable": "big_boxes", "qty": 5, "price": 32, "desc": "Triple-wall cartons with corner blocks for towers and rack servers."},

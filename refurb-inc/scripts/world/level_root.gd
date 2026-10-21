@@ -45,6 +45,8 @@ var fixtures_root: Node3D
 var _xf_accum := 0.0
 var _model_cache: Dictionary = {}    # fixture type -> {placeholder, params, scene}
 var site: SiteBounds                 # invisible site fence + guaranteed ground (see site_bounds.gd)
+var style: PremisesStyle             # paint, floor lines, door signs (the company's look, in every premises)
+var _pose_t := 0.0
 
 
 func _enter_tree() -> void:
@@ -78,6 +80,9 @@ func _ready() -> void:
 	add_child(site)
 	site.build(self)
 	_fill_site_ground()
+	style = PremisesStyle.new()
+	style.setup(self)
+	add_child(style)
 	if menu_mode:
 		_preview_fixtures()
 		return
@@ -216,6 +221,10 @@ func _on_state_changed(kind: String, id: Variant) -> void:
 	match kind:
 		"item":
 			_update_item(int(id))
+			if Game.is_host() and Game.sim:
+				var it: Item = Game.state.items.get(int(id))
+				if it and it.loc.get("t") == "loose" and it.loc.get("relocate", false) and Game.state.building_id == building_id:
+					_queue_relocate()
 		"fixture":
 			var before: Node3D = fixture_nodes.get(str(id))
 			var old_r := Rect2(Vector2(before.global_position.x, before.global_position.z), Vector2.ZERO).grow(2.5) if before else Rect2()
@@ -345,11 +354,15 @@ func can_place(type: String, pos: Vector3, rot_deg: float, ignore_id: String = "
 	for k in keepout_rects:
 		if k.intersects(r):
 			return false
+	# Rugs and wall pieces (posters, clocks, the Employee of the Month frame) share floor space with anything.
+	var flat := bool(Content.fixture(type).get("overlap", false))
 	for id in Game.state.fixtures:
 		if id == ignore_id:
 			continue
 		var f: Dictionary = Game.state.fixtures[id]
 		if not f.get("placed", false):
+			continue
+		if flat or Content.fixture(str(f.type)).get("overlap", false):
 			continue
 		var o := footprint_rect(f.type, Vector3(f.p[0], f.p[1], f.p[2]), float(f.r), f.get("bend", {})).grow(-FIT_TOLERANCE)
 		if o.intersects(r):
@@ -367,7 +380,7 @@ func _auto_layout() -> void:
 			continue
 		var spot := _layout_spot(f.type, used)
 		if spot.is_empty():
-			spot = _free_spot(f.type)
+			spot = wall_spot(f.type) if Content.fixture(f.type).get("mount", "") == "wall" else _free_spot(f.type)
 		if spot.is_empty():
 			Game.toast.emit("No room for %s — it's in storage (Building app)." % f.label, "warn")
 			continue
@@ -405,7 +418,75 @@ func _free_spot(type: String) -> Dictionary:
 	return {}
 
 
-func _relocate_loose_items() -> void:
+static func wall_edges(rects: Array) -> Array:
+	## Every floor-rectangle edge as {a, b, rot}: rot turns a wall piece's front (+Z) to face into the room.
+	var out: Array = []
+	for fr: Rect2 in rects:
+		out.append({"a": Vector2(fr.position.x, fr.position.y), "b": Vector2(fr.end.x, fr.position.y), "rot": 0.0})     # back wall, faces +Z
+		out.append({"a": Vector2(fr.position.x, fr.end.y), "b": Vector2(fr.end.x, fr.end.y), "rot": 180.0})          # front wall
+		out.append({"a": Vector2(fr.position.x, fr.position.y), "b": Vector2(fr.position.x, fr.end.y), "rot": 90.0})  # left wall, faces +X
+		out.append({"a": Vector2(fr.end.x, fr.position.y), "b": Vector2(fr.end.x, fr.end.y), "rot": -90.0})          # right wall
+	return out
+
+
+func wall_snap(type: String, aim: Vector3) -> Dictionary:
+	## Placing a wall piece: the nearest point on a wall line to where you're aiming, facing into the room.
+	var best := {}
+	var best_d := INF
+	var half := float(Content.fixture(type).get("footprint", [0.6, 0.2])[0]) * 0.5 + 0.05
+	for e in wall_edges(floor_rects):
+		var a: Vector2 = e.a
+		var b: Vector2 = e.b
+		var ab := b - a
+		var t := clampf((Vector2(aim.x, aim.z) - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
+		var p := a + ab * t
+		# Keep the piece wholly on the wall (not hanging off a corner).
+		var along := ab.normalized()
+		var lo := a + along * half
+		var hi := b - along * half
+		if ab.length() < half * 2.0:
+			continue
+		p = lo + along * clampf((p - lo).dot(along), 0.0, (hi - lo).length())
+		var d := p.distance_to(Vector2(aim.x, aim.z))
+		if d < best_d:
+			best_d = d
+			best = {"pos": Vector3(p.x, 0.0, p.y), "rot": float(e.rot)}
+	return best
+
+
+func wall_spot(type: String) -> Dictionary:
+	## Auto-hang a wall piece: walk the walls for a free stretch, preferring wall that isn't behind equipment.
+	var fallback := {}
+	for e in wall_edges(floor_rects):
+		var a: Vector2 = e.a
+		var b: Vector2 = e.b
+		var length := a.distance_to(b)
+		var steps := int(length / 0.5)
+		for i in range(1, steps):
+			var p := a.lerp(b, float(i) / steps)
+			var pos := Vector3(p.x, 0.0, p.y)
+			if not can_place(type, pos, float(e.rot)):
+				continue
+			var clear := true
+			var front := footprint_rect(type, pos, float(e.rot)).grow(0.45)
+			for id in Game.state.fixtures:
+				var f: Dictionary = Game.state.fixtures[id]
+				if not f.get("placed", false):
+					continue
+				var o := footprint_rect(str(f.type), Vector3(f.p[0], f.p[1], f.p[2]), float(f.r), f.get("bend", {}))
+				var other_wall: bool = Content.fixture(str(f.type)).get("mount", "") == "wall"
+				if (other_wall and o.grow(0.25).intersects(front)) or (not other_wall and not Content.fixture(str(f.type)).get("overlap", false) and o.intersects(front)):
+					clear = false
+					break
+			var spot := {"p": [pos.x, 0.0, pos.z], "r": float(e.rot)}
+			if clear:
+				return spot
+			if fallback.is_empty():
+				fallback = spot
+	return fallback
+
+
+func _relocate_loose_items(vehicles_now: bool = false) -> void:
 	var base := goods_in.global_position if goods_in else safe_drop_point()
 	var k := 0
 	var pk := 0
@@ -413,6 +494,14 @@ func _relocate_loose_items() -> void:
 		if it.loc.get("t") != "loose" or not it.loc.get("relocate", false):
 			continue
 		var p: Vector3
+		if it.kind == Item.KIND_FORKLIFT or it.kind == Item.KIND_PALLET_TRUCK:
+			if not vehicles_now:
+				_queue_relocate()          # needs the walls in the physics world: a couple of frames from now
+				continue
+			var spot := vehicle_spot(base, it.kind == Item.KIND_FORKLIFT)
+			var q := Quaternion(Vector3.UP, deg_to_rad(float(spot.r)))
+			Game.state.set_loc(it, {"t": "loose", "p": _v3a(spot.p), "r": [q.x, q.y, q.z, q.w]})
+			continue
 		if it.kind == Item.KIND_PALLET:
 			p = base + Vector3((pk % 4) * 1.5 - 2.25, 0.02, -(pk / 4) * 1.2)
 			pk += 1
@@ -420,6 +509,83 @@ func _relocate_loose_items() -> void:
 			p = base + Vector3((k % 6) * 0.5 - 1.25, 0.4 + (k / 24) * 0.3, 1.6 + ((k / 6) % 4) * 0.45)
 			k += 1
 		Game.state.set_loc(it, {"t": "loose", "p": [p.x, p.y, p.z], "r": [0, 0, 0, 1]})
+
+
+static func _v3a(v: Vector3) -> Array:
+	return [v.x, v.y, v.z]
+
+
+const FORKLIFT_BOX := Vector3(1.3, 2.1, 3.45)        # body + forks, centred at FORKLIFT_BOX_Z in model space
+const FORKLIFT_BOX_Z := 0.06
+
+
+func vehicle_spot(base: Vector3, forklift: bool) -> Dictionary:
+	## A clear parking spot near goods-in for a forklift (or pallet truck): not in a wall, equipment, or on top of
+	## another vehicle or pallet, on ground at the same level. Uses the physics world for walls.
+	var size := FORKLIFT_BOX if forklift else Vector3(0.6, 1.1, 1.6)
+	var off_z := FORKLIFT_BOX_Z if forklift else 0.0
+	var space := get_world_3d().direct_space_state
+	var shape := BoxShape3D.new()
+	shape.size = size - Vector3(0.05, 0.3, 0.05)
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = shape
+	q.collision_mask = 1
+	var others: Array = []
+	for it: Item in Game.state.items.values():
+		if it.kind in [Item.KIND_FORKLIFT, Item.KIND_PALLET_TRUCK, Item.KIND_PALLET] and it.loc.get("t") == "loose" and not it.loc.get("relocate", false):
+			var p: Array = it.loc.get("p", [0, 0, 0])
+			others.append(Vector2(float(p[0]), float(p[2])))
+	var ray := PhysicsRayQueryParameters3D.new()
+	ray.collision_mask = 1
+	for ring in 13:
+		for step in maxi(1, ring * 8):
+			var a := TAU * step / maxf(1.0, ring * 8.0)
+			var c := base + Vector3(cos(a), 0, sin(a)) * ring * 0.9
+			for rot in [0.0, 90.0, 180.0, -90.0]:
+				var b := Basis(Vector3.UP, deg_to_rad(rot))
+				var centre: Vector3 = c + b * Vector3(0, 0, off_z)
+				var ok := true
+				for o: Vector2 in others:
+					if o.distance_to(Vector2(centre.x, centre.z)) < (size.z * 0.5 + 0.9):
+						ok = false
+						break
+				if not ok:
+					continue
+				var fr := Rect2(centre.x - size.z * 0.5, centre.z - size.z * 0.5, size.z, size.z)
+				for fid in Game.state.fixtures:
+					var f: Dictionary = Game.state.fixtures[fid]
+					if f.get("placed", false) and not Content.fixture(str(f.type)).get("overlap", false):
+						if footprint_rect(str(f.type), Vector3(f.p[0], f.p[1], f.p[2]), float(f.r), f.get("bend", {})).intersects(fr):
+							ok = false
+							break
+				if not ok:
+					continue
+				ray.from = centre + Vector3(0, 1.0, 0)
+				ray.to = centre + Vector3(0, -2.0, 0)
+				var g := space.intersect_ray(ray)
+				if g.is_empty() or absf((g.position as Vector3).y - base.y) > 0.3:
+					continue
+				var ground_y: float = (g.position as Vector3).y
+				q.transform = Transform3D(b, Vector3(centre.x, ground_y + size.y * 0.5 + 0.12, centre.z))
+				if not space.intersect_shape(q, 1).is_empty():
+					continue
+				return {"p": Vector3(c.x, ground_y, c.z), "r": rot}
+	return {"p": Vector3(base.x, base.y, base.z), "r": 0.0}
+
+
+var _relocate_queued := false
+
+
+func _queue_relocate() -> void:
+	## Something landed in goods-in mid-game (a forklift from the Shop): place it once physics has caught up.
+	if _relocate_queued:
+		return
+	_relocate_queued = true
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	_relocate_queued = false
+	if is_inside_tree() and Game.is_host() and Game.state.building_id == building_id:
+		_relocate_loose_items(true)
 
 
 func _preview_fixtures() -> void:
@@ -450,10 +616,10 @@ func _rebuild_items() -> void:
 		v.queue_free()
 	item_views.clear()
 	pending_views.clear()
-	# Pallet trucks, then pallets (their slots must exist before the units on them), then everything else.
+	# Pallet trucks and forklifts, then pallets (their slots must exist before the units on them), then the rest.
 	var ids: Array = Game.state.items.keys()
 	var order := func(it: Item) -> int:
-		return 0 if it.kind == Item.KIND_PALLET_TRUCK else (1 if it.kind == Item.KIND_PALLET else 2)
+		return 0 if it.kind in [Item.KIND_PALLET_TRUCK, Item.KIND_FORKLIFT] else (1 if it.kind == Item.KIND_PALLET else 2)
 	ids.sort_custom(func(a, b): return order.call(Game.state.items[a]) < order.call(Game.state.items[b]))
 	for id in ids:
 		_update_item(id)
@@ -462,7 +628,7 @@ func _rebuild_items() -> void:
 func _update_item(id: int) -> void:
 	var it: Item = Game.state.items.get(id)
 	var view: ItemView = item_views.get(id)
-	var visible_loc: bool = it != null and it.loc.get("t") in ["slot", "held", "loose", "pushed", "on_truck", "belt", "arm"]
+	var visible_loc: bool = it != null and it.loc.get("t") in ["slot", "held", "loose", "pushed", "on_truck", "belt", "arm", "driven", "on_forks"]
 	if not visible_loc:
 		if view:
 			view.queue_free()
@@ -476,7 +642,7 @@ func _update_item(id: int) -> void:
 		item_views[id] = view
 	else:
 		view.apply_state(it)
-	if it.kind == Item.KIND_PALLET and not pending_views.is_empty():
+	if it.kind in [Item.KIND_PALLET, Item.KIND_FORKLIFT, Item.KIND_PALLET_TRUCK] and not pending_views.is_empty():
 		_retry_pending.call_deferred()
 
 
@@ -546,7 +712,17 @@ func _sync_players() -> void:
 func _on_peer_left(peer: int) -> void:
 	if Game.is_host() and Game.sim and players.has(peer):
 		var pos: Vector3 = players[peer].global_position + Vector3(0, 0.5, 0)
-		Game.sim.c_drop_all_held(peer, {"p": [pos.x, pos.y, pos.z]})
+		var args := {"p": [pos.x, pos.y, pos.z]}
+		var fork := Game.sim.forklift_of(peer)
+		if fork:
+			# Park their forklift exactly where it is (its view follows the player node).
+			var v: ItemView = item_views.get(fork.id)
+			if v:
+				var q := v.global_basis.get_rotation_quaternion()
+				args["fork_p"] = [v.global_position.x, v.global_position.y, v.global_position.z]
+				args["fork_r"] = [q.x, q.y, q.z, q.w]
+			args["fork_h"] = (players[peer] as Player).fork_h if players[peer] is Player else 0.0
+		Game.sim.c_drop_all_held(peer, args)
 	_sync_players()
 
 
@@ -557,6 +733,11 @@ func local_player() -> Node:
 # ================================================================= loose-item transform streaming (host → clients)
 
 func _physics_process(delta: float) -> void:
+	if Game.is_host():
+		_pose_t -= delta
+		if _pose_t <= 0.0:
+			_pose_t = 0.5
+			_note_driven_poses()
 	if not Game.is_host() or not Net.is_online() or multiplayer.get_peers().is_empty():
 		return
 	_xf_accum += delta
@@ -575,6 +756,23 @@ func _physics_process(delta: float) -> void:
 		data.append_array([p.x, p.y, p.z, q.x, q.y, q.z, q.w])
 	if not ids.is_empty():
 		_rpc_xforms.rpc(ids, data)
+
+
+func _note_driven_poses() -> void:
+	## Host: remember where each driven forklift is (and its fork height) in its state, quietly — not replicated
+	## (everyone already sees it following its driver), but a save made now parks it in the right place.
+	for it: Item in Game.state.items.values():
+		if it.kind != Item.KIND_FORKLIFT or it.loc.get("t") != "driven":
+			continue
+		var v: ItemView = item_views.get(it.id)
+		if v == null or not v.visible:
+			continue
+		var q := v.global_basis.get_rotation_quaternion()
+		it.loc["p"] = [v.global_position.x, v.global_position.y, v.global_position.z]
+		it.loc["r"] = [q.x, q.y, q.z, q.w]
+		var driver = players.get(int(it.loc.get("peer", 0)))
+		if driver is Player:
+			it.data["h"] = (driver as Player).fork_h
 
 
 @rpc("authority", "call_remote", "unreliable_ordered")
