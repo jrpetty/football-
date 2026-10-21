@@ -63,7 +63,7 @@ func _premises() -> void:
 		right.custom_minimum_size.x = 260
 		h.add_child(right)
 		right.add_child(l("%s / week" % GameState.format_money(int(b.rent_weekly)), 24))
-		right.add_child(l("+ %s utilities" % GameState.format_money(int(b.utilities_weekly)), 16, SUB))
+		right.add_child(l("+ %s bills · electricity metered" % GameState.format_money(int(b.utilities_weekly)), 16, SUB))
 		if not here:
 			var cost := int(b.get("move_fee", 0))
 			right.add_child(l("Move cost %s" % GameState.format_money(cost), 16, AMBER))
@@ -107,24 +107,41 @@ func _equipment() -> void:
 
 
 func _shop() -> void:
-	_list.add_child(para("Equipment is delivered straight away and placed by you. Floor space is the only limit.", 17, SUB, 1000))
+	_list.add_child(para("Equipment is delivered straight away and placed by you. Floor space is the only limit. Powered kit adds to the electricity bill (metered at %dp/kWh)." % int(round(float(Content.econ("electricity_per_kwh", 0.28)) * 100.0)), 17, SUB, 1000))
+	var groups := {"Workstations": [], "Storage": [], "Automation": []}
 	for type in Content.fixtures:
 		var def: Dictionary = Content.fixture(type)
-		var c := card()
-		var h := HBoxContainer.new()
-		h.add_theme_constant_override("separation", 16)
-		c.add_child(h)
-		var v := VBoxContainer.new()
-		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(v)
-		v.add_child(l(def.name, 20))
-		v.add_child(para(def.get("desc", ""), 15, SUB, 700))
-		var fp: Array = def.get("footprint", [1, 1])
-		h.add_child(l("%.1f × %.1f m" % [float(fp[0]), float(fp[1])], 15, SUB))
-		h.add_child(l("£%d" % int(def.price), 22))
-		var afford: bool = Game.state.cash - int(def.price) >= int(Content.econ("overdraft_warning", -500))
-		h.add_child(button("Buy & place", func(): _buy(type), GREEN, not afford))
-		_list.add_child(c)
+		if def.has("auto"):
+			groups.Automation.append(type)
+		elif float(def.get("power_kw", 0.0)) <= 0.0:
+			groups.Storage.append(type)
+		else:
+			groups.Workstations.append(type)
+	for g in ["Workstations", "Storage", "Automation"]:
+		_list.add_child(l(g, 24))
+		if g == "Automation":
+			_list.add_child(para("Lay conveyors end to end (they snap together and turn to match). Robot arms move kit between anything inside their cyan ring: pallets, racks, robots, shelving, conveyor ends.", 15, SUB, 1000))
+		for type in groups[g]:
+			var def: Dictionary = Content.fixture(type)
+			var c := card()
+			var h := HBoxContainer.new()
+			h.add_theme_constant_override("separation", 16)
+			c.add_child(h)
+			var v := VBoxContainer.new()
+			v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			h.add_child(v)
+			v.add_child(l(def.name, 20))
+			v.add_child(para(def.get("desc", ""), 15, SUB, 700))
+			var kw := float(def.get("power_kw", 0.0))
+			if kw > 0.0:
+				var daily := kw * 8.0 * 0.6 * float(Content.econ("electricity_per_kwh", 0.28))
+				v.add_child(l("⚡ %.2g kW · about %s a day to run" % [kw, GameState.format_money(maxi(1, int(round(daily))))], 14, AMBER))
+			var fp: Array = def.get("footprint", [1, 1])
+			h.add_child(l("%.1f × %.1f m" % [float(fp[0]), float(fp[1])], 15, SUB))
+			h.add_child(l("£%d" % int(def.price), 22))
+			var afford: bool = Game.state.cash - int(def.price) >= int(Content.econ("overdraft_warning", -500))
+			h.add_child(button("Buy & place", func(): _buy(type), GREEN, not afford))
+			_list.add_child(c)
 
 
 func _buy(type: String) -> void:

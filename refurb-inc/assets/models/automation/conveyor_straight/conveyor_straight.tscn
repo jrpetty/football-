@@ -5,9 +5,9 @@
 
 
 [node name="ConveyorStraight" type="Node3D"]
-metadata/footprint = Vector3(0.70000, 0.90000, 2.00000)
-metadata/source_tier = "Powered roller conveyor, straight"
-metadata/surfaces = [[0.240, 0.14, -0.293, 0.286, -0.859, 0.861], [0.580, 1.00, -0.350, 0.326, -1.000, 1.000]]
+metadata/footprint = Vector3(1.02000, 0.90000, 2.00000)
+metadata/source_tier = "Powered roller conveyor, straight (rollers lengthened: 0.6 m between the rails, so 19-inch rack servers fit)"
+metadata/surfaces = [[0.240, 0.12, -0.453, 0.446, -0.859, 0.861], [0.580, 1.00, -0.510, 0.486, -1.000, 1.000]]
 
 
 [node name="Model" type="MeshInstance3D" parent="."]

@@ -88,8 +88,8 @@ static func player_key(peer: int) -> String:
 
 func c_pick_up(peer: int, a: Dictionary) -> Dictionary:
 	var it := state.get_item(int(a.get("item", 0)))
-	if it == null or it.loc.get("t") in ["held", "in", "gone"]:
-		return _fail("")
+	if it == null or it.loc.get("t") in ["held", "in", "gone", "arm"]:
+		return _fail("" if it == null or it.loc.get("t") != "arm" else "The robot arm has got that.")
 	if not it.is_carryable():
 		return _fail("Too heavy to lift — you'll need a pallet truck." if it.kind == Item.KIND_PALLET else "")
 	if pushed_truck(peer) != null:
@@ -178,6 +178,124 @@ func c_release_truck(peer: int, a: Dictionary) -> Dictionary:
 	if pallet:
 		state.set_loc(pallet, {"t": "loose", "p": a.get("pallet_p", a.get("p", [0, 0, 0])), "r": a.get("pallet_r", [0, 0, 0, 1])})
 	state.set_loc(truck, {"t": "loose", "p": a.get("p", [0, 0, 0]), "r": a.get("r", [0, 0, 0, 1])})
+	return _ok()
+
+
+# ================================================================= tea round
+
+const MUG_SLOTS := 6
+
+
+func _tea_mugs(sid: String) -> Array:
+	var out: Array = []
+	for i in MUG_SLOTS:
+		var it := state.station_slot_item(sid, "mug%d" % i)
+		if it and it.kind == Item.KIND_MUG:
+			out.append(it)
+	return out
+
+
+func kettle_boiled(st: Dictionary) -> bool:
+	var k: Dictionary = st.get("kettle", {})
+	return not k.is_empty() and state.belt_clock >= float(k.t0) + float(k.dur)
+
+
+func c_tea(peer: int, a: Dictionary) -> Dictionary:
+	## The kitchen: get mugs out, boil the kettle, pour the round, splash of milk.
+	var sid: String = a.get("station", "")
+	if not state.stations.has(sid) or state.stations[sid].get("type", "") != "tea":
+		return _fail("")
+	var st: Dictionary = state.stations[sid]
+	var now := state.belt_clock
+	match str(a.get("act", "")):
+		"mug":
+			for i in MUG_SLOTS:
+				var slot := "%s:mug%d" % [sid, i]
+				if state.item_in_slot(slot) == null:
+					var mug := state.new_item(Item.KIND_MUG)
+					mug.data = {"c": randi() % TeaMug.COLOURS.size(), "s": randi() % TeaMug.SLOGANS.size(), "fill": 0.0}
+					state.set_loc(mug, {"t": "slot", "slot": slot})
+					return _ok()
+			return _fail("The worktop's full of mugs — pour this round first.")
+		"boil":
+			var k: Dictionary = st.get("kettle", {})
+			if not k.is_empty() and now < float(k.t0) + float(k.dur):
+				return _fail("It's already on.")
+			st["kettle"] = {"t0": now, "dur": float(Content.econ("kettle_boil_secs", 16.0)), "by": peer}
+			add_kwh(float(Content.econ("kettle_kwh", 0.11)))
+			state.mark("station", sid)
+			return _ok()
+		"pour":
+			if not kettle_boiled(st):
+				return _fail("Boil the kettle first." if st.get("kettle", {}).is_empty() else "Wait for it to boil.")
+			if now - (float(st.kettle.t0) + float(st.kettle.dur)) > float(Content.econ("kettle_cold_secs", 300.0)):
+				st["kettle"] = {}
+				state.mark("station", sid)
+				return _fail("The kettle's gone cold — boil it again.")
+			var empty := _tea_mugs(sid).filter(func(m): return float(m.data.get("fill", 0.0)) <= 0.05)
+			if empty.is_empty():
+				return _fail("Get some mugs out of the cupboard first.")
+			var ids: Array = []
+			for i in empty.size():
+				var m: Item = empty[i]
+				m.data["fill"] = 0.86
+				m.data["brew"] = "tea"
+				m.data["milk"] = false
+				m.data["drunk"] = false
+				m.data["t"] = now + 1.35 + i * 0.95       # when the kettle reaches this mug (the animation)
+				m.data["by"] = peer
+				m.data.erase("mt")
+				state.mark("item", m.id)
+				ids.append(m.id)
+			st["kettle"] = {}
+			st["pour"] = {"t0": now, "ids": ids}
+			state.bump_stat("brews", empty.size())
+			state.mark("station", sid)
+			return _ok()
+		"milk":
+			var mugs := _tea_mugs(sid).filter(func(m): return float(m.data.get("fill", 0.0)) > 0.05 and str(m.data.get("brew", "")) != "" and not m.data.get("milk", false))
+			if mugs.is_empty():
+				return _fail("Nothing to put milk in yet.")
+			var ids: Array = []
+			for i in mugs.size():
+				var m: Item = mugs[i]
+				m.data["milk"] = true
+				m.data["mt"] = maxf(now + 0.9 + i * 0.45, float(m.data.get("t", now)) + 0.6)
+				state.mark("item", m.id)
+				ids.append(m.id)
+			st["milk"] = {"t0": now, "ids": ids}
+			state.mark("station", sid)
+			return _ok()
+	return _fail("")
+
+
+func c_drink_mug(peer: int, _a: Dictionary) -> Dictionary:
+	var held := state.held_by(peer)
+	if held.is_empty() or held.back().kind != Item.KIND_MUG:
+		return _fail("")
+	var mug: Item = held.back()
+	if float(mug.data.get("fill", 0.0)) <= 0.05:
+		return _fail("It's empty. Pop it in the sink.")
+	mug.data["fill"] = 0.0
+	mug.data["drunk"] = true
+	state.mark("item", mug.id)
+	return _ok()
+
+
+func c_give_mug(peer: int, a: Dictionary) -> Dictionary:
+	## Hand a brew to a colleague: it goes straight into their hands.
+	var to := int(a.get("to", 0))
+	var held := state.held_by(peer)
+	if held.is_empty() or held.back().kind != Item.KIND_MUG or to == peer or not active_peers.has(to):
+		return _fail("")
+	var theirs := state.held_by(to)
+	if not theirs.is_empty() and theirs[0].kind != Item.KIND_MUG:
+		return _fail("Their hands are full.")
+	if theirs.size() >= carry_capacity(to):
+		return _fail("They can't carry any more.")
+	var mug: Item = held.back()
+	state.set_loc(mug, {"t": "held", "peer": to, "i": theirs.size()})
+	state.say("%s brought you a brew! [E] to drink it." % Net.display_name(peer), "good", to)
 	return _ok()
 
 
@@ -297,6 +415,14 @@ func _station_accepts(station_id: String, slot_id: String, it: Item) -> Dictiona
 
 func _on_entered_slot(it: Item, slot_id: String, peer: int) -> void:
 	var sid := state.slot_station(slot_id)
+	if it.kind == Item.KIND_MUG and slot_id.ends_with(":sink"):
+		var poured := float(it.data.get("fill", 0.0)) > 0.05
+		state.set_loc(it, {"t": "gone"})
+		if state.stations.has(sid):
+			state.stations[sid]["wash"] = state.belt_clock
+			state.mark("station", sid)
+		state.say("Poured away and washed up." if poured else "Washed up. Your colleagues salute you.", "info", peer)
+		return
 	if sid != "" and state.stations.has(sid):
 		var t: String = state.stations[sid].get("type", "")
 		if t in ["rack_test", "rack_image", "robot_repair", "robot_pack"]:
@@ -988,7 +1114,8 @@ func c_buy_lot(peer: int, a: Dictionary) -> Dictionary:
 	state.schedule.append({"at": arrive, "type": "lorry", "data": {"lot": lot.id}})
 	state.mark("schedule")
 	state.mark("lot", lot.id)
-	state.say("Bought %s — %d units for %s. Lorry due %s." % [lot.seller_name, lot.count, GameState.format_money(total), GameState.format_minute(arrive)], "good")
+	var express := " (first-day express)" if state.day_index_of(arrive) == state.day_index() else ""
+	state.say("Bought %s — %d units for %s. Lorry due %s%s." % [lot.seller_name, lot.count, GameState.format_money(total), GameState.format_minute(arrive), express], "good")
 	return _ok()
 
 
@@ -1000,7 +1127,19 @@ func purchase_discount(peer: int, lot: Dictionary) -> float:
 	return d
 
 
+func first_day_express() -> bool:
+	## Day one would otherwise be spent waiting for tomorrow's lorry: anything bought on the first day comes same-day.
+	return state.day_index() == 0 and bool(Content.econ("first_day_express", true))
+
+
 func _next_lorry_slot() -> float:
+	if first_day_express():
+		var soon := ceilf((state.minute + float(Content.econ("first_day_lorry_minutes", 30))) / 5.0) * 5.0
+		for ev in state.schedule:
+			if ev.type == "lorry" and absf(float(ev.at) - soon) < 25.0:
+				soon = float(ev.at) + 25.0
+		if soon <= state.day_end_minute(0) - 20.0:
+			return soon
 	var day := state.day_index() + 1
 	while day % 7 >= 5:
 		day += 1
@@ -1162,11 +1301,15 @@ func c_shop_buy(peer: int, a: Dictionary) -> Dictionary:
 		name = Content.part(id).get("name", id)
 		parcel_contents.parts[id] = qty
 	state.add_money(-price, "shop", "%d× %s" % [qty, name])
-	# Shop orders arrive with the next courier visit that is at least an hour away.
+	# Shop orders arrive with the next courier visit that is at least an hour away (day one: within ~20 minutes).
 	var arrive := _next_courier_after(state.minute + 60.0)
+	var window := 1.0
+	if first_day_express() and state.minute + 20.0 <= state.day_end_minute(0) - 10.0:
+		arrive = ceilf((state.minute + float(Content.econ("first_day_parcel_minutes", 20))) / 5.0) * 5.0
+		window = 15.0
 	var merged := false
 	for ev in state.schedule:
-		if ev.type == "parcel" and absf(float(ev.at) - arrive) < 1.0:
+		if ev.type == "parcel" and absf(float(ev.at) - arrive) < window:
 			_merge_contents(ev.data, parcel_contents)
 			merged = true
 			break
@@ -1273,11 +1416,61 @@ func advance_minutes(mins: float) -> void:
 	while state.minute < target - 0.0001:
 		var step := minf(5.0, target - state.minute)
 		state.minute += step
+		_meter_power(step)
 		BusinessStats.on_clock(state, active_peers, step)
 		_process_minute_events()
 	state.mark("clock")
 	if state.minute >= end - 0.0001:
 		end_day()
+
+
+# ================================================================= electricity
+
+var _power_acc := 0.0
+var _power_kw := -1.0
+
+
+func power_draw_kw() -> float:
+	## What the premises is pulling right now: lighting by floor area, plus every powered fixture at its
+	## rating while it works (bench job, rack bays, arm move, belt running) and a standby fraction otherwise.
+	var kw := float(state.building().get("floor_m2", 40)) * float(Content.econ("lighting_w_per_m2", 5.0)) / 1000.0
+	var running_belts := {}
+	for it: Item in state.items.values():
+		if it.loc.get("t") == "belt" and float(it.loc.get("v", 0.0)) > 0.0:
+			running_belts[str(it.loc.get("belt", ""))] = true
+	for fid in state.fixtures:
+		var f: Dictionary = state.fixtures[fid]
+		if not f.get("placed", false):
+			continue
+		var def := Content.fixture(f.type)
+		var rated := float(def.get("power_kw", 0.0))
+		if rated <= 0.0:
+			continue
+		var st: Dictionary = state.stations.get(fid, {})
+		var active: bool = not st.get("job", {}).is_empty() or not st.get("jobs", {}).is_empty() or running_belts.has(fid)
+		kw += rated * (1.0 if active else float(def.get("idle_frac", Content.econ("power_idle_frac", 0.15))))
+	return kw
+
+
+func _meter_power(step: float) -> void:
+	if not state.day_running:
+		return
+	if _power_kw < 0.0:
+		_power_kw = power_draw_kw()
+	_power_acc += step
+	if _power_acc >= 1.0:
+		add_kwh(_power_kw * _power_acc / 60.0)
+		_power_acc = 0.0
+		_power_kw = power_draw_kw()
+		state.day_stats["kw_now"] = snappedf(_power_kw, 0.01)
+
+
+func add_kwh(kwh: float) -> void:
+	state.day_stats["kwh"] = float(state.day_stats.get("kwh", 0.0)) + kwh
+
+
+func electricity_cost(kwh: float) -> int:
+	return int(round(kwh * float(Content.econ("electricity_per_kwh", 0.28))))
 
 
 func _process_minute_events() -> void:
@@ -1327,7 +1520,18 @@ func end_day() -> void:
 	summary["day"] = state.day_index()
 	summary["weekday"] = state.weekday_name()
 	summary["rep_delta"] = state.reputation - float(ds.get("rep_start", state.reputation))
-	summary["profit"] = int(ds.get("income", 0)) - int(ds.get("spend", 0))
+	# Metered electricity for the day (lights, machines, kettle).
+	var kwh := float(ds.get("kwh", 0.0))
+	# Pennies carry over, so a garage's few kWh a day still adds up on the bill.
+	var owed := float(state.totals.get("power_owed", 0.0)) + kwh * float(Content.econ("electricity_per_kwh", 0.28))
+	var bill := int(floor(owed))
+	state.totals["power_owed"] = owed - bill
+	state.totals["kwh"] = float(state.totals.get("kwh", 0.0)) + kwh
+	if bill > 0:
+		state.add_money(-bill, "utilities", "Electricity: %d kWh @ %dp" % [int(round(kwh)), int(round(float(Content.econ("electricity_per_kwh", 0.28)) * 100.0))])
+	summary["kwh"] = kwh
+	summary["electric"] = bill
+	summary["profit"] = int(state.day_stats.get("income", 0)) - int(state.day_stats.get("spend", 0))
 	summary["cash"] = state.cash
 	# Weekly rent & bills on the due weekday.
 	if state.weekday() == int(Content.econ("rent_due_weekday", 4)):
@@ -1335,7 +1539,7 @@ func end_day() -> void:
 		var rent := int(b.get("rent_weekly", 150))
 		var util := int(b.get("utilities_weekly", 25))
 		state.add_money(-rent, "rent", "Weekly rent — %s" % b.get("name", "premises"))
-		state.add_money(-util, "utilities", "Electric & broadband")
+		state.add_money(-util, "utilities", "Water, broadband & standing charges")
 		summary["rent_paid"] = rent + util
 		if state.cash < 0:
 			var fee := int(Content.econ("overdraft_fee_weekly", 40))

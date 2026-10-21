@@ -39,7 +39,10 @@ func _lots() -> void:
 	if lots.is_empty():
 		_list.add_child(para("No lots right now. New disposals are posted every morning.", 20))
 		return
-	_list.add_child(para("Prices are per unit and fixed. Cheaper lots are cheaper for a reason — read the seller's notes. Deliveries arrive by lorry the next working morning.", 17, SUB, 900))
+	var lorry_text := "Opening-day offer: anything you buy today arrives by lorry within the hour." if Game.sim and Game.sim.first_day_express() else "Deliveries arrive by lorry the next working morning."
+	if not Game.is_host() and Game.state.day_index() == 0:
+		lorry_text = "Opening-day offer: anything you buy today arrives by lorry within the hour."
+	_list.add_child(para("Prices are per unit and fixed. Cheaper lots are cheaper for a reason — read the seller's notes. " + lorry_text, 17, SUB, 900))
 	for lot in lots:
 		_list.add_child(_lot_card(lot))
 

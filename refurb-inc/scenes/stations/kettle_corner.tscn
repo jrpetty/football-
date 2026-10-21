@@ -1,15 +1,16 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="1_uj2c0"]
-[ext_resource type="Script" path="res://scripts/stations/simple_interactables.gd" id="2_84ccd"]
+[ext_resource type="Script" path="res://scripts/stations/tea_station.gd" id="2_tea"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_pajih"]
 size = Vector3(1.4, 0.9, 0.58)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_t2527"]
-size = Vector3(0.22, 0.26, 0.26)
-
 [node name="KettleCorner" type="Node3D" unique_id=1549929925]
+script = ExtResource("2_tea")
+station_id = "kitchen"
+station_type = "tea"
+display_name = "Kitchen"
 
 [node name="Model" type="Node3D" parent="." unique_id=48712140]
 script = ExtResource("1_uj2c0")
@@ -20,11 +21,3 @@ placeholder = "kettle_corner"
 [node name="Shape" type="CollisionShape3D" parent="Body" unique_id=532013859]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.25, 0.45, 0)
 shape = SubResource("BoxShape3D_pajih")
-
-[node name="Kettle" type="StaticBody3D" parent="." unique_id=1581933408]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 0.9, 0)
-script = ExtResource("2_84ccd")
-
-[node name="@CollisionShape3D@34" type="CollisionShape3D" parent="Kettle" unique_id=731952293]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.13, 0)
-shape = SubResource("BoxShape3D_t2527")

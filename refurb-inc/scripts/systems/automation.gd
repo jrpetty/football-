@@ -15,6 +15,8 @@ extends RefCounted
 
 const PORT_SNAP := 0.35       # out-port and in-port closer than this (m) are joined
 const EPS := 0.002
+const SORTER_SIDE := 0.78     # side exits sit on the sorter's footprint edge
+const LOAD_S := 0.38          # loading point: far enough in that a rack server sits wholly on the belt
 
 var sim: Sim
 var state: GameState
@@ -46,18 +48,21 @@ static func belt_local(auto: Dictionary) -> Dictionary:
 	if kind == "arc":
 		var r := float(auto.get("radius", 1.0))
 		var right: bool = auto.get("turn", "right") == "right"
-		var sx := 1.0 if right else -1.0
-		var p_in := Vector3(-0.333 * sx, 0, -0.666)
-		var centre := p_in + Vector3(r * sx, 0, 0)
-		var p_out := Vector3(0.667 * sx, 0, 0.334)
+		# Turning right (as the kit travels along +Z) means bending towards -X.
+		var sx := -1.0 if right else 1.0
+		# The curve's footprint is centred: its square is (radius + half width) on a side.
+		var half := (r + float(auto.get("half_width", 0.5))) * 0.5
+		var centre := Vector3(half * sx, 0, -half)
+		var p_in := centre - Vector3(r * sx, 0, 0)
+		var p_out := centre + Vector3(0, 0, r)
 		return {"kind": "arc", "length": r * PI * 0.5, "radius": r, "centre": centre, "sx": sx,
 			"in": [{"p": p_in, "d": Vector3(0, 0, 1)}],
 			"out": [{"p": p_out, "d": Vector3(sx, 0, 0), "name": "out"}]}
 	var length := float(auto.get("length", 2.0))
 	var outs: Array = [{"p": Vector3(0, 0, length * 0.5), "d": Vector3(0, 0, 1), "name": "out"}]
 	if auto.get("device", "") == "sorter":
-		outs.append({"p": Vector3(-0.5, 0, length * 0.5 - 0.3), "d": Vector3(-1, 0, 0), "name": "left"})
-		outs.append({"p": Vector3(0.5, 0, length * 0.5 - 0.3), "d": Vector3(1, 0, 0), "name": "right"})
+		outs.append({"p": Vector3(-SORTER_SIDE, 0, length * 0.5 - 0.3), "d": Vector3(-1, 0, 0), "name": "left"})
+		outs.append({"p": Vector3(SORTER_SIDE, 0, length * 0.5 - 0.3), "d": Vector3(1, 0, 0), "name": "right"})
 	return {"kind": "line", "length": length, "in": [{"p": Vector3(0, 0, -length * 0.5), "d": Vector3(0, 0, 1)}], "out": outs}
 
 
@@ -74,6 +79,32 @@ static func path_point(lb: Dictionary, s: float) -> Transform3D:
 		var fwd := Vector3(sin(th) * sx, 0, cos(th)).normalized()
 		return Transform3D(Basis.looking_at(-fwd, Vector3.UP), pos)
 	return Transform3D(Basis.IDENTITY, Vector3(0, 0, -length * 0.5 + s))
+
+
+static func belt_world(f: Dictionary) -> Dictionary:
+	## {xf, lb, height} for a placed belt fixture — enough for anyone (clients too) to place things on it.
+	var auto := def_of(f.get("type", ""))
+	return {"xf": fixture_xf(f), "lb": belt_local(auto), "height": float(auto.get("height", 0.84))}
+
+
+static func belt_point(geo: Dictionary, s: float) -> Transform3D:
+	var local := path_point(geo.lb, s)
+	local.origin.y += float(geo.height)
+	return (geo.xf as Transform3D) * local
+
+
+static func ports_of(type: String, xf: Transform3D) -> Array:
+	## World ports of a belt fixture at `xf`: [{p, d, in: bool, name}] (used for placement snapping).
+	var auto := def_of(type)
+	if auto.get("kind", "") != "belt":
+		return []
+	var lb := belt_local(auto)
+	var out: Array = []
+	for prt in lb.in:
+		out.append({"p": xf * (prt.p as Vector3), "d": xf.basis * (prt.d as Vector3), "in": true, "name": "in"})
+	for prt in lb.out:
+		out.append({"p": xf * (prt.p as Vector3), "d": xf.basis * (prt.d as Vector3), "in": false, "name": prt.name})
+	return out
 
 
 func rebuild() -> void:
@@ -101,6 +132,18 @@ func rebuild() -> void:
 			"arm":
 				arms[fid] = {"xf": xf, "reach": float(auto.get("reach", 1.8)), "cycle": float(auto.get("cycle", 3.6))}
 				state.register_station(fid, "arm")
+	# Anything left riding a conveyor that has been taken away drops to the floor where it was.
+	for it: Item in state.items.values():
+		if it.loc.get("t") == "belt" and not belts.has(str(it.loc.get("belt", ""))):
+			var f: Dictionary = state.fixtures.get(str(it.loc.get("belt", "")), {})
+			var p := Vector3(0, 0.05, 0)
+			if not f.is_empty():
+				p = fixture_xf(f).origin + Vector3(0, 0.05, 0)
+			state.set_loc(it, {"t": "loose", "p": [p.x, p.y, p.z], "r": [0, 0, 0, 1]})
+		elif it.loc.get("t") == "arm" and not arms.has(str(it.loc.get("arm", ""))):
+			var fa: Dictionary = state.fixtures.get(str(it.loc.get("arm", "")), {})
+			var pa := fixture_xf(fa).origin + Vector3(0.8, 0.05, 0) if not fa.is_empty() else Vector3(0, 0.05, 0)
+			state.set_loc(it, {"t": "loose", "p": [pa.x, pa.y, pa.z], "r": [0, 0, 0, 1]})
 	# Join out-ports to the in-ports they touch.
 	for a in belts:
 		for o in belts[a].out:
@@ -157,17 +200,27 @@ static func item_len(it: Item) -> float:
 	return 0.3
 
 
-func put_on_belt(it: Item, fid: String, s: float = 0.0) -> void:
+func put_on_belt(it: Item, fid: String, s: float = -1.0) -> void:
+	## s = where the item's centre goes; by default it's set down wholly on the belt at the start.
 	var b: Dictionary = belts.get(fid, {})
+	if s < 0.0:
+		s = item_len(it) * 0.5 + 0.02
 	state.set_loc(it, {"t": "belt", "belt": fid, "s": s, "at": state.belt_clock, "v": float(b.get("speed", 0.6))})
 
 
-func belt_has_room(fid: String, it: Item) -> bool:
-	## Is the start of this belt clear enough for `it`?
+func belt_has_room(fid: String, it: Item, s0: float = -1.0) -> bool:
+	## Is the start of this belt clear enough for `it` (centred at s0)?
+	if s0 < 0.0:
+		s0 = item_len(it) * 0.5 + 0.02
 	for other: Item in items_on(fid):
-		if pos_of(other) < (item_len(other) + item_len(it)) * 0.5 + 0.06:
+		if pos_of(other) - s0 < (item_len(other) + item_len(it)) * 0.5 + 0.06:
 			return false
 	return true
+
+
+func end_stop(fid: String, it: Item) -> float:
+	## Where the front item waits at a closed end: wholly on the belt, front edge at the end.
+	return float(belts[fid].length) - item_len(it) * 0.5 - 0.01
 
 
 func _set_motion(it: Item, s: float, v: float) -> void:
@@ -191,7 +244,10 @@ func _step_belt(fid: String) -> void:
 	for i in list.size():
 		var it: Item = list[i]
 		var s := pos_of(it)
-		var limit := length if i == 0 else front_s - (front_len + item_len(it)) * 0.5 - 0.06
+		var limit := front_s - (front_len + item_len(it)) * 0.5 - 0.06
+		if i == 0:
+			# Run on to the end only if the next conveyor can take it; otherwise stop wholly on this belt.
+			limit = length if _can_hand_over(fid, it) else end_stop(fid, it)
 		if b.dev != "" and s >= length * 0.5 and not it.data.get("fx_" + fid, false):
 			_device_effect(fid, b.dev, it)
 		if i == 0 and s >= length - EPS:
@@ -205,6 +261,18 @@ func _step_belt(fid: String) -> void:
 		front_len = item_len(it)
 
 
+func _can_hand_over(fid: String, it: Item) -> bool:
+	var b: Dictionary = belts[fid]
+	var outs: Array = ["out"]
+	if b.dev == "sorter":
+		outs = _sorter_choices(fid, it)
+	for o in outs:
+		var nxt: String = b.next.get(o, "")
+		if nxt != "" and belts.has(nxt) and belt_has_room(nxt, it, 0.0):
+			return true
+	return false
+
+
 func _hand_over(fid: String, it: Item) -> bool:
 	var b: Dictionary = belts[fid]
 	var outs: Array = ["out"]
@@ -212,7 +280,7 @@ func _hand_over(fid: String, it: Item) -> bool:
 		outs = _sorter_choices(fid, it)
 	for o in outs:
 		var nxt: String = b.next.get(o, "")
-		if nxt != "" and belts.has(nxt) and belt_has_room(nxt, it):
+		if nxt != "" and belts.has(nxt) and belt_has_room(nxt, it, 0.0):
 			put_on_belt(it, nxt, 0.0)
 			return true
 	return false
@@ -371,7 +439,7 @@ func _deliver(it: Item, to: Dictionary) -> bool:
 		"belt":
 			if not belts.has(to.belt) or not belt_has_room(to.belt, it):
 				return false
-			put_on_belt(it, to.belt, 0.0)
+			put_on_belt(it, to.belt)
 			return true
 	return false
 
@@ -386,7 +454,7 @@ func _find_pick(fid: String, arm: Dictionary) -> Dictionary:
 		for o in bd.out:
 			if o.name == "out" and dead_end and _in_reach(arm, o.p):
 				var list := items_on(b)
-				if not list.is_empty() and pos_of(list[0]) >= float(bd.length) - 0.05:
+				if not list.is_empty() and pos_of(list[0]) >= end_stop(b, list[0]) - 0.05:
 					candidates.append({"item": list[0].id, "from_belt": b})
 	# 2) Finished work in reachable stations (racks, robots) and stock on pallets.
 	for sid in state.slot_defs:
@@ -483,6 +551,11 @@ func _choose_target(fid: String, arm: Dictionary, it: Item, from_belt: String) -
 		var slot := _free_slot_of_type(arm, want, it)
 		if slot != "":
 			return {"kind": "slot", "slot": slot}
+	# Its next station is right here but busy: leave it where it is (the queue backs up) rather than sending
+	# it off down the line where nothing can do that job.
+	for want in wants:
+		if want != "stock" and _type_in_reach(arm, want):
+			return {}
 	# Transport: a belt in-port within reach (never straight back onto the belt it came off).
 	# Kit with nothing specific to do next, or whose next stop is full, may also be buffered on racking below.
 	for b in belts:
@@ -503,6 +576,16 @@ func _choose_target(fid: String, arm: Dictionary, it: Item, from_belt: String) -
 	return {}
 
 
+func _type_in_reach(arm: Dictionary, want: String) -> bool:
+	for host in state.stations:
+		if not state.fixtures.has(host) or not state.fixtures[host].get("placed", false):
+			continue
+		var t: String = state.stations[host].get("type", "")
+		if t == want and _in_reach(arm, _fixture_pos(host), _fixture_slack(host)):
+			return true
+	return false
+
+
 func _robot_can_fix(u: UnitData) -> bool:
 	for host in state.stations:
 		if state.stations[host].get("type", "") == "robot_repair" and not sim._robot_fixable(host, u).is_empty():
@@ -521,7 +604,7 @@ func _free_slot_of_type(arm: Dictionary, want: String, it: Item) -> String:
 			"courier":
 				ok = stype == "courier"
 			"stock":
-				ok = stype == "" and not str(sid).begins_with("i")
+				ok = stype == "" and not str(sid).begins_with("i") and not belts.has(host)
 			_:
 				ok = stype == want
 		if not ok:
@@ -548,6 +631,10 @@ func tick(dt: float) -> void:
 		return
 	for fid in belts:
 		_step_belt(fid)
+		var waiting := state.item_in_slot(fid + ":load")
+		if waiting and belt_has_room(fid, waiting, maxf(LOAD_S, item_len(waiting) * 0.5 + 0.02)):
+			sim._leave_slot_side_effects(waiting)
+			put_on_belt(waiting, fid, maxf(LOAD_S, item_len(waiting) * 0.5 + 0.02))
 	_think -= dt
 	if _think <= 0.0:
 		_think = 0.25

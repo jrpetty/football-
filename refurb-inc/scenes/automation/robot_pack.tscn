@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/automation/robot_cell_view.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2"]
+[ext_resource type="PackedScene" path="res://assets/models/stations/repair_bench/repair_bench.tscn" id="3"]
+[ext_resource type="Script" path="res://scripts/interaction/snap_slot.gd" id="4"]
+
+[sub_resource type="BoxShape3D" id="box"]
+size = Vector3(1.6, 0.86, 0.75)
+
+[node name="RobotPack" type="Node3D"]
+script = ExtResource("1")
+cell_kind = "pack"
+station_type = "robot_pack"
+display_name = "Packing robot"
+
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2")
+model_scene = ExtResource("3")
+
+[node name="Body" type="StaticBody3D" parent="."]
+collision_layer = 9
+
+[node name="Shape" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.43, -0.06)
+shape = SubResource("box")
+
+[node name="Slot_unit" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.832, 0.1)
+script = ExtResource("4")
+slot_name = "unit"
+accepts = PackedStringArray("unit", "unit_large")
+location_label = "Packing robot"
+hint_size = Vector3(0.42, 0.01, 0.3)
+
+[node name="Slot_out" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.36, 0.832, 0.1)
+script = ExtResource("4")
+slot_name = "out"
+accepts = PackedStringArray("package", "package_large")
+location_label = "Packing robot"
+hint_size = Vector3(0.46, 0.01, 0.34)

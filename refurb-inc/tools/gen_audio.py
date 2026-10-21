@@ -266,6 +266,76 @@ def ambience():
     write("ambience", "fluorescent_hum", loopable(hum, 0.2), 0.25, loop_fade=True)
 
 
+def automation():
+    # Servo whine for robot arms (looped; pitch/volume follow the arm's speed in game).
+    d = 2.0
+    whine = sine(420, d) * 0.35 + sine(840, d) * 0.18 + sine(1263, d) * 0.08 + bandpass(noise(d), 1500, 5000) * 0.12
+    whine *= 0.85 + 0.15 * np.sin(2 * np.pi * 3.0 * t(d))
+    write("sfx", "servo_loop", loopable(whine, 0.3), 0.4, loop_fade=True)
+    # Pneumatic gripper: click + short hiss.
+    d = 0.35
+    n = int(SR * d)
+    click = bandpass(noise(d), 2000, 8000) * exp_decay(n, 0.006) * 1.5
+    hiss = highpass(noise(d), 3000) * env(n, 0.01, 0.2, 0.0, 0.1) * 0.5
+    write("sfx", "gripper", click + hiss, 0.55)
+    # Roller conveyor running (looped): low rumble + roller tick.
+    d = 3.0
+    rumble = lowpass(noise(d), 180) * 1.2 + sine(50, d) * 0.15
+    ticks = bandpass(noise(d), 1200, 4000) * (np.sin(2 * np.pi * 14 * t(d)) > 0.92) * 0.25
+    write("sfx", "conveyor_loop", loopable(rumble + ticks, 0.4), 0.35, loop_fade=True)
+    # Barcode scanner: classic two-tone beep.
+    d = 0.18
+    beep = np.concatenate([sine(2730, 0.08) * env(int(SR * 0.08), 0.002, 0.07, 1.0, 0.008), sine(3640, 0.1) * env(int(SR * 0.1), 0.002, 0.09, 1.0, 0.008)])
+    write("sfx", "scan_beep", beep, 0.4)
+    # Sorter paddle: pneumatic thunk.
+    d = 0.3
+    n = int(SR * d)
+    write("sfx", "sorter_push", sine(140, d) * exp_decay(n, 0.04) + bandpass(noise(d), 400, 3000) * exp_decay(n, 0.02) + highpass(noise(d), 4000) * env(n, 0.005, 0.12, 0.0, 0.08) * 0.3, 0.6)
+    # Vision grader: camera shutter flash.
+    d = 0.25
+    n = int(SR * d)
+    sh = bandpass(noise(d), 3000, 9000) * (exp_decay(n, 0.004) + np.roll(exp_decay(n, 0.004), int(SR * 0.05)) * 0.7)
+    write("sfx", "grader_flash", sh + sine(5200, d) * exp_decay(n, 0.05) * 0.2, 0.45)
+    # Rack bay chirp (job done).
+    d = 0.22
+    write("sfx", "rack_chirp", np.concatenate([sine(1760, 0.07), np.zeros(int(SR * 0.03)), sine(2349, 0.12)]) * 0.6, 0.35)
+
+
+def tea_round():
+    # Kettle: switch click, rolling boil (loop) and the click-off.
+    d = 0.12
+    n = int(SR * d)
+    write("sfx", "kettle_click", bandpass(noise(d), 1500, 7000) * exp_decay(n, 0.008) * 1.4 + sine(900, d) * exp_decay(n, 0.01) * 0.3, 0.6)
+    d = 3.0
+    rumble = lowpass(noise(d), 500) * 0.9
+    bubbles = np.zeros(int(SR * d))
+    for k in range(140):
+        s0 = int(rng.uniform(0, d - 0.05) * SR)
+        dd = rng.uniform(0.01, 0.03)
+        f = rng.uniform(500, 1600)
+        b = np.sin(2 * np.pi * np.cumsum(np.linspace(f, f * 1.6, int(SR * dd))) / SR) * exp_decay(int(SR * dd), dd / 3)
+        bubbles[s0:s0 + len(b)] += b * 0.25
+    write("sfx", "kettle_boil", loopable(rumble + bubbles, 0.4), 0.45, loop_fade=True)
+    # Spoon stirring: three chinks on china.
+    d = 1.0
+    out = np.zeros(int(SR * d))
+    for k, at in enumerate([0.05, 0.36, 0.67]):
+        dd = 0.25
+        nn = int(SR * dd)
+        ch = (sine(3150 + k * 40, dd) * 0.6 + sine(4720, dd) * 0.3 + sine(6900, dd) * 0.15) * exp_decay(nn, 0.05)
+        s0 = int(at * SR)
+        out[s0:s0 + nn] += ch
+    swirl = bandpass(noise(d), 600, 2500) * (0.3 + 0.3 * np.sin(2 * np.pi * 3 * t(d))) * 0.25
+    write("sfx", "spoon_stir", out + swirl, 0.4)
+    # Mug set down on a desk / handed over.
+    d = 0.3
+    nn = int(SR * d)
+    write("sfx", "mug_down", sine(380, d) * exp_decay(nn, 0.03) * 0.8 + sine(2100, d) * exp_decay(nn, 0.02) * 0.3 + bandpass(noise(d), 800, 4000) * exp_decay(nn, 0.01), 0.55)
+    # Milk splash.
+    d = 0.6
+    write("sfx", "milk_pour", bandpass(noise(d), 300, 2200) * env(int(SR * d), 0.05, 0.4, 0.7, 0.15) * (0.7 + 0.3 * np.sin(2 * np.pi * 11 * t(d))), 0.35)
+
+
 if __name__ == "__main__":
     footsteps()
     handling()
@@ -274,4 +344,7 @@ if __name__ == "__main__":
     vehicles()
     ui()
     ambience()
+    tea()
+    automation()
+    tea_round()
     # "footstep" (no suffix) resolves to footstep_1..4 variants in Sfx.

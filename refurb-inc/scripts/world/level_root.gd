@@ -376,7 +376,7 @@ func _rebuild_items() -> void:
 func _update_item(id: int) -> void:
 	var it: Item = Game.state.items.get(id)
 	var view: ItemView = item_views.get(id)
-	var visible_loc: bool = it != null and it.loc.get("t") in ["slot", "held", "loose", "pushed", "on_truck"]
+	var visible_loc: bool = it != null and it.loc.get("t") in ["slot", "held", "loose", "pushed", "on_truck", "belt", "arm"]
 	if not visible_loc:
 		if view:
 			view.queue_free()

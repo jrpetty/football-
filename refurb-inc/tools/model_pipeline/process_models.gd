@@ -82,6 +82,8 @@ func process(path: String, e: Dictionary) -> void:
 		if after <= budget * 1.3:
 			break
 	_transform(arrays, e)
+	if e.has("widen"):
+		_widen(arrays, e["widen"])
 	if e.has("bend"):
 		_bend(arrays, e["bend"], e)
 	if e.has("crop"):
@@ -89,6 +91,8 @@ func process(path: String, e: Dictionary) -> void:
 	var tris := (arrays[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
 	if e.get("kind", "") == "laptop":
 		_build_laptop(arrays, e, out_dir, out_rel, mat_res)
+	elif e.get("kind", "") == "articulated":
+		_build_articulated(arrays, e, out_dir, out_rel, mat_res)
 	else:
 		_build_prop(arrays, e, out_dir, out_rel, mat_res)
 	print("%s: %d -> %d tris (%.1fs)" % [e["name"], src_tris, tris, (Time.get_ticks_msec() - t0) / 1000.0])
@@ -212,9 +216,25 @@ func _transform(arrays: Array, e: Dictionary) -> void:
 		arrays[Mesh.ARRAY_TANGENT] = tg
 
 
+func _widen(arrays: Array, w: Dictionary) -> void:
+	## Make a piece wider without fattening its sides: the middle (|x| < inner) is stretched, everything
+	## outside it (side frames, rails, motors) just moves out by `by`. Used to fit 19-inch servers on conveyors.
+	var inner := float(w.get("inner", 0.2))
+	var by := float(w.get("by", 0.1))
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	for i in v.size():
+		var x := v[i].x
+		if absf(x) <= inner:
+			v[i].x = x * (inner + by) / inner
+		else:
+			v[i].x = x + signf(x) * by
+	arrays[Mesh.ARRAY_VERTEX] = v
+
+
 func _bend(arrays: Array, b: Dictionary, e: Dictionary) -> void:
 	## Wrap a straight piece (running along Z, already scaled so its length = the arc's centreline length)
-	## round a vertical axis: it enters at -Z heading +Z and leaves heading +X (a right-hand turn).
+	## round a vertical axis: it enters at -Z heading +Z and leaves heading +X (a left-hand turn as the kit sees it;
+	## the right-hand curve is this mirrored).
 	## Used to make the 90-degree conveyor curve from the straight conveyor so both match exactly.
 	var deg := float(b.get("deg", 90.0))
 	var r := float(b.get("radius", 1.0))
@@ -556,6 +576,99 @@ func _surfaces(arrays: Array) -> String:
 		if L[1] >= biggest * 0.12 and L[0] > 0.02:
 			out.append("[%.3f, %.2f, %.3f, %.3f, %.3f, %.3f]" % [L[0], L[1] / biggest, L[2], L[3], L[4], L[5]])
 	return "[" + ", ".join(out) + "]"
+
+
+# ------------------------------------------------------------------ articulated (robot arm)
+
+func _build_articulated(arrays: Array, e: Dictionary, out_dir: String, out_rel: String, mat_res: String) -> void:
+	## Split one mesh into jointed parts by side-view (x, y) region rules, each saved relative to its pivot,
+	## and write a scene with the joint hierarchy (Turret yaws; Upper/Fore/Grip pitch about local Z).
+	## parts: [{name, parent, pivot:[x,y,z], when:[clauses…]}]; clauses: y_lt, y_ge, x_lt, x_gt, seg:[ax,ay,bx,by,r].
+	var parts: Array = e["parts"]
+	var v: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var idx: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
+	var tri_part := PackedByteArray()
+	tri_part.resize(idx.size() / 3)
+	for t in tri_part.size():
+		var c := (v[idx[t * 3]] + v[idx[t * 3 + 1]] + v[idx[t * 3 + 2]]) / 3.0
+		var pick := parts.size() - 1
+		for pi in parts.size():
+			if _clauses_hold(parts[pi].get("when", []), c):
+				pick = pi
+				break
+		tri_part[t] = pick
+	var exts := _ext("Material", mat_res, "m")
+	var nodes := ""
+	for pi in parts.size():
+		var part: Dictionary = parts[pi]
+		var sub := _subset(arrays, tri_part, pi)
+		var pv: PackedVector3Array = sub[Mesh.ARRAY_VERTEX]
+		var piv := Vector3(part.pivot[0], part.pivot[1], part.pivot[2])
+		for i in pv.size():
+			pv[i] -= piv
+		sub[Mesh.ARRAY_VERTEX] = pv
+		_save_mesh(sub, out_dir.path_join("%s.res" % part.name))
+		exts += _ext("ArrayMesh", "res://%s/%s.res" % [out_rel, part.name], "p%d" % pi)
+		print("  part %s: %d tris" % [part.name, (sub[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3])
+	# Parents must come before children in a .tscn: emit the joints shallowest first.
+	var order: Array = range(parts.size())
+	order.sort_custom(func(a, b): return _node_path(parts, parts[a].name).count("/") < _node_path(parts, parts[b].name).count("/"))
+	for pi in order:
+		var part: Dictionary = parts[pi]
+		var piv := Vector3(part.pivot[0], part.pivot[1], part.pivot[2])
+		var parent_path := "."
+		var parent_piv := Vector3.ZERO
+		if part.get("parent", "") != "":
+			parent_path = _node_path(parts, part.parent)
+			var pp: Dictionary = parts.filter(func(x): return x.name == part.parent)[0]
+			parent_piv = Vector3(pp.pivot[0], pp.pivot[1], pp.pivot[2])
+		var rel := piv - parent_piv
+		nodes += _node(part.name.capitalize().replace(" ", ""), "Node3D", parent_path, "transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, %s)\n" % _v3raw(rel), "")
+		var me: String = parent_path + "/" + part.name.capitalize().replace(" ", "") if parent_path != "." else part.name.capitalize().replace(" ", "")
+		nodes += _node("Mesh", "MeshInstance3D", me, "", 'mesh = ExtResource("p%d")\nsurface_material_override/0 = ExtResource("m")\n' % pi)
+	for mk in e.get("markers", []):
+		var host_piv := Vector3.ZERO
+		var hp: Dictionary = parts.filter(func(x): return x.name == mk.parent)[0]
+		host_piv = Vector3(hp.pivot[0], hp.pivot[1], hp.pivot[2])
+		var mp := Vector3(mk.pos[0], mk.pos[1], mk.pos[2]) - host_piv
+		nodes += _node(mk.name, "Marker3D", _node_path(parts, mk.parent), "transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, %s)\n" % _v3raw(mp), "")
+	var box := _aabb(arrays[Mesh.ARRAY_VERTEX])
+	var scn := _scene_header(e, parts.size() + 2, box.size)
+	scn += "metadata/joints = %s\n\n" % JSON.stringify(e.get("joints", {}))
+	scn = scn.replace("[ext_resources]", exts).replace("[sub_resources]", "")
+	scn += nodes
+	_write(out_dir.path_join(e["name"] + ".tscn"), scn)
+
+
+func _node_path(parts: Array, name: String) -> String:
+	var chain: Array = []
+	var cur := name
+	while cur != "":
+		chain.push_front(cur.capitalize().replace(" ", ""))
+		var p: Array = parts.filter(func(x): return x.name == cur)
+		cur = p[0].get("parent", "") if not p.is_empty() else ""
+	return "/".join(chain)
+
+
+func _clauses_hold(clauses: Array, c: Vector3) -> bool:
+	for cl: Dictionary in clauses:
+		if cl.has("y_lt") and not c.y < float(cl.y_lt):
+			return false
+		if cl.has("y_ge") and not c.y >= float(cl.y_ge):
+			return false
+		if cl.has("x_lt") and not c.x < float(cl.x_lt):
+			return false
+		if cl.has("x_gt") and not c.x > float(cl.x_gt):
+			return false
+		if cl.has("seg"):
+			var sg: Array = cl.seg
+			var a := Vector2(sg[0], sg[1])
+			var b := Vector2(sg[2], sg[3])
+			var p := Vector2(c.x, c.y)
+			var t := clampf((p - a).dot(b - a) / maxf((b - a).length_squared(), 1e-6), 0.0, 1.0)
+			if p.distance_to(a + (b - a) * t) > float(sg[4]):
+				return false
+	return true
 
 
 # ------------------------------------------------------------------ materials / textures

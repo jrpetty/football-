@@ -19,6 +19,7 @@ const KIND_USB_IMAGE := "usb_image"
 const KIND_PARCEL := "parcel"        # incoming supplies from the Shop
 const KIND_PACKAGE := "package"      # outgoing customer order
 const KIND_PALLET_TRUCK := "pallet_truck"   # hand pallet truck: push it, jack pallets up, move them
+const KIND_MUG := "mug"              # a brew: data {c colour, s slogan, fill, brew, milk, t poured, mt milked, by maker}
 
 var id: int = 0
 var kind: String = KIND_UNIT
@@ -30,7 +31,7 @@ var data: Dictionary = {}            # kind-specific extras (parcel contents, pa
 static func carry_weight(kind_name: String) -> int:
 	## How many "carry slots" this kind uses. Players carry up to their capacity (default 3).
 	match kind_name:
-		KIND_UNIT, KIND_PARCEL, KIND_PACKAGE:
+		KIND_UNIT, KIND_PARCEL, KIND_PACKAGE, KIND_MUG:
 			return 1
 		KIND_USB_TEST, KIND_USB_IMAGE:
 			return 0
@@ -81,6 +82,10 @@ func display_name() -> String:
 			return "Packed order #%d" % int(data.get("order_id", 0))
 		KIND_PALLET_TRUCK:
 			return "Pallet truck"
+		KIND_MUG:
+			if float(data.get("fill", 0.0)) <= 0.05:
+				return "Empty mug" if not data.get("drunk", false) else "Dirty mug"
+			return "Mug of tea" if str(data.get("brew", "")) != "" else "Mug of hot water"
 	return kind.capitalize()
 
 

@@ -1,15 +1,61 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=8 format=3]
 
-[ext_resource type="ArrayMesh" path="res://assets/models/automation/robot_arm/mesh.res" id="1"]
-[ext_resource type="Material" path="res://assets/models/automation/robot_arm/material.tres" id="2"]
+[ext_resource type="Material" path="res://assets/models/automation/robot_arm/material.tres" id="m"]
+[ext_resource type="ArrayMesh" path="res://assets/models/automation/robot_arm/base.res" id="p0"]
+[ext_resource type="ArrayMesh" path="res://assets/models/automation/robot_arm/grip.res" id="p1"]
+[ext_resource type="ArrayMesh" path="res://assets/models/automation/robot_arm/upper.res" id="p2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/automation/robot_arm/upper_back.res" id="p3"]
+[ext_resource type="ArrayMesh" path="res://assets/models/automation/robot_arm/fore.res" id="p4"]
+[ext_resource type="ArrayMesh" path="res://assets/models/automation/robot_arm/turret.res" id="p5"]
 
 
 [node name="RobotArm" type="Node3D"]
 metadata/footprint = Vector3(1.87299, 1.90000, 0.84692)
-metadata/source_tier = "Six-axis pick-and-place robot arm"
-metadata/surfaces = [[0.300, 0.33, 0.254, 0.798, -0.307, 0.296], [0.660, 0.56, -0.924, 0.809, -0.253, 0.319]]
+metadata/source_tier = "Six-axis pick-and-place robot arm (articulated: base, turret, upper arm, forearm, gripper)"
+metadata/joints = {"base_axis":[0.534,0.0,0.0],"elbow":[0.534,1.66],"shoulder":[0.32,0.806],"tip":[-0.82,0.8],"wrist":[-0.7,1.47]}
 
 
-[node name="Model" type="MeshInstance3D" parent="."]
-mesh = ExtResource("1")
-surface_material_override/0 = ExtResource("2")
+[node name="Base" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.53400, 0.00000, 0.00000)
+
+[node name="Mesh" type="MeshInstance3D" parent="Base"]
+mesh = ExtResource("p0")
+surface_material_override/0 = ExtResource("m")
+
+[node name="Turret" type="Node3D" parent="Base"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00000, 0.34000, 0.00000)
+
+[node name="Mesh" type="MeshInstance3D" parent="Base/Turret"]
+mesh = ExtResource("p5")
+surface_material_override/0 = ExtResource("m")
+
+[node name="Upper" type="Node3D" parent="Base/Turret"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.21400, 0.46600, 0.00000)
+
+[node name="Mesh" type="MeshInstance3D" parent="Base/Turret/Upper"]
+mesh = ExtResource("p2")
+surface_material_override/0 = ExtResource("m")
+
+[node name="UpperBack" type="Node3D" parent="Base/Turret/Upper"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.00000, 0.00000, 0.00000)
+
+[node name="Mesh" type="MeshInstance3D" parent="Base/Turret/Upper/UpperBack"]
+mesh = ExtResource("p3")
+surface_material_override/0 = ExtResource("m")
+
+[node name="Fore" type="Node3D" parent="Base/Turret/Upper"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.21400, 0.85400, 0.00000)
+
+[node name="Mesh" type="MeshInstance3D" parent="Base/Turret/Upper/Fore"]
+mesh = ExtResource("p4")
+surface_material_override/0 = ExtResource("m")
+
+[node name="Grip" type="Node3D" parent="Base/Turret/Upper/Fore"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.23400, -0.19000, 0.00000)
+
+[node name="Mesh" type="MeshInstance3D" parent="Base/Turret/Upper/Fore/Grip"]
+mesh = ExtResource("p1")
+surface_material_override/0 = ExtResource("m")
+
+[node name="Tip" type="Marker3D" parent="Base/Turret/Upper/Fore/Grip"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12000, -0.67000, 0.00000)

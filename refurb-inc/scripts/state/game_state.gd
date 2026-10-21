@@ -78,6 +78,10 @@ func day_index() -> int:
 	return int(floor(minute / MIN_PER_DAY))
 
 
+static func day_index_of(m: float) -> int:
+	return int(floor(m / MIN_PER_DAY))
+
+
 func minute_of_day() -> float:
 	return fmod(minute, MIN_PER_DAY)
 

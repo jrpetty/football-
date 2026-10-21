@@ -5,10 +5,10 @@
 
 
 [node name="ConveyorCurve" type="Node3D"]
-metadata/footprint = Vector3(1.33302, 0.90000, 1.33277)
-metadata/source_tier = "Roller conveyor, 90-degree curve (the straight conveyor bent round a 1 m radius)"
-metadata/surfaces = [[0.240, 0.17, -0.604, 0.585, -0.581, 0.605], [0.580, 1.00, -0.639, 0.666, -0.666, 0.641]]
-metadata/ports = [[Vector3(-0.33349, 0.00000, -0.66638), Vector3(0, 0, 1)], [Vector3(0.66651, 0.00000, 0.33362), Vector3(1.0000, 0, 0.0000)]]
+metadata/footprint = Vector3(1.49221, 0.90000, 1.49199)
+metadata/source_tier = "Roller conveyor, 90-degree curve (the straight conveyor bent round a 1 m radius) (rollers lengthened: 0.6 m between the rails, so 19-inch rack servers fit)"
+metadata/surfaces = [[0.240, 0.17, -0.683, 0.682, -0.679, 0.684], [0.580, 1.00, -0.719, 0.746, -0.746, 0.721]]
+metadata/ports = [[Vector3(-0.25389, 0.00000, -0.74600), Vector3(0, 0, 1)], [Vector3(0.74611, 0.00000, 0.25400), Vector3(1.0000, 0, 0.0000)]]
 
 
 [node name="Model" type="MeshInstance3D" parent="."]

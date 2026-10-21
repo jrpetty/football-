@@ -327,24 +327,42 @@ static func _b_monitor(root: Node3D, p: Dictionary) -> void:
 
 
 static func _b_kettle_corner(root: Node3D, _p: Dictionary) -> void:
-	# Base cabinet with worktop
+	# Base cabinet (the mug cupboard) with worktop
 	box(root, Vector3(0.9, 0.86, 0.55), Vector3(0, 0.43, 0), Mats.color(Color(0.93, 0.93, 0.9), 0.6))
 	box(root, Vector3(0.92, 0.035, 0.58), Vector3(0, 0.88, 0), Mats.color(Color(0.25, 0.25, 0.27), 0.35))
-	box(root, Vector3(0.008, 0.12, 0.02), Vector3(0.0, 0.7, 0.285), Mats.color(Color(0.7, 0.7, 0.72), 0.3, 0.8))
-	# Kettle
+	box(root, Vector3(0.004, 0.8, 0.01), Vector3(0.0, 0.43, 0.277), Mats.color(Color(0.8, 0.8, 0.78), 0.5))
+	for hx in [-0.04, 0.04]:
+		box(root, Vector3(0.008, 0.12, 0.02), Vector3(hx, 0.7, 0.285), Mats.color(Color(0.7, 0.7, 0.72), 0.3, 0.8))
+	# Kettle base (stays put) and the jug (lifts off to pour; the kitchen animates "Kettle").
+	cyl(root, 0.085, 0.015, Vector3(-0.3, 0.9075, -0.08), Mats.color(BLACK_PLASTIC, 0.4))
 	var k := Node3D.new()
 	k.name = "Kettle"
-	k.position = Vector3(-0.22, 0.9, 0.0)
+	k.position = Vector3(-0.3, 0.9, -0.08)
 	root.add_child(k)
-	cyl(k, 0.085, 0.015, Vector3(0, 0.0075, 0), Mats.color(BLACK_PLASTIC, 0.4))
-	cyl(k, 0.075, 0.2, Vector3(0, 0.115, 0), Mats.color(Color(0.95, 0.95, 0.95), 0.3), Vector3.ZERO, 20, 0.06)
-	box(k, Vector3(0.025, 0.16, 0.04), Vector3(0.0, 0.12, -0.085), Mats.color(Color(0.95, 0.95, 0.95), 0.3))
-	box(k, Vector3(0.03, 0.025, 0.06), Vector3(0, 0.17, 0.08), Mats.color(Color(0.95, 0.95, 0.95), 0.3), Vector3(-30, 0, 0))
-	# Mugs & tea caddy
-	cyl(root, 0.04, 0.095, Vector3(0.05, 0.95, 0.1), Mats.color(Color(0.2, 0.4, 0.75), 0.35))
-	cyl(root, 0.04, 0.095, Vector3(0.15, 0.95, -0.05), Mats.color(Color(0.95, 0.9, 0.8), 0.35))
-	box(root, Vector3(0.12, 0.15, 0.1), Vector3(0.32, 0.975, -0.12), Mats.color(Color(0.1, 0.25, 0.15), 0.5))
-	# Mini fridge beside
+	var white := Mats.color(Color(0.95, 0.95, 0.95), 0.3)
+	cyl(k, 0.075, 0.2, Vector3(0, 0.115, 0), white, Vector3.ZERO, 20, 0.06)
+	box(k, Vector3(0.025, 0.16, 0.04), Vector3(0.0, 0.12, -0.085), white)
+	box(k, Vector3(0.03, 0.025, 0.06), Vector3(0, 0.17, 0.08), white, Vector3(-30, 0, 0))
+	cyl(k, 0.062, 0.012, Vector3(0, 0.221, 0), Mats.color(Color(0.2, 0.2, 0.22), 0.4))
+	var led := box(k, Vector3(0.02, 0.012, 0.004), Vector3(0, 0.03, 0.074), Mats.color(Color(0.1, 0.1, 0.12), 0.4), Vector3.ZERO, "KettleLED")
+	var lm := StandardMaterial3D.new()
+	lm.albedo_color = Color(0.1, 0.2, 0.5)
+	lm.emission_enabled = true
+	lm.emission = Color(0.25, 0.55, 1.0)
+	lm.emission_energy_multiplier = 0.0
+	led.material_override = lm
+	# Sink with a tap
+	var steel := Mats.color(Color(0.78, 0.8, 0.82), 0.25, 0.9)
+	box(root, Vector3(0.28, 0.006, 0.32), Vector3(0.3, 0.9, 0.0), steel)
+	box(root, Vector3(0.22, 0.004, 0.26), Vector3(0.3, 0.9035, 0.0), Mats.color(Color(0.42, 0.44, 0.46), 0.3, 0.9))
+	cyl(root, 0.012, 0.002, Vector3(0.3, 0.906, 0.0), Mats.color(Color(0.15, 0.15, 0.16), 0.4, 0.8))
+	cyl(root, 0.012, 0.24, Vector3(0.3, 1.02, -0.14), steel)
+	box(root, Vector3(0.02, 0.02, 0.06), Vector3(0.3, 1.13, -0.115), steel)
+	# Tea caddy and sugar
+	box(root, Vector3(0.1, 0.13, 0.09), Vector3(-0.08, 0.965, -0.2), Mats.color(Color(0.1, 0.25, 0.15), 0.5))
+	text(root, "TEA", Vector3(-0.08, 0.97, -0.154), 26, Color(0.95, 0.85, 0.5), Vector3.ZERO, 0.0008)
+	cyl(root, 0.035, 0.07, Vector3(0.05, 0.935, -0.2), Mats.color(Color(0.95, 0.95, 0.92), 0.3))
+	# Mini fridge beside (the milk)
 	box(root, Vector3(0.48, 0.84, 0.5), Vector3(0.72, 0.42, 0), Mats.color(Color(0.92, 0.93, 0.94), 0.35))
 	box(root, Vector3(0.02, 0.2, 0.02), Vector3(0.52, 0.6, 0.26), Mats.color(Color(0.7, 0.7, 0.72), 0.3, 0.8))
 

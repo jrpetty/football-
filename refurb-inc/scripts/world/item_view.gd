@@ -30,6 +30,12 @@ var _shape: CollisionShape3D
 var _settle_reported := false
 var _screen_tex: Texture2D = null
 var cinematic := false                 # an animation (lorry unloading…) is driving this view; state wins after
+var _ride := ""                        # "belt" / "arm": position comes from the conveyor path / the arm each frame
+var mug: TeaMug = null
+var _belt_geo := {}
+var _belt_key := ""
+## Where this item was when a robot arm took it (the arm reaches for it there).
+var arm_pick_xf := Transform3D.IDENTITY
 
 
 func setup(it: Item) -> void:
@@ -51,6 +57,11 @@ func setup(it: Item) -> void:
 		laptop.configure(it.unit)
 		visual_size = laptop.footprint()
 		mass = float(it.unit.model().get("weight_kg", 1.5))
+	elif kind == Item.KIND_MUG:
+		mug = TeaMug.make(int(it.data.get("c", 0)), int(it.data.get("s", 0)))
+		add_child(mug)
+		visual_size = Vector3(0.095, 0.1, 0.095)
+		mass = 0.35
 	else:
 		var def: Dictionary = KIND_VISUAL.get(kind, {}).duplicate(true)
 		if kind == Item.KIND_PACKAGE and it.data.has("size"):
@@ -160,7 +171,29 @@ func apply_state(it: Item, initial: bool = false) -> void:
 		visible = true
 		freeze = true
 		return
+	var was_ride := _ride
+	_ride = ""
 	match loc.get("t"):
+		"belt":
+			_ride = "belt"
+			_following = false
+			_follow_node = null
+			freeze = true
+			freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
+			collision_layer = 1 << 2
+			visible = true
+			if initial:
+				global_transform = _belt_xf(it)
+		"arm":
+			_ride = "arm"
+			if was_ride != "arm":
+				arm_pick_xf = global_transform
+			_following = false
+			_follow_node = null
+			freeze = true
+			freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
+			collision_layer = 0
+			visible = true
 		"slot":
 			var slot: SnapSlot = lr.slot_nodes.get(loc.slot) if lr else null
 			if slot == null:
@@ -194,7 +227,11 @@ func apply_state(it: Item, initial: bool = false) -> void:
 				return
 			var idx := int(loc.get("i", 0))
 			var stack_h := visual_size.y + 0.004
-			_follow(player.hold_point(), Transform3D(Basis.IDENTITY, Vector3(0, idx * stack_h, 0)))
+			var off := Vector3(0, idx * stack_h, 0)
+			if kind == Item.KIND_MUG:
+				var n := Game.state.held_by(peer).size()
+				off = Vector3((idx - (n - 1) * 0.5) * 0.11, 0, 0.02 * absf(idx - (n - 1) * 0.5))
+			_follow(player.hold_point(), Transform3D(Basis.IDENTITY, off))
 			collision_layer = 0   # don't block our own interaction ray
 		"loose":
 			_following = false
@@ -226,10 +263,52 @@ func apply_state(it: Item, initial: bool = false) -> void:
 		_rebuild_pallet_slots(it)
 	if it.unit and laptop:
 		laptop.refresh(it.unit)
-		var on_station: bool = loc.get("t") == "slot" and Game.state.slot_station(loc.get("slot", "")) != ""
+		var sid := Game.state.slot_station(loc.get("slot", "")) if loc.get("t") == "slot" else ""
+		# Lids open on benches and racks (the screen shows the job); the packing robot boxes them shut.
+		var on_station: bool = sid != "" and Game.state.stations.get(sid, {}).get("type", "") != "robot_pack"
 		laptop.set_lid_open(on_station, not initial)
 		if not on_station:
 			set_screen(null)
+
+
+func _belt_xf(it: Item) -> Transform3D:
+	## Where the state says this item is on its conveyor right now (clients extrapolate the belt clock).
+	var loc := it.loc
+	var fid := str(loc.get("belt", ""))
+	var f: Dictionary = Game.state.fixtures.get(fid, {})
+	if f.is_empty():
+		return global_transform
+	var key := "%s|%s|%s" % [fid, str(f.get("p")), str(f.get("r"))]
+	if key != _belt_key:
+		_belt_key = key
+		_belt_geo = Automation.belt_world(f)
+	var now := Game.state.belt_now(Game.is_host())
+	var s := float(loc.get("s", 0.0)) + float(loc.get("v", 0.0)) * (now - float(loc.get("at", 0.0)))
+	return Automation.belt_point(_belt_geo, minf(s, float(_belt_geo.lb.length)))
+
+
+func _process(_delta: float) -> void:
+	if mug and visible:
+		var mi := Game.state.get_item(item_id)
+		if mi:
+			var now := Game.state.belt_now(Game.is_host())
+			var poured := float(mi.data.get("t", -1e9))
+			mug.show_state(TeaMug.shown_fill(mi.data, now), TeaMug.brew_colour(mi.data, now), now - poured < 420.0, str(mi.data.get("brew", "")) != "" and not mi.data.get("milk", false) and now - poured < 45.0)
+	if _ride == "" or cinematic:
+		return
+	var it := Game.state.get_item(item_id)
+	if it == null:
+		return
+	if _ride == "belt":
+		var target := _belt_xf(it)
+		# Hand-overs between conveyors and sorter pushes glide rather than snap.
+		var d := global_position.distance_to(target.origin)
+		global_transform = target if d < 0.03 else global_transform.interpolate_with(target, clampf(_delta * 14.0, 0.0, 1.0))
+	elif _ride == "arm":
+		var lr := LevelRoot.current
+		var arm: Node = lr.fixture_nodes.get(str(it.loc.get("arm", ""))) if lr else null
+		if arm and arm.has_method("carry_xf"):
+			global_transform = arm.carry_xf(item_id, arm_pick_xf, visual_size)
 
 
 func _follow(node: Node3D, offset: Transform3D) -> void:
@@ -251,7 +330,7 @@ func set_screen(tex: Texture2D) -> void:
 
 
 func _physics_process(delta: float) -> void:
-	if cinematic:
+	if cinematic or _ride != "":
 		return
 	if _following and not is_instance_valid(_follow_node):
 		_following = false
@@ -347,6 +426,18 @@ func hover_info(player: Node) -> Dictionary:
 		Item.KIND_PACKAGE:
 			info.lines.append("For %s — %s" % [it.data.get("buyer", "?"), it.data.get("model", "")])
 			info.lines.append("Put it on the OUTGOING shelf for the courier.")
+		Item.KIND_MUG:
+			var d := it.data
+			var now := Game.state.belt_now(Game.is_host())
+			if float(d.get("fill", 0.0)) > 0.05:
+				var by := int(d.get("by", 0))
+				if by != 0:
+					info.lines.append("Made by %s" % ("you" if by == multiplayer.get_unique_id() else Net.display_name(by)))
+				var hot := now - float(d.get("t", now)) < 420.0
+				info.lines.append("%s · %s" % ["Hot" if hot else "Gone cold", "milk" if d.get("milk", false) else "no milk yet (fridge)"])
+			else:
+				info.lines.append("Empty. Fill it at the kettle or wash it up in the sink.")
+			info.lines.append("\"%s\"" % str(TeaMug.SLOGANS[clampi(int(d.get("s", 0)), 0, TeaMug.SLOGANS.size() - 1)]).replace("\n", " "))
 		Item.KIND_USB_TEST:
 			info.lines.append("Plug into a test bench to run full diagnostics.")
 		Item.KIND_USB_IMAGE:

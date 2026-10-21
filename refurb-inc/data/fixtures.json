@@ -14,7 +14,8 @@
       "power_kw": 0.4,
       "desc": "Runs PaneOS: purchasing, sales, stock, finance. More PCs = more people buying and listing at once.",
       "back": 0.36,
-      "front": 1.14
+      "front": 1.14,
+      "idle_frac": 0.35
     },
     {
       "id": "test_bench",
@@ -29,7 +30,8 @@
       "power_kw": 0.6,
       "desc": "One unit + one USB at a time. Diagnostics or wipe & image.",
       "back": 0.4,
-      "front": 1.1
+      "front": 1.1,
+      "idle_frac": 0.2
     },
     {
       "id": "repair_bench",
@@ -44,7 +46,8 @@
       "power_kw": 0.3,
       "desc": "ESD mat, tools and a lamp. Fix faults with parts from the bins.",
       "back": 0.4,
-      "front": 1.1
+      "front": 1.1,
+      "idle_frac": 0.1
     },
     {
       "id": "grading_desk",
@@ -59,7 +62,8 @@
       "power_kw": 0.2,
       "desc": "Light box and label printer for consistent grading.",
       "back": 0.37,
-      "front": 1.07
+      "front": 1.07,
+      "idle_frac": 0.25
     },
     {
       "id": "packing_table",
@@ -74,7 +78,8 @@
       "power_kw": 0.1,
       "desc": "Boxes, foam, tape gun and label printer.",
       "back": 0.42,
-      "front": 1.12
+      "front": 1.12,
+      "idle_frac": 0.2
     },
     {
       "id": "metal_shelf",
@@ -133,28 +138,30 @@
       "name": "Roller conveyor (2 m)",
       "scene": "res://scenes/automation/conveyor.tscn",
       "footprint": [
-        0.72,
+        1.02,
         2.0
       ],
       "height": 0.95,
       "price": 650,
       "power_kw": 0.25,
-      "desc": "Powered rollers carry kit along. Ends snap together; an open end is a pick-up point for robot arms.",
+      "desc": "Powered rollers, 0.6 m between the rails (19-inch rack servers fit). Ends snap together; an open end is a pick-up point for robot arms; put kit on the near end to send it along.",
       "auto": {
         "kind": "belt",
         "path": "line",
         "length": 2.0,
         "speed": 0.6,
-        "height": 0.84
-      }
+        "height": 0.856,
+        "half_width": 0.51
+      },
+      "idle_frac": 0.05
     },
     {
       "id": "conveyor_curve_r",
       "name": "Conveyor curve (right)",
       "scene": "res://scenes/automation/conveyor_curve_r.tscn",
       "footprint": [
-        1.36,
-        1.36
+        1.49,
+        1.49
       ],
       "height": 0.95,
       "price": 900,
@@ -166,16 +173,18 @@
         "radius": 1.0,
         "turn": "right",
         "speed": 0.6,
-        "height": 0.84
-      }
+        "height": 0.856,
+        "half_width": 0.492
+      },
+      "idle_frac": 0.05
     },
     {
       "id": "conveyor_curve_l",
       "name": "Conveyor curve (left)",
       "scene": "res://scenes/automation/conveyor_curve_l.tscn",
       "footprint": [
-        1.36,
-        1.36
+        1.49,
+        1.49
       ],
       "height": 0.95,
       "price": 900,
@@ -187,15 +196,17 @@
         "radius": 1.0,
         "turn": "left",
         "speed": 0.6,
-        "height": 0.84
-      }
+        "height": 0.856,
+        "half_width": 0.492
+      },
+      "idle_frac": 0.05
     },
     {
       "id": "conveyor_scanner",
       "name": "Goods-in scanner",
       "scene": "res://scenes/automation/conveyor_scanner.tscn",
       "footprint": [
-        0.9,
+        1.24,
         1.0
       ],
       "height": 1.6,
@@ -208,15 +219,17 @@
         "length": 1.0,
         "speed": 0.6,
         "device": "scanner",
-        "height": 0.84
-      }
+        "height": 0.856,
+        "half_width": 0.51
+      },
+      "idle_frac": 0.3
     },
     {
       "id": "conveyor_sorter",
       "name": "Diverter / sorter",
       "scene": "res://scenes/automation/conveyor_sorter.tscn",
       "footprint": [
-        1.3,
+        1.56,
         1.4
       ],
       "height": 1.2,
@@ -229,15 +242,17 @@
         "length": 1.4,
         "speed": 0.6,
         "device": "sorter",
-        "height": 0.84
-      }
+        "height": 0.856,
+        "half_width": 0.51
+      },
+      "idle_frac": 0.1
     },
     {
       "id": "conveyor_grader",
       "name": "Vision grader",
       "scene": "res://scenes/automation/conveyor_grader.tscn",
       "footprint": [
-        0.95,
+        1.24,
         1.4
       ],
       "height": 1.8,
@@ -250,8 +265,10 @@
         "length": 1.4,
         "speed": 0.6,
         "device": "grader",
-        "height": 0.84
-      }
+        "height": 0.856,
+        "half_width": 0.51
+      },
+      "idle_frac": 0.3
     },
     {
       "id": "robot_arm",
@@ -269,7 +286,8 @@
         "kind": "arm",
         "reach": 1.8,
         "cycle": 3.6
-      }
+      },
+      "idle_frac": 0.15
     },
     {
       "id": "rack_test",
@@ -286,7 +304,8 @@
       "auto": {
         "kind": "rack",
         "speed": 1.6
-      }
+      },
+      "idle_frac": 0.2
     },
     {
       "id": "rack_image",
@@ -303,7 +322,8 @@
       "auto": {
         "kind": "rack",
         "speed": 2.0
-      }
+      },
+      "idle_frac": 0.2
     },
     {
       "id": "robot_repair",
@@ -321,7 +341,8 @@
         "kind": "robot",
         "max_tier": 1,
         "speed": 1.0
-      }
+      },
+      "idle_frac": 0.12
     },
     {
       "id": "robot_pack",
@@ -338,7 +359,8 @@
       "auto": {
         "kind": "robot",
         "speed": 1.0
-      }
+      },
+      "idle_frac": 0.12
     }
   ]
 }

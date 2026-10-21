@@ -86,9 +86,9 @@
     {
       "kind": "pallet_truck",
       "p": [
-        -1.45,
+        -0.95,
         0.02,
-        2.55
+        2.95
       ],
       "r": [
         0,
@@ -150,5 +150,14 @@
       "type": "metal_shelf",
       "label": "Shelf B"
     }
-  ]
+  ],
+  "first_day_express": true,
+  "first_day_lorry_minutes": 30,
+  "first_day_parcel_minutes": 20,
+  "electricity_per_kwh": 0.28,
+  "lighting_w_per_m2": 5.0,
+  "power_idle_frac": 0.15,
+  "kettle_kwh": 0.11,
+  "kettle_boil_secs": 16.0,
+  "kettle_cold_secs": 300.0
 }

@@ -25,7 +25,7 @@ func build() -> void:
 		_filter = t.to_lower()
 		refresh())
 	row.add_child(search)
-	row.add_child(l("   Deliveries come with the courier — order before ~11:00 for the midday run.", 16, SUB))
+	row.add_child(l("   Opening day: orders arrive in about 20 minutes." if Game.state.day_index() == 0 else "   Deliveries come with the courier — order before ~11:00 for the midday run.", 16, SUB))
 	var sl := scroll_list()
 	add_child(sl[0])
 	_list = sl[1]

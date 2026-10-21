@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/automation/conveyor_view.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2"]
+[ext_resource type="PackedScene" path="res://assets/models/automation/conveyor_straight/conveyor_straight.tscn" id="3"]
+
+[node name="ConveyorScanner" type="Node3D"]
+script = ExtResource("1")
+fixture_type = "conveyor_scanner"
+display_name = "Conveyor"
+
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2")
+model_scene = ExtResource("3")
+model_scale = Vector3(1, 1, 0.5)

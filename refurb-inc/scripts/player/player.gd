@@ -68,6 +68,8 @@ var _ghost_mat: StandardMaterial3D
 var _ghost_rot := 0.0
 var _ghost_pos := Vector3.ZERO
 var _ghost_valid := false
+var _guides: Node3D = null            # automation layout guides while placing (open ends, arm reach)
+var _snapped := {}
 
 
 func _ready() -> void:
@@ -400,6 +402,13 @@ func _update_interaction(delta: float) -> void:
 				info = {"title": top.display_name(), "lines": ["No free space for that on %s." % where], "prompt": "[Q] Put down"}
 		else:
 			info = {"title": top.display_name(), "lines": ["Carrying %d" % held.size()] if held.size() > 1 else [], "prompt": "[Q] Put down"}
+			if top.kind == Item.KIND_MUG:
+				var mate := _give_target()
+				_give_to = mate.peer_id if mate else 0
+				if mate:
+					info.prompt = "[E] Give %s this brew  ·  [Q] Put down" % Net.display_name(mate.peer_id)
+				elif float(top.data.get("fill", 0.0)) > 0.05:
+					info.prompt = "[E] Drink  ·  [Q] Put down"
 			if node and node.has_method("hover_info"):
 				var hi: Dictionary = node.hover_info(self)
 				if hi.has("hold") and not hi.hold.has("blocked"):
@@ -530,7 +539,14 @@ func _tap() -> void:
 	if not held.is_empty():
 		if _place_slot:
 			Game.request("place", {"slot": _place_slot.full_id()})
-			Sfx.play_at("place", _place_slot.global_position, -4.0)
+			Sfx.play_at("mug_down" if held.back().kind == Item.KIND_MUG else "place", _place_slot.global_position, -4.0)
+		elif held.back().kind == Item.KIND_MUG:
+			var mate := _give_target()
+			if mate:
+				Game.request("give_mug", {"to": mate.peer_id})
+				Sfx.play_at("mug_down", mate.global_position + Vector3(0, 1.2, 0), -8.0)
+			elif float(held.back().data.get("fill", 0.0)) > 0.05:
+				drink_tea(held.back())
 		return
 	if _hover_node and _hover_node.has_method("interact"):
 		_hover_node.interact(self)
@@ -576,28 +592,80 @@ func _on_command_result(cmd: String, res: Dictionary) -> void:
 
 # ================================================================= tea
 
+var _give_to := 0
+
+
+func _give_target() -> Node3D:
+	## The colleague you're looking at (within arm's reach-ish), for handing over a brew.
+	var lr := LevelRoot.current
+	if lr == null or camera == null:
+		return null
+	var best: Node3D = null
+	var best_d := 2.6
+	for p in lr.players.values():
+		if p == self or not is_instance_valid(p):
+			continue
+		var chest: Vector3 = (p as Node3D).global_position + Vector3(0, 1.25, 0)
+		var to := chest - camera.global_position
+		var d := to.length()
+		if d < best_d and (-camera.global_basis.z).dot(to.normalized()) > 0.93:
+			best_d = d
+			best = p
+	return best
+
+
 func has_tea() -> bool:
 	return _tea_until > Game.state.minute
 
 
-func give_tea() -> void:
-	_tea_until = Game.state.minute + TEA_MINUTES
-	Game.toast.emit("Lovely brew. You feel sharper for the next hour.", "good")
+func give_tea(minutes: float = TEA_MINUTES, msg: String = "Lovely brew. You feel sharper for the next hour.") -> void:
+	_tea_until = maxf(_tea_until, Game.state.minute + minutes)
+	Game.toast.emit(msg, "good")
 
 
-func drink_tea() -> void:
-	## First-person tea break: the mug comes up into view, tilts to your lips (head tips back a touch),
-	## a sip and an "ahh", then it's lowered away and the buff kicks in. Co-op players see your avatar drink.
+func drink_tea(mug_item: Item = null) -> void:
+	## First-person tea break with the actual mug in your hand: it comes up into view, tilts to your lips
+	## (head tips back a touch), three sips as the level drops, an "ahh", then it's lowered. Co-op players
+	## see your avatar drink; a brew a colleague made you lasts longer.
 	if _drinking:
 		return
 	_drinking = true
+	var minutes := TEA_MINUTES
+	var msg := "Lovely brew. You feel sharper for the next hour."
+	var c := 0
+	var sl := 0
+	var start_fill := 0.86
+	var colour := TeaMug.TEA
+	if mug_item:
+		var d := mug_item.data
+		var now := Game.state.belt_now(Game.is_host())
+		c = int(d.get("c", 0))
+		sl = int(d.get("s", 0))
+		start_fill = TeaMug.shown_fill(d, now)
+		colour = TeaMug.brew_colour(d, now)
+		var by := int(d.get("by", 0))
+		if by != 0 and by != peer_id:
+			minutes = TEA_MINUTES * 1.5
+			msg = "A brew made by %s. Proper teamwork — you're flying for 90 minutes." % Net.display_name(by)
+		elif not d.get("milk", false):
+			msg = "Black tea. Bold. You feel sharper for the next hour."
+		if now - float(d.get("t", now)) > 420.0:
+			minutes *= 0.5
+			msg = "Stone cold. You drink it anyway. Half the effect."
+		Game.request("drink_mug", {})
 	if is_local and multiplayer.has_multiplayer_peer():
 		_rpc_drink.rpc()
 	if not is_local or camera == null:
 		_drinking = false
-		give_tea()
+		give_tea(minutes, msg)
 		return
-	var mug := _make_mug()
+	var held_view: ItemView = LevelRoot.current.item_views.get(mug_item.id) if mug_item and LevelRoot.current else null
+	if held_view:
+		held_view.visible = false
+	var mug := TeaMug.make(c, sl, true)
+	mug.level_liquid = true
+	mug.show_state(start_fill, colour, true, false)
+	var level := {"v": start_fill}
 	camera.add_child(mug)
 	var rest := Vector3(0.34, -0.46, -0.42)
 	mug.position = rest
@@ -614,9 +682,17 @@ func drink_tea() -> void:
 	tw2.tween_property(mug, "rotation_degrees", Vector3(38, -14, 6), 0.55).set_trans(Tween.TRANS_SINE)
 	tw2.tween_property(self, "_drink_pitch", deg_to_rad(13.0), 0.55).set_trans(Tween.TRANS_SINE)
 	await tw2.finished
-	Sfx.play_at("tea_sip", camera.global_position, -4.0)
-	await get_tree().create_timer(0.85).timeout
-	give_tea()
+	for sip in 3:
+		Sfx.play_at("tea_sip", camera.global_position, -4.0 - sip * 1.5)
+		var tws := create_tween()
+		tws.tween_method(func(v: float):
+			level.v = v
+			mug.show_state(v, colour, true, false), level.v, start_fill * (1.0 - (sip + 1) / 3.0), 0.55)
+		tws.parallel().tween_property(mug, "rotation_degrees:x", 38.0 + (sip + 1) * 12.0, 0.55).set_trans(Tween.TRANS_SINE)
+		tws.parallel().tween_property(self, "_drink_pitch", deg_to_rad(13.0 + (sip + 1) * 3.0), 0.55)
+		await tws.finished
+		await get_tree().create_timer(0.15).timeout
+	give_tea(minutes, msg)
 	# Down again.
 	var tw3 := create_tween()
 	tw3.set_parallel(true)
@@ -632,6 +708,8 @@ func drink_tea() -> void:
 	tw4.tween_property(mug, "rotation_degrees", Vector3(10, -25, -10), 0.6)
 	await tw4.finished
 	mug.queue_free()
+	if is_instance_valid(held_view):
+		held_view.visible = true
 	_drinking = false
 
 
@@ -817,6 +895,18 @@ func start_placement(fixture_id: String) -> void:
 	LevelRoot.current.add_child(_ghost)
 	ms.rebuilt.connect(_tint_ghost)
 	_tint_ghost()
+	if def.has("auto") or f.type == "courier_shelf" or f.type == "heavy_rack":
+		_guides = AutoLayout.build_guides(fixture_id)
+		LevelRoot.current.add_child(_guides)
+	if f.type == "robot_arm":
+		var rm := StandardMaterial3D.new()
+		rm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		rm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		rm.albedo_color = Color(0.3, 0.95, 1.0, 0.6)
+		var ring := AutoLayout.reach_ring(rm)
+		ring.name = "Reach"
+		ring.position.y = 0.015
+		_ghost.add_child(ring)
 	Sfx.play_ui("ui_click", -6.0)
 
 
@@ -838,6 +928,10 @@ func cancel_placement() -> void:
 	if _ghost:
 		_ghost.queue_free()
 	_ghost = null
+	if _guides:
+		_guides.queue_free()
+	_guides = null
+	_snapped = {}
 	placing_id = ""
 	_set_hover(null, {})
 
@@ -858,8 +952,14 @@ func _update_placement() -> void:
 		var t := -origin.y / dir.y
 		pos = origin + dir * minf(t, 9.0)
 	pos.y = 0.0
+	var aim := pos
 	pos.x = snappedf(pos.x, 0.25)
 	pos.z = snappedf(pos.z, 0.25)
+	# Conveyors snap onto the nearest open end and turn to match — no fiddling with rotation.
+	_snapped = AutoLayout.snap(f.type, aim, placing_id)
+	if not _snapped.is_empty():
+		pos = _snapped.pos
+		_ghost_rot = float(_snapped.rot)
 	_ghost_pos = pos
 	_ghost.global_transform = Transform3D(Basis(Vector3.UP, deg_to_rad(_ghost_rot)), pos)
 	_ghost_valid = LevelRoot.current.can_place(f.type, pos, _ghost_rot, placing_id)
@@ -870,6 +970,21 @@ func _update_placement() -> void:
 		"prompt": "[E] Place  ·  [R] Rotate  ·  [Q] Cancel"}
 	if not _ghost_valid:
 		info.lines.append("✖ Doesn't fit here (walls, doorways or other equipment)")
+	if not _snapped.is_empty():
+		var other: Dictionary = Game.state.fixtures.get(str(_snapped.port.fid), {})
+		info.lines.append("⇄ Joins %s %s" % ["the start of" if _snapped.port["in"] else "the end of", str(other.get("label", "the conveyor"))])
+		info.prompt = "[E] Place  ·  [Q] Cancel"
+	elif Automation.def_of(f.type).get("kind", "") == "belt":
+		info.lines.append("Aim near a green arrow to join on. Open ends wait for a robot arm.")
+	if f.type == "robot_arm":
+		var serves := AutoLayout.arm_serves(pos, placing_id)
+		info.lines.append("Reaches: " + (", ".join(serves) if not serves.is_empty() else "nothing yet — put racks, robots, shelves and conveyor ends inside the ring"))
+	elif Content.fixture(f.type).has("auto") or f.type in ["heavy_rack", "courier_shelf"]:
+		var arm := AutoLayout.arm_covering(pos, placing_id)
+		if arm != "":
+			info.lines.append("✓ In reach of %s" % str(Game.state.fixtures[arm].get("label", "a robot arm")))
+		elif Automation.def_of(f.type).get("kind", "") != "belt":
+			info.lines.append("Put it inside a robot arm's ring (cyan) to automate it.")
 	if info.hash() != _hover_info.hash():
 		_set_hover(null, info)
 

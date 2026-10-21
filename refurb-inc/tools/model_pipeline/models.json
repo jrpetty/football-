@@ -1,5 +1,5 @@
 {
- "_comment": "Source models -> game-ready assets. match = substring of the source .glb file name. rot_y turns the model so its front faces +Z. size: give one axis for a uniform scale (metres), or x/y/z for an exact box (rack servers). kind 'laptop' splits off a hinged Lid + Screen. colour = flat PBR colour for untextured sources. tris = triangle budget for LOD0 (Godot builds smaller LODs from it). tex = texture size (px). match may also be the number of an 'Unconfirmed NNNN.crdownload' file. bend {deg, radius}: wrap a straight piece round a vertical axis (the conveyor curve is made from the straight). crop: list of [xmin,ymin,zmin,xmax,ymax,zmax] boxes (game metres) whose triangles are removed.",
+ "_comment": "Source models -> game-ready assets. match = substring of the source .glb file name. rot_y turns the model so its front faces +Z. size: give one axis for a uniform scale (metres), or x/y/z for an exact box (rack servers). kind 'laptop' splits off a hinged Lid + Screen. colour = flat PBR colour for untextured sources. tris = triangle budget for LOD0 (Godot builds smaller LODs from it). tex = texture size (px). match may also be the number of an 'Unconfirmed NNNN.crdownload' file. bend {deg, radius}: wrap a straight piece round a vertical axis (the conveyor curve is made from the straight). crop: list of [xmin,ymin,zmin,xmax,ymax,zmax] boxes (game metres) whose triangles are removed. kind articulated: split into jointed parts (see process_models.gd _build_articulated).",
  "models": [
   {
    "match": "laptop_tier1_student",
@@ -282,7 +282,11 @@
    },
    "tris": 40000,
    "tex": 1024,
-   "tier": "Powered roller conveyor, straight"
+   "tier": "Powered roller conveyor, straight (rollers lengthened: 0.6 m between the rails, so 19-inch rack servers fit)",
+   "widen": {
+    "inner": 0.11,
+    "by": 0.16
+   }
   },
   {
    "match": "Unconfirmed 889695",
@@ -297,24 +301,159 @@
    },
    "tris": 40000,
    "tex": 1024,
-   "tier": "Roller conveyor, 90-degree curve (the straight conveyor bent round a 1 m radius)",
+   "tier": "Roller conveyor, 90-degree curve (the straight conveyor bent round a 1 m radius) (rollers lengthened: 0.6 m between the rails, so 19-inch rack servers fit)",
    "bend": {
     "deg": 90,
     "radius": 1.0
+   },
+   "widen": {
+    "inner": 0.11,
+    "by": 0.16
    }
   },
   {
    "match": "Unconfirmed 274869",
    "category": "automation",
    "name": "robot_arm",
-   "kind": "prop",
+   "kind": "articulated",
    "rot_y": 0,
    "size": {
     "y": 1.9
    },
    "tris": 50000,
    "tex": 2048,
-   "tier": "Six-axis pick-and-place robot arm"
+   "tier": "Six-axis pick-and-place robot arm (articulated: base, turret, upper arm, forearm, gripper)",
+   "parts": [
+    {
+     "name": "base",
+     "parent": "",
+     "pivot": [
+      0.534,
+      0,
+      0
+     ],
+     "when": [
+      {
+       "y_lt": 0.34
+      }
+     ]
+    },
+    {
+     "name": "grip",
+     "parent": "fore",
+     "pivot": [
+      -0.7,
+      1.47,
+      0
+     ],
+     "when": [
+      {
+       "x_lt": -0.42
+      },
+      {
+       "y_lt": 1.43
+      }
+     ]
+    },
+    {
+     "name": "upper",
+     "parent": "turret",
+     "pivot": [
+      0.32,
+      0.806,
+      0
+     ],
+     "when": [
+      {
+       "seg": [
+        0.32,
+        0.806,
+        0.534,
+        1.66,
+        0.2
+       ]
+      },
+      {
+       "y_ge": 0.95
+      }
+     ]
+    },
+    {
+     "name": "upper_back",
+     "parent": "upper",
+     "pivot": [
+      0.32,
+      0.806,
+      0
+     ],
+     "when": [
+      {
+       "y_ge": 0.95
+      },
+      {
+       "x_gt": 0.42
+      }
+     ]
+    },
+    {
+     "name": "fore",
+     "parent": "upper",
+     "pivot": [
+      0.534,
+      1.66,
+      0
+     ],
+     "when": [
+      {
+       "y_ge": 1.2
+      }
+     ]
+    },
+    {
+     "name": "turret",
+     "parent": "base",
+     "pivot": [
+      0.534,
+      0.34,
+      0
+     ],
+     "when": []
+    }
+   ],
+   "markers": [
+    {
+     "name": "Tip",
+     "parent": "grip",
+     "pos": [
+      -0.82,
+      0.8,
+      0
+     ]
+    }
+   ],
+   "joints": {
+    "base_axis": [
+     0.534,
+     0,
+     0
+    ],
+    "shoulder": [
+     0.32,
+     0.806
+    ],
+    "elbow": [
+     0.534,
+     1.66
+    ],
+    "wrist": [
+     -0.7,
+     1.47
+    ],
+    "tip": [
+     -0.82,
+     0.8
+    ]
+   }
   },
   {
    "match": "Unconfirmed 18857",

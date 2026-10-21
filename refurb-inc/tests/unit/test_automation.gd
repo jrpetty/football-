@@ -40,7 +40,7 @@ func test_belts_carry_space_and_hand_over() -> void:
 	sim.auto.put_on_belt(b, "c1", 0.0)
 	_run(sim, 10.0)
 	eq(a.loc.belt, "c2", "front unit handed over to the next conveyor")
-	check(sim.auto.pos_of(a) >= 1.99, "and stopped at the open end")
+	check(sim.auto.pos_of(a) >= sim.auto.end_stop("c2", a) - 0.01 and sim.auto.pos_of(a) <= 2.0 - Automation.item_len(a) * 0.5, "and stopped wholly on the belt at the open end")
 	var gap := sim.auto.pos_of(a) - sim.auto.pos_of(b)
 	check(b.loc.belt == "c2" and gap > 0.25, "second queues behind with spacing (gap %.2f)" % gap)
 	eq(float(a.loc.v), 0.0, "waiting units stop (no network chatter)")
@@ -50,8 +50,8 @@ func test_curve_and_sorter_route_by_stage() -> void:
 	var sim := fresh_sim(62)
 	var s := sim.state
 	_fixture(s, "sort", "conveyor_sorter", Vector3(0, 0, 0))
-	_fixture(s, "left", "conveyor", Vector3(-1.5, 0, 0.4), 90.0 * -1 + 0)     # runs towards -X
-	_fixture(s, "right", "conveyor", Vector3(1.5, 0, 0.4), 90.0)
+	_fixture(s, "left", "conveyor", Vector3(-1.78, 0, 0.4), 90.0 * -1 + 0)     # runs towards -X
+	_fixture(s, "right", "conveyor", Vector3(1.78, 0, 0.4), 90.0)
 	s.fixtures["left"].r = -90.0
 	sim.tick_automation(0.1)
 	var ok_left: bool = sim.auto.belts.sort.next.get("left", "") == "left"
@@ -73,6 +73,28 @@ func test_curve_and_sorter_route_by_stage() -> void:
 	eq(good.loc.get("belt", ""), "right", "passed kit goes right")
 	check(sim.execute(1, "set_sorter_rule", {"sorter": "sort", "out": "left", "rule": "passed"}).ok)
 	eq(sim.auto.sorter_rules("sort").left, "passed")
+
+
+func test_big_kit_fits_and_rides() -> void:
+	## A 2U rack server (0.48 m wide, 0.72 m long) loads, rides round a curve and stops wholly on the belt.
+	var sim := fresh_sim(64)
+	var s := sim.state
+	_fixture(s, "c1", "conveyor", Vector3(0, 0, 0))
+	_fixture(s, "k1", "conveyor_curve_r", Vector3(-0.254, 0, 1.746))
+	sim.tick_automation(0.1)
+	eq(sim.auto.belts.c1.next.get("out", ""), "k1", "straight feeds the curve")
+	var srv := s.new_item(Item.KIND_UNIT)
+	srv.unit = sim.lots.roll_unit("corvex_rampart_2200", 0.5)
+	var w := float(srv.unit.model().visual.w)
+	check(w < 0.6, "server width %.2f fits the 0.6 m between the rails" % w)
+	s.register_slot("c1:load", ["unit", "unit_large"], "")
+	s.set_loc(srv, {"t": "slot", "slot": "c1:load"})
+	sim.tick_automation(0.1)
+	eq(srv.loc.get("t"), "belt", "loading point sends it off")
+	check(sim.auto.pos_of(srv) >= Automation.item_len(srv) * 0.5, "set down wholly on the belt")
+	_run(sim, 12.0)
+	eq(srv.loc.get("belt", ""), "k1", "rode on round the curve")
+	check(absf(sim.auto.pos_of(srv) - sim.auto.end_stop("k1", srv)) < 0.02, "and waits wholly on the curve at its open end")
 
 
 func test_lights_out_factory_ships_a_lot() -> void:

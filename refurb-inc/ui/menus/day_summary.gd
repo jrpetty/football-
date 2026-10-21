@@ -70,6 +70,8 @@ func show_summary(s: Dictionary) -> void:
 		grid.add_child(UiStyle.label(r[1], 17, UiStyle.TEXT))
 	var profit := int(s.get("profit", 0))
 	_body.add_child(UiStyle.label("Day result: %s   ·   Balance: %s" % [GameState.format_money(profit), GameState.format_money(int(s.get("cash", 0)))], 20, UiStyle.money_colour(profit)))
+	if int(s.get("electric", 0)) > 0:
+		_body.add_child(UiStyle.label("Electricity: %d kWh — %s" % [int(round(float(s.get("kwh", 0.0)))), GameState.format_money(-int(s.electric))], 17, UiStyle.WARN))
 	if s.has("rent_paid"):
 		_body.add_child(UiStyle.label("Weekly rent & bills paid: %s" % GameState.format_money(-int(s.rent_paid)), 17, UiStyle.WARN))
 	if s.has("overdraft_fee"):
