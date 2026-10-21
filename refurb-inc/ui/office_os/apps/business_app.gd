@@ -27,7 +27,18 @@ func build() -> void:
 	add_child(_bar)
 	var sl := scroll_list()
 	add_child(sl[0])
+	_scroll = sl[0]
 	_body = sl[1]
+
+
+var _scroll: ScrollContainer
+
+
+func show_contract(cid: int) -> void:
+	## Scroll the On the go list to one contract's card (used by QA renders; handy for links later).
+	for card_node in _body.get_children():
+		if int(card_node.get_meta("contract", 0)) == cid:
+			_scroll.ensure_control_visible(card_node)
 
 
 func _contracts(statuses: Array) -> Array:
@@ -122,6 +133,7 @@ func _on_the_go(active: Array) -> void:
 	active.sort_custom(func(a, b): return float(a.due) < float(b.due))
 	for c: Dictionary in active:
 		var v := _card()
+		v.get_parent().set_meta("contract", int(c.id))
 		var top := HBoxContainer.new()
 		top.add_theme_constant_override("separation", 10)
 		v.add_child(top)
@@ -175,13 +187,17 @@ func _bulk_progress(v: VBoxContainer, c: Dictionary) -> void:
 		var t := VBoxContainer.new()
 		v.add_child(t)
 		_table(t, ["Allocated unit", "Grade", "Status", "Order"], rows, true, 0, [2])
-		for o: Dictionary in orders.filter(func(x): return x.status == "to_pack").slice(0, 6):
-			var it := Game.state.get_item(int(o.unit))
-			if it:
-				var r := HBoxContainer.new()
-				r.add_child(l("  %s (%s)" % [o.model, UnitData.grade_label(str(o.grade))], 14, SUB))
-				r.add_child(button("Take off the order", func(): Game.request("biz_release", {"contract": int(c.id), "item": it.id}), Color(0.55, 0.57, 0.6)))
-				v.add_child(r)
+		var unpacked := orders.filter(func(x): return x.status == "to_pack")
+		if not unpacked.is_empty():
+			# Undo a mistaken allocation (only before it's packed): one small button per order.
+			var r := HBoxContainer.new()
+			r.add_theme_constant_override("separation", 6)
+			r.add_child(l("Take one off the order:", 14, SUB))
+			for o: Dictionary in unpacked.slice(0, 10):
+				var it := Game.state.get_item(int(o.unit))
+				if it:
+					r.add_child(button("#%d" % int(o.id), func(): Game.request("biz_release", {"contract": int(c.id), "item": it.id}), Color(0.55, 0.57, 0.6)))
+			v.add_child(r)
 	if room > 0 and not elig.is_empty():
 		v.add_child(l("Or pick units yourself (cheapest guide value first):", 15, SUB))
 		for it: Item in elig.slice(0, 8):
@@ -218,6 +234,8 @@ func _build_progress(v: VBoxContainer, c: Dictionary) -> void:
 			stage = "Built. Next: test it." if not u.tested else ("Faulty — repair it." if u.has_open_faults() else ("Next: wipe & image it." if not u.imaged else "Ready to pack — it's an order now."))
 		v.add_child(l("%s (%s)" % [stage, u.serial], 15, GREEN if ServerBuild.complete(u, c.spec) else SUB))
 	var need := Business.shopping_list(Game.state, c)
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 10)
 	if need.is_empty():
 		v.add_child(l("Everything it still needs is in the parts bins.", 15, GREEN))
 	else:
@@ -230,11 +248,13 @@ func _build_progress(v: VBoxContainer, c: Dictionary) -> void:
 		var order_all := func() -> void:
 			for n: Dictionary in need:
 				Game.request("shop_buy", {"id": str(n.part), "qty": int(n.qty)})
-		v.add_child(button("Order the missing parts (%s)" % _m(cost), order_all, BLUE, Game.state.cash - cost < int(Content.econ("overdraft_warning", -500))))
+		actions.add_child(button("Order the missing parts (%s)" % _m(cost), order_all, BLUE, Game.state.cash - cost < int(Content.econ("overdraft_warning", -500))))
 	if u != null and u.order_id == 0:
 		var it := Game.state.get_item(int(c.unit))
 		if it:
-			v.add_child(button("Release this server", func(): Game.request("biz_release", {"contract": int(c.id), "item": it.id}), Color(0.55, 0.57, 0.6)))
+			actions.add_child(button("Release this server", func(): Game.request("biz_release", {"contract": int(c.id), "item": it.id}), Color(0.55, 0.57, 0.6)))
+	if actions.get_child_count() > 0:
+		v.add_child(actions)
 
 
 # ================================================================= history

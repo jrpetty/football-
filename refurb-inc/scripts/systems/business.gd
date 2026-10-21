@@ -248,7 +248,7 @@ static func build_parts_cost(spec: Dictionary) -> int:
 static func build_unit(st: GameState, c: Dictionary) -> UnitData:
 	## The server reserved for this build, if there is one.
 	var it: Item = st.get_item(int(c.get("unit", 0)))
-	if it and it.unit and int(it.unit.contract) == int(c.get("id", -1)):
+	if it and it.unit and int(it.unit.contract) == int(c.get("id", -1)) and it.loc.get("t") != "gone":
 		return it.unit
 	return null
 

@@ -112,7 +112,7 @@ func _update_status() -> void:
 	var pr := ServerBuild.progress(it.unit, c.spec)
 	if int(pr[0]) >= int(pr[1]):
 		var u := it.unit
-		_status.text = "✔ BUILT" + ("  ·  TEST IT" if not u.tested else ("  ·  IMAGE IT" if not u.imaged else ""))
+		_status.text = "✓ BUILT" + ("  ·  TEST IT" if not u.tested else ("  ·  IMAGE IT" if not u.imaged else ""))
 		_status.modulate = Color(0.4, 1.0, 0.55)
 	else:
 		_status.text = "BUILD %d/%d" % [int(pr[0]), int(pr[1])]

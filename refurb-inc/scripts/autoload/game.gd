@@ -197,6 +197,12 @@ func _rpc_report(report: Dictionary) -> void:
 
 # ================================================================= simulation + replication
 
+func _unhandled_key_input(event: InputEvent) -> void:
+	# Debug builds only: F9 = +30 reputation and +£5,000 (try business buyers and builds without the grind).
+	if OS.is_debug_build() and in_game and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F9:
+		request("dev_boost")
+
+
 func _process(delta: float) -> void:
 	if not in_game:
 		return

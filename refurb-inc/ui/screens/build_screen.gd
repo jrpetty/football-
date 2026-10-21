@@ -62,7 +62,7 @@ func _draw_build(u: UnitData, c: Dictionary) -> void:
 	var done := 0
 	for r: Dictionary in rows:
 		var col := OK if r.ok else (PART if int(r.have) > 0 else BAD)
-		var mark := "✔" if r.ok else ("◐" if int(r.have) > 0 else "✖")
+		var mark := "✓" if r.ok else ("◐" if int(r.have) > 0 else "×")    # glyphs the fallback font has
 		draw_rect(Rect2(12, y - 22, size_px().x - 24, 34), Color(1, 1, 1, 0.045 if r.ok else 0.02))
 		_t(Vector2(22, y), mark, 20, col, 26)
 		_t(Vector2(52, y), str(r.label), 17, INK if r.ok else Color(0.85, 0.88, 0.95), 300)

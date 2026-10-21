@@ -106,6 +106,17 @@ static func clean_company_name(raw: String) -> String:
 	return out if out != "" else DEFAULT_COMPANY
 
 
+func c_dev_boost(peer: int, _a: Dictionary) -> Dictionary:
+	## Debug builds only (F9 in game): +30 reputation and +£5,000, for trying later-game features quickly.
+	if not OS.is_debug_build():
+		return _fail("")
+	state.add_reputation(30.0)
+	state.add_money(5000, "dev", "Dev boost")
+	state.say("Dev boost: reputation %d, +£5,000 (debug builds only)." % int(state.reputation), "info", peer)
+	business_hourly()
+	return _ok()
+
+
 func c_rename_company(_peer: int, a: Dictionary) -> Dictionary:
 	var name := clean_company_name(str(a.get("name", "")))
 	if name == state.company_name:
@@ -1414,6 +1425,12 @@ func c_biz_accept(peer: int, a: Dictionary) -> Dictionary:
 	if c.kind == "build":
 		state.say("Accepted: %s for %s (%s), due %s. Put a %s on the build bench." % [c.name, c.buyer, GameState.format_money(int(c.price)),
 			GameState.format_minute(float(c.due)), Business.chassis_name(c.spec)], "good", peer)
+		# A matching server already sitting on a build bench is reserved for it straight away.
+		for sid in state.stations:
+			if state.stations[sid].get("type", "") == "build":
+				var it := state.station_slot_item(sid, "unit")
+				if it and Business.build_unit(state, c) == null:
+					_auto_link_build(it)
 	else:
 		var n := Business.eligible_units(state, c).size()
 		state.say("Accepted: %s for %s, due %s. %d matching unit%s in stock — allocate them in the Business app." % [Business.title(c), c.buyer,
@@ -1645,8 +1662,7 @@ func _auto_link_build(it: Item) -> void:
 	for c: Dictionary in state.contracts.values():
 		if c.kind != "build" or c.status != "active" or not it.unit.model_id in c.spec.chassis:
 			continue
-		var held := state.get_item(int(c.get("unit", 0)))
-		if held and held.unit and int(held.unit.contract) == int(c.id) and held.loc.get("t") != "gone":
+		if Business.build_unit(state, c) != null:
 			continue
 		if best.is_empty() or float(c.due) < float(best.due):
 			best = c

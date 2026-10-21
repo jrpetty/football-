@@ -61,8 +61,7 @@ static func chassis_plan(st: GameState) -> Dictionary:
 	for c: Dictionary in st.contracts.values():
 		if c.get("kind", "") != "build" or c.get("status", "") != "active":
 			continue
-		var held: Item = st.get_item(int(c.get("unit", 0)))
-		if held and held.unit and int(held.unit.contract) == int(c.id):
+		if Business.build_unit(st, c) != null:
 			continue
 		waiting.append(c)
 	waiting.sort_custom(func(a, b): return float(a.due) < float(b.due))
