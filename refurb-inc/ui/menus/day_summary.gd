@@ -72,8 +72,20 @@ func show_summary(s: Dictionary) -> void:
 	_body.add_child(UiStyle.label("Day result: %s   ·   Balance: %s" % [GameState.format_money(profit), GameState.format_money(int(s.get("cash", 0)))], 20, UiStyle.money_colour(profit)))
 	if int(s.get("electric", 0)) > 0:
 		_body.add_child(UiStyle.label("Electricity: %d kWh — %s" % [int(round(float(s.get("kwh", 0.0)))), GameState.format_money(-int(s.electric))], 17, UiStyle.WARN))
+	if float(s.get("overtime_h", 0.0)) > 0.0:
+		var ot_pay := int(s.get("overtime_pay", 0))
+		_body.add_child(UiStyle.label("🌙 Overtime: %.1f h%s" % [float(s.overtime_h),
+			("  ·  staff time-and-a-half %s (paid Friday)" % GameState.format_money(ot_pay)) if ot_pay > 0 else ""], 17, UiStyle.INFO))
 	if s.has("rent_paid"):
 		_body.add_child(UiStyle.label("Weekly rent & bills paid: %s" % GameState.format_money(-int(s.rent_paid)), 17, UiStyle.WARN))
+	if s.has("wages"):
+		_body.add_child(UiStyle.label("Wages paid: %s%s" % [GameState.format_money(-int(s.wages)),
+			("  ·  overtime %s" % GameState.format_money(-int(s.overtime_paid))) if s.has("overtime_paid") else ""], 17, UiStyle.WARN))
+	elif s.has("overtime_paid"):
+		_body.add_child(UiStyle.label("Staff overtime paid: %s" % GameState.format_money(-int(s.overtime_paid)), 17, UiStyle.WARN))
+	if float(s.get("morale", -1.0)) >= 0.0:
+		var mo := float(s.morale)
+		_body.add_child(UiStyle.label("Team morale: %s (%d)" % [StaffMorale.mood(mo), int(round(mo))], 17, UiStyle.GOOD if mo >= 60.0 else (UiStyle.TEXT if mo >= 40.0 else UiStyle.BAD)))
 	if s.has("overdraft_fee"):
 		_body.add_child(UiStyle.label("Overdraft fee charged — you're in the red!", 17, UiStyle.BAD))
 	var rep := float(s.get("rep_delta", 0.0))

@@ -40,6 +40,46 @@ func _player_block(key: String, is_me: bool) -> void:
 	_list.add_child(grid)
 	for sk: Dictionary in Content.skill_defs():
 		grid.add_child(_skill_card(key, sk))
+	if is_me:
+		_list.add_child(_courses(key))
+
+
+func _courses(key: String) -> Control:
+	## Online courses for yourself: instant XP in one skill, paid from company cash. Each repeat teaches less.
+	var c := card()
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	c.add_child(v)
+	v.add_child(l("Online courses", 22))
+	v.add_child(para("Learn on the job faster: each course is instant XP in one skill, paid by the company. You get less out of repeating the same course. (Staff go on proper courses — send them from the Staff app.)", 14, SUB, 900))
+	var taken: Dictionary = Game.state.player(key).get("courses", {})
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 18)
+	grid.add_theme_constant_override("v_separation", 8)
+	v.add_child(grid)
+	for sk: Dictionary in Content.skill_defs():
+		var course := Training.online_course(str(sk.id))
+		if course.is_empty():
+			continue
+		var n := int(taken.get(sk.id, 0))
+		var xp := Training.online_xp(course, n)
+		var price := int(course.get("price", 0))
+		var maxed := Game.state.skill_level(key, str(sk.id)) >= Training.max_level()
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		row.custom_minimum_size.x = 560
+		row.add_child(pill(" %s " % str(sk.get("icon", "•")), Color(str(sk.get("colour", "#2e7dd1"))), Color.WHITE, 15))
+		var t := VBoxContainer.new()
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.add_child(l(str(course.get("name", "")), 16))
+		t.add_child(l("%s · +%d %s XP%s" % [str(course.get("hours", "")), xp, str(sk.name), ("  (taken %d×)" % n) if n > 0 else ""], 13, SUB))
+		row.add_child(t)
+		var sid := str(sk.id)
+		row.add_child(button("Top level" if maxed else "Buy £%d" % price, func(): Game.request("buy_course", {"skill": sid}), GREEN,
+			maxed or Game.state.cash - price < int(Content.econ("overdraft_warning", -500))))
+		grid.add_child(row)
+	return c
 
 
 func _skill_card(key: String, sk: Dictionary) -> Control:

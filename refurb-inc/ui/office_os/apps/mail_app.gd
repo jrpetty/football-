@@ -29,7 +29,11 @@ func _mails() -> Array:
 		return []
 	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	var out: Array = d.get("mail", []) if d is Dictionary else []
-	return out.filter(func(m): return int(m.get("day", 0)) <= Game.state.day_index())
+	out = out.filter(func(m): return int(m.get("day", 0)) <= Game.state.day_index())
+	# Messages from the business itself (staff asking for a rise, resignations…), newest first, above the rest.
+	var inbox: Array = Game.state.totals.get("inbox", []).duplicate()
+	inbox.reverse()
+	return inbox + out
 
 
 func refresh() -> void:

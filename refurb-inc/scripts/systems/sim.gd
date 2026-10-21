@@ -1904,7 +1904,8 @@ func _check_goals() -> void:
 			text = "🏆 REFURB EMPIRE COMPLETE — mega plant and £20M in %d working days!" % day
 		state.say(text, "good")
 		BusinessStats.event(state, "milestone", text)
-		state.goal_reached.emit(id, day)
+		if state.challenge().is_empty():
+			state.goal_reached.emit(id, day)     # challenge starts aren't fair campaign times: no milestone records
 
 
 # ================================================================= electricity

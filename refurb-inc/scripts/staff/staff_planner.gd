@@ -360,7 +360,7 @@ func _plan_buy() -> Array:
 
 # ================================================================= tea breaks
 
-const MATE_CHANCE := 0.35       # how often they make one for a colleague too
+static var mate_chance := 0.35      # how often they make one for a colleague too (tools raise it to film it)
 
 
 func _kitchen() -> String:
@@ -486,7 +486,7 @@ func wash_up_or_drop() -> void:
 
 func _brew_mate() -> int:
 	## Now and then they make one for a player who's here with free hands (or already carrying brews).
-	if randf() > MATE_CHANCE:
+	if randf() > mate_chance:
 		return 0
 	var lr := LevelRoot.current
 	if lr == null:

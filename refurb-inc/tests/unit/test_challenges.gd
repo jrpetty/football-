@@ -193,12 +193,16 @@ func test_no_staff_rule() -> void:
 func test_building_goal() -> void:
 	var sim := _sim_for("garage_to_lockup")
 	var s := sim.state
+	var records := []
+	s.goal_reached.connect(func(id, day): records.append(id))
 	eq(s.cash, 7500, "a bit more in the bank")
 	s.cash = 20000
 	check(sim.execute(1, "move_building", {"building": "lockup"}).ok, "moved")
 	sim.advance_minutes(10.0)
 	eq(str(s.challenge().status), "won", "out of the garage")
 	eq(str(s.challenge().result.medal), "gold", "on day 1 — gold")
+	check(Campaign.reached(s).has("building_lockup"), "the campaign milestone still ticks off in the run")
+	eq(records, [], "but a challenge's head start never goes on the campaign leaderboards")
 
 
 func test_local_records_and_the_daily_attempt() -> void:

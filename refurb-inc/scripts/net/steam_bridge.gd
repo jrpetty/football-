@@ -30,6 +30,7 @@ var my_id := 0
 var _boards := {}                              # leaderboard name -> handle (0 while being found)
 var _pending_scores := {}                      # leaderboard name -> score waiting for its handle
 var _board_queue: Array = []                   # names waiting for a find result (one request at a time)
+var _descending := {}                          # boards where higher is better (daily-run scores)
 var _avatars := {}                             # steam id -> Image
 
 
@@ -280,15 +281,19 @@ func unlock_achievement(api_name: String) -> void:
 		steam.storeStats()
 
 
-func submit_score(board: String, score: int) -> void:
-	## Fewer days is better (ascending). Keeps the player's best. Boards are created on first use.
+func submit_score(board: String, score: int, ascending: bool = true) -> void:
+	## Fewer days is better (ascending); daily-run scores are higher-is-better (ascending = false). Keeps the
+	## player's best. Boards are created on first use.
 	if not available:
 		return
 	var handle := int(_boards.get(board, 0))
 	if handle != 0:
 		steam.uploadLeaderboardScore(score, true, PackedInt32Array(), handle)
 		return
-	_pending_scores[board] = mini(int(_pending_scores.get(board, score)), score)
+	var prev := int(_pending_scores.get(board, score))
+	_pending_scores[board] = mini(prev, score) if ascending else maxi(prev, score)
+	if not ascending:
+		_descending[board] = true
 	if not board in _board_queue:
 		_board_queue.append(board)
 		if _board_queue.size() == 1:
@@ -298,7 +303,8 @@ func submit_score(board: String, score: int) -> void:
 func _find_next_board() -> void:
 	if _board_queue.is_empty():
 		return
-	steam.findOrCreateLeaderboard(_board_queue[0], _const("LEADERBOARD_SORT_METHOD_ASCENDING", 1), _const("LEADERBOARD_DISPLAY_TYPE_NUMERIC", 1))
+	var sort := _const("LEADERBOARD_SORT_METHOD_DESCENDING", 2) if _descending.has(_board_queue[0]) else _const("LEADERBOARD_SORT_METHOD_ASCENDING", 1)
+	steam.findOrCreateLeaderboard(_board_queue[0], sort, _const("LEADERBOARD_DISPLAY_TYPE_NUMERIC", 1))
 
 
 func _on_leaderboard_found(handle: int, found: int) -> void:
