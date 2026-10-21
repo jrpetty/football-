@@ -51,6 +51,20 @@ func _place(fid: String, type: String, p: Vector3, r: float = 0.0) -> void:
 
 
 func _shoot(name: String, eye: Vector3, at: Vector3, fov: float = 60.0) -> void:
+	if OS.get_cmdline_user_args().has("--dry"):
+		# Headless check of the set-up instead of a render.
+		var s := Game.state
+		print("== %s" % name)
+		for fid in s.fixtures:
+			if s.fixtures[fid].placed:
+				print("  fixture %s %s at %s r%s node=%s" % [fid, s.fixtures[fid].type, str(s.fixtures[fid].p), str(s.fixtures[fid].r), LevelRoot.current.fixture_nodes.has(fid)])
+		for it: Item in s.items.values():
+			if it.kind in [Item.KIND_PALLET, Item.KIND_FORKLIFT]:
+				var v: ItemView = LevelRoot.current.item_views.get(it.id)
+				print("  %s %d %s view=%s at %s units=%d" % [it.kind, it.id, str(it.loc), v != null and v.visible, str(v.global_position) if v else "-", Logistics.units_on(s, it.id).size()])
+		var belts := s.items.values().filter(func(i): return i.loc.get("t") in ["belt", "arm"])
+		print("  on belts / in the arm: %d" % belts.size())
+		return
 	if _cam == null:
 		_cam = Camera3D.new()
 		add_child(_cam)
@@ -102,8 +116,14 @@ func _rack() -> void:
 	var carried := _pallet(Vector3.ZERO, laptops, 12)
 	s.set_loc(carried, {"t": "on_forks", "fork": fl.id, "yaw": 90.0})
 	await get_tree().create_timer(1.2).timeout
-	await _shoot("logistics_rack", origin + Vector3(3.6, 2.4, 3.8), origin + Vector3(-0.3, 1.9, -1.8), 62.0)
-	await _shoot("logistics_bay", Vector3(-0.6, 2.3, 2.8), Vector3(3.2, 0.6, -2.2), 62.0)
+	if not args_has("--bay-only"):
+		await _shoot("logistics_rack", origin + Vector3(3.6, 2.4, 3.8), origin + Vector3(-0.3, 1.9, -1.8), 62.0)
+	# From above the line, so the conveyor doesn't hide the bay behind it.
+	await _shoot("logistics_bay", Vector3(0.6, 4.3, 0.2), Vector3(3.4, 0.3, -2.7), 60.0)
+
+
+static func args_has(flag: String) -> bool:
+	return OS.get_cmdline_user_args().has(flag)
 
 
 func _garage() -> void:
@@ -133,4 +153,8 @@ func _garage() -> void:
 	if radio != "":
 		sim.execute(1, "decor_toggle", {"id": radio})
 	await _shoot("premises_garage", Vector3(1.6, 1.65, 3.0), Vector3(-0.6, 1.2, -3.2), 70.0)
-	await _shoot("premises_garage_door", Vector3(1.2, 1.6, 9.5), Vector3(0, 2.2, 3.5), 58.0)
+	# Outside with the shutter down: the sign above the door and the logo on the shutter.
+	for d: RollerDoor in level.style.doors():
+		d.set_open(false)
+	await get_tree().create_timer(4.0).timeout
+	await _shoot("premises_garage_door", Vector3(1.4, 1.7, 10.5), Vector3(0, 1.8, 3.5), 55.0)

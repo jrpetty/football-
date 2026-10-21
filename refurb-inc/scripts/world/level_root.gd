@@ -455,35 +455,40 @@ func wall_snap(type: String, aim: Vector3) -> Dictionary:
 
 
 func wall_spot(type: String) -> Dictionary:
-	## Auto-hang a wall piece: walk the walls for a free stretch, preferring wall that isn't behind equipment.
-	var fallback := {}
+	## Auto-hang a wall piece: walk the walls for the best free stretch — not on top of another wall piece, and
+	## not behind tall kit (shelving, racking) that would hide it. Above a bench is fine.
+	var best := {}
+	var best_score := 99
 	for e in wall_edges(floor_rects):
 		var a: Vector2 = e.a
 		var b: Vector2 = e.b
 		var length := a.distance_to(b)
-		var steps := int(length / 0.5)
+		var steps := int(length / 0.25)
 		for i in range(1, steps):
 			var p := a.lerp(b, float(i) / steps)
 			var pos := Vector3(p.x, 0.0, p.y)
 			if not can_place(type, pos, float(e.rot)):
 				continue
-			var clear := true
-			var front := footprint_rect(type, pos, float(e.rot)).grow(0.45)
+			var mine := footprint_rect(type, pos, float(e.rot))
+			var on_piece := false
+			var hidden := false
 			for id in Game.state.fixtures:
 				var f: Dictionary = Game.state.fixtures[id]
 				if not f.get("placed", false):
 					continue
+				var def := Content.fixture(str(f.type))
 				var o := footprint_rect(str(f.type), Vector3(f.p[0], f.p[1], f.p[2]), float(f.r), f.get("bend", {}))
-				var other_wall: bool = Content.fixture(str(f.type)).get("mount", "") == "wall"
-				if (other_wall and o.grow(0.25).intersects(front)) or (not other_wall and not Content.fixture(str(f.type)).get("overlap", false) and o.intersects(front)):
-					clear = false
-					break
-			var spot := {"p": [pos.x, 0.0, pos.z], "r": float(e.rot)}
-			if clear:
-				return spot
-			if fallback.is_empty():
-				fallback = spot
-	return fallback
+				if def.get("mount", "") == "wall":
+					on_piece = on_piece or o.grow(0.2).intersects(mine)
+				elif not def.get("overlap", false) and float(def.get("height", 1.0)) > 1.5:
+					hidden = hidden or o.intersects(mine.grow(0.3))
+			var score := (2 if on_piece else 0) + (1 if hidden else 0)
+			if score < best_score:
+				best_score = score
+				best = {"p": [pos.x, 0.0, pos.z], "r": float(e.rot)}
+				if score == 0:
+					return best
+	return best
 
 
 func _relocate_loose_items(vehicles_now: bool = false) -> void:
