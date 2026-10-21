@@ -2120,9 +2120,26 @@ func c_set_premises(peer: int, a: Dictionary) -> Dictionary:
 	state.premises[key] = str(value)
 	state.bump_stat("restyles")
 	state.mark("premises")
-	var what := {"paint": "Walls painted %s", "markings": "Floor marked out: %s", "line_colour": "Lines in %s",
-		"accent": "Accent colour: %s", "logo": "New logo: %s"}[key] % str(opt.get("name", value))
+	var templates := {"paint": "Walls painted %s", "markings": "Floor marked out: %s", "line_colour": "Lines in %s",
+		"accent": "Accent colour: %s", "logo": "New logo: %s"}
+	var what: String = str(templates[key]) % str(opt.get("name", value))
 	state.say(what + ("" if price <= 0 else " (%s)" % GameState.format_money(price)) + ".", "good", peer)
+	return _ok()
+
+
+func c_decor_toggle(peer: int, a: Dictionary) -> Dictionary:
+	## Decor with a switch (the site radio): on/off for everyone.
+	var fid := str(a.get("id", ""))
+	var f: Dictionary = state.fixtures.get(fid, {})
+	if f.is_empty() or str(f.get("type", "")) != "site_radio":
+		return _fail("")
+	if not state.stations.has(fid):
+		state.register_station(fid, "radio")
+	var on := not bool(state.stations[fid].get("on", false))
+	state.stations[fid]["on"] = on
+	state.mark("station", fid)
+	if on:
+		state.bump_stat("radio_on")
 	return _ok()
 
 
