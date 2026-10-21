@@ -433,6 +433,10 @@ static func on_day_end(st: GameState, summary: Dictionary) -> void:
 	rec["kwh"] = snappedf(float(st.day_stats.get("kwh", 0.0)), 0.01)
 	rec["power_cost"] = int(summary.get("electric", 0))
 	rec["wages"] = int(summary.get("wages", 0))
+	rec["ot_hours"] = float(summary.get("overtime_h", 0.0))
+	rec["ot_pay"] = int(summary.get("overtime_pay", 0))
+	if summary.has("morale"):
+		rec["morale"] = float(summary.morale)
 	var auto: Dictionary = s.get("auto", {})
 	rec["auto"] = auto.get("today", {}).duplicate()
 	if not auto.is_empty():

@@ -646,7 +646,7 @@ func _page_finance() -> void:
 	var v := _section("Profit & loss (all time)")
 	var net_sales: int = int(f.revenue) - int(f.fees) - int(f.postage)
 	var gross: int = net_sales - int(f.stock_bought) - int(f.shop)
-	var operating: int = gross - int(f.rent) - int(f.utilities) - int(f.wages) - int(f.bank)
+	var operating: int = gross - int(f.rent) - int(f.utilities) - int(f.wages) - int(f.get("overtime", 0)) - int(f.get("training", 0)) - int(f.bank)
 	_table(v, ["", "Amount"], [
 		["Sales revenue", _m(f.revenue)],
 		["   less Flogit fees", _m(-int(f.fees))],
@@ -658,6 +658,8 @@ func _page_finance() -> void:
 		["   less rent", _m(-int(f.rent))],
 		["   less utilities", _m(-int(f.utilities))],
 		["   less staff wages", _m(-int(f.wages))],
+		["   less staff overtime (time-and-a-half)", _m(-int(f.get("overtime", 0)))],
+		["   less training courses", _m(-int(f.get("training", 0)))],
 		["   less bank charges", _m(-int(f.bank))],
 		[["Operating profit", INK], [_m(operating), _sign(operating)]],
 		["   less equipment bought", _m(-int(f.equipment))],
@@ -665,6 +667,10 @@ func _page_finance() -> void:
 		[["Net profit", INK], [_m(f.net), _sign(f.net)]],
 	])
 	_note(v, "Gross profit counts every lot you've bought, including stock not yet sold. On units actually sold, you've made %s after purchase price, parts, fees, postage and packaging (cost of goods sold: %s)." % [_m(f.gross_on_sold), _m(f.cogs)])
+	if float(f.get("ot_hours", 0.0)) > 0.0:
+		_note(v, "Overtime: %.1f hours over %d late shift%s, %s paid in staff time-and-a-half%s. Late shifts also run up the electricity (Energy)." % [
+			float(f.ot_hours), int(f.ot_days), "" if int(f.ot_days) == 1 else "s", _m(f.get("overtime", 0)),
+			(" and %s owed on Friday" % _m(f.ot_owed)) if int(f.get("ot_owed", 0)) > 0 else ""])
 	_daily_chart()
 	v = _section("Week by week")
 	if f.weeks.is_empty():
@@ -709,6 +715,13 @@ func _page_people() -> void:
 		[[str(p.staff), _m(p.wage_bill_weekly), _m(p.avg_wage_weekly) + "/wk", _m(p.avg_wage_hourly) + "/h", _m(p.labour_per_unit)]], false)
 	if int(p.staff) == 0:
 		_note(v, "No staff yet: it's just the owners, unpaid. Hire in the Staff app; wages then land here, in Finance and in the Friday bills. The Staff page has the live view.")
+	if float(p.get("ot_hours", 0.0)) > 0.0 or int(p.get("training", 0)) > 0:
+		var ov := _section("Overtime & training", "Late shifts (night shift licence) pay staff time-and-a-half with Friday's wages. Courses: staff go away a few days and come back a level up; your own online courses are instant XP.")
+		_table(ov, ["Overtime hours", "Late shifts", "Overtime paid", "Owed this Friday", "Training spent"],
+			[["%.1f h" % float(p.ot_hours), str(p.ot_days), _m(p.ot_paid), _m(p.ot_owed), _m(p.training)]], false)
+		if not p.ot_recent.is_empty():
+			_table(ov, ["Late shift", "Overtime", "Staff overtime", "Electricity that day"], p.ot_recent.map(func(x): return [
+				"%s, day %d" % [x.weekday, int(x.day) + 1], "%.1f h" % float(x.hours), _m(x.pay), "%.1f kWh" % float(x.kwh)]))
 	v = _section("Hours", "Game hours on shift (09:00–17:00) while in the session. Jobs/hour counts tests, repairs, images, grades, listings and parcels.")
 	_table(v, ["Name", "Hours", "Days worked", "Avg hours/day", "Jobs/hour", "Total XP", "Best skill"],
 		p.team.map(func(x): return [x.name, _hours(x.hours), str(x.days), _hours(x.avg_hours_day), "%.1f" % float(x.jobs_per_hour), str(x.xp), x.top_skill]))
@@ -885,11 +898,28 @@ func _page_staff() -> void:
 	if s.rows.is_empty():
 		_empty("No staff yet. The Staff app has this week's candidates: a tester or a packer takes a job off your hands. Skill decides speed — a level-1 hire is slow, a level-10 one flies, and pay follows.")
 		return
-	var v := _section("Team right now", "Speed is their pace at their main job against a standard worker (×1.00). Best value first.")
-	_table(v, ["Name", "Role", "Doing", "Main skill", "Speed", "Wage", "Worth", "Jobs", "Days"], s.rows.map(func(x): return [
-		x.name, x.role, [x.status, GREEN if str(x.status).begins_with("Working") else SUB], "%s %d" % [x.main, int(x.level)],
-		"×%.2f" % float(x.speed), _m(x.wage) + "/wk", [_m(x.value) + "/wk", GREEN if int(x.value) > int(x.wage) else AMBER],
-		str(x.jobs), str(x.days)]), true, 0, [1, 2, 3])
+	var avg := float(s.get("morale_avg", -1.0))
+	_kpis([
+		["Team morale", ("%s (%d)" % [StaffMorale.mood(avg), int(round(avg))]) if avg >= 0.0 else "—", "×%.2f speed on average" % lerpf(0.8, 1.2, maxf(avg, 0.0) / 100.0) if avg >= 0.0 else "everyone's away", StaffMorale.mood_colour(avg) if avg >= 0.0 else SUB],
+		["Fed up", str(s.get("unhappy", 0)), "morale under 40", RED if int(s.get("unhappy", 0)) > 0 else INK],
+		["Want a pay rise", str(s.get("want_rise", 0)), "skills now worth more than their pay", AMBER if int(s.get("want_rise", 0)) > 0 else INK],
+		["On notice / on courses", "%d / %d" % [int(s.get("on_notice", 0)), int(s.get("away", 0))], "handed their notice in · away training", RED if int(s.get("on_notice", 0)) > 0 else INK],
+	], 4)
+	var v := _section("Team right now", "Speed is their pace at their main job against a standard worker (×1.00), morale included. Best value first.")
+	_table(v, ["Name", "Role", "Doing", "Mood", "Main skill", "Speed", "Wage", "Worth"], s.rows.map(func(x): return [
+		x.name, x.role, [x.status, GREEN if str(x.status).begins_with("Working") else SUB],
+		["%s %d" % [x.mood, int(round(float(x.morale)))], StaffMorale.mood_colour(float(x.morale))], "%s %d" % [x.main, int(x.level)],
+		"×%.2f" % float(x.speed), [_m(x.wage) + "/wk", AMBER if int(x.wants_rise) > int(x.wage) else INK], [_m(x.value) + "/wk", GREEN if int(x.value) > int(x.wage) else AMBER]]),
+		true, 0, [1, 2, 3, 4])
+	var mv := _section("Morale", "Tea breaks, a thank-you, fair pay, good shifts and courses lift it; no breaks, a flat-out week, lagging pay, late orders and overtime wear it down. Below 20 for a few days and people resign.")
+	for x: Dictionary in s.rows:
+		if x.away:
+			_meter_row(mv, str(x.name), 0.0, "away on a course", SUB)
+		else:
+			_meter_row(mv, str(x.name), float(x.morale) / 100.0, "%s %d%s" % [x.mood, int(round(float(x.morale))), (" — " + str(x.why)) if str(x.why) != "" else ""],
+				StaffMorale.mood_colour(float(x.morale)), "⚠ notice" if x.notice else "")
+	if s.get("morale_series", []).size() >= 2:
+		mv.add_child(_chart(s.morale_series, [], s.morale_days, Color(0.12, 0.6, 0.3), false))
 	var v2 := _section("Work done", "Everything each member of staff has done since they started.")
 	_table(v2, ["Name", "Carried", "Tested", "Repaired", "Imaged", "Graded", "Listed", "Packed", "Hours"], s.rows.map(func(x): return [
 		x.name, str(x.acts.get("hauled", 0)), str(x.acts.get("tested", 0)), str(x.acts.get("repaired", 0)), str(x.acts.get("imaged", 0)),

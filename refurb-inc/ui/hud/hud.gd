@@ -20,6 +20,9 @@ var hint_label: Label
 var fps_label: Label
 var objective_label: Label
 var goal_label: Label
+var shift_label: Label          # overtime / tiredness
+var overtime_prompt: OvertimePrompt
+var challenge_hud: ChallengeHud
 var _obj_t := 0.0
 
 var _hold_p := 0.0
@@ -89,6 +92,11 @@ func _ready() -> void:
 	sv.add_child(cash_label)
 	rep_label = UiStyle.label("", 15, UiStyle.ACCENT)
 	sv.add_child(rep_label)
+	shift_label = UiStyle.label("", 15, UiStyle.INFO)
+	shift_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	shift_label.custom_minimum_size.x = 250
+	shift_label.visible = false
+	sv.add_child(shift_label)
 	next_label = UiStyle.label("", 14, UiStyle.MUTED)
 	next_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	sv.add_child(next_label)
@@ -131,6 +139,11 @@ func _ready() -> void:
 	Game.state_reset.connect(_on_reset)
 	_build_achievement_layer()
 	Game.achievement_unlocked.connect(show_achievement)
+	# Their own canvas layers (they stay up while the HUD hides for the office PC).
+	overtime_prompt = OvertimePrompt.new()
+	add_child(overtime_prompt)
+	challenge_hud = ChallengeHud.new()
+	add_child(challenge_hud)
 	_on_reset()
 
 
@@ -176,6 +189,8 @@ func _process(delta: float) -> void:
 			goal_label.text = "🏆 Next goal: %s (%d%%)" % [str(nm.name), int(clampf(float(pr[0]) / maxf(float(pr[1]), 0.001), 0.0, 1.0) * 100.0)]
 		else:
 			goal_label.text = "🏆 Every milestone reached"
+		shift_label.text = shift_text(Game.state, _player.is_tired() if _player and is_instance_valid(_player) else false)
+		shift_label.visible = shift_label.text != ""
 	fps_label.visible = false     # the always-on PerfOverlay autoload shows FPS now
 	visible = not (_player and is_instance_valid(_player) and _player.ui_mode and not _keep_visible_in_ui)
 
@@ -488,6 +503,19 @@ class _AchShine extends Control:
 		var x := lerpf(-90.0, size.x + 90.0, t)
 		draw_colored_polygon(PackedVector2Array([Vector2(x, 0), Vector2(x + 44, 0), Vector2(x + 4, size.y), Vector2(x - 40, size.y)]),
 			Color(1.0, 0.95, 0.75, 0.13))
+
+
+static func shift_text(s: GameState, tired: bool) -> String:
+	## Overtime line under the clock: how late you're going, and whether you're flagging.
+	if s.overtime_asking():
+		return "⏸ Closing time — %s" % ("keep going?" if Game.is_host() else "the host is deciding")
+	if not s.overtime_active():
+		return ""
+	var end := int(fmod(s.shift_end_minute(), GameState.MIN_PER_DAY))
+	var t := "🌙 OVERTIME until %02d:%02d%s" % [end / 60, end % 60, " · staff on time-and-a-half" if not s.staff.is_empty() else ""]
+	if tired:
+		t += "\n😴 You're flagging — have a brew"
+	return t
 
 
 static func next_objective() -> String:

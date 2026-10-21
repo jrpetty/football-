@@ -8,7 +8,8 @@
     {"id": "boxes_laptop", "name": "Laptop shipping boxes + foam (×10)", "kind": "consumable", "consumable": "boxes", "qty": 10, "price": 18, "desc": "Double-wall boxes with foam end caps."},
     {"id": "boxes_large", "name": "Large server/tower boxes + foam (x5)", "kind": "consumable", "consumable": "big_boxes", "qty": 5, "price": 32, "desc": "Triple-wall cartons with corner blocks for towers and rack servers."},
     {"id": "labels",       "name": "Thermal shipping labels (×250)",     "kind": "consumable", "consumable": "labels", "qty": 250, "price": 9, "desc": "For the label printer."},
-    {"id": "tape",         "name": "Packing tape (×6 rolls)",            "kind": "consumable", "consumable": "tape", "qty": 60, "price": 8, "desc": "Each roll seals about ten boxes."}
+    {"id": "tape",         "name": "Packing tape (×6 rolls)",            "kind": "consumable", "consumable": "tape", "qty": 60, "price": 8, "desc": "Each roll seals about ten boxes."},
+    {"id": "night_shift_licence", "name": "Night shift licence", "kind": "licence", "licence": "night_shift", "price": 7000, "desc": "Council licence, insurance and yard floodlights for working late. At 17:00 the host can keep going until 20:00, 22:00 or right through to 06:00. Staff get time-and-a-half; the meter keeps running. One-off."}
   ],
   "start_consumables": {"boxes": 12, "big_boxes": 3, "labels": 250, "tape": 30}
 }

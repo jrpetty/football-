@@ -3,13 +3,14 @@ extends Control
 ## Title screen: Continue / New game / Host on Steam / Join a game / Character / Achievements / Settings / Quit.
 
 ## "new" | "continue" | "host" (LAN) | "join" (LAN, arg = address) | "host_steam" / "host_steam_public" (arg = business
-## name) | "join_steam" (arg = lobby id)
+## name) | "join_steam" (arg = lobby id) | "challenge" (arg = challenge id, "daily" or "resume")
 signal start_requested(mode: String, arg: String)
 
 var _panel: PanelContainer
 var _settings: SettingsPanel
 var _character: CharacterPanel
 var _achievements: AchievementsPanel
+var _challenges: ChallengesPanel
 var _join_panel: PanelContainer
 var _lobby_list: VBoxContainer
 var _lobby_status: Label
@@ -59,6 +60,9 @@ func _ready() -> void:
 		steam_btn.disabled = true
 		steam_btn.tooltip_text = Net.steam.status_text + " LAN co-op is under Join a game."
 	_btn(bv, "Join a game…", _open_join)
+	_btn(bv, "Challenges & daily run", func():
+		_panel.visible = false
+		_challenges.visible = true)
 	_btn(bv, "Character", func():
 		_panel.visible = false
 		_character.visible = true)
@@ -95,6 +99,13 @@ func _ready() -> void:
 		_achievements.visible = false
 		_panel.visible = true)
 	v.add_child(_achievements)
+	_challenges = ChallengesPanel.new()
+	_challenges.visible = false
+	_challenges.closed.connect(func():
+		_challenges.visible = false
+		_panel.visible = true)
+	_challenges.play.connect(func(arg: String): start_requested.emit("challenge", arg))
+	v.add_child(_challenges)
 	var ver := UiStyle.label("v%s · %s · early development build" % [ProjectSettings.get_setting("application/config/version", "0.1"), BuildInfo.STAMP], 15, UiStyle.MUTED)
 	ver.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	ver.position = Vector2(24, -36)

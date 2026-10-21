@@ -62,7 +62,7 @@ When Refurb Inc. has its own Steamworks app:
 
 ## Steamworks registration lists
 
-### Achievements (70)
+### Achievements (79)
 
 | API name | Name | Description | Hidden |
 |---|---|---|---|
@@ -135,6 +135,15 @@ When Refurb Inc. has its own Steamworks app:
 | `ACH_DARK_FACTORY` | Dark factory | Ship 100 lights-out orders. |  |
 | `ACH_TWENTY_MILLION` | Twenty million | Pass £20,000,000 in lifetime revenue. |  |
 | `ACH_REFURB_EMPIRE` | Refurb empire | Run the business from the mega plant with £20,000,000 in lifetime revenue. |  |
+| `ACH_CUPPA_FOR_THE_CREW` | Cuppa for the crew | Hand a member of staff a brew you made. |  |
+| `ACH_SOMEONE_ELSES_ROUND` | Someone else's round | Get a brew brought over by a member of staff. |  |
+| `ACH_WORTH_EVERY_PENNY` | Worth every penny | Give a member of staff a pay rise. |  |
+| `ACH_BACK_TO_SCHOOL` | Back to school | Send a member of staff on a training course. |  |
+| `ACH_CHEERS_BOSS` | Cheers, boss | Thank your staff 25 times. |  |
+| `ACH_NIGHT_OWLS` | Night owls | Work right through the night to 06:00 on the night shift licence. |  |
+| `ACH_CHALLENGER` | Challenger | Win a medal in a challenge or a daily run. |  |
+| `ACH_GOLD_STANDARD` | Gold standard | Win gold in a challenge. |  |
+| `ACH_DAILY_GRIND` | Daily grind | Finish a daily run. |  |
 | `ACH_COMPLETIONIST` | Completionist | Unlock every other achievement. |  |
 
 ### Leaderboards (ascending, numeric: working days)
@@ -162,3 +171,18 @@ When Refurb Inc. has its own Steamworks app:
 | `DAYS_REVENUE_20M` | £20M in sales |
 | `DAYS_BREWS_100` | Chief tea maker |
 | `DAYS_EMPIRE` | Refurb empire (end goal) |
+
+### Challenge leaderboards (created on first use by `SteamBridge.submit_score`)
+
+Timed challenges post the finish time in **working minutes** (ascending, fewer is better). The daily run posts its
+score (descending, more is better). Each date gets its own board, so it can't be registered in advance.
+
+| Leaderboard | Challenge | Sort |
+|---|---|---|
+| `CHALLENGE_COUNCIL_REFRESH` | The council refresh | ascending (working minutes) |
+| `CHALLENGE_GARAGE_TO_LOCKUP` | Out of the garage | ascending (working minutes) |
+| `CHALLENGE_LONE_WOLF` | Lone wolf | ascending (working minutes) |
+| `CHALLENGE_OVERDRAFT_ESCAPE` | Overdraft escape | ascending (working minutes) |
+| `CHALLENGE_FLOGIT_FRENZY` | Flogit frenzy | ascending (working minutes) |
+| `CHALLENGE_DEADLINE_NIGHT` | Deadline night | ascending (working minutes) |
+| `DAILY_<yyyymmdd>` | Daily run (UTC date) | descending (profit £ or orders shipped) |

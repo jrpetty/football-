@@ -3,6 +3,7 @@ extends Node
 
 const DIR := "user://saves/"
 const AUTOSAVE := "autosave"
+const CHALLENGE := "challenge"     # challenges and daily runs save here, never over your main company
 
 signal saved(slot: String)
 
@@ -18,6 +19,8 @@ func path_for(slot: String) -> String:
 func save_game(slot: String) -> Error:
 	if not Game.is_host() or not Game.in_game:
 		return ERR_UNAVAILABLE
+	if slot in [AUTOSAVE, "manual"] and not Game.state.challenge().is_empty():
+		slot = CHALLENGE
 	var d := Game.state.to_dict()
 	d["saved_at"] = Time.get_datetime_string_from_system()
 	d["label"] = "%s — Day %d, %s" % [Game.state.company_name, Game.state.day_index() + 1, GameState.format_money(Game.state.cash)]

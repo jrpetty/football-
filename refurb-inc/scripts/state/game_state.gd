@@ -7,6 +7,7 @@ signal changed(kind: String, id: Variant)
 signal notify(text: String, level: String, peer: int)   # level: info|good|warn|bad ; peer 0 = everyone
 signal day_ended(summary: Dictionary)
 signal vehicle(kind: String, payload: Dictionary)
+signal challenge_finished(result: Dictionary)   # host: a challenge / daily run just ended (for local records)
 
 const MIN_PER_DAY := 1440.0
 const WEEKDAYS := ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -20,6 +21,9 @@ var minute: float = 0.0              # absolute game minutes since day 0 (a Mond
 var belt_clock: float = 0.0          # real seconds the automation has run (belts/arms move on this clock)
 var _belt_clock_stamp := 0.0         # clients: local time the last belt_clock arrived (for smooth extrapolation)
 var day_running: bool = false        # false between "day over" and "start next day"
+## Overtime (night shift licence): {"ask": true} while the host decides at closing time, then
+## {"until": abs minute, "day": the shift's day, "asked": true}. Empty on a normal day.
+var shift: Dictionary = {}
 var last_flogit_hour: int = -1
 
 # --- company
@@ -109,6 +113,34 @@ func day_start_minute(day: int) -> float:
 
 func day_end_minute(day: int) -> float:
 	return day * MIN_PER_DAY + float(Content.econ("day_end_hour", 17)) * 60.0
+
+
+func shift_day() -> int:
+	## The day this shift belongs to: during overtime past midnight the calendar has moved on, the shift hasn't.
+	return int(shift.get("day", day_index())) if float(shift.get("until", 0.0)) > 0.0 else day_index()
+
+
+func shift_end_minute() -> float:
+	## When the current shift closes: the overtime end if the host chose to keep going, else normal closing time.
+	return float(shift.until) if float(shift.get("until", 0.0)) > 0.0 else day_end_minute(day_index())
+
+
+func overtime_active() -> bool:
+	## Working past closing time right now (night shift licence).
+	return day_running and float(shift.get("until", 0.0)) > 0.0 and minute > day_end_minute(shift_day())
+
+
+func overtime_asking() -> bool:
+	return bool(shift.get("ask", false))
+
+
+func has_licence(id: String) -> bool:
+	return bool(totals.get("licences", {}).get(id, false))
+
+
+func challenge() -> Dictionary:
+	## The challenge / daily run this company is playing (empty for a normal game). Replicates with the company.
+	return totals.get("challenge", {})
 
 
 static func format_money(amount: int) -> String:
@@ -329,6 +361,7 @@ func to_dict() -> Dictionary:
 	return {
 		"version": 1, "seed": seed_value, "rng_state": rng.state, "next_id": next_id,
 		"minute": minute, "day_running": day_running, "last_flogit_hour": last_flogit_hour, "belt_clock": belt_clock,
+		"shift": shift.duplicate(true),
 		"company_name": company_name, "cash": cash, "reputation": reputation, "ledger": ledger.duplicate(true),
 		"parts": parts.duplicate(), "consumables": consumables.duplicate(), "players": players.duplicate(true),
 		"items": it_out, "stations": stations.duplicate(true), "building_id": building_id, "fixtures": fixtures.duplicate(true), "lots": _int_keyed_out(lots),
@@ -349,6 +382,7 @@ func load_dict(d: Dictionary) -> void:
 	minute = float(d.get("minute", 0.0))
 	belt_clock = float(d.get("belt_clock", 0.0))
 	day_running = bool(d.get("day_running", false))
+	shift = d.get("shift", {}).duplicate(true)
 	last_flogit_hour = int(d.get("last_flogit_hour", -1))
 	company_name = d.get("company_name", "Refurb Inc.")
 	cash = int(d.get("cash", 0))
@@ -428,7 +462,7 @@ func export_entity(kind: String, id: Variant) -> Variant:
 				"ledger_tail": ledger.slice(maxi(0, ledger.size() - 200)), "company_name": company_name,
 				"totals": totals.duplicate(true), "day_stats": day_stats.duplicate(true)}
 		"clock":
-			return {"minute": minute, "day_running": day_running, "belt_clock": belt_clock}
+			return {"minute": minute, "day_running": day_running, "belt_clock": belt_clock, "shift": shift.duplicate(true)}
 		"fixture":
 			return fixtures[str(id)].duplicate(true) if fixtures.has(str(id)) else null
 		"building":
@@ -504,6 +538,7 @@ func import_entity(kind: String, id: Variant, v: Variant) -> void:
 		"clock":
 			minute = float(v.minute)
 			day_running = bool(v.day_running)
+			shift = v.get("shift", {})
 			belt_clock = float(v.get("belt_clock", belt_clock))
 			_belt_clock_stamp = Time.get_ticks_msec() / 1000.0
 		"fixture":

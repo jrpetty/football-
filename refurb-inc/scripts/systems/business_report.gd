@@ -867,6 +867,10 @@ static func _finance(st: GameState, r: Dictionary) -> Dictionary:
 		"revenue": int(m.get("sales", 0)), "fees": -int(m.get("fees", 0)), "postage": -int(m.get("postage", 0)),
 		"stock_bought": -int(m.get("purchasing", 0)), "shop": -int(m.get("shop", 0)), "rent": -int(m.get("rent", 0)),
 		"utilities": -int(m.get("utilities", 0)), "wages": -int(m.get("wages", 0)), "equipment": -int(m.get("equipment", 0)),
+		"overtime": -int(m.get("overtime", 0)), "training": -int(m.get("training", 0)),
+		"ot_hours": _sum(days.map(func(d): return float(d.get("ot_hours", 0.0)))),
+		"ot_days": days.filter(func(d): return float(d.get("ot_hours", 0.0)) > 0.0).size(),
+		"ot_owed": int(round(float(st.totals.get("ot_owed", 0.0)))),
 		"premises": -int(m.get("premises", 0)), "bank": -int(m.get("bank", 0)),
 		"cogs": int((float(r.sales.avg_cost) + float(r.sales.avg_parts)) * int(r.sales.count)),
 		"gross_on_sold": int(r.sales.profit),
@@ -949,7 +953,20 @@ static func _people(st: GameState, r: Dictionary) -> Dictionary:
 		"avg_wage_hourly": _avg(wage_bill, st.staff.size()) / 40.0,
 		"labour_per_unit": float(r.finance.wages) / float(r.sales.count) if int(r.sales.count) > 0 else 0.0,
 		"wages_paid": int(r.finance.wages),
+		"ot_hours": float(r.finance.ot_hours), "ot_days": int(r.finance.ot_days), "ot_paid": int(r.finance.overtime),
+		"ot_owed": int(r.finance.ot_owed), "training": int(r.finance.training),
+		"ot_recent": _overtime_days(st),
 	}
+
+
+static func _overtime_days(st: GameState) -> Array:
+	## The last few late shifts: hours, staff overtime and the electricity used that day.
+	var out: Array = []
+	for d: Dictionary in st.stats.days:
+		if float(d.get("ot_hours", 0.0)) > 0.0:
+			out.append({"day": int(d.get("day", 0)), "weekday": str(d.get("weekday", "")), "hours": float(d.ot_hours),
+				"pay": int(d.get("ot_pay", 0)), "kwh": float(d.get("kwh", 0.0))})
+	return out.slice(-8)
 
 
 static func _premises(st: GameState) -> Dictionary:
@@ -1388,15 +1405,30 @@ static func _staff(st: GameState) -> Dictionary:
 		wages += int(d.get("wage", 0))
 		value += val
 		rows.append({"id": int(sid), "name": str(d.get("name", "")), "role": StaffView._role_name(role), "main": main.capitalize(),
-			"level": lvl, "speed": pow(st.skill_speed(key, main), 1.5), "status": str(d.get("status", "")),
+			"level": lvl, "speed": pow(st.skill_speed(key, main), 1.5) * StaffMorale.speed_mult(d), "status": str(d.get("status", "")),
+			"morale": StaffMorale.value(d), "mood": StaffMorale.mood(StaffMorale.value(d)), "why": str(d.get("why", "")),
+			"wants_rise": int(d.get("wants_rise", 0)), "notice": d.has("notice"), "away": d.has("away"),
 			"wage": int(d.get("wage", 0)), "value": val, "days": st.day_index() - int(d.get("hired", st.day_index())),
 			"jobs": jobs, "hours": float(p.get("minutes", 0.0)) / 60.0, "xp": xp, "levels": levels,
 			"acts": acts.duplicate(), "units_day": Staff.units_per_day(role, lvl)})
 	rows.sort_custom(func(x, y): return int(x.value) - int(x.wage) > int(y.value) - int(y.wage))
 	var working := rows.filter(func(x): return str(x.status).begins_with("Working")).size()
+	var here := rows.filter(func(x): return not x.away)
+	var morale := 0.0
+	for x: Dictionary in here:
+		morale += float(x.morale)
+	var hist: Array = st.stats.get("days", []).filter(func(d): return d.has("morale")).slice(-20)
 	return {"rows": rows, "count": rows.size(), "wage_bill": wages, "value_week": value, "net_week": value - wages,
 		"working_now": working, "wages_paid": int(st.stats.get("money", {}).get("wages", 0)),
-		"candidates": st.candidates.size()}
+		"candidates": st.candidates.size(),
+		"morale_avg": morale / here.size() if not here.is_empty() else -1.0,
+		"unhappy": here.filter(func(x): return float(x.morale) < 40.0).size(),
+		"want_rise": rows.filter(func(x): return int(x.wants_rise) > int(x.wage)).size(),
+		"on_notice": rows.filter(func(x): return x.notice).size(), "away": rows.size() - here.size(),
+		"morale_series": hist.map(func(d): return float(d.morale)),
+		"morale_days": hist.map(func(d): return "%s %d" % [str(d.get("weekday", "")).substr(0, 3), int(d.get("day", 0)) + 1]),
+		"overtime_paid": int(-int(st.stats.get("money", {}).get("overtime", 0))),
+		"training_spent": int(-int(st.stats.get("money", {}).get("training", 0)))}
 
 
 const COUNTER_NAMES := {"tested": "Units tested", "repaired": "Repairs done", "imaged": "Units wiped & imaged",

@@ -30,6 +30,9 @@ func _mails() -> Array:
 	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	var out: Array = d.get("mail", []) if d is Dictionary else []
 	out = out.filter(func(m): return int(m.get("day", 0)) <= Game.state.day_index())
+	# Messages from the business itself (staff asking for a rise, resignations…), newest first, at the top.
+	var inbox: Array = Game.state.totals.get("inbox", []).duplicate()
+	inbox.reverse()
 	# Business buyers email in (newest first): enquiries to answer, then orders on the go and recent ones.
 	var biz: Array = []
 	var cs: Array = Game.state.contracts.values()
@@ -41,7 +44,7 @@ func _mails() -> Array:
 		var w: Dictionary = Business.cfg("welcome", {})
 		if not w.is_empty():
 			biz.append(w)
-	return biz + out
+	return inbox + biz + out
 
 
 func refresh() -> void:

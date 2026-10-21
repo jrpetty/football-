@@ -10,6 +10,7 @@ static var claimed := {}            # item id -> staff peer currently fetching i
 
 var staff_id := 0
 var peer := 0
+var peer_id := 0          # same as `peer` (players' code hands brews to whoever is in LevelRoot.players)
 var rig: CharacterRig
 var hold_node: Node3D
 var _plan: Array = []
@@ -26,6 +27,9 @@ var _planner: StaffPlanner
 var status := "Starting their shift"
 var _fail_count := 0
 var _cur_speed := 0.0
+var _body: StaticBody3D
+var _tea_plan := false        # the current plan is a tea break (don't interrupt it for a brew)
+var _rest_fails := 0          # tea breaks that couldn't happen (no kettle free) → a sit-down instead
 
 
 static func claim(item_id: int, by: int) -> void:
@@ -39,6 +43,7 @@ static func peer_of(id: int) -> int:
 func setup(id: int) -> void:
 	staff_id = id
 	peer = peer_of(id)
+	peer_id = peer
 	name = "Staff_%d" % id
 	var d: Dictionary = Game.state.staff.get(id, {})
 	rig = CharacterRig.new()
@@ -57,6 +62,20 @@ func setup(id: int) -> void:
 	tag.outline_size = 8
 	tag.modulate = Color(0.85, 0.95, 1.0)
 	add_child(tag)
+	# Something to look at: hover for their mood and what they're up to, [E] to thank them, hand them a brew.
+	# (Interact layer only, so it never blocks players, items or the pallet truck.)
+	var body := StaticBody3D.new()
+	_body = body
+	body.collision_layer = 1 << 3
+	body.collision_mask = 0
+	var cs := CollisionShape3D.new()
+	var cap := CapsuleShape3D.new()
+	cap.radius = 0.28
+	cap.height = 1.7
+	cs.shape = cap
+	cs.position.y = 0.88
+	body.add_child(cs)
+	add_child(body)
 	var p: Array = d.get("pos", [])
 	if p.size() == 3:
 		global_position = Vector3(p[0], 0, p[2])
@@ -82,6 +101,12 @@ func hold_point() -> Node3D:
 func _physics_process(delta: float) -> void:
 	if not Game.state.staff.has(staff_id):
 		return
+	# Away on a training course: not on the floor (and nothing to bump into or hover).
+	var away := StaffMorale.is_away(Game.state.staff[staff_id])
+	if visible == away:
+		visible = not away
+		if _body:
+			_body.collision_layer = 0 if away else 1 << 3
 	if Game.is_host() and Game.sim:
 		_think(delta)
 		_pose_t -= delta
@@ -111,9 +136,22 @@ func _physics_process(delta: float) -> void:
 # ================================================================= host brain
 
 func _think(delta: float) -> void:
-	if not Game.state.day_running:
+	var card: Dictionary = Game.state.staff[staff_id]
+	if StaffMorale.is_away(card):
+		if not _plan.is_empty() or not _path.is_empty():
+			_plan = []
+			_step = 0
+			_path = PackedVector3Array()
+			_wait = 0.0
+			_tea_plan = false
+			_release_claims()
 		_cur_speed = 0.0
-		status = "Off shift"
+		var away: Dictionary = card.away
+		status = "On a course: %s (back %s)" % [str(away.get("skill", "")).capitalize(), GameState.WEEKDAYS[int(away.get("back", 0)) % 7]]
+		return
+	if not Game.state.day_running or Game.state.overtime_asking():
+		_cur_speed = 0.0
+		status = "Off shift" if not Game.state.day_running else "Waiting to hear about overtime"
 		return
 	if _wait > 0.0:
 		_wait -= delta
@@ -123,26 +161,44 @@ func _think(delta: float) -> void:
 			_do_cmd(str(st[2]), st[3])
 			_step += 1
 		return
+	# Someone handed them a brew: down tools and drink it while it's hot.
+	if not _tea_plan and _planner and _holding_brew():
+		_release_claims()
+		_path = PackedVector3Array()
+		_plan = _planner.plan_drink_held()
+		_step = 0
+		_tea_plan = true
 	if not _path.is_empty():
 		_walk(delta)
 		return
 	if _step >= _plan.size():
 		_plan = []
 		_step = 0
+		_tea_plan = false
 		_idle_t -= delta
 		if _idle_t > 0.0:
 			_cur_speed = 0.0
 			return
-		if _planner == null or _planner.role != str(Game.state.staff[staff_id].get("role", "")):
-			_planner = StaffPlanner.new(peer, str(Game.state.staff[staff_id].get("role", "all_rounder")))
-		_plan = _planner.next_plan()
-		# Less reliable people take longer to get going on the next job.
+		if _planner == null or _planner.role != str(card.get("role", "")):
+			_planner = StaffPlanner.new(peer, str(card.get("role", "all_rounder")))
+		if _holding_brew():
+			_plan = _planner.plan_drink_held()
+			_tea_plan = true
+		elif StaffMorale.wants_break(card) and Game.state.held_by(peer).is_empty():
+			# Time for a brew: off to the kitchen (sometimes making one for a colleague too).
+			_plan = _planner.plan_tea()
+			_tea_plan = not _plan.is_empty()
+			if _plan.is_empty():
+				_no_tea()
+		if _plan.is_empty():
+			_plan = _planner.next_plan()
+		# Less reliable people (and fed-up ones) take longer to get going on the next job.
 		var key := Sim.player_key(peer)
 		var levels := {}
 		for sk: Dictionary in Content.skill_defs():
 			levels[sk.id] = Game.state.skill_level(key, sk.id)
-		if not _plan.is_empty():
-			_plan.push_front(["wait", lerpf(3.5, 0.3, Staff.reliability(levels))])
+		if not _plan.is_empty() and not _tea_plan:
+			_plan.push_front(["wait", lerpf(3.5, 0.3, Staff.reliability(levels)) * StaffMorale.idle_mult(card)])
 		if _plan.is_empty():
 			status = _waiting_status()
 			_idle_t = 2.0
@@ -152,7 +208,7 @@ func _think(delta: float) -> void:
 	var step: Array = _plan[_step]
 	match str(step[0]):
 		"walk":
-			var target: Vector3 = step[1]
+			var target: Vector3 = step[1].call() if step[1] is Callable else step[1]
 			if target == Vector3.INF:
 				_abort("Can't reach that")
 				return
@@ -170,11 +226,22 @@ func _think(delta: float) -> void:
 		"cmd":
 			_do_cmd(str(step[1]), step[2])
 			_step += 1
+		"call":
+			# A step decided on the spot (the tea round): false = give up on the plan.
+			if step.size() > 2:
+				status = str(step[2])
+			if not bool(step[1].call()):
+				_abort("")
+				return
+			_step += 1
 		"hold":
-			status = "Working: %s" % str(step[2])
+			status = str(step[4]) if step.size() > 4 else "Working: %s" % str(step[2])
 			_wait = float(step[1])
 		"wait":
-			status = "At the office PC" if Staff.office_role(str(Game.state.staff[staff_id].get("role", ""))) else "Getting ready"
+			if step.size() > 2:
+				status = str(step[2])
+			else:
+				status = "At the office PC" if Staff.office_role(str(card.get("role", ""))) else "Getting ready"
 			_wait = float(step[1])
 			_step += 1
 
@@ -235,7 +302,13 @@ func _abort(why: String) -> void:
 	## Plans go stale (someone else moved the unit, a slot filled up): put down anything carried and re-plan.
 	_fail_count += 1
 	status = "Re-thinking" if why == "" else why
+	if _tea_plan:
+		_tea_plan = false
+		_no_tea()
 	var held := Game.state.held_by(peer)
+	if not held.is_empty() and held.back().kind == Item.KIND_MUG and _planner:
+		_planner.wash_up_or_drop()
+		held = Game.state.held_by(peer)
 	if not held.is_empty():
 		var shelf := ""
 		if _planner:
@@ -257,3 +330,42 @@ func _release_claims() -> void:
 	for k in claimed.keys():
 		if claimed[k] == peer:
 			claimed.erase(k)
+
+
+# ================================================================= tea & mood
+
+func _holding_brew() -> bool:
+	var held := Game.state.held_by(peer)
+	return not held.is_empty() and held.back().kind == Item.KIND_MUG and float(held.back().data.get("fill", 0.0)) > 0.05
+
+
+func _no_tea() -> void:
+	## Couldn't get a brew (kettle busy, mugs everywhere): after a few tries they settle for a sit-down.
+	_rest_fails += 1
+	if _rest_fails >= 3:
+		_rest_fails = 0
+		Game.sim.execute(peer, "staff_rest", {})
+
+
+func hover_info(_player: Node) -> Dictionary:
+	## Look at a member of staff: what they're doing, how they feel, and [E] to thank them.
+	var d: Dictionary = Game.state.staff.get(staff_id, {})
+	if d.is_empty():
+		return {}
+	var role := str(d.get("role", ""))
+	var main := Staff.main_skill(role)
+	var lvl := Game.state.skill_level(Sim.player_key(peer), main)
+	var lines: Array = [status, "Mood: %s" % StaffMorale.mood_line(d)]
+	if int(d.get("wants_rise", 0)) > 0:
+		lines.append("⚠ Wants a pay rise to %s a week (Staff app)" % GameState.format_money(int(d.wants_rise)))
+	if d.has("notice"):
+		lines.append("⚠ Handed in their notice: leaves %s" % GameState.WEEKDAYS[int(d.notice.get("leave_day", 0)) % 7])
+	elif StaffMorale.wants_break(d):
+		lines.append("Gasping for a brew")
+	var thanked := int(d.get("thanked", -1)) == Game.state.shift_day()
+	return {"title": str(d.get("name", "Staff")), "subtitle": "%s · %s level %d" % [_role_name(role), main.capitalize(), lvl],
+		"lines": lines, "prompt": "✔ Thanked today" if thanked else "[E] Say thanks"}
+
+
+func interact(_player: Node) -> void:
+	Game.request("thank_staff", {"staff": staff_id})

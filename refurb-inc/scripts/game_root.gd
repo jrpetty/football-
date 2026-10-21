@@ -135,6 +135,21 @@ func _start(mode: String, arg: String) -> void:
 				return
 			_clear_menu()
 			_enter_level()
+		"challenge":
+			# Challenges and the daily run (arg = id, "daily", or "resume" = the last challenge save). Open it to
+			# friends from the pause menu for co-op.
+			if arg == "daily" and not Challenges.daily_attempt(Challenges.today_key()).is_empty():
+				if _menu:
+					_menu.set_status("You've had today's daily run. A new one tomorrow.")
+				return
+			Net.go_offline()
+			_clear_menu()
+			if arg == "resume":
+				if not SaveManager.load_game(SaveManager.CHALLENGE):
+					Game.new_game()
+			elif not Challenges.begin(arg, str(Settings.values.get("company_name", ""))):
+				Game.new_game()
+			_enter_level()
 		"host_steam", "host_steam_public":
 			if _menu:
 				_menu.set_status("Opening your game on Steam…")

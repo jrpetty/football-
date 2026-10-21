@@ -95,7 +95,7 @@ func _refs(id: String, c: Dictionary) -> void:
 
 func test_data_is_sane() -> void:
 	var defs := Achievements.defs()
-	check(defs.size() >= 50 and defs.size() <= 90, "50–90 achievements (got %d)" % defs.size())
+	check(defs.size() >= 50 and defs.size() <= 100, "50–100 achievements (got %d)" % defs.size())
 	var groups := Achievements.groups()
 	var ids := {}
 	var hidden := 0

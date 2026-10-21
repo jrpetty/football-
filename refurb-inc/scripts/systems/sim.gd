@@ -324,14 +324,22 @@ func c_drink_mug(peer: int, _a: Dictionary) -> Dictionary:
 	mug.data["fill"] = 0.0
 	mug.data["drunk"] = true
 	state.mark("item", mug.id)
+	if peer <= -1000 and state.staff.has(-peer - 1000):
+		# Staff tea break: a brew someone on the team made them counts for more.
+		var by := int(mug.data.get("by", 0))
+		StaffMorale.on_tea(state, state.staff[-peer - 1000], by != peer and by != 0, peer_name(state, by) if by != peer and by != 0 else "")
 	return _ok()
 
 
+func _staff_peer_here(peer: int) -> bool:
+	return peer <= -1000 and state.staff.has(-peer - 1000) and not StaffMorale.is_away(state.staff[-peer - 1000])
+
+
 func c_give_mug(peer: int, a: Dictionary) -> Dictionary:
-	## Hand a brew to a colleague: it goes straight into their hands.
+	## Hand a brew to a colleague (a player or a member of staff): it goes straight into their hands.
 	var to := int(a.get("to", 0))
 	var held := state.held_by(peer)
-	if held.is_empty() or held.back().kind != Item.KIND_MUG or to == peer or not active_peers.has(to):
+	if held.is_empty() or held.back().kind != Item.KIND_MUG or to == peer or not (active_peers.has(to) or _staff_peer_here(to)):
 		return _fail("")
 	var theirs := state.held_by(to)
 	if not theirs.is_empty() and theirs[0].kind != Item.KIND_MUG:
@@ -340,7 +348,13 @@ func c_give_mug(peer: int, a: Dictionary) -> Dictionary:
 		return _fail("They can't carry any more.")
 	var mug: Item = held.back()
 	state.set_loc(mug, {"t": "held", "peer": to, "i": theirs.size()})
-	state.say("%s brought you a brew! [E] to drink it." % Net.display_name(peer), "good", to)
+	if to <= -1000:
+		state.bump_stat("brews_for_staff")
+		state.say("%s: \"Oh, you star — thanks!\"" % peer_name(state, to), "good", peer)
+	else:
+		if peer <= -1000:
+			state.bump_stat("staff_brews")
+		state.say("%s brought you a brew! [E] to drink it." % peer_name(state, peer), "good", to)
 	return _ok()
 
 
@@ -364,13 +378,23 @@ func c_hire(_peer: int, a: Dictionary) -> Dictionary:
 			pick = c
 	if pick.is_empty():
 		return _fail("They've taken another job.")
+	if bool(state.challenge().get("rules", {}).get("no_staff", false)) and str(state.challenge().get("status", "")) == "running":
+		return _fail("No staff allowed in this challenge — it's all on you.")
 	var need := int(Staff.data().get("hire_rep_min", {}).get(pick.role, 0))
 	if state.reputation < need:
 		return _fail("Office staff want a company with reputation %d+." % need)
 	state.candidates.erase(pick)
+	employ(pick)
+	return _ok()
+
+
+func employ(pick: Dictionary) -> int:
+	## Put a candidate on the books (hiring, or a challenge's starting crew).
+	var cid := int(pick.id)
 	var d: Dictionary = pick.duplicate(true)
 	d["hired"] = state.day_index()
 	d["status"] = "Starting their shift"
+	StaffMorale.init_card(d)
 	state.staff[cid] = d
 	# Their skills go through the same system as players' (so they level up by doing the work).
 	var key := player_key(StaffView.peer_of(cid))
@@ -386,7 +410,7 @@ func c_hire(_peer: int, a: Dictionary) -> Dictionary:
 	state.mark("candidates", 0)
 	state.say("%s starts today as %s. Wages £%d a week." % [d.name, StaffView._role_name(d.role).to_lower(), int(d.wage)], "good")
 	BusinessStats.event(state, "staff", "Hired %s (%s)" % [d.name, StaffView._role_name(d.role)])
-	return _ok()
+	return cid
 
 
 func c_fire(peer: int, a: Dictionary) -> Dictionary:
@@ -394,11 +418,170 @@ func c_fire(peer: int, a: Dictionary) -> Dictionary:
 	if not state.staff.has(sid):
 		return _fail("")
 	var d: Dictionary = state.staff[sid]
-	var sp := StaffView.peer_of(sid)
-	c_drop_all_held(sp, {"p": d.get("pos", [0, 1, 0])})
+	staff_leaves(sid)
+	state.say("%s has left the company." % d.name, "info", peer)
+	return _ok()
+
+
+func staff_leaves(sid: int) -> void:
+	## Off the books (let go, or resigned): whatever they were carrying is put down where they stood.
+	var d: Dictionary = state.staff.get(sid, {})
+	if d.is_empty():
+		return
+	c_drop_all_held(StaffView.peer_of(sid), {"p": d.get("pos", [0, 1, 0])})
 	state.staff.erase(sid)
 	state.mark("staff", sid)
-	state.say("%s has left the company." % d.name, "info", peer)
+
+
+static func peer_name(st: GameState, peer: int) -> String:
+	## Players by their name, staff by theirs.
+	if peer <= -1000:
+		return str(st.staff.get(-peer - 1000, {}).get("name", "A colleague"))
+	return Net.display_name(peer)
+
+
+func send_mail(from: String, subject: String, body: String) -> void:
+	## A message in the office PC's Mail app (kept with the company, so co-op guests see it too).
+	var inbox: Array = state.totals.get("inbox", [])
+	inbox.append({"day": state.shift_day(), "m": int(state.minute), "from": from, "subject": subject, "body": body})
+	if inbox.size() > 40:
+		inbox = inbox.slice(inbox.size() - 40)
+	state.totals["inbox"] = inbox
+	state.mark("company")
+
+
+# ================================================================= staff morale & training
+
+func _staff_card(a: Dictionary) -> Dictionary:
+	return state.staff.get(int(a.get("staff", 0)), {})
+
+
+func c_pay_rise(_peer: int, a: Dictionary) -> Dictionary:
+	## Give a rise: up to what their skills are worth if they've asked, otherwise a goodwill 5% (once a week).
+	var d := _staff_card(a)
+	if d.is_empty():
+		return _fail("")
+	var wage := int(d.get("wage", 0))
+	var fair := StaffMorale.fair_wage(state, d)
+	var new_wage := 0
+	if fair > wage:
+		new_wage = fair
+		StaffMorale.change(state, d, float(StaffMorale.c("pay_rise_boost", 18)), "got the rise they asked for")
+	else:
+		var cooldown := int(StaffMorale.c("pay_rise_cooldown_days", 5))
+		if d.has("last_rise") and state.shift_day() - int(d.last_rise) < cooldown:
+			return _fail("%s had a rise %s — wait a week before the next." % [d.name, "today" if state.shift_day() == int(d.last_rise) else "recently"])
+		var step := maxi(int(round(wage * float(StaffMorale.c("pay_rise_pct", 0.05)) / 5.0) * 5), int(StaffMorale.c("pay_rise_min", 10)))
+		new_wage = wage + step
+		StaffMorale.change(state, d, float(StaffMorale.c("pay_rise_small_boost", 8)), "a pay rise out of the blue")
+	d["wage"] = new_wage
+	d["last_rise"] = state.shift_day()
+	d.erase("wants_rise")
+	state.mark("staff", int(d.id))
+	state.bump_stat("pay_rises")
+	state.say("%s's pay is now %s a week (was %s). They're chuffed." % [d.name, GameState.format_money(new_wage), GameState.format_money(wage)], "good")
+	BusinessStats.event(state, "staff", "Pay rise for %s: %s a week" % [d.name, GameState.format_money(new_wage)])
+	return _ok()
+
+
+func c_thank_staff(peer: int, a: Dictionary) -> Dictionary:
+	## A cheap thank-you, once a day each: it matters more than you'd think.
+	var d := _staff_card(a)
+	if d.is_empty():
+		return _fail("")
+	if StaffMorale.is_away(d):
+		return _fail("%s is away on a course." % d.name)
+	if int(d.get("thanked", -1)) == state.shift_day():
+		return _fail("You've already thanked %s today." % d.name)
+	d["thanked"] = state.shift_day()
+	StaffMorale.change(state, d, float(StaffMorale.c("thank_boost", 6)), "%s said thanks" % peer_name(state, peer))
+	state.bump_stat("thanks")
+	var lines := ["\"Cheers! Means a lot.\"", "\"Ah, no worries.\"", "\"Thanks — nice to be noticed.\"", "\"Any time, boss.\"", "\"Aw, ta.\""]
+	state.say("%s: %s" % [d.name, lines[(int(d.id) + state.shift_day()) % lines.size()]], "good", peer)
+	return _ok()
+
+
+func c_staff_rest(peer: int, _a: Dictionary) -> Dictionary:
+	## Staff only: a sit-down when there's no kettle to be had.
+	var d: Dictionary = state.staff.get(-peer - 1000, {}) if peer <= -1000 else {}
+	if d.is_empty():
+		return _fail("")
+	StaffMorale.on_rest(state, d)
+	return _ok()
+
+
+func c_send_course(_peer: int, a: Dictionary) -> Dictionary:
+	## Off on a training course: away (and still paid) for a few working days, back one level up in that skill.
+	var d := _staff_card(a)
+	var skill := str(a.get("skill", ""))
+	if d.is_empty() or Training.staff_course(skill).is_empty():
+		return _fail("")
+	if StaffMorale.is_away(d):
+		return _fail("%s is already on a course." % d.name)
+	var key := player_key(StaffView.peer_of(int(d.id)))
+	var level := state.skill_level(key, skill)
+	if level >= Training.max_level():
+		return _fail("%s is already top level at %s." % [d.name, skill.capitalize()])
+	var cost := Training.staff_cost(level)
+	if state.cash - cost < int(Content.econ("overdraft_warning", -500)):
+		return _fail("The course costs %s." % GameState.format_money(cost))
+	var days := Training.staff_days(level)
+	var back := Training.return_day(state.shift_day(), days)
+	var course := Training.staff_course(skill)
+	c_drop_all_held(StaffView.peer_of(int(d.id)), {"p": d.get("pos", [0, 1, 0])})
+	d["away"] = {"skill": skill, "course": str(course.get("name", "")), "from": state.shift_day(), "back": back, "level": level + 1}
+	d["status"] = "On a course"
+	state.mark("staff", int(d.id))
+	state.add_money(-cost, "training", "%s — %s (%s)" % [course.get("name", "Course"), d.name, course.get("provider", "")])
+	state.bump_stat("courses")
+	state.say("%s is off to %s (%s) — back %s morning, %s level %d." % [d.name, course.get("name", ""), course.get("provider", ""),
+		GameState.WEEKDAYS[back % 7], skill.capitalize(), level + 1], "good")
+	BusinessStats.event(state, "staff", "%s sent on %s" % [d.name, course.get("name", "a course")])
+	return _ok()
+
+
+func _course_returns() -> void:
+	## Morning: anyone due back from a course walks in a level up.
+	for d: Dictionary in state.staff.values():
+		var away: Dictionary = d.get("away", {})
+		if away.is_empty() or state.day_index() < int(away.get("back", 0)):
+			continue
+		var skill := str(away.skill)
+		var key := player_key(StaffView.peer_of(int(d.id)))
+		var target := mini(int(away.get("level", state.skill_level(key, skill) + 1)), Training.max_level())
+		var p := state.player(key)
+		p.xp[skill] = maxi(int(p.xp.get(skill, 0)), Staff.xp_for_level(target))
+		state.mark("player", key)
+		d.erase("away")
+		d["status"] = "Back from the course"
+		d["since_break"] = 0.0
+		StaffMorale.change(state, d, float(StaffMorale.c("course_boost", 10)), "back from a course, full of ideas")
+		state.say("%s is back from %s — %s level %d now." % [d.name, str(away.get("course", "the course")), skill.capitalize(), state.skill_level(key, skill)], "good")
+		BusinessStats.event(state, "skill", "%s qualified: %s level %d" % [d.name, skill.capitalize(), state.skill_level(key, skill)])
+
+
+func c_buy_course(peer: int, a: Dictionary) -> Dictionary:
+	## Online course for a player: instant XP in one skill (each repeat teaches a bit less).
+	var skill := str(a.get("skill", ""))
+	var course := Training.online_course(skill)
+	if course.is_empty() or peer <= -1000:
+		return _fail("")
+	var key := player_key(peer)
+	if state.skill_level(key, skill) >= Training.max_level():
+		return _fail("You're already top level at %s." % skill.capitalize())
+	var price := int(course.get("price", 100))
+	if state.cash - price < int(Content.econ("overdraft_warning", -500)):
+		return _fail("That course costs %s." % GameState.format_money(price))
+	var p := state.player(key)
+	var taken: Dictionary = p.get("courses", {})
+	var n := int(taken.get(skill, 0))
+	var xp := Training.online_xp(course, n)
+	taken[skill] = n + 1
+	p["courses"] = taken
+	state.add_money(-price, "training", "%s — %s" % [course.get("name", "Online course"), p.get("name", key)])
+	state.add_xp(key, skill, xp)
+	state.bump_stat("online_courses")
+	state.say("Course complete: %s. +%d %s XP." % [course.get("name", ""), xp, skill.capitalize()], "good", peer)
 	return _ok()
 
 
@@ -413,18 +596,10 @@ func c_staff_role(_peer: int, a: Dictionary) -> Dictionary:
 
 
 func weekly_wages() -> int:
-	## Friday pay review: staff who've levelled up by doing the work get a rise to match.
+	## Friday: everyone on the books is paid (people away on a course too). Rises aren't automatic any more —
+	## staff whose skills outgrow their pay ask for one (StaffMorale) and you give it in the Staff app.
 	var total := 0
 	for d in state.staff.values():
-		var key := player_key(StaffView.peer_of(int(d.id)))
-		var levels := {}
-		for sk: Dictionary in Content.skill_defs():
-			levels[sk.id] = state.skill_level(key, sk.id)
-		var now := Staff.wage_for(levels)
-		if now > int(d.get("wage", 0)):
-			state.say("Pay rise: %s is better at the job now — £%d a week (was £%d)." % [d.name, now, int(d.wage)], "info")
-			d["wage"] = now
-			state.mark("staff", int(d.id))
 		total += int(d.get("wage", 0))
 	return total
 
@@ -811,8 +986,8 @@ func _skill_speed(peer: int, skill: String) -> float:
 	var key := player_key(peer)
 	var sp := state.skill_speed(key, skill)
 	if peer <= -1000:
-		# AI staff: skill matters even more (×0.41 at level 1 … ×2.3 at level 10).
-		sp = pow(sp, 1.5)
+		# AI staff: skill matters even more (×0.41 at level 1 … ×2.3 at level 10), and so does morale (±20%).
+		sp = pow(sp, 1.5) * StaffMorale.speed_mult(state.staff.get(-peer - 1000, {}))
 	if (skill == "testing" and state.has_perk(key, "bench_whisper")) or (skill == "imaging" and state.has_perk(key, "fast_wipe")):
 		sp *= 1.15
 	return sp
@@ -1117,7 +1292,7 @@ static func sale_chance_per_hour(st: GameState, u: UnitData) -> float:
 		base *= 1.1
 	# Salespeople in the office bring more buyers in.
 	for d in st.staff.values():
-		if str(d.get("role", "")) == "salesperson":
+		if str(d.get("role", "")) == "salesperson" and not d.has("away"):
 			base *= 1.0 + 0.012 * st.skill_level(player_key(StaffView.peer_of(int(d.id))), "sales")
 	var market := float(Valuation.market_value(u, u.grade)) * u.list_quality
 	var ratio := market / maxf(float(u.list_price), 1.0)
@@ -1857,7 +2032,8 @@ func _next_lorry_slot() -> float:
 				soon = float(ev.at) + 25.0
 		if soon <= state.day_end_minute(0) - 20.0:
 			return soon
-	var day := state.day_index() + 1
+	# Tomorrow's morning lorry (or this morning's, when buying in the small hours of an all-nighter).
+	var day := state.day_index() + (1 if state.minute_of_day() >= float(Content.econ("day_start_hour", 9)) * 60.0 else 0)
 	while day % 7 >= 5:
 		day += 1
 	# Space multiple deliveries out by 40 minutes on the same morning.
@@ -1996,6 +2172,8 @@ func shop_price(id: String) -> int:
 func c_shop_buy(peer: int, a: Dictionary) -> Dictionary:
 	var id: String = a.get("id", "")
 	var qty := clampi(int(a.get("qty", 1)), 1, 50)
+	if Content.shop_items.get(id, {}).get("kind", "") == "licence":
+		return _buy_licence(peer, Content.shop_items[id])
 	var price := shop_price(id) * qty
 	if price <= 0:
 		return _fail("Unknown product.")
@@ -2034,6 +2212,27 @@ func c_shop_buy(peer: int, a: Dictionary) -> Dictionary:
 		state.schedule.append({"at": arrive, "type": "parcel", "data": parcel_contents})
 	state.mark("schedule")
 	state.say("Ordered %d× %s — arrives %s." % [qty, name, GameState.format_minute(arrive)], "info", peer)
+	return _ok()
+
+
+func _buy_licence(peer: int, s: Dictionary) -> Dictionary:
+	## One-off licences (night shift): no parcel, it's yours as soon as it's paid for.
+	var lic := str(s.get("licence", s.id))
+	if state.has_licence(lic):
+		return _fail("You already have the %s." % str(s.name).to_lower())
+	var price := int(s.price)
+	if state.cash - price < int(Content.econ("overdraft_warning", -500)):
+		return _fail("The %s costs %s." % [str(s.name).to_lower(), GameState.format_money(price)])
+	state.add_money(-price, "equipment", str(s.name))
+	var all: Dictionary = state.totals.get("licences", {})
+	all[lic] = true
+	state.totals["licences"] = all
+	state.mark("company")
+	BusinessStats.event(state, "equipment", "Bought the %s (%s)" % [str(s.name).to_lower(), GameState.format_money(price)])
+	if lic == "night_shift":
+		state.say("Night shift licence granted and the yard floodlights are up. At 17:00 you can keep going into overtime.", "good")
+	else:
+		state.say("%s bought." % s.name, "good", peer)
 	return _ok()
 
 
@@ -2109,7 +2308,7 @@ func c_unbox(peer: int, a: Dictionary) -> Dictionary:
 # ================================================================= day / time
 
 func tick(real_delta: float) -> void:
-	if paused or not state.day_running:
+	if paused or not state.day_running or state.overtime_asking():
 		return
 	var rate := (float(Content.econ("day_end_hour", 17)) - float(Content.econ("day_start_hour", 9))) * 60.0 / float(Content.econ("real_seconds_per_day", 900))
 	advance_minutes(real_delta * rate)
@@ -2127,7 +2326,9 @@ func tick_automation(real_delta: float) -> void:
 
 
 func advance_minutes(mins: float) -> void:
-	var end := state.day_end_minute(state.day_index())
+	if state.overtime_asking():
+		return          # closing time: waiting for the host to choose overtime or home time
+	var end := state.shift_end_minute()
 	var target := minf(state.minute + mins, end)
 	# Step in ≤5-minute chunks so hourly/scheduled events fire in order even on big jumps.
 	while state.minute < target - 0.0001:
@@ -2135,14 +2336,93 @@ func advance_minutes(mins: float) -> void:
 		state.minute += step
 		_meter_power(step)
 		BusinessStats.on_clock(state, active_peers, step)
+		_shift_clock(step)
 		_process_minute_events()
 	state.mark("clock")
 	_check_goals()
 	if state.minute >= end - 0.0001:
+		if _offer_overtime():
+			return
 		end_day()
 
 
+# ================================================================= overtime (night shift licence)
+
+static func overtime_cfg() -> Dictionary:
+	return Content.econ("overtime", {})
+
+
+static func overtime_options() -> Array:
+	return overtime_cfg().get("options", [])
+
+
+func _offer_overtime() -> bool:
+	## Closing time with the night shift licence: hold the clock at 17:00 while the host decides.
+	if not state.has_licence("night_shift") or float(state.shift.get("until", 0.0)) > 0.0 or state.shift.get("asked", false):
+		return false
+	state.shift = {"ask": true, "day": state.day_index()}
+	state.mark("clock")
+	state.say("Closing time. Keep going into overtime, or call it a day?", "info")
+	return true
+
+
+func c_overtime(peer: int, a: Dictionary) -> Dictionary:
+	## The host's answer to "Keep going?": an overtime option id, or "close" for home time.
+	if not state.overtime_asking():
+		return _fail("")
+	if peer != 1:
+		return _fail("The host decides whether to keep going.")
+	var day := int(state.shift.get("day", state.day_index()))
+	var choice := str(a.get("choice", "close"))
+	if choice == "close":
+		state.shift = {"asked": true, "day": day}
+		state.mark("clock")
+		end_day()
+		return _ok()
+	var opt: Dictionary = {}
+	for o: Dictionary in overtime_options():
+		if str(o.id) == choice:
+			opt = o
+	if opt.is_empty():
+		return _fail("")
+	var until := day * GameState.MIN_PER_DAY + float(opt.end_hour) * 60.0
+	if until <= state.minute:
+		return _fail("")
+	state.shift = {"until": until, "day": day, "asked": true, "choice": choice}
+	state.mark("clock")
+	state.bump_stat("overtime_shifts")
+	BusinessStats.event(state, "premises", "Overtime: %s" % str(opt.name).to_lower())
+	var paid := "" if state.staff.is_empty() else " Staff are on time-and-a-half."
+	state.say("Keep going! Overtime %s.%s Brew up after midnight or you'll flag." % [str(opt.name).to_lower(), paid], "info")
+	return _ok()
+
+
+func overtime_rate_per_minute() -> float:
+	## £ per overtime minute for everyone on shift (time-and-a-half of their hourly rate).
+	var cfg := overtime_cfg()
+	var per := float(cfg.get("pay_mult", 1.5)) / (float(cfg.get("hours_per_week", 40)) * 60.0)
+	var total := 0.0
+	for d in state.staff.values():
+		if not StaffMorale.is_away(d):
+			total += float(d.get("wage", 0)) * per
+	return total
+
+
+func _shift_clock(step: float) -> void:
+	## Per clock step: overtime hours and pay, and staff morale (breaks, a long week, late nights).
+	var ot := state.overtime_active()
+	if ot:
+		state.day_stats["ot_min"] = float(state.day_stats.get("ot_min", 0.0)) + step
+		var pay := overtime_rate_per_minute() * step
+		if pay > 0.0:
+			state.day_stats["ot_pay"] = float(state.day_stats.get("ot_pay", 0.0)) + pay
+	if not state.staff.is_empty():
+		var mod := state.minute_of_day()
+		StaffMorale.tick(state, step, ot, ot and (mod >= 22.0 * 60.0 or mod < 6.0 * 60.0))
+
+
 func _check_goals() -> void:
+	Challenges.check(self)
 	for id in Campaign.check(state):
 		var day := int(Campaign.reached(state).get(id, Campaign.day_number(state)))
 		var end_id := str(Campaign.data().get("end_goal", {}).get("id", ""))
@@ -2151,7 +2431,8 @@ func _check_goals() -> void:
 			text = "🏆 REFURB EMPIRE COMPLETE — mega plant and £20M in %d working days!" % day
 		state.say(text, "good")
 		BusinessStats.event(state, "milestone", text)
-		state.goal_reached.emit(id, day)
+		if state.challenge().is_empty():
+			state.goal_reached.emit(id, day)     # challenge starts aren't fair campaign times: no milestone records
 
 
 # ================================================================= electricity
@@ -2172,6 +2453,9 @@ static func power_breakdown(st: GameState) -> Dictionary:
 	## fixture at its rating while it works (bench job, rack bays, arm move, belt running) and a standby
 	## fraction otherwise. {name: {kw, count, active}}
 	var out := {"Lighting": {"kw": float(st.building().get("floor_m2", 40)) * float(Content.econ("lighting_w_per_m2", 5.0)) / 1000.0, "count": 1, "active": 1}}
+	if st.has_licence("night_shift") and DayNight.darkness(st.minute_of_day()) > 0.15:
+		var nf := DayNight.flood_count(st.building())
+		out["Floodlights"] = {"kw": nf * float(overtime_cfg().get("flood_kw", 0.15)), "count": nf, "active": nf}
 	var running_belts := {}
 	for it: Item in st.items.values():
 		if it.loc.get("t") == "belt" and float(it.loc.get("v", 0.0)) > 0.0:
@@ -2261,10 +2545,14 @@ func end_day() -> void:
 	if not state.day_running:
 		return
 	state.day_running = false
+	# Overtime past midnight: the calendar has moved on, but this is still that day's shift (rent on Friday's).
+	var day := state.shift_day()
+	var overnight := state.day_index() > day
+	state.shift.erase("ask")
 	var ds := state.day_stats
 	var summary := ds.duplicate()
-	summary["day"] = state.day_index()
-	summary["weekday"] = state.weekday_name()
+	summary["day"] = day
+	summary["weekday"] = GameState.WEEKDAYS[day % 7]
 	summary["rep_delta"] = state.reputation - float(ds.get("rep_start", state.reputation))
 	# Metered electricity for the day (lights, machines, kettle).
 	var kwh := float(ds.get("kwh", 0.0))
@@ -2277,10 +2565,22 @@ func end_day() -> void:
 		state.add_money(-bill, "utilities", "Electricity: %d kWh @ %dp" % [int(round(kwh)), int(round(float(Content.econ("electricity_per_kwh", 0.28)) * 100.0))])
 	summary["kwh"] = kwh
 	summary["electric"] = bill
+	# Overtime: hours worked late, and staff time-and-a-half owed (paid with Friday's wages).
+	var ot_min := float(ds.get("ot_min", 0.0))
+	if ot_min > 0.0:
+		var ot_pay := float(ds.get("ot_pay", 0.0))
+		summary["overtime_h"] = snappedf(ot_min / 60.0, 0.1)
+		summary["overtime_pay"] = int(round(ot_pay))
+		summary["overtime_until"] = str(state.shift.get("choice", ""))
+		state.totals["ot_owed"] = float(state.totals.get("ot_owed", 0.0)) + ot_pay
+		state.totals["ot_hours_week"] = float(state.totals.get("ot_hours_week", 0.0)) + ot_min / 60.0
+		state.bump_stat("overtime_minutes", int(round(ot_min)))
+		if overnight:
+			state.bump_stat("all_nighters")
 	summary["profit"] = int(state.day_stats.get("income", 0)) - int(state.day_stats.get("spend", 0))
 	summary["cash"] = state.cash
 	# Weekly rent & bills on the due weekday.
-	if state.weekday() == int(Content.econ("rent_due_weekday", 4)):
+	if day % 7 == int(Content.econ("rent_due_weekday", 4)):
 		var b := state.building()
 		var rent := int(b.get("rent_weekly", 150))
 		var util := int(b.get("utilities_weekly", 25))
@@ -2291,6 +2591,13 @@ func end_day() -> void:
 		if wages > 0:
 			state.add_money(-wages, "wages", "Wages — %d staff" % state.staff.size())
 			summary["wages"] = wages
+		var ot_owed := int(round(float(state.totals.get("ot_owed", 0.0))))
+		if ot_owed > 0:
+			state.add_money(-ot_owed, "overtime", "Staff overtime — %.1f h at time-and-a-half" % float(state.totals.get("ot_hours_week", 0.0)))
+			summary["overtime_paid"] = ot_owed
+		state.totals["ot_owed"] = 0.0
+		state.totals["ot_hours_week"] = 0.0
+		StaffMorale.week_reset(state)
 		if state.cash < 0:
 			var fee := int(Content.econ("overdraft_fee_weekly", 40))
 			state.add_money(-fee, "bank", "Overdraft fee")
@@ -2301,6 +2608,10 @@ func end_day() -> void:
 	summary["run_day"] = Campaign.day_number(state)
 	state.totals["days_worked"] = int(state.totals.get("days_worked", 0)) + 1
 	summary["rating"] = shift_rating(summary)
+	if not state.staff.is_empty():
+		StaffMorale.day_end(self, summary, overnight)
+		summary["morale"] = _team_morale()
+	Challenges.on_day_end(self, summary)
 	BusinessStats.on_day_end(state, summary)
 	state.mark("clock")
 	state.mark("company")
@@ -2318,15 +2629,27 @@ static func shift_rating(s: Dictionary) -> int:
 	return clampi(int(round(1.0 + score / 4.0)), 1, 5)
 
 
+func _team_morale() -> float:
+	var total := 0.0
+	var n := 0
+	for d in state.staff.values():
+		if not StaffMorale.is_away(d):
+			total += StaffMorale.value(d)
+			n += 1
+	return snappedf(total / n, 0.1) if n > 0 else -1.0
+
+
 func start_next_day() -> void:
 	if state.day_running:
 		return
-	var day := state.day_index() + 1
+	var day := state.shift_day() + 1      # after an all-nighter the calendar already reads tomorrow
 	while day % 7 >= 5:
 		day += 1                          # weekends off — the lorry company doesn't work Saturdays either
 	var start := state.day_start_minute(day)
+	state.shift = {}
 	# Overnight: jobs that finish before morning complete; deliveries for the morning still come in daytime.
 	state.minute = start
+	_course_returns()
 	_process_jobs()
 	_check_deadlines()
 	_check_contracts()
@@ -2366,6 +2689,19 @@ func c_buy_fixture(peer: int, a: Dictionary) -> Dictionary:
 	var price := int(def.get("price", 0))
 	if state.cash - price < int(Content.econ("overdraft_warning", -500)):
 		return _fail("Not enough funds for %s." % def.name)
+	var id := add_fixture(type)
+	state.add_money(-price, "equipment", "Bought %s" % def.name)
+	BusinessStats.on_fixture_bought(state, id, def.name, price)
+	state.mark("fixture", id)
+	state.say("Bought %s — place it from the Building app (or it'll be set up for you)." % def.name, "good", peer)
+	return {"ok": true, "msg": "", "id": id}
+
+
+func add_fixture(type: String) -> String:
+	## A new piece of equipment in storage (the level lays it out). Used by the Shop and challenge starts.
+	var def := Content.fixture(type)
+	if def.is_empty():
+		return ""
 	var n := 1
 	while state.fixtures.has("%s_%d" % [type, n]):
 		n += 1
@@ -2373,11 +2709,8 @@ func c_buy_fixture(peer: int, a: Dictionary) -> Dictionary:
 	state.fixtures[id] = {"type": type, "label": fixture_label(state, type), "placed": false, "p": [0, 0, 0], "r": 0.0}
 	if str(def.get("auto", {}).get("origin", "")) == "in":
 		state.fixtures[id]["bend"] = Automation.clamp_bend(def.auto)
-	state.add_money(-price, "equipment", "Bought %s" % def.name)
-	BusinessStats.on_fixture_bought(state, id, def.name, price)
 	state.mark("fixture", id)
-	state.say("Bought %s — place it from the Building app (or it'll be set up for you)." % def.name, "good", peer)
-	return {"ok": true, "msg": "", "id": id}
+	return id
 
 
 func c_place_fixture(_peer: int, a: Dictionary) -> Dictionary:

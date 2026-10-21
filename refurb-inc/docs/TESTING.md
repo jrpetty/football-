@@ -126,6 +126,28 @@ Everything about the business, live, in 13 sections down the left. Hover the cha
 - **Tests:** `tests/unit/test_business.gd` (14 tests: unlock, offers, pricing, bulk flow, late/cancel, builds from a barebones chassis and from stock, blocked builds, upgrades and their limits, review scoring and arrival, grading misses, co-op replication and save/load).
 - **Renders:** `godot --rendering-driver d3d12 --gpu-index 1 --path . res://tools/business_shot.tscn` (software renderer, about 3 minutes a shot). It saves `tools/out/business_*.png`: the bench mid-build, its screen, the Business app's Enquiries and On the go tabs, and Flogit Reviews. Run it with `--headless` for a quick dry run of the same code with no images.
 
+## Staff morale, training, night shifts and challenges (October 2026)
+- **Morale:** hire two or three staff (office PC → **Staff**). Each card now has a mood pill, a morale bar with the reason ("had a tea break", "wants a pay rise…"), and how fast they work because of it (×0.80 miserable → ×1.20 buzzing).
+  - **Tea breaks:** after about 2½ working hours a member of staff walks to the kitchen, gets a mug out, boils the kettle, pours, adds milk, drinks it and washes up. About one break in three they make one for you too and bring it over: you'll get "<name> brought you a brew!".
+  - **Hand them a brew:** make a round, pick up a mug, look at a member of staff and press **E**. They stop, drink it and their morale jumps more than for their own brew.
+  - **Hover over a member of staff:** you see what they're doing and their mood. Press **E** with empty hands to say thanks, which works once a day each.
+  - **Pay:** rises aren't automatic any more. When someone's skills outgrow their pay they email you ("Pay review?" in **Mail**) and lose morale each day. **Staff → Give a pay rise** fixes it. If they're already paid fairly you can give a smaller goodwill rise, once a week.
+  - **Fed up:** if morale stays under 20 for two days you get a "Can we talk?" email. After three they hand in their notice and leave two working days later. Cheer them back above 40 and they withdraw it.
+  - To see that chain quickly, let staff go a whole day without the kitchen (keep them busy), or give them overtime.
+- **Training:** **Staff → Training:** pick a skill, see the course, provider, price and days away, then **Send on course**. They disappear from the floor (still paid on Friday) and walk back in on the day shown, one level up. **Skills → Online courses** gives you instant XP; each repeat of the same course gives less.
+- **Night shift licence:** office PC → **Shop** → Equipment tab → **Night shift licence** (£7,000, one-off). At 17:00 the clock stops on a **Keep going?** card. The host picks Until 20:00, Until 22:00, Through the night (06:00), or Call it a day; guests see "The host is deciding…".
+  - In overtime the HUD shows "🌙 OVERTIME until …". Outside goes dark from about 18:30, the yard floodlights come on and the premises' lights stay on.
+  - After midnight you walk and hold-to-act more slowly ("You're flagging — have a brew") until you drink a brew.
+  - The end-of-shift card shows overtime hours and the staff time-and-a-half, which is paid on Friday with the wages. Insights → **Finance** and **People & premises** show overtime hours, cost and the electricity used on late shifts.
+- **Challenges:** title screen → **Challenges & daily run**. Each card has a goal, a day limit and medals. **Play** starts that scenario.
+  - During a challenge a banner at the top shows the goal, progress and days left.
+  - When it ends (target reached, time up or out of time) a results card shows the medal, your time or score and this PC's board for it. **Keep playing** or **Back to the title screen**.
+  - Challenge runs save to their own slot (**Resume** on the Challenges panel), never over your main company.
+  - The **daily run** is the same start for everyone on a (UTC) date, one go per day. Its board is `DAILY_<yyyymmdd>`, and with Steam running the result goes to that Steam leaderboard too.
+  - **Flogit frenzy** is the quickest to see a finish: 30 laptops are already listed, so orders arrive within the hour. To see the results card without playing a run, use `tools/feature_shots.tscn -- --only results`.
+- **Runtime check:** `tools/feature_check.tscn` (F6, or headless). It shows a crew taking real tea breaks in the garage (one brings the player a brew), a night shift with the dark sky and floodlights, and the council refresh challenge starting in the industrial unit. It prints `FEATURES OK`.
+- **UI shots:** `tools/feature_shots.tscn` saves `tools/out/feature_*.png`: Staff app, Insights → Staff, online courses, Keep going?, the shift card, the Challenges panel and the results card. On this PC use the software renderer: `--rendering-driver d3d12 --gpu-index 1`.
+
 ## Co-op (LAN / same PC)
 - Title screen → **Host co-op**. On a second instance → **Join co-op…** → host's IP → **Join**.
 - Same PC: Godot **Debug → Customize Run Instances… → 2 instances**, then press F5 twice-ish (one hosts, one joins `127.0.0.1`).
@@ -134,7 +156,7 @@ Everything about the business, live, in 13 sections down the left. Hover the cha
 ## Automated checks
 Run everything from a terminal: `tools/run_all_checks.sh /path/to/godot`
 Or run individually in the editor:
-- `tests/run_tests.tscn` (F6) — 80 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats, staff, new stock, tea, goals, achievements, automation.
+- `tests/run_tests.tscn` (F6) — 123 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats, staff, morale, training, overtime, challenges, new stock, tea, goals, achievements, automation, Steam.
 - `tools/playtest.tscn` (F6) — drives the real garage at 8× speed: lorry, bench, repair, image, grade, sell, pack, courier, parcel, save/load.
 - `tools/premises_test.tscn` (F6) — moves one company through all 7 buildings: layout, stock, loose pallets, lorry to docks, extra equipment.
 - `tools/net_test.tscn -- --role host` and `-- --role client` — two-process co-op check.

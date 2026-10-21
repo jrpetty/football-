@@ -36,7 +36,10 @@ func refresh() -> void:
 	var cat: String = PART_TABS[_tab][1]
 	if cat == "":
 		for s: Dictionary in Content.shop_items.values():
-			_row(s.id, s.name, int(s.price), s.get("desc", ""), _stock_text_shop(s))
+			if str(s.get("kind", "")) == "licence":
+				_licence_row(s)
+			else:
+				_row(s.id, s.name, int(s.price), s.get("desc", ""), _stock_text_shop(s))
 		return
 	for p: Dictionary in Content.parts.values():
 		var c: String = p.category
@@ -90,6 +93,27 @@ func _stock_text_shop(s: Dictionary) -> String:
 			var n := Game.state.items.values().filter(func(i): return i.kind == s.item_kind).size()
 			return "%d owned" % n
 	return ""
+
+
+func _licence_row(s: Dictionary) -> void:
+	## One-off licences (night shift): bought once, yours straight away.
+	var owned := Game.state.has_licence(str(s.get("licence", s.id)))
+	var c := card(Color(0.97, 0.96, 1.0))
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 18)
+	c.add_child(h)
+	h.add_child(pill(" 🌙 ", Color(0.2, 0.22, 0.45), Color.WHITE, 22))
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(v)
+	v.add_child(l(str(s.name), 20))
+	v.add_child(para(str(s.get("desc", "")), 15, SUB, 700))
+	h.add_child(l("Owned ✔" if owned else "One-off", 17, GREEN if owned else SUB))
+	h.add_child(l(GameState.format_money(int(s.price)), 22))
+	var price := int(s.price)
+	h.add_child(button("Licensed" if owned else "Buy licence", func(): Game.request("shop_buy", {"id": str(s.id)}), GREEN,
+		owned or Game.state.cash - price < int(Content.econ("overdraft_warning", -500))))
+	_list.add_child(c)
 
 
 func _row(id: String, name: String, price: int, desc: String, stock: String) -> void:
