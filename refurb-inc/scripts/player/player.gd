@@ -227,7 +227,7 @@ func _physics_process(delta: float) -> void:
 	_crouch = move_toward(_crouch, 1.0 if crouching else 0.0, delta * 6.0)
 	var sprinting := not crouching and not ui_mode and Input.is_action_pressed("sprint") and input.y < 0.1
 	var speed := CROUCH_SPEED if crouching else (SPRINT_SPEED if sprinting else WALK_SPEED)
-	speed *= _carry_speed_mult() * (1.12 if has_tea() else 1.0)
+	speed *= _carry_speed_mult() * (1.12 if has_tea() else 1.0) * (float(Sim.overtime_cfg().get("tired_walk_mult", 0.85)) if is_tired() else 1.0)
 	var wish := (transform.basis * Vector3(input.x, 0, input.y))
 	wish.y = 0
 	wish = wish.normalized() * speed * minf(input.length(), 1.0)
@@ -414,7 +414,7 @@ func _update_interaction(delta: float) -> void:
 				var mate := _give_target()
 				_give_to = mate.peer_id if mate else 0
 				if mate:
-					info.prompt = "[E] Give %s this brew  ·  [Q] Put down" % Net.display_name(mate.peer_id)
+					info.prompt = "[E] Give %s this brew  ·  [Q] Put down" % Sim.peer_name(Game.state, mate.peer_id)
 				elif float(top.data.get("fill", 0.0)) > 0.05:
 					info.prompt = "[E] Drink  ·  [Q] Put down"
 			if node and node.has_method("hover_info"):
@@ -441,7 +441,8 @@ func _update_interaction(delta: float) -> void:
 			var host_station := _station_for(_hold_target)
 			if host_station and host_station.has_method("hold_progress") and _hold_progress == 0.0:
 				host_station.hold_progress(true)
-			_hold_progress += delta / maxf(float(ha.secs), 0.05)
+			var tired_mult := float(Sim.overtime_cfg().get("tired_hold_mult", 1.25)) if is_tired() else 1.0
+			_hold_progress += delta / maxf(float(ha.secs) * tired_mult, 0.05)
 			hold_changed.emit(minf(_hold_progress, 1.0), str(ha.get("label", "")))
 			if _hold_progress >= 1.0:
 				_hold_consumed = true
@@ -621,7 +622,7 @@ func _give_target() -> Node3D:
 	var best: Node3D = null
 	var best_d := 2.6
 	for p in lr.players.values():
-		if p == self or not is_instance_valid(p):
+		if p == self or not is_instance_valid(p) or not (p as Node3D).visible:
 			continue
 		var chest: Vector3 = (p as Node3D).global_position + Vector3(0, 1.25, 0)
 		var to := chest - camera.global_position
@@ -634,6 +635,19 @@ func _give_target() -> Node3D:
 
 func has_tea() -> bool:
 	return _tea_until > Game.state.minute
+
+
+static func tired_now(st: GameState, tea: bool) -> bool:
+	## Overtime in the small hours (night shift licence) wears you down — a brew sorts it out for a while.
+	if tea or not st.overtime_active():
+		return false
+	var cfg := Sim.overtime_cfg()
+	var h := st.minute_of_day() / 60.0
+	return h >= float(cfg.get("tired_from_hour", 0)) and h < float(cfg.get("tired_until_hour", 6))
+
+
+func is_tired() -> bool:
+	return tired_now(Game.state, has_tea())
 
 
 func give_tea(minutes: float = TEA_MINUTES, msg: String = "Lovely brew. You feel sharper for the next hour.") -> void:
@@ -664,7 +678,7 @@ func drink_tea(mug_item: Item = null) -> void:
 		var by := int(d.get("by", 0))
 		if by != 0 and by != peer_id:
 			minutes = TEA_MINUTES * 1.5
-			msg = "A brew made by %s. Proper teamwork — you're flying for 90 minutes." % Net.display_name(by)
+			msg = "A brew made by %s. Proper teamwork — you're flying for 90 minutes." % Sim.peer_name(Game.state, by)
 		elif not d.get("milk", false):
 			msg = "Black tea. Bold. You feel sharper for the next hour."
 		if now - float(d.get("t", now)) > 420.0:

@@ -51,11 +51,20 @@ func test_wages_and_pay_rises() -> void:
 	var key := Sim.player_key(StaffView.peer_of(id))
 	for sk in s.player(key).xp:
 		s.player(key).xp[sk] = Staff.xp_for_level(8)
-	# …so Friday brings a pay rise and the wages leave the account.
+	# …so at close they ask for a rise (rises aren't automatic — you give them in the Staff app),
+	# and Friday's wages leave the account.
+	sim.advance_minutes(GameState.MIN_PER_DAY)
+	check(int(s.staff[id].get("wants_rise", 0)) > before, "they ask for a rise once their skills outgrow their pay")
+	check(s.totals.get("inbox", []).any(func(m): return str(m.subject) == "Pay review?"), "by email")
+	sim.start_next_day()
 	while s.weekday() != int(Content.econ("rent_due_weekday", 4)):
 		sim.advance_minutes(GameState.MIN_PER_DAY)
 		sim.start_next_day()
 	sim.advance_minutes(GameState.MIN_PER_DAY)
 	var paid := s.ledger.filter(func(e): return str(e.cat) == "wages")
 	check(not paid.is_empty(), "wages paid on Friday")
+	eq(int(s.staff[id].wage), before, "no automatic rise")
+	check(sim.execute(1, "pay_rise", {"staff": id}).ok, "give them the rise")
 	check(int(s.staff[id].wage) > before, "pay rise after levelling up (£%d → £%d)" % [before, int(s.staff[id].wage)])
+	eq(int(s.staff[id].wage), StaffMorale.fair_wage(s, s.staff[id]), "up to what their skills are worth")
+	check(not s.staff[id].has("wants_rise"), "and they stop asking")

@@ -358,6 +358,164 @@ func _plan_buy() -> Array:
 	return steps
 
 
+# ================================================================= tea breaks
+
+const MATE_CHANCE := 0.35       # how often they make one for a colleague too
+
+
+func _kitchen() -> String:
+	var hosts := _hosts("tea")
+	return hosts[0] if not hosts.is_empty() else ""
+
+
+func plan_tea() -> Array:
+	## A proper tea break through the real kitchen commands: mugs out, kettle on, wait, pour, milk, take theirs
+	## (and sometimes one for a player, handed over with give_mug), drink it, wash up.
+	var host := _kitchen()
+	if host == "":
+		return []
+	var spot := _slot_pos(host + ":mug0")
+	if spot == Vector3.INF:
+		return []
+	var mate := _brew_mate()
+	var want := 2 if mate != 0 else 1
+	var boil := float(Content.econ("kettle_boil_secs", 16.0))
+	var steps: Array = [
+		["walk", spot],
+		["call", _mugs_out.bind(host, want), "Making a brew"],
+		["call", _boil.bind(host), "Making a brew"],
+		["wait", boil + 0.6, "Waiting for the kettle"],
+		["call", _tea_act.bind(host, "pour"), "Making a brew"],
+		["wait", 1.4 + want * 0.95 + 0.9, "Making a brew"],
+		["call", _tea_act.bind(host, "milk"), "Making a brew"],
+		["wait", 1.6, "Making a brew"],
+		["call", _take_brew.bind(host), "Making a brew"],
+	]
+	if mate != 0:
+		steps.append(["call", _take_second.bind(host), "Making a brew"])
+		steps.append(["walk", _beside.bind(mate, spot)])
+		steps.append(["call", _give.bind(mate), "Bringing a brew over"])
+	steps.append(["hold", 7.0, "drink_mug", {}, "On a tea break"])
+	if mate != 0:
+		steps.append(["walk", spot])
+	steps.append(["call", _wash, "Washing up"])
+	return steps
+
+
+func plan_drink_held() -> Array:
+	## Someone brought them a brew: drink it now, then wash the mug up.
+	var by := 0
+	var held := s.held_by(peer)
+	if not held.is_empty():
+		by = int(held.back().data.get("by", 0))
+	var who := Sim.peer_name(s, by) if by != 0 and by != peer else ""
+	var steps: Array = [["hold", 6.0, "drink_mug", {}, ("A brew from %s — lovely" % who) if who != "" else "On a tea break"]]
+	var host := _kitchen()
+	var spot := _slot_pos(host + ":mug0") if host != "" else Vector3.INF
+	if spot != Vector3.INF:
+		steps.append(["walk", spot])
+	steps.append(["call", _wash, "Washing up"])
+	return steps
+
+
+func _tea_act(host: String, act: String) -> bool:
+	## Pour / milk: if someone else got there first, the brew is still on the worktop — carry on regardless.
+	sim.execute(peer, "tea", {"station": host, "act": act})
+	return true
+
+
+func _take_second(host: String) -> bool:
+	_take_brew(host)
+	return true
+
+
+func _give(mate: int) -> bool:
+	## Hand the colleague their brew (if they've wandered off or filled their hands, drink both — no waste).
+	sim.execute(peer, "give_mug", {"to": mate})
+	return true
+
+
+func _wash() -> bool:
+	wash_up_or_drop()
+	return true
+
+
+func _mugs_out(host: String, want: int) -> bool:
+	var empty := sim._tea_mugs(host).filter(func(m): return float(m.data.get("fill", 0.0)) <= 0.05).size()
+	for i in maxi(want - empty, 0):
+		if not sim.execute(peer, "tea", {"station": host, "act": "mug"}).ok:
+			return i > 0 or empty > 0
+	return true
+
+
+func _boil(host: String) -> bool:
+	var st: Dictionary = s.stations.get(host, {})
+	if not st.get("kettle", {}).is_empty():
+		return true          # already on, or boiled and waiting: either way, it'll do
+	return sim.execute(peer, "tea", {"station": host, "act": "boil"}).ok
+
+
+func _take_brew(host: String) -> bool:
+	## Pick up a fresh brew from the worktop: one they poured, or any just-made one if someone beat them to it.
+	var now := s.belt_clock
+	var best: Item = null
+	for m: Item in sim._tea_mugs(host):
+		if float(m.data.get("fill", 0.0)) <= 0.05 or str(m.data.get("brew", "")) == "":
+			continue
+		if int(m.data.get("by", 0)) == peer:
+			best = m
+			break
+		if best == null and now - float(m.data.get("t", now)) < 90.0:
+			best = m
+	return best != null and sim.execute(peer, "pick_up", {"item": best.id}).ok
+
+
+func wash_up_or_drop() -> void:
+	## Every mug in their hands into the sink (or put down, if there's no kitchen).
+	var host := _kitchen()
+	for i in 6:
+		var held := s.held_by(peer)
+		if held.is_empty() or held.back().kind != Item.KIND_MUG:
+			return
+		if host == "" or not sim.execute(peer, "place", {"slot": host + ":sink"}).ok:
+			var lr := LevelRoot.current
+			var v: Node3D = lr.players.get(peer) if lr else null
+			var p := v.global_position + v.global_basis.z * 0.5 if v else Vector3(0, 0, 0)
+			sim.execute(peer, "drop", {"p": [p.x, 0.3, p.z], "r": [0, 0, 0, 1]})
+
+
+func _brew_mate() -> int:
+	## Now and then they make one for a player who's here with free hands (or already carrying brews).
+	if randf() > MATE_CHANCE:
+		return 0
+	var lr := LevelRoot.current
+	if lr == null:
+		return 0
+	var options: Array = []
+	for p in sim.active_peers:
+		if not lr.players.has(p):
+			continue
+		var held := s.held_by(int(p))
+		if held.is_empty() or held[0].kind == Item.KIND_MUG:
+			options.append(int(p))
+	return options[randi() % options.size()] if not options.is_empty() else 0
+
+
+func _beside(mate: int, fallback: Vector3) -> Vector3:
+	## Where to stand to hand a colleague a brew: just short of them, on our side.
+	var lr := LevelRoot.current
+	var n: Node3D = lr.players.get(mate) if lr else null
+	if n == null or not is_instance_valid(n):
+		return fallback
+	var p := Vector3(n.global_position.x, 0.0, n.global_position.z)
+	var me: Node3D = lr.players.get(peer)
+	if me:
+		var to := Vector3(me.global_position.x, 0.0, me.global_position.z) - p
+		if to.length() > 0.05:
+			p += to.normalized() * 0.8
+	return p
+
+
 func _plan_sell() -> Array:
 	var spot := _office_spot()
 	var steps: Array = []

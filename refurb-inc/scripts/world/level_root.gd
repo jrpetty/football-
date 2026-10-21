@@ -81,6 +81,10 @@ func _ready() -> void:
 	if menu_mode:
 		_preview_fixtures()
 		return
+	# Night outside when working late (night shift licence): sky, sun and yard floodlights.
+	var dn := DayNight.new()
+	add_child(dn)
+	dn.setup(self)
 	if not Game.in_game:
 		# Running this level directly from the editor (F6): start a fresh solo game here.
 		Game.new_game()
@@ -120,6 +124,9 @@ func _start_ambience() -> void:
 func _apply_graphics() -> void:
 	if environment:
 		Settings.apply_graphics(environment.environment, sun)
+	var dn := get_node_or_null("DayNight") as DayNight
+	if dn and dn.darkness_now > 0.0:
+		dn.apply(dn.darkness_now)
 
 
 func _on_state_reset() -> void:

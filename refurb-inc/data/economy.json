@@ -162,6 +162,21 @@
     {"id": "fast", "name": "Fast", "speed_mult": 1.7, "power_mult": 1.4, "cost": 350},
     {"id": "express", "name": "Express", "speed_mult": 2.5, "power_mult": 1.9, "cost": 800}
   ],
+  "overtime": {
+    "_comment": "Night shift licence (shop.json): at day_end_hour the host may keep working until one of these end hours (24+ = the next morning). Time runs at the normal speed; lorries and couriers keep their usual schedule. Staff on shift earn pay_mult × their hourly rate (weekly wage / hours_per_week) for every overtime hour, paid with Friday's wages. Players get tired after tired_from_hour (walk and hold actions slow down) until they have a brew. Floodlights draw flood_kw each (2 + loading bays) while it's dark.",
+    "options": [
+      {"id": "20", "name": "Until 20:00", "end_hour": 20},
+      {"id": "22", "name": "Until 22:00", "end_hour": 22},
+      {"id": "night", "name": "Through the night (06:00)", "end_hour": 30}
+    ],
+    "pay_mult": 1.5,
+    "hours_per_week": 40,
+    "tired_from_hour": 0,
+    "tired_until_hour": 6,
+    "tired_walk_mult": 0.85,
+    "tired_hold_mult": 1.25,
+    "flood_kw": 0.15
+  },
   "kettle_kwh": 0.11,
   "kettle_boil_secs": 16.0,
   "kettle_cold_secs": 300.0,
