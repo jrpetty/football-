@@ -364,12 +364,11 @@ func _rebuild_items() -> void:
 		v.queue_free()
 	item_views.clear()
 	pending_views.clear()
-	# Pallets first so their slots exist before the units on them.
+	# Pallet trucks, then pallets (their slots must exist before the units on them), then everything else.
 	var ids: Array = Game.state.items.keys()
-	ids.sort_custom(func(a, b):
-		var ka: bool = Game.state.items[a].kind == Item.KIND_PALLET
-		var kb: bool = Game.state.items[b].kind == Item.KIND_PALLET
-		return ka and not kb)
+	var order := func(it: Item) -> int:
+		return 0 if it.kind == Item.KIND_PALLET_TRUCK else (1 if it.kind == Item.KIND_PALLET else 2)
+	ids.sort_custom(func(a, b): return order.call(Game.state.items[a]) < order.call(Game.state.items[b]))
 	for id in ids:
 		_update_item(id)
 
@@ -377,7 +376,7 @@ func _rebuild_items() -> void:
 func _update_item(id: int) -> void:
 	var it: Item = Game.state.items.get(id)
 	var view: ItemView = item_views.get(id)
-	var visible_loc: bool = it != null and it.loc.get("t") in ["slot", "held", "loose"]
+	var visible_loc: bool = it != null and it.loc.get("t") in ["slot", "held", "loose", "pushed", "on_truck"]
 	if not visible_loc:
 		if view:
 			view.queue_free()

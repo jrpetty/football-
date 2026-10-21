@@ -58,6 +58,8 @@ var _net_pos := Vector3.ZERO
 var _net_yaw := 0.0
 var _net_pitch := 0.0
 var _tea_until := -1.0
+var _drink_pitch := 0.0      # head tips back while sipping (added to the look pitch)
+var _drinking := false
 
 # Placement mode (moving / installing equipment)
 var placing_id := ""
@@ -182,7 +184,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _apply_look() -> void:
 	rotation.y = _yaw
-	head.rotation.x = _pitch
+	head.rotation.x = _pitch + _drink_pitch
 
 
 func set_ui_mode(on: bool) -> void:
@@ -224,6 +226,13 @@ func _physics_process(delta: float) -> void:
 	horiz = horiz.move_toward(wish, rate * speed * delta)
 	velocity.x = horiz.x
 	velocity.z = horiz.z
+	if my_truck() and _truck_blocked(Vector3(velocity.x, 0, velocity.z) * delta * 3.0):
+		# The forks/pallet would hit something: stop the part of the motion that drives into it.
+		var fwd := -global_transform.basis.z
+		var along := Vector3(velocity.x, 0, velocity.z).dot(fwd)
+		if along > 0.0:
+			velocity.x -= fwd.x * along
+			velocity.z -= fwd.z * along
 	move_and_slide()
 	# Landing dip
 	if on_floor and not _was_on_floor and velocity.y <= 0.0:
@@ -236,8 +245,74 @@ func _physics_process(delta: float) -> void:
 
 
 func _carry_speed_mult() -> float:
+	var truck := my_truck()
+	if truck:
+		# Pallet trucks are slower than walking, slower again with a load; Pallet pro (Hauling 4) helps.
+		var m := 0.82 if Game.sim == null or Game.sim.truck_load(truck) == null else 0.6
+		if Game.state.has_perk(Sim.player_key(peer_id), "pallet_pro"):
+			m *= 1.3
+		return minf(m, 1.0)
 	var n := Game.state.held_by(peer_id).size()
 	return 1.0 - 0.05 * n
+
+
+func my_truck() -> Item:
+	for it: Item in Game.state.items.values():
+		if it.kind == Item.KIND_PALLET_TRUCK and it.loc.get("t") == "pushed" and int(it.loc.get("peer", 0)) == peer_id:
+			return it
+	return null
+
+
+func _truck_load_item(truck: Item) -> Item:
+	for it: Item in Game.state.items.values():
+		if it.kind == Item.KIND_PALLET and it.loc.get("t") == "on_truck" and int(it.loc.get("truck", 0)) == truck.id:
+			return it
+	return null
+
+
+func _fork_centre() -> Vector3:
+	# World position of the fork centre of the truck we're pushing.
+	return (global_transform * ItemView.PUSHED * ItemView.ON_FORKS).origin
+
+
+func _truck_target_pallet() -> ItemView:
+	## The loose pallet the forks are under (close to the fork centre), if any.
+	var lr := LevelRoot.current
+	if lr == null:
+		return null
+	var fc := _fork_centre()
+	var best: ItemView = null
+	var best_d := 0.75
+	for v: ItemView in lr.item_views.values():
+		if not is_instance_valid(v) or v.kind != Item.KIND_PALLET or not v.visible:
+			continue
+		var it := Game.state.get_item(v.item_id)
+		if it == null or it.loc.get("t") != "loose":
+			continue
+		var pc := v.global_position
+		var d := Vector2(pc.x - fc.x, pc.z - fc.z).length()
+		if d < best_d and absf(pc.y - global_position.y) < 0.6:
+			best_d = d
+			best = v
+	return best
+
+
+func _truck_blocked(motion: Vector3) -> bool:
+	## Would the truck (and its pallet) hit a wall, shelf or bench if we moved by `motion`?
+	var truck := my_truck()
+	if truck == null or motion.length() < 0.0001:
+		return false
+	var loaded := _truck_load_item(truck) != null
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(0.82 if loaded else 0.55, 0.32, 1.25 if loaded else 1.0)
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = shape
+	q.collision_mask = 1
+	var xf := global_transform * ItemView.PUSHED
+	xf.origin += motion + Vector3(0, 0.28, 0) + xf.basis.z.normalized() * (0.22 if loaded else 0.25)
+	q.transform = xf
+	q.exclude = [get_rid()]
+	return not get_world_3d().direct_space_state.intersect_shape(q, 1).is_empty()
 
 
 func _update_head(delta: float, hspeed: float, sprinting: bool, on_floor: bool) -> void:
@@ -278,6 +353,22 @@ func _update_interaction(delta: float) -> void:
 		hit = ray.get_collision_point()
 		node = _find_interactable(ray.get_collider())
 	var held := Game.state.held_by(peer_id)
+	var truck_now := my_truck()
+	if truck_now:
+		var loaded := _truck_load_item(truck_now)
+		var tinfo := {"title": "Pallet truck", "lines": [], "prompt": "[Q] Let go"}
+		if loaded:
+			tinfo.lines = ["Carrying %s" % loaded.display_name()]
+			tinfo.prompt = "[E] Lower pallet · [Q] Let go"
+		elif _truck_target_pallet():
+			tinfo.lines = ["Forks are under a pallet."]
+			tinfo.prompt = "[E] Jack it up · [Q] Let go"
+		else:
+			tinfo.lines = ["Line the forks up under a pallet."]
+		_set_place_slot(null)
+		if tinfo.hash() != _hover_info.hash():
+			_set_hover(null, tinfo)
+		return
 	# Empty-handed and looking at a shelf/bench: target the item in the nearest space, not the furniture.
 	if held.is_empty() and node and node.has_method("item_view_near"):
 		var near: ItemView = node.item_view_near(hit)
@@ -416,6 +507,25 @@ func _find_interactable(collider: Object) -> Node:
 
 
 func _tap() -> void:
+	var truck := my_truck()
+	if truck:
+		var load_it := _truck_load_item(truck)
+		if load_it:
+			var v: ItemView = LevelRoot.current.item_views.get(load_it.id)
+			var xf := v.global_transform if v else global_transform
+			var q := xf.basis.get_rotation_quaternion()
+			Game.request("truck_lower", {"p": [xf.origin.x, maxf(xf.origin.y - 0.035, 0.0), xf.origin.z], "r": [q.x, q.y, q.z, q.w]})
+			Sfx.play_at("hydraulic", xf.origin, -10.0)
+		else:
+			var target := _truck_target_pallet()
+			if target:
+				var lr2 := LevelRoot.current
+				var tv2: ItemView = lr2.item_views.get(truck.id) if lr2 else null
+				var truck_yaw := tv2.global_basis.get_euler().y if tv2 else rotation.y
+				var rel := rad_to_deg(wrapf(target.global_basis.get_euler().y - truck_yaw, -PI, PI))
+				Game.request("truck_lift", {"pallet": target.item_id, "yaw": snappedf(rel, 90.0)})
+				Sfx.play_at("hydraulic", target.global_position, -10.0)
+		return
 	var held := Game.state.held_by(peer_id)
 	if not held.is_empty():
 		if _place_slot:
@@ -429,6 +539,21 @@ func _tap() -> void:
 
 
 func _drop() -> void:
+	var truck := my_truck()
+	if truck:
+		var lr := LevelRoot.current
+		var tv: ItemView = lr.item_views.get(truck.id) if lr else null
+		var txf := tv.global_transform if tv else global_transform * ItemView.PUSHED
+		var tq := txf.basis.get_rotation_quaternion()
+		var args := {"p": [txf.origin.x, maxf(txf.origin.y, 0.0), txf.origin.z], "r": [tq.x, tq.y, tq.z, tq.w]}
+		var load_it := _truck_load_item(truck)
+		if load_it and lr and lr.item_views.has(load_it.id):
+			var pxf: Transform3D = lr.item_views[load_it.id].global_transform
+			var pq := pxf.basis.get_rotation_quaternion()
+			args["pallet_p"] = [pxf.origin.x, maxf(pxf.origin.y - 0.035, 0.0), pxf.origin.z]
+			args["pallet_r"] = [pq.x, pq.y, pq.z, pq.w]
+		Game.request("release_truck", args)
+		return
 	var held := Game.state.held_by(peer_id)
 	if held.is_empty():
 		return
@@ -458,6 +583,158 @@ func has_tea() -> bool:
 func give_tea() -> void:
 	_tea_until = Game.state.minute + TEA_MINUTES
 	Game.toast.emit("Lovely brew. You feel sharper for the next hour.", "good")
+
+
+func drink_tea() -> void:
+	## First-person tea break: the mug comes up into view, tilts to your lips (head tips back a touch),
+	## a sip and an "ahh", then it's lowered away and the buff kicks in. Co-op players see your avatar drink.
+	if _drinking:
+		return
+	_drinking = true
+	if is_local and multiplayer.has_multiplayer_peer():
+		_rpc_drink.rpc()
+	if not is_local or camera == null:
+		_drinking = false
+		give_tea()
+		return
+	var mug := _make_mug()
+	camera.add_child(mug)
+	var rest := Vector3(0.34, -0.46, -0.42)
+	mug.position = rest
+	mug.rotation_degrees = Vector3(8, -20, -6)
+	var tw := create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(mug, "position", Vector3(0.07, -0.14, -0.28), 0.75).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_property(mug, "rotation_degrees", Vector3(4, -8, 4), 0.75).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	# Tip it to the lips.
+	var tw2 := create_tween()
+	tw2.set_parallel(true)
+	tw2.tween_property(mug, "position", Vector3(0.05, -0.115, -0.2), 0.55).set_trans(Tween.TRANS_SINE)
+	tw2.tween_property(mug, "rotation_degrees", Vector3(38, -14, 6), 0.55).set_trans(Tween.TRANS_SINE)
+	tw2.tween_property(self, "_drink_pitch", deg_to_rad(13.0), 0.55).set_trans(Tween.TRANS_SINE)
+	await tw2.finished
+	Sfx.play_at("tea_sip", camera.global_position, -4.0)
+	await get_tree().create_timer(0.85).timeout
+	give_tea()
+	# Down again.
+	var tw3 := create_tween()
+	tw3.set_parallel(true)
+	tw3.tween_property(mug, "position", Vector3(0.07, -0.15, -0.3), 0.5).set_trans(Tween.TRANS_SINE)
+	tw3.tween_property(mug, "rotation_degrees", Vector3(2, -10, 4), 0.5).set_trans(Tween.TRANS_SINE)
+	tw3.tween_property(self, "_drink_pitch", 0.0, 0.5).set_trans(Tween.TRANS_SINE)
+	await tw3.finished
+	Sfx.play_at("tea_ahh", camera.global_position, -6.0)
+	await get_tree().create_timer(0.5).timeout
+	var tw4 := create_tween()
+	tw4.set_parallel(true)
+	tw4.tween_property(mug, "position", rest + Vector3(0.05, -0.15, 0.0), 0.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tw4.tween_property(mug, "rotation_degrees", Vector3(10, -25, -10), 0.6)
+	await tw4.finished
+	mug.queue_free()
+	_drinking = false
+
+
+@rpc("authority", "call_remote", "reliable")
+func _rpc_drink() -> void:
+	if avatar is CharacterRig:
+		(avatar as CharacterRig).play_drink()
+
+
+func _make_mug() -> Node3D:
+	## A proper Refurb Inc mug: tapered white body, orange band, handle, a brew inside and a wisp of steam.
+	var mug := Node3D.new()
+	mug.name = "TeaMug"
+	var body := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.043
+	cm.bottom_radius = 0.038
+	cm.height = 0.1
+	cm.radial_segments = 28
+	body.mesh = cm
+	body.material_override = Mats.color(Color(0.96, 0.95, 0.93), 0.25)
+	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mug.add_child(body)
+	var band := MeshInstance3D.new()
+	var bc := CylinderMesh.new()
+	bc.top_radius = 0.0425
+	bc.bottom_radius = 0.0415
+	bc.height = 0.022
+	bc.radial_segments = 28
+	band.mesh = bc
+	band.position.y = 0.012
+	band.material_override = Mats.color(Color(0.95, 0.5, 0.12), 0.35)
+	mug.add_child(band)
+	var tea := MeshInstance3D.new()
+	var tc := CylinderMesh.new()
+	tc.top_radius = 0.039
+	tc.bottom_radius = 0.039
+	tc.height = 0.004
+	tea.mesh = tc
+	tea.position.y = 0.04
+	tea.material_override = Mats.color(Color(0.42, 0.25, 0.12), 0.08)
+	mug.add_child(tea)
+	var handle := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 0.018
+	tm.outer_radius = 0.028
+	tm.rings = 16
+	tm.ring_segments = 8
+	handle.mesh = tm
+	handle.rotation_degrees = Vector3(90, 0, 0)
+	handle.position = Vector3(0.046, 0.0, 0)
+	handle.material_override = body.material_override
+	mug.add_child(handle)
+	var logo := Label3D.new()
+	logo.text = "REFURB INC."
+	logo.font_size = 22
+	logo.pixel_size = 0.00045
+	logo.modulate = Color(0.1, 0.1, 0.12)
+	logo.position = Vector3(0, -0.012, 0.0435)
+	mug.add_child(logo)
+	var steam := GPUParticles3D.new()
+	steam.amount = 14
+	steam.lifetime = 1.6
+	steam.local_coords = false
+	steam.position.y = 0.05
+	var pm := ParticleProcessMaterial.new()
+	pm.direction = Vector3(0, 1, 0)
+	pm.spread = 12.0
+	pm.initial_velocity_min = 0.03
+	pm.initial_velocity_max = 0.07
+	pm.gravity = Vector3(0, 0.02, 0)
+	pm.scale_min = 0.6
+	pm.scale_max = 1.2
+	var grad := Gradient.new()
+	grad.set_color(0, Color(1, 1, 1, 0.16))
+	grad.set_color(1, Color(1, 1, 1, 0.0))
+	var gt := GradientTexture1D.new()
+	gt.gradient = grad
+	pm.color_ramp = gt
+	steam.process_material = pm
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.035, 0.035)
+	var sm := StandardMaterial3D.new()
+	sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sm.vertex_color_use_as_albedo = true
+	sm.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	# Soft round puff (radial gradient) so the steam reads as wisps, not squares.
+	var puff := GradientTexture2D.new()
+	puff.fill = GradientTexture2D.FILL_RADIAL
+	puff.fill_from = Vector2(0.5, 0.5)
+	puff.fill_to = Vector2(0.5, 0.0)
+	var pg := Gradient.new()
+	pg.set_color(0, Color(1, 1, 1, 1))
+	pg.set_color(1, Color(1, 1, 1, 0))
+	puff.gradient = pg
+	puff.width = 64
+	puff.height = 64
+	sm.albedo_texture = puff
+	quad.material = sm
+	steam.draw_pass_1 = quad
+	mug.add_child(steam)
+	return mug
 
 
 # ================================================================= networking

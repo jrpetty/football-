@@ -40,7 +40,10 @@ func new_game(seed_value: int = 0) -> void:
 		state.mark("fixture", f.id)
 	for si in Content.econ("start_items", []):
 		var it := state.new_item(si.kind)
-		state.set_loc(it, {"t": "slot", "slot": si.slot})
+		if si.has("p"):
+			state.set_loc(it, {"t": "loose", "p": si.p, "r": si.get("r", [0, 0, 0, 1])})
+		else:
+			state.set_loc(it, {"t": "slot", "slot": si.slot})
 	_init_seller_cycles()
 	refresh_lot_board(true)
 	state.say("Day 1. The garage is yours. Check the office PC for lots.", "info")
@@ -83,7 +86,9 @@ func c_pick_up(peer: int, a: Dictionary) -> Dictionary:
 	if it == null or it.loc.get("t") in ["held", "in", "gone"]:
 		return _fail("")
 	if not it.is_carryable():
-		return _fail("Too heavy to lift — you'll need a pallet truck.")
+		return _fail("Too heavy to lift — you'll need a pallet truck." if it.kind == Item.KIND_PALLET else "")
+	if pushed_truck(peer) != null:
+		return _fail("Let go of the pallet truck first (Q).")
 	var held := state.held_by(peer)
 	if not held.is_empty():
 		# Stacks are one kind and size only (a pile of laptops), and small things (USBs) are carried alone.
@@ -101,6 +106,73 @@ func c_pick_up(peer: int, a: Dictionary) -> Dictionary:
 	if it.kind == Item.KIND_UNIT:
 		state.add_xp(player_key(peer), "hauling", int(Content.econ("xp", {}).get("haul", 1)))
 		BusinessStats.act(state, peer, "hauled")
+	return _ok()
+
+
+# ================================================================= pallet truck
+
+func pushed_truck(peer: int) -> Item:
+	for it: Item in state.items.values():
+		if it.kind == Item.KIND_PALLET_TRUCK and it.loc.get("t") == "pushed" and int(it.loc.get("peer", 0)) == peer:
+			return it
+	return null
+
+
+func truck_load(truck: Item) -> Item:
+	for it: Item in state.items.values():
+		if it.kind == Item.KIND_PALLET and it.loc.get("t") == "on_truck" and int(it.loc.get("truck", 0)) == truck.id:
+			return it
+	return null
+
+
+func c_take_truck(peer: int, a: Dictionary) -> Dictionary:
+	var it := state.get_item(int(a.get("item", 0)))
+	if it == null or it.kind != Item.KIND_PALLET_TRUCK:
+		return _fail("")
+	if it.loc.get("t") != "loose":
+		return _fail("Someone's already using that pallet truck.")
+	if not state.held_by(peer).is_empty():
+		return _fail("Put down what you're carrying first.")
+	if pushed_truck(peer) != null:
+		return _fail("You've already got a pallet truck.")
+	state.set_loc(it, {"t": "pushed", "peer": peer})
+	return _ok()
+
+
+func c_truck_lift(peer: int, a: Dictionary) -> Dictionary:
+	var truck := pushed_truck(peer)
+	var pallet := state.get_item(int(a.get("pallet", 0)))
+	if truck == null or pallet == null or pallet.kind != Item.KIND_PALLET:
+		return _fail("")
+	if truck_load(truck) != null:
+		return _fail("There's already a pallet on the forks.")
+	if pallet.loc.get("t") != "loose":
+		return _fail("That pallet's busy.")
+	# yaw = the pallet's turn relative to the truck (snapped to 90°), so it keeps the way it was lying.
+	state.set_loc(pallet, {"t": "on_truck", "truck": truck.id, "yaw": snappedf(float(a.get("yaw", 90.0)), 90.0)})
+	state.add_xp(player_key(peer), "hauling", int(Content.econ("xp", {}).get("pallet_move", 3)))
+	return _ok()
+
+
+func c_truck_lower(peer: int, a: Dictionary) -> Dictionary:
+	var truck := pushed_truck(peer)
+	if truck == null:
+		return _fail("")
+	var pallet := truck_load(truck)
+	if pallet == null:
+		return _fail("")
+	state.set_loc(pallet, {"t": "loose", "p": a.get("p", [0, 0, 0]), "r": a.get("r", [0, 0, 0, 1])})
+	return _ok()
+
+
+func c_release_truck(peer: int, a: Dictionary) -> Dictionary:
+	var truck := pushed_truck(peer)
+	if truck == null:
+		return _fail("")
+	var pallet := truck_load(truck)
+	if pallet:
+		state.set_loc(pallet, {"t": "loose", "p": a.get("pallet_p", a.get("p", [0, 0, 0])), "r": a.get("pallet_r", [0, 0, 0, 1])})
+	state.set_loc(truck, {"t": "loose", "p": a.get("p", [0, 0, 0]), "r": a.get("r", [0, 0, 0, 1])})
 	return _ok()
 
 
@@ -127,9 +199,25 @@ func c_place(peer: int, a: Dictionary) -> Dictionary:
 	var check := _station_accepts(station_id, slot_id, it)
 	if not check.ok:
 		return check
+	if slot_id.begins_with("i") and it.kind == Item.KIND_UNIT:
+		_adapt_pallet(int(slot_id.substr(1).get_slice(":", 0)), it)
 	state.set_loc(it, {"t": "slot", "slot": slot_id})
 	_on_entered_slot(it, slot_id, peer)
 	return _ok()
+
+
+func _adapt_pallet(pallet_id: int, unit_it: Item) -> void:
+	## An empty pallet takes the stacking grid of the first unit put on it (laptops 3×2, 2U servers 2×1…).
+	var pallet := state.get_item(pallet_id)
+	if pallet == null or pallet.data.has("cell"):
+		return
+	for it: Item in state.items.values():
+		if it.loc.get("t") == "slot" and str(it.loc.get("slot", "")).begins_with("i%d:" % pallet_id):
+			return
+	var lay := pallet_layout(unit_it.unit.model_id)
+	pallet.data["cell"] = lay.cell
+	pallet.data["grid"] = lay.grid
+	state.mark("item", pallet_id)
 
 
 func c_drop(peer: int, a: Dictionary) -> Dictionary:
@@ -152,8 +240,10 @@ func c_settle(_peer: int, a: Dictionary) -> Dictionary:
 
 
 func c_drop_all_held(peer: int, a: Dictionary) -> Dictionary:
-	## Player disconnected / left: drop everything where they stood.
+	## Player disconnected / left: drop everything where they stood (and let go of any pallet truck).
 	var p: Array = a.get("p", [0, 1, 0])
+	if pushed_truck(peer) != null:
+		c_release_truck(peer, {"p": [p[0], 0.02, p[2]], "pallet_p": [p[0], 0.02, float(p[2]) + 1.3]})
 	var k := 0
 	for it: Item in state.held_by(peer):
 		state.set_loc(it, {"t": "loose", "p": [p[0], p[1] + 0.1 * k, p[2]], "r": [0, 0, 0, 1]})
@@ -950,6 +1040,20 @@ func _next_courier_after(t: float) -> float:
 
 
 func deliver_parcel(contents: Dictionary, pos: Vector3 = Vector3.ZERO) -> Item:
+	# Pallets and pallet trucks don't come in a box: the courier leaves them by the parcel.
+	var items: Array = contents.get("items", []).duplicate()
+	var bulky := items.filter(func(k): return k in [Item.KIND_PALLET, Item.KIND_PALLET_TRUCK])
+	var n := 0
+	for k in bulky:
+		var big := state.new_item(k)
+		state.set_loc(big, {"t": "loose", "p": [pos.x + 1.4 + n * 1.3, pos.y, pos.z], "r": [0, 0, 0, 1]})
+		items.erase(k)
+		n += 1
+	contents = contents.duplicate(true)
+	contents["items"] = items
+	if items.is_empty() and contents.get("parts", {}).is_empty() and contents.get("consumables", {}).is_empty():
+		state.say("Your delivery has been left by the door.", "info")
+		return null
 	var parcel := state.new_item(Item.KIND_PARCEL)
 	parcel.data = contents.duplicate(true)
 	state.set_loc(parcel, {"t": "loose", "p": [pos.x, pos.y, pos.z], "r": [0, 0, 0, 1]})

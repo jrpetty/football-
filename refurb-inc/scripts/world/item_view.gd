@@ -8,9 +8,14 @@ const KIND_VISUAL := {
 	"usb_test": {"placeholder": "usb_stick", "params": {"color": Color(0.1, 0.45, 0.9)}, "model": "res://assets/models/items/usb_stick/usb_stick.tscn", "tint": Color(0.35, 0.6, 1.0), "size": Vector3(0.022, 0.012, 0.06), "mass": 0.02, "label": "DIAG"},
 	"usb_image": {"placeholder": "usb_stick", "params": {"color": Color(0.95, 0.5, 0.1)}, "model": "res://assets/models/items/usb_stick/usb_stick.tscn", "size": Vector3(0.022, 0.012, 0.06), "mass": 0.02, "label": "PANE"},
 	"parcel": {"placeholder": "cardboard_box", "params": {"size": Vector3(0.42, 0.26, 0.32)}, "model": "res://assets/models/props/box_parcel/box_parcel.tscn", "size": Vector3(0.42, 0.26, 0.32), "mass": 2.0},
+	"pallet_truck": {"placeholder": "pallet", "model": "res://assets/models/vehicles/pallet_truck/pallet_truck.tscn", "size": Vector3(0.48, 1.03, 1.55), "mass": 60.0},
 	"package": {"placeholder": "cardboard_box", "params": {"size": Vector3(0.44, 0.12, 0.34), "label": true}, "model": "res://assets/models/props/box_laptop/box_laptop.tscn", "size": Vector3(0.44, 0.12, 0.34), "mass": 2.2},
 }
 const LARGE_BOX_MODEL := "res://assets/models/props/box_heavy/box_heavy.tscn"
+## Where a jacked-up pallet sits relative to the pallet truck (forks run along the pallet's 1.2 m side).
+const ON_FORKS := Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(0, 0.035, 0.22))
+## Where a pushed pallet truck sits relative to the player (forks ahead, handle at the player's hands).
+const PUSHED := Transform3D(Basis(Vector3.UP, PI), Vector3(0, 0.0, -1.02))
 
 var item_id: int = 0
 var kind: String = ""
@@ -95,9 +100,28 @@ func setup(it: Item) -> void:
 	apply_state(it, true)
 
 
+var _built_cell = null
+
+
+func _rebuild_pallet_slots(it: Item) -> void:
+	for s: SnapSlot in pallet_slots:
+		s.unregister()
+		s.queue_free()
+	pallet_slots.clear()
+	_build_pallet_slots(it)
+	# Re-seat anything already on the pallet onto the new slot nodes.
+	if LevelRoot.current:
+		for other: Item in Game.state.items.values():
+			if other.loc.get("t") == "slot" and str(other.loc.get("slot", "")).begins_with("i%d:" % item_id):
+				var v: ItemView = LevelRoot.current.item_views.get(other.id)
+				if v:
+					v.apply_state(other)
+
+
 func _build_pallet_slots(it: Item) -> void:
 	# Grid sized by the delivery (Sim.pallet_layout): cols × rows per layer, layers stacked by the tallest unit.
 	# Old saves without a layout get the original laptop grid (3 × 2, 26 mm layers).
+	_built_cell = it.data.get("cell", null)
 	var cell: Array = it.data.get("cell", [0.4, 0.026, 0.4])
 	var grid: Array = it.data.get("grid", [3, 2])
 	var cols := int(grid[0])
@@ -145,6 +169,23 @@ func apply_state(it: Item, initial: bool = false) -> void:
 				return
 			_follow(slot, Transform3D.IDENTITY)
 			collision_layer = 1 << 2
+		"pushed":
+			var pusher: Node3D = lr.players.get(int(loc.get("peer", 0))) if lr else null
+			if pusher == null:
+				visible = false
+				return
+			_follow(pusher, PUSHED)
+			collision_layer = 0
+		"on_truck":
+			var truck_view: ItemView = lr.item_views.get(int(loc.get("truck", 0))) if lr else null
+			if truck_view == null:
+				lr.pending_views[item_id] = true
+				visible = false
+				return
+			var on_forks := ON_FORKS
+			on_forks.basis = Basis(Vector3.UP, deg_to_rad(float(loc.get("yaw", 90.0))))
+			_follow(truck_view, on_forks)
+			collision_layer = 1 << 2
 		"held":
 			var peer := int(loc.get("peer", 0))
 			var player: Node3D = lr.players.get(peer) if lr else null
@@ -169,7 +210,7 @@ func apply_state(it: Item, initial: bool = false) -> void:
 			var xf := Transform3D(Basis(Quaternion(r[0], r[1], r[2], r[3]).normalized()), Vector3(p[0], p[1], p[2]))
 			_settle_reported = false
 			if Game.is_host():
-				freeze = kind == Item.KIND_PALLET   # pallets are moved by machines, not shoved by players
+				freeze = kind in [Item.KIND_PALLET, Item.KIND_PALLET_TRUCK]   # moved by hand trucks, not shoved
 				global_transform = xf
 				if not freeze:
 					sleeping = false
@@ -181,6 +222,8 @@ func apply_state(it: Item, initial: bool = false) -> void:
 				_target_xf = xf
 		_:
 			visible = false
+	if kind == Item.KIND_PALLET and it.data.get("cell", null) != _built_cell:
+		_rebuild_pallet_slots(it)
 	if it.unit and laptop:
 		laptop.refresh(it.unit)
 		var on_station: bool = loc.get("t") == "slot" and Game.state.slot_station(loc.get("slot", "")) != ""
@@ -285,6 +328,11 @@ func hover_info(player: Node) -> Dictionary:
 			if u.imaged and u.grade == "" and Game.state.has_perk(me, "keen_eye"):
 				info.lines.append("Keen eye: will grade %s" % UnitData.grade_label(Valuation.predicted_grade(u)))
 			info["subtitle"] = u.serial
+		Item.KIND_PALLET_TRUCK:
+			if it.loc.get("t") == "loose":
+				info.lines.append("Grab the handle, slide the forks under a pallet and jack it up.")
+				info.prompt = "[E] Take the pallet truck"
+			return info
 		Item.KIND_PALLET:
 			var n := 0
 			for s: SnapSlot in pallet_slots:
@@ -331,7 +379,9 @@ func _parcel_summary(it: Item) -> String:
 
 func interact(_player: Node) -> void:
 	var it := Game.state.get_item(item_id)
-	if it and it.is_carryable():
+	if it and it.kind == Item.KIND_PALLET_TRUCK and it.loc.get("t") == "loose":
+		Game.request("take_truck", {"item": item_id})
+	elif it and it.is_carryable():
 		Game.request("pick_up", {"item": item_id})
 
 

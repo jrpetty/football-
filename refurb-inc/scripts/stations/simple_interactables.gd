@@ -41,6 +41,10 @@ func hold_complete(player: Node, action: String) -> void:
 		_busy = true
 		Sfx.play_at("kettle", global_position)
 		await get_tree().create_timer(3.0).timeout
+		Sfx.play_at("tea_pour", global_position, -3.0)
+		await get_tree().create_timer(0.9).timeout
 		_busy = false
-		if is_instance_valid(player) and player.has_method("give_tea"):
+		if is_instance_valid(player) and player.has_method("drink_tea"):
+			player.drink_tea()
+		elif is_instance_valid(player) and player.has_method("give_tea"):
 			player.give_tea()

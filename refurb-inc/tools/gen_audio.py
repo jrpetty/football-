@@ -188,6 +188,20 @@ def building():
     write("sfx", "kettle", np.concatenate([boil * env(int(SR * d), 0.3, 3.0, 1.0, 0.2), click]), 0.5)
 
 
+def tea():
+    # Pouring the brew and a satisfied sip (first-person tea break).
+    d = 1.6
+    gurgle = bandpass(noise(d), 500, 3500) * (0.6 + 0.4 * np.abs(np.sin(2 * np.pi * 7 * t(d))))
+    write("sfx", "tea_pour", gurgle * env(int(SR * d), 0.08, 1.2, 0.9, 0.3), 0.45)
+    d = 0.7
+    f = np.linspace(900, 2600, int(SR * d))
+    slurp = bandpass(noise(d), 700, 5000) * (0.5 + 0.5 * np.sin(2 * np.pi * np.cumsum(f / 300.0) / SR * 40))
+    write("sfx", "tea_sip", slurp * env(int(SR * d), 0.05, 0.45, 0.6, 0.2), 0.35)
+    d = 0.6
+    ahh = (sine(180, d) * 0.5 + sine(360, d) * 0.2 + bandpass(noise(d), 300, 1500) * 0.4) * env(int(SR * d), 0.05, 0.4, 0.5, 0.25)
+    write("sfx", "tea_ahh", ahh, 0.3)
+
+
 def vehicles():
     # Reversing beeper: 1 s loop (beep 0.5 s, gap 0.5 s)
     d = 1.0

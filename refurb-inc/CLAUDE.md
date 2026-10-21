@@ -380,7 +380,8 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
       sorter, vision grader, repair + packing robots. Designed to make sense, look and perform great.
 - [~] Better delivery: lorry arrives loaded, shutter rolls up, a hi-vis driver pulls each pallet with the pallet truck
       onto the tail lift and wheels it in (done); player pallet truck + forklift and arms → conveyors (to do).
-- [ ] Empty pallets you can buy and stack servers/laptops on; manual pallet truck to move loaded pallets.
+- [x] Empty pallets (Shop) adopt the first unit's stacking grid; hand pallet truck (start kit + Shop): take, forks under,
+      jack up, push (walls block it, Pallet pro perk), lower, let go. Host-authoritative, synced.
 - [ ] Skill system that matters: low level = noticeably slow, speeds up with XP; unlock abilities/perks over time.
 - [ ] Co-op designed in: shared goals, roles, office PCs for several players; later buildings get a sales &
       purchasing office (multiple desks/PCs) — build on it where it improves the game.
@@ -395,7 +396,8 @@ DECISIONS & PROGRESS LOG (maintained by Claude — everything above this line is
       and function great.
 - [ ] Player avatars + AI staff look good; character menu where a player uploads a photo that becomes their
       avatar's face (comedic), synced in co-op.
-- [ ] Tea/coffee: proper first-person drinking animation (see yourself drink), looks and performs great.
+- [x] Tea break: pour + first-person mug (Refurb Inc. branded, soft steam) lifted to the lips, head tips back, sip, "ahh";
+      co-op players see your avatar drink.
 - [ ] Insights app performance (redraw only on change, update in place, send guests only diffs).
 - [ ] Smoothness: no FPS spikes/dips. Benchmark every premises full of stock; optimise (screens, shadows, LOD/visibility
       ranges, Insights redraws, physics) without hurting looks. [x] Always-on FPS overlay (F3) with 1% low.

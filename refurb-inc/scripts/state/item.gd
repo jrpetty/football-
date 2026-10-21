@@ -9,6 +9,8 @@ extends RefCounted
 ##   {"t": "loose", "p": [x,y,z], "r": [x,y,z,w]}   – resting in the world under physics
 ##   {"t": "in",    "item": 42}                     – packed inside another item (unit inside a package)
 ##   {"t": "gone"}                                  – shipped / consumed (kept for records until pruned)
+##   {"t": "pushed", "peer": 1}                     – a pallet truck being pushed by a player
+##   {"t": "on_truck", "truck": 7}                  – a pallet jacked up on a pallet truck
 
 const KIND_UNIT := "unit"
 const KIND_PALLET := "pallet"
@@ -16,6 +18,7 @@ const KIND_USB_TEST := "usb_test"
 const KIND_USB_IMAGE := "usb_image"
 const KIND_PARCEL := "parcel"        # incoming supplies from the Shop
 const KIND_PACKAGE := "package"      # outgoing customer order
+const KIND_PALLET_TRUCK := "pallet_truck"   # hand pallet truck: push it, jack pallets up, move them
 
 var id: int = 0
 var kind: String = KIND_UNIT
@@ -67,7 +70,7 @@ func display_name() -> String:
 		KIND_UNIT:
 			return unit.display_name() if unit else "Unit"
 		KIND_PALLET:
-			return "Pallet — %s" % data.get("seller_name", "delivery")
+			return "Pallet — %s" % data.get("seller_name", "delivery") if data.has("seller_name") else "Empty pallet"
 		KIND_USB_TEST:
 			return "DiagnostiKit Pro USB"
 		KIND_USB_IMAGE:
@@ -76,6 +79,8 @@ func display_name() -> String:
 			return "Parcel — supplies"
 		KIND_PACKAGE:
 			return "Packed order #%d" % int(data.get("order_id", 0))
+		KIND_PALLET_TRUCK:
+			return "Pallet truck"
 	return kind.capitalize()
 
 

@@ -71,7 +71,8 @@
     "pack": 6,
     "haul": 1,
     "buy_unit": 2,
-    "ship": 5
+    "ship": 5,
+    "pallet_move": 3
   },
   "start_items": [
     {
@@ -81,6 +82,20 @@
     {
       "kind": "usb_image",
       "slot": "bench_1:park_b"
+    },
+    {
+      "kind": "pallet_truck",
+      "p": [
+        -1.45,
+        0.02,
+        2.55
+      ],
+      "r": [
+        0,
+        0.7071,
+        0,
+        0.7071
+      ]
     }
   ],
   "start_parts": {
