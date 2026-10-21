@@ -30,6 +30,7 @@ var perks: Dictionary = {}         # perk id -> Dictionary
 var business: Dictionary = {}      # data/business.json (business buyers: tuning, buyers, request templates)
 var biz_requests: Dictionary = {}  # request template id -> Dictionary
 var reviews: Dictionary = {}       # data/reviews.json (Flogit review scoring + comments)
+var premises_data: Dictionary = {} # data/premises.json (paints, floor markings, colours, logos, defaults)
 
 var errors: PackedStringArray = []
 
@@ -69,6 +70,7 @@ func reload() -> void:
 	business = _load("business.json")
 	biz_requests = _index(business.get("requests", []))
 	reviews = _load("reviews.json")
+	premises_data = _load("premises.json")
 	_validate()
 	for e in errors:
 		push_error("[Content] " + e)
@@ -100,6 +102,19 @@ func _validate() -> void:
 			errors.append("start_fixtures references unknown fixture type %s" % f.get("type", ""))
 	if not buildings.has(economy.get("start_building", "garage")):
 		errors.append("Unknown start_building")
+	for fx: Dictionary in fixtures.values():
+		if not ResourceLoader.exists(str(fx.get("scene", ""))):
+			errors.append("Fixture %s scene missing: %s" % [fx.id, fx.get("scene", "")])
+		var pal: Dictionary = fx.get("pallet", {})
+		if not pal.is_empty() and ((pal.get("levels", []) as Array).is_empty() or int(pal.get("bays", 0)) < 1):
+			errors.append("Fixture %s has a pallet section without bays/levels" % fx.id)
+	var defaults: Dictionary = premises_data.get("defaults", {})
+	for key in ["paint", "markings", "line_colour", "accent", "logo"]:
+		if premises_option(key, str(defaults.get(key, ""))).is_empty():
+			errors.append("premises.json default %s is not a listed option" % key)
+	for b: Dictionary in buildings.values():
+		if (b.get("paint_mats", []) as Array).is_empty():
+			errors.append("Building %s has no paint_mats" % b.id)
 	for m: Dictionary in models.values():
 		if m.has("cpu_options") or m.has("ref_cpu"):
 			for c in m.get("cpu_options", []):
@@ -264,3 +279,14 @@ func perks_for(skill: String) -> Array:
 
 func fixture(id: String) -> Dictionary:
 	return fixtures.get(id, {})
+
+
+const PREMISES_LISTS := {"paint": "paints", "markings": "markings", "line_colour": "line_colours", "accent": "accents", "logo": "logos"}
+
+
+func premises_option(key: String, id: String) -> Dictionary:
+	## One choice from data/premises.json ({} if `id` isn't offered for `key`).
+	for o: Dictionary in premises_data.get(PREMISES_LISTS.get(key, ""), []):
+		if str(o.get("id", "")) == id:
+			return o
+	return {}

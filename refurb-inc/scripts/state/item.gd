@@ -11,6 +11,9 @@ extends RefCounted
 ##   {"t": "gone"}                                  – shipped / consumed (kept for records until pruned)
 ##   {"t": "pushed", "peer": 1}                     – a pallet truck being pushed by a player
 ##   {"t": "on_truck", "truck": 7}                  – a pallet jacked up on a pallet truck
+##   {"t": "driven", "peer": 1, "p": […], "r": […]}  – a forklift with someone in the seat (p/r = last known pose)
+##   {"t": "on_forks", "fork": 9, "yaw": 90}        – a pallet lifted on a forklift's forks (yaw: relative turn)
+## A forklift's fork height lives in data.h (metres), updated when it's parked or a pallet goes on / comes off.
 
 const KIND_UNIT := "unit"
 const KIND_PALLET := "pallet"
@@ -20,6 +23,7 @@ const KIND_PARCEL := "parcel"        # incoming supplies from the Shop
 const KIND_PACKAGE := "package"      # outgoing customer order
 const KIND_PALLET_TRUCK := "pallet_truck"   # hand pallet truck: push it, jack pallets up, move them
 const KIND_MUG := "mug"              # a brew: data {c colour, s slogan, fill, brew, milk, t poured, mt milked, by maker}
+const KIND_FORKLIFT := "forklift"    # counterbalance forklift: get in, drive, lift pallets into racking
 
 var id: int = 0
 var kind: String = KIND_UNIT
@@ -82,6 +86,8 @@ func display_name() -> String:
 			return "Packed order #%d" % int(data.get("order_id", 0))
 		KIND_PALLET_TRUCK:
 			return "Pallet truck"
+		KIND_FORKLIFT:
+			return "Forklift"
 		KIND_MUG:
 			if float(data.get("fill", 0.0)) <= 0.05:
 				return "Empty mug" if not data.get("drunk", false) else "Dirty mug"

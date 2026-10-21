@@ -139,6 +139,10 @@ func c_pick_up(peer: int, a: Dictionary) -> Dictionary:
 		return _fail("Too heavy to lift — you'll need a pallet truck." if it.kind == Item.KIND_PALLET else "")
 	if pushed_truck(peer) != null:
 		return _fail("Let go of the pallet truck first (Q).")
+	if forklift_of(peer) != null:
+		return _fail("Get out of the forklift first (E).")
+	if not Logistics.within_reach_on_foot(state, it):
+		return _fail("Out of reach — bring the pallet down with the forklift.")
 	var held := state.held_by(peer)
 	if not held.is_empty():
 		# Stacks are one kind and size only (a pile of laptops), and small things (USBs) are carried alone.
@@ -185,6 +189,8 @@ func c_take_truck(peer: int, a: Dictionary) -> Dictionary:
 		return _fail("Put down what you're carrying first.")
 	if pushed_truck(peer) != null:
 		return _fail("You've already got a pallet truck.")
+	if forklift_of(peer) != null:
+		return _fail("")
 	state.set_loc(it, {"t": "pushed", "peer": peer})
 	return _ok()
 
@@ -196,7 +202,12 @@ func c_truck_lift(peer: int, a: Dictionary) -> Dictionary:
 		return _fail("")
 	if truck_load(truck) != null:
 		return _fail("There's already a pallet on the forks.")
-	if pallet.loc.get("t") != "loose":
+	var in_bay: bool = pallet.loc.get("t") == "slot" and Logistics.slot_world(state, str(pallet.loc.get("slot", ""))) != null
+	if in_bay:
+		var sid := str(pallet.loc.slot)
+		if Logistics.level_height(str(state.fixtures[sid.get_slice(":", 0)].type), sid.get_slice(":", 1)) > Logistics.TRUCK_MAX_LEVEL:
+			return _fail("Out of reach — that bay needs a forklift.")
+	elif pallet.loc.get("t") != "loose":
 		return _fail("That pallet's busy.")
 	# yaw = the pallet's turn relative to the truck (snapped to 90°), so it keeps the way it was lying.
 	state.set_loc(pallet, {"t": "on_truck", "truck": truck.id, "yaw": snappedf(float(a.get("yaw", 90.0)), 90.0)})
@@ -211,8 +222,141 @@ func c_truck_lower(peer: int, a: Dictionary) -> Dictionary:
 	var pallet := truck_load(truck)
 	if pallet == null:
 		return _fail("")
+	if str(a.get("slot", "")) != "":
+		# Lowered into a floor-level bay of pallet racking / an unload bay.
+		var sid := str(a.slot)
+		var check := _check_pallet_bay(sid, a.get("p", [0, 0, 0]))
+		if not check.ok:
+			return check
+		if Logistics.level_height(str(state.fixtures[sid.get_slice(":", 0)].type), sid.get_slice(":", 1)) > Logistics.TRUCK_MAX_LEVEL:
+			return _fail("A pallet truck only reaches the floor level — use a forklift for the upper bays.")
+		_pallet_into_bay(pallet, sid, peer)
+		return _ok()
 	state.set_loc(pallet, {"t": "loose", "p": a.get("p", [0, 0, 0]), "r": a.get("r", [0, 0, 0, 1])})
 	return _ok()
+
+
+# ================================================================= forklift & pallet racking
+
+func forklift_of(peer: int) -> Item:
+	## The forklift this player is driving (null if they're on foot).
+	for it: Item in state.items.values():
+		if it.kind == Item.KIND_FORKLIFT and it.loc.get("t") == "driven" and int(it.loc.get("peer", 0)) == peer:
+			return it
+	return null
+
+
+func fork_load(fork: Item) -> Item:
+	for it: Item in state.items.values():
+		if it.kind == Item.KIND_PALLET and it.loc.get("t") == "on_forks" and int(it.loc.get("fork", 0)) == fork.id:
+			return it
+	return null
+
+
+func c_forklift_enter(peer: int, a: Dictionary) -> Dictionary:
+	var it := state.get_item(int(a.get("item", 0)))
+	if it == null or it.kind != Item.KIND_FORKLIFT:
+		return _fail("")
+	if it.loc.get("t") != "loose" or it.loc.get("relocate", false):
+		return _fail("Someone's already in that forklift.")
+	if not state.held_by(peer).is_empty():
+		return _fail("Put down what you're carrying first.")
+	if pushed_truck(peer) != null:
+		return _fail("Let go of the pallet truck first (Q).")
+	if forklift_of(peer) != null:
+		return _fail("")
+	# Keep the parked pose: it's where the forklift is until the driver's first move reaches the host.
+	state.set_loc(it, {"t": "driven", "peer": peer, "p": it.loc.get("p", [0, 0, 0]), "r": it.loc.get("r", [0, 0, 0, 1])})
+	state.add_xp(player_key(peer), "hauling", 1)
+	return _ok()
+
+
+func c_forklift_exit(peer: int, a: Dictionary) -> Dictionary:
+	## Climb out and leave it parked where it is (forks at whatever height they're at — a load stays on them).
+	var fork := forklift_of(peer)
+	if fork == null:
+		return _fail("")
+	fork.data["h"] = clampf(float(a.get("h", fork.data.get("h", 0.0))), 0.0, Logistics.FORK_MAX)
+	var p: Array = a.get("p", fork.loc.get("p", [0, 0, 0]))
+	state.set_loc(fork, {"t": "loose", "p": [float(p[0]), float(p[1]), float(p[2])], "r": a.get("r", fork.loc.get("r", [0, 0, 0, 1]))})
+	return _ok()
+
+
+func c_fork_lift(peer: int, a: Dictionary) -> Dictionary:
+	## Forks under a pallet, raise them: it comes up on the forks. `at` = where the driver sees the pallet's base.
+	var fork := forklift_of(peer)
+	var pallet := state.get_item(int(a.get("pallet", 0)))
+	if fork == null or pallet == null or pallet.kind != Item.KIND_PALLET:
+		return _fail("")
+	if fork_load(fork) != null:
+		return _fail("There's already a pallet on the forks.")
+	var pos = Logistics.pallet_pos(state, pallet)
+	if pos == null or not pallet.loc.get("t") in ["loose", "slot"]:
+		return _fail("That pallet's busy.")
+	var at: Array = a.get("at", [0, 0, 0])
+	var claimed := Vector3(float(at[0]), float(at[1]), float(at[2]))
+	var real: Vector3 = pos
+	if Vector2(claimed.x - real.x, claimed.z - real.z).length() > Logistics.VERIFY_XZ or absf(claimed.y - real.y) > Logistics.VERIFY_Y:
+		return _fail("Line the forks up under the pallet.")
+	var from_slot := str(pallet.loc.get("slot", "")) if pallet.loc.get("t") == "slot" else ""
+	fork.data["h"] = clampf(float(a.get("h", real.y)), 0.0, Logistics.FORK_MAX)
+	state.mark("item", fork.id)
+	state.set_loc(pallet, {"t": "on_forks", "fork": fork.id, "yaw": snappedf(float(a.get("yaw", 0.0)), 90.0)})
+	state.add_xp(player_key(peer), "hauling", int(Content.econ("xp", {}).get("pallet_move", 3)))
+	state.bump_stat("pallets_forked")
+	if from_slot != "":
+		BusinessStats.act(state, peer, "hauled")
+	return _ok()
+
+
+func c_fork_set(peer: int, a: Dictionary) -> Dictionary:
+	## Lower the load: into the bay it's lined up with (`slot`), or onto the floor at p/r.
+	var fork := forklift_of(peer)
+	if fork == null:
+		return _fail("")
+	var pallet := fork_load(fork)
+	if pallet == null:
+		return _fail("")
+	fork.data["h"] = clampf(float(a.get("h", 0.0)), 0.0, Logistics.FORK_MAX)
+	state.mark("item", fork.id)
+	var sid := str(a.get("slot", ""))
+	if sid != "":
+		var check := _check_pallet_bay(sid, a.get("p", [0, 0, 0]))
+		if not check.ok:
+			return check
+		_pallet_into_bay(pallet, sid, peer)
+		return _ok()
+	var p: Array = a.get("p", [0, 0, 0])
+	state.set_loc(pallet, {"t": "loose", "p": [float(p[0]), float(p[1]), float(p[2])], "r": a.get("r", [0, 0, 0, 1])})
+	return _ok()
+
+
+func _check_pallet_bay(sid: String, claimed_p: Array) -> Dictionary:
+	## A pallet may go into this bay: it's a placed pallet bay, free, and where the client says it is.
+	var xf = Logistics.slot_world(state, sid)
+	if xf == null or not state.slot_accepts(sid, Item.KIND_PALLET):
+		return _fail("That's not a pallet bay.")
+	if state.item_in_slot(sid) != null:
+		return _fail("There's already a pallet in that bay.")
+	var o: Vector3 = (xf as Transform3D).origin
+	var c := Vector3(float(claimed_p[0]), float(claimed_p[1]), float(claimed_p[2]))
+	if Vector2(c.x - o.x, c.z - o.z).length() > Logistics.VERIFY_XZ or absf(c.y - o.y) > Logistics.VERIFY_Y:
+		return _fail("Line it up with the bay.")
+	return _ok()
+
+
+func _pallet_into_bay(pallet: Item, sid: String, peer: int) -> void:
+	state.set_loc(pallet, {"t": "slot", "slot": sid})
+	BusinessStats.act(state, peer, "hauled")
+	var fid := sid.get_slice(":", 0)
+	var type := str(state.fixtures.get(fid, {}).get("type", ""))
+	if Logistics.bay_station(state, sid) == "pallet_bay":
+		state.bump_stat("pallets_to_line")
+		state.say("Pallet in %s — robot arms in reach will unload it." % str(state.fixtures[fid].get("label", "the bay")), "info", peer)
+		return
+	state.bump_stat("pallets_racked")
+	if Logistics.level_height(type, sid.get_slice(":", 1)) > 0.0:
+		state.bump_stat("pallets_racked_high")
 
 
 func c_release_truck(peer: int, a: Dictionary) -> Dictionary:
@@ -672,6 +816,10 @@ func c_drop_all_held(peer: int, a: Dictionary) -> Dictionary:
 	var p: Array = a.get("p", [0, 1, 0])
 	if pushed_truck(peer) != null:
 		c_release_truck(peer, {"p": [p[0], 0.02, p[2]], "pallet_p": [p[0], 0.02, float(p[2]) + 1.3]})
+	var fork := forklift_of(peer)
+	if fork:
+		# Park it where they left it (the level passes the forklift's own pose when it knows it).
+		c_forklift_exit(peer, {"p": a.get("fork_p", fork.loc.get("p", [p[0], 0.0, p[2]])), "r": a.get("fork_r", fork.loc.get("r", [0, 0, 0, 1])), "h": a.get("fork_h", fork.data.get("h", 0.0))})
 	var k := 0
 	for it: Item in state.held_by(peer):
 		state.set_loc(it, {"t": "loose", "p": [p[0], p[1] + 0.1 * k, p[2]], "r": [0, 0, 0, 1]})
@@ -2261,11 +2409,17 @@ func _next_courier_after(t: float) -> float:
 func deliver_parcel(contents: Dictionary, pos: Vector3 = Vector3.ZERO) -> Item:
 	# Pallets and pallet trucks don't come in a box: the courier leaves them by the parcel.
 	var items: Array = contents.get("items", []).duplicate()
-	var bulky := items.filter(func(k): return k in [Item.KIND_PALLET, Item.KIND_PALLET_TRUCK])
+	var bulky := items.filter(func(k): return k in [Item.KIND_PALLET, Item.KIND_PALLET_TRUCK, Item.KIND_FORKLIFT])
 	var n := 0
 	for k in bulky:
 		var big := state.new_item(k)
-		state.set_loc(big, {"t": "loose", "p": [pos.x + 1.4 + n * 1.3, pos.y, pos.z], "r": [0, 0, 0, 1]})
+		if k == Item.KIND_FORKLIFT:
+			# Delivered on a low-loader and left in goods-in (the level finds it room); forks down.
+			big.data = {"h": 0.0}
+			state.set_loc(big, {"t": "loose", "relocate": true, "p": [pos.x, 0.0, pos.z], "r": [0, 0, 0, 1]})
+			state.say("Your forklift has been dropped off in goods-in. [E] to get in.", "good")
+		else:
+			state.set_loc(big, {"t": "loose", "p": [pos.x + 1.4 + n * 1.3, pos.y, pos.z], "r": [0, 0, 0, 1]})
 		items.erase(k)
 		n += 1
 	contents = contents.duplicate(true)
@@ -2476,6 +2630,16 @@ static func power_breakdown(st: GameState) -> Dictionary:
 		e.count = int(e.count) + 1
 		e.active = int(e.active) + (1 if active else 0)
 		out[name] = e
+	# Electric forklifts: battery drain while someone's driving, a trickle on charge otherwise.
+	for it: Item in st.items.values():
+		if it.kind != Item.KIND_FORKLIFT or it.loc.get("t") == "gone":
+			continue
+		var driving: bool = it.loc.get("t") == "driven"
+		var fe: Dictionary = out.get("Electric forklift", {"kw": 0.0, "count": 0, "active": 0})
+		fe.kw = float(fe.kw) + float(Content.econ("forklift_kw" if driving else "forklift_charge_kw", 2.4 if driving else 0.25))
+		fe.count = int(fe.count) + 1
+		fe.active = int(fe.active) + (1 if driving else 0)
+		out["Electric forklift"] = fe
 	return out
 
 
@@ -2659,6 +2823,8 @@ func start_next_day() -> void:
 	refresh_lot_board()
 	if state.weekday() == 0 or state.candidates.is_empty():
 		refresh_candidates()
+	if state.weekday() == 0:
+		employee_of_the_month()
 	state.mark("clock")
 	state.mark("company")
 	state.say("%s, day %d. Kettle's on." % [state.weekday_name(), state.day_index() + 1], "info")
@@ -2678,6 +2844,9 @@ static func fixture_label(st: GameState, type: String) -> String:
 			n += 1
 	if type == "metal_shelf":
 		return "Shelf %s" % char(65 + n)
+	var rack_label := Logistics.fixture_number_label(st, type)
+	if rack_label != "":
+		return rack_label
 	return "%s %d" % [Content.fixture(type).get("name", type), n + 1]
 
 
@@ -2764,14 +2933,121 @@ func c_move_building(peer: int, a: Dictionary) -> Dictionary:
 	for id in state.fixtures:
 		state.fixtures[id].placed = false
 		state.mark("fixture", id)
-	# Loose stock, pallets and parcels are dropped off in the new goods-in area.
+	# Loose stock, pallets and parcels are dropped off in the new goods-in area. Forklifts come too (whoever was
+	# driving hops out; a pallet on the forks stays on them), and so do pallet trucks.
 	for it: Item in state.items.values():
-		if it.loc.get("t") == "loose":
+		if it.kind == Item.KIND_FORKLIFT and it.loc.get("t") == "driven":
+			it.data["h"] = minf(float(it.data.get("h", 0.0)), 0.3)
+			state.set_loc(it, {"t": "loose", "relocate": true, "p": [0, 0, 0], "r": [0, 0, 0, 1]})
+		elif it.kind == Item.KIND_PALLET_TRUCK and it.loc.get("t") == "pushed":
+			var load_it := truck_load(it)
+			if load_it:
+				state.set_loc(load_it, {"t": "loose", "relocate": true, "p": [0, 1, 0], "r": [0, 0, 0, 1]})
+			state.set_loc(it, {"t": "loose", "relocate": true, "p": [0, 0, 0], "r": [0, 0, 0, 1]})
+		elif it.loc.get("t") == "loose":
 			state.set_loc(it, {"t": "loose", "relocate": true, "p": [0, 1, 0], "r": [0, 0, 0, 1]})
 	state.mark("building")
 	BusinessStats.on_moved(state, b)
 	state.say("Moving day! Welcome to %s, %s." % [b.name, b.get("address", "")], "good")
 	return _ok()
+
+
+# ================================================================= making the premises yours (Fit-out app)
+
+const STYLE_KEYS := ["paint", "markings", "line_colour", "accent", "logo"]
+
+
+func c_set_premises(peer: int, a: Dictionary) -> Dictionary:
+	## Paint, floor markings, line/accent colours, logo style, door signage. Paid once to the decorators;
+	## the choice follows the company to every premises.
+	var key := str(a.get("key", ""))
+	var value: Variant = a.get("value")
+	if key == "door_sign":
+		var on := bool(value)
+		if bool(state.style("door_sign")) == on:
+			return _ok()
+		state.premises["door_sign"] = on
+		state.mark("premises")
+		return _ok()
+	if not key in STYLE_KEYS:
+		return _fail("")
+	var opt := Content.premises_option(key, str(value))
+	if opt.is_empty():
+		return _fail("That isn't on the colour chart.")
+	if str(state.style(key)) == str(value):
+		return _ok()
+	var price := int(opt.get("price", 0))
+	if price > 0:
+		if state.cash - price < int(Content.econ("overdraft_warning", -500)):
+			return _fail("The decorators want %s up front." % GameState.format_money(price))
+		state.add_money(-price, "premises", "Decorators: %s" % str(opt.get("name", value)))
+	state.premises[key] = str(value)
+	state.bump_stat("restyles")
+	state.mark("premises")
+	var templates := {"paint": "Walls painted %s", "markings": "Floor marked out: %s", "line_colour": "Lines in %s",
+		"accent": "Accent colour: %s", "logo": "New logo: %s"}
+	var what: String = str(templates[key]) % str(opt.get("name", value))
+	state.say(what + ("" if price <= 0 else " (%s)" % GameState.format_money(price)) + ".", "good", peer)
+	return _ok()
+
+
+func c_decor_toggle(peer: int, a: Dictionary) -> Dictionary:
+	## Decor with a switch (the site radio): on/off for everyone.
+	var fid := str(a.get("id", ""))
+	var f: Dictionary = state.fixtures.get(fid, {})
+	if f.is_empty() or str(f.get("type", "")) != "site_radio":
+		return _fail("")
+	if not state.stations.has(fid):
+		state.register_station(fid, "radio")
+	var on := not bool(state.stations[fid].get("on", false))
+	state.stations[fid]["on"] = on
+	state.mark("station", fid)
+	if on:
+		state.bump_stat("radio_on")
+	return _ok()
+
+
+static func eotm_score(acts: Dictionary) -> float:
+	var w: Dictionary = Content.premises_data.get("eotm", {}).get("weights", {})
+	var s := 0.0
+	for k in acts:
+		s += float(acts[k]) * float(w.get(k, 0.0))
+	return s
+
+
+func employee_of_the_month() -> void:
+	## Monday morning: whoever (player or staff) got the most done last week goes up on the wall.
+	var snap: Dictionary = state.stats.get("eotm_snap", {})
+	var board: Array = []
+	var now_snap := {}
+	for key in state.stats.get("people", {}):
+		var p: Dictionary = state.stats.people[key]
+		var total := eotm_score(p.get("acts", {}))
+		now_snap[key] = total
+		var week := total - float(snap.get(key, 0.0))
+		if week >= 1.0:
+			var staff := str(key).begins_with("p-")
+			var nm := str(state.players.get(key, {}).get("name", p.get("name", key)))
+			board.append({"key": str(key), "name": nm, "score": int(round(week)), "staff": staff})
+	state.stats["eotm_snap"] = now_snap
+	board.sort_custom(func(x, y): return int(x.score) > int(y.score))
+	var prev: Dictionary = state.premises.get("eotm", {})
+	if board.is_empty():
+		state.premises["eotm"] = {"day": state.day_index(), "board": [], "key": "", "streak": 0}
+		state.mark("premises")
+		return
+	var top: Dictionary = board[0]
+	var streak := int(prev.get("streak", 0)) + 1 if str(prev.get("key", "")) == str(top.key) else 1
+	var role := ""
+	if top.staff:
+		var sid := -int(str(top.key).substr(1)) - 1000
+		role = StaffView._role_name(str(state.staff.get(sid, {}).get("role", ""))) if state.staff.has(sid) else ""
+	state.premises["eotm"] = {"day": state.day_index(), "key": top.key, "name": top.name, "score": top.score,
+		"staff": top.staff, "role": role, "streak": streak, "board": board.slice(0, 5)}
+	state.mark("premises")
+	state.bump_stat("eotm_awards")
+	BusinessStats.event(state, "staff", "Employee of the Month: %s (%d jobs last week)" % [top.name, int(top.score)])
+	state.say("Employee of the Month: %s — %d jobs done last week!%s" % [top.name, int(top.score), "" if streak < 2 else " That's %d weeks running." % streak], "good")
 
 
 func migrate_save() -> void:
@@ -2785,3 +3061,20 @@ func migrate_save() -> void:
 			state.fixtures[f.id] = {"type": f.type, "label": f.get("label", ""), "placed": false, "p": [0, 0, 0], "r": 0.0}
 	if not Content.buildings.has(state.building_id):
 		state.building_id = String(Content.econ("start_building", "garage"))
+	# Nobody is in the seat or pushing a truck when a save is loaded: park them where they were last seen.
+	for it: Item in state.items.values():
+		if it.kind == Item.KIND_FORKLIFT and it.loc.get("t") == "driven":
+			var p: Array = it.loc.get("p", [])
+			if p.size() == 3:
+				state.set_loc(it, {"t": "loose", "p": p, "r": it.loc.get("r", [0, 0, 0, 1])})
+			else:
+				state.set_loc(it, {"t": "loose", "relocate": true, "p": [0, 0, 0], "r": [0, 0, 0, 1]})
+		elif it.kind == Item.KIND_PALLET_TRUCK and it.loc.get("t") == "pushed":
+			var load_it := truck_load(it)
+			if load_it:
+				state.set_loc(load_it, {"t": "loose", "relocate": true, "p": [0, 1, 0], "r": [0, 0, 0, 1]})
+			state.set_loc(it, {"t": "loose", "relocate": true, "p": [0, 0, 0], "r": [0, 0, 0, 1]})
+	# Every premises has an Employee of the Month frame (older saves get one; the level hangs it on a wall).
+	if not state.fixtures.values().any(func(f): return str(f.get("type", "")) == "eotm_frame"):
+		state.fixtures["eotm_1"] = {"type": "eotm_frame", "label": "Employee of the Month", "placed": false, "p": [0, 0, 0], "r": 0.0}
+		state.mark("fixture", "eotm_1")

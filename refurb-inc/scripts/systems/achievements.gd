@@ -191,6 +191,9 @@ func tick(delta: float, state: GameState, ctx_fn: Callable) -> void:
 	## Called every frame by Game while in a real game. Evaluates once a second (or right after an event).
 	if not active or state == null:
 		return
+	if _style.is_empty() and state == _state:
+		_style = state.premises.duplicate(true)      # baseline for fit-out / Employee of the Month events
+		_style["_seen"] = true
 	_eval_t -= delta
 	_save_t -= delta
 	if _pending or _eval_t <= 0.0:
@@ -435,7 +438,7 @@ func watch(state: GameState) -> void:
 	if _state and _state.changed.is_connected(_on_changed):
 		_state.changed.disconnect(_on_changed)
 	_state = state
-	for c: Dictionary in [_units, _mugs, _pkgs, _pallets, _orders, _lots, _pours]:
+	for c: Dictionary in [_units, _mugs, _pkgs, _pallets, _orders, _lots, _pours, _style]:
 		c.clear()
 	if state:
 		state.changed.connect(_on_changed)
@@ -457,6 +460,8 @@ func _on_changed(kind: String, id: Variant) -> void:
 			_watch_lot(int(id))
 		"station":
 			_watch_station(str(id))
+		"premises":
+			_watch_premises()
 
 
 func _watch_item(iid: int) -> void:
@@ -562,14 +567,47 @@ func _watch_mug(it: Item) -> void:
 
 
 func _watch_pallet(it: Item) -> void:
-	var lifted: bool = it.loc.get("t") == "on_truck"
-	var was: bool = _pallets.get(it.id, false)
-	_pallets[it.id] = lifted
-	if not lifted or was:
-		return
-	var truck: Item = _state.items.get(int(it.loc.get("truck", 0)))
-	if truck and truck.loc.get("t") == "pushed" and int(truck.loc.get("peer", 0)) == _me():
-		record_event("pallet_lift")
+	var t := str(it.loc.get("t", ""))
+	var was: Dictionary = _pallets.get(it.id, {})
+	var mine_on_forks := false
+	if t == "on_forks":
+		var fork: Item = _state.items.get(int(it.loc.get("fork", 0)))
+		mine_on_forks = fork != null and fork.loc.get("t") == "driven" and int(fork.loc.get("peer", 0)) == _me()
+	_pallets[it.id] = {"t": t, "mine": mine_on_forks if t == "on_forks" else bool(was.get("mine", false)) and t == "slot"}
+	if t == "on_truck" and was.get("t", "") != "on_truck":
+		var truck: Item = _state.items.get(int(it.loc.get("truck", 0)))
+		if truck and truck.loc.get("t") == "pushed" and int(truck.loc.get("peer", 0)) == _me():
+			record_event("pallet_lift")
+	elif mine_on_forks and was.get("t", "") != "on_forks":
+		record_event("fork_lift")
+	elif t == "slot" and was.get("t", "") == "on_forks" and bool(was.get("mine", false)):
+		# Put away by my forklift: the top level of the racking?
+		var sid := str(it.loc.get("slot", ""))
+		var f: Dictionary = _state.fixtures.get(sid.get_slice(":", 0), {})
+		var levels: Array = Logistics.rack_def(str(f.get("type", ""))).get("levels", [])
+		if levels.size() > 1 and Logistics.parse_slot(sid.get_slice(":", 1)).y == levels.size() - 1:
+			record_event("racked_top")
+
+
+var _style := {}
+
+
+func _watch_premises() -> void:
+	## Fit-out changes and the Employee of the Month (replicated, so guests see them too).
+	var p: Dictionary = _state.premises
+	if _style.is_empty():
+		_style = {"_seen": true}      # no baseline yet (tests drive the watcher directly): everything is new
+	if true:
+		if str(p.get("paint", "original")) != str(_style.get("paint", "original")) and str(p.get("paint", "original")) != "original":
+			record_event("painted")
+		if str(p.get("markings", "none")) != str(_style.get("markings", "none")) and str(p.get("markings", "none")) != "none":
+			record_event("marked_out")
+		var e: Dictionary = p.get("eotm", {})
+		var old: Dictionary = _style.get("eotm", {})
+		if str(e.get("key", "")) == Sim.player_key(_me()) and (int(e.get("day", -1)) != int(old.get("day", -1)) or str(old.get("key", "")) != str(e.key)):
+			record_event("eotm_me")
+	_style = p.duplicate(true)
+	_style["_seen"] = true
 
 
 func _watch_order(oid: int) -> void:

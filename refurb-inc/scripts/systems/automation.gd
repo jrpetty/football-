@@ -807,6 +807,8 @@ func _tick_arm(fid: String) -> void:
 	sim._leave_slot_side_effects(it)
 	var from_slot: String = it.loc.get("slot", "") if it.loc.get("t") == "slot" else ""
 	state.set_loc(it, {"t": "arm", "arm": fid})
+	if pick.has("from_pallet"):
+		state.bump_stat("unloaded")      # pallet → line, no hands (lifetime counter)
 	if from_slot != "":
 		# A machine that just had its output cleared may be able to start on what's waiting.
 		var host := from_slot.get_slice(":", 0)
@@ -890,14 +892,12 @@ func _find_pick(fid: String, arm: Dictionary) -> Dictionary:
 		elif it.unit and it.unit.order_id != 0 and state.stations.get(host, {}).get("type", "") in ["", "stock_tower"]:
 			candidates.append({"item": it.id})      # sold stock on racking / in a tower → packing
 	for it: Item in state.items.values():
-		if it.kind != Item.KIND_PALLET or it.loc.get("t") != "loose":
-			continue
-		var pp: Array = it.loc.get("p", [0, 0, 0])
-		if not _in_reach(arm, Vector3(pp[0], 0, pp[2]), 0.5):
+		var pp = unload_pos(state, it)
+		if pp == null or not _in_reach(arm, pp, 0.5):
 			continue
 		var top := _pallet_top_unit(it.id)
 		if top:
-			candidates.append({"item": top.id})
+			candidates.append({"item": top.id, "from_pallet": it.id})
 	_last_cands = candidates.size()
 	for c in candidates:
 		var it := state.get_item(int(c.item))
@@ -908,6 +908,26 @@ func _find_pick(fid: String, arm: Dictionary) -> Dictionary:
 			c["to"] = to
 			return c
 	return {}
+
+
+static func unload_pos(st: GameState, it: Item) -> Variant:
+	## Where an arm can unload this pallet from: loose on the floor, or set down in a pallet unload bay
+	## (not pallets stored in racking, on a truck or on the forks). null = not available to arms.
+	if it.kind != Item.KIND_PALLET:
+		return null
+	match str(it.loc.get("t", "")):
+		"loose":
+			if it.loc.get("relocate", false):
+				return null
+			var p: Array = it.loc.get("p", [0, 0, 0])
+			return Vector3(float(p[0]), 0.0, float(p[2]))
+		"slot":
+			var sid := str(it.loc.get("slot", ""))
+			if Logistics.bay_station(st, sid) != "pallet_bay":
+				return null
+			var xf = Logistics.slot_world(st, sid)
+			return (xf as Transform3D).origin if xf != null else null
+	return null
 
 
 func _pallet_top_unit(pallet_id: int) -> Item:
@@ -1273,10 +1293,9 @@ static func _machine_queues(st: GameState, stages: Dictionary, host_slots: Dicti
 			if Vector2(mp.x - base.x, mp.z - base.z).length() <= reach + minf(float(fp[0]), float(fp[1])) * 0.5:
 				info.machines.append(m)
 		for it: Item in st.items.values():
-			if it.kind == Item.KIND_PALLET and it.loc.get("t") == "loose":
-				var pp: Array = it.loc.get("p", [0, 0, 0])
-				if Vector2(float(pp[0]) - base.x, float(pp[2]) - base.z).length() <= reach + 0.5:
-					info.pallets.append(it.id)
+			var pp = unload_pos(st, it)
+			if pp != null and Vector2((pp as Vector3).x - base.x, (pp as Vector3).z - base.z).length() <= reach + 0.5:
+				info.pallets.append(it.id)
 		for m in info.machines:
 			feeders.get_or_add(m, []).append(info)
 	var out := {}

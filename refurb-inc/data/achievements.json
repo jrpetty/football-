@@ -2,7 +2,8 @@
   "_comment": "Achievements, in display order. Evaluated by scripts/systems/achievements.gd on every machine (host and co-op guests) from replicated game state, and unlocked into this PC's profile (user://achievements.json). Steam API names are ACH_<ID IN CAPITALS> (Achievements.steam_name). Conditions: stat (totals.* / lifetime.* / day.* / reputation / cash), day_stat, summary + day_end (end-of-day summary), building (premises tier reached), fixture / fixture_count (types may name a fixture_sets entry), goal (+within_days, campaign milestones in goals.json), skill_level (the local player), players (in the session now), event (counted on this PC), flag (character settings), achievements (every other one), all / any. Comparators: gte, lte, gt, lt, eq (default: >= 1).",
   "groups": ["Getting started", "Hardware", "Repairs", "Sales", "Premises", "Automation", "Team & co-op", "Tea", "Money", "Legendary"],
   "fixture_sets": {
-    "belts": ["conveyor", "conveyor_curve_r", "conveyor_curve_l", "conveyor_bend", "conveyor_merge", "conveyor_merge_r"]
+    "belts": ["conveyor", "conveyor_curve_r", "conveyor_curve_l", "conveyor_bend", "conveyor_merge", "conveyor_merge_r"],
+    "decor": ["plant_tall", "plant_small", "rug", "site_radio", "wall_clock", "poster_safety", "poster_motto", "poster_retro"]
   },
   "achievements": [
     {"id": "open_for_business", "name": "Open for business", "desc": "Buy your first lot of ex-corporate kit.", "icon": "🛒", "group": "Getting started", "hidden": false,
@@ -99,6 +100,12 @@
       "condition": {"building": "megaplant"}},
     {"id": "fast_mover", "name": "Fast mover", "desc": "Get out of the garage within 40 working days.", "icon": "🏃", "group": "Premises", "hidden": false,
       "condition": {"goal": "building_lockup", "within_days": 40}},
+    {"id": "licence_to_lift", "name": "Licence to lift", "desc": "Pick up a pallet with a forklift.", "icon": "🏗", "group": "Premises", "hidden": false,
+      "condition": {"event": "fork_lift", "gte": 1}},
+    {"id": "top_shelf", "name": "Top shelf", "desc": "Put a pallet away on the top level of pallet racking.", "icon": "⬆", "group": "Premises", "hidden": false,
+      "condition": {"event": "racked_top", "gte": 1}},
+    {"id": "interior_designer", "name": "Interior designer", "desc": "Paint the walls, mark out the floor and put up three pieces of decor.", "icon": "🎨", "group": "Premises", "hidden": false,
+      "condition": {"all": [{"event": "painted"}, {"event": "marked_out"}, {"fixture_count": {"type": "decor", "gte": 3, "placed": true}}]}},
 
     {"id": "rolling", "name": "Rolling, rolling, rolling", "desc": "Buy your first conveyor.", "icon": "🛞", "group": "Automation", "hidden": false,
       "condition": {"fixture": "belts"}},
@@ -116,6 +123,8 @@
       "condition": {"stat": "lifetime.stored", "gte": 1}},
     {"id": "lights_out", "name": "Lights out", "desc": "Ship an order no human hand touched — booked in, processed and packed by machines.", "icon": "🌙", "group": "Automation", "hidden": false,
       "condition": {"event": "lights_out", "gte": 1}},
+    {"id": "hands_free_goods_in", "name": "Hands-free goods-in", "desc": "Let robot arms unload 100 units straight off pallets.", "icon": "🦾", "group": "Automation", "hidden": false,
+      "condition": {"stat": "lifetime.unloaded", "gte": 100}},
 
     {"id": "two_pairs_of_hands", "name": "Two pairs of hands", "desc": "Play a co-op session with a friend.", "icon": "🤝", "group": "Team & co-op", "hidden": false,
       "condition": {"players": {"gte": 2}}},
@@ -129,6 +138,8 @@
       "condition": {"skill_level": {"all": true, "gte": 5}}},
     {"id": "personal_best", "name": "Personal best", "desc": "Beat one of your own milestone records.", "icon": "🏅", "group": "Team & co-op", "hidden": false,
       "condition": {"event": "beat_record", "gte": 1}},
+    {"id": "employee_of_the_month", "name": "Employee of the Month", "desc": "Get your name up in the frame on the wall: most jobs done in a week.", "icon": "🖼", "group": "Team & co-op", "hidden": false,
+      "condition": {"event": "eotm_me", "gte": 1}},
     {"id": "face_of_the_company", "name": "Face of the company", "desc": "Put your own photo on your character and go to work.", "icon": "📸", "group": "Team & co-op", "hidden": false,
       "condition": {"flag": "photo_face"}},
     {"id": "big_head", "name": "Head too big for the door", "desc": "Finish a working day in big head mode.", "icon": "🎈", "group": "Team & co-op", "hidden": true,

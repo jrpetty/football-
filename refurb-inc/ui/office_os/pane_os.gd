@@ -16,6 +16,7 @@ const APPS := [
 	{"id": "achievements", "title": "Achievements", "short": "Achievements", "colour": Color(0.78, 0.36, 0.16), "glyph": "✪", "script": "res://ui/office_os/apps/achievements_app.gd"},
 	{"id": "staff", "title": "Staff", "short": "Staff", "colour": Color(0.3, 0.62, 0.45), "glyph": "☺", "script": "res://ui/office_os/apps/staff_app.gd"},
 	{"id": "building", "title": "Premises & Equipment", "short": "Building", "colour": Color(0.2, 0.6, 0.6), "glyph": "⌂", "script": "res://ui/office_os/apps/building_app.gd"},
+	{"id": "fitout", "title": "Fit-out — make it yours", "short": "Fit-out", "colour": Color(0.86, 0.42, 0.52), "glyph": "✎", "script": "res://ui/office_os/apps/fitout_app.gd"},
 ]
 
 var pc: OfficePC

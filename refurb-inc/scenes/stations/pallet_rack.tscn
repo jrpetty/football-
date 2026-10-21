@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/stations/pallet_rack.gd" id="1_pr"]
+[ext_resource type="Script" path="res://scripts/world/model_slot.gd" id="2_pr"]
+
+[node name="PalletRack" type="Node3D"]
+script = ExtResource("1_pr")
+fixture_type = "pallet_rack"
+display_name = "Pallet racking"
+description = "Nine bays for whole pallets: forklift for every level, pallet truck for the floor."
+
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2_pr")
+placeholder = "pallet_rack"
+placeholder_params = {
+"type": "pallet_rack"
+}

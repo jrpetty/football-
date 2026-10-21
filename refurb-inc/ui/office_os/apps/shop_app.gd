@@ -6,7 +6,7 @@ var _list: VBoxContainer
 var _filter := ""
 var _qty := {}
 
-const PART_TABS := [["Equipment", ""], ["Batteries", "battery"], ["Memory & storage", "ramstorage"], ["Keyboards & small parts", "small"], ["Screens & L2", "l2"], ["Board-level (L3)", "l3"], ["Server build", "build"]]
+const PART_TABS := [["Equipment", ""], ["Decor", "decor"], ["Batteries", "battery"], ["Memory & storage", "ramstorage"], ["Keyboards & small parts", "small"], ["Screens & L2", "l2"], ["Board-level (L3)", "l3"], ["Server build", "build"]]
 
 
 func build() -> void:
@@ -40,6 +40,13 @@ func refresh() -> void:
 				_licence_row(s)
 			else:
 				_row(s.id, s.name, int(s.price), s.get("desc", ""), _stock_text_shop(s))
+		return
+	if cat == "decor":
+		# Decor is equipment: delivered straight away and placed by you (paint and signs: Fit-out app).
+		for type in Content.fixtures:
+			var def: Dictionary = Content.fixture(type)
+			if def.get("decor", false):
+				_decor_row(type, def)
 		return
 	for p: Dictionary in Content.parts.values():
 		var c: String = p.category
@@ -114,6 +121,33 @@ func _licence_row(s: Dictionary) -> void:
 	h.add_child(button("Licensed" if owned else "Buy licence", func(): Game.request("shop_buy", {"id": str(s.id)}), GREEN,
 		owned or Game.state.cash - price < int(Content.econ("overdraft_warning", -500))))
 	_list.add_child(c)
+
+
+func _decor_row(type: String, def: Dictionary) -> void:
+	var c := card()
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 18)
+	c.add_child(h)
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(v)
+	v.add_child(l(str(def.name), 20))
+	v.add_child(para(str(def.get("desc", "")), 15, SUB, 700))
+	var owned := Game.state.fixtures.values().filter(func(f): return str(f.get("type", "")) == type).size()
+	h.add_child(l("%d owned" % owned, 17, SUB))
+	h.add_child(l("£%d" % int(def.price), 22))
+	h.add_child(button("Buy & place", _buy_decor.bind(type), GREEN, Game.state.cash - int(def.price) < int(Content.econ("overdraft_warning", -500))))
+	_list.add_child(c)
+
+
+func _buy_decor(type: String) -> void:
+	var before := Game.state.fixtures.keys()
+	Game.request("buy_fixture", {"type": type})
+	await get_tree().create_timer(0.15).timeout
+	for id in Game.state.fixtures:
+		if not id in before and os and os.pc:
+			os.pc.leave_then(func(p): p.start_placement(id))
+			return
 
 
 func _row(id: String, name: String, price: int, desc: String, stock: String) -> void:

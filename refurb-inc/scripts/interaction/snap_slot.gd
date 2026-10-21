@@ -18,6 +18,8 @@ signal moved
 
 var host_id: String = ""
 var station_id: String = ""
+## True while this slot rides a moving vehicle (a pallet on a truck or the forks): its item follows exactly.
+var rigid := false
 var _hint: MeshInstance3D
 
 

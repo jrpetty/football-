@@ -1,0 +1,46 @@
+{
+  "_comment": "Make the premises yours (office PC → Fit-out app). Choices live in GameState.premises (saved, replicated) and are applied by PremisesStyle in every level: wall paint repaints the building's inside wall materials (buildings.json paint_mats), floor markings are painted lines (walkways around the floor, bay boxes around equipment), the accent colour goes on door signage, rugs and the motto poster, and the logo style is the badge on the doors. Prices are a one-off for the decorators; changing back is free if it costs nothing. eotm = Employee of the Month weighting (jobs done last week).",
+  "paints": [
+    {"id": "original", "name": "As found", "colour": "", "price": 0, "desc": "Whatever the last tenant left."},
+    {"id": "magnolia", "name": "Builder's Magnolia", "colour": "#efe4cf", "price": 120},
+    {"id": "workshop_white", "name": "Workshop White", "colour": "#f4f4f1", "price": 120},
+    {"id": "dove_grey", "name": "Dove Grey", "colour": "#bfc1c0", "price": 140},
+    {"id": "gunmetal", "name": "Gunmetal", "colour": "#5d6670", "price": 160},
+    {"id": "navy_blazer", "name": "Navy Blazer", "colour": "#2c3e5c", "price": 160},
+    {"id": "racing_green", "name": "Racing Green", "colour": "#2d5040", "price": 160},
+    {"id": "mint_condition", "name": "Mint Condition", "colour": "#bfe0cf", "price": 140},
+    {"id": "terracotta", "name": "Terracotta", "colour": "#c06b4b", "price": 160},
+    {"id": "mustard", "name": "Mustard", "colour": "#d8a838", "price": 160},
+    {"id": "brand_orange", "name": "Refurb Orange", "colour": "#e8812e", "price": 160}
+  ],
+  "markings": [
+    {"id": "none", "name": "Bare floor", "desc": "No lines.", "price": 0},
+    {"id": "walkways", "name": "Walkways", "desc": "A painted walkway line all the way round, 0.9 m in from the walls.", "price": 90},
+    {"id": "bays", "name": "Bay boxes", "desc": "A painted box round every piece of equipment and a hatched pallet zone at goods-in.", "price": 90},
+    {"id": "both", "name": "Walkways and bay boxes", "desc": "The full warehouse look.", "price": 150}
+  ],
+  "line_colours": [
+    {"id": "yellow", "name": "Safety yellow", "colour": "#f2c318"},
+    {"id": "white", "name": "White", "colour": "#f2f2ee"},
+    {"id": "green", "name": "Walkway green", "colour": "#3aa35a"},
+    {"id": "blue", "name": "Blue", "colour": "#2f6fd0"},
+    {"id": "red", "name": "Red", "colour": "#d23a2e"}
+  ],
+  "accents": [
+    {"id": "orange", "name": "Refurb Orange", "colour": "#e8812e"},
+    {"id": "blue", "name": "Circuit Blue", "colour": "#2f6fd0"},
+    {"id": "green", "name": "Board Green", "colour": "#2f9a5a"},
+    {"id": "red", "name": "Post Box Red", "colour": "#cc2f2f"},
+    {"id": "purple", "name": "Royal Purple", "colour": "#6b45b8"},
+    {"id": "teal", "name": "Teal", "colour": "#1d9a96"},
+    {"id": "charcoal", "name": "Charcoal", "colour": "#33363c"}
+  ],
+  "logos": [
+    {"id": "badge", "name": "Initials badge", "desc": "Your initials in a rounded square."},
+    {"id": "ring", "name": "Ring", "desc": "Initials in a bold ring."},
+    {"id": "chevron", "name": "Chevrons", "desc": "Three forward chevrons — always moving stock."},
+    {"id": "plain", "name": "Name only", "desc": "Just the company name."}
+  ],
+  "defaults": {"paint": "original", "markings": "none", "line_colour": "yellow", "accent": "orange", "logo": "badge", "door_sign": true},
+  "eotm": {"weights": {"tested": 1.0, "repaired": 1.5, "imaged": 1.0, "graded": 1.0, "listed": 0.25, "packed": 1.0, "hauled": 0.25, "lots_bought": 2.0}}
+}

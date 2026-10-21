@@ -154,8 +154,15 @@
       "id": "shelf_b",
       "type": "metal_shelf",
       "label": "Shelf B"
+    },
+    {
+      "id": "eotm_1",
+      "type": "eotm_frame",
+      "label": "Employee of the Month"
     }
   ],
+  "forklift_kw": 2.4,
+  "forklift_charge_kw": 0.25,
   "first_day_express": true,
   "first_day_lorry_minutes": 30,
   "first_day_parcel_minutes": 20,

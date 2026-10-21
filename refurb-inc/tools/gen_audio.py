@@ -379,6 +379,60 @@ def achievements():
     write("ui", "achievement", out, 0.6)
 
 
+def forklift():
+    # Electric counterbalance truck: traction motor whine (pitch follows speed in game), the hydraulic pump when
+    # the forks move, and the horn.
+    d = 3.0
+    tt = t(d)
+    whine = np.sin(2 * np.pi * 420 * tt) * 0.25 + np.sin(2 * np.pi * 840 * tt + 0.4) * 0.12 + np.sin(2 * np.pi * 1260 * tt) * 0.05
+    hum = np.sin(2 * np.pi * 100 * tt) * 0.35 + np.sin(2 * np.pi * 50 * tt) * 0.25
+    gear = bandpass(noise(d), 300, 1800) * (0.6 + 0.4 * np.sin(2 * np.pi * 23 * tt)) * 0.35
+    write("sfx", "forklift_motor", loopable(whine + hum + gear), 0.5, loop_fade=True)
+    d = 2.0
+    tt = t(d)
+    pump = np.sin(2 * np.pi * 180 * tt) * 0.35 + np.sin(2 * np.pi * 360 * tt) * 0.2
+    pump *= 0.8 + 0.2 * np.sin(2 * np.pi * 30 * tt)
+    hiss = bandpass(noise(d), 900, 5000) * 0.25
+    write("sfx", "forklift_hydraulic", loopable(pump + hiss), 0.5, loop_fade=True)
+    d = 0.55
+    n = int(SR * d)
+    horn = (square(420, d) * 0.5 + square(530, d) * 0.4) * env(n, 0.01, 0.5, 0.9, 0.05)
+    write("sfx", "forklift_horn", lowpass(horn, 3000), 0.6)
+
+
+def radio():
+    # "Refurb FM": a cheerful loop through a small speaker — chords, a bass line and a simple tune, band-limited.
+    bpm = 112
+    beat = 60.0 / bpm
+    bars = 4
+    total = bars * 4 * beat
+    out = np.zeros(int(SR * total))
+
+    def add(x, at, gain=1.0):
+        s0 = int(at * SR)
+        e0 = min(len(out), s0 + len(x))
+        out[s0:e0] += x[: e0 - s0] * gain
+
+    def tone(f, d, decay=0.25):
+        n = int(SR * d)
+        return (np.sin(2 * np.pi * f * t(d)) + 0.3 * np.sin(4 * np.pi * f * t(d))) * exp_decay(n, decay)
+
+    chords = [[261.6, 329.6, 392.0], [220.0, 261.6, 329.6], [174.6, 220.0, 261.6], [196.0, 246.9, 293.7]]
+    bass = [130.8, 110.0, 87.3, 98.0]
+    tune = [523.3, 587.3, 659.3, 587.3, 523.3, 440.0, 392.0, 440.0, 523.3, 659.3, 784.0, 659.3, 587.3, 523.3, 493.9, 523.3]
+    for b in range(bars):
+        for k in range(4):
+            at = (b * 4 + k) * beat
+            for f in chords[b]:
+                add(tone(f, beat * 0.9, 0.18), at, 0.12)
+            add(tone(bass[b], beat * 0.95, 0.3), at, 0.35)
+            add(bandpass(noise(0.05), 4000, 9000) * exp_decay(int(SR * 0.05), 0.01), at + beat * 0.5, 0.15)
+        for k in range(4):
+            add(tone(tune[(b * 4 + k) % len(tune)], beat * 0.8, 0.2), (b * 4 + k) * beat + beat * 0.02, 0.22)
+    out = bandpass(out, 250, 3500)        # little speaker in a roll cage
+    write("sfx", "radio_music", loopable(out, 0.05), 0.4, loop_fade=True)
+
+
 if __name__ == "__main__":
     footsteps()
     handling()
@@ -391,4 +445,6 @@ if __name__ == "__main__":
     automation()
     tea_round()
     achievements()
+    forklift()
+    radio()
     # "footstep" (no suffix) resolves to footstep_1..4 variants in Sfx.

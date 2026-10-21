@@ -41,6 +41,9 @@ var players: Dictionary = {}         # player key -> { "name": String, "xp": {sk
 # --- premises & equipment
 var building_id: String = "garage"
 var fixtures: Dictionary = {}        # fixture/station id -> { "type": String, "label": String, "placed": bool, "p": [x,y,z], "r": yaw_deg }
+## How the company has made the place its own (Fit-out app; data/premises.json): paint, markings, line_colour,
+## accent, logo, door_sign — plus "eotm", this week's Employee of the Month. Applies in every premises.
+var premises: Dictionary = {}
 
 # --- world
 var items: Dictionary = {}           # id -> Item
@@ -370,6 +373,7 @@ func to_dict() -> Dictionary:
 		"stats": stats.duplicate(true),
 		"staff": _int_keyed_out(staff), "candidates": candidates.duplicate(true),
 		"contracts": _int_keyed_out(contracts),
+		"premises": premises.duplicate(true),
 	}
 
 
@@ -412,6 +416,7 @@ func load_dict(d: Dictionary) -> void:
 	for k in d.get("staff", {}):
 		staff[int(k)] = d.staff[k].duplicate(true)
 	candidates = d.get("candidates", []).duplicate(true)
+	premises = d.get("premises", {}).duplicate(true)
 	stats = BusinessStats.migrate(d.get("stats", {}))
 	dirty.clear()
 
@@ -473,6 +478,8 @@ func export_entity(kind: String, id: Variant) -> Variant:
 			return staff[int(id)].duplicate(true) if staff.has(int(id)) else null
 		"candidates":
 			return candidates.duplicate(true)
+		"premises":
+			return premises.duplicate(true)
 	return null
 
 
@@ -550,6 +557,8 @@ func import_entity(kind: String, id: Variant, v: Variant) -> void:
 			building_id = str(v)
 		"schedule":
 			schedule = v
+		"premises":
+			premises = v if v is Dictionary else {}
 	changed.emit(kind, id)
 
 
@@ -579,6 +588,11 @@ func snapshot() -> Dictionary:
 
 func building() -> Dictionary:
 	return Content.building(building_id)
+
+
+func style(key: String) -> Variant:
+	## A premises choice (paint, markings, line_colour, accent, logo, door_sign), falling back to the defaults.
+	return premises.get(key, Content.premises_data.get("defaults", {}).get(key))
 
 
 func fixture_items(fixture_id: String) -> Array:

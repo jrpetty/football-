@@ -36,6 +36,10 @@ var _belt_geo := {}
 var _belt_key := ""
 ## Where this item was when a robot arm took it (the arm reaches for it there).
 var arm_pick_xf := Transform3D.IDENTITY
+## Forklifts: the visual rig (moving forks) and a solid body that stops people walking through it when parked.
+var forklift: ForkliftRig = null
+var _blocker: CollisionShape3D = null
+var _rigid := false                    # follow exactly (riding a vehicle), no smoothing lag
 
 
 func setup(it: Item) -> void:
@@ -62,6 +66,24 @@ func setup(it: Item) -> void:
 		add_child(mug)
 		visual_size = Vector3(0.095, 0.1, 0.095)
 		mass = 0.35
+	elif kind == Item.KIND_FORKLIFT:
+		forklift = ForkliftRig.new()
+		forklift.name = "Forklift"
+		add_child(forklift)
+		visual_size = LevelRoot.FORKLIFT_BOX
+		mass = 2600.0
+		process_physics_priority = -5          # after the driver moves, before the pallet on its forks
+		var sb := StaticBody3D.new()
+		sb.name = "Blocker"
+		sb.collision_layer = 1                 # parked: people and other vehicles can't go through it
+		sb.collision_mask = 0
+		_blocker = CollisionShape3D.new()
+		var bb := BoxShape3D.new()
+		bb.size = Vector3(1.15, 2.0, 2.35)
+		_blocker.shape = bb
+		_blocker.position = Vector3(0, 1.0, -0.45)
+		sb.add_child(_blocker)
+		add_child(sb)
 	else:
 		var def: Dictionary = KIND_VISUAL.get(kind, {}).duplicate(true)
 		if kind == Item.KIND_PACKAGE and it.data.has("size"):
@@ -98,13 +120,14 @@ func setup(it: Item) -> void:
 			Placeholders.text(self, def.label, Vector3(0, 0.0086, 0.008), 24, Color(0.1, 0.1, 0.1), Vector3(-90, 0, 0), 0.0006)
 		if kind == Item.KIND_PALLET:
 			_build_pallet_slots(it)
+			process_physics_priority = -2      # pallets move before the units stacked on them
 		if kind == Item.KIND_PACKAGE:
 			var lbl := Placeholders.text(self, "#%d\n%s" % [int(it.data.get("order_id", 0)), str(it.data.get("buyer", ""))], Vector3(0.09, visual_size.y + 0.003, 0), 22, Color(0.05, 0.05, 0.05), Vector3(-90, 0, 0), 0.0012)
 			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var bs := BoxShape3D.new()
 	bs.size = Vector3(maxf(visual_size.x, 0.05), maxf(visual_size.y, 0.02), maxf(visual_size.z, 0.05))
 	_shape.shape = bs
-	_shape.position = Vector3(0, visual_size.y / 2, 0)
+	_shape.position = Vector3(0, visual_size.y / 2, LevelRoot.FORKLIFT_BOX_Z if kind == Item.KIND_FORKLIFT else 0.0)
 	physics_material_override = PhysicsMaterial.new()
 	physics_material_override.friction = 0.9
 	physics_material_override.bounce = 0.05
@@ -162,7 +185,7 @@ func state_transform(it: Item) -> Transform3D:
 	return Transform3D(Basis(Quaternion(r[0], r[1], r[2], r[3]).normalized()), Vector3(p[0], p[1], p[2]))
 
 
-const STORAGE_TYPES := ["metal_shelf", "heavy_rack", "courier_shelf", "parts_shelf", "stock_tower"]
+const STORAGE_TYPES := ["metal_shelf", "heavy_rack", "courier_shelf", "parts_shelf", "stock_tower", "pallet_rack", "pallet_rack_low"]
 var _shadows_on := true
 
 
@@ -199,7 +222,37 @@ func apply_state(it: Item, initial: bool = false) -> void:
 		return
 	var was_ride := _ride
 	_ride = ""
+	_rigid = false
+	if forklift:
+		forklift.driven = loc.get("t") == "driven"
+		if _blocker:
+			_blocker.disabled = loc.get("t") != "loose"
+		if loc.get("t") != "driven":
+			forklift.set_fork_height(float(it.data.get("h", 0.0)))
+	if kind == Item.KIND_PALLET:
+		# Riding a truck or the forks: the stock on it follows exactly instead of easing after it.
+		var riding: bool = loc.get("t") in ["on_truck", "on_forks"]
+		for s: SnapSlot in pallet_slots:
+			s.rigid = riding
 	match loc.get("t"):
+		"driven":
+			# Someone's in the seat: it goes where they drive (their player node), exactly.
+			var driver: Node3D = lr.players.get(int(loc.get("peer", 0))) if lr else null
+			if driver == null:
+				visible = false
+				return
+			_follow(driver, Logistics.drive_xf())
+			_rigid = true
+			collision_layer = 0
+		"on_forks":
+			var fork_view: ItemView = lr.item_views.get(int(loc.get("fork", 0))) if lr else null
+			if fork_view == null or fork_view.forklift == null:
+				lr.pending_views[item_id] = true
+				visible = false
+				return
+			_follow(fork_view.forklift.fork_point(), Logistics.pallet_on_forks(0.0, float(loc.get("yaw", 0.0))))
+			_rigid = true
+			collision_layer = 0
 		"belt":
 			_ride = "belt"
 			_following = false
@@ -244,6 +297,7 @@ func apply_state(it: Item, initial: bool = false) -> void:
 			var on_forks := ON_FORKS
 			on_forks.basis = Basis(Vector3.UP, deg_to_rad(float(loc.get("yaw", 90.0))))
 			_follow(truck_view, on_forks)
+			_rigid = true
 			collision_layer = 1 << 2
 		"held":
 			var peer := int(loc.get("peer", 0))
@@ -273,7 +327,9 @@ func apply_state(it: Item, initial: bool = false) -> void:
 			var xf := Transform3D(Basis(Quaternion(r[0], r[1], r[2], r[3]).normalized()), Vector3(p[0], p[1], p[2]))
 			_settle_reported = false
 			if Game.is_host():
-				freeze = kind in [Item.KIND_PALLET, Item.KIND_PALLET_TRUCK]   # moved by hand trucks, not shoved
+				freeze = kind in [Item.KIND_PALLET, Item.KIND_PALLET_TRUCK, Item.KIND_FORKLIFT]   # moved by trucks, not shoved
+				if freeze:
+					freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
 				global_transform = xf
 				if not freeze:
 					sleeping = false
@@ -375,6 +431,10 @@ func _physics_process(delta: float) -> void:
 		return
 	if _following and is_instance_valid(_follow_node):
 		var target := _follow_node.global_transform * _follow_offset
+		if _rigid or (_follow_node is SnapSlot and (_follow_node as SnapSlot).rigid):
+			# Riding a vehicle (or stacked on a pallet that is): exactly where it should be, every frame.
+			global_transform = target
+			return
 		var held := not (_follow_node is SnapSlot)
 		if held:
 			# Smooth, slightly laggy follow = weight and sway when carrying.
@@ -454,13 +514,26 @@ func hover_info(player: Node) -> Dictionary:
 				info.lines.append("Grab the handle, slide the forks under a pallet and jack it up.")
 				info.prompt = "[E] Take the pallet truck"
 			return info
+		Item.KIND_FORKLIFT:
+			var t := str(it.loc.get("t", ""))
+			if t == "driven":
+				info.lines.append("%s is driving" % Net.display_name(int(it.loc.get("peer", 0))))
+			else:
+				info.lines.append("Electric counterbalance · forks at %.1f m" % float(it.data.get("h", 0.0)))
+				for p: Item in Game.state.items.values():
+					if p.kind == Item.KIND_PALLET and p.loc.get("t") == "on_forks" and int(p.loc.get("fork", 0)) == item_id:
+						info.lines.append("Carrying %s" % p.display_name())
+				info.prompt = "[E] Get in"
+			return info
 		Item.KIND_PALLET:
 			var n := 0
 			for s: SnapSlot in pallet_slots:
 				if not s.is_free():
 					n += 1
 			info.lines.append("%d unit(s) on this pallet" % n)
-			info.prompt = "Look at a unit to pick it up"
+			if it.loc.get("t") == "slot":
+				info.lines.append(Logistics.pallet_location(Game.state, it))
+			info.prompt = "Look at a unit to pick it up" if n > 0 else "Move it with a pallet truck or forklift"
 			return info
 		Item.KIND_PARCEL:
 			info.lines.append(_parcel_summary(it))
@@ -514,6 +587,8 @@ func interact(_player: Node) -> void:
 	var it := Game.state.get_item(item_id)
 	if it and it.kind == Item.KIND_PALLET_TRUCK and it.loc.get("t") == "loose":
 		Game.request("take_truck", {"item": item_id})
+	elif it and it.kind == Item.KIND_FORKLIFT and it.loc.get("t") == "loose":
+		Game.request("forklift_enter", {"item": item_id})
 	elif it and it.is_carryable():
 		Game.request("pick_up", {"item": item_id})
 
