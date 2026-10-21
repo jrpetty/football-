@@ -107,6 +107,38 @@ Everything about the business, live, in 13 sections down the left. Hover the cha
 - **Benchmark:** run `tools/benchmark.tscn` (F6, or `-- --levels garage,warehouse --preset high`). It fills every shelf, drops pallets, pans the camera with v-sync off and writes avg FPS, 1% low and draw calls to `tools/out/benchmark_<preset>.txt`. Add `--probe` to see where the frame goes (stock, sun shadows, post-processing, lamps, building). It runs the GPU flat out: run one premises per launch.
 - **Shadow stand-ins:** `tools/shadow_compare.tscn` renders the heavy props with their own shadows vs the stand-ins side by side (`tools/out/shadow_*.png`). After new models come through the pipeline, run `godot --headless --path . -s tools/shadow_proxies.gd` to give any new heavy mesh a stand-in. `tools/lod_report.gd` lists every mesh's triangles and LODs.
 
+## Forklift, pallet racking, unload bay, fit-out (October 2026)
+- **Forklift:** office PC → **Shop** → Equipment → **Electric forklift** (£7,800). It's dropped off in goods-in (no box).
+  - Look at it and press **E** to get in. The view glides into the seat.
+  - **W/S** drive, **A/D** steer. The back swings out like a real counterbalance truck.
+  - **R/F** (or the mouse wheel) raise and lower the forks. They stop the moment you let go.
+  - **H** sounds the horn and **E** gets you out. Reversing beeps, and the motor whines with speed.
+  - Walls, equipment, racking and stock stop the truck. Bare forks stop at walls too.
+- **Lift a pallet:** lower the forks to the floor and drive them into the pallet until the truck stops at the backrest. The card says "Forks under the pallet", so press **R** and it comes up. Lower it anywhere on the floor with **F**.
+- **Pallet racking:** Building → Buy equipment → **Logistics**.
+  - **Pallet racking** has 3 bays × 3 levels (4 m tall), for warehouse-height buildings.
+  - **Low pallet racking** has 2 × 2 and fits under a garage roof.
+  - Carry the pallet long side along the forks and raise it above the beam you want. Drive in until the truck stops at the racking. The card says "Lined up with Racking R1 · level 2 · bay 2"; press **F** and it settles on the beam.
+  - Off-line over a beam, it stops and says "Line it up with a bay".
+  - Units on a racked pallet show in the **Stock** app as e.g. "Racking R1 · level 3 · bay 2". You can't hand-pick from the upper levels.
+  - The hand **pallet truck** reaches the floor level only: wheel a pallet into a floor bay and press E.
+- **Pallet → line:** buy a **Pallet unload bay** (yellow painted box) and put a **robot arm** beside it, with the start of a conveyor inside the arm's cyan ring.
+  - Bring a delivered pallet over with the forklift or pallet truck and set it down in the bay.
+  - The arm unloads it unit by unit onto the belt (or straight onto a test rack if one is in reach).
+  - Pallets stored in racking are left alone.
+- **Fit-out app** (office PC, pink ✎ icon) has five tabs:
+  - **Walls & colours:** pick a paint and the inside walls change straight away. "As found" strips it back. The accent colour goes on the signs, rug and motto poster.
+  - **Floor markings:** walkway lines 0.9 m in from the walls and/or painted boxes round every piece of equipment, plus a hatched pallet zone at goods-in. Choose the line colour. The boxes follow equipment when you move it.
+  - **Signage:** rename the company, pick a logo (initials badge, ring, chevrons or name only) and put the door signs up or down. A sign goes above every roller door, and the logo goes on the shutter.
+  - **Decor:** plants, a rug, the site radio (E switches it on and plays Refurb FM), a wall clock that keeps game time, and three posters. Wall pieces hang on the nearest wall.
+  - **Employee of the Month:** this week's winner and last week's leaderboard.
+- **Employee of the Month:** the gold frame on the wall (every premises has one).
+  - Every Monday, whoever got the most done the week before goes up: tests, repairs ×1.5, imaging, grading, packing, hauling ÷4 and lots bought ×2. Staff count too.
+  - If the winner uploaded a photo face (Character menu), it's their face in the frame. Otherwise it's a name card with their initials in the accent colour.
+- **Moving premises:** all of the above comes with you: paint, lines, signs, decor, racking (with its pallets), the forklift and the frame.
+- **Co-op:** the guest sees the driver sat in the forklift, the forks moving and the pallet riding them. Paint and decor changes show for everyone.
+- **Renders:** `tools/logistics_shot.tscn -- --shot rack` (forklift at the racking, unload bay with an arm) or `-- --shot garage` (a customised garage). Use the software renderer if the GPU is busy: `godot --rendering-driver d3d12 --gpu-index 1 --path . res://tools/logistics_shot.tscn -- --shot garage`. Output goes to `tools/out/`.
+
 ## Co-op (LAN / same PC)
 - Title screen → **Host co-op**. On a second instance → **Join co-op…** → host's IP → **Join**.
 - Same PC: Godot **Debug → Customize Run Instances… → 2 instances**, then press F5 twice-ish (one hosts, one joins `127.0.0.1`).
@@ -115,9 +147,10 @@ Everything about the business, live, in 13 sections down the left. Hover the cha
 ## Automated checks
 Run everything from a terminal: `tools/run_all_checks.sh /path/to/godot`
 Or run individually in the editor:
-- `tests/run_tests.tscn` (F6) — 80 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats, staff, new stock, tea, goals, achievements, automation.
+- `tests/run_tests.tscn` (F6) — 102 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats, staff, new stock, tea, goals, achievements, automation, Steam, logistics (forklift, racking, lorry → unload bay → arm → belt) and the premises fit-out (paint, lines, signs, decor, Employee of the Month).
 - `tools/playtest.tscn` (F6) — drives the real garage at 8× speed: lorry, bench, repair, image, grade, sell, pack, courier, parcel, save/load.
-- `tools/premises_test.tscn` (F6) — moves one company through all 7 buildings: layout, stock, loose pallets, lorry to docks, extra equipment.
+- `tools/premises_test.tscn` (F6) — moves one company through all 7 buildings: layout, stock, loose pallets, lorry to docks, extra equipment, and in every building the paint, floor lines, door logos, the Employee of the Month frame, the forklift's parking spot and a racked pallet that travels with its racking.
+- `tools/forklift_test.tscn` (F6) — the real player drives the real forklift with simulated keys: forks under a pallet, lift, into the racking at level 2, set down, reverse out, walls stop it.
 - `tools/net_test.tscn -- --role host` and `-- --role client` — two-process co-op check.
 - `tools/check_scripts.tscn` — compiles every script.
 - `tools/economy_sim.tscn -- --days 20 --seed 3` — a bot runs the business through the real commands for N days and prints the headline numbers and the auto-insights (good for balancing).

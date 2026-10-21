@@ -1438,6 +1438,15 @@ func _update_placement() -> void:
 	if not _snapped.is_empty():
 		pos = _snapped.pos
 		_ghost_rot = float(_snapped.rot)
+	var wall := str(Content.fixture(f.type).get("mount", "")) == "wall"
+	if wall:
+		# Posters, clocks, the Employee of the Month frame: onto the nearest wall, facing into the room.
+		var ws := LevelRoot.current.wall_snap(f.type, aim)
+		if not ws.is_empty():
+			pos = ws.pos
+			pos.x = snappedf(pos.x, 0.05)
+			pos.z = snappedf(pos.z, 0.05)
+			_ghost_rot = float(ws.rot)
 	_ghost_pos = pos
 	_ghost.global_transform = Transform3D(Basis(Vector3.UP, deg_to_rad(_ghost_rot)), pos)
 	_ghost_valid = LevelRoot.current.can_place(f.type, pos, _ghost_rot, placing_id, _bend)
@@ -1446,6 +1455,9 @@ func _update_placement() -> void:
 		_ghost_mat.albedo_color = c
 	var info := {"title": "Placing: %s" % f.get("label", f.type), "lines": [],
 		"prompt": "[E] Place  ·  [R] Rotate  ·  [Q] Cancel"}
+	if wall:
+		info.lines.append("Hangs on the wall nearest where you look")
+		info.prompt = "[E] Hang it here  ·  [Q] Cancel"
 	if not _ghost_valid:
 		info.lines.append("✖ Doesn't fit here (walls, doorways or other equipment)")
 	if not _snapped.is_empty():

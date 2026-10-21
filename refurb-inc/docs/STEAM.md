@@ -62,7 +62,7 @@ When Refurb Inc. has its own Steamworks app:
 
 ## Steamworks registration lists
 
-### Achievements (70)
+### Achievements (75)
 
 | API name | Name | Description | Hidden |
 |---|---|---|---|
@@ -104,6 +104,9 @@ When Refurb Inc. has its own Steamworks app:
 | `ACH_HEADQUARTERS` | Headquarters | Move into the refurb facility. |  |
 | `ACH_THE_MEGA_PLANT` | The mega plant | Move into the mega plant — the top of the ladder. |  |
 | `ACH_FAST_MOVER` | Fast mover | Get out of the garage within 40 working days. |  |
+| `ACH_LICENCE_TO_LIFT` | Licence to lift | Pick up a pallet with a forklift. |  |
+| `ACH_TOP_SHELF` | Top shelf | Put a pallet away on the top level of pallet racking. |  |
+| `ACH_INTERIOR_DESIGNER` | Interior designer | Paint the walls, mark out the floor and put up three pieces of decor. |  |
 | `ACH_ROLLING` | Rolling, rolling, rolling | Buy your first conveyor. |  |
 | `ACH_PRODUCTION_LINE` | Production line | Have 10 conveyor sections laid out. |  |
 | `ACH_SPAGHETTI_JUNCTION` | Spaghetti junction | Have 50 conveyor sections laid out. |  |
@@ -112,12 +115,14 @@ When Refurb Inc. has its own Steamworks app:
 | `ACH_RACK_EM_UP` | Rack 'em up | Own a network test rack and a network imaging rack. |  |
 | `ACH_TOWER_OF_POWER` | Tower of power | Store a unit in an automated stock tower. |  |
 | `ACH_LIGHTS_OUT` | Lights out | Ship an order no human hand touched — booked in, processed and packed by machines. |  |
+| `ACH_HANDS_FREE_GOODS_IN` | Hands-free goods-in | Let robot arms unload 100 units straight off pallets. |  |
 | `ACH_TWO_PAIRS_OF_HANDS` | Two pairs of hands | Play a co-op session with a friend. |  |
 | `ACH_FULL_CREW` | Full crew | Play with a full crew of four. |  |
 | `ACH_GETTING_GOOD` | Getting good | Reach level 5 in any skill. |  |
 | `ACH_MASTER_OF_ONE` | Master of one | Reach level 10 in a skill. |  |
 | `ACH_JACK_OF_ALL_TRADES` | Jack of all trades | Reach level 5 in every skill. |  |
 | `ACH_PERSONAL_BEST` | Personal best | Beat one of your own milestone records. |  |
+| `ACH_EMPLOYEE_OF_THE_MONTH` | Employee of the Month | Get your name up in the frame on the wall: most jobs done in a week. |  |
 | `ACH_FACE_OF_THE_COMPANY` | Face of the company | Put your own photo on your character and go to work. |  |
 | `ACH_BIG_HEAD` | Head too big for the door | Finish a working day in big head mode. | yes |
 | `ACH_KETTLES_ON` | Kettle's on | Make your first brew. |  |
