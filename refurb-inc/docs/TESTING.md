@@ -82,6 +82,26 @@ Everything about the business, live, in 13 sections down the left. Hover the cha
 - **Timeline:** the company diary, covering lots bought, milestones, record days, skill level-ups, reputation marks, new sellers, moves and equipment.
 - **To see it full of data:** run `xvfb-run godot --path . res://tools/screenshot.tscn -- --insights`. It simulates 20 working days with the bot and saves every section to `tools/out/insights_*.png`.
 
+## Staff, characters, stock, achievements, automation (October 2026)
+- **Character:** title screen → **Character**. Change shirt, trousers, skin, hair and style, build and height; tick hi-vis, cap or big head; **Upload photo** puts your face on your avatar. The preview turns as you change things. In co-op the others see your look.
+- **Staff:** office PC → **Staff** (smiley icon) → **Candidates** → **Hire** a tester. They walk to the test bench, swap USBs and test whatever is waiting. **Your team** shows what they're doing, their skills and their wage. A level-1 hire is slow; a level-8 one is quick and costs much more. Wages go out on Friday with the rent.
+- **New stock:** LotFinder lots now include monitors, Linkwell switches and Wi-Fi APs, docks, tablets and phones. On the test bench each kind gets its own diagnostics steps and hardware list.
+  - Monitors and docks show "TESTED — ready to grade": they have no data to wipe.
+  - Phones and tablets need the PaneOS USB for a secure wipe and factory reset. Switches and APs get a config wipe and firmware update.
+  - An activation-locked phone can't be fixed and grades as D (Spares/Repairs).
+- **Goals:** office PC → **Goals** (crown icon). Milestones are timed in working days and fastest times are kept under **Leaderboards**.
+- **Achievements:** office PC → **Achievements**, or the button on the title screen. Brew a cup of tea to see the gold unlock card.
+- **Automation:** Building → Shop → **Automation**.
+  - Lay out conveyor → stop gate → conveyor → splitter with a conveyor off each side exit. Each piece snaps onto the green arrows.
+  - Kit alternates left and right at the splitter. Press **E** on the splitter for Overflow, and **E** on the gate to hold or open.
+  - **Hold E** on any belt to upgrade the whole run to Fast (blue), then Express (orange).
+  - A **people's hatch** stops kit at a pick face for a person; put it on the far half to send it on.
+  - A **line monitor** shows the line live with the bottleneck outlined in red.
+  - **Flexible bend:** while placing it, scroll changes the angle, Shift+scroll the radius and **T** flips the side.
+- **Insights:** the new **Automation, Energy, Staff and Lifetime stats** pages update live while you watch them.
+- **Bench screens for every kind of kit:** run `tools/bench_screen_shot.tscn` (F6). It saves `tools/out/bench_<model>_<1-4>.png`.
+- **Benchmark:** run `tools/benchmark.tscn` (F6, or `-- --levels garage,warehouse`). It fills every shelf, drops pallets, pans the camera and prints avg FPS, 1% low and draw calls to `tools/out/benchmark.txt`.
+
 ## Co-op (LAN / same PC)
 - Title screen → **Host co-op**. On a second instance → **Join co-op…** → host's IP → **Join**.
 - Same PC: Godot **Debug → Customize Run Instances… → 2 instances**, then press F5 twice-ish (one hosts, one joins `127.0.0.1`).
@@ -90,7 +110,7 @@ Everything about the business, live, in 13 sections down the left. Hover the cha
 ## Automated checks
 Run everything from a terminal: `tools/run_all_checks.sh /path/to/godot`
 Or run individually in the editor:
-- `tests/run_tests.tscn` (F6) — 25 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats.
+- `tests/run_tests.tscn` (F6) — 77 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats, staff, new stock, tea, goals, achievements, automation.
 - `tools/playtest.tscn` (F6) — drives the real garage at 8× speed: lorry, bench, repair, image, grade, sell, pack, courier, parcel, save/load.
 - `tools/premises_test.tscn` (F6) — moves one company through all 7 buildings: layout, stock, loose pallets, lorry to docks, extra equipment.
 - `tools/net_test.tscn -- --role host` and `-- --role client` — two-process co-op check.
