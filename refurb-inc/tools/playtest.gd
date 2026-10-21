@@ -71,6 +71,24 @@ func _ready() -> void:
 		if v == null or not v.visible:
 			view_ok = false
 	_check(view_ok, "every unit has a visible view on the pallet")
+	# Settled stock goes idle (no per-frame work) but still follows when its pallet moves.
+	for i in 90:
+		await get_tree().physics_frame
+	var pal: Item = s.items.values().filter(func(i): return i.kind == Item.KIND_PALLET)[0]
+	var pal_view: ItemView = _level.item_views.get(pal.id)
+	var on_pal: Array = units.filter(func(u): return str(u.loc.get("slot", "")).begins_with("i%d:" % pal.id))
+	var uv: ItemView = _level.item_views.get(on_pal[0].id) if not on_pal.is_empty() else null
+	_check(uv != null and not uv.is_physics_processing(), "a settled unit stops updating every frame")
+	if uv and pal_view:
+		var before := uv.global_position
+		var home := pal_view.global_transform
+		pal_view.global_position += Vector3(0.4, 0, 0)
+		for i in 40:
+			await get_tree().physics_frame
+		_check(uv.global_position.distance_to(before + Vector3(0.4, 0, 0)) < 0.03, "settled units follow their pallet when it moves (%.3f m off)" % uv.global_position.distance_to(before + Vector3(0.4, 0, 0)))
+		pal_view.global_transform = home
+		for i in 40:
+			await get_tree().physics_frame
 
 	# --- carry a unit in and test it
 	var it: Item = units[0]

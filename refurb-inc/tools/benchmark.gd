@@ -2,7 +2,9 @@ extends Node
 ## Smoothness benchmark: every premises with its equipment laid out, every shelf bay full of stock and pallets of
 ## kit on the floor, then the camera pans round inside and outside while frame times are recorded (v-sync off).
 ## Prints avg FPS, 1% low, worst frame and draw calls per premises, and writes tools/out/benchmark.txt.
-##   Godot --path . res://tools/benchmark.tscn [-- --levels garage,warehouse] [-- --pallets 16]
+##   Godot --path . res://tools/benchmark.tscn [-- --levels garage,warehouse] [--pallets 16] [--preset high] [--append]
+##   --probe: on the inside view, measure again with one thing switched off at a time (stock, sun shadows,
+##   post-processing, lamps, building) to show where the frame time goes.
 
 const SHOT := preload("res://tools/screenshot.gd")
 const LAPTOPS := ["corvex_prospect_5420", "halden_folio_840", "northstar_meridian_t14", "kestrel_swift_14", "brightline_vantage_3510"]
@@ -24,14 +26,18 @@ func _ready() -> void:
 	var pallets := 12
 	if args.find("--pallets") >= 0:
 		pallets = int(args[args.find("--pallets") + 1])
-	_lines.append("REFURB INC benchmark · %s · %s" % [Time.get_datetime_string_from_system(), RenderingServer.get_video_adapter_name()])
+	if args.find("--preset") >= 0:
+		Settings.values.graphics_preset = args[args.find("--preset") + 1]   # this run only; not saved
+	_lines.append("REFURB INC benchmark · %s · %s · preset %s" % [Time.get_datetime_string_from_system(), RenderingServer.get_video_adapter_name(), Settings.values.graphics_preset])
 	_lines.append("%-13s %-7s %7s %7s %8s %7s %9s %6s" % ["premises", "view", "avg fps", "1% low", "worst ms", "draws", "prims(k)", "items"])
 	for level_id in levels:
 		await _bench_level(str(level_id), pallets)
 	var out := "\n".join(_lines)
 	print(out)
 	DirAccess.make_dir_recursive_absolute("res://tools/out")
-	var f := FileAccess.open("res://tools/out/benchmark.txt", FileAccess.WRITE)
+	var path := "res://tools/out/benchmark_%s.txt" % Settings.values.graphics_preset
+	var f := FileAccess.open(path, FileAccess.READ_WRITE if FileAccess.file_exists(path) and "--append" in args else FileAccess.WRITE)
+	f.seek_end()
 	f.store_string(out + "\n")
 	f.close()
 	get_tree().quit()
@@ -70,6 +76,11 @@ func _bench_level(level_id: String, pallets: int) -> void:
 	var lights := level.find_children("*", "Light3D", true, false).filter(func(x): return x.shadow_enabled and x.visible)
 	print("%s: %d shadowed lights, LOD threshold %.1f px" % [level_id, lights.size(), get_viewport().mesh_lod_threshold])
 	var poses: Dictionary = SHOT.LEVEL_POSES.get(level_id, {})
+	if "--probe" in args and poses.has("int"):
+		await _probe(level, level_id, poses.int)
+		_cam.queue_free()
+		level.queue_free()
+		return
 	for view in ["int", "ext"]:
 		if not poses.has(view):
 			continue
@@ -186,3 +197,77 @@ func _measure(from: Vector3, look: Vector3) -> Dictionary:
 	worst_1pc /= k
 	return {"avg": n / maxf(total, 0.0001), "low": 1.0 / maxf(worst_1pc, 0.0001), "worst": float(times[n - 1]) * 1000.0,
 		"draws": draws / maxi(n, 1), "prims": float(prims) / maxi(n, 1)}
+
+
+func _probe(level: Node, level_id: String, pose: Array) -> void:
+	## Where the frame goes: the inside view again with one thing off at a time.
+	var env: Environment = level.environment.environment if level.get("environment") else null
+	var sun: DirectionalLight3D = level.get("sun")
+	var stock: Array = level.find_children("Item_*", "", true, false)
+	var lamps: Array = level.find_children("*", "Light3D", true, false).filter(func(x): return not x is DirectionalLight3D)
+	var meshes: Array = level.find_children("*", "GeometryInstance3D", true, false)
+	print("%s: %d stock items, %d lamps (%d shadowed), %d geometry nodes" % [level_id, stock.size(), lamps.size(),
+		lamps.filter(func(x): return x.shadow_enabled).size(), meshes.size()])
+	_probe_line(level_id, "baseline", await _measure(pose[0], pose[1]))
+	for it in stock:
+		it.visible = false
+	_probe_line(level_id, "no stock", await _measure(pose[0], pose[1]))
+	for it in stock:
+		it.visible = true
+	for it in stock:
+		it.set_process(false)
+		it.set_physics_process(false)
+	_probe_line(level_id, "stock scripts off", await _measure(pose[0], pose[1]))
+	for it in stock:
+		it.set_process(true)
+		it.set_physics_process(true)
+	var draws_per := 0
+	if not stock.is_empty():
+		draws_per = stock[0].find_children("*", "GeometryInstance3D", true, false).size()
+	print("geometry nodes per stock item: %d" % draws_per)
+	if sun:
+		sun.shadow_enabled = false
+		_probe_line(level_id, "no sun shadow", await _measure(pose[0], pose[1]))
+		sun.shadow_enabled = true
+	if env:
+		var keep := [env.ssao_enabled, env.ssil_enabled, env.volumetric_fog_enabled, env.glow_enabled, env.ssr_enabled]
+		env.ssao_enabled = false
+		env.ssil_enabled = false
+		env.volumetric_fog_enabled = false
+		env.glow_enabled = false
+		env.ssr_enabled = false
+		_probe_line(level_id, "no post fx", await _measure(pose[0], pose[1]))
+		env.volumetric_fog_enabled = keep[2]
+		_probe_line(level_id, "only fog on", await _measure(pose[0], pose[1]))
+		env.volumetric_fog_enabled = false
+		env.ssil_enabled = keep[1]
+		_probe_line(level_id, "only ssil on", await _measure(pose[0], pose[1]))
+		env.ssil_enabled = false
+		env.ssr_enabled = keep[4]
+		_probe_line(level_id, "only ssr on", await _measure(pose[0], pose[1]))
+		env.ssao_enabled = keep[0]
+		env.ssil_enabled = keep[1]
+		env.volumetric_fog_enabled = keep[2]
+		env.glow_enabled = keep[3]
+		env.ssr_enabled = keep[4]
+	for l in lamps:
+		l.visible = false
+	_probe_line(level_id, "no lamps", await _measure(pose[0], pose[1]))
+	for l in lamps:
+		l.visible = true
+	var vp := get_viewport()
+	var aa := [vp.msaa_3d, vp.use_taa]
+	vp.msaa_3d = Viewport.MSAA_DISABLED
+	vp.use_taa = false
+	_probe_line(level_id, "no msaa/taa", await _measure(pose[0], pose[1]))
+	vp.msaa_3d = aa[0]
+	vp.use_taa = aa[1]
+	for m: GeometryInstance3D in meshes:
+		if not m.find_parent("Item_*") and not m.find_parent("Fixtures*"):
+			m.visible = false
+	_probe_line(level_id, "no building", await _measure(pose[0], pose[1]))
+
+
+func _probe_line(level_id: String, what: String, r: Dictionary) -> void:
+	_lines.append("%-13s %-15s %7.0f %7.0f %8.1f %7d %9.0f" % [level_id, what, r.avg, r.low, r.worst, r.draws, r.prims / 1000.0])
+	print(_lines[-1])

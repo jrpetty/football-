@@ -12,9 +12,18 @@ extends Marker3D
 ## Visual hint drawn when a player carries something this slot accepts.
 @export var hint_size: Vector3 = Vector3(0.34, 0.01, 0.24)
 
+## Emitted when the slot moves in the world (its shelf was moved, its pallet is being wheeled about), so an item
+## resting in it wakes up and follows.
+signal moved
+
 var host_id: String = ""
 var station_id: String = ""
 var _hint: MeshInstance3D
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSFORM_CHANGED:
+		moved.emit()
 
 
 func full_id() -> String:
@@ -25,6 +34,7 @@ func _ready() -> void:
 	gizmo_extents = 0.08
 	if Engine.is_editor_hint():
 		return
+	set_notify_transform(true)
 	_hint = MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = hint_size

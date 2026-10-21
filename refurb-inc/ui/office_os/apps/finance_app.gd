@@ -10,9 +10,17 @@ func build() -> void:
 	_body = sl[1]
 
 
+var _renaming := false
+var _edit: LineEdit
+
+
 func refresh() -> void:
+	if _renaming and is_instance_valid(_edit) and _edit.has_focus():
+		return            # don't rebuild under the player's typing
+	_renaming = false
 	clear(_body)
 	var s := Game.state
+	_company_row(s)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 16)
 	_body.add_child(top)
@@ -33,7 +41,13 @@ func refresh() -> void:
 	bv.add_child(l("Upcoming", 20))
 	var b := s.building()
 	bv.add_child(l("Rent (%s) £%d + utilities £%d — due %s at close" % [b.get("name", ""), int(b.get("rent_weekly", 150)), int(b.get("utilities_weekly", 25)), "today" if days_to == 0 else GameState.WEEKDAYS[due_day]], 17, AMBER if days_to <= 1 else INK))
-	bv.add_child(l("Staff wages: none yet (hire staff once the business can carry them)", 17, SUB))
+	var wages := 0
+	for d in s.staff.values():
+		wages += int(d.get("wage", 0))
+	if wages > 0:
+		bv.add_child(l("Staff wages £%d (%d staff) — due %s at close" % [wages, s.staff.size(), "today" if days_to == 0 else GameState.WEEKDAYS[due_day]], 17, AMBER if days_to <= 1 else INK))
+	else:
+		bv.add_child(l("Staff wages: none yet (hire staff in the Staff app once the business can carry them)", 17, SUB))
 	if s.cash < 0:
 		bv.add_child(para("You are overdrawn. The bank charges £%d a week and it dents your reputation. Sell stock to recover." % int(Content.econ("overdraft_fee_weekly", 40)), 17, RED, 800))
 	_body.add_child(bills)
@@ -82,6 +96,53 @@ func refresh() -> void:
 		row.add_child(l(GameState.format_money(int(e.amt)), 15, GREEN if int(e.amt) >= 0 else RED))
 		lv.add_child(row)
 	_body.add_child(lc)
+
+
+func _company_row(s: GameState) -> void:
+	## The business name, with Rename (it changes the sign outside, parcels and leaderboard entries).
+	var c := card()
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 12)
+	c.add_child(h)
+	h.add_child(l("Business name", 17, SUB))
+	var name_l := l(s.company_name, 24)
+	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(name_l)
+	var edit := LineEdit.new()
+	edit.max_length = Sim.COMPANY_NAME_MAX
+	edit.placeholder_text = Sim.DEFAULT_COMPANY
+	edit.custom_minimum_size = Vector2(360, 40)
+	edit.add_theme_font_size_override("font_size", 20)
+	edit.visible = false
+	h.add_child(edit)
+	_edit = edit
+	var save := button("Save", func(): pass, GREEN)
+	save.visible = false
+	var cancel := button("Cancel", func(): pass, Color(0.45, 0.47, 0.52))
+	cancel.visible = false
+	var rename := button("Rename", func(): pass)
+	var done := func(apply: bool):
+		if apply:
+			Game.request("rename_company", {"name": edit.text})
+		_renaming = false
+		refresh.call_deferred()
+	rename.pressed.connect(func():
+		_renaming = true
+		name_l.visible = false
+		rename.visible = false
+		edit.text = s.company_name
+		edit.visible = true
+		save.visible = true
+		cancel.visible = true
+		edit.grab_focus()
+		edit.select_all())
+	save.pressed.connect(func(): done.call(true))
+	cancel.pressed.connect(func(): done.call(false))
+	edit.text_submitted.connect(func(_t): done.call(true))
+	h.add_child(rename)
+	h.add_child(save)
+	h.add_child(cancel)
+	_body.add_child(c)
 
 
 func _sum_since(m: float) -> int:

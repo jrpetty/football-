@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/stations/repair_bench/mesh.res" id="1"]
 [ext_resource type="Material" path="res://assets/models/stations/repair_bench/material.tres" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/stations/repair_bench/shadow.res" id="3_al1jr"]
 
-
-[node name="RepairBench" type="Node3D"]
-metadata/footprint = Vector3(1.60000, 1.64000, 0.91400)
+[node name="RepairBench" type="Node3D" unique_id=1002871884]
+metadata/footprint = Vector3(1.6, 1.64, 0.914)
 metadata/source_tier = "Repair bench with pegboard and bins"
-metadata/surfaces = [[0.230, 0.92, -0.608, 0.660, -0.343, 0.244], [0.740, 0.18, -0.798, 0.723, -0.452, 0.246], [0.830, 1.00, -0.771, 0.796, -0.367, 0.262], [1.150, 0.12, -0.725, 0.747, -0.367, 0.034], [1.250, 0.26, -0.680, 0.573, -0.347, 0.452]]
+metadata/surfaces = [[0.23, 0.92, -0.608, 0.66, -0.343, 0.244], [0.74, 0.18, -0.798, 0.723, -0.452, 0.246], [0.83, 1.0, -0.771, 0.796, -0.367, 0.262], [1.15, 0.12, -0.725, 0.747, -0.367, 0.034], [1.25, 0.26, -0.68, 0.573, -0.347, 0.452]]
 
-
-[node name="Model" type="MeshInstance3D" parent="."]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=44305156]
+cast_shadow = 0
 mesh = ExtResource("1")
 surface_material_override/0 = ExtResource("2")
+
+[node name="ShadowProxy" type="MeshInstance3D" parent="." unique_id=979898598]
+cast_shadow = 3
+mesh = ExtResource("3_al1jr")

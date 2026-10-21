@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/automation/conveyor_straight/mesh.res" id="1"]
 [ext_resource type="Material" path="res://assets/models/automation/conveyor_straight/material.tres" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/automation/conveyor_straight/shadow.res" id="3_qjj8x"]
 
-
-[node name="ConveyorStraight" type="Node3D"]
-metadata/footprint = Vector3(1.02000, 0.90000, 2.00000)
+[node name="ConveyorStraight" type="Node3D" unique_id=1876860971]
+metadata/footprint = Vector3(1.02, 0.9, 2)
 metadata/source_tier = "Powered roller conveyor, straight (rollers lengthened: 0.6 m between the rails, so 19-inch rack servers fit)"
-metadata/surfaces = [[0.240, 0.12, -0.453, 0.446, -0.859, 0.861], [0.580, 1.00, -0.510, 0.486, -1.000, 1.000]]
+metadata/surfaces = [[0.24, 0.12, -0.453, 0.446, -0.859, 0.861], [0.58, 1.0, -0.51, 0.486, -1.0, 1.0]]
 
-
-[node name="Model" type="MeshInstance3D" parent="."]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=2098538385]
+cast_shadow = 0
 mesh = ExtResource("1")
 surface_material_override/0 = ExtResource("2")
+
+[node name="ShadowProxy" type="MeshInstance3D" parent="." unique_id=1637660955]
+cast_shadow = 3
+mesh = ExtResource("3_qjj8x")

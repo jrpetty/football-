@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/vehicles/hatchback/mesh.res" id="1"]
 [ext_resource type="Material" path="res://assets/models/vehicles/hatchback/material.tres" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/vehicles/hatchback/shadow.res" id="3_kvalp"]
 
-
-[node name="Hatchback" type="Node3D"]
-metadata/footprint = Vector3(2.04802, 1.71701, 4.10000)
+[node name="Hatchback" type="Node3D" unique_id=465379268]
+metadata/footprint = Vector3(2.04802, 1.71701, 4.1)
 metadata/source_tier = "Hatchback car"
 metadata/surfaces = []
 
-
-[node name="Model" type="MeshInstance3D" parent="."]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1005732747]
+cast_shadow = 0
 mesh = ExtResource("1")
 surface_material_override/0 = ExtResource("2")
+
+[node name="ShadowProxy" type="MeshInstance3D" parent="." unique_id=1782193242]
+cast_shadow = 3
+mesh = ExtResource("3_kvalp")

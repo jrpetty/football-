@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/vehicles/box_lorry/mesh.res" id="1"]
 [ext_resource type="Material" path="res://assets/models/vehicles/box_lorry/material.tres" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/vehicles/box_lorry/shadow.res" id="3_skf60"]
 
-
-[node name="BoxLorry" type="Node3D"]
+[node name="BoxLorry" type="Node3D" unique_id=1017394761]
 metadata/footprint = Vector3(2.85872, 3.36119, 7.39921)
 metadata/source_tier = "7.5t box lorry (stray side plate and rear doors cut; the game adds an animated shutter and tail lift)"
-metadata/surfaces = [[0.230, 1.00, -1.076, 1.411, -3.696, 3.690]]
+metadata/surfaces = [[0.23, 1.0, -1.076, 1.411, -3.696, 3.69]]
 
-
-[node name="Model" type="MeshInstance3D" parent="."]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=846860886]
+cast_shadow = 0
 mesh = ExtResource("1")
 surface_material_override/0 = ExtResource("2")
+
+[node name="ShadowProxy" type="MeshInstance3D" parent="." unique_id=231981501]
+cast_shadow = 3
+mesh = ExtResource("3_skf60")

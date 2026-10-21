@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/servers/server_1u/mesh.res" id="1"]
 [ext_resource type="Material" path="res://assets/models/servers/server_1u/material.tres" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/servers/server_1u/shadow.res" id="3_bq3wa"]
 
-
-[node name="Server1u" type="Node3D"]
-metadata/footprint = Vector3(0.48200, 0.04450, 0.72000)
+[node name="Server1u" type="Node3D" unique_id=98945208]
+metadata/footprint = Vector3(0.482, 0.0445, 0.72)
 metadata/source_tier = "Server: 1U rack compute node"
 metadata/surfaces = []
 
-
-[node name="Model" type="MeshInstance3D" parent="."]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=2060376421]
+cast_shadow = 0
 mesh = ExtResource("1")
 surface_material_override/0 = ExtResource("2")
+
+[node name="ShadowProxy" type="MeshInstance3D" parent="." unique_id=1714855633]
+cast_shadow = 3
+mesh = ExtResource("3_bq3wa")

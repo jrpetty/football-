@@ -88,6 +88,36 @@ static func player_key(peer: int) -> String:
 	return "p%d" % peer
 
 
+# ================================================================= company
+
+const DEFAULT_COMPANY := "Refurb Inc."
+const COMPANY_NAME_MAX := 32
+
+
+static func clean_company_name(raw: String) -> String:
+	## Trimmed, single-spaced, printable, at most COMPANY_NAME_MAX characters; blank → Refurb Inc.
+	var out := ""
+	for ch in raw.strip_edges():
+		if ch.unicode_at(0) >= 32 and ch.unicode_at(0) != 127:
+			out += ch
+	while "  " in out:
+		out = out.replace("  ", " ")
+	out = out.substr(0, COMPANY_NAME_MAX).strip_edges()
+	return out if out != "" else DEFAULT_COMPANY
+
+
+func c_rename_company(_peer: int, a: Dictionary) -> Dictionary:
+	var name := clean_company_name(str(a.get("name", "")))
+	if name == state.company_name:
+		return _ok()
+	var old := state.company_name
+	state.company_name = name
+	state.mark("company")
+	state.say("The business is now called %s." % name, "good")
+	BusinessStats.event(state, "milestone", "Renamed from %s to %s" % [old, name])
+	return _ok()
+
+
 # ================================================================= carrying
 
 func c_pick_up(peer: int, a: Dictionary) -> Dictionary:

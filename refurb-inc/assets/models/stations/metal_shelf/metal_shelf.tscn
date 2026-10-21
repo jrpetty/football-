@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/stations/metal_shelf/mesh.res" id="1"]
 [ext_resource type="Material" path="res://assets/models/stations/metal_shelf/material.tres" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/stations/metal_shelf/shadow.res" id="3_hmguv"]
 
-
-[node name="MetalShelf" type="Node3D"]
-metadata/footprint = Vector3(1.20000, 1.90000, 0.45000)
+[node name="MetalShelf" type="Node3D" unique_id=1539682464]
+metadata/footprint = Vector3(1.2, 1.9, 0.45)
 metadata/source_tier = "Boltless stock shelving"
-metadata/surfaces = [[0.210, 1.00, -0.595, 0.586, -0.212, 0.218], [0.770, 1.00, -0.593, 0.587, -0.217, 0.212], [1.320, 0.96, -0.595, 0.593, -0.213, 0.219], [1.840, 0.14, -0.586, 0.585, -0.212, 0.211], [1.890, 0.81, -0.590, 0.587, -0.211, 0.211]]
+metadata/surfaces = [[0.21, 1.0, -0.595, 0.586, -0.212, 0.218], [0.77, 1.0, -0.593, 0.587, -0.217, 0.212], [1.32, 0.96, -0.595, 0.593, -0.213, 0.219], [1.84, 0.14, -0.586, 0.585, -0.212, 0.211], [1.89, 0.81, -0.59, 0.587, -0.211, 0.211]]
 
-
-[node name="Model" type="MeshInstance3D" parent="."]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1640850528]
+cast_shadow = 0
 mesh = ExtResource("1")
 surface_material_override/0 = ExtResource("2")
+
+[node name="ShadowProxy" type="MeshInstance3D" parent="." unique_id=464909452]
+cast_shadow = 3
+mesh = ExtResource("3_hmguv")

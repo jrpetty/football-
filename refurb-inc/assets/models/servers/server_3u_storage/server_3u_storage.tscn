@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/servers/server_3u_storage/mesh.res" id="1"]
 [ext_resource type="Material" path="res://assets/models/servers/server_3u_storage/material.tres" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/servers/server_3u_storage/shadow.res" id="3_olwda"]
 
-
-[node name="Server3uStorage" type="Node3D"]
-metadata/footprint = Vector3(0.48200, 0.13100, 0.72000)
+[node name="Server3uStorage" type="Node3D" unique_id=1540436589]
+metadata/footprint = Vector3(0.482, 0.131, 0.72)
 metadata/source_tier = "Server: 3U storage server (16 bays)"
 metadata/surfaces = []
 
-
-[node name="Model" type="MeshInstance3D" parent="."]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1670037396]
+cast_shadow = 0
 mesh = ExtResource("1")
 surface_material_override/0 = ExtResource("2")
+
+[node name="ShadowProxy" type="MeshInstance3D" parent="." unique_id=1769599024]
+cast_shadow = 3
+mesh = ExtResource("3_olwda")

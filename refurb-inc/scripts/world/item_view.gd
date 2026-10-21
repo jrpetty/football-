@@ -189,6 +189,9 @@ func apply_state(it: Item, initial: bool = false) -> void:
 	var lr := LevelRoot.current
 	if lr == null or not is_inside_tree():
 		return
+	# Any change wakes the item; it goes back to sleep once it has settled where the state says.
+	set_process(true)
+	set_physics_process(true)
 	_update_shadows(it)
 	if cinematic and loc.get("t") == "loose":
 		visible = true
@@ -318,6 +321,8 @@ func _process(_delta: float) -> void:
 			var poured := float(mi.data.get("t", -1e9))
 			mug.show_state(TeaMug.shown_fill(mi.data, now), TeaMug.brew_colour(mi.data, now), now - poured < 420.0, str(mi.data.get("brew", "")) != "" and not mi.data.get("milk", false) and now - poured < 45.0)
 	if _ride == "" or cinematic:
+		if mug == null:
+			set_process(false)     # nothing to animate until the state changes again
 		return
 	var it := Game.state.get_item(item_id)
 	if it == null:
@@ -339,11 +344,20 @@ func _follow(node: Node3D, offset: Transform3D) -> void:
 	freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
 	visible = true
 	var first := _follow_node == null
+	if _follow_node != node:
+		if _follow_node is SnapSlot and is_instance_valid(_follow_node) and _follow_node.moved.is_connected(_wake):
+			_follow_node.moved.disconnect(_wake)
+		if node is SnapSlot:
+			node.moved.connect(_wake)
 	_following = true
 	_follow_node = node
 	_follow_offset = offset
 	if first and is_inside_tree():
 		global_transform = node.global_transform * offset
+
+
+func _wake() -> void:
+	set_physics_process(true)
 
 
 func set_screen(tex: Texture2D) -> void:
@@ -367,7 +381,12 @@ func _physics_process(delta: float) -> void:
 			var t := clampf(delta * 18.0, 0.0, 1.0)
 			global_transform = global_transform.interpolate_with(target, t)
 		else:
-			global_transform = global_transform.interpolate_with(target, clampf(delta * 22.0, 0.0, 1.0))
+			if global_transform.origin.distance_squared_to(target.origin) < 1e-8 and global_transform.basis.is_equal_approx(target.basis):
+				# Settled in its slot: stop updating until the slot moves (SnapSlot.moved) or the state changes.
+				global_transform = target
+				set_physics_process(false)
+			else:
+				global_transform = global_transform.interpolate_with(target, clampf(delta * 22.0, 0.0, 1.0))
 		return
 	if not Game.is_host():
 		if freeze:

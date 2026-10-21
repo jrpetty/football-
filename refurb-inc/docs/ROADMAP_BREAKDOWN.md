@@ -65,9 +65,34 @@ mesh-LOD threshold (low 4 px … ultra 1 px):
 | Triangles per frame | 10.8 M | 4.8 M |
 | Draw calls | 2,000 | 1,000 |
 
+**All seven premises (21 October 2026)**, Ultra preset, every shelf full plus 12 pallets (276–696 units),
+average fps / 1% low:
+
+| Premises | Inside before | Inside after | Outside before | Outside after | High preset, inside after |
+|---|---|---|---|---|---|
+| Garage | 82 / 37 | 84 / 71 | 119 / 94 | 127 / 105 | 127 / 109 |
+| Lock-up | 107 / 87 | 108 / 90 | 126 / 99 | 135 / 103 | 153 / 135 |
+| Industrial unit | 109 / 64 | 116 / 96 | 116 / 94 | 134 / 108 | 152 / 120 |
+| Warehouse | 72 / 60 | 76 / 49 | 71 / 56 | 101 / 75 | 100 / 84 |
+| Distribution centre | 38 / 27 | 73 / 60 | 32 / 20 | 92 / 69 | 91 / 70 |
+| Refurb facility | 32 / 21 | 64 / 55 | 32 / 20 | 86 / 56 | 82 / 66 |
+| Mega plant | 43 / 30 | 77 / 66 | 33 / 20 | 87 / 66 | 95 / 80 |
+
+What the probe (`-- --probe`) found and what was fixed:
+- **Every stored unit reset its own transform every physics tick** (700 items × 60 Hz). Hiding the stock took the
+  distribution centre from 36 to 85 fps; pausing just their scripts gave 70. Items now go idle once settled in a slot
+  and wake when their state changes or their slot moves (`SnapSlot.moved`: a shelf moved, a pallet wheeled away).
+- **Grade stickers and crack overlays** (two extra draw calls per unit) fade out beyond 8–10 m: draws 2,700 → 1,550.
+- **No LODs on the heaviest models.** The AI meshes have a UV seam at almost every vertex, so Godot's simplifier can't
+  reduce them: the 176k-triangle racking (also the network racks), conveyors, shelving, benches, desk, servers and
+  the lorry were drawn in full in every shadow cascade. `tools/shadow_proxies.gd` gives each a ~1/12 shadow-only
+  stand-in (looks identical: `tools/shadow_compare.tscn`). Simplified *visible* LODs were tried and rejected — the
+  textures smeared. Not yet measured on the GPU (it dropped out again); it only removes shadow-pass work.
+- Post-processing, lamps and MSAA each cost under ~10% on Ultra; SSIL + SSR + 4× MSAA + TAA are why Ultra trails High.
+
 Next, in order of payoff:
-1. **Run the benchmark on every premises** (`-- --levels lockup,warehouse,…`) — the larger buildings still need
-   measuring (the GPU dropped out mid-run on this machine); fix the top three costs each time.
+1. **Re-run the benchmark** after a reboot to measure the shadow stand-ins; look at the warehouse inside view's
+   occasional 28 ms frame (likely a first-view shader compile — try a shader warm-up on level load).
 2. **MultiMesh for shelf stock** far from the camera (hundreds of laptops on racking as one draw call).
 3. **Bake lighting** (LightmapGI) for each level in the editor; keep dynamic shadows to the sun + a few lamps.
 4. **Occlusion culling** in the warehouse and up (Godot OccluderInstance3D for walls/racking).

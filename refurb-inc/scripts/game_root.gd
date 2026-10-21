@@ -92,6 +92,7 @@ func _start(mode: String, arg: String) -> void:
 			Net.go_offline()
 			_clear_menu()
 			Game.new_game()
+			_name_company(arg)
 			_enter_level()
 		"continue":
 			Net.go_offline()
@@ -107,6 +108,7 @@ func _start(mode: String, arg: String) -> void:
 				return
 			_clear_menu()
 			Game.new_game()
+			_name_company(arg)
 			_enter_level()
 			Game.toast.emit("Hosting on port %d. Friends can join with your IP address." % Net.DEFAULT_PORT, "info")
 		"join":
@@ -119,6 +121,13 @@ func _start(mode: String, arg: String) -> void:
 			await Game.state_reset
 			_clear_menu()
 			_enter_level()
+
+
+func _name_company(name: String) -> void:
+	## A new company starts with the name chosen on the title screen (before anyone joins, so no rename event).
+	if name != "":
+		Game.state.company_name = Sim.clean_company_name(name)
+		Game.state.mark("company")
 
 
 func _watch_state() -> void:

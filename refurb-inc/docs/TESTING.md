@@ -82,6 +82,10 @@ Everything about the business, live, in 13 sections down the left. Hover the cha
 - **Timeline:** the company diary, covering lots bought, milestones, record days, skill level-ups, reputation marks, new sellers, moves and equipment.
 - **To see it full of data:** run `xvfb-run godot --path . res://tools/screenshot.tscn -- --insights`. It simulates 20 working days with the bot and saves every section to `tools/out/insights_*.png`.
 
+## Your business name
+- Title screen → **New game** (or **Host co-op**): a "Name your business" box appears, filled with the last name you used (first time: Refurb Inc.). Type a name, press Enter or **Start trading**. The sign on the building shows it.
+- Office PC → **Finance** → **Rename** at the top. Type a new name, press Enter or **Save**. A toast confirms it and the sign outside changes straight away. In co-op, everyone sees the new name.
+
 ## Staff, characters, stock, achievements, automation (October 2026)
 - **Character:** title screen → **Character**. Change shirt, trousers, skin, hair and style, build and height; tick hi-vis, cap or big head; **Upload photo** puts your face on your avatar. The preview turns as you change things. In co-op the others see your look.
 - **Staff:** office PC → **Staff** (smiley icon) → **Candidates** → **Hire** a tester. They walk to the test bench, swap USBs and test whatever is waiting. **Your team** shows what they're doing, their skills and their wage. A level-1 hire is slow; a level-8 one is quick and costs much more. Wages go out on Friday with the rent.
@@ -100,7 +104,8 @@ Everything about the business, live, in 13 sections down the left. Hover the cha
   - **Flexible bend:** while placing it, scroll changes the angle, Shift+scroll the radius and **T** flips the side.
 - **Insights:** the new **Automation, Energy, Staff and Lifetime stats** pages update live while you watch them.
 - **Bench screens for every kind of kit:** run `tools/bench_screen_shot.tscn` (F6). It saves `tools/out/bench_<model>_<1-4>.png`.
-- **Benchmark:** run `tools/benchmark.tscn` (F6, or `-- --levels garage,warehouse`). It fills every shelf, drops pallets, pans the camera and prints avg FPS, 1% low and draw calls to `tools/out/benchmark.txt`.
+- **Benchmark:** run `tools/benchmark.tscn` (F6, or `-- --levels garage,warehouse --preset high`). It fills every shelf, drops pallets, pans the camera with v-sync off and writes avg FPS, 1% low and draw calls to `tools/out/benchmark_<preset>.txt`. Add `--probe` to see where the frame goes (stock, sun shadows, post-processing, lamps, building). It runs the GPU flat out: run one premises per launch.
+- **Shadow stand-ins:** `tools/shadow_compare.tscn` renders the heavy props with their own shadows vs the stand-ins side by side (`tools/out/shadow_*.png`). After new models come through the pipeline, run `godot --headless --path . -s tools/shadow_proxies.gd` to give any new heavy mesh a stand-in. `tools/lod_report.gd` lists every mesh's triangles and LODs.
 
 ## Co-op (LAN / same PC)
 - Title screen → **Host co-op**. On a second instance → **Join co-op…** → host's IP → **Join**.
@@ -110,7 +115,7 @@ Everything about the business, live, in 13 sections down the left. Hover the cha
 ## Automated checks
 Run everything from a terminal: `tools/run_all_checks.sh /path/to/godot`
 Or run individually in the editor:
-- `tests/run_tests.tscn` (F6) — 77 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats, staff, new stock, tea, goals, achievements, automation.
+- `tests/run_tests.tscn` (F6) — 80 headless logic tests: lot pricing/quality, the full buy-to-ship loop, rent, save/load, replication, premises, business stats, staff, new stock, tea, goals, achievements, automation.
 - `tools/playtest.tscn` (F6) — drives the real garage at 8× speed: lorry, bench, repair, image, grade, sell, pack, courier, parcel, save/load.
 - `tools/premises_test.tscn` (F6) — moves one company through all 7 buildings: layout, stock, loose pallets, lorry to docks, extra equipment.
 - `tools/net_test.tscn -- --role host` and `-- --role client` — two-process co-op check.

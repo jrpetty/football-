@@ -43,6 +43,7 @@ var values := {
 	"show_fps": true,
 	"settings_version": 2,
 	"player_name": "",
+	"company_name": "Refurb Inc.",   # last business name used for a new game
 	"char_shirt": "#3359a0",
 	"char_trousers": "#292b33",
 	"char_skin": "#dbb08f",

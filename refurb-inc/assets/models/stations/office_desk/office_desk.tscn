@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/stations/office_desk/mesh.res" id="1"]
 [ext_resource type="Material" path="res://assets/models/stations/office_desk/material.tres" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/stations/office_desk/shadow.res" id="3_7wsyg"]
 
-
-[node name="OfficeDesk" type="Node3D"]
-metadata/footprint = Vector3(1.40000, 1.01000, 1.39000)
+[node name="OfficeDesk" type="Node3D" unique_id=2041977003]
+metadata/footprint = Vector3(1.4, 1.01, 1.39)
 metadata/source_tier = "Office desk with chair"
-metadata/surfaces = [[0.670, 1.00, -0.700, 0.699, -0.680, 0.620], [0.740, 0.79, -0.696, 0.697, -0.695, 0.656]]
+metadata/surfaces = [[0.67, 1.0, -0.7, 0.699, -0.68, 0.62], [0.74, 0.79, -0.696, 0.697, -0.695, 0.656]]
 
-
-[node name="Model" type="MeshInstance3D" parent="."]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=464010212]
+cast_shadow = 0
 mesh = ExtResource("1")
 surface_material_override/0 = ExtResource("2")
+
+[node name="ShadowProxy" type="MeshInstance3D" parent="." unique_id=1528783381]
+cast_shadow = 3
+mesh = ExtResource("3_7wsyg")

@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/stations/test_bench_esd/mesh.res" id="1"]
 [ext_resource type="Material" path="res://assets/models/stations/test_bench_esd/material.tres" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/stations/test_bench_esd/shadow.res" id="3_rmt25"]
 
-
-[node name="TestBenchEsd" type="Node3D"]
-metadata/footprint = Vector3(1.45000, 1.80000, 0.83000)
+[node name="TestBenchEsd" type="Node3D" unique_id=1445338442]
+metadata/footprint = Vector3(1.45, 1.8, 0.83)
 metadata/source_tier = "ESD test bench with monitor arm"
-metadata/surfaces = [[0.340, 0.15, -0.651, 0.642, -0.373, 0.356], [0.860, 1.00, -0.724, 0.704, -0.405, 0.413], [1.760, 0.52, -0.714, 0.704, -0.397, 0.346]]
+metadata/surfaces = [[0.34, 0.15, -0.651, 0.642, -0.373, 0.356], [0.86, 1.0, -0.724, 0.704, -0.405, 0.413], [1.76, 0.52, -0.714, 0.704, -0.397, 0.346]]
 
-
-[node name="Model" type="MeshInstance3D" parent="."]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=401328380]
+cast_shadow = 0
 mesh = ExtResource("1")
 surface_material_override/0 = ExtResource("2")
+
+[node name="ShadowProxy" type="MeshInstance3D" parent="." unique_id=1728983393]
+cast_shadow = 3
+mesh = ExtResource("3_rmt25")

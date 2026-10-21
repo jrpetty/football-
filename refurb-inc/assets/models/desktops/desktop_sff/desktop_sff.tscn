@@ -1,15 +1,19 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://assets/models/desktops/desktop_sff/mesh.res" id="1"]
 [ext_resource type="Material" path="res://assets/models/desktops/desktop_sff/material.tres" id="2"]
+[ext_resource type="ArrayMesh" path="res://assets/models/desktops/desktop_sff/shadow.res" id="3_c3l6i"]
 
-
-[node name="DesktopSff" type="Node3D"]
-metadata/footprint = Vector3(0.07909, 0.30000, 0.29999)
+[node name="DesktopSff" type="Node3D" unique_id=929523626]
+metadata/footprint = Vector3(0.07909, 0.3, 0.29999)
 metadata/source_tier = "Desktop: slim small-form-factor (stands on its feet)"
 metadata/surfaces = []
 
-
-[node name="Model" type="MeshInstance3D" parent="."]
+[node name="Model" type="MeshInstance3D" parent="." unique_id=1716337625]
+cast_shadow = 0
 mesh = ExtResource("1")
 surface_material_override/0 = ExtResource("2")
+
+[node name="ShadowProxy" type="MeshInstance3D" parent="." unique_id=549969539]
+cast_shadow = 3
+mesh = ExtResource("3_c3l6i")

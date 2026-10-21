@@ -139,6 +139,7 @@ func _build_overlays() -> void:
 		_crack.position = Vector3(0, 0, 0.0005)
 		_crack.visible = false
 		screen.add_child(_crack)
+		_near_only(_crack, 10.0)
 
 
 func refresh(u: UnitData) -> void:
@@ -170,6 +171,20 @@ func _set_grade(g: String) -> void:
 	l.position = Vector3(0, 0.0004, 0)
 	l.outline_size = 0
 	_grade_tag.add_child(l)
+	_near_only(_grade_tag, 8.0)
+
+
+static func _near_only(root: Node, dist: float) -> void:
+	## Small details (grade sticker, crack overlay) fade out with distance: two fewer draw calls per unit across
+	## a warehouse full of stock, and at that range they're a pixel or two anyway.
+	var all: Array = root.find_children("*", "GeometryInstance3D", true, false)
+	if root is GeometryInstance3D:
+		all.append(root)
+	for gi: GeometryInstance3D in all:
+		gi.visibility_range_end = dist
+		gi.visibility_range_end_margin = dist * 0.15
+		gi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
 func set_lid_open(open: bool, animate: bool = true) -> void:
